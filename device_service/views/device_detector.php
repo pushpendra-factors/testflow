@@ -6,17 +6,35 @@ use DeviceDetector\ClientHints;
 use DeviceDetector\DeviceDetector;
 use DeviceDetector\Parser\Device\AbstractDeviceParser;
 
+function LogExecutionTime($time_start, $userAgent)
+{
+    $time_end = microtime(true);
+    $execution_time = ($time_end - $time_start) * 1000;
+    error_log('User Agent: ' . $userAgent . ' Total Execution Time: ' . $execution_time . ' ms .');
+}
+
 // function  GetDevice() returns device info
 function GetDevice($userAgent)
 {
 
+    $time_start = microtime(true);
     $clientHints = ClientHints::factory($_SERVER);
     AbstractDeviceParser::setVersionTruncation(AbstractDeviceParser::VERSION_TRUNCATION_NONE);
     $dd = new DeviceDetector($userAgent, $clientHints);
+
+    // caching device info
+    $cache = new \Symfony\Component\Cache\Adapter\ApcuAdapter();
+    $dd->setCache(
+        new \DeviceDetector\Cache\PSR6Bridge($cache)
+    );
+
+    // parse user agent
     $dd->parse();
 
-    // Check if user agent is a bot
+    // Check for bot
     if ($dd->isBot()) {
+        LogExecutionTime($time_start, $userAgent);
+
         return json_encode(["is_bot" => $dd->isBot()]);
     } else {
 
@@ -25,6 +43,8 @@ function GetDevice($userAgent)
         $device = $dd->getDeviceName();
         $brand = $dd->getBrandName();
         $model = $dd->getModel();
+
+        LogExecutionTime($time_start, $userAgent);
 
         return json_encode([
             "is_bot" => $dd->isBot(),

@@ -91,8 +91,10 @@ func (store *MemSQL) ExecuteUserKPIForAttributionV1(projectID int64, query *mode
 	if err != nil {
 		return kpiData, kpiHeaders, kpiAggFunctionType, err
 	}
-	logCtx.WithFields(log.Fields{"UserKPIAttribution": "Debug", "kpiData": kpiData,
-		"kpiKeys": kpiKeys}).Info("UserKPI-Attribution kpiData reports 3")
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"UserKPIAttribution": "Debug", "kpiData": kpiData,
+			"kpiKeys": kpiKeys}).Info("UserKPI-Attribution kpiData reports 3")
+	}
 
 	return kpiData, kpiHeaders, kpiAggFunctionType, nil
 }
@@ -172,10 +174,14 @@ func (store *MemSQL) RunUserKPIGroupQueryV1(projectID int64, query *model.Attrib
 			// Skip the datetime header and the other result is of format. ex. "headers": ["$hubspot_deal_hs_object_id", "Revenue", "Pipeline", ...],
 			if res.Headers[0] == "datetime" {
 				kpiQueryResultWithTime = res
-				logCtx.WithFields(log.Fields{"kpiQueryResultWithTime": kpiQueryResultWithTime}).Info("UserKPI-Attribution result set")
+				if C.GetAttributionDebug() == 1 {
+					logCtx.WithFields(log.Fields{"kpiQueryResultWithTime": kpiQueryResultWithTime}).Info("UserKPI-Attribution result set")
+				}
 			} else {
 				kpiQueryResult = res
-				logCtx.WithFields(log.Fields{"kpiQueryResult": kpiQueryResult}).Info("UserKPI-Attribution result set")
+				if C.GetAttributionDebug() == 1 {
+					logCtx.WithFields(log.Fields{"kpiQueryResult": kpiQueryResult}).Info("UserKPI-Attribution result set")
+				}
 			}
 
 		}
