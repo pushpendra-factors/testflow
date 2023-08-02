@@ -6,8 +6,9 @@ import (
 	"factors/util"
 	U "factors/util"
 	"fmt"
-	"github.com/clearbit/clearbit-go/clearbit"
 	"testing"
+
+	"github.com/clearbit/clearbit-go/clearbit"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/stretchr/testify/assert"
@@ -210,4 +211,12 @@ func TestSanitizeWeekStart(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestIsIPV4AddressInCIDRRange(t *testing.T) {
+
+	assert.False(t, U.IsIPV4AddressInCIDRRange("40.94.0.0/16", "40.93.255.255")) // previous ip to cidr range start
+	assert.True(t, U.IsIPV4AddressInCIDRRange("40.94.0.0/16", "40.94.0.0"))      // start ip in cidr range
+	assert.True(t, U.IsIPV4AddressInCIDRRange("40.94.0.0/16", "40.94.255.255"))  //  end ip in cidr range
+	assert.False(t, U.IsIPV4AddressInCIDRRange("40.94.0.0/16", "40.95.0.0"))     //  next ip to cidr range end
 }
