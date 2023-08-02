@@ -51,7 +51,7 @@ class Facebook extends Component {
         response: response
       })
       if(response.id != undefined) {
-        fetch(`https://graph.facebook.com/v15.0/${response.id}/adaccounts?access_token=${response.accessToken}`)
+        fetch(`https://graph.facebook.com/v17.0/${response.id}/adaccounts?access_token=${response.accessToken}`)
         .then(res=> res.json().then((r)=> {
           let adAccounts = r.data.map(account => {
             return {value: account.id, label: account.id} 

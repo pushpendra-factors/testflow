@@ -53,7 +53,7 @@ const FacebookIntegration = ({
     SetFbResponse(response);
     if (response.id != undefined) {
       fetch(
-        `https://graph.facebook.com/v15.0/${response.id}/adaccounts?access_token=${response.accessToken}&fields=id,name`
+        `https://graph.facebook.com/v17.0/${response.id}/adaccounts?access_token=${response.accessToken}&fields=id,name`
       )
         .then((res) =>
           res.json().then((r) => {

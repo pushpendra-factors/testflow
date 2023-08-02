@@ -139,16 +139,6 @@ function UserProfiles({
     FEATURES.FEATURE_ENGAGEMENT
   );
 
-  const { isFeatureConnected: isClearBitConnected } = useFeatureLock(
-    FEATURES.INT_CLEARBIT
-  );
-  const { isFeatureConnected: isSixSenseConnected } = useFeatureLock(
-    FEATURES.INT_SIX_SIGNAL
-  );
-
-  const { isFeatureConnected: isFactorsDeanonymizationConnected } =
-    useFeatureLock(FEATURES.INT_FACTORS_DEANONYMISATION);
-
   useEffect(() => {
     if (!timelinePayload.search_filter) {
       setListSearchItems([]);
@@ -244,7 +234,7 @@ function UserProfiles({
     integrationV1?.int_slack ||
     integration?.lead_squared_config !== null ||
     integration?.int_client_six_signal_key ||
-    isFactorsDeanonymizationConnected ||
+    integration?.int_factors_six_signal_key ||
     integration?.int_rudderstack;
 
   useEffect(() => {
@@ -949,7 +939,7 @@ function UserProfiles({
         {showUpgradeNudge(
           sixSignalInfo?.usage || 0,
           sixSignalInfo?.limit || 0,
-          !(isClearBitConnected || isSixSenseConnected)
+          currentProjectSettings
         ) && (
           <div className='mb-4'>
             <RangeNudge

@@ -41,6 +41,7 @@ import { fetchGroups } from 'Reducers/coreQuery/services';
 import GlobalFilter from 'Components/GlobalFilter';
 import EventFilter from './EventFilter';
 import ExpandBy from './ExpandBy';
+import { fetchAdwordsCustomerAccounts } from 'Reducers/global';
 
 const QueryBuilder = ({
   queryOptions = {},
@@ -85,14 +86,6 @@ const QueryBuilder = ({
     getButtonClickProperties(activeProject?.id)
     getPageViewsProperties(activeProject?.id)
   }, [activeProject?.id]);
-
-  // useEffect(() => {
-  //   console.log("exclude events triggered", excludeEvents)
-  //   if(excludeEvents != activeQuery?.exclude_events){
-  //     setConsiderEventArr([]);
-  //     setMultipleQueries([]);
-  //   }
-  // }, [excludeEvents]);
 
   useEffect(() => {
     if (groupCategory === 'users') {
@@ -153,7 +146,6 @@ const QueryBuilder = ({
     return payload
   }
 
-
   const buildPathAnalysisQuery = (data) => {
     setLoading(true);
     let payload = {
@@ -177,7 +169,7 @@ const QueryBuilder = ({
       .then(() => {
         fetchSavedPathAnalysis(activeProject?.id);
         setLoading(false);
-        history.push('/path-analysis');
+        activeQuery ? "" : history.push('/path-analysis');
         message.success('Report saved!');
       })
       .catch((err) => {
@@ -499,9 +491,9 @@ const QueryBuilder = ({
       //reset filter when event type changes
       setEventLevelFilter([]);
       setEventLevelExpandBy([]);
-    }, [eventType, eventTypeName]); 
-    
-    const setValOnChange = (val) => { 
+    }, [eventType, eventTypeName]);
+
+    const setValOnChange = (val) => {
       setEventTypeName(val)
       let mainArr = considerEventArr;
       mainArr[index] = {
@@ -655,9 +647,15 @@ const QueryBuilder = ({
           eventTypeName={eventTypeName}
         />
 
-        <ExpandBy isDDVisible={expandByDD} setDDVisible={setExpandByDD}
-          eventLevelExpandBy={item?.expand_property ? item?.expand_property : eventLevelExpandBy} setEventLevelExpandBy={setExpandByChange}
+        <ExpandBy
+          isDDVisible={expandByDD}
+          setDDVisible={setExpandByDD}
+          eventLevelExpandBy={item?.expand_property ? item?.expand_property : eventLevelExpandBy}
+          setEventLevelExpandBy={setExpandByChange}
+          eventItem={considerEventArr[index]}
+          eventTypeName={eventTypeName}
         />
+
       </div>
     )
   }
@@ -850,7 +848,7 @@ const QueryBuilder = ({
           onFinishFailed={onFinishFailed}
           autoComplete='off'
           form={form}
-        > 
+        >
           <Form.Item
             name='title'
             rules={[
@@ -899,12 +897,6 @@ const QueryBuilder = ({
   };
   const footer = () => {
     try {
-      // if (queryType === QUERY_TYPE_EVENT && queries.length < 1) {
-      //   return null;
-      // }
-      // if (queryType === QUERY_TYPE_FUNNEL && queries.length < 2) {
-      //   return null;
-      // } else {
 
       const smoothScroll = (element) => {
         document.querySelector(element).scrollIntoView({
@@ -949,22 +941,7 @@ const QueryBuilder = ({
             savedRanges={savedRanges}
             onSelect={setDateRange}
             onSelectSavedRange={onSelectSavedRangeFn}
-          />
-
-          {/* <FaDatepicker
-            todayPicker={false}
-            customPicker
-            presetRange
-            monthPicker
-            quarterPicker
-            placement='topRight'
-            buttonSize={'large'}
-            range={{
-              startDate: selectedDateRange.startDate,
-              endDate: selectedDateRange.endDate
-            }}
-            onSelect={setDateRange}
-          /> */}
+          /> 
 
           <div className='flex justify-end items-center'>
             {showCollapseBtn && (
@@ -983,9 +960,10 @@ const QueryBuilder = ({
               size='large'
               disabled={_.isEmpty(singleQueries)}
               loading={loading}
+              // onClick={activeQuery? () => buildPathAnalysisQuery({title: activeQuery?.title}) : () => setIsModalOpen(true)}
               onClick={() => setIsModalOpen(true)}
             >
-              {`Save and Build`}
+              {activeQuery? 'Create New Report' : 'Save and Build'}
             </Button>
           </div>
         </div>

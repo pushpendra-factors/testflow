@@ -53,8 +53,6 @@ func main() {
 	blacklistedProjectIDPropertyTypeFromDB := flag.String("blacklisted_project_ids_property_type_check_from_db", "", "Blocked project id for property type check from db.")
 	numDocRoutines := flag.Int("num_unique_doc_routines", 1, "Number of unique document go routines per project")
 	minSyncTimestamp := flag.Int64("min_sync_timestamp", 0, "Min timstamp from where to process records")
-	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
-	sixsignalV1EnabledProjectIDs := flag.String("sixsignal_v1_enabled_projectIds", "", "To enable new sixsignal flow")
 	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
 	enableDomainsGroupByProjectID := flag.String("enable_domains_group_by_project_id", "", "")
 	enableUserDomainsGroupByProjectID := flag.String("enable_user_domains_group_by_project_id", "", "Allow domains group for users")
@@ -103,8 +101,6 @@ func main() {
 		UseSourcePropertyOverwriteByProjectIDs:       *useSourcePropertyOverwriteByProjectID,
 		CaptureSourceInUsersTable:                    *captureSourceInUsersTable,
 		RestrictReusingUsersByCustomerUserId:         *restrictReusingUsersByCustomerUserId,
-		ClearbitEnabled:                              *clearbitEnabled,
-		SixSignalV1EnabledProjectIDs:                 *sixsignalV1EnabledProjectIDs,
 		IngestionTimezoneEnabledProjectIDs:           C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
 		EnableDomainsGroupByProjectID:                *enableDomainsGroupByProjectID,
 		EnableUserDomainsGroupByProjectID:            *enableUserDomainsGroupByProjectID,
