@@ -160,23 +160,15 @@ func matchFitlerValuesForCategorical(projectId int64, eventPropValue interface{}
 	propertyValue := fmt.Sprintf("%v", eventPropValue)
 
 	for i, value := range filterValues {
-		log.Info(value.Value, "--", propertyValue)
-		log.Info(fmt.Println(value.Value == propertyValue))
 		if value.Value == M.PropertyValueNone {
-			log.Info("checkpoint 6 none case check")
-
 			results[i] = handleNoneCase(propertyValue, isPresentEventPropValue, value.Operator)
-			log.Info("checkpoint 8 none case result -- ", results[i])
-
 			continue
 		}
 		if value.Operator == M.EqualsOpStr {
 			results[i] = strings.EqualFold(propertyValue, value.Value)
 		}
 		if value.Operator == M.NotEqualOpStr {
-			log.Info("checkpoint 9 - not equal op check")
 			results[i] = !strings.EqualFold(propertyValue, value.Value)
-			log.Info("checkpoint 10 not equal ops result -- ", results[i])
 		}
 		if value.Operator == M.ContainsOpStr {
 			results[i] = strings.Contains(strings.ToLower(propertyValue), strings.ToLower(value.Value))
@@ -242,7 +234,9 @@ func handleNoneCase(eventPropValue string, isPresentEventPropValue bool, operato
 		return !isPresentEventPropValue || eventPropValue == "$none" || eventPropValue == ""
 	}
 	if operator == M.NotEqualOpStr || operator == M.NotContainsOpStr {
-		log.Info("checkpoint 7 hande none case, ", isPresentEventPropValue, eventPropValue)
+		if eventPropValue == "$none" || eventPropValue == "" {
+			log.Info("$$$$checkpoint - hande none case, ", isPresentEventPropValue, eventPropValue)
+		}
 		return isPresentEventPropValue && eventPropValue != "$none" && eventPropValue != ""
 	}
 	return false
