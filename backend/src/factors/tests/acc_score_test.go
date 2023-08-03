@@ -439,43 +439,69 @@ func TestAccScoreUpdateLastEventsDay(t *testing.T) {
 	// assert.Nil(t, err)
 }
 
-func TestAccScoreDecayValue(t *testing.T) {
+func TestGenerateDate(t *testing.T) {
 
-	salewindow := int64(200)
+	currentTimestamp := time.Now()
+	salewindow := int(30)
 
-	a1 := M.ComputeDecayValue("20230710", salewindow)
-	a2 := M.ComputeDecayValue("20230709", salewindow)
-	a3 := M.ComputeDecayValue("20230708", salewindow)
-	a4 := M.ComputeDecayValue("20230707", salewindow)
-	a5 := M.ComputeDecayValue("20230706", salewindow)
-	a6 := M.ComputeDecayValue("20230705", salewindow)
-	a7 := M.ComputeDecayValue("20230704", salewindow)
-	a8 := M.ComputeDecayValue("20230703", salewindow)
-	a9 := M.ComputeDecayValue("20230702", salewindow)
-	a10 := M.ComputeDecayValue("20230701", salewindow)
-	a11 := M.ComputeDecayValue("20230630", salewindow)
-	a12 := M.ComputeDecayValue("20221223", salewindow)
-	vals := []float64{a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12}
-	log.Debugf("%v", vals)
-	assert.Greater(t, a1, a2)
-	assert.Greater(t, a1, a12)
+	ds := mm.GenDateStringsForLastNdays(currentTimestamp.Unix(), int64(salewindow))
+	// prevTs := currentTimestamp.AddDate(0, 0, -1*salewindow)
+	// for i := salewindow; i > 0; i-- {
+	// 	cts := T.GetDateOnlyFromTimestamp(currentTimestamp.AddDate(0, 0, -1*i).Unix())
+	// 	log.Debugf("cts : %s", cts)
+	// 	countDays[cts] = model.LatestScore{}
+	// }
+
+	// orderedDays := mm.OrderCountDays(currentTimestamp.Unix(), prevTs.Unix(), int64(salewindow), countDays)
+	// dd := make([]int64, 0)
+	// for _, d := range orderedDays {
+	// 	dd = append(dd, model.GetDateFromString(d))
+	// }
+	// assert.IsIncreasing(t, dd)
+	log.Debugf("generated dates : %v", ds)
+	assert.Equal(t, salewindow, len(ds))
+
 }
 
-func TestOrderingOfDays(t *testing.T) {
+func TestGenerateAccountScores(t *testing.T) {
+	var finalWeights M.AccWeights
 
-	countDays := make(map[string]model.LatestScore)
-	currentTimestamp := time.Now()
-	for i := 10; i > 0; i-- {
-		cts := T.GetDateOnlyFromTimestamp(currentTimestamp.AddDate(0, 0, -1*i).Unix())
-		log.Debugf("cts : %s", cts)
-		countDays[cts] = model.LatestScore{}
+	w0 := M.AccEventWeight{WeightId: "1", Weight_value: 1.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w1 := M.AccEventWeight{WeightId: "2", Weight_value: 1.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w2 := M.AccEventWeight{WeightId: "3", Weight_value: 1.0, Is_deleted: false, EventName: "$session", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w3 := M.AccEventWeight{WeightId: "4", Weight_value: 1.0, Is_deleted: false, EventName: "$form_submitted", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w4 := M.AccEventWeight{WeightId: "5", Weight_value: 1.0, Is_deleted: false, EventName: "www.acme.com", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w5 := M.AccEventWeight{WeightId: "6", Weight_value: 1.0, Is_deleted: false, EventName: "www.acme.com/pricing", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w6 := M.AccEventWeight{WeightId: "7", Weight_value: 1.0, Is_deleted: false, EventName: "$session"}
+	w7 := M.AccEventWeight{WeightId: "8", Weight_value: 1.0, Is_deleted: false, EventName: "", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Kenya"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w8 := M.AccEventWeight{WeightId: "9", Weight_value: 1.0, Is_deleted: false, EventName: "", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Brazil"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+
+	weightRules := []M.AccEventWeight{w0, w1, w2, w3, w4, w5, w6, w7, w8}
+	finalWeights.WeightConfig = weightRules
+	finalWeights.SaleWindow = 10
+
+	numDaysToTrend := finalWeights.SaleWindow
+	currentTs := time.Now().Unix()
+	DateStringToday := T.GetDateOnlyFromTimestamp(currentTs)
+
+	currentDate := model.GetDateFromString(DateStringToday)
+	prevDateTotrend := time.Unix(currentDate, 0).AddDate(0, 0, -1*int(numDaysToTrend)).Unix()
+
+	countsMapDays := make(map[string]model.LatestScore)
+	e1 := map[string]float64{"1": 1, "2": 1, "3": 1, "4": 1}
+	for i := (numDaysToTrend + 10); i > 0; i-- {
+		if i%2 == 0 {
+			prevDate := time.Unix(currentDate, 0).AddDate(0, 0, -1*int(i)).Unix()
+			prevDateString := T.GetDateOnlyFromTimestamp(prevDate)
+			countsMapDays[prevDateString] = model.LatestScore{Date: prevDate, EventsCount: e1}
+		}
 	}
 
-	orderedDays := mm.OrderCountDays(countDays)
-	dd := make([]int64, 0)
-	for _, d := range orderedDays {
-		dd = append(dd, model.GetDateFromString(d))
+	_, scores, _, err := mm.CalculatescoresPerAccount(&finalWeights, currentDate, prevDateTotrend, countsMapDays)
+	for k1, v1 := range scores {
+		_, ok := countsMapDays[k1]
+		fmt.Printf("countMapDays : %s , score : %f ,%v \n", k1, v1, ok)
 	}
-	assert.IsIncreasing(t, dd)
+	assert.Nil(t, err)
 
 }

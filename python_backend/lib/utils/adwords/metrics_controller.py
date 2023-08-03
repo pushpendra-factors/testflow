@@ -109,7 +109,7 @@ class MetricsController:
                 cls.etl_stats["token_failures"][message].setdefault(project_id, set())
                 cls.etl_stats["token_failures"][message][project_id].add(url)
             
-            elif EMPTY_RESPONSE_GSC in message.lower():
+            elif EMPTY_RESPONSE_GSC in message:
                 cls.etl_stats["warnings"].setdefault(message, {})
                 cls.etl_stats["warnings"][message].setdefault(project_id, {})
                 cls.etl_stats["warnings"][message][project_id].setdefault(doc_type, set())

@@ -54,13 +54,17 @@ function QueryBlock({
   }, [availableGroups, event]);
 
   const getGroupOpts = (eventOpts, availableGroups, activeGroup) => {
-    if (activeGroup === 'events') {
+    if (activeGroup === 'users') {
+      return [
+        ...eventOpts.filter(
+          (group) =>
+            !['Linkedin Company Engagements', 'G2 Engagements'].includes(
+              group?.label
+            )
+        )
+      ];
+    } else if (activeGroup === 'events') {
       return [...eventOpts];
-    } else if (activeGroup === 'users') {
-      const groupNamesList = availableGroups?.map((item) => item[0]);
-      return eventOpts?.filter(
-        (item) => !groupNamesList?.includes(item?.label)
-      );
     } else {
       const groupDisplayName = availableGroups?.find(
         (group) => group[1] === activeGroup

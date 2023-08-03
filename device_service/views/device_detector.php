@@ -23,7 +23,7 @@ function GetDevice($userAgent)
     $dd = new DeviceDetector($userAgent, $clientHints);
 
     // caching device info
-    $cache = new \Symfony\Component\Cache\Adapter\ApcuAdapter();
+    $cache = new \Symfony\Component\Cache\Adapter\ApcuAdapter('', 31622400, null, null);
     $dd->setCache(
         new \DeviceDetector\Cache\PSR6Bridge($cache)
     );

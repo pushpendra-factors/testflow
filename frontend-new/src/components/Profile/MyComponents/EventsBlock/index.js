@@ -71,10 +71,12 @@ function EventsBlock({
     let showOpts = [];
 
     if (groupAnalysis === 'users') {
-      const groupNamesList = availableGroups?.map((item) => item[0]);
       showOpts = [
-        ...eventOptions?.filter(
-          (item) => !groupNamesList?.includes(item?.label)
+        ...eventOptions.filter(
+          (group) =>
+            !['Linkedin Company Engagements', 'G2 Engagements'].includes(
+              group?.label
+            )
         )
       ];
     } else {

@@ -213,6 +213,6 @@ func ComputeDecayValue(ts string, SaleWindow int64) float64 {
 		return 0
 	}
 	// get decay value
-	decay = 1 - float64(float64(int64(dayDiff))/float64(SaleWindow))
+	decay = float64(float64(int64(dayDiff)) / float64(SaleWindow))
 	return decay
 }

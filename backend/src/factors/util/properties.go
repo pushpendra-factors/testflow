@@ -1617,7 +1617,7 @@ var STANDARD_GROUP_DISPLAY_NAMES = map[string]string{
 	GROUP_NAME_SALESFORCE_OPPORTUNITY: "Salesforce Opportunities",
 	GROUP_NAME_SIX_SIGNAL:             "6Signal Domains",
 	GROUP_NAME_LINKEDIN_COMPANY:       "Linkedin Company Engagements",
-	GROUP_NAME_G2:                     "G2 Enagagements",
+	GROUP_NAME_G2:                     "G2 Engagements",
 }
 
 var ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES = map[string]string{
