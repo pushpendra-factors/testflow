@@ -704,15 +704,15 @@ func Track(projectId int64, request *TrackPayload,
 	pageURLProp := U.GetPropertyValueAsString((*eventProperties)[U.EP_PAGE_URL])
 
 	//Fetching feature flags to check of feature is enabled on the plan.
-	factorsDeanonymisationEnabled, _, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_FACTORS_DEANONYMISATION)
+	factorsDeanonymisationEnabled, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_FACTORS_DEANONYMISATION)
 	if err != nil {
 		logCtx.Error("Failed to fetch factors deanonymisation feature flag")
 	}
-	sixsignalEnabled, _, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_SIX_SIGNAL)
+	sixsignalEnabled, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_SIX_SIGNAL)
 	if err != nil {
 		logCtx.Error("Failed to fetch client sixsignal feature flag")
 	}
-	clearbitEnabled, _, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_CLEARBIT)
+	clearbitEnabled, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_CLEARBIT)
 	if err != nil {
 		logCtx.Warn("Failed to fetch clearbit feature flag")
 	}

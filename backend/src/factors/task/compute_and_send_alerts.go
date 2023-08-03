@@ -55,7 +55,7 @@ func ComputeAndSendAlerts(projectID int64, configs map[string]interface{}) (map[
 	var err error
 	status := make(map[string]interface{})
 	if C.IsEnabledFeatureGatesV2() {
-		available, _, err = store.GetStore().GetFeatureStatusForProjectV2(projectID, model.FEATURE_KPI_ALERTS)
+		available, err = store.GetStore().GetFeatureStatusForProjectV2(projectID, model.FEATURE_KPI_ALERTS)
 		if err != nil {
 			log.WithError(err).Error("Failed to get feature status in compute and send alerts  job for project ID ", projectID)
 			status[fmt.Sprintf("Failure-Feature-Status %v", projectID)] = true

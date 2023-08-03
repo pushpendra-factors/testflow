@@ -275,7 +275,7 @@ func main() {
 	for _, projectId := range projectIdsArray {
 		available := true
 		if *enableFeatureGatesV2 {
-			available, _, err = store.GetStore().GetFeatureStatusForProjectV2(projectId, M.FEATURE_ACCOUNT_SCORING)
+			available, err = store.GetStore().GetFeatureStatusForProjectV2(projectId, M.FEATURE_ACCOUNT_SCORING)
 			if err != nil {
 				log.WithError(err).Error("Failed to get feature status in account scoring job for project ID ", projectId)
 				continue

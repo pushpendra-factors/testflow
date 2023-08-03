@@ -307,7 +307,7 @@ func main() {
 	for _, projectId := range projectIdsArray {
 		available := true
 		if *enableFeatureGatesV2 {
-			available, _, err = store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_EXPLAIN)
+			available, err = store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_EXPLAIN)
 			if err != nil {
 				log.WithError(err).Error("Failed to get feature status in explain v2  job for project ID ", projectId)
 				finalStatus[fmt.Sprintf("Failure-Feature-Status %v", projectId)] = true
