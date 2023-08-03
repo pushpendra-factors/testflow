@@ -148,9 +148,10 @@ function AccountProfiles({
   );
 
   useEffect(() => {
-    fetchProjectSettings(activeProject.id);
+    fetchProjectSettings(activeProject?.id);
     fetchGroups(activeProject?.id, true);
-  }, []);
+    getSavedSegments(activeProject?.id);
+  }, [activeProject?.id]);
 
   const groupsList = useMemo(() => {
     return getGroupList(groupOpts);
@@ -230,11 +231,6 @@ function AccountProfiles({
     };
     setTLConfig(timelinesConfig);
   }, [currentProjectSettings?.timelines_config]);
-
-  useEffect(() => {
-    fetchProjectSettings(activeProject.id);
-    getSavedSegments(activeProject.id);
-  }, [activeProject.id]);
 
   useEffect(() => {
     Object.keys(groupOpts || {}).forEach((group) =>

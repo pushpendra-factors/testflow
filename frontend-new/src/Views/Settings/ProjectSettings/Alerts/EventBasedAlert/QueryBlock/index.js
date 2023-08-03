@@ -58,12 +58,7 @@ function QueryBlock({
   useEffect(() => {
     let showOpts = [];
     if (groupAnalysis === 'users') {
-      const groupNamesList = availableGroups?.map((item) => item[0]);
-      showOpts = [
-        ...eventOptions?.filter(
-          (item) => !groupNamesList?.includes(item?.label)
-        )
-      ];
+      showOpts = [...eventOptions];
     } else {
       const groupOpts = eventOptions?.filter((item) => {
         const [groupDisplayName] =
