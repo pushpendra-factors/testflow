@@ -13,10 +13,6 @@ import (
 	"factors/model/store/memsql"
 	U "factors/util"
 	"fmt"
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
-	"github.com/rs/xid"
-	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"math"
 	"net/http"
@@ -25,6 +21,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+	"github.com/rs/xid"
+	log "github.com/sirupsen/logrus"
 )
 
 // scope constants.

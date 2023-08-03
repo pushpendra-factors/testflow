@@ -460,7 +460,8 @@ func clearbitAnalysisTestDBClearbit(t *testing.T) {
 	if errCode != http.StatusFound {
 		log.Info("Get clear_bit key failed.")
 	}
-	go clear_bit.ExecuteClearBitEnrich(clearbitKey, &propertiesMap1, clientIP, executeClearBitStatusChannel) // Our gateway IP.
+	logCtx := log.WithField("project_id", projectId)
+	go clear_bit.ExecuteClearBitEnrich(clearbitKey, &propertiesMap1, clientIP, executeClearBitStatusChannel, logCtx) // Our gateway IP.
 	select {
 	case response, ok := <-executeClearBitStatusChannel:
 		if ok {

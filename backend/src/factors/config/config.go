@@ -321,6 +321,7 @@ type Configuration struct {
 	DeviceServiceURL                                   string
 	EnableDeviceServiceByProjectID                     string
 	DisableOpportunityContactRolesByProjectID          string
+	ExcludeBotIPV4AddressByRange                       string
 }
 
 type Services struct {
@@ -2958,4 +2959,23 @@ func DisableOpportunityContactRolesEnrichmentByProjectID(projectID int64) bool {
 	}
 
 	return allowedProjectIDs[projectID]
+}
+
+// IsExcludeBotIPV4AddressByRange exclude ipv4 address by CIDR range
+func IsExcludeBotIPV4AddressByRange(ip string) bool {
+	if GetConfig().ExcludeBotIPV4AddressByRange == "" {
+		return false
+	}
+
+	ipRanges := strings.TrimSpace(GetConfig().ExcludeBotIPV4AddressByRange)
+
+	cidrRanges := GetTokensFromStringListAsString(ipRanges)
+
+	for i := range cidrRanges {
+		if U.IsIPV4AddressInCIDRRange(cidrRanges[i], ip) {
+			return true
+		}
+	}
+
+	return false
 }

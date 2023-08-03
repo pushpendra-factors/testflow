@@ -116,6 +116,7 @@ type UpdateEventPropertiesPayload struct {
 	Timestamp     int64           `json:"timestamp"`
 	UserAgent     string          `json:"user_agent"`
 	RequestSource int             `json:"request_source"`
+	ClientIP      string          `json:"client_ip"`
 }
 
 type UpdateEventPropertiesResponse struct {
@@ -1068,7 +1069,7 @@ func CheckingSixSignalQuotaLimit(projectId int64) (bool, error) {
 	}
 
 	if count >= limit {
-		logCtx.Error("SixSignal Limit Exhausted")
+		logCtx.Warn("SixSignal Limit Exhausted")
 		return false, errors.New("SixSignal Limit Exhausted")
 	}
 	return true, nil
@@ -1085,7 +1086,7 @@ func FillClearbitUserProperties(projectId int64, clearbitKey string,
 		// logCtx.Info("clearbit cache hit")
 	} else {
 		// logCtx.Info("clearbit cache miss")
-		go clear_bit.ExecuteClearBitEnrich(clearbitKey, userProperties, clientIP, executeClearBitStatusChannel)
+		go clear_bit.ExecuteClearBitEnrich(clearbitKey, userProperties, clientIP, executeClearBitStatusChannel, logCtx)
 
 		select {
 		case ok := <-executeClearBitStatusChannel:
@@ -1689,7 +1690,17 @@ func enqueueRequest(token, reqType string, reqPayload interface{}) error {
 	return nil
 }
 
-func excludeBotRequestBySetting(token, userAgent string, eventName string) bool {
+func excludeBotRequestBySetting(token, userAgent string, eventName string, clientIP string) (excluded bool) {
+	defer func() {
+		if excluded == true {
+			metrics.Increment(metrics.IncrSDKRquestQueueExcludedBot)
+		}
+	}()
+
+	if clientIP != "" && C.IsExcludeBotIPV4AddressByRange(clientIP) {
+		return true
+	}
+
 	settings, errCode := store.GetStore().GetProjectSettingByTokenWithCacheAndDefault(token)
 	if errCode != http.StatusFound {
 		log.WithField("err_code", errCode).
@@ -1725,7 +1736,7 @@ func TrackByToken(token string, reqPayload *TrackPayload) (int, *TrackResponse) 
 func TrackWithQueue(token string, reqPayload *TrackPayload,
 	queueAllowedTokens []string) (int, *TrackResponse) {
 
-	if excludeBotRequestBySetting(token, reqPayload.UserAgent, reqPayload.Name) {
+	if excludeBotRequestBySetting(token, reqPayload.UserAgent, reqPayload.Name, reqPayload.ClientIP) {
 		return http.StatusNotModified,
 			&TrackResponse{Message: "Tracking skipped. Bot request."}
 	}
@@ -1964,7 +1975,7 @@ func UpdateEventPropertiesByToken(token string,
 func UpdateEventPropertiesWithQueue(token string, reqPayload *UpdateEventPropertiesPayload,
 	queueAllowedTokens []string) (int, *UpdateEventPropertiesResponse) {
 
-	if excludeBotRequestBySetting(token, reqPayload.UserAgent, "") {
+	if excludeBotRequestBySetting(token, reqPayload.UserAgent, "", reqPayload.ClientIP) {
 		return http.StatusNotModified, &UpdateEventPropertiesResponse{
 			Message: "Update event properties skipped. Bot request."}
 	}
@@ -2147,6 +2158,7 @@ type AMPUpdateEventPropertiesPayload struct {
 	Timestamp     int64  `json:"timestamp"`
 	UserAgent     string `json:"user_agent"`
 	RequestSource int    `json:"request_source"`
+	ClientIP      string `json:"client_ip"`
 }
 type AMPTrackResponse struct {
 	Message string `json:"message"`
@@ -2389,7 +2401,7 @@ func GetCacheAMPSDKEventIDByPageURL(projectId int64, userId string, pageURL stri
 func AMPTrackWithQueue(token string, reqPayload *AMPTrackPayload,
 	queueAllowedTokens []string) (int, *Response) {
 
-	if excludeBotRequestBySetting(token, reqPayload.UserAgent, "") {
+	if excludeBotRequestBySetting(token, reqPayload.UserAgent, "", reqPayload.ClientIP) {
 		return http.StatusNotModified,
 			&Response{Message: "Track skipped. Bot request."}
 	}
@@ -2409,7 +2421,7 @@ func AMPTrackWithQueue(token string, reqPayload *AMPTrackPayload,
 func AMPUpdateEventPropertiesWithQueue(token string, reqPayload *AMPUpdateEventPropertiesPayload,
 	queueAllowedTokens []string) (int, *Response) {
 
-	if excludeBotRequestBySetting(token, reqPayload.UserAgent, "") {
+	if excludeBotRequestBySetting(token, reqPayload.UserAgent, "", reqPayload.ClientIP) {
 		return http.StatusNotModified,
 			&Response{Message: "Update event properties skipped. Bot request."}
 	}

@@ -281,6 +281,11 @@ func (store *MemSQL) RunKPIGroupQuery(projectID int64, query *model.AttributionQ
 			}
 			return errors.New("failed to get KPI result for attribution query"), nil, nil, nil
 		}
+		if resultGroup == nil || len(resultGroup) == 0 || len(resultGroup[0].Headers) == 0 {
+			logCtx.WithFields(log.Fields{"resultGroup": resultGroup,
+				"duplicatedRequest": duplicatedRequest}).Error("empty result for KPI query")
+			return errors.New("empty result for KPI query"), nil, nil, nil
+		}
 		for _, res := range resultGroup {
 			// Skip the datetime header and the other result is of format. ex. "headers": ["$hubspot_deal_hs_object_id", "Revenue", "Pipeline", ...],
 			if res.Headers[0] == "datetime" {
@@ -323,6 +328,11 @@ func (store *MemSQL) RunKPIGroupQueryV1(projectID int64, query *model.Attributio
 				return errors.New("failed to get KPI result for attribution query - StatusPartialContent"), nil, nil, nil
 			}
 			return errors.New("failed to get KPI result for attribution query"), nil, nil, nil
+		}
+		if resultGroup == nil || len(resultGroup) == 0 || len(resultGroup[0].Headers) == 0 {
+			logCtx.WithFields(log.Fields{"resultGroup": resultGroup,
+				"duplicatedRequest": duplicatedRequest}).Error("empty result for KPI query")
+			return errors.New("empty result for KPI query"), nil, nil, nil
 		}
 		for _, res := range resultGroup {
 			// Skip the datetime header and the other result is of format. ex. "headers": ["$hubspot_deal_hs_object_id", "Revenue", "Pipeline", ...],

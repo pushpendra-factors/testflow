@@ -37,7 +37,7 @@ class BaseJob:
             self.extract_task()
         else:
             self.transform_and_load_task(False)
-        metrics_controller.update_job_stats(self._project_id, self._url_prefix, self._doc_type, SUCCESS_MESSAGE)
+        metrics_controller.update_gsc_job_stats(self._project_id, self._url_prefix, self._doc_type, SUCCESS_MESSAGE)
 
     def extract_and_load_task(self):
         self.extract_task()

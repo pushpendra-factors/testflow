@@ -99,7 +99,7 @@ func (store *MemSQL) GetDisplayablePlanDetails(ppMap model.ProjectPlanMapping, p
 	var addOns model.OverWrite
 	if ppMap.OverWrite != nil {
 		err := U.DecodePostgresJsonbToStructType(ppMap.OverWrite, &addOns)
-		if err != nil {
+		if err != nil && err.Error() != "Empty jsonb object" {
 			errMsg := "failed to decode postgres jsonb object"
 			logCtx.WithError(err).Error(errMsg)
 			return nil, http.StatusBadRequest, errMsg, err

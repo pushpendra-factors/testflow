@@ -86,6 +86,9 @@ func main() {
 	blockedIPProjectTokens := flag.String("blocked_ip_project_tokens",
 		"", "List of tokens to enable feature of IP based blocking for all sdk request types.")
 
+	excludeBotIPV4AddressByRange := flag.String("exclude_bot_ip_by_range",
+		"", "CIDR ranges for excluding bot traffic.")
+
 	flag.Parse()
 
 	appName := "sdk_server"
@@ -130,6 +133,7 @@ func main() {
 		AllowSupportForUserPropertiesInIdentifyCall: *allowSupportForUserPropertiesInIdentifyCall,
 		EnableDebuggingForIP:                        *enableDebuggingForIP,
 		BlockedIPProjectTokens:                      *blockedIPProjectTokens,
+		ExcludeBotIPV4AddressByRange:                *excludeBotIPV4AddressByRange,
 	}
 	C.InitConf(config)
 

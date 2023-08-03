@@ -5,14 +5,18 @@ import (
 	"fmt"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/clearbit/clearbit-go/clearbit"
 )
 
-func ExecuteClearBitEnrich(clearbitKey string, properties *util.PropertiesMap, clientIP string, statusChannel chan int) {
+func ExecuteClearBitEnrich(clearbitKey string, properties *util.PropertiesMap, clientIP string, statusChannel chan int, logCtx *log.Entry) {
 	defer close(statusChannel)
+
 	err := EnrichmentUsingclearBit(clearbitKey, properties, clientIP)
 
 	if err != nil {
+		logCtx.WithFields(log.Fields{"error": err, "apiKey": clearbitKey}).Warn("clearbit enrichment debug")
 		statusChannel <- 0
 	}
 	statusChannel <- 1

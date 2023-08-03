@@ -7,6 +7,7 @@ import (
 	"factors/util"
 	U "factors/util"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -68,8 +69,12 @@ func (store *MemSQL) MonitorSlowQueries() ([]interface{}, []interface{}, error) 
 
 		// project name field intialized
 		projectID := store.GetProjectIdFromInfo(slowQuery.Info)
-		project, _ := store.GetProject(int64(projectID))
-		slowQuery.ProjectName = project.Name
+		project, status := store.GetProject(int64(projectID))
+
+		if status == http.StatusFound {
+			slowQuery.ProjectName = project.Name
+		}
+
 		slowQuery.Info = slowQuery.Info[:U.MinInt(len(slowQuery.Info), 500)]
 
 		if slowQuery.Info != "" {
