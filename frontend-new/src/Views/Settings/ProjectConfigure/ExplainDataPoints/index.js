@@ -29,7 +29,9 @@ const ConfigureDP = (props) => {
     fetchFactorsTrackedEvents,
     fetchFactorsTrackedUserProperties,
     delEventTracked,
-    delUserPropertyTracked
+    delUserPropertyTracked,
+    userPropNames,
+    eventNames
   } = props;
   const [activeEventsTracked, setActiveEventsTracked] = useState(0);
   const [InQueueEventsEvents, setInQueueEventsEvents] = useState(0);
@@ -259,7 +261,7 @@ const ConfigureDP = (props) => {
               </Col>
             )}
             <Col span={24}>
-              <Row justify={'center'}>
+              <Row justify={'center'} className='min-h-screen'>
                 <Col span={12}>
                   <div className={'pr-4'}>
                     <Row gutter={[24, 12]} justify={'center'}>
@@ -408,7 +410,7 @@ const ConfigureDP = (props) => {
                                       weight={'thin'}
                                       extraClass={'m-0 ml-2'}
                                     >
-                                      {event.name}
+                                      {eventNames[event.name] ? eventNames[event.name] : event.name}
                                     </Text>
                                   </div>
                                   <Button
@@ -581,7 +583,7 @@ const ConfigureDP = (props) => {
                                       weight={'thin'}
                                       extraClass={'m-0 ml-2'}
                                     >
-                                      {event.user_property_name}
+                                      {userPropNames[event.user_property_name] ? userPropNames[event.user_property_name] : event.user_property_name}
                                     </Text>
                                   </div>
                                   <Button
@@ -615,6 +617,8 @@ const mapStateToProps = (state) => {
     tracked_events: state.factors.tracked_events,
     tracked_user_property: state.factors.tracked_user_property,
     userProperties: state.coreQuery.userProperties,
+    userPropNames: state.coreQuery.userPropNames,
+    eventNames: state.coreQuery.eventNames,
     events: state.coreQuery.eventOptions
   };
 };

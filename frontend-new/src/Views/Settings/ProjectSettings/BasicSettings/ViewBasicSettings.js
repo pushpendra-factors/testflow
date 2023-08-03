@@ -127,7 +127,7 @@ function ViewBasicSettings({
             )}
           </Col>
         </Row>
-        <Row className={'mt-6'}>
+        {/* <Row className={'mt-6'}>
           <Col span={12}>
             <Text type={'title'} level={7} extraClass={'m-0'}>
               Date Format
@@ -160,7 +160,7 @@ function ViewBasicSettings({
               </Text>
             )}
           </Col>
-        </Row>
+        </Row> */}
         <Row className={'mt-6 mb-10'}>
           <Col span={12}>
             <Text type={'title'} level={7} extraClass={'m-0'}>

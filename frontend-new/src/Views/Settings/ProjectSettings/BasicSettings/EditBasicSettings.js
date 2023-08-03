@@ -238,7 +238,7 @@ function EditBasicSettings({
             </Col>
           </Row>
 
-          <Row className={'mt-6'}>
+          {/* <Row className={'mt-6'}>
             <Col span={24}>
               <Text type={'title'} level={7} extraClass={'m-0'}>
                 Date Format
@@ -279,7 +279,7 @@ function EditBasicSettings({
                 </Select>
               </Form.Item>
             </Col>
-          </Row>
+          </Row> */}
 
           {agent?.email == 'solutions@factors.ai' ||
           agent?.email == 'baliga@factors.ai' ? (
