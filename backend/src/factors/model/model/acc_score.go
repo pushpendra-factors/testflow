@@ -105,6 +105,7 @@ type PerUserScoreOnDay struct {
 	Id        string                 `json:"id"`
 	Score     float32                `json:"score"`
 	Timestamp string                 `json:"timestamp"`
+	Property  map[string][]string    `json:"prp"`
 	Debug     map[string]interface{} `json:"debug"`
 }
 
@@ -120,11 +121,12 @@ type GroupEventsCountScore struct {
 }
 
 type EventsCountScore struct {
-	UserId     string           `json:"uid"`
-	ProjectId  int64            `json:"pid"`
-	EventScore map[string]int64 `json:"eventscore"`
-	DateStamp  string           `json:"ds"`
-	IsGroup    bool             `json:"ig"`
+	UserId     string                      `json:"uid"`
+	ProjectId  int64                       `json:"pid"`
+	EventScore map[string]int64            `json:"eventscore"`
+	Property   map[string]map[string]int64 `json:"prp"`
+	DateStamp  string                      `json:"ds"`
+	IsGroup    bool                        `json:"ig"`
 }
 type PerUserScore struct {
 	DayScore map[string]PerDayScore `json:"dayscore"`
@@ -135,8 +137,18 @@ type PerDayScore struct {
 }
 
 type LatestScore struct {
-	Date        int64              `json:"date"`
-	EventsCount map[string]float64 `json:"events"`
+	Date        int64                       `json:"date"`
+	EventsCount map[string]float64          `json:"events"`
+	Properties  map[string]map[string]int64 `json:"prop"`
+}
+
+type DbUpdateAccScoring struct {
+	Userid         string      `json:"uid"`
+	TS             int64       `json:"ts"`
+	Date           string      `json:"date"`
+	CurrEventCount LatestScore `json:"ev"`
+	Lastevent      LatestScore `json:"lev"`
+	IsGroup        bool        `json:"ig"`
 }
 
 func GetDateFromString(ts string) int64 {

@@ -3,10 +3,9 @@ package v1
 import (
 	"encoding/json"
 	mid "factors/middleware"
-	"factors/model/model"
 	M "factors/model/model"
 	"factors/model/store"
-	T "factors/task"
+	T "factors/task/account_scoring"
 	U "factors/util"
 	"net/http"
 	"strconv"
@@ -88,7 +87,7 @@ func GetAccountScores(c *gin.Context) (interface{}, int, string, string, bool) {
 		"date":      dateString,
 	})
 
-	var accountScores model.AccScoreResult
+	var accountScores M.AccScoreResult
 	accountScores.ProjectId = projectId
 	groupId, _ := strconv.Atoi(groupIdString)
 	debug, _ := strconv.ParseBool(debugFlag)
@@ -101,7 +100,7 @@ func GetAccountScores(c *gin.Context) (interface{}, int, string, string, bool) {
 		return nil, http.StatusInternalServerError, "", "", true
 	}
 
-	accountScores.AccResult = make([]model.PerAccountScore, len(perAccScore))
+	accountScores.AccResult = make([]M.PerAccountScore, len(perAccScore))
 	accountScores.AccResult = perAccScore
 	if debug {
 		accountScores.Debug = make(map[string]interface{})
@@ -127,7 +126,7 @@ func GetPerAccountScore(c *gin.Context) (interface{}, int, string, string, bool)
 		"date":      dateString,
 	})
 
-	var accountScores model.AccScoreResult
+	var accountScores M.AccScoreResult
 	var numDaysToTrend int
 	var err error
 	accountScores.ProjectId = projectId
@@ -141,7 +140,7 @@ func GetPerAccountScore(c *gin.Context) (interface{}, int, string, string, bool)
 	}
 
 	if numDaysToTrend == 0 {
-		numDaysToTrend = model.NUM_TREND_DAYS
+		numDaysToTrend = M.NUM_TREND_DAYS
 	}
 
 	logCtx.Info("getting account scores")
@@ -152,7 +151,7 @@ func GetPerAccountScore(c *gin.Context) (interface{}, int, string, string, bool)
 		return nil, http.StatusInternalServerError, "", "", true
 	}
 
-	accountScores.AccResult = make([]model.PerAccountScore, 1)
+	accountScores.AccResult = make([]M.PerAccountScore, 1)
 	accountScores.AccResult[0] = perAccScore
 	if debug {
 		accountScores.Debug = make(map[string]interface{})
@@ -166,7 +165,7 @@ func GetUserScore(c *gin.Context) (interface{}, int, string, string, bool) {
 	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	reqID, _ := getReqIDAndProjectID(c)
 
-	var UsersScores model.AccUserScoreResult
+	var UsersScores M.AccUserScoreResult
 	var dateString string
 	var userId string
 
@@ -198,7 +197,7 @@ func GetUserScore(c *gin.Context) (interface{}, int, string, string, bool) {
 		logCtx.WithError(err).Error(errMsg)
 		return nil, http.StatusInternalServerError, "", "", true
 	}
-	UsersScores.AccResult = make([]model.PerUserScoreOnDay, 0)
+	UsersScores.AccResult = make([]M.PerUserScoreOnDay, 0)
 	UsersScores.AccResult = append(UsersScores.AccResult, perAccScore)
 	// if project score exist
 	return UsersScores, http.StatusOK, "", "", false
@@ -222,13 +221,13 @@ func GetAllUsersScores(c *gin.Context) (interface{}, int, string, string, bool) 
 		return nil, http.StatusBadRequest, "", "", true
 	}
 
-	var accountScores model.UserScoreResult
+	var accountScores M.UserScoreResult
 	accountScores.ProjectId = projectId
 	debug, _ := strconv.ParseBool(debug_flag)
 	var perAccScore []M.AllUsersScore
 	var err error
 	var weights *M.AccWeights
-	if date == model.LAST_EVENT {
+	if date == M.LAST_EVENT {
 		logCtx.Info("getting all user scores latest scores")
 		perAccScore, weights, err = store.GetStore().GetAllUserScoreLatest(projectId, debug)
 		if err != nil {
@@ -246,7 +245,7 @@ func GetAllUsersScores(c *gin.Context) (interface{}, int, string, string, bool) 
 		}
 	}
 
-	accountScores.AccResult = make([]model.AllUsersScore, len(perAccScore))
+	accountScores.AccResult = make([]M.AllUsersScore, len(perAccScore))
 	accountScores.AccResult = perAccScore
 	if debug {
 		accountScores.Debug = make(map[string]interface{})

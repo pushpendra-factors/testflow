@@ -2,12 +2,10 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Table,
   Button,
-  Modal,
   Spin,
   Popover,
   Tabs,
   notification,
-  // Divider,
   Input
 } from 'antd';
 import { connect, useDispatch, useSelector } from 'react-redux';
@@ -19,11 +17,9 @@ import { getGroupProperties } from '../../../reducers/coreQuery/middleware';
 import FaSelect from '../../FaSelect';
 import {
   DEFAULT_TIMELINE_CONFIG,
-  // displayFilterOpts,
   EngagementTag,
-  // formatEventsFromSegment,
   formatFiltersForPayload,
-  // formatPayloadForFilters,
+  formatReqPayload,
   getHost,
   getPropType,
   propValueFormat,
@@ -43,9 +39,7 @@ import {
 import SearchCheckList from 'Components/SearchCheckList';
 import { formatUserPropertiesToCheckList } from 'Reducers/timelines/utils';
 import { PropTextFormat } from 'Utils/dataFormatter';
-// import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
 import SegmentModal from '../UserProfiles/SegmentModal';
-// import EventsBlock from '../MyComponents/EventsBlock';
 import { useHistory, useLocation } from 'react-router-dom';
 import {
   fetchGroupPropertyValues,
@@ -53,7 +47,6 @@ import {
 } from 'Reducers/coreQuery/services';
 import NoDataWithMessage from '../MyComponents/NoDataWithMessage';
 import ProfilesWrapper from '../ProfilesWrapper';
-// import { generateSegmentsList, getGroupList } from './accountProfiles.helpers';
 import { getGroupList } from './accountProfiles.helpers';
 import {
   selectAccountPayload,
@@ -70,7 +63,6 @@ import useFeatureLock from 'hooks/useFeatureLock';
 import { FEATURES } from 'Constants/plans.constants';
 import UpgradeModal from '../UpgradeModal';
 import RangeNudge from 'Components/GenericComponents/RangeNudge';
-import { PathUrls } from '../../../routes/pathUrls';
 import _ from 'lodash';
 import { showUpgradeNudge } from 'Views/Settings/ProjectSettings/Pricing/utils';
 
@@ -123,9 +115,6 @@ function AccountProfiles({
   const [searchBarOpen, setSearchBarOpen] = useState(false);
   const [searchDDOpen, setSearchDDOpen] = useState(false);
   const [listSearchItems, setListSearchItems] = useState([]);
-  // const [isModalVisible, setIsModalVisible] = useState(false);
-  // const [isGroupDDVisible, setGroupDDVisible] = useState(false);
-  // const [isSegmentDDVisible, setSegmentDDVisible] = useState(false);
   const [listProperties, setListProperties] = useState([]);
   const [showPopOver, setShowPopOver] = useState(false);
   const [checkListAccountProps, setCheckListAccountProps] = useState([]);
@@ -244,7 +233,8 @@ function AccountProfiles({
       const formatPayload = { ...payload };
       formatPayload.filters =
         formatFiltersForPayload(payload?.filters, 'accounts') || [];
-      getProfileAccounts(activeProject.id, formatPayload, activeAgent);
+      const reqPayload = formatReqPayload(formatPayload, activeSegment);
+      getProfileAccounts(activeProject.id, reqPayload, activeAgent);
     }
     if (shouldCache) {
       setCurrentPage(location.state.currentPage);
@@ -420,25 +410,6 @@ function AccountProfiles({
     }));
   };
 
-  // const showModal = () => {
-  //   setIsModalVisible(true);
-  // };
-
-  // const handleCancel = () => {
-  //   setIsModalVisible(false);
-  // };
-
-  // const onChange = (val) => {
-  //   if (val !== accountPayload.source) {
-  //     const opts = { ...accountPayload };
-  //     opts.source = val;
-  //     opts.filters = [];
-  //     opts.segment_id = '';
-  //     setAccountPayload(opts);
-  //   }
-  //   setGroupDDVisible(false);
-  // };
-
   const setFilters = (filters) => {
     const opts = { ...accountPayload };
     opts.filters = filters;
@@ -455,17 +426,6 @@ function AccountProfiles({
     getAccounts(opts);
   };
 
-  // const selectGroup = () => (
-  //   <div className='absolute top-0'>
-  //     {isGroupDDVisible ? (
-  //       <FaSelect
-  //         options={groupsList}
-  //         onClickOutside={() => setGroupDDVisible(false)}
-  //         optionClick={(val) => onChange(val[1])}
-  //       />
-  //     ) : null}
-  //   </div>
-  // );
 
   const handlePropChange = (option) => {
     if (
@@ -560,14 +520,6 @@ function AccountProfiles({
     </Tabs>
   );
 
-  // const onOptionClick = (_, data) => {
-  //   const opts = { ...accountPayload };
-  //   opts.segment_id = data[1];
-  //   opts.source = data[2].type;
-  //   setActiveSegment(data[2], opts);
-  //   setSegmentDDVisible(false);
-  // };
-
   const handleSaveSegment = async (segmentPayload) => {
     try {
       const response = await createNewSegment(activeProject.id, segmentPayload);
@@ -590,176 +542,6 @@ function AccountProfiles({
       });
     }
   };
-
-  // const clearSegment = () => {
-  //   const opts = { ...accountPayload };
-  //   opts.segment_id = '';
-  //   setActiveSegment({}, opts);
-  //   setSegmentDDVisible(false);
-  // };
-
-  // const renderAdditionalActionsInSegment = () => (
-  //   <div className='mb-2'>
-  //     <Divider className='divider-margin' />
-  //     <div className='flex items-center flex-col'>
-  //       {accountPayload.segment_id && (
-  //         <Button
-  //           size='large'
-  //           type='text'
-  //           className='w-full mb-2'
-  //           onClick={clearSegment}
-  //           icon={<SVG name='remove' />}
-  //         >
-  //           Clear Segment
-  //         </Button>
-  //       )}
-  //       <Button
-  //         type='link'
-  //         size='large'
-  //         className='w-full'
-  //         icon={<SVG name='plus' color='purple' />}
-  //         onClick={() => setShowSegmentModal(true)}
-  //       >
-  //         Add New Segment
-  //       </Button>
-  //     </div>
-  //   </div>
-  // );
-
-  // const selectSegment = () => (
-  //   <div className='absolute top-8'>
-  //     {isSegmentDDVisible ? (
-  //       <GroupSelect2
-  //         groupedProperties={generateSegmentsList({ accountPayload, segments })}
-  //         placeholder='Search Segments'
-  //         optionClick={onOptionClick}
-  //         onClickOutside={() => setSegmentDDVisible(false)}
-  //         additionalActions={renderAdditionalActionsInSegment()}
-  //       />
-  //     ) : null}
-  //   </div>
-  // );
-
-  // const eventsList = (listEvents) => {
-  //   const blockList = listEvents.map((event, index) => (
-  //     <div key={index} className='m-0 mr-2 mb-2'>
-  //       <EventsBlock
-  //         availableGroups={groupsList}
-  //         index={index + 1}
-  //         event={event}
-  //         queries={listEvents}
-  //         viewMode
-  //       />
-  //     </div>
-  //   ));
-
-  //   if (!blockList.length) {
-  //     return null;
-  //   }
-  //   return (
-  //     <div className='segment-query_block'>
-  //       <h2
-  //         className={`title ${
-  //           activeSegment?.query?.gup?.length ? '' : 'width-unset'
-  //         }`}
-  //       >
-  //         Performed Events
-  //       </h2>
-  //       <div className='content'>{blockList}</div>
-  //     </div>
-  //   );
-  // };
-
-  // const filtersList = (filters) => {
-  //   return (
-  //     <div className='segment-query_block'>
-  //       <h2
-  //         className={`title ${
-  //           activeSegment?.query?.ewp?.length ? '' : 'width-unset'
-  //         }`}
-  //       >
-  //         Properties
-  //       </h2>
-  //       <div className='content'>
-  //         <PropertyFilter
-  //           filtersLimit={10}
-  //           profileType='account'
-  //           source={accountPayload.source}
-  //           filters={filters}
-  //           availableGroups={Object.keys(groupOpts || {})}
-  //           viewMode
-  //         />
-  //       </div>
-  //     </div>
-  //   );
-  // };
-
-  // const segmentInfo = () => {
-  //   if (!activeSegment.query) {
-  //     return null;
-  //   }
-
-  //   return (
-  //     <div className='p-3'>
-  //       {activeSegment.query.ewp && activeSegment.query.ewp.length
-  //         ? eventsList(formatEventsFromSegment(activeSegment.query.ewp))
-  //         : null}
-  //       {activeSegment.query.gup && activeSegment.query.gup.length
-  //         ? filtersList(formatPayloadForFilters(activeSegment.query.gup))
-  //         : null}
-  //       {activeSegment.query.ewp && activeSegment.query.ewp.length ? (
-  //         <h2 className='whitespace-no-wrap italic line-height-8 m-0 mr-2'>
-  //           {`*Shows ${
-  //             displayFilterOpts[activeSegment.type]
-  //           } from last 28 days.`}
-  //         </h2>
-  //       ) : null}
-  //     </div>
-  //   );
-  // };
-
-  // const renderGroupSelectDD = () => (
-  //   <div className='relative mr-2'>
-  //     <Button
-  //       className='dropdown-btn'
-  //       type='text'
-  //       icon={<SVG name='user_friends' size={16} />}
-  //       onClick={() => setGroupDDVisible(!isGroupDDVisible)}
-  //     >
-  //       {
-  //         groupsList?.find(
-  //           ([_, groupName]) => groupName === accountPayload?.source
-  //         )?.[0]
-  //       }
-  //       <SVG name='caretDown' size={16} />
-  //     </Button>
-  //     {selectGroup()}
-  //   </div>
-  // );
-
-  // const renderSegmentSelect = () => (
-  //   <div className='relative mr-2'>
-  //     <Popover
-  //       overlayClassName='fa-custom-popover'
-  //       placement='bottomLeft'
-  //       trigger={activeSegment.query ? 'hover' : ''}
-  //       content={segmentInfo}
-  //       mouseEnterDelay={0.5}
-  //     >
-  //       <Button
-  //         className='dropdown-btn'
-  //         type='text'
-  //         onClick={() => setSegmentDDVisible(!isSegmentDDVisible)}
-  //       >
-  //         {Object.keys(activeSegment).length
-  //           ? activeSegment.name
-  //           : 'Select Segment'}
-  //         <SVG name='caretDown' size={16} />
-  //       </Button>
-  //     </Popover>
-  //     {selectSegment()}
-  //   </div>
-  // );
 
   const renderPropertyFilter = () => (
     <div key={0} className='max-w-3xl'>
@@ -958,16 +740,6 @@ function AccountProfiles({
     </Popover>
   );
 
-  // const renderConfiguration = () => (
-  //   <Button
-  //     size='large'
-  //     icon={<SVG name='configure' size={20} />}
-  //     onClick={() => history.push(PathUrls.ConfigureEngagements)}
-  //   >
-  //     Engagements
-  //   </Button>
-  // );
-
   const handleTableChange = (pageParams) => {
     setCurrentPage(pageParams.current);
   };
@@ -975,15 +747,12 @@ function AccountProfiles({
   const renderActions = () => (
     <div className='flex justify-between items-start my-4'>
       <div className='flex justify-between'>
-        {/* {renderGroupSelectDD()}
-        {renderSegmentSelect()} */}
         {renderPropertyFilter()}
       </div>
       <div className='inline-flex gap--6'>
         {accountPayload?.filters?.length ? renderClearFilterButton() : null}
         {renderSearchSection()}
         {renderTablePropsSelect()}
-        {/* {renderConfiguration()} */}
       </div>
     </div>
   );

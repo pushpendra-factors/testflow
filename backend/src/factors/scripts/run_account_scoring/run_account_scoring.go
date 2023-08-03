@@ -12,16 +12,19 @@ import (
 	serviceEtcd "factors/services/etcd"
 	serviceGCS "factors/services/gcstorage"
 	T "factors/task"
+	AS "factors/task/account_scoring"
+
 	"factors/util"
 	"flag"
 	"fmt"
-	"github.com/apache/beam/sdks/go/pkg/beam"
-	_ "github.com/jinzhu/gorm"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/apache/beam/sdks/go/pkg/beam"
+	_ "github.com/jinzhu/gorm"
+	log "github.com/sirupsen/logrus"
 )
 
 func registerStructs() {
@@ -119,7 +122,7 @@ func main() {
 
 	// init DB, etcd
 	appName := "acc_score_job"
-	healthcheckPingID := C.HealthcheckPatternMinePingID
+	healthcheckPingID := C.HealthcheckAccScoringJobPingID
 	defer C.PingHealthcheckForPanic(appName, *envFlag, healthcheckPingID)
 
 	config := &C.Configuration{
@@ -281,7 +284,7 @@ func main() {
 
 		if available {
 
-			status, _ := T.BuildAccScoringDaily(projectId, configs)
+			status, _ := AS.BuildAccScoringDaily(projectId, configs)
 			log.Info(status)
 			if status["err"] != nil {
 				C.PingHealthcheckForFailure(healthcheckPingID, status)
