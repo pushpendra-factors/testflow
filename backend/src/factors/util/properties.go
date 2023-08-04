@@ -2079,6 +2079,25 @@ var STANDARD_USER_PROPERTIES_CATAGORIZATION = map[string]string{
 	SP_SESSION_TIME:                "Session properties",
 	SP_SPENT_TIME:                  "Session properties",
 	SP_PAGE_COUNT:                  "Session properties",
+	SIX_SIGNAL_ADDRESS:             "Company identification",
+	SIX_SIGNAL_ANNUAL_REVENUE:      "Company identification",
+	SIX_SIGNAL_CITY:                "Company identification",
+	SIX_SIGNAL_COUNTRY:             "Company identification",
+	SIX_SIGNAL_COUNTRY_ISO_CODE:    "Company identification",
+	SIX_SIGNAL_DOMAIN:              "Company identification",
+	SIX_SIGNAL_EMPLOYEE_COUNT:      "Company identification",
+	SIX_SIGNAL_EMPLOYEE_RANGE:      "Company identification",
+	SIX_SIGNAL_INDUSTRY:            "Company identification",
+	SIX_SIGNAL_NAICS:               "Company identification",
+	SIX_SIGNAL_NAICS_DESCRIPTION:   "Company identification",
+	SIX_SIGNAL_NAME:                "Company identification",
+	SIX_SIGNAL_PHONE:               "Company identification",
+	SIX_SIGNAL_REGION:              "Company identification",
+	SIX_SIGNAL_REVENUE_RANGE:       "Company identification",
+	SIX_SIGNAL_SIC:                 "Company identification",
+	SIX_SIGNAL_SIC_DESCRIPTION:     "Company identification",
+	SIX_SIGNAL_STATE:               "Company identification",
+	SIX_SIGNAL_ZIP:                 "Company identification",
 }
 
 var DISABLED_EVENT_USER_PROPERTIES = []string{
@@ -2087,6 +2106,12 @@ var DISABLED_EVENT_USER_PROPERTIES = []string{
 	UP_SESSION_COUNT,
 	UP_PAGE_COUNT,
 	UP_TOTAL_SPENT_TIME,
+	UP_INITIAL_COST,
+	UP_INITIAL_REVENUE,
+	UP_TOTAL_COST,
+	UP_TOTAL_REVENUE,
+	UP_LATEST_COST,
+	UP_LATEST_REVENUE,
 }
 
 var STANDARD_SESSION_PROPERTIES_CATAGORIZATION = map[string]string{
