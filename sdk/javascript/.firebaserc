@@ -7,9 +7,6 @@
       "hosting": {
         "staging": [
           "b2mxnuvcer"
-        ],
-        "staging-dyh7ken7pc": [
-          "dyh7ken7pc"
         ]
       }
     },
@@ -17,9 +14,6 @@
       "hosting": {
         "production": [
           "b3mxnuvcer"
-        ],
-        "production-dyh8ken8pc": [
-          "dyh8ken8pc"
         ]
       }
     }

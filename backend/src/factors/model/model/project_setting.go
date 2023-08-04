@@ -345,8 +345,8 @@ func GetProjectSDKAPIAndAssetURL(projectID int64) (string, string) {
 	index := (int(projectID) % len(availableHashes))
 	hash := availableHashes[index]
 
-	assetURL := "https://" + hash + ".firebaseapp.com/" + hash + ".js"
-	apiURL := "https://" + hash + ".com"
+	assetURL := "https://asset." + hash + ".com/" + hash + ".js"
+	apiURL := "https://api." + hash + ".com"
 
 	return assetURL, apiURL
 }
