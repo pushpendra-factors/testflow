@@ -233,19 +233,19 @@ function GroupBlock({
     );
   };
 
-  const getIcon = (groupByEvent) => {
+  const getIcon = (groupByEvent) => { 
     const { property, prop_category } = groupByEvent || {};
     if (!property) return null;
     const iconName = prop_category === 'group' ? 'user' : prop_category;
     return <SVG name={iconName} size={16} color={'purple'} />;
   };
-
-  const renderGroupDisplayName = (opt, index) => {
+  
+  const renderGroupDisplayName = (opt, index) => { 
     let propertyName = '';
     if (opt.property && opt.prop_category === 'event') {
       propertyName = eventPropNames[opt.property]
-        ? (eventPropNames[opt.property] ? eventPropNames[opt.property] : userPropNames[opt.property])
-        : opt.property;
+        ? eventPropNames[opt.property]
+        : (userPropNames[opt.property] ? userPropNames[opt.property] : opt.property);
     }
     if (opt.property && opt.prop_category === 'group') {
       propertyName = groupPropNames[opt.property]
