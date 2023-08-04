@@ -4321,6 +4321,7 @@ func SortByTimestampAndCount(data []NameCountTimestampCategory) []NameCountTimes
 	smartEventNames := make([]NameCountTimestampCategory, 0)
 	pageViewEventNames := make([]NameCountTimestampCategory, 0)
 	sorted := make([]NameCountTimestampCategory, 0)
+	sessionEvent := NameCountTimestampCategory{}
 	trimmed := make([]NameCountTimestampCategory, 0)
 
 	sort.Slice(data, func(i, j int) bool {
@@ -4334,8 +4335,10 @@ func SortByTimestampAndCount(data []NameCountTimestampCategory) []NameCountTimes
 		} else if details.Category == PageViewEvent {
 			details.GroupName = PageViewEvent
 			pageViewEventNames = append(pageViewEventNames, details)
+		} else if details.Name == EVENT_NAME_SESSION {
+			details.GroupName = FrequentlySeen
+			sessionEvent = details
 		} else {
-
 			details.GroupName = FrequentlySeen
 			trimmed = append(trimmed, details)
 		}
@@ -4343,7 +4346,8 @@ func SortByTimestampAndCount(data []NameCountTimestampCategory) []NameCountTimes
 	}
 
 	sorted = append(smartEventNames, sorted...)
-	sorted = append(pageViewEventNames, sorted...)
+	sorted = append(sorted, sessionEvent)
+	sorted = append(sorted, pageViewEventNames...)
 
 	for _, data := range trimmed {
 		sorted = append(sorted, data)
