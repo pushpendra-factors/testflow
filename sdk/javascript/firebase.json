@@ -23,6 +23,41 @@
                 "value" : "public, max-age=3600, s-maxage=3600"
               }
             ]
+          },
+          {
+            "source" : "b2mxnuvcer.js",
+            "headers" : [ 
+              {
+                "key" : "Cache-Control",
+                "value" : "public, max-age=3600, s-maxage=3600"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "target": "staging-dyh7ken7pc",
+        "public": "dist",
+        "ignore": [
+          "firebase.json",
+          "**/.*",
+          "**/node_modules/**"
+        ],
+        "rewrites": [
+          {
+            "source": "**",
+            "destination": "/index.html"
+          }
+        ],
+        "headers" : [
+          {
+            "source" : "dyh7ken7pc.js",
+            "headers" : [ 
+              {
+                "key" : "Cache-Control",
+                "value" : "public, max-age=3600, s-maxage=3600"
+              }
+            ]
           }
         ]
       },
@@ -43,6 +78,32 @@
         "headers" : [
           {
             "source" : "factors.v1.js",
+            "headers" : [ 
+              {
+                "key" : "Cache-Control",
+                "value" : "public, max-age=3600, s-maxage=3600"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "target": "production-dyh8ken8pc",
+        "public": "dist",
+        "ignore": [
+          "firebase.json",
+          "**/.*",
+          "**/node_modules/**"
+        ],
+        "rewrites": [
+          {
+            "source": "**",
+            "destination": "/index.html"
+          }
+        ],
+        "headers" : [
+          {
+            "source" : "dyh8ken8pc.js",
             "headers" : [ 
               {
                 "key" : "Cache-Control",

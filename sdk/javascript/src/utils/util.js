@@ -1,9 +1,9 @@
 function validatedStringArg(name, value) {
     if (typeof(value) != "string")
-        throw new Error("FactorsArgumentError: Invalid "+name);
+        throw new Error("FAITrackerArgumentError: Invalid "+name);
     
     value = value.trim();
-    if (!value) throw new Error("FactorsArgumentError: "+name+" cannot be empty.");
+    if (!value) throw new Error("FAITrackerArgumentError: "+name+" cannot be empty.");
     
     return value;
 }
@@ -42,7 +42,7 @@ function isLocalStorageAvailable() {
     if (window.localStorage == undefined) return false;
 
     try {
-        var key = "factors-test";
+        var key = "faitracker-test";
         var value = "test";
         window.localStorage.setItem(key, value);
         var isAvailable = window.localStorage.getItem(key) == value;

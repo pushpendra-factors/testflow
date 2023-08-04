@@ -216,9 +216,9 @@ SuitePrivateMethod.testGetPropertiesFromQueryParams = function() {
 }
 
 SuitePrivateMethod.testGetCleanHash = function() {
-    assert.equal(util.getCleanHash("#/factors?q=10"), "#/factors")
-    assert.equal(util.getCleanHash("#/factors?"), "#/factors")
-    assert.equal(util.getCleanHash("#/factors"), "#/factors")
+    assert.equal(util.getCleanHash("#/faitracker?q=10"), "#/faitracker")
+    assert.equal(util.getCleanHash("#/faitracker?"), "#/faitracker")
+    assert.equal(util.getCleanHash("#/faitracker"), "#/faitracker")
     assert.equal(util.getCleanHash("#/?q=10"), "#/")
     assert.equal(util.getCleanHash(""), "")
 }
@@ -252,7 +252,7 @@ SuitePublicMethod.testInit = function() {
 SuitePublicMethod.testInitWithBadInput = function() {
     app.reset();
     // Bad input. Invalidated on sdk.
-    assert.throws(() => app.init(" "), Error, "FactorsArgumentError: token cannot be empty.");
+    assert.throws(() => app.init(" "), Error, "FAITrackerArgumentError: token cannot be empty.");
     assert.equal(app.client, null, "Bad input token should not be allowed.");
 }
 
@@ -264,7 +264,7 @@ SuitePublicMethod.testTrackBeforeInit = function() {
     try {
         app.track();
     } catch(e) {
-        assert.equal(e.message, "FactorsError: SDK is not initialized with token.")
+        assert.equal(e.message, "FAITrackerError: SDK is not initialized with token.")
     }
 }
 
@@ -352,7 +352,7 @@ SuitePublicMethod.testIdentifyBeforeInit = function() {
     try {
         app.identify();
     } catch(e) {
-        assert.equal(e.message, "FactorsError: SDK is not initialized with token.")
+        assert.equal(e.message, "FAITrackerError: SDK is not initialized with token.")
     }
 }
 
@@ -376,7 +376,7 @@ SuitePublicMethod.testIdentifyWithoutCustomerUserId = function() {
             try {
                 app.identify(" ");
             } catch(e) {
-                assert.equal(e.message, "FactorsArgumentError: customer_user_id cannot be empty.")
+                assert.equal(e.message, "FAITrackerArgumentError: customer_user_id cannot be empty.")
             }
         });
 }
@@ -540,7 +540,7 @@ function runPrivateMethodsSuite() {
 }
 
 // Todo(Dinesh): Inconsistent test: Fixes - Create a mock object for document.cookie,
-// Use app instance instead of factors like testInit.
+// Use app instance instead of faitracker like testInit.
 function runPublicMethodsSuite() {
     window.FACOTRS_DEBUG=true;
 

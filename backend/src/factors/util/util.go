@@ -240,7 +240,7 @@ func RandomUint64WithUnixNano() uint64 {
 	return uint64(time.Now().UnixNano())
 }
 
-// RandomIntInRange Generates a random number in range [min, max).
+// RandomIntInRange Generates a random number in range [min, max-1).
 func RandomIntInRange(min, max int) int {
 	rand.Seed(time.Now().UTC().UnixNano())
 	return min + rand.Intn(max-min)

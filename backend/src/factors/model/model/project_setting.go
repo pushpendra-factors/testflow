@@ -89,6 +89,9 @@ type ProjectSetting struct {
 	SixSignalEmailList         string `gorm:"column:sixsignal_email_list" json:"sixsignal_email_list"`
 	IntG2ApiKey                string `json:"int_g2_api_key"`
 	IntG2                      *bool  `gorm:"not null;default:false" json:"int_g2,omitempty"`
+
+	SDKAPIURL   string `gorm:"-" json:"sdk_api_url"`
+	SDKAssetURL string `gorm:"-" json:"sdk_asset_url"`
 }
 
 /* Sample Attribution Setting
@@ -329,4 +332,21 @@ var HubspotCustomIdentificationFieldByProjectID = map[int64]string{
 // GetHubspotCustomIdentificationFieldByProjectID use to get custom field for hubspot custom identification enabled project
 func GetHubspotCustomIdentificationFieldByProjectID(projectID int64) string {
 	return HubspotCustomIdentificationFieldByProjectID[projectID]
+}
+
+func GetProjectSDKAPIAndAssetURL(projectID int64) (string, string) {
+	// Todo: The selected URL for each project has to be persisted.
+	// Any change to availableHashes will change the SDK code for a project, if not persisted.
+	availableHashes := []string{
+		"b3mxnuvcer",
+		"dyh8ken8pc",
+	}
+
+	index := (int(projectID) % len(availableHashes))
+	hash := availableHashes[index]
+
+	assetURL := "https://" + hash + ".firebaseapp.com/" + hash + ".js"
+	apiURL := "https://" + hash + ".com"
+
+	return assetURL, apiURL
 }
