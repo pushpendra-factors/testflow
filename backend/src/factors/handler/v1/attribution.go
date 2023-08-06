@@ -266,21 +266,41 @@ func runTheCommonDBFlow(reqId string, projectId int64, dashboardId int64, unitId
 	timezoneString U.TimeZoneString, enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool,
 	logCtx *log.Entry) (interface{}, int, string, string, bool) {
 
-	errCode, cacheResult := store.GetStore().FetchCachedResultFromDataBase(reqId, projectId, dashboardId, unitId,
-		requestPayload.Query.From, requestPayload.Query.To)
-
-	if errCode == http.StatusFound {
-		return H.DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true, RefreshedAt: cacheResult.ComputedAt,
-			CacheMeta: cacheResult.CreatedAt}, http.StatusOK, "", "", false
+	logCtx.Info("Hitting the DB cache lookup runTheCommonDBFlow")
+	shouldReturn, resCode, resMsg := H.GetResponseFromDBCaching(reqId, projectId, dashboardId, unitId,
+		requestPayload.Query.From, requestPayload.Query.To, timezoneString)
+	logCtx.WithFields(log.Fields{
+		"should_return": shouldReturn,
+		"res_code":      resCode,
+		"dashboard_Id":  dashboardId,
+		"unit_id":       unitId,
+	}).Info("Hitting the DB cache lookup")
+	if shouldReturn {
+		logCtx.Info("Found the result in DB runTheCommonDBFlow")
+		if resCode == http.StatusOK {
+			return resMsg, resCode, "", "", false
+		}
 	}
+
+	/*
+		errCode, cacheResult := store.GetStore().FetchCachedResultFromDataBase(reqId, projectId, dashboardId, unitId,
+			requestPayload.Query.From, requestPayload.Query.To)
+
+		if errCode == http.StatusFound {
+			return H.DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true, RefreshedAt: cacheResult.ComputedAt,
+				CacheMeta: cacheResult.CreatedAt}, http.StatusOK, "", "", false
+		}*/
 
 	// Reached here, it means that the exact date range is not there in the DB result storage
 	// Check for monthly range query, we assume that the range has continuous date range inputs
 	isMonthsQuery, last12Months := IsAMonthlyRangeQuery(timezoneString, requestPayload.Query.From, requestPayload.Query.To)
 	if isMonthsQuery {
 
-		logCtx.Info("Figured it a Month range query")
 		monthsToRun := U.GetAllValidRangesInBetween(requestPayload.Query.From, requestPayload.Query.To, last12Months)
+		logCtx.WithFields(log.Fields{
+			"last12Months": last12Months,
+			"monthsToRun":  monthsToRun,
+		}).Info("Figured it a Month range query, running")
 		hasFailed, mergedResult := RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId, requestPayload,
 			timezoneString, reqId, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery,
 			monthsToRun, logCtx)
@@ -297,8 +317,11 @@ func runTheCommonDBFlow(reqId string, projectId int64, dashboardId int64, unitId
 	isWeeksQuery, last48Weeks := IsAWeeklyRangeQuery(timezoneString, requestPayload.Query.From, requestPayload.Query.To)
 	if isWeeksQuery {
 
-		logCtx.Info("Figured it a Week range query")
 		weeksToRun := U.GetAllValidRangesInBetween(requestPayload.Query.From, requestPayload.Query.To, last48Weeks)
+		logCtx.WithFields(log.Fields{
+			"last12Months": last48Weeks,
+			"monthsToRun":  weeksToRun,
+		}).Info("Figured it a Week range query, running")
 		hasFailed, mergedResult := RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId, requestPayload,
 			timezoneString, reqId, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery,
 			weeksToRun, logCtx)
