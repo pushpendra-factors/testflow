@@ -293,7 +293,7 @@ func runTheCommonDBFlow(reqId string, projectId int64, dashboardId int64, unitId
 
 	// Reached here, it means that the exact date range is not there in the DB result storage
 	// Check for monthly range query, we assume that the range has continuous date range inputs
-	isMonthsQuery, last12Months := IsAMonthlyRangeQuery(timezoneString, requestPayload.Query.From, requestPayload.Query.To)
+	isMonthsQuery, last12Months := U.IsAMonthlyRangeQuery(timezoneString, requestPayload.Query.From, requestPayload.Query.To)
 	if isMonthsQuery {
 
 		monthsToRun := U.GetAllValidRangesInBetween(requestPayload.Query.From, requestPayload.Query.To, last12Months)
@@ -314,7 +314,7 @@ func runTheCommonDBFlow(reqId string, projectId int64, dashboardId int64, unitId
 	}
 
 	// Check for weekly range query, we assume that the range has continuous date range inputs
-	isWeeksQuery, last48Weeks := IsAWeeklyRangeQuery(timezoneString, requestPayload.Query.From, requestPayload.Query.To)
+	isWeeksQuery, last48Weeks := U.IsAWeeklyRangeQuery(timezoneString, requestPayload.Query.From, requestPayload.Query.To)
 	if isWeeksQuery {
 
 		weeksToRun := U.GetAllValidRangesInBetween(requestPayload.Query.From, requestPayload.Query.To, last48Weeks)
