@@ -1,0 +1,6 @@
+apiVersion: networking.gke.io/v1beta1
+kind: FrontendConfig
+metadata:
+  name: "fe-tls12"
+spec:
+  sslPolicy: "tls-1-2"
