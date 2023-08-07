@@ -432,14 +432,18 @@ func ApplySFOfflineTouchPointRuleForCampaignMemberV1(project *model.Project, otp
 	}
 
 	fistRespondedRuleApplicable := true
-	// Checking if the EP_SFCampaignMemberResponded has already been set as true for same customer id
-	if eventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED {
 
-		// ignore to create a new touch point if last updated doc has EP_SFCampaignMemberResponded=true
-		if val, exists := sfEvent.EventProperties[model.EP_SFCampaignMemberResponded]; exists {
-			if val != nil && val.(bool) == true {
-				logCtx.Info("found EP_SFCampaignMemberResponded=true for the document, skipping creating OTP.")
-				fistRespondedRuleApplicable = false
+	if project.ID != int64(1125899936000037) {
+
+		// Checking if the EP_SFCampaignMemberResponded has already been set as true for same customer id
+		if eventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED {
+
+			// ignore to create a new touch point if last updated doc has EP_SFCampaignMemberResponded=true
+			if val, exists := sfEvent.EventProperties[model.EP_SFCampaignMemberResponded]; exists {
+				if val != nil && val.(bool) == true {
+					logCtx.Info("found EP_SFCampaignMemberResponded=true for the document, skipping creating OTP.")
+					fistRespondedRuleApplicable = false
+				}
 			}
 		}
 	}
@@ -488,6 +492,12 @@ func ApplySFOfflineTouchPointRuleForCampaignMemberV1(project *model.Project, otp
 			}
 		}
 
+		if project.ID != int64(1125899936000037) {
+			logCtx.WithField("ref", rule.TouchPointTimeRef).WithField("flag", fistRespondedRuleApplicable).Info("touch timeref for updated events")
+			if rule.TouchPointTimeRef == "sf_campaign_member_updated" {
+				rule.TouchPointTimeRef = model.SFCampaignMemberResponded
+			}
+		}
 		// Run for only first responded rules & documents where first responded is not set.
 		if rule.TouchPointTimeRef == model.SFCampaignMemberResponded && fistRespondedRuleApplicable {
 
