@@ -78,8 +78,8 @@ func RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId int64, re
 		mergedResult = model.MergeTwoAttributionReportsIntoOne(mergedResult, resultForRange,
 			keyIndex, requestPayload.Query.AttributionKey,
 			kpiAggFunctionType, *logCtx)
-		if err != nil {
-			logCtx.Info("Failed to process query from DB - attribution v1", err.Error())
+		if mergedResult == nil {
+			logCtx.Info("Failed to process query from DB - attribution v1 as mergedResult is nil")
 			return true, mergedResult
 		}
 	}
