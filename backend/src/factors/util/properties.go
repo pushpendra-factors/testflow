@@ -2079,6 +2079,25 @@ var STANDARD_USER_PROPERTIES_CATAGORIZATION = map[string]string{
 	SP_SESSION_TIME:                "Session properties",
 	SP_SPENT_TIME:                  "Session properties",
 	SP_PAGE_COUNT:                  "Session properties",
+	SIX_SIGNAL_ADDRESS:             "Company identification",
+	SIX_SIGNAL_ANNUAL_REVENUE:      "Company identification",
+	SIX_SIGNAL_CITY:                "Company identification",
+	SIX_SIGNAL_COUNTRY:             "Company identification",
+	SIX_SIGNAL_COUNTRY_ISO_CODE:    "Company identification",
+	SIX_SIGNAL_DOMAIN:              "Company identification",
+	SIX_SIGNAL_EMPLOYEE_COUNT:      "Company identification",
+	SIX_SIGNAL_EMPLOYEE_RANGE:      "Company identification",
+	SIX_SIGNAL_INDUSTRY:            "Company identification",
+	SIX_SIGNAL_NAICS:               "Company identification",
+	SIX_SIGNAL_NAICS_DESCRIPTION:   "Company identification",
+	SIX_SIGNAL_NAME:                "Company identification",
+	SIX_SIGNAL_PHONE:               "Company identification",
+	SIX_SIGNAL_REGION:              "Company identification",
+	SIX_SIGNAL_REVENUE_RANGE:       "Company identification",
+	SIX_SIGNAL_SIC:                 "Company identification",
+	SIX_SIGNAL_SIC_DESCRIPTION:     "Company identification",
+	SIX_SIGNAL_STATE:               "Company identification",
+	SIX_SIGNAL_ZIP:                 "Company identification",
 }
 
 var DISABLED_EVENT_USER_PROPERTIES = []string{
@@ -2087,6 +2106,12 @@ var DISABLED_EVENT_USER_PROPERTIES = []string{
 	UP_SESSION_COUNT,
 	UP_PAGE_COUNT,
 	UP_TOTAL_SPENT_TIME,
+	UP_INITIAL_COST,
+	UP_INITIAL_REVENUE,
+	UP_TOTAL_COST,
+	UP_TOTAL_REVENUE,
+	UP_LATEST_COST,
+	UP_LATEST_REVENUE,
 }
 
 var STANDARD_SESSION_PROPERTIES_CATAGORIZATION = map[string]string{
@@ -4296,6 +4321,7 @@ func SortByTimestampAndCount(data []NameCountTimestampCategory) []NameCountTimes
 	smartEventNames := make([]NameCountTimestampCategory, 0)
 	pageViewEventNames := make([]NameCountTimestampCategory, 0)
 	sorted := make([]NameCountTimestampCategory, 0)
+	sessionEvent := NameCountTimestampCategory{}
 	trimmed := make([]NameCountTimestampCategory, 0)
 
 	sort.Slice(data, func(i, j int) bool {
@@ -4309,8 +4335,10 @@ func SortByTimestampAndCount(data []NameCountTimestampCategory) []NameCountTimes
 		} else if details.Category == PageViewEvent {
 			details.GroupName = PageViewEvent
 			pageViewEventNames = append(pageViewEventNames, details)
+		} else if details.Name == EVENT_NAME_SESSION {
+			details.GroupName = FrequentlySeen
+			sessionEvent = details
 		} else {
-
 			details.GroupName = FrequentlySeen
 			trimmed = append(trimmed, details)
 		}
@@ -4318,7 +4346,8 @@ func SortByTimestampAndCount(data []NameCountTimestampCategory) []NameCountTimes
 	}
 
 	sorted = append(smartEventNames, sorted...)
-	sorted = append(pageViewEventNames, sorted...)
+	sorted = append(sorted, sessionEvent)
+	sorted = append(sorted, pageViewEventNames...)
 
 	for _, data := range trimmed {
 		sorted = append(sorted, data)

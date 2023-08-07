@@ -1,17 +1,49 @@
 <html>
     <head> 
-        <title>faitracker</title>
+        <title>factors.ai</title>
         <script type="text/javascript" src="testCases.js"></script>
 
         <script type="text/javascript">
-            window.faitracker = window.faitracker||(function(){
+        
+            window.factors = window.factors||(function(){
                 this.q = [];
-                var qEvent = new CustomEvent('FAITRACKER_QUEUED_EVENT');
+                var factorsQueuedEvent = new CustomEvent('FACTORS_QUEUED_EVENT');
+                var addToQueue = function(k,a) {
+                    this.q.push({k,a});
+                    window.dispatchEvent(factorsQueuedEvent);   
+                }
+                this.track = function(ev, ep, ac) {
+                    addToQueue('track', arguments);  
+                }
                 this.init = function(at, op, ac) {
                     this.TOKEN = at;
                     this.INIT_PARAMS = op;
                     this.INIT_CALLBACK = ac;
-                    window.dispatchEvent(new CustomEvent('FAITRACKER_INIT_EVENT'))
+                }
+                this.reset = function() {
+                    addToQueue('reset', arguments);
+                }
+                this.page = function(ac, frc) {
+                    addToQueue('page', arguments);
+                }
+                this.updateEventProperties = function(evI, pr) {
+                    addToQueue('updateEventProperties', arguments);
+                }
+                this.identify = function(cus, uP) {
+                    addToQueue('identify', arguments);
+                }
+                this.addUserProperties = function(pr){
+                    addToQueue('addUserProperties', arguments);
+                }
+                this.getUserId = function(){
+                    addToQueue('getUserId', arguments);
+                }
+                this.message = function(){
+                    window.addEventListener('message', function(e) {
+                        if(e.data.origin === 'factors'){
+                            addToQueue('message', [e.data.type, e.data.message]);
+                        }
+                    });
                 }
                 this.call = function(){
                     var callMap = {k: '', a: []}
@@ -22,26 +54,19 @@
                         callMap.k = arguments[0];
                     }
                     this.q.push(callMap);
-                    window.dispatchEvent(qEvent);
-                }
-                this.message = function(){
-                    window.addEventListener('message', function(e) {
-                        if(e.data.origin === 'faitracker'){
-                            this.call('message', e.data.type, e.data.message);
-                        }
-                    });
+                    window.dispatchEvent(factorsQueuedEvent);
                 }
                 this.message();
                 this.init("e00jerl4ojnsx0jd5i5c63fyaf5wk1y9", {
-                                host: "https://dyh8ken8pc.com"
-                        }, function(){console.log("Init callback")});
+                    host: "https://api.factors.ai"
+            }, function(){console.log("Init callback")});
                 return this;
             })();
 
             (function() {
                 var s = document.createElement("script");
                 s.type = "text/javascript";
-                s.src = "dist/factors.v1.js";
+                s.src = "dist/factors.v1.js"; // backward compatibility test.
                 s.async = true;
                 d = document.getElementsByTagName('script')[0];
                 d.parentNode.insertBefore(s, d);
@@ -100,14 +125,14 @@
 
 
         <script>
-            console.log(faitracker);
-            console.log(faitracker.q);
-            faitracker.call('track', '$form_submitted', {'$email': 'ak@gm.com'});
-            faitracker.call('track', '$form_submitted', {'$email': 'ak@em.com'});
-            faitracker.call('track', '$form_submitted', {'$email': 'ak@ems.com'});
+            console.log(factors);
+            console.log(factors.q);
+            factors.track('$form_submitted', {'$email': 'ak@gm.com'});
+            factors.call('track', '$form_submitted', {'$email': 'ak@em.com'});
+            factors.call('track', '$form_submitted', {'$email': 'ak@ems.com'});
 
             setTimeout(function(){
-                faitracker.track('$form_submitted', {'$email': 'ak@time.com'});
+                factors.track('$form_submitted', {'$email': 'ak@time.com'});
             }, 20000)
         </script>
     </body>

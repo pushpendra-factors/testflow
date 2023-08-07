@@ -711,6 +711,20 @@ func ProcessQueryKPIPageUrlV1(query *AttributionQueryV1, attributionData *map[st
 func MergeTwoAttributionReportsIntoOne(result1, result2 *QueryResult, keyIndex int, attributionKey string,
 	conversionFunTypes []string, logCtx log.Entry) *QueryResult {
 
+	if result1 == nil && result2 == nil {
+		logCtx.Info("can't merge, results are empty")
+		return nil
+	}
+
+	if result1 == nil && result2 != nil {
+		logCtx.Info("returning result2 as result1 is nil")
+		return result2
+	}
+	if result2 == nil && result1 != nil {
+		logCtx.Info("returning result1 as result2 is nil")
+		return result1
+	}
+
 	rows1 := result1.Rows
 	rows2 := result2.Rows
 

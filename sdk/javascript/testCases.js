@@ -35,12 +35,12 @@ const testCookieConsent = (res, rej) => {
     const bodyChildElement = document.body.children[0];
     document.body.insertBefore(consentCheckElement, bodyChildElement);
     document.getElementById('consentButtonY').addEventListener('click', function () {
-        const wasQueueEmpty = !window.factors?.q?.length;   
+        const wasQueueEmpty = !window.faitracker?.q?.length;   
         document.__defineGetter__("cookie", cookieCodeGet );
         document.__defineSetter__("cookie", cookieCodeSet );
         consentCheckElement.style = "display: none;";
         setTimeout(() => {
-            if(!wasQueueEmpty && !window.factors?.q?.length) {
+            if(!wasQueueEmpty && !window.faitracker?.q?.length) {
                 res({
                     success: true,
                     msg: 'Step 0: Cookie consent && queue order: Success'

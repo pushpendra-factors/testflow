@@ -401,7 +401,6 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	log.WithFields(logFields).Info("Inside match checkpoint 1")
 	alerts, eventName, errCode := store.GetEventTriggerAlertsByEvent(projectId, eventNameId)
 	if errCode != http.StatusFound || alerts == nil {
 		//log.WithFields(logFields).Error("GetEventTriggerAlertsByEvent failure inside Match function.")
@@ -418,8 +417,6 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 	if UpdatedEventProps != nil {
 		updatedEventProps, _ = U.DecodePostgresJsonb(UpdatedEventProps)
 	}
-
-	log.WithFields(logFields).Info("Inside match checkpoint 2")
 	
 	var matchedAlerts []model.EventTriggerAlert
 	for _, alert := range alerts {
@@ -444,14 +441,11 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 					isUpdateOnlyPropertyInMessageBody = true
 				}
 			}
-			if isUpdateOnlyPropertyInMessageBody {
-				log.WithFields(logFields).Info("Inside match checkpoint 3 - !isUpdate")
-				
+			if isUpdateOnlyPropertyInMessageBody {				
 				continue
 			}
 		}
 		if isUpdate {
-			log.WithFields(logFields).Info("Inside match checkpoint 4 - isUpdate")
 			if len(*updatedEventProps) == 0 {
 				continue
 			} else {
@@ -473,10 +467,17 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 				}
 			}
 		}
-		log.WithFields(logFields).Info("Inside Match func checkpoint 5 - going for filter matching")
 
-		if E.EventMatchesFilterCriterionList(projectId, *userPropMap, *eventPropMap, E.MapFilterProperties(config.Filter)) {
-			log.WithFields(logFields).Info("Inside Match func checkpoint 11 - matching success")
+		criteria := E.MapFilterProperties(config.Filter)
+		if E.EventMatchesFilterCriterionList(projectId, *userPropMap, *eventPropMap, criteria) {
+			for _, fil := range config.Filter {
+				if fil.Property == "$6Signal_domain" &&
+				(fil.Operator == model.NotEqualOpStr || fil.Operator == model.NotContainsOpStr) &&
+				fil.Value == "$none" &&
+				((*userPropMap)["$6Signal_domain"] == "$none" || (*userPropMap)["$6Signal_domain"] == "" ) {
+					log.WithFields(logFields).Info("$$$$checkpoint - matching success")
+				}
+			}
 			matchedAlerts = append(matchedAlerts, alert)
 			
 		}

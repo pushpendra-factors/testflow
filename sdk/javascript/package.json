@@ -6,7 +6,8 @@
   "scripts": {
     "test": "",
     "build-dev": "./node_modules/.bin/webpack --config webpack.dev.config.js",
-    "build-prod": "./node_modules/.bin/webpack --config webpack.v1.config.js",
+    "build-prod": "./node_modules/.bin/webpack --config webpack.v2.config.js; cp ./dist/factors.v1.js ./dist/b2mxnuvcer.js; cp ./dist/factors.v1.js ./dist/dyh7ken7pc.js; cp ./dist/factors.v1.js ./dist/b3mxnuvcer.js; cp ./dist/factors.v1.js ./dist/dyh8ken8pc.js",
+    "build-prod-v1": "./node_modules/.bin/webpack --config webpack.v1.config.js",
     "build-prod-v0": "./node_modules/.bin/webpack --config webpack.v0.config.js",
     "build-loader": "rm ./dist/factors.loader.js && ./node_modules/.bin/uglifyjs factors.loader.js --compress --mangle --output ./dist/factors.loader.js",
     "build-npm": "./node_modules/.bin/webpack --config webpack.npm.config.js",

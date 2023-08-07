@@ -213,10 +213,65 @@ func TestSanitizeWeekStart(t *testing.T) {
 	}
 }
 
-func TestIsIPV4AddressInCIDRRange(t *testing.T) {
+func TestRandomIntInRange(t *testing.T) {
+	assert.Less(t, U.RandomIntInRange(1, 3), 3)
+	assert.Less(t, U.RandomIntInRange(1, 3), 3)
+	assert.Less(t, U.RandomIntInRange(1, 3), 3)
+	assert.Less(t, U.RandomIntInRange(1, 3), 3)
+	assert.Less(t, U.RandomIntInRange(1, 3), 3)
+	assert.Less(t, U.RandomIntInRange(1, 3), 3)
+	assert.Less(t, U.RandomIntInRange(1, 3), 3)
+	assert.Less(t, U.RandomIntInRange(1, 3), 3)
+	assert.Less(t, U.RandomIntInRange(1, 3), 3)
+	assert.Less(t, U.RandomIntInRange(1, 3), 3)
+	assert.Greater(t, U.RandomIntInRange(1, 3), 0)
+	assert.Greater(t, U.RandomIntInRange(1, 3), 0)
+	assert.Greater(t, U.RandomIntInRange(1, 3), 0)
+	assert.Greater(t, U.RandomIntInRange(1, 3), 0)
+	assert.Greater(t, U.RandomIntInRange(1, 3), 0)
+	assert.Greater(t, U.RandomIntInRange(1, 3), 0)
+	assert.Greater(t, U.RandomIntInRange(1, 3), 0)
+	assert.Greater(t, U.RandomIntInRange(1, 3), 0)
+	assert.Greater(t, U.RandomIntInRange(1, 3), 0)
+	assert.Greater(t, U.RandomIntInRange(1, 3), 0)
+}
 
+func TestIsIPV4AddressInCIDRRange(t *testing.T) {
 	assert.False(t, U.IsIPV4AddressInCIDRRange("40.94.0.0/16", "40.93.255.255")) // previous ip to cidr range start
 	assert.True(t, U.IsIPV4AddressInCIDRRange("40.94.0.0/16", "40.94.0.0"))      // start ip in cidr range
 	assert.True(t, U.IsIPV4AddressInCIDRRange("40.94.0.0/16", "40.94.255.255"))  //  end ip in cidr range
 	assert.False(t, U.IsIPV4AddressInCIDRRange("40.94.0.0/16", "40.95.0.0"))     //  next ip to cidr range end
+}
+
+func TestIsAWeeklyRangeQuery(t *testing.T) {
+	type args struct {
+		timezoneString U.TimeZoneString
+		effectiveFrom  int64
+		effectiveTo    int64
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{name: "Test1", args: args{
+			timezoneString: U.TimeZoneStringIST,
+			effectiveFrom:  1689445800,
+			effectiveTo:    1690655399,
+		}, want: true},
+		{name: "Test2", args: args{
+			timezoneString: U.TimeZoneStringIST,
+			effectiveFrom:  1690655400,
+			effectiveTo:    1691260199,
+		}, want: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, _ := U.IsAWeeklyRangeQuery(tt.args.timezoneString, tt.args.effectiveFrom, tt.args.effectiveTo)
+			if got != tt.want {
+				t.Errorf("IsAWeeklyRangeQuery() got = %v, want %v", got, tt.want)
+			}
+
+		})
+	}
 }
