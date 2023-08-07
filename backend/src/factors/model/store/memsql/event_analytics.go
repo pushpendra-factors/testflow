@@ -1083,7 +1083,7 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 				return steps, stepsToKeysMap, errors.New("CRMs not enabled for accounts timeline")
 			}
 		} else {
-			addColsString = "users.updated_at"
+			addColsString = "users.updated_at, users.properties_updated_timestamp"
 		}
 	}
 	for i, ewp := range q.EventsWithProperties {
@@ -1208,7 +1208,7 @@ func (store *MemSQL) selectStringForSegments(projectID int64, source string, cal
 		if model.IsAllowedAccountGroupNames(source) && source == group.Name {
 			commonSelect = fmt.Sprintf("CASE WHEN users.is_group_user = 1 THEN events.user_id ELSE users.group_%d_user_id END AS identity%%, users.updated_at as last_activity, users.properties as properties", group.ID)
 			if scopeGroupID > 0 {
-				commonSelect = fmt.Sprintf("%%, users.updated_at as last_activity")
+				commonSelect = fmt.Sprintf("%%, users.updated_at as last_activity, users.properties_updated_timestamp")
 			}
 			commonSelect = strings.ReplaceAll(commonSelect, "%", "%s")
 		} else {
@@ -1264,7 +1264,7 @@ func (store *MemSQL) addSourceFilterForSegments(projectID int64,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var addSourceStmt string
-	addColString := " " + "users.updated_at,"
+	addColString := " " + "users.updated_at, users.properties_updated_timestamp,"
 	var selectVal string
 	if C.EnableOptimisedFilterOnEventUserQuery() {
 		selectVal = "_event_users_view"

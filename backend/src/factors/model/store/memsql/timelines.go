@@ -320,8 +320,8 @@ func (store *MemSQL) GenerateQueryString(
 			whereStmt = joinStr + " " + whereStmt
 		}
 
-		selectString = "id AS identity, properties, updated_at AS last_activity"
-		selectColumnsStr = "users.id, users.properties, users.updated_at "
+		selectString = "id AS identity, properties, updated_at AS last_activity, properties_updated_timestamp"
+		selectColumnsStr = "users.id, users.properties, users.updated_at, users.properties_updated_timestamp"
 		groupByStr = ""
 
 		// selecting property col of users in case of user props in account profiles
@@ -411,14 +411,14 @@ func (store *MemSQL) BuildQueryStringForDomains(projectID int64, filterString st
 	whereForDomainGroupQuery := fmt.Sprintf(strings.Replace(whereForUserQuery, "users.source!=", "source=",
 		1) + " AND is_group_user = 1")
 	whereForUserQuery = whereForUserQuery + " AND " + userTimeAndRecordsLimit
-	selectUserColumnsString := fmt.Sprintf("properties, group_%d_user_id, id, customer_user_id, is_group_user, group_%d_id", domainGroup.ID, domainGroup.ID)
+	selectUserColumnsString := fmt.Sprintf("properties, updated_at, group_%d_user_id, id, customer_user_id, is_group_user, group_%d_id", domainGroup.ID, domainGroup.ID)
 	userQueryString := fmt.Sprintf("(SELECT " + selectUserColumnsString + " FROM users " + whereForUserQuery + " ) AS users")
-	selectDomainGroupColString := fmt.Sprintf("SELECT id, updated_at, group_%d_id FROM users", domainGroup.ID)
+	selectDomainGroupColString := fmt.Sprintf("SELECT id, group_%d_id FROM users", domainGroup.ID)
 	domainGroupQueryString := "( " + selectDomainGroupColString + " " + whereForDomainGroupQuery +
 		" ) AS domain_groups"
 	onCondition := fmt.Sprintf("ON users.group_%d_user_id = domain_groups.id", domainGroup.ID)
 	groupByStr := "GROUP BY identity"
-	selectString := fmt.Sprintf("domain_groups.id AS identity, users.properties as properties, domain_groups.updated_at AS last_activity, domain_groups.group_%d_id as host_name", domainGroup.ID)
+	selectString := fmt.Sprintf("domain_groups.id AS identity, users.properties as properties, MAX(users.updated_at) AS last_activity, domain_groups.group_%d_id as host_name", domainGroup.ID)
 	var selectFilterString, havingString string
 	selectFilterString, havingString = SelectFilterAndHavingStringsForAccounts(filters)
 	if selectFilterString != "" {
@@ -569,20 +569,22 @@ func (store *MemSQL) GetUsersAssociatedToDomain(projectID int64, minMax *model.M
 	domainID := groupIdsMap[model.GROUP_NAME_DOMAINS]
 	query := fmt.Sprintf(`SELECT domain_groups.id AS identity, 
 	  user_global_user_properties as properties, 
-	  domain_groups.updated_at AS last_activity, 
+	  MAX(users.updated_at) AS last_activity, 
 	  domain_groups.group_%d_id as host_name 
 	FROM (
-		SELECT properties as user_global_user_properties, 
-		  group_%d_user_id, id 
+		SELECT id,
+		  properties as user_global_user_properties, 
+		  updated_at,
+		  group_%d_user_id
 		FROM users 
 		WHERE project_id = ? 
 		  AND customer_user_id IS NOT NULL 
-		AND group_%d_user_id IS NOT NULL 
-		AND %s 
-		AND %s
+		  AND group_%d_user_id IS NOT NULL 
+		  AND %s 
+		  AND %s
 	  ) AS users 
 	JOIN (
-		SELECT updated_at, id, group_%d_id 
+		SELECT id, group_%d_id 
 		FROM users 
 		WHERE project_id = ? 
 		  AND source = ? 
@@ -868,6 +870,9 @@ func FormatProfilesStruct(profiles []model.Profile, profileType string, tablePro
 
 			if profiles[index].Name == "" && profiles[index].HostName != "" {
 				profiles[index].Name = profiles[index].HostName
+			}
+			if !(source == "All" || source == U.GROUP_NAME_DOMAINS) && profile.PropertiesUpdatedTimestamp > 0 {
+				profiles[index].LastActivity = *model.UnixToLocalTime(profile.PropertiesUpdatedTimestamp)
 			}
 		}
 	} else if profileType == model.PROFILE_TYPE_USER {
