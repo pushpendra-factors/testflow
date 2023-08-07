@@ -492,9 +492,9 @@ func ApplySFOfflineTouchPointRuleForCampaignMemberV1(project *model.Project, otp
 			}
 		}
 
-		if project.ID != int64(1125899936000037) {
+		if project.ID == int64(1125899936000037) {
 			logCtx.WithField("ref", rule.TouchPointTimeRef).WithField("flag", fistRespondedRuleApplicable).Info("touch timeref for updated events")
-			if rule.TouchPointTimeRef == "sf_campaign_member_updated" {
+			if rule.TouchPointTimeRef == "$sf_campaign_member_updated" {
 				rule.TouchPointTimeRef = model.SFCampaignMemberResponded
 			}
 		}
