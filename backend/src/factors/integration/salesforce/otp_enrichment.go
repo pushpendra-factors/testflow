@@ -92,7 +92,7 @@ func WorkerForSfOtp(projectID, startTime, endTime int64, backfillEnabled bool, w
 
 			switch eventName {
 
-			case U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED:
+			case U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN:
 				RunSFOfflineTouchPointRuleForCampaignMember(project, &otpRules, &uniqueOTPEventKeys, timeRange.Unix(), timeRange.Unix()+model.SecsInADay-1, eventDetails.ID, eventName, logCtx)
 
 			case U.EVENT_NAME_SALESFORCE_TASK_UPDATED, U.EVENT_NAME_SALESFORCE_TASK_CREATED:
@@ -431,91 +431,35 @@ func ApplySFOfflineTouchPointRuleForCampaignMemberV1(project *model.Project, otp
 		return nil
 	}
 
-	fistRespondedRuleApplicable := true
-
-	if project.ID != int64(1125899936000037) {
-
-		// Checking if the EP_SFCampaignMemberResponded has already been set as true for same customer id
-		if eventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED {
-
-			// ignore to create a new touch point if last updated doc has EP_SFCampaignMemberResponded=true
-			if val, exists := sfEvent.EventProperties[model.EP_SFCampaignMemberResponded]; exists {
-				if val != nil && val.(bool) == true {
-					logCtx.Info("found EP_SFCampaignMemberResponded=true for the document, skipping creating OTP.")
-					fistRespondedRuleApplicable = false
-				}
-			}
-		}
-	}
-
-	otpEventName, err := store.GetStore().GetEventNameIDFromEventName(U.EVENT_NAME_OFFLINE_TOUCH_POINT, project.ID)
-	if err != nil {
-		return err
-	}
-
 	for _, rule := range *otpRules {
-
-		otpUniqueKey, err := createOTPUniqueKeyForCampaignMemberV1(rule, sfEvent, logCtx)
-		if err != http.StatusCreated {
-			logCtx.Error("Failed to create otp_unique_key")
-			continue
-		}
-
-		//Checks if the otpUniqueKey is already present in other OTP Event Properties
-		if C.GetOtpKeyWithQueryCheckEnabled() {
-
-			//Checks if the otpUniqueKey is already present in other OTP Event Properties
-			isUnique, _ := store.GetStore().IsOTPKeyUniqueWithQuery(project.ID, sfEvent.UserId, otpEventName.ID, otpUniqueKey)
-
-			if !isUnique {
-				continue
-			}
-
-		} else {
-			//Checks if the otpUniqueKey is already present in other OTP Event Properties
-			if !isSalesforceOTPKeyUnique(otpUniqueKey, uniqueOTPEventKeys, logCtx) {
-
-				continue
-			}
-		}
 
 		// check if rule is applicable
 		if !model.EvaluateOTPFilterV1(rule, sfEvent, logCtx) {
 			continue
 		}
 
-		// Run for create document rule
+		// Run for Added To Campaign
 		if rule.TouchPointTimeRef == model.SFCampaignMemberCreated && eventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED {
-			_, err := CreateTouchPointEventCampaignMemberV1(project, sfEvent, otpUniqueKey, eventName, rule)
+			_, err := CreateTouchPointEventCampaignMemberV1(project, sfEvent, eventName, rule)
 			if err != nil {
 				logCtx.WithError(err).Error("failed to create touch point for salesforce campaign member document. trying for responded rule")
 			}
 		}
 
-		if project.ID == int64(1125899936000037) {
-			logCtx.WithField("ref", rule.TouchPointTimeRef).WithField("flag", fistRespondedRuleApplicable).Info("touch timeref for updated events")
-			if rule.TouchPointTimeRef == "$sf_campaign_member_updated" {
-				rule.TouchPointTimeRef = model.SFCampaignMemberResponded
+		// Run for responded To Campaign
+		if rule.TouchPointTimeRef == model.SFCampaignMemberResponded && eventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN {
+			_, err := CreateTouchPointEventCampaignMemberV1(project, sfEvent, eventName, rule)
+			if err != nil {
+				logCtx.WithError(err).Error("failed to create touch point for salesforce campaign member document. trying for responded rule")
 			}
 		}
-		// Run for only first responded rules & documents where first responded is not set.
-		if rule.TouchPointTimeRef == model.SFCampaignMemberResponded && fistRespondedRuleApplicable {
 
-			if val, exists := sfEvent.EventProperties[model.EP_SFCampaignMemberResponded]; exists {
-				if val.(bool) == true {
-					_, err := CreateTouchPointEventCampaignMemberV1(project, sfEvent, otpUniqueKey, eventName, rule)
-					if err != nil {
-						logCtx.WithError(err).Error("failed to create touch point for salesforce campaign member document.")
-					}
-				}
-			}
-		}
 	}
 	return nil
 }
 
 // CreateTouchPointEventCampaignMemberV1 - Creates offline touch point event for SF Campaign
-func CreateTouchPointEventCampaignMemberV1(project *model.Project, sfEvent model.EventIdToProperties, otpUniqueKey, eventName string, rule model.OTPRule) (*SDK.TrackResponse, error) {
+func CreateTouchPointEventCampaignMemberV1(project *model.Project, sfEvent model.EventIdToProperties, eventName string, rule model.OTPRule) (*SDK.TrackResponse, error) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEventCampaignMemberV1", "rule": rule, "sfEvent": sfEvent, "eventName": eventName})
 	logCtx.WithField("sfEvent", sfEvent).Info("CreateTouchPointEvent: creating salesforce document")
@@ -574,14 +518,13 @@ func CreateTouchPointEventCampaignMemberV1(project *model.Project, sfEvent model
 	}
 	// Adding mandatory properties
 	payload.EventProperties[U.EP_OTP_RULE_ID] = rule.ID
-	payload.EventProperties[U.EP_OTP_UNIQUE_KEY] = otpUniqueKey
 
 	status, trackResponse := SDK.Track(project.ID, payload, true, SDK.SourceSalesforce, "")
 	if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 		logCtx.WithField("event", sfEvent).WithError(err).Error(fmt.Errorf("create salesforce touchpoint event track failed for doc type , message %s", trackResponse.Error))
 		return trackResponse, errors.New(fmt.Sprintf("create salesforce touchpoint event track failed for doc type , message %s", trackResponse.Error))
 	}
-	logCtx.WithField("statusCode", status).WithField("trackResponsePayload", trackResponse).WithField("otpUniqueKey", otpUniqueKey).Info("Successfully: created salesforce offline touch point")
+	logCtx.WithField("statusCode", status).WithField("trackResponsePayload", trackResponse).Info("Successfully: created salesforce offline touch point")
 	return trackResponse, nil
 }
 
