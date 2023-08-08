@@ -1706,3 +1706,43 @@ func IsIPV4AddressInCIDRRange(cidr string, ipv4 string) bool {
 
 	return true
 }
+
+func FilterEmptyArrayValues(arr []string) []string {
+	filteredArr := make([]string, 0)
+	for i := range arr {
+		if arr[i] == "" {
+			continue
+		}
+		filteredArr = append(filteredArr, arr[i])
+	}
+	return filteredArr
+}
+
+func FilterEmptyKeysAndValues(projectID int64, properties map[string][]string) map[string][]string {
+	filteredProperties := make(map[string][]string)
+	for key, values := range properties {
+		if key == "" {
+			log.WithFields(log.Fields{"project_id": projectID}).Warning("Found empty property keys. Skipping key.")
+			continue
+		}
+
+		filteredValues := FilterEmptyArrayValues(values)
+
+		filteredProperties[key] = filteredValues
+	}
+
+	return filteredProperties
+}
+
+func FilterDisplayNameEmptyKeysAndValues(projectID int64, displayNames map[string]string) map[string]string {
+	filteredDisplayNames := make(map[string]string)
+	for key, value := range displayNames {
+		if key == "" || value == "" {
+			log.WithFields(log.Fields{"project_id": projectID, "key": key, "value": value}).Warning("Found empty display name key value. Skipping key.")
+			continue
+		}
+		filteredDisplayNames[key] = value
+	}
+
+	return filteredDisplayNames
+}

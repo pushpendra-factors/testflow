@@ -205,10 +205,10 @@ func GetUserPropertiesHandler(c *gin.Context) {
 			}
 			dupCheck[name] = true
 		}
-		if(version != "2"){
-			c.JSON(http.StatusOK, gin.H{"properties": properties, "display_names": displayNamesOp, "disabled_event_user_properties": U.DISABLED_EVENT_USER_PROPERTIES})
+		if version != "2" {
+			c.JSON(http.StatusOK, gin.H{"properties": U.FilterEmptyKeysAndValues(projectId, properties), "display_names": U.FilterDisplayNameEmptyKeysAndValues(projectId, displayNamesOp), "disabled_event_user_properties": U.DISABLED_EVENT_USER_PROPERTIES})
 		} else {
-			c.JSON(http.StatusOK, gin.H{"properties": model.CategorizeProperties(properties, "user"), "display_names": displayNamesOp, "disabled_event_user_properties": U.DISABLED_EVENT_USER_PROPERTIES})
+			c.JSON(http.StatusOK, gin.H{"properties": model.CategorizeProperties(U.FilterEmptyKeysAndValues(projectId, properties), "user"), "display_names": U.FilterDisplayNameEmptyKeysAndValues(projectId, displayNamesOp), "disabled_event_user_properties": U.DISABLED_EVENT_USER_PROPERTIES})
 		}
 		return
 	}
@@ -293,11 +293,11 @@ func GetUserPropertyValuesHandler(c *gin.Context) {
 			logCtx.WithField("property_name", propertyName).Error("No user property value labels Returned")
 		}
 
-		c.JSON(http.StatusOK, propertyValueLabel)
+		c.JSON(http.StatusOK, U.FilterDisplayNameEmptyKeysAndValues(projectId, propertyValueLabel))
 		return
 	}
 
-	c.JSON(http.StatusOK, propertyValues)
+	c.JSON(http.StatusOK, U.FilterEmptyArrayValues(propertyValues))
 }
 
 func getUserPropertyValuesFromPatternServer(projectId int64, modelId uint64, propertyName string) ([]string, int, string) {
