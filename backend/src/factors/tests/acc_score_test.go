@@ -505,3 +505,47 @@ func TestGenerateAccountScores(t *testing.T) {
 	assert.Nil(t, err)
 
 }
+
+func TestGenerationOfScore(t *testing.T) {
+
+	var finalWeights M.AccWeights
+	w0 := M.AccEventWeight{WeightId: "1", Weight_value: 1.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w1 := M.AccEventWeight{WeightId: "2", Weight_value: 1.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w2 := M.AccEventWeight{WeightId: "3", Weight_value: 1.0, Is_deleted: false, EventName: "$session", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w3 := M.AccEventWeight{WeightId: "4", Weight_value: 1.0, Is_deleted: false, EventName: "$form_submitted", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+
+	weightRules := []M.AccEventWeight{w0, w1, w2, w3}
+	finalWeights.WeightConfig = weightRules
+	finalWeights.SaleWindow = 30
+
+	counts := make(map[string]float64)
+	maxNum := 30
+
+	currentTimestamp := time.Now().AddDate(0, 0, -1*maxNum)
+	scores := make([]float64, maxNum)
+	counts["1"] += float64(1)
+	counts["2"] += float64(1)
+	counts["3"] += float64(1)
+	counts["4"] += float64(1)
+
+	for idx := 0; idx < maxNum; idx++ {
+
+		day := T.GetDateOnlyFromTimestamp(currentTimestamp.AddDate(0, 0, 1*idx).Unix())
+		if idx == 0 {
+			idx1 := 0
+			counts["1"] += float64(idx1)
+			counts["2"] += float64(idx1)
+			counts["3"] += float64(idx1)
+			counts["4"] += float64(idx1)
+		}
+
+		score := mm.ComputeScoreWithWeightsAndCounts(&finalWeights, counts, day)
+		scores[idx] = score
+
+	}
+	log.Debugf("Scores : %v", scores)
+	score := mm.ComputeScoreWithWeightsAndCounts(&finalWeights, counts, T.GetDateOnlyFromTimestamp(time.Now().Unix()))
+	log.Debugf("Scores on current day  : %v,%f", counts, score)
+
+	assert.IsDecreasing(t, scores)
+}
