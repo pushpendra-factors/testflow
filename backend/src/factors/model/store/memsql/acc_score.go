@@ -17,99 +17,121 @@ import (
 
 const MAX_LIMIT = 10000
 
-func (store *MemSQL) UpdateUserEventsCount(projectId int64, evdata []model.DbUpdateAccScoring) error {
-	projectID := projectId
+func (store *MemSQL) UpdateUserEventsCount(evdata []model.EventsCountScore, lastevent map[string]model.LatestScore) error {
+	projectID := evdata[0].ProjectId
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
 	db := C.GetServices().Db
-	users := 0
 	for _, ev := range evdata {
-		countsLatest := ev.CurrEventCount
-		lastEvent := ev.Lastevent
-		dateString := ev.Date
-		userId := ev.Userid
+		var countsLatest model.LatestScore
+		us := model.User{}
+		us.ID = ev.UserId
+		us.ProjectId = ev.ProjectId
+		uk := make(map[string]map[string]int64)
+		uk[ev.DateStamp] = ev.EventScore
+		countsLatest.Date = model.GetDateFromString(ev.DateStamp)
+		countsLatest.EventsCount = make(map[string]float64)
+		for k, v := range ev.EventScore {
+			countsLatest.EventsCount[k] = float64(v)
+		}
+		countsLatest.Properties = make(map[string]map[string]int64)
+		for kp, vp := range ev.Property {
 
+			countsLatest.Properties[kp] = make(map[string]int64)
+			for vpp, vpl := range vp {
+				countsLatest.Properties[kp][vpp] = vpl
+			}
+		}
 		eventsCountjson, err := json.Marshal(countsLatest)
 		if err != nil {
 			logCtx.WithError(err).Errorf("Unable to convert map to json in event counts ")
 		}
-		LatestScoreString, err := json.Marshal(lastEvent)
+
+		LatestScoreString, err := json.Marshal(lastevent[ev.UserId])
 		if err != nil {
 			logCtx.WithError(err).Errorf("Unable to marshall latest score ")
 		}
+		logCtx.Debugf("user last event data: %s", string(LatestScoreString))
 
-		if len(countsLatest.EventsCount) > 0 {
-
-			stmt := fmt.Sprintf("UPDATE users SET event_aggregate = case when event_aggregate is NULL THEN '{}' ELSE  event_aggregate END, event_aggregate::`%s`='%s' ,event_aggregate::`%s` = '%s' where id= ? and project_id= ?", dateString, eventsCountjson, model.LAST_EVENT, LatestScoreString)
-			err = db.Exec(stmt, userId, projectID).Error
-			if err != nil {
-				logCtx.WithError(err).Errorf("Unable to update latest score in user events ")
-				return err
-			}
-		} else {
-
-			if len(lastEvent.EventsCount) > 0 {
-				stmt := fmt.Sprintf("UPDATE users SET event_aggregate = case when event_aggregate is NULL THEN '{}' ELSE  event_aggregate END, event_aggregate::`%s`='%s' where id= ? and project_id= ?", model.LAST_EVENT, LatestScoreString)
-				err = db.Exec(stmt, userId, projectID).Error
-				if err != nil {
-					logCtx.WithError(err).Errorf("Unable to update latest score in user events ")
-					return err
-				}
-			}
+		stmt := fmt.Sprintf("UPDATE users SET event_aggregate = case when event_aggregate is NULL THEN '{}' ELSE  event_aggregate END, event_aggregate::`%s`='%s' ,event_aggregate::`%s` = '%s' where id= ? and project_id= ?", ev.DateStamp, eventsCountjson, model.LAST_EVENT, LatestScoreString)
+		err = db.Exec(stmt, ev.UserId, ev.ProjectId).Error
+		if err != nil {
+			logCtx.WithError(err).Errorf("Unable to update latest score in user events ")
+			return err
 		}
-		users += 1
+
 	}
-	logCtx.Infof("Total number of users updated:%d", users)
 	return nil
 
 }
 
-func (store *MemSQL) UpdateGroupEventsCount(projectId int64, evdata []model.DbUpdateAccScoring) error {
-	projectID := projectId
+func (store *MemSQL) UpdateGroupEventsCount(evdata []model.EventsCountScore, lastevent map[string]model.LatestScore) error {
+	projectID := evdata[0].ProjectId
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
 	db := C.GetServices().Db
-	groupIds := 0
+	group_ids := make([]string, 0)
 	for _, ev := range evdata {
+		var countsLatest model.LatestScore
+		us := model.User{}
+		us.ID = ev.UserId
+		us.ProjectId = ev.ProjectId
+		uk := make(map[string]map[string]int64)
+		uk[ev.DateStamp] = ev.EventScore
+		countsLatest.Date = model.GetDateFromString(ev.DateStamp)
+		countsLatest.EventsCount = make(map[string]float64)
+		for k, v := range ev.EventScore {
+			countsLatest.EventsCount[k] = float64(v)
+		}
+		countsLatest.Properties = make(map[string]map[string]int64)
+		for kp, vp := range ev.Property {
 
-		countsLatest := ev.CurrEventCount
-		lastevent := ev.Lastevent
-		datastring := ev.Date
-		userId := ev.Userid
+			countsLatest.Properties[kp] = make(map[string]int64)
+			for vpp, vpl := range vp {
+				countsLatest.Properties[kp][vpp] = vpl
+			}
+		}
+
 		eventsCountjson, err := json.Marshal(countsLatest)
 		if err != nil {
 			logCtx.WithError(err).Errorf("unable to convert map to json in event counts ")
 		}
-		lasteventjson, err := json.Marshal(lastevent)
-		if err != nil {
-			logCtx.WithError(err).Errorf("unable to convert map to json in event counts ")
-		}
 
-		if len(ev.CurrEventCount.EventsCount) > 0 {
-			stmt := fmt.Sprintf("UPDATE users SET event_aggregate = case when event_aggregate is NULL THEN '{}' ELSE  event_aggregate END, event_aggregate::`%s`='%s' ,event_aggregate::`%s` = '%s' where id= ? and project_id= ?", datastring, eventsCountjson, model.LAST_EVENT, lasteventjson)
-			err = db.Exec(stmt, userId, projectID).Error
+		if len(ev.EventScore) > 0 {
+
+			var lt model.LatestScore
+			lt.EventsCount = make(map[string]float64)
+
+			if le, ok := lastevent[ev.UserId]; ok {
+				lt = le
+			} else {
+				e := fmt.Errorf("unable to find, last event for user:%s", ev.UserId)
+				logCtx.Error(e)
+			}
+
+			LatestScoreString, err := json.Marshal(lt)
 			if err != nil {
-				logCtx.WithError(err).Errorf("Unable to update latest score in user groups ")
+				logCtx.WithError(err).Errorf("Unable to marshall latest score ")
+			}
+
+			stmt := fmt.Sprintf("UPDATE users SET event_aggregate = case when event_aggregate is NULL THEN '{}' ELSE  event_aggregate END, event_aggregate::`%s`='%s' ,event_aggregate::`%s` = '%s' where id= ? and project_id= ?", ev.DateStamp, eventsCountjson, model.LAST_EVENT, LatestScoreString)
+			err = db.Exec(stmt, ev.UserId, ev.ProjectId).Error
+			if err != nil {
+				logCtx.WithError(err).Errorf("Unable to update latest score in user events ")
 				return err
 			}
-		} else {
 
-			stmt := fmt.Sprintf("UPDATE users SET event_aggregate = case when event_aggregate is NULL THEN '{}' ELSE  event_aggregate END, event_aggregate::`%s`='%s' where id= ? and project_id= ?", model.LAST_EVENT, lasteventjson)
-			err = db.Exec(stmt, userId, projectID).Error
-			if err != nil {
-				logCtx.WithError(err).Errorf("Unable to update latest score in user groups")
-				return err
-			}
+			group_ids = append(group_ids, ev.UserId)
 		}
-		groupIds += 1
+
 	}
-	logCtx.Infof("num of groups added : %d", groupIds)
+	logCtx.WithField("Num of groups added", len(group_ids)).Infof("groups :%v", group_ids)
 	return nil
 
 }
