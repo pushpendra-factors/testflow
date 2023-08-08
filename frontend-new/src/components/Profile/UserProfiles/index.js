@@ -460,9 +460,9 @@ function UserProfiles({
       const updatedQuery = { ...activeSegment.query };
       updatedQuery.table_props =
         checkListUserProps
-          .filter((item) => item.enabled === true)
-          .map((item) => item?.prop_name)
-          .filter((entry) => entry !== '' && entry !== undefined) || [];
+          ?.filter((item) => item.enabled === true)
+          ?.map((item) => item?.prop_name)
+          ?.filter((entry) => entry !== '' && entry !== undefined) || [];
       updateSegmentForId(activeProject.id, timelinePayload.segment_id, {
         query: { ...updatedQuery }
       })
@@ -472,8 +472,8 @@ function UserProfiles({
     } else {
       const config = { ...tlConfig };
       config.user_config.table_props = checkListUserProps
-        .filter((item) => item.enabled === true)
-        .map((item) => item?.prop_name);
+        ?.filter((item) => item.enabled === true)
+        ?.map((item) => item?.prop_name);
       udpateProjectSettings(activeProject.id, {
         timelines_config: { ...config }
       }).then(() => getUsers(timelinePayload));

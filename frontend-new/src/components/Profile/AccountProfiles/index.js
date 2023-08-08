@@ -156,7 +156,7 @@ function AccountProfiles({
           (item) => item.includes(source)
         );
     return (
-      tableProps.filter((entry) => entry !== '' && entry !== undefined) || []
+      tableProps?.filter((entry) => entry !== '' && entry !== undefined) || []
     );
   }, [currentProjectSettings, accountPayload, activeSegment]);
 
@@ -446,9 +446,9 @@ function AccountProfiles({
         ...activeSegment.query,
         table_props:
           checkListAccountProps
-            .filter(({ enabled }) => enabled)
-            .map(({ prop_name }) => prop_name)
-            .filter((entry) => entry !== '' && entry !== undefined) || []
+            ?.filter(({ enabled }) => enabled)
+            ?.map(({ prop_name }) => prop_name)
+            ?.filter((entry) => entry !== '' && entry !== undefined) || []
       };
 
       updateSegmentForId(activeProject.id, accountPayload.segment_id, {
