@@ -12,12 +12,13 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 )
 
 type AttributionRequestPayload struct {
@@ -49,14 +50,9 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	}
 
 	var err error
-	var requestPayload AttributionRequestPayload
-	var dashboardId int64
-	var unitId int64
 	var timezoneString U.TimeZoneString
 	preset := ""
 	hardRefresh := false
-	dashboardIdParam := c.Query("dashboard_id")
-	unitIdParam := c.Query("dashboard_unit_id")
 	refreshParam := c.Query("refresh")
 	presetParam := c.Query("preset") // check preset
 
@@ -67,38 +63,9 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		hardRefresh, _ = strconv.ParseBool(refreshParam)
 	}
 
-	isDashboardQueryRequest := dashboardIdParam != "" && unitIdParam != ""
-	if isDashboardQueryRequest {
-		dashboardId, err = strconv.ParseInt(dashboardIdParam, 10, 64)
-		if err != nil || dashboardId == 0 {
-			logCtx.WithError(err).Error("Query failed. Invalid DashboardID.")
-			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardID.", true
-		}
-		unitId, err = strconv.ParseInt(unitIdParam, 10, 64)
-		if err != nil || unitId == 0 {
-			logCtx.WithError(err).Error("Query failed. Invalid DashboardUnitID.")
-			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardUnitID.", true
-		}
-	}
-
-	queryIdString := c.Query("query_id")
-	if queryIdString == "" {
-		var hasFailed bool
-		var errMsg string
-		hasFailed, errMsg, requestPayload = decodeAttributionPayload(r, logCtx)
-		if hasFailed {
-			logCtx.Error("Query failed. Json decode failed." + errMsg)
-			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed." + errMsg, true
-		}
-	} else {
-		_, query, err := store.GetStore().GetQueryAndClassFromQueryIdString(queryIdString, projectId)
-		if err != "" {
-			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
-			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
-		}
-		var requestPayloadUnit model.AttributionQueryUnit
-		U.DecodePostgresJsonbToStructType(&query.Query, &requestPayloadUnit)
-		requestPayload.Query = requestPayloadUnit.Query
+	requestPayload, dashboardId, unitId, isDashboardQueryRequest, statusCode, errorCode, errMsg, isErr := getValidAttributionQueryAndDetailsFromRequest(r, c, logCtx, projectId)
+	if statusCode != http.StatusOK {
+		return nil, statusCode, errorCode, errMsg, isErr
 	}
 
 	if requestPayload.Query == nil {
@@ -228,6 +195,92 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	}
 	result.Query = requestPayload.Query
 	return result, http.StatusOK, "", "", false
+}
+
+func getValidAttributionQueryAndDetailsFromRequest(r *http.Request, c *gin.Context, logCtx *log.Entry, projectId int64) (AttributionRequestPayload, int64, int64, bool, int, string, string, bool) {
+	var dashboardId, unitId int64
+	var err error
+	queryPayload, requestPayload := AttributionRequestPayload{}, AttributionRequestPayload{}
+	var dbQuery model.AttributionQueryUnit
+
+	dashboardIdParam := c.Query("dashboard_id")
+	unitIdParam := c.Query("dashboard_unit_id")
+	queryIdString := c.Query("query_id")
+
+	if queryIdString == "" {
+		var hasFailed bool
+		var errMsg string
+		hasFailed, errMsg, requestPayload = decodeAttributionPayload(r, logCtx)
+		if hasFailed {
+			logCtx.WithField("errMsg", errMsg).Error("Query failed. Json decode failed.")
+			return queryPayload, 0, 0, false, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
+		}
+	}
+
+	isDashboardQueryRequest := dashboardIdParam != "" && unitIdParam != ""
+	if isDashboardQueryRequest {
+
+		dashboardId, err = strconv.ParseInt(dashboardIdParam, 10, 64)
+		if err != nil || dashboardId == 0 {
+			logCtx.WithError(err).Error("Query failed. Invalid DashboardID.")
+			return queryPayload, dashboardId, 0, true, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardID.", true
+		}
+		unitId, err = strconv.ParseInt(unitIdParam, 10, 64)
+		if err != nil || unitId == 0 {
+			logCtx.WithError(err).Error("Query failed. Invalid DashboardUnitID.")
+			return queryPayload, dashboardId, unitId, true, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardUnitID.", true
+		}
+		_, query, err := store.GetStore().GetQueryFromUnitID(projectId, unitId)
+		if err != "" {
+			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
+			return queryPayload, dashboardId, unitId, true, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
+		}
+		if query.LockedForCacheInvalidation {
+			return queryPayload, dashboardId, unitId, true, http.StatusConflict, V1.PROCESSING_FAILED, "Query is not processed due to saved query updated", false
+		}
+		U.DecodePostgresJsonbToStructType(&query.Query, &dbQuery)
+		queryPayload.Query = dbQuery.Query
+	} else if queryIdString != "" {
+		_, query, err := store.GetStore().GetQueryAndClassFromQueryIdString(queryIdString, projectId)
+		if err != "" {
+			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
+			return queryPayload, 0, 0, false, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
+		}
+		if query.LockedForCacheInvalidation {
+			return queryPayload, 0, 0, false, http.StatusConflict, V1.PROCESSING_FAILED, "Query is not processed due to saved query updated", false
+		}
+		U.DecodePostgresJsonbToStructType(&query.Query, &dbQuery)
+		queryPayload.Query = dbQuery.Query
+	} else {
+		queryPayload = requestPayload
+	}
+
+	if queryIdString == "" {
+		queryUnitPayload := model.AttributionQueryUnit{Query: queryPayload.Query}
+
+		queryUnitPayload.SetQueryDateRange(requestPayload.Query.From, requestPayload.Query.To)
+		if requestPayload.Query.Timezone != "" {
+			queryUnitPayload.SetTimeZone(U.TimeZoneString(requestPayload.Query.Timezone))
+		}
+
+		if requestPayload.Query.KPI.Class != "" {
+			var inputGroupByTimestamp string
+			for _, query := range requestPayload.Query.KPI.Queries {
+				if query.GroupByTimestamp != "" {
+					inputGroupByTimestamp = query.GroupByTimestamp
+				}
+			}
+			for index, query := range queryUnitPayload.Query.KPI.Queries {
+				if query.GroupByTimestamp != "" {
+					queryUnitPayload.Query.KPI.Queries[index].GroupByTimestamp = inputGroupByTimestamp
+				}
+			}
+		}
+
+		queryPayload.Query = queryUnitPayload.Query
+	}
+
+	return queryPayload, dashboardId, unitId, isDashboardQueryRequest, http.StatusOK, "", "", false
 }
 
 // decodeAttributionPayload decodes attribution requestPayload for 2 json formats to support old and new

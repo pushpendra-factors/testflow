@@ -522,6 +522,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS queries (
     updated_at timestamp(6) NOT NULL,
     id_text text,
     converted boolean,
+    locked_for_cache_invalidation boolean default false,
     KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id, id),

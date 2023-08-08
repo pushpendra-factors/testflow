@@ -365,47 +365,20 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 		return nil, http.StatusBadRequest, INVALID_INPUT, "", true
 	}
 	logCtx = logCtx.WithField("project_id", projectID).WithField("reqId", reqID)
-
-	queryIdString := c.Query("query_id")
-	request := model.KPIQueryGroup{}
-	if queryIdString == "" {
-		err := c.BindJSON(&request)
-		if err != nil {
-			return nil, http.StatusBadRequest, INVALID_INPUT, "Error during validation of execute KPIQuery.", true
-		}
-	} else {
-		_, query, err := store.GetStore().GetQueryAndClassFromQueryIdString(queryIdString, projectID)
-		if err != "" {
-			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
-			return nil, http.StatusBadRequest, INVALID_INPUT, "Query failed. Json decode failed.", true
-		}
-		U.DecodePostgresJsonbToStructType(&query.Query, &request)
+	request, dashboardId, unitId, isDashboardQueryRequest, statusCode, errorCode, errMsg, isErr := getValidKPIQueryAndDetailsFromRequest(c.Request, c, logCtx, projectID, c.Query("dashboard_id"), c.Query("dashboard_unit_id"), c.Query("query_id"))
+	if statusCode != http.StatusOK {
+		return nil, statusCode, errorCode, errMsg, isErr
 	}
 
-	dashboardId, unitId, preset, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, _, err := getDashboardRelatedInformationFromRequest(request, projectID,
-		c.Query("dashboard_id"), c.Query("dashboard_unit_id"), c.Query("preset"), c.Query("refresh"), c.Query("is_query"))
-	if err != nil {
-		return nil, http.StatusBadRequest, INVALID_INPUT, err.Error(), true
+	preset, commonQueryFrom, commonQueryTo, hardRefresh, _ := getOtherRelatedInformationFromRequest(request, projectID,
+		c.Query("preset"), c.Query("refresh"), c.Query("is_query"))
+
+	request, statusCode, errorCode, errMsg, isErr = setTimezoneForKPIRequest(logCtx, request, projectID)
+	if statusCode != http.StatusOK {
+		return nil, statusCode, errorCode, errMsg, isErr
 	}
 
-	if request.Queries[0].Timezone != "" {
-		_, errCode := time.LoadLocation(string(request.Queries[0].Timezone))
-		if errCode != nil {
-			return nil, http.StatusBadRequest, INVALID_INPUT, "Query failed. Invalid Timezone provided.", true
-		}
-
-		timezoneString = U.TimeZoneString(request.Queries[0].Timezone)
-	} else {
-		timezoneString, statusCode = store.GetStore().GetTimezoneForProject(projectID)
-		if statusCode != http.StatusFound {
-			logCtx.Error("Query failed. Failed to get Timezone.")
-			return nil, http.StatusBadRequest, INVALID_INPUT, "Query failed. Failed to get Timezone.", true
-		}
-		// logCtx.WithError(err).Error("Query failed. Invalid Timezone.")
-	}
-
-	request.SetTimeZone(timezoneString)
-	err = request.TransformDateTypeFilters()
+	err := request.TransformDateTypeFilters()
 	if err != nil {
 		return nil, http.StatusBadRequest, INVALID_INPUT, err.Error(), true
 	}
@@ -504,16 +477,102 @@ func isQueryShareable(request model.KPIQueryGroup) bool {
 	return false
 }
 
-func getDashboardRelatedInformationFromRequest(request model.KPIQueryGroup, projectID int64, dashboardIdParam, unitIdParam, presetParam, refreshParam, isQueryParam string) (int64, int64, string, int64, int64, bool, bool, bool, error) {
-	var dashboardId int64
+func getValidKPIQueryAndDetailsFromRequest(r *http.Request, c *gin.Context, logCtx *log.Entry, projectId int64, dashboardIdParam, unitIdParam, queryIdParam string) (model.KPIQueryGroup, int64, int64, bool, int, string, string, bool) {
 	var unitId int64
-	var err error
-	hardRefresh := false
-	preset := ""
+	requestPayload, queryPayload := model.KPIQueryGroup{}, model.KPIQueryGroup{}
+	dashboardId, err := strconv.ParseInt(dashboardIdParam, 10, 64)
+	if err != nil {
+		err = errors.New("Query failed. Invalid DashboardID.")
+	}
+	unitId, err = strconv.ParseInt(unitIdParam, 10, 64)
+	if err != nil || unitId == 0 {
+		err = errors.New("Query failed. Invalid DashboardUnitID.")
+	}
+	isDashboardQueryRequest := dashboardIdParam != "" && unitIdParam != ""
 
-	commonQueryFrom := request.Queries[0].From
-	commonQueryTo := request.Queries[0].To
-	timeZoneString := request.Queries[0].Timezone
+	if queryIdParam == "" {
+		if err := c.BindJSON(&requestPayload); err != nil {
+			logCtx.WithError(err).Error("Query failed. Json decode failed.")
+			return queryPayload, dashboardId, unitId, isDashboardQueryRequest, http.StatusBadRequest, INVALID_INPUT, "Query failed. Json decode failed.", true
+		}
+	}
+
+	if isDashboardQueryRequest {
+
+		_, query, err := store.GetStore().GetQueryFromUnitID(projectId, unitId)
+		if err != "" {
+			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
+			return queryPayload, dashboardId, unitId, isDashboardQueryRequest, http.StatusBadRequest, INVALID_INPUT, "Query failed. Json decode failed.", true
+		}
+		if query.LockedForCacheInvalidation {
+			return queryPayload, dashboardId, unitId, isDashboardQueryRequest, http.StatusConflict, PROCESSING_FAILED, "Query is not processed due to saved query updated", false
+		}
+		U.DecodePostgresJsonbToStructType(&query.Query, &queryPayload)
+	} else if queryIdParam != "" {
+		_, query, err := store.GetStore().GetQueryAndClassFromQueryIdString(queryIdParam, projectId)
+		if err != "" {
+			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
+			return queryPayload, dashboardId, unitId, isDashboardQueryRequest, http.StatusBadRequest, INVALID_INPUT, "Query failed. Json decode failed.", true
+		}
+		if query.LockedForCacheInvalidation {
+			return queryPayload, dashboardId, unitId, isDashboardQueryRequest, http.StatusConflict, PROCESSING_FAILED, "Query is not processed due to saved query updated", false
+		}
+		U.DecodePostgresJsonbToStructType(&query.Query, &queryPayload)
+	} else {
+		queryPayload = requestPayload
+	}
+
+	if queryIdParam == "" {
+		queryPayload.SetQueryDateRange(requestPayload.Queries[0].From, requestPayload.Queries[0].To)
+		if requestPayload.Queries[0].Timezone != "" {
+			queryPayload.SetTimeZone(U.TimeZoneString(requestPayload.Queries[0].Timezone))
+		}
+
+		var inputGroupByTimestamp string
+		for _, query := range requestPayload.Queries {
+			if query.GroupByTimestamp != "" {
+				inputGroupByTimestamp = query.GroupByTimestamp
+			}
+		}
+
+		for index := range queryPayload.Queries {
+			if queryPayload.Queries[index].GroupByTimestamp != "" {
+				queryPayload.Queries[index].GroupByTimestamp = inputGroupByTimestamp
+			}
+		}
+	}
+
+	if len(queryPayload.Queries) == 0 {
+		logCtx.Error("Query failed. Empty query group.")
+		return queryPayload, dashboardId, unitId, isDashboardQueryRequest, http.StatusBadRequest, INVALID_INPUT, "Query failed. Empty query group.", true
+	}
+	return queryPayload, dashboardId, unitId, isDashboardQueryRequest, http.StatusOK, "", "", false
+}
+
+func setTimezoneForKPIRequest(logCtx *log.Entry, requestPayload model.KPIQueryGroup, projectId int64) (model.KPIQueryGroup, int, string, string, bool) {
+	var timezoneString U.TimeZoneString
+	if requestPayload.Queries[0].Timezone != "" {
+		_, errCode := time.LoadLocation(string(requestPayload.Queries[0].Timezone))
+		if errCode != nil {
+			return requestPayload, http.StatusBadRequest, INVALID_INPUT, "Query failed. Invalid Timezone provided.", true
+		}
+		timezoneString = U.TimeZoneString(requestPayload.Queries[0].Timezone)
+	} else {
+		var statusCode int
+		timezoneString, statusCode = store.GetStore().GetTimezoneForProject(projectId)
+		if statusCode != http.StatusFound {
+			logCtx.Error("Query failed. Failed to get Timezone.")
+			return requestPayload, http.StatusBadRequest, INVALID_INPUT, "Query failed. Failed to get Timezone.", true
+		}
+	}
+	requestPayload.SetTimeZone(timezoneString)
+	return requestPayload, http.StatusOK, "", "", false
+}
+
+func getOtherRelatedInformationFromRequest(request model.KPIQueryGroup, projectID int64, presetParam, refreshParam, isQueryParam string) (string, int64, int64, bool, bool) {
+	hardRefresh, preset := false, ""
+
+	commonQueryFrom, commonQueryTo, timeZoneString := request.Queries[0].From, request.Queries[0].To, request.Queries[0].Timezone
 	if U.PresetLookup[presetParam] != "" && C.IsLastComputedWhitelisted(projectID) {
 		preset = presetParam
 	}
@@ -526,22 +585,10 @@ func getDashboardRelatedInformationFromRequest(request model.KPIQueryGroup, proj
 		isQuery, _ = strconv.ParseBool(isQueryParam)
 	}
 
-	isDashboardQueryRequest := dashboardIdParam != "" && unitIdParam != ""
-	if !isDashboardQueryRequest {
-		return dashboardId, unitId, preset, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, isQuery, err
-	}
 	if preset == "" {
 		preset = U.GetPresetNameByFromAndTo(commonQueryFrom, commonQueryTo, U.TimeZoneString(timeZoneString))
 	}
-	dashboardId, err = strconv.ParseInt(dashboardIdParam, 10, 64)
-	unitId, err = strconv.ParseInt(unitIdParam, 10, 64)
-	if err != nil || unitId == 0 {
-		err = errors.New("Query failed. Invalid DashboardID.")
-	}
-	if err != nil || unitId == 0 {
-		err = errors.New("Query failed. Invalid DashboardUnitID.")
-	}
-	return dashboardId, unitId, preset, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, isQuery, err
+	return preset, commonQueryFrom, commonQueryTo, hardRefresh, isQuery
 }
 
 func GetResultFromCacheOrDashboard(c *gin.Context, reqID string, projectID int64, request model.KPIQueryGroup,
