@@ -234,9 +234,6 @@ func handleNoneCase(eventPropValue string, isPresentEventPropValue bool, operato
 		return !isPresentEventPropValue || eventPropValue == "$none" || eventPropValue == ""
 	}
 	if operator == M.NotEqualOpStr || operator == M.NotContainsOpStr {
-		if eventPropValue == "$none" || eventPropValue == "" {
-			log.Info("$$$$checkpoint - hande none case, ", isPresentEventPropValue, eventPropValue)
-		}
 		return isPresentEventPropValue && eventPropValue != "$none" && eventPropValue != ""
 	}
 	return false

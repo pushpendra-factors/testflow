@@ -470,14 +470,6 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 
 		criteria := E.MapFilterProperties(config.Filter)
 		if E.EventMatchesFilterCriterionList(projectId, *userPropMap, *eventPropMap, criteria) {
-			for _, fil := range config.Filter {
-				if fil.Property == "$6Signal_domain" &&
-				(fil.Operator == model.NotEqualOpStr || fil.Operator == model.NotContainsOpStr) &&
-				fil.Value == "$none" &&
-				((*userPropMap)["$6Signal_domain"] == "$none" || (*userPropMap)["$6Signal_domain"] == "" ) {
-					log.WithFields(logFields).Info("$$$$checkpoint - matching success")
-				}
-			}
 			matchedAlerts = append(matchedAlerts, alert)
 			
 		}
@@ -919,8 +911,7 @@ func (store *MemSQL) CacheEventTriggerAlert(alert *model.EventTriggerAlert, even
 		log.WithFields(logFields).Error("Failed to send alert.")
 		return false
 	}
-
-	log.WithFields(logFields).Info("Inside Match func checkpoint 12 - caching success")
+	
 	return true
 }
 
