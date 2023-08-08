@@ -10,7 +10,7 @@ import (
 
 const DEFAULT_EVENT string = "all_events"
 const LAST_EVENT string = "LAST_EVENT"
-const NUM_TREND_DAYS int = 10
+const NUM_TREND_DAYS int = 30
 
 type AccScoreResult struct {
 	ProjectId int64                  `json:"projectid"`
