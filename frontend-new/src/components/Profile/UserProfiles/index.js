@@ -321,39 +321,41 @@ function UserProfiles({
       ? activeSegment?.query?.table_props
       : currentProjectSettings?.timelines_config?.user_config?.table_props;
 
-    tableProps?.forEach((prop) => {
-      const propDisplayName = userPropNames[prop]
-        ? userPropNames[prop]
-        : PropTextFormat(prop);
-      const propType = getPropType(userProperties, prop);
-      columns.push({
-        title: (
-          <Text
-            type='title'
-            level={7}
-            color='grey-2'
-            weight='bold'
-            extraClass='m-0'
-            truncate
-            charLimit={25}
-          >
-            {propDisplayName}
-          </Text>
-        ),
-        dataIndex: prop,
-        key: prop,
-        width: 260,
-        sorter: (a, b) =>
-          propType === 'numerical'
-            ? sortNumericalColumn(a[prop], b[prop])
-            : sortStringColumn(a[prop], b[prop]),
-        render: (value) => (
-          <Text type='title' level={7} extraClass='m-0' truncate>
-            {value ? propValueFormat(prop, value, propType) : '-'}
-          </Text>
-        )
+    tableProps
+      ?.filter((entry) => entry !== '' && entry !== undefined)
+      ?.forEach((prop) => {
+        const propDisplayName = userPropNames[prop]
+          ? userPropNames[prop]
+          : PropTextFormat(prop);
+        const propType = getPropType(userProperties, prop);
+        columns.push({
+          title: (
+            <Text
+              type='title'
+              level={7}
+              color='grey-2'
+              weight='bold'
+              extraClass='m-0'
+              truncate
+              charLimit={25}
+            >
+              {propDisplayName}
+            </Text>
+          ),
+          dataIndex: prop,
+          key: prop,
+          width: 260,
+          sorter: (a, b) =>
+            propType === 'numerical'
+              ? sortNumericalColumn(a[prop], b[prop])
+              : sortStringColumn(a[prop], b[prop]),
+          render: (value) => (
+            <Text type='title' level={7} extraClass='m-0' truncate>
+              {value ? propValueFormat(prop, value, propType) : '-'}
+            </Text>
+          )
+        });
       });
-    });
 
     columns.push({
       title: <div className={headerClassStr}>Last Activity</div>,
@@ -456,9 +458,11 @@ function UserProfiles({
   const applyTableProps = () => {
     if (timelinePayload?.segment_id?.length) {
       const updatedQuery = { ...activeSegment.query };
-      updatedQuery.table_props = checkListUserProps
-        .filter((item) => item.enabled === true)
-        .map((item) => item?.prop_name);
+      updatedQuery.table_props =
+        checkListUserProps
+          .filter((item) => item.enabled === true)
+          .map((item) => item?.prop_name)
+          .filter((entry) => entry !== '' && entry !== undefined) || [];
       updateSegmentForId(activeProject.id, timelinePayload.segment_id, {
         query: { ...updatedQuery }
       })
