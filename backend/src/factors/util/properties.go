@@ -174,6 +174,7 @@ const GROUP_EVENT_NAME_G2_CATEGORY = "$g2_category"
 const GROUP_EVENT_NAME_G2_COMPARISON = "$g2_comparison"
 const GROUP_EVENT_NAME_G2_REPORT = "$g2_report"
 const GROUP_EVENT_NAME_G2_REFERENCE = "$g2_reference"
+const GROUP_EVENT_NAME_G2_DEAL = "$g2_deal"
 
 // Integration shopify event names.
 const EVENT_NAME_SHOPIFY_CHECKOUT_CREATED = "$shopify_checkout_created"
@@ -329,6 +330,7 @@ var ALLOWED_INTERNAL_EVENT_NAMES = [...]string{
 	GROUP_EVENT_NAME_G2_COMPARISON,
 	GROUP_EVENT_NAME_G2_REPORT,
 	GROUP_EVENT_NAME_G2_REFERENCE,
+	GROUP_EVENT_NAME_G2_DEAL,
 }
 
 const GROUP_NAME_HUBSPOT_COMPANY = "$hubspot_company"
@@ -358,6 +360,7 @@ var GROUP_EVENT_NAME_TO_GROUP_NAME_MAPPING = map[string]string{
 	GROUP_EVENT_NAME_G2_COMPARISON:                  GROUP_NAME_G2,
 	GROUP_EVENT_NAME_G2_REPORT:                      GROUP_NAME_G2,
 	GROUP_EVENT_NAME_G2_REFERENCE:                   GROUP_NAME_G2,
+	GROUP_EVENT_NAME_G2_DEAL:                        GROUP_NAME_G2,
 	GROUP_EVENT_NAME_LINKEDIN_VIEWED_AD:             GROUP_NAME_LINKEDIN_COMPANY,
 	GROUP_EVENT_NAME_LINKEDIN_CLICKED_AD:            GROUP_NAME_LINKEDIN_COMPANY,
 }
@@ -1583,31 +1586,34 @@ var STANDARD_EVENTS_DISPLAY_NAMES = map[string]string{
 	"$sf_campaign_member_created":               "Added to Campaign",
 	"$sf_campaign_member_updated":               "Interacted with Campaign",
 	"$sf_campaign_member_responded_to_campaign": "Responded to Campaign",
-	"$session":                          "Website Session",
-	"$form_submitted":                   "Form Button Click",
-	"$hubspot_company_created":          "Company Created",
-	"$hubspot_company_updated":          "Company Updated",
-	"$hubspot_deal_created":             "Deal Created",
-	"$hubspot_deal_updated":             "Deal Updated",
-	"$salesforce_account_updated":       "Salesforce Account Updated",
-	"$salesforce_opportunity_updated":   "Salesforce Opportunity Updated",
-	"$salesforce_account_created":       "Salesforce Account Created",
-	"$salesforce_opportunity_created":   "Salesforce Opportunity Created",
-	"$offline_touch_point":              "Offline Touchpoint",
-	"$leadsquared_lead_created":         "Lead Created",
-	"$leadsquared_lead_updated":         "Lead Updated",
-	EVENT_NAME_FORM_FILL:                "Form Fills",
-	EVENT_NAME_SALESFORCE_TASK_CREATED:  "Salesforce Task Created",
-	EVENT_NAME_SALESFORCE_EVENT_CREATED: "Salesforce Event Created",
-	GROUP_EVENT_NAME_G2_ALL:             "G2 All",
-	GROUP_EVENT_NAME_G2_SPONSORED:       "G2 Sponsored",
-	GROUP_EVENT_NAME_G2_PRODUCT_PROFILE: "G2 Product Profile",
-	GROUP_EVENT_NAME_G2_ALTERNATIVE:     "G2 Alternative",
-	GROUP_EVENT_NAME_G2_PRICING:         "G2 Pricing",
-	GROUP_EVENT_NAME_G2_CATEGORY:        "G2 Category",
-	GROUP_EVENT_NAME_G2_COMPARISON:      "G2 Comparison",
-	GROUP_EVENT_NAME_G2_REPORT:          "G2 Report",
-	GROUP_EVENT_NAME_G2_REFERENCE:       "G2 Reference",
+	"$session":                           "Website Session",
+	"$form_submitted":                    "Form Button Click",
+	"$hubspot_company_created":           "Company Created",
+	"$hubspot_company_updated":           "Company Updated",
+	"$hubspot_deal_created":              "Deal Created",
+	"$hubspot_deal_updated":              "Deal Updated",
+	"$salesforce_account_updated":        "Salesforce Account Updated",
+	"$salesforce_opportunity_updated":    "Salesforce Opportunity Updated",
+	"$salesforce_account_created":        "Salesforce Account Created",
+	"$salesforce_opportunity_created":    "Salesforce Opportunity Created",
+	"$offline_touch_point":               "Offline Touchpoint",
+	"$leadsquared_lead_created":          "Lead Created",
+	"$leadsquared_lead_updated":          "Lead Updated",
+	EVENT_NAME_FORM_FILL:                 "Form Fills",
+	EVENT_NAME_SALESFORCE_TASK_CREATED:   "Salesforce Task Created",
+	EVENT_NAME_SALESFORCE_EVENT_CREATED:  "Salesforce Event Created",
+	GROUP_EVENT_NAME_G2_ALL:              "G2 All",
+	GROUP_EVENT_NAME_G2_SPONSORED:        "G2 Sponsored",
+	GROUP_EVENT_NAME_G2_PRODUCT_PROFILE:  "G2 Product Profile",
+	GROUP_EVENT_NAME_G2_ALTERNATIVE:      "G2 Alternative",
+	GROUP_EVENT_NAME_G2_PRICING:          "G2 Pricing",
+	GROUP_EVENT_NAME_G2_CATEGORY:         "G2 Category",
+	GROUP_EVENT_NAME_G2_COMPARISON:       "G2 Comparison",
+	GROUP_EVENT_NAME_G2_REPORT:           "G2 Report",
+	GROUP_EVENT_NAME_G2_REFERENCE:        "G2 Reference",
+	GROUP_EVENT_NAME_G2_DEAL:             "G2 Deal",
+	GROUP_EVENT_NAME_LINKEDIN_CLICKED_AD: "Linkedin Ad Clicked",
+	GROUP_EVENT_NAME_LINKEDIN_VIEWED_AD:  "Linkedin Ad Viewed",
 }
 
 var STANDARD_GROUP_DISPLAY_NAMES = map[string]string{
@@ -1986,6 +1992,13 @@ var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	SIX_SIGNAL_SIC_DESCRIPTION:                   "Company SIC description",
 	SIX_SIGNAL_STATE:                             "Company state",
 	SIX_SIGNAL_ZIP:                               "Company ZIP code",
+	G2_DOMAIN:                                    "Company Domain",
+	G2_NAME:                                      "Company Name",
+	G2_LEGAL_NAME:                                "Company Legal Name",
+	G2_COUNTRY:                                   "Company Country",
+	G2_EMPLOYEES_RANGE:                           "Company Employee Range",
+	G2_EMPLOYEES:                                 "No Of Employees",
+	G2_COMPANY_ID:                                "Company G2 ID",
 }
 
 var STANDARD_USER_PROPERTIES_CATAGORIZATION = map[string]string{
