@@ -9,6 +9,7 @@ ADD /docker-development-setup/samplemodeldata/chunks /go/factors/cloud_storage/p
 # Create stripped down version without go and source code
 FROM alpine:3.7
 RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/* && apk add curl
+ENV GOLANG_PROTOBUF_REGISTRATION_CONFLICT=ignore
 # Fixes: time.LoadLocation(ZONE_NAME) error, zoneinfo.zip no such file or directory.
 ADD https://github.com/golang/go/raw/master/lib/time/zoneinfo.zip /usr/local/go/lib/time/zoneinfo.zip
 COPY --from=builder /go/factors/cloud_storage/projects/1/models/1596524994039/chunks /go/projects/1/models/1596524994039/chunks
