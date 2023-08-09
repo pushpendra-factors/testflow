@@ -171,12 +171,12 @@ func UpdateSavedQueryHandler(c *gin.Context) {
 		Type:      requestPayload.Type,
 		CreatedBy: agentUUID,
 		// To support empty settings value.
-		Settings:                   postgres.Jsonb{RawMessage: json.RawMessage(`{}`)},
-		IdText:                     U.RandomStringForSharableQuery(50),
-		LockedForCacheInvalidation: true,
+		Settings: postgres.Jsonb{RawMessage: json.RawMessage(`{}`)},
+		IdText:   U.RandomStringForSharableQuery(50),
 	}
 	if requestPayloadContainsQueryUpdate {
 		queryRequest.Query = *requestPayload.Query
+		queryRequest.LockedForCacheInvalidation = true
 	}
 
 	query, status := store.GetStore().GetQueryWithQueryId(projectID, queryID)
