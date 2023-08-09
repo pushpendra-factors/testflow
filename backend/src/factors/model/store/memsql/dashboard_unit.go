@@ -279,6 +279,14 @@ func (store *MemSQL) GetDashboardUnitByDashboardID(projectId int64, dashboardId 
 	return dashboardUnits, http.StatusFound
 }
 
+func (store *MemSQL) GetQueryFromUnitID(projectID int64, unitID int64) (queryClass string, queryInfo *model.Queries, errMsg string) {
+	dashboardUnit, statusCode := store.GetDashboardUnitByUnitID(projectID, unitID)
+	if statusCode != http.StatusFound {
+		return "", nil, "Failed to fetch dashboard unit from unit ID"
+	}
+	return store.GetQueryAndClassFromDashboardUnit(dashboardUnit)
+}
+
 // GetDashboardUnitByUnitID To get a dashboard unit by project id and unit id.
 func (store *MemSQL) GetDashboardUnitByUnitID(projectID int64, unitID int64) (*model.DashboardUnit, int) {
 	logFields := log.Fields{
@@ -1174,6 +1182,10 @@ func (store *MemSQL) RunCustomQueryRangeCaching(dashboardUnit model.DashboardUni
 		logCtx.WithField("err_code", errC).
 			WithField("query_id", dashboardUnit.QueryId).
 			Error("Failed to fetch query from query_id")
+		return
+	}
+	if queryInfo.LockedForCacheInvalidation {
+		logCtx.WithField("query_id", dashboardUnit.QueryId).Error("Didnt run caching because of lock on query.")
 		return
 	}
 

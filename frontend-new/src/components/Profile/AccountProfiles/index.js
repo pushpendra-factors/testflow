@@ -1,13 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import {
-  Table,
-  Button,
-  Spin,
-  Popover,
-  Tabs,
-  notification,
-  Input
-} from 'antd';
+import { Table, Button, Spin, Popover, Tabs, notification, Input } from 'antd';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { Text, SVG } from '../../factorsComponents';
@@ -163,7 +155,9 @@ function AccountProfiles({
       : currentProjectSettings?.timelines_config?.account_config?.table_props?.filter(
           (item) => item.includes(source)
         );
-    return tableProps || [];
+    return (
+      tableProps?.filter((entry) => entry !== '' && entry !== undefined) || []
+    );
   }, [currentProjectSettings, accountPayload, activeSegment]);
 
   useEffect(() => {
@@ -426,7 +420,6 @@ function AccountProfiles({
     getAccounts(opts);
   };
 
-
   const handlePropChange = (option) => {
     if (
       option.enabled ||
@@ -451,9 +444,11 @@ function AccountProfiles({
     if (accountPayload?.segment_id?.length) {
       const updatedQuery = {
         ...activeSegment.query,
-        table_props: checkListAccountProps
-          .filter(({ enabled }) => enabled)
-          .map(({ prop_name }) => prop_name)
+        table_props:
+          checkListAccountProps
+            ?.filter(({ enabled }) => enabled)
+            ?.map(({ prop_name }) => prop_name)
+            ?.filter((entry) => entry !== '' && entry !== undefined) || []
       };
 
       updateSegmentForId(activeProject.id, accountPayload.segment_id, {
@@ -746,9 +741,7 @@ function AccountProfiles({
 
   const renderActions = () => (
     <div className='flex justify-between items-start my-4'>
-      <div className='flex justify-between'>
-        {renderPropertyFilter()}
-      </div>
+      <div className='flex justify-between'>{renderPropertyFilter()}</div>
       <div className='inline-flex gap--6'>
         {accountPayload?.filters?.length ? renderClearFilterButton() : null}
         {renderSearchSection()}

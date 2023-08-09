@@ -66,12 +66,12 @@ func RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId int64, re
 				return true, mergedResult
 			}
 		}
-		keyIndex := model.GetLastKeyValueIndex(mergedResult.Headers)
+		keyIndex := model.GetLastKeyValueIndex(resultForRange.Headers)
 		if requestPayload.Query.AttributionKey == model.AttributionKeyLandingPage ||
 			requestPayload.Query.AttributionKey == model.AttributionKeyChannel ||
 			requestPayload.Query.AttributionKey == model.AttributionKeySource ||
 			requestPayload.Query.AttributionKey == model.AttributionKeyAllPageView {
-			keyIndex = model.GetLastKeyValueIndexLandingPage(mergedResult.Headers)
+			keyIndex = model.GetLastKeyValueIndexLandingPage(resultForRange.Headers)
 		}
 
 		// Now we have the result either from cache or computed

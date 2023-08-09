@@ -281,7 +281,7 @@ func GetEventNamesByUserHandler(c *gin.Context) {
 		eventNames = MoveCustomEventNamesOnUserEventNames(eventNames, customEventNameGroups)
 	}
 
-	c.JSON(http.StatusOK, EventNamesByUserResponsePayload{EventNames: eventNames, DisplayNames: displayNameEvents, AllowedDisplayNameGroups: U.GetStandardDisplayNameGroups()})
+	c.JSON(http.StatusOK, EventNamesByUserResponsePayload{EventNames: U.FilterEmptyKeysAndValues(projectId, eventNames), DisplayNames: U.FilterDisplayNameEmptyKeysAndValues(projectId, displayNameEvents), AllowedDisplayNameGroups: U.GetStandardDisplayNameGroups()})
 
 }
 
@@ -322,7 +322,7 @@ func GetEventNamesByGroupHandler(c *gin.Context) {
 		eventNames[U.FrequentlySeen] = append(eventNames[U.FrequentlySeen], fNames...)
 	}
 
-	c.JSON(http.StatusOK, gin.H{"event_names": eventNames, "display_names": displayNameEvents})
+	c.JSON(http.StatusOK, gin.H{"event_names": U.FilterEmptyKeysAndValues(projectId, eventNames), "display_names": U.FilterDisplayNameEmptyKeysAndValues(projectId, displayNameEvents)})
 
 }
 
@@ -421,29 +421,29 @@ func GetEventPropertiesHandler(c *gin.Context) {
 
 	if isDisplayNameEnabled == "true" {
 		displayNamesOp := store.GetStore().GetDisplayNamesForEventProperties(projectId, properties, eventName)
-		if(version != "2"){
-			c.JSON(http.StatusOK, gin.H{"properties": properties, "display_names": displayNamesOp})
+		if version != "2" {
+			c.JSON(http.StatusOK, gin.H{"properties": U.FilterEmptyKeysAndValues(projectId, properties), "display_names": U.FilterDisplayNameEmptyKeysAndValues(projectId, displayNamesOp)})
 		} else {
 			eventType := ""
-			if(eventName == "$session"){
+			if eventName == "$session" {
 				eventType = "session"
 			} else {
 				eventType = "event"
 			}
-			c.JSON(http.StatusOK, gin.H{"properties": model.CategorizeProperties(properties, eventType), "display_names": displayNamesOp})
+			c.JSON(http.StatusOK, gin.H{"properties": model.CategorizeProperties(U.FilterEmptyKeysAndValues(projectId, properties), eventType), "display_names": U.FilterDisplayNameEmptyKeysAndValues(projectId, displayNamesOp)})
 		}
 		return
 	}
-	if(version != "2"){
-		c.JSON(http.StatusOK, properties)
+	if version != "2" {
+		c.JSON(http.StatusOK, U.FilterEmptyKeysAndValues(projectId, properties))
 	} else {
 		eventType := ""
-		if(eventName == "$session"){
+		if eventName == "$session" {
 			eventType = "session"
 		} else {
 			eventType = "event"
 		}
-		c.JSON(http.StatusOK, model.CategorizeProperties(properties, eventType))
+		c.JSON(http.StatusOK, model.CategorizeProperties(U.FilterEmptyKeysAndValues(projectId, properties), eventType))
 	}
 }
 
@@ -575,11 +575,11 @@ func GetEventPropertyValuesHandler(c *gin.Context) {
 			logCtx.WithField("property_name", propertyName).Error("No event property value labels Returned")
 		}
 
-		c.JSON(http.StatusOK, propertyValueLabel)
+		c.JSON(http.StatusOK, U.FilterDisplayNameEmptyKeysAndValues(projectId, propertyValueLabel))
 		return
 	}
 
-	c.JSON(http.StatusOK, propertyValues)
+	c.JSON(http.StatusOK, U.FilterEmptyArrayValues(propertyValues))
 }
 
 func getEventPropertyValuesFromPatternServer(projectId int64, modelId uint64, eventName, propertyName string) ([]string, int, string) {

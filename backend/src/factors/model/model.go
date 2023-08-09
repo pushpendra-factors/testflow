@@ -172,6 +172,7 @@ type Model interface {
 	GetAttributionDashboardUnitsForProjectID(projectID int64) ([]model.DashboardUnit, int)
 	GetDashboardUnits(projectID int64, agentUUID string, dashboardId int64) ([]model.DashboardUnit, int)
 	GetDashboardUnitByDashboardID(projectId int64, dashboardId int64) ([]model.DashboardUnit, int)
+	GetQueryFromUnitID(projectID int64, unitID int64) (queryClass string, queryInfo *model.Queries, errMsg string)
 	GetDashboardUnitByUnitID(projectID int64, unitID int64) (*model.DashboardUnit, int)
 	GetDashboardUnitsByProjectIDAndDashboardIDAndTypes(projectID int64, dashboardID int64, types []string) ([]model.DashboardUnit, int)
 	DeleteDashboardUnit(projectID int64, agentUUID string, dashboardId int64, id int64) int
@@ -958,8 +959,8 @@ type Model interface {
 
 	//account scoring
 	GetWeightsByProject(project_id int64) (*model.AccWeights, int)
-	UpdateUserEventsCount(projectId int64, evdata []model.DbUpdateAccScoring) error
-	UpdateGroupEventsCount(projectId int64, evdata []model.DbUpdateAccScoring) error
+	UpdateUserEventsCount(ev []model.EventsCountScore, lastev map[string]model.LatestScore) error
+	UpdateGroupEventsCount(ev []model.EventsCountScore, lastev map[string]model.LatestScore) error
 	GetAccountsScore(project_id int64, group_id int, ts string, debug bool) ([]model.PerAccountScore, *model.AccWeights, error)
 	GetUserScore(project_id int64, user_id string, ts string, debug bool, is_anonymus bool) (model.PerUserScoreOnDay, error)
 	GetAllUserScore(project_id int64, debug bool) ([]model.AllUsersScore, *model.AccWeights, error)

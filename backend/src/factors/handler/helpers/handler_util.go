@@ -198,22 +198,28 @@ func UseUserFunnelV2(c *gin.Context) bool {
 }
 
 // InValidateSavedQueryCache Common function to invalidate cache if present.
-func InValidateSavedQueryCache(query *model.Queries) {
-
+func InValidateSavedQueryCache(query *model.Queries) int {
+	failedKeys := make([]string, 0)
 	units := store.GetStore().GetDashboardUnitForQueryID(query.ProjectID, query.ID)
 	if units == nil {
-		return
+		return http.StatusOK
 	}
 	for _, unit := range units {
-		InValidateDashboardQueryCache(unit.ProjectID, unit.DashboardId, unit.ID)
+		failedKeys = append(failedKeys, InValidateDashboardQueryCache(unit.ProjectID, unit.DashboardId, unit.ID)...)
 	}
 
 	log.WithField("key", units).Info("Query cache key")
 
+	if len(failedKeys) != 0 {
+		return http.StatusInternalServerError
+	}
+	return http.StatusOK
 }
 
-func InValidateDashboardQueryCache(projectID, dashboardID, unitID int64) {
+// This can give both pattern or keys which failed.
+func InValidateDashboardQueryCache(projectID, dashboardID, unitID int64) []string {
 
+	failedKeys := make([]string, 0)
 	var cacheKeys []*cacheRedis.Key
 	var err error
 
@@ -231,13 +237,17 @@ func InValidateDashboardQueryCache(projectID, dashboardID, unitID int64) {
 	}
 	if err != nil {
 		log.WithError(err).Error("Failed to get cache key")
-		return
+		failedKeys = append(failedKeys, pattern)
 	}
 
 	for _, cacheKey := range cacheKeys {
-		cacheRedis.DelPersistent(cacheKey)
+		err := cacheRedis.DelPersistent(cacheKey)
+		key, _ := cacheKey.Key()
+		if err != nil {
+			failedKeys = append(failedKeys, key)
+		}
 	}
-
+	return failedKeys
 }
 
 func GetResponseFromDBCaching(reqId string, projectID int64, dashboardID, unitID int64, from, to int64, timezoneString U.TimeZoneString) (bool, int, interface{}) {

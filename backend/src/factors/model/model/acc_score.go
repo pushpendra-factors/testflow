@@ -10,7 +10,7 @@ import (
 
 const DEFAULT_EVENT string = "all_events"
 const LAST_EVENT string = "LAST_EVENT"
-const NUM_TREND_DAYS int = 10
+const NUM_TREND_DAYS int = 30
 
 type AccScoreResult struct {
 	ProjectId int64                  `json:"projectid"`
@@ -193,12 +193,9 @@ func GetDefaultAccScoringWeights() AccWeights {
 func ComputeDayDifference(ts1 int64, ts2 int64) int {
 
 	t1 := time.Unix(ts1, 0)
-	day1 := t1.YearDay()
-
 	t2 := time.Unix(ts2, 0)
-	day2 := t2.YearDay()
-
-	return int(math.Abs(float64(day2 - day1)))
+	daydiff := t2.Sub(t1).Seconds() / float64(24*60*60)
+	return int(math.Abs(daydiff))
 
 }
 
@@ -214,5 +211,6 @@ func ComputeDecayValue(ts string, SaleWindow int64) float64 {
 	}
 	// get decay value
 	decay = float64(float64(int64(dayDiff)) / float64(SaleWindow))
+
 	return decay
 }

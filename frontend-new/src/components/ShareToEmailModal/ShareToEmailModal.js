@@ -9,6 +9,7 @@ import { PlusOutlined } from '@ant-design/icons';
 import PropTypes from 'prop-types';
 import AppModal from '../AppModal';
 import { meetLink } from 'Utils/hubspot';
+import sanitizeInputString from 'Utils/sanitizeInputString';
 
 const ShareToEmailModal = ({visible, onSubmit, isLoading, setShowShareToEmailModal, queryTitle}) => {
     const [form] = Form.useForm();
@@ -26,9 +27,14 @@ const ShareToEmailModal = ({visible, onSubmit, isLoading, setShowShareToEmailMod
         }
       }, [resetModalState, isLoading]);
 
-    const handleSubmit = (data) => {
+    const handleSubmit = (payload) => { 
+        let data = {
+            ...payload,
+            message: sanitizeInputString(payload?.message),
+            subject: sanitizeInputString(payload?.subject)
+        }
         onSubmit({
-          data,
+            data,
           frequency,
           onSuccess: () => {
             resetModalState();
