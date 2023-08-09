@@ -446,6 +446,10 @@ func ApplySFOfflineTouchPointRuleForCampaignMemberV1(project *model.Project, otp
 			}
 		}
 
+		if rule.TouchPointTimeRef == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED {
+			rule.TouchPointTimeRef = model.SFCampaignMemberResponded
+		}
+
 		// Run for responded To Campaign
 		if rule.TouchPointTimeRef == model.SFCampaignMemberResponded && eventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN {
 			_, err := CreateTouchPointEventCampaignMemberV1(project, sfEvent, eventName, rule)
