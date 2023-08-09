@@ -19,7 +19,7 @@ func TransformChannelsPropertiesConfigToKpiPropertiesConfig(channelsWithProperti
 				"data_type":    property.Type,
 				"object_type":  channelAndProperties.Name,
 				"entity":       EventEntity,
-				"category": 	channel,
+				"category":     channelAndProperties.Name,
 			}
 			resultantPropertiesConfig = append(resultantPropertiesConfig, tempPropertyConfig)
 		}
