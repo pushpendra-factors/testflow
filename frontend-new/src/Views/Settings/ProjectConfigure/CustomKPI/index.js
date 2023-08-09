@@ -758,6 +758,7 @@ function CustomKPI({
                 filters={getStateFromFilters(
                   viewKPIDetails?.transformations?.fil
                 )}
+                setGlobalFilters={setGlobalFiltersOption}
                 delFilter={false}
                 viewMode
               />
@@ -812,7 +813,7 @@ function CustomKPI({
                         Monitor progress, measure success, and gain actionable
                         insights to drive continuous improvement and achieve
                         your business milestones.{' '}
-                        <a href='https://help.factors.ai/en/articles/7284181-custom-kpis'>
+                        <a href='https://help.factors.ai/en/articles/7284181-custom-kpis' target='_blank'>
                           Learn more
                         </a>
                       </Text>
@@ -1379,6 +1380,7 @@ function CustomKPI({
                             filters={getStateFromFilters(
                               viewKPIDetails?.transformations?.fil
                             )}
+                            setGlobalFilters={setGlobalFiltersOption}
                             delFilter={false}
                             viewMode
                           />
@@ -1467,6 +1469,7 @@ function CustomKPI({
 
                                   <GLobalFilter
                                     filters={getStateFromFilters(item.fil)}
+                                    setGlobalFilters={setGlobalFiltersOption}
                                     delFilter={false}
                                     viewMode
                                   />
