@@ -200,17 +200,9 @@ func ComputeDayDifference(ts1 int64, ts2 int64) int {
 }
 
 func ComputeDecayValue(ts string, SaleWindow int64) float64 {
-	var decay float64
-	// get current date
 	currentTS := time.Now().Unix()
 	EventTs := GetDateFromString(ts)
-	// get difference in weeks
-	dayDiff := ComputeDayDifference(currentTS, EventTs)
-	if int64(dayDiff) > SaleWindow {
-		return 0
-	}
-	// get decay value
-	decay = float64(float64(int64(dayDiff)) / float64(SaleWindow))
+	decay := ComputeDecayValueGivenStartEndTS(currentTS, EventTs, SaleWindow)
 
 	return decay
 }

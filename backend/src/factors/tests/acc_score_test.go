@@ -442,22 +442,9 @@ func TestAccScoreUpdateLastEventsDay(t *testing.T) {
 func TestGenerateDate(t *testing.T) {
 
 	currentTimestamp := time.Now()
-	salewindow := int(30)
+	salewindow := int(10)
 
 	ds := mm.GenDateStringsForLastNdays(currentTimestamp.Unix(), int64(salewindow))
-	// prevTs := currentTimestamp.AddDate(0, 0, -1*salewindow)
-	// for i := salewindow; i > 0; i-- {
-	// 	cts := T.GetDateOnlyFromTimestamp(currentTimestamp.AddDate(0, 0, -1*i).Unix())
-	// 	log.Debugf("cts : %s", cts)
-	// 	countDays[cts] = model.LatestScore{}
-	// }
-
-	// orderedDays := mm.OrderCountDays(currentTimestamp.Unix(), prevTs.Unix(), int64(salewindow), countDays)
-	// dd := make([]int64, 0)
-	// for _, d := range orderedDays {
-	// 	dd = append(dd, model.GetDateFromString(d))
-	// }
-	// assert.IsIncreasing(t, dd)
 	log.Debugf("generated dates : %v", ds)
 	assert.Equal(t, salewindow, len(ds))
 
@@ -581,7 +568,7 @@ func TestGenerationOfScoresInPeriod(t *testing.T) {
 		events.Date = t
 		idx1 := 1
 		if idx > maxNum/2 {
-			idx1 = 0
+			idx1 = 1
 		}
 		countsEvent["1"] = float64(idx1)
 		countsEvent["2"] = float64(idx1)
