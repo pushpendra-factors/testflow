@@ -172,7 +172,7 @@ func (store *MemSQL) DeleteEventTriggerAlert(projectID int64, id string) (int, s
 	return http.StatusAccepted, ""
 }
 
-func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int64, alertConfig *model.EventTriggerAlertConfig, slackTokenUser, teamTokenUser string) (*model.EventTriggerAlert, int, string) {
+func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int64, alertConfig *model.EventTriggerAlertConfig, slackTokenUser, teamTokenUser string, isPausedAlert bool) (*model.EventTriggerAlert, int, string) {
 	logFields := log.Fields{
 		"project_id":          projectID,
 		"event_trigger_alert": alertConfig,
@@ -240,6 +240,10 @@ func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int
 		return nil, http.StatusInternalServerError, "TiggerAlert conversion to Jsonb failed"
 	}
 
+	internalStatus := model.Active
+	if isPausedAlert {
+		internalStatus = model.Disabled
+	}
 	alert = model.EventTriggerAlert{
 		ID:                       id,
 		ProjectID:                projectID,
@@ -251,7 +255,7 @@ func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int
 		IsDeleted:                false,
 		SlackChannelAssociatedBy: slackTokenUser,
 		TeamsChannelAssociatedBy: teamTokenUser,
-		InternalStatus:           model.Active,
+		InternalStatus:           internalStatus,
 	}
 
 	if err := db.Create(&alert).Error; err != nil {
