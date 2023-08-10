@@ -1992,13 +1992,13 @@ var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	SIX_SIGNAL_SIC_DESCRIPTION:                   "Company SIC description",
 	SIX_SIGNAL_STATE:                             "Company state",
 	SIX_SIGNAL_ZIP:                               "Company ZIP code",
-	G2_DOMAIN:                                    "Company Domain",
-	G2_NAME:                                      "Company Name",
-	G2_LEGAL_NAME:                                "Company Legal Name",
-	G2_COUNTRY:                                   "Company Country",
-	G2_EMPLOYEES_RANGE:                           "Company Employee Range",
-	G2_EMPLOYEES:                                 "No Of Employees",
-	G2_COMPANY_ID:                                "Company G2 ID",
+	G2_DOMAIN:                                    "G2 Company Domain",
+	G2_NAME:                                      "G2 Company Name",
+	G2_LEGAL_NAME:                                "G2 Company Legal Name",
+	G2_COUNTRY:                                   "G2 Company Country",
+	G2_EMPLOYEES_RANGE:                           "G2 Company Employee Range",
+	G2_EMPLOYEES:                                 "G2 No Of Employees",
+	G2_COMPANY_ID:                                "G2 Company ID",
 }
 
 var STANDARD_USER_PROPERTIES_CATAGORIZATION = map[string]string{

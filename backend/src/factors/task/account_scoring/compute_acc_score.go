@@ -672,7 +672,7 @@ func UpdateLastEventsDay(prevCountsOfUser map[string]map[string]M.LatestScore, d
 						if _, eok := eventsCountWithDecay[eventKey]; !eok {
 							eventsCountWithDecay[eventKey] = 0
 						}
-						eventsCountWithDecay[eventKey] += eventVal
+						eventsCountWithDecay[eventKey] += decayval * eventVal
 					}
 				}
 
@@ -693,6 +693,7 @@ func UpdateLastEventsDay(prevCountsOfUser map[string]map[string]M.LatestScore, d
 			}
 		}
 
+		decayvalcurrent := model.ComputeDecayValue(currentDate, int64(saleWindow))
 		if eventCountPerUser, ok := currentUserMap[currentUser]; ok {
 
 			counts := eventCountPerUser.EventsCount
@@ -700,7 +701,7 @@ func UpdateLastEventsDay(prevCountsOfUser map[string]map[string]M.LatestScore, d
 				if _, eok := eventsCountWithDecay[eventKey]; !eok {
 					eventsCountWithDecay[eventKey] = 0
 				}
-				eventsCountWithDecay[eventKey] += float64(eventCount.EventCount)
+				eventsCountWithDecay[eventKey] += decayvalcurrent * float64(eventCount.EventCount)
 			}
 
 			for _, eprops := range eventCountPerUser.Properties {

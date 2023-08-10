@@ -29,12 +29,12 @@ func CreateMarketoIntegration(c *gin.Context) (interface{}, int, string, string,
 	}
 	statusCode, errMsg, connectorId, schemaId := fivetran.FiveTranCreateMarketoConnector(projectID)
 	if statusCode != http.StatusCreated {
-		logCtx.Error("BingAds Connector Creation Failed - " + errMsg)
+		logCtx.Error("Marketo Connector Creation Failed - " + errMsg)
 		return nil, http.StatusInternalServerError, "", "Connector Creation Failed", true
 	}
 	statusCode, errMsg, redirectUri := fivetran.FiveTranCreateConnectorCard(connectorId)
 	if statusCode != http.StatusOK {
-		logCtx.Error("BingAds Connector Create Connector Card Failed - " + errMsg)
+		logCtx.Error("Marketo Connector Create Connector Card Failed - " + errMsg)
 		return nil, http.StatusInternalServerError, "", "Connector Card Failed", true
 	}
 	statusCode, errMsg, _, accounts := fivetran.FiveTranGetConnector(connectorId)

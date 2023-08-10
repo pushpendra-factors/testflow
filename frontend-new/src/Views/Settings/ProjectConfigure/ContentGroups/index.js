@@ -200,7 +200,7 @@ function ContentGroups({
                         Compare the performance of different content groups,
                         identify optimization opportunities, and enhance your
                         content marketing efforts to drive better results.{' '}
-                        <a href='https://help.factors.ai/en/articles/7284125-content-groups'>
+                        <a href='https://help.factors.ai/en/articles/7284125-content-groups' target='_blank'>
                           Learn more
                         </a>
                       </Text>

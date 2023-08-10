@@ -279,7 +279,7 @@ function Properties({
                 Customize and tailor your data to align perfectly with your
                 business objectives, ensuring optimal insights and enhanced
                 advertising optimization.
-                <a href='https://help.factors.ai/en/articles/7284109-custom-properties'>
+                <a href='https://help.factors.ai/en/articles/7284109-custom-properties' target='_blank'>
                   Learn more
                 </a>
               </Text>

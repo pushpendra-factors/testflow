@@ -132,6 +132,36 @@ func AddSecurityResponseHeadersToCustomDomain() gin.HandlerFunc {
 	}
 }
 
+func RestrictHTTPAccess() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		isLiveEnv := C.IsProduction() || C.IsStaging()
+		// /status route is used for liveness probes internally, hence excluded.
+		isStatusRoute := c.Request.URL.Path == "/status"
+		if isLiveEnv && !isStatusRoute {
+			// Header added through advanced configuration on
+			// sdk-proxy-api >> Backend Configuration >> Advanced Configurations
+			// Required to differentiate the source load balalncer.
+			sourceValue := "https-load-balancer"
+			isSourceHTTPsProxy := c.Request.Header.Get("x-request-source") == sourceValue ||
+				c.Request.Header.Get("X-Request-Source") == sourceValue
+
+			// Header added through BackendConfig lb-backend-config.
+			// Required to figure out protocol used by the client.
+			// By default protocol information is not available.
+			isEncrypted := c.Request.Header.Get("X-Client-Encrypted")
+			isHTTPs := isEncrypted == "true"
+
+			if !isSourceHTTPsProxy && !isHTTPs {
+				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+					"message":  "Unsecured request.",
+					"is_https": isEncrypted,
+				})
+				return
+			}
+		}
+	}
+}
+
 func IsBlockedIPByProject() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := U.GetScopeByKeyAsString(c, SCOPE_PROJECT_TOKEN)
