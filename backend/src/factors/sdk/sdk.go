@@ -1069,7 +1069,7 @@ func CheckingSixSignalQuotaLimit(projectId int64) (bool, error) {
 	}
 
 	if count >= limit {
-		logCtx.Error("SixSignal Limit Exhausted")
+		logCtx.Warn("SixSignal Limit Exhausted")
 		return false, errors.New("SixSignal Limit Exhausted")
 	}
 	return true, nil
@@ -1086,7 +1086,7 @@ func FillClearbitUserProperties(projectId int64, clearbitKey string,
 		// logCtx.Info("clearbit cache hit")
 	} else {
 		// logCtx.Info("clearbit cache miss")
-		go clear_bit.ExecuteClearBitEnrich(clearbitKey, userProperties, clientIP, executeClearBitStatusChannel)
+		go clear_bit.ExecuteClearBitEnrich(clearbitKey, userProperties, clientIP, executeClearBitStatusChannel, logCtx)
 
 		select {
 		case ok := <-executeClearBitStatusChannel:

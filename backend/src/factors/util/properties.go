@@ -174,6 +174,7 @@ const GROUP_EVENT_NAME_G2_CATEGORY = "$g2_category"
 const GROUP_EVENT_NAME_G2_COMPARISON = "$g2_comparison"
 const GROUP_EVENT_NAME_G2_REPORT = "$g2_report"
 const GROUP_EVENT_NAME_G2_REFERENCE = "$g2_reference"
+const GROUP_EVENT_NAME_G2_DEAL = "$g2_deal"
 
 // Integration shopify event names.
 const EVENT_NAME_SHOPIFY_CHECKOUT_CREATED = "$shopify_checkout_created"
@@ -329,6 +330,7 @@ var ALLOWED_INTERNAL_EVENT_NAMES = [...]string{
 	GROUP_EVENT_NAME_G2_COMPARISON,
 	GROUP_EVENT_NAME_G2_REPORT,
 	GROUP_EVENT_NAME_G2_REFERENCE,
+	GROUP_EVENT_NAME_G2_DEAL,
 }
 
 const GROUP_NAME_HUBSPOT_COMPANY = "$hubspot_company"
@@ -358,6 +360,7 @@ var GROUP_EVENT_NAME_TO_GROUP_NAME_MAPPING = map[string]string{
 	GROUP_EVENT_NAME_G2_COMPARISON:                  GROUP_NAME_G2,
 	GROUP_EVENT_NAME_G2_REPORT:                      GROUP_NAME_G2,
 	GROUP_EVENT_NAME_G2_REFERENCE:                   GROUP_NAME_G2,
+	GROUP_EVENT_NAME_G2_DEAL:                        GROUP_NAME_G2,
 	GROUP_EVENT_NAME_LINKEDIN_VIEWED_AD:             GROUP_NAME_LINKEDIN_COMPANY,
 	GROUP_EVENT_NAME_LINKEDIN_CLICKED_AD:            GROUP_NAME_LINKEDIN_COMPANY,
 }
@@ -1583,31 +1586,34 @@ var STANDARD_EVENTS_DISPLAY_NAMES = map[string]string{
 	"$sf_campaign_member_created":               "Added to Campaign",
 	"$sf_campaign_member_updated":               "Interacted with Campaign",
 	"$sf_campaign_member_responded_to_campaign": "Responded to Campaign",
-	"$session":                          "Website Session",
-	"$form_submitted":                   "Form Button Click",
-	"$hubspot_company_created":          "Company Created",
-	"$hubspot_company_updated":          "Company Updated",
-	"$hubspot_deal_created":             "Deal Created",
-	"$hubspot_deal_updated":             "Deal Updated",
-	"$salesforce_account_updated":       "Salesforce Account Updated",
-	"$salesforce_opportunity_updated":   "Salesforce Opportunity Updated",
-	"$salesforce_account_created":       "Salesforce Account Created",
-	"$salesforce_opportunity_created":   "Salesforce Opportunity Created",
-	"$offline_touch_point":              "Offline Touchpoint",
-	"$leadsquared_lead_created":         "Lead Created",
-	"$leadsquared_lead_updated":         "Lead Updated",
-	EVENT_NAME_FORM_FILL:                "Form Fills",
-	EVENT_NAME_SALESFORCE_TASK_CREATED:  "Salesforce Task Created",
-	EVENT_NAME_SALESFORCE_EVENT_CREATED: "Salesforce Event Created",
-	GROUP_EVENT_NAME_G2_ALL:             "G2 All",
-	GROUP_EVENT_NAME_G2_SPONSORED:       "G2 Sponsored",
-	GROUP_EVENT_NAME_G2_PRODUCT_PROFILE: "G2 Product Profile",
-	GROUP_EVENT_NAME_G2_ALTERNATIVE:     "G2 Alternative",
-	GROUP_EVENT_NAME_G2_PRICING:         "G2 Pricing",
-	GROUP_EVENT_NAME_G2_CATEGORY:        "G2 Category",
-	GROUP_EVENT_NAME_G2_COMPARISON:      "G2 Comparison",
-	GROUP_EVENT_NAME_G2_REPORT:          "G2 Report",
-	GROUP_EVENT_NAME_G2_REFERENCE:       "G2 Reference",
+	"$session":                           "Website Session",
+	"$form_submitted":                    "Form Button Click",
+	"$hubspot_company_created":           "Company Created",
+	"$hubspot_company_updated":           "Company Updated",
+	"$hubspot_deal_created":              "Deal Created",
+	"$hubspot_deal_updated":              "Deal Updated",
+	"$salesforce_account_updated":        "Salesforce Account Updated",
+	"$salesforce_opportunity_updated":    "Salesforce Opportunity Updated",
+	"$salesforce_account_created":        "Salesforce Account Created",
+	"$salesforce_opportunity_created":    "Salesforce Opportunity Created",
+	"$offline_touch_point":               "Offline Touchpoint",
+	"$leadsquared_lead_created":          "Lead Created",
+	"$leadsquared_lead_updated":          "Lead Updated",
+	EVENT_NAME_FORM_FILL:                 "Form Fills",
+	EVENT_NAME_SALESFORCE_TASK_CREATED:   "Salesforce Task Created",
+	EVENT_NAME_SALESFORCE_EVENT_CREATED:  "Salesforce Event Created",
+	GROUP_EVENT_NAME_G2_ALL:              "G2 All",
+	GROUP_EVENT_NAME_G2_SPONSORED:        "G2 Sponsored",
+	GROUP_EVENT_NAME_G2_PRODUCT_PROFILE:  "G2 Product Profile",
+	GROUP_EVENT_NAME_G2_ALTERNATIVE:      "G2 Alternative",
+	GROUP_EVENT_NAME_G2_PRICING:          "G2 Pricing",
+	GROUP_EVENT_NAME_G2_CATEGORY:         "G2 Category",
+	GROUP_EVENT_NAME_G2_COMPARISON:       "G2 Comparison",
+	GROUP_EVENT_NAME_G2_REPORT:           "G2 Report",
+	GROUP_EVENT_NAME_G2_REFERENCE:        "G2 Reference",
+	GROUP_EVENT_NAME_G2_DEAL:             "G2 Deal",
+	GROUP_EVENT_NAME_LINKEDIN_CLICKED_AD: "Linkedin Ad Clicked",
+	GROUP_EVENT_NAME_LINKEDIN_VIEWED_AD:  "Linkedin Ad Viewed",
 }
 
 var STANDARD_GROUP_DISPLAY_NAMES = map[string]string{
@@ -1617,7 +1623,7 @@ var STANDARD_GROUP_DISPLAY_NAMES = map[string]string{
 	GROUP_NAME_SALESFORCE_OPPORTUNITY: "Salesforce Opportunities",
 	GROUP_NAME_SIX_SIGNAL:             "6Signal Domains",
 	GROUP_NAME_LINKEDIN_COMPANY:       "Linkedin Company Engagements",
-	GROUP_NAME_G2:                     "G2 Enagagements",
+	GROUP_NAME_G2:                     "G2 Engagements",
 }
 
 var ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES = map[string]string{
@@ -1968,24 +1974,31 @@ var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	CLR_COMPANY_TECH:                             "Clearbit Company Tech",
 	CLR_COMPANY_TAGS:                             "Clearbit Company Tags",
 	SIX_SIGNAL_ADDRESS:                           "Company HQ address",
-	SIX_SIGNAL_ANNUAL_REVENUE:                    "Annual revenue",
+	SIX_SIGNAL_ANNUAL_REVENUE:                    "Company annual revenue",
 	SIX_SIGNAL_CITY:                              "Company HQ city",
 	SIX_SIGNAL_COUNTRY:                           "Company country",
 	SIX_SIGNAL_COUNTRY_ISO_CODE:                  "Company country ISO code",
 	SIX_SIGNAL_DOMAIN:                            "Company domain",
-	SIX_SIGNAL_EMPLOYEE_COUNT:                    "Employee count",
-	SIX_SIGNAL_EMPLOYEE_RANGE:                    "Employee range",
-	SIX_SIGNAL_INDUSTRY:                          "Industry",
+	SIX_SIGNAL_EMPLOYEE_COUNT:                    "Company employee count",
+	SIX_SIGNAL_EMPLOYEE_RANGE:                    "Company employee range",
+	SIX_SIGNAL_INDUSTRY:                          "Company industry",
 	SIX_SIGNAL_NAICS:                             "Company NAICS code",
 	SIX_SIGNAL_NAICS_DESCRIPTION:                 "Company NAICS description",
 	SIX_SIGNAL_NAME:                              "Company name",
 	SIX_SIGNAL_PHONE:                             "Company phone",
 	SIX_SIGNAL_REGION:                            "Company region",
-	SIX_SIGNAL_REVENUE_RANGE:                     "Annual revenue range",
+	SIX_SIGNAL_REVENUE_RANGE:                     "Company annual revenue range",
 	SIX_SIGNAL_SIC:                               "Company SIC code",
 	SIX_SIGNAL_SIC_DESCRIPTION:                   "Company SIC description",
 	SIX_SIGNAL_STATE:                             "Company state",
 	SIX_SIGNAL_ZIP:                               "Company ZIP code",
+	G2_DOMAIN:                                    "Company Domain",
+	G2_NAME:                                      "Company Name",
+	G2_LEGAL_NAME:                                "Company Legal Name",
+	G2_COUNTRY:                                   "Company Country",
+	G2_EMPLOYEES_RANGE:                           "Company Employee Range",
+	G2_EMPLOYEES:                                 "No Of Employees",
+	G2_COMPANY_ID:                                "Company G2 ID",
 }
 
 var STANDARD_USER_PROPERTIES_CATAGORIZATION = map[string]string{
@@ -2079,6 +2092,25 @@ var STANDARD_USER_PROPERTIES_CATAGORIZATION = map[string]string{
 	SP_SESSION_TIME:                "Session properties",
 	SP_SPENT_TIME:                  "Session properties",
 	SP_PAGE_COUNT:                  "Session properties",
+	SIX_SIGNAL_ADDRESS:             "Company identification",
+	SIX_SIGNAL_ANNUAL_REVENUE:      "Company identification",
+	SIX_SIGNAL_CITY:                "Company identification",
+	SIX_SIGNAL_COUNTRY:             "Company identification",
+	SIX_SIGNAL_COUNTRY_ISO_CODE:    "Company identification",
+	SIX_SIGNAL_DOMAIN:              "Company identification",
+	SIX_SIGNAL_EMPLOYEE_COUNT:      "Company identification",
+	SIX_SIGNAL_EMPLOYEE_RANGE:      "Company identification",
+	SIX_SIGNAL_INDUSTRY:            "Company identification",
+	SIX_SIGNAL_NAICS:               "Company identification",
+	SIX_SIGNAL_NAICS_DESCRIPTION:   "Company identification",
+	SIX_SIGNAL_NAME:                "Company identification",
+	SIX_SIGNAL_PHONE:               "Company identification",
+	SIX_SIGNAL_REGION:              "Company identification",
+	SIX_SIGNAL_REVENUE_RANGE:       "Company identification",
+	SIX_SIGNAL_SIC:                 "Company identification",
+	SIX_SIGNAL_SIC_DESCRIPTION:     "Company identification",
+	SIX_SIGNAL_STATE:               "Company identification",
+	SIX_SIGNAL_ZIP:                 "Company identification",
 }
 
 var DISABLED_EVENT_USER_PROPERTIES = []string{
@@ -2087,6 +2119,12 @@ var DISABLED_EVENT_USER_PROPERTIES = []string{
 	UP_SESSION_COUNT,
 	UP_PAGE_COUNT,
 	UP_TOTAL_SPENT_TIME,
+	UP_INITIAL_COST,
+	UP_INITIAL_REVENUE,
+	UP_TOTAL_COST,
+	UP_TOTAL_REVENUE,
+	UP_LATEST_COST,
+	UP_LATEST_REVENUE,
 }
 
 var STANDARD_SESSION_PROPERTIES_CATAGORIZATION = map[string]string{
@@ -4296,6 +4334,7 @@ func SortByTimestampAndCount(data []NameCountTimestampCategory) []NameCountTimes
 	smartEventNames := make([]NameCountTimestampCategory, 0)
 	pageViewEventNames := make([]NameCountTimestampCategory, 0)
 	sorted := make([]NameCountTimestampCategory, 0)
+	sessionEvent := NameCountTimestampCategory{}
 	trimmed := make([]NameCountTimestampCategory, 0)
 
 	sort.Slice(data, func(i, j int) bool {
@@ -4309,8 +4348,10 @@ func SortByTimestampAndCount(data []NameCountTimestampCategory) []NameCountTimes
 		} else if details.Category == PageViewEvent {
 			details.GroupName = PageViewEvent
 			pageViewEventNames = append(pageViewEventNames, details)
+		} else if details.Name == EVENT_NAME_SESSION {
+			details.GroupName = FrequentlySeen
+			sessionEvent = details
 		} else {
-
 			details.GroupName = FrequentlySeen
 			trimmed = append(trimmed, details)
 		}
@@ -4318,7 +4359,8 @@ func SortByTimestampAndCount(data []NameCountTimestampCategory) []NameCountTimes
 	}
 
 	sorted = append(smartEventNames, sorted...)
-	sorted = append(pageViewEventNames, sorted...)
+	sorted = append(sorted, sessionEvent)
+	sorted = append(sorted, pageViewEventNames...)
 
 	for _, data := range trimmed {
 		sorted = append(sorted, data)

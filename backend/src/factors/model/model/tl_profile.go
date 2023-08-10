@@ -8,15 +8,16 @@ import (
 )
 
 type Profile struct {
-	Identity     string                 `json:"identity"`
-	Properties   *postgres.Jsonb        `json:"-"`
-	Name         string                 `json:"name,omitempty"`
-	HostName     string                 `json:"host_name,omitempty"`
-	IsAnonymous  bool                   `json:"is_anonymous"`
-	LastActivity time.Time              `json:"last_activity"`
-	TableProps   map[string]interface{} `json:"table_props"`
-	Score        float64                `json:"score"`
-	Engagement   string                 `json:"engagement,omitempty"`
+	Identity                   string                 `json:"identity"`
+	Properties                 *postgres.Jsonb        `json:"-"`
+	Name                       string                 `json:"name,omitempty"`
+	HostName                   string                 `json:"host_name,omitempty"`
+	IsAnonymous                bool                   `json:"is_anonymous"`
+	LastActivity               time.Time              `json:"last_activity"`
+	PropertiesUpdatedTimestamp int64                  `json:"-"`
+	TableProps                 map[string]interface{} `json:"table_props"`
+	Score                      float64                `json:"score"`
+	Engagement                 string                 `json:"engagement,omitempty"`
 }
 
 type MinMaxUpdatedAt struct {
@@ -123,7 +124,7 @@ var AccountNames = map[string]string{
 }
 
 // host and company name list
-var NameProps = []string{U.UP_COMPANY, U.GP_HUBSPOT_COMPANY_NAME, U.GP_SALESFORCE_ACCOUNT_NAME, U.SIX_SIGNAL_NAME, U.LI_LOCALIZED_NAME, U.G2_NAME}
+var NameProps = []string{U.GP_HUBSPOT_COMPANY_NAME, U.GP_SALESFORCE_ACCOUNT_NAME, U.SIX_SIGNAL_NAME, U.LI_LOCALIZED_NAME, U.G2_NAME}
 var HostNameProps = []string{U.GP_HUBSPOT_COMPANY_DOMAIN, U.GP_SALESFORCE_ACCOUNT_WEBSITE, U.SIX_SIGNAL_DOMAIN, U.LI_DOMAIN, U.G2_DOMAIN}
 
 // Hover Events Property Map
@@ -169,4 +170,10 @@ var GroupPropertyPrefixList = []string{
 	U.GROUP_NAME_SIX_SIGNAL,
 	U.LI_PROPERTIES_PREFIX,
 	U.GROUP_NAME_G2,
+}
+
+func UnixToLocalTime(timestamp int64) *time.Time {
+	t := time.Unix(timestamp, 0)
+	localTime := t.Local()
+	return &localTime
 }

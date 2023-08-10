@@ -60,7 +60,7 @@ function EngagementModal({ visible, onOk, onCancel, event, editMode }) {
             queries={listEvents}
             eventChange={queryChange}
             closeEvent={closeEvent}
-            groupAnalysis={'users'}
+            groupAnalysis={'events'}
             dropdownPlacement='bottom'
             propertiesScope={['event', 'user']}
           />
@@ -78,7 +78,7 @@ function EngagementModal({ visible, onOk, onCancel, event, editMode }) {
             closeEvent={closeEvent}
             queries={listEvents}
             eventChange={queryChange}
-            groupAnalysis={'users'}
+            groupAnalysis={'events'}
             dropdownPlacement='bottom'
             propertiesScope={['event', 'user']}
           />

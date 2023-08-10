@@ -160,7 +160,7 @@ func GetGroupPropertiesHandler(c *gin.Context) {
 
 	}
 
-	response := gin.H{"properties": propertiesFromCache}
+	response := gin.H{"properties": U.FilterEmptyKeysAndValues(projectId, propertiesFromCache)}
 
 	displayNamesOp := make(map[string]string)
 	_, displayNames := store.GetStore().GetDisplayNamesForAllUserProperties(projectId)
@@ -190,7 +190,7 @@ func GetGroupPropertiesHandler(c *gin.Context) {
 		}
 		dupCheck[name] = true
 	}
-	response["display_names"] = displayNamesOp
+	response["display_names"] = U.FilterDisplayNameEmptyKeysAndValues(projectId, displayNamesOp)
 
 	c.JSON(http.StatusOK, response)
 }
@@ -260,11 +260,11 @@ func GetGroupPropertyValuesHandler(c *gin.Context) {
 			label := c.Query("label")
 			if label == "true" {
 				propertyValueLabel := map[string]string{"false": "False", "true": "True"}
-				c.JSON(http.StatusOK, propertyValueLabel)
+				c.JSON(http.StatusOK, U.FilterDisplayNameEmptyKeysAndValues(projectId, propertyValueLabel))
 				return
 			}
 			propertyValues := []string{"false", "true"}
-			c.JSON(http.StatusOK, propertyValues)
+			c.JSON(http.StatusOK, U.FilterEmptyArrayValues(propertyValues))
 			return
 		}
 
@@ -298,9 +298,9 @@ func GetGroupPropertyValuesHandler(c *gin.Context) {
 			logCtx.WithField("property_name", propertyName).Warn("No group property value labels returned")
 		}
 
-		c.JSON(http.StatusOK, propertyValueLabel)
+		c.JSON(http.StatusOK, U.FilterDisplayNameEmptyKeysAndValues(projectId, propertyValueLabel))
 		return
 	}
 
-	c.JSON(http.StatusOK, propertyValues)
+	c.JSON(http.StatusOK, U.FilterEmptyArrayValues(propertyValues))
 }

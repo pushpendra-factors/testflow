@@ -4,13 +4,13 @@ const config = require("../config");
 const LOCALSTORAGE_PREFIX = "_faireq_";
 const URI_SERVICE_ERROR = "/sdk/service/error";
 
-// window.FACTORS_LS_AVAILABLE is set as true after 
+// window.FAITRACKER_LS_AVAILABLE is set as true after 
 // checking accessibility of localstorage during initialisation.
 function useLocalStorage(url) {
     var allowedAPI = url.indexOf("/sdk/event/track") > 0 || 
         url.indexOf("/sdk/user/identify") > 0 ||
         url.indexOf("/sdk/capture_click") > 0;
-    return  !!window.FACTORS_LS_AVAILABLE && allowedAPI;
+    return  !!window.FAITRACKER_LS_AVAILABLE && allowedAPI;
 }
 
 function getRandomUID() {
@@ -30,12 +30,12 @@ function removeLocalStorage(rid, withPrefix=true) {
     logger.debug("Removed req from LS: "+key, false);
 
     // Ways to disable LS removal and post-processing on next load.
-    if (window.FACTORS_DISABLE_LS_REMOVE) return;
+    if (window.FAITRACKER_DISABLE_LS_REMOVE) return;
 
     window.localStorage.removeItem(key);
 }
 
-// Filters factors request keys from localstorage.
+// Filters faitracker request keys from localstorage.
 function getAllRequestKeysFromLS() {
     var allKeys = Object.keys(window.localStorage);
     var reqKeys = [];
@@ -47,7 +47,7 @@ function getAllRequestKeysFromLS() {
     return reqKeys;
 }
 
-// Filters all factors request key and value from localstorage.
+// Filters all faitracker request key and value from localstorage.
 function getAllRequestsFromLS() {
     var keys = getAllRequestKeysFromLS();
     var requests = {};
@@ -64,7 +64,7 @@ function isFetchAbortedError(e) {
 }
 
 function processAllLocalStorageBacklogRequests() {
-    if (!window.FACTORS_LS_AVAILABLE) return;
+    if (!window.FAITRACKER_LS_AVAILABLE) return;
 
     var requests = getAllRequestsFromLS();
     var reqKeys = Object.keys(requests);

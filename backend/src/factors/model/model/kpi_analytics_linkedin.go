@@ -25,13 +25,13 @@ func TransformLinkedinChannelsPropertiesConfigToKpiPropertiesConfig(channelsWith
 				"data_type":    property.Type,
 				"object_type":  channelAndProperties.Name,
 				"entity":       EventEntity,
+				"category":     channelAndProperties.Name,
 			}
 			resultantPropertiesConfig = append(resultantPropertiesConfig, tempPropertyConfig)
 		}
 	}
 	return resultantPropertiesConfig
 }
-
 
 func GetKPIMetricsForLinkedin() []map[string]string {
 	return GetStaticallyDefinedMetricsForDisplayCategory(AllChannelsDisplayCategory)

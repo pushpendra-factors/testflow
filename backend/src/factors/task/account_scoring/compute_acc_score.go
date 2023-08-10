@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	C "factors/config"
 	"factors/filestore"
+	"factors/model/model"
 	M "factors/model/model"
 	"factors/model/store"
 	P "factors/pattern"
@@ -66,15 +67,21 @@ func BuildAccScoringDaily(projectId int64, configs map[string]interface{}) (map[
 		log.Infof("weight : %s, val :%v", k, v)
 	}
 
-	prevCountsOfUser, err := store.GetStore().GetAllUserEvents(projectId, false)
-	if err != nil {
-		status["err"] = "unable to prev counts"
-		return status, false
-	}
+	// prevCountsOfUser, err := store.GetStore().GetAllUserEvents(projectId, false)
+	// if err != nil {
+	// 	status["err"] = "unable to prev counts"
+	// 	return status, false
+	// }
 
 	for tm.Unix() <= start_time.Unix() {
 		dateString := GetDateOnlyFromTimestamp(tm.Unix())
 		log.Infof("Pulling daily events for :%s", dateString)
+
+		prevCountsOfUser, err := store.GetStore().GetAllUserEvents(projectId, false)
+		if err != nil {
+			status["err"] = "unable to prev counts"
+			return status, false
+		}
 		err = AggDailyUsersOnDate(projectId, archiveCloudManager, modelCloudManager, diskManager, tm, db, mweights, prevCountsOfUser, salewindow)
 		if err != nil {
 			log.WithError(err).Errorf("Error in aggregating users : %d time: %v ", tm)
@@ -288,15 +295,6 @@ func AggEventsOnUsers(file io.ReadCloser, userGroupCount map[string]*AggEventsOn
 					aggGroupCounts(event, event.Group8UserId, userGroupCount, ruleIds)
 				}
 			}
-			// else if event.IsGroupUser {
-
-			// 	// get domain group user id
-			// 	if domainGroup != "" {
-			// 		id := getDomainGroupUserId(event, domainGroup)
-			// 		aggGroupCounts(event, id, userGroupCount, ruleIds)
-			// 	}
-
-			// }
 		}
 
 	}
@@ -370,8 +368,8 @@ func WriteUserCountsToDB(projectId int64, startTime int64,
 	userCounts map[string]*AggEventsOnUserAndGroup, weights map[string][]M.AccEventWeight,
 	prevcountsofuser map[string]map[string]M.LatestScore, salewindow int64) error {
 
-	evdata := make([]M.DbUpdateAccScoring, 0)
-	gpdata := make([]M.DbUpdateAccScoring, 0)
+	evdata := make([]*AggEventsOnUserAndGroup, 0)
+	gpdata := make([]*AggEventsOnUserAndGroup, 0)
 
 	mweights := make(map[string]bool, 0)
 
@@ -381,34 +379,82 @@ func WriteUserCountsToDB(projectId int64, startTime int64,
 		}
 	}
 
-	userUpdatedcounts := UpdateCountsWithDecayToUpdateDB(userCounts, weights,
-		prevcountsofuser, salewindow, startTime)
-
-	for _, uval := range userUpdatedcounts {
-		if uval.IsGroup {
-			gpdata = append(gpdata, uval)
-		} else {
-			evdata = append(evdata, uval)
+	for _, uval := range userCounts {
+		if len(uval.EventsCount) > 0 {
+			if uval.Is_group {
+				gpdata = append(gpdata, uval)
+			} else {
+				evdata = append(evdata, uval)
+			}
 		}
 	}
+	evDataLastEvent, err := UpdateLastEventsDay(prevcountsofuser, evdata, startTime, salewindow)
+	if err != nil {
+		e := fmt.Errorf("unable to update last event for users")
+		return e
+	}
+	gpDataLastEvent, err := UpdateLastEventsDay(prevcountsofuser, gpdata, startTime, salewindow)
+	if err != nil {
+		e := fmt.Errorf("unable to update last event for groups")
+		return e
+	}
+
+	evData := transformUserActivityies(projectId, evdata, startTime)
+	gpData := transformUserActivityies(projectId, gpdata, startTime)
 
 	if len(evdata) > 0 {
-		err := store.GetStore().UpdateUserEventsCount(projectId, evdata)
+		err := store.GetStore().UpdateUserEventsCount(evData, evDataLastEvent)
 		if err != nil {
 			return err
 		}
 	}
 
 	if len(gpdata) > 0 {
-		err := store.GetStore().UpdateGroupEventsCount(projectId, gpdata)
+
+		err := store.GetStore().UpdateGroupEventsCount(gpData, gpDataLastEvent)
 		if err != nil {
 			return err
 		}
 	}
-
-	log.Infof("Total number of users and groups: %d , %d", len(evdata), len(gpdata))
-
 	return nil
+}
+
+func transformUserActivityies(projectId int64, ev []*AggEventsOnUserAndGroup, ts int64) []M.EventsCountScore {
+
+	var events []M.EventsCountScore
+	events = make([]M.EventsCountScore, 0)
+	dateString := GetDateOnlyFromTimestamp(ts)
+	for _, usr := range ev {
+		var usrCount M.EventsCountScore
+		usrCount.UserId = usr.User_id
+		usrCount.EventScore = make(map[string]int64)
+
+		for evKey, evVal := range usr.EventsCount {
+			usrCount.EventScore[evKey] = evVal.EventCount
+		}
+		usrCount.Property = make(map[string]map[string]int64)
+		for _, ev := range usr.Properties {
+			propsName := ev.Name
+			props := ev.Properties
+			if _, ok := usrCount.Property[propsName]; !ok {
+				usrCount.Property[propsName] = make(map[string]int64)
+			}
+
+			// for each property val add the count
+			for k, v := range props {
+				if _, ok := usrCount.Property[propsName][k]; !ok {
+					usrCount.Property[propsName][k] = 0
+				}
+				usrCount.Property[propsName][k] = v
+			}
+		}
+		usrCount.IsGroup = usr.Is_group
+		usrCount.DateStamp = dateString
+		usrCount.ProjectId = projectId
+		events = append(events, usrCount)
+	}
+
+	return events
 }
 
 func getChannelInfo(event *P.CounterEventFormat) string {
@@ -439,67 +485,6 @@ func updateEventChannel(user *AggEventsOnUserAndGroup, event *P.CounterEventForm
 	return nil
 }
 
-func updateCountsOnPreviousDays(currentUser M.EventsCountScore, prevCountsOnday map[string]M.LatestScore, currentts int64, salewindow int64) (map[string]map[string]int64,
-	map[string]float64) {
-
-	properties := make(map[string]map[string]int64)
-	eventsCountWithDecay := make(map[string]float64)
-	currentDate := GetDateOnlyFromTimestamp(currentts)
-
-	for dateOfCount, counts := range prevCountsOnday {
-
-		decayval := M.ComputeDecayValue(dateOfCount, salewindow)
-		for eventKey, eventVal := range counts.EventsCount {
-			if _, eok := eventsCountWithDecay[eventKey]; !eok {
-				eventsCountWithDecay[eventKey] = 0
-			}
-			eventsCountWithDecay[eventKey] += decayval * eventVal
-		}
-
-		// for each property take the property val and update the counts
-		for propKey, propCounts := range counts.Properties {
-			if _, pok := properties[propKey]; !pok {
-				properties[propKey] = make(map[string]int64)
-			}
-
-			for k, v := range propCounts {
-				if _, ok := properties[k]; !ok {
-					properties[propKey][k] = 0
-				}
-				properties[propKey][k] += v
-			}
-
-		}
-
-	}
-
-	for eventKey, eventCount := range currentUser.EventScore {
-		decayval := M.ComputeDecayValue(currentDate, int64(salewindow))
-		if _, eok := eventsCountWithDecay[eventKey]; !eok {
-			eventsCountWithDecay[eventKey] = 0
-		}
-
-		eventsCountWithDecay[eventKey] += decayval * float64(eventCount)
-	}
-
-	for propKey, propCounts := range currentUser.Property {
-		log.Infof("Property key:%s", propKey)
-		if _, ok := properties[propKey]; !ok {
-			properties[propKey] = make(map[string]int64)
-		}
-
-		for k, v := range propCounts {
-			if _, ok := properties[propKey][k]; !ok {
-				properties[propKey][k] = 0
-			}
-			properties[propKey][k] += v
-		}
-	}
-
-	return properties, eventsCountWithDecay
-
-}
-
 func UpdateCountsWithDecayToUpdateDB(CurrUserCounts map[string]*AggEventsOnUserAndGroup, weights map[string][]M.AccEventWeight,
 	prevcountsofuser map[string]map[string]M.LatestScore, salewindow int64, currentts int64) []M.DbUpdateAccScoring {
 
@@ -519,11 +504,9 @@ func UpdateCountsWithDecayToUpdateDB(CurrUserCounts map[string]*AggEventsOnUserA
 	userWithUpdatedCounts := make([]M.DbUpdateAccScoring, 0)
 
 	userIdsmap := make(map[string]bool, 0)
-
 	for usrkey, _ := range prevcountsofuser {
 		userIdsmap[usrkey] = true
 	}
-
 	for usrkey, _ := range CurrUserCounts {
 		userIdsmap[usrkey] = true
 	}
@@ -562,7 +545,6 @@ func UpdateCountsWithDecayToUpdateDB(CurrUserCounts map[string]*AggEventsOnUserA
 				}
 			}
 
-			log.Debugf("Properties:%v", currUser.Properties)
 			for _, ev := range currUser.Properties {
 				propsName := ev.Name
 				props := ev.Properties
@@ -579,25 +561,24 @@ func UpdateCountsWithDecayToUpdateDB(CurrUserCounts map[string]*AggEventsOnUserA
 				}
 			}
 		}
-		log.Debugf("current event :%v", CurrEvent)
 
 		// update prevuser with event counts of  curr date
 		prevcountsofuser[userId][currentDate] = CurrEvent
 		properties := make(map[string]map[string]int64)
 		prevCountsOnday := prevcountsofuser[userId]
-
-		log.Debugf("---Properties :%v---", properties)
-
 		for dateOfCount, counts := range prevCountsOnday {
 			dateTs := M.GetDateFromString(dateOfCount)
 
 			if dateTs <= currentts {
 				decayval := M.ComputeDecayValue(dateOfCount, salewindow)
-				for eventKey, eventVal := range counts.EventsCount {
-					if _, eok := eventsCountWithDecay[eventKey]; !eok {
-						eventsCountWithDecay[eventKey] = 0
+				if decayval > 0 {
+					for eventKey, eventVal := range counts.EventsCount {
+						if _, eok := eventsCountWithDecay[eventKey]; !eok {
+							eventsCountWithDecay[eventKey] = 0
+						}
+						eventsCountWithDecay[eventKey] += eventVal
+
 					}
-					eventsCountWithDecay[eventKey] += decayval * eventVal
 				}
 
 				// for each property take the property val and update the counts
@@ -659,5 +640,93 @@ func UpdateCountsWithDecayToUpdateDB(CurrUserCounts map[string]*AggEventsOnUserA
 	}
 
 	return userWithUpdatedCounts
+
+}
+
+func UpdateLastEventsDay(prevCountsOfUser map[string]map[string]M.LatestScore, data []*AggEventsOnUserAndGroup, currentTS int64, saleWindow int64) (map[string]M.LatestScore, error) {
+
+	updatedLastScore := make(map[string]M.LatestScore, 0)
+	currentDate := GetDateOnlyFromTimestamp(currentTS)
+	currentUserMap := make(map[string]*AggEventsOnUserAndGroup)
+
+	userIdsmap := make(map[string]bool, 0)
+	for usrkey, _ := range prevCountsOfUser {
+		userIdsmap[usrkey] = true
+	}
+	for _, usrval := range data {
+		userIdsmap[usrval.User_id] = true
+		currentUserMap[usrval.User_id] = usrval
+	}
+
+	for currentUser := range userIdsmap {
+		var lastevent M.LatestScore
+		properties := make(map[string]map[string]int64)
+		eventsCountWithDecay := make(map[string]float64)
+
+		if prevCountsOnday, ok := prevCountsOfUser[currentUser]; ok {
+
+			for dateOfCount, counts := range prevCountsOnday {
+				decayval := model.ComputeDecayValue(dateOfCount, int64(saleWindow))
+				if decayval > 0 {
+					for eventKey, eventVal := range counts.EventsCount {
+						if _, eok := eventsCountWithDecay[eventKey]; !eok {
+							eventsCountWithDecay[eventKey] = 0
+						}
+						eventsCountWithDecay[eventKey] += eventVal
+					}
+				}
+
+				for peruserProperties, eprops := range counts.Properties {
+
+					if _, prKeyok := properties[peruserProperties]; !prKeyok {
+						properties[peruserProperties] = make(map[string]int64)
+					}
+
+					for kpropval, vpropcount := range eprops {
+						if _, propValOk := counts.Properties[peruserProperties][kpropval]; !propValOk {
+							counts.Properties[peruserProperties][kpropval] = 0
+						}
+						properties[peruserProperties][kpropval] += vpropcount
+					}
+
+				}
+			}
+		}
+
+		if eventCountPerUser, ok := currentUserMap[currentUser]; ok {
+
+			counts := eventCountPerUser.EventsCount
+			for eventKey, eventCount := range counts {
+				if _, eok := eventsCountWithDecay[eventKey]; !eok {
+					eventsCountWithDecay[eventKey] = 0
+				}
+				eventsCountWithDecay[eventKey] += float64(eventCount.EventCount)
+			}
+
+			for _, eprops := range eventCountPerUser.Properties {
+				propName := eprops.Name
+				if _, prKeyok := properties[propName]; !prKeyok {
+					properties[propName] = make(map[string]int64)
+				}
+
+				for k, v := range eprops.Properties {
+					if _, propValOk := properties[propName][k]; !propValOk {
+						properties[propName][k] = 0
+					}
+					properties[propName][k] += v
+				}
+
+			}
+
+		}
+
+		currentDateTS := M.GetDateFromString(currentDate)
+		lastevent.Date = currentDateTS
+		lastevent.Properties = properties
+		lastevent.EventsCount = make(map[string]float64)
+		lastevent.EventsCount = eventsCountWithDecay
+		updatedLastScore[currentUser] = lastevent
+	}
+	return updatedLastScore, nil
 
 }

@@ -168,6 +168,40 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	return returnData, http.StatusFound, ""
 }
 
+// remove none filters for building where condition
+func RemoveNoneFiltersFromWhere(groupedProps map[string][]model.QueryProperty) (map[string][]model.QueryProperty, map[string][]model.QueryProperty) {
+	nullPropertyMap := make(map[string][]model.QueryProperty)
+	nullPropsNames := make(map[string]bool)
+	if len(groupedProps) == 0 {
+		return groupedProps, nullPropertyMap
+	}
+
+	for groupName, filterArray := range groupedProps {
+		if groupName == model.FILTER_TYPE_USERS {
+			continue
+		}
+		for _, filter := range filterArray {
+			noneFilterCheck := filter.Value == model.PropertyValueNone
+			if noneFilterCheck && filter.Entity == model.PropertyEntityUserGlobal {
+				nullPropsNames[filter.Property] = true
+			}
+		}
+	}
+
+	resultMap := make(map[string][]model.QueryProperty)
+	for groupName, filterArray := range groupedProps {
+		for _, filter := range filterArray {
+			if nullPropsNames[filter.Property] {
+				nullPropertyMap[filter.Property] = append(nullPropertyMap[filter.Property], filter)
+				continue
+			}
+			resultMap[groupName] = append(resultMap[groupName], filter)
+		}
+	}
+
+	return resultMap, nullPropertyMap
+}
+
 // hasUserProperty checks for user properties in filters.
 func hasUserProperty(profileType string, properties []model.QueryProperty) bool {
 	isUserProperty := false
@@ -320,8 +354,8 @@ func (store *MemSQL) GenerateQueryString(
 			whereStmt = joinStr + " " + whereStmt
 		}
 
-		selectString = "id AS identity, properties, updated_at AS last_activity"
-		selectColumnsStr = "users.id, users.properties, users.updated_at "
+		selectString = "id AS identity, properties, updated_at AS last_activity, properties_updated_timestamp"
+		selectColumnsStr = "users.id, users.properties, users.updated_at, users.properties_updated_timestamp"
 		groupByStr = ""
 
 		// selecting property col of users in case of user props in account profiles
@@ -354,9 +388,14 @@ func (store *MemSQL) GenerateQueryString(
 	}
 
 	if profileType == model.PROFILE_TYPE_ACCOUNT && isDomainGroup {
+		filtersMapForWhere, nullPropertyMap := RemoveNoneFiltersFromWhere(groupedFilters)
+		filterString, filterParams, err = buildFilterStringAndParams(projectID, filtersMapForWhere)
+		if err != nil {
+			return "", params, err
+		}
 		var queryParams []interface{}
 		var err error
-		queryString, queryParams, err = store.BuildQueryStringForDomains(projectID, filterString, hasUserProperty, source, sourceStmt, timeAndRecordsLimit, groupedFilters)
+		queryString, queryParams, err = store.BuildQueryStringForDomains(projectID, filterString, hasUserProperty, source, sourceStmt, timeAndRecordsLimit, groupedFilters, nullPropertyMap)
 		if err != nil {
 			return "", params, err
 		}
@@ -383,7 +422,7 @@ GROUP BY identity ORDER BY last_activity DESC LIMIT 1000;
 */
 
 func (store *MemSQL) BuildQueryStringForDomains(projectID int64, filterString string, hasUserProperty bool, source string, sourceStmt string,
-	userTimeAndRecordsLimit string, filters map[string][]model.QueryProperty) (string, []interface{}, error) {
+	userTimeAndRecordsLimit string, filters map[string][]model.QueryProperty, nullFilterMap map[string][]model.QueryProperty) (string, []interface{}, error) {
 
 	var params []interface{}
 
@@ -411,18 +450,20 @@ func (store *MemSQL) BuildQueryStringForDomains(projectID int64, filterString st
 	whereForDomainGroupQuery := fmt.Sprintf(strings.Replace(whereForUserQuery, "users.source!=", "source=",
 		1) + " AND is_group_user = 1")
 	whereForUserQuery = whereForUserQuery + " AND " + userTimeAndRecordsLimit
-	selectUserColumnsString := fmt.Sprintf("properties, group_%d_user_id, id, customer_user_id, is_group_user, group_%d_id", domainGroup.ID, domainGroup.ID)
+	selectUserColumnsString := fmt.Sprintf("properties, updated_at, group_%d_user_id, id, customer_user_id, is_group_user, group_%d_id", domainGroup.ID, domainGroup.ID)
 	userQueryString := fmt.Sprintf("(SELECT " + selectUserColumnsString + " FROM users " + whereForUserQuery + " ) AS users")
-	selectDomainGroupColString := fmt.Sprintf("SELECT id, updated_at, group_%d_id FROM users", domainGroup.ID)
+	selectDomainGroupColString := fmt.Sprintf("SELECT id, group_%d_id FROM users", domainGroup.ID)
 	domainGroupQueryString := "( " + selectDomainGroupColString + " " + whereForDomainGroupQuery +
 		" ) AS domain_groups"
 	onCondition := fmt.Sprintf("ON users.group_%d_user_id = domain_groups.id", domainGroup.ID)
 	groupByStr := "GROUP BY identity"
-	selectString := fmt.Sprintf("domain_groups.id AS identity, users.properties as properties, domain_groups.updated_at AS last_activity, domain_groups.group_%d_id as host_name", domainGroup.ID)
-	var selectFilterString, havingString string
-	selectFilterString, havingString = SelectFilterAndHavingStringsForAccounts(filters)
+	selectString := fmt.Sprintf("domain_groups.id AS identity, users.properties as properties, MAX(users.updated_at) AS last_activity, domain_groups.group_%d_id as host_name", domainGroup.ID)
+	selectFilterString, havingString, havingFilterParams := SelectFilterAndHavingStringsForAccounts(filters, nullFilterMap)
 	if selectFilterString != "" {
 		selectString = selectString + ", " + selectFilterString
+		if havingFilterParams != nil {
+			params = append(params, havingFilterParams...)
+		}
 	}
 	queryString := "SELECT " + selectString + " FROM " + userQueryString + " JOIN " + domainGroupQueryString + " " +
 		onCondition
@@ -569,20 +610,22 @@ func (store *MemSQL) GetUsersAssociatedToDomain(projectID int64, minMax *model.M
 	domainID := groupIdsMap[model.GROUP_NAME_DOMAINS]
 	query := fmt.Sprintf(`SELECT domain_groups.id AS identity, 
 	  user_global_user_properties as properties, 
-	  domain_groups.updated_at AS last_activity, 
+	  MAX(users.updated_at) AS last_activity, 
 	  domain_groups.group_%d_id as host_name 
 	FROM (
-		SELECT properties as user_global_user_properties, 
-		  group_%d_user_id, id 
+		SELECT id,
+		  properties as user_global_user_properties, 
+		  updated_at,
+		  group_%d_user_id
 		FROM users 
 		WHERE project_id = ? 
 		  AND customer_user_id IS NOT NULL 
-		AND group_%d_user_id IS NOT NULL 
-		AND %s 
-		AND %s
+		  AND group_%d_user_id IS NOT NULL 
+		  AND %s 
+		  AND %s
 	  ) AS users 
 	JOIN (
-		SELECT updated_at, id, group_%d_id 
+		SELECT id, group_%d_id 
 		FROM users 
 		WHERE project_id = ? 
 		  AND source = ? 
@@ -706,23 +749,64 @@ func (store *MemSQL) GetSourceStringForAccountsV2(projectID int64, source string
 }
 
 // SelectFilterAndHavingStringsForAccounts generates a SELECT statement for filters and a HAVING clause for the case when filter properties are from multiple sources
-func SelectFilterAndHavingStringsForAccounts(filtersMap map[string][]model.QueryProperty) (string, string) {
+func SelectFilterAndHavingStringsForAccounts(filtersMap map[string][]model.QueryProperty, nullFilterMap map[string][]model.QueryProperty) (string, string, []interface{}) {
 	index := 1
 	filterArray := make([]string, 0)
 	havingArray := make([]string, 0)
 	propMap := make(map[string]bool)
+	var filterParams []interface{}
 	for group, filterArr := range filtersMap {
 		if group == model.FILTER_TYPE_USERS {
 			continue
 		}
 		for _, filter := range filterArr {
-
 			if exists := propMap[filter.Property]; exists {
 				continue
 			}
+
+			// for case where multiple values for a property and a $none
+			propArray, nullPropexists := nullFilterMap[filter.Property]
+			if nullPropexists && len(propArray) > 1 {
+				// select string
+				if filter.Type == U.PropertyTypeNumerical {
+					filterStr := fmt.Sprintf("CASE WHEN JSON_GET_TYPE(JSON_EXTRACT_JSON(properties, '%s')) = 'double' THEN  MAX(JSON_EXTRACT_DOUBLE(properties, '%s')) ELSE false END as filter_key_%d", filter.Property, filter.Property, index)
+					filterArray = append(filterArray, filterStr)
+				} else {
+					filterStr := fmt.Sprintf("MAX(JSON_EXTRACT_STRING(properties, '%s')) as filter_key_%d", filter.Property, index)
+					filterArray = append(filterArray, filterStr)
+				}
+
+				var havingProps []string
+
+				for idx, prop := range propArray {
+					propertyOp := getOp(prop.Operator, prop.Type)
+					var propString string
+					if idx > 0 {
+						propString = fmt.Sprintf("%s ", prop.LogicalOp)
+					}
+					if prop.Value == model.PropertyValueNone && (prop.Operator == model.EqualsOpStr || prop.Operator == model.ContainsOpStr) {
+						propString = propString + fmt.Sprintf("(filter_key_%d IS NULL OR filter_key_%d='')", index, index)
+					} else if prop.Value == model.PropertyValueNone {
+						propString = propString + fmt.Sprintf("filter_key_%d IS NOT NULL", index)
+					} else {
+						propString = propString + fmt.Sprintf("filter_key_%d %s ? ", index, propertyOp)
+						filterParams = append(filterParams, prop.Value)
+					}
+					havingProps = append(havingProps, propString)
+				}
+				havingFilterStr := "(" + strings.Join(havingProps, " ") + ")"
+				havingArray = append(havingArray, havingFilterStr)
+
+				delete(nullFilterMap, filter.Property)
+				index += 1
+				propMap[filter.Property] = true
+				continue
+			}
+
+			filterValNull := filter.Value == model.PropertyValueNone && (filter.Operator == model.EqualsOpStr || filter.Operator == model.ContainsOpStr)
 			filterStr := fmt.Sprintf("MAX(JSON_EXTRACT_STRING(properties, '%s')) as filter_key_%d", filter.Property, index)
 			filterArray = append(filterArray, filterStr)
-			if filter.Value == model.PropertyValueNone {
+			if filterValNull && len(filterArr) == 1 {
 				havingArray = append(havingArray, fmt.Sprintf("(filter_key_%d IS NULL OR filter_key_%d='')", index, index))
 			} else {
 				havingArray = append(havingArray, fmt.Sprintf("filter_key_%d IS NOT NULL", index))
@@ -736,7 +820,7 @@ func SelectFilterAndHavingStringsForAccounts(filtersMap map[string][]model.Query
 		selectFilterString = strings.Join(filterArray, ", ")
 		havingString = "HAVING " + strings.Join(havingArray, " AND ")
 	}
-	return selectFilterString, havingString
+	return selectFilterString, havingString, filterParams
 }
 
 func (store *MemSQL) GetGroupNameIDMap(projectID int64) (map[string]int, int) {
@@ -868,6 +952,9 @@ func FormatProfilesStruct(profiles []model.Profile, profileType string, tablePro
 
 			if profiles[index].Name == "" && profiles[index].HostName != "" {
 				profiles[index].Name = profiles[index].HostName
+			}
+			if !(source == "All" || source == U.GROUP_NAME_DOMAINS) && profile.PropertiesUpdatedTimestamp > 0 {
+				profiles[index].LastActivity = *model.UnixToLocalTime(profile.PropertiesUpdatedTimestamp)
 			}
 		}
 	} else if profileType == model.PROFILE_TYPE_USER {
