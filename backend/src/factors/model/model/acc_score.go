@@ -214,3 +214,16 @@ func ComputeDecayValue(ts string, SaleWindow int64) float64 {
 
 	return decay
 }
+
+func ComputeDecayValueGivenStartEndTS(start int64, end int64, SaleWindow int64) float64 {
+	var decay float64
+	// get difference in weeks
+	dayDiff := ComputeDayDifference(start, end)
+	if int64(dayDiff) > SaleWindow {
+		return 0
+	}
+	// get decay value
+	decay = 1 - float64(float64(int64(dayDiff))/float64(SaleWindow))
+
+	return decay
+}
