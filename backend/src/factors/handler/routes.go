@@ -40,13 +40,15 @@ func InitExternalAuth(r *gin.Engine, auth *Authenticator) {
 func InitAppRoutes(r *gin.Engine) {
 	routePrefix := C.GetRoutesURLPrefix()
 
-	r.GET(routePrefix+"/status", func(c *gin.Context) {
-		resp := map[string]string{
-			"status": "success",
-		}
-		c.JSON(http.StatusOK, resp)
-		return
-	})
+	r.GET(routePrefix+"/status",
+		mid.RestrictHTTPAccess(),
+		func(c *gin.Context) {
+			resp := map[string]string{
+				"status": "success",
+			}
+			c.JSON(http.StatusOK, resp)
+			return
+		})
 
 	// Initialize swagger api docs only for development / staging.
 	if C.GetConfig().Env != C.PRODUCTION {
