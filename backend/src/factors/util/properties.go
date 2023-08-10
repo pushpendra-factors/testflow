@@ -4359,7 +4359,9 @@ func SortByTimestampAndCount(data []NameCountTimestampCategory) []NameCountTimes
 	}
 
 	sorted = append(smartEventNames, sorted...)
-	sorted = append(sorted, sessionEvent)
+	if sessionEvent.Name != "" {
+		sorted = append(sorted, sessionEvent)
+	}
 	sorted = append(sorted, pageViewEventNames...)
 
 	for _, data := range trimmed {
