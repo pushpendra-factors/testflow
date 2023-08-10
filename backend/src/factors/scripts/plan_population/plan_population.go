@@ -2,6 +2,7 @@ package main
 
 import (
 	C "factors/config"
+	"factors/model/model"
 	M "factors/model/model"
 	store "factors/model/store"
 	U "factors/util"
@@ -24,6 +25,7 @@ const (
 	FreePlanExpiry                       = math.MaxInt64 // Free plan never expires
 	Create                               = "create"
 	Update                               = "update"
+	Disable                              = "disable"
 )
 
 // Add new features for the custom plan other than the features already in the free plan
@@ -501,7 +503,8 @@ func main() {
 	planID := flag.Int64("id", -1, "Enter plan id to be updated")
 	updateAdd := flag.String("add", "", "Add feature to the feature list of an existing plan")
 	updateRemove := flag.String("remove", "", "Remove feature from the feature list of an existing plan")
-
+	disableFeatures := flag.String("disable_features", "", "")
+	ProjectIDs := flag.String("project_ids", "", "comma separeted list of project ids, * for all")
 	flag.Parse()
 
 	if *env != "development" &&
@@ -564,5 +567,52 @@ func main() {
 				log.WithError(err).Error("failed to populate plan details table")
 			}
 		}
+	}
+	if *action == Disable {
+		// only allowing in Custom Plan
+		features := C.GetTokensFromStringListAsString(*disableFeatures)
+		featureMap := make(map[string]bool)
+		for _, feature := range features {
+			featureMap[feature] = true
+		}
+		var projectIDS []int64
+		var err error
+		if *ProjectIDs == "*" {
+			projectIDS, _, _, err = store.GetStore().GetAllProjectIdsUsingPlanId(model.PLAN_ID_CUSTOM)
+			if err != nil {
+				log.Error("Failed to get project ID with custom plan")
+				return
+			}
+		} else {
+			projectIDS = C.GetTokensFromStringListAsUint64(*ProjectIDs)
+		}
+		for _, id := range projectIDS {
+			DisableFeaturesForCustomPlan(id, featureMap)
+		}
+	}
+}
+
+func DisableFeaturesForCustomPlan(ProjectID int64, featuresMap map[string]bool) {
+	ppmapping, err := store.GetStore().GetProjectPlanMappingforProject(ProjectID)
+	if err != nil {
+		log.Error("Failed to disable features for ID ", ProjectID)
+		return
+	}
+	var addOns model.OverWrite
+	if ppmapping.OverWrite != nil {
+		err := U.DecodePostgresJsonbToStructType(ppmapping.OverWrite, &addOns)
+		if err != nil {
+			log.Error(err, " ID ", ProjectID)
+			return
+		}
+	}
+	for idx, feature := range addOns {
+		if _, ok := featuresMap[feature.Name]; ok {
+			addOns[idx].IsEnabledFeature = false
+		}
+	}
+	_, err = store.GetStore().UpdateAddonsForProject(ProjectID, addOns)
+	if err != nil {
+		log.Error("Failed to update addons for project ", ProjectID)
 	}
 }
