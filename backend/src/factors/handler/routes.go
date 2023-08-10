@@ -40,11 +40,19 @@ func InitExternalAuth(r *gin.Engine, auth *Authenticator) {
 func InitAppRoutes(r *gin.Engine) {
 	routePrefix := C.GetRoutesURLPrefix()
 
-	r.GET(routePrefix+"/status",
+	r.GET(routePrefix+"/status", func(c *gin.Context) {
+		resp := map[string]string{
+			"status": "success",
+		}
+		c.JSON(http.StatusOK, resp)
+		return
+	})
+
+	r.GET(routePrefix+"/verify",
 		mid.RestrictHTTPAccess(),
 		func(c *gin.Context) {
 			resp := map[string]string{
-				"status": "success",
+				"status": "verified",
 			}
 			c.JSON(http.StatusOK, resp)
 			return
