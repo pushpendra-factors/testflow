@@ -4,3 +4,6 @@ metadata:
   name: lb-backend-config
 spec:
   timeoutSec: 1800
+  customRequestHeaders:
+    headers:
+    - "X-Client-Encrypted:{client_encrypted}"

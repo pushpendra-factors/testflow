@@ -134,12 +134,28 @@ func AddSecurityResponseHeadersToCustomDomain() gin.HandlerFunc {
 
 func RestrictHTTPAccess() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if C.IsProduction() || C.IsStaging() {
+		isLiveEnv := C.IsProduction() || C.IsStaging()
+		// /status route is used for liveness probes internally, hence excluded.
+		isStatusRoute := c.Request.URL.Path == "/status"
+		if isLiveEnv && !isStatusRoute {
+			// Header added through advanced configuration on
+			// sdk-proxy-api >> Backend Configuration >> Advanced Configurations
+			// Required to differentiate the source load balalncer.
 			sourceValue := "https-load-balancer"
-			isSourceHttpsLB := c.Request.Header.Get("x-request-source") == sourceValue ||
+			isSourceHTTPsProxy := c.Request.Header.Get("x-request-source") == sourceValue ||
 				c.Request.Header.Get("X-Request-Source") == sourceValue
-			if !isSourceHttpsLB && !strings.Contains(c.Request.Proto, "https://") {
-				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"message": "Unsupported protocol."})
+
+			// Header added through BackendConfig lb-backend-config.
+			// Required to figure out protocol used by the client.
+			// By default protocol information is not available.
+			isEncrypted := c.Request.Header.Get("X-Client-Encrypted")
+			isHTTPs := isEncrypted == "true"
+
+			if !isSourceHTTPsProxy && !isHTTPs {
+				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+					"message":  "Unsecured request.",
+					"is_https": isEncrypted,
+				})
 				return
 			}
 		}
