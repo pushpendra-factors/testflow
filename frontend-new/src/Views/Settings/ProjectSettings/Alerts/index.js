@@ -368,7 +368,7 @@ const Alerts = ({
                   Be instantly notified, take immediate action, and seize every
                   opportunity to drive conversions, optimize performance, and
                   achieve your business objectives.
-                  <a href='https://help.factors.ai/en/articles/7284705-alerts'>
+                  <a href='https://help.factors.ai/en/articles/7284705-alerts' target='_blank'>
                     Learn more
                   </a>
                 </Text>

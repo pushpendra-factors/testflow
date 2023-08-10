@@ -204,7 +204,7 @@ export const getDataFromServer = (
                 ...q,
                 fr,
                 to,
-                gbt: q.gbt ? durationObj.frequency : ''
+                gbt: q.gbt ? q.gbt : ''
               };
             })
           }

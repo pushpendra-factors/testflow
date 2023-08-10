@@ -40,6 +40,11 @@ func GetProjectSettingHandler(c *gin.Context) {
 	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to get project settings."})
 	} else {
+		// Returning random url sets everytime.
+		// Todo: Persist url at project level and return the same.
+		assetURL, apiURL := model.GetProjectSDKAPIAndAssetURL(projectId)
+		settings.SDKAPIURL = apiURL
+		settings.SDKAssetURL = assetURL
 		c.JSON(http.StatusOK, settings)
 	}
 }

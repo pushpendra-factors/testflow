@@ -172,7 +172,7 @@ func (store *MemSQL) DeleteEventTriggerAlert(projectID int64, id string) (int, s
 	return http.StatusAccepted, ""
 }
 
-func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int64, alertConfig *model.EventTriggerAlertConfig, slackTokenUser, teamTokenUser string) (*model.EventTriggerAlert, int, string) {
+func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int64, alertConfig *model.EventTriggerAlertConfig, slackTokenUser, teamTokenUser string, isPausedAlert bool) (*model.EventTriggerAlert, int, string) {
 	logFields := log.Fields{
 		"project_id":          projectID,
 		"event_trigger_alert": alertConfig,
@@ -240,6 +240,10 @@ func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int
 		return nil, http.StatusInternalServerError, "TiggerAlert conversion to Jsonb failed"
 	}
 
+	internalStatus := model.Active
+	if isPausedAlert {
+		internalStatus = model.Disabled
+	}
 	alert = model.EventTriggerAlert{
 		ID:                       id,
 		ProjectID:                projectID,
@@ -251,7 +255,7 @@ func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int
 		IsDeleted:                false,
 		SlackChannelAssociatedBy: slackTokenUser,
 		TeamsChannelAssociatedBy: teamTokenUser,
-		InternalStatus:           model.Active,
+		InternalStatus:           internalStatus,
 	}
 
 	if err := db.Create(&alert).Error; err != nil {
@@ -401,7 +405,6 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	log.WithFields(logFields).Info("Inside match checkpoint 1")
 	alerts, eventName, errCode := store.GetEventTriggerAlertsByEvent(projectId, eventNameId)
 	if errCode != http.StatusFound || alerts == nil {
 		//log.WithFields(logFields).Error("GetEventTriggerAlertsByEvent failure inside Match function.")
@@ -418,8 +421,6 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 	if UpdatedEventProps != nil {
 		updatedEventProps, _ = U.DecodePostgresJsonb(UpdatedEventProps)
 	}
-
-	log.WithFields(logFields).Info("Inside match checkpoint 2")
 	
 	var matchedAlerts []model.EventTriggerAlert
 	for _, alert := range alerts {
@@ -444,14 +445,11 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 					isUpdateOnlyPropertyInMessageBody = true
 				}
 			}
-			if isUpdateOnlyPropertyInMessageBody {
-				log.WithFields(logFields).Info("Inside match checkpoint 3 - !isUpdate")
-				
+			if isUpdateOnlyPropertyInMessageBody {				
 				continue
 			}
 		}
 		if isUpdate {
-			log.WithFields(logFields).Info("Inside match checkpoint 4 - isUpdate")
 			if len(*updatedEventProps) == 0 {
 				continue
 			} else {
@@ -473,10 +471,9 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 				}
 			}
 		}
-		log.WithFields(logFields).Info("Inside Match func checkpoint 5 - going for filter matching")
 
-		if E.EventMatchesFilterCriterionList(projectId, *userPropMap, *eventPropMap, E.MapFilterProperties(config.Filter)) {
-			log.WithFields(logFields).Info("Inside Match func checkpoint 11 - matching success")
+		criteria := E.MapFilterProperties(config.Filter)
+		if E.EventMatchesFilterCriterionList(projectId, *userPropMap, *eventPropMap, criteria) {
 			matchedAlerts = append(matchedAlerts, alert)
 			
 		}
@@ -918,8 +915,7 @@ func (store *MemSQL) CacheEventTriggerAlert(alert *model.EventTriggerAlert, even
 		log.WithFields(logFields).Error("Failed to send alert.")
 		return false
 	}
-
-	log.WithFields(logFields).Info("Inside Match func checkpoint 12 - caching success")
+	
 	return true
 }
 

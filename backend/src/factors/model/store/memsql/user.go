@@ -3175,14 +3175,14 @@ func (store *MemSQL) GetAssociatedDomainForUser(projectID int64, userID string, 
 		SELECT group_%d_id as account
 		FROM users 
 		WHERE project_id = ? 
-			AND id = (
-				SELECT group_%d_user_id
-				FROM users 
-				WHERE project_id = ?
-					AND %s = ? 
-					AND group_%d_user_id IS NOT NULL 
-				LIMIT 1
-			)
+		  AND id = (
+			SELECT group_%d_user_id
+			FROM users 
+			WHERE project_id = ?
+			  AND %s = ? 
+			  AND group_%d_user_id IS NOT NULL 
+			LIMIT 1
+		)
 		`, domainGroup.ID, domainGroup.ID, columnName, domainGroup.ID)
 
 	err := db.Raw(queryString, projectID, projectID, userID).Scan(&details).Error

@@ -530,15 +530,15 @@ const getEventsWithPropertiesKPI = (filters, category) => {
                   : fil?.extra[3]
                 : 'event',
             objTy:
-              fil?.extra[3] == 'propMap'
+              fil?.extra?.[3] == 'propMap'
                 ? ''
                 : category === 'channels' || category === 'custom_channels'
                 ? fil?.extra
                   ? fil?.extra[3]
                   : 'event'
                 : '',
-            va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val,
-            isPrMa: fil?.extra[3] == 'propMap' ? true : false
+            va: fil.props?.[1] === 'datetime' ? formatFilterDate(val) : val,
+            isPrMa: fil?.extra?.[3] == 'propMap' ? true : false
           });
         });
       } else {
@@ -557,7 +557,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
                 : fil?.extra[3]
               : 'event',
           objTy:
-            fil?.extra[3] == 'propMap'
+            fil?.extra?.[3] == 'propMap'
               ? ''
               : category === 'channels' || category === 'custom_channels'
               ? fil?.extra
@@ -565,10 +565,10 @@ const getEventsWithPropertiesKPI = (filters, category) => {
                 : 'event'
               : '',
           va:
-            fil.props[1] === 'datetime'
+            fil.props?.[1] === 'datetime'
               ? formatFilterDate(fil.values)
               : fil.values,
-          isPrMa: fil?.extra[3] == 'propMap' ? true : false
+          isPrMa: fil?.extra?.[3] == 'propMap' ? true : false
         });
       }
     } else {
@@ -590,15 +590,15 @@ const getEventsWithPropertiesKPI = (filters, category) => {
                   : fil?.extra[3]
                 : 'event',
             objTy:
-              fil?.extra[3] == 'propMap'
+              fil?.extra?.[3] == 'propMap'
                 ? ''
                 : category === 'channels' || category === 'custom_channels'
                 ? fil?.extra
                   ? fil?.extra[3]
                   : 'event'
                 : '',
-            va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val,
-            isPrMa: fil?.extra[3] == 'propMap' ? true : false
+            va: fil.props?.[1] === 'datetime' ? formatFilterDate(val) : val,
+            isPrMa: fil?.extra?.[3] == 'propMap' ? true : false
           });
         });
       } else {
@@ -615,7 +615,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
               ? fil?.extra[3]
               : 'event',
           objTy:
-            fil?.extra[3] == 'propMap'
+            fil?.extra?.[3] == 'propMap'
               ? ''
               : category === 'channels' || category === 'custom_channels'
               ? fil?.extra
@@ -625,10 +625,10 @@ const getEventsWithPropertiesKPI = (filters, category) => {
                 : 'event'
               : '',
           va:
-            fil.props[1] === 'datetime'
+            fil.props?.[1] === 'datetime'
               ? formatFilterDate(fil.values)
               : fil.values,
-          isPrMa: fil?.extra[3] == 'propMap' ? true : false
+          isPrMa: fil?.extra?.[3] == 'propMap' ? true : false
         });
       }
       fil = filtersGr[1];
@@ -649,15 +649,15 @@ const getEventsWithPropertiesKPI = (filters, category) => {
                   : fil?.extra[3]
                 : 'event',
             objTy:
-              fil?.extra[3] == 'propMap'
+              fil?.extra?.[3] == 'propMap'
                 ? ''
                 : category === 'channels' || category === 'custom_channels'
                 ? fil?.extra
                   ? fil?.extra[3]
                   : 'event'
                 : '',
-            va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val,
-            isPrMa: fil?.extra[3] == 'propMap' ? true : false
+            va: fil.props?.[1] === 'datetime' ? formatFilterDate(val) : val,
+            isPrMa: fil?.extra?.[3] == 'propMap' ? true : false
           });
         });
       } else {
@@ -676,7 +676,7 @@ const getEventsWithPropertiesKPI = (filters, category) => {
                 : fil?.extra[3]
               : 'event',
           objTy:
-            fil?.extra[3] == 'propMap'
+            fil?.extra?.[3] == 'propMap'
               ? ''
               : category === 'channels' || category === 'custom_channels'
               ? fil?.extra
@@ -684,10 +684,10 @@ const getEventsWithPropertiesKPI = (filters, category) => {
                 : 'event'
               : '',
           va:
-            fil.props[1] === 'datetime'
+            fil.props?.[1] === 'datetime'
               ? formatFilterDate(fil.values)
               : fil.values,
-          isPrMa: fil?.extra[3] == 'propMap' ? true : false
+          isPrMa: fil?.extra?.[3] == 'propMap' ? true : false
         });
       }
     }

@@ -75,7 +75,7 @@ func sendEditProjectRequest(r *gin.Engine, projectId int64, projectName string, 
 	}
 	rb := C.NewRequestBuilderWithPrefix(http.MethodPut, fmt.Sprintf("/projects/%v", projectId)).
 		WithHeader("Content-UnitType", "application/json").
-		WithPostParams(map[string]string{"name": projectName, "project_uri": "factors.ai.edit", "time_format": "HH:mm:ss.edit", "date_format": "yyyy-MM-dd.edit", "time_zone": "IST.edit"}).
+		WithPostParams(map[string]string{"name": projectName, "project_uri": "factors.ai.edit", "time_format": "HH:mm:ss.edit", "date_format": "yyyy-MM-dd.edit", "time_zone": "Europe/Tirane"}).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
@@ -220,7 +220,7 @@ func TestAPIEditProject(t *testing.T) {
 		assert.Equal(t, "factors.ai.edit", jsonResponseMap["project_uri"].(string))
 		assert.Equal(t, "HH:mm:ss.edit", jsonResponseMap["time_format"].(string))
 		assert.Equal(t, "yyyy-MM-dd.edit", jsonResponseMap["date_format"].(string))
-		assert.Equal(t, "IST.edit", jsonResponseMap["time_zone"].(string))
+		assert.Equal(t, "Europe/Tirane", jsonResponseMap["time_zone"].(string))
 		assert.NotEqual(t, 0, len(jsonResponseMap["token"].(string)))         // Todo: should be removed from response.
 		assert.NotEqual(t, 0, len(jsonResponseMap["private_token"].(string))) // Todo: should be removed from response.
 		assert.NotNil(t, jsonResponseMap["created_at"].(string))

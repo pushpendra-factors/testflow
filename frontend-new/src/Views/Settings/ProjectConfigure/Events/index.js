@@ -179,7 +179,7 @@ function Events({
                         Define and capture custom events that matter most to
                         your business, such as clicks, form submissions,
                         lifecycle stage changes, or other specific actions.{' '}
-                        <a href='https://help.factors.ai/en/articles/7284092-custom-events'>
+                        <a href='https://help.factors.ai/en/articles/7284092-custom-events' target='_blank'>
                           Learn more
                         </a>
                       </Text>

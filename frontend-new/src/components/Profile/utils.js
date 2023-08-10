@@ -88,6 +88,26 @@ export const displayFilterOpts = {
   $g2: 'G2 Engagements'
 };
 
+export const formatReqPayload = (payload, segment) => {
+  const req = {
+    query: {
+      grpa: segment.query ? segment.query.grpa : '',
+      source: payload.source,
+      ty: segment.query ? segment.query.ty : '',
+      ec: segment.query ? segment.query.ec : '',
+      ewp: segment.query ? segment.query.ewp || [] : [],
+      gup: [
+        ...payload.filters,
+        ...(segment.query ? segment.query.gup || [] : [])
+      ],
+      table_props: segment.query ? segment.query.table_props || [] : []
+    },
+    search_filter: [...(payload.search_filter || [])]
+  };
+
+  return req;
+};
+
 export const formatFiltersForPayload = (filters = [], source = 'users') => {
   const filterProps = [];
   filters.forEach((fil) => {

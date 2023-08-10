@@ -1,28 +1,28 @@
 "use strict";
 
-const cacheWindowKey = "FACTORS_CACHE";
+const cacheWindowKey = "FAITRACKER_CACHE";
 
-function getFactorsCache(key) { 
+function getFAITrackerCache(key) { 
     if (!window[cacheWindowKey]) window[cacheWindowKey]={}; 
     return window[cacheWindowKey][key];
 }
 
-function setFactorsCache(key, value) {
+function setFAITrackerCache(key, value) {
     if (!window[cacheWindowKey]) window[cacheWindowKey]={};
     window[cacheWindowKey][key] = value;
 }
 
-function getFactorsCacheObject() {
+function getFAITrackerCacheObject() {
     if (!window[cacheWindowKey]) window[cacheWindowKey]={};
     return window[cacheWindowKey];
 }
 
 module.exports = {
-    getFactorsCache: getFactorsCache,
-    setFactorsCache: setFactorsCache,
-    getFactorsCacheObject: getFactorsCacheObject,
+    getFAITrackerCache: getFAITrackerCache,
+    setFAITrackerCache: setFAITrackerCache,
+    getFAITrackerCacheObject: getFAITrackerCacheObject,
 
-    // List of factors cache keys.
+    // List of faitracker cache keys.
     currentPageURLEventName: "currentPageURLEventName",
     currentPageTrackEventId: "currentPageTrackEventId",
     currentPageOriginalURL: "currentPageOriginalURL",

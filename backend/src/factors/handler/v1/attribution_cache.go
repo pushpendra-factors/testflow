@@ -7,10 +7,8 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
-	"fmt"
 	log "github.com/sirupsen/logrus"
 	"net/http"
-	"time"
 )
 
 func RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId int64, requestPayload AttributionRequestPayloadV1,
@@ -68,99 +66,25 @@ func RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId int64, re
 				return true, mergedResult
 			}
 		}
-		keyIndex := model.GetLastKeyValueIndex(mergedResult.Headers)
+		keyIndex := model.GetLastKeyValueIndex(resultForRange.Headers)
 		if requestPayload.Query.AttributionKey == model.AttributionKeyLandingPage ||
 			requestPayload.Query.AttributionKey == model.AttributionKeyChannel ||
 			requestPayload.Query.AttributionKey == model.AttributionKeySource ||
 			requestPayload.Query.AttributionKey == model.AttributionKeyAllPageView {
-			keyIndex = model.GetLastKeyValueIndexLandingPage(mergedResult.Headers)
+			keyIndex = model.GetLastKeyValueIndexLandingPage(resultForRange.Headers)
 		}
 
 		// Now we have the result either from cache or computed
 		mergedResult = model.MergeTwoAttributionReportsIntoOne(mergedResult, resultForRange,
 			keyIndex, requestPayload.Query.AttributionKey,
 			kpiAggFunctionType, *logCtx)
-		if err != nil {
-			logCtx.Info("Failed to process query from DB - attribution v1", err.Error())
+		if mergedResult == nil {
+			logCtx.Info("Failed to process query from DB - attribution v1 as mergedResult is nil")
 			return true, mergedResult
 		}
 	}
 	mergedResult.CacheMeta = latestFoundResult.CacheMeta
 	return false, mergedResult
-}
-
-func IsAMonthlyRangeQuery(timezoneString U.TimeZoneString, effectiveFrom, effectiveTo int64) (bool, []U.TimestampRange) {
-
-	last12Months := U.GenerateLast12MonthsTimestamps(string(timezoneString))
-	stMatch := 0
-	enMatch := 0
-	for _, rng := range last12Months {
-		if rng.Start == effectiveFrom {
-			stMatch = 1
-		}
-		if rng.End == effectiveTo {
-			enMatch = 1
-		}
-	}
-	// both start and end timestamp belong to a month
-	if stMatch == 1 && enMatch == 1 {
-		return true, last12Months
-	}
-	return false, last12Months
-}
-
-func IsAWeeklyRangeQuery(timezoneString U.TimeZoneString, effectiveFrom, effectiveTo int64) (bool, []U.TimestampRange) {
-
-	last48Weeks := U.GenerateLast12MonthsTimestamps(string(timezoneString))
-	stMatch := 0
-	enMatch := 0
-	for _, rng := range last48Weeks {
-		if rng.Start == effectiveFrom {
-			stMatch = 1
-		}
-		if rng.End == effectiveTo {
-			enMatch = 1
-		}
-	}
-	// both start and end timestamp belong to a month
-	if stMatch == 1 && enMatch == 1 {
-		return true, last48Weeks
-	}
-	return false, last48Weeks
-}
-
-// GenerateLast48WeeksTimestamps returns start-end of last 48 weeks in descending order (last week first) from now
-func GenerateLast48WeeksTimestamps(timezone string) []U.TimestampRange {
-	timestamps := make([]U.TimestampRange, 0)
-
-	loc, err := time.LoadLocation(timezone)
-	if err != nil {
-		fmt.Println("Invalid timezone:", timezone)
-		return timestamps
-	}
-
-	now := time.Now().In(loc)
-
-	// Set the weekday to Sunday (0) and adjust the time to 00:00:00
-	weekStart := now.AddDate(0, 0, -(int(now.Weekday())))
-	weekStart = time.Date(weekStart.Year(), weekStart.Month(), weekStart.Day(), 0, 0, 0, 0, loc)
-
-	for i := 0; i < 48; i++ {
-		// Get the end of the week by adding 6 days, 23 hours, 59 minutes, and 59 seconds
-		weekEnd := weekStart.AddDate(0, 0, 6).Add(time.Hour*23 + time.Minute*59 + time.Second*59)
-
-		// add all the valid ranges which are smaller than today's time
-		if weekStart.Unix() < now.Unix() && weekEnd.Unix() < now.Unix() {
-			timestamps = append(timestamps, U.TimestampRange{
-				Start: weekStart.Unix(),
-				End:   weekEnd.Unix(),
-			})
-		}
-		// Move to the previous week's start
-		weekStart = weekStart.AddDate(0, 0, -7)
-	}
-
-	return timestamps
 }
 
 func RunAttributionQuery(projectId int64, requestPayload AttributionRequestPayloadV1, debugQueryKey string,

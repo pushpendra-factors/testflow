@@ -192,13 +192,6 @@ func (store *MemSQL) GetPropertiesByGroup(projectID int64, groupName string, lim
 			logCtx.WithField("current_date", currentDateOnlyFormat).WithField("error", err).Warn("Failed to get group properties from cache.")
 			continue
 		}
-		// Temporary fix, to be removed later on when the cache resets
-		for key, value := range groupProperty.Property {
-			if key == U.G2_EMPLOYEES && value.Category == U.PropertyTypeUnknown {
-				value.Category = U.PropertyTypeNumerical
-				groupProperty.Property[key] = value
-			}
-		}
 		groupProperties = append(groupProperties, groupProperty)
 	}
 

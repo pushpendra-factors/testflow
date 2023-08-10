@@ -5,14 +5,14 @@ window.factors = window.factors||(function(){
         this.q.push({'k': k,'a': a});
         window.dispatchEvent(factorsQueuedEvent);   
     }
-    this.track = function(ev, ep, ac) {
-        addToQueue('track', arguments);  
-    }
     this.init = function(at, op, ac) {
         this.TOKEN = at;
         this.INIT_PARAMS = op;
         this.INIT_CALLBACK = ac;
         window.dispatchEvent(new CustomEvent('FACTORS_INIT_EVENT'))
+    }
+    this.track = function(ev, ep, ac) {
+        addToQueue('track', arguments);  
     }
     this.reset = function() {
         addToQueue('reset', arguments);

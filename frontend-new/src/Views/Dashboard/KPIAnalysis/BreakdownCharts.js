@@ -47,6 +47,7 @@ const BreakdownCharts = ({
   const [aggregateData, setAggregateData] = useState([]);
   const [categories, setCategories] = useState([]);
   const [data, setData] = useState([]);
+  const [dateWiseTotals, setDateWiseTotals] = useState([]);
 
   const handleSorting = useCallback((prop) => {
     setSorter((currentSorter) => {
@@ -67,7 +68,11 @@ const BreakdownCharts = ({
       breakdown,
       currentEventIndex
     );
-    const { categories: cats, data: d } = isSeriesChart(chartType)
+    const {
+      categories: cats,
+      data: d,
+      dateWiseTotals: dwt
+    } = isSeriesChart(chartType)
       ? formatDataInSeriesFormat(
           responseData,
           aggData,
@@ -79,6 +84,7 @@ const BreakdownCharts = ({
     setAggregateData(aggData);
     setCategories(cats);
     setData(d);
+    setDateWiseTotals(dwt);
   }, [responseData, breakdown, currentEventIndex, kpis, chartType]);
 
   useEffect(() => {
@@ -191,6 +197,7 @@ const BreakdownCharts = ({
         legendsPosition='top'
         cardSize={unit.cardSize}
         chartId={`bar-${unit.id}`}
+        dateWiseTotals={dateWiseTotals}
       />
     );
   }

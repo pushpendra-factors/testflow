@@ -62,6 +62,7 @@ const SingleEventSingleBreakdownComponent = forwardRef(
   ) => {
     const [visibleProperties, setVisibleProperties] = useState([]);
     const [visibleSeriesData, setVisibleSeriesData] = useState([]);
+    const [dateWiseTotals, setDateWiseTotals] = useState([]);
     const [sorter, setSorter] = useState(
       savedQuerySettings.sorter && Array.isArray(savedQuerySettings.sorter)
         ? savedQuerySettings.sorter
@@ -95,7 +96,8 @@ const SingleEventSingleBreakdownComponent = forwardRef(
       const {
         categories: cats,
         data: d,
-        compareCategories: compareCats
+        compareCategories: compareCats,
+        dateWiseTotals: dwt
       } = formatDataInSeriesFormat(
         resultState.data,
         aggData,
@@ -106,6 +108,7 @@ const SingleEventSingleBreakdownComponent = forwardRef(
       setCategories(cats);
       setCompareCategories(compareCats);
       setData(d);
+      setDateWiseTotals(dwt);
     }, [resultState.data, durationObj.frequency, comparisonData.data]);
 
     useEffect(() => {
@@ -205,6 +208,7 @@ const SingleEventSingleBreakdownComponent = forwardRef(
             categories={categories}
             showAllLegends
             data={visibleSeriesDataWithoutComparisonData}
+            dateWiseTotals={dateWiseTotals}
           />
         </div>
       );

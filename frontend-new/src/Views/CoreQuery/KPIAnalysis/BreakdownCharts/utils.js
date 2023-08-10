@@ -564,6 +564,7 @@ export const formatDataInSeriesFormat = (
   const dateIndex = headers.findIndex((h) => h === 'datetime');
   const breakdownIndex = dateIndex + 1;
   const differentDates = getDifferentDates({ rows, dateIndex });
+  const dateWiseTotals = Array(differentDates.length).fill(0);
   const differentComparisonDates =
     comparisonData != null
       ? getDifferentDates({ rows: comparisonData[dataIndex].rows, dateIndex })
@@ -634,6 +635,7 @@ export const formatDataInSeriesFormat = (
         addQforQuarter(frequency) + MomentTz(category).format(format)
       ] = kpiVals[currentEventIndex];
       resultantData[bIdx].data[idx] = kpiVals[currentEventIndex];
+      dateWiseTotals[idx] += kpiVals[currentEventIndex];
     }
 
     if (comparisonData != null) {
@@ -670,7 +672,8 @@ export const formatDataInSeriesFormat = (
     return {
       categories: differentDates,
       compareCategories: differentComparisonDates,
-      data: resultsWithAtLeastWithOneDataPoint
+      data: resultsWithAtLeastWithOneDataPoint,
+      dateWiseTotals
     };
   }
 
@@ -680,7 +683,8 @@ export const formatDataInSeriesFormat = (
       comparisonData != null
         ? [...resultantData, ...resultantComparisonData]
         : resultantData,
-    compareCategories: differentComparisonDates
+    compareCategories: differentComparisonDates,
+    dateWiseTotals
   };
 };
 

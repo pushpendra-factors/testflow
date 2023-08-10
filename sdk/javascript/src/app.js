@@ -11,12 +11,12 @@ const Cache = require("./cache");
 const { isLocalStorageAvailable } = require("./utils/util");
 const { processAllLocalStorageBacklogRequests } = require("./utils/request");
 const properties = require("./properties");
-const { lastActivityTime, getFactorsCache } = require("./cache");
+const { lastActivityTime, getFAITrackerCache } = require("./cache");
 
-const SDK_NOT_INIT_ERROR = new Error("Factors SDK is not initialized.");
+const SDK_NOT_INIT_ERROR = new Error("FAITracker SDK is not initialized.");
 const SDK_NO_USER_ERROR = new Error("No user.");
 
-const FACTORS_INPUT_ID_ATTRIBUTE = "data-factors-input-id";
+const FAITRACKER_INPUT_ID_ATTRIBUTE = "data-faitracker-input-id";
 
 function isAllowedEventName(eventName) {
     // whitelisted $ event_name.
@@ -56,14 +56,14 @@ function getAutoTrackURL() {
 function setCurrentPageAttributesToStore(eventId, eventNamePageURL, originalPageURL) {
     if (!eventId || eventId == "") return;
 
-    Cache.setFactorsCache(Cache.currentPageOriginalURL, originalPageURL);
-    Cache.setFactorsCache(Cache.currentPageURLEventName, eventNamePageURL);
-    Cache.setFactorsCache(Cache.currentPageTrackEventId, eventId);
+    Cache.setFAITrackerCache(Cache.currentPageOriginalURL, originalPageURL);
+    Cache.setFAITrackerCache(Cache.currentPageURLEventName, eventNamePageURL);
+    Cache.setFAITrackerCache(Cache.currentPageTrackEventId, eventId);
 
     // Reset all fields related to timer.
-    Cache.setFactorsCache(Cache.lastPageProperties, {});
-    Cache.setFactorsCache(Cache.lastActivityTime, 0);
-    Cache.setFactorsCache(Cache.currentPageSpentTimeInMs, 0);
+    Cache.setFAITrackerCache(Cache.lastPageProperties, {});
+    Cache.setFAITrackerCache(Cache.lastActivityTime, 0);
+    Cache.setFAITrackerCache(Cache.currentPageSpentTimeInMs, 0);
 }
 
 function setLastActivityTime() {
@@ -71,7 +71,7 @@ function setLastActivityTime() {
 
     var lastActivityTime = getLastActivityTime();
     if (lastActivityTime == 0) {
-        Cache.setFactorsCache(Cache.lastActivityTime, currentTime);
+        Cache.setFAITrackerCache(Cache.lastActivityTime, currentTime);
         return
     }
 
@@ -82,15 +82,15 @@ function setLastActivityTime() {
         var diff = currentTime - lastActivityTime;
         var spentTimeInMs = getCurrentPageSpentTimeInMs();
         var newSpentTimeInMs = spentTimeInMs + diff;
-        Cache.setFactorsCache(Cache.currentPageSpentTimeInMs, newSpentTimeInMs);
+        Cache.setFAITrackerCache(Cache.currentPageSpentTimeInMs, newSpentTimeInMs);
         logger.debug("Page spent time: " + newSpentTimeInMs + "ms");
     }
 
-    Cache.setFactorsCache(Cache.lastActivityTime, currentTime);
+    Cache.setFAITrackerCache(Cache.lastActivityTime, currentTime);
 }
 
 function getLastActivityTime() {
-    var lastActivityTime = Cache.getFactorsCache(Cache.lastActivityTime);
+    var lastActivityTime = Cache.getFAITrackerCache(Cache.lastActivityTime);
     return lastActivityTime ? lastActivityTime : 0;
 }
 
@@ -124,23 +124,26 @@ function  waitForGlobalKey(key, callback, timer = 0, subkey = null, waitTime = 1
 }
 
 function triggerQueueInitialisedEvent() {
+    window.dispatchEvent(new CustomEvent('FAITRACKER_INITIALISED_EVENT'));
+
+    // For backward compatibility.
     window.dispatchEvent(new CustomEvent('FACTORS_INITIALISED_EVENT'));
 }
 
-const FACTORS_WINDOW_TIMEOUT_KEY_PREFIX = 'lastTimeoutId_';
+const FAITRACKER_WINDOW_TIMEOUT_KEY_PREFIX = 'lastTimeoutId_';
 
 function setLastTimeoutIdByPeriod(timeoutIn=0, id=0) {
     if (timeoutIn == 0 || id == 0) return;
 
-    var key = FACTORS_WINDOW_TIMEOUT_KEY_PREFIX + timeoutIn;
-    Cache.getFactorsCacheObject()[key] = id;
+    var key = FAITRACKER_WINDOW_TIMEOUT_KEY_PREFIX + timeoutIn;
+    Cache.getFAITrackerCacheObject()[key] = id;
 }
 
 function getLastTimeoutIdByPeriod(timeoutIn=0) {
     if (timeoutIn == 0) return;
 
-    var key = FACTORS_WINDOW_TIMEOUT_KEY_PREFIX + timeoutIn;
-    return Cache.getFactorsCacheObject()[key];
+    var key = FAITRACKER_WINDOW_TIMEOUT_KEY_PREFIX + timeoutIn;
+    return Cache.getFAITrackerCacheObject()[key];
 }
 
 function clearTimeoutByPeriod(timeoutInPeriod) {
@@ -152,7 +155,7 @@ function clearTimeoutByPeriod(timeoutInPeriod) {
 }
 
 function getCurrentPageSpentTimeInMs() {
-    var currentPageSpentTimeInMs = Cache.getFactorsCache(Cache.currentPageSpentTimeInMs);
+    var currentPageSpentTimeInMs = Cache.getFAITrackerCache(Cache.currentPageSpentTimeInMs);
     return currentPageSpentTimeInMs ? currentPageSpentTimeInMs : 0;
 }
 
@@ -170,9 +173,9 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
 
     // Doesn't allow initialize with different token as it needs _fuid reset.
     if (this.isInitialized() && !this.isSameToken(token))
-        return Promise.reject(new Error("FactorsInitError: Initialized already. Use reset() and init(), if you really want to do this."));
+        return Promise.reject(new Error("FAITrackerInitError: Initialized already. Use reset() and init(), if you really want to do this."));
 
-    if (!token) return Promise.reject(new Error("FactorsArgumentError: Invalid token."));
+    if (!token) return Promise.reject(new Error("FAITrackerArgumentError: Invalid token."));
 
     
 
@@ -191,11 +194,11 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
     }
 
     if (opts.track_page_on_spa === true) {
-        Cache.setFactorsCache(Cache.trackPageOnSPA, true); 
+        Cache.setFAITrackerCache(Cache.trackPageOnSPA, true); 
     }
 
     // Enable localstorage for use after checking.
-    if (isLocalStorageAvailable()) window.FACTORS_LS_AVAILABLE = true;
+    if (isLocalStorageAvailable()) window.FAITRACKER_LS_AVAILABLE = true;
     
     // Gets info using temp client with given token, if succeeds, 
     // set temp client as app client and set response as app config 
@@ -208,7 +211,7 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
         .then(function(response) {
             if (response.status < 200 || response.status > 308) {
                 logger.errorLine("Get project settings failed with code : ", response.status); 
-                return Promise.reject(new Error("FactorsRequestError: Init failed. App configuration failed."));
+                return Promise.reject(new Error("FAITrackerRequestError: Init failed. App configuration failed."));
             }
             return response;
         })
@@ -250,8 +253,8 @@ function runPostInitProcess(_this, trackOnInit) {
     })().then(function() {
         logger.debug("Auto Track call starts", false);
         // Enable auto-track SPA page based on settings or init option.
-        var enableTrackSPA = Cache.getFactorsCache(Cache.trackPageOnSPA) || _this.getConfig("auto_track_spa_page_view");
-        Cache.setFactorsCache(Cache.trackPageOnSPA, enableTrackSPA);
+        var enableTrackSPA = Cache.getFAITrackerCache(Cache.trackPageOnSPA) || _this.getConfig("auto_track_spa_page_view");
+        Cache.setFAITrackerCache(Cache.trackPageOnSPA, enableTrackSPA);
         // Auto-track current page on init, if not disabled.
         return trackOnInit ? _this.autoTrack(_this.getConfig("auto_track"), 
             false, afterPageTrackCallback, true) : null;
@@ -283,8 +286,8 @@ function getEventProperties(eventProperties={}) {
 
     var referrer = document.referrer;
     // Use page event name on cache as referrer for SPA auto tracking.
-    var currentPageOriginalURL = Cache.getFactorsCache(Cache.currentPageOriginalURL)
-    if (Cache.getFactorsCache(Cache.trackPageOnSPA) && currentPageOriginalURL) 
+    var currentPageOriginalURL = Cache.getFAITrackerCache(Cache.currentPageOriginalURL)
+    if (Cache.getFAITrackerCache(Cache.trackPageOnSPA) && currentPageOriginalURL) 
         referrer = currentPageOriginalURL;
 
     // Merge default properties.
@@ -301,7 +304,7 @@ App.prototype.track = function(eventName, eventProperties, auto=false, afterCall
 
     eventName = util.validatedStringArg("event_name", eventName) // Clean event name.
     if (!isAllowedEventName(eventName)) 
-        return Promise.reject(new Error("FactorsError: Invalid event name."));
+        return Promise.reject(new Error("FAITrackerError: Invalid event name."));
 
     // The original page URL is added to cache for tracking referrer etc.,
     var originalPageURL = window.location.href;
@@ -351,7 +354,7 @@ App.prototype.updateEventProperties = function(eventId, properties={}) {
 
 App.prototype.updatePagePropertiesIfChanged = function(defaultPageSpentTimeInMs=0) {
 
-    let lastPageProperties = Cache.getFactorsCache(Cache.lastPageProperties);
+    let lastPageProperties = Cache.getFAITrackerCache(Cache.lastPageProperties);
 
     let lastPageSpentTimeInMs = lastPageProperties && lastPageProperties[Properties.PAGE_SPENT_TIME] ? 
         lastPageProperties[Properties.PAGE_SPENT_TIME] : 0;
@@ -387,33 +390,33 @@ App.prototype.updatePagePropertiesIfChanged = function(defaultPageSpentTimeInMs=
     // update if any properties given.
     if (Object.keys(properties).length > 0) {
         logger.debug("Updating page properties : " + JSON.stringify(properties), false);
-        var eventId = Cache.getFactorsCache(Cache.currentPageTrackEventId);
+        var eventId = Cache.getFAITrackerCache(Cache.currentPageTrackEventId);
         var payload = { event_id: eventId, properties: properties };
         this.client.updateEventProperties(updatePayloadWithUserIdFromCookie(payload)).catch(logger.debug);
     } else {
         logger.debug("No change on page properties, skipping update for : " + JSON.stringify(lastPageProperties), false);
     }
 
-    Cache.setFactorsCache(Cache.lastPageProperties, {
+    Cache.setFAITrackerCache(Cache.lastPageProperties, {
         [Properties.PAGE_SCROLL_PERCENT]: pageScrollPercentage, 
         [Properties.PAGE_SPENT_TIME]: pageSpentTimeInMs
     });
 }
 
 function isPageAutoTracked() {
-    var pageEventId = Cache.getFactorsCache(Cache.currentPageTrackEventId); 
+    var pageEventId = Cache.getFAITrackerCache(Cache.currentPageTrackEventId); 
     if (pageEventId && pageEventId != undefined) {
-        return getAutoTrackURL() == Cache.getFactorsCache(Cache.currentPageURLEventName);
+        return getAutoTrackURL() == Cache.getFAITrackerCache(Cache.currentPageURLEventName);
     }
 
     return false
 }
 
-App.prototype.autoTrack = function(enabled=false, force=false, afterCallback, initFactorsQueue=false) {
+App.prototype.autoTrack = function(enabled=false, force=false, afterCallback, initFAITrackerQueue=false) {
     if (!enabled) return false;
 
     if (!force && isPageAutoTracked()) {
-        logger.debug('Page tracked already as per store : '+JSON.stringify(Cache.getFactorsCacheObject()))
+        logger.debug('Page tracked already as per store : '+JSON.stringify(Cache.getFAITrackerCacheObject()))
         return false;
     }
 
@@ -442,7 +445,7 @@ App.prototype.autoTrack = function(enabled=false, force=false, afterCallback, in
     setLastTimeoutIdByPeriod(tenSecondsInMs, timoutId10thSecond);
 
     // clear the previous poller, if exist.
-    var lastPollerId = Cache.getFactorsCache(Cache.lastPollerId);
+    var lastPollerId = Cache.getFAITrackerCache(Cache.lastPollerId);
     clearInterval(lastPollerId);
     if (lastPollerId) logger.debug("Cleared previous page poller: "+lastPollerId, false);
 
@@ -451,7 +454,7 @@ App.prototype.autoTrack = function(enabled=false, force=false, afterCallback, in
         _this.updatePagePropertiesIfChanged();
     }, 20000);
     
-    Cache.setFactorsCache(Cache.lastPollerId, pollerId);
+    Cache.setFAITrackerCache(Cache.lastPollerId, pollerId);
 
     // update page properties before leaving the page.
     window.addEventListener("beforeunload", function() {
@@ -467,7 +470,7 @@ App.prototype.autoTrack = function(enabled=false, force=false, afterCallback, in
     
     // AutoTrack SPA using history.
     // checks support for history and onpopstate listener.
-    if ( !Cache.getFactorsCache(Cache.trackPageOnSPA) && window.history && window.onpopstate !== undefined) {
+    if ( !Cache.getFAITrackerCache(Cache.trackPageOnSPA) && window.history && window.onpopstate !== undefined) {
         var prevLocation = window.location.href;
         window.addEventListener('popstate', function() {
             logger.debug("Triggered window.onpopstate goto: "+window.location.href+", prev: "+prevLocation);
@@ -481,9 +484,9 @@ App.prototype.autoTrack = function(enabled=false, force=false, afterCallback, in
         })
     }
 
-    if (Cache.getFactorsCache(Cache.trackPageOnSPA)) {
+    if (Cache.getFAITrackerCache(Cache.trackPageOnSPA)) {
         setInterval(function(){
-            if (Cache.getFactorsCache(Cache.currentPageURLEventName) && Cache.getFactorsCache(Cache.currentPageURLEventName) != getAutoTrackURL()) {
+            if (Cache.getFAITrackerCache(Cache.currentPageURLEventName) && Cache.getFAITrackerCache(Cache.currentPageURLEventName) != getAutoTrackURL()) {
                 _this.track(
                     getAutoTrackURL(), 
                     Properties.getFromQueryParams(window.location), 
@@ -719,13 +722,13 @@ function captureInputFieldValues(appInstance, input) {
     var isCapturable = Capture.isPossibleEmail(newValue);
     if (!isCapturable) return
     
-    var inputId = input.getAttribute(FACTORS_INPUT_ID_ATTRIBUTE);
-    if (window.FACTORS_FORM_FILLS == undefined) 
-        window.FACTORS_FORM_FILLS = {};
+    var inputId = input.getAttribute(FAITRACKER_INPUT_ID_ATTRIBUTE);
+    if (window.FAITRACKER_FORM_FILLS == undefined) 
+        window.FAITRACKER_FORM_FILLS = {};
     
-    var existingValue = window.FACTORS_FORM_FILLS[inputId];
+    var existingValue = window.FAITRACKER_FORM_FILLS[inputId];
     if (newValue != "" && newValue != existingValue) {
-        window.FACTORS_FORM_FILLS[inputId] = newValue;
+        window.FAITRACKER_FORM_FILLS[inputId] = newValue;
 
         var formId = inputId.split(".")[0];
         var payload = {
@@ -769,31 +772,31 @@ function bindAndCaptureFormFills(appInstance) {
 
     // Assigning incremental id to the form.
     var forms = Capture.getElemsFromTopAndIframes('form');
-    const FACTORS_FORM_ID_ATTRIBUTE = "data-factors-form-id";
-    if (!window.FACTORS_FORMS_ID) window.FACTORS_FORMS_ID = 0;
+    const FAITRACKER_FORM_ID_ATTRIBUTE = "data-faitracker-form-id";
+    if (!window.FAITRACKER_FORMS_ID) window.FAITRACKER_FORMS_ID = 0;
  
     for (var fi=0; fi<forms.length; fi++) {
-        if (forms[fi].getAttribute(FACTORS_FORM_ID_ATTRIBUTE)) continue;
-        forms[fi].setAttribute(FACTORS_FORM_ID_ATTRIBUTE, "form-"+window.FACTORS_FORMS_ID);
-        window.FACTORS_FORMS_ID++;
+        if (forms[fi].getAttribute(FAITRACKER_FORM_ID_ATTRIBUTE)) continue;
+        forms[fi].setAttribute(FAITRACKER_FORM_ID_ATTRIBUTE, "form-"+window.FAITRACKER_FORMS_ID);
+        window.FAITRACKER_FORMS_ID++;
     }
 
     // Assigns non-form fields with noform.field-1.
     // Assign form input fields with form-1.field-1.
     var inputs = Capture.getElemsFromTopAndIframes('input');
-    if (!window.FACTORS_INPUTS_ID) window.FACTORS_INPUTS_ID = 0;
+    if (!window.FAITRACKER_INPUTS_ID) window.FAITRACKER_INPUTS_ID = 0;
 
     for(var i=0; i<inputs.length; i++) {
-        if (inputs[i].getAttribute(FACTORS_INPUT_ID_ATTRIBUTE)) continue;
+        if (inputs[i].getAttribute(FAITRACKER_INPUT_ID_ATTRIBUTE)) continue;
         if(properties.DISABLED_INPUT_TYPES.indexOf(inputs[i].type) >= 0) continue;
 
         var formId = "noform";
         var hasForm = inputs[i].form && 
-            inputs[i].form.getAttribute(FACTORS_FORM_ID_ATTRIBUTE) != "";
+            inputs[i].form.getAttribute(FAITRACKER_FORM_ID_ATTRIBUTE) != "";
         
-        if (hasForm) formId = inputs[i].form.getAttribute(FACTORS_FORM_ID_ATTRIBUTE);
+        if (hasForm) formId = inputs[i].form.getAttribute(FAITRACKER_FORM_ID_ATTRIBUTE);
 
-        inputs[i].setAttribute(FACTORS_INPUT_ID_ATTRIBUTE, formId+".field-"+window.FACTORS_INPUTS_ID);
+        inputs[i].setAttribute(FAITRACKER_INPUT_ID_ATTRIBUTE, formId+".field-"+window.FAITRACKER_INPUTS_ID);
 
         // Captures values while typing.
         inputs[i].addEventListener("input", function() { 
@@ -807,7 +810,7 @@ function bindAndCaptureFormFills(appInstance) {
             captureInputFieldValues(appInstance, _input); 
         });
 
-        window.FACTORS_INPUTS_ID++;
+        window.FAITRACKER_INPUTS_ID++;
     }
 
     // Create timeouts for every 5s for 30s.
@@ -875,7 +878,7 @@ App.prototype.addUserProperties = function (properties={}) {
 
 
     if (typeof(properties) != "object")
-        return Promise.reject(new Error("FactorsArgumentError: Properties should be an Object(key/values)."));
+        return Promise.reject(new Error("FAITrackerArgumentError: Properties should be an Object(key/values)."));
     
     if (Object.keys(properties).length == 0)
         return Promise.reject("No changes. Empty properties.");
@@ -907,7 +910,7 @@ App.prototype.getClient = function() {
 
 App.prototype.getConfig = function(name) {
     if (this.config[name] == undefined) {
-        logger.errorLine(new Error("FactorsConfigError: Config not present."));
+        logger.errorLine(new Error("FAITrackerConfigError: Config not present."));
         return
     }
 

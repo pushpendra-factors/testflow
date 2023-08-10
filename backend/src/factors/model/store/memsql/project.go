@@ -18,6 +18,7 @@ import (
 
 const TOKEN_GEN_RETRY_LIMIT = 5
 const ENABLE_DEFAULT_WEB_ANALYTICS = false
+const VISITOR_IDENTIFICATION_TEMPLATE_ID = "bf721a15-a5c4-4db9-9435-924f4c544850"
 
 // Checks for the existence of token already.
 func isTokenExist(token string, private bool) (exists int, err error) {
@@ -330,6 +331,13 @@ func (store *MemSQL) CreateProjectWithDependencies(project *model.Project, agent
 	if errCode != http.StatusCreated {
 		return nil, errCode
 	}
+
+	//Generate Website Visitor Identification Dashboard
+	_, errCode, errMsg := store.GenerateDashboardFromTemplate(cProject.ID, agentUUID, VISITOR_IDENTIFICATION_TEMPLATE_ID)
+	if errCode != http.StatusCreated {
+		log.WithField("error", errMsg).Error("Website Visitor Identification dashboard creation failed")
+	}
+
 	if createDashboard {
 		_, errCode = store.CreateProjectAgentMappingWithDependencies(&model.ProjectAgentMapping{
 			ProjectID: cProject.ID,

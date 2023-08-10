@@ -132,6 +132,20 @@ func AddSecurityResponseHeadersToCustomDomain() gin.HandlerFunc {
 	}
 }
 
+func RestrictHTTPAccess() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if C.IsProduction() || C.IsStaging() {
+			sourceValue := "https-load-balancer"
+			isSourceHttpsLB := c.Request.Header.Get("x-request-source") == sourceValue ||
+				c.Request.Header.Get("X-Request-Source") == sourceValue
+			if !isSourceHttpsLB && !strings.Contains(c.Request.Proto, "https://") {
+				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"message": "Unsupported protocol."})
+				return
+			}
+		}
+	}
+}
+
 func IsBlockedIPByProject() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := U.GetScopeByKeyAsString(c, SCOPE_PROJECT_TOKEN)
