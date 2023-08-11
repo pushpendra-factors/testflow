@@ -3218,6 +3218,24 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 		assert.NotNil(t, response.EventId)
 		assert.Empty(t, response.UserId)
 		assert.Equal(t, http.StatusOK, status)
+
+		// Website session
+		timestamp = timestamp - 10000
+		trackPayload = SDK.TrackPayload{
+			UserId:          user.ID,
+			CreateUser:      false,
+			IsNewUser:       false,
+			Name:            U.EVENT_NAME_SESSION,
+			EventProperties: eventProperties,
+			UserProperties:  map[string]interface{}{},
+			Timestamp:       timestamp,
+			Auto:            false,
+			RequestSource:   model.UserSourceHubspot,
+		}
+		status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+		assert.NotNil(t, response.EventId)
+		assert.Empty(t, response.UserId)
+		assert.Equal(t, http.StatusOK, status)
 	}
 	assert.Equal(t, len(users), 20)
 
@@ -3310,7 +3328,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 	resp = make([]model.Profile, 0)
 	err = json.Unmarshal(jsonResponse, &resp)
 	assert.Nil(t, err)
-	assert.Equal(t, len(resp), 4)
+	assert.Equal(t, len(resp), 3)
 	for _, profile := range resp {
 		assert.NotNil(t, profile.TableProps[U.UP_COUNTRY])
 		assert.NotNil(t, profile.Identity)
@@ -3380,6 +3398,37 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 		assert.NotNil(t, profile.Name)
 	}
 
+	// account segment with ewp (user event)
+
+	payload = model.TimelinePayload{
+		Query: model.Query{
+			GroupAnalysis:   model.GROUP_NAME_HUBSPOT_COMPANY,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: "any_given_event",
+			EventsWithProperties: []model.QueryEventWithProperties{
+				{
+					Name:          U.EVENT_NAME_SESSION,
+					GroupAnalysis: "Most Recent",
+				},
+			},
+			Source:     model.GROUP_NAME_HUBSPOT_COMPANY,
+			TableProps: []string{"$country", "$hubspot_company_created", "$hour_of_first_event"},
+		},
+	}
+
+	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	resp = make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 5)
+	for _, profile := range resp {
+		assert.NotNil(t, profile.TableProps["$hubspot_company_created"])
+		assert.NotNil(t, profile.Identity)
+		assert.NotNil(t, profile.LastActivity)
+	}
+
 	// account segment with only ewp
 	payload = model.TimelinePayload{
 		Query: model.Query{
@@ -3410,6 +3459,10 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 						},
 					},
 				},
+				{
+					Name:          U.EVENT_NAME_SESSION,
+					GroupAnalysis: "Most Recent",
+				},
 			},
 			Type:            model.QueryTypeUniqueUsers,
 			EventsCondition: model.EventCondAllGivenEvent,
@@ -3432,6 +3485,48 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 		assert.NotNil(t, profile.Identity)
 		assert.NotNil(t, profile.LastActivity)
 	}
+
+	// account segment with ewp (user event) and gup
+
+	payload = model.TimelinePayload{
+		Query: model.Query{
+			GroupAnalysis:   model.GROUP_NAME_HUBSPOT_COMPANY,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: "any_given_event",
+			GlobalUserProperties: []model.QueryProperty{
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$city",
+					Operator:  "equals",
+					Value:     "London",
+					LogicalOp: "AND",
+				},
+			},
+			EventsWithProperties: []model.QueryEventWithProperties{
+				{
+					Name:          U.EVENT_NAME_SESSION,
+					GroupAnalysis: "Most Recent",
+				},
+			},
+			Source:     model.GROUP_NAME_HUBSPOT_COMPANY,
+			TableProps: []string{"$country", "$hubspot_company_created", "$hour_of_first_event"},
+		},
+	}
+
+	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	resp = make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 2)
+	for _, profile := range resp {
+		assert.NotNil(t, profile.TableProps["$hubspot_company_created"])
+		assert.NotNil(t, profile.Identity)
+		assert.NotNil(t, profile.LastActivity)
+	}
+
 }
 
 func TestAllAccountDefaultGroupProperties(t *testing.T) {
