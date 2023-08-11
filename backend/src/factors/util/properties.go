@@ -753,6 +753,10 @@ var IN_G2 = "$in_g2"
 var VISITED_WEBSITE = "$visited_website"
 var IN_SALESFORCE = "$in_salesforce"
 var IN_LINKEDIN = "$in_linkedin"
+var IDENTIFIED_USER_ID = "$identified_user_id"
+
+// SQL column as properties
+var CUSTOMER_USER_ID = "customer_user_id"
 
 var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,
@@ -1640,6 +1644,14 @@ var ALL_ACCOUNT_DEFAULT_PROPERTIES = []string{
 	IN_G2,
 	VISITED_WEBSITE,
 	IN_SALESFORCE,
+}
+
+var USER_PROPERTIES_WITH_COLUMN = []string{
+	IDENTIFIED_USER_ID,
+}
+
+var USER_PROPERTIES_WITH_COLUMN_DISPLAY_NAMES = map[string]string{
+	IDENTIFIED_USER_ID: "Identified User Id",
 }
 
 var CRM_USER_EVENT_NAME_LABELS = map[string]string{

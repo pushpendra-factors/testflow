@@ -3440,19 +3440,7 @@ func TestAllAccountDefaultGroupProperties(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
-	timelinesConfig := &model.TimelinesConfig{
-		AccountConfig: model.AccountConfig{
-			TableProps: []string{"$salesforce_account_billingcountry", "$hubspot_company_country", U.SIX_SIGNAL_COUNTRY},
-		},
-	}
-
-	tlConfigEncoded, err := U.EncodeStructTypeToPostgresJsonb(timelinesConfig)
-	assert.Nil(t, err)
-
-	_, errCode := store.GetStore().UpdateProjectSettings(project.ID,
-		&model.ProjectSetting{TimelinesConfig: tlConfigEncoded})
-	assert.Equal(t, errCode, http.StatusAccepted)
-
+	var errCode int
 	// Properties Map
 	propertiesMap := []map[string]interface{}{
 		{"$salesforce_account_name": "Adapt.IO", "$page_count": 4, "$salesforce_account_id": "123", "$salesforce_account_website": "adapt.io", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Target", "$browser": "Chrome", "$device_type": "PC"},
@@ -3756,6 +3744,66 @@ func TestAllAccountDefaultGroupProperties(t *testing.T) {
 		err = json.Unmarshal(jsonResponse, &resp)
 		assert.Nil(t, err)
 		assert.Equal(t, 10, len(resp))
+	})
+	t.Run("TestInPropertiesWithColumn", func(t *testing.T) {
+
+		payload = model.TimelinePayload{
+			Query: model.Query{
+				Source: "All",
+				GlobalUserProperties: []model.QueryProperty{
+					{
+						Entity:    "user_g",
+						Type:      "categorical",
+						Property:  U.IDENTIFIED_USER_ID,
+						Operator:  "notEqual",
+						Value:     "$none",
+						LogicalOp: "AND",
+					},
+				},
+			},
+		}
+
+		w := sendGetProfileAccountRequest(r, project.ID, agent, payload)
+		assert.Equal(t, http.StatusOK, w.Code)
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		resp := make([]model.Profile, 0)
+		err = json.Unmarshal(jsonResponse, &resp)
+		assert.Nil(t, err)
+		assert.Equal(t, 15, len(resp))
+	})
+	t.Run("TestInPropertiesMultipleFilterWithColumn", func(t *testing.T) {
+
+		payload = model.TimelinePayload{
+			Query: model.Query{
+				Source: "All",
+				GlobalUserProperties: []model.QueryProperty{
+					{
+						Entity:    "user_g",
+						Type:      "categorical",
+						Property:  U.IDENTIFIED_USER_ID,
+						Operator:  "notEqual",
+						Value:     "$none",
+						LogicalOp: "AND",
+					},
+					{
+						Entity:    "user_g",
+						Type:      "categorical",
+						Property:  "$in_salesforce",
+						Operator:  "equals",
+						Value:     "true",
+						LogicalOp: "AND",
+					},
+				},
+			},
+		}
+
+		w := sendGetProfileAccountRequest(r, project.ID, agent, payload)
+		assert.Equal(t, http.StatusOK, w.Code)
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		resp := make([]model.Profile, 0)
+		err = json.Unmarshal(jsonResponse, &resp)
+		assert.Nil(t, err)
+		assert.Equal(t, 5, len(resp))
 	})
 
 }

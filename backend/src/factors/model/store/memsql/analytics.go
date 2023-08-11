@@ -145,6 +145,7 @@ func buildWhereFromProperties(projectID int64, properties []model.QueryProperty,
 		for indexOfProperty, p := range currentGroupedProperties {
 
 			_logicalOp := p.LogicalOp
+			isColumn := false
 			if _, exists := model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]; exists {
 				if p.Value == "true" {
 					p = model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]
@@ -152,10 +153,12 @@ func buildWhereFromProperties(projectID int64, properties []model.QueryProperty,
 					p = model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]
 					p.Operator = model.OPPOSITE_OF_OPERATOR_MAP[p.Operator]
 				}
+			} else if _, exists := model.PROPERTY_TO_TABLE_COLUMN_MAP[p.Property]; exists {
+				isColumn = exists
+				p.Property = model.PROPERTY_TO_TABLE_COLUMN_MAP[p.Property]
 			}
 
 			p.LogicalOp = _logicalOp
-
 			if p.LogicalOp == "" {
 				p.LogicalOp = "AND"
 			}
@@ -183,48 +186,66 @@ func buildWhereFromProperties(projectID int64, properties []model.QueryProperty,
 				} else {
 					// categorical property type.
 					pValue := p.Value
-					if p.Operator == model.ContainsOpStr {
-						pValue = strings.Replace(pValue, "?", "\\?", -1)
-						pStmnt = fmt.Sprintf("JSON_EXTRACT_STRING(%s, ?) %s ?", propertyEntity, propertyOp)
-						rParams = append(rParams, p.Property, pValue)
-					} else if !hasNoneFilter && p.Operator == model.NotContainsOpStr {
-						pValue = strings.Replace(pValue, "?", "\\?", -1)
-						pStmnt1 := fmt.Sprintf(" ( JSON_EXTRACT_STRING(%s, ?) %s ? ", propertyEntity, propertyOp)
-						rParams = append(rParams, p.Property, pValue)
-						pStmnt2 := fmt.Sprintf(" OR JSON_EXTRACT_STRING(%s, ?) = '' ", propertyEntity)
-						rParams = append(rParams, p.Property)
-						pStmnt3 := fmt.Sprintf(" OR JSON_EXTRACT_STRING(%s, ?) IS NULL ) ", propertyEntity)
-						rParams = append(rParams, p.Property)
-						pStmnt = pStmnt1 + pStmnt2 + pStmnt3
-					} else if !hasNoneFilter && p.Operator == model.NotEqualOpStr {
-						// PR: 2342 - This change is to allow empty ('') or NULL values during a filter of != value
-						// ex: JSON_EXTRACT_STRING(events.properties, '$source') != 'google' OR JSON_EXTRACT_STRING(events.properties, '$source') = '' OR JSON_EXTRACT_STRING(events.properties, '$source') IS NULL
-						pStmnt1 := fmt.Sprintf(" ( JSON_EXTRACT_STRING(%s, ?) %s ? ", propertyEntity, propertyOp)
-						rParams = append(rParams, p.Property, pValue)
-						pStmnt2 := fmt.Sprintf(" OR JSON_EXTRACT_STRING(%s, ?) = '' ", propertyEntity)
-						rParams = append(rParams, p.Property)
-						pStmnt3 := fmt.Sprintf(" OR JSON_EXTRACT_STRING(%s, ?) IS NULL ) ", propertyEntity)
-						rParams = append(rParams, p.Property)
-						pStmnt = pStmnt1 + pStmnt2 + pStmnt3
+					if isColumn {
+						err := getSqlWhereStatementFromColumnsForPropertyTypeCategorical(p, propertyOp, &pStmnt, hasNoneFilter, &rParams)
+						if err != nil {
+							return "", nil, err
+						}
 					} else {
-						pStmnt = fmt.Sprintf("JSON_EXTRACT_STRING(%s, ?) %s ?", propertyEntity, propertyOp)
-						rParams = append(rParams, p.Property, pValue)
+						if p.Operator == model.ContainsOpStr {
+							pValue = strings.Replace(pValue, "?", "\\?", -1)
+							pStmnt = fmt.Sprintf("JSON_EXTRACT_STRING(%s, ?) %s ?", propertyEntity, propertyOp)
+							rParams = append(rParams, p.Property, pValue)
+						} else if !hasNoneFilter && p.Operator == model.NotContainsOpStr {
+							pValue = strings.Replace(pValue, "?", "\\?", -1)
+							pStmnt1 := fmt.Sprintf(" ( JSON_EXTRACT_STRING(%s, ?) %s ? ", propertyEntity, propertyOp)
+							rParams = append(rParams, p.Property, pValue)
+							pStmnt2 := fmt.Sprintf(" OR JSON_EXTRACT_STRING(%s, ?) = '' ", propertyEntity)
+							rParams = append(rParams, p.Property)
+							pStmnt3 := fmt.Sprintf(" OR JSON_EXTRACT_STRING(%s, ?) IS NULL ) ", propertyEntity)
+							rParams = append(rParams, p.Property)
+							pStmnt = pStmnt1 + pStmnt2 + pStmnt3
+						} else if !hasNoneFilter && p.Operator == model.NotEqualOpStr {
+							// PR: 2342 - This change is to allow empty ('') or NULL values during a filter of != value
+							// ex: JSON_EXTRACT_STRING(events.properties, '$source') != 'google' OR JSON_EXTRACT_STRING(events.properties, '$source') = '' OR JSON_EXTRACT_STRING(events.properties, '$source') IS NULL
+							pStmnt1 := fmt.Sprintf(" ( JSON_EXTRACT_STRING(%s, ?) %s ? ", propertyEntity, propertyOp)
+							rParams = append(rParams, p.Property, pValue)
+							pStmnt2 := fmt.Sprintf(" OR JSON_EXTRACT_STRING(%s, ?) = '' ", propertyEntity)
+							rParams = append(rParams, p.Property)
+							pStmnt3 := fmt.Sprintf(" OR JSON_EXTRACT_STRING(%s, ?) IS NULL ) ", propertyEntity)
+							rParams = append(rParams, p.Property)
+							pStmnt = pStmnt1 + pStmnt2 + pStmnt3
+						} else {
+							pStmnt = fmt.Sprintf("JSON_EXTRACT_STRING(%s, ?) %s ?", propertyEntity, propertyOp)
+							rParams = append(rParams, p.Property, pValue)
+						}
 					}
+
 				}
 			} else {
 				// where condition for $none value.
 				// var pStmnt string
-				if propertyOp == model.EqualsOp || propertyOp == model.RLikeOp {
-					// i.e: (NOT jsonb_exists(events.properties, 'property_name') OR events.properties->>'property_name'='')
-					pStmnt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s, ?) IS NULL OR JSON_EXTRACT_STRING(%s, ?)='')", propertyEntity, propertyEntity)
-				} else if propertyOp == model.NotEqualOp || propertyOp == model.NotRLikeOp {
-					// i.e: (jsonb_exists(events.properties, 'property_name') AND events.properties->>'property_name'!='')
-					pStmnt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s, ?) IS NOT NULL AND JSON_EXTRACT_STRING(%s, ?)!='')", propertyEntity, propertyEntity)
+				if isColumn {
+					err := getSqlWhereStatementFromColumnsForPropertyTypeCategorical(p, propertyOp, &pStmnt, hasNoneFilter, &rParams)
+					if err != nil {
+						return "", nil, err
+					}
 				} else {
-					return "", nil, fmt.Errorf("unsupported opertator %s for property value none", propertyOp)
+					if propertyOp == model.EqualsOp || propertyOp == model.RLikeOp {
+						// i.e: (NOT jsonb_exists(events.properties, 'property_name') OR events.properties->>'property_name'='')
+						pStmnt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s, ?) IS NULL OR JSON_EXTRACT_STRING(%s, ?)='')", propertyEntity, propertyEntity)
+					} else if propertyOp == model.NotEqualOp || propertyOp == model.NotRLikeOp {
+
+						// i.e: (jsonb_exists(events.properties, 'property_name') AND events.properties->>'property_name'!='')
+						pStmnt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s, ?) IS NOT NULL AND JSON_EXTRACT_STRING(%s, ?)!='')", propertyEntity, propertyEntity)
+					} else {
+						return "", nil, fmt.Errorf("unsupported opertator %s for property value none", propertyOp)
+					}
+					rParams = append(rParams, p.Property, p.Property)
 				}
-				rParams = append(rParams, p.Property, p.Property)
+
 			}
+
 			if indexOfProperty == 0 {
 				currentGroupStmnt = pStmnt
 			} else {
@@ -236,10 +257,56 @@ func buildWhereFromProperties(projectID int64, properties []model.QueryProperty,
 		} else {
 			rStmnt = fmt.Sprintf("%s AND (%s)", rStmnt, currentGroupStmnt)
 		}
-
 	}
 
 	return rStmnt, rParams, nil
+}
+
+func getSqlWhereStatementFromColumnsForPropertyTypeCategorical(property model.QueryProperty, propertyOp string, pStmnt *string, hasNoneFilter bool, rParams *[]interface{}) (err error) {
+
+	if property.Value != model.PropertyValueNone {
+		if property.Type == U.PropertyTypeCategorical {
+			// categorical property type.
+			pValue := property.Value
+			if property.Operator == model.ContainsOpStr {
+				pValue = strings.Replace(pValue, "?", "\\?", -1)
+				*pStmnt = fmt.Sprintf("users.%s %s ?", property.Property, propertyOp)
+				*rParams = append(*rParams, pValue)
+			} else if !hasNoneFilter && property.Operator == model.NotContainsOpStr {
+				pValue = strings.Replace(pValue, "?", "\\?", -1)
+				pStmnt1 := fmt.Sprintf(" ( users.%s %s ? ", property.Property, propertyOp)
+				*rParams = append(*rParams, pValue)
+				pStmnt2 := fmt.Sprintf(" OR users.%s = '' ", property.Property)
+				pStmnt3 := fmt.Sprintf(" OR users.%s IS NULL ) ", property.Property)
+				*pStmnt = pStmnt1 + pStmnt2 + pStmnt3
+			} else if !hasNoneFilter && property.Operator == model.NotEqualOpStr {
+				// PR: 2342 - This change is to allow empty ('') or NULL values during a filter of != value
+				// ex: users.column_name != 'value' OR users.column_name = '' OR users.column_name IS NULL
+				pStmnt1 := fmt.Sprintf(" (users.%s %s ? ", property.Property, propertyOp)
+				*rParams = append(*rParams, pValue)
+				pStmnt2 := fmt.Sprintf(" OR users.%s = '' ", property.Property)
+
+				pStmnt3 := fmt.Sprintf(" OR users.%s IS NULL ) ", property.Property)
+				*pStmnt = pStmnt1 + pStmnt2 + pStmnt3
+			} else {
+				*pStmnt = fmt.Sprintf("users.%s %s ?", property.Property, propertyOp)
+				*rParams = append(*rParams, pValue)
+			}
+		}
+	} else {
+		// where condition for $none value.
+		// var pStmnt string
+		if propertyOp == model.EqualsOp || propertyOp == model.RLikeOp {
+			// i.e: (NOT (users.column_name OR users.column_name ='')
+			*pStmnt = fmt.Sprintf("(users.%s IS NULL OR users.%s ='')", property.Property, property.Property)
+		} else if propertyOp == model.NotEqualOp || propertyOp == model.NotRLikeOp {
+			// i.e: (users.column_name AND users.column_name !='')
+			*pStmnt = fmt.Sprintf("( users.%s  IS NOT NULL AND users.%s !='')", property.Property, property.Property)
+		} else {
+			return fmt.Errorf("unsupported opertator %s for property value none", propertyOp)
+		}
+	}
+	return nil
 }
 
 // from = t1, to = t2
