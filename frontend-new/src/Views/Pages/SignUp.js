@@ -42,12 +42,13 @@ function SignUp({ signup }) {
     setDataLoading(true);
     form.validateFields().then((values) => {
         setDataLoading(true); 
-        
         let sanitizedValues = {
             ...values,
             first_name: sanitizeInputString(values?.first_name), 
-            'last_name': ''
-          }
+            'last_name': '',
+            subscribe_newsletter: values?.subscribe_newsletter ? values?.subscribe_newsletter : true
+        } 
+        
         //Factors SIGNUP tracking
         factorsai.track('SIGNUP',{'first_name':sanitizedValues?.first_name,'email':sanitizedValues?.email}); 
         
@@ -76,14 +77,14 @@ function SignUp({ signup }) {
   return (
     <>
     { !formData &&
-      <div className={'fa-content-container.no-sidebar h-screen w-full h-full'}>
+      <div className={'fa-content-container.no-sidebar fa-content-container--full-height w-full'}>
 
             {/* //parent container starts here */}
 
-            <div className={'flex items-center w-full h-full '}>
+            <div className={'flex w-full h-full '}>
                 {/* //left side content starts here */}
                 <Col xs={{ span: 0}} sm={{ span: 12}} style={{background: '#E6F7FF'}} className={'w-full h-full'}>
-                    <Row align="center" className={'my-40'}>
+                    <Row align="center" className={'my-32'}>
                             <Col span={14}>
                                 <Row>
                                     <Col span={24}>
@@ -110,11 +111,20 @@ function SignUp({ signup }) {
                 {/* //right side content starts here */}
 
                 <Col xs={{ span: 24}} sm={{ span: 12}} >
+
+                <Row>
+                                <Col span={24}>
+                                    <div className={'flex flex-col justify-end items-end mt-10 mr-10'} >
+                                    <Text type={'paragraph'} mini color={'grey'}>Already have an account? <Button type="text" className='btn-custom--bordered ml-1' disabled={dataLoading} onClick={() => routeChange('/login')}> Log In</Button></Text>
+                                    </div>
+                                </Col>
+                            </Row>
+
                     <Row align="center">
                         <Col span={14}>
                         
 
-                        <Row>
+                        <Row className={'my-16 flex justify-center'}>
                         <Col span={20}>
 
                         <Form
@@ -229,18 +239,17 @@ function SignUp({ signup }) {
                                 <Col span={24}>
                                         <div className={'flex flex-col mt-5 w-full'} > 
                                             <Form.Item label={null}
-                                                name="subscribe_newsletter" valuePropName={'checked'}                                 
-                                                >
+                                                name="subscribe_newsletter" valuePropName={'checked'}>
                                                 <div className='flex items-center'>
-                                                    <Checkbox disabled={dataLoading} ></Checkbox>
-                                                    <Text type={'title'} level={7} color={'grey-2'} extraClass={'m-0 ml-4'} >Please keep me up to date on Factors, including news, new products, and services.</Text>
+                                                    <Checkbox disabled={dataLoading} defaultChecked={true} />
+                                                    <Text type={'title'} level={8} color={'grey'} extraClass={'m-0 ml-4'} >Please keep me up to date on Factors, including news, new products, and services.</Text>
                                                 </div>
                                             </Form.Item>
                                         </div>
                                 </Col>
                             </Row>
                             
-                            <Row>
+                            {/* <Row>
                                 <Col span={24}>
                                         <div className={'flex flex-col mt-5 w-full'} >
                                             <Form.Item label={null} 
@@ -254,7 +263,7 @@ function SignUp({ signup }) {
                                             </Form.Item>
                                         </div>
                                 </Col>
-                            </Row>
+                            </Row> */}
 
                             <Row>
                                 <Col span={24}>
@@ -298,7 +307,7 @@ function SignUp({ signup }) {
                                 <Col span={24}>
                                     <div className={'flex flex-col justify-center items-center mt-5'} >
                                     <Form.Item className={'m-0 w-full'}>
-                                        <a href={SSO_SIGNUP_URL}><Button type={'default'} size={'large'} style={{background:'#fff', boxShadow: '0px 0px 2px rgba(0, 0, 0, 0.3)'}} className={'w-full'}><SVG name={'Google'} size={24} />Continue with Google</Button></a>
+                                        <a href={SSO_SIGNUP_URL}><Button type={'default'} size={'large'} className='btn-custom--bordered w-full'><SVG name={'Google'} size={24} />Continue with Google</Button></a>
                                     </Form.Item>
                                     </div>
                                 </Col>
@@ -308,7 +317,7 @@ function SignUp({ signup }) {
                                 <Col span={24}>
                                     <div className={'flex flex-col justify-center items-center mt-5'} >
                                     <Form.Item className={'m-0 w-full'} loading={dataLoading}>
-                                        <Button loading={dataLoading} type={'default'} size={'large'} style={{background:'#fff', boxShadow: '0px 0px 2px rgba(0, 0, 0, 0.3)'}} className={'w-full'} onClick={() => setShowModal(true)}><SVG name={'S_Key'} size={24} color={'#8692A3'} /> More SSO Options</Button>
+                                        <Button loading={dataLoading} type={'default'} size={'large'} className='btn-custom--bordered' onClick={() => setShowModal(true)}><SVG name={'S_Key'} size={24} color={'#8692A3'} /> More SSO Options</Button>
                                     </Form.Item>
                                     </div>
                                 </Col>
@@ -317,10 +326,11 @@ function SignUp({ signup }) {
                             <Row>
                                 <Col span={24}>
                                     <div className={'flex flex-col justify-center items-center mt-6'} >
-                                    <Text type={'paragraph'} mini color={'grey'}>Already have an account?<a disabled={dataLoading} onClick={() => routeChange('/login')}> Log In</a></Text>
+                                        <Text type={'title'} level={8} color={'grey'} extraClass={'text-center'}>By signing up, I accept the Factors.ai <a href={"https://www.factors.ai/terms-of-use"} target='_blank' >Terms of Use</a> and acknowledge having read through the <a href={"https://www.factors.ai/privacy-policy"} target='_blank' >Privacy policy</a></Text>
                                     </div>
                                 </Col>
                             </Row>
+
                         </Form>
                         </Col>
 

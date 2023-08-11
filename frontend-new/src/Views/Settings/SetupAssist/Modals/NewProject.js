@@ -26,7 +26,7 @@ function NewProject(props) {
       >
 
           <div className={'fa-container mb-10'}>
-            <Row justify={'space-between'} className={'py-4 m-0 mt-8'}>
+            <Row justify={'space-between'} className={'py-4 px-16 m-0 mt-8'}>
               <Col>
                 <SVG name={'brand'} size={50}/>
                 <Text type={'title'} level={4} weight={'bold'} color={'grey-2'} extraClass={'m-0 -mt-10 ml-16'}>Create a New Project</Text>
