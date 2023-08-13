@@ -701,13 +701,13 @@ const GlobalSearch = () => {
           icon: <SVG name={`Events_cq`} size={20} color={'blue'} />,
           path: '/analyse/' + QUERY_TYPE_EVENT
         },
-        {
-          name: 'Attribution',
-          fullName: 'Attribution Report',
-          description: 'Identify channels that are working',
-          icon: <SVG name={`Attributions_cq`} size={20} color={'blue'} />,
-          path: '/analyse/' + QUERY_TYPE_ATTRIBUTION
-        },
+        // {
+        //   name: 'Attribution',
+        //   fullName: 'Attribution Report',
+        //   description: 'Identify channels that are working',
+        //   icon: <SVG name={`Attributions_cq`} size={20} color={'blue'} />,
+        //   path: '/analyse/' + QUERY_TYPE_ATTRIBUTION
+        // },
         {
           name: 'Profiles',
           fullName: 'Profiles Report',

@@ -32,16 +32,16 @@ const getMenuItems = ({ showSavedReport }) => {
       ),
       description: 'Track how users navigate'
     },
-    {
-      label: 'Attribution Report',
-      key: 3,
-      icon: (
-        <div style={{ padding: '0 10px 0 0px' }}>
-          <SVG name={`attributions_cq`} size={24} color={'blue'} />
-        </div>
-      ),
-      description: 'Identify the channels that contribute'
-    },
+    // {
+    //   label: 'Attribution Report',
+    //   key: 3,
+    //   icon: (
+    //     <div style={{ padding: '0 10px 0 0px' }}>
+    //       <SVG name={`attributions_cq`} size={24} color={'blue'} />
+    //     </div>
+    //   ),
+    //   description: 'Identify the channels that contribute'
+    // },
     {
       label: 'Event Report',
       key: 4,
