@@ -3,6 +3,7 @@ package model
 import (
 	"time"
 
+	cacheRedis "factors/cache/redis"
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 )
@@ -67,7 +68,9 @@ type AgentInfo struct {
 }
 
 const (
-	AgentSaltLength = 32
+	AgentSaltLength                = 32
+	MaxFailedLoginAttempts         = 10
+	LoginAttemptKeyExpiryInSeconds = 3600
 )
 
 func CreateAgentInfo(agent *Agent) *AgentInfo {
@@ -201,4 +204,9 @@ func Auth0Value(value *postgres.Jsonb) Option {
 	return func(fields FieldsToUpdate) {
 		fields["value"] = value
 	}
+}
+
+func AgentFailedLoginAttemptCacheKey(agentUUID string) (*cacheRedis.Key, error) {
+	prefix := "LOGIN:FAIL"
+	return cacheRedis.NewKeyWithAgentUID(prefix, agentUUID, "")
 }
