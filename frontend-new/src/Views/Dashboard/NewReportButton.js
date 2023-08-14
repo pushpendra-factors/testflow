@@ -6,6 +6,7 @@ import {
   QUERY_TYPE_EVENT,
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_KPI,
+  SAVED_QUERY,
   QUERY_TYPE_PROFILE
 } from 'Utils/constants';
 import { useHistory } from 'react-router-dom';
@@ -14,7 +15,7 @@ const getMenuItems = ({ showSavedReport }) => {
   const items = [
     {
       label: 'KPI Report',
-      key: 1,
+      key: QUERY_TYPE_KPI,
       icon: (
         <div style={{ padding: '0 10px 0 0px' }}>
           <SVG name={`KPI_cq`} size={24} color={'blue'} />
@@ -24,7 +25,7 @@ const getMenuItems = ({ showSavedReport }) => {
     },
     {
       label: 'Funnel Report',
-      key: 2,
+      key: QUERY_TYPE_FUNNEL,
       icon: (
         <div style={{ padding: '0 10px 0 0px' }}>
           <SVG name={`funnels_cq`} size={24} color={'blue'} />
@@ -44,7 +45,7 @@ const getMenuItems = ({ showSavedReport }) => {
     // },
     {
       label: 'Event Report',
-      key: 4,
+      key: QUERY_TYPE_EVENT,
       icon: (
         <div style={{ padding: '0 10px 0 0px' }}>
           <SVG name={`events_cq`} size={24} color={'blue'} />
@@ -54,7 +55,7 @@ const getMenuItems = ({ showSavedReport }) => {
     },
     {
       label: 'Profile Report',
-      key: 5,
+      key: QUERY_TYPE_PROFILE,
       icon: (
         <div style={{ padding: '0 10px 0 0px' }}>
           <SVG name={`profiles_cq`} size={24} color={'blue'} />
@@ -67,7 +68,7 @@ const getMenuItems = ({ showSavedReport }) => {
   if (showSavedReport === true) {
     items.push({
       label: 'Saved Report',
-      key: 6,
+      key: SAVED_QUERY,
       icon: (
         <div style={{ padding: '0 10px 0 0px' }}>
           {' '}
@@ -84,42 +85,14 @@ const NewReportButton = ({ setIsReportsModalOpen, showSavedReport }) => {
   const history = useHistory();
 
   const HandleMenuItemClick = ({ item, key, keyPath, domEvent }) => {
-    if (key === '0') {
+    if(key !== SAVED_QUERY) {
       history.push({
-        pathname: '/analyse/' + QUERY_TYPE_KPI,
+        pathname: '/analyse/' + key,
         state: {
           navigatedFromDashboardExistingReports: true
         }
       });
-    } else if (key === '1') {
-      history.push({
-        pathname: '/analyse/' + QUERY_TYPE_FUNNEL,
-        state: {
-          navigatedFromDashboardExistingReports: true
-        }
-      });
-    } else if (key === '2') {
-      history.push({
-        pathname: '/analyse/' + QUERY_TYPE_ATTRIBUTION,
-        state: {
-          navigatedFromDashboardExistingReports: true
-        }
-      });
-    } else if (key === '3') {
-      history.push({
-        pathname: '/analyse/' + QUERY_TYPE_EVENT,
-        state: {
-          navigatedFromDashboardExistingReports: true
-        }
-      });
-    } else if (key === '4') {
-      history.push({
-        pathname: '/analyse/' + QUERY_TYPE_PROFILE,
-        state: {
-          navigatedFromDashboardExistingReports: true
-        }
-      });
-    } else if (key === '5') {
+    } else {
       setIsReportsModalOpen((prev) => !prev);
     }
   };
@@ -143,7 +116,7 @@ const NewReportButton = ({ setIsReportsModalOpen, showSavedReport }) => {
             )}
             <Menu.Item
               icon={eachItem.icon}
-              key={eachKey}
+              key={eachItem.key}
               style={{
                 margin: '2px 6px 2px 6px',
                 display: 'flex',
