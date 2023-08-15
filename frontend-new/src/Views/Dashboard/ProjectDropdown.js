@@ -332,7 +332,7 @@ function ProjectDropdown({
           ''
         )}
         {active_project.id === demoProjectId ? (
-          <div className='rounded-lg border-2 h-20 mb-3 mx-10'>
+          <div className='rounded-lg border-2 mb-3 mx-10'>
             <Row justify='space-between' className='m-0 p-3'>
               <Col span={projects.length === 1 ? 12 : 18}>
                 <img

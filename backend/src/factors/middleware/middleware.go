@@ -132,18 +132,22 @@ func AddSecurityResponseHeadersToCustomDomain() gin.HandlerFunc {
 	}
 }
 
+func isRequestFromHTTPsProxy(c *gin.Context) bool {
+	// Header added through advanced configuration on
+	// sdk-proxy-api >> Backend Configuration >> Advanced Configurations
+	// Required to differentiate the source load balalncer.
+	sourceValue := "https-load-balancer"
+	return c.Request.Header.Get("x-request-source") == sourceValue ||
+		c.Request.Header.Get("X-Request-Source") == sourceValue
+}
+
 func RestrictHTTPAccess() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		isLiveEnv := C.IsProduction() || C.IsStaging()
 		// /status route is used for liveness probes internally, hence excluded.
 		isStatusRoute := c.Request.URL.Path == "/status"
 		if isLiveEnv && !isStatusRoute {
-			// Header added through advanced configuration on
-			// sdk-proxy-api >> Backend Configuration >> Advanced Configurations
-			// Required to differentiate the source load balalncer.
-			sourceValue := "https-load-balancer"
-			isSourceHTTPsProxy := c.Request.Header.Get("x-request-source") == sourceValue ||
-				c.Request.Header.Get("X-Request-Source") == sourceValue
+			isSourceHTTPsProxy := isRequestFromHTTPsProxy(c)
 
 			// Header added through BackendConfig lb-backend-config.
 			// Required to figure out protocol used by the client.
@@ -398,6 +402,7 @@ func AddSecurityHeadersForAppRoutes() gin.HandlerFunc {
 
 		if !isSDKRequest(c.Request.URL.Path) && !isIntergrationsRequest(c.Request.URL.Path) {
 			c.Header("X-Frame-Options", SAMEORIGIN)
+			c.Header("Strict-Transport-Security", "max-age=31536000;includeSubDomains")
 		}
 		c.Next()
 	}

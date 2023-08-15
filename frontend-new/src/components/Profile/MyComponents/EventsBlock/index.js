@@ -79,6 +79,8 @@ function EventsBlock({
             )
         )
       ];
+    } else if (groupAnalysis === 'events') {
+      showOpts = [...eventOptions];
     } else {
       const [label] =
         availableGroups?.find((group) => group[1] === groupAnalysis) || [];
