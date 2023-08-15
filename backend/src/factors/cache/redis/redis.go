@@ -15,6 +15,7 @@ type Key struct {
 	// any one must be set.
 	ProjectID  int64
 	ProjectUID string
+	AgentUUID  string
 	// Prefix - Helps better grouping and searching
 	// i.e table_name + index_name
 	Prefix string
@@ -70,8 +71,20 @@ func NewKeyWithProjectUID(projectUID, prefix, suffix string) (*Key, error) {
 	return &Key{ProjectUID: projectUID, Prefix: prefix, Suffix: suffix}, nil
 }
 
+func NewKeyWithAgentUID(agentUUID, prefix, suffix string) (*Key, error) {
+	if agentUUID == "" {
+		return nil, ErrorInvalidProject
+	}
+
+	if prefix == "" {
+		return nil, ErrorInvalidPrefix
+	}
+
+	return &Key{AgentUUID: agentUUID, Prefix: prefix, Suffix: suffix}, nil
+}
+
 func (key *Key) Key() (string, error) {
-	if key.ProjectID == 0 && key.ProjectUID == "" {
+	if key.ProjectID == 0 && key.ProjectUID == "" && key.AgentUUID == "" {
 		return "", ErrorInvalidProject
 	}
 
@@ -82,8 +95,10 @@ func (key *Key) Key() (string, error) {
 	var projectScope string
 	if key.ProjectID != 0 {
 		projectScope = fmt.Sprintf("pid:%d", key.ProjectID)
-	} else {
+	} else if key.ProjectUID != "" {
 		projectScope = fmt.Sprintf("puid:%s", key.ProjectUID)
+	} else {
+		projectScope = fmt.Sprintf("auuid:%s", key.AgentUUID)
 	}
 
 	// key: i.e, event_names:user_last_event:pid:1:uid:1

@@ -13,9 +13,12 @@ import (
 	"time"
 	"unicode"
 
+	cacheRedis "factors/cache/redis"
 	"github.com/gin-gonic/gin"
+	"github.com/gomodule/redigo/redis"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"strconv"
 )
 
 type signInParams struct {
@@ -84,10 +87,27 @@ func Signin(c *gin.Context) {
 		return
 	}
 
+	blocked, err := IsAgentBlockedToLogin(agent.UUID)
+	if blocked {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "You have used all attempts, Try after sometime"})
+		return
+	}
+
 	if !model.IsPasswordAndHashEqual(password, agent.Password) {
+		_, err = IncreaseFailedLoginAttemptCountForAgent(agent.UUID)
+		if err != nil {
+			c.AbortWithStatus(http.StatusInternalServerError)
+		}
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
+	// remove failure count keys if any
+	_, err = RemoveFailedLoginAttemptsForAgent(agent.UUID)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to remove failed login count keys ")
+		// not breaking as password is correct
+	}
+
 	ts := time.Now().UTC()
 	errCode := store.GetStore().UpdateAgentLastLoginInfo(agent.UUID, ts)
 	if errCode != http.StatusAccepted {
@@ -819,6 +839,12 @@ func AgentSetPassword(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
+	// removing count keys if password is updated
+	_, err = RemoveFailedLoginAttemptsForAgent(agentUUID)
+	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
 	resp := map[string]string{
 		"status": "success",
 	}
@@ -1117,4 +1143,80 @@ func isAdmin(role uint64) bool {
 		return true
 	}
 	return false
+}
+
+func IsAgentBlockedToLogin(agentUuid string) (bool, error) {
+	logCtx := log.WithFields(log.Fields{
+		"uuid": agentUuid,
+	})
+	key, err := model.AgentFailedLoginAttemptCacheKey(agentUuid)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get key for agent")
+		return false, err
+	}
+	result, err := cacheRedis.GetPersistent(key)
+	if err != nil && err != redis.ErrNil {
+		logCtx.WithError(err).Error("Failed to fetch count from key")
+		return false, err
+	}
+	var count int64
+	if err != redis.ErrNil {
+		count, err = strconv.ParseInt(result, 10, 64)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed while parsing count for agent")
+			return false, err
+		}
+	}
+	return count >= model.MaxFailedLoginAttempts, nil
+}
+
+func IncreaseFailedLoginAttemptCountForAgent(agentUuid string) (int, error) {
+	logCtx := log.WithFields(log.Fields{
+		"uuid": agentUuid,
+	})
+	key, err := model.AgentFailedLoginAttemptCacheKey(agentUuid)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get key for agent")
+		return 0, err
+	}
+
+	// increase the count
+	newKey := cacheRedis.KeyCountTuple{
+		Key:   key,
+		Count: 1,
+	}
+	keys := make([]cacheRedis.KeyCountTuple, 0)
+	keys = append(keys, newKey)
+	_, err = cacheRedis.IncrByBatchPersistent(keys)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to increment key for agent key")
+		return http.StatusInternalServerError, err
+	}
+	expiry := model.LoginAttemptKeyExpiryInSeconds
+	for _, key := range keys {
+		_, err = cacheRedis.SetExpiryPersistent(key.Key, expiry)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to increment expiry for agent key")
+			return http.StatusInternalServerError, err
+		}
+	}
+
+	return http.StatusOK, nil
+}
+
+func RemoveFailedLoginAttemptsForAgent(uuid string) (int, error) {
+	logCtx := log.WithFields(log.Fields{
+		"uuid": uuid,
+	})
+	key, err := model.AgentFailedLoginAttemptCacheKey(uuid)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get failure login attempts key for agent")
+		return http.StatusInternalServerError, err
+	}
+	err = cacheRedis.DelPersistent(key)
+	if err != nil {
+		logCtx.WithField("key", key).WithError(err).Error("Cannot remove agent login count key by zrem")
+		return http.StatusInternalServerError, err
+	}
+	return http.StatusOK, nil
 }
