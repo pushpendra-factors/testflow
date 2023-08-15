@@ -123,8 +123,7 @@ func AddSecurityResponseHeadersToCustomDomain() gin.HandlerFunc {
 		// Note: When custom domain is used the c.Request.Host will contain
 		// Internal IP of loadbalancer. This makes it not possible to enable
 		// it by selected custom domain.
-		isFromHttpsProxy := isRequestFromHTTPsProxy(c)
-		if !isFromHttpsProxy {
+		if !U.StringValueIn(c.Request.Host, HOSTED_DOMAINS) {
 			c.Header("Strict-Transport-Security", "max-age=31536000;includeSubDomains")
 			c.Header("X-Frame-Options", "SAMEORIGIN")
 			c.Header("X-Content-Type-Options", "nosniff")
@@ -134,6 +133,9 @@ func AddSecurityResponseHeadersToCustomDomain() gin.HandlerFunc {
 }
 
 func isRequestFromHTTPsProxy(c *gin.Context) bool {
+	// Header added through advanced configuration on
+	// sdk-proxy-api >> Backend Configuration >> Advanced Configurations
+	// Required to differentiate the source load balalncer.
 	sourceValue := "https-load-balancer"
 	return c.Request.Header.Get("x-request-source") == sourceValue ||
 		c.Request.Header.Get("X-Request-Source") == sourceValue
@@ -145,9 +147,6 @@ func RestrictHTTPAccess() gin.HandlerFunc {
 		// /status route is used for liveness probes internally, hence excluded.
 		isStatusRoute := c.Request.URL.Path == "/status"
 		if isLiveEnv && !isStatusRoute {
-			// Header added through advanced configuration on
-			// sdk-proxy-api >> Backend Configuration >> Advanced Configurations
-			// Required to differentiate the source load balalncer.
 			isSourceHTTPsProxy := isRequestFromHTTPsProxy(c)
 
 			// Header added through BackendConfig lb-backend-config.
@@ -403,6 +402,7 @@ func AddSecurityHeadersForAppRoutes() gin.HandlerFunc {
 
 		if !isSDKRequest(c.Request.URL.Path) && !isIntergrationsRequest(c.Request.URL.Path) {
 			c.Header("X-Frame-Options", SAMEORIGIN)
+			c.Header("Strict-Transport-Security", "max-age=31536000;includeSubDomains")
 		}
 		c.Next()
 	}
