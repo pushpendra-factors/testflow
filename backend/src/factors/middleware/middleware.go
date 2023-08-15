@@ -123,13 +123,20 @@ func AddSecurityResponseHeadersToCustomDomain() gin.HandlerFunc {
 		// Note: When custom domain is used the c.Request.Host will contain
 		// Internal IP of loadbalancer. This makes it not possible to enable
 		// it by selected custom domain.
-		if !U.StringValueIn(c.Request.Host, HOSTED_DOMAINS) {
+		isFromHttpsProxy := isRequestFromHTTPsProxy(c)
+		if !isFromHttpsProxy {
 			c.Header("Strict-Transport-Security", "max-age=31536000;includeSubDomains")
 			c.Header("X-Frame-Options", "SAMEORIGIN")
 			c.Header("X-Content-Type-Options", "nosniff")
 		}
 		c.Next()
 	}
+}
+
+func isRequestFromHTTPsProxy(c *gin.Context) bool {
+	sourceValue := "https-load-balancer"
+	return c.Request.Header.Get("x-request-source") == sourceValue ||
+		c.Request.Header.Get("X-Request-Source") == sourceValue
 }
 
 func RestrictHTTPAccess() gin.HandlerFunc {
@@ -141,9 +148,7 @@ func RestrictHTTPAccess() gin.HandlerFunc {
 			// Header added through advanced configuration on
 			// sdk-proxy-api >> Backend Configuration >> Advanced Configurations
 			// Required to differentiate the source load balalncer.
-			sourceValue := "https-load-balancer"
-			isSourceHTTPsProxy := c.Request.Header.Get("x-request-source") == sourceValue ||
-				c.Request.Header.Get("X-Request-Source") == sourceValue
+			isSourceHTTPsProxy := isRequestFromHTTPsProxy(c)
 
 			// Header added through BackendConfig lb-backend-config.
 			// Required to figure out protocol used by the client.
