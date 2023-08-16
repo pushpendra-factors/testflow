@@ -1359,7 +1359,12 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 		accountDetails.AccountTimeline = append(accountDetails.AccountTimeline, intentTimeline)
 	}
 
-	if C.IsScoringEnabled(projectID) {
+	scoringAvailable, _, err := store.GetFeatureStatusForProjectV2(projectID, model.FEATURE_ACCOUNT_SCORING)
+	if err != nil {
+		log.WithFields(logFields).Error("Error fetching scoring availability status for the project")
+	}
+
+	if scoringAvailable {
 		overview, err := store.GetAccountOverview(projectID, id, groupName)
 		if err != nil {
 			log.WithFields(logFields).WithError(err)

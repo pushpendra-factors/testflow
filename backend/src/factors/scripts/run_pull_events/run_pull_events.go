@@ -8,6 +8,7 @@ package main
 import (
 	C "factors/config"
 	"factors/filestore"
+	M "factors/model/model"
 	"factors/model/store"
 	serviceDisk "factors/services/disk"
 	serviceGCS "factors/services/gcstorage"
@@ -119,6 +120,7 @@ func main() {
 			wi_projects, _ := store.GetStore().GetAllWeeklyInsightsEnabledProjects()
 			explain_projects, _ := store.GetStore().GetAllExplainEnabledProjects()
 			path_analysis_projects, _ := store.GetStore().GetAllPathAnalysisEnabledProjects()
+			acc_scoring_projects, _ := store.GetStore().GetAllProjectsWithFeatureEnabled(M.FEATURE_ACCOUNT_SCORING)
 			for _, id := range wi_projects {
 				projectIdsToRun[id] = true
 			}
@@ -126,6 +128,9 @@ func main() {
 				projectIdsToRun[id] = true
 			}
 			for _, id := range path_analysis_projects {
+				projectIdsToRun[id] = true
+			}
+			for _, id := range acc_scoring_projects {
 				projectIdsToRun[id] = true
 			}
 		}
