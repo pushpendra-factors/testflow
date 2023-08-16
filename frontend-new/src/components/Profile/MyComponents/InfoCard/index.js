@@ -1,7 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Popover } from 'antd';
 import { Text } from 'Components/factorsComponents';
-import { PropTextFormat } from 'Utils/dataFormatter';
+import {
+  PropTextFormat,
+  convertGroupedPropertiesToUngrouped
+} from 'Utils/dataFormatter';
 import {
   getPropType,
   propValueFormat,
@@ -9,7 +12,7 @@ import {
 } from '../../utils';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import { getEventProperties } from 'Reducers/coreQuery/middleware';
+import { getEventPropertiesV2 } from 'Reducers/coreQuery/middleware';
 
 function InfoCard({
   title,
@@ -21,12 +24,23 @@ function InfoCard({
   trigger,
   children,
   activeProject,
-  eventProperties
+  eventPropertiesV2
 }) {
   useEffect(() => {
-    if (!eventProperties[eventName])
-      getEventProperties(activeProject?.id, eventName);
+    if (!eventPropertiesV2[eventName])
+      getEventPropertiesV2(activeProject?.id, eventName);
   }, [activeProject?.id, eventName]);
+
+  const eventPropertiesModified = useMemo(() => {
+    const eventProps = [];
+    if (eventPropertiesV2?.[eventName]) {
+      convertGroupedPropertiesToUngrouped(
+        eventPropertiesV2?.[eventName],
+        eventProps
+      );
+    }
+    return eventProps;
+  }, [eventName, eventPropertiesV2]);
 
   const popoverContent = () => (
     <div className='fa-popupcard'>
@@ -43,7 +57,7 @@ function InfoCard({
       </div>
 
       {Object.entries(properties).map(([key, value]) => {
-        const propType = getPropType(eventProperties[eventName], key);
+        const propType = getPropType(eventPropertiesModified, key);
         if (key === '$is_page_view' && value === true)
           return (
             <div className='flex justify-between py-2'>
@@ -114,13 +128,13 @@ function InfoCard({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  eventProperties: state.coreQuery.eventProperties
+  eventPropertiesV2: state.coreQuery.eventPropertiesV2
 });
 
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
-      getEventProperties
+      getEventPropertiesV2
     },
     dispatch
   );

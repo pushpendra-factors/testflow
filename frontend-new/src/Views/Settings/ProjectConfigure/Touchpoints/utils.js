@@ -54,16 +54,7 @@ export const Extra_PROP_SHOW_OPTIONS = [
   ['Adgroup ID', null, 'adgroup_id'],
   ['Page URL', null, 'page_url']
 ];
-
 export const ruleTypesNameMappingForHS = {
-  Contact: RULE_TYPE_HS_CONTACT,
-  'Form Submissions': RULE_TYPE_HS_FORM_SUBMISSIONS,
-  Email: RULE_TYPE_HS_EMAILS,
-  Meetings: RULE_TYPE_HS_MEETINGS,
-  Calls: RULE_TYPE_HS_CALLS,
-  Lists: RULE_TYPE_HS_LISTS
-};
-export const reverseRuleTypesNameMappingForHS = {
   [RULE_TYPE_HS_CONTACT]: 'Contact',
   [RULE_TYPE_HS_FORM_SUBMISSIONS]: 'Form Submissions',
   [RULE_TYPE_HS_EMAILS]: 'Email',
@@ -72,18 +63,11 @@ export const reverseRuleTypesNameMappingForHS = {
   [RULE_TYPE_HS_LISTS]: 'Lists'
 };
 export const ruleTypesNameMappingForSF = {
-  Contact: RULE_TYPE_SF_CONTACT,
-  Campaigns: RULE_TYPE_SF_CAMPAIGNS,
-  Tasks: RULE_TYPE_SF_TASKS,
-  Events: RULE_TYPE_SF_EVENTS
-};
-export const reverseRuleTypesNameMappingForSF = {
   [RULE_TYPE_SF_CONTACT]: 'Contact',
   [RULE_TYPE_SF_CAMPAIGNS]: 'Campaigns',
   [RULE_TYPE_SF_TASKS]: 'Tasks',
   [RULE_TYPE_SF_EVENTS]: 'Events'
 };
-
 export const DEFAULT_TIMESTAMPS = {
   [RULE_TYPE_HS_CONTACT]: 'LAST_MODIFIED_TIME_REF',
   [RULE_TYPE_HS_EMAILS]: '$hubspot_engagement_timestamp',

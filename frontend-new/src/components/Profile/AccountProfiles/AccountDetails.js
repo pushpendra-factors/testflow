@@ -26,7 +26,10 @@ import {
 import SearchCheckList from '../../SearchCheckList';
 import LeftPanePropBlock from '../MyComponents/LeftPanePropBlock';
 import AccountTimelineSingleView from './AccountTimelineSingleView';
-import { PropTextFormat } from 'Utils/dataFormatter';
+import {
+  PropTextFormat,
+  convertGroupedPropertiesToUngrouped
+} from 'Utils/dataFormatter';
 import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
 import { useHistory, useLocation } from 'react-router-dom';
 import { PathUrls } from '../../../routes/pathUrls';
@@ -35,7 +38,7 @@ import UpgradeModal from '../UpgradeModal';
 import { PLANS } from 'Constants/plans.constants';
 import {
   getGroupProperties,
-  getEventProperties
+  getEventPropertiesV2
 } from 'Reducers/coreQuery/middleware';
 import AccountOverview from './AccountOverview';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
@@ -53,11 +56,11 @@ function AccountDetails({
   fetchProjectSettings,
   udpateProjectSettings,
   getProfileAccountDetails,
-  userProperties,
+  userPropertiesV2,
   groupProperties,
   eventNamesMap,
-  eventProperties,
-  getEventProperties
+  eventPropertiesV2,
+  getEventPropertiesV2
 }) {
   const dispatch = useDispatch();
   const history = useHistory();
@@ -179,15 +182,19 @@ function AccountDetails({
   useEffect(() => {
     hoverEvents.forEach((event) => {
       if (
-        !eventProperties[event] &&
+        !eventPropertiesV2[event] &&
         accountDetails.data?.account_events?.some(
           (activity) => activity?.event_name === event
         )
       ) {
-        getEventProperties(activeProject?.id, event);
+        getEventPropertiesV2(activeProject?.id, event);
       }
     });
-  }, [activeProject?.id, eventProperties, accountDetails.data?.account_events]);
+  }, [
+    activeProject?.id,
+    eventPropertiesV2,
+    accountDetails.data?.account_events
+  ]);
 
   useEffect(() => {
     Object.keys(groupOpts || {}).forEach((group) =>
@@ -229,12 +236,19 @@ function AccountDetails({
   }, [groupProperties, groupOpts]);
 
   useEffect(() => {
+    const userPropertiesModified = [];
+    if (userPropertiesV2) {
+      convertGroupedPropertiesToUngrouped(
+        userPropertiesV2,
+        userPropertiesModified
+      );
+    }
     const userPropsWithEnableKey = formatUserPropertiesToCheckList(
-      userProperties,
+      userPropertiesModified,
       [currentProjectSettings.timelines_config?.account_config?.user_prop]
     );
     setCheckListUserProps(userPropsWithEnableKey);
-  }, [currentProjectSettings, userProperties]);
+  }, [currentProjectSettings, userPropertiesV2]);
 
   const handlePropChange = (option) => {
     if (
@@ -718,8 +732,8 @@ const mapStateToProps = (state) => ({
   groupOpts: state.groups.data,
   accounts: state.timelines.accounts,
   accountDetails: state.timelines.accountDetails,
-  userProperties: state.coreQuery.userProperties,
-  eventProperties: state.coreQuery.eventProperties,
+  userPropertiesV2: state.coreQuery.userPropertiesV2,
+  eventPropertiesV2: state.coreQuery.eventPropertiesV2,
   groupProperties: state.coreQuery.groupProperties,
   eventNamesMap: state.coreQuery.eventNamesMap
 });
@@ -729,7 +743,7 @@ const mapDispatchToProps = (dispatch) =>
     {
       fetchGroups,
       getGroupProperties,
-      getEventProperties,
+      getEventPropertiesV2,
       getProfileAccountDetails,
       fetchProjectSettings,
       udpateProjectSettings

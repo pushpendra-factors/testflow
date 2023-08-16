@@ -23,10 +23,10 @@ import {
   fetchKPIConfigWithoutDerivedKPI
 } from 'Reducers/kpi';
 import {
-  getUserProperties,
+  getUserPropertiesV2,
   deleteGroupByForEvent,
   fetchEventNames,
-  getEventProperties
+  getEventPropertiesV2
 } from 'Reducers/coreQuery/middleware';
 import _ from 'lodash';
 import GLobalFilter from 'Components/KPIComposer/GlobalFilter';
@@ -68,8 +68,8 @@ function CustomKPI({
   fetchEventNames,
   eventNames,
   eventNameOptions,
-  getEventProperties,
-  eventProperties
+  getEventPropertiesV2,
+  eventPropertiesV2
 }) {
   const [showForm, setShowForm] = useState(false);
   const [tableData, setTableData] = useState([]);
@@ -422,26 +422,24 @@ function CustomKPI({
   }, [selKPICategory, customKPIConfig]);
 
   useEffect(() => {
-    let DDCategory;
-    for (const key of Object.keys(eventProperties)) {
+    let DDCategory = {};
+    for (const key of Object.keys(eventPropertiesV2)) {
       if (key === selEventName) {
-        DDCategory = eventProperties[key];
+        DDCategory = eventPropertiesV2[key];
       }
     }
-
-    const DDvalues = DDCategory?.map((item) => [
-      item[0],
-      item[1],
-      item[2],
-      'event'
-    ]);
-
+    const DDvalues = [];
+    Object.keys(DDCategory).forEach((group) => {
+      DDCategory[group]?.forEach((item) => {
+        DDvalues.push([item[0], item[1], item[2], 'event']);
+      });
+    });
     setEventFilterDDValues(DDvalues);
-  }, [selEventName, eventProperties]);
+  }, [selEventName, eventPropertiesV2]);
 
   useEffect(() => {
     if (selEventName || viewKPIDetails?.transformations?.evNm) {
-      getEventProperties(
+      getEventPropertiesV2(
         activeProject.id,
         selEventName || viewKPIDetails?.transformations?.evNm
       );
@@ -565,11 +563,11 @@ function CustomKPI({
             <Text type='title' level={7} extraClass='m-0'>
               Select Event
             </Text>
-            <Form.Item
-              name='event'
-              className='m-0'
-            >
-              <EventQueryBlock selEventName={selEventName} setEventName={setEventName} />
+            <Form.Item name='event' className='m-0'>
+              <EventQueryBlock
+                selEventName={selEventName}
+                setEventName={setEventName}
+              />
             </Form.Item>
           </Col>
         </Row>
@@ -655,23 +653,28 @@ function CustomKPI({
                         .indexOf(input.toLowerCase()) >= 0
                     }
                   >
-                    {Object.keys(eventProperties)?.map((category) => {
+                    {Object.keys(eventPropertiesV2)?.map((category) => {
                       if (category === selEventName) {
-                        return eventProperties[category]?.map((item) => {
-                          if (item[2] === 'numerical') {
-                            return (
-                              <Option
-                                key={item[0]}
-                                value={item[0]}
-                                name={item[1]}
-                                data_type={item[2]}
-                                en={'event'}
-                              >
-                                {item[0]}
-                              </Option>
-                            );
-                          }
+                        const options = [];
+                        const eventGroups = eventPropertiesV2[category];
+                        Object.keys(eventGroups).forEach((group) => {
+                          eventGroups[group]?.forEach((item) => {
+                            if (item[2] === 'numerical') {
+                              options.push(
+                                <Option
+                                  key={item[0]}
+                                  value={item[0]}
+                                  name={item[1]}
+                                  data_type={item[2]}
+                                  en={'event'}
+                                >
+                                  {item[0]}
+                                </Option>
+                              );
+                            }
+                          });
                         });
+                        return options;
                       }
                     })}
                   </Select>
@@ -691,7 +694,6 @@ function CustomKPI({
                   filters={EventfilterValues?.globalFilters}
                   setGlobalFilters={setEventGlobalFiltersOption}
                   event={{ label: selEventName }}
-                  eventProperties={eventProperties}
                 />
               </div>
             </Col>
@@ -1105,7 +1107,7 @@ function CustomKPI({
                                 filters={filterValues?.globalFilters}
                                 onFiltersLoad={[
                                   () => {
-                                    getUserProperties(activeProject.id, null);
+                                    getUserPropertiesV2(activeProject.id, null);
                                   }
                                 ]}
                                 setGlobalFilters={setGlobalFiltersOption}
@@ -1543,7 +1545,7 @@ const mapStateToProps = (state) => ({
   currentAgent: state.agent.agent_details,
   eventNames: state.coreQuery?.eventNames,
   eventNameOptions: state.coreQuery.eventOptions,
-  eventProperties: state.coreQuery.eventProperties
+  eventPropertiesV2: state.coreQuery.eventPropertiesV2
 });
 
 export default connect(mapStateToProps, {
@@ -1553,5 +1555,5 @@ export default connect(mapStateToProps, {
   removeCustomKPI,
   fetchKPIConfigWithoutDerivedKPI,
   fetchEventNames,
-  getEventProperties
+  getEventPropertiesV2
 })(CustomKPI);

@@ -9,14 +9,19 @@ import { Button, Tooltip } from 'antd';
 import { setGroupBy, delGroupBy } from '../../../reducers/coreQuery/middleware';
 import FaSelect from '../../FaSelect';
 import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
-import { PropTextFormat } from 'Utils/dataFormatter';
+import {
+  PropTextFormat,
+  convertAndAddPropertiesToGroupSelectOptions
+} from 'Utils/dataFormatter';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import startCase from 'lodash/startCase';
+import getGroupIcon from 'Utils/getGroupIcon';
 
 function GroupBlock({
   groupByState,
   setGroupBy,
   delGroupBy,
-  userProperties,
+  userPropertiesV2,
   groupProperties,
   userPropNames,
   groupPropNames,
@@ -25,46 +30,40 @@ function GroupBlock({
   const [isDDVisible, setDDVisible] = useState([false]);
   const [isValueDDVisible, setValueDDVisible] = useState([false]);
   const [propSelVis, setSelVis] = useState([false]);
-  const [filterOptions, setFilterOptions] = useState([
-    {
-      label: 'User Properties',
-      iconName: 'user',
-      values: []
-    },
-    {
-      label: 'Group Properties',
-      iconName: 'group',
-      values: []
-    }
-  ]);
+  const [filterOptions, setFilterOptions] = useState([]);
 
   useEffect(() => {
-    const filterOpts = [...filterOptions];
+    const filterOptsObj = {};
     if (groupName === 'users') {
-      filterOpts[0].values = userProperties;
-      filterOpts[1].values = [];
+      if (userPropertiesV2) {
+        convertAndAddPropertiesToGroupSelectOptions(
+          userPropertiesV2,
+          filterOptsObj,
+          'user'
+        );
+      }
     } else {
-      filterOpts[1].label = `${PropTextFormat(groupName)} Properties`;
-      filterOpts[1].values = groupProperties[groupName];
-      filterOpts[0].values = [];
-    }
-    const modifiedFilterOpts = filterOpts?.map((opt) => {
-      return {
-        iconName: opt?.iconName,
-        label: opt?.label,
-        values: opt?.values?.map((op) => {
+      const groupLabel = `${PropTextFormat(groupName)} Properties`;
+      const groupValues =
+        groupProperties[groupName]?.map((op) => {
           return {
             value: op?.[1],
             label: op?.[0],
             extraProps: {
-              valueType: op?.[2]
+              valueType: op?.[2],
+              propertyType: 'group'
             }
           };
-        })
+        }) || [];
+      const groupPropIconName = getGroupIcon(groupLabel);
+      filterOptsObj[groupLabel] = {
+        iconName: groupPropIconName === 'NoImage' ? 'group' : groupPropIconName,
+        label: groupLabel,
+        values: groupValues
       };
-    });
-    setFilterOptions(modifiedFilterOpts);
-  }, [userProperties, groupProperties, groupName]);
+    }
+    setFilterOptions(Object.values(filterOptsObj));
+  }, [userPropertiesV2, groupProperties, groupName]);
 
   const delOption = (index) => {
     delGroupBy('global', groupByState.global[index], index);
@@ -296,7 +295,7 @@ function GroupBlock({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  userProperties: state.coreQuery.userProperties,
+  userPropertiesV2: state.coreQuery.userPropertiesV2,
   groupProperties: state.coreQuery.groupProperties,
   userPropNames: state.coreQuery.userPropNames,
   groupPropNames: state.coreQuery.groupPropNames,

@@ -8,7 +8,7 @@ import {
   setGroupBy,
   delGroupBy,
   getGroupProperties,
-  getEventProperties
+  getEventPropertiesV2
 } from 'Reducers/coreQuery/middleware';
 import FaSelect from 'Components/FaSelect';
 import EventGroupBlock from '../EventGroupBlock';
@@ -33,12 +33,12 @@ function QueryBlock({
   groupBy,
   setGroupBy,
   delGroupBy,
-  eventUserProperties,
-  eventProperties,
+  eventUserPropertiesV2,
+  eventPropertiesV2,
   groupProperties,
   getGroupProperties,
   filterConfig,
-  getEventProperties
+  getEventPropertiesV2
 }) {
   const [isDDVisible, setDDVisible] = useState(false);
   const [isFilterDDVisible, setFilterDDVisible] = useState(false);
@@ -88,8 +88,8 @@ function QueryBlock({
     if (!event || event === undefined) {
       return;
     }
-    if (!eventProperties[event.label]) {
-      getEventProperties(activeProject?.id, event?.label);
+    if (!eventPropertiesV2[event?.label]) {
+      getEventPropertiesV2(activeProject?.id, event?.label);
     }
     if (eventGroup) {
       getGroupProperties(activeProject?.id, eventGroup);
@@ -105,17 +105,17 @@ function QueryBlock({
       assignFilterProps.group = groupProperties[eventGroup];
       assignFilterProps.user = [];
     } else {
-      assignFilterProps.user = eventUserProperties;
+      assignFilterProps.user = eventUserPropertiesV2;
       assignFilterProps.group = [];
     }
-    assignFilterProps.event = eventProperties[event.label] || [];
+    assignFilterProps.event = eventPropertiesV2[event.label] || [];
     setFilterProperties(assignFilterProps);
   }, [
     event,
     eventGroup,
-    eventProperties,
+    eventPropertiesV2,
     groupProperties,
-    eventUserProperties
+    eventUserPropertiesV2
   ]);
 
   const triggerDropDown = () => {
@@ -536,9 +536,9 @@ function QueryBlock({
 const mapStateToProps = (state) => ({
   eventOptions: state.coreQuery.eventOptions,
   activeProject: state.global.active_project,
-  eventUserProperties: state.coreQuery.eventUserProperties,
+  eventUserPropertiesV2: state.coreQuery.eventUserPropertiesV2,
   groupProperties: state.coreQuery.groupProperties,
-  eventProperties: state.coreQuery.eventProperties,
+  eventPropertiesV2: state.coreQuery.eventPropertiesV2,
   groupBy: state.coreQuery.groupBy.event,
   groupByMagic: state.coreQuery.groupBy,
   eventNames: state.coreQuery.eventNames
@@ -550,7 +550,7 @@ const mapDispatchToProps = (dispatch) =>
       setGroupBy,
       delGroupBy,
       getGroupProperties,
-      getEventProperties
+      getEventPropertiesV2
     },
     dispatch
   );

@@ -114,6 +114,7 @@ function EventFilterWrapper({
   useEffect(() => {
     const filterDD = Object.assign({}, filterDropDownOptions);
     const propState = [];
+    //Needs to Update But not being Used.
     Object.keys(filterProps).forEach((k, i) => {
       propState.push({
         label: k,
@@ -121,6 +122,7 @@ function EventFilterWrapper({
         values: filterProps[k]
       });
     });
+    //
     let KPIlist = KPI_config || [];
     let selGroup = KPIlist.find((item) => {
       return item.display_category == event?.group;

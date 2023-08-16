@@ -306,7 +306,6 @@ function QueryComposer({
               filters={queryOptions.globalFilters}
               setGlobalFilters={setGlobalFiltersOption}
               groupName={queryOptions.group_analysis}
-              isNewVersion={true}
             />
           </div>
         </ComposerBlock>

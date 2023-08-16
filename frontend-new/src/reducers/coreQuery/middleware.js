@@ -103,7 +103,6 @@ export const getGroupProperties = (projectId, groupName) => {
     });
   };
 };
-
 export const getUserPropertiesV2 = (projectId, queryType = '') => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
@@ -128,39 +127,6 @@ export const getUserPropertiesV2 = (projectId, queryType = '') => {
     });
   };
 };
-export const getUserProperties = (projectId, queryType = '') => {
-  return (dispatch) => {
-    return new Promise((resolve, reject) => {
-      fetchUserProperties(projectId, queryType)
-        .then((response) => {
-          const options = convertPropsToOptions(
-            response.data?.properties,
-            response.data?.display_names
-          );
-          resolve(
-            dispatch(setUserPropertiesNamesAction(response.data?.display_names))
-          );
-          resolve(dispatch(fetchUserPropertiesAction(options)));
-          resolve(
-            dispatch(
-              fetchEventUserPropertiesAction(
-                options.filter(
-                  (item) =>
-                    !response.data?.disabled_event_user_properties?.includes(
-                      item?.[1]
-                    )
-                )
-              )
-            )
-          );
-        })
-        .catch((err) => {
-          // resolve(dispatch(fetchEventPropertiesAction({})));
-        });
-    });
-  };
-};
-
 export const getEventPropertiesV2 = (projectId, eventName) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
@@ -176,29 +142,6 @@ export const getEventPropertiesV2 = (projectId, eventName) => {
             )
           );
           resolve(dispatch(fetchEventPropertiesActionV2(options, eventName)));
-        })
-        .catch((err) => {
-          // resolve(dispatch(fetchEventPropertiesAction({})));
-        });
-    });
-  };
-};
-
-export const getEventProperties = (projectId, eventName) => {
-  return (dispatch) => {
-    return new Promise((resolve, reject) => {
-      fetchEventProperties(projectId, eventName)
-        .then((response) => {
-          const options = convertPropsToOptions(
-            response.data.properties,
-            response.data?.display_names
-          );
-          resolve(
-            dispatch(
-              setEventPropertiesNamesAction(response.data?.display_names)
-            )
-          );
-          resolve(dispatch(fetchEventPropertiesAction(options, eventName)));
         })
         .catch((err) => {
           // resolve(dispatch(fetchEventPropertiesAction({})));

@@ -9,7 +9,10 @@ import { Button, Tooltip } from 'antd';
 import { setGroupBy, delGroupBy } from '../../../reducers/coreQuery/middleware';
 import FaSelect from '../../FaSelect';
 import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
-import { PropTextFormat } from 'Utils/dataFormatter';
+import {
+  PropTextFormat,
+  convertAndAddPropertiesToGroupSelectOptions
+} from 'Utils/dataFormatter';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import startCase from 'lodash/startCase';
 import getGroupIcon from 'Utils/getGroupIcon';
@@ -33,36 +36,11 @@ function GroupBlock({
     const filterOptsObj = {};
     if (groupName === 'users' || groupName === 'events') {
       if (userPropertiesV2) {
-        Object.keys(userPropertiesV2)?.forEach((groupkey) => {
-          if (!filterOptsObj[groupkey]) {
-            filterOptsObj[groupkey] = {
-              label: startCase(groupkey),
-              iconName: getGroupIcon(groupkey),
-              values:
-                userPropertiesV2?.[groupkey]?.map((op) => {
-                  return {
-                    value: op?.[1],
-                    label: op?.[0],
-                    extraProps: {
-                      valueType: op?.[2],
-                      propertyType: 'user'
-                    }
-                  };
-                }) || []
-            };
-          } else {
-            userPropertiesV2?.[groupkey]?.forEach((op) =>
-              filterOptsObj[groupkey].values.push({
-                value: op?.[1],
-                label: op?.[0],
-                extraProps: {
-                  valueType: op?.[2],
-                  propertyType: 'user'
-                }
-              })
-            );
-          }
-        });
+        convertAndAddPropertiesToGroupSelectOptions(
+          userPropertiesV2,
+          filterOptsObj,
+          'user'
+        );
       }
     } else {
       const groupLabel = `${PropTextFormat(groupName)} Properties`;

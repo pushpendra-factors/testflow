@@ -13,7 +13,7 @@ import { connect, useDispatch, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { Text, SVG } from '../../factorsComponents';
 import FaSelect from '../../FaSelect';
-import { getUserProperties } from '../../../reducers/coreQuery/middleware';
+import { getUserPropertiesV2 } from '../../../reducers/coreQuery/middleware';
 import PropertyFilter from '../MyComponents/PropertyFilter';
 import MomentTz from '../../MomentTz';
 import {
@@ -48,7 +48,10 @@ import _ from 'lodash';
 import SegmentModal from './SegmentModal';
 import SearchCheckList from 'Components/SearchCheckList';
 import { formatUserPropertiesToCheckList } from 'Reducers/timelines/utils';
-import { PropTextFormat } from 'Utils/dataFormatter';
+import {
+  PropTextFormat,
+  convertGroupedPropertiesToUngrouped
+} from 'Utils/dataFormatter';
 import { fetchUserPropertyValues } from 'Reducers/coreQuery/services';
 import ProfilesWrapper from '../ProfilesWrapper';
 import { getUserOptions } from './userProfiles.helpers';
@@ -79,7 +82,7 @@ function UserProfiles({
   getSavedSegments,
   getProfileUsers,
   getProfileUserDetails,
-  getUserProperties,
+  getUserPropertiesV2,
   fetchProjectSettingsV1,
   fetchProjectSettings,
   fetchMarketoIntegration,
@@ -97,7 +100,9 @@ function UserProfiles({
   const integrationV1 = useSelector((state) => state.global.projectSettingsV1);
   const { bingAds, marketo } = useSelector((state) => state.global);
   const { dashboards } = useSelector((state) => state.dashboard);
-  const userProperties = useSelector((state) => state.coreQuery.userProperties);
+  const userPropertiesV2 = useSelector(
+    (state) => state.coreQuery.userPropertiesV2
+  );
   const { userPropNames } = useSelector((state) => state.coreQuery);
   const timelinePayload = useSelector((state) => selectTimelinePayload(state));
   const activeSegment = useSelector((state) => selectActiveSegment(state));
@@ -198,7 +203,7 @@ function UserProfiles({
   }, [activeProject]);
 
   useEffect(() => {
-    getUserProperties(activeProject.id);
+    getUserPropertiesV2(activeProject.id);
   }, [activeProject?.id]);
 
   const isIntegrationEnabled =
@@ -224,12 +229,24 @@ function UserProfiles({
     const tableProps = timelinePayload?.segment_id
       ? activeSegment?.query?.table_props
       : currentProjectSettings.timelines_config?.user_config?.table_props;
+    const userPropertiesModified = [];
+    if (userPropertiesV2) {
+      convertGroupedPropertiesToUngrouped(
+        userPropertiesV2,
+        userPropertiesModified
+      );
+    }
     const userPropsWithEnableKey = formatUserPropertiesToCheckList(
-      userProperties,
+      userPropertiesModified,
       tableProps
     );
     setCheckListUserProps(userPropsWithEnableKey);
-  }, [currentProjectSettings, userProperties, activeSegment, timelinePayload]);
+  }, [
+    currentProjectSettings,
+    userPropertiesV2,
+    activeSegment,
+    timelinePayload
+  ]);
 
   useEffect(() => {
     getSavedSegments(activeProject.id);
@@ -321,13 +338,20 @@ function UserProfiles({
       ? activeSegment?.query?.table_props
       : currentProjectSettings?.timelines_config?.user_config?.table_props;
 
+    const userPropertiesModified = [];
+    if (userPropertiesV2) {
+      convertGroupedPropertiesToUngrouped(
+        userPropertiesV2,
+        userPropertiesModified
+      );
+    }
     tableProps
       ?.filter((entry) => entry !== '' && entry !== undefined)
       ?.forEach((prop) => {
         const propDisplayName = userPropNames[prop]
           ? userPropNames[prop]
           : PropTextFormat(prop);
-        const propType = getPropType(userProperties, prop);
+        const propType = getPropType(userPropertiesModified, prop);
         columns.push({
           title: (
             <Text
@@ -765,7 +789,7 @@ const mapDispatchToProps = (dispatch) =>
       getProfileUsers,
       getProfileUserDetails,
       getSavedSegments,
-      getUserProperties,
+      getUserPropertiesV2,
       fetchProjectSettingsV1,
       fetchProjectSettings,
       fetchMarketoIntegration,

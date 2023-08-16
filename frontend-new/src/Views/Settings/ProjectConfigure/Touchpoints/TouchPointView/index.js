@@ -1,18 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { connect, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { Text, SVG } from 'factorsComponents';
 import { Row, Col, Button, Radio, Input, Select, Tooltip } from 'antd';
 
 import {
-  getEventProperties,
+  getEventPropertiesV2,
   getEventPropertyValues
 } from 'Reducers/coreQuery/middleware';
 
 import FaFilterSelect from 'Components/FaFilterSelect';
 import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
 
-import FaSelect from '../../../../../components/FaSelect';
+import FaSelect from '../../../../../components/GenericComponents/FaSelect';
 
 import {
   getFiltersWithoutOrProperty,
@@ -28,13 +28,11 @@ import {
   Extra_PROP_SHOW_OPTIONS,
   RULE_TYPE_SF_CONTACT,
   ruleTypesNameMappingForHS,
-  reverseRuleTypesNameMappingForHS,
   RULE_TYPE_SF_CAMPAIGNS,
   RULE_TYPE_SF_TASKS,
   RULE_TYPE_SF_EVENTS,
   EVENTS_MAP,
   ruleTypesNameMappingForSF,
-  reverseRuleTypesNameMappingForSF,
   DEFAULT_TIMESTAMPS,
   PROPERTY_MAP_OPTIONS
 } from '../utils';
@@ -42,13 +40,19 @@ import { toCapitalCase } from 'Utils/global';
 import styles from './index.module.scss';
 import logger from 'Utils/logger';
 import { PropertySelect } from './PropertySelect';
+import getGroupIcon from 'Utils/getGroupIcon';
+import startCase from 'lodash/startCase';
+import {
+  convertGroupedPropertiesToUngrouped,
+  setDisplayName
+} from 'Utils/dataFormatter';
 
 const TouchpointView = ({
   activeProject,
   tchType = '2',
-  getEventProperties,
-  eventProperties,
-  eventUserProperties,
+  getEventPropertiesV2,
+  eventPropertiesV2,
+  eventUserPropertiesV2,
   rule,
   onCancel,
   onSave,
@@ -148,7 +152,7 @@ const TouchpointView = ({
   };
   useEffect(() => {
     const eventToCall = getEventToCall();
-    getEventProperties(activeProject.id, eventToCall);
+    getEventPropertiesV2(activeProject.id, eventToCall);
     if (!rule || !initialRender) reInitialise();
   }, [tchRuleType]);
   useEffect(() => {
@@ -190,7 +194,7 @@ const TouchpointView = ({
     const propKeys = Object.keys(propertyMap);
     Object.keys(propMap).forEach((key) => {
       if (key !== '$type' && propMap[key].va?.[0] !== '$') {
-        propMap[key].va = reversePropertyNameMap(propMap[key].va);
+        propMap[key].va = getReversePropertyName(propMap[key]?.va);
       }
       if (!propKeys.includes(key)) {
         extraProps[key] = propMap[key];
@@ -244,65 +248,96 @@ const TouchpointView = ({
     return EVENTS_MAP[tchRuleType];
   };
 
+  const getPropertiesFiltered = (propertiesObj, startsWith) => {
+    const propertiesFiltered = {};
+    if (propertiesObj) {
+      for (const key in propertiesObj) {
+        if (propertiesObj.hasOwnProperty(key)) {
+          propertiesFiltered[key] = propertiesObj[key].filter((item) =>
+            item?.[1]?.startsWith(startsWith)
+          );
+        }
+      }
+    }
+    return propertiesFiltered;
+  };
+
   useEffect(() => {
     const eventToCall = getEventToCall();
-    const tchUserProps = [];
+    let tchUserProps = {};
     const filterDD = Object.assign({}, filterDropDownOptions);
     const propState = [];
-    const eventProps = [];
+    let eventProps = {};
+    const propsArray = [];
     const startsWith = getStartsWith();
     if (tchType === '2') {
-      eventProperties[eventToCall]
-        ? eventProperties[eventToCall].forEach((prop) => {
-            if (startsWith?.length ? prop[1]?.startsWith(startsWith) : true) {
-              eventProps.push(prop);
-            }
-          })
-        : (() => {})();
-      tchRuleType !== RULE_TYPE_HS_FORM_SUBMISSIONS &&
-        eventUserProperties.forEach((prop) => {
-          if (startsWith?.length ? prop[1]?.startsWith(startsWith) : true) {
-            tchUserProps.push(prop);
-          }
-        });
+      eventProps = getPropertiesFiltered(
+        eventPropertiesV2[eventToCall],
+        startsWith
+      );
+      if (tchRuleType !== RULE_TYPE_HS_FORM_SUBMISSIONS) {
+        tchUserProps = getPropertiesFiltered(eventUserPropertiesV2, startsWith);
+      }
     } else if (tchType === '3') {
-      eventProperties[eventToCall]
-        ? eventProperties[eventToCall].forEach((prop) => {
-            if (startsWith?.length ? prop[1]?.startsWith(startsWith) : true) {
-              eventProps.push(prop);
-            }
-          })
-        : (() => {})();
-      eventUserProperties.forEach((prop) => {
-        if (startsWith?.length ? prop[1]?.startsWith(startsWith) : true) {
-          tchUserProps.push(prop);
+      eventProps = getPropertiesFiltered(
+        eventPropertiesV2[eventToCall],
+        startsWith
+      );
+      tchUserProps = getPropertiesFiltered(eventUserPropertiesV2, startsWith);
+    }
+    const filterOptsObj = {};
+    if (eventProps) {
+      Object.keys(eventProps)?.forEach((groupkey) => {
+        if (!filterOptsObj[groupkey]) {
+          filterOptsObj[groupkey] = {
+            label: startCase(groupkey),
+            icon: getGroupIcon(groupkey),
+            propertyType: 'event',
+            values: eventProps?.[groupkey]
+          };
+        } else {
+          eventProps?.[groupkey]?.forEach((optionArray) =>
+            filterOptsObj[groupkey].values.push(optionArray)
+          );
         }
+        // Convert to Array.
+        eventProps[groupkey].forEach((userPropArray) => {
+          propsArray.push(userPropArray);
+        });
+      });
+    }
+    if (tchUserProps) {
+      Object.keys(tchUserProps)?.forEach((groupkey) => {
+        if (!filterOptsObj[groupkey]) {
+          filterOptsObj[groupkey] = {
+            label: startCase(groupkey),
+            icon: getGroupIcon(groupkey),
+            propertyType: 'event',
+            values: tchUserProps?.[groupkey]
+          };
+        } else {
+          tchUserProps?.[groupkey]?.forEach((optionArray) =>
+            filterOptsObj[groupkey].values.push(optionArray)
+          );
+        }
+        // Convert to Array.
+        tchUserProps[groupkey].forEach((userPropArray) => {
+          propsArray.push(userPropArray);
+        });
       });
     }
 
-    filterDropDownOptions.props.forEach((k) => {
-      propState.push({
-        label: k.label,
-        icon: 'event',
-        values: [...eventProps, ...tchUserProps]
-      });
-    });
-
     const dateTypepoperties = [];
-    eventProps.forEach((prop) => {
+    propsArray.forEach((prop) => {
       if (prop[2] === 'datetime') {
-        dateTypepoperties.push(prop);
-      }
-    });
-    tchUserProps.forEach((prop) => {
-      if (prop[2] === 'datetime') {
-        dateTypepoperties.push(prop);
+        dateTypepoperties.push({ value: prop[1], label: prop[0] });
       }
     });
     setDateTypeProps(dateTypepoperties);
-    filterDD.props = propState;
+
+    filterDD.props = Object.values(filterOptsObj);
     setFiltDD(filterDD);
-  }, [eventProperties, timestampRef]);
+  }, [eventPropertiesV2, timestampRef]);
 
   const applyFilter = (fil, index) => {
     const filtState = [...newFilterStates];
@@ -413,8 +448,8 @@ const TouchpointView = ({
     setTouchPointPropRef(timeStVal);
   };
 
-  const setTimestampProp = (val) => {
-    setTouchPointPropRef(val[1]);
+  const setTimestampProp = ({ value, label }) => {
+    setTouchPointPropRef(value);
     setDateTypeDD(false);
   };
 
@@ -565,7 +600,7 @@ const TouchpointView = ({
               </Button>
               {dateTypeDD && (
                 <FaSelect
-                  optionClick={(opt) => setTimestampProp(opt)}
+                  optionClickCallback={setTimestampProp}
                   onClickOutside={() => setDateTypeDD(false)}
                   options={dateTypeProps}
                 ></FaSelect>
@@ -577,17 +612,17 @@ const TouchpointView = ({
     );
   };
 
-  const setPropType = (val) => {
+  const setPropType = ({ value, label }) => {
     const propMap = Object.assign({}, propertyMap);
-    propMap['$type']['va'] = val[0].toLowerCase();
+    propMap['$type']['va'] = value;
     setPropertyMap(propMap);
     // setTypeSelectorOpen(false);
   };
 
-  const setPropVal = (val, key) => {
+  const setPropVal = ({ value, label }, key) => {
     let propMap = Object.assign({}, propertyMap);
-    propMap[key]['va'] = reversePropertyNameMap(val[0]);
-    if (val[0].length !== 0 && isSearchedValue(val[0]))
+    propMap[key]['va'] = value;
+    if (value.length !== 0 && isSearchedValue(value))
       propMap[key]['ty'] = 'Constant';
     else propMap[key]['ty'] = 'Property';
     setPropertyMap(propMap);
@@ -616,74 +651,100 @@ const TouchpointView = ({
     }
   };
 
+  const eventPropertiesModified = useMemo(() => {
+    const eventToCall = getEventToCall();
+
+    const eventProps = [];
+    if (eventPropertiesV2?.[eventToCall]) {
+      convertGroupedPropertiesToUngrouped(
+        eventPropertiesV2?.[eventToCall],
+        eventProps
+      );
+    }
+    return eventProps;
+  }, [eventPropertiesV2, tchRuleType]);
+  const eventUserPropertiesModified = useMemo(() => {
+    const userPropertiesModified = [];
+    if (eventUserPropertiesV2) {
+      convertGroupedPropertiesToUngrouped(
+        eventUserPropertiesModified,
+        userPropertiesModified
+      );
+    }
+    return userPropertiesModified;
+  }, [eventUserPropertiesV2]);
+
   const renderEventPropertyCampOptions = () => {
     const eventToCall = getEventToCall();
     const propertiesMp = [];
     const startsWith = getStartsWith();
+
     if (tchType === '2') {
-      eventProperties[eventToCall]?.forEach((prop) => {
+      eventPropertiesModified?.forEach((prop) => {
         if (startsWith?.length ? prop[1]?.startsWith(startsWith) : true) {
-          propertiesMp.push([prop[0]]);
+          propertiesMp.push({ value: prop[1], label: prop[0] });
         }
       });
       tchRuleType !== RULE_TYPE_HS_FORM_SUBMISSIONS &&
-        eventUserProperties.forEach((prop) => {
+        eventUserPropertiesModified.forEach((prop) => {
           if (prop[1]?.startsWith(startsWith)) {
-            propertiesMp.push([prop[0]]);
+            propertiesMp.push({ value: prop[1], label: prop[0] });
           }
         });
     } else if (tchType === '3') {
-      eventProperties[eventToCall]?.forEach((prop) => {
+      eventPropertiesModified?.forEach((prop) => {
         if (prop[1]?.startsWith(startsWith)) {
-          propertiesMp.push([prop[0]]);
+          propertiesMp.push({ value: prop[1], label: prop[0] });
         }
       });
-      eventUserProperties.forEach((prop) => {
+      eventUserPropertiesModified.forEach((prop) => {
         if (prop[1]?.startsWith(startsWith)) {
-          propertiesMp.push([prop[0]]);
+          propertiesMp.push({ value: prop[1], label: prop[0] });
         }
       });
     }
     return propertiesMp;
   };
 
-  const propertyNameMap = (val) => {
+  const { propertyNameMap, reversePropertyNameMap } = useMemo(() => {
     const eventToCall = getEventToCall();
-    if (eventProperties[eventToCall] === undefined) return val;
-    const index = eventProperties[eventToCall]
-      ?.map((prop) => prop[1])
-      .indexOf(val);
-    if (index === -1) return val;
-    const name = eventProperties[eventToCall]?.[index]?.[0];
-    return name === undefined ? val : name;
-  };
-  const reversePropertyNameMap = (val) => {
-    const eventToCall = getEventToCall();
-    if (eventProperties[eventToCall] === undefined) return val;
-    const index = eventProperties[eventToCall]
-      ?.map((prop) => prop[0])
-      .indexOf(val);
-    if (index === -1) return val;
-    const name = eventProperties[eventToCall]?.[index]?.[1];
-    return name === undefined ? val : name;
-  };
+    const propertyNameMap = {};
+    const reversePropertyNameMap = {};
+    if (eventToCall && eventPropertiesV2?.[eventToCall]) {
+      Object.keys(eventPropertiesV2[eventToCall]).forEach((groupKey) => {
+        eventPropertiesV2[eventToCall][groupKey]?.forEach((optArray) => {
+          reversePropertyNameMap[optArray[0]] = optArray[1];
+          propertyNameMap[optArray[1]] = optArray[0];
+        });
+      });
+    }
+    return { propertyNameMap, reversePropertyNameMap };
+  }, [eventPropertiesV2, tchRuleType]);
 
-  //To check if the value is new value entered by user.
+  const getPropertyName = (val) => {
+    if (propertyNameMap.hasOwnProperty(val)) return propertyNameMap[val];
+    return val;
+  };
+  const getReversePropertyName = (val) => {
+    if (reversePropertyNameMap.hasOwnProperty(val))
+      return reversePropertyNameMap[val];
+    return val;
+  };
+  //To check if the value is new value entered by user. Returns True For New Value
   const isSearchedValue = (val) => {
     const eventToCall = getEventToCall();
-    const index1 = eventProperties[eventToCall]
-      ?.map((prop) => prop[0])
-      .indexOf(val);
-    const index2 = eventProperties[eventToCall]
-      ?.map((prop) => prop[1])
-      .indexOf(val);
-    if (index1 === -1 && index2 === -1) return true;
-    return false;
+    return (
+      !propertyNameMap.hasOwnProperty(val) &&
+      !reversePropertyNameMap.hasOwnProperty(val)
+    );
   };
+
   const renderTypePropertyOptions = () => {
     const options = [];
-    if (tchRuleType !== RULE_TYPE_HS_FORM_SUBMISSIONS) options.push(['Tactic']);
-    if (tchRuleType !== RULE_TYPE_HS_EMAILS) options.push(['Offer']);
+    if (tchRuleType !== RULE_TYPE_HS_FORM_SUBMISSIONS)
+      options.push({ value: 'tactic', label: 'Tactic' });
+    if (tchRuleType !== RULE_TYPE_HS_EMAILS)
+      options.push({ value: 'offer', label: 'Offer' });
     return options;
   };
   const renderPropertyMap = () => {
@@ -721,11 +782,11 @@ const TouchpointView = ({
             </Col>
             <PropertySelect
               title={
-                propertyMap[propKey]['va'] === ''
-                  ? 'Select Type Property'
-                  : propertyNameMap(propertyMap[propKey]['va'])
+                !propertyMap[propKey]['va'] || propertyMap[propKey]['va'] === ''
+                  ? `Select ${toCapitalCase(propKey?.slice(1))} Property`
+                  : setDisplayName(eventPropNames, propertyMap[propKey]['va'])
               }
-              setPropValue={(val) => setPropVal(val, propKey)}
+              setPropValue={(option) => setPropVal(option, propKey)}
               renderOptions={renderEventPropertyCampOptions}
               allowSearch={true}
             />
@@ -799,21 +860,18 @@ const TouchpointView = ({
   };
 
   //Rule Type Selection
-  const ruleTypeSelect = (val) => {
-    setTchRuleType(
-      tchType === '2'
-        ? ruleTypesNameMappingForHS[val[0]]
-        : ruleTypesNameMappingForSF[val[0]]
-    );
+  const ruleTypeSelect = (option) => {
+    setTchRuleType(option.value);
   };
   const renderTchRuleTypeOptions = () => {
-    let ruleTypes = Object.keys(ruleTypesNameMappingForHS).map((type) => [
-      type
-    ]);
     if (tchType === '3') {
-      ruleTypes = Object.keys(ruleTypesNameMappingForSF).map((type) => [type]);
+      return Object.entries(ruleTypesNameMappingForSF).map((option) => {
+        return { value: option[0], label: option[1] };
+      });
     }
-    return ruleTypes;
+    return Object.entries(ruleTypesNameMappingForHS).map((option) => {
+      return { value: option[0], label: option[1] };
+    });
   };
   const renderTchRuleType = () => {
     return (
@@ -827,8 +885,8 @@ const TouchpointView = ({
           <PropertySelect
             title={
               tchType === '2'
-                ? reverseRuleTypesNameMappingForHS[tchRuleType]
-                : reverseRuleTypesNameMappingForSF[tchRuleType]
+                ? ruleTypesNameMappingForHS[tchRuleType]
+                : ruleTypesNameMappingForSF[tchRuleType]
             }
             setPropValue={ruleTypeSelect}
             renderOptions={renderTchRuleTypeOptions}
@@ -848,10 +906,10 @@ const TouchpointView = ({
     };
     setExtraPropMap(extraMap);
   };
-  const setExtraPropVal = (val, key) => {
+  const setExtraPropVal = ({ value, label }, key) => {
     let propMap = Object.assign({}, extraPropMap);
-    propMap[key]['va'] = reversePropertyNameMap(val[0]);
-    if (val[0].length !== 0 && isSearchedValue(val[0]))
+    propMap[key]['va'] = value;
+    if (value.length !== 0 && isSearchedValue(value))
       propMap[key]['ty'] = 'Constant';
     else propMap[key]['ty'] = 'Property';
     setExtraPropMap(propMap);
@@ -869,9 +927,11 @@ const TouchpointView = ({
 
         {extraPropBtn && (
           <FaSelect
-            options={Extra_PROP_SHOW_OPTIONS}
-            optionClick={(op) => {
-              setExtraMapByProp(op[2]);
+            options={Extra_PROP_SHOW_OPTIONS.map((op) => {
+              return { value: op[2], label: op[0] };
+            })}
+            optionClickCallback={(option) => {
+              setExtraMapByProp(option.value);
               setExtraPropBtn(false);
             }}
             onClickOutside={() => setExtraPropBtn(false)}
@@ -894,9 +954,9 @@ const TouchpointView = ({
           </Col>
           <PropertySelect
             title={
-              extraPropMap[propKey]['va'] === ''
+              !extraPropMap[propKey]['va'] || extraPropMap[propKey]['va'] === ''
                 ? 'Select Property'
-                : propertyNameMap(extraPropMap[propKey]['va'])
+                : setDisplayName(eventPropNames, extraPropMap[propKey]['va'])
             }
             setPropValue={(val) => setExtraPropVal(val, propKey)}
             renderOptions={renderEventPropertyCampOptions}
@@ -933,14 +993,14 @@ const TouchpointView = ({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  eventProperties: state.coreQuery.eventProperties,
-  eventUserProperties: state.coreQuery.eventUserProperties,
+  eventPropertiesV2: state.coreQuery.eventPropertiesV2,
+  eventUserPropertiesV2: state.coreQuery.eventUserPropertiesV2,
   propertyValuesMap: state.coreQuery.propertyValuesMap
 });
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
-      getEventProperties,
+      getEventPropertiesV2,
       getEventPropertyValues
     },
     dispatch

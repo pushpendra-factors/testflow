@@ -11,7 +11,7 @@ import {
 } from 'Reducers/factors';
 import {
   fetchEventNames,
-  getUserProperties
+  getUserPropertiesV2
 } from 'Reducers/coreQuery/middleware';
 import { connect, useSelector } from 'react-redux';
 import { fetchProjectAgents } from 'Reducers/agentActions';
@@ -73,7 +73,7 @@ const Factors = ({
   fetchGoalInsights,
   fetchFactorsTrackedEvents,
   fetchFactorsTrackedUserProperties,
-  getUserProperties,
+  getUserPropertiesV2,
   fetchDemoProject,
   getHubspotContact,
   fetchProjectSettingsV1,
@@ -154,7 +154,7 @@ const Factors = ({
       await fetchFactorsModels(activeProject.id);
       await fetchFactorsTrackedEvents(activeProject.id);
       await fetchFactorsTrackedUserProperties(activeProject.id);
-      await getUserProperties(activeProject.id, 'events');
+      await getUserPropertiesV2(activeProject.id, 'events');
       await fetchProjectAgents(activeProject.id);
       // await fetchSavedExplainGoals(activeProject.id);
     };
@@ -452,7 +452,7 @@ export default connect(mapStateToProps, {
   fetchGoalInsights,
   fetchFactorsModels,
   fetchEventNames,
-  getUserProperties,
+  getUserPropertiesV2,
   fetchDemoProject,
   getHubspotContact,
   fetchProjectSettingsV1,

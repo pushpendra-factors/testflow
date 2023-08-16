@@ -57,8 +57,9 @@ function FilterWrapper({
 
   useEffect(() => {
     const filterDD = { ...filterDropDownOptions, props: [] };
-    Object.keys(filterProps)?.forEach((key) => {       
+    Object.keys(filterProps)?.forEach((key) => {
       if (!Array.isArray(filterProps[key])) {
+        //For Event and User Properties Which Have Internal Groups.
         const groups = filterProps[key];
         if (groups) {
           Object.keys(groups)?.forEach((groupKey) => {
@@ -75,7 +76,11 @@ function FilterWrapper({
         }
       } else {
         const label = `${PropTextFormat(key)} Properties`;
-        const icon = ['user', 'event'].includes(key) ? key : ['button_click', 'page_view'].includes(key) ? 'event' : 'group'; //'button_click', 'page_view' custom types used in pathanalysis
+        const icon = ['user', 'event'].includes(key)
+          ? key
+          : ['button_click', 'page_view'].includes(key)
+          ? 'event'
+          : 'group'; //'button_click', 'page_view' custom types used in pathanalysis
         const values = filterProps[key];
         filterDD.props.push({
           label,
@@ -146,13 +151,13 @@ function FilterWrapper({
   };
 
   const applyFilter = (filterState) => {
-    if (filterState) { 
+    if (filterState) {
       insertFilter(filterState, index);
       closeFilter();
     }
   };
 
-  const setValuesByProps = (props) => { 
+  const setValuesByProps = (props) => {
     if (props[2] === 'categorical') {
       if (props[3] === 'user' || props[3] === 'user_g') {
         getUserPropertyValues(projectID, props[1]);

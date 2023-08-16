@@ -5,7 +5,12 @@ import { SVG, Text } from 'factorsComponents';
 import styles from './index.module.scss';
 import GroupSelect2 from '../GroupSelect2';
 import FaSelect from 'Components/FaSelect';
-import { PropTextFormat } from 'Utils/dataFormatter';
+import {
+  PropTextFormat,
+  convertAndAddPropertiesToGroupSelectOptions
+} from 'Utils/dataFormatter';
+import getGroupIcon from 'Utils/getGroupIcon';
+import startCase from 'lodash/startCase';
 
 function EventGroupBlock({
   eventGroup,
@@ -14,9 +19,9 @@ function EventGroupBlock({
   grpIndex,
   groupByEvent,
   event,
-  eventUserProperties,
+  eventUserPropertiesV2,
   userPropNames,
-  eventProperties,
+  eventPropertiesV2,
   eventPropNames,
   groupProperties,
   groupPropNames,
@@ -24,49 +29,53 @@ function EventGroupBlock({
   delGroupState,
   closeDropDown
 }) {
-  const [filterOptions, setFilterOptions] = useState([
-    {
-      label: 'Event Properties',
-      icon: 'event',
-      values: []
-    },
-    {
-      label: 'User Properties',
-      icon: 'user',
-      values: []
-    },
-    {
-      label: 'Group Properties',
-      icon: 'group',
-      values: []
-    }
-  ]);
+  const [filterOptions, setFilterOptions] = useState();
 
   const [propSelVis, setSelVis] = useState(false);
   const [isGroupByDDVisible, setGroupByDDVisible] = useState(false);
 
   useEffect(() => {
-    const filterOpts = [...filterOptions];
-    filterOpts[0].values = eventProperties[event.label];
+    const filterOptsObj = {};
+    const eventGroups = eventPropertiesV2[event?.label] || {};
+    convertAndAddPropertiesToGroupSelectOptions(
+      eventGroups,
+      filterOptsObj,
+      'event'
+    );
     if (eventGroup) {
-      filterOpts[2].values = groupProperties[eventGroup];
-      filterOpts[1].values = [];
+      const groupLabel = `${PropTextFormat(eventGroup)} Properties`;
+      const groupValues =
+        groupProperties[eventGroup]?.map((op) => {
+          return {
+            value: op?.[1],
+            label: op?.[0],
+            extraProps: {
+              valueType: op?.[2],
+              propertyType: 'group'
+            }
+          };
+        }) || [];
+      const groupPropIconName = getGroupIcon(groupLabel);
+      filterOptsObj[groupLabel] = {
+        iconName: groupPropIconName === 'NoImage' ? 'group' : groupPropIconName,
+        label: groupLabel,
+        values: groupValues
+      };
     } else {
-      filterOpts[1].values = eventUserProperties;
-      filterOpts[2].values = [];
+      if (eventUserPropertiesV2) {
+        convertAndAddPropertiesToGroupSelectOptions(
+          eventUserPropertiesV2,
+          filterOptsObj,
+          'user'
+        );
+      }
     }
-    setFilterOptions(filterOpts);
-  }, [eventUserProperties, eventProperties, groupProperties]);
+    setFilterOptions(Object.values(filterOptsObj));
+  }, [eventUserPropertiesV2, eventPropertiesV2, groupProperties]);
 
   const onChange = (group, val, ind) => {
     const newGroupByState = { ...groupByEvent };
-    if (group === 'User Properties') {
-      newGroupByState.prop_category = 'user';
-    } else if (group === 'Group Properties') {
-      newGroupByState.prop_category = 'group';
-    } else {
-      newGroupByState.prop_category = 'event';
-    }
+    newGroupByState.prop_category = option?.extraProps?.propertyType;
     newGroupByState.eventName = event.label;
     newGroupByState.property = val[1];
     newGroupByState.prop_type = val[2];
@@ -257,8 +266,8 @@ function EventGroupBlock({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   groupProperties: state.coreQuery.groupProperties,
-  eventUserProperties: state.coreQuery.eventUserProperties,
-  eventProperties: state.coreQuery.eventProperties,
+  eventUserPropertiesV2: state.coreQuery.eventUserPropertiesV2,
+  eventPropertiesV2: state.coreQuery.eventPropertiesV2,
   userPropNames: state.coreQuery.userPropNames,
   eventPropNames: state.coreQuery.eventPropNames,
   groupPropNames: state.coreQuery.groupPropNames

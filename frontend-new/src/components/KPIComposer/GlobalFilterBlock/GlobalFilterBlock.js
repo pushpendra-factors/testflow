@@ -3,7 +3,7 @@ import isEmpty from 'lodash/isEmpty';
 import { QUERY_TYPE_EVENT, QUERY_TYPE_FUNNEL } from '../../../utils/constants';
 import ComposerBlock from '../../QueryCommons/ComposerBlock';
 import GlobalFilter from '../GlobalFilter';
-import { getUserProperties } from '../../../reducers/coreQuery/middleware';
+import { getUserPropertiesV2 } from '../../../reducers/coreQuery/middleware';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { areKpisInSameGroup } from '../../../utils/kpiQueryComposer.helpers';
@@ -18,7 +18,7 @@ const GlobalFilterBlock = ({
   KPIConfigProps,
   setQueryOptions,
   DefaultQueryOptsVal,
-  getUserProperties,
+  getUserPropertiesV2,
   propertyMaps
 }) => {
   const [filterBlockOpen, setFilterBlockOpen] = useState(true);
@@ -70,7 +70,7 @@ const GlobalFilterBlock = ({
           setGlobalFilters={setGlobalFiltersOption}
           onFiltersLoad={[
             () => {
-              getUserProperties(activeProject.id, queryType);
+              getUserPropertiesV2(activeProject.id, queryType);
             }
           ]}
           selectedMainCategory={selectedMainCategory}
@@ -91,7 +91,7 @@ const mapStateToProps = (state) => ({
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
-      getUserProperties
+      getUserPropertiesV2
     },
     dispatch
   );

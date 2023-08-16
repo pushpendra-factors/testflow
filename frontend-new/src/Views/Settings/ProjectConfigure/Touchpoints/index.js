@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { connect, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { Text, SVG } from 'factorsComponents';
-import { getEventProperties } from 'Reducers/coreQuery/middleware';
+import { getEventPropertiesV2 } from 'Reducers/coreQuery/middleware';
 import { fetchProjects, udpateProjectDetails } from 'Reducers/global';
 import {
   Row,
@@ -36,7 +36,7 @@ const { TabPane } = Tabs;
 const Touchpoints = ({
   activeProject,
   currentProjectSettings,
-  getEventProperties,
+  getEventPropertiesV2,
   fetchProjects,
   udpateProjectDetails
 }) => {
@@ -103,8 +103,8 @@ const Touchpoints = ({
         ]
       : [];
     setTouchPointsData(touchpointObjs);
-    getEventProperties(activeProject.id, '$sf_campaign_member_updated');
-    getEventProperties(activeProject.id, '$sf_campaign_member_created');
+    getEventPropertiesV2(activeProject.id, '$sf_campaign_member_updated');
+    getEventPropertiesV2(activeProject.id, '$sf_campaign_member_created');
   };
 
   const setHubspotContactData = (data = []) => {
@@ -120,7 +120,7 @@ const Touchpoints = ({
         ]
       : [];
     setTouchPointsData(touchpointObjs);
-    getEventProperties(activeProject.id, '$hubspot_contact_updated');
+    getEventPropertiesV2(activeProject.id, '$hubspot_contact_updated');
   };
 
   const setPropertyMapByDisplayName = (propertyMap) => {
@@ -534,7 +534,7 @@ const mapStateToProps = (state) => ({
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
-      getEventProperties,
+      getEventPropertiesV2,
       fetchProjects,
       udpateProjectDetails
     },

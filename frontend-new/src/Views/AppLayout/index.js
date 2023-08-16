@@ -23,8 +23,8 @@ import {
   fetchAttributionQueries
 } from 'Attribution/state/services';
 import {
-  getUserProperties,
-  getEventProperties,
+  getUserPropertiesV2,
+  getEventPropertiesV2,
   fetchEventNames,
   getGroupProperties
 } from '../../reducers/coreQuery/middleware';
@@ -62,8 +62,8 @@ customizeHighCharts(Highcharts);
 function AppLayout({
   fetchProjects,
   fetchEventNames,
-  getEventProperties,
-  getUserProperties,
+  getEventPropertiesV2,
+  getUserPropertiesV2,
   getGroupProperties,
   fetchWeeklyIngishtsMetaData,
   setActiveProject,
@@ -171,7 +171,7 @@ function AppLayout({
       dispatch(fetchPageUrls(active_project?.id));
       // dispatch(deleteQueryTest())
       fetchEventNames(active_project?.id);
-      getUserProperties(active_project?.id);
+      getUserPropertiesV2(active_project?.id);
       getGroupProperties(active_project?.id);
       dispatch(fetchSmartPropertyRules(active_project?.id));
       fetchWeeklyIngishtsMetaData(active_project?.id);
@@ -256,8 +256,8 @@ const mapDispatchToProps = (dispatch) =>
       fetchProjects,
       fetchDashboards,
       fetchEventNames,
-      getEventProperties,
-      getUserProperties,
+      getEventPropertiesV2,
+      getUserPropertiesV2,
       getGroupProperties,
       fetchWeeklyIngishtsMetaData,
       setActiveProject,

@@ -9,7 +9,7 @@ import GroupBlock from './GroupBlock';
 import { QUERY_TYPE_PROFILE } from '../../utils/constants';
 import ComposerBlock from '../QueryCommons/ComposerBlock';
 import {
-  getUserProperties,
+  getUserPropertiesV2,
   getGroupProperties
 } from 'Reducers/coreQuery/middleware';
 import MomentTz from 'Components/MomentTz';
@@ -26,7 +26,7 @@ function ProfileComposer({
   eventChange,
   queryType,
   fetchGroups,
-  getUserProperties,
+  getUserPropertiesV2,
   getGroupProperties,
   activeProject,
   groupOpts,
@@ -56,7 +56,7 @@ function ProfileComposer({
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
-      getUserProperties(activeProject.id, queryType);
+      getUserPropertiesV2(activeProject.id, queryType);
     }
   }, [activeProject.id]);
 
@@ -83,7 +83,13 @@ function ProfileComposer({
   };
 
   const resetLabel = (group) => {
-    const labelMap = ['salesforce', 'hubspot', '6signal', 'linkedin_company', 'g2'];
+    const labelMap = [
+      'salesforce',
+      'hubspot',
+      '6signal',
+      'linkedin_company',
+      'g2'
+    ];
     const label =
       labelMap.find((key) => group.toLowerCase().includes(key)) || 'web';
     const query = { ...queries, label, alias: '', filters: [] };
@@ -401,7 +407,7 @@ const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
       fetchGroups,
-      getUserProperties,
+      getUserPropertiesV2,
       getGroupProperties
     },
     dispatch

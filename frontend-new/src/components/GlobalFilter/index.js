@@ -13,16 +13,11 @@ const GlobalFilter = ({
   filters = [],
   setGlobalFilters,
   groupName = 'users',
-  event,
-  isNewVersion = false //Only For Query Composer Using New Version
+  event
 }) => {
-  const {
-    userProperties,
-    groupProperties,
-    eventProperties,
-    userPropertiesV2,
-    eventPropertiesV2
-  } = useSelector((state) => state.coreQuery);
+  const { groupProperties, userPropertiesV2, eventPropertiesV2 } = useSelector(
+    (state) => state.coreQuery
+  );
   const activeProject = useSelector((state) => state.global.active_project);
   const [filterProps, setFilterProperties] = useState({});
   const [filterDD, setFilterDD] = useState(false);
@@ -31,25 +26,15 @@ const GlobalFilter = ({
   useEffect(() => {
     const props = {};
     if (event?.label) {
-      if (isNewVersion) props.event = eventPropertiesV2[event.label];
-      else props.event = eventProperties[event.label];
+      props.event = eventPropertiesV2[event.label];
     }
     if (groupName === 'users' || groupName === 'events') {
-      if (isNewVersion) props.user = userPropertiesV2;
-      else props.user = userProperties;
+      props.user = userPropertiesV2;
     } else {
       props[groupName] = groupProperties[groupName];
     }
     setFilterProperties(props);
-  }, [
-    userProperties,
-    groupProperties,
-    eventProperties,
-    event,
-    groupName,
-    eventPropertiesV2,
-    userPropertiesV2
-  ]);
+  }, [groupProperties, event, groupName, eventPropertiesV2, userPropertiesV2]);
 
   const delFilter = (index) => {
     const filtersSorted = [...filters];

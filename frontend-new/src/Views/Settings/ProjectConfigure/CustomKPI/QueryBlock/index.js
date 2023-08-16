@@ -32,8 +32,8 @@ function QueryBlock({
   groupBy,
   setGroupBy,
   delGroupBy,
-  // userProperties,
-  // eventProperties,
+  // userPropertiesV2,
+  // eventPropertiesV2,
   // setSelectedMainCategory,
   kpi,
   KPIConfigProps,
@@ -109,12 +109,12 @@ function QueryBlock({
   //   } // Akhil please check this line
   //   const assignFilterProps = Object.assign({}, filterProps);
 
-  //   if (eventProperties[event.label]) {
-  //     assignFilterProps.event = eventProperties[event.label];
+  //   if (eventPropertiesV2[event.label]) {
+  //     assignFilterProps.event = eventPropertiesV2[event.label];
   //   }
-  //   assignFilterProps.user = userProperties;
+  //   assignFilterProps.user = userPropertiesV2;
   //   setFilterProperties(assignFilterProps);
-  // }, [userProperties, eventProperties]);
+  // }, [userPropertiesV2, eventPropertiesV2]);
 
   const triggerDropDown = () => {
     setDDVisible(true);
@@ -585,8 +585,8 @@ function QueryBlock({
 const mapStateToProps = (state) => ({
   eventOptions: state.coreQuery.eventOptions,
   activeProject: state.global.active_project,
-  userProperties: state.coreQuery.userProperties,
-  eventProperties: state.coreQuery.eventProperties,
+  userPropertiesV2: state.coreQuery.userPropertiesV2,
+  eventPropertiesV2: state.coreQuery.eventPropertiesV2,
   groupBy: state.coreQuery.groupBy.event,
   eventNames: state.coreQuery.eventNames,
   kpi: state.kpi

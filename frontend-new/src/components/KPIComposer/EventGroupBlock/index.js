@@ -15,31 +15,31 @@ const EventGroupBlock = ({
   grpIndex,
   groupByEvent,
   event,
-  userProperties,
+  userPropertiesV2,
   userPropNames,
-  eventProperties,
+  eventPropertiesV2,
   eventPropNames,
   setGroupState,
   delGroupState,
   closeDropDown,
   selectedMainCategory,
-  KPI_config,
+  KPI_config
 }) => {
   const [filterOptions, setFilterOptions] = useState([
     {
       label: 'Event Properties',
       icon: 'mouseclick',
-      values: [],
-    },
+      values: []
+    }
   ]);
 
   const [propSelVis, setSelVis] = useState(false);
 
   // useEffect(() => {
   //   const filterOpts = [...filterOptions];
-  //   filterOpts[1].values = userProperties;
+  //   filterOpts[1].values = userPropertiesV2;
   //   setFilterOptions(filterOpts);
-  // }, [userProperties]);
+  // }, [userPropertiesV2]);
 
   useEffect(() => {
     const filterOpts = [...filterOptions];
@@ -52,7 +52,8 @@ const EventGroupBlock = ({
       if (item == null) return;
       let ddName = item.display_name ? item.display_name : item.name;
       let ddtype =
-        (selGroup?.category == 'channels' || selGroup?.category == 'custom_channels')
+        selGroup?.category == 'channels' ||
+        selGroup?.category == 'custom_channels'
           ? item.object_type
           : item.entity
           ? item.entity
@@ -62,13 +63,13 @@ const EventGroupBlock = ({
 
     filterOpts[0].values = DDvalues;
     setFilterOptions(filterOpts);
-  }, [eventProperties]);
+  }, [eventPropertiesV2]);
 
   // useEffect(() => {
   //   const filterOpts = [...filterOptions];
-  //   filterOpts[0].values = eventProperties[event.label];
+  //   filterOpts[0].values = eventPropertiesV2[event.label];
   //   setFilterOptions(filterOpts);
-  // }, [eventProperties]);
+  // }, [eventPropertiesV2]);
 
   const onChange = (group, val) => {
     const newGroupByState = Object.assign({}, groupByEvent);
@@ -112,14 +113,14 @@ const EventGroupBlock = ({
     const propOpts = {
       numerical: [
         ['original values', null, 'raw_values'],
-        ['bucketed values', null, 'with_buckets'],
+        ['bucketed values', null, 'with_buckets']
       ],
       datetime: [
         ['hour', null, 'hour'],
         ['date', null, 'day'],
         ['week', null, 'week'],
-        ['month', null, 'month'],
-      ],
+        ['month', null, 'month']
+      ]
     };
 
     const getProp = (opt) => {
@@ -223,11 +224,11 @@ const EventGroupBlock = ({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  userProperties: state.coreQuery.userProperties,
-  eventProperties: state.coreQuery.eventProperties,
+  userPropertiesV2: state.coreQuery.userPropertiesV2,
+  eventPropertiesV2: state.coreQuery.eventPropertiesV2,
   userPropNames: state.coreQuery.userPropNames,
   eventPropNames: state.coreQuery.eventPropNames,
-  KPI_config: state.kpi?.config,
+  KPI_config: state.kpi?.config
 });
 
 export default connect(mapStateToProps)(EventGroupBlock);

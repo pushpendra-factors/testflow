@@ -4,16 +4,21 @@ import styles from 'Components/QueryComposer/GroupBlock/index.module.scss';
 import { SVG, Text } from 'Components/factorsComponents';
 import { bindActionCreators } from 'redux';
 import { Button, Tooltip } from 'antd';
-import { setGroupBy, delGroupBy, getEventProperties } from 'Reducers/coreQuery/middleware';
+import {
+  setGroupBy,
+  delGroupBy,
+  getEventPropertiesV2
+} from 'Reducers/coreQuery/middleware';
 import FaSelect from 'Components/FaSelect';
 import { TOOLTIP_CONSTANTS } from 'Constants/tooltips.constans';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import { convertGroupedPropertiesToUngrouped } from 'Utils/dataFormatter';
 
 function GroupBlock({
   groupByState,
   setGroupBy,
   delGroupBy,
-  userProperties,
+  userPropertiesV2,
   groupProperties,
   userPropNames,
   groupPropNames,
@@ -24,9 +29,9 @@ function GroupBlock({
   eventLevelExpandBy,
   buttonClickPropNames,
   pageViewPropNames,
-  eventProperties,
-  getEventProperties,
-  eventTypeName = "",
+  eventPropertiesV2,
+  getEventPropertiesV2,
+  eventTypeName = '',
   eventItem,
   activeProject,
   eventPropNames
@@ -41,22 +46,52 @@ function GroupBlock({
     }
   ]);
 
-  const selectedEventName = eventItem?.value?.split(",")[0];
+  const selectedEventName = eventItem?.value?.split(',')[0];
   useEffect(() => {
-    getEventProperties(activeProject?.id, selectedEventName);
+    getEventPropertiesV2(activeProject?.id, selectedEventName);
   }, [eventItem]);
 
-
+  const modifyUserProperties = () => {
+    const userPropertiesModified = [];
+    if (userPropertiesV2) {
+      convertGroupedPropertiesToUngrouped(
+        userPropertiesV2,
+        userPropertiesModified
+      );
+    }
+    return userPropertiesModified;
+  };
+  const modifyEventProperties = (eventName) => {
+    const eventProps = [];
+    if (eventName && eventPropertiesV2?.[eventName]) {
+      convertGroupedPropertiesToUngrouped(
+        eventPropertiesV2?.[eventName],
+        eventProps
+      );
+    }
+    return eventProps;
+  };
   useEffect(() => {
     const filterOpts = [...filterOptions];
 
     switch (selectedEventName) {
-      case 'Button Clicks': filterOpts[0].values = buttonClickPropNames; break;
-      case 'Sessions': filterOpts[0].values = eventProperties['$session']; break;
-      case 'CRM Events': filterOpts[0].values = userProperties; break;
-      case 'Page Views': filterOpts[0].values = pageViewPropNames; break;
-      case selectedEventName: filterOpts[0].values = eventProperties[selectedEventName]; break;
-      default: filterOpts[0].values = [];
+      case 'Button Clicks':
+        filterOpts[0].values = buttonClickPropNames;
+        break;
+      case 'Sessions':
+        filterOpts[0].values = modifyEventProperties('$session');
+        break;
+      case 'CRM Events':
+        filterOpts[0].values = modifyUserProperties();
+        break;
+      case 'Page Views':
+        filterOpts[0].values = pageViewPropNames;
+        break;
+      case selectedEventName:
+        filterOpts[0].values = modifyEventProperties(selectedEventName);
+        break;
+      default:
+        filterOpts[0].values = [];
     }
 
     const modifiedFilterOpts = filterOpts?.map((opt) => {
@@ -75,7 +110,16 @@ function GroupBlock({
       };
     });
     setFilterOptions(modifiedFilterOpts);
-  }, [userProperties, groupProperties, groupName, eventTypeName, eventProperties, buttonClickPropNames, pageViewPropNames, selectedEventName]);
+  }, [
+    userPropertiesV2,
+    groupProperties,
+    groupName,
+    eventTypeName,
+    eventPropertiesV2,
+    buttonClickPropNames,
+    pageViewPropNames,
+    selectedEventName
+  ]);
 
   const delOption = (index) => {
     // delGroupBy('global', groupByState.global[index], index);
@@ -233,19 +277,21 @@ function GroupBlock({
     );
   };
 
-  const getIcon = (groupByEvent) => { 
+  const getIcon = (groupByEvent) => {
     const { property, prop_category } = groupByEvent || {};
     if (!property) return null;
     const iconName = prop_category === 'group' ? 'user' : prop_category;
     return <SVG name={iconName} size={16} color={'purple'} />;
   };
-  
-  const renderGroupDisplayName = (opt, index) => { 
+
+  const renderGroupDisplayName = (opt, index) => {
     let propertyName = '';
     if (opt.property && opt.prop_category === 'event') {
       propertyName = eventPropNames[opt.property]
         ? eventPropNames[opt.property]
-        : (userPropNames[opt.property] ? userPropNames[opt.property] : opt.property);
+        : userPropNames[opt.property]
+        ? userPropNames[opt.property]
+        : opt.property;
     }
     if (opt.property && opt.prop_category === 'group') {
       propertyName = groupPropNames[opt.property]
@@ -322,15 +368,15 @@ function GroupBlock({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  userProperties: state.coreQuery.userProperties,
+  userPropertiesV2: state.coreQuery.userPropertiesV2,
   groupProperties: state.coreQuery.groupProperties,
   userPropNames: state.coreQuery.userPropNames,
   groupPropNames: state.coreQuery.groupPropNames,
   groupByState: state.coreQuery.groupBy,
   buttonClickPropNames: state.coreQuery.buttonClickPropNames,
   pageViewPropNames: state.coreQuery.pageViewPropNames,
-  eventProperties: state.coreQuery.eventProperties,
-  eventPropNames: state.coreQuery.eventPropNames,
+  eventPropertiesV2: state.coreQuery.eventPropertiesV2,
+  eventPropNames: state.coreQuery.eventPropNames
 });
 
 const mapDispatchToProps = (dispatch) =>
@@ -338,7 +384,7 @@ const mapDispatchToProps = (dispatch) =>
     {
       setGroupBy,
       delGroupBy,
-      getEventProperties,
+      getEventPropertiesV2
     },
     dispatch
   );

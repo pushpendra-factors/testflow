@@ -23,7 +23,7 @@ function ProfileBlock({
   eventChange,
   queries,
   activeProject,
-  userProperties,
+  userPropertiesV2,
   groupProperties,
   groupAnalysis,
   queryOptions,
@@ -84,12 +84,12 @@ function ProfileBlock({
     }
     const props = {};
     if (groupAnalysis === 'users') {
-      props.user = userProperties;
+      props.user = userPropertiesV2;
     } else {
       props[groupAnalysis] = groupProperties[groupAnalysis];
     }
     setFilterProperties(props);
-  }, [userProperties, groupProperties, event, groupAnalysis]);
+  }, [userPropertiesV2, groupProperties, event, groupAnalysis]);
 
   const deleteItem = () => {
     eventChange(event, index - 1, 'delete');
@@ -442,7 +442,7 @@ function ProfileBlock({
 const mapStateToProps = (state) => ({
   eventOptions: state.coreQuery.eventOptions,
   activeProject: state.global.active_project,
-  userProperties: state.coreQuery.userProperties,
+  userPropertiesV2: state.coreQuery.userPropertiesV2,
   groupProperties: state.coreQuery.groupProperties,
   eventNames: state.coreQuery.eventNames
 });
