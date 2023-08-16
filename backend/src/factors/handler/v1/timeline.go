@@ -12,8 +12,6 @@ import (
 	"strconv"
 	"time"
 
-	C "factors/config"
-
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
@@ -63,8 +61,12 @@ func GetProfileUsersHandler(c *gin.Context) (interface{}, int, string, string, b
 		return nil, errCode, "", errMsg, true
 	}
 
+	scoringAvailable, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_ACCOUNT_SCORING)
+	if err != nil {
+		logCtx.Error("Error fetching scoring availability status for project ID-", projectId)
+	}
 	// Add user scores to the response if scoring is enabled
-	if getScore || C.IsScoringEnabled(projectId) {
+	if getScore && scoringAvailable {
 		// Separate anonymous and known user IDs
 		var userIdsAnonymous []string
 		var userIdsNonAnonymous []string
@@ -237,8 +239,12 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 		return "", errCode, "", errMsg, true
 	}
 
+	scoringAvailable, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_ACCOUNT_SCORING)
+	if err != nil {
+		logCtx.Error("Error fetching scoring availability status for the project")
+	}
 	// Add account scores to the response if scoring is enabled
-	if getScore || C.IsScoringEnabled(projectId) {
+	if getScore && scoringAvailable {
 		// Retrieve scores for account IDs
 		var accountIds []string
 		for _, profile := range profileAccountsList {
