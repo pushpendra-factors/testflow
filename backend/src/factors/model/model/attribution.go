@@ -2311,6 +2311,7 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 
 // SanitizeResult removes unwanted headers which are marked by (remove).
 // Ex. For KPIs like Revenue/Pipeline, User conversion rate is not needed.
+// It also updates the channel names.
 func SanitizeResult(result *QueryResult) {
 
 	// Populating the valid index
@@ -2344,6 +2345,33 @@ func SanitizeResult(result *QueryResult) {
 
 	result.Headers = resultHeader
 	result.Rows = resultRows
+	UpdateChannelName(result, "adwords", "Google Ads")
+}
+
+// UpdateChannelName updates the original channel names with the given  channel name
+func UpdateChannelName(result *QueryResult, originalName string, newName string) {
+
+	hasChannelName := false
+	var channelNameIdx int
+	for idx, colName := range result.Headers {
+		if colName == "ChannelName" {
+			channelNameIdx = idx
+			hasChannelName = true
+			break
+		}
+	}
+
+	if !hasChannelName {
+		return
+	}
+
+	for _, row := range result.Rows {
+
+		if row[channelNameIdx] == originalName {
+			row[channelNameIdx] = newName
+		}
+
+	}
 }
 
 // SanitizeResultForSourceAndChannel removes marketing metrics for source and channel level report
