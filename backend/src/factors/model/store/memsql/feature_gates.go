@@ -163,7 +163,7 @@ func (store *MemSQL) GetAllProjectsWithFeatureEnabled(featureName string) ([]int
 		return nil, err
 	}
 	for _, projectId := range projectIDs {
-		available, _, err := store.GetFeatureStatusForProjectV2(projectId, featureName)
+		available, err := store.GetFeatureStatusForProjectV2(projectId, featureName)
 		if err != nil {
 			log.WithFields(log.Fields{"project_id": projectId, "feature": featureName}).WithError(err).Error("failed to get feature status for project ID ")
 			continue
