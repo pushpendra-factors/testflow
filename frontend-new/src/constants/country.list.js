@@ -104,7 +104,7 @@ export const COUNTRY_LIST = [
     iso_code: 'BT'
   },
   {
-    name: ['bolivia (plurinational state of)', 'bolivia'],
+    name: ['bolivia', 'bolivia (plurinational state of)'],
     iso_code: 'BO'
   },
   {
@@ -131,11 +131,11 @@ export const COUNTRY_LIST = [
     iso_code: 'BR'
   },
   {
-    name: ['british indian ocean territory', 'british virgin islands'],
+    name: ['british virgin islands', 'british indian ocean territory'],
     iso_code: 'IO'
   },
   {
-    name: ['brunei darussalam', 'brunei'],
+    name: ['brunei', 'brunei darussalam'],
     iso_code: 'BN'
   },
   {
@@ -208,8 +208,8 @@ export const COUNTRY_LIST = [
   },
   {
     name: [
-      'congo, democratic republic of the congo',
       'congo republic',
+      'congo, democratic republic of the congo',
       'dr congo',
       'republic of the congo'
     ],
@@ -224,7 +224,7 @@ export const COUNTRY_LIST = [
     iso_code: 'CR'
   },
   {
-    name: ["côte d'ivoire", 'ivory coast'],
+    name: ['ivory coast', "côte d'ivoire"],
     iso_code: 'CI'
   },
   {
@@ -236,7 +236,7 @@ export const COUNTRY_LIST = [
     iso_code: 'CU'
   },
   {
-    name: ['curaçao', 'curaao'],
+    name: ['curaao', 'curaçao'],
     iso_code: 'CW'
   },
   {
@@ -296,7 +296,7 @@ export const COUNTRY_LIST = [
     iso_code: 'ET'
   },
   {
-    name: ['falkland islands (malvinas)', 'falkland islands'],
+    name: ['falkland islands', 'falkland islands (malvinas)'],
     iso_code: 'FK'
   },
   {
@@ -400,7 +400,7 @@ export const COUNTRY_LIST = [
     iso_code: 'HM'
   },
   {
-    name: ['holy see', 'vatican city'],
+    name: ['vatican city', 'holy see'],
     iso_code: 'VA'
   },
   {
@@ -428,7 +428,7 @@ export const COUNTRY_LIST = [
     iso_code: 'ID'
   },
   {
-    name: ['iran (islamic republic of)', 'iran'],
+    name: ['iran', 'iran (islamic republic of)'],
     iso_code: 'IR'
   },
   {
@@ -484,7 +484,7 @@ export const COUNTRY_LIST = [
     iso_code: 'KP'
   },
   {
-    name: ['korea, republic of', 'republic of korea', 'south korea'],
+    name: ['south korea', 'korea, republic of', 'republic of korea'],
     iso_code: 'KR'
   },
   {
@@ -496,7 +496,7 @@ export const COUNTRY_LIST = [
     iso_code: 'KG'
   },
   {
-    name: ["lao people's democratic republic", 'laos'],
+    name: ['laos', "lao people's democratic republic"],
     iso_code: 'LA'
   },
   {
@@ -591,7 +591,7 @@ export const COUNTRY_LIST = [
     iso_code: 'FM'
   },
   {
-    name: ['moldova, republic of', 'moldova', 'republic of moldova'],
+    name: ['moldova', 'moldova, republic of', 'republic of moldova'],
     iso_code: 'MD'
   },
   {
@@ -667,7 +667,7 @@ export const COUNTRY_LIST = [
     iso_code: 'NF'
   },
   {
-    name: ['north macedonia', 'macedonia'],
+    name: ['macedonia', 'north macedonia'],
     iso_code: 'MK'
   },
   {
@@ -691,7 +691,7 @@ export const COUNTRY_LIST = [
     iso_code: 'PW'
   },
   {
-    name: ['palestine, state of', 'palestine'],
+    name: ['palestine', 'palestine, state of'],
     iso_code: 'PS'
   },
   {
@@ -735,7 +735,7 @@ export const COUNTRY_LIST = [
     iso_code: 'QA'
   },
   {
-    name: ['réunion', 'runion'],
+    name: ['runion', 'réunion'],
     iso_code: 'RE'
   },
   {
@@ -743,7 +743,7 @@ export const COUNTRY_LIST = [
     iso_code: 'RO'
   },
   {
-    name: ['russian federation', 'russia'],
+    name: ['russia', 'russian federation'],
     iso_code: 'RU'
   },
   {
@@ -751,7 +751,7 @@ export const COUNTRY_LIST = [
     iso_code: 'RW'
   },
   {
-    name: ['saint barthélemy', 'saint barthlemy'],
+    name: ['saint barthlemy', 'saint barthélemy'],
     iso_code: 'BL'
   },
   {
@@ -819,7 +819,7 @@ export const COUNTRY_LIST = [
     iso_code: 'SG'
   },
   {
-    name: ['sint maarten (dutch part)', 'saint martin', 'sint maarten'],
+    name: ['saint martin', 'sint maarten (dutch part)', 'sint maarten'],
     iso_code: 'SX'
   },
   {
@@ -879,11 +879,11 @@ export const COUNTRY_LIST = [
     iso_code: 'CH'
   },
   {
-    name: ['syrian arab republic', 'syria'],
+    name: ['syria', 'syrian arab republic'],
     iso_code: 'SY'
   },
   {
-    name: ['taiwan, province of china', 'taiwan'],
+    name: ['taiwan', 'taiwan, province of china'],
     iso_code: 'TW'
   },
   {
@@ -891,7 +891,7 @@ export const COUNTRY_LIST = [
     iso_code: 'TJ'
   },
   {
-    name: ['tanzania, united republic of', 'tanzania'],
+    name: ['tanzania', 'tanzania, united republic of'],
     iso_code: 'TZ'
   },
   {
@@ -952,8 +952,8 @@ export const COUNTRY_LIST = [
   },
   {
     name: [
-      'united kingdom of great britain and northern ireland',
-      'united kingdom'
+      'united kingdom',
+      'united kingdom of great britain and northern ireland'
     ],
     iso_code: 'GB'
   },
@@ -981,11 +981,11 @@ export const COUNTRY_LIST = [
     iso_code: 'VU'
   },
   {
-    name: ['venezuela (bolivarian republic of)', 'venezuela'],
+    name: ['venezuela', 'venezuela (bolivarian republic of)'],
     iso_code: 'VE'
   },
   {
-    name: ['viet nam', 'vietnam'],
+    name: ['vietnam', 'viet nam'],
     iso_code: 'VN'
   },
   {

@@ -61,7 +61,7 @@ const EnrichmentRulesTab = ({
   }, [six_signal_config]);
 
   return (
-    <div className='py-4'>
+    <div className='py-4' style={{ pointerEvents: !isAdmin ? 'none' : 'all' }}>
       {!isAdmin && (
         <div className='my-8'>
           <Alert
