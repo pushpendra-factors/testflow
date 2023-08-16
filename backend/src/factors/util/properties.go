@@ -1923,8 +1923,8 @@ var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	UP_INITIAL_CHANNEL:                  "User first channel",
 	UP_DAY_OF_FIRST_EVENT:               "First seen day",
 	UP_HOUR_OF_FIRST_EVENT:              "First seen hour",
-	UP_PAGE_COUNT:                       "Page Count",
-	UP_TOTAL_SPENT_TIME:                 "Session Spent Time",
+	UP_PAGE_COUNT:                       "User page count",
+	UP_TOTAL_SPENT_TIME:                 "User total active time",
 	UP_LATEST_PAGE_URL:                  "User latest page URL",
 	UP_LATEST_PAGE_DOMAIN:               "User latest page domain",
 	UP_LATEST_PAGE_RAW_URL:              "User latest page raw URL",
@@ -2004,13 +2004,13 @@ var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	SIX_SIGNAL_SIC_DESCRIPTION:                   "Company SIC description",
 	SIX_SIGNAL_STATE:                             "Company state",
 	SIX_SIGNAL_ZIP:                               "Company ZIP code",
-	G2_DOMAIN:                                    "Company Domain",
-	G2_NAME:                                      "Company Name",
-	G2_LEGAL_NAME:                                "Company Legal Name",
-	G2_COUNTRY:                                   "Company Country",
-	G2_EMPLOYEES_RANGE:                           "Company Employee Range",
-	G2_EMPLOYEES:                                 "No Of Employees",
-	G2_COMPANY_ID:                                "Company G2 ID",
+	G2_DOMAIN:                                    "G2 Company Domain",
+	G2_NAME:                                      "G2 Company Name",
+	G2_LEGAL_NAME:                                "G2 Company Legal Name",
+	G2_COUNTRY:                                   "G2 Company Country",
+	G2_EMPLOYEES_RANGE:                           "G2 Company Employee Range",
+	G2_EMPLOYEES:                                 "G2 No Of Employees",
+	G2_COMPANY_ID:                                "G2 Company ID",
 }
 
 var STANDARD_USER_PROPERTIES_CATAGORIZATION = map[string]string{
@@ -4371,7 +4371,9 @@ func SortByTimestampAndCount(data []NameCountTimestampCategory) []NameCountTimes
 	}
 
 	sorted = append(smartEventNames, sorted...)
-	sorted = append(sorted, sessionEvent)
+	if sessionEvent.Name != "" {
+		sorted = append(sorted, sessionEvent)
+	}
 	sorted = append(sorted, pageViewEventNames...)
 
 	for _, data := range trimmed {

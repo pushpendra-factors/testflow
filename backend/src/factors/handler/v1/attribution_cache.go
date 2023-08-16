@@ -13,12 +13,14 @@ import (
 
 func RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId int64, requestPayload AttributionRequestPayloadV1,
 	timezoneString U.TimeZoneString, reqId string, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery bool,
-	rangesToRun []U.TimestampRange, logCtx *log.Entry) (bool, *model.QueryResult) { //hasFailed, Result
+	rangesToRun []U.TimestampRange, logCtx *log.Entry) (bool, *model.QueryResult, []H.ComputedRangeInfo) { //hasFailed, Result, computeMeta
 
 	var latestFoundResult *model.QueryResult
 	var mergedResult *model.QueryResult
 	mergedResult = nil
 	var err error
+
+	var computedMeta []H.ComputedRangeInfo
 
 	// Get the basic parameters for merging
 	_, kpiAggFunctionType, errKpi := store.GetStore().GetRawAttributionQueryParams(projectId, requestPayload.Query,
@@ -27,7 +29,7 @@ func RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId int64, re
 
 	if errKpi != nil {
 		logCtx.WithError(errKpi).Error("Error occurred during fetching merge params of attribution GetRawAttributionQueryParams")
-		return true, mergedResult
+		return true, mergedResult, computedMeta
 	}
 
 	logCtx.WithFields(log.Fields{"Ranges": rangesToRun}).Info("Ranges to run the query")
@@ -44,10 +46,12 @@ func RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId int64, re
 			err = json.Unmarshal(cacheResult.Result, &resultForRange)
 			if err != nil {
 				logCtx.WithError(err).Error("Error occurred during unmarshal of attribution cached report")
-				return true, mergedResult
+				return true, mergedResult, computedMeta
 			}
 			// this will update the last cached result as qRange ranges are in descending order
 			latestFoundResult = resultForRange
+			computedM := H.ComputedRangeInfo{From: qRange.Start, To: qRange.End, TimeZone: string(timezoneString), FromCache: true}
+			computedMeta = append(computedMeta, computedM)
 		} else {
 			// compute if not found in cache
 			requestPayload.Query.From = qRange.Start
@@ -63,8 +67,10 @@ func RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId int64, re
 			logCtx.WithError(err).WithFields(log.Fields{"RIndex": idx, "RStart": qRange.Start, "REnd": qRange.End}).Info("Found there ExecuteAttributionQueryV1")
 			if err != nil {
 				logCtx.Info("Failed to process query when not found in  DB - attribution v1")
-				return true, mergedResult
+				return true, mergedResult, computedMeta
 			}
+			computedM := H.ComputedRangeInfo{From: qRange.Start, To: qRange.End, TimeZone: string(timezoneString), FromCache: false}
+			computedMeta = append(computedMeta, computedM)
 		}
 		keyIndex := model.GetLastKeyValueIndex(resultForRange.Headers)
 		if requestPayload.Query.AttributionKey == model.AttributionKeyLandingPage ||
@@ -80,11 +86,11 @@ func RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId int64, re
 			kpiAggFunctionType, *logCtx)
 		if mergedResult == nil {
 			logCtx.Info("Failed to process query from DB - attribution v1 as mergedResult is nil")
-			return true, mergedResult
+			return true, mergedResult, computedMeta
 		}
 	}
 	mergedResult.CacheMeta = latestFoundResult.CacheMeta
-	return false, mergedResult
+	return false, mergedResult, computedMeta
 }
 
 func RunAttributionQuery(projectId int64, requestPayload AttributionRequestPayloadV1, debugQueryKey string,

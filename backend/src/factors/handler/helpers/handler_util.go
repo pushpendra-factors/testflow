@@ -23,13 +23,21 @@ import (
 const HeaderUserFilterOptForProfiles string = "Use-Filter-Opt-Profiles"
 const HeaderUserFilterOptForEventsAndUsers string = "Use-Filter-Opt-Events-Users"
 
-// DashboardQueryResponsePayload Query query response with cache and refreshed_at.
+// DashboardQueryResponsePayload Query response with cache and refreshed_at.
 type DashboardQueryResponsePayload struct {
 	Result      interface{} `json:"result"`
 	Cache       bool        `json:"cache"`
 	RefreshedAt int64       `json:"refreshed_at"`
 	TimeZone    string      `json:"timezone"`
 	CacheMeta   interface{} `json:"cache_meta"`
+	ComputeMeta interface{} `json:"compute_meta"`
+}
+
+type ComputedRangeInfo struct {
+	From      int64  `json:"from"`
+	To        int64  `json:"to"`
+	TimeZone  string `json:"timezone"`
+	FromCache bool   `json:"from_cache"`
 }
 
 func getQueryCacheResponse(c *gin.Context, cacheResult model.QueryCacheResult, forDashboard bool, skipContextVerfication bool) (bool, int, interface{}) {

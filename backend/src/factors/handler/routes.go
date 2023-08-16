@@ -53,6 +53,8 @@ func InitAppRoutes(r *gin.Engine) {
 		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
 
+	r.Use(mid.RestrictHTTPAccess())
+
 	// NOTE: Always keep BlockMaliciousPayload middlware on top of the chain.
 	r.Use(mid.BlockMaliciousPayload())
 

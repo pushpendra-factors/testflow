@@ -24,12 +24,14 @@ export const convertToEventOptions = (eventNames, display_names = []) => {
 export const convertPropsToOptions = (props, display_names = []) => {
   const options = [];
   Object.keys(props).forEach((type) => {
-    props[type].forEach((val) => {
-      options.push([
-        display_names[val] ? display_names[val] : val,
-        val,
-        type === 'unknown' ? 'categorical' : type
-      ]);
+    props[type]?.forEach((val) => {
+      if (val?.length !== 0) {
+        options.push([
+          display_names[val] ? display_names[val] : val,
+          val,
+          type === 'unknown' ? 'categorical' : type
+        ]);
+      }
     });
   });
   return options;
@@ -40,17 +42,21 @@ export const convertEventsPropsToOptions = (props, display_names = []) => {
   Object.keys(props).forEach((type) => {
     const categoryOptions = props[type];
     Object.keys(categoryOptions).forEach((group) => {
-      const groupOptions = categoryOptions[group];
-      if (!options[group]) {
-        options[group] = [];
+      if (group?.length !== 0) {
+        const groupOptions = categoryOptions[group];
+        if (!options[group]) {
+          options[group] = [];
+        }
+        groupOptions.forEach((val) => {
+          if (val?.length !== 0) {
+            options[group].push([
+              display_names[val] ? display_names[val] : val,
+              val,
+              type === 'unknown' ? 'categorical' : type
+            ]);
+          }
+        });
       }
-      groupOptions.forEach((val) => {
-        options[group].push([
-          display_names[val] ? display_names[val] : val,
-          val,
-          type === 'unknown' ? 'categorical' : type
-        ]);
-      });
     });
   });
   return options;
@@ -65,27 +71,31 @@ export const convertUserPropsToOptions = (
   Object.keys(props).forEach((type) => {
     const categoryOptions = props[type];
     Object.keys(categoryOptions).forEach((group) => {
-      const groupOptions = categoryOptions[group];
-      if (!userOptions[group]) {
-        userOptions[group] = [];
-      }
-      if (!eventUserOptions[group]) {
-        eventUserOptions[group] = [];
-      }
-      groupOptions.forEach((val) => {
-        userOptions[group].push([
-          display_names[val] ? display_names[val] : val,
-          val,
-          type
-        ]);
-        if (!disabledEventValues.includes(val)) {
-          eventUserOptions[group].push([
-            display_names[val] ? display_names[val] : val,
-            val,
-            type
-          ]);
+      if (group?.length !== 0) {
+        const groupOptions = categoryOptions[group];
+        if (!userOptions[group]) {
+          userOptions[group] = [];
         }
-      });
+        if (!eventUserOptions[group]) {
+          eventUserOptions[group] = [];
+        }
+        groupOptions.forEach((val) => {
+          if (val?.length !== 0) {
+            userOptions[group].push([
+              display_names[val] ? display_names[val] : val,
+              val,
+              type
+            ]);
+            if (!disabledEventValues.includes(val)) {
+              eventUserOptions[group].push([
+                display_names[val] ? display_names[val] : val,
+                val,
+                type
+              ]);
+            }
+          }
+        });
+      }
     });
   });
   return { userOptions, eventUserOptions };

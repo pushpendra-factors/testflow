@@ -89,7 +89,7 @@ function ReportContent({
       getChartTypeMenuItems(
         queryType,
         breakdown?.length,
-        queries,
+        attributionsState?.attrQueries? attributionsState?.attrQueries : queries,
         attributionsState?.touchpoint
       )
     );
@@ -145,12 +145,12 @@ function ReportContent({
     }
     if (
       attributionsState.models.length === 1 &&
-      isArray(attrQueries) &&
-      attrQueries.length > 1
+      isArray(attributionsState.attrQueries) &&
+      attributionsState.attrQueries.length > 1
     ) {
       metricsDropdown = (
         <CampaignMetricsDropdown
-          metrics={attrQueries.map((q) => q.label)}
+          metrics={attributionsState.attrQueries.map((q) => q.label)}
           currValue={currMetricsValue}
           onChange={setCurrMetricsValue}
         />
@@ -209,7 +209,7 @@ function ReportContent({
               breakdown,
               chartType
             })}
-            kpis={queries}
+            kpis={attributionsState?.attrQueries? attributionsState?.attrQueries: queries}
           />
         </div>
       </>

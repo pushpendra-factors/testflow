@@ -388,6 +388,7 @@ func WriteUserCountsToDB(projectId int64, startTime int64,
 			}
 		}
 	}
+
 	evDataLastEvent, err := UpdateLastEventsDay(prevcountsofuser, evdata, startTime, salewindow)
 	if err != nil {
 		e := fmt.Errorf("unable to update last event for users")
@@ -643,7 +644,8 @@ func UpdateCountsWithDecayToUpdateDB(CurrUserCounts map[string]*AggEventsOnUserA
 
 }
 
-func UpdateLastEventsDay(prevCountsOfUser map[string]map[string]M.LatestScore, data []*AggEventsOnUserAndGroup, currentTS int64, saleWindow int64) (map[string]M.LatestScore, error) {
+func UpdateLastEventsDay(prevCountsOfUser map[string]map[string]M.LatestScore, data []*AggEventsOnUserAndGroup,
+	currentTS int64, saleWindow int64) (map[string]M.LatestScore, error) {
 
 	updatedLastScore := make(map[string]M.LatestScore, 0)
 	currentDate := GetDateOnlyFromTimestamp(currentTS)
@@ -658,6 +660,7 @@ func UpdateLastEventsDay(prevCountsOfUser map[string]map[string]M.LatestScore, d
 		currentUserMap[usrval.User_id] = usrval
 	}
 
+	ordereddays := GenDateStringsForLastNdays(currentTS, saleWindow)
 	for currentUser := range userIdsmap {
 		var lastevent M.LatestScore
 		properties := make(map[string]map[string]int64)
@@ -665,14 +668,18 @@ func UpdateLastEventsDay(prevCountsOfUser map[string]map[string]M.LatestScore, d
 
 		if prevCountsOnday, ok := prevCountsOfUser[currentUser]; ok {
 
-			for dateOfCount, counts := range prevCountsOnday {
+			for _, dateOfCount := range ordereddays {
+				counts, ook := prevCountsOnday[dateOfCount]
+				if !ook {
+					counts.EventsCount = make(map[string]float64, 0)
+				}
 				decayval := model.ComputeDecayValue(dateOfCount, int64(saleWindow))
 				if decayval > 0 {
 					for eventKey, eventVal := range counts.EventsCount {
 						if _, eok := eventsCountWithDecay[eventKey]; !eok {
 							eventsCountWithDecay[eventKey] = 0
 						}
-						eventsCountWithDecay[eventKey] += eventVal
+						eventsCountWithDecay[eventKey] += decayval * eventVal
 					}
 				}
 
@@ -693,14 +700,16 @@ func UpdateLastEventsDay(prevCountsOfUser map[string]map[string]M.LatestScore, d
 			}
 		}
 
+		decayvalcurrent := model.ComputeDecayValue(currentDate, int64(saleWindow))
 		if eventCountPerUser, ok := currentUserMap[currentUser]; ok {
 
 			counts := eventCountPerUser.EventsCount
-			for eventKey, eventCount := range counts {
+			for _, eventCount := range counts {
+				eventKey := eventCount.EventId
 				if _, eok := eventsCountWithDecay[eventKey]; !eok {
 					eventsCountWithDecay[eventKey] = 0
 				}
-				eventsCountWithDecay[eventKey] += float64(eventCount.EventCount)
+				eventsCountWithDecay[eventKey] += decayvalcurrent * float64(eventCount.EventCount)
 			}
 
 			for _, eprops := range eventCountPerUser.Properties {
@@ -729,4 +738,17 @@ func UpdateLastEventsDay(prevCountsOfUser map[string]map[string]M.LatestScore, d
 	}
 	return updatedLastScore, nil
 
+}
+
+func GenDateStringsForLastNdays(currDate int64, salewindow int64) []string {
+
+	dateStrings := make([]string, 0)
+
+	currts := time.Unix(currDate, 0)
+	for idx := salewindow; idx > 0; idx-- {
+		ts := currts.AddDate(0, 0, -1*int(idx))
+		dstring := GetDateOnlyFromTimestamp(ts.Unix())
+		dateStrings = append(dateStrings, dstring)
+	}
+	return dateStrings
 }
