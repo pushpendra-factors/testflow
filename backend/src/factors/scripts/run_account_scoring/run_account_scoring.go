@@ -17,7 +17,6 @@ import (
 	"factors/util"
 	"flag"
 	"fmt"
-	"net/http"
 	"reflect"
 	"strings"
 	"time"
@@ -194,22 +193,28 @@ func main() {
 		}
 	}
 
-	allProjects, projectIdsToRun, _ := C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
-	if allProjects {
-		projectIDs, errCode := store.GetStore().GetAllProjectIDs()
-		if errCode != http.StatusFound {
-			log.Fatal("Failed to get all projects and project_ids set to '*'.")
-		}
-
-		projectIdsToRun = make(map[int64]bool, 0)
-		for _, projectID := range projectIDs {
-			projectIdsToRun[projectID] = true
-		}
-	}
-
+	projectIdList := *projectIdFlag
 	projectIdsArray := make([]int64, 0)
-	for projectId, _ := range projectIdsToRun {
-		projectIdsArray = append(projectIdsArray, projectId)
+
+	if projectIdList == "*" {
+		projectIdsArray, err = store.GetStore().GetAllProjectsWithFeatureEnabled(M.FEATURE_ACCOUNT_SCORING)
+		if err != nil {
+			errString := fmt.Errorf("failed to get feature status for all projects")
+			log.WithError(err).Error(errString)
+		}
+	} else {
+		projectIds := C.GetTokensFromStringListAsUint64(projectIdList)
+		for _, projectId := range projectIds {
+			available := false
+			available, _, err = store.GetStore().GetFeatureStatusForProjectV2(projectId, M.FEATURE_ACCOUNT_SCORING)
+			if err != nil {
+				log.WithFields(log.Fields{"projectID": projectId}).WithError(err).Error("Failed to get feature status in account scoring job for project")
+				continue
+			}
+			if available {
+				projectIdsArray = append(projectIdsArray, projectId)
+			}
+		}
 	}
 
 	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
@@ -271,27 +276,13 @@ func main() {
 	configs["diskManager"] = diskManager
 	configs["beamConfig"] = &beamConfig
 
-	// status := taskWrapper.TaskFuncWithProjectId("AccScoreJob", *lookback, projectIdsArray, T.BuildAccScoringDaily, configs)
 	for _, projectId := range projectIdsArray {
-		available := true
-		if *enableFeatureGatesV2 {
-			available, err = store.GetStore().GetFeatureStatusForProjectV2(projectId, M.FEATURE_ACCOUNT_SCORING)
-			if err != nil {
-				log.WithError(err).Error("Failed to get feature status in account scoring job for project ID ", projectId)
-				continue
-			}
-		}
 
-		if available {
-
-			status, _ := AS.BuildAccScoringDaily(projectId, configs)
-			log.Info(status)
-			if status["err"] != nil {
-				C.PingHealthcheckForFailure(healthcheckPingID, status)
-			}
-			C.PingHealthcheckForSuccess(healthcheckPingID, status)
-		} else {
-			log.Error("Feature Not Available... Skipping account scoring job for project ID ", projectId)
+		status, _ := AS.BuildAccScoringDaily(projectId, configs)
+		log.Info(status)
+		if status["err"] != nil {
+			C.PingHealthcheckForFailure(healthcheckPingID, status)
 		}
+		C.PingHealthcheckForSuccess(healthcheckPingID, status)
 	}
 }

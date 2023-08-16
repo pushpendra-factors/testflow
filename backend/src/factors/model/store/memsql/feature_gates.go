@@ -5,8 +5,9 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"net/http"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // Not in use
@@ -50,6 +51,7 @@ func (store *MemSQL) GetFeatureStatusForProjectV2(projectID int64, featureName s
 	status := isFeatureAvailableForProject(featureList, addOns, featureName)
 	return status, nil
 }
+
 func (store *MemSQL) UpdateFeatureStatusForProject(projectID int64, feature model.FeatureDetails) (string, error) {
 	_, addOns, err := store.GetPlanDetailsAndAddonsForProject(projectID)
 	if err != nil {
@@ -149,4 +151,26 @@ func (*MemSQL) CreateDefaultFeatureGatesConfigForProject(ProjectID int64) (int, 
 	}
 	return http.StatusCreated, nil
 
+}
+
+func (store *MemSQL) GetAllProjectsWithFeatureEnabled(featureName string) ([]int64, error) {
+	var enabledProjectIds []int64 = make([]int64, 0)
+
+	projectIDs, errCode := store.GetAllProjectIDs()
+	if errCode != http.StatusFound {
+		err := fmt.Errorf("failed to get all projects ids to query feature enabled flag")
+		log.WithField("err_code", err).Error(err)
+		return nil, err
+	}
+	for _, projectId := range projectIDs {
+		available, _, err := store.GetFeatureStatusForProjectV2(projectId, featureName)
+		if err != nil {
+			log.WithFields(log.Fields{"project_id": projectId, "feature": featureName}).WithError(err).Error("failed to get feature status for project ID ")
+			continue
+		}
+		if available {
+			enabledProjectIds = append(enabledProjectIds, projectId)
+		}
+	}
+	return enabledProjectIds, nil
 }
