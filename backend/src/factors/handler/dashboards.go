@@ -267,6 +267,7 @@ func CreateDashboardUnitHandler(c *gin.Context) (interface{}, int, string, bool)
 
 	dashboardUnit, errCode, errMsg := store.GetStore().CreateDashboardUnit(projectId, agentUUID,
 		&model.DashboardUnit{
+			ProjectID:    projectId,
 			DashboardId:  dashboardId,
 			Presentation: requestPayload.Presentation,
 			QueryId:      requestPayload.QueryId,

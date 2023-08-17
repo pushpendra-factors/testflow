@@ -54,6 +54,7 @@ func (store *MemSQL) CreateDashboardUnitForMultipleDashboards(dashboardIds []int
 	for _, dashboardId := range dashboardIds {
 		dashboardUnit, errCode, errMsg := store.CreateDashboardUnit(projectId, agentUUID,
 			&model.DashboardUnit{
+				ProjectID:    projectId,
 				DashboardId:  dashboardId,
 				Description:  unitPayload.Description,
 				Presentation: unitPayload.Presentation,
@@ -86,6 +87,7 @@ func (store *MemSQL) CreateMultipleDashboardUnits(requestPayload []model.Dashboa
 		}
 		dashboardUnit, errCode, errMsg := store.CreateDashboardUnit(projectId, agentUUID,
 			&model.DashboardUnit{
+				ProjectID:    projectId,
 				DashboardId:  dashboardId,
 				Description:  payload.Description,
 				Presentation: payload.Presentation,

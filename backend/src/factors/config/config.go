@@ -2252,7 +2252,7 @@ func IsDomainEnabled(projectID int64) bool {
 	return false
 }
 
-func IsScoringEnabled(projectID int64) bool {
+func IsScoringEnabledForAllUsers(projectID int64) bool {
 	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableScoringByProjectID, "")
 	if allProjects || projectIDsMap[projectID] {
 		return true
