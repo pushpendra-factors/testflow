@@ -2,6 +2,7 @@ package v1
 
 import (
 	"encoding/json"
+	C "factors/config"
 	mid "factors/middleware"
 	"factors/model/model"
 	"factors/model/store"
@@ -65,8 +66,11 @@ func GetProfileUsersHandler(c *gin.Context) (interface{}, int, string, string, b
 	if err != nil {
 		logCtx.Error("Error fetching scoring availability status for project ID-", projectId)
 	}
+
+	showScore := getScore || C.IsScoringEnabledForAllUsers(projectId)
+
 	// Add user scores to the response if scoring is enabled
-	if getScore && scoringAvailable {
+	if scoringAvailable && showScore {
 		// Separate anonymous and known user IDs
 		var userIdsAnonymous []string
 		var userIdsNonAnonymous []string
@@ -243,8 +247,11 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 	if err != nil {
 		logCtx.Error("Error fetching scoring availability status for the project")
 	}
+
+	showScore := getScore || C.IsScoringEnabledForAllUsers(projectId)
+
 	// Add account scores to the response if scoring is enabled
-	if getScore && scoringAvailable {
+	if scoringAvailable && showScore {
 		// Retrieve scores for account IDs
 		var accountIds []string
 		for _, profile := range profileAccountsList {
