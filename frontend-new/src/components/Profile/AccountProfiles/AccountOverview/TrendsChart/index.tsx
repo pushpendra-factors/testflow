@@ -3,8 +3,8 @@ import Highcharts from 'highcharts';
 import { Text } from 'Components/factorsComponents';
 import cx from 'classnames';
 import ReactDOMServer from 'react-dom/server';
-import { DataMap } from '..';
 import { nearestGreater100, transformDate } from '../utils';
+import { DataMap } from '../types';
 
 interface ChartProps {
   data: DataMap;

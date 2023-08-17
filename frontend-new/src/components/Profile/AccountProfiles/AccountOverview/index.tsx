@@ -1,30 +1,93 @@
 import { Spin } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 import { Text } from 'Components/factorsComponents';
 import React from 'react';
-import { formatDurationIntoString } from 'Utils/dataFormatter';
+import { formatDurationIntoString, formatDuration } from 'Utils/dataFormatter';
+import TableWithHeading from './TableWithHeading';
 import TrendsChart from './TrendsChart';
+import {
+  AccountOverviewProps,
+  CustomStyles,
+  TopPages,
+  TopUsers
+} from './types';
 import { EngagementTag } from './utils';
 
-export interface DataMap {
-  [key: string]: number;
-}
+const topPageColumns: ColumnsType<TopPages> = [
+  {
+    title: 'Page URL',
+    dataIndex: 'page_url',
+    key: 'page_url',
+    ellipsis: true,
+    width: 224,
+    render: (text: string) => (
+      <a href={text} target='_blank' rel='noopener noreferrer'>
+        {text}
+      </a>
+    )
+  },
+  {
+    title: '# Views',
+    dataIndex: 'views',
+    align: 'right',
+    width: 96,
+    key: 'views'
+  },
+  {
+    title: '# Users',
+    dataIndex: 'users_count',
+    align: 'right',
+    width: 96,
+    key: 'users_count'
+  },
+  {
+    title: 'Total Time',
+    dataIndex: 'total_time',
+    key: 'total_time',
+    align: 'right',
+    width: 96,
+    render: (time: number) => formatDuration(time)
+  },
+  {
+    title: 'Avg. Scroll %',
+    dataIndex: 'avg_page_scroll_percent',
+    key: 'avg_page_scroll_percent',
+    width: 112,
+    align: 'right',
+    render: (percent: number) => `${percent.toFixed(2)}%`
+  }
+];
 
-export type Overview = {
-  temperature: number;
-  engagement: string;
-  users_count: number;
-  time_active: number;
-  scores_list: DataMap;
-};
-
-interface AccountOverviewProps {
-  overview: Overview;
-  loading: boolean;
-}
-
-interface CustomStyles {
-  '--bg-color': string;
-}
+const topUserColumns: ColumnsType<TopUsers> = [
+  {
+    title: 'Name',
+    dataIndex: 'name',
+    key: 'name',
+    width: 264
+  },
+  {
+    title: '# Views',
+    align: 'right',
+    width: 120,
+    dataIndex: 'num_page_views',
+    key: 'num_page_views'
+  },
+  {
+    title: 'Active Time',
+    align: 'right',
+    width: 120,
+    dataIndex: 'active_time',
+    key: 'active_time',
+    render: (time: number) => formatDuration(time)
+  },
+  {
+    title: '# Pages',
+    align: 'right',
+    width: 120,
+    dataIndex: 'num_of_pages',
+    key: 'num_of_pages'
+  }
+];
 
 const AccountOverview: React.FC<AccountOverviewProps> = ({
   overview,
@@ -135,6 +198,20 @@ const AccountOverview: React.FC<AccountOverviewProps> = ({
         <div className='chart'>
           <TrendsChart data={overview.scores_list} />
         </div>
+      </div>
+      <div className='top-tables'>
+        <TableWithHeading
+          heading='Top Pages'
+          data={overview.top_pages}
+          columns={topPageColumns}
+          yScroll={200}
+        />
+        <TableWithHeading
+          heading='Top Users'
+          data={overview.top_users}
+          columns={topUserColumns}
+          yScroll={200}
+        />
       </div>
     </div>
   );

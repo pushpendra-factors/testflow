@@ -154,7 +154,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, len(resp), count)
 		for i, user := range resp {
-			if source == "All" {
+			if model.IsDomainGroup(source) {
 				if i < 10 {
 					assert.Equal(t, user.IsAnonymous, false)
 				} else {
@@ -1258,7 +1258,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, len(resp), count)
 		for i, user := range resp {
-			if source == "All" {
+			if model.IsDomainGroup(source) {
 				assert.NotEmpty(t, user.Name)
 				assert.NotEmpty(t, user.HostName)
 			}
@@ -2030,7 +2030,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		assert.Contains(t, resp.Name, "Freshworks")
 		assert.Equal(t, resp.HostName, "google.com")
 		assert.Equal(t, len(resp.AccountTimeline) > 0, true)
-		assert.Equal(t, len(resp.AccountTimeline), 11)
+		assert.Equal(t, len(resp.AccountTimeline), 10)
 		assert.NotNil(t, resp.LeftPaneProps)
 		for i, property := range resp.LeftPaneProps {
 			assert.Equal(t, props[i], property)
@@ -2046,6 +2046,32 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 			}
 		}
 
+		//Top Users
+		assert.Len(t, resp.Overview.TopUsers, 6)
+		expectedNames := []string{"user5@example.com", "user4@example.com", "user2@example.com", "user3@example.com", "user1@example.com"}
+		expectedPageViews := []int{2, 1, 1, 1, 1}
+		expectedActiveTime := []int{400, 100, 100, 100, 100}
+		expectedNumOfPages := []int{1, 1, 1, 1, 1}
+
+		for i, expectedName := range expectedNames {
+			assert.Equal(t, expectedName, resp.Overview.TopUsers[i].Name)
+			assert.Equal(t, int64(expectedPageViews[i]), resp.Overview.TopUsers[i].NumPageViews)
+			assert.Equal(t, float64(expectedActiveTime[i]), resp.Overview.TopUsers[i].ActiveTime)
+			assert.Equal(t, int64(expectedNumOfPages[i]), resp.Overview.TopUsers[i].NumOfPages)
+		}
+		//Anonymous User
+		assert.Equal(t, "4 Anonymous Users", resp.Overview.TopUsers[5].Name)
+		assert.Equal(t, int64(4), resp.Overview.TopUsers[5].NumPageViews)
+		assert.Equal(t, float64(400), resp.Overview.TopUsers[5].ActiveTime)
+		assert.Equal(t, int64(1), resp.Overview.TopUsers[5].NumOfPages)
+
+		//Top Pages
+		assert.Len(t, resp.Overview.TopPages, 1)
+		assert.Equal(t, "", resp.Overview.TopPages[0].PageUrl)
+		assert.Equal(t, int64(10), resp.Overview.TopPages[0].Views)
+		assert.Equal(t, int64(9), resp.Overview.TopPages[0].UsersCount)
+		assert.Equal(t, float64(10), resp.Overview.TopPages[0].TotalTime)
+		assert.Equal(t, float64(0), resp.Overview.TopPages[0].AvgScrollPercent)
 	})
 
 	t.Run("Success2", func(t *testing.T) {
@@ -2055,12 +2081,12 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		resp := &model.AccountDetails{}
 		err := json.Unmarshal(jsonResponse, &resp)
 		assert.Nil(t, err)
-		assert.Contains(t, resp.Name, "ChargeBee")
+		assert.Contains(t, resp.Name, "chargebee")
 		assert.Equal(t, resp.HostName, "chargebee.com")
 		assert.Equal(t, len(resp.AccountTimeline) > 0, true)
 		assert.Equal(t, len(resp.AccountTimeline), 4)
 		assert.Equal(t, resp.Overview.UsersCount, int64(len(resp.AccountTimeline)-1))
-		assert.Equal(t, resp.Overview.TimeActive, int64((len(resp.AccountTimeline)-1)*100))
+		assert.Equal(t, resp.Overview.TimeActive, float64((len(resp.AccountTimeline)-1)*100))
 		for _, userTimeline := range resp.AccountTimeline {
 			if userTimeline.UserName != model.GROUP_ACTIVITY_USERNAME {
 				assert.Equal(t, userTimeline.IsAnonymous, false)
@@ -2080,7 +2106,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		assert.Equal(t, resp.HostName, "google.com")
 		assert.Equal(t, len(resp.AccountTimeline), 10)
 		assert.Equal(t, resp.Overview.UsersCount, int64(len(resp.AccountTimeline)-1))
-		assert.Equal(t, resp.Overview.TimeActive, int64((len(resp.AccountTimeline)-1)*100))
+		assert.Equal(t, resp.Overview.TimeActive, float64((len(resp.AccountTimeline))*100))
 		assert.NotNil(t, resp.LeftPaneProps)
 		for i, property := range resp.LeftPaneProps {
 			assert.Equal(t, props[i], property)
