@@ -84,14 +84,14 @@ type ProjectSetting struct {
 	IsPathAnalysisEnabled bool            `json:"is_path_analysis_enabled"`
 	Acc_score_weights     *postgres.Jsonb `json:"acc_score_weights"`
 	// onboarding flow steps
-	IsDeanonymizationRequested bool   `json:"is_deanonymization_requested"`
-	IsOnboardingCompleted      bool   `json:"is_onboarding_completed"`
-	SixSignalEmailList         string `gorm:"column:sixsignal_email_list" json:"sixsignal_email_list"`
-	IntG2ApiKey                string `json:"int_g2_api_key"`
-	IntG2                      *bool  `gorm:"not null;default:false" json:"int_g2,omitempty"`
-
-	SDKAPIURL   string `gorm:"-" json:"sdk_api_url"`
-	SDKAssetURL string `gorm:"-" json:"sdk_asset_url"`
+	IsDeanonymizationRequested bool            `json:"is_deanonymization_requested"`
+	IsOnboardingCompleted      bool            `json:"is_onboarding_completed"`
+	SixSignalEmailList         string          `gorm:"column:sixsignal_email_list" json:"sixsignal_email_list"`
+	IntG2ApiKey                string          `json:"int_g2_api_key"`
+	IntG2                      *bool           `gorm:"not null;default:false" json:"int_g2,omitempty"`
+	OnboardingSteps            *postgres.Jsonb `json:"onboarding_steps"`
+	SDKAPIURL                  string          `gorm:"-" json:"sdk_api_url"`
+	SDKAssetURL                string          `gorm:"-" json:"sdk_asset_url"`
 }
 
 /* Sample Attribution Setting

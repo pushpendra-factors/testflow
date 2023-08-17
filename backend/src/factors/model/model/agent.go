@@ -4,6 +4,7 @@ import (
 	"time"
 
 	cacheRedis "factors/cache/redis"
+
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 )
@@ -44,6 +45,7 @@ type Agent struct {
 	SlackAccessTokens *postgres.Jsonb `json:"slack_access_tokens"`
 	LastLoggedOut     int64           `json:"last_logged_out"`
 	TeamsAccessTokens *postgres.Jsonb `json:"teams_access_tokens"`
+	IsFormFilled      bool            `json:"is_form_filled"`
 }
 type CreateAgentParams struct {
 	Agent    *Agent
