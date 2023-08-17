@@ -360,7 +360,7 @@ func runTheCommonDBFlow(reqId string, projectId int64, dashboardId int64, unitId
 			"last12Months": last12Months,
 			"monthsToRun":  monthsToRun,
 		}).Info("Figured it a Month range query, running")
-		hasFailed, mergedResult := RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId, requestPayload,
+		hasFailed, mergedResult, computeMeta := RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId, requestPayload,
 			timezoneString, reqId, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery,
 			monthsToRun, logCtx)
 		if hasFailed {
@@ -369,7 +369,7 @@ func runTheCommonDBFlow(reqId string, projectId int64, dashboardId int64, unitId
 		}
 
 		return H.DashboardQueryResponsePayload{Result: mergedResult, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
-			CacheMeta: mergedResult.CacheMeta}, http.StatusOK, "", "", false
+			CacheMeta: mergedResult.CacheMeta, ComputeMeta: computeMeta}, http.StatusOK, "", "", false
 	}
 
 	// Check for weekly range query, we assume that the range has continuous date range inputs
@@ -381,7 +381,7 @@ func runTheCommonDBFlow(reqId string, projectId int64, dashboardId int64, unitId
 			"last12Months": last48Weeks,
 			"monthsToRun":  weeksToRun,
 		}).Info("Figured it a Week range query, running")
-		hasFailed, mergedResult := RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId, requestPayload,
+		hasFailed, mergedResult, computeMeta := RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId, requestPayload,
 			timezoneString, reqId, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery,
 			weeksToRun, logCtx)
 
@@ -391,7 +391,7 @@ func runTheCommonDBFlow(reqId string, projectId int64, dashboardId int64, unitId
 		}
 
 		return H.DashboardQueryResponsePayload{Result: mergedResult, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
-			CacheMeta: mergedResult.CacheMeta}, http.StatusOK, "", "", false
+			CacheMeta: mergedResult.CacheMeta, ComputeMeta: computeMeta}, http.StatusOK, "", "", false
 	}
 
 	// Nothing worked, fail the query finally

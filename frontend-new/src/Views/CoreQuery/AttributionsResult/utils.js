@@ -136,6 +136,11 @@ const getQueryLabelConversions = (query, headers, result) => {
     } else {
       result.push(`${query.label} - Conversion`);
     }
+    if (headers.includes(`${query.label} - Return on Cost`)) {
+      result.push(`${query.label} - Return on Cost`);
+    } else {
+      result.push(`${query.label} - Return on Cost`);
+    }
     if (headers.includes(`${query.label} - Cost Per Conversion`)) {
       result.push(`${query.label} - Cost Per Conversion`);
     } else {

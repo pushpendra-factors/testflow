@@ -938,6 +938,7 @@ type Model interface {
 	UpdateExplainV2EntityStatus(projectID int64, id string, status string, model_id uint64) (int, string)
 
 	// Feature Gates
+	GetAllProjectsWithFeatureEnabled(featureName string) ([]int64, error)
 	GetFeaturesForProject(projectID int64) (model.FeatureGate, error)
 	UpdateStatusForFeature(projectID int64, featureName string, updateValue int) (int, error)
 	GetFeatureStatusForProject(projectID int64, featureName string) (int, error)

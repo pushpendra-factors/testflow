@@ -48,20 +48,12 @@ func InitAppRoutes(r *gin.Engine) {
 		return
 	})
 
-	r.GET(routePrefix+"/verify",
-		mid.RestrictHTTPAccess(),
-		func(c *gin.Context) {
-			resp := map[string]string{
-				"status": "verified",
-			}
-			c.JSON(http.StatusOK, resp)
-			return
-		})
-
 	// Initialize swagger api docs only for development / staging.
 	if C.GetConfig().Env != C.PRODUCTION {
 		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
+
+	r.Use(mid.RestrictHTTPAccess())
 
 	// NOTE: Always keep BlockMaliciousPayload middlware on top of the chain.
 	r.Use(mid.BlockMaliciousPayload())

@@ -106,11 +106,11 @@ const coreQueryoptions = [
     icon: 'funnels_cq',
     desc: 'Track how users navigate across their buying journey'
   },
-  {
-    title: 'Attribution',
-    icon: 'attributions_cq',
-    desc: 'Identify the channels that contribute to conversion goals'
-  },
+  // {
+  //   title: 'Attribution',
+  //   icon: 'attributions_cq',
+  //   desc: 'Identify the channels that contribute to conversion goals'
+  // },
   {
     title: 'Profiles',
     icon: 'profiles_cq',

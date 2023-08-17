@@ -43,9 +43,12 @@
           ]
         },
         {
-          "source": "**/*",
+          "source": "**/!(factors.js)",
           "headers": [
-            {"key": "X-Frame-Options", "value": "DENY"}
+            {
+              "key": "X-Frame-Options", 
+              "value": "SAMEORIGIN"
+            }
           ]
         }
       ]
@@ -71,6 +74,15 @@
             {
               "key" : "Cache-Control",
               "value" : "public, max-age=3600, s-maxage=3600"
+            }
+          ]
+        },
+        {
+          "source": "**/!(factors.js)",
+          "headers": [
+            {
+              "key": "X-Frame-Options", 
+              "value": "SAMEORIGIN"
             }
           ]
         }

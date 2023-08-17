@@ -1189,6 +1189,9 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 	if result != "" {
 		*qStmnt = result
 	}
+	if IsCallerProfiles(q.Caller) {
+		*qStmnt = strings.ReplaceAll(*qStmnt, "global_user_properties_updated_timestamp", "properties_updated_timestamp")
+	}
 
 	return steps, stepsToKeysMap, nil
 }
