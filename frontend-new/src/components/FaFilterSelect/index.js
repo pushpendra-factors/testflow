@@ -58,6 +58,7 @@ const FaFilterSelect = ({
   maxAllowedSelection
 }) => {
   const [propState, setPropState] = useState({
+    groupName: '',
     icon: '',
     name: '',
     type: ''
@@ -113,7 +114,12 @@ const FaFilterSelect = ({
       (filter && filter?.values !== valuesState)
     ) {
       const prop = filter.props;
-      setPropState({ icon: prop[2], name: prop[0], type: prop[1] });
+      setPropState({
+        groupName: prop[0],
+        icon: prop[3],
+        name: prop[1],
+        type: prop[2]
+      });
       if (
         (filter.operator === OPERATORS['equalTo'] ||
           filter.operator === OPERATORS['notEqualTo']) &&
@@ -143,7 +149,7 @@ const FaFilterSelect = ({
 
   const setValues = () => {
     let values;
-    if (filter.props[1] === 'datetime') {
+    if (filter.props[2] === 'datetime') {
       const filterVals = isArray(filter.values)
         ? filter.values[0]
         : filter.values;
@@ -177,7 +183,12 @@ const FaFilterSelect = ({
   const emitFilter = () => {
     if (propState && operatorState && valuesState) {
       applyFilter({
-        props: [propState.name, propState.type, propState.icon],
+        props: [
+          propState.groupName,
+          propState.name,
+          propState.type,
+          propState.icon
+        ],
         operator: operatorState,
         values: valuesState,
         ref: refValue
@@ -193,6 +204,7 @@ const FaFilterSelect = ({
 
   const propSelect = (option, group) => {
     setPropState({
+      groupName: group?.groupName,
       icon: option.extraProps?.propertyType || group.iconName,
       name: option.value,
       type: option.extraProps.valueType
@@ -205,7 +217,7 @@ const FaFilterSelect = ({
     );
     setValuesState(null);
     setValuesByProps([
-      option.label,
+      group.groupName,
       option.value,
       option.extraProps.valueType,
       option.extraProps?.propertyType || group.iconName
@@ -325,6 +337,7 @@ const FaFilterSelect = ({
       const label = getGroupLabel(groupOpt?.label);
       if (!optionsObj[label]) {
         optionsObj[label] = {
+          groupName: groupOpt?.key,
           iconName: groupOpt?.icon,
           label: label,
           values: groupOpt?.values?.map((valueOpt) => {

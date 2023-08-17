@@ -10,7 +10,7 @@ import {
 } from 'Utils/dataFormatter';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
-import startCase from 'lodash/startCase';
+import { startCase } from 'lodash';
 
 function EventGroupBlock({
   eventGroup,
@@ -31,7 +31,6 @@ function EventGroupBlock({
   hideText = false // added to hide the text from UI (Used in event based alerts)
 }) {
   const [filterOptions, setFilterOptions] = useState([]);
-
   const [propSelVis, setSelVis] = useState(false);
   const [isGroupByDDVisible, setGroupByDDVisible] = useState(false);
 
@@ -52,7 +51,8 @@ function EventGroupBlock({
             label: op?.[0],
             extraProps: {
               valueType: op?.[2],
-              propertyType: 'group'
+              propertyType: 'group',
+              groupName: eventGroup
             }
           };
         }) || [];

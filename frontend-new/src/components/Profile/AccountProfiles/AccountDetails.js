@@ -197,9 +197,11 @@ function AccountDetails({
   ]);
 
   useEffect(() => {
-    Object.keys(groupOpts || {}).forEach((group) =>
-      getGroupProperties(activeProject.id, group)
-    );
+    Object.keys(groupOpts || {}).forEach((group) => {
+      if (!groupProperties[group]) {
+        getGroupProperties(activeProject?.id, group);
+      }
+    });
   }, [activeProject.id, groupOpts]);
 
   useEffect(() => {

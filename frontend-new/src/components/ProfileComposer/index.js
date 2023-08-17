@@ -5,7 +5,6 @@ import { Button, DatePicker, Tooltip } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
 import styles from './index.module.scss';
 import ProfileBlock from './ProfileBlock';
-import GroupBlock from './GroupBlock';
 import { QUERY_TYPE_PROFILE } from '../../utils/constants';
 import ComposerBlock from '../QueryCommons/ComposerBlock';
 import {
@@ -18,6 +17,7 @@ import { INITIALIZE_GROUPBY } from '../../reducers/coreQuery/actions';
 import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
 import { fetchGroups } from 'Reducers/coreQuery/services';
 import GlobalFilter from 'Components/GlobalFilter';
+import GroupBlock from 'Components/QueryComposer/GroupBlock';
 
 function ProfileComposer({
   queries,
@@ -163,7 +163,6 @@ function ProfileComposer({
                 </div>
               </Button>
             </Tooltip>
-
             {selectGroup()}
           </div>
         </div>

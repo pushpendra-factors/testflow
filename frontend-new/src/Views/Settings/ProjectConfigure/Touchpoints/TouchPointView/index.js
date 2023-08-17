@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { connect, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { Text, SVG } from 'factorsComponents';
-import { Row, Col, Button, Radio, Input, Select, Tooltip } from 'antd';
+import { Row, Col, Button, Radio } from 'antd';
 
 import {
   getEventPropertiesV2,
@@ -16,7 +16,7 @@ import FaSelect from '../../../../../components/GenericComponents/FaSelect';
 
 import {
   getFiltersWithoutOrProperty,
-  getStateFromFilters
+  processFiltersFromQuery
 } from '../../../../../Views/CoreQuery/utils';
 import {
   RULE_TYPE_HS_CONTACT,
@@ -37,8 +37,6 @@ import {
   PROPERTY_MAP_OPTIONS
 } from '../utils';
 import { toCapitalCase } from 'Utils/global';
-import styles from './index.module.scss';
-import logger from 'Utils/logger';
 import { PropertySelect } from './PropertySelect';
 import getGroupIcon from 'Utils/getGroupIcon';
 import startCase from 'lodash/startCase';
@@ -157,7 +155,7 @@ const TouchpointView = ({
   }, [tchRuleType]);
   useEffect(() => {
     if (rule) {
-      const filterState = getStateFromFilters(rule.filters);
+      const filterState = processFiltersFromQuery(rule.filters);
       chainEventPropertyValues(filterState);
       setNewFilterStates(filterState);
       setPropertyMap(reversePropertyMap(rule.properties_map));

@@ -31,17 +31,6 @@ import {
 import _ from 'lodash';
 import GLobalFilter from 'Components/KPIComposer/GlobalFilter';
 import styles from './index.module.scss';
-import {
-  convertDateTimeObjectValuesToMilliSeconds,
-  getKPIQuery,
-  DefaultDateRangeFormat,
-  getEventsWithPropertiesKPI
-} from './utils';
-import {
-  reverseOperatorMap,
-  reverseDateOperatorMap
-} from 'Utils/operatorMapping';
-import { FILTER_TYPES } from '../../../CoreQuery/constants';
 import QueryBlock from './QueryBlock';
 import {
   INITIAL_SESSION_ANALYTICS_SEQ,
@@ -50,6 +39,12 @@ import {
 import EventFilter from 'Components/GlobalFilter';
 import useAutoFocus from 'hooks/useAutoFocus';
 import EventQueryBlock from './EventQueryBlock';
+import {
+  getStateFromKPIFilters,
+  getKPIQuery,
+  DefaultDateRangeFormat,
+  getEventsWithPropertiesKPI
+} from 'Views/CoreQuery/utils';
 
 const { Option } = Select;
 
@@ -475,65 +470,6 @@ function CustomKPI({
     }
   }, [savedCustomKPI]);
 
-  const getStateFromFilters = (rawFilters) => {
-    const eventFilters = [];
-
-    let ref = -1,
-      lastProp = '',
-      lastOp = '';
-    rawFilters.forEach((pr) => {
-      if (pr.lOp === 'AND') {
-        ref += 1;
-        const val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
-        const DNa = matchEventName(pr.prNa);
-        const isCamp =
-          pr?.ca === 'channels' || pr?.ca === 'custom_channels'
-            ? pr.objTy
-            : pr.en;
-        eventFilters.push({
-          operator:
-            pr.prDaTy === 'datetime'
-              ? reverseDateOperatorMap[pr.co]
-              : reverseOperatorMap[pr.co],
-          props: [DNa, pr.prDaTy, isCamp],
-          values:
-            pr.prDaTy === FILTER_TYPES.DATETIME
-              ? convertDateTimeObjectValuesToMilliSeconds(val)
-              : val,
-          extra: [DNa, pr.prNa, pr.prDaTy, isCamp],
-          ref
-        });
-        lastProp = pr.prNa;
-        lastOp = pr.co;
-      } else if (lastProp === pr.prNa && lastOp === pr.co) {
-        eventFilters[eventFilters.length - 1].values.push(pr.va);
-      } else {
-        const val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
-        const DNa = matchEventName(pr.prNa);
-        const isCamp =
-          pr?.ca === 'channels' || pr?.ca === 'custom_channels'
-            ? pr.objTy
-            : pr.en;
-        eventFilters.push({
-          operator:
-            pr.prDaTy === 'datetime'
-              ? reverseDateOperatorMap[pr.co]
-              : reverseOperatorMap[pr.co],
-          props: [DNa, pr.prDaTy, isCamp],
-          values:
-            pr.prDaTy === FILTER_TYPES.DATETIME
-              ? convertDateTimeObjectValuesToMilliSeconds(val)
-              : val,
-          extra: [DNa, pr.prNa, pr.prDaTy, isCamp],
-          ref
-        });
-        lastProp = pr.prNa;
-        lastOp = pr.co;
-      }
-    });
-    return eventFilters;
-  };
-
   const excludeEventsFromList = [
     'Contact Created',
     'Contact Updated',
@@ -757,7 +693,7 @@ function CustomKPI({
                 Filter
               </Text>
               <GLobalFilter
-                filters={getStateFromFilters(
+                filters={getStateFromKPIFilters(
                   viewKPIDetails?.transformations?.fil
                 )}
                 setGlobalFilters={setGlobalFiltersOption}
@@ -1379,7 +1315,7 @@ function CustomKPI({
                             Filter
                           </Text>
                           <GLobalFilter
-                            filters={getStateFromFilters(
+                            filters={getStateFromKPIFilters(
                               viewKPIDetails?.transformations?.fil
                             )}
                             setGlobalFilters={setGlobalFiltersOption}
@@ -1470,7 +1406,7 @@ function CustomKPI({
                                   </Text>
 
                                   <GLobalFilter
-                                    filters={getStateFromFilters(item.fil)}
+                                    filters={getStateFromKPIFilters(item.fil)}
                                     setGlobalFilters={setGlobalFiltersOption}
                                     delFilter={false}
                                     viewMode

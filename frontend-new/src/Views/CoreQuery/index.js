@@ -48,7 +48,6 @@ import {
   getKPIQuery,
   DefaultDateRangeFormat,
   getAttributionQuery,
-  getCampaignsQuery,
   isComparisonEnabled,
   getProfileQuery,
   getStateQueryFromRequestQuery
@@ -57,7 +56,6 @@ import {
   getEventsData,
   getFunnelData,
   getAttributionsData,
-  getCampaignsData,
   getProfileData,
   getKPIData
 } from '../../reducers/coreQuery/services';
@@ -84,7 +82,6 @@ import { SHOW_ANALYTICS_RESULT } from '../../reducers/types';
 import AnalysisResultsPage from './AnalysisResultsPage';
 import AnalysisHeader from './AnalysisResultsPage/AnalysisHeader';
 import {
-  SET_CAMP_DATE_RANGE,
   SET_ATTR_DATE_RANGE,
   INITIALIZE_GROUPBY
 } from '../../reducers/coreQuery/actions';
@@ -1136,88 +1133,6 @@ function CoreQuery({
     ]
   );
 
-  const runCampaignsQuery = useCallback(
-    async (isQuerySaved, durationObj = null, isGranularityChange = false) => {
-      try {
-        closeDrawer();
-        dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
-        setShowResult(true);
-        setQuerySaved(isQuerySaved);
-        if (!isQuerySaved) {
-          setNavigatedFromDashboard(false);
-          setNavigatedFromAnalyse(false);
-        }
-        updateResultState({
-          ...initialState,
-          loading: true
-        });
-        if (!durationObj) {
-          durationObj = camp_dateRange;
-        }
-        const query = getCampaignsQuery(
-          camp_channels,
-          camp_measures,
-          camp_filters,
-          camp_groupBy,
-          durationObj
-        );
-
-        if (!isQuerySaved) {
-          // Factors RUN_QUERY tracking
-          factorsai.track('RUN-QUERY', {
-            email_id: currentAgent?.email,
-            query_type: QUERY_TYPE_CAMPAIGN,
-            project_id: activeProject?.id,
-            project_name: activeProject?.name
-          });
-        }
-
-        setCampaignState({
-          channel: query.query_group[0].channel,
-          filters: query.query_group[0].filters,
-          select_metrics: query.query_group[0].select_metrics,
-          group_by: query.query_group[0].group_by,
-          date_range: { ...durationObj }
-        });
-        updateRequestQuery(query);
-        setLoading(true);
-        const res = await getCampaignsData(
-          activeProject.id,
-          query,
-          getDashboardConfigs(isGranularityChange ? false : isQuerySaved), // we need to call fresh query when granularity is changed
-          true
-        );
-        setLoading(false);
-        updateResultState({
-          ...initialState,
-          data: res.data.result || res.data
-        });
-      } catch (err) {
-        console.log(err);
-        setLoading(false);
-        updateResultState({
-          ...initialState,
-          error: true
-        });
-      }
-    },
-    [
-      dispatch,
-      updateResultState,
-      camp_channels,
-      camp_measures,
-      camp_filters,
-      camp_groupBy,
-      activeProject.id,
-      activeProject?.name,
-      getDashboardConfigs,
-      setNavigatedFromDashboard,
-      setNavigatedFromAnalyse,
-      camp_dateRange,
-      currentAgent?.email
-    ]
-  );
-
   const runProfileQuery = useCallback(
     async (isQuerySaved, durationObj) => {
       try {
@@ -1297,14 +1212,6 @@ function CoreQuery({
           runKPIQuery(querySaved, appliedDateRange, true);
         }
       }
-      if (queryType === QUERY_TYPE_CAMPAIGN) {
-        const payload = {
-          ...camp_dateRange,
-          frequency
-        };
-        dispatch({ type: SET_CAMP_DATE_RANGE, payload });
-        runCampaignsQuery(querySaved, payload, true);
-      }
     },
     [
       queryOptions.date_range,
@@ -1313,7 +1220,6 @@ function CoreQuery({
       camp_dateRange,
       dispatch,
       queryType,
-      runCampaignsQuery,
       resetComparisonData,
       runKPIQuery
     ]
@@ -1398,11 +1304,6 @@ function CoreQuery({
         runKPIQuery(querySaved, appliedDateRange, false, isCompareDate);
       }
 
-      if (queryType === QUERY_TYPE_CAMPAIGN) {
-        dispatch({ type: SET_CAMP_DATE_RANGE, payload });
-        runCampaignsQuery(querySaved, payload);
-      }
-
       if (queryType === QUERY_TYPE_PROFILE) {
         runProfileQuery(querySaved, payload);
       }
@@ -1422,7 +1323,6 @@ function CoreQuery({
       querySaved,
       queryOptions.date_range,
       dispatch,
-      runCampaignsQuery,
       runAttributionQuery,
       runProfileQuery,
       runKPIQuery
@@ -1438,11 +1338,6 @@ function CoreQuery({
         });
       } else if (clickedSavedReport.queryType === QUERY_TYPE_ATTRIBUTION) {
         runAttributionQuery({
-          id: clickedSavedReport.query_id,
-          name: clickedSavedReport.queryName
-        });
-      } else if (clickedSavedReport.queryType === QUERY_TYPE_CAMPAIGN) {
-        runCampaignsQuery({
           id: clickedSavedReport.query_id,
           name: clickedSavedReport.queryName
         });
@@ -1469,7 +1364,6 @@ function CoreQuery({
     runFunnelQuery,
     runQuery,
     runAttributionQuery,
-    runCampaignsQuery,
     runKPIQuery,
     runProfileQuery
   ]);

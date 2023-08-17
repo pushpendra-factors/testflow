@@ -400,7 +400,6 @@ let Step2DashboardTemplateModal = ({
     // dispatch(deleteQueryTest())
     fetchEventNames(activeProject.id);
     getUserPropertiesV2(activeProject.id);
-    getGroupProperties(activeProject.id);
     dispatch(fetchSmartPropertyRules(activeProject.id));
     fetchWeeklyIngishtsMetaData(activeProject.id);
     dispatch(fetchAttrContentGroups(activeProject.id));

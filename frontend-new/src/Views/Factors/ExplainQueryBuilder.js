@@ -171,8 +171,8 @@ const CreateGoalDrawer = (props) => {
       };
       setSelectedDateRange(defaultDate);
 
-      if (goalInsights.type == 'singleevent') {
-        if (goalInsights?.goal?.st_en == '') {
+      if (goalInsights.type === 'singleevent') {
+        if (goalInsights?.goal?.st_en === '') {
           setEvent1(goalInsights?.goal?.en_en);
         } else {
           setEvent1(goalInsights?.goal?.st_en);

@@ -78,7 +78,7 @@ function QueryBlock({
 
   useEffect(() => {
     if (!event) return;
-    if (eventGroup?.length) {
+    if (eventGroup?.length && !groupProperties[eventGroup]) {
       getGroupProperties(activeProject.id, eventGroup);
     }
   }, [event, activeProject.id, eventGroup]);

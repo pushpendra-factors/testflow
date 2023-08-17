@@ -737,6 +737,20 @@ export const formatDurationIntoString = (seconds) => {
   return returnString.trim();
 };
 
+export const processProperties = (properties, propertyType, key) => {
+  if (!properties) return [];
+
+  return properties.map((op) => ({
+    value: op?.[1],
+    label: op?.[0],
+    extraProps: {
+      valueType: op?.[2],
+      propertyType,
+      groupName: key
+    }
+  }));
+};
+
 export const convertAndAddPropertiesToGroupSelectOptions = (
   properties,
   filterOptsObj,
@@ -748,28 +762,11 @@ export const convertAndAddPropertiesToGroupSelectOptions = (
       filterOptsObj[groupkey] = {
         label: startCase(groupkey),
         iconName: getGroupIcon(groupkey),
-        values:
-          properties?.[groupkey]?.map((op) => {
-            return {
-              value: op?.[1],
-              label: op?.[0],
-              extraProps: {
-                valueType: op?.[2],
-                propertyType
-              }
-            };
-          }) || []
+        values: processProperties(properties, propertyType, groupkey) || []
       };
     } else {
-      properties?.[groupkey]?.forEach((op) =>
-        filterOptsObj[groupkey].values.push({
-          value: op?.[1],
-          label: op?.[0],
-          extraProps: {
-            valueType: op?.[2],
-            propertyType
-          }
-        })
+      filterOptsObj[groupkey].values.push(
+        ...(processProperties(properties, propertyType, groupkey) || [])
       );
     }
   });

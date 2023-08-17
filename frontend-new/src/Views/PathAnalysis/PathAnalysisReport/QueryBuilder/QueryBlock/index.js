@@ -91,7 +91,7 @@ function QueryBlock({
     if (!eventPropertiesV2[event?.label]) {
       getEventPropertiesV2(activeProject?.id, event?.label);
     }
-    if (eventGroup) {
+    if (eventGroup && !groupProperties[eventGroup]) {
       getGroupProperties(activeProject?.id, eventGroup);
     }
   }, [activeProject?.id, event, eventGroup]);

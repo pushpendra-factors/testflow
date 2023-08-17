@@ -11,11 +11,12 @@ import FaSelect from '../../FaSelect';
 import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 import {
   PropTextFormat,
-  convertAndAddPropertiesToGroupSelectOptions
+  convertAndAddPropertiesToGroupSelectOptions,
+  processProperties
 } from 'Utils/dataFormatter';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
-import startCase from 'lodash/startCase';
 import getGroupIcon from 'Utils/getGroupIcon';
+import { GroupDisplayNames } from 'Components/Profile/utils';
 
 function GroupBlock({
   groupByState,
@@ -34,6 +35,7 @@ function GroupBlock({
 
   useEffect(() => {
     const filterOptsObj = {};
+
     if (groupName === 'users' || groupName === 'events') {
       if (userPropertiesV2) {
         convertAndAddPropertiesToGroupSelectOptions(
@@ -42,25 +44,33 @@ function GroupBlock({
           'user'
         );
       }
-    } else {
+    } else if (groupName !== '$domains') {
       const groupLabel = `${PropTextFormat(groupName)} Properties`;
-      const groupValues =
-        groupProperties[groupName]?.map((op) => {
-          return {
-            value: op?.[1],
-            label: op?.[0],
-            extraProps: {
-              valueType: op?.[2],
-              propertyType: 'group'
-            }
-          };
-        }) || [];
+      const groupValues = processProperties(
+        groupProperties[groupName],
+        'group',
+        groupName
+      );
       const groupPropIconName = getGroupIcon(groupLabel);
       filterOptsObj[groupLabel] = {
         iconName: groupPropIconName === 'NoImage' ? 'group' : groupPropIconName,
         label: groupLabel,
         values: groupValues
       };
+    } else {
+      Object.entries(groupProperties || {}).forEach(([group, properties]) => {
+        if (Object.keys(GroupDisplayNames).includes(group)) {
+          const groupLabel = `${PropTextFormat(group)} Properties`;
+          const groupValues = processProperties(properties, 'group', group);
+          const groupPropIconName = getGroupIcon(groupLabel);
+          filterOptsObj[groupLabel] = {
+            iconName:
+              groupPropIconName === 'NoImage' ? 'group' : groupPropIconName,
+            label: groupLabel,
+            values: groupValues
+          };
+        }
+      });
     }
     setFilterOptions(Object.values(filterOptsObj));
   }, [userPropertiesV2, groupProperties, groupName]);
@@ -84,23 +94,24 @@ function GroupBlock({
   };
 
   const onChange = (option, group, index) => {
-    const newGroupByState = Object.assign({}, groupByState.global[index]);
-    newGroupByState.prop_category = option?.extraProps?.propertyType;
-    newGroupByState.eventName = '$present';
-    newGroupByState.property = option?.value;
-    newGroupByState.prop_type = option?.extraProps?.valueType;
-    if (newGroupByState.prop_type === 'numerical') {
-      newGroupByState.gbty = 'raw_values';
-    }
-    if (newGroupByState.prop_type === 'datetime') {
-      newGroupByState.grn = 'day';
-    }
+    const newGroupByState = {
+      prop_category: option?.extraProps?.propertyType,
+      eventName: '$present',
+      groupName: option?.extraProps?.groupName,
+      property: option?.value,
+      prop_type: option?.extraProps?.valueType,
+      gbty: option?.extraProps?.valueType === 'numerical' ? 'raw_values' : '',
+      grn: option?.extraProps?.valueType === 'datetime' ? 'day' : ''
+    };
+
     setGroupBy('global', newGroupByState, index);
+
     const ddVis = [...isDDVisible];
     ddVis[index] = false;
-    const valDD = [isValueDDVisible];
-    valDD[index] = true;
     setDDVisible(ddVis);
+
+    const valDD = [...isValueDDVisible];
+    valDD[index] = true;
     setValueDDVisible(valDD);
   };
 

@@ -79,7 +79,7 @@ export const TimelineHoverPropDisplayNames = {
   $hubspot_form_submission_timestamp: 'Form Submit Timestamp'
 };
 
-export const displayFilterOpts = {
+export const GroupDisplayNames = {
   All: 'All Accounts',
   $hubspot_company: 'Hubspot Companies',
   $salesforce_account: 'Salesforce Accounts',
@@ -144,94 +144,6 @@ export const formatFiltersForPayload = (filters = [], source = 'users') => {
     }
   });
   return filterProps;
-};
-
-export const formatEventsFromSegment = (ewp) => {
-  const events = ewp?.map((e) => {
-    const filters = [];
-    let ref = -1;
-    let lastProp = '';
-    let lastOp = '';
-    e.pr.forEach((pr) => {
-      if (pr.lop === 'AND') {
-        ref += 1;
-        filters.push({
-          operator:
-            pr.ty === 'datetime'
-              ? reverseDateOperatorMap[pr.op]
-              : reverseOperatorMap[pr.op],
-          props: [pr.pr, pr.ty, pr.en],
-          values: [pr.va],
-          ref
-        });
-        lastProp = pr.pr;
-        lastOp = pr.op;
-      } else if (lastProp === pr.pr && lastOp === pr.op) {
-        filters[filters.length - 1].values.push(pr.va);
-      } else {
-        filters.push({
-          operator:
-            pr.ty === 'datetime'
-              ? reverseDateOperatorMap[pr.op]
-              : reverseOperatorMap[pr.op],
-          props: [pr.pr, pr.ty, pr.en],
-          values: [pr.va],
-          ref
-        });
-        lastProp = pr.pr;
-        lastOp = pr.op;
-      }
-    });
-    return {
-      alias: e.an,
-      label: e.na,
-      group: e.grpa,
-      filters,
-      key: generateRandomKey()
-    };
-  });
-  return events;
-};
-
-export const formatPayloadForFilters = (gp) => {
-  const globalFilters = [];
-
-  if (gp && Array.isArray(gp)) {
-    let ref = -1;
-    let lastProp = '';
-    let lastOp = '';
-    gp.forEach((pr) => {
-      if (pr.lop === 'AND') {
-        ref += 1;
-        globalFilters.push({
-          operator:
-            pr.ty === 'datetime'
-              ? reverseDateOperatorMap[pr.op]
-              : reverseOperatorMap[pr.op],
-          props: [pr.pr, pr.ty, pr.en],
-          values: [pr.va],
-          ref
-        });
-        lastProp = pr.pr;
-        lastOp = pr.op;
-      } else if (lastProp === pr.pr && lastOp === pr.op) {
-        globalFilters[globalFilters.length - 1].values.push(pr.va);
-      } else {
-        globalFilters.push({
-          operator:
-            pr.ty === 'datetime'
-              ? reverseDateOperatorMap[pr.op]
-              : reverseOperatorMap[pr.op],
-          props: [pr.pr, pr.ty, pr.en],
-          values: [pr.va],
-          ref
-        });
-        lastProp = pr.pr;
-        lastOp = pr.op;
-      }
-    });
-  }
-  return globalFilters;
 };
 
 export const eventsFormattedForGranularity = (
@@ -328,7 +240,7 @@ export const propValueFormat = (searchKey, value, type) => {
 export const formatSegmentsObjToGroupSelectObj = (group, vals) => {
   const label =
     ReverseProfileMapper[group]?.users ||
-    displayFilterOpts[group] ||
+    GroupDisplayNames[group] ||
     PropTextFormat(group) ||
     'Others';
   const values = vals?.map(({ name, id, description, type, query }) => [

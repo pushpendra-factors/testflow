@@ -656,7 +656,6 @@ const mapStateToProps = (state) => ({
   eventOptions: state.coreQuery.eventOptions,
   activeProject: state.global.active_project,
   eventPropertiesV2: state.coreQuery.eventPropertiesV2,
-  eventPropertiesV2: state.coreQuery.eventPropertiesV2,
   groupBy: state.coreQuery.groupBy.event,
   eventNames: state.coreQuery.eventNames,
   kpi: state.kpi

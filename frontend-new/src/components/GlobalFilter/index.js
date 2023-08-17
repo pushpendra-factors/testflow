@@ -8,6 +8,7 @@ import { Button } from 'antd';
 import ORButton from '../ORButton';
 import { compareFilters, groupFilters } from '../../utils/global';
 import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
+import { GroupDisplayNames } from 'Components/Profile/utils';
 
 const GlobalFilter = ({
   filters = [],
@@ -30,6 +31,12 @@ const GlobalFilter = ({
     }
     if (groupName === 'users' || groupName === 'events') {
       props.user = userPropertiesV2;
+    } else if (groupName === '$domains') {
+      Object.entries(groupProperties || {}).forEach(([group, properties]) => {
+        if (Object.keys(GroupDisplayNames).includes(group)) {
+          props[group] = properties;
+        }
+      });
     } else {
       props[groupName] = groupProperties[groupName];
     }
@@ -42,17 +49,20 @@ const GlobalFilter = ({
     const fltrs = filtersSorted.filter((f, i) => i !== index);
     setGlobalFilters(fltrs);
   };
+
   const editFilter = (id, filter) => {
     const filtersSorted = [...filters];
     filtersSorted.sort(compareFilters);
     const fltrs = filtersSorted.map((f, i) => (i === id ? filter : f));
     setGlobalFilters(fltrs);
   };
+
   const addFilter = (filter) => {
     const fltrs = [...filters];
     fltrs.push(filter);
     setGlobalFilters(fltrs);
   };
+
   const closeFilter = () => {
     setFilterDD(false);
     setOrFilterIndex(-1);

@@ -35,7 +35,6 @@ import {
   getGroupProperties,
   getEventPropertiesV2
 } from 'Reducers/coreQuery/middleware';
-import { getEventsWithProperties, getStateFromFiltersEvent } from '../utils';
 import {
   fetchSlackChannels,
   fetchProjectSettingsV1,
@@ -51,7 +50,11 @@ import {
   INITIAL_SESSION_ANALYTICS_SEQ,
   QUERY_OPTIONS_DEFAULT_VALUE
 } from 'Utils/constants';
-import { DefaultDateRangeFormat } from '../../../../CoreQuery/utils';
+import {
+  DefaultDateRangeFormat,
+  formatFiltersForQuery,
+  processFiltersFromQuery
+} from '../../../../CoreQuery/utils';
 import TextArea from 'antd/lib/input/TextArea';
 import EventGroupBlock from '../../../../../components/QueryComposer/EventGroupBlock';
 import useAutoFocus from 'hooks/useAutoFocus';
@@ -294,7 +297,7 @@ const EventBasedAlert = ({
 
   useEffect(() => {
     if (viewAlertDetails?.event_alert?.filter) {
-      const filter = getStateFromFiltersEvent(
+      const filter = processFiltersFromQuery(
         viewAlertDetails.event_alert.filter
       );
       setViewFilter(filter);
@@ -334,7 +337,7 @@ const EventBasedAlert = ({
       queryData.push({
         alias: '',
         label: viewAlertDetails?.event_alert?.event,
-        filters: getStateFromFiltersEvent(viewAlertDetails.event_alert.filter),
+        filters: processFiltersFromQuery(viewAlertDetails.event_alert.filter),
         group: ''
       });
       setQueries(queryData);
@@ -548,35 +551,6 @@ const EventBasedAlert = ({
     return groupByEvents;
   };
 
-  const getGroupByFromProperties = (appliedGroupBy) => {
-    return appliedGroupBy.map((opt) => {
-      let gbpReq = {};
-      if (opt.eventIndex) {
-        gbpReq = {
-          pr: opt.property,
-          en: opt.prop_category === 'group' ? 'user' : opt.prop_category,
-          pty: opt.prop_type,
-          ena: opt.eventName,
-          eni: opt.eventIndex
-        };
-      } else {
-        gbpReq = {
-          pr: opt.property,
-          en: opt.prop_category === 'group' ? 'user' : opt.prop_category,
-          pty: opt.prop_type,
-          ena: opt.eventName
-        };
-      }
-      if (opt.prop_type === 'datetime') {
-        opt.grn ? (gbpReq.grn = opt.grn) : (gbpReq.grn = 'day');
-      }
-      if (opt.prop_type === 'numerical') {
-        opt.gbty ? (gbpReq.gbty = opt.gbty) : (gbpReq.gbty = '');
-      }
-      return gbpReq;
-    });
-  };
-
   const getGroupByFromState = (appliedGroupBy) => {
     return appliedGroupBy.map((opt) => {
       let gbpReq = {};
@@ -650,12 +624,12 @@ const EventBasedAlert = ({
       let payload = {
         title: data?.alert_name,
         event: queries[0]?.label,
-        filter: getEventsWithProperties(queries),
+        filter: formatFiltersForQuery(queries?.[0]?.filters),
         notifications: notifications,
         message: data?.message,
         message_property:
           groupBy && groupBy.length && groupBy[0] && groupBy[0].property
-            ? getGroupByFromProperties(
+            ? formatFiltersForQuery(
                 groupBy
                   .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
                   .filter(
@@ -668,7 +642,7 @@ const EventBasedAlert = ({
         alert_limit: alertLimit,
         repeat_alerts: notRepeat,
         cool_down_time: coolDownTime * 3600,
-        breakdown_properties: getGroupByFromProperties(breakDownProperties),
+        breakdown_properties: formatFiltersForQuery(breakDownProperties),
         slack: slackEnabled,
         slack_channels: saveSelectedChannel,
         webhook: webhookEnabled,
@@ -894,7 +868,7 @@ const EventBasedAlert = ({
       event: queries[0]?.label,
       message_property:
         groupBy && groupBy.length && groupBy[0] && groupBy[0].property
-          ? getGroupByFromProperties(
+          ? formatFiltersForQuery(
               groupBy
                 .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
                 .filter(

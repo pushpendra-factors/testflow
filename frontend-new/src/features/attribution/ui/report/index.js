@@ -35,10 +35,9 @@ import {
   getKPIQueryAttributionV1,
   DefaultDateRangeFormat,
   getAttributionQuery,
-  isComparisonEnabled
+  isComparisonEnabled,
+  getAttributionStateFromRequestQuery
 } from 'Views/CoreQuery/utils';
-
-import { getAttributionStateFromRequestQuery } from 'Attribution/utils';
 
 import {
   getAttributionsData,
@@ -653,7 +652,7 @@ function CoreQuery({
         updateQuery(activeProject.id, savedQueryId, reqBody);
 
         // #Todo Disabled for now. The query is getting rerun again. Have to figure out a way around it.
-        if (!query_type) {
+        if (!queryType) {
           dispatch({
             type: QUERY_UPDATED,
             queryId: savedQueryId,

@@ -41,7 +41,6 @@ function CopyDashboardModal({
     // dispatch(deleteQueryTest())
     fetchEventNames(active_project.id);
     getUserPropertiesV2(active_project.id);
-    getGroupProperties(active_project.id);
     dispatch(fetchSmartPropertyRules(active_project.id));
     fetchWeeklyIngishtsMetaData(active_project.id);
     dispatch(fetchAttrContentGroups(active_project.id));

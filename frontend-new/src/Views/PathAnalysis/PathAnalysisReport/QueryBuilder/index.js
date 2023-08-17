@@ -30,23 +30,16 @@ import {
   fetchPathAnalysisInsights
 } from 'Reducers/pathAnalysis';
 import { useHistory } from 'react-router-dom';
-import FaDatepicker from 'Components/FaDatepicker';
 import FaSavedRangePicker from 'Components/FaSavedRangePicker';
 import { useEffect } from 'react';
 import moment from 'moment';
-import {
-  getGlobalFilters,
-  getGlobalFiltersfromSavedState,
-  getExpandBy,
-  getExpandByFromState
-} from './utils';
 import _ from 'lodash';
 import FaSelect from 'Components/FaSelect';
 import { fetchGroups } from 'Reducers/coreQuery/services';
 import GlobalFilter from 'Components/GlobalFilter';
 import EventFilter from './EventFilter';
 import ExpandBy from './ExpandBy';
-import { fetchAdwordsCustomerAccounts } from 'Reducers/global';
+import { formatBreakdownsForQuery, formatFiltersForQuery, processBreakdownsFromQuery, processFiltersFromQuery } from 'Views/CoreQuery/utils';
 
 const QueryBuilder = ({
   queryOptions = {},
@@ -118,7 +111,7 @@ const QueryBuilder = ({
         ...Arr[0],
         filters: _, // removing filters key
         filter: !_.isEmpty(Arr[0]?.filters)
-          ? getGlobalFilters(Arr[0]?.filters)
+          ? formatFiltersForQuery(Arr[0]?.filters)
           : null
       };
       return query;
@@ -126,34 +119,30 @@ const QueryBuilder = ({
   };
 
   const separateEventsArr = () => {
-    let Arr = considerEventArr.filter((item) => item.type == 'eventOnly');
-    let payload = Arr.map((item) => {
+    let Arr = considerEventArr.filter(item => item.type === "eventOnly")
+    let payload = Arr.map(item => {
       return {
-        alias: item.value?.split(',')[1],
-        label: item.value?.split(',')[0],
-        group: item.value?.split(',')[2],
-        filter: item?.filter ? getGlobalFilters(item?.filter) : null,
-        expand_property: item?.expand_property
-          ? getExpandBy(item?.expand_property)
-          : null
-      };
-    });
-    return payload;
-  };
+        alias: item.value?.split(",")[1],
+        label: item.value?.split(",")[0],
+        group: item.value?.split(",")[2],
+        filter: item?.filter ? formatFiltersForQuery(item?.filter) : null,
+        expand_property: item?.expand_property ? formatBreakdownsForQuery(item?.expand_property) : null
+      }
+    })
+    return payload
+  }
   const separateGroupArr = () => {
-    let Arr = considerEventArr.filter((item) => item.type == 'eventType');
-    let payload = Arr.map((item) => {
+    let Arr = considerEventArr.filter(item => item.type === "eventType")
+    let payload = Arr.map(item => {
       return {
         alias: '',
         label: item.value,
-        filter: item?.filter ? getGlobalFilters(item?.filter) : null,
-        expand_property: item?.expand_property
-          ? getExpandBy(item?.expand_property)
-          : null
-      };
-    });
-    return payload;
-  };
+        filter: item?.filter ? formatFiltersForQuery(item?.filter) : null,
+        expand_property: item?.expand_property ? formatBreakdownsForQuery(item?.expand_property) : null
+      }
+    })
+    return payload
+  }
 
   const buildPathAnalysisQuery = (data) => {
     setLoading(true);
@@ -164,13 +153,13 @@ const QueryBuilder = ({
         group: groupCategory,
         event: transformIndividualFilter(singleQueries),
         steps: Number(pathStepCount),
-        include_events: excludeEvents == 'false' ? separateEventsArr() : null,
-        exclude_events: excludeEvents == 'true' ? multipleQueries : null,
+        include_events: excludeEvents === 'false' ? separateEventsArr() : null,
+        exclude_events: excludeEvents === 'true' ? multipleQueries : null,
         include_group: separateGroupArr(),
         starttimestamp: moment(selectedDateRange.startDate).unix(),
         endtimestamp: moment(selectedDateRange.endDate).unix(),
         avoid_repeated_events: repetativeStep,
-        filter: globalFilters ? getGlobalFilters(globalFilters) : null
+        filter: globalFilters ? formatFiltersForQuery(globalFilters) : null
       },
       referenceid: activeQuery ? activeQuery?.referenceid : ''
     };
@@ -178,7 +167,9 @@ const QueryBuilder = ({
       .then(() => {
         fetchSavedPathAnalysis(activeProject?.id);
         setLoading(false);
-        activeQuery ? '' : history.push('/path-analysis');
+        if (!activeQuery) {
+          history.push('/path-analysis')
+        };
         message.success('Report saved!');
       })
       .catch((err) => {
@@ -198,47 +189,32 @@ const QueryBuilder = ({
       setPathStepCount(`${activeQueryItem?.steps}`);
       setExcludeEvents(`${activeQueryItem?.include_events ? 'false' : 'true'}`);
 
-      let includeGroupFromState = activeQueryItem?.include_group
-        ? activeQueryItem?.include_group?.map((item) => {
-            return {
-              ...item,
-              value: item?.label,
-              type: 'eventType',
-              filter: item?.filter
-                ? getGlobalFiltersfromSavedState(item?.filter)
-                : null,
-              expand_property: item?.expand_property
-                ? getExpandByFromState(item?.expand_property)
-                : null
-            };
-          })
-        : [];
-      let includeEventsFromState = activeQueryItem?.include_events
-        ? activeQueryItem?.include_events?.map((item) => {
-            return {
-              ...item,
-              type: 'eventOnly',
-              value: `${item?.label},${item?.alias},${item?.group},`,
-              filter: item?.filter
-                ? getGlobalFiltersfromSavedState(item?.filter)
-                : null,
-              expand_property: item?.expand_property
-                ? getExpandByFromState(item?.expand_property)
-                : null
-            };
-          })
-        : [];
-      let considerEventsFromState = [
-        ...includeGroupFromState,
-        ...includeEventsFromState
-      ];
+      let includeGroupFromState = activeQueryItem?.include_group ? activeQueryItem?.include_group?.map((item) => {
+        return {
+          ...item,
+          value: item?.label,
+          type: "eventType",
+          filter: item?.filter ? processFiltersFromQuery(item?.filter) : null,
+          expand_property: item?.expand_property ? processBreakdownsFromQuery(item?.expand_property) : null
+        }
+      }) : []
+      let includeEventsFromState = activeQueryItem?.include_events ? activeQueryItem?.include_events?.map((item) => {
+        return {
+          ...item,
+          type: "eventOnly",
+          value: `${item?.label},${item?.alias},${item?.group},`,
+          filter: item?.filter ? processFiltersFromQuery(item?.filter) : null,
+          expand_property: item?.expand_property ? processBreakdownsFromQuery(item?.expand_property) : null
+        }
+      }) : []
+      let considerEventsFromState = [...includeGroupFromState, ...includeEventsFromState];
 
-      setConsiderEventArr(considerEventsFromState);
+      setConsiderEventArr(considerEventsFromState)
       let eventFromState = {
         ...activeQueryItem?.event,
         //adding filters key for filters to work
         filters: activeQueryItem?.event?.filter
-          ? getGlobalFiltersfromSavedState(activeQueryItem?.event?.filter)
+          ? processFiltersFromQuery(activeQueryItem?.event?.filter)
           : null
       };
       setSingleQueries([eventFromState]);
@@ -259,7 +235,7 @@ const QueryBuilder = ({
 
       setGlobalFilters(
         activeQueryItem?.filter
-          ? getGlobalFiltersfromSavedState(activeQueryItem?.filter)
+          ? processFiltersFromQuery(activeQueryItem?.filter)
           : null
       );
       setSelectedDateRange(defaultDate);
@@ -631,7 +607,7 @@ const QueryBuilder = ({
             />
           </div>
           <div className='ml-2'>
-            {typeCheck == 'eventOnly' ? (
+            {typeCheck === 'eventOnly' ? (
               <Select
                 showSearch
                 style={{ minWidth: 285 }}
@@ -747,7 +723,7 @@ const QueryBuilder = ({
               />
             </div>
 
-            {excludeEvents == 'true' ? queryList() : addEventFn()}
+            {excludeEvents === 'true' ? queryList() : addEventFn()}
           </div>
         </>
       );

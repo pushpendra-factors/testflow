@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Modal, Button } from 'antd';
 import {
   DefaultDateRangeForSegments,
-  displayFilterOpts,
+  GroupDisplayNames,
   getSegmentQuery
 } from '../utils';
 import { SVG, Text } from 'Components/factorsComponents';
@@ -434,7 +434,7 @@ function SegmentModal({
       ${
         profileType === 'user'
           ? ReverseProfileMapper[segmentPayload.type]?.users
-          : displayFilterOpts[segmentPayload.type]
+          : GroupDisplayNames[segmentPayload.type]
       } in the last 28 days who performed `}
       </h2>
       <div className={`relative fa-button--truncate`}>
