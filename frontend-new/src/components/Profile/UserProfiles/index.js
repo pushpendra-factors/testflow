@@ -17,14 +17,12 @@ import { getUserPropertiesV2 } from '../../../reducers/coreQuery/middleware';
 import PropertyFilter from '../MyComponents/PropertyFilter';
 import MomentTz from '../../MomentTz';
 import {
-  fetchDemoProject,
   fetchProjectSettingsV1,
   fetchProjectSettings,
   fetchMarketoIntegration,
   fetchBingAdsIntegration,
   udpateProjectSettings
 } from '../../../reducers/global';
-import ProfileBeforeIntegration from '../ProfileBeforeIntegration';
 import {
   ALPHANUMSTR,
   DEFAULT_TIMELINE_CONFIG,
@@ -71,6 +69,7 @@ import { FEATURES } from 'Constants/plans.constants';
 import UpgradeModal from '../UpgradeModal';
 import RangeNudge from 'Components/GenericComponents/RangeNudge';
 import { showUpgradeNudge } from 'Views/Settings/ProjectSettings/Pricing/utils';
+import CommonBeforeIntegrationPage from 'Components/GenericComponents/CommonBeforeIntegrationPage';
 
 const userOptions = getUserOptions();
 
@@ -87,7 +86,6 @@ function UserProfiles({
   fetchProjectSettings,
   fetchMarketoIntegration,
   fetchBingAdsIntegration,
-  fetchDemoProject,
   currentProjectSettings,
   udpateProjectSettings,
   updateSegmentForId
@@ -114,7 +112,6 @@ function UserProfiles({
   const [listSearchItems, setListSearchItems] = useState([]);
   const [searchBarOpen, setSearchBarOpen] = useState(false);
   const [searchDDOpen, setSearchDDOpen] = useState(false);
-  const [demoProjectId, setDemoProjectId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [checkListUserProps, setCheckListUserProps] = useState([]);
   const [showPopOver, setShowPopOver] = useState(false);
@@ -176,16 +173,6 @@ function UserProfiles({
       setTLConfig(timelinesConfig);
     }
   }, [currentProjectSettings?.timelines_config]);
-
-  useEffect(() => {
-    fetchDemoProject()
-      .then((res) => {
-        setDemoProjectId(res.data[0]);
-      })
-      .catch((err) => {
-        console.log(err.data.error);
-      });
-  }, [activeProject, fetchDemoProject]);
 
   useEffect(() => {
     setTimeout(() => {
@@ -724,7 +711,7 @@ function UserProfiles({
     );
   }
 
-  if (isIntegrationEnabled || activeProject.id === demoProjectId) {
+  if (isIntegrationEnabled) {
     return (
       <ProfilesWrapper>
         {showUpgradeNudge(
@@ -772,7 +759,7 @@ function UserProfiles({
       </ProfilesWrapper>
     );
   }
-  return <ProfileBeforeIntegration />;
+  return <CommonBeforeIntegrationPage />;
 }
 
 const mapStateToProps = (state) => ({
@@ -794,7 +781,6 @@ const mapDispatchToProps = (dispatch) =>
       fetchProjectSettings,
       fetchMarketoIntegration,
       fetchBingAdsIntegration,
-      fetchDemoProject,
       udpateProjectSettings,
       updateSegmentForId
     },

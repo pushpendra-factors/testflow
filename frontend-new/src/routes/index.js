@@ -67,7 +67,6 @@ export const AppRoutes = () => (
 
 export const AppLayoutRoutes = ({
   activeAgent,
-  demoProjectId,
   active_project,
   currentProjectSettings
 }) => {
@@ -108,11 +107,7 @@ export const AppLayoutRoutes = ({
         />
       ) : null}
 
-      {!demoProjectId.includes(active_project?.id) ? (
-        <PrivateRoute path='/project-setup' component={SetupAssist} />
-      ) : (
-        <Redirect to='/' />
-      )}
+      <PrivateRoute path='/project-setup' component={SetupAssist} />
     </Switch>
   );
 };

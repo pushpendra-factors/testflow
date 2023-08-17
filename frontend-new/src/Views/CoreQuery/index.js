@@ -20,7 +20,6 @@ import KPIComposer from 'Components/KPIComposer';
 import PageSuspenseLoader from 'Components/SuspenseLoaders/PageSuspenseLoader';
 import moment from 'moment';
 import {
-  fetchDemoProject,
   getHubspotContact,
   fetchProjectSettingsV1,
   fetchProjectSettings,
@@ -117,10 +116,10 @@ import {
 } from './coreQuery.helpers';
 import { getChartChangedKey } from './AnalysisResultsPage/analysisResultsPage.helpers';
 import NewProject from '../Settings/SetupAssist/Modals/NewProject';
-import AnalyseBeforeIntegration from './AnalyseBeforeIntegration';
 import SaveQuery from 'Components/SaveQuery';
 import _ from 'lodash';
 import { fetchKPIConfig } from 'Reducers/kpi';
+import CommonBeforeIntegrationPage from 'Components/GenericComponents/CommonBeforeIntegrationPage';
 
 function CoreQuery({
   activeProject,
@@ -128,7 +127,7 @@ function CoreQuery({
   location,
   getCampaignConfigData,
   KPI_config,
-  fetchDemoProject,
+
   fetchProjectSettingsV1,
   fetchProjectSettings,
   fetchMarketoIntegration,
@@ -169,9 +168,7 @@ function CoreQuery({
   const [KPIConfigProps, setKPIConfigProps] = useState([]);
   const [loading, setLoading] = useState(true);
   const renderedCompRef = useRef(null);
-  const [demoProjectId, setDemoProjectId] = useState(null);
   const [showProjectModal, setShowProjectModal] = useState(false);
-  const { projects } = useSelector((state) => state.global);
 
   const history = useHistory();
 
@@ -281,15 +278,6 @@ function CoreQuery({
       });
     }
   }, [dispatch, query_type]);
-  useEffect(() => {
-    fetchDemoProject()
-      .then((res) => {
-        setDemoProjectId(res.data[0]);
-      })
-      .catch((err) => {
-        console.log(err.data.error);
-      });
-  }, [activeProject, fetchDemoProject]);
 
   const handleTour = () => {
     history.push('/');
@@ -1897,7 +1885,7 @@ function CoreQuery({
     );
   }
 
-  if (isIntegrationEnabled || activeProject.id === demoProjectId) {
+  if (isIntegrationEnabled) {
     return (
       <ErrorBoundary
         fallback={
@@ -1928,73 +1916,6 @@ function CoreQuery({
             {renderQueryComposer()}
           </ErrorBoundary>
         </Drawer>
-
-        {!showResult &&
-        !resultState.data &&
-        !resultState.loading &&
-        activeProject.id === demoProjectId ? (
-          <div className='rounded-lg border-2 h-20 mx-20'>
-            <Row justify='space-between' className='m-0 p-3'>
-              <Col span={projects.length === 1 ? 12 : 18}>
-                <img
-                  alt='Welcome'
-                  src='assets/icons/welcome.svg'
-                  style={{ float: 'left', marginRight: '20px' }}
-                />
-                <Text type='title' level={6} weight='bold' extraClass='m-0'>
-                  Welcome! You just entered a Factors demo project
-                </Text>
-                {projects.length === 1 ? (
-                  <Text type='title' level={7} extraClass='m-0'>
-                    These reports have been built with a sample dataset. Use
-                    this to start exploring!
-                  </Text>
-                ) : (
-                  <Text type='title' level={7} extraClass='m-0'>
-                    To jump back into your Factors project, click on your
-                    account card on the{' '}
-                    <span className='font-bold'>top right</span> of the screen.
-                  </Text>
-                )}
-              </Col>
-              <Col className='mr-2 mt-2'>
-                {projects.length === 1 ? (
-                  <Button
-                    type='default'
-                    style={{
-                      background: 'white',
-                      border: '1px solid #E7E9ED',
-                      height: '40px'
-                    }}
-                    className='m-0 mr-2'
-                    onClick={() => setShowProjectModal(true)}
-                  >
-                    Set up my own Factors project
-                  </Button>
-                ) : null}
-
-                <Button
-                  type='link'
-                  style={{
-                    background: 'white',
-                    // border: '1px solid #E7E9ED',
-                    height: '40px'
-                  }}
-                  className='m-0 mr-2'
-                  onClick={() => handleTour()}
-                >
-                  Take the tour{' '}
-                  <SVG
-                    name='Arrowright'
-                    size={16}
-                    extraClass='ml-1'
-                    color='blue'
-                  />
-                </Button>
-              </Col>
-            </Row>
-          </div>
-        ) : null}
 
         {!showResult && resultState.loading ? <PageSuspenseLoader /> : null}
 
@@ -2066,7 +1987,7 @@ function CoreQuery({
       </ErrorBoundary>
     );
   }
-  return <AnalyseBeforeIntegration />;
+  return <CommonBeforeIntegrationPage />;
 }
 
 const mapStateToProps = (state) => ({
@@ -2081,7 +2002,6 @@ const mapDispatchToProps = (dispatch) =>
     {
       deleteGroupByForEvent,
       getCampaignConfigData,
-      fetchDemoProject,
       getHubspotContact,
       fetchProjectSettingsV1,
       fetchProjectSettings,
