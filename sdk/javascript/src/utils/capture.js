@@ -281,7 +281,7 @@ function addElementAttributeIfExists(element, key, attributes) {
     attributes[key] = value;
 }
 
-function cleanupString(s) {
+function cleanupString(s = "") {
     // Allows only letters, numbers, punctuation, whitespace, symbols.
     return s.replace(/[^\p{L}\p{N}\p{P}\p{Z}^$\n]/gu, '').trim();
 }
@@ -291,7 +291,7 @@ function getClickCapturePayloadFromElement(element) {
 
     var displayName = element.textContent;
     if (!displayName) displayName = element.value;
-    if (displayName != "") displayName = displayName.trim();
+    if (displayName != "" && displayName !== undefined) displayName = displayName.trim();
 
     // Possibilities A, BUTTON, INPUT[type=button].
     var elementType = element.nodeName; 
