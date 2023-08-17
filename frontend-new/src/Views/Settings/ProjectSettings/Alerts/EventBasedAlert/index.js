@@ -52,7 +52,9 @@ import {
 } from 'Utils/constants';
 import {
   DefaultDateRangeFormat,
+  formatBreakdownsForQuery,
   formatFiltersForQuery,
+  processBreakdownsFromQuery,
   processFiltersFromQuery
 } from '../../../../CoreQuery/utils';
 import TextArea from 'antd/lib/input/TextArea';
@@ -345,7 +347,7 @@ const EventBasedAlert = ({
       setCoolDownTime(viewAlertDetails?.event_alert?.cool_down_time / 3600);
       setNotRepeat(viewAlertDetails?.event_alert?.repeat_alerts);
       setNotifications(viewAlertDetails?.event_alert?.notifications);
-      const messageProperty = getGroupByFromState(
+      const messageProperty = processBreakdownsFromQuery(
         viewAlertDetails?.event_alert?.message_property
       );
       messageProperty.forEach((property) => pushGroupBy(property));
@@ -551,35 +553,6 @@ const EventBasedAlert = ({
     return groupByEvents;
   };
 
-  const getGroupByFromState = (appliedGroupBy) => {
-    return appliedGroupBy.map((opt) => {
-      let gbpReq = {};
-      if (opt.eni) {
-        gbpReq = {
-          property: opt.pr,
-          prop_category: opt.en === 'group' ? 'user' : opt.en,
-          prop_type: opt.pty,
-          eventName: opt.ena,
-          eventIndex: opt.eni
-        };
-      } else {
-        gbpReq = {
-          property: opt.pr,
-          prop_category: opt.en === 'group' ? 'user' : opt.en,
-          prop_type: opt.pty,
-          eventName: opt.ena
-        };
-      }
-      if (opt.pty === 'datetime') {
-        opt.grn ? (gbpReq.grn = opt.grn) : (gbpReq.grn = 'day');
-      }
-      if (opt.pty === 'numerical') {
-        opt.gbty ? (gbpReq.gbty = opt.gbty) : (gbpReq.gbty = '');
-      }
-      return gbpReq;
-    });
-  };
-
   const onReset = () => {
     setQueries([]);
     setSlackEnabled(false);
@@ -629,7 +602,7 @@ const EventBasedAlert = ({
         message: data?.message,
         message_property:
           groupBy && groupBy.length && groupBy[0] && groupBy[0].property
-            ? formatFiltersForQuery(
+            ? formatBreakdownsForQuery(
                 groupBy
                   .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
                   .filter(
@@ -642,7 +615,7 @@ const EventBasedAlert = ({
         alert_limit: alertLimit,
         repeat_alerts: notRepeat,
         cool_down_time: coolDownTime * 3600,
-        breakdown_properties: formatFiltersForQuery(breakDownProperties),
+        breakdown_properties: formatBreakdownsForQuery(breakDownProperties),
         slack: slackEnabled,
         slack_channels: saveSelectedChannel,
         webhook: webhookEnabled,
@@ -868,7 +841,7 @@ const EventBasedAlert = ({
       event: queries[0]?.label,
       message_property:
         groupBy && groupBy.length && groupBy[0] && groupBy[0].property
-          ? formatFiltersForQuery(
+          ? formatBreakdownsForQuery(
               groupBy
                 .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
                 .filter(
@@ -3050,7 +3023,7 @@ const EventBasedAlert = ({
                   viewAlertDetails?.event_alert?.message_property &&
                     viewAlertDetails?.event_alert?.message_property.length &&
                     viewAlertDetails?.event_alert?.message_property[0] &&
-                    getGroupByFromState(
+                    processBreakdownsFromQuery(
                       viewAlertDetails?.event_alert?.message_property
                         .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
                         .filter(
