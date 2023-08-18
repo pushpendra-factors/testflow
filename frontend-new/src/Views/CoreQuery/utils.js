@@ -56,8 +56,12 @@ export const labelsObj = {
 export const formatFiltersForQuery = (filters, scope = 'event') => {
   const formattedFilters = [];
   const groupByRef = {};
+  let count = 0;
   filters.forEach((filter) => {
-    const { ref } = filter;
+    let { ref } = filter;
+    if (!ref){
+      ref = count++;
+    }
     if (!groupByRef[ref]) {
       groupByRef[ref] = [];
     }
