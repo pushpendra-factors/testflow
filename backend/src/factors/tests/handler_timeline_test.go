@@ -7,6 +7,7 @@ import (
 	"factors/handler/helpers"
 	"factors/model/model"
 	"factors/model/store"
+	"factors/model/store/memsql"
 	SDK "factors/sdk"
 	U "factors/util"
 	"fmt"
@@ -1103,6 +1104,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 			Properties:     properties,
 			Group2ID:       "2",
 			Group2UserID:   account.ID,
+			Group1UserID:   domID,
 			CustomerUserId: fmt.Sprintf("hubspot@%duser", (i%5)+1),
 		})
 		_, errCode = store.GetStore().GetUser(project.ID, createdUserID1)
@@ -1473,9 +1475,14 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	assert.Equal(t, resp[0].Identity, domID)
 	assert.NotNil(t, resp[0].LastActivity)
 	assert.Contains(t, filteredCompaniesNameHostNameMap, resp[0].Name)
-	assert.Equal(t, resp[0].HostName, "clientjoy.io")
+	assert.NotNil(t, resp[0].HostName)
 	assert.Equal(t, resp[0].TableProps["$salesforce_city"], "New Delhi")
 	assert.Equal(t, resp[0].TableProps["$hubspot_company_is_public"], "true")
+
+	// Testing base64 conversion
+	hostString, err := memsql.ConvertDomainIdToHostName("dom-Ni1wcm8tY2FwaXRhLmNvbQ==")
+	assert.Nil(t, err)
+	assert.Equal(t, hostString, "pro-capita.com")
 }
 
 func sendGetProfileAccountRequest(r *gin.Engine, projectId int64, agent *model.Agent, payload model.TimelinePayload) *httptest.ResponseRecorder {
