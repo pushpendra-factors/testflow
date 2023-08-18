@@ -15,7 +15,7 @@ import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
 import FaSelect from '../../../../../components/GenericComponents/FaSelect';
 
 import {
-  getFiltersWithoutOrProperty,
+  formatFiltersForQuery,
   processFiltersFromQuery
 } from '../../../../../Views/CoreQuery/utils';
 import {
@@ -661,11 +661,12 @@ const TouchpointView = ({
     }
     return eventProps;
   }, [eventPropertiesV2, tchRuleType]);
+
   const eventUserPropertiesModified = useMemo(() => {
     const userPropertiesModified = [];
     if (eventUserPropertiesV2) {
       convertGroupedPropertiesToUngrouped(
-        eventUserPropertiesModified,
+        eventUserPropertiesV2,
         userPropertiesModified
       );
     }
@@ -814,7 +815,7 @@ const TouchpointView = ({
 
     const touchPointObj = {
       //parse and set filterstate
-      filters: getFiltersWithoutOrProperty(newFilterStates),
+      filters: formatFiltersForQuery(newFilterStates),
       // set propMap
       properties_map: propMap,
       touch_point_time_ref: touchPointPropRef
