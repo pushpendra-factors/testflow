@@ -10,7 +10,7 @@ import (
 	"factors/model/store"
 	"factors/util"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"regexp"
 	"strings"
@@ -128,37 +128,6 @@ type Response struct {
 	EventId string `json:"event_id,omitempty"`
 	Message string `json:"message,omitempty"`
 	Error   string `json:"error,omitempty"`
-}
-
-type OsInfo struct {
-	Name      string `json:"name"`
-	ShortName string `json:"short_name"`
-	Version   string `json:"version"`
-	Platform  string `json:"platform"`
-	Family    string `json:"family"`
-}
-type ClientInfo struct {
-	Type          string `json:"type"`
-	Name          string `json:"name"`
-	ShortName     string `json:"short_name"`
-	Version       string `json:"version"`
-	Engine        string `json:"engine"`
-	EngineVersion string `json:"engine_version"`
-	Family        string `json:"family"`
-}
-
-type DeviceInfo struct {
-	IsBot       bool       `json:"is_bot"`
-	ClientInfo  ClientInfo `json:"client_info"`
-	OsInfo      OsInfo     `json:"os_info"`
-	DeviceType  string     `json:"device_type"`
-	DeviceBrand string     `json:"device_brand"`
-	DeviceModel string     `json:"device_model"`
-}
-type DeviceApiResult struct {
-	payload DeviceInfo
-	message string
-	err     error
 }
 
 const (
@@ -2439,122 +2408,112 @@ func AMPUpdateEventPropertiesWithQueue(token string, reqPayload *AMPUpdateEventP
 	return AMPUpdateEventPropertiesByToken(token, reqPayload)
 }
 
-// PostDeviceServiceAPI - Makes POST request to Device Service and passes the device info to channel
-func PostDeviceServiceAPI(apiUrl string, userAgent string, c chan DeviceApiResult) {
+// PostDeviceServiceAPI - Make POST request to Device Server
+func PostDeviceServiceAPI(apiUrl string, userAgent string) (model.DeviceInfo, int, error) {
+	logCtx := log.WithFields(log.Fields{
+		"userAgent": userAgent,
+		"Method":    "PostDeviceServiceAPI",
+	})
+
 	start := time.Now()
-	var apiPayload DeviceInfo
-	res := new(DeviceApiResult)
-	client := &http.Client{}
-	var msg string = ""
+	var res model.DeviceInfo
+	client := &http.Client{Timeout: 5 * time.Second}
+
 	req, err := http.NewRequest("POST", apiUrl, nil)
 	if err != nil {
-		msg = "failed to build request"
-		res.err = err
-		res.message = msg
-		log.WithError(err).Error(msg)
-		return
+		msg := "failed to build request"
+		logCtx.WithError(err).Error(msg)
+		return res, http.StatusInternalServerError, err
 	}
 
 	req.Header.Set("User-Agent", userAgent)
 	resp, err := client.Do(req)
 
-	if resp == nil {
-		msg = "empty response from api"
-		res.err = errors.New(msg)
-		res.message = msg
-		c <- *res
-		log.WithError(err).Error(msg)
-		return
+	if err != nil {
+		msg := "Request to Device detection service failed"
+		logCtx.WithError(err).Error(msg)
+		return res, resp.StatusCode, err
 	}
 
-	if err != nil || (resp != nil && resp.StatusCode != http.StatusOK) {
-		msg = "Request to Device detection service failed"
-		logCtx := log.WithError(err)
-		if resp != nil {
-			logCtx = log.WithField("status", resp.StatusCode)
-		}
-		logCtx.Error(msg)
-		res.message = msg
-		res.err = err
-		c <- *res
-		return
+	if resp != nil && resp.StatusCode != http.StatusOK {
+		msg := "User Agent Not found"
+		logCtx.WithField("status_code", resp.StatusCode).Error(msg)
+		return res, resp.StatusCode, err
 	}
 
-	respBytes, err := ioutil.ReadAll(resp.Body)
+	respBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		msg = "Error reading the response body"
-		res.err = err
-		res.message = msg
-		c <- *res
-		log.WithError(err).Error(msg)
-		return
+		msg := "Error reading the response body"
+		logCtx.WithError(err).Error(msg)
+		return res, http.StatusInternalServerError, err
 	}
-	err = json.Unmarshal(respBytes, &apiPayload)
-	res.payload = apiPayload
+
+	err = json.Unmarshal(respBytes, &res)
 	if err != nil {
-		msg = "Failed to unmarshall"
-		res.message = msg
-		res.err = err
-		c <- *res
-		log.WithError(err).Error(msg)
-		return
+		msg := "Failed to unmarshall"
+		logCtx.WithError(err).Error(msg)
+		return res, http.StatusInternalServerError, err
 	}
 
 	// check for time elapsed in the post request to device service
 	elapsed := time.Since(start).Milliseconds()
 	if elapsed > 100 {
-		log.WithFields(log.Fields{"total_time": elapsed, "user_agent": userAgent}).Error("PostDeviceServiceAPI call took more than 100 ms")
+		log.WithFields(log.Fields{"total_time": elapsed, "user_agent": userAgent}).Warning("PostDeviceServiceAPI call took more than 100 ms")
 	}
 
-	res.message = msg
-	res.err = nil
-	c <- *res
+	return res, http.StatusOK, nil
 }
 
-// FillDeviceInfoFromDeviceService - For given ProjectID it gets device info from php device service by default
+// FillDeviceInfoFromDeviceService - For given user agent it gets device info from php device service by default
 // and fallbacks to existing device data in case of failure
 func FillDeviceInfoFromDeviceService(userProperties *U.PropertiesMap, userAgent string) error {
+	var allDeviceInfo *model.DeviceInfo
 
-	fillDeviceInfoChannel := make(chan DeviceApiResult)
-	go PostDeviceServiceAPI(C.GetConfig().DeviceServiceURL, userAgent, fillDeviceInfoChannel)
+	resp, errCode, err := model.GetCacheResultByUserAgent(userAgent)
 
-	select {
-	case res := <-fillDeviceInfoChannel:
-		if res.err == nil {
-			apiPayload := res.payload
-			osInfo := apiPayload.OsInfo
-			(*userProperties)[U.UP_OS] = osInfo.Name
-			(*userProperties)[U.UP_OS_VERSION] = osInfo.Version
-			(*userProperties)[U.UP_OS_WITH_VERSION] = fmt.Sprintf("%s-%s",
-				(*userProperties)[U.UP_OS], (*userProperties)[U.UP_OS_VERSION])
+	// check if device info for user agent exists in cache
+	if errCode == http.StatusFound && err == nil {
+		allDeviceInfo = resp
+	} else {
 
-			// to check if user agent is a bot or not
-			if apiPayload.IsBot {
-				(*userProperties)[U.UP_BROWSER] = "Bot"
-				return nil
-			}
+		deviceInfo, status, err := PostDeviceServiceAPI(C.GetConfig().DeviceServiceURL, userAgent)
 
-			clientInfo := apiPayload.ClientInfo
-			(*userProperties)[U.UP_BROWSER] = clientInfo.Name
-			(*userProperties)[U.UP_BROWSER_VERSION] = clientInfo.Version
-			(*userProperties)[U.UP_BROWSER_WITH_VERSION] = fmt.Sprintf("%s-%s",
-				(*userProperties)[U.UP_BROWSER], (*userProperties)[U.UP_BROWSER_VERSION])
-
-			(*userProperties)[U.UP_DEVICE_BRAND] = apiPayload.DeviceBrand
-			(*userProperties)[U.UP_DEVICE_TYPE] = apiPayload.DeviceType
-			(*userProperties)[U.UP_DEVICE_MODEL] = apiPayload.DeviceModel
-		} else {
+		// check for status of POST request
+		if err != nil || status != http.StatusOK {
 			return FillDeviceInfoFromFallback(userProperties, userAgent)
-
 		}
-	case <-time.After(U.TimeoutHundredMilliSecond):
-		log.Warning("device detection service timed out in FillUserAgentUserProperties")
-		return FillDeviceInfoFromFallback(userProperties, userAgent)
-	default:
-		return FillDeviceInfoFromFallback(userProperties, userAgent)
+
+		allDeviceInfo = &deviceInfo
+		model.SetCacheResultByUserAgent(userAgent, &deviceInfo)
 	}
 
+	(*userProperties)[U.UP_USER_AGENT] = userAgent
+
+	// check for bot
+	if allDeviceInfo.IsBot {
+		(*userProperties)[U.UP_BROWSER] = "Bot"
+		return nil
+	}
+
+	osInfo := allDeviceInfo.OsInfo
+
+	(*userProperties)[U.UP_OS] = osInfo.Name
+	(*userProperties)[U.UP_OS_VERSION] = osInfo.Version
+	(*userProperties)[U.UP_OS_WITH_VERSION] = fmt.Sprintf("%s-%s",
+		(*userProperties)[U.UP_OS], (*userProperties)[U.UP_OS_VERSION])
+
+	clientInfo := allDeviceInfo.ClientInfo
+
+	(*userProperties)[U.UP_BROWSER] = clientInfo.Name
+	(*userProperties)[U.UP_BROWSER_VERSION] = clientInfo.Version
+	(*userProperties)[U.UP_BROWSER_WITH_VERSION] = fmt.Sprintf("%s-%s",
+		(*userProperties)[U.UP_BROWSER], (*userProperties)[U.UP_BROWSER_VERSION])
+
+	(*userProperties)[U.UP_DEVICE_BRAND] = allDeviceInfo.DeviceBrand
+	(*userProperties)[U.UP_DEVICE_TYPE] = allDeviceInfo.DeviceType
+	(*userProperties)[U.UP_DEVICE_MODEL] = allDeviceInfo.DeviceModel
 	return nil
+
 }
 
 // FillUserAgentUserProperties - Adds user_properties derived from user_agent.
@@ -2564,8 +2523,6 @@ func FillUserAgentUserProperties(projectID int64, userProperties *U.PropertiesMa
 	if userAgentStr == "" || projectID == 0 {
 		return errors.New("invalid parameters")
 	}
-
-	(*userProperties)[U.UP_USER_AGENT] = userAgentStr
 
 	if !C.AllowDeviceServiceByProjectID(projectID) {
 		return FillDeviceInfoFromFallback(userProperties, userAgentStr)
@@ -2577,6 +2534,7 @@ func FillUserAgentUserProperties(projectID int64, userProperties *U.PropertiesMa
 
 func FillDeviceInfoFromFallback(userProperties *U.PropertiesMap, userAgentStr string) error {
 	userAgent := user_agent.New(userAgentStr)
+	(*userProperties)[U.UP_USER_AGENT] = userAgent
 	(*userProperties)[U.UP_OS] = userAgent.OSInfo().Name
 	(*userProperties)[U.UP_OS_VERSION] = userAgent.OSInfo().Version
 	(*userProperties)[U.UP_OS_WITH_VERSION] = fmt.Sprintf("%s-%s",

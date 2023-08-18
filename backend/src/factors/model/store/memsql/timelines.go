@@ -1,6 +1,7 @@
 package memsql
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	C "factors/config"
 	"factors/model/model"
@@ -73,7 +74,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 			return nil, errCode, err.Error()
 		}
 
-		returnData, err := FormatProfilesStruct(profiles, profileType, payload.Query.TableProps, payload.Query.Source)
+		returnData, err := FormatProfilesStruct(projectID, profiles, profileType, payload.Query.TableProps, payload.Query.Source)
 		if err != nil {
 			log.WithFields(logFields).WithField("status", err).Error("Failed to filter properties from profiles.")
 			return nil, http.StatusInternalServerError, "Failed Formatting Profile Results"
@@ -82,8 +83,14 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	}
 
 	// transforming datetime filters
+	addSearchFiltersToFilters := true
 	groupedFilters := GroupFiltersByPrefix(payload.Query.GlobalUserProperties)
-	groupedFilters[model.FILTER_TYPE_USERS] = append(groupedFilters[model.FILTER_TYPE_USERS], payload.SearchFilter...)
+	if profileType == model.PROFILE_TYPE_ACCOUNT && payload.Query.Source == "All" && C.IsAllAccountsEnabled(projectID) {
+		addSearchFiltersToFilters = false
+	}
+	if addSearchFiltersToFilters {
+		groupedFilters[model.FILTER_TYPE_USERS] = append(groupedFilters[model.FILTER_TYPE_USERS], payload.SearchFilter...)
+	}
 
 	// to check whether the filter in account profiles is of user properties
 	isUserProperty := hasUserProperty(profileType, payload.Query.GlobalUserProperties)
@@ -132,11 +139,18 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	}
 
 	// Get Profiles
-	runQueryStmt, queryParams, err := store.GenerateQueryString(projectID, profileType, payload.Query.Source, sourceStmt, isUserProperty, whereStmt, *minMax, groupedFilters)
+	var runQueryStmt string
+	var queryParams []interface{}
+	if profileType == model.PROFILE_TYPE_ACCOUNT && payload.Query.Source == "All" && C.IsAllAccountsEnabled(projectID) {
+		runQueryStmt, queryParams, err = store.GenerateAllAccountsQueryString(projectID, payload.Query.Source, isUserProperty, isAllUserProperties, *minMax, groupedFilters, payload.SearchFilter)
+		params = queryParams
+	} else {
+		runQueryStmt, queryParams, err = store.GenerateQueryString(projectID, profileType, payload.Query.Source, sourceStmt, isUserProperty, whereStmt, *minMax, groupedFilters)
+		params = append(params, queryParams...)
+	}
 	if err != nil {
 		return nil, http.StatusInternalServerError, err.Error()
 	}
-	params = append(params, queryParams...)
 
 	var profiles []model.Profile
 	db := C.GetServices().Db
@@ -149,7 +163,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	// Get merged properties for all accounts
 	if profileType == model.PROFILE_TYPE_ACCOUNT && C.IsDomainEnabled(projectID) && payload.Query.Source == "All" {
 		tablePropsHasUserProp := tablePropsHasUserProperty(payload.Query.TableProps)
-		if isAllUserProperties {
+		if isAllUserProperties && !C.IsAllAccountsEnabled(projectID) {
 			userDomains, _ := store.GetUsersAssociatedToDomain(projectID, minMax, groupedFilters)
 			profiles = appendProfiles(profiles, userDomains)
 		}
@@ -160,7 +174,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	}
 
 	// Get Return Table Content
-	returnData, err := FormatProfilesStruct(profiles, profileType, payload.Query.TableProps, payload.Query.Source)
+	returnData, err := FormatProfilesStruct(projectID, profiles, profileType, payload.Query.TableProps, payload.Query.Source)
 	if err != nil {
 		log.WithError(err).WithFields(logFields).WithField("status", err).Error("Failed to filter properties from profiles.")
 		return nil, http.StatusInternalServerError, "Query formatting failed."
@@ -321,6 +335,158 @@ func buildFilterStringAndParams(projectID int64, groupedFilters map[string][]mod
 	}
 
 	return filterString, filterParams, nil
+}
+
+// GenerateAllAccountsQueryString generates the final query used to fetch the list of profiles.
+func (store *MemSQL) GenerateAllAccountsQueryString(
+	projectID int64,
+	source string,
+	hasUserProperty bool,
+	isAllUserProperties bool,
+	minMax model.MinMaxUpdatedAt,
+	groupedFilters map[string][]model.QueryProperty,
+	searchFilter []model.QueryProperty,
+) (string, []interface{}, error) {
+	logFields := log.Fields{
+		"project_id":             projectID,
+		"source":                 source,
+		"has_user_property":      hasUserProperty,
+		"is_all_user_properties": isAllUserProperties,
+		"min_max":                minMax,
+		"grouped_filters":        groupedFilters,
+		"search_filter":          searchFilter,
+	}
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	params := []interface{}{projectID, model.UserSourceDomains, minMax.MinUpdatedAt, minMax.MaxUpdatedAt}
+
+	var isGroupUserCheck, allUsersWhere string
+	if !hasUserProperty && (len(groupedFilters) > 0) {
+		isGroupUserCheck = "AND is_group_user=1"
+	}
+	if isAllUserProperties && (len(groupedFilters) > 0) {
+		isGroupUserCheck = "AND (is_group_user=0 OR is_group_user IS NULL) AND customer_user_id IS NOT NULL"
+	}
+
+	whereForGroups := make(map[string]string)
+	paramsForGroupFilters := make(map[string][]interface{})
+	index := 0
+	for groupName, filters := range groupedFilters {
+		whereStr, filterParams, err := buildWhereFromProperties(projectID, filters, 0)
+		if err != nil {
+			return "", params, err
+		}
+		whereStr = strings.ReplaceAll(whereStr, "users.properties", "properties")
+		whereStr = strings.ReplaceAll(whereStr, "user_global_user_properties", "properties")
+		whereForGroups[groupName] = whereStr
+		paramsForGroupFilters[groupName] = filterParams
+		if index == 0 {
+			allUsersWhere = "WHERE " + whereStr
+		} else {
+			whereStr = strings.ReplaceAll(whereStr, " AND ", " OR ")
+			allUsersWhere = allUsersWhere + " OR " + whereStr
+		}
+		params = append(params, filterParams...)
+		index++
+	}
+
+	whereForSearchFilters, searchFiltersParams, err := buildWhereFromProperties(projectID, searchFilter, 0)
+	if err != nil {
+		return "", params, err
+	}
+
+	// adding search filters
+	if whereForSearchFilters != "" {
+		whereForSearchFilters = strings.ReplaceAll(whereForSearchFilters, "users.properties", "properties")
+		whereForSearchFilters = strings.ReplaceAll(whereForSearchFilters, "user_global_user_properties", "properties")
+		if allUsersWhere != "" {
+			allUsersWhere = allUsersWhere + " AND (" + whereForSearchFilters + ")"
+		} else {
+			allUsersWhere = " WHERE " + whereForSearchFilters
+		}
+		params = append(params, searchFiltersParams...)
+	}
+
+	// building filter steps for query
+	var filterSteps string
+	stepNumber := 1
+	for groupName, filterString := range whereForGroups {
+		isGroupStr := "is_group_user=1"
+		if groupName == model.FILTER_TYPE_USERS {
+			isGroupStr = "(is_group_user=0 OR is_group_user IS NULL) AND customer_user_id IS NOT NULL"
+		}
+
+		filterSteps = filterSteps + fmt.Sprintf(`, filter_%d as (
+			SELECT * FROM all_users WHERE %s AND 
+				%s
+		)`, stepNumber, isGroupStr, filterString)
+
+		params = append(params, paramsForGroupFilters[groupName]...)
+		stepNumber++
+	}
+
+	// building intersect step for the query
+	var intersectStep string
+	for stepNo := 1; stepNo <= len(groupedFilters); stepNo++ {
+		if len(groupedFilters) == 1 {
+			intersectStep = `SELECT 
+			filter_1.properties, filter_1.identity, MAX(filter_1.updated_at) as last_activity 
+			FROM filter_1 
+			GROUP BY filter_1.identity 
+			ORDER BY last_activity DESC LIMIT 1000;`
+			break
+		}
+		if stepNo == 1 {
+			intersectStep = `SELECT 
+			filter_1.properties, filter_1.identity, MAX(filter_1.updated_at) as last_activity FROM filter_1 `
+		}
+		intersectStep = intersectStep + fmt.Sprintf(`INNER JOIN filter_%d 
+		ON filter_%d.identity = filter_%d.identity `, stepNo+1, stepNo, stepNo+1)
+
+		if stepNo == len(groupedFilters)-1 {
+			intersectStep = intersectStep + `GROUP BY filter_1.identity 
+			ORDER BY last_activity DESC LIMIT 1000;`
+			break
+		}
+	}
+
+	if len(groupedFilters) == 0 {
+		intersectStep = `SELECT 
+		properties, identity, MAX(updated_at) as last_activity 
+		FROM all_users 
+		GROUP BY identity 
+		ORDER BY last_activity DESC LIMIT 1000;`
+	}
+
+	domainGroup, errCode := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
+	if errCode != http.StatusFound || domainGroup == nil {
+		return "", params, fmt.Errorf("failed to get group while adding group info")
+	}
+
+	query := fmt.Sprintf(`WITH 
+	all_users as (
+		SELECT * FROM (
+		  SELECT
+		  properties,
+		  updated_at, 
+		  group_%d_user_id as identity,
+		  is_group_user,
+		  customer_user_id
+		  FROM users 
+		  WHERE 
+		  project_id = ? %s 
+		  AND users.source != ? 
+		  AND users.group_%d_user_id IS NOT NULL 
+		  AND users.updated_at BETWEEN ? 
+		  AND ?
+		  LIMIT 10000000 
+		) %s
+	) %s %s`, domainGroup.ID, isGroupUserCheck, domainGroup.ID, allUsersWhere, filterSteps, intersectStep)
+
+	logCtx.Info("Generated query for all accounts: ", query)
+	return query, params, nil
 }
 
 // GenerateQueryString generates the final query used to fetch the list of profiles.
@@ -900,10 +1066,12 @@ func (store *MemSQL) GetSourceStringForAccountsV1(projectID int64, source string
 }
 
 // FormatProfilesStruct transforms the results into a processed version suitable for the response payload.
-func FormatProfilesStruct(profiles []model.Profile, profileType string, tableProps []string, source string) ([]model.Profile, error) {
+func FormatProfilesStruct(projectID int64, profiles []model.Profile, profileType string, tableProps []string, source string) ([]model.Profile, error) {
 	logFields := log.Fields{
 		"profile_type": profileType,
 	}
+
+	convertDomainIdToHostName := profileType == model.PROFILE_TYPE_ACCOUNT && source == "All" && C.IsAllAccountsEnabled(projectID)
 
 	if profileType == model.PROFILE_TYPE_ACCOUNT {
 		var companyNameProps, hostNameProps []string
@@ -950,6 +1118,15 @@ func FormatProfilesStruct(profiles []model.Profile, profileType string, tablePro
 				}
 			}
 
+			// conbert domain id to hostname
+			if convertDomainIdToHostName && profiles[index].HostName == "" {
+				profiles[index].HostName, err = ConvertDomainIdToHostName(profiles[index].Identity)
+				if err != nil || profiles[index].HostName == "" {
+					log.WithFields(logFields).WithFields(log.Fields{"identity": profile.Identity}).WithError(err).Error("Failed fetching host name.")
+					continue
+				}
+			}
+
 			if profiles[index].Name == "" && profiles[index].HostName != "" {
 				profiles[index].Name = profiles[index].HostName
 			}
@@ -976,6 +1153,28 @@ func FormatProfilesStruct(profiles []model.Profile, profileType string, tablePro
 		}
 	}
 	return profiles, nil
+}
+
+func ConvertDomainIdToHostName(domainID string) (string, error) {
+	domomainIdEncoded := strings.TrimPrefix(domainID, "dom-")
+
+	decodedBytes, err := base64.StdEncoding.DecodeString(domomainIdEncoded)
+	if err != nil {
+		log.Error("Error decoding domain_id to host_name ", err)
+		return "", err
+	}
+
+	// Convert the decoded bytes to a string
+	decodedString := string(decodedBytes)
+	resultArray := strings.SplitN(decodedString, "-", 2)
+
+	if len(resultArray) != 2 {
+		log.Error("Error converting domain_id to host_name ")
+		return "", nil
+	}
+
+	hostName := resultArray[1]
+	return hostName, nil
 }
 
 func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string, isAnonymous string) (*model.ContactDetails, int, string) {
@@ -1815,6 +2014,9 @@ func GroupFiltersByPrefix(filters []model.QueryProperty) map[string][]model.Quer
 	for _, filter := range filters {
 		var groupName string
 		for _, prefix := range model.GroupPropertyPrefixList {
+			if filter.Entity == model.PropertyEntityUserGroup {
+				break
+			}
 			if strings.Contains(strings.ToLower(filter.Property), prefix) {
 				groupName = prefix
 				break

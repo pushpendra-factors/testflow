@@ -1,8 +1,6 @@
 {
     "require": {
-        "matomo/device-detector": "^6.1",
-        "psr/simple-cache": "^3.0",
-        "symfony/cache": "^6.3"
+        "matomo/device-detector": "^6.1"
     },
     "autoload": {
         "psr-4": {
