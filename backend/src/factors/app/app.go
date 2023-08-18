@@ -198,6 +198,7 @@ func main() {
 	blockedIPList := flag.String("blocked_IP_list", "", "List containing all the blocked IP address")
 	blockedEmailDomainList := flag.String("blocked_email_domain_list", "", "List containing all blocked email domains")
 	allAccountsProjectId := flag.String("all_accounts_project_id", "", "List of projectIds to enable domain.")
+	enableNewAllAccountsByProjectID := flag.String("enable_new_all_accounts_by_project_id", "", "List of projectIds to enable domain.")
 	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
 	IncreaseKPILimitForProjectIDs := flag.String("increase_kpi_limit_for_projectids", "", "List of projectIds where kpi limit in increased.")
 	enableEventFiltersInSegments := flag.Bool("enable_event_filters_in_segments", false, "Enables adding event filters in segment query")
@@ -369,6 +370,7 @@ func main() {
 		AllowEventAnalyticsGroupsByProjectID:           *allowEventAnalyticsGroupsByProjectID,
 		EnableFeatureGatesV2:                           *enableFeatureGatesV2,
 		EnableScoringByProjectID:                       *enableScoreByProjectID,
+		EnableNewAllAccountsByProjectID:                *enableNewAllAccountsByProjectID,
 	}
 	C.InitConf(config)
 

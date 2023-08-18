@@ -629,13 +629,23 @@ const EventBasedAlert = ({
       queries.length > 0 &&
       (EventPropertyDetails?.name || EventPropertyDetails?.[1])
     ) {
+
+      let category;
+
+      for (let property in eventPropertiesV2[queries[0]?.label]) {
+        let nestedArrays = eventPropertiesV2[queries[0]?.label][property];
+        category = nestedArrays.filter(
+          (prop) => prop[1] === (EventPropertyDetails?.name || EventPropertyDetails?.[1])
+        );
+      }
+
       breakDownProperties = [
         {
           eventName: queries?.[0].label,
           property: EventPropertyDetails?.name || EventPropertyDetails?.[1],
           prop_type:
             EventPropertyDetails?.data_type || EventPropertyDetails?.[2],
-          prop_category: 'event'
+          prop_category: category.length > 0 ? 'event' : 'user',
         }
       ];
     }

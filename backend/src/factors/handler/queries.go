@@ -166,6 +166,8 @@ func UpdateSavedQueryHandler(c *gin.Context) {
 	requestPayloadContainsQueryUpdate := (requestPayload.Query != nil && !U.IsEmptyPostgresJsonb(requestPayload.Query))
 
 	queryRequest := &model.Queries{
+		ID:        queryID,
+		ProjectID: projectID,
 		Query:     postgres.Jsonb{},
 		Title:     requestPayload.Title,
 		Type:      requestPayload.Type,
@@ -202,7 +204,7 @@ func UpdateSavedQueryHandler(c *gin.Context) {
 		return
 	}
 	if requestPayloadContainsQueryUpdate {
-		go invalidateSavedQueryCache(projectID, query)
+		go invalidateSavedQueryCache(projectID, queryRequest)
 	}
 
 	c.JSON(http.StatusAccepted, gin.H{"message": "Successfully updated."})

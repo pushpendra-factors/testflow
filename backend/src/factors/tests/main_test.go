@@ -133,6 +133,7 @@ func TestMain(m *testing.M) {
 		UseHubspotEngagementsV3APIByProjectID:              "*",
 		UseHubspotDealsV3APIByProjectID:                    "*",
 		RemoveDisabledEventUserPropertiesByProjectID:       "*",
+		EnableNewAllAccountsByProjectID:                    "*",
 	}
 	C.InitConf(config)
 

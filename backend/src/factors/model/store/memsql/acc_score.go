@@ -290,6 +290,9 @@ func CalculatescoresPerAccount(weights *model.AccWeights, currentDate int64, pre
 	var resultmap map[string]model.PerAccountScore = make(map[string]model.PerAccountScore)
 	scoreOnDays := make(map[string]float32)
 
+	last_event := countsMapDays[model.LAST_EVENT]
+	currentDate = last_event.Date
+
 	accountScoreMap, err := ComputeTrendWrapper(currentDate, countsMapDays, weights)
 	if err != nil {
 		return nil, nil, -1, err
