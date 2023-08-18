@@ -20,6 +20,12 @@ type SyncStatus struct {
 	Lock                    sync.Mutex
 }
 
+type WorkerStatus struct {
+	Status     []IntHubspot.Status
+	HasFailure bool
+	ProjectId  int64
+}
+
 func isStatusProcessLimitExceeded(status []IntHubspot.Status) bool {
 	for i := range status {
 		if status[i].IsProcessLimitExceeded {
@@ -29,10 +35,14 @@ func isStatusProcessLimitExceeded(status []IntHubspot.Status) bool {
 
 	return false
 }
+func Producer(hubspotProjectSettingsMap map[int64]*model.HubspotProjectSettings, projectSettingsChannel chan model.HubspotProjectSettings) {
+	for _, settings := range hubspotProjectSettingsMap {
+		projectSettingsChannel <- *settings
+	}
+	close(projectSettingsChannel)
+}
 
-func (s *SyncStatus) AddSyncStatus(status []IntHubspot.Status, hasFailure bool) {
-	s.Lock.Lock()
-	defer s.Lock.Unlock()
+func AddSyncStatus(s *SyncStatus, status []IntHubspot.Status, hasFailure bool) {
 	processLimitExceeded := false
 	if isStatusProcessLimitExceeded(status) {
 		processLimitExceeded = true
@@ -57,34 +67,79 @@ func (s *SyncStatus) AddSyncStatus(status []IntHubspot.Status, hasFailure bool) 
 	}
 }
 
-func syncWorker(projectID int64, wg *sync.WaitGroup, numDocRoutines int, syncStatus *SyncStatus, recordsMaxCreatedAt int64, hubspotProjectSettings *model.HubspotProjectSettings, recordsProcessLimit int) {
-	defer wg.Done()
-	datePropertiesByObjectType, err := IntHubspot.GetHubspotPropertiesByDataType(projectID, model.GetHubspotAllowedObjects(projectID), hubspotProjectSettings.APIKey, hubspotProjectSettings.RefreshToken, model.HubspotDataTypeDate)
-	if err != nil {
-		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error("Failed to get date properties.")
+func StartEnrichmentByProjectIdWorker(projectSettingsChannel chan model.HubspotProjectSettings, syncStatusChannel chan WorkerStatus,
+	numDocRoutines int, projectsMaxCreatedAt map[int64]int64, recordsProcessLimit int) {
+	for projectSettings := range projectSettingsChannel {
 
-		syncStatus.AddSyncStatus([]IntHubspot.Status{{ProjectId: projectID, Message: err.Error(), Status: U.CRM_SYNC_STATUS_FAILURES}}, true)
-		return
-	}
+		recordsMaxCreatedAt := projectsMaxCreatedAt[projectSettings.ProjectId]
+		var workerStatus WorkerStatus
 
-	timeZone, err := model.GetHubspotAccountTimezone(projectID, hubspotProjectSettings.APIKey, hubspotProjectSettings.RefreshToken, C.GetHubspotAppID(), C.GetHubspotAppSecret())
-	if err != nil {
-		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error("Failed to get timezone for enrichment.")
-		syncStatus.AddSyncStatus([]IntHubspot.Status{{ProjectId: projectID, Message: err.Error(), Status: U.CRM_SYNC_STATUS_FAILURES}}, true)
-		return
-	}
-
-	status, hasFailure := IntHubspot.Sync(projectID, numDocRoutines, recordsMaxCreatedAt, datePropertiesByObjectType, timeZone, recordsProcessLimit)
-	syncStatus.AddSyncStatus(status, hasFailure)
-
-	// mark enrich_heavy as false irrespective of failure, let the distributer re distribute the project
-	if !isStatusProcessLimitExceeded(status) {
-		errCode := store.GetStore().UpdateCRMSetting(projectID, model.HubspotEnrichHeavy(false, nil))
-		if errCode != http.StatusAccepted {
-			log.WithFields(log.Fields{"project_id": projectID}).Error("Failed to mark hubspot project for crm settings")
+		if projectSettings.APIKey != "" || projectSettings.RefreshToken != "" {
+			datePropertiesByObjectType, err := IntHubspot.GetHubspotPropertiesByDataType(projectSettings.ProjectId, model.GetHubspotAllowedObjects(projectSettings.ProjectId),
+				projectSettings.APIKey, projectSettings.RefreshToken, model.HubspotDataTypeDate)
+			if err != nil {
+				log.WithFields(log.Fields{"project_id": projectSettings.ProjectId}).WithError(err).Error("Failed to get date properties.")
+				workerStatus.Status = []IntHubspot.Status{{ProjectId: projectSettings.ProjectId, Message: err.Error(), Status: U.CRM_SYNC_STATUS_FAILURES}}
+				workerStatus.HasFailure = true
+				workerStatus.ProjectId = projectSettings.ProjectId
+				syncStatusChannel <- workerStatus
+				continue
+			}
+			timeZone, err := model.GetHubspotAccountTimezone(projectSettings.ProjectId, projectSettings.APIKey, projectSettings.RefreshToken, C.GetHubspotAppID(), C.GetHubspotAppSecret())
+			if err != nil {
+				log.WithFields(log.Fields{"project_id": projectSettings.ProjectId}).WithError(err).Error("Failed to get timezone for enrichment.")
+				workerStatus.Status = []IntHubspot.Status{{ProjectId: projectSettings.ProjectId, Message: err.Error(), Status: U.CRM_SYNC_STATUS_FAILURES}}
+				workerStatus.HasFailure = true
+				workerStatus.ProjectId = projectSettings.ProjectId
+				syncStatusChannel <- workerStatus
+				continue
+			}
+			status, hasFailure := IntHubspot.Sync(projectSettings.ProjectId, numDocRoutines, recordsMaxCreatedAt, datePropertiesByObjectType, timeZone, recordsProcessLimit)
+			workerStatus.Status = status
+			workerStatus.HasFailure = hasFailure
+			workerStatus.ProjectId = projectSettings.ProjectId
+			syncStatusChannel <- workerStatus
+		} else {
+			status, hasFailure := IntHubspot.Sync(projectSettings.ProjectId, numDocRoutines, recordsMaxCreatedAt, nil, "", recordsProcessLimit)
+			workerStatus.Status = status
+			workerStatus.HasFailure = hasFailure
+			workerStatus.ProjectId = projectSettings.ProjectId
+			syncStatusChannel <- workerStatus
 		}
 	}
 
+}
+
+func StartEnrichment(numProjectRoutines int, projectsMaxCreatedAt map[int64]int64, hubspotProjectSettingsMap map[int64]*model.HubspotProjectSettings,
+	numDocRoutines int, recordsProcessLimit int) SyncStatus {
+
+	syncStatusChannel := make(chan WorkerStatus)
+	projectSettingsChannel := make(chan model.HubspotProjectSettings)
+	overallSyncStatus := SyncStatus{}
+
+	go Producer(hubspotProjectSettingsMap, projectSettingsChannel)
+
+	for i := 0; i < numProjectRoutines; i++ {
+		go StartEnrichmentByProjectIdWorker(projectSettingsChannel, syncStatusChannel, numDocRoutines, projectsMaxCreatedAt, recordsProcessLimit)
+	}
+
+	for i := 0; i < len(hubspotProjectSettingsMap); i++ {
+		workerStatus := <-syncStatusChannel
+		syncStatus := workerStatus.Status
+		anyFailure := workerStatus.HasFailure
+		AddSyncStatus(&overallSyncStatus, syncStatus, anyFailure)
+
+		// mark enrich_heavy as false irrespective of failure, let the distributer re distribute the project
+		if !isStatusProcessLimitExceeded(workerStatus.Status) {
+			errCode := store.GetStore().UpdateCRMSetting(workerStatus.ProjectId, model.HubspotEnrichHeavy(false, nil))
+			if errCode != http.StatusAccepted {
+				log.WithFields(log.Fields{"project_id": workerStatus.ProjectId}).Error("Failed to mark hubspot project for crm settings")
+			}
+		}
+	}
+
+	close(syncStatusChannel)
+	return overallSyncStatus
 }
 
 func isEnrichHeavyProject(projectID int64, settings map[int64]model.CRMSetting) bool {
@@ -213,20 +268,9 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 		hubspotProjectSettingsMap[settings.ProjectId] = &hubspotEnabledProjectSettings[i]
 	}
 
-	// Runs enrichment for list of project_ids as batch using go routines.
-	batches := U.GetInt64ListAsBatch(projectIDs, numProjectRoutines)
-	log.WithFields(log.Fields{"project_batches": batches}).Info("Running for batches.")
-	syncStatus := SyncStatus{}
-	for bi := range batches {
-		batch := batches[bi]
+	// Runs enrichment for list of project_ids synchronously
+	syncStatus := StartEnrichment(numProjectRoutines, projectsMaxCreatedAt, hubspotProjectSettingsMap, numDocRoutines, recordsProcessLimit)
 
-		var wg sync.WaitGroup
-		for pi := range batch {
-			wg.Add(1)
-			go syncWorker(batch[pi], &wg, numDocRoutines, &syncStatus, projectsMaxCreatedAt[batch[pi]], hubspotProjectSettingsMap[batch[pi]], recordsProcessLimit)
-		}
-		wg.Wait()
-	}
 	anyFailure = anyFailure || syncStatus.HasFailure
 
 	jobStatus = map[string]interface{}{
@@ -234,11 +278,10 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 		"property_type_sync": propertyDetailSyncStatus,
 	}
 	panicError = false
-
-	// For enrichment heavy, if any project limit is exceeded then return false to re-run the task on a new pod
-	if enrichHeavy && syncStatus.AnyProcessLimitExceeded == true {
+	if enrichHeavy && syncStatus.AnyProcessLimitExceeded {
 		return jobStatus, false
 	}
 
 	return jobStatus, true
+
 }
