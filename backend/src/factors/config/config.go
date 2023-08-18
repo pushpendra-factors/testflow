@@ -323,6 +323,7 @@ type Configuration struct {
 	EnableDeviceServiceByProjectID                     string
 	DisableOpportunityContactRolesByProjectID          string
 	ExcludeBotIPV4AddressByRange                       string
+	SlackInternalAlertWebhookUrl                       string
 }
 
 type Services struct {
@@ -2813,6 +2814,11 @@ func IsEnabledFeatureGates() bool {
 func IsEnabledFeatureGatesV2() bool {
 	return configuration.EnableFeatureGatesV2
 }
+
+func GetSlackWebhookUrlForInternalAlerts() string {
+	return configuration.SlackInternalAlertWebhookUrl
+}
+
 
 func EnableSixSignalGroupByProjectID(projectID int64) bool {
 	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableSixSignalGroupByProjectID, "")

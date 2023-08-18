@@ -112,7 +112,7 @@ func (store *MemSQL) GetDisplayablePlanDetails(ppMap model.ProjectPlanMapping, p
 		}
 	}
 	var sixSignalInfo model.SixSignalInfo
-	isDeanonymisationEnabled, _, err := store.GetFeatureStatusForProjectV2(ppMap.ProjectID, FEATURE_FACTORS_DEANONYMISATION)
+	isDeanonymisationEnabled, err := store.GetFeatureStatusForProjectV2(ppMap.ProjectID, FEATURE_FACTORS_DEANONYMISATION)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get status for six signal")
 		return nil, http.StatusInternalServerError, "Failed to get status for six signal", err
@@ -352,24 +352,11 @@ func (store *MemSQL) CreateAddonsForCustomPlanForProject(projectID int64) error 
 			// TODO : change this to const
 			feature.Limit = 100
 		}
-		if featureName == model.INT_FACTORS_DEANONYMISATION {
-			feature.IsConnected = true
-		}
 		addOns = append(addOns, feature)
 	}
 	_, err := store.UpdateAddonsForProject(projectID, addOns)
 	if err != nil {
 		log.WithError(err).Error("Failed to create custom plan addons")
-		return err
-	}
-	settings, status := store.GetProjectSetting(projectID)
-	if status != http.StatusFound {
-		log.WithError(err).Error("Failed to update custom plan addons int status")
-		return errors.New("Failed to update custom plan addons int status")
-	}
-	err = store.UpdateAllFeatureStatusForProject(projectID, *settings)
-	if err != nil {
-		log.WithError(err).Error("Failed to update custom plan addons int status")
 		return err
 	}
 	return nil

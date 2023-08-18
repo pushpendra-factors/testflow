@@ -11,6 +11,7 @@ ADD /factors/scripts/ingest_demo_data/demo_data/facebook_documents.txt /go/src/d
 # Create stripped down version without go and source code
 FROM alpine:3.7
 RUN apk update && apk add ca-certificates && apk add curl && rm -rf /var/cache/apk/*
+ENV GOLANG_PROTOBUF_REGISTRATION_CONFLICT=ignore
 COPY --from=builder /go/src/factors/backend/bin/documentdatagen /go/src/factors/backend/bin/documentdatagen
 COPY --from=builder /go/src/documentdatagen/demo_data/bin/adwords_documents.txt /go/bin/demo_data/adwords_documents.txt
 COPY --from=builder /go/src/documentdatagen/demo_data/bin/linkedin_documents.txt /go/bin/demo_data/linkedin_documents.txt

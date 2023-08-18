@@ -164,12 +164,10 @@ const journeyMenu = (
 
 const renderConfigureMenu = (email) => (
   <Menu className={styles['dropdown-menu']}>
-    <Menu.Item disabled className={styles['dropdown-menu-item']}>
-      <Link to={PathUrls.Dashboard}>
+    <Menu.Item disabled className={styles['dropdown-menu-item']}> 
         <Text color='disabled' level={7} type='title' extraClass='mb-0'>
           Configure
-        </Text>
-      </Link>
+        </Text> 
     </Menu.Item>
     {getConfigureMenuItems(email).map((item) => {
       return (
@@ -188,11 +186,9 @@ const renderConfigureMenu = (email) => (
 const SettingsMenu = (
   <Menu className={styles['dropdown-menu']}>
     <Menu.Item disabled className={styles['dropdown-menu-item']}>
-      <Link className='items-center col-gap-2' to={PathUrls.Dashboard}>
         <Text color='disabled' level={7} type='title' extraClass='mb-0'>
           Settings
-        </Text>
-      </Link>
+        </Text> 
     </Menu.Item>
     {settingsMenuItems.map((item) => {  
       if(item?.whitelisted){
@@ -324,7 +320,7 @@ function FaHeader() {
                 isConfigurationUrl(pathname)
             })}
           >
-            <SVG color='#F0F0F0' size={20} name='controls' />
+            <SVG color='#F0F0F0' size={16} name='config' />
           </div>
         </Dropdown>
         <Dropdown placement='bottomRight' overlay={SettingsMenu}>

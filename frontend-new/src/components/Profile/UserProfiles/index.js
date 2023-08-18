@@ -13,18 +13,16 @@ import { connect, useDispatch, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { Text, SVG } from '../../factorsComponents';
 import FaSelect from '../../FaSelect';
-import { getUserProperties } from '../../../reducers/coreQuery/middleware';
+import { getUserPropertiesV2 } from '../../../reducers/coreQuery/middleware';
 import PropertyFilter from '../MyComponents/PropertyFilter';
 import MomentTz from '../../MomentTz';
 import {
-  fetchDemoProject,
   fetchProjectSettingsV1,
   fetchProjectSettings,
   fetchMarketoIntegration,
   fetchBingAdsIntegration,
   udpateProjectSettings
 } from '../../../reducers/global';
-import ProfileBeforeIntegration from '../ProfileBeforeIntegration';
 import {
   ALPHANUMSTR,
   DEFAULT_TIMELINE_CONFIG,
@@ -48,7 +46,10 @@ import _ from 'lodash';
 import SegmentModal from './SegmentModal';
 import SearchCheckList from 'Components/SearchCheckList';
 import { formatUserPropertiesToCheckList } from 'Reducers/timelines/utils';
-import { PropTextFormat } from 'Utils/dataFormatter';
+import {
+  PropTextFormat,
+  convertGroupedPropertiesToUngrouped
+} from 'Utils/dataFormatter';
 import { fetchUserPropertyValues } from 'Reducers/coreQuery/services';
 import ProfilesWrapper from '../ProfilesWrapper';
 import { getUserOptions } from './userProfiles.helpers';
@@ -68,6 +69,7 @@ import { FEATURES } from 'Constants/plans.constants';
 import UpgradeModal from '../UpgradeModal';
 import RangeNudge from 'Components/GenericComponents/RangeNudge';
 import { showUpgradeNudge } from 'Views/Settings/ProjectSettings/Pricing/utils';
+import CommonBeforeIntegrationPage from 'Components/GenericComponents/CommonBeforeIntegrationPage';
 
 const userOptions = getUserOptions();
 
@@ -79,12 +81,11 @@ function UserProfiles({
   getSavedSegments,
   getProfileUsers,
   getProfileUserDetails,
-  getUserProperties,
+  getUserPropertiesV2,
   fetchProjectSettingsV1,
   fetchProjectSettings,
   fetchMarketoIntegration,
   fetchBingAdsIntegration,
-  fetchDemoProject,
   currentProjectSettings,
   udpateProjectSettings,
   updateSegmentForId
@@ -97,7 +98,9 @@ function UserProfiles({
   const integrationV1 = useSelector((state) => state.global.projectSettingsV1);
   const { bingAds, marketo } = useSelector((state) => state.global);
   const { dashboards } = useSelector((state) => state.dashboard);
-  const userProperties = useSelector((state) => state.coreQuery.userProperties);
+  const userPropertiesV2 = useSelector(
+    (state) => state.coreQuery.userPropertiesV2
+  );
   const { userPropNames } = useSelector((state) => state.coreQuery);
   const timelinePayload = useSelector((state) => selectTimelinePayload(state));
   const activeSegment = useSelector((state) => selectActiveSegment(state));
@@ -109,7 +112,6 @@ function UserProfiles({
   const [listSearchItems, setListSearchItems] = useState([]);
   const [searchBarOpen, setSearchBarOpen] = useState(false);
   const [searchDDOpen, setSearchDDOpen] = useState(false);
-  const [demoProjectId, setDemoProjectId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [checkListUserProps, setCheckListUserProps] = useState([]);
   const [showPopOver, setShowPopOver] = useState(false);
@@ -173,16 +175,6 @@ function UserProfiles({
   }, [currentProjectSettings?.timelines_config]);
 
   useEffect(() => {
-    fetchDemoProject()
-      .then((res) => {
-        setDemoProjectId(res.data[0]);
-      })
-      .catch((err) => {
-        console.log(err.data.error);
-      });
-  }, [activeProject, fetchDemoProject]);
-
-  useEffect(() => {
     setTimeout(() => {
       setLoading(false);
     }, 1000);
@@ -198,7 +190,7 @@ function UserProfiles({
   }, [activeProject]);
 
   useEffect(() => {
-    getUserProperties(activeProject.id);
+    getUserPropertiesV2(activeProject.id);
   }, [activeProject?.id]);
 
   const isIntegrationEnabled =
@@ -224,12 +216,24 @@ function UserProfiles({
     const tableProps = timelinePayload?.segment_id
       ? activeSegment?.query?.table_props
       : currentProjectSettings.timelines_config?.user_config?.table_props;
+    const userPropertiesModified = [];
+    if (userPropertiesV2) {
+      convertGroupedPropertiesToUngrouped(
+        userPropertiesV2,
+        userPropertiesModified
+      );
+    }
     const userPropsWithEnableKey = formatUserPropertiesToCheckList(
-      userProperties,
+      userPropertiesModified,
       tableProps
     );
     setCheckListUserProps(userPropsWithEnableKey);
-  }, [currentProjectSettings, userProperties, activeSegment, timelinePayload]);
+  }, [
+    currentProjectSettings,
+    userPropertiesV2,
+    activeSegment,
+    timelinePayload
+  ]);
 
   useEffect(() => {
     getSavedSegments(activeProject.id);
@@ -321,13 +325,20 @@ function UserProfiles({
       ? activeSegment?.query?.table_props
       : currentProjectSettings?.timelines_config?.user_config?.table_props;
 
+    const userPropertiesModified = [];
+    if (userPropertiesV2) {
+      convertGroupedPropertiesToUngrouped(
+        userPropertiesV2,
+        userPropertiesModified
+      );
+    }
     tableProps
       ?.filter((entry) => entry !== '' && entry !== undefined)
       ?.forEach((prop) => {
         const propDisplayName = userPropNames[prop]
           ? userPropNames[prop]
           : PropTextFormat(prop);
-        const propType = getPropType(userProperties, prop);
+        const propType = getPropType(userPropertiesModified, prop);
         columns.push({
           title: (
             <Text
@@ -700,7 +711,7 @@ function UserProfiles({
     );
   }
 
-  if (isIntegrationEnabled || activeProject.id === demoProjectId) {
+  if (isIntegrationEnabled) {
     return (
       <ProfilesWrapper>
         {showUpgradeNudge(
@@ -748,7 +759,7 @@ function UserProfiles({
       </ProfilesWrapper>
     );
   }
-  return <ProfileBeforeIntegration />;
+  return <CommonBeforeIntegrationPage />;
 }
 
 const mapStateToProps = (state) => ({
@@ -765,12 +776,11 @@ const mapDispatchToProps = (dispatch) =>
       getProfileUsers,
       getProfileUserDetails,
       getSavedSegments,
-      getUserProperties,
+      getUserPropertiesV2,
       fetchProjectSettingsV1,
       fetchProjectSettings,
       fetchMarketoIntegration,
       fetchBingAdsIntegration,
-      fetchDemoProject,
       udpateProjectSettings,
       updateSegmentForId
     },

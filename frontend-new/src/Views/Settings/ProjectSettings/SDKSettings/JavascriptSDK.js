@@ -117,7 +117,7 @@ const GTMSetup = ({ currentProjectSettings, activeProject }) => {
           Setup 1
         </Text>
         <Text type={'paragraph'} extraClass={'m-0'}>
-          1. Sign in to
+          1. Sign in to&nbsp;
           <span className={'underline'}>
             <a href='https://tagmanager.google.com/' target='_blank'>
               Google Tag Manager
@@ -835,7 +835,7 @@ const VerifySdkCheck = ({
                   color={'grey-2'}
                   extraClass={'m-0 ml-2 inline'}
                 >
-                  SDK have successfully verified
+                  SDK verified successfully
                 </Text>
               </Col>
               <Col>

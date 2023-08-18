@@ -25,6 +25,8 @@ import {
   CHART_COLOR_9,
   CHART_COLOR_10
 } from '../constants/color.constants';
+import getGroupIcon from './getGroupIcon';
+import startCase from 'lodash/startCase';
 
 export const visualizationColors = [
   CHART_COLOR_1,
@@ -733,4 +735,50 @@ export const formatDurationIntoString = (seconds) => {
     }
   } else return 'NA';
   return returnString.trim();
+};
+
+export const processProperties = (properties, propertyType, key) => {
+  if (!properties) return [];
+
+  return properties.map((op) => ({
+    value: op?.[1],
+    label: op?.[0],
+    extraProps: {
+      valueType: op?.[2],
+      propertyType,
+      groupName: key
+    }
+  }));
+};
+
+export const convertAndAddPropertiesToGroupSelectOptions = (
+  properties,
+  filterOptsObj,
+  propertyType
+) => {
+  //filterOptsObj is Passed By Reference.
+  Object.keys(properties)?.forEach((groupkey) => {
+    if (!filterOptsObj[groupkey]) {
+      filterOptsObj[groupkey] = {
+        label: startCase(groupkey),
+        iconName: getGroupIcon(groupkey),
+        values: processProperties(properties, propertyType, groupkey) || []
+      };
+    } else {
+      filterOptsObj[groupkey].values.push(
+        ...(processProperties(properties, propertyType, groupkey) || [])
+      );
+    }
+  });
+};
+
+export const convertGroupedPropertiesToUngrouped = (
+  properties,
+  propertiesModified
+) => {
+  Object.keys(properties).forEach((groupKey) => {
+    properties[groupKey].forEach((userPropArray) => {
+      propertiesModified.push(userPropArray);
+    });
+  });
 };

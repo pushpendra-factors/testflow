@@ -4,8 +4,8 @@ import { SVG, Text } from 'factorsComponents';
 import GroupSelect2 from '../../components/QueryComposer/GroupSelect2';
 import {
   fetchEventNames,
-  getUserProperties,
-  getEventProperties
+  getUserPropertiesV2,
+  getEventPropertiesV2
 } from 'Reducers/coreQuery/middleware';
 import {
   createExplainJob,
@@ -34,10 +34,9 @@ const symbolToTextConv = (symbol) => {
     case '!=':
       return 'notEqual';
     default:
-      return 'equals'
+      return 'equals';
   }
-}
-
+};
 
 const title = (props) => {
   return (
@@ -90,9 +89,7 @@ const CreateGoalDrawer = (props) => {
   const [showEventFilter2DD, setEventFilter2DD] = useState(false);
 
   const [filters, setfilters] = useState([]);
-  const [filterProps, setFilterProperties] = useState({
-    user: []
-  });
+
   const [filterDD, setFilterDD] = useState(false);
 
   const [eventsBlockOpen, setEventsBlockOpen] = useState(true);
@@ -108,9 +105,12 @@ const CreateGoalDrawer = (props) => {
 
   const [loading, setLoading] = useState(false);
 
-
-  const defaultStartDate = selectedDateRange ? selectedDateRange?.startDate : moment().subtract(1, 'days')
-  const defaultEndDate = selectedDateRange ? selectedDateRange?.endDate : moment().subtract(1, 'days')
+  const defaultStartDate = selectedDateRange
+    ? selectedDateRange?.startDate
+    : moment().subtract(1, 'days');
+  const defaultEndDate = selectedDateRange
+    ? selectedDateRange?.endDate
+    : moment().subtract(1, 'days');
 
   const getFilters = (filters) => {
     const result = [];
@@ -165,15 +165,14 @@ const CreateGoalDrawer = (props) => {
   useEffect(() => {
     let goalInsights = props.goal_insights;
     if (goalInsights) {
-
       let defaultDate = {
         startDate: moment.unix(goalInsights?.sts),
         endDate: moment.unix(goalInsights?.ets)
       };
       setSelectedDateRange(defaultDate);
 
-      if (goalInsights.type == 'singleevent') {
-        if (goalInsights?.goal?.st_en == '') {
+      if (goalInsights.type === 'singleevent') {
+        if (goalInsights?.goal?.st_en === '') {
           setEvent1(goalInsights?.goal?.en_en);
         } else {
           setEvent1(goalInsights?.goal?.st_en);
@@ -185,9 +184,8 @@ const CreateGoalDrawer = (props) => {
       }
 
       if (goalInsights?.goal?.rule?.in_en) {
-        setEventsToInc(goalInsights?.goal?.rule?.in_en)
+        setEventsToInc(goalInsights?.goal?.rule?.in_en);
       }
-
     }
   }, []);
 
@@ -210,7 +208,7 @@ const CreateGoalDrawer = (props) => {
     //   }
     // }
     if (props.activeProject && props.activeProject.id) {
-      props.getUserProperties(props.activeProject.id, 'channel');
+      props.getUserPropertiesV2(props.activeProject.id, 'channel');
     }
     if (props.tracked_events) {
       const fromatterTrackedEvents = props.tracked_events.map((item) => {
@@ -226,20 +224,6 @@ const CreateGoalDrawer = (props) => {
     props.goal_insights,
     props.factors_insight_model
   ]);
-
-  useEffect(() => {
-    const assignFilterProps = Object.assign({}, filterProps);
-    assignFilterProps.user = props.userProperties;
-    let catAndNumericalProps = [];
-
-    props.userProperties.map((item) => {
-      if (item[1] == 'categorical' || item[1] == 'numerical') {
-        catAndNumericalProps.push(item);
-      }
-    });
-    assignFilterProps.user = catAndNumericalProps;
-    setFilterProperties(assignFilterProps);
-  }, [props.userProperties]);
 
   const smoothScroll = (element) => {
     document.querySelector(element).scrollIntoView({
@@ -419,8 +403,9 @@ const CreateGoalDrawer = (props) => {
     <div>
       <div className={`flex flex-col py-4 px-20 border--thin-2 relative `}>
         <div
-          className={`explain-builder--content ${collapse ? 'explain-builder--collapsed' : ''
-            }`}
+          className={`explain-builder--content ${
+            collapse ? 'explain-builder--collapsed' : ''
+          }`}
         >
           <ComposerBlock
             blockTitle={'SELECT ANALYSIS WINDOW'}
@@ -501,12 +486,12 @@ const CreateGoalDrawer = (props) => {
                                 groupedProperties={
                                   TrackedEventNames
                                     ? [
-                                      {
-                                        label: 'Most Recent',
-                                        icon: 'most_recent',
-                                        values: TrackedEventNames
-                                      }
-                                    ]
+                                        {
+                                          label: 'Most Recent',
+                                          icon: 'most_recent',
+                                          values: TrackedEventNames
+                                        }
+                                      ]
                                     : null
                                 }
                                 placeholder='Select Events'
@@ -608,12 +593,12 @@ const CreateGoalDrawer = (props) => {
                                   groupedProperties={
                                     TrackedEventNames
                                       ? [
-                                        {
-                                          label: 'Most Recent',
-                                          icon: 'most_recent',
-                                          values: TrackedEventNames
-                                        }
-                                      ]
+                                          {
+                                            label: 'Most Recent',
+                                            icon: 'most_recent',
+                                            values: TrackedEventNames
+                                          }
+                                        ]
                                       : null
                                   }
                                   placeholder='Select Events'
@@ -791,7 +776,7 @@ const CreateGoalDrawer = (props) => {
 const mapStateToProps = (state) => {
   return {
     activeProject: state.global.active_project,
-    userProperties: state.coreQuery.userProperties,
+    userPropertiesV2: state.coreQuery.userPropertiesV2,
     GlobalEventNames: state.coreQuery?.eventOptions[0]?.values,
     factors_models: state.factors.factors_models,
     goal_insights: state.factors.goal_insights,
@@ -808,8 +793,8 @@ export default connect(mapStateToProps, {
   fetchFactorsModels,
   saveGoalInsightRules,
   saveGoalInsightModel,
-  getUserProperties,
-  getEventProperties,
+  getUserPropertiesV2,
+  getEventPropertiesV2,
   fetchFactorsModelMetadata,
   fetchSavedExplainGoals
 })(CreateGoalDrawer);

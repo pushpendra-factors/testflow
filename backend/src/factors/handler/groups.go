@@ -135,7 +135,7 @@ func GetGroupPropertiesHandler(c *gin.Context) {
 	var propertiesFromCache map[string][]string
 	var status int
 
-	if groupName == "All" || groupName == U.GROUP_NAME_DOMAINS {
+	if model.IsDomainGroup(groupName) {
 
 		propertiesFromCache["categorical"] = U.ALL_ACCOUNT_DEFAULT_PROPERTIES
 
@@ -253,7 +253,7 @@ func GetGroupPropertyValuesHandler(c *gin.Context) {
 		return
 	}
 	logCtx = logCtx.WithField("property_name", propertyName)
-	if groupName == "All" || groupName == U.GROUP_NAME_DOMAINS {
+	if model.IsDomainGroup(groupName) {
 
 		if U.ContainsStringInArray(U.ALL_ACCOUNT_DEFAULT_PROPERTIES, propertyName) {
 

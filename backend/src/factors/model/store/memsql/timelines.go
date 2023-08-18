@@ -161,7 +161,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	}
 
 	// Get merged properties for all accounts
-	if profileType == model.PROFILE_TYPE_ACCOUNT && C.IsDomainEnabled(projectID) && payload.Query.Source == "All" {
+	if model.IsAccountProfiles(profileType) && C.IsDomainEnabled(projectID) && model.IsDomainGroup(payload.Query.Source) {
 		tablePropsHasUserProp := tablePropsHasUserProperty(payload.Query.TableProps)
 		if isAllUserProperties && !C.IsAllAccountsEnabled(projectID) {
 			userDomains, _ := store.GetUsersAssociatedToDomain(projectID, minMax, groupedFilters)
@@ -220,7 +220,7 @@ func RemoveNoneFiltersFromWhere(groupedProps map[string][]model.QueryProperty) (
 func hasUserProperty(profileType string, properties []model.QueryProperty) bool {
 	isUserProperty := false
 
-	if profileType == model.PROFILE_TYPE_ACCOUNT {
+	if model.IsAccountProfiles(profileType) {
 		for _, filter := range properties {
 			if filter.Entity == model.PropertyEntityUserGroup {
 				isUserProperty = true
@@ -235,12 +235,12 @@ func hasUserProperty(profileType string, properties []model.QueryProperty) bool 
 // getGroupUserStatement generates a where statement indicating whether the user is a group user or not
 func getGroupUserStatement(profileType, source string) string {
 	isGroupUserStmt := ""
-	if source == "All" {
+	if model.IsDomainGroup(source) {
 		return isGroupUserStmt
 	}
-	if profileType == model.PROFILE_TYPE_ACCOUNT {
+	if model.IsAccountProfiles(profileType) {
 		isGroupUserStmt = "AND users.is_group_user=1"
-	} else if profileType == model.PROFILE_TYPE_USER {
+	} else if model.IsUserProfiles(profileType) {
 		isGroupUserStmt = "AND (is_group_user=0 OR is_group_user IS NULL)"
 	}
 	return isGroupUserStmt
@@ -251,7 +251,7 @@ func (store *MemSQL) GetSourceStmtWithParams(projectID int64, profileType, sourc
 	sourceStmt := ""
 	sourceID := 0
 	status := http.StatusOK
-	if profileType == model.PROFILE_TYPE_ACCOUNT {
+	if model.IsAccountProfiles(profileType) {
 		if C.IsDomainEnabled(projectID) {
 			sourceStmt, sourceID, status = store.GetSourceStringForAccountsV2(projectID, source, hasAllUserProperties)
 		} else {
@@ -260,10 +260,10 @@ func (store *MemSQL) GetSourceStmtWithParams(projectID int64, profileType, sourc
 		if status != http.StatusOK {
 			return "", 0, fmt.Errorf("failed retrieving account source")
 		}
-	} else if profileType == model.PROFILE_TYPE_USER {
+	} else if model.IsUserProfiles(profileType) {
 		if model.UserSourceMap[source] == model.UserSourceWeb {
 			sourceStmt = "AND (source=1 OR source IS NULL)"
-		} else if source == "All" {
+		} else if model.IsDomainGroup(source) {
 			sourceStmt = ""
 		} else {
 			sourceStmt = "AND source=?"
@@ -279,7 +279,7 @@ func (store *MemSQL) GetMinAndMaxUpdatedAt(profileType string, whereStmt string,
 	windowSelectStr := "MIN(updated_at) AS min_updated_at, MAX(updated_at) AS max_updated_at"
 
 	fromStr := fmt.Sprintf("%s AND updated_at < ?", whereStmt)
-	minMaxQParams = append(minMaxQParams, FormatTimeToString(gorm.NowFunc()))
+	minMaxQParams = append(minMaxQParams, model.FormatTimeToString(gorm.NowFunc()))
 
 	queryStrmt := fmt.Sprintf("SELECT %s FROM (SELECT updated_at FROM users %s ORDER BY updated_at DESC LIMIT %d);", windowSelectStr, fromStr, limitVal)
 	db := C.GetServices().Db
@@ -503,14 +503,14 @@ func (store *MemSQL) GenerateQueryString(
 	var params []interface{}
 	var queryString, selectString, selectColumnsStr, fromStr, groupByStr string
 
-	isDomainGroup := (C.IsDomainEnabled(projectID) && source == "All")
+	isDomainGroup := (C.IsDomainEnabled(projectID) && model.IsDomainGroup(source))
 
 	filterString, filterParams, err := buildFilterStringAndParams(projectID, groupedFilters)
 	if err != nil {
 		return "", params, err
 	}
 
-	if profileType == model.PROFILE_TYPE_ACCOUNT {
+	if model.IsAccountProfiles(profileType) {
 		if hasUserProperty && source != "All" {
 			group, errCode := store.GetGroup(projectID, source)
 			if errCode != http.StatusFound || group == nil {
@@ -529,20 +529,20 @@ func (store *MemSQL) GenerateQueryString(
 			selectColumnsStr = selectColumnsStr + ", user_user_g.properties as user_global_user_properties"
 		}
 
-	} else if profileType == model.PROFILE_TYPE_USER {
+	} else if model.IsUserProfiles(profileType) {
 		selectString = "COALESCE(customer_user_id, id) AS identity, ISNULL(customer_user_id) AS is_anonymous, properties, MAX(updated_at) AS last_activity"
 		selectColumnsStr = "id, customer_user_id, properties, updated_at"
 		groupByStr = "GROUP BY identity"
 	}
 
 	timeAndRecordsLimit := "users.updated_at BETWEEN ? AND ? LIMIT 100000000"
-	params = append(params, FormatTimeToString(minMax.MinUpdatedAt), FormatTimeToString(minMax.MaxUpdatedAt))
+	params = append(params, model.FormatTimeToString(minMax.MinUpdatedAt), model.FormatTimeToString(minMax.MaxUpdatedAt))
 
 	if filterString != "" {
 		fromStr = fmt.Sprintf("(SELECT %s FROM users %s AND ", selectColumnsStr, whereStmt) +
 			timeAndRecordsLimit + " ) AS select_view WHERE"
 
-		if profileType == model.PROFILE_TYPE_USER || !isDomainGroup {
+		if model.IsUserProfiles(profileType) || !isDomainGroup {
 			filterString = strings.ReplaceAll(filterString, "users.", "select_view.") // Json Filters on select_view
 
 			if hasUserProperty {
@@ -553,7 +553,7 @@ func (store *MemSQL) GenerateQueryString(
 		fromStr = fmt.Sprintf("users %s AND updated_at BETWEEN ? AND ?", whereStmt)
 	}
 
-	if profileType == model.PROFILE_TYPE_ACCOUNT && isDomainGroup {
+	if model.IsAccountProfiles(profileType) && isDomainGroup {
 		filtersMapForWhere, nullPropertyMap := RemoveNoneFiltersFromWhere(groupedFilters)
 		filterString, filterParams, err = buildFilterStringAndParams(projectID, filtersMapForWhere)
 		if err != nil {
@@ -655,9 +655,9 @@ func (store *MemSQL) GetTablePropsFromConfig(projectID int64, profileType string
 	if err != nil {
 		return nil
 	}
-	if profileType == model.PROFILE_TYPE_ACCOUNT {
+	if model.IsAccountProfiles(profileType) {
 		return timelinesConfig.AccountConfig.TableProps
-	} else if profileType == model.PROFILE_TYPE_USER {
+	} else if model.IsUserProfiles(profileType) {
 		return timelinesConfig.UserConfig.TableProps
 	}
 	return nil
@@ -753,7 +753,7 @@ func (store *MemSQL) GetUsersAssociatedToDomain(projectID int64, minMax *model.M
 	}
 
 	timeAndRecordsLimit := "users.updated_at BETWEEN ? AND ? LIMIT 100000000"
-	limitParams := []interface{}{FormatTimeToString(minMax.MinUpdatedAt), FormatTimeToString(minMax.MaxUpdatedAt)}
+	limitParams := []interface{}{model.FormatTimeToString(minMax.MinUpdatedAt), model.FormatTimeToString(minMax.MaxUpdatedAt)}
 
 	groupIdsMap, status := store.GetGroupNameIDMap(projectID)
 	if status != http.StatusFound {
@@ -887,7 +887,7 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profile
 func (store *MemSQL) GetSourceStringForAccountsV2(projectID int64, source string, isAllUserProperties bool) (string, int, int) {
 	var sourceString string
 	groupName := source
-	if source == "All" {
+	if model.IsDomainGroup(source) {
 		groupName = model.GROUP_NAME_DOMAINS
 	}
 	group, errCode := store.GetGroup(projectID, groupName)
@@ -896,7 +896,7 @@ func (store *MemSQL) GetSourceStringForAccountsV2(projectID int64, source string
 		return sourceString, 0, http.StatusBadRequest
 	}
 
-	if source == "All" {
+	if model.IsDomainGroup(source) {
 		sourceString = "AND users.source!=?"
 		if isAllUserProperties {
 			sourceString = sourceString + " " + fmt.Sprintf("AND (users.group_%d_id IS NOT NULL OR (users.customer_user_id IS NOT NULL AND users.group_%d_user_id IS NOT NULL))", group.ID, group.ID)
@@ -1050,7 +1050,7 @@ func (store *MemSQL) GetSourceStringForAccountsV1(projectID int64, source string
 
 	var sourceArr []string
 	for i, crmName := range crmNames {
-		if source == "All" || source == crmName {
+		if model.IsDomainGroup(source) || source == crmName {
 			if crmExists[i] {
 				sourceArr = append(sourceArr, fmt.Sprintf("group_%d_id IS NOT NULL", crmIDs[i]))
 			}
@@ -1071,9 +1071,9 @@ func FormatProfilesStruct(projectID int64, profiles []model.Profile, profileType
 		"profile_type": profileType,
 	}
 
-	convertDomainIdToHostName := profileType == model.PROFILE_TYPE_ACCOUNT && source == "All" && C.IsAllAccountsEnabled(projectID)
+	convertDomainIdToHostName := model.IsAccountProfiles(profileType) && model.IsDomainGroup(source) && C.IsAllAccountsEnabled(projectID)
 
-	if profileType == model.PROFILE_TYPE_ACCOUNT {
+	if model.IsAccountProfiles(profileType) {
 		var companyNameProps, hostNameProps []string
 		if model.IsAllowedAccountGroupNames(source) {
 			hostNameProps = []string{model.HostNameGroup[source]}
@@ -1134,7 +1134,7 @@ func FormatProfilesStruct(projectID int64, profiles []model.Profile, profileType
 				profiles[index].LastActivity = *model.UnixToLocalTime(profile.PropertiesUpdatedTimestamp)
 			}
 		}
-	} else if profileType == model.PROFILE_TYPE_USER {
+	} else if model.IsUserProfiles(profileType) {
 		for index, profile := range profiles {
 			filterTableProps := make(map[string]interface{}, 0)
 			properties, err := U.DecodePostgresJsonb(profile.Properties)
@@ -1452,7 +1452,7 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 	var accountDetails model.AccountDetails
 
 	var group *model.Group
-	if groupName == "All" {
+	if model.IsDomainGroup(groupName) {
 		group, status = store.GetGroup(projectID, U.GROUP_NAME_DOMAINS)
 	} else {
 		group, status = store.GetGroup(projectID, groupName)
@@ -1558,7 +1558,7 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 		accountDetails.AccountTimeline = append(accountDetails.AccountTimeline, intentTimeline)
 	}
 
-	scoringAvailable, _, err := store.GetFeatureStatusForProjectV2(projectID, model.FEATURE_ACCOUNT_SCORING)
+	scoringAvailable, err := store.GetFeatureStatusForProjectV2(projectID, model.FEATURE_ACCOUNT_SCORING)
 	if err != nil {
 		log.WithFields(logFields).Error("Error fetching scoring availability status for the project")
 	}
@@ -1575,6 +1575,7 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 	return &accountDetails, http.StatusFound, ""
 }
 
+// GetAccountOverview gives us a compiled response for account overview
 func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (model.Overview, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -1588,7 +1589,7 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 	groupUserString := ""
 	var params []interface{}
 	grpName := groupName
-	if groupName == "All" {
+	if model.IsDomainGroup(groupName) {
 		grpName = U.GROUP_NAME_DOMAINS
 	}
 	group, errGetGroup := store.GetGroup(projectID, grpName)
@@ -1642,10 +1643,149 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 		overview.ScoresList = accountScore.Trend
 	}
 
-	if errGetScore != nil && errGetCount != nil {
+	// Get Top Pages and Top Users
+	topPages, errGetTopPages := store.GetTopPages(projectID, id, group.ID)
+	if errGetTopPages != nil {
+		log.WithFields(logFields).WithError(errGetScore).Error("Error getting top pages")
+	} else {
+		overview.TopPages = topPages
+	}
+
+	topUsers, errGetTopUsers := store.GetTopUsers(projectID, id, group.ID)
+	if errGetTopUsers != nil {
+		log.WithFields(logFields).WithError(errGetScore).Error("Error getting top users")
+	} else {
+		overview.TopUsers = topUsers
+	}
+
+	if errGetScore != nil && errGetCount != nil && errGetTopUsers != nil && errGetTopPages != nil {
 		return overview, fmt.Errorf("error getting overview")
 	}
+
 	return overview, nil
+}
+
+// GetTopPages gives us a list of top pages with visited by the users associated to a group/domain ordered by number of visits
+func (store *MemSQL) GetTopPages(projectID int64, id string, groupID int) ([]model.TopPage, error) {
+	queryParams := []interface{}{projectID, id}
+	groupUserString := fmt.Sprintf("users.group_%d_user_id=? ", groupID)
+
+	queryStmt := fmt.Sprintf(`SELECT JSON_EXTRACT_STRING(events.properties, '%s') AS page_url,
+          COUNT(events.id) AS views,
+          COUNT(DISTINCT(COALESCE(users.customer_user_id, users.id))) AS users_count,
+          SUM(JSON_EXTRACT_STRING(events.properties, '%s')) AS total_time,
+          AVG(JSON_EXTRACT_STRING(events.properties, '%s')) AS avg_scroll_percent
+        FROM users 
+        JOIN events 
+        ON users.id=events.user_id AND users.project_id=events.project_id
+        WHERE users.project_id=?
+          AND users.is_group_user = 0
+          AND (%s)
+          AND JSON_EXTRACT_STRING(events.properties,  '%s') = 'true'
+        GROUP BY page_url
+        ORDER BY views DESC
+        LIMIT 30;`, U.EP_PAGE_URL, U.EP_PAGE_SPENT_TIME, U.EP_PAGE_SCROLL_PERCENT, groupUserString, U.EP_IS_PAGE_VIEW)
+
+	db := C.GetServices().Db
+	var topPages []model.TopPage
+	if err := db.Raw(queryStmt, queryParams...).Scan(&topPages).Error; err != nil {
+		logFields := log.Fields{
+			"project_id": projectID,
+			"id":         id,
+		}
+		log.WithFields(logFields).WithError(err).Error("Error executing top pages query")
+		return nil, fmt.Errorf("error executing top pages query")
+	}
+
+	return topPages, nil
+}
+
+// GetTopUsers gives us a list of top users associated to a group/domain ordered by activity
+func (store *MemSQL) GetTopUsers(projectID int64, id string, groupID int) ([]model.TopUser, error) {
+	queryParams := []interface{}{projectID, id}
+	groupUserStmt := fmt.Sprintf("users.group_%d_user_id=? ", groupID)
+
+	// known users
+	topKnownUsers, err := store.GetTopKnownUsers(queryParams, groupUserStmt)
+	if err != nil {
+		return nil, err
+	}
+
+	// anonymous users
+	topAnonymousUsers, err := store.GetTopAnonymousUsers(queryParams, groupUserStmt)
+	if err != nil {
+		return nil, err
+	}
+
+	// Combine the results of known and anonymous users
+	topUsers := append(topKnownUsers, topAnonymousUsers)
+
+	return topUsers, nil
+}
+
+// GetTopUsers gives us a list of top identified users associated to a group/domain ordered by activity
+func (store *MemSQL) GetTopKnownUsers(queryParams []interface{}, groupUserStmt string) ([]model.TopUser, error) {
+	db := C.GetServices().Db
+	queryStmt := fmt.Sprintf(`SELECT COALESCE(JSON_EXTRACT_STRING(users.properties, '%s'), users.customer_user_id) AS name,
+      COUNT(events.id) as num_page_views,
+      SUM(JSON_EXTRACT_STRING(users.properties, '%s')) as active_time,
+      COUNT(DISTINCT(events.event_name_id)) as num_of_pages
+    FROM users
+    JOIN events
+    ON users.id=events.user_id AND users.project_id=events.project_id
+    WHERE users.project_id=?
+      AND users.is_group_user = 0
+      AND (%s)
+      AND users.customer_user_id IS NOT NULL
+      AND JSON_EXTRACT_STRING(events.properties, '%s') = 'true'
+    GROUP BY name
+    ORDER BY num_page_views DESC 
+    LIMIT 30;`, U.UP_NAME, U.UP_TOTAL_SPENT_TIME, groupUserStmt, U.EP_IS_PAGE_VIEW)
+
+	var topUsers []model.TopUser
+	if err := db.Raw(queryStmt, queryParams...).Scan(&topUsers).Error; err != nil {
+		logFields := log.Fields{
+			"project_id": queryParams[0].(int64),
+			"id":         queryParams[1].(string),
+		}
+		log.WithFields(logFields).WithError(err).Error("Error executing top users query")
+		return nil, fmt.Errorf("error executing top users query")
+	}
+
+	return topUsers, nil
+}
+
+// GetTopUsers gives us a cumulative record of unidentified/anonymous users associated to a group/domain
+func (store *MemSQL) GetTopAnonymousUsers(queryParams []interface{}, groupUserStmt string) (model.TopUser, error) {
+	db := C.GetServices().Db
+	queryStmt := fmt.Sprintf(`SELECT COUNT(DISTINCT(users.id)) AS anonymous_users_count,
+      COUNT(events.id) as num_page_views,
+      SUM(JSON_EXTRACT_STRING(users.properties, '%s')) as active_time,
+      COUNT(DISTINCT(events.event_name_id)) as num_of_pages
+    FROM users
+    JOIN events
+    ON users.id=events.user_id AND users.project_id=events.project_id
+    WHERE users.project_id=?
+      AND users.is_group_user = 0
+      AND (%s)
+      AND users.customer_user_id IS NULL
+      AND JSON_EXTRACT_STRING(events.properties, '%s') = 'true'
+    LIMIT 1;`, U.UP_TOTAL_SPENT_TIME, groupUserStmt, U.EP_IS_PAGE_VIEW)
+
+	var topAnonymousUsers model.TopUser
+	if err := db.Raw(queryStmt, queryParams...).Scan(&topAnonymousUsers).Error; err != nil {
+		logFields := log.Fields{
+			"project_id": queryParams[0].(int64),
+			"id":         queryParams[1].(string),
+		}
+		log.WithFields(logFields).WithError(err).Error("Error executing anonymous users query")
+		return model.TopUser{}, fmt.Errorf("error executing anonymous users query")
+	}
+	if topAnonymousUsers.AnonymousUsersCount > 0 {
+		topAnonymousUsers.Name = fmt.Sprintf("%d Anonymous Users", topAnonymousUsers.AnonymousUsersCount)
+	}
+
+	return topAnonymousUsers, nil
 }
 
 func (store *MemSQL) GetIntentTimeline(projectID int64, groupName string, id string) (model.UserTimeline, error) {
@@ -1656,7 +1796,7 @@ func (store *MemSQL) GetIntentTimeline(projectID int64, groupName string, id str
 		UserActivities: []model.UserActivity{},
 	}
 
-	if groupName == "All" || groupName == U.GROUP_NAME_DOMAINS {
+	if model.IsDomainGroup(groupName) {
 		intentTimeline.AdditionalProp = "All"
 		groupNameIDMap, status := store.GetGroupNameIDMap(projectID)
 		if status != http.StatusFound {
@@ -1692,14 +1832,10 @@ func (store *MemSQL) GetIntentTimeline(projectID int64, groupName string, id str
 	return intentTimeline, nil
 }
 
-func FormatTimeToString(time time.Time) string {
-	return time.Format("2006-01-02 15:04:05.000000")
-}
-
 func (store *MemSQL) AccountPropertiesForDomainsEnabledV2(projectID int64, id, groupName string) (map[string]interface{}, bool, int) {
 	propertiesDecoded := make(map[string]interface{}, 0)
 	isUserDetails := false
-	if groupName == "All" {
+	if model.IsDomainGroup(groupName) {
 		groupNameIDMap, status := store.GetGroupNameIDMap(projectID)
 		if status != http.StatusFound {
 			return propertiesDecoded, isUserDetails, status
@@ -1898,9 +2034,9 @@ func GetLeftPanePropertiesFromConfig(timelinesConfig model.TimelinesConfig, prof
 	filteredProperties := make(map[string]interface{})
 	var leftPaneProps []string
 
-	if profileType == model.PROFILE_TYPE_USER {
+	if model.IsUserProfiles(profileType) {
 		leftPaneProps = timelinesConfig.UserConfig.LeftpaneProps
-	} else if profileType == model.PROFILE_TYPE_ACCOUNT {
+	} else if model.IsAccountProfiles(profileType) {
 		leftPaneProps = timelinesConfig.AccountConfig.LeftpaneProps
 	}
 	for _, prop := range leftPaneProps {
@@ -1916,9 +2052,9 @@ func GetMilestonesFromConfig(timelinesConfig model.TimelinesConfig, profileType 
 	filteredProperties := make(map[string]interface{})
 	var milestones []string
 
-	if profileType == model.PROFILE_TYPE_USER {
+	if model.IsUserProfiles(profileType) {
 		milestones = timelinesConfig.UserConfig.Milestones
-	} else if profileType == model.PROFILE_TYPE_ACCOUNT {
+	} else if model.IsAccountProfiles(profileType) {
 		milestones = timelinesConfig.AccountConfig.Milestones
 	}
 	for _, prop := range milestones {
@@ -1973,7 +2109,7 @@ func FormatAnalyzeResultForProfiles(result *model.QueryResult, profileType strin
 		var row model.Profile
 		row.Identity = profile[0].(string)
 
-		if profileType == model.PROFILE_TYPE_USER {
+		if model.IsUserProfiles(profileType) {
 			isAnonymous := profile[1] == float64(1)
 			row.IsAnonymous = isAnonymous
 			row.LastActivity = profile[2].(time.Time)
@@ -1987,7 +2123,7 @@ func FormatAnalyzeResultForProfiles(result *model.QueryResult, profileType strin
 			if err != nil {
 				return nil, fmt.Errorf("failed at encoding props")
 			}
-		} else if profileType == model.PROFILE_TYPE_ACCOUNT {
+		} else if model.IsAccountProfiles(profileType) {
 			row.TableProps = make(map[string]interface{}, 0)
 			row.LastActivity = profile[1].(time.Time)
 			reflectProps := reflect.ValueOf(profile[2])

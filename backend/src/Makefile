@@ -725,6 +725,14 @@ pack-plan-population:
 upload-plan-population: export IMAGE_NAME=plan-population-job
 upload-plan-population: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/plan-population-job:$(TAG)
+
+pack-send-internal-alerts:
+	docker build -t us.gcr.io/factors-$(ENV)/send-internal-alerts-job:$(TAG) -f Dockerfile.send_internal_alerts_job .
+
+upload-send-internal-alerts: export IMAGE_NAME=send-internal-alerts-job
+upload-send-internal-alerts: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/send-internal-alerts-job:$(TAG)
+
 upload-g2-enrich-job: export IMAGE_NAME=g2-enrich-job
 upload-g2-enrich-job: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/g2-enrich-job:$(TAG)

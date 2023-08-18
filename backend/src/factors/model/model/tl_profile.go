@@ -73,6 +73,24 @@ type Overview struct {
 	UsersCount  int64              `json:"users_count"` // Number of Associated Users
 	TimeActive  float64            `json:"time_active"` // in seconds
 	ScoresList  map[string]float32 `json:"scores_list"` // Score trends list
+	TopPages    []TopPage          `json:"top_pages"`
+	TopUsers    []TopUser          `json:"top_users"`
+}
+
+type TopPage struct {
+	PageUrl          string  `json:"page_url"`
+	Views            int64   `json:"views"`
+	UsersCount       int64   `json:"users_count"`
+	TotalTime        float64 `json:"total_time"` // in seconds
+	AvgScrollPercent float64 `json:"avg_scroll_percent"`
+}
+
+type TopUser struct {
+	Name                string  `json:"name"`
+	NumPageViews        int64   `json:"num_page_views"`
+	AnonymousUsersCount int64   `json:"-"`
+	ActiveTime          float64 `json:"active_time"` // in seconds
+	NumOfPages          int64   `json:"num_of_pages"`
 }
 
 type UserTimeline struct {
@@ -162,6 +180,26 @@ var GROUP_TO_COMPANY_NAME_MAP = map[string]string{
 	U.GROUP_NAME_SIX_SIGNAL:         U.SIX_SIGNAL_DOMAIN,
 	U.GROUP_NAME_LINKEDIN_COMPANY:   U.LI_LOCALIZED_NAME,
 	U.GROUP_NAME_G2:                 U.G2_NAME,
+}
+
+func FormatTimeToString(time time.Time) string {
+	return time.Format("2006-01-02 15:04:05.000000")
+}
+
+func IsDomainGroup(group string) bool {
+	return group == "All" || group == U.GROUP_NAME_DOMAINS
+}
+
+func IsAnyProfiles(caller string) bool {
+	return (caller == PROFILE_TYPE_USER || caller == PROFILE_TYPE_ACCOUNT)
+}
+
+func IsAccountProfiles(caller string) bool {
+	return caller == PROFILE_TYPE_ACCOUNT
+}
+
+func IsUserProfiles(caller string) bool {
+	return caller == PROFILE_TYPE_USER
 }
 
 var GroupPropertyPrefixList = []string{

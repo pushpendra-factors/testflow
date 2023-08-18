@@ -25,8 +25,6 @@ function QueryBlock({
   groupBy,
   setGroupBy,
   delGroupBy,
-  eventUserProperties,
-  eventProperties,
   groupProperties,
   getGroupProperties,
   groupAnalysis
@@ -80,7 +78,7 @@ function QueryBlock({
 
   useEffect(() => {
     if (!event) return;
-    if (eventGroup?.length) {
+    if (eventGroup?.length && !groupProperties[eventGroup]) {
       getGroupProperties(activeProject.id, eventGroup);
     }
   }, [event, activeProject.id, eventGroup]);
@@ -181,9 +179,7 @@ function QueryBlock({
 const mapStateToProps = (state) => ({
   eventOptions: state.coreQuery.eventOptions,
   activeProject: state.global.active_project,
-  eventUserProperties: state.coreQuery.eventUserProperties,
   groupProperties: state.coreQuery.groupProperties,
-  eventProperties: state.coreQuery.eventProperties,
   groupBy: state.coreQuery.groupBy.event,
   groupByMagic: state.coreQuery.groupBy,
   eventNames: state.coreQuery.eventNames

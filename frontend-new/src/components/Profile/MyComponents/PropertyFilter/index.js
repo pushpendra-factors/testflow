@@ -13,7 +13,9 @@ function PropertyFilter({
   filters = [],
   setFilters
 }) {
-  const userProperties = useSelector((state) => state.coreQuery.userProperties);
+  const userPropertiesV2 = useSelector(
+    (state) => state.coreQuery.userPropertiesV2
+  );
   const groupProperties = useSelector(
     (state) => state.coreQuery.groupProperties
   );
@@ -31,12 +33,12 @@ function PropertyFilter({
           props[group] = groupProperties[group];
         });
       } else props[source] = groupProperties[source];
-      props.user = userProperties;
+      props.user = userPropertiesV2;
     } else if (profileType === 'user') {
-      props.user = userProperties;
+      props.user = userPropertiesV2;
     }
     setFilterProperties(props);
-  }, [userProperties, groupProperties, availableGroups, profileType, source]);
+  }, [userPropertiesV2, groupProperties, availableGroups, profileType, source]);
 
   const updateFilters = (newFilters) => {
     if (viewMode) return;

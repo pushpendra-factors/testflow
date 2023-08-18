@@ -10,10 +10,10 @@ import {
   presentationObj,
   QUERY_TYPE_ATTRIBUTION
 } from 'Utils/constants';
-import { getStateQueryFromRequestQuery } from 'Views/CoreQuery/utils';
-
-import { getAttributionStateFromRequestQuery } from 'Attribution/utils';
-
+import {
+  getAttributionStateFromRequestQuery,
+  getStateQueryFromRequestQuery
+} from 'Views/CoreQuery/utils';
 import AttributionsChart from 'Views/Dashboard/Attributions/AttributionsChart';
 import {
   DEFAULT_DASHBOARD_PRESENTATION,

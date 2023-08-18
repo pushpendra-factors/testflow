@@ -1042,7 +1042,7 @@ func FeatureMiddleware(features []string) gin.HandlerFunc {
 		projectID := U.GetScopeByKeyAsInt64(c, SCOPE_PROJECT_ID)
 
 		for _, feature := range features {
-			status, _, err := store.GetStore().GetFeatureStatusForProjectV2(projectID, feature)
+			status, err := store.GetStore().GetFeatureStatusForProjectV2(projectID, feature)
 			if err != nil {
 				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to get feature status for this project " + feature})
 				return

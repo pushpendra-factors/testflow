@@ -5,7 +5,6 @@ import { connect, useDispatch, useSelector } from 'react-redux';
 import { Link, useHistory } from 'react-router-dom';
 import {
   getHubspotContact,
-  fetchDemoProject,
   setActiveProject,
   fetchProjectSettings,
   fetchProjectSettingsV1
@@ -78,7 +77,6 @@ const Welcome = ({
   currentAgent,
   activeProject,
   getHubspotContact,
-  fetchDemoProject,
   setActiveProject,
   projects,
   fetchProjectSettings,
@@ -114,20 +112,6 @@ const Welcome = ({
       });
   }, []);
 
-  const switchProject = () => {
-    fetchDemoProject().then((res) => {
-      let id = res?.data?.[0];
-      let selectedProject = projects?.filter((project) => project?.id === id);
-      selectedProject = selectedProject?.[0];
-      localStorage.setItem('activeProject', selectedProject?.id);
-      setActiveProject(selectedProject);
-      history.push('/');
-      notification.success({
-        message: 'Project Changed!',
-        description: `You are currently viewing data from demo project`
-      });
-    });
-  };
   const showInprogress = (is_onboarding_completed) => {
     // console.log(is_onboarding_completed);
     // If onboarding is completed no need to show in-progress alert
@@ -325,7 +309,6 @@ const mapStateToProps = (state) => ({
 
 export default connect(mapStateToProps, {
   getHubspotContact,
-  fetchDemoProject,
   setActiveProject,
   fetchProjectSettings,
   fetchProjectSettingsV1
