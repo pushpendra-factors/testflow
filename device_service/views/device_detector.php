@@ -22,32 +22,39 @@ function GetDevice($userAgent)
     AbstractDeviceParser::setVersionTruncation(AbstractDeviceParser::VERSION_TRUNCATION_NONE);
     $dd = new DeviceDetector($userAgent, $clientHints);
 
-    // caching device info
-    $cache = new \Symfony\Component\Cache\Adapter\ApcuAdapter('', 31622400, null, null);
-    $dd->setCache(
-        new \DeviceDetector\Cache\PSR6Bridge($cache)
-    );
-
     // parse user agent
     $dd->parse();
 
     // Check for bot
-    if ($dd->isBot()) {
+    $isBot = $dd->isBot();
+    if ($isBot) {
         LogExecutionTime($time_start, $userAgent);
 
-        return json_encode(["is_bot" => $dd->isBot()]);
+        return json_encode(["is_bot" => $isBot]);
     } else {
 
         $clientInfo = $dd->getClient();
+
         $osInfo = $dd->getOs();
+        if (count($osInfo) == 0) {
+            $osInfo = null;
+        }
+
         $device = $dd->getDeviceName();
         $brand = $dd->getBrandName();
         $model = $dd->getModel();
 
+        // check for invalid user agent
+        if (is_null($clientInfo) && $device == "" && $brand == "" && is_null($osInfo)) {
+            http_response_code(404); // Set HTTP response code to 404 (Not found)
+            echo "User Agent not found";
+            exit;
+        }
+
         LogExecutionTime($time_start, $userAgent);
 
         return json_encode([
-            "is_bot" => $dd->isBot(),
+            "is_bot" => $isBot,
             "client_info" => $clientInfo,
             "os_info" => $osInfo,
             "device_type" => $device,

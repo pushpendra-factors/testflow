@@ -70,6 +70,12 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 		return nil, statusCode, errorCode, errMsg, isErr
 	}
 
+	logCtx = logCtx.WithFields(log.Fields{
+		"dashboardId": dashboardId,
+		"unitId":      unitId,
+		"To":          requestPayload.Query.To,
+		"From":        requestPayload.Query.From,
+	})
 	if requestPayload.Query == nil || requestPayload.Query.KPIQueries == nil || len(requestPayload.Query.KPIQueries) == 0 ||
 		requestPayload.Query.KPIQueries[0].KPI.Queries == nil || len(requestPayload.Query.KPIQueries[0].KPI.Queries) == 0 {
 		return nil, http.StatusBadRequest, INVALID_INPUT, "invalid query. empty query.", true
@@ -107,6 +113,10 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 		C.EnableOptimisedFilterOnEventUserQuery()
 
 	// If refresh is passed, refresh only is Query.From is of today's beginning.
+
+	logCtx.WithFields(log.Fields{
+		"requestPayload": requestPayload,
+	}).Info("Attribution query debug request payload")
 	if !hardRefresh && isDashboardQueryRequest && !H.ShouldAllowHardRefresh(requestPayload.Query.From, requestPayload.Query.To, timezoneString, hardRefresh) {
 
 		// if common flow and merge is enabled for the project
@@ -134,8 +144,6 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 				"should_return": shouldReturn,
 				"res_code":      resCode,
 				"res_msg":       resMsg,
-				"dashboard_Id":  dashboardId,
-				"unit_id":       unitId,
 			}).Info("Hitting the DB cache lookup")
 			if shouldReturn {
 				if resCode == http.StatusOK {
@@ -145,14 +153,20 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 		}
 
 		if C.IsLastComputedWhitelisted(projectId) {
-
+			logCtx.Info("Hitting GetResponseIfCachedDashboardQueryWithPreset")
 			shouldReturn, resCode, resMsg = H.GetResponseIfCachedDashboardQueryWithPreset(reqId, projectId, dashboardId, unitId, preset, effectiveFrom, effectiveTo, timezoneString)
 
 		} else {
-
+			logCtx.Info("Hitting GetResponseIfCachedDashboardQuery")
 			shouldReturn, resCode, resMsg = H.GetResponseIfCachedDashboardQuery(reqId, projectId, dashboardId, unitId, effectiveFrom, effectiveTo, timezoneString)
 
 		}
+		logCtx.WithFields(log.Fields{
+			"should_return": shouldReturn,
+			"res_code":      resCode,
+			"res_msg":       resMsg,
+		}).Info("Getting response from CachedDashboardQuery")
+
 		if shouldReturn {
 			if resCode == http.StatusOK {
 				return resMsg, resCode, "", "", false
@@ -171,7 +185,13 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 		return nil, http.StatusBadRequest, INVALID_INPUT, err.Error(), true
 	}
 	if !hardRefresh {
+		logCtx.Info("Hitting GetResponseIfCachedQuery")
 		shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &attributionQueryUnitPayload, cacheResult, isDashboardQueryRequest, reqId, false)
+		logCtx.WithFields(log.Fields{
+			"should_return": shouldReturn,
+			"res_code":      resCode,
+			"res_msg":       resMsg,
+		}).Info("Getting response from CachedQuery")
 		if shouldReturn {
 			if resCode == http.StatusOK {
 				return resMsg, resCode, "", "", false
@@ -191,6 +211,7 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 
 	var result *model.QueryResult
 
+	logCtx.Info("Hitting ExecuteAttributionQueryV1")
 	result, err = store.GetStore().ExecuteAttributionQueryV1(projectId, requestPayload.Query, debugQueryKey,
 		enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 
@@ -239,7 +260,11 @@ func getValidAttributionQueryAndDetailsFromRequestV1(r *http.Request, c *gin.Con
 	unitIdParam := c.Query("dashboard_unit_id")
 	queryIdString := c.Query("query_id")
 	isDashboardQueryRequest := dashboardIdParam != "" && unitIdParam != ""
-
+	logCtx.WithFields(log.Fields{
+		"dashboardIdParam": dashboardIdParam,
+		"unitIdParam":      unitIdParam,
+		"queryIdString":    queryIdString,
+	}).Info("query requestPayload")
 	if queryIdString == "" {
 		var hasFailed bool
 		var errMsg string
@@ -269,6 +294,12 @@ func getValidAttributionQueryAndDetailsFromRequestV1(r *http.Request, c *gin.Con
 			return queryPayload, dashboardId, unitId, true, http.StatusBadRequest, INVALID_INPUT, "Query failed. Json decode failed.", true
 		}
 		if query.LockedForCacheInvalidation {
+			logCtx.WithFields(log.Fields{
+				"dashboardIdParam":           dashboardIdParam,
+				"unitIdParam":                unitIdParam,
+				"queryIdString":              queryIdString,
+				"LockedForCacheInvalidation": query.LockedForCacheInvalidation,
+			}).Info("query requestPayload")
 			return queryPayload, dashboardId, unitId, true, http.StatusConflict, PROCESSING_FAILED, "Query is not processed due to saved query updated", false
 		}
 		U.DecodePostgresJsonbToStructType(&query.Query, &dbQuery)
