@@ -170,8 +170,7 @@ func GetFeaturesDetailsList(planType string) []M.FeatureDetails {
 			Name:             feature,
 			Limit:            PlanFreeLimitMap[feature],
 			IsEnabledFeature: true,
-			//IsConnected:      true,
-			Expiry: FreePlanExpiry,
+			Expiry:           FreePlanExpiry,
 		}
 		featureDetailsList = append(featureDetailsList, featureDetail)
 	}
