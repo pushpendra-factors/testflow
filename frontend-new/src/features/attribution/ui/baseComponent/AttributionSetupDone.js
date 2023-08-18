@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useHistory } from 'react-router-dom';
 import { Button } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
 import styles from './index.module.scss';
@@ -7,6 +7,7 @@ import { ATTRIBUTION_BASICS_LINK } from 'Attribution/utils/constants';
 import { PathUrls } from '../../../../routes/pathUrls';
 
 function AttributionSetupDone() {
+  const history = useHistory();
   return (
     <div className={`flex flex-col items-center ${styles.contentBody}`}>
       <div className='flex w-full justify-between items-center px-8'>
@@ -23,7 +24,7 @@ function AttributionSetupDone() {
           <Button
             type='link'
             size='large'
-            onClick={() => history.push(PathUrls.SettingsAttribution)}
+            onClick={() => history.push(PathUrls.ConfigureAttribution)}
           >
             Configuration
           </Button>
