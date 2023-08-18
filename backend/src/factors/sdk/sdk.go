@@ -700,7 +700,7 @@ func Track(projectId int64, request *TrackPayload,
 		userProperties = requestUserProperties
 	}
 
-	_, countryName := model.FillLocationUserProperties(userProperties, clientIP)
+	_, countryName, isoCode := model.FillLocationUserProperties(userProperties, clientIP)
 	pageURLProp := U.GetPropertyValueAsString((*eventProperties)[U.EP_PAGE_URL])
 
 	//Fetching feature flags to check of feature is enabled on the plan.
@@ -725,7 +725,7 @@ func Track(projectId int64, request *TrackPayload,
 		logCtx.Info("Enrichment using client sixsignal")
 	} else if factorsDeanonymisationEnabled && *(projectSettings.IntFactorsSixSignalKey) {
 		if isSixsignalQuotaAvailable, _ := CheckingSixSignalQuotaLimit(projectId); isSixsignalQuotaAvailable {
-			FillSixSignalUserPropertiesViaFactors(projectId, projectSettings, userProperties, request.UserId, clientIP, countryName, pageURLProp)
+			FillSixSignalUserPropertiesViaFactors(projectId, projectSettings, userProperties, request.UserId, clientIP, isoCode, countryName, pageURLProp)
 			logCtx.Info("Enrichment using factors deanonymisation")
 		}
 	}
@@ -904,7 +904,7 @@ func FillSixSignalUserProperties(projectId int64, apiKey string, userProperties 
 }
 
 func FillSixSignalUserPropertiesViaFactors(projectId int64, projectSettings *model.ProjectSetting,
-	userProperties *U.PropertiesMap, UserId, clientIP, countryName, pageURLProp string) {
+	userProperties *U.PropertiesMap, UserId, clientIP, isoCode, countryName, pageURLProp string) {
 
 	logCtx := log.WithField("project_id", projectId)
 
@@ -920,7 +920,7 @@ func FillSixSignalUserPropertiesViaFactors(projectId int64, projectSettings *mod
 		}
 	}
 
-	shouldEnrichUsingSixSignal, _ := ApplySixSignalFilters(sixSignalConfig, countryName, pageURLProp)
+	shouldEnrichUsingSixSignal, _ := ApplySixSignalFilters(sixSignalConfig, isoCode, countryName, pageURLProp)
 	if !shouldEnrichUsingSixSignal {
 		logCtx.Warn("SixSignal configs not matched.")
 		return
@@ -929,7 +929,7 @@ func FillSixSignalUserPropertiesViaFactors(projectId int64, projectSettings *mod
 	FillSixSignalUserProperties(projectId, factors6SignalKey, userProperties, UserId, clientIP)
 }
 
-func ApplySixSignalFilters(sixSignalConfig model.SixSignalConfig, countryName, pageUrl string) (bool, error) {
+func ApplySixSignalFilters(sixSignalConfig model.SixSignalConfig, isoCode, countryName, pageUrl string) (bool, error) {
 
 	//No filter case is true
 	if (sixSignalConfig.CountryInclude == nil || len(sixSignalConfig.CountryInclude) == 0) &&
@@ -939,37 +939,63 @@ func ApplySixSignalFilters(sixSignalConfig model.SixSignalConfig, countryName, p
 		return true, nil
 	}
 
-	countryFilterPassed := true
-	pageFilterPassed := true
-	if sixSignalConfig.CountryInclude != nil && len(sixSignalConfig.CountryInclude) != 0 {
-		countryFilterPassed = false
+	countryFilterPassed := IsCountryFilterPassed(sixSignalConfig, isoCode, countryName)
+	if !countryFilterPassed {
+		return false, nil
+	}
+
+	pageFilterPassed, _ := IsPageFilterPassed(sixSignalConfig, pageUrl)
+	if !pageFilterPassed {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func IsCountryFilterPassed(sixSignalConfig model.SixSignalConfig, isoCode, countryName string) bool {
+
+	isCountryIncluded := (sixSignalConfig.CountryInclude != nil && len(sixSignalConfig.CountryInclude) != 0)
+	isCountryExcluded := (sixSignalConfig.CountryExclude != nil && len(sixSignalConfig.CountryExclude) != 0)
+
+	if !isCountryIncluded && !isCountryExcluded {
+		return true
+	}
+
+	mapOfCountries := make(map[string]bool)
+	var isIsoCode bool
+
+	if isCountryIncluded {
 		for _, filter := range sixSignalConfig.CountryInclude {
-			switch filter.Type {
-			case model.EqualsOpStr:
-				if filter.Value == countryName {
-					countryFilterPassed = true
-				}
-			}
+			mapOfCountries[filter.Value] = true
+			isIsoCode = (model.ISOCODES[filter.Value] == 1)
 		}
-		// failed to satisfy country include filter
-		if countryFilterPassed == false {
-			return false, nil
-		}
-	}
 
-	if sixSignalConfig.CountryExclude != nil && len(sixSignalConfig.CountryExclude) != 0 {
+	} else if isCountryExcluded {
 		for _, filter := range sixSignalConfig.CountryExclude {
-			switch filter.Type {
-			case model.EqualsOpStr:
-				if filter.Value == countryName {
-					//skip if country name matches
-					return false, nil
-				}
-			}
+			mapOfCountries[filter.Value] = true
+			isIsoCode = (model.ISOCODES[filter.Value] == 1)
 		}
 	}
 
-	if sixSignalConfig.PagesInclude != nil && len(sixSignalConfig.PagesInclude) != 0 {
+	var contains bool
+	if isIsoCode {
+		contains = mapOfCountries[isoCode]
+	} else {
+		contains = mapOfCountries[countryName]
+	}
+
+	if isCountryIncluded {
+		return contains
+	}
+	return !contains
+
+}
+
+func IsPageFilterPassed(sixSignalConfig model.SixSignalConfig, pageUrl string) (bool, error) {
+
+	pageFilterPassed := true
+	isPageUrlIncluded := (sixSignalConfig.PagesInclude != nil && len(sixSignalConfig.PagesInclude) != 0)
+	if isPageUrlIncluded {
 		pageFilterPassed = false
 		for _, filter := range sixSignalConfig.PagesInclude {
 			switch filter.Type {
@@ -1007,7 +1033,8 @@ func ApplySixSignalFilters(sixSignalConfig model.SixSignalConfig, countryName, p
 		}
 	}
 
-	if sixSignalConfig.PagesExclude != nil && len(sixSignalConfig.PagesExclude) != 0 {
+	isPageUrlExcluded := (sixSignalConfig.PagesExclude != nil && len(sixSignalConfig.PagesExclude) != 0)
+	if isPageUrlExcluded {
 		for _, filter := range sixSignalConfig.PagesExclude {
 			switch filter.Type {
 			case model.EqualsOpStr:
@@ -1040,12 +1067,7 @@ func ApplySixSignalFilters(sixSignalConfig model.SixSignalConfig, countryName, p
 		}
 	}
 
-	//return pass only when both cases pass i.e. AND
-	if countryFilterPassed && pageFilterPassed {
-		return true, nil
-	}
-	//else
-	return false, nil
+	return pageFilterPassed, nil
 }
 
 func CheckingSixSignalQuotaLimit(projectId int64) (bool, error) {
@@ -1588,7 +1610,7 @@ func AddUserProperties(projectId int64,
 		FillClearbitUserProperties(projectId, clearbitKey, validProperties, request.UserId, request.ClientIP)
 	}
 
-	_, _ = model.FillLocationUserProperties(validProperties, request.ClientIP)
+	_, _, _ = model.FillLocationUserProperties(validProperties, request.ClientIP)
 	propertiesJSON, err := json.Marshal(validProperties)
 	if err != nil {
 		return http.StatusBadRequest,
