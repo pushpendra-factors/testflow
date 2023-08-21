@@ -762,11 +762,13 @@ export const convertAndAddPropertiesToGroupSelectOptions = (
       filterOptsObj[groupkey] = {
         label: startCase(groupkey),
         iconName: getGroupIcon(groupkey),
-        values: processProperties(properties, propertyType, groupkey) || []
+        values:
+          processProperties(properties[groupkey], propertyType, groupkey) || []
       };
     } else {
       filterOptsObj[groupkey].values.push(
-        ...(processProperties(properties, propertyType, groupkey) || [])
+        ...(processProperties(properties[groupkey], propertyType, groupkey) ||
+          [])
       );
     }
   });
