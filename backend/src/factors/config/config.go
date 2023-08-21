@@ -408,27 +408,33 @@ const (
 )
 
 func PingHealthCheckBasedOnStatus(status map[string]interface{}, healthcheckPingID string) bool {
+	errorMap := make(map[string]map[string]interface{})
 	isSuccess := true
 	for reason, message := range status {
 		if message == false {
-			for key, val := range status[reason[6:]].(map[string]interface{}) {
+			errorMap[reason] = make(map[string]interface{})
+			deltaStatus := make(map[string]interface{})
+			switch x := status[reason[6:]].(type) {
+			case map[string]interface{}:
+				deltaStatus = x
+			case string:
+				errorMap[reason]["error"] = x
+			}
+			for key, val := range deltaStatus {
 				if strings.Contains(key, "error") {
+					errorMap[reason][key] = val
 					if strings.HasPrefix(val.(string), "invalid end timestamp") {
 						continue
 					}
 					isSuccess = false
-					break
 				}
-			}
-			if !isSuccess {
-				break
 			}
 		}
 	}
 	if isSuccess {
 		PingHealthcheckForSuccess(healthcheckPingID, status)
 	} else {
-		PingHealthcheckForFailure(healthcheckPingID, status)
+		PingHealthcheckForFailure(healthcheckPingID, errorMap)
 	}
 	return isSuccess
 }
