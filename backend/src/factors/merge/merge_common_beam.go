@@ -174,7 +174,7 @@ func ReadAndMergeDailyFilesForBeam(projectId int64, dataType, fileNamePrefix str
 	log.Infof("Merging dailyFiles for project: %d", projectId)
 	timestamp := startTimestamp
 	for timestamp <= endTimestamp {
-		partFilesDir, _ := GetDailyArchiveFilePathAndName(*archiveCloudManager, dataType, fileNamePrefix, projectId, timestamp, 0, 0)
+		partFilesDir, _ := pull.GetDailyArchiveFilePathAndName(archiveCloudManager, dataType, fileNamePrefix, projectId, timestamp, 0, 0)
 		listFiles := (*archiveCloudManager).ListFiles(partFilesDir)
 		for _, partFileFullName := range listFiles {
 			partFNamelist := strings.Split(partFileFullName, "/")

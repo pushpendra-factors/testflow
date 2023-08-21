@@ -12,7 +12,7 @@ import (
 	serviceDisk "factors/services/disk"
 	U "factors/util"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -33,7 +33,7 @@ func createKpiInsights(diskManager *serviceDisk.DiskDriver, archiveCloudManager,
 		dateString := U.GetDateOnlyFromTimestampZ(periodCodesWithWeekNMinus1[0].From)
 		path, name := (*cloudManager).GetInsightsWpiFilePathAndName(projectId, dateString, queryId, topK, mailerRun)
 		if reader, err := (*cloudManager).Get(path, name); err == nil {
-			data, err := ioutil.ReadAll(reader)
+			data, err := io.ReadAll(reader)
 			if err == nil {
 				err := json.Unmarshal(data, &oldInsightsList)
 				if err == nil {
@@ -47,7 +47,7 @@ func createKpiInsights(diskManager *serviceDisk.DiskDriver, archiveCloudManager,
 		dateString := U.GetDateOnlyFromTimestampZ(periodCodesWithWeekNMinus1[1].From)
 		path, name := (*cloudManager).GetInsightsWpiFilePathAndName(projectId, dateString, queryId, topK, mailerRun)
 		if reader, err := (*cloudManager).Get(path, name); err == nil {
-			data, err := ioutil.ReadAll(reader)
+			data, err := io.ReadAll(reader)
 			if err == nil {
 				err := json.Unmarshal(data, &newInsightsList)
 				if err == nil {

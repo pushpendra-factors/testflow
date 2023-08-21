@@ -145,7 +145,7 @@ func main() {
 					projectIdsFromList[projectID] = true
 				}
 			}
-			for projectId, _ := range projectIdsFromList {
+			for projectId := range projectIdsFromList {
 				projectIdsToRun[projectId] = true
 			}
 		}
@@ -169,7 +169,7 @@ func main() {
 			}
 		}
 
-		for projectId, _ := range splitRangeProjectIdsMap {
+		for projectId := range splitRangeProjectIdsMap {
 			splitRangeProjectIds = append(splitRangeProjectIds, projectId)
 		}
 	}
@@ -191,21 +191,23 @@ func main() {
 	configs["splitRangeProjectIds"] = splitRangeProjectIds
 	configs["noOfSplits"] = *noOfSplits
 
-	C.PingHealthcheckForStart(healthcheckPingID)
 	var statusEvents map[string]interface{}
 	if *pullEventsDaily {
 		fileTypesMapOnlyEvents := make(map[int64]bool)
 		fileTypesMapOnlyEvents[1] = true
 		configs["fileTypes"] = fileTypesMapOnlyEvents
+		C.PingHealthcheckForStart(healthcheckPingID)
 		statusEvents = taskWrapper.TaskFuncWithProjectId("PullEventsDaily", *lookback, projectIdsArray, T.PullAllDataV2, configs)
-		log.Info("events only: ", statusEvents)
+		log.Info("PullEventsDaily: ", statusEvents)
 		C.PingHealthCheckBasedOnStatus(statusEvents, healthcheckPingID)
 	}
 
-	C.PingHealthcheckForStart(healthcheckPingID)
-	configs["fileTypes"] = fileTypesMap
-	status := taskWrapper.TaskFuncWithProjectId("PullDataDaily", *lookback, projectIdsArray, T.PullAllDataV2, configs)
-	C.PingHealthCheckBasedOnStatus(status, healthcheckPingID)
-	log.Info("all data: ", status)
-	log.Info("events only: ", statusEvents)
+	if len(fileTypesMap) != 0 {
+		configs["fileTypes"] = fileTypesMap
+		C.PingHealthcheckForStart(healthcheckPingID)
+		status := taskWrapper.TaskFuncWithProjectId("PullDataDaily", *lookback, projectIdsArray, T.PullAllDataV2, configs)
+		log.Info("PullDataDaily: ", status)
+		log.Info("PullEventsDaily: ", statusEvents)
+		C.PingHealthCheckBasedOnStatus(status, healthcheckPingID)
+	}
 }

@@ -444,3 +444,22 @@ func CheckIfAddSessionCompleted(projectID int64, endTimestamp int64) (bool, erro
 	}
 	return true, nil
 }
+
+// get data file (daily) path and name given fileManager and dataType
+//
+// channelOrDatefield - channel name for ad_reports dataType and dateField for users dataType,
+// sortOnGroup - (0:uid, i:group_i_id) for events dataType
+func GetDailyArchiveFilePathAndName(fileManager *filestore.FileManager, dataType, channelOrDatefield string, projectId int64, dataTimestamp, startTime, endTime int64) (string, string) {
+	if dataType == U.DataTypeEvent {
+		return (*fileManager).GetDailyEventArchiveFilePathAndName(projectId, dataTimestamp, startTime, endTime)
+	} else if dataType == U.DataTypeAdReport {
+		channel := channelOrDatefield
+		return (*fileManager).GetDailyChannelArchiveFilePathAndName(channel, projectId, dataTimestamp, startTime, endTime)
+	} else if dataType == U.DataTypeUser {
+		dateField := channelOrDatefield
+		return (*fileManager).GetDailyUsersArchiveFilePathAndName(dateField, projectId, dataTimestamp, startTime, endTime)
+	} else {
+		log.Errorf("wrong dataType: %s", dataType)
+	}
+	return "", ""
+}
