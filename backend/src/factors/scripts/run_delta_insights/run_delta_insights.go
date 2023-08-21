@@ -256,7 +256,6 @@ func mainRunDeltaInsights() {
 
 	healthcheckPingID := C.HealthCheckWeeklyInsightsPingID
 	defer C.PingHealthcheckForPanic(appName, *envFlag, healthcheckPingID)
-	C.PingHealthcheckForStart(healthcheckPingID)
 
 	fileTypesList := strings.TrimSpace(*fileTypesFlag)
 	var fileTypes []int64
@@ -274,16 +273,17 @@ func mainRunDeltaInsights() {
 	// This job has dependency on pull_data
 	if *isWeeklyEnabled && !(*isMailerRun) {
 		taskName := "WIWeeklyV2"
+		C.PingHealthcheckForStart(healthcheckPingID)
 		status := taskWrapper.TaskFuncWithProjectId(taskName, *lookback, projectIdsArray, D.ComputeDeltaInsights, configs)
 		log.Info(status)
 		C.PingHealthCheckBasedOnStatus(status, healthcheckPingID)
 	}
 
-	C.PingHealthcheckForStart(healthcheckPingID)
-
 	if *isWeeklyEnabled && *isMailerRun {
+		healthcheckPingID := C.HealthcheckMailWIPingID
 		taskName := "WIWeeklyMailerV2"
 		configs["run_type"] = "mailer"
+		C.PingHealthcheckForStart(healthcheckPingID)
 		status := taskWrapper.TaskFuncWithProjectId(taskName, *lookback, projectIdsArray, D.ComputeDeltaInsights, configs)
 		log.Info(status)
 		C.PingHealthCheckBasedOnStatus(status, healthcheckPingID)

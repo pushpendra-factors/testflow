@@ -6,7 +6,7 @@ import (
 	"errors"
 	P "factors/pattern"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math"
 	"os"
 	"path/filepath"
@@ -329,7 +329,7 @@ func ReadFromJSONFile(filename string, targetStructPointer interface{}) error {
 	}
 	defer jsonFile.Close()
 	fmt.Println(filename)
-	byteValue, err := ioutil.ReadAll(jsonFile)
+	byteValue, err := io.ReadAll(jsonFile)
 	if err != nil {
 		log.WithError(err).Error("Contents of JSON file " + filename + " could not be parsed.")
 		return err

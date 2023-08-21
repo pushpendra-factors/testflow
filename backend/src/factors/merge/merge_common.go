@@ -51,7 +51,7 @@ func createDataFileFromSortedFiles(projectId int64, fileNamePrefix string, sorte
 		sortedCloudDirSplit := strings.Split(sorted_cloud_dir, "/")
 		dataTypeDir := strings.Join(sortedCloudDirSplit[0:len(sortedCloudDirSplit)-tmp], "/") + "/"
 		listAllFiles := (*cloudManager).ListFiles(dataTypeDir)
-		log.Info("listDirs: %v", listAllFiles)
+		log.Infof("listDirs: %v", listAllFiles)
 		endDateStr := U.GetDateOnlyFromTimestampZ(endTimestamp)
 		endDate, err := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, endDateStr)
 		if err != nil {
@@ -161,7 +161,7 @@ func getApproxFileSize(dataType, fileNamePrefix string, projectId, startTimestam
 	var totalFileSize int
 	timestamp := startTimestamp
 	for timestamp <= endTimestamp {
-		partFilesDir, _ := GetDailyArchiveFilePathAndName(*cloudManager, dataType, fileNamePrefix, projectId, timestamp, 0, 0)
+		partFilesDir, _ := pull.GetDailyArchiveFilePathAndName(cloudManager, dataType, fileNamePrefix, projectId, timestamp, 0, 0)
 		listFiles := (*cloudManager).ListFiles(partFilesDir)
 		for _, partFileFullName := range listFiles {
 			partFNamelist := strings.Split(partFileFullName, "/")
@@ -190,12 +190,12 @@ func checkDependencyForEventsFile(projectId int64, startTimestamp, endTimestamp 
 	lookback := int(endTimeWithOffset.Sub(startTime).Hours() / 24)
 	configuredDeltas, status, errStr := store.GetStore().GetAllDeltasByConfiguration(taskDetails.TaskID, lookback, &endTimeWithOffset)
 	if status != http.StatusOK {
-		log.Errorf("GetAllDeltasByConfiguration failed with status:%s and error:%s", status, errStr)
+		log.Errorf("GetAllDeltasByConfiguration failed with status:%d and error:%s", status, errStr)
 		return false, fmt.Errorf("%s", errStr)
 	}
 	processedDeltas, status, errStr := store.GetStore().GetAllProcessedIntervals(taskDetails.TaskID, projectId, lookback, &endTimeWithOffset)
 	if status != http.StatusOK {
-		log.Errorf("GetAllProcessedIntervals failed with status:%s and error:%s", status, errStr)
+		log.Errorf("GetAllProcessedIntervals failed with status:%d and error:%s", status, errStr)
 		return false, fmt.Errorf("%s", errStr)
 	}
 	for _, delta := range configuredDeltas {
@@ -227,7 +227,7 @@ func MergeAndWriteSortedFile(projectId int64, dataType, channelOrDatefield strin
 	if timestampsInProjectTimezone {
 		projectDetails, _ := store.GetStore().GetProject(projectId)
 		if projectDetails.TimeZone != "" {
-			log.Info("Project Timezone not UTC - Converting timestamps to UTC from project timezone(%s)", projectDetails.TimeZone)
+			log.Infof("Project Timezone not UTC - Converting timestamps to UTC from project timezone(%s)", projectDetails.TimeZone)
 			offset := U.FindOffsetInUTC(U.TimeZoneString(projectDetails.TimeZone))
 			startTimestamp = startTimestamp + int64(offset)
 			endTimestamp = endTimestamp + int64(offset)
@@ -258,7 +258,7 @@ func MergeAndWriteSortedFile(projectId int64, dataType, channelOrDatefield strin
 
 	var fileNamePrefix string
 	if dataType == U.DataTypeEvent {
-		fileNamePrefix = "events"
+		fileNamePrefix = U.EVENTS_FILENAME_PREFIX
 	} else {
 		fileNamePrefix = channelOrDatefield
 	}
@@ -277,6 +277,21 @@ func MergeAndWriteSortedFile(projectId int64, dataType, channelOrDatefield strin
 	if err != nil {
 		log.WithError(err).Error("unable to get approx file size")
 		return sorted_cloud_dir, sorted_cloud_name, err
+	}
+
+	if approxFileSize == 0 {
+		log.WithFields(log.Fields{"start": startTimestamp, "end": endTimestamp}).Error("no data found for the given range")
+		cloudWriter, err := (*cloudManager).GetWriter(sorted_cloud_dir, sorted_cloud_name)
+		if err != nil {
+			log.WithFields(log.Fields{"fileDir": sorted_cloud_dir, "fileName": sorted_cloud_name}).Error("unable to get writer for file")
+			return sorted_cloud_dir, sorted_cloud_name, err
+		}
+		err = cloudWriter.Close()
+		if err != nil {
+			log.WithFields(log.Fields{"fileDir": sorted_cloud_dir, "fileName": sorted_cloud_name}).Error("unable to close writer")
+			return sorted_cloud_dir, sorted_cloud_name, err
+		}
+		return sorted_cloud_dir, sorted_cloud_name, nil
 	}
 
 	var useBeam bool
@@ -305,11 +320,6 @@ func MergeAndWriteSortedFile(projectId int64, dataType, channelOrDatefield strin
 	}
 	log.Infof("merged (beam: %t) - numLines: %d", useBeam, unsortedLinesCount)
 
-	if unsortedLinesCount == 0 {
-		log.Errorf("no data found for the given range (beam: %t)", useBeam)
-		return sorted_cloud_dir, sorted_cloud_name, nil
-	}
-
 	var sortedLinesCount int
 	if useBeam {
 		sortedLinesCount, err = SortDataOnBeam(projectId, dataType, channelOrDatefield, startIndexToFileInfoMap, indexMap, beamConfig, sorted_cloud_dir, sorted_cloud_name,
@@ -327,7 +337,7 @@ func MergeAndWriteSortedFile(projectId int64, dataType, channelOrDatefield strin
 	}
 	log.Infof("sorted (beam: %t) - numLines: %d", useBeam, sortedLinesCount)
 
-	if unsortedLinesCount != sortedLinesCount {
+	if dataType != U.DataTypeUser && unsortedLinesCount != sortedLinesCount {
 		err = fmt.Errorf("sorting error(beam: %t) - unsortedLinesCount:%d, sortedLinesCount:%d", useBeam, unsortedLinesCount, sortedLinesCount)
 		log.WithError(err).Errorf("error in sorting (beam: %t)", useBeam)
 		return sorted_cloud_dir, sorted_cloud_name, err
@@ -358,7 +368,7 @@ func ReadAndMergeDailyFiles(projectId int64, dataType, fileNamePrefix string, un
 	log.Infof("Merging dailyFiles for project:%d", projectId)
 	timestamp := startTimestamp
 	for timestamp <= endTimestamp {
-		partFilesDir, _ := GetDailyArchiveFilePathAndName(*archiveCloudManager, dataType, fileNamePrefix, projectId, timestamp, 0, 0)
+		partFilesDir, _ := pull.GetDailyArchiveFilePathAndName(archiveCloudManager, dataType, fileNamePrefix, projectId, timestamp, 0, 0)
 		listFiles := (*archiveCloudManager).ListFiles(partFilesDir)
 		for _, partFileFullName := range listFiles {
 			partFNamelist := strings.Split(partFileFullName, "/")
@@ -606,6 +616,7 @@ func SortUnsortedUsersFile(tmpCloudManager, sortedCloudManager *filestore.FileMa
 			log.WithError(err).Error("Error writing")
 			return numLines, err
 		}
+		numLines++
 	}
 	err = cloudWriter.Close()
 
@@ -661,23 +672,6 @@ func GetSortedFilePathAndName(fileManager filestore.FileManager, dataType, chann
 	} else if dataType == U.DataTypeUser {
 		dateField := channelOrDatefield
 		return fileManager.GetUsersFilePathAndName(dateField, projectId, startTime, endTime)
-	} else {
-		log.Errorf("wrong dataType: %s", dataType)
-	}
-	return "", ""
-}
-
-// get data file (daily) path and name given fileManager and dataType
-//
-// channelOrDatefield - channel name for ad_reports dataType and dateField for users dataType,
-// sortOnGroup - (0:uid, i:group_i_id) for events dataType
-func GetDailyArchiveFilePathAndName(fileManager filestore.FileManager, dataType, channelOrDatefield string, projectId int64, dataTimestamp, startTime, endTime int64) (string, string) {
-	if dataType == U.DataTypeEvent {
-		return fileManager.GetDailyEventArchiveFilePathAndName(projectId, dataTimestamp, startTime, endTime)
-	} else if dataType == U.DataTypeAdReport {
-		return fileManager.GetDailyChannelArchiveFilePathAndName(channelOrDatefield, projectId, dataTimestamp, startTime, endTime)
-	} else if dataType == U.DataTypeUser {
-		return fileManager.GetDailyUsersArchiveFilePathAndName(channelOrDatefield, projectId, dataTimestamp, startTime, endTime)
 	} else {
 		log.Errorf("wrong dataType: %s", dataType)
 	}
