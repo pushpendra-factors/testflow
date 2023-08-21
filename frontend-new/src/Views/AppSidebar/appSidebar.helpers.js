@@ -4,7 +4,6 @@ import { PathUrls } from '../../routes/pathUrls';
 export const isSettingsUrl = (pathname) => {
   return (
     pathname === PathUrls.SettingsGeneral ||
-    pathname === PathUrls.SettingsInsights ||
     pathname === PathUrls.SettingsIntegration ||
     pathname === PathUrls.SettingsSdk ||
     pathname === PathUrls.SettingsSharing ||

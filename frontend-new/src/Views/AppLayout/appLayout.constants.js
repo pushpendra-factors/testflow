@@ -5,7 +5,6 @@ export const routesWithSidebar = [
   PathUrls.ProfileAccounts,
   PathUrls.ProfilePeople,
   PathUrls.SettingsGeneral,
-  PathUrls.SettingsInsights,
   PathUrls.SettingsIntegration,
   PathUrls.SettingsSdk,
   PathUrls.SettingsSharing,
