@@ -14,11 +14,12 @@ import (
 	"unicode"
 
 	cacheRedis "factors/cache/redis"
+	"strconv"
+
 	"github.com/gin-gonic/gin"
 	"github.com/gomodule/redigo/redis"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"strconv"
 )
 
 type signInParams struct {
@@ -1041,6 +1042,7 @@ type updateAgentParams struct {
 	LastName             string `json:"last_name"`
 	Phone                string `json:"phone"`
 	IsOnboardingFlowSeen *bool  `json:"is_onboarding_flow_seen"`
+	IsFormFilled         *bool  `json:"is_form_filled"`
 }
 
 func getUpdateAgentParams(c *gin.Context) (*updateAgentParams, error) {
@@ -1067,7 +1069,7 @@ func UpdateAgentInfo(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid character"})
 		return
 	}
-	errCode := store.GetStore().UpdateAgentInformation(loggedInAgentUUID, params.FirstName, params.LastName, params.Phone, params.IsOnboardingFlowSeen)
+	errCode := store.GetStore().UpdateAgentInformation(loggedInAgentUUID, params.FirstName, params.LastName, params.Phone, params.IsOnboardingFlowSeen, params.IsFormFilled)
 	if errCode == http.StatusInternalServerError {
 		c.AbortWithStatus(errCode)
 		return

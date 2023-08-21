@@ -354,13 +354,14 @@ func (store *MemSQL) UpdateAgentVerificationDetailsFromAuth0(agentUUID, firstNam
 	return updateAgent(agentUUID, options...)
 }
 
-func (store *MemSQL) UpdateAgentInformation(agentUUID, firstName, lastName, phone string, isOnboardingFlowSeen *bool) int {
+func (store *MemSQL) UpdateAgentInformation(agentUUID, firstName, lastName, phone string, isOnboardingFlowSeen *bool, isFormFilled *bool) int {
 	logFields := log.Fields{
 		"agent_uuid":              agentUUID,
 		"first_name":              firstName,
 		"last_name":               lastName,
 		"phone":                   phone,
 		"in_onboarding_flow_seen": isOnboardingFlowSeen,
+		"is_form_filled":          isFormFilled,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if agentUUID == "" {
@@ -378,6 +379,9 @@ func (store *MemSQL) UpdateAgentInformation(agentUUID, firstName, lastName, phon
 	}
 	if isOnboardingFlowSeen != nil {
 		updateParams = append(updateParams, model.IsOnboardingFlowSeen(*isOnboardingFlowSeen))
+	}
+	if isFormFilled != nil {
+		updateParams = append(updateParams, model.IsFormFilled(*isFormFilled))
 	}
 	return updateAgent(agentUUID, updateParams...)
 }
