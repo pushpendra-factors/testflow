@@ -26,7 +26,6 @@ export const PathUrls = {
   SettingsSdk: '/settings/sdk',
   SettingsIntegration: '/settings/integration',
   SettingsSharing: '/settings/sharing',
-  SettingsInsights: '/settings/insights',
   SettingsPricing: '/settings/pricing',
   Upgrade: '/upgrade'
 };

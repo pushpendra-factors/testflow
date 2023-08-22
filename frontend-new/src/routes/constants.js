@@ -10,7 +10,6 @@ import UserSettings from 'Views/Settings/ProjectSettings/UserSettings';
 import IntegrationSettings from 'Views/Settings/ProjectSettings/IntegrationSettings';
 import Sharing from 'Views/Settings/ProjectSettings/Sharing';
 import Events from 'Views/Settings/ProjectConfigure/Events';
-import InsightsSettings from 'Views/Settings/ProjectSettings/InsightsSettings';
 import PropertySettings from 'Views/Settings/ProjectConfigure/PropertySettings';
 import ContentGroups from 'Views/Settings/ProjectConfigure/ContentGroups';
 import CustomKPI from 'Views/Settings/ProjectConfigure/CustomKPI';
@@ -380,14 +379,6 @@ export const APP_LAYOUT_ROUTES = {
     exact: true,
     path: PathUrls.SettingsSharing,
     Component: FeatureLockedReportSharing,
-    Private: true,
-    Layout: AppLayout
-  },
-  SettingsInsights: {
-    exact: true,
-    path: PathUrls.SettingsInsights,
-    name: 'dashboardSettings',
-    Component: InsightsSettings,
     Private: true,
     Layout: AppLayout
   },
