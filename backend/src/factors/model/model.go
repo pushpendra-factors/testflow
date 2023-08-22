@@ -61,7 +61,7 @@ type Model interface {
 	ExecuteAttributionQueryV0(projectID int64, query *model.AttributionQuery, debugQueryKey string,
 		enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) (*model.QueryResult, error)
 	ExecuteAttributionQueryV1(projectID int64, query *model.AttributionQueryV1, debugQueryKey string,
-		enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) (*model.QueryResult, error)
+		enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool, dashboardUnitId int64) (*model.QueryResult, error)
 	FetchCachedResultFromDataBase(reqId string, projectID, dashboardID, unitID int64, from, to int64) (int, model.DashQueryResult)
 	FetchCachedResultFromDataBaseByQueryID(reqId string, projectID, queryID, from, to int64) (int, model.DashQueryResult)
 	GetCoalesceIDFromUserIDs(userIDs []string, projectID int64, logCtx log.Entry) (map[string]model.UserInfo, []string, error)

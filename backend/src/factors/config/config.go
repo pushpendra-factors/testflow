@@ -306,6 +306,7 @@ type Configuration struct {
 	StartTimestampForWeekMonth                         int64
 	CacheForLongerExpiryProjects                       string
 	CacheOnlyDashboards                                string
+	CacheOnlyDashboardUnits                            string
 	AllowedSalesforceSyncDocTypes                      string
 	CustomDateStart                                    int64
 	CustomDateEnd                                      int64
@@ -2887,6 +2888,10 @@ func IsProjectAllowedForLongerExpiry(projectId int64) bool {
 
 func IsDashboardAllowedForCaching(dashboardID int64) bool {
 	return isIDOnIDList(configuration.CacheOnlyDashboards, dashboardID)
+}
+
+func IsDashboardUnitAllowedForCaching(dashboardID int64) bool {
+	return isIDOnIDList(configuration.CacheOnlyDashboardUnits, dashboardID)
 }
 
 func IsSalesforceDocTypeEnabledForSync(docType string) bool {
