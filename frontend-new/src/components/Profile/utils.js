@@ -108,41 +108,33 @@ export const formatReqPayload = (payload, segment) => {
   return req;
 };
 
+const getEntityName = (source, entity) => {
+  if (source === 'accounts') {
+    return entity === 'user' ? 'user_group' : 'user_g';
+  } else {
+    return entity === 'user' ? 'user_group' : 'user_g';
+  }
+};
+
 export const formatFiltersForPayload = (filters = [], source = 'users') => {
   const filterProps = [];
-  filters.forEach((fil) => {
-    if (Array.isArray(fil.values)) {
-      fil.values.forEach((val, index) => {
-        filterProps.push({
-          en:
-            source === 'accounts'
-              ? fil.props[2] === 'user'
-                ? 'user_group'
-                : 'user_g'
-              : 'user_g',
-          lop: !index ? 'AND' : 'OR',
-          op: operatorMap[fil.operator],
-          pr: fil.props[0],
-          ty: fil.props[1],
-          va: fil.props[1] === 'datetime' ? val : val
-        });
-      });
-    } else {
+  filters.forEach((filter) => {
+    const { values, props, operator } = filter;
+    const vals = Array.isArray(values) ? filter.values : [filter.values];
+
+    vals.forEach((val, index) => {
       filterProps.push({
-        en:
-          source === 'account'
-            ? fil.props[2] === 'user'
-              ? 'user_group'
-              : 'user_g'
-            : 'user_g',
-        lop: 'AND',
-        op: operatorMap[fil.operator],
-        pr: fil.props[0],
-        ty: fil.props[1],
-        va: fil.props[1] === 'datetime' ? fil.values : fil.values
+        en: getEntityName(source, props[3]),
+        lop: index === 0 ? 'AND' : 'OR',
+        op: operatorMap[operator],
+        grpn: props[0],
+        pr: props[1],
+        ty: props[2],
+        va: val
       });
-    }
+    });
   });
+
   return filterProps;
 };
 
