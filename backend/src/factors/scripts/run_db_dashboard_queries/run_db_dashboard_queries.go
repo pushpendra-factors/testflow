@@ -24,6 +24,7 @@ func main() {
 	customDateStart := flag.Int64("custom_start_timestamp", -1, "Start timestamp of a custom date range run.")
 	customDateEnd := flag.Int64("custom_end_timestamp", -1, "End timestamp of a custom date range run.")
 	cacheOnlyDashboards := flag.String("cache_only_dashboards", "*", "Comma separated dashboard ids to run for. * to run for all")
+	cacheOnlyDashboardUnits := flag.String("cache_only_dashboard_units", "*", "Comma separated dashboard ids to run for. * to run for all")
 	cacheForLongerExpiryProjects := flag.String("cache_for_longer_expiry_projects", "", "Comma separated project ids to run for. * to run for all")
 	startTimestampForWeekMonth := flag.Int64("start_timestamp_week_month", -1,
 		"Start timestamp of caching week/month")
@@ -134,6 +135,7 @@ func main() {
 		StartTimestampForWeekMonth:            *startTimestampForWeekMonth,
 		CacheForLongerExpiryProjects:          *cacheForLongerExpiryProjects,
 		CacheOnlyDashboards:                   *cacheOnlyDashboards,
+		CacheOnlyDashboardUnits:               *cacheOnlyDashboardUnits,
 		CustomDateStart:                       *customDateStart,
 		CustomDateEnd:                         *customDateEnd,
 	}

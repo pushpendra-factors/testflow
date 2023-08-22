@@ -696,6 +696,10 @@ func (store *MemSQL) DBCacheAttributionDashboardUnitsForProjects(stringProjectsI
 			if !C.IsDashboardAllowedForCaching(dashboardUnit.DashboardId) {
 				continue
 			}
+			// skip caching the dashboard unit if not in the list
+			if !C.IsDashboardUnitAllowedForCaching(dashboardUnit.ID) {
+				continue
+			}
 			queryClass, queryInfo, errMsg := store.GetQueryAndClassFromDashboardUnit(&dashboardUnit)
 			if errMsg != "" {
 				log.WithFields(logFields).Error("failed to get query class")
