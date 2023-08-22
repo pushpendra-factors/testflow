@@ -1583,6 +1583,16 @@ func syncSalesforcePropertyByType(projectID int64, doctTypeAlias string, fieldNa
 		return err
 	}
 
+	eventName = model.GetSalesforceCustomEventNameByType(doctTypeAlias)
+	if eventName != "" {
+		err = store.GetStore().CreateOrDeletePropertyDetails(projectID, eventName, enKey, pType, false, true)
+		if err != nil {
+			logCtx.WithFields(log.Fields{"enriched_property_key": enKey}).WithError(err).
+				Error("Failed to create custom event property details.")
+			return err
+		}
+	}
+
 	return nil
 }
 
