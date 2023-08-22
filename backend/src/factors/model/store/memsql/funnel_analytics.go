@@ -1680,9 +1680,9 @@ func buildUniqueUsersFunnelQueryV3(projectId int64, q model.Query, groupIds []in
 	var ugSelect string
 	var ugParams []interface{}
 	var ugGroupKeys string
+	funnelstepGroupBy := ""
 	userGroupProps := filterGroupPropsByType(q.GroupByProperties, model.PropertyEntityUser)
 	userGroupProps = removeEventSpecificUserGroupBys(userGroupProps)
-	useDistinctOnFunnelStep := false
 	if !isFunnelGroupQuery {
 		ugSelect, ugParams, _ = buildGroupKeys(projectId, userGroupProps, q.Timezone, false, false)
 	} else if isFunnelGroupQueryDomains {
@@ -1690,11 +1690,11 @@ func buildUniqueUsersFunnelQueryV3(projectId int64, q model.Query, groupIds []in
 
 		if len(ugSelectParams) > 0 {
 			ugParams = append(ugParams, ugSelectParams...)
-			useDistinctOnFunnelStep = true
 		}
 
 		if ugGroupSelect != "" {
 			ugSelect = joinWithComma(ugSelect, ugGroupSelect)
+			funnelstepGroupBy = fmt.Sprintf("GROUP BY %s.coal_group_user_id", funnelSteps[0])
 		}
 	} else {
 		_, _, ugGroupKeys = buildGroupKeys(projectId, userGroupProps, q.Timezone, false, false)
@@ -1718,7 +1718,7 @@ func buildUniqueUsersFunnelQueryV3(projectId int64, q model.Query, groupIds []in
 	// select step counts, user properties and event properties group_keys.
 	stepFunnelSelect := joinWithComma(funnelCountAliases...)
 
-	if isFunnelGroupQueryDomains && useDistinctOnFunnelStep && len(funnelCountAliases) > 0 {
+	if isFunnelGroupQueryDomains && len(funnelCountAliases) > 0 {
 		stepFunnelSelect = joinWithComma(fmt.Sprintf("DISTINCT %s.coal_group_user_id", funnelCountAliases[0]), stepFunnelSelect)
 	}
 
@@ -1741,7 +1741,7 @@ func buildUniqueUsersFunnelQueryV3(projectId int64, q model.Query, groupIds []in
 	}
 
 	funnelStmnt := "SELECT" + " " + stepFunnelSelect + " " + "FROM" + " " + funnelSteps[0] +
-		" " + propertiesJoinStmnt + " " + stepsJoinStmnt
+		" " + propertiesJoinStmnt + " " + stepsJoinStmnt + " " + funnelstepGroupBy
 	qStmnt = joinWithComma(qStmnt, as(stepFunnelName, funnelStmnt))
 	qParams = append(qParams, ugParams...)
 	qParams = append(qParams, propertiesJoinParams...)
