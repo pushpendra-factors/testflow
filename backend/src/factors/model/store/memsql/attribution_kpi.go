@@ -269,6 +269,14 @@ func (store *MemSQL) RunKPIGroupQuery(projectID int64, query *model.AttributionQ
 			duplicatedRequest.Queries[index].From = query.From
 			duplicatedRequest.Queries[index].To = query.To
 		}
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"KPIQueryGroupDebug": duplicatedRequest,
+				"method":                                "RunKPIGroupQuery",
+				"projectID":                             projectID,
+				"duplicatedRequest":                     duplicatedRequest,
+				"enableOptimisedFilterOnProfileQuery":   enableOptimisedFilterOnProfileQuery,
+				"enableOptimisedFilterOnEventUserQuery": enableOptimisedFilterOnEventUserQuery}).Info("Debug before ExecuteKPIQueryGroup")
+		}
 		resultGroup, statusCode := store.ExecuteKPIQueryGroup(projectID, debugQueryKey,
 			duplicatedRequest, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 		log.WithFields(log.Fields{"KPIQueryGroupDebug": duplicatedRequest, "ResultGroup": resultGroup, "Status": statusCode}).Info("KPI-Attribution result received")
@@ -318,6 +326,14 @@ func (store *MemSQL) RunKPIGroupQueryV1(projectID int64, query *model.Attributio
 			// Making sure the internal KPI group queries have same from to as parent attribution query
 			duplicatedRequest.Queries[index].From = from
 			duplicatedRequest.Queries[index].To = to
+		}
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"KPIQueryGroupDebug": duplicatedRequest,
+				"method":                                "RunKPIGroupQueryV1",
+				"projectID":                             projectID,
+				"duplicatedRequest":                     duplicatedRequest,
+				"enableOptimisedFilterOnProfileQuery":   enableOptimisedFilterOnProfileQuery,
+				"enableOptimisedFilterOnEventUserQuery": enableOptimisedFilterOnEventUserQuery}).Info("Debug before ExecuteKPIQueryGroup")
 		}
 		resultGroup, statusCode := store.ExecuteKPIQueryGroup(projectID, debugQueryKey,
 			duplicatedRequest, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)

@@ -89,7 +89,9 @@ func RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId int64, re
 			return true, mergedResult, computedMeta
 		}
 	}
-	mergedResult.CacheMeta = latestFoundResult.CacheMeta
+	if latestFoundResult != nil {
+		mergedResult.CacheMeta = latestFoundResult.CacheMeta
+	}
 	return false, mergedResult, computedMeta
 }
 
