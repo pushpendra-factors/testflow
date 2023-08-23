@@ -1366,7 +1366,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 			GlobalUserProperties: []model.QueryProperty{
 				{
 					Entity:    "user_g",
-					Type:      "numerical",
+					Type:      "categorical",
 					Property:  "$hubspot_company_name",
 					Operator:  "equals",
 					Value:     "Adshup",
@@ -1374,10 +1374,10 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 				},
 				{
 					Entity:    "user_g",
-					Type:      "numerical",
+					Type:      "categorical",
 					Property:  "$hubspot_company_name",
 					Operator:  "equals",
-					Value:     "$none",
+					Value:     "Adapt.IO",
 					LogicalOp: "OR",
 				},
 			},
@@ -1407,6 +1407,40 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	assert.Equal(t, errCode, http.StatusAccepted)
 
 	// 6. Accounts from All Sources (filters applied)
+
+	payload = model.TimelinePayload{
+		Query: model.Query{
+			GlobalUserProperties: []model.QueryProperty{
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$hubspot_company_country",
+					Operator:  "notEqual",
+					Value:     "Pakistan",
+					LogicalOp: "AND",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$salesforce_account_name",
+					Operator:  "equals",
+					Value:     "Adapt.IO",
+					LogicalOp: "AND",
+				},
+			},
+			Source: "All",
+		},
+	}
+
+	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	resp = make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 1)
+
+	// 7. Accounts from All Sources (filters applied)
 
 	payload = model.TimelinePayload{
 		Query: model.Query{

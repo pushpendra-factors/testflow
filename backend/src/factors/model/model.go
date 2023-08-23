@@ -869,6 +869,7 @@ type Model interface {
 	GetUserDetailsAssociatedToDomain(projectID int64, id string) (model.AccountDetails, map[string]interface{}, int)
 	GetUserPropertiesForAccounts(projectID int64, source string) (string, interface{}, string)
 	GetUsersAssociatedToDomain(projectID int64, minMax *model.MinMaxUpdatedAt, groupedFilters map[string][]model.QueryProperty) ([]model.Profile, int)
+	GenerateAllAccountsQueryString(projectID int64, source string, hasUserProperty bool, isAllUserProperties bool, minMax model.MinMaxUpdatedAt, groupedFilters map[string][]model.QueryProperty, searchFilter []model.QueryProperty) (string, []interface{}, error)
 
 	// segment
 	CreateSegment(projectId int64, segment *model.SegmentPayload) (int, error)
