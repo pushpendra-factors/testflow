@@ -219,7 +219,7 @@ func getPropertyValueLabel(projectID int64, propertyName string, filterValues in
 	}
 
 	for value := range filterValueMap {
-		if label, exists := propertyValueLabelMap[value]; !exists || label == "" {
+		if label, exists := propertyValueLabelMap[value]; exists && label != "" {
 			filterValueMap[value] = label
 		}
 	}
