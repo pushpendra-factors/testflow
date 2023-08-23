@@ -750,6 +750,30 @@ const EventBasedAlert = ({
     }
   };
 
+  const createDuplicateAlert = (item) =>{ 
+    let payload = {
+      ...item?.event_alert,
+      title: `Copy of ${item?.event_alert?.title}`
+    } 
+    createEventAlert(activeProject?.id, payload)
+    .then((res) => {
+      setLoading(false);
+      fetchEventAlerts(activeProject?.id);
+      onReset();
+      notification.success({
+        message: 'Alert Created',
+        description: 'Copy of alert is created and saved successfully.'
+      }); 
+    })
+    .catch((err) => {
+      setLoading(false);
+      notification.error({
+        message: 'Error',
+        description: err?.data?.error
+      });
+    });
+  }
+
   const onConnectSlack = () => {
     enableSlackIntegration(activeProject.id)
       .then((r) => {
@@ -1920,7 +1944,7 @@ const EventBasedAlert = ({
                 </Form.Item>
               </Col> </>}
 
-            <Col span={16} className={'m-0 mt-4'}>
+            <Col span={16} className={'m-0 mt-4'}> 
               <a type={'link'} onClick={() => setShowAdvSettings(!showAdvSettings)}>{`${showAdvSettings ? 'Hide advanced options' : 'Show advanced options'}`}</a>
             </Col>
 
@@ -1930,7 +1954,23 @@ const EventBasedAlert = ({
           {alertState.state == 'edit' ? <>
             <Row className={'border-top--thin-2 mt-6 pt-6'}>
               <Col span={12}>
-                <a type={'link'} color={'red'} onClick={() => confirmDeleteAlert(viewAlertDetails)}>{`Delete`}</a>
+                {/* <a type={'link'} className={'mr-2'} onClick={() => createDuplicateAlert(viewAlertDetails)}>{'Create copy'}</a>
+                <a type={'link'} color={'red'} onClick={() => confirmDeleteAlert(viewAlertDetails)}>{`Delete`}</a> */}
+                
+                 
+                <Button type={'text'} color={'red'} onClick={() => createDuplicateAlert(viewAlertDetails)}> 
+                  <div className='flex items-center'>
+                    <SVG name='Pluscopy' size={16} color={'grey'} extraClass={'mr-1'} />
+                    <Text type={'title'} level={7}extraClass={'m-0'} >Create copy </Text>
+                    </div>
+                </Button>
+                <Button type={'text'} color={'red'} onClick={() => confirmDeleteAlert(viewAlertDetails)}> 
+                  <div className='flex items-center'>
+                    <SVG name='Delete1' size={16} color={'red'} extraClass={'mr-1'} />
+                    <Text type={'title'} level={7} color={'red'} extraClass={'m-0'} >Delete </Text>
+                    </div>
+                </Button>
+               
               </Col>
               <Col span={12}>
                 <div className={'flex justify-end'}>
