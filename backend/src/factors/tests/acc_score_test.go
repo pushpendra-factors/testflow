@@ -228,6 +228,7 @@ func TestAccScoreFilterCountAndScoreEvents(t *testing.T) {
 	ev := []string{e1, e2, e3, e4, e5, e6, e7, e8}
 	var events []*P.CounterEventFormat = make([]*P.CounterEventFormat, 0)
 
+	projectId := int64(0)
 	for _, e := range ev {
 		var testev *P.CounterEventFormat
 		err := json.Unmarshal([]byte(e), &testev)
@@ -302,7 +303,7 @@ func TestAccScoreFilterCountAndScoreEvents(t *testing.T) {
 	for k, v := range countsmapf64 {
 		countsmapf64[k] = v
 	}
-	account_score_, err := mm.ComputeAccountScoreOnLastEvent(cr, countsmapf64)
+	account_score_, err := mm.ComputeAccountScoreOnLastEvent(projectId, cr, countsmapf64)
 	s = fmt.Sprintf("acc score : %f  , counts map :%v", account_score, countsmapf64)
 	log.Debugf(s)
 	assert.Nil(t, err)
@@ -319,7 +320,7 @@ func TestAccScoreFilterCountAndScoreEvents(t *testing.T) {
 	for k, v := range countsmapf64 {
 		countsmapf64[k] = v
 	}
-	account_score_, err = mm.ComputeAccountScoreOnLastEvent(cr, countsmapf64)
+	account_score_, err = mm.ComputeAccountScoreOnLastEvent(projectId, cr, countsmapf64)
 	s = fmt.Sprintf("acc score : %f , counts map :%v", account_score_, counts_map)
 	log.Debugf(s)
 	assert.Nil(t, err)
@@ -452,7 +453,7 @@ func TestGenerateDate(t *testing.T) {
 
 func TestGenerateAccountScores(t *testing.T) {
 	var finalWeights M.AccWeights
-
+	projectId := int64(0)
 	w0 := M.AccEventWeight{WeightId: "1", Weight_value: 1.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
 	w1 := M.AccEventWeight{WeightId: "2", Weight_value: 1.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
 	w2 := M.AccEventWeight{WeightId: "3", Weight_value: 1.0, Is_deleted: false, EventName: "$session", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
@@ -484,7 +485,7 @@ func TestGenerateAccountScores(t *testing.T) {
 		}
 	}
 
-	_, scores, _, err := mm.CalculatescoresPerAccount(&finalWeights, currentDate, prevDateTotrend, countsMapDays)
+	_, scores, _, err := mm.CalculatescoresPerAccount(projectId, &finalWeights, currentDate, prevDateTotrend, countsMapDays)
 	for k1, v1 := range scores {
 		_, ok := countsMapDays[k1]
 		fmt.Printf("countMapDays : %s , score : %f ,%v \n", k1, v1, ok)
@@ -496,6 +497,7 @@ func TestGenerateAccountScores(t *testing.T) {
 func TestGenerationOfScore(t *testing.T) {
 
 	var finalWeights M.AccWeights
+	projectId := int64(0)
 	w0 := M.AccEventWeight{WeightId: "1", Weight_value: 1.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
 	w1 := M.AccEventWeight{WeightId: "2", Weight_value: 1.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
 	w2 := M.AccEventWeight{WeightId: "3", Weight_value: 1.0, Is_deleted: false, EventName: "$session", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
@@ -526,12 +528,12 @@ func TestGenerationOfScore(t *testing.T) {
 			counts["4"] += float64(idx1)
 		}
 
-		score := mm.ComputeScoreWithWeightsAndCounts(&finalWeights, counts, day)
+		score := mm.ComputeScoreWithWeightsAndCounts(projectId, &finalWeights, counts, day)
 		scores[idx] = score
 
 	}
 	log.Debugf("Scores : %v", scores)
-	score := mm.ComputeScoreWithWeightsAndCounts(&finalWeights, counts, T.GetDateOnlyFromTimestamp(time.Now().Unix()))
+	score := mm.ComputeScoreWithWeightsAndCounts(projectId, &finalWeights, counts, T.GetDateOnlyFromTimestamp(time.Now().Unix()))
 	log.Debugf("Scores on current day  : %v,%f", counts, score)
 
 	assert.IsDecreasing(t, scores)
@@ -540,6 +542,7 @@ func TestGenerationOfScore(t *testing.T) {
 func TestGenerationOfScoresInPeriod(t *testing.T) {
 
 	var finalWeights M.AccWeights
+	projectId := int64(0)
 	countsOnDays := make(map[string]M.LatestScore)
 	w0 := M.AccEventWeight{WeightId: "1", Weight_value: 1.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
 	w1 := M.AccEventWeight{WeightId: "2", Weight_value: 1.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
@@ -578,7 +581,7 @@ func TestGenerationOfScoresInPeriod(t *testing.T) {
 		countsOnDays[day] = events
 	}
 
-	accountScoreMap, err := mm.ComputeTrendWrapper(time.Now().Unix(), countsOnDays, &finalWeights)
+	accountScoreMap, err := mm.ComputeTrendWrapper(projectId, time.Now().Unix(), countsOnDays, &finalWeights)
 	for d, e := range accountScoreMap {
 		log.Debugf("day : %s score :%f", d, e)
 	}
