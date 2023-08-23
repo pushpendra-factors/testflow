@@ -108,6 +108,14 @@ func (store *MemSQL) RunUserKPIGroupQuery(projectID int64, query *model.Attribut
 
 		var duplicatedRequest model.KPIQueryGroup
 		U.DeepCopy(&query.KPI, &duplicatedRequest)
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"KPIQueryGroupDebug": duplicatedRequest,
+				"method":                                "RunUserKPIGroupQuery",
+				"projectID":                             projectID,
+				"duplicatedRequest":                     duplicatedRequest,
+				"enableOptimisedFilterOnProfileQuery":   enableOptimisedFilterOnProfileQuery,
+				"enableOptimisedFilterOnEventUserQuery": enableOptimisedFilterOnEventUserQuery}).Info("Debug before ExecuteKPIQueryGroup")
+		}
 		resultGroup, statusCode := store.ExecuteKPIQueryGroup(projectID, debugQueryKey,
 			duplicatedRequest, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 		log.WithFields(log.Fields{"ResultGroup": resultGroup, "Status": statusCode}).Info("UserKPI-Attribution result received")
@@ -164,6 +172,14 @@ func (store *MemSQL) RunUserKPIGroupQueryV1(projectID int64, query *model.Attrib
 			duplicatedRequest.Queries[index].LimitNotApplicable = true
 			duplicatedRequest.Queries[index].From = from
 			duplicatedRequest.Queries[index].To = to
+		}
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"KPIQueryGroupDebug": duplicatedRequest,
+				"method":                                "RunUserKPIGroupQueryV1",
+				"projectID":                             projectID,
+				"duplicatedRequest":                     duplicatedRequest,
+				"enableOptimisedFilterOnProfileQuery":   enableOptimisedFilterOnProfileQuery,
+				"enableOptimisedFilterOnEventUserQuery": enableOptimisedFilterOnEventUserQuery}).Info("Debug before ExecuteKPIQueryGroup")
 		}
 		resultGroup, statusCode := store.ExecuteKPIQueryGroup(projectID, debugQueryKey,
 			duplicatedRequest, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
