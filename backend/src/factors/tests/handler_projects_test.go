@@ -268,9 +268,6 @@ func TestAccessControl(t *testing.T) {
 		id, _ = strconv.Atoi(jsonResponseMap1["id"].(string))
 		agentProjectId := int64(id)
 
-		var trueFlag = true
-		C.GetConfig().EnableDemoReadAccess = &trueFlag
-		C.GetConfig().DemoProjectIds = []string{fmt.Sprintf("%v", demoProjectId)}
 		w = sendGetProjectsRequest(r, agent1)
 		assert.Equal(t, http.StatusOK, w.Code)
 		jsonResponse, _ = ioutil.ReadAll(w.Body)
@@ -287,7 +284,6 @@ func TestAccessControl(t *testing.T) {
 		w = sendGetProjectSettingsReq(r, demoProjectId, agent1)
 		assert.Equal(t, http.StatusMethodNotAllowed, w.Code)
 
-		C.GetConfig().DemoProjectIds = []string{}
 		w = sendGetProjectSettingsReq(r, demoProjectId, agent1)
 		assert.Equal(t, http.StatusForbidden, w.Code)
 		w = sendGetProjectSettingsReq(r, demoProjectId, agent1)
@@ -298,9 +294,6 @@ func TestAccessControl(t *testing.T) {
 		json.Unmarshal(jsonResponse, &projects)
 		assert.Equal(t, 1, len(projects))
 
-		var falseFlag = false
-		C.GetConfig().EnableDemoReadAccess = &falseFlag
-		C.GetConfig().DemoProjectIds = []string{fmt.Sprintf("%v", demoProjectId)}
 		w = sendGetProjectSettingsReq(r, demoProjectId, agent1)
 		assert.Equal(t, http.StatusForbidden, w.Code)
 		w = sendGetProjectsRequest(r, agent1)
@@ -309,7 +302,6 @@ func TestAccessControl(t *testing.T) {
 		json.Unmarshal(jsonResponse, &projects)
 		assert.Equal(t, 1, len(projects))
 
-		C.GetConfig().EnableDemoReadAccess = &trueFlag
 		w = sendGetProjectSettingsReq(r, demoProjectId, agent)
 		assert.Equal(t, http.StatusMethodNotAllowed, w.Code)
 		C.GetConfig().ProjectAnalyticsWhitelistedUUIds = []string{agent.UUID}

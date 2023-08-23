@@ -476,11 +476,6 @@ func TestAPIGetQueriesHandler(t *testing.T) {
 	}
 	assert.Equal(t, 2, len(queries))
 
-	// Test access of the agent to Demo project queries
-	C.GetConfig().DemoProjectIds = append(C.GetConfig().DemoProjectIds, fmt.Sprintf("%v", project.ID))
-	b := true
-	C.GetConfig().EnableDemoReadAccess = &b
-
 	agent2, errCode := SetupAgentReturnDAO(getRandomEmail(), "+1343545")
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotNil(t, agent2)

@@ -188,7 +188,6 @@ type Configuration struct {
 	ProjectAnalyticsWhitelistedUUIds       []string
 	CustomerEnabledProjectsLastComputed    []int64
 	SkippedOtpProjectIDs                   string
-	DemoProjectIds                         []string
 	PrimaryDatastore                       string
 	// Flag for enabling only the /mql routes for secondary env testing.
 	EnableMQLAPI bool
@@ -196,7 +195,6 @@ type Configuration struct {
 	// Added as pointer to prevent accidental writes from
 	// other services while testing.
 	DisableDBWrites                                    *bool
-	EnableDemoReadAccess                               *bool
 	DisableQueryCache                                  *bool
 	AllowedCampaignEnrichmentByProjectID               string
 	UseOpportunityAssociationByProjectID               string
@@ -1058,13 +1056,6 @@ func DisableDBWrites() bool {
 		return *GetConfig().DisableDBWrites
 	}
 	return true
-}
-
-func EnableDemoReadAccess() bool {
-	if GetConfig().EnableDemoReadAccess != nil {
-		return *GetConfig().EnableDemoReadAccess
-	}
-	return false
 }
 
 // DisableMemSQLQueryCache If dashboard and query cache to be disabled. Defaults to false unless specified explicitly.
@@ -2426,16 +2417,6 @@ func IsLastComputedWhitelisted(projectId int64) bool {
 func IsLoggedInUserWhitelistedForProjectAnalytics(loggedInUUID string) bool {
 	for _, uuid := range configuration.ProjectAnalyticsWhitelistedUUIds {
 		if uuid == loggedInUUID {
-			return true
-		}
-	}
-	return false
-}
-
-func IsDemoProject(projectId int64) bool {
-	for _, id := range configuration.DemoProjectIds {
-		projectIdString := fmt.Sprintf("%v", projectId)
-		if id == projectIdString {
 			return true
 		}
 	}
