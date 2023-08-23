@@ -373,6 +373,19 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 	whereForGroups := make(map[string]string)
 	paramsForGroupFilters := make(map[string][]interface{})
 	index := 0
+
+	allUserFilterArray := BuildAllUsersFilterArray(groupedFilters)
+	allUsersWhere, allfilterParams, err := buildWhereFromProperties(projectID, allUserFilterArray, 0)
+	if err != nil {
+		return "", params, err
+	}
+	if len(allUserFilterArray) > 0 {
+		allUsersWhere = strings.ReplaceAll(allUsersWhere, "users.properties", "properties")
+		allUsersWhere = strings.ReplaceAll(allUsersWhere, "user_global_user_properties", "properties")
+		allUsersWhere = "WHERE " + allUsersWhere
+		params = append(params, allfilterParams...)
+	}
+
 	for groupName, filters := range groupedFilters {
 		whereStr, filterParams, err := buildWhereFromProperties(projectID, filters, 0)
 		if err != nil {
@@ -382,13 +395,6 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 		whereStr = strings.ReplaceAll(whereStr, "user_global_user_properties", "properties")
 		whereForGroups[groupName] = whereStr
 		paramsForGroupFilters[groupName] = filterParams
-		if index == 0 {
-			allUsersWhere = "WHERE " + whereStr
-		} else {
-			whereStr = strings.ReplaceAll(whereStr, " AND ", " OR ")
-			allUsersWhere = allUsersWhere + " OR " + whereStr
-		}
-		params = append(params, filterParams...)
 		index++
 	}
 
@@ -427,15 +433,38 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 		stepNumber++
 	}
 
+	domainGroup, errCode := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
+	if errCode != http.StatusFound || domainGroup == nil {
+		return "", params, fmt.Errorf("failed to get group while adding group info")
+	}
+
+	// check if payload contains a "NULL", "notEquals", "notContains"
+	requireSpecialFilter, negativeFilters := CheckForNegativeFilters(groupedFilters)
+
+	if requireSpecialFilter {
+		specialFilterParams := []interface{}{projectID, model.UserSourceDomains, minMax.MinUpdatedAt, minMax.MaxUpdatedAt}
+		specialFilterString, filterparams, err := BuildSpecialFilter(projectID, negativeFilters, domainGroup.ID, isGroupUserCheck)
+		if err != nil {
+			return "", params, err
+		}
+		specialFilterParams = append(specialFilterParams, filterparams...)
+		params = append(params, specialFilterParams...)
+		filterSteps = filterSteps + ", " + specialFilterString
+	}
+
 	// building intersect step for the query
 	var intersectStep string
 	for stepNo := 1; stepNo <= len(groupedFilters); stepNo++ {
 		if len(groupedFilters) == 1 {
-			intersectStep = `SELECT 
+			var addSpecialFilter string
+			if requireSpecialFilter {
+				addSpecialFilter = "WHERE filter_1.identity NOT IN (SELECT identity FROM filter_special) "
+			}
+			intersectStep = fmt.Sprintf(`SELECT 
 			filter_1.properties, filter_1.identity, MAX(filter_1.updated_at) as last_activity 
-			FROM filter_1 
+			FROM filter_1 %s
 			GROUP BY filter_1.identity 
-			ORDER BY last_activity DESC LIMIT 1000;`
+			ORDER BY last_activity DESC LIMIT 1000;`, addSpecialFilter)
 			break
 		}
 		if stepNo == 1 {
@@ -446,7 +475,11 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 		ON filter_%d.identity = filter_%d.identity `, stepNo+1, stepNo, stepNo+1)
 
 		if stepNo == len(groupedFilters)-1 {
-			intersectStep = intersectStep + `GROUP BY filter_1.identity 
+			var addSpecialFilter string
+			if requireSpecialFilter {
+				addSpecialFilter = " WHERE filter_1.identity NOT IN (SELECT identity FROM filter_special) "
+			}
+			intersectStep = intersectStep + addSpecialFilter + `GROUP BY filter_1.identity 
 			ORDER BY last_activity DESC LIMIT 1000;`
 			break
 		}
@@ -458,11 +491,6 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 		FROM all_users 
 		GROUP BY identity 
 		ORDER BY last_activity DESC LIMIT 1000;`
-	}
-
-	domainGroup, errCode := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
-	if errCode != http.StatusFound || domainGroup == nil {
-		return "", params, fmt.Errorf("failed to get group while adding group info")
 	}
 
 	query := fmt.Sprintf(`WITH 
@@ -487,6 +515,92 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 
 	logCtx.Info("Generated query for all accounts: ", query)
 	return query, params, nil
+}
+
+func BuildAllUsersFilterArray(groupedFilters map[string][]model.QueryProperty) []model.QueryProperty {
+	allUsersFilters := make([]model.QueryProperty, 0)
+	for _, filterArray := range groupedFilters {
+		for _, filter := range filterArray {
+			filter.LogicalOp = "OR"
+			allUsersFilters = append(allUsersFilters, filter)
+		}
+	}
+
+	return allUsersFilters
+}
+
+func CheckForNegativeFilters(groupedFilters map[string][]model.QueryProperty) (bool, []model.QueryProperty) {
+	negativeFilterExists := false
+	negativeFilters := make([]model.QueryProperty, 0)
+	for _, filterArray := range groupedFilters {
+		for _, filter := range filterArray {
+			if (filter.Operator == model.NotContainsOpStr && filter.Value != model.PropertyValueNone) ||
+				(filter.Operator == model.ContainsOpStr && filter.Value == model.PropertyValueNone) ||
+				(filter.Operator == model.NotEqualOpStr && filter.Value != model.PropertyValueNone) ||
+				(filter.Operator == model.EqualsOpStr && filter.Value == model.PropertyValueNone) {
+				negativeFilterExists = true
+				negativeFilters = append(negativeFilters, filter)
+			}
+		}
+	}
+
+	return negativeFilterExists, negativeFilters
+}
+
+func BuildSpecialFilter(projectID int64, negativeFilters []model.QueryProperty, domainGroupID int, isGroupUserCheck string) (string, []interface{}, error) {
+	var buildWhereString string
+
+	var filterParams []interface{}
+	negatedFilters := make([]model.QueryProperty, 0)
+
+	for _, filter := range negativeFilters {
+		if filter.Operator == model.NotContainsOpStr && filter.Value != model.PropertyValueNone {
+			filter.Operator = model.ContainsOpStr
+		} else if filter.Operator == model.NotEqualOpStr && filter.Value != model.PropertyValueNone {
+			filter.Operator = model.EqualsOpStr
+		} else if filter.Operator == model.EqualsOpStr && filter.Value == model.PropertyValueNone {
+			filter.Operator = model.NotEqualOpStr
+		} else if filter.Operator == model.ContainsOpStr && filter.Value == model.PropertyValueNone {
+			filter.Operator = model.NotContainsOpStr
+		}
+		filter.LogicalOp = "OR"
+		negatedFilters = append(negatedFilters, filter)
+	}
+
+	var err error
+	if len(negatedFilters) > 0 {
+		buildWhereString, filterParams, err = buildWhereFromProperties(projectID, negatedFilters, 0)
+		if err != nil {
+			return "", filterParams, err
+		}
+		buildWhereString = strings.ReplaceAll(buildWhereString, "users.properties", "properties")
+		buildWhereString = strings.ReplaceAll(buildWhereString, "user_global_user_properties", "properties")
+		buildWhereString = "WHERE " + buildWhereString
+	}
+
+	query := fmt.Sprintf(`filter_special as (
+		SELECT 
+		  * 
+		FROM 
+		  (
+			SELECT 
+			  properties, 
+			  group_%d_user_id as identity
+			FROM 
+			  users 
+			WHERE 
+			  project_id = ? %s
+			  AND users.source != ? 
+			  AND users.group_%d_user_id IS NOT NULL 
+			  AND users.updated_at BETWEEN ?
+			  AND ? 
+			LIMIT 
+			  10000000
+		  ) %s
+		GROUP BY identity
+	  )`, domainGroupID, isGroupUserCheck, domainGroupID, buildWhereString)
+
+	return query, filterParams, nil
 }
 
 // GenerateQueryString generates the final query used to fetch the list of profiles.
