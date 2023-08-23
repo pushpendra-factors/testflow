@@ -1,7 +1,7 @@
 import { Spin } from 'antd';
 import { Text } from 'Components/factorsComponents';
 import React from 'react';
-import { formatDurationIntoString } from 'Utils/dataFormatter';
+import { formatDuration } from 'Utils/dataFormatter';
 import TrendsChart from './TrendsChart';
 import { EngagementTag } from './utils';
 
@@ -61,7 +61,7 @@ const AccountOverview: React.FC<AccountOverviewProps> = ({
           ) : (
             <Text
               type='title'
-              level={3}
+              level={4}
               extraClass='m-0'
               color='red'
               weight='bold'
@@ -81,7 +81,7 @@ const AccountOverview: React.FC<AccountOverviewProps> = ({
           </Text>
           <Text
             type='title'
-            level={3}
+            level={4}
             extraClass='m-0'
             color='red'
             weight='bold'
@@ -95,12 +95,12 @@ const AccountOverview: React.FC<AccountOverviewProps> = ({
           <Text
             type='title'
             level={7}
-            extraClass='m-0 whitespace-no-wrap'
+            extraClass='m-0'
             color='grey'
           >
             #Users
           </Text>
-          <Text type='title' level={3} extraClass='m-0' weight='bold'>
+          <Text type='title' level={4} extraClass='m-0' weight='bold'>
             {overview?.users_count > 25 ? '25+' : overview?.users_count || 0}
           </Text>
         </div>
@@ -113,10 +113,13 @@ const AccountOverview: React.FC<AccountOverviewProps> = ({
           >
             Active Time
           </Text>
-          <Text type='title' level={3} extraClass='m-0' weight='bold'>
-            {formatDurationIntoString(
-              parseInt((overview?.time_active || 0).toFixed())
-            )}
+          <Text
+            type='title'
+            level={4}
+            extraClass='m-0 whitespace-no-wrap'
+            weight='bold'
+          >
+            {formatDuration(parseInt((overview?.time_active || 0).toFixed()))}
           </Text>
         </div>
       </div>

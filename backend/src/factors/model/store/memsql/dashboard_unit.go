@@ -696,6 +696,10 @@ func (store *MemSQL) DBCacheAttributionDashboardUnitsForProjects(stringProjectsI
 			if !C.IsDashboardAllowedForCaching(dashboardUnit.DashboardId) {
 				continue
 			}
+			// skip caching the dashboard unit if not in the list
+			if !C.IsDashboardUnitAllowedForCaching(dashboardUnit.ID) {
+				continue
+			}
 			queryClass, queryInfo, errMsg := store.GetQueryAndClassFromDashboardUnit(&dashboardUnit)
 			if errMsg != "" {
 				log.WithFields(logFields).Error("failed to get query class")
@@ -1464,7 +1468,7 @@ func (store *MemSQL) CacheAttributionDashboardUnitForDateRange(cachePayload mode
 
 		channel := make(chan Result)
 		logCtx.Info("Running attribution V1 caching")
-		go store.runAttributionUnitV1(projectID, attributionQuery.Query, channel)
+		go store.runAttributionUnitV1(projectID, attributionQuery.Query, channel, dashboardUnitID)
 
 		select {
 		case response := <-channel:
@@ -1791,7 +1795,7 @@ func (store *MemSQL) WrapperForAnalyze(projectID int64, queryOriginal model.Quer
 	return store.Analyze(projectID, queryOriginal, enableFilterOpt, false) // disable dashboard caching for funnelv2
 }
 
-func (store *MemSQL) runAttributionUnitV1(projectID int64, queryOriginal *model.AttributionQueryV1, c chan Result) {
+func (store *MemSQL) runAttributionUnitV1(projectID int64, queryOriginal *model.AttributionQueryV1, c chan Result, unitId int64) {
 	attributionQueryUnitPayload := model.AttributionQueryUnitV1{
 		Class: model.QueryClassAttribution,
 		Query: queryOriginal,
@@ -1801,7 +1805,7 @@ func (store *MemSQL) runAttributionUnitV1(projectID int64, queryOriginal *model.
 	var r *model.QueryResult
 	var err error
 	var result Result
-	r, err = store.WrapperForExecuteAttributionQueryV1(projectID, queryOriginal, debugQueryKey)
+	r, err = store.WrapperForExecuteAttributionQueryV1(projectID, queryOriginal, debugQueryKey, unitId)
 	if err != nil {
 		result = Result{res: r, err: err, errMsg: "", lastComputedAt: U.TimeNowUnix(), errCode: http.StatusInternalServerError}
 	} else {
@@ -1811,10 +1815,10 @@ func (store *MemSQL) runAttributionUnitV1(projectID int64, queryOriginal *model.
 	c <- result
 }
 
-func (store *MemSQL) WrapperForExecuteAttributionQueryV1(projectID int64, queryOriginal *model.AttributionQueryV1, debugQueryKey string) (*model.QueryResult, error) {
+func (store *MemSQL) WrapperForExecuteAttributionQueryV1(projectID int64, queryOriginal *model.AttributionQueryV1, debugQueryKey string, unitId int64) (*model.QueryResult, error) {
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	return store.ExecuteAttributionQueryV1(projectID, queryOriginal, debugQueryKey,
-		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery(), unitId)
 }
 
 func (store *MemSQL) runAttributionUnit(projectID int64, queryOriginal *model.AttributionQuery, c chan Result) {

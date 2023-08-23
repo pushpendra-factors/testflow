@@ -2437,7 +2437,7 @@ func PostDeviceServiceAPI(apiUrl string, userAgent string) (model.DeviceInfo, in
 
 	if resp != nil && resp.StatusCode != http.StatusOK {
 		msg := "User Agent Not found"
-		logCtx.WithField("status_code", resp.StatusCode).Error(msg)
+		logCtx.WithField("status_code", resp.StatusCode).Warning(msg)
 		return res, resp.StatusCode, err
 	}
 

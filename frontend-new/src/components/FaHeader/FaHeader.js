@@ -89,12 +89,6 @@ export const settingsMenuItems = [
     url: PathUrls.SettingsSdk,
     lineBreak: true
   },
-  {
-    label: 'Build Insights',
-    url: PathUrls.SettingsInsights,
-    lineBreak: true,
-    whitelisted: true
-  },
 
   {
     label: 'Sharing',
@@ -194,9 +188,9 @@ const SettingsMenu = (
         </Text>
       </Link>
     </Menu.Item>
-    {settingsMenuItems.map((item) => {  
-      if(item?.whitelisted){
-        return null
+    {settingsMenuItems.map((item) => {
+      if (item?.whitelisted) {
+        return null;
       }
       return (
         <>
@@ -204,7 +198,7 @@ const SettingsMenu = (
             <Link to={item.url}>
               <Text color='black' level={7} type='title' extraClass='mb-0'>
                 {item.label}
-              </Text> 
+              </Text>
             </Link>
           </Menu.Item>
           {item.lineBreak === true && <hr />}

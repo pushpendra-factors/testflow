@@ -63,7 +63,7 @@ func RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId int64, re
 			QueryKey, _ := attributionQueryUnitPayload.GetQueryCacheRedisKey(projectId)
 			debugQueryKey := model.GetStringKeyFromCacheRedisKey(QueryKey)
 			resultForRange, err = store.GetStore().ExecuteAttributionQueryV1(projectId, requestPayload.Query, debugQueryKey,
-				enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
+				enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery, unitId)
 			logCtx.WithError(err).WithFields(log.Fields{"RIndex": idx, "RStart": qRange.Start, "REnd": qRange.End}).Info("Found there ExecuteAttributionQueryV1")
 			if err != nil {
 				logCtx.Info("Failed to process query when not found in  DB - attribution v1")
@@ -89,7 +89,9 @@ func RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId int64, re
 			return true, mergedResult, computedMeta
 		}
 	}
-	mergedResult.CacheMeta = latestFoundResult.CacheMeta
+	if latestFoundResult != nil {
+		mergedResult.CacheMeta = latestFoundResult.CacheMeta
+	}
 	return false, mergedResult, computedMeta
 }
 
@@ -101,7 +103,7 @@ func RunAttributionQuery(projectId int64, requestPayload AttributionRequestPaylo
 	var err error
 	var result *model.QueryResult
 	result, err = store.GetStore().ExecuteAttributionQueryV1(projectId, requestPayload.Query, debugQueryKey,
-		enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
+		enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery, unitId)
 
 	if err != nil {
 		model.DeleteQueryCacheKey(projectId, &attributionQueryUnitPayload)

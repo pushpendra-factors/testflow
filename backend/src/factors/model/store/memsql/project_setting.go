@@ -1712,12 +1712,12 @@ func (store *MemSQL) GetWeightsByProject(project_id int64) (*model.AccWeights, i
 
 	var project_settings model.ProjectSetting
 	var weights model.AccWeights
-
 	if err := db.Table("project_settings").Limit(1).Where("project_id = ?", project_id).Find(&project_settings).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			logCtx.WithError(err).Error("Unable to fetch weights from DB")
 			return nil, http.StatusNotFound
 		}
+		logCtx.WithError(err).Error("Unable to fetch weights from DB")
 		return &model.AccWeights{}, http.StatusInternalServerError
 	}
 
@@ -1726,7 +1726,7 @@ func (store *MemSQL) GetWeightsByProject(project_id int64) (*model.AccWeights, i
 	} else {
 		err := U.DecodePostgresJsonbToStructType(project_settings.Acc_score_weights, &weights)
 		if err != nil {
-			log.WithError(err).Error("Unable to decode weights")
+			logCtx.WithError(err).Error("Unable to decode weights")
 			return nil, http.StatusInternalServerError
 		}
 	}

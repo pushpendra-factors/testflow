@@ -361,8 +361,7 @@ func getFilteredKpiPropertiesForCustomMetric(kpiProperties []map[string]string, 
 	filteredKpiProperties := make([]map[string]string, 0)
 	propKeys, err := getPropKeysToEvalForCustomMetric(metric, projectId, periodCodes, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, topK, beamConfig, hardPull, useSortedFilesMerge, pulledMap)
 	if err != nil {
-		err := fmt.Errorf("error getting topK keys from 1st scan")
-		log.WithError(err).Error("error getPropKeysToEvalForCustomMetric")
+		log.WithError(err).Error("error getPropKeysToEvalForCustomMetric: error getting topK keys from 1st scan")
 		return nil, err
 	}
 	for _, propMap := range kpiProperties {
