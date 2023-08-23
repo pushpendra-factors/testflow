@@ -295,6 +295,7 @@ const Alerts = ({
           size={'large'}
           onClick={() => {
             setAlertState({ state: 'add', index: 0 });
+            setAlertDetails(false)
           }}
         >
           <SVG name={'plus'} extraClass={'mr-2'} size={16} />

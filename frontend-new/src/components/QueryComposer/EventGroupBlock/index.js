@@ -28,7 +28,8 @@ function EventGroupBlock({
   setGroupState,
   delGroupState,
   closeDropDown,
-  hideText = false // added to hide the text from UI (Used in event based alerts)
+  hideText = false, // added to hide the text from UI (Used in event based alerts)
+  noMargin = false
 }) {
   const [filterOptions, setFilterOptions] = useState([]);
   const [propSelVis, setSelVis] = useState(false);
@@ -245,7 +246,7 @@ function EventGroupBlock({
   );
 
   return (
-    <div className='flex items-center relative ml-10'>
+    <div className={`flex items-center relative ${noMargin ? "" : "ml-10"}`}>
       {!hideText &&
         (grpIndex >= 1 ? (
           <Text level={8} type='title' extraClass='m-0 mr-16' weight='thin'>
