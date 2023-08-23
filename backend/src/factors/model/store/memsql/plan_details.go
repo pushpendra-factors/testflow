@@ -347,13 +347,11 @@ func (store *MemSQL) CreateAddonsForCustomPlanForProject(projectID int64) error 
 	for _, featureName := range featureNames {
 		var feature model.FeatureDetails
 		feature.Name = featureName
-		feature.IsEnabledFeature = true
+		feature.IsEnabledFeature = false // false by default in custom plan
 		if featureName == model.FEATURE_FACTORS_DEANONYMISATION {
 			// TODO : change this to const
 			feature.Limit = 100
-		}
-		if featureName == model.INT_FACTORS_DEANONYMISATION {
-			feature.IsConnected = true
+			feature.IsEnabledFeature = true
 		}
 		addOns = append(addOns, feature)
 	}
@@ -362,16 +360,7 @@ func (store *MemSQL) CreateAddonsForCustomPlanForProject(projectID int64) error 
 		log.WithError(err).Error("Failed to create custom plan addons")
 		return err
 	}
-	settings, status := store.GetProjectSetting(projectID)
-	if status != http.StatusFound {
-		log.WithError(err).Error("Failed to update custom plan addons int status")
-		return errors.New("Failed to update custom plan addons int status")
-	}
-	err = store.UpdateAllFeatureStatusForProject(projectID, *settings)
-	if err != nil {
-		log.WithError(err).Error("Failed to update custom plan addons int status")
-		return err
-	}
+
 	return nil
 }
 func GetPlanIDFromString(planID string) (int, error) {
