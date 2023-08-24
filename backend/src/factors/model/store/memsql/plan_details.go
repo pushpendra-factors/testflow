@@ -347,10 +347,11 @@ func (store *MemSQL) CreateAddonsForCustomPlanForProject(projectID int64) error 
 	for _, featureName := range featureNames {
 		var feature model.FeatureDetails
 		feature.Name = featureName
-		feature.IsEnabledFeature = true
+		feature.IsEnabledFeature = false // false by default in custom plan
 		if featureName == model.FEATURE_FACTORS_DEANONYMISATION {
 			// TODO : change this to const
 			feature.Limit = 100
+			feature.IsEnabledFeature = true
 		}
 		addOns = append(addOns, feature)
 	}
