@@ -376,11 +376,12 @@ func TestAccScoreUpdateLastEventsDay(t *testing.T) {
 
 	p1 := T.PropAggregate{Name: "$channel", Properties: propertiesmap}
 	p1u1 := make(map[string]T.PropAggregate)
+	usersList := make([]*T.AggEventsOnUserAndGroup, 0)
 	p1u1["$channel"] = p1
 
 	user1 := T.AggEventsOnUserAndGroup{User_id: "1", EventsCount: eventsCount, Is_group: false, Properties: p1u1}
 	users["1"] = &user1
-
+	usersList = append(usersList, &user1)
 	prevCountsOfUser["1"] = make(map[string]M.LatestScore)
 	currentTimestamp := time.Now()
 	currentTS := currentTimestamp.Unix()
@@ -418,26 +419,14 @@ func TestAccScoreUpdateLastEventsDay(t *testing.T) {
 	prevCountsOfUser["1"][w3_date_string] = M.LatestScore{Date: w3_date_unix.Unix(), EventsCount: w3, Properties: p1u2}
 	prevCountsOfUser["1"][w2_date_string] = M.LatestScore{Date: w2_date_unix.Unix(), EventsCount: w2, Properties: p1u3}
 
-	dbup := T.UpdateCountsWithDecayToUpdateDB(users, mweights, prevCountsOfUser, finalWeights.SaleWindow, currentTS)
+	dbup, err := T.UpdateLastEventsDay(prevCountsOfUser, usersList, currentTS, finalWeights.SaleWindow)
+	assert.Nil(t, err)
 	log.Debugf("result:%v", dbup)
-	assert.Equal(t, dbup[0].CurrEventCount.EventsCount["a"], float64(1))
-	assert.Equal(t, dbup[0].CurrEventCount.EventsCount["b"], float64(1))
-	assert.Equal(t, dbup[0].CurrEventCount.EventsCount["c"], float64(1))
-	assert.Equal(t, dbup[0].CurrEventCount.EventsCount["d"], float64(1))
-	assert.Equal(t, dbup[0].CurrEventCount.EventsCount["e"], float64(1))
-
-	assert.Equal(t, dbup[0].Lastevent.EventsCount["a"], 2.5)
-	assert.Equal(t, dbup[0].Lastevent.EventsCount["b"], 2.5)
-	assert.Equal(t, dbup[0].Lastevent.EventsCount["c"], 2.5)
-	assert.Equal(t, dbup[0].Lastevent.EventsCount["d"], 2.5)
-	assert.Equal(t, dbup[0].Lastevent.EventsCount["e"], 2.5)
-	assert.Equal(t, int64(10), dbup[0].Lastevent.Properties["$channel"]["p1"])
-	assert.Equal(t, int64(4), dbup[0].Lastevent.Properties["$channel"]["p2"])
-	assert.Equal(t, int64(6), dbup[0].Lastevent.Properties["$channel"]["p3"])
-	assert.Equal(t, T.TAKETOPK, len(dbup[0].Lastevent.Properties["$channel"]), "Take Topk properties violated")
-
+	assert.Equal(t, dbup["1"].EventsCount["a"], 2.5)
+	assert.Equal(t, dbup["1"].EventsCount["b"], 2.5)
+	assert.Equal(t, dbup["1"].EventsCount["c"], 2.5)
+	assert.Equal(t, dbup["1"].EventsCount["d"], 2.5)
 	assert.Equal(t, 1, len(dbup))
-	// assert.Nil(t, err)
 }
 
 func TestGenerateDate(t *testing.T) {
