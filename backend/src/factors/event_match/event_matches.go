@@ -71,10 +71,14 @@ func EventMatchesFilterCriterionList(projectId int64, userProperties, eventPrope
 		fcNext := filterCriterionList[i+1]
 		result := eventMatchesFilterCriterion(projectId, userProperties, eventProperties, fc)
 		if fcNext.Values[0].LogicalOp == "AND" && !soFar { // "AND" logic: If even a single filter fails, return False.
-			return result
+			if !result {
+				return false
+			}
+		} else if fcNext.Values[0].LogicalOp == "AND" && soFar {
+			soFar = false
 		} else if fcNext.Values[0].LogicalOp == "OR" {
 			soFar = soFar || result
-		}
+		} 
 	}
 	return true
 }
