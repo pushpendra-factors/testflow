@@ -7,6 +7,7 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	"fmt"
+	MM "math"
 	"net/http"
 	"sort"
 	"time"
@@ -174,7 +175,7 @@ func (store *MemSQL) GetAccountsScore(projectId int64, groupId int, ts string, d
 		}
 
 		currentDate := GetDateOnlyFromTimestamp(counts_map.Date)
-		account_score = ComputeScoreWithWeightsAndCounts(weights, counts_map.EventsCount, currentDate)
+		account_score = ComputeScoreWithWeightsAndCounts(projectId, weights, counts_map.EventsCount, currentDate)
 		r.Id = account_id
 		r.Score = float32(account_score)
 		r.Timestamp = ts // have to fill the right timestamp
@@ -230,7 +231,7 @@ func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userI
 		logCtx.WithError(err).Error("Failed to unmarshall json counts for users per day")
 	}
 
-	resultmap, scoreOnDays, fscore, err = CalculatescoresPerAccount(weights, currentDate, prevDateTotrend, countsMapDays)
+	resultmap, scoreOnDays, fscore, err = CalculatescoresPerAccount(projectId, weights, currentDate, prevDateTotrend, countsMapDays)
 	if err != nil {
 		return model.PerAccountScore{}, nil, err
 	}
@@ -248,7 +249,7 @@ func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userI
 
 }
 
-func ComputeTrendWrapper(currentDate int64, countsMapDays map[string]model.LatestScore, weights *model.AccWeights) (map[string]float32, error) {
+func ComputeTrendWrapper(projectId int64, currentDate int64, countsMapDays map[string]model.LatestScore, weights *model.AccWeights) (map[string]float32, error) {
 
 	scoreOnDays := make(map[string]float32)
 	salewindow := weights.SaleWindow
@@ -259,14 +260,14 @@ func ComputeTrendWrapper(currentDate int64, countsMapDays map[string]model.Lates
 		periodDateInit := periodStartDate.AddDate(0, 0, int(dayIdx)).Unix()
 		dateString := GetDateOnlyFromTimestamp(periodDateInit)
 		orderedDayString := GenDateStringsForLastNdays(periodDateInit, weights.SaleWindow)
-		score := computeTrendInPeriod(periodDateInit, orderedDayString, countsMapDays, weights)
+		score := computeTrendInPeriod(projectId, periodDateInit, orderedDayString, countsMapDays, weights)
 		scoreOnDays[dateString] = float32(score)
 	}
 
 	return scoreOnDays, nil
 }
 
-func computeTrendInPeriod(startDate int64, dates []string, countsMapDays map[string]model.LatestScore, weights *model.AccWeights) float64 {
+func computeTrendInPeriod(projectId int64, startDate int64, dates []string, countsMapDays map[string]model.LatestScore, weights *model.AccWeights) float64 {
 	score := float64(0)
 	for _, dayString := range dates {
 		endDateUnix := model.GetDateFromString(dayString)
@@ -275,7 +276,7 @@ func computeTrendInPeriod(startDate int64, dates []string, countsMapDays map[str
 			countsPerday.EventsCount = make(map[string]float64)
 		}
 		decay := model.ComputeDecayValueGivenStartEndTS(endDateUnix, startDate, weights.SaleWindow)
-		accountScore := ComputeScoreWithWeightsAndCountsWithDecay(weights, countsPerday.EventsCount, decay)
+		accountScore := ComputeScoreWithWeightsAndCountsWithDecay(projectId, weights, countsPerday.EventsCount, decay)
 		score += accountScore
 
 	}
@@ -283,17 +284,14 @@ func computeTrendInPeriod(startDate int64, dates []string, countsMapDays map[str
 
 }
 
-func CalculatescoresPerAccount(weights *model.AccWeights, currentDate int64, prevDateTotrend int64, countsMapDays map[string]model.LatestScore) (map[string]model.PerAccountScore,
+func CalculatescoresPerAccount(projectId int64, weights *model.AccWeights, currentDate int64, prevDateTotrend int64, countsMapDays map[string]model.LatestScore) (map[string]model.PerAccountScore,
 	map[string]float32, float64, error) {
 
 	var fscore float32
 	var resultmap map[string]model.PerAccountScore = make(map[string]model.PerAccountScore)
 	scoreOnDays := make(map[string]float32)
 
-	last_event := countsMapDays[model.LAST_EVENT]
-	currentDate = last_event.Date
-
-	accountScoreMap, err := ComputeTrendWrapper(currentDate, countsMapDays, weights)
+	accountScoreMap, err := ComputeTrendWrapper(projectId, currentDate, countsMapDays, weights)
 	if err != nil {
 		return nil, nil, -1, err
 	}
@@ -305,6 +303,10 @@ func CalculatescoresPerAccount(weights *model.AccWeights, currentDate int64, pre
 		if day != model.LAST_EVENT {
 			var t model.PerAccountScore
 			fscore = float32(accountScore)
+			if projectId == 2 {
+				fscore = float32(accountScore)
+				fscore = float32(normalize_score(float64(fscore)))
+			}
 			t.Score = fscore
 			t.Timestamp = day
 			unixDay := model.GetDateFromString(day)
@@ -316,6 +318,7 @@ func CalculatescoresPerAccount(weights *model.AccWeights, currentDate int64, pre
 					t.Debug["counts"] = countsInInt
 					t.Debug["date"] = day
 					t.Debug["score"] = accountScore
+					t.Debug["normscore"] = fscore
 				}
 			}
 			resultmap[day] = t
@@ -407,7 +410,7 @@ func (store *MemSQL) GetUserScore(projectId int64, userId string, eventTS string
 		logCtx.WithError(err).Error("Unable to unamrshall user counts data")
 		return result, err
 	}
-	accountScore := ComputeScoreWithWeightsAndCounts(weights, countsMap, eventTS)
+	accountScore := ComputeScoreWithWeightsAndCounts(projectId, weights, countsMap, eventTS)
 	result.Id = userId
 	result.Score = float32(accountScore)
 	result.Timestamp = eventTS
@@ -448,7 +451,7 @@ func ComputeUserScoreOnCustomerId(db *gorm.DB, id string, projectId int64, event
 		}
 
 		date := GetDateOnlyFromTimestamp(le.Date)
-		accountScore := ComputeScoreWithWeightsAndCounts(&weights, le.EventsCount, date)
+		accountScore := ComputeScoreWithWeightsAndCounts(projectId, &weights, le.EventsCount, date)
 
 		var uday model.PerUserScoreOnDay
 		uday.Id = user_id
@@ -487,17 +490,6 @@ func ComputeAccountScore(weights model.AccWeights, eventsCount map[string]int64,
 	return account_score_after_decay, eventsCountMap, decay_value, nil
 }
 
-func ComputeAccountScoreOnLastEvent(weights model.AccWeights, eventsCount map[string]float64) (float64, error) {
-
-	var accountScore float64
-	weightValue := weights.WeightConfig
-	for _, w := range weightValue {
-		if ew, ok := eventsCount[w.WeightId]; ok {
-			accountScore += ew * float64(w.Weight_value)
-		}
-	}
-	return accountScore, nil
-}
 func GetDateOnlyFromTimestamp(ts int64) string {
 	year, month, date := time.Unix(ts, 0).UTC().Date()
 	data := fmt.Sprintf("%d%02d%02d", year, month, date)
@@ -565,7 +557,7 @@ func (store *MemSQL) GetAllUserScore(projectId int64, debug bool) ([]model.AllUs
 				}
 				resultmap[day] = t
 			} else {
-				accountScore, _ := ComputeAccountScoreOnLastEvent(*weights, countsPerday)
+				accountScore, _ := ComputeAccountScoreOnLastEvent(projectID, *weights, countsPerday)
 				var t model.PerUserScoreOnDay
 				t.Score = float32(accountScore)
 				t.Timestamp = day
@@ -636,7 +628,7 @@ func (store *MemSQL) GetAllUserScoreOnDay(projectId int64, ts string, debug bool
 		for day, countsPerday := range countsMapDays {
 			if day != model.LAST_EVENT {
 				var t model.PerUserScoreOnDay
-				accountScore := ComputeScoreWithWeightsAndCounts(weights, countsPerday, day)
+				accountScore := ComputeScoreWithWeightsAndCounts(projectId, weights, countsPerday, day)
 				t.Score = float32(accountScore)
 				t.Timestamp = day
 				addProperty(&t, &countsOnDays)
@@ -704,7 +696,7 @@ func (store *MemSQL) GetAllUserScoreLatest(projectId int64, debug bool) ([]model
 		day := GetDateOnlyFromTimestamp(lastday.Date)
 		countsPerDay = lastday.EventsCount
 		// accountScore := ComputeScoreWithWeightsAndCounts(weights, countsPerDay, day)
-		accountScore, _ := ComputeAccountScoreOnLastEvent(*weights, countsPerDay)
+		accountScore, _ := ComputeAccountScoreOnLastEvent(projectId, *weights, countsPerDay)
 		var t model.PerUserScoreOnDay
 		t.Score = float32(accountScore)
 		t.Timestamp = day
@@ -772,8 +764,10 @@ func (store *MemSQL) GetUserScoreOnIds(projectId int64, usersAnonymous, usersNon
 		}
 		ts := GetDateOnlyFromTimestamp(le.Date)
 
-		// accountScore := ComputeScoreWithWeightsAndCounts(weights, le.EventsCount, ts)
-		accountScore, _ := ComputeAccountScoreOnLastEvent(*weights, le.EventsCount)
+		accountScore, _ := ComputeAccountScoreOnLastEvent(projectId, *weights, le.EventsCount)
+		if projectId == 2 {
+			accountScore = normalize_score(accountScore)
+		}
 		resultPerUser.Id = userId
 		resultPerUser.Score = float32(accountScore)
 		addProperty(&resultPerUser, &le)
@@ -840,7 +834,10 @@ func (store *MemSQL) GetAccountScoreOnIds(projectId int64, accountIds []string, 
 		ts := GetDateOnlyFromTimestamp(le.Date)
 		resultPerUser.Timestamp = ts
 
-		accountScore, _ := ComputeAccountScoreOnLastEvent(*weights, le.EventsCount)
+		accountScore, _ := ComputeAccountScoreOnLastEvent(projectId, *weights, le.EventsCount)
+		if projectId == 2 {
+			accountScore = normalize_score(accountScore)
+		}
 		resultPerUser.Id = userId
 		resultPerUser.Score = float32(accountScore)
 		addProperty(&resultPerUser, &le)
@@ -907,7 +904,10 @@ func ComputeUserScoreNonAnonymous(db *gorm.DB, weights model.AccWeights, project
 		var r model.PerUserScoreOnDay
 		ts := GetDateOnlyFromTimestamp(userCounts.Date)
 		r.Timestamp = ts
-		accountScore := ComputeScoreWithWeightsAndCounts(&weights, userCounts.EventsCount, ts)
+		accountScore := ComputeScoreWithWeightsAndCounts(projectId, &weights, userCounts.EventsCount, ts)
+		if projectId == 2 {
+			accountScore = normalize_score(accountScore)
+		}
 		r.Id = userKey
 		r.Score = float32(accountScore)
 		addProperty(&r, &userCounts)
@@ -991,19 +991,37 @@ func addProperty(result *model.PerUserScoreOnDay, le *model.LatestScore) {
 	}
 }
 
-func ComputeScoreWithWeightsAndCounts(weights *model.AccWeights, counts map[string]float64, day string) float64 {
+func ComputeScoreWithWeightsAndCounts(projectId int64, weights *model.AccWeights, counts map[string]float64, day string) float64 {
 
 	var score float64
 	decay := model.ComputeDecayValue(day, weights.SaleWindow)
-	accountScoref, _ := ComputeAccountScoreOnLastEvent(*weights, counts)
+	accountScoref, _ := ComputeAccountScoreOnLastEvent(projectId, *weights, counts)
 	score = decay * accountScoref
 	return score
 }
 
-func ComputeScoreWithWeightsAndCountsWithDecay(weights *model.AccWeights, counts map[string]float64, decay float64) float64 {
+func ComputeScoreWithWeightsAndCountsWithDecay(projectId int64, weights *model.AccWeights, counts map[string]float64, decay float64) float64 {
 
 	var score float64
-	accountScoref, _ := ComputeAccountScoreOnLastEvent(*weights, counts)
+	accountScoref, _ := ComputeAccountScoreOnLastEvent(projectId, *weights, counts)
 	score = decay * accountScoref
 	return score
+}
+
+func normalize_score(x float64) float64 {
+	//100 * tanh(x/100000) range 0 to 100000
+	val := x / float64(100000)
+	return 100 * MM.Tanh(val)
+}
+
+func ComputeAccountScoreOnLastEvent(project_id int64, weights model.AccWeights, eventsCount map[string]float64) (float64, error) {
+
+	var accountScore float64
+	weightValue := weights.WeightConfig
+	for _, w := range weightValue {
+		if ew, ok := eventsCount[w.WeightId]; ok {
+			accountScore += ew * float64(w.Weight_value)
+		}
+	}
+	return accountScore, nil
 }

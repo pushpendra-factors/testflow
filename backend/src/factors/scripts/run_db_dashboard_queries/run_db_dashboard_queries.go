@@ -67,9 +67,9 @@ func main() {
 	enableSlowDBQueryLogging := flag.Bool("log_slow_db_queries", false, "Logs queries with execution time greater than 50ms.")
 	allowProfilesGroupSupport := flag.String("allow_profiles_group_support", "", "")
 	enableOptimisedFilterOnProfileQuery := flag.Int("enable_optimised_filter_on_profile_query",
-		0, "Enables filter optimisation logic for profiles query.")
+		1, "Enables filter optimisation logic for profiles query.")
 	enableOptimisedFilterOnEventUserQuery := flag.Int("enable_optimised_filter_on_event_user_query",
-		0, "Enables filter optimisation logic for events and users query.")
+		1, "Enables filter optimisation logic for events and users query.")
 	customerEnabledProjectsLastComputed := flag.String("customer_enabled_projects_last_computed",
 		"*", "List of projects customer enabled forLast Computed")
 	IncreaseKPILimitForProjectIDs := flag.String("increase_kpi_limit_for_projectids", "", "List of projectIds where kpi limit in increased.")
