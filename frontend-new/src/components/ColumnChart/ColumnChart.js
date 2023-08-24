@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, memo, useMemo } from 'react';
 import ReactDOMServer from 'react-dom/server';
 import cx from 'classnames';
+import moment from 'moment';
 import Highcharts from 'highcharts';
 import PropTypes from 'prop-types';
 import styles from './columnChart.module.scss';
@@ -12,8 +13,9 @@ import {
 } from '../../utils/constants';
 import { CHART_COLOR_1 } from '../../constants/color.constants';
 import { COLOR_CLASSNAMES } from '../../constants/charts.constants';
-import { generateColors } from '../../utils/dataFormatter';
+import { addQforQuarter, generateColors } from '../../utils/dataFormatter';
 import TopLegends from 'Components/GroupedBarChart/TopLegends';
+import { getDateFormatForTimeSeriesChart } from 'Utils/chart.helpers';
 
 const defaultColors = generateColors(10);
 
@@ -27,8 +29,11 @@ function ColumnChart({
   colors,
   valueMetricType,
   height,
-  legendsProps
+  legendsProps,
+  xAxisType,
+  frequency
 }) {
+  const dateFormat = getDateFormatForTimeSeriesChart({ frequency });
   useEffect(() => {
     if (comparisonApplied) {
       if (multiColored) {
@@ -143,6 +148,12 @@ function ColumnChart({
           formatter() {
             const self = this;
             const label = self.value;
+            if (xAxisType === 'date-time') {
+              return (
+                addQforQuarter(frequency) +
+                moment(this.value).format(dateFormat)
+              );
+            }
             const tickLength = BAR_CHART_XAXIS_TICK_LENGTH[cardSize];
             if (label.length > tickLength) {
               return `${label.substr(0, tickLength)}...`;
@@ -193,7 +204,10 @@ function ColumnChart({
                 level={7}
                 color='grey-2'
               >
-                {self.point.category}
+                {xAxisType === 'date-time'
+                  ? addQforQuarter(frequency) +
+                    moment(self.point.category).format(dateFormat)
+                  : self.point.category}
               </Text>
               <div className={cx('flex flex-col')}>
                 <div className='flex items-center col-gap-1'>
@@ -210,13 +224,16 @@ function ColumnChart({
       series: updatedSeries
     });
   }, [
-    cardSize,
-    categories,
     chartId,
     comparisonApplied,
+    height,
+    categories,
     updatedSeries,
-    valueMetricType,
-    height
+    xAxisType,
+    cardSize,
+    frequency,
+    dateFormat,
+    valueMetricType
   ]);
 
   useEffect(() => {
@@ -272,7 +289,9 @@ ColumnChart.propTypes = {
   legendsProps: PropTypes.shape({
     showAll: PropTypes.bool,
     position: PropTypes.oneOf(['top', 'bottom'])
-  })
+  }),
+  xAxisType: PropTypes.string,
+  frequency: PropTypes.string
 };
 
 ColumnChart.defaultProps = {
@@ -285,5 +304,7 @@ ColumnChart.defaultProps = {
   colors: defaultColors,
   valueMetricType: null,
   height: null,
-  legendsProps: null
+  legendsProps: null,
+  xAxisType: null,
+  frequency: null
 };

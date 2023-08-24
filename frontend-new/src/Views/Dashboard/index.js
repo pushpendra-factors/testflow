@@ -22,9 +22,9 @@ import { getDashboardDateRange } from './utils';
 import DashboardAfterIntegration from './EmptyDashboard/DashboardAfterIntegration';
 import ProjectDropdown from './ProjectDropdown';
 import { DASHBOARD_KEYS } from '../../constants/localStorage.constants';
-import DashboardBeforeIntegration from './DashboardBeforeIntegration';
 import { selectAreDraftsSelected } from 'Reducers/dashboard/selectors';
 import Drafts from './Drafts';
+import CommonBeforeIntegrationPage from 'Components/GenericComponents/CommonBeforeIntegrationPage';
 
 const dashboardRefreshInitialState = {
   inProgress: false,
@@ -56,7 +56,7 @@ function Dashboard({
   const areDraftsSelected = useSelector((state) =>
     selectAreDraftsSelected(state)
   );
-  
+
   const integration = useSelector(
     (state) => state.global.currentProjectSettings
   );
@@ -273,7 +273,7 @@ function Dashboard({
     );
   }
 
-  return <DashboardBeforeIntegration />;
+  return <CommonBeforeIntegrationPage />;
 }
 
 export default connect(null, {

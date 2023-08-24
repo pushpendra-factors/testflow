@@ -127,7 +127,7 @@ const AttributionSettings = ({
       );
     });
 
-    if (value.length < 5) {
+    if (value.length < 10) {
       blockList.push(
         <div key={'init'}>
           <SelectKPIBlock

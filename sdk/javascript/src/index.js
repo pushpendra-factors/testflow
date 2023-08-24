@@ -121,62 +121,69 @@ function getUserId() {
     return app.getUserId();
 }
 
+
+function primaryWindowVar() {
+    if (window.faitracker) return window.faitracker;
+    // For backward compatibility.
+    if (window.factors) return window.factors;
+}
+
 function processQueue() {
-    if(factors && factors.q && factors.q.length > 0 && !isQueueBeingProcessed) {
+    if(primaryWindowVar() && primaryWindowVar().q && primaryWindowVar().q.length > 0 && !isQueueBeingProcessed) {
         isQueueBeingProcessed = true;
         logger.debug("Starting Queue", false);
         try{
-            while(factors.q.length > 0) {
+            while(primaryWindowVar().q.length > 0) {
                 logger.debug("Processing Queue", false);
                 // q[0] indicates first item of the queue;
                 // a indicates list of arguments;
-                switch(factors.q[0].k) {
+                switch(primaryWindowVar().q[0].k) {
                     case 'message': {
-                        if(factors.q[0].a[0] === Properties.EV_FORM_SUBMITTED) {
-                            var properties = factors.q[0].a[1];
+                        if(primaryWindowVar().q[0].a[0] === Properties.EV_FORM_SUBMITTED) {
+                            var properties = primaryWindowVar().q[0].a[1];
                             if (!Properties.hasEmailOrPhone(properties)) {
                                 logger.debug("No email and phone, skipping form submit.", false);
-                                factors.q.shift();
+                                primaryWindowVar().q.shift();
                                 break;
                             }
-                            track(factors.q[0].a[0], factors.q[0].a[1]);
-                            factors.q.shift();
+                            track(primaryWindowVar().q[0].a[0], primaryWindowVar().q[0].a[1]);
+                            primaryWindowVar().q.shift();
                         }
                         break;
                     }
                     case 'track': {
-                        track(factors.q[0].a[0], factors.q[0].a[1], factors.q[0].a[2]);
-                        factors.q.shift();
+                        track(primaryWindowVar().q[0].a[0], primaryWindowVar().q[0].a[1], primaryWindowVar().q[0].a[2]);
+                        primaryWindowVar().q.shift();
                         break;
                     }
                     case 'reset': {
                         reset();
-                        factors.q.shift();
+                        primaryWindowVar().q.shift();
                         break;
                     }
                     case 'page': {
-                        page(factors.q[0].a[0], factors.q[0].a[1]);
-                        factors.q.shift();
+                        page(primaryWindowVar().q[0].a[0], primaryWindowVar().q[0].a[1]);
+                        primaryWindowVar().q.shift();
                         break;
                     }
                     case 'updateEventProperties': {
-                        updateEventProperties(factors.q[0].a[0], factors.q[0].a[1]);
-                        factors.q.shift();
+                        updateEventProperties(primaryWindowVar().q[0].a[0], primaryWindowVar().q[0].a[1]);
+                        primaryWindowVar().q.shift();
                         break;
                     }
                     case 'identify': {
-                        identify(factors.q[0].a[0], factors.q[0].a[1]);
-                        factors.q.shift();
+                        identify(primaryWindowVar().q[0].a[0], primaryWindowVar().q[0].a[1]);
+                        primaryWindowVar().q.shift();
                         break;
                     }
                     case 'addUserProperties': {
-                        addUserProperties(factors.q[0].a[0]);
-                        factors.q.shift();
+                        addUserProperties(primaryWindowVar().q[0].a[0]);
+                        primaryWindowVar().q.shift();
                         break;
                     }
                     case 'getUserId': {
                         getUserId();
-                        factors.q.shift();
+                        primaryWindowVar().q.shift();
                         break;
                     }
                     default:
@@ -201,15 +208,27 @@ if (process.env.NODE_ENV === "development") {
     exposed["app"] = app;
 }
 
-if(factors && factors.TOKEN) {
-    init(factors.TOKEN, factors.INIT_PARAMS, factors.INIT_CALLBACK);
+if(primaryWindowVar() && primaryWindowVar().TOKEN) {
+    init(primaryWindowVar().TOKEN, primaryWindowVar().INIT_PARAMS, primaryWindowVar().INIT_CALLBACK);
 }
 
+window.addEventListener('FAITRACKER_INIT_EVENT', function(e) {
+    init(primaryWindowVar().TOKEN, primaryWindowVar().INIT_PARAMS, primaryWindowVar().INIT_CALLBACK);
+});
+
+// For backward compatibility.
 window.addEventListener('FACTORS_INIT_EVENT', function(e) {
-    init(factors.TOKEN, factors.INIT_PARAMS, factors.INIT_CALLBACK);
-})
+    init(primaryWindowVar().TOKEN, primaryWindowVar().INIT_PARAMS, primaryWindowVar().INIT_CALLBACK);
+});
 
+window.addEventListener('FAITRACKER_INITIALISED_EVENT', function(e){
+    processQueue();
+    window.addEventListener('FAITRACKER_QUEUED_EVENT', function(e) {
+        processQueue();
+    });
+});
 
+// For backward compatibility.
 window.addEventListener('FACTORS_INITIALISED_EVENT', function(e){
     processQueue();
     window.addEventListener('FACTORS_QUEUED_EVENT', function(e) {

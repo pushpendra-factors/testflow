@@ -1,0 +1,139 @@
+<html>
+    <head> 
+        <title>factors.ai</title>
+        <script type="text/javascript" src="testCases.js"></script>
+
+        <script type="text/javascript">
+        
+            window.factors = window.factors||(function(){
+                this.q = [];
+                var factorsQueuedEvent = new CustomEvent('FACTORS_QUEUED_EVENT');
+                var addToQueue = function(k,a) {
+                    this.q.push({k,a});
+                    window.dispatchEvent(factorsQueuedEvent);   
+                }
+                this.track = function(ev, ep, ac) {
+                    addToQueue('track', arguments);  
+                }
+                this.init = function(at, op, ac) {
+                    this.TOKEN = at;
+                    this.INIT_PARAMS = op;
+                    this.INIT_CALLBACK = ac;
+                }
+                this.reset = function() {
+                    addToQueue('reset', arguments);
+                }
+                this.page = function(ac, frc) {
+                    addToQueue('page', arguments);
+                }
+                this.updateEventProperties = function(evI, pr) {
+                    addToQueue('updateEventProperties', arguments);
+                }
+                this.identify = function(cus, uP) {
+                    addToQueue('identify', arguments);
+                }
+                this.addUserProperties = function(pr){
+                    addToQueue('addUserProperties', arguments);
+                }
+                this.getUserId = function(){
+                    addToQueue('getUserId', arguments);
+                }
+                this.message = function(){
+                    window.addEventListener('message', function(e) {
+                        if(e.data.origin === 'factors'){
+                            addToQueue('message', [e.data.type, e.data.message]);
+                        }
+                    });
+                }
+                this.call = function(){
+                    var callMap = {k: '', a: []}
+                    if(arguments && arguments.length >= 1){
+                        for(var i=1;i<arguments.length;i++) {
+                            callMap.a.push(arguments[i]);
+                        }
+                        callMap.k = arguments[0];
+                    }
+                    this.q.push(callMap);
+                    window.dispatchEvent(factorsQueuedEvent);
+                }
+                this.message();
+                this.init("e00jerl4ojnsx0jd5i5c63fyaf5wk1y9", {
+                    host: "https://api.factors.ai"
+            }, function(){console.log("Init callback")});
+                return this;
+            })();
+
+            (function() {
+                var s = document.createElement("script");
+                s.type = "text/javascript";
+                s.src = "dist/factors.v1.js"; // backward compatibility test.
+                s.async = true;
+                d = document.getElementsByTagName('script')[0];
+                d.parentNode.insertBefore(s, d);
+            })();
+        </script>
+
+        <script>
+            setTimeout(function() {
+                document.getElementById("lazy-form1").innerHTML = '<form><input type="email" name="E-mail" placeholder="Your email"/></br></br><input type="text" name="Company" placeholder="Your company" /></br></br><button type="button">Non-Submit Button</button></form>';
+            }, 3000);
+        </script>
+    </head>
+    <body> 
+        <h2>Factors SDK Test</h2>
+
+        <h2>Form</h2>
+        <form novalidate="novalidate">
+            <input type="text" name="First Name" placeholder="Your first name" /></br></br>
+            <input type="text" name="Last Name" placeholder="Your last name" /></br></br>
+            <input type="email" name="E-mail" placeholder="Your email"/></br></br>
+            <input type="tel" name="Phone Number" placeholder="Your phone number"/></br></br>
+            <input type="text" name="Company" placeholder="Your company" /></br></br>
+            <button type="submit">Submit</button>
+        </form>
+
+        <h2>Non Form</h2>
+        <input type="email" name="E-mail" placeholder="Your email"/></br></br>
+        <input type="name" name="name" placeholder="Your name"/></br></br>
+        <button> Create </button>
+
+        <h2> Lazy loaded form </h2>
+        <div id="lazy-form1"></div>
+
+        <h2>Form Without Submit Button</h2>
+        <form novalidate="novalidate">
+            <input type="email" name="E-mail" placeholder="Your email"/></br></br>
+            <input type="text" name="Company" placeholder="Your company" /></br></br>
+            <button type="button">Non-Submit Button</button>
+        </form>
+
+        <!-- Comment all other forms while testing this, If you see multiple form submits. -->
+        <h2>Form Without Submit and Input Button</h2>
+        <form novalidate="novalidate">
+            <input type="email" name="E-mail" placeholder="Your email"/></br></br>
+            <input type="text" name="Company" placeholder="Your company" /></br></br>
+            <input type="button" value="Non-Submit Input Button">
+        </form>
+
+        <a id="id1" name="sample" rel="rel">Sample Anchor</a>
+        <button id="id1" name="sample" class="style" role="role">Sample Button 😀</button>
+
+
+        <h2>Form Within an Iframe</h2>
+        <iframe src="./iframe.html" sandbox="allow-same-origin allow-scripts">
+        </iframe>
+
+
+        <script>
+            console.log(factors);
+            console.log(factors.q);
+            factors.track('$form_submitted', {'$email': 'ak@gm.com'});
+            factors.call('track', '$form_submitted', {'$email': 'ak@em.com'});
+            factors.call('track', '$form_submitted', {'$email': 'ak@ems.com'});
+
+            setTimeout(function(){
+                factors.track('$form_submitted', {'$email': 'ak@time.com'});
+            }, 20000)
+        </script>
+    </body>
+</html>

@@ -10,7 +10,6 @@ import UserSettings from 'Views/Settings/ProjectSettings/UserSettings';
 import IntegrationSettings from 'Views/Settings/ProjectSettings/IntegrationSettings';
 import Sharing from 'Views/Settings/ProjectSettings/Sharing';
 import Events from 'Views/Settings/ProjectConfigure/Events';
-import InsightsSettings from 'Views/Settings/ProjectSettings/InsightsSettings';
 import PropertySettings from 'Views/Settings/ProjectConfigure/PropertySettings';
 import ContentGroups from 'Views/Settings/ProjectConfigure/ContentGroups';
 import CustomKPI from 'Views/Settings/ProjectConfigure/CustomKPI';
@@ -30,6 +29,10 @@ import LockedStateComponent from 'Components/GenericComponents/LockedStateVideoC
 import PricingComponent from 'Views/Settings/ProjectSettings/Pricing';
 import EngagementConfig from 'Views/Settings/ProjectConfigure/Engagement';
 import CommonLockedComponent from 'Components/GenericComponents/CommonLockedComponent';
+
+//locked screen images
+import LockedExplainImage from '../assets/images/locked_explain.png';
+import LockedPathAnalysisImage from '../assets/images/locked_path_analysis.png';
 
 const Login = lazyWithRetry(() => import('../Views/Pages/Login'));
 const ForgotPassword = lazyWithRetry(() =>
@@ -54,6 +57,7 @@ const FeatureLockedPathAnalysis = withFeatureLockHOC(PathAnalysis, {
   LockedComponent: () => (
     <LockedStateComponent
       title={'Path Analysis'}
+      embeddedLink={LockedPathAnalysisImage}
       description='Gain valuable insights into customer journeys and optimize conversion paths. Understand how prospects navigate your website, attribute revenue to specific marketing efforts, optimize content and campaigns, and deliver personalized experiences for increased conversions and marketing success'
     />
   )
@@ -66,6 +70,7 @@ const FeatureLockedPathAnalysisReport = withFeatureLockHOC(PathAnalysisReport, {
   LockedComponent: () => (
     <LockedStateComponent
       title={'Path Analysis'}
+      embeddedLink={LockedPathAnalysisImage}
       description='Gain valuable insights into customer journeys and optimize conversion paths. Understand how prospects navigate your website, attribute revenue to specific marketing efforts, optimize content and campaigns, and deliver personalized experiences for increased conversions and marketing success'
     />
   )
@@ -185,6 +190,7 @@ const FeatureLockedFactorsInsightsNew = withFeatureLockHOC(FactorsInsightsNew, {
   LockedComponent: () => (
     <LockedStateComponent
       title={'Explain'}
+      embeddedLink={LockedExplainImage}
       description='All your important metrics at a glance. The dashboard is where you save your analyses for quick and easy viewing. Create multiple dashboards for different needs, and toggle through them as you wish. Making the right decisions just became easier.'
     />
   )
@@ -197,6 +203,7 @@ const FeatureLockedFactorsInsightsOld = withFeatureLockHOC(FactorsInsightsOld, {
   LockedComponent: () => (
     <LockedStateComponent
       title={'Explain'}
+      embeddedLink={LockedExplainImage}
       description='All your important metrics at a glance. The dashboard is where you save your analyses for quick and easy viewing. Create multiple dashboards for different needs, and toggle through them as you wish. Making the right decisions just became easier.'
     />
   )
@@ -209,6 +216,7 @@ const FeatureLockedFactors = withFeatureLockHOC(Factors, {
   LockedComponent: () => (
     <LockedStateComponent
       title={'Explain'}
+      embeddedLink={LockedExplainImage}
       description='All your important metrics at a glance. The dashboard is where you save your analyses for quick and easy viewing. Create multiple dashboards for different needs, and toggle through them as you wish. Making the right decisions just became easier.'
     />
   )
@@ -375,14 +383,6 @@ export const APP_LAYOUT_ROUTES = {
     exact: true,
     path: PathUrls.SettingsSharing,
     Component: FeatureLockedReportSharing,
-    Private: true,
-    Layout: AppLayout
-  },
-  SettingsInsights: {
-    exact: true,
-    path: PathUrls.SettingsInsights,
-    name: 'dashboardSettings',
-    Component: InsightsSettings,
     Private: true,
     Layout: AppLayout
   },

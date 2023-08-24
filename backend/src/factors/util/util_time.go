@@ -717,7 +717,7 @@ func GenerateWeeksBetween(start, end int64) []TimestampRange {
 	return weeks
 }
 
-func GetAllMonthsInBetween(from, to int64, ranges []TimestampRange) []TimestampRange {
+func GetAllValidRangesInBetween(from, to int64, ranges []TimestampRange) []TimestampRange {
 	timestamps := make([]TimestampRange, 0)
 
 	for _, rng := range ranges {
@@ -725,5 +725,79 @@ func GetAllMonthsInBetween(from, to int64, ranges []TimestampRange) []TimestampR
 			timestamps = append(timestamps, rng)
 		}
 	}
+	return timestamps
+}
+
+func IsAMonthlyRangeQuery(timezoneString TimeZoneString, effectiveFrom, effectiveTo int64) (bool, []TimestampRange) {
+
+	last12Months := GenerateLast12MonthsTimestamps(string(timezoneString))
+	stMatch := 0
+	enMatch := 0
+	for _, rng := range last12Months {
+		if rng.Start == effectiveFrom {
+			stMatch = 1
+		}
+		if rng.End == effectiveTo {
+			enMatch = 1
+		}
+	}
+	// both start and end timestamp belong to a month
+	if stMatch == 1 && enMatch == 1 {
+		return true, last12Months
+	}
+	return false, last12Months
+}
+
+func IsAWeeklyRangeQuery(timezoneString TimeZoneString, effectiveFrom, effectiveTo int64) (bool, []TimestampRange) {
+
+	last48Weeks := GenerateLast48WeeksTimestamps(string(timezoneString))
+	stMatch := 0
+	enMatch := 0
+	for _, rng := range last48Weeks {
+		if rng.Start == effectiveFrom {
+			stMatch = 1
+		}
+		if rng.End == effectiveTo {
+			enMatch = 1
+		}
+	}
+	// both start and end timestamp belong to a week
+	if stMatch == 1 && enMatch == 1 {
+		return true, last48Weeks
+	}
+	return false, last48Weeks
+}
+
+// GenerateLast48WeeksTimestamps returns start-end of last 48 weeks in descending order (last week first) from now
+func GenerateLast48WeeksTimestamps(timezone string) []TimestampRange {
+	timestamps := make([]TimestampRange, 0)
+
+	loc, err := time.LoadLocation(timezone)
+	if err != nil {
+		fmt.Println("Invalid timezone:", timezone)
+		return timestamps
+	}
+
+	now := time.Now().In(loc)
+
+	// Set the weekday to Sunday (0) and adjust the time to 00:00:00
+	weekStart := now.AddDate(0, 0, -(int(now.Weekday())))
+	weekStart = time.Date(weekStart.Year(), weekStart.Month(), weekStart.Day(), 0, 0, 0, 0, loc)
+
+	for i := 0; i < 48; i++ {
+		// Get the end of the week by adding 6 days, 23 hours, 59 minutes, and 59 seconds
+		weekEnd := weekStart.AddDate(0, 0, 6).Add(time.Hour*23 + time.Minute*59 + time.Second*59)
+
+		// add all the valid ranges which are smaller than today's time
+		if weekStart.Unix() < now.Unix() && weekEnd.Unix() < now.Unix() {
+			timestamps = append(timestamps, TimestampRange{
+				Start: weekStart.Unix(),
+				End:   weekEnd.Unix(),
+			})
+		}
+		// Move to the previous week's start
+		weekStart = weekStart.AddDate(0, 0, -7)
+	}
+
 	return timestamps
 }

@@ -14,6 +14,7 @@ import { FEATURES } from 'Constants/plans.constants';
 import LockedStateComponent from 'Components/GenericComponents/LockedStateVideoComponent';
 import { PathUrls } from './pathUrls';
 import ConfigurePlans from 'Views/Settings/ProjectSettings/ConfigurePlans';
+import LockedAttributionImage from '../assets/images/locked_attribution.png';
 
 const Attribution = lazyWithRetry(() => import('../features/attribution/ui'));
 const FeatureLockedAttributionComponent = withFeatureLockHOC(Attribution, {
@@ -22,6 +23,7 @@ const FeatureLockedAttributionComponent = withFeatureLockHOC(Attribution, {
     <LockedStateComponent
       title={'Attribution'}
       description='Attribute revenue and conversions to the right marketing channels, campaigns, and touchpoints to gain a clear understanding of what drives success. Identify the most effective marketing strategies, optimize your budget allocation, and make data-driven decisions to maximize ROI and achieve your business goals.'
+      embeddedLink={LockedAttributionImage}
     />
   )
 });
@@ -66,7 +68,6 @@ export const AppRoutes = () => (
 
 export const AppLayoutRoutes = ({
   activeAgent,
-  demoProjectId,
   active_project,
   currentProjectSettings
 }) => {
@@ -107,11 +108,7 @@ export const AppLayoutRoutes = ({
         />
       ) : null}
 
-      {!demoProjectId.includes(active_project?.id) ? (
-        <PrivateRoute path='/project-setup' component={SetupAssist} />
-      ) : (
-        <Redirect to='/' />
-      )}
+      <PrivateRoute path='/project-setup' component={SetupAssist} />
     </Switch>
   );
 };

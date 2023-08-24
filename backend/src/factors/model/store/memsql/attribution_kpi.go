@@ -269,6 +269,14 @@ func (store *MemSQL) RunKPIGroupQuery(projectID int64, query *model.AttributionQ
 			duplicatedRequest.Queries[index].From = query.From
 			duplicatedRequest.Queries[index].To = query.To
 		}
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"KPIQueryGroupDebug": duplicatedRequest,
+				"method":                                "RunKPIGroupQuery",
+				"projectID":                             projectID,
+				"duplicatedRequest":                     duplicatedRequest,
+				"enableOptimisedFilterOnProfileQuery":   enableOptimisedFilterOnProfileQuery,
+				"enableOptimisedFilterOnEventUserQuery": enableOptimisedFilterOnEventUserQuery}).Info("Debug before ExecuteKPIQueryGroup")
+		}
 		resultGroup, statusCode := store.ExecuteKPIQueryGroup(projectID, debugQueryKey,
 			duplicatedRequest, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 		log.WithFields(log.Fields{"KPIQueryGroupDebug": duplicatedRequest, "ResultGroup": resultGroup, "Status": statusCode}).Info("KPI-Attribution result received")
@@ -280,6 +288,11 @@ func (store *MemSQL) RunKPIGroupQuery(projectID int64, query *model.AttributionQ
 				return errors.New("failed to get KPI result for attribution query - StatusPartialContent"), nil, nil, nil
 			}
 			return errors.New("failed to get KPI result for attribution query"), nil, nil, nil
+		}
+		if resultGroup == nil || len(resultGroup) == 0 || len(resultGroup[0].Headers) == 0 {
+			logCtx.WithFields(log.Fields{"resultGroup": resultGroup,
+				"duplicatedRequest": duplicatedRequest}).Error("empty result for KPI query")
+			return errors.New("empty result for KPI query"), nil, nil, nil
 		}
 		for _, res := range resultGroup {
 			// Skip the datetime header and the other result is of format. ex. "headers": ["$hubspot_deal_hs_object_id", "Revenue", "Pipeline", ...],
@@ -314,6 +327,14 @@ func (store *MemSQL) RunKPIGroupQueryV1(projectID int64, query *model.Attributio
 			duplicatedRequest.Queries[index].From = from
 			duplicatedRequest.Queries[index].To = to
 		}
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"KPIQueryGroupDebug": duplicatedRequest,
+				"method":                                "RunKPIGroupQueryV1",
+				"projectID":                             projectID,
+				"duplicatedRequest":                     duplicatedRequest,
+				"enableOptimisedFilterOnProfileQuery":   enableOptimisedFilterOnProfileQuery,
+				"enableOptimisedFilterOnEventUserQuery": enableOptimisedFilterOnEventUserQuery}).Info("Debug before ExecuteKPIQueryGroup")
+		}
 		resultGroup, statusCode := store.ExecuteKPIQueryGroup(projectID, debugQueryKey,
 			duplicatedRequest, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 		logCtx.WithFields(log.Fields{"KPIQueryGroupDebug": duplicatedRequest, "ResultGroup": resultGroup, "Status": statusCode}).Info("KPI-Attribution result received")
@@ -323,6 +344,11 @@ func (store *MemSQL) RunKPIGroupQueryV1(projectID int64, query *model.Attributio
 				return errors.New("failed to get KPI result for attribution query - StatusPartialContent"), nil, nil, nil
 			}
 			return errors.New("failed to get KPI result for attribution query"), nil, nil, nil
+		}
+		if resultGroup == nil || len(resultGroup) == 0 || len(resultGroup[0].Headers) == 0 {
+			logCtx.WithFields(log.Fields{"resultGroup": resultGroup,
+				"duplicatedRequest": duplicatedRequest}).Error("empty result for KPI query")
+			return errors.New("empty result for KPI query"), nil, nil, nil
 		}
 		for _, res := range resultGroup {
 			// Skip the datetime header and the other result is of format. ex. "headers": ["$hubspot_deal_hs_object_id", "Revenue", "Pipeline", ...],

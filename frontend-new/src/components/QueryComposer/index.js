@@ -33,7 +33,6 @@ import { ReactSortable } from 'react-sortablejs';
 import { isEqual } from 'lodash';
 import { fetchGroups } from 'Reducers/coreQuery/services';
 import GlobalFilter from '../GlobalFilter';
-import FunnelsConversionDurationBlock from './FunnelsConversionDurationBlock/FunnelsConversionDurationBlock';
 import { setShowCriteria } from 'Reducers/analyticsQuery';
 import CriteriaSection from './CriteriaSection';
 
@@ -50,7 +49,8 @@ function QueryComposer({
   getEventPropertiesV2,
   activeProject,
   groupOpts,
-  eventProperties,
+  groupProperties,
+  eventPropertiesV2,
   queryOptions,
   setQueryOptions,
   runFunnelQuery,
@@ -73,15 +73,20 @@ function QueryComposer({
   }, [activeProject]);
 
   const groupsList = useMemo(() => {
-    let groups = [['Users', 'users']];
+    const customGroups = [['Users', 'users']];
+
     if (queryType === QUERY_TYPE_EVENT) {
-      groups.unshift(['Events', 'events']);
+      customGroups.unshift(['Events', 'events']);
+    } else if (queryType === QUERY_TYPE_FUNNEL) {
+      customGroups.push(['All Accounts', '$domains']);
     }
-    Object.entries(groupOpts || {}).forEach(([group_name, display_name]) => {
-      groups.push([display_name, group_name]);
-    });
-    return groups;
-  }, [groupOpts]);
+
+    const groups = Object.entries(groupOpts || {}).map(
+      ([group_name, display_name]) => [display_name, group_name]
+    );
+
+    return [...customGroups, ...groups];
+  }, [groupOpts, queryType]);
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -90,17 +95,20 @@ function QueryComposer({
   }, [activeProject, fetchEventNames, getUserPropertiesV2, queryType]);
 
   useEffect(() => {
-    if (queryOptions.group_analysis === 'users') return;
-    getGroupProperties(activeProject.id, queryOptions.group_analysis);
-  }, [activeProject.id, queryOptions.group_analysis]);
+    Object.keys(groupOpts || {}).forEach((group) => {
+      if (!groupProperties[group]) {
+        getGroupProperties(activeProject.id, group);
+      }
+    });
+  }, [activeProject?.id, groupProperties, groupOpts]);
 
   useEffect(() => {
     queries.forEach((ev) => {
-      if (!eventProperties[ev.label]) {
+      if (!eventPropertiesV2[ev.label]) {
         getEventPropertiesV2(activeProject.id, ev.label);
       }
     });
-  }, [activeProject?.id, eventProperties, getEventPropertiesV2, queries]);
+  }, [activeProject?.id, eventPropertiesV2, getEventPropertiesV2, queries]);
 
   const setEventsCondition = (condition) => {
     setQueryOptions((prevOptions) => ({
@@ -158,10 +166,6 @@ function QueryComposer({
   );
 
   const setGroupAnalysis = (group) => {
-    if (!['users', 'events'].includes(group)) {
-      getGroupProperties(activeProject.id, group);
-    }
-
     const criteria =
       group === 'events' ? TOTAL_EVENTS_CRITERIA : TOTAL_USERS_CRITERIA;
     setShowCriteria(criteria);
@@ -193,7 +197,10 @@ function QueryComposer({
   const groupsMenuItems = groupsList.map((opt) => ({
     label: opt[0],
     key: opt[1],
-    lineBreak: opt[1] === 'users'
+    lineBreak:
+      queryType === QUERY_TYPE_FUNNEL
+        ? opt[1] === '$domains'
+        : opt[1] === 'users'
   }));
 
   const groupsMenu = (
@@ -518,7 +525,8 @@ function QueryComposer({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   groupOpts: state.groups.data,
-  eventProperties: state.coreQuery.eventProperties
+  eventPropertiesV2: state.coreQuery.eventPropertiesV2,
+  groupProperties: state.coreQuery.groupProperties
 });
 
 const mapDispatchToProps = (dispatch) =>

@@ -15,25 +15,25 @@ import getGroupIcon from 'Utils/getGroupIcon';
 import startCase from 'lodash/startCase';
 
 function FilterWrapper({
-  viewMode,
-  index,
-  groupName,
-  filterProps,
-  refValue,
   projectID,
   event,
+  index,
+  filterProps,
+  groupName,
   filter,
-  delIcon = 'remove',
   deleteFilter,
   insertFilter,
   closeFilter,
+  refValue,
   showOr,
-  hasPrefix = false,
-  filterPrefix = 'Filter by',
   caller,
+  viewMode,
   dropdownPlacement,
   dropdownMaxHeight,
   showInList = false,
+  delIcon = 'remove',
+  hasPrefix = false,
+  filterPrefix = 'Filter by',
   getEventPropertyValues,
   getGroupPropertyValues,
   getUserPropertyValues,
@@ -49,35 +49,41 @@ function FilterWrapper({
   const [filterDropDownOptions, setFiltDD] = useState({});
 
   useEffect(() => {
-    if (filter && filter.props[1] === 'categorical') {
+    if (filter && filter.props[2] === 'categorical') {
       setValuesByProps(filter.props);
       setNewFilterState(filter);
     }
   }, [filter]);
 
   useEffect(() => {
-    const filterDD = { ...filterDropDownOptions, props: [] };
-    Object.keys(filterProps)?.forEach((key) => {
-      if (!Array.isArray(filterProps[key])) {
-        const groups = filterProps[key];
-        if (groups) {
-          Object.keys(groups)?.forEach((groupKey) => {
+    const formattedFilterDDOptions = { ...filterDropDownOptions, props: [] };
+    Object.keys(filterProps)?.forEach((propertyKey) => {
+      if (!Array.isArray(filterProps[propertyKey])) {
+        const propertyGroups = filterProps[propertyKey];
+        if (propertyGroups) {
+          Object.keys(propertyGroups)?.forEach((groupKey) => {
             const label = startCase(groupKey);
             const icon = getGroupIcon(groupKey);
-            const values = groups?.[groupKey];
-            filterDD.props.push({
+            const values = propertyGroups?.[groupKey];
+            formattedFilterDDOptions.props.push({
+              key: propertyKey,
               label,
               icon,
-              propertyType: key,
+              propertyType: propertyKey,
               values
             });
           });
         }
       } else {
-        const label = `${PropTextFormat(key)} Properties`;
-        const icon = ['user', 'event'].includes(key) ? key : 'group';
-        const values = filterProps[key];
-        filterDD.props.push({
+        const label = `${PropTextFormat(propertyKey)} Properties`;
+        const icon = ['user', 'event'].includes(propertyKey)
+          ? propertyKey
+          : ['button_click', 'page_view'].includes(propertyKey)
+          ? 'event'
+          : 'group'; //'button_click', 'page_view' custom types used in pathanalysis
+        const values = filterProps[propertyKey];
+        formattedFilterDDOptions.props.push({
+          key: propertyKey,
           label,
           icon,
           propertyType: icon,
@@ -85,8 +91,9 @@ function FilterWrapper({
         });
       }
     });
-    filterDD.operator = operatorsMap;
-    setFiltDD(filterDD);
+
+    formattedFilterDDOptions.operator = operatorsMap;
+    setFiltDD(formattedFilterDDOptions);
   }, [filterProps]);
 
   const renderFilterContent = () => {
@@ -110,36 +117,24 @@ function FilterWrapper({
   };
 
   useEffect(() => {
-    if (newFilterState.props[1] === 'categorical') {
-      if (
-        newFilterState.props[2] === 'user' ||
-        newFilterState.props[2] === 'user_g'
+    const [groupName, propertyName, propertyType, entity] =
+      newFilterState.props;
+
+    const propGrp = groupName || groupName === '' ? entity : groupName;
+
+    if (propertyType === 'categorical') {
+      if (['user', 'user_g'].includes(propGrp)) {
+        getUserPropertyValues(projectID, propertyName);
+      } else if (propGrp === 'event') {
+        getEventPropertyValues(projectID, event.label, propertyName);
+      } else if (
+        !['group', 'user', 'user_g'].includes(propGrp) &&
+        ['group', 'user', 'user_g'].includes(entity)
       ) {
-        getUserPropertyValues(projectID, newFilterState.props[0]);
-      } else if (newFilterState.props[2] === 'event') {
-        getEventPropertyValues(projectID, event.label, newFilterState.props[0]);
-      } else if (newFilterState.props[2] === 'group') {
-        let group = groupName;
-        if (groupName === 'All') {
-          if (newFilterState.props[0].toLowerCase().includes('hubspot'))
-            group = '$hubspot_company';
-          if (newFilterState.props[0].toLowerCase().includes('salesforce'))
-            group = '$salesforce_account';
-          if (newFilterState.props[0].toLowerCase().includes('6signal'))
-            group = '$6signal';
-          if (newFilterState.props[0].toLowerCase().includes('$li_'))
-            group = '$linkedin_company';
-          if (newFilterState.props[0].toLowerCase().includes('$g2_'))
-            group = '$g2';
-        }
-        getGroupPropertyValues(projectID, group, newFilterState.props[0]);
+        getGroupPropertyValues(projectID, groupName, propertyName);
       }
     }
-  }, [
-    newFilterState.props[0],
-    newFilterState.props[1],
-    newFilterState.props[2]
-  ]);
+  }, [newFilterState?.props]);
 
   const delFilter = () => {
     deleteFilter(index);
@@ -151,26 +146,19 @@ function FilterWrapper({
       closeFilter();
     }
   };
-
   const setValuesByProps = (props) => {
-    if (props[2] === 'categorical') {
-      if (props[3] === 'user' || props[3] === 'user_g') {
-        getUserPropertyValues(projectID, props[1]);
-      } else if (props[3] === 'event') {
-        getEventPropertyValues(projectID, event.label, props[1]);
-      } else if (props[3] === 'group') {
-        let group = groupName;
-        if (groupName === 'All') {
-          if (props[1].toLowerCase().includes('hubspot'))
-            group = '$hubspot_company';
-          if (props[1].toLowerCase().includes('salesforce'))
-            group = '$salesforce_account';
-          if (props[1].toLowerCase().includes('6signal')) group = '$6signal';
-          if (props[1].toLowerCase().includes('$li_'))
-            group = '$linkedin_company';
-          if (props[1].toLowerCase().includes('$g2_')) group = '$g2';
-        }
-        getGroupPropertyValues(projectID, group, props[1]);
+    const [groupName, propertyName, propertyType, entity] = props;
+
+    if (propertyType === 'categorical') {
+      if (['user', 'user_g'].includes(groupName)) {
+        getUserPropertyValues(projectID, propertyName);
+      } else if (groupName === 'event') {
+        getEventPropertyValues(projectID, event.label, propertyName);
+      } else if (
+        !['group', 'user', 'user_g'].includes(groupName) &&
+        ['group', 'user', 'user_g'].includes(entity)
+      ) {
+        getGroupPropertyValues(projectID, groupName, propertyName);
       }
     }
   };

@@ -18,7 +18,7 @@ import { getNormalizedKpi } from '../utils';
 import { get } from 'lodash';
 import { compareFilters, groupFilters } from 'Utils/global';
 import { TOOLTIP_CONSTANTS } from 'Constants/tooltips.constans';
-import getGroupIcon from 'Utils/getGroupIcon'
+import getGroupIcon from 'Utils/getGroupIcon';
 
 function QueryBlock({
   index,
@@ -32,8 +32,8 @@ function QueryBlock({
   groupBy,
   setGroupBy,
   delGroupBy,
-  // userProperties,
-  // eventProperties,
+  // userPropertiesV2,
+  // eventPropertiesV2,
   // setSelectedMainCategory,
   kpi,
   KPIConfigProps,
@@ -105,12 +105,12 @@ function QueryBlock({
   //   } // Akhil please check this line
   //   const assignFilterProps = Object.assign({}, filterProps);
 
-  //   if (eventProperties[event.label]) {
-  //     assignFilterProps.event = eventProperties[event.label];
+  //   if (eventPropertiesV2[event.label]) {
+  //     assignFilterProps.event = eventPropertiesV2[event.label];
   //   }
-  //   assignFilterProps.user = userProperties;
+  //   assignFilterProps.user = userPropertiesV2;
   //   setFilterProperties(assignFilterProps);
-  // }, [userProperties, eventProperties]);
+  // }, [userPropertiesV2, eventPropertiesV2]);
 
   const triggerDropDown = () => {
     setDDVisible(true);
@@ -258,17 +258,13 @@ function QueryBlock({
     }
   };
 
-
   const additionalActions = () => {
     // Kept Filter by only, as it was previously, just changed Filter Menu
 
     return (
       <div className={'flex'} style={{ 'margin-left': '1px' }}>
         <Tooltip title='Delete this KPI' color={TOOLTIP_CONSTANTS.DARK}>
-          <Button
-            onClick={deleteItem}
-            className={`btn-right-round`}
-          >
+          <Button onClick={deleteItem} className={`btn-right-round`}>
             <SVG name='close' size={18} color={'grey'} />
           </Button>
         </Tooltip>
@@ -422,8 +418,9 @@ function QueryBlock({
   if (!event) {
     return (
       <div
-        className={`${styles.query_block} fa--query_block my-2 ${ifQueries ? 'borderless no-padding' : 'borderless no-padding'
-          }`}
+        className={`${styles.query_block} fa--query_block my-2 ${
+          ifQueries ? 'borderless no-padding' : 'borderless no-padding'
+        }`}
       >
         <div
           className={`${styles.query_block__event} flex justify-start items-center`}
@@ -443,16 +440,22 @@ function QueryBlock({
     );
   }
 
-  let KPIFilterOptions = []; 
+  let KPIFilterOptions = [];
   return (
-    <div
-      className={`${styles.query_block} borderless no-padding`}
-    >
+    <div className={`${styles.query_block} borderless no-padding`}>
       <div
-        className={`${!event?.alias?.length ? 'flex justify-start' : ''} ${styles.query_block__event
-          }  items-center`}
+        className={`${!event?.alias?.length ? 'flex justify-start' : ''} ${
+          styles.query_block__event
+        }  items-center`}
       >
-        {index != 1 && <SVG name={'DoubeEndedArrow'} color={'grey'} size={24} extraClass={'mr-1 ml-1'} />}
+        {index != 1 && (
+          <SVG
+            name={'DoubeEndedArrow'}
+            color={'grey'}
+            size={24}
+            extraClass={'mr-1 ml-1'}
+          />
+        )}
         <div className={`flex ${!event?.alias?.length ? '' : 'ml-8 mt-2'}`}>
           <div className='max-w-7xl'>
             <Tooltip
@@ -475,9 +478,7 @@ function QueryBlock({
             </Tooltip>
           </div>
 
-          <div>
-            {additionalActions()}
-          </div>
+          <div>{additionalActions()}</div>
         </div>
       </div>
       {eventFilters()}
@@ -488,8 +489,8 @@ function QueryBlock({
 const mapStateToProps = (state) => ({
   eventOptions: state.coreQuery.eventOptions,
   activeProject: state.global.active_project,
-  userProperties: state.coreQuery.userProperties,
-  eventProperties: state.coreQuery.eventProperties,
+  userPropertiesV2: state.coreQuery.userPropertiesV2,
+  eventPropertiesV2: state.coreQuery.eventPropertiesV2,
   groupBy: state.coreQuery.groupBy.event,
   eventNames: state.coreQuery.eventNames,
   kpi: state.kpi

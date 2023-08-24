@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, memo } from 'react';
+import React, { useCallback, useEffect, memo, useMemo } from 'react';
 import ReactDOMServer from 'react-dom/server';
 import moment from 'moment';
 import Highcharts from 'highcharts';
@@ -11,7 +11,7 @@ import {
 import LegendsCircle from '../../styles/components/LegendsCircle';
 import {
   addQforQuarter,
-  formatCount,
+  calculatePercentage,
   generateColors
 } from '../../utils/dataFormatter';
 import TopLegends from '../GroupedBarChart/TopLegends';
@@ -26,9 +26,30 @@ function StackedBarChart({
   cardSize = 1,
   spacing = highChartsDefaultSpacing,
   chartId = 'barChartContainer',
-  showAllLegends = false
+  showAllLegends = false,
+  dateWiseTotals = []
 }) {
-  const colors = generateColors(data.length);
+  const computePointValues = useCallback(
+    (point) => {
+      const categoryIndex = categories.indexOf(point.category);
+      const value = point.y;
+      const total =
+        categoryIndex > -1 && dateWiseTotals.length > 0
+          ? dateWiseTotals[categoryIndex]
+          : point.stackTotal;
+
+      return {
+        percent: calculatePercentage(value, total, 1),
+        total
+      };
+    },
+    [categories, dateWiseTotals]
+  );
+
+  const colors = useMemo(() => {
+    return generateColors(data.length);
+  }, [data.length]);
+
   const drawChart = useCallback(() => {
     Highcharts.chart(chartId, {
       chart: {
@@ -75,13 +96,13 @@ function StackedBarChart({
           enabled: false
         },
         stackLabels: {
-          enabled: cardSize !== 2,
-          formatter() {
-            const self = this;
-            return ReactDOMServer.renderToString(
-              <NumFormat shortHand={self.total >= 1000} number={self.total} />
-            );
-          }
+          enabled: false
+          // formatter() {
+          //   const self = this;
+          //   return ReactDOMServer.renderToString(
+          //     <NumFormat shortHand={self.total >= 1000} number={self.total} />
+          //   );
+          // }
         }
       },
       tooltip: {
@@ -93,6 +114,7 @@ function StackedBarChart({
         formatter() {
           const self = this;
           const format = getDateFormatForTimeSeriesChart({ frequency });
+          const values = computePointValues(self.point);
           return ReactDOMServer.renderToString(
             <>
               <Text
@@ -126,9 +148,11 @@ function StackedBarChart({
                 type='title'
                 color='grey-2'
                 extraClass={`mt-1 ${styles.infoText} mb-0`}
-              >{`${formatCount(self.point.percentage, 1)}% (${
-                self.point.y
-              } of ${self.point.stackTotal})`}</Text>
+              >
+                {`${values.percent}% (${self.point.y} of ${
+                  values.total
+                })`}
+              </Text>
             </>
           );
         }
@@ -140,7 +164,17 @@ function StackedBarChart({
       },
       series: data.map((d, index) => ({ ...d, color: colors[index] }))
     });
-  }, [cardSize, categories, chartId, data, frequency, height, spacing, colors]);
+  }, [
+    chartId,
+    height,
+    cardSize,
+    spacing,
+    categories,
+    data,
+    frequency,
+    computePointValues,
+    colors
+  ]);
 
   useEffect(() => {
     drawChart();

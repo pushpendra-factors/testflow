@@ -81,10 +81,11 @@ func (store *MemSQL) GetRawAttributionQueryParams(projectID int64, queryOriginal
 // @Deprecated
 func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *model.AttributionQueryV1,
 	debugQueryKey string, enableOptimisedFilterOnProfileQuery,
-	enableOptimisedFilterOnEventUserQuery bool) (*model.QueryResult, error) {
+	enableOptimisedFilterOnEventUserQuery bool, dashboardUnitId int64) (*model.QueryResult, error) {
 
 	logFields := log.Fields{
 		"project_id":        projectID,
+		"dashboardUnitId":   dashboardUnitId,
 		"debug_query_key":   debugQueryKey,
 		"query_from":        queryOriginal.From,
 		"query_to":          queryOriginal.To,
@@ -2096,7 +2097,7 @@ func (store *MemSQL) AppendOTPSessionsV1(projectID int64, query *model.Attributi
 }
 
 // FetchCachedResultFromDataBase fetches the result row from `dash_query_results` if that exits
-func (store *MemSQL) FetchCachedResultFromDataBase(reqId string, projectID, dashboardID, unitID int64,
+func (store *MemSQL) FetchCachedResultFromDataBase(reqId string, projectID, dashboardID, unitID,
 	from, to int64) (int, model.DashQueryResult) {
 
 	logFields := log.Fields{
@@ -2104,12 +2105,38 @@ func (store *MemSQL) FetchCachedResultFromDataBase(reqId string, projectID, dash
 		"req_id":            reqId,
 		"dashboard_id":      dashboardID,
 		"dashboard_unit_id": unitID,
+		"from":              from,
+		"to":                to,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 	var dashQueryResult model.DashQueryResult
 	err := db.Limit(1).Table("dash_query_results").Where("project_id=? AND dashboard_id=? AND dashboard_unit_id=? AND from_t=? AND to_t=?",
 		projectID, dashboardID, unitID, from, to).Find(&dashQueryResult).Error
+	if err != nil {
+		log.WithFields(logFields).WithFields(log.Fields{"err": err}).Error("Error in executing query to get dashboard cache results")
+		return http.StatusNotFound, dashQueryResult
+	}
+	log.Info("got the dash query results from DB")
+	return http.StatusFound, dashQueryResult
+}
+
+// FetchCachedResultFromDataBaseByQueryID fetches the result row from `dash_query_results` if that exits based on queryID
+func (store *MemSQL) FetchCachedResultFromDataBaseByQueryID(reqId string, projectID, queryID,
+	from, to int64) (int, model.DashQueryResult) {
+
+	logFields := log.Fields{
+		"project_id": projectID,
+		"req_id":     reqId,
+		"query_id":   queryID,
+		"from":       from,
+		"to":         to,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+	var dashQueryResult model.DashQueryResult
+	err := db.Limit(1).Table("dash_query_results").Where("project_id=? AND query_id=? AND from_t=? AND to_t=?",
+		projectID, queryID, from, to).Find(&dashQueryResult).Error
 	if err != nil {
 		log.WithFields(logFields).WithFields(log.Fields{"err": err}).Error("Error in executing query to get dashboard cache results")
 		return http.StatusNotFound, dashQueryResult

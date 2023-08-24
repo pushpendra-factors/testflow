@@ -723,9 +723,10 @@ const GlobalFilterSelect = ({
           >
             <Button
               className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
-              type='link'
+              type={viewMode ? 'default': 'link'}
               onClick={() => setValuesSelectionOpen(!valuesSelectionOpen)}
-              disabled={viewMode}
+              // disabled={viewMode}
+              style={{color:`${viewMode && '#00000040'}`}}
             >
               {valuesState && valuesState.length
                 ? valuesState

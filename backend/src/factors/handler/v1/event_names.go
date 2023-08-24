@@ -106,9 +106,9 @@ func GetEventNamesHandler(c *gin.Context) {
 				}
 			}
 		}
-		c.JSON(http.StatusOK, gin.H{"event_names": eventsWithGroupsAfterOrdering, "display_names": displayNameEvents})
+		c.JSON(http.StatusOK, gin.H{"event_names": U.FilterEmptyKeysAndValues(projectId, eventsWithGroupsAfterOrdering), "display_names": U.FilterDisplayNameEmptyKeysAndValues(projectId, displayNameEvents)})
 	} else {
-		c.JSON(http.StatusOK, gin.H{"event_names": eventNames})
+		c.JSON(http.StatusOK, gin.H{"event_names": U.FilterEmptyKeysAndValues(projectId, eventNames)})
 	}
 }
 
@@ -231,12 +231,12 @@ func GetPropertiesByEventCategoryType(c *gin.Context) {
 		return
 	}
 	properties := make(map[string][]string)
-	if(eventCategoryType == "page_views") {
+	if eventCategoryType == "page_views" {
 		properties["categorical"] = U.PAGE_VIEWS_STANDARD_PROPERTIES_CATEGORICAL
-		properties["numerical"]= U.PAGE_VIEWS_STANDARD_PROPERTIES_NUMERICAL
-		
-	} else if(eventCategoryType == "button_clicks"){
+		properties["numerical"] = U.PAGE_VIEWS_STANDARD_PROPERTIES_NUMERICAL
+
+	} else if eventCategoryType == "button_clicks" {
 		properties["categorical"] = U.BUTTON_CLICKS_STANDARD_PROPERTIES_CATEGORICAL
 	}
-	c.JSON(http.StatusOK, gin.H{"properties": properties})
+	c.JSON(http.StatusOK, gin.H{"properties": U.FilterEmptyKeysAndValues(projectId, properties)})
 }

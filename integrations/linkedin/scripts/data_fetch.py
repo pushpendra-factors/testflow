@@ -21,8 +21,8 @@ class DataFetch:
             url = META_DATA_URL.format(ad_account, url_endpoint, start, META_COUNT)
             headers = {'Authorization': 'Bearer ' + access_token,
                     'X-Restli-Protocol-Version': PROTOCOL_VERSION, 'LinkedIn-Version': LINKEDIN_VERSION}
-            response = requests.get(url, headers=headers)
-            request_counter += 1
+            response, req_count = U.request_with_retries_and_sleep(url, headers)
+            request_counter += req_count
             if not response.ok:
                 errString = API_ERROR_FORMAT.format(
                     doc_type, 'metadata', response.status_code,
@@ -58,8 +58,8 @@ class DataFetch:
             
             headers = {'Authorization': 'Bearer ' + linkedin_setting.access_token,
                     'X-Restli-Protocol-Version': PROTOCOL_VERSION, 'LinkedIn-Version': LINKEDIN_VERSION}
-            response = requests.get(url, headers=headers)
-            request_counter += 1
+            response, req_count = U.request_with_retries_and_sleep(url, headers)
+            request_counter += req_count
             if not response.ok:
                 errString = API_ERROR_FORMAT.format(
                                 pivot, 'insights',
@@ -87,8 +87,8 @@ class DataFetch:
         map_id_to_org_data = {}
 
         for ids in batch_of_ids:
-            response = U.org_lookup(access_token, ids)
-            request_counter += 1
+            response, req_count = U.org_lookup(access_token, ids)
+            request_counter += req_count
             if not response.ok or 'results' not in response.json():
                 return ({}, request_counter, ORG_DATA_FETCH_ERROR.format(
                             response.text))
@@ -97,8 +97,8 @@ class DataFetch:
             # retry in case of failed ids
             failed_ids_for_batch = U.get_failed_ids(ids, map_id_to_org_data)
             if failed_ids_for_batch != "":
-                response = U.org_lookup(access_token, failed_ids_for_batch)
-                request_counter += 1
+                response, req_count = U.org_lookup(access_token, failed_ids_for_batch)
+                request_counter += req_count
                 if 'results' in response.json() and len(response.json()['results']) > 0:
                     map_id_to_org_data.update(response.json()['results'])
 
@@ -109,14 +109,14 @@ class DataFetch:
         url = AD_ACCOUNT_URL.format(linkedin_setting.ad_account)
         headers = {'Authorization': 'Bearer ' + linkedin_setting.access_token,
                     'X-Restli-Protocol-Version': PROTOCOL_VERSION, 'LinkedIn-Version': LINKEDIN_VERSION}
-        response = requests.get(url, headers=headers)
+        response, req_count = U.request_with_retries_and_sleep(url, headers)
         if not response.ok:
             errString = API_ERROR_FORMAT.format(
                             'ad account', 'metadata',
                             response.status_code, response.text,
                             linkedin_setting.project_id, 
                             linkedin_setting.ad_account)
-            return {'status': 'failed', 'errMsg': errString, API_REQUESTS: 0}
+            return {'status': 'failed', 'errMsg': errString, API_REQUESTS: req_count}
         metadata = response.json()
         timestamp = int(datetime.now().strftime('%Y%m%d'))
         if end_timestamp != None:
@@ -297,7 +297,7 @@ class DataFetch:
                                                 timerange_for_backfill, request_counter)
             if resp['errMsg'] != '':
                 return resp
-            request_counter += resp[API_REQUESTS]
+            request_counter = resp[API_REQUESTS]
         
         return {'status': 'success', 'errMsg': '', API_REQUESTS: request_counter}
     
@@ -379,7 +379,7 @@ class DataFetch:
             if response['errMsg'] != '':
                 log.warning(response['errMsg'])
                 return response
-            request_counter += response[API_REQUESTS]
+            request_counter = response[API_REQUESTS]
         
         return {'status': 'success', 'errMsg': '', API_REQUESTS: request_counter}
         

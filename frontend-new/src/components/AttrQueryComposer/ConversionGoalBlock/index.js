@@ -14,6 +14,7 @@ import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
 import EventFilterWrapper from 'Components/KPIComposer/EventFilterWrapper';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
+import { PropTextFormat } from 'Utils/dataFormatter';
 
 const ConversionGoalBlock = ({
   eventGoal,
@@ -22,8 +23,8 @@ const ConversionGoalBlock = ({
   eventNameOptions,
   eventNames,
   activeProject,
-  eventProperties,
-  eventUserProperties,
+  eventPropertiesV2,
+  eventUserPropertiesV2,
   group_analysis = 'users',
   KPI_config,
   KPI_config_without_derived_kpi,
@@ -46,7 +47,7 @@ const ConversionGoalBlock = ({
     } else {
       setFilterPropsforKpiGroups();
     }
-  }, [eventProperties, eventUserProperties, group_analysis]);
+  }, [eventPropertiesV2, eventUserPropertiesV2, group_analysis]);
 
   useEffect(() => {
     if (!showDerivedKPI && !KPI_config_without_derived_kpi)
@@ -59,10 +60,10 @@ const ConversionGoalBlock = ({
     }
     const assignFilterProps = Object.assign({}, filterProps);
 
-    if (eventProperties[eventGoal.label]) {
-      assignFilterProps.event = eventProperties[eventGoal.label];
+    if (eventPropertiesV2[eventGoal.label]) {
+      assignFilterProps.event = eventPropertiesV2[eventGoal.label];
     }
-    assignFilterProps.user = eventUserProperties;
+    assignFilterProps.user = eventUserPropertiesV2;
     setFilterProperties(assignFilterProps);
   };
 
@@ -435,7 +436,7 @@ const ConversionGoalBlock = ({
     groupOptions = groupOptions?.map((groupOpt) => {
       return {
         iconName: getGroupIcon(groupOpt?.icon),
-        label: _.startCase(groupOpt?.label),
+        label: PropTextFormat(groupOpt?.label),
         value: groupOpt?.label,
         extraProps: {
           category: groupOpt?.category
@@ -569,8 +570,8 @@ const ConversionGoalBlock = ({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  eventProperties: state.coreQuery.eventProperties,
-  eventUserProperties: state.coreQuery.eventUserProperties,
+  eventPropertiesV2: state.coreQuery.eventPropertiesV2,
+  eventUserPropertiesV2: state.coreQuery.eventUserPropertiesV2,
   eventNameOptions: state.coreQuery.eventOptions,
   eventNames: state.coreQuery.eventNames,
   KPI_config: state.kpi?.config,

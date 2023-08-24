@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { connect } from 'react-redux';
 import styles from './index.module.scss';
-import { SVG, Text } from 'factorsComponents';
+import { SVG } from 'factorsComponents';
 import { bindActionCreators } from 'redux';
 
 import { Button, Tooltip } from 'antd';
@@ -16,7 +16,6 @@ function GroupBlock({
   groupByState,
   setGroupBy,
   delGroupBy,
-  userProperties,
   userPropNames,
   eventPropNames,
   KPIConfigProps,
@@ -289,8 +288,6 @@ function GroupBlock({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  userProperties: state.coreQuery.userProperties,
-  eventProperties: state.coreQuery.eventProperties,
   userPropNames: state.coreQuery.userPropNames,
   eventPropNames: state.coreQuery.eventPropNames,
   groupByState: state.coreQuery.groupBy

@@ -2,6 +2,7 @@ package v1
 
 import (
 	"encoding/json"
+	C "factors/config"
 	mid "factors/middleware"
 	"factors/model/model"
 	"factors/model/store"
@@ -11,8 +12,6 @@ import (
 	"sort"
 	"strconv"
 	"time"
-
-	C "factors/config"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -42,15 +41,18 @@ func GetProfileUsersHandler(c *gin.Context) (interface{}, int, string, string, b
 	}
 
 	var payload model.TimelinePayload
+
+	decoder := json.NewDecoder(req.Body)
+	decoder.DisallowUnknownFields()
+	err = decoder.Decode(&payload)
+
 	logCtx = log.WithFields(log.Fields{
 		"projectId": projectId,
 		"payload":   payload,
 	})
-	decoder := json.NewDecoder(req.Body)
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&payload); err != nil {
+	if err != nil {
 		logCtx.Error("Json decode failed.")
-		message := fmt.Sprintf("Query failed. Invalid user source provided : %s", payload.Source)
+		message := "Query failed. Invalid payload"
 		return nil, http.StatusBadRequest, "", message, true
 	}
 
@@ -60,8 +62,15 @@ func GetProfileUsersHandler(c *gin.Context) (interface{}, int, string, string, b
 		return nil, errCode, "", errMsg, true
 	}
 
+	scoringAvailable, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_ACCOUNT_SCORING)
+	if err != nil {
+		logCtx.Error("Error fetching scoring availability status for project ID-", projectId)
+	}
+
+	showScore := getScore || C.IsScoringEnabledForAllUsers(projectId)
+
 	// Add user scores to the response if scoring is enabled
-	if getScore || C.IsScoringEnabled(projectId) {
+	if scoringAvailable && showScore {
 		// Separate anonymous and known user IDs
 		var userIdsAnonymous []string
 		var userIdsNonAnonymous []string
@@ -234,8 +243,15 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 		return "", errCode, "", errMsg, true
 	}
 
+	scoringAvailable, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_ACCOUNT_SCORING)
+	if err != nil {
+		logCtx.Error("Error fetching scoring availability status for the project")
+	}
+
+	showScore := getScore || C.IsScoringEnabledForAllUsers(projectId)
+
 	// Add account scores to the response if scoring is enabled
-	if getScore || C.IsScoringEnabled(projectId) {
+	if scoringAvailable && showScore {
 		// Retrieve scores for account IDs
 		var accountIds []string
 		for _, profile := range profileAccountsList {

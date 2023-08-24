@@ -1,0 +1,1 @@
+ALTER TABLE queries ADD COLUMN locked_for_cache_invalidation boolean default false;

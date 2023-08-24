@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { connect, ConnectedProps } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { Button, notification, Tooltip, Input, Row, Col, Tag } from 'antd';
@@ -32,7 +32,7 @@ const ExcludeIpBlock = ({
     return (
       <div>
         {chunks?.map((ipChunk, index) => {
-          if (index > 3 && !editMode) return;
+          if (index > 3 && !editMode) return null;
           return (
             <>
               <Row>
@@ -62,14 +62,18 @@ const ExcludeIpBlock = ({
     );
   };
 
+  const SaveSettings = useCallback(() => {
+    udpateProjectSettings(activeProject.id, {
+      filter_ips: filterIps?.getFilterIpPayload()
+    }).then(() => {
+      fetchProjectSettings(activeProject.id);
+    });
+  }, [activeProject?.id, filterIps]);
+
   const blockIpandSaveSettings = () => {
     const setIpResponse = filterIps?.setIp(ipToExclude);
     if (setIpResponse === true) {
-      udpateProjectSettings(activeProject.id, {
-        filter_ips: filterIps?.getFilterIpPayload()
-      }).then((res) => {
-        fetchProjectSettings(activeProject.id);
-      });
+      SaveSettings();
     } else {
       setErrorState(setIpResponse);
     }
@@ -114,21 +118,30 @@ const ExcludeIpBlock = ({
         <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 mb-2'}>
           Blocked IPs
         </Text>
-        {
+        {editMode ? (
           <Button
-            type={editMode ? 'primary' : 'default'}
+            type='primary'
             size='large'
-            icon={
-              <SVG name='edit' size='20' color={editMode ? 'white' : 'grey'} />
-            }
+            icon={<SVG name='edit' size='20' color='white' />}
             onClick={() => {
-              setEditMode(!editMode);
-              console.log(editMode);
+              setEditMode(false);
+              SaveSettings();
             }}
           >
-            {editMode ? 'Save' : 'Edit'}
+            Save
           </Button>
-        }
+        ) : (
+          <Button
+            type='default'
+            size='large'
+            icon={<SVG name='edit' size='20' color='grey' />}
+            onClick={() => {
+              setEditMode(true);
+            }}
+          >
+            Edit
+          </Button>
+        )}
       </Row>
       {editMode ? renderExcludeInput() : null}
       <Row>{renderIpList()}</Row>

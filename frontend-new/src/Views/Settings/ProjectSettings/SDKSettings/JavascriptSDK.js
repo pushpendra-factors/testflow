@@ -36,10 +36,10 @@ import ExcludeIp from '../BasicSettings/IpBlocking/excludeIp';
 
 const { TabPane } = Tabs;
 
-const ViewSetup = ({ activeProject }) => {
+const ViewSetup = ({ currentProjectSettings, activeProject }) => {
   const projectToken = activeProject.token;
-  // eslint-disable-next-line
-  const assetURL = BUILD_CONFIG.sdk_asset_url;
+  const assetURL = currentProjectSettings.sdk_asset_url;
+  const apiURL = currentProjectSettings.sdk_api_url;  
 
   return (
     <Row>
@@ -64,14 +64,14 @@ const ViewSetup = ({ activeProject }) => {
             <>
               <span style={{ color: '#2F80ED' }}>{`<script>`}</span>
               {`
-window.factors=window.factors||function(){this.q=[];var i=new CustomEvent("FACTORS_QUEUED_EVENT"),n=function(t,e){this.q.push({k:t,a:e}),window.dispatchEvent(i)};return this.track=function(t,e,i){n("track",arguments)},this.init=function(t,e,i){this.TOKEN=t,this.INIT_PARAMS=e,this.INIT_CALLBACK=i,window.dispatchEvent(new CustomEvent("FACTORS_INIT_EVENT"))},this.reset=function(){n("reset",arguments)},this.page=function(t,e){n("page",arguments)},this.updateEventProperties=function(t,e){n("updateEventProperties",arguments)},this.identify=function(t,e){n("identify",arguments)},this.addUserProperties=function(t){n("addUserProperties",arguments)},this.getUserId=function(){n("getUserId",arguments)},this.call=function(){var t={k:"",a:[]};if(arguments&&1<=arguments.length){for(var e=1;e<arguments.length;e++)t.a.push(arguments[e]);t.k=arguments[0]}this.q.push(t),window.dispatchEvent(i)},this.init("`}
+window.faitracker=window.faitracker||function(){this.q=[];var t=new CustomEvent("FAITRACKER_QUEUED_EVENT");return this.init=function(t,e,a){this.TOKEN=t,this.INIT_PARAMS=e,this.INIT_CALLBACK=a,window.dispatchEvent(new CustomEvent("FAITRACKER_INIT_EVENT"))},this.call=function(){var e={k:"",a:[]};if(arguments&&arguments.length>=1){for(var a=1;a<arguments.length;a++)e.a.push(arguments[a]);e.k=arguments[0]}this.q.push(e),window.dispatchEvent(t)},this.message=function(){window.addEventListener("message",function(t){"faitracker"===t.data.origin&&this.call("message",t.data.type,t.data.message)})},this.message(),this.init("`}
               <span style={{ color: '#EB5757' }}>{projectToken}</span>
-              {`"),this}(),function(){var t=document.createElement("script");t.type="text/javascript",t.src="${assetURL}",t.async=!0,d=document.getElementsByTagName("script")[0],d.parentNode.insertBefore(t,d)}(); 
+              {`",{host:"${apiURL}"}),this}(),function(){var t=document.createElement("script");t.type="text/javascript",t.src="${assetURL}",t.async=!0,(d=document.getElementsByTagName("script")[0]).parentNode.insertBefore(t,d)}();
 `}
               <span style={{ color: '#2F80ED' }}>{`</script>`}</span>
             </>
           }
-          pureTextCode={`<script> window.factors=window.factors||function(){this.q=[];var i=new CustomEvent("FACTORS_QUEUED_EVENT"),n=function(t,e){this.q.push({k:t,a:e}),window.dispatchEvent(i)};return this.track=function(t,e,i){n("track",arguments)},this.init=function(t,e,i){this.TOKEN=t,this.INIT_PARAMS=e,this.INIT_CALLBACK=i,window.dispatchEvent(new CustomEvent("FACTORS_INIT_EVENT"))},this.reset=function(){n("reset",arguments)},this.page=function(t,e){n("page",arguments)},this.updateEventProperties=function(t,e){n("updateEventProperties",arguments)},this.identify=function(t,e){n("identify",arguments)},this.addUserProperties=function(t){n("addUserProperties",arguments)},this.getUserId=function(){n("getUserId",arguments)},this.call=function(){var t={k:"",a:[]};if(arguments&&1<=arguments.length){for(var e=1;e<arguments.length;e++)t.a.push(arguments[e]);t.k=arguments[0]}this.q.push(t),window.dispatchEvent(i)},this.init("${projectToken}"),this}(),function(){var t=document.createElement("script");t.type="text/javascript",t.src="${assetURL}",t.async=!0,d=document.getElementsByTagName("script")[0],d.parentNode.insertBefore(t,d)}(); </script>`}
+          pureTextCode={`<script> window.faitracker=window.faitracker||function(){this.q=[];var t=new CustomEvent("FAITRACKER_QUEUED_EVENT");return this.init=function(t,e,a){this.TOKEN=t,this.INIT_PARAMS=e,this.INIT_CALLBACK=a,window.dispatchEvent(new CustomEvent("FAITRACKER_INIT_EVENT"))},this.call=function(){var e={k:"",a:[]};if(arguments&&arguments.length>=1){for(var a=1;a<arguments.length;a++)e.a.push(arguments[a]);e.k=arguments[0]}this.q.push(e),window.dispatchEvent(t)},this.message=function(){window.addEventListener("message",function(t){"faitracker"===t.data.origin&&this.call("message",t.data.type,t.data.message)})},this.message(),this.init("${projectToken}",{host:"${apiURL}"}),this}(),function(){var t=document.createElement("script");t.type="text/javascript",t.src="${assetURL}",t.async=!0,(d=document.getElementsByTagName("script")[0]).parentNode.insertBefore(t,d)}(); </script>`}
         ></CodeBlock>
       </Col>
       <Col span={24}>
@@ -91,18 +91,18 @@ window.factors=window.factors||function(){this.q=[];var i=new CustomEvent("FACTO
       </Col>
       <Col span={24}>
         <CodeBlock
-          codeContent={'factors.track("YOUR_EVENT");'}
-          pureTextCode={'factors.track("YOUR_EVENT");'}
+          codeContent={'faitracker.call("track", "YOUR_EVENT");'}
+          pureTextCode={`faitracker.call("track", "YOUR_EVENT");`}
         ></CodeBlock>
       </Col>
     </Row>
   );
 };
 
-const GTMSetup = ({ activeProject }) => {
+const GTMSetup = ({ currentProjectSettings, activeProject }) => {
   const projectToken = activeProject.token;
-  // eslint-disable-next-line
-  const assetURL = BUILD_CONFIG.sdk_asset_url;
+  const assetURL = currentProjectSettings.sdk_asset_url;
+  const apiURL = currentProjectSettings.sdk_api_url; 
 
   return (
     <Row>
@@ -117,7 +117,7 @@ const GTMSetup = ({ activeProject }) => {
           Setup 1
         </Text>
         <Text type={'paragraph'} extraClass={'m-0'}>
-          1. Sign in to
+          1. Sign in to&nbsp;
           <span className={'underline'}>
             <a href='https://tagmanager.google.com/' target='_blank'>
               Google Tag Manager
@@ -144,14 +144,14 @@ const GTMSetup = ({ activeProject }) => {
             <>
               <span style={{ color: '#2F80ED' }}>{`<script>`}</span>
               {`
-window.factors=window.factors||function(){this.q=[];var i=new CustomEvent("FACTORS_QUEUED_EVENT"),n=function(t,e){this.q.push({k:t,a:e}),window.dispatchEvent(i)};return this.track=function(t,e,i){n("track",arguments)},this.init=function(t,e,i){this.TOKEN=t,this.INIT_PARAMS=e,this.INIT_CALLBACK=i,window.dispatchEvent(new CustomEvent("FACTORS_INIT_EVENT"))},this.reset=function(){n("reset",arguments)},this.page=function(t,e){n("page",arguments)},this.updateEventProperties=function(t,e){n("updateEventProperties",arguments)},this.identify=function(t,e){n("identify",arguments)},this.addUserProperties=function(t){n("addUserProperties",arguments)},this.getUserId=function(){n("getUserId",arguments)},this.call=function(){var t={k:"",a:[]};if(arguments&&1<=arguments.length){for(var e=1;e<arguments.length;e++)t.a.push(arguments[e]);t.k=arguments[0]}this.q.push(t),window.dispatchEvent(i)},this.init("`}
+window.faitracker=window.faitracker||function(){this.q=[];var t=new CustomEvent("FAITRACKER_QUEUED_EVENT");return this.init=function(t,e,a){this.TOKEN=t,this.INIT_PARAMS=e,this.INIT_CALLBACK=a,window.dispatchEvent(new CustomEvent("FAITRACKER_INIT_EVENT"))},this.call=function(){var e={k:"",a:[]};if(arguments&&arguments.length>=1){for(var a=1;a<arguments.length;a++)e.a.push(arguments[a]);e.k=arguments[0]}this.q.push(e),window.dispatchEvent(t)},this.message=function(){window.addEventListener("message",function(t){"faitracker"===t.data.origin&&this.call("message",t.data.type,t.data.message)})},this.message(),this.init("`}
               <span style={{ color: '#EB5757' }}>{projectToken}</span>
-              {`"),this}(),function(){var t=document.createElement("script");t.type="text/javascript",t.src="${assetURL}",t.async=!0,d=document.getElementsByTagName("script")[0],d.parentNode.insertBefore(t,d)}(); 
+              {`",{host:"${apiURL}"}),this}(),function(){var t=document.createElement("script");t.type="text/javascript",t.src="${assetURL}",t.async=!0,(d=document.getElementsByTagName("script")[0]).parentNode.insertBefore(t,d)}();
 `}
               <span style={{ color: '#2F80ED' }}>{`</script>`}</span>
             </>
           }
-          pureTextCode={`<script> window.factors=window.factors||function(){this.q=[];var i=new CustomEvent("FACTORS_QUEUED_EVENT"),n=function(t,e){this.q.push({k:t,a:e}),window.dispatchEvent(i)};return this.track=function(t,e,i){n("track",arguments)},this.init=function(t,e,i){this.TOKEN=t,this.INIT_PARAMS=e,this.INIT_CALLBACK=i,window.dispatchEvent(new CustomEvent("FACTORS_INIT_EVENT"))},this.reset=function(){n("reset",arguments)},this.page=function(t,e){n("page",arguments)},this.updateEventProperties=function(t,e){n("updateEventProperties",arguments)},this.identify=function(t,e){n("identify",arguments)},this.addUserProperties=function(t){n("addUserProperties",arguments)},this.getUserId=function(){n("getUserId",arguments)},this.call=function(){var t={k:"",a:[]};if(arguments&&1<=arguments.length){for(var e=1;e<arguments.length;e++)t.a.push(arguments[e]);t.k=arguments[0]}this.q.push(t),window.dispatchEvent(i)},this.init("${projectToken}"),this}(),function(){var t=document.createElement("script");t.type="text/javascript",t.src="${assetURL}",t.async=!0,d=document.getElementsByTagName("script")[0],d.parentNode.insertBefore(t,d)}(); </script>`}
+          pureTextCode={`<script> window.faitracker=window.faitracker||function(){this.q=[];var t=new CustomEvent("FAITRACKER_QUEUED_EVENT");return this.init=function(t,e,a){this.TOKEN=t,this.INIT_PARAMS=e,this.INIT_CALLBACK=a,window.dispatchEvent(new CustomEvent("FAITRACKER_INIT_EVENT"))},this.call=function(){var e={k:"",a:[]};if(arguments&&arguments.length>=1){for(var a=1;a<arguments.length;a++)e.a.push(arguments[a]);e.k=arguments[0]}this.q.push(e),window.dispatchEvent(t)},this.message=function(){window.addEventListener("message",function(t){"faitracker"===t.data.origin&&this.call("message",t.data.type,t.data.message)})},this.message(),this.init("${projectToken}",{host:"${apiURL}"}),this}(),function(){var t=document.createElement("script");t.type="text/javascript",t.src="${assetURL}",t.async=!0,(d=document.getElementsByTagName("script")[0]).parentNode.insertBefore(t,d)}(); </script>`}
         />
       </Col>
       <Col span={24}>
@@ -184,8 +184,8 @@ window.factors=window.factors||function(){this.q=[];var i=new CustomEvent("FACTO
       </Col>
       <Col span={24}>
         <CodeBlock
-          codeContent={'factors.track("YOUR_EVENT");'}
-          pureTextCode={`factors.track("YOUR_EVENT");`}
+          codeContent={'faitracker.call("track", "YOUR_EVENT");'}
+          pureTextCode={`faitracker.call("track", "YOUR_EVENT");`}
         ></CodeBlock>
       </Col>
     </Row>
@@ -835,7 +835,7 @@ const VerifySdkCheck = ({
                   color={'grey-2'}
                   extraClass={'m-0 ml-2 inline'}
                 >
-                  SDK have successfully verified
+                  SDK verified successfully
                 </Text>
               </Col>
               <Col>

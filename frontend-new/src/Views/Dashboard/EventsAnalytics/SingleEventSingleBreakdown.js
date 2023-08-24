@@ -38,6 +38,7 @@ function SingleEventSingleBreakdown({
   section
 }) {
   const [visibleProperties, setVisibleProperties] = useState([]);
+  const [dateWiseTotals, setDateWiseTotals] = useState([]);
   const [visibleSeriesData, setVisibleSeriesData] = useState([]);
   const [sorter, setSorter] = useState(defaultSortProp({ breakdown }));
   const [dateSorter, setDateSorter] = useState(defaultSortProp({ breakdown }));
@@ -55,7 +56,11 @@ function SingleEventSingleBreakdown({
 
   useEffect(() => {
     const aggData = formatData(resultState.data);
-    const { categories: cats, data: d } = isSeriesChart(chartType)
+    const {
+      categories: cats,
+      data: d,
+      dateWiseTotals: dwt
+    } = isSeriesChart(chartType)
       ? formatDataInSeriesFormat(
           resultState.data,
           aggData,
@@ -65,6 +70,7 @@ function SingleEventSingleBreakdown({
     setAggregateData(aggData);
     setCategories(cats);
     setData(d);
+    setDateWiseTotals(dwt);
   }, [resultState.data, durationObj.frequency, chartType]);
 
   useEffect(() => {
@@ -155,6 +161,7 @@ function SingleEventSingleBreakdown({
         legendsPosition='top'
         cardSize={unit.cardSize}
         chartId={`bar-${unit.id}`}
+        dateWiseTotals={dateWiseTotals}
       />
     );
   } else if (chartType === CHART_TYPE_LINECHART) {

@@ -79,7 +79,7 @@ export const TimelineHoverPropDisplayNames = {
   $hubspot_form_submission_timestamp: 'Form Submit Timestamp'
 };
 
-export const displayFilterOpts = {
+export const GroupDisplayNames = {
   All: 'All Accounts',
   $hubspot_company: 'Hubspot Companies',
   $salesforce_account: 'Salesforce Accounts',
@@ -88,130 +88,54 @@ export const displayFilterOpts = {
   $g2: 'G2 Engagements'
 };
 
+export const formatReqPayload = (payload, segment) => {
+  const req = {
+    query: {
+      grpa: segment.query ? segment.query.grpa : '',
+      source: payload.source,
+      ty: segment.query ? segment.query.ty : '',
+      ec: segment.query ? segment.query.ec : '',
+      ewp: segment.query ? segment.query.ewp || [] : [],
+      gup: [
+        ...payload.filters,
+        ...(segment.query ? segment.query.gup || [] : [])
+      ],
+      table_props: segment.query ? segment.query.table_props || [] : []
+    },
+    search_filter: [...(payload.search_filter || [])]
+  };
+
+  return req;
+};
+
+const getEntityName = (source, entity) => {
+  if (source === 'accounts') {
+    return entity === 'user' ? 'user_group' : 'user_g';
+  } else {
+    return entity === 'user' ? 'user_group' : 'user_g';
+  }
+};
+
 export const formatFiltersForPayload = (filters = [], source = 'users') => {
   const filterProps = [];
-  filters.forEach((fil) => {
-    if (Array.isArray(fil.values)) {
-      fil.values.forEach((val, index) => {
-        filterProps.push({
-          en:
-            source === 'accounts'
-              ? fil.props[2] === 'user'
-                ? 'user_group'
-                : 'user_g'
-              : 'user_g',
-          lop: !index ? 'AND' : 'OR',
-          op: operatorMap[fil.operator],
-          pr: fil.props[0],
-          ty: fil.props[1],
-          va: fil.props[1] === 'datetime' ? val : val
-        });
-      });
-    } else {
+  filters.forEach((filter) => {
+    const { values, props, operator } = filter;
+    const vals = Array.isArray(values) ? filter.values : [filter.values];
+
+    vals.forEach((val, index) => {
       filterProps.push({
-        en:
-          source === 'account'
-            ? fil.props[2] === 'user'
-              ? 'user_group'
-              : 'user_g'
-            : 'user_g',
-        lop: 'AND',
-        op: operatorMap[fil.operator],
-        pr: fil.props[0],
-        ty: fil.props[1],
-        va: fil.props[1] === 'datetime' ? fil.values : fil.values
+        en: getEntityName(source, props[3]),
+        lop: index === 0 ? 'AND' : 'OR',
+        op: operatorMap[operator],
+        grpn: props[0],
+        pr: props[1],
+        ty: props[2],
+        va: val
       });
-    }
+    });
   });
+
   return filterProps;
-};
-
-export const formatEventsFromSegment = (ewp) => {
-  const events = ewp?.map((e) => {
-    const filters = [];
-    let ref = -1;
-    let lastProp = '';
-    let lastOp = '';
-    e.pr.forEach((pr) => {
-      if (pr.lop === 'AND') {
-        ref += 1;
-        filters.push({
-          operator:
-            pr.ty === 'datetime'
-              ? reverseDateOperatorMap[pr.op]
-              : reverseOperatorMap[pr.op],
-          props: [pr.pr, pr.ty, pr.en],
-          values: [pr.va],
-          ref
-        });
-        lastProp = pr.pr;
-        lastOp = pr.op;
-      } else if (lastProp === pr.pr && lastOp === pr.op) {
-        filters[filters.length - 1].values.push(pr.va);
-      } else {
-        filters.push({
-          operator:
-            pr.ty === 'datetime'
-              ? reverseDateOperatorMap[pr.op]
-              : reverseOperatorMap[pr.op],
-          props: [pr.pr, pr.ty, pr.en],
-          values: [pr.va],
-          ref
-        });
-        lastProp = pr.pr;
-        lastOp = pr.op;
-      }
-    });
-    return {
-      alias: e.an,
-      label: e.na,
-      group: e.grpa,
-      filters,
-      key: generateRandomKey()
-    };
-  });
-  return events;
-};
-
-export const formatPayloadForFilters = (gp) => {
-  const globalFilters = [];
-
-  if (gp && Array.isArray(gp)) {
-    let ref = -1;
-    let lastProp = '';
-    let lastOp = '';
-    gp.forEach((pr) => {
-      if (pr.lop === 'AND') {
-        ref += 1;
-        globalFilters.push({
-          operator:
-            pr.ty === 'datetime'
-              ? reverseDateOperatorMap[pr.op]
-              : reverseOperatorMap[pr.op],
-          props: [pr.pr, pr.ty, pr.en],
-          values: [pr.va],
-          ref
-        });
-        lastProp = pr.pr;
-        lastOp = pr.op;
-      } else if (lastProp === pr.pr && lastOp === pr.op) {
-        globalFilters[globalFilters.length - 1].values.push(pr.va);
-      } else {
-        globalFilters.push({
-          operator:
-            pr.ty === 'datetime'
-              ? reverseDateOperatorMap[pr.op]
-              : reverseOperatorMap[pr.op],
-          props: [pr.pr, pr.ty, pr.en],
-          values: [pr.va],
-          ref
-        });
-        lastProp = pr.pr;
-        lastOp = pr.op;
-      }
-    });
-  }
-  return globalFilters;
 };
 
 export const eventsFormattedForGranularity = (
@@ -308,7 +232,7 @@ export const propValueFormat = (searchKey, value, type) => {
 export const formatSegmentsObjToGroupSelectObj = (group, vals) => {
   const label =
     ReverseProfileMapper[group]?.users ||
-    displayFilterOpts[group] ||
+    GroupDisplayNames[group] ||
     PropTextFormat(group) ||
     'Others';
   const values = vals?.map(({ name, id, description, type, query }) => [

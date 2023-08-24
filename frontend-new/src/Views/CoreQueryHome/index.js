@@ -25,7 +25,6 @@ import MomentTz from 'Components/MomentTz';
 import {
   getStateQueryFromRequestQuery,
   getAttributionStateFromRequestQuery,
-  getCampaignStateFromRequestQuery,
   getProfileQueryFromRequestQuery,
   getKPIStateFromRequestQuery,
   DefaultDateRangeFormat
@@ -106,11 +105,11 @@ const coreQueryoptions = [
     icon: 'funnels_cq',
     desc: 'Track how users navigate across their buying journey'
   },
-  {
-    title: 'Attribution',
-    icon: 'attributions_cq',
-    desc: 'Identify the channels that contribute to conversion goals'
-  },
+  // {
+  //   title: 'Attribution',
+  //   icon: 'attributions_cq',
+  //   desc: 'Identify the channels that contribute to conversion goals'
+  // },
   {
     title: 'Profiles',
     icon: 'profiles_cq',
@@ -521,55 +520,42 @@ function CoreQuery({
         // }
         let equivalentQuery;
         if (record.query.query_group) {
-          if (record.query.cl && record.query.cl === QUERY_TYPE_CAMPAIGN) {
-            equivalentQuery = getCampaignStateFromRequestQuery(
-              record.query.query_group[0]
-            );
-            let newDateRange;
-            if (navigatedFromDashboard) {
-              newDateRange = { camp_dateRange: getDashboardDateRange() };
-            }
-            const usefulQuery = { ...equivalentQuery, ...newDateRange };
-            delete usefulQuery.queryType;
-            dispatch({ type: INITIALIZE_CAMPAIGN_STATE, payload: usefulQuery });
+          equivalentQuery = getStateQueryFromRequestQuery(
+            record.query.query_group[0]
+          );
+          updateEventFunnelsState(equivalentQuery, navigatedFromDashboard);
+          if (record.query.query_group.length === 1) {
+            dispatch({
+              type: SET_PERFORMANCE_CRITERIA,
+              payload: reverse_user_types[record.query.query_group[0].ec]
+            });
+            dispatch({
+              type: SET_SHOW_CRITERIA,
+              payload: TOTAL_USERS_CRITERIA
+            });
           } else {
-            equivalentQuery = getStateQueryFromRequestQuery(
-              record.query.query_group[0]
-            );
-            updateEventFunnelsState(equivalentQuery, navigatedFromDashboard);
-            if (record.query.query_group.length === 1) {
-              dispatch({
-                type: SET_PERFORMANCE_CRITERIA,
-                payload: reverse_user_types[record.query.query_group[0].ec]
-              });
+            dispatch({
+              type: SET_PERFORMANCE_CRITERIA,
+              payload: EACH_USER_TYPE
+            });
+            if (record.query.query_group.length === 2) {
               dispatch({
                 type: SET_SHOW_CRITERIA,
-                payload: TOTAL_USERS_CRITERIA
+                payload:
+                  record.query.query_group[0].ty === TYPE_EVENTS_OCCURRENCE
+                    ? TOTAL_EVENTS_CRITERIA
+                    : TOTAL_USERS_CRITERIA
+              });
+            } else if (record.query.query_group.length === 3) {
+              dispatch({
+                type: SET_SHOW_CRITERIA,
+                payload: ACTIVE_USERS_CRITERIA
               });
             } else {
               dispatch({
-                type: SET_PERFORMANCE_CRITERIA,
-                payload: EACH_USER_TYPE
+                type: SET_SHOW_CRITERIA,
+                payload: FREQUENCY_CRITERIA
               });
-              if (record.query.query_group.length === 2) {
-                dispatch({
-                  type: SET_SHOW_CRITERIA,
-                  payload:
-                    record.query.query_group[0].ty === TYPE_EVENTS_OCCURRENCE
-                      ? TOTAL_EVENTS_CRITERIA
-                      : TOTAL_USERS_CRITERIA
-                });
-              } else if (record.query.query_group.length === 3) {
-                dispatch({
-                  type: SET_SHOW_CRITERIA,
-                  payload: ACTIVE_USERS_CRITERIA
-                });
-              } else {
-                dispatch({
-                  type: SET_SHOW_CRITERIA,
-                  payload: FREQUENCY_CRITERIA
-                });
-              }
             }
           }
         } else if (record.query.cl && record.query.cl === QUERY_TYPE_KPI) {

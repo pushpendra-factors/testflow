@@ -714,42 +714,11 @@ func (store *MemSQL) UpdateProjectSettings(projectId int64, settings *model.Proj
 			err).Error("Failed updating ProjectSettings.")
 		return nil, http.StatusInternalServerError
 	}
-	err := store.UpdateAllFeatureStatusForProject(projectId, updatedProjectSetting)
-	if err != nil {
-		log.WithError(err).Error("Failed to update integration status in feature flags")
-		return nil, http.StatusInternalServerError
-	}
 	store.delAllProjectSettingsCacheForProject(projectId)
 
 	return &updatedProjectSetting, http.StatusAccepted
 }
-func (store *MemSQL) UpdateAllFeatureStatusForProject(ProjectID int64, updatedSettings model.ProjectSetting) error {
-	latestProjectSettings, status := store.GetProjectSetting(ProjectID)
-	if status != http.StatusFound {
-		return errors.New("Failed to get project settings")
-	}
-	clearbit := model.FeatureDetails{
-		Name:             model.INT_CLEARBIT,
-		IsEnabledFeature: true,
-		IsConnected:      *latestProjectSettings.IntClearBit,
-	}
-	msg, err := store.UpdateFeatureStatusForProject(ProjectID, clearbit)
-	if err != nil {
-		log.WithError(err).Error(msg)
-		return err
-	}
-	clientSixSignal := model.FeatureDetails{
-		Name:             model.INT_SIX_SIGNAL,
-		IsEnabledFeature: true,
-		IsConnected:      *latestProjectSettings.IntClientSixSignalKey,
-	}
-	msg, err = store.UpdateFeatureStatusForProject(ProjectID, clientSixSignal)
-	if err != nil {
-		log.WithError(err).Error(msg)
-		return err
-	}
-	return nil
-}
+
 func IsValidIP(filterIps model.FilterIps) bool {
 	for _, ip := range filterIps.BlockIps {
 		ip = strings.TrimSpace(ip)
@@ -1658,7 +1627,7 @@ func (store *MemSQL) GetFormFillEnabledProjectIDWithToken() (*map[int64]string, 
 	return &idWithTokenMap, http.StatusFound
 }
 
-func (store *MemSQL) GetTimelineConfigOfProject(projectID int64) (model.TimelinesConfig, error) {
+func (store *MemSQL) GetTimelinesConfig(projectID int64) (model.TimelinesConfig, error) {
 	db := C.GetServices().Db
 	var projectSettings model.ProjectSetting
 	err := db.Table("project_settings").Select("timelines_config").Where("project_id=?", projectID).Find(&projectSettings).Error
@@ -1712,12 +1681,12 @@ func (store *MemSQL) GetWeightsByProject(project_id int64) (*model.AccWeights, i
 
 	var project_settings model.ProjectSetting
 	var weights model.AccWeights
-
 	if err := db.Table("project_settings").Limit(1).Where("project_id = ?", project_id).Find(&project_settings).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			logCtx.WithError(err).Error("Unable to fetch weights from DB")
 			return nil, http.StatusNotFound
 		}
+		logCtx.WithError(err).Error("Unable to fetch weights from DB")
 		return &model.AccWeights{}, http.StatusInternalServerError
 	}
 
@@ -1726,7 +1695,7 @@ func (store *MemSQL) GetWeightsByProject(project_id int64) (*model.AccWeights, i
 	} else {
 		err := U.DecodePostgresJsonbToStructType(project_settings.Acc_score_weights, &weights)
 		if err != nil {
-			log.WithError(err).Error("Unable to decode weights")
+			logCtx.WithError(err).Error("Unable to decode weights")
 			return nil, http.StatusInternalServerError
 		}
 	}

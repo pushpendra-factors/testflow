@@ -4,9 +4,9 @@ import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
 
 export const FETCH_EVENTS = 'FETCH_EVENTS';
 export const FETCH_EVENTS_MAP = 'FETCH_EVENTS_MAP';
-export const FETCH_EVENT_PROPERTIES = 'FETCH_EVENT_PROPERTIES';
-export const FETCH_USER_PROPERTIES = 'FETCH_USER_PROPERTIES';
-export const FETCH_EVENT_USER_PROPERTIES = 'FETCH_EVENT_USER_PROPERTIES';
+export const FETCH_EVENT_PROPERTIES_V2 = 'FETCH_EVENT_PROPERTIES_V2';
+export const FETCH_USER_PROPERTIES_V2 = 'FETCH_USER_PROPERTIES_V2';
+export const FETCH_EVENT_USER_PROPERTIES_V2 = 'FETCH_EVENT_USER_PROPERTIES_V2';
 export const FETCH_GROUP_PROPERTIES = 'FETCH_GROUP_PROPERTIES';
 export const FETCH_PROPERTY_VALUES_LOADING = 'FETCH_PROPERTY_VALUES_LOADING';
 export const FETCH_PROPERTY_VALUES_LOADED = 'FETCH_PROPERTY_VALUES_LOADED';
@@ -53,12 +53,12 @@ export const setEventsDisplayAction = (displayNames, status = 'started') => {
   return { type: SET_EVENT_NAMES, payload: displayNames };
 };
 
-export const fetchUserPropertiesAction = (userProps) => {
-  return { type: FETCH_USER_PROPERTIES, payload: userProps };
+export const fetchUserPropertiesActionV2 = (userProps) => {
+  return { type: FETCH_USER_PROPERTIES_V2, payload: userProps };
 };
 
-export const fetchEventUserPropertiesAction = (eventUserProps) => {
-  return { type: FETCH_EVENT_USER_PROPERTIES, payload: eventUserProps };
+export const fetchEventUserPropertiesActionV2 = (eventUserProps) => {
+  return { type: FETCH_EVENT_USER_PROPERTIES_V2, payload: eventUserProps };
 };
 
 export const fetchGroupPropertiesAction = (groupProps, groupName) => {
@@ -77,8 +77,12 @@ export const setUserPropertiesNamesAction = (userPropsDisplayNames) => {
   return { type: SET_USER_PROP_NAME, payload: userPropsDisplayNames };
 };
 
-export const fetchEventPropertiesAction = (eventProps, name) => {
-  return { type: FETCH_EVENT_PROPERTIES, payload: eventProps, eventName: name };
+export const fetchEventPropertiesActionV2 = (eventProps, name) => {
+  return {
+    type: FETCH_EVENT_PROPERTIES_V2,
+    payload: eventProps,
+    eventName: name
+  };
 };
 
 export const setEventPropertiesNamesAction = (eventPropDisplayNames) => {

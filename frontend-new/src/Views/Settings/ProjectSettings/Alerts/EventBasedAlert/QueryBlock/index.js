@@ -31,8 +31,8 @@ function QueryBlock({
   groupBy,
   setGroupBy,
   delGroupBy,
-  eventUserProperties,
-  eventProperties,
+  eventUserPropertiesV2,
+  eventPropertiesV2,
   groupProperties,
   getGroupProperties,
   groupAnalysis,
@@ -62,12 +62,12 @@ function QueryBlock({
     } else {
       const groupOpts = eventOptions?.filter((item) => {
         const [groupDisplayName] =
-          availableGroups.find((group) => group[1] === groupAnalysis) || [];
+          availableGroups?.find((group) => group[1] === groupAnalysis) || [];
         return item.label === groupDisplayName;
       });
-      const groupNamesList = availableGroups.map((item) => item[0]);
+      const groupNamesList = availableGroups?.map((item) => item[0]);
       const userOpts = eventOptions?.filter(
-        (item) => !groupNamesList.includes(item?.label)
+        (item) => !groupNamesList?.includes(item?.label)
       );
       showOpts = groupOpts.concat(userOpts);
     }
@@ -115,14 +115,14 @@ function QueryBlock({
     if (!event || event === undefined) {
       return;
     }
-    if (eventGroup) {
+    if (eventGroup && !groupProperties[eventGroup]) {
       getGroupProperties(activeProject.id, eventGroup);
     }
   }, [event]);
 
   useEffect(() => {
     queries.forEach((ev) => {
-      if (!eventProperties[ev.label]) {
+      if (!eventPropertiesV2[ev.label]) {
         getEventPropertiesV2(activeProject.id, ev.label);
       }
     });
@@ -137,12 +137,12 @@ function QueryBlock({
       assignFilterProps.group = groupProperties[eventGroup];
       assignFilterProps.user = [];
     } else {
-      assignFilterProps.user = eventUserProperties;
+      assignFilterProps.user = eventUserPropertiesV2;
       assignFilterProps.group = [];
     }
-    assignFilterProps.event = eventProperties[event.label] || [];
+    assignFilterProps.event = eventPropertiesV2[event.label] || [];
     setFilterProperties(assignFilterProps);
-  }, [eventProperties, groupProperties, eventUserProperties]);
+  }, [eventPropertiesV2, groupProperties, eventUserPropertiesV2]);
 
   const triggerDropDown = () => {
     setDDVisible(true);
@@ -502,9 +502,9 @@ function QueryBlock({
 const mapStateToProps = (state) => ({
   eventOptions: state.coreQuery.eventOptions,
   activeProject: state.global.active_project,
-  eventUserProperties: state.coreQuery.eventUserProperties,
+  eventUserPropertiesV2: state.coreQuery.eventUserPropertiesV2,
   groupProperties: state.coreQuery.groupProperties,
-  eventProperties: state.coreQuery.eventProperties,
+  eventPropertiesV2: state.coreQuery.eventPropertiesV2,
   groupBy: state.coreQuery.groupBy.event,
   groupByMagic: state.coreQuery.groupBy,
   eventNames: state.coreQuery.eventNames

@@ -19,8 +19,8 @@ import QueryBlock from './QueryBlock';
 import {
   deleteGroupByForEvent,
   getGroupProperties,
-  getUserProperties,
-  getEventProperties,
+  getUserPropertiesV2,
+  getEventPropertiesV2,
   getButtonClickProperties,
   getPageViewsProperties
 } from 'Reducers/coreQuery/middleware';
@@ -30,17 +30,16 @@ import {
   fetchPathAnalysisInsights
 } from 'Reducers/pathAnalysis';
 import { useHistory } from 'react-router-dom';
-import FaDatepicker from 'Components/FaDatepicker';
 import FaSavedRangePicker from 'Components/FaSavedRangePicker';
 import { useEffect } from 'react';
 import moment from 'moment';
-import { getGlobalFilters, getGlobalFiltersfromSavedState, getExpandBy, getExpandByFromState } from './utils';
 import _ from 'lodash';
 import FaSelect from 'Components/FaSelect';
 import { fetchGroups } from 'Reducers/coreQuery/services';
 import GlobalFilter from 'Components/GlobalFilter';
 import EventFilter from './EventFilter';
 import ExpandBy from './ExpandBy';
+import { formatBreakdownsForQuery, formatFiltersForQuery, processBreakdownsFromQuery, processFiltersFromQuery } from 'Views/CoreQuery/utils';
 
 const QueryBuilder = ({
   queryOptions = {},
@@ -52,11 +51,11 @@ const QueryBuilder = ({
   activeQuery,
   groupOpts,
   getGroupProperties,
-  getUserProperties,
+  getUserPropertiesV2,
   eventOptions,
   savedQuery,
   fetchPathAnalysisInsights,
-  getEventProperties,
+  getEventPropertiesV2,
   getButtonClickProperties,
   getPageViewsProperties
 }) => {
@@ -81,22 +80,14 @@ const QueryBuilder = ({
 
   useEffect(() => {
     fetchGroups(activeProject?.id);
-    getEventProperties(activeProject?.id, '$session'); //pre-fetching event-propeties for $session
-    getButtonClickProperties(activeProject?.id)
-    getPageViewsProperties(activeProject?.id)
+    getEventPropertiesV2(activeProject?.id, '$session'); //pre-fetching event-propeties for $session
+    getButtonClickProperties(activeProject?.id);
+    getPageViewsProperties(activeProject?.id);
   }, [activeProject?.id]);
-
-  // useEffect(() => {
-  //   console.log("exclude events triggered", excludeEvents)
-  //   if(excludeEvents != activeQuery?.exclude_events){
-  //     setConsiderEventArr([]);
-  //     setMultipleQueries([]);
-  //   }
-  // }, [excludeEvents]);
 
   useEffect(() => {
     if (groupCategory === 'users') {
-      getUserProperties(activeProject?.id);
+      getUserPropertiesV2(activeProject?.id);
     } else {
       getGroupProperties(activeProject?.id, groupCategory);
     }
@@ -120,7 +111,7 @@ const QueryBuilder = ({
         ...Arr[0],
         filters: _, // removing filters key
         filter: !_.isEmpty(Arr[0]?.filters)
-          ? getGlobalFilters(Arr[0]?.filters)
+          ? formatFiltersForQuery(Arr[0]?.filters)
           : null
       };
       return query;
@@ -128,48 +119,47 @@ const QueryBuilder = ({
   };
 
   const separateEventsArr = () => {
-    let Arr = considerEventArr.filter(item => item.type == "eventOnly")
+    let Arr = considerEventArr.filter(item => item.type === "eventOnly")
     let payload = Arr.map(item => {
       return {
         alias: item.value?.split(",")[1],
         label: item.value?.split(",")[0],
         group: item.value?.split(",")[2],
-        filter: item?.filter ? getGlobalFilters(item?.filter) : null,
-        expand_property: item?.expand_property ? getExpandBy(item?.expand_property) : null
+        filter: item?.filter ? formatFiltersForQuery(item?.filter) : null,
+        expand_property: item?.expand_property ? formatBreakdownsForQuery(item?.expand_property) : null
       }
     })
     return payload
   }
   const separateGroupArr = () => {
-    let Arr = considerEventArr.filter(item => item.type == "eventType")
+    let Arr = considerEventArr.filter(item => item.type === "eventType")
     let payload = Arr.map(item => {
       return {
-        alias: "",
+        alias: '',
         label: item.value,
-        filter: item?.filter ? getGlobalFilters(item?.filter) : null,
-        expand_property: item?.expand_property ? getExpandBy(item?.expand_property) : null
+        filter: item?.filter ? formatFiltersForQuery(item?.filter) : null,
+        expand_property: item?.expand_property ? formatBreakdownsForQuery(item?.expand_property) : null
       }
     })
     return payload
   }
 
-
   const buildPathAnalysisQuery = (data) => {
     setLoading(true);
     let payload = {
-      "query": {
+      query: {
         title: data?.title,
         event_type: pathCondition,
         group: groupCategory,
         event: transformIndividualFilter(singleQueries),
         steps: Number(pathStepCount),
-        include_events: excludeEvents == 'false' ? separateEventsArr() : null,
-        exclude_events: excludeEvents == 'true' ? multipleQueries : null,
+        include_events: excludeEvents === 'false' ? separateEventsArr() : null,
+        exclude_events: excludeEvents === 'true' ? multipleQueries : null,
         include_group: separateGroupArr(),
         starttimestamp: moment(selectedDateRange.startDate).unix(),
         endtimestamp: moment(selectedDateRange.endDate).unix(),
         avoid_repeated_events: repetativeStep,
-        filter: globalFilters ? getGlobalFilters(globalFilters) : null
+        filter: globalFilters ? formatFiltersForQuery(globalFilters) : null
       },
       referenceid: activeQuery ? activeQuery?.referenceid : ''
     };
@@ -177,7 +167,9 @@ const QueryBuilder = ({
       .then(() => {
         fetchSavedPathAnalysis(activeProject?.id);
         setLoading(false);
-        history.push('/path-analysis');
+        if (!activeQuery) {
+          history.push('/path-analysis')
+        };
         message.success('Report saved!');
       })
       .catch((err) => {
@@ -190,8 +182,6 @@ const QueryBuilder = ({
   useEffect(() => {
     let activeQueryItem = activeQuery?.query;
     if (activeQueryItem) {
-
-
       setCollapseBtn(true);
       setCollapse(true);
       setRepetativeStep(activeQueryItem?.avoid_repeated_events);
@@ -199,14 +189,13 @@ const QueryBuilder = ({
       setPathStepCount(`${activeQueryItem?.steps}`);
       setExcludeEvents(`${activeQueryItem?.include_events ? 'false' : 'true'}`);
 
-
       let includeGroupFromState = activeQueryItem?.include_group ? activeQueryItem?.include_group?.map((item) => {
         return {
           ...item,
           value: item?.label,
           type: "eventType",
-          filter: item?.filter ? getGlobalFiltersfromSavedState(item?.filter) : null,
-          expand_property: item?.expand_property ? getExpandByFromState(item?.expand_property) : null
+          filter: item?.filter ? processFiltersFromQuery(item?.filter) : null,
+          expand_property: item?.expand_property ? processBreakdownsFromQuery(item?.expand_property) : null
         }
       }) : []
       let includeEventsFromState = activeQueryItem?.include_events ? activeQueryItem?.include_events?.map((item) => {
@@ -214,8 +203,8 @@ const QueryBuilder = ({
           ...item,
           type: "eventOnly",
           value: `${item?.label},${item?.alias},${item?.group},`,
-          filter: item?.filter ? getGlobalFiltersfromSavedState(item?.filter) : null,
-          expand_property: item?.expand_property ? getExpandByFromState(item?.expand_property) : null
+          filter: item?.filter ? processFiltersFromQuery(item?.filter) : null,
+          expand_property: item?.expand_property ? processBreakdownsFromQuery(item?.expand_property) : null
         }
       }) : []
       let considerEventsFromState = [...includeGroupFromState, ...includeEventsFromState];
@@ -225,7 +214,7 @@ const QueryBuilder = ({
         ...activeQueryItem?.event,
         //adding filters key for filters to work
         filters: activeQueryItem?.event?.filter
-          ? getGlobalFiltersfromSavedState(activeQueryItem?.event?.filter)
+          ? processFiltersFromQuery(activeQueryItem?.event?.filter)
           : null
       };
       setSingleQueries([eventFromState]);
@@ -235,8 +224,8 @@ const QueryBuilder = ({
             ? activeQueryItem?.include_events
             : []
           : activeQueryItem?.exclude_events
-            ? activeQueryItem?.exclude_events
-            : []
+          ? activeQueryItem?.exclude_events
+          : []
       );
 
       let defaultDate = {
@@ -246,7 +235,7 @@ const QueryBuilder = ({
 
       setGlobalFilters(
         activeQueryItem?.filter
-          ? getGlobalFiltersfromSavedState(activeQueryItem?.filter)
+          ? processFiltersFromQuery(activeQueryItem?.filter)
           : null
       );
       setSelectedDateRange(defaultDate);
@@ -256,10 +245,13 @@ const QueryBuilder = ({
       if (savedReferences?.length > 1) {
         let savedRangesArr = savedReferences?.map((item) => {
           return {
-            startDate: item?.query?.starttimestamp, endDate: item?.query?.endtimestamp, status: item?.status, id: item?.id
-          }
-        })
-        setSavedRanges(savedRangesArr)
+            startDate: item?.query?.starttimestamp,
+            endDate: item?.query?.endtimestamp,
+            status: item?.status,
+            id: item?.id
+          };
+        });
+        setSavedRanges(savedRangesArr);
       }
     }
   }, [activeQuery]);
@@ -394,13 +386,13 @@ const QueryBuilder = ({
     let isSingleEvent = type === 'singleEvent' ? true : false;
     let filterConfig = isSingleEvent
       ? {
-        eventLimit: 1,
-        extraActions: true
-      }
+          eventLimit: 1,
+          extraActions: true
+        }
       : {
-        eventLimit: 15,
-        extraActions: false
-      };
+          eventLimit: 15,
+          extraActions: false
+        };
 
     const blockList = [];
     let queryArr = isSingleEvent ? singleQueries : multipleQueries;
@@ -486,7 +478,6 @@ const QueryBuilder = ({
   };
 
   const CustomPath = ({ item, index }) => {
-
     const [eventType, setEventType] = useState('eventOnly');
     const [eventLevelFilter, setEventLevelFilter] = useState([]);
     const [filterDD, setFilterDD] = useState(false);
@@ -494,65 +485,73 @@ const QueryBuilder = ({
     const [eventLevelExpandBy, setEventLevelExpandBy] = useState([]);
     const [eventTypeName, setEventTypeName] = useState(null);
 
-
     useEffect(() => {
       //reset filter when event type changes
       setEventLevelFilter([]);
       setEventLevelExpandBy([]);
-    }, [eventType, eventTypeName]); 
-    
-    const setValOnChange = (val) => { 
-      setEventTypeName(val)
+    }, [eventType, eventTypeName]);
+
+    const setValOnChange = (val) => {
+      setEventTypeName(val);
       let mainArr = considerEventArr;
       mainArr[index] = {
         ...mainArr[index],
         type: mainArr[index]?.type ? mainArr[index]?.type : 'eventOnly',
         value: val
-      }
-      setConsiderEventArr(mainArr)
-    }
+      };
+      setConsiderEventArr(mainArr);
+    };
     const setOnTypeChange = (val) => {
       setEventType(val);
       let mainArr = considerEventArr;
       mainArr[index] = {
         ...mainArr[index],
-        type: val,
-      }
-      setConsiderEventArr(mainArr)
-    }
+        type: val
+      };
+      setConsiderEventArr(mainArr);
+    };
     const removeItem = (indexVal) => {
-      let newArr = considerEventArr?.filter((item, index) => index != indexVal)
+      let newArr = considerEventArr?.filter((item, index) => index != indexVal);
       setConsiderEventArr(newArr);
-    }
+    };
 
     const setFilterChange = (val) => {
-      setEventLevelFilter(val)
+      setEventLevelFilter(val);
       let mainArr = considerEventArr;
       mainArr[index] = {
         ...mainArr[index],
         filter: val
-      }
-      setConsiderEventArr(mainArr)
-    }
+      };
+      setConsiderEventArr(mainArr);
+    };
 
     const setExpandByChange = (val) => {
-      setEventLevelExpandBy(val)
+      setEventLevelExpandBy(val);
       let mainArr = considerEventArr;
       mainArr[index] = {
         ...mainArr[index],
         expand_property: val
-      }
-      setConsiderEventArr(mainArr)
-    }
+      };
+      setConsiderEventArr(mainArr);
+    };
 
     const DDMenuItems = (eventType) => {
       return (
         <Menu>
-          {eventType != 'eventOnly' &&
-            <Menu.Item key='0' disabled={eventLevelFilter?.length >= 1} onClick={() => setFilterDD(true)}>
+          {eventType != 'eventOnly' && (
+            <Menu.Item
+              key='0'
+              disabled={eventLevelFilter?.length >= 1}
+              onClick={() => setFilterDD(true)}
+            >
               <a disabled={eventLevelFilter?.length >= 1}> Add Filter</a>
-            </Menu.Item>}
-          <Menu.Item key='1' disabled={eventLevelExpandBy?.length >= 1} onClick={() => setExpandByDD([true])}>
+            </Menu.Item>
+          )}
+          <Menu.Item
+            key='1'
+            disabled={eventLevelExpandBy?.length >= 1}
+            onClick={() => setExpandByDD([true])}
+          >
             <a disabled={eventLevelExpandBy?.length >= 1}>Expand by property</a>
           </Menu.Item>
         </Menu>
@@ -562,34 +561,35 @@ const QueryBuilder = ({
     const DDEventTypes = [
       {
         value: 'Page Views',
-        label: 'Page Views',
+        label: 'Page Views'
       },
       {
         value: 'CRM Events',
-        label: 'CRM Events',
+        label: 'CRM Events'
       },
       {
         value: 'Button Clicks',
-        label: 'Button Clicks',
+        label: 'Button Clicks'
       },
       {
         value: 'Sessions',
-        label: 'Sessions',
-      },
-    ]
-
+        label: 'Sessions'
+      }
+    ];
 
     let DDValues = eventOptions.map((item) => {
       let optionsVal = item?.values.map((val) => {
-        return { label: val[0], value: `${val[1]},${val[0]},${item?.label}` }
-      })
+        return { label: val[0], value: `${val[1]},${val[0]},${item?.label}` };
+      });
       return {
         label: item?.label,
         options: optionsVal
-      }
+      };
     });
 
-    let typeCheck = considerEventArr[index]?.type ? considerEventArr[index]?.type : 'eventOnly';
+    let typeCheck = considerEventArr[index]?.type
+      ? considerEventArr[index]?.type
+      : 'eventOnly';
     return (
       <div className='flex flex-col'>
         <div className='flex items-center mt-2'>
@@ -602,12 +602,12 @@ const QueryBuilder = ({
               onChange={(val) => setOnTypeChange(val)}
               options={[
                 { value: 'eventOnly', label: 'If the event equals' },
-                { value: 'eventType', label: 'If the event is of type' },
+                { value: 'eventType', label: 'If the event is of type' }
               ]}
             />
           </div>
           <div className='ml-2'>
-            {typeCheck == 'eventOnly' ?
+            {typeCheck === 'eventOnly' ? (
               <Select
                 showSearch
                 style={{ minWidth: 285 }}
@@ -617,8 +617,9 @@ const QueryBuilder = ({
                 allowClear={true}
                 // defaultActiveFirstOption={true}
                 onChange={(val) => setValOnChange(val)}
-                defaultValue={considerEventArr[index]?.value?.split(",")[1]}
-              /> :
+                defaultValue={considerEventArr[index]?.value?.split(',')[1]}
+              />
+            ) : (
               <Select
                 style={{ minWidth: 245 }}
                 options={DDEventTypes}
@@ -628,23 +629,25 @@ const QueryBuilder = ({
                 onChange={(val) => setValOnChange(val)}
                 defaultValue={considerEventArr[index]?.value}
               />
-            }
+            )}
           </div>
           <div className='ml-2'>
-            <Dropdown overlay={() => DDMenuItems(eventType)} trigger={['click']} >
-              <Button type={'text'} icon={<SVG name={'Threedot'} size={16} color='gray' />} />
+            <Dropdown
+              overlay={() => DDMenuItems(eventType)}
+              trigger={['click']}
+            >
+              <Button
+                type={'text'}
+                icon={<SVG name={'Threedot'} size={16} color='gray' />}
+              />
             </Dropdown>
 
-            <Button type={'text'} icon={<SVG
-              name={'Trash'}
-              size={16}
-              color='gray'
-            />}
-              onClick={() => removeItem(index)} />
+            <Button
+              type={'text'}
+              icon={<SVG name={'Trash'} size={16} color='gray' />}
+              onClick={() => removeItem(index)}
+            />
           </div>
-
-
-
         </div>
         <EventFilter
           filters={item?.filter ? item?.filter : eventLevelFilter}
@@ -655,37 +658,40 @@ const QueryBuilder = ({
           eventTypeName={eventTypeName}
         />
 
-        <ExpandBy isDDVisible={expandByDD} setDDVisible={setExpandByDD}
-          eventLevelExpandBy={item?.expand_property ? item?.expand_property : eventLevelExpandBy} setEventLevelExpandBy={setExpandByChange}
+        <ExpandBy
+          isDDVisible={expandByDD}
+          setDDVisible={setExpandByDD}
+          eventLevelExpandBy={
+            item?.expand_property ? item?.expand_property : eventLevelExpandBy
+          }
+          setEventLevelExpandBy={setExpandByChange}
+          eventItem={considerEventArr[index]}
+          eventTypeName={eventTypeName}
         />
       </div>
-    )
-  }
-
+    );
+  };
 
   const addEventFn = () => {
     try {
-
-
-
       return (
         <div className={`mt-4`}>
           {considerEventArr?.map((item, index) => {
-            return (
-              <CustomPath item={item} index={index} />
-            )
+            return <CustomPath item={item} index={index} />;
           })}
 
-          <Button type={'text'} className={considerEventArr?.length > 0 ? 'mt-4' : ''}
-            onClick={() => setConsiderEventArr([...considerEventArr, {}])
-            }
+          <Button
+            type={'text'}
+            className={considerEventArr?.length > 0 ? 'mt-4' : ''}
+            onClick={() => setConsiderEventArr([...considerEventArr, {}])}
             icon={<SVG name='plus' />}
-          >Add New</Button>
-
+          >
+            Add New
+          </Button>
         </div>
       );
     } catch (err) {
-      console.log("error caught-->>>", err);
+      console.log('error caught-->>>', err);
     }
   };
 
@@ -717,7 +723,7 @@ const QueryBuilder = ({
               />
             </div>
 
-            {excludeEvents == 'true' ? queryList() : addEventFn()}
+            {excludeEvents === 'true' ? queryList() : addEventFn()}
           </div>
         </>
       );
@@ -850,7 +856,7 @@ const QueryBuilder = ({
           onFinishFailed={onFinishFailed}
           autoComplete='off'
           form={form}
-        > 
+        >
           <Form.Item
             name='title'
             rules={[
@@ -899,13 +905,6 @@ const QueryBuilder = ({
   };
   const footer = () => {
     try {
-      // if (queryType === QUERY_TYPE_EVENT && queries.length < 1) {
-      //   return null;
-      // }
-      // if (queryType === QUERY_TYPE_FUNNEL && queries.length < 2) {
-      //   return null;
-      // } else {
-
       const smoothScroll = (element) => {
         document.querySelector(element).scrollIntoView({
           behavior: 'smooth'
@@ -914,22 +913,23 @@ const QueryBuilder = ({
 
       const onSelectSavedRangeFn = (data) => {
         setLoading(true);
-        fetchPathAnalysisInsights(activeProject?.id, data?.id).then(() => {
-          smoothScroll('#fa-report-container');
-          setLoading(false);
-        }).catch((err) => {
-          setLoading(false);
-          console.log('path analysis saved range err->', err);
-          message.error(err.data.error);
-        });
-      }
+        fetchPathAnalysisInsights(activeProject?.id, data?.id)
+          .then(() => {
+            smoothScroll('#fa-report-container');
+            setLoading(false);
+          })
+          .catch((err) => {
+            setLoading(false);
+            console.log('path analysis saved range err->', err);
+            message.error(err.data.error);
+          });
+      };
 
       return (
         <div
           // className={ !collapse ? styles.composer_footer : styles.composer_footer_right }
           className='flex justify-between w-100 mt-6 pt-6 mb-6 border-top--thin-2'
         >
-
           <FaSavedRangePicker
             todayPicker={false}
             customPicker
@@ -951,21 +951,6 @@ const QueryBuilder = ({
             onSelectSavedRange={onSelectSavedRangeFn}
           />
 
-          {/* <FaDatepicker
-            todayPicker={false}
-            customPicker
-            presetRange
-            monthPicker
-            quarterPicker
-            placement='topRight'
-            buttonSize={'large'}
-            range={{
-              startDate: selectedDateRange.startDate,
-              endDate: selectedDateRange.endDate
-            }}
-            onSelect={setDateRange}
-          /> */}
-
           <div className='flex justify-end items-center'>
             {showCollapseBtn && (
               <Button
@@ -983,9 +968,10 @@ const QueryBuilder = ({
               size='large'
               disabled={_.isEmpty(singleQueries)}
               loading={loading}
+              // onClick={activeQuery? () => buildPathAnalysisQuery({title: activeQuery?.title}) : () => setIsModalOpen(true)}
               onClick={() => setIsModalOpen(true)}
             >
-              {`Save and Build`}
+              {activeQuery ? 'Create New Report' : 'Save and Build'}
             </Button>
           </div>
         </div>
@@ -1001,8 +987,9 @@ const QueryBuilder = ({
       <div className={'relative px-20'}>
         {
           <div
-            className={`query_card_cont mb-10 ${!collapse ? `query_card_open` : `query_card_close`
-              }`}
+            className={`query_card_cont mb-10 ${
+              !collapse ? `query_card_open` : `query_card_close`
+            }`}
           >
             {renderGroupSection()}
             {renderPathCondition()}
@@ -1044,9 +1031,9 @@ export default connect(mapStateToProps, {
   createPathPathAnalysisQuery,
   fetchGroups,
   getGroupProperties,
-  getUserProperties,
+  getUserPropertiesV2,
   fetchPathAnalysisInsights,
-  getEventProperties,
+  getEventPropertiesV2,
   getButtonClickProperties,
   getPageViewsProperties
 })(QueryBuilder);

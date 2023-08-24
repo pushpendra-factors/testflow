@@ -11,7 +11,7 @@ import {
 } from 'Reducers/factors';
 import {
   fetchEventNames,
-  getUserProperties
+  getUserPropertiesV2
 } from 'Reducers/coreQuery/middleware';
 import { connect, useSelector } from 'react-redux';
 import { fetchProjectAgents } from 'Reducers/agentActions';
@@ -22,7 +22,6 @@ import { Text, SVG, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useHistory } from 'react-router-dom';
 import {
-  fetchDemoProject,
   getHubspotContact,
   fetchProjectSettingsV1,
   fetchProjectSettings,
@@ -30,7 +29,7 @@ import {
   fetchBingAdsIntegration
 } from '../../reducers/global';
 import NewProject from '../Settings/SetupAssist/Modals/NewProject';
-import ExplainBeforeIntegration from './ExplainBeforeIntegration';
+import CommonBeforeIntegrationPage from 'Components/GenericComponents/CommonBeforeIntegrationPage';
 
 // const whiteListedAccounts = [
 //   'baliga@factors.ai',
@@ -73,8 +72,7 @@ const Factors = ({
   fetchGoalInsights,
   fetchFactorsTrackedEvents,
   fetchFactorsTrackedUserProperties,
-  getUserProperties,
-  fetchDemoProject,
+  getUserPropertiesV2,
   getHubspotContact,
   fetchProjectSettingsV1,
   fetchProjectSettings,
@@ -87,26 +85,14 @@ const Factors = ({
   const history = useHistory();
   const [loading, setLoading] = useState(true);
 
-  const [demoProjectId, setDemoProjectId] = useState(null);
   const [tabID, setTabID] = useState(1);
   const [showProjectModal, setShowProjectModal] = useState(false);
-  const { projects } = useSelector((state) => state.global);
   const integration = useSelector(
     (state) => state.global.currentProjectSettings
   );
   const integrationV1 = useSelector((state) => state.global.projectSettingsV1);
   const { bingAds, marketo } = useSelector((state) => state.global);
   const { dashboards } = useSelector((state) => state.dashboard);
-
-  useEffect(() => {
-    fetchDemoProject()
-      .then((res) => {
-        setDemoProjectId(res.data[0]);
-      })
-      .catch((err) => {
-        console.log(err.data.error);
-      });
-  }, [activeProject]);
 
   useEffect(() => {
     setTimeout(() => {
@@ -154,7 +140,7 @@ const Factors = ({
       await fetchFactorsModels(activeProject.id);
       await fetchFactorsTrackedEvents(activeProject.id);
       await fetchFactorsTrackedUserProperties(activeProject.id);
-      await getUserProperties(activeProject.id, 'events');
+      await getUserPropertiesV2(activeProject.id, 'events');
       await fetchProjectAgents(activeProject.id);
       // await fetchSavedExplainGoals(activeProject.id);
     };
@@ -274,7 +260,7 @@ const Factors = ({
     );
   }
 
-  if (isIntegrationEnabled || activeProject.id === demoProjectId) {
+  if (isIntegrationEnabled) {
     return (
       <>
         <ErrorBoundary
@@ -289,76 +275,6 @@ const Factors = ({
           }
           onError={FaErrorLog}
         >
-          {activeProject.id === demoProjectId ? (
-            <div className={'rounded-lg border-2 h-20 mx-20'}>
-              <Row justify={'space-between'} className={'m-0 p-3'}>
-                <Col span={projects.length === 1 ? 12 : 18}>
-                  <img
-                    alt='Welcome'
-                    src='assets/icons/welcome.svg'
-                    style={{ float: 'left', marginRight: '20px' }}
-                  />
-                  <Text
-                    type={'title'}
-                    level={6}
-                    weight={'bold'}
-                    extraClass={'m-0'}
-                  >
-                    Welcome! You just entered a Factors demo project
-                  </Text>
-                  {projects.length === 1 ? (
-                    <Text type={'title'} level={7} extraClass={'m-0'}>
-                      These reports have been built with a sample dataset. Use
-                      this to start exploring!
-                    </Text>
-                  ) : (
-                    <Text type={'title'} level={7} extraClass={'m-0'}>
-                      To jump back into your Factors project, click on your
-                      account card on the{' '}
-                      <span className={'font-bold'}>top right</span> of the
-                      screen.
-                    </Text>
-                  )}
-                </Col>
-                <Col className={'mr-2 mt-2'}>
-                  {projects.length === 1 ? (
-                    <Button
-                      type={'default'}
-                      style={{
-                        background: 'white',
-                        border: '1px solid #E7E9ED',
-                        height: '40px'
-                      }}
-                      className={'m-0 mr-2'}
-                      onClick={() => setShowProjectModal(true)}
-                    >
-                      Set up my own Factors project
-                    </Button>
-                  ) : null}
-
-                  <Button
-                    type={'link'}
-                    style={{
-                      background: 'white',
-                      // border: '1px solid #E7E9ED',
-                      height: '40px'
-                    }}
-                    className={'m-0 mr-2'}
-                    onClick={() => handleTour()}
-                  >
-                    Take the tour{' '}
-                    <SVG
-                      name={'Arrowright'}
-                      size={16}
-                      extraClass={'ml-1'}
-                      color={'blue'}
-                    />
-                  </Button>
-                </Col>
-              </Row>
-            </div>
-          ) : null}
-
           {fetchingIngishts ? (
             <Spin size={'large'} className={'fa-page-loader'} />
           ) : (
@@ -428,7 +344,7 @@ const Factors = ({
   } else {
     return (
       <>
-        <ExplainBeforeIntegration />
+        <CommonBeforeIntegrationPage />
       </>
     );
   }
@@ -452,8 +368,7 @@ export default connect(mapStateToProps, {
   fetchGoalInsights,
   fetchFactorsModels,
   fetchEventNames,
-  getUserProperties,
-  fetchDemoProject,
+  getUserPropertiesV2,
   getHubspotContact,
   fetchProjectSettingsV1,
   fetchProjectSettings,

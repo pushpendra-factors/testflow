@@ -13,9 +13,9 @@ import (
 )
 
 // CreateQueryAndSaveToDashboard Executes the following steps:
-//	1. Create a query in db for given payload
-// 	2. Create attribution v1 dashboard, if it is not already present
-//	3. Create a dashboard unit, link it to the query and save it in the dashboard
+//  1. Create a query in db for given payload
+//  2. Create attribution v1 dashboard, if it is not already present
+//  3. Create a dashboard unit, link it to the query and save it in the dashboard
 func (store *MemSQL) CreateQueryAndSaveToDashboard(projectID int64, queryInfo *model.CreateQueryAndSaveToDashboardInfo) (*model.QueryAndDashboardUnit, int, string) {
 	queryRequest := &model.Queries{
 		Query:     *queryInfo.Query,
@@ -52,6 +52,7 @@ func (store *MemSQL) CreateQueryAndSaveToDashboard(projectID int64, queryInfo *m
 
 	dashboardUnit, errCode, errMsg := store.CreateDashboardUnit(projectID, queryInfo.CreatedBy,
 		&model.DashboardUnit{
+			ProjectID:    projectID,
 			DashboardId:  dashboard.ID,
 			Presentation: queryInfo.DashboardUnitPresentation,
 			QueryId:      query.ID,

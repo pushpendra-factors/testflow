@@ -7,19 +7,12 @@ import (
 	"factors/model/store"
 	PC "factors/pattern_client"
 	U "factors/util"
-	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
-
-	C "factors/config"
-
-	H "factors/handler/helpers"
 
 	V1 "factors/handler/v1"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -172,32 +165,6 @@ func GetProjectsHandler(c *gin.Context) {
 	}
 
 	resp := make(map[string][]model.ProjectString)
-	if C.EnableDemoReadAccess() {
-		trimmedDemoProjects := make([]model.Project, 0)
-		demoProjectStrings := C.GetConfig().DemoProjectIds
-		demoProjs := make([]int64, 0)
-		for _, demoProj := range demoProjectStrings {
-			num, _ := strconv.ParseInt(demoProj, 10, 64)
-			demoProjs = append(demoProjs, num)
-		}
-		demoProjects, _ := store.GetStore().GetProjectsByIDs(demoProjs)
-		for _, project := range demoProjects {
-			project.Token = ""
-			project.PrivateToken = ""
-			project.InteractionSettings = postgres.Jsonb{}
-			project.SalesforceTouchPoints = postgres.Jsonb{}
-			project.HubspotTouchPoints = postgres.Jsonb{}
-			project.JobsMetadata = nil
-			project.ChannelGroupRules = postgres.Jsonb{}
-			trimmedDemoProjects = append(trimmedDemoProjects, project)
-		}
-
-		for _, project := range trimmedDemoProjects {
-			if !H.IsDemoProjectInAuthorizedProjects(authorizedProjects.([]int64), fmt.Sprintf("%v", project.ID)) {
-				projects = append(projects, project)
-			}
-		}
-	}
 	for _, project := range projects {
 		resp["projects"] = append(resp["projects"], V1.MapProjectToString(project))
 	}

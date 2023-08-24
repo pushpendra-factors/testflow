@@ -47,7 +47,7 @@ import { fetchKPIConfig, fetchPageUrls } from 'Reducers/kpi';
 import {
   fetchEventNames,
   getGroupProperties,
-  getUserProperties
+  getUserPropertiesV2
 } from 'Reducers/coreQuery/middleware';
 import { fetchWeeklyIngishtsMetaData } from 'Reducers/insights';
 import { useHistory } from 'react-router-dom';
@@ -399,8 +399,7 @@ let Step2DashboardTemplateModal = ({
     dispatch(fetchPageUrls(activeProject.id));
     // dispatch(deleteQueryTest())
     fetchEventNames(activeProject.id);
-    getUserProperties(activeProject.id);
-    getGroupProperties(activeProject.id);
+    getUserPropertiesV2(activeProject.id);
     dispatch(fetchSmartPropertyRules(activeProject.id));
     fetchWeeklyIngishtsMetaData(activeProject.id);
     dispatch(fetchAttrContentGroups(activeProject.id));

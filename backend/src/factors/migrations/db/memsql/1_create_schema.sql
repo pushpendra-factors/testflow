@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS users (
     source int,
     customer_user_id_source int,
     event_aggregate json,
+    
     -- COLUMNSTORE key is sort key, can we add an incremental numerical column to the end?
     -- Initial parts of the indices are still useful when don't use the last column which is an incremental value.
     KEY (project_id, source, join_timestamp) USING CLUSTERED COLUMNSTORE,
@@ -172,6 +173,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS agents (
     slack_access_tokens JSON,
     teams_access_tokens JSON,
     last_logged_out bigint DEFAULT 0,
+    is_form_filled boolean DEFAULT false,
     SHARD KEY (uuid),
     PRIMARY KEY (uuid),
     KEY (updated_at),
@@ -467,6 +469,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS project_settings (
     sixsignal_email_list text,
     int_g2_api_key text,
     six_signal_config JSON,
+    onboarding_steps JSON,
 
     KEY (updated_at),
     SHARD KEY (project_id),
@@ -522,6 +525,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS queries (
     updated_at timestamp(6) NOT NULL,
     id_text text,
     converted boolean,
+    locked_for_cache_invalidation boolean default false,
     KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id, id),

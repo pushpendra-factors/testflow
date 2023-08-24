@@ -91,8 +91,10 @@ func (store *MemSQL) ExecuteUserKPIForAttributionV1(projectID int64, query *mode
 	if err != nil {
 		return kpiData, kpiHeaders, kpiAggFunctionType, err
 	}
-	logCtx.WithFields(log.Fields{"UserKPIAttribution": "Debug", "kpiData": kpiData,
-		"kpiKeys": kpiKeys}).Info("UserKPI-Attribution kpiData reports 3")
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"UserKPIAttribution": "Debug", "kpiData": kpiData,
+			"kpiKeys": kpiKeys}).Info("UserKPI-Attribution kpiData reports 3")
+	}
 
 	return kpiData, kpiHeaders, kpiAggFunctionType, nil
 }
@@ -106,6 +108,14 @@ func (store *MemSQL) RunUserKPIGroupQuery(projectID int64, query *model.Attribut
 
 		var duplicatedRequest model.KPIQueryGroup
 		U.DeepCopy(&query.KPI, &duplicatedRequest)
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"KPIQueryGroupDebug": duplicatedRequest,
+				"method":                                "RunUserKPIGroupQuery",
+				"projectID":                             projectID,
+				"duplicatedRequest":                     duplicatedRequest,
+				"enableOptimisedFilterOnProfileQuery":   enableOptimisedFilterOnProfileQuery,
+				"enableOptimisedFilterOnEventUserQuery": enableOptimisedFilterOnEventUserQuery}).Info("Debug before ExecuteKPIQueryGroup")
+		}
 		resultGroup, statusCode := store.ExecuteKPIQueryGroup(projectID, debugQueryKey,
 			duplicatedRequest, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 		log.WithFields(log.Fields{"ResultGroup": resultGroup, "Status": statusCode}).Info("UserKPI-Attribution result received")
@@ -115,6 +125,11 @@ func (store *MemSQL) RunUserKPIGroupQuery(projectID int64, query *model.Attribut
 				return errors.New("failed to get userKPI result for attribution query - StatusPartialContent"), nil, nil, nil
 			}
 			return errors.New("failed to get userKPI result for attribution query"), nil, nil, nil
+		}
+		if resultGroup == nil || len(resultGroup) == 0 || len(resultGroup[0].Headers) == 0 {
+			logCtx.WithFields(log.Fields{"resultGroup": resultGroup,
+				"duplicatedRequest": duplicatedRequest}).Error("empty result for KPI query")
+			return errors.New("empty result for userKPI query"), nil, nil, nil
 		}
 		for _, res := range resultGroup {
 			// Skip the datetime header and the other result is of format. ex. "headers": ["$hubspot_deal_hs_object_id", "Revenue", "Pipeline", ...],
@@ -158,6 +173,14 @@ func (store *MemSQL) RunUserKPIGroupQueryV1(projectID int64, query *model.Attrib
 			duplicatedRequest.Queries[index].From = from
 			duplicatedRequest.Queries[index].To = to
 		}
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"KPIQueryGroupDebug": duplicatedRequest,
+				"method":                                "RunUserKPIGroupQueryV1",
+				"projectID":                             projectID,
+				"duplicatedRequest":                     duplicatedRequest,
+				"enableOptimisedFilterOnProfileQuery":   enableOptimisedFilterOnProfileQuery,
+				"enableOptimisedFilterOnEventUserQuery": enableOptimisedFilterOnEventUserQuery}).Info("Debug before ExecuteKPIQueryGroup")
+		}
 		resultGroup, statusCode := store.ExecuteKPIQueryGroup(projectID, debugQueryKey,
 			duplicatedRequest, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 		logCtx.WithFields(log.Fields{"ResultGroup": resultGroup, "Status": statusCode}).Info("UserKPI-Attribution result received")
@@ -168,14 +191,23 @@ func (store *MemSQL) RunUserKPIGroupQueryV1(projectID int64, query *model.Attrib
 			}
 			return errors.New("failed to get userKPI result for attribution query"), nil, nil, nil
 		}
+		if resultGroup == nil || len(resultGroup) == 0 || len(resultGroup[0].Headers) == 0 {
+			logCtx.WithFields(log.Fields{"resultGroup": resultGroup,
+				"duplicatedRequest": duplicatedRequest}).Error("empty result for KPI query")
+			return errors.New("empty result for userKPI query"), nil, nil, nil
+		}
 		for _, res := range resultGroup {
 			// Skip the datetime header and the other result is of format. ex. "headers": ["$hubspot_deal_hs_object_id", "Revenue", "Pipeline", ...],
 			if res.Headers[0] == "datetime" {
 				kpiQueryResultWithTime = res
-				logCtx.WithFields(log.Fields{"kpiQueryResultWithTime": kpiQueryResultWithTime}).Info("UserKPI-Attribution result set")
+				if C.GetAttributionDebug() == 1 {
+					logCtx.WithFields(log.Fields{"kpiQueryResultWithTime": kpiQueryResultWithTime}).Info("UserKPI-Attribution result set")
+				}
 			} else {
 				kpiQueryResult = res
-				logCtx.WithFields(log.Fields{"kpiQueryResult": kpiQueryResult}).Info("UserKPI-Attribution result set")
+				if C.GetAttributionDebug() == 1 {
+					logCtx.WithFields(log.Fields{"kpiQueryResult": kpiQueryResult}).Info("UserKPI-Attribution result set")
+				}
 			}
 
 		}

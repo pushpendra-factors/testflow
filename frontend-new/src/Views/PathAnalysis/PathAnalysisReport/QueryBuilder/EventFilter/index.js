@@ -13,52 +13,62 @@ const GlobalFilter = ({
   filters = [],
   setGlobalFilters,
   groupName = 'users',
-  event =
-  {
-    "alias": "",
-    "label": "$session",
-    "filters": [],
-    "group": "Most Recent",
-    "key": "9EpYUyLk"
+  event = {
+    alias: '',
+    label: '$session',
+    filters: [],
+    group: 'Most Recent',
+    key: '9EpYUyLk'
   },
   filterDD,
   setFilterDD,
   eventTypeName
 }) => {
-  const { userProperties, groupProperties, eventProperties, buttonClickPropNames,pageViewPropNames } = useSelector(
-    (state) => state.coreQuery
-  );
+  const {
+    userPropertiesV2,
+    groupProperties,
+    eventPropertiesV2,
+    buttonClickPropNames,
+    pageViewPropNames
+  } = useSelector((state) => state.coreQuery);
   const activeProject = useSelector((state) => state.global.active_project);
   const [filterProps, setFilterProperties] = useState({});
 
-  const [orFilterIndex, setOrFilterIndex] = useState(-1); 
+  const [orFilterIndex, setOrFilterIndex] = useState(-1);
 
   useEffect(() => {
-    const props = {}; 
+    const props = {};
 
     if (eventTypeName == 'Sessions') {
-      props.event = eventProperties[event?.label]; 
+      props.event = eventPropertiesV2[event?.label];
     }
     if (eventTypeName == 'CRM Events') {
-      props.user = userProperties; 
+      props.user = userPropertiesV2;
     }
-    if(eventTypeName == 'Page Views'){
-      props.page_view = pageViewPropNames; 
+    if (eventTypeName == 'Page Views') {
+      props.page_view = pageViewPropNames;
     }
-    if(eventTypeName == 'Button Clicks'){
-      props.button_click = buttonClickPropNames; 
+    if (eventTypeName == 'Button Clicks') {
+      props.button_click = buttonClickPropNames;
     }
 
     // if (groupName === 'users') {
-    //   props.user = userProperties;
+    //   props.user = userPropertiesV2;
     //   props.group = [];
     // } else {
     //   props.user = [];
     //   props.group = groupProperties[groupName];
     // }
 
-    setFilterProperties(props); 
-  }, [userProperties, groupProperties, eventProperties, groupName, eventTypeName, buttonClickPropNames]);
+    setFilterProperties(props);
+  }, [
+    userPropertiesV2,
+    groupProperties,
+    eventPropertiesV2,
+    groupName,
+    eventTypeName,
+    buttonClickPropNames
+  ]);
 
   const delFilter = (index) => {
     const filtersSorted = [...filters];
@@ -97,8 +107,12 @@ const GlobalFilter = ({
         if (filtersGr.length === 1) {
           const filt = filtersGr[0];
           filtrs.push(
-            <div className={'fa--query_block--filters flex flex-row items-center'}>
-              <Text type={'title'} level={8} extraClass={`m-0 mt-2 mr-4`}>Filter by</Text>
+            <div
+              className={'fa--query_block--filters flex flex-row items-center'}
+            >
+              <Text type={'title'} level={8} extraClass={`m-0 mt-2 mr-4`}>
+                Filter by
+              </Text>
               <div key={index} className={`mt-2`}>
                 <FilterWrapper
                   event={event}
@@ -138,8 +152,12 @@ const GlobalFilter = ({
           index += 1;
         } else {
           filtrs.push(
-            <div className={'fa--query_block--filters flex flex-row items-center'}>
-              <Text type={'title'} level={8} extraClass={`m-0 mt-2 mr-4`}>Filter by</Text>
+            <div
+              className={'fa--query_block--filters flex flex-row items-center'}
+            >
+              <Text type={'title'} level={8} extraClass={`m-0 mt-2 mr-4`}>
+                Filter by
+              </Text>
               <div key={index} className={`mt-2`}>
                 <FilterWrapper
                   event={event}
@@ -178,7 +196,9 @@ const GlobalFilter = ({
     if (filterDD) {
       filtrs.push(
         <div key={filtrs.length} className={`mt-2 flex items-center`}>
-          <Text type={'title'} level={8} extraClass={`m-0 mr-4`}>Filter by</Text>
+          <Text type={'title'} level={8} extraClass={`m-0 mr-4`}>
+            Filter by
+          </Text>
           <FilterWrapper
             event={event}
             projectID={activeProject?.id}
@@ -206,8 +226,7 @@ const GlobalFilter = ({
     //     </div>
     //   );
     // }
-    return (<div className={`flex flex-col items-start ml-20`}>{filtrs}</div>
-    );
+    return <div className={`flex flex-col items-start ml-20`}>{filtrs}</div>;
   }
 };
 

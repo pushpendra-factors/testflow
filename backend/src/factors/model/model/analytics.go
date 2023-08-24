@@ -244,7 +244,61 @@ type Query struct {
 	AggregateProperty     string `json:"agPr"`
 	AggregateEntity       string `json:"agEn"`
 	AggregatePropertyType string `json:"agTy"`
-	IsLimitNotApplicable bool
+	IsLimitNotApplicable  bool
+}
+
+var IN_PROPERTIES_DEFAULT_QUERY_MAP = map[string]QueryProperty{
+	U.IN_HUBSPOT: {
+		Entity:   "user_g",
+		Type:     U.PropertyTypeCategorical,
+		Property: HSCompanyIDProperty,
+		Operator: NotEqualOpStr,
+		Value:    "$none",
+	},
+
+	U.IN_G2: {
+		Entity:   "user_g",
+		Type:     U.PropertyTypeCategorical,
+		Property: U.G2_DOMAIN,
+		Operator: NotEqualOpStr,
+		Value:    "$none",
+	},
+
+	U.VISITED_WEBSITE: {
+		Entity:   "user_g",
+		Type:     U.PropertyTypeNumerical,
+		Property: U.SP_PAGE_COUNT,
+		Operator: GreaterThanOpStr,
+		Value:    "0",
+	},
+
+	U.IN_SALESFORCE: {
+		Entity:   "user_g",
+		Type:     U.PropertyTypeCategorical,
+		Property: SFAccountIDProperty,
+		Operator: NotEqualOpStr,
+		Value:    "$none",
+	},
+
+	U.IN_LINKEDIN: {
+		Entity:   "user_g",
+		Type:     U.PropertyTypeCategorical,
+		Property: U.LI_DOMAIN,
+		Operator: NotEqualOpStr,
+		Value:    "$none",
+	},
+}
+
+var PROPERTY_TO_TABLE_COLUMN_MAP = map[string]string{
+	U.IDENTIFIED_USER_ID: U.CUSTOMER_USER_ID,
+}
+
+var USER_PROPERTY_TO_COLUMN_MAP = map[string]string{
+	U.IDENTIFIED_USER_ID: "$user_id",
+}
+var OPPOSITE_OF_OPERATOR_MAP = map[string]string{
+	NotEqualOpStr:    EqualsOpStr,
+	GreaterThanOpStr: LesserThanOrEqualOpStr,
 }
 
 func (q *Query) GetClass() string {
@@ -383,7 +437,12 @@ type QueryProperty struct {
 	// Entity: user or event.
 	Entity string `json:"en"`
 	// Type: categorical or numerical
-	Type      string `json:"ty"`
+	Type string `json:"ty"`
+
+	// currenly used only in all accounts to get the group name for the property.
+	GroupName   string `json:"grpn"`
+	GroupNameID int    `json:"-"` // internal property holds the group id from the GroupName
+
 	Property  string `json:"pr"`
 	Operator  string `json:"op"`
 	Value     string `json:"va"`
@@ -490,6 +549,10 @@ type QueryGroupByProperty struct {
 	EventName      string `json:"ena"`
 	EventNameIndex int    `json:"eni"`
 	Granularity    string `json:"grn"` // currently used only for datetime - year/month/week/day/hour
+
+	// currenly used only in all accounts to get the group name for the property.
+	GroupName   string `json:"grpn"`
+	GroupNameID int    `json:"-"` // internal property holds the group id from the GroupName
 }
 
 type QueryEventWithProperties struct {
@@ -1001,6 +1064,37 @@ func GetPropertiesGrouped(properties []QueryProperty) [][]QueryProperty {
 	return groupedProperties
 }
 
+// GetPropertiesGroupedByGroupName groups properties by their group and tells if
+// it is only OR or only AND properties
+func GetPropertiesGroupedByGroupName(properties []QueryProperty) ([][]QueryProperty, bool, bool) {
+	groupedPropertiesMap := make(map[string][]QueryProperty, 0)
+	isOnlyOR := true
+	isOnlyAND := true
+	for i := range properties {
+		property := properties[i]
+
+		if i != 0 && property.LogicalOp == "AND" {
+			isOnlyOR = false
+		}
+
+		if i != 0 && property.LogicalOp == "OR" {
+			isOnlyAND = false
+		}
+
+		if _, exist := groupedPropertiesMap[property.GroupName]; !exist {
+			groupedPropertiesMap[property.GroupName] = make([]QueryProperty, 0)
+		}
+		groupedPropertiesMap[property.GroupName] = append(groupedPropertiesMap[property.GroupName], property)
+	}
+
+	groupedProperties := make([][]QueryProperty, 0)
+	for groupName := range groupedPropertiesMap {
+		groupedProperties = append(groupedProperties, groupedPropertiesMap[groupName])
+	}
+
+	return groupedProperties, isOnlyOR, isOnlyAND
+}
+
 // CheckIfHasNoneFilter Returns if set of filters has $none as a value
 func CheckIfHasNoneFilter(properties []QueryProperty) bool {
 
@@ -1021,6 +1115,38 @@ func CheckIfHasGlobalUserFilter(properties []QueryProperty) bool {
 		}
 	}
 	return false
+}
+
+// getGroupIDsFromGlobalUserFilter returns group names for the global properties
+func getGroupIDsFromGlobalUserGroupByANDFilters(queryProperties []QueryProperty, groupByProperties []QueryGroupByProperty) map[string]int {
+	groupNameIDs := make(map[string]int)
+	for _, p := range queryProperties {
+		groupNameIDs[p.GroupName] = p.GroupNameID
+	}
+
+	for _, p := range groupByProperties {
+		groupNameIDs[p.GroupName] = p.GroupNameID
+	}
+	return groupNameIDs
+}
+
+// GetDomainsAsscocaitedGroupSourceANDColumnIDs gives the group_x_id and source for properties and breakdowns for domain association
+func GetDomainsAsscocaitedGroupSourceANDColumnIDs(globalUserProperties []QueryProperty, userGroupProps []QueryGroupByProperty) (string, string) {
+	groupNameIDs := getGroupIDsFromGlobalUserGroupByANDFilters(globalUserProperties, userGroupProps)
+	globalGroupIDColumns := ""
+	globalGroupSource := ""
+	for groupName, groupID := range groupNameIDs {
+		if globalGroupIDColumns != "" {
+			globalGroupIDColumns += " OR "
+		}
+		if globalGroupSource != "" {
+			globalGroupSource += ","
+		}
+
+		globalGroupIDColumns += fmt.Sprintf("group_users.group_%d_id IS NOT NULL", groupID)
+		globalGroupSource += fmt.Sprintf("%d", GroupUserSource[groupName])
+	}
+	return globalGroupIDColumns, globalGroupSource
 }
 
 func GetPropertyEntityFieldForFilter(entityName string) string {
@@ -1192,7 +1318,7 @@ func GetQueryUserGroupUserID(stmnt string) string {
 
 func IsValidFunnelQueryGroupName(group string) bool {
 	_, exists := AllowedGroupNames[group]
-	if exists || IsFunnelQueryGroupNameUser(group) {
+	if exists || IsFunnelQueryGroupNameUser(group) || IsQueryGroupNameAllAccounts(group) {
 		return true
 	}
 
@@ -1201,4 +1327,8 @@ func IsValidFunnelQueryGroupName(group string) bool {
 
 func IsFunnelQueryGroupNameUser(group string) bool {
 	return group == USERS
+}
+
+func IsQueryGroupNameAllAccounts(group string) bool {
+	return group == GROUP_NAME_DOMAINS
 }

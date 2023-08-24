@@ -5,8 +5,9 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"net/http"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // Not in use
@@ -42,15 +43,15 @@ func (store *MemSQL) GetFeatureStatusForProject(projectID int64, featureName str
 }
 
 // isEnabled, isConnected, error
-func (store *MemSQL) GetFeatureStatusForProjectV2(projectID int64, featureName string) (bool, bool, error) {
+func (store *MemSQL) GetFeatureStatusForProjectV2(projectID int64, featureName string) (bool, error) {
 	featureList, addOns, err := store.GetPlanDetailsAndAddonsForProject(projectID)
 	if err != nil {
 		log.WithError(err).Error("Failed to get feature status for Project ID ", projectID)
 	}
 	status := isFeatureAvailableForProject(featureList, addOns, featureName)
-	isConnected := isFeatureConnectedForProject(featureList, addOns, featureName)
-	return status, isConnected, nil
+	return status, nil
 }
+
 func (store *MemSQL) UpdateFeatureStatusForProject(projectID int64, feature model.FeatureDetails) (string, error) {
 	_, addOns, err := store.GetPlanDetailsAndAddonsForProject(projectID)
 	if err != nil {
@@ -118,21 +119,6 @@ func isFeatureAvailableForProject(featureList model.FeatureList, addOns model.Ov
 
 	return false
 }
-func isFeatureConnectedForProject(featureList model.FeatureList, addOns model.OverWrite, featureName string) bool {
-	for _, feature := range featureList {
-		if featureName == feature.Name {
-			return feature.IsConnected
-		}
-	}
-
-	for _, feature := range addOns {
-		if featureName == feature.Name {
-			return feature.IsConnected
-		}
-	}
-
-	return false
-}
 
 // not in use
 func (store *MemSQL) UpdateStatusForFeature(projectID int64, featureName string, updateValue int) (int, error) {
@@ -165,4 +151,26 @@ func (*MemSQL) CreateDefaultFeatureGatesConfigForProject(ProjectID int64) (int, 
 	}
 	return http.StatusCreated, nil
 
+}
+
+func (store *MemSQL) GetAllProjectsWithFeatureEnabled(featureName string) ([]int64, error) {
+	var enabledProjectIds []int64 = make([]int64, 0)
+
+	projectIDs, errCode := store.GetAllProjectIDs()
+	if errCode != http.StatusFound {
+		err := fmt.Errorf("failed to get all projects ids to query feature enabled flag")
+		log.WithField("err_code", err).Error(err)
+		return nil, err
+	}
+	for _, projectId := range projectIDs {
+		available, err := store.GetFeatureStatusForProjectV2(projectId, featureName)
+		if err != nil {
+			log.WithFields(log.Fields{"project_id": projectId, "feature": featureName}).WithError(err).Error("failed to get feature status for project ID ")
+			continue
+		}
+		if available {
+			enabledProjectIds = append(enabledProjectIds, projectId)
+		}
+	}
+	return enabledProjectIds, nil
 }

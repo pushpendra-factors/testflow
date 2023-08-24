@@ -8,5 +8,6 @@ RUN go build -o /go/src/factors/backend/bin/rollupcache scripts/run_rollup_sorte
 # Create stripped down version without go and source code
 FROM alpine:3.7
 RUN apk update && apk add ca-certificates && apk add curl && rm -rf /var/cache/apk/*
+ENV GOLANG_PROTOBUF_REGISTRATION_CONFLICT=ignore
 COPY --from=builder /go/src/factors/backend/bin/rollupcache /go/src/factors/backend/bin/rollupcache
 CMD ["sh","-c", "/go/src/factors/backend/bin/rollupcache --primary_datastore=${PRI_DS} --memsql_host=${MEMSQL_HOST} --db_host=${DB_HOST} --redis_host_ps=${REDIS_HOST}"]

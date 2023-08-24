@@ -15,8 +15,8 @@ from ...utils.json import JsonUtil
 # response of class methods are different.
 # eg - local_storage vs external - though we have same base class being used..
 class ExternalSystem(BaseSystem):
-    BASE_URL_POLL_ASYNC = "https://graph.facebook.com/v15.0/{}?access_token={}"
-    BASE_URL_INSIGHTS_ASYNC = "https://graph.facebook.com/v15.0/{}/insights?access_token={}"
+    BASE_URL_POLL_ASYNC = "https://graph.facebook.com/v17.0/{}?access_token={}"
+    BASE_URL_INSIGHTS_ASYNC = "https://graph.facebook.com/v17.0/{}/insights?access_token={}"
 
     def read(self):
         total_requests = 0

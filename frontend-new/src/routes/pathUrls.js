@@ -23,11 +23,9 @@ export const PathUrls = {
   ConfigurePlans: '/configure/plans',
   SettingsGeneral: '/settings/general',
   SettingsUser: '/settings/user',
-  SettingsAttribution: '/settings/attribution',
   SettingsSdk: '/settings/sdk',
   SettingsIntegration: '/settings/integration',
   SettingsSharing: '/settings/sharing',
-  SettingsInsights: '/settings/insights',
   SettingsPricing: '/settings/pricing',
   Upgrade: '/upgrade'
 };

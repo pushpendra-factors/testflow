@@ -188,7 +188,6 @@ type Configuration struct {
 	ProjectAnalyticsWhitelistedUUIds       []string
 	CustomerEnabledProjectsLastComputed    []int64
 	SkippedOtpProjectIDs                   string
-	DemoProjectIds                         []string
 	PrimaryDatastore                       string
 	// Flag for enabling only the /mql routes for secondary env testing.
 	EnableMQLAPI bool
@@ -196,7 +195,6 @@ type Configuration struct {
 	// Added as pointer to prevent accidental writes from
 	// other services while testing.
 	DisableDBWrites                                    *bool
-	EnableDemoReadAccess                               *bool
 	DisableQueryCache                                  *bool
 	AllowedCampaignEnrichmentByProjectID               string
 	UseOpportunityAssociationByProjectID               string
@@ -204,6 +202,7 @@ type Configuration struct {
 	CloudManager                                       filestore.FileManager
 	SegmentExcludedCustomerIDByProject                 map[int64]string // map[project_id]customer_user_id
 	AttributionDebug                                   int
+	AttributionCommonFlow                              string
 	AttributionDBCacheLookup                           string
 	DisableDashboardQueryDBExecution                   bool
 	AllowedHubspotGroupsByProjectIDs                   string
@@ -262,8 +261,6 @@ type Configuration struct {
 	SlackAppClientSecret                               string
 	EnableDryRunAlerts                                 bool
 	DataAvailabilityExpiry                             int
-	ClearbitEnabled                                    int
-	SixSignalV1EnabledProjectIDs                       string
 	UseSalesforceV54APIByProjectID                     string
 	EnableOptimisedFilterOnProfileQuery                bool
 	HubspotAppID                                       string
@@ -275,6 +272,7 @@ type Configuration struct {
 	BlockedIPList                                      []string
 	BlockedEmailDomainList                             []string
 	AllAccountsProjectId                               string
+	EnableNewAllAccountsByProjectID                    string
 	DBMaxAllowedPacket                                 int64
 	AllowIdentificationOverwriteUsingSourceByProjectID string
 	AllowHubspotPastEventsEnrichmentByProjectID        string
@@ -306,6 +304,7 @@ type Configuration struct {
 	StartTimestampForWeekMonth                         int64
 	CacheForLongerExpiryProjects                       string
 	CacheOnlyDashboards                                string
+	CacheOnlyDashboardUnits                            string
 	AllowedSalesforceSyncDocTypes                      string
 	CustomDateStart                                    int64
 	CustomDateEnd                                      int64
@@ -322,6 +321,8 @@ type Configuration struct {
 	DeviceServiceURL                                   string
 	EnableDeviceServiceByProjectID                     string
 	DisableOpportunityContactRolesByProjectID          string
+	ExcludeBotIPV4AddressByRange                       string
+	SlackInternalAlertWebhookUrl                       string
 }
 
 type Services struct {
@@ -396,6 +397,7 @@ const (
 	HealthcheckLinkedinGroupUserPingID                = "a8b221cd-6f14-4c9c-8ae7-cd26f585868b"
 	HeathCheckG2ETLPingID                             = "4ccbf168-5175-4e08-84e6-7a6ce58bcb08"
 	HeathCheckG2EnrichmentPingID                      = "3b240e93-e130-4ea6-b698-5d5d0ea0a83f"
+	HealthcheckAccScoringJobPingID                    = "3f93c58e-708c-413e-abc4-0e112ae07260"
 
 	// Other services ping IDs. Only reported when alert conditions are met, not periodically.
 	// Once an alert is triggered, ping manually from Healthchecks UI after fixing.
@@ -405,27 +407,33 @@ const (
 )
 
 func PingHealthCheckBasedOnStatus(status map[string]interface{}, healthcheckPingID string) bool {
+	errorMap := make(map[string]map[string]interface{})
 	isSuccess := true
 	for reason, message := range status {
 		if message == false {
-			for key, val := range status[reason[6:]].(map[string]interface{}) {
+			errorMap[reason] = make(map[string]interface{})
+			deltaStatus := make(map[string]interface{})
+			switch x := status[reason[6:]].(type) {
+			case map[string]interface{}:
+				deltaStatus = x
+			case string:
+				errorMap[reason]["error"] = x
+			}
+			for key, val := range deltaStatus {
 				if strings.Contains(key, "error") {
+					errorMap[reason][key] = val
 					if strings.HasPrefix(val.(string), "invalid end timestamp") {
 						continue
 					}
 					isSuccess = false
-					break
 				}
-			}
-			if !isSuccess {
-				break
 			}
 		}
 	}
 	if isSuccess {
 		PingHealthcheckForSuccess(healthcheckPingID, status)
 	} else {
-		PingHealthcheckForFailure(healthcheckPingID, status)
+		PingHealthcheckForFailure(healthcheckPingID, errorMap)
 	}
 	return isSuccess
 }
@@ -1048,13 +1056,6 @@ func DisableDBWrites() bool {
 		return *GetConfig().DisableDBWrites
 	}
 	return true
-}
-
-func EnableDemoReadAccess() bool {
-	if GetConfig().EnableDemoReadAccess != nil {
-		return *GetConfig().EnableDemoReadAccess
-	}
-	return false
 }
 
 // DisableMemSQLQueryCache If dashboard and query cache to be disabled. Defaults to false unless specified explicitly.
@@ -2054,6 +2055,26 @@ func GetAttributionDebug() int {
 	return configuration.AttributionDebug
 }
 
+func IsAllowedAttributionCommonFlow(projectID int64) bool {
+	if configuration.AttributionCommonFlow == "" {
+		return false
+	}
+
+	if configuration.AttributionCommonFlow == "*" {
+		return true
+	}
+
+	projectIDStr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.AttributionCommonFlow, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDStr {
+			return true
+		}
+	}
+
+	return false
+}
+
 func IsAllowedAttributionDBCacheLookup(projectID int64) bool {
 	if configuration.AttributionDBCacheLookup == "" {
 		return false
@@ -2072,10 +2093,6 @@ func IsAllowedAttributionDBCacheLookup(projectID int64) bool {
 	}
 
 	return false
-}
-
-func GetClearbitEnabled() int {
-	return configuration.ClearbitEnabled
 }
 
 func GetOtpKeyWithQueryCheckEnabled() bool {
@@ -2235,8 +2252,17 @@ func IsDomainEnabled(projectID int64) bool {
 	return false
 }
 
-func IsScoringEnabled(projectID int64) bool {
+func IsScoringEnabledForAllUsers(projectID int64) bool {
 	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableScoringByProjectID, "")
+	if allProjects || projectIDsMap[projectID] {
+		return true
+	}
+	return false
+}
+
+// IsAllAccountsEnabled - Checks if $domain is enabled for given project_id in all accounts
+func IsAllAccountsEnabled(projectID int64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableNewAllAccountsByProjectID, "")
 	if allProjects || projectIDsMap[projectID] {
 		return true
 	}
@@ -2397,16 +2423,6 @@ func IsLoggedInUserWhitelistedForProjectAnalytics(loggedInUUID string) bool {
 	return false
 }
 
-func IsDemoProject(projectId int64) bool {
-	for _, id := range configuration.DemoProjectIds {
-		projectIdString := fmt.Sprintf("%v", projectId)
-		if id == projectIdString {
-			return true
-		}
-	}
-	return false
-}
-
 func IsIngestionTimezoneEnabled(projectId int64) bool {
 	for _, id := range configuration.IngestionTimezoneEnabledProjectIDs {
 		projectIdString := fmt.Sprintf("%v", projectId)
@@ -2415,28 +2431,6 @@ func IsIngestionTimezoneEnabled(projectId int64) bool {
 		}
 	}
 	return false
-}
-
-func IsSixSignalV1Enabled(projectId int64) bool {
-
-	if configuration.SixSignalV1EnabledProjectIDs == "" {
-		return false
-	}
-
-	if configuration.SixSignalV1EnabledProjectIDs == "*" {
-		return true
-	}
-
-	projectIDstr := fmt.Sprintf("%d", projectId)
-	projectIDs := strings.Split(configuration.SixSignalV1EnabledProjectIDs, ",")
-	for i := range projectIDs {
-		if projectIDs[i] == projectIDstr {
-			return true
-		}
-	}
-
-	return false
-
 }
 
 func EnableMQLAPI() bool {
@@ -2809,6 +2803,11 @@ func IsEnabledFeatureGatesV2() bool {
 	return configuration.EnableFeatureGatesV2
 }
 
+func GetSlackWebhookUrlForInternalAlerts() string {
+	return configuration.SlackInternalAlertWebhookUrl
+}
+
+
 func EnableSixSignalGroupByProjectID(projectID int64) bool {
 	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableSixSignalGroupByProjectID, "")
 	if allProjects {
@@ -2870,6 +2869,10 @@ func IsProjectAllowedForLongerExpiry(projectId int64) bool {
 
 func IsDashboardAllowedForCaching(dashboardID int64) bool {
 	return isIDOnIDList(configuration.CacheOnlyDashboards, dashboardID)
+}
+
+func IsDashboardUnitAllowedForCaching(dashboardID int64) bool {
+	return isIDOnIDList(configuration.CacheOnlyDashboardUnits, dashboardID)
 }
 
 func IsSalesforceDocTypeEnabledForSync(docType string) bool {
@@ -2949,8 +2952,6 @@ func AllowHubspotDealsv3APIByProjectID(projectID int64) bool {
 	return allowedProjectIDs[projectID]
 }
 
-
-
 func AllowDeviceServiceByProjectID(projectID int64) bool {
 	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableDeviceServiceByProjectID, "")
 	if allProjects {
@@ -2967,4 +2968,23 @@ func DisableOpportunityContactRolesEnrichmentByProjectID(projectID int64) bool {
 	}
 
 	return allowedProjectIDs[projectID]
+}
+
+// IsExcludeBotIPV4AddressByRange exclude ipv4 address by CIDR range
+func IsExcludeBotIPV4AddressByRange(ip string) bool {
+	if GetConfig().ExcludeBotIPV4AddressByRange == "" {
+		return false
+	}
+
+	ipRanges := strings.TrimSpace(GetConfig().ExcludeBotIPV4AddressByRange)
+
+	cidrRanges := GetTokensFromStringListAsString(ipRanges)
+
+	for i := range cidrRanges {
+		if U.IsIPV4AddressInCIDRRange(cidrRanges[i], ip) {
+			return true
+		}
+	}
+
+	return false
 }

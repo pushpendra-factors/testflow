@@ -24,16 +24,13 @@ class BaseInfoLoad(BaseLoad):
             return SyncUtil.get_next_timestamps(self.input_from_timestamp, self.input_to_timestamp)
         elif self.input_from_timestamp is not None and self.input_to_timestamp is None:
             return SyncUtil.get_next_timestamps(self.input_from_timestamp, int(datetime.utcnow().strftime('%Y%m%d')))
-        elif self.is_eligible_for_backfill():
+        elif self.is_first_run():
             return SyncUtil.get_next_timestamps(0, int(datetime.utcnow().strftime('%Y%m%d')))
         else:
             return SyncUtil.get_next_timestamps(self.last_timestamp, int(datetime.utcnow().strftime('%Y%m%d')))
 
     def is_first_run(self):
-        return self.last_timestamp == 0 or self.last_timestamp < self.get_max_look_back_timestamp()
-
-    def is_eligible_for_backfill(self):
-        return self.BACKFILL_SUPPORTED and self.is_first_run()
+        return self.last_timestamp == 0
 
     def get_max_look_back_timestamp(self):
         return SyncUtil.get_max_look_back_timestamp()

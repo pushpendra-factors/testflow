@@ -472,7 +472,7 @@ const SixSignalReport = ({
       {showUpgradeNudge(
         sixSignalInfo?.usage || 0,
         sixSignalInfo?.limit || 0,
-        true
+        currentProjectSettings
       ) && (
         <div className='mb-4'>
           <RangeNudge

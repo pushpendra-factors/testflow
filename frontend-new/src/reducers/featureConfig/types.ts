@@ -6,10 +6,7 @@ export interface FeatureConfigState {
   error: boolean;
   addOns?: FeatureConfig[];
   lastRenewedOn?: string;
-  plan?: {
-    id: string;
-    name: typeof PLANS[keyof typeof PLANS];
-  };
+  plan?: Omit<Plan, 'feature_list'>;
   sixSignalInfo?: SixSignalInfo;
 }
 
@@ -17,6 +14,8 @@ export interface FeatureConfig {
   expiry: number;
   granularity: string;
   limit: number;
+  is_connected?: boolean;
+  is_enabled_feature: boolean;
   name: typeof FEATURES[keyof typeof FEATURES];
 }
 
@@ -33,10 +32,8 @@ interface updateActiveFeatures {
     activeFeatures: FeatureConfig[];
     addOns?: FeatureConfig[];
     lastRenewedOn?: string;
-    plan?: {
-      id: string;
-      name: string;
-    };
+    plan?: Omit<Plan, 'feature_list'>;
+    sixSignalInfo?: SixSignalInfo;
   };
 }
 
@@ -66,10 +63,11 @@ export interface FeatureConfigApiResponse {
 
 interface ResponseData {
   project_id: number;
-  plan: Plan;
+  plan: Omit<Plan, 'display_name'>;
   add_ons?: FeatureConfig[];
   last_renewed_on: string;
   six_signal_info: SixSignalInfo;
+  display_name?: string;
 }
 
 interface SixSignalInfo {
@@ -81,4 +79,5 @@ export interface Plan {
   id: number;
   name: string;
   feature_list?: FeatureConfig[] | null;
+  display_name?: string;
 }

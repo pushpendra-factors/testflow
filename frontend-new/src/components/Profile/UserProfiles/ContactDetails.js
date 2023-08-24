@@ -33,11 +33,17 @@ import {
 } from '../../../reducers/timelines/utils';
 import SearchCheckList from '../../SearchCheckList';
 import LeftPanePropBlock from '../MyComponents/LeftPanePropBlock';
-import { PropTextFormat } from 'Utils/dataFormatter';
+import {
+  PropTextFormat,
+  convertAndAddPropertiesToGroupSelectOptions,
+  convertGroupedPropertiesToUngrouped
+} from 'Utils/dataFormatter';
 import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
 import { useHistory, useLocation } from 'react-router-dom';
-import { getEventProperties } from 'Reducers/coreQuery/middleware';
+import { getEventPropertiesV2 } from 'Reducers/coreQuery/middleware';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import getGroupIcon from 'Utils/getGroupIcon';
+import startCase from 'lodash/startCase';
 
 function ContactDetails({
   userDetails,
@@ -46,10 +52,10 @@ function ContactDetails({
   fetchProjectSettings,
   udpateProjectSettings,
   getProfileUserDetails,
-  userProperties,
+  userPropertiesV2,
   eventNamesMap,
-  eventProperties,
-  getEventProperties
+  eventPropertiesV2,
+  getEventPropertiesV2
 }) {
   const dispatch = useDispatch();
   const history = useHistory();
@@ -103,7 +109,14 @@ function ContactDetails({
   }, [activeProject.id, userID, isAnonymous]);
 
   useEffect(() => {
-    const lsitDatetimeProperties = userProperties.filter(
+    const userPropertiesModified = [];
+    if (userPropertiesV2) {
+      convertGroupedPropertiesToUngrouped(
+        userPropertiesV2,
+        userPropertiesModified
+      );
+    }
+    const lsitDatetimeProperties = userPropertiesModified.filter(
       (item) => item[2] === 'datetime'
     );
     const userPropsWithEnableKey = formatUserPropertiesToCheckList(
@@ -111,7 +124,7 @@ function ContactDetails({
       currentProjectSettings.timelines_config?.user_config?.milestones
     );
     setCheckListMilestones(userPropsWithEnableKey);
-  }, [currentProjectSettings, userProperties]);
+  }, [currentProjectSettings, userPropertiesV2]);
 
   useEffect(() => {
     if (currentProjectSettings?.timelines_config) {
@@ -136,39 +149,33 @@ function ContactDetails({
   }, [activeProject]);
 
   const generateUserProps = () => {
-    const groupProps = [
-      { label: 'User Properties', iconName: 'user', values: [] }
-    ];
-    groupProps[0].values = userProperties;
-    return groupProps?.map((opt) => {
-      return {
-        iconName: opt?.iconName,
-        label: opt?.label,
-        values: opt?.values?.map((op) => {
-          return {
-            value: op?.[1],
-            label: op?.[0],
-            extraProps: {
-              valueType: op?.[2]
-            }
-          };
-        })
-      };
-    });
+    const filterOptsObj = {};
+    if (userPropertiesV2) {
+      convertAndAddPropertiesToGroupSelectOptions(
+        userPropertiesV2,
+        filterOptsObj,
+        'user'
+      );
+    }
+    return Object.values(filterOptsObj);
   };
 
   useEffect(() => {
     hoverEvents.forEach((event) => {
       if (
-        !eventProperties[event] &&
+        !eventPropertiesV2[event] &&
         userDetails?.data?.user_activities?.some(
           (activity) => activity?.event_name === event
         )
       ) {
-        getEventProperties(activeProject?.id, event);
+        getEventPropertiesV2(activeProject?.id, event);
       }
     });
-  }, [activeProject?.id, eventProperties, userDetails?.data?.user_activities]);
+  }, [
+    activeProject?.id,
+    eventPropertiesV2,
+    userDetails?.data?.user_activities
+  ]);
 
   useEffect(() => {
     const listActivities = addEnabledFlagToActivities(
@@ -340,9 +347,15 @@ function ContactDetails({
     const showProps =
       currentProjectSettings?.timelines_config?.user_config?.leftpane_props ||
       [];
-
+    const userPropertiesModified = [];
+    if (userPropertiesV2) {
+      convertGroupedPropertiesToUngrouped(
+        userPropertiesV2,
+        userPropertiesModified
+      );
+    }
     showProps.forEach((prop, index) => {
-      const propType = getPropType(userProperties, prop);
+      const propType = getPropType(userPropertiesModified, prop);
       const propDisplayName = userPropNames[prop]
         ? userPropNames[prop]
         : PropTextFormat(prop);
@@ -557,8 +570,8 @@ const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   currentProjectSettings: state.global.currentProjectSettings,
   userDetails: state.timelines.contactDetails,
-  userProperties: state.coreQuery.userProperties,
-  eventProperties: state.coreQuery.eventProperties,
+  userPropertiesV2: state.coreQuery.userPropertiesV2,
+  eventPropertiesV2: state.coreQuery.eventPropertiesV2,
   eventNamesMap: state.coreQuery.eventNamesMap
 });
 
@@ -568,7 +581,7 @@ const mapDispatchToProps = (dispatch) =>
       getProfileUserDetails,
       fetchProjectSettings,
       udpateProjectSettings,
-      getEventProperties
+      getEventPropertiesV2
     },
     dispatch
   );

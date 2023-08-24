@@ -54,6 +54,7 @@ func (store *MemSQL) CreateDashboardUnitForMultipleDashboards(dashboardIds []int
 	for _, dashboardId := range dashboardIds {
 		dashboardUnit, errCode, errMsg := store.CreateDashboardUnit(projectId, agentUUID,
 			&model.DashboardUnit{
+				ProjectID:    projectId,
 				DashboardId:  dashboardId,
 				Description:  unitPayload.Description,
 				Presentation: unitPayload.Presentation,
@@ -86,6 +87,7 @@ func (store *MemSQL) CreateMultipleDashboardUnits(requestPayload []model.Dashboa
 		}
 		dashboardUnit, errCode, errMsg := store.CreateDashboardUnit(projectId, agentUUID,
 			&model.DashboardUnit{
+				ProjectID:    projectId,
 				DashboardId:  dashboardId,
 				Description:  payload.Description,
 				Presentation: payload.Presentation,
@@ -277,6 +279,14 @@ func (store *MemSQL) GetDashboardUnitByDashboardID(projectId int64, dashboardId 
 	}
 
 	return dashboardUnits, http.StatusFound
+}
+
+func (store *MemSQL) GetQueryFromUnitID(projectID int64, unitID int64) (queryClass string, queryInfo *model.Queries, errMsg string) {
+	dashboardUnit, statusCode := store.GetDashboardUnitByUnitID(projectID, unitID)
+	if statusCode != http.StatusFound {
+		return "", nil, "Failed to fetch dashboard unit from unit ID"
+	}
+	return store.GetQueryAndClassFromDashboardUnit(dashboardUnit)
 }
 
 // GetDashboardUnitByUnitID To get a dashboard unit by project id and unit id.
@@ -686,6 +696,10 @@ func (store *MemSQL) DBCacheAttributionDashboardUnitsForProjects(stringProjectsI
 
 			// skip caching the dashboard if not in the list
 			if !C.IsDashboardAllowedForCaching(dashboardUnit.DashboardId) {
+				continue
+			}
+			// skip caching the dashboard unit if not in the list
+			if !C.IsDashboardUnitAllowedForCaching(dashboardUnit.ID) {
 				continue
 			}
 			queryClass, queryInfo, errMsg := store.GetQueryAndClassFromDashboardUnit(&dashboardUnit)
@@ -1176,6 +1190,10 @@ func (store *MemSQL) RunCustomQueryRangeCaching(dashboardUnit model.DashboardUni
 			Error("Failed to fetch query from query_id")
 		return
 	}
+	if queryInfo.LockedForCacheInvalidation {
+		logCtx.WithField("query_id", dashboardUnit.QueryId).Error("Didnt run caching because of lock on query.")
+		return
+	}
 
 	// Create a new baseQuery instance every time to avoid overwriting from, to values in routines.
 	baseQuery, err := model.DecodeQueryForClass(queryInfo.Query, queryClass)
@@ -1452,7 +1470,7 @@ func (store *MemSQL) CacheAttributionDashboardUnitForDateRange(cachePayload mode
 
 		channel := make(chan Result)
 		logCtx.Info("Running attribution V1 caching")
-		go store.runAttributionUnitV1(projectID, attributionQuery.Query, channel)
+		go store.runAttributionUnitV1(projectID, attributionQuery.Query, channel, dashboardUnitID)
 
 		select {
 		case response := <-channel:
@@ -1779,7 +1797,7 @@ func (store *MemSQL) WrapperForAnalyze(projectID int64, queryOriginal model.Quer
 	return store.Analyze(projectID, queryOriginal, enableFilterOpt, false) // disable dashboard caching for funnelv2
 }
 
-func (store *MemSQL) runAttributionUnitV1(projectID int64, queryOriginal *model.AttributionQueryV1, c chan Result) {
+func (store *MemSQL) runAttributionUnitV1(projectID int64, queryOriginal *model.AttributionQueryV1, c chan Result, unitId int64) {
 	attributionQueryUnitPayload := model.AttributionQueryUnitV1{
 		Class: model.QueryClassAttribution,
 		Query: queryOriginal,
@@ -1789,7 +1807,7 @@ func (store *MemSQL) runAttributionUnitV1(projectID int64, queryOriginal *model.
 	var r *model.QueryResult
 	var err error
 	var result Result
-	r, err = store.WrapperForExecuteAttributionQueryV1(projectID, queryOriginal, debugQueryKey)
+	r, err = store.WrapperForExecuteAttributionQueryV1(projectID, queryOriginal, debugQueryKey, unitId)
 	if err != nil {
 		result = Result{res: r, err: err, errMsg: "", lastComputedAt: U.TimeNowUnix(), errCode: http.StatusInternalServerError}
 	} else {
@@ -1799,10 +1817,10 @@ func (store *MemSQL) runAttributionUnitV1(projectID int64, queryOriginal *model.
 	c <- result
 }
 
-func (store *MemSQL) WrapperForExecuteAttributionQueryV1(projectID int64, queryOriginal *model.AttributionQueryV1, debugQueryKey string) (*model.QueryResult, error) {
+func (store *MemSQL) WrapperForExecuteAttributionQueryV1(projectID int64, queryOriginal *model.AttributionQueryV1, debugQueryKey string, unitId int64) (*model.QueryResult, error) {
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	return store.ExecuteAttributionQueryV1(projectID, queryOriginal, debugQueryKey,
-		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery(), unitId)
 }
 
 func (store *MemSQL) runAttributionUnit(projectID int64, queryOriginal *model.AttributionQuery, c chan Result) {

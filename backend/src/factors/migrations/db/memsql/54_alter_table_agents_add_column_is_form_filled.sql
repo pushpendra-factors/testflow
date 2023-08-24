@@ -1,0 +1,1 @@
+ALTER TABLE agents ADD COLUMN is_form_filled bool DEFAULT false;

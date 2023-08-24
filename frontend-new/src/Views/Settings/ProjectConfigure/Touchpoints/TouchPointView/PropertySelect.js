@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Button, Tooltip } from 'antd';
 import { SVG } from 'factorsComponents';
-import FaSelect from '../../../../../components/FaSelect';
 import styles from './index.module.scss';
+import FaSelect from 'Components/GenericComponents/FaSelect';
 
 export const PropertySelect = ({
   title,
@@ -12,9 +12,9 @@ export const PropertySelect = ({
 }) => {
   const [propSelectorOpen, setPropSelectorOpen] = useState(false);
 
-  const handleOptionClick = (val) => {
+  const handleOptionClick = (option) => {
     setPropSelectorOpen(false);
-    setPropValue(val);
+    setPropValue(option);
   };
   return (
     <div className={`flex flex-col relative items-center ${styles.dropdown}`}>
@@ -34,7 +34,7 @@ export const PropertySelect = ({
         <FaSelect
           allowSearch={allowSearch}
           options={renderOptions()}
-          optionClick={(val) => handleOptionClick(val)}
+          optionClickCallback={handleOptionClick}
           onClickOutside={() => setPropSelectorOpen(false)}
           extraClass={`${styles.dropdownSelect}`}
         ></FaSelect>

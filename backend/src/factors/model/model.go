@@ -37,7 +37,7 @@ type Model interface {
 	UpdateAgentIntSalesforce(uuid, refreshToken string, instanceURL string) int
 	UpdateAgentPassword(uuid, plainTextPassword string, passUpdatedAt time.Time) int
 	UpdateAgentLastLoginInfo(agentUUID string, ts time.Time) int
-	UpdateAgentInformation(agentUUID, firstName, lastName, phone string, isOnboardingFlowSeen *bool) int
+	UpdateAgentInformation(agentUUID, firstName, lastName, phone string, isOnboardingFlowSeen *bool, isFormFilled *bool) int
 	UpdateAgentVerificationDetails(agentUUID, password, firstName, lastName string, verified bool, passUpdatedAt time.Time) int
 	UpdateAgentVerificationDetailsFromAuth0(agentUUID, firstName, lastName string, verified bool, value *postgres.Jsonb) int
 	GetPrimaryAgentOfProject(projectId int64) (uuid string, errCode int)
@@ -61,8 +61,9 @@ type Model interface {
 	ExecuteAttributionQueryV0(projectID int64, query *model.AttributionQuery, debugQueryKey string,
 		enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) (*model.QueryResult, error)
 	ExecuteAttributionQueryV1(projectID int64, query *model.AttributionQueryV1, debugQueryKey string,
-		enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) (*model.QueryResult, error)
+		enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool, dashboardUnitId int64) (*model.QueryResult, error)
 	FetchCachedResultFromDataBase(reqId string, projectID, dashboardID, unitID int64, from, to int64) (int, model.DashQueryResult)
+	FetchCachedResultFromDataBaseByQueryID(reqId string, projectID, queryID, from, to int64) (int, model.DashQueryResult)
 	GetCoalesceIDFromUserIDs(userIDs []string, projectID int64, logCtx log.Entry) (map[string]model.UserInfo, []string, error)
 	PullAllUsersByCustomerUserID(projectID int64, kpiData *map[string]model.KPIInfo, logCtx log.Entry) error
 	FetchAllUsersAndCustomerUserData(projectID int64, customerUserIdList []string, logCtx log.Entry) (map[string]string, map[string][]string, error)
@@ -171,6 +172,7 @@ type Model interface {
 	GetAttributionDashboardUnitsForProjectID(projectID int64) ([]model.DashboardUnit, int)
 	GetDashboardUnits(projectID int64, agentUUID string, dashboardId int64) ([]model.DashboardUnit, int)
 	GetDashboardUnitByDashboardID(projectId int64, dashboardId int64) ([]model.DashboardUnit, int)
+	GetQueryFromUnitID(projectID int64, unitID int64) (queryClass string, queryInfo *model.Queries, errMsg string)
 	GetDashboardUnitByUnitID(projectID int64, unitID int64) (*model.DashboardUnit, int)
 	GetDashboardUnitsByProjectIDAndDashboardIDAndTypes(projectID int64, dashboardID int64, types []string) ([]model.DashboardUnit, int)
 	DeleteDashboardUnit(projectID int64, agentUUID string, dashboardId int64, id int64) int
@@ -201,6 +203,7 @@ type Model interface {
 	GetQueryClassFromQueries(query model.Queries) (queryClass, errMsg string)
 	GetQueryAndClassFromQueryIdString(queryIdString string, projectId int64) (queryClass string, queryInfo *model.Queries, errMsg string)
 	GetQueryWithQueryIdString(projectID int64, queryIDString string) (*model.Queries, int)
+	GetQueryWithDashboardUnitIdString(projectID int64, dashboardUnitId int64) (*model.Queries, int)
 
 	CacheDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload, enableFilterOpt bool) (int, string, model.CachingUnitReport)
 	CacheAttributionDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload, enableFilterOpt bool) (int, string, model.CachingUnitReport)
@@ -469,7 +472,7 @@ type Model interface {
 	GetAllExplainEnabledProjects() ([]int64, error)
 	GetAllPathAnalysisEnabledProjects() ([]int64, error)
 	GetFormFillEnabledProjectIDWithToken() (*map[int64]string, int)
-	GetTimelineConfigOfProject(projectID int64) (model.TimelinesConfig, error)
+	GetTimelinesConfig(projectID int64) (model.TimelinesConfig, error)
 	UpdateAccScoreWeights(projectId int64, weights model.AccWeights) error
 	GetSixsignalEmailListFromProjectSetting(projectId int64) (string, int)
 	AddSixsignalEmailList(projectId int64, emailIds string) int
@@ -520,6 +523,7 @@ type Model interface {
 	DeleteTemplate(templateId string) int
 	SearchTemplateWithTemplateID(templateId string) (model.DashboardTemplate, int)
 	GetAllTemplates() ([]model.DashboardTemplate, int)
+	GenerateDashboardFromTemplate(projectID int64, agentUUID string, templateID string) (*model.Dashboard, int, error)
 
 	// offline touchpoints
 	CreateOTPRule(projectId int64, rule *model.OTPRule) (*model.OTPRule, int, string)
@@ -854,16 +858,18 @@ type Model interface {
 	GetProfileUserDetailsByID(projectID int64, identity string, isAnonymous string) (*model.ContactDetails, int, string)
 	GetUserActivities(projectID int64, identity string, userId string) ([]model.UserActivity, error)
 	GetProfileAccountDetailsByID(projectID int64, id string, groupName string) (*model.AccountDetails, int, string)
-	GetAnalyzeResultForSegments(projectId int64, segment *model.Segment) ([]model.Profile, int, error)
-	GetGroupNameIDMap(projectID int64) (map[string]int, int)
 	GetAccountsAssociatedToDomain(projectID int64, id string, domainGroupId int) ([]model.User, int)
-	GetSourceStringForAccountsV2(projectID int64, source string) (string, int, []interface{}, int)
+	GetSourceStringForAccountsV2(projectID int64, source string, isAllUserProperties bool) (string, int, int)
 	AccountPropertiesForDomainsEnabledV2(projectID int64, id string, groupName string) (map[string]interface{}, bool, int)
 	AccountPropertiesForDomainsDisabledV1(projectID int64, id string) (string, map[string]interface{}, []interface{}, int)
-	AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile) ([]model.Profile, int)
+	AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile, hasUserProp bool) ([]model.Profile, int)
 	GetAccountOverview(projectID int64, id, groupName string) (model.Overview, error)
+	GetIntentTimeline(projectID int64, groupName string, id string) (model.UserTimeline, error)
+	GetMinAndMaxUpdatedAt(profileType string, whereStmt string, limitVal int, minMaxQParams []interface{}) (*model.MinMaxUpdatedAt, int, string)
 	GetUserDetailsAssociatedToDomain(projectID int64, id string) (model.AccountDetails, map[string]interface{}, int)
-	GetUsersAssociatedToDomain(projectID int64, timeAndRecordsLimit string, filterString string, userParams []interface{}) ([]model.Profile, int)
+	GetUserPropertiesForAccounts(projectID int64, source string) (string, interface{}, string)
+	GetUsersAssociatedToDomain(projectID int64, minMax *model.MinMaxUpdatedAt, groupedFilters map[string][]model.QueryProperty) ([]model.Profile, int)
+	GenerateAllAccountsQueryString(projectID int64, source string, hasUserProperty bool, isAllUserProperties bool, minMax model.MinMaxUpdatedAt, groupedFilters map[string][]model.QueryProperty, searchFilter []model.QueryProperty) (string, []interface{}, error)
 
 	// segment
 	CreateSegment(projectId int64, segment *model.SegmentPayload) (int, error)
@@ -915,7 +921,7 @@ type Model interface {
 
 	// Event Trigger Alerts
 	GetAllEventTriggerAlertsByProject(projectID int64) ([]model.EventTriggerAlertInfo, int)
-	CreateEventTriggerAlert(userID, oldID string, projectID int64, alertConfig *model.EventTriggerAlertConfig, slackTokenUser, teamTokenUser string) (*model.EventTriggerAlert, int, string)
+	CreateEventTriggerAlert(userID, oldID string, projectID int64, alertConfig *model.EventTriggerAlertConfig, slackTokenUser, teamTokenUser string, isPausedAlert bool) (*model.EventTriggerAlert, int, string)
 	DeleteEventTriggerAlert(projectID int64, id string) (int, string)
 	MatchEventTriggerAlertWithTrackPayload(projectId int64, name string, eventProps, userProps *postgres.Jsonb, UpdatedEventProps *postgres.Jsonb, isUpdate bool) (*[]model.EventTriggerAlert, *model.EventName, int)
 	UpdateEventTriggerAlertField(projectID int64, id string, field map[string]interface{}) (int, error)
@@ -933,15 +939,15 @@ type Model interface {
 	UpdateExplainV2EntityStatus(projectID int64, id string, status string, model_id uint64) (int, string)
 
 	// Feature Gates
+	GetAllProjectsWithFeatureEnabled(featureName string) ([]int64, error)
 	GetFeaturesForProject(projectID int64) (model.FeatureGate, error)
 	UpdateStatusForFeature(projectID int64, featureName string, updateValue int) (int, error)
 	GetFeatureStatusForProject(projectID int64, featureName string) (int, error)
 	CreateDefaultFeatureGatesConfigForProject(ProjectID int64) (int, error)
-	GetFeatureStatusForProjectV2(projectID int64, featureName string) (bool, bool, error)
+	GetFeatureStatusForProjectV2(projectID int64, featureName string) (bool, error)
 	GetPlanDetailsAndAddonsForProject(projectID int64) (model.FeatureList, model.OverWrite, error)
 	GetFeatureLimitForProject(projectID int64, featureName string) (int64, error)
 	UpdateFeatureStatusForProject(projectID int64, feature model.FeatureDetails) (string, error)
-	UpdateAllFeatureStatusForProject(ProjectID int64, updatedSettings model.ProjectSetting) error
 
 	// Property Mapping
 	CreatePropertyMapping(propertyMapping model.PropertyMapping) (*model.PropertyMapping, string, int)

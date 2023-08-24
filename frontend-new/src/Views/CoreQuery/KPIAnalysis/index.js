@@ -36,6 +36,7 @@ function KPIAnalysis({
       ref={renderedCompRef}
       durationObj={durationObj}
       secondAxisKpiIndices={secondAxisKpiIndices}
+      currentEventIndex={currMetricsValue}
     />
   );
 }

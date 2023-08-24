@@ -4,7 +4,7 @@ import { useSelector, useDispatch, connect } from 'react-redux';
 import { ErrorBoundary } from 'react-error-boundary';
 import FaSelect from 'Components/FaSelect';
 import factorsai from 'factorsai';
-import { fetchDemoProject, getHubspotContact } from 'Reducers/global';
+import { getHubspotContact } from 'Reducers/global';
 import {
   fetchActiveDashboardUnits,
   DeleteUnitFromDashboard,
@@ -39,7 +39,6 @@ function ProjectDropdown({
   durationObj,
   handleDurationChange,
   isPinned = false,
-  fetchDemoProject,
   oldestRefreshTime,
   setOldestRefreshTime,
   handleRefreshClick,
@@ -57,29 +56,17 @@ function ProjectDropdown({
   const { dashboards, activeDashboard, activeDashboardUnits } = useSelector(
     (state) => state.dashboard
   );
-  const { projects } = useSelector((state) => state.global);
   const [selectVisible, setSelectVisible] = useState(false);
   const [showDashboardName, setDashboardName] = useState('');
   const [showDashboardDesc, setDashboardDesc] = useState('');
   const [deleteDashboardModal, showDeleteDashboardModal] = useState(false);
   const [dashboardDeleteApi, setDashboardDeleteApi] = useState(false);
-  const [demoProjectId, setDemoProjectId] = useState(null);
   const [showProjectModal, setShowProjectModal] = useState(false);
 
   const [isReportsModalOpen, setIsReportsModalOpen] = useState(false);
   const dispatch = useDispatch();
 
   const { agent_details } = useSelector((state) => state.agent);
-
-  useEffect(() => {
-    fetchDemoProject()
-      .then((res) => {
-        setDemoProjectId(res.data[0]);
-      })
-      .catch((err) => {
-        console.log(err.data.error);
-      });
-  }, [active_project]);
 
   const changeActiveDashboard = useCallback(
     (val) => {
@@ -331,68 +318,7 @@ function ProjectDropdown({
         ) : (
           ''
         )}
-        {active_project.id === demoProjectId ? (
-          <div className='rounded-lg border-2 h-20 mb-3 mx-10'>
-            <Row justify='space-between' className='m-0 p-3'>
-              <Col span={projects.length === 1 ? 12 : 18}>
-                <img
-                  alt='welcome'
-                  src='assets/icons/welcome.svg'
-                  style={{ float: 'left', marginRight: '20px' }}
-                />
-                <Text type='title' level={6} weight='bold' extraClass='m-0'>
-                  Welcome! You just entered a Factors demo project
-                </Text>
-                {projects.length === 1 ? (
-                  <Text type='title' level={7} extraClass='m-0'>
-                    These reports have been built with a sample dataset. Use
-                    this to start exploring!
-                  </Text>
-                ) : (
-                  <Text type='title' level={7} extraClass='m-0'>
-                    To jump back into your Factors project, click on your
-                    account card on the{' '}
-                    <span className='font-bold'>top right</span> of the screen.
-                  </Text>
-                )}
-              </Col>
-              <Col className='mr-2 mt-2'>
-                {projects.length === 1 ? (
-                  <Button
-                    type='default'
-                    style={{
-                      background: 'white',
-                      border: '1px solid #E7E9ED',
-                      height: '40px'
-                    }}
-                    className='m-0 mr-2'
-                    onClick={() => setShowProjectModal(true)}
-                  >
-                    Set up my own Factors project
-                  </Button>
-                ) : null}
 
-                <Button
-                  type='link'
-                  style={{
-                    background: 'white',
-                    height: '40px'
-                  }}
-                  className='m-0 mr-2'
-                  onClick={() => handleTour()}
-                >
-                  Take the tour{' '}
-                  <SVG
-                    name='Arrowright'
-                    size={16}
-                    extraClass='ml-1'
-                    color='blue'
-                  />
-                </Button>
-              </Col>
-            </Row>
-          </div>
-        ) : null}
         <div className='flex items-start justify-between'>
           <div className='flex flex-col items-start'>
             <div className='flex items-center'>
@@ -480,6 +406,4 @@ function ProjectDropdown({
   return null;
 }
 
-export default connect(null, { fetchDemoProject, getHubspotContact })(
-  ProjectDropdown
-);
+export default connect(null, { getHubspotContact })(ProjectDropdown);

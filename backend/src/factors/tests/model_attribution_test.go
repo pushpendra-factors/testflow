@@ -2239,7 +2239,7 @@ func TestAttributionKPIV1(t *testing.T) {
 			AttributionMethodology:  model.AttributionMethodLinear,
 		}
 
-		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery(), 0)
 		assert.Equal(t, float64(1), getConversionUserCountKpi(query.AttributionKey, result, "test"))
 		assert.Equal(t, float64(1), getConversionUserCountKpi(query.AttributionKey, result, "test1"))
 		assert.Nil(t, err)
@@ -2329,7 +2329,7 @@ func TestAttributionKPIV1(t *testing.T) {
 			AttributionMethodology:  model.AttributionMethodLinear,
 		}
 
-		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery(), 0)
 		assert.Equal(t, float64(1), getConversionUserCountKpi(query.AttributionKey, result, "test"))
 		assert.Equal(t, float64(1), getConversionUserCountKpi(query.AttributionKey, result, "test1"))
 		assert.Nil(t, err)
@@ -2705,7 +2705,7 @@ func TestAttributionKPIV1NoData(t *testing.T) {
 			AttributionMethodology:  model.AttributionMethodLinear,
 		}
 
-		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery(), 0)
 		assert.Equal(t, float64(0), getConversionUserCountKpi(query.AttributionKey, result, "test"))
 		assert.Equal(t, float64(0), getConversionUserCountKpi(query.AttributionKey, result, "test1"))
 		assert.Nil(t, err)
@@ -2795,7 +2795,7 @@ func TestAttributionKPIV1NoData(t *testing.T) {
 			AttributionMethodology:  model.AttributionMethodLinear,
 		}
 
-		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery(), 0)
 		assert.Equal(t, float64(0), getConversionUserCountKpi(query.AttributionKey, result, "Grand Total")) // Deals - Conversion
 		assert.Nil(t, err)
 
@@ -2896,7 +2896,7 @@ func TestAttributionKPIV1NoData(t *testing.T) {
 			AttributionMethodology:  model.AttributionMethodLinear,
 		}
 
-		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		result, err := store.GetStore().ExecuteAttributionQueryV1(project.ID, query, "", C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery(), 0)
 		assert.Equal(t, float64(0), getConversionUserCountKpi(query.AttributionKey, result, "Grand Total")) // Deals - Conversion
 		assert.Equal(t, 17, len(result.Headers))
 		assert.Nil(t, err)

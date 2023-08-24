@@ -59,8 +59,6 @@ func main() {
 	enableHubspotFormEventsByProjectID := flag.String("enable_hubspot_form_events_by_project_id", "", "")
 	hubspotMaxCreatedAt := flag.Int64("huspot_max_created_at", time.Now().Unix(), "max created_at for records to process.")
 	enrichHeavy := flag.Bool("enrich_heavy", false, "Run heavy projects")
-	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
-	sixsignalV1EnabledProjectIDs := flag.String("sixsignal_v1_enabled_projectIds", "", "To enable new sixsignal flow")
 	otpKeyWithQueryCheckEnabled := flag.Bool("query_otpkey_check_enabled", false, "To check unique otp key using query")
 	recordProcessLimit := flag.Int("record_process_limit", 50000, "Number of records to process per project.")
 	numDaysBackfill := flag.Int("num_days_backfill", 93, "Number of days to backfill from now")
@@ -123,8 +121,6 @@ func main() {
 		RestrictReusingUsersByCustomerUserId:          *restrictReusingUsersByCustomerUserId,
 		EnableHubspotFormsEventsByProjectID:           *enableHubspotFormEventsByProjectID,
 		OtpKeyWithQueryCheckEnabled:                   *otpKeyWithQueryCheckEnabled,
-		ClearbitEnabled:                               *clearbitEnabled,
-		SixSignalV1EnabledProjectIDs:                  *sixsignalV1EnabledProjectIDs,
 		DisableHubspotNonMarketingContactsByProjectID: *disableNonMarketingContactByProjectID,
 		HubspotAppID:                                  *hubspotAppID,
 		HubspotAppSecret:                              *hubspotAppSecret,
