@@ -27,5 +27,6 @@ export const PathUrls = {
   SettingsIntegration: '/settings/integration',
   SettingsSharing: '/settings/sharing',
   SettingsPricing: '/settings/pricing',
-  Upgrade: '/upgrade'
+  Upgrade: '/upgrade',
+  Onboarding: '/onboarding'
 };

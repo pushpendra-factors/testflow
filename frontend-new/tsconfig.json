@@ -33,7 +33,8 @@
       "Context/*": ["./src/contexts/*"],
       "Constants/*": ["./src/constants/*"],
       "Routes/*": ["./src/routes/*"],
-      "HOC/*": ["./src/HOC/*"]
+      "HOC/*": ["./src/HOC/*"],
+      "Onboarding/*": ["./src/features/onboarding"]
     }
   },
   "include": ["src/**/*", "declaration"],

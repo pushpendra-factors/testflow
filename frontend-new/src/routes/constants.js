@@ -1,7 +1,6 @@
 import React from 'react';
 import lazyWithRetry from 'Utils/lazyWithRetry';
 
-import Welcome from 'Views/Settings/SetupAssist/Welcome/index';
 import DashboardTemplates from 'Views/DashboardTemplates/index';
 import AttributionSettings from 'Views/Settings/ProjectSettings/AttributionSettings';
 import BasicSettings from 'Views/Settings/ProjectSettings/BasicSettings';
@@ -19,7 +18,6 @@ import UserProfiles from 'Components/Profile/UserProfiles';
 import AccountProfiles from 'Components/Profile/AccountProfiles';
 import Touchpoints from 'Views/Settings/ProjectConfigure/Touchpoints';
 import AppLayout from 'Views/AppLayout';
-import OnBoard from 'Views/Settings/SetupAssist/Welcome/OnboardFlow';
 import { PathUrls } from './pathUrls';
 import AccountDetails from 'Components/Profile/AccountProfiles/AccountDetails';
 import ContactDetails from 'Components/Profile/UserProfiles/ContactDetails';
@@ -29,6 +27,7 @@ import LockedStateComponent from 'Components/GenericComponents/LockedStateVideoC
 import PricingComponent from 'Views/Settings/ProjectSettings/Pricing';
 import EngagementConfig from 'Views/Settings/ProjectConfigure/Engagement';
 import CommonLockedComponent from 'Components/GenericComponents/CommonLockedComponent';
+import Onboarding from '../features/onboarding/ui';
 
 //locked screen images
 import LockedExplainImage from '../assets/images/locked_explain.png';
@@ -330,20 +329,6 @@ export const APP_LAYOUT_ROUTES = {
     Private: true,
     Layout: AppLayout
   },
-  Welcome: {
-    exact: true,
-    path: '/welcome',
-    Component: Welcome,
-    Private: true,
-    Layout: AppLayout
-  },
-  OnBoardFlow: {
-    exact: true,
-    path: '/welcome/visitoridentification/:step',
-    Component: OnBoard,
-    Private: true,
-    Layout: AppLayout
-  },
   Template: {
     exact: true,
     path: '/template',
@@ -503,6 +488,13 @@ export const APP_LAYOUT_ROUTES = {
     Layout: AppLayout,
     Private: true,
     Component: FeatureLockedPathAnalysisReport
+  },
+  Onboarding: {
+    exact: true,
+    path: PathUrls.Onboarding,
+    Layout: AppLayout,
+    Private: true,
+    Component: Onboarding
   },
   //For backward compatibility for old url sent over mail
   SixSignalReportRedirection: {

@@ -63,6 +63,10 @@
     color: $fa-color-character-secondary;
   }
 
+  &.fai-text__color--character-disabled-placeholder {
+    color: $fa-color-character-disabled-placeholder;
+  }
+
   //Case
   &.fai-text__transform--uppercase {
     text-transform: uppercase;
