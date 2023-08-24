@@ -64,21 +64,31 @@ func EventMatchesCriterion(projectId int64, eventName string, userProperties, ev
 }
 
 func EventMatchesFilterCriterionList(projectId int64, userProperties, eventProperties map[string]interface{}, filterCriterionList []EventFilterCriterion) bool {
+	// The first filter's lop is always AND
 	soFar := false
 	for i := 0; i < len(filterCriterionList)-1; i++ {
 		// Today we dont support OR across filters. So retaining it this way. Its always a AND
 		fc := filterCriterionList[i]
 		fcNext := filterCriterionList[i+1]
 		result := eventMatchesFilterCriterion(projectId, userProperties, eventProperties, fc)
-		if fcNext.Values[0].LogicalOp == "AND" && !soFar { // "AND" logic: If even a single filter fails, return False.
+
+		if fcNext.Values[0].LogicalOp == "AND" && !soFar {
+			// If the next filter has first lop as AND, then if the current filter matching fails we can return fail
 			if !result {
+				// "AND" logic: If even a single filter fails, return False.
 				return false
 			}
 		} else if fcNext.Values[0].LogicalOp == "AND" && soFar {
+			// Assuming OR condition if AND is not present
+			// If the next filter has AND lop, and the result upto prev filter (soFar) is true, 
+			// then the current filter matching will not affect the logical equation. 
+			// Logic example: true || false = true, true || true = true
+			// We reset the soFar variable.
 			soFar = false
 		} else if fcNext.Values[0].LogicalOp == "OR" {
+			// If the next filter has OR lop, we append the current result to soFar.
 			soFar = soFar || result
-		} 
+		}
 	}
 	return true
 }
