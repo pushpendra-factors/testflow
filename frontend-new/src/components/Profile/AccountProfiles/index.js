@@ -215,11 +215,16 @@ function AccountProfiles({
     setTLConfig(timelinesConfig);
   }, [currentProjectSettings?.timelines_config]);
 
+  const fetchGroupProperties = async (groupId) => {
+    if (!groupProperties[groupId]) {
+      await getGroupProperties(activeProject.id, groupId);
+    }
+  };
+
   useEffect(() => {
+    fetchGroupProperties('$domains');
     Object.keys(groupOpts || {}).forEach((group) => {
-      if (!groupProperties[group]) {
-        getGroupProperties(activeProject?.id, group);
-      }
+      fetchGroupProperties(group);
     });
   }, [activeProject.id, groupOpts]);
 

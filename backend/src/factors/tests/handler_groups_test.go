@@ -204,6 +204,28 @@ func TestAPIGroupPropertiesAndValuesHandler(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Contains(t, propertyValues, "value1")
 	assert.Contains(t, propertyValues, "existingPropertyNewValue1")
+
+	//Test $domains group properties
+	domainGroup, status := store.GetStore().CreateOrGetDomainsGroup(project.ID)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.NotNil(t, domainGroup)
+
+	groupNameEncoded = b64.StdEncoding.EncodeToString([]byte(b64.StdEncoding.EncodeToString([]byte(U.GROUP_NAME_DOMAINS))))
+	rb = C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/groups/%s/properties", project.ID, groupNameEncoded)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+	req, err = rb.Build()
+	assert.Equal(t, err, nil)
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	err = json.Unmarshal(jsonResponse, &properties)
+	assert.Nil(t, err)
+	assert.Equal(t, U.ALL_ACCOUNT_DEFAULT_PROPERTIES, properties["properties"]["categorical"])
 }
 
 func buildGroupPropertyValuesRequest(projectId int64, groupName, propertyName string, label bool, cookieData string) (*http.Request, error) {
