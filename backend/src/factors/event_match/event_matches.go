@@ -64,10 +64,16 @@ func EventMatchesCriterion(projectId int64, eventName string, userProperties, ev
 }
 
 func EventMatchesFilterCriterionList(projectId int64, userProperties, eventProperties map[string]interface{}, filterCriterionList []EventFilterCriterion) bool {
-	for _, fc := range filterCriterionList {
+	soFar := false
+	for i := 0; i < len(filterCriterionList)-1; i++ {
 		// Today we dont support OR across filters. So retaining it this way. Its always a AND
-		if !eventMatchesFilterCriterion(projectId, userProperties, eventProperties, fc) { // "AND" logic: If even a single filter fails, return False.
-			return false
+		fc := filterCriterionList[i]
+		fcNext := filterCriterionList[i+1]
+		result := eventMatchesFilterCriterion(projectId, userProperties, eventProperties, fc)
+		if fcNext.Values[0].LogicalOp == "AND" && !soFar { // "AND" logic: If even a single filter fails, return False.
+			return result
+		} else if fcNext.Values[0].LogicalOp == "OR" {
+			soFar = soFar || result
 		}
 	}
 	return true
