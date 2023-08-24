@@ -2705,17 +2705,24 @@ func syncCompanyV2(projectID int64, document *model.HubspotDocument) int {
 		logCtx.Warning("No marketing contacts found for hubspot company.")
 	}
 
+	contactUserIDs := make([]string, 0)
+	for i := range contactDocuments {
+		if contactDocuments[i].UserId != "" {
+			contactUserIDs = append(contactUserIDs, contactDocuments[i].UserId)
+		}
+	}
+
+	if len(contactUserIDs) > 0 {
+		status := store.GetStore().UpdateUserGroupInBatch(projectID, contactUserIDs, model.GROUP_NAME_HUBSPOT_COMPANY, companyGroupID, companyUserID, false)
+		if status != http.StatusAccepted {
+			logCtx.Error("Failed to update user group id in batch.")
+		}
+	}
+
 	// update $hubspot_company_name and other company
 	// properties on each associated contact user.
 	for _, contactDocument := range contactDocuments {
 		if contactDocument.UserId != "" {
-			if C.IsAllowedHubspotGroupsByProjectID(projectID) {
-				logCtx.Info("Updating user company group user id.")
-				_, status := store.GetStore().UpdateUserGroup(projectID, contactDocument.UserId, model.GROUP_NAME_HUBSPOT_COMPANY, companyGroupID, companyUserID, false)
-				if status != http.StatusAccepted && status != http.StatusNotModified {
-					logCtx.Error("Failed to update user group id.")
-				}
-			}
 
 			if C.EnableUserDomainsGroupByProjectID(projectID) {
 				status := store.GetStore().AssociateUserDomainsGroup(projectID, contactDocument.UserId, model.GROUP_NAME_HUBSPOT_COMPANY, companyUserID)

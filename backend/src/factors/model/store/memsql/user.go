@@ -2645,6 +2645,59 @@ func (store *MemSQL) updateUserGroup(projectID int64, user *model.User, userID s
 	return store.UpdateUser(projectID, userID, user, user.PropertiesUpdatedTimestamp)
 }
 
+func (store *MemSQL) UpdateUserGroupInBatch(projectID int64, userIDs []string, groupName, groupID string, groupUserID string, overwrite bool) int {
+	logFields := log.Fields{
+		"project_id":    projectID,
+		"user_ids":      userIDs,
+		"group_id":      groupID,
+		"group_user_id": groupUserID,
+		"overwrite":     overwrite,
+		"group_name":    groupName,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	if projectID == 0 || groupUserID == "" || len(userIDs) == 0 || groupName == "" {
+		logCtx.Error("Invalid parameters.")
+		return http.StatusBadRequest
+	}
+
+	group, status := store.GetGroup(projectID, groupName)
+	if status != http.StatusFound {
+		logCtx.Error("Failed to get group on UpdateUserGroupInBatch.")
+		return http.StatusInternalServerError
+	}
+
+	groupUserIDColumn := fmt.Sprintf("group_%d_user_id", group.ID)
+	groupIDColumn := fmt.Sprintf("group_%d_id", group.ID)
+
+	updates := map[string]string{
+		groupUserIDColumn: groupUserID,
+		groupIDColumn:     groupID,
+	}
+
+	whereStmnt := "project_id = ? AND ( is_group_user is null OR is_group_user = false )"
+	if len(userIDs) == 1 {
+		whereStmnt = whereStmnt + " AND id = ?"
+	} else {
+		whereStmnt = whereStmnt + " AND id in (?)"
+	}
+	whereParams := []interface{}{projectID, userIDs}
+
+	if !overwrite {
+		whereStmnt = whereStmnt + " AND " + groupUserIDColumn + " IS NULL "
+	}
+
+	db := C.GetServices().Db
+	err := db.Model(&model.User{}).Where(whereStmnt, whereParams...).Updates(updates).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to update group user association.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
+}
+
 func (store *MemSQL) UpdateGroupUserDomainsGroup(projectID int64, groupUserID, groupUserGroupName, domainsUserID, domainsGroupID string, overwrite bool) (*model.User, int) {
 	logFields := log.Fields{
 		"project_id":            projectID,
