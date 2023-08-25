@@ -1213,6 +1213,24 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		alerts2, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event2.Properties, event2.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts2)
+
+		event3 := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
+			UserId: agent.UUID, Timestamp: start.Unix(),
+			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{"$country":"India", "$Salesforce_Industry":"Healthtech"}`)},
+			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "2000"}`)}}
+
+		alerts3, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event3.Properties, event3.UserProperties, nil, false)
+		assert.Equal(t, http.StatusNotFound, errCode)
+		assert.Nil(t, alerts3)
+
+		event4 := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
+			UserId: agent.UUID, Timestamp: start.Unix(),
+			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{"$country":"US", "$Salesforce_Industry":"Healthtech"}`)},
+			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "2000"}`)}}
+
+		alerts4, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event4.Properties, event4.UserProperties, nil, false)
+		assert.Equal(t, http.StatusNotFound, errCode)
+		assert.Nil(t, alerts4)
 	})
 	// t.Run("MatchEventTriggerAlert:CombinationFilters2", func(t *testing.T) {
 	// 	project, user, eventName, err := SetupProjectUserEventNameReturnDAO()
