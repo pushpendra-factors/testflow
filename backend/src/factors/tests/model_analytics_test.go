@@ -1173,10 +1173,16 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
 	stepTimestamp := startTimestamp
 
+	CustomerUserIds := make([]string, 0, 0)
+
 	// s0 event property value with 5.
 	for i := 0; i < 5; i++ {
-		payload1 := fmt.Sprintf(`{"event_name": "%s", "timestamp": %d, "event_properties": {"value": 5,"id": 1}, "user_properties": {"gender": "M", "age": 18}}`,
-			"s0", stepTimestamp)
+
+		user_id := U.RandomLowerAphaNumString(5)
+		cu_id := U.RandomString(4)
+
+		payload1 := fmt.Sprintf(`{"user_id":"%s","event_name": "%s", "timestamp": %d, "event_properties": {"value": 5,"id": 1}, "user_properties": {"gender": "M", "age": 18}}`,
+			user_id, "s0", stepTimestamp)
 		w := ServePostRequestWithHeaders(r, uri, []byte(payload1),
 			map[string]string{"Authorization": project.Token})
 		assert.Equal(t, http.StatusOK, w.Code)
@@ -1184,6 +1190,10 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 		assert.NotNil(t, response["event_id"])
 		assert.NotNil(t, response["user_id"])
 		stepTimestamp = stepTimestamp + 10
+
+		CustomerUserIds = append(CustomerUserIds, cu_id)
+		status, _ := SDK.Identify(project.ID, &SDK.IdentifyPayload{UserId: user_id, CustomerUserId: cu_id, RequestSource: model.UserSourceWeb}, true)
+		assert.Equal(t, http.StatusOK, status)
 	}
 
 	// s0 event property value greater than 5.
@@ -1828,6 +1838,152 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.Equal(t, float64(10), result10.Rows[0][0])
 	assert.Equal(t, float64(5), result10.Rows[0][1])
+
+	//column properties with event level and global level breakdown
+	//breakdown with global level property  and column property
+	query11 := model.Query{
+		From: startTimestamp - 1, // session created before timestamp of first event.
+		To:   time.Now().UTC().Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{
+				Name:       "$session",
+				Properties: []model.QueryProperty{},
+			},
+			model.QueryEventWithProperties{
+				Name:       "s0",
+				Properties: []model.QueryProperty{},
+			},
+			model.QueryEventWithProperties{
+				Name:       "s2",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+
+			model.QueryGroupByProperty{
+				Entity:    model.PropertyEntityUser,
+				Property:  "gender",
+				EventName: model.UserPropertyGroupByPresent,
+			},
+
+			model.QueryGroupByProperty{
+				Entity:    model.PropertyEntityUser,
+				Property:  U.IDENTIFIED_USER_ID,
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+
+		Class:             model.QueryClassFunnel,
+		Type:              model.QueryTypeUniqueUsers,
+		EventsCondition:   model.EventCondAllGivenEvent,
+		SessionStartEvent: 2,
+		SessionEndEvent:   3,
+	}
+
+	result11, errCode, _ := store.GetStore().Analyze(project.ID, query11, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, 7, len(result11.Rows))
+	assert.Equal(t, "F", result11.Rows[1][0])
+	for i := 2; i < 7; i++ {
+		assert.Equal(t, true, U.ContainsStringInArray(CustomerUserIds, fmt.Sprintf("%v", result11.Rows[i][1])))
+		assert.Equal(t, "M", result11.Rows[i][0])
+	}
+
+	//break down with only column property
+	query12 := model.Query{
+		From: startTimestamp - 1, // session created before timestamp of first event.
+		To:   time.Now().UTC().Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{
+				Name:       "$session",
+				Properties: []model.QueryProperty{},
+			},
+			model.QueryEventWithProperties{
+				Name:       "s0",
+				Properties: []model.QueryProperty{},
+			},
+			model.QueryEventWithProperties{
+				Name:       "s2",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+
+			model.QueryGroupByProperty{
+				Entity:    model.PropertyEntityUser,
+				Property:  U.IDENTIFIED_USER_ID,
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+
+		Class:             model.QueryClassFunnel,
+		Type:              model.QueryTypeUniqueUsers,
+		EventsCondition:   model.EventCondAllGivenEvent,
+		SessionStartEvent: 2,
+		SessionEndEvent:   3,
+	}
+
+	result12, errCode, _ := store.GetStore().Analyze(project.ID, query12, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, 7, len(result12.Rows))
+	assert.Equal(t, float64(5), result12.Rows[1][1])
+
+	for i := 2; i < 7; i++ {
+		assert.Equal(t, true, U.ContainsStringInArray(CustomerUserIds, fmt.Sprintf("%v", result12.Rows[i][0])))
+		assert.Equal(t, float64(1), result12.Rows[i][1])
+	}
+
+	//breakdown with event level and column property
+	query13 := model.Query{
+		From: startTimestamp - 1, // session created before timestamp of first event.
+		To:   time.Now().UTC().Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{
+				Name:       "$session",
+				Properties: []model.QueryProperty{},
+			},
+			model.QueryEventWithProperties{
+				Name:       "s0",
+				Properties: []model.QueryProperty{},
+			},
+			model.QueryEventWithProperties{
+				Name:       "s2",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+
+			model.QueryGroupByProperty{
+				Entity:         model.PropertyEntityUser,
+				Property:       "age",
+				EventName:      "s0",
+				EventNameIndex: 2,
+			},
+
+			model.QueryGroupByProperty{
+				Entity:    model.PropertyEntityUser,
+				Property:  U.IDENTIFIED_USER_ID,
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+
+		Class:             model.QueryClassFunnel,
+		Type:              model.QueryTypeUniqueUsers,
+		EventsCondition:   model.EventCondAllGivenEvent,
+		SessionStartEvent: 2,
+		SessionEndEvent:   3,
+	}
+
+	result13, errCode, _ := store.GetStore().Analyze(project.ID, query13, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, 7, len(result13.Rows))
+	assert.Equal(t, "20", result13.Rows[1][0])
+
+	for i := 2; i < 7; i++ {
+		assert.Equal(t, true, U.ContainsStringInArray(CustomerUserIds, fmt.Sprintf("%v", result13.Rows[i][1])))
+		assert.Equal(t, "18", result13.Rows[i][0])
+	}
+
 }
 
 func TestAnalyticsInsightsQuery(t *testing.T) {
@@ -2874,7 +3030,8 @@ func TestAnalyticsFunnelQueryWithNumericalBucketing(t *testing.T) {
 		// nonPercentileBucketRange := (upperPercentileValue - lowerPercentileValue) / (model.NumericalGroupByBuckets - 2)
 
 		for i := numPropertyRangeStart; i <= numPropertyRangeEnd; i++ {
-			icreatedUserID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+			cuid := RandomURL()
+			icreatedUserID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: cuid, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 			payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
 				`"event_properties":{"$page_load_time":%d},"user_properties":{"numerical_property":%d}}`,
 				eventName1, icreatedUserID, startTimestamp+10, i, i)
