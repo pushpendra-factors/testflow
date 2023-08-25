@@ -81,10 +81,11 @@ func (store *MemSQL) GetRawAttributionQueryParams(projectID int64, queryOriginal
 // @Deprecated
 func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *model.AttributionQueryV1,
 	debugQueryKey string, enableOptimisedFilterOnProfileQuery,
-	enableOptimisedFilterOnEventUserQuery bool) (*model.QueryResult, error) {
+	enableOptimisedFilterOnEventUserQuery bool, dashboardUnitId int64) (*model.QueryResult, error) {
 
 	logFields := log.Fields{
 		"project_id":        projectID,
+		"dashboardUnitId":   dashboardUnitId,
 		"debug_query_key":   debugQueryKey,
 		"query_from":        queryOriginal.From,
 		"query_to":          queryOriginal.To,

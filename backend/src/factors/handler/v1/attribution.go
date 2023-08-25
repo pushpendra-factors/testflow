@@ -155,17 +155,20 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 		if C.IsLastComputedWhitelisted(projectId) {
 			logCtx.Info("Hitting GetResponseIfCachedDashboardQueryWithPreset")
 			shouldReturn, resCode, resMsg = H.GetResponseIfCachedDashboardQueryWithPreset(reqId, projectId, dashboardId, unitId, preset, effectiveFrom, effectiveTo, timezoneString)
-
+			logCtx.WithFields(log.Fields{
+				"should_return": shouldReturn,
+				"res_code":      resCode,
+				"res_msg":       resMsg,
+			}).Info("Response from GetResponseIfCachedDashboardQueryWithPreset")
 		} else {
 			logCtx.Info("Hitting GetResponseIfCachedDashboardQuery")
 			shouldReturn, resCode, resMsg = H.GetResponseIfCachedDashboardQuery(reqId, projectId, dashboardId, unitId, effectiveFrom, effectiveTo, timezoneString)
-
+			logCtx.WithFields(log.Fields{
+				"should_return": shouldReturn,
+				"res_code":      resCode,
+				"res_msg":       resMsg,
+			}).Info("Response from GetResponseIfCachedDashboardQuery")
 		}
-		logCtx.WithFields(log.Fields{
-			"should_return": shouldReturn,
-			"res_code":      resCode,
-			"res_msg":       resMsg,
-		}).Info("Getting response from CachedDashboardQuery")
 
 		if shouldReturn {
 			if resCode == http.StatusOK {
@@ -185,13 +188,15 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 		return nil, http.StatusBadRequest, INVALID_INPUT, err.Error(), true
 	}
 	if !hardRefresh {
-		logCtx.Info("Hitting GetResponseIfCachedQuery")
+		logCtx.WithFields(log.Fields{
+			"query to form cache key": attributionQueryUnitPayload,
+		}).Info("Hitting GetResponseIfCachedQuery")
 		shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &attributionQueryUnitPayload, cacheResult, isDashboardQueryRequest, reqId, false)
 		logCtx.WithFields(log.Fields{
 			"should_return": shouldReturn,
 			"res_code":      resCode,
 			"res_msg":       resMsg,
-		}).Info("Getting response from CachedQuery")
+		}).Info("Response from GetResponseIfCachedQuery")
 		if shouldReturn {
 			if resCode == http.StatusOK {
 				return resMsg, resCode, "", "", false
@@ -213,7 +218,7 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 
 	logCtx.Info("Hitting ExecuteAttributionQueryV1")
 	result, err = store.GetStore().ExecuteAttributionQueryV1(projectId, requestPayload.Query, debugQueryKey,
-		enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
+		enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery, unitId)
 
 	if err != nil {
 		model.DeleteQueryCacheKey(projectId, &attributionQueryUnitPayload)

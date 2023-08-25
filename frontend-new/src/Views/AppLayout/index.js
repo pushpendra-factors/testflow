@@ -39,7 +39,7 @@ import { fetchTemplates } from '../../reducers/dashboard_templates/services';
 import { AppLayoutRoutes } from 'Routes/index';
 import { TOGGLE_GLOBAL_SEARCH } from 'Reducers/types';
 import './index.css';
-import _ from 'lodash';
+import _, { isEmpty } from 'lodash';
 import logger from 'Utils/logger';
 import { useLocation } from 'react-router-dom';
 import GlobalSearchModal from './GlobalSearchModal';
@@ -47,10 +47,11 @@ import AppSidebar from '../AppSidebar';
 import styles from './index.module.scss';
 import { routesWithSidebar } from './appLayout.constants';
 import { selectSidebarCollapsedState } from 'Reducers/global/selectors';
-import { fetchProjectAgents } from 'Reducers/agentActions';
+import { fetchProjectAgents, fetchAgentInfo } from 'Reducers/agentActions';
 import { fetchFeatureConfig } from 'Reducers/featureConfig/middleware';
 import { selectAreDraftsSelected } from 'Reducers/dashboard/selectors';
 import { PathUrls } from '../../routes/pathUrls';
+import OnboardingRouting from 'Onboarding/ui/OnboardingRouting';
 
 // customizing highcharts for project requirements
 customizeHighCharts(Highcharts);
@@ -64,7 +65,8 @@ function AppLayout({
   fetchWeeklyIngishtsMetaData,
   setActiveProject,
   fetchProjectSettings,
-  fetchProjectSettingsV1
+  fetchProjectSettingsV1,
+  fetchAgentInfo
 }) {
   const [dataLoading, setDataLoading] = useState(true);
   const { Content } = Layout;
@@ -88,8 +90,13 @@ function AppLayout({
 
   const fetchProjectsOnLoad = useCallback(async () => {
     try {
-      if (isAgentLoggedIn) await fetchProjects();
-      else setDataLoading(false);
+      if (isAgentLoggedIn) {
+        const res = await fetchProjects();
+        //handling when no project is present
+        if (isEmpty(res?.data)) {
+          setDataLoading(false);
+        }
+      } else setDataLoading(false);
     } catch (err) {
       console.log(err);
     }
@@ -166,6 +173,7 @@ function AppLayout({
       dispatch(fetchAttributionQueries(active_project?.id));
       dispatch(fetchProjectAgents(active_project.id));
       dispatch(fetchFeatureConfig(active_project?.id));
+      fetchAgentInfo();
     }
   }, [dispatch, active_project]);
 
@@ -226,6 +234,7 @@ function AppLayout({
           </Layout>
         </Layout>
         <GlobalSearchModal />
+        <OnboardingRouting />
       </ErrorBoundary>
     </Layout>
   );
@@ -243,7 +252,8 @@ const mapDispatchToProps = (dispatch) =>
       fetchWeeklyIngishtsMetaData,
       setActiveProject,
       fetchProjectSettings,
-      fetchProjectSettingsV1
+      fetchProjectSettingsV1,
+      fetchAgentInfo
     },
     dispatch
   );

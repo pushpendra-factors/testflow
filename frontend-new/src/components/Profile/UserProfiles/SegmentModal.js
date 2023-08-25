@@ -187,7 +187,6 @@ function SegmentModal({
 
   const queryChange = useCallback(
     (newEvent, index, changeType = 'add') => {
-      console.log('this is hell!');
       const queryupdated = [...listEvents];
       if (queryupdated[index]) {
         if (changeType === 'add' || changeType === 'filters_updated') {

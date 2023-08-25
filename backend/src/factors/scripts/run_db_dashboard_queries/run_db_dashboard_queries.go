@@ -24,6 +24,7 @@ func main() {
 	customDateStart := flag.Int64("custom_start_timestamp", -1, "Start timestamp of a custom date range run.")
 	customDateEnd := flag.Int64("custom_end_timestamp", -1, "End timestamp of a custom date range run.")
 	cacheOnlyDashboards := flag.String("cache_only_dashboards", "*", "Comma separated dashboard ids to run for. * to run for all")
+	cacheOnlyDashboardUnits := flag.String("cache_only_dashboard_units", "*", "Comma separated dashboard ids to run for. * to run for all")
 	cacheForLongerExpiryProjects := flag.String("cache_for_longer_expiry_projects", "", "Comma separated project ids to run for. * to run for all")
 	startTimestampForWeekMonth := flag.Int64("start_timestamp_week_month", -1,
 		"Start timestamp of caching week/month")
@@ -66,9 +67,9 @@ func main() {
 	enableSlowDBQueryLogging := flag.Bool("log_slow_db_queries", false, "Logs queries with execution time greater than 50ms.")
 	allowProfilesGroupSupport := flag.String("allow_profiles_group_support", "", "")
 	enableOptimisedFilterOnProfileQuery := flag.Int("enable_optimised_filter_on_profile_query",
-		0, "Enables filter optimisation logic for profiles query.")
+		1, "Enables filter optimisation logic for profiles query.")
 	enableOptimisedFilterOnEventUserQuery := flag.Int("enable_optimised_filter_on_event_user_query",
-		0, "Enables filter optimisation logic for events and users query.")
+		1, "Enables filter optimisation logic for events and users query.")
 	customerEnabledProjectsLastComputed := flag.String("customer_enabled_projects_last_computed",
 		"*", "List of projects customer enabled forLast Computed")
 	IncreaseKPILimitForProjectIDs := flag.String("increase_kpi_limit_for_projectids", "", "List of projectIds where kpi limit in increased.")
@@ -134,6 +135,7 @@ func main() {
 		StartTimestampForWeekMonth:            *startTimestampForWeekMonth,
 		CacheForLongerExpiryProjects:          *cacheForLongerExpiryProjects,
 		CacheOnlyDashboards:                   *cacheOnlyDashboards,
+		CacheOnlyDashboardUnits:               *cacheOnlyDashboardUnits,
 		CustomDateStart:                       *customDateStart,
 		CustomDateEnd:                         *customDateEnd,
 	}

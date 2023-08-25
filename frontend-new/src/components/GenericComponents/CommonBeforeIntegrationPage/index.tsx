@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Col, Row } from 'antd';
+import { Button } from 'antd';
 import UnplugImage from '../../../assets/images/unplug.png';
 import { Text } from 'Components/factorsComponents';
 import { useHistory } from 'react-router-dom';
@@ -21,7 +21,7 @@ const CommonBeforeIntegrationPage = () => {
         color='character-title'
         extraClass='m-0 mt-6'
       >
-        We’ll need to get some data in here.
+        Website account identification paused
       </Text>
       <Text
         type={'title'}
@@ -29,7 +29,8 @@ const CommonBeforeIntegrationPage = () => {
         color='character-secondary'
         extraClass='m-0 mt-2'
       >
-        Integration has not been completed.
+        Account identification is not active on your project. To active, please
+        enable ‘Factors Website De-anonymization’ from the integrations page.
       </Text>
       <Button
         className='mt-6'

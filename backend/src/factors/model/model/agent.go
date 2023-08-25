@@ -66,6 +66,7 @@ type AgentInfo struct {
 	LastLoggedIn         *time.Time `json:"last_logged_in"`
 	Phone                string     `json:"phone"`
 	IsOnboardingFlowSeen bool       `json:"is_onboarding_flow_seen"`
+	IsFormFilled         bool       `json:"is_form_filled"`
 	SignedUpAt           *time.Time `json:"signed_up_at"`
 }
 
@@ -88,6 +89,7 @@ func CreateAgentInfo(agent *Agent) *AgentInfo {
 		LastLoggedIn:         agent.LastLoggedInAt,
 		Phone:                agent.Phone,
 		IsOnboardingFlowSeen: agent.IsOnboardingFlowSeen,
+		IsFormFilled:         agent.IsFormFilled,
 		SignedUpAt:           &agent.CreatedAt,
 	}
 }
@@ -141,6 +143,13 @@ func IsOnboardingFlowSeen(status bool) Option {
 		fields["is_onboarding_flow_seen"] = status
 	}
 }
+
+func IsFormFilled(status bool) Option {
+	return func(fields FieldsToUpdate) {
+		fields["is_form_filled"] = status
+	}
+}
+
 func PasswordAndPasswordCreatedAt(password string, ts time.Time) Option {
 	return func(fields FieldsToUpdate) {
 		fields["password"] = password

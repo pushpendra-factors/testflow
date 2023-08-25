@@ -89,12 +89,6 @@ export const settingsMenuItems = [
     url: PathUrls.SettingsSdk,
     lineBreak: true
   },
-  {
-    label: 'Build Insights',
-    url: PathUrls.SettingsInsights,
-    lineBreak: true,
-    whitelisted: true
-  },
 
   {
     label: 'Sharing',
@@ -134,7 +128,7 @@ const accountsMenu = (
       >
         <SVG name='coloredWebsiteVisitorsIdentification' />
         <Text color='black' level={7} type='title' extraClass='mb-0'>
-          Visitor identification
+          Account identification
         </Text>
       </Link>
     </Menu.Item>
@@ -164,10 +158,10 @@ const journeyMenu = (
 
 const renderConfigureMenu = (email) => (
   <Menu className={styles['dropdown-menu']}>
-    <Menu.Item disabled className={styles['dropdown-menu-item']}> 
-        <Text color='disabled' level={7} type='title' extraClass='mb-0'>
-          Configure
-        </Text> 
+    <Menu.Item disabled className={styles['dropdown-menu-item']}>
+      <Text color='disabled' level={7} type='title' extraClass='mb-0'>
+        Configure
+      </Text>
     </Menu.Item>
     {getConfigureMenuItems(email).map((item) => {
       return (
@@ -186,13 +180,13 @@ const renderConfigureMenu = (email) => (
 const SettingsMenu = (
   <Menu className={styles['dropdown-menu']}>
     <Menu.Item disabled className={styles['dropdown-menu-item']}>
-        <Text color='disabled' level={7} type='title' extraClass='mb-0'>
-          Settings
-        </Text> 
+      <Text color='disabled' level={7} type='title' extraClass='mb-0'>
+        Settings
+      </Text>
     </Menu.Item>
-    {settingsMenuItems.map((item) => {  
-      if(item?.whitelisted){
-        return null
+    {settingsMenuItems.map((item) => {
+      if (item?.whitelisted) {
+        return null;
       }
       return (
         <>
@@ -200,7 +194,7 @@ const SettingsMenu = (
             <Link to={item.url}>
               <Text color='black' level={7} type='title' extraClass='mb-0'>
                 {item.label}
-              </Text> 
+              </Text>
             </Link>
           </Menu.Item>
           {item.lineBreak === true && <hr />}

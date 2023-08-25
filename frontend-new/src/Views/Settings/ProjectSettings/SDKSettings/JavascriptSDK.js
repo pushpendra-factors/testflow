@@ -33,13 +33,15 @@ import styles from './index.module.scss';
 import { UserAddOutlined } from '@ant-design/icons';
 import InviteUsers from 'Views/Settings/ProjectSettings/UserSettings/InviteUsers';
 import ExcludeIp from '../BasicSettings/IpBlocking/excludeIp';
+import { generateSdkScriptCode } from './utils';
+import ScriptHtml from './ScriptHtml';
 
 const { TabPane } = Tabs;
 
 const ViewSetup = ({ currentProjectSettings, activeProject }) => {
   const projectToken = activeProject.token;
   const assetURL = currentProjectSettings.sdk_asset_url;
-  const apiURL = currentProjectSettings.sdk_api_url;  
+  const apiURL = currentProjectSettings.sdk_api_url;
 
   return (
     <Row>
@@ -61,17 +63,13 @@ const ViewSetup = ({ currentProjectSettings, activeProject }) => {
       <Col span={24}>
         <CodeBlock
           codeContent={
-            <>
-              <span style={{ color: '#2F80ED' }}>{`<script>`}</span>
-              {`
-window.faitracker=window.faitracker||function(){this.q=[];var t=new CustomEvent("FAITRACKER_QUEUED_EVENT");return this.init=function(t,e,a){this.TOKEN=t,this.INIT_PARAMS=e,this.INIT_CALLBACK=a,window.dispatchEvent(new CustomEvent("FAITRACKER_INIT_EVENT"))},this.call=function(){var e={k:"",a:[]};if(arguments&&arguments.length>=1){for(var a=1;a<arguments.length;a++)e.a.push(arguments[a]);e.k=arguments[0]}this.q.push(e),window.dispatchEvent(t)},this.message=function(){window.addEventListener("message",function(t){"faitracker"===t.data.origin&&this.call("message",t.data.type,t.data.message)})},this.message(),this.init("`}
-              <span style={{ color: '#EB5757' }}>{projectToken}</span>
-              {`",{host:"${apiURL}"}),this}(),function(){var t=document.createElement("script");t.type="text/javascript",t.src="${assetURL}",t.async=!0,(d=document.getElementsByTagName("script")[0]).parentNode.insertBefore(t,d)}();
-`}
-              <span style={{ color: '#2F80ED' }}>{`</script>`}</span>
-            </>
+            <ScriptHtml
+              assetURL={assetURL}
+              projectToken={projectToken}
+              apiURL={apiURL}
+            />
           }
-          pureTextCode={`<script> window.faitracker=window.faitracker||function(){this.q=[];var t=new CustomEvent("FAITRACKER_QUEUED_EVENT");return this.init=function(t,e,a){this.TOKEN=t,this.INIT_PARAMS=e,this.INIT_CALLBACK=a,window.dispatchEvent(new CustomEvent("FAITRACKER_INIT_EVENT"))},this.call=function(){var e={k:"",a:[]};if(arguments&&arguments.length>=1){for(var a=1;a<arguments.length;a++)e.a.push(arguments[a]);e.k=arguments[0]}this.q.push(e),window.dispatchEvent(t)},this.message=function(){window.addEventListener("message",function(t){"faitracker"===t.data.origin&&this.call("message",t.data.type,t.data.message)})},this.message(),this.init("${projectToken}",{host:"${apiURL}"}),this}(),function(){var t=document.createElement("script");t.type="text/javascript",t.src="${assetURL}",t.async=!0,(d=document.getElementsByTagName("script")[0]).parentNode.insertBefore(t,d)}(); </script>`}
+          pureTextCode={generateSdkScriptCode(assetURL, projectToken, apiURL)}
         ></CodeBlock>
       </Col>
       <Col span={24}>
@@ -102,7 +100,7 @@ window.faitracker=window.faitracker||function(){this.q=[];var t=new CustomEvent(
 const GTMSetup = ({ currentProjectSettings, activeProject }) => {
   const projectToken = activeProject.token;
   const assetURL = currentProjectSettings.sdk_asset_url;
-  const apiURL = currentProjectSettings.sdk_api_url; 
+  const apiURL = currentProjectSettings.sdk_api_url;
 
   return (
     <Row>
@@ -141,17 +139,13 @@ const GTMSetup = ({ currentProjectSettings, activeProject }) => {
       <Col span={24}>
         <CodeBlock
           codeContent={
-            <>
-              <span style={{ color: '#2F80ED' }}>{`<script>`}</span>
-              {`
-window.faitracker=window.faitracker||function(){this.q=[];var t=new CustomEvent("FAITRACKER_QUEUED_EVENT");return this.init=function(t,e,a){this.TOKEN=t,this.INIT_PARAMS=e,this.INIT_CALLBACK=a,window.dispatchEvent(new CustomEvent("FAITRACKER_INIT_EVENT"))},this.call=function(){var e={k:"",a:[]};if(arguments&&arguments.length>=1){for(var a=1;a<arguments.length;a++)e.a.push(arguments[a]);e.k=arguments[0]}this.q.push(e),window.dispatchEvent(t)},this.message=function(){window.addEventListener("message",function(t){"faitracker"===t.data.origin&&this.call("message",t.data.type,t.data.message)})},this.message(),this.init("`}
-              <span style={{ color: '#EB5757' }}>{projectToken}</span>
-              {`",{host:"${apiURL}"}),this}(),function(){var t=document.createElement("script");t.type="text/javascript",t.src="${assetURL}",t.async=!0,(d=document.getElementsByTagName("script")[0]).parentNode.insertBefore(t,d)}();
-`}
-              <span style={{ color: '#2F80ED' }}>{`</script>`}</span>
-            </>
+            <ScriptHtml
+              assetURL={assetURL}
+              projectToken={projectToken}
+              apiURL={apiURL}
+            />
           }
-          pureTextCode={`<script> window.faitracker=window.faitracker||function(){this.q=[];var t=new CustomEvent("FAITRACKER_QUEUED_EVENT");return this.init=function(t,e,a){this.TOKEN=t,this.INIT_PARAMS=e,this.INIT_CALLBACK=a,window.dispatchEvent(new CustomEvent("FAITRACKER_INIT_EVENT"))},this.call=function(){var e={k:"",a:[]};if(arguments&&arguments.length>=1){for(var a=1;a<arguments.length;a++)e.a.push(arguments[a]);e.k=arguments[0]}this.q.push(e),window.dispatchEvent(t)},this.message=function(){window.addEventListener("message",function(t){"faitracker"===t.data.origin&&this.call("message",t.data.type,t.data.message)})},this.message(),this.init("${projectToken}",{host:"${apiURL}"}),this}(),function(){var t=document.createElement("script");t.type="text/javascript",t.src="${assetURL}",t.async=!0,(d=document.getElementsByTagName("script")[0]).parentNode.insertBefore(t,d)}(); </script>`}
+          pureTextCode={generateSdkScriptCode(assetURL, projectToken, apiURL)}
         />
       </Col>
       <Col span={24}>
@@ -563,7 +557,9 @@ const JSConfig = ({
           <span style={{ width: '50px' }}>
             <Switch
               checkedChildren='On'
-              disabled={enableEdit || currentAgent.email === 'solutions@factors.ai'}
+              disabled={
+                enableEdit || currentAgent.email === 'solutions@factors.ai'
+              }
               unCheckedChildren='OFF'
               onChange={toggleAutoCaptureFormFills}
               checked={autoCaptureFormFills}

@@ -34,6 +34,10 @@ type Int64Tuple struct {
 }
 
 const (
+	EVENTS_FILENAME_PREFIX = "events"
+)
+
+const (
 	DataTypeEvent    = "events"
 	DataTypeAdReport = "ad_reports"
 	DataTypeUser     = "users"

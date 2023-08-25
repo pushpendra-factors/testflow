@@ -136,9 +136,6 @@ func GetGroupPropertiesHandler(c *gin.Context) {
 	var status int
 
 	if model.IsDomainGroup(groupName) {
-
-		propertiesFromCache["categorical"] = U.ALL_ACCOUNT_DEFAULT_PROPERTIES
-
 		response := gin.H{
 			"properties": map[string][]string{
 				"categorical": U.ALL_ACCOUNT_DEFAULT_PROPERTIES,

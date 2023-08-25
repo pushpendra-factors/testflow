@@ -8,7 +8,7 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math"
 	"net/http"
 	"sort"
@@ -782,7 +782,7 @@ func GetWeeklyInsights(projectId int64, agentUUID string, queryId int64, baseSta
 		log.WithError(err).Error("Error reading file")
 		return nil, err
 	}
-	data, err := ioutil.ReadAll(reader)
+	data, err := io.ReadAll(reader)
 	if err != nil {
 		fmt.Println(err.Error())
 		log.WithError(err).Error("Error reading file")
@@ -1287,12 +1287,17 @@ func GetPropertiesFromFile(projectId int64) map[string]bool {
 		log.WithError(err).Error("Error reading file")
 		return propertiesFromFile
 	}
-	data, err := ioutil.ReadAll(reader)
+	data, err := io.ReadAll(reader)
 	if err != nil {
 		fmt.Println(err.Error())
 		log.WithError(err).Error("Error reading file")
 		return propertiesFromFile
 	}
 	err = json.Unmarshal(data, &propertiesFromFile)
+	if err != nil {
+		fmt.Println(err.Error())
+		log.WithError(err).Error("Error unmarhalling")
+		return propertiesFromFile
+	}
 	return propertiesFromFile
 }

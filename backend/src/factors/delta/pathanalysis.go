@@ -20,7 +20,7 @@ import (
 	M "factors/model/model"
 	"factors/model/store"
 
-	"io/ioutil"
+	"io"
 
 	"net/http"
 
@@ -31,10 +31,10 @@ import (
 
 const (
 	NO_OF_EVENTS_AT_EACH_LEVEL = 10
-	PAGE_VIEW_CATEGORY = "Page Views"
-	BUTTON_CLICKS_CATEGORY = "Button Clicks"
-	CRM_EVENTS_CATEGORY = "CRM Events"
-	SESSIONS_CATEGORY = "Sessions"
+	PAGE_VIEW_CATEGORY         = "Page Views"
+	BUTTON_CLICKS_CATEGORY     = "Button Clicks"
+	CRM_EVENTS_CATEGORY        = "CRM Events"
+	SESSIONS_CATEGORY          = "Sessions"
 )
 
 func GetDisplayName(displayNamesFromDB map[string]string, eventName string) string {
@@ -51,7 +51,7 @@ func GetDisplayName(displayNamesFromDB map[string]string, eventName string) stri
 		return displayname
 	}
 	return U.CreateVirtualDisplayName(eventName)
-	
+
 }
 
 func toCountEvent(eventDetails P.CounterEventFormat, nameFilter string, filters []M.QueryProperty) (bool, error) {
@@ -69,56 +69,56 @@ func toCountEvent(eventDetails P.CounterEventFormat, nameFilter string, filters 
 	return isEventToBeCounted(eventDetails, nameFilter, propFilter)
 }
 
-func appendExpandByCriteria(expandByProperty map[string][]PropertyEntityTypeMap, event P.CounterEventFormat, displayNamesFromDB map[string]string,) string {
+func appendExpandByCriteria(expandByProperty map[string][]PropertyEntityTypeMap, event P.CounterEventFormat, displayNamesFromDB map[string]string) string {
 	page_views, crm_event, button_click, session_event := false, false, false, false
 	_, exist := event.EventProperties["$is_page_view"]
-	if(!exist){
+	if !exist {
 		page_views = true
 	}
 	hasPrefix := false
 	for _, prefix := range U.CRMEventPrefixes {
-		if(strings.HasPrefix(event.EventName, prefix)){
+		if strings.HasPrefix(event.EventName, prefix) {
 			hasPrefix = true
 		}
 	}
-	if (hasPrefix == true){
+	if hasPrefix == true {
 		crm_event = false
 	}
 	_, exist = event.EventProperties["element_type"]
-	if(!exist){
+	if !exist {
 		button_click = true
 	}
-	if(!(event.EventName == "$session")){
+	if !(event.EventName == "$session") {
 		session_event = true
 	}
 	expandByProperties := make([]PropertyEntityTypeMap, 0)
 	expandByPropertiesEvent := make([]PropertyEntityTypeMap, 0)
 	expandByPropertiesUser := make([]PropertyEntityTypeMap, 0)
 	properties, existInMap := expandByProperty[PAGE_VIEW_CATEGORY]
-	if(page_views == true && existInMap){
+	if page_views == true && existInMap {
 		expandByProperties = append(expandByProperties, properties...)
 	}
 	properties, existInMap = expandByProperty[CRM_EVENTS_CATEGORY]
-	if(crm_event == true && existInMap){
+	if crm_event == true && existInMap {
 		expandByProperties = append(expandByProperties, properties...)
 	}
 	properties, existInMap = expandByProperty[BUTTON_CLICKS_CATEGORY]
-	if(button_click == true && existInMap){
+	if button_click == true && existInMap {
 		expandByProperties = append(expandByProperties, properties...)
 	}
 	properties, existInMap = expandByProperty[SESSIONS_CATEGORY]
-	if(session_event == true && existInMap){
+	if session_event == true && existInMap {
 		expandByProperties = append(expandByProperties, properties...)
 	}
 	properties, existInMap = expandByProperty[event.EventName]
-	if(existInMap){
+	if existInMap {
 		expandByProperties = append(expandByProperties, properties...)
 	}
 	for _, property := range expandByProperties {
-		if(property.Entity == "event"){
+		if property.Entity == "event" {
 			expandByPropertiesEvent = append(expandByPropertiesEvent, property)
 		}
-		if(property.Entity == "user") {
+		if property.Entity == "user" {
 			expandByPropertiesUser = append(expandByPropertiesUser, property)
 		}
 	}
@@ -132,7 +132,7 @@ func appendExpandByCriteria(expandByProperty map[string][]PropertyEntityTypeMap,
 	for _, property := range expandByPropertiesEvent {
 		value, exists := event.EventProperties[property.Property]
 		valueString := ""
-		if(exists){
+		if exists {
 			valueString = fmt.Sprintf("%v", value)
 		} else {
 			valueString = "<nil>"
@@ -142,7 +142,7 @@ func appendExpandByCriteria(expandByProperty map[string][]PropertyEntityTypeMap,
 	for _, property := range expandByPropertiesUser {
 		value, exists := event.UserProperties[property.Property]
 		valueString := ""
-		if(exists){
+		if exists {
 			valueString = fmt.Sprintf("%v", value)
 		} else {
 			valueString = "<nil>"
@@ -154,8 +154,9 @@ func appendExpandByCriteria(expandByProperty map[string][]PropertyEntityTypeMap,
 
 type PropertyEntityTypeMap struct {
 	Property string
-	Entity string
+	Entity   string
 }
+
 func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]interface{}, bool) {
 
 	// Get the Queries that are to be computed
@@ -189,11 +190,11 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 	processedQueries := make([]string, 0)
 	queries, _ := store.GetStore().GetAllSavedPathAnalysisEntityByProject(projectId)
 	queryCountMap := make(map[string]int)
-	
+
 	_, displayNames := store.GetStore().GetDisplayNamesForAllEvents(projectId)
 	for _, query := range queries {
 		_, isBlacklisted := blacklistedQueriesMap[query.ID]
-		if(isBlacklisted){
+		if isBlacklisted {
 			finalStatus[query.ID] = "skipped - blacklisted"
 			continue
 		}
@@ -208,8 +209,8 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 		U.DecodePostgresJsonbToStructType(query.PathAnalysisQuery, &actualQuery)
 		expandedProperty := make(map[string][]PropertyEntityTypeMap)
 		for _, event := range actualQuery.IncludeEvents {
-			_, exists := expandedProperty[event.Label] 
-			if(!exists){
+			_, exists := expandedProperty[event.Label]
+			if !exists {
 				expandedProperty[event.Label] = make([]PropertyEntityTypeMap, 0)
 			}
 			for _, prop := range event.ExpandProperty {
@@ -217,8 +218,8 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 			}
 		}
 		for _, event := range actualQuery.IncludeGroup {
-			_, exists := expandedProperty[event.Label] 
-			if(!exists){
+			_, exists := expandedProperty[event.Label]
+			if !exists {
 				expandedProperty[event.Label] = make([]PropertyEntityTypeMap, 0)
 			}
 			for _, prop := range event.ExpandProperty {
@@ -366,7 +367,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 			}
 			prevId = currentId
 			isIncludePresent := false
-			if(len(actualQuery.IncludeEvents) == 0 && len(actualQuery.IncludeGroup) == 0){
+			if len(actualQuery.IncludeEvents) == 0 && len(actualQuery.IncludeGroup) == 0 {
 				isIncludePresent = true
 			}
 			if len(actualQuery.IncludeEvents) > 0 {
@@ -379,41 +380,41 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 					continue
 				}
 			}
-			if(len(actualQuery.IncludeGroup) > 0){
+			if len(actualQuery.IncludeGroup) > 0 {
 				for _, group := range actualQuery.IncludeGroup {
 					allFiltersForIncludeGroup := append(group.Filter, actualQuery.Filter...)
 					matchesFilter := E.EventMatchesFilterCriterionList(projectId, event.UserProperties, event.EventProperties, E.MapFilterProperties(allFiltersForIncludeGroup))
-					if(group.Label == PAGE_VIEW_CATEGORY){
+					if group.Label == PAGE_VIEW_CATEGORY {
 						_, exist := event.EventProperties["$is_page_view"]
-						if(exist && matchesFilter){
+						if exist && matchesFilter {
 							isIncludePresent = true
 						}
 					}
-					if(group.Label == CRM_EVENTS_CATEGORY){
+					if group.Label == CRM_EVENTS_CATEGORY {
 						hasPrefix := false
 						for _, prefix := range U.CRMEventPrefixes {
-							if(strings.HasPrefix(event.EventName, prefix)){
+							if strings.HasPrefix(event.EventName, prefix) {
 								hasPrefix = true
 							}
 						}
-						if (hasPrefix == true && matchesFilter){
+						if hasPrefix == true && matchesFilter {
 							isIncludePresent = true
 						}
 					}
-					if(group.Label == BUTTON_CLICKS_CATEGORY){
+					if group.Label == BUTTON_CLICKS_CATEGORY {
 						_, exist := event.EventProperties["element_type"]
-						if(exist && matchesFilter){
+						if exist && matchesFilter {
 							isIncludePresent = true
 						}
 					}
-					if(group.Label == SESSIONS_CATEGORY){
-						if((event.EventName == "$session") && matchesFilter){
+					if group.Label == SESSIONS_CATEGORY {
+						if (event.EventName == "$session") && matchesFilter {
 							isIncludePresent = true
 						}
 					}
 				}
 			}
-			if(isIncludePresent == false){
+			if isIncludePresent == false {
 				continue
 			}
 			if actualQuery.EventType == M.STARTSWITH {
@@ -468,7 +469,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 				for _, event := range events {
 					if soFar == "" {
 						soFar = appendExpandByCriteria(expandedProperty, event, displayNames)
-					} else	 {
+					} else {
 						soFar = soFar + "," + appendExpandByCriteria(expandedProperty, event, displayNames)
 					}
 					steps[soFar]++
@@ -678,7 +679,7 @@ func GetPathAnalysisData(projectId int64, id string) map[int]map[string]int {
 		return nil
 	}
 	result := make(map[int]map[string]int)
-	data, err := ioutil.ReadAll(reader)
+	data, err := io.ReadAll(reader)
 	if err != nil {
 		fmt.Println(err.Error())
 		log.WithError(err).Error("Error reading file")
