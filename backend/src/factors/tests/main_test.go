@@ -134,6 +134,7 @@ func TestMain(m *testing.M) {
 		UseHubspotDealsV3APIByProjectID:                    "*",
 		RemoveDisabledEventUserPropertiesByProjectID:       "*",
 		EnableNewAllAccountsByProjectID:                    "*",
+		UseHashIDForCRMGroupUserByProject:                  "*",
 	}
 	C.InitConf(config)
 

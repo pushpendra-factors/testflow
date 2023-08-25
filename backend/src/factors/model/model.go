@@ -590,6 +590,8 @@ type Model interface {
 	CreateOrGetAMPUser(projectID int64, ampUserId string, timestamp int64, requestSource int) (string, int)
 	CreateOrGetDomainGroupUser(projectID int64, groupName string, domainName string,
 		requestTimestamp int64, requestSource int) (string, int)
+	CreateOrGetCRMGroupUser(projectID int64, groupName string, recordID string,
+		requestTimestamp int64, requestSource int) (string, int)
 	CreateOrGetSegmentUser(projectID int64, segAnonId, custUserId string, requestTimestamp int64, requestSource int) (*model.User, int)
 	GetUserPropertiesByUserID(projectID int64, id string) (*postgres.Jsonb, int)
 	GetUser(projectID int64, id string) (*model.User, int)

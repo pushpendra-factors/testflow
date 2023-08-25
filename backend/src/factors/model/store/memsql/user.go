@@ -586,6 +586,17 @@ func getDomainUserIDByDomainGroupIndexANDDomainName(domainGroupIndex int, domain
 	return "dom-" + enKey
 }
 
+func getCRMGroupUserIDByRecordIDANDIndex(groupIndex int, recordID string) string {
+	if groupIndex == 0 || recordID == "" {
+		return ""
+	}
+
+	key := fmt.Sprintf("%d-%s", groupIndex, recordID)
+
+	enKey := base64.StdEncoding.EncodeToString([]byte(key))
+	return "crm-" + enKey
+}
+
 // CreateOrGetSegmentUser create or updates(c_uid) and returns user by segement_anonymous_id
 // and/or customer_user_id.
 func (store *MemSQL) CreateOrGetSegmentUser(projectId int64, segAnonId, custUserId string,
@@ -734,6 +745,57 @@ func (store *MemSQL) CreateOrGetDomainGroupUser(projectID int64, groupName strin
 	}, groupName, domainName)
 	if status != http.StatusCreated && status != http.StatusConflict {
 		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to create domain group user.")
+		return "", http.StatusInternalServerError
+	}
+
+	return userID, status
+}
+
+// CreateOrGetCRMGroupUser creates or get crm group user by group name and record id
+func (store *MemSQL) CreateOrGetCRMGroupUser(projectID int64, groupName string, recordID string,
+	requestTimestamp int64, requestSource int) (string, int) {
+	logFields := log.Fields{
+		"project_id":        projectID,
+		"group_name":        groupName,
+		"record_id":         recordID,
+		"request_timestamp": requestTimestamp,
+		"request_source":    requestSource,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+
+	if projectID == 0 || groupName == "" || recordID == "" {
+		logCtx.Error("Invalid parameters on CreateOrGetCRMGroupUser.")
+		return "", http.StatusBadRequest
+	}
+
+	user, status := store.GetGroupUserByGroupID(projectID, groupName, recordID)
+	if status != http.StatusFound && status != http.StatusNotFound {
+		logCtx.Error("Failed to check for existence of crm group user.")
+		return "", http.StatusInternalServerError
+	}
+
+	if status == http.StatusFound {
+		return user.ID, http.StatusFound
+	}
+
+	group, status := store.GetGroup(projectID, groupName)
+	if status != http.StatusFound {
+		logCtx.Error("Failed to get group on CreateOrGetCRMGroupUser.")
+		return "", http.StatusInternalServerError
+	}
+
+	isGroupUser := true
+	userID, status := store.CreateGroupUser(&model.User{
+		ID:            getCRMGroupUserIDByRecordIDANDIndex(group.ID, recordID),
+		ProjectId:     projectID,
+		IsGroupUser:   &isGroupUser,
+		JoinTimestamp: requestTimestamp,
+		Source:        &requestSource,
+	}, groupName, recordID)
+	if status != http.StatusCreated && status != http.StatusConflict {
+		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to create crm group user.")
 		return "", http.StatusInternalServerError
 	}
 

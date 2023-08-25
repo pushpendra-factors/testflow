@@ -3069,16 +3069,40 @@ func createOrUpdateHubspotGroupsProperties(projectID int64, document *model.Hubs
 
 	createdEventName, updatedEventName := getGroupEventName(document.Type)
 	if document.Action == model.HubspotDocumentActionCreated {
-		groupUserID, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID, "",
-			enProperties, getEventTimestamp(document.Timestamp), getEventTimestamp(document.Timestamp), model.UserSourceHubspotString)
+		if !C.UseHashIDForCRMGroupUserByProject(projectID) {
+			groupUserID, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID, "",
+				enProperties, getEventTimestamp(document.Timestamp), getEventTimestamp(document.Timestamp), model.UserSourceHubspotString)
 
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to update hubspot created group properties.")
-			return "", "", http.StatusInternalServerError
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to update hubspot created group properties.")
+				return "", "", http.StatusInternalServerError
+			}
+
+			processEventNames = append(processEventNames, createdEventName)
+			processEventTimestamps = append(processEventTimestamps, document.Timestamp)
+		} else {
+			userID, status := store.GetStore().CreateOrGetCRMGroupUser(projectID, groupName, groupID,
+				getEventTimestamp(document.Timestamp), model.UserSourceHubspot)
+			if status != http.StatusCreated && status != http.StatusConflict && status != http.StatusFound {
+				logCtx.WithError(err).Error("Failed to create group user for hubspot.")
+				return "", "", http.StatusInternalServerError
+			}
+			groupUserID = userID
+
+			if status == http.StatusConflict || status == http.StatusFound {
+				return groupUserID, "", http.StatusOK
+			}
+
+			_, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID, groupUserID,
+				enProperties, getEventTimestamp(document.Timestamp), getEventTimestamp(document.Timestamp), model.UserSourceHubspotString)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to update hubspot group user properties.")
+				return "", "", http.StatusInternalServerError
+			}
+
+			processEventNames = append(processEventNames, createdEventName)
+			processEventTimestamps = append(processEventTimestamps, document.Timestamp)
 		}
-
-		processEventNames = append(processEventNames, createdEventName)
-		processEventTimestamps = append(processEventTimestamps, document.Timestamp)
 	}
 
 	updateCreatedRecord := false
@@ -3107,7 +3131,6 @@ func createOrUpdateHubspotGroupsProperties(projectID int64, document *model.Hubs
 
 		processEventNames = append(processEventNames, updatedEventName)
 		processEventTimestamps = append(processEventTimestamps, document.Timestamp)
-
 	}
 
 	if document.Action == model.HubspotDocumentActionAssociationsUpdated {

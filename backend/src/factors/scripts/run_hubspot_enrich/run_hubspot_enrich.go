@@ -81,6 +81,7 @@ func main() {
 	useHubspotDealsv3APIByProjectID := flag.String("use_hubspot_deals_v3_by_project_id", "", "")
 	removeDisabledEventUserPropertiesByProjectId := flag.String("remove_disabled_event_user_properties",
 		"", "List of projects to disable event user property population in events.")
+	useHashIDForCRMGroupUserByProject := flag.String("use_hash_id_for_crm_group_user_by_project_id", "", "")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -140,6 +141,7 @@ func main() {
 		UseHubspotEngagementsV3APIByProjectID:              *useHubspotEngagementsv3APIByProjectID,
 		UseHubspotDealsV3APIByProjectID:                    *useHubspotDealsv3APIByProjectID,
 		RemoveDisabledEventUserPropertiesByProjectID:       *removeDisabledEventUserPropertiesByProjectId,
+		UseHashIDForCRMGroupUserByProject:                  *useHashIDForCRMGroupUserByProject,
 	}
 
 	C.InitConf(config)
