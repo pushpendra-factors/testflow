@@ -180,26 +180,8 @@ export function removeCustomKPI(projectID, data) {
   };
 }
 export function fetchKPIFilterValues(projectID, data) {
-  return function (dispatch) {
-    return new Promise((resolve, reject) => {
-      post(
-        dispatch,
-        host + 'projects/' + projectID + `/v1/kpi/filter_values`,
-        data
-      )
-        .then((response) => {
-          dispatch({
-            type: 'FETCH_KPI_FILTERVALUES_FULFILLED',
-            payload: response.data
-          });
-          resolve(response);
-        })
-        .catch((err) => {
-          dispatch({ type: 'FETCH_KPI_FILTERVALUES_REJECTED', payload: err });
-          reject(err);
-        });
-    });
-  };
+  const url = host + 'projects/' + projectID + `/v1/kpi/filter_values?label=true`
+  return post(null, url,data);
 }
 
 export function fetchPageUrls(projectID) {

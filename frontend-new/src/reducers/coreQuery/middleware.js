@@ -1,4 +1,4 @@
-/* eslint-disable */
+import { fetchKPIFilterValues } from 'Reducers/kpi';
 import {
   fetchEventsAction,
   fetchEventPropertiesAction,
@@ -414,24 +414,26 @@ export const getUserPropertyValues =
   (projectId, propertyName) => (dispatch) => {
     return new Promise((resolve, reject) => {
       dispatch({ type: FETCH_PROPERTY_VALUES_LOADING });
-      fetchUserPropertyValues(projectId, propertyName).then((response) => {
-        resolve(
-          dispatch({
-            type: FETCH_PROPERTY_VALUES_LOADED,
-            payload: response.data,
-            propName: propertyName
-          })
-        );
-      });
-    }).catch((err) => {
-      console.log(err);
-      resolve(
-        dispatch({
-          type: FETCH_PROPERTY_VALUES_LOADED,
-          payload: {},
-          propName: propertyName
+      fetchUserPropertyValues(projectId, propertyName)
+        .then((response) => {
+          resolve(
+            dispatch({
+              type: FETCH_PROPERTY_VALUES_LOADED,
+              payload: response.data,
+              propName: propertyName
+            })
+          );
         })
-      );
+        .catch((err) => {
+          console.log(err);
+          resolve(
+            dispatch({
+              type: FETCH_PROPERTY_VALUES_LOADED,
+              payload: {},
+              propName: propertyName
+            })
+          );
+        });
     });
   };
 
@@ -439,8 +441,8 @@ export const getEventPropertyValues =
   (projectId, eventName, propertyName) => (dispatch) => {
     return new Promise((resolve, reject) => {
       dispatch({ type: FETCH_PROPERTY_VALUES_LOADING });
-      fetchEventPropertyValues(projectId, eventName, propertyName).then(
-        (response) => {
+      fetchEventPropertyValues(projectId, eventName, propertyName)
+        .then((response) => {
           resolve(
             dispatch({
               type: FETCH_PROPERTY_VALUES_LOADED,
@@ -448,17 +450,17 @@ export const getEventPropertyValues =
               propName: propertyName
             })
           );
-        }
-      );
-    }).catch((err) => {
-      console.log(err);
-      resolve(
-        dispatch({
-          type: FETCH_PROPERTY_VALUES_LOADED,
-          payload: {},
-          propName: propertyName
         })
-      );
+        .catch((err) => {
+          console.log(err);
+          resolve(
+            dispatch({
+              type: FETCH_PROPERTY_VALUES_LOADED,
+              payload: {},
+              propName: propertyName
+            })
+          );
+        });
     });
   };
 
@@ -466,8 +468,8 @@ export const getGroupPropertyValues =
   (projectId, groupName, propertyName) => (dispatch) => {
     return new Promise((resolve, reject) => {
       dispatch({ type: FETCH_PROPERTY_VALUES_LOADING });
-      fetchGroupPropertyValues(projectId, groupName, propertyName).then(
-        (response) => {
+      fetchGroupPropertyValues(projectId, groupName, propertyName)
+        .then((response) => {
           resolve(
             dispatch({
               type: FETCH_PROPERTY_VALUES_LOADED,
@@ -475,16 +477,42 @@ export const getGroupPropertyValues =
               propName: propertyName
             })
           );
-        }
-      );
-    }).catch((err) => {
-      console.log(err);
-      resolve(
-        dispatch({
-          type: FETCH_PROPERTY_VALUES_LOADED,
-          payload: {},
-          propName: propertyName
         })
-      );
+        .catch((err) => {
+          console.log(err);
+          resolve(
+            dispatch({
+              type: FETCH_PROPERTY_VALUES_LOADED,
+              payload: {},
+              propName: propertyName
+            })
+          );
+        });
     });
   };
+
+export const getKPIPropertyValues = (projectId, data) => (dispatch) => {
+  return new Promise((resolve, reject) => {
+    dispatch({ type: FETCH_PROPERTY_VALUES_LOADING });
+    fetchKPIFilterValues(projectId, data)
+      .then((response) => {
+        resolve(
+          dispatch({
+            type: FETCH_PROPERTY_VALUES_LOADED,
+            payload: response.data,
+            propName: data?.property_name
+          })
+        );
+      })
+      .catch((err) => {
+        console.log(err);
+        resolve(
+          dispatch({
+            type: FETCH_PROPERTY_VALUES_LOADED,
+            payload: {},
+            propName: data?.property_name
+          })
+        );
+      });
+  });
+};
