@@ -51,6 +51,8 @@ function QueryBlock({
     group: []
   });
   const [showGroups, setShowGroups] = useState([]);
+  const [orFilterIndex, setOrFilterIndex] = useState(-1);
+  const [isModalVisible, setIsModalVisible] = useState(false);
 
   const eventGroup = useMemo(() => {
     const group =
@@ -60,25 +62,23 @@ function QueryBlock({
 
   useEffect(() => {
     let showOpts = [];
+
+    const groupNamesList = availableGroups?.map((item) => item[0]);
     if (groupAnalysis === 'users') {
-      // showOpts = [...eventOptions];
-      showOpts = eventOptions.filter((item) => peopleCategoryList.includes(item.icon))
-    } else {
-      const groupOpts = eventOptions?.filter((item) => {
-        const [groupDisplayName] =
-          availableGroups?.find((group) => group[1] === groupAnalysis) || [];
-        return item.label === groupDisplayName;
-      });
-      const groupNamesList = availableGroups?.map((item) => item[0]);
+
       const userOpts = eventOptions?.filter(
         (item) => !groupNamesList?.includes(item?.label)
       );
-      let prevShowOpts = groupOpts.concat(userOpts);
-      showOpts = prevShowOpts.filter((item) => accountsCategoryList.includes(item.icon))
 
+      showOpts = userOpts;
+
+    } else {
+      const groupOpts = eventOptions?.filter(
+        (item) => groupNamesList?.includes(item?.label)
+      );
+      // showOpts = groupOpts.concat(userOpts);
+      showOpts = groupOpts;
     }
-
-
 
     showOpts = showOpts?.map((opt) => {
       return {
@@ -91,11 +91,7 @@ function QueryBlock({
     });
 
     setShowGroups(showOpts);
-  }, [eventOptions, groupAnalysis]);
-
-  const [orFilterIndex, setOrFilterIndex] = useState(-1);
-
-  const [isModalVisible, setIsModalVisible] = useState(false);
+  }, [eventOptions, groupAnalysis, availableGroups]); 
 
   const showModal = () => {
     setIsModalVisible(true);

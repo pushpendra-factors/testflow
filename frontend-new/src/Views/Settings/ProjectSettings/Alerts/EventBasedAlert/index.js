@@ -180,7 +180,7 @@ const EventBasedAlert = ({
     date_range: { ...DefaultDateRangeFormat }
   });
 
-  const [activeGrpBtn, setActiveGrpBtn] = useState(queryOptions?.group_analysis);
+  const [activeGrpBtn, setActiveGrpBtn] = useState(QUERY_TYPE_EVENT);
 
   const history = useHistory();
   const routeChange = (url) => {
@@ -198,10 +198,7 @@ const EventBasedAlert = ({
 
 
   const groupsList = useMemo(() => {
-    let groups = [['Users', 'users']];
-    if (queryType === QUERY_TYPE_EVENT) {
-      groups.unshift(['Events', 'events']);
-    }
+    let groups = [];
     Object.entries(groupOpts || {}).forEach(([group_name, display_name]) => {
       groups.push([display_name, group_name]);
     });
@@ -306,10 +303,6 @@ const EventBasedAlert = ({
       );
     }
   }, [viewAlertDetails?.event_alert?.event]);
-
-
-   
-
 
   useEffect(() => {
     if (viewAlertDetails?.event_alert?.filter) {
@@ -438,10 +431,7 @@ const EventBasedAlert = ({
             event={event}
             queries={queries}
             eventChange={queryChange}
-            groupAnalysis={queryOptions.group_analysis}
-
-          // availableGroups={groupsList} 
-
+            groupAnalysis={activeGrpBtn}
           />
         </div>
       );
@@ -451,12 +441,13 @@ const EventBasedAlert = ({
       blockList.push(
         <div key='init'>
           <QueryBlock
+            availableGroups={groupsList}
             queryType={queryType}
             index={queries.length + 1}
             queries={queries}
             eventChange={queryChange}
             groupBy={queryOptions.groupBy}
-            groupAnalysis={queryOptions.group_analysis}
+            groupAnalysis={activeGrpBtn}
           />
         </div>
       );
@@ -592,10 +583,10 @@ const EventBasedAlert = ({
   const confirmDeleteAlert = (item) => {
     confirm({
       title: 'Do you want to delete this alert?',
-      icon: <ExclamationCircleOutlined />, 
+      icon: <ExclamationCircleOutlined />,
       content: 'Please confirm to proceed',
       onOk() {
-        deleteEventAlert(activeProject?.id, item?.id ).then(()=>{
+        deleteEventAlert(activeProject?.id, item?.id).then(() => {
           message.success('Deleted Alert successfully!');
           setAlertState({ state: 'list', index: 0 });
           fetchEventAlerts(activeProject.id)
@@ -652,14 +643,14 @@ const EventBasedAlert = ({
         message_property:
           groupBy && groupBy.length && groupBy[0] && groupBy[0].property
             ? formatBreakdownsForQuery(
-                groupBy
-                  .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
-                  .filter(
-                    (gbp) =>
-                      gbp.eventName === queries[0]?.label &&
-                      gbp.eventIndex === 1
-                  )
-              )
+              groupBy
+                .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
+                .filter(
+                  (gbp) =>
+                    gbp.eventName === queries[0]?.label &&
+                    gbp.eventIndex === 1
+                )
+            )
             : [],
         alert_limit: alertLimit,
         repeat_alerts: notRepeat,
@@ -750,28 +741,28 @@ const EventBasedAlert = ({
     }
   };
 
-  const createDuplicateAlert = (item) =>{ 
+  const createDuplicateAlert = (item) => {
     let payload = {
       ...item?.event_alert,
       title: `Copy of ${item?.event_alert?.title}`
-    } 
+    }
     createEventAlert(activeProject?.id, payload)
-    .then((res) => {
-      setLoading(false);
-      fetchEventAlerts(activeProject?.id);
-      onReset();
-      notification.success({
-        message: 'Alert Created',
-        description: 'Copy of alert is created and saved successfully.'
-      }); 
-    })
-    .catch((err) => {
-      setLoading(false);
-      notification.error({
-        message: 'Error',
-        description: err?.data?.error
+      .then((res) => {
+        setLoading(false);
+        fetchEventAlerts(activeProject?.id);
+        onReset();
+        notification.success({
+          message: 'Alert Created',
+          description: 'Copy of alert is created and saved successfully.'
+        });
+      })
+      .catch((err) => {
+        setLoading(false);
+        notification.error({
+          message: 'Error',
+          description: err?.data?.error
+        });
       });
-    });
   }
 
   const onConnectSlack = () => {
@@ -923,13 +914,13 @@ const EventBasedAlert = ({
       message_property:
         groupBy && groupBy.length && groupBy[0] && groupBy[0].property
           ? formatBreakdownsForQuery(
-              groupBy
-                .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
-                .filter(
-                  (gbp) =>
-                    gbp.eventName === queries[0]?.label && gbp.eventIndex === 1
-                )
-            )
+            groupBy
+              .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
+              .filter(
+                (gbp) =>
+                  gbp.eventName === queries[0]?.label && gbp.eventIndex === 1
+              )
+          )
           : [],
       message: alertMessage,
       url: webhookUrl,
@@ -978,10 +969,10 @@ const EventBasedAlert = ({
     let status = 'paused';
     confirm({
       title: 'Pause Alert?',
-      icon: <ExclamationCircleOutlined />, 
+      icon: <ExclamationCircleOutlined />,
       content: 'Alerts and webhooks from this event will be paused. You can always turn this back on when needed.',
       onOk() {
-        updateEventAlertStatus(activeProject?.id, item?.id, status ).then(()=>{
+        updateEventAlertStatus(activeProject?.id, item?.id, status).then(() => {
           message.success('Successfully paused/disabled alerts.');
           setAlertState({ state: 'list', index: 0 });
           fetchEventAlerts(activeProject.id)
@@ -991,7 +982,7 @@ const EventBasedAlert = ({
       }
     });
   };
-  
+
 
   const toggleAlertEnabled = (checked) => {
     if (!checked) {
@@ -1944,7 +1935,7 @@ const EventBasedAlert = ({
                 </Form.Item>
               </Col> </>}
 
-            <Col span={16} className={'m-0 mt-4'}> 
+            <Col span={16} className={'m-0 mt-4'}>
               <a type={'link'} onClick={() => setShowAdvSettings(!showAdvSettings)}>{`${showAdvSettings ? 'Hide advanced options' : 'Show advanced options'}`}</a>
             </Col>
 
@@ -1956,21 +1947,21 @@ const EventBasedAlert = ({
               <Col span={12}>
                 {/* <a type={'link'} className={'mr-2'} onClick={() => createDuplicateAlert(viewAlertDetails)}>{'Create copy'}</a>
                 <a type={'link'} color={'red'} onClick={() => confirmDeleteAlert(viewAlertDetails)}>{`Delete`}</a> */}
-                
-                 
-                <Button type={'text'} color={'red'} onClick={() => createDuplicateAlert(viewAlertDetails)}> 
+
+
+                <Button type={'text'} color={'red'} onClick={() => createDuplicateAlert(viewAlertDetails)}>
                   <div className='flex items-center'>
                     <SVG name='Pluscopy' size={16} color={'grey'} extraClass={'mr-1'} />
-                    <Text type={'title'} level={7}extraClass={'m-0'} >Create copy </Text>
-                    </div>
+                    <Text type={'title'} level={7} extraClass={'m-0'} >Create copy </Text>
+                  </div>
                 </Button>
-                <Button type={'text'} color={'red'} onClick={() => confirmDeleteAlert(viewAlertDetails)}> 
+                <Button type={'text'} color={'red'} onClick={() => confirmDeleteAlert(viewAlertDetails)}>
                   <div className='flex items-center'>
                     <SVG name='Delete1' size={16} color={'red'} extraClass={'mr-1'} />
                     <Text type={'title'} level={7} color={'red'} extraClass={'m-0'} >Delete </Text>
-                    </div>
+                  </div>
                 </Button>
-               
+
               </Col>
               <Col span={12}>
                 <div className={'flex justify-end'}>
