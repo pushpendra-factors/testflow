@@ -190,3 +190,30 @@ func (store *MemSQL) GetAllProjectsWithFeatureEnabled(featureName string) ([]int
 	}
 	return enabledProjectIds, nil
 }
+
+func (store *MemSQL) GetProjectsArrayWithFeatureEnabledFromProjectIdFlag(stringProjectsIDs, featureName string) ([]int64, error) {
+	projectIdsArray := make([]int64, 0)
+	var err error
+	if stringProjectsIDs == "*" {
+		projectIdsArray, err = store.GetAllProjectsWithFeatureEnabled(featureName)
+		if err != nil {
+			errString := fmt.Errorf("failed to get feature status for all projects")
+			log.WithError(err).Error(errString)
+		}
+	} else {
+		projectIds := C.GetTokensFromStringListAsUint64(stringProjectsIDs)
+		for _, projectId := range projectIds {
+			available := false
+			available, _, err = store.GetFeatureStatusForProjectV2(projectId, featureName)
+			if err != nil {
+				log.WithFields(log.Fields{"projectID": projectId}).WithError(err)
+				continue
+			}
+			if available {
+				projectIdsArray = append(projectIdsArray, projectId)
+			}
+		}
+	}
+	return projectIdsArray, err
+
+}

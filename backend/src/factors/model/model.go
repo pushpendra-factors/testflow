@@ -950,6 +950,7 @@ type Model interface {
 	GetFeatureLimitForProject(projectID int64, featureName string) (int64, error)
 	UpdateFeatureStatusForProject(projectID int64, feature model.FeatureDetails) (string, error)
 	UpdateAllFeatureStatusForProject(ProjectID int64, updatedSettings model.ProjectSetting) error
+	GetProjectsArrayWithFeatureEnabledFromProjectIdFlag(stringProjectsIDs, featureName string) ([]int64, error)
 
 	// Property Mapping
 	CreatePropertyMapping(propertyMapping model.PropertyMapping) (*model.PropertyMapping, string, int)

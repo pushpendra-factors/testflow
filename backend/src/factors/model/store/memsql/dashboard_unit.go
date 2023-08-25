@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	C "factors/config"
 	"factors/model/model"
+	M "factors/model/model"
 	U "factors/util"
 	"fmt"
 	"net/http"
@@ -661,9 +662,13 @@ func (store *MemSQL) DBCacheAttributionDashboardUnitsForProjects(stringProjectsI
 	logCtx := log.WithFields(logFields)
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	projectIDs := store.GetProjectsToRunForIncludeExcludeString(stringProjectsIDs, excludeProjectIDs)
+	projectIDs, err := store.GetProjectsArrayWithFeatureEnabledFromProjectIdFlag(stringProjectsIDs, M.FEATURE_ATTRIBUTION)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get projects array with feature enabled")
+		return
+	}
+
 	var mapOfValidDashboardUnits map[int64]map[int64]bool
-	var err error
 	validUnitCount := int64(0)
 	if C.GetUsageBasedDashboardCaching() == 1 {
 		mapOfValidDashboardUnits, validUnitCount, err = model.GetDashboardCacheAnalyticsValidityMap()
