@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo
+} from 'react';
 import { connect } from 'react-redux';
 import {
   Row,
@@ -166,6 +172,17 @@ const EventBasedAlert = ({
   useEffect(() => {
     fetchGroups(activeProject.id);
   }, [activeProject]);
+
+  const groupsList = useMemo(() => {
+    let groups = [['Users', 'users']];
+    if (queryType === QUERY_TYPE_EVENT) {
+      groups.unshift(['Events', 'events']);
+    }
+    Object.entries(groupOpts || {}).forEach(([group_name, display_name]) => {
+      groups.push([display_name, group_name]);
+    });
+    return groups;
+  }, [groupOpts]);
 
   const [isGroupByDDVisible, setGroupByDDVisible] = useState(false);
 
@@ -419,6 +436,7 @@ const EventBasedAlert = ({
             queries={queries}
             eventChange={queryChange}
             groupAnalysis={queryOptions.group_analysis}
+            availableGroups={groupsList}
           />
         </div>
       );
@@ -434,6 +452,7 @@ const EventBasedAlert = ({
             eventChange={queryChange}
             groupBy={queryOptions.groupBy}
             groupAnalysis={queryOptions.group_analysis}
+            availableGroups={groupsList}
           />
         </div>
       );
@@ -629,13 +648,14 @@ const EventBasedAlert = ({
       queries.length > 0 &&
       (EventPropertyDetails?.name || EventPropertyDetails?.[1])
     ) {
-
       let category;
 
       for (let property in eventPropertiesV2[queries[0]?.label]) {
         let nestedArrays = eventPropertiesV2[queries[0]?.label][property];
         category = nestedArrays.filter(
-          (prop) => prop[1] === (EventPropertyDetails?.name || EventPropertyDetails?.[1])
+          (prop) =>
+            prop[1] ===
+            (EventPropertyDetails?.name || EventPropertyDetails?.[1])
         );
       }
 
@@ -645,7 +665,7 @@ const EventBasedAlert = ({
           property: EventPropertyDetails?.name || EventPropertyDetails?.[1],
           prop_type:
             EventPropertyDetails?.data_type || EventPropertyDetails?.[2],
-          prop_category: category.length > 0 ? 'event' : 'user',
+          prop_category: category.length > 0 ? 'event' : 'user'
         }
       ];
     }
