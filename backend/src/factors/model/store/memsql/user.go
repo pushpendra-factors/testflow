@@ -131,6 +131,10 @@ func (store *MemSQL) createUserWithError(user *model.User) (*model.User, error) 
 }
 
 func (store *MemSQL) CreateUser(user *model.User) (string, int) {
+	return store.createUserWithConflicts(user, true)
+}
+
+func (store *MemSQL) createUserWithConflicts(user *model.User, ignoreConflicts bool) (string, int) {
 	logFields := log.Fields{
 		"user": user,
 	}
@@ -155,7 +159,11 @@ func (store *MemSQL) CreateUser(user *model.User) (string, int) {
 			// Multiple requests trying to create user at the
 			// same time should not lead failure permanently,
 			// so get the user and return.
-			return user.ID, http.StatusCreated
+			if ignoreConflicts {
+				return user.ID, http.StatusCreated
+			} else {
+				return user.ID, http.StatusConflict
+			}
 		}
 
 		logCtx.WithError(err).Error("Failed to create user. Integrity violation.")
@@ -787,13 +795,13 @@ func (store *MemSQL) CreateOrGetCRMGroupUser(projectID int64, groupName string, 
 	}
 
 	isGroupUser := true
-	userID, status := store.CreateGroupUser(&model.User{
+	userID, status := store.createGroupUserWithConflicts(&model.User{
 		ID:            getCRMGroupUserIDByRecordIDANDIndex(group.ID, recordID),
 		ProjectId:     projectID,
 		IsGroupUser:   &isGroupUser,
 		JoinTimestamp: requestTimestamp,
 		Source:        &requestSource,
-	}, groupName, recordID)
+	}, groupName, recordID, false)
 	if status != http.StatusCreated && status != http.StatusConflict {
 		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to create crm group user.")
 		return "", http.StatusInternalServerError
@@ -2551,6 +2559,10 @@ func (store *MemSQL) addGroupUserPropertyDetailsToCache(projectID int64, groupNa
 }
 
 func (store *MemSQL) CreateGroupUser(user *model.User, groupName, groupID string) (string, int) {
+	return store.createGroupUserWithConflicts(user, groupName, groupID, true)
+}
+
+func (store *MemSQL) createGroupUserWithConflicts(user *model.User, groupName, groupID string, ignoreConflicts bool) (string, int) {
 	logFields := log.Fields{
 		"user":       user,
 		"group_name": groupName,
@@ -2601,7 +2613,7 @@ func (store *MemSQL) CreateGroupUser(user *model.User, groupName, groupID string
 		logCtx.Warning("Skip associating group_id")
 	}
 
-	return store.CreateUser(groupUser)
+	return store.createUserWithConflicts(groupUser, ignoreConflicts)
 }
 
 func (store *MemSQL) UpdateUserGroup(projectID int64, userID, groupName, groupID, groupUserID string, overwrite bool) (*model.User, int) {
