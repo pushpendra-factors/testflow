@@ -3,13 +3,16 @@ import StepsCounter from 'Components/GenericComponents/StepsCounter';
 import { SVG, Text } from 'Components/factorsComponents';
 import { Button, Dropdown, Menu } from 'antd';
 import useMobileView from 'hooks/useMobileView';
+import { useHistory } from 'react-router-dom';
 
 const OnboardingHeader = ({
   currentStep,
   totalSteps,
-  showStepsCounter = true
+  showStepsCounter = true,
+  showCloseButton = false
 }: OnboardingHeaderProps) => {
   const isMobileView = useMobileView();
+  const history = useHistory();
   const handleHelpClick = () => {
     if (window?.Intercom) {
       window.Intercom(
@@ -17,6 +20,10 @@ const OnboardingHeader = ({
         `Hey, I have few doubts regarding onboarding! Can you guys help me out?`
       );
     }
+  };
+
+  const handleCloseClick = () => {
+    history.goBack();
   };
 
   const getMobileMenu = () => {
@@ -33,6 +40,11 @@ const OnboardingHeader = ({
             Need help?
           </Button>
         </Menu.Item>
+        {showCloseButton && (
+          <Menu.Item key='3'>
+            <Button onClick={handleCloseClick}>Close</Button>
+          </Menu.Item>
+        )}
       </Menu>
     );
   };
@@ -67,12 +79,18 @@ const OnboardingHeader = ({
 
       {!isMobileView && (
         <div className='flex flex-row-reverse gap-10'>
-          <Button
-            icon={<SVG name='Headset' size='16' color='#8C8C8C' />}
-            onClick={handleHelpClick}
-          >
-            Need help?
-          </Button>
+          <div className='flex gap-2'>
+            <Button
+              icon={<SVG name='Headset' size='16' color='#8C8C8C' />}
+              onClick={handleHelpClick}
+            >
+              Need help?
+            </Button>
+            {showCloseButton && (
+              <Button onClick={handleCloseClick}>Close</Button>
+            )}
+          </div>
+
           {showStepsCounter && (
             <StepsCounter currentStep={currentStep} totalSteps={totalSteps} />
           )}
@@ -86,6 +104,7 @@ interface OnboardingHeaderProps {
   totalSteps: number;
   currentStep: number;
   showStepsCounter?: boolean;
+  showCloseButton?: boolean;
 }
 
 export default OnboardingHeader;

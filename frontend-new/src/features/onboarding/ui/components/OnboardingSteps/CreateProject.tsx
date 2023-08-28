@@ -99,7 +99,7 @@ const Step1 = ({
       setIsFormSubmitted(true);
       setLoading(false);
       incrementStepCount();
-      history.push(PathUrls.Onboarding);
+      history.replace(PathUrls.Onboarding);
     } catch (error) {
       setLoading(false);
       message.error(error?.data?.error);

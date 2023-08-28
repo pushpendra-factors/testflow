@@ -46,7 +46,6 @@ const Onboarding = ({ setShowAnalyticsResult }: OnboardingComponentProps) => {
   };
 
   const decrementStepCount = () => {
-    console.log('decrement step count called---', currentStep);
     if (currentStep > 0) setCurrentStep(currentStep - 1);
   };
 
@@ -93,6 +92,7 @@ const Onboarding = ({ setShowAnalyticsResult }: OnboardingComponentProps) => {
       currentStep={currentStep}
       stepImage={getIllustrationImage(currentStep)}
       totalSteps={5}
+      showCloseButton={currentStep === 1 && paramSetup === 'new'}
     >
       {currentStep === 1 && (
         <Step1

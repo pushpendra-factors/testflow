@@ -166,7 +166,7 @@ const Step3 = ({
                 color='character-disabled-placeholder'
               >
                 (This affects your monthly quota of accounts. You can check out
-                our pricing page for more info.)
+                our pricing settings for more info.)
               </Text>
               <div className='flex items-center my-6 gap-1'>
                 <SVG name='InfoCircle' size='16' />
@@ -176,7 +176,7 @@ const Step3 = ({
                   color='character-secondary'
                   extraClass='m-0'
                 >
-                  You can also do this later in the pricing page.
+                  You can also do this later in the pricing settings.
                 </Text>
               </div>
             </>

@@ -7,7 +7,7 @@ import { useHistory, useLocation } from 'react-router-dom';
 import { OnboardingStepsConfig, SETUP_COMPLETED } from './types';
 
 const OnboardingRouting = () => {
-  const { isAgentInvited, email } = useAgentInfo();
+  const { isAgentInvited, email, isLoggedIn } = useAgentInfo();
   const { agent_details, agents } = useSelector((state) => state.agent);
   const { projects, currentProjectSettings } = useSelector(
     (state) => state.global
@@ -20,7 +20,9 @@ const OnboardingRouting = () => {
   useEffect(() => {
     let routeFlag = false;
     let routePath = '';
-    if (!projects || projects?.length === 0) {
+    if (!isLoggedIn) {
+      return;
+    } else if (!projects || projects?.length === 0) {
       //if no projects are available
       routeFlag = true;
       routePath = PathUrls.Onboarding;
@@ -58,7 +60,8 @@ const OnboardingRouting = () => {
     email,
     projects,
     onboarding_steps,
-    currentProjectSettings
+    currentProjectSettings,
+    isLoggedIn
   ]);
   return <></>;
 };

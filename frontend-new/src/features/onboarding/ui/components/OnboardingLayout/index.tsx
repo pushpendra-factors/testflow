@@ -8,7 +8,8 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
   totalSteps,
   currentStep,
   stepImage,
-  showStepsCounter
+  showStepsCounter,
+  showCloseButton
 }) => {
   const isMobileView = useMobileView();
   const renderIllustrationImage = () => (
@@ -28,6 +29,7 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
         totalSteps={totalSteps}
         currentStep={currentStep}
         showStepsCounter={showStepsCounter}
+        showCloseButton={showCloseButton}
       />
 
       {isMobileView && (
@@ -61,6 +63,7 @@ interface OnboardingLayoutProps {
   currentStep: number;
   totalSteps: number;
   showStepsCounter?: boolean;
+  showCloseButton?: boolean;
 }
 
 export default OnboardingLayout;
