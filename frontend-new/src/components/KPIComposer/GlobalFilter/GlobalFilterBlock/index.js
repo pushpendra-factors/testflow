@@ -38,8 +38,9 @@ function GlobalFilterBlock({
   viewMode = false,
   isSameKPIGrp
 }) {
-
-  const propertyValuesMap = useSelector((state)=>state.coreQuery.propertyValuesMap)
+  const propertyValuesMap = useSelector(
+    (state) => state.coreQuery.propertyValuesMap
+  );
   const [filterTypeState, setFilterTypeState] = useState('props');
   const [groupCollapseState, setGroupCollapse] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
@@ -114,13 +115,15 @@ function GlobalFilterBlock({
           }
         }
         setvalueOptsLoading(true);
-        getKPIPropertyValues(activeProject.id, filterData)
-          .then((res) => {
-            setvalueOptsLoading(false);
-          })
-          .catch((err) => {
-            setvalueOptsLoading(false);
-          });
+        if (propertyValuesMap[filterData?.property_name]) {
+          getKPIPropertyValues(activeProject.id, filterData)
+            .then((res) => {
+              setvalueOptsLoading(false);
+            })
+            .catch((err) => {
+              setvalueOptsLoading(false);
+            });
+        }
       }
     }
   }, [filter, isSameKPIGrp]);

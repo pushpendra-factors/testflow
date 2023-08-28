@@ -258,6 +258,162 @@ export const getProfileQuery = (
   return query;
 };
 
+export const getEventsWithPropertiesCustomKPI = (filters, category) => {
+  const filterProps = [];
+  // adding fil?.extra ? fil?.extra[*] check as a hotfix for timestamp filters
+  const filtersGroupedByRef = Object.values(groupFilters(filters, 'ref'));
+  filtersGroupedByRef.forEach((filtersGr) => {
+    if (filtersGr.length === 1) {
+      const fil = filtersGr[0];
+      if (fil.props.length === 4) {
+        fil.props.shift();
+      }
+      if (Array.isArray(fil.values)) {
+        fil.values.forEach((val, index) => {
+          filterProps.push({
+            prNa: fil?.extra ? fil?.extra[1] : fil?.props[0],
+            prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
+            co: operatorMap[fil.operator],
+            lOp: !index ? 'AND' : 'OR',
+            en:
+              category === 'channels' || category === 'custom_channels'
+                ? ''
+                : fil?.extra
+                ? fil?.extra[3]
+                : fil?.props?.[2],
+            objTy:
+              category === 'channels' || category === 'custom_channels'
+                ? fil?.extra
+                  ? fil?.extra[3]
+                  : fil?.props?.[2]
+                : '',
+            va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val
+          });
+        });
+      } else {
+        filterProps.push({
+          prNa: fil?.extra ? fil?.extra[1] : fil?.props[0],
+          prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
+          co: operatorMap[fil.operator],
+          lOp: 'AND',
+          en:
+            category === 'channels' || category === 'custom_channels'
+              ? ''
+              : fil?.extra
+              ? fil?.extra[3]
+              : fil?.props?.[2],
+          objTy:
+            category === 'channels' || category === 'custom_channels'
+              ? fil?.extra
+                ? fil?.extra[3]
+                : fil?.props?.[2]
+              : '',
+          va:
+            fil.props[1] === 'datetime'
+              ? formatFilterDate(fil.values)
+              : fil.values
+        });
+      }
+    } else {
+      let fil = filtersGr[0];
+      if (Array.isArray(fil.values)) {
+        fil.values.forEach((val, index) => {
+          filterProps.push({
+            prNa: fil?.extra ? fil?.extra[1] : fil?.props[0],
+            prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
+            co: operatorMap[fil.operator],
+            lOp: !index ? 'AND' : 'OR',
+            en:
+              category === 'channels' || category === 'custom_channels'
+                ? ''
+                : fil?.extra
+                ? fil?.extra[3]
+                : fil?.props?.[2],
+            objTy:
+              category === 'channels' || category === 'custom_channels'
+                ? fil?.extra
+                  ? fil?.extra[3]
+                  : fil?.props?.[2]
+                : '',
+            va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val
+          });
+        });
+      } else {
+        filterProps.push({
+          prNa: fil?.extra ? fil?.extra[1] : fil?.props[0],
+          prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
+          co: operatorMap[fil.operator],
+          lOp: 'AND',
+          en:
+            category === 'channels' || category === 'custom_channels'
+              ? ''
+              : fil?.extra
+              ? fil?.extra[3]
+              : fil?.props?.[2],
+          objTy:
+            category === 'channels' || category === 'custom_channels'
+              ? fil?.extra
+                ? fil?.extra[3]
+                : fil?.props?.[2]
+              : '',
+          va:
+            fil.props[1] === 'datetime'
+              ? formatFilterDate(fil.values)
+              : fil.values
+        });
+      }
+      fil = filtersGr[1];
+      if (Array.isArray(fil.values)) {
+        fil.values.forEach((val) => {
+          filterProps.push({
+            prNa: fil?.extra ? fil?.extra[1] : fil?.props[0],
+            prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
+            co: operatorMap[fil.operator],
+            lOp: 'OR',
+            en:
+              category === 'channels' || category === 'custom_channels'
+                ? ''
+                : fil?.extra
+                ? fil?.extra[3]
+                : fil?.props?.[2],
+            objTy:
+              category === 'channels' || category === 'custom_channels'
+                ? fil?.extra
+                  ? fil?.extra[3]
+                  : fil?.props?.[2]
+                : '',
+            va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val
+          });
+        });
+      } else {
+        filterProps.push({
+          prNa: fil?.extra ? fil?.extra[1] : fil?.props[0],
+          prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
+          co: operatorMap[fil.operator],
+          lOp: 'OR',
+          en:
+            category === 'channels' || category === 'custom_channels'
+              ? ''
+              : fil?.extra
+              ? fil?.extra[3]
+              : fil?.props?.[2],
+          objTy:
+            category === 'channels' || category === 'custom_channels'
+              ? fil?.extra
+                ? fil?.extra[3]
+                : fil?.props?.[2]
+              : '',
+          va:
+            fil.props[1] === 'datetime'
+              ? formatFilterDate(fil.values)
+              : fil.values
+        });
+      }
+    }
+  });
+  return filterProps;
+};
+
 export const getEventsWithPropertiesKPI = (filters, category) => {
   const filterProps = [];
   // adding fil?.extra ? fil?.extra[*] check as a hotfix for timestamp filters
@@ -579,6 +735,104 @@ export const getKPIQuery = (
     queries[0]?.category
   );
 
+  return query;
+};
+const getGroupByWithPropertiesCustomKPI = (appliedGroupBy, index, category) => {
+  return appliedGroupBy.map((opt) => {
+    let appGbp = {};
+    if (opt.eventIndex === index) {
+      appGbp = {
+        gr: '',
+        prNa: opt.property,
+        prDaTy: opt.prop_type,
+        eni: opt.eventIndex,
+        en:
+          category === 'channels' || category === 'custom_channels'
+            ? ''
+            : opt.prop_category,
+        objTy:
+          category === 'channels' || category === 'custom_channels'
+            ? opt.prop_category
+            : '',
+        dpNa: opt?.display_name ? opt?.display_name : ''
+      };
+    } else {
+      appGbp = {
+        gr: '',
+        prNa: opt.property,
+        prDaTy: opt.prop_type,
+        en:
+          category === 'channels' || category === 'custom_channels'
+            ? ''
+            : opt.prop_category,
+        objTy:
+          category === 'channels' || category === 'custom_channels'
+            ? opt.prop_category
+            : '',
+        dpNa: opt?.display_name ? opt?.display_name : ''
+      };
+    }
+    if (opt.prop_type === 'datetime') {
+      opt.grn ? (appGbp.grn = opt.grn) : (appGbp.grn = 'day');
+    }
+    if (opt.prop_type === 'numerical') {
+      opt.gbty ? (appGbp.gbty = opt.gbty) : (appGbp.gbty = '');
+    }
+    return appGbp;
+  });
+};
+const getCustomKPIqueryGroup = (queries, eventGrpBy, period) => {
+  const alphabetIndex = 'abcdefghijk';
+  const queryArr = [];
+  queries.forEach((item, index) => {
+    const GrpByItem = eventGrpBy.filter(
+      (item) => item.eventIndex === index + 1
+    );
+    queryArr.push({
+      ca: item?.category,
+      pgUrl: item?.pageViewVal ? item?.pageViewVal : '',
+      dc: item.group,
+      me: [item.metric],
+      fil: getEventsWithPropertiesCustomKPI(item.filters, item?.category),
+      gBy: getGroupByWithPropertiesCustomKPI(GrpByItem, index, item?.category),
+      fr: period.from,
+      to: period.to,
+      tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata',
+      na: alphabetIndex[index],
+      qt: item.qt
+    });
+  });
+  return queryArr;
+};
+
+
+export const getCustomKPIQuery = (
+  queries,
+  date_range,
+  groupBy,
+  queryOptions,
+  formula
+  // globalFilters = []
+) => {
+  const query = {};
+  query.cl = QUERY_TYPE_KPI?.toLocaleLowerCase();
+  const period = {};
+  if (date_range?.from && date_range?.to) {
+    period.from = MomentTz(date_range.from).startOf('day').utc().unix();
+    period.to = MomentTz(date_range.to).endOf('day').utc().unix();
+    period.frequency = date_range.frequency;
+  } else {
+    period.from = MomentTz().startOf('week').utc().unix();
+    period.to =
+      MomentTz().format('dddd') !== 'Sunday'
+        ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
+        : MomentTz().utc().unix();
+    period.frequency = date_range.frequency;
+  }
+
+  const eventGrpBy = [...groupBy.event];
+  query.qG = getCustomKPIqueryGroup(queries, eventGrpBy, period);
+  query.for = formula;
   return query;
 };
 

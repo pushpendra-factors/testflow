@@ -89,13 +89,15 @@ function EventFilterWrapper({
           };
         }
         setvalueOptsLoading(true);
-        getKPIPropertyValues(activeProject.id, filterData)
-          .then((res) => {
-            setvalueOptsLoading(false);
-          })
-          .catch((err) => {
-            setvalueOptsLoading(false);
-          });
+        if (propertyValuesMap[filterData?.property_name]) {
+          getKPIPropertyValues(activeProject.id, filterData)
+            .then((res) => {
+              setvalueOptsLoading(false);
+            })
+            .catch((err) => {
+              setvalueOptsLoading(false);
+            });
+        }
       } else if (!filter?.extra) {
         // filter.extra getiing set null after running query once and after 2nd time it showing loading
         // added here temporary fix for the above
