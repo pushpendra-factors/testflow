@@ -323,6 +323,7 @@ type Configuration struct {
 	DisableOpportunityContactRolesByProjectID          string
 	ExcludeBotIPV4AddressByRange                       string
 	SlackInternalAlertWebhookUrl                       string
+	UseHashIDForCRMGroupUserByProject                  string
 }
 
 type Services struct {
@@ -2987,4 +2988,13 @@ func IsExcludeBotIPV4AddressByRange(ip string) bool {
 	}
 
 	return false
+}
+
+func UseHashIDForCRMGroupUserByProject(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().UseHashIDForCRMGroupUserByProject, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
 }
