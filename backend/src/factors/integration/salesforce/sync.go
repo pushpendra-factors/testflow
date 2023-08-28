@@ -137,6 +137,7 @@ func getSalesforceObjectDescription(projectID int64, objectName, accessToken, in
 		return nil, err
 	}
 
+	log.WithFields(log.Fields{"project_id": projectID, "object_name": objectName, "api_usage": resp.Header["Sforce-Limit-Info"]}).Info("Api Usage on getSalesforceObjectDescription.")
 	return &jsonRespone, nil
 }
 
@@ -397,6 +398,7 @@ func (s *DataClient) getRequest(queryURL string) (*QueryResponse, error) {
 		return nil, errors.New("failed to decode response")
 	}
 	s.APICall++
+	log.WithFields(log.Fields{"project_id": s.ProjectID, "api_usage": resp.Header["Sforce-Limit-Info"]}).Info("Api Usage on getRequest.")
 
 	return &jsonResponse, nil
 }

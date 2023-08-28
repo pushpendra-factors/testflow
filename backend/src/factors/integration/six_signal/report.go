@@ -72,10 +72,10 @@ func SendSixSignalEmailForSubscribe(projectIdArray []int64) map[int64][]string {
 		}
 
 		_, failToSendEmailIds := memsql.SendSixSignalReportViaEmail(reqPayload)
-		projectIdToFailSendEmailIdsMap[projectId] = failToSendEmailIds
-
+		if len(failToSendEmailIds) > 0 {
+			projectIdToFailSendEmailIdsMap[projectId] = failToSendEmailIds
+		}
 	}
-
 	return projectIdToFailSendEmailIdsMap
 }
 

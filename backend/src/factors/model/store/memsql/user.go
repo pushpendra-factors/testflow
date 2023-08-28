@@ -131,6 +131,10 @@ func (store *MemSQL) createUserWithError(user *model.User) (*model.User, error) 
 }
 
 func (store *MemSQL) CreateUser(user *model.User) (string, int) {
+	return store.createUserWithConflicts(user, true)
+}
+
+func (store *MemSQL) createUserWithConflicts(user *model.User, ignoreConflicts bool) (string, int) {
 	logFields := log.Fields{
 		"user": user,
 	}
@@ -155,7 +159,11 @@ func (store *MemSQL) CreateUser(user *model.User) (string, int) {
 			// Multiple requests trying to create user at the
 			// same time should not lead failure permanently,
 			// so get the user and return.
-			return user.ID, http.StatusCreated
+			if ignoreConflicts {
+				return user.ID, http.StatusCreated
+			} else {
+				return user.ID, http.StatusConflict
+			}
 		}
 
 		logCtx.WithError(err).Error("Failed to create user. Integrity violation.")
@@ -586,6 +594,17 @@ func getDomainUserIDByDomainGroupIndexANDDomainName(domainGroupIndex int, domain
 	return "dom-" + enKey
 }
 
+func getCRMGroupUserIDByRecordIDANDIndex(groupIndex int, recordID string) string {
+	if groupIndex == 0 || recordID == "" {
+		return ""
+	}
+
+	key := fmt.Sprintf("%d-%s", groupIndex, recordID)
+
+	enKey := base64.StdEncoding.EncodeToString([]byte(key))
+	return "crm-" + enKey
+}
+
 // CreateOrGetSegmentUser create or updates(c_uid) and returns user by segement_anonymous_id
 // and/or customer_user_id.
 func (store *MemSQL) CreateOrGetSegmentUser(projectId int64, segAnonId, custUserId string,
@@ -734,6 +753,57 @@ func (store *MemSQL) CreateOrGetDomainGroupUser(projectID int64, groupName strin
 	}, groupName, domainName)
 	if status != http.StatusCreated && status != http.StatusConflict {
 		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to create domain group user.")
+		return "", http.StatusInternalServerError
+	}
+
+	return userID, status
+}
+
+// CreateOrGetCRMGroupUser creates or get crm group user by group name and record id
+func (store *MemSQL) CreateOrGetCRMGroupUser(projectID int64, groupName string, recordID string,
+	requestTimestamp int64, requestSource int) (string, int) {
+	logFields := log.Fields{
+		"project_id":        projectID,
+		"group_name":        groupName,
+		"record_id":         recordID,
+		"request_timestamp": requestTimestamp,
+		"request_source":    requestSource,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+
+	if projectID == 0 || groupName == "" || recordID == "" {
+		logCtx.Error("Invalid parameters on CreateOrGetCRMGroupUser.")
+		return "", http.StatusBadRequest
+	}
+
+	user, status := store.GetGroupUserByGroupID(projectID, groupName, recordID)
+	if status != http.StatusFound && status != http.StatusNotFound {
+		logCtx.Error("Failed to check for existence of crm group user.")
+		return "", http.StatusInternalServerError
+	}
+
+	if status == http.StatusFound {
+		return user.ID, http.StatusFound
+	}
+
+	group, status := store.GetGroup(projectID, groupName)
+	if status != http.StatusFound {
+		logCtx.Error("Failed to get group on CreateOrGetCRMGroupUser.")
+		return "", http.StatusInternalServerError
+	}
+
+	isGroupUser := true
+	userID, status := store.createGroupUserWithConflicts(&model.User{
+		ID:            getCRMGroupUserIDByRecordIDANDIndex(group.ID, recordID),
+		ProjectId:     projectID,
+		IsGroupUser:   &isGroupUser,
+		JoinTimestamp: requestTimestamp,
+		Source:        &requestSource,
+	}, groupName, recordID, false)
+	if status != http.StatusCreated && status != http.StatusConflict {
+		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to create crm group user.")
 		return "", http.StatusInternalServerError
 	}
 
@@ -2489,6 +2559,10 @@ func (store *MemSQL) addGroupUserPropertyDetailsToCache(projectID int64, groupNa
 }
 
 func (store *MemSQL) CreateGroupUser(user *model.User, groupName, groupID string) (string, int) {
+	return store.createGroupUserWithConflicts(user, groupName, groupID, true)
+}
+
+func (store *MemSQL) createGroupUserWithConflicts(user *model.User, groupName, groupID string, ignoreConflicts bool) (string, int) {
 	logFields := log.Fields{
 		"user":       user,
 		"group_name": groupName,
@@ -2539,7 +2613,7 @@ func (store *MemSQL) CreateGroupUser(user *model.User, groupName, groupID string
 		logCtx.Warning("Skip associating group_id")
 	}
 
-	return store.CreateUser(groupUser)
+	return store.createUserWithConflicts(groupUser, ignoreConflicts)
 }
 
 func (store *MemSQL) UpdateUserGroup(projectID int64, userID, groupName, groupID, groupUserID string, overwrite bool) (*model.User, int) {
@@ -2643,6 +2717,59 @@ func (store *MemSQL) updateUserGroup(projectID int64, user *model.User, userID s
 	user.ProjectId = 0
 	user.ID = ""
 	return store.UpdateUser(projectID, userID, user, user.PropertiesUpdatedTimestamp)
+}
+
+func (store *MemSQL) UpdateUserGroupInBatch(projectID int64, userIDs []string, groupName, groupID string, groupUserID string, overwrite bool) int {
+	logFields := log.Fields{
+		"project_id":    projectID,
+		"user_ids":      userIDs,
+		"group_id":      groupID,
+		"group_user_id": groupUserID,
+		"overwrite":     overwrite,
+		"group_name":    groupName,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	if projectID == 0 || groupUserID == "" || len(userIDs) == 0 || groupName == "" {
+		logCtx.Error("Invalid parameters.")
+		return http.StatusBadRequest
+	}
+
+	group, status := store.GetGroup(projectID, groupName)
+	if status != http.StatusFound {
+		logCtx.Error("Failed to get group on UpdateUserGroupInBatch.")
+		return http.StatusInternalServerError
+	}
+
+	groupUserIDColumn := fmt.Sprintf("group_%d_user_id", group.ID)
+	groupIDColumn := fmt.Sprintf("group_%d_id", group.ID)
+
+	updates := map[string]string{
+		groupUserIDColumn: groupUserID,
+		groupIDColumn:     groupID,
+	}
+
+	whereStmnt := "project_id = ? AND ( is_group_user is null OR is_group_user = false )"
+	if len(userIDs) == 1 {
+		whereStmnt = whereStmnt + " AND id = ?"
+	} else {
+		whereStmnt = whereStmnt + " AND id in (?)"
+	}
+	whereParams := []interface{}{projectID, userIDs}
+
+	if !overwrite {
+		whereStmnt = whereStmnt + " AND " + groupUserIDColumn + " IS NULL "
+	}
+
+	db := C.GetServices().Db
+	err := db.Model(&model.User{}).Where(whereStmnt, whereParams...).Updates(updates).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to update group user association.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
 }
 
 func (store *MemSQL) UpdateGroupUserDomainsGroup(projectID int64, groupUserID, groupUserGroupName, domainsUserID, domainsGroupID string, overwrite bool) (*model.User, int) {

@@ -33,7 +33,7 @@ class JobScheduler:
             log.error("Invalid refresh token for project_id %d", project_id)
             message = "Invalid refresh token."
         if message != "":
-            metrics_controller.update_job_stats(project_id, url_prefix, doc_type, STATUS_FAILED, message)
+            metrics_controller.update_gsc_job_stats(project_id, url_prefix, doc_type, STATUS_FAILED, message)
             return False
 
         if metrics_controller.is_permission_denied_previously(project_id, url_prefix, refresh_token):
