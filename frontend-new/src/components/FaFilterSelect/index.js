@@ -30,6 +30,7 @@ import { uploadList } from 'Reducers/global';
 import FaSelect from 'Components/GenericComponents/FaSelect';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import { selectedOptionsMapper } from 'Components/GenericComponents/FaSelect/utils';
+import { PropTextFormat } from 'Utils/dataFormatter';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 const rangePicker = [OPERATORS['equalTo'], OPERATORS['notEqualTo']];
@@ -113,7 +114,8 @@ const FaFilterSelect = ({
       (filter && !valuesState) ||
       (filter && filter?.values !== valuesState)
     ) {
-      const prop = filter.props;
+      const prop =
+        filter.props.length === 3 ? ['', ...filter.props] : filter.props;
       setPropState({
         groupName: prop[0],
         icon: prop[3],
@@ -287,26 +289,15 @@ const FaFilterSelect = ({
   };
 
   const renderGroupDisplayName = (propState) => {
-    // propState?.name ? userPropNames[propState?.name] ? userPropNames[propState?.name] : propState?.name : 'Select Property'
+    const mergedPropNames = {
+      ...groupPropNames,
+      ...userPropNames,
+      ...eventPropNames
+    };
     let propertyName = propState?.name;
-    if (propState.name && propState.icon === 'group') {
-      propertyName = groupPropNames[propState.name]
-        ? groupPropNames[propState.name]
-        : propState.name;
-    }
-    if (
-      propState.name &&
-      (propState.icon === 'user' || propState.icon === 'user_g')
-    ) {
-      propertyName = userPropNames[propState.name]
-        ? userPropNames[propState.name]
-        : propState.name;
-    }
-    if (propState.name && propState.icon === 'event') {
-      propertyName = eventPropNames[propState.name]
-        ? eventPropNames[propState.name]
-        : propState.name;
-    }
+    propertyName = mergedPropNames[propState?.name]
+      ? mergedPropNames[propState?.name]
+      : PropTextFormat(propState?.name);
     if (!propState.name) {
       propertyName = 'Select Property';
     }

@@ -1897,6 +1897,8 @@ func (store *MemSQL) GetTopAnonymousUsers(queryParams []interface{}, groupUserSt
 	}
 	if topAnonymousUsers.AnonymousUsersCount > 0 {
 		topAnonymousUsers.Name = fmt.Sprintf("%d Anonymous Users", topAnonymousUsers.AnonymousUsersCount)
+	} else {
+		return model.TopUser{}, nil
 	}
 
 	return topAnonymousUsers, nil

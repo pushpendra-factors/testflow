@@ -59,7 +59,7 @@ export const formatFiltersForQuery = (filters, scope = 'event') => {
   let count = 0;
   filters.forEach((filter) => {
     let { ref } = filter;
-    if (!ref){
+    if (ref !== 0 || !ref) {
       ref = count++;
     }
     if (!groupByRef[ref]) {
@@ -76,13 +76,14 @@ export const formatFiltersForQuery = (filters, scope = 'event') => {
       const values = Array.isArray(filter.values)
         ? filter.values
         : [filter.values];
+      const operator = operatorMap[filter.operator];
       values.forEach((value, j) => {
         const valueLop = i === 0 && j === 0 ? 'AND' : 'OR';
         const filterStruct = {
           en: entity,
           grpn: filter.props[0],
           lop: valueLop,
-          op: filter.operator,
+          op: operator,
           pr: filter.props[1],
           ty: filter.props[2],
           va: value
@@ -94,7 +95,6 @@ export const formatFiltersForQuery = (filters, scope = 'event') => {
       });
     });
   }
-
   return formattedFilters;
 };
 
@@ -261,11 +261,13 @@ export const getProfileQuery = (
 export const getEventsWithPropertiesKPI = (filters, category) => {
   const filterProps = [];
   // adding fil?.extra ? fil?.extra[*] check as a hotfix for timestamp filters
-
   const filtersGroupedByRef = Object.values(groupFilters(filters, 'ref'));
   filtersGroupedByRef.forEach((filtersGr) => {
     if (filtersGr.length === 1) {
       const fil = filtersGr[0];
+      if (fil.props.length === 4) {
+        fil.props.shift();
+      }
       if (Array.isArray(fil.values)) {
         fil.values.forEach((val, index) => {
           filterProps.push({
@@ -1383,9 +1385,9 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
       ? processFiltersFromQuery(requestQuery.gup)
       : null;
 
-  const globalBreakdown =  processBreakdownsFromQuery(requestQuery?.gbp || []).filter(
-    (b) => !b.eventIndex
-  );
+  const globalBreakdown = processBreakdownsFromQuery(
+    requestQuery?.gbp || []
+  ).filter((b) => !b.eventIndex);
 
   const groupBy = {
     global: globalBreakdown,

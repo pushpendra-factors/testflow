@@ -74,7 +74,8 @@ const FAFilterSelect = ({
   );
   useEffect(() => {
     if (filter) {
-      const prop = filter.props;
+      const prop =
+        filter.props.length === 4 ? filter.props.slice(1) : filter.props;
       setPropState({
         icon: prop[2],
         name: prop[0],

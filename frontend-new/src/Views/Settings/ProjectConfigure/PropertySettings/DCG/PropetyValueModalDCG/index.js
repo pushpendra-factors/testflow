@@ -119,7 +119,7 @@ function PropertyValueModal({
           filterProps.push({
             logical_operator: !index ? 'AND' : 'OR',
             condition: operatorMap[fil.operator],
-            property: fil.props[0],
+            property: fil.props[1],
             // ty: fil.props[1],
             value: val
           });
@@ -128,7 +128,7 @@ function PropertyValueModal({
         filterProps.push({
           logical_operator: 'AND',
           condition: operatorMap[fil.operator],
-          property: fil.props[0],
+          property: fil.props[1],
           // ty: fil.props[1],
           value: fil.values
         });

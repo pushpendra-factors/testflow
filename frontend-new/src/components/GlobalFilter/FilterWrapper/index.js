@@ -9,10 +9,10 @@ import {
 } from 'Reducers/coreQuery/middleware';
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
-import { PropTextFormat } from 'Utils/dataFormatter';
 import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
 import getGroupIcon from 'Utils/getGroupIcon';
 import startCase from 'lodash/startCase';
+import { getPropertyGroupLabel } from './utils';
 
 function FilterWrapper({
   projectID,
@@ -57,7 +57,7 @@ function FilterWrapper({
 
   useEffect(() => {
     const formattedFilterDDOptions = { ...filterDropDownOptions, props: [] };
-    Object.keys(filterProps)?.forEach((propertyKey) => {
+    Object.keys(filterProps || {})?.forEach((propertyKey) => {
       if (!Array.isArray(filterProps[propertyKey])) {
         const propertyGroups = filterProps[propertyKey];
         if (propertyGroups) {
@@ -75,7 +75,7 @@ function FilterWrapper({
           });
         }
       } else {
-        const label = `${PropTextFormat(propertyKey)} Properties`;
+        const label = getPropertyGroupLabel(propertyKey);
         const icon = ['user', 'event'].includes(propertyKey)
           ? propertyKey
           : ['button_click', 'page_view'].includes(propertyKey)

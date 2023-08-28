@@ -61,7 +61,7 @@ const DCGTable = ({
         let conditionCamelCase = _.camelCase(item.condition);
         filters.push({
           operator: reverseOperatorMap[conditionCamelCase],
-          props: [item.property, 'categorical', 'event'],
+          props: ['event',item.property, 'categorical', 'event'],
           values: [item.value]
         });
       } else {
@@ -97,7 +97,7 @@ const DCGTable = ({
                     color={'grey'}
                     level={8}
                     truncate
-                  >{`${matchEventName(item?.props[0])} ${
+                  >{`${matchEventName(item?.props[1])} ${
                     item?.operator
                   } ${_.join(
                     item?.values.map((vl) =>
@@ -106,7 +106,7 @@ const DCGTable = ({
                     [', ']
                   )}`}</Text>
                 </Button>
-                {queryMap.length != index + 1 && (
+                {queryMap.length !== index + 1 && (
                   <Text
                     type={'title'}
                     weight={'thin'}
