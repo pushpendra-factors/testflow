@@ -60,7 +60,7 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	}
 
 	logCtx = logCtx.WithField("projectId", projectId)
-	requestPayload, dashboardId, unitId, isDashboardQueryRequest, statusCode, errorCode, errMsg, isErr := getValidAnalyticsQueryAndDetailsFromRequest(r, c, logCtx, projectId)
+	requestPayload, dashboardId, unitId, isDashboardQueryRequest, isDashboardQueryLocked, statusCode, errorCode, errMsg, isErr := getValidAnalyticsQueryAndDetailsFromRequest(r, c, logCtx, projectId)
 	if statusCode != http.StatusOK {
 		return nil, statusCode, errorCode, errMsg, isErr
 	}
@@ -90,6 +90,37 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 			preset = U.GetPresetNameByFromAndTo(commonQueryFrom, commonQueryTo, requestPayload.GetTimeZone())
 		}
 		model.SetDashboardCacheAnalytics(projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo, requestPayload.GetTimeZone())
+	}
+
+	enableOptimisedFilterOnEventUserQuery := c.Request.Header.Get(H.HeaderUserFilterOptForEventsAndUsers) == "true" ||
+		C.EnableOptimisedFilterOnEventUserQuery()
+
+	if isDashboardQueryLocked {
+		err = requestPayload.TransformDateTypeFilters()
+		if err != nil {
+			return nil, http.StatusBadRequest, V1.INVALID_INPUT, err.Error(), true
+		}
+
+		resultGroup, errCode := store.GetStore().RunEventsGroupQuery(requestPayload.Queries, projectId, enableOptimisedFilterOnEventUserQuery)
+		if errCode != http.StatusOK {
+			model.DeleteQueryCacheKey(projectId, &requestPayload)
+			logCtx.Error("Query failed. Failed to process query from DB")
+			if errCode == http.StatusPartialContent {
+				return resultGroup, errCode, V1.PROCESSING_FAILED, "Failed to process query from DB", true
+			}
+			return nil, errCode, V1.PROCESSING_FAILED, "Failed to process query from DB", true
+		}
+
+		if allowSyncReferenceFields {
+			resultGroup.Results, err = store.GetStore().AddPropertyValueLabelToQueryResults(projectId, resultGroup.Results)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to set property value label.")
+			}
+		}
+
+		return H.DashboardQueryResponsePayload{
+			Result: resultGroup, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), TimeZone: string(requestPayload.GetTimeZone()), CacheMeta: nil}, http.StatusOK, "", "", false
+
 	}
 
 	// If refresh is passed, refresh only is Query.From is of todays beginning.
@@ -141,9 +172,6 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	// If not found, set a placeholder for the query hash key that it has been running to avoid running again.
 	model.SetQueryCachePlaceholder(projectId, &requestPayload)
 	H.SleepIfHeaderSet(c)
-
-	enableOptimisedFilterOnEventUserQuery := c.Request.Header.Get(H.HeaderUserFilterOptForEventsAndUsers) == "true" ||
-		C.EnableOptimisedFilterOnEventUserQuery()
 
 	resultGroup, errCode := store.GetStore().RunEventsGroupQuery(requestPayload.Queries, projectId, enableOptimisedFilterOnEventUserQuery)
 	if errCode != http.StatusOK {
@@ -250,7 +278,7 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 		hardRefresh, _ = strconv.ParseBool(refreshParam)
 	}
 
-	requestPayload, dashboardId, unitId, isDashboardQueryRequest, statusCode, errorCode, errMsg, isErr := getValidAnalyticsQueryOlderAndDetailsFromRequest(r, c, logCtx, projectId)
+	requestPayload, dashboardId, unitId, isDashboardQueryRequest, isDashboardQueryLocked, statusCode, errorCode, errMsg, isErr := getValidAnalyticsQueryOlderAndDetailsFromRequest(r, c, logCtx, projectId)
 	if statusCode != http.StatusOK {
 		return nil, statusCode, errorCode, errMsg, isErr
 	}
@@ -267,12 +295,34 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 		}
 	}
 
+	enableOptimisedFilterOnEventUserQuery := c.Request.Header.Get(H.HeaderUserFilterOptForEventsAndUsers) == "true" ||
+		C.EnableOptimisedFilterOnEventUserQuery()
+
 	// Tracking dashboard query request.
 	if isDashboardQueryRequest {
 		if preset == "" && C.IsLastComputedWhitelisted(projectId) {
 			preset = U.GetPresetNameByFromAndTo(requestPayload.Query.From, requestPayload.Query.To, requestPayload.Query.GetTimeZone())
 		}
 		model.SetDashboardCacheAnalytics(projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To, requestPayload.Query.GetTimeZone())
+	}
+
+	if isDashboardQueryLocked {
+		err = requestPayload.Query.TransformDateTypeFilters()
+		if err != nil {
+			return nil, http.StatusBadRequest, V1.INVALID_INPUT, err.Error(), true
+		}
+
+		funnelV2 := H.UseUserFunnelV2(c)
+		result, errCode, errMsg := store.GetStore().Analyze(projectId, requestPayload.Query, enableOptimisedFilterOnEventUserQuery, funnelV2)
+		if errCode != http.StatusOK {
+			logCtx.Error("Failed to process query from DB - " + errMsg)
+			return nil, errCode, V1.PROCESSING_FAILED, "Failed to process query from DB - " + errMsg, true
+		}
+		if result == nil {
+			logCtx.Error(" Result is nil - " + errMsg)
+			return nil, errCode, V1.PROCESSING_FAILED, "Result is nil - " + errMsg, true
+		}
+		return H.DashboardQueryResponsePayload{Result: result, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), TimeZone: string(requestPayload.Query.GetTimeZone()), CacheMeta: nil}, http.StatusOK, "", "", false
 	}
 
 	// If refresh is passed, refresh only is Query.From is of today's beginning.
@@ -317,9 +367,6 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	model.SetQueryCachePlaceholder(projectId, &requestPayload.Query)
 	H.SleepIfHeaderSet(c)
 
-	enableOptimisedFilterOnEventUserQuery := c.Request.Header.Get(H.HeaderUserFilterOptForEventsAndUsers) == "true" ||
-		C.EnableOptimisedFilterOnEventUserQuery()
-
 	funnelV2 := H.UseUserFunnelV2(c)
 	result, errCode, errMsg := store.GetStore().Analyze(projectId, requestPayload.Query, enableOptimisedFilterOnEventUserQuery, funnelV2)
 	if errCode != http.StatusOK {
@@ -358,10 +405,10 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	return result, http.StatusOK, "", "", false
 }
 
-func getValidAnalyticsQueryAndDetailsFromRequest(r *http.Request, c *gin.Context, logCtx *log.Entry, projectId int64) (model.QueryGroup, int64, int64, bool, int, string, string, bool) {
+func getValidAnalyticsQueryAndDetailsFromRequest(r *http.Request, c *gin.Context, logCtx *log.Entry, projectId int64) (model.QueryGroup, int64, int64, bool, bool, int, string, string, bool) {
 	var dashboardId, unitId int64
 	var err error
-	requestPayload, queryPayload := model.QueryGroup{}, model.QueryGroup{}
+	requestPayload, queryPayload, isDashboardQueryLocked := model.QueryGroup{}, model.QueryGroup{}, false
 
 	dashboardIdParam := c.Query("dashboard_id")
 	unitIdParam := c.Query("dashboard_unit_id")
@@ -372,7 +419,7 @@ func getValidAnalyticsQueryAndDetailsFromRequest(r *http.Request, c *gin.Context
 		decoder.DisallowUnknownFields()
 		if err := decoder.Decode(&requestPayload); err != nil {
 			logCtx.WithError(err).Error("Query failed. Json decode failed.")
-			return requestPayload, 0, 0, false, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
+			return requestPayload, 0, 0, false, isDashboardQueryLocked, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
 		}
 	}
 
@@ -382,30 +429,25 @@ func getValidAnalyticsQueryAndDetailsFromRequest(r *http.Request, c *gin.Context
 		dashboardId, err = strconv.ParseInt(dashboardIdParam, 10, 64)
 		if err != nil || dashboardId == 0 {
 			logCtx.WithError(err).Error("Query failed. Invalid DashboardID.")
-			return queryPayload, dashboardId, 0, true, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardID.", true
+			return queryPayload, dashboardId, 0, true, isDashboardQueryLocked, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardID.", true
 		}
 		unitId, err = strconv.ParseInt(unitIdParam, 10, 64)
 		if err != nil || unitId == 0 {
 			logCtx.WithError(err).Error("Query failed. Invalid DashboardUnitID.")
-			return queryPayload, dashboardId, unitId, true, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardUnitID.", true
+			return queryPayload, dashboardId, unitId, true, isDashboardQueryLocked, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardUnitID.", true
 		}
 		_, query, err := store.GetStore().GetQueryFromUnitID(projectId, unitId)
 		if err != "" {
 			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
-			return queryPayload, dashboardId, unitId, true, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
+			return queryPayload, dashboardId, unitId, true, isDashboardQueryLocked, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
 		}
-		if query.LockedForCacheInvalidation {
-			return queryPayload, dashboardId, unitId, true, http.StatusConflict, V1.PROCESSING_FAILED, "Query is not processed due to saved query updated", false
-		}
+		isDashboardQueryLocked = query.LockedForCacheInvalidation
 		U.DecodePostgresJsonbToStructType(&query.Query, &queryPayload)
 	} else if queryIdString != "" {
 		_, query, err := store.GetStore().GetQueryAndClassFromQueryIdString(queryIdString, projectId)
 		if err != "" {
 			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
-			return queryPayload, 0, 0, false, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
-		}
-		if query.LockedForCacheInvalidation {
-			return queryPayload, 0, 0, false, http.StatusConflict, V1.PROCESSING_FAILED, "Query is not processed due to saved query updated", false
+			return queryPayload, 0, 0, false, isDashboardQueryLocked, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
 		}
 		U.DecodePostgresJsonbToStructType(&query.Query, &queryPayload)
 	} else {
@@ -434,9 +476,9 @@ func getValidAnalyticsQueryAndDetailsFromRequest(r *http.Request, c *gin.Context
 
 	if len(queryPayload.Queries) == 0 {
 		logCtx.Error("Query failed. Empty query group.")
-		return queryPayload, dashboardId, unitId, isDashboardQueryRequest, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Empty query group.", true
+		return queryPayload, dashboardId, unitId, isDashboardQueryRequest, isDashboardQueryLocked, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Empty query group.", true
 	}
-	return queryPayload, dashboardId, unitId, isDashboardQueryRequest, http.StatusOK, "", "", false
+	return queryPayload, dashboardId, unitId, isDashboardQueryRequest, isDashboardQueryLocked, http.StatusOK, "", "", false
 }
 
 func setTimezoneForAnalyticsRequest(logCtx *log.Entry, requestPayload model.QueryGroup, projectId int64) (model.QueryGroup, int, string, string, bool) {
@@ -459,11 +501,11 @@ func setTimezoneForAnalyticsRequest(logCtx *log.Entry, requestPayload model.Quer
 	return requestPayload, http.StatusOK, "", "", false
 }
 
-func getValidAnalyticsQueryOlderAndDetailsFromRequest(r *http.Request, c *gin.Context, logCtx *log.Entry, projectId int64) (QueryRequestPayload, int64, int64, bool, int, string, string, bool) {
+func getValidAnalyticsQueryOlderAndDetailsFromRequest(r *http.Request, c *gin.Context, logCtx *log.Entry, projectId int64) (QueryRequestPayload, int64, int64, bool, bool, int, string, string, bool) {
 	var dashboardId, unitId int64
 	var err error
 
-	requestPayload, queryPayload := QueryRequestPayload{}, QueryRequestPayload{}
+	requestPayload, queryPayload, isDashboardQueryLocked := QueryRequestPayload{}, QueryRequestPayload{}, false
 	dbQuery := model.Query{}
 
 	dashboardIdParam := c.Query("dashboard_id")
@@ -475,7 +517,7 @@ func getValidAnalyticsQueryOlderAndDetailsFromRequest(r *http.Request, c *gin.Co
 		decoder.DisallowUnknownFields()
 		if err := decoder.Decode(&requestPayload); err != nil {
 			logCtx.WithError(err).Error("Query failed. Json decode failed.")
-			return queryPayload, 0, 0, false, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
+			return queryPayload, 0, 0, false, isDashboardQueryLocked, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
 		}
 	}
 
@@ -485,31 +527,26 @@ func getValidAnalyticsQueryOlderAndDetailsFromRequest(r *http.Request, c *gin.Co
 		dashboardId, err = strconv.ParseInt(dashboardIdParam, 10, 64)
 		if err != nil || dashboardId == 0 {
 			logCtx.WithError(err).Error("Query failed. Invalid DashboardID.")
-			return queryPayload, dashboardId, 0, true, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardID.", true
+			return queryPayload, dashboardId, 0, true, isDashboardQueryLocked, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardID.", true
 		}
 		unitId, err = strconv.ParseInt(unitIdParam, 10, 64)
 		if err != nil || unitId == 0 {
 			logCtx.WithError(err).Error("Query failed. Invalid DashboardUnitID.")
-			return queryPayload, dashboardId, unitId, true, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardUnitID.", true
+			return queryPayload, dashboardId, unitId, true, isDashboardQueryLocked, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardUnitID.", true
 		}
 		_, query, err := store.GetStore().GetQueryFromUnitID(projectId, unitId)
 		if err != "" {
 			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
-			return queryPayload, dashboardId, unitId, true, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
+			return queryPayload, dashboardId, unitId, true, isDashboardQueryLocked, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
 		}
-		if query.LockedForCacheInvalidation {
-			return queryPayload, dashboardId, unitId, true, http.StatusConflict, V1.PROCESSING_FAILED, "Query is not processed due to saved query updated", false
-		}
+		isDashboardQueryLocked = query.LockedForCacheInvalidation
 		U.DecodePostgresJsonbToStructType(&query.Query, &dbQuery)
 		queryPayload.Query = dbQuery
 	} else if queryIdString != "" {
 		_, query, err := store.GetStore().GetQueryAndClassFromQueryIdString(queryIdString, projectId)
 		if err != "" {
 			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
-			return queryPayload, 0, 0, false, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
-		}
-		if query.LockedForCacheInvalidation {
-			return queryPayload, 0, 0, false, http.StatusConflict, V1.PROCESSING_FAILED, "Query is not processed due to saved query updated", false
+			return queryPayload, 0, 0, false, isDashboardQueryLocked, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
 		}
 		U.DecodePostgresJsonbToStructType(&query.Query, &dbQuery)
 		queryPayload.Query = dbQuery
@@ -526,7 +563,7 @@ func getValidAnalyticsQueryOlderAndDetailsFromRequest(r *http.Request, c *gin.Co
 		queryPayload.Query.GroupByTimestamp = requestPayload.Query.GroupByTimestamp
 	}
 
-	return queryPayload, dashboardId, unitId, isDashboardQueryRequest, http.StatusOK, "", "", false
+	return queryPayload, dashboardId, unitId, isDashboardQueryRequest, isDashboardQueryLocked, http.StatusOK, "", "", false
 }
 
 func setTimezoneForAnalyticsRequestOlder(logCtx *log.Entry, requestPayload QueryRequestPayload, projectId int64) (QueryRequestPayload, int, string, string, bool) {

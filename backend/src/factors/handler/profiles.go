@@ -56,7 +56,7 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 		"projectID": projectID,
 	})
 
-	profileQueryGroup, dashboardId, unitId, isDashboardQueryRequest, statusCode, errorCode, errMsg, isErr := getValidProfilesQueryAndDetailsFromRequest(r, c, logCtx, projectID)
+	profileQueryGroup, dashboardId, unitId, isDashboardQueryRequest, isDashboardQueryLocked, statusCode, errorCode, errMsg, isErr := getValidProfilesQueryAndDetailsFromRequest(r, c, logCtx, projectID)
 	if statusCode != http.StatusOK {
 		return nil, statusCode, errorCode, errMsg, isErr
 	}
@@ -116,12 +116,36 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 		}
 	}
 
+	// Use optimised filter for profiles query if enabled using header or configuration.
+	enableOptimisedFilter := c.Request.Header.Get(H.HeaderUserFilterOptForProfiles) == "true" ||
+		C.EnableOptimisedFilterOnProfileQuery()
+	allowSyncReferenceFields := C.AllowSyncReferenceFields(projectID)
+
 	// Tracking dashboard query request.
 	if isDashboardQueryRequest {
 		model.SetDashboardCacheAnalytics(projectID, dashboardId, unitId, profileQueryGroup.From, profileQueryGroup.To, timezoneString)
 	}
 
-	allowSyncReferenceFields := C.AllowSyncReferenceFields(projectID)
+	if isDashboardQueryLocked {
+		resultGroup, errCode := store.GetStore().RunProfilesGroupQuery(profileQueryGroup.Queries, projectID, enableOptimisedFilter)
+		if errCode != http.StatusOK {
+			logCtx.Error("Profile Query failed. Failed to process query from DB")
+			if errCode == http.StatusPartialContent {
+				return resultGroup, errCode, V1.PROCESSING_FAILED, "Failed to process query from DB", true
+			}
+			return nil, errCode, V1.PROCESSING_FAILED, "Failed to process query from DB", true
+		}
+		resultGroup.Query = profileQueryGroup
+
+		if allowSyncReferenceFields {
+			resultGroup.Results, err = store.GetStore().AddPropertyValueLabelToQueryResults(projectID, resultGroup.Results)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to set property value label.")
+			}
+		}
+
+		return gin.H{"result": resultGroup}, http.StatusOK, "", "", false
+	}
 
 	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(0, 0, timezoneString, hardRefresh) {
 		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(
@@ -161,10 +185,6 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 			"error": "Query failed. Not found in cache. Suspended db execution."})
 	}*/
 
-	// Use optimised filter for profiles query if enabled using header or configuration.
-	enableOptimisedFilter := c.Request.Header.Get(H.HeaderUserFilterOptForProfiles) == "true" ||
-		C.EnableOptimisedFilterOnProfileQuery()
-
 	model.SetQueryCachePlaceholder(projectID, &profileQueryGroup)
 	H.SleepIfHeaderSet(c)
 	resultGroup, errCode := store.GetStore().RunProfilesGroupQuery(profileQueryGroup.Queries, projectID, enableOptimisedFilter)
@@ -189,10 +209,10 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 	return resultGroup, http.StatusOK, "", "", false
 }
 
-func getValidProfilesQueryAndDetailsFromRequest(r *http.Request, c *gin.Context, logCtx *log.Entry, projectId int64) (model.ProfileQueryGroup, int64, int64, bool, int, string, string, bool) {
+func getValidProfilesQueryAndDetailsFromRequest(r *http.Request, c *gin.Context, logCtx *log.Entry, projectId int64) (model.ProfileQueryGroup, int64, int64, bool, bool, int, string, string, bool) {
 	var dashboardId, unitId int64
 	var err error
-	requestPayload, queryPayload := model.ProfileQueryGroup{}, model.ProfileQueryGroup{}
+	requestPayload, queryPayload, isDashboardQueryLocked := model.ProfileQueryGroup{}, model.ProfileQueryGroup{}, false
 
 	dashboardIdParam := c.Query("dashboard_id")
 	unitIdParam := c.Query("dashboard_unit_id")
@@ -203,7 +223,7 @@ func getValidProfilesQueryAndDetailsFromRequest(r *http.Request, c *gin.Context,
 		decoder.DisallowUnknownFields()
 		if err := decoder.Decode(&requestPayload); err != nil {
 			logCtx.WithError(err).Error("Query failed. Json decode failed.")
-			return queryPayload, 0, 0, false, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
+			return queryPayload, 0, 0, false, isDashboardQueryLocked, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
 		}
 	}
 
@@ -213,30 +233,25 @@ func getValidProfilesQueryAndDetailsFromRequest(r *http.Request, c *gin.Context,
 		dashboardId, err = strconv.ParseInt(dashboardIdParam, 10, 64)
 		if err != nil || dashboardId == 0 {
 			logCtx.WithError(err).Error("Query failed. Invalid DashboardID.")
-			return queryPayload, dashboardId, 0, true, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardID.", true
+			return queryPayload, dashboardId, 0, true, isDashboardQueryLocked, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardID.", true
 		}
 		unitId, err = strconv.ParseInt(unitIdParam, 10, 64)
 		if err != nil || unitId == 0 {
 			logCtx.WithError(err).Error("Query failed. Invalid DashboardUnitID.")
-			return queryPayload, dashboardId, unitId, true, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardUnitID.", true
+			return queryPayload, dashboardId, unitId, true, isDashboardQueryLocked, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardUnitID.", true
 		}
 		_, query, err := store.GetStore().GetQueryFromUnitID(projectId, unitId)
 		if err != "" {
 			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
-			return queryPayload, dashboardId, unitId, true, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
+			return queryPayload, dashboardId, unitId, true, isDashboardQueryLocked, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
 		}
-		if query.LockedForCacheInvalidation {
-			return queryPayload, dashboardId, unitId, true, http.StatusConflict, V1.PROCESSING_FAILED, "Query is not processed due to saved query updated", false
-		}
+		isDashboardQueryLocked = query.LockedForCacheInvalidation
 		U.DecodePostgresJsonbToStructType(&query.Query, &queryPayload)
 	} else if queryIdString != "" {
 		_, query, err := store.GetStore().GetQueryAndClassFromQueryIdString(queryIdString, projectId)
 		if err != "" {
 			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
-			return queryPayload, 0, 0, false, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
-		}
-		if query.LockedForCacheInvalidation {
-			return queryPayload, 0, 0, false, http.StatusConflict, V1.PROCESSING_FAILED, "Query is not processed due to saved query updated", false
+			return queryPayload, 0, 0, false, isDashboardQueryLocked, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
 		}
 		U.DecodePostgresJsonbToStructType(&query.Query, &queryPayload)
 	} else {
@@ -253,9 +268,9 @@ func getValidProfilesQueryAndDetailsFromRequest(r *http.Request, c *gin.Context,
 
 	if len(requestPayload.Queries) == 0 {
 		logCtx.Error("Query failed. Empty query group.")
-		return queryPayload, dashboardId, unitId, isDashboardQueryRequest, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Empty query group.", true
+		return queryPayload, dashboardId, unitId, isDashboardQueryRequest, isDashboardQueryLocked, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Empty query group.", true
 	}
-	return queryPayload, dashboardId, unitId, isDashboardQueryRequest, http.StatusOK, "", "", false
+	return queryPayload, dashboardId, unitId, isDashboardQueryRequest, isDashboardQueryLocked, http.StatusOK, "", "", false
 }
 
 func setTimezoneForProfilesRequest(logCtx *log.Entry, requestPayload model.ProfileQueryGroup, projectId int64) (model.ProfileQueryGroup, int, string, string, bool) {

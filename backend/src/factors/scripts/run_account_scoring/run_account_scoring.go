@@ -276,9 +276,12 @@ func main() {
 	configs["diskManager"] = diskManager
 	configs["beamConfig"] = &beamConfig
 
+	log.WithField("projects", projectIdsArray).Info("Running acc scoring for these projects")
+
 	for _, projectId := range projectIdsArray {
 
 		status, _ := AS.BuildAccScoringDaily(projectId, configs)
+		status["project id"] = projectId
 		log.Info(status)
 		if status["err"] != nil {
 			C.PingHealthcheckForFailure(healthcheckPingID, status)

@@ -17,6 +17,7 @@ import (
 )
 
 const MAX_LIMIT = 10000
+const NORM_CONFIG = 10000
 
 func (store *MemSQL) UpdateUserEventsCount(evdata []model.EventsCountScore, lastevent map[string]model.LatestScore) error {
 	projectID := evdata[0].ProjectId
@@ -1010,7 +1011,7 @@ func ComputeScoreWithWeightsAndCountsWithDecay(projectId int64, weights *model.A
 
 func normalize_score(x float64) float64 {
 	//100 * tanh(x/100000) range 0 to 100000
-	val := x / float64(100000)
+	val := x / float64(NORM_CONFIG)
 	return 100 * MM.Tanh(val)
 }
 

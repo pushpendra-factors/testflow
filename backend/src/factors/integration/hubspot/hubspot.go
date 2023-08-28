@@ -2705,17 +2705,24 @@ func syncCompanyV2(projectID int64, document *model.HubspotDocument) int {
 		logCtx.Warning("No marketing contacts found for hubspot company.")
 	}
 
+	contactUserIDs := make([]string, 0)
+	for i := range contactDocuments {
+		if contactDocuments[i].UserId != "" {
+			contactUserIDs = append(contactUserIDs, contactDocuments[i].UserId)
+		}
+	}
+
+	if len(contactUserIDs) > 0 {
+		status := store.GetStore().UpdateUserGroupInBatch(projectID, contactUserIDs, model.GROUP_NAME_HUBSPOT_COMPANY, companyGroupID, companyUserID, false)
+		if status != http.StatusAccepted {
+			logCtx.Error("Failed to update user group id in batch.")
+		}
+	}
+
 	// update $hubspot_company_name and other company
 	// properties on each associated contact user.
 	for _, contactDocument := range contactDocuments {
 		if contactDocument.UserId != "" {
-			if C.IsAllowedHubspotGroupsByProjectID(projectID) {
-				logCtx.Info("Updating user company group user id.")
-				_, status := store.GetStore().UpdateUserGroup(projectID, contactDocument.UserId, model.GROUP_NAME_HUBSPOT_COMPANY, companyGroupID, companyUserID, false)
-				if status != http.StatusAccepted && status != http.StatusNotModified {
-					logCtx.Error("Failed to update user group id.")
-				}
-			}
 
 			if C.EnableUserDomainsGroupByProjectID(projectID) {
 				status := store.GetStore().AssociateUserDomainsGroup(projectID, contactDocument.UserId, model.GROUP_NAME_HUBSPOT_COMPANY, companyUserID)
@@ -3062,16 +3069,40 @@ func createOrUpdateHubspotGroupsProperties(projectID int64, document *model.Hubs
 
 	createdEventName, updatedEventName := getGroupEventName(document.Type)
 	if document.Action == model.HubspotDocumentActionCreated {
-		groupUserID, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID, "",
-			enProperties, getEventTimestamp(document.Timestamp), getEventTimestamp(document.Timestamp), model.UserSourceHubspotString)
+		if !C.UseHashIDForCRMGroupUserByProject(projectID) {
+			groupUserID, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID, "",
+				enProperties, getEventTimestamp(document.Timestamp), getEventTimestamp(document.Timestamp), model.UserSourceHubspotString)
 
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to update hubspot created group properties.")
-			return "", "", http.StatusInternalServerError
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to update hubspot created group properties.")
+				return "", "", http.StatusInternalServerError
+			}
+
+			processEventNames = append(processEventNames, createdEventName)
+			processEventTimestamps = append(processEventTimestamps, document.Timestamp)
+		} else {
+			userID, status := store.GetStore().CreateOrGetCRMGroupUser(projectID, groupName, groupID,
+				getEventTimestamp(document.Timestamp), model.UserSourceHubspot)
+			if status != http.StatusCreated && status != http.StatusConflict && status != http.StatusFound {
+				logCtx.WithError(err).Error("Failed to create group user for hubspot.")
+				return "", "", http.StatusInternalServerError
+			}
+			groupUserID = userID
+
+			if status == http.StatusConflict || status == http.StatusFound {
+				return groupUserID, "", http.StatusOK
+			}
+
+			_, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID, groupUserID,
+				enProperties, getEventTimestamp(document.Timestamp), getEventTimestamp(document.Timestamp), model.UserSourceHubspotString)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to update hubspot group user properties.")
+				return "", "", http.StatusInternalServerError
+			}
+
+			processEventNames = append(processEventNames, createdEventName)
+			processEventTimestamps = append(processEventTimestamps, document.Timestamp)
 		}
-
-		processEventNames = append(processEventNames, createdEventName)
-		processEventTimestamps = append(processEventTimestamps, document.Timestamp)
 	}
 
 	updateCreatedRecord := false
@@ -3100,7 +3131,6 @@ func createOrUpdateHubspotGroupsProperties(projectID int64, document *model.Hubs
 
 		processEventNames = append(processEventNames, updatedEventName)
 		processEventTimestamps = append(processEventTimestamps, document.Timestamp)
-
 	}
 
 	if document.Action == model.HubspotDocumentActionAssociationsUpdated {
