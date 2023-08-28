@@ -939,12 +939,12 @@ type Model interface {
 	UpdateExplainV2EntityStatus(projectID int64, id string, status string, model_id uint64) (int, string)
 
 	// Feature Gates
-	GetAllProjectsWithFeatureEnabled(featureName string) ([]int64, error)
+	GetAllProjectsWithFeatureEnabled(featureName string, includeProjectSettings bool) ([]int64, error)
 	GetFeaturesForProject(projectID int64) (model.FeatureGate, error)
 	UpdateStatusForFeature(projectID int64, featureName string, updateValue int) (int, error)
 	GetFeatureStatusForProject(projectID int64, featureName string) (int, error)
 	CreateDefaultFeatureGatesConfigForProject(ProjectID int64) (int, error)
-	GetFeatureStatusForProjectV2(projectID int64, featureName string) (bool, error)
+	GetFeatureStatusForProjectV2(projectID int64, featureName string, includeProjectSettings bool) (bool, error)
 	GetPlanDetailsAndAddonsForProject(projectID int64) (model.FeatureList, model.OverWrite, error)
 	GetFeatureLimitForProject(projectID int64, featureName string) (int64, error)
 	UpdateFeatureStatusForProject(projectID int64, feature model.FeatureDetails) (string, error)

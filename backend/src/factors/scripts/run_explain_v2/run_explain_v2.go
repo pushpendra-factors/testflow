@@ -15,12 +15,12 @@ import (
 	"factors/util"
 	"flag"
 	"fmt"
+	"reflect"
+	"strings"
+
 	"github.com/apache/beam/sdks/go/pkg/beam"
 	_ "github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
-	"net/http"
-	"reflect"
-	"strings"
 )
 
 func registerStructs() {
@@ -210,22 +210,17 @@ func main() {
 	}
 
 	projectIdsToSkip := util.GetIntBoolMapFromStringList(projectIdsToSkipFlag)
-	allProjects, projectIdsToRun, _ := C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
-	if allProjects {
-		projectIDs, errCode := store.GetStore().GetAllProjectIDs()
-		if errCode != http.StatusFound {
-			log.Fatal("Failed to get all projects and project_ids set to '*'.")
-		}
 
-		projectIdsToRun = make(map[int64]bool, 0)
-		for _, projectID := range projectIDs {
-			projectIdsToRun[projectID] = true
+	projectIdList := *projectIdFlag
+	var projectIdsArray []int64
+	if projectIdList == "*" {
+		projectIdsArray, err = store.GetStore().GetAllProjectsWithFeatureEnabled(model.FEATURE_EXPLAIN, false)
+		if err != nil {
+			errString := fmt.Errorf("failed to get feature status for all projects")
+			log.WithError(err).Error(errString)
 		}
-	}
-
-	projectIdsArray := make([]int64, 0)
-	for projectId, _ := range projectIdsToRun {
-		projectIdsArray = append(projectIdsArray, projectId)
+	} else {
+		projectIdsArray = C.GetTokensFromStringListAsUint64(projectIdList)
 	}
 
 	C.GetConfig().ActiveFactorsGoalsLimit = *numActiveFactorsGoalsLimit
@@ -306,8 +301,8 @@ func main() {
 	finalStatus := make(map[string]interface{})
 	for _, projectId := range projectIdsArray {
 		available := true
-		if *enableFeatureGatesV2 {
-			available, err = store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_EXPLAIN)
+		if *enableFeatureGatesV2 && projectIdList != "*" {
+			available, err = store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_EXPLAIN, false)
 			if err != nil {
 				log.WithError(err).Error("Failed to get feature status in explain v2  job for project ID ", projectId)
 				finalStatus[fmt.Sprintf("Failure-Feature-Status %v", projectId)] = true

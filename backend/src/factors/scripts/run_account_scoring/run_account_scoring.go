@@ -197,7 +197,7 @@ func main() {
 	projectIdsArray := make([]int64, 0)
 
 	if projectIdList == "*" {
-		projectIdsArray, err = store.GetStore().GetAllProjectsWithFeatureEnabled(M.FEATURE_ACCOUNT_SCORING)
+		projectIdsArray, err = store.GetStore().GetAllProjectsWithFeatureEnabled(M.FEATURE_ACCOUNT_SCORING,false)
 		if err != nil {
 			errString := fmt.Errorf("failed to get feature status for all projects")
 			log.WithError(err).Error(errString)
@@ -206,7 +206,7 @@ func main() {
 		projectIds := C.GetTokensFromStringListAsUint64(projectIdList)
 		for _, projectId := range projectIds {
 			available := false
-			available, err = store.GetStore().GetFeatureStatusForProjectV2(projectId, M.FEATURE_ACCOUNT_SCORING)
+			available, err = store.GetStore().GetFeatureStatusForProjectV2(projectId, M.FEATURE_ACCOUNT_SCORING, false)
 			if err != nil {
 				log.WithFields(log.Fields{"projectID": projectId}).WithError(err).Error("Failed to get feature status in account scoring job for project")
 				continue
