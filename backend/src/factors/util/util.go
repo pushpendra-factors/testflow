@@ -1538,6 +1538,9 @@ func IsNumericToken(token string) bool {
 func ValidateArithmeticFormula(formula string) bool {
 	var valueStack []string
 	var operatorStack []string
+	if len(formula) == 0 {
+		return false
+	}
 
 	formulaArray := GetArrayOfTokensFromFormula(formula)
 
