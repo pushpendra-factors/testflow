@@ -188,7 +188,7 @@ func (store *MemSQL) GetProjectsArrayWithFeatureEnabledFromProjectIdFlag(stringP
 		projectIds := C.GetTokensFromStringListAsUint64(stringProjectsIDs)
 		for _, projectId := range projectIds {
 			available := false
-			available, _, err = store.GetFeatureStatusForProjectV2(projectId, featureName)
+			available, err = store.GetFeatureStatusForProjectV2(projectId, featureName)
 			if err != nil {
 				log.WithFields(log.Fields{"projectID": projectId}).WithError(err)
 				continue
