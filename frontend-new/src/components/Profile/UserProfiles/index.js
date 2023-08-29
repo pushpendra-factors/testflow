@@ -556,7 +556,7 @@ function UserProfiles({
 
   const onApplyClick = (val) => {
     const searchFilter = {
-      props: ['$user_id', 'categorical', 'user'],
+      props: ['', '$user_id', 'categorical', 'user'],
       operator: ['contains'],
       values: []
     };

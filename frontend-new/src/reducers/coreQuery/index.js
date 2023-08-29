@@ -149,7 +149,7 @@ export default function (state = defaultState, action) {
         ...state,
         propertyValuesMap: {
           loading: true,
-          data: {}
+          data: {...state.propertyValuesMap.data}
         }
       };
     case FETCH_PROPERTY_VALUES_LOADED:

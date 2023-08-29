@@ -112,7 +112,7 @@ const getEntityName = (source, entity) => {
   if (source === 'accounts') {
     return entity === 'user' ? 'user_group' : 'user_g';
   } else {
-    return entity === 'user' ? 'user_group' : 'user_g';
+    return 'user_g';
   }
 };
 
@@ -503,11 +503,11 @@ export const transformPayloadForWeightConfig = (payload) => {
   if (payload?.filters?.length) {
     payload.filters.forEach((filter) => {
       const rule = {
-        key: filter.props[0],
+        key: filter.props[1],
         value: filter.values,
         operator: filter.operator,
-        property_type: filter.props[2],
-        value_type: filter.props[1]
+        property_type: filter.props[3],
+        value_type: filter.props[2]
       };
       output.rule.push(rule);
     });
@@ -538,7 +538,7 @@ export const transformWeightConfigForQuery = (config) => {
         : rule.value;
 
       const filter = {
-        props: [rule.key, rule.value_type, rule.property_type],
+        props: [rule.property_type, rule.key, rule.value_type, rule.property_type],
         operator: rule.operator,
         values: ruleValues,
         ref: 1

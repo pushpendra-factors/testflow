@@ -118,6 +118,13 @@ func GetCacheResultByDashboardIdAndUnitId(reqId string, projectId int64, dashboa
 	}
 
 	cacheKey, err := GetDashboardUnitQueryResultCacheKey(projectId, dashboardId, unitId, from, to, timezoneString)
+	log.WithFields(log.Fields{
+		"cacheKey":    cacheKey,
+		"dashboardId": dashboardId,
+		"unitId":      unitId,
+		"from":        from,
+		"to":          to,
+	}).Info("looking for this cache key")
 
 	if err != nil {
 		return cacheResult, http.StatusInternalServerError, errors.New("Dashboard Cache: Failed to fetch cache key - " + err.Error())

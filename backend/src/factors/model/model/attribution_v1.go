@@ -718,11 +718,17 @@ func MergeTwoAttributionReportsIntoOne(result1, result2 *QueryResult, keyIndex i
 
 	if result1 == nil && result2 != nil {
 		logCtx.Info("returning result2 as result1 is nil")
-		return result2
+		var resultNew QueryResult
+		// copying result2 to resultNew
+		U.DeepCopy(&result2, &resultNew)
+		return &resultNew
 	}
 	if result2 == nil && result1 != nil {
 		logCtx.Info("returning result1 as result2 is nil")
-		return result1
+		var resultNew QueryResult
+		// copying result1 to resultNew
+		U.DeepCopy(&result1, &resultNew)
+		return &resultNew
 	}
 
 	rows1 := result1.Rows
@@ -731,6 +737,11 @@ func MergeTwoAttributionReportsIntoOne(result1, result2 *QueryResult, keyIndex i
 	mergedRows := MergeTwoAttributionReportRows(rows1, rows2, keyIndex, attributionKey, conversionFunTypes, logCtx)
 
 	result1.Rows = mergedRows
+	logCtx.WithFields(log.Fields{
+		"result1":    result1,
+		"mergedRows": mergedRows,
+	}).Info("post successful merge - mergedRows")
+
 	return result1
 }
 

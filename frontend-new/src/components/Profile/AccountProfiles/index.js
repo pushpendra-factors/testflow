@@ -618,8 +618,8 @@ function AccountProfiles({
           ];
     lookIn.forEach(([group, prop]) => {
       searchFilter.push({
-        props: [prop, 'categorical', 'group'],
-        operator: 'equals',
+        props: ['', prop, 'categorical', 'group'],
+        operator: 'contains',
         values: parsedValues
       });
     });

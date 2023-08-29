@@ -35,6 +35,7 @@ import logger from 'Utils/logger';
 import useQuery from 'hooks/useQuery';
 import { useHistory } from 'react-router-dom';
 import { PathUrls } from 'Routes/pathUrls';
+import style from './index.module.scss';
 const { Option } = Select;
 
 const Step1 = ({
@@ -48,6 +49,7 @@ const Step1 = ({
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
   const [isFormSubmitted, setIsFormSubmitted] = useState(false);
+  const [projectName, setProjectName] = useState('');
   const [checkbox, setcheckbox] = useState(true);
   const history = useHistory();
 
@@ -82,6 +84,10 @@ const Step1 = ({
         ProjectName: projectData?.name,
         time_zone: projectData?.time_zone
       });
+      let prevProjectId = '';
+      if (isNewSetup) {
+        prevProjectId = active_project?.id;
+      }
       const createProjectRes = await createProjectWithTimeZone(projectData);
       const projectId = createProjectRes?.data?.id;
       if (checkbox) {
@@ -96,10 +102,14 @@ const Step1 = ({
         onboarding_steps: updatedOnboardingConfig
       });
       localStorage.setItem('activeProject', projectId);
+
+      if (prevProjectId)
+        localStorage.setItem('prevActiveProject', prevProjectId);
+
       setIsFormSubmitted(true);
       setLoading(false);
       incrementStepCount();
-      history.push(PathUrls.Onboarding);
+      history.replace(PathUrls.Onboarding);
     } catch (error) {
       setLoading(false);
       message.error(error?.data?.error);
@@ -155,6 +165,10 @@ const Step1 = ({
     });
   };
 
+  const handleFormValuesChange = (_changedValues, allValues) => {
+    setProjectName(allValues?.['projectName'] || '');
+  };
+
   const getInitialFormValues = useCallback(() => {
     if (isFormSubmitted) {
       return {
@@ -163,7 +177,8 @@ const Step1 = ({
       };
     }
     return {
-      time_zone: `${TimeZoneOffsetValueArr[0]?.name} (UTC ${TimeZoneOffsetValueArr[0]?.offset})`
+      time_zone: `${TimeZoneOffsetValueArr[0]?.name} (UTC ${TimeZoneOffsetValueArr[0]?.offset})`,
+      projectName: ''
     };
   }, [isFormSubmitted, active_project]);
 
@@ -177,6 +192,7 @@ const Step1 = ({
 
   useEffect(() => {
     form.setFieldsValue(getInitialFormValues());
+    setProjectName(getInitialFormValues().projectName);
   }, [isFormSubmitted, form, getInitialFormValues]);
 
   return (
@@ -193,6 +209,7 @@ const Step1 = ({
             level={3}
             color={'character-primary'}
             extraClass={'m-0'}
+            weight={'bold'}
           >
             Create a New Project
           </Text>
@@ -210,6 +227,7 @@ const Step1 = ({
           onFinish={onFinish}
           form={form}
           initialValues={getInitialFormValues()}
+          onValuesChange={handleFormValuesChange}
         >
           <Row className='mt-8'>
             <Col xs={24} sm={24} md={12}>
@@ -339,7 +357,7 @@ const Step1 = ({
                             />
                           ) : (
                             <div
-                              className='flex justify-center items-center'
+                              className={`flex justify-center items-center ${style.projectImageContainer}`}
                               style={{
                                 width: 145,
                                 height: 145,
@@ -348,7 +366,17 @@ const Step1 = ({
                                 background: '#FAFAFA'
                               }}
                             >
-                              <SVG name='ImageBackground' />
+                              <SVG
+                                name='ImageBackground'
+                                extraClass={style.projectImage}
+                              />
+                              <div className={style.editImageIcon}>
+                                <SVG
+                                  name='ImageEdit'
+                                  size='22'
+                                  color='#40A9FF'
+                                />
+                              </div>
                             </div>
                           )}
                         </Upload>
@@ -406,6 +434,7 @@ const Step1 = ({
                     style={{ height: '36px' }}
                     className={'m-0'}
                     htmlType='submit'
+                    disabled={projectName === ''}
                   >
                     Create and continue
                   </Button>

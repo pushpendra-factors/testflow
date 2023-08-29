@@ -73,6 +73,7 @@ func main() {
 	customerEnabledProjectsLastComputed := flag.String("customer_enabled_projects_last_computed",
 		"*", "List of projects customer enabled forLast Computed")
 	IncreaseKPILimitForProjectIDs := flag.String("increase_kpi_limit_for_projectids", "", "List of projectIds where kpi limit in increased.")
+	allowEventAnalyticsGroupsByProjectID := flag.String("allow_event_analytics_groups_by_project_id", "", "")
 
 	flag.Parse()
 
@@ -138,6 +139,7 @@ func main() {
 		CacheOnlyDashboardUnits:               *cacheOnlyDashboardUnits,
 		CustomDateStart:                       *customDateStart,
 		CustomDateEnd:                         *customDateEnd,
+		AllowEventAnalyticsGroupsByProjectID:  *allowEventAnalyticsGroupsByProjectID,
 	}
 
 	C.InitConf(config)

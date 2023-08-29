@@ -1672,7 +1672,7 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 		accountDetails.AccountTimeline = append(accountDetails.AccountTimeline, intentTimeline)
 	}
 
-	scoringAvailable, err := store.GetFeatureStatusForProjectV2(projectID, model.FEATURE_ACCOUNT_SCORING,false)
+	scoringAvailable, err := store.GetFeatureStatusForProjectV2(projectID, model.FEATURE_ACCOUNT_SCORING, false)
 	if err != nil {
 		log.WithFields(logFields).Error("Error fetching scoring availability status for the project")
 	}
@@ -1897,6 +1897,8 @@ func (store *MemSQL) GetTopAnonymousUsers(queryParams []interface{}, groupUserSt
 	}
 	if topAnonymousUsers.AnonymousUsersCount > 0 {
 		topAnonymousUsers.Name = fmt.Sprintf("%d Anonymous Users", topAnonymousUsers.AnonymousUsersCount)
+	} else {
+		return model.TopUser{}, nil
 	}
 
 	return topAnonymousUsers, nil

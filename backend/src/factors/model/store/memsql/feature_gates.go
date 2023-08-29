@@ -70,7 +70,7 @@ func (store *MemSQL) GetFeatureStatusForProjectV2(projectID int64, featureName s
 	case model.FEATURE_GOOGLE_ADS:
 		return store.IsAdwordsIntegrationAvailable(projectID), nil
 	default:
-		log.Error("Include Project Settings Enabled but Definition is not present for feature ",featureName)
+		log.Error("Include Project Settings Enabled but Definition is not present for feature ", featureName)
 		return featureStatus, nil
 	}
 
@@ -251,9 +251,36 @@ func (store *MemSQL) GetAllProjectsWithFeatureEnabled(featureName string, includ
 			}
 		}
 	default:
-		log.Error("Include Project Settings Enabled but Definition is not present for feature ",featureName)
+		log.Error("Include Project Settings Enabled but Definition is not present for feature ", featureName)
 		return enabledProjectIds, nil
 	}
 	return projectIdsArray, nil
+
+}
+
+func (store *MemSQL) GetProjectsArrayWithFeatureEnabledFromProjectIdFlag(stringProjectsIDs, featureName string) ([]int64, error) {
+	projectIdsArray := make([]int64, 0)
+	var err error
+	if stringProjectsIDs == "*" {
+		projectIdsArray, err = store.GetAllProjectsWithFeatureEnabled(featureName, false)
+		if err != nil {
+			errString := fmt.Errorf("failed to get feature status for all projects")
+			log.WithError(err).Error(errString)
+		}
+	} else {
+		projectIds := C.GetTokensFromStringListAsUint64(stringProjectsIDs)
+		for _, projectId := range projectIds {
+			available := false
+			available, err = store.GetFeatureStatusForProjectV2(projectId, featureName, false)
+			if err != nil {
+				log.WithFields(log.Fields{"projectID": projectId}).WithError(err)
+				continue
+			}
+			if available {
+				projectIdsArray = append(projectIdsArray, projectId)
+			}
+		}
+	}
+	return projectIdsArray, err
 
 }

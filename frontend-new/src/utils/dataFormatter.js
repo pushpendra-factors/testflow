@@ -26,7 +26,6 @@ import {
   CHART_COLOR_10
 } from '../constants/color.constants';
 import getGroupIcon from './getGroupIcon';
-import startCase from 'lodash/startCase';
 
 export const visualizationColors = [
   CHART_COLOR_1,
@@ -760,13 +759,15 @@ export const convertAndAddPropertiesToGroupSelectOptions = (
   Object.keys(properties)?.forEach((groupkey) => {
     if (!filterOptsObj[groupkey]) {
       filterOptsObj[groupkey] = {
-        label: startCase(groupkey),
+        label: PropTextFormat(groupkey),
         iconName: getGroupIcon(groupkey),
-        values: processProperties(properties[groupkey], propertyType, groupkey) || []
+        values:
+          processProperties(properties[groupkey], propertyType, groupkey) || []
       };
     } else {
       filterOptsObj[groupkey].values.push(
-        ...(processProperties(properties[groupkey], propertyType, groupkey) || [])
+        ...(processProperties(properties[groupkey], propertyType, groupkey) ||
+          [])
       );
     }
   });

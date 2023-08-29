@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import styles from './index.module.scss';
 import { Button, Input, InputNumber, Tooltip, DatePicker } from 'antd';
@@ -23,7 +23,7 @@ const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 const FAFilterSelect = ({
   propOpts = [],
   operatorOpts = defaultOpProps,
-  valueOpts = [],
+  valueOpts = {},
   valueOptsLoading,
   setValuesByProps,
   applyFilter,
@@ -37,6 +37,12 @@ const FAFilterSelect = ({
     type: '',
     extra: ''
   });
+
+  const valueDisplayNames = useMemo(() => {
+    return valueOpts?.[propState?.extra?.[1]]
+      ? valueOpts?.[propState?.extra?.[1]]
+      : DISPLAY_PROP;
+  }, [valueOpts, propState.extra]);
 
   const rangePicker = [OPERATORS['equalTo'], OPERATORS['notEqualTo']];
   const customRangePicker = [OPERATORS['between'], OPERATORS['notBetween']];
@@ -68,8 +74,14 @@ const FAFilterSelect = ({
   );
   useEffect(() => {
     if (filter) {
-      const prop = filter.props;
-      setPropState({ icon: prop[2], name: prop[0], type: prop[1] });
+      const prop =
+        filter.props.length === 4 ? filter.props.slice(1) : filter.props;
+      setPropState({
+        icon: prop[2],
+        name: prop[0],
+        type: prop[1],
+        extra: filter?.extra
+      });
       if (
         (filter.operator === OPERATORS['equalTo'] ||
           filter.operator === OPERATORS['notEqualTo']) &&
@@ -110,10 +122,13 @@ const FAFilterSelect = ({
   const setValues = () => {
     let values;
     if (filter.props[1] === 'datetime') {
-      const parsedValues = filter.values[0]
-        ? typeof filter.values[0] === 'string'
-          ? JSON.parse(filter.values)
-          : filter.values
+      const filterVals = isArray(filter.values)
+        ? filter.values[0]
+        : filter.values;
+      const parsedValues = filterVals
+        ? typeof filterVals === 'string'
+          ? JSON.parse(filterVals)
+          : filterVals
         : {};
       values = parseDateRangeFilter(
         parsedValues.fr,
@@ -553,20 +568,20 @@ const FAFilterSelect = ({
   };
   const renderValuesSelector = () => {
     let selectionComponent;
-    const values = [];
     if (propState.type === 'categorical') {
       const variant =
         operatorState === OPERATORS['notEqualTo'] ||
         operatorState === OPERATORS['doesNotContain']
           ? 'Single'
           : 'Multi';
-      let valueOptions =
-        valueOpts?.[propState?.name]?.map((val) => {
-          return {
-            value: val,
-            label: val === '$none' ? DISPLAY_PROP[val] : val
-          };
-        }) || [];
+      let valueOptions = valueOpts?.[propState?.extra?.[1]]
+        ? Object.entries(valueOpts[propState?.extra?.[1]]).map((val) => {
+            return {
+              value: val[0],
+              label: val[1]
+            };
+          })
+        : [];
       valueOptions = selectedOptionsMapper(valueOptions, valuesState);
 
       if (variant === 'Single') {
@@ -676,7 +691,9 @@ const FAFilterSelect = ({
               >
                 {valuesState && valuesState.length
                   ? valuesState
-                      .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
+                      .map((vl) =>
+                        valueDisplayNames[vl] ? valueDisplayNames[vl] : vl
+                      )
                       .join(', ')
                   : 'Select Values'}
               </Button>

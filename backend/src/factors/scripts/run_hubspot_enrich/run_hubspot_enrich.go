@@ -81,6 +81,8 @@ func main() {
 	useHubspotDealsv3APIByProjectID := flag.String("use_hubspot_deals_v3_by_project_id", "", "")
 	removeDisabledEventUserPropertiesByProjectId := flag.String("remove_disabled_event_user_properties",
 		"", "List of projects to disable event user property population in events.")
+	useHashIDForCRMGroupUserByProject := flag.String("use_hash_id_for_crm_group_user_by_project_id", "", "")
+	moveHubspotCompanyAssocationFlowToContactByPojectID := flag.String("move_hubspot_company_association_flow_to_contact_by_project_id", "", "")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -128,18 +130,20 @@ func main() {
 		DisableHubspotNonMarketingContactsByProjectID: *disableNonMarketingContactByProjectID,
 		HubspotAppID:                                  *hubspotAppID,
 		HubspotAppSecret:                              *hubspotAppSecret,
-		AllowIdentificationOverwriteUsingSourceByProjectID: *allowIdentificationOverwriteUsingSourceByProjectID,
-		AllowHubspotPastEventsEnrichmentByProjectID:        *allowHubspotPastEventsEnrichmentByProjectID,
-		AllowHubspotContactListInsertByProjectID:           *allowHubspotContactListInsertByProjectID,
-		IngestionTimezoneEnabledProjectIDs:                 C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
-		EnableDomainsGroupByProjectID:                      *enableDomainsGroupByProjectID,
-		EnableSyncReferenceFieldsByProjectID:               *enableSyncReferenceFieldsByProjectID,
-		EnableUserDomainsGroupByProjectID:                  *enableUserDomainsGroupByProjectID,
-		UseHubspotCompaniesV3APIByProjectID:                *useHubspotCompaniesv3APIByProjectID,
-		AllowEmailDomainsByProjectID:                       *allowEmailDomainsByProjectID,
-		UseHubspotEngagementsV3APIByProjectID:              *useHubspotEngagementsv3APIByProjectID,
-		UseHubspotDealsV3APIByProjectID:                    *useHubspotDealsv3APIByProjectID,
-		RemoveDisabledEventUserPropertiesByProjectID:       *removeDisabledEventUserPropertiesByProjectId,
+		AllowIdentificationOverwriteUsingSourceByProjectID:  *allowIdentificationOverwriteUsingSourceByProjectID,
+		AllowHubspotPastEventsEnrichmentByProjectID:         *allowHubspotPastEventsEnrichmentByProjectID,
+		AllowHubspotContactListInsertByProjectID:            *allowHubspotContactListInsertByProjectID,
+		IngestionTimezoneEnabledProjectIDs:                  C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
+		EnableDomainsGroupByProjectID:                       *enableDomainsGroupByProjectID,
+		EnableSyncReferenceFieldsByProjectID:                *enableSyncReferenceFieldsByProjectID,
+		EnableUserDomainsGroupByProjectID:                   *enableUserDomainsGroupByProjectID,
+		UseHubspotCompaniesV3APIByProjectID:                 *useHubspotCompaniesv3APIByProjectID,
+		AllowEmailDomainsByProjectID:                        *allowEmailDomainsByProjectID,
+		UseHubspotEngagementsV3APIByProjectID:               *useHubspotEngagementsv3APIByProjectID,
+		UseHubspotDealsV3APIByProjectID:                     *useHubspotDealsv3APIByProjectID,
+		RemoveDisabledEventUserPropertiesByProjectID:        *removeDisabledEventUserPropertiesByProjectId,
+		UseHashIDForCRMGroupUserByProject:                   *useHashIDForCRMGroupUserByProject,
+		MoveHubspotCompanyAssocationFlowToContactByPojectID: *moveHubspotCompanyAssocationFlowToContactByPojectID,
 	}
 
 	C.InitConf(config)

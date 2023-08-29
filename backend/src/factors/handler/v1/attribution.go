@@ -65,7 +65,7 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 		hardRefresh, _ = strconv.ParseBool(refreshParam)
 	}
 
-	requestPayload, dashboardId, unitId, isDashboardQueryRequest, statusCode, errorCode, errMsg, isErr := getValidAttributionQueryAndDetailsFromRequestV1(r, c, logCtx, projectId)
+	requestPayload, dashboardId, unitId, isDashboardQueryRequest, isDashboardQueryLocked, statusCode, errorCode, errMsg, isErr := getValidAttributionQueryAndDetailsFromRequestV1(r, c, logCtx, projectId)
 	if statusCode != http.StatusOK {
 		return nil, statusCode, errorCode, errMsg, isErr
 	}
@@ -98,6 +98,21 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 		return nil, http.StatusBadRequest, INVALID_INPUT, "Query failed. LookbackDays exceeded the limit.", true
 	}
 
+	enableOptimisedFilterOnProfileQuery := c.Request.Header.Get(H.HeaderUserFilterOptForProfiles) == "true" ||
+		C.EnableOptimisedFilterOnProfileQuery()
+
+	enableOptimisedFilterOnEventUserQuery := c.Request.Header.Get(H.HeaderUserFilterOptForEventsAndUsers) == "true" ||
+		C.EnableOptimisedFilterOnEventUserQuery()
+	attributionQueryUnitPayload := model.AttributionQueryUnitV1{
+		Class: model.QueryClassAttribution,
+		Query: requestPayload.Query,
+	}
+	attributionQueryUnitPayload.SetTimeZone(timezoneString)
+	err = attributionQueryUnitPayload.TransformDateTypeFilters()
+	if err != nil {
+		return nil, http.StatusBadRequest, INVALID_INPUT, err.Error(), true
+	}
+
 	// Tracking dashboard query request.
 	if isDashboardQueryRequest {
 		model.SetDashboardCacheAnalytics(projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To, timezoneString)
@@ -106,11 +121,23 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 		}
 	}
 
-	enableOptimisedFilterOnProfileQuery := c.Request.Header.Get(H.HeaderUserFilterOptForProfiles) == "true" ||
-		C.EnableOptimisedFilterOnProfileQuery()
+	if isDashboardQueryLocked {
+		QueryKey, _ := attributionQueryUnitPayload.GetQueryCacheRedisKey(projectId)
+		debugQueryKey := model.GetStringKeyFromCacheRedisKey(QueryKey)
+		var result *model.QueryResult
+		result, err = store.GetStore().ExecuteAttributionQueryV1(projectId, requestPayload.Query, debugQueryKey,
+			enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery, unitId)
+		if err != nil {
+			logCtx.Info("Failed to process query from DB - attributionv1", err.Error())
+			return nil, http.StatusInternalServerError, PROCESSING_FAILED, err.Error(), true
+		}
+		if result == nil {
+			logCtx.WithError(err).Error(" Result is nil")
+			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Result is nil " + err.Error(), true
+		}
 
-	enableOptimisedFilterOnEventUserQuery := c.Request.Header.Get(H.HeaderUserFilterOptForEventsAndUsers) == "true" ||
-		C.EnableOptimisedFilterOnEventUserQuery()
+		return H.DashboardQueryResponsePayload{Result: result, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), CacheMeta: nil}, http.StatusOK, "", "", false
+	}
 
 	// If refresh is passed, refresh only is Query.From is of today's beginning.
 
@@ -118,7 +145,7 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 		"requestPayload": requestPayload,
 	}).Info("Attribution query debug request payload")
 	if !hardRefresh && isDashboardQueryRequest && !H.ShouldAllowHardRefresh(requestPayload.Query.From, requestPayload.Query.To, timezoneString, hardRefresh) {
-
+		//todo satya: check if we want to use effective to and from in this flow
 		// if common flow and merge is enabled for the project
 		if C.IsAllowedAttributionCommonFlow(projectId) {
 			logCtx.Info("Running the common DB cache flow")
@@ -178,15 +205,6 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 	}
 
 	var cacheResult model.QueryResult
-	attributionQueryUnitPayload := model.AttributionQueryUnitV1{
-		Class: model.QueryClassAttribution,
-		Query: requestPayload.Query,
-	}
-	attributionQueryUnitPayload.SetTimeZone(timezoneString)
-	err = attributionQueryUnitPayload.TransformDateTypeFilters()
-	if err != nil {
-		return nil, http.StatusBadRequest, INVALID_INPUT, err.Error(), true
-	}
 	if !hardRefresh {
 		logCtx.WithFields(log.Fields{
 			"query to form cache key": attributionQueryUnitPayload,
@@ -241,12 +259,16 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 	result.CacheMeta = meta
 	model.SetQueryCacheResult(projectId, &attributionQueryUnitPayload, result)
 	if isDashboardQueryRequest {
+		effectiveFrom, effectiveTo := model.GetEffectiveTimeRangeForDashboardUnitAttributionQuery(requestPayload.Query.From, requestPayload.Query.To)
+		if effectiveFrom == 0 || effectiveTo == 0 {
+			return nil, http.StatusBadRequest, INVALID_INPUT, "Query time range is not valid for attribution.", true
+		}
 		if C.IsLastComputedWhitelisted(projectId) {
 			model.SetCacheResultByDashboardIdAndUnitIdWithPreset(result, projectId, dashboardId, unitId, preset,
-				requestPayload.Query.From, requestPayload.Query.To, timezoneString, meta)
+				effectiveFrom, effectiveTo, timezoneString, meta)
 		} else {
 			model.SetCacheResultByDashboardIdAndUnitId(result, projectId, dashboardId, unitId,
-				requestPayload.Query.From, requestPayload.Query.To, timezoneString, meta)
+				effectiveFrom, effectiveTo, timezoneString, meta)
 		}
 
 		return H.DashboardQueryResponsePayload{Result: result, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), CacheMeta: meta}, http.StatusOK, "", "", false
@@ -255,10 +277,10 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 	return result, http.StatusOK, "", "", false
 }
 
-func getValidAttributionQueryAndDetailsFromRequestV1(r *http.Request, c *gin.Context, logCtx *log.Entry, projectId int64) (AttributionRequestPayloadV1, int64, int64, bool, int, string, string, bool) {
+func getValidAttributionQueryAndDetailsFromRequestV1(r *http.Request, c *gin.Context, logCtx *log.Entry, projectId int64) (AttributionRequestPayloadV1, int64, int64, bool, bool, int, string, string, bool) {
 	var dashboardId, unitId int64
 	var err error
-	queryPayload, requestPayload := AttributionRequestPayloadV1{}, AttributionRequestPayloadV1{}
+	queryPayload, requestPayload, isDashboardQueryLocked := AttributionRequestPayloadV1{}, AttributionRequestPayloadV1{}, false
 	var dbQuery model.AttributionQueryUnitV1
 
 	dashboardIdParam := c.Query("dashboard_id")
@@ -277,7 +299,7 @@ func getValidAttributionQueryAndDetailsFromRequestV1(r *http.Request, c *gin.Con
 		hasFailed, errMsg, requestPayload = decodeAttributionPayload(r, logCtx)
 		if hasFailed {
 			logCtx.WithField("errMsg", errMsg).Error("Query failed. Json decode failed.")
-			return queryPayload, 0, 0, false, http.StatusBadRequest, INVALID_INPUT, "Query failed. Json decode failed.", true
+			return queryPayload, 0, 0, false, isDashboardQueryLocked, http.StatusBadRequest, INVALID_INPUT, "Query failed. Json decode failed.", true
 		}
 	}
 
@@ -286,37 +308,26 @@ func getValidAttributionQueryAndDetailsFromRequestV1(r *http.Request, c *gin.Con
 		dashboardId, err = strconv.ParseInt(dashboardIdParam, 10, 64)
 		if err != nil || dashboardId == 0 {
 			logCtx.WithError(err).Error("Query failed. Invalid DashboardID.")
-			return queryPayload, dashboardId, 0, true, http.StatusBadRequest, INVALID_INPUT, "Query failed. Invalid DashboardID.", true
+			return queryPayload, dashboardId, 0, true, isDashboardQueryLocked, http.StatusBadRequest, INVALID_INPUT, "Query failed. Invalid DashboardID.", true
 		}
 		unitId, err = strconv.ParseInt(unitIdParam, 10, 64)
 		if err != nil || unitId == 0 {
 			logCtx.WithError(err).Error("Query failed. Invalid DashboardUnitID.")
-			return queryPayload, dashboardId, unitId, true, http.StatusBadRequest, INVALID_INPUT, "Query failed. Invalid DashboardUnitID.", true
+			return queryPayload, dashboardId, unitId, true, isDashboardQueryLocked, http.StatusBadRequest, INVALID_INPUT, "Query failed. Invalid DashboardUnitID.", true
 		}
 		_, query, err := store.GetStore().GetQueryFromUnitID(projectId, unitId)
 		if err != "" {
 			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
-			return queryPayload, dashboardId, unitId, true, http.StatusBadRequest, INVALID_INPUT, "Query failed. Json decode failed.", true
+			return queryPayload, dashboardId, unitId, true, isDashboardQueryLocked, http.StatusBadRequest, INVALID_INPUT, "Query failed. Json decode failed.", true
 		}
-		if query.LockedForCacheInvalidation {
-			logCtx.WithFields(log.Fields{
-				"dashboardIdParam":           dashboardIdParam,
-				"unitIdParam":                unitIdParam,
-				"queryIdString":              queryIdString,
-				"LockedForCacheInvalidation": query.LockedForCacheInvalidation,
-			}).Info("query requestPayload")
-			return queryPayload, dashboardId, unitId, true, http.StatusConflict, PROCESSING_FAILED, "Query is not processed due to saved query updated", false
-		}
+		isDashboardQueryLocked = query.LockedForCacheInvalidation
 		U.DecodePostgresJsonbToStructType(&query.Query, &dbQuery)
 		queryPayload.Query = dbQuery.Query
 	} else if queryIdString != "" {
 		_, query, err := store.GetStore().GetQueryAndClassFromQueryIdString(queryIdString, projectId)
 		if err != "" {
 			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
-			return queryPayload, 0, 0, false, http.StatusBadRequest, INVALID_INPUT, "Query failed. Json decode failed.", true
-		}
-		if query.LockedForCacheInvalidation {
-			return queryPayload, 0, 0, false, http.StatusConflict, PROCESSING_FAILED, "Query is not processed due to saved query updated", false
+			return queryPayload, 0, 0, false, isDashboardQueryLocked, http.StatusBadRequest, INVALID_INPUT, "Query failed. Json decode failed.", true
 		}
 		U.DecodePostgresJsonbToStructType(&query.Query, &dbQuery)
 		queryPayload.Query = dbQuery.Query
@@ -354,7 +365,7 @@ func getValidAttributionQueryAndDetailsFromRequestV1(r *http.Request, c *gin.Con
 		queryPayload.Query = queryUnitPayload.Query
 	}
 
-	return queryPayload, dashboardId, unitId, isDashboardQueryRequest, http.StatusOK, "", "", false
+	return queryPayload, dashboardId, unitId, isDashboardQueryRequest, isDashboardQueryLocked, http.StatusOK, "", "", false
 }
 
 func runTheCommonDBFlow(reqId string, projectId int64, dashboardId int64, unitId int64, requestPayload AttributionRequestPayloadV1,
@@ -415,7 +426,7 @@ func runTheCommonDBFlow(reqId string, projectId int64, dashboardId int64, unitId
 		weeksToRun := U.GetAllValidRangesInBetween(requestPayload.Query.From, requestPayload.Query.To, last48Weeks)
 		logCtx.WithFields(log.Fields{
 			"last12Months": last48Weeks,
-			"monthsToRun":  weeksToRun,
+			"weeksToRun":   weeksToRun,
 		}).Info("Figured it a Week range query, running")
 		hasFailed, mergedResult, computeMeta := RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId, requestPayload,
 			timezoneString, reqId, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery,
@@ -425,7 +436,10 @@ func runTheCommonDBFlow(reqId string, projectId int64, dashboardId int64, unitId
 			logCtx.Error("Week range query failed to run")
 			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Week range query failed to run", true
 		}
-
+		logCtx.WithFields(log.Fields{
+			"mergedResult": mergedResult,
+			"computeMeta":  computeMeta,
+		}).Info("post RunMultipleRangeAttributionQueries merge - mergedRows")
 		return H.DashboardQueryResponsePayload{Result: mergedResult, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
 			CacheMeta: mergedResult.CacheMeta, ComputeMeta: computeMeta}, http.StatusOK, "", "", false
 	}
