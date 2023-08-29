@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -2359,6 +2360,16 @@ func TestSDKGetProjectSettingsHandler(t *testing.T) {
 	assert.NotNil(t, jsonResponseMap["int_clear_bit"])
 	assert.Nil(t, jsonResponseMap["user_id"])
 
+	// Test with user_id and base64 encoded encoded payload.
+	payload = `{"user_id": "xxx"}`
+	payload = base64.StdEncoding.EncodeToString([]byte(payload))
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	json.Unmarshal(jsonResponse, &jsonResponseMap)
+	assert.NotNil(t, jsonResponseMap["auto_track"])
+	assert.Nil(t, jsonResponseMap["user_id"])
+
 	// Test without user_id.
 	payload = `{}`
 	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
@@ -2372,7 +2383,17 @@ func TestSDKGetProjectSettingsHandler(t *testing.T) {
 	assert.NotNil(t, jsonResponseMap["exclude_bot"])
 	assert.NotNil(t, jsonResponseMap["int_drift"])
 	assert.NotNil(t, jsonResponseMap["int_clear_bit"])
+	// Should return new user_id.
+	assert.NotEmpty(t, jsonResponseMap["user_id"])
 
+	// Test without user_id and base64 encoded request.
+	payload = `{}`
+	payload = base64.StdEncoding.EncodeToString([]byte(payload))
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	json.Unmarshal(jsonResponse, &jsonResponseMap)
+	assert.NotNil(t, jsonResponseMap["auto_track"])
 	// Should return new user_id.
 	assert.NotEmpty(t, jsonResponseMap["user_id"])
 

@@ -3191,10 +3191,11 @@ func TestHubspotParallelProcessingByDocumentID(t *testing.T) {
 				"vid":     contactID,
 				"addedAt": U.GetPropertyValueAsString(createdAt.Unix() * 1000),
 				"properties": map[string]map[string]interface{}{
-					"createdate":       {"value": U.GetPropertyValueAsString(createdAt.Unix() * 1000)},
-					"lastmodifieddate": {"value": U.GetPropertyValueAsString(lastModified.Unix() * 1000)},
-					"lifecyclestage":   {"value": "lead"},
-					"count":            {"value": U.GetPropertyValueAsString(i)},
+					"createdate":          {"value": U.GetPropertyValueAsString(createdAt.Unix() * 1000)},
+					"lastmodifieddate":    {"value": U.GetPropertyValueAsString(lastModified.Unix() * 1000)},
+					"lifecyclestage":      {"value": "lead"},
+					"count":               {"value": U.GetPropertyValueAsString(i)},
+					"associatedcompanyid": {"value": U.GetPropertyValueAsString(contactID)},
 				},
 				"identity-profiles": []map[string]interface{}{
 					{
@@ -3241,8 +3242,7 @@ func TestHubspotParallelProcessingByDocumentID(t *testing.T) {
 		companyUpdatedDate = companyCreatedDate
 		for i := 0; i < 9; i++ {
 			company := IntHubspot.Company{
-				CompanyId:  companyID,
-				ContactIds: []int64{companyID},
+				CompanyId: companyID,
 				Properties: map[string]IntHubspot.Property{
 					"createdate":             {Value: fmt.Sprintf("%d", companyCreatedDate.Unix()*1000)},
 					"hs_lastmodifieddate":    {Value: fmt.Sprintf("%d", companyUpdatedDate.Unix()*1000)},
@@ -3271,7 +3271,6 @@ func TestHubspotParallelProcessingByDocumentID(t *testing.T) {
 			}
 			companyUpdatedDate = companyUpdatedDate.AddDate(0, 0, 1)
 		}
-
 	}
 
 	numParallelDocuments := 3
@@ -3572,9 +3571,10 @@ func TestHubspotCompanyGroups(t *testing.T) {
 		contact := IntHubspot.Contact{
 			Vid: company1Contact[i],
 			Properties: map[string]IntHubspot.Property{
-				"createdate":       {Value: fmt.Sprintf("%d", companyCreatedDate.Add(100*time.Minute).Unix()*1000)},
-				"lastmodifieddate": {Value: fmt.Sprintf("%d", companyCreatedDate.Add(100*time.Minute).Unix()*1000)},
-				"lifecyclestage":   {Value: "lead"},
+				"createdate":          {Value: fmt.Sprintf("%d", companyCreatedDate.Add(100*time.Minute).Unix()*1000)},
+				"lastmodifieddate":    {Value: fmt.Sprintf("%d", companyCreatedDate.Add(100*time.Minute).Unix()*1000)},
+				"lifecyclestage":      {Value: "lead"},
+				"associatedcompanyid": {Value: U.GetPropertyValueAsString(company1ID)},
 			},
 			IdentityProfiles: []IntHubspot.ContactIdentityProfile{
 				{
@@ -3676,29 +3676,43 @@ func TestHubspotCompanyGroups(t *testing.T) {
 			company3GroupUserID = companyDocuments[0].GroupUserId
 		}
 	}
+
 	/*
 		Contact moving to different company will not be updated
 	*/
-	company.CompanyId = 2
-	company.ContactIds = company1Contact
-	company.Properties = map[string]IntHubspot.Property{
-		"createdate":             {Value: fmt.Sprintf("%d", companyCreatedDate.Unix()*1000)},
-		"hs_lastmodifieddate":    {Value: fmt.Sprintf("%d", companyUpdatedDate.Add(100*time.Minute).Unix()*1000)},
-		"company_lifecyclestage": {Value: "lead"},
-		"name": {
-			Value:     "testcompany",
-			Timestamp: companyCreatedDate.Unix() * 1000,
-		},
+
+	// contacts for company
+	for i := range company1Contact {
+		contact := IntHubspot.Contact{
+			Vid: company1Contact[i],
+			Properties: map[string]IntHubspot.Property{
+				"createdate":          {Value: fmt.Sprintf("%d", companyCreatedDate.Add(100*time.Minute).Unix()*1000)},
+				"lastmodifieddate":    {Value: fmt.Sprintf("%d", companyCreatedDate.Add(200*time.Minute).Unix()*1000)},
+				"lifecyclestage":      {Value: "lead"},
+				"associatedcompanyid": {Value: U.GetPropertyValueAsString(company2ID)},
+			},
+			IdentityProfiles: []IntHubspot.ContactIdentityProfile{
+				{
+					Identities: []IntHubspot.ContactIdentity{
+						{
+							Type:  "LEAD_GUID",
+							Value: getRandomAgentUUID(),
+						},
+					},
+				},
+			},
+		}
+
+		enJSON, err = json.Marshal(contact)
+		assert.Nil(t, err)
+		contactPJson := postgres.Jsonb{json.RawMessage(enJSON)}
+		hubspotDocument := model.HubspotDocument{
+			TypeAlias: model.HubspotDocumentTypeNameContact,
+			Value:     &contactPJson,
+		}
+		status := store.GetStore().CreateHubspotDocumentInBatch(project.ID, model.HubspotDocumentTypeContact, []*model.HubspotDocument{&hubspotDocument}, 1)
+		assert.Equal(t, http.StatusCreated, status)
 	}
-	enJSON, err = json.Marshal(company)
-	assert.Nil(t, err)
-	companyPJson = postgres.Jsonb{json.RawMessage(enJSON)}
-	hubspotDocument = model.HubspotDocument{
-		TypeAlias: model.HubspotDocumentTypeNameCompany,
-		Value:     &companyPJson,
-	}
-	status = store.GetStore().CreateHubspotDocumentInBatch(project.ID, model.HubspotDocumentTypeCompany, []*model.HubspotDocument{&hubspotDocument}, 1)
-	assert.Equal(t, http.StatusCreated, status)
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap = GetProjectSettings(project.ID)
 	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50)
@@ -3882,7 +3896,7 @@ func TestHubspotCompanyGroups(t *testing.T) {
 	// verify contact not associated to any
 	documents, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{fmt.Sprintf("%d", company1Contact[3])}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated, model.HubspotDocumentActionUpdated})
 	assert.Equal(t, http.StatusFound, status)
-	assert.Len(t, documents, 2)
+	assert.Len(t, documents, 3)
 	assert.Equal(t, "", documents[0].GroupUserId)
 	user, status = store.GetStore().GetUser(project.ID, documents[0].UserId)
 	assert.Equal(t, http.StatusFound, status)
@@ -3933,7 +3947,7 @@ func TestHubspotCompanyGroups(t *testing.T) {
 
 	documents, status = store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{fmt.Sprintf("%d", company1Contact[3])}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated, model.HubspotDocumentActionUpdated})
 	assert.Equal(t, http.StatusFound, status)
-	assert.Len(t, documents, 2)
+	assert.Len(t, documents, 3)
 	assert.Equal(t, "", documents[0].GroupUserId)
 	user, status = store.GetStore().GetUser(project.ID, documents[0].UserId)
 	assert.Equal(t, http.StatusFound, status)
@@ -5638,9 +5652,10 @@ func TestHubspotGetContactProperties(t *testing.T) {
 		"vid":     1,
 		"addedAt": createdAt,
 		"properties": map[string]map[string]interface{}{
-			"createdate":       {"value": createdAt},
-			"lastmodifieddate": {"value": createdAt},
-			"lifecyclestage":   {"value": "lead"},
+			"createdate":          {"value": createdAt},
+			"lastmodifieddate":    {"value": createdAt},
+			"lifecyclestage":      {"value": "lead"},
+			"associatedcompanyid": {"value": "1"},
 		},
 		"identity-profiles": []map[string]interface{}{
 			{
@@ -5681,9 +5696,10 @@ func TestHubspotGetContactProperties(t *testing.T) {
 		Type:      model.HubspotDocumentTypeContact,
 	}
 
-	enProperties, properties, secondaryEmails, primaryEmail, err := IntHubspot.GetContactProperties(document.ProjectId, document)
+	enProperties, properties, secondaryEmails, primaryEmail, associatedCompanyID, err := IntHubspot.GetContactProperties(document.ProjectId, document)
 	assert.Nil(t, err)
 	assert.Equal(t, email1, primaryEmail)
+	assert.Equal(t, "1", associatedCompanyID)
 	assert.NotContains(t, secondaryEmails, primaryEmail)
 	assert.NotContains(t, secondaryEmails, "123-45")
 	for _, secondaryEmail := range []string{email2, email3} {
@@ -5744,7 +5760,7 @@ func TestHubspotGetContactProperties(t *testing.T) {
 		Type:      model.HubspotDocumentTypeContact,
 	}
 
-	enProperties, properties, secondaryEmails, primaryEmail, err = IntHubspot.GetContactProperties(document.ProjectId, document)
+	enProperties, properties, secondaryEmails, primaryEmail, _, err = IntHubspot.GetContactProperties(document.ProjectId, document)
 	assert.Nil(t, err)
 	assert.Empty(t, primaryEmail)
 	assert.NotContains(t, secondaryEmails, primaryEmail)

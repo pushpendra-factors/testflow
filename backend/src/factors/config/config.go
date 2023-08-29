@@ -324,6 +324,7 @@ type Configuration struct {
 	ExcludeBotIPV4AddressByRange                       string
 	SlackInternalAlertWebhookUrl                       string
 	UseHashIDForCRMGroupUserByProject                  string
+	MoveHubspotCompanyAssocationFlowToContactByPojectID string
 }
 
 type Services struct {
@@ -2997,4 +2998,13 @@ func UseHashIDForCRMGroupUserByProject(projectID int64) bool {
 	}
 
 	return allowedProjectIDs[projectID]
+}
+
+func MoveHubspotCompanyAssocationFlowToContactByPojectID(projecID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().MoveHubspotCompanyAssocationFlowToContactByPojectID, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projecID]
 }

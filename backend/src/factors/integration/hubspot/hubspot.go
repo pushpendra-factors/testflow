@@ -128,16 +128,30 @@ type PropertyDetail struct {
 	Options                      []Option `json:"options"`
 }
 
-var syncOrderByType = [...]int{
+var syncOrderByTypeV1 = [...]int{
 	model.HubspotDocumentTypeContact,
 	model.HubspotDocumentTypeCompany,
 	model.HubspotDocumentTypeDeal,
 	model.HubspotDocumentTypeEngagement,
 	model.HubspotDocumentTypeContactList,
 }
+var syncOrderByTypeV2 = [...]int{
+	model.HubspotDocumentTypeCompany,
+	model.HubspotDocumentTypeContact,
+	model.HubspotDocumentTypeDeal,
+	model.HubspotDocumentTypeEngagement,
+	model.HubspotDocumentTypeContactList,
+}
 
 func GetHubspotObjectTypeForSync() []int {
-	return syncOrderByType[:]
+	return syncOrderByTypeV1[:]
+}
+
+func GetHubspotSyncOrderByProjectID(projectID int64) []int {
+	if C.MoveHubspotCompanyAssocationFlowToContactByPojectID(projectID) {
+		return syncOrderByTypeV2[:]
+	}
+	return syncOrderByTypeV1[:]
 }
 
 func GetDecodedValue(encodedValue string, limit int) string {
@@ -236,7 +250,7 @@ func syncContactFormSubmissions(project *model.Project, otpRules *[]model.OTPRul
 		return
 	}
 
-	enProperties, _, _, _, err := GetContactProperties(project.ID, document)
+	enProperties, _, _, _, _, err := GetContactProperties(project.ID, document)
 	if err != nil {
 		return
 	}
@@ -366,15 +380,15 @@ func GetHubspotPropertiesByDataType(projectId int64, docTypeAPIObjects *map[stri
 	return propertiesByObjectType, nil
 }
 
-func GetContactProperties(projectID int64, document *model.HubspotDocument) (*map[string]interface{}, *map[string]interface{}, []string, string, error) {
+func GetContactProperties(projectID int64, document *model.HubspotDocument) (*map[string]interface{}, *map[string]interface{}, []string, string, string, error) {
 	if document.Type != model.HubspotDocumentTypeContact {
-		return nil, nil, nil, "", errors.New("invalid type")
+		return nil, nil, nil, "", "", errors.New("invalid type")
 	}
 
 	var contact Contact
 	err := json.Unmarshal((document.Value).RawMessage, &contact)
 	if err != nil {
-		return nil, nil, nil, "", err
+		return nil, nil, nil, "", "", err
 	}
 
 	enrichedProperties := make(map[string]interface{}, 0)
@@ -420,7 +434,12 @@ func GetContactProperties(projectID int64, document *model.HubspotDocument) (*ma
 		}
 	}
 
+	associatedCompanID := ""
 	for pkey, pvalue := range contact.Properties {
+		if pkey == "associatedcompanyid" && pvalue.Value != "" {
+			associatedCompanID = pvalue.Value
+		}
+
 		enKey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot,
 			model.HubspotDocumentTypeNameContact, pkey)
 		value, err := getHubspotMappedDataTypeValue(projectID, U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED, enKey, pvalue.Value, model.HubspotDocumentTypeContact, document.GetDateProperties(), string(document.GetTimeZone()))
@@ -475,10 +494,10 @@ func GetContactProperties(projectID int64, document *model.HubspotDocument) (*ma
 			properties["EMAIL"] = secondaryEmails[0]
 		}
 
-		return &enrichedProperties, &properties, secondaryEmails, primaryEmail, nil
+		return &enrichedProperties, &properties, secondaryEmails, primaryEmail, associatedCompanID, nil
 	}
 
-	return &enrichedProperties, &properties, nil, "", nil
+	return &enrichedProperties, &properties, nil, "", associatedCompanID, nil
 }
 
 func getCustomerUserIDFromProperties(projectID int64, properties map[string]interface{}) (string, string) {
@@ -531,7 +550,7 @@ func getCustomIdentification(projectID int64, document *model.HubspotDocument) (
 		return "", false
 	}
 
-	_, properties, _, _, err := GetContactProperties(projectID, document)
+	_, properties, _, _, _, err := GetContactProperties(projectID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get contact properties" +
 			"on getCustomIdentificationProperty.")
@@ -592,7 +611,7 @@ func GetHubspotSmartEventPayload(projectID int64, eventName, docID string,
 		} else {
 
 			if docType == model.HubspotDocumentTypeContact {
-				_, prevProperties, _, _, err = GetContactProperties(projectID, prevDoc)
+				_, prevProperties, _, _, _, err = GetContactProperties(projectID, prevDoc)
 			}
 			if docType == model.HubspotDocumentTypeDeal {
 				_, prevProperties, err = getDealProperties(projectID, prevDoc)
@@ -1470,7 +1489,7 @@ func syncContact(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEve
 		}
 	}
 
-	enProperties, properties, secondaryEmails, primaryEmail, err := GetContactProperties(project.ID, document)
+	enProperties, properties, secondaryEmails, primaryEmail, associatedCompanyID, err := GetContactProperties(project.ID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properites from hubspot contact.")
 		return http.StatusInternalServerError
@@ -1715,11 +1734,58 @@ func syncContact(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEve
 		syncContactFormSubmissions(project, otpRules, uniqueOTPEventKeys, userID, document)
 	}
 
+	if C.MoveHubspotCompanyAssocationFlowToContactByPojectID(project.ID) && associatedCompanyID != "" {
+		status = associateContactToCompany(project.ID, userID, associatedCompanyID)
+		if status != http.StatusOK {
+			logCtx.Error("Failed to associateContactToCompany.")
+		}
+	}
+
 	errCode := store.GetStore().UpdateHubspotDocumentAsSynced(
 		project.ID, document.ID, model.HubspotDocumentTypeContact, eventID, document.Timestamp, document.Action, userID, "")
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update hubspot contact document as synced.")
 		return http.StatusInternalServerError
+	}
+
+	return http.StatusOK
+}
+
+func associateContactToCompany(projectID int64, contactUserID string, companyID string) int {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "contact_user_id": contactUserID, "company_id": companyID})
+	if projectID == 0 || contactUserID == "" || companyID == "" {
+		logCtx.Error("Invalid parameters in associateContactToCompany.")
+		return http.StatusBadRequest
+	}
+
+	documents, status := store.GetStore().GetHubspotDocumentByTypeAndActions(projectID, []string{companyID},
+		model.HubspotDocumentTypeCompany, []int{model.HubspotDocumentActionCreated})
+	if status != http.StatusFound {
+		logCtx.WithField("err_code", status).Error("Failed to get company record in associateContactToCompany.")
+		return http.StatusInternalServerError
+	}
+
+	companyUserID := documents[0].GroupUserId
+	if companyUserID == "" {
+		groupUseID, status := syncCompany(projectID, &documents[0])
+		if status != http.StatusOK {
+			logCtx.Error("Failed to sync company in associateContactToCompany.")
+			return http.StatusInternalServerError
+		}
+		companyUserID = groupUseID
+	}
+
+	logCtx.Info("Updating contact user company group user id in associateContactToCompany.")
+	_, status = store.GetStore().UpdateUserGroup(projectID, contactUserID, model.GROUP_NAME_HUBSPOT_COMPANY, companyID, companyUserID, false)
+	if status != http.StatusAccepted && status != http.StatusNotModified {
+		logCtx.Error("Failed to update user group id.")
+	}
+
+	if C.EnableUserDomainsGroupByProjectID(projectID) {
+		status := store.GetStore().AssociateUserDomainsGroup(projectID, contactUserID, model.GROUP_NAME_HUBSPOT_COMPANY, companyUserID)
+		if status != http.StatusOK && status != http.StatusNotModified {
+			logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to AssociateUserDomainsGroup on hubspot sync company.")
+		}
 	}
 
 	return http.StatusOK
@@ -2378,7 +2444,7 @@ func filterCheck(rule model.OTPRule, trackPayload *SDK.TrackPayload, document *m
 		var prevProperties *map[string]interface{}
 
 		if document.Type == model.HubspotDocumentTypeContact {
-			prevProperties, _, _, _, err = GetContactProperties(document.ProjectId, prevDoc)
+			prevProperties, _, _, _, _, err = GetContactProperties(document.ProjectId, prevDoc)
 		}
 
 		if err != nil {
@@ -2623,12 +2689,12 @@ func checkIfCompanyV3(document *model.HubspotDocument) (bool, error) {
 	return false, errors.New("invalid company document")
 }
 
-func syncCompany(projectID int64, document *model.HubspotDocument) int {
+func syncCompany(projectID int64, document *model.HubspotDocument) (string, int) {
 	var value interface{}
 	err := U.DecodePostgresJsonbToStructType(document.Value, &value)
 	if err != nil {
 		log.WithFields(log.Fields{"project_id": projectID})
-		return http.StatusInternalServerError
+		return "", http.StatusInternalServerError
 	}
 
 	isCompanyV3, err := checkIfCompanyV3(document)
@@ -2643,9 +2709,9 @@ func syncCompany(projectID int64, document *model.HubspotDocument) int {
 	return syncCompanyV2(projectID, document)
 }
 
-func syncCompanyV2(projectID int64, document *model.HubspotDocument) int {
+func syncCompanyV2(projectID int64, document *model.HubspotDocument) (string, int) {
 	if document.Type != model.HubspotDocumentTypeCompany {
-		return http.StatusInternalServerError
+		return "", http.StatusInternalServerError
 	}
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "document_id": document.ID,
@@ -2655,7 +2721,7 @@ func syncCompanyV2(projectID int64, document *model.HubspotDocument) int {
 	err := json.Unmarshal((document.Value).RawMessage, &company)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to unmarshal hubspot company document.")
-		return http.StatusInternalServerError
+		return "", http.StatusInternalServerError
 	}
 
 	contactIds := make([]string, 0, 0)
@@ -2667,7 +2733,7 @@ func syncCompanyV2(projectID int64, document *model.HubspotDocument) int {
 	userProperties, err := getCompanyProperties(projectID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get company properties")
-		return http.StatusInternalServerError
+		return "", http.StatusInternalServerError
 	}
 
 	var companyUserID string
@@ -2679,15 +2745,25 @@ func syncCompanyV2(projectID int64, document *model.HubspotDocument) int {
 		}
 	}
 
+	if C.MoveHubspotCompanyAssocationFlowToContactByPojectID(projectID) {
+		errCode := store.GetStore().UpdateHubspotDocumentAsSynced(projectID, document.ID, model.HubspotDocumentTypeCompany, "", document.Timestamp, document.Action, "", companyUserID)
+		if errCode != http.StatusAccepted {
+			logCtx.Error("Failed to update hubspot company_v3 document as synced.")
+			return "", http.StatusInternalServerError
+		}
+
+		return companyUserID, http.StatusOK
+	}
+	// company contact_ids deprecated and will be removed.
 	if len(company.ContactIds) == 0 {
 		logCtx.Warning("Skipped company sync. No contacts associated to company.")
 		// No sync_id as no event or user or one user property created.
 		errCode := store.GetStore().UpdateHubspotDocumentAsSynced(projectID, document.ID, model.HubspotDocumentTypeCompany, "", document.Timestamp, document.Action, "", companyUserID)
 		if errCode != http.StatusAccepted {
 			logCtx.Error("Failed to update hubspot company document as synced.")
-			return http.StatusInternalServerError
+			return "", http.StatusInternalServerError
 		}
-		return http.StatusOK
+		return "", http.StatusOK
 	}
 
 	var contactDocuments []model.HubspotDocument
@@ -2697,7 +2773,7 @@ func syncCompanyV2(projectID int64, document *model.HubspotDocument) int {
 			contactIds, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
 		if errCode == http.StatusInternalServerError {
 			logCtx.Error("Failed to get hubspot contact documents by type and action on sync company.")
-			return errCode
+			return "", errCode
 		}
 	}
 
@@ -2737,10 +2813,10 @@ func syncCompanyV2(projectID int64, document *model.HubspotDocument) int {
 	errCode = store.GetStore().UpdateHubspotDocumentAsSynced(projectID, document.ID, model.HubspotDocumentTypeCompany, "", document.Timestamp, document.Action, "", companyUserID)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update hubspot company document as synced.")
-		return http.StatusInternalServerError
+		return "", http.StatusInternalServerError
 	}
 
-	return http.StatusOK
+	return companyUserID, http.StatusOK
 }
 
 func getCompanyPropertiesV3(projectID int64, document *model.HubspotDocument) (map[string]interface{}, error) {
@@ -2782,9 +2858,9 @@ func getCompanyPropertiesV3(projectID int64, document *model.HubspotDocument) (m
 	return userProperties, nil
 }
 
-func syncCompanyV3(projectID int64, document *model.HubspotDocument) int {
+func syncCompanyV3(projectID int64, document *model.HubspotDocument) (string, int) {
 	if document.Type != model.HubspotDocumentTypeCompany {
-		return http.StatusInternalServerError
+		return "", http.StatusInternalServerError
 	}
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "document_id": document.ID,
@@ -2794,7 +2870,7 @@ func syncCompanyV3(projectID int64, document *model.HubspotDocument) int {
 	err := json.Unmarshal((document.Value).RawMessage, &company)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to unmarshal hubspot company document.")
-		return http.StatusInternalServerError
+		return "", http.StatusInternalServerError
 	}
 
 	contactIds := make([]string, 0, 0)
@@ -2805,7 +2881,7 @@ func syncCompanyV3(projectID int64, document *model.HubspotDocument) int {
 	userProperties, err := getCompanyPropertiesV3(projectID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get company properties")
-		return http.StatusInternalServerError
+		return "", http.StatusInternalServerError
 	}
 
 	var companyUserID string
@@ -2817,15 +2893,25 @@ func syncCompanyV3(projectID int64, document *model.HubspotDocument) int {
 		}
 	}
 
+	if C.MoveHubspotCompanyAssocationFlowToContactByPojectID(projectID) {
+		errCode := store.GetStore().UpdateHubspotDocumentAsSynced(projectID, document.ID, model.HubspotDocumentTypeCompany, "", document.Timestamp, document.Action, "", companyUserID)
+		if errCode != http.StatusAccepted {
+			logCtx.Error("Failed to update hubspot company_v3 document as synced.")
+			return "", http.StatusInternalServerError
+		}
+
+		return companyUserID, http.StatusOK
+	}
+	// company contact_ids deprecated and will be removed.
 	if len(company.ContactIds) == 0 {
 		logCtx.Warning("Skipped company sync. No contacts associated to company.")
 		// No sync_id as no event or user or one user property created.
 		errCode := store.GetStore().UpdateHubspotDocumentAsSynced(projectID, document.ID, model.HubspotDocumentTypeCompany, "", document.Timestamp, document.Action, "", companyUserID)
 		if errCode != http.StatusAccepted {
 			logCtx.Error("Failed to update hubspot company_v3 document as synced.")
-			return http.StatusInternalServerError
+			return "", http.StatusInternalServerError
 		}
-		return http.StatusOK
+		return "", http.StatusOK
 	}
 
 	var contactDocuments []model.HubspotDocument
@@ -2835,7 +2921,7 @@ func syncCompanyV3(projectID int64, document *model.HubspotDocument) int {
 			contactIds, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
 		if errCode == http.StatusInternalServerError {
 			logCtx.Error("Failed to get hubspot contact documents by type and action on sync company.")
-			return errCode
+			return "", errCode
 		}
 	}
 
@@ -2868,10 +2954,10 @@ func syncCompanyV3(projectID int64, document *model.HubspotDocument) int {
 	errCode = store.GetStore().UpdateHubspotDocumentAsSynced(projectID, document.ID, model.HubspotDocumentTypeCompany, "", document.Timestamp, document.Action, "", companyUserID)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update hubspot company_v3 document as synced.")
-		return http.StatusInternalServerError
+		return "", http.StatusInternalServerError
 	}
 
-	return http.StatusOK
+	return companyUserID, http.StatusOK
 }
 
 func getHubspotDateTimestampAsMidnightTimeZoneTimestamp(dateUTCMS interface{}, timeZone string) (int64, error) {
@@ -3820,7 +3906,7 @@ func syncEngagementsV2(project *model.Project, otpRules *[]model.OTPRule, unique
 		}
 
 		propertiesWithEmailOrContact := make(map[string]interface{})
-		enProperties, _, _, _, err := GetContactProperties(project.ID, latestContactDocument)
+		enProperties, _, _, _, _, err := GetContactProperties(project.ID, latestContactDocument)
 		if err != nil {
 			logCtx.WithError(err).Error("can't get contact properties")
 			return http.StatusInternalServerError
@@ -4221,7 +4307,7 @@ func syncEngagementsV3(project *model.Project, otpRules *[]model.OTPRule, unique
 		}
 
 		propertiesWithEmailOrContact := make(map[string]interface{})
-		enProperties, _, _, _, err := GetContactProperties(project.ID, latestContactDocument)
+		enProperties, _, _, _, _, err := GetContactProperties(project.ID, latestContactDocument)
 		if err != nil {
 			logCtx.WithError(err).Error("can't get contact properties in engagement_v3")
 			return http.StatusInternalServerError
@@ -4396,7 +4482,7 @@ func syncContactListV2(project *model.Project, otpRules *[]model.OTPRule, unique
 		return errCode
 	}
 
-	_, properties, _, _, _ := GetContactProperties(project.ID, contact_document)
+	_, properties, _, _, _, _ := GetContactProperties(project.ID, contact_document)
 	var emailId string
 	if (*properties)["EMAIL"] != nil {
 		emailId, err = U.GetValueAsString((*properties)["EMAIL"])
@@ -4472,7 +4558,7 @@ func syncAll(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKe
 				seenFailures = true
 			}
 		case model.HubspotDocumentTypeCompany:
-			errCode := syncCompany(project.ID, &documents[i])
+			_, errCode := syncCompany(project.ID, &documents[i])
 			if errCode != http.StatusOK {
 				seenFailures = true
 			}
@@ -4544,6 +4630,7 @@ func syncByOrderedTimeSeries(project *model.Project, otpRules *[]model.OTPRule, 
 	}
 
 	minTimestamps := make(map[int]int64)
+	syncOrderByType := GetHubspotSyncOrderByProjectID(project.ID)
 	for i := range syncOrderByType {
 		if syncOrderByType[i] == model.HubspotDocumentTypeContactList && !C.ContactListInsertEnabled(project.ID) {
 			continue
@@ -4670,7 +4757,7 @@ func Sync(projectID int64, workersPerProject int, recordsMaxCreatedAtSec int64, 
 	}
 
 	var orderedTimeSeries [][]int64
-	minTimestamp, errCode := store.GetStore().GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(projectID, syncOrderByType[:])
+	minTimestamp, errCode := store.GetStore().GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(projectID, GetHubspotSyncOrderByProjectID(projectID))
 	if errCode != http.StatusFound {
 		if errCode == http.StatusNotFound {
 			statusByProjectAndType = append(statusByProjectAndType, Status{ProjectId: projectID,
