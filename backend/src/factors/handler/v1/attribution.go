@@ -268,7 +268,7 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 				effectiveFrom, effectiveTo, timezoneString, meta)
 		} else {
 			model.SetCacheResultByDashboardIdAndUnitId(result, projectId, dashboardId, unitId,
-				effectiveTo, effectiveTo, timezoneString, meta)
+				effectiveFrom, effectiveTo, timezoneString, meta)
 		}
 
 		return H.DashboardQueryResponsePayload{Result: result, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), CacheMeta: meta}, http.StatusOK, "", "", false
