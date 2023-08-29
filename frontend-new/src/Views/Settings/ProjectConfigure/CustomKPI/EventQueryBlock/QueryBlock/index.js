@@ -55,7 +55,7 @@ function QueryBlock({
     }
     showOpts = showOpts?.map((opt) => {
       return {
-        iconName: opt?.icon,
+        iconName: getGroupIcon(opt?.icon),
         label: opt?.label,
         values: opt?.values?.map((op) => {
           return { value: op[1], label: op[0] };
@@ -152,10 +152,10 @@ function QueryBlock({
               <Button
                 icon={
                   <SVG
-                    name={getGroupIcon(
+                    name={
                       showGroups.find((group) => group.label === event.group)
                         ?.iconName
-                    )}
+                    }
                     size={20}
                   />
                 }

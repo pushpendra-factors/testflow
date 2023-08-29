@@ -206,7 +206,7 @@ const FaFilterSelect = ({
 
   const propSelect = (option, group) => {
     setPropState({
-      groupName: group?.groupName,
+      groupName: option.extraProps?.groupName,
       icon: option.extraProps?.propertyType || group.iconName,
       name: option.value,
       type: option.extraProps.valueType
@@ -219,7 +219,7 @@ const FaFilterSelect = ({
     );
     setValuesState(null);
     setValuesByProps([
-      group.groupName,
+      option.extraProps?.groupName,
       option.value,
       option.extraProps.valueType,
       option.extraProps?.propertyType || group.iconName
@@ -328,7 +328,6 @@ const FaFilterSelect = ({
       const label = getGroupLabel(groupOpt?.label);
       if (!optionsObj[label]) {
         optionsObj[label] = {
-          groupName: groupOpt?.key,
           iconName: groupOpt?.icon,
           label: label,
           values: groupOpt?.values?.map((valueOpt) => {
@@ -337,7 +336,8 @@ const FaFilterSelect = ({
               value: valueOpt[1],
               extraProps: {
                 valueType: valueOpt[2],
-                propertyType: groupOpt?.propertyType
+                propertyType: groupOpt?.propertyType,
+                groupName: groupOpt?.key
               }
             };
           })
@@ -349,7 +349,8 @@ const FaFilterSelect = ({
             label: op?.[0],
             extraProps: {
               valueType: op?.[2],
-              propertyType: groupOpt?.propertyType
+              propertyType: groupOpt?.propertyType,
+              groupName: groupOpt?.key
             }
           });
         });
