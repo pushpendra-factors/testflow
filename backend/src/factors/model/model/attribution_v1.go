@@ -808,20 +808,21 @@ func MergeTwoAttributionReportRows(rows1, rows2 [][]interface{}, keyIndex int, a
 			mergedRowKeyMap[key] = rowResult1
 			continue
 		}
-		if _, exists := mergedRowKeyMap[key]; exists {
-			mergedRowKeyMap[key] = MergeTwoDataRowsV1(rowResult1, rowResult2, keyIndex, attributionKey, conversionFunTypes)
-			logCtx.WithFields(log.Fields{
-				"keyIndex":             keyIndex,
-				"attributionKey":       attributionKey,
-				"conversionFunTypes":   conversionFunTypes,
-				"rowResult1":           rowResult1,
-				"rowResult2":           rowResult2,
-				"mergedRowKeyMap[key]": mergedRowKeyMap[key],
-			}).Info("MergeTwoDataRowsV1 mergedRowKeyMap merging 2 rows")
-		} else {
-			mergedRowKeyMap[key] = rowResult1
+		mergedRowKeyMap[key] = MergeTwoDataRowsV1(rowResult1, rowResult2, keyIndex, attributionKey, conversionFunTypes)
+		logCtx.WithFields(log.Fields{
+			"rowResult1":           rowResult1,
+			"rowResult2":           rowResult2,
+			"mergedRowKeyMap[key]": mergedRowKeyMap[key],
+		}).Info("MergeTwoDataRowsV1 mergedRowKeyMap merging 2 rows")
+	}
+
+	// adding up all the missed row2 values while merging in previous block
+	for key, val := range rowsOfResult2InMap {
+		if mergedRowKeyMap[key] == nil {
+			mergedRowKeyMap[key] = val
 		}
 	}
+
 	mergedResultRows := make([][]interface{}, 0)
 	for _, mapRow := range mergedRowKeyMap {
 		mergedResultRows = append(mergedResultRows, mapRow)
