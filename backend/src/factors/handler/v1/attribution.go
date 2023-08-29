@@ -145,7 +145,7 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 		"requestPayload": requestPayload,
 	}).Info("Attribution query debug request payload")
 	if !hardRefresh && isDashboardQueryRequest && !H.ShouldAllowHardRefresh(requestPayload.Query.From, requestPayload.Query.To, timezoneString, hardRefresh) {
-
+		//todo satya: check if we want to use effective to and from in this flow
 		// if common flow and merge is enabled for the project
 		if C.IsAllowedAttributionCommonFlow(projectId) {
 			logCtx.Info("Running the common DB cache flow")
@@ -259,12 +259,16 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 	result.CacheMeta = meta
 	model.SetQueryCacheResult(projectId, &attributionQueryUnitPayload, result)
 	if isDashboardQueryRequest {
+		effectiveFrom, effectiveTo := model.GetEffectiveTimeRangeForDashboardUnitAttributionQuery(requestPayload.Query.From, requestPayload.Query.To)
+		if effectiveFrom == 0 || effectiveTo == 0 {
+			return nil, http.StatusBadRequest, INVALID_INPUT, "Query time range is not valid for attribution.", true
+		}
 		if C.IsLastComputedWhitelisted(projectId) {
 			model.SetCacheResultByDashboardIdAndUnitIdWithPreset(result, projectId, dashboardId, unitId, preset,
-				requestPayload.Query.From, requestPayload.Query.To, timezoneString, meta)
+				effectiveFrom, effectiveTo, timezoneString, meta)
 		} else {
 			model.SetCacheResultByDashboardIdAndUnitId(result, projectId, dashboardId, unitId,
-				requestPayload.Query.From, requestPayload.Query.To, timezoneString, meta)
+				effectiveTo, effectiveTo, timezoneString, meta)
 		}
 
 		return H.DashboardQueryResponsePayload{Result: result, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), CacheMeta: meta}, http.StatusOK, "", "", false
