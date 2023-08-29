@@ -1,5 +1,6 @@
 var logger = require("./logger");
 const config = require("../config");
+var util = require("./util")
 
 const LOCALSTORAGE_PREFIX = "_faireq_";
 const URI_SERVICE_ERROR = "/sdk/service/error";
@@ -142,7 +143,7 @@ function requestWithLocalStorage(method, url, headers, data) {
     let options = { method: method };
 
     if(data && data != undefined) 
-        options["body"] = JSON.stringify(data);
+        options["body"] = util.encode(JSON.stringify(data));
 
     if(headers && headers != undefined ) {
         options.headers = headers;
