@@ -259,32 +259,38 @@ const Step2 = ({
       </Text>
       <div>
         <div className='flex items-center gap-3'>
-          <Button
-            type='dashed'
-            onClick={() => handleCDPTypeChangeClick('segment')}
-            icon={<SVG name='Segment_ads' size='24' />}
-            className={`${
+          <div
+            className={
               cdpType === 'segment'
                 ? style.dashedButtonActive
                 : style.dashedButton
-            }`}
-            size='large'
+            }
           >
-            Segment
-          </Button>
-          <Button
-            type='dashed'
-            onClick={() => handleCDPTypeChangeClick('rudderstack')}
-            icon={<SVG name='Rudderstack_ads' size='24' />}
-            className={`${
+            <Button
+              type='dashed'
+              onClick={() => handleCDPTypeChangeClick('segment')}
+              icon={<SVG name='Segment_ads' size='24' />}
+              size='large'
+            >
+              Segment
+            </Button>
+          </div>
+          <div
+            className={
               cdpType === 'rudderstack'
                 ? style.dashedButtonActive
                 : style.dashedButton
-            }`}
-            size='large'
+            }
           >
-            Rudderstack
-          </Button>
+            <Button
+              type='dashed'
+              onClick={() => handleCDPTypeChangeClick('rudderstack')}
+              icon={<SVG name='Rudderstack_ads' size='24' />}
+              size='large'
+            >
+              Rudderstack
+            </Button>
+          </div>
         </div>
         {cdpType && (
           <>
@@ -356,7 +362,7 @@ const Step2 = ({
         <Menu.Item key='1'>
           <Button
             type='text'
-            icon={<SVG name='TextCopy' size='16' color='#8C8C8C' />}
+            icon={<SVG name='TextCopy' size='24' color='#8C8C8C' />}
             onClick={copyInstruction}
           >
             <Text
@@ -373,7 +379,7 @@ const Step2 = ({
         <Menu.Item key='2'>
           <Button
             type='text'
-            icon={<SVG name='Download' size='16' color='#8C8C8C' />}
+            icon={<SVG name='DownloadOutline' size='24' color='#8C8C8C' />}
           >
             <PDFDownloadLink
               document={
@@ -590,6 +596,7 @@ const Step2 = ({
                 level={3}
                 color={'character-primary'}
                 extraClass={'m-0'}
+                weight={'bold'}
               >
                 Connect with your website
               </Text>
@@ -708,6 +715,7 @@ const Step2 = ({
               loading={loading}
               className={'m-0'}
               onClick={handleSDkSubmission}
+              disabled={!sdkVerified}
             >
               Connect and continue
             </Button>

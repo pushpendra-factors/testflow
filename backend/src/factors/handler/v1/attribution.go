@@ -268,7 +268,7 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 				effectiveFrom, effectiveTo, timezoneString, meta)
 		} else {
 			model.SetCacheResultByDashboardIdAndUnitId(result, projectId, dashboardId, unitId,
-				effectiveTo, effectiveTo, timezoneString, meta)
+				effectiveFrom, effectiveTo, timezoneString, meta)
 		}
 
 		return H.DashboardQueryResponsePayload{Result: result, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), CacheMeta: meta}, http.StatusOK, "", "", false
@@ -426,7 +426,7 @@ func runTheCommonDBFlow(reqId string, projectId int64, dashboardId int64, unitId
 		weeksToRun := U.GetAllValidRangesInBetween(requestPayload.Query.From, requestPayload.Query.To, last48Weeks)
 		logCtx.WithFields(log.Fields{
 			"last12Months": last48Weeks,
-			"monthsToRun":  weeksToRun,
+			"weeksToRun":   weeksToRun,
 		}).Info("Figured it a Week range query, running")
 		hasFailed, mergedResult, computeMeta := RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId, requestPayload,
 			timezoneString, reqId, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery,
@@ -436,7 +436,10 @@ func runTheCommonDBFlow(reqId string, projectId int64, dashboardId int64, unitId
 			logCtx.Error("Week range query failed to run")
 			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Week range query failed to run", true
 		}
-
+		logCtx.WithFields(log.Fields{
+			"mergedResult": mergedResult,
+			"computeMeta":  computeMeta,
+		}).Info("post RunMultipleRangeAttributionQueries merge - mergedRows")
 		return H.DashboardQueryResponsePayload{Result: mergedResult, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
 			CacheMeta: mergedResult.CacheMeta, ComputeMeta: computeMeta}, http.StatusOK, "", "", false
 	}

@@ -84,7 +84,7 @@ const EnrichmentRulesTab = ({
           extraClass={'m-0 mb-2'}
           color='character-primary'
         >
-          Set up rules for visitor identification
+          Set up rules for Account identification
         </Text>
         <Text
           type={'title'}

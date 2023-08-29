@@ -1,11 +1,9 @@
 "use strict";
 
 const logger = require("./utils/logger");
-const U = require("./utils/util")
 var App = require("./app");
 // const { EV_FORM_SUBMITTED } = require("./properties");
 const Properties = require("./properties");
-const { util } = require("chai");
 
 // Global reference.
 var app = new App();
@@ -123,15 +121,6 @@ function getUserId() {
     return app.getUserId();
 }
 
-/* 
-Internal method. Used for decoding the request payload.
-
-Usage:
-_faitracker.d("!#") 
-*/
-function d(str) {
-    console.log(U.decode(str));
-}
 
 function primaryWindowVar() {
     if (window.faitracker) return window.faitracker;
@@ -212,7 +201,7 @@ function processQueue() {
 }
 
 let exposed = { init, reset, track, page, updateEventProperties, 
-    identify, addUserProperties, getUserId, d };
+    identify, addUserProperties, getUserId };
 
 if (process.env.NODE_ENV === "development") {
     exposed["test"] = require("./test/suite.js");

@@ -54,6 +54,7 @@ function ProjectModal(props) {
 
   const switchProject = () => {
     localStorage.setItem('activeProject', selectedProject?.id);
+    localStorage.setItem('prevActiveProject', props?.active_project?.id || '');
     props.setActiveProject(selectedProject);
     props.fetchProjectSettings(selectedProject?.id);
     history.push('/');
