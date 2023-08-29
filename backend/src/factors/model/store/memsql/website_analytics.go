@@ -281,6 +281,7 @@ func (store *MemSQL) addWebAnalyticsDefaultDashboardUnits(projectId int64,
 		// creating dashboard unit for query created just above
 		_, errCode, errMsg = store.CreateDashboardUnitForDashboardClass(projectId, agentUUID,
 			&model.DashboardUnit{
+				ProjectID:    projectId,
 				DashboardId:  dashboardId,
 				Presentation: presentation,
 				QueryId:      query.ID,

@@ -131,13 +131,11 @@ func main() {
 		"", "List of UUIDs whitelisted for project analytics API")
 	customerEnabledProjectsLastComputed := flag.String("customer_enabled_projects_last_computed",
 		"*", "List of projects customer enabled forLast Computed")
-	demoProjectIds := flag.String("demo_projects", "", "List of projectIds those are used for demo")
 	attributionDebug := flag.Int("attribution_debug", 0, "Enables debug logging for attribution queries")
 	attributionDBCacheLookup := flag.String("attribution_db_cache_lookup", "", "For given projects, Lookup for cache results in DB for dashboard queries")
 	attributionCommonFlow := flag.String("attribution_common_flow", "", "For given projects, run attribution queries with common flow for "+
 		"dashboard and normal query. Both flow will check DB, cache based on week, months and so on..")
 	enableMQLAPI := flag.Bool("enable_mql_api", false, "Enable MQL API routes.")
-	enableDemoReadAccess := flag.Bool("enable_demo_read_access", false, "Enable Admin API restrictions.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 
 	disableDashboardQueryDBExecution := flag.Bool("disable_dashboard_query_db_execution", false,
@@ -302,8 +300,6 @@ func main() {
 		AllowSmartEventRuleCreation:             *allowSmartEventRuleCreation,
 		ProjectAnalyticsWhitelistedUUIds:        C.GetUUIdsFromStringListAsString(*projectAnalyticsWhitelistedUUIds),
 		CustomerEnabledProjectsLastComputed:     C.GetTokensFromStringListAsUint64(*customerEnabledProjectsLastComputed),
-		DemoProjectIds:                          C.GetTokensFromStringListAsString(*demoProjectIds),
-		EnableDemoReadAccess:                    enableDemoReadAccess,
 		EnableMQLAPI:                            *enableMQLAPI,
 		DisableDBWrites:                         disableDBWrites,
 		DisableQueryCache:                       disableQueryCache,

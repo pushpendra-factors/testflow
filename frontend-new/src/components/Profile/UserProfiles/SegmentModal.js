@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Modal, Button } from 'antd';
 import {
   DefaultDateRangeForSegments,
-  displayFilterOpts,
+  GroupDisplayNames,
   getSegmentQuery
 } from '../utils';
 import { SVG, Text } from 'Components/factorsComponents';
@@ -56,7 +56,9 @@ function SegmentModal({
   );
   const [criteria, setCriteria] = useState('any');
   const [filterProperties, setFilterProperties] = useState({});
-  const userProperties = useSelector((state) => state.coreQuery.userProperties);
+  const userPropertiesV2 = useSelector(
+    (state) => state.coreQuery.userPropertiesV2
+  );
   const groupProperties = useSelector(
     (state) => state.coreQuery.groupProperties
   );
@@ -92,10 +94,10 @@ function SegmentModal({
           });
       } else props[segmentPayload.type] = groupProperties[segmentPayload.type];
     } else if (profileType === 'user') {
-      props.user = userProperties;
+      props.user = userPropertiesV2;
     }
     setFilterProperties(props);
-  }, [userProperties, groupProperties, segmentPayload.type, profileType]);
+  }, [userPropertiesV2, groupProperties, segmentPayload.type, profileType]);
 
   useEffect(() => {
     const payload = { ...segmentPayload };
@@ -431,7 +433,7 @@ function SegmentModal({
       ${
         profileType === 'user'
           ? ReverseProfileMapper[segmentPayload.type]?.users
-          : displayFilterOpts[segmentPayload.type]
+          : GroupDisplayNames[segmentPayload.type]
       } in the last 28 days who performed `}
       </h2>
       <div className={`relative fa-button--truncate`}>

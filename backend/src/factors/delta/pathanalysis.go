@@ -382,9 +382,11 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 			}
 			if len(actualQuery.IncludeGroup) > 0 {
 				for _, group := range actualQuery.IncludeGroup {
+					allFiltersForIncludeGroup := append(group.Filter, actualQuery.Filter...)
+					matchesFilter := E.EventMatchesFilterCriterionList(projectId, event.UserProperties, event.EventProperties, E.MapFilterProperties(allFiltersForIncludeGroup))
 					if group.Label == PAGE_VIEW_CATEGORY {
 						_, exist := event.EventProperties["$is_page_view"]
-						if exist {
+						if exist && matchesFilter {
 							isIncludePresent = true
 						}
 					}
@@ -395,18 +397,18 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 								hasPrefix = true
 							}
 						}
-						if hasPrefix == true {
+						if hasPrefix == true && matchesFilter {
 							isIncludePresent = true
 						}
 					}
 					if group.Label == BUTTON_CLICKS_CATEGORY {
 						_, exist := event.EventProperties["element_type"]
-						if exist {
+						if exist && matchesFilter {
 							isIncludePresent = true
 						}
 					}
 					if group.Label == SESSIONS_CATEGORY {
-						if event.EventName == "$session" {
+						if (event.EventName == "$session") && matchesFilter {
 							isIncludePresent = true
 						}
 					}

@@ -89,13 +89,15 @@ function EventFilterWrapper({
           };
         }
         setvalueOptsLoading(true);
-        getKPIPropertyValues(activeProject.id, filterData)
-          .then((res) => {
-            setvalueOptsLoading(false);
-          })
-          .catch((err) => {
-            setvalueOptsLoading(false);
-          });
+        if (propertyValuesMap[filterData?.property_name]) {
+          getKPIPropertyValues(activeProject.id, filterData)
+            .then((res) => {
+              setvalueOptsLoading(false);
+            })
+            .catch((err) => {
+              setvalueOptsLoading(false);
+            });
+        }
       } else if (!filter?.extra) {
         // filter.extra getiing set null after running query once and after 2nd time it showing loading
         // added here temporary fix for the above
@@ -109,6 +111,7 @@ function EventFilterWrapper({
   useEffect(() => {
     const filterDD = Object.assign({}, filterDropDownOptions);
     const propState = [];
+    //Needs to Update But not being Used.
     Object.keys(filterProps).forEach((k, i) => {
       propState.push({
         label: k,
@@ -116,6 +119,7 @@ function EventFilterWrapper({
         values: filterProps[k]
       });
     });
+    //
     let KPIlist = KPI_config || [];
     let selGroup = KPIlist.find((item) => {
       return item.display_category == event?.group;
@@ -209,9 +213,7 @@ function EventFilterWrapper({
   };
 
   return (
-    <div
-      className={`flex items-center relative ${!showOr ? 'ml-10' : 'ml-10'}`}
-    >
+    <div className={`flex items-center relative ${!showOr ? 'ml-10' : ''}`}>
       {!showOr &&
         (index >= 1 ? (
           <Text
@@ -233,12 +235,7 @@ function EventFilterWrapper({
           </Text>
         ))}
       {showOr && (
-        <Text
-          level={8}
-          type={'title'}
-          extraClass={'m-0 mr-16 my-3'}
-          weight={'thin'}
-        >
+        <Text level={8} type={'title'} extraClass={'m-0 mx-4'} weight={'thin'}>
           or
         </Text>
       )}

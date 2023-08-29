@@ -517,14 +517,6 @@ func ValidateLoggedInAgentHasAccessToRequestProject() gin.HandlerFunc {
 			}
 		}
 
-		if C.IsDemoProject(urlParamProjectId) && C.EnableDemoReadAccess() {
-			U.SetScope(c, SCOPE_PROJECT_ID, urlParamProjectId)
-
-			c.Next()
-			return
-
-		}
-
 		c.AbortWithStatusJSON(http.StatusForbidden,
 			gin.H{"error": "Unauthorized access. No projects found."})
 		return
@@ -834,12 +826,6 @@ func ValidateAccessToSharedEntity(entityType int) gin.HandlerFunc {
 			}
 			agentId = agent.UUID
 			U.SetScope(c, SCOPE_LOGGEDIN_AGENT_UUID, agent.UUID)
-
-			if C.EnableDemoReadAccess() && C.IsDemoProject(urlParamProjectId) {
-				U.SetScope(c, SCOPE_PROJECT_ID, urlParamProjectId)
-				c.Next()
-				return
-			}
 		}
 
 		// Check whether is part of the project, if yes than access allowed directly
@@ -982,20 +968,6 @@ func SkipAPIWritesIfDisabled() gin.HandlerFunc {
 	}
 }
 
-func SkipDemoProjectWriteAccess() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if C.EnableDemoReadAccess() {
-			projectId := U.GetScopeByKeyAsInt64(c, SCOPE_PROJECT_ID)
-			agentId := U.GetScopeByKeyAsString(c, SCOPE_LOGGEDIN_AGENT_UUID)
-			if !C.IsLoggedInUserWhitelistedForProjectAnalytics(agentId) && C.IsDemoProject(projectId) {
-				c.AbortWithStatusJSON(http.StatusMethodNotAllowed, gin.H{"error": "Operations disallowed for Non-Admin users"})
-				return
-			}
-			c.Next()
-		}
-	}
-}
-
 func BlockMaliciousPayload() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var bodyBytes []byte
@@ -1072,7 +1044,7 @@ func FeatureMiddleware(features []string) gin.HandlerFunc {
 		projectID := U.GetScopeByKeyAsInt64(c, SCOPE_PROJECT_ID)
 
 		for _, feature := range features {
-			status, _, err := store.GetStore().GetFeatureStatusForProjectV2(projectID, feature)
+			status, err := store.GetStore().GetFeatureStatusForProjectV2(projectID, feature)
 			if err != nil {
 				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to get feature status for this project " + feature})
 				return

@@ -15,10 +15,7 @@ import {
 import FaDatepicker from '../../components/FaDatepicker';
 import ComposerBlock from '../QueryCommons/ComposerBlock';
 import CriteriaSection from './CriteriaSection';
-import {
-  fetchEventNames,
-  getEventProperties
-} from 'Reducers/coreQuery/middleware';
+import { fetchEventNames } from 'Reducers/coreQuery/middleware';
 import { resetGroupByAction } from 'Reducers/coreQuery/actions';
 import { getValidGranularityOptions } from '../../utils/dataFormatter';
 import { DefaultDateRangeFormat } from '../../Views/CoreQuery/utils';
@@ -319,7 +316,6 @@ function KPIComposer({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  eventProperties: state.coreQuery.eventProperties,
   propertyMaps: state.kpi.kpi_property_mapping
 });
 
@@ -327,7 +323,6 @@ const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
       fetchEventNames,
-      getEventProperties,
       resetGroupByAction,
       getKPIPropertyMappings
     },

@@ -425,7 +425,7 @@ func TestPropertiesUpdatedTimestamp(t *testing.T) {
 
 func TestDBFillUserDefaultProperties(t *testing.T) {
 	propertiesMap := U.PropertiesMap{"prop_1": "value_1"}
-	err, _ := model.FillLocationUserProperties(&propertiesMap, "180.151.36.234") // Our gateway IP.
+	err, _, _ := model.FillLocationUserProperties(&propertiesMap, "180.151.36.234") // Our gateway IP.
 	assert.Nil(t, err)
 	// IP is not stored in user properties.
 	assert.Empty(t, propertiesMap[U.EP_INTERNAL_IP])
@@ -439,12 +439,12 @@ func TestDBFillUserDefaultProperties(t *testing.T) {
 	assert.NotNil(t, propertiesMap["prop_1"]) // Should append to existing values.
 
 	propertiesMap = U.PropertiesMap{"prop_1": "value_1"}
-	err, _ = model.FillLocationUserProperties(&propertiesMap, "127.0.0.1")
+	err, _, _ = model.FillLocationUserProperties(&propertiesMap, "127.0.0.1")
 	assert.Nil(t, err)
 	assert.Empty(t, propertiesMap[U.EP_INTERNAL_IP])
 
 	propertiesMap = U.PropertiesMap{"prop_1": "value_1"}
-	err, _ = model.FillLocationUserProperties(&propertiesMap, "::1")
+	err, _, _ = model.FillLocationUserProperties(&propertiesMap, "::1")
 	assert.Nil(t, err)
 	assert.Empty(t, propertiesMap[U.EP_INTERNAL_IP])
 }

@@ -513,6 +513,11 @@ var EP_SF_EVENT_TYPE string = "$salesforce_event_type"
 var EP_SF_EVENT_SUBTYPE string = "$salesforce_event_eventsubtype"
 var EP_SF_EVENT_COMPLETED_DATETIME string = "$salesforce_event_completeddatetime"
 var EP_G2_TAG string = "$g2_tag"
+var EP_G2_CATEGORY_IDS string = "$g2_category_ids"
+var EP_G2_PRODUCT_IDS string = "$g2_product_ids"
+var EP_G2_CITY string = "$g2_visitor_city"
+var EP_G2_STATE string = "$g2_visitor_state"
+var EP_G2_COUNTRY string = "$g2_visitor_country"
 
 // Event Form meta attributes properties
 var EP_FORM_ID string = "$form_id"
@@ -559,6 +564,7 @@ var UP_APP_NAMESPACE string = "$app_namespace"
 var UP_APP_VERSION string = "$app_version"
 var UP_APP_BUILD string = "$app_build"
 var UP_COUNTRY string = "$country"
+var UP_ISO_CODE string = "$iso_code"
 var UP_CITY string = "$city"
 var UP_CONTINENT string = "$continent"
 var UP_POSTAL_CODE string = "$postal_code"
@@ -753,6 +759,10 @@ var IN_G2 = "$in_g2"
 var VISITED_WEBSITE = "$visited_website"
 var IN_SALESFORCE = "$in_salesforce"
 var IN_LINKEDIN = "$in_linkedin"
+var IDENTIFIED_USER_ID = "$identified_user_id"
+
+// SQL column as properties
+var CUSTOMER_USER_ID = "customer_user_id"
 
 var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,
@@ -1603,15 +1613,15 @@ var STANDARD_EVENTS_DISPLAY_NAMES = map[string]string{
 	EVENT_NAME_SALESFORCE_TASK_CREATED:   "Salesforce Task Created",
 	EVENT_NAME_SALESFORCE_EVENT_CREATED:  "Salesforce Event Created",
 	GROUP_EVENT_NAME_G2_ALL:              "G2 All",
-	GROUP_EVENT_NAME_G2_SPONSORED:        "G2 Sponsored",
-	GROUP_EVENT_NAME_G2_PRODUCT_PROFILE:  "G2 Product Profile",
-	GROUP_EVENT_NAME_G2_ALTERNATIVE:      "G2 Alternative",
-	GROUP_EVENT_NAME_G2_PRICING:          "G2 Pricing",
-	GROUP_EVENT_NAME_G2_CATEGORY:         "G2 Category",
-	GROUP_EVENT_NAME_G2_COMPARISON:       "G2 Comparison",
-	GROUP_EVENT_NAME_G2_REPORT:           "G2 Report",
-	GROUP_EVENT_NAME_G2_REFERENCE:        "G2 Reference",
-	GROUP_EVENT_NAME_G2_DEAL:             "G2 Deal",
+	GROUP_EVENT_NAME_G2_SPONSORED:        "Saw ad on competitor's page",
+	GROUP_EVENT_NAME_G2_PRODUCT_PROFILE:  "Looked at product page",
+	GROUP_EVENT_NAME_G2_ALTERNATIVE:      "Looked at alternatives",
+	GROUP_EVENT_NAME_G2_PRICING:          "Looked at pricing",
+	GROUP_EVENT_NAME_G2_CATEGORY:         "Looked at product category",
+	GROUP_EVENT_NAME_G2_COMPARISON:       "Compared with other products",
+	GROUP_EVENT_NAME_G2_REPORT:           "Looked at grid report",
+	GROUP_EVENT_NAME_G2_REFERENCE:        "Looked at reference page",
+	GROUP_EVENT_NAME_G2_DEAL:             "Looked at deal page",
 	GROUP_EVENT_NAME_LINKEDIN_CLICKED_AD: "Linkedin Ad Clicked",
 	GROUP_EVENT_NAME_LINKEDIN_VIEWED_AD:  "Linkedin Ad Viewed",
 }
@@ -1640,6 +1650,14 @@ var ALL_ACCOUNT_DEFAULT_PROPERTIES = []string{
 	IN_G2,
 	VISITED_WEBSITE,
 	IN_SALESFORCE,
+}
+
+var USER_PROPERTIES_WITH_COLUMN = []string{
+	IDENTIFIED_USER_ID,
+}
+
+var USER_PROPERTIES_WITH_COLUMN_DISPLAY_NAMES = map[string]string{
+	IDENTIFIED_USER_ID: "Identified User Id",
 }
 
 var CRM_USER_EVENT_NAME_LABELS = map[string]string{
@@ -1792,6 +1810,11 @@ var STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	EP_FORM_ACTION:                           "Form Action",
 	EP_FORM_TYPE:                             "Form Type",
 	EP_G2_TAG:                                "G2 Tag",
+	EP_G2_CITY:                               "G2 Visitor's City",
+	EP_G2_STATE:                              "G2 Visitor's State",
+	EP_G2_COUNTRY:                            "G2 Visitor's Country",
+	EP_G2_CATEGORY_IDS:                       "G2 Category IDs",
+	EP_G2_PRODUCT_IDS:                        "G2 Product IDs",
 	"$hubspot_form_submission_form-type":     "Form Type",
 	"$hubspot_form_submission_title":         "Form Title",
 	"$hubspot_form_submission_form-id":       "Form ID",
@@ -1849,6 +1872,12 @@ var STANDARD_EVENT_PROPERTIES_CATAGORIZATION = map[string]string{
 	SP_SESSION_TIME:        "Session properties",
 	SP_SPENT_TIME:          "Session properties",
 	SP_PAGE_COUNT:          "Session properties",
+	EP_G2_TAG:              "G2 Properties",
+	EP_G2_CITY:             "G2 Properties",
+	EP_G2_STATE:            "G2 Properties",
+	EP_G2_COUNTRY:          "G2 Properties",
+	EP_G2_CATEGORY_IDS:     "G2 Properties",
+	EP_G2_PRODUCT_IDS:      "G2 Properties",
 }
 
 // GetStandardUserPropertiesBasedOnIntegration is using this.
@@ -1911,8 +1940,8 @@ var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	UP_INITIAL_CHANNEL:                  "User first channel",
 	UP_DAY_OF_FIRST_EVENT:               "First seen day",
 	UP_HOUR_OF_FIRST_EVENT:              "First seen hour",
-	UP_PAGE_COUNT:                       "Page Count",
-	UP_TOTAL_SPENT_TIME:                 "Session Spent Time",
+	UP_PAGE_COUNT:                       "User page count",
+	UP_TOTAL_SPENT_TIME:                 "User total active time",
 	UP_LATEST_PAGE_URL:                  "User latest page URL",
 	UP_LATEST_PAGE_DOMAIN:               "User latest page domain",
 	UP_LATEST_PAGE_RAW_URL:              "User latest page raw URL",
@@ -1974,20 +2003,20 @@ var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	CLR_COMPANY_TECH:                             "Clearbit Company Tech",
 	CLR_COMPANY_TAGS:                             "Clearbit Company Tags",
 	SIX_SIGNAL_ADDRESS:                           "Company HQ address",
-	SIX_SIGNAL_ANNUAL_REVENUE:                    "Annual revenue",
+	SIX_SIGNAL_ANNUAL_REVENUE:                    "Company annual revenue",
 	SIX_SIGNAL_CITY:                              "Company HQ city",
 	SIX_SIGNAL_COUNTRY:                           "Company country",
 	SIX_SIGNAL_COUNTRY_ISO_CODE:                  "Company country ISO code",
 	SIX_SIGNAL_DOMAIN:                            "Company domain",
-	SIX_SIGNAL_EMPLOYEE_COUNT:                    "Employee count",
-	SIX_SIGNAL_EMPLOYEE_RANGE:                    "Employee range",
-	SIX_SIGNAL_INDUSTRY:                          "Industry",
+	SIX_SIGNAL_EMPLOYEE_COUNT:                    "Company employee count",
+	SIX_SIGNAL_EMPLOYEE_RANGE:                    "Company employee range",
+	SIX_SIGNAL_INDUSTRY:                          "Company industry",
 	SIX_SIGNAL_NAICS:                             "Company NAICS code",
 	SIX_SIGNAL_NAICS_DESCRIPTION:                 "Company NAICS description",
 	SIX_SIGNAL_NAME:                              "Company name",
 	SIX_SIGNAL_PHONE:                             "Company phone",
 	SIX_SIGNAL_REGION:                            "Company region",
-	SIX_SIGNAL_REVENUE_RANGE:                     "Annual revenue range",
+	SIX_SIGNAL_REVENUE_RANGE:                     "Company annual revenue range",
 	SIX_SIGNAL_SIC:                               "Company SIC code",
 	SIX_SIGNAL_SIC_DESCRIPTION:                   "Company SIC description",
 	SIX_SIGNAL_STATE:                             "Company state",
@@ -2111,6 +2140,13 @@ var STANDARD_USER_PROPERTIES_CATAGORIZATION = map[string]string{
 	SIX_SIGNAL_SIC_DESCRIPTION:     "Company identification",
 	SIX_SIGNAL_STATE:               "Company identification",
 	SIX_SIGNAL_ZIP:                 "Company identification",
+	G2_DOMAIN:                      "G2 Properties",
+	G2_NAME:                        "G2 Properties",
+	G2_LEGAL_NAME:                  "G2 Properties",
+	G2_COUNTRY:                     "G2 Properties",
+	G2_EMPLOYEES_RANGE:             "G2 Properties",
+	G2_EMPLOYEES:                   "G2 Properties",
+	G2_COMPANY_ID:                  "G2 Properties",
 }
 
 var DISABLED_EVENT_USER_PROPERTIES = []string{

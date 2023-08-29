@@ -86,6 +86,42 @@ func TestAPIAgentSignin(t *testing.T) {
 		cookies := w.Result().Cookies()
 		assert.True(t, len(cookies) > 0)
 	})
+
+	t.Run("FailedLoginAttempt", func(t *testing.T) {
+		email := getRandomEmail()
+		_, errCode := SetupAgentReturnDAO(email, "+93214356")
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		wrongPassword := "wrong@123"
+
+		for i := 1; i < 11; i++ {
+			w := sendSignInRequest(email, wrongPassword, r)
+			assert.Equal(t, http.StatusUnauthorized, w.Code)
+		}
+		// last failure attempt
+		w := sendSignInRequest(email, wrongPassword, r)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("PartialFailedLoginAttempt", func(t *testing.T) {
+		email := getRandomEmail()
+		agent, errCode := SetupAgentReturnDAO(email, "+93214356")
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		wrongPassword := "wrong@123"
+
+		for i := 1; i < 5; i++ {
+			w := sendSignInRequest(email, wrongPassword, r)
+			assert.Equal(t, http.StatusUnauthorized, w.Code)
+		}
+		plainTextPassword := U.RandomLowerAphaNumString(6)
+		errCode = store.GetStore().UpdateAgentPassword(agent.UUID, plainTextPassword, time.Now().UTC())
+		assert.Equal(t, http.StatusAccepted, errCode)
+
+		w := sendSignInRequest(email, plainTextPassword, r)
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
 }
 
 func TestAPIAgentSignout(t *testing.T) {

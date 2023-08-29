@@ -63,7 +63,7 @@ function QueryBlock({
             )
         )
       ];
-    } else if (activeGroup === 'events') {
+    } else if (activeGroup === 'events' || activeGroup === '$domains') {
       return [...eventOpts];
     } else {
       const groupDisplayName = availableGroups?.find(
@@ -131,11 +131,10 @@ function QueryBlock({
   ]);
 
   useEffect(() => {
-    if (!event) return;
-    if (eventGroup?.length) {
-      getGroupProperties(activeProject.id, eventGroup);
+    if (event && eventGroup?.length && !groupProperties[eventGroup]) {
+        getGroupProperties(activeProject.id, eventGroup);
     }
-  }, [event, activeProject.id, eventGroup]);
+}, [event, activeProject.id, eventGroup]);
 
   const showModal = () => {
     setIsModalVisible(true);

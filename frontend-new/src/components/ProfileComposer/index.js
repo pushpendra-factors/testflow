@@ -5,11 +5,10 @@ import { Button, DatePicker, Tooltip } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
 import styles from './index.module.scss';
 import ProfileBlock from './ProfileBlock';
-import GroupBlock from './GroupBlock';
 import { QUERY_TYPE_PROFILE } from '../../utils/constants';
 import ComposerBlock from '../QueryCommons/ComposerBlock';
 import {
-  getUserProperties,
+  getUserPropertiesV2,
   getGroupProperties
 } from 'Reducers/coreQuery/middleware';
 import MomentTz from 'Components/MomentTz';
@@ -18,6 +17,7 @@ import { INITIALIZE_GROUPBY } from '../../reducers/coreQuery/actions';
 import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
 import { fetchGroups } from 'Reducers/coreQuery/services';
 import GlobalFilter from 'Components/GlobalFilter';
+import GroupBlock from 'Components/QueryComposer/GroupBlock';
 
 function ProfileComposer({
   queries,
@@ -26,7 +26,7 @@ function ProfileComposer({
   eventChange,
   queryType,
   fetchGroups,
-  getUserProperties,
+  getUserPropertiesV2,
   getGroupProperties,
   activeProject,
   groupOpts,
@@ -56,7 +56,7 @@ function ProfileComposer({
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
-      getUserProperties(activeProject.id, queryType);
+      getUserPropertiesV2(activeProject.id, queryType);
     }
   }, [activeProject.id]);
 
@@ -83,7 +83,13 @@ function ProfileComposer({
   };
 
   const resetLabel = (group) => {
-    const labelMap = ['salesforce', 'hubspot', '6signal', 'linkedin_company', 'g2'];
+    const labelMap = [
+      'salesforce',
+      'hubspot',
+      '6signal',
+      'linkedin_company',
+      'g2'
+    ];
     const label =
       labelMap.find((key) => group.toLowerCase().includes(key)) || 'web';
     const query = { ...queries, label, alias: '', filters: [] };
@@ -157,7 +163,6 @@ function ProfileComposer({
                 </div>
               </Button>
             </Tooltip>
-
             {selectGroup()}
           </div>
         </div>
@@ -401,7 +406,7 @@ const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
       fetchGroups,
-      getUserProperties,
+      getUserPropertiesV2,
       getGroupProperties
     },
     dispatch

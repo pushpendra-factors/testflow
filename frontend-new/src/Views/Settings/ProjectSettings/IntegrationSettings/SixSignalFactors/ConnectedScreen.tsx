@@ -1,31 +1,41 @@
 import React from 'react';
-import EnrichFeature from './EnrichFeature';
 import { SVG, Text } from 'Components/factorsComponents';
 import ProgressBar from 'Components/GenericComponents/Progress';
 import { useSelector } from 'react-redux';
 import { FeatureConfigState } from 'Reducers/featureConfig/types';
+import { useHistory } from 'react-router-dom';
+import { PathUrls } from 'Routes/pathUrls';
+import { PRICING_PAGE_TABS } from '../../Pricing/utils';
 
 const ConnectedScreen = () => {
   const { sixSignalInfo } = useSelector(
     (state: any) => state.featureConfig
   ) as FeatureConfigState;
+  const history = useHistory();
   const sixSignalLimit = sixSignalInfo?.limit || 0;
   const sixSignalUsage = sixSignalInfo?.usage || 0;
   return (
     <div className='mt-4 flex flex-col border-top--thin  py-4 w-full'>
       <div>
         <div className='flex justify-between items-center'>
-          <div>
+          <div className='flex items-center justify-start gap-2'>
             <Text type={'paragraph'} mini>
               Default Monthly Quota
             </Text>
-            {/* <div>
-            <SVG name='ArrowUpRightSquare' color='#40A9FF' />
+            <div
+              className='flex items-center justify-start gap-1 cursor-pointer'
+              onClick={() =>
+                history.push(
+                  `${PathUrls.SettingsPricing}?activeTab=${PRICING_PAGE_TABS.ENRICHMENT_RULES}`
+                )
+              }
+            >
+              <SVG name='ArrowUpRightSquare' color='#40A9FF' />
 
               <Text type={'paragraph'} mini color='brand-color'>
-                Buy add on
+                Enrichment rules
               </Text>
-            </div> */}
+            </div>
           </div>
 
           <Text type={'paragraph'} mini>
@@ -33,20 +43,6 @@ const ConnectedScreen = () => {
           </Text>
         </div>
         <ProgressBar percentage={(sixSignalUsage / sixSignalLimit) * 100} />
-      </div>
-      <div className='mt-4'>
-        <EnrichFeature
-          type='page'
-          title='Enrich for specific pages'
-          subtitle='Gain insight into who is visiting your website and where they are in the buying journey'
-        />
-      </div>
-      <div className='mt-4'>
-        <EnrichFeature
-          type='country'
-          title='Enable country filtering'
-          subtitle='Gain insight into who is visiting your website and where they are in the buying journey'
-        />
       </div>
     </div>
   );

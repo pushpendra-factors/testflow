@@ -19,7 +19,6 @@ type FeatureDetails struct {
 	Granularity      string `json:"granularity"`
 	Expiry           int64  `json:"expiry"`
 	IsEnabledFeature bool   `json:"is_enabled_feature"` //is feature an addition to the plan or deletion from it
-	IsConnected      bool   `json:"is_connected"`       // to display if int is active or not
 }
 
 type FeatureList []FeatureDetails

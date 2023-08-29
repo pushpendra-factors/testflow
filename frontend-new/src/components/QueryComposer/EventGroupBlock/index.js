@@ -4,10 +4,13 @@ import { connect } from 'react-redux';
 import { SVG, Text } from '../../factorsComponents';
 import styles from './index.module.scss';
 import FaSelect from '../../FaSelect';
-import { PropTextFormat } from 'Utils/dataFormatter';
+import {
+  PropTextFormat,
+  convertAndAddPropertiesToGroupSelectOptions
+} from 'Utils/dataFormatter';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
-import startCase from 'lodash/startCase';
+import { startCase } from 'lodash';
 
 function EventGroupBlock({
   eventGroup,
@@ -28,43 +31,17 @@ function EventGroupBlock({
   hideText = false // added to hide the text from UI (Used in event based alerts)
 }) {
   const [filterOptions, setFilterOptions] = useState([]);
-
   const [propSelVis, setSelVis] = useState(false);
   const [isGroupByDDVisible, setGroupByDDVisible] = useState(false);
 
   useEffect(() => {
     const filterOptsObj = {};
     const eventGroups = eventPropertiesV2[event?.label] || {};
-    Object.keys(eventGroups)?.forEach((groupkey) => {
-      if (!filterOptsObj[groupkey]) {
-        filterOptsObj[groupkey] = {
-          label: startCase(groupkey),
-          iconName: getGroupIcon(groupkey),
-          values:
-            eventGroups?.[groupkey]?.map((op) => {
-              return {
-                value: op?.[1],
-                label: op?.[0],
-                extraProps: {
-                  valueType: op?.[2],
-                  propertyType: 'event'
-                }
-              };
-            }) || []
-        };
-      } else {
-        eventGroups?.[groupkey]?.forEach((op) =>
-          filterOptsObj[groupkey].values.push({
-            value: op?.[1],
-            label: op?.[0],
-            extraProps: {
-              valueType: op?.[2],
-              propertyType: 'event'
-            }
-          })
-        );
-      }
-    });
+    convertAndAddPropertiesToGroupSelectOptions(
+      eventGroups,
+      filterOptsObj,
+      'event'
+    );
     if (eventGroup) {
       const groupLabel = `${PropTextFormat(eventGroup)} Properties`;
       const groupValues =
@@ -74,47 +51,29 @@ function EventGroupBlock({
             label: op?.[0],
             extraProps: {
               valueType: op?.[2],
-              propertyType: 'group'
+              propertyType: 'group',
+              groupName: eventGroup
             }
           };
         }) || [];
       const groupPropIconName = getGroupIcon(groupLabel);
-      filterOptsObj[groupLabel] = {
-        iconName: groupPropIconName === 'NoImage' ? 'group' : groupPropIconName,
-        label: groupLabel,
-        values: groupValues
-      };
+      if (!filterOptsObj[groupLabel]) {
+        filterOptsObj[groupLabel] = {
+          iconName:
+            groupPropIconName === 'NoImage' ? 'group' : groupPropIconName,
+          label: groupLabel,
+          values: groupValues
+        };
+      } else {
+        filterOptsObj[groupLabel].values.push(...groupValues);
+      }
     } else {
       if (eventUserPropertiesV2) {
-        Object.keys(eventUserPropertiesV2)?.forEach((groupkey) => {
-          if (!filterOptsObj[groupkey]) {
-            filterOptsObj[groupkey] = {
-              label: startCase(groupkey),
-              iconName: getGroupIcon(groupkey),
-              values: eventUserPropertiesV2?.[groupkey]?.map((op) => {
-                return {
-                  value: op?.[1],
-                  label: op?.[0],
-                  extraProps: {
-                    valueType: op?.[2],
-                    propertyType: 'user'
-                  }
-                };
-              })
-            };
-          } else {
-            eventUserPropertiesV2?.[groupkey]?.forEach((op) =>
-              filterOptsObj[groupkey].values.push({
-                value: op?.[1],
-                label: op?.[0],
-                extraProps: {
-                  valueType: op?.[2],
-                  propertyType: 'user'
-                }
-              })
-            );
-          }
-        });
+        convertAndAddPropertiesToGroupSelectOptions(
+          eventUserPropertiesV2,
+          filterOptsObj,
+          'user'
+        );
       }
     }
     setFilterOptions(Object.values(filterOptsObj));

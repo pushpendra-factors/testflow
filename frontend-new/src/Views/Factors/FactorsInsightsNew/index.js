@@ -1,11 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import Header from '../../AppLayout/Header';
 import SearchBar from '../../../components/SearchBar';
+import { Row, Col, Button, Spin } from 'antd';
 import {
-  Row, Col, Button, Spin
-} from 'antd';
-import { fetchSavedExplainGoals, fetchFactorsModels, setGoalInsight, saveGoalInsightRules, saveGoalInsightModel, fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties } from 'Reducers/factors';
-import { fetchEventNames, getUserProperties } from 'Reducers/coreQuery/middleware';
+  fetchSavedExplainGoals,
+  fetchFactorsModels,
+  setGoalInsight,
+  saveGoalInsightRules,
+  saveGoalInsightModel,
+  fetchFactorsTrackedEvents,
+  fetchFactorsTrackedUserProperties
+} from 'Reducers/factors';
+import {
+  fetchEventNames,
+  getUserPropertiesV2
+} from 'Reducers/coreQuery/middleware';
 import { connect, useSelector, useDispatch } from 'react-redux';
 import { fetchProjectAgents } from 'Reducers/agentActions';
 import _, { isEmpty } from 'lodash';
@@ -19,22 +28,22 @@ import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
 import matchEventName from './Utils/MatchEventNames';
 
 const Factors = ({
-  fetchSavedExplainGoals
-  , activeProject
-  , goals
-  , agents
-  , fetchProjectAgents
-  , fetchEventNames
-  , fetchFactorsModels 
-  , fetchFactorsTrackedEvents
-  , fetchFactorsTrackedUserProperties
-  , getUserProperties,
+  fetchSavedExplainGoals,
+  activeProject,
+  goals,
+  agents,
+  fetchProjectAgents,
+  fetchEventNames,
+  fetchFactorsModels,
+  fetchFactorsTrackedEvents,
+  fetchFactorsTrackedUserProperties,
+  getUserPropertiesV2,
   goalInsights,
   saveGoalInsightRules,
   saveGoalInsightModel,
   setGoalInsight,
   eventPropNames,
-  userPropNames,
+  userPropNames
 }) => {
   const [loadingTable, SetLoadingTable] = useState(true);
   const [fetchingIngishts, SetfetchingIngishts] = useState(false);
@@ -53,22 +62,20 @@ const Factors = ({
       await fetchFactorsModels(activeProject.id);
       await fetchFactorsTrackedEvents(activeProject.id);
       await fetchFactorsTrackedUserProperties(activeProject.id);
-      await getUserProperties(activeProject.id, 'events');
+      await getUserPropertiesV2(activeProject.id, 'events');
     };
     getData1();
 
     return () => {
       dispatch({ type: SHOW_ANALYTICS_RESULT, payload: false });
     };
-
   }, [activeProject]);
-
 
   const smoothScroll = (element) => {
     document.querySelector(element).scrollIntoView({
-      behavior: 'smooth',
+      behavior: 'smooth'
     });
-  }
+  };
 
   useEffect(() => {
     if (goalInsights) {
@@ -80,39 +87,60 @@ const Factors = ({
       saveGoalInsightRules(null);
       saveGoalInsightModel(null);
       setGoalInsight(null);
-    }
-  }, [])
+    };
+  }, []);
 
   const handleCancel = () => {
     setConfigureDPModal(false);
   };
-  const explainMatchEventName = (eventName, stringOnly = false, color = 'grey') => {
-
-    return matchEventName(eventName, eventPropNames, userPropNames, stringOnly, color)
-  }
+  const explainMatchEventName = (
+    eventName,
+    stringOnly = false,
+    color = 'grey'
+  ) => {
+    return matchEventName(
+      eventName,
+      eventPropNames,
+      userPropNames,
+      stringOnly,
+      color
+    );
+  };
 
   return (
     <>
-      <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Explain Error '} subtitle={'We are facing trouble loading Explain. Drop us a message on the in-app chat.'} />} onError={FaErrorLog}>
-
-        {fetchingIngishts ? <Spin size={'large'} className={'fa-page-loader'} /> :
+      <ErrorBoundary
+        fallback={
+          <FaErrorComp
+            size={'medium'}
+            title={'Explain Error '}
+            subtitle={
+              'We are facing trouble loading Explain. Drop us a message on the in-app chat.'
+            }
+          />
+        }
+        onError={FaErrorLog}
+      >
+        {fetchingIngishts ? (
+          <Spin size={'large'} className={'fa-page-loader'} />
+        ) : (
           <>
-
             <HeaderContents />
             <div className={'fa-container'}>
               <div className={'mt-24 '}>
                 <ExplainQueryBuilder />
                 <div id='fa-explain-results--container' className='px-20'>
-                  {!_.isEmpty(goalInsights?.insights) && <ResultsTableL1
-                    goalInsights={goalInsights}
-                    explainMatchEventName={explainMatchEventName}
-                  />}
+                  {!_.isEmpty(goalInsights?.insights) && (
+                    <ResultsTableL1
+                      goalInsights={goalInsights}
+                      explainMatchEventName={explainMatchEventName}
+                    />
+                  )}
                 </div>
               </div>
             </div>
-
           </>
-        }
+        )}
       </ErrorBoundary>
     </>
   );
@@ -128,4 +156,15 @@ const mapStateToProps = (state) => {
     userPropNames: state.coreQuery.userPropNames
   };
 };
-export default connect(mapStateToProps, { fetchSavedExplainGoals, setGoalInsight, saveGoalInsightModel, fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties, fetchProjectAgents, saveGoalInsightRules, fetchFactorsModels, fetchEventNames, getUserProperties })(Factors);
+export default connect(mapStateToProps, {
+  fetchSavedExplainGoals,
+  setGoalInsight,
+  saveGoalInsightModel,
+  fetchFactorsTrackedEvents,
+  fetchFactorsTrackedUserProperties,
+  fetchProjectAgents,
+  saveGoalInsightRules,
+  fetchFactorsModels,
+  fetchEventNames,
+  getUserPropertiesV2
+})(Factors);

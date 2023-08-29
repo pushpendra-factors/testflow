@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { connect } from 'react-redux';
 import { Text } from 'factorsComponents';
 import { Modal, Form, Row, Col, Select, Input, Button, message } from 'antd';
-import { getEventProperties } from 'Reducers/coreQuery/middleware';
+import { getEventPropertiesV2 } from 'Reducers/coreQuery/middleware';
 import { udpateProjectDetails } from 'Reducers/global';
 import defaultRules from '../defaultRules';
 import _ from 'lodash';
@@ -11,9 +11,9 @@ import { operatorMap } from 'Utils/operatorMapping';
 import GlobalFilter from 'Components/GlobalFilter';
 
 function PropertyValueModal({
-  eventProperties,
+  eventPropertiesV2,
   activeProject,
-  getEventProperties,
+  getEventPropertiesV2,
   isModalVisible,
   setShowModalVisible,
   setShowDCGForm,
@@ -30,17 +30,17 @@ function PropertyValueModal({
   const inputComponentRef = useAutoFocus(isModalVisible);
 
   useEffect(() => {
-    if (!eventProperties['$session']) {
-      getEventProperties(activeProject.id, '$session');
+    if (!eventPropertiesV2['$session']) {
+      getEventPropertiesV2(activeProject.id, '$session');
     }
-    if (eventProperties) {
+    if (eventPropertiesV2) {
       const props = {};
-      props['event'] = eventProperties['$session'];
+      props['event'] = eventPropertiesV2['$session'];
       setFilterProperties(props);
     }
-  }, [eventProperties]);
+  }, [eventPropertiesV2]);
 
-  // console.log('eventProperties',eventProperties);
+  // console.log('eventPropertiesV2',eventPropertiesV2);
   const onReset = () => {
     // seterrorInfo(null);
     // setVisible(false);
@@ -119,7 +119,7 @@ function PropertyValueModal({
           filterProps.push({
             logical_operator: !index ? 'AND' : 'OR',
             condition: operatorMap[fil.operator],
-            property: fil.props[0],
+            property: fil.props[1],
             // ty: fil.props[1],
             value: val
           });
@@ -128,7 +128,7 @@ function PropertyValueModal({
         filterProps.push({
           logical_operator: 'AND',
           condition: operatorMap[fil.operator],
-          property: fil.props[0],
+          property: fil.props[1],
           // ty: fil.props[1],
           value: fil.values
         });
@@ -241,10 +241,10 @@ function PropertyValueModal({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  eventProperties: state.coreQuery.eventProperties
+  eventPropertiesV2: state.coreQuery.eventPropertiesV2
 });
 
 export default connect(mapStateToProps, {
-  getEventProperties,
+  getEventPropertiesV2,
   udpateProjectDetails
 })(PropertyValueModal);

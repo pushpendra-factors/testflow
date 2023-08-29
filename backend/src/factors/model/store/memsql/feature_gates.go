@@ -43,14 +43,13 @@ func (store *MemSQL) GetFeatureStatusForProject(projectID int64, featureName str
 }
 
 // isEnabled, isConnected, error
-func (store *MemSQL) GetFeatureStatusForProjectV2(projectID int64, featureName string) (bool, bool, error) {
+func (store *MemSQL) GetFeatureStatusForProjectV2(projectID int64, featureName string) (bool, error) {
 	featureList, addOns, err := store.GetPlanDetailsAndAddonsForProject(projectID)
 	if err != nil {
 		log.WithError(err).Error("Failed to get feature status for Project ID ", projectID)
 	}
 	status := isFeatureAvailableForProject(featureList, addOns, featureName)
-	isConnected := isFeatureConnectedForProject(featureList, addOns, featureName)
-	return status, isConnected, nil
+	return status, nil
 }
 
 func (store *MemSQL) UpdateFeatureStatusForProject(projectID int64, feature model.FeatureDetails) (string, error) {
@@ -120,21 +119,6 @@ func isFeatureAvailableForProject(featureList model.FeatureList, addOns model.Ov
 
 	return false
 }
-func isFeatureConnectedForProject(featureList model.FeatureList, addOns model.OverWrite, featureName string) bool {
-	for _, feature := range featureList {
-		if featureName == feature.Name {
-			return feature.IsConnected
-		}
-	}
-
-	for _, feature := range addOns {
-		if featureName == feature.Name {
-			return feature.IsConnected
-		}
-	}
-
-	return false
-}
 
 // not in use
 func (store *MemSQL) UpdateStatusForFeature(projectID int64, featureName string, updateValue int) (int, error) {
@@ -179,7 +163,7 @@ func (store *MemSQL) GetAllProjectsWithFeatureEnabled(featureName string) ([]int
 		return nil, err
 	}
 	for _, projectId := range projectIDs {
-		available, _, err := store.GetFeatureStatusForProjectV2(projectId, featureName)
+		available, err := store.GetFeatureStatusForProjectV2(projectId, featureName)
 		if err != nil {
 			log.WithFields(log.Fields{"project_id": projectId, "feature": featureName}).WithError(err).Error("failed to get feature status for project ID ")
 			continue
@@ -204,7 +188,7 @@ func (store *MemSQL) GetProjectsArrayWithFeatureEnabledFromProjectIdFlag(stringP
 		projectIds := C.GetTokensFromStringListAsUint64(stringProjectsIDs)
 		for _, projectId := range projectIds {
 			available := false
-			available, _, err = store.GetFeatureStatusForProjectV2(projectId, featureName)
+			available, err = store.GetFeatureStatusForProjectV2(projectId, featureName)
 			if err != nil {
 				log.WithFields(log.Fields{"projectID": projectId}).WithError(err)
 				continue

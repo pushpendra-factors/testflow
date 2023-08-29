@@ -8,7 +8,7 @@ import {
   Menu,
   Dropdown,
   Modal,
-  message,
+  message
 } from 'antd';
 import { Text } from 'factorsComponents';
 import { MoreOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
@@ -17,9 +17,8 @@ import { connect } from 'react-redux';
 import {
   fetchProjectAgents,
   projectAgentRemove,
-  updateAgentRole,
+  updateAgentRole
 } from 'Reducers/agentActions';
-import { fetchDemoProject } from 'Reducers/global';
 import MomentTz from 'Components/MomentTz';
 
 const { confirm } = Modal;
@@ -30,14 +29,12 @@ function UserSettings({
   projectAgentRemove,
   activeProjectID,
   updateAgentRole,
-  fetchProjectAgents,
-  fetchDemoProject,
+  fetchProjectAgents
 }) {
   const [dataLoading, setDataLoading] = useState(true);
   const [dataSource, setdataSource] = useState(null);
   const [inviteModal, setInviteModal] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
-  const [demoProjectID, setdemoProjectID] = useState(null);
 
   const confirmRemove = (uuid) => {
     let agent = agents.filter((agent) => agent.email === currentAgent.email);
@@ -48,20 +45,20 @@ function UserSettings({
       okText: 'Yes',
       onOk() {
         projectAgentRemove(activeProjectID, uuid)
-        .then(() => {
-          fetchProjectAgents(activeProjectID);
-          const rulesToUpdate = [
-            ...dataSource.filter(
-              (val) => JSON.stringify(val.uuid) !== JSON.stringify(uuid)
-            ),
-          ];
-          setdataSource(rulesToUpdate);
-          message.success('User removed successfully!');
-        })
-        .catch((err) => {
+          .then(() => {
+            fetchProjectAgents(activeProjectID);
+            const rulesToUpdate = [
+              ...dataSource.filter(
+                (val) => JSON.stringify(val.uuid) !== JSON.stringify(uuid)
+              )
+            ];
+            setdataSource(rulesToUpdate);
+            message.success('User removed successfully!');
+          })
+          .catch((err) => {
             message.error(err?.data?.error);
-        });
-      },
+          });
+      }
     });
   };
 
@@ -78,7 +75,7 @@ function UserSettings({
             const rulesToUpdate = [
               ...dataSource.filter(
                 (val) => JSON.stringify(val.uuid) !== JSON.stringify(uuid)
-              ),
+              )
             ];
             setdataSource(rulesToUpdate);
             message.success('User role updated successfully!');
@@ -86,7 +83,7 @@ function UserSettings({
           .catch((err) => {
             message.error(err.data.error);
           });
-      },
+      }
     });
   };
 
@@ -123,22 +120,22 @@ function UserSettings({
             {text}
           </Text>{' '}
         </div>
-      ),
+      )
     },
     {
       title: 'Email',
       dataIndex: 'email',
-      key: 'email',
+      key: 'email'
     },
     {
       title: 'Role',
       dataIndex: 'role',
-      key: 'role',
+      key: 'role'
     },
     {
       title: 'Last activity',
       dataIndex: 'lastActivity',
-      key: 'lastActivity',
+      key: 'lastActivity'
     },
     {
       title: '',
@@ -148,24 +145,18 @@ function UserSettings({
         <Dropdown overlay={() => menu(values)} trigger={['click']}>
           <Button size={'large'} type='text' icon={<MoreOutlined />} />
         </Dropdown>
-      ),
-    },
+      )
+    }
   ];
 
   useEffect(() => {
-    fetchDemoProject().then((res) => {
-      let id = res.data[0];
-      setdemoProjectID(id);
-    });
-    if (activeProjectID === demoProjectID) {
-      setdataSource([]);
-    } else if (agents) {
+    if (agents) {
       const formattedArray = [];
       agents.map((agent, index) => {
         // console.log(index, 'agent-name-->', agent.first_name);
         const values = {
           uuid: `${agent.uuid}`,
-          role: agent.role,
+          role: agent.role
         };
         formattedArray.push({
           key: index,
@@ -183,7 +174,7 @@ function UserSettings({
               ? 'Pending Invite'
               : '---'
           }`,
-          actions: values,
+          actions: values
         });
         setdataSource(formattedArray);
       });
@@ -191,7 +182,7 @@ function UserSettings({
       setdataSource([]);
     }
     setDataLoading(false);
-  }, [agents, demoProjectID]);
+  }, [agents]);
 
   const handleOk = () => {
     setConfirmLoading(true);
@@ -257,14 +248,13 @@ function UserSettings({
 const mapStateToProps = (state) => ({
   activeProjectID: state.global.active_project.id,
   agents: state.agent.agents,
-  currentAgent: state.agent.agent_details,
+  currentAgent: state.agent.agent_details
 });
 
 export default connect(mapStateToProps, {
   fetchProjectAgents,
   updateAgentRole,
-  projectAgentRemove,
-  fetchDemoProject,
+  projectAgentRemove
 })(UserSettings);
 
 // table datasource example

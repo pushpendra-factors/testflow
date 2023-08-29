@@ -3,6 +3,8 @@ package model
 import (
 	"time"
 
+	cacheRedis "factors/cache/redis"
+
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 )
@@ -43,6 +45,7 @@ type Agent struct {
 	SlackAccessTokens *postgres.Jsonb `json:"slack_access_tokens"`
 	LastLoggedOut     int64           `json:"last_logged_out"`
 	TeamsAccessTokens *postgres.Jsonb `json:"teams_access_tokens"`
+	IsFormFilled      bool            `json:"is_form_filled"`
 }
 type CreateAgentParams struct {
 	Agent    *Agent
@@ -63,11 +66,14 @@ type AgentInfo struct {
 	LastLoggedIn         *time.Time `json:"last_logged_in"`
 	Phone                string     `json:"phone"`
 	IsOnboardingFlowSeen bool       `json:"is_onboarding_flow_seen"`
+	IsFormFilled         bool       `json:"is_form_filled"`
 	SignedUpAt           *time.Time `json:"signed_up_at"`
 }
 
 const (
-	AgentSaltLength = 32
+	AgentSaltLength                = 32
+	MaxFailedLoginAttempts         = 10
+	LoginAttemptKeyExpiryInSeconds = 3600
 )
 
 func CreateAgentInfo(agent *Agent) *AgentInfo {
@@ -83,6 +89,7 @@ func CreateAgentInfo(agent *Agent) *AgentInfo {
 		LastLoggedIn:         agent.LastLoggedInAt,
 		Phone:                agent.Phone,
 		IsOnboardingFlowSeen: agent.IsOnboardingFlowSeen,
+		IsFormFilled:         agent.IsFormFilled,
 		SignedUpAt:           &agent.CreatedAt,
 	}
 }
@@ -136,6 +143,13 @@ func IsOnboardingFlowSeen(status bool) Option {
 		fields["is_onboarding_flow_seen"] = status
 	}
 }
+
+func IsFormFilled(status bool) Option {
+	return func(fields FieldsToUpdate) {
+		fields["is_form_filled"] = status
+	}
+}
+
 func PasswordAndPasswordCreatedAt(password string, ts time.Time) Option {
 	return func(fields FieldsToUpdate) {
 		fields["password"] = password
@@ -201,4 +215,9 @@ func Auth0Value(value *postgres.Jsonb) Option {
 	return func(fields FieldsToUpdate) {
 		fields["value"] = value
 	}
+}
+
+func AgentFailedLoginAttemptCacheKey(agentUUID string) (*cacheRedis.Key, error) {
+	prefix := "LOGIN:FAIL"
+	return cacheRedis.NewKeyWithAgentUID(prefix, agentUUID, "")
 }

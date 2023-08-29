@@ -37,7 +37,7 @@ type Model interface {
 	UpdateAgentIntSalesforce(uuid, refreshToken string, instanceURL string) int
 	UpdateAgentPassword(uuid, plainTextPassword string, passUpdatedAt time.Time) int
 	UpdateAgentLastLoginInfo(agentUUID string, ts time.Time) int
-	UpdateAgentInformation(agentUUID, firstName, lastName, phone string, isOnboardingFlowSeen *bool) int
+	UpdateAgentInformation(agentUUID, firstName, lastName, phone string, isOnboardingFlowSeen *bool, isFormFilled *bool) int
 	UpdateAgentVerificationDetails(agentUUID, password, firstName, lastName string, verified bool, passUpdatedAt time.Time) int
 	UpdateAgentVerificationDetailsFromAuth0(agentUUID, firstName, lastName string, verified bool, value *postgres.Jsonb) int
 	GetPrimaryAgentOfProject(projectId int64) (uuid string, errCode int)
@@ -947,11 +947,10 @@ type Model interface {
 	UpdateStatusForFeature(projectID int64, featureName string, updateValue int) (int, error)
 	GetFeatureStatusForProject(projectID int64, featureName string) (int, error)
 	CreateDefaultFeatureGatesConfigForProject(ProjectID int64) (int, error)
-	GetFeatureStatusForProjectV2(projectID int64, featureName string) (bool, bool, error)
+	GetFeatureStatusForProjectV2(projectID int64, featureName string) (bool, error)
 	GetPlanDetailsAndAddonsForProject(projectID int64) (model.FeatureList, model.OverWrite, error)
 	GetFeatureLimitForProject(projectID int64, featureName string) (int64, error)
 	UpdateFeatureStatusForProject(projectID int64, feature model.FeatureDetails) (string, error)
-	UpdateAllFeatureStatusForProject(ProjectID int64, updatedSettings model.ProjectSetting) error
 	GetProjectsArrayWithFeatureEnabledFromProjectIdFlag(stringProjectsIDs, featureName string) ([]int64, error)
 
 	// Property Mapping

@@ -30,6 +30,7 @@ import { uploadList } from 'Reducers/global';
 import FaSelect from 'Components/GenericComponents/FaSelect';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import { selectedOptionsMapper } from 'Components/GenericComponents/FaSelect/utils';
+import { PropTextFormat } from 'Utils/dataFormatter';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 const rangePicker = [OPERATORS['equalTo'], OPERATORS['notEqualTo']];
@@ -58,6 +59,7 @@ const FaFilterSelect = ({
   maxAllowedSelection
 }) => {
   const [propState, setPropState] = useState({
+    groupName: '',
     icon: '',
     name: '',
     type: ''
@@ -112,8 +114,14 @@ const FaFilterSelect = ({
       (filter && !valuesState) ||
       (filter && filter?.values !== valuesState)
     ) {
-      const prop = filter.props;
-      setPropState({ icon: prop[2], name: prop[0], type: prop[1] });
+      const prop =
+        filter.props.length === 3 ? ['', ...filter.props] : filter.props;
+      setPropState({
+        groupName: prop[0],
+        icon: prop[3],
+        name: prop[1],
+        type: prop[2]
+      });
       if (
         (filter.operator === OPERATORS['equalTo'] ||
           filter.operator === OPERATORS['notEqualTo']) &&
@@ -143,7 +151,7 @@ const FaFilterSelect = ({
 
   const setValues = () => {
     let values;
-    if (filter.props[1] === 'datetime') {
+    if (filter.props[2] === 'datetime') {
       const filterVals = isArray(filter.values)
         ? filter.values[0]
         : filter.values;
@@ -177,7 +185,12 @@ const FaFilterSelect = ({
   const emitFilter = () => {
     if (propState && operatorState && valuesState) {
       applyFilter({
-        props: [propState.name, propState.type, propState.icon],
+        props: [
+          propState.groupName,
+          propState.name,
+          propState.type,
+          propState.icon
+        ],
         operator: operatorState,
         values: valuesState,
         ref: refValue
@@ -193,6 +206,7 @@ const FaFilterSelect = ({
 
   const propSelect = (option, group) => {
     setPropState({
+      groupName: option.extraProps?.groupName,
       icon: option.extraProps?.propertyType || group.iconName,
       name: option.value,
       type: option.extraProps.valueType
@@ -205,7 +219,7 @@ const FaFilterSelect = ({
     );
     setValuesState(null);
     setValuesByProps([
-      option.label,
+      option.extraProps?.groupName,
       option.value,
       option.extraProps.valueType,
       option.extraProps?.propertyType || group.iconName
@@ -275,26 +289,15 @@ const FaFilterSelect = ({
   };
 
   const renderGroupDisplayName = (propState) => {
-    // propState?.name ? userPropNames[propState?.name] ? userPropNames[propState?.name] : propState?.name : 'Select Property'
+    const mergedPropNames = {
+      ...groupPropNames,
+      ...userPropNames,
+      ...eventPropNames
+    };
     let propertyName = propState?.name;
-    if (propState.name && propState.icon === 'group') {
-      propertyName = groupPropNames[propState.name]
-        ? groupPropNames[propState.name]
-        : propState.name;
-    }
-    if (
-      propState.name &&
-      (propState.icon === 'user' || propState.icon === 'user_g')
-    ) {
-      propertyName = userPropNames[propState.name]
-        ? userPropNames[propState.name]
-        : propState.name;
-    }
-    if (propState.name && propState.icon === 'event') {
-      propertyName = eventPropNames[propState.name]
-        ? eventPropNames[propState.name]
-        : propState.name;
-    }
+    propertyName = mergedPropNames[propState?.name]
+      ? mergedPropNames[propState?.name]
+      : PropTextFormat(propState?.name);
     if (!propState.name) {
       propertyName = 'Select Property';
     }
@@ -333,7 +336,8 @@ const FaFilterSelect = ({
               value: valueOpt[1],
               extraProps: {
                 valueType: valueOpt[2],
-                propertyType: groupOpt?.propertyType
+                propertyType: groupOpt?.propertyType,
+                groupName: groupOpt?.key
               }
             };
           })
@@ -345,7 +349,8 @@ const FaFilterSelect = ({
             label: op?.[0],
             extraProps: {
               valueType: op?.[2],
-              propertyType: groupOpt?.propertyType
+              propertyType: groupOpt?.propertyType,
+              groupName: groupOpt?.key
             }
           });
         });

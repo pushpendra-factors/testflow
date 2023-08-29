@@ -244,7 +244,7 @@ type Query struct {
 	AggregateProperty     string `json:"agPr"`
 	AggregateEntity       string `json:"agEn"`
 	AggregatePropertyType string `json:"agTy"`
-	IsLimitNotApplicable bool
+	IsLimitNotApplicable  bool
 }
 
 var IN_PROPERTIES_DEFAULT_QUERY_MAP = map[string]QueryProperty{
@@ -289,6 +289,13 @@ var IN_PROPERTIES_DEFAULT_QUERY_MAP = map[string]QueryProperty{
 	},
 }
 
+var PROPERTY_TO_TABLE_COLUMN_MAP = map[string]string{
+	U.IDENTIFIED_USER_ID: U.CUSTOMER_USER_ID,
+}
+
+var USER_PROPERTY_TO_COLUMN_MAP = map[string]string{
+	U.IDENTIFIED_USER_ID: "$user_id",
+}
 var OPPOSITE_OF_OPERATOR_MAP = map[string]string{
 	NotEqualOpStr:    EqualsOpStr,
 	GreaterThanOpStr: LesserThanOrEqualOpStr,
@@ -430,16 +437,16 @@ type QueryProperty struct {
 	// Entity: user or event.
 	Entity string `json:"en"`
 	// Type: categorical or numerical
-	Type        string `json:"ty"`
+	Type string `json:"ty"`
 
 	// currenly used only in all accounts to get the group name for the property.
-	GroupName   string `json:"grpn"` 
-	GroupNameID int    `json:"-"`    // internal property holds the group id from the GroupName
+	GroupName   string `json:"grpn"`
+	GroupNameID int    `json:"-"` // internal property holds the group id from the GroupName
 
-	Property    string `json:"pr"`
-	Operator    string `json:"op"`
-	Value       string `json:"va"`
-	LogicalOp   string `json:"lop"`
+	Property  string `json:"pr"`
+	Operator  string `json:"op"`
+	Value     string `json:"va"`
+	LogicalOp string `json:"lop"`
 }
 
 // Duplicate code present between QueryProperty and KPIFilter

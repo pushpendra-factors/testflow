@@ -534,20 +534,21 @@ func IsEmptyPropertyValue(propertyValue interface{}) bool {
 	}
 }
 
-func FillLocationUserProperties(properties *util.PropertiesMap, clientIP string) (error, string) {
+func FillLocationUserProperties(properties *util.PropertiesMap, clientIP string) (error, string, string) {
 	geo := config.GetServices().GeoLocation
 
 	country := ""
+	isoCode := ""
 	// ClientIP unavailable.
 	if clientIP == "" {
-		return fmt.Errorf("invalid IP, failed adding geolocation properties"), country
+		return fmt.Errorf("invalid IP, failed adding geolocation properties"), country, isoCode
 	}
 
 	city, err := geo.City(net.ParseIP(clientIP))
 	if err != nil {
 		log.WithFields(log.Fields{"clientIP": clientIP}).WithError(err).Error(
 			"Failed to get city information from geodb")
-		return err, country
+		return err, country, isoCode
 	}
 
 	// Using en -> english name.
@@ -555,6 +556,13 @@ func FillLocationUserProperties(properties *util.PropertiesMap, clientIP string)
 		if c, ok := (*properties)[util.UP_COUNTRY]; !ok || c == "" {
 			(*properties)[util.UP_COUNTRY] = countryName
 			country = countryName
+		}
+	}
+
+	if countryISOCode := city.Country.IsoCode; countryISOCode != "" {
+		if c, ok := (*properties)[util.UP_ISO_CODE]; !ok || c == "" {
+			(*properties)[util.UP_ISO_CODE] = countryISOCode
+			isoCode = countryISOCode
 		}
 	}
 
@@ -575,7 +583,7 @@ func FillLocationUserProperties(properties *util.PropertiesMap, clientIP string)
 		}
 	}
 
-	return nil, country
+	return nil, country, isoCode
 }
 
 // GetDecodedUserPropertiesIdentifierMetaObject gets the identifier meta data from the user properties

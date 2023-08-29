@@ -112,7 +112,7 @@ func (store *MemSQL) GetDisplayablePlanDetails(ppMap model.ProjectPlanMapping, p
 		}
 	}
 	var sixSignalInfo model.SixSignalInfo
-	isDeanonymisationEnabled, _, err := store.GetFeatureStatusForProjectV2(ppMap.ProjectID, FEATURE_FACTORS_DEANONYMISATION)
+	isDeanonymisationEnabled, err := store.GetFeatureStatusForProjectV2(ppMap.ProjectID, FEATURE_FACTORS_DEANONYMISATION)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get status for six signal")
 		return nil, http.StatusInternalServerError, "Failed to get status for six signal", err
@@ -360,7 +360,6 @@ func (store *MemSQL) CreateAddonsForCustomPlanForProject(projectID int64) error 
 		log.WithError(err).Error("Failed to create custom plan addons")
 		return err
 	}
-
 	return nil
 }
 func GetPlanIDFromString(planID string) (int, error) {

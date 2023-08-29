@@ -8,7 +8,6 @@ import Highcharts from 'highcharts';
 import {
   fetchProjects,
   setActiveProject,
-  fetchDemoProject,
   fetchProjectSettings,
   fetchProjectSettingsV1
 } from 'Reducers/global';
@@ -23,8 +22,8 @@ import {
   fetchAttributionQueries
 } from 'Attribution/state/services';
 import {
-  getUserProperties,
-  getEventProperties,
+  getUserPropertiesV2,
+  getEventPropertiesV2,
   fetchEventNames,
   getGroupProperties
 } from '../../reducers/coreQuery/middleware';
@@ -36,25 +35,23 @@ import { fetchWeeklyIngishtsMetaData } from 'Reducers/insights';
 import { fetchKPIConfig, fetchPageUrls } from '../../reducers/kpi';
 import FaHeader from '../../components/FaHeader';
 
-import { EMPTY_ARRAY } from '../../utils/global';
-
 import { fetchTemplates } from '../../reducers/dashboard_templates/services';
 import { AppLayoutRoutes } from 'Routes/index';
 import { TOGGLE_GLOBAL_SEARCH } from 'Reducers/types';
 import './index.css';
-import _ from 'lodash';
+import _, { isEmpty } from 'lodash';
 import logger from 'Utils/logger';
 import { useLocation } from 'react-router-dom';
 import GlobalSearchModal from './GlobalSearchModal';
-import { APP_LAYOUT_ROUTES } from '../../routes/constants';
 import AppSidebar from '../AppSidebar';
 import styles from './index.module.scss';
 import { routesWithSidebar } from './appLayout.constants';
 import { selectSidebarCollapsedState } from 'Reducers/global/selectors';
-import { fetchProjectAgents } from 'Reducers/agentActions';
+import { fetchProjectAgents, fetchAgentInfo } from 'Reducers/agentActions';
 import { fetchFeatureConfig } from 'Reducers/featureConfig/middleware';
 import { selectAreDraftsSelected } from 'Reducers/dashboard/selectors';
 import { PathUrls } from '../../routes/pathUrls';
+import OnboardingRouting from 'Onboarding/ui/OnboardingRouting';
 
 // customizing highcharts for project requirements
 customizeHighCharts(Highcharts);
@@ -62,17 +59,16 @@ customizeHighCharts(Highcharts);
 function AppLayout({
   fetchProjects,
   fetchEventNames,
-  getEventProperties,
-  getUserProperties,
+  getEventPropertiesV2,
+  getUserPropertiesV2,
   getGroupProperties,
   fetchWeeklyIngishtsMetaData,
   setActiveProject,
-  fetchDemoProject,
   fetchProjectSettings,
-  fetchProjectSettingsV1
+  fetchProjectSettingsV1,
+  fetchAgentInfo
 }) {
   const [dataLoading, setDataLoading] = useState(true);
-  const [demoProjectId, setDemoProjectId] = useState(EMPTY_ARRAY);
   const { Content } = Layout;
   const agentState = useSelector((state) => state.agent);
   const isAgentLoggedIn = agentState.isLoggedIn;
@@ -94,8 +90,13 @@ function AppLayout({
 
   const fetchProjectsOnLoad = useCallback(async () => {
     try {
-      if (isAgentLoggedIn) await fetchProjects();
-      else setDataLoading(false);
+      if (isAgentLoggedIn) {
+        const res = await fetchProjects();
+        //handling when no project is present
+        if (isEmpty(res?.data)) {
+          setDataLoading(false);
+        }
+      } else setDataLoading(false);
     } catch (err) {
       console.log(err);
     }
@@ -120,25 +121,14 @@ function AppLayout({
   }, [fetchProjectsOnLoad]);
 
   useEffect(() => {
-    fetchDemoProject().then((res) => {
-      setDemoProjectId(res.data);
-    });
-  }, [fetchDemoProject, setDemoProjectId]);
-
-  useEffect(() => {
     if (projects.length && _.isEmpty(active_project)) {
       let activeItem = projects?.filter(
         (item) => item.id === localStorage.getItem('activeProject')
       );
-      //handling Saas factors demo project
-      let default_project = demoProjectId.includes(projects[0].id)
-        ? projects[1]
-          ? projects[1]
-          : projects[0]
-        : projects[0];
-      let projectDetails = _.isEmpty(activeItem)
-        ? default_project
-        : activeItem[0];
+
+      //handling project redirection
+      let projectDetails = _.isEmpty(activeItem) ? projects[0] : activeItem[0];
+
       localStorage.setItem('activeProject', projectDetails?.id);
       setActiveProject(projectDetails);
     }
@@ -171,8 +161,7 @@ function AppLayout({
       dispatch(fetchPageUrls(active_project?.id));
       // dispatch(deleteQueryTest())
       fetchEventNames(active_project?.id);
-      getUserProperties(active_project?.id);
-      getGroupProperties(active_project?.id);
+      getUserPropertiesV2(active_project?.id);
       dispatch(fetchSmartPropertyRules(active_project?.id));
       fetchWeeklyIngishtsMetaData(active_project?.id);
       dispatch(fetchAttrContentGroups(active_project?.id));
@@ -184,6 +173,7 @@ function AppLayout({
       dispatch(fetchAttributionQueries(active_project?.id));
       dispatch(fetchProjectAgents(active_project.id));
       dispatch(fetchFeatureConfig(active_project?.id));
+      fetchAgentInfo();
     }
   }, [dispatch, active_project]);
 
@@ -236,7 +226,6 @@ function AppLayout({
               <Suspense fallback={<PageSuspenseLoader />}>
                 <AppLayoutRoutes
                   activeAgent={activeAgent}
-                  demoProjectId={demoProjectId}
                   active_project={active_project}
                   currentProjectSettings={currentProjectSettings}
                 />
@@ -245,6 +234,7 @@ function AppLayout({
           </Layout>
         </Layout>
         <GlobalSearchModal />
+        <OnboardingRouting />
       </ErrorBoundary>
     </Layout>
   );
@@ -256,14 +246,14 @@ const mapDispatchToProps = (dispatch) =>
       fetchProjects,
       fetchDashboards,
       fetchEventNames,
-      getEventProperties,
-      getUserProperties,
+      getEventPropertiesV2,
+      getUserPropertiesV2,
       getGroupProperties,
       fetchWeeklyIngishtsMetaData,
       setActiveProject,
-      fetchDemoProject,
       fetchProjectSettings,
-      fetchProjectSettingsV1
+      fetchProjectSettingsV1,
+      fetchAgentInfo
     },
     dispatch
   );

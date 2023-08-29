@@ -218,6 +218,7 @@ func (store *MemSQL) GenerateDashboardFromTemplate(projectID int64, agentUUID st
 
 		_dUnit, errCode, errMsg := store.CreateDashboardUnit(projectID, agentUUID,
 			&model.DashboardUnit{
+				ProjectID:    projectID,
 				DashboardId:  dashboard.ID,
 				Presentation: requestPayload.Presentation,
 				QueryId:      requestPayload.QueryId,

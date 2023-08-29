@@ -4,6 +4,7 @@ import { SVG, Text } from '../factorsComponents';
 import { getUniqueItemsByKeyAndSearchTerm } from '../Profile/utils';
 import CustomCheckbox from './CustomCheckbox';
 import { PropTextFormat } from 'Utils/dataFormatter';
+import VirtualList from 'rc-virtual-list';
 
 export default function SearchCheckList({
   placeholder,
@@ -36,7 +37,7 @@ export default function SearchCheckList({
         onChange={handleSearch}
         value={searchTerm}
       />
-      <div className='fa-custom--popover-content'>
+      <div>
         <div className={`${showApply ? 'apply_active' : ''}`}>
           {showDisabledOption && (
             <>
@@ -65,16 +66,23 @@ export default function SearchCheckList({
             </>
           )}
           {mapArray?.length ? (
-            getUniqueItemsByKeyAndSearchTerm(mapArray, searchTerm).map(
-              (option) => (
-                <CustomCheckbox
-                  key={option[titleKey]}
-                  name={PropTextFormat(option[titleKey])}
-                  checked={option[checkedKey]}
-                  onChange={onChange.bind(this, option)}
-                />
-              )
-            )
+            <VirtualList
+              data={getUniqueItemsByKeyAndSearchTerm(mapArray, searchTerm)}
+              height={showApply ? 348 : 392}
+              itemHeight={38}
+              itemKey={titleKey}
+            >
+              {(item, index) => {
+                return (
+                  <CustomCheckbox
+                    key={item[titleKey]}
+                    name={PropTextFormat(item[titleKey])}
+                    checked={item[checkedKey]}
+                    onChange={onChange.bind(this, item)}
+                  />
+                );
+              }}
+            </VirtualList>
           ) : (
             <div className='text-center p-2 italic'>{emptyListText}</div>
           )}

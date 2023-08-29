@@ -215,10 +215,17 @@ function AccountProfiles({
     setTLConfig(timelinesConfig);
   }, [currentProjectSettings?.timelines_config]);
 
+  const fetchGroupProperties = async (groupId) => {
+    if (!groupProperties[groupId]) {
+      await getGroupProperties(activeProject.id, groupId);
+    }
+  };
+
   useEffect(() => {
-    Object.keys(groupOpts || {}).forEach((group) =>
-      getGroupProperties(activeProject.id, group)
-    );
+    fetchGroupProperties('$domains');
+    Object.keys(groupOpts || {}).forEach((group) => {
+      fetchGroupProperties(group);
+    });
   }, [activeProject.id, groupOpts]);
 
   const getAccounts = (payload) => {
@@ -611,8 +618,8 @@ function AccountProfiles({
           ];
     lookIn.forEach(([group, prop]) => {
       searchFilter.push({
-        props: [prop, 'categorical', 'group'],
-        operator: 'equals',
+        props: ['', prop, 'categorical', 'group'],
+        operator: 'contains',
         values: parsedValues
       });
     });

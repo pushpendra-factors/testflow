@@ -155,7 +155,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, len(resp), count)
 		for i, user := range resp {
-			if source == "All" {
+			if model.IsDomainGroup(source) {
 				if i < 10 {
 					assert.Equal(t, user.IsAnonymous, false)
 				} else {
@@ -1260,6 +1260,10 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, len(resp), count)
 		for i, user := range resp {
+			if model.IsDomainGroup(source) {
+				assert.NotEmpty(t, user.Name)
+				assert.NotEmpty(t, user.HostName)
+			}
 			if source == U.GROUP_NAME_HUBSPOT_COMPANY {
 				assert.Equal(t, user.Name, propertiesMap[count+4-i]["$hubspot_company_name"])
 				assert.Equal(t, user.HostName, propertiesMap[count+4-i]["$hubspot_company_domain"])
@@ -2067,7 +2071,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		assert.Contains(t, resp.Name, "Freshworks")
 		assert.Equal(t, resp.HostName, "google.com")
 		assert.Equal(t, len(resp.AccountTimeline) > 0, true)
-		assert.Equal(t, len(resp.AccountTimeline), 11)
+		assert.Equal(t, len(resp.AccountTimeline), 10)
 		assert.NotNil(t, resp.LeftPaneProps)
 		for i, property := range resp.LeftPaneProps {
 			assert.Equal(t, props[i], property)
@@ -2083,6 +2087,32 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 			}
 		}
 
+		//Top Users
+		assert.Len(t, resp.Overview.TopUsers, 6)
+		expectedNames := []string{"user5@example.com", "user4@example.com", "user2@example.com", "user3@example.com", "user1@example.com"}
+		expectedPageViews := []int{2, 1, 1, 1, 1}
+		expectedActiveTime := []int{400, 100, 100, 100, 100}
+		expectedNumOfPages := []int{1, 1, 1, 1, 1}
+
+		for i, expectedName := range expectedNames {
+			assert.Equal(t, expectedName, resp.Overview.TopUsers[i].Name)
+			assert.Equal(t, int64(expectedPageViews[i]), resp.Overview.TopUsers[i].NumPageViews)
+			assert.Equal(t, float64(expectedActiveTime[i]), resp.Overview.TopUsers[i].ActiveTime)
+			assert.Equal(t, int64(expectedNumOfPages[i]), resp.Overview.TopUsers[i].NumOfPages)
+		}
+		//Anonymous User
+		assert.Equal(t, "4 Anonymous Users", resp.Overview.TopUsers[5].Name)
+		assert.Equal(t, int64(4), resp.Overview.TopUsers[5].NumPageViews)
+		assert.Equal(t, float64(400), resp.Overview.TopUsers[5].ActiveTime)
+		assert.Equal(t, int64(1), resp.Overview.TopUsers[5].NumOfPages)
+
+		//Top Pages
+		assert.Len(t, resp.Overview.TopPages, 1)
+		assert.Equal(t, "", resp.Overview.TopPages[0].PageUrl)
+		assert.Equal(t, int64(10), resp.Overview.TopPages[0].Views)
+		assert.Equal(t, int64(9), resp.Overview.TopPages[0].UsersCount)
+		assert.Equal(t, float64(10), resp.Overview.TopPages[0].TotalTime)
+		assert.Equal(t, float64(0), resp.Overview.TopPages[0].AvgScrollPercent)
 	})
 
 	t.Run("Success2", func(t *testing.T) {
@@ -2092,12 +2122,12 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		resp := &model.AccountDetails{}
 		err := json.Unmarshal(jsonResponse, &resp)
 		assert.Nil(t, err)
-		assert.Contains(t, resp.Name, "ChargeBee")
+		assert.Contains(t, resp.Name, "chargebee")
 		assert.Equal(t, resp.HostName, "chargebee.com")
 		assert.Equal(t, len(resp.AccountTimeline) > 0, true)
 		assert.Equal(t, len(resp.AccountTimeline), 4)
 		assert.Equal(t, resp.Overview.UsersCount, int64(len(resp.AccountTimeline)-1))
-		assert.Equal(t, resp.Overview.TimeActive, int64((len(resp.AccountTimeline)-1)*100))
+		assert.Equal(t, resp.Overview.TimeActive, float64((len(resp.AccountTimeline)-1)*100))
 		for _, userTimeline := range resp.AccountTimeline {
 			if userTimeline.UserName != model.GROUP_ACTIVITY_USERNAME {
 				assert.Equal(t, userTimeline.IsAnonymous, false)
@@ -2117,7 +2147,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		assert.Equal(t, resp.HostName, "google.com")
 		assert.Equal(t, len(resp.AccountTimeline), 10)
 		assert.Equal(t, resp.Overview.UsersCount, int64(len(resp.AccountTimeline)-1))
-		assert.Equal(t, resp.Overview.TimeActive, int64((len(resp.AccountTimeline)-1)*100))
+		assert.Equal(t, resp.Overview.TimeActive, float64((len(resp.AccountTimeline))*100))
 		assert.NotNil(t, resp.LeftPaneProps)
 		for i, property := range resp.LeftPaneProps {
 			assert.Equal(t, props[i], property)
@@ -3572,19 +3602,7 @@ func TestAllAccountDefaultGroupProperties(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
-	timelinesConfig := &model.TimelinesConfig{
-		AccountConfig: model.AccountConfig{
-			TableProps: []string{"$salesforce_account_billingcountry", "$hubspot_company_country", U.SIX_SIGNAL_COUNTRY},
-		},
-	}
-
-	tlConfigEncoded, err := U.EncodeStructTypeToPostgresJsonb(timelinesConfig)
-	assert.Nil(t, err)
-
-	_, errCode := store.GetStore().UpdateProjectSettings(project.ID,
-		&model.ProjectSetting{TimelinesConfig: tlConfigEncoded})
-	assert.Equal(t, errCode, http.StatusAccepted)
-
+	var errCode int
 	// Properties Map
 	propertiesMap := []map[string]interface{}{
 		{"$salesforce_account_name": "Adapt.IO", "$page_count": 4, "$salesforce_account_id": "123", "$salesforce_account_website": "adapt.io", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Target", "$browser": "Chrome", "$device_type": "PC"},
@@ -3888,6 +3906,66 @@ func TestAllAccountDefaultGroupProperties(t *testing.T) {
 		err = json.Unmarshal(jsonResponse, &resp)
 		assert.Nil(t, err)
 		assert.Equal(t, 10, len(resp))
+	})
+	t.Run("TestInPropertiesWithColumn", func(t *testing.T) {
+
+		payload = model.TimelinePayload{
+			Query: model.Query{
+				Source: "All",
+				GlobalUserProperties: []model.QueryProperty{
+					{
+						Entity:    "user_g",
+						Type:      "categorical",
+						Property:  U.IDENTIFIED_USER_ID,
+						Operator:  "notEqual",
+						Value:     "$none",
+						LogicalOp: "AND",
+					},
+				},
+			},
+		}
+
+		w := sendGetProfileAccountRequest(r, project.ID, agent, payload)
+		assert.Equal(t, http.StatusOK, w.Code)
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		resp := make([]model.Profile, 0)
+		err = json.Unmarshal(jsonResponse, &resp)
+		assert.Nil(t, err)
+		assert.Equal(t, 15, len(resp))
+	})
+	t.Run("TestInPropertiesMultipleFilterWithColumn", func(t *testing.T) {
+
+		payload = model.TimelinePayload{
+			Query: model.Query{
+				Source: "All",
+				GlobalUserProperties: []model.QueryProperty{
+					{
+						Entity:    "user_g",
+						Type:      "categorical",
+						Property:  U.IDENTIFIED_USER_ID,
+						Operator:  "notEqual",
+						Value:     "$none",
+						LogicalOp: "AND",
+					},
+					{
+						Entity:    "user_g",
+						Type:      "categorical",
+						Property:  "$in_salesforce",
+						Operator:  "equals",
+						Value:     "true",
+						LogicalOp: "AND",
+					},
+				},
+			},
+		}
+
+		w := sendGetProfileAccountRequest(r, project.ID, agent, payload)
+		assert.Equal(t, http.StatusOK, w.Code)
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		resp := make([]model.Profile, 0)
+		err = json.Unmarshal(jsonResponse, &resp)
+		assert.Nil(t, err)
+		assert.Equal(t, 5, len(resp))
 	})
 
 }

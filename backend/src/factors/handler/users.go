@@ -173,6 +173,9 @@ func GetUserPropertiesHandler(c *gin.Context) {
 	_, overrides := store.GetStore().GetPropertyOverridesByType(projectId, U.PROPERTY_OVERRIDE_BLACKLIST, model.GetEntity(true))
 	U.FilterDisabledCoreUserProperties(overrides, &properties)
 
+	//adding constant properties
+	appendCustomColumnProperties(&properties)
+
 	if isDisplayNameEnabled == "true" {
 		_, displayNames := store.GetStore().GetDisplayNamesForAllUserProperties(projectId)
 		standardProperties := U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES
@@ -214,6 +217,14 @@ func GetUserPropertiesHandler(c *gin.Context) {
 	}
 }
 
+func appendCustomColumnProperties(properties *map[string][]string) {
+
+	if _, exists := (*properties)["categorical"]; exists {
+		(*properties)["categorical"] = append((*properties)["categorical"], U.USER_PROPERTIES_WITH_COLUMN...)
+	}
+
+}
+
 // GetUserPropertyValuesHandler curl -i -X GET http://localhost:8080/projects/1/user_properties/$country
 // GetUserPropertiesHandler godoc
 // @Summary Get property values for given property name.
@@ -253,6 +264,10 @@ func GetUserPropertyValuesHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
+
+	//updating property name if inproperties
+	appendCustomColumnPropertyNames(&propertyName)
+
 	if isExplain != "true" {
 		propertyValues, err = store.GetStore().GetPropertyValuesByUserProperty(projectId, propertyName, 2500, C.GetLookbackWindowForEventUserCache())
 		if err != nil {
@@ -300,6 +315,12 @@ func GetUserPropertyValuesHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, U.FilterEmptyArrayValues(propertyValues))
 }
 
+func appendCustomColumnPropertyNames(propertyName *string) {
+
+	if _, exists := model.USER_PROPERTY_TO_COLUMN_MAP[*propertyName]; exists {
+		*propertyName = model.USER_PROPERTY_TO_COLUMN_MAP[*propertyName]
+	}
+}
 func getUserPropertyValuesFromPatternServer(projectId int64, modelId uint64, propertyName string) ([]string, int, string) {
 	propertyValues := make([]string, 0)
 	ps, err := PW.NewPatternServiceWrapper("", projectId, modelId)

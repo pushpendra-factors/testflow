@@ -17,7 +17,7 @@ import { connect } from 'react-redux';
 import SmartEventsForm from './SmartEvents/SmartEventsForm';
 import {
   fetchEventNames,
-  getUserProperties
+  getUserPropertiesV2
 } from 'Reducers/coreQuery/middleware';
 import { MoreOutlined } from '@ant-design/icons';
 import { removeSmartEvents, fetchSmartEvents } from 'Reducers/events';

@@ -5,8 +5,8 @@ import { bindActionCreators } from 'redux';
 import { SVG } from 'Components/factorsComponents';
 import styles from './index.module.scss';
 import {
-  getEventProperties,
-  getUserProperties
+  getEventPropertiesV2,
+  getUserPropertiesV2
 } from 'Reducers/coreQuery/middleware';
 import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
 import ORButton from 'Components/ORButton';
@@ -34,10 +34,10 @@ function EventsBlock({
   eventOptions,
   eventNames,
   activeProject,
-  eventProperties,
-  getEventProperties,
-  eventUserProperties,
-  getUserProperties,
+  eventPropertiesV2,
+  getEventPropertiesV2,
+  eventUserPropertiesV2,
+  getUserPropertiesV2,
   groupAnalysis,
   viewMode,
   dropdownPlacement = 'top',
@@ -50,9 +50,7 @@ function EventsBlock({
     }
   }, [viewMode]);
   const [isFilterDDVisible, setFilterDDVisible] = useState(false);
-  const [filterProps, setFilterProperties] = useState({
-    event: []
-  });
+  const [filterProps, setFilterProperties] = useState();
   const [showGroups, setShowGroups] = useState([]);
   const [orFilterIndex, setOrFilterIndex] = useState(-1);
 
@@ -127,35 +125,51 @@ function EventsBlock({
     if (!event || event === undefined) {
       return;
     }
-    if (!eventProperties[event.label] && !viewMode) {
-      getEventProperties(activeProject?.id, event.label);
+    if (!eventPropertiesV2[event.label] && !viewMode) {
+      getEventPropertiesV2(activeProject?.id, event.label);
     }
-    getUserProperties(activeProject.id);
-  }, [activeProject?.id, event, eventProperties, viewMode]);
+    getUserPropertiesV2(activeProject.id);
+  }, [activeProject?.id, event, eventPropertiesV2, viewMode]);
 
   useEffect(() => {
     if (!event || event === undefined) {
       return;
     }
+    const eventPropertiesFiltered = {};
+    if (eventPropertiesV2?.[event?.label]) {
+      for (const key in eventPropertiesV2[event?.label]) {
+        if (eventPropertiesV2[event?.label].hasOwnProperty(key)) {
+          eventPropertiesFiltered[key] = eventPropertiesV2[event?.label][
+            key
+          ].filter((item) => item?.[2] !== 'datetime');
+        }
+      }
+    }
+    const eventUserPropertiesFiltered = {};
+    if (eventUserPropertiesV2) {
+      for (const key in eventUserPropertiesV2) {
+        if (eventUserPropertiesV2.hasOwnProperty(key)) {
+          eventUserPropertiesFiltered[key] = eventUserPropertiesV2[key].filter(
+            (item) => item?.[2] !== 'datetime'
+          );
+        }
+      }
+    }
     const assignFilterProps = {};
     propertiesScope.forEach((scope) => {
       if (scope === 'event') {
         assignFilterProps.event = isEngagementConfig
-          ? eventProperties[event.label]?.filter(
-              (property) => property?.[2] !== 'datetime'
-            ) || []
-          : eventProperties[event.label] || [];
+          ? eventPropertiesFiltered
+          : eventPropertiesV2[event?.label] || {};
       }
       if (scope === 'user') {
         assignFilterProps.user = isEngagementConfig
-          ? eventUserProperties?.filter(
-              (property) => property?.[2] !== 'datetime'
-            ) || []
-          : eventUserProperties || [];
+          ? eventUserPropertiesFiltered
+          : eventUserPropertiesV2 || {};
       }
     });
     setFilterProperties(assignFilterProps);
-  }, [eventProperties, eventUserProperties, event]);
+  }, [eventPropertiesV2, eventUserPropertiesV2, event]);
 
   const deleteItem = () => {
     eventChange(event, index - 1, 'delete');
@@ -443,13 +457,13 @@ function EventsBlock({
 const mapStateToProps = (state) => ({
   eventOptions: state.coreQuery.eventOptions,
   activeProject: state.global.active_project,
-  eventUserProperties: state.coreQuery.eventUserProperties,
+  eventUserPropertiesV2: state.coreQuery.eventUserPropertiesV2,
   groupProperties: state.coreQuery.groupProperties,
-  eventProperties: state.coreQuery.eventProperties,
+  eventPropertiesV2: state.coreQuery.eventPropertiesV2,
   eventNames: state.coreQuery.eventNames
 });
 
 const mapDispatchToProps = (dispatch) =>
-  bindActionCreators({ getEventProperties, getUserProperties }, dispatch);
+  bindActionCreators({ getEventPropertiesV2, getUserPropertiesV2 }, dispatch);
 
 export default connect(mapStateToProps, mapDispatchToProps)(EventsBlock);

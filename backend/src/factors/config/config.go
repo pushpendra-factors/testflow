@@ -188,143 +188,142 @@ type Configuration struct {
 	ProjectAnalyticsWhitelistedUUIds       []string
 	CustomerEnabledProjectsLastComputed    []int64
 	SkippedOtpProjectIDs                   string
-	DemoProjectIds                         []string
 	PrimaryDatastore                       string
 	// Flag for enabling only the /mql routes for secondary env testing.
 	EnableMQLAPI bool
 	// Flags to disable DB and Redis writes when enabled.
 	// Added as pointer to prevent accidental writes from
 	// other services while testing.
-	DisableDBWrites                                     *bool
-	EnableDemoReadAccess                                *bool
-	DisableQueryCache                                   *bool
-	AllowedCampaignEnrichmentByProjectID                string
-	UseOpportunityAssociationByProjectID                string
-	AllowChannelGroupingForProjectIDs                   string
-	CloudManager                                        filestore.FileManager
-	SegmentExcludedCustomerIDByProject                  map[int64]string // map[project_id]customer_user_id
-	AttributionDebug                                    int
-	AttributionCommonFlow                               string
-	AttributionDBCacheLookup                            string
-	DisableDashboardQueryDBExecution                    bool
-	AllowedHubspotGroupsByProjectIDs                    string
-	EnableFilterOptimisation                            bool
-	FilterPropertiesStartTimestamp                      int64
-	OnlyAttributionDashboardCaching                     int
-	SkipAttributionDashboardCaching                     int
-	IsRunningForMemsql                                  int
-	UseSourcePropertyOverwriteByProjectIDs              string
-	AllowedSalesforceGroupsByProjectIDs                 string
-	DevBox                                              bool
-	AllowSupportForUserPropertiesInIdentifyCall         string
-	SkipEventNameStepByProjectID                        string
-	SkipUserJoinInEventQueryByProjectID                 string
-	EnableEventLevelEventProperties                     string
-	EnableOLTPQueriesMemSQLImprovements                 string
-	CaptureSourceInUsersTable                           string
-	AllowSupportForSourceColumnInUsers                  string
-	ResourcePoolForAnalytics                            string
-	RestrictReusingUsersByCustomerUserId                string
-	HubspotAPIOnboardingHAPIKey                         string
-	HubspotAPIOnboardingPrivateAccessToken              string
-	MailModoOnboardingAPIKey                            string
-	MailModoOnboardingURL1                              string
-	MailModoOnboardingURL2                              string
-	SlackOnboardingWebhookURL                           string
-	AllowProfilesGroupSupport                           string
-	DebugEnabled                                        bool
-	MergeAmpIDAndSegmentIDWithUserIDByProjectID         string
-	SessionBatchTransactionBatchSize                    int
-	FivetranGroupId                                     string
-	FivetranLicenseKey                                  string
-	DisableCRMUniquenessConstraintsCheckByProjectID     string
-	SkipDashboardCachingAnalytics                       int
-	AllowEventsFunnelsGroupSupport                      string
-	MonitoringAPIToken                                  string
-	DelayedTaskThreshold                                int
-	SdkQueueThreshold                                   int
-	UseQueueRedis                                       bool
-	IntegrationQueueThreshold                           int
-	UsageBasedDashboardCaching                          int
-	OnlyKPICaching                                      int
-	SkipKPICaching                                      int
-	EnableBingAdsAttribution                            bool
-	EnableHubspotFormsEventsByProjectID                 string
-	DisableHubspotNonMarketingContactsByProjectID       string
-	RemoveDisabledEventUserPropertiesByProjectID        string
-	HubspotBatchInsertBatchSize                         int
-	UseHubspotBatchInsertByProjectID                    string
-	SalesforcePropertyLookBackTimeHr                    int
-	SalesforceBatchInsertBatchSize                      int
-	AllowHubspotEngagementsByProjectID                  string
-	HubspotPropertyLookBackLimit                        int
-	EnableSlowDBQueryLogging                            bool
-	SlackAppClientID                                    string
-	SlackAppClientSecret                                string
-	EnableDryRunAlerts                                  bool
-	DataAvailabilityExpiry                              int
-	UseSalesforceV54APIByProjectID                      string
-	EnableOptimisedFilterOnProfileQuery                 bool
-	HubspotAppID                                        string
-	HubspotAppSecret                                    string
-	EnableOptimisedFilterOnEventUserQuery               bool
-	EnableEmailBlockingFlag                             bool
-	EnableIPBlockingFlag                                bool
-	BlockedEmailList                                    []string
-	BlockedIPList                                       []string
-	BlockedEmailDomainList                              []string
-	AllAccountsProjectId                                string
-	EnableNewAllAccountsByProjectID                     string
-	DBMaxAllowedPacket                                  int64
-	AllowIdentificationOverwriteUsingSourceByProjectID  string
-	AllowHubspotPastEventsEnrichmentByProjectID         string
-	AllowHubspotContactListInsertByProjectID            string
-	IngestionTimezoneEnabledProjectIDs                  []string
-	LinkedinMemberCompanyConfigProjectIDs               []string
-	AllowedSalesforceActivityTasksByProjectIDs          string
-	AllowedSalesforceActivityEventsByProjectIDs         string
-	DisallowedSalesforceActivityTasksByProjectIDs       string
-	DisallowedSalesforceActivityEventsByProjectIDs      string
-	IncreaseKPILimitForProjectIDs                       string
-	EnableUserLevelEventPullForAddSessionByProjectID    string
-	EventsPullMaxLimit                                  int
-	EnableFeatureGates                                  bool
-	EnableDBConnectionPool2                             bool
-	FormFillIdentificationAllowedProjects               string
-	EnableEventFiltersInSegments                        bool
-	UseSentryRollup                                     bool
-	SentryRollupSyncInSecs                              int
-	EnableSixSignalGroupByProjectID                     string
-	EnableDebuggingForIP                                bool
-	TeamsAppTenantID                                    string
-	TeamsAppClientID                                    string
-	TeamsAppClientSecret                                string
-	TeamsApplicationID                                  string
-	EnableDomainsGroupByProjectID                       string
-	DisableUpdateNextSessionTimestamp                   int
-	EnableSyncReferenceFieldsByProjectID                string
-	StartTimestampForWeekMonth                          int64
-	CacheForLongerExpiryProjects                        string
-	CacheOnlyDashboards                                 string
-	CacheOnlyDashboardUnits                             string
-	AllowedSalesforceSyncDocTypes                       string
-	CustomDateStart                                     int64
-	CustomDateEnd                                       int64
-	EnableFieldsSyncByProjectID                         string
-	EnableUserDomainsGroupByProjectID                   string
-	UseHubspotCompaniesV3APIByProjectID                 string
-	UseHubspotEngagementsV3APIByProjectID               string
-	AllowEventAnalyticsGroupsByProjectID                string
-	OtpKeyWithQueryCheckEnabled                         bool
-	EnableFeatureGatesV2                                bool
-	AllowEmailDomainsByProjectID                        string
-	UseHubspotDealsV3APIByProjectID                     string
-	EnableScoringByProjectID                            string
-	DeviceServiceURL                                    string
-	EnableDeviceServiceByProjectID                      string
-	DisableOpportunityContactRolesByProjectID           string
-	ExcludeBotIPV4AddressByRange                        string
-	UseHashIDForCRMGroupUserByProject                   string
+	DisableDBWrites                                    *bool
+	DisableQueryCache                                  *bool
+	AllowedCampaignEnrichmentByProjectID               string
+	UseOpportunityAssociationByProjectID               string
+	AllowChannelGroupingForProjectIDs                  string
+	CloudManager                                       filestore.FileManager
+	SegmentExcludedCustomerIDByProject                 map[int64]string // map[project_id]customer_user_id
+	AttributionDebug                                   int
+	AttributionCommonFlow                              string
+	AttributionDBCacheLookup                           string
+	DisableDashboardQueryDBExecution                   bool
+	AllowedHubspotGroupsByProjectIDs                   string
+	EnableFilterOptimisation                           bool
+	FilterPropertiesStartTimestamp                     int64
+	OnlyAttributionDashboardCaching                    int
+	SkipAttributionDashboardCaching                    int
+	IsRunningForMemsql                                 int
+	UseSourcePropertyOverwriteByProjectIDs             string
+	AllowedSalesforceGroupsByProjectIDs                string
+	DevBox                                             bool
+	AllowSupportForUserPropertiesInIdentifyCall        string
+	SkipEventNameStepByProjectID                       string
+	SkipUserJoinInEventQueryByProjectID                string
+	EnableEventLevelEventProperties                    string
+	EnableOLTPQueriesMemSQLImprovements                string
+	CaptureSourceInUsersTable                          string
+	AllowSupportForSourceColumnInUsers                 string
+	ResourcePoolForAnalytics                           string
+	RestrictReusingUsersByCustomerUserId               string
+	HubspotAPIOnboardingHAPIKey                        string
+	HubspotAPIOnboardingPrivateAccessToken             string
+	MailModoOnboardingAPIKey                           string
+	MailModoOnboardingURL1                             string
+	MailModoOnboardingURL2                             string
+	SlackOnboardingWebhookURL                          string
+	AllowProfilesGroupSupport                          string
+	DebugEnabled                                       bool
+	MergeAmpIDAndSegmentIDWithUserIDByProjectID        string
+	SessionBatchTransactionBatchSize                   int
+	FivetranGroupId                                    string
+	FivetranLicenseKey                                 string
+	DisableCRMUniquenessConstraintsCheckByProjectID    string
+	SkipDashboardCachingAnalytics                      int
+	AllowEventsFunnelsGroupSupport                     string
+	MonitoringAPIToken                                 string
+	DelayedTaskThreshold                               int
+	SdkQueueThreshold                                  int
+	UseQueueRedis                                      bool
+	IntegrationQueueThreshold                          int
+	UsageBasedDashboardCaching                         int
+	OnlyKPICaching                                     int
+	SkipKPICaching                                     int
+	EnableBingAdsAttribution                           bool
+	EnableHubspotFormsEventsByProjectID                string
+	DisableHubspotNonMarketingContactsByProjectID      string
+	RemoveDisabledEventUserPropertiesByProjectID       string
+	HubspotBatchInsertBatchSize                        int
+	UseHubspotBatchInsertByProjectID                   string
+	SalesforcePropertyLookBackTimeHr                   int
+	SalesforceBatchInsertBatchSize                     int
+	AllowHubspotEngagementsByProjectID                 string
+	HubspotPropertyLookBackLimit                       int
+	EnableSlowDBQueryLogging                           bool
+	SlackAppClientID                                   string
+	SlackAppClientSecret                               string
+	EnableDryRunAlerts                                 bool
+	DataAvailabilityExpiry                             int
+	UseSalesforceV54APIByProjectID                     string
+	EnableOptimisedFilterOnProfileQuery                bool
+	HubspotAppID                                       string
+	HubspotAppSecret                                   string
+	EnableOptimisedFilterOnEventUserQuery              bool
+	EnableEmailBlockingFlag                            bool
+	EnableIPBlockingFlag                               bool
+	BlockedEmailList                                   []string
+	BlockedIPList                                      []string
+	BlockedEmailDomainList                             []string
+	AllAccountsProjectId                               string
+	EnableNewAllAccountsByProjectID                    string
+	DBMaxAllowedPacket                                 int64
+	AllowIdentificationOverwriteUsingSourceByProjectID string
+	AllowHubspotPastEventsEnrichmentByProjectID        string
+	AllowHubspotContactListInsertByProjectID           string
+	IngestionTimezoneEnabledProjectIDs                 []string
+	LinkedinMemberCompanyConfigProjectIDs              []string
+	AllowedSalesforceActivityTasksByProjectIDs         string
+	AllowedSalesforceActivityEventsByProjectIDs        string
+	DisallowedSalesforceActivityTasksByProjectIDs      string
+	DisallowedSalesforceActivityEventsByProjectIDs     string
+	IncreaseKPILimitForProjectIDs                      string
+	EnableUserLevelEventPullForAddSessionByProjectID   string
+	EventsPullMaxLimit                                 int
+	EnableFeatureGates                                 bool
+	EnableDBConnectionPool2                            bool
+	FormFillIdentificationAllowedProjects              string
+	EnableEventFiltersInSegments                       bool
+	UseSentryRollup                                    bool
+	SentryRollupSyncInSecs                             int
+	EnableSixSignalGroupByProjectID                    string
+	EnableDebuggingForIP                               bool
+	TeamsAppTenantID                                   string
+	TeamsAppClientID                                   string
+	TeamsAppClientSecret                               string
+	TeamsApplicationID                                 string
+	EnableDomainsGroupByProjectID                      string
+	DisableUpdateNextSessionTimestamp                  int
+	EnableSyncReferenceFieldsByProjectID               string
+	StartTimestampForWeekMonth                         int64
+	CacheForLongerExpiryProjects                       string
+	CacheOnlyDashboards                                string
+	CacheOnlyDashboardUnits                            string
+	AllowedSalesforceSyncDocTypes                      string
+	CustomDateStart                                    int64
+	CustomDateEnd                                      int64
+	EnableFieldsSyncByProjectID                        string
+	EnableUserDomainsGroupByProjectID                  string
+	UseHubspotCompaniesV3APIByProjectID                string
+	UseHubspotEngagementsV3APIByProjectID              string
+	AllowEventAnalyticsGroupsByProjectID               string
+	OtpKeyWithQueryCheckEnabled                        bool
+	EnableFeatureGatesV2                               bool
+	AllowEmailDomainsByProjectID                       string
+	UseHubspotDealsV3APIByProjectID                    string
+	EnableScoringByProjectID                           string
+	DeviceServiceURL                                   string
+	EnableDeviceServiceByProjectID                     string
+	DisableOpportunityContactRolesByProjectID          string
+	ExcludeBotIPV4AddressByRange                       string
+	SlackInternalAlertWebhookUrl                       string
+	UseHashIDForCRMGroupUserByProject                  string
 	MoveHubspotCompanyAssocationFlowToContactByPojectID string
 }
 
@@ -1059,13 +1058,6 @@ func DisableDBWrites() bool {
 		return *GetConfig().DisableDBWrites
 	}
 	return true
-}
-
-func EnableDemoReadAccess() bool {
-	if GetConfig().EnableDemoReadAccess != nil {
-		return *GetConfig().EnableDemoReadAccess
-	}
-	return false
 }
 
 // DisableMemSQLQueryCache If dashboard and query cache to be disabled. Defaults to false unless specified explicitly.
@@ -2433,16 +2425,6 @@ func IsLoggedInUserWhitelistedForProjectAnalytics(loggedInUUID string) bool {
 	return false
 }
 
-func IsDemoProject(projectId int64) bool {
-	for _, id := range configuration.DemoProjectIds {
-		projectIdString := fmt.Sprintf("%v", projectId)
-		if id == projectIdString {
-			return true
-		}
-	}
-	return false
-}
-
 func IsIngestionTimezoneEnabled(projectId int64) bool {
 	for _, id := range configuration.IngestionTimezoneEnabledProjectIDs {
 		projectIdString := fmt.Sprintf("%v", projectId)
@@ -2822,6 +2804,11 @@ func IsEnabledFeatureGates() bool {
 func IsEnabledFeatureGatesV2() bool {
 	return configuration.EnableFeatureGatesV2
 }
+
+func GetSlackWebhookUrlForInternalAlerts() string {
+	return configuration.SlackInternalAlertWebhookUrl
+}
+
 
 func EnableSixSignalGroupByProjectID(projectID int64) bool {
 	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableSixSignalGroupByProjectID, "")
