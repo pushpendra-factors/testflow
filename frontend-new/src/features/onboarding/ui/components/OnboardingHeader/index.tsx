@@ -3,16 +3,16 @@ import StepsCounter from 'Components/GenericComponents/StepsCounter';
 import { SVG, Text } from 'Components/factorsComponents';
 import { Button, Dropdown, Menu } from 'antd';
 import useMobileView from 'hooks/useMobileView';
-import { useHistory } from 'react-router-dom';
 
 const OnboardingHeader = ({
   currentStep,
   totalSteps,
   showStepsCounter = true,
-  showCloseButton = false
+  showCloseButton = false,
+  handleCloseClick
 }: OnboardingHeaderProps) => {
   const isMobileView = useMobileView();
-  const history = useHistory();
+
   const handleHelpClick = () => {
     if (window?.Intercom) {
       window.Intercom(
@@ -20,10 +20,6 @@ const OnboardingHeader = ({
         `Hey, I have few doubts regarding onboarding! Can you guys help me out?`
       );
     }
-  };
-
-  const handleCloseClick = () => {
-    history.goBack();
   };
 
   const getMobileMenu = () => {
@@ -105,6 +101,7 @@ interface OnboardingHeaderProps {
   currentStep: number;
   showStepsCounter?: boolean;
   showCloseButton?: boolean;
+  handleCloseClick?: () => void;
 }
 
 export default OnboardingHeader;

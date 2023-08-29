@@ -125,6 +125,7 @@ const Step3 = ({
             level={3}
             color={'character-primary'}
             extraClass={'m-0'}
+            weight={'bold'}
           >
             Activate Deanonymisation
           </Text>
