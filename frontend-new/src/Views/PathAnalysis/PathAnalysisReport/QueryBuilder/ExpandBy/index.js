@@ -12,7 +12,10 @@ import {
 import FaSelect from 'Components/FaSelect';
 import { TOOLTIP_CONSTANTS } from 'Constants/tooltips.constans';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
-import { convertGroupedPropertiesToUngrouped } from 'Utils/dataFormatter';
+import {
+  convertGroupedPropertiesToUngrouped,
+  processProperties
+} from 'Utils/dataFormatter';
 
 function GroupBlock({
   groupByState,
@@ -98,15 +101,7 @@ function GroupBlock({
       return {
         iconName: opt?.iconName,
         label: opt?.label,
-        values: opt?.values?.map((op) => {
-          return {
-            value: op[1],
-            label: op[0],
-            extraProps: {
-              valueType: op[2]
-            }
-          };
-        })
+        values: processProperties(opt?.values)
       };
     });
     setFilterOptions(modifiedFilterOpts);

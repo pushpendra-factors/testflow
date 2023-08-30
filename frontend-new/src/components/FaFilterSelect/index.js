@@ -18,6 +18,8 @@ import MomentTz from 'Components/MomentTz';
 import { isArray } from 'lodash';
 import {
   DEFAULT_OPERATOR_PROPS,
+  checkIfValueSelectorCanRender,
+  convertOptionsToGroupSelectFormat,
   dateTimeSelect
 } from 'Components/FaFilterSelect/utils';
 import moment from 'moment';
@@ -30,6 +32,7 @@ import { uploadList } from 'Reducers/global';
 import FaSelect from 'Components/GenericComponents/FaSelect';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import { selectedOptionsMapper } from 'Components/GenericComponents/FaSelect/utils';
+import { processProperties } from 'Utils/dataFormatter';
 import { PropTextFormat } from 'Utils/dataFormatter';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
@@ -320,44 +323,6 @@ const FaFilterSelect = ({
     return grp;
   };
 
-  const convertOptionsToGroupSelectFormat = (options) => {
-    // To remove Duplicate Groups.(Groups With Same Names)
-    const optionsObj = {};
-
-    options?.forEach((groupOpt) => {
-      const label = getGroupLabel(groupOpt?.label);
-      if (!optionsObj[label]) {
-        optionsObj[label] = {
-          iconName: groupOpt?.icon,
-          label: label,
-          values: groupOpt?.values?.map((valueOpt) => {
-            return {
-              label: valueOpt[0],
-              value: valueOpt[1],
-              extraProps: {
-                valueType: valueOpt[2],
-                propertyType: groupOpt?.propertyType,
-                groupName: groupOpt?.key
-              }
-            };
-          })
-        };
-      } else {
-        groupOpt.values?.forEach((op) => {
-          optionsObj[label].values.push({
-            value: op?.[1],
-            label: op?.[0],
-            extraProps: {
-              valueType: op?.[2],
-              propertyType: groupOpt?.propertyType,
-              groupName: groupOpt?.key
-            }
-          });
-        });
-      }
-    });
-    return Object.values(optionsObj);
-  };
   const renderPropSelect = () => {
     return (
       <div
@@ -1020,17 +985,14 @@ const FaFilterSelect = ({
       </div>
     );
   };
+
   return (
     <div className={styles.filter}>
       {renderPropSelect()}
 
       {propState?.name ? renderOperatorSelector() : null}
 
-      {operatorState &&
-      operatorState !== OPERATORS['isKnown'] &&
-      operatorState !== OPERATORS['isUnknown'] &&
-      operatorState !== OPERATORS['inList'] &&
-      operatorState !== OPERATORS['notInList']
+      {checkIfValueSelectorCanRender(operatorState)
         ? renderValuesSelector()
         : operatorState === OPERATORS['inList'] ||
           operatorState === OPERATORS['notInList']

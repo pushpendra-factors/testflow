@@ -20,6 +20,7 @@ import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
+import { processProperties } from 'Utils/dataFormatter';
 function QueryBlock({
   availableGroups,
   index,
@@ -84,7 +85,7 @@ function QueryBlock({
     return opts?.map((opt) => ({
       iconName: getGroupIcon(opt?.icon),
       label: opt.label,
-      values: opt.values.map((op) => ({ value: op[1], label: op[0] }))
+      values: processProperties(opt.values)
     }));
   };
 
@@ -132,9 +133,9 @@ function QueryBlock({
 
   useEffect(() => {
     if (event && eventGroup?.length && !groupProperties[eventGroup]) {
-        getGroupProperties(activeProject.id, eventGroup);
+      getGroupProperties(activeProject.id, eventGroup);
     }
-}, [event, activeProject.id, eventGroup]);
+  }, [event, activeProject.id, eventGroup]);
 
   const showModal = () => {
     setIsModalVisible(true);

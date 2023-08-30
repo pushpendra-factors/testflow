@@ -17,9 +17,15 @@ import ORButton from 'Components/ORButton';
 import { compareFilters, groupFilters } from 'Utils/global';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
+import { processProperties } from 'Utils/dataFormatter';
 
-const peopleCategoryList = ['others', 'page_views']
-const accountsCategoryList = ['others', 'page_views', "linkedin_company_engagements", "g2_engagements"]
+const peopleCategoryList = ['others', 'page_views'];
+const accountsCategoryList = [
+  'others',
+  'page_views',
+  'linkedin_company_engagements',
+  'g2_engagements'
+];
 
 function QueryBlock({
   availableGroups,
@@ -65,16 +71,14 @@ function QueryBlock({
 
     const groupNamesList = availableGroups?.map((item) => item[0]);
     if (groupAnalysis === 'users') {
-
       const userOpts = eventOptions?.filter(
         (item) => !groupNamesList?.includes(item?.label)
       );
 
       showOpts = userOpts;
-
     } else {
-      const groupOpts = eventOptions?.filter(
-        (item) => groupNamesList?.includes(item?.label)
+      const groupOpts = eventOptions?.filter((item) =>
+        groupNamesList?.includes(item?.label)
       );
       // showOpts = groupOpts.concat(userOpts);
       showOpts = groupOpts;
@@ -82,16 +86,14 @@ function QueryBlock({
 
     showOpts = showOpts?.map((opt) => {
       return {
-        'iconName': getGroupIcon(opt?.icon),
-        'label': opt?.label,
-        'values': opt?.values?.map((op) => {
-          return { value: op[1], label: op[0] };
-        })
+        iconName: getGroupIcon(opt?.icon),
+        label: opt?.label,
+        values: processProperties(opt?.values)
       };
     });
 
     setShowGroups(showOpts);
-  }, [eventOptions, groupAnalysis, availableGroups]); 
+  }, [eventOptions, groupAnalysis, availableGroups]);
 
   const showModal = () => {
     setIsModalVisible(true);
@@ -423,8 +425,9 @@ function QueryBlock({
   if (!event) {
     return (
       <div
-        className={`${styles.query_block} fa--query_block my-1 ${ifQueries ? 'borderless no-padding' : 'borderless no-padding'
-          }`}
+        className={`${styles.query_block} fa--query_block my-1 ${
+          ifQueries ? 'borderless no-padding' : 'borderless no-padding'
+        }`}
       >
         <div
           className={`${styles.query_block__event} flex justify-start items-center`}
@@ -432,7 +435,7 @@ function QueryBlock({
           <Button
             type='link'
             onClick={triggerDropDown}
-          // icon={<SVG name='plus' color='grey' />}
+            // icon={<SVG name='plus' color='grey' />}
           >
             {ifQueries ? 'Select another event' : 'Select Event'}
           </Button>
@@ -447,8 +450,9 @@ function QueryBlock({
       className={`${styles.query_block} fa--query_block_section borderless no-padding mt-0`}
     >
       <div
-        className={`${!event?.alias?.length ? 'flex justify-start' : ''} ${styles.query_block__event
-          } block_section items-center`}
+        className={`${!event?.alias?.length ? 'flex justify-start' : ''} ${
+          styles.query_block__event
+        } block_section items-center`}
       >
         <div className='flex items-center'>
           {event?.alias?.length ? (

@@ -6,11 +6,11 @@ import styles from './index.module.scss';
 import FaSelect from '../../FaSelect';
 import {
   PropTextFormat,
-  convertAndAddPropertiesToGroupSelectOptions
+  convertAndAddPropertiesToGroupSelectOptions,
+  processProperties
 } from 'Utils/dataFormatter';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
-import { startCase } from 'lodash';
 
 function EventGroupBlock({
   eventGroup,
@@ -46,17 +46,8 @@ function EventGroupBlock({
     if (eventGroup) {
       const groupLabel = `${PropTextFormat(eventGroup)} Properties`;
       const groupValues =
-        groupProperties[eventGroup]?.map((op) => {
-          return {
-            value: op?.[1],
-            label: op?.[0],
-            extraProps: {
-              valueType: op?.[2],
-              propertyType: 'group',
-              groupName: eventGroup
-            }
-          };
-        }) || [];
+        processProperties(groupProperties[eventGroup], 'group', eventGroup) ||
+        [];
       const groupPropIconName = getGroupIcon(groupLabel);
       if (!filterOptsObj[groupLabel]) {
         filterOptsObj[groupLabel] = {
@@ -251,7 +242,7 @@ function EventGroupBlock({
   );
 
   return (
-    <div className={`flex items-center relative ${noMargin ? "" : "ml-10"}`}>
+    <div className={`flex items-center relative ${noMargin ? '' : 'ml-10'}`}>
       {!hideText &&
         (grpIndex >= 1 ? (
           <Text level={8} type='title' extraClass='m-0 mr-16' weight='thin'>

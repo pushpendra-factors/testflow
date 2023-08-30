@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { Button, Tooltip } from 'antd';
 import { SVG } from 'factorsComponents';
 import { connect } from 'react-redux';
-import GroupSelect2 from '../../../../../components/QueryComposer/GroupSelect2';
 import { getNormalizedKpiWithConfigs } from '../../../../../utils/kpiQueryComposer.helpers';
+import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import getGroupIcon from 'Utils/getGroupIcon';
+import styles from '../index.module.scss';
+import { processProperties } from 'Utils/dataFormatter';
 
 function SelectKPIBlock({ kpi, header, index, ev, attrConfig, setAttrConfig }) {
   const [isDDVisible, setDDVisible] = useState(false);
@@ -12,14 +15,20 @@ function SelectKPIBlock({ kpi, header, index, ev, attrConfig, setAttrConfig }) {
     return getNormalizedKpiWithConfigs({ kpi: item });
   });
 
-  const onChange = (group, value, category) => {
+  const onChange = (option, group) => {
     const opts = Object.assign({}, attrConfig);
-    const newEv = { label: '', group: '', value: '', category: '', kpi_query_type: '' };
-    newEv.label = value[0];
-    newEv.group = group;
-    newEv.value = value[1];
-    newEv.kpi_query_type = value[3];
-    newEv.category = category;
+    const newEv = {
+      label: '',
+      group: '',
+      value: '',
+      category: '',
+      kpi_query_type: ''
+    };
+    newEv.label = option?.label;
+    newEv.group = group?.value;
+    newEv.value = option?.value;
+    newEv.kpi_query_type = option?.extraProps?.queryType;
+    newEv.category = group.extraProps?.category;
     !opts.kpis_to_attribute[header]
       ? (opts.kpis_to_attribute[header] = [])
       : opts.kpis_to_attribute[header];
@@ -39,20 +48,33 @@ function SelectKPIBlock({ kpi, header, index, ev, attrConfig, setAttrConfig }) {
 
   const selectKPI = () => {
     const groupedProps =
-      header === 'sf_kpi'
+      (header === 'sf_kpi'
         ? kpiEvents.filter((ev) => ev.group == 'salesforce_opportunities')
         : header === 'hs_kpi'
         ? kpiEvents.filter((ev) => ev.group == 'hubspot_deals')
-        : kpiEvents;
+        : kpiEvents
+      )?.map((groupOpt) => {
+        return {
+          iconName: groupOpt?.icon,
+          label: _.startCase(groupOpt?.label),
+          value: groupOpt?.label,
+          extraProps: {
+            category: groupOpt?.category
+          },
+          values: processProperties(groupOpt?.values)
+        };
+      }) || [];
     return (
-      <div className={`absolute`}>
+      <div className={styles.filter__event_selector}>
         {isDDVisible ? (
-          <GroupSelect2
-            groupedProperties={groupedProps}
-            placeholder="Select Event"
-            optionClick={(group, val, category) => onChange(group, val, category)}
+          <GroupSelect
+            options={groupedProps}
+            searchPlaceHolder='Select Event'
+            optionClickCallback={onChange}
             onClickOutside={() => setDDVisible(false)}
-            allowEmpty={true}
+            allowSearch={true}
+            allowSearchTextSelection={false}
+            extraClass={styles.filter__event_selector__select}
           />
         ) : null}
       </div>
@@ -63,7 +85,7 @@ function SelectKPIBlock({ kpi, header, index, ev, attrConfig, setAttrConfig }) {
     return (
       <div className={`mt-4`}>
         <Button
-          type="text"
+          type='text'
           onClick={() => {
             setDDVisible(true);
           }}
@@ -80,7 +102,9 @@ function SelectKPIBlock({ kpi, header, index, ev, attrConfig, setAttrConfig }) {
     <div className={`flex items-center mt-4`}>
       <Tooltip title={ev?.label ? ev.label : ev}>
         <Button
-          icon={<SVG name="mouseevent" size={16} color={'purple'} />}
+          icon={
+            <SVG name={getGroupIcon(ev?.group)} size={16} color={'purple'} />
+          }
           type={'link'}
           onClick={() => {
             setDDVisible(true);
@@ -93,11 +117,11 @@ function SelectKPIBlock({ kpi, header, index, ev, attrConfig, setAttrConfig }) {
       </Tooltip>
       <Button
         size={'large'}
-        type="text"
+        type='text'
         onClick={deleteItem}
         className={`fa-btn--custom ml-2`}
       >
-        <SVG name="trash"></SVG>
+        <SVG name='trash'></SVG>
       </Button>
     </div>
   );

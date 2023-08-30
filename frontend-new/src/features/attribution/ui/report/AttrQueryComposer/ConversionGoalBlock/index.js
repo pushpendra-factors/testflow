@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import styles from './index.module.scss';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
 import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
 import { Button, Tooltip } from 'antd';
 import { SVG, Text } from 'factorsComponents';
@@ -15,6 +14,9 @@ import { fetchKPIConfigWithoutDerivedKPI } from 'Reducers/kpi';
 import { TOOLTIP_CONSTANTS } from 'Constants/tooltips.constans';
 
 import EventFilterWrapper from 'Components/KPIComposer/EventFilterWrapper';
+import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import getGroupIcon from 'Utils/getGroupIcon';
+import { kpiItemsgroupedByCategoryProperty } from './utils';
 
 function ConversionGoalBlock({
   eventGoal,
@@ -69,17 +71,20 @@ function ConversionGoalBlock({
         currentProjectSettings.attribution_config.kpis_to_attribute;
       const groupedList = [];
       Object.keys(kpiList).forEach((grpName) => {
-        const propertyObj = { label: '', icon: '', values: [] };
+        const propertyObj = { label: '', iconName: '', value: '', values: [] };
         propertyObj.label = attrGroupNameMap[grpName]?.label;
-        propertyObj.icon = grpName;
+        propertyObj.value = attrGroupNameMap[grpName]?.value;
+        propertyObj.iconName = getGroupIcon(propertyObj.label);
         kpiList[grpName].forEach((item) => {
-          propertyObj.values.push([
-            item.label,
-            item.value,
-            item.category,
-            item.group,
-            item.kpi_query_type
-          ]);
+          propertyObj.values.push({
+            label: item.label,
+            value: item.value,
+            extraProps: {
+              valueCategory: item.category,
+              kpiQueryType: item.kpi_query_type,
+              valueGroup: item.group
+            }
+          });
         });
         groupedList.push(propertyObj);
       });
@@ -87,22 +92,10 @@ function ConversionGoalBlock({
     }
   }, [activeProject, showDerivedKPI, currentProjectSettings]);
 
-  const setEventPropsForUserGroup = () => {
-    if (!eventGoal || !eventGoal?.label?.length) {
-      return;
-    }
-    const assignFilterProps = Object.assign({}, filterProps);
-
-    if (eventPropertiesV2[eventGoal.label]) {
-      assignFilterProps.event = eventPropertiesV2[eventGoal.label];
-    }
-    assignFilterProps.user = eventUserPropertiesV2;
-    setFilterProperties(assignFilterProps);
-  };
-
   const setFilterPropsforKpiGroups = () => {
     const assignFilterProps = Object.assign({}, filterProps);
     assignFilterProps.event = getKPIProps(group_analysis);
+
     setFilterProperties(assignFilterProps);
   };
 
@@ -111,33 +104,7 @@ function ConversionGoalBlock({
     let selGroup = KPIlist.find((item) => {
       return item?.display_category == eventGoal.group;
     });
-
-    let DDvalues = selGroup?.properties?.map((item) => {
-      if (item == null) return;
-      let ddName = item.display_name ? item.display_name : item.name;
-      let ddtype =
-        selGroup?.category == 'channels'
-          ? item.object_type
-          : item.entity
-          ? item.entity
-          : item.object_type;
-      return [ddName, item.name, item.data_type, ddtype];
-    });
-    return DDvalues;
-  };
-
-  const getKpiGroupList = (groupName) => {
-    let KPIlist = showDerivedKPI
-      ? KPI_config
-      : KPI_config_without_derived_kpi || [];
-    let selGroup = KPIlist.find((item) => {
-      return item?.display_category == groupName;
-    });
-
-    const group = ((selGroup) => {
-      return getNormalizedKpi({ kpi: selGroup });
-    })(selGroup);
-    return [group];
+    return kpiItemsgroupedByCategoryProperty(selGroup) || {};
   };
 
   const toggleEventSelect = () => {
@@ -319,25 +286,25 @@ function ConversionGoalBlock({
     return filters;
   };
 
-  const onEventSelect = (val, group, category) => {
+  const onEventSelect = (option, group) => {
     const currentEventGoal = Object.assign({}, eventGoal);
-    currentEventGoal.label = val[1] ? val[1] : val[0];
+    currentEventGoal.label = option.value ? option.value : option.label;
     currentEventGoal.filters = [];
     if (group_analysis !== 'users') {
-      currentEventGoal.label = val[0];
-      currentEventGoal.metric = val[1] ? val[1] : val[0];
-      const grp = Object.keys(attrGroupNameMap).find(
-        (val) => attrGroupNameMap[val].label === group
-      );
-      currentEventGoal.group = attrGroupNameMap[grp].value;
-      if (val[2]) {
-        currentEventGoal.category = val[2];
+      currentEventGoal.label = option.label;
+      currentEventGoal.metric = option.value ? option.value : option.label;
+      currentEventGoal.group = group.value;
+      const valueCategory = option.extraProps.valueCategory;
+      const valueGroup = option.extraProps.valueGroup;
+      const kpiQueryType = option.extraProps.kpiQueryType;
+      if (valueCategory) {
+        currentEventGoal.category = valueCategory;
       }
-      if (val[3]) {
-        currentEventGoal.group = val[3];
+      if (valueGroup) {
+        currentEventGoal.group = valueGroup;
       }
-      if (val[4]) {
-        currentEventGoal.qt = val[4];
+      if (kpiQueryType) {
+        currentEventGoal.qt = kpiQueryType;
       }
     }
     eventGoalChange(currentEventGoal);
@@ -400,48 +367,19 @@ function ConversionGoalBlock({
     );
   };
 
-  const getKpiGroupListAll = () => {
-    const filterList = [
-      'hubspot_deals',
-      'salesforce_opportunities',
-      'form_submission'
-    ];
-    let KPIlist = showDerivedKPI
-      ? KPI_config
-      : KPI_config_without_derived_kpi || [];
-    let selGroup = KPIlist.find((item) => {
-      return filterList.includes(item?.display_category);
-    });
-
-    const group = ((selGroup) => {
-      return getNormalizedKpi({ kpi: selGroup });
-    })(selGroup);
-    return [group];
-  };
-
-  const getGroupedProps = () => {
-    if (!group_analysis || group_analysis === 'users') return eventNameOptions;
-    if (group_analysis === 'all') {
-      return getKpiGroupListAll();
-    } else {
-      return getKpiGroupList(group_analysis);
-    }
-  };
-
   const selectEvents = () => {
-    const groupedProps = getGroupedProps();
     return (
       <div className={styles.block__event_selector}>
         {selectVisible ? (
-          <GroupSelect2
-            groupedProperties={groupProps}
-            placeholder='Select Event'
-            optionClick={(group, val, category) =>
-              onEventSelect(val, group, category)
-            }
+          <GroupSelect
+            options={groupProps}
             onClickOutside={() => setSelectVisible(false)}
-            useCollapseView
-          ></GroupSelect2>
+            optionClickCallback={onEventSelect}
+            placeholder='Select Event'
+            allowSearch={true}
+            extraClass={styles.block__event_selector__select}
+            allowSearchTextSelection={false}
+          />
         ) : null}
       </div>
     );
@@ -463,7 +401,7 @@ function ConversionGoalBlock({
             <Button
               type='link'
               onClick={toggleEventSelect}
-              icon={<SVG name='mouseevent' />}
+              icon={<SVG name={getGroupIcon(eventGoal?.group)} />}
               className={`fa-button--truncate fa-button--truncate-lg btn-total-round`}
             >
               {eventNames[eventGoal?.label]

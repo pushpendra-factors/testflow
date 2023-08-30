@@ -410,7 +410,8 @@ function CustomKPI({
       item.display_name,
       item.name,
       item.data_type,
-      item.entity
+      item.entity,
+      item.category
     ]);
 
     setFilterDDValues(DDvalues);
@@ -751,7 +752,10 @@ function CustomKPI({
                         Monitor progress, measure success, and gain actionable
                         insights to drive continuous improvement and achieve
                         your business milestones.{' '}
-                        <a href='https://help.factors.ai/en/articles/7284181-custom-kpis' target='_blank'>
+                        <a
+                          href='https://help.factors.ai/en/articles/7284181-custom-kpis'
+                          target='_blank'
+                        >
                           Learn more
                         </a>
                       </Text>

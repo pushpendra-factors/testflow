@@ -28,7 +28,8 @@ import LeftPanePropBlock from '../MyComponents/LeftPanePropBlock';
 import AccountTimelineSingleView from './AccountTimelineSingleView';
 import {
   PropTextFormat,
-  convertGroupedPropertiesToUngrouped
+  convertGroupedPropertiesToUngrouped,
+  processProperties
 } from 'Utils/dataFormatter';
 import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
 import { useHistory, useLocation } from 'react-router-dom';
@@ -222,15 +223,7 @@ function AccountDetails({
       return {
         iconName: getGroupIcon(opt?.iconName),
         label: opt?.label,
-        values: opt?.values?.map((op) => {
-          return {
-            value: op?.[1],
-            label: op?.[0],
-            extraProps: {
-              valueType: op?.[2]
-            }
-          };
-        })
+        values: processProperties(opt?.values)
       };
     });
     setListProperties(mergedProps);

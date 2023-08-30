@@ -1688,7 +1688,7 @@ function CoreQuery({
             : item.entity
             ? item.entity
             : item.object_type;
-        return [ddName, item.name, item.data_type, ddtype];
+        return [ddName, item.name, item.data_type, ddtype, item.category];
       });
       return DDvalues;
     },
