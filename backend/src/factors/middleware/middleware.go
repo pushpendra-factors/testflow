@@ -118,6 +118,40 @@ func SetScopeProjectToken() gin.HandlerFunc {
 	}
 }
 
+func isJSONRequestBody(body string) bool {
+	return strings.HasPrefix(body, "{") && strings.HasSuffix(body, "}")
+}
+
+func DecodeSDKRequestBody() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		logCtx := log.WithField("token", U.GetScopeByKey(c, SCOPE_PROJECT_TOKEN))
+
+		rawBody, err := ioutil.ReadAll(c.Request.Body)
+		if err != nil {
+			// Do not log an error on client request termination and null/empty requests.
+			isEOFError := strings.Contains(err.Error(), "EOF")
+			if !isEOFError {
+				logCtx.WithError(err).WithField("body", string(rawBody)).
+					Error("Failed to read sdk request body.")
+			}
+
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid request."})
+			return
+		}
+
+		var body []byte
+		strBody := string(rawBody)
+		if isJSONRequestBody(strBody) {
+			body = rawBody
+		} else {
+			body = []byte(U.Decode(strBody, 4))
+		}
+
+		c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+		c.Next()
+	}
+}
+
 func AddSecurityResponseHeadersToCustomDomain() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Note: When custom domain is used the c.Request.Host will contain

@@ -8,43 +8,46 @@ const CodeBlock = ({
   codeClassName = 'fa-code-code-block',
   preProps = {},
   codeProps = {},
-  pureTextCode = ``
+  pureTextCode = ``,
+  hideCopyBtn = false
 }) => {
   return (
     <div>
       <pre className={preClassName} {...preProps}>
-        <div style={{ position: 'absolute', right: '8px' }}>
-          <Button
-            className={styles['btn']}
-            onClick={() => {
-              navigator?.clipboard
-                ?.writeText(pureTextCode)
-                .then(() => {
-                  message.success({
-                    content: 'copied',
-                    style: {
-                      display: 'flex',
-                      justifyContent: 'center',
-                      margin: '0 auto'
-                    }
+        {!hideCopyBtn && (
+          <div style={{ position: 'absolute', right: '8px' }}>
+            <Button
+              className={styles['btn']}
+              onClick={() => {
+                navigator?.clipboard
+                  ?.writeText(pureTextCode)
+                  .then(() => {
+                    message.success({
+                      content: 'copied',
+                      style: {
+                        display: 'flex',
+                        justifyContent: 'center',
+                        margin: '0 auto'
+                      }
+                    });
+                  })
+                  .catch(() => {
+                    console.log('ERROR');
+                    message.error({
+                      content: 'copying failed',
+                      style: {
+                        display: 'flex',
+                        justifyContent: 'center',
+                        margin: '0 auto'
+                      }
+                    });
                   });
-                })
-                .catch(() => {
-                  console.log('ERROR');
-                  message.error({
-                    content: 'copying failed',
-                    style: {
-                      display: 'flex',
-                      justifyContent: 'center',
-                      margin: '0 auto'
-                    }
-                  });
-                });
-            }}
-          >
-            <SVG name='copycode' />
-          </Button>
-        </div>
+              }}
+            >
+              <SVG name='copycode' />
+            </Button>
+          </div>
+        )}
         <code className={codeClassName} {...codeProps}>
           {codeContent}
         </code>

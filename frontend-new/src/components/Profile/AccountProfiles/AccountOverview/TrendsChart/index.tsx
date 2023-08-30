@@ -43,7 +43,7 @@ const TrendsChart: React.FC<ChartProps> = ({ data }) => {
           title: {
             text: null
           },
-          max: nearestGreater100(Math.max(...Object.values(data || {}))),
+          max: Math.max(...Object.values(data || {})),
           min: 0
         },
         plotOptions: {
