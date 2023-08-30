@@ -1820,7 +1820,7 @@ func (store *MemSQL) GetTopUsers(projectID int64, id string, groupID int) ([]mod
 	groupUserStmt := fmt.Sprintf("users.group_%d_user_id=? ", groupID)
 
 	// known users
-	topKnownUsers, err := store.GetTopKnownUsers(queryParams, groupUserStmt)
+	topUsers, err := store.GetTopKnownUsers(queryParams, groupUserStmt)
 	if err != nil {
 		return nil, err
 	}
@@ -1832,7 +1832,9 @@ func (store *MemSQL) GetTopUsers(projectID int64, id string, groupID int) ([]mod
 	}
 
 	// Combine the results of known and anonymous users
-	topUsers := append(topKnownUsers, topAnonymousUsers)
+	if topAnonymousUsers.AnonymousUsersCount > 0 {
+		topUsers = append(topUsers, topAnonymousUsers)
+	}
 
 	return topUsers, nil
 }
@@ -1842,7 +1844,7 @@ func (store *MemSQL) GetTopKnownUsers(queryParams []interface{}, groupUserStmt s
 	db := C.GetServices().Db
 	queryStmt := fmt.Sprintf(`SELECT COALESCE(JSON_EXTRACT_STRING(users.properties, '%s'), users.customer_user_id) AS name,
       COUNT(events.id) as num_page_views,
-      SUM(JSON_EXTRACT_STRING(users.properties, '%s')) as active_time,
+      MAX(JSON_EXTRACT_STRING(users.properties, '%s')) as active_time,
       COUNT(DISTINCT(events.event_name_id)) as num_of_pages
     FROM users
     JOIN events
@@ -1897,8 +1899,6 @@ func (store *MemSQL) GetTopAnonymousUsers(queryParams []interface{}, groupUserSt
 	}
 	if topAnonymousUsers.AnonymousUsersCount > 0 {
 		topAnonymousUsers.Name = fmt.Sprintf("%d Anonymous Users", topAnonymousUsers.AnonymousUsersCount)
-	} else {
-		return model.TopUser{}, nil
 	}
 
 	return topAnonymousUsers, nil
