@@ -7,11 +7,10 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	"fmt"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	"net/http"
 	"strconv"
 	"time"
-
-	"github.com/jinzhu/gorm/dialects/postgres"
 
 	C "factors/config"
 	U "factors/util"
@@ -232,7 +231,7 @@ func InValidateDashboardQueryCache(projectID, dashboardID, unitID int64) []strin
 	var err error
 
 	pattern := fmt.Sprintf("dashboard:*:pid:%d:did:%d:duid:%d:*", projectID, dashboardID, unitID)
-	cacheKey, err := cacheRedis.ScanPersistent(pattern, 50000000, 50000000)
+	cacheKey, err := cacheRedis.ScanPersistent(pattern, model.MaxNumberPerScanCount, model.MaxNumberPerScanCount)
 	cacheKeys = append(cacheKeys, cacheKey...)
 	if C.GetAttributionDebug() == 1 {
 		log.WithFields(log.Fields{
