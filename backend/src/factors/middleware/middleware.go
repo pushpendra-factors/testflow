@@ -128,8 +128,12 @@ func DecodeSDKRequestBody() gin.HandlerFunc {
 
 		rawBody, err := ioutil.ReadAll(c.Request.Body)
 		if err != nil {
-			logCtx.WithError(err).WithField("body", string(rawBody)).
-				Error("Failed to read sdk request body.")
+			// Do not log an error on client request termination and null/empty requests.
+			isEOFError := strings.Contains(err.Error(), "EOF")
+			if !isEOFError {
+				logCtx.WithError(err).WithField("body", string(rawBody)).
+					Error("Failed to read sdk request body.")
+			}
 
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid request."})
 			return
