@@ -43,12 +43,12 @@ const CodeBlockV2 = ({
         <Button onClick={handleCollapse} type='text' className={style.btnV2}>
           <SVG
             name={collapsed ? 'Expand' : 'Collapse'}
-            size='18'
-            color='#D9D9D9'
+            size='16'
+            color='#8C8C8C'
           />
         </Button>
         <Button className={style.btnV2} onClick={copyCode} type='text'>
-          <SVG name='TextCopy' size='18' color='#D9D9D9' />
+          <SVG name='TextCopy' size='16' color='#8C8C8C' />
         </Button>
       </div>
     </div>

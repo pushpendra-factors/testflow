@@ -197,7 +197,7 @@ func main() {
 	projectIdsArray := make([]int64, 0)
 
 	if projectIdList == "*" {
-		projectIdsArray, err = store.GetStore().GetAllProjectsWithFeatureEnabled(M.FEATURE_ACCOUNT_SCORING,false)
+		projectIdsArray, err = store.GetStore().GetAllProjectsWithFeatureEnabled(M.FEATURE_ACCOUNT_SCORING, false)
 		if err != nil {
 			errString := fmt.Errorf("failed to get feature status for all projects")
 			log.WithError(err).Error(errString)
@@ -276,9 +276,12 @@ func main() {
 	configs["diskManager"] = diskManager
 	configs["beamConfig"] = &beamConfig
 
+	log.WithField("projects", projectIdsArray).Info("Running acc scoring for these projects")
+
 	for _, projectId := range projectIdsArray {
 
 		status, _ := AS.BuildAccScoringDaily(projectId, configs)
+		status["project id"] = projectId
 		log.Info(status)
 		if status["err"] != nil {
 			C.PingHealthcheckForFailure(healthcheckPingID, status)

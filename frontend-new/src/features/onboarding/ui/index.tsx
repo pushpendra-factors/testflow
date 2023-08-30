@@ -16,6 +16,11 @@ import Step5 from './components/OnboardingSteps/AfterSetupScreen';
 import useQuery from 'hooks/useQuery';
 import { OnboardingStepsConfig } from './types';
 import { getCurrentStep } from '../utils';
+import { useProductFruitsApi } from 'react-product-fruits';
+import { useHistory } from 'react-router-dom';
+import { setActiveProject } from 'Reducers/global';
+import { isEmpty } from 'lodash';
+import { PathUrls } from 'Routes/pathUrls';
 
 const getIllustrationImage = (currentStep: number): string => {
   switch (currentStep) {
@@ -32,8 +37,12 @@ const getIllustrationImage = (currentStep: number): string => {
   }
 };
 
-const Onboarding = ({ setShowAnalyticsResult }: OnboardingComponentProps) => {
+const Onboarding = ({
+  setShowAnalyticsResult,
+  setActiveProject
+}: OnboardingComponentProps) => {
   const [currentStep, setCurrentStep] = useState<number>(1);
+  const history = useHistory();
   const routerQuery = useQuery();
   const paramTarget = routerQuery.get('target');
   const paramSetup = routerQuery.get('setup');
@@ -41,12 +50,43 @@ const Onboarding = ({ setShowAnalyticsResult }: OnboardingComponentProps) => {
   const onboarding_steps: OnboardingStepsConfig = useSelector(
     (state) => state?.global?.currentProjectSettings?.onboarding_steps
   );
+  const { projects } = useSelector((state) => state.global);
+
+  const showCloseButton =
+    paramSetup === 'new' || (Array.isArray(projects) && projects.length > 1);
+
   const incrementStepCount = () => {
     if (currentStep < 5) setCurrentStep(currentStep + 1);
   };
 
+  const handleCloseClick = () => {
+    if (paramSetup === 'new') {
+      history.goBack();
+      return;
+    }
+    if (currentStep === 5) {
+      history.push(PathUrls.ProfileAccounts);
+      return;
+    }
+    // going back to previous project
+    if (projects.length) {
+      let activeItem = projects?.filter(
+        (item) => item.id === localStorage.getItem('prevActiveProject')
+      );
+
+      //handling project redirection
+      let projectDetails = isEmpty(activeItem) ? projects[0] : activeItem[0];
+      localStorage.setItem(
+        'prevActiveProject',
+        localStorage.getItem('activeProject') || ''
+      );
+      localStorage.setItem('activeProject', projectDetails?.id);
+      setActiveProject(projectDetails);
+      history.push(PathUrls.ProfileAccounts);
+    }
+  };
+
   const decrementStepCount = () => {
-    console.log('decrement step count called---', currentStep);
     if (currentStep > 0) setCurrentStep(currentStep - 1);
   };
 
@@ -58,6 +98,15 @@ const Onboarding = ({ setShowAnalyticsResult }: OnboardingComponentProps) => {
       setShowAnalyticsResult(false);
     };
   }, [setShowAnalyticsResult]);
+
+  //hiding product fruits help center button
+  useProductFruitsApi((api) => {
+    api.button.hide();
+    return () => {
+      api.button.show();
+      api.button.close();
+    };
+  }, []);
 
   useEffect(() => {
     if (paramSetup === 'new') {
@@ -86,13 +135,20 @@ const Onboarding = ({ setShowAnalyticsResult }: OnboardingComponentProps) => {
   }
 
   if (currentStep === 5) {
-    return <Step5 />;
+    return (
+      <Step5
+        handleCloseClick={handleCloseClick}
+        showCloseButton={showCloseButton}
+      />
+    );
   }
   return (
     <OnboardingLayout
       currentStep={currentStep}
       stepImage={getIllustrationImage(currentStep)}
       totalSteps={5}
+      showCloseButton={showCloseButton}
+      handleCloseClick={handleCloseClick}
     >
       {currentStep === 1 && (
         <Step1
@@ -119,7 +175,6 @@ const Onboarding = ({ setShowAnalyticsResult }: OnboardingComponentProps) => {
           decrementStepCount={decrementStepCount}
         />
       )}
-      {currentStep === 5 && <Step5 />}
     </OnboardingLayout>
   );
 };
@@ -127,7 +182,8 @@ const Onboarding = ({ setShowAnalyticsResult }: OnboardingComponentProps) => {
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
-      setShowAnalyticsResult
+      setShowAnalyticsResult,
+      setActiveProject
     },
     dispatch
   );

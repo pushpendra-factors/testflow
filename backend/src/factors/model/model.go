@@ -590,6 +590,8 @@ type Model interface {
 	CreateOrGetAMPUser(projectID int64, ampUserId string, timestamp int64, requestSource int) (string, int)
 	CreateOrGetDomainGroupUser(projectID int64, groupName string, domainName string,
 		requestTimestamp int64, requestSource int) (string, int)
+	CreateOrGetCRMGroupUser(projectID int64, groupName string, recordID string,
+		requestTimestamp int64, requestSource int) (string, int)
 	CreateOrGetSegmentUser(projectID int64, segAnonId, custUserId string, requestTimestamp int64, requestSource int) (*model.User, int)
 	GetUserPropertiesByUserID(projectID int64, id string) (*postgres.Jsonb, int)
 	GetUser(projectID int64, id string) (*model.User, int)
@@ -621,6 +623,7 @@ type Model interface {
 	GetSelectedUsersByCustomerUserID(projectID int64, customerUserID string, limit uint64, numUsers uint64) ([]model.User, int)
 	CreateGroupUser(user *model.User, groupName, groupID string) (string, int)
 	UpdateUserGroup(projectID int64, userID, groupName, groupID, groupUserID string, overwrite bool) (*model.User, int)
+	UpdateUserGroupInBatch(projectID int64, userIDs []string, groupName, groupID string, groupUserID string, overwrite bool) int
 	UpdateUserGroupProperties(projectID int64, userID string, newProperties *postgres.Jsonb, updateTimestamp int64) (*postgres.Jsonb, int)
 	GetPropertiesUpdatedTimestampOfUser(projectId int64, id string) (int64, int)
 	GetCustomerUserIdFromUserId(projectID int64, id string) (string, int)
@@ -948,6 +951,7 @@ type Model interface {
 	GetPlanDetailsAndAddonsForProject(projectID int64) (model.FeatureList, model.OverWrite, error)
 	GetFeatureLimitForProject(projectID int64, featureName string) (int64, error)
 	UpdateFeatureStatusForProject(projectID int64, feature model.FeatureDetails) (string, error)
+	GetProjectsArrayWithFeatureEnabledFromProjectIdFlag(stringProjectsIDs, featureName string) ([]int64, error)
 
 	// Property Mapping
 	CreatePropertyMapping(propertyMapping model.PropertyMapping) (*model.PropertyMapping, string, int)

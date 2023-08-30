@@ -29,6 +29,7 @@ function PropertyFilter({
     const props = {};
     if (profileType === 'account') {
       if (source === 'All') {
+        props['$domains'] = groupProperties['$domains'];
         Object.keys(availableGroups).forEach((group) => {
           props[group] = groupProperties[group];
         });

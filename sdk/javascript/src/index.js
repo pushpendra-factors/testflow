@@ -1,6 +1,7 @@
 "use strict";
 
 const logger = require("./utils/logger");
+const util = require("./utils/util")
 var App = require("./app");
 // const { EV_FORM_SUBMITTED } = require("./properties");
 const Properties = require("./properties");
@@ -121,6 +122,15 @@ function getUserId() {
     return app.getUserId();
 }
 
+/* 
+Internal method. Used for decoding the request payload.
+
+Usage:
+_faitracker.d("!#") 
+*/
+function d(str) {
+    console.log(util.decode(str));
+}
 
 function primaryWindowVar() {
     if (window.faitracker) return window.faitracker;

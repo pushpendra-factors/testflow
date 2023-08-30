@@ -4,6 +4,7 @@ import { Button } from 'antd';
 import { SVG, Text } from '../../factorsComponents';
 import { ApplyClickCallbackType, OptionType } from './types';
 import { filterSearchFunction, moveSelectedOptionsToTop } from './utils';
+import { HighlightSearchText } from 'Utils/dataFormatter';
 interface MultiSelectProps {
   options: OptionType[];
   applyClickCallback?: ApplyClickCallbackType;
@@ -195,13 +196,26 @@ export default function MultiSelect({
               : ''
           } `}
         >
-          <span className={`ml-1 ${styles.optText}`}>
-            {option.labelNode ? option.labelNode : option.label}
-          </span>
+          <div className='w-11/12'>
+            {option.labelNode ? (
+              option.labelNode
+            ) : searchTerm.length > 0 ? (
+              <HighlightSearchText text={option.label} highlight={searchTerm} />
+            ) : (
+              <Text
+                level={7}
+                type={'title'}
+                weight={'regular'}
+                extraClass={'self-center m-0'}
+              >
+                {option.label}
+              </Text>
+            )}
+          </div>
           {option?.isSelected && (
             <SVG
               name='checkmark'
-              extraClass={'self-center'}
+              extraClass={'self-center w-1/12'}
               size={17}
               color={'purple'}
             />

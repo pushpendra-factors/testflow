@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useSelector, connect } from 'react-redux';
 import styles from './index.module.scss';
 import { DateRangePicker } from 'react-date-range';
-import { Input, Button, Result } from 'antd';
+import { Input, Button } from 'antd';
 import { SVG, Text } from 'factorsComponents';
 import { DEFAULT_DATE_RANGE } from 'Components/QueryComposer/DateRangeSelector/utils';
 import MomentTz from 'Components/MomentTz';
 
 import GlobalFilterSelect from '../GlobalFilterSelect';
 import { DEFAULT_OPERATOR_PROPS } from '../../../FaFilterSelect/utils';
-import { fetchKPIFilterValues } from 'Reducers/kpi';
+import { getKPIPropertyValues } from 'Reducers/coreQuery/middleware';
 import _ from 'lodash';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
@@ -32,12 +32,15 @@ function GlobalFilterBlock({
   deleteFilter,
   insertFilter,
   closeFilter,
-  fetchKPIFilterValues,
+  getKPIPropertyValues,
   selectedMainCategory,
   showOr,
   viewMode = false,
   isSameKPIGrp
 }) {
+  const propertyValuesMap = useSelector(
+    (state) => state.coreQuery.propertyValuesMap
+  );
   const [filterTypeState, setFilterTypeState] = useState('props');
   const [groupCollapseState, setGroupCollapse] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
@@ -112,19 +115,15 @@ function GlobalFilterBlock({
           }
         }
         setvalueOptsLoading(true);
-        fetchKPIFilterValues(activeProject.id, filterData)
-          .then((res) => {
-            const ddValues = Object.assign({}, dropDownValues);
-            ddValues[filter?.extra[0]] = [...res.data, '$none'];
-            setDropDownValues(ddValues);
-            setvalueOptsLoading(false);
-          })
-          .catch((err) => {
-            const ddValues = Object.assign({}, dropDownValues);
-            ddValues[filter?.extra[0]] = ['$none'];
-            setDropDownValues(ddValues);
-            setvalueOptsLoading(false);
-          });
+        if (propertyValuesMap[filterData?.property_name]) {
+          getKPIPropertyValues(activeProject.id, filterData)
+            .then((res) => {
+              setvalueOptsLoading(false);
+            })
+            .catch((err) => {
+              setvalueOptsLoading(false);
+            });
+        }
       }
     }
   }, [filter, isSameKPIGrp]);
@@ -156,8 +155,8 @@ function GlobalFilterBlock({
       <GlobalFilterSelect
         propOpts={filterDropDownOptions.props}
         operatorOpts={filterDropDownOptions.operator}
-        valueOpts={dropDownValues}
-        valueOptsLoading={valueOptsLoading}
+        valueOpts={propertyValuesMap.data}
+        valueOptsLoading={propertyValuesMap.loading}
         applyFilter={applyFilter}
         setValuesByProps={setValuesByProps}
         filter={filter}
@@ -203,12 +202,10 @@ function GlobalFilterBlock({
 
   const removeFilter = () => {
     const filterState = Object.assign({}, newFilterState);
-    filterTypeState === 'operator'
-      ? (() => {
-          filterState.props = [];
-          changeFilterTypeState(false);
-        })()
-      : null;
+    if (filterTypeState === 'operator') {
+      filterState.props = [];
+      changeFilterTypeState(false);
+    }
     if (filterTypeState === 'values') {
       filterState.values.length
         ? filterState.values.pop()
@@ -637,17 +634,11 @@ function GlobalFilterBlock({
 
       setvalueOptsLoading(true);
 
-      fetchKPIFilterValues(activeProject.id, filterData)
+      getKPIPropertyValues(activeProject.id, filterData)
         .then((res) => {
-          const ddValues = Object.assign({}, dropDownValues);
-          ddValues[props[0]] = [...res.data, '$none'];
-          setDropDownValues(ddValues);
           setvalueOptsLoading(false);
         })
         .catch((err) => {
-          const ddValues = Object.assign({}, dropDownValues);
-          ddValues[props[0]] = ['$none'];
-          setDropDownValues(ddValues);
           setvalueOptsLoading(false);
         });
     }
@@ -659,8 +650,8 @@ function GlobalFilterBlock({
         <GlobalFilterSelect
           propOpts={filterDropDownOptions.props}
           operatorOpts={filterDropDownOptions.operator}
-          valueOpts={dropDownValues}
-          valueOptsLoading={valueOptsLoading}
+          valueOpts={propertyValuesMap.data}
+          valueOptsLoading={propertyValuesMap.loading}
           applyFilter={applyFilter}
           setValuesByProps={setValuesByProps}
           filter={filter}
@@ -700,4 +691,4 @@ function GlobalFilterBlock({
   );
 }
 
-export default connect(null, { fetchKPIFilterValues })(GlobalFilterBlock);
+export default connect(null, { getKPIPropertyValues })(GlobalFilterBlock);

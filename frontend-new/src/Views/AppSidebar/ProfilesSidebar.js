@@ -22,14 +22,16 @@ const GroupItem = ({ group }) => {
   const timelinePayload = useSelector((state) => selectTimelinePayload(state));
 
   const setTimelinePayload = () => {
-    dispatch(
-      setTimelinePayloadAction({
-        source: group[1],
-        filters: [],
-        segment_id: ''
-      })
-    );
-    dispatch(setActiveSegmentAction({}));
+    if (timelinePayload.source !== group[1]) {
+      dispatch(
+        setTimelinePayloadAction({
+          source: group[1],
+          filters: [],
+          segment_id: ''
+        })
+      );
+      dispatch(setActiveSegmentAction({}));
+    }
   };
 
   const isActive =
@@ -49,13 +51,17 @@ const SegmentItem = ({ segment }) => {
   const timelinePayload = useSelector((state) => selectTimelinePayload(state));
 
   const setActiveSegment = () => {
-    const opts = { ...timelinePayload };
-    opts.source = segment[2].type;
-    opts.segment_id = segment[1];
-    opts.filters = [];
-    delete opts.search_filter;
-    dispatch(setActiveSegmentAction(segment[2]));
-    dispatch(setTimelinePayloadAction(opts));
+    if (timelinePayload.segment_id !== segment[1]) {
+      const opts = { ...timelinePayload };
+      opts.source = segment[2].type;
+      opts.segment_id = segment[1];
+      opts.filters = [];
+      delete opts.search_filter;
+      dispatch(setActiveSegmentAction(segment[2]));
+      dispatch(setTimelinePayloadAction(opts));
+    }
+
+
   };
 
   const isActive = timelinePayload.segment_id === segment[1];

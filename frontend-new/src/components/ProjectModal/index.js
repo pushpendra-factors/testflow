@@ -28,6 +28,7 @@ import { fetchProjectSettings } from 'Reducers/global';
 import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
 import useAutoFocus from 'hooks/useAutoFocus';
 import { PathUrls } from 'Routes/pathUrls';
+import logger from 'Utils/logger';
 
 function ProjectModal(props) {
   const [ShowPopOver, setShowPopOver] = useState(false);
@@ -53,6 +54,7 @@ function ProjectModal(props) {
 
   const switchProject = () => {
     localStorage.setItem('activeProject', selectedProject?.id);
+    localStorage.setItem('prevActiveProject', props?.active_project?.id || '');
     props.setActiveProject(selectedProject);
     props.fetchProjectSettings(selectedProject?.id);
     history.push('/');
@@ -87,9 +89,13 @@ function ProjectModal(props) {
     }
   }, [props?.currentAgent, props?.active_project]);
 
-  const userLogout = () => {
-    props.signout();
-    dispatch({ type: USER_LOGOUT });
+  const userLogout = async () => {
+    try {
+      await props.signout();
+      dispatch({ type: USER_LOGOUT });
+    } catch (error) {
+      logger.error('Error in logging out', error);
+    }
   };
 
   const popoverContent = () => (

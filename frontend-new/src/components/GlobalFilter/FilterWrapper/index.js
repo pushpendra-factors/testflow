@@ -9,10 +9,10 @@ import {
 } from 'Reducers/coreQuery/middleware';
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
-import { PropTextFormat } from 'Utils/dataFormatter';
 import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
 import getGroupIcon from 'Utils/getGroupIcon';
-import startCase from 'lodash/startCase';
+import { getPropertyGroupLabel } from './utils';
+import { PropTextFormat } from 'Utils/dataFormatter';
 
 function FilterWrapper({
   projectID,
@@ -57,12 +57,12 @@ function FilterWrapper({
 
   useEffect(() => {
     const formattedFilterDDOptions = { ...filterDropDownOptions, props: [] };
-    Object.keys(filterProps)?.forEach((propertyKey) => {
+    Object.keys(filterProps || {})?.forEach((propertyKey) => {
       if (!Array.isArray(filterProps[propertyKey])) {
         const propertyGroups = filterProps[propertyKey];
         if (propertyGroups) {
           Object.keys(propertyGroups)?.forEach((groupKey) => {
-            const label = startCase(groupKey);
+            const label = PropTextFormat(groupKey);
             const icon = getGroupIcon(groupKey);
             const values = propertyGroups?.[groupKey];
             formattedFilterDDOptions.props.push({
@@ -75,18 +75,19 @@ function FilterWrapper({
           });
         }
       } else {
-        const label = `${PropTextFormat(propertyKey)} Properties`;
-        const icon = ['user', 'event'].includes(propertyKey)
+        const label = getPropertyGroupLabel(propertyKey);
+        const propertyType = ['user', 'event'].includes(propertyKey)
           ? propertyKey
           : ['button_click', 'page_view'].includes(propertyKey)
           ? 'event'
           : 'group'; //'button_click', 'page_view' custom types used in pathanalysis
         const values = filterProps[propertyKey];
+        const icon = getGroupIcon(label);
         formattedFilterDDOptions.props.push({
           key: propertyKey,
           label,
           icon,
-          propertyType: icon,
+          propertyType: propertyType,
           values
         });
       }

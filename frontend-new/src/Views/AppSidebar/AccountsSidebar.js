@@ -26,14 +26,16 @@ const GroupItem = ({ group }) => {
   );
 
   const setAccountPayload = () => {
-    dispatch(
-      setAccountPayloadAction({
-        source: group[1],
-        filters: [],
-        segment_id: ''
-      })
-    );
-    dispatch(setActiveSegmentAction({}));
+    if (activeAccountPayload.source !== group[1]) {
+      dispatch(
+        setAccountPayloadAction({
+          source: group[1],
+          filters: [],
+          segment_id: ''
+        })
+      );
+      dispatch(setActiveSegmentAction({}));
+    }
   };
 
   const isActive =
@@ -56,13 +58,15 @@ const SegmentItem = ({ segment }) => {
   );
 
   const setActiveSegment = () => {
-    const opts = { ...activeAccountPayload };
-    opts.segment_id = segment[1];
-    opts.source = segment[2].type;
-    opts.filters = [];
-    delete opts.search_filter;
-    dispatch(setActiveSegmentAction(segment[2]));
-    dispatch(setAccountPayloadAction(opts));
+    if (activeAccountPayload.segment_id !== segment[1]) {
+      const opts = { ...activeAccountPayload };
+      opts.segment_id = segment[1];
+      opts.source = segment[2].type;
+      opts.filters = [];
+      delete opts.search_filter;
+      dispatch(setActiveSegmentAction(segment[2]));
+      dispatch(setAccountPayloadAction(opts));
+    }
   };
 
   const isActive = activeAccountPayload.segment_id === segment[1];

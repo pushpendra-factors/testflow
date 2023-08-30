@@ -1,5 +1,11 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { connect, useDispatch, useSelector } from 'react-redux';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo
+} from 'react';
+import { connect } from 'react-redux';
 import {
   Row,
   Col,
@@ -42,7 +48,7 @@ import {
   enableTeamsIntegration,
   fetchTeamsWorkspace,
   fetchTeamsChannels,
-  updateEventAlertStatus,
+  updateEventAlertStatus
 } from 'Reducers/global';
 import SelectChannels from '../SelectChannels';
 import {
@@ -622,7 +628,7 @@ const EventBasedAlert = ({
           property: EventPropertyDetails?.name || EventPropertyDetails?.[1],
           prop_type:
             EventPropertyDetails?.data_type || EventPropertyDetails?.[2],
-          prop_category: category.length > 0 ? 'event' : 'user',
+          prop_category: category.length > 0 ? 'event' : 'user'
         }
       ];
     }

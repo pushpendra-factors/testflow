@@ -41,9 +41,9 @@ import useAutoFocus from 'hooks/useAutoFocus';
 import EventQueryBlock from './EventQueryBlock';
 import {
   getStateFromKPIFilters,
-  getKPIQuery,
   DefaultDateRangeFormat,
-  getEventsWithPropertiesKPI
+  getEventsWithPropertiesCustomKPI,
+  getCustomKPIQuery
 } from 'Views/CoreQuery/utils';
 
 const { Option } = Select;
@@ -305,13 +305,13 @@ function CustomKPI({
           agPr: KPIPropertyDetails?.name,
           agPrTy: KPIPropertyDetails?.data_type,
           fil: filterValues?.globalFilters
-            ? getEventsWithPropertiesKPI(filterValues?.globalFilters, '')
+            ? getEventsWithPropertiesCustomKPI(filterValues?.globalFilters, '')
             : [],
           daFie: data.kpi_dateField
         }
       };
     } else if (selKPIType === 'derived_kpi') {
-      const KPIquery = getKPIQuery(
+      const KPIquery = getCustomKPIQuery(
         queries,
         queryOptions.date_range,
         groupBy,
@@ -339,7 +339,7 @@ function CustomKPI({
           agPr: EventPropertyDetails?.name,
           agPrTy: EventPropertyDetails?.data_type,
           fil: EventfilterValues?.globalFilters
-            ? getEventsWithPropertiesKPI(EventfilterValues?.globalFilters, '')
+            ? getEventsWithPropertiesCustomKPI(EventfilterValues?.globalFilters, '')
             : [],
           daFie: '',
           evNm: selEventName,

@@ -17,6 +17,7 @@ import (
 )
 
 const MAX_LIMIT = 10000
+const NORM_CONFIG = 10000
 
 func (store *MemSQL) UpdateUserEventsCount(evdata []model.EventsCountScore, lastevent map[string]model.LatestScore) error {
 	projectID := evdata[0].ProjectId
@@ -302,11 +303,7 @@ func CalculatescoresPerAccount(projectId int64, weights *model.AccWeights, curre
 		accountScore := accountScoreMap[day]
 		if day != model.LAST_EVENT {
 			var t model.PerAccountScore
-			fscore = float32(accountScore)
-			if projectId == 2 {
-				fscore = float32(accountScore)
-				fscore = float32(normalize_score(float64(fscore)))
-			}
+			fscore = float32(normalize_score(float64(accountScore)))
 			t.Score = fscore
 			t.Timestamp = day
 			unixDay := model.GetDateFromString(day)
@@ -765,9 +762,8 @@ func (store *MemSQL) GetUserScoreOnIds(projectId int64, usersAnonymous, usersNon
 		ts := GetDateOnlyFromTimestamp(le.Date)
 
 		accountScore, _ := ComputeAccountScoreOnLastEvent(projectId, *weights, le.EventsCount)
-		if projectId == 2 {
-			accountScore = normalize_score(accountScore)
-		}
+		accountScore = normalize_score(accountScore)
+
 		resultPerUser.Id = userId
 		resultPerUser.Score = float32(accountScore)
 		addProperty(&resultPerUser, &le)
@@ -835,9 +831,8 @@ func (store *MemSQL) GetAccountScoreOnIds(projectId int64, accountIds []string, 
 		resultPerUser.Timestamp = ts
 
 		accountScore, _ := ComputeAccountScoreOnLastEvent(projectId, *weights, le.EventsCount)
-		if projectId == 2 {
-			accountScore = normalize_score(accountScore)
-		}
+		accountScore = normalize_score(accountScore)
+
 		resultPerUser.Id = userId
 		resultPerUser.Score = float32(accountScore)
 		addProperty(&resultPerUser, &le)
@@ -905,9 +900,8 @@ func ComputeUserScoreNonAnonymous(db *gorm.DB, weights model.AccWeights, project
 		ts := GetDateOnlyFromTimestamp(userCounts.Date)
 		r.Timestamp = ts
 		accountScore := ComputeScoreWithWeightsAndCounts(projectId, &weights, userCounts.EventsCount, ts)
-		if projectId == 2 {
-			accountScore = normalize_score(accountScore)
-		}
+		accountScore = normalize_score(accountScore)
+
 		r.Id = userKey
 		r.Score = float32(accountScore)
 		addProperty(&r, &userCounts)
@@ -1010,7 +1004,7 @@ func ComputeScoreWithWeightsAndCountsWithDecay(projectId int64, weights *model.A
 
 func normalize_score(x float64) float64 {
 	//100 * tanh(x/100000) range 0 to 100000
-	val := x / float64(100000)
+	val := x / float64(NORM_CONFIG)
 	return 100 * MM.Tanh(val)
 }
 

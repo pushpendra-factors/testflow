@@ -7,15 +7,14 @@ export interface TopPages {
   views: number;
   users_count: number;
   total_time: number;
-  avg_page_scroll_percent: number;
+  avg_scroll_percent: number;
 }
 
 export interface TopUsers {
   name: string;
-  views: number;
-  users_count: number;
+  num_page_views: number;
   active_time: number;
-  pages_count: number;
+  num_of_pages: number;
 }
 
 export type Overview = {

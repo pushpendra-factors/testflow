@@ -717,12 +717,28 @@ func MergeTwoAttributionReportsIntoOne(result1, result2 *QueryResult, keyIndex i
 	}
 
 	if result1 == nil && result2 != nil {
-		logCtx.Info("returning result2 as result1 is nil")
-		return result2
+		var resultNew QueryResult
+		// copying result2 to resultNew
+		U.DeepCopy(&result2, &resultNew)
+
+		logCtx.WithFields(log.Fields{
+			"result2":    result2,
+			"resultNew1": resultNew,
+		}).Info("returning result2 as result1 is nil")
+
+		return &resultNew
 	}
 	if result2 == nil && result1 != nil {
-		logCtx.Info("returning result1 as result2 is nil")
-		return result1
+		var resultNew QueryResult
+		// copying result1 to resultNew
+		U.DeepCopy(&result1, &resultNew)
+
+		logCtx.WithFields(log.Fields{
+			"result1":    result1,
+			"resultNew2": resultNew,
+		}).Info("returning result1 as result2 is nil")
+
+		return &resultNew
 	}
 
 	rows1 := result1.Rows
@@ -730,7 +746,13 @@ func MergeTwoAttributionReportsIntoOne(result1, result2 *QueryResult, keyIndex i
 
 	mergedRows := MergeTwoAttributionReportRows(rows1, rows2, keyIndex, attributionKey, conversionFunTypes, logCtx)
 
+	logCtx.WithFields(log.Fields{
+		"result1":    result1,
+		"mergedRows": mergedRows,
+	}).Info("post successful merge - mergedRows")
+
 	result1.Rows = mergedRows
+
 	return result1
 }
 
@@ -752,6 +774,14 @@ func MergeTwoAttributionReportRows(rows1, rows2 [][]interface{}, keyIndex int, a
 		}
 		rowsOfResult2InMap[key] = row
 	}
+	logCtx.WithFields(log.Fields{
+		"keyIndex":           keyIndex,
+		"attributionKey":     attributionKey,
+		"conversionFunTypes": conversionFunTypes,
+		"rows1":              rows1,
+		"rows2":              rows2,
+		"rowsOfResult2InMap": rowsOfResult2InMap,
+	}).Info("MergeTwoAttributionReportRows merging rows and rowsOfResult2InMap")
 
 	mergedRowKeyMap := make(map[string][]interface{})
 	maxRowSize := 0
@@ -775,18 +805,32 @@ func MergeTwoAttributionReportRows(rows1, rows2 [][]interface{}, keyIndex int, a
 		// Fetch the same key row from Result2
 		rowResult2 := rowsOfResult2InMap[key]
 		if rowResult2 == nil {
+			mergedRowKeyMap[key] = rowResult1
 			continue
 		}
-		if _, exists := mergedRowKeyMap[key]; exists {
-			mergedRowKeyMap[key] = MergeTwoDataRowsV1(rowResult1, rowResult2, keyIndex, attributionKey, conversionFunTypes)
-		} else {
-			mergedRowKeyMap[key] = rowResult1
+		mergedRowKeyMap[key] = MergeTwoDataRowsV1(rowResult1, rowResult2, keyIndex, attributionKey, conversionFunTypes)
+		logCtx.WithFields(log.Fields{
+			"rowResult1":           rowResult1,
+			"rowResult2":           rowResult2,
+			"mergedRowKeyMap[key]": mergedRowKeyMap[key],
+		}).Info("MergeTwoDataRowsV1 mergedRowKeyMap merging 2 rows")
+	}
+
+	// adding up all the missed row2 values while merging in previous block
+	for key, val := range rowsOfResult2InMap {
+		if mergedRowKeyMap[key] == nil {
+			mergedRowKeyMap[key] = val
 		}
 	}
+
 	mergedResultRows := make([][]interface{}, 0)
 	for _, mapRow := range mergedRowKeyMap {
 		mergedResultRows = append(mergedResultRows, mapRow)
 	}
+	logCtx.WithFields(log.Fields{
+		"mergedRowKeyMap":  mergedRowKeyMap,
+		"mergedResultRows": mergedResultRows,
+	}).Info("Final MergeTwoAttributionReportRows merging rows")
 	return mergedResultRows
 }
 

@@ -8,7 +8,10 @@ import { useHistory } from 'react-router-dom';
 import { PathUrls } from 'Routes/pathUrls';
 import style from './index.module.scss';
 
-const Step5 = () => {
+const AfterSetupScreen = ({
+  handleCloseClick,
+  showCloseButton
+}: AfterSetupScreenProps) => {
   const isMobileView = useMobileView();
   const history = useHistory();
   const renderCard = (
@@ -30,7 +33,7 @@ const Step5 = () => {
           <div>
             <Text
               type={'title'}
-              color='character-title'
+              color='character-primary'
               level={6}
               weight={'bold'}
               extraClass='m-0 mb-1'
@@ -55,20 +58,33 @@ const Step5 = () => {
   };
   return (
     <>
-      <OnboardingHeader totalSteps={5} currentStep={5} />
+      <OnboardingHeader
+        totalSteps={5}
+        currentStep={5}
+        showCloseButton={showCloseButton}
+        handleCloseClick={handleCloseClick}
+      />
       <div style={{ padding: isMobileView ? '32px 16px' : '60px 222px' }}>
         <Row>
-          <Col xs={24} sm={24} md={8}>
-            <div className='p-4 flex justify-center items-center'>
+          <Col xs={24} sm={24} md={6}>
+            <div className='p-4 flex  items-center'>
               <img
                 src={IllustrationImage}
                 alt='illustration'
-                className='h-full w-full'
-                style={{ width: 217, height: 212 }}
+                className={`${isMobileView ? 'w-full h-full' : ''}`}
+                style={{ height: isMobileView ? '100%' : 212 }}
               />
             </div>
           </Col>
-          <Col xs={24} sm={24} md={16}>
+          <Col
+            xs={24}
+            sm={24}
+            md={18}
+            style={{ display: 'flex' }}
+            className={`flex flex-col justify-center ${
+              isMobileView ? '' : 'pl-6'
+            }`}
+          >
             <Text
               type={'title'}
               level={3}
@@ -80,26 +96,29 @@ const Step5 = () => {
                 🎉
               </span>
             </Text>
-            <Text
-              type={'title'}
-              level={6}
-              color='character-disabled-placeholder'
-            >
+            <Text type={'title'} level={6} color='character-secondary'>
               Yeah! Your project setup is now complete. We have started pulling
               data into your project and you can soon expect to see accounts we
               have identified for you.
-              <br />
-              <br />
+            </Text>
+            <Text
+              type={'title'}
+              level={6}
+              color='character-secondary'
+              extraClass='m-0'
+            >
               Meanwhile, feel free to set up additional integrations or invite
               your teammates while we set up the product for you liking.
             </Text>
-            <Button
-              type='primary'
-              className={'m-0'}
-              onClick={() => history.push(PathUrls.ProfileAccounts)}
-            >
-              Continue to project
-            </Button>
+            <div>
+              <Button
+                type='primary'
+                className={'m-0 mt-4'}
+                onClick={() => history.push(PathUrls.ProfileAccounts)}
+              >
+                Continue to project
+              </Button>
+            </div>
           </Col>
           <Divider />
           <Col span={24} className='mb-5'>
@@ -151,4 +170,9 @@ const Step5 = () => {
   );
 };
 
-export default Step5;
+interface AfterSetupScreenProps {
+  showCloseButton: boolean;
+  handleCloseClick: () => void;
+}
+
+export default AfterSetupScreen;

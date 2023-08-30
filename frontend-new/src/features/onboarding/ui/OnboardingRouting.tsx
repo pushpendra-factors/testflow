@@ -7,11 +7,15 @@ import { useHistory, useLocation } from 'react-router-dom';
 import { OnboardingStepsConfig, SETUP_COMPLETED } from './types';
 
 const OnboardingRouting = () => {
-  const { isAgentInvited, email } = useAgentInfo();
+  const { isAgentInvited, email, isLoggedIn } = useAgentInfo();
   const { agent_details, agents } = useSelector((state) => state.agent);
-  const { projects, currentProjectSettings } = useSelector(
-    (state) => state.global
-  );
+  const {
+    projects,
+    currentProjectSettings,
+    currentProjectSettingsLoading,
+    active_project
+  } = useSelector((state) => state.global);
+
   const onboarding_steps: OnboardingStepsConfig =
     currentProjectSettings?.onboarding_steps;
   const history = useHistory();
@@ -20,26 +24,38 @@ const OnboardingRouting = () => {
   useEffect(() => {
     let routeFlag = false;
     let routePath = '';
-    if (!projects || projects?.length === 0) {
+
+    if (
+      !isLoggedIn ||
+      currentProjectSettingsLoading ||
+      currentProjectSettings?.project_id != active_project?.id ||
+      agents?.length === 0
+    ) {
+      return;
+    } else if (!projects || projects?.length === 0) {
       //if no projects are available
       routeFlag = true;
       routePath = PathUrls.Onboarding;
     } else if (currentProjectSettings && !onboarding_steps?.[SETUP_COMPLETED]) {
       routeFlag = true;
       routePath = PathUrls.Onboarding;
-    } else if (agents && agent_details) {
-      if (
-        isAgentInvited &&
-        !agent_details?.is_form_filled &&
-        !AdminLock(email)
-      ) {
-        //render invited user form
-        routeFlag = true;
-        routePath = `${PathUrls.Onboarding}?target=invited_user`;
-      } else if (!agent_details?.is_onboarding_flow_seen) {
-        // handle onboarding
-        routeFlag = true;
-        routePath = PathUrls.Onboarding;
+    } else if (agents && agents?.length > 0 && agent_details) {
+      if (isAgentInvited) {
+        if (
+          isAgentInvited &&
+          !agent_details?.is_form_filled &&
+          !AdminLock(email)
+        ) {
+          //render invited user form
+          routeFlag = true;
+          routePath = `${PathUrls.Onboarding}?target=invited_user`;
+        }
+      } else {
+        if (!agent_details?.is_onboarding_flow_seen) {
+          // handle onboarding
+          routeFlag = true;
+          routePath = PathUrls.Onboarding;
+        }
       }
     } else if (agent_details && !agent_details?.is_onboarding_flow_seen) {
       //   handle onboarding
@@ -58,7 +74,10 @@ const OnboardingRouting = () => {
     email,
     projects,
     onboarding_steps,
-    currentProjectSettings
+    currentProjectSettings,
+    isLoggedIn,
+    active_project?.id,
+    currentProjectSettingsLoading
   ]);
   return <></>;
 };

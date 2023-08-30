@@ -58,11 +58,16 @@ function EventGroupBlock({
           };
         }) || [];
       const groupPropIconName = getGroupIcon(groupLabel);
-      filterOptsObj[groupLabel] = {
-        iconName: groupPropIconName === 'NoImage' ? 'group' : groupPropIconName,
-        label: groupLabel,
-        values: groupValues
-      };
+      if (!filterOptsObj[groupLabel]) {
+        filterOptsObj[groupLabel] = {
+          iconName:
+            groupPropIconName === 'NoImage' ? 'group' : groupPropIconName,
+          label: groupLabel,
+          values: groupValues
+        };
+      } else {
+        filterOptsObj[groupLabel].values.push(...groupValues);
+      }
     } else {
       if (eventUserPropertiesV2) {
         convertAndAddPropertiesToGroupSelectOptions(

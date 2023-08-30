@@ -50,11 +50,11 @@ const topPageColumns: ColumnsType<TopPages> = [
   },
   {
     title: 'Avg. Scroll %',
-    dataIndex: 'avg_page_scroll_percent',
-    key: 'avg_page_scroll_percent',
+    dataIndex: 'avg_scroll_percent',
+    key: 'avg_scroll_percent',
     width: 112,
     align: 'right',
-    render: (percent: number) => `${percent.toFixed(2)}%`
+    render: (percent: number) => `${percent?.toFixed(2)}%`
   }
 ];
 
