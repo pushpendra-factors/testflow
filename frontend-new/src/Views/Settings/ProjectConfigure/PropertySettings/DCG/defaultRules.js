@@ -1,5 +1,16 @@
 const defaultRules =
 [
+   {
+      "channel":"Internal",
+      "conditions":[
+         {
+            "value":"*Channel is set as Internal when the Referrer Domain is same as the Landing Page Domain",
+            "property":"",
+            "condition":"",
+            "logical_operator":""
+         }
+      ]
+    },
     {
        "channel":"Direct",
        "conditions":[
