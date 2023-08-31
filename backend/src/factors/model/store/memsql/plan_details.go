@@ -342,20 +342,48 @@ func (store *MemSQL) UpdateAddonsForProject(projectID int64, addons model.OverWr
 	return "", nil
 }
 func (store *MemSQL) CreateAddonsForCustomPlanForProject(projectID int64) error {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	logCtx := log.WithFields(logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	// enable free plan features
+	freePlanDetails, errCode, errMsg, err := store.GetPlanDetailsFromPlanId(model.PLAN_ID_FREE)
+	if err != nil || errCode != http.StatusFound {
+		logCtx.WithError(err).Error(errMsg)
+		return err
+	}
+	var freeFeatureList model.FeatureList
+	if freePlanDetails.FeatureList != nil {
+		err = U.DecodePostgresJsonbToStructType(freePlanDetails.FeatureList, &freeFeatureList)
+		if err != nil && err.Error() != "Empty jsonb object" {
+			logCtx.WithError(err).Error("Failed to decode plan details.")
+			return err
+		}
+	}
+
+	// free plan features map
+	freePlanFeaturesMap := make(map[string]bool)
+
+	for _, feature := range freeFeatureList {
+		freePlanFeaturesMap[feature.Name] = true
+	}
+
 	var addOns model.OverWrite
 	featureNames := model.GetAllAvailableFeatures()
 	for _, featureName := range featureNames {
 		var feature model.FeatureDetails
 		feature.Name = featureName
-		feature.IsEnabledFeature = false // false by default in custom plan
+		if _, exists := freePlanFeaturesMap[featureName]; exists {
+			feature.IsEnabledFeature = true
+		}
 		if featureName == model.FEATURE_FACTORS_DEANONYMISATION {
 			// TODO : change this to const
 			feature.Limit = 100
-			feature.IsEnabledFeature = true
 		}
 		addOns = append(addOns, feature)
 	}
-	_, err := store.UpdateAddonsForProject(projectID, addOns)
+	_, err = store.UpdateAddonsForProject(projectID, addOns)
 	if err != nil {
 		log.WithError(err).Error("Failed to create custom plan addons")
 		return err
