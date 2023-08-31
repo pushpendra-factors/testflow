@@ -46,7 +46,7 @@ const topPageColumns: ColumnsType<TopPages> = [
     key: 'total_time',
     align: 'right',
     width: 96,
-    render: (time: number) => formatDuration(time)
+    render: (time: number) => formatDuration(time.toFixed())
   },
   {
     title: 'Avg. Scroll %',
@@ -78,7 +78,7 @@ const topUserColumns: ColumnsType<TopUsers> = [
     width: 120,
     dataIndex: 'active_time',
     key: 'active_time',
-    render: (time: number) => formatDuration(time)
+    render: (time: number) => formatDuration(time.toFixed())
   },
   {
     title: '# Pages',
@@ -155,12 +155,7 @@ const AccountOverview: React.FC<AccountOverviewProps> = ({
           </Text>
         </div>
         <div className='metric'>
-          <Text
-            type='title'
-            level={7}
-            extraClass='m-0'
-            color='grey'
-          >
+          <Text type='title' level={7} extraClass='m-0' color='grey'>
             #Users
           </Text>
           <Text type='title' level={4} extraClass='m-0' weight='bold'>

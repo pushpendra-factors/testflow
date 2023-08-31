@@ -55,17 +55,21 @@ function QueryBlock({
   }, [availableGroups, event]);
 
   const getGroupOpts = (eventOpts, availableGroups, activeGroup) => {
-    if (activeGroup === 'users') {
-      return [
-        ...eventOpts.filter(
-          (group) =>
-            !['Linkedin Company Engagements', 'G2 Engagements'].includes(
-              group?.label
-            )
-        )
-      ];
-    } else if (activeGroup === 'events' || activeGroup === '$domains') {
+    const userGroupExclusions = [
+      'Linkedin Company Engagements',
+      'G2 Engagements'
+    ];
+    const domainGroupExclusions = ['Hubspot Deals', 'Salesforce Opportunities'];
+    if (activeGroup === 'events') {
       return [...eventOpts];
+    } else if (activeGroup === 'users') {
+      return eventOpts.filter(
+        (group) => !userGroupExclusions.includes(group?.label)
+      );
+    } else if (activeGroup === '$domains') {
+      return eventOpts.filter(
+        (group) => !domainGroupExclusions.includes(group?.label)
+      );
     } else {
       const groupDisplayName = availableGroups?.find(
         (group) => group[1] === activeGroup

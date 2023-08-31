@@ -231,6 +231,99 @@ func AddHeadersByAttributionKeyV1(result *QueryResult, query *AttributionQueryV1
 	}
 }
 
+// MergeTwoDataRowsFromDBCachedResultsV1 adds values of two data rows
+func MergeTwoDataRowsFromDBCachedResultsV1(row1 []interface{}, row2 []interface{}, keyIndex int, attributionKey string, conversionFunTypes []string) []interface{} {
+
+	if attributionKey == AttributionKeyLandingPage ||
+		attributionKey == AttributionKeyChannel ||
+		attributionKey == AttributionKeySource ||
+		attributionKey == AttributionKeyAllPageView {
+
+		row1[keyIndex+1] = row1[keyIndex+1].(float64) + row2[keyIndex+1].(float64) // Conversion.
+		row1[keyIndex+2] = row1[keyIndex+2].(float64) + row2[keyIndex+2].(float64) // Conversion Influence - values same as Linear Touch
+
+		if len(row1) > keyIndex+4 && len(row2) > keyIndex+4 {
+			row1[keyIndex+3] = row1[keyIndex+3].(float64) + row2[keyIndex+3].(float64) // Compare conversion
+			row1[keyIndex+4] = row1[keyIndex+4].(float64) + row2[keyIndex+4].(float64) // Compare conversion-Influence - values same as Linear Touch
+
+			// Remaining linked funnel events & CPCs
+			for i := keyIndex + 5; i < len(row1)-1; i += 2 {
+				row1[i] = row1[i].(float64) + row2[i].(float64)
+				row1[i+1] = row1[i+1].(float64) + row2[i+1].(float64)
+			}
+		}
+		return row1
+
+	} else {
+
+		row1[keyIndex+1] = row1[keyIndex+1].(int64) + row2[keyIndex+1].(int64)     // Impressions.
+		row1[keyIndex+2] = row1[keyIndex+2].(int64) + row2[keyIndex+2].(int64)     // Clicks.
+		row1[keyIndex+3] = row1[keyIndex+3].(float64) + row2[keyIndex+3].(float64) // Spend.
+
+		for idx, _ := range conversionFunTypes {
+			nextConPosition := idx * 6
+			row1[keyIndex+8+nextConPosition] = row1[keyIndex+8+nextConPosition].(float64) + row2[keyIndex+8+nextConPosition].(float64)    // Conversion.
+			row1[keyIndex+9+nextConPosition] = row1[keyIndex+9+nextConPosition].(float64) + row2[keyIndex+9+nextConPosition].(float64)    // Conversion Influence - values same as Linear Touch
+			row1[keyIndex+11+nextConPosition] = row1[keyIndex+11+nextConPosition].(float64) + row2[keyIndex+11+nextConPosition].(float64) // Compare Conversion.
+			row1[keyIndex+12+nextConPosition] = row1[keyIndex+12+nextConPosition].(float64) + row2[keyIndex+12+nextConPosition].(float64) // Compare Conversion Influence - values same as Linear Touch
+		}
+		impressions := (row1[keyIndex+1]).(int64)
+		clicks := (row1[keyIndex+2]).(int64)
+		spend := row1[keyIndex+3].(float64)
+
+		if float64(impressions) > 0 {
+			row1[keyIndex+4], _ = U.FloatRoundOffWithPrecision(100*float64(clicks)/float64(impressions), U.DefaultPrecision) // CTR.
+			row1[keyIndex+6], _ = U.FloatRoundOffWithPrecision(1000*float64(spend)/float64(impressions), U.DefaultPrecision) // CPM.
+		} else {
+			row1[keyIndex+4] = float64(0) // CTR.
+			row1[keyIndex+6] = float64(0) // CPM.
+		}
+		if float64(clicks) > 0 {
+			row1[keyIndex+5], _ = U.FloatRoundOffWithPrecision(float64(spend)/float64(clicks), U.DefaultPrecision)                          // AvgCPC.
+			row1[keyIndex+7], _ = U.FloatRoundOffWithPrecision(100*float64(row1[keyIndex+8].(float64))/float64(clicks), U.DefaultPrecision) // ClickConversionRate.
+		} else {
+			row1[keyIndex+5] = float64(0) // AvgCPC.
+			row1[keyIndex+7] = float64(0) // ClickConversionRate.
+		}
+
+		for idx, funcType := range conversionFunTypes {
+			nextConPosition := idx * 6
+			// Normal conversion [8, 9,10] = [Conversion,Conversion Influence, CPC]
+			// Compare conversion [11, 12,13]  = [Conversion,Conversion Influence, CPC, Rate+nextConPosition]
+			if strings.ToLower(funcType) == "sum" {
+
+				if spend > 0 {
+					row1[keyIndex+10+nextConPosition], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+8+nextConPosition].(float64)/spend, U.DefaultPrecision) // Conversion - CPC.
+				} else {
+					row1[keyIndex+10+nextConPosition] = float64(0) // Conversion - CPC.
+				}
+
+				if spend > 0 {
+					row1[keyIndex+13+nextConPosition], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+11+nextConPosition].(float64)/spend, U.DefaultPrecision) // Compare Conversion - CPC.
+				} else {
+					row1[keyIndex+13+nextConPosition] = float64(0) // Compare Conversion - CPC.
+				}
+
+			} else {
+
+				if row1[keyIndex+8+nextConPosition].(float64) > 0 {
+					row1[keyIndex+10+nextConPosition], _ = U.FloatRoundOffWithPrecision(spend/row1[keyIndex+8+nextConPosition].(float64), U.DefaultPrecision) // Conversion - CPC.
+				} else {
+					row1[keyIndex+10+nextConPosition] = float64(0) // Conversion - CPC.
+				}
+
+				if row1[keyIndex+11+nextConPosition].(float64) > 0 {
+					row1[keyIndex+13+nextConPosition], _ = U.FloatRoundOffWithPrecision(spend/row1[keyIndex+11+nextConPosition].(float64), U.DefaultPrecision) // Compare Conversion - CPC.
+				} else {
+					row1[keyIndex+13+nextConPosition] = float64(0) // Compare Conversion - CPC.
+				}
+			}
+		}
+		return row1
+
+	}
+}
+
 // MergeTwoDataRowsV1 adds values of two data rows
 func MergeTwoDataRowsV1(row1 []interface{}, row2 []interface{}, keyIndex int, attributionKey string, conversionFunTypes []string) []interface{} {
 
@@ -808,12 +901,12 @@ func MergeTwoAttributionReportRows(rows1, rows2 [][]interface{}, keyIndex int, a
 			mergedRowKeyMap[key] = rowResult1
 			continue
 		}
-		mergedRowKeyMap[key] = MergeTwoDataRowsV1(rowResult1, rowResult2, keyIndex, attributionKey, conversionFunTypes)
+		mergedRowKeyMap[key] = MergeTwoDataRowsFromDBCachedResultsV1(rowResult1, rowResult2, keyIndex, attributionKey, conversionFunTypes)
 		logCtx.WithFields(log.Fields{
 			"rowResult1":           rowResult1,
 			"rowResult2":           rowResult2,
 			"mergedRowKeyMap[key]": mergedRowKeyMap[key],
-		}).Info("MergeTwoDataRowsV1 mergedRowKeyMap merging 2 rows")
+		}).Info("MergeTwoDataRowsFromDBCachedResultsV1 mergedRowKeyMap merging 2 rows")
 	}
 
 	// adding up all the missed row2 values while merging in previous block
