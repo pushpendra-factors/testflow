@@ -5,7 +5,7 @@ import React, {
   useRef,
   useMemo
 } from 'react';
-import { connect } from 'react-redux';
+import { connect, useDispatch } from 'react-redux';
 import {
   Row,
   Col,
