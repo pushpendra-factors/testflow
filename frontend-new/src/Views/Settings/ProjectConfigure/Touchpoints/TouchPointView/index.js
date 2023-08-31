@@ -251,9 +251,13 @@ const TouchpointView = ({
     if (propertiesObj) {
       for (const key in propertiesObj) {
         if (propertiesObj.hasOwnProperty(key)) {
-          propertiesFiltered[key] = propertiesObj[key].filter((item) =>
-            item?.[1]?.startsWith(startsWith)
-          );
+          const filteredProperties =
+            propertiesObj[key].filter((item) =>
+              item?.[1]?.startsWith(startsWith)
+            ) || [];
+          if (filteredProperties?.length > 0) {
+            propertiesFiltered[key] = filteredProperties;
+          }
         }
       }
     }
