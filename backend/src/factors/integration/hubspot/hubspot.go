@@ -1760,9 +1760,14 @@ func associateContactToCompany(projectID int64, contactUserID string, companyID 
 
 	documents, status := store.GetStore().GetHubspotDocumentByTypeAndActions(projectID, []string{companyID},
 		model.HubspotDocumentTypeCompany, []int{model.HubspotDocumentActionCreated})
-	if status != http.StatusFound {
+	if status != http.StatusFound && status != http.StatusNotFound {
 		logCtx.WithField("err_code", status).Error("Failed to get company record in associateContactToCompany.")
 		return http.StatusInternalServerError
+	}
+
+	if status == http.StatusNotFound {
+		logCtx.Warning("Company record not found in associateContactToCompany. Skip associating.")
+		return http.StatusOK
 	}
 
 	companyUserID := documents[0].GroupUserId

@@ -9,12 +9,9 @@ import { OnboardingStepsConfig, SETUP_COMPLETED } from './types';
 const OnboardingRouting = () => {
   const { isAgentInvited, email, isLoggedIn } = useAgentInfo();
   const { agent_details, agents } = useSelector((state) => state.agent);
-  const {
-    projects,
-    currentProjectSettings,
-    currentProjectSettingsLoading,
-    active_project
-  } = useSelector((state) => state.global);
+  const { projects, currentProjectSettings, active_project } = useSelector(
+    (state) => state.global
+  );
 
   const onboarding_steps: OnboardingStepsConfig =
     currentProjectSettings?.onboarding_steps;
@@ -27,9 +24,9 @@ const OnboardingRouting = () => {
 
     if (
       !isLoggedIn ||
-      currentProjectSettingsLoading ||
-      currentProjectSettings?.project_id != active_project?.id ||
-      agents?.length === 0
+      (currentProjectSettings?.project_id && active_project?.id
+        ? currentProjectSettings.project_id != active_project.id
+        : false)
     ) {
       return;
     } else if (!projects || projects?.length === 0) {
@@ -41,11 +38,7 @@ const OnboardingRouting = () => {
       routePath = PathUrls.Onboarding;
     } else if (agents && agents?.length > 0 && agent_details) {
       if (isAgentInvited) {
-        if (
-          isAgentInvited &&
-          !agent_details?.is_form_filled &&
-          !AdminLock(email)
-        ) {
+        if (!agent_details?.is_form_filled && !AdminLock(email)) {
           //render invited user form
           routeFlag = true;
           routePath = `${PathUrls.Onboarding}?target=invited_user`;
@@ -57,10 +50,6 @@ const OnboardingRouting = () => {
           routePath = PathUrls.Onboarding;
         }
       }
-    } else if (agent_details && !agent_details?.is_onboarding_flow_seen) {
-      //   handle onboarding
-      routeFlag = true;
-      routePath = PathUrls.Onboarding;
     }
 
     if (location.pathname !== PathUrls.Onboarding && routeFlag && routePath) {
@@ -76,8 +65,7 @@ const OnboardingRouting = () => {
     onboarding_steps,
     currentProjectSettings,
     isLoggedIn,
-    active_project?.id,
-    currentProjectSettingsLoading
+    active_project?.id
   ]);
   return <></>;
 };

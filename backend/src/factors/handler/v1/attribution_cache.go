@@ -80,10 +80,21 @@ func RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId int64, re
 			keyIndex = model.GetLastKeyValueIndexLandingPage(resultForRange.Headers)
 		}
 
+		logCtx.WithFields(log.Fields{
+			"mergedResult":   mergedResult,
+			"resultForRange": resultForRange,
+		}).Info("before MergeTwoAttributionReportsIntoOne")
+
 		// Now we have the result either from cache or computed
 		mergedResult = model.MergeTwoAttributionReportsIntoOne(mergedResult, resultForRange,
 			keyIndex, requestPayload.Query.AttributionKey,
 			kpiAggFunctionType, *logCtx)
+
+		logCtx.WithFields(log.Fields{
+			"mergedResult":   mergedResult,
+			"resultForRange": resultForRange,
+		}).Info("after MergeTwoAttributionReportsIntoOne")
+
 		if mergedResult == nil {
 			logCtx.Info("Failed to process query from DB - attribution v1 as mergedResult is nil")
 			return true, mergedResult, computedMeta

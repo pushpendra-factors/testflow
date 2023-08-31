@@ -1513,9 +1513,9 @@ export const getAttributionStateFromRequestQuery = (
   kpiConfig
 ) => {
   let attrQueries = [];
-  if (requestQuery.analyze_type && requestQuery.analyze_type !== 'users') {
+  if (requestQuery.kpi_queries && requestQuery.kpi_queries.length) {
     const kpiQuery = getKPIStateFromRequestQuery(
-      requestQuery.kpi_query_group,
+      requestQuery.kpi_queries[0]?.kpi_query_group,
       kpiConfig
     );
     attrQueries = kpiQuery.events;
