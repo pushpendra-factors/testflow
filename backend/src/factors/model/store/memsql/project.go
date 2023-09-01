@@ -573,6 +573,37 @@ func (store *MemSQL) GetProjectIDsWithSixSignalEnabled() []int64 {
 	return projectIds
 }
 
+/*
+GetProjectsToRunForVisitorIdentificationReport
+
+1. An external function GetProjectsFromListWithAllProjectSupport() is called which returns true if projectIdFlag is '*'.
+
+2. if allIdentificationEnabledProjects is true, projects id is fetched for the projects for which FEATURE_SIX_SIGNAL_REPORT is enabled.
+
+3. else it returns the list of projectIds from the projectIDsMap returned from GetProjectsFromListWithAllProjectSupport()
+*/
+func (store *MemSQL) GetProjectsToRunForVisitorIdentificationReport(projectIdFlag, excludeProjectIDs string) []int64 {
+
+	var projectIDsToRun []int64
+	allIdentificationEnabledProjects, projectIDsMap, excludeProjectIDsMap := C.GetProjectsFromListWithAllProjectSupport(
+		projectIdFlag, excludeProjectIDs)
+	projectIDsToRun = C.ProjectIdsFromProjectIdBoolMap(projectIDsMap)
+
+	if allIdentificationEnabledProjects {
+		projectIDs, err := store.GetAllProjectsWithFeatureEnabled(model.FEATURE_SIX_SIGNAL_REPORT, false)
+		if err != nil {
+			return projectIDsToRun
+		}
+
+		for _, projectID := range projectIDs {
+			if _, found := excludeProjectIDsMap[projectID]; !found {
+				projectIDsToRun = append(projectIDsToRun, projectID)
+			}
+		}
+	}
+	return projectIDsToRun
+}
+
 // GetNextSessionStartTimestampForProject - Returns start timestamp for
 // pulling events, for add session job, by project.
 func (store *MemSQL) GetNextSessionStartTimestampForProject(projectID int64) (int64, int) {
