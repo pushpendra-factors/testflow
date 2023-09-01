@@ -3,8 +3,9 @@ import cx from 'classnames';
 import { Tooltip } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
 import styles from './index.module.scss';
+import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
 
-const SidebarMenuItem = ({ text, isActive, onClick }) => {
+const SidebarMenuItem = ({ text, isActive, onClick, icon, iconColor }) => {
   return (
     <Tooltip placement='right' mouseEnterDelay={2} title={text}>
       <div
@@ -18,14 +19,19 @@ const SidebarMenuItem = ({ text, isActive, onClick }) => {
           styles['sidebar-menu-item']
         )}
       >
-        <Text
-          type='title'
-          level={7}
-          extraClass='mb-0 text-with-ellipsis'
-          weight='medium'
-        >
-          {text}
-        </Text>
+        <div className='flex col-gap-1 items-center w-full'>
+          <ControlledComponent controller={icon != null}>
+            <SVG name={icon} size={20} color={iconColor} />
+          </ControlledComponent>
+          <Text
+            type='title'
+            level={7}
+            extraClass='mb-0 text-with-ellipsis'
+            weight='medium'
+          >
+            {text}
+          </Text>
+        </div>
         {isActive && <SVG size={16} color='#595959' name='arrowright' />}
       </div>
     </Tooltip>
