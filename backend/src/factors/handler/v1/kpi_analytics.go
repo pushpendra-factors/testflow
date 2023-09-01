@@ -191,9 +191,19 @@ func GetKPIFilterValuesHandler(c *gin.Context) (interface{}, int, string, string
 func getPropertyValueLabel(projectID int64, propertyName string, filterValues interface{}) map[string]string {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "property_name": propertyName, "filter_values": filterValues})
-	propertyValues, ok := filterValues.([]string)
-	if !ok {
-		logCtx.Error("Failed to convert interface to []string in KPI getPropertyValueLabel.")
+
+	propertyValues := []string{}
+	switch values := filterValues.(type) {
+	case []string:
+		propertyValues = values
+
+	case []interface{}:
+		for i := range values {
+			propertyValues = append(propertyValues, U.GetPropertyValueAsString(values[i]))
+		}
+
+	default:
+		logCtx.Error("Failed to convert interface on KPI getPropertyValueLabel.")
 		return nil
 	}
 
