@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback,useEffect, useMemo, useState } from 'react';
 import {
   Button,
   Avatar,
@@ -42,7 +42,7 @@ import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
 import { useHistory, useLocation } from 'react-router-dom';
 import { getEventPropertiesV2 } from 'Reducers/coreQuery/middleware';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
-
+import useKey from 'hooks/useKey';
 function ContactDetails({
   userDetails,
   activeProject,
@@ -290,9 +290,7 @@ function ContactDetails({
           type='text'
           icon={<SVG name='brand' size={36} />}
           size='large'
-          onClick={() => {
-            history.goBack();
-          }}
+          onClick={handleOptionBackClick}
         />
         <Text type='title' level={4} weight='bold' extraClass='m-0'>
           Contact Details
@@ -301,9 +299,7 @@ function ContactDetails({
       <Button
         size='large'
         type='text'
-        onClick={() => {
-          history.goBack();
-        }}
+        onClick={handleOptionBackClick}
         icon={<SVG name='times' />}
       />
     </div>
@@ -328,6 +324,10 @@ function ContactDetails({
     }
     setPropSelectOpen(false);
   };
+
+  const handleOptionBackClick = useCallback(() =>{
+    history.goBack();
+  },[]);
 
   const onDelete = (option) => {
     const timelinesConfig = { ...tlConfig };
@@ -552,7 +552,7 @@ function ContactDetails({
       </div>
     );
   };
-
+  useKey(['Escape'], handleOptionBackClick);
   return (
     <div>
       {renderModalHeader()}
