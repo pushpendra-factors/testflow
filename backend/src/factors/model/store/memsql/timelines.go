@@ -82,6 +82,12 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		return returnData, http.StatusFound, ""
 	}
 
+	for index, p := range payload.Query.GlobalUserProperties {
+		if v, exist := model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]; exist {
+			payload.Query.GlobalUserProperties[index] = v
+		}
+	}
+
 	// transforming datetime filters
 	addSearchFiltersToFilters := true
 	groupedFilters := GroupFiltersByPrefix(payload.Query.GlobalUserProperties)
@@ -783,7 +789,9 @@ func hasAllUserProperties(filters []model.QueryProperty, profileType string) boo
 
 	if profileType == model.PROFILE_TYPE_ACCOUNT {
 		for _, filter := range filters {
+
 			if filter.Entity != model.PropertyEntityUserGroup {
+
 				isAllUserProperties = false
 				break
 			}
@@ -2273,6 +2281,7 @@ func GroupFiltersByPrefix(filters []model.QueryProperty) map[string][]model.Quer
 				groupName = prefix
 				break
 			}
+
 		}
 
 		if groupName == "" {
