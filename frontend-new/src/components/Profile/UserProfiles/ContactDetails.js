@@ -42,8 +42,6 @@ import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
 import { useHistory, useLocation } from 'react-router-dom';
 import { getEventPropertiesV2 } from 'Reducers/coreQuery/middleware';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
-import getGroupIcon from 'Utils/getGroupIcon';
-import startCase from 'lodash/startCase';
 
 function ContactDetails({
   userDetails,

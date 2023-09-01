@@ -112,7 +112,7 @@ func (store *MemSQL) GetDisplayablePlanDetails(ppMap model.ProjectPlanMapping, p
 		}
 	}
 	var sixSignalInfo model.SixSignalInfo
-	isDeanonymisationEnabled, err := store.GetFeatureStatusForProjectV2(ppMap.ProjectID, FEATURE_FACTORS_DEANONYMISATION)
+	isDeanonymisationEnabled, err := store.GetFeatureStatusForProjectV2(ppMap.ProjectID, FEATURE_FACTORS_DEANONYMISATION, false)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get status for six signal")
 		return nil, http.StatusInternalServerError, "Failed to get status for six signal", err

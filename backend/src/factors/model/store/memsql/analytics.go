@@ -578,7 +578,14 @@ func getNoneHandledGroupBySelect(projectID int64, groupProp model.QueryGroupByPr
 	entityField := getPropertyEntityField(projectID, groupProp)
 	var groupSelect string
 	groupSelectParams := make([]interface{}, 0)
-	if groupProp.Type != U.PropertyTypeDateTime {
+
+	if _, isColumnProperties := model.PROPERTY_TO_TABLE_COLUMN_MAP[groupProp.Property]; isColumnProperties {
+
+		groupProp.Property = model.PROPERTY_TO_TABLE_COLUMN_MAP[groupProp.Property]
+		groupSelect = fmt.Sprintf("CASE WHEN %s IS NULL THEN '%s' WHEN %s = '' THEN '%s' WHEN %s = '0' THEN '%s' ELSE %s END AS %s",
+			groupProp.Property, model.PropertyValueNone, groupProp.Property, model.PropertyValueNone, groupProp.Property, model.PropertyValueNone, groupProp.Property, groupKey)
+
+	} else if groupProp.Type != U.PropertyTypeDateTime {
 		groupSelect = fmt.Sprintf("CASE WHEN JSON_EXTRACT_STRING(%s, ?) IS NULL THEN '%s' WHEN JSON_EXTRACT_STRING(%s, ?) = '' THEN '%s' ELSE JSON_EXTRACT_STRING(%s, ?) END AS %s",
 			entityField, model.PropertyValueNone, entityField, model.PropertyValueNone, entityField, groupKey)
 		groupSelectParams = []interface{}{groupProp.Property, groupProp.Property, groupProp.Property}
@@ -593,43 +600,34 @@ func getNoneHandledGroupBySelect(projectID int64, groupProp model.QueryGroupByPr
 }
 
 /*
-CASE
+SUBSTRING(
 
-	WHEN FIRST_VALUE(
-	    JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')
-	) OVER (
-	    PARTITION BY step_0.coal_group_user_id
-	    ORDER BY
-	        CASE
-	            when JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') is null then 1000000000000
-	            when JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') = '' then 1000000000000
-	            ELSE group_users.join_timestamp
-	        END
-	) is NULL THEN '$none'
-	WHEN FIRST_VALUE(
-	    JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')
-	) OVER (
-	    PARTITION BY step_0.coal_group_user_id
-	    ORDER BY
-	        CASE
-	            when JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') is null then 1000000000000
-	            when JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') = '' then 1000000000000
-	            ELSE group_users.join_timestamp
-	        END
-	) = '' THEN '$none'
-	ELSE FIRST_VALUE(
-	    JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')
-	) OVER (
-	    PARTITION BY step_0.coal_group_user_id
-	    ORDER BY
-	        CASE
-	            when JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') is null then 1000000000000
-	            when JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') = '' then 1000000000000
-	            ELSE group_users.join_timestamp
-	        END
-	)
-
-END AS _group_key_0
+	    max(
+	        case
+	            when JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') is null then '$none'
+	            when JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') = '' then '$none'
+	            else CONCAT(
+	                join_timestamp,
+	                ':',
+	                JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')
+	            )
+	        end
+	    ),
+	    LOCATE(
+	        ':',
+	        max(
+	            case
+	                when JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') is null then '$none'
+	                when JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') = '' then '$none'
+	                else CONCAT(
+	                    join_timestamp,
+	                    ':',
+	                    JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')
+	                )
+	            end
+	        )
+	    ) + 1
+	) AS _group_key_1
 */
 func getNoneHandledGroupBySelectForDomains(projectID int64, groupProp model.QueryGroupByProperty, groupKey string, timezoneString string, refStep string) (string, []interface{}) {
 	logFields := log.Fields{
@@ -642,25 +640,26 @@ func getNoneHandledGroupBySelectForDomains(projectID int64, groupProp model.Quer
 
 	entityField := getPropertyEntityField(projectID, groupProp)
 	var groupSelect string
-	groupSelectParams := make([]interface{}, 0)
-	firstValueSelect := fmt.Sprintf("FIRST_VALUE(JSON_EXTRACT_STRING(%s, ?)) OVER (PARTITION BY %s.coal_group_user_id ORDER BY CASE WHEN "+
-		"JSON_EXTRACT_STRING(%s, ?) IS NULL THEN 1000000000000 WHEN JSON_EXTRACT_STRING(%s, ?) = '' THEN 1000000000000 ELSE "+
-		"group_users.join_timestamp END)", entityField, refStep, entityField, entityField)
-	firstValueSelectParams := []interface{}{groupProp.Property, groupProp.Property, groupProp.Property}
 
 	if groupProp.Type != U.PropertyTypeDateTime {
-		groupSelect = fmt.Sprintf("CASE WHEN %s IS NULL THEN '%s' WHEN %s = '' THEN '%s' ELSE %s END AS %s",
-			firstValueSelect, model.PropertyValueNone, firstValueSelect, model.PropertyValueNone, firstValueSelect, groupKey)
-		groupSelectParams = append(firstValueSelectParams, firstValueSelectParams...)
-		groupSelectParams = append(groupSelectParams, firstValueSelectParams...)
-	} else {
-		timestampStr := getSelectTimestampByTypeAndPropertyName(groupProp.Granularity, firstValueSelect, timezoneString)
-		groupSelect = fmt.Sprintf("CASE WHEN %s IS NULL THEN '%s' WHEN %s = '' THEN '%s' ELSE %s END AS %s",
-			firstValueSelect, model.PropertyValueNone, firstValueSelect, model.PropertyValueNone, timestampStr, groupKey)
-		groupSelectParams = append(firstValueSelectParams, firstValueSelectParams...)
-		groupSelectParams = append(groupSelectParams, firstValueSelectParams...)
+		groupSelect = fmt.Sprintf("SUBSTRING(max(case when JSON_EXTRACT_STRING(%s, ?) is null then '%s' when JSON_EXTRACT_STRING(%s, ?) = '' "+
+			"then '%s' else CONCAT( join_timestamp, ':', JSON_EXTRACT_STRING(%s, ?) ) end), LOCATE(':', max( case when "+
+			"JSON_EXTRACT_STRING(%s, ?) is null then '%s' when JSON_EXTRACT_STRING(%s, ?) = '' then '%s' "+
+			"else CONCAT( join_timestamp, ':', JSON_EXTRACT_STRING(%s, ?) ) end ))+1) AS %s",
+			entityField, model.PropertyValueNone, entityField, model.PropertyValueNone, entityField, entityField, model.PropertyValueNone, entityField,
+			model.PropertyValueNone, entityField, groupKey)
+		return groupSelect, []interface{}{groupProp.Property, groupProp.Property, groupProp.Property, groupProp.Property, groupProp.Property, groupProp.Property}
 	}
-	return groupSelect, groupSelectParams
+
+	propertyName := "JSON_EXTRACT_STRING(" + entityField + ", ?)"
+	timestampStr := getSelectTimestampByTypeAndPropertyName(groupProp.Granularity, propertyName, timezoneString)
+	groupSelect = fmt.Sprintf("SUBSTRING(max(case when JSON_EXTRACT_STRING(%s, ?) is null then '%s' when JSON_EXTRACT_STRING(%s, ?) = '' "+
+		"then '%s' else CONCAT( join_timestamp, ':', %s ) end), LOCATE(':', max( case when "+
+		"JSON_EXTRACT_STRING(%s, ?) is null then '%s' when JSON_EXTRACT_STRING(%s, ?) = '' then '%s' "+
+		"else CONCAT( join_timestamp, ':', %s ) end ))+1) AS %s",
+		entityField, model.PropertyValueNone, entityField, model.PropertyValueNone, timestampStr, entityField, model.PropertyValueNone, entityField,
+		model.PropertyValueNone, timestampStr, groupKey)
+	return groupSelect, []interface{}{groupProp.Property, groupProp.Property, groupProp.Property, groupProp.Property, groupProp.Property, groupProp.Property}
 }
 
 func getNoneHandledGroupBySelectWithFirst(projectID int64, groupProp model.QueryGroupByProperty, groupKey string, timezoneString string) (string, []interface{}) {
@@ -674,7 +673,14 @@ func getNoneHandledGroupBySelectWithFirst(projectID int64, groupProp model.Query
 	entityField := getPropertyEntityField(projectID, groupProp)
 	var groupSelect string
 	groupSelectParams := make([]interface{}, 0)
-	if groupProp.Type != U.PropertyTypeDateTime {
+
+	if _, isColumnProperties := model.PROPERTY_TO_TABLE_COLUMN_MAP[groupProp.Property]; isColumnProperties {
+
+		groupProp.Property = model.PROPERTY_TO_TABLE_COLUMN_MAP[groupProp.Property]
+		groupSelect = fmt.Sprintf("CASE WHEN %s IS NULL THEN '%s' WHEN %s = '' THEN '%s' WHEN %s = '0' THEN '%s' ELSE %s END AS %s",
+			groupProp.Property, model.PropertyValueNone, groupProp.Property, model.PropertyValueNone, groupProp.Property, model.PropertyValueNone, groupProp.Property, groupKey)
+
+	} else if groupProp.Type != U.PropertyTypeDateTime {
 		groupSelect = fmt.Sprintf("CASE WHEN JSON_EXTRACT_STRING(FIRST(%s, FROM_UNIXTIME(events.timestamp)), ?) IS NULL THEN '%s' WHEN JSON_EXTRACT_STRING(FIRST(%s, FROM_UNIXTIME(events.timestamp)), ?) = '' THEN '%s' ELSE JSON_EXTRACT_STRING(FIRST(%s, FROM_UNIXTIME(events.timestamp)), ?) END AS %s",
 			entityField, model.PropertyValueNone, entityField, model.PropertyValueNone, entityField, groupKey)
 		groupSelectParams = []interface{}{groupProp.Property, groupProp.Property, groupProp.Property}
@@ -784,14 +790,17 @@ func buildGroupKeysWithFirst(projectID int64, groupProps []model.QueryGroupByPro
 		if userGroupProperties {
 			v.Entity = model.PropertyEntityGroup
 		}
+
 		noneHandledSelect, noneHandledSelectParams := getNoneHandledGroupBySelectWithFirst(projectID, v, gKey, timezoneString)
 		groupSelect = groupSelect + noneHandledSelect
 		groupKeys = groupKeys + gKey
+
 		if i < len(groupProps)-1 {
 			groupSelect = groupSelect + ", "
 			groupKeys = groupKeys + ", "
 		}
 		groupSelectParams = append(groupSelectParams, noneHandledSelectParams...)
+
 	}
 
 	return groupSelect, groupSelectParams, groupKeys

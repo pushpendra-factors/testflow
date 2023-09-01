@@ -95,7 +95,7 @@ func getCRMPropertyKeyByType(source, objectType, key string) string {
 }
 
 /*
- Salesforce supported document types and their alias
+Salesforce supported document types and their alias
 */
 const (
 	SalesforceDocumentTypeContact                = 1
@@ -214,6 +214,17 @@ func GetSalesforceEventNameByDocumentAndAction(doc *SalesforceDocument, action S
 	typAlias := GetSalesforceAliasByDocType(doc.Type)
 
 	return GetSalesforceEventNameByAction(typAlias, action)
+}
+
+func GetSalesforceCustomEventNameByType(typAlias string) string {
+	if typAlias == "" {
+		return ""
+	}
+
+	if typAlias == SalesforceDocumentTypeNameCampaignMember {
+		return "$sf_campaign_member_responded_to_campaign"
+	}
+	return ""
 }
 
 func GetSalesforceEventNameByAction(typAlias string, action SalesforceAction) string {

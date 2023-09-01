@@ -137,7 +137,7 @@ func main() {
 	for _, projectID := range projectIDs {
 		available := true
 		if *enableFeatureGatesV2 {
-			available, err = store.GetStore().GetFeatureStatusForProjectV2(projectID, model.FEATURE_EVENT_BASED_ALERTS)
+			available, err = store.GetStore().GetFeatureStatusForProjectV2(projectID, model.FEATURE_EVENT_BASED_ALERTS,false)
 			if err != nil {
 				log.WithError(err).Error("Failed to get feature status in event trigger alerts  job for project ID ", projectID)
 				finalStatus[fmt.Sprintf("Failure-Feature-Status %v", projectID)] = true

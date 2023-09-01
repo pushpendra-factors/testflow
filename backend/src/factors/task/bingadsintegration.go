@@ -19,7 +19,7 @@ func BingAdsIntegration(projectId int64, configs map[string]interface{}) (map[st
 	available := true
 	var err error
 	if C.IsEnabledFeatureGatesV2() {
-		available, err = store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_BING_ADS)
+		available, err = store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_BING_ADS,false)
 		if err != nil {
 			log.WithError(err).Error("Failed to get feature status in bing ads integration job for project ID ", projectId)
 			resultStatus[fmt.Sprintf("Failure-Feature-Status %v", projectId)] = true

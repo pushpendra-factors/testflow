@@ -10,6 +10,7 @@ import (
 	D "factors/delta"
 	"factors/filestore"
 	"factors/merge"
+	"factors/model/model"
 	"factors/model/store"
 	"factors/pattern"
 	"factors/pull"
@@ -173,7 +174,8 @@ func mainRunDeltaInsights() {
 
 	projectIdsToRun := make(map[int64]bool, 0)
 	if *projectsFromDB {
-		wi_projects, _ := store.GetStore().GetAllWeeklyInsightsEnabledProjects()
+		//wi_projects, _ := store.GetStore().GetAllWeeklyInsightsEnabledProjects()
+		wi_projects, _ := store.GetStore().GetAllProjectsWithFeatureEnabled(model.FEATURE_WEEKLY_INSIGHTS, false)
 		for _, id := range wi_projects {
 			projectIdsToRun[id] = true
 		}

@@ -135,7 +135,7 @@ func G2Enrichment(g2ProjectSettings []model.G2ProjectSettings) (map[string][]SP.
 		available := true
 		var err error
 		if C.IsEnabledFeatureGatesV2() {
-			available, err = store.GetStore().GetFeatureStatusForProjectV2(setting.ProjectID, model.FEATURE_G2)
+			available, err = store.GetStore().GetFeatureStatusForProjectV2(setting.ProjectID, model.FEATURE_G2, false)
 			if err != nil {
 				log.WithError(err).Error("Failed to get feature status in g2 etl job for project ID ", setting.ProjectID)
 				syncStatusFailures = append(syncStatusFailures, SP.Status{
