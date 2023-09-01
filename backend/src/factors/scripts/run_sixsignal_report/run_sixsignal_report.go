@@ -30,6 +30,7 @@ func main() {
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	memSQLCertificate := flag.String("memsql_cert", "", "")
+	projectIds := flag.String("project_ids", "", "")
 	appDomain := flag.String("app_domain", "factors-dev.com:3000", "")
 	awsRegion := flag.String("aws_region", "us-east-1", "")
 	awsAccessKeyId := flag.String("aws_key", "dummy", "")
@@ -80,6 +81,7 @@ func main() {
 		RedisHostPersistent: *redisHostPersistent,
 		RedisPortPersistent: *redisPortPersistent,
 	}
+
 	defaultHealthcheckPingID := C.HealthCheckSixSignalReportPingID
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)
 	C.InitConf(config)
@@ -94,7 +96,8 @@ func main() {
 	db := C.GetServices().Db
 	defer db.Close()
 
-	projectIdsArray := store.GetStore().GetProjectIDsWithSixSignalEnabled()
+	projectIdsArray := store.GetStore().GetProjectsToRunForVisitorIdentificationReport(*projectIds, "")
+	log.Info("projectIdArray", projectIdsArray)
 
 	//Initialized configs
 	configs := make(map[string]interface{})
