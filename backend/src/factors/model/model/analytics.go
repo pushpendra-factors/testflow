@@ -40,6 +40,7 @@ const (
 	PresentationArea          = "pa"
 	PresentationHorizontalBar = "ph"
 	HorizontalBar             = "hb"
+	FunnelChart               = "fc"
 )
 
 const (
