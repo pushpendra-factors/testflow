@@ -8,12 +8,7 @@ import {
   TYPE_UNIQUE_USERS
 } from 'Utils/constants';
 import { getEventsWithProperties } from '../../Views/CoreQuery/utils';
-import { generateRandomKey } from 'Utils/global';
-import {
-  operatorMap,
-  reverseDateOperatorMap,
-  reverseOperatorMap
-} from 'Utils/operatorMapping';
+import { operatorMap } from 'Utils/operatorMapping';
 
 export const granularityOptions = [
   'Timestamp',
@@ -88,6 +83,26 @@ export const GroupDisplayNames = {
   $g2: 'G2 Engagements'
 };
 
+export const getFiltersRequestPayload = ({
+  payload,
+  queriesList,
+  eventProp,
+  table_props
+}) => {
+  const queryOptions = {
+    group_analysis: payload.source,
+    source: payload.source,
+    caller: 'account_profiles',
+    table_props,
+    globalFilters: payload.filters,
+    date_range: {}
+  };
+
+  return {
+    query: getSegmentQuery(queriesList, queryOptions, eventProp)
+  };
+};
+
 export const formatReqPayload = (payload, segment) => {
   const req = {
     query: {
@@ -106,6 +121,37 @@ export const formatReqPayload = (payload, segment) => {
   };
 
   return req;
+};
+
+export const getSegmentQuery = (queries, queryOptions, userType) => {
+  const query = {};
+  query.grpa = queryOptions?.group_analysis;
+  query.source = queryOptions?.source;
+  query.caller = queryOptions?.caller;
+  query.table_props = queryOptions?.table_props;
+  query.cl = QUERY_TYPE_EVENT;
+  query.ty = TYPE_UNIQUE_USERS;
+
+  const period = {};
+  if (queryOptions.date_range.from && queryOptions.date_range.to) {
+    period.from = MomentTz(queryOptions.date_range.from).utc().unix();
+    period.to = MomentTz(queryOptions.date_range.to).utc().unix();
+  } else {
+    period.from = MomentTz().startOf('week').utc().unix();
+    period.to =
+      MomentTz().format('dddd') !== 'Sunday'
+        ? MomentTz().subtract(1, 'day').utc().unix()
+        : MomentTz().utc().unix();
+  }
+  query.fr = period.from;
+  query.to = period.to;
+
+  query.ewp = getEventsWithProperties(queries);
+  query.gup = formatFiltersForPayload(queryOptions?.globalFilters);
+
+  query.ec = EVENT_QUERY_USER_TYPE[userType];
+  query.tz = localStorage.getItem('project_timeZone') || 'Asia/Kolkata';
+  return query;
 };
 
 const getEntityName = (source, entity) => {
@@ -408,37 +454,6 @@ export const DefaultDateRangeForSegments = {
       : PREDEFINED_DATES.THIS_MONTH
 };
 
-export const getSegmentQuery = (queries, queryOptions, userType) => {
-  const query = {};
-  query.grpa = queryOptions?.group_analysis;
-  query.source = queryOptions?.source;
-  query.caller = queryOptions?.caller;
-  query.table_props = queryOptions?.table_props;
-  query.cl = QUERY_TYPE_EVENT;
-  query.ty = TYPE_UNIQUE_USERS;
-
-  const period = {};
-  if (queryOptions.date_range.from && queryOptions.date_range.to) {
-    period.from = MomentTz(queryOptions.date_range.from).utc().unix();
-    period.to = MomentTz(queryOptions.date_range.to).utc().unix();
-  } else {
-    period.from = MomentTz().startOf('week').utc().unix();
-    period.to =
-      MomentTz().format('dddd') !== 'Sunday'
-        ? MomentTz().subtract(1, 'day').utc().unix()
-        : MomentTz().utc().unix();
-  }
-  query.fr = period.from;
-  query.to = period.to;
-
-  query.ewp = getEventsWithProperties(queries);
-  query.gup = formatFiltersForPayload(queryOptions?.globalFilters);
-
-  query.ec = EVENT_QUERY_USER_TYPE[userType];
-  query.tz = localStorage.getItem('project_timeZone') || 'Asia/Kolkata';
-  return query;
-};
-
 export const timestampToString = {
   Timestamp: (item) => MomentTz(item * 1000).format('DD MMM YYYY, hh:mm:ss A'),
   Hourly: (item) =>
@@ -538,7 +553,12 @@ export const transformWeightConfigForQuery = (config) => {
         : rule.value;
 
       const filter = {
-        props: [rule.property_type, rule.key, rule.value_type, rule.property_type],
+        props: [
+          rule.property_type,
+          rule.key,
+          rule.value_type,
+          rule.property_type
+        ],
         operator: rule.operator,
         values: ruleValues,
         ref: 1
