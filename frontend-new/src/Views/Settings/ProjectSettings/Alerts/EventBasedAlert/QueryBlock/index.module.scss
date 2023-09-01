@@ -4,8 +4,7 @@
   }
 
   &__event {
-    position: relative;
-    margin-top: 12px;
+    position: relative; 
     &:hover {
       .query_block__additional_actions {
         visibility: visible;

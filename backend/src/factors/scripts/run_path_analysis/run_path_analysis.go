@@ -12,6 +12,7 @@ import (
 	"reflect"
 
 	D "factors/delta"
+	M "factors/model/model"
 
 	"factors/filestore"
 	serviceDisk "factors/services/disk"
@@ -135,7 +136,10 @@ func main() {
 	defer db.Close()
 	//Initialized configs
 
-	projectIDs, _ := store.GetStore().GetAllProjectIDs()
+	projectIDs, err := store.GetStore().GetAllProjectsWithFeatureEnabled(M.FEATURE_PATH_ANALYSIS, false)
+	if err != nil {
+		log.WithError(err).Fatal("failed to get project ids using feature gates")
+	}
 
 	// Get All the Projects for which the path analysis has pending items
 	configs := make(map[string]interface{})

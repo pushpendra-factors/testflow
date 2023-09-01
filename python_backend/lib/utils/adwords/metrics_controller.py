@@ -3,7 +3,7 @@ import logging as log
 import scripts
 from lib.utils.healthchecks import HealthChecksUtil
 from lib.utils.json import JsonUtil
-from scripts.adwords import STATUS_SKIPPED, STATUS_FAILED, FAILURE_MESSAGE, SUCCESS_MESSAGE
+from scripts.adwords import STATUS_SKIPPED, STATUS_FAILED, FAILURE_MESSAGE, SUCCESS_MESSAGE, EMPTY_RESPONSE_GSC
 from lib.utils.adwords.job_task_stats import JobTaskStats
 
 # NOTE: SIGKILL cant capture this.
@@ -18,6 +18,7 @@ class MetricsController:
         "task_stats": None,
         "failures": {},
         "token_failures": {},
+        "warnings": {},
         "success": {}
     }
     ADWORDS_SYNC_PING_ID = "188cbf7c-0ea1-414b-bf5c-eee47c12a0c8"
@@ -93,18 +94,31 @@ class MetricsController:
             cls.etl_stats["success"][project_id].add(customer_acc_id)
 
     @classmethod
-    def update_gsc_job_stats(cls, project_id, url, status, message=""):
+    def update_gsc_job_stats(cls, project_id, url, doc_type, status, message=""):
         if status == STATUS_FAILED:
             cls.etl_stats["status"] = FAILURE_MESSAGE
 
         if status is None:
             cls.etl_stats["failures"].append("Sync status is missing on response")
         elif status == STATUS_FAILED:
-            if "access_token" in message.lower() or "permission" in message.lower():
-                cls.etl_stats["token_failures"].setdefault(message, set())
-                cls.etl_stats["token_failures"][message].add(project_id)
+            if ("invalid_grant" in message.lower() or "permission".lower() in message.lower() 
+                or "invalid params" in message.lower() or "access_token" in message.lower() 
+                or "refresh token" in message.lower() or "refresh_token" in message.lower()):
+                
+                cls.etl_stats["token_failures"].setdefault(message, {})
+                cls.etl_stats["token_failures"][message].setdefault(project_id, set())
+                cls.etl_stats["token_failures"][message][project_id].add(url)
+            
+            elif EMPTY_RESPONSE_GSC in message:
+                cls.etl_stats["warnings"].setdefault(message, {})
+                cls.etl_stats["warnings"][message].setdefault(project_id, {})
+                cls.etl_stats["warnings"][message][project_id].setdefault(doc_type, set())
+                cls.etl_stats["warnings"][message][project_id][doc_type].add(url)
             else:
                 cls.etl_stats["failures"].setdefault(message, {})
+                cls.etl_stats["failures"][message].setdefault(project_id, {})
+                cls.etl_stats["failures"][message][project_id].setdefault(doc_type, set())
+                cls.etl_stats["failures"][message][project_id][doc_type].add(url)
         else:
             cls.etl_stats["success"].setdefault(project_id, set())
             cls.etl_stats["success"][project_id].add(url)
@@ -160,14 +174,16 @@ class MetricsController:
         if cls.type_of_run == scripts.adwords.EXTRACT_AND_LOAD:
             cls.etl_stats["task_stats"] = cls.compare_load_and_extract()
 
-        if cls.etl_stats["status"] == SUCCESS_MESSAGE:
-            HealthChecksUtil.ping(scripts.gsc.CONFIG.GSC_APP.env, cls.etl_stats["success"], cls.GSC_SYNC_PING_ID)
+        if cls.etl_stats["status"] == SUCCESS_MESSAGE or len(cls.etl_stats["failures"].keys()) == 0:
+            stats_to_ping = {"success": cls.etl_stats["success"], "warnings": cls.etl_stats["warnings"]}
+            HealthChecksUtil.ping(scripts.gsc.CONFIG.GSC_APP.env, stats_to_ping, cls.GSC_SYNC_PING_ID)
         else:
-            HealthChecksUtil.ping(scripts.gsc.CONFIG.GSC_APP.env, cls.etl_stats["failures"], cls.GSC_SYNC_PING_ID, endpoint="/fail")
-            log.warning("Job has errors. Failed synced Projects and customer accounts are: %s", json.dumps(cls.etl_stats["failures"], default=JsonUtil.serialize_sets))
+            stats_to_ping = {"failures": cls.etl_stats["failures"], "warnings": cls.etl_stats["warnings"]}
+            HealthChecksUtil.ping(scripts.gsc.CONFIG.GSC_APP.env, stats_to_ping, cls.GSC_SYNC_PING_ID, endpoint="/fail")
+            log.warning("Job has errors. Failed synced Projects and customer accounts are: %s", json.dumps(stats_to_ping, default=JsonUtil.serialize_sets))
 
         if len(cls.etl_stats["token_failures"].keys()) != 0:
-            HealthChecksUtil.ping(scripts.adwords.CONFIG.GSC_APP.env, cls.etl_stats["token_failures"], cls.GSC_PING_ID_TOKEN_FAILURE, endpoint="/fail")
+            HealthChecksUtil.ping(scripts.gsc.CONFIG.GSC_APP.env, cls.etl_stats["token_failures"], cls.GSC_PING_ID_TOKEN_FAILURE, endpoint="/fail")
             log.warning("Job has token errors. Failed synced Projects and customer accounts are: %s", json.dumps(cls.etl_stats["token_failures"], default=JsonUtil.serialize_sets))
 
     @classmethod

@@ -12,16 +12,18 @@ import (
 	serviceEtcd "factors/services/etcd"
 	serviceGCS "factors/services/gcstorage"
 	T "factors/task"
+	AS "factors/task/account_scoring"
+
 	"factors/util"
 	"flag"
 	"fmt"
-	"github.com/apache/beam/sdks/go/pkg/beam"
-	_ "github.com/jinzhu/gorm"
-	log "github.com/sirupsen/logrus"
-	"net/http"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/apache/beam/sdks/go/pkg/beam"
+	_ "github.com/jinzhu/gorm"
+	log "github.com/sirupsen/logrus"
 )
 
 func registerStructs() {
@@ -81,6 +83,7 @@ func main() {
 	redisPort := flag.Int("redis_port", 6379, "")
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
+	enableFeatureGatesV2 := flag.Bool("enable_feature_gates_v2", false, "")
 
 	lookback := flag.Int("lookback", 30, "lookback_for_delta lookup")
 	flag.Parse()
@@ -118,7 +121,7 @@ func main() {
 
 	// init DB, etcd
 	appName := "acc_score_job"
-	healthcheckPingID := C.HealthcheckPatternMinePingID
+	healthcheckPingID := C.HealthcheckAccScoringJobPingID
 	defer C.PingHealthcheckForPanic(appName, *envFlag, healthcheckPingID)
 
 	config := &C.Configuration{
@@ -135,12 +138,13 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		SentryDSN:           *sentryDSN,
-		PrimaryDatastore:    *primaryDatastore,
-		RedisHost:           *redisHost,
-		RedisPort:           *redisPort,
-		RedisHostPersistent: *redisHostPersistent,
-		RedisPortPersistent: *redisPortPersistent,
+		SentryDSN:            *sentryDSN,
+		PrimaryDatastore:     *primaryDatastore,
+		RedisHost:            *redisHost,
+		RedisPort:            *redisPort,
+		RedisHostPersistent:  *redisHostPersistent,
+		RedisPortPersistent:  *redisPortPersistent,
+		EnableFeatureGatesV2: *enableFeatureGatesV2,
 	}
 
 	C.InitConf(config)
@@ -189,22 +193,28 @@ func main() {
 		}
 	}
 
-	allProjects, projectIdsToRun, _ := C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
-	if allProjects {
-		projectIDs, errCode := store.GetStore().GetAllProjectIDs()
-		if errCode != http.StatusFound {
-			log.Fatal("Failed to get all projects and project_ids set to '*'.")
-		}
-
-		projectIdsToRun = make(map[int64]bool, 0)
-		for _, projectID := range projectIDs {
-			projectIdsToRun[projectID] = true
-		}
-	}
-
+	projectIdList := *projectIdFlag
 	projectIdsArray := make([]int64, 0)
-	for projectId, _ := range projectIdsToRun {
-		projectIdsArray = append(projectIdsArray, projectId)
+
+	if projectIdList == "*" {
+		projectIdsArray, err = store.GetStore().GetAllProjectsWithFeatureEnabled(M.FEATURE_ACCOUNT_SCORING, false)
+		if err != nil {
+			errString := fmt.Errorf("failed to get feature status for all projects")
+			log.WithError(err).Error(errString)
+		}
+	} else {
+		projectIds := C.GetTokensFromStringListAsUint64(projectIdList)
+		for _, projectId := range projectIds {
+			available := false
+			available, err = store.GetStore().GetFeatureStatusForProjectV2(projectId, M.FEATURE_ACCOUNT_SCORING, false)
+			if err != nil {
+				log.WithFields(log.Fields{"projectID": projectId}).WithError(err).Error("Failed to get feature status in account scoring job for project")
+				continue
+			}
+			if available {
+				projectIdsArray = append(projectIdsArray, projectId)
+			}
+		}
 	}
 
 	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
@@ -266,22 +276,16 @@ func main() {
 	configs["diskManager"] = diskManager
 	configs["beamConfig"] = &beamConfig
 
-	// status := taskWrapper.TaskFuncWithProjectId("AccScoreJob", *lookback, projectIdsArray, T.BuildAccScoringDaily, configs)
-	for _, projectId := range projectIdsArray {
-		available, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, M.FEATURE_ACCOUNT_SCORING)
-		if err != nil {
-			log.WithError(err).Error("Failed to get feature status in account scoring job for project ID ", projectId)
-		}
-		if available {
+	log.WithField("projects", projectIdsArray).Info("Running acc scoring for these projects")
 
-			status, _ := T.BuildAccScoringDaily(projectId, configs)
-			log.Info(status)
-			if status["err"] != nil {
-				C.PingHealthcheckForFailure(healthcheckPingID, status)
-			}
-			C.PingHealthcheckForSuccess(healthcheckPingID, status)
-		} else {
-			log.Error("Feature Not Available... Skipping account scoring job for project ID ", projectId)
+	for _, projectId := range projectIdsArray {
+
+		status, _ := AS.BuildAccScoringDaily(projectId, configs)
+		status["project id"] = projectId
+		log.Info(status)
+		if status["err"] != nil {
+			C.PingHealthcheckForFailure(healthcheckPingID, status)
 		}
+		C.PingHealthcheckForSuccess(healthcheckPingID, status)
 	}
 }

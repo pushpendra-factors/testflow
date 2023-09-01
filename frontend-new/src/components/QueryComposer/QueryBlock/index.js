@@ -18,8 +18,9 @@ import ORButton from '../../ORButton';
 import { compareFilters, groupFilters } from '../../../utils/global';
 import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
-import { getQueryComposerGroupIcon } from 'Utils/getQueryComposerGroupIcons';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import getGroupIcon from 'Utils/getGroupIcon';
+import { processProperties } from 'Utils/dataFormatter';
 function QueryBlock({
   availableGroups,
   index,
@@ -33,8 +34,8 @@ function QueryBlock({
   groupBy,
   setGroupBy,
   delGroupBy,
-  eventUserProperties,
-  eventProperties,
+  eventUserPropertiesV2,
+  eventPropertiesV2,
   groupProperties,
   getGroupProperties,
   groupAnalysis
@@ -53,68 +54,89 @@ function QueryBlock({
     return group[1];
   }, [availableGroups, event]);
 
-  const showGroups = useMemo(() => {
-    let showOpts = [];
-    if (['users', 'events'].includes(groupAnalysis)) {
-      showOpts = [...eventOptions];
-    } else {
-      const groupOpts = eventOptions?.filter((item) => {
-        const [groupDisplayName] =
-          availableGroups?.find((group) => group[1] === groupAnalysis) || [];
-        return item.label === groupDisplayName;
-      });
-      const groupNamesList = availableGroups.map((item) => item[0]);
-      const userOpts = eventOptions?.filter(
-        (item) => !groupNamesList.includes(item?.label)
+  const getGroupOpts = (eventOpts, availableGroups, activeGroup) => {
+    const userGroupExclusions = [
+      'Linkedin Company Engagements',
+      'G2 Engagements'
+    ];
+    const domainGroupExclusions = ['Hubspot Deals', 'Salesforce Opportunities'];
+    if (activeGroup === 'events') {
+      return [...eventOpts];
+    } else if (activeGroup === 'users') {
+      return eventOpts.filter(
+        (group) => !userGroupExclusions.includes(group?.label)
       );
-      showOpts = groupOpts.concat(userOpts);
+    } else if (activeGroup === '$domains') {
+      return eventOpts.filter(
+        (group) => !domainGroupExclusions.includes(group?.label)
+      );
+    } else {
+      const groupDisplayName = availableGroups?.find(
+        (group) => group[1] === activeGroup
+      )?.[0];
+      const groupOpts = eventOpts?.filter(
+        (item) => item.label === groupDisplayName
+      );
+      const groupNamesList = availableGroups?.map((item) => item[0]);
+      const userOpts = eventOpts?.filter(
+        (item) => !groupNamesList?.includes(item?.label)
+      );
+      return groupOpts.concat(userOpts);
     }
-    showOpts = showOpts?.map((opt) => {
-      return {
-        iconName: opt?.icon,
-        label: opt?.label,
-        values: opt?.values?.map((op) => {
-          return { value: op[1], label: op[0] };
-        })
-      };
-    });
-    // Moving MostRecent as first Option.
-    const mostRecentGroupindex = showOpts
-      ?.map((opt) => opt.label)
-      ?.indexOf('Most Recent');
+  };
+
+  const mapOptionsToGroupSelectItem = (opts) => {
+    return opts?.map((opt) => ({
+      iconName: getGroupIcon(opt?.icon),
+      label: opt.label,
+      values: processProperties(opt.values)
+    }));
+  };
+
+  const moveMostRecentToTop = (opts) => {
+    const mostRecentGroupindex = opts.findIndex(
+      (opt) => opt.label === 'Most Recent'
+    );
     if (mostRecentGroupindex > 0) {
-      showOpts = [
-        showOpts[mostRecentGroupindex],
-        ...showOpts.slice(0, mostRecentGroupindex),
-        ...showOpts.slice(mostRecentGroupindex + 1)
-      ];
+      const mostRecentGroup = opts[mostRecentGroupindex];
+      opts.splice(mostRecentGroupindex, 1);
+      opts.unshift(mostRecentGroup);
     }
-    return showOpts;
+  };
+
+  const showGroups = useMemo(() => {
+    const groupOpts = getGroupOpts(
+      eventOptions,
+      availableGroups,
+      groupAnalysis
+    );
+    const mappedOptions = mapOptionsToGroupSelectItem(groupOpts);
+    moveMostRecentToTop(mappedOptions);
+    return mappedOptions;
   }, [eventOptions, groupAnalysis, availableGroups]);
 
   const filterProperties = useMemo(() => {
     if (!event) return {};
 
     const props = {
-      event: eventProperties[event.label] || []
+      event: eventPropertiesV2[event.label] || []
     };
     if (eventGroup) {
       props[eventGroup] = groupProperties[eventGroup];
     } else {
-      props.user = eventUserProperties;
+      props.user = eventUserPropertiesV2;
     }
     return props;
   }, [
     event,
     eventGroup,
-    eventProperties,
+    eventPropertiesV2,
     groupProperties,
-    eventUserProperties
+    eventUserPropertiesV2
   ]);
 
   useEffect(() => {
-    if (!event) return;
-    if (eventGroup?.length) {
+    if (event && eventGroup?.length && !groupProperties[eventGroup]) {
       getGroupProperties(activeProject.id, eventGroup);
     }
   }, [event, activeProject.id, eventGroup]);
@@ -558,10 +580,10 @@ function QueryBlock({
               <Button
                 icon={
                   <SVG
-                    name={getQueryComposerGroupIcon(
+                    name={
                       showGroups.find((group) => group.label === event.group)
                         ?.iconName
-                    )}
+                    }
                     size={20}
                   />
                 }
@@ -607,9 +629,9 @@ function QueryBlock({
 const mapStateToProps = (state) => ({
   eventOptions: state.coreQuery.eventOptions,
   activeProject: state.global.active_project,
-  eventUserProperties: state.coreQuery.eventUserProperties,
+  eventUserPropertiesV2: state.coreQuery.eventUserPropertiesV2,
   groupProperties: state.coreQuery.groupProperties,
-  eventProperties: state.coreQuery.eventProperties,
+  eventPropertiesV2: state.coreQuery.eventPropertiesV2,
   groupBy: state.coreQuery.groupBy.event,
   groupByMagic: state.coreQuery.groupBy,
   eventNames: state.coreQuery.eventNames

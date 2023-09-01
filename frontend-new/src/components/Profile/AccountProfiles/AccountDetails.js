@@ -26,7 +26,11 @@ import {
 import SearchCheckList from '../../SearchCheckList';
 import LeftPanePropBlock from '../MyComponents/LeftPanePropBlock';
 import AccountTimelineSingleView from './AccountTimelineSingleView';
-import { PropTextFormat } from 'Utils/dataFormatter';
+import {
+  PropTextFormat,
+  convertGroupedPropertiesToUngrouped,
+  processProperties
+} from 'Utils/dataFormatter';
 import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
 import { useHistory, useLocation } from 'react-router-dom';
 import { PathUrls } from '../../../routes/pathUrls';
@@ -35,10 +39,12 @@ import UpgradeModal from '../UpgradeModal';
 import { PLANS } from 'Constants/plans.constants';
 import {
   getGroupProperties,
-  getEventProperties
+  getEventPropertiesV2
 } from 'Reducers/coreQuery/middleware';
 import AccountOverview from './AccountOverview';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import { featureLock } from '../../../routes/feature';
+import getGroupIcon from 'Utils/getGroupIcon';
 
 function AccountDetails({
   accounts,
@@ -51,11 +57,11 @@ function AccountDetails({
   fetchProjectSettings,
   udpateProjectSettings,
   getProfileAccountDetails,
-  userProperties,
+  userPropertiesV2,
   groupProperties,
   eventNamesMap,
-  eventProperties,
-  getEventProperties
+  eventPropertiesV2,
+  getEventPropertiesV2
 }) {
   const dispatch = useDispatch();
   const history = useHistory();
@@ -70,7 +76,7 @@ function AccountDetails({
   const [propSelectOpen, setPropSelectOpen] = useState(false);
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
   const { TabPane } = Tabs;
-  const [timelineViewMode, setTimelineViewMode] = useState('overview');
+  const [timelineViewMode, setTimelineViewMode] = useState('birdview');
   const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
   const [openPopover, setOpenPopover] = useState(false);
   const handleOpenPopoverChange = (value) => {
@@ -80,6 +86,14 @@ function AccountDetails({
   const { groupPropNames } = useSelector((state) => state.coreQuery);
   const { plan } = useSelector((state) => state.featureConfig);
   const isFreePlan = plan?.name === PLANS.PLAN_FREE;
+  const agentState = useSelector((state) => state.agent);
+  const activeAgent = agentState?.agent_details?.email;
+
+  useEffect(() => {
+    if (featureLock(activeAgent)) {
+      setTimelineViewMode('overview');
+    }
+  }, [activeAgent]);
 
   useEffect(() => {
     fetchGroups(activeProject?.id, true);
@@ -105,10 +119,10 @@ function AccountDetails({
     const params = Object.fromEntries(urlSearchParams.entries());
     const id = atob(location.pathname.split('/').pop());
     const group = params.group ? params.group : 'All';
-    const view = params.view ? params.view : 'birdview';
+    const view = params.view ? params.view : timelineViewMode;
     document.title = 'Accounts - FactorsAI';
     return [id, group, view];
-  }, [location]);
+  }, [location, timelineViewMode]);
 
   useEffect(() => {
     if (activeId && activeId !== '')
@@ -169,20 +183,26 @@ function AccountDetails({
   useEffect(() => {
     hoverEvents.forEach((event) => {
       if (
-        !eventProperties[event] &&
+        !eventPropertiesV2[event] &&
         accountDetails.data?.account_events?.some(
           (activity) => activity?.event_name === event
         )
       ) {
-        getEventProperties(activeProject?.id, event);
+        getEventPropertiesV2(activeProject?.id, event);
       }
     });
-  }, [activeProject?.id, eventProperties, accountDetails.data?.account_events]);
+  }, [
+    activeProject?.id,
+    eventPropertiesV2,
+    accountDetails.data?.account_events
+  ]);
 
   useEffect(() => {
-    Object.keys(groupOpts || {}).forEach((group) =>
-      getGroupProperties(activeProject.id, group)
-    );
+    Object.keys(groupOpts || {}).forEach((group) => {
+      if (!groupProperties[group]) {
+        getGroupProperties(activeProject?.id, group);
+      }
+    });
   }, [activeProject.id, groupOpts]);
 
   useEffect(() => {
@@ -201,17 +221,9 @@ function AccountDetails({
     }));
     groupProps = groupProps?.map((opt) => {
       return {
-        iconName: opt?.iconName,
+        iconName: getGroupIcon(opt?.iconName),
         label: opt?.label,
-        values: opt?.values?.map((op) => {
-          return {
-            value: op?.[1],
-            label: op?.[0],
-            extraProps: {
-              valueType: op?.[2]
-            }
-          };
-        })
+        values: processProperties(opt?.values)
       };
     });
     setListProperties(mergedProps);
@@ -219,12 +231,19 @@ function AccountDetails({
   }, [groupProperties, groupOpts]);
 
   useEffect(() => {
+    const userPropertiesModified = [];
+    if (userPropertiesV2) {
+      convertGroupedPropertiesToUngrouped(
+        userPropertiesV2,
+        userPropertiesModified
+      );
+    }
     const userPropsWithEnableKey = formatUserPropertiesToCheckList(
-      userProperties,
+      userPropertiesModified,
       [currentProjectSettings.timelines_config?.account_config?.user_prop]
     );
     setCheckListUserProps(userPropsWithEnableKey);
-  }, [currentProjectSettings, userProperties]);
+  }, [currentProjectSettings, userPropertiesV2]);
 
   const handlePropChange = (option) => {
     if (
@@ -244,7 +263,7 @@ function AccountDetails({
         )
       );
     }
-    setOpenPopover(false);
+    handleOpenPopoverChange(false);
   };
 
   const handleEventsChange = (option) => {
@@ -260,7 +279,7 @@ function AccountDetails({
     udpateProjectSettings(activeProject.id, {
       timelines_config: { ...timelinesConfig }
     });
-    setOpenPopover(false);
+    handleOpenPopoverChange(false);
   };
 
   const handleMilestonesChange = (option) => {
@@ -274,7 +293,6 @@ function AccountDetails({
       );
       checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
       setCheckListMilestones(checkListProps);
-      setOpenPopover(false);
     } else {
       notification.error({
         message: 'Error',
@@ -299,6 +317,7 @@ function AccountDetails({
         currentProjectSettings?.timelines_config
       )
     );
+    handleOpenPopoverChange(false);
   };
 
   const controlsPopover = () => (
@@ -481,26 +500,31 @@ function AccountDetails({
 
   const renderLeftPane = () => (
     <div className='leftpane'>
-      <div className='user'>
-        <img
-          src={`https://logo.uplead.com/${getHost(accountDetails?.data?.host)}`}
-          onError={(e) => {
-            if (
-              e.target.src !==
-              'https://s3.amazonaws.com/www.factors.ai/assets/img/buildings.svg'
-            ) {
-              e.target.src =
-                'https://s3.amazonaws.com/www.factors.ai/assets/img/buildings.svg';
-            }
-          }}
-          alt=''
-          height={96}
-          width={96}
-        />
-        <Text type='title' level={6} extraClass='m-0 py-2' weight='bold'>
-          {accountDetails?.data?.name}
-        </Text>
+      <div className='header'>
+        <div className='user'>
+          <img
+            src={`https://logo.uplead.com/${getHost(
+              accountDetails?.data?.host
+            )}`}
+            onError={(e) => {
+              if (
+                e.target.src !==
+                'https://s3.amazonaws.com/www.factors.ai/assets/img/buildings.svg'
+              ) {
+                e.target.src =
+                  'https://s3.amazonaws.com/www.factors.ai/assets/img/buildings.svg';
+              }
+            }}
+            alt=''
+            height={96}
+            width={96}
+          />
+          <Text type='title' level={6} extraClass='m-0 py-2' weight='bold'>
+            {accountDetails?.data?.name}
+          </Text>
+        </div>
       </div>
+
       <div className='props'>
         {listLeftPaneProps(accountDetails.data.left_pane_props)}
         <div className='px-8 pb-8 pt-2'>{renderAddNewProp()}</div>
@@ -541,7 +565,6 @@ function AccountDetails({
       milestones={accountDetails.data?.milestones}
       loading={accountDetails?.isLoading}
       eventNamesMap={eventNamesMap}
-      listProperties={[...listProperties, ...userProperties]}
     />
   );
 
@@ -638,7 +661,6 @@ function AccountDetails({
         granularity={granularity}
         loading={accountDetails?.isLoading}
         eventNamesMap={eventNamesMap}
-        listProperties={[...listProperties, ...userProperties]}
       />
     </div>
   );
@@ -647,7 +669,7 @@ function AccountDetails({
     return (
       <div className='timeline-view'>
         <Tabs
-          defaultActiveKey='overview'
+          defaultActiveKey='birdview'
           size='small'
           activeKey={timelineViewMode}
           onChange={(val) => {
@@ -656,12 +678,16 @@ function AccountDetails({
             setGranularity(granularity);
           }}
         >
-          <TabPane
-            tab={<span className='fa-activity-filter--tabname'>Overview</span>}
-            key='overview'
-          >
-            {renderOverview()}
-          </TabPane>
+          {featureLock(activeAgent) && (
+            <TabPane
+              tab={
+                <span className='fa-activity-filter--tabname'>Overview</span>
+              }
+              key='overview'
+            >
+              {renderOverview()}
+            </TabPane>
+          )}
           <TabPane
             tab={<span className='fa-activity-filter--tabname'>Timeline</span>}
             key='timeline'
@@ -701,8 +727,8 @@ const mapStateToProps = (state) => ({
   groupOpts: state.groups.data,
   accounts: state.timelines.accounts,
   accountDetails: state.timelines.accountDetails,
-  userProperties: state.coreQuery.userProperties,
-  eventProperties: state.coreQuery.eventProperties,
+  userPropertiesV2: state.coreQuery.userPropertiesV2,
+  eventPropertiesV2: state.coreQuery.eventPropertiesV2,
   groupProperties: state.coreQuery.groupProperties,
   eventNamesMap: state.coreQuery.eventNamesMap
 });
@@ -712,7 +738,7 @@ const mapDispatchToProps = (dispatch) =>
     {
       fetchGroups,
       getGroupProperties,
-      getEventProperties,
+      getEventPropertiesV2,
       getProfileAccountDetails,
       fetchProjectSettings,
       udpateProjectSettings

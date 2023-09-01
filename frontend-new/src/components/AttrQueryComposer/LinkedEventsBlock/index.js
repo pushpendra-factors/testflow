@@ -8,6 +8,7 @@ import { SVG } from 'factorsComponents';
 import { isArray } from 'lodash';
 import { TOOLTIP_CONSTANTS } from 'Constants/tooltips.constans';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import getGroupIcon from 'Utils/getGroupIcon';
 
 const LinkedEventsBlock = ({
   linkEvent,
@@ -15,9 +16,9 @@ const LinkedEventsBlock = ({
   delLinkEvent,
   eventNameOptions,
   activeProject,
-  eventProperties,
+  eventPropertiesV2,
   eventNames,
-  eventUserProperties
+  eventUserPropertiesV2
 }) => {
   const [selectVisible, setSelectVisible] = useState(false);
   const [filterBlockVisible, setFilterBlockVisible] = useState(false);
@@ -33,12 +34,12 @@ const LinkedEventsBlock = ({
     }
     const assignFilterProps = Object.assign({}, filterProps);
 
-    if (eventProperties[linkEvent.label]) {
-      assignFilterProps.event = eventProperties[linkEvent.label];
+    if (eventPropertiesV2[linkEvent.label]) {
+      assignFilterProps.event = eventPropertiesV2[linkEvent.label];
     }
-    assignFilterProps.user = eventUserProperties;
+    assignFilterProps.user = eventUserPropertiesV2;
     setFilterProperties(assignFilterProps);
-  }, [eventUserProperties, eventProperties, linkEvent]);
+  }, [eventUserPropertiesV2, eventPropertiesV2, linkEvent]);
 
   const toggleEventSelect = () => {
     setSelectVisible(!selectVisible);
@@ -204,7 +205,7 @@ const LinkedEventsBlock = ({
   const selectEvents = () => {
     let orderedEventOptions = eventNameOptions.map((groupOpt) => {
       return {
-        iconName: groupOpt?.icon,
+        iconName: getGroupIcon(groupOpt?.icon),
         label: groupOpt?.label,
         value: groupOpt?.label,
         values: groupOpt?.values?.map((op) => {
@@ -325,8 +326,8 @@ const LinkedEventsBlock = ({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  eventProperties: state.coreQuery.eventProperties,
-  eventUserProperties: state.coreQuery.eventUserProperties,
+  eventPropertiesV2: state.coreQuery.eventPropertiesV2,
+  eventUserPropertiesV2: state.coreQuery.eventUserPropertiesV2,
   eventNameOptions: state.coreQuery.eventOptions,
   eventNames: state.coreQuery.eventNames
 });

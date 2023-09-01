@@ -3,14 +3,21 @@ const style =
 const label = '%cDebug';
 
 class logger {
+  showLogs() {
+    return (
+      window.FACTORS_APP_DEBUG === true ||
+      process.env.NODE_ENV === 'development'
+    );
+  }
+
   log(...args) {
-    if (window.FACTORS_APP_DEBUG === true) console.log(label, style, ...args);
+    if (this.showLogs()) console.log(label, style, ...args);
   }
   error(...args) {
-    if (window.FACTORS_APP_DEBUG === true) console.error(label, style, ...args);
+    if (this.showLogs()) console.error(label, style, ...args);
   }
   warn(...args) {
-    if (window.FACTORS_APP_DEBUG === true) console.warn(label, style, ...args);
+    if (this.showLogs()) console.warn(label, style, ...args);
   }
 }
 

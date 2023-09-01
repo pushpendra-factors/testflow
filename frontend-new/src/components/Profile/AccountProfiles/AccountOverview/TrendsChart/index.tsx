@@ -3,13 +3,14 @@ import Highcharts from 'highcharts';
 import { Text } from 'Components/factorsComponents';
 import cx from 'classnames';
 import ReactDOMServer from 'react-dom/server';
-import { DataMap } from '..';
+import { nearestGreater100, transformDate } from '../utils';
+import { DataMap } from '../types';
 
-interface SparklineChartProps {
+interface ChartProps {
   data: DataMap;
 }
 
-const SparklineChart: React.FC<SparklineChartProps> = ({ data }) => {
+const TrendsChart: React.FC<ChartProps> = ({ data }) => {
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstanceRef = useRef<Highcharts.Chart | null>(null);
 
@@ -29,7 +30,9 @@ const SparklineChart: React.FC<SparklineChartProps> = ({ data }) => {
           enabled: false
         },
         xAxis: {
-          categories: Object.keys(data || {}),
+          categories: Object.keys(data || {})?.map((yyyymmdd) =>
+            transformDate(yyyymmdd)
+          ),
           labels: {
             enabled: true
           },
@@ -40,12 +43,7 @@ const SparklineChart: React.FC<SparklineChartProps> = ({ data }) => {
           title: {
             text: null
           },
-          labels: {
-            formatter: function () {
-              return this.value + '%';
-            }
-          },
-          max: 100,
+          max: Math.max(...Object.values(data || {})),
           min: 0
         },
         plotOptions: {
@@ -58,8 +56,8 @@ const SparklineChart: React.FC<SparklineChartProps> = ({ data }) => {
                 y2: 1
               },
               stops: [
-                [0, 'rgba(0, 120, 255, 1)'],
-                [1, 'rgba(255, 255, 255, 1)']
+                [0, 'rgba(64, 169, 255, 1)'],
+                [1, 'rgba(64, 169, 255, 0)']
               ]
             },
             marker: {
@@ -113,7 +111,7 @@ const SparklineChart: React.FC<SparklineChartProps> = ({ data }) => {
                       level={5}
                       extraClass='m-0'
                     >
-                      {this.point.y}
+                      {this.point.y?.toFixed()}
                     </Text>
                   </div>
                 </div>
@@ -140,4 +138,4 @@ const SparklineChart: React.FC<SparklineChartProps> = ({ data }) => {
   return <div ref={chartRef} />;
 };
 
-export default SparklineChart;
+export default TrendsChart;

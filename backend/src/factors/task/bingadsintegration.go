@@ -8,17 +8,25 @@ import (
 	"fmt"
 	"strconv"
 
+	C "factors/config"
 	U "factors/util"
-
 	log "github.com/sirupsen/logrus"
 	"strings"
 )
 
 func BingAdsIntegration(projectId int64, configs map[string]interface{}) (map[string]interface{}, bool) {
-	available, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_BING_ADS)
-	if err != nil {
-		log.WithError(err).Error("Failed to get feature status in bing ads integration job for project ID ", projectId)
+	resultStatus := make(map[string]interface{})
+	available := true
+	var err error
+	if C.IsEnabledFeatureGatesV2() {
+		available, err = store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_BING_ADS,false)
+		if err != nil {
+			log.WithError(err).Error("Failed to get feature status in bing ads integration job for project ID ", projectId)
+			resultStatus[fmt.Sprintf("Failure-Feature-Status %v", projectId)] = true
+			return resultStatus, false
+		}
 	}
+
 	if !available {
 		log.Error("Feature Not Available... Skipping bing ads integration job for project ID ", projectId)
 		return nil, false
@@ -28,7 +36,6 @@ func BingAdsIntegration(projectId int64, configs map[string]interface{}) (map[st
 		BigqueryCredentialsJSON: configs["BigqueryCredential"].(string),
 	}
 
-	resultStatus := make(map[string]interface{})
 	executionDate := configs["startTimestamp"].(int64) - 86400
 	executionDateString := U.GetDateOnlyHyphenFormatFromTimestampZ(executionDate)
 	executionDateStringYYYYMMDD, _ := strconv.ParseInt(U.GetDateOnlyFromTimestampZ(executionDate), 10, 64)

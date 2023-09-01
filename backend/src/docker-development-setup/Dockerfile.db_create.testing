@@ -9,6 +9,7 @@ ADD docker-development-setup/memsql_ingest.sql /go/src/factors/backend/src/docke
 # Create stripped down version without go and source code
 FROM alpine:3.7
 RUN apk update && apk add ca-certificates && apk add curl && apk add mysql mysql-client && rm -rf /var/cache/apk/*
+ENV GOLANG_PROTOBUF_REGISTRATION_CONFLICT=ignore
 COPY --from=builder /go/src/factors/backend/src/factors/migrations/db/memsql/1_create_schema.sql /go/src/factors/backend/src/factors/migrations/db/memsql/1_create_schema.sql
 COPY --from=builder /go/src/factors/backend/src/docker-development-setup/memsql_ingest.sql /go/src/factors/backend/src/docker-development-setup/memsql_ingest.sql
 CMD ["sh","-c", "if [ $PRI_DS == memsql ]; then while true; do mysql -h memsql --port 3306 -u root --password=${ROOT_PASSWORD} > conn_test.sql; if [ \"$?\" -eq 0 ]; then mysql -h memsql --port 3306 -u root --password=${ROOT_PASSWORD} < /go/src/factors/backend/src/factors/migrations/db/memsql/1_create_schema.sql; mysql -h memsql --port 3306 -u root --password=${ROOT_PASSWORD} factors < /go/src/factors/backend/src/docker-development-setup/memsql_ingest.sql; break; fi; echo 'Unable to run command on memsql'; sleep 2; done; fi"]

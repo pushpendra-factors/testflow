@@ -30,6 +30,7 @@ var tagEnum = map[string]string{
 	"categories.show":                             U.GROUP_EVENT_NAME_G2_CATEGORY,
 	"categories.learn":                            U.GROUP_EVENT_NAME_G2_CATEGORY,
 	"products.reviews":                            U.GROUP_EVENT_NAME_G2_PRODUCT_PROFILE,
+	"products.video_reviews":                      U.GROUP_EVENT_NAME_G2_PRODUCT_PROFILE,
 	"products.features":                           U.GROUP_EVENT_NAME_G2_PRODUCT_PROFILE,
 	"products.details":                            U.GROUP_EVENT_NAME_G2_PRODUCT_PROFILE,
 	"products.pricing":                            U.GROUP_EVENT_NAME_G2_PRICING,
@@ -38,6 +39,9 @@ var tagEnum = map[string]string{
 	"reports.show":                                U.GROUP_EVENT_NAME_G2_REPORT,
 	"reports.preview":                             U.GROUP_EVENT_NAME_G2_REPORT,
 	"reviewers.take_survey":                       U.GROUP_EVENT_NAME_G2_PRODUCT_PROFILE,
+	"product_reference_pages.show":                U.GROUP_EVENT_NAME_G2_REFERENCE,
+	"deals.show":                                  U.GROUP_EVENT_NAME_G2_DEAL,
+	"deals.index":                                 U.GROUP_EVENT_NAME_G2_DEAL,
 }
 
 type EventStreamResponseStruct struct {
@@ -361,8 +365,44 @@ func getEventPropertiesFromValueMap(valueMap map[string]interface{}) map[string]
 	tag := fmt.Sprintf("%v", valueMap["tag"])
 	title := fmt.Sprintf("%v", valueMap["title"])
 	page_url := fmt.Sprintf("%v", valueMap["url"])
+	city, state, country := "", "", ""
+
+	if _, exists := valueMap["user_location"]; exists {
+
+		locationProperties := valueMap["user_location"].(map[string]interface{})
+
+		if _, isExists := locationProperties["city"]; isExists {
+			city = fmt.Sprintf("%v", locationProperties["city"])
+		}
+		if _, isExists := locationProperties["state"]; isExists {
+			state = fmt.Sprintf("%v", locationProperties["state"])
+		}
+		if _, isExists := locationProperties["country"]; isExists {
+			country = fmt.Sprintf("%v", locationProperties["country"])
+		}
+	}
+
+	categoryIDsRaw := valueMap["category_ids"].([]interface{})
+	categoryIDsArray := make([]string, 0)
+	for _, category := range categoryIDsRaw {
+		categoryIDsArray = append(categoryIDsArray, fmt.Sprintf("%v", category))
+	}
+	categoryIDs := strings.Join(categoryIDsArray[:], ",")
+
+	productIDsRaw := valueMap["product_ids"].([]interface{})
+	productIDsArray := make([]string, 0)
+	for _, product := range productIDsRaw {
+		productIDsArray = append(productIDsArray, fmt.Sprintf("%v", product))
+	}
+	productIDs := strings.Join(productIDsArray[:], ",")
+
 	properties[U.EP_PAGE_TITLE] = title
 	properties[U.EP_PAGE_URL] = page_url
 	properties[U.EP_G2_TAG] = tag
+	properties[U.EP_G2_CITY] = city
+	properties[U.EP_G2_COUNTRY] = country
+	properties[U.EP_G2_STATE] = state
+	properties[U.EP_G2_CATEGORY_IDS] = categoryIDs
+	properties[U.EP_G2_PRODUCT_IDS] = productIDs
 	return properties
 }

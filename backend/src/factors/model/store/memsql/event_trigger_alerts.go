@@ -175,7 +175,7 @@ func (store *MemSQL) DeleteEventTriggerAlert(projectID int64, id string) (int, s
 	return http.StatusAccepted, ""
 }
 
-func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int64, alertConfig *model.EventTriggerAlertConfig, slackTokenUser, teamTokenUser string) (*model.EventTriggerAlert, int, string) {
+func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int64, alertConfig *model.EventTriggerAlertConfig, slackTokenUser, teamTokenUser string, isPausedAlert bool) (*model.EventTriggerAlert, int, string) {
 	logFields := log.Fields{
 		"project_id":          projectID,
 		"event_trigger_alert": alertConfig,
@@ -243,6 +243,10 @@ func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int
 		return nil, http.StatusInternalServerError, "TiggerAlert conversion to Jsonb failed"
 	}
 
+	internalStatus := model.Active
+	if isPausedAlert {
+		internalStatus = model.Disabled
+	}
 	alert = model.EventTriggerAlert{
 		ID:                       id,
 		ProjectID:                projectID,
@@ -254,7 +258,7 @@ func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int
 		IsDeleted:                false,
 		SlackChannelAssociatedBy: slackTokenUser,
 		TeamsChannelAssociatedBy: teamTokenUser,
-		InternalStatus:           model.Active,
+		InternalStatus:           internalStatus,
 	}
 
 	if err := db.Create(&alert).Error; err != nil {
@@ -306,7 +310,34 @@ func (store *MemSQL) isValidEventTriggerAlertBody(projectID int64, agentID strin
 	if alert.Webhook && alert.WebhookURL == "" {
 		return false, http.StatusBadRequest, "webhook url must not be empty"
 	}
+	if duplicateMessagePropertiesPresent(alert.MessageProperty) {
+		return false, http.StatusBadRequest, "duplicate properties selected in message property"
+	}
 	return true, http.StatusOK, ""
+}
+
+func duplicateMessagePropertiesPresent(mp *postgres.Jsonb) bool {
+	
+	//Note to anyone reading this code. Always check for empty Jsonb and nil pointers
+	if mp == nil || isEmptyPostgresJsonb(mp) {
+		return false
+	}
+
+	props := make([]model.QueryGroupByProperty, 0)
+	err := U.DecodePostgresJsonbToStructType(mp, &props)
+	if err != nil {
+		return true
+	}
+
+	for i := 0; i < len(props)-1; i++ {
+		for j := i + 1; j < len(props); j++ {
+			// timestamp property can be selected for multiple granularities like day, hour, and week
+			if strings.EqualFold(props[i].Property, props[j].Property) && props[i].Property != "$timestamp" {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func alertCreationLimitExceeded(projectID int64) bool {
@@ -470,8 +501,11 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 				}
 			}
 		}
-		if E.EventMatchesFilterCriterionList(projectId, *userPropMap, *eventPropMap, E.MapFilterProperties(config.Filter)) {
+
+		criteria := E.MapFilterProperties(config.Filter)
+		if E.EventMatchesFilterCriterionList(projectId, *userPropMap, *eventPropMap, criteria) {
 			matchedAlerts = append(matchedAlerts, alert)
+
 		}
 	}
 	if len(matchedAlerts) == 0 {

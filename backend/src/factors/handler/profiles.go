@@ -23,11 +23,8 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 		return nil, http.StatusUnauthorized, V1.PROCESSING_FAILED, "Query failed. Query only allowed for memSQl.", true
 	}
 	var timezoneString U.TimeZoneString
-	var statusCode int
 	var err error
 	hardRefresh := false
-	dashboardIdParam := c.Query("dashboard_id")
-	unitIdParam := c.Query("dashboard_unit_id")
 	refreshParam := c.Query("refresh")
 	var dashboardId int64
 	var unitId int64
@@ -46,19 +43,6 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 		isQuery, _ = strconv.ParseBool(isQueryParam)
 	}*/
 
-	isDashboardQueryRequest := dashboardIdParam != "" && unitIdParam != ""
-	if isDashboardQueryRequest {
-		dashboardId, err = strconv.ParseInt(dashboardIdParam, 10, 64)
-		if err != nil || dashboardId == 0 {
-			logCtx.WithError(err).Error("Query failed. Invalid DashboardID.")
-			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardID.", true
-		}
-		unitId, err = strconv.ParseInt(unitIdParam, 10, 64)
-		if err != nil || unitId == 0 {
-			logCtx.WithError(err).Error("Query failed. Invalid DashboardUnitID.")
-			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardUnitID.", true
-		}
-	}
 	r := c.Request
 
 	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
@@ -71,38 +55,17 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 		"reqId":     reqID,
 		"projectID": projectID,
 	})
-	var profileQueryGroup model.ProfileQueryGroup
-	queryIdString := c.Query("query_id")
-	if queryIdString == "" {
-		decoder := json.NewDecoder(r.Body)
-		decoder.DisallowUnknownFields()
-		if err := decoder.Decode(&profileQueryGroup); err != nil {
-			logCtx.WithError(err).Error("Query failed. Json decode failed.")
-			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
-		}
-	} else {
-		_, query, err := store.GetStore().GetQueryAndClassFromQueryIdString(queryIdString, projectID)
-		if err != "" {
-			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
-			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
-		}
-		U.DecodePostgresJsonbToStructType(&query.Query, &profileQueryGroup)
+
+	profileQueryGroup, dashboardId, unitId, isDashboardQueryRequest, isDashboardQueryLocked, statusCode, errorCode, errMsg, isErr := getValidProfilesQueryAndDetailsFromRequest(r, c, logCtx, projectID)
+	if statusCode != http.StatusOK {
+		return nil, statusCode, errorCode, errMsg, isErr
 	}
 
-	if profileQueryGroup.Timezone != "" {
-		_, errCode := time.LoadLocation(string(profileQueryGroup.Timezone))
-		if errCode != nil {
-			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid Timezone provided.", true
-		}
-
-		timezoneString = U.TimeZoneString(profileQueryGroup.Timezone)
-	} else {
-		timezoneString, statusCode = store.GetStore().GetTimezoneForProject(projectID)
-		if statusCode != http.StatusFound {
-			logCtx.WithError(err).Error("Query failed. Failed to get Timezone.")
-			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Failed to get Timezone.", true
-		}
+	profileQueryGroup, statusCode, errorCode, errMsg, isErr = setTimezoneForProfilesRequest(logCtx, profileQueryGroup, projectID)
+	if statusCode != http.StatusOK {
+		return nil, statusCode, errorCode, errMsg, isErr
 	}
+	timezoneString = profileQueryGroup.GetTimeZone()
 
 	if profileQueryGroup.From == 0 || profileQueryGroup.To == 0 {
 		logCtx.WithError(err).Error("Query failed. Invalid date range provided.")
@@ -153,12 +116,36 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 		}
 	}
 
+	// Use optimised filter for profiles query if enabled using header or configuration.
+	enableOptimisedFilter := c.Request.Header.Get(H.HeaderUserFilterOptForProfiles) == "true" ||
+		C.EnableOptimisedFilterOnProfileQuery()
+	allowSyncReferenceFields := C.AllowSyncReferenceFields(projectID)
+
 	// Tracking dashboard query request.
 	if isDashboardQueryRequest {
 		model.SetDashboardCacheAnalytics(projectID, dashboardId, unitId, profileQueryGroup.From, profileQueryGroup.To, timezoneString)
 	}
 
-	allowSyncReferenceFields := C.AllowSyncReferenceFields(projectID)
+	if isDashboardQueryLocked {
+		resultGroup, errCode := store.GetStore().RunProfilesGroupQuery(profileQueryGroup.Queries, projectID, enableOptimisedFilter)
+		if errCode != http.StatusOK {
+			logCtx.Error("Profile Query failed. Failed to process query from DB")
+			if errCode == http.StatusPartialContent {
+				return resultGroup, errCode, V1.PROCESSING_FAILED, "Failed to process query from DB", true
+			}
+			return nil, errCode, V1.PROCESSING_FAILED, "Failed to process query from DB", true
+		}
+		resultGroup.Query = profileQueryGroup
+
+		if allowSyncReferenceFields {
+			resultGroup.Results, err = store.GetStore().AddPropertyValueLabelToQueryResults(projectID, resultGroup.Results)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to set property value label.")
+			}
+		}
+
+		return gin.H{"result": resultGroup}, http.StatusOK, "", "", false
+	}
 
 	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(0, 0, timezoneString, hardRefresh) {
 		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(
@@ -198,10 +185,6 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 			"error": "Query failed. Not found in cache. Suspended db execution."})
 	}*/
 
-	// Use optimised filter for profiles query if enabled using header or configuration.
-	enableOptimisedFilter := c.Request.Header.Get(H.HeaderUserFilterOptForProfiles) == "true" ||
-		C.EnableOptimisedFilterOnProfileQuery()
-
 	model.SetQueryCachePlaceholder(projectID, &profileQueryGroup)
 	H.SleepIfHeaderSet(c)
 	resultGroup, errCode := store.GetStore().RunProfilesGroupQuery(profileQueryGroup.Queries, projectID, enableOptimisedFilter)
@@ -224,4 +207,88 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 	}
 
 	return resultGroup, http.StatusOK, "", "", false
+}
+
+func getValidProfilesQueryAndDetailsFromRequest(r *http.Request, c *gin.Context, logCtx *log.Entry, projectId int64) (model.ProfileQueryGroup, int64, int64, bool, bool, int, string, string, bool) {
+	var dashboardId, unitId int64
+	var err error
+	requestPayload, queryPayload, isDashboardQueryLocked := model.ProfileQueryGroup{}, model.ProfileQueryGroup{}, false
+
+	dashboardIdParam := c.Query("dashboard_id")
+	unitIdParam := c.Query("dashboard_unit_id")
+	queryIdString := c.Query("query_id")
+
+	if queryIdString == "" {
+		decoder := json.NewDecoder(r.Body)
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&requestPayload); err != nil {
+			logCtx.WithError(err).Error("Query failed. Json decode failed.")
+			return queryPayload, 0, 0, false, isDashboardQueryLocked, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
+		}
+	}
+
+	isDashboardQueryRequest := dashboardIdParam != "" && unitIdParam != ""
+	if isDashboardQueryRequest {
+
+		dashboardId, err = strconv.ParseInt(dashboardIdParam, 10, 64)
+		if err != nil || dashboardId == 0 {
+			logCtx.WithError(err).Error("Query failed. Invalid DashboardID.")
+			return queryPayload, dashboardId, 0, true, isDashboardQueryLocked, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardID.", true
+		}
+		unitId, err = strconv.ParseInt(unitIdParam, 10, 64)
+		if err != nil || unitId == 0 {
+			logCtx.WithError(err).Error("Query failed. Invalid DashboardUnitID.")
+			return queryPayload, dashboardId, unitId, true, isDashboardQueryLocked, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardUnitID.", true
+		}
+		_, query, err := store.GetStore().GetQueryFromUnitID(projectId, unitId)
+		if err != "" {
+			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
+			return queryPayload, dashboardId, unitId, true, isDashboardQueryLocked, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
+		}
+		isDashboardQueryLocked = query.LockedForCacheInvalidation
+		U.DecodePostgresJsonbToStructType(&query.Query, &queryPayload)
+	} else if queryIdString != "" {
+		_, query, err := store.GetStore().GetQueryAndClassFromQueryIdString(queryIdString, projectId)
+		if err != "" {
+			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
+			return queryPayload, 0, 0, false, isDashboardQueryLocked, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
+		}
+		U.DecodePostgresJsonbToStructType(&query.Query, &queryPayload)
+	} else {
+		queryPayload = requestPayload
+	}
+
+	if queryIdString == "" {
+		queryPayload.From = requestPayload.From
+		queryPayload.To = requestPayload.To
+		if requestPayload.Timezone != "" {
+			queryPayload.SetTimeZone(U.TimeZoneString(requestPayload.Timezone))
+		}
+	}
+
+	if len(requestPayload.Queries) == 0 {
+		logCtx.Error("Query failed. Empty query group.")
+		return queryPayload, dashboardId, unitId, isDashboardQueryRequest, isDashboardQueryLocked, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Empty query group.", true
+	}
+	return queryPayload, dashboardId, unitId, isDashboardQueryRequest, isDashboardQueryLocked, http.StatusOK, "", "", false
+}
+
+func setTimezoneForProfilesRequest(logCtx *log.Entry, requestPayload model.ProfileQueryGroup, projectId int64) (model.ProfileQueryGroup, int, string, string, bool) {
+	var timezoneString U.TimeZoneString
+	if requestPayload.Queries[0].Timezone != "" {
+		_, errCode := time.LoadLocation(string(requestPayload.Queries[0].Timezone))
+		if errCode != nil {
+			return requestPayload, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid Timezone provided.", true
+		}
+		timezoneString = U.TimeZoneString(requestPayload.Queries[0].Timezone)
+	} else {
+		var statusCode int
+		timezoneString, statusCode = store.GetStore().GetTimezoneForProject(projectId)
+		if statusCode != http.StatusFound {
+			logCtx.Error("Query failed. Failed to get Timezone.")
+			return requestPayload, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Failed to get Timezone.", true
+		}
+	}
+	requestPayload.SetTimeZone(timezoneString)
+	return requestPayload, http.StatusOK, "", "", false
 }

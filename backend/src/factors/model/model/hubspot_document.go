@@ -321,7 +321,6 @@ func GetTimestampForV3Records(propertyValue interface{}) (int64, error) {
 	if err == nil {
 		return tm.UnixNano() / int64(time.Millisecond), nil
 	}
-	log.WithField("value", propertyValue).Error("failed to convert timestamp inside getTimestampFromPropertiesByKeyV3")
 	return 0, errors.New("failed to convert timestamp inside getTimestampFromPropertiesByKeyV3")
 }
 

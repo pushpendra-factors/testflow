@@ -208,7 +208,7 @@ func MergeAndWriteSortedFileTask(projectId int64, configs map[string]interface{}
 	}
 
 	success := true
-	for ftype, _ := range fileTypes {
+	for ftype := range fileTypes {
 		if ftype == pull.FileType["events"] {
 			_, _, err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", startTimestamp, endTimestamp, archiveCloudManager, tmpCloudManager, cloudManager, diskManager, beamConfig, *hardPull, 0, true, false, false)
 			if err != nil {
@@ -236,7 +236,7 @@ func MergeAndWriteSortedFileTask(projectId int64, configs map[string]interface{}
 					}
 				}
 			}
-			for dateField, _ := range uniqueDateFileds {
+			for dateField := range uniqueDateFileds {
 				_, _, err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeUser, dateField, startTimestamp, endTimestamp, archiveCloudManager, tmpCloudManager, cloudManager, diskManager, beamConfig, *hardPull, 0, true, false, false)
 				if err != nil {
 					status["users-"+dateField+"-error"] = err

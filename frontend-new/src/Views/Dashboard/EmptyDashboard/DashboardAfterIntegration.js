@@ -5,32 +5,30 @@ import { FaErrorComp, FaErrorLog } from '../../../components/factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Button } from 'antd';
 import { connect } from 'react-redux';
-import {
-  getHubspotContact,
-  setActiveProject,
-  fetchDemoProject
-} from 'Reducers/global';
+import { getHubspotContact, setActiveProject } from 'Reducers/global';
 import DashboardTemplates from '../../DashboardTemplates';
+import { PathUrls } from 'Routes/pathUrls';
 function DashboardAfterIntegration({
   setaddDashboardModal,
   getHubspotContact,
   currentAgent,
   setActiveProject,
-  fetchDemoProject,
   projects
 }) {
   const history = useHistory();
 
   useEffect(() => {
-    let email = currentAgent.email;
-    getHubspotContact(email)
-      .then((res) => {
-        console.log('get hubspot contact success', res.data);
-      })
-      .catch((err) => {
-        console.log(err.data.error);
-      });
-  }, [currentAgent.email, getHubspotContact]);
+    if (currentAgent?.email != null) {
+      let email = currentAgent.email;
+      getHubspotContact(email)
+        .then((res) => {
+          console.log('get hubspot contact success', res.data);
+        })
+        .catch((err) => {
+          console.log(err.data.error);
+        });
+    }
+  }, [currentAgent?.email, getHubspotContact]);
 
   return (
     <>
@@ -78,7 +76,7 @@ function DashboardAfterIntegration({
               type={'link'}
               style={{ backgroundColor: 'white' }}
               className={'mt-2'}
-              onClick={() => history.push('/welcome')}
+              onClick={() => history.push(PathUrls.SettingsIntegration)}
             >
               Finish Setup
               <SVG
@@ -103,6 +101,5 @@ const mapStateToProps = (state) => ({
 
 export default connect(mapStateToProps, {
   getHubspotContact,
-  setActiveProject,
-  fetchDemoProject
+  setActiveProject
 })(DashboardAfterIntegration);

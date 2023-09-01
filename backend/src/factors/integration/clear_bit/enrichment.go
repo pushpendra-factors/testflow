@@ -3,13 +3,20 @@ package clear_bit
 import (
 	"factors/util"
 	"fmt"
+	"time"
+
+	log "github.com/sirupsen/logrus"
+
 	"github.com/clearbit/clearbit-go/clearbit"
 )
 
-func ExecuteClearBitEnrich(clearbitKey string, properties *util.PropertiesMap, clientIP string, statusChannel chan int) {
+func ExecuteClearBitEnrich(clearbitKey string, properties *util.PropertiesMap, clientIP string, statusChannel chan int, logCtx *log.Entry) {
+	defer close(statusChannel)
+
 	err := EnrichmentUsingclearBit(clearbitKey, properties, clientIP)
 
 	if err != nil {
+		logCtx.WithFields(log.Fields{"error": err, "apiKey": clearbitKey}).Warn("clearbit enrichment debug")
 		statusChannel <- 0
 	}
 	statusChannel <- 1
@@ -19,7 +26,7 @@ func EnrichmentUsingclearBit(clearbitKey string, properties *util.PropertiesMap,
 		return fmt.Errorf("invalid IP, failed adding user properties")
 	}
 
-	client := clearbit.NewClient(clearbit.WithAPIKey(clearbitKey))
+	client := clearbit.NewClient(clearbit.WithAPIKey(clearbitKey), clearbit.WithTimeout(util.TimeoutOneSecond+100*time.Millisecond))
 	results, _, err := client.Reveal.Find(clearbit.RevealFindParams{
 		IP: clientIP,
 	})

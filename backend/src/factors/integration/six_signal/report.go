@@ -56,7 +56,7 @@ func SendSixSignalEmailForSubscribe(projectIdArray []int64) map[int64][]string {
 
 		//Fetching emailIds from database and converting the datatype to array
 		emailIdsString, errCode1 := store.GetStore().GetSixsignalEmailListFromProjectSetting(projectId)
-		if errCode1 != http.StatusFound {
+		if errCode1 != http.StatusFound || emailIdsString == "" {
 			logCtx.Error("No email Ids for sixsignal report subscription is found.")
 			continue
 		}
@@ -72,10 +72,10 @@ func SendSixSignalEmailForSubscribe(projectIdArray []int64) map[int64][]string {
 		}
 
 		_, failToSendEmailIds := memsql.SendSixSignalReportViaEmail(reqPayload)
-		projectIdToFailSendEmailIdsMap[projectId] = failToSendEmailIds
-
+		if len(failToSendEmailIds) > 0 {
+			projectIdToFailSendEmailIdsMap[projectId] = failToSendEmailIds
+		}
 	}
-
 	return projectIdToFailSendEmailIdsMap
 }
 

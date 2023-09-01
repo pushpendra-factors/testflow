@@ -1,4 +1,4 @@
-/* eslint-disable */
+import { fetchKPIFilterValues } from 'Reducers/kpi';
 import {
   fetchEventsAction,
   fetchEventPropertiesAction,
@@ -33,11 +33,15 @@ import {
   setButtonClicksPropertiesNamesAction,
   setPageViewsPropertiesNamesAction,
   FETCH_PROPERTY_VALUES_LOADING,
-  FETCH_PROPERTY_VALUES_LOADED
+  FETCH_PROPERTY_VALUES_LOADED,
+  fetchUserPropertiesActionV2,
+  fetchEventUserPropertiesActionV2,
+  fetchEventPropertiesActionV2
 } from './actions';
 import {
   getEventNames,
   fetchEventProperties,
+  fetchEventPropertiesV2,
   fetchUserProperties,
   fetchGroupProperties,
   fetchCampaignConfig,
@@ -45,13 +49,16 @@ import {
   fetchGroupPropertyValues,
   fetchUserPropertyValues,
   fetchButtonClicksPropertyValues,
-  fetchPageViewsPropertyValues
+  fetchPageViewsPropertyValues,
+  fetchUserPropertiesV2
 } from './services';
 import {
   convertToEventOptions,
   convertPropsToOptions,
   convertCampaignConfig,
-  convertCustomEventCategoryToOptions
+  convertCustomEventCategoryToOptions,
+  convertEventsPropsToOptions,
+  convertUserPropsToOptions
 } from './utils';
 
 export const fetchEventNames = (projectId) => {
@@ -96,31 +103,22 @@ export const getGroupProperties = (projectId, groupName) => {
     });
   };
 };
-
-export const getUserProperties = (projectId, queryType = '') => {
+export const getUserPropertiesV2 = (projectId, queryType = '') => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
-      fetchUserProperties(projectId, queryType)
+      fetchUserPropertiesV2(projectId, queryType)
         .then((response) => {
-          const options = convertPropsToOptions(
+          const options = convertUserPropsToOptions(
             response.data?.properties,
-            response.data?.display_names
+            response.data?.display_names,
+            response.data?.disabled_event_user_properties
           );
           resolve(
             dispatch(setUserPropertiesNamesAction(response.data?.display_names))
           );
-          resolve(dispatch(fetchUserPropertiesAction(options)));
+          resolve(dispatch(fetchUserPropertiesActionV2(options.userOptions)));
           resolve(
-            dispatch(
-              fetchEventUserPropertiesAction(
-                options.filter(
-                  (item) =>
-                    !response.data?.disabled_event_user_properties?.includes(
-                      item?.[1]
-                    )
-                )
-              )
-            )
+            dispatch(fetchEventUserPropertiesActionV2(options.eventUserOptions))
           );
         })
         .catch((err) => {
@@ -129,13 +127,12 @@ export const getUserProperties = (projectId, queryType = '') => {
     });
   };
 };
-
-export const getEventProperties = (projectId, eventName) => {
+export const getEventPropertiesV2 = (projectId, eventName) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
-      fetchEventProperties(projectId, eventName)
+      fetchEventPropertiesV2(projectId, eventName)
         .then((response) => {
-          const options = convertPropsToOptions(
+          const options = convertEventsPropsToOptions(
             response.data.properties,
             response.data?.display_names
           );
@@ -144,7 +141,7 @@ export const getEventProperties = (projectId, eventName) => {
               setEventPropertiesNamesAction(response.data?.display_names)
             )
           );
-          resolve(dispatch(fetchEventPropertiesAction(options, eventName)));
+          resolve(dispatch(fetchEventPropertiesActionV2(options, eventName)));
         })
         .catch((err) => {
           // resolve(dispatch(fetchEventPropertiesAction({})));
@@ -360,24 +357,26 @@ export const getUserPropertyValues =
   (projectId, propertyName) => (dispatch) => {
     return new Promise((resolve, reject) => {
       dispatch({ type: FETCH_PROPERTY_VALUES_LOADING });
-      fetchUserPropertyValues(projectId, propertyName).then((response) => {
-        resolve(
-          dispatch({
-            type: FETCH_PROPERTY_VALUES_LOADED,
-            payload: response.data,
-            propName: propertyName
-          })
-        );
-      });
-    }).catch((err) => {
-      console.log(err);
-      resolve(
-        dispatch({
-          type: FETCH_PROPERTY_VALUES_LOADED,
-          payload: {},
-          propName: propertyName
+      fetchUserPropertyValues(projectId, propertyName)
+        .then((response) => {
+          resolve(
+            dispatch({
+              type: FETCH_PROPERTY_VALUES_LOADED,
+              payload: response.data,
+              propName: propertyName
+            })
+          );
         })
-      );
+        .catch((err) => {
+          console.log(err);
+          resolve(
+            dispatch({
+              type: FETCH_PROPERTY_VALUES_LOADED,
+              payload: {},
+              propName: propertyName
+            })
+          );
+        });
     });
   };
 
@@ -385,8 +384,8 @@ export const getEventPropertyValues =
   (projectId, eventName, propertyName) => (dispatch) => {
     return new Promise((resolve, reject) => {
       dispatch({ type: FETCH_PROPERTY_VALUES_LOADING });
-      fetchEventPropertyValues(projectId, eventName, propertyName).then(
-        (response) => {
+      fetchEventPropertyValues(projectId, eventName, propertyName)
+        .then((response) => {
           resolve(
             dispatch({
               type: FETCH_PROPERTY_VALUES_LOADED,
@@ -394,17 +393,17 @@ export const getEventPropertyValues =
               propName: propertyName
             })
           );
-        }
-      );
-    }).catch((err) => {
-      console.log(err);
-      resolve(
-        dispatch({
-          type: FETCH_PROPERTY_VALUES_LOADED,
-          payload: {},
-          propName: propertyName
         })
-      );
+        .catch((err) => {
+          console.log(err);
+          resolve(
+            dispatch({
+              type: FETCH_PROPERTY_VALUES_LOADED,
+              payload: {},
+              propName: propertyName
+            })
+          );
+        });
     });
   };
 
@@ -412,8 +411,8 @@ export const getGroupPropertyValues =
   (projectId, groupName, propertyName) => (dispatch) => {
     return new Promise((resolve, reject) => {
       dispatch({ type: FETCH_PROPERTY_VALUES_LOADING });
-      fetchGroupPropertyValues(projectId, groupName, propertyName).then(
-        (response) => {
+      fetchGroupPropertyValues(projectId, groupName, propertyName)
+        .then((response) => {
           resolve(
             dispatch({
               type: FETCH_PROPERTY_VALUES_LOADED,
@@ -421,16 +420,42 @@ export const getGroupPropertyValues =
               propName: propertyName
             })
           );
-        }
-      );
-    }).catch((err) => {
-      console.log(err);
-      resolve(
-        dispatch({
-          type: FETCH_PROPERTY_VALUES_LOADED,
-          payload: {},
-          propName: propertyName
         })
-      );
+        .catch((err) => {
+          console.log(err);
+          resolve(
+            dispatch({
+              type: FETCH_PROPERTY_VALUES_LOADED,
+              payload: {},
+              propName: propertyName
+            })
+          );
+        });
     });
   };
+
+export const getKPIPropertyValues = (projectId, data) => (dispatch) => {
+  return new Promise((resolve, reject) => {
+    dispatch({ type: FETCH_PROPERTY_VALUES_LOADING });
+    fetchKPIFilterValues(projectId, data)
+      .then((response) => {
+        resolve(
+          dispatch({
+            type: FETCH_PROPERTY_VALUES_LOADED,
+            payload: response.data,
+            propName: data?.property_name
+          })
+        );
+      })
+      .catch((err) => {
+        console.log(err);
+        resolve(
+          dispatch({
+            type: FETCH_PROPERTY_VALUES_LOADED,
+            payload: {},
+            propName: data?.property_name
+          })
+        );
+      });
+  });
+};

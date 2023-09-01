@@ -184,8 +184,7 @@ export const getDataFromServer = (
               return {
                 ...q,
                 fr,
-                to,
-                gbt: q.gbt ? durationObj.frequency : ''
+                to
               };
             })
           }
@@ -203,8 +202,7 @@ export const getDataFromServer = (
               return {
                 ...q,
                 fr,
-                to,
-                gbt: q.gbt ? durationObj.frequency : ''
+                to
               };
             })
           }

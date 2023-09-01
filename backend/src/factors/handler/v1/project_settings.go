@@ -50,11 +50,9 @@ func GetProjectSettingHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to get project settings."})
 		return
 	}
-	events, errCode := store.GetStore().GetEventNames(projectId)
-	var int_completed bool = false
-	if len(events) > 1 {
-		int_completed = true
-	}
+	isExist, errCode := store.GetStore().IsEventExistsWithType(projectId, model.TYPE_AUTO_TRACKED_EVENT_NAME)
+	int_completed := isExist
+
 	projectSettings := ProjectSettings{
 		Settings:     *settings,
 		IntCompleted: int_completed,
@@ -64,6 +62,12 @@ func GetProjectSettingHandler(c *gin.Context) {
 	if errCode != http.StatusFound && errCode != http.StatusNotFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to get project settings."})
 	} else {
+		// Returning random url sets everytime.
+		// Todo: Persist url at project level and return the same.
+		assetURL, apiURL := model.GetProjectSDKAPIAndAssetURL(projectId)
+		projectSettings.Settings.SDKAPIURL = apiURL
+		projectSettings.Settings.SDKAssetURL = assetURL
+
 		c.JSON(http.StatusOK, projectSettings)
 	}
 }

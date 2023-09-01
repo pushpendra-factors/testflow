@@ -28,6 +28,7 @@ type OverWrite []FeatureDetails
 type DisplayPlanDetails struct {
 	ProjectID     int64         `json:"project_id"`
 	Plan          PlanDetails   `json:"plan"`
+	DisplayName   string        `json:"display_name"`
 	AddOns        OverWrite     `json:"add_ons"`
 	LastRenewedOn time.Time     `json:"last_renewed_on"`
 	SixSignalInfo SixSignalInfo `json:"six_signal_info"`

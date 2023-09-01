@@ -137,6 +137,7 @@ func getSalesforceObjectDescription(projectID int64, objectName, accessToken, in
 		return nil, err
 	}
 
+	log.WithFields(log.Fields{"project_id": projectID, "object_name": objectName, "api_usage": resp.Header["Sforce-Limit-Info"]}).Info("Api Usage on getSalesforceObjectDescription.")
 	return &jsonRespone, nil
 }
 
@@ -397,6 +398,7 @@ func (s *DataClient) getRequest(queryURL string) (*QueryResponse, error) {
 		return nil, errors.New("failed to decode response")
 	}
 	s.APICall++
+	log.WithFields(log.Fields{"project_id": s.ProjectID, "api_usage": resp.Header["Sforce-Limit-Info"]}).Info("Api Usage on getRequest.")
 
 	return &jsonResponse, nil
 }
@@ -1581,6 +1583,16 @@ func syncSalesforcePropertyByType(projectID int64, doctTypeAlias string, fieldNa
 		logCtx.WithFields(log.Fields{"enriched_property_key": enKey}).WithError(err).
 			Error("Failed to create user property details.")
 		return err
+	}
+
+	eventName = model.GetSalesforceCustomEventNameByType(doctTypeAlias)
+	if eventName != "" {
+		err = store.GetStore().CreateOrDeletePropertyDetails(projectID, eventName, enKey, pType, false, true)
+		if err != nil {
+			logCtx.WithFields(log.Fields{"enriched_property_key": enKey}).WithError(err).
+				Error("Failed to create custom event property details.")
+			return err
+		}
 	}
 
 	return nil

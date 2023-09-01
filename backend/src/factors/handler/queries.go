@@ -15,7 +15,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-//SavedQueryRequestPayload is struct for post request to create saved query
+// SavedQueryRequestPayload is struct for post request to create saved query
 type SavedQueryRequestPayload struct {
 	Title    string          `json:"title"`
 	Type     int             `json:"type"`
@@ -163,8 +163,11 @@ func UpdateSavedQueryHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid query id."})
 		return
 	}
+	requestPayloadContainsQueryUpdate := (requestPayload.Query != nil && !U.IsEmptyPostgresJsonb(requestPayload.Query))
 
 	queryRequest := &model.Queries{
+		ID:        queryID,
+		ProjectID: projectID,
 		Query:     postgres.Jsonb{},
 		Title:     requestPayload.Title,
 		Type:      requestPayload.Type,
@@ -172,6 +175,10 @@ func UpdateSavedQueryHandler(c *gin.Context) {
 		// To support empty settings value.
 		Settings: postgres.Jsonb{RawMessage: json.RawMessage(`{}`)},
 		IdText:   U.RandomStringForSharableQuery(50),
+	}
+	if requestPayloadContainsQueryUpdate {
+		queryRequest.Query = *requestPayload.Query
+		queryRequest.LockedForCacheInvalidation = true
 	}
 
 	query, status := store.GetStore().GetQueryWithQueryId(projectID, queryID)
@@ -181,10 +188,11 @@ func UpdateSavedQueryHandler(c *gin.Context) {
 	}
 	queryRequest.IdText = query.IdText
 
-	if requestPayload.Query != nil && !U.IsEmptyPostgresJsonb(requestPayload.Query) {
-		queryRequest.Query = *requestPayload.Query
-		H.InValidateSavedQueryCache(query)
+	if query.LockedForCacheInvalidation {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to update Saved Query. There is already an update"})
+		return
 	}
+
 	if requestPayload.Settings != nil && !U.IsEmptyPostgresJsonb(requestPayload.Settings) {
 		queryRequest.Settings = *requestPayload.Settings
 	}
@@ -195,8 +203,23 @@ func UpdateSavedQueryHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to update Saved Query."})
 		return
 	}
+	if requestPayloadContainsQueryUpdate {
+		go invalidateSavedQueryCache(projectID, queryRequest)
+	}
 
 	c.JSON(http.StatusAccepted, gin.H{"message": "Successfully updated."})
+}
+
+func invalidateSavedQueryCache(projectID int64, query *model.Queries) {
+	statusCode := H.InValidateSavedQueryCache(query)
+	if statusCode != http.StatusOK {
+		log.WithField("query_id", query.ID).Error("Failed in invalidating saved query cache.")
+	}
+	query.LockedForCacheInvalidation = false
+	_, errCode := store.GetStore().UpdateSavedQuery(projectID, query.ID, query)
+	if errCode != http.StatusAccepted {
+		log.WithField("query_id", query.ID).Error("Failed to unset lock for cache.")
+	}
 }
 
 // DeleteSavedQueryHandler godoc

@@ -99,13 +99,13 @@ services:
                 - etcd
                 - redis
         # Frontend docker is not building. Run manually.
-        #frontend:
-        #    build: 
-        #        context: ../../../frontend-new
-        #        dockerfile: Dockerfile.frontend.testing
-        #    image: testing/frontend:1.0
-        #    ports: 
-        #        - "3000:3000"
+        frontend:
+            build: 
+                context: ../../../frontend-new
+                dockerfile: Dockerfile.frontend.testing
+            image: testing/frontend:1.0
+            ports: 
+                - "3000:3000"
         datagen:
             build:
                 context: ../../../misc/data_simulator/src/

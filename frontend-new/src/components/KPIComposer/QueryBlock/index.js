@@ -18,6 +18,7 @@ import { get } from 'lodash';
 import { compareFilters, groupFilters } from '../../../utils/global';
 import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import { processProperties } from 'Utils/dataFormatter';
 
 function QueryBlock({
   index,
@@ -31,8 +32,8 @@ function QueryBlock({
   groupBy,
   setGroupBy,
   delGroupBy,
-  // userProperties,
-  // eventProperties,
+  // eventPropertiesV2,
+  // eventPropertiesV2,
   // setSelectedMainCategory,
   kpi,
   KPIConfigProps,
@@ -106,12 +107,12 @@ function QueryBlock({
   //   } // Akhil please check this line
   //   const assignFilterProps = Object.assign({}, filterProps);
 
-  //   if (eventProperties[event.label]) {
-  //     assignFilterProps.event = eventProperties[event.label];
+  //   if (eventPropertiesV2[event.label]) {
+  //     assignFilterProps.event = eventPropertiesV2[event.label];
   //   }
-  //   assignFilterProps.user = userProperties;
+  //   assignFilterProps.user = eventPropertiesV2;
   //   setFilterProperties(assignFilterProps);
-  // }, [userProperties, eventProperties]);
+  // }, [eventPropertiesV2, eventPropertiesV2]);
 
   const triggerDropDown = () => {
     setDDVisible(true);
@@ -133,31 +134,11 @@ function QueryBlock({
         extraProps: {
           category: groupOpt?.category
         },
-        values: groupOpt?.values?.map((op) => {
-          return {
-            value: op[1],
-            label: op[0],
-            extraProps: {
-              valueType: op[2]
-            }
-          };
-        })
+        values: processProperties(groupOpt?.values)
       };
     });
 
   const selectEvents = () => {
-    let orderedKpiEvents;
-    // Moving MostRecent as first Option.
-    const mostRecentGroupindex = kpiEvents
-      ?.map((opt) => opt.label)
-      ?.indexOf('Most Recent');
-    if (mostRecentGroupindex > 0) {
-      orderedKpiEvents = [
-        orderedKpiEvents[mostRecentGroupindex],
-        ...orderedKpiEvents.slice(0, mostRecentGroupindex),
-        ...orderedKpiEvents.slice(mostRecentGroupindex + 1)
-      ];
-    }
     return (
       <>
         {isDDVisible ? (
@@ -655,8 +636,7 @@ function QueryBlock({
 const mapStateToProps = (state) => ({
   eventOptions: state.coreQuery.eventOptions,
   activeProject: state.global.active_project,
-  userProperties: state.coreQuery.userProperties,
-  eventProperties: state.coreQuery.eventProperties,
+  eventPropertiesV2: state.coreQuery.eventPropertiesV2,
   groupBy: state.coreQuery.groupBy.event,
   eventNames: state.coreQuery.eventNames,
   kpi: state.kpi

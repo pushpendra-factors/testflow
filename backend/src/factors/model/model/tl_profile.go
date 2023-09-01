@@ -8,15 +8,21 @@ import (
 )
 
 type Profile struct {
-	Identity     string                 `json:"identity"`
-	Properties   *postgres.Jsonb        `json:"-"`
-	Name         string                 `json:"name,omitempty"`
-	HostName     string                 `json:"host_name,omitempty"`
-	IsAnonymous  bool                   `json:"is_anonymous"`
-	LastActivity time.Time              `json:"last_activity"`
-	TableProps   map[string]interface{} `json:"table_props"`
-	Score        float64                `json:"score"`
-	Engagement   string                 `json:"engagement,omitempty"`
+	Identity                   string                 `json:"identity"`
+	Properties                 *postgres.Jsonb        `json:"-"`
+	Name                       string                 `json:"name,omitempty"`
+	HostName                   string                 `json:"host_name,omitempty"`
+	IsAnonymous                bool                   `json:"is_anonymous"`
+	LastActivity               time.Time              `json:"last_activity"`
+	PropertiesUpdatedTimestamp int64                  `json:"-"`
+	TableProps                 map[string]interface{} `json:"table_props"`
+	Score                      float64                `json:"score"`
+	Engagement                 string                 `json:"engagement,omitempty"`
+}
+
+type MinMaxUpdatedAt struct {
+	MinUpdatedAt time.Time `json:"min_updated_at"`
+	MaxUpdatedAt time.Time `json:"max_updated_at"`
 }
 
 type ContactDetails struct {
@@ -47,9 +53,7 @@ type UserActivity struct {
 }
 
 type TimelinePayload struct {
-	Source       string          `json:"source"`
-	SegmentId    string          `json:"segment_id"`
-	Filters      []QueryProperty `json:"filters"`
+	Query        Query           `json:"query"`
 	SearchFilter []QueryProperty `json:"search_filter"`
 }
 
@@ -67,8 +71,26 @@ type Overview struct {
 	Temperature float32            `json:"temperature"` // Normalised Score for base 100
 	Engagement  string             `json:"engagement"`  // Hot, Warm, Cold
 	UsersCount  int64              `json:"users_count"` // Number of Associated Users
-	TimeActive  int64              `json:"time_active"` // in seconds
+	TimeActive  float64            `json:"time_active"` // in seconds
 	ScoresList  map[string]float32 `json:"scores_list"` // Score trends list
+	TopPages    []TopPage          `json:"top_pages"`
+	TopUsers    []TopUser          `json:"top_users"`
+}
+
+type TopPage struct {
+	PageUrl          string  `json:"page_url"`
+	Views            int64   `json:"views"`
+	UsersCount       int64   `json:"users_count"`
+	TotalTime        float64 `json:"total_time"` // in seconds
+	AvgScrollPercent float64 `json:"avg_scroll_percent"`
+}
+
+type TopUser struct {
+	Name                string  `json:"name"`
+	NumPageViews        int64   `json:"num_page_views"`
+	AnonymousUsersCount int64   `json:"-"`
+	ActiveTime          float64 `json:"active_time"` // in seconds
+	NumOfPages          int64   `json:"num_of_pages"`
 }
 
 type UserTimeline struct {
@@ -90,12 +112,6 @@ const (
 )
 const GROUP_ACTIVITY_USERNAME = "group_user"
 const FILTER_TYPE_USERS = "users"
-
-// Profile type for Segment Events
-const (
-	USER_PROFILE_CALLER    = "user_profiles"
-	ACCOUNT_PROFILE_CALLER = "account_profiles"
-)
 
 // Source number to source name map
 var SourceGroupUser = map[int]string{
@@ -126,7 +142,7 @@ var AccountNames = map[string]string{
 }
 
 // host and company name list
-var NameProps = []string{U.UP_COMPANY, U.GP_HUBSPOT_COMPANY_NAME, U.GP_SALESFORCE_ACCOUNT_NAME, U.SIX_SIGNAL_NAME, U.LI_LOCALIZED_NAME, U.G2_NAME}
+var NameProps = []string{U.GP_HUBSPOT_COMPANY_NAME, U.GP_SALESFORCE_ACCOUNT_NAME, U.SIX_SIGNAL_NAME, U.LI_LOCALIZED_NAME, U.G2_NAME}
 var HostNameProps = []string{U.GP_HUBSPOT_COMPANY_DOMAIN, U.GP_SALESFORCE_ACCOUNT_WEBSITE, U.SIX_SIGNAL_DOMAIN, U.LI_DOMAIN, U.G2_DOMAIN}
 
 // Hover Events Property Map
@@ -164,4 +180,38 @@ var GROUP_TO_COMPANY_NAME_MAP = map[string]string{
 	U.GROUP_NAME_SIX_SIGNAL:         U.SIX_SIGNAL_DOMAIN,
 	U.GROUP_NAME_LINKEDIN_COMPANY:   U.LI_LOCALIZED_NAME,
 	U.GROUP_NAME_G2:                 U.G2_NAME,
+}
+
+func FormatTimeToString(time time.Time) string {
+	return time.Format("2006-01-02 15:04:05.000000")
+}
+
+func IsDomainGroup(group string) bool {
+	return group == "All" || group == U.GROUP_NAME_DOMAINS
+}
+
+func IsAnyProfiles(caller string) bool {
+	return (caller == PROFILE_TYPE_USER || caller == PROFILE_TYPE_ACCOUNT)
+}
+
+func IsAccountProfiles(caller string) bool {
+	return caller == PROFILE_TYPE_ACCOUNT
+}
+
+func IsUserProfiles(caller string) bool {
+	return caller == PROFILE_TYPE_USER
+}
+
+var GroupPropertyPrefixList = []string{
+	U.GROUP_NAME_HUBSPOT_COMPANY,
+	U.GROUP_NAME_SALESFORCE_ACCOUNT,
+	U.GROUP_NAME_SIX_SIGNAL,
+	U.LI_PROPERTIES_PREFIX,
+	U.GROUP_NAME_G2,
+}
+
+func UnixToLocalTime(timestamp int64) *time.Time {
+	t := time.Unix(timestamp, 0)
+	localTime := t.Local()
+	return &localTime
 }

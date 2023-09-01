@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	C "factors/config"
 	"factors/model/model"
+	M "factors/model/model"
 	U "factors/util"
 	"fmt"
 	"net/http"
@@ -54,6 +55,7 @@ func (store *MemSQL) CreateDashboardUnitForMultipleDashboards(dashboardIds []int
 	for _, dashboardId := range dashboardIds {
 		dashboardUnit, errCode, errMsg := store.CreateDashboardUnit(projectId, agentUUID,
 			&model.DashboardUnit{
+				ProjectID:    projectId,
 				DashboardId:  dashboardId,
 				Description:  unitPayload.Description,
 				Presentation: unitPayload.Presentation,
@@ -86,6 +88,7 @@ func (store *MemSQL) CreateMultipleDashboardUnits(requestPayload []model.Dashboa
 		}
 		dashboardUnit, errCode, errMsg := store.CreateDashboardUnit(projectId, agentUUID,
 			&model.DashboardUnit{
+				ProjectID:    projectId,
 				DashboardId:  dashboardId,
 				Description:  payload.Description,
 				Presentation: payload.Presentation,
@@ -277,6 +280,14 @@ func (store *MemSQL) GetDashboardUnitByDashboardID(projectId int64, dashboardId 
 	}
 
 	return dashboardUnits, http.StatusFound
+}
+
+func (store *MemSQL) GetQueryFromUnitID(projectID int64, unitID int64) (queryClass string, queryInfo *model.Queries, errMsg string) {
+	dashboardUnit, statusCode := store.GetDashboardUnitByUnitID(projectID, unitID)
+	if statusCode != http.StatusFound {
+		return "", nil, "Failed to fetch dashboard unit from unit ID"
+	}
+	return store.GetQueryAndClassFromDashboardUnit(dashboardUnit)
 }
 
 // GetDashboardUnitByUnitID To get a dashboard unit by project id and unit id.
@@ -653,9 +664,13 @@ func (store *MemSQL) DBCacheAttributionDashboardUnitsForProjects(stringProjectsI
 	logCtx := log.WithFields(logFields)
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	projectIDs := store.GetProjectsToRunForIncludeExcludeString(stringProjectsIDs, excludeProjectIDs)
+	projectIDs, err := store.GetProjectsArrayWithFeatureEnabledFromProjectIdFlag(stringProjectsIDs, M.FEATURE_ATTRIBUTION)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get projects array with feature enabled")
+		return
+	}
+
 	var mapOfValidDashboardUnits map[int64]map[int64]bool
-	var err error
 	validUnitCount := int64(0)
 	if C.GetUsageBasedDashboardCaching() == 1 {
 		mapOfValidDashboardUnits, validUnitCount, err = model.GetDashboardCacheAnalyticsValidityMap()
@@ -686,6 +701,10 @@ func (store *MemSQL) DBCacheAttributionDashboardUnitsForProjects(stringProjectsI
 
 			// skip caching the dashboard if not in the list
 			if !C.IsDashboardAllowedForCaching(dashboardUnit.DashboardId) {
+				continue
+			}
+			// skip caching the dashboard unit if not in the list
+			if !C.IsDashboardUnitAllowedForCaching(dashboardUnit.ID) {
 				continue
 			}
 			queryClass, queryInfo, errMsg := store.GetQueryAndClassFromDashboardUnit(&dashboardUnit)
@@ -1081,10 +1100,24 @@ func (store *MemSQL) RunCachingForLast3MonthsAttribution(dashboardUnit model.Das
 	}
 }
 
+// RunEverydayCachingForAttribution computes daily caching for ONE dashboardUnit at a time. It also check in DB to avoid re-computing.
 func (store *MemSQL) RunEverydayCachingForAttribution(dashboardUnit model.DashboardUnit, timezoneString U.TimeZoneString,
 	logCtx *log.Entry, queryClass string, reportCollector *sync.Map, enableFilterOpt bool) {
 
 	var unitWaitGroup sync.WaitGroup
+
+	resultsComputed, _ := store.GetLast3MonthStoredQueriesFromAndTo(dashboardUnit.ProjectID, dashboardUnit.DashboardId, dashboardUnit.ID, dashboardUnit.QueryId)
+
+	// get from and to for all the time ranges!
+	startTimeForCache := time.Now().Unix() - 63*U.SECONDS_IN_A_DAY
+	monthRange := U.GetAllMonthFromTo(startTimeForCache, timezoneString)
+	weeksRange := U.GetAllWeeksFromStartTime(startTimeForCache, timezoneString)
+
+	allRange := append(monthRange, weeksRange...)
+
+	log.WithFields(log.Fields{"projectID": dashboardUnit.ProjectID,
+		"allRange": allRange,
+		"Method":   "RunCachingForLast3MonthsAttribution"}).Info("Attribution V1 caching debug")
 
 	for preset, rangeFunction := range U.QueryDateRangePresets {
 
@@ -1093,6 +1126,15 @@ func (store *MemSQL) RunEverydayCachingForAttribution(dashboardUnit model.Dashbo
 			errMsg := fmt.Sprintf("Failed to get proper project Timezone for %d", dashboardUnit.ProjectID)
 			C.PingHealthcheckForFailure(C.HealthcheckDashboardDBAttributionPingID, errMsg)
 			return
+		}
+
+		// check if the result exists in DB
+		for _, resultEntry := range *resultsComputed {
+			if resultEntry.FromT == fr && resultEntry.ToT == t {
+				// already computed hence skip computing
+				logCtx.Info("Already computed unit, skipping")
+				continue
+			}
 		}
 
 		queryInfo, errC := store.GetQueryWithQueryId(dashboardUnit.ProjectID, dashboardUnit.QueryId)
@@ -1174,6 +1216,10 @@ func (store *MemSQL) RunCustomQueryRangeCaching(dashboardUnit model.DashboardUni
 		logCtx.WithField("err_code", errC).
 			WithField("query_id", dashboardUnit.QueryId).
 			Error("Failed to fetch query from query_id")
+		return
+	}
+	if queryInfo.LockedForCacheInvalidation {
+		logCtx.WithField("query_id", dashboardUnit.QueryId).Error("Didnt run caching because of lock on query.")
 		return
 	}
 
@@ -1452,7 +1498,7 @@ func (store *MemSQL) CacheAttributionDashboardUnitForDateRange(cachePayload mode
 
 		channel := make(chan Result)
 		logCtx.Info("Running attribution V1 caching")
-		go store.runAttributionUnitV1(projectID, attributionQuery.Query, channel)
+		go store.runAttributionUnitV1(projectID, attributionQuery.Query, channel, dashboardUnitID)
 
 		select {
 		case response := <-channel:
@@ -1779,7 +1825,7 @@ func (store *MemSQL) WrapperForAnalyze(projectID int64, queryOriginal model.Quer
 	return store.Analyze(projectID, queryOriginal, enableFilterOpt, false) // disable dashboard caching for funnelv2
 }
 
-func (store *MemSQL) runAttributionUnitV1(projectID int64, queryOriginal *model.AttributionQueryV1, c chan Result) {
+func (store *MemSQL) runAttributionUnitV1(projectID int64, queryOriginal *model.AttributionQueryV1, c chan Result, unitId int64) {
 	attributionQueryUnitPayload := model.AttributionQueryUnitV1{
 		Class: model.QueryClassAttribution,
 		Query: queryOriginal,
@@ -1789,7 +1835,7 @@ func (store *MemSQL) runAttributionUnitV1(projectID int64, queryOriginal *model.
 	var r *model.QueryResult
 	var err error
 	var result Result
-	r, err = store.WrapperForExecuteAttributionQueryV1(projectID, queryOriginal, debugQueryKey)
+	r, err = store.WrapperForExecuteAttributionQueryV1(projectID, queryOriginal, debugQueryKey, unitId)
 	if err != nil {
 		result = Result{res: r, err: err, errMsg: "", lastComputedAt: U.TimeNowUnix(), errCode: http.StatusInternalServerError}
 	} else {
@@ -1799,10 +1845,10 @@ func (store *MemSQL) runAttributionUnitV1(projectID int64, queryOriginal *model.
 	c <- result
 }
 
-func (store *MemSQL) WrapperForExecuteAttributionQueryV1(projectID int64, queryOriginal *model.AttributionQueryV1, debugQueryKey string) (*model.QueryResult, error) {
+func (store *MemSQL) WrapperForExecuteAttributionQueryV1(projectID int64, queryOriginal *model.AttributionQueryV1, debugQueryKey string, unitId int64) (*model.QueryResult, error) {
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	return store.ExecuteAttributionQueryV1(projectID, queryOriginal, debugQueryKey,
-		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery(), unitId)
 }
 
 func (store *MemSQL) runAttributionUnit(projectID int64, queryOriginal *model.AttributionQuery, c chan Result) {

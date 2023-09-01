@@ -131,6 +131,10 @@ func (store *MemSQL) createUserWithError(user *model.User) (*model.User, error) 
 }
 
 func (store *MemSQL) CreateUser(user *model.User) (string, int) {
+	return store.createUserWithConflicts(user, true)
+}
+
+func (store *MemSQL) createUserWithConflicts(user *model.User, ignoreConflicts bool) (string, int) {
 	logFields := log.Fields{
 		"user": user,
 	}
@@ -155,7 +159,11 @@ func (store *MemSQL) CreateUser(user *model.User) (string, int) {
 			// Multiple requests trying to create user at the
 			// same time should not lead failure permanently,
 			// so get the user and return.
-			return user.ID, http.StatusCreated
+			if ignoreConflicts {
+				return user.ID, http.StatusCreated
+			} else {
+				return user.ID, http.StatusConflict
+			}
 		}
 
 		logCtx.WithError(err).Error("Failed to create user. Integrity violation.")
@@ -320,34 +328,9 @@ func (store *MemSQL) GetUsers(projectId int64, offset uint64, limit uint64) ([]m
 	return users, http.StatusFound
 }
 
-// GetUsersByCustomerUserID Gets all the users indentified by given customer_user_id in increasing order of updated_at.
+// GetUsersByCustomerUserID Gets all the users dentified by given customer_user_id with a limit.
 func (store *MemSQL) GetUsersByCustomerUserID(projectID int64, customerUserID string) ([]model.User, int) {
-	logFields := log.Fields{
-		"project_id":       projectID,
-		"customer_user_id": customerUserID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-
-	logCtx := log.WithFields(logFields)
-
-	var users []model.User
-	db := C.GetServices().Db
-	if err := db.Where("project_id = ? AND customer_user_id = ?", projectID, customerUserID).
-		Find(&users).Error; err != nil {
-
-		logCtx.WithError(err).Error("Failed to get users for customer_user_id")
-		return nil, http.StatusInternalServerError
-	}
-	if len(users) == 0 {
-		return nil, http.StatusNotFound
-	}
-
-	// Sort by created_at ASC
-	sort.Slice(users, func(i, j int) bool {
-		return users[i].CreatedAt.Before(users[j].CreatedAt)
-	})
-
-	return users, http.StatusFound
+	return store.GetSelectedUsersByCustomerUserID(projectID, customerUserID, 5000, 100)
 }
 
 // GetSelectedUsersByCustomerUserID gets selected (top 50 & bottom 50) users identified by given customer_user_id in increasing order of updated_at.
@@ -363,7 +346,8 @@ func (store *MemSQL) GetSelectedUsersByCustomerUserID(projectID int64, customerU
 	logCtx := log.WithFields(logFields)
 
 	var ids []model.User
-	if err := db.Limit(limit).Order("created_at ASC").
+	// Fetches recently updated users to ensure relevance at present.
+	if err := db.Limit(limit).Order("updated_at DESC").
 		Where("project_id = ? AND customer_user_id = ?", projectID, customerUserID).
 		Select("id").Find(&ids).Error; err != nil {
 		logCtx.WithError(err).Error("Failed to get selected users for customer_user_id")
@@ -398,7 +382,7 @@ func (store *MemSQL) GetSelectedUsersByCustomerUserID(projectID int64, customerU
 		return nil, http.StatusInternalServerError
 	}
 
-	// sort by created_at ASC
+	// Sorted by ASC order intentionally to keep the order of creation.
 	sort.Slice(users, func(i, j int) bool {
 		return users[i].CreatedAt.Before(users[j].CreatedAt)
 	})
@@ -610,6 +594,17 @@ func getDomainUserIDByDomainGroupIndexANDDomainName(domainGroupIndex int, domain
 	return "dom-" + enKey
 }
 
+func getCRMGroupUserIDByRecordIDANDIndex(groupIndex int, recordID string) string {
+	if groupIndex == 0 || recordID == "" {
+		return ""
+	}
+
+	key := fmt.Sprintf("%d-%s", groupIndex, recordID)
+
+	enKey := base64.StdEncoding.EncodeToString([]byte(key))
+	return "crm-" + enKey
+}
+
 // CreateOrGetSegmentUser create or updates(c_uid) and returns user by segement_anonymous_id
 // and/or customer_user_id.
 func (store *MemSQL) CreateOrGetSegmentUser(projectId int64, segAnonId, custUserId string,
@@ -758,6 +753,57 @@ func (store *MemSQL) CreateOrGetDomainGroupUser(projectID int64, groupName strin
 	}, groupName, domainName)
 	if status != http.StatusCreated && status != http.StatusConflict {
 		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to create domain group user.")
+		return "", http.StatusInternalServerError
+	}
+
+	return userID, status
+}
+
+// CreateOrGetCRMGroupUser creates or get crm group user by group name and record id
+func (store *MemSQL) CreateOrGetCRMGroupUser(projectID int64, groupName string, recordID string,
+	requestTimestamp int64, requestSource int) (string, int) {
+	logFields := log.Fields{
+		"project_id":        projectID,
+		"group_name":        groupName,
+		"record_id":         recordID,
+		"request_timestamp": requestTimestamp,
+		"request_source":    requestSource,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+
+	if projectID == 0 || groupName == "" || recordID == "" {
+		logCtx.Error("Invalid parameters on CreateOrGetCRMGroupUser.")
+		return "", http.StatusBadRequest
+	}
+
+	user, status := store.GetGroupUserByGroupID(projectID, groupName, recordID)
+	if status != http.StatusFound && status != http.StatusNotFound {
+		logCtx.Error("Failed to check for existence of crm group user.")
+		return "", http.StatusInternalServerError
+	}
+
+	if status == http.StatusFound {
+		return user.ID, http.StatusFound
+	}
+
+	group, status := store.GetGroup(projectID, groupName)
+	if status != http.StatusFound {
+		logCtx.Error("Failed to get group on CreateOrGetCRMGroupUser.")
+		return "", http.StatusInternalServerError
+	}
+
+	isGroupUser := true
+	userID, status := store.createGroupUserWithConflicts(&model.User{
+		ID:            getCRMGroupUserIDByRecordIDANDIndex(group.ID, recordID),
+		ProjectId:     projectID,
+		IsGroupUser:   &isGroupUser,
+		JoinTimestamp: requestTimestamp,
+		Source:        &requestSource,
+	}, groupName, recordID, false)
+	if status != http.StatusCreated && status != http.StatusConflict {
+		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to create crm group user.")
 		return "", http.StatusInternalServerError
 	}
 
@@ -1418,9 +1464,7 @@ func (store *MemSQL) getUsersForMergingPropertiesByCustomerUserID(projectID int6
 	// For user_properties created at same unix time, older user order will help in
 	// ensuring the order while merging properties.
 	// users, errCode := store.GetUsersByCustomerUserID(projectID, customerUserID)
-	var limit uint64 = 10000
-	var numUsers uint64 = 100
-	users, errCode := store.GetSelectedUsersByCustomerUserID(projectID, customerUserID, limit, numUsers)
+	users, errCode := store.GetUsersByCustomerUserID(projectID, customerUserID)
 	if errCode == http.StatusInternalServerError || errCode == http.StatusNotFound {
 		return users, errCode
 	}
@@ -2295,15 +2339,18 @@ func (store *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdatedV2(
 			newUserProperties[U.UP_LATEST_CHANNEL] = sessionUserProperties.LatestChannel
 		}
 
-		existingPageCount, existingTotalSpentTime := getPageCountAndTimeSpentFormUserPropertiesMap(*existingUserPropertiesMap, logCtx)
+		existingPageCount, err := U.GetPropertyValueAsFloat64((*existingUserPropertiesMap)[U.UP_PAGE_COUNT])
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to convert page_count to float64.")
+		}
 
-		realPageCount, realTotalSpentTime := getRealPageCountAndTimeSpentFormUserPropertiesMap(*existingUserPropertiesMap, logCtx)
+		existingTotalSpentTime, err := U.GetPropertyValueAsFloat64((*existingUserPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to convert existing total_spent_time to float64.")
+		}
 
 		newUserProperties[U.UP_TOTAL_SPENT_TIME] = existingTotalSpentTime + sessionUserProperties.TotalSpentTime
 		newUserProperties[U.UP_PAGE_COUNT] = existingPageCount + sessionUserProperties.PageCount
-
-		newUserProperties[U.UP_REAL_TOTAL_SPENT_TIME] = realTotalSpentTime + sessionUserProperties.TotalSpentTime
-		newUserProperties[U.UP_REAL_PAGE_COUNT] = realPageCount + sessionUserProperties.PageCount
 
 		userPropertiesJsonb, err := U.AddToPostgresJsonb(existingUserProperties, newUserProperties, true)
 		if err != nil {
@@ -2350,71 +2397,6 @@ func (store *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdatedV2(
 	}
 
 	return http.StatusAccepted
-}
-
-func getPageCountAndTimeSpentFormUserPropertiesMap(propertiesMap util.PropertiesMap, logCtx *log.Entry) (float64, float64) {
-
-	var existingPageCount float64
-	var existingTotalSpentTime float64
-	var err error
-
-	if _, exist := propertiesMap[U.UP_PAGE_COUNT]; exist {
-
-		existingPageCount, err = U.GetPropertyValueAsFloat64((propertiesMap)[U.UP_PAGE_COUNT])
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to convert page_count to float64.")
-		}
-
-	}
-
-	if _, exist := propertiesMap[U.UP_TOTAL_SPENT_TIME]; exist {
-		existingTotalSpentTime, err = U.GetPropertyValueAsFloat64((propertiesMap)[U.UP_TOTAL_SPENT_TIME])
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to convert existing total_spent_time to float64.")
-		}
-
-	}
-
-	return existingPageCount, existingTotalSpentTime
-
-}
-
-func getRealPageCountAndTimeSpentFormUserPropertiesMap(propertiesMap util.PropertiesMap, logCtx *log.Entry) (float64, float64) {
-
-	var existingPageCount float64
-	var existingTotalSpentTime float64
-	var err error
-
-	if _, exist := propertiesMap[U.UP_REAL_PAGE_COUNT]; exist {
-
-		existingPageCount, err = U.GetPropertyValueAsFloat64((propertiesMap)[U.UP_REAL_PAGE_COUNT])
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to convert page_count to float64.")
-		}
-
-	} else {
-
-		existingPageCount, err = U.GetPropertyValueAsFloat64((propertiesMap)[U.UP_PAGE_COUNT])
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to convert page_count to float64.")
-		}
-	}
-
-	if _, exist := propertiesMap[U.UP_REAL_TOTAL_SPENT_TIME]; exist {
-
-		existingTotalSpentTime, err = U.GetPropertyValueAsFloat64((propertiesMap)[U.UP_TOTAL_SPENT_TIME])
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to convert existing total_spent_time to float64.")
-		}
-	} else {
-		existingTotalSpentTime, err = U.GetPropertyValueAsFloat64((propertiesMap)[U.UP_TOTAL_SPENT_TIME])
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to convert existing total_spent_time to float64.")
-		}
-	}
-
-	return existingPageCount, existingTotalSpentTime
-
 }
 
 func shouldAllowCustomerUserID(current, incoming string) bool {
@@ -2577,6 +2559,10 @@ func (store *MemSQL) addGroupUserPropertyDetailsToCache(projectID int64, groupNa
 }
 
 func (store *MemSQL) CreateGroupUser(user *model.User, groupName, groupID string) (string, int) {
+	return store.createGroupUserWithConflicts(user, groupName, groupID, true)
+}
+
+func (store *MemSQL) createGroupUserWithConflicts(user *model.User, groupName, groupID string, ignoreConflicts bool) (string, int) {
 	logFields := log.Fields{
 		"user":       user,
 		"group_name": groupName,
@@ -2627,7 +2613,7 @@ func (store *MemSQL) CreateGroupUser(user *model.User, groupName, groupID string
 		logCtx.Warning("Skip associating group_id")
 	}
 
-	return store.CreateUser(groupUser)
+	return store.createUserWithConflicts(groupUser, ignoreConflicts)
 }
 
 func (store *MemSQL) UpdateUserGroup(projectID int64, userID, groupName, groupID, groupUserID string, overwrite bool) (*model.User, int) {
@@ -2731,6 +2717,59 @@ func (store *MemSQL) updateUserGroup(projectID int64, user *model.User, userID s
 	user.ProjectId = 0
 	user.ID = ""
 	return store.UpdateUser(projectID, userID, user, user.PropertiesUpdatedTimestamp)
+}
+
+func (store *MemSQL) UpdateUserGroupInBatch(projectID int64, userIDs []string, groupName, groupID string, groupUserID string, overwrite bool) int {
+	logFields := log.Fields{
+		"project_id":    projectID,
+		"user_ids":      userIDs,
+		"group_id":      groupID,
+		"group_user_id": groupUserID,
+		"overwrite":     overwrite,
+		"group_name":    groupName,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	if projectID == 0 || groupUserID == "" || len(userIDs) == 0 || groupName == "" {
+		logCtx.Error("Invalid parameters.")
+		return http.StatusBadRequest
+	}
+
+	group, status := store.GetGroup(projectID, groupName)
+	if status != http.StatusFound {
+		logCtx.Error("Failed to get group on UpdateUserGroupInBatch.")
+		return http.StatusInternalServerError
+	}
+
+	groupUserIDColumn := fmt.Sprintf("group_%d_user_id", group.ID)
+	groupIDColumn := fmt.Sprintf("group_%d_id", group.ID)
+
+	updates := map[string]string{
+		groupUserIDColumn: groupUserID,
+		groupIDColumn:     groupID,
+	}
+
+	whereStmnt := "project_id = ? AND ( is_group_user is null OR is_group_user = false )"
+	if len(userIDs) == 1 {
+		whereStmnt = whereStmnt + " AND id = ?"
+	} else {
+		whereStmnt = whereStmnt + " AND id in (?)"
+	}
+	whereParams := []interface{}{projectID, userIDs}
+
+	if !overwrite {
+		whereStmnt = whereStmnt + " AND " + groupUserIDColumn + " IS NULL "
+	}
+
+	db := C.GetServices().Db
+	err := db.Model(&model.User{}).Where(whereStmnt, whereParams...).Updates(updates).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to update group user association.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
 }
 
 func (store *MemSQL) UpdateGroupUserDomainsGroup(projectID int64, groupUserID, groupUserGroupName, domainsUserID, domainsGroupID string, overwrite bool) (*model.User, int) {
@@ -3263,14 +3302,14 @@ func (store *MemSQL) GetAssociatedDomainForUser(projectID int64, userID string, 
 		SELECT group_%d_id as account
 		FROM users 
 		WHERE project_id = ? 
-			AND id = (
-				SELECT group_%d_user_id
-				FROM users 
-				WHERE project_id = ?
-					AND %s = ? 
-					AND group_%d_user_id IS NOT NULL 
-				LIMIT 1
-			)
+		  AND id = (
+			SELECT group_%d_user_id
+			FROM users 
+			WHERE project_id = ?
+			  AND %s = ? 
+			  AND group_%d_user_id IS NOT NULL 
+			LIMIT 1
+		)
 		`, domainGroup.ID, domainGroup.ID, columnName, domainGroup.ID)
 
 	err := db.Raw(queryString, projectID, projectID, userID).Scan(&details).Error

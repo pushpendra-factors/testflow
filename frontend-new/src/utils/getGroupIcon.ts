@@ -1,24 +1,3 @@
-type GroupName =
-  | 'website_session'
-  | 'form_submission'
-  | 'hubspot_contacts'
-  | 'hubspot_companies'
-  | 'hubspot_deals'
-  | 'google_ads_metrics'
-  | 'google_organic_metrics'
-  | 'linkedin_metrics'
-  | 'linkedin_company_engagements'
-  | 'all_channels_metrics'
-  | 'bingads_metrics'
-  | 'marketo_leads'
-  | 'page_views'
-  | 'Capterra'
-  | 'source1'
-  | 'Quora'
-  | 'Twitter'
-  | 'event_based'
-  | 'others';
-
 type GroupIcon =
   | 'brand'
   | 'List_Checkv2'
@@ -37,10 +16,22 @@ type GroupIcon =
   | 'Twitter'
   | 'EventBased'
   | 'mouseevent'
-  | '';
+  | 'Salesforce_ads'
+  | 'Others'
+  | 'ArrowProgress'
+  | 'UserMagnify'
+  | 'G2crowd'
+  | 'marketo'
+  | 'leadSquared'
+  | 'profile'
+  | 'LaptopMobile'
+  | 'PeopleRoof'
+  | 'FaceBook'
+  | 'BullsEyePointer';
 
-const getGroupIcon = (groupName: GroupName): GroupIcon => {
-  switch (groupName) {
+const getGroupIcon = (groupName: any): GroupIcon => {
+  const checkIcon = groupName?.toLowerCase().split(' ').join('_');
+  switch (checkIcon) {
     case 'website_session':
       return 'brand';
     case 'form_submission':
@@ -67,21 +58,65 @@ const getGroupIcon = (groupName: GroupName): GroupIcon => {
       return 'Marketo';
     case 'page_views':
       return 'PageViews';
-    case 'Capterra':
+    case 'capterra':
       return 'Capterra';
     case 'source1':
       return 'Source1';
-    case 'Quora':
+    case 'quora':
       return 'Quora';
-    case 'Twitter':
+    case 'twitter':
       return 'Twitter';
     case 'event_based':
       return 'EventBased';
     case 'others':
+      return 'Others';
+    case 'salesforce_users':
+      return 'Salesforce_ads';
+    case 'salesforce_accounts':
+      return 'Salesforce_ads';
+    case 'salesforce_opportunities':
+      return 'Salesforce_ads';
+    case 'traffic_source':
+      return 'ArrowProgress';
+    case 'session_properties':
       return 'mouseevent';
-    default:
-      return '';
+    case 'user_identification':
+      return 'UserMagnify';
+    case 'company_identification':
+      return 'PeopleRoof';
+    case 'platform/device':
+      return 'LaptopMobile';
   }
+
+  //Mapping Icons With Similar Name.
+  if (checkIcon?.includes('salesforce')) {
+    return 'Salesforce_ads';
+  }
+  if (checkIcon?.includes('hubspot')) {
+    return 'hubspot_ads';
+  }
+  if (checkIcon?.includes('marketo')) {
+    return 'marketo';
+  }
+  if (checkIcon?.includes('leadsquared')) {
+    return 'leadSquared';
+  }
+  if (checkIcon?.includes('group')) {
+    return 'profile';
+  }
+  if (checkIcon?.includes('linkedin')) {
+    return 'linkedin_ads';
+  }
+  if (checkIcon?.includes('g2')) {
+    return 'G2crowd';
+  }
+  if (checkIcon?.includes('page')) {
+    return 'PageViews';
+  }
+  if (checkIcon?.includes('facebook')) {
+    return 'FaceBook';
+  }
+  return 'BullsEyePointer';
 };
 
 export default getGroupIcon;

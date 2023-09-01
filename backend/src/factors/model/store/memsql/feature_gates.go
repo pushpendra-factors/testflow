@@ -7,6 +7,7 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"net/http"
+	"strconv"
 )
 
 // Not in use
@@ -40,16 +41,59 @@ func (store *MemSQL) GetFeatureStatusForProject(projectID int64, featureName str
 	}
 	return status, nil
 }
-func (store *MemSQL) GetFeatureStatusForProjectV2(projectID int64, featureName string) (bool, error) {
-	if C.IsEnabledFeatureGatesV2() {
-		featureList, addOns, err := store.GetPlanDetailsAndAddonsForProject(projectID)
-		if err != nil {
-			log.WithError(err).Error("Failed to get feature status for Project ID ", projectID)
-		}
-		status := isFeatureAvailableForProject(featureList, addOns, featureName)
-		return status, nil
+
+// isEnabled, error
+func (store *MemSQL) GetFeatureStatusForProjectV2(projectID int64, featureName string, includeProjectSettings bool) (bool, error) {
+	logCtx := log.WithField("project_id", projectID)
+
+	featureList, addOns, err := store.GetPlanDetailsAndAddonsForProject(projectID)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get feature status for Project ID ", projectID)
 	}
-	return true, nil
+	featureStatus := isFeatureAvailableForProject(featureList, addOns, featureName)
+	if !featureStatus || !includeProjectSettings {
+		return featureStatus, nil
+	}
+	// project settings check (AND of feature gates and project settings integration)
+
+	switch featureName {
+	case model.FEATURE_HUBSPOT:
+		return store.IsHubspotIntegrationAvailable(projectID), nil
+	case model.FEATURE_SALESFORCE:
+		return store.IsSalesforceIntegrationAvailable(projectID), nil
+	case model.FEATURE_BING_ADS:
+		return store.IsBingIntegrationAvailable(projectID), nil
+	case model.FEATURE_MARKETO:
+		return store.IsMarketoIntegrationAvailable(projectID), nil
+	case model.FEATURE_LINKEDIN:
+		return store.IsLinkedInIntegrationAvailable(projectID), nil
+	case model.FEATURE_GOOGLE_ADS:
+		return store.IsAdwordsIntegrationAvailable(projectID), nil
+	default:
+		log.Error("Include Project Settings Enabled but Definition is not present for feature ", featureName)
+		return featureStatus, nil
+	}
+
+	return featureStatus, nil
+}
+
+func (store *MemSQL) UpdateFeatureStatusForProject(projectID int64, feature model.FeatureDetails) (string, error) {
+	_, addOns, err := store.GetPlanDetailsAndAddonsForProject(projectID)
+	if err != nil {
+		log.WithError(err).Error("Failed to update feature status for Project ID ", projectID)
+		return "Failed to get Plan Details ", err
+	}
+	for idx, addOn := range addOns {
+		if addOn.Name == feature.Name {
+			addOns[idx] = feature
+		}
+	}
+	errMsg, err := store.UpdateAddonsForProject(projectID, addOns)
+	if err != nil {
+		log.WithError(err).Error("Failed to update feature status for Project ID ", projectID)
+		return errMsg, err
+	}
+	return "", nil
 }
 
 func (store *MemSQL) GetFeatureLimitForProject(projectID int64, featureName string) (int64, error) {
@@ -131,5 +175,112 @@ func (*MemSQL) CreateDefaultFeatureGatesConfigForProject(ProjectID int64) (int, 
 		return http.StatusInternalServerError, err
 	}
 	return http.StatusCreated, nil
+
+}
+
+func (store *MemSQL) GetAllProjectsWithFeatureEnabled(featureName string, includeProjectSettings bool) ([]int64, error) {
+	var enabledProjectIds []int64 = make([]int64, 0)
+
+	projectIDs, errCode := store.GetAllProjectIDs()
+	if errCode != http.StatusFound {
+		err := fmt.Errorf("failed to get all projects ids to query feature enabled flag")
+		log.WithField("err_code", err).Error(err)
+		return nil, err
+	}
+	for _, projectId := range projectIDs {
+		available, err := store.GetFeatureStatusForProjectV2(projectId, featureName, false)
+		if err != nil {
+			log.WithFields(log.Fields{"project_id": projectId, "feature": featureName}).WithError(err).Error("failed to get feature status for project ID ")
+			continue
+		}
+		if available {
+			enabledProjectIds = append(enabledProjectIds, projectId)
+		}
+	}
+	if !includeProjectSettings {
+		return enabledProjectIds, nil
+	}
+
+	projectIdsMap := make(map[int64]bool)
+	for _, projectID := range enabledProjectIds {
+		projectIdsMap[projectID] = true
+	}
+	// project settings/fivetran mappings check
+
+	projectIdsArray := make([]int64, 0)
+	switch featureName {
+	case model.FEATURE_HUBSPOT:
+		settings, status := store.GetAllHubspotProjectSettings()
+		if status != http.StatusFound {
+			return projectIdsArray, errors.New(fmt.Sprintf("Failed to get %s enabled project settings ", featureName))
+		}
+		for _, setting := range settings {
+			if _, exists := projectIdsMap[setting.ProjectId]; exists {
+				projectIdsArray = append(projectIdsArray, setting.ProjectId)
+			}
+		}
+	case model.FEATURE_SALESFORCE:
+		settings, status := store.GetAllSalesforceProjectSettings()
+		if status != http.StatusFound {
+			return projectIdsArray, errors.New(fmt.Sprintf("Failed to get %s enabled project settings ", featureName))
+		}
+		for _, setting := range settings {
+			if _, exists := projectIdsMap[setting.ProjectID]; exists {
+				projectIdsArray = append(projectIdsArray, setting.ProjectID)
+			}
+		}
+	case model.FEATURE_LINKEDIN:
+		settings, status := store.GetLinkedinEnabledProjectSettings()
+		if status != http.StatusFound {
+			return projectIdsArray, errors.New(fmt.Sprintf("Failed to get %s enabled project settings ", featureName))
+		}
+		for _, setting := range settings {
+			projectID, _ := strconv.ParseInt(setting.ProjectId, 10, 64)
+			if _, exists := projectIdsMap[projectID]; exists {
+				projectIdsArray = append(projectIdsArray, projectID)
+			}
+		}
+	case model.FEATURE_GOOGLE_ADS:
+		settings, status := store.GetAllIntAdwordsProjectSettings()
+		if status != http.StatusFound {
+			return projectIdsArray, errors.New(fmt.Sprintf("Failed to get %s enabled project settings ", featureName))
+		}
+		for _, setting := range settings {
+			if _, exists := projectIdsMap[setting.ProjectId]; exists {
+				projectIdsArray = append(projectIdsArray, setting.ProjectId)
+			}
+		}
+	default:
+		log.Error("Include Project Settings Enabled but Definition is not present for feature ", featureName)
+		return enabledProjectIds, nil
+	}
+	return projectIdsArray, nil
+
+}
+
+func (store *MemSQL) GetProjectsArrayWithFeatureEnabledFromProjectIdFlag(stringProjectsIDs, featureName string) ([]int64, error) {
+	projectIdsArray := make([]int64, 0)
+	var err error
+	if stringProjectsIDs == "*" {
+		projectIdsArray, err = store.GetAllProjectsWithFeatureEnabled(featureName, false)
+		if err != nil {
+			errString := fmt.Errorf("failed to get feature status for all projects")
+			log.WithError(err).Error(errString)
+		}
+	} else {
+		projectIds := C.GetTokensFromStringListAsUint64(stringProjectsIDs)
+		for _, projectId := range projectIds {
+			available := false
+			available, err = store.GetFeatureStatusForProjectV2(projectId, featureName, false)
+			if err != nil {
+				log.WithFields(log.Fields{"projectID": projectId}).WithError(err)
+				continue
+			}
+			if available {
+				projectIdsArray = append(projectIdsArray, projectId)
+			}
+		}
+	}
+	return projectIdsArray, err
 
 }

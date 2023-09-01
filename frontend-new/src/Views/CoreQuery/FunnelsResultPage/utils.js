@@ -831,7 +831,7 @@ export const getStepDuration = (durationsObj, index1, index2) => {
 
 const getConvertedValuesForScatterPlot = (metric, originalValue) => {
   if (metric === 'Conversion Time' || metric.includes('time')) {
-    return Number(getDurationInSeconds(originalValue));
+    return originalValue ? Number(getDurationInSeconds(originalValue)) : null;
   }
   return originalValue.value || originalValue.value === 0
     ? Number(originalValue.value)

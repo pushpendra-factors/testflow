@@ -143,7 +143,7 @@ function BasicDetails({
       {!formData && (
         <div className={'fa-container'}>
           <Row justify={'center'} className={`${styles.start}`}>
-            <Col span={7}>
+            <Col span={8}>
               <div className={'flex flex-col justify-center mt-14'}>
                 <Row className={'mb-4'}>
                   <Col span={24}>
@@ -282,9 +282,9 @@ function BasicDetails({
                               ></Checkbox>
                               <Text
                                 type={'title'}
-                                size={10}
+                                level={7}
                                 color={'grey'}
-                                extraClass={'-mt-2 ml-3 mb-2'}
+                                extraClass={'ml-3 mb-2'}
                               >
                                 Invite{' '}
                                 <span className={'font-bold'}>
@@ -294,7 +294,22 @@ function BasicDetails({
                               </Text>
                             </div>
                           </Form.Item>
-                        </Col>
+                        </Col> 
+
+                        <Col span={24}>
+                        <div className='flex items-start'>
+                          <div style={{'cursor': 'not-allowed'}} >
+                              <Checkbox
+                                defaultChecked={true} 
+                               checked={true}
+                               style={{'cursor': 'not-allowed'}} 
+                              />  
+                          </div>
+                                <Text  type={'title'} level={7} color={'grey'}  extraClass={'ml-3 mb-2'}>By creating this project, I accept the Factors.ai <a href={"https://www.factors.ai/terms-of-use"} target='_blank' >Terms of Use</a></Text>
+                            
+                            </div>
+                        </Col> 
+
                         {showProfile ? (
                           <Col span={24}>
                             <Row
@@ -354,7 +369,7 @@ function BasicDetails({
                                 type={'title'}
                                 size={8}
                                 color={'grey'}
-                                extraClass={'max-w-md m-0 ml-1'}
+                                extraClass={'max-w-md m-0 ml-1 text-center'}
                               >
                                 A logo helps personalize your Project.{' '}
                                 <a onClick={() => setShowProfile(true)}>

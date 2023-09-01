@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, memo } from 'react';
+import React, { useState, useEffect, useCallback, memo, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import cx from 'classnames';
 import {
@@ -17,13 +17,21 @@ import {
   CHART_TYPE_SPARKLINES,
   CHART_TYPE_LINECHART,
   CHART_TYPE_TABLE,
-  DASHBOARD_WIDGET_AREA_CHART_HEIGHT
+  DASHBOARD_WIDGET_AREA_CHART_HEIGHT,
+  CHART_TYPE_BARCHART,
+  DASHBOARD_WIDGET_BAR_CHART_HEIGHT,
+  CHART_TYPE_METRIC_CHART,
+  MAX_ALLOWED_VISIBLE_PROPERTIES
 } from '../../../utils/constants';
 import ChartHeader from '../../../components/SparkLineChart/ChartHeader';
 import SparkChart from '../../../components/SparkLineChart/Chart';
 import LineChart from '../../../components/HCLineChart';
 import NoBreakdownTable from '../../CoreQuery/KPIAnalysis/NoBreakdownCharts/NoBreakdownTable';
 import { getKpiLabel } from '../../CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
+import ColumnChart from 'Components/ColumnChart/ColumnChart';
+import MetricChart from 'Components/MetricChart/MetricChart';
+
+const colors = generateColors(MAX_ALLOWED_VISIBLE_PROPERTIES);
 
 function NoBreakdownCharts({
   kpis,
@@ -32,7 +40,8 @@ function NoBreakdownCharts({
   section,
   unit,
   arrayMapper,
-  durationObj
+  durationObj,
+  currentEventIndex
 }) {
   const { eventNames } = useSelector((state) => state.coreQuery);
 
@@ -61,6 +70,16 @@ function NoBreakdownCharts({
     setCategories(cats);
     setData(d);
   }, [responseData, kpis]);
+
+  const columnChartSeries = useMemo(() => {
+    return [
+      {
+        data: aggregateData[currentEventIndex]?.dataOverTime?.map(
+          (elem) => elem[kpis[currentEventIndex].label]
+        )
+      }
+    ];
+  }, [aggregateData, currentEventIndex, kpis]);
 
   if (!aggregateData.length) {
     return (
@@ -96,9 +115,9 @@ function NoBreakdownCharts({
         <div className='flex items-center justify-center w-full  h-full'>
           <div
             className={`flex items-center justify-center  h-full ${
-              unit?.cardSize == 2
+              unit?.cardSize === 2
                 ? 'flex-col w-full'
-                : unit?.cardSize == 0
+                : unit?.cardSize === 0
                 ? 'w-4/5'
                 : 'w-3/5'
             }`}
@@ -220,6 +239,39 @@ function NoBreakdownCharts({
         cardSize={unit.cardSize}
         chartId={`line-${unit.id}`}
       />
+    );
+  } else if (chartType === CHART_TYPE_BARCHART) {
+    chartContent = (
+      <ColumnChart
+        categories={categories}
+        xAxisType='date-time'
+        series={columnChartSeries}
+        frequency={durationObj.frequency}
+        height={DASHBOARD_WIDGET_BAR_CHART_HEIGHT}
+        chartId={`kpi${unit.id}`}
+        cardSize={unit.cardSize}
+      />
+    );
+  } else if (chartType === CHART_TYPE_METRIC_CHART) {
+    chartContent = (
+      <div className='grid grid-cols-3 w-full col-gap-2 row-gap-12 h-full'>
+        {aggregateData &&
+          aggregateData.slice(0, 3).map((eachAggregateData, eachIndex) => {
+            return (
+              <MetricChart
+                key={eachAggregateData.name}
+                headerTitle={eachAggregateData.name}
+                value={eachAggregateData.total}
+                iconColor={colors[eachIndex]}
+                valueType={
+                  eachAggregateData.metricType === 'percentage_type'
+                    ? 'percentage'
+                    : 'numerical'
+                }
+              />
+            );
+          })}
+      </div>
     );
   }
 

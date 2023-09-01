@@ -10,7 +10,7 @@ import (
 	"factors/model/store"
 	"factors/util"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"regexp"
 	"strings"
@@ -116,6 +116,7 @@ type UpdateEventPropertiesPayload struct {
 	Timestamp     int64           `json:"timestamp"`
 	UserAgent     string          `json:"user_agent"`
 	RequestSource int             `json:"request_source"`
+	ClientIP      string          `json:"client_ip"`
 }
 
 type UpdateEventPropertiesResponse struct {
@@ -127,37 +128,6 @@ type Response struct {
 	EventId string `json:"event_id,omitempty"`
 	Message string `json:"message,omitempty"`
 	Error   string `json:"error,omitempty"`
-}
-
-type OsInfo struct {
-	Name      string `json:"name"`
-	ShortName string `json:"short_name"`
-	Version   string `json:"version"`
-	Platform  string `json:"platform"`
-	Family    string `json:"family"`
-}
-type ClientInfo struct {
-	Type          string `json:"type"`
-	Name          string `json:"name"`
-	ShortName     string `json:"short_name"`
-	Version       string `json:"version"`
-	Engine        string `json:"engine"`
-	EngineVersion string `json:"engine_version"`
-	Family        string `json:"family"`
-}
-
-type DeviceInfo struct {
-	IsBot       bool       `json:"is_bot"`
-	ClientInfo  ClientInfo `json:"client_info"`
-	OsInfo      OsInfo     `json:"os_info"`
-	DeviceType  string     `json:"device_type"`
-	DeviceBrand string     `json:"device_brand"`
-	DeviceModel string     `json:"device_model"`
-}
-type DeviceApiResult struct {
-	payload DeviceInfo
-	message string
-	err     error
 }
 
 const (
@@ -699,17 +669,36 @@ func Track(projectId int64, request *TrackPayload,
 		userProperties = requestUserProperties
 	}
 
-	_, countryName := model.FillLocationUserProperties(userProperties, clientIP)
+	_, countryName, isoCode := model.FillLocationUserProperties(userProperties, clientIP)
 	pageURLProp := U.GetPropertyValueAsString((*eventProperties)[U.EP_PAGE_URL])
 
-	if C.GetClearbitEnabled() == 1 {
-		FillClearbitUserProperties(projectId, projectSettings, userProperties, request.UserId, clientIP)
+	//Fetching feature flags to check of feature is enabled on the plan.
+	factorsDeanonymisationEnabled, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_FACTORS_DEANONYMISATION, false)
+	if err != nil {
+		logCtx.Error("Failed to fetch factors deanonymisation feature flag")
 	}
-	if C.IsSixSignalV1Enabled(projectId) {
-		FillSixSignalUserPropertiesV1(projectId, projectSettings, userProperties, request.UserId, clientIP, countryName, pageURLProp)
-	} else {
-		FillSixSignalUserProperties(projectId, projectSettings, userProperties, request.UserId, clientIP, countryName, pageURLProp)
+	sixsignalEnabled, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_SIX_SIGNAL, false)
+	if err != nil {
+		logCtx.Error("Failed to fetch client sixsignal feature flag")
 	}
+	clearbitEnabled, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_CLEARBIT, false)
+	if err != nil {
+		logCtx.Warn("Failed to fetch clearbit feature flag")
+	}
+
+	if clearbitEnabled && projectSettings.ClearbitKey != "" && *(projectSettings.IntClearBit) {
+		FillClearbitUserProperties(projectId, projectSettings.ClearbitKey, userProperties, request.UserId, clientIP)
+		logCtx.Info("Enrichment using clearbit")
+	} else if sixsignalEnabled && projectSettings.Client6SignalKey != "" && *(projectSettings.IntClientSixSignalKey) {
+		FillSixSignalUserProperties(projectId, projectSettings.Client6SignalKey, userProperties, request.UserId, clientIP)
+		logCtx.Info("Enrichment using client sixsignal")
+	} else if factorsDeanonymisationEnabled && *(projectSettings.IntFactorsSixSignalKey) {
+		if isSixsignalQuotaAvailable, _ := CheckingSixSignalQuotaLimit(projectId); isSixsignalQuotaAvailable {
+			FillSixSignalUserPropertiesViaFactors(projectId, projectSettings, userProperties, request.UserId, clientIP, isoCode, countryName, pageURLProp)
+			logCtx.Info("Enrichment using factors deanonymisation")
+		}
+	}
+
 	if C.EnableSixSignalGroupByProjectID(projectId) {
 		groupProperties := U.FilterPropertiesByKeysByPrefix(userProperties, U.SIX_SIGNAL_PROPERTIES_PREFIX)
 		if groupProperties != nil && len(*groupProperties) > 0 {
@@ -853,184 +842,63 @@ func Track(projectId int64, request *TrackPayload,
 	return http.StatusOK, response
 }
 
-// To be deprecated after new flow is tested.
-func FillSixSignalUserProperties(projectId int64, projectSettings *model.ProjectSetting,
-	userProperties *U.PropertiesMap, UserId, clientIP, countryName, pageURLProp string) {
+func FillSixSignalUserProperties(projectId int64, apiKey string, userProperties *U.PropertiesMap,
+	UserId, clientIP string) {
+
+	logCtx := log.WithField("project_id", projectId)
+	execute6SignalStatusChannel := make(chan int)
+	sixSignalExists, _ := model.GetSixSignalCacheResult(projectId, UserId, clientIP)
+	if sixSignalExists {
+		logCtx.Info("6Signal cache hit")
+	} else {
+		go six_signal.ExecuteSixSignalEnrich(projectId, apiKey, userProperties, clientIP, execute6SignalStatusChannel)
+		select {
+		case ok := <-execute6SignalStatusChannel:
+			if ok == 1 {
+				model.SetSixSignalCacheResult(projectId, UserId, clientIP)
+				logCtx.Info("ExecuteSixSignal suceeded in track call")
+
+				if apiKey == C.GetFactorsSixSignalAPIKey() {
+					model.SetSixSignalAPITotalHitCountCacheResult(projectId, U.TimeZoneStringIST)
+				}
+
+			} else {
+				logCtx.Warn("ExecuteSixSignal failed in track call")
+			}
+		case <-time.After(U.TimeoutOneSecond):
+			logCtx.Warn("six_Signal enrichment timed out in Track call")
+
+		}
+	}
+}
+
+func FillSixSignalUserPropertiesViaFactors(projectId int64, projectSettings *model.ProjectSetting,
+	userProperties *U.PropertiesMap, UserId, clientIP, isoCode, countryName, pageURLProp string) {
 
 	logCtx := log.WithField("project_id", projectId)
 
-	// Existing if keys are not present
-	if !((projectSettings.Client6SignalKey != "" && *(projectSettings.IntClientSixSignalKey) == true) ||
-		(projectSettings.Factors6SignalKey != "" && *(projectSettings.IntFactorsSixSignalKey) == true)) {
-		return
-	}
+	//Fetching sixsignal API Key
+	factors6SignalKey := C.GetFactorsSixSignalAPIKey()
 
+	//Fetching sixsignal configs
 	sixSignalConfig := model.SixSignalConfig{}
 	if projectSettings.SixSignalConfig != nil {
 		err := json.Unmarshal(projectSettings.SixSignalConfig.RawMessage, &sixSignalConfig)
 		if err != nil {
-			logCtx.WithField("six_signal_config", projectSettings.SixSignalConfig).
-				WithError(err).Error("Failed to decode six signal property")
+			logCtx.WithField("six_signal_config", projectSettings.SixSignalConfig).WithError(err).Error("Failed to decode six signal property")
 		}
-		// Todo (Anil): extract api limit and use it
 	}
 
-	shouldEnrichUsingSixSignal, _ := ApplySixSignalFilters(sixSignalConfig, countryName, pageURLProp)
-
-	if shouldEnrichUsingSixSignal == false {
-
-		if projectId == 2251799844000008 {
-			logCtx.WithFields(log.Fields{"six_signal_config": sixSignalConfig, "countryName": countryName, "page": pageURLProp}).Info("sixsignal filter returns false - debug Upflow")
-		}
+	shouldEnrichUsingSixSignal, _ := ApplySixSignalFilters(sixSignalConfig, isoCode, countryName, pageURLProp)
+	if !shouldEnrichUsingSixSignal {
+		logCtx.Warn("SixSignal configs not matched.")
 		return
 	}
 
-	if projectId == 2251799844000008 && !strings.Contains(pageURLProp, "/demo") && !strings.Contains(pageURLProp, "/pricing") {
-		logCtx.WithFields(log.Fields{"pageUrl": pageURLProp, "Pages Include": sixSignalConfig.PagesInclude, "EnrichSixSignal": shouldEnrichUsingSixSignal}).Info("Hitting factors sixsignal enrichment -debug for Upflow.")
-	}
-
-	if projectSettings.Client6SignalKey != "" && *(projectSettings.IntClientSixSignalKey) == true {
-
-		execute6SignalStatusChannel := make(chan int)
-		sixSignalExists, _ := model.GetSixSignalCacheResult(projectId, UserId, clientIP)
-		if sixSignalExists {
-			// logCtx.Info("6Signal cache hit")
-		} else {
-			go six_signal.ExecuteSixSignalEnrich(projectId, projectSettings.Client6SignalKey, userProperties, clientIP, execute6SignalStatusChannel)
-			select {
-			case ok := <-execute6SignalStatusChannel:
-				if ok == 1 {
-					model.SetSixSignalCacheResult(projectId, UserId, clientIP)
-				} else {
-					logCtx.Warn("ExecuteSixSignal failed in track call")
-				}
-			case <-time.After(U.TimeoutOneSecond):
-				logCtx.Warn("six_Signal enrichment timed out in Track call")
-
-			}
-		}
-	} else if projectSettings.Factors6SignalKey != "" && *(projectSettings.IntFactorsSixSignalKey) == true {
-		execute6SignalStatusChannel := make(chan int)
-		sixSignalExists, _ := model.GetSixSignalCacheResult(projectId, UserId, clientIP)
-		if sixSignalExists {
-			// logCtx.Info("6Signal cache hit")
-		} else {
-			// logCtx.Info("6Signal cache miss")
-			go six_signal.ExecuteSixSignalEnrich(projectId, projectSettings.Factors6SignalKey, userProperties, clientIP, execute6SignalStatusChannel)
-
-			select {
-			case ok := <-execute6SignalStatusChannel:
-				if ok == 1 {
-					model.SetSixSignalCacheResult(projectId, UserId, clientIP)
-					// Total hit counts
-					model.SetSixSignalAPITotalHitCountCacheResult(projectId, U.TimeZoneStringIST)
-				} else {
-					logCtx.Warn("ExecuteSixSignal failed in track call")
-				}
-			case <-time.After(U.TimeoutOneSecond):
-				logCtx.Warn("Six_Signal enrichment timed out in Track call")
-			}
-		}
-	}
+	FillSixSignalUserProperties(projectId, factors6SignalKey, userProperties, UserId, clientIP)
 }
 
-/*
-	FillSixSignalUserProperties{
-		If clientIp is “”{
-			Return
-		}
-		if clientKey is present and client integration is enabled :
-			enrich using them
-		else if factors sixsignal is enabled:
-		 	check sixsignal quota is not exhausted (TODO)
-		 	fetch factors API KEY from configs
-		 	fetch sixsignal configs–page url & country filter
-		 	check whether sixisignal config is satisfied
-		 	then enrich
-		Else : return
-	}
-*/
-func FillSixSignalUserPropertiesV1(projectId int64, projectSettings *model.ProjectSetting,
-	userProperties *U.PropertiesMap, UserId, clientIP, countryName, pageURLProp string) {
-
-	logCtx := log.WithField("project_id", projectId)
-	if clientIP == "" {
-		logCtx.Warn("Client IP is blank")
-		return
-	}
-
-	if projectSettings.Client6SignalKey != "" && *(projectSettings.IntClientSixSignalKey) {
-
-		execute6SignalStatusChannel := make(chan int)
-		sixSignalExists, _ := model.GetSixSignalCacheResult(projectId, UserId, clientIP)
-		if sixSignalExists {
-			// logCtx.Info("6Signal cache hit")
-		} else {
-
-			go six_signal.ExecuteSixSignalEnrich(projectId, projectSettings.Client6SignalKey, userProperties, clientIP, execute6SignalStatusChannel)
-
-			select {
-			case ok := <-execute6SignalStatusChannel:
-				if ok == 1 {
-					model.SetSixSignalCacheResult(projectId, UserId, clientIP)
-
-				} else {
-					logCtx.Warn("ExecuteSixSignal failed in track call")
-				}
-			case <-time.After(U.TimeoutOneSecond):
-				logCtx.Warn("six_Signal enrichment timed out in Track call")
-
-			}
-		}
-	} else if *(projectSettings.IntFactorsSixSignalKey) {
-
-		//Todo: @Roshan check sixsignal quota is not exhausted
-
-		//Fetching sixsignal API Key
-		factors6SignalKey := C.GetFactorsSixSignalAPIKey()
-
-		//Fetching sixsignal configs
-		sixSignalConfig := model.SixSignalConfig{}
-		if projectSettings.SixSignalConfig != nil {
-			err := json.Unmarshal(projectSettings.SixSignalConfig.RawMessage, &sixSignalConfig)
-			if err != nil {
-				logCtx.WithField("six_signal_config", projectSettings.SixSignalConfig).WithError(err).Error("Failed to decode six signal property")
-			}
-		}
-
-		shouldEnrichUsingSixSignal, _ := ApplySixSignalFilters(sixSignalConfig, countryName, pageURLProp)
-		if !shouldEnrichUsingSixSignal {
-			return
-		}
-
-		execute6SignalStatusChannel := make(chan int)
-		sixSignalExists, _ := model.GetSixSignalCacheResult(projectId, UserId, clientIP)
-		if sixSignalExists {
-			// logCtx.Info("6Signal cache hit")
-		} else {
-			// logCtx.Info("6Signal cache miss")
-			go six_signal.ExecuteSixSignalEnrich(projectId, factors6SignalKey, userProperties, clientIP, execute6SignalStatusChannel)
-
-			select {
-			case ok := <-execute6SignalStatusChannel:
-				if ok == 1 {
-					model.SetSixSignalCacheResult(projectId, UserId, clientIP)
-					// Total hit counts
-					model.SetSixSignalAPITotalHitCountCacheResult(projectId, U.TimeZoneStringIST)
-
-				} else {
-					logCtx.Warn("ExecuteSixSignal failed in track call")
-				}
-			case <-time.After(U.TimeoutOneSecond):
-				logCtx.Warn("Six_Signal enrichment timed out in Track call")
-			}
-		}
-	} else {
-		return
-	}
-}
-
-func ApplySixSignalFilters(sixSignalConfig model.SixSignalConfig, countryName, pageUrl string) (bool, error) {
+func ApplySixSignalFilters(sixSignalConfig model.SixSignalConfig, isoCode, countryName, pageUrl string) (bool, error) {
 
 	//No filter case is true
 	if (sixSignalConfig.CountryInclude == nil || len(sixSignalConfig.CountryInclude) == 0) &&
@@ -1040,37 +908,63 @@ func ApplySixSignalFilters(sixSignalConfig model.SixSignalConfig, countryName, p
 		return true, nil
 	}
 
-	countryFilterPassed := true
-	pageFilterPassed := true
-	if sixSignalConfig.CountryInclude != nil && len(sixSignalConfig.CountryInclude) != 0 {
-		countryFilterPassed = false
+	countryFilterPassed := IsCountryFilterPassed(sixSignalConfig, isoCode, countryName)
+	if !countryFilterPassed {
+		return false, nil
+	}
+
+	pageFilterPassed, _ := IsPageFilterPassed(sixSignalConfig, pageUrl)
+	if !pageFilterPassed {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func IsCountryFilterPassed(sixSignalConfig model.SixSignalConfig, isoCode, countryName string) bool {
+
+	isCountryIncluded := (sixSignalConfig.CountryInclude != nil && len(sixSignalConfig.CountryInclude) != 0)
+	isCountryExcluded := (sixSignalConfig.CountryExclude != nil && len(sixSignalConfig.CountryExclude) != 0)
+
+	if !isCountryIncluded && !isCountryExcluded {
+		return true
+	}
+
+	mapOfCountries := make(map[string]bool)
+	var isIsoCode bool
+
+	if isCountryIncluded {
 		for _, filter := range sixSignalConfig.CountryInclude {
-			switch filter.Type {
-			case model.EqualsOpStr:
-				if filter.Value == countryName {
-					countryFilterPassed = true
-				}
-			}
+			mapOfCountries[filter.Value] = true
+			isIsoCode = (model.ISOCODES[filter.Value] == 1)
 		}
-		// failed to satisfy country include filter
-		if countryFilterPassed == false {
-			return false, nil
-		}
-	}
 
-	if sixSignalConfig.CountryExclude != nil && len(sixSignalConfig.CountryExclude) != 0 {
+	} else if isCountryExcluded {
 		for _, filter := range sixSignalConfig.CountryExclude {
-			switch filter.Type {
-			case model.EqualsOpStr:
-				if filter.Value == countryName {
-					//skip if country name matches
-					return false, nil
-				}
-			}
+			mapOfCountries[filter.Value] = true
+			isIsoCode = (model.ISOCODES[filter.Value] == 1)
 		}
 	}
 
-	if sixSignalConfig.PagesInclude != nil && len(sixSignalConfig.PagesInclude) != 0 {
+	var contains bool
+	if isIsoCode {
+		contains = mapOfCountries[isoCode]
+	} else {
+		contains = mapOfCountries[countryName]
+	}
+
+	if isCountryIncluded {
+		return contains
+	}
+	return !contains
+
+}
+
+func IsPageFilterPassed(sixSignalConfig model.SixSignalConfig, pageUrl string) (bool, error) {
+
+	pageFilterPassed := true
+	isPageUrlIncluded := (sixSignalConfig.PagesInclude != nil && len(sixSignalConfig.PagesInclude) != 0)
+	if isPageUrlIncluded {
 		pageFilterPassed = false
 		for _, filter := range sixSignalConfig.PagesInclude {
 			switch filter.Type {
@@ -1108,7 +1002,8 @@ func ApplySixSignalFilters(sixSignalConfig model.SixSignalConfig, countryName, p
 		}
 	}
 
-	if sixSignalConfig.PagesExclude != nil && len(sixSignalConfig.PagesExclude) != 0 {
+	isPageUrlExcluded := (sixSignalConfig.PagesExclude != nil && len(sixSignalConfig.PagesExclude) != 0)
+	if isPageUrlExcluded {
 		for _, filter := range sixSignalConfig.PagesExclude {
 			switch filter.Type {
 			case model.EqualsOpStr:
@@ -1141,37 +1036,58 @@ func ApplySixSignalFilters(sixSignalConfig model.SixSignalConfig, countryName, p
 		}
 	}
 
-	//return pass only when both cases pass i.e. AND
-	if countryFilterPassed && pageFilterPassed {
-		return true, nil
-	}
-	//else
-	return false, nil
+	return pageFilterPassed, nil
 }
 
-func FillClearbitUserProperties(projectId int64, projectSettings *model.ProjectSetting,
+func CheckingSixSignalQuotaLimit(projectId int64) (bool, error) {
+
+	logCtx := log.WithField("project_id", projectId)
+	limit, err := store.GetStore().GetFeatureLimitForProject(projectId, model.FEATURE_FACTORS_DEANONYMISATION)
+	if err != nil {
+		logCtx.Error("Failed fetching sixsignal quota limit with error ", err)
+		return false, err
+	}
+
+	timeZone, statusCode := store.GetStore().GetTimezoneForProject(projectId)
+	if statusCode != http.StatusFound {
+		timeZone = util.TimeZoneStringIST
+	}
+	monthYear := util.GetCurrentMonthYear(timeZone)
+	count, err := model.GetSixSignalMonthlyUniqueEnrichmentCount(projectId, monthYear)
+	if err != nil {
+		logCtx.Error("Error while fetching sixsignal count")
+		return false, err
+	}
+
+	if count >= limit {
+		logCtx.Warn("SixSignal Limit Exhausted")
+		return false, errors.New("SixSignal Limit Exhausted")
+	}
+	return true, nil
+}
+
+func FillClearbitUserProperties(projectId int64, clearbitKey string,
 	userProperties *U.PropertiesMap, UserId string, clientIP string) {
 
 	logCtx := log.WithField("project_id", projectId)
-	if projectSettings.ClearbitKey != "" {
-		executeClearBitStatusChannel := make(chan int)
-		clearBitExists, _ := clear_bit.GetClearbitCacheResult(projectId, UserId, clientIP)
-		if clearBitExists {
-			// logCtx.Info("clearbit cache hit")
-		} else {
-			// logCtx.Info("clearbit cache miss")
-			go clear_bit.ExecuteClearBitEnrich(projectSettings.ClearbitKey, userProperties, clientIP, executeClearBitStatusChannel)
 
-			select {
-			case ok := <-executeClearBitStatusChannel:
-				if ok == 1 {
-					clear_bit.SetClearBitCacheResult(projectId, UserId, clientIP)
-				} else {
-					logCtx.Warn("ExecuteClearbit failed in Track call")
-				}
-			case <-time.After(U.TimeoutOneSecond):
-				logCtx.Warn("clear_bit enrichment timed out in Track call")
+	executeClearBitStatusChannel := make(chan int)
+	clearBitExists, _ := clear_bit.GetClearbitCacheResult(projectId, UserId, clientIP)
+	if clearBitExists {
+		// logCtx.Info("clearbit cache hit")
+	} else {
+		// logCtx.Info("clearbit cache miss")
+		go clear_bit.ExecuteClearBitEnrich(clearbitKey, userProperties, clientIP, executeClearBitStatusChannel, logCtx)
+
+		select {
+		case ok := <-executeClearBitStatusChannel:
+			if ok == 1 {
+				clear_bit.SetClearBitCacheResult(projectId, UserId, clientIP)
+			} else {
+				logCtx.Warn("ExecuteClearbit failed in Track call")
 			}
+		case <-time.After(U.TimeoutOneSecond):
+			logCtx.Warn("clear_bit enrichment timed out in Track call")
 		}
 	}
 
@@ -1655,35 +1571,15 @@ func AddUserProperties(projectId int64,
 	// Validate properties.
 	validProperties := U.GetValidatedUserProperties(&request.Properties)
 
-	if C.GetClearbitEnabled() == 1 {
-		clearbitKey, errCode := store.GetStore().GetClearbitKeyFromProjectSetting(projectId)
-		if errCode != http.StatusFound {
-			logCtx.Info("Get clear_bit key from project_settings failed.")
-		}
-		if clearbitKey != "" {
-
-			statusChannel := make(chan int)
-			clearBitExists, _ := clear_bit.GetClearbitCacheResult(projectId, request.UserId, request.ClientIP)
-
-			if !clearBitExists {
-				go clear_bit.ExecuteClearBitEnrich(clearbitKey, validProperties, request.ClientIP, statusChannel)
-
-				select {
-				case ok := <-statusChannel:
-					if ok == 1 {
-						clear_bit.SetClearBitCacheResult(projectId, request.UserId, request.ClientIP)
-					} else {
-						logCtx.Info("ExecuteClearbit failed in AddUserProperties")
-					}
-				case <-time.After(U.TimeoutOneSecond):
-					logCtx.Info("clear_bit enrichment timed out in AddUserProperties")
-				}
-			}
-		}
-
+	clearbitKey, err1 := store.GetStore().GetClearbitKeyFromProjectSetting(projectId)
+	if err1 != http.StatusFound {
+		logCtx.Info("Get clear_bit key from project_settings failed.")
+	}
+	if clearbitKey != "" {
+		FillClearbitUserProperties(projectId, clearbitKey, validProperties, request.UserId, request.ClientIP)
 	}
 
-	_, _ = model.FillLocationUserProperties(validProperties, request.ClientIP)
+	_, _, _ = model.FillLocationUserProperties(validProperties, request.ClientIP)
 	propertiesJSON, err := json.Marshal(validProperties)
 	if err != nil {
 		return http.StatusBadRequest,
@@ -1785,7 +1681,17 @@ func enqueueRequest(token, reqType string, reqPayload interface{}) error {
 	return nil
 }
 
-func excludeBotRequestBySetting(token, userAgent string, eventName string) bool {
+func excludeBotRequestBySetting(token, userAgent string, eventName string, clientIP string) (excluded bool) {
+	defer func() {
+		if excluded == true {
+			metrics.Increment(metrics.IncrSDKRquestQueueExcludedBot)
+		}
+	}()
+
+	if clientIP != "" && C.IsExcludeBotIPV4AddressByRange(clientIP) {
+		return true
+	}
+
 	settings, errCode := store.GetStore().GetProjectSettingByTokenWithCacheAndDefault(token)
 	if errCode != http.StatusFound {
 		log.WithField("err_code", errCode).
@@ -1821,7 +1727,7 @@ func TrackByToken(token string, reqPayload *TrackPayload) (int, *TrackResponse) 
 func TrackWithQueue(token string, reqPayload *TrackPayload,
 	queueAllowedTokens []string) (int, *TrackResponse) {
 
-	if excludeBotRequestBySetting(token, reqPayload.UserAgent, reqPayload.Name) {
+	if excludeBotRequestBySetting(token, reqPayload.UserAgent, reqPayload.Name, reqPayload.ClientIP) {
 		return http.StatusNotModified,
 			&TrackResponse{Message: "Tracking skipped. Bot request."}
 	}
@@ -2060,7 +1966,7 @@ func UpdateEventPropertiesByToken(token string,
 func UpdateEventPropertiesWithQueue(token string, reqPayload *UpdateEventPropertiesPayload,
 	queueAllowedTokens []string) (int, *UpdateEventPropertiesResponse) {
 
-	if excludeBotRequestBySetting(token, reqPayload.UserAgent, "") {
+	if excludeBotRequestBySetting(token, reqPayload.UserAgent, "", reqPayload.ClientIP) {
 		return http.StatusNotModified, &UpdateEventPropertiesResponse{
 			Message: "Update event properties skipped. Bot request."}
 	}
@@ -2243,6 +2149,7 @@ type AMPUpdateEventPropertiesPayload struct {
 	Timestamp     int64  `json:"timestamp"`
 	UserAgent     string `json:"user_agent"`
 	RequestSource int    `json:"request_source"`
+	ClientIP      string `json:"client_ip"`
 }
 type AMPTrackResponse struct {
 	Message string `json:"message"`
@@ -2485,7 +2392,7 @@ func GetCacheAMPSDKEventIDByPageURL(projectId int64, userId string, pageURL stri
 func AMPTrackWithQueue(token string, reqPayload *AMPTrackPayload,
 	queueAllowedTokens []string) (int, *Response) {
 
-	if excludeBotRequestBySetting(token, reqPayload.UserAgent, "") {
+	if excludeBotRequestBySetting(token, reqPayload.UserAgent, "", reqPayload.ClientIP) {
 		return http.StatusNotModified,
 			&Response{Message: "Track skipped. Bot request."}
 	}
@@ -2505,7 +2412,7 @@ func AMPTrackWithQueue(token string, reqPayload *AMPTrackPayload,
 func AMPUpdateEventPropertiesWithQueue(token string, reqPayload *AMPUpdateEventPropertiesPayload,
 	queueAllowedTokens []string) (int, *Response) {
 
-	if excludeBotRequestBySetting(token, reqPayload.UserAgent, "") {
+	if excludeBotRequestBySetting(token, reqPayload.UserAgent, "", reqPayload.ClientIP) {
 		return http.StatusNotModified,
 			&Response{Message: "Update event properties skipped. Bot request."}
 	}
@@ -2523,118 +2430,112 @@ func AMPUpdateEventPropertiesWithQueue(token string, reqPayload *AMPUpdateEventP
 	return AMPUpdateEventPropertiesByToken(token, reqPayload)
 }
 
-// PostDeviceServiceAPI - Makes POST request to Device Service and passes the device info to channel
-func PostDeviceServiceAPI(apiUrl string, userAgent string, c chan DeviceApiResult) {
+// PostDeviceServiceAPI - Make POST request to Device Server
+func PostDeviceServiceAPI(apiUrl string, userAgent string) (model.DeviceInfo, int, error) {
+	logCtx := log.WithFields(log.Fields{
+		"userAgent": userAgent,
+		"Method":    "PostDeviceServiceAPI",
+	})
+
 	start := time.Now()
-	var apiPayload DeviceInfo
-	res := new(DeviceApiResult)
-	client := &http.Client{}
-	var msg string = ""
+	var res model.DeviceInfo
+	client := &http.Client{Timeout: 5 * time.Second}
+
 	req, err := http.NewRequest("POST", apiUrl, nil)
 	if err != nil {
-		msg = "failed to build request"
-		res.err = err
-		res.message = msg
-		log.WithError(err).Error(msg)
-		return
+		msg := "failed to build request"
+		logCtx.WithError(err).Error(msg)
+		return res, http.StatusInternalServerError, err
 	}
 
 	req.Header.Set("User-Agent", userAgent)
 	resp, err := client.Do(req)
 
-	if resp == nil {
-		msg = "empty response from api"
-		res.err = errors.New(msg)
-		res.message = msg
-		log.WithError(err).Error(msg)
-		return
+	if err != nil {
+		msg := "Request to Device detection service failed"
+		logCtx.WithError(err).Error(msg)
+		return res, resp.StatusCode, err
 	}
 
-	if err != nil || (resp != nil && resp.StatusCode != http.StatusOK) {
-		msg = "Request to Device detection service failed"
-		logCtx := log.WithError(err)
-		if resp != nil {
-			logCtx = log.WithField("status", resp.StatusCode)
-		}
-		logCtx.Error(msg)
-		res.message = msg
-		res.err = err
-		c <- *res
-		return
+	if resp != nil && resp.StatusCode != http.StatusOK {
+		msg := "User Agent Not found"
+		logCtx.WithField("status_code", resp.StatusCode).Warning(msg)
+		return res, resp.StatusCode, err
 	}
 
-	respBytes, err := ioutil.ReadAll(resp.Body)
+	respBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		msg = "Error reading the response body"
-		res.err = err
-		res.message = msg
-		log.WithError(err).Error(msg)
-		return
+		msg := "Error reading the response body"
+		logCtx.WithError(err).Error(msg)
+		return res, http.StatusInternalServerError, err
 	}
-	err = json.Unmarshal(respBytes, &apiPayload)
-	res.payload = apiPayload
+
+	err = json.Unmarshal(respBytes, &res)
 	if err != nil {
-		msg = "Failed to unmarshall"
-		res.message = msg
-		res.err = err
-		c <- *res
-		return
+		msg := "Failed to unmarshall"
+		logCtx.WithError(err).Error(msg)
+		return res, http.StatusInternalServerError, err
 	}
 
 	// check for time elapsed in the post request to device service
 	elapsed := time.Since(start).Milliseconds()
 	if elapsed > 100 {
-		log.Error(" PostDeviceServiceAPI call took more than 100 ms")
+		log.WithFields(log.Fields{"total_time": elapsed, "user_agent": userAgent}).Warning("PostDeviceServiceAPI call took more than 100 ms")
 	}
-	res.message = msg
-	res.err = nil
-	c <- *res
+
+	return res, http.StatusOK, nil
 }
 
-// FillDeviceInfoFromDeviceService - For given ProjectID it gets device info from php device service by default
+// FillDeviceInfoFromDeviceService - For given user agent it gets device info from php device service by default
 // and fallbacks to existing device data in case of failure
 func FillDeviceInfoFromDeviceService(userProperties *U.PropertiesMap, userAgent string) error {
+	var allDeviceInfo *model.DeviceInfo
 
-	fillDeviceInfoChannel := make(chan DeviceApiResult)
-	go PostDeviceServiceAPI(C.GetConfig().DeviceServiceURL, userAgent, fillDeviceInfoChannel)
+	resp, errCode, err := model.GetCacheResultByUserAgent(userAgent)
 
-	select {
-	case res := <-fillDeviceInfoChannel:
-		if res.err == nil {
-			apiPayload := res.payload
-			osInfo := apiPayload.OsInfo
-			(*userProperties)[U.UP_OS] = osInfo.Name
-			(*userProperties)[U.UP_OS_VERSION] = osInfo.Version
-			(*userProperties)[U.UP_OS_WITH_VERSION] = fmt.Sprintf("%s-%s",
-				(*userProperties)[U.UP_OS], (*userProperties)[U.UP_OS_VERSION])
+	// check if device info for user agent exists in cache
+	if errCode == http.StatusFound && err == nil {
+		allDeviceInfo = resp
+	} else {
 
-			// to check if user agent is a bot or not
-			if apiPayload.IsBot {
-				(*userProperties)[U.UP_BROWSER] = "Bot"
-				return nil
-			}
+		deviceInfo, status, err := PostDeviceServiceAPI(C.GetConfig().DeviceServiceURL, userAgent)
 
-			clientInfo := apiPayload.ClientInfo
-			(*userProperties)[U.UP_BROWSER] = clientInfo.Name
-			(*userProperties)[U.UP_BROWSER_VERSION] = clientInfo.Version
-			(*userProperties)[U.UP_BROWSER_WITH_VERSION] = fmt.Sprintf("%s-%s",
-				(*userProperties)[U.UP_BROWSER], (*userProperties)[U.UP_BROWSER_VERSION])
-
-			(*userProperties)[U.UP_DEVICE_BRAND] = apiPayload.DeviceBrand
-			(*userProperties)[U.UP_DEVICE_TYPE] = apiPayload.DeviceType
-			(*userProperties)[U.UP_DEVICE_MODEL] = apiPayload.DeviceModel
-		} else {
+		// check for status of POST request
+		if err != nil || status != http.StatusOK {
 			return FillDeviceInfoFromFallback(userProperties, userAgent)
-
 		}
-	case <-time.After(U.TimeoutHundredMilliSecond):
-		log.Warning("device detection service timed out in FillUserAgentUserProperties")
-		return FillDeviceInfoFromFallback(userProperties, userAgent)
-	default:
-		return FillDeviceInfoFromFallback(userProperties, userAgent)
+
+		allDeviceInfo = &deviceInfo
+		model.SetCacheResultByUserAgent(userAgent, &deviceInfo)
 	}
 
+	(*userProperties)[U.UP_USER_AGENT] = userAgent
+
+	// check for bot
+	if allDeviceInfo.IsBot {
+		(*userProperties)[U.UP_BROWSER] = "Bot"
+		return nil
+	}
+
+	osInfo := allDeviceInfo.OsInfo
+
+	(*userProperties)[U.UP_OS] = osInfo.Name
+	(*userProperties)[U.UP_OS_VERSION] = osInfo.Version
+	(*userProperties)[U.UP_OS_WITH_VERSION] = fmt.Sprintf("%s-%s",
+		(*userProperties)[U.UP_OS], (*userProperties)[U.UP_OS_VERSION])
+
+	clientInfo := allDeviceInfo.ClientInfo
+
+	(*userProperties)[U.UP_BROWSER] = clientInfo.Name
+	(*userProperties)[U.UP_BROWSER_VERSION] = clientInfo.Version
+	(*userProperties)[U.UP_BROWSER_WITH_VERSION] = fmt.Sprintf("%s-%s",
+		(*userProperties)[U.UP_BROWSER], (*userProperties)[U.UP_BROWSER_VERSION])
+
+	(*userProperties)[U.UP_DEVICE_BRAND] = allDeviceInfo.DeviceBrand
+	(*userProperties)[U.UP_DEVICE_TYPE] = allDeviceInfo.DeviceType
+	(*userProperties)[U.UP_DEVICE_MODEL] = allDeviceInfo.DeviceModel
 	return nil
+
 }
 
 // FillUserAgentUserProperties - Adds user_properties derived from user_agent.
@@ -2644,8 +2545,6 @@ func FillUserAgentUserProperties(projectID int64, userProperties *U.PropertiesMa
 	if userAgentStr == "" || projectID == 0 {
 		return errors.New("invalid parameters")
 	}
-
-	(*userProperties)[U.UP_USER_AGENT] = userAgentStr
 
 	if !C.AllowDeviceServiceByProjectID(projectID) {
 		return FillDeviceInfoFromFallback(userProperties, userAgentStr)
@@ -2657,6 +2556,7 @@ func FillUserAgentUserProperties(projectID int64, userProperties *U.PropertiesMa
 
 func FillDeviceInfoFromFallback(userProperties *U.PropertiesMap, userAgentStr string) error {
 	userAgent := user_agent.New(userAgentStr)
+	(*userProperties)[U.UP_USER_AGENT] = userAgent
 	(*userProperties)[U.UP_OS] = userAgent.OSInfo().Name
 	(*userProperties)[U.UP_OS_VERSION] = userAgent.OSInfo().Version
 	(*userProperties)[U.UP_OS_WITH_VERSION] = fmt.Sprintf("%s-%s",

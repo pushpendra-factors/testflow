@@ -13,10 +13,6 @@ import (
 	"factors/model/store/memsql"
 	U "factors/util"
 	"fmt"
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
-	"github.com/rs/xid"
-	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"math"
 	"net/http"
@@ -25,6 +21,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+	"github.com/rs/xid"
+	log "github.com/sirupsen/logrus"
 )
 
 // scope constants.
@@ -117,6 +118,40 @@ func SetScopeProjectToken() gin.HandlerFunc {
 	}
 }
 
+func isJSONRequestBody(body string) bool {
+	return strings.HasPrefix(body, "{") && strings.HasSuffix(body, "}")
+}
+
+func DecodeSDKRequestBody() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		logCtx := log.WithField("token", U.GetScopeByKey(c, SCOPE_PROJECT_TOKEN))
+
+		rawBody, err := ioutil.ReadAll(c.Request.Body)
+		if err != nil {
+			// Do not log an error on client request termination and null/empty requests.
+			isEOFError := strings.Contains(err.Error(), "EOF")
+			if !isEOFError {
+				logCtx.WithError(err).WithField("body", string(rawBody)).
+					Error("Failed to read sdk request body.")
+			}
+
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid request."})
+			return
+		}
+
+		var body []byte
+		strBody := string(rawBody)
+		if isJSONRequestBody(strBody) {
+			body = rawBody
+		} else {
+			body = []byte(U.Decode(strBody, 4))
+		}
+
+		c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+		c.Next()
+	}
+}
+
 func AddSecurityResponseHeadersToCustomDomain() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Note: When custom domain is used the c.Request.Host will contain
@@ -128,6 +163,40 @@ func AddSecurityResponseHeadersToCustomDomain() gin.HandlerFunc {
 			c.Header("X-Content-Type-Options", "nosniff")
 		}
 		c.Next()
+	}
+}
+
+func isRequestFromHTTPsProxy(c *gin.Context) bool {
+	// Header added through advanced configuration on
+	// sdk-proxy-api >> Backend Configuration >> Advanced Configurations
+	// Required to differentiate the source load balalncer.
+	sourceValue := "https-load-balancer"
+	return c.Request.Header.Get("x-request-source") == sourceValue ||
+		c.Request.Header.Get("X-Request-Source") == sourceValue
+}
+
+func RestrictHTTPAccess() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		isLiveEnv := C.IsProduction() || C.IsStaging()
+		// /status route is used for liveness probes internally, hence excluded.
+		isStatusRoute := c.Request.URL.Path == "/status"
+		if isLiveEnv && !isStatusRoute {
+			isSourceHTTPsProxy := isRequestFromHTTPsProxy(c)
+
+			// Header added through BackendConfig lb-backend-config.
+			// Required to figure out protocol used by the client.
+			// By default protocol information is not available.
+			isEncrypted := c.Request.Header.Get("X-Client-Encrypted")
+			isHTTPs := isEncrypted == "true"
+
+			if !isSourceHTTPsProxy && !isHTTPs {
+				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+					"message":  "Unsecured request.",
+					"is_https": isEncrypted,
+				})
+				return
+			}
+		}
 	}
 }
 
@@ -367,6 +436,7 @@ func AddSecurityHeadersForAppRoutes() gin.HandlerFunc {
 
 		if !isSDKRequest(c.Request.URL.Path) && !isIntergrationsRequest(c.Request.URL.Path) {
 			c.Header("X-Frame-Options", SAMEORIGIN)
+			c.Header("Strict-Transport-Security", "max-age=31536000;includeSubDomains")
 		}
 		c.Next()
 	}
@@ -449,14 +519,6 @@ func ValidateLoggedInAgentHasAccessToRequestProject() gin.HandlerFunc {
 				c.Next()
 				return
 			}
-		}
-
-		if C.IsDemoProject(urlParamProjectId) && C.EnableDemoReadAccess() {
-			U.SetScope(c, SCOPE_PROJECT_ID, urlParamProjectId)
-
-			c.Next()
-			return
-
 		}
 
 		c.AbortWithStatusJSON(http.StatusForbidden,
@@ -768,12 +830,6 @@ func ValidateAccessToSharedEntity(entityType int) gin.HandlerFunc {
 			}
 			agentId = agent.UUID
 			U.SetScope(c, SCOPE_LOGGEDIN_AGENT_UUID, agent.UUID)
-
-			if C.EnableDemoReadAccess() && C.IsDemoProject(urlParamProjectId) {
-				U.SetScope(c, SCOPE_PROJECT_ID, urlParamProjectId)
-				c.Next()
-				return
-			}
 		}
 
 		// Check whether is part of the project, if yes than access allowed directly
@@ -916,20 +972,6 @@ func SkipAPIWritesIfDisabled() gin.HandlerFunc {
 	}
 }
 
-func SkipDemoProjectWriteAccess() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if C.EnableDemoReadAccess() {
-			projectId := U.GetScopeByKeyAsInt64(c, SCOPE_PROJECT_ID)
-			agentId := U.GetScopeByKeyAsString(c, SCOPE_LOGGEDIN_AGENT_UUID)
-			if !C.IsLoggedInUserWhitelistedForProjectAnalytics(agentId) && C.IsDemoProject(projectId) {
-				c.AbortWithStatusJSON(http.StatusMethodNotAllowed, gin.H{"error": "Operations disallowed for Non-Admin users"})
-				return
-			}
-			c.Next()
-		}
-	}
-}
-
 func BlockMaliciousPayload() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var bodyBytes []byte
@@ -1006,7 +1048,7 @@ func FeatureMiddleware(features []string) gin.HandlerFunc {
 		projectID := U.GetScopeByKeyAsInt64(c, SCOPE_PROJECT_ID)
 
 		for _, feature := range features {
-			status, err := store.GetStore().GetFeatureStatusForProjectV2(projectID, feature)
+			status, err := store.GetStore().GetFeatureStatusForProjectV2(projectID, feature, false)
 			if err != nil {
 				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to get feature status for this project " + feature})
 				return

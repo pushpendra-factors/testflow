@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import styles from './index.module.scss';
 import { SVG, Text } from 'factorsComponents';
@@ -19,6 +19,7 @@ import { DISPLAY_PROP, OPERATORS } from 'Utils/constants';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import FaSelect from 'Components/GenericComponents/FaSelect';
 import { selectedOptionsMapper } from 'Components/GenericComponents/FaSelect/utils';
+import { processProperties } from 'Utils/dataFormatter';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
@@ -27,8 +28,8 @@ const { Option } = Select;
 const GlobalFilterSelect = ({
   propOpts = [],
   operatorOpts = defaultOpProps,
-  valueOpts = [],
-  valueOptsLoading = { valueOptsLoading },
+  valueOpts = {},
+  valueOptsLoading,
   setValuesByProps,
   applyFilter,
   filter,
@@ -54,6 +55,12 @@ const GlobalFilterSelect = ({
     type: ''
   });
 
+  const valueDisplayNames = useMemo(() => {
+    return valueOpts?.[propState?.extra?.[1]]
+      ? valueOpts?.[propState?.extra?.[1]]
+      : DISPLAY_PROP;
+  }, [valueOpts, propState.extra]);
+
   const [operatorState, setOperatorState] = useState(OPERATORS['between']);
   const [valuesState, setValuesState] = useState(null);
 
@@ -74,7 +81,12 @@ const GlobalFilterSelect = ({
   useEffect(() => {
     if (filter) {
       const prop = filter.props;
-      setPropState({ icon: prop[2], name: prop[0], type: prop[1] });
+      setPropState({
+        icon: prop[2],
+        name: prop[0],
+        type: prop[1],
+        extra: filter?.extra
+      });
       if (
         (filter.operator === OPERATORS['equalTo'] ||
           filter.operator === OPERATORS['notEqualTo']) &&
@@ -172,11 +184,10 @@ const GlobalFilterSelect = ({
 
   const propSelect = (option, group) => {
     const valueType = option.extraProps.valueType;
-    const valuecategory = option.extraProps.category;
+    const valuecategory = option.extraProps.queryType;
     const valueArray = [option.label, option.value, valueType, valuecategory];
-    let prop = [group.iconName, ...valueArray];
     setPropState({
-      icon: group.iconName,
+      icon: option.extraProps?.propertyType || group.iconName,
       name: option.label,
       type: valueType,
       extra: valueArray
@@ -294,16 +305,10 @@ const GlobalFilterSelect = ({
                 return {
                   iconName: groupOpt?.icon,
                   label: getGroupLabel(groupOpt?.label),
-                  values: groupOpt?.values?.map((valueOpt) => {
-                    return {
-                      label: valueOpt[0],
-                      value: valueOpt[1],
-                      extraProps: {
-                        valueType: valueOpt[2],
-                        category: valueOpt[3]
-                      }
-                    };
-                  })
+                  values: processProperties(
+                    groupOpt?.values,
+                    groupOpt?.propertyType
+                  )
                 };
               })}
               onClickOutside={() => setPropSelectOpen(false)}
@@ -608,13 +613,14 @@ const GlobalFilterSelect = ({
         operatorState === OPERATORS['doesNotContain']
           ? 'Single'
           : 'Multi';
-      let valueOptions =
-        valueOpts?.[propState?.name]?.map((val) => {
-          return {
-            value: val,
-            label: val === '$none' ? DISPLAY_PROP[val] : val
-          };
-        }) || [];
+      let valueOptions = valueOpts?.[propState?.extra?.[1]]
+        ? Object.entries(valueOpts[propState?.extra?.[1]]).map((val) => {
+            return {
+              value: val[0],
+              label: val[1]
+            };
+          })
+        : [];
       valueOptions = selectedOptionsMapper(valueOptions, valuesState);
 
       if (variant === 'Single') {
@@ -712,8 +718,8 @@ const GlobalFilterSelect = ({
               valuesState && valuesState.length
                 ? valuesState
                     .map((vl) =>
-                      DISPLAY_PROP[vl]
-                        ? DISPLAY_PROP[vl]
+                      valueDisplayNames[vl]
+                        ? valueDisplayNames[vl]
                         : formatCsvUploadValue(vl)
                     )
                     .join(', ')
@@ -723,9 +729,10 @@ const GlobalFilterSelect = ({
           >
             <Button
               className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
-              type='link'
+              type={viewMode ? 'default' : 'link'}
               onClick={() => setValuesSelectionOpen(!valuesSelectionOpen)}
-              disabled={viewMode}
+              // disabled={viewMode}
+              style={{ color: `${viewMode && '#00000040'}` }}
             >
               {valuesState && valuesState.length
                 ? valuesState

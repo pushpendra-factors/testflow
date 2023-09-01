@@ -1,0 +1,23 @@
+.content {
+  height: calc(100% - 64px);
+}
+
+.contentDesktopChild {
+  height: 100%;
+  width: 100%;
+  padding: 80px 75px 36px 75px;
+  overflow-y: scroll;
+}
+
+.contentMobileChild {
+  padding: 30px;
+  height: 100%;
+}
+
+.contentImageMobile {
+  height: 222px;
+}
+
+.contentContainerMobile {
+  min-height: calc(100vh - 64px);
+}

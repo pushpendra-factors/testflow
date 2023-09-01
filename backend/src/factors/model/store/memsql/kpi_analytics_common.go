@@ -115,6 +115,11 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQuer
 	}
 
 	gbtRelatedQueryResults, nonGbtRelatedQueryResults, gbtRelatedQueries, nonGbtRelatedQueries := model.SplitQueryResultsIntoGBTAndNonGBT(finalResultantResults, kpiQueryGroup, finalStatusCode)
+	if gbtRelatedQueryResults == nil || len(gbtRelatedQueryResults) == 0 || len(gbtRelatedQueryResults[0].Headers) == 0 ||
+		nonGbtRelatedQueryResults == nil || len(nonGbtRelatedQueryResults) == 0 || len(nonGbtRelatedQueryResults[0].Headers) == 0 {
+		return []model.QueryResult{{}, {}}, finalStatusCode
+	}
+
 	finalQueryResult := make([]model.QueryResult, 0)
 	gbtRelatedMergedResults := model.MergeQueryResults(gbtRelatedQueryResults, gbtRelatedQueries, kpiTimezoneString, finalStatusCode)
 	nonGbtRelatedMergedResults := model.MergeQueryResults(nonGbtRelatedQueryResults, nonGbtRelatedQueries, kpiTimezoneString, finalStatusCode)
@@ -195,6 +200,7 @@ func (store *MemSQL) buildInternalQueryGroupForDerivedKPIs(kpiQueryGroup model.K
 				internalKPIQueryGroup.Queries[internalIndex].To = query.To
 				internalKPIQueryGroup.Queries[internalIndex].Timezone = query.Timezone
 				internalKPIQueryGroup.Queries[internalIndex].GroupByTimestamp = query.GroupByTimestamp
+				internalKPIQueryGroup.Queries[internalIndex].LimitNotApplicable = query.LimitNotApplicable
 			}
 
 			hashCode, err := query.GetQueryCacheHashString()

@@ -1,5 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import noop from 'lodash/noop';
 import { Modal } from 'antd';
 
 const AppModal = (props) => {
@@ -41,6 +42,7 @@ const AppModal = (props) => {
 export default AppModal;
 
 AppModal.propTypes = {
+  children: PropTypes.element,
   visible: PropTypes.bool,
   width: PropTypes.number,
   title: PropTypes.oneOfType([PropTypes.string, PropTypes.instanceOf(null)]),
@@ -50,18 +52,18 @@ AppModal.propTypes = {
   cancelText: PropTypes.string,
   closable: PropTypes.bool,
   isLoading: PropTypes.bool,
-  className: PropTypes.string,
+  className: PropTypes.string
 };
 
 AppModal.defaultProps = {
   visible: false,
   width: 700,
   title: null,
-  onOk: _.noop,
-  onCancel: _.noop,
+  onOk: noop,
+  onCancel: noop,
   okText: 'Ok',
   cancelText: 'Cancel',
   closable: false,
   isLoading: false,
-  className: 'fa-modal--regular',
+  className: 'fa-modal--regular'
 };

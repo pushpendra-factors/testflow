@@ -178,64 +178,53 @@ func GetKPIFilterValuesHandler(c *gin.Context) (interface{}, int, string, string
 		return kpiFilterValues, status, errString, errMsg, failures
 	}
 
-	if request.Category == model.ChannelCategory || request.Category == model.CustomChannelCategory {
-		return kpiFilterValues, http.StatusOK, "", "", false
-	}
-
 	label := c.Query("label")
 	if label != "true" {
 		return kpiFilterValues, http.StatusOK, "", "", false
 	}
 
-	logCtx = logCtx.WithField("property_name", request.PropertyName)
-
-	propertyValueLabel, err, isSourceEmpty := getPropertyValueLabel(projectID, request.PropertyName, kpiFilterValues)
-	if err != nil {
-		logCtx.WithError(err).Error("Error during getting property values and labels of KPI FilterValues Data")
-		return kpiFilterValues, http.StatusOK, "", err.Error(), false // return values without labels
-	}
-
-	if isSourceEmpty {
-		logCtx.Warning("source is empty")
-		return kpiFilterValues, http.StatusOK, "", "", false // return values without labels
-	}
-
-	if len(propertyValueLabel) == 0 {
-		logCtx.Error("No KPI Filter property value labels returned")
-		return kpiFilterValues, http.StatusOK, "", "", false
-	}
+	propertyValueLabel := getPropertyValueLabel(projectID, request.PropertyName, kpiFilterValues)
 
 	return propertyValueLabel, http.StatusOK, "", "", false
 }
 
-func getPropertyValueLabel(projectID int64, propertyName string, filterValues interface{}) (map[string]string, error, bool) {
+func getPropertyValueLabel(projectID int64, propertyName string, filterValues interface{}) map[string]string {
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "property_name": propertyName, "filter_values": filterValues})
+	propertyValues, ok := filterValues.([]string)
+	if !ok {
+		logCtx.Error("Failed to convert interface to []string in KPI getPropertyValueLabel.")
+		return nil
+	}
+
+	filterValueMap := make(map[string]string)
+	for _, value := range propertyValues {
+		filterValueMap[value] = value
+	}
+
 	var source string
 	if U.IsAllowedCRMPropertyPrefix(propertyName) {
 		source = strings.Split(propertyName, "_")[0]
 		source = strings.TrimPrefix(source, "$")
 	}
 
-	if source == "" {
-		return nil, nil, true
+	if source == "" || propertyName == "" {
+		return filterValueMap
 	}
 
 	propertyValueLabelMap, err := store.GetStore().GetPropertyLabelAndValuesByProjectIdAndPropertyKey(projectID, source, propertyName)
 	if err != nil {
-		return nil, err, false
+		logCtx.Error("Failed to GetPropertyLabelAndValuesByProjectIdAndPropertyKey in KPI filter values.")
+		return filterValueMap
 	}
 
-	propertyValues, ok := filterValues.([]string)
-	if !ok {
-		return nil, errors.New("failed to convert interface to []string in getPropertyValueLabel"), false
-	}
-
-	for _, value := range propertyValues {
-		if label, exists := propertyValueLabelMap[value]; !exists || label == "" {
-			propertyValueLabelMap[value] = value
+	for value := range filterValueMap {
+		if label, exists := propertyValueLabelMap[value]; exists && label != "" {
+			filterValueMap[value] = label
 		}
 	}
 
-	return propertyValueLabelMap, nil, false
+	return filterValueMap
 }
 
 // Gets filter values for property mapping request as union of individual property values
@@ -366,53 +355,62 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 	}
 	logCtx = logCtx.WithField("project_id", projectID).WithField("reqId", reqID)
 
-	queryIdString := c.Query("query_id")
-	request := model.KPIQueryGroup{}
-	if queryIdString == "" {
-		err := c.BindJSON(&request)
-		if err != nil {
-			return nil, http.StatusBadRequest, INVALID_INPUT, "Error during validation of execute KPIQuery.", true
-		}
-	} else {
-		_, query, err := store.GetStore().GetQueryAndClassFromQueryIdString(queryIdString, projectID)
-		if err != "" {
-			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
-			return nil, http.StatusBadRequest, INVALID_INPUT, "Query failed. Json decode failed.", true
-		}
-		U.DecodePostgresJsonbToStructType(&query.Query, &request)
+	request, dashboardId, unitId, isDashboardQueryRequest, isDashboardQueryLocked, statusCode, errorCode, errMsg, isErr := getValidKPIQueryAndDetailsFromRequest(c.Request, c, logCtx, projectID, c.Query("dashboard_id"), c.Query("dashboard_unit_id"), c.Query("query_id"))
+	if statusCode != http.StatusOK {
+		return nil, statusCode, errorCode, errMsg, isErr
 	}
 
-	dashboardId, unitId, preset, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, _, err := getDashboardRelatedInformationFromRequest(request, projectID,
-		c.Query("dashboard_id"), c.Query("dashboard_unit_id"), c.Query("preset"), c.Query("refresh"), c.Query("is_query"))
-	if err != nil {
-		return nil, http.StatusBadRequest, INVALID_INPUT, err.Error(), true
+	preset, commonQueryFrom, commonQueryTo, hardRefresh, _ := getOtherRelatedInformationFromRequest(request, projectID,
+		c.Query("preset"), c.Query("refresh"), c.Query("is_query"))
+
+	request, statusCode, errorCode, errMsg, isErr = setTimezoneForKPIRequest(logCtx, request, projectID)
+	if statusCode != http.StatusOK {
+		return nil, statusCode, errorCode, errMsg, isErr
 	}
 
-	if request.Queries[0].Timezone != "" {
-		_, errCode := time.LoadLocation(string(request.Queries[0].Timezone))
-		if errCode != nil {
-			return nil, http.StatusBadRequest, INVALID_INPUT, "Query failed. Invalid Timezone provided.", true
-		}
-
-		timezoneString = U.TimeZoneString(request.Queries[0].Timezone)
-	} else {
-		timezoneString, statusCode = store.GetStore().GetTimezoneForProject(projectID)
-		if statusCode != http.StatusFound {
-			logCtx.Error("Query failed. Failed to get Timezone.")
-			return nil, http.StatusBadRequest, INVALID_INPUT, "Query failed. Failed to get Timezone.", true
-		}
-		// logCtx.WithError(err).Error("Query failed. Invalid Timezone.")
-	}
-
-	request.SetTimeZone(timezoneString)
-	err = request.TransformDateTypeFilters()
+	err := request.TransformDateTypeFilters()
 	if err != nil {
 		return nil, http.StatusBadRequest, INVALID_INPUT, err.Error(), true
 	}
 
 	allowSyncReferenceFields := C.AllowSyncReferenceFields(projectID)
+	// Use JSON optimised filter for profiles query from KPI if enabled using query_param or global config.
+	enableOptimisedFilterOnProfileQuery := c.Request.Header.Get(H.HeaderUserFilterOptForProfiles) == "true" ||
+		C.EnableOptimisedFilterOnProfileQuery()
 
-	if !hardRefresh {
+	enableOptimisedFilterOnEventUserQuery := c.Request.Header.Get(H.HeaderUserFilterOptForEventsAndUsers) == "true" ||
+		C.EnableOptimisedFilterOnEventUserQuery()
+
+	// Tracking dashboard query request.
+	if isDashboardQueryRequest {
+		if preset == "" && C.IsLastComputedWhitelisted(projectID) {
+			preset = U.GetPresetNameByFromAndTo(commonQueryFrom, commonQueryTo, timezoneString)
+		}
+		model.SetDashboardCacheAnalytics(projectID, dashboardId, unitId, commonQueryFrom, commonQueryTo, timezoneString)
+	}
+
+	if isDashboardQueryLocked {
+		var duplicatedRequest model.KPIQueryGroup
+		U.DeepCopy(&request, &duplicatedRequest)
+		queryResult, statusCode := store.GetStore().ExecuteKPIQueryGroup(projectID, reqID,
+			duplicatedRequest, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
+		if statusCode != http.StatusOK {
+			if statusCode == http.StatusPartialContent {
+				return queryResult, statusCode, PROCESSING_FAILED, "Failed to process query from DB", true
+			}
+			return nil, statusCode, PROCESSING_FAILED, "Failed to process query from DB", true
+		}
+
+		if allowSyncReferenceFields {
+			queryResult, err = store.GetStore().AddPropertyValueLabelToQueryResults(projectID, queryResult)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to set property value label.")
+			}
+		}
+
+		return H.DashboardQueryResponsePayload{Result: queryResult, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), CacheMeta: nil}, http.StatusOK, "", "", false
+	}
+	if !hardRefresh { // to make condition explicit
 		data, statusCode, errorCode, errMsg, isErr := GetResultFromCacheOrDashboard(c, reqID, projectID, request, dashboardId, unitId, preset, commonQueryFrom, commonQueryTo, hardRefresh, timezoneString, isDashboardQueryRequest, logCtx, false)
 		if statusCode != http.StatusProcessing {
 			if allowSyncReferenceFields && data != nil {
@@ -432,13 +430,6 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 
 	model.SetQueryCachePlaceholder(projectID, &request)
 	H.SleepIfHeaderSet(c)
-
-	// Use JSON optimised filter for profiles query from KPI if enabled using query_param or global config.
-	enableOptimisedFilterOnProfileQuery := c.Request.Header.Get(H.HeaderUserFilterOptForProfiles) == "true" ||
-		C.EnableOptimisedFilterOnProfileQuery()
-
-	enableOptimisedFilterOnEventUserQuery := c.Request.Header.Get(H.HeaderUserFilterOptForEventsAndUsers) == "true" ||
-		C.EnableOptimisedFilterOnEventUserQuery()
 
 	var duplicatedRequest model.KPIQueryGroup
 	U.DeepCopy(&request, &duplicatedRequest)
@@ -495,6 +486,7 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 	}
 	return gin.H{"result": queryResult, "query": request, "sharable": isQueryShareable}, http.StatusOK, "", "", false
 }
+
 func isQueryShareable(request model.KPIQueryGroup) bool {
 	// if breakdown is not present, then it is sharable
 	if request.GlobalGroupBy == nil || len(request.GlobalGroupBy) == 0 {
@@ -504,16 +496,100 @@ func isQueryShareable(request model.KPIQueryGroup) bool {
 	return false
 }
 
-func getDashboardRelatedInformationFromRequest(request model.KPIQueryGroup, projectID int64, dashboardIdParam, unitIdParam, presetParam, refreshParam, isQueryParam string) (int64, int64, string, int64, int64, bool, bool, bool, error) {
-	var dashboardId int64
+// isDashboardQueryLocked returns if query run for dashboard is locked. isDashboardQueryRequest returns if its any dashboard query request.
+func getValidKPIQueryAndDetailsFromRequest(r *http.Request, c *gin.Context, logCtx *log.Entry, projectId int64, dashboardIdParam, unitIdParam, queryIdParam string) (model.KPIQueryGroup, int64, int64, bool, bool, int, string, string, bool) {
 	var unitId int64
-	var err error
-	hardRefresh := false
-	preset := ""
+	requestPayload, queryPayload, isDashboardQueryLocked := model.KPIQueryGroup{}, model.KPIQueryGroup{}, false
+	dashboardId, err := strconv.ParseInt(dashboardIdParam, 10, 64)
+	if err != nil {
+		err = errors.New("Query failed. Invalid DashboardID.")
+	}
+	unitId, err = strconv.ParseInt(unitIdParam, 10, 64)
+	if err != nil || unitId == 0 {
+		err = errors.New("Query failed. Invalid DashboardUnitID.")
+	}
+	isDashboardQueryRequest := dashboardIdParam != "" && unitIdParam != ""
 
-	commonQueryFrom := request.Queries[0].From
-	commonQueryTo := request.Queries[0].To
-	timeZoneString := request.Queries[0].Timezone
+	if queryIdParam == "" {
+		if err := c.BindJSON(&requestPayload); err != nil {
+			logCtx.WithError(err).Error("Query failed. Json decode failed.")
+			return queryPayload, dashboardId, unitId, isDashboardQueryRequest, isDashboardQueryLocked, http.StatusBadRequest, INVALID_INPUT, "Query failed. Json decode failed.", true
+		}
+	}
+
+	if isDashboardQueryRequest {
+
+		_, query, err := store.GetStore().GetQueryFromUnitID(projectId, unitId)
+		if err != "" {
+			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
+			return queryPayload, dashboardId, unitId, isDashboardQueryRequest, isDashboardQueryLocked, http.StatusBadRequest, INVALID_INPUT, "Query failed. Json decode failed.", true
+		}
+		// If there is a difference between request and internal Query, lets log it and error out with different status Code.
+
+		isDashboardQueryLocked = query.LockedForCacheInvalidation
+		U.DecodePostgresJsonbToStructType(&query.Query, &queryPayload)
+	} else if queryIdParam != "" {
+		_, query, err := store.GetStore().GetQueryAndClassFromQueryIdString(queryIdParam, projectId)
+		if err != "" {
+			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
+			return queryPayload, dashboardId, unitId, isDashboardQueryRequest, isDashboardQueryLocked, http.StatusBadRequest, INVALID_INPUT, "Query failed. Json decode failed.", true
+		}
+		U.DecodePostgresJsonbToStructType(&query.Query, &queryPayload)
+	} else {
+		queryPayload = requestPayload
+	}
+
+	if queryIdParam == "" {
+		queryPayload.SetQueryDateRange(requestPayload.Queries[0].From, requestPayload.Queries[0].To)
+		if requestPayload.Queries[0].Timezone != "" {
+			queryPayload.SetTimeZone(U.TimeZoneString(requestPayload.Queries[0].Timezone))
+		}
+
+		var inputGroupByTimestamp string
+		for _, query := range requestPayload.Queries {
+			if query.GroupByTimestamp != "" {
+				inputGroupByTimestamp = query.GroupByTimestamp
+			}
+		}
+
+		for index := range queryPayload.Queries {
+			if queryPayload.Queries[index].GroupByTimestamp != "" {
+				queryPayload.Queries[index].GroupByTimestamp = inputGroupByTimestamp
+			}
+		}
+	}
+
+	if len(queryPayload.Queries) == 0 {
+		logCtx.Error("Query failed. Empty query group.")
+		return queryPayload, dashboardId, unitId, isDashboardQueryRequest, isDashboardQueryLocked, http.StatusBadRequest, INVALID_INPUT, "Query failed. Empty query group.", true
+	}
+	return queryPayload, dashboardId, unitId, isDashboardQueryRequest, isDashboardQueryLocked, http.StatusOK, "", "", false
+}
+
+func setTimezoneForKPIRequest(logCtx *log.Entry, requestPayload model.KPIQueryGroup, projectId int64) (model.KPIQueryGroup, int, string, string, bool) {
+	var timezoneString U.TimeZoneString
+	if requestPayload.Queries[0].Timezone != "" {
+		_, errCode := time.LoadLocation(string(requestPayload.Queries[0].Timezone))
+		if errCode != nil {
+			return requestPayload, http.StatusBadRequest, INVALID_INPUT, "Query failed. Invalid Timezone provided.", true
+		}
+		timezoneString = U.TimeZoneString(requestPayload.Queries[0].Timezone)
+	} else {
+		var statusCode int
+		timezoneString, statusCode = store.GetStore().GetTimezoneForProject(projectId)
+		if statusCode != http.StatusFound {
+			logCtx.Error("Query failed. Failed to get Timezone.")
+			return requestPayload, http.StatusBadRequest, INVALID_INPUT, "Query failed. Failed to get Timezone.", true
+		}
+	}
+	requestPayload.SetTimeZone(timezoneString)
+	return requestPayload, http.StatusOK, "", "", false
+}
+
+func getOtherRelatedInformationFromRequest(request model.KPIQueryGroup, projectID int64, presetParam, refreshParam, isQueryParam string) (string, int64, int64, bool, bool) {
+	hardRefresh, preset := false, ""
+
+	commonQueryFrom, commonQueryTo, timeZoneString := request.Queries[0].From, request.Queries[0].To, request.Queries[0].Timezone
 	if U.PresetLookup[presetParam] != "" && C.IsLastComputedWhitelisted(projectID) {
 		preset = presetParam
 	}
@@ -526,35 +602,15 @@ func getDashboardRelatedInformationFromRequest(request model.KPIQueryGroup, proj
 		isQuery, _ = strconv.ParseBool(isQueryParam)
 	}
 
-	isDashboardQueryRequest := dashboardIdParam != "" && unitIdParam != ""
-	if !isDashboardQueryRequest {
-		return dashboardId, unitId, preset, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, isQuery, err
-	}
 	if preset == "" {
 		preset = U.GetPresetNameByFromAndTo(commonQueryFrom, commonQueryTo, U.TimeZoneString(timeZoneString))
 	}
-	dashboardId, err = strconv.ParseInt(dashboardIdParam, 10, 64)
-	unitId, err = strconv.ParseInt(unitIdParam, 10, 64)
-	if err != nil || unitId == 0 {
-		err = errors.New("Query failed. Invalid DashboardID.")
-	}
-	if err != nil || unitId == 0 {
-		err = errors.New("Query failed. Invalid DashboardUnitID.")
-	}
-	return dashboardId, unitId, preset, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, isQuery, err
+	return preset, commonQueryFrom, commonQueryTo, hardRefresh, isQuery
 }
 
 func GetResultFromCacheOrDashboard(c *gin.Context, reqID string, projectID int64, request model.KPIQueryGroup,
 	dashboardId int64, unitId int64, preset string, commonQueryFrom int64, commonQueryTo int64, hardRefresh bool,
 	timezoneString U.TimeZoneString, isDashboardQueryRequest bool, logCtx *log.Entry, skipContextVerfication bool) (interface{}, int, string, string, bool) {
-
-	// Tracking dashboard query request.
-	if isDashboardQueryRequest {
-		if preset == "" && C.IsLastComputedWhitelisted(projectID) {
-			preset = U.GetPresetNameByFromAndTo(commonQueryFrom, commonQueryTo, timezoneString)
-		}
-		model.SetDashboardCacheAnalytics(projectID, dashboardId, unitId, commonQueryFrom, commonQueryTo, timezoneString)
-	}
 
 	// If refresh is passed, refresh only is Query.From is of todays beginning.
 	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(commonQueryFrom, commonQueryTo, request.GetTimeZone(), hardRefresh) {

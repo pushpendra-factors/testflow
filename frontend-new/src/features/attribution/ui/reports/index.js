@@ -3,7 +3,7 @@ import { Button, Spin } from 'antd';
 import { connect, useDispatch } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { useHistory } from 'react-router-dom';
-import { isEmpty } from 'lodash';
+import { isEmpty,get } from 'lodash';
 
 import { SVG, Text } from 'Components/factorsComponents';
 import FaDatepicker from 'Components/FaDatepicker';

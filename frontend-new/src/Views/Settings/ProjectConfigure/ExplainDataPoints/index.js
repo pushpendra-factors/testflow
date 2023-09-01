@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Row, Col, Modal, Button, Progress, message } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import styles from './index.module.scss';
@@ -14,6 +14,12 @@ import {
 } from 'Reducers/factors';
 import { MoreOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import getGroupIcon from 'Utils/getGroupIcon';
+import {
+  convertAndAddPropertiesToGroupSelectOptions,
+  processProperties
+} from 'Utils/dataFormatter';
+
 const { confirm } = Modal;
 
 const ConfigureDP = (props) => {
@@ -21,14 +27,16 @@ const ConfigureDP = (props) => {
     activeProject,
     tracked_events,
     tracked_user_property,
-    userProperties,
+    userPropertiesV2,
     events,
     addEventToTracked,
     addUserPropertyToTracked,
     fetchFactorsTrackedEvents,
     fetchFactorsTrackedUserProperties,
     delEventTracked,
-    delUserPropertyTracked
+    delUserPropertyTracked,
+    userPropNames,
+    eventNames
   } = props;
   const [activeEventsTracked, setActiveEventsTracked] = useState(0);
   const [InQueueEventsEvents, setInQueueEventsEvents] = useState(0);
@@ -111,7 +119,7 @@ const ConfigureDP = (props) => {
       });
   };
 
-  const onChangeUserPropertiesDD = (grp, value) => {
+  const onChangeUserPropertiesDD = (option, group) => {
     setShowDropDown1(false);
     const UserPropertyData = {
       user_property_name: `${option.value ? option.value : option.label}`
@@ -174,6 +182,18 @@ const ConfigureDP = (props) => {
       }
     });
   };
+
+  const userPropertiesModified = useMemo(() => {
+    const filterOptsObj = {};
+    if (userPropertiesV2) {
+      convertAndAddPropertiesToGroupSelectOptions(
+        userPropertiesV2,
+        filterOptsObj,
+        'user'
+      );
+    }
+    return Object.values(filterOptsObj);
+  }, [userPropertiesV2]);
 
   return (
     <div className={'fa-container'}>
@@ -258,7 +278,7 @@ const ConfigureDP = (props) => {
               </Col>
             )}
             <Col span={24}>
-              <Row justify={'center'}>
+              <Row justify={'center'} className='min-h-screen'>
                 <Col span={12}>
                   <div className={'pr-4'}>
                     <Row gutter={[24, 12]} justify={'center'}>
@@ -361,14 +381,11 @@ const ConfigureDP = (props) => {
                                     events
                                       ? events?.map((opt) => {
                                           return {
-                                            iconName: opt?.icon,
+                                            iconName: getGroupIcon(opt?.icon),
                                             label: opt?.label,
-                                            values: opt?.values?.map((op) => {
-                                              return {
-                                                value: op[1],
-                                                label: op[0]
-                                              };
-                                            })
+                                            values: processProperties(
+                                              opt?.values
+                                            )
                                           };
                                         })
                                       : []
@@ -407,7 +424,9 @@ const ConfigureDP = (props) => {
                                       weight={'thin'}
                                       extraClass={'m-0 ml-2'}
                                     >
-                                      {event.name}
+                                      {eventNames[event.name]
+                                        ? eventNames[event.name]
+                                        : event.name}
                                     </Text>
                                   </div>
                                   <Button
@@ -525,27 +544,7 @@ const ConfigureDP = (props) => {
                                   extraClass={
                                     styles.explain_dataPoints__event_selector__select
                                   }
-                                  options={
-                                    userProperties
-                                      ? [
-                                          {
-                                            label: 'User Properties',
-                                            iconName: 'fav',
-                                            values: userProperties?.map(
-                                              (op) => {
-                                                return {
-                                                  value: op[1],
-                                                  label: op[0],
-                                                  extraProps: {
-                                                    valueType: op[2]
-                                                  }
-                                                };
-                                              }
-                                            )
-                                          }
-                                        ]
-                                      : []
-                                  }
+                                  options={userPropertiesModified}
                                   searchPlaceHolder='Select User Properties'
                                   optionClickCallback={onChangeUserPropertiesDD}
                                   onClickOutside={() => setShowDropDown1(false)}
@@ -580,7 +579,11 @@ const ConfigureDP = (props) => {
                                       weight={'thin'}
                                       extraClass={'m-0 ml-2'}
                                     >
-                                      {event.user_property_name}
+                                      {userPropNames[event.user_property_name]
+                                        ? userPropNames[
+                                            event.user_property_name
+                                          ]
+                                        : event.user_property_name}
                                     </Text>
                                   </div>
                                   <Button
@@ -613,7 +616,9 @@ const mapStateToProps = (state) => {
     activeProject: state.global.active_project,
     tracked_events: state.factors.tracked_events,
     tracked_user_property: state.factors.tracked_user_property,
-    userProperties: state.coreQuery.userProperties,
+    userPropertiesV2: state.coreQuery.userPropertiesV2,
+    userPropNames: state.coreQuery.userPropNames,
+    eventNames: state.coreQuery.eventNames,
     events: state.coreQuery.eventOptions
   };
 };

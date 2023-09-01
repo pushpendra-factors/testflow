@@ -60,8 +60,11 @@ export const formatAccountTimeline = (data, config) => {
 
   const non_anonymous_users = account_timeline
     .filter((user) => !user.is_anonymous && user.user_name !== 'group_user')
-    .sort((a, b) =>
-      compareObjTimestampsDesc(a.user_activities[0], b.user_activities[0])
+    .sort(
+      (a, b) =>
+        a.user_activities &&
+        b.user_activities &&
+        compareObjTimestampsDesc(a.user_activities[0], b.user_activities[0])
     )
     .map(
       ({
@@ -86,6 +89,7 @@ export const formatAccountTimeline = (data, config) => {
     name: data.name,
     host: data.host_name,
     left_pane_props: data.left_pane_props,
+    overview: data.overview,
     account_users: [...non_anonymous_users, ...anonymous_user, ...intent_user],
     account_events
   };
@@ -109,7 +113,7 @@ export const formatUsersTimeline = (data, config) => {
     title: data.is_anonymous ? 'New User' : data.name || data.user_id,
     subtitle: data.company || data.user_id,
     left_pane_props: data.left_pane_props,
-    account:data.account,
+    account: data.account,
     user_activities: []
   };
   const arrayMilestones = [

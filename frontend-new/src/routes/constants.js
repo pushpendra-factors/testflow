@@ -1,7 +1,6 @@
 import React from 'react';
 import lazyWithRetry from 'Utils/lazyWithRetry';
 
-import Welcome from 'Views/Settings/SetupAssist/Welcome/index';
 import DashboardTemplates from 'Views/DashboardTemplates/index';
 import AttributionSettings from 'Views/Settings/ProjectSettings/AttributionSettings';
 import BasicSettings from 'Views/Settings/ProjectSettings/BasicSettings';
@@ -10,7 +9,6 @@ import UserSettings from 'Views/Settings/ProjectSettings/UserSettings';
 import IntegrationSettings from 'Views/Settings/ProjectSettings/IntegrationSettings';
 import Sharing from 'Views/Settings/ProjectSettings/Sharing';
 import Events from 'Views/Settings/ProjectConfigure/Events';
-import InsightsSettings from 'Views/Settings/ProjectSettings/InsightsSettings';
 import PropertySettings from 'Views/Settings/ProjectConfigure/PropertySettings';
 import ContentGroups from 'Views/Settings/ProjectConfigure/ContentGroups';
 import CustomKPI from 'Views/Settings/ProjectConfigure/CustomKPI';
@@ -20,7 +18,6 @@ import UserProfiles from 'Components/Profile/UserProfiles';
 import AccountProfiles from 'Components/Profile/AccountProfiles';
 import Touchpoints from 'Views/Settings/ProjectConfigure/Touchpoints';
 import AppLayout from 'Views/AppLayout';
-import OnBoard from 'Views/Settings/SetupAssist/Welcome/OnboardFlow';
 import { PathUrls } from './pathUrls';
 import AccountDetails from 'Components/Profile/AccountProfiles/AccountDetails';
 import ContactDetails from 'Components/Profile/UserProfiles/ContactDetails';
@@ -30,6 +27,11 @@ import LockedStateComponent from 'Components/GenericComponents/LockedStateVideoC
 import PricingComponent from 'Views/Settings/ProjectSettings/Pricing';
 import EngagementConfig from 'Views/Settings/ProjectConfigure/Engagement';
 import CommonLockedComponent from 'Components/GenericComponents/CommonLockedComponent';
+import Onboarding from '../features/onboarding/ui';
+
+//locked screen images
+import LockedExplainImage from '../assets/images/locked_explain.png';
+import LockedPathAnalysisImage from '../assets/images/locked_path_analysis.png';
 
 const Login = lazyWithRetry(() => import('../Views/Pages/Login'));
 const ForgotPassword = lazyWithRetry(() =>
@@ -54,7 +56,8 @@ const FeatureLockedPathAnalysis = withFeatureLockHOC(PathAnalysis, {
   LockedComponent: () => (
     <LockedStateComponent
       title={'Path Analysis'}
-      description='All your important metrics at a glance. The dashboard is where you save your analyses for quick and easy viewing. Create multiple dashboards for different needs, and toggle through them as you wish. Making the right decisions just became easier.'
+      embeddedLink={LockedPathAnalysisImage}
+      description='Gain valuable insights into customer journeys and optimize conversion paths. Understand how prospects navigate your website, attribute revenue to specific marketing efforts, optimize content and campaigns, and deliver personalized experiences for increased conversions and marketing success'
     />
   )
 });
@@ -66,7 +69,8 @@ const FeatureLockedPathAnalysisReport = withFeatureLockHOC(PathAnalysisReport, {
   LockedComponent: () => (
     <LockedStateComponent
       title={'Path Analysis'}
-      description='All your important metrics at a glance. The dashboard is where you save your analyses for quick and easy viewing. Create multiple dashboards for different needs, and toggle through them as you wish. Making the right decisions just became easier.'
+      embeddedLink={LockedPathAnalysisImage}
+      description='Gain valuable insights into customer journeys and optimize conversion paths. Understand how prospects navigate your website, attribute revenue to specific marketing efforts, optimize content and campaigns, and deliver personalized experiences for increased conversions and marketing success'
     />
   )
 });
@@ -142,7 +146,12 @@ const FeatureLockConfigurationAttribution = withFeatureLockHOC(
   AttributionSettings,
   {
     featureName: FEATURES.CONF_ATTRUBUTION_SETTINGS,
-    LockedComponent: () => <CommonLockedComponent title='Attribution' />
+    LockedComponent: () => (
+      <CommonLockedComponent
+        title='Attribution'
+        description='Attribute revenue and conversions to the right marketing channels, campaigns, and touchpoints to gain a clear understanding of what drives success. Identify the most effective marketing strategies, optimize your budget allocation, and make data-driven decisions to maximize ROI and achieve your business goals.'
+      />
+    )
   }
 );
 
@@ -180,6 +189,7 @@ const FeatureLockedFactorsInsightsNew = withFeatureLockHOC(FactorsInsightsNew, {
   LockedComponent: () => (
     <LockedStateComponent
       title={'Explain'}
+      embeddedLink={LockedExplainImage}
       description='All your important metrics at a glance. The dashboard is where you save your analyses for quick and easy viewing. Create multiple dashboards for different needs, and toggle through them as you wish. Making the right decisions just became easier.'
     />
   )
@@ -192,6 +202,7 @@ const FeatureLockedFactorsInsightsOld = withFeatureLockHOC(FactorsInsightsOld, {
   LockedComponent: () => (
     <LockedStateComponent
       title={'Explain'}
+      embeddedLink={LockedExplainImage}
       description='All your important metrics at a glance. The dashboard is where you save your analyses for quick and easy viewing. Create multiple dashboards for different needs, and toggle through them as you wish. Making the right decisions just became easier.'
     />
   )
@@ -204,6 +215,7 @@ const FeatureLockedFactors = withFeatureLockHOC(Factors, {
   LockedComponent: () => (
     <LockedStateComponent
       title={'Explain'}
+      embeddedLink={LockedExplainImage}
       description='All your important metrics at a glance. The dashboard is where you save your analyses for quick and easy viewing. Create multiple dashboards for different needs, and toggle through them as you wish. Making the right decisions just became easier.'
     />
   )
@@ -317,20 +329,6 @@ export const APP_LAYOUT_ROUTES = {
     Private: true,
     Layout: AppLayout
   },
-  Welcome: {
-    exact: true,
-    path: '/welcome',
-    Component: Welcome,
-    Private: true,
-    Layout: AppLayout
-  },
-  OnBoardFlow: {
-    exact: true,
-    path: '/welcome/visitoridentification/:step',
-    Component: OnBoard,
-    Private: true,
-    Layout: AppLayout
-  },
   Template: {
     exact: true,
     path: '/template',
@@ -370,14 +368,6 @@ export const APP_LAYOUT_ROUTES = {
     exact: true,
     path: PathUrls.SettingsSharing,
     Component: FeatureLockedReportSharing,
-    Private: true,
-    Layout: AppLayout
-  },
-  SettingsInsights: {
-    exact: true,
-    path: PathUrls.SettingsInsights,
-    name: 'dashboardSettings',
-    Component: InsightsSettings,
     Private: true,
     Layout: AppLayout
   },
@@ -498,6 +488,13 @@ export const APP_LAYOUT_ROUTES = {
     Layout: AppLayout,
     Private: true,
     Component: FeatureLockedPathAnalysisReport
+  },
+  Onboarding: {
+    exact: true,
+    path: PathUrls.Onboarding,
+    Layout: AppLayout,
+    Private: true,
+    Component: Onboarding
   },
   //For backward compatibility for old url sent over mail
   SixSignalReportRedirection: {

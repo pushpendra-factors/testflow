@@ -1,6 +1,7 @@
 package model
 
 import (
+	"errors"
 	C "factors/config"
 	U "factors/util"
 	log "github.com/sirupsen/logrus"
@@ -303,6 +304,157 @@ func AddKPIKeyDataInMap(kpiQueryResult QueryResult, logCtx log.Entry, keyIdx int
 	}
 
 	return kpiKeys
+}
+
+func AddUserKPIKeyDataInMap(kpiQueryResult QueryResult, kpiQueryResultWithTime QueryResult, logCtx log.Entry, keyIdx int,
+	from int64, to int64, valIdx int, kpiValueHeaders []string,
+	kpiAggFunctionType []string, kpiData *map[string]KPIInfo) []string {
+	var kpiKeys []string
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"kpiQueryResult": kpiQueryResult,
+			"kpiQueryResultWithTime": kpiQueryResultWithTime}).Info("UserKPI-AddUserKPIKeyDataInMap")
+	}
+	for _, row := range kpiQueryResult.Rows {
+
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"Row": row}).Info("KPI-Attribution KPI Row")
+		}
+		var kpiDetail KPIInfo
+		// get ID
+		kpiID := row[keyIdx].(string)
+
+		// add kpi values
+		var kpiVals []float64
+		for vi := valIdx; vi < len(row); vi++ {
+			val := float64(0)
+			vInt, okInt := row[vi].(int)
+			if !okInt {
+				vFloat, okFloat := row[vi].(float64)
+				if !okFloat {
+					logCtx.WithError(errors.New("float expected")).WithFields(log.Fields{"value": row[vi]}).Error("couldn't parse the value for KPI query, continuing")
+					val = 0.0
+				} else {
+					val = vFloat
+				}
+			} else {
+				val = float64(vInt)
+			}
+
+			kpiVals = append(kpiVals, val)
+
+		}
+		// keeping conversion time for every kpi in separate KpiValuesList
+		var kpiValuesList []KpiRowValue
+		for vi := 0; vi < len(kpiVals); vi++ {
+			values := make([]float64, len(kpiVals))
+			values[vi] = kpiVals[vi]
+			kpiValuesList = append(kpiValuesList, KpiRowValue{Values: values, Timestamp: 0, TimeString: ""})
+		}
+		kpiDetail.KpiValuesList = kpiValuesList
+
+		// add headers
+		kpiDetail.KpiHeaderNames = kpiValueHeaders
+		// add aggregate function type
+		kpiDetail.KpiAggFunctionTypes = kpiAggFunctionType
+
+		(*kpiData)[kpiID] = kpiDetail
+
+		kpiKeys = append(kpiKeys, kpiID)
+
+	}
+	AddTimestampforUserKPI(kpiData, kpiQueryResultWithTime, logCtx, from, to)
+
+	return kpiKeys
+}
+
+func AddTimestampforUserKPI(kpiData *map[string]KPIInfo, kpiQueryResultWithTime QueryResult, logCtx log.Entry, from int64, to int64) {
+	datetimeIdx := 0
+	keyIdx := 1
+	valIdx := 2
+
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"kpiData": kpiData,
+			"kpiQueryResultWithTime": kpiQueryResultWithTime}).Info("UserKPI-AddTimestampforUserKPI 1")
+	}
+	for _, row := range kpiQueryResultWithTime.Rows {
+
+		// get ID
+		kpiID := row[keyIdx].(string)
+		// get time
+		eventTime, err := time.Parse(time.RFC3339, row[datetimeIdx].(string))
+		if err != nil {
+			logCtx.WithError(err).WithFields(log.Fields{"timestamp": row[datetimeIdx]}).Error("couldn't parse the timestamp for KPI query, continuing")
+			continue
+		}
+		timestamp := eventTime.Unix()
+
+		if timestamp > to || timestamp < from {
+			if C.GetAttributionDebug() == 1 {
+				logCtx.WithFields(log.Fields{"kpi-timestamp": row[datetimeIdx]}).Info("ignoring row as KPI-time not in range, continuing")
+			}
+			continue
+		}
+		timeString := row[datetimeIdx].(string)
+		// add kpi values
+		var kpiVals []float64
+		for vi := valIdx; vi < len(row); vi++ {
+			val := float64(0)
+			vInt, okInt := row[vi].(int)
+			if !okInt {
+				vFloat, okFloat := row[vi].(float64)
+				if !okFloat {
+					logCtx.WithError(err).WithFields(log.Fields{"value": row[vi]}).Error("couldn't parse the value for KPI query, continuing")
+					val = 0.0
+				} else {
+					val = vFloat
+				}
+			} else {
+				val = float64(vInt)
+			}
+
+			kpiVals = append(kpiVals, val)
+
+		}
+		// adding the conversion timestamp for each kpi_id, kpi pair
+		kpiDetail := (*kpiData)[kpiID]
+		for vi := 0; vi < len(kpiVals); vi++ {
+			if kpiVals[vi] > 0 {
+				previousTime := kpiDetail.KpiValuesList[vi].Timestamp
+				if previousTime == 0 || timestamp < previousTime {
+					kpiDetail.KpiValuesList[vi].Timestamp = timestamp
+					kpiDetail.KpiValuesList[vi].TimeString = timeString
+				}
+
+			}
+
+		}
+
+		(*kpiData)[kpiID] = kpiDetail
+
+	}
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"kpiData": kpiData,
+			"kpiQueryResultWithTime": kpiQueryResultWithTime}).Info("before SanitizeKpiDataForZeroConversionTime")
+	}
+	SanitizeKpiDataForZeroConversionTime(kpiData)
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"kpiData": kpiData,
+			"kpiQueryResultWithTime": kpiQueryResultWithTime}).Info("after SanitizeKpiDataForZeroConversionTime")
+	}
+}
+
+// SanitizeKpiDataForZeroConversionTime removes kpiRowValue having invalid conversion time
+func SanitizeKpiDataForZeroConversionTime(kpiData *map[string]KPIInfo) {
+	for key, kpiInfo := range *kpiData {
+		newKpiInfo := kpiInfo
+		newKpiInfo.KpiValuesList = []KpiRowValue{}
+		for _, kpiRowValue := range kpiInfo.KpiValuesList {
+			if kpiRowValue.Timestamp != 0 {
+				newKpiInfo.KpiValuesList = append(newKpiInfo.KpiValuesList, kpiRowValue)
+			}
+		}
+		(*kpiData)[key] = newKpiInfo
+	}
 }
 
 func KPIValueListToValues(kpiDetail KPIInfo) []float64 {

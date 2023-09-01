@@ -14,7 +14,6 @@ function AccountTimelineSingleView({
   activities = [],
   loading = false,
   eventNamesMap,
-  listProperties
 }) {
   const groupedActivities = _.groupBy(activities, groups['Daily']);
 

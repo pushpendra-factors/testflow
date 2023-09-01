@@ -1,7 +1,7 @@
 const logger = require("./logger");
 
-const FACTORS_FORM_BIND_ATTRIBUTE = 'data-factors-form-bind';
-const FACTORS_CLICK_BIND_ATTRIBUTE = 'data-factors-click-bind';
+const FAITRACKER_FORM_BIND_ATTRIBUTE = 'data-faitracker-form-bind';
+const FAITRACKER_CLICK_BIND_ATTRIBUTE = 'data-faitracker-click-bind';
 
 const TRIGGER_FORM_BINDING_EVENT = "trigger-form-binding";
 
@@ -109,7 +109,7 @@ function bindAllFormsOnSubmit(appInstance, processCallback) {
 
         // Using unique attribute as flag to avoid binding,
         // multiple times.
-        if (!forms[i].getAttribute(FACTORS_FORM_BIND_ATTRIBUTE)) {
+        if (!forms[i].getAttribute(FAITRACKER_FORM_BIND_ATTRIBUTE)) {
             maxCallCount = maxCallCount + 1;
             forms[i].addEventListener('submit', function(e) {
                 if (callCount > 0) {
@@ -126,14 +126,14 @@ function bindAllFormsOnSubmit(appInstance, processCallback) {
                 callCount = callCount + 1;
             });
             
-            forms[i].setAttribute(FACTORS_FORM_BIND_ATTRIBUTE, true);
+            forms[i].setAttribute(FAITRACKER_FORM_BIND_ATTRIBUTE, true);
         }
         
 
         // Bind processCallback to on-click of form's submit element,
         // But call only if not processed on submit.
         var submitElement = forms[i].querySelector('*[type="submit"]');
-        if (!submitElement || submitElement.getAttribute(FACTORS_FORM_BIND_ATTRIBUTE)) continue;
+        if (!submitElement || submitElement.getAttribute(FAITRACKER_FORM_BIND_ATTRIBUTE)) continue;
 
         maxCallCount = maxCallCount + 1;
         submitElement.addEventListener('click', function(e) {
@@ -148,7 +148,7 @@ function bindAllFormsOnSubmit(appInstance, processCallback) {
             processCallback(_appInstance, e.target.form);
             callCount = callCount + 1;
         });
-        submitElement.setAttribute(FACTORS_FORM_BIND_ATTRIBUTE, true);
+        submitElement.setAttribute(FAITRACKER_FORM_BIND_ATTRIBUTE, true);
     }
 }
 
@@ -168,7 +168,7 @@ function bindAllNonFormButtonOnClick(appInstance, processCallback) {
         var _button = buttons[i];
 
         // Do not bind button part of a form or bound already.
-        if (isPartOfForm(_button) || _button.getAttribute(FACTORS_FORM_BIND_ATTRIBUTE)) continue;
+        if (isPartOfForm(_button) || _button.getAttribute(FAITRACKER_FORM_BIND_ATTRIBUTE)) continue;
 
         _button.addEventListener('click', function() {
             logger.debug("Executing callback on click of button.", false);
@@ -177,12 +177,12 @@ function bindAllNonFormButtonOnClick(appInstance, processCallback) {
             processCallback(_appInstance);
         });
 
-        _button.setAttribute(FACTORS_FORM_BIND_ATTRIBUTE, true);
+        _button.setAttribute(FAITRACKER_FORM_BIND_ATTRIBUTE, true);
     }
 }
 
 function stopFormBinderTask() {
-    window.clearInterval(window.FACTORS_FORM_BINDER_ID);
+    window.clearInterval(window.FAITRACKER_FORM_BINDER_ID);
     logger.debug('Stopped form binder task.');
 }
 
@@ -193,7 +193,7 @@ function stopBackgroundFormBinderTaskLater() {
 
 function startBackgroundFormBinder(appInstance, processCallback) {
     // Binder should start only once for a window.
-    if (!!window.FACTORS_FORM_BINDER_ID) {
+    if (!!window.FAITRACKER_FORM_BINDER_ID) {
         logger.debug("Form binder started already.", true)
         return;
     }
@@ -208,7 +208,7 @@ function startBackgroundFormBinder(appInstance, processCallback) {
         document.dispatchEvent(new Event(TRIGGER_FORM_BINDING_EVENT));
     }, 2000);
 
-    window.FACTORS_FORM_BINDER_ID = taskId;
+    window.FAITRACKER_FORM_BINDER_ID = taskId;
     stopBackgroundFormBinderTaskLater();
 }
 
@@ -216,7 +216,7 @@ function bindAllClickableElements(appInstance, processCallback) {
     var buttons = document.querySelectorAll('button,input[type="button"],input[type="submit"]');
     for (var i=0; i<buttons.length; i++) {
         // TODO: Do we have to exclude click capture for submit buttons of form?
-        if (!buttons[i].getAttribute(FACTORS_CLICK_BIND_ATTRIBUTE)) {
+        if (!buttons[i].getAttribute(FAITRACKER_CLICK_BIND_ATTRIBUTE)) {
 
             buttons[i].addEventListener('click', function(e) {
                 logger.debug("Executing callback on click of button as part of click capture.", false);
@@ -224,13 +224,13 @@ function bindAllClickableElements(appInstance, processCallback) {
                 processCallback(_appInstance, e.target);
             });
             
-            buttons[i].setAttribute(FACTORS_CLICK_BIND_ATTRIBUTE, true);
+            buttons[i].setAttribute(FAITRACKER_CLICK_BIND_ATTRIBUTE, true);
         }
     }
 
     var anchors = document.querySelectorAll('a');
     for (var i=0; i<anchors.length; i++) {
-        if (!anchors[i].getAttribute(FACTORS_CLICK_BIND_ATTRIBUTE)) {
+        if (!anchors[i].getAttribute(FAITRACKER_CLICK_BIND_ATTRIBUTE)) {
             anchors[i].addEventListener('click', function(e) {
                 logger.debug("Executing callback on click of anchor as part of click capture.", false);
 
@@ -258,7 +258,7 @@ function bindAllClickableElements(appInstance, processCallback) {
                 }
             });
             
-            anchors[i].setAttribute(FACTORS_CLICK_BIND_ATTRIBUTE, true);
+            anchors[i].setAttribute(FAITRACKER_CLICK_BIND_ATTRIBUTE, true);
         }
     }
 }
@@ -281,7 +281,7 @@ function addElementAttributeIfExists(element, key, attributes) {
     attributes[key] = value;
 }
 
-function cleanupString(s) {
+function cleanupString(s = "") {
     // Allows only letters, numbers, punctuation, whitespace, symbols.
     return s.replace(/[^\p{L}\p{N}\p{P}\p{Z}^$\n]/gu, '').trim();
 }
@@ -291,7 +291,7 @@ function getClickCapturePayloadFromElement(element) {
 
     var displayName = element.textContent;
     if (!displayName) displayName = element.value;
-    if (displayName != "") displayName = displayName.trim();
+    if (displayName != "" && displayName !== undefined) displayName = displayName.trim();
 
     // Possibilities A, BUTTON, INPUT[type=button].
     var elementType = element.nodeName; 

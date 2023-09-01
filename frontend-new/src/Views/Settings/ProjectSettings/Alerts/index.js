@@ -10,7 +10,8 @@ import {
   notification,
   Tabs,
   Badge,
-  Switch
+  Switch,
+  Modal
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { MoreOutlined } from '@ant-design/icons';
@@ -19,13 +20,13 @@ import {
   fetchAlerts,
   deleteAlert,
   fetchEventAlerts,
-  deleteEventAlert
+  deleteEventAlert,
+  createEventAlert
 } from 'Reducers/global';
-import ConfirmationModal from '../../../../components/ConfirmationModal';
 import KPIBasedAlert from './KPIBasedAlert';
 import EventBasedAlert from './EventBasedAlert';
 import styles from './index.module.scss';
-
+import { ExclamationCircleOutlined } from '@ant-design/icons';
 const { TabPane } = Tabs;
 
 const Alerts = ({
@@ -36,27 +37,27 @@ const Alerts = ({
   deleteEventAlert,
   savedAlerts,
   savedEventAlerts,
-  currentAgent
+  currentAgent,
+  createEventAlert
 }) => {
   const [tableData, setTableData] = useState([]);
   const [tableLoading, setTableLoading] = useState(false);
   const [viewAlertDetails, setAlertDetails] = useState(false);
-  const [deleteWidgetModal, showDeleteWidgetModal] = useState(false);
-  const [deleteApiCalled, setDeleteApiCalled] = useState(false);
   const [tabNo, setTabNo] = useState('2');
   const [alertState, setAlertState] = useState({
     state: 'list',
     index: 0
-  });
+  }); 
+  const { confirm } = Modal;
 
   const confirmRemove = (id) => {
     if (tabNo === '1') {
-      return deleteAlert(activeProject.id, id).then(
+      return deleteAlert(activeProject?.id, id).then(
         (res) => {
-          fetchAlerts(activeProject.id);
+          fetchAlerts(activeProject?.id);
           notification.success({
             message: 'Success',
-            description: 'Deleted Alert successfully ',
+            description: 'Removed alert successfully ',
             duration: 5
           });
         },
@@ -69,12 +70,12 @@ const Alerts = ({
         }
       );
     } else {
-      return deleteEventAlert(activeProject.id, id).then(
+      return deleteEventAlert(activeProject?.id, id).then(
         (res) => {
-          fetchEventAlerts(activeProject.id);
+          fetchEventAlerts(activeProject?.id);
           notification.success({
             message: 'Success',
-            description: 'Deleted Alert successfully ',
+            description: 'Removed alert successfully ',
             duration: 5
           });
         },
@@ -89,33 +90,84 @@ const Alerts = ({
     }
   };
 
-  const confirmDelete = useCallback(async () => {
-    try {
-      setDeleteApiCalled(true);
-      await confirmRemove(deleteWidgetModal);
-      setDeleteApiCalled(false);
-      showDeleteWidgetModal(false);
-      setAlertState({ state: 'list', index: 0 });
-    } catch (err) {
-      console.log(err);
-      console.log(err.response);
-    }
-  }, [deleteWidgetModal]);
+  const confirmDeleteAlert = (id) => {
+    confirm({
+      title: 'Do you really want to remove this alert?',
+      icon: <ExclamationCircleOutlined />, 
+      content: 'Please confirm to proceed',
+      onOk() {
+        if (tabNo === '1') {
+          return deleteAlert(activeProject?.id, id).then(
+            (res) => {
+              fetchAlerts(activeProject?.id);
+              notification.success({
+                message: 'Success',
+                description: 'Deleted Alert successfully ',
+                duration: 5
+              });
+              setAlertState({ state: 'list', index: 0 });
+            },
+            (err) => {
+              notification.error({
+                message: 'Error',
+                description: err.data,
+                duration: 5
+              });
+            }
+          );
+        } else {
+          return deleteEventAlert(activeProject?.id, id).then(
+            (res) => {
+              fetchEventAlerts(activeProject?.id);
+              notification.success({
+                message: 'Success',
+                description: 'Deleted Alert successfully ',
+                duration: 5
+              });
+              setAlertState({ state: 'list', index: 0 });
+            },
+            (err) => {
+              notification.error({
+                message: 'Error',
+                description: err.data,
+                duration: 5
+              });
+            }
+          );
+        }
+      }
+    });
+  };
+
+
+  const createDuplicateAlert = (item) =>{
+    let payload = {
+      ...item?.event_alert,
+      title: `Copy of ${item?.event_alert?.title}`
+    } 
+    createEventAlert(activeProject?.id, payload)
+    .then((res) => {
+      setTableLoading(false);
+      fetchEventAlerts(activeProject?.id);
+      notification.success({
+        message: 'Alert Created',
+        description: 'Copy of alert is created and saved successfully.'
+      }); 
+    })
+    .catch((err) => {
+      setTableLoading(false);
+      notification.error({
+        message: 'Error',
+        description: err?.data?.error
+      });
+    });
+  }
 
   const menu = (item) => {
     return (
       <Menu className={`${styles.antdActionMenu}`}>
-        {/* <Menu.Item
+         <Menu.Item
           key='0'
-          onClick={() => {
-            setAlertState({ state: 'view', index: item });
-            setAlertDetails(item);
-          }}
-        >
-          <a>View</a>
-        </Menu.Item> */}
-        <Menu.Item
-          key='1'
           onClick={() => {
             setAlertState({ state: 'edit', index: item });
             setAlertDetails(item);
@@ -123,11 +175,22 @@ const Alerts = ({
         >
           <a>Edit alert</a>
         </Menu.Item>
+        {tabNo === '2' && <>
+        <Menu.Item
+          key='1' 
+          onClick={() => { 
+            createDuplicateAlert(item);
+          }}
+        >
+          <a>Create copy</a>
+        </Menu.Item>
+        </>}
+       
         <Menu.Divider />
         <Menu.Item
           key='2'
           onClick={() => {
-            showDeleteWidgetModal(item.id);
+            confirmDeleteAlert(item.id);
           }}
         >
           <a>
@@ -219,12 +282,12 @@ const Alerts = ({
   useEffect(() => {
     if (tabNo === '1') {
       setTableLoading(true);
-      fetchAlerts(activeProject.id).then(() => {
+      fetchAlerts(activeProject?.id).then(() => {
         setTableLoading(false);
       });
     } else {
       setTableLoading(true);
-      fetchEventAlerts(activeProject.id).then(() => {
+      fetchEventAlerts(activeProject?.id).then(() => {
         setTableLoading(false);
       });
     }
@@ -295,6 +358,7 @@ const Alerts = ({
           size={'large'}
           onClick={() => {
             setAlertState({ state: 'add', index: 0 });
+            setAlertDetails(false)
           }}
         >
           <SVG name={'plus'} extraClass={'mr-2'} size={16} />
@@ -368,7 +432,7 @@ const Alerts = ({
                   Be instantly notified, take immediate action, and seize every
                   opportunity to drive conversions, optimize performance, and
                   achieve your business objectives.
-                  <a href='https://help.factors.ai/en/articles/7284705-alerts'>
+                  <a href='https://help.factors.ai/en/articles/7284705-alerts' target='_blank'>
                     Learn more
                   </a>
                 </Text>
@@ -402,16 +466,6 @@ const Alerts = ({
           {' '}
         </EventBasedAlert>
       )}
-      <ConfirmationModal
-        visible={deleteWidgetModal ? true : false}
-        confirmationText='Do you really want to remove this alert?'
-        onOk={confirmDelete}
-        onCancel={showDeleteWidgetModal.bind(this, false)}
-        title='Remove Alert'
-        okText='Confirm'
-        cancelText='Cancel'
-        confirmLoading={deleteApiCalled}
-      />
     </div>
   );
 };
@@ -431,5 +485,6 @@ export default connect(mapStateToProps, {
   fetchAlerts,
   deleteAlert,
   fetchEventAlerts,
-  deleteEventAlert
+  deleteEventAlert,
+  createEventAlert
 })(Alerts);

@@ -25,6 +25,7 @@ import {
   CHART_COLOR_9,
   CHART_COLOR_10
 } from '../constants/color.constants';
+import getGroupIcon from './getGroupIcon';
 
 export const visualizationColors = [
   CHART_COLOR_1,
@@ -733,4 +734,85 @@ export const formatDurationIntoString = (seconds) => {
     }
   } else return 'NA';
   return returnString.trim();
+};
+
+export const processProperties = (properties, propertyType, key) => {
+  if (!properties) return [];
+
+  return properties.map((op) => ({
+    value: op?.[1],
+    label: op?.[0],
+    extraProps: {
+      valueType: op?.[2],
+      queryType: op?.[3],
+      propertyType,
+      groupName: key
+    }
+  }));
+};
+
+export const convertAndAddPropertiesToGroupSelectOptions = (
+  properties,
+  filterOptsObj,
+  propertyType
+) => {
+  //filterOptsObj is Passed By Reference.
+  Object.keys(properties)?.forEach((groupkey) => {
+    if (!filterOptsObj[groupkey]) {
+      filterOptsObj[groupkey] = {
+        label: PropTextFormat(groupkey),
+        iconName: getGroupIcon(groupkey),
+        values:
+          processProperties(properties[groupkey], propertyType, groupkey) || []
+      };
+    } else {
+      filterOptsObj[groupkey].values.push(
+        ...(processProperties(properties[groupkey], propertyType, groupkey) ||
+          [])
+      );
+    }
+  });
+};
+
+export const convertGroupedPropertiesToUngrouped = (
+  properties,
+  propertiesModified
+) => {
+  Object.keys(properties).forEach((groupKey) => {
+    properties[groupKey].forEach((userPropArray) => {
+      propertiesModified.push(userPropArray);
+    });
+  });
+};
+
+//Array of Arrays.
+export const groupKPIPropertiesOnCategory = (kpiProperties, propertyType) => {
+  return (
+    kpiProperties?.reduce((result, kpiItem) => {
+      const category = kpiItem[4];
+      if (!category) {
+        return result;
+      }
+      if (!result[category]) {
+        result[category] = {
+          label: category,
+          icon: getGroupIcon(category),
+          propertyType: propertyType,
+          values: []
+        };
+      }
+      const propertyLabel = kpiItem[0];
+      const propertyValueName = kpiItem[1];
+      const propertyDataType = kpiItem[2];
+      const propertyCategoryType = kpiItem[3];
+
+      result[category].values.push([
+        propertyLabel,
+        propertyValueName,
+        propertyDataType,
+        propertyCategoryType
+      ]);
+      return result;
+    }, {}) || {}
+  );
 };

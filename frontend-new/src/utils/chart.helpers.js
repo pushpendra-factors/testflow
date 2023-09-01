@@ -152,6 +152,10 @@ export const getChartTypeMenuItems = (
       {
         key: CHART_TYPE_METRIC_CHART,
         name: 'Metric'
+      },
+      {
+        key: CHART_TYPE_BARCHART,
+        name: 'Column'
       }
     ];
   }

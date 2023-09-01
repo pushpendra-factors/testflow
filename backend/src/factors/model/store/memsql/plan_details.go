@@ -6,6 +6,7 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -98,7 +99,7 @@ func (store *MemSQL) GetDisplayablePlanDetails(ppMap model.ProjectPlanMapping, p
 	var addOns model.OverWrite
 	if ppMap.OverWrite != nil {
 		err := U.DecodePostgresJsonbToStructType(ppMap.OverWrite, &addOns)
-		if err != nil {
+		if err != nil && err.Error() != "Empty jsonb object" {
 			errMsg := "failed to decode postgres jsonb object"
 			logCtx.WithError(err).Error(errMsg)
 			return nil, http.StatusBadRequest, errMsg, err
@@ -111,7 +112,7 @@ func (store *MemSQL) GetDisplayablePlanDetails(ppMap model.ProjectPlanMapping, p
 		}
 	}
 	var sixSignalInfo model.SixSignalInfo
-	isDeanonymisationEnabled, err := store.GetFeatureStatusForProjectV2(ppMap.ProjectID, FEATURE_FACTORS_DEANONYMISATION)
+	isDeanonymisationEnabled, err := store.GetFeatureStatusForProjectV2(ppMap.ProjectID, FEATURE_FACTORS_DEANONYMISATION, false)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get status for six signal")
 		return nil, http.StatusInternalServerError, "Failed to get status for six signal", err
@@ -127,12 +128,16 @@ func (store *MemSQL) GetDisplayablePlanDetails(ppMap model.ProjectPlanMapping, p
 	obj := model.DisplayPlanDetails{
 		ProjectID:     ppMap.ProjectID,
 		Plan:          planDetails,
+		DisplayName:   getDisplayNameForPlan(planDetails.Name),
 		AddOns:        enabledAddOns,
 		LastRenewedOn: ppMap.LastRenewedOn,
 		SixSignalInfo: sixSignalInfo,
 	}
 
 	return &obj, http.StatusFound, "", nil
+}
+func getDisplayNameForPlan(planName string) string {
+	return strings.Title(strings.ToLower(planName))
 }
 func (store *MemSQL) GetSixSignalInfoForProject(projectID int64) (model.SixSignalInfo, error) {
 	logCtx := log.WithFields(log.Fields{
@@ -141,8 +146,8 @@ func (store *MemSQL) GetSixSignalInfoForProject(projectID int64) (model.SixSigna
 	// metering logic here
 	timeZoneString, statusCode := store.GetTimezoneForProject(projectID)
 	if statusCode != http.StatusFound {
-		logCtx.Error(" Failed to get Timezone for six signal count")
-		return model.SixSignalInfo{}, errors.New("Failed to get Timezone")
+		logCtx.Warn(" Failed to get Timezone for six signal count")
+		timeZoneString = U.TimeZoneStringIST
 	}
 	monthYearString := U.GetCurrentMonthYear(timeZoneString)
 	sixSignalCount, err := model.GetSixSignalMonthlyUniqueEnrichmentCount(projectID, monthYearString)
@@ -342,10 +347,11 @@ func (store *MemSQL) CreateAddonsForCustomPlanForProject(projectID int64) error 
 	for _, featureName := range featureNames {
 		var feature model.FeatureDetails
 		feature.Name = featureName
-		feature.IsEnabledFeature = true
+		feature.IsEnabledFeature = false // false by default in custom plan
 		if featureName == model.FEATURE_FACTORS_DEANONYMISATION {
 			// TODO : change this to const
 			feature.Limit = 100
+			feature.IsEnabledFeature = true
 		}
 		addOns = append(addOns, feature)
 	}

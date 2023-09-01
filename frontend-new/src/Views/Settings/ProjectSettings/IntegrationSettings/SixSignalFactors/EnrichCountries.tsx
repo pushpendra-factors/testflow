@@ -11,12 +11,14 @@ import {
 
 import { Button, notification, Radio, Select, Tooltip } from 'antd';
 import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
-import { useSelector } from 'react-redux';
-import { fetchEventPropertyValues } from 'Reducers/coreQuery/services';
-import { getCountryCode, isCountryFlagAvailable } from 'Utils/country';
+import {
+  getAllCountryIsoCodes,
+  getCountryNameFromIsoCode
+} from 'Utils/country';
 import { Text } from 'Components/factorsComponents';
 import { udpateProjectSettings } from 'Reducers/global';
 import style from './index.module.scss';
+import { AVAILABLE_FLAGS } from 'Constants/country.list';
 
 const EnrichCountries = ({
   mode,
@@ -29,7 +31,6 @@ const EnrichCountries = ({
   const [countryOptions, setCountryOptions] = useState<CountryLabel[]>([]);
   const [data, setData] = useState<CountryLabel[]>([]);
   const countriesSet = useRef(false);
-  const { active_project } = useSelector((state) => state.global);
 
   const handleAddNew = () => {
     if (countryOptions && countryOptions?.length > 0) {
@@ -49,17 +50,17 @@ const EnrichCountries = ({
     setData([...data.slice(0, index), value, ...data.slice(index + 1)]);
   };
 
-  const renderOption = (country: string) => {
-    const isFlagAvailable = isCountryFlagAvailable(country);
+  const renderOption = (country_isoCode: string) => {
+    const isFlagAvailable = AVAILABLE_FLAGS.includes(country_isoCode);
     return (
       <div className='flex items-center gap-2 justify-start mt-1'>
         {isFlagAvailable && (
-          <div className={`fflag fflag-${getCountryCode(country)} ff-md`}></div>
+          <div className={`fflag fflag-${country_isoCode} ff-md`}></div>
         )}
         <div className='flex-1 whitespace-nowrap overflow-hidden text-ellipsis'>
           <Text type={'paragraph'} mini ellipsis>
             {' '}
-            {country}
+            {getCountryNameFromIsoCode(country_isoCode)}
           </Text>
         </div>
       </div>
@@ -82,6 +83,13 @@ const EnrichCountries = ({
               minWidth: 215
             }}
             className={style.countrySelectContainer}
+            filterOption={(input, option) => {
+              return (
+                option?.value
+                  ? getCountryNameFromIsoCode(option?.value).toLowerCase()
+                  : ''
+              ).includes(input.toLowerCase());
+            }}
             labelInValue
             value={country}
             showSearch
@@ -186,33 +194,13 @@ const EnrichCountries = ({
   ]);
 
   useEffect(() => {
-    //fetching country list
-    const fetchCountries = async () => {
-      const res = await fetchEventPropertyValues(
-        active_project?.id,
-        '$session',
-        '$country'
-      );
-      if (res.ok && res?.data) {
-        const data = res?.data;
-        if (typeof data !== 'object' || !data) return;
-        const countryList = Object.keys(data);
-        const countryListWithLabels = countryList.map((country: string) => ({
-          value: country,
-          label: renderOption(data[country])
-        }));
-        setCountryOptions(countryListWithLabels);
-        if (!countriesSet.current) {
-          const firstCountry = countryList[0];
-          if (firstCountry)
-            setData([
-              { value: firstCountry, label: renderOption(data[firstCountry]) }
-            ]);
-        }
-      }
-    };
-    if (active_project?.id) fetchCountries();
-  }, [active_project?.id]);
+    const countriesIsoCodes = getAllCountryIsoCodes();
+    const countryListWithLabels = countriesIsoCodes.map((isoCode) => ({
+      value: isoCode,
+      label: renderOption(isoCode)
+    }));
+    setCountryOptions(countryListWithLabels);
+  }, []);
 
   return (
     <div className={style.customSelect}>

@@ -11,8 +11,8 @@ import FaSelect from '../FaSelect';
 
 import {
   fetchEventNames,
-  getUserProperties,
-  getEventProperties,
+  getUserPropertiesV2,
+  getEventPropertiesV2,
   setGoalEvent,
   setTouchPoint,
   setModels,
@@ -31,9 +31,9 @@ import { fetchGroups } from 'Reducers/coreQuery/services';
 const AttrQueryComposer = ({
   activeProject,
   fetchEventNames,
-  getEventProperties,
-  eventUserProperties,
-  eventProperties,
+  getEventPropertiesV2,
+  eventUserPropertiesV2,
+  eventPropertiesV2,
   runAttributionQuery,
   eventGoal,
   setGoalEvent,
@@ -76,9 +76,9 @@ const AttrQueryComposer = ({
       $hubspot_deal: 'hubspot_deals',
       $salesforce_opportunity: 'salesforce_opportunities'
     };
-    Object.entries(groupOpts|| {}).forEach(([group_name, display_name])=>{
+    Object.entries(groupOpts || {}).forEach(([group_name, display_name]) => {
       groups.push([display_name, valueMap[group_name]]);
-    })
+    });
     return groups;
   }, [groupOpts]);
 
@@ -86,22 +86,22 @@ const AttrQueryComposer = ({
     if (activeProject && activeProject.id) {
       getCampaignConfigData(activeProject.id, 'all_ads');
       fetchEventNames(activeProject.id);
-      if (!eventUserProperties.length) {
-        getUserProperties(activeProject.id, 'analysis');
+      if (!eventUserPropertiesV2.length) {
+        getUserPropertiesV2(activeProject.id, 'analysis');
       }
     }
   }, [activeProject]);
 
   useEffect(() => {
-    if (!eventProperties[eventGoal?.label]) {
-      getEventProperties(activeProject.id, eventGoal.label);
+    if (!eventPropertiesV2[eventGoal?.label]) {
+      getEventPropertiesV2(activeProject.id, eventGoal.label);
     }
   }, [eventGoal]);
 
   useEffect(() => {
     linkedEvents.forEach((ev, index) => {
-      if (!eventProperties[ev.label]) {
-        getEventProperties(activeProject.id, ev.label);
+      if (!eventPropertiesV2[ev.label]) {
+        getEventPropertiesV2(activeProject.id, ev.label);
       }
     });
   }, [linkedEvents]);
@@ -236,9 +236,7 @@ const AttrQueryComposer = ({
     }
 
     linkEventsList.push(
-      <LinkedEventsBlock
-        linkEventChange={(ev) => linkEventChange(ev, -1)}
-      />
+      <LinkedEventsBlock linkEventChange={(ev) => linkEventChange(ev, -1)} />
     );
 
     return linkEventsList;
@@ -463,8 +461,8 @@ const AttrQueryComposer = ({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  eventProperties: state.coreQuery.eventProperties,
-  eventUserProperties: state.coreQuery.eventUserProperties,
+  eventPropertiesV2: state.coreQuery.eventPropertiesV2,
+  eventUserPropertiesV2: state.coreQuery.eventUserPropertiesV2,
   eventGoal: state.coreQuery.eventGoal,
   touchPoint: state.coreQuery.touchpoint,
   models: state.coreQuery.models,
@@ -479,8 +477,8 @@ const mapDispatchToProps = (dispatch) =>
     {
       fetchGroups,
       fetchEventNames,
-      getEventProperties,
-      getUserProperties,
+      getEventPropertiesV2,
+      getUserPropertiesV2,
       getCampaignConfigData,
       setGoalEvent,
       setTouchPoint,

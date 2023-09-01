@@ -290,21 +290,6 @@ export function fetchProjects() {
   };
 }
 
-export function fetchDemoProject() {
-  return function (dispatch) {
-    return new Promise((resolve, reject) => {
-      get(dispatch, host + 'v1/demoprojects')
-        .then((response) => {
-          resolve(response);
-        })
-        .catch((err) => {
-          dispatch({ type: 'FETCH_PROJECTS_REJECTED', payload: err });
-          reject(err);
-        });
-    });
-  };
-}
-
 export function createProject(projectName) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
@@ -1424,13 +1409,18 @@ export function testWebhhookUrl(projectId, payload) {
   };
 }
 
-
 export function updateEventAlertStatus(projectId, id, status) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
       put(
         dispatch,
-        host + 'projects/' + projectId + '/v1/eventtriggeralert/' + id + '/' + status
+        host +
+          'projects/' +
+          projectId +
+          '/v1/eventtriggeralert/' +
+          id +
+          '/status',
+        { status: status }
       )
         .then((r) => {
           resolve(r);

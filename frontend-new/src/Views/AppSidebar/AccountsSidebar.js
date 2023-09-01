@@ -2,6 +2,7 @@ import React, { Fragment, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import cx from 'classnames';
 import { Button } from 'antd';
+import noop from 'lodash/noop';
 import {
   generateSegmentsList,
   getGroupList
@@ -10,7 +11,7 @@ import { SVG, Text } from 'Components/factorsComponents';
 import {
   setAccountPayloadAction,
   setActiveSegmentAction,
-  setSegmentModalStateAction
+  setNewSegmentModeAction
 } from 'Reducers/accountProfilesView/actions';
 import { selectAccountPayload } from 'Reducers/accountProfilesView/selectors';
 import { selectGroupOptions } from 'Reducers/groups/selectors';
@@ -18,6 +19,18 @@ import { selectSegments } from 'Reducers/timelines/selectors';
 import styles from './index.module.scss';
 import SidebarMenuItem from './SidebarMenuItem';
 import SidebarSearch from './SidebarSearch';
+import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
+import { AccountsSidebarIconsMapping } from './appSidebar.constants';
+
+const NewSegmentItem = () => {
+  return (
+    <SidebarMenuItem
+      text={'Untitled Segment 1'}
+      isActive={true}
+      onClick={noop}
+    />
+  );
+};
 
 const GroupItem = ({ group }) => {
   const dispatch = useDispatch();
@@ -26,14 +39,16 @@ const GroupItem = ({ group }) => {
   );
 
   const setAccountPayload = () => {
-    dispatch(
-      setAccountPayloadAction({
-        source: group[1],
-        filters: [],
-        segment_id: ''
-      })
-    );
-    dispatch(setActiveSegmentAction({}));
+    if (activeAccountPayload.source !== group[1]) {
+      dispatch(
+        setAccountPayloadAction({
+          source: group[1],
+          filters: [],
+          segment_id: ''
+        })
+      );
+      dispatch(setActiveSegmentAction({}));
+    }
   };
 
   const isActive =
@@ -45,6 +60,7 @@ const GroupItem = ({ group }) => {
       text={group[0]}
       isActive={isActive}
       onClick={setAccountPayload}
+      icon={AccountsSidebarIconsMapping[group[1]]}
     />
   );
 };
@@ -56,13 +72,15 @@ const SegmentItem = ({ segment }) => {
   );
 
   const setActiveSegment = () => {
-    const opts = { ...activeAccountPayload };
-    opts.segment_id = segment[1];
-    opts.source = segment[2].type;
-    opts.filters = [];
-    delete opts.search_filter;
-    dispatch(setActiveSegmentAction(segment[2]));
-    dispatch(setAccountPayloadAction(opts));
+    if (activeAccountPayload.segment_id !== segment[1]) {
+      const opts = { ...activeAccountPayload };
+      opts.segment_id = segment[1];
+      opts.source = segment[2].type;
+      opts.filters = [];
+      delete opts.search_filter;
+      dispatch(setActiveSegmentAction(segment[2]));
+      dispatch(setAccountPayloadAction(opts));
+    }
   };
 
   const isActive = activeAccountPayload.segment_id === segment[1];
@@ -84,10 +102,26 @@ const AccountsSidebar = () => {
   const activeAccountPayload = useSelector((state) =>
     selectAccountPayload(state)
   );
+  const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
 
   const groupsList = useMemo(() => {
     return getGroupList(groupOptions);
   }, [groupOptions]);
+
+  const isAllAccountsSelected =
+    activeAccountPayload.source === 'All' &&
+    Boolean(activeAccountPayload.segment_id) === false;
+
+  const selectAllAccounts = () => {
+    dispatch(
+      setAccountPayloadAction({
+        source: 'All',
+        filters: [],
+        segment_id: ''
+      })
+    );
+    dispatch(setActiveSegmentAction({}));
+  };
 
   const segmentsList = useMemo(() => {
     return generateSegmentsList({
@@ -104,18 +138,34 @@ const AccountsSidebar = () => {
           styles['accounts-list-container']
         )}
       >
-        <div className='flex flex-col row-gap-1 px-4 pb-6 border-b'>
-          <Text
-            type='title'
-            level={8}
-            extraClass='mb-0 px-2'
-            color='character-secondary'
+        <div className='px-4 pb-6 border-b'>
+          <div
+            className={cx(
+              'p-2 flex justify-between items-center',
+              styles['sidebar-menu-item'],
+              {
+                [styles['active']]: isAllAccountsSelected
+              }
+            )}
+            role='button'
+            onClick={selectAllAccounts}
           >
-            Default
-          </Text>
-          {groupsList.map((group) => {
-            return <GroupItem key={group[0]} group={group} />;
-          })}
+            <div className='flex col-gap-2 items-center'>
+              <SVG name='regularBuilding' size={20} color='#F5222D' />
+              <Text
+                type='title'
+                extraClass='mb-0'
+                color='character-title'
+                weight='medium'
+              >
+                All Accounts
+              </Text>
+            </div>
+
+            <ControlledComponent controller={isAllAccountsSelected === true}>
+              <SVG size={16} color='#595959' name='arrowright' />
+            </ControlledComponent>
+          </div>
         </div>
         <div className='flex flex-col row-gap-3 px-4'>
           <Text
@@ -132,6 +182,12 @@ const AccountsSidebar = () => {
               setSearchText={setSearchText}
               placeholder={'Search segment'}
             />
+            {groupsList.slice(1).map((group) => {
+              return <GroupItem key={group[0]} group={group} />;
+            })}
+            <ControlledComponent controller={newSegmentMode === true}>
+              <NewSegmentItem />
+            </ControlledComponent>
             {segmentsList.map((segment) => {
               if (segment.values != null) {
                 const filteredSegments = segment.values.filter((value) =>
@@ -158,7 +214,7 @@ const AccountsSidebar = () => {
           )}
           type='secondary'
           onClick={() => {
-            dispatch(setSegmentModalStateAction(true));
+            dispatch(setNewSegmentModeAction(true));
           }}
         >
           <SVG name={'plus'} size={16} color='#1890FF' />

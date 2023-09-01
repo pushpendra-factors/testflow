@@ -88,7 +88,7 @@ func CreateEventTriggerAlertHandler(c *gin.Context) (interface{}, int, string, s
 		return nil, http.StatusBadRequest, errMsg, "", true
 	}
 	oldID := ""
-	obj, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(userID, oldID, projectID, &alert, userID, userID)
+	obj, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(userID, oldID, projectID, &alert, userID, userID, false)
 	if errCode != http.StatusCreated {
 		log.WithFields(log.Fields{"document": alert, "err-message": errMsg}).Error("Failed to create alert in handler.")
 		return nil, errCode, PROCESSING_FAILED, errMsg, true
@@ -234,7 +234,12 @@ func EditEventTriggerAlertHandler(c *gin.Context) (interface{}, int, string, str
 		teamAssociatedUserId = userID
 	}
 
-	eta, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(userID, id, projectID, &alert, slackAssociatedUserId, teamAssociatedUserId)
+	isPausedAlert := false
+	if existingAlert.InternalStatus == model.Disabled {
+		isPausedAlert = true
+	}
+
+	eta, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(userID, id, projectID, &alert, slackAssociatedUserId, teamAssociatedUserId, isPausedAlert)
 	if errMsg != "" || errCode != http.StatusCreated || eta == nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Edit TriggerAlert failed while updating db"})
 		return nil, http.StatusInternalServerError, PROCESSING_FAILED, ErrorMessages[PROCESSING_FAILED], true

@@ -53,10 +53,10 @@ export const getEventsData = (
   return post(null, url, query_group && { query_group });
 };
 
-export function fetchEventProperties(projectId, eventName) {
+export function fetchEventPropertiesV2(projectId, eventName) {
   const url = `${host}projects/${projectId}/event_names/${btoa(
     btoa(eventName)
-  )}/properties?is_display_name_enabled=true`;
+  )}/properties?is_display_name_enabled=true&version=2`;
   return get(null, url);
 }
 
@@ -86,9 +86,8 @@ export const fetchChannelObjPropertyValues = (
   const url = `${host}projects/${projectId}/v1/channels/filter_values?channel=${channel}&filter_object=${filterObj}&filter_property=${property}`;
   return get(null, url);
 };
-
-export function fetchUserProperties(projectId, queryType) {
-  const url = `${host}projects/${projectId}/user_properties?is_display_name_enabled=true`;
+export function fetchUserPropertiesV2(projectId, queryType) {
+  const url = `${host}projects/${projectId}/user_properties?is_display_name_enabled=true&version=2`;
   return get(null, url);
 }
 

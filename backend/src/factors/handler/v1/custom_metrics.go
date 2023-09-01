@@ -223,7 +223,7 @@ func GetPropertiesForCustomKPIEventBased(c *gin.Context) {
 
 	displayNamesOp := store.GetStore().GetDisplayNamesForEventProperties(projectID, propertiesFromCache, eventName)
 
-	kpiConfig := model.TransformEventPropertiesToKPIConfigProperties(propertiesFromCache, displayNamesOp)
+	kpiConfig := model.TransformEventPropertiesToKPIConfigProperties(U.FilterEmptyKeysAndValues(projectID, propertiesFromCache), U.FilterDisplayNameEmptyKeysAndValues(projectID, displayNamesOp))
 	// Handling both error and NotFound.
 	if statusCode != http.StatusFound {
 		c.JSON(http.StatusOK, gin.H{"properties": kpiConfig})

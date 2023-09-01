@@ -8,10 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"factors/model/model"
 	M "factors/model/model"
 	mm "factors/model/store/memsql"
 	P "factors/pattern"
-	T "factors/task"
+	T "factors/task/account_scoring"
 
 	log "github.com/sirupsen/logrus"
 
@@ -227,6 +228,7 @@ func TestAccScoreFilterCountAndScoreEvents(t *testing.T) {
 	ev := []string{e1, e2, e3, e4, e5, e6, e7, e8}
 	var events []*P.CounterEventFormat = make([]*P.CounterEventFormat, 0)
 
+	projectId := int64(0)
 	for _, e := range ev {
 		var testev *P.CounterEventFormat
 		err := json.Unmarshal([]byte(e), &testev)
@@ -296,50 +298,93 @@ func TestAccScoreFilterCountAndScoreEvents(t *testing.T) {
 	current_time = time.Now()
 	onlastsaleday := current_time.AddDate(0, 0, -1*int(finalWeights.SaleWindow))
 	dateString = T.GetDateOnlyFromTimestamp(onlastsaleday.Unix())
-	account_score, counts_map, decayValue, err = mm.ComputeAccountScore(cr, countsmap, dateString)
-	s = fmt.Sprintf("acc score : %f , decay_value : %f , counts map :%v", account_score, decayValue, counts_map)
+
+	countsmapf64 := make(map[string]float64)
+	for k, v := range countsmapf64 {
+		countsmapf64[k] = v
+	}
+	account_score_, err := mm.ComputeAccountScoreOnLastEvent(projectId, cr, countsmapf64)
+	s = fmt.Sprintf("acc score : %f  , counts map :%v", account_score, countsmapf64)
 	log.Debugf(s)
 	assert.Nil(t, err)
 	// expected counts map is all ones
 	//countsmap[id]count [1:1 2:1 3:2 4:1 7:2 8:3 9:1]
-	assert.Equal(t, account_score, float32(0), "score miscalculation")
-	assert.Equal(t, decayValue, float64(1), "decay value miscalculation")
+	assert.Equal(t, account_score_, float64(0), "score miscalculation")
 
 	// score should be 0 after the sale window has been exceeded
 	current_time = time.Now()
 	sale_day_exceed := current_time.AddDate(0, 0, -1*int(finalWeights.SaleWindow)-1)
 	dateString = T.GetDateOnlyFromTimestamp(sale_day_exceed.Unix())
-	account_score, counts_map, decayValue, err = mm.ComputeAccountScore(cr, countsmap, dateString)
-	s = fmt.Sprintf("acc score : %f , decay_value : %f , counts map :%v", account_score, decayValue, counts_map)
+
+	countsmapf64 = make(map[string]float64)
+	for k, v := range countsmapf64 {
+		countsmapf64[k] = v
+	}
+	account_score_, err = mm.ComputeAccountScoreOnLastEvent(projectId, cr, countsmapf64)
+	s = fmt.Sprintf("acc score : %f , counts map :%v", account_score_, counts_map)
 	log.Debugf(s)
 	assert.Nil(t, err)
 	// expected counts map is all ones
 	//countsmap[id]count [1:1 2:1 3:2 4:1 7:2 8:3 9:1]
-	assert.Equal(t, account_score, float32(0), "score miscalculation")
-	assert.Equal(t, decayValue, float64(1), "decay value miscalculation")
-
+	assert.Equal(t, account_score_, float64(0), "score miscalculation")
 }
 
 func TestAccScoreUpdateLastEventsDay(t *testing.T) {
 
 	var prevCountsOfUser map[string]map[string]M.LatestScore = make(map[string]map[string]M.LatestScore)
-	var data []M.EventsCountScore = make([]M.EventsCountScore, 0)
+	users := make(map[string]*T.AggEventsOnUserAndGroup)
+	var finalWeights M.AccWeights
 
+	we0 := M.AccEventWeight{WeightId: "a", Weight_value: 1.0, Is_deleted: false, EventName: "a"}
+	we1 := M.AccEventWeight{WeightId: "b", Weight_value: 1.0, Is_deleted: false, EventName: "b"}
+	we2 := M.AccEventWeight{WeightId: "c", Weight_value: 1.0, Is_deleted: false, EventName: "c"}
+	we3 := M.AccEventWeight{WeightId: "d", Weight_value: 1.0, Is_deleted: false, EventName: "d"}
+	we4 := M.AccEventWeight{WeightId: "e", Weight_value: 1.0, Is_deleted: false, EventName: "e"}
+
+	finalWeights.WeightConfig = []M.AccEventWeight{we0, we1, we2, we3, we4}
+	finalWeights.SaleWindow = 10
+
+	mweights := make(map[string][]M.AccEventWeight, 0)
+	for _, v := range finalWeights.WeightConfig {
+
+		mweights[v.WeightId] = make([]M.AccEventWeight, 1)
+		mweights[v.WeightId] = append(mweights[v.WeightId], v)
+	}
+
+	e1 := M.EventAgg{EventName: "a", EventId: "a", EventCount: 1}
+	e2 := M.EventAgg{EventName: "b", EventId: "b", EventCount: 1}
+	e3 := M.EventAgg{EventName: "c", EventId: "c", EventCount: 1}
+	e4 := M.EventAgg{EventName: "d", EventId: "d", EventCount: 1}
+	e5 := M.EventAgg{EventName: "e", EventId: "e", EventCount: 1}
+
+	eventsCount := make(map[string]*M.EventAgg)
+
+	eventsCount["e1"] = &e1
+	eventsCount["e2"] = &e2
+	eventsCount["e3"] = &e3
+	eventsCount["e4"] = &e4
+	eventsCount["e5"] = &e5
+
+	propertiesmap := make(map[string]int64)
+	propertiesmap["p1"] = 2
+	propertiesmap["p2"] = 3
+	propertiesmap["p3"] = 4
+	propertiesmap["p4"] = 3
+	propertiesmap["p5"] = 14
+	propertiesmap["p6"] = 13
+	propertiesmap["p7"] = 12
+
+	p1 := T.PropAggregate{Name: "$channel", Properties: propertiesmap}
+	p1u1 := make(map[string]T.PropAggregate)
+	usersList := make([]*T.AggEventsOnUserAndGroup, 0)
+	p1u1["$channel"] = p1
+
+	user1 := T.AggEventsOnUserAndGroup{User_id: "1", EventsCount: eventsCount, Is_group: false, Properties: p1u1}
+	users["1"] = &user1
+	usersList = append(usersList, &user1)
 	prevCountsOfUser["1"] = make(map[string]M.LatestScore)
 	currentTimestamp := time.Now()
 	currentTS := currentTimestamp.Unix()
-	saleWindow := int64(10)
-	w4 := map[string]int64{}
-	w4["a"] = 3
-	w4["b"] = 3
-	w4["c"] = 3
-	w4["d"] = 3
-	w4["e"] = 3
-	w1_date_string := T.GetDateOnlyFromTimestamp(currentTS)
-
-	d1 := M.EventsCountScore{UserId: "1", ProjectId: 1, EventScore: w4, DateStamp: w1_date_string, IsGroup: false}
-	data = append(data, d1)
-
 	w3 := make(map[string]float64)
 	w3["a"] = 1.0
 	w3["b"] = 1.0
@@ -357,38 +402,178 @@ func TestAccScoreUpdateLastEventsDay(t *testing.T) {
 
 	w2_date_string := T.GetDateOnlyFromTimestamp(w2_date_unix.Unix())
 	w3_date_string := T.GetDateOnlyFromTimestamp(w3_date_unix.Unix())
+	p1u2 := make(map[string]map[string]int64)
+	p1u3 := make(map[string]map[string]int64)
+	p1u2["$channel"] = make(map[string]int64)
+	p1u2["$channel"]["p1"] = 4
+	p1u2["$channel"]["p2"] = 1
+	p1u2["$channel"]["p4"] = 1
+	p1u2["$channel"]["p5"] = 1
 
-	prevCountsOfUser["1"][w3_date_string] = M.LatestScore{Date: w3_date_unix.Unix(), EventsCount: w3}
-	prevCountsOfUser["1"][w2_date_string] = M.LatestScore{Date: w2_date_unix.Unix(), EventsCount: w2}
+	p1u3["$channel"] = make(map[string]int64)
+	p1u3["$channel"]["p1"] = 4
+	p1u3["$channel"]["p3"] = 2
+	p1u3["$channel"]["p4"] = 1
+	p1u3["$channel"]["p5"] = 10
 
-	log.Debugf("input:%v", prevCountsOfUser)
-	log.Debugf("input:%v", data)
-	res, err := T.UpdateLastEventsDay(prevCountsOfUser, data, currentTS, saleWindow)
-	log.Debugf("result:%v", res)
-	assert.Equal(t, 4.5, res["1"].EventsCount["a"])
-	assert.Equal(t, 4.5, res["1"].EventsCount["b"])
-	assert.Equal(t, 4.5, res["1"].EventsCount["c"])
+	prevCountsOfUser["1"][w3_date_string] = M.LatestScore{Date: w3_date_unix.Unix(), EventsCount: w3, Properties: p1u2}
+	prevCountsOfUser["1"][w2_date_string] = M.LatestScore{Date: w2_date_unix.Unix(), EventsCount: w2, Properties: p1u3}
+
+	dbup, err := T.UpdateLastEventsDay(prevCountsOfUser, usersList, currentTS, finalWeights.SaleWindow)
 	assert.Nil(t, err)
+	log.Debugf("result:%v", dbup)
+	assert.Equal(t, dbup["1"].EventsCount["a"], 2.5)
+	assert.Equal(t, dbup["1"].EventsCount["b"], 2.5)
+	assert.Equal(t, dbup["1"].EventsCount["c"], 2.5)
+	assert.Equal(t, dbup["1"].EventsCount["d"], 2.5)
+	assert.Equal(t, 1, len(dbup))
 }
 
-func TestAccScoreDecayValue(t *testing.T) {
+func TestGenerateDate(t *testing.T) {
 
-	salewindow := int64(200)
+	currentTimestamp := time.Now()
+	salewindow := int(10)
 
-	a1 := M.ComputeDecayValue("20230710", salewindow)
-	a2 := M.ComputeDecayValue("20230709", salewindow)
-	a3 := M.ComputeDecayValue("20230708", salewindow)
-	a4 := M.ComputeDecayValue("20230707", salewindow)
-	a5 := M.ComputeDecayValue("20230706", salewindow)
-	a6 := M.ComputeDecayValue("20230705", salewindow)
-	a7 := M.ComputeDecayValue("20230704", salewindow)
-	a8 := M.ComputeDecayValue("20230703", salewindow)
-	a9 := M.ComputeDecayValue("20230702", salewindow)
-	a10 := M.ComputeDecayValue("20230701", salewindow)
-	a11 := M.ComputeDecayValue("20230630", salewindow)
-	a12 := M.ComputeDecayValue("20221223", salewindow)
-	vals := []float64{a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12}
-	log.Debugf("%v", vals)
-	assert.Greater(t, a1, a2)
-	assert.Greater(t, a1, a12)
+	ds := mm.GenDateStringsForLastNdays(currentTimestamp.Unix(), int64(salewindow))
+	log.Debugf("generated dates : %v", ds)
+	assert.Equal(t, salewindow, len(ds))
+
+}
+
+func TestGenerateAccountScores(t *testing.T) {
+	var finalWeights M.AccWeights
+	projectId := int64(0)
+	w0 := M.AccEventWeight{WeightId: "1", Weight_value: 1.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w1 := M.AccEventWeight{WeightId: "2", Weight_value: 1.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w2 := M.AccEventWeight{WeightId: "3", Weight_value: 1.0, Is_deleted: false, EventName: "$session", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w3 := M.AccEventWeight{WeightId: "4", Weight_value: 1.0, Is_deleted: false, EventName: "$form_submitted", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w4 := M.AccEventWeight{WeightId: "5", Weight_value: 1.0, Is_deleted: false, EventName: "www.acme.com", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w5 := M.AccEventWeight{WeightId: "6", Weight_value: 1.0, Is_deleted: false, EventName: "www.acme.com/pricing", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w6 := M.AccEventWeight{WeightId: "7", Weight_value: 1.0, Is_deleted: false, EventName: "$session"}
+	w7 := M.AccEventWeight{WeightId: "8", Weight_value: 1.0, Is_deleted: false, EventName: "", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Kenya"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w8 := M.AccEventWeight{WeightId: "9", Weight_value: 1.0, Is_deleted: false, EventName: "", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Brazil"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+
+	weightRules := []M.AccEventWeight{w0, w1, w2, w3, w4, w5, w6, w7, w8}
+	finalWeights.WeightConfig = weightRules
+	finalWeights.SaleWindow = 10
+
+	numDaysToTrend := finalWeights.SaleWindow
+	currentTs := time.Now().Unix()
+	DateStringToday := T.GetDateOnlyFromTimestamp(currentTs)
+
+	currentDate := model.GetDateFromString(DateStringToday)
+	prevDateTotrend := time.Unix(currentDate, 0).AddDate(0, 0, -1*int(numDaysToTrend)).Unix()
+
+	countsMapDays := make(map[string]model.LatestScore)
+	e1 := map[string]float64{"1": 1, "2": 1, "3": 1, "4": 1}
+	for i := (numDaysToTrend + 10); i > 0; i-- {
+		if i%2 == 0 {
+			prevDate := time.Unix(currentDate, 0).AddDate(0, 0, -1*int(i)).Unix()
+			prevDateString := T.GetDateOnlyFromTimestamp(prevDate)
+			countsMapDays[prevDateString] = model.LatestScore{Date: prevDate, EventsCount: e1}
+		}
+	}
+
+	_, scores, _, err := mm.CalculatescoresPerAccount(projectId, &finalWeights, currentDate, prevDateTotrend, countsMapDays)
+	for k1, v1 := range scores {
+		_, ok := countsMapDays[k1]
+		fmt.Printf("countMapDays : %s , score : %f ,%v \n", k1, v1, ok)
+	}
+	assert.Nil(t, err)
+
+}
+
+func TestGenerationOfScore(t *testing.T) {
+
+	var finalWeights M.AccWeights
+	projectId := int64(0)
+	w0 := M.AccEventWeight{WeightId: "1", Weight_value: 1.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w1 := M.AccEventWeight{WeightId: "2", Weight_value: 1.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w2 := M.AccEventWeight{WeightId: "3", Weight_value: 1.0, Is_deleted: false, EventName: "$session", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w3 := M.AccEventWeight{WeightId: "4", Weight_value: 1.0, Is_deleted: false, EventName: "$form_submitted", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+
+	weightRules := []M.AccEventWeight{w0, w1, w2, w3}
+	finalWeights.WeightConfig = weightRules
+	finalWeights.SaleWindow = 30
+
+	counts := make(map[string]float64)
+	maxNum := 30
+
+	currentTimestamp := time.Now().AddDate(0, 0, -1*maxNum)
+	scores := make([]float64, maxNum)
+	counts["1"] += float64(1)
+	counts["2"] += float64(1)
+	counts["3"] += float64(1)
+	counts["4"] += float64(1)
+
+	for idx := 0; idx < maxNum; idx++ {
+
+		day := T.GetDateOnlyFromTimestamp(currentTimestamp.AddDate(0, 0, 1*idx).Unix())
+		if idx == 0 {
+			idx1 := 0
+			counts["1"] += float64(idx1)
+			counts["2"] += float64(idx1)
+			counts["3"] += float64(idx1)
+			counts["4"] += float64(idx1)
+		}
+
+		score := mm.ComputeScoreWithWeightsAndCounts(projectId, &finalWeights, counts, day)
+		scores[idx] = score
+
+	}
+	log.Debugf("Scores : %v", scores)
+	score := mm.ComputeScoreWithWeightsAndCounts(projectId, &finalWeights, counts, T.GetDateOnlyFromTimestamp(time.Now().Unix()))
+	log.Debugf("Scores on current day  : %v,%f", counts, score)
+
+	assert.IsDecreasing(t, scores)
+}
+
+func TestGenerationOfScoresInPeriod(t *testing.T) {
+
+	var finalWeights M.AccWeights
+	projectId := int64(0)
+	countsOnDays := make(map[string]M.LatestScore)
+	w0 := M.AccEventWeight{WeightId: "1", Weight_value: 1.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w1 := M.AccEventWeight{WeightId: "2", Weight_value: 1.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w2 := M.AccEventWeight{WeightId: "3", Weight_value: 1.0, Is_deleted: false, EventName: "$session", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w3 := M.AccEventWeight{WeightId: "4", Weight_value: 1.0, Is_deleted: false, EventName: "$form_submitted", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+
+	weightRules := []M.AccEventWeight{w0, w1, w2, w3}
+	finalWeights.WeightConfig = weightRules
+	finalWeights.SaleWindow = 10
+
+	counts := make(map[string]float64)
+	maxNum := 20
+
+	currentTimestamp := time.Now().AddDate(0, 0, -1*maxNum)
+	// scores := make([]float64, maxNum)
+	counts["1"] += float64(1)
+	counts["2"] += float64(1)
+	counts["3"] += float64(1)
+	counts["4"] += float64(1)
+
+	for idx := 0; idx < maxNum; idx++ {
+		var events M.LatestScore
+		countsEvent := make(map[string]float64)
+		t := currentTimestamp.AddDate(0, 0, 1*idx).Unix()
+		day := T.GetDateOnlyFromTimestamp(t)
+		events.Date = t
+		idx1 := 1
+		if idx > maxNum/2 {
+			idx1 = 1
+		}
+		countsEvent["1"] = float64(idx1)
+		countsEvent["2"] = float64(idx1)
+		countsEvent["3"] = float64(idx1)
+		countsEvent["4"] = float64(idx1)
+		events.EventsCount = countsEvent
+		countsOnDays[day] = events
+	}
+
+	accountScoreMap, err := mm.ComputeTrendWrapper(projectId, time.Now().Unix(), countsOnDays, &finalWeights)
+	for d, e := range accountScoreMap {
+		log.Debugf("day : %s score :%f", d, e)
+	}
+	assert.Equal(t, maxNum, len(countsOnDays))
+	assert.Nil(t, err)
 }

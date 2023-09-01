@@ -8,9 +8,11 @@ import MomentTz from 'Components/MomentTz';
 import { SVG, Text } from 'factorsComponents';
 import { DEFAULT_DATE_RANGE } from '../../QueryComposer/DateRangeSelector/utils';
 import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
-import { fetchKPIFilterValues } from 'Reducers/kpi';
 import _ from 'lodash';
 import FAFilterSelect from 'Components/KPIComposer/FaFilterSelectKPI';
+import getGroupIcon from 'Utils/getGroupIcon';
+import { groupKPIPropertiesOnCategory } from 'Utils/dataFormatter';
+import { getKPIPropertyValues } from 'Reducers/coreQuery/middleware';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
@@ -26,10 +28,11 @@ function EventFilterWrapper({
   deleteFilter,
   insertFilter,
   closeFilter,
-  fetchKPIFilterValues,
   KPI_config,
   selectedMainCategory,
-  showOr
+  showOr,
+  getKPIPropertyValues,
+  propertyValuesMap
 }) {
   const [filterTypeState, setFilterTypeState] = useState('props');
   const [groupCollapseState, setGroupCollapse] = useState({});
@@ -88,19 +91,15 @@ function EventFilterWrapper({
           };
         }
         setvalueOptsLoading(true);
-        fetchKPIFilterValues(activeProject.id, filterData)
-          .then((res) => {
-            const ddValues = Object.assign({}, dropDownValues);
-            ddValues[filter?.extra[0]] = [...res.data, '$none'];
-            setDropDownValues(ddValues);
-            setvalueOptsLoading(false);
-          })
-          .catch((err) => {
-            const ddValues = Object.assign({}, dropDownValues);
-            ddValues[filter?.extra[0]] = ['$none'];
-            setDropDownValues(ddValues);
-            setvalueOptsLoading(false);
-          });
+        if (propertyValuesMap[filterData?.property_name]) {
+          getKPIPropertyValues(activeProject.id, filterData)
+            .then((res) => {
+              setvalueOptsLoading(false);
+            })
+            .catch((err) => {
+              setvalueOptsLoading(false);
+            });
+        }
       } else if (!filter?.extra) {
         // filter.extra getiing set null after running query once and after 2nd time it showing loading
         // added here temporary fix for the above
@@ -113,19 +112,11 @@ function EventFilterWrapper({
 
   useEffect(() => {
     const filterDD = Object.assign({}, filterDropDownOptions);
-    const propState = [];
-    Object.keys(filterProps).forEach((k, i) => {
-      propState.push({
-        label: k,
-        icon: k === 'event' ? 'mouseclick' : k,
-        values: filterProps[k]
-      });
-    });
     let KPIlist = KPI_config || [];
     let selGroup = KPIlist.find((item) => {
       return item.display_category == event?.group;
     });
-    let DDvalues = selGroup?.properties?.map((item) => {
+    const kpiPropertiesArrays = selGroup?.properties?.map((item) => {
       if (item == null) return;
       let ddName = item.display_name ? item.display_name : item.name;
       let ddtype =
@@ -135,17 +126,14 @@ function EventFilterWrapper({
           : item.entity
           ? item.entity
           : item.object_type;
-      return [ddName, item.name, item.data_type, ddtype];
+      return [ddName, item.name, item.data_type, ddtype, item.category];
     });
+    const kpiItemsgroupedByCategoryProperty = groupKPIPropertiesOnCategory(
+      kpiPropertiesArrays,
+      'user'
+    );
 
-    // filterDD.props = propState;
-    filterDD.props = [
-      {
-        icon: 'user',
-        label: 'user',
-        values: DDvalues
-      }
-    ];
+    filterDD.props = Object.values(kpiItemsgroupedByCategoryProperty);
     setFiltDD(filterDD);
   }, [filterProps]);
 
@@ -188,18 +176,11 @@ function EventFilterWrapper({
       }
 
       setvalueOptsLoading(true);
-
-      fetchKPIFilterValues(activeProject.id, filterData)
+      getKPIPropertyValues(activeProject.id, filterData)
         .then((res) => {
-          const ddValues = Object.assign({}, dropDownValues);
-          ddValues[props[0]] = [...res.data, '$none'];
-          setDropDownValues(ddValues);
           setvalueOptsLoading(false);
         })
         .catch((err) => {
-          const ddValues = Object.assign({}, dropDownValues);
-          ddValues[props[0]] = ['$none'];
-          setDropDownValues(ddValues);
           setvalueOptsLoading(false);
         });
     }
@@ -210,8 +191,8 @@ function EventFilterWrapper({
       <FAFilterSelect
         propOpts={filterDropDownOptions.props}
         operatorOpts={filterDropDownOptions.operator}
-        valueOpts={dropDownValues}
-        valueOptsLoading={valueOptsLoading}
+        valueOpts={propertyValuesMap.data}
+        valueOptsLoading={propertyValuesMap.loading}
         applyFilter={applyFilter}
         setValuesByProps={setValuesByProps}
         filter={filter}
@@ -221,9 +202,7 @@ function EventFilterWrapper({
   };
 
   return (
-    <div
-      className={`flex items-center relative ${!showOr ? 'ml-10' : 'ml-10'}`}
-    >
+    <div className={`flex items-center relative ${!showOr ? 'ml-10' : ''}`}>
       {!showOr &&
         (index >= 1 ? (
           <Text
@@ -245,12 +224,7 @@ function EventFilterWrapper({
           </Text>
         ))}
       {showOr && (
-        <Text
-          level={8}
-          type={'title'}
-          extraClass={'m-0 mr-16 my-3'}
-          weight={'thin'}
-        >
+        <Text level={8} type={'title'} extraClass={'m-0 mx-4'} weight={'thin'}>
           or
         </Text>
       )}
@@ -274,9 +248,10 @@ function EventFilterWrapper({
 }
 
 const mapStateToProps = (state) => ({
-  KPI_config: state.kpi?.config
+  KPI_config: state.kpi?.config,
+  propertyValuesMap: state.coreQuery.propertyValuesMap
 });
 
-export default connect(mapStateToProps, { fetchKPIFilterValues })(
+export default connect(mapStateToProps, { getKPIPropertyValues })(
   EventFilterWrapper
 );

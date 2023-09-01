@@ -14,6 +14,7 @@ class BaseHandler(tornado.web.RequestHandler):
         allowed_origin = Cors.get_cors_allowed_origin(origin)
         if allowed_origin != None:
             self.set_header("Access-Control-Allow-Origin", allowed_origin)
+        self.clear_header("Server")
 
 # def write_error(self, status_code, **kwargs):
 #     if status_code == 500:

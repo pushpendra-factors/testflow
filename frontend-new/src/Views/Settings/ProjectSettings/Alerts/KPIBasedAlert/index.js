@@ -9,7 +9,6 @@ import {
   Input,
   message,
   notification,
-  Checkbox,
   Modal,
   Switch,
   Avatar
@@ -26,7 +25,6 @@ import {
 import ConfirmationModal from 'Components/ConfirmationModal';
 import QueryBlock from './QueryBlock';
 import { deleteGroupByForEvent } from 'Reducers/coreQuery/middleware';
-import { getEventsWithPropertiesKPI, getStateFromFilters } from '../utils';
 import {
   fetchSlackChannels,
   fetchProjectSettingsV1,
@@ -38,6 +36,10 @@ import {
 import SelectChannels from '../SelectChannels';
 import useAutoFocus from 'hooks/useAutoFocus';
 import GLobalFilter from 'Components/KPIComposer/GlobalFilter';
+import {
+  getEventsWithPropertiesKPI,
+  getStateFromKPIFilters
+} from 'Views/CoreQuery/utils';
 
 const { Option } = Select;
 
@@ -160,7 +162,7 @@ const KPIBasedAlert = ({
 
   useEffect(() => {
     if (viewAlertDetails?.alert_description?.query?.fil) {
-      const filter = getStateFromFilters(
+      const filter = getStateFromKPIFilters(
         viewAlertDetails.alert_description.query.fil
       );
       setViewFilter(filter);
@@ -210,7 +212,7 @@ const KPIBasedAlert = ({
       queryData.push({
         alias: '',
         label: _.startCase(viewAlertDetails?.alert_description?.name),
-        filters: getStateFromFilters(
+        filters: getStateFromKPIFilters(
           viewAlertDetails?.alert_description?.query?.fil
         ),
         group: viewAlertDetails?.alert_description?.query?.dc,
@@ -716,9 +718,7 @@ const KPIBasedAlert = ({
               <Form.Item
                 name='alert_name'
                 className={'m-0'}
-                rules={[
-                  { required: true, message: 'Please enter alert name' },
-                ]}
+                rules={[{ required: true, message: 'Please enter alert name' }]}
               >
                 <Input
                   className={'fa-input'}
@@ -1388,9 +1388,7 @@ const KPIBasedAlert = ({
                 name='alert_name'
                 className={'m-0'}
                 initialValue={viewAlertDetails?.alert_name}
-                rules={[
-                  { required: true, message: 'Please enter alert name' }
-                ]}
+                rules={[{ required: true, message: 'Please enter alert name' }]}
               >
                 <Input
                   className={'fa-input'}

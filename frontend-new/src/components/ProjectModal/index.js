@@ -20,18 +20,20 @@ import {
 import { USER_LOGOUT } from 'Reducers/types';
 import { setActiveProject } from 'Reducers/global';
 import UserSettings from '../../Views/Settings/UserSettings';
-import NewProject from '../../Views/Settings/SetupAssist/Modals/NewProject';
+// import NewProject from '../../Views/Settings/SetupAssist/Modals/NewProject';
 import { connect, useDispatch } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import factorsai from 'factorsai';
 import { fetchProjectSettings } from 'Reducers/global';
 import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
 import useAutoFocus from 'hooks/useAutoFocus';
+import { PathUrls } from 'Routes/pathUrls';
+import logger from 'Utils/logger';
 
 function ProjectModal(props) {
   const [ShowPopOver, setShowPopOver] = useState(false);
   const [searchProjectName, setsearchProjectName] = useState('');
-  const [showProjectModal, setShowProjectModal] = useState(false);
+  // const [showProjectModal, setShowProjectModal] = useState(false);
   const [ShowUserSettings, setShowUserSettings] = useState(false);
   const [changeProjectModal, setchangeProjectModal] = useState(false);
   const [selectedProject, setselectedProject] = useState(null);
@@ -52,6 +54,7 @@ function ProjectModal(props) {
 
   const switchProject = () => {
     localStorage.setItem('activeProject', selectedProject?.id);
+    localStorage.setItem('prevActiveProject', props?.active_project?.id || '');
     props.setActiveProject(selectedProject);
     props.fetchProjectSettings(selectedProject?.id);
     history.push('/');
@@ -61,44 +64,18 @@ function ProjectModal(props) {
     });
   };
 
-  const UpdateOnboardingSeen = () => {
-    props.updateAgentInfo({ is_onboarding_flow_seen: true }).then(() => {
-      props.fetchAgentInfo();
-    });
-    //Factors FIRST_TIME_LOGIN tracking for NON_INVITED
-    factorsai.track('FIRST_TIME_LOGIN', { email: props?.currentAgent?.email });
-    if (props?.currentAgent?.is_auth0_user) {
-      factorsai.track('$form_submitted', {
-        $email: props?.currentAgent?.email
-      });
-    }
-  };
-
-  useEffect(() => {
-    if (!props.agents) {
-      props.fetchProjectAgents(props.active_project?.id);
-    }
-    if (!props.currentAgent) {
-      props.fetchAgentInfo();
-    }
-    if (props.agents && props.currentAgent) {
-      let agent = props.agents?.filter(
-        (agent) => agent.email === props.currentAgent.email
-      );
-      if (agent[0]?.invited_by) {
-        setShowProjectModal(false);
-      } else if (!props.currentAgent?.is_onboarding_flow_seen) {
-        setShowProjectModal(true);
-        UpdateOnboardingSeen();
-      }
-    } else if (
-      props.currentAgent &&
-      !props.currentAgent?.is_onboarding_flow_seen
-    ) {
-      setShowProjectModal(true);
-      UpdateOnboardingSeen();
-    }
-  }, [props.active_project, props.agents, props.currentAgent]);
+  // const UpdateOnboardingSeen = () => {
+  //   props.updateAgentInfo({ is_onboarding_flow_seen: true }).then(() => {
+  //     props.fetchAgentInfo();
+  //   });
+  //   //Factors FIRST_TIME_LOGIN tracking for NON_INVITED
+  //   factorsai.track('FIRST_TIME_LOGIN', { email: props?.currentAgent?.email });
+  //   if (props?.currentAgent?.is_auth0_user) {
+  //     factorsai.track('$form_submitted', {
+  //       $email: props?.currentAgent?.email
+  //     });
+  //   }
+  // };
 
   useEffect(() => {
     if (props?.currentAgent) {
@@ -112,10 +89,14 @@ function ProjectModal(props) {
     }
   }, [props?.currentAgent, props?.active_project]);
 
-  const userLogout = () =>{
-    props.signout(); 
-    dispatch({ type: USER_LOGOUT });
-  }
+  const userLogout = async () => {
+    try {
+      await props.signout();
+      dispatch({ type: USER_LOGOUT });
+    } catch (error) {
+      logger.error('Error in logging out', error);
+    }
+  };
 
   const popoverContent = () => (
     <div data-tour='step-9' className={'fa-popupcard'}>
@@ -166,7 +147,8 @@ function ProjectModal(props) {
           className='fa-btn--custom'
           onClick={() => {
             setShowPopOver(false);
-            setShowProjectModal(true);
+            // setShowProjectModal(true);
+            history.push(`${PathUrls.Onboarding}?setup=new`);
           }}
         >
           <SVG name='plus' />
@@ -247,7 +229,7 @@ function ProjectModal(props) {
           size={'large'}
           type={'text'}
           onClick={() => {
-            setShowPopOver(false); 
+            setShowPopOver(false);
             userLogout();
           }}
           className={styles.popover_content__signout}
@@ -293,7 +275,7 @@ function ProjectModal(props) {
                 background: '#FF7875',
                 textTransform: 'uppercase',
                 fontWeight: '600',
-                borderRadius: '8px',
+                borderRadius: '8px'
               }}
             >{`${props.active_project?.name?.charAt(0)}`}</Avatar>
 
@@ -322,10 +304,10 @@ function ProjectModal(props) {
         visible={ShowUserSettings}
         handleCancel={closeUserSettingsModal}
       />
-      <NewProject
+      {/* <NewProject
         visible={showProjectModal}
         handleCancel={() => setShowProjectModal(false)}
-      />
+      /> */}
       <Modal
         visible={changeProjectModal}
         zIndex={1020}

@@ -13,7 +13,8 @@ const CONFIG = {
       webanalytics: '3de1776a-2b06-4223-adf3-a57012833ec5',
       websitevisitoridentification: 'd14c52fd-7856-4fda-9f2e-0f36c2dd0084',
       allpaidmarketing: '215d866d-129c-415a-a728-592672604cfa'
-    }
+    },
+    typeformId: 'goCJdYgS'
   },
   staging: {
     backend_host: 'https://staging-api.factors.ai',
@@ -27,7 +28,8 @@ const CONFIG = {
       webanalytics: '3de1776a-2b06-4223-adf3-a57012833ec5',
       websitevisitoridentification: 'd14c52fd-7856-4fda-9f2e-0f36c2dd0084',
       allpaidmarketing: 'bf10934c-0128-4c1c-8948-772387c95502'
-    }
+    },
+    typeformId: 'goCJdYgS'
   },
   test: {
     backend_host: 'http://localhost:8080',
@@ -47,8 +49,9 @@ const CONFIG = {
     firstTimeDashboardTemplates: {
       webanalytics: '6d966a20-07a6-46db-b2d4-1b1d4d7fb8ec',
       websitevisitoridentification: 'bf721a15-a5c4-4db9-9435-924f4c544850',
-      allpaidmarketing: 'f8785bee-6d7d-4a03-8744-a2d31ce4dd9e'
-    }
+      allpaidmarketing: '39562070-e824-455d-b112-62b16b496d6f'
+    },
+    typeformId: 'FLAEamGj'
   }
 };
 

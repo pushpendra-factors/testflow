@@ -24,23 +24,93 @@ export const convertToEventOptions = (eventNames, display_names = []) => {
 export const convertPropsToOptions = (props, display_names = []) => {
   const options = [];
   Object.keys(props).forEach((type) => {
-    props[type].forEach((val) => {
-      options.push([display_names[val] ? display_names[val] : val, val, type]);
+    props[type]?.forEach((val) => {
+      if (val?.length !== 0) {
+        options.push([
+          display_names[val] ? display_names[val] : val,
+          val,
+          type === 'unknown' ? 'categorical' : type
+        ]);
+      }
     });
   });
   return options;
 };
 
+export const convertEventsPropsToOptions = (props, display_names = []) => {
+  const options = {};
+  Object.keys(props).forEach((type) => {
+    const categoryOptions = props[type];
+    Object.keys(categoryOptions).forEach((group) => {
+      if (group?.length !== 0) {
+        const groupOptions = categoryOptions[group];
+        if (!options[group]) {
+          options[group] = [];
+        }
+        groupOptions.forEach((val) => {
+          if (val?.length !== 0) {
+            options[group].push([
+              display_names[val] ? display_names[val] : val,
+              val,
+              type === 'unknown' ? 'categorical' : type
+            ]);
+          }
+        });
+      }
+    });
+  });
+  return options;
+};
+export const convertUserPropsToOptions = (
+  props,
+  display_names = [],
+  disabledEventValues = []
+) => {
+  const userOptions = {};
+  const eventUserOptions = {};
+  Object.keys(props).forEach((type) => {
+    const categoryOptions = props[type];
+    Object.keys(categoryOptions).forEach((group) => {
+      if (group?.length !== 0) {
+        const groupOptions = categoryOptions[group];
+        if (!userOptions[group]) {
+          userOptions[group] = [];
+        }
+        if (!eventUserOptions[group]) {
+          eventUserOptions[group] = [];
+        }
+        groupOptions.forEach((val) => {
+          if (val?.length !== 0) {
+            userOptions[group].push([
+              display_names[val] ? display_names[val] : val,
+              val,
+              type
+            ]);
+            if (!disabledEventValues.includes(val)) {
+              eventUserOptions[group].push([
+                display_names[val] ? display_names[val] : val,
+                val,
+                type
+              ]);
+            }
+          }
+        });
+      }
+    });
+  });
+  return { userOptions, eventUserOptions };
+};
+
 export const convertCustomEventCategoryToOptions = (data) => {
-  const mainItem = data.properties
+  const mainItem = data.properties;
   const keys = Object.keys(mainItem);
-  const finalArr = keys.map((type,index)=>{
-    let arr = mainItem[type].map(item=>{
-      return [_.startCase(item),item,type]
-    })
-    return arr
-  })
-  return _.flatten(finalArr)
+  const finalArr = keys.map((type, index) => {
+    let arr = mainItem[type].map((item) => {
+      return [_.startCase(item), item, type];
+    });
+    return arr;
+  });
+  return _.flatten(finalArr);
 };
 
 const convertToChannelOptions = (objects) => {

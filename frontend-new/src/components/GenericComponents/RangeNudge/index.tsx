@@ -39,7 +39,11 @@ const RangeNudge = ({
           <ProgressBar percentage={percentage} />
         </div>
         <Text type={'paragraph'} mini color='character-primary'>
-          {`${amountUsed} of ${totalLimit} used`}
+          {`${amountUsed} of ${totalLimit} used${
+            percentage >= 100
+              ? '. Enrichment of new accounts has been paused'
+              : ''
+          }`}
         </Text>
       </div>
       <div>

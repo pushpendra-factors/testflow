@@ -407,6 +407,30 @@ func (store *MemSQL) GetEventNames(projectId int64) ([]model.EventName, int) {
 	}
 	return eventNames, http.StatusFound
 }
+func (store *MemSQL) IsEventExistsWithType(projectId int64, eventType string) (bool, int) {
+	logFields := log.Fields{
+		"project_id": projectId,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	if projectId == 0 {
+		log.Error("GetEventExists With Type Failed. Missing projectId")
+		return false, http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+
+	var eventName model.EventName
+	if err := db.Order("created_at ASC").Where("project_id = ? AND type = ?", projectId, eventType).Limit(1).Find(&eventName).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return false, http.StatusNotFound
+		}
+		return false, http.StatusInternalServerError
+	}
+	if eventName.Type != eventType {
+		return false, http.StatusNotFound
+	}
+	return true, http.StatusFound
+}
 
 // GetOrderedEventNamesFromDb - Get 'limit' events from DB sort by occurence for a given time period
 func (store *MemSQL) GetOrderedEventNamesFromDb(
@@ -819,6 +843,7 @@ func (store *MemSQL) GetMostFrequentlyEventNamesByType(projectID int64, limit in
 	var finalEventNames []model.EventName
 	var result []string
 	db := C.GetServices().Db
+
 	if eventNameTypes, exists = model.EventTypeToEnameType[typeOfEvent]; !exists {
 		return nil, errors.New("invalid type is provided.")
 	}
@@ -826,17 +851,25 @@ func (store *MemSQL) GetMostFrequentlyEventNamesByType(projectID int64, limit in
 	if err != nil {
 		return nil, err
 	}
+	if typeOfEvent == model.PageViewsDisplayCategory {
+		for _, event := range eventsSorted {
+			if event.GroupName == U.PageViewEvent {
+				mostFrequentEventNames = append(mostFrequentEventNames, event.Name)
+			}
+		}
+	} else {
+		for _, event := range eventsSorted {
+			if event.GroupName == U.MostRecent {
+				mostFrequentEventNames = append(mostFrequentEventNames, event.Name)
+			}
+		}
+		for _, event := range eventsSorted {
+			if event.GroupName == U.FrequentlySeen {
+				mostFrequentEventNames = append(mostFrequentEventNames, event.Name)
+			}
+		}
+	}
 
-	for _, event := range eventsSorted {
-		if event.GroupName == U.MostRecent {
-			mostFrequentEventNames = append(mostFrequentEventNames, event.Name)
-		}
-	}
-	for _, event := range eventsSorted {
-		if event.GroupName == U.FrequentlySeen {
-			mostFrequentEventNames = append(mostFrequentEventNames, event.Name)
-		}
-	}
 	if limit > 0 {
 		sliceLength := len(mostFrequentEventNames)
 		if sliceLength > limit*2 {
@@ -844,26 +877,34 @@ func (store *MemSQL) GetMostFrequentlyEventNamesByType(projectID int64, limit in
 		}
 	}
 
-	if dbResult := db.Where("type IN (?) AND name IN (?)", eventNameTypes, mostFrequentEventNames).Select("name").Limit(limit).Find(&finalEventNames); dbResult.Error != nil {
-		return nil, dbResult.Error
-	}
-
-	hashMapOfFinalEventNames := make(map[string]int)
-	for _, eventName := range finalEventNames {
-		hashMapOfFinalEventNames[eventName.Name] = 1
-	}
-
 	if typeOfEvent == model.PageViewsDisplayCategory {
-		if _, ok := hashMapOfFinalEventNames[U.EVENT_NAME_FORM_SUBMITTED]; ok {
-			delete(hashMapOfFinalEventNames, U.EVENT_NAME_FORM_SUBMITTED)
+
+		result = mostFrequentEventNames
+
+	} else {
+
+		if dbResult := db.Where("type IN (?) AND name IN (?)", eventNameTypes, mostFrequentEventNames).Select("name").Limit(limit).Find(&finalEventNames); dbResult.Error != nil {
+			return nil, dbResult.Error
+		}
+
+		hashMapOfFinalEventNames := make(map[string]int)
+		for _, eventName := range finalEventNames {
+			hashMapOfFinalEventNames[eventName.Name] = 1
+		}
+
+		if typeOfEvent == model.PageViewsDisplayCategory {
+			if _, ok := hashMapOfFinalEventNames[U.EVENT_NAME_FORM_SUBMITTED]; ok {
+				delete(hashMapOfFinalEventNames, U.EVENT_NAME_FORM_SUBMITTED)
+			}
+		}
+
+		for _, event := range mostFrequentEventNames {
+			if _, ok := hashMapOfFinalEventNames[event]; ok {
+				result = append(result, event)
+			}
 		}
 	}
 
-	for _, event := range mostFrequentEventNames {
-		if _, ok := hashMapOfFinalEventNames[event]; ok {
-			result = append(result, event)
-		}
-	}
 	return result, nil
 }
 

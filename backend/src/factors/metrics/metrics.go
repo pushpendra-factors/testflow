@@ -18,6 +18,7 @@ const (
 	IncrSDKRequestOverallCount           = "sdk_request_overall_count"
 	IncrSDKRequestQueueProcessed         = "sdk_request_queue_processed"
 	IncrSDKRequestQueueRetry             = "sdk_request_queue_retry"
+	IncrSDKRquestQueueExcludedBot        = "sdk_request_queue_excluded_bot"
 	IncrIntegrationRequestOverallCount   = "integration_request_overall_count"
 	IncrIntegrationRequestQueueProcessed = "integration_request_queue_processed"
 	IncrIntegrationRequestQueueRetry     = "integration_request_queue_retry"

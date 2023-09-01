@@ -5,9 +5,11 @@
   "dependencies": {
     "@ant-design/icons": "^4.7.0",
     "@emotion/react": "^11.5.0",
+    "@react-pdf/renderer": "^3.1.12",
     "@reactour/tour": "^2.3.0",
     "@sentry/react": "^5.29.2",
     "@sentry/tracing": "^5.29.2",
+    "@typeform/embed-react": "^2.30.0",
     "animate.css": "^4.1.1",
     "antd": "^4.5.2",
     "classnames": "^2.2.6",
@@ -31,6 +33,7 @@
     "react-lottie": "^1.2.3",
     "react-number-format": "^4.4.4",
     "react-pivottable": "^0.11.0",
+    "react-product-fruits": "^2.2.3",
     "react-redux": "^7.2.1",
     "react-router-dom": "^5.2.0",
     "react-scripts": "^3.4.1",
@@ -38,8 +41,7 @@
     "redux": "^4.0.5",
     "redux-persist": "^6.0.0",
     "reselect": "^4.1.8",
-    "sortablejs": "^1.12.0",
-    "userflow.js": "^2.4.0"
+    "sortablejs": "^1.12.0"
   },
   "scripts": {
     "dev": "export NODE_ENV=development && ./node_modules/.bin/webpack-dev-server --host factors-dev.com --port 3000 --content-base src --inline --hot",
@@ -99,6 +101,7 @@
     "@storybook/theming": "^6.0.12",
     "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/react": "^12.1.5",
+    "@types/lodash": "^4.14.196",
     "@types/node": "^18.11.18",
     "@types/react": "^16.14.35",
     "@types/react-dom": "^16.9.17",

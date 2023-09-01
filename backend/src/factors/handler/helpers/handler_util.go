@@ -7,10 +7,11 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	"fmt"
-	"github.com/jinzhu/gorm/dialects/postgres"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/jinzhu/gorm/dialects/postgres"
 
 	C "factors/config"
 	U "factors/util"
@@ -22,13 +23,21 @@ import (
 const HeaderUserFilterOptForProfiles string = "Use-Filter-Opt-Profiles"
 const HeaderUserFilterOptForEventsAndUsers string = "Use-Filter-Opt-Events-Users"
 
-// DashboardQueryResponsePayload Query query response with cache and refreshed_at.
+// DashboardQueryResponsePayload Query response with cache and refreshed_at.
 type DashboardQueryResponsePayload struct {
 	Result      interface{} `json:"result"`
 	Cache       bool        `json:"cache"`
 	RefreshedAt int64       `json:"refreshed_at"`
 	TimeZone    string      `json:"timezone"`
 	CacheMeta   interface{} `json:"cache_meta"`
+	ComputeMeta interface{} `json:"compute_meta"`
+}
+
+type ComputedRangeInfo struct {
+	From      int64  `json:"from"`
+	To        int64  `json:"to"`
+	TimeZone  string `json:"timezone"`
+	FromCache bool   `json:"from_cache"`
 }
 
 func getQueryCacheResponse(c *gin.Context, cacheResult model.QueryCacheResult, forDashboard bool, skipContextVerfication bool) (bool, int, interface{}) {
@@ -197,27 +206,33 @@ func UseUserFunnelV2(c *gin.Context) bool {
 }
 
 // InValidateSavedQueryCache Common function to invalidate cache if present.
-func InValidateSavedQueryCache(query *model.Queries) {
-
+func InValidateSavedQueryCache(query *model.Queries) int {
+	failedKeys := make([]string, 0)
 	units := store.GetStore().GetDashboardUnitForQueryID(query.ProjectID, query.ID)
 	if units == nil {
-		return
+		return http.StatusOK
 	}
 	for _, unit := range units {
-		InValidateDashboardQueryCache(unit.ProjectID, unit.DashboardId, unit.ID)
+		failedKeys = append(failedKeys, InValidateDashboardQueryCache(unit.ProjectID, unit.DashboardId, unit.ID)...)
 	}
 
 	log.WithField("key", units).Info("Query cache key")
 
+	if len(failedKeys) != 0 {
+		return http.StatusInternalServerError
+	}
+	return http.StatusOK
 }
 
-func InValidateDashboardQueryCache(projectID, dashboardID, unitID int64) {
+// This can give both pattern or keys which failed.
+func InValidateDashboardQueryCache(projectID, dashboardID, unitID int64) []string {
 
+	failedKeys := make([]string, 0)
 	var cacheKeys []*cacheRedis.Key
 	var err error
 
 	pattern := fmt.Sprintf("dashboard:*:pid:%d:did:%d:duid:%d:*", projectID, dashboardID, unitID)
-	cacheKey, err := cacheRedis.ScanPersistent(pattern, model.MaxNumberPerScanCount, model.MaxNumberPerScanCount)
+	cacheKey, err := cacheRedis.ScanPersistent(pattern, 50000000, 50000000)
 	cacheKeys = append(cacheKeys, cacheKey...)
 	if C.GetAttributionDebug() == 1 {
 		log.WithFields(log.Fields{
@@ -230,13 +245,17 @@ func InValidateDashboardQueryCache(projectID, dashboardID, unitID int64) {
 	}
 	if err != nil {
 		log.WithError(err).Error("Failed to get cache key")
-		return
+		failedKeys = append(failedKeys, pattern)
 	}
 
 	for _, cacheKey := range cacheKeys {
-		cacheRedis.DelPersistent(cacheKey)
+		err := cacheRedis.DelPersistent(cacheKey)
+		key, _ := cacheKey.Key()
+		if err != nil {
+			failedKeys = append(failedKeys, key)
+		}
 	}
-
+	return failedKeys
 }
 
 func GetResponseFromDBCaching(reqId string, projectID int64, dashboardID, unitID int64, from, to int64, timezoneString U.TimeZoneString) (bool, int, interface{}) {
@@ -251,18 +270,37 @@ func GetResponseFromDBCaching(reqId string, projectID int64, dashboardID, unitID
 }
 
 // GetResponseIfCachedDashboardQuery Common function to fetch result from cache if present for dashboard query.
-func GetResponseIfCachedDashboardQuery(reqId string, projectID int64, dashboardID, unitID int64, from, to int64, timezoneString U.TimeZoneString) (bool, int, interface{}) {
+func GetResponseIfCachedDashboardQuery(reqId string, projectID int64, dashboardID, unitID int64, from, to int64,
+	timezoneString U.TimeZoneString) (bool, int, interface{}) {
 	cacheResult, errCode, err := model.GetCacheResultByDashboardIdAndUnitId(reqId, projectID, dashboardID, unitID, from, to, timezoneString)
 	if errCode == http.StatusFound && cacheResult != nil {
-		return true, http.StatusOK, DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true, RefreshedAt: cacheResult.RefreshedAt, TimeZone: string(timezoneString), CacheMeta: cacheResult.CacheMeta}
+		return true, http.StatusOK, DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true,
+			RefreshedAt: cacheResult.RefreshedAt, TimeZone: string(timezoneString), CacheMeta: cacheResult.CacheMeta}
 	}
 	return false, errCode, err
 }
 
-func GetResponseIfCachedDashboardQueryWithPreset(reqId string, projectID int64, dashboardID, unitID int64, preset string, from, to int64, timezoneString U.TimeZoneString) (bool, int, interface{}) {
-	cacheResult, errCode, err := model.GetCacheResultByDashboardIdAndUnitIdWithPreset(reqId, projectID, dashboardID, unitID, preset, from, to, timezoneString)
+func GetResponseIfCachedDashboardQueryWithPreset(reqId string, projectID int64, dashboardID, unitID int64, preset string,
+	from, to int64, timezoneString U.TimeZoneString) (bool, int, interface{}) {
+	cacheResult, errCode, err := model.GetCacheResultByDashboardIdAndUnitIdWithPreset(reqId, projectID, dashboardID,
+		unitID, preset, from, to, timezoneString)
 	if errCode == http.StatusFound && cacheResult != nil {
-		return true, http.StatusOK, DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true, RefreshedAt: cacheResult.RefreshedAt, TimeZone: string(timezoneString), CacheMeta: cacheResult.CacheMeta}
+		return true, http.StatusOK, DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true,
+			RefreshedAt: cacheResult.RefreshedAt, TimeZone: string(timezoneString), CacheMeta: cacheResult.CacheMeta}
 	}
 	return false, errCode, err
+}
+
+func GetResponseFromDBCachingObject(reqId string, projectID int64, dashboardID, unitID int64, from, to int64,
+	timezoneString U.TimeZoneString) (bool, int, DashboardQueryResponsePayload) {
+
+	errCode, cacheResult := store.GetStore().FetchCachedResultFromDataBase(reqId, projectID, dashboardID, unitID, from, to)
+
+	// since cacheResult.Result is []byte, need to marshall it
+	resultJson := &postgres.Jsonb{RawMessage: json.RawMessage(cacheResult.Result)}
+	if errCode == http.StatusFound && cacheResult.Result != nil {
+		return true, http.StatusOK, DashboardQueryResponsePayload{Result: resultJson, Cache: true,
+			RefreshedAt: cacheResult.ComputedAt, TimeZone: string(timezoneString), CacheMeta: nil}
+	}
+	return false, errCode, DashboardQueryResponsePayload{}
 }

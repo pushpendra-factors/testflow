@@ -29,6 +29,9 @@
   &.fai-text__color--grey-6 {
     color: $fa-color--mono-6;
   }
+  &.fai-text__color--grey-7 {
+    color: $fa-color-neutral-grey-7;
+  }
   &.fai-text__color--white {
     color: $fa-color--white;
   }
@@ -40,6 +43,9 @@
   }
   &.fai-text__color--brand-6 {
     color: $fa-color--brand-6;
+  }
+  &.fai-text__color--brand-color-6 {
+    color: $fa-color--brand-color-6;
   }
   &.fai-text__color--brand-color {
     color: $fa-color--brand-color;
@@ -61,6 +67,13 @@
 
   &.fai-text__color--character-secondary {
     color: $fa-color-character-secondary;
+  }
+
+  &.fai-text__color--character-title {
+    color: $fa-color-character-title;
+  }
+  &.fai-text__color--character-disabled-placeholder {
+    color: $fa-color-character-disabled-placeholder;
   }
 
   //Case

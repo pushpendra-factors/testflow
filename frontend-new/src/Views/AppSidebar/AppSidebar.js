@@ -1,6 +1,7 @@
 import React from 'react';
 import cx from 'classnames';
 import { Layout } from 'antd';
+import { useLocation } from 'react-router-dom';
 import styles from './index.module.scss';
 import useSidebarTitleConfig from './hooks/useSidebarTitleConfig';
 import { SVG, Text } from 'Components/factorsComponents';
@@ -8,9 +9,13 @@ import SidebarContent from './SidebarContent';
 import { useDispatch, useSelector } from 'react-redux';
 import { selectSidebarCollapsedState } from 'Reducers/global/selectors';
 import { toggleSidebarCollapsedStateAction } from 'Reducers/global/actions';
+import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
+import { PathUrls } from 'Routes/pathUrls';
 
 const AppSidebar = () => {
   const { Sider } = Layout;
+  const location = useLocation();
+  const { pathname } = location;
   const dispatch = useDispatch();
   const isSidebarCollapsed = useSelector((state) =>
     selectSidebarCollapsedState(state)
@@ -32,38 +37,46 @@ const AppSidebar = () => {
       })}
       onClick={isSidebarCollapsed ? handleExpand : null}
     >
-      {isSidebarCollapsed === false && (
+      <ControlledComponent controller={isSidebarCollapsed === false}>
         <div
           className={cx(
             'flex flex-col row-gap-4 pt-6',
             styles['sidebar-content-container']
           )}
         >
-          <div className='flex justify-between items-center'>
-            <div className='flex col-gap-2 items-center px-3'>
-              <SVG
-                color={sidebarTitleConfig.iconColor}
-                name={sidebarTitleConfig.icon}
-              />
-              <Text type='title' extraClass='mb-0' color='character-secondary'>
-                {sidebarTitleConfig.title}
-              </Text>
+          <ControlledComponent
+            controller={pathname !== PathUrls.ProfileAccounts}
+          >
+            <div className='flex justify-between items-center'>
+              <div className='flex col-gap-2 items-center px-3'>
+                <SVG
+                  color={sidebarTitleConfig.iconColor}
+                  name={sidebarTitleConfig.icon}
+                />
+                <Text
+                  type='title'
+                  extraClass='mb-0'
+                  color='character-secondary'
+                >
+                  {sidebarTitleConfig.title}
+                </Text>
+              </div>
+              <div
+                role='button'
+                onClick={handleCollapse}
+                className={cx(
+                  'flex justify-center items-center w-8 h-8 rounded-full',
+                  styles['collapsible-icon-wrapper']
+                )}
+              >
+                <SVG name='arrow_left' color='#8C8C8C' size={20} />
+              </div>
             </div>
-            <div
-              role='button'
-              onClick={handleCollapse}
-              className={cx(
-                'flex justify-center items-center w-8 h-8 rounded-full',
-                styles['collapsible-icon-wrapper']
-              )}
-            >
-              <SVG name='arrow_left' color='#8C8C8C' size={20} />
-            </div>
-          </div>
+          </ControlledComponent>
           <SidebarContent />
         </div>
-      )}
-      {isSidebarCollapsed === true && (
+      </ControlledComponent>
+      <ControlledComponent controller={isSidebarCollapsed === true}>
         <div className='flex mt-5 justify-end'>
           <div
             role='button'
@@ -76,7 +89,7 @@ const AppSidebar = () => {
             <SVG name='arrow_right' color='#8C8C8C' size={20} />
           </div>
         </div>
-      )}
+      </ControlledComponent>
     </Sider>
   );
 };

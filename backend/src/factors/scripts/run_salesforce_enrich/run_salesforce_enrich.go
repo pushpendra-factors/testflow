@@ -138,8 +138,6 @@ func main() {
 	numDocRoutines := flag.Int("num_unique_doc_routines", 1, "Number of unique document go routines per project")
 	insertBatchSize := flag.Int("insert_batch_size", 1, "Number of unique document go routines per project")
 	overrideLastSyncTimestamp := flag.Int64("override_last_sync_timestamp", 0, "Override last sync timestamp")
-	clearbitEnabled := flag.Int("clearbit_enabled", 0, "To enable clearbit enrichment")
-	sixsignalV1EnabledProjectIDs := flag.String("sixsignal_v1_enabled_projectIds", "", "To enable new sixsignal flow")
 	useSalesforceV54APIByProjectID := flag.String("use_salesforce_v54_api_by_project_id", "", "Use v54 api for query salesforce data")
 	allowIdentificationOverwriteUsingSourceByProjectID := flag.String("allow_identification_overwrite_using_source_by_project_id", "", "Allow identification overwrite based on request source.")
 	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
@@ -157,6 +155,7 @@ func main() {
 	removeDisabledEventUserPropertiesByProjectId := flag.String("remove_disabled_event_user_properties",
 		"", "List of projects to disable event user property population in events.")
 	enrichRecordProcessLimit := flag.Int("enrich_record_process_limit", 0, "Limit number of records for enrichment at project level")
+	disableOpportunityContactRolesByProjectID := flag.String("disable_opportunity_contact_roles_by_project_id", "", "")
 
 	flag.Parse()
 	defaultAppName := "salesforce_enrich"
@@ -214,8 +213,6 @@ func main() {
 		RestrictReusingUsersByCustomerUserId:               *restrictReusingUsersByCustomerUserId,
 		DisableCRMUniquenessConstraintsCheckByProjectID:    *disableCRMUniquenessConstraintsCheckByProjectID,
 		SalesforceBatchInsertBatchSize:                     *insertBatchSize,
-		ClearbitEnabled:                                    *clearbitEnabled,
-		SixSignalV1EnabledProjectIDs:                       *sixsignalV1EnabledProjectIDs,
 		UseSalesforceV54APIByProjectID:                     *useSalesforceV54APIByProjectID,
 		AllowIdentificationOverwriteUsingSourceByProjectID: *allowIdentificationOverwriteUsingSourceByProjectID,
 		IngestionTimezoneEnabledProjectIDs:                 C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
@@ -230,6 +227,7 @@ func main() {
 		EnableSyncReferenceFieldsByProjectID:               *enableSyncReferenceFieldsByProjectID,
 		AllowEmailDomainsByProjectID:                       *allowEmailDomainsByProjectID,
 		RemoveDisabledEventUserPropertiesByProjectID:       *removeDisabledEventUserPropertiesByProjectId,
+		DisableOpportunityContactRolesByProjectID:          *disableOpportunityContactRolesByProjectID,
 	}
 
 	C.InitConf(config)

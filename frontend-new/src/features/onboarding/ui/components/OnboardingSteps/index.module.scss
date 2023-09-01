@@ -1,0 +1,63 @@
+@import '../../../../../styles/abstracts/variables';
+
+.collapse {
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  background: #fff;
+
+  :global(.ant-collapse-content) {
+    border: none;
+  }
+
+  :global(.ant-collapse-item) {
+    border: none;
+  }
+
+  :global(.ant-collapse-content-box) {
+    border: none;
+  }
+}
+
+.dashedButton {
+  :global(.ant-btn) {
+    border: 1px dashed $fa-color--mono-4;
+    font-size: 16px;
+    color: $fa-color-character-title;
+  }
+}
+
+.dashedButtonActive {
+  @extend .dashedButton;
+  :global(.ant-btn) {
+    border: 1px dashed $fa-color--brand-color;
+    color: $fa-color--brand-color;
+  }
+  :global(.ant-btn:focus, .ant-btn:hover, .ant-btn:active) {
+    border: 1px dashed $fa-color--brand-color;
+    color: $fa-color--brand-color;
+  }
+}
+
+.outlineButton {
+  border: 1px solid #d9d9d9 !important;
+  background: #fff;
+}
+
+.outlineBorder {
+  border-radius: 10px;
+  border: 1px solid #f0f0f0;
+}
+
+.projectImageContainer {
+  position: relative;
+}
+
+.projectImageContainer .projectImage {
+  display: block;
+}
+
+.projectImageContainer .editImageIcon {
+  position: absolute;
+  bottom: -11px;
+  right: -11px;
+}

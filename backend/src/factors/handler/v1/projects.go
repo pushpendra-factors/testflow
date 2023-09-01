@@ -3,19 +3,14 @@ package v1
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 
-	C "factors/config"
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
 
 	mid "factors/middleware"
 
-	H "factors/handler/helpers"
-
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm/dialects/postgres"
 )
 
 // Test command.
@@ -63,10 +58,6 @@ func GetProjectsHandler(c *gin.Context) {
 	} else if errCode == http.StatusNoContent || errCode == http.StatusBadRequest {
 		resp := make(map[string]interface{})
 		resp["projects"] = []model.Project{}
-		if !C.EnableDemoReadAccess() {
-			c.JSON(http.StatusNotFound, resp)
-			return
-		}
 	}
 	projectRoleMap := make(map[int64]uint64)
 	resp := make(map[uint64][]interface{})
@@ -86,48 +77,8 @@ func GetProjectsHandler(c *gin.Context) {
 			resp[projectRoleMap[project.ID]] = append(resp[projectRoleMap[project.ID]], MapProjectToString(project))
 		}
 	}
-	if C.EnableDemoReadAccess() {
-		trimmedDemoProjects := make([]model.ProjectString, 0)
-		demoProjectStrings := C.GetConfig().DemoProjectIds
-		demoProjs := make([]int64, 0)
-		for _, demoProj := range demoProjectStrings {
-			num, _ := strconv.ParseInt(demoProj, 10, 64)
-			demoProjs = append(demoProjs, num)
-		}
-
-		demoProjects, _ := store.GetStore().GetProjectsByIDs(demoProjs)
-		for _, project := range demoProjects {
-			project.Token = ""
-			project.PrivateToken = ""
-			project.InteractionSettings = postgres.Jsonb{}
-			project.SalesforceTouchPoints = postgres.Jsonb{}
-			project.HubspotTouchPoints = postgres.Jsonb{}
-			project.JobsMetadata = nil
-			project.ChannelGroupRules = postgres.Jsonb{}
-			trimmedDemoProjects = append(trimmedDemoProjects, MapProjectToString(project))
-		}
-		for _, project := range trimmedDemoProjects {
-			if !H.IsDemoProjectInAuthorizedProjects(authorizedProjects.([]int64), project.ID) {
-				resp[1] = append(resp[1], project)
-			}
-		}
-	}
 	c.JSON(http.StatusOK, resp)
 	return
-}
-
-func GetDemoProjects(c *gin.Context) {
-	demoProjects := make([]string, 0)
-	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-	projects := C.GetConfig().DemoProjectIds
-
-	if C.IsLoggedInUserWhitelistedForProjectAnalytics(loggedInAgentUUID) {
-		c.JSON(http.StatusOK, demoProjects)
-		return
-	} else {
-		c.JSON(http.StatusOK, projects)
-		return
-	}
 }
 
 func MapProjectToString(project model.Project) model.ProjectString {

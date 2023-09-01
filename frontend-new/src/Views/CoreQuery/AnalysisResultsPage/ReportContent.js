@@ -214,7 +214,11 @@ function ReportContent({
     }
   }
 
-  if (queryType === QUERY_TYPE_KPI && breakdown.length && queries.length > 1) {
+  if (
+    queryType === QUERY_TYPE_KPI &&
+    (breakdown.length || chartType === CHART_TYPE_BARCHART) &&
+    queries.length > 1
+  ) {
     metricsDropdown = (
       <CampaignMetricsDropdown
         metrics={queries.map((q) => getKpiLabel(q))}

@@ -11,7 +11,8 @@ import {
   Modal,
   Input,
   Spin,
-  Divider
+  Divider,
+  notification
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import {
@@ -33,13 +34,17 @@ import styles from './index.module.scss';
 import { UserAddOutlined } from '@ant-design/icons';
 import InviteUsers from 'Views/Settings/ProjectSettings/UserSettings/InviteUsers';
 import ExcludeIp from '../BasicSettings/IpBlocking/excludeIp';
+import { generateSdkScriptCode } from './utils';
+import ScriptHtml from './ScriptHtml';
+import CodeBlockV2 from 'Components/CodeBlock/CodeBlockV2';
+import logger from 'Utils/logger';
 
 const { TabPane } = Tabs;
 
-const ViewSetup = ({ activeProject }) => {
+const ViewSetup = ({ currentProjectSettings, activeProject }) => {
   const projectToken = activeProject.token;
-  // eslint-disable-next-line
-  const assetURL = BUILD_CONFIG.sdk_asset_url;
+  const assetURL = currentProjectSettings.sdk_asset_url;
+  const apiURL = currentProjectSettings.sdk_api_url;
 
   return (
     <Row>
@@ -48,61 +53,96 @@ const ViewSetup = ({ activeProject }) => {
           type={'title'}
           level={5}
           weight={'bold'}
-          color={'grey'}
           extraClass={'m-0 mt-2'}
         >
-          Setup 1
+          Setup manually
         </Text>
-        <Text type={'paragraph'} extraClass={'m-0'}>
-          Add the below javascript code on every page between the {'<head>'} and
-          {'</head>'} tags.
-        </Text>
-      </Col>
-      <Col span={24}>
-        <CodeBlock
-          codeContent={
-            <>
-              <span style={{ color: '#2F80ED' }}>{`<script>`}</span>
-              {`
-window.factors=window.factors||function(){this.q=[];var i=new CustomEvent("FACTORS_QUEUED_EVENT"),n=function(t,e){this.q.push({k:t,a:e}),window.dispatchEvent(i)};return this.track=function(t,e,i){n("track",arguments)},this.init=function(t,e,i){this.TOKEN=t,this.INIT_PARAMS=e,this.INIT_CALLBACK=i,window.dispatchEvent(new CustomEvent("FACTORS_INIT_EVENT"))},this.reset=function(){n("reset",arguments)},this.page=function(t,e){n("page",arguments)},this.updateEventProperties=function(t,e){n("updateEventProperties",arguments)},this.identify=function(t,e){n("identify",arguments)},this.addUserProperties=function(t){n("addUserProperties",arguments)},this.getUserId=function(){n("getUserId",arguments)},this.call=function(){var t={k:"",a:[]};if(arguments&&1<=arguments.length){for(var e=1;e<arguments.length;e++)t.a.push(arguments[e]);t.k=arguments[0]}this.q.push(t),window.dispatchEvent(i)},this.init("`}
-              <span style={{ color: '#EB5757' }}>{projectToken}</span>
-              {`"),this}(),function(){var t=document.createElement("script");t.type="text/javascript",t.src="${assetURL}",t.async=!0,d=document.getElementsByTagName("script")[0],d.parentNode.insertBefore(t,d)}(); 
-`}
-              <span style={{ color: '#2F80ED' }}>{`</script>`}</span>
-            </>
-          }
-          pureTextCode={`<script> window.factors=window.factors||function(){this.q=[];var i=new CustomEvent("FACTORS_QUEUED_EVENT"),n=function(t,e){this.q.push({k:t,a:e}),window.dispatchEvent(i)};return this.track=function(t,e,i){n("track",arguments)},this.init=function(t,e,i){this.TOKEN=t,this.INIT_PARAMS=e,this.INIT_CALLBACK=i,window.dispatchEvent(new CustomEvent("FACTORS_INIT_EVENT"))},this.reset=function(){n("reset",arguments)},this.page=function(t,e){n("page",arguments)},this.updateEventProperties=function(t,e){n("updateEventProperties",arguments)},this.identify=function(t,e){n("identify",arguments)},this.addUserProperties=function(t){n("addUserProperties",arguments)},this.getUserId=function(){n("getUserId",arguments)},this.call=function(){var t={k:"",a:[]};if(arguments&&1<=arguments.length){for(var e=1;e<arguments.length;e++)t.a.push(arguments[e]);t.k=arguments[0]}this.q.push(t),window.dispatchEvent(i)},this.init("${projectToken}"),this}(),function(){var t=document.createElement("script");t.type="text/javascript",t.src="${assetURL}",t.async=!0,d=document.getElementsByTagName("script")[0],d.parentNode.insertBefore(t,d)}(); </script>`}
-        ></CodeBlock>
-      </Col>
-      <Col span={24}>
         <Text
           type={'title'}
-          level={5}
-          weight={'bold'}
+          level={6}
           color={'grey'}
-          extraClass={'m-0 mt-4'}
+          extraClass={'m-0 mb-3'}
         >
-          Setup 2 (Optional)
+          Add Factors SDK manually in the head section for all pages you wish to
+          get data for
         </Text>
-        <Text type={'paragraph'} extraClass={'m-0'}>
-          Send us an event (Enable Auto-track for capturing user visits
-          automatically).
-        </Text>
+        <div className='ml-3'>
+          <Text
+            type={'title'}
+            level={6}
+            weight={'bold'}
+            color={'grey'}
+            extraClass={'m-0 mt-2 mb-2'}
+          >
+            Setup 1
+          </Text>
+          <Text type='paragraph' color='mono-6' extraClass={'m-0'}>
+            Add the javascript code below on every page between the {'<head>'}{' '}
+            and {'</head>'} tags.
+          </Text>
+          <div className='py-4'>
+            <CodeBlockV2
+              collapsedViewText={
+                <>
+                  <span style={{ color: '#2F80ED' }}>{`<script>`}</span>
+                  {`(function(c)d.appendCh.....func("`}
+                  <span style={{ color: '#EB5757' }}>{`${projectToken}`}</span>
+                  {`")`}
+                  <span style={{ color: '#2F80ED' }}>{`</script>`}</span>
+                </>
+              }
+              fullViewText={
+                <ScriptHtml
+                  projectToken={projectToken}
+                  assetURL={assetURL}
+                  apiURL={apiURL}
+                />
+              }
+              textToCopy={generateSdkScriptCode(assetURL, projectToken, apiURL)}
+            />
+          </div>
+        </div>
       </Col>
-      <Col span={24}>
-        <CodeBlock
-          codeContent={'factors.track("YOUR_EVENT");'}
-          pureTextCode={'factors.track("YOUR_EVENT");'}
-        ></CodeBlock>
-      </Col>
+      <div className='ml-3'>
+        <Col span={24}>
+          <Text
+            type={'title'}
+            level={6}
+            weight={'bold'}
+            color={'grey'}
+            extraClass={'m-0 mt-4'}
+          >
+            Setup 2 (Optional)
+          </Text>
+          <Text type='paragraph' color='mono-6' extraClass={'m-0'}>
+            Send us an event (Enable Auto-track under{' '}
+            <span className='italic'>General Configuration tab</span> above for
+            capturing user visits automatically).
+          </Text>
+        </Col>
+        <Col span={24}>
+          <CodeBlock
+            codeContent={
+              <>
+                <span style={{ color: '#2F80ED' }}>{'faitracker.call'}</span>
+                {'("track", "'}
+                <span style={{ color: '#EB5757' }}>{'YOUR_EVENT'}</span>
+                {'");'}
+              </>
+            }
+            pureTextCode={`faitracker.call("track", "YOUR_EVENT");`}
+            hideCopyBtn={true}
+          ></CodeBlock>
+        </Col>
+      </div>
     </Row>
   );
 };
 
-const GTMSetup = ({ activeProject }) => {
+const GTMSetup = ({ currentProjectSettings, activeProject }) => {
   const projectToken = activeProject.token;
-  // eslint-disable-next-line
-  const assetURL = BUILD_CONFIG.sdk_asset_url;
+  const assetURL = currentProjectSettings.sdk_asset_url;
+  const apiURL = currentProjectSettings.sdk_api_url;
 
   return (
     <Row>
@@ -111,83 +151,114 @@ const GTMSetup = ({ activeProject }) => {
           type={'title'}
           level={5}
           weight={'bold'}
-          color={'grey'}
-          extraClass={'m-0 mt-2 mb-1'}
+          extraClass={'m-0 mt-2'}
         >
-          Setup 1
+          Setup using GTM
         </Text>
-        <Text type={'paragraph'} extraClass={'m-0'}>
-          1. Sign in to
-          <span className={'underline'}>
-            <a href='https://tagmanager.google.com/' target='_blank'>
-              Google Tag Manager
-            </a>
-          </span>
-          , select “Workspace”, and “Add a new tag”
-        </Text>
-        <Text type={'paragraph'} extraClass={'m-0'}>
-          2. Name it “Factors tag”. Select
-          <span className={'italic'}>Edit</span> on Tag Configuration
-        </Text>
-        <Text type={'paragraph'} extraClass={'m-0'}>
-          3. Under custom, select <span className={'italic'}>custom HTML</span>
-        </Text>
-        <Text type={'paragraph'} extraClass={'m-0'}>
-          4. Copy the below tracking script and
-          <span className={'italic'}>paste</span> it on the HTML field, Select
-          <span className={'font-extrabold'}>Save</span>
-        </Text>
-      </Col>
-      <Col span={24}>
-        <CodeBlock
-          codeContent={
-            <>
-              <span style={{ color: '#2F80ED' }}>{`<script>`}</span>
-              {`
-window.factors=window.factors||function(){this.q=[];var i=new CustomEvent("FACTORS_QUEUED_EVENT"),n=function(t,e){this.q.push({k:t,a:e}),window.dispatchEvent(i)};return this.track=function(t,e,i){n("track",arguments)},this.init=function(t,e,i){this.TOKEN=t,this.INIT_PARAMS=e,this.INIT_CALLBACK=i,window.dispatchEvent(new CustomEvent("FACTORS_INIT_EVENT"))},this.reset=function(){n("reset",arguments)},this.page=function(t,e){n("page",arguments)},this.updateEventProperties=function(t,e){n("updateEventProperties",arguments)},this.identify=function(t,e){n("identify",arguments)},this.addUserProperties=function(t){n("addUserProperties",arguments)},this.getUserId=function(){n("getUserId",arguments)},this.call=function(){var t={k:"",a:[]};if(arguments&&1<=arguments.length){for(var e=1;e<arguments.length;e++)t.a.push(arguments[e]);t.k=arguments[0]}this.q.push(t),window.dispatchEvent(i)},this.init("`}
-              <span style={{ color: '#EB5757' }}>{projectToken}</span>
-              {`"),this}(),function(){var t=document.createElement("script");t.type="text/javascript",t.src="${assetURL}",t.async=!0,d=document.getElementsByTagName("script")[0],d.parentNode.insertBefore(t,d)}(); 
-`}
-              <span style={{ color: '#2F80ED' }}>{`</script>`}</span>
-            </>
-          }
-          pureTextCode={`<script> window.factors=window.factors||function(){this.q=[];var i=new CustomEvent("FACTORS_QUEUED_EVENT"),n=function(t,e){this.q.push({k:t,a:e}),window.dispatchEvent(i)};return this.track=function(t,e,i){n("track",arguments)},this.init=function(t,e,i){this.TOKEN=t,this.INIT_PARAMS=e,this.INIT_CALLBACK=i,window.dispatchEvent(new CustomEvent("FACTORS_INIT_EVENT"))},this.reset=function(){n("reset",arguments)},this.page=function(t,e){n("page",arguments)},this.updateEventProperties=function(t,e){n("updateEventProperties",arguments)},this.identify=function(t,e){n("identify",arguments)},this.addUserProperties=function(t){n("addUserProperties",arguments)},this.getUserId=function(){n("getUserId",arguments)},this.call=function(){var t={k:"",a:[]};if(arguments&&1<=arguments.length){for(var e=1;e<arguments.length;e++)t.a.push(arguments[e]);t.k=arguments[0]}this.q.push(t),window.dispatchEvent(i)},this.init("${projectToken}"),this}(),function(){var t=document.createElement("script");t.type="text/javascript",t.src="${assetURL}",t.async=!0,d=document.getElementsByTagName("script")[0],d.parentNode.insertBefore(t,d)}(); </script>`}
-        />
-      </Col>
-      <Col span={24}>
-        <Text type={'paragraph'} extraClass={'m-0'}>
-          5. In the <span className={'italic'}>Triggers</span> popup, select
-          <span className={'italic'}>Add Trigger</span> and select
-          <span className={'italic'}>All Pages</span>
-        </Text>
-        <Text type={'paragraph'} extraClass={'m-0'}>
-          6. The trigger has been added. Click on
-          <span className={'font-extrabold'}>Publish</span> at the top of your
-          GTM window!
-        </Text>
-      </Col>
-
-      <Col span={24}>
         <Text
           type={'title'}
-          level={5}
-          weight={'bold'}
+          level={6}
           color={'grey'}
-          extraClass={'m-0 mt-4'}
+          extraClass={'m-0 mb-3'}
         >
-          Setup 2 (Optional)
+          Add Factors SDK quickly using Google Tag Manager without any
+          engineering effort
         </Text>
-        <Text type={'paragraph'} extraClass={'m-0'}>
-          Send us custom events that you define using GTM’s triggers (Enable
-          Auto-track for capturing user visits automatically).
-        </Text>
+        <div className='ml-3'>
+          <Text
+            type={'title'}
+            level={6}
+            weight={'bold'}
+            color={'grey'}
+            extraClass={'m-0 mt-2 mb-2'}
+          >
+            Setup 1
+          </Text>
+          <Text type='paragraph' color='mono-6' extraClass={'m-0'}>
+            1. Sign in to&nbsp;
+            <span>
+              <a href='https://tagmanager.google.com/' target='_blank'>
+                Google Tag Manager
+              </a>
+            </span>
+            &nbsp;and select “Workspace”.
+          </Text>
+          <Text type='paragraph' color='mono-6' extraClass={'m-0'}>
+            2. Click on “Add a new tag” and name it “Factors tag”.
+          </Text>
+          <Text type='paragraph' color='mono-6' extraClass={'m-0'}>
+            3. Click <span className='italic'>Edit</span> on Tag Configuration
+            and under custom, select <span className='italic'>Custom HTML</span>
+          </Text>
+          <Text type='paragraph' color='mono-6' extraClass={'m-0'}>
+            4. Copy the tracking script below and paste it on the HTML field.
+            Hit <span className='italic'>Save</span>.
+          </Text>
+          <div className='py-4'>
+            <CodeBlockV2
+              collapsedViewText={
+                <>
+                  <span style={{ color: '#2F80ED' }}>{`<script>`}</span>
+                  {`(function(c)d.appendCh.....func("`}
+                  <span style={{ color: '#EB5757' }}>{`${projectToken}`}</span>
+                  {`")`}
+                  <span style={{ color: '#2F80ED' }}>{`</script>`}</span>
+                </>
+              }
+              fullViewText={
+                <ScriptHtml
+                  projectToken={projectToken}
+                  assetURL={assetURL}
+                  apiURL={apiURL}
+                />
+              }
+              textToCopy={generateSdkScriptCode(assetURL, projectToken, apiURL)}
+            />
+          </div>
+
+          <Text type='paragraph' color='mono-6' extraClass={'m-0'}>
+            5. In the Triggers popup, click{' '}
+            <span className='italic'>Add Trigger</span> and select All Pages.
+          </Text>
+          <Text type='paragraph' color='mono-6' extraClass={'m-0'}>
+            6. Once the trigger has been added, click on Publish at the top of
+            your GTM window and that’s it!
+          </Text>
+        </div>
       </Col>
-      <Col span={24}>
-        <CodeBlock
-          codeContent={'factors.track("YOUR_EVENT");'}
-          pureTextCode={`factors.track("YOUR_EVENT");`}
-        ></CodeBlock>
-      </Col>
+
+      <div className='ml-3'>
+        <Col span={24}>
+          <Text
+            type={'title'}
+            level={6}
+            weight={'bold'}
+            color={'grey'}
+            extraClass={'m-0 mt-4'}
+          >
+            Setup 2 (Optional)
+          </Text>
+          <Text type='paragraph' color='mono-6' extraClass={'m-0'}>
+            Send us an event (Enable Auto-track under{' '}
+            <span className='italic'>General Configuration tab</span> above for
+            capturing user visits automatically).
+          </Text>
+        </Col>
+        <Col span={24}>
+          <CodeBlock
+            codeContent={
+              <>
+                <span style={{ color: '#2F80ED' }}>{'faitracker.call'}</span>
+                {'("track", "'}
+                <span style={{ color: '#EB5757' }}>{'YOUR_EVENT'}</span>
+                {'");'}
+              </>
+            }
+            pureTextCode={`faitracker.call("track", "YOUR_EVENT");`}
+            hideCopyBtn={true}
+          ></CodeBlock>
+        </Col>
+      </div>
     </Row>
   );
 };
@@ -563,7 +634,9 @@ const JSConfig = ({
           <span style={{ width: '50px' }}>
             <Switch
               checkedChildren='On'
-              disabled={enableEdit || currentAgent.email === 'solutions@factors.ai'}
+              disabled={
+                enableEdit || currentAgent.email === 'solutions@factors.ai'
+              }
               unCheckedChildren='OFF'
               onChange={toggleAutoCaptureFormFills}
               checked={autoCaptureFormFills}
@@ -789,92 +862,119 @@ const VerifySdkCheck = ({
   const int_completed = useSelector(
     (state) => state?.global?.projectSettingsV1?.int_completed
   );
-  const [sdkCheck, setSdkCheck] = useState(null);
-  const [loading, setloading] = useState(false);
-  const fetchProjectsV1 = async () => {
-    try {
-      setloading(true);
+  const [sdkVerified, setSdkVerified] = useState(int_completed ? true : false);
+  const [loading, setLoading] = useState(false);
+  const [errorState, setErrorState] = useState(false);
 
-      fetchProjectSettingsV1(activeProject.id).then((res) => {
-        if (res.data.int_completed) {
-          message.success('SDK Verified!');
-        } else {
-          message.error('SDK not verified');
-        }
-        setSdkCheck(res.data.int_completed);
-        setloading(false);
-      });
+  const handleSdkVerification = async () => {
+    try {
+      setLoading(true);
+      setErrorState(false);
+      const res = await fetchProjectSettingsV1(activeProject.id);
+
+      if (res?.data?.int_completed) {
+        setSdkVerified(true);
+        notification.success({
+          message: 'Success',
+          description: 'SDK Verified!',
+          duration: 3
+        });
+      } else {
+        notification.error({
+          message: 'Error',
+          description: 'SDK not Verified!',
+          duration: 3
+        });
+        setErrorState(true);
+      }
+
+      setLoading(false);
     } catch (error) {
-      console.error(error);
-      setloading(false);
+      logger.error(error);
+      setErrorState(true);
+      setLoading(false);
     }
-  };
-  useEffect(() => {
-    setSdkCheck(int_completed);
-  }, []);
-  const onSDKcheck = () => {
-    fetchProjectsV1();
-    // setSdkCheck(!sdkCheck);
   };
 
   return (
     <React.Fragment>
-      {loading ? (
-        <div className='flex justify-center items-center w-full'>
-          <Spin />
-        </div>
-      ) : (
-        <>
-          {int_completed ? (
-            <Row justify={'space-between'}>
-              <Col span={20}>
-                <SVG name={'CheckCircle'} extraClass={'inline'} />
-                <Text
-                  type={'title'}
-                  level={6}
-                  color={'grey-2'}
-                  extraClass={'m-0 ml-2 inline'}
-                >
-                  SDK have successfully verified
-                </Text>
-              </Col>
-              <Col>
-                <Button
-                  type={'text'}
-                  size={'small'}
-                  style={{ color: '#1890FF' }}
-                  onClick={onSDKcheck}
-                >
-                  Verify again
-                </Button>
-              </Col>
-            </Row>
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div
-                style={{
-                  margin: '0 5px',
-                  display: 'flex',
-                  alignItems: 'center'
-                }}
-              >
-                <SVG name='badgecheck' />
-              </div>
+      <div className='mt-2 ml-2'>
+        <Divider />
+        {sdkVerified && (
+          <div className='flex justify-between items-center'>
+            <div>
+              <SVG name={'CheckCircle'} extraClass={'inline'} />
               <Text
                 type={'title'}
                 level={6}
-                weight='bold'
-                extraClass={'m-0 ml-2 mr-1 flex '}
+                color={'character-primary'}
+                extraClass={'m-0 ml-2 inline'}
               >
-                Have you added the SDK? Verify Here
+                {'Verified. Your script is up and running.'}
               </Text>
-              <Button type={'default'} onClick={onSDKcheck}>
-                Check for SDK
-              </Button>
             </div>
-          )}
-        </>
-      )}
+            <Button
+              type={'text'}
+              size={'small'}
+              style={{ color: '#1890FF' }}
+              onClick={() => handleSdkVerification()}
+              loading={loading}
+            >
+              {'Verify again'}
+            </Button>
+          </div>
+        )}
+        {!int_completed && !errorState && (
+          <div className='flex gap-2 items-center'>
+            <Text type='paragraph' color='mono-6' extraClass='m-0'>
+              {'Have you already added the code?'}
+            </Text>
+            <Button onClick={() => handleSdkVerification()}>
+              {'Verify it now'}
+            </Button>
+          </div>
+        )}
+        {errorState && (
+          <div className='flex items-center'>
+            <SVG name={'CloseCircle'} extraClass={'inline'} color='#F5222D' />
+            <Text
+              type={'title'}
+              level={6}
+              color={'character-primary'}
+              extraClass={'m-0 ml-2 inline'}
+            >
+              {'Couldn’t detect SDK.'}
+            </Text>
+            <Button
+              type={'text'}
+              size={'small'}
+              style={{ color: '#1890FF', padding: 0 }}
+              onClick={() => handleSdkVerification()}
+              loading={loading}
+            >
+              Verify again
+            </Button>
+            <Text
+              type={'title'}
+              level={6}
+              color={'character-primary'}
+              extraClass={'m-0 ml-1 inline'}
+            >
+              or
+            </Text>
+            <Button
+              type={'text'}
+              size={'small'}
+              style={{ color: '#1890FF', padding: 0, marginLeft: 4 }}
+              onClick={() =>
+                window.open('https://calendly.com/aravindhvetri', '_blank')
+              }
+            >
+              book a call
+            </Button>
+          </div>
+        )}
+      </div>
     </React.Fragment>
   );
 };
@@ -1056,8 +1156,6 @@ function JavascriptSDK({
                       {renderTabs()}
                     </Tabs>
 
-                    <Divider style={{ margin: '0px 0 10px 0' }} />
-
                     <VerifySdkCheck
                       activeProject={activeProject}
                       setDataLoading={setDataLoading}
@@ -1077,18 +1175,19 @@ function JavascriptSDK({
             display: 'flex'
           }}
         >
-          <span>
+          <Text type='paragraph' color='mono-6' extraClass={'m-0 inline'}>
             For detailed instructions on how to install and initialize the
             JavaScript SDK please refer to our
-          </span>
-          <a
-            href='https://help.factors.ai/en/articles/7260638-placing-factors-sdk'
-            target='_blank'
-            rel='noreferrer'
-            style={{ margin: '0 5px' }}
-          >
-            JavaScript developer documentation &#8594;
-          </a>
+          </Text>
+          <Text type='paragraph' color='mono-6' extraClass={'m-0 inline'}>
+            <a
+              href='https://help.factors.ai/en/articles/7260638-placing-factors-sdk'
+              target='_blank'
+              rel='noreferrer'
+            >
+              JavaScript developer documentation &#8594;
+            </a>
+          </Text>
         </Row>
       </div>
     </>

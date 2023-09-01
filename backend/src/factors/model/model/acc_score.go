@@ -10,7 +10,7 @@ import (
 
 const DEFAULT_EVENT string = "all_events"
 const LAST_EVENT string = "LAST_EVENT"
-const NUM_TREND_DAYS int = 10
+const NUM_TREND_DAYS int = 30
 
 type AccScoreResult struct {
 	ProjectId int64                  `json:"projectid"`
@@ -105,6 +105,7 @@ type PerUserScoreOnDay struct {
 	Id        string                 `json:"id"`
 	Score     float32                `json:"score"`
 	Timestamp string                 `json:"timestamp"`
+	Property  map[string][]string    `json:"prp"`
 	Debug     map[string]interface{} `json:"debug"`
 }
 
@@ -120,11 +121,12 @@ type GroupEventsCountScore struct {
 }
 
 type EventsCountScore struct {
-	UserId     string           `json:"uid"`
-	ProjectId  int64            `json:"pid"`
-	EventScore map[string]int64 `json:"eventscore"`
-	DateStamp  string           `json:"ds"`
-	IsGroup    bool             `json:"ig"`
+	UserId     string                      `json:"uid"`
+	ProjectId  int64                       `json:"pid"`
+	EventScore map[string]int64            `json:"eventscore"`
+	Property   map[string]map[string]int64 `json:"prp"`
+	DateStamp  string                      `json:"ds"`
+	IsGroup    bool                        `json:"ig"`
 }
 type PerUserScore struct {
 	DayScore map[string]PerDayScore `json:"dayscore"`
@@ -135,8 +137,18 @@ type PerDayScore struct {
 }
 
 type LatestScore struct {
-	Date        int64              `json:"date"`
-	EventsCount map[string]float64 `json:"events"`
+	Date        int64                       `json:"date"`
+	EventsCount map[string]float64          `json:"events"`
+	Properties  map[string]map[string]int64 `json:"prop"`
+}
+
+type DbUpdateAccScoring struct {
+	Userid         string      `json:"uid"`
+	TS             int64       `json:"ts"`
+	Date           string      `json:"date"`
+	CurrEventCount LatestScore `json:"ev"`
+	Lastevent      LatestScore `json:"lev"`
+	IsGroup        bool        `json:"ig"`
 }
 
 func GetDateFromString(ts string) int64 {
@@ -181,26 +193,29 @@ func GetDefaultAccScoringWeights() AccWeights {
 func ComputeDayDifference(ts1 int64, ts2 int64) int {
 
 	t1 := time.Unix(ts1, 0)
-	day1 := t1.YearDay()
-
 	t2 := time.Unix(ts2, 0)
-	day2 := t2.YearDay()
-
-	return int(math.Abs(float64(day2 - day1)))
+	daydiff := t2.Sub(t1).Seconds() / float64(24*60*60)
+	return int(math.Abs(daydiff))
 
 }
 
 func ComputeDecayValue(ts string, SaleWindow int64) float64 {
-	var decay float64
-	// get current date
 	currentTS := time.Now().Unix()
 	EventTs := GetDateFromString(ts)
+	decay := ComputeDecayValueGivenStartEndTS(currentTS, EventTs, SaleWindow)
+
+	return decay
+}
+
+func ComputeDecayValueGivenStartEndTS(start int64, end int64, SaleWindow int64) float64 {
+	var decay float64
 	// get difference in weeks
-	dayDiff := ComputeDayDifference(currentTS, EventTs)
+	dayDiff := ComputeDayDifference(start, end)
 	if int64(dayDiff) > SaleWindow {
 		return 0
 	}
 	// get decay value
 	decay = 1 - float64(float64(int64(dayDiff))/float64(SaleWindow))
+
 	return decay
 }

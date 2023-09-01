@@ -20,14 +20,12 @@ import KPIComposer from 'Components/KPIComposer';
 import PageSuspenseLoader from 'Components/SuspenseLoaders/PageSuspenseLoader';
 import moment from 'moment';
 import {
-  fetchDemoProject,
   getHubspotContact,
   fetchProjectSettingsV1,
   fetchProjectSettings,
   fetchMarketoIntegration,
   fetchBingAdsIntegration
 } from 'Reducers/global';
-import userflow from 'userflow.js';
 import QueryComposer from '../../components/QueryComposer';
 import AttrQueryComposer from '../../components/AttrQueryComposer';
 import CoreQueryHome from '../CoreQueryHome';
@@ -49,7 +47,6 @@ import {
   getKPIQuery,
   DefaultDateRangeFormat,
   getAttributionQuery,
-  getCampaignsQuery,
   isComparisonEnabled,
   getProfileQuery,
   getStateQueryFromRequestQuery
@@ -58,7 +55,6 @@ import {
   getEventsData,
   getFunnelData,
   getAttributionsData,
-  getCampaignsData,
   getProfileData,
   getKPIData
 } from '../../reducers/coreQuery/services';
@@ -85,7 +81,6 @@ import { SHOW_ANALYTICS_RESULT } from '../../reducers/types';
 import AnalysisResultsPage from './AnalysisResultsPage';
 import AnalysisHeader from './AnalysisResultsPage/AnalysisHeader';
 import {
-  SET_CAMP_DATE_RANGE,
   SET_ATTR_DATE_RANGE,
   INITIALIZE_GROUPBY
 } from '../../reducers/coreQuery/actions';
@@ -121,10 +116,10 @@ import {
 } from './coreQuery.helpers';
 import { getChartChangedKey } from './AnalysisResultsPage/analysisResultsPage.helpers';
 import NewProject from '../Settings/SetupAssist/Modals/NewProject';
-import AnalyseBeforeIntegration from './AnalyseBeforeIntegration';
 import SaveQuery from 'Components/SaveQuery';
 import _ from 'lodash';
 import { fetchKPIConfig } from 'Reducers/kpi';
+import CommonBeforeIntegrationPage from 'Components/GenericComponents/CommonBeforeIntegrationPage';
 
 function CoreQuery({
   activeProject,
@@ -132,7 +127,7 @@ function CoreQuery({
   location,
   getCampaignConfigData,
   KPI_config,
-  fetchDemoProject,
+
   fetchProjectSettingsV1,
   fetchProjectSettings,
   fetchMarketoIntegration,
@@ -173,9 +168,7 @@ function CoreQuery({
   const [KPIConfigProps, setKPIConfigProps] = useState([]);
   const [loading, setLoading] = useState(true);
   const renderedCompRef = useRef(null);
-  const [demoProjectId, setDemoProjectId] = useState(null);
   const [showProjectModal, setShowProjectModal] = useState(false);
-  const { projects } = useSelector((state) => state.global);
 
   const history = useHistory();
 
@@ -285,19 +278,10 @@ function CoreQuery({
       });
     }
   }, [dispatch, query_type]);
-  useEffect(() => {
-    fetchDemoProject()
-      .then((res) => {
-        setDemoProjectId(res.data[0]);
-      })
-      .catch((err) => {
-        console.log(err.data.error);
-      });
-  }, [activeProject, fetchDemoProject]);
 
   const handleTour = () => {
     history.push('/');
-    userflow.start('c162ed75-0983-41f3-ae56-8aedd7dbbfbd');
+    // userflow.start('c162ed75-0983-41f3-ae56-8aedd7dbbfbd');
   };
 
   useEffect(() => {
@@ -621,7 +605,18 @@ function CoreQuery({
         updateAppliedBreakdown();
       }
       if (queryType === QUERY_TYPE_KPI) {
-        setAppliedQueries(queriesA);
+        setAppliedQueries(
+          queriesA.map((q) => {
+            const category = KPI_config.find(
+              (elem) => elem.category === q.category
+            );
+            const metric = category?.metrics.find((m) => m.name === q.metric);
+            return {
+              ...q,
+              metricType: metric?.type != null ? metric.type : q.metricType
+            };
+          })
+        );
         updateAppliedBreakdown();
       }
       if (queryType === QUERY_TYPE_PROFILE) {
@@ -643,7 +638,8 @@ function CoreQuery({
       savedQueries,
       updateChartTypes,
       updateAppliedBreakdown,
-      profileQueries
+      profileQueries,
+      KPI_config
     ]
   );
 
@@ -1125,88 +1121,6 @@ function CoreQuery({
     ]
   );
 
-  const runCampaignsQuery = useCallback(
-    async (isQuerySaved, durationObj = null, isGranularityChange = false) => {
-      try {
-        closeDrawer();
-        dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
-        setShowResult(true);
-        setQuerySaved(isQuerySaved);
-        if (!isQuerySaved) {
-          setNavigatedFromDashboard(false);
-          setNavigatedFromAnalyse(false);
-        }
-        updateResultState({
-          ...initialState,
-          loading: true
-        });
-        if (!durationObj) {
-          durationObj = camp_dateRange;
-        }
-        const query = getCampaignsQuery(
-          camp_channels,
-          camp_measures,
-          camp_filters,
-          camp_groupBy,
-          durationObj
-        );
-
-        if (!isQuerySaved) {
-          // Factors RUN_QUERY tracking
-          factorsai.track('RUN-QUERY', {
-            email_id: currentAgent?.email,
-            query_type: QUERY_TYPE_CAMPAIGN,
-            project_id: activeProject?.id,
-            project_name: activeProject?.name
-          });
-        }
-
-        setCampaignState({
-          channel: query.query_group[0].channel,
-          filters: query.query_group[0].filters,
-          select_metrics: query.query_group[0].select_metrics,
-          group_by: query.query_group[0].group_by,
-          date_range: { ...durationObj }
-        });
-        updateRequestQuery(query);
-        setLoading(true);
-        const res = await getCampaignsData(
-          activeProject.id,
-          query,
-          getDashboardConfigs(isGranularityChange ? false : isQuerySaved), // we need to call fresh query when granularity is changed
-          true
-        );
-        setLoading(false);
-        updateResultState({
-          ...initialState,
-          data: res.data.result || res.data
-        });
-      } catch (err) {
-        console.log(err);
-        setLoading(false);
-        updateResultState({
-          ...initialState,
-          error: true
-        });
-      }
-    },
-    [
-      dispatch,
-      updateResultState,
-      camp_channels,
-      camp_measures,
-      camp_filters,
-      camp_groupBy,
-      activeProject.id,
-      activeProject?.name,
-      getDashboardConfigs,
-      setNavigatedFromDashboard,
-      setNavigatedFromAnalyse,
-      camp_dateRange,
-      currentAgent?.email
-    ]
-  );
-
   const runProfileQuery = useCallback(
     async (isQuerySaved, durationObj) => {
       try {
@@ -1286,14 +1200,6 @@ function CoreQuery({
           runKPIQuery(querySaved, appliedDateRange, true);
         }
       }
-      if (queryType === QUERY_TYPE_CAMPAIGN) {
-        const payload = {
-          ...camp_dateRange,
-          frequency
-        };
-        dispatch({ type: SET_CAMP_DATE_RANGE, payload });
-        runCampaignsQuery(querySaved, payload, true);
-      }
     },
     [
       queryOptions.date_range,
@@ -1302,7 +1208,6 @@ function CoreQuery({
       camp_dateRange,
       dispatch,
       queryType,
-      runCampaignsQuery,
       resetComparisonData,
       runKPIQuery
     ]
@@ -1387,11 +1292,6 @@ function CoreQuery({
         runKPIQuery(querySaved, appliedDateRange, false, isCompareDate);
       }
 
-      if (queryType === QUERY_TYPE_CAMPAIGN) {
-        dispatch({ type: SET_CAMP_DATE_RANGE, payload });
-        runCampaignsQuery(querySaved, payload);
-      }
-
       if (queryType === QUERY_TYPE_PROFILE) {
         runProfileQuery(querySaved, payload);
       }
@@ -1411,7 +1311,6 @@ function CoreQuery({
       querySaved,
       queryOptions.date_range,
       dispatch,
-      runCampaignsQuery,
       runAttributionQuery,
       runProfileQuery,
       runKPIQuery
@@ -1427,11 +1326,6 @@ function CoreQuery({
         });
       } else if (clickedSavedReport.queryType === QUERY_TYPE_ATTRIBUTION) {
         runAttributionQuery({
-          id: clickedSavedReport.query_id,
-          name: clickedSavedReport.queryName
-        });
-      } else if (clickedSavedReport.queryType === QUERY_TYPE_CAMPAIGN) {
-        runCampaignsQuery({
           id: clickedSavedReport.query_id,
           name: clickedSavedReport.queryName
         });
@@ -1458,7 +1352,6 @@ function CoreQuery({
     runFunnelQuery,
     runQuery,
     runAttributionQuery,
-    runCampaignsQuery,
     runKPIQuery,
     runProfileQuery
   ]);
@@ -1795,7 +1688,7 @@ function CoreQuery({
             : item.entity
             ? item.entity
             : item.object_type;
-        return [ddName, item.name, item.data_type, ddtype];
+        return [ddName, item.name, item.data_type, ddtype, item.category];
       });
       return DDvalues;
     },
@@ -1992,7 +1885,7 @@ function CoreQuery({
     );
   }
 
-  if (isIntegrationEnabled || activeProject.id === demoProjectId) {
+  if (isIntegrationEnabled) {
     return (
       <ErrorBoundary
         fallback={
@@ -2023,73 +1916,6 @@ function CoreQuery({
             {renderQueryComposer()}
           </ErrorBoundary>
         </Drawer>
-
-        {!showResult &&
-        !resultState.data &&
-        !resultState.loading &&
-        activeProject.id === demoProjectId ? (
-          <div className='rounded-lg border-2 h-20 mx-20'>
-            <Row justify='space-between' className='m-0 p-3'>
-              <Col span={projects.length === 1 ? 12 : 18}>
-                <img
-                  alt='Welcome'
-                  src='assets/icons/welcome.svg'
-                  style={{ float: 'left', marginRight: '20px' }}
-                />
-                <Text type='title' level={6} weight='bold' extraClass='m-0'>
-                  Welcome! You just entered a Factors demo project
-                </Text>
-                {projects.length === 1 ? (
-                  <Text type='title' level={7} extraClass='m-0'>
-                    These reports have been built with a sample dataset. Use
-                    this to start exploring!
-                  </Text>
-                ) : (
-                  <Text type='title' level={7} extraClass='m-0'>
-                    To jump back into your Factors project, click on your
-                    account card on the{' '}
-                    <span className='font-bold'>top right</span> of the screen.
-                  </Text>
-                )}
-              </Col>
-              <Col className='mr-2 mt-2'>
-                {projects.length === 1 ? (
-                  <Button
-                    type='default'
-                    style={{
-                      background: 'white',
-                      border: '1px solid #E7E9ED',
-                      height: '40px'
-                    }}
-                    className='m-0 mr-2'
-                    onClick={() => setShowProjectModal(true)}
-                  >
-                    Set up my own Factors project
-                  </Button>
-                ) : null}
-
-                <Button
-                  type='link'
-                  style={{
-                    background: 'white',
-                    // border: '1px solid #E7E9ED',
-                    height: '40px'
-                  }}
-                  className='m-0 mr-2'
-                  onClick={() => handleTour()}
-                >
-                  Take the tour{' '}
-                  <SVG
-                    name='Arrowright'
-                    size={16}
-                    extraClass='ml-1'
-                    color='blue'
-                  />
-                </Button>
-              </Col>
-            </Row>
-          </div>
-        ) : null}
 
         {!showResult && resultState.loading ? <PageSuspenseLoader /> : null}
 
@@ -2161,7 +1987,7 @@ function CoreQuery({
       </ErrorBoundary>
     );
   }
-  return <AnalyseBeforeIntegration />;
+  return <CommonBeforeIntegrationPage />;
 }
 
 const mapStateToProps = (state) => ({
@@ -2176,7 +2002,6 @@ const mapDispatchToProps = (dispatch) =>
     {
       deleteGroupByForEvent,
       getCampaignConfigData,
-      fetchDemoProject,
       getHubspotContact,
       fetchProjectSettingsV1,
       fetchProjectSettings,

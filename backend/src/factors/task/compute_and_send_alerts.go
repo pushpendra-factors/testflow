@@ -51,10 +51,17 @@ const (
 )
 
 func ComputeAndSendAlerts(projectID int64, configs map[string]interface{}) (map[string]interface{}, bool) {
-	available, err := store.GetStore().GetFeatureStatusForProjectV2(projectID, model.FEATURE_KPI_ALERTS)
-	if err != nil {
-		log.WithError(err).Error("Failed to get feature status in compute and send alerts  job for project ID ", projectID)
+	available := true
+	var err error
+	status := make(map[string]interface{})
+	if C.IsEnabledFeatureGatesV2() {
+		available, err = store.GetStore().GetFeatureStatusForProjectV2(projectID, model.FEATURE_KPI_ALERTS, false)
+		if err != nil {
+			log.WithError(err).Error("Failed to get feature status in compute and send alerts  job for project ID ", projectID)
+			status[fmt.Sprintf("Failure-Feature-Status %v", projectID)] = true
+		}
 	}
+
 	if !available {
 		log.Error("Feature Not Available... Skipping account compute and send alerts job for project ID ", projectID)
 		return nil, false
@@ -64,7 +71,7 @@ func ComputeAndSendAlerts(projectID int64, configs map[string]interface{}) (map[
 		log.Fatalf("Failed to get all alerts for project_id: %v", projectID)
 		return nil, false
 	}
-	status := make(map[string]interface{})
+
 	var alertsToBeProcessed []model.Alert
 	if configs["modelType"] == ModelTypeWeek {
 		for _, alert := range allAlerts {

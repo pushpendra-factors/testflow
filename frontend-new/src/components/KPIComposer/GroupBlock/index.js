@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { connect } from 'react-redux';
 import styles from './index.module.scss';
-import { SVG, Text } from 'factorsComponents';
+import { SVG } from 'factorsComponents';
 import { bindActionCreators } from 'redux';
 
 import { Button, Tooltip } from 'antd';
@@ -11,12 +11,16 @@ import FaSelect from '../../FaSelect';
 import _ from 'lodash';
 import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import getGroupIcon from 'Utils/getGroupIcon';
+import {
+  groupKPIPropertiesOnCategory,
+  processProperties
+} from 'Utils/dataFormatter';
 
 function GroupBlock({
   groupByState,
   setGroupBy,
   delGroupBy,
-  userProperties,
   userPropNames,
   eventPropNames,
   KPIConfigProps,
@@ -27,41 +31,38 @@ function GroupBlock({
   const [isDDVisible, setDDVisible] = useState([false]);
   const [isValueDDVisible, setValueDDVisible] = useState([false]);
   const [propSelVis, setSelVis] = useState([false]);
-  const [filterOptions, setFilterOptions] = useState([
-    {
-      label: 'User Properties',
-      iconName: 'user',
-      values: []
-    }
-  ]);
+  const [filterOptions, setFilterOptions] = useState([]);
 
   useEffect(() => {
     let commonProperties = [];
     if (propertyMaps) {
-      commonProperties = propertyMaps?.map((item) => {
-        return [item?.display_name, item?.name, item?.data_type, 'propMap'];
-      });
+      commonProperties =
+        propertyMaps?.map((item) => {
+          return [
+            item?.display_name,
+            item?.name,
+            item?.data_type,
+            'propMap',
+            item?.category
+          ];
+        }) || [];
     }
-    const filterOpts = [...filterOptions];
-    filterOpts[0].values = !isSameKPIGrp
+    const kpiProperties = !isSameKPIGrp
       ? commonProperties
       : KPIConfigProps
       ? KPIConfigProps
       : [];
-    const modifiedFilterOpts = filterOpts?.map((opt) => {
+    const kpiItemsgroupedByCategoryProperty = groupKPIPropertiesOnCategory(
+      kpiProperties,
+      'user'
+    );
+    const propertyArrays = Object.values(kpiItemsgroupedByCategoryProperty);
+
+    const modifiedFilterOpts = propertyArrays?.map((opt) => {
       return {
-        iconName: opt?.iconName,
+        iconName: opt?.icon,
         label: opt?.label,
-        values: opt?.values?.map((op) => {
-          return {
-            value: op?.[1],
-            label: op?.[0],
-            extraProps: {
-              valueType: op?.[2],
-              category: op?.[3]
-            }
-          };
-        })
+        values: processProperties(opt?.values, opt?.propertyType)
       };
     });
     setFilterOptions(modifiedFilterOpts);
@@ -87,7 +88,7 @@ function GroupBlock({
 
   const onChange = (option, group, index) => {
     const newGroupByState = Object.assign({}, groupByState.global[index]);
-    newGroupByState.prop_category = option?.extraProps?.category;
+    newGroupByState.prop_category = option?.extraProps?.queryType;
     newGroupByState.eventName = option?.extraProps?.valueType;
     newGroupByState.property = option?.value;
     newGroupByState.prop_type = option?.extraProps?.valueType;
@@ -289,8 +290,6 @@ function GroupBlock({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  userProperties: state.coreQuery.userProperties,
-  eventProperties: state.coreQuery.eventProperties,
   userPropNames: state.coreQuery.userPropNames,
   eventPropNames: state.coreQuery.eventPropNames,
   groupByState: state.coreQuery.groupBy

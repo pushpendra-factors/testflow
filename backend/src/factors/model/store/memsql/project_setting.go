@@ -657,7 +657,6 @@ func (store *MemSQL) UpdateProjectSettings(projectId int64, settings *model.Proj
 	if errCode := store.satisfiesProjectSettingForeignConstraints(*settings); errCode != http.StatusOK {
 		return nil, http.StatusInternalServerError
 	}
-
 	if settings.IntHubspotApiKey != "" || settings.IntHubspotRefreshToken != "" {
 		existingSettings, status := store.GetProjectSetting(projectId)
 		if status != http.StatusFound {
@@ -715,7 +714,6 @@ func (store *MemSQL) UpdateProjectSettings(projectId int64, settings *model.Proj
 			err).Error("Failed updating ProjectSettings.")
 		return nil, http.StatusInternalServerError
 	}
-
 	store.delAllProjectSettingsCacheForProject(projectId)
 
 	return &updatedProjectSetting, http.StatusAccepted
@@ -1629,7 +1627,7 @@ func (store *MemSQL) GetFormFillEnabledProjectIDWithToken() (*map[int64]string, 
 	return &idWithTokenMap, http.StatusFound
 }
 
-func (store *MemSQL) GetTimelineConfigOfProject(projectID int64) (model.TimelinesConfig, error) {
+func (store *MemSQL) GetTimelinesConfig(projectID int64) (model.TimelinesConfig, error) {
 	db := C.GetServices().Db
 	var projectSettings model.ProjectSetting
 	err := db.Table("project_settings").Select("timelines_config").Where("project_id=?", projectID).Find(&projectSettings).Error
@@ -1683,12 +1681,12 @@ func (store *MemSQL) GetWeightsByProject(project_id int64) (*model.AccWeights, i
 
 	var project_settings model.ProjectSetting
 	var weights model.AccWeights
-
 	if err := db.Table("project_settings").Limit(1).Where("project_id = ?", project_id).Find(&project_settings).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
-			logCtx.WithError(err).Error("Unable to fetch weights from DB")
+			logCtx.WithField("project_id", project_id).WithError(err).Error("Unable to fetch weights from DB")
 			return nil, http.StatusNotFound
 		}
+		logCtx.WithField("project_id", project_id).WithError(err).Error("Unable to fetch weights from DB")
 		return &model.AccWeights{}, http.StatusInternalServerError
 	}
 
@@ -1697,7 +1695,7 @@ func (store *MemSQL) GetWeightsByProject(project_id int64) (*model.AccWeights, i
 	} else {
 		err := U.DecodePostgresJsonbToStructType(project_settings.Acc_score_weights, &weights)
 		if err != nil {
-			log.WithError(err).Error("Unable to decode weights")
+			logCtx.WithError(err).Error("Unable to decode weights")
 			return nil, http.StatusInternalServerError
 		}
 	}

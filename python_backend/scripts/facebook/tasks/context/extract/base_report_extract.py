@@ -27,7 +27,7 @@ class BaseReportExtract(BaseExtract):
     METRICS_2 = []
     LEVEL_BREAKDOWN = ""  # Facebook terminology
     TASK_TYPE = EXTRACT
-    UNFORMATTED_URL = 'https://graph.facebook.com/v15.0/{}/insights?breakdowns={' \
+    UNFORMATTED_URL = 'https://graph.facebook.com/v17.0/{}/insights?breakdowns={' \
                       '}&&action_breakdowns=action_type&&time_range={}&&fields={}&&access_token={}&&level={' \
                       '}&&filtering=[{{\'field\':\'impressions\',\'operator\':\'GREATER_THAN_OR_EQUAL\',\'value\':0}}]&&limit=1000'
 
