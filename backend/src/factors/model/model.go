@@ -803,6 +803,7 @@ type Model interface {
 	UpdateAlertStatus(lastAlertSent bool) (int, string)
 	UpdateAlert(projectID int64, alertID string, alert model.Alert) (model.Alert, int, string)
 	GetAlertNamesByProjectIdTypeAndNameAndPropertyMappingName(projectID int64, reqID, nameOfPropertyMappings string) ([]string, int)
+	GetAlertByProjectId(projectId int64, excludeSavedQueries bool) ([]model.AlertInfo, int)
 
 	// sharable url
 	CreateShareableURL(sharableURLParams *model.ShareableURL) (*model.ShareableURL, int)
@@ -924,7 +925,7 @@ type Model interface {
 	GetLeadSquaredMarker(ProjectID int64, Delta int64, Document string, Tag string) (int, int, bool)
 
 	// Event Trigger Alerts
-	GetAllEventTriggerAlertsByProject(projectID int64) ([]model.EventTriggerAlertInfo, int)
+	GetAllEventTriggerAlertsByProject(projectID int64) ([]model.AlertInfo, int)
 	CreateEventTriggerAlert(userID, oldID string, projectID int64, alertConfig *model.EventTriggerAlertConfig, slackTokenUser, teamTokenUser string, isPausedAlert bool) (*model.EventTriggerAlert, int, string)
 	DeleteEventTriggerAlert(projectID int64, id string) (int, string)
 	MatchEventTriggerAlertWithTrackPayload(projectId int64, name string, eventProps, userProps *postgres.Jsonb, UpdatedEventProps *postgres.Jsonb, isUpdate bool) (*[]model.EventTriggerAlert, *model.EventName, int)

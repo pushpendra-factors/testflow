@@ -53,32 +53,36 @@ type EventTriggerAlert struct {
 }
 
 type EventTriggerAlertConfig struct {
-	Title               string          `json:"title"`
-	Event               string          `json:"event"`
-	Filter              []QueryProperty `json:"filter"`
-	Message             string          `json:"message"`
-	MessageProperty     *postgres.Jsonb `json:"message_property"`
-	DontRepeatAlerts    bool            `json:"repeat_alerts"`
-	CoolDownTime        int64           `json:"cool_down_time"`
-	BreakdownProperties *postgres.Jsonb `json:"breakdown_properties"`
-	SetAlertLimit       bool            `json:"notifications"`
-	AlertLimit          int64           `json:"alert_limit"`
-	Slack               bool            `json:"slack"`
-	SlackChannels       *postgres.Jsonb `json:"slack_channels"`
-	Webhook             bool            `json:"webhook"`
-	Secret              string          `json:"secret"`
-	WebhookURL          string          `json:"url"`
-	Teams               bool            `json:"teams"`
-	TeamsChannelsConfig *postgres.Jsonb `json:"teams_channels_config"`
+	Title                   string          `json:"title"`
+	EventLevel              string          `json:"event_level"`
+	Event                   string          `json:"event"`
+	Filter                  []QueryProperty `json:"filter"`
+	Message                 string          `json:"message"`
+	MessageProperty         *postgres.Jsonb `json:"message_property"`
+	DontRepeatAlerts        bool            `json:"repeat_alerts"`
+	CoolDownTime            int64           `json:"cool_down_time"`
+	BreakdownProperties     *postgres.Jsonb `json:"breakdown_properties"`
+	SetAlertLimit           bool            `json:"notifications"`
+	AlertLimit              int64           `json:"alert_limit"`
+	Slack                   bool            `json:"slack"`
+	SlackChannels           *postgres.Jsonb `json:"slack_channels"`
+	IsSlackHyperlinkEnabled bool            `json:"is_slack_hyperlink_enabled"`
+	Webhook                 bool            `json:"webhook"`
+	Secret                  string          `json:"secret"`
+	WebhookURL              string          `json:"url"`
+	Teams                   bool            `json:"teams"`
+	TeamsChannelsConfig     *postgres.Jsonb `json:"teams_channels_config"`
 }
 
-type EventTriggerAlertInfo struct {
-	ID                string                   `json:"id"`
-	Title             string                   `json:"title"`
-	DeliveryOptions   string                   `json:"delivery_options"`
-	Status            string                   `json:"status"`
-	LastFailDetails   *postgres.Jsonb          `json:"last_fail_details"`
-	EventTriggerAlert *EventTriggerAlertConfig `json:"event_alert"`
+type AlertInfo struct {
+	ID              string          `json:"id"`
+	Title           string          `json:"title"`
+	DeliveryOptions string          `json:"delivery_options"`
+	Status          string          `json:"status"`
+	LastFailDetails *postgres.Jsonb `json:"last_fail_details"`
+	Alert           *postgres.Jsonb `json:"alert"`
+	Type            string          `json:"type"`
+	CreatedAt       time.Time       `json:"created_at"`
 }
 
 type CachedEventTriggerAlert struct {
