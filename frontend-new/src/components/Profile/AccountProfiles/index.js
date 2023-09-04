@@ -164,8 +164,7 @@ function AccountProfiles({
     if (!accountPayload.search_filter) {
       setListSearchItems([]);
     } else {
-      const listValues =
-        accountPayload?.search_filter?.map((vl) => vl?.va) || [];
+      const listValues = accountPayload?.search_filter || [];
       setListSearchItems(_.uniq(listValues));
       setSearchBarOpen(true);
     }
@@ -314,7 +313,13 @@ function AccountProfiles({
     const columns = [
       {
         // Company Name Column
-        title: <div className={headerClassStr}>Company Name</div>,
+        title: (
+          <div className={headerClassStr}>
+            {accountPayload.source === 'All'
+              ? 'Account Domain'
+              : 'Company Name'}
+          </div>
+        ),
         dataIndex: 'account',
         key: 'account',
         width: 300,
@@ -602,39 +607,12 @@ function AccountProfiles({
     fetchData();
   }, [activeProject.id, groupOpts]);
 
-  const onApplyClick = (val) => {
-    const parsedValues = val.map((vl) => JSON.parse(vl)[0]);
-    const searchFilter = [];
-    const lookIn =
-      accountPayload.source === 'All'
-        ? Object.entries(groupToCompanyPropMap)?.filter((item) =>
-            groupsList?.map((item) => item?.[1])?.includes(item?.[0])
-          )
-        : [
-            [
-              accountPayload.source,
-              groupToCompanyPropMap[accountPayload.source]
-            ]
-          ];
-    lookIn.forEach(([group, prop]) => {
-      searchFilter.push({
-        props: ['', prop, 'categorical', 'group'],
-        operator: 'contains',
-        values: parsedValues
-      });
-    });
-
+  const onApplyClick = (values) => {
     const updatedPayload = {
       ...accountPayload,
-      search_filter: formatFiltersForPayload(searchFilter)
+      search_filter: values.map((vl) => JSON.parse(vl)[0])
     };
-    const search_filters = updatedPayload.search_filter.map((filter, index) => {
-      const isAnd = index === 0 ? filter.lop === 'AND' : filter.lop === 'OR';
-      return isAnd ? filter : { ...filter, lop: 'OR' };
-    });
-    updatedPayload.search_filter = search_filters;
-
-    setListSearchItems(parsedValues);
+    setListSearchItems(updatedPayload.search_filter);
     setAccountPayload(updatedPayload);
     setActiveSegment(activeSegment);
     getAccounts(updatedPayload);

@@ -1,7 +1,6 @@
 package memsql
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	C "factors/config"
 	"factors/model/model"
@@ -66,7 +65,8 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		}
 
 		if payload.SearchFilter != nil {
-			payload.Query.GlobalUserProperties = append(payload.Query.GlobalUserProperties, payload.SearchFilter...)
+			searchFilters := GenerateSearchFilterQueryProperties(profileType, payload.Query.Source, payload.SearchFilter)
+			payload.Query.GlobalUserProperties = append(payload.Query.GlobalUserProperties, searchFilters...)
 		}
 
 		profiles, errCode, err := store.GetAnalyzeResultForSegments(projectID, profileType, payload.Query)
@@ -91,11 +91,12 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	// transforming datetime filters
 	addSearchFiltersToFilters := true
 	groupedFilters := GroupFiltersByPrefix(payload.Query.GlobalUserProperties)
-	if profileType == model.PROFILE_TYPE_ACCOUNT && payload.Query.Source == "All" && C.IsAllAccountsEnabled(projectID) {
+	if model.IsAccountProfiles(profileType) && model.IsDomainGroup(payload.Query.Source) && C.IsAllAccountsEnabled(projectID) {
 		addSearchFiltersToFilters = false
 	}
 	if addSearchFiltersToFilters {
-		groupedFilters[model.FILTER_TYPE_USERS] = append(groupedFilters[model.FILTER_TYPE_USERS], payload.SearchFilter...)
+		searchFilters := GenerateSearchFilterQueryProperties(profileType, payload.Query.Source, payload.SearchFilter)
+		groupedFilters[model.FILTER_TYPE_USERS] = append(groupedFilters[model.FILTER_TYPE_USERS], searchFilters...)
 	}
 
 	// to check whether the filter in account profiles is of user properties
@@ -147,7 +148,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	// Get Profiles
 	var runQueryStmt string
 	var queryParams []interface{}
-	if profileType == model.PROFILE_TYPE_ACCOUNT && payload.Query.Source == "All" && C.IsAllAccountsEnabled(projectID) {
+	if model.IsAccountProfiles(profileType) && model.IsDomainGroup(payload.Query.Source) && C.IsAllAccountsEnabled(projectID) {
 		runQueryStmt, queryParams, err = store.GenerateAllAccountsQueryString(projectID, payload.Query.Source, isUserProperty, isAllUserProperties, *minMax, groupedFilters, payload.SearchFilter)
 		params = queryParams
 	} else {
@@ -351,7 +352,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 	isAllUserProperties bool,
 	minMax model.MinMaxUpdatedAt,
 	groupedFilters map[string][]model.QueryProperty,
-	searchFilter []model.QueryProperty,
+	searchFilter []string,
 ) (string, []interface{}, error) {
 	logFields := log.Fields{
 		"project_id":             projectID,
@@ -404,19 +405,14 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 		index++
 	}
 
-	whereForSearchFilters, searchFiltersParams, err := buildWhereFromProperties(projectID, searchFilter, 0)
-	if err != nil {
-		return "", params, err
-	}
+	whereForSearchFilters, searchFiltersParams := SearchFilterForAllAccounts(searchFilter)
 
 	// adding search filters
 	if whereForSearchFilters != "" {
-		whereForSearchFilters = strings.ReplaceAll(whereForSearchFilters, "users.properties", "properties")
-		whereForSearchFilters = strings.ReplaceAll(whereForSearchFilters, "user_global_user_properties", "properties")
 		if allUsersWhere != "" {
 			allUsersWhere = allUsersWhere + " AND (" + whereForSearchFilters + ")"
 		} else {
-			allUsersWhere = " WHERE " + whereForSearchFilters
+			allUsersWhere = " WHERE (" + whereForSearchFilters + ")"
 		}
 		params = append(params, searchFiltersParams...)
 	}
@@ -493,7 +489,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 
 	if len(groupedFilters) == 0 {
 		intersectStep = `SELECT 
-		properties, identity, MAX(updated_at) as last_activity 
+		properties, identity, host_name, MAX(updated_at) as last_activity 
 		FROM all_users 
 		GROUP BY identity 
 		ORDER BY last_activity DESC LIMIT 1000;`
@@ -506,6 +502,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 		  properties,
 		  updated_at, 
 		  group_%d_user_id as identity,
+		  group_%d_id as host_name,
 		  is_group_user,
 		  customer_user_id
 		  FROM users 
@@ -517,10 +514,55 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 		  AND ?
 		  LIMIT 10000000 
 		) %s
-	) %s %s`, domainGroup.ID, isGroupUserCheck, domainGroup.ID, allUsersWhere, filterSteps, intersectStep)
+	) %s %s`, domainGroup.ID, domainGroup.ID, isGroupUserCheck, domainGroup.ID, allUsersWhere, filterSteps, intersectStep)
 
 	logCtx.Info("Generated query for all accounts: ", query)
 	return query, params, nil
+}
+
+func GenerateSearchFilterQueryProperties(profileType string, source string, searchFilter []string) []model.QueryProperty {
+	var property string
+	searchFilterProperties := make([]model.QueryProperty, 0)
+
+	if model.IsUserProfiles(profileType) {
+		property = U.UP_USER_ID
+	} else if model.IsAccountProfiles(profileType) {
+		property = model.AccountNames[source]
+	} else {
+		return searchFilterProperties
+	}
+
+	logicalOp := "AND"
+	for index, filterValue := range searchFilter {
+		if index > 0 {
+			logicalOp = "OR"
+		}
+		queryStruct := model.QueryProperty{
+			Entity:    model.PropertyEntityUserGlobal,
+			Type:      U.PropertyTypeCategorical,
+			GroupName: source,
+			Property:  property,
+			Operator:  model.ContainsOpStr,
+			Value:     filterValue,
+			LogicalOp: logicalOp,
+		}
+		searchFilterProperties = append(searchFilterProperties, queryStruct)
+	}
+
+	return searchFilterProperties
+}
+
+func SearchFilterForAllAccounts(searchFilters []string) (string, []interface{}) {
+	var searchFilterWhere string
+	var searchFilterParams []interface{}
+	for index, filter := range searchFilters {
+		searchFilterWhere = searchFilterWhere + "host_name RLIKE ?"
+		if index < len(searchFilters)-1 {
+			searchFilterWhere = searchFilterWhere + " OR "
+		}
+		searchFilterParams = append(searchFilterParams, filter)
+	}
+	return searchFilterWhere, searchFilterParams
 }
 
 func BuildAllUsersFilterArray(groupedFilters map[string][]model.QueryProperty) []model.QueryProperty {
@@ -642,7 +684,6 @@ func (store *MemSQL) GenerateQueryString(
 
 		selectString = "id AS identity, properties, updated_at AS last_activity, properties_updated_timestamp"
 		selectColumnsStr = "users.id, users.properties, users.updated_at, users.properties_updated_timestamp"
-		groupByStr = ""
 
 		// selecting property col of users in case of user props in account profiles
 		if hasUserProperty {
@@ -652,9 +693,9 @@ func (store *MemSQL) GenerateQueryString(
 	} else if model.IsUserProfiles(profileType) {
 		selectString = "COALESCE(customer_user_id, id) AS identity, ISNULL(customer_user_id) AS is_anonymous, properties, MAX(updated_at) AS last_activity"
 		selectColumnsStr = "id, customer_user_id, properties, updated_at"
-		groupByStr = "GROUP BY identity"
 	}
 
+	groupByStr = "GROUP BY identity"
 	timeAndRecordsLimit := "users.updated_at BETWEEN ? AND ? LIMIT 100000000"
 	params = append(params, model.FormatTimeToString(minMax.MinUpdatedAt), model.FormatTimeToString(minMax.MaxUpdatedAt))
 
@@ -787,7 +828,7 @@ func (store *MemSQL) GetTablePropsFromConfig(projectID int64, profileType string
 func hasAllUserProperties(filters []model.QueryProperty, profileType string) bool {
 	isAllUserProperties := true
 
-	if profileType == model.PROFILE_TYPE_ACCOUNT {
+	if model.IsAccountProfiles(profileType) {
 		for _, filter := range filters {
 
 			if filter.Entity != model.PropertyEntityUserGroup {
@@ -1193,8 +1234,6 @@ func FormatProfilesStruct(projectID int64, profiles []model.Profile, profileType
 		"profile_type": profileType,
 	}
 
-	convertDomainIdToHostName := model.IsAccountProfiles(profileType) && model.IsDomainGroup(source) && C.IsAllAccountsEnabled(projectID)
-
 	if model.IsAccountProfiles(profileType) {
 		var companyNameProps, hostNameProps []string
 		if model.IsAllowedAccountGroupNames(source) {
@@ -1206,6 +1245,10 @@ func FormatProfilesStruct(projectID int64, profiles []model.Profile, profileType
 		}
 
 		for index, profile := range profiles {
+
+			if model.IsDomainGroup(source) {
+				profiles[index].Name = profiles[index].HostName
+			}
 			filterTableProps := make(map[string]interface{}, 0)
 			properties, err := U.DecodePostgresJsonb(profile.Properties)
 			if err != nil {
@@ -1225,34 +1268,27 @@ func FormatProfilesStruct(projectID int64, profiles []model.Profile, profileType
 			nameProps := append(companyNameProps, hostNameProps...)
 
 			for _, prop := range nameProps {
-				if profiles[index].Name == "" {
-					if name, exists := (*properties)[prop]; exists {
-						profiles[index].Name = fmt.Sprintf("%s", name)
-					}
+				if profiles[index].Name != "" {
+					break
+				}
+				if name, exists := (*properties)[prop]; exists {
+					profiles[index].Name = fmt.Sprintf("%s", name)
 				}
 			}
 
 			for _, prop := range hostNameProps {
-				if profiles[index].HostName == "" {
-					if hostname, exists := (*properties)[prop]; exists {
-						profiles[index].HostName = fmt.Sprintf("%s", hostname)
-					}
+				if profiles[index].HostName != "" {
+					break
 				}
-			}
-
-			// conbert domain id to hostname
-			if convertDomainIdToHostName && profiles[index].HostName == "" {
-				profiles[index].HostName, err = ConvertDomainIdToHostName(profiles[index].Identity)
-				if err != nil || profiles[index].HostName == "" {
-					log.WithFields(logFields).WithFields(log.Fields{"identity": profile.Identity}).WithError(err).Error("Failed fetching host name.")
-					continue
+				if hostname, exists := (*properties)[prop]; exists {
+					profiles[index].HostName = fmt.Sprintf("%s", hostname)
 				}
 			}
 
 			if profiles[index].Name == "" && profiles[index].HostName != "" {
 				profiles[index].Name = profiles[index].HostName
 			}
-			if !(source == "All" || source == U.GROUP_NAME_DOMAINS) && profile.PropertiesUpdatedTimestamp > 0 {
+			if !(model.IsDomainGroup(source)) && profile.PropertiesUpdatedTimestamp > 0 {
 				profiles[index].LastActivity = *model.UnixToLocalTime(profile.PropertiesUpdatedTimestamp)
 			}
 		}
@@ -1275,28 +1311,6 @@ func FormatProfilesStruct(projectID int64, profiles []model.Profile, profileType
 		}
 	}
 	return profiles, nil
-}
-
-func ConvertDomainIdToHostName(domainID string) (string, error) {
-	domomainIdEncoded := strings.TrimPrefix(domainID, "dom-")
-
-	decodedBytes, err := base64.StdEncoding.DecodeString(domomainIdEncoded)
-	if err != nil {
-		log.Error("Error decoding domain_id to host_name ", err)
-		return "", err
-	}
-
-	// Convert the decoded bytes to a string
-	decodedString := string(decodedBytes)
-	resultArray := strings.SplitN(decodedString, "-", 2)
-
-	if len(resultArray) != 2 {
-		log.Error("Error converting domain_id to host_name ")
-		return "", nil
-	}
-
-	hostName := resultArray[1]
-	return hostName, nil
 }
 
 func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string, isAnonymous string) (*model.ContactDetails, int, string) {
