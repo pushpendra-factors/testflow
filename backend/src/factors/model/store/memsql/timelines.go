@@ -1,6 +1,7 @@
 package memsql
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	C "factors/config"
 	"factors/model/model"
@@ -489,7 +490,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 
 	if len(groupedFilters) == 0 {
 		intersectStep = `SELECT 
-		properties, identity, host_name, MAX(updated_at) as last_activity 
+		properties, identity, MAX(updated_at) as last_activity 
 		FROM all_users 
 		GROUP BY identity 
 		ORDER BY last_activity DESC LIMIT 1000;`
@@ -502,7 +503,6 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 		  properties,
 		  updated_at, 
 		  group_%d_user_id as identity,
-		  group_%d_id as host_name,
 		  is_group_user,
 		  customer_user_id
 		  FROM users 
@@ -514,7 +514,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 		  AND ?
 		  LIMIT 10000000 
 		) %s
-	) %s %s`, domainGroup.ID, domainGroup.ID, isGroupUserCheck, domainGroup.ID, allUsersWhere, filterSteps, intersectStep)
+	) %s %s`, domainGroup.ID, isGroupUserCheck, domainGroup.ID, allUsersWhere, filterSteps, intersectStep)
 
 	logCtx.Info("Generated query for all accounts: ", query)
 	return query, params, nil
@@ -556,11 +556,12 @@ func SearchFilterForAllAccounts(searchFilters []string) (string, []interface{}) 
 	var searchFilterWhere string
 	var searchFilterParams []interface{}
 	for index, filter := range searchFilters {
-		searchFilterWhere = searchFilterWhere + "host_name RLIKE ?"
+		encodedString := base64.StdEncoding.EncodeToString([]byte(filter))
+		searchFilterWhere = searchFilterWhere + "identity RLIKE ?"
 		if index < len(searchFilters)-1 {
 			searchFilterWhere = searchFilterWhere + " OR "
 		}
-		searchFilterParams = append(searchFilterParams, filter)
+		searchFilterParams = append(searchFilterParams, encodedString)
 	}
 	return searchFilterWhere, searchFilterParams
 }
@@ -1230,87 +1231,81 @@ func (store *MemSQL) GetSourceStringForAccountsV1(projectID int64, source string
 
 // FormatProfilesStruct transforms the results into a processed version suitable for the response payload.
 func FormatProfilesStruct(projectID int64, profiles []model.Profile, profileType string, tableProps []string, source string) ([]model.Profile, error) {
-	logFields := log.Fields{
-		"profile_type": profileType,
+	if model.IsAccountProfiles(profileType) {
+		formatAccountProfilesList(profiles, tableProps, source)
+	} else if model.IsUserProfiles(profileType) {
+		formatUserProfilesList(profiles, tableProps)
 	}
 
-	if model.IsAccountProfiles(profileType) {
-		var companyNameProps, hostNameProps []string
-		if model.IsAllowedAccountGroupNames(source) {
-			hostNameProps = []string{model.HostNameGroup[source]}
-			companyNameProps = []string{model.AccountNames[source], U.UP_COMPANY}
-		} else {
-			companyNameProps = model.NameProps
-			hostNameProps = model.HostNameProps
+	return profiles, nil
+}
+
+func formatAccountProfilesList(profiles []model.Profile, tableProps []string, source string) {
+	logFields := log.Fields{
+		"profile_type": model.PROFILE_TYPE_ACCOUNT,
+	}
+
+	for index, profile := range profiles {
+		properties, err := U.DecodePostgresJsonb(profile.Properties)
+		if err != nil {
+			log.WithFields(logFields).WithFields(log.Fields{"identity": profile.Identity}).WithError(err).Error("Failed decoding account properties.")
+			continue
 		}
 
-		for index, profile := range profiles {
+		filterTableProps := filterPropertiesByKeys(properties, tableProps)
+		profiles[index].TableProps = filterTableProps
 
-			if model.IsDomainGroup(source) {
-				profiles[index].Name = profiles[index].HostName
-			}
-			filterTableProps := make(map[string]interface{}, 0)
-			properties, err := U.DecodePostgresJsonb(profile.Properties)
+		if model.IsDomainGroup(source) {
+			hostName, err := model.ConvertDomainIdToHostName(profile.Identity)
 			if err != nil {
-				log.WithFields(logFields).WithFields(log.Fields{"identity": profile.Identity}).WithError(err).Error("Failed decoding account properties.")
 				continue
 			}
-
-			// Filter Table Props
-			for _, prop := range tableProps {
-				if value, exists := (*properties)[prop]; exists {
-					filterTableProps[prop] = value
-				}
-			}
-			profiles[index].TableProps = filterTableProps
-
-			// Filter Company Name and Hostname
-			nameProps := append(companyNameProps, hostNameProps...)
-
-			for _, prop := range nameProps {
-				if profiles[index].Name != "" {
-					break
-				}
-				if name, exists := (*properties)[prop]; exists {
-					profiles[index].Name = fmt.Sprintf("%s", name)
-				}
+			profiles[index].HostName = hostName
+			profiles[index].Name = hostName
+		} else {
+			if name, exists := (*properties)[model.AccountNames[source]]; exists {
+				profiles[index].Name = fmt.Sprintf("%s", name)
 			}
 
-			for _, prop := range hostNameProps {
-				if profiles[index].HostName != "" {
-					break
-				}
-				if hostname, exists := (*properties)[prop]; exists {
-					profiles[index].HostName = fmt.Sprintf("%s", hostname)
-				}
+			if hostname, exists := (*properties)[model.HostNameGroup[source]]; exists {
+				profiles[index].HostName = fmt.Sprintf("%s", hostname)
 			}
 
 			if profiles[index].Name == "" && profiles[index].HostName != "" {
 				profiles[index].Name = profiles[index].HostName
 			}
-			if !(model.IsDomainGroup(source)) && profile.PropertiesUpdatedTimestamp > 0 {
-				profiles[index].LastActivity = *model.UnixToLocalTime(profile.PropertiesUpdatedTimestamp)
-			}
 		}
-	} else if model.IsUserProfiles(profileType) {
-		for index, profile := range profiles {
-			filterTableProps := make(map[string]interface{}, 0)
-			properties, err := U.DecodePostgresJsonb(profile.Properties)
-			if err != nil {
-				log.WithFields(logFields).WithFields(log.Fields{"identity": profile.Identity}).WithError(err).Error("Failed decoding account properties.")
-				continue
-			}
 
-			// Filter Table Props
-			for _, prop := range tableProps {
-				if value, exists := (*properties)[prop]; exists {
-					filterTableProps[prop] = value
-				}
-			}
-			profiles[index].TableProps = filterTableProps
+		if !(model.IsDomainGroup(source)) && profile.PropertiesUpdatedTimestamp > 0 {
+			profiles[index].LastActivity = *model.UnixToLocalTime(profile.PropertiesUpdatedTimestamp)
 		}
 	}
-	return profiles, nil
+}
+
+func formatUserProfilesList(profiles []model.Profile, tableProps []string) {
+	logFields := log.Fields{
+		"profile_type": model.PROFILE_TYPE_USER,
+	}
+	for index, profile := range profiles {
+		properties, err := U.DecodePostgresJsonb(profile.Properties)
+		if err != nil {
+			log.WithFields(logFields).WithFields(log.Fields{"identity": profile.Identity}).WithError(err).Error("Failed decoding account properties.")
+			continue
+		}
+
+		filterTableProps := filterPropertiesByKeys(properties, tableProps)
+		profiles[index].TableProps = filterTableProps
+	}
+}
+
+func filterPropertiesByKeys(properties *map[string]interface{}, keys []string) map[string]interface{} {
+	filteredProps := make(map[string]interface{})
+	for _, prop := range keys {
+		if value, exists := (*properties)[prop]; exists {
+			filteredProps[prop] = value
+		}
+	}
+	return filteredProps
 }
 
 func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string, isAnonymous string) (*model.ContactDetails, int, string) {

@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	C "factors/config"
 	H "factors/handler"
@@ -4038,6 +4039,7 @@ func TestAllAccounts(t *testing.T) {
 		source := model.GetRequestSourcePointer(model.UserSourceDomains)
 		groupUser := true
 		domID, _ := store.GetStore().CreateUser(&model.User{
+			ID:          fmt.Sprintf("dom-%s", base64.StdEncoding.EncodeToString([]byte(domains[i]))),
 			ProjectId:   project.ID,
 			Source:      source,
 			Group1ID:    domains[i],
@@ -4199,4 +4201,17 @@ func TestAllAccounts(t *testing.T) {
 	assert.Equal(t, len(resp), 1)
 	assert.Contains(t, resp[0].HostName, "hey")
 	assert.Contains(t, resp[0].Name, "hey")
+
+	payload = model.TimelinePayload{
+		Query: model.Query{
+			Source: "$domains",
+		},
+	}
+	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = io.ReadAll(w.Body)
+	resp = make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 5)
 }
