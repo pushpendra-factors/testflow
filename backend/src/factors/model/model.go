@@ -510,6 +510,7 @@ type Model interface {
 	UpdateQueryIDsWithNewIDs(projectID int64, shareableURLs []string) int
 	SearchQueriesWithProjectId(projectID int64, searchString string) ([]model.Queries, int)
 	GetAllNonConvertedQueries(projectID int64) ([]model.Queries, int)
+	DeleteAttributionDBResult(projectID int64, queryId int64)
 
 	// properties
 	GetStandardUserPropertiesBasedOnIntegration(projectID int64) map[string]string

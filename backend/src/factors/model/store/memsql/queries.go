@@ -477,3 +477,14 @@ func (store *MemSQL) SearchQueriesWithProjectId(projectID int64, searchString st
 	}
 	return queries, http.StatusFound
 }
+
+func (store *MemSQL) DeleteAttributionDBResult(projectID int64, queryId int64) {
+	logCtx := log.WithField("project_id", projectID).WithField("queryId", queryId)
+
+	db := C.GetServices().Db
+	var dashQueryResult model.DashQueryResult
+	err := db.Where("project_id = ? AND query_id = ?", projectID, queryId).Delete(&dashQueryResult).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to delete attribution db result")
+	}
+}
