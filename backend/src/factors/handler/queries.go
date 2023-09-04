@@ -203,7 +203,11 @@ func UpdateSavedQueryHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to update Saved Query."})
 		return
 	}
+
 	if requestPayloadContainsQueryUpdate {
+		if query.Type == model.QueryTypeAttributionV1Query {
+			go store.GetStore().DeleteAttributionDBResult(projectID, queryID)
+		}
 		go invalidateSavedQueryCache(projectID, queryRequest)
 	}
 
