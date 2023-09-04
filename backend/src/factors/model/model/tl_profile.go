@@ -231,7 +231,7 @@ func ConvertDomainIdToHostName(domainID string) (string, error) {
 	resultArray := strings.SplitN(decodedString, "-", 2)
 
 	if len(resultArray) != 2 {
-		return "", nil
+		return decodedString, nil
 	}
 
 	hostName := resultArray[1]
