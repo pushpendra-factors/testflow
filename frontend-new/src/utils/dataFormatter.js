@@ -744,6 +744,7 @@ export const processProperties = (properties, propertyType, key) => {
     label: op?.[0],
     extraProps: {
       valueType: op?.[2],
+      queryType: op?.[3],
       propertyType,
       groupName: key
     }
@@ -782,4 +783,36 @@ export const convertGroupedPropertiesToUngrouped = (
       propertiesModified.push(userPropArray);
     });
   });
+};
+
+//Array of Arrays.
+export const groupKPIPropertiesOnCategory = (kpiProperties, propertyType) => {
+  return (
+    kpiProperties?.reduce((result, kpiItem) => {
+      const category = kpiItem[4];
+      if (!category) {
+        return result;
+      }
+      if (!result[category]) {
+        result[category] = {
+          label: category,
+          icon: getGroupIcon(category),
+          propertyType: propertyType,
+          values: []
+        };
+      }
+      const propertyLabel = kpiItem[0];
+      const propertyValueName = kpiItem[1];
+      const propertyDataType = kpiItem[2];
+      const propertyCategoryType = kpiItem[3];
+
+      result[category].values.push([
+        propertyLabel,
+        propertyValueName,
+        propertyDataType,
+        propertyCategoryType
+      ]);
+      return result;
+    }, {}) || {}
+  );
 };

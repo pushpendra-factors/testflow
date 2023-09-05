@@ -219,9 +219,9 @@ function SegmentModal({
             availableGroups={typeOptions}
             index={index + 1}
             event={event}
-            closeEvent={closeEvent}
             queries={listEvents}
             eventChange={queryChange}
+            closeEvent={closeEvent}
             groupAnalysis={queryOptions.group_analysis}
           />
         </div>

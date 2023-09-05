@@ -17,6 +17,15 @@ import ORButton from 'Components/ORButton';
 import { compareFilters, groupFilters } from 'Utils/global';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
+import { processProperties } from 'Utils/dataFormatter';
+
+const peopleCategoryList = ['others', 'page_views'];
+const accountsCategoryList = [
+  'others',
+  'page_views',
+  'linkedin_company_engagements',
+  'g2_engagements'
+];
 
 function QueryBlock({
   availableGroups,
@@ -48,6 +57,8 @@ function QueryBlock({
     group: []
   });
   const [showGroups, setShowGroups] = useState([]);
+  const [orFilterIndex, setOrFilterIndex] = useState(-1);
+  const [isModalVisible, setIsModalVisible] = useState(false);
 
   const eventGroup = useMemo(() => {
     const group =
@@ -57,35 +68,32 @@ function QueryBlock({
 
   useEffect(() => {
     let showOpts = [];
+
+    const groupNamesList = availableGroups?.map((item) => item[0]);
     if (groupAnalysis === 'users') {
-      showOpts = [...eventOptions];
-    } else {
-      const groupOpts = eventOptions?.filter((item) => {
-        const [groupDisplayName] =
-          availableGroups?.find((group) => group[1] === groupAnalysis) || [];
-        return item.label === groupDisplayName;
-      });
-      const groupNamesList = availableGroups?.map((item) => item[0]);
       const userOpts = eventOptions?.filter(
         (item) => !groupNamesList?.includes(item?.label)
       );
-      showOpts = groupOpts.concat(userOpts);
+
+      showOpts = userOpts;
+    } else {
+      const groupOpts = eventOptions?.filter((item) =>
+        groupNamesList?.includes(item?.label)
+      );
+      // showOpts = groupOpts.concat(userOpts);
+      showOpts = groupOpts;
     }
+
     showOpts = showOpts?.map((opt) => {
       return {
         iconName: getGroupIcon(opt?.icon),
         label: opt?.label,
-        values: opt?.values?.map((op) => {
-          return { value: op[1], label: op[0] };
-        })
+        values: processProperties(opt?.values)
       };
     });
+
     setShowGroups(showOpts);
-  }, [eventOptions, groupAnalysis]);
-
-  const [orFilterIndex, setOrFilterIndex] = useState(-1);
-
-  const [isModalVisible, setIsModalVisible] = useState(false);
+  }, [eventOptions, groupAnalysis, availableGroups]);
 
   const showModal = () => {
     setIsModalVisible(true);

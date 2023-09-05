@@ -62,7 +62,7 @@ func GetProfileUsersHandler(c *gin.Context) (interface{}, int, string, string, b
 		return nil, errCode, "", errMsg, true
 	}
 
-	scoringAvailable, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_ACCOUNT_SCORING)
+	scoringAvailable, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_ACCOUNT_SCORING, false)
 	if err != nil {
 		logCtx.Error("Error fetching scoring availability status for project ID-", projectId)
 	}
@@ -259,7 +259,7 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 		return "", errCode, "", errMsg, true
 	}
 
-	scoringAvailable, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_ACCOUNT_SCORING)
+	scoringAvailable, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_ACCOUNT_SCORING, false)
 	if err != nil {
 		logCtx.Error("Error fetching scoring availability status for the project")
 	}

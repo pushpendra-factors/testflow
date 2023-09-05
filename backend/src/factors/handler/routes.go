@@ -267,6 +267,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/v1/alerts/:id", mid.FeatureMiddleware([]string{M.FEATURE_KPI_ALERTS}), responseWrapper(V1.GetAlertByIDHandler))
 	authRouteGroup.DELETE("/:project_id/v1/alerts/:id",  mid.FeatureMiddleware([]string{M.FEATURE_KPI_ALERTS}), responseWrapper(V1.DeleteAlertHandler))
 	authRouteGroup.PUT("/:project_id/v1/alerts/:id",  mid.FeatureMiddleware([]string{M.FEATURE_KPI_ALERTS}), responseWrapper(V1.EditAlertHandler))
+	authRouteGroup.GET("/:project_id/v1/all_alerts", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS, M.FEATURE_KPI_ALERTS}), responseWrapper(V1.GetAllAlertsInOneHandler))
 
 	// slack
 	authRouteGroup.POST("/:project_id/slack/auth",  mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.INT_SLACK}), V1.SlackAuthRedirectHandler)
@@ -398,20 +399,23 @@ func InitSDKServiceRoutes(r *gin.Engine) {
 
 	r.GET("/", SDKStatusHandler) // Default handler for probes.
 	r.GET(ROUTE_SDK_ROOT+"/service/status", SDKStatusHandler)
+	r.POST(ROUTE_SDK_ROOT+"/service/error", SDKErrorHandler)
 
 	// Robots.txt added to disallow crawling.
 	r.GET("/robots.txt", func(c *gin.Context) {
 		c.Data(http.StatusOK, "text/plain", []byte("User-agent: *\nDisallow: *"))
 	})
 
-	// Error capture route with encoded body.
-	r.POST(ROUTE_SDK_ROOT+"/service/error",
-		mid.DecodeSDKRequestBody(), SDKErrorHandler)
+	// Todo(Dinesh): Check integrity of token using encrytion/decryption
+	// with secret, on middleware, to avoid spamming queue.
+
+	// Getting project_id is moved to sdk request handler to
+	// support queue workers also.
+	// sdkRouteGroup.Use(mid.SetScopeProjectIdByToken())
 
 	sdkRouteGroup := r.Group(ROUTE_SDK_ROOT)
 	sdkRouteGroup.Use(mid.SetScopeProjectToken())
 	sdkRouteGroup.Use(mid.IsBlockedIPByProject())
-	sdkRouteGroup.Use(mid.DecodeSDKRequestBody())
 
 	// DEPRECATED: Kept for backward compatibility.
 	// Used on only on old npm installations. JS_SDK uses /get_info.

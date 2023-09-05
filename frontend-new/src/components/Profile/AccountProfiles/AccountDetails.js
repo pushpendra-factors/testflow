@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import { Button, Dropdown, Menu, notification, Popover, Tabs } from 'antd';
 import styles from './index.module.scss';
 import { bindActionCreators } from 'redux';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import { Text, SVG } from '../../factorsComponents';
 import AccountTimelineBirdView from './AccountTimelineBirdView';
+import useKey from 'hooks/useKey';
 import {
   DEFAULT_TIMELINE_CONFIG,
   getHost,
@@ -28,7 +29,8 @@ import LeftPanePropBlock from '../MyComponents/LeftPanePropBlock';
 import AccountTimelineSingleView from './AccountTimelineSingleView';
 import {
   PropTextFormat,
-  convertGroupedPropertiesToUngrouped
+  convertGroupedPropertiesToUngrouped,
+  processProperties
 } from 'Utils/dataFormatter';
 import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
 import { useHistory, useLocation } from 'react-router-dom';
@@ -222,15 +224,7 @@ function AccountDetails({
       return {
         iconName: getGroupIcon(opt?.iconName),
         label: opt?.label,
-        values: opt?.values?.map((op) => {
-          return {
-            value: op?.[1],
-            label: op?.[0],
-            extraProps: {
-              valueType: op?.[2]
-            }
-          };
-        })
+        values: processProperties(opt?.values)
       };
     });
     setListProperties(mergedProps);
@@ -402,6 +396,16 @@ function AccountDetails({
     setPropSelectOpen(false);
   };
 
+  const handleOptionBackClick = useCallback(() =>{
+    history.replace(PathUrls.ProfileAccounts, {
+      activeSegment: location.state?.activeSegment,
+      fromDetails: location.state?.fromDetails,
+      accountPayload: location.state?.accountPayload,
+      currentPage: location.state?.currentPage
+    });
+
+  },[]);
+
   const onDelete = (option) => {
     const timelinesConfig = { ...tlConfig };
     timelinesConfig.account_config.leftpane_props.splice(
@@ -421,14 +425,7 @@ function AccountDetails({
           type='text'
           icon={<SVG name='brand' size={36} />}
           size='large'
-          onClick={() => {
-            history.replace(PathUrls.ProfileAccounts, {
-              activeSegment: location.state?.activeSegment,
-              fromDetails: location.state?.fromDetails,
-              accountPayload: location.state?.accountPayload,
-              currentPage: location.state?.currentPage
-            });
-          }}
+          onClick={handleOptionBackClick}
         />
         <Text type='title' level={4} weight='bold' extraClass='m-0'>
           Account Details
@@ -437,14 +434,7 @@ function AccountDetails({
       <Button
         size='large'
         type='text'
-        onClick={() => {
-          history.replace(PathUrls.ProfileAccounts, {
-            activeSegment: location.state?.activeSegment,
-            fromDetails: location.state?.fromDetails,
-            accountPayload: location.state?.accountPayload,
-            currentPage: location.state?.currentPage
-          });
-        }}
+        onClick={handleOptionBackClick}
         icon={<SVG name='times' />}
       />
     </div>
@@ -711,6 +701,8 @@ function AccountDetails({
       </div>
     );
   };
+
+  useKey(['Escape'], handleOptionBackClick);
 
   return (
     <div>

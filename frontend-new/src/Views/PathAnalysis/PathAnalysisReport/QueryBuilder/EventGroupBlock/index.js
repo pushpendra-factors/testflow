@@ -10,7 +10,6 @@ import {
   convertAndAddPropertiesToGroupSelectOptions
 } from 'Utils/dataFormatter';
 import getGroupIcon from 'Utils/getGroupIcon';
-import startCase from 'lodash/startCase';
 
 function EventGroupBlock({
   eventGroup,

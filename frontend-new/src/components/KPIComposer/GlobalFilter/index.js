@@ -8,6 +8,7 @@ import { Button } from 'antd';
 import GlobalFilterBlock from './GlobalFilterBlock';
 import ORButton from '../../ORButton';
 import { compareFilters, groupFilters } from '../../../utils/global';
+import getGroupIcon from 'Utils/getGroupIcon';
 
 const GLobalFilter = ({
   filters = [],
@@ -31,9 +32,16 @@ const GLobalFilter = ({
   useEffect(() => {
     let commonProperties = [];
     if (propertyMaps) {
-      commonProperties = propertyMaps?.map((item) => {
-        return [item?.display_name, item?.name, item?.data_type, 'propMap'];
-      });
+      commonProperties =
+        propertyMaps?.map((item) => {
+          return [
+            item?.display_name,
+            item?.name,
+            item?.data_type,
+            'propMap',
+            item.category
+          ];
+        }) || [];
     }
     const props = Object.assign({}, filterProps);
     props['user'] = !isSameKPIGrp

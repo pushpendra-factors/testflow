@@ -10,6 +10,8 @@ import { DEFAULT_DATE_RANGE } from '../../QueryComposer/DateRangeSelector/utils'
 import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
 import _ from 'lodash';
 import FAFilterSelect from 'Components/KPIComposer/FaFilterSelectKPI';
+import getGroupIcon from 'Utils/getGroupIcon';
+import { groupKPIPropertiesOnCategory } from 'Utils/dataFormatter';
 import { getKPIPropertyValues } from 'Reducers/coreQuery/middleware';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
@@ -110,21 +112,11 @@ function EventFilterWrapper({
 
   useEffect(() => {
     const filterDD = Object.assign({}, filterDropDownOptions);
-    const propState = [];
-    //Needs to Update But not being Used.
-    Object.keys(filterProps).forEach((k, i) => {
-      propState.push({
-        label: k,
-        icon: k === 'event' ? 'mouseclick' : k,
-        values: filterProps[k]
-      });
-    });
-    //
     let KPIlist = KPI_config || [];
     let selGroup = KPIlist.find((item) => {
       return item.display_category == event?.group;
     });
-    let DDvalues = selGroup?.properties?.map((item) => {
+    const kpiPropertiesArrays = selGroup?.properties?.map((item) => {
       if (item == null) return;
       let ddName = item.display_name ? item.display_name : item.name;
       let ddtype =
@@ -134,17 +126,14 @@ function EventFilterWrapper({
           : item.entity
           ? item.entity
           : item.object_type;
-      return [ddName, item.name, item.data_type, ddtype];
+      return [ddName, item.name, item.data_type, ddtype, item.category];
     });
+    const kpiItemsgroupedByCategoryProperty = groupKPIPropertiesOnCategory(
+      kpiPropertiesArrays,
+      'user'
+    );
 
-    // filterDD.props = propState;
-    filterDD.props = [
-      {
-        icon: 'user',
-        label: 'user',
-        values: DDvalues
-      }
-    ];
+    filterDD.props = Object.values(kpiItemsgroupedByCategoryProperty);
     setFiltDD(filterDD);
   }, [filterProps]);
 

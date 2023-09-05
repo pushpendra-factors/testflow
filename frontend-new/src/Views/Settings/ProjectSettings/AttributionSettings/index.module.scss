@@ -1,0 +1,12 @@
+.filter {
+  &__event_selector {
+    position: absolute;
+    margin-top: -32px;
+    &__select {
+      width: 380px;
+      min-height: 240px;
+      max-height: 480px;
+      position: absolute;
+    }
+  }
+}

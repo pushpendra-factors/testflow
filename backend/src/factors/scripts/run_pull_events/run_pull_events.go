@@ -117,10 +117,10 @@ func main() {
 	{
 		projectIdsToRun := make(map[int64]bool)
 		if *projectsFromDB {
-			wi_projects, _ := store.GetStore().GetAllWeeklyInsightsEnabledProjects()
-			explain_projects, _ := store.GetStore().GetAllExplainEnabledProjects()
-			path_analysis_projects, _ := store.GetStore().GetAllPathAnalysisEnabledProjects()
-			acc_scoring_projects, _ := store.GetStore().GetAllProjectsWithFeatureEnabled(M.FEATURE_ACCOUNT_SCORING)
+			wi_projects, _ := store.GetStore().GetAllProjectsWithFeatureEnabled(M.FEATURE_WEEKLY_INSIGHTS, false)
+			explain_projects, _ := store.GetStore().GetAllProjectsWithFeatureEnabled(M.FEATURE_EXPLAIN, false)
+			path_analysis_projects, _ := store.GetStore().GetAllProjectsWithFeatureEnabled(M.FEATURE_PATH_ANALYSIS, false)
+			acc_scoring_projects, _ := store.GetStore().GetAllProjectsWithFeatureEnabled(M.FEATURE_ACCOUNT_SCORING, false)
 			for _, id := range wi_projects {
 				projectIdsToRun[id] = true
 			}
