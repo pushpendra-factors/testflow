@@ -631,6 +631,8 @@ type Model interface {
 	GetCustomerUserIdFromUserId(projectID int64, id string) (string, int)
 	AssociateUserDomainsGroup(projectID int64, requestUserID string, requestGroupName, requestGroupUserID string) int
 	GetAssociatedDomainForUser(projectID int64, userID string, isAnonymous bool) (string, error)
+	GetUsersUpdatedAtGivenHour(projectID int64, hour int, domainID int) ([]model.User, int)
+	UpdateAssociatedSegments(projectID int64, id string, associatedSegments map[string]interface{}) (int, error)
 
 	// web_analytics
 	GetWebAnalyticsQueriesFromDashboardUnits(projectID int64) (int64, *model.WebAnalyticsQueries, int)

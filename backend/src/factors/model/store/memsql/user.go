@@ -328,6 +328,57 @@ func (store *MemSQL) GetUsers(projectId int64, offset uint64, limit uint64) ([]m
 	return users, http.StatusFound
 }
 
+// get all users where updated in last x hours
+// select id, group_6_user_id as group_1_user_, properties, is_group_user, updated_at from users where project_id=2 and
+// source!=9 and group_6_user_id in (select DISTINCT(group_6_user_id) from users
+// where project_id=2 and source!=9 and updated_at>=DATE_SUB(NOW(), INTERVAL 1 HOUR) and group_6_user_id
+// is not null limit 1000);
+func (store *MemSQL) GetUsersUpdatedAtGivenHour(projectID int64, hour int, domainID int) ([]model.User, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"hour":       hour,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	var users []model.User
+	queryParams := []interface{}{projectID, projectID, hour}
+
+	query := fmt.Sprintf(`SELECT id, 
+	  group_%d_user_id as group_1_user_id, 
+	  properties, 
+	  is_group_user, 
+	  source, 
+	  updated_at,
+	  associated_segments 
+    FROM 
+	  users 
+    WHERE 
+	  project_id = ?
+	  AND source != 9 
+	  AND group_%d_user_id IN (
+	    SELECT 
+		  DISTINCT(group_%d_user_id) 
+	    FROM 
+		  users 
+	    WHERE 
+		  project_id = ?
+		  AND source != 9 
+		  AND updated_at >= DATE_SUB(NOW(), INTERVAL ? HOUR) 
+		  AND group_%d_user_id IS NOT NULL
+		 LIMIT 1000
+		);`, domainID, domainID, domainID, domainID)
+
+	db := C.GetServices().Db
+	err := db.Raw(query, queryParams...).Scan(&users).Error
+	if err != nil {
+		return users, http.StatusInternalServerError
+	}
+	if len(users) == 0 {
+		return nil, http.StatusNotFound
+	}
+	return users, http.StatusFound
+}
+
 // GetUsersByCustomerUserID Gets all the users dentified by given customer_user_id with a limit.
 func (store *MemSQL) GetUsersByCustomerUserID(projectID int64, customerUserID string) ([]model.User, int) {
 	return store.GetSelectedUsersByCustomerUserID(projectID, customerUserID, 5000, 100)
@@ -2014,6 +2065,40 @@ func (store *MemSQL) UpdateUserPropertiesForSession(projectID int64,
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	return store.updateUserPropertiesForSessionV2(projectID, sessionUserPropertiesRecordMap)
+}
+
+// UpdateAssociatedSegments - Updates segments associated to the user
+func (store *MemSQL) UpdateAssociatedSegments(projectID int64, id string,
+	associatedSegments map[string]interface{}) (int, error) {
+	params := log.Fields{"project_id": projectID, "user_id": id, "associated_segments": associatedSegments}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &params)
+	logCtx := log.WithFields(params)
+
+	if projectID == 0 || id == "" {
+		logCtx.Error("Failed to update associated_segment by ID. Invalid parameters.")
+		return http.StatusBadRequest, nil
+	}
+
+	db := C.GetServices().Db
+
+	associatedSegmentJsonb, err := U.EncodeToPostgresJsonb(&associatedSegments)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to encode associated_segment map.")
+	}
+	update := map[string]interface{}{"associated_segments": associatedSegmentJsonb}
+
+	if err := db.Model(&model.User{}).Limit(1).
+		Where("project_id = ? AND id = ?", projectID, id).Update(update).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return http.StatusNotFound, err
+		}
+
+		logCtx.WithError(err).Error(
+			"Failed while updating segment on UpdateSegmentById.")
+		return http.StatusInternalServerError, err
+	}
+
+	return http.StatusOK, nil
 }
 
 // GetCustomerUserIDAndUserPropertiesFromFormSubmit return customer_user_id na and validated user_properties from form submit properties

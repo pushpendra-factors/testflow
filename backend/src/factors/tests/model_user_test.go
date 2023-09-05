@@ -290,6 +290,34 @@ func TestDBUpdateUserById(t *testing.T) {
 	assert.NotEqual(t, http.StatusAccepted, errCode)
 }
 
+func TestDBUpdateUserAssociatedSegmentsById(t *testing.T) {
+	// Intialize.
+	project, user, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+	assert.NotNil(t, user)
+
+	// Test updating a associated_segments.
+	associatedSegments := map[string]interface{}{"seg1": time.Now(), "seg2": time.Now().Add(-1)}
+	errCode, err := store.GetStore().UpdateAssociatedSegments(project.ID, user.ID, associatedSegments)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Nil(t, err)
+
+	// Test updating a associated_segments.
+	associatedSegments = map[string]interface{}{"seg2": time.Now(), "seg3": time.Now().Add(-1)}
+	errCode, err = store.GetStore().UpdateAssociatedSegments(project.ID, user.ID, associatedSegments)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Nil(t, err)
+
+	updatedUser, errCode := store.GetStore().GetUser(project.ID, user.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+
+	updatedAssociatedSegments, err := U.DecodePostgresJsonb(&updatedUser.AssociatedSegments)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, (*updatedAssociatedSegments)["seg3"])
+	assert.Nil(t, (*updatedAssociatedSegments)["seg1"])
+}
+
 func TestDBUpdateUserProperties(t *testing.T) {
 	// Intialize.
 	project, user, err := SetupProjectUserReturnDAO()
