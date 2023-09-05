@@ -17,7 +17,7 @@ import (
 )
 
 const MAX_LIMIT = 10000
-const NORM_CONFIG = 10000
+const NORM_CONFIG = 1000
 
 func (store *MemSQL) UpdateUserEventsCount(evdata []model.EventsCountScore, lastevent map[string]model.LatestScore) error {
 	projectID := evdata[0].ProjectId

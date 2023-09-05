@@ -4190,7 +4190,7 @@ func TestAllAccounts(t *testing.T) {
 		Query: model.Query{
 			Source: "$domains",
 		},
-		SearchFilter: []string{"hey"},
+		SearchFilter: []string{"maruti", "hey", "adapt"},
 	}
 	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -4198,9 +4198,11 @@ func TestAllAccounts(t *testing.T) {
 	resp = make([]model.Profile, 0)
 	err = json.Unmarshal(jsonResponse, &resp)
 	assert.Nil(t, err)
-	assert.Equal(t, len(resp), 1)
-	assert.Contains(t, resp[0].HostName, "hey")
-	assert.Contains(t, resp[0].Name, "hey")
+	assert.Equal(t, len(resp), 2)
+	assert.Contains(t, resp[0].HostName, "adapt")
+	assert.Contains(t, resp[1].HostName, "hey")
+	assert.Contains(t, resp[0].Name, "adapt")
+	assert.Contains(t, resp[1].Name, "hey")
 
 	payload = model.TimelinePayload{
 		Query: model.Query{
@@ -4214,4 +4216,35 @@ func TestAllAccounts(t *testing.T) {
 	err = json.Unmarshal(jsonResponse, &resp)
 	assert.Nil(t, err)
 	assert.Equal(t, len(resp), 5)
+
+	payload = model.TimelinePayload{
+		Query: model.Query{
+			GlobalUserProperties: []model.QueryProperty{
+				{
+					Entity:    "user_group",
+					Type:      "categorical",
+					Property:  "$city",
+					Operator:  "equals",
+					Value:     "London",
+					LogicalOp: "AND",
+				}, {
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$hubspot_company_country",
+					Operator:  "equals",
+					Value:     "India",
+					LogicalOp: "AND",
+				},
+			}, Source: "$domains",
+		},
+		SearchFilter: []string{"adapt", "hey"},
+	}
+	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = io.ReadAll(w.Body)
+	resp = make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 1)
+	assert.Contains(t, resp[0].HostName, "adapt")
 }
