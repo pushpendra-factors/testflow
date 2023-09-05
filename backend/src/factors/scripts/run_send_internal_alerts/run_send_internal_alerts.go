@@ -55,6 +55,8 @@ func main() {
 	if err != nil {
 		log.Fatal("Init failed.")
 	}
+	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
+
 	db := C.GetServices().Db
 	defer db.Close()
 
@@ -88,13 +90,13 @@ func HandleAccountLimitExhaustedForInternalAlert(ProjectID, count, limit int64) 
 	}
 	percentageExhausted := float64(count) / float64(limit) * 100.0
 	if percentageExhausted >= float64(100) {
-		err := SendInternalAlertForAccountLimitExhausted(ProjectID, LIMIT_FULL_EXHAUSTED, percentageExhausted)
+		err := SendInternalAlertForAccountLimitExhausted(ProjectID, LIMIT_FULL_EXHAUSTED, percentageExhausted, count)
 		if err != nil {
 			logCtx.WithError(err).Error("failed to send internal alert")
 			return errors.New("failed to send internal alert")
 		}
 	} else if percentageExhausted >= float64(PARTIAL_LIMIT_THRESHOLD) {
-		err := SendInternalAlertForAccountLimitExhausted(ProjectID, LIMIT_PARTIAL_EXHAUSTED, percentageExhausted)
+		err := SendInternalAlertForAccountLimitExhausted(ProjectID, LIMIT_PARTIAL_EXHAUSTED, percentageExhausted, count)
 		if err != nil {
 			logCtx.WithError(err).Error("failed to send internal alert")
 			return errors.New("failed to send internal alert")
@@ -103,13 +105,21 @@ func HandleAccountLimitExhaustedForInternalAlert(ProjectID, count, limit int64) 
 	return nil
 }
 
-func SendInternalAlertForAccountLimitExhausted(ProjectID int64, limitType string, percentage float64) error {
+func SendInternalAlertForAccountLimitExhausted(ProjectID int64, limitType string, percentage float64, accounts int64) error {
 	var err error
 	project, status := store.GetStore().GetProject(ProjectID)
 	if status != http.StatusFound {
 		return errors.New("Failed to get Project")
 	}
-	message := fmt.Sprintf(`Project %s With ID %v Has Exhuasted %v %% of their monthly quota`, project.Name, ProjectID, percentage)
+	emoji := ""
+	if limitType == LIMIT_PARTIAL_EXHAUSTED {
+		emoji = ":warning:"
+	} else if limitType == LIMIT_FULL_EXHAUSTED {
+		emoji = ":exclamation:"
+	}
+
+	message := fmt.Sprintf("This account has exhausted %v%% of their monthly quota %s\nProject name: %s\nProject ID: %d\nAccounts identified this month: %d",
+		percentage, emoji, project.Name, project.ID, accounts)
 
 	shouldSend, err := shouldSendInternalAlert(ProjectID, limitType)
 	if err != nil {

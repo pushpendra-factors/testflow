@@ -70,6 +70,7 @@ const getTablePropColumn = ({ prop, groupPropNames, listProperties }) => {
 
 export const getColumns = ({
   accounts,
+  payload,
   isEngagementLocked,
   displayTableProps,
   groupPropNames,
@@ -80,7 +81,11 @@ export const getColumns = ({
   const columns = [
     {
       // Company Name Column
-      title: <div className={headerClassStr}>Company Name</div>,
+      title: (
+        <div className={headerClassStr}>
+          {payload.source === 'All' ? 'Account Domain' : 'Company Name'}
+        </div>
+      ),
       dataIndex: 'account',
       key: 'account',
       width: 300,

@@ -40,6 +40,7 @@ const (
 	PresentationArea          = "pa"
 	PresentationHorizontalBar = "ph"
 	HorizontalBar             = "hb"
+	FunnelChart               = "fc"
 )
 
 const (
@@ -249,43 +250,48 @@ type Query struct {
 
 var IN_PROPERTIES_DEFAULT_QUERY_MAP = map[string]QueryProperty{
 	U.IN_HUBSPOT: {
-		Entity:   "user_g",
-		Type:     U.PropertyTypeCategorical,
-		Property: HSCompanyIDProperty,
-		Operator: NotEqualOpStr,
-		Value:    "$none",
+		Entity:    "user_g",
+		GroupName: GROUP_NAME_HUBSPOT_COMPANY,
+		Type:      U.PropertyTypeNumerical,
+		Property:  HSCompanyIDProperty,
+		Operator:  GreaterThanOpStr,
+		Value:     "0",
 	},
 
 	U.IN_G2: {
-		Entity:   "user_g",
-		Type:     U.PropertyTypeCategorical,
-		Property: U.G2_DOMAIN,
-		Operator: NotEqualOpStr,
-		Value:    "$none",
+		Entity:    "user_g",
+		GroupName: GROUP_NAME_G2,
+		Type:      U.PropertyTypeCategorical,
+		Property:  U.G2_DOMAIN,
+		Operator:  NotEqualOpStr,
+		Value:     "$none",
 	},
 
 	U.VISITED_WEBSITE: {
-		Entity:   "user_g",
-		Type:     U.PropertyTypeNumerical,
-		Property: U.SP_PAGE_COUNT,
-		Operator: GreaterThanOpStr,
-		Value:    "0",
+		Entity:    "user_group",
+		GroupName: "user",
+		Type:      U.PropertyTypeNumerical,
+		Property:  U.SP_PAGE_COUNT,
+		Operator:  GreaterThanOpStr,
+		Value:     "0",
 	},
 
 	U.IN_SALESFORCE: {
-		Entity:   "user_g",
-		Type:     U.PropertyTypeCategorical,
-		Property: SFAccountIDProperty,
-		Operator: NotEqualOpStr,
-		Value:    "$none",
+		Entity:    "user_g",
+		GroupName: GROUP_NAME_SALESFORCE_ACCOUNT,
+		Type:      U.PropertyTypeCategorical,
+		Property:  SFAccountIDProperty,
+		Operator:  NotEqualOpStr,
+		Value:     "$none",
 	},
 
 	U.IN_LINKEDIN: {
-		Entity:   "user_g",
-		Type:     U.PropertyTypeCategorical,
-		Property: U.LI_DOMAIN,
-		Operator: NotEqualOpStr,
-		Value:    "$none",
+		Entity:    "user_g",
+		GroupName: GROUP_NAME_LINKEDIN_COMPANY,
+		Type:      U.PropertyTypeCategorical,
+		Property:  U.LI_DOMAIN,
+		Operator:  NotEqualOpStr,
+		Value:     "$none",
 	},
 }
 

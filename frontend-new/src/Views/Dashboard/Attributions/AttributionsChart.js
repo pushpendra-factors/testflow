@@ -131,7 +131,7 @@ const AttributionsChart = ({
   ]);
 
   useEffect(() => {
-    const {tableData} = getTableData(
+    const { tableData } = getTableData(
       data,
       event,
       searchText,
@@ -185,7 +185,13 @@ const AttributionsChart = ({
           touchpoint,
           attribution_method,
           attribution_method_compare,
-          currMetricsValue
+          currMetricsValue,
+          attrQueries,
+          get(
+            queryOptions,
+            'group_analysis',
+            ATTRIBUTION_GROUP_ANALYSIS_KEYS.USERS
+          )
         );
         setDualTouchpointChartData(chartData);
       }

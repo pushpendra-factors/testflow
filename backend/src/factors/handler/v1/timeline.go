@@ -129,12 +129,28 @@ func updateProfileUserScores(profileUsersList *[]model.Profile, scoresPerUser ma
 	}
 }
 
+func removeZeros(input []float64) []float64 {
+	var result []float64
+
+	for _, value := range input {
+		if value != 0 {
+			result = append(result, value)
+		}
+	}
+	return result
+}
+
 func GetEngagementLevels(scores []float64) map[float64]string {
 	result := make(map[float64]string)
-	for _, score := range scores {
-		percentile := calculatePercentile(scores, score)
+	result[0] = getEngagement(0)
+
+	nonZeroScores := removeZeros(scores)
+
+	for _, score := range nonZeroScores {
+		percentile := calculatePercentile(nonZeroScores, score)
 		result[score] = getEngagement(percentile)
 	}
+
 	return result
 }
 

@@ -244,6 +244,7 @@ var DashboardUnitPresentations = [...]string{
 	PresentationStack,
 	PresentationArea,
 	PresentationHorizontalBar,
+	FunnelChart,
 }
 
 const (

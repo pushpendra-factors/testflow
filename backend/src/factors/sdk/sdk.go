@@ -895,6 +895,10 @@ func FillSixSignalUserPropertiesViaFactors(projectId int64, projectSettings *mod
 		return
 	}
 
+	if projectId == 588 && isoCode != "US" && isoCode != "CA" {
+		logCtx.WithFields(log.Fields{"isoCode: ": sixSignalConfig.CountryInclude, "shouldEnrinchSixSignal: ": shouldEnrichUsingSixSignal}).Warn("Selective filtering debug for mailmodo")
+	}
+
 	FillSixSignalUserProperties(projectId, factors6SignalKey, userProperties, UserId, clientIP)
 }
 
