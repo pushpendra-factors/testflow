@@ -805,7 +805,6 @@ const getCustomKPIqueryGroup = (queries, eventGrpBy, period) => {
   return queryArr;
 };
 
-
 export const getCustomKPIQuery = (
   queries,
   date_range,
@@ -1514,11 +1513,13 @@ export const getAttributionStateFromRequestQuery = (
 ) => {
   let attrQueries = [];
   if (requestQuery.kpi_queries && requestQuery.kpi_queries.length) {
-    const kpiQuery = getKPIStateFromRequestQuery(
-      requestQuery.kpi_queries[0]?.kpi_query_group,
-      kpiConfig
-    );
-    attrQueries = kpiQuery.events;
+    requestQuery.kpi_queries.map((query) => {
+      const kpiQuery = getKPIStateFromRequestQuery(
+        query?.kpi_query_group,
+        kpiConfig
+      );
+      attrQueries.push(...kpiQuery.events);
+    });
   }
 
   const filters = processFiltersFromQuery(get(requestQuery, 'ce.pr', []));
