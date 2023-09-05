@@ -399,7 +399,7 @@ type Model interface {
 	GetHubspotFormDocuments(projectID int64) ([]model.HubspotDocument, int)
 	GetHubspotDocumentsByTypeForSync(projectID int64, typ int, maxCreatedAtSec int64) ([]model.HubspotDocument, int)
 	GetHubspotContactCreatedSyncIDAndUserID(projectID int64, docID string) ([]model.HubspotDocument, int)
-	GetHubspotDocumentsByTypeANDRangeForSync(projectID int64, docType int, from, to, maxCreatedAtSec int64) ([]model.HubspotDocument, int)
+	GetHubspotDocumentsByTypeANDRangeForSync(projectID int64, docType int, from, to, maxCreatedAtSec int64, limit, offset int) ([]model.HubspotDocument, int)
 	GetSyncedHubspotDealDocumentByIdAndStage(projectId int64, id string, stage string) (*model.HubspotDocument, int)
 	GetHubspotObjectPropertiesName(ProjectID int64, objectType string) ([]string, []string)
 	UpdateHubspotDocumentAsSynced(projectID int64, id string, docType int, syncId string, timestamp int64, action int, userID, groupUserID string) int
