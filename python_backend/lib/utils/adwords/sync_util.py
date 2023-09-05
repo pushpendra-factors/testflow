@@ -66,3 +66,13 @@ class AdwordsSyncUtil:
     @staticmethod
     def non_historical_doc_type(doc_type):
         return doc_type in [CAMPAIGNS, ADS, AD_GROUPS, CUSTOMER_ACCOUNT_PROPERTIES]
+
+    @staticmethod
+    def is_token_error(message):
+        is_token_failure = False
+        if ("invalid_grant" in message.lower() or "PERMISSION_DENIED".lower() in message.lower() 
+            or "invalid params" in message.lower() or "access token" in message.lower() 
+            or "refresh_token" in message.lower()):
+            is_token_failure = True
+        
+        return is_token_failure

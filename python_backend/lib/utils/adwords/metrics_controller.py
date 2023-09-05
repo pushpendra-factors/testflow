@@ -2,6 +2,7 @@ import json
 import logging as log
 import scripts
 from lib.utils.healthchecks import HealthChecksUtil
+from lib.utils.adwords.sync_util import AdwordsSyncUtil
 from lib.utils.json import JsonUtil
 from scripts.adwords import STATUS_SKIPPED, STATUS_FAILED, FAILURE_MESSAGE, SUCCESS_MESSAGE, EMPTY_RESPONSE_GSC
 from lib.utils.adwords.job_task_stats import JobTaskStats
@@ -81,10 +82,10 @@ class MetricsController:
             cls.etl_stats["failures"][message].setdefault(doc_type, set())
             cls.etl_stats["failures"][message][doc_type].add(project_id)
         elif status == STATUS_FAILED:
-
-            if "invalid_grant" in message.lower() or "PERMISSION_DENIED".lower() in message.lower():
-                cls.etl_stats["token_failures"].setdefault(message, set())
-                cls.etl_stats["token_failures"][message].add(project_id)
+            if AdwordsSyncUtil.is_token_error(message):
+                cls.etl_stats["token_failures"].setdefault(message, {})
+                cls.etl_stats["token_failures"][message].setdefault(project_id, set())
+                cls.etl_stats["token_failures"][message][project_id].add(customer_acc_id)
             else:
                 cls.etl_stats["failures"].setdefault(message, {})
                 cls.etl_stats["failures"][message].setdefault(doc_type, set())
@@ -93,6 +94,7 @@ class MetricsController:
             cls.etl_stats["success"].setdefault(project_id, set())
             cls.etl_stats["success"][project_id].add(customer_acc_id)
 
+    
     @classmethod
     def update_gsc_job_stats(cls, project_id, url, doc_type, status, message=""):
         if status == STATUS_FAILED:

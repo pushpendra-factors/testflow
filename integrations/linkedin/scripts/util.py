@@ -225,7 +225,7 @@ class Util:
     def get_batch_of_ids(records):
         mapIDs = {}
         batch_of_ids = []
-        len_of_batch = 500
+        len_of_batch = ORG_BATCH_SIZE
         for data in records:
             id = data['pivotValues'][0].split(':')[3]
             mapIDs[id]= True

@@ -1323,6 +1323,10 @@ func TestDerivedKPIChannels(t *testing.T) {
 	name1 := U.RandomString(8)
 	name2 := U.RandomString(8)
 	description1 := U.RandomString(8)
+	transformations0 := &postgres.Jsonb{json.RawMessage(`{"cl":"kpi","for":"","qG":[{"ca":"channels","dc":"google_ads_metrics","fil":[],"gBy":[],"me":["impressions"],"na":"a","pgUrl":"","tz":"Australia/Sydney"},{"ca":"channels","dc":"google_ads_metrics","fil":[],"gBy":[],"me":["clicks"],"na":"b","pgUrl":"","tz":"Australia/Sydney"}]}`)}
+	w0 := sendCreateCustomMetric(a, project.ID, agent, transformations0, name1, description1, "google_ads_metrics", 2)
+	assert.Equal(t, http.StatusBadRequest, w0.Code)
+
 	transformations1 := &postgres.Jsonb{json.RawMessage(`{"cl":"kpi","for":"a/b","qG":[{"ca":"channels","dc":"google_ads_metrics","fil":[],"gBy":[],"me":["impressions"],"na":"a","pgUrl":"","tz":"Australia/Sydney"},{"ca":"channels","dc":"google_ads_metrics","fil":[],"gBy":[],"me":["clicks"],"na":"b","pgUrl":"","tz":"Australia/Sydney"}]}`)}
 	w := sendCreateCustomMetric(a, project.ID, agent, transformations1, name1, description1, "google_ads_metrics", 2)
 	assert.Equal(t, http.StatusOK, w.Code)

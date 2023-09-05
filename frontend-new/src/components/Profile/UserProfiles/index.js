@@ -128,8 +128,7 @@ function UserProfiles({
     if (!timelinePayload.search_filter) {
       setListSearchItems([]);
     } else {
-      const listValues =
-        timelinePayload?.search_filter?.map((vl) => vl?.va) || [];
+      const listValues = timelinePayload?.search_filter || [];
       setListSearchItems(_.uniq(listValues));
       setSearchBarOpen(true);
     }
@@ -554,19 +553,15 @@ function UserProfiles({
       });
   }, [activeProject.id]);
 
-  const onApplyClick = (val) => {
-    const searchFilter = {
-      props: ['', '$user_id', 'categorical', 'user'],
-      operator: ['contains'],
-      values: []
+  const onApplyClick = (values) => {
+    const updatedPayload = {
+      ...timelinePayload,
+      search_filter: values.map((value) => JSON.parse(value)[0])
     };
-    const payload = { ...timelinePayload };
-    searchFilter.values.push(...val.map((vl) => JSON.parse(vl)[0]));
-    payload.search_filter = formatFiltersForPayload([searchFilter]);
-    setListSearchItems(searchFilter.values);
-    setTimelinePayload(payload);
+    setListSearchItems(updatedPayload.search_filter);
+    setTimelinePayload(updatedPayload);
     setActiveSegment(activeSegment);
-    getUsers(payload);
+    getUsers(updatedPayload);
   };
 
   const searchUsers = () => (
