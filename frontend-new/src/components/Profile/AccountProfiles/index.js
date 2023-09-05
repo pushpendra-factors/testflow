@@ -384,7 +384,11 @@ function AccountProfiles({
       source: selectedAccount.account[1],
       filters: filtersList
     };
-    setAppliedFilters({ filters: filtersList, eventsList: listEvents, eventProp });
+    setAppliedFilters({
+      filters: filtersList,
+      eventsList: listEvents,
+      eventProp
+    });
     setFiltersExpanded(false);
     const reqPayload = getFiltersRequestPayload({
       payload: opts,
@@ -719,7 +723,7 @@ function AccountProfiles({
   const tableColumns = useMemo(() => {
     return getColumns({
       accounts,
-      accountPayload,
+      source: accountPayload?.source,
       isEngagementLocked,
       displayTableProps,
       groupPropNames,
@@ -727,7 +731,7 @@ function AccountProfiles({
     });
   }, [
     accounts,
-    accountPayload,
+    accountPayload?.source,
     displayTableProps,
     groupPropNames,
     isEngagementLocked,
