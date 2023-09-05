@@ -1,7 +1,9 @@
 package model
 
 import (
+	"encoding/base64"
 	U "factors/util"
+	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -53,8 +55,8 @@ type UserActivity struct {
 }
 
 type TimelinePayload struct {
-	Query        Query           `json:"query"`
-	SearchFilter []QueryProperty `json:"search_filter"`
+	Query        Query    `json:"query"`
+	SearchFilter []string `json:"search_filter"`
 }
 
 type AccountDetails struct {
@@ -214,4 +216,24 @@ func UnixToLocalTime(timestamp int64) *time.Time {
 	t := time.Unix(timestamp, 0)
 	localTime := t.Local()
 	return &localTime
+}
+
+func ConvertDomainIdToHostName(domainID string) (string, error) {
+	domomainIdEncoded := strings.TrimPrefix(domainID, "dom-")
+
+	decodedBytes, err := base64.StdEncoding.DecodeString(domomainIdEncoded)
+	if err != nil {
+		return "", err
+	}
+
+	// Convert the decoded bytes to a string
+	decodedString := string(decodedBytes)
+	resultArray := strings.SplitN(decodedString, "-", 2)
+
+	if len(resultArray) != 2 {
+		return decodedString, nil
+	}
+
+	hostName := resultArray[1]
+	return hostName, nil
 }

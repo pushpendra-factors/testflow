@@ -27,7 +27,7 @@ class JobScheduler:
         metrics_controller = scripts.adwords.CONFIG.ADWORDS_APP.metrics_controller
 
         message = ""
-        if project_id is None or project_id is 0 or customer_acc_id is None or customer_acc_id == "" or doc_type is None or doc_type == "" or timestamp is None:
+        if project_id is None or project_id == 0 or customer_acc_id is None or customer_acc_id == "" or doc_type is None or doc_type == "" or timestamp is None:
             log.error("Invalid project_id: %s or customer_account_id: %s or document_type: %s or timestamp: %s",
                       str(project_id), str(customer_acc_id), str(doc_type), str(timestamp))
             message = "Invalid params project_id or customer_account_id or type or timestamp."

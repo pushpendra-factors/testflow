@@ -270,26 +270,26 @@ func getSqlWhereStatementFromColumnsForPropertyTypeCategorical(property model.Qu
 			pValue := property.Value
 			if property.Operator == model.ContainsOpStr {
 				pValue = strings.Replace(pValue, "?", "\\?", -1)
-				*pStmnt = fmt.Sprintf("users.%s %s ?", property.Property, propertyOp)
+				*pStmnt = fmt.Sprintf("%s %s ?", property.Property, propertyOp)
 				*rParams = append(*rParams, pValue)
 			} else if !hasNoneFilter && property.Operator == model.NotContainsOpStr {
 				pValue = strings.Replace(pValue, "?", "\\?", -1)
-				pStmnt1 := fmt.Sprintf(" ( users.%s %s ? ", property.Property, propertyOp)
+				pStmnt1 := fmt.Sprintf(" ( %s %s ? ", property.Property, propertyOp)
 				*rParams = append(*rParams, pValue)
-				pStmnt2 := fmt.Sprintf(" OR users.%s = '' ", property.Property)
-				pStmnt3 := fmt.Sprintf(" OR users.%s IS NULL ) ", property.Property)
+				pStmnt2 := fmt.Sprintf(" OR %s = '' ", property.Property)
+				pStmnt3 := fmt.Sprintf(" OR %s IS NULL ) ", property.Property)
 				*pStmnt = pStmnt1 + pStmnt2 + pStmnt3
 			} else if !hasNoneFilter && property.Operator == model.NotEqualOpStr {
 				// PR: 2342 - This change is to allow empty ('') or NULL values during a filter of != value
 				// ex: users.column_name != 'value' OR users.column_name = '' OR users.column_name IS NULL
-				pStmnt1 := fmt.Sprintf(" (users.%s %s ? ", property.Property, propertyOp)
+				pStmnt1 := fmt.Sprintf(" (%s %s ? ", property.Property, propertyOp)
 				*rParams = append(*rParams, pValue)
-				pStmnt2 := fmt.Sprintf(" OR users.%s = '' ", property.Property)
+				pStmnt2 := fmt.Sprintf(" OR %s = '' ", property.Property)
 
-				pStmnt3 := fmt.Sprintf(" OR users.%s IS NULL ) ", property.Property)
+				pStmnt3 := fmt.Sprintf(" OR %s IS NULL ) ", property.Property)
 				*pStmnt = pStmnt1 + pStmnt2 + pStmnt3
 			} else {
-				*pStmnt = fmt.Sprintf("users.%s %s ?", property.Property, propertyOp)
+				*pStmnt = fmt.Sprintf("%s %s ?", property.Property, propertyOp)
 				*rParams = append(*rParams, pValue)
 			}
 		}
@@ -298,10 +298,10 @@ func getSqlWhereStatementFromColumnsForPropertyTypeCategorical(property model.Qu
 		// var pStmnt string
 		if propertyOp == model.EqualsOp || propertyOp == model.RLikeOp {
 			// i.e: (NOT (users.column_name OR users.column_name ='')
-			*pStmnt = fmt.Sprintf("(users.%s IS NULL OR users.%s ='')", property.Property, property.Property)
+			*pStmnt = fmt.Sprintf("(%s IS NULL OR %s ='')", property.Property, property.Property)
 		} else if propertyOp == model.NotEqualOp || propertyOp == model.NotRLikeOp {
 			// i.e: (users.column_name AND users.column_name !='')
-			*pStmnt = fmt.Sprintf("( users.%s  IS NOT NULL AND users.%s !='')", property.Property, property.Property)
+			*pStmnt = fmt.Sprintf("( %s  IS NOT NULL AND %s !='')", property.Property, property.Property)
 		} else {
 			return fmt.Errorf("unsupported opertator %s for property value none", propertyOp)
 		}

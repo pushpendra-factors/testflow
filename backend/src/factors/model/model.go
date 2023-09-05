@@ -510,6 +510,7 @@ type Model interface {
 	UpdateQueryIDsWithNewIDs(projectID int64, shareableURLs []string) int
 	SearchQueriesWithProjectId(projectID int64, searchString string) ([]model.Queries, int)
 	GetAllNonConvertedQueries(projectID int64) ([]model.Queries, int)
+	DeleteAttributionDBResult(projectID int64, queryId int64)
 
 	// properties
 	GetStandardUserPropertiesBasedOnIntegration(projectID int64) map[string]string
@@ -874,7 +875,7 @@ type Model interface {
 	GetUserDetailsAssociatedToDomain(projectID int64, id string) (model.AccountDetails, map[string]interface{}, int)
 	GetUserPropertiesForAccounts(projectID int64, source string) (string, interface{}, string)
 	GetUsersAssociatedToDomain(projectID int64, minMax *model.MinMaxUpdatedAt, groupedFilters map[string][]model.QueryProperty) ([]model.Profile, int)
-	GenerateAllAccountsQueryString(projectID int64, source string, hasUserProperty bool, isAllUserProperties bool, minMax model.MinMaxUpdatedAt, groupedFilters map[string][]model.QueryProperty, searchFilter []model.QueryProperty) (string, []interface{}, error)
+	GenerateAllAccountsQueryString(projectID int64, source string, hasUserProperty bool, isAllUserProperties bool, minMax model.MinMaxUpdatedAt, groupedFilters map[string][]model.QueryProperty, searchFilter []string) (string, []interface{}, error)
 
 	// segment
 	CreateSegment(projectId int64, segment *model.SegmentPayload) (int, error)
