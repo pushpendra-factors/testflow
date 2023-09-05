@@ -13,6 +13,7 @@ import (
 	"factors/task/hubspot_enrich"
 	U "factors/util"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
@@ -1089,7 +1090,7 @@ func TestHubspotObjectPropertiesAPI(t *testing.T) {
 	var property1Values []interface{}
 	w := sendGetCRMObjectValuesByPropertyNameReq(r, project.ID, agent, model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContact, property1)
 	assert.Equal(t, http.StatusOK, w.Code)
-	jsonResponse, _ := ioutil.ReadAll(w.Body)
+	jsonResponse, _ := io.ReadAll(w.Body)
 	err = json.Unmarshal(jsonResponse, &property1Values)
 	assert.Nil(t, err)
 	//should contain all values

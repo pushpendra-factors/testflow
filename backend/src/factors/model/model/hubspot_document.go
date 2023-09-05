@@ -1025,3 +1025,54 @@ func GetHubspotDocumentsListAsBatchById(list []*HubspotDocument, batchSize int) 
 
 	return batchList
 }
+
+func CheckIfEngagementV3(document *HubspotDocument) (bool, error) {
+	value, err := U.DecodePostgresJsonb(document.Value)
+	if err != nil {
+		return false, err
+	}
+
+	if _, ok := (*value)["properties"]; ok { // Engagement V3 (New payload)
+		return true, nil
+	}
+
+	if _, ok := (*value)["engagement"]; ok { // Engagement V2 (Old payload)
+		return false, nil
+	}
+
+	return false, errors.New("invalid engagement document")
+}
+
+func CheckIfDealV3(document *HubspotDocument) (bool, error) {
+	value, err := U.DecodePostgresJsonb(document.Value)
+	if err != nil {
+		return false, err
+	}
+
+	if _, ok := (*value)["id"]; ok { // Deal V3 (New payload)
+		return true, nil
+	}
+
+	if _, ok := (*value)["dealId"]; ok { // Deal V2 (Old payload)
+		return false, nil
+	}
+
+	return false, errors.New("invalid deal document")
+}
+
+func CheckIfCompanyV3(document *HubspotDocument) (bool, error) {
+	value, err := U.DecodePostgresJsonb(document.Value)
+	if err != nil {
+		return false, err
+	}
+
+	if _, ok := (*value)["id"]; ok { // Company V3 (New payload)
+		return true, nil
+	}
+
+	if _, ok := (*value)["companyId"]; ok { // Company V2 (Old payload)
+		return false, nil
+	}
+
+	return false, errors.New("invalid company document")
+}
