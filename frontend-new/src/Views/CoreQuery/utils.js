@@ -1852,3 +1852,90 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
   };
   return result;
 };
+
+export const getStateFromCustomKPIqueryGroup = (
+  requestQuery,
+  kpiConfig = []
+) => {
+  const queries = [];
+  for (let i = 0; i < requestQuery.qG.length; i += 1) {
+    const q = requestQuery.qG[i];
+    const config = kpiConfig.find((elem) => elem.display_category === q.dc);
+    const metric = config
+      ? config.metrics.find((m) => m.name === q.me[0])
+      : null;
+
+    const eventFilters = [];
+    const fil = get(q, 'fil', EMPTY_ARRAY)
+      ? get(q, 'fil', EMPTY_ARRAY)
+      : EMPTY_ARRAY;
+    let ref = -1;
+    let lastProp = '';
+    let lastOp = '';
+    fil.forEach((pr, index) => {
+      if (pr.lOp === 'AND') {
+        ref += 1;
+        const val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
+        const DNa = pr.prNa;
+        const isCamp =
+          requestQuery?.qG[i]?.ca === 'channels' ||
+          requestQuery?.qG[i]?.ca === 'custom_channels'
+            ? pr.objTy
+            : pr.en;
+        eventFilters.push({
+          operator:
+            pr.prDaTy === 'datetime'
+              ? reverseDateOperatorMap[pr.co]
+              : reverseOperatorMap[pr.co],
+          props: [DNa, pr.prDaTy, isCamp],
+          values:
+            pr.prDaTy === FILTER_TYPES.DATETIME
+              ? convertDateTimeObjectValuesToMilliSeconds(val)
+              : val,
+          extra: [DNa, pr.prNa, pr.prDaTy, isCamp],
+          ref
+        });
+        lastProp = pr.prNa;
+        lastOp = pr.co;
+      } else if (lastProp === pr.prNa && lastOp === pr.co) {
+        eventFilters[eventFilters.length - 1].values.push(pr.va);
+      } else {
+        const val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
+        const DNa = pr.prNa;
+        const isCamp =
+          requestQuery?.qG[i]?.ca === 'channels' ||
+          requestQuery?.qG[i]?.ca === 'custom_channels'
+            ? pr.objTy
+            : pr.en;
+        eventFilters.push({
+          operator:
+            pr.prDaTy === 'datetime'
+              ? reverseDateOperatorMap[pr.co]
+              : reverseOperatorMap[pr.co],
+          props: [DNa, pr.prDaTy, isCamp],
+          values:
+            pr.prDaTy === FILTER_TYPES.DATETIME
+              ? convertDateTimeObjectValuesToMilliSeconds(val)
+              : val,
+          extra: [DNa, pr.prNa, pr.prDaTy, isCamp],
+          ref
+        });
+        lastProp = pr.prNa;
+        lastOp = pr.co;
+      }
+    });
+
+    queries.push({
+      category: q.ca,
+      group: q.dc,
+      pageViewVal: q.pgUrl,
+      metric: q.me[0],
+      label: metric ? metric.display_name : q.me[0],
+      filters: eventFilters,
+      alias: q?.an,
+      metricType: get(metric, 'type', null),
+      qt: q.qt
+    });
+  }
+  return queries;
+};

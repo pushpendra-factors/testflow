@@ -22,6 +22,7 @@ import { setShowCriteria } from 'Reducers/analyticsQuery';
 import { generateRandomKey } from 'Utils/global';
 import { deleteGroupByForEvent } from 'Reducers/coreQuery/middleware';
 import { DefaultDateRangeFormat } from 'Views/CoreQuery/utils';
+import { findGroupNameUsingOptionValue } from './utils';
 
 function EventQueryBlock({
   selEventName,
@@ -38,6 +39,7 @@ function EventQueryBlock({
 }) {
   const [queries, setQueries] = useState([]);
   const [queryType, setQueryType] = useState(QUERY_TYPE_EVENT);
+  const { eventOptions } = useSelector((state) => state.coreQuery);
   const [queryOptions, setQueryOptions] = useState({
     ...QUERY_OPTIONS_DEFAULT_VALUE,
     session_analytics_seq: INITIAL_SESSION_ANALYTICS_SEQ,
@@ -58,6 +60,17 @@ function EventQueryBlock({
     });
     return groups;
   }, [groupOpts]);
+
+  useEffect(() => {
+    if (selEventName) {
+      setQueries([
+        {
+          label: selEventName,
+          group: findGroupNameUsingOptionValue(eventOptions, selEventName)
+        }
+      ]);
+    }
+  }, [selEventName]);
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
