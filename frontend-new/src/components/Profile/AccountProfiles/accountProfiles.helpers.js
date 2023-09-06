@@ -188,10 +188,20 @@ export const checkFiltersEquality = ({
   const areFiltersEqual = isEqual(filtersList, appliedFilters.filters);
   const areEventsEqual = isEqual(eventsList, appliedFilters.eventsList);
   const isEventPropEqual = eventProp === appliedFilters.eventProp;
-  const saveButtonDisabled =
-    areFiltersEqual === false || filtersList.length === 0;
   const applyButtonDisabled =
-    areFiltersEqual === true && areEventsEqual && isEventPropEqual;
+    areFiltersEqual === true &&
+    areEventsEqual === true &&
+    isEventPropEqual === true;
+  const saveButtonDisabled =
+    applyButtonDisabled === false || filtersList.length === 0;
+  console.log(
+    'jklogs ~ file: accountProfiles.helpers.js:208 ~ applyButtonDisabled:',
+    applyButtonDisabled
+  );
+  console.log(
+    'jklogs ~ file: accountProfiles.helpers.js:208 ~ saveButtonDisabled:',
+    saveButtonDisabled
+  );
   return { saveButtonDisabled, applyButtonDisabled };
 };
 

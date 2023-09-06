@@ -6,6 +6,8 @@ import { selectGroupsList } from 'Reducers/groups/selectors';
 import FiltersBox from './FiltersBox';
 import styles from './index.module.scss';
 import { Text, SVG } from 'Components/factorsComponents';
+import { INITIAL_FILTERS_STATE } from './accountProfiles.constants';
+import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
 
 function PropertyFilter({
   viewMode,
@@ -38,8 +40,10 @@ function PropertyFilter({
         account
       };
     });
-    setFiltersList([]);
-    setAppliedFilters({});
+    setFiltersList(INITIAL_FILTERS_STATE.filters);
+    setEventProp(INITIAL_FILTERS_STATE.eventProp);
+    setListEvents(INITIAL_FILTERS_STATE.eventsList);
+    setAppliedFilters(INITIAL_FILTERS_STATE);
   };
 
   const analyseMenu = (
@@ -65,7 +69,7 @@ function PropertyFilter({
   }, [setFiltersExpanded]);
 
   if (filtersExpanded === false && newSegmentMode === false) {
-    if (appliedFilters.length > 0) {
+    if (appliedFilters.filters.length > 0) {
       return (
         <Button
           className={cx(
@@ -76,7 +80,7 @@ function PropertyFilter({
           onClick={toggleFilters}
         >
           <Text type='title' extraClass='mb-0' weight='medium' color='grey-6'>
-            View {appliedFilters.length} filter(s)
+            View {appliedFilters.filters.length} filter(s)
           </Text>
           <SVG size={16} name='chevronDown' color='#8C8C8C' />
         </Button>
@@ -108,19 +112,21 @@ function PropertyFilter({
 
   return (
     <div className='flex flex-col row-gap-4 w-full'>
-      <Button
-        className={cx(
-          'flex items-center justify-center col-gap-1',
-          styles['collapse-button']
-        )}
-        type='text'
-        onClick={toggleFilters}
-      >
-        <Text type='title' extraClass='mb-0' weight='medium' color='grey-6'>
-          Collapse conditions
-        </Text>
-        <SVG size={16} name='chevronDown' color='#8C8C8C' />
-      </Button>
+      <ControlledComponent controller={newSegmentMode === false}>
+        <Button
+          className={cx(
+            'flex items-center justify-center col-gap-1',
+            styles['collapse-button']
+          )}
+          type='text'
+          onClick={toggleFilters}
+        >
+          <Text type='title' extraClass='mb-0' weight='medium' color='grey-6'>
+            Collapse conditions
+          </Text>
+          <SVG size={16} name='chevronDown' color='#8C8C8C' />
+        </Button>
+      </ControlledComponent>
       <div className='flex col-gap-2 items-center'>
         <Text type='title' extraClass='mb-0'>
           Include

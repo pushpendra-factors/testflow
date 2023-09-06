@@ -81,14 +81,17 @@ const FiltersBox = ({
 
   const handleInsertFilter = useCallback(
     (filter, index) => {
-      setFiltersList((curr) => {
-        if (index === curr.length) {
-          return [...curr, filter];
-        }
-        return [...curr.slice(0, index), filter, ...curr.slice(index + 1)];
-      });
+      if (filtersList.length === index) {
+        setFiltersList([...filtersList, filter]);
+      } else {
+        setFiltersList([
+          ...filtersList.slice(0, index),
+          filter,
+          ...filtersList.slice(index + 1)
+        ]);
+      }
     },
-    [setFiltersList]
+    [filtersList, setFiltersList]
   );
 
   const handleDeleteFilter = useCallback(
@@ -97,11 +100,9 @@ const FiltersBox = ({
         setFilterDD(false);
         return;
       }
-      setFiltersList((curr) => {
-        return curr.filter((_, index) => index !== filterIndex);
-      });
+      setFiltersList(filtersList.filter((_, index) => index !== filterIndex));
     },
-    [filtersList.length, setFiltersList]
+    [setFiltersList, filtersList]
   );
 
   const showFilterDropdown = useCallback(() => {
