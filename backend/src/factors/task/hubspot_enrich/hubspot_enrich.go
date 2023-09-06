@@ -68,7 +68,7 @@ func AddSyncStatus(s *SyncStatus, status []IntHubspot.Status, hasFailure bool) {
 }
 
 func StartEnrichmentByProjectIdWorker(projectSettingsChannel chan model.HubspotProjectSettings, syncStatusChannel chan WorkerStatus,
-	numDocRoutines int, projectsMaxCreatedAt map[int64]int64, recordsProcessLimit int) {
+	numDocRoutines int, projectsMaxCreatedAt map[int64]int64, recordsProcessLimit, pullLimit int) {
 	for projectSettings := range projectSettingsChannel {
 
 		recordsMaxCreatedAt := projectsMaxCreatedAt[projectSettings.ProjectId]
@@ -94,13 +94,13 @@ func StartEnrichmentByProjectIdWorker(projectSettingsChannel chan model.HubspotP
 				syncStatusChannel <- workerStatus
 				continue
 			}
-			status, hasFailure := IntHubspot.Sync(projectSettings.ProjectId, numDocRoutines, recordsMaxCreatedAt, datePropertiesByObjectType, timeZone, recordsProcessLimit)
+			status, hasFailure := IntHubspot.Sync(projectSettings.ProjectId, numDocRoutines, recordsMaxCreatedAt, datePropertiesByObjectType, timeZone, recordsProcessLimit, pullLimit)
 			workerStatus.Status = status
 			workerStatus.HasFailure = hasFailure
 			workerStatus.ProjectId = projectSettings.ProjectId
 			syncStatusChannel <- workerStatus
 		} else {
-			status, hasFailure := IntHubspot.Sync(projectSettings.ProjectId, numDocRoutines, recordsMaxCreatedAt, nil, "", recordsProcessLimit)
+			status, hasFailure := IntHubspot.Sync(projectSettings.ProjectId, numDocRoutines, recordsMaxCreatedAt, nil, "", recordsProcessLimit, pullLimit)
 			workerStatus.Status = status
 			workerStatus.HasFailure = hasFailure
 			workerStatus.ProjectId = projectSettings.ProjectId
@@ -111,7 +111,7 @@ func StartEnrichmentByProjectIdWorker(projectSettingsChannel chan model.HubspotP
 }
 
 func StartEnrichment(numProjectRoutines int, projectsMaxCreatedAt map[int64]int64, hubspotProjectSettingsMap map[int64]*model.HubspotProjectSettings,
-	numDocRoutines int, recordsProcessLimit int) SyncStatus {
+	numDocRoutines int, recordsProcessLimit int, enrichPullLimit int) SyncStatus {
 
 	syncStatusChannel := make(chan WorkerStatus)
 	projectSettingsChannel := make(chan model.HubspotProjectSettings)
@@ -120,7 +120,7 @@ func StartEnrichment(numProjectRoutines int, projectsMaxCreatedAt map[int64]int6
 	go Producer(hubspotProjectSettingsMap, projectSettingsChannel)
 
 	for i := 0; i < numProjectRoutines; i++ {
-		go StartEnrichmentByProjectIdWorker(projectSettingsChannel, syncStatusChannel, numDocRoutines, projectsMaxCreatedAt, recordsProcessLimit)
+		go StartEnrichmentByProjectIdWorker(projectSettingsChannel, syncStatusChannel, numDocRoutines, projectsMaxCreatedAt, recordsProcessLimit, enrichPullLimit)
 	}
 
 	for i := 0; i < len(hubspotProjectSettingsMap); i++ {
@@ -184,6 +184,7 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 	hubspotMaxCreatedAt := configs["max_record_created_at"].(int64)
 	enrichHeavy := configs["enrich_heavy"].(bool)
 	recordsProcessLimit := configs["record_process_limit_per_project"].(int)
+	enrichPullLimit := configs["enrich_pull_limit"].(int)
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, overrideHealthcheckPingID)
 
 	hubspotEnabledProjectSettings, errCode := store.GetStore().GetAllHubspotProjectSettings()
@@ -269,7 +270,7 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 	}
 
 	// Runs enrichment for list of project_ids synchronously
-	syncStatus := StartEnrichment(numProjectRoutines, projectsMaxCreatedAt, hubspotProjectSettingsMap, numDocRoutines, recordsProcessLimit)
+	syncStatus := StartEnrichment(numProjectRoutines, projectsMaxCreatedAt, hubspotProjectSettingsMap, numDocRoutines, recordsProcessLimit, enrichPullLimit)
 
 	anyFailure = anyFailure || syncStatus.HasFailure
 

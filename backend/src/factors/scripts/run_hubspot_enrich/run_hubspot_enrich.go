@@ -83,12 +83,12 @@ func main() {
 		"", "List of projects to disable event user property population in events.")
 	useHashIDForCRMGroupUserByProject := flag.String("use_hash_id_for_crm_group_user_by_project_id", "", "")
 	moveHubspotCompanyAssocationFlowToContactByPojectID := flag.String("move_hubspot_company_association_flow_to_contact_by_project_id", "", "")
+	enrichPullLimit := flag.Int("enrich_pull_limit", 0, "Total records to be pulled in single db call")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
 		panic(fmt.Errorf("env [ %s ] not recognised", *env))
 	}
-
 	defaultAppName := "hubspot_enrich_job"
 	defaultHealthcheckPingID := C.HealthcheckHubspotEnrichPingID
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)
@@ -175,6 +175,7 @@ func main() {
 	configsEnrich["max_record_created_at"] = *hubspotMaxCreatedAt
 	configsEnrich["enrich_heavy"] = *enrichHeavy
 	configsEnrich["record_process_limit_per_project"] = *recordProcessLimit
+	configsEnrich["enrich_pull_limit"] = *enrichPullLimit
 
 	configsDistributer := make(map[string]interface{})
 	configsDistributer["health_check_ping_id"] = ""
