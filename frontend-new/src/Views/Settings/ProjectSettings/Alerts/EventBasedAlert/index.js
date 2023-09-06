@@ -25,10 +25,10 @@ import {
 import { Text, SVG } from 'factorsComponents';
 import {
   createEventAlert,
-  fetchEventAlerts,
   deleteEventAlert,
   editEventAlert,
-  testWebhhookUrl
+  testWebhhookUrl,
+  fetchAllAlerts
 } from 'Reducers/global';
 import ConfirmationModal from 'Components/ConfirmationModal';
 import QueryBlock from './QueryBlock';
@@ -86,7 +86,6 @@ const { Option } = Select;
 
 const EventBasedAlert = ({
   activeProject,
-  fetchEventAlerts,
   deleteEventAlert,
   createEventAlert,
   editEventAlert,
@@ -122,6 +121,7 @@ const EventBasedAlert = ({
   teams,
   updateEventAlertStatus,
   setShowCriteria,
+  fetchAllAlerts
 }) => {
   const [errorInfo, seterrorInfo] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -595,7 +595,7 @@ const EventBasedAlert = ({
         deleteEventAlert(activeProject?.id, item?.id).then(() => {
           message.success('Deleted Alert successfully!');
           setAlertState({ state: 'list', index: 0 });
-          fetchEventAlerts(activeProject.id)
+          fetchAllAlerts(activeProject.id)
         }).catch((err) => {
           message.error(err);
         });
@@ -678,7 +678,7 @@ const EventBasedAlert = ({
         editEventAlert(activeProject.id, payload, viewAlertDetails?.id)
           .then((res) => {
             setLoading(false);
-            fetchEventAlerts(activeProject.id);
+            fetchAllAlerts(activeProject.id);
             notification.success({
               message: 'Alerts Saved',
               description: 'Alerts is edited and saved successfully.'
@@ -696,7 +696,7 @@ const EventBasedAlert = ({
         createEventAlert(activeProject.id, payload)
           .then((res) => {
             setLoading(false);
-            fetchEventAlerts(activeProject.id);
+            fetchAllAlerts(activeProject.id);
             notification.success({
               message: 'Alerts Saved',
               description: 'New Alerts is created and saved successfully.'
@@ -755,7 +755,7 @@ const EventBasedAlert = ({
     createEventAlert(activeProject?.id, payload)
       .then((res) => {
         setLoading(false);
-        fetchEventAlerts(activeProject?.id);
+        fetchAllAlerts(activeProject?.id);
         onReset();
         notification.success({
           message: 'Alert Created',
@@ -981,7 +981,7 @@ const EventBasedAlert = ({
         updateEventAlertStatus(activeProject?.id, item?.id, status).then(() => {
           message.success('Successfully paused/disabled alerts.');
           setAlertState({ state: 'list', index: 0 });
-          fetchEventAlerts(activeProject.id)
+          fetchAllAlerts(activeProject.id)
         }).catch((err) => {
           message.error(err);
         });
@@ -999,7 +999,7 @@ const EventBasedAlert = ({
       updateEventAlertStatus(activeProject?.id, id, status)
         .then((res) => {
           setisAlertEnabled(true);
-          fetchEventAlerts(activeProject.id);
+          fetchAllAlerts(activeProject.id);
           message.success('Successfully enabled alerts.');
         })
         .catch((err) => {
@@ -2154,7 +2154,6 @@ const mapStateToProps = (state) => ({
 });
 
 export default connect(mapStateToProps, {
-  fetchEventAlerts,
   deleteEventAlert,
   createEventAlert,
   editEventAlert,
@@ -2174,5 +2173,6 @@ export default connect(mapStateToProps, {
   fetchTeamsChannels,
   updateEventAlertStatus,
   setShowCriteria,
-  deleteEventAlert
+  deleteEventAlert,
+  fetchAllAlerts
 })(EventBasedAlert);

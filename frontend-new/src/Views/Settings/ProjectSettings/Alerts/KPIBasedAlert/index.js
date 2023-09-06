@@ -20,7 +20,8 @@ import {
   createAlert,
   fetchAlerts,
   deleteAlert,
-  editAlert
+  editAlert,
+  fetchAllAlerts
 } from 'Reducers/global';
 import ConfirmationModal from 'Components/ConfirmationModal';
 import QueryBlock from './QueryBlock';
@@ -47,7 +48,7 @@ const KPIBasedAlert = ({
   activeProject,
   kpi,
   createAlert,
-  fetchAlerts,
+  fetchAllAlerts,
   deleteAlert,
   editAlert,
   savedAlerts,
@@ -121,7 +122,7 @@ const KPIBasedAlert = ({
   const confirmRemove = (id) => {
     return deleteAlert(activeProject.id, id).then(
       (res) => {
-        fetchAlerts(activeProject.id);
+        fetchAllAlerts(activeProject.id);
         notification.success({
           message: 'Success',
           description: 'Deleted Alert successfully ',
@@ -390,7 +391,7 @@ const KPIBasedAlert = ({
         editAlert(activeProject.id, payload, alertDetails?.id)
           .then((res) => {
             setLoading(false);
-            fetchAlerts(activeProject.id);
+            fetchAllAlerts(activeProject.id);
             notification.success({
               message: 'Alerts Saved',
               description: 'Alerts is saved successfully.'
@@ -408,7 +409,7 @@ const KPIBasedAlert = ({
         createAlert(activeProject.id, payload, 0)
           .then((res) => {
             setLoading(false);
-            fetchAlerts(activeProject.id);
+            fetchAllAlerts(activeProject.id);
             notification.success({
               message: 'Alerts Saved',
               description: 'New Alerts is created and saved successfully.'
@@ -2636,7 +2637,7 @@ const mapStateToProps = (state) => ({
 
 export default connect(mapStateToProps, {
   createAlert,
-  fetchAlerts,
+  fetchAllAlerts,
   deleteAlert,
   editAlert,
   fetchSlackChannels,
