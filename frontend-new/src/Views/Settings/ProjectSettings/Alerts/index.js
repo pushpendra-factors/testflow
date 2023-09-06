@@ -20,7 +20,6 @@ import _ from 'lodash';
 import {
   fetchAlerts,
   deleteAlert,
-  fetchEventAlerts,
   deleteEventAlert,
   createEventAlert,
   fetchAllAlerts,
@@ -36,7 +35,6 @@ const Alerts = ({
   activeProject,
   fetchAlerts,
   deleteAlert,
-  fetchEventAlerts,
   deleteEventAlert,
   savedAlerts,
   currentAgent,
@@ -113,7 +111,7 @@ const Alerts = ({
       createAlert(activeProject?.id, payload, 0)
       .then((res) => {
         setTableLoading(false);
-        fetchEventAlerts(activeProject?.id);
+        fetchAllAlerts(activeProject?.id);
         notification.success({
           message: 'Alert Created',
           description: 'Copy of alert is created and saved successfully.'
@@ -136,7 +134,7 @@ const Alerts = ({
       createEventAlert(activeProject?.id, payload)
         .then((res) => {
           setTableLoading(false);
-          fetchEventAlerts(activeProject?.id);
+          fetchAllAlerts(activeProject?.id);
           notification.success({
             message: 'Alert Created',
             description: 'Copy of alert is created and saved successfully.'
@@ -279,10 +277,10 @@ const Alerts = ({
   ];
 
   useEffect(() => {
+    setTableLoading(true);
     fetchAllAlerts(activeProject?.id).then(() => {
       setTableLoading(false);
     }); 
-
   }, [activeProject]);
 
   useEffect(() => { 
@@ -478,7 +476,6 @@ const mapStateToProps = (state) => ({
 export default connect(mapStateToProps, {
   fetchAlerts,
   deleteAlert,
-  fetchEventAlerts,
   deleteEventAlert,
   createEventAlert,
   fetchAllAlerts,
