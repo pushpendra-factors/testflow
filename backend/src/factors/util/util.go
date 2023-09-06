@@ -1405,7 +1405,7 @@ func HasMaliciousContent(reqPayload string) (bool, error) {
 	}
 
 	// Checks for any tag below with or without attributes. Eg. <html>, <script src="link">
-	hasHTML, _ := regexp.MatchString("<(html|head|script|body|iframe|).+>", lcasePayload)
+	hasHTML, _ := regexp.MatchString("<(html|head|script|body|iframe|a|h1|h2|h3|input|form|div|table).+>", lcasePayload)
 	if hasHTML {
 		return hasHTML, errors.New("HTML content on payload")
 	}
