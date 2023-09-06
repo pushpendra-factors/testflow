@@ -1019,6 +1019,25 @@ export function fetchAlerts(projectId) {
   };
 }
 
+export function fetchAllAlerts(projectId) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      get(dispatch, host + 'projects/' + projectId + '/v1/all_alerts', {})
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'FETCH_ALERTS', payload: r.data });
+            resolve(r);
+          } else {
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  };
+}
+
 export function fetchSharedAlerts(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
