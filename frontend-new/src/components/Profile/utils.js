@@ -577,8 +577,11 @@ export const transformWeightConfigForQuery = (config) => {
 };
 
 export const getSelectedFiltersFromQuery = ({ query, groupsList }) => {
-  const eventProp = reverse_user_types[query.ec] ?? ANY_USER_TYPE;
-  const grpa = query.grpa ?? 'All';
+  const eventProp =
+    reverse_user_types[query.ec] != null
+      ? reverse_user_types[query.ec]
+      : ANY_USER_TYPE;
+  const grpa = Boolean(query.grpa) === true ? query.grpa : 'All';
   const filters = getStateQueryFromRequestQuery(query);
   const result = {
     eventProp,
