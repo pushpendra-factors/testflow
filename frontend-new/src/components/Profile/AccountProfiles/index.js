@@ -430,6 +430,52 @@ function AccountProfiles({
       />
     );
   };
+  const groupToDomainMap = {
+    $hubspot_company: '$hubspot_company_domain',
+    $salesforce_account: '$salesforce_account_website',
+    $6signal: '$6Signal_domain',
+    $linkedin_company: '$li_domain',
+    $g2: '$g2_domain'
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const newCompanyValues = { All: {} };
+      for (const [group, prop] of Object.entries(groupToCompanyPropMap)) {
+        if (groupOpts[group]) {
+          try {
+            const res = await fetchGroupPropertyValues(
+              activeProject.id,
+              group,
+              prop
+            );
+            newCompanyValues[group] = { ...res.data };
+          } catch (err) {
+            console.log(err);
+          }
+        }
+      }
+      for (const [group, prop] of Object.entries(groupToDomainMap)) {
+        if (groupOpts[group]) {
+          try {
+            const res = await fetchGroupPropertyValues(
+              activeProject.id,
+              group,
+              prop
+            );
+            newCompanyValues['All'] = {
+              ...newCompanyValues['All'],
+              ...res.data
+            };
+          } catch (err) {
+            console.log(err);
+          }
+        }
+      }
+      setCompanyValueOpts(newCompanyValues);
+    };
+    fetchData();
+  }, [activeProject.id, groupOpts]);
 
   const onApplyClick = (values) => {
     const updatedPayload = {

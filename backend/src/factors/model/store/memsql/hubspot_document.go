@@ -1296,7 +1296,7 @@ func (store *MemSQL) GetHubspotDocumentCountForSync(projectIDs []int64, docTypes
 
 // GetHubspotDocumentsByTypeANDRangeForSync return list of documents unsynced for given time range
 func (store *MemSQL) GetHubspotDocumentsByTypeANDRangeForSync(projectID int64,
-	docType int, from, to, maxCreatedAtSec int64) ([]model.HubspotDocument, int) {
+	docType int, from, to, maxCreatedAtSec int64, limit, offset int) ([]model.HubspotDocument, int) {
 
 	argFields := log.Fields{"project_id": projectID, "type": docType, "from": from, "to": to, "max_created_at_sec": maxCreatedAtSec}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &argFields)
@@ -1311,11 +1311,28 @@ func (store *MemSQL) GetHubspotDocumentsByTypeANDRangeForSync(projectID int64,
 	var documents []model.HubspotDocument
 
 	db := C.GetServices().Db
-	err := db.Order("timestamp, created_at ASC").Where("project_id=? AND type=? AND synced=false AND timestamp BETWEEN ? AND ? AND created_at < ? ",
-		projectID, docType, from, to, maxCreatedAtFmt).Find(&documents).Error
-	if err != nil {
+	dbTx := db.Order("timestamp, created_at ASC").Where("project_id=? AND type=? AND synced=false AND timestamp BETWEEN ? AND ? AND created_at < ? ",
+		projectID, docType, from, to, maxCreatedAtFmt)
+
+	if limit > 0 {
+		dbTx = dbTx.Limit(limit)
+	}
+
+	if offset > 0 {
+		dbTx = dbTx.Offset(offset)
+	}
+
+	if err := dbTx.Find(&documents).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
 		logCtx.WithError(err).Error("Failed to get hubspot documents by type.")
 		return nil, http.StatusInternalServerError
+	}
+
+	if len(documents) == 0 {
+		return nil, http.StatusNotFound
 	}
 
 	return documents, http.StatusFound
