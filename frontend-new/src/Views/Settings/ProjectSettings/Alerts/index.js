@@ -277,10 +277,10 @@ const Alerts = ({
   ];
 
   useEffect(() => {
+    setTableLoading(true);
     fetchAllAlerts(activeProject?.id).then(() => {
       setTableLoading(false);
     }); 
-
   }, [activeProject]);
 
   useEffect(() => { 
