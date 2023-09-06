@@ -4560,6 +4560,128 @@ type syncWorkerStatus struct {
 	Lock       sync.Mutex
 }
 
+type DocumentPaginator struct {
+	ProjectID    int64                  `json:"project_id"`
+	DocType      int                    `json:"doc_type"`
+	StartTime    int64                  `json:"start_time"`
+	EndTime      int64                  `json:"end_time"`
+	LastDocument *model.HubspotDocument `json:"previous_last_document"`
+	Limit        int                    `json:"limit"`
+	Offset       int                    `json:"offset"`
+	MaxCreatedAt int64                  `json:"max_created_at"`
+}
+
+func NewHubspotDocumentPaginator(projectID int64, docType int, startTime, endTime, maxCreatedAt int64, limit int) *DocumentPaginator {
+	return &DocumentPaginator{
+		ProjectID:    projectID,
+		DocType:      docType,
+		StartTime:    startTime,
+		EndTime:      endTime,
+		Limit:        limit,
+		MaxCreatedAt: maxCreatedAt,
+	}
+}
+
+func (dp *DocumentPaginator) GetNextBatch() ([]model.HubspotDocument, int, bool) {
+	documents, status := store.GetStore().GetHubspotDocumentsByTypeANDRangeForSync(dp.ProjectID, dp.DocType, dp.StartTime, dp.EndTime, dp.MaxCreatedAt, dp.Limit, dp.Offset)
+	if status != http.StatusFound {
+		if status != http.StatusNotFound {
+			log.WithFields(log.Fields{"paginator": dp}).Error("Failed to get hubspot documents using pagination.")
+			return nil, status, false
+		}
+
+		return nil, status, false
+	}
+
+	log.WithFields(log.Fields{"paginator": dp, "total_records": len(documents)}).Info("Pulled records in hubspot documents paginator.")
+	// to avoid pulling same record set again when records are skipped from processing because of unprocessed dependent records.
+	if dp.LastDocument != nil && len(documents) == dp.Limit {
+		currentLastDocument := documents[len(documents)-1]
+		// unique index compare
+		if dp.LastDocument.ID == currentLastDocument.ID && dp.LastDocument.Type == currentLastDocument.Type &&
+			dp.LastDocument.Action == currentLastDocument.Action && dp.LastDocument.Timestamp == currentLastDocument.Timestamp {
+			dp.Offset += len(documents)
+
+			log.WithFields(log.Fields{"paginator": dp, "total_records": len(documents)}).Info("Same records received on hubspot documents paginator. Shifting offest.")
+			documents, status = store.GetStore().GetHubspotDocumentsByTypeANDRangeForSync(dp.ProjectID, dp.DocType, dp.StartTime, dp.EndTime, dp.MaxCreatedAt, dp.Limit, dp.Offset)
+			if status != http.StatusFound {
+				if status != http.StatusNotFound {
+					log.WithFields(log.Fields{"paginator": dp}).Error("Failed to get hubspot documents using pagination with offset.")
+					return nil, status, false
+				}
+
+				return nil, status, false
+			}
+		}
+	}
+
+	dp.LastDocument = &documents[len(documents)-1]
+	return documents, http.StatusFound, len(documents) == dp.Limit
+}
+
+func getAndProcessUnSyncedDocumentsByDocType(project *model.Project, docType int, from, to int64, pullLimit int, totalRecordsToProcess int, firstSyncTimestamp int64, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string,
+	workersPerProject int, recordsMaxCreatedAtSec int64, datePropertiesByObjectType map[int]*map[string]bool,
+	timeZone U.TimeZoneString, recordsProcessLimit int, hubspotSmartEventNames *map[string][]HubspotSmartEventName) (bool, bool, int) {
+
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "doc_type": docType, "start_time": from, "end_time": to,
+		"pull_limit": pullLimit, "total_records_to_process": totalRecordsToProcess, "first_sync_timestamp": firstSyncTimestamp,
+		"workers_per_project": workersPerProject, "record_max_created_at": recordsMaxCreatedAtSec, "time_zone": timeZone, "record_process_limit": recordsProcessLimit})
+
+	if docType == model.HubspotDocumentTypeContactList && !C.ContactListInsertEnabled(project.ID) {
+		return false, false, 0
+	}
+
+	logCtx.Info("Processing started for given time range.")
+
+	processedCount := 0
+	docTypFailure := false
+	documentPaginator := NewHubspotDocumentPaginator(project.ID, docType, from, to, recordsMaxCreatedAtSec, pullLimit)
+	hasMore := true
+	for hasMore {
+		var documents []model.HubspotDocument
+		var errCode int
+		documents, errCode, hasMore = documentPaginator.GetNextBatch()
+		if errCode != http.StatusFound {
+			if errCode != http.StatusNotFound {
+				logCtx.Error("Failed to get salesforce document by type for sync.")
+				return true, false, processedCount
+			}
+
+			return docTypFailure, false, processedCount
+		}
+
+		fillDatePropertiesAndTimeZone(documents, datePropertiesByObjectType[docType], timeZone)
+		docTypeAlias := model.GetHubspotTypeAliasByType(docType)
+
+		batches := GetBatchedOrderedDocumentsByID(documents, workersPerProject)
+
+		var syncStatus syncWorkerStatus
+		var workerIndex int
+		for bi := range batches {
+			batch := batches[bi]
+			var wg sync.WaitGroup
+			for docID := range batch {
+				processedCount += len(batch[docID])
+				logCtx.WithFields(log.Fields{"worker": workerIndex, "doc_id": docID, "type": docType}).Info("Processing Batch by doc_id.")
+				workerIndex++
+				wg.Add(1)
+				go syncAllWorker(project, &wg, &syncStatus, otpRules, uniqueOTPEventKeys, batch[docID], (*hubspotSmartEventNames)[docTypeAlias], firstSyncTimestamp)
+			}
+			wg.Wait()
+
+			if syncStatus.HasFailure {
+				docTypFailure = true
+			}
+
+			if processedCount > totalRecordsToProcess {
+				return docTypFailure, true, processedCount
+			}
+		}
+	}
+
+	return docTypFailure, false, processedCount
+}
+
 // syncAllWorker is a wrapper over syncAll function for providing concurrency
 func syncAllWorker(project *model.Project, wg *sync.WaitGroup, syncStatus *syncWorkerStatus, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, documents []model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName, minTimestamp int64) {
 	defer wg.Done()
@@ -4574,7 +4696,7 @@ func syncAllWorker(project *model.Project, wg *sync.WaitGroup, syncStatus *syncW
 }
 
 func syncByOrderedTimeSeries(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, orderedTimeSeries [][]int64, workersPerProject int, recordsMaxCreatedAtSec int64, datePropertiesByObjectType map[int]*map[string]bool, timeZone U.TimeZoneString, recordsProcessLimit int,
-	hubspotSmartEventNames *map[string][]HubspotSmartEventName) (map[string]bool, map[string]int64, map[string]int, bool) {
+	hubspotSmartEventNames *map[string][]HubspotSmartEventName, pullLimit int) (map[string]bool, map[string]int64, map[string]int, bool) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "worker_per_project": workersPerProject,
 		"record_max_created_at": recordsMaxCreatedAtSec, "record_process_limit": recordsProcessLimit})
@@ -4583,7 +4705,7 @@ func syncByOrderedTimeSeries(project *model.Project, otpRules *[]model.OTPRule, 
 		return nil, nil, nil, false
 	}
 
-	minTimestamps := make(map[int]int64)
+	firstSyncTimestamp := make(map[int]int64)
 	syncOrderByType := GetHubspotSyncOrderByProjectID(project.ID)
 	for i := range syncOrderByType {
 		if syncOrderByType[i] == model.HubspotDocumentTypeContactList && !C.ContactListInsertEnabled(project.ID) {
@@ -4592,84 +4714,48 @@ func syncByOrderedTimeSeries(project *model.Project, otpRules *[]model.OTPRule, 
 
 		// for contact-list set last 48 hrs as begenning for recent events
 		if syncOrderByType[i] == model.HubspotDocumentTypeContactList {
-			minTimestamps[syncOrderByType[i]] = U.TimeNowZ().Add(-48*time.Hour).Unix() * 1000
+			firstSyncTimestamp[syncOrderByType[i]] = U.TimeNowZ().Add(-48*time.Hour).Unix() * 1000
 			continue
 		}
 
-		minTimestamp, err := store.GetStore().GetMinTimestampByFirstSync(project.ID, syncOrderByType[i])
+		firstTimestamp, err := store.GetStore().GetMinTimestampByFirstSync(project.ID, syncOrderByType[i])
 		if err != http.StatusFound && err != http.StatusNotFound {
 			logCtx.WithFields(log.Fields{"project_id": project.ID, "doc_type": syncOrderByType[i]}).Error("Failed to get timestamp by first sync in hubspot document.")
 			return nil, nil, nil, false
 		}
 
-		minTimestamps[syncOrderByType[i]] = minTimestamp
+		firstSyncTimestamp[syncOrderByType[i]] = firstTimestamp
 	}
 
-	processedCount := 0
 	overAllSyncStatus := make(map[string]bool)
 	overallExecutionTime := make(map[string]int64)
 	overallProcessedCount := make(map[string]int)
+	totalRecordsProcessed := 0
 	for _, timeRange := range orderedTimeSeries {
 
 		for i := range syncOrderByType {
-			if syncOrderByType[i] == model.HubspotDocumentTypeContactList && !C.ContactListInsertEnabled(project.ID) {
-				continue
-			}
-
-			startTime := time.Now()
-			logCtx = logCtx.WithFields(log.Fields{"type": syncOrderByType[i], "time_range": timeRange})
 
 			logCtx.Info("Processing started for given time range")
-			var documents []model.HubspotDocument
-			var errCode int
-			if workersPerProject > 1 {
-				documents, errCode = store.GetStore().GetHubspotDocumentsByTypeANDRangeForSync(project.ID, syncOrderByType[i], timeRange[0], timeRange[1], recordsMaxCreatedAtSec)
-			} else {
-				documents, errCode = store.GetStore().
-					GetHubspotDocumentsByTypeForSync(project.ID, syncOrderByType[i], recordsMaxCreatedAtSec)
-			}
 
-			if errCode != http.StatusFound && errCode != http.StatusNotFound {
-				logCtx.WithFields(log.Fields{"time_range": timeRange, "doc_type": syncOrderByType[i]}).Error("Failed to get hubspot document by type for sync.")
-				continue
-			}
+			docType := syncOrderByType[i]
+			docTypeAlias := model.GetHubspotTypeAliasByType(docType)
+			startTime := time.Now()
+			pendingRecordsProcessCount := recordsProcessLimit - totalRecordsProcessed + 1
 
-			fillDatePropertiesAndTimeZone(documents, datePropertiesByObjectType[syncOrderByType[i]], timeZone)
-			docTypeAlias := model.GetHubspotTypeAliasByType(syncOrderByType[i])
+			docTypeFailure, processLimitExceeded, recordsProcessed := getAndProcessUnSyncedDocumentsByDocType(project, docType, timeRange[0], timeRange[1], pullLimit, pendingRecordsProcessCount, firstSyncTimestamp[docType], otpRules, uniqueOTPEventKeys,
+				workersPerProject, recordsMaxCreatedAtSec, datePropertiesByObjectType, timeZone, recordsProcessLimit, hubspotSmartEventNames)
 
-			batches := GetBatchedOrderedDocumentsByID(documents, workersPerProject)
-
-			var syncStatus syncWorkerStatus
-			var workerIndex int
-			isProcessLimitExceeded := false
-			for bi := range batches {
-				batch := batches[bi]
-				var wg sync.WaitGroup
-				for docID := range batch {
-					processedCount += len(batch[docID])
-					logCtx.WithFields(log.Fields{"worker": workerIndex, "doc_id": docID, "type": syncOrderByType[i]}).Info("Processing Batch by doc_id")
-					workerIndex++
-					wg.Add(1)
-					go syncAllWorker(project, &wg, &syncStatus, otpRules, uniqueOTPEventKeys, batch[docID], (*hubspotSmartEventNames)[docTypeAlias], minTimestamps[syncOrderByType[i]])
-				}
-				wg.Wait()
-				if processedCount > recordsProcessLimit {
-					isProcessLimitExceeded = true
-					break
-				}
-			}
-
+			overallExecutionTime[docTypeAlias] += time.Since(startTime).Milliseconds()
+			overallProcessedCount[docTypeAlias] += recordsProcessed
+			totalRecordsProcessed = totalRecordsProcessed + recordsProcessed
 			if _, exist := overAllSyncStatus[docTypeAlias]; !exist {
 				overAllSyncStatus[docTypeAlias] = false
 			}
 
-			if syncStatus.HasFailure {
+			if docTypeFailure {
 				overAllSyncStatus[docTypeAlias] = true
 			}
-
-			overallExecutionTime[docTypeAlias] += time.Since(startTime).Milliseconds()
-			overallProcessedCount[docTypeAlias] += len(documents)
-			if isProcessLimitExceeded {
+			if processLimitExceeded {
 				return overAllSyncStatus, overallExecutionTime, overallProcessedCount, true
 			}
 
@@ -4681,7 +4767,8 @@ func syncByOrderedTimeSeries(project *model.Project, otpRules *[]model.OTPRule, 
 }
 
 // Sync - Syncs hubspot documents in an order of type.
-func Sync(projectID int64, workersPerProject int, recordsMaxCreatedAtSec int64, datePropertiesByObjectType map[int]*map[string]bool, timeZone U.TimeZoneString, recordsProcessLimit int) ([]Status, bool) {
+func Sync(projectID int64, workersPerProject int, recordsMaxCreatedAtSec int64, datePropertiesByObjectType map[int]*map[string]bool, timeZone U.TimeZoneString,
+	recordsProcessLimit int, pullLimit int) ([]Status, bool) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "workers_per_project": workersPerProject, "record_max_created_at": recordsMaxCreatedAtSec})
 	logCtx.Info("Running sync for project.")
 
@@ -4746,8 +4833,8 @@ func Sync(projectID int64, workersPerProject int, recordsMaxCreatedAtSec int64, 
 	}
 
 	anyFailure := false
-	overAllSyncStatus, overallExecutionTime, overallProcessedCount, isProcessLimitExceeded := syncByOrderedTimeSeries(project, &otpRules, &uniqueOTPEventKeys, orderedTimeSeries, workersPerProject,
-		recordsMaxCreatedAtSec, datePropertiesByObjectType, timeZone, recordsProcessLimit, hubspotSmartEventNames)
+	overAllSyncStatus, overallExecutionTime, overallProcessedCount, isProcessLimitExceeded := syncByOrderedTimeSeries(project, &otpRules, &uniqueOTPEventKeys,
+		orderedTimeSeries, workersPerProject, recordsMaxCreatedAtSec, datePropertiesByObjectType, timeZone, recordsProcessLimit, hubspotSmartEventNames, pullLimit)
 
 	for docTypeAlias, failure := range overAllSyncStatus {
 		status := Status{ProjectId: projectID,
