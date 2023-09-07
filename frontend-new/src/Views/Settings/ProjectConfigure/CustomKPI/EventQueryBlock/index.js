@@ -70,7 +70,7 @@ function EventQueryBlock({
         }
       ]);
     }
-  }, [selEventName]);
+  }, [selEventName, eventOptions]);
 
   useEffect(() => {
     if (activeProject && activeProject.id) {

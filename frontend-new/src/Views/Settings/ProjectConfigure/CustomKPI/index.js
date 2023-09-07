@@ -149,7 +149,7 @@ function CustomKPI({
           color={'red'}
           extraClass={'mr-2 inline'}
         />
-        <span style={{ color: 'red' }}>Remove</span>
+        <span className='text-red-600'>Remove</span>
       </Menu.Item>
     </Menu>
   );
