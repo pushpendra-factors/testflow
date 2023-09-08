@@ -64,7 +64,16 @@ export const hoverEvents = [
   '$hubspot_engagement_meeting_created',
   '$hubspot_engagement_call_created',
   'sf_task_created',
-  '$sf_event_created'
+  '$sf_event_created',
+  '$g2_sponsored',
+  '$g2_product_profile',
+  '$g2_alternative',
+  '$g2_pricing',
+  '$g2_category',
+  '$g2_comparison',
+  '$g2_report',
+  '$g2_reference',
+  '$g2_deal'
 ];
 
 export const TimelineHoverPropDisplayNames = {
