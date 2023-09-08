@@ -675,16 +675,12 @@ function AccountDetails({
             setGranularity(granularity);
           }}
         >
-          {featureLock(activeAgent) && (
-            <TabPane
-              tab={
-                <span className='fa-activity-filter--tabname'>Overview</span>
-              }
-              key='overview'
-            >
-              {renderOverview()}
-            </TabPane>
-          )}
+          <TabPane
+            tab={<span className='fa-activity-filter--tabname'>Overview</span>}
+            key='overview'
+          >
+            {renderOverview()}
+          </TabPane>
           <TabPane
             tab={<span className='fa-activity-filter--tabname'>Timeline</span>}
             key='timeline'

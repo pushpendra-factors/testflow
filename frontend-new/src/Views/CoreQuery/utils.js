@@ -57,7 +57,7 @@ export const formatFiltersForQuery = (filters, scope = 'event') => {
   let count = 0;
   filters.forEach((filter) => {
     let { ref } = filter;
-    if (ref !== 0 || !ref) {
+    if (!ref) {
       ref = count++;
     }
     if (!groupByRef[ref]) {
