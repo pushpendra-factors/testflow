@@ -155,18 +155,20 @@ const Alerts = ({
       <Menu className={`${styles.antdActionMenu}`}>
         <Menu.Item
           key='0'
-          onClick={() => {
+          onClick={(e) => {
             setTabNo(item?.type == "kpi_alert" ? "1" : "2")
             setAlertState({ state: 'edit', index: item });
             setAlertDetails(item);
+            e.stopPropagation();
           }}
         >
           <a>Edit alert</a>
         </Menu.Item> 
           <Menu.Item
             key='1'
-            onClick={() => {
+            onClick={(e) => {
               createDuplicateAlert(item);
+              e.stopPropagation();
             }}
           >
             <a>Create copy</a>
@@ -174,8 +176,9 @@ const Alerts = ({
         <Menu.Divider />
         <Menu.Item
           key='2'
-          onClick={() => {
+          onClick={(e) => {
             confirmDeleteAlert(item);
+            e.stopPropagation();
           }}
         >
           <a>
@@ -198,11 +201,11 @@ const Alerts = ({
           level={7}
           truncate={true}
           extraClass={`cursor-pointer m-0`}
-          onClick={() => { 
-            setTabNo(item?.type == "kpi_alert" ? "1" : "2")
-            setAlertState({ state: 'edit', index: item });
-            setAlertDetails(item);
-          }}
+          // onClick={() => { 
+          //   setTabNo(item?.type == "kpi_alert" ? "1" : "2")
+          //   setAlertState({ state: 'edit', index: item });
+          //   setAlertDetails(item);
+          // }}
         >
           {item?.alert_name || item?.title}
         </Text>
@@ -403,6 +406,15 @@ const Alerts = ({
             columns={columns}
             dataSource={tableData}
             pagination={false}
+            onRow={(data,id)=>{
+              return {
+                onClick: () => { 
+                  setTabNo(data.actions?.type == "kpi_alert" ? "1" : "2")
+                  setAlertState({ state: 'edit', index: data.actions});
+                  setAlertDetails(data.actions);
+                }
+              }
+            }}
           />
       );
     }

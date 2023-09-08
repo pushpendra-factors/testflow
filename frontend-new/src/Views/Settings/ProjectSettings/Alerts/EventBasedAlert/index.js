@@ -355,6 +355,7 @@ const EventBasedAlert = ({
         filters: processFiltersFromQuery(viewAlertDetails?.alert?.filter),
         group: ''
       });
+      setActiveGrpBtn(viewAlertDetails?.alert?.event_level == "account" ? "events" : "users")
       setQueries(queryData);
       setAlertLimit(viewAlertDetails?.alert?.alert_limit);
       setCoolDownTime(viewAlertDetails?.alert?.cool_down_time / 3600);
@@ -642,6 +643,7 @@ const EventBasedAlert = ({
     ) {
       let payload = {
         title: data?.alert_name,
+        event_level: activeGrpBtn == "events" ? "account" : "user",
         event: queries[0]?.label,
         filter: formatFiltersForQuery(queries?.[0]?.filters),
         notifications: notifications,
@@ -1118,7 +1120,7 @@ const EventBasedAlert = ({
               </div>
             </Col>
             <Col span={16}>
-              <div className='border--thin-2 px-4 py-2'>
+              <div className='border--thin-2 px-4 py-2 border-radius--sm'>
                 <Form.Item name='event_name' className={'m-0'}>
                   {queryList()}
                 </Form.Item>
