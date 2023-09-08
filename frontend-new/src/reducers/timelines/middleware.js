@@ -6,7 +6,8 @@ import {
   createSegment,
   fetchSegments,
   updateSegment,
-  deleteSegmentByID
+  deleteSegmentByID,
+  fetchAccountOverview
 } from '.';
 import { formatAccountTimeline, formatUsersTimeline } from './utils';
 import { deleteSegmentAction } from './actions';
@@ -68,6 +69,31 @@ export const getProfileAccountDetails =
         });
     });
   };
+
+export const getAccountOverview = (projectId, id, source) => (dispatch) => {
+  dispatch({ type: 'FETCH_PROFILE_ACCOUNT_OVERVIEW_LOADING' });
+  return new Promise((resolve) => {
+    fetchAccountOverview(projectId, id, source)
+      .then((response) => {
+        const data = { ...response.data, id: id };
+        resolve(
+          dispatch({
+            type: 'FETCH_PROFILE_ACCOUNT_OVERVIEW_FULFILLED',
+            payload: data
+          })
+        );
+      })
+      .catch((err) => {
+        console.log(err);
+        resolve(
+          dispatch({
+            type: 'FETCH_PROFILE_ACCOUNT_OVERVIEW_FAILED',
+            payload: {}
+          })
+        );
+      });
+  });
+};
 
 export const getProfileUsers = (projectId, payload, agentId) => (dispatch) => {
   dispatch({ type: 'FETCH_PROFILE_USERS_LOADING' });

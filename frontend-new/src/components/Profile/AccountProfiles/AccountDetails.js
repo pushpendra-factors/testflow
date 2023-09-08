@@ -19,7 +19,10 @@ import {
   udpateProjectSettings,
   fetchProjectSettings
 } from '../../../reducers/global';
-import { getProfileAccountDetails } from '../../../reducers/timelines/middleware';
+import {
+  getAccountOverview,
+  getProfileAccountDetails
+} from '../../../reducers/timelines/middleware';
 import {
   addEnabledFlagToActivities,
   formatUserPropertiesToCheckList
@@ -50,6 +53,7 @@ import getGroupIcon from 'Utils/getGroupIcon';
 function AccountDetails({
   accounts,
   accountDetails,
+  accountOverview,
   activeProject,
   fetchGroups,
   groupOpts,
@@ -58,6 +62,7 @@ function AccountDetails({
   fetchProjectSettings,
   udpateProjectSettings,
   getProfileAccountDetails,
+  getAccountOverview,
   userPropertiesV2,
   groupProperties,
   eventNamesMap,
@@ -396,15 +401,14 @@ function AccountDetails({
     setPropSelectOpen(false);
   };
 
-  const handleOptionBackClick = useCallback(() =>{
+  const handleOptionBackClick = useCallback(() => {
     history.replace(PathUrls.ProfileAccounts, {
       activeSegment: location.state?.activeSegment,
       fromDetails: location.state?.fromDetails,
       accountPayload: location.state?.accountPayload,
       currentPage: location.state?.currentPage
     });
-
-  },[]);
+  }, []);
 
   const onDelete = (option) => {
     const timelinesConfig = { ...tlConfig };
@@ -531,6 +535,7 @@ function AccountDetails({
           className='font-size--small'
           href='https://www.uplead.com'
           target='_blank'
+          rel='noreferrer'
         >
           Brand Logo provided by UpLead
         </a>
@@ -541,15 +546,17 @@ function AccountDetails({
   // temp hack for engagement
   const formatOverview = useMemo(() => {
     const account = accounts?.data?.find((item) => item?.identity === activeId);
-    const { data: { overview } = {} } = accountDetails;
-    const formattedOverview = { ...overview, engagement: account?.engagement };
+    const formattedOverview = {
+      ...accountOverview,
+      engagement: account?.engagement
+    };
     return formattedOverview;
-  }, [accounts, accountDetails, activeId]);
+  }, [accounts, accountOverview, activeId]);
 
   const renderOverview = () => (
     <AccountOverview
       overview={formatOverview || {}}
-      loading={accountDetails?.isLoading}
+      loading={accountOverview?.isLoading}
     />
   );
 
@@ -662,6 +669,24 @@ function AccountDetails({
     </div>
   );
 
+  const handleTabChange = (val) => {
+    if (val === 'overview' && activeId !== accountOverview?.id) {
+      getAccountOverview(activeProject.id, activeGroup, activeId);
+    }
+    insertUrlParam(window.history, 'view', val);
+    setTimelineViewMode(val);
+    setGranularity(granularity);
+  };
+
+  const renderTabPane = ({ key, tabName, content }) => (
+    <TabPane
+      tab={<span className='fa-activity-filter--tabname'>{tabName}</span>}
+      key={key}
+    >
+      {content}
+    </TabPane>
+  );
+
   const renderTimelineView = () => {
     return (
       <div className='timeline-view'>
@@ -669,30 +694,23 @@ function AccountDetails({
           defaultActiveKey='birdview'
           size='small'
           activeKey={timelineViewMode}
-          onChange={(val) => {
-            insertUrlParam(window.history, 'view', val);
-            setTimelineViewMode(val);
-            setGranularity(granularity);
-          }}
+          onChange={handleTabChange}
         >
-          <TabPane
-            tab={<span className='fa-activity-filter--tabname'>Overview</span>}
-            key='overview'
-          >
-            {renderOverview()}
-          </TabPane>
-          <TabPane
-            tab={<span className='fa-activity-filter--tabname'>Timeline</span>}
-            key='timeline'
-          >
-            {renderSingleTimelineView()}
-          </TabPane>
-          <TabPane
-            tab={<span className='fa-activity-filter--tabname'>Birdview</span>}
-            key='birdview'
-          >
-            {renderBirdviewWithActions()}
-          </TabPane>
+          {renderTabPane({
+            key: 'overview',
+            tabName: 'Overview',
+            content: renderOverview()
+          })}
+          {renderTabPane({
+            key: 'timeline',
+            tabName: 'Timeline',
+            content: renderSingleTimelineView()
+          })}
+          {renderTabPane({
+            key: 'birdview',
+            tabName: 'Birdview',
+            content: renderBirdviewWithActions()
+          })}
         </Tabs>
       </div>
     );
@@ -722,6 +740,7 @@ const mapStateToProps = (state) => ({
   groupOpts: state.groups.data,
   accounts: state.timelines.accounts,
   accountDetails: state.timelines.accountDetails,
+  accountOverview: state.timelines.accountOverview,
   userPropertiesV2: state.coreQuery.userPropertiesV2,
   eventPropertiesV2: state.coreQuery.eventPropertiesV2,
   groupProperties: state.coreQuery.groupProperties,
@@ -733,6 +752,7 @@ const mapDispatchToProps = (dispatch) =>
     {
       fetchGroups,
       getGroupProperties,
+      getAccountOverview,
       getEventPropertiesV2,
       getProfileAccountDetails,
       fetchProjectSettings,

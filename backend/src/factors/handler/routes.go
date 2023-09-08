@@ -122,164 +122,165 @@ func InitAppRoutes(r *gin.Engine) {
 	shareSixSignalRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/sixsignal", responseWrapper(GetSixSignalReportHandler))
 	shareSixSignalRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/sixsignal/publicreport", responseWrapper(GetSixSignalPublicReportHandler))
 	shareSixSignalRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/sixsignal/report/pageviews", responseWrapper(GetPageViewForSixSignalReport))
-	authRouteGroup.POST("/:project_id/sixsignal/share",  mid.FeatureMiddleware([]string{M.FEATURE_SIX_SIGNAL_REPORT}), stringifyWrapper(CreateSixSignalShareableURLHandler))
-	authRouteGroup.POST("/:project_id/sixsignal/add_email",  mid.FeatureMiddleware([]string{M.FEATURE_SIX_SIGNAL_REPORT}), stringifyWrapper(AddSixSignalEmailIDHandler))
-	authRouteGroup.GET("/:project_id/sixsignal/date_list",  mid.FeatureMiddleware([]string{M.FEATURE_SIX_SIGNAL_REPORT}), stringifyWrapper(FetchListofDatesForSixSignalReport))
+	authRouteGroup.POST("/:project_id/sixsignal/share", mid.FeatureMiddleware([]string{M.FEATURE_SIX_SIGNAL_REPORT}), stringifyWrapper(CreateSixSignalShareableURLHandler))
+	authRouteGroup.POST("/:project_id/sixsignal/add_email", mid.FeatureMiddleware([]string{M.FEATURE_SIX_SIGNAL_REPORT}), stringifyWrapper(AddSixSignalEmailIDHandler))
+	authRouteGroup.GET("/:project_id/sixsignal/date_list", mid.FeatureMiddleware([]string{M.FEATURE_SIX_SIGNAL_REPORT}), stringifyWrapper(FetchListofDatesForSixSignalReport))
 
 	// Dashboard endpoints
 	authRouteGroup.GET("/:project_id/dashboards", mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), stringifyWrapper(GetDashboardsHandler))
-	authRouteGroup.POST("/:project_id/dashboards",  mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), stringifyWrapper(CreateDashboardHandler))
-	authRouteGroup.PUT("/:project_id/dashboards/:dashboard_id",  mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), UpdateDashboardHandler)
+	authRouteGroup.POST("/:project_id/dashboards", mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), stringifyWrapper(CreateDashboardHandler))
+	authRouteGroup.PUT("/:project_id/dashboards/:dashboard_id", mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), UpdateDashboardHandler)
 	authRouteGroup.GET("/:project_id/dashboards/:dashboard_id/units", mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), stringifyWrapper(GetDashboardUnitsHandler))
-	authRouteGroup.POST("/:project_id/dashboards/:dashboard_id/units",  mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), stringifyWrapper(CreateDashboardUnitHandler))
-	authRouteGroup.PUT("/:project_id/dashboards/:dashboard_id/units/:unit_id",  mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), UpdateDashboardUnitHandler)
-	authRouteGroup.DELETE("/:project_id/dashboards/:dashboard_id/units/:unit_id",  mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), DeleteDashboardUnitHandler)
+	authRouteGroup.POST("/:project_id/dashboards/:dashboard_id/units", mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), stringifyWrapper(CreateDashboardUnitHandler))
+	authRouteGroup.PUT("/:project_id/dashboards/:dashboard_id/units/:unit_id", mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), UpdateDashboardUnitHandler)
+	authRouteGroup.DELETE("/:project_id/dashboards/:dashboard_id/units/:unit_id", mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), DeleteDashboardUnitHandler)
 	authRouteGroup.POST("/:project_id/dashboard/:dashboard_id/units/query/web_analytics", mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}),
 		DashboardUnitsWebAnalyticsQueryHandler)
 
 	// Offline Touch Point rules
 	authRouteGroup.GET("/:project_id/otp_rules", mid.FeatureMiddleware([]string{M.FEATURE_OFFLINE_TOUCHPOINTS}), responseWrapper(GetOTPRuleHandler))
-	authRouteGroup.POST("/:project_id/otp_rules",  mid.FeatureMiddleware([]string{M.FEATURE_OFFLINE_TOUCHPOINTS}), responseWrapper(CreateOTPRuleHandler))
-	authRouteGroup.PUT("/:project_id/otp_rules/:rule_id",  mid.FeatureMiddleware([]string{M.FEATURE_OFFLINE_TOUCHPOINTS}), responseWrapper(UpdateOTPRuleHandler))
+	authRouteGroup.POST("/:project_id/otp_rules", mid.FeatureMiddleware([]string{M.FEATURE_OFFLINE_TOUCHPOINTS}), responseWrapper(CreateOTPRuleHandler))
+	authRouteGroup.PUT("/:project_id/otp_rules/:rule_id", mid.FeatureMiddleware([]string{M.FEATURE_OFFLINE_TOUCHPOINTS}), responseWrapper(UpdateOTPRuleHandler))
 	authRouteGroup.GET("/:project_id/otp_rules/:rule_id", mid.FeatureMiddleware([]string{M.FEATURE_OFFLINE_TOUCHPOINTS}), responseWrapper(SearchOTPRuleHandler))
-	authRouteGroup.DELETE("/:project_id/otp_rules/:rule_id",  mid.FeatureMiddleware([]string{M.FEATURE_OFFLINE_TOUCHPOINTS}), responseWrapper(DeleteOTPRuleHandler))
+	authRouteGroup.DELETE("/:project_id/otp_rules/:rule_id", mid.FeatureMiddleware([]string{M.FEATURE_OFFLINE_TOUCHPOINTS}), responseWrapper(DeleteOTPRuleHandler))
 
 	// Dashboard templates
 
-	authRouteGroup.POST("/:project_id/dashboard_template/:id/trigger",  mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), GenerateDashboardFromTemplateHandler)
-	authRouteGroup.POST("/:project_id/dashboards/:dashboard_id/trigger",  mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), GenerateTemplateFromDashboardHandler)
+	authRouteGroup.POST("/:project_id/dashboard_template/:id/trigger", mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), GenerateDashboardFromTemplateHandler)
+	authRouteGroup.POST("/:project_id/dashboards/:dashboard_id/trigger", mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), GenerateTemplateFromDashboardHandler)
 
 	authRouteGroup.GET("/:project_id/queries", mid.FeatureMiddleware([]string{M.FEATURE_SAVED_QUERIES}), stringifyWrapper(GetQueriesHandler))
-	authRouteGroup.POST("/:project_id/queries",  mid.FeatureMiddleware([]string{M.FEATURE_SAVED_QUERIES}), stringifyWrapper(CreateQueryHandler))
-	authRouteGroup.PUT("/:project_id/queries/:query_id",  mid.FeatureMiddleware([]string{M.FEATURE_SAVED_QUERIES}), UpdateSavedQueryHandler)
-	authRouteGroup.DELETE("/:project_id/queries/:query_id",  mid.FeatureMiddleware([]string{M.FEATURE_SAVED_QUERIES}), DeleteSavedQueryHandler)
+	authRouteGroup.POST("/:project_id/queries", mid.FeatureMiddleware([]string{M.FEATURE_SAVED_QUERIES}), stringifyWrapper(CreateQueryHandler))
+	authRouteGroup.PUT("/:project_id/queries/:query_id", mid.FeatureMiddleware([]string{M.FEATURE_SAVED_QUERIES}), UpdateSavedQueryHandler)
+	authRouteGroup.DELETE("/:project_id/queries/:query_id", mid.FeatureMiddleware([]string{M.FEATURE_SAVED_QUERIES}), DeleteSavedQueryHandler)
 	authRouteGroup.GET("/:project_id/queries/search", mid.FeatureMiddleware([]string{M.FEATURE_SAVED_QUERIES}), stringifyWrapper(SearchQueriesHandler))
 
 	authRouteGroup.GET("/:project_id/models", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), GetProjectModelsHandler)
 	authRouteGroup.GET("/:project_id/filters", mid.FeatureMiddleware([]string{M.FEATURE_FILTERS}), GetFiltersHandler)
-	authRouteGroup.POST("/:project_id/filters",  mid.FeatureMiddleware([]string{M.FEATURE_FILTERS}), CreateFilterHandler)
-	authRouteGroup.PUT("/:project_id/filters/:filter_id",  mid.FeatureMiddleware([]string{M.FEATURE_FILTERS}), UpdateFilterHandler)
-	authRouteGroup.DELETE("/:project_id/filters/:filter_id",  mid.FeatureMiddleware([]string{M.FEATURE_FILTERS}), DeleteFilterHandler)
+	authRouteGroup.POST("/:project_id/filters", mid.FeatureMiddleware([]string{M.FEATURE_FILTERS}), CreateFilterHandler)
+	authRouteGroup.PUT("/:project_id/filters/:filter_id", mid.FeatureMiddleware([]string{M.FEATURE_FILTERS}), UpdateFilterHandler)
+	authRouteGroup.DELETE("/:project_id/filters/:filter_id", mid.FeatureMiddleware([]string{M.FEATURE_FILTERS}), DeleteFilterHandler)
 	authRouteGroup.POST("/:project_id/factor", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), FactorHandler)
 
 	// shareable url endpoints
 	authRouteGroup.GET("/:project_id/shareable_url", mid.FeatureMiddleware([]string{M.FEATURE_SHAREABLE_URL}), GetShareableURLsHandler)
 	authRouteGroup.POST("/:project_id/shareable_url", mid.FeatureMiddleware([]string{M.FEATURE_SHAREABLE_URL}), CreateShareableURLHandler)
-	authRouteGroup.DELETE("/:project_id/shareable_url/:share_id",  mid.FeatureMiddleware([]string{M.FEATURE_SHAREABLE_URL}), DeleteShareableURLHandler)
-	authRouteGroup.DELETE("/:project_id/shareable_url/revoke/:query_id",  mid.FeatureMiddleware([]string{M.FEATURE_SHAREABLE_URL}), RevokeShareableURLHandler)
+	authRouteGroup.DELETE("/:project_id/shareable_url/:share_id", mid.FeatureMiddleware([]string{M.FEATURE_SHAREABLE_URL}), DeleteShareableURLHandler)
+	authRouteGroup.DELETE("/:project_id/shareable_url/revoke/:query_id", mid.FeatureMiddleware([]string{M.FEATURE_SHAREABLE_URL}), RevokeShareableURLHandler)
 
 	// v1 Dashboard endpoints
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/dashboards/multi/:dashboard_ids/units",  mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), stringifyWrapper(CreateDashboardUnitForMultiDashboardsHandler))
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/dashboards/queries/:dashboard_id/units",  mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), stringifyWrapper(CreateDashboardUnitsForMultipleQueriesHandler))
-	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/dashboards/:dashboard_id/units/multi/:unit_ids",  mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), DeleteMultiDashboardUnitHandler)
-	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/dashboards/:dashboard_id",  mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), DeleteDashboardHandler)
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/dashboards/multi/:dashboard_ids/units", mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), stringifyWrapper(CreateDashboardUnitForMultiDashboardsHandler))
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/dashboards/queries/:dashboard_id/units", mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), stringifyWrapper(CreateDashboardUnitsForMultipleQueriesHandler))
+	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/dashboards/:dashboard_id/units/multi/:unit_ids", mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), DeleteMultiDashboardUnitHandler)
+	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/dashboards/:dashboard_id", mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), DeleteDashboardHandler)
 
 	// attribution V1 endpoints
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/attribution/queries", mid.FeatureMiddleware([]string{M.FEATURE_ATTRIBUTION}), stringifyWrapper(V1.GetAttributionQueriesHandler))
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/attribution/queries",  mid.FeatureMiddleware([]string{M.FEATURE_ATTRIBUTION}), stringifyWrapper(V1.CreateAttributionV1QueryAndSaveToDashboardHandler))
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/attribution/queries", mid.FeatureMiddleware([]string{M.FEATURE_ATTRIBUTION}), stringifyWrapper(V1.CreateAttributionV1QueryAndSaveToDashboardHandler))
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/attribution/dashboards", mid.FeatureMiddleware([]string{M.FEATURE_ATTRIBUTION}), stringifyWrapper(V1.GetOrCreateAttributionV1DashboardHandler))
-	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/attribution/dashboards/:dashboard_id/units/:unit_id/query/:query_id",  mid.FeatureMiddleware([]string{M.FEATURE_ATTRIBUTION}), V1.DeleteAttributionDashboardUnitAndQueryHandler)
+	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/attribution/dashboards/:dashboard_id/units/:unit_id/query/:query_id", mid.FeatureMiddleware([]string{M.FEATURE_ATTRIBUTION}), V1.DeleteAttributionDashboardUnitAndQueryHandler)
 
 	// v1 custom metrics - admin/settings side.
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/config/v1", mid.FeatureMiddleware([]string{M.FEATURE_CUSTOM_METRICS, M.CONF_CUSTOM_KPIS}), V1.GetCustomMetricsConfigV1)
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics",  mid.FeatureMiddleware([]string{M.FEATURE_CUSTOM_METRICS, M.CONF_CUSTOM_KPIS}), responseWrapper(V1.CreateCustomMetric))
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics", mid.FeatureMiddleware([]string{M.FEATURE_CUSTOM_METRICS, M.CONF_CUSTOM_KPIS}), responseWrapper(V1.CreateCustomMetric))
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics", mid.FeatureMiddleware([]string{M.FEATURE_CUSTOM_METRICS, M.CONF_CUSTOM_KPIS}), responseWrapper(V1.GetCustomMetrics))
-	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/:id",  mid.FeatureMiddleware([]string{M.FEATURE_CUSTOM_METRICS, M.CONF_CUSTOM_KPIS}), responseWrapper(V1.DeleteCustomMetrics))
+	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/:id", mid.FeatureMiddleware([]string{M.FEATURE_CUSTOM_METRICS, M.CONF_CUSTOM_KPIS}), responseWrapper(V1.DeleteCustomMetrics))
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/prebuilt/add_missing", mid.FeatureMiddleware([]string{M.FEATURE_CUSTOM_METRICS, M.CONF_CUSTOM_KPIS}), responseWrapper(V1.CreateMissingPreBuiltCustomKPI))
 
 	// v1 CRM And Smart Event endpoints
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_event", mid.FeatureMiddleware([]string{M.FEATURE_SMART_EVENTS}), GetSmartEventFiltersHandler)
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/smart_event",  mid.FeatureMiddleware([]string{M.FEATURE_SMART_EVENTS}), CreateSmartEventFilterHandler)
-	authRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/smart_event",  mid.FeatureMiddleware([]string{M.FEATURE_SMART_EVENTS}), UpdateSmartEventFilterHandler)
-	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/smart_event",  mid.FeatureMiddleware([]string{M.FEATURE_SMART_EVENTS}), responseWrapper(DeleteSmartEventFilterHandler))
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/smart_event", mid.FeatureMiddleware([]string{M.FEATURE_SMART_EVENTS}), CreateSmartEventFilterHandler)
+	authRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/smart_event", mid.FeatureMiddleware([]string{M.FEATURE_SMART_EVENTS}), UpdateSmartEventFilterHandler)
+	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/smart_event", mid.FeatureMiddleware([]string{M.FEATURE_SMART_EVENTS}), responseWrapper(DeleteSmartEventFilterHandler))
 
 	// template
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/templates/:type/config", mid.FeatureMiddleware([]string{M.FEATURE_TEMPLATES}), responseWrapper(V1.GetTemplateConfigHandler))
-	authRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/templates/:type/config",  mid.FeatureMiddleware([]string{M.FEATURE_TEMPLATES}), responseWrapper(V1.UpdateTemplateConfigHandler))
+	authRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/templates/:type/config", mid.FeatureMiddleware([]string{M.FEATURE_TEMPLATES}), responseWrapper(V1.UpdateTemplateConfigHandler))
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/templates/:type/query", mid.FeatureMiddleware([]string{M.FEATURE_TEMPLATES}), responseWrapper(V1.ExecuteTemplateQueryHandler))
 
 	// smart Properties
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/config/:object_type", mid.FeatureMiddleware([]string{M.FEATURE_SMART_PROPERTIES}), responseWrapper(GetSmartPropertyRulesConfigHandler))
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/rules",  mid.FeatureMiddleware([]string{M.FEATURE_SMART_PROPERTIES}), responseWrapper(CreateSmartPropertyRulesHandler))
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/rules", mid.FeatureMiddleware([]string{M.FEATURE_SMART_PROPERTIES}), responseWrapper(CreateSmartPropertyRulesHandler))
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/rules", mid.FeatureMiddleware([]string{M.FEATURE_SMART_PROPERTIES}), responseWrapper(GetSmartPropertyRulesHandler))
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/rules/:rule_id", mid.FeatureMiddleware([]string{M.FEATURE_SMART_PROPERTIES}), responseWrapper(GetSmartPropertyRuleByRuleIDHandler))
-	authRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/rules/:rule_id",  mid.FeatureMiddleware([]string{M.FEATURE_SMART_PROPERTIES}), responseWrapper(UpdateSmartPropertyRulesHandler))
-	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/rules/:rule_id",  mid.FeatureMiddleware([]string{M.FEATURE_SMART_PROPERTIES}), responseWrapper(DeleteSmartPropertyRulesHandler))
+	authRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/rules/:rule_id", mid.FeatureMiddleware([]string{M.FEATURE_SMART_PROPERTIES}), responseWrapper(UpdateSmartPropertyRulesHandler))
+	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/rules/:rule_id", mid.FeatureMiddleware([]string{M.FEATURE_SMART_PROPERTIES}), responseWrapper(DeleteSmartPropertyRulesHandler))
 
 	// content groups
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/contentgroup",  mid.FeatureMiddleware([]string{M.FEATURE_CONTENT_GROUPS}), responseWrapper(V1.CreateContentGroupHandler))
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/contentgroup", mid.FeatureMiddleware([]string{M.FEATURE_CONTENT_GROUPS}), responseWrapper(V1.CreateContentGroupHandler))
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/contentgroup", mid.FeatureMiddleware([]string{M.FEATURE_CONTENT_GROUPS}), responseWrapper(V1.GetContentGroupHandler))
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/contentgroup/:id", mid.FeatureMiddleware([]string{M.FEATURE_CONTENT_GROUPS}), responseWrapper(V1.GetContentGroupByIDHandler))
-	authRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/contentgroup/:id",  mid.FeatureMiddleware([]string{M.FEATURE_CONTENT_GROUPS}), responseWrapper(V1.UpdateContentGroupHandler))
-	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/contentgroup/:id",  mid.FeatureMiddleware([]string{M.FEATURE_CONTENT_GROUPS}), responseWrapper(V1.DeleteContentGroupHandler))
+	authRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/contentgroup/:id", mid.FeatureMiddleware([]string{M.FEATURE_CONTENT_GROUPS}), responseWrapper(V1.UpdateContentGroupHandler))
+	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/contentgroup/:id", mid.FeatureMiddleware([]string{M.FEATURE_CONTENT_GROUPS}), responseWrapper(V1.DeleteContentGroupHandler))
 	// TODO
 	// Scope this with Project Admin
-	authRouteGroup.GET("/:project_id/clickable_elements",  mid.FeatureMiddleware([]string{M.FEATURE_CLICKABLE_ELEMENTS}), GetClickableElementsHandler)
-	authRouteGroup.GET("/:project_id/clickable_elements/:id/toggle",  mid.FeatureMiddleware([]string{M.FEATURE_CLICKABLE_ELEMENTS}), ToggleClickableElementHandler)
+	authRouteGroup.GET("/:project_id/clickable_elements", mid.FeatureMiddleware([]string{M.FEATURE_CLICKABLE_ELEMENTS}), GetClickableElementsHandler)
+	authRouteGroup.GET("/:project_id/clickable_elements/:id/toggle", mid.FeatureMiddleware([]string{M.FEATURE_CLICKABLE_ELEMENTS}), ToggleClickableElementHandler)
 
 	// LeadSquared
-	authRouteGroup.PUT("/:project_id/leadsquaredsettings",   mid.FeatureMiddleware([]string{M.FEATURE_LEADSQUARED}), UpdateLeadSquaredConfigHandler)
-	authRouteGroup.DELETE("/:project_id/leadsquaredsettings/remove",   mid.FeatureMiddleware([]string{M.FEATURE_LEADSQUARED}), RemoveLeadSquaredConfigHandler)
+	authRouteGroup.PUT("/:project_id/leadsquaredsettings", mid.FeatureMiddleware([]string{M.FEATURE_LEADSQUARED}), UpdateLeadSquaredConfigHandler)
+	authRouteGroup.DELETE("/:project_id/leadsquaredsettings/remove", mid.FeatureMiddleware([]string{M.FEATURE_LEADSQUARED}), RemoveLeadSquaredConfigHandler)
 
 	// Tracked Events
-	authRouteGroup.POST("/:project_id/v1/factors/tracked_event",  mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), V1.CreateFactorsTrackedEventsHandler)
-	authRouteGroup.DELETE("/:project_id/v1/factors/tracked_event/remove",  mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), V1.RemoveFactorsTrackedEventsHandler)
+	authRouteGroup.POST("/:project_id/v1/factors/tracked_event", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), V1.CreateFactorsTrackedEventsHandler)
+	authRouteGroup.DELETE("/:project_id/v1/factors/tracked_event/remove", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), V1.RemoveFactorsTrackedEventsHandler)
 	authRouteGroup.GET("/:project_id/v1/factors/tracked_event", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), V1.GetAllFactorsTrackedEventsHandler)
 	authRouteGroup.GET("/:project_id/v1/factors/grouped_tracked_event", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), V1.GetAllGroupedFactorsTrackedEventsHandler)
 
 	// Tracked User Property
-	authRouteGroup.POST("/:project_id/v1/factors/tracked_user_property",  mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), V1.CreateFactorsTrackedUserPropertyHandler)
-	authRouteGroup.DELETE("/:project_id/v1/factors/tracked_user_property/remove",  mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), V1.RemoveFactorsTrackedUserPropertyHandler)
+	authRouteGroup.POST("/:project_id/v1/factors/tracked_user_property", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), V1.CreateFactorsTrackedUserPropertyHandler)
+	authRouteGroup.DELETE("/:project_id/v1/factors/tracked_user_property/remove", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), V1.RemoveFactorsTrackedUserPropertyHandler)
 	authRouteGroup.GET("/:project_id/v1/factors/tracked_user_property", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), V1.GetAllFactorsTrackedUserPropertiesHandler)
 
 	// Goals
-	authRouteGroup.POST("/:project_id/v1/factors/goals",  mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), V1.CreateFactorsGoalsHandler)
-	authRouteGroup.DELETE("/:project_id/v1/factors/goals/remove",  mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), V1.RemoveFactorsGoalsHandler)
+	authRouteGroup.POST("/:project_id/v1/factors/goals", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), V1.CreateFactorsGoalsHandler)
+	authRouteGroup.DELETE("/:project_id/v1/factors/goals/remove", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), V1.RemoveFactorsGoalsHandler)
 	authRouteGroup.GET("/:project_id/v1/factors/goals", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), V1.GetAllFactorsGoalsHandler)
-	authRouteGroup.PUT("/:project_id/v1/factors/goals/update",  mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), V1.UpdateFactorsGoalsHandler)
+	authRouteGroup.PUT("/:project_id/v1/factors/goals/update", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), V1.UpdateFactorsGoalsHandler)
 	authRouteGroup.GET("/:project_id/v1/factors/goals/search", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), V1.SearchFactorsGoalHandler)
 	authRouteGroup.POST("/:project_id/v1/factor", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), V1.PostFactorsHandler)
 	authRouteGroup.POST("/:project_id/v1/factor/compare", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), V1.PostFactorsCompareHandler)
-	authRouteGroup.POST("/:project_id/v1/events/displayname",  mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), responseWrapper(V1.CreateDisplayNamesHandler))
+	authRouteGroup.POST("/:project_id/v1/events/displayname", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), responseWrapper(V1.CreateDisplayNamesHandler))
 	authRouteGroup.GET("/:project_id/v1/events/displayname", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), responseWrapper(V1.GetAllDistinctEventProperties))
 	authRouteGroup.GET("/:project_id/v1/factor", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), V1.GetFactorsHandler)
 	authRouteGroup.GET("/:project_id/v1/factor/model_metadata", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), V1.GetModelMetaData)
 
 	authRouteGroup.GET("/:project_id/insights", mid.FeatureMiddleware([]string{M.FEATURE_WEEKLY_INSIGHTS}), responseWrapper(V1.GetWeeklyInsightsHandler))
 	authRouteGroup.GET("/:project_id/weekly_insights_metadata", mid.FeatureMiddleware([]string{M.FEATURE_WEEKLY_INSIGHTS}), responseWrapper(V1.GetWeeklyInsightsMetadata))
-	authRouteGroup.POST("/:project_id/feedback",  mid.FeatureMiddleware([]string{M.FEATURE_WEEKLY_INSIGHTS}), V1.PostFeedbackHandler)
+	authRouteGroup.POST("/:project_id/feedback", mid.FeatureMiddleware([]string{M.FEATURE_WEEKLY_INSIGHTS}), V1.PostFeedbackHandler)
 
 	// bingads integration
-	authRouteGroup.POST("/:project_id/v1/bingads",  mid.FeatureMiddleware([]string{M.FEATURE_BING_ADS}), responseWrapper(V1.CreateBingAdsIntegration))
-	authRouteGroup.DELETE("/:project_id/v1/bingads/disable",  mid.FeatureMiddleware([]string{M.FEATURE_BING_ADS}), responseWrapper(V1.DisableBingAdsIntegration))
+	authRouteGroup.POST("/:project_id/v1/bingads", mid.FeatureMiddleware([]string{M.FEATURE_BING_ADS}), responseWrapper(V1.CreateBingAdsIntegration))
+	authRouteGroup.DELETE("/:project_id/v1/bingads/disable", mid.FeatureMiddleware([]string{M.FEATURE_BING_ADS}), responseWrapper(V1.DisableBingAdsIntegration))
 	authRouteGroup.GET("/:project_id/v1/bingads", mid.FeatureMiddleware([]string{M.FEATURE_BING_ADS}), responseWrapper(V1.GetBingAdsIntegration))
-	authRouteGroup.PUT("/:project_id/v1/bingads/enable",  mid.FeatureMiddleware([]string{M.FEATURE_BING_ADS}), responseWrapper(V1.EnableBingAdsIntegration))
+	authRouteGroup.PUT("/:project_id/v1/bingads/enable", mid.FeatureMiddleware([]string{M.FEATURE_BING_ADS}), responseWrapper(V1.EnableBingAdsIntegration))
 
 	// marketo integration
-	authRouteGroup.POST("/:project_id/v1/marketo",  mid.FeatureMiddleware([]string{M.FEATURE_MARKETO}), responseWrapper(V1.CreateMarketoIntegration))
-	authRouteGroup.DELETE("/:project_id/v1/marketo/disable",  mid.FeatureMiddleware([]string{M.FEATURE_MARKETO}), responseWrapper(V1.DisableMarketoIntegration))
+	authRouteGroup.POST("/:project_id/v1/marketo", mid.FeatureMiddleware([]string{M.FEATURE_MARKETO}), responseWrapper(V1.CreateMarketoIntegration))
+	authRouteGroup.DELETE("/:project_id/v1/marketo/disable", mid.FeatureMiddleware([]string{M.FEATURE_MARKETO}), responseWrapper(V1.DisableMarketoIntegration))
 	authRouteGroup.GET("/:project_id/v1/marketo", mid.FeatureMiddleware([]string{M.FEATURE_MARKETO}), responseWrapper(V1.GetMarketoIntegration))
-	authRouteGroup.PUT("/:project_id/v1/marketo/enable",  mid.FeatureMiddleware([]string{M.FEATURE_MARKETO}), responseWrapper(V1.EnableMarketoIntegration))
+	authRouteGroup.PUT("/:project_id/v1/marketo/enable", mid.FeatureMiddleware([]string{M.FEATURE_MARKETO}), responseWrapper(V1.EnableMarketoIntegration))
 
 	// alerts
-	authRouteGroup.POST("/:project_id/v1/alerts",  mid.FeatureMiddleware([]string{M.FEATURE_KPI_ALERTS}), responseWrapper(V1.CreateAlertHandler))
+	authRouteGroup.POST("/:project_id/v1/alerts", mid.FeatureMiddleware([]string{M.FEATURE_KPI_ALERTS}), responseWrapper(V1.CreateAlertHandler))
 	authRouteGroup.GET("/:project_id/v1/alerts", mid.FeatureMiddleware([]string{M.FEATURE_KPI_ALERTS}), responseWrapper(V1.GetAlertsHandler))
 	authRouteGroup.GET("/:project_id/v1/alerts/:id", mid.FeatureMiddleware([]string{M.FEATURE_KPI_ALERTS}), responseWrapper(V1.GetAlertByIDHandler))
-	authRouteGroup.DELETE("/:project_id/v1/alerts/:id",  mid.FeatureMiddleware([]string{M.FEATURE_KPI_ALERTS}), responseWrapper(V1.DeleteAlertHandler))
-	authRouteGroup.PUT("/:project_id/v1/alerts/:id",  mid.FeatureMiddleware([]string{M.FEATURE_KPI_ALERTS}), responseWrapper(V1.EditAlertHandler))
+	authRouteGroup.DELETE("/:project_id/v1/alerts/:id", mid.FeatureMiddleware([]string{M.FEATURE_KPI_ALERTS}), responseWrapper(V1.DeleteAlertHandler))
+	authRouteGroup.PUT("/:project_id/v1/alerts/:id", mid.FeatureMiddleware([]string{M.FEATURE_KPI_ALERTS}), responseWrapper(V1.EditAlertHandler))
 	authRouteGroup.GET("/:project_id/v1/all_alerts", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS, M.FEATURE_KPI_ALERTS}), responseWrapper(V1.GetAllAlertsInOneHandler))
 
 	// slack
-	authRouteGroup.POST("/:project_id/slack/auth",  mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.INT_SLACK}), V1.SlackAuthRedirectHandler)
-	authRouteGroup.GET("/:project_id/slack/channels",  mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.INT_SLACK}), V1.GetSlackChannelsListHandler)
-	authRouteGroup.DELETE("/:project_id/slack/delete",  mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.INT_SLACK}), V1.DeleteSlackIntegrationHandler)
-	authRouteGroup.POST("/:project_id/v1/alerts/send_now",  mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.INT_SLACK}), V1.QuerySendNowHandler)
+	authRouteGroup.POST("/:project_id/slack/auth", mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.INT_SLACK}), V1.SlackAuthRedirectHandler)
+	authRouteGroup.GET("/:project_id/slack/channels", mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.INT_SLACK}), V1.GetSlackChannelsListHandler)
+	authRouteGroup.DELETE("/:project_id/slack/delete", mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.INT_SLACK}), V1.DeleteSlackIntegrationHandler)
+	authRouteGroup.POST("/:project_id/v1/alerts/send_now", mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.INT_SLACK}), V1.QuerySendNowHandler)
 
 	// Timeline
 	authRouteGroup.POST("/:project_id/v1/profiles/users", mid.FeatureMiddleware([]string{M.FEATURE_PEOPLE_PROFILES}), responseWrapper(V1.GetProfileUsersHandler))
 	authRouteGroup.GET("/:project_id/v1/profiles/users/:id", mid.FeatureMiddleware([]string{M.FEATURE_PEOPLE_PROFILES}), responseWrapper(V1.GetProfileUserDetailsHandler))
 	authRouteGroup.POST("/:project_id/v1/profiles/accounts", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_PROFILES}), responseWrapper(V1.GetProfileAccountsHandler))
 	authRouteGroup.GET("/:project_id/v1/profiles/accounts/:group/:id", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_PROFILES}), responseWrapper(V1.GetProfileAccountDetailsHandler))
+	authRouteGroup.GET("/:project_id/v1/profiles/accounts/overview/:group/:id", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_PROFILES}), responseWrapper(V1.GetProfileAccountOverviewHandler))
 	authRouteGroup.POST("/:project_id/segments", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), CreateSegmentHandler)
 	authRouteGroup.GET("/:project_id/segments", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(GetSegmentsHandler))
 	authRouteGroup.GET("/:project_id/segments/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(GetSegmentByIdHandler))
@@ -316,22 +317,22 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.PUT("/:project_id/v1/eventtriggeralert/:id/status", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), responseWrapper(V1.UpdateEventTriggerAlertInternalStatusHandler))
 
 	// teams
-	authRouteGroup.POST("/:project_id/teams/auth",  mid.FeatureMiddleware([]string{M.FEATURE_TEAMS, M.INT_TEAMS}), V1.TeamsAuthRedirectHandler)
-	authRouteGroup.GET("/:project_id/teams/get_teams",  mid.FeatureMiddleware([]string{M.FEATURE_TEAMS}), V1.GetAllTeamsHandler)
-	authRouteGroup.GET("/:project_id/teams/channels",  mid.FeatureMiddleware([]string{M.FEATURE_TEAMS}), V1.GetTeamsChannelsHandler)
-	authRouteGroup.DELETE("/:project_id/teams/delete",  mid.FeatureMiddleware([]string{M.FEATURE_TEAMS}), V1.DeleteTeamsIntegrationHandler)
+	authRouteGroup.POST("/:project_id/teams/auth", mid.FeatureMiddleware([]string{M.FEATURE_TEAMS, M.INT_TEAMS}), V1.TeamsAuthRedirectHandler)
+	authRouteGroup.GET("/:project_id/teams/get_teams", mid.FeatureMiddleware([]string{M.FEATURE_TEAMS}), V1.GetAllTeamsHandler)
+	authRouteGroup.GET("/:project_id/teams/channels", mid.FeatureMiddleware([]string{M.FEATURE_TEAMS}), V1.GetTeamsChannelsHandler)
+	authRouteGroup.DELETE("/:project_id/teams/delete", mid.FeatureMiddleware([]string{M.FEATURE_TEAMS}), V1.DeleteTeamsIntegrationHandler)
 	// Upload
 	authRouteGroup.POST("/:project_id/uploadlist", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), V1.UploadListForFilters)
 
 	authRouteGroup.GET("/:project_id/agents", GetProjectAgentsHandler)
-	authRouteGroup.POST("/:project_id/agents/invite",  AgentInvite)
-	authRouteGroup.POST("/:project_id/agents/batchinvite",  AgentInviteBatch)
-	authRouteGroup.PUT("/:project_id/agents/remove",  RemoveProjectAgent)
-	authRouteGroup.PUT("/:project_id/agents/update",  AgentUpdate)
-	authRouteGroup.GET("/:project_id/settings",  GetProjectSettingHandler)
-	authRouteGroup.GET("/:project_id/v1/settings",  V1.GetProjectSettingHandler)
-	authRouteGroup.PUT("/:project_id/settings",  UpdateProjectSettingsHandler)
-	authRouteGroup.PUT("/:project_id",  EditProjectHandler)
+	authRouteGroup.POST("/:project_id/agents/invite", AgentInvite)
+	authRouteGroup.POST("/:project_id/agents/batchinvite", AgentInviteBatch)
+	authRouteGroup.PUT("/:project_id/agents/remove", RemoveProjectAgent)
+	authRouteGroup.PUT("/:project_id/agents/update", AgentUpdate)
+	authRouteGroup.GET("/:project_id/settings", GetProjectSettingHandler)
+	authRouteGroup.GET("/:project_id/v1/settings", V1.GetProjectSettingHandler)
+	authRouteGroup.PUT("/:project_id/settings", UpdateProjectSettingsHandler)
+	authRouteGroup.PUT("/:project_id", EditProjectHandler)
 	authRouteGroup.GET("/:project_id/event_names", GetEventNamesHandler)
 	authRouteGroup.GET("/:project_id/user/event_names", GetEventNamesByUserHandler)
 	authRouteGroup.GET(":project_id/groups/:group_name/event_names", GetEventNamesByGroupHandler)
@@ -355,7 +356,7 @@ func InitAppRoutes(r *gin.Engine) {
 	// V1 Routes
 	authRouteGroup.GET("/:project_id/v1/event_names", V1.GetEventNamesHandler)
 	authRouteGroup.GET("/:project_id/v1/event_names/:type", V1.GetEventNamesByTypeHandler)
-	authRouteGroup.GET("/:project_id/v1/agents",  V1.GetProjectAgentsHandler)
+	authRouteGroup.GET("/:project_id/v1/agents", V1.GetProjectAgentsHandler)
 	// project analytics
 	authRouteGroup.GET("/:project_id/v1/dataobservability/metrics", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.GetAnalyticsMetricsFromStorage))
 	authRouteGroup.GET("/:project_id/v1/dataobservability/alerts", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.GetAnalyticsAlertsFromStorage))
@@ -371,7 +372,7 @@ func InitAppRoutes(r *gin.Engine) {
 	//The dashboard endpoints doesn't have project_id params, hence feature middleware is not added here.
 	authCommonRouteGroup.GET("/dashboard_templates/:id/search", SearchTemplateHandler)
 	authCommonRouteGroup.GET("/dashboard_templates", GetDashboardTemplatesHandler)
-	authCommonRouteGroup.POST("/dashboard_template/create",  CreateTemplateHandler)
+	authCommonRouteGroup.POST("/dashboard_template/create", CreateTemplateHandler)
 
 	// feature gate v2
 	authRouteGroup.GET("/:project_id/v1/features", responseWrapper(V1.GetPlanDetailsForProjectHandler))
@@ -508,7 +509,7 @@ func InitIntRoutes(r *gin.Engine) {
 	intRouteGroup.DELETE("/:project_id/:channel_name",
 		mid.SetLoggedInAgent(),
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
-		 mid.FeatureMiddleware([]string{M.FEATURE_GOOGLE_ADS, M.FEATURE_FACEBOOK, M.FEATURE_LINKEDIN, M.FEATURE_GOOGLE_ORGANIC}),
+		mid.FeatureMiddleware([]string{M.FEATURE_GOOGLE_ADS, M.FEATURE_FACEBOOK, M.FEATURE_LINKEDIN, M.FEATURE_GOOGLE_ORGANIC}),
 		IntDeleteHandler)
 
 	intRouteGroup.GET("/slack/callback", mid.FeatureMiddleware([]string{M.INT_SLACK}), V1.SlackCallbackHandler)

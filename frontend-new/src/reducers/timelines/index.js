@@ -10,6 +10,7 @@ const initialState = {
   contactDetails: { isLoading: false, data: {} },
   accounts: { isLoading: false, data: [] },
   accountDetails: { isLoading: false, data: {} },
+  accountOverview: { isLoading: false, data: {} },
   segmentCreateStatus: '',
   segmentUpdateStatus: '',
   segments: {}
@@ -52,6 +53,15 @@ export default function (state = initialState, action) {
       };
     case 'FETCH_PROFILE_ACCOUNT_DETAILS_FAILED':
       return { ...state, accountDetails: { isLoading: false, data: {} } };
+    case 'FETCH_PROFILE_ACCOUNT_OVERVIEW_LOADING':
+      return { ...state, accountOverview: { isLoading: true, data: {} } };
+    case 'FETCH_PROFILE_ACCOUNT_OVERVIEW_FULFILLED':
+      return {
+        ...state,
+        accountOverview: { isLoading: false, data: action.payload }
+      };
+    case 'FETCH_PROFILE_ACCOUNT_OVERVIEW_FAILED':
+      return { ...state, accountOverview: { isLoading: false, data: {} } };
     case 'SEGMENT_CREATION_FULFILLED':
       return { ...state, segmentCreateStatus: action.payload };
     case 'SEGMENT_CREATION_REJECTED':
@@ -159,3 +169,8 @@ function getUpdatedSegmentsAfterDeleting({ segments, segmentId }) {
   }
   return updatedSegments;
 }
+
+export const fetchAccountOverview = (projectID, groupName, accID) => {
+  const url = `${host}projects/${projectID}/v1/profiles/accounts/overview/${groupName}/${accID}`;
+  return get(null, url);
+};

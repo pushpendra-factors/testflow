@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { Spin, Tooltip } from 'antd';
 import _ from 'lodash';
 import { CaretUpOutlined, CaretRightOutlined } from '@ant-design/icons';
-import { SVG } from '../../../factorsComponents';
 import InfoCard from '../../MyComponents/InfoCard';
 import {
   eventIconsColorMap,

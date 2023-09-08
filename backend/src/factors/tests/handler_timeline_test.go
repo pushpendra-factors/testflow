@@ -2072,33 +2072,39 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 				assert.Equal(t, len(userTimeline.UserActivities), 2)
 			}
 		}
-
+	})
+	t.Run("Success", func(t *testing.T) {
+		w := sendGetProfileAccountOverviewRequest(r, projectID, agent, domainUser.ID, "All")
+		assert.Equal(t, http.StatusOK, w.Code)
+		jsonResponse, _ := io.ReadAll(w.Body)
+		resp := &model.Overview{}
+		err = json.Unmarshal(jsonResponse, &resp)
 		//Top Users
-		assert.Len(t, resp.Overview.TopUsers, 6)
+		assert.Len(t, resp.TopUsers, 6)
 		expectedNames := []string{"user5@example.com", "user4@example.com", "user2@example.com", "user3@example.com", "user1@example.com"}
 		expectedPageViews := []int{2, 1, 1, 1, 1}
-		expectedActiveTime := []int{400, 100, 100, 100, 100}
+		expectedActiveTime := []int{200, 100, 100, 100, 100}
 		expectedNumOfPages := []int{1, 1, 1, 1, 1}
 
 		for i, expectedName := range expectedNames {
-			assert.Equal(t, expectedName, resp.Overview.TopUsers[i].Name)
-			assert.Equal(t, int64(expectedPageViews[i]), resp.Overview.TopUsers[i].NumPageViews)
-			assert.Equal(t, float64(expectedActiveTime[i]), resp.Overview.TopUsers[i].ActiveTime)
-			assert.Equal(t, int64(expectedNumOfPages[i]), resp.Overview.TopUsers[i].NumOfPages)
+			assert.Equal(t, expectedName, resp.TopUsers[i].Name)
+			assert.Equal(t, int64(expectedPageViews[i]), resp.TopUsers[i].NumPageViews)
+			assert.Equal(t, float64(expectedActiveTime[i]), resp.TopUsers[i].ActiveTime)
+			assert.Equal(t, int64(expectedNumOfPages[i]), resp.TopUsers[i].NumOfPages)
 		}
 		//Anonymous User
-		assert.Equal(t, "4 Anonymous Users", resp.Overview.TopUsers[5].Name)
-		assert.Equal(t, int64(4), resp.Overview.TopUsers[5].NumPageViews)
-		assert.Equal(t, float64(400), resp.Overview.TopUsers[5].ActiveTime)
-		assert.Equal(t, int64(1), resp.Overview.TopUsers[5].NumOfPages)
+		assert.Equal(t, "4 Anonymous Users", resp.TopUsers[5].Name)
+		assert.Equal(t, int64(4), resp.TopUsers[5].NumPageViews)
+		assert.Equal(t, float64(400), resp.TopUsers[5].ActiveTime)
+		assert.Equal(t, int64(1), resp.TopUsers[5].NumOfPages)
 
 		//Top Pages
-		assert.Len(t, resp.Overview.TopPages, 1)
-		assert.Equal(t, "", resp.Overview.TopPages[0].PageUrl)
-		assert.Equal(t, int64(10), resp.Overview.TopPages[0].Views)
-		assert.Equal(t, int64(9), resp.Overview.TopPages[0].UsersCount)
-		assert.Equal(t, float64(10), resp.Overview.TopPages[0].TotalTime)
-		assert.Equal(t, float64(0), resp.Overview.TopPages[0].AvgScrollPercent)
+		assert.Len(t, resp.TopPages, 1)
+		assert.Equal(t, "", resp.TopPages[0].PageUrl)
+		assert.Equal(t, int64(10), resp.TopPages[0].Views)
+		assert.Equal(t, int64(9), resp.TopPages[0].UsersCount)
+		assert.Equal(t, float64(10), resp.TopPages[0].TotalTime)
+		assert.Equal(t, float64(0), resp.TopPages[0].AvgScrollPercent)
 	})
 
 	t.Run("Success2", func(t *testing.T) {
@@ -2112,8 +2118,6 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		assert.Equal(t, resp.HostName, "chargebee.com")
 		assert.Equal(t, len(resp.AccountTimeline) > 0, true)
 		assert.Equal(t, len(resp.AccountTimeline), 4)
-		assert.Equal(t, resp.Overview.UsersCount, int64(len(resp.AccountTimeline)-1))
-		assert.Equal(t, resp.Overview.TimeActive, float64((len(resp.AccountTimeline)-1)*100))
 		for _, userTimeline := range resp.AccountTimeline {
 			if userTimeline.UserName != model.GROUP_ACTIVITY_USERNAME {
 				assert.Equal(t, userTimeline.IsAnonymous, false)
@@ -2132,8 +2136,6 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		assert.Contains(t, resp.Name, "Freshworks")
 		assert.Equal(t, resp.HostName, "google.com")
 		assert.Equal(t, len(resp.AccountTimeline), 10)
-		assert.Equal(t, resp.Overview.UsersCount, int64(len(resp.AccountTimeline)-1))
-		assert.Equal(t, resp.Overview.TimeActive, float64((len(resp.AccountTimeline))*100))
 		assert.NotNil(t, resp.LeftPaneProps)
 		for i, property := range resp.LeftPaneProps {
 			assert.Equal(t, props[i], property)
@@ -2220,6 +2222,27 @@ func sendGetProfileAccountDetailsRequest(r *gin.Engine, projectId int64, agent *
 		log.WithError(err).Error("Error Creating cookieData")
 	}
 	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/v1/profiles/accounts/%s/%s", projectId, group, id)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	w := httptest.NewRecorder()
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error Creating getProjectSetting Req")
+	}
+	r.ServeHTTP(w, req)
+	return w
+}
+func sendGetProfileAccountOverviewRequest(r *gin.Engine, projectId int64, agent *model.Agent, id string, group string) *httptest.ResponseRecorder {
+
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error Creating cookieData")
+	}
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/v1/profiles/accounts/overview/%s/%s", projectId, group, id)).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,

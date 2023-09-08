@@ -1467,7 +1467,9 @@ func (store *MemSQL) GetUserActivities(projectID int64, identity string, userId 
 				userActivity.DisplayName = userActivity.EventName
 			}
 			// Alias Names
-			if userActivity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED {
+			if aliasName, exists := model.STANDARD_EVENT_NAME_ALIASES[userActivity.EventName]; exists {
+				userActivity.AliasName = aliasName
+			} else if userActivity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED {
 				userActivity.AliasName = fmt.Sprintf("Added to %s", (*properties)[U.EP_SALESFORCE_CAMPAIGN_NAME])
 			} else if userActivity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN {
 				userActivity.AliasName = fmt.Sprintf("Responded to %s", (*properties)[U.EP_SALESFORCE_CAMPAIGN_NAME])
@@ -1691,26 +1693,11 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 	} else {
 		accountDetails.AccountTimeline = append(accountDetails.AccountTimeline, intentTimeline)
 	}
-
-	scoringAvailable, err := store.GetFeatureStatusForProjectV2(projectID, model.FEATURE_ACCOUNT_SCORING, false)
-	if err != nil {
-		log.WithFields(logFields).Error("Error fetching scoring availability status for the project")
-	}
-
-	if scoringAvailable {
-		overview, err := store.GetAccountOverview(projectID, id, groupName)
-		if err != nil {
-			log.WithFields(logFields).WithError(err)
-		} else {
-			accountDetails.Overview = overview
-		}
-	}
-
 	return &accountDetails, http.StatusFound, ""
 }
 
 // GetAccountOverview gives us a compiled response for account overview
-func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (model.Overview, error) {
+func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (model.Overview, int, string) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"id":         id,
@@ -1793,10 +1780,10 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 	}
 
 	if errGetScore != nil && errGetCount != nil && errGetTopUsers != nil && errGetTopPages != nil {
-		return overview, fmt.Errorf("error getting overview")
+		return overview, http.StatusInternalServerError, "error getting overview"
 	}
 
-	return overview, nil
+	return overview, http.StatusOK, ""
 }
 
 // GetTopPages gives us a list of top pages with visited by the users associated to a group/domain ordered by number of visits
