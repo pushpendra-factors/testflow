@@ -28,7 +28,8 @@ function PropertyFilter({
   selectedAccount,
   setSelectedAccount,
   setAppliedFilters,
-  setEventProp
+  setEventProp,
+  areFiltersDirty
 }) {
   const groupsList = useSelector((state) => selectGroupsList(state));
   const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
@@ -157,6 +158,7 @@ function PropertyFilter({
         listEvents={listEvents}
         setListEvents={setListEvents}
         eventProp={eventProp}
+        areFiltersDirty={areFiltersDirty}
         setEventProp={setEventProp}
         onCancel={toggleFilters}
       />
