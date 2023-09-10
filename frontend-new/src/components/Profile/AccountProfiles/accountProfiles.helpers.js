@@ -177,7 +177,9 @@ export const checkFiltersEquality = ({
   filtersList,
   newSegmentMode,
   eventsList,
-  eventProp
+  eventProp,
+  areFiltersDirty,
+  isActiveSegment
 }) => {
   if (newSegmentMode === true && filtersList.length > 0) {
     return {
@@ -193,15 +195,9 @@ export const checkFiltersEquality = ({
     areEventsEqual === true &&
     isEventPropEqual === true;
   const saveButtonDisabled =
-    applyButtonDisabled === false || filtersList.length === 0;
-  console.log(
-    'jklogs ~ file: accountProfiles.helpers.js:208 ~ applyButtonDisabled:',
-    applyButtonDisabled
-  );
-  console.log(
-    'jklogs ~ file: accountProfiles.helpers.js:208 ~ saveButtonDisabled:',
-    saveButtonDisabled
-  );
+    isActiveSegment === true
+      ? filtersList.length === 0 || areFiltersDirty === false
+      : applyButtonDisabled === false || filtersList.length === 0;
   return { saveButtonDisabled, applyButtonDisabled };
 };
 

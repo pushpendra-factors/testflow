@@ -15,6 +15,7 @@ import { eventMenuList } from './accountProfiles.constants';
 import EventsBlock from '../MyComponents/EventsBlock';
 import { selectGroupsList } from 'Reducers/groups/selectors';
 import { generateRandomKey } from 'Utils/global';
+import { selectAccountPayload } from 'Reducers/accountProfilesView/selectors';
 
 const FiltersBox = ({
   filtersList,
@@ -26,6 +27,7 @@ const FiltersBox = ({
   onCancel,
   setSaveSegmentModal,
   listEvents,
+  areFiltersDirty,
   setListEvents,
   eventProp,
   setEventProp
@@ -40,6 +42,9 @@ const FiltersBox = ({
   const groupProperties = useSelector(
     (state) => state.coreQuery.groupProperties
   );
+  const accountPayload = useSelector((state) => {
+    return selectAccountPayload(state);
+  });
 
   const availableGroups = useSelector((state) => state.groups.data);
 
@@ -151,9 +156,19 @@ const FiltersBox = ({
       filtersList,
       newSegmentMode,
       eventsList: listEvents,
-      eventProp
+      eventProp,
+      isActiveSegment: Boolean(accountPayload.segment_id),
+      areFiltersDirty
     });
-  }, [filtersList, appliedFilters, newSegmentMode, listEvents, eventProp]);
+  }, [
+    appliedFilters,
+    filtersList,
+    newSegmentMode,
+    listEvents,
+    eventProp,
+    accountPayload.segment_id,
+    areFiltersDirty
+  ]);
 
   const showEventsSection = filtersList.length > 0 && source !== 'All';
 

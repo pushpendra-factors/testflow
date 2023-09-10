@@ -63,6 +63,7 @@ import {
   moreActionsMode
 } from './accountProfiles.constants';
 import { selectGroupsList } from 'Reducers/groups/selectors';
+import UpdateSegmentModal from './UpdateSegmentModal';
 
 const groupToCompanyPropMap = {
   $hubspot_company: '$hubspot_company_name',
@@ -70,6 +71,14 @@ const groupToCompanyPropMap = {
   $6signal: '$6Signal_name',
   $linkedin_company: '$li_localized_name',
   $g2: '$g2_name'
+};
+
+const groupToDomainMap = {
+  $hubspot_company: '$hubspot_company_domain',
+  $salesforce_account: '$salesforce_account_website',
+  $6signal: '$6Signal_domain',
+  $linkedin_company: '$li_domain',
+  $g2: '$g2_domain'
 };
 
 function AccountProfiles({
@@ -125,6 +134,7 @@ function AccountProfiles({
   });
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [saveSegmentModal, setSaveSegmentModal] = useState(false);
+  const [updateSegmentModal, setUpdateSegmentModal] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState(INITIAL_FILTERS_STATE);
   const [appliedFilters, setAppliedFilters] = useState(INITIAL_FILTERS_STATE);
   const [areFiltersDirty, setFiltersDirty] = useState(false);
@@ -160,6 +170,28 @@ function AccountProfiles({
     });
   }, [accountPayload.segment_id, activeProject.id, deleteSegment]);
 
+  const displayTableProps = useMemo(() => {
+    const filterPropsMap = {
+      $hubspot_company: 'hubspot',
+      $salesforce_account: 'salesforce',
+      $6signal: '6Signal',
+      $linkedin_company: '$li_',
+      $g2: '$g2',
+      All: ''
+    };
+    const source = filterPropsMap[accountPayload?.source];
+    const tableProps = accountPayload.segment_id
+      ? activeSegment?.query?.table_props?.filter((item) =>
+          item.includes(source)
+        )
+      : currentProjectSettings?.timelines_config?.account_config?.table_props?.filter(
+          (item) => item.includes(source)
+        );
+    return (
+      tableProps?.filter((entry) => entry !== '' && entry !== undefined) || []
+    );
+  }, [currentProjectSettings, accountPayload, activeSegment]);
+
   const handleRenameSegment = useCallback(
     (name) => {
       updateSegmentForId(activeProject.id, accountPayload.segment_id, {
@@ -184,27 +216,33 @@ function AccountProfiles({
     ]
   );
 
-  const displayTableProps = useMemo(() => {
-    const filterPropsMap = {
-      $hubspot_company: 'hubspot',
-      $salesforce_account: 'salesforce',
-      $6signal: '6Signal',
-      $linkedin_company: '$li_',
-      $g2: '$g2',
-      All: ''
-    };
-    const source = filterPropsMap[accountPayload?.source];
-    const tableProps = accountPayload.segment_id
-      ? activeSegment?.query?.table_props?.filter((item) =>
-          item.includes(source)
-        )
-      : currentProjectSettings?.timelines_config?.account_config?.table_props?.filter(
-          (item) => item.includes(source)
-        );
-    return (
-      tableProps?.filter((entry) => entry !== '' && entry !== undefined) || []
-    );
-  }, [currentProjectSettings, accountPayload, activeSegment]);
+  const handleUpdateSegmentDefinition = useCallback(() => {
+    const reqPayload = getFiltersRequestPayload({
+      source: selectedAccount.account[1],
+      selectedFilters,
+      table_props: displayTableProps
+    });
+    updateSegmentForId(
+      activeProject.id,
+      accountPayload.segment_id,
+      reqPayload
+    ).then((respnse) => {
+      getSavedSegments(activeProject.id);
+      setUpdateSegmentModal(false);
+      notification.success({
+        message: 'Segment updated successfully',
+        duration: 5
+      });
+    });
+  }, [
+    accountPayload.segment_id,
+    activeProject.id,
+    displayTableProps,
+    getSavedSegments,
+    selectedAccount.account,
+    selectedFilters,
+    updateSegmentForId
+  ]);
 
   const setAccountPayload = useCallback(
     (payload) => {
@@ -406,6 +444,18 @@ function AccountProfiles({
     });
   }, []);
 
+  const handleSaveSegmentClick = useCallback(() => {
+    if (newSegmentMode === true) {
+      setSaveSegmentModal(true);
+      return;
+    }
+    if (Boolean(accountPayload.segment_id) === true) {
+      setUpdateSegmentModal(true);
+    } else {
+      setSaveSegmentModal(true);
+    }
+  }, [accountPayload.segment_id, newSegmentMode]);
+
   const renderPropertyFilter = () => {
     return (
       <PropertyFilter
@@ -419,9 +469,10 @@ function AccountProfiles({
         listEvents={selectedFilters.eventsList}
         availableGroups={Object.keys(groupOpts || {})}
         eventProp={selectedFilters.eventProp}
+        areFiltersDirty={areFiltersDirty}
         applyFilters={applyFilters}
         setFiltersExpanded={setFiltersExpanded}
-        setSaveSegmentModal={setSaveSegmentModal}
+        setSaveSegmentModal={handleSaveSegmentClick}
         setFiltersList={setFiltersList}
         setSelectedAccount={setSelectedAccount}
         setAppliedFilters={setAppliedFilters}
@@ -429,13 +480,6 @@ function AccountProfiles({
         setEventProp={setEventProp}
       />
     );
-  };
-  const groupToDomainMap = {
-    $hubspot_company: '$hubspot_company_domain',
-    $salesforce_account: '$salesforce_account_website',
-    $6signal: '$6Signal_domain',
-    $linkedin_company: '$li_domain',
-    $g2: '$g2_domain'
   };
 
   useEffect(() => {
@@ -542,9 +586,19 @@ function AccountProfiles({
       newSegmentMode,
       filtersList: selectedFilters.filters,
       eventProp: selectedFilters.eventProp,
-      eventsList: selectedFilters.eventsList
+      eventsList: selectedFilters.eventsList,
+      isActiveSegment: Boolean(accountPayload.segment_id),
+      areFiltersDirty
     });
-  }, [appliedFilters, newSegmentMode, selectedFilters]);
+  }, [
+    accountPayload.segment_id,
+    appliedFilters,
+    areFiltersDirty,
+    newSegmentMode,
+    selectedFilters.eventProp,
+    selectedFilters.eventsList,
+    selectedFilters.filters
+  ]);
 
   const renderSaveSegmentButton = () => {
     return (
@@ -556,7 +610,7 @@ function AccountProfiles({
         }
       >
         <Button
-          onClick={() => setSaveSegmentModal(true)}
+          onClick={handleSaveSegmentClick}
           type='default'
           className='flex items-center col-gap-1'
           disabled={saveButtonDisabled}
@@ -733,6 +787,7 @@ function AccountProfiles({
             duration: 3
           });
           setSaveSegmentModal(false);
+          setUpdateSegmentModal(false);
         }
         await getSavedSegments(activeProject.id);
       } catch (err) {
@@ -907,10 +962,6 @@ function AccountProfiles({
   }, [activeProject?.id, fetchGroups, fetchProjectSettings, getSavedSegments]);
 
   useEffect(() => {
-    restoreFiltersDefaultState();
-  }, [accountPayload, restoreFiltersDefaultState]);
-
-  useEffect(() => {
     if (newSegmentMode === true) {
       restoreFiltersDefaultState();
     }
@@ -925,6 +976,8 @@ function AccountProfiles({
       setSelectedAccount({ account: selectedAccount });
       setAppliedFilters(segmentFilters);
       setSelectedFilters(segmentFilters);
+      setFiltersExpanded(false);
+      setFiltersDirty(false);
     } else {
       const selectedGroup = groupsList.find(
         (g) => g[1] === accountPayload.source
@@ -935,8 +988,14 @@ function AccountProfiles({
           account: selectedGroup
         };
       });
+      restoreFiltersDefaultState();
     }
-  }, [accountPayload, activeSegment.query, groupsList]);
+  }, [
+    accountPayload,
+    activeSegment.query,
+    groupsList,
+    restoreFiltersDefaultState
+  ]);
 
   return (
     <ProfilesWrapper>
@@ -1024,6 +1083,12 @@ function AccountProfiles({
         visible={moreActionsModalMode === moreActionsMode.RENAME}
         onCancel={() => setMoreActionsModalMode(null)}
         handleSubmit={handleRenameSegment}
+      />
+      <UpdateSegmentModal
+        visible={updateSegmentModal}
+        onCancel={() => setUpdateSegmentModal(false)}
+        onCreate={handleCreateSegment}
+        onUpdate={handleUpdateSegmentDefinition}
       />
     </ProfilesWrapper>
   );
