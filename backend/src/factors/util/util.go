@@ -1750,3 +1750,30 @@ func FilterDisplayNameEmptyKeysAndValues(projectID int64, displayNames map[strin
 
 	return filteredDisplayNames
 }
+
+func AddTwoNumbersInt64Float64(a, b interface{}) (int64, error) {
+
+	var sum int64
+
+	// Check the type of the first input.
+	switch v1 := a.(type) {
+	case int64:
+		sum += v1
+	case float64:
+		sum += int64(v1)
+	default:
+		return 0, errors.New("unsupported type for input 1")
+	}
+
+	// Check the type of the second input.
+	switch v2 := b.(type) {
+	case int64:
+		sum += v2
+	case float64:
+		sum += int64(v2)
+	default:
+		return 0, errors.New("unsupported type for input 2")
+	}
+
+	return sum, nil
+}
