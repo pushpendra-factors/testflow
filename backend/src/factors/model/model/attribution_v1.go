@@ -239,33 +239,51 @@ func MergeTwoDataRowsFromDBCachedResultsV1(row1 []interface{}, row2 []interface{
 		attributionKey == AttributionKeySource ||
 		attributionKey == AttributionKeyAllPageView {
 
-		row1[keyIndex+1] = row1[keyIndex+1].(float64) + row2[keyIndex+1].(float64) // Conversion.
-		row1[keyIndex+2] = row1[keyIndex+2].(float64) + row2[keyIndex+2].(float64) // Conversion Influence - values same as Linear Touch
-
-		if len(row1) > keyIndex+4 && len(row2) > keyIndex+4 {
-			row1[keyIndex+3] = row1[keyIndex+3].(float64) + row2[keyIndex+3].(float64) // Compare conversion
-			row1[keyIndex+4] = row1[keyIndex+4].(float64) + row2[keyIndex+4].(float64) // Compare conversion-Influence - values same as Linear Touch
-
-			// Remaining linked funnel events & CPCs
-			for i := keyIndex + 5; i < len(row1)-1; i += 2 {
-				row1[i] = row1[i].(float64) + row2[i].(float64)
-				row1[i+1] = row1[i+1].(float64) + row2[i+1].(float64)
-			}
+		for idx, _ := range conversionFunTypes {
+			nextConPosition := idx * 2
+			row1[keyIndex+1+nextConPosition] = row1[keyIndex+1+nextConPosition].(float64) + row2[keyIndex+1+nextConPosition].(float64) // Conversion.
+			row1[keyIndex+2+nextConPosition] = row1[keyIndex+2+nextConPosition].(float64) + row2[keyIndex+2+nextConPosition].(float64) // Compare conversion
 		}
 		return row1
 
 	} else {
+		//0: "Campaign"
+		//1: "Impressions"
+		//2: "Clicks"
+		//3: "Spend"
+		//4: "CTR(%)"
+		//5: "Average CPC"
+		//6: "CPM"
+		//7: "ClickConversionRate(%)"
+		//8: "X - Conversion Value"
+		//9: "X - Return on Cost/ CPC"
+		//10: "X - Conversion Value(compare)"
+		//11: "X - Return on Cost(compare)/ CPC"
+		//12: "key"
 
-		row1[keyIndex+1] = row1[keyIndex+1].(int64) + row2[keyIndex+1].(int64)     // Impressions.
-		row1[keyIndex+2] = row1[keyIndex+2].(int64) + row2[keyIndex+2].(int64)     // Clicks.
+		var err1 error
+		row1[keyIndex+1], err1 = U.AddTwoNumbersInt64Float64(row1[keyIndex+1], row2[keyIndex+1]) // Impressions.
+		if err1 != nil {
+			log.WithError(err1).WithFields(log.Fields{
+				"row1Value": row1[keyIndex+1], "row2Value": row2[keyIndex+1],
+			}).Error("unsupported interface type for Impressions merging")
+			return nil
+		}
+		row1[keyIndex+2], err1 = U.AddTwoNumbersInt64Float64(row1[keyIndex+2], row2[keyIndex+2]) // Clicks.
+		if err1 != nil {
+			log.WithError(err1).WithFields(log.Fields{
+				"row1Value": row1[keyIndex+2], "row2Value": row2[keyIndex+2],
+			}).Error("unsupported interface type for Clicks merging")
+			return nil
+		}
 		row1[keyIndex+3] = row1[keyIndex+3].(float64) + row2[keyIndex+3].(float64) // Spend.
 
 		for idx, _ := range conversionFunTypes {
-			nextConPosition := idx * 6
-			row1[keyIndex+8+nextConPosition] = row1[keyIndex+8+nextConPosition].(float64) + row2[keyIndex+8+nextConPosition].(float64)    // Conversion.
-			row1[keyIndex+9+nextConPosition] = row1[keyIndex+9+nextConPosition].(float64) + row2[keyIndex+9+nextConPosition].(float64)    // Conversion Influence - values same as Linear Touch
-			row1[keyIndex+11+nextConPosition] = row1[keyIndex+11+nextConPosition].(float64) + row2[keyIndex+11+nextConPosition].(float64) // Compare Conversion.
-			row1[keyIndex+12+nextConPosition] = row1[keyIndex+12+nextConPosition].(float64) + row2[keyIndex+12+nextConPosition].(float64) // Compare Conversion Influence - values same as Linear Touch
+			nextConPosition := idx * 4
+			row1[keyIndex+8+nextConPosition] = row1[keyIndex+8+nextConPosition].(float64) + row2[keyIndex+8+nextConPosition].(float64) // Conversion.
+			//row1[keyIndex+9+nextConPosition] = row1[keyIndex+9+nextConPosition].(float64) + row2[keyIndex+9+nextConPosition].(float64)    // Conversion Influence - values same as Linear Touch
+			row1[keyIndex+10+nextConPosition] = row1[keyIndex+10+nextConPosition].(float64) + row2[keyIndex+10+nextConPosition].(float64) // Compare Conversion.
+			//row1[keyIndex+12+nextConPosition] = row1[keyIndex+12+nextConPosition].(float64) + row2[keyIndex+12+nextConPosition].(float64) // Compare Conversion Influence - values same as Linear Touch
 		}
 		impressions := (row1[keyIndex+1]).(int64)
 		clicks := (row1[keyIndex+2]).(int64)
@@ -287,40 +305,39 @@ func MergeTwoDataRowsFromDBCachedResultsV1(row1 []interface{}, row2 []interface{
 		}
 
 		for idx, funcType := range conversionFunTypes {
-			nextConPosition := idx * 6
-			// Normal conversion [8, 9,10] = [Conversion,Conversion Influence, CPC]
-			// Compare conversion [11, 12,13]  = [Conversion,Conversion Influence, CPC, Rate+nextConPosition]
+			nextConPosition := idx * 4
+			// Normal conversion [8, 9] = [Conversion, CPC]
+			// Compare conversion [10, 11]  = [Conversion,CPC]
 			if strings.ToLower(funcType) == "sum" {
 
 				if spend > 0 {
-					row1[keyIndex+10+nextConPosition], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+8+nextConPosition].(float64)/spend, U.DefaultPrecision) // Conversion - CPC.
+					row1[keyIndex+9+nextConPosition], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+8+nextConPosition].(float64)/spend, U.DefaultPrecision) // Conversion - CPC.
 				} else {
-					row1[keyIndex+10+nextConPosition] = float64(0) // Conversion - CPC.
+					row1[keyIndex+9+nextConPosition] = float64(0) // Conversion - CPC.
 				}
 
 				if spend > 0 {
-					row1[keyIndex+13+nextConPosition], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+11+nextConPosition].(float64)/spend, U.DefaultPrecision) // Compare Conversion - CPC.
+					row1[keyIndex+11+nextConPosition], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+10+nextConPosition].(float64)/spend, U.DefaultPrecision) // Compare Conversion - CPC.
 				} else {
-					row1[keyIndex+13+nextConPosition] = float64(0) // Compare Conversion - CPC.
+					row1[keyIndex+11+nextConPosition] = float64(0) // Compare Conversion - CPC.
 				}
 
 			} else {
 
 				if row1[keyIndex+8+nextConPosition].(float64) > 0 {
-					row1[keyIndex+10+nextConPosition], _ = U.FloatRoundOffWithPrecision(spend/row1[keyIndex+8+nextConPosition].(float64), U.DefaultPrecision) // Conversion - CPC.
+					row1[keyIndex+9+nextConPosition], _ = U.FloatRoundOffWithPrecision(spend/row1[keyIndex+8+nextConPosition].(float64), U.DefaultPrecision) // Conversion - CPC.
 				} else {
-					row1[keyIndex+10+nextConPosition] = float64(0) // Conversion - CPC.
+					row1[keyIndex+9+nextConPosition] = float64(0) // Conversion - CPC.
 				}
 
-				if row1[keyIndex+11+nextConPosition].(float64) > 0 {
-					row1[keyIndex+13+nextConPosition], _ = U.FloatRoundOffWithPrecision(spend/row1[keyIndex+11+nextConPosition].(float64), U.DefaultPrecision) // Compare Conversion - CPC.
+				if row1[keyIndex+10+nextConPosition].(float64) > 0 {
+					row1[keyIndex+11+nextConPosition], _ = U.FloatRoundOffWithPrecision(spend/row1[keyIndex+10+nextConPosition].(float64), U.DefaultPrecision) // Compare Conversion - CPC.
 				} else {
-					row1[keyIndex+13+nextConPosition] = float64(0) // Compare Conversion - CPC.
+					row1[keyIndex+11+nextConPosition] = float64(0) // Compare Conversion - CPC.
 				}
 			}
 		}
 		return row1
-
 	}
 }
 
