@@ -306,13 +306,6 @@ type Model interface {
 	GetAllEventsForSessionCreationAsUserEventsMap(projectID int64, sessionEventNameId string, startTimestamp, endTimestamp int64) (*map[string][]model.Event, int, int)
 	GetEventsWithoutPropertiesAndWithPropertiesByNameForYourStory(projectID int64, from, to int64, mandatoryProperties []string) ([]model.EventWithProperties, *map[string]U.PropertiesMap, int)
 	OverwriteEventUserPropertiesByID(projectID int64, userID, id string, properties *postgres.Jsonb) int
-	PullEventRowsV1(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
-	PullAdwordsRowsV1(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
-	PullFacebookRowsV1(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
-	PullBingAdsRowsV1(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
-	PullLinkedInRowsV1(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
-	PullGoogleOrganicRowsV1(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
-	PullUsersRowsForWIV1(projectID int64, startTime, endTime int64, dateField string, source int, group int) (*sql.Rows, *sql.Tx, error)
 	PullEventRowsV2(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
 	PullAdwordsRowsV2(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
 	PullFacebookRowsV2(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)

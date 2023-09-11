@@ -2370,27 +2370,6 @@ func (store *MemSQL) PullEventRowsV2(projectID int64, startTime, endTime int64) 
 	return rows, tx, err
 }
 
-// PullEventRows - Function to pull events for factors model building sequentially.
-func (store *MemSQL) PullEventRowsV1(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"start_time": startTime,
-		"end_time":   endTime,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-
-	rawQuery := fmt.Sprintf("SELECT COALESCE(users.customer_user_id, users.id), event_names.name, events.timestamp, events.count,"+
-		" events.properties, users.join_timestamp, events.user_properties FROM events "+
-		"LEFT JOIN event_names ON events.event_name_id = event_names.id "+
-		"LEFT JOIN users ON events.user_id = users.id AND users.project_id = %d "+
-		"WHERE events.project_id = %d AND events.timestamp BETWEEN  %d AND %d "+
-		"ORDER BY COALESCE(users.customer_user_id, users.id), events.timestamp LIMIT %d",
-		projectID, projectID, startTime, endTime, model.EventsPullLimit+1)
-
-	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
-	return rows, tx, err
-}
-
 // PullEventsForArchivalJob - Function to pull events for archival.
 func (store *MemSQL) PullEventRowsForArchivalJob(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
 	logFields := log.Fields{

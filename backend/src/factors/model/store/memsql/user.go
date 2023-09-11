@@ -3126,28 +3126,6 @@ func (store *MemSQL) PullUsersRowsForWIV2(projectID int64, startTime, endTime in
 	return rows, tx, err
 }
 
-func (store *MemSQL) PullUsersRowsForWIV1(projectID int64, startTime, endTime int64, dateField string, source int, group int) (*sql.Rows, *sql.Tx, error) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"start_time": startTime,
-		"end_time":   endTime,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-
-	whereGroupStmt := fmt.Sprintf("(is_group_user=1 AND group_%d_id IS NOT NULL)", group)
-	if group == 0 {
-		whereGroupStmt = "(is_group_user=0 OR is_group_user IS NULL)"
-	}
-	rawQuery := fmt.Sprintf("SELECT COALESCE(customer_user_id, id) as user_id, properties,ISNULL(customer_user_id) AS is_anonymous, "+
-		"MIN(join_timestamp) as join_timestamp FROM users "+
-		"WHERE %s AND project_id=%d AND source=%d AND JSON_EXTRACT_STRING(properties, '%s')>=%d AND JSON_EXTRACT_STRING(properties, '%s')<=%d AND updated_at<NOW() "+
-		"GROUP BY user_id  ORDER BY join_timestamp LIMIT %d",
-		whereGroupStmt, projectID, source, dateField, startTime, dateField, endTime, model.UsersPullLimit+1)
-
-	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
-	return rows, tx, err
-}
-
 func (store *MemSQL) AssociateUserDomainsGroup(projectID int64, requestUserID string, requestGroupName, requestGroupUserID string) int {
 
 	logFields := log.Fields{"project_id": projectID, "request_user_id": requestUserID, "request_group_name": requestGroupName,
@@ -3385,14 +3363,14 @@ func (store *MemSQL) GetAssociatedDomainForUser(projectID int64, userID string, 
 	var details model.ContactDetails
 	queryString := fmt.Sprintf(`
 		SELECT group_%d_id as account
-		FROM users 
-		WHERE project_id = ? 
+		FROM users
+		WHERE project_id = ?
 		  AND id = (
 			SELECT group_%d_user_id
-			FROM users 
+			FROM users
 			WHERE project_id = ?
-			  AND %s = ? 
-			  AND group_%d_user_id IS NOT NULL 
+			  AND %s = ?
+			  AND group_%d_user_id IS NOT NULL
 			LIMIT 1
 		)
 		`, domainGroup.ID, domainGroup.ID, columnName, domainGroup.ID)

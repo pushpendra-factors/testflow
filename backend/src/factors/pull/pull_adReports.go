@@ -63,7 +63,7 @@ func PullDataForChannel(channel string, projectId int64, cloudManager *filestore
 }
 
 // pull ad reports(rows) from db for channel into cloud files
-func pullChannelData(channel string, projectID int64, startTimestampTimezone, endTimestampTimezone int64, cName string, cloudManager *filestore.FileManager, startTimestamp, endTimestamp int64) (int, error) {
+func pullChannelData(channel string, projectID int64, startTimestampTimezone, endTimestampTimezone int64, fileName string, cloudManager *filestore.FileManager, startTimestamp, endTimestamp int64) (int, error) {
 
 	rows, tx, err := channelToPullMap[channel](projectID, startTimestampTimezone, endTimestampTimezone)
 	if err != nil {
@@ -73,6 +73,8 @@ func pullChannelData(channel string, projectID int64, startTimestampTimezone, en
 	defer U.CloseReadQuery(rows, tx)
 
 	var writerMap = make(map[int64]*io.WriteCloser)
+	nilValue := 0
+	nilSmartProps := 0
 	rowCount := 0
 	for rows.Next() {
 		var id string
@@ -91,49 +93,35 @@ func pullChannelData(channel string, projectID int64, startTimestampTimezone, en
 			return 0, err
 		}
 		fileTimestamp := timestampUnix
-		writer, ok := writerMap[fileTimestamp]
-		if !ok {
-			cPath, _ := (*cloudManager).GetDailyChannelArchiveFilePathAndName(channel, projectID, fileTimestamp, 0, 0)
-			cloudWriter, err := (*cloudManager).GetWriter(cPath, cName)
-			if err != nil {
-				log.WithFields(log.Fields{"file": cName, "err": err}).Error("Unable to get cloud file writer")
-				return 0, err
-			}
-			writerMap[fileTimestamp] = &cloudWriter
-			writer = &cloudWriter
+		//get apt writer w.r.t file timestamp
+		writer, err := getAptWriterFromMap(projectID, writerMap, cloudManager, fileName, fileTimestamp, U.DataTypeUser, channel)
+		if err != nil {
+			log.WithError(err).Error("error getting apt writer from file")
+			return 0, err
 		}
 
-		var valueMap map[string]interface{}
-		if value != nil {
-			valueBytes, err := value.Value()
-			if err != nil {
-				log.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal value")
-				return 0, err
-			}
-			err = json.Unmarshal(valueBytes.([]byte), &valueMap)
-			if err != nil {
-				log.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal value")
-				return 0, err
-			}
-		} else {
-			log.WithFields(log.Fields{"err": err, "project_id": projectID}).Error("Nil value")
+		//value
+		valueMap, err := getMapFromPostgresJson(value)
+		if err != nil {
+			log.WithError(err).WithFields(log.Fields{"project_id": projectID}).Error("error getting value")
+			return 0, err
+		}
+		if len(valueMap) == 0 {
+			nilValue++
 		}
 
-		var smartPropsMap map[string]interface{}
-		if smartProps != nil {
-			smartPropsBytes, err := smartProps.Value()
-			if err != nil {
-				log.WithFields(log.Fields{"err": err}).Error("Unable to get value from smart props json")
-				return 0, err
-			}
-			err = json.Unmarshal(smartPropsBytes.([]byte), &smartPropsMap)
-			if err != nil {
-				log.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal smart props")
-				return 0, err
-			}
+		//smart props
+		smartPropsMap, err := getMapFromPostgresJson(smartProps)
+		if err != nil {
+			log.WithError(err).WithFields(log.Fields{"project_id": projectID}).Error("error getting smart properties")
+			return 0, err
+		}
+		if len(smartPropsMap) == 0 {
+			nilSmartProps++
 		}
 
-		doc := CounterCampaignFormat{
+		//create campInfo
+		campInfo := CounterCampaignFormat{
 			Id:         id,
 			Channel:    channel,
 			Value:      valueMap,
@@ -142,9 +130,10 @@ func pullChannelData(channel string, projectID int64, startTimestampTimezone, en
 			SmartProps: smartPropsMap,
 		}
 
-		lineBytes, err := json.Marshal(doc)
+		//write campInfo to file
+		lineBytes, err := json.Marshal(campInfo)
 		if err != nil {
-			log.WithFields(log.Fields{"err": err}).Error("Unable to marshal document.")
+			log.WithFields(log.Fields{"err": err}).Error("Unable to marshal report.")
 			return 0, err
 		}
 		line := string(lineBytes)

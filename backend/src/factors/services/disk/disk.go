@@ -177,11 +177,11 @@ func (dd *DiskDriver) GetEventsFilePathAndName(projectId int64, startTimestamp, 
 	pathArr := strings.Split(dd.baseDir, "/")
 	folderName := pathArr[len(pathArr)-1]
 	if folderName == "cloud_storage" {
-		fileName = "events.txt"
+		fileName = U.EVENTS_FILENAME_PREFIX + ".txt"
 	} else {
 		dateFormattedStart := U.GetDateOnlyFromTimestampZ(startTimestamp)
 		dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
-		fileName = fmt.Sprintf("events_%s-%s.txt", dateFormattedStart, dateFormattedEnd)
+		fileName = fmt.Sprintf("%s_%s-%s.txt", U.EVENTS_FILENAME_PREFIX, dateFormattedStart, dateFormattedEnd)
 	}
 	return path, fileName
 }
@@ -201,7 +201,7 @@ func (dd *DiskDriver) GetEventsGroupFilePathAndName(projectId int64, startTimest
 	path := dd.GetProjectDataFileDir(projectId, startTimestamp, U.DataTypeEvent, modelType)
 	dateFormattedStart := U.GetDateOnlyFromTimestampZ(startTimestamp)
 	dateFormattedEnd := U.GetDateOnlyFromTimestampZ(endTimestamp)
-	fileName = fmt.Sprintf("events_group%d_%s-%s.txt", group, dateFormattedStart, dateFormattedEnd)
+	fileName = fmt.Sprintf("%s_group%d_%s-%s.txt", U.EVENTS_FILENAME_PREFIX, group, dateFormattedStart, dateFormattedEnd)
 	return path, fileName
 }
 
@@ -350,7 +350,7 @@ func (dd *DiskDriver) GetDailyArchiveFilesDir(projectID int64, dataTimestamp int
 
 func (dd *DiskDriver) GetDailyEventArchiveFilePathAndName(projectID int64, dataTimestamp int64, startTime, endTime int64) (string, string) {
 	path := dd.GetDailyArchiveFilesDir(projectID, dataTimestamp, U.DataTypeEvent)
-	fileName := fmt.Sprintf("events_created_at_%d-%d.txt", startTime, endTime)
+	fileName := fmt.Sprintf("%s_created_at_%d-%d.txt", U.EVENTS_FILENAME_PREFIX, startTime, endTime)
 	return path, fileName
 }
 

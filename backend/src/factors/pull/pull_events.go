@@ -13,6 +13,8 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -49,8 +51,10 @@ func PullDataForEvents(projectId int64, cloudManager *filestore.FileManager, sta
 	}
 
 	logCtx.Info("Pulling events.")
+
 	_, cName := (*cloudManager).GetDailyEventArchiveFilePathAndName(projectId, 0, startTimestamp, endTimestamp)
 	startAt := time.Now().UnixNano()
+
 	eventsCount, err := pullEventsData(projectId, startTimestampInProjectTimezone, endTimestampInProjectTimezone, cName, cloudManager, startTimestamp, endTimestamp, splitRange, noOfSplits)
 	if err != nil {
 		logCtx.WithError(err).Error("Pull events failed. Pull and write events failed.")
@@ -80,34 +84,18 @@ func pullEventsData(projectID int64, startTimeTimezone, endTimeTimezone int64, f
 	var writerMap = make(map[int64]*io.WriteCloser)
 	rowCount := 0
 	nilUserProperties := 0
+	nilEventProperties := 0
 
-	var startSplit = make([]int64, 0)
-	var endSplit = make([]int64, 0)
-	if splitRange && noOfSplits > 1 {
-		var tmpStart, tmpEnd int64
-		perQueryRange := U.Per_day_epoch / int64(noOfSplits)
-		for i := 0; i < noOfSplits; i++ {
-			if i == 0 {
-				tmpStart = startTimeTimezone
-			} else {
-				tmpStart = tmpEnd + 1
-			}
-			if i == noOfSplits-1 {
-				tmpEnd = endTimeTimezone
-			} else {
-				tmpEnd = tmpStart + perQueryRange - 1
-			}
-			startSplit = append(startSplit, tmpStart)
-			endSplit = append(endSplit, tmpEnd)
-		}
-	} else {
-		startSplit = []int64{startTimeTimezone}
-		endSplit = []int64{endTimeTimezone}
-	}
+	var perQueryRange = endTimestamp - startTimestamp
+	startSplit, endSplit := getTimeStampArraysAfterSplit(splitRange, noOfSplits, startTimeTimezone, endTimeTimezone, &perQueryRange)
 	for i := range startSplit {
+		splitRowCount := 0
+		splitNum := i + 1
 		pullStartTime := startSplit[i]
 		pullEndTime := endSplit[i]
-		log.WithFields(log.Fields{"start": pullStartTime, "end": pullEndTime}).Infof("Executing split %d out of %d", i+1, len(startSplit))
+
+		//pull data from db in the form of rows
+		log.WithFields(log.Fields{"start": pullStartTime, "end": pullEndTime}).Infof("Executing split %d out of %d", splitNum, len(startSplit))
 		rows, tx, err := store.GetStore().PullEventRowsV2(projectID, pullStartTime, pullEndTime)
 		if err != nil {
 			log.WithError(err).Error("SQL Query failed.")
@@ -147,53 +135,39 @@ func pullEventsData(projectID int64, startTimeTimezone, endTimeTimezone int64, f
 				log.WithFields(log.Fields{"err": err}).Error("SQL Parse failed.")
 				return 0, err
 			}
+
+			//get file timestamp w.r.t event timestamp
 			daysFromStart := int64(math.Floor(float64(eventTimestamp-startTimeTimezone) / float64(U.Per_day_epoch)))
 			fileTimestamp := startTimestamp + daysFromStart*U.Per_day_epoch
-			writer, ok := writerMap[fileTimestamp]
-			if !ok {
-				cPath, _ := (*cloudManager).GetDailyEventArchiveFilePathAndName(projectID, fileTimestamp, 0, 0)
-				cloudWriter, err := (*cloudManager).GetWriter(cPath, fileName)
-				if err != nil {
-					log.WithFields(log.Fields{"file": fileName, "err": err}).Error("Unable to get cloud file writer")
-					return 0, err
-				}
-				writerMap[fileTimestamp] = &cloudWriter
-				writer = &cloudWriter
+
+			//get apt writer w.r.t file timestamp
+			writer, err := getAptWriterFromMap(projectID, writerMap, cloudManager, fileName, fileTimestamp, U.DataTypeEvent, "")
+			if err != nil {
+				log.WithError(err).Error("error getting apt writer from file")
+				return 0, err
 			}
 
-			var eventPropertiesMap map[string]interface{}
-			if eventProperties != nil {
-				eventPropertiesBytes, err := eventProperties.Value()
-				if err != nil {
-					log.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal event property.")
-					return 0, err
-				}
-				err = json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
-				if err != nil {
-					log.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal event property.")
-					return 0, err
-				}
-			} else {
-				log.WithFields(log.Fields{"err": err, "project_id": projectID}).Error("Nil event properties.")
+			//event props
+			eventPropertiesMap, err := getMapFromPostgresJson(eventProperties)
+			if err != nil {
+				log.WithError(err).WithFields(log.Fields{"project_id": projectID}).Error("error getting event properties")
+				return 0, err
+			}
+			if len(eventPropertiesMap) == 0 {
+				nilEventProperties++
 			}
 
-			var userPropertiesMap map[string]interface{}
-			if userProperties != nil {
-				userPropertiesBytes, err := userProperties.Value()
-				if err != nil {
-					log.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal user property.")
-					return 0, err
-				}
-
-				err = json.Unmarshal(userPropertiesBytes.([]byte), &userPropertiesMap)
-				if err != nil {
-					log.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal user property.")
-					return 0, err
-				}
-			} else {
+			//user props
+			userPropertiesMap, err := getMapFromPostgresJson(userProperties)
+			if err != nil {
+				log.WithError(err).WithFields(log.Fields{"project_id": projectID}).Error("error getting user properties")
+				return 0, err
+			}
+			if len(userPropertiesMap) == 0 {
 				nilUserProperties++
 			}
 
+			//group variables
 			is_group_user := U.IfThenElse(is_group_user_null.Valid, is_group_user_null.Bool, false).(bool)
 
 			group_1_user_id := U.IfThenElse(group_1_user_id_null.Valid, group_1_user_id_null.String, "").(string)
@@ -214,6 +188,7 @@ func pullEventsData(projectID int64, startTimeTimezone, endTimeTimezone int64, f
 			group_7_id := U.IfThenElse(group_7_id_null.Valid, group_7_id_null.String, "").(string)
 			group_8_id := U.IfThenElse(group_8_id_null.Valid, group_8_id_null.String, "").(string)
 
+			//initialise event with apt values
 			event := P.CounterEventFormat{
 				UserId:            userID,
 				UserJoinTimestamp: userJoinTimestamp,
@@ -241,10 +216,7 @@ func pullEventsData(projectID int64, startTimeTimezone, endTimeTimezone int64, f
 				Group8Id:          group_8_id,
 			}
 
-			if rowCount == 0 && i == 0 {
-				firstEventTimestamp = event.EventTimestamp
-			}
-
+			//write event
 			lineBytes, err := json.Marshal(event)
 			if err != nil {
 				log.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal event.")
@@ -256,27 +228,36 @@ func pullEventsData(projectID int64, startTimeTimezone, endTimeTimezone int64, f
 				return 0, err
 			}
 
-			lastEventTimestamp = event.EventTimestamp
-			rowCount++
+			//info variables
+			if event.EventTimestamp < firstEventTimestamp {
+				firstEventTimestamp = event.EventTimestamp
+			}
+			if event.EventTimestamp > lastEventTimestamp {
+				lastEventTimestamp = event.EventTimestamp
+			}
+			splitRowCount++
 		}
+		// Error from DB is captured eg: timeout error
 		err = rows.Err()
 		if err != nil {
-			// Error from DB is captured eg: timeout error
 			log.WithFields(log.Fields{"err": err, "project_id": projectID}).Error("Error in executing query")
 			return 0, err
 		}
-		U.CloseReadQuery(rows, tx)
-	}
 
-	if nilUserProperties > 0 {
-		log.WithFields(log.Fields{"project_id": projectID, "count": nilUserProperties}).Error("Nil user properties.")
+		U.CloseReadQuery(rows, tx)
+		rowCount += splitRowCount
+		log.WithFields(log.Fields{"start": pullStartTime, "end": pullEndTime, "rowCount": splitRowCount}).Infof("Completed split %d out of %d", splitNum, len(startSplit))
 	}
+	noOfFiles := len(writerMap)
+	log.WithFields(log.Fields{"rowCount": rowCount, "writersCount": noOfFiles, "start": startTimeTimezone, "end": endTimeTimezone}).Info("Allotted rows to writers")
 
 	if rowCount > M.EventsPullLimit {
 		// Todo(Dinesh): notify
 		return rowCount, fmt.Errorf("events count has exceeded the %d limit", M.EventsPullLimit)
 	}
 
+	//Closing writers (writing files)
+	log.WithFields(log.Fields{"writers": noOfFiles, "start": startTimeTimezone, "end": endTimeTimezone}).Info("Closing writers")
 	for _, writer := range writerMap {
 		err := (*writer).Close()
 		if err != nil {
@@ -284,12 +265,17 @@ func pullEventsData(projectID int64, startTimeTimezone, endTimeTimezone int64, f
 			return 0, err
 		}
 	}
+	log.WithFields(log.Fields{"writers": noOfFiles, "start": startTimeTimezone, "end": endTimeTimezone}).Info("All files successfully created")
 
 	if rowCount > 0 {
 		log.WithFields(log.Fields{
 			"FirstEventTimestamp": firstEventTimestamp,
 			"LastEventTimesamp":   lastEventTimestamp,
-		}).Info("Events time information.")
+			"FilesCreated":        noOfFiles,
+			"NumberOfRows":        rowCount,
+			"NilEventProperties":  nilEventProperties,
+			"NilUserProperties":   nilUserProperties,
+		}).Info("Events pulled information.")
 	}
 	return rowCount, nil
 }
@@ -413,20 +399,7 @@ func PullEventsForArchive(projectID int64, eventsFilePath, usersFilePath string,
 	return rowCount, eventsFilePath, usersFilePath, nil
 }
 
-// check if events file has been generated already for given start and end timestamp, in dataTimestamp's day and
-// its previous day's folder
-func CheckEventFileExists(cloudManager *filestore.FileManager, projectId int64, dataTimestamp, startTimestamp, endTimestamp int64) (bool, error) {
-	path, name := (*cloudManager).GetDailyEventArchiveFilePathAndName(projectId, dataTimestamp, startTimestamp, endTimestamp)
-	if yes, _ := U.CheckFileExists(cloudManager, path, name); yes {
-		return true, nil
-	}
-	path, _ = (*cloudManager).GetDailyEventArchiveFilePathAndName(projectId, dataTimestamp-U.Per_day_epoch, startTimestamp, endTimestamp)
-	if yes, _ := U.CheckFileExists(cloudManager, path, name); yes {
-		return true, nil
-	}
-	return false, fmt.Errorf("file not found in cloud: %s", name)
-}
-
+// check if add session is completed till given timestamp
 func CheckIfAddSessionCompleted(projectID int64, endTimestamp int64) (bool, error) {
 	var eventsDownloadStartTimestamp int64
 	{
@@ -443,6 +416,124 @@ func CheckIfAddSessionCompleted(projectID int64, endTimestamp int64) (bool, erro
 		return false, nil
 	}
 	return true, nil
+}
+
+// check if events file has been generated already for given start and end timestamp, in dataTimestamp's day and
+// its previous day's folder
+func CheckEventFileExists(cloudManager *filestore.FileManager, projectId int64, dataTimestamp, startTimestamp, endTimestamp int64) (bool, error) {
+	path, _ := (*cloudManager).GetDailyEventArchiveFilePathAndName(projectId, dataTimestamp, startTimestamp, endTimestamp)
+	filesPathList := (*cloudManager).ListFiles(path)
+	path, _ = (*cloudManager).GetDailyEventArchiveFilePathAndName(projectId, dataTimestamp-U.Per_day_epoch, startTimestamp, endTimestamp)
+	filesPathList = append(filesPathList, (*cloudManager).ListFiles(path)...)
+	return checkStartAndEndtimestampsExist(filesPathList, U.EVENTS_FILENAME_PREFIX, startTimestamp, endTimestamp)
+}
+
+// check if start and end times exist in file names in filesPathList
+func checkStartAndEndtimestampsExist(filesPathList []string, fileNamePrefix string, startTimestamp int64, endTimestamp int64) (bool, error) {
+	var startExists, endExists bool
+	for _, fpath := range filesPathList {
+		partFNamelist := strings.Split(fpath, "/")
+		partFileName := partFNamelist[len(partFNamelist)-1]
+		if !strings.HasPrefix(partFileName, fileNamePrefix) {
+			continue
+		}
+		start, end, err := getStartAndEndTimestampFromFileName(partFileName)
+		if err != nil {
+			log.WithError(err).Error("error getStartAndEndTimestampFromFileName")
+			return false, err
+		}
+		if start == startTimestamp {
+			startExists = true
+		}
+		if end == endTimestamp {
+			endExists = true
+		}
+		if startExists && endExists {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// get start and end timestamp from archive file name
+func getStartAndEndTimestampFromFileName(fileName string) (int64, int64, error) {
+	nameArr := strings.Split(fileName, "_")
+	startEndTxtStr := nameArr[len(nameArr)-1]
+	startEndStr := strings.Replace(startEndTxtStr, ".txt", "", 1)
+	startEndArr := strings.Split(startEndStr, "-")
+	start, err := strconv.ParseInt(startEndArr[0], 10, 64)
+	if err != nil {
+		log.WithError(err).Error("error parsing startTimestamp to int64")
+		return 0, 0, err
+	}
+	end, err := strconv.ParseInt(startEndArr[1], 10, 64)
+	if err != nil {
+		log.WithError(err).Error("error parsing endTimestamp to int64")
+		return 0, 0, err
+	}
+	return start, end, nil
+}
+
+// get 2 equal length arrays with start and end timestamps after split
+func getTimeStampArraysAfterSplit(splitRange bool, noOfSplits int, startTimestamp, endTimestamp int64, perQueryRange *int64) ([]int64, []int64) {
+	var startSplit = make([]int64, 0)
+	var endSplit = make([]int64, 0)
+	if splitRange && noOfSplits > 1 {
+		var tmpStart, tmpEnd int64
+		*perQueryRange = (endTimestamp - startTimestamp) / int64(noOfSplits)
+		for i := 0; i < noOfSplits; i++ {
+			if i == 0 {
+				tmpStart = startTimestamp
+			} else {
+				tmpStart = tmpEnd + 1
+			}
+			if i == noOfSplits-1 {
+				tmpEnd = endTimestamp
+			} else {
+				tmpEnd = tmpStart + *perQueryRange - 1
+			}
+			startSplit = append(startSplit, tmpStart)
+			endSplit = append(endSplit, tmpEnd)
+		}
+	} else {
+		startSplit = []int64{startTimestamp}
+		endSplit = []int64{endTimestamp}
+	}
+	return startSplit, endSplit
+}
+
+// get writer (initialise or get from map)
+func getAptWriterFromMap(projectID int64, writerMap map[int64]*io.WriteCloser, cloudManager *filestore.FileManager, cName string, dataTimestamp int64, dataType, channelOrDatefield string) (*io.WriteCloser, error) {
+	writer, ok := writerMap[dataTimestamp]
+	if !ok {
+		cPath, _ := GetDailyArchiveFilePathAndName(cloudManager, dataType, channelOrDatefield, projectID, dataTimestamp, 0, 0)
+		cloudWriter, err := (*cloudManager).GetWriter(cPath, cName)
+		if err != nil {
+			log.WithFields(log.Fields{"file": cName, "err": err}).Error("Unable to get cloud file writer")
+			return writer, err
+		}
+		writerMap[dataTimestamp] = &cloudWriter
+		writer = &cloudWriter
+	}
+	return writer, nil
+}
+
+// get map from json
+func getMapFromPostgresJson(data *postgres.Jsonb) (map[string]interface{}, error) {
+	var dataMap map[string]interface{}
+	if data != nil {
+		dataBytes, err := data.Value()
+		if err != nil {
+			log.WithFields(log.Fields{"err": err}).Error("Unable to get value of json.")
+			return nil, err
+		}
+		err = json.Unmarshal(dataBytes.([]byte), &dataMap)
+		if err != nil {
+			log.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal property.")
+			return nil, err
+		}
+	}
+	return dataMap, nil
 }
 
 // get data file (daily) path and name given fileManager and dataType
