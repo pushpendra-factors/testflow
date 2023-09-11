@@ -44,8 +44,6 @@ import {
 
 export const initialState = INITIAL_STATE;
 
-const USER_KPIS = ['form_submission'];
-
 export const labelsObj = {
   [TOTAL_EVENTS_CRITERIA]: 'Event Count',
   [TOTAL_USERS_CRITERIA]: 'User Count',
@@ -59,7 +57,7 @@ export const formatFiltersForQuery = (filters, scope = 'event') => {
   let count = 0;
   filters.forEach((filter) => {
     let { ref } = filter;
-    if (ref !== 0 || !ref) {
+    if (!ref) {
       ref = count++;
     }
     if (!groupByRef[ref]) {

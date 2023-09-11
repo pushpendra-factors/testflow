@@ -1,13 +1,18 @@
 import MomentTz from '../MomentTz';
 import { formatDurationIntoString, PropTextFormat } from 'Utils/dataFormatter';
 import {
+  ANY_USER_TYPE,
   EVENT_QUERY_USER_TYPE,
   PREDEFINED_DATES,
   QUERY_TYPE_EVENT,
+  reverse_user_types,
   ReverseProfileMapper,
   TYPE_UNIQUE_USERS
 } from 'Utils/constants';
-import { getEventsWithProperties } from '../../Views/CoreQuery/utils';
+import {
+  getEventsWithProperties,
+  getStateQueryFromRequestQuery
+} from '../../Views/CoreQuery/utils';
 import { operatorMap } from 'Utils/operatorMapping';
 
 export const granularityOptions = [
@@ -59,7 +64,16 @@ export const hoverEvents = [
   '$hubspot_engagement_meeting_created',
   '$hubspot_engagement_call_created',
   'sf_task_created',
-  '$sf_event_created'
+  '$sf_event_created',
+  '$g2_sponsored',
+  '$g2_product_profile',
+  '$g2_alternative',
+  '$g2_pricing',
+  '$g2_category',
+  '$g2_comparison',
+  '$g2_report',
+  '$g2_reference',
+  '$g2_deal'
 ];
 
 export const TimelineHoverPropDisplayNames = {
@@ -84,22 +98,23 @@ export const GroupDisplayNames = {
 };
 
 export const getFiltersRequestPayload = ({
-  payload,
-  queriesList,
-  eventProp,
+  source,
+  selectedFilters,
   table_props
 }) => {
+  const { eventsList, eventProp, filters } = selectedFilters;
+
   const queryOptions = {
-    group_analysis: payload.source,
-    source: payload.source,
+    group_analysis: source,
+    source: source,
     caller: 'account_profiles',
     table_props,
-    globalFilters: payload.filters,
+    globalFilters: filters,
     date_range: {}
   };
 
   return {
-    query: getSegmentQuery(queriesList, queryOptions, eventProp)
+    query: getSegmentQuery(eventsList, queryOptions, eventProp)
   };
 };
 
@@ -568,4 +583,22 @@ export const transformWeightConfigForQuery = (config) => {
   }
 
   return output;
+};
+
+export const getSelectedFiltersFromQuery = ({ query, groupsList }) => {
+  const eventProp =
+    reverse_user_types[query.ec] != null
+      ? reverse_user_types[query.ec]
+      : ANY_USER_TYPE;
+  const grpa = Boolean(query.grpa) === true ? query.grpa : 'All';
+  const filters = getStateQueryFromRequestQuery(query);
+  const result = {
+    eventProp,
+    filters: filters.globalFilters,
+    eventsList: filters.events
+  };
+  return {
+    segmentFilters: result,
+    selectedAccount: groupsList.find((g) => g[1] === grpa)
+  };
 };

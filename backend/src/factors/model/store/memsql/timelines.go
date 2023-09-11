@@ -1,7 +1,6 @@
 package memsql
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	C "factors/config"
 	"factors/model/model"
@@ -83,9 +82,16 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		return returnData, http.StatusFound, ""
 	}
 
-	for index, p := range payload.Query.GlobalUserProperties {
-		if v, exist := model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]; exist {
-			payload.Query.GlobalUserProperties[index] = v
+	for _, p := range payload.Query.GlobalUserProperties {
+		if _, exist := model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]; exist {
+
+			if p.Value == "true" {
+				p = model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]
+			} else if p.Value == "false" || p.Value == "$none" {
+				p = model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]
+				p.Operator = model.OPPOSITE_OF_OPERATOR_MAP[p.Operator]
+			}
+
 		}
 	}
 
@@ -370,6 +376,11 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 
 	params := []interface{}{projectID, model.UserSourceDomains, minMax.MinUpdatedAt, minMax.MaxUpdatedAt}
 
+	domainGroup, errCode := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
+	if errCode != http.StatusFound || domainGroup == nil {
+		return "", params, fmt.Errorf("failed to get group while adding group info")
+	}
+
 	var isGroupUserCheck, allUsersWhere string
 	if !hasUserProperty && (len(groupedFilters) > 0) {
 		isGroupUserCheck = "AND is_group_user=1"
@@ -406,17 +417,10 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 		index++
 	}
 
-	whereForSearchFilters, searchFiltersParams := SearchFilterForAllAccounts(searchFilter)
-
-	// adding search filters
-	if whereForSearchFilters != "" {
-		if allUsersWhere != "" {
-			allUsersWhere = allUsersWhere + " AND (" + whereForSearchFilters + ")"
-		} else {
-			allUsersWhere = " WHERE (" + whereForSearchFilters + ")"
-		}
-		params = append(params, searchFiltersParams...)
-	}
+	whereForSearchFilters, searchFiltersParams := SearchFilterForAllAccounts(searchFilter, domainGroup.ID)
+	domainQParams := []interface{}{projectID, model.UserSourceDomains}
+	domainQParams = append(domainQParams, searchFiltersParams...)
+	params = append(domainQParams, params...)
 
 	// building filter steps for query
 	var filterSteps string
@@ -434,11 +438,6 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 
 		params = append(params, paramsForGroupFilters[groupName]...)
 		stepNumber++
-	}
-
-	domainGroup, errCode := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
-	if errCode != http.StatusFound || domainGroup == nil {
-		return "", params, fmt.Errorf("failed to get group while adding group info")
 	}
 
 	// check if payload contains a "NULL", "notEquals", "notContains"
@@ -464,7 +463,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 				addSpecialFilter = "WHERE filter_1.identity NOT IN (SELECT identity FROM filter_special) "
 			}
 			intersectStep = fmt.Sprintf(`SELECT 
-			filter_1.properties, filter_1.identity, MAX(filter_1.updated_at) as last_activity 
+			filter_1.properties, filter_1.identity, filter_1.host_name, MAX(filter_1.updated_at) as last_activity 
 			FROM filter_1 %s
 			GROUP BY filter_1.identity 
 			ORDER BY last_activity DESC LIMIT 1000;`, addSpecialFilter)
@@ -472,7 +471,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 		}
 		if stepNo == 1 {
 			intersectStep = `SELECT 
-			filter_1.properties, filter_1.identity, MAX(filter_1.updated_at) as last_activity FROM filter_1 `
+			filter_1.properties, filter_1.identity, filter_1.host_name, MAX(filter_1.updated_at) as last_activity FROM filter_1 `
 		}
 		intersectStep = intersectStep + fmt.Sprintf(`INNER JOIN filter_%d 
 		ON filter_%d.identity = filter_%d.identity `, stepNo+1, stepNo, stepNo+1)
@@ -490,31 +489,34 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 
 	if len(groupedFilters) == 0 {
 		intersectStep = `SELECT 
-		properties, identity, MAX(updated_at) as last_activity 
+		properties, identity, host_name, MAX(updated_at) as last_activity 
 		FROM all_users 
 		GROUP BY identity 
 		ORDER BY last_activity DESC LIMIT 1000;`
 	}
 
-	query := fmt.Sprintf(`WITH 
-	all_users as (
+	query := fmt.Sprintf(`WITH all_users as (
 		SELECT * FROM (
-		  SELECT
-		  properties,
-		  updated_at, 
-		  group_%d_user_id as identity,
-		  is_group_user,
-		  customer_user_id
-		  FROM users 
-		  WHERE 
-		  project_id = ? %s 
-		  AND users.source != ? 
-		  AND users.group_%d_user_id IS NOT NULL 
-		  AND users.updated_at BETWEEN ? 
-		  AND ?
+		  SELECT u.properties,
+		  u.updated_at, 
+		  d.id as identity,
+		  d.group_%d_id as host_name,
+		  u.is_group_user,
+		  u.customer_user_id
+		  FROM users as u
+		  JOIN (
+			SELECT id, group_%d_id
+            FROM users 
+            WHERE project_id = ?
+              AND source = ?
+              %s) as d
+		  ON u.group_%d_user_id = d.id 
+		  WHERE u.project_id = ? %s 
+		    AND u.source != ? 
+		    AND u.updated_at BETWEEN ? AND ?
 		  LIMIT 10000000 
 		) %s
-	) %s %s`, domainGroup.ID, isGroupUserCheck, domainGroup.ID, allUsersWhere, filterSteps, intersectStep)
+	) %s %s`, domainGroup.ID, domainGroup.ID, whereForSearchFilters, domainGroup.ID, isGroupUserCheck, allUsersWhere, filterSteps, intersectStep)
 
 	logCtx.Info("Generated query for all accounts: ", query)
 	return query, params, nil
@@ -552,16 +554,18 @@ func GenerateSearchFilterQueryProperties(profileType string, source string, sear
 	return searchFilterProperties
 }
 
-func SearchFilterForAllAccounts(searchFilters []string) (string, []interface{}) {
+func SearchFilterForAllAccounts(searchFilters []string, domainID int) (string, []interface{}) {
 	var searchFilterWhere string
 	var searchFilterParams []interface{}
 	for index, filter := range searchFilters {
-		encodedString := base64.StdEncoding.EncodeToString([]byte(filter))
-		searchFilterWhere = searchFilterWhere + "identity RLIKE ?"
+		searchFilterWhere = searchFilterWhere + fmt.Sprintf("group_%d_id RLIKE ?", domainID)
 		if index < len(searchFilters)-1 {
 			searchFilterWhere = searchFilterWhere + " OR "
 		}
-		searchFilterParams = append(searchFilterParams, encodedString)
+		searchFilterParams = append(searchFilterParams, filter)
+	}
+	if searchFilterWhere != "" {
+		searchFilterWhere = fmt.Sprintf("AND (%s)", searchFilterWhere)
 	}
 	return searchFilterWhere, searchFilterParams
 }
@@ -1256,21 +1260,17 @@ func formatAccountProfilesList(profiles []model.Profile, tableProps []string, so
 		profiles[index].TableProps = filterTableProps
 
 		if model.IsDomainGroup(source) {
-			hostName, err := model.ConvertDomainIdToHostName(profile.Identity)
-			if err != nil {
+			if profiles[index].HostName == "" {
 				continue
 			}
-			profiles[index].HostName = hostName
-			profiles[index].Name = hostName
+			profiles[index].Name = profiles[index].HostName
 		} else {
 			if name, exists := (*properties)[model.AccountNames[source]]; exists {
 				profiles[index].Name = fmt.Sprintf("%s", name)
 			}
-
 			if hostname, exists := (*properties)[model.HostNameGroup[source]]; exists {
 				profiles[index].HostName = fmt.Sprintf("%s", hostname)
 			}
-
 			if profiles[index].Name == "" && profiles[index].HostName != "" {
 				profiles[index].Name = profiles[index].HostName
 			}
@@ -1474,7 +1474,9 @@ func (store *MemSQL) GetUserActivities(projectID int64, identity string, userId 
 				userActivity.DisplayName = userActivity.EventName
 			}
 			// Alias Names
-			if userActivity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED {
+			if aliasName, exists := model.STANDARD_EVENT_NAME_ALIASES[userActivity.EventName]; exists {
+				userActivity.AliasName = aliasName
+			} else if userActivity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED {
 				userActivity.AliasName = fmt.Sprintf("Added to %s", (*properties)[U.EP_SALESFORCE_CAMPAIGN_NAME])
 			} else if userActivity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN {
 				userActivity.AliasName = fmt.Sprintf("Responded to %s", (*properties)[U.EP_SALESFORCE_CAMPAIGN_NAME])
@@ -1609,6 +1611,16 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 	}
 
 	accountDetails = FormatAccountDetails(projectID, propertiesDecoded, groupName, accountDetails.HostName)
+	if model.IsDomainGroup(groupName) {
+		hostName, err := model.ConvertDomainIdToHostName(id)
+		if err != nil || hostName == "" {
+			log.WithFields(logFields).WithError(err).Error("Couldn't translate ID to Hostname")
+		} else {
+			accountDetails.HostName = hostName
+			accountDetails.Name = hostName
+		}
+
+	}
 
 	timelinesConfig, err := store.GetTimelinesConfig(projectID)
 	if err != nil {
@@ -1688,26 +1700,11 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 	} else {
 		accountDetails.AccountTimeline = append(accountDetails.AccountTimeline, intentTimeline)
 	}
-
-	scoringAvailable, err := store.GetFeatureStatusForProjectV2(projectID, model.FEATURE_ACCOUNT_SCORING, false)
-	if err != nil {
-		log.WithFields(logFields).Error("Error fetching scoring availability status for the project")
-	}
-
-	if scoringAvailable {
-		overview, err := store.GetAccountOverview(projectID, id, groupName)
-		if err != nil {
-			log.WithFields(logFields).WithError(err)
-		} else {
-			accountDetails.Overview = overview
-		}
-	}
-
 	return &accountDetails, http.StatusFound, ""
 }
 
 // GetAccountOverview gives us a compiled response for account overview
-func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (model.Overview, error) {
+func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (model.Overview, int, string) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"id":         id,
@@ -1790,10 +1787,10 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 	}
 
 	if errGetScore != nil && errGetCount != nil && errGetTopUsers != nil && errGetTopPages != nil {
-		return overview, fmt.Errorf("error getting overview")
+		return overview, http.StatusInternalServerError, "error getting overview"
 	}
 
-	return overview, nil
+	return overview, http.StatusOK, ""
 }
 
 // GetTopPages gives us a list of top pages with visited by the users associated to a group/domain ordered by number of visits

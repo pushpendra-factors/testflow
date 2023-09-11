@@ -211,10 +211,11 @@
     background:#fff;
     border: 1px solid $fa-color--mono-2;
     padding: 4px 8px;
-    color: $fa-color--brand-color;
+    color: $fa-color--mono-3;
     padding-left: 14px;
     padding-right: 14px;
     transition: all 0.3s;
+    
     &:first-child{
       border-radius: 3px 0px 0px 3px; 
       transition: all 0.3s;
@@ -224,6 +225,7 @@
       &.active{
         // border-right: 1px;
         border: 1px solid $fa-color--brand-color;
+        color: $fa-color--brand-color;
       }
     }
     &:last-child{
@@ -233,6 +235,7 @@
       }
       &.active{ 
         border: 1px solid $fa-color--brand-color;
+        color: $fa-color--brand-color;
       }
     }
  

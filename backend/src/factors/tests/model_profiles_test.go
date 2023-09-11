@@ -800,7 +800,7 @@ func TestProfilesUsersPropertyValueLabels(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 
 	// execute sync job
-	allStatus, _ := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50)
+	allStatus, _ := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50, 3)
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
 	}
@@ -937,7 +937,7 @@ func TestProfilesHubspotDealsPropertyValueLabels(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 
 	// execute sync job
-	allStatus, _ := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50)
+	allStatus, _ := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50, 3)
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
 	}

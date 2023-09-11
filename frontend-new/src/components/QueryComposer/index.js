@@ -73,12 +73,13 @@ function QueryComposer({
   }, [activeProject]);
 
   const groupsList = useMemo(() => {
-    const customGroups = [['Users', 'users']];
+    const customGroups = [
+      ['Users', 'users'],
+      ['All Accounts', '$domains']
+    ];
 
     if (queryType === QUERY_TYPE_EVENT) {
       customGroups.unshift(['Events', 'events']);
-    } else if (queryType === QUERY_TYPE_FUNNEL) {
-      customGroups.push(['All Accounts', '$domains']);
     }
 
     const groups = Object.entries(groupOpts || {}).map(
@@ -197,10 +198,7 @@ function QueryComposer({
   const groupsMenuItems = groupsList.map((opt) => ({
     label: opt[0],
     key: opt[1],
-    lineBreak:
-      queryType === QUERY_TYPE_FUNNEL
-        ? opt[1] === '$domains'
-        : opt[1] === 'users'
+    lineBreak: opt[1] === '$domains'
   }));
 
   const groupsMenu = (

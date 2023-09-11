@@ -21,7 +21,7 @@ const topPageColumns: ColumnsType<TopPages> = [
     ellipsis: true,
     width: 224,
     render: (text: string) => (
-      <a href={text} target='_blank' rel='noopener noreferrer'>
+      <a href={"https://"+text} target='_blank' rel='noopener noreferrer'>
         {text}
       </a>
     )

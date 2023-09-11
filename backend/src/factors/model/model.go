@@ -399,7 +399,7 @@ type Model interface {
 	GetHubspotFormDocuments(projectID int64) ([]model.HubspotDocument, int)
 	GetHubspotDocumentsByTypeForSync(projectID int64, typ int, maxCreatedAtSec int64) ([]model.HubspotDocument, int)
 	GetHubspotContactCreatedSyncIDAndUserID(projectID int64, docID string) ([]model.HubspotDocument, int)
-	GetHubspotDocumentsByTypeANDRangeForSync(projectID int64, docType int, from, to, maxCreatedAtSec int64) ([]model.HubspotDocument, int)
+	GetHubspotDocumentsByTypeANDRangeForSync(projectID int64, docType int, from, to, maxCreatedAtSec int64, limit, offset int) ([]model.HubspotDocument, int)
 	GetSyncedHubspotDealDocumentByIdAndStage(projectId int64, id string, stage string) (*model.HubspotDocument, int)
 	GetHubspotObjectPropertiesName(ProjectID int64, objectType string) ([]string, []string)
 	UpdateHubspotDocumentAsSynced(projectID int64, id string, docType int, syncId string, timestamp int64, action int, userID, groupUserID string) int
@@ -871,7 +871,7 @@ type Model interface {
 	AccountPropertiesForDomainsEnabledV2(projectID int64, id string, groupName string) (map[string]interface{}, bool, int)
 	AccountPropertiesForDomainsDisabledV1(projectID int64, id string) (string, map[string]interface{}, []interface{}, int)
 	AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile, hasUserProp bool) ([]model.Profile, int)
-	GetAccountOverview(projectID int64, id, groupName string) (model.Overview, error)
+	GetAccountOverview(projectID int64, id, groupName string) (model.Overview, int, string)
 	GetIntentTimeline(projectID int64, groupName string, id string) (model.UserTimeline, error)
 	GetMinAndMaxUpdatedAt(profileType string, whereStmt string, limitVal int, minMaxQParams []interface{}) (*model.MinMaxUpdatedAt, int, string)
 	GetUserDetailsAssociatedToDomain(projectID int64, id string) (model.AccountDetails, map[string]interface{}, int)

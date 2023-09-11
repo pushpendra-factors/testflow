@@ -11,7 +11,8 @@ import {
   DEFAULT_TIMELINE_CONFIG,
   formatFiltersForPayload,
   formatReqPayload,
-  getFiltersRequestPayload
+  getFiltersRequestPayload,
+  getSelectedFiltersFromQuery
 } from '../utils';
 import {
   getProfileAccounts,
@@ -33,7 +34,7 @@ import {
 } from 'Reducers/coreQuery/services';
 import NoDataWithMessage from '../MyComponents/NoDataWithMessage';
 import ProfilesWrapper from '../ProfilesWrapper';
-import { getColumns } from './accountProfiles.helpers';
+import { checkFiltersEquality, getColumns } from './accountProfiles.helpers';
 import {
   selectAccountPayload,
   selectActiveSegment
@@ -57,8 +58,12 @@ import styles from './index.module.scss';
 import MoreActionsDropdown from './MoreActionsDropdown';
 import DeleteSegmentModal from './DeleteSegmentModal';
 import RenameSegmentModal from './RenameSegmentModal';
-import { moreActionsMode } from './accountProfiles.constants';
+import {
+  INITIAL_FILTERS_STATE,
+  moreActionsMode
+} from './accountProfiles.constants';
 import { selectGroupsList } from 'Reducers/groups/selectors';
+import UpdateSegmentModal from './UpdateSegmentModal';
 
 const groupToCompanyPropMap = {
   $hubspot_company: '$hubspot_company_name',
@@ -66,6 +71,14 @@ const groupToCompanyPropMap = {
   $6signal: '$6Signal_name',
   $linkedin_company: '$li_localized_name',
   $g2: '$g2_name'
+};
+
+const groupToDomainMap = {
+  $hubspot_company: '$hubspot_company_domain',
+  $salesforce_account: '$salesforce_account_website',
+  $6signal: '$6Signal_domain',
+  $linkedin_company: '$li_domain',
+  $g2: '$g2_domain'
 };
 
 function AccountProfiles({
@@ -115,16 +128,17 @@ function AccountProfiles({
   const [companyValueOpts, setCompanyValueOpts] = useState({ All: {} });
   const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
   // accounts 2.0
+
   const [selectedAccount, setSelectedAccount] = useState({
     account: null
   });
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [saveSegmentModal, setSaveSegmentModal] = useState(false);
-  const [filtersList, setFiltersList] = useState([]);
-  const [appliedFilters, setAppliedFilters] = useState({});
-  const [listEvents, setListEvents] = useState([]);
+  const [updateSegmentModal, setUpdateSegmentModal] = useState(false);
+  const [selectedFilters, setSelectedFilters] = useState(INITIAL_FILTERS_STATE);
+  const [appliedFilters, setAppliedFilters] = useState(INITIAL_FILTERS_STATE);
+  const [areFiltersDirty, setFiltersDirty] = useState(false);
   const [moreActionsModalMode, setMoreActionsModalMode] = useState(null); // DELETE | RENAME
-  const [eventProp, setEventProp] = useState('any');
 
   const { isFeatureLocked: isEngagementLocked } = useFeatureLock(
     FEATURES.FEATURE_ENGAGEMENT
@@ -156,6 +170,28 @@ function AccountProfiles({
     });
   }, [accountPayload.segment_id, activeProject.id, deleteSegment]);
 
+  const displayTableProps = useMemo(() => {
+    const filterPropsMap = {
+      $hubspot_company: 'hubspot',
+      $salesforce_account: 'salesforce',
+      $6signal: '6Signal',
+      $linkedin_company: '$li_',
+      $g2: '$g2',
+      All: ''
+    };
+    const source = filterPropsMap[accountPayload?.source];
+    const tableProps = accountPayload.segment_id
+      ? activeSegment?.query?.table_props?.filter((item) =>
+          item.includes(source)
+        )
+      : currentProjectSettings?.timelines_config?.account_config?.table_props?.filter(
+          (item) => item.includes(source)
+        );
+    return (
+      tableProps?.filter((entry) => entry !== '' && entry !== undefined) || []
+    );
+  }, [currentProjectSettings, accountPayload, activeSegment]);
+
   const handleRenameSegment = useCallback(
     (name) => {
       updateSegmentForId(activeProject.id, accountPayload.segment_id, {
@@ -180,75 +216,33 @@ function AccountProfiles({
     ]
   );
 
-  useEffect(() => {
-    fetchProjectSettings(activeProject?.id);
-    fetchGroups(activeProject?.id, true);
-    getSavedSegments(activeProject?.id);
-  }, [activeProject?.id, fetchGroups, fetchProjectSettings, getSavedSegments]);
-
-  useEffect(() => {
-    if (groupsList.length > 0) {
-      if (activeSegment.type != null) {
-        const selectedGroup = groupsList.find(
-          (g) => g[1] === activeSegment.type
-        );
-        setSelectedAccount((current) => {
-          return {
-            ...current,
-            account: selectedGroup
-          };
-        });
-      } else {
-        const selectedGroup = groupsList.find(
-          (g) => g[1] === accountPayload.source
-        );
-        setSelectedAccount((current) => {
-          return {
-            ...current,
-            account: selectedGroup
-          };
-        });
-      }
-    }
-  }, [groupsList, accountPayload.source, activeSegment.type]);
-
-  const displayTableProps = useMemo(() => {
-    const filterPropsMap = {
-      $hubspot_company: 'hubspot',
-      $salesforce_account: 'salesforce',
-      $6signal: '6Signal',
-      $linkedin_company: '$li_',
-      $g2: '$g2',
-      All: ''
-    };
-    const source = filterPropsMap[accountPayload?.source];
-    const tableProps = accountPayload.segment_id
-      ? activeSegment?.query?.table_props?.filter((item) =>
-          item.includes(source)
-        )
-      : currentProjectSettings?.timelines_config?.account_config?.table_props?.filter(
-          (item) => item.includes(source)
-        );
-    return (
-      tableProps?.filter((entry) => entry !== '' && entry !== undefined) || []
-    );
-  }, [currentProjectSettings, accountPayload, activeSegment]);
-
-  useEffect(() => {
-    setFiltersList([]);
-    setAppliedFilters({});
-    setFiltersExpanded(false);
-  }, [accountPayload]);
-
-  useEffect(() => {
-    if (!accountPayload.search_filter) {
-      setListSearchItems([]);
-    } else {
-      const listValues = accountPayload?.search_filter || [];
-      setListSearchItems(uniq(listValues));
-      setSearchBarOpen(true);
-    }
-  }, [accountPayload?.search_filter]);
+  const handleUpdateSegmentDefinition = useCallback(() => {
+    const reqPayload = getFiltersRequestPayload({
+      source: selectedAccount.account[1],
+      selectedFilters,
+      table_props: displayTableProps
+    });
+    updateSegmentForId(
+      activeProject.id,
+      accountPayload.segment_id,
+      reqPayload
+    ).then((respnse) => {
+      getSavedSegments(activeProject.id);
+      setUpdateSegmentModal(false);
+      notification.success({
+        message: 'Segment updated successfully',
+        duration: 5
+      });
+    });
+  }, [
+    accountPayload.segment_id,
+    activeProject.id,
+    displayTableProps,
+    getSavedSegments,
+    selectedAccount.account,
+    selectedFilters,
+    updateSegmentForId
+  ]);
 
   const setAccountPayload = useCallback(
     (payload) => {
@@ -264,34 +258,6 @@ function AccountProfiles({
     [dispatch]
   );
 
-  useEffect(() => {
-    if (!accountPayload.source) {
-      const source = groupsList?.[0]?.[1] || '';
-      updateAccountPayload({ source });
-    }
-  }, [
-    accountPayload.source,
-    activeProject.id,
-    groupsList,
-    updateAccountPayload
-  ]);
-
-  useEffect(() => {
-    if (!currentProjectSettings?.timelines_config) return;
-
-    const { disabled_events, user_config, account_config } =
-      currentProjectSettings.timelines_config;
-    const timelinesConfig = {
-      disabled_events: [...disabled_events],
-      user_config: { ...DEFAULT_TIMELINE_CONFIG.user_config, ...user_config },
-      account_config: {
-        ...DEFAULT_TIMELINE_CONFIG.account_config,
-        ...account_config
-      }
-    };
-    setTLConfig(timelinesConfig);
-  }, [currentProjectSettings?.timelines_config]);
-
   const fetchGroupProperties = useCallback(
     async (groupId) => {
       if (!groupProperties[groupId]) {
@@ -300,13 +266,6 @@ function AccountProfiles({
     },
     [activeProject.id, getGroupProperties, groupProperties]
   );
-
-  useEffect(() => {
-    fetchGroupProperties('$domains');
-    Object.keys(groupOpts || {}).forEach((group) => {
-      fetchGroupProperties(group);
-    });
-  }, [activeProject.id, fetchGroupProperties, groupOpts]);
 
   const getAccounts = useCallback(
     (payload) => {
@@ -335,40 +294,6 @@ function AccountProfiles({
     ]
   );
 
-  useEffect(() => {
-    getAccounts(accountPayload);
-  }, [
-    accountPayload.source,
-    accountPayload.segment_id,
-    getAccounts,
-    accountPayload
-  ]);
-
-  useEffect(() => {
-    let listProps = [];
-    if (accountPayload?.source === 'All') {
-      listProps = Object.keys(groupOpts || {}).reduce((acc, property) => {
-        return groupProperties[property]
-          ? acc.concat(groupProperties[property])
-          : acc;
-      }, []);
-    } else {
-      listProps = groupProperties?.[accountPayload?.source] || [];
-    }
-    setListProperties(listProps);
-  }, [groupProperties, accountPayload?.source, groupOpts]);
-
-  useEffect(() => {
-    const tableProps = accountPayload?.segment_id
-      ? activeSegment?.query?.table_props
-      : currentProjectSettings.timelines_config?.account_config?.table_props;
-    const accountPropsWithEnableKey = formatUserPropertiesToCheckList(
-      listProperties,
-      tableProps
-    );
-    setCheckListAccountProps(accountPropsWithEnableKey);
-  }, [currentProjectSettings, listProperties, activeSegment, accountPayload]);
-
   const getTableData = (data) => {
     const sortedData = data.sort(
       (a, b) => new Date(b.last_activity) - new Date(a.last_activity)
@@ -380,39 +305,23 @@ function AccountProfiles({
   };
 
   const applyFilters = useCallback(() => {
-    const opts = {
-      source: selectedAccount.account[1],
-      filters: filtersList
-    };
-    setAppliedFilters({ filters: filtersList, eventsList: listEvents, eventProp });
+    setAppliedFilters(selectedFilters);
     setFiltersExpanded(false);
+    setFiltersDirty(true);
     const reqPayload = getFiltersRequestPayload({
-      payload: opts,
-      queriesList: listEvents,
-      eventProp,
+      source: selectedAccount.account[1],
+      selectedFilters,
       table_props: displayTableProps
     });
     getProfileAccounts(activeProject.id, reqPayload, activeAgent);
-    disableNewSegmentMode();
   }, [
     selectedAccount.account,
-    filtersList,
+    selectedFilters,
     displayTableProps,
-    listEvents,
-    eventProp,
     getProfileAccounts,
     activeProject.id,
-    activeAgent,
-    disableNewSegmentMode
+    activeAgent
   ]);
-
-  // const clearFilters = () => {
-  //   const opts = { ...accountPayload };
-  //   opts.filters = [];
-  //   setAccountPayload(opts);
-  //   setActiveSegment(activeSegment);
-  //   getAccounts(opts);
-  // };
 
   const handlePropChange = (option) => {
     if (
@@ -508,6 +417,45 @@ function AccountProfiles({
     </Tabs>
   );
 
+  const setFiltersList = useCallback((filters) => {
+    setSelectedFilters((curr) => {
+      return {
+        ...curr,
+        filters
+      };
+    });
+  }, []);
+
+  const setListEvents = useCallback((eventsList) => {
+    setSelectedFilters((curr) => {
+      return {
+        ...curr,
+        eventsList
+      };
+    });
+  }, []);
+
+  const setEventProp = useCallback((eventProp) => {
+    setSelectedFilters((curr) => {
+      return {
+        ...curr,
+        eventProp
+      };
+    });
+  }, []);
+
+  const handleSaveSegmentClick = useCallback(() => {
+    if (newSegmentMode === true) {
+      setSaveSegmentModal(true);
+      return;
+    }
+    if (Boolean(accountPayload.segment_id) === true) {
+      setUpdateSegmentModal(true);
+    } else {
+      setSaveSegmentModal(true);
+    }
+  }, [accountPayload.segment_id, newSegmentMode]);
+
   const renderPropertyFilter = () => {
     return (
       <PropertyFilter
@@ -515,15 +463,16 @@ function AccountProfiles({
         source={accountPayload.source}
         filters={accountPayload.filters}
         filtersExpanded={filtersExpanded}
-        filtersList={filtersList}
+        filtersList={selectedFilters.filters}
         appliedFilters={appliedFilters}
         selectedAccount={selectedAccount}
-        listEvents={listEvents}
+        listEvents={selectedFilters.eventsList}
         availableGroups={Object.keys(groupOpts || {})}
-        eventProp={eventProp}
+        eventProp={selectedFilters.eventProp}
+        areFiltersDirty={areFiltersDirty}
         applyFilters={applyFilters}
         setFiltersExpanded={setFiltersExpanded}
-        setSaveSegmentModal={setSaveSegmentModal}
+        setSaveSegmentModal={handleSaveSegmentClick}
         setFiltersList={setFiltersList}
         setSelectedAccount={setSelectedAccount}
         setAppliedFilters={setAppliedFilters}
@@ -532,17 +481,6 @@ function AccountProfiles({
       />
     );
   };
-
-  // const renderClearFilterButton = () => (
-  //   <Button
-  //     className='dropdown-btn large mr-2'
-  //     type='text'
-  //     icon={<SVG name='times_circle' size={16} />}
-  //     onClick={clearFilters}
-  //   >
-  //     Clear Filters
-  //   </Button>
-  // );
 
   useEffect(() => {
     const fetchData = async () => {
@@ -556,6 +494,19 @@ function AccountProfiles({
               prop
             );
             newCompanyValues[group] = { ...res.data };
+          } catch (err) {
+            console.log(err);
+          }
+        }
+      }
+      for (const [group, prop] of Object.entries(groupToDomainMap)) {
+        if (groupOpts[group]) {
+          try {
+            const res = await fetchGroupPropertyValues(
+              activeProject.id,
+              group,
+              prop
+            );
             newCompanyValues['All'] = {
               ...newCompanyValues['All'],
               ...res.data
@@ -629,18 +580,51 @@ function AccountProfiles({
     </div>
   );
 
+  const { saveButtonDisabled } = useMemo(() => {
+    return checkFiltersEquality({
+      appliedFilters,
+      newSegmentMode,
+      filtersList: selectedFilters.filters,
+      eventProp: selectedFilters.eventProp,
+      eventsList: selectedFilters.eventsList,
+      isActiveSegment: Boolean(accountPayload.segment_id),
+      areFiltersDirty
+    });
+  }, [
+    accountPayload.segment_id,
+    appliedFilters,
+    areFiltersDirty,
+    newSegmentMode,
+    selectedFilters.eventProp,
+    selectedFilters.eventsList,
+    selectedFilters.filters
+  ]);
+
   const renderSaveSegmentButton = () => {
     return (
       <ControlledComponent
-        controller={filtersExpanded === false && appliedFilters.length > 0}
+        controller={
+          filtersExpanded === false &&
+          appliedFilters.filters.length > 0 &&
+          newSegmentMode === false
+        }
       >
         <Button
-          onClick={() => setSaveSegmentModal(true)}
+          onClick={handleSaveSegmentClick}
           type='default'
           className='flex items-center col-gap-1'
+          disabled={saveButtonDisabled}
         >
-          <SVG color={'#1890ff'} size={16} name='pieChart' />
-          <Text type='title' extraClass='mb-0' color={'brand-color-6'}>
+          <SVG
+            color={saveButtonDisabled ? '#BFBFBF' : '#1890ff'}
+            size={16}
+            name='pieChart'
+          />
+          <Text
+            type='title'
+            extraClass='mb-0'
+            color={saveButtonDisabled ? 'disabled' : 'brand-color-6'}
+          >
             Save segment
           </Text>
         </Button>
@@ -719,7 +703,7 @@ function AccountProfiles({
   const tableColumns = useMemo(() => {
     return getColumns({
       accounts,
-      accountPayload,
+      source: accountPayload?.source,
       isEngagementLocked,
       displayTableProps,
       groupPropNames,
@@ -727,7 +711,7 @@ function AccountProfiles({
     });
   }, [
     accounts,
-    accountPayload,
+    accountPayload?.source,
     displayTableProps,
     groupPropNames,
     isEngagementLocked,
@@ -803,6 +787,7 @@ function AccountProfiles({
             duration: 3
           });
           setSaveSegmentModal(false);
+          setUpdateSegmentModal(false);
         }
         await getSavedSegments(activeProject.id);
       } catch (err) {
@@ -819,20 +804,20 @@ function AccountProfiles({
 
   const handleCreateSegment = useCallback(
     (newSegmentName) => {
-      const opts = { source: selectedAccount.account[1], filters: filtersList };
-      const formatPayload = { ...opts };
-      formatPayload.filters =
-        formatFiltersForPayload(opts?.filters, 'accounts') || [];
-      const reqPayload = formatReqPayload(formatPayload, activeSegment);
+      const reqPayload = getFiltersRequestPayload({
+        source: selectedAccount.account[1],
+        selectedFilters,
+        table_props: displayTableProps
+      });
       reqPayload.name = newSegmentName;
       reqPayload.type = selectedAccount.account[1];
       handleSaveSegment(reqPayload);
       disableNewSegmentMode();
     },
     [
-      activeSegment,
-      filtersList,
-      selectedAccount,
+      selectedAccount.account,
+      selectedFilters,
+      displayTableProps,
       handleSaveSegment,
       disableNewSegmentMode
     ]
@@ -853,6 +838,164 @@ function AccountProfiles({
     }
     return activeSegment.name;
   }, [accountPayload, groupsList, activeSegment, newSegmentMode]);
+
+  const restoreFiltersDefaultState = useCallback(() => {
+    setSelectedFilters(INITIAL_FILTERS_STATE);
+    setAppliedFilters(INITIAL_FILTERS_STATE);
+    setFiltersExpanded(false);
+    setFiltersDirty(false);
+  }, []);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const newCompanyValues = { All: {} };
+      for (const [group, prop] of Object.entries(groupToCompanyPropMap)) {
+        if (groupOpts[group]) {
+          try {
+            const res = await fetchGroupPropertyValues(
+              activeProject.id,
+              group,
+              prop
+            );
+            newCompanyValues[group] = { ...res.data };
+            newCompanyValues['All'] = {
+              ...newCompanyValues['All'],
+              ...res.data
+            };
+          } catch (err) {
+            console.log(err);
+          }
+        }
+      }
+      setCompanyValueOpts(newCompanyValues);
+    };
+    fetchData();
+  }, [activeProject.id, groupOpts]);
+
+  useEffect(() => {
+    if (newSegmentMode === false) {
+      getAccounts(accountPayload);
+    }
+  }, [
+    accountPayload.source,
+    accountPayload.segment_id,
+    getAccounts,
+    accountPayload,
+    newSegmentMode
+  ]);
+
+  useEffect(() => {
+    let listProps = [];
+    if (accountPayload?.source === 'All') {
+      listProps = Object.keys(groupOpts || {}).reduce((acc, property) => {
+        return groupProperties[property]
+          ? acc.concat(groupProperties[property])
+          : acc;
+      }, []);
+    } else {
+      listProps = groupProperties?.[accountPayload?.source] || [];
+    }
+    setListProperties(listProps);
+  }, [groupProperties, accountPayload?.source, groupOpts]);
+
+  useEffect(() => {
+    const tableProps = accountPayload?.segment_id
+      ? activeSegment?.query?.table_props
+      : currentProjectSettings.timelines_config?.account_config?.table_props;
+    const accountPropsWithEnableKey = formatUserPropertiesToCheckList(
+      listProperties,
+      tableProps
+    );
+    setCheckListAccountProps(accountPropsWithEnableKey);
+  }, [currentProjectSettings, listProperties, activeSegment, accountPayload]);
+
+  useEffect(() => {
+    fetchGroupProperties('$domains');
+    Object.keys(groupOpts || {}).forEach((group) => {
+      fetchGroupProperties(group);
+    });
+  }, [activeProject.id, fetchGroupProperties, groupOpts]);
+
+  useEffect(() => {
+    if (!accountPayload.source) {
+      const source = groupsList?.[0]?.[1] || '';
+      updateAccountPayload({ source });
+    }
+  }, [
+    accountPayload.source,
+    activeProject.id,
+    groupsList,
+    updateAccountPayload
+  ]);
+
+  useEffect(() => {
+    if (!currentProjectSettings?.timelines_config) return;
+
+    const { disabled_events, user_config, account_config } =
+      currentProjectSettings.timelines_config;
+    const timelinesConfig = {
+      disabled_events: [...disabled_events],
+      user_config: { ...DEFAULT_TIMELINE_CONFIG.user_config, ...user_config },
+      account_config: {
+        ...DEFAULT_TIMELINE_CONFIG.account_config,
+        ...account_config
+      }
+    };
+    setTLConfig(timelinesConfig);
+  }, [currentProjectSettings?.timelines_config]);
+
+  useEffect(() => {
+    if (!accountPayload.search_filter) {
+      setListSearchItems([]);
+    } else {
+      const listValues =
+        accountPayload?.search_filter?.map((vl) => vl?.va) || [];
+      setListSearchItems(uniq(listValues));
+      setSearchBarOpen(true);
+    }
+  }, [accountPayload?.search_filter]);
+
+  useEffect(() => {
+    fetchProjectSettings(activeProject?.id);
+    fetchGroups(activeProject?.id, true);
+    getSavedSegments(activeProject?.id);
+  }, [activeProject?.id, fetchGroups, fetchProjectSettings, getSavedSegments]);
+
+  useEffect(() => {
+    if (newSegmentMode === true) {
+      restoreFiltersDefaultState();
+    }
+  }, [newSegmentMode, restoreFiltersDefaultState]);
+
+  useEffect(() => {
+    if (accountPayload.segment_id != null && activeSegment.query != null) {
+      const { segmentFilters, selectedAccount } = getSelectedFiltersFromQuery({
+        query: activeSegment.query,
+        groupsList
+      });
+      setSelectedAccount({ account: selectedAccount });
+      setAppliedFilters(segmentFilters);
+      setSelectedFilters(segmentFilters);
+      setFiltersExpanded(false);
+      setFiltersDirty(false);
+    } else {
+      const selectedGroup = groupsList.find(
+        (g) => g[1] === accountPayload.source
+      );
+      setSelectedAccount((current) => {
+        return {
+          ...current,
+          account: selectedGroup
+        };
+      });
+      restoreFiltersDefaultState();
+    }
+  }, [
+    accountPayload,
+    activeSegment.query,
+    groupsList,
+    restoreFiltersDefaultState
+  ]);
 
   return (
     <ProfilesWrapper>
@@ -904,7 +1047,7 @@ function AccountProfiles({
         controller={
           accounts.isLoading === false &&
           accounts.data.length > 0 &&
-          newSegmentMode === false
+          (newSegmentMode === false || areFiltersDirty === true)
         }
       >
         <>{renderTable()}</>
@@ -913,7 +1056,7 @@ function AccountProfiles({
         controller={
           accounts.isLoading === false &&
           accounts.data.length === 0 &&
-          newSegmentMode === false
+          (newSegmentMode === false || areFiltersDirty === true)
         }
       >
         <NoDataWithMessage message={'No Accounts Found'} />
@@ -940,6 +1083,12 @@ function AccountProfiles({
         visible={moreActionsModalMode === moreActionsMode.RENAME}
         onCancel={() => setMoreActionsModalMode(null)}
         handleSubmit={handleRenameSegment}
+      />
+      <UpdateSegmentModal
+        visible={updateSegmentModal}
+        onCancel={() => setUpdateSegmentModal(false)}
+        onCreate={handleCreateSegment}
+        onUpdate={handleUpdateSegmentDefinition}
       />
     </ProfilesWrapper>
   );

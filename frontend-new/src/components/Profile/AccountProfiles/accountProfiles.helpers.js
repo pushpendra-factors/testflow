@@ -70,7 +70,7 @@ const getTablePropColumn = ({ prop, groupPropNames, listProperties }) => {
 
 export const getColumns = ({
   accounts,
-  payload,
+  source,
   isEngagementLocked,
   displayTableProps,
   groupPropNames,
@@ -83,7 +83,7 @@ export const getColumns = ({
       // Company Name Column
       title: (
         <div className={headerClassStr}>
-          {payload.source === 'All' ? 'Account Domain' : 'Company Name'}
+          {source === 'All' ? 'Account Domain' : 'Company Name'}
         </div>
       ),
       dataIndex: 'account',
@@ -177,7 +177,9 @@ export const checkFiltersEquality = ({
   filtersList,
   newSegmentMode,
   eventsList,
-  eventProp
+  eventProp,
+  areFiltersDirty,
+  isActiveSegment
 }) => {
   if (newSegmentMode === true && filtersList.length > 0) {
     return {
@@ -188,10 +190,14 @@ export const checkFiltersEquality = ({
   const areFiltersEqual = isEqual(filtersList, appliedFilters.filters);
   const areEventsEqual = isEqual(eventsList, appliedFilters.eventsList);
   const isEventPropEqual = eventProp === appliedFilters.eventProp;
-  const saveButtonDisabled =
-    areFiltersEqual === false || filtersList.length === 0;
   const applyButtonDisabled =
-    areFiltersEqual === true && areEventsEqual && isEventPropEqual;
+    areFiltersEqual === true &&
+    areEventsEqual === true &&
+    isEventPropEqual === true;
+  const saveButtonDisabled =
+    isActiveSegment === true
+      ? filtersList.length === 0 || areFiltersDirty === false
+      : applyButtonDisabled === false || filtersList.length === 0;
   return { saveButtonDisabled, applyButtonDisabled };
 };
 

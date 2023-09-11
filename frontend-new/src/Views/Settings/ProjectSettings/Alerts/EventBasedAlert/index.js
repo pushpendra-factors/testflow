@@ -25,10 +25,10 @@ import {
 import { Text, SVG } from 'factorsComponents';
 import {
   createEventAlert,
-  fetchEventAlerts,
   deleteEventAlert,
   editEventAlert,
-  testWebhhookUrl
+  testWebhhookUrl,
+  fetchAllAlerts
 } from 'Reducers/global';
 import ConfirmationModal from 'Components/ConfirmationModal';
 import QueryBlock from './QueryBlock';
@@ -64,7 +64,7 @@ import {
   formatFiltersForQuery,
   processBreakdownsFromQuery,
   processFiltersFromQuery
-} from '../../../../CoreQuery/utils';
+} from 'Views/CoreQuery/utils';
 import TextArea from 'antd/lib/input/TextArea';
 import EventGroupBlock from '../../../../../components/QueryComposer/EventGroupBlock';
 import useAutoFocus from 'hooks/useAutoFocus';
@@ -86,7 +86,6 @@ const { Option } = Select;
 
 const EventBasedAlert = ({
   activeProject,
-  fetchEventAlerts,
   deleteEventAlert,
   createEventAlert,
   editEventAlert,
@@ -122,6 +121,7 @@ const EventBasedAlert = ({
   teams,
   updateEventAlertStatus,
   setShowCriteria,
+  fetchAllAlerts
 }) => {
   const [errorInfo, seterrorInfo] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -276,7 +276,7 @@ const EventBasedAlert = ({
       let property = DDCategory.filter(
         (data) =>
           data[1] ===
-          viewAlertDetails?.event_alert?.breakdown_properties?.[0]?.pr
+          viewAlertDetails?.alert?.breakdown_properties?.[0]?.pr
       );
       setEventPropertyDetails(property?.[0]);
     }
@@ -296,54 +296,54 @@ const EventBasedAlert = ({
   };
 
   useEffect(() => {
-    if (viewAlertDetails?.event_alert?.event) {
+    if (viewAlertDetails?.alert?.event) {
       getGroupProperties(
         activeProject.id,
-        viewAlertDetails?.event_alert?.event
+        viewAlertDetails?.alert?.event
       );
     }
-    if (viewAlertDetails?.event_alert?.event) {
+    if (viewAlertDetails?.alert?.event) {
       getEventPropertiesV2(
         activeProject.id,
-        viewAlertDetails?.event_alert?.event
+        viewAlertDetails?.alert?.event
       );
     }
-  }, [viewAlertDetails?.event_alert?.event]);
+  }, [viewAlertDetails?.alert?.event]);
 
   useEffect(() => {
-    if (viewAlertDetails?.event_alert?.filter) {
+    if (viewAlertDetails?.alert?.filter) {
       const filter = processFiltersFromQuery(
-        viewAlertDetails.event_alert.filter
+        viewAlertDetails?.alert?.filter
       );
       setViewFilter(filter);
     }
-    if (viewAlertDetails?.event_alert?.slack_channels) {
-      setViewSelectedChannels(viewAlertDetails?.event_alert?.slack_channels);
+    if (viewAlertDetails?.alert?.slack_channels) {
+      setViewSelectedChannels(viewAlertDetails?.alert?.slack_channels);
       if (alertState?.state === 'edit') {
-        setSlackEnabled(viewAlertDetails?.event_alert?.slack);
-        setSaveSelectedChannel(viewAlertDetails?.event_alert?.slack_channels);
-        setSelectedChannel(viewAlertDetails?.event_alert?.slack_channels);
+        setSlackEnabled(viewAlertDetails?.alert?.slack);
+        setSaveSelectedChannel(viewAlertDetails?.alert?.slack_channels);
+        setSelectedChannel(viewAlertDetails?.alert?.slack_channels);
       }
     }
     if (
-      viewAlertDetails?.event_alert?.teams_channels_config?.team_channel_list
+      viewAlertDetails?.alert?.teams_channels_config?.team_channel_list
     ) {
       setTeamsViewSelectedChannels(
-        viewAlertDetails?.event_alert?.teams_channels_config?.team_channel_list
+        viewAlertDetails?.alert?.teams_channels_config?.team_channel_list
       );
       if (alertState?.state === 'edit') {
-        setTeamsEnabled(viewAlertDetails?.event_alert?.teams);
+        setTeamsEnabled(viewAlertDetails?.alert?.teams);
         setTeamsSaveSelectedChannel(
-          viewAlertDetails?.event_alert?.teams_channels_config
+          viewAlertDetails?.alert?.teams_channels_config
             ?.team_channel_list
         );
         setTeamsSelectedChannel(
-          viewAlertDetails?.event_alert?.teams_channels_config
+          viewAlertDetails?.alert?.teams_channels_config
             ?.team_channel_list
         );
         setSelectedWorkspace({
-          name: viewAlertDetails?.event_alert?.teams_channels_config?.team_name,
-          id: viewAlertDetails?.event_alert?.teams_channels_config?.team_id
+          name: viewAlertDetails?.alert?.teams_channels_config?.team_name,
+          id: viewAlertDetails?.alert?.teams_channels_config?.team_id
         });
       }
     }
@@ -351,25 +351,26 @@ const EventBasedAlert = ({
       let queryData = [];
       queryData.push({
         alias: '',
-        label: viewAlertDetails?.event_alert?.event,
-        filters: processFiltersFromQuery(viewAlertDetails.event_alert.filter),
+        label: viewAlertDetails?.alert?.event,
+        filters: processFiltersFromQuery(viewAlertDetails?.alert?.filter),
         group: ''
       });
+      setActiveGrpBtn(viewAlertDetails?.alert?.event_level == "account" ? "events" : "users")
       setQueries(queryData);
-      setAlertLimit(viewAlertDetails?.event_alert?.alert_limit);
-      setCoolDownTime(viewAlertDetails?.event_alert?.cool_down_time / 3600);
-      setNotRepeat(viewAlertDetails?.event_alert?.repeat_alerts);
-      setNotifications(viewAlertDetails?.event_alert?.notifications);
+      setAlertLimit(viewAlertDetails?.alert?.alert_limit);
+      setCoolDownTime(viewAlertDetails?.alert?.cool_down_time / 3600);
+      setNotRepeat(viewAlertDetails?.alert?.repeat_alerts);
+      setNotifications(viewAlertDetails?.alert?.notifications);
       const messageProperty = processBreakdownsFromQuery(
-        viewAlertDetails?.event_alert?.message_property
+        viewAlertDetails?.alert?.message_property
       );
       messageProperty.forEach((property) => pushGroupBy(property));
 
       // webhook settings
-      if (viewAlertDetails?.event_alert?.webhook) {
-        setWebhookEnabled(viewAlertDetails?.event_alert?.webhook);
-        setWebhookUrl(viewAlertDetails?.event_alert?.url);
-        setFinalWebhookUrl(viewAlertDetails?.event_alert?.url);
+      if (viewAlertDetails?.alert?.webhook) {
+        setWebhookEnabled(viewAlertDetails?.alert?.webhook);
+        setWebhookUrl(viewAlertDetails?.alert?.url);
+        setFinalWebhookUrl(viewAlertDetails?.alert?.url);
         setConfirmBtn(false);
         setTestMessageBtn(true);
         setTestMassageResponse('');
@@ -378,7 +379,7 @@ const EventBasedAlert = ({
         setDisbleWebhookInput(true);
         setHideTestMessageBtn(false);
       } else {
-        setWebhookEnabled(viewAlertDetails?.event_alert?.webhook);
+        setWebhookEnabled(viewAlertDetails?.alert?.webhook);
         setWebhookUrl('');
         setFinalWebhookUrl('');
         setConfirmBtn(true);
@@ -538,7 +539,7 @@ const EventBasedAlert = ({
     if (groupBy && groupBy.length && groupBy[0] && groupBy[0].property) {
       groupBy
         .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
-        .filter((gbp) => gbp.eventName === viewAlertDetails?.event_alert?.event)
+        .filter((gbp) => gbp.eventName === viewAlertDetails?.alert?.event)
         .forEach((gbp, gbpIndex) => {
           const { groupByIndex, ...orgGbp } = gbp;
           groupByEvents.push(
@@ -548,7 +549,7 @@ const EventBasedAlert = ({
                 grpIndex={gbpIndex}
                 eventIndex={1}
                 groupByEvent={orgGbp}
-                event={viewAlertDetails?.event_alert?.event}
+                event={viewAlertDetails?.alert?.event}
                 delGroupState={(ev) => deleteGroupBy(ev, gbpIndex)}
                 setGroupState={pushGroupBy}
                 closeDropDown={() => setGroupByDDVisible(false)}
@@ -595,7 +596,7 @@ const EventBasedAlert = ({
         deleteEventAlert(activeProject?.id, item?.id).then(() => {
           message.success('Deleted Alert successfully!');
           setAlertState({ state: 'list', index: 0 });
-          fetchEventAlerts(activeProject.id)
+          fetchAllAlerts(activeProject.id)
         }).catch((err) => {
           message.error(err);
         });
@@ -642,6 +643,7 @@ const EventBasedAlert = ({
     ) {
       let payload = {
         title: data?.alert_name,
+        event_level: activeGrpBtn == "events" ? "account" : "user",
         event: queries[0]?.label,
         filter: formatFiltersForQuery(queries?.[0]?.filters),
         notifications: notifications,
@@ -678,7 +680,7 @@ const EventBasedAlert = ({
         editEventAlert(activeProject.id, payload, viewAlertDetails?.id)
           .then((res) => {
             setLoading(false);
-            fetchEventAlerts(activeProject.id);
+            fetchAllAlerts(activeProject.id);
             notification.success({
               message: 'Alerts Saved',
               description: 'Alerts is edited and saved successfully.'
@@ -696,7 +698,7 @@ const EventBasedAlert = ({
         createEventAlert(activeProject.id, payload)
           .then((res) => {
             setLoading(false);
-            fetchEventAlerts(activeProject.id);
+            fetchAllAlerts(activeProject.id);
             notification.success({
               message: 'Alerts Saved',
               description: 'New Alerts is created and saved successfully.'
@@ -749,13 +751,13 @@ const EventBasedAlert = ({
 
   const createDuplicateAlert = (item) => {
     let payload = {
-      ...item?.event_alert,
-      title: `Copy of ${item?.event_alert?.title}`
+      ...item?.alert,
+      title: `Copy of ${item?.alert?.title}`
     }
     createEventAlert(activeProject?.id, payload)
       .then((res) => {
         setLoading(false);
-        fetchEventAlerts(activeProject?.id);
+        fetchAllAlerts(activeProject?.id);
         onReset();
         notification.success({
           message: 'Alert Created',
@@ -981,7 +983,7 @@ const EventBasedAlert = ({
         updateEventAlertStatus(activeProject?.id, item?.id, status).then(() => {
           message.success('Successfully paused/disabled alerts.');
           setAlertState({ state: 'list', index: 0 });
-          fetchEventAlerts(activeProject.id)
+          fetchAllAlerts(activeProject.id)
         }).catch((err) => {
           message.error(err);
         });
@@ -999,7 +1001,7 @@ const EventBasedAlert = ({
       updateEventAlertStatus(activeProject?.id, id, status)
         .then((res) => {
           setisAlertEnabled(true);
-          fetchEventAlerts(activeProject.id);
+          fetchAllAlerts(activeProject.id);
           message.success('Successfully enabled alerts.');
         })
         .catch((err) => {
@@ -1118,7 +1120,7 @@ const EventBasedAlert = ({
               </div>
             </Col>
             <Col span={16}>
-              <div className='border--thin-2 px-4 py-2'>
+              <div className='border--thin-2 px-4 py-2 border-radius--sm'>
                 <Form.Item name='event_name' className={'m-0'}>
                   {queryList()}
                 </Form.Item>
@@ -1192,7 +1194,7 @@ const EventBasedAlert = ({
                 </Popover>
               </div>
               <Form.Item name='message'
-                initialValue={viewAlertDetails?.event_alert?.message}
+                initialValue={viewAlertDetails?.alert?.message}
                 className={'m-0'}>
                 <TextArea
                   className={'fa-input'}
@@ -2154,7 +2156,6 @@ const mapStateToProps = (state) => ({
 });
 
 export default connect(mapStateToProps, {
-  fetchEventAlerts,
   deleteEventAlert,
   createEventAlert,
   editEventAlert,
@@ -2174,5 +2175,6 @@ export default connect(mapStateToProps, {
   fetchTeamsChannels,
   updateEventAlertStatus,
   setShowCriteria,
-  deleteEventAlert
+  deleteEventAlert,
+  fetchAllAlerts
 })(EventBasedAlert);

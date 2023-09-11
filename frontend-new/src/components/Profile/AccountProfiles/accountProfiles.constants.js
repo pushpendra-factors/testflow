@@ -17,3 +17,9 @@ export const moreActionsMode = {
   DELETE: 'DELETE',
   RENAME: 'RENAME'
 };
+
+export const INITIAL_FILTERS_STATE = {
+  filters: [],
+  eventsList: [],
+  eventProp: 'any'
+};

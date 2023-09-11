@@ -37,6 +37,7 @@ const GroupItem = ({ group }) => {
   const activeAccountPayload = useSelector((state) =>
     selectAccountPayload(state)
   );
+  const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
 
   const setAccountPayload = () => {
     if (activeAccountPayload.source !== group[1]) {
@@ -53,7 +54,8 @@ const GroupItem = ({ group }) => {
 
   const isActive =
     activeAccountPayload.source === group[1] &&
-    !activeAccountPayload.segment_id;
+    !activeAccountPayload.segment_id &&
+    newSegmentMode === false;
 
   return (
     <SidebarMenuItem
@@ -70,6 +72,7 @@ const SegmentItem = ({ segment }) => {
   const activeAccountPayload = useSelector((state) =>
     selectAccountPayload(state)
   );
+  const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
 
   const setActiveSegment = () => {
     if (activeAccountPayload.segment_id !== segment[1]) {
@@ -83,7 +86,8 @@ const SegmentItem = ({ segment }) => {
     }
   };
 
-  const isActive = activeAccountPayload.segment_id === segment[1];
+  const isActive =
+    activeAccountPayload.segment_id === segment[1] && newSegmentMode === false;
 
   return (
     <SidebarMenuItem
@@ -144,7 +148,8 @@ const AccountsSidebar = () => {
               'p-2 flex justify-between items-center',
               styles['sidebar-menu-item'],
               {
-                [styles['active']]: isAllAccountsSelected
+                [styles['active']]:
+                  isAllAccountsSelected && newSegmentMode === false
               }
             )}
             role='button'
@@ -162,7 +167,11 @@ const AccountsSidebar = () => {
               </Text>
             </div>
 
-            <ControlledComponent controller={isAllAccountsSelected === true}>
+            <ControlledComponent
+              controller={
+                isAllAccountsSelected === true && newSegmentMode === false
+              }
+            >
               <SVG size={16} color='#595959' name='arrowright' />
             </ControlledComponent>
           </div>

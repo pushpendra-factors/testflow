@@ -1404,13 +1404,10 @@ func HasMaliciousContent(reqPayload string) (bool, error) {
 		return hasSQLStatement, errors.New("sql on payload")
 	}
 
-	hasJSScript := strings.Contains(lcasePayload, "<script") ||
-		strings.Contains(lcasePayload, "\\u003cscript") ||
-		strings.Contains(lcasePayload, "</script") ||
-		strings.Contains(lcasePayload, "\\u003c/script")
-
-	if hasJSScript {
-		return hasJSScript, errors.New("jsscript tags on payload")
+	// Checks for any tag below with or without attributes. Eg. <html>, <script src="link">
+	hasHTML, _ := regexp.MatchString("<(html|head|script|body|iframe|a|h1|h2|h3|input|form|div|table).+>", lcasePayload)
+	if hasHTML {
+		return hasHTML, errors.New("HTML content on payload")
 	}
 
 	return false, nil
@@ -1752,4 +1749,31 @@ func FilterDisplayNameEmptyKeysAndValues(projectID int64, displayNames map[strin
 	}
 
 	return filteredDisplayNames
+}
+
+func AddTwoNumbersInt64Float64(a, b interface{}) (int64, error) {
+
+	var sum int64
+
+	// Check the type of the first input.
+	switch v1 := a.(type) {
+	case int64:
+		sum += v1
+	case float64:
+		sum += int64(v1)
+	default:
+		return 0, errors.New("unsupported type for input 1")
+	}
+
+	// Check the type of the second input.
+	switch v2 := b.(type) {
+	case int64:
+		sum += v2
+	case float64:
+		sum += int64(v2)
+	default:
+		return 0, errors.New("unsupported type for input 2")
+	}
+
+	return sum, nil
 }
