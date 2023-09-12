@@ -5,7 +5,14 @@ import { SVG, Text } from 'Components/factorsComponents';
 import styles from './index.module.scss';
 import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
 
-const SidebarMenuItem = ({ text, isActive, onClick, icon, iconColor }) => {
+const SidebarMenuItem = ({
+  text,
+  isActive,
+  onClick,
+  icon,
+  iconColor,
+  iconSize = 16
+}) => {
   return (
     <Tooltip placement='right' mouseEnterDelay={2} title={text}>
       <div
@@ -19,20 +26,20 @@ const SidebarMenuItem = ({ text, isActive, onClick, icon, iconColor }) => {
           styles['sidebar-menu-item']
         )}
       >
-        <div className='flex col-gap-1 items-center w-full'>
+        <div className={cx('flex col-gap-1 items-center w-full')}>
           <ControlledComponent controller={icon != null}>
             <SVG name={icon} size={20} color={iconColor} />
           </ControlledComponent>
           <Text
             type='title'
             level={7}
-            extraClass='mb-0 text-with-ellipsis'
+            extraClass='mb-0 text-with-ellipsis w-40'
             weight='medium'
           >
             {text}
           </Text>
         </div>
-        {isActive && <SVG size={16} color='#595959' name='arrowright' />}
+        {isActive && <SVG size={iconSize} color='#595959' name='arrowright' />}
       </div>
     </Tooltip>
   );
