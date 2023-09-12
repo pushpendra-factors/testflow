@@ -120,9 +120,7 @@ function FilterWrapper({
   useEffect(() => {
     const [groupName, propertyName, propertyType, entity] =
       newFilterState.props;
-
-    const propGrp = groupName || groupName === '' ? entity : groupName;
-
+    const propGrp = groupName || groupName !== '' ? groupName : entity;
     if (propertyType === 'categorical') {
       if (['user', 'user_g'].includes(propGrp)) {
         getUserPropertyValues(projectID, propertyName);
@@ -149,7 +147,6 @@ function FilterWrapper({
   };
   const setValuesByProps = (props) => {
     const [groupName, propertyName, propertyType, entity] = props;
-
     if (propertyType === 'categorical') {
       if (['user', 'user_g'].includes(groupName)) {
         getUserPropertyValues(projectID, propertyName);
