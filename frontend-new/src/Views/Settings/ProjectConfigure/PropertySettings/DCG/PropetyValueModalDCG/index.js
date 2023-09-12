@@ -63,7 +63,8 @@ function PropertyValueModal({
       } else {
         ruleSet = defaultRules;
       }
-
+      ruleSet = ruleSet.filter(rule => rule.channel !== "Internal");
+  
       // if (_.isEmpty(activeProject?.channel_group_rules)) {
       //   ruleSet = defaultRules;
       // }
