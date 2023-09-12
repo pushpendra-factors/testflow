@@ -948,8 +948,7 @@ function AccountProfiles({
     if (!accountPayload.search_filter) {
       setListSearchItems([]);
     } else {
-      const listValues =
-        accountPayload?.search_filter?.map((vl) => vl?.va) || [];
+      const listValues = accountPayload?.search_filter || [];
       setListSearchItems(uniq(listValues));
       setSearchBarOpen(true);
     }
