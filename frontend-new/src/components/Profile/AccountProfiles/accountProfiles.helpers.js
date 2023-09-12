@@ -196,8 +196,10 @@ export const checkFiltersEquality = ({
     isEventPropEqual === true;
   const saveButtonDisabled =
     isActiveSegment === true
-      ? filtersList.length === 0 || areFiltersDirty === false
-      : applyButtonDisabled === false || filtersList.length === 0;
+      ? (filtersList.length === 0 && eventsList.length === 0) ||
+        areFiltersDirty === false
+      : applyButtonDisabled === false ||
+        (filtersList.length === 0 && eventsList.length === 0);
   return { saveButtonDisabled, applyButtonDisabled };
 };
 

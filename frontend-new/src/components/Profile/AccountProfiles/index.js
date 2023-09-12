@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import cx from 'classnames';
 import { Table, Button, Spin, Popover, Tabs, notification, Input } from 'antd';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
@@ -54,7 +53,6 @@ import uniq from 'lodash/uniq';
 import { showUpgradeNudge } from 'Views/Settings/ProjectSettings/Pricing/utils';
 import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
 import SaveSegmentModal from './SaveSegmentModal';
-import styles from './index.module.scss';
 import MoreActionsDropdown from './MoreActionsDropdown';
 import DeleteSegmentModal from './DeleteSegmentModal';
 import RenameSegmentModal from './RenameSegmentModal';
@@ -64,6 +62,7 @@ import {
 } from './accountProfiles.constants';
 import { selectGroupsList } from 'Reducers/groups/selectors';
 import UpdateSegmentModal from './UpdateSegmentModal';
+import { AccountsSidebarIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
 
 const groupToCompanyPropMap = {
   $hubspot_company: '$hubspot_company_name',
@@ -605,7 +604,7 @@ function AccountProfiles({
       <ControlledComponent
         controller={
           filtersExpanded === false &&
-          appliedFilters.filters.length > 0 &&
+          saveButtonDisabled === false &&
           newSegmentMode === false
         }
       >
@@ -968,34 +967,51 @@ function AccountProfiles({
   }, [newSegmentMode, restoreFiltersDefaultState]);
 
   useEffect(() => {
-    if (accountPayload.segment_id != null && activeSegment.query != null) {
-      const { segmentFilters, selectedAccount } = getSelectedFiltersFromQuery({
-        query: activeSegment.query,
-        groupsList
-      });
-      setSelectedAccount({ account: selectedAccount });
-      setAppliedFilters(segmentFilters);
-      setSelectedFilters(segmentFilters);
-      setFiltersExpanded(false);
-      setFiltersDirty(false);
-    } else {
-      const selectedGroup = groupsList.find(
-        (g) => g[1] === accountPayload.source
-      );
-      setSelectedAccount((current) => {
-        return {
-          ...current,
-          account: selectedGroup
-        };
-      });
-      restoreFiltersDefaultState();
+    if (newSegmentMode === false) {
+      if (
+        Boolean(accountPayload.segment_id) === true &&
+        activeSegment.query != null
+      ) {
+        const { segmentFilters, selectedAccount } = getSelectedFiltersFromQuery(
+          {
+            query: activeSegment.query,
+            groupsList
+          }
+        );
+        setSelectedAccount({ account: selectedAccount });
+        setAppliedFilters(segmentFilters);
+        setSelectedFilters(segmentFilters);
+        setFiltersExpanded(false);
+        setFiltersDirty(false);
+      } else {
+        const selectedGroup = groupsList.find(
+          (g) => g[1] === accountPayload.source
+        );
+        setSelectedAccount((current) => {
+          return {
+            ...current,
+            account: selectedGroup
+          };
+        });
+        restoreFiltersDefaultState();
+      }
     }
   }, [
     accountPayload,
     activeSegment.query,
     groupsList,
+    newSegmentMode,
     restoreFiltersDefaultState
   ]);
+
+  const titleIcon = useMemo(() => {
+    if (Boolean(accountPayload.segment_id) === true) {
+      return 'pieChart';
+    }
+    return AccountsSidebarIconsMapping[accountPayload.source] != null
+      ? AccountsSidebarIconsMapping[accountPayload.source]
+      : 'buildings';
+  }, [accountPayload]);
 
   return (
     <ProfilesWrapper>
@@ -1011,13 +1027,8 @@ function AccountProfiles({
 
       <div className='flex justify-between items-center'>
         <div className='flex col-gap-2  items-center'>
-          <div
-            className={cx(
-              'flex items-center bg-red-200 rounded justify-center h-10 w-10',
-              styles['title-icon-container']
-            )}
-          >
-            <SVG name='buildings' size={24} color='#FF4D4F' />
+          <div className='flex items-center rounded justify-center h-10 w-10'>
+            <SVG name={titleIcon} size={32} color='#FF4D4F' />
           </div>
           <Text type='title' level={3} weight='bold' extraClass='mb-0'>
             {pageTitle}
