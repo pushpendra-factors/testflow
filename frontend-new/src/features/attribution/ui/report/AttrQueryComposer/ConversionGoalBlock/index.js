@@ -193,14 +193,15 @@ function ConversionGoalBlock({
   };
 
   const selectEventFilter = (index) => {
-    return (
-      <FilterWrapper
+   return (
+      <EventFilterWrapper
         filterProps={filterProps}
-        projectID={activeProject?.id}
+        activeProject={activeProject}
         event={eventGoal}
-        deleteFilter={() => closeFilter()}
+        deleteFilter={closeFilter}
         insertFilter={addFilter}
         closeFilter={closeFilter}
+        selectedMainCategory={eventGoal}
         refValue={index}
       />
     );
