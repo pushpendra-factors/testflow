@@ -82,14 +82,15 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		return returnData, http.StatusFound, ""
 	}
 
-	for _, p := range payload.Query.GlobalUserProperties {
-		if _, exist := model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]; exist {
+	for i, p := range payload.Query.GlobalUserProperties {
+		if v, exist := model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]; exist {
 
 			if p.Value == "true" {
-				p = model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]
+				payload.Query.GlobalUserProperties[i] = v
 			} else if p.Value == "false" || p.Value == "$none" {
-				p = model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]
-				p.Operator = model.OPPOSITE_OF_OPERATOR_MAP[p.Operator]
+
+				v.Operator = model.OPPOSITE_OF_OPERATOR_MAP[v.Operator]
+				payload.Query.GlobalUserProperties[i] = v
 			}
 
 		}
