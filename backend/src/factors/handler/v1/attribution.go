@@ -80,9 +80,13 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 		requestPayload.Query.KPIQueries[0].KPI.Queries == nil || len(requestPayload.Query.KPIQueries[0].KPI.Queries) == 0 {
 		return nil, http.StatusBadRequest, INVALID_INPUT, "invalid query. empty query.", true
 	}
-
+	logCtx.WithFields(log.Fields{
+		"requestPayload": requestPayload,
+	}).Info("debug before SetTimezoneForAttributionQueryV1")
 	timezoneString, err = SetTimezoneForAttributionQueryV1(&requestPayload, projectId)
-
+	logCtx.WithFields(log.Fields{
+		"timezoneString": timezoneString,
+	}).Info("debug after SetTimezoneForAttributionQueryV1")
 	if err != nil {
 		return nil, http.StatusBadRequest, INVALID_INPUT, "query failed. Failed to get Timezone", true
 	}
@@ -143,6 +147,7 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 
 	logCtx.WithFields(log.Fields{
 		"requestPayload": requestPayload,
+		"timezoneString": timezoneString,
 	}).Info("Attribution query debug request payload")
 	if !hardRefresh && isDashboardQueryRequest && !H.ShouldAllowHardRefresh(requestPayload.Query.From, requestPayload.Query.To, timezoneString, hardRefresh) {
 		//todo satya: check if we want to use effective to and from in this flow
