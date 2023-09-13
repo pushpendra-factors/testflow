@@ -24,7 +24,7 @@ const EnrichPages = ({
   projectId,
   udpateProjectSettings
 }: EnrichPagesProps) => {
-  const [enrichType, setEnrichType] = useState<EnrichTypes | null>(null);
+  const [enrichType, setEnrichType] = useState<EnrichTypes | null>('include');
   const [data, setData] = useState<EnrichPageData[]>([defaultPageData]);
   const [errors, setErrors] = useState<number[] | null>(null);
   const [errorType, setErrorType] = useState<string>('');
