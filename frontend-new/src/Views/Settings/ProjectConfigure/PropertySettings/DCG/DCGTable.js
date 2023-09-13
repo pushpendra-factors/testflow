@@ -198,7 +198,7 @@ const DCGTable = ({
       onOk() {
         let updatedArr = activeProject?.channel_group_rules?.filter(
           (item, index) => {
-            if (index != el.index) {
+            if(item.channel !== "Internal" && index != el.index){
               return item;
             }
           }
