@@ -73,6 +73,9 @@ func main() {
 		os.Exit(1)
 	}
 
+	db := C.GetServices().Db
+	defer db.Close()
+
 	isSuccess := RunSegmentMarkerForProjects(projectIdFlag)
 	if !isSuccess {
 		C.PingHealthcheckForFailure(healthcheckPingID, "segment_markup run failed.")
