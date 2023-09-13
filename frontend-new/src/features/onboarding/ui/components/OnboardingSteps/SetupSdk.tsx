@@ -32,6 +32,7 @@ import {
   OnboardingStepsConfig,
   SDK_SETUP
 } from '../../types';
+import GTMSteps from 'Views/Settings/ProjectSettings/SDKSettings/GTMSteps';
 
 const { Panel } = Collapse;
 
@@ -170,34 +171,11 @@ const Step2 = ({
 
   const renderGtmContent = () => (
     <div className='flex flex-col gap-1.5 px-4'>
-      <Text type='paragraph' color='mono-6' extraClass={'m-0'}>
-        1. Sign in to&nbsp;
-        <span>
-          <a href='https://tagmanager.google.com/' target='_blank'>
-            Google Tag Manager
-          </a>
-        </span>
-        , select “Workspace”, and “Add a new tag”
-      </Text>
-      <Text type='paragraph' color='mono-6' extraClass={'m-0'}>
-        2. Name it “Factors tag”. Select Edit on Tag Configuration
-      </Text>
-      <Text type='paragraph' color='mono-6' extraClass={'m-0'}>
-        3. Under custom, select custom HTML
-      </Text>
-      <Text type='paragraph' color='mono-6' extraClass={'m-0'}>
-        4. Copy the below tracking script and paste it on the HTML field, Select
-        Save
-      </Text>
-      <div className='py-4'>{renderCodeBlock()}</div>
-
-      <Text type='paragraph' color='mono-6' extraClass={'m-0'}>
-        5. In theTriggers popup, select Add Trigger and select All Pages
-      </Text>
-      <Text type='paragraph' color='mono-6' extraClass={'m-0'}>
-        6. The trigger has been added. Click on Publish at the top of your GTM
-        window!
-      </Text>
+      <GTMSteps
+        projectToken={projectToken}
+        apiURL={apiURL}
+        assetURL={assetURL}
+      />
       {renderSDKVerificationFooter('gtm')}
     </div>
   );
