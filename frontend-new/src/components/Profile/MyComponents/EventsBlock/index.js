@@ -42,9 +42,10 @@ function EventsBlock({
   groupAnalysis,
   viewMode,
   dropdownPlacement = 'top',
-  propertiesScope = ['event']
+  propertiesScope = ['event'],
+  initialDDState = true
 }) {
-  const [isDDVisible, setDDVisible] = useState(true);
+  const [isDDVisible, setDDVisible] = useState(initialDDState);
   useEffect(() => {
     if (viewMode) {
       setDDVisible(false);

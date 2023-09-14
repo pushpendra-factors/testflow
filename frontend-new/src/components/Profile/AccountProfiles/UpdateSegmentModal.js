@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import cx from 'classnames';
 import { noop } from 'lodash';
 import AppModal from 'Components/AppModal/AppModal';
@@ -44,6 +44,11 @@ const UpdateSegmentModal = ({
     }
     onUpdate();
   }, [newSegmentName, onCreate, onUpdate, saveMode]);
+
+  useEffect(() => {
+    setSaveMode(null);
+    setNewSegmentName('');
+  }, [visible]);
 
   return (
     <AppModal

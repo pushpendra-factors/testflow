@@ -15,7 +15,8 @@ import SidebarMenuItem from './SidebarMenuItem';
 import { selectAccountPayload } from 'Reducers/accountProfilesView/selectors';
 import {
   setAccountPayloadAction,
-  setActiveSegmentAction
+  setActiveSegmentAction,
+  setExitConfirmationModalAction
 } from 'Reducers/accountProfilesView/actions';
 
 const AppSidebar = () => {
@@ -26,7 +27,10 @@ const AppSidebar = () => {
   const activeAccountPayload = useSelector((state) =>
     selectAccountPayload(state)
   );
-  const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
+
+  const { newSegmentMode, filtersDirty: areFiltersDirty } = useSelector(
+    (state) => state.accountProfilesView
+  );
   const isAllAccountsSelected =
     activeAccountPayload.source === 'All' &&
     Boolean(activeAccountPayload.segment_id) === false;
@@ -44,7 +48,7 @@ const AppSidebar = () => {
     dispatch(toggleSidebarCollapsedStateAction(false));
   };
 
-  const selectAllAccounts = () => {
+  const changeAccountPayload = () => {
     dispatch(
       setAccountPayloadAction({
         source: 'All',
@@ -53,6 +57,16 @@ const AppSidebar = () => {
       })
     );
     dispatch(setActiveSegmentAction({}));
+  };
+
+  const selectAllAccounts = () => {
+    if (isAllAccountsSelected === false) {
+      if (areFiltersDirty === false) {
+        changeAccountPayload();
+      } else {
+        dispatch(setExitConfirmationModalAction(true, changeAccountPayload));
+      }
+    }
   };
 
   return (
