@@ -67,6 +67,7 @@ type AgentInfo struct {
 	Phone                string     `json:"phone"`
 	IsOnboardingFlowSeen bool       `json:"is_onboarding_flow_seen"`
 	IsFormFilled         bool       `json:"is_form_filled"`
+	LoginCount           uint64     `json:"login_count"`
 	SignedUpAt           *time.Time `json:"signed_up_at"`
 }
 
@@ -90,6 +91,7 @@ func CreateAgentInfo(agent *Agent) *AgentInfo {
 		Phone:                agent.Phone,
 		IsOnboardingFlowSeen: agent.IsOnboardingFlowSeen,
 		IsFormFilled:         agent.IsFormFilled,
+		LoginCount:           agent.LoginCount,
 		SignedUpAt:           &agent.CreatedAt,
 	}
 }

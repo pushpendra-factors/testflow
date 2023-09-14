@@ -26,8 +26,6 @@ func SignUp(c *gin.Context) {
 	type signupParams struct {
 		Email               string `json:"email" binding:"required"`
 		Phone               string `json:"phone"`
-		FirstName           string `json:"first_name"`
-		LastName            string `json:"last_name"`
 		CompanyURL          string `json:"company_url"`
 		SubscribeNewsletter bool   `json:"subscribe_newsletter"`
 		PlanCode            string `json:"plan_code"`
@@ -56,8 +54,6 @@ func SignUp(c *gin.Context) {
 	email := params.Email
 	phone := params.Phone
 	planCode := params.PlanCode
-	firstName := params.FirstName
-	lastName := params.LastName
 	companyUrl := params.CompanyURL
 	subscribeNewsletter := params.SubscribeNewsletter
 	if planCode == "" {
@@ -84,7 +80,7 @@ func SignUp(c *gin.Context) {
 	}
 
 	createAgentParams := model.CreateAgentParams{
-		Agent:    &model.Agent{Email: email, Phone: phone, LastName: lastName, FirstName: firstName, CompanyURL: companyUrl, SubscribeNewsletter: subscribeNewsletter},
+		Agent:    &model.Agent{Email: email, Phone: phone, CompanyURL: companyUrl, SubscribeNewsletter: subscribeNewsletter},
 		PlanCode: planCode,
 	}
 	createAgentResp, code := store.GetStore().CreateAgentWithDependencies(&createAgentParams)
@@ -106,12 +102,7 @@ func SignUp(c *gin.Context) {
 			WithField("email", email).
 			Error("Failed To Send Onboarding Mail")
 	}
-	code = onboardingHubspotOwner(agent)
-	if code != http.StatusOK {
-		log.WithField("email", email).
-			WithField("status_code", code).
-			Error("Failed To Create Hubspot Owner")
-	}
+	
 	code = onboardingSlackAPICall(agent)
 	if code != http.StatusOK {
 		log.WithField("email", email).
