@@ -5,7 +5,9 @@ import {
   SET_ACTIVE_SEGMENT,
   UPDATE_ACCOUNT_PAYLOAD,
   ENABLE_NEW_SEGMENT_MODE,
-  DISABLE_NEW_SEGMENT_MODE
+  DISABLE_NEW_SEGMENT_MODE,
+  SET_FILTERS_DIRTY,
+  SET_EXIT_CONFIRMATION_MODAL
 } from './types';
 import { SEGMENT_DELETED } from 'Reducers/timelines/types';
 
@@ -16,7 +18,10 @@ const initialState = {
   accountPayload: INITIAL_ACCOUNT_PAYLOAD,
   activeSegment: INITIAL_ACTIVE_SEGMENT,
   showSegmentModal: false,
-  newSegmentMode: false
+  newSegmentMode: false,
+  filtersDirty: false,
+  showExitConfirmationModal: false,
+  routingCallback: null
 };
 
 export default function (state = initialState, action) {
@@ -69,6 +74,20 @@ export default function (state = initialState, action) {
         ...state,
         activeSegment: INITIAL_ACTIVE_SEGMENT,
         accountPayload: { ...INITIAL_ACCOUNT_PAYLOAD, source: 'All' }
+      };
+    }
+    case SET_FILTERS_DIRTY: {
+      return {
+        ...state,
+        filtersDirty: action.payload
+      };
+    }
+    case SET_EXIT_CONFIRMATION_MODAL: {
+      const { value, routingCallback } = action.payload;
+      return {
+        ...state,
+        showExitConfirmationModal: value,
+        routingCallback
       };
     }
     default:

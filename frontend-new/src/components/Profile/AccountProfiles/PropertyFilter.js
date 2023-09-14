@@ -30,7 +30,8 @@ function PropertyFilter({
   setSelectedAccount,
   setAppliedFilters,
   setEventProp,
-  areFiltersDirty
+  areFiltersDirty,
+  resetSelectedFilters
 }) {
   const groupsList = useSelector((state) => selectGroupsList(state));
   const dispatch = useDispatch();
@@ -71,6 +72,11 @@ function PropertyFilter({
     setFiltersExpanded((curr) => !curr);
     dispatch(setNewSegmentModeAction(false));
   }, [dispatch, setFiltersExpanded]);
+
+  const handleCancel = useCallback(() => {
+    toggleFilters();
+    resetSelectedFilters();
+  }, [resetSelectedFilters, toggleFilters]);
 
   if (filtersExpanded === false && newSegmentMode === false) {
     if (appliedFilters.filters.length + appliedFilters.eventsList.length > 0) {
@@ -165,7 +171,7 @@ function PropertyFilter({
         eventProp={eventProp}
         areFiltersDirty={areFiltersDirty}
         setEventProp={setEventProp}
-        onCancel={toggleFilters}
+        onCancel={handleCancel}
       />
     </div>
   );

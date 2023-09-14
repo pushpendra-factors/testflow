@@ -263,6 +263,7 @@ const FiltersBox = ({
                     groupAnalysis={source}
                     eventChange={handleQueryChange}
                     closeEvent={closeEvent}
+                    initialDDState={false}
                   />
                 </div>
               );

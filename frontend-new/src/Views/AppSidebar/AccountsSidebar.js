@@ -11,6 +11,7 @@ import { SVG, Text } from 'Components/factorsComponents';
 import {
   setAccountPayloadAction,
   setActiveSegmentAction,
+  setExitConfirmationModalAction,
   setNewSegmentModeAction
 } from 'Reducers/accountProfilesView/actions';
 import { selectAccountPayload } from 'Reducers/accountProfilesView/selectors';
@@ -37,18 +38,28 @@ const GroupItem = ({ group }) => {
   const activeAccountPayload = useSelector((state) =>
     selectAccountPayload(state)
   );
-  const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
+  const { newSegmentMode, filtersDirty: areFiltersDirty } = useSelector(
+    (state) => state.accountProfilesView
+  );
+
+  const changeAccountPayload = () => {
+    dispatch(
+      setAccountPayloadAction({
+        source: group[1],
+        filters: [],
+        segment_id: ''
+      })
+    );
+    dispatch(setActiveSegmentAction({}));
+  };
 
   const setAccountPayload = () => {
     if (activeAccountPayload.source !== group[1]) {
-      dispatch(
-        setAccountPayloadAction({
-          source: group[1],
-          filters: [],
-          segment_id: ''
-        })
-      );
-      dispatch(setActiveSegmentAction({}));
+      if (areFiltersDirty === false) {
+        changeAccountPayload();
+      } else {
+        dispatch(setExitConfirmationModalAction(true, changeAccountPayload));
+      }
     }
   };
 
@@ -72,17 +83,27 @@ const SegmentItem = ({ segment }) => {
   const activeAccountPayload = useSelector((state) =>
     selectAccountPayload(state)
   );
-  const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
+  const { newSegmentMode, filtersDirty: areFiltersDirty } = useSelector(
+    (state) => state.accountProfilesView
+  );
+
+  const changeActiveSegment = () => {
+    const opts = { ...activeAccountPayload };
+    opts.segment_id = segment[1];
+    opts.source = segment[2].type;
+    opts.filters = [];
+    delete opts.search_filter;
+    dispatch(setActiveSegmentAction(segment[2]));
+    dispatch(setAccountPayloadAction(opts));
+  };
 
   const setActiveSegment = () => {
     if (activeAccountPayload.segment_id !== segment[1]) {
-      const opts = { ...activeAccountPayload };
-      opts.segment_id = segment[1];
-      opts.source = segment[2].type;
-      opts.filters = [];
-      delete opts.search_filter;
-      dispatch(setActiveSegmentAction(segment[2]));
-      dispatch(setAccountPayloadAction(opts));
+      if (areFiltersDirty === false) {
+        changeActiveSegment();
+      } else {
+        dispatch(setExitConfirmationModalAction(true, changeActiveSegment));
+      }
     }
   };
 
