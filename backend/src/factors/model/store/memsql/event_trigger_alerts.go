@@ -182,6 +182,7 @@ func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int
 	}
 
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
 
 	db := C.GetServices().Db
 
@@ -191,15 +192,18 @@ func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int
 
 	isValidAlertBody, errCode, errMsg := store.isValidEventTriggerAlertBody(projectID, userID, alertConfig)
 	if !isValidAlertBody {
+		logCtx.WithError(fmt.Errorf(errMsg)).Error("invalid alert body provided")
 		return nil, errCode, errMsg
 	}
 
 	if alertCreationLimitExceeded(projectID) {
-		return nil, http.StatusConflict, "Alerts limit reached"
+		logCtx.Error("alerts limit reached")
+		return nil, http.StatusConflict, "alerts limit reached"
 	}
 
 	if isDuplicateAlertTitle(projectID, alertConfig.Title, oldID) {
-		return nil, http.StatusConflict, "Alert already exist"
+		logCtx.Error("alert already exist")
+		return nil, http.StatusConflict, "alert already exist"
 	}
 
 	for _, filter := range (*alertConfig).Filter {
@@ -239,7 +243,7 @@ func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int
 
 	trigger, err := U.EncodeStructTypeToPostgresJsonb(*alertConfig)
 	if err != nil {
-		log.WithFields(logFields).WithError(err).Error("TriggerAlert conversion to Jsonb failed")
+		logCtx.WithError(err).Error("TriggerAlert conversion to Jsonb failed")
 		return nil, http.StatusInternalServerError, "TiggerAlert conversion to Jsonb failed"
 	}
 
@@ -262,7 +266,7 @@ func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int
 	}
 
 	if err := db.Create(&alert).Error; err != nil {
-		log.WithFields(logFields).WithError(err).Error("Create Failed")
+		logCtx.WithError(err).Error("Create Failed in db")
 		return nil, http.StatusInternalServerError, "Create Failed in db"
 	}
 
@@ -276,20 +280,36 @@ func isEmptyPostgresJsonb(json *postgres.Jsonb) bool {
 
 func (store *MemSQL) isValidEventTriggerAlertBody(projectID int64, agentID string, alert *model.EventTriggerAlertConfig) (bool, int, string) {
 
+	logCtx := log.WithFields(log.Fields{
+		"project_id":   projectID,
+		"agent_uuid":   agentID,
+		"alert_config": *alert,
+	})
+
 	if alert.Title == "" {
-		return false, http.StatusBadRequest, "title can not be empty"
+		errMsg := "title can not be empty"
+		logCtx.WithError(fmt.Errorf(errMsg)).Error("alert body validation failure")
+		return false, http.StatusBadRequest, errMsg
 	}
 	if alert.Event == "" {
-		return false, http.StatusBadRequest, "event can not be empty"
+		errMsg := "event can not be empty"
+		logCtx.WithError(fmt.Errorf(errMsg)).Error("alert body validation failure")
+		return false, http.StatusBadRequest, errMsg
 	}
 	if alert.DontRepeatAlerts && (alert.BreakdownProperties == nil || isEmptyPostgresJsonb(alert.BreakdownProperties)) {
-		return false, http.StatusBadRequest, "breakdown property not selected"
+		errMsg := "breakdown property not selected"
+		logCtx.WithError(fmt.Errorf(errMsg)).Error("alert body validation failure")
+		return false, http.StatusBadRequest, errMsg
 	}
 	if !alert.Slack && !alert.Webhook && !alert.Teams {
-		return false, http.StatusBadRequest, "Choose atleast one delivery option"
+		errMsg := "choose atleast one delivery option"
+		logCtx.WithError(fmt.Errorf(errMsg)).Error("alert body validation failure")
+		return false, http.StatusBadRequest, errMsg
 	}
 	if alert.Slack && (alert.SlackChannels == nil || U.IsEmptyPostgresJsonb(alert.SlackChannels)) {
-		return false, http.StatusBadRequest, "Slack channel not selected"
+		errMsg := "slack channel not selected"
+		logCtx.WithError(fmt.Errorf(errMsg)).Error("alert body validation failure")
+		return false, http.StatusBadRequest, errMsg
 	}
 	isSlackIntegrated, errCode := store.IsSlackIntegratedForProject(projectID, agentID)
 	if errCode != http.StatusOK {
@@ -297,7 +317,9 @@ func (store *MemSQL) isValidEventTriggerAlertBody(projectID int64, agentID strin
 		return false, errCode, "failed to check slack integration"
 	}
 	if alert.Slack && !isSlackIntegrated {
-		return false, http.StatusBadRequest, "Slack integration is not enabled for this project"
+		errMsg := "slack integration is not enabled for this project"
+		logCtx.WithError(fmt.Errorf(errMsg)).Error("alert body validation failure")
+		return false, http.StatusBadRequest, errMsg
 	}
 	isTeamsIntegrated, errCode := store.IsTeamsIntegratedForProject(projectID, agentID)
 	if errCode != http.StatusOK {
@@ -305,19 +327,26 @@ func (store *MemSQL) isValidEventTriggerAlertBody(projectID int64, agentID strin
 		return false, errCode, "failed to check teams integration"
 	}
 	if alert.Teams && !isTeamsIntegrated {
-		return false, http.StatusBadRequest, "Teams integration is not enabled for this project"
+		errMsg := "teams integration is not enabled for this project"
+		logCtx.WithError(fmt.Errorf(errMsg)).Error("alert body validation failure")
+		return false, http.StatusBadRequest, errMsg
 	}
 	if alert.Webhook && alert.WebhookURL == "" {
-		return false, http.StatusBadRequest, "webhook url must not be empty"
+		errMsg := "webhook url must not be empty"
+		logCtx.WithError(fmt.Errorf(errMsg)).Error("alert body validation failure")
+		return false, http.StatusBadRequest, errMsg
 	}
 	if duplicateMessagePropertiesPresent(alert.MessageProperty) {
-		return false, http.StatusBadRequest, "duplicate properties selected in message property"
+		errMsg := "duplicate properties found in message property"
+		logCtx.WithError(fmt.Errorf(errMsg)).Error("alert body validation failure")
+		return false, http.StatusBadRequest, errMsg
 	}
+
 	return true, http.StatusOK, ""
 }
 
 func duplicateMessagePropertiesPresent(mp *postgres.Jsonb) bool {
-	
+
 	//Note to anyone reading this code. Always check for empty Jsonb and nil pointers
 	if mp == nil || isEmptyPostgresJsonb(mp) {
 		return false
