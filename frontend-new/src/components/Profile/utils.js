@@ -434,6 +434,11 @@ export const eventIconsColorMap = {
     bgColor: '#E6F7FF',
     borderColor: '#91D5FF'
   },
+  g2crowd: {
+    iconColor: '#FF7A59',
+    bgColor: '#FFE8E2',
+    borderColor: '#FED0C5'
+  },
   window: {
     iconColor: '#FF85C0',
     bgColor: '#FFF0F7',
