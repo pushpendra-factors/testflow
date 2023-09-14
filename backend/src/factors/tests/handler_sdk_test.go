@@ -3624,14 +3624,14 @@ func Test_ApplySixSignalFilters(t *testing.T) {
 	}
 	//Testing Country Include case
 	t1ar := args{sixSignalConfig: model.SixSignalConfig{
-		APILimit:       100,
+
 		CountryInclude: []model.SixSignalFilter{{Value: "IN", Type: "equals"}},
 		CountryExclude: []model.SixSignalFilter{},
 		PagesInclude:   []model.SixSignalFilter{},
 		PagesExclude:   []model.SixSignalFilter{},
 	}, isoCode: "IN", pageUrl: "www.abc.com", countryName: "India"}
 	t2ar := args{sixSignalConfig: model.SixSignalConfig{
-		APILimit:       100,
+
 		CountryInclude: []model.SixSignalFilter{{Value: "United States", Type: "equals"}},
 		CountryExclude: []model.SixSignalFilter{},
 		PagesInclude:   []model.SixSignalFilter{},
@@ -3639,14 +3639,14 @@ func Test_ApplySixSignalFilters(t *testing.T) {
 	}, isoCode: "IN", pageUrl: "www.abc.com", countryName: "India"}
 	//Testing Country Exclude case
 	t3ar := args{sixSignalConfig: model.SixSignalConfig{
-		APILimit:       100,
+
 		CountryInclude: []model.SixSignalFilter{},
 		CountryExclude: []model.SixSignalFilter{{Value: "India", Type: "equals"}},
 		PagesInclude:   []model.SixSignalFilter{},
 		PagesExclude:   []model.SixSignalFilter{},
 	}, isoCode: "IN", pageUrl: "www.abc.com", countryName: "India"}
 	t4ar := args{sixSignalConfig: model.SixSignalConfig{
-		APILimit:       100,
+
 		CountryInclude: []model.SixSignalFilter{},
 		CountryExclude: []model.SixSignalFilter{{Value: "US", Type: "equals"}},
 		PagesInclude:   []model.SixSignalFilter{},
@@ -3655,13 +3655,13 @@ func Test_ApplySixSignalFilters(t *testing.T) {
 
 	//Testing Page Include case
 	t5ar := args{sixSignalConfig: model.SixSignalConfig{
-		APILimit:       100,
+
 		CountryInclude: []model.SixSignalFilter{},
 		CountryExclude: []model.SixSignalFilter{},
 		PagesInclude:   []model.SixSignalFilter{{Value: "www.abc.com", Type: "equals"}},
 		PagesExclude:   []model.SixSignalFilter{}}, isoCode: "IN", pageUrl: "www.abc.com", countryName: "India"}
 	t6ar := args{sixSignalConfig: model.SixSignalConfig{
-		APILimit:       100,
+
 		CountryInclude: []model.SixSignalFilter{},
 		CountryExclude: []model.SixSignalFilter{},
 		PagesInclude:   []model.SixSignalFilter{{Value: "www.abc-abc.com", Type: "equals"}},
@@ -3669,13 +3669,13 @@ func Test_ApplySixSignalFilters(t *testing.T) {
 
 	//Testing Page Exclude case
 	t7ar := args{sixSignalConfig: model.SixSignalConfig{
-		APILimit:       100,
+
 		CountryInclude: []model.SixSignalFilter{},
 		CountryExclude: []model.SixSignalFilter{},
 		PagesInclude:   []model.SixSignalFilter{},
 		PagesExclude:   []model.SixSignalFilter{{Value: "www.abc.com", Type: "equals"}}}, isoCode: "IN", pageUrl: "www.abc.com", countryName: "India"}
 	t8ar := args{sixSignalConfig: model.SixSignalConfig{
-		APILimit:       100,
+
 		CountryInclude: []model.SixSignalFilter{},
 		CountryExclude: []model.SixSignalFilter{},
 		PagesInclude:   []model.SixSignalFilter{},
@@ -3684,13 +3684,13 @@ func Test_ApplySixSignalFilters(t *testing.T) {
 	//Contains Case
 	//Testing Page Include case
 	t9ar := args{sixSignalConfig: model.SixSignalConfig{
-		APILimit:       100,
+
 		CountryInclude: []model.SixSignalFilter{},
 		CountryExclude: []model.SixSignalFilter{},
 		PagesInclude:   []model.SixSignalFilter{{Value: "www.abc", Type: "contains"}},
 		PagesExclude:   []model.SixSignalFilter{}}, isoCode: "IN", pageUrl: "www.abc.com", countryName: "India"}
 	t10ar := args{sixSignalConfig: model.SixSignalConfig{
-		APILimit:       100,
+
 		CountryInclude: []model.SixSignalFilter{},
 		CountryExclude: []model.SixSignalFilter{},
 		PagesInclude:   []model.SixSignalFilter{{Value: "www.axc", Type: "contains"}},
@@ -3698,13 +3698,13 @@ func Test_ApplySixSignalFilters(t *testing.T) {
 
 	//Testing Page Exclude case
 	t11ar := args{sixSignalConfig: model.SixSignalConfig{
-		APILimit:       100,
+
 		CountryInclude: []model.SixSignalFilter{},
 		CountryExclude: []model.SixSignalFilter{},
 		PagesInclude:   []model.SixSignalFilter{},
 		PagesExclude:   []model.SixSignalFilter{{Value: "www.abc.com", Type: "contains"}}}, isoCode: "IN", pageUrl: "www.abc.com", countryName: "India"}
 	t12ar := args{sixSignalConfig: model.SixSignalConfig{
-		APILimit:       100,
+
 		CountryInclude: []model.SixSignalFilter{},
 		CountryExclude: []model.SixSignalFilter{},
 		PagesInclude:   []model.SixSignalFilter{},
@@ -3712,13 +3712,13 @@ func Test_ApplySixSignalFilters(t *testing.T) {
 
 	//Testing Page Include Case for Equals Operator with utm params in pageUrl
 	t13ar := args{sixSignalConfig: model.SixSignalConfig{
-		APILimit:       100,
+
 		CountryInclude: []model.SixSignalFilter{},
 		CountryExclude: []model.SixSignalFilter{},
 		PagesInclude:   []model.SixSignalFilter{{Value: "www.abc.com", Type: "equals"}},
 		PagesExclude:   []model.SixSignalFilter{}}, isoCode: "IN", pageUrl: "https://www.abc.com?source=Google&channel=Direct", countryName: "India"}
 	t14ar := args{sixSignalConfig: model.SixSignalConfig{
-		APILimit:       100,
+
 		CountryInclude: []model.SixSignalFilter{},
 		CountryExclude: []model.SixSignalFilter{},
 		PagesInclude:   []model.SixSignalFilter{{Value: "www.abc-abc.com", Type: "equals"}},
@@ -3726,13 +3726,13 @@ func Test_ApplySixSignalFilters(t *testing.T) {
 
 	//Testing Page Exclude Case for Equals Operator with utm params in pageUrl
 	t15ar := args{sixSignalConfig: model.SixSignalConfig{
-		APILimit:       100,
+
 		CountryInclude: []model.SixSignalFilter{},
 		CountryExclude: []model.SixSignalFilter{},
 		PagesInclude:   []model.SixSignalFilter{},
 		PagesExclude:   []model.SixSignalFilter{{Value: "www.abc.com", Type: "equals"}}}, isoCode: "IN", pageUrl: "www.abc.com?source=Google&channel=Direct", countryName: "India"}
 	t16ar := args{sixSignalConfig: model.SixSignalConfig{
-		APILimit:       100,
+
 		CountryInclude: []model.SixSignalFilter{},
 		CountryExclude: []model.SixSignalFilter{},
 		PagesInclude:   []model.SixSignalFilter{},
