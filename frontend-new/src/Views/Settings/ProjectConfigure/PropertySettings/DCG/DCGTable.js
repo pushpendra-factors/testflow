@@ -58,13 +58,14 @@ const DCGTable = ({
 
   const getBaseQueryfromResponse = (el) => {
     const filters = [];
-    el.forEach((item) => {
+    el.forEach((item,i) => {
       if (item.logical_operator === 'AND') {
         let conditionCamelCase = _.camelCase(item.condition);
         filters.push({
           operator: reverseOperatorMap[conditionCamelCase],
           props: ['event',item.property, 'categorical', 'event'],
-          values: [item.value]
+          values: [item.value],
+          ref:i
         });
       }
       // check for internal channel 
@@ -111,7 +112,7 @@ const DCGTable = ({
                           level={8}
                           truncate
                       >
-                          {`${matchEventName(item.props[0])} ${item.operator} ${_.join(
+                          {`${matchEventName(item.props[1])} ${item.operator} ${_.join(
                               item.values.map((vl) =>
                                   DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl
                               ),
