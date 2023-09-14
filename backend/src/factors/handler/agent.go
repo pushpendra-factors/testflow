@@ -624,9 +624,10 @@ func RemoveProjectAgent(c *gin.Context) {
 }
 
 type agentVerifyParams struct {
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	Password  string `json:"password" binding:"required"`
+	FirstName           string `json:"first_name" binding:"required"`
+	LastName            string `json:"last_name"`
+	Password            string `json:"password" binding:"required"`
+	SubscribeNewsletter bool   `json:"subscribe_newsletter" binding:"required"`
 }
 
 func getAgentVerifyParams(c *gin.Context) (*agentVerifyParams, error) {
