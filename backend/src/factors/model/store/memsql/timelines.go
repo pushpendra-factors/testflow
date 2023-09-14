@@ -194,6 +194,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		log.WithError(err).WithFields(logFields).WithField("status", err).Error("Failed to filter properties from profiles.")
 		return nil, http.StatusInternalServerError, "Query formatting failed."
 	}
+
 	return returnData, http.StatusFound, ""
 }
 
@@ -1510,6 +1511,8 @@ func (store *MemSQL) GetUserActivities(projectID int64, identity string, userId 
 				userActivity.Icon = "salesforce"
 			} else if strings.Contains(userActivity.EventName, "linkedin_") || strings.Contains(userActivity.EventName, "li_") {
 				userActivity.Icon = "linkedin"
+			} else if strings.Contains(userActivity.EventName, "g2_") {
+				userActivity.Icon = "g2crowd"
 			}
 			// Default Icon
 			if userActivity.Icon == "" {
