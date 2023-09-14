@@ -632,6 +632,7 @@ func BuildSpecialFilter(projectID int64, negativeFilters []model.QueryProperty, 
 		buildWhereString = strings.ReplaceAll(buildWhereString, "user_global_user_properties", "properties")
 		buildWhereString = "WHERE " + buildWhereString
 	}
+	isGroupUserCheck = strings.ReplaceAll(isGroupUserCheck, "u.is_group_user", "is_group_user")
 
 	query := fmt.Sprintf(`filter_special as (
 		SELECT 
