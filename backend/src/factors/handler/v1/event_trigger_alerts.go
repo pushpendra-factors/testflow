@@ -51,7 +51,7 @@ func GetAllAlertsInOneHandler(c *gin.Context) (interface{}, int, string, string,
 		return alerts[p].CreatedAt.After(alerts[q].CreatedAt)
 	})
 
-	return alerts, http.StatusFound, "", "", false
+	return alerts, http.StatusOK, "", "", false
 }
 
 func GetEventTriggerAlertsByProjectHandler(c *gin.Context) (interface{}, int, string, string, bool) {
