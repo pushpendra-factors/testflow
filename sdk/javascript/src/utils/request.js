@@ -142,7 +142,7 @@ function requestWithLocalStorage(method, url, headers, data) {
     let options = { method: method };
 
     if(data && data != undefined) 
-        options["body"] = JSON.stringify(data);
+        options["body"] = util.encode(JSON.stringify(data));
 
     if(headers && headers != undefined ) {
         options.headers = headers;
