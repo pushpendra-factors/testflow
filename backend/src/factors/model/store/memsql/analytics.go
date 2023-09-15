@@ -151,7 +151,8 @@ func buildWhereFromProperties(projectID int64, properties []model.QueryProperty,
 					p = model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]
 				} else if p.Value == "false" || p.Value == "$none" {
 					p = model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]
-					p.Operator = model.OPPOSITE_OF_OPERATOR_MAP[p.Operator]
+					p.Operator = model.EqualsOpStr
+					p.Value = "$none"
 				}
 			} else if _, exists := model.PROPERTY_TO_TABLE_COLUMN_MAP[p.Property]; exists {
 				isColumn = exists

@@ -88,8 +88,8 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 			if p.Value == "true" {
 				payload.Query.GlobalUserProperties[i] = v
 			} else if p.Value == "false" || p.Value == "$none" {
-
-				v.Operator = model.OPPOSITE_OF_OPERATOR_MAP[v.Operator]
+				v.Operator = model.EqualsOpStr
+				v.Value = "$none"
 				payload.Query.GlobalUserProperties[i] = v
 			}
 
@@ -633,6 +633,7 @@ func BuildSpecialFilter(projectID int64, negativeFilters []model.QueryProperty, 
 		buildWhereString = "WHERE " + buildWhereString
 	}
 	isGroupUserCheck = strings.ReplaceAll(isGroupUserCheck, "u.is_group_user", "is_group_user")
+	isGroupUserCheck = strings.ReplaceAll(isGroupUserCheck, "u.customer_user_id", "customer_user_id")
 
 	query := fmt.Sprintf(`filter_special as (
 		SELECT 
