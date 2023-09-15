@@ -30,6 +30,10 @@ func TestTaskSegmentMarker(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID,
+		&model.ProjectSetting{SegmentMarkerLastRun: U.TimeNowZ().Add(time.Duration(-3) * time.Hour)})
+	assert.Equal(t, errCode, http.StatusAccepted)
+
 	// user property map
 	userPropsMap := []map[string]interface{}{
 		{"$browser": "Chrome", "$city": "Delhi", "$country": "India", "$device_type": "desktop", "$page_count": 100, "$session_spent_time": 2000},
@@ -498,7 +502,7 @@ func TestTaskSegmentMarker(t *testing.T) {
 	assert.True(t, nameFound2)
 
 	// Process all user
-	errCode := T.SegmentMarker(project.ID)
+	errCode = T.SegmentMarker(project.ID)
 	assert.Equal(t, errCode, http.StatusOK)
 
 	// to verify updated users

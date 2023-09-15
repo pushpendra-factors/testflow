@@ -114,6 +114,8 @@ const (
 )
 const GROUP_ACTIVITY_USERNAME = "group_user"
 const FILTER_TYPE_USERS = "users"
+const USER_PROFILES = "user_profiles"
+const ACCOUNT_PROFILES = "account_profiles"
 
 // Source number to source name map
 var SourceGroupUser = map[int]string{

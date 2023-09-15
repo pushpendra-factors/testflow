@@ -1,0 +1,1 @@
+ALTER TABLE project_settings ADD COLUMN segment_marker_last_run timestamp(6);

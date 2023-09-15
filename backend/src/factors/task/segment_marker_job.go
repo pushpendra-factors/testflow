@@ -1,9 +1,14 @@
 package task
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
+
+	C "factors/config"
 
 	log "github.com/sirupsen/logrus"
 
@@ -22,8 +27,17 @@ func SegmentMarker(projectID int64) int {
 		return status
 	}
 
+	var lookBack time.Time
+
+	if !C.UseLookbackForSegmentMarker() {
+		lookBack, _ = store.GetStore().GetSegmentMarkerLastRunTime(projectID)
+	} else if lookBack.IsZero() {
+		hour := C.LookbackForSegmentMarker()
+		lookBack = U.TimeNowZ().Add(time.Duration(-hour) * time.Hour)
+	}
+
 	// list of 1000 domains their associated users with last updated_at in last 1 hour
-	users, statusCode := store.GetStore().GetUsersUpdatedAtGivenHour(projectID, 1, domainGroup.ID)
+	users, statusCode := store.GetStore().GetUsersUpdatedAtGivenHour(projectID, lookBack, domainGroup.ID)
 	if statusCode != http.StatusFound {
 		log.WithField("project_id", projectID).Error("Couldn't find updated records in last one hour")
 		return statusCode
@@ -62,77 +76,130 @@ func SegmentMarker(projectID int64) int {
 			}
 			segmentQuery.Timezone = string(timezoneString)
 			segmentQuery.Source = segment.Type
-			if segmentQuery.Caller == "user_profiles" {
-				segmentQuery.GroupAnalysis = "users"
-			} else if segmentQuery.Caller == "account_profiles" {
+			if segmentQuery.Caller == model.USER_PROFILES {
+				segmentQuery.GroupAnalysis = model.FILTER_TYPE_USERS
+			} else if segmentQuery.Caller == model.ACCOUNT_PROFILES {
 				segmentQuery.GroupAnalysis = segment.Type
 			}
 			decodedSegmentRulesMap[groupName] = append(decodedSegmentRulesMap[groupName], segmentQuery)
 		}
 	}
 
+	statusMap := make(map[string]int, 0)
+
+	var waitGroup sync.WaitGroup
+	actualRoutineLimit := U.MinInt(len(users), C.AllowedGoRoutinesSegmentMarker())
+	waitGroup.Add(actualRoutineLimit)
+	count := 0
 	for _, user := range users {
-		userAssociatedSegments := make(map[string]interface{})
-
-		// decoding user properties col
-		decodedProps, err := U.DecodePostgresJsonb(&user.Properties)
-		if err != nil {
-			log.WithField("project_id", projectID).Error("Unable to decode user properties.")
-			return http.StatusInternalServerError
+		count++
+		go usersProcessing(projectID, user, allSegmentsMap, decodedSegmentRulesMap, &waitGroup, &statusMap)
+		if count%actualRoutineLimit == 0 {
+			waitGroup.Wait()
+			waitGroup.Add(U.MinInt(len(users)-count, actualRoutineLimit))
 		}
+	}
 
-		matched := false
-		for groupName, segmentArray := range allSegmentsMap {
-			if groupName == "All" {
-				continue
-			}
-			if model.GroupUserSource[groupName] == *user.Source || model.UserSourceMap[groupName] == *user.Source {
-				for index, segment := range segmentArray {
-					segmentQuery := decodedSegmentRulesMap[groupName][index]
+	waitGroup.Wait()
 
-					// check if grpa == source
-					if (segmentQuery.GroupAnalysis == model.SourceGroupUser[*user.Source] && (user.IsGroupUser != nil && *user.IsGroupUser)) ||
-						(segmentQuery.GroupAnalysis == model.FILTER_TYPE_USERS && (user.IsGroupUser == nil || !*user.IsGroupUser)) {
-						// apply segment rule on the user
-						matched = isRuleMatched(segment, decodedProps)
+	if len(statusMap) > 0 {
+		log.WithField("project_id", projectID).Error("failures while running segment_markup for following users ", statusMap)
+	}
 
-						// update associated_segments map on the basis of segment rule applied
-						userAssociatedSegments = updateSegmentMap(matched, user,
-							userAssociatedSegments, segment.Id)
-					}
-				}
-			}
-		}
-
-		// decoding associated_segments col
-		userPartOfSegments, err := U.DecodePostgresJsonb(&user.AssociatedSegments)
-		if err != nil {
-			log.WithField("project_id", projectID).Error("Unable to decode associated_segments.")
-			return http.StatusInternalServerError
-		}
-
-		// do not update in db if no associated segment
-		if len(*userPartOfSegments) == 0 && len(userAssociatedSegments) == 0 {
-			continue
-		}
-
-		// update associated_segments in db
-		status, _ := store.GetStore().UpdateAssociatedSegments(projectID, user.ID,
-			userAssociatedSegments)
-		if status != http.StatusOK {
-			log.WithField("project_id", projectID).Error("Unable to update associated_segments to the user.")
+	// check if there is no All type segment in the project
+	if _, exists := allSegmentsMap["All"]; exists {
+		status, err := allAccountsSegmentMarkup(projectID, users, allSegmentsMap["All"], decodedSegmentRulesMap["All"], domainGroup.ID)
+		if status != http.StatusOK || err != nil {
+			log.WithField("project_id", projectID).Error("Unable to update associated_segments to the domain user.")
 			return status
 		}
 	}
 
-	// check if there is no All type segment in the project
-	if _, exists := allSegmentsMap["All"]; !exists {
+	// updating segment_marker_last_run in project settings after completing the job
+	_, errCode := store.GetStore().UpdateProjectSettings(projectID,
+		&model.ProjectSetting{SegmentMarkerLastRun: U.TimeNowZ()})
+
+	if errCode != http.StatusAccepted {
+		log.WithField("project_id", projectID).Error("Unable to update segment_marker_last_run in project_settings.")
+		return errCode
+	}
+
+	return http.StatusOK
+}
+
+func usersProcessing(projectID int64, user model.User, allSegmentsMap map[string][]model.Segment,
+	decodedSegmentRulesMap map[string][]model.Query, waitGroup *sync.WaitGroup, statusMap *map[string]int) {
+	logFields := log.Fields{
+		"project_id":                projectID,
+		"user":                      user,
+		"all_segments_map":          allSegmentsMap,
+		"decoded_segment_rules_map": decodedSegmentRulesMap,
+		"wait_group":                waitGroup,
+	}
+
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer waitGroup.Done()
+
+	status := userProcessingWithErrcode(projectID, user, allSegmentsMap, decodedSegmentRulesMap)
+
+	if status != http.StatusOK {
+		(*statusMap)[user.ID] = status
+	}
+
+}
+
+func userProcessingWithErrcode(projectID int64, user model.User, allSegmentsMap map[string][]model.Segment,
+	decodedSegmentRulesMap map[string][]model.Query) int {
+	userAssociatedSegments := make(map[string]interface{})
+
+	// decoding user properties col
+	decodedProps, err := U.DecodePostgresJsonb(&user.Properties)
+	if err != nil {
+		log.WithField("project_id", projectID).Error("Unable to decode user properties.")
+		return http.StatusInternalServerError
+	}
+
+	matched := false
+	for groupName, segmentArray := range allSegmentsMap {
+		if model.IsDomainGroup(groupName) {
+			continue
+		}
+		if model.GroupUserSource[groupName] == *user.Source || model.UserSourceMap[groupName] == *user.Source {
+			for index, segment := range segmentArray {
+				segmentQuery := decodedSegmentRulesMap[groupName][index]
+
+				// check if grpa == source
+				if (segmentQuery.GroupAnalysis == model.SourceGroupUser[*user.Source] && (user.IsGroupUser != nil && *user.IsGroupUser)) ||
+					(segmentQuery.GroupAnalysis == model.FILTER_TYPE_USERS && (user.IsGroupUser == nil || !*user.IsGroupUser)) {
+					// apply segment rule on the user
+					matched = isRuleMatched(segment, decodedProps)
+
+					// update associated_segments map on the basis of segment rule applied
+					userAssociatedSegments = updateSegmentMap(matched, user,
+						userAssociatedSegments, segment.Id)
+				}
+			}
+		}
+	}
+
+	// decoding associated_segments col
+	userPartOfSegments, err := U.DecodePostgresJsonb(&user.AssociatedSegments)
+	if err != nil {
+		log.WithField("project_id", projectID).Error("Unable to decode associated_segments.")
+		return http.StatusInternalServerError
+	}
+
+	// do not update in db if no associated segment
+	if len(*userPartOfSegments) == 0 && len(userAssociatedSegments) == 0 {
 		return http.StatusOK
 	}
 
-	status, err := allAccountsSegmentMarkup(projectID, users, allSegmentsMap["All"], decodedSegmentRulesMap["All"], domainGroup.ID)
-	if status != http.StatusOK || err != nil {
-		log.WithField("project_id", projectID).Error("Unable to update associated_segments to the domain user.")
+	// update associated_segments in db
+	status, _ := store.GetStore().UpdateAssociatedSegments(projectID, user.ID,
+		userAssociatedSegments)
+	if status != http.StatusOK {
+		log.WithField("project_id", projectID).Error("Unable to update associated_segments to the user.")
 		return status
 	}
 	return http.StatusOK
@@ -146,7 +213,11 @@ func allAccountsSegmentMarkup(projectID int64, users []model.User, segments []mo
 
 	domainUsersMap := make(map[string][]model.User)
 	for _, user := range users {
-		domainUsersMap[user.Group1UserID] = append(domainUsersMap[user.Group1UserID], user)
+		groupUserId, err := findUserGroupByID(user, domainGroupId)
+		if err != nil {
+			return http.StatusBadRequest, err
+		}
+		domainUsersMap[groupUserId] = append(domainUsersMap[groupUserId], user)
 	}
 
 	for domId, usersArray := range domainUsersMap {
@@ -181,6 +252,29 @@ func allAccountsSegmentMarkup(projectID int64, users []model.User, segments []mo
 	}
 
 	return http.StatusOK, nil
+}
+
+func findUserGroupByID(u model.User, id int) (string, error) {
+	switch id {
+	case 1:
+		return u.Group1UserID, nil
+	case 2:
+		return u.Group2UserID, nil
+	case 3:
+		return u.Group3UserID, nil
+	case 4:
+		return u.Group4UserID, nil
+	case 5:
+		return u.Group5UserID, nil
+	case 6:
+		return u.Group6UserID, nil
+	case 7:
+		return u.Group7UserID, nil
+	case 8:
+		return u.Group8UserID, nil
+	default:
+		return "", fmt.Errorf("no matching group for ID %d", id)
+	}
 }
 
 func isRuleMatchedAllAccounts(segment model.Query, decodedProperties []map[string]interface{}, userArr []model.User) bool {

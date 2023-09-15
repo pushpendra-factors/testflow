@@ -189,6 +189,10 @@ type Configuration struct {
 	CustomerEnabledProjectsLastComputed    []int64
 	SkippedOtpProjectIDs                   string
 	PrimaryDatastore                       string
+	// Segment Marker lookback
+	UseLookbackSegmentMarker bool
+	LookbackSegmentMarker    int
+	AllowedGoRoutines        int
 	// Flag for enabling only the /mql routes for secondary env testing.
 	EnableMQLAPI bool
 	// Flags to disable DB and Redis writes when enabled.
@@ -631,6 +635,19 @@ func ResetPropertyDetailsCacheByDate(timestamp int64) {
 // IsEnabledPropertyDetailFromDB should allow property type check from DB.
 func IsEnabledPropertyDetailFromDB() bool {
 	return configuration.enablePropertyTypeFromDB
+}
+
+// UseLookbackForSegmentMarker allow next run from LookbackSegmentMarker flag
+func UseLookbackForSegmentMarker() bool {
+	return configuration.UseLookbackSegmentMarker
+}
+
+func LookbackForSegmentMarker() int {
+	return configuration.LookbackSegmentMarker
+}
+
+func AllowedGoRoutinesSegmentMarker() int {
+	return configuration.AllowedGoRoutines
 }
 
 // IsEnabledEventsFilterInSegments should allow event properties to be added in the query.

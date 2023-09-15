@@ -329,22 +329,19 @@ func (store *MemSQL) GetUsers(projectId int64, offset uint64, limit uint64) ([]m
 }
 
 // get all users where updated in last x hours
-// select id, group_6_user_id as group_1_user_, properties, is_group_user, updated_at from users where project_id=2 and
-// source!=9 and group_6_user_id in (select DISTINCT(group_6_user_id) from users
-// where project_id=2 and source!=9 and updated_at>=DATE_SUB(NOW(), INTERVAL 1 HOUR) and group_6_user_id
-// is not null limit 1000);
-func (store *MemSQL) GetUsersUpdatedAtGivenHour(projectID int64, hour int, domainID int) ([]model.User, int) {
+func (store *MemSQL) GetUsersUpdatedAtGivenHour(projectID int64, fromTime time.Time, domainID int) ([]model.User, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"hour":       hour,
+		"from_time":  fromTime,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	var users []model.User
-	queryParams := []interface{}{projectID, projectID, hour}
+	fromTimeString := model.FormatTimeToString(fromTime)
+	queryParams := []interface{}{projectID, projectID, fromTimeString}
 
 	query := fmt.Sprintf(`SELECT id, 
-	  group_%d_user_id as group_1_user_id, 
+	  group_%d_user_id, 
 	  properties, 
 	  is_group_user, 
 	  source, 
@@ -363,7 +360,7 @@ func (store *MemSQL) GetUsersUpdatedAtGivenHour(projectID int64, hour int, domai
 	    WHERE 
 		  project_id = ?
 		  AND source != 9 
-		  AND updated_at >= DATE_SUB(NOW(), INTERVAL ? HOUR) 
+		  AND updated_at >= ?
 		  AND group_%d_user_id IS NOT NULL
 		 LIMIT 1000
 		);`, domainID, domainID, domainID, domainID)

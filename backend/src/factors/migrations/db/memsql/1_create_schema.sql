@@ -470,6 +470,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS project_settings (
     int_g2_api_key text,
     six_signal_config JSON,
     onboarding_steps JSON,
+	 segment_marker_last_run timestamp(6),
 
     KEY (updated_at),
     SHARD KEY (project_id),

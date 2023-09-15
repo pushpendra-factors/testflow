@@ -1597,6 +1597,22 @@ func (store *MemSQL) DisableExplain(projectId int64) int {
 	return http.StatusOK
 }
 
+// fetch segment_marker_last_run for given project_id
+func (store *MemSQL) GetSegmentMarkerLastRunTime(projectID int64) (time.Time, int) {
+	db := C.GetServices().Db
+	var projectSettings model.ProjectSetting
+	err := db.Table("project_settings").Select("segment_marker_last_run").Where("project_id=?", projectID).Find(&projectSettings).Error
+	if err != nil {
+		log.WithField("project_id", projectID).WithError(err).Error("Failed to fetch segment_marker_last_run from project_settings.")
+		return time.Time{}, http.StatusInternalServerError
+	}
+	if projectSettings.SegmentMarkerLastRun.IsZero() {
+		return time.Time{}, http.StatusNotFound
+	}
+
+	return projectSettings.SegmentMarkerLastRun, http.StatusFound
+}
+
 // define a db method to fetch all the rows
 func (store *MemSQL) GetFormFillEnabledProjectIDWithToken() (*map[int64]string, int) {
 	type idWithToken struct {
