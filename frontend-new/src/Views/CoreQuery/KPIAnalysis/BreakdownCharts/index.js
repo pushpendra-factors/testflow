@@ -9,6 +9,7 @@ import React, {
   useMemo
 } from 'react';
 import { has } from 'lodash';
+import cx from 'classnames';
 import {
   formatData,
   getVisibleData,
@@ -266,7 +267,13 @@ const BreakdownChartsComponent = forwardRef(
       );
     } else if (chartType === CHART_TYPE_METRIC_CHART) {
       chart = (
-        <div className='grid grid-cols-3 w-full col-gap-2 row-gap-12'>
+        <div
+          className={cx(
+            'grid w-full col-gap-2 row-gap-12',
+            { 'grid-flow-col': aggregateData.length < 3 },
+            { 'grid-cols-3': aggregateData.length >= 3 }
+          )}
+        >
           {aggregateData &&
             aggregateData.map((eachAggregateData, eachIndex) => {
               return (
