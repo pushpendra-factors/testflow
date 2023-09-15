@@ -547,7 +547,7 @@ function AccountDetails({
   const formatOverview = useMemo(() => {
     const account = accounts?.data?.find((item) => item?.identity === activeId);
     const formattedOverview = {
-      ...accountOverview,
+      ...accountOverview?.data,
       engagement: account?.engagement
     };
     return formattedOverview;
@@ -669,8 +669,17 @@ function AccountDetails({
     </div>
   );
 
+  useEffect(() => {
+    if (
+      timelineViewMode === 'overview' &&
+      activeId !== accountOverview?.data?.id
+    ) {
+      getAccountOverview(activeProject.id, activeGroup, activeId);
+    }
+  }, [timelineViewMode, activeId]);
+
   const handleTabChange = (val) => {
-    if (val === 'overview' && activeId !== accountOverview?.id) {
+    if (val === 'overview' && activeId !== accountOverview?.data?.id) {
       getAccountOverview(activeProject.id, activeGroup, activeId);
     }
     insertUrlParam(window.history, 'view', val);
