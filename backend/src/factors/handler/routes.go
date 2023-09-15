@@ -400,23 +400,19 @@ func InitSDKServiceRoutes(r *gin.Engine) {
 
 	r.GET("/", SDKStatusHandler) // Default handler for probes.
 	r.GET(ROUTE_SDK_ROOT+"/service/status", SDKStatusHandler)
-	r.POST(ROUTE_SDK_ROOT+"/service/error", SDKErrorHandler)
 
 	// Robots.txt added to disallow crawling.
 	r.GET("/robots.txt", func(c *gin.Context) {
 		c.Data(http.StatusOK, "text/plain", []byte("User-agent: *\nDisallow: *"))
 	})
 
-	// Todo(Dinesh): Check integrity of token using encrytion/decryption
-	// with secret, on middleware, to avoid spamming queue.
-
-	// Getting project_id is moved to sdk request handler to
-	// support queue workers also.
-	// sdkRouteGroup.Use(mid.SetScopeProjectIdByToken())
+	r.POST(ROUTE_SDK_ROOT+"/service/error",
+		mid.DecodeSDKRequestBody(), SDKErrorHandler)
 
 	sdkRouteGroup := r.Group(ROUTE_SDK_ROOT)
 	sdkRouteGroup.Use(mid.SetScopeProjectToken())
 	sdkRouteGroup.Use(mid.IsBlockedIPByProject())
+	sdkRouteGroup.Use(mid.DecodeSDKRequestBody())
 
 	// DEPRECATED: Kept for backward compatibility.
 	// Used on only on old npm installations. JS_SDK uses /get_info.
