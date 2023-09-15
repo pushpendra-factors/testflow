@@ -22,12 +22,7 @@ import MetricChart from 'Components/MetricChart/MetricChart';
 import { generateColors } from 'Utils/dataFormatter';
 import ColumnChart from '../../../components/ColumnChart/ColumnChart';
 import HorizontalBarChart from '../../../components/HorizontalBarChart';
-
-const cardSizeToMetricCount = {
-  0: 2,
-  1: 3,
-  2: 1
-};
+import { cardSizeToMetricCount } from 'Constants/charts.constants';
 
 const colors = generateColors(MAX_ALLOWED_VISIBLE_PROPERTIES);
 

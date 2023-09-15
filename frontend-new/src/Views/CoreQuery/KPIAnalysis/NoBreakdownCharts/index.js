@@ -8,6 +8,7 @@ import React, {
   memo,
   useMemo
 } from 'react';
+import cx from 'classnames';
 import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
 import {
   getDefaultDateSortProp,
@@ -210,7 +211,13 @@ const NoBreakdownChartsComponent = forwardRef(
       );
     } else if (chartType === CHART_TYPE_METRIC_CHART) {
       chart = (
-        <div className='grid grid-cols-3 w-full col-gap-2 row-gap-12'>
+        <div
+          className={cx(
+            'grid w-full col-gap-2 row-gap-12',
+            { 'grid-flow-col': aggregateData.length < 3 },
+            { 'grid-cols-3': aggregateData.length >= 3 }
+          )}
+        >
           {aggregateData &&
             aggregateData.map((eachAggregateData, eachIndex) => {
               return (

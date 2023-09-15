@@ -30,6 +30,7 @@ import NoBreakdownTable from '../../CoreQuery/KPIAnalysis/NoBreakdownCharts/NoBr
 import { getKpiLabel } from '../../CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
 import ColumnChart from 'Components/ColumnChart/ColumnChart';
 import MetricChart from 'Components/MetricChart/MetricChart';
+import { cardSizeToMetricCount } from 'Constants/charts.constants';
 
 const colors = generateColors(MAX_ALLOWED_VISIBLE_PROPERTIES);
 
@@ -254,23 +255,27 @@ function NoBreakdownCharts({
     );
   } else if (chartType === CHART_TYPE_METRIC_CHART) {
     chartContent = (
-      <div className='grid grid-cols-3 w-full col-gap-2 row-gap-12 h-full'>
+      <div
+        className={cx('grid grid-flow-col w-full col-gap-2 row-gap-12 h-full')}
+      >
         {aggregateData &&
-          aggregateData.slice(0, 3).map((eachAggregateData, eachIndex) => {
-            return (
-              <MetricChart
-                key={eachAggregateData.name}
-                headerTitle={eachAggregateData.name}
-                value={eachAggregateData.total}
-                iconColor={colors[eachIndex]}
-                valueType={
-                  eachAggregateData.metricType === 'percentage_type'
-                    ? 'percentage'
-                    : 'numerical'
-                }
-              />
-            );
-          })}
+          aggregateData
+            .slice(0, cardSizeToMetricCount[unit.cardSize])
+            .map((eachAggregateData, eachIndex) => {
+              return (
+                <MetricChart
+                  key={eachAggregateData.name}
+                  headerTitle={eachAggregateData.name}
+                  value={eachAggregateData.total}
+                  iconColor={colors[eachIndex]}
+                  valueType={
+                    eachAggregateData.metricType === 'percentage_type'
+                      ? 'percentage'
+                      : 'numerical'
+                  }
+                />
+              );
+            })}
       </div>
     );
   }
