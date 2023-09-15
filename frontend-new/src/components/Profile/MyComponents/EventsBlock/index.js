@@ -15,6 +15,7 @@ import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
 import { OPERATORS } from 'Utils/constants';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
+import { processProperties } from 'Utils/dataFormatter';
 
 const ENGAGEMENT_SUPPORTED_OPERATORS = [
   OPERATORS['equalTo'],
@@ -41,9 +42,10 @@ function EventsBlock({
   groupAnalysis,
   viewMode,
   dropdownPlacement = 'top',
-  propertiesScope = ['event']
+  propertiesScope = ['event'],
+  initialDDState = true
 }) {
-  const [isDDVisible, setDDVisible] = useState(true);
+  const [isDDVisible, setDDVisible] = useState(initialDDState);
   useEffect(() => {
     if (viewMode) {
       setDDVisible(false);
@@ -93,9 +95,7 @@ function EventsBlock({
       return {
         iconName: getGroupIcon(opt?.icon),
         label: opt?.label,
-        values: opt?.values?.map((op) => {
-          return { value: op[1], label: op[0] };
-        })
+        values: processProperties(opt?.values)
       };
     });
     // Moving MostRecent as first Option.

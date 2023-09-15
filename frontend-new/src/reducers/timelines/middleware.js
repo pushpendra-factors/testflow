@@ -5,40 +5,44 @@ import {
   fetchProfileUserDetails,
   createSegment,
   fetchSegments,
-  updateSegment
+  updateSegment,
+  deleteSegmentByID,
+  fetchAccountOverview
 } from '.';
 import { formatAccountTimeline, formatUsersTimeline } from './utils';
+import { deleteSegmentAction } from './actions';
 
-export const getProfileAccounts = (projectId, payload, agentId) => (dispatch) => {
-  dispatch({ type: 'FETCH_PROFILE_ACCOUNTS_LOADING' });
-  return new Promise((resolve) => {
-    fetchProfileAccounts(projectId, payload, agentId)
-      .then((response) => {
-        const data = response.data.map((account) => ({
-          ...account,
-          identity: account.identity,
-          account: { name: account.name, host: account?.host_name },
-          tableProps: account.table_props,
-          lastActivity: account.last_activity
-        }));
-        resolve(
-          dispatch({
-            type: 'FETCH_PROFILE_ACCOUNTS_FULFILLED',
-            payload: data
-          })
-        );
-      })
-      .catch((err) => {
-        console.log(err);
-        resolve(
-          dispatch({
-            type: 'FETCH_PROFILE_ACCOUNTS_FAILED',
-            payload: []
-          })
-        );
-      });
-  });
-};
+export const getProfileAccounts =
+  (projectId, payload, agentId) => (dispatch) => {
+    dispatch({ type: 'FETCH_PROFILE_ACCOUNTS_LOADING' });
+    return new Promise((resolve) => {
+      fetchProfileAccounts(projectId, payload, agentId)
+        .then((response) => {
+          const data = response.data.map((account) => ({
+            ...account,
+            identity: account.identity,
+            account: { name: account.name, host: account?.host_name },
+            tableProps: account.table_props,
+            lastActivity: account.last_activity
+          }));
+          resolve(
+            dispatch({
+              type: 'FETCH_PROFILE_ACCOUNTS_FULFILLED',
+              payload: data
+            })
+          );
+        })
+        .catch((err) => {
+          console.log(err);
+          resolve(
+            dispatch({
+              type: 'FETCH_PROFILE_ACCOUNTS_FAILED',
+              payload: []
+            })
+          );
+        });
+    });
+  };
 
 export const getProfileAccountDetails =
   (projectId, id, source, config) => (dispatch) => {
@@ -65,6 +69,31 @@ export const getProfileAccountDetails =
         });
     });
   };
+
+export const getAccountOverview = (projectId, id, source) => (dispatch) => {
+  dispatch({ type: 'FETCH_PROFILE_ACCOUNT_OVERVIEW_LOADING' });
+  return new Promise((resolve) => {
+    fetchAccountOverview(projectId, id, source)
+      .then((response) => {
+        const data = { ...response.data, id: id };
+        resolve(
+          dispatch({
+            type: 'FETCH_PROFILE_ACCOUNT_OVERVIEW_FULFILLED',
+            payload: data
+          })
+        );
+      })
+      .catch((err) => {
+        console.log(err);
+        resolve(
+          dispatch({
+            type: 'FETCH_PROFILE_ACCOUNT_OVERVIEW_FAILED',
+            payload: {}
+          })
+        );
+      });
+  });
+};
 
 export const getProfileUsers = (projectId, payload, agentId) => (dispatch) => {
   dispatch({ type: 'FETCH_PROFILE_USERS_LOADING' });
@@ -174,4 +203,19 @@ export const updateSegmentForId = (projectId, id, payload) => (dispatch) => {
         reject(err);
       });
   });
+};
+
+export const deleteSegment = ({ projectId, segmentId }) => {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      deleteSegmentByID({ projectId, segmentId })
+        .then((response) => {
+          dispatch(deleteSegmentAction({ segmentId }));
+          resolve();
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  };
 };

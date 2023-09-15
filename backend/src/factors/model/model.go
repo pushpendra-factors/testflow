@@ -631,6 +631,8 @@ type Model interface {
 	GetCustomerUserIdFromUserId(projectID int64, id string) (string, int)
 	AssociateUserDomainsGroup(projectID int64, requestUserID string, requestGroupName, requestGroupUserID string) int
 	GetAssociatedDomainForUser(projectID int64, userID string, isAnonymous bool) (string, error)
+	GetUsersUpdatedAtGivenHour(projectID int64, hour int, domainID int) ([]model.User, int)
+	UpdateAssociatedSegments(projectID int64, id string, associatedSegments map[string]interface{}) (int, error)
 
 	// web_analytics
 	GetWebAnalyticsQueriesFromDashboardUnits(projectID int64) (int64, *model.WebAnalyticsQueries, int)
@@ -804,6 +806,7 @@ type Model interface {
 	UpdateAlertStatus(lastAlertSent bool) (int, string)
 	UpdateAlert(projectID int64, alertID string, alert model.Alert) (model.Alert, int, string)
 	GetAlertNamesByProjectIdTypeAndNameAndPropertyMappingName(projectID int64, reqID, nameOfPropertyMappings string) ([]string, int)
+	GetAlertByProjectId(projectId int64, excludeSavedQueries bool) ([]model.AlertInfo, int)
 
 	// sharable url
 	CreateShareableURL(sharableURLParams *model.ShareableURL) (*model.ShareableURL, int)
@@ -868,7 +871,7 @@ type Model interface {
 	AccountPropertiesForDomainsEnabledV2(projectID int64, id string, groupName string) (map[string]interface{}, bool, int)
 	AccountPropertiesForDomainsDisabledV1(projectID int64, id string) (string, map[string]interface{}, []interface{}, int)
 	AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile, hasUserProp bool) ([]model.Profile, int)
-	GetAccountOverview(projectID int64, id, groupName string) (model.Overview, error)
+	GetAccountOverview(projectID int64, id, groupName string) (model.Overview, int, string)
 	GetIntentTimeline(projectID int64, groupName string, id string) (model.UserTimeline, error)
 	GetMinAndMaxUpdatedAt(profileType string, whereStmt string, limitVal int, minMaxQParams []interface{}) (*model.MinMaxUpdatedAt, int, string)
 	GetUserDetailsAssociatedToDomain(projectID int64, id string) (model.AccountDetails, map[string]interface{}, int)
@@ -925,7 +928,7 @@ type Model interface {
 	GetLeadSquaredMarker(ProjectID int64, Delta int64, Document string, Tag string) (int, int, bool)
 
 	// Event Trigger Alerts
-	GetAllEventTriggerAlertsByProject(projectID int64) ([]model.EventTriggerAlertInfo, int)
+	GetAllEventTriggerAlertsByProject(projectID int64) ([]model.AlertInfo, int)
 	CreateEventTriggerAlert(userID, oldID string, projectID int64, alertConfig *model.EventTriggerAlertConfig, slackTokenUser, teamTokenUser string, isPausedAlert bool) (*model.EventTriggerAlert, int, string)
 	DeleteEventTriggerAlert(projectID int64, id string) (int, string)
 	MatchEventTriggerAlertWithTrackPayload(projectId int64, name string, eventProps, userProps *postgres.Jsonb, UpdatedEventProps *postgres.Jsonb, isUpdate bool) (*[]model.EventTriggerAlert, *model.EventName, int)
@@ -944,12 +947,12 @@ type Model interface {
 	UpdateExplainV2EntityStatus(projectID int64, id string, status string, model_id uint64) (int, string)
 
 	// Feature Gates
-	GetAllProjectsWithFeatureEnabled(featureName string) ([]int64, error)
+	GetAllProjectsWithFeatureEnabled(featureName string, includeProjectSettings bool) ([]int64, error)
 	GetFeaturesForProject(projectID int64) (model.FeatureGate, error)
 	UpdateStatusForFeature(projectID int64, featureName string, updateValue int) (int, error)
 	GetFeatureStatusForProject(projectID int64, featureName string) (int, error)
 	CreateDefaultFeatureGatesConfigForProject(ProjectID int64) (int, error)
-	GetFeatureStatusForProjectV2(projectID int64, featureName string) (bool, error)
+	GetFeatureStatusForProjectV2(projectID int64, featureName string, includeProjectSettings bool) (bool, error)
 	GetPlanDetailsAndAddonsForProject(projectID int64) (model.FeatureList, model.OverWrite, error)
 	GetFeatureLimitForProject(projectID int64, featureName string) (int64, error)
 	UpdateFeatureStatusForProject(projectID int64, feature model.FeatureDetails) (string, error)

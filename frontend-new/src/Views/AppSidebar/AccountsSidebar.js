@@ -2,6 +2,7 @@ import React, { Fragment, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import cx from 'classnames';
 import { Button } from 'antd';
+import noop from 'lodash/noop';
 import {
   generateSegmentsList,
   getGroupList
@@ -10,7 +11,8 @@ import { SVG, Text } from 'Components/factorsComponents';
 import {
   setAccountPayloadAction,
   setActiveSegmentAction,
-  setSegmentModalStateAction
+  setExitConfirmationModalAction,
+  setNewSegmentModeAction
 } from 'Reducers/accountProfilesView/actions';
 import { selectAccountPayload } from 'Reducers/accountProfilesView/selectors';
 import { selectGroupOptions } from 'Reducers/groups/selectors';
@@ -18,35 +20,60 @@ import { selectSegments } from 'Reducers/timelines/selectors';
 import styles from './index.module.scss';
 import SidebarMenuItem from './SidebarMenuItem';
 import SidebarSearch from './SidebarSearch';
+import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
+import { AccountsSidebarIconsMapping } from './appSidebar.constants';
+
+const NewSegmentItem = () => {
+  return (
+    <SidebarMenuItem
+      text={'Untitled Segment 1'}
+      isActive={true}
+      onClick={noop}
+    />
+  );
+};
 
 const GroupItem = ({ group }) => {
   const dispatch = useDispatch();
   const activeAccountPayload = useSelector((state) =>
     selectAccountPayload(state)
   );
+  const { newSegmentMode, filtersDirty: areFiltersDirty } = useSelector(
+    (state) => state.accountProfilesView
+  );
+
+  const changeAccountPayload = () => {
+    dispatch(
+      setAccountPayloadAction({
+        source: group[1],
+        filters: [],
+        segment_id: ''
+      })
+    );
+    dispatch(setActiveSegmentAction({}));
+  };
 
   const setAccountPayload = () => {
     if (activeAccountPayload.source !== group[1]) {
-      dispatch(
-        setAccountPayloadAction({
-          source: group[1],
-          filters: [],
-          segment_id: ''
-        })
-      );
-      dispatch(setActiveSegmentAction({}));
+      if (areFiltersDirty === false) {
+        changeAccountPayload();
+      } else {
+        dispatch(setExitConfirmationModalAction(true, changeAccountPayload));
+      }
     }
   };
 
   const isActive =
     activeAccountPayload.source === group[1] &&
-    !activeAccountPayload.segment_id;
+    !activeAccountPayload.segment_id &&
+    newSegmentMode === false;
 
   return (
     <SidebarMenuItem
       text={group[0]}
       isActive={isActive}
       onClick={setAccountPayload}
+      icon={AccountsSidebarIconsMapping[group[1]]}
     />
   );
 };
@@ -56,26 +83,40 @@ const SegmentItem = ({ segment }) => {
   const activeAccountPayload = useSelector((state) =>
     selectAccountPayload(state)
   );
+  const { newSegmentMode, filtersDirty: areFiltersDirty } = useSelector(
+    (state) => state.accountProfilesView
+  );
+
+  const changeActiveSegment = () => {
+    const opts = { ...activeAccountPayload };
+    opts.segment_id = segment[1];
+    opts.source = segment[2].type;
+    opts.filters = [];
+    delete opts.search_filter;
+    dispatch(setActiveSegmentAction(segment[2]));
+    dispatch(setAccountPayloadAction(opts));
+  };
 
   const setActiveSegment = () => {
     if (activeAccountPayload.segment_id !== segment[1]) {
-      const opts = { ...activeAccountPayload };
-      opts.segment_id = segment[1];
-      opts.source = segment[2].type;
-      opts.filters = [];
-      delete opts.search_filter;
-      dispatch(setActiveSegmentAction(segment[2]));
-      dispatch(setAccountPayloadAction(opts));
+      if (areFiltersDirty === false) {
+        changeActiveSegment();
+      } else {
+        dispatch(setExitConfirmationModalAction(true, changeActiveSegment));
+      }
     }
   };
 
-  const isActive = activeAccountPayload.segment_id === segment[1];
+  const isActive =
+    activeAccountPayload.segment_id === segment[1] && newSegmentMode === false;
 
   return (
     <SidebarMenuItem
       text={segment[0]}
       isActive={isActive}
       onClick={setActiveSegment}
+      icon='pieChart'
+      iconColor={'#595959'}
     />
   );
 };
@@ -88,6 +129,7 @@ const AccountsSidebar = () => {
   const activeAccountPayload = useSelector((state) =>
     selectAccountPayload(state)
   );
+  const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
 
   const groupsList = useMemo(() => {
     return getGroupList(groupOptions);
@@ -100,6 +142,12 @@ const AccountsSidebar = () => {
     });
   }, [activeAccountPayload, segments]);
 
+  const filteredGroupsList = groupsList
+    .slice(1)
+    .filter((value) =>
+      value[0].toLowerCase().includes(searchText.toLowerCase())
+    );
+
   return (
     <div className='flex flex-col row-gap-5'>
       <div
@@ -108,19 +156,6 @@ const AccountsSidebar = () => {
           styles['accounts-list-container']
         )}
       >
-        <div className='flex flex-col row-gap-1 px-4 pb-6 border-b'>
-          <Text
-            type='title'
-            level={8}
-            extraClass='mb-0 px-2'
-            color='character-secondary'
-          >
-            Default
-          </Text>
-          {groupsList.map((group) => {
-            return <GroupItem key={group[0]} group={group} />;
-          })}
-        </div>
         <div className='flex flex-col row-gap-3 px-4'>
           <Text
             type='title'
@@ -136,6 +171,12 @@ const AccountsSidebar = () => {
               setSearchText={setSearchText}
               placeholder={'Search segment'}
             />
+            {filteredGroupsList.map((group) => {
+              return <GroupItem key={group[0]} group={group} />;
+            })}
+            <ControlledComponent controller={newSegmentMode === true}>
+              <NewSegmentItem />
+            </ControlledComponent>
             {segmentsList.map((segment) => {
               if (segment.values != null) {
                 const filteredSegments = segment.values.filter((value) =>
@@ -162,7 +203,7 @@ const AccountsSidebar = () => {
           )}
           type='secondary'
           onClick={() => {
-            dispatch(setSegmentModalStateAction(true));
+            dispatch(setNewSegmentModeAction(true));
           }}
         >
           <SVG name={'plus'} size={16} color='#1890FF' />

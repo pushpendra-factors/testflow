@@ -22,6 +22,7 @@ import { compareFilters, groupFilters } from 'Utils/global';
 
 import { TOOLTIP_CONSTANTS } from 'Constants/tooltips.constans';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import { processProperties } from 'Utils/dataFormatter';
 
 function QueryBlock({
   index,
@@ -137,15 +138,7 @@ function QueryBlock({
         extraProps: {
           category: groupOpt?.category
         },
-        values: groupOpt?.values?.map((op) => {
-          return {
-            value: op[1],
-            label: op[0],
-            extraProps: {
-              valueType: op[2]
-            }
-          };
-        })
+        values: processProperties(groupOpt?.values)
       };
     });
 

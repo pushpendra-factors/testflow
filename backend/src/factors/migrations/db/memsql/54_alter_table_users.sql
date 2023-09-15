@@ -1,0 +1,1 @@
+ALTER TABLE users add column associated_segments json;

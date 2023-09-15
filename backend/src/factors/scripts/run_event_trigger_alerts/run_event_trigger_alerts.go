@@ -137,7 +137,7 @@ func main() {
 	for _, projectID := range projectIDs {
 		available := true
 		if *enableFeatureGatesV2 {
-			available, err = store.GetStore().GetFeatureStatusForProjectV2(projectID, model.FEATURE_EVENT_BASED_ALERTS)
+			available, err = store.GetStore().GetFeatureStatusForProjectV2(projectID, model.FEATURE_EVENT_BASED_ALERTS, false)
 			if err != nil {
 				log.WithError(err).Error("Failed to get feature status in event trigger alerts  job for project ID ", projectID)
 				finalStatus[fmt.Sprintf("Failure-Feature-Status %v", projectID)] = true
@@ -473,7 +473,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		}
 		if isSlackIntergrated {
 			partialSlackSuccess, _, errMsg := sendSlackAlertForEventTriggerAlert(eta.ProjectID,
-				eta.SlackChannelAssociatedBy, msg, alertConfiguration.SlackChannels)
+				eta.SlackChannelAssociatedBy, msg, alertConfiguration.SlackChannels, alertConfiguration.IsHyperlinkDisabled)
 			if !partialSlackSuccess {
 				sendReport.SlackFail++
 				errMessage = append(errMessage, errMsg)
@@ -674,7 +674,7 @@ func AddKeyToSortedSet(key *cacheRedis.Key, projectID int64, failPoint string, r
 }
 
 func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
-	msg model.EventTriggerAlertMessage, Schannels *postgres.Jsonb) (partialSuccess bool, channelSuccess []bool, errMessage string) {
+	msg model.EventTriggerAlertMessage, Schannels *postgres.Jsonb, isHyperlinkDisabled bool) (partialSuccess bool, channelSuccess []bool, errMessage string) {
 	logCtx := log.WithFields(log.Fields{
 		"project_id":  projectID,
 		"agent_uuid":  agentUUID,
@@ -695,7 +695,13 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
 	if wetRun {
 		for _, channel := range slackChannels {
 			errMsg := "successfully sent"
-			status, err := slack.SendSlackAlert(projectID, getSlackMsgBlock(msg), agentUUID, channel)
+			var blockMessage string
+			if !isHyperlinkDisabled {
+				blockMessage = getSlackMsgBlock(msg)
+			} else {
+				blockMessage = getSlackMsgBlockWithoutHyperlinks(msg)
+			}
+			status, err := slack.SendSlackAlert(projectID, blockMessage, agentUUID, channel)
 			partialSuccess = partialSuccess || status
 			if err != nil || !status {
 				errMsg = err.Error()
@@ -864,6 +870,114 @@ func getPropsBlockV2(propMap U.PropertiesMap) string {
 func getSlackMsgBlock(msg model.EventTriggerAlertMessage) string {
 
 	propBlock := getPropsBlockV2(msg.MessageProperty)
+
+	// added next two lines to support double quotes(") and backslash(\) in slack templates
+	title := strings.ReplaceAll(strings.ReplaceAll(msg.Title, "\\", "\\\\"), "\"", "\\\"")
+	message := strings.ReplaceAll(strings.ReplaceAll(msg.Message, "\\", "\\\\"), "\"", "\\\"")
+
+	mainBlock := fmt.Sprintf(`[
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "%s\n*%s*\n"
+			}
+		},
+		%s
+		{
+			"type": "section",
+						"text": {
+							"type": "mrkdwn",
+							"text": "*<https://app.factors.ai/profiles/people|Know More>*"
+						}
+		}
+	]`, title, message, propBlock)
+
+	return mainBlock
+}
+
+func getPropsBlockV2WithoutHyperlinks(propMap U.PropertiesMap) string {
+
+	var propBlock string
+	length := len(propMap)
+	i := 0
+	for i < length {
+		var key1, key2 string
+		var prop1, prop2 interface{}
+		prop1 = ""
+		prop2 = ""
+		if i < length {
+			pp1 := propMap[fmt.Sprintf("%d", i)]
+			i++
+			var mp1 model.MessagePropMapStruct
+			if pp1 != nil {
+				trans, ok := pp1.(map[string]interface{})
+				if !ok {
+					log.Warn("cannot convert interface to map[string]interface{} type")
+					continue
+				}
+				err := U.DecodeInterfaceMapToStructType(trans, &mp1)
+				if err != nil {
+					log.Warn("cannot convert interface map to struct type")
+					continue
+				}
+			}
+			key1 = mp1.DisplayName
+			prop1 = mp1.PropValue
+			if prop1 == "" {
+				prop1 = "<nil>"
+			}
+		}
+		if i < length {
+			pp2 := propMap[fmt.Sprintf("%d", i)]
+			i++
+			var mp2 model.MessagePropMapStruct
+			if pp2 != nil {
+				trans, ok := pp2.(map[string]interface{})
+				if !ok {
+					log.Warn("cannot convert interface to map[string]interface{} type")
+					continue
+				}
+				err := U.DecodeInterfaceMapToStructType(trans, &mp2)
+				if err != nil {
+					log.Warn("cannot convert interface map to struct type")
+					continue
+				}
+			}
+			key2 = mp2.DisplayName
+			prop2 = mp2.PropValue
+			if prop2 == "" {
+				prop2 = "<nil>"
+			}
+		}
+
+		// as slack template support only 2 columns hence adding check for count 2
+
+		propBlock += fmt.Sprintf(
+			`{
+					"type": "section",
+					"fields": [
+						{
+							"type": "plain_text",
+							"text": "%s \n %v"
+						},
+						{
+							"type": "plain_text",
+							"text": "%s \n %v",
+						}
+					]
+				},
+				{
+					"type": "divider"
+				},`, key1, strings.Replace(fmt.Sprintf("%v", prop1), "\"", "", -1), key2,
+			strings.Replace(fmt.Sprintf("%v", prop2), "\"", "", -1))
+	}
+	return propBlock
+}
+
+func getSlackMsgBlockWithoutHyperlinks(msg model.EventTriggerAlertMessage) string {
+
+	propBlock := getPropsBlockV2WithoutHyperlinks(msg.MessageProperty)
 
 	// added next two lines to support double quotes(") and backslash(\) in slack templates
 	title := strings.ReplaceAll(strings.ReplaceAll(msg.Title, "\\", "\\\\"), "\"", "\\\"")

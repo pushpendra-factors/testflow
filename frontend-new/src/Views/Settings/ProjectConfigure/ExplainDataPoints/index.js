@@ -15,8 +15,10 @@ import {
 import { MoreOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
-import startCase from 'lodash/startCase';
-import { convertAndAddPropertiesToGroupSelectOptions } from 'Utils/dataFormatter';
+import {
+  convertAndAddPropertiesToGroupSelectOptions,
+  processProperties
+} from 'Utils/dataFormatter';
 
 const { confirm } = Modal;
 
@@ -381,12 +383,9 @@ const ConfigureDP = (props) => {
                                           return {
                                             iconName: getGroupIcon(opt?.icon),
                                             label: opt?.label,
-                                            values: opt?.values?.map((op) => {
-                                              return {
-                                                value: op[1],
-                                                label: op[0]
-                                              };
-                                            })
+                                            values: processProperties(
+                                              opt?.values
+                                            )
                                           };
                                         })
                                       : []

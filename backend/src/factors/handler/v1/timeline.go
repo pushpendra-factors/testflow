@@ -62,7 +62,7 @@ func GetProfileUsersHandler(c *gin.Context) (interface{}, int, string, string, b
 		return nil, errCode, "", errMsg, true
 	}
 
-	scoringAvailable, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_ACCOUNT_SCORING)
+	scoringAvailable, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_ACCOUNT_SCORING, false)
 	if err != nil {
 		logCtx.Error("Error fetching scoring availability status for project ID-", projectId)
 	}
@@ -259,7 +259,7 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 		return "", errCode, "", errMsg, true
 	}
 
-	scoringAvailable, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_ACCOUNT_SCORING)
+	scoringAvailable, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_ACCOUNT_SCORING, false)
 	if err != nil {
 		logCtx.Error("Error fetching scoring availability status for the project")
 	}
@@ -324,4 +324,52 @@ func GetProfileAccountDetailsHandler(c *gin.Context) (interface{}, int, string, 
 	}
 
 	return accountDetails, http.StatusOK, "", "", false
+}
+
+func GetProfileAccountOverviewHandler(c *gin.Context) (interface{}, int, string, string, bool) {
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	id := c.Params.ByName("id")
+	group := c.Params.ByName("group")
+
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectId,
+		"userId":    id,
+		"group":     group,
+	})
+
+	if projectId == 0 {
+		logCtx.Error("Invalid project_id.")
+		return "", http.StatusBadRequest, "", "invalid project_id", true
+	}
+
+	if id == "" {
+		logCtx.Error("Invalid userId.")
+		return nil, http.StatusBadRequest, INVALID_INPUT, "invalid userId", true
+	}
+
+	if group == "" {
+		logCtx.Error("Invalid group name.")
+		return nil, http.StatusBadRequest, INVALID_INPUT, "invalid group name", true
+	}
+
+	scoringAvailable, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_ACCOUNT_SCORING, false)
+	if err != nil {
+		logCtx.Error("Error fetching scoring availability status for project ID-", projectId)
+		return nil, http.StatusBadRequest, PROCESSING_FAILED, "Scoring Unavailable for this project", true
+	}
+
+	showScore := C.IsScoringEnabledForAllUsers(projectId)
+
+	// Add user scores to the response if scoring is enabled
+	if !scoringAvailable || !showScore {
+		return nil, http.StatusBadRequest, PROCESSING_FAILED, "Scoring Unavailable for this project", true
+	}
+
+	accountOverview, errCode, errMsg := store.GetStore().GetAccountOverview(projectId, id, group)
+	if errCode != http.StatusOK {
+		logCtx.Error("Account details not found. " + errMsg)
+		return nil, errCode, PROCESSING_FAILED, errMsg, true
+	}
+
+	return accountOverview, http.StatusOK, "", "", false
 }

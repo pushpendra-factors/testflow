@@ -590,7 +590,7 @@ func (store *MemSQL) GetProjectsToRunForVisitorIdentificationReport(projectIdFla
 	projectIDsToRun = C.ProjectIdsFromProjectIdBoolMap(projectIDsMap)
 
 	if allIdentificationEnabledProjects {
-		projectIDs, err := store.GetAllProjectsWithFeatureEnabled(model.FEATURE_SIX_SIGNAL_REPORT)
+		projectIDs, err := store.GetAllProjectsWithFeatureEnabled(model.FEATURE_SIX_SIGNAL_REPORT, false)
 		if err != nil {
 			return projectIDsToRun
 		}

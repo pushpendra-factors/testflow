@@ -19,6 +19,7 @@ import { TOOLTIP_CONSTANTS } from 'Constants/tooltips.constans';
 import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
+import { processProperties } from 'Utils/dataFormatter';
 
 function QueryBlock({
   availableGroups = [],
@@ -134,9 +135,7 @@ function QueryBlock({
             return {
               iconName: getGroupIcon(opt?.icon),
               label: opt?.label,
-              values: opt?.values?.map((op) => {
-                return { value: op[1], label: op[0] };
-              })
+              values: processProperties(opt?.values)
             };
           })}
           searchPlaceHolder='Select Event'

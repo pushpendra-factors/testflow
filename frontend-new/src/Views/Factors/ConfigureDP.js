@@ -14,7 +14,6 @@ import {
 import { MoreOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
-import startCase from 'lodash/startCase';
 import { convertAndAddPropertiesToGroupSelectOptions } from 'Utils/dataFormatter';
 
 const { confirm } = Modal;

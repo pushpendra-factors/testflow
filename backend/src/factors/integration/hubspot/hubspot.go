@@ -2589,7 +2589,7 @@ func getCompanyNameAndDomainName(document *model.HubspotDocument) (string, strin
 		return "", "", errors.New("invalid document type")
 	}
 
-	isCompanyV3, err := checkIfCompanyV3(document)
+	isCompanyV3, err := model.CheckIfCompanyV3(document)
 	if err != nil {
 		return "", "", err
 	}
@@ -2638,7 +2638,7 @@ func getCompanyProperties(projectID int64, document *model.HubspotDocument) (map
 		return nil, errors.New("invalid document type")
 	}
 
-	isCompanyV3, err := checkIfCompanyV3(document)
+	isCompanyV3, err := model.CheckIfCompanyV3(document)
 	if err != nil {
 		return nil, err
 	}
@@ -2677,23 +2677,6 @@ func getCompanyProperties(projectID int64, document *model.HubspotDocument) (map
 	return userProperties, nil
 }
 
-func checkIfCompanyV3(document *model.HubspotDocument) (bool, error) {
-	value, err := U.DecodePostgresJsonb(document.Value)
-	if err != nil {
-		return false, err
-	}
-
-	if _, ok := (*value)["id"]; ok { // Company V3 (New payload)
-		return true, nil
-	}
-
-	if _, ok := (*value)["companyId"]; ok { // Company V2 (Old payload)
-		return false, nil
-	}
-
-	return false, errors.New("invalid company document")
-}
-
 func syncCompany(projectID int64, document *model.HubspotDocument) (string, int) {
 	var value interface{}
 	err := U.DecodePostgresJsonbToStructType(document.Value, &value)
@@ -2702,7 +2685,7 @@ func syncCompany(projectID int64, document *model.HubspotDocument) (string, int)
 		return "", http.StatusInternalServerError
 	}
 
-	isCompanyV3, err := checkIfCompanyV3(document)
+	isCompanyV3, err := model.CheckIfCompanyV3(document)
 	if err != nil {
 		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error("failed to check type of company record")
 	}
@@ -3049,7 +3032,7 @@ func getDealProperties(projectID int64, document *model.HubspotDocument) (*map[s
 		return nil, nil, errors.New("invalid type")
 	}
 
-	isDealV3, err := checkIfDealV3(document)
+	isDealV3, err := model.CheckIfDealV3(document)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -3446,25 +3429,8 @@ func syncGroupDeal(projectID int64, enProperties *map[string]interface{}, docume
 	return dealGroupUserID, eventId, http.StatusOK
 }
 
-func checkIfDealV3(document *model.HubspotDocument) (bool, error) {
-	value, err := U.DecodePostgresJsonb(document.Value)
-	if err != nil {
-		return false, err
-	}
-
-	if _, ok := (*value)["id"]; ok { // Deal V3 (New payload)
-		return true, nil
-	}
-
-	if _, ok := (*value)["dealId"]; ok { // Deal V2 (Old payload)
-		return false, nil
-	}
-
-	return false, errors.New("invalid deal document")
-}
-
 func syncDeal(projectID int64, document *model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) int {
-	isDealV3, err := checkIfDealV3(document)
+	isDealV3, err := model.CheckIfDealV3(document)
 	if err != nil {
 		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error("failed to check type of deal record")
 		return http.StatusInternalServerError
@@ -3787,25 +3753,8 @@ func getEngagementContactIds(engagementTypeStr string, engagement Engagements) (
 	return contactIds, http.StatusOK
 }
 
-func checkIfEngagementV3(document *model.HubspotDocument) (bool, error) {
-	value, err := U.DecodePostgresJsonb(document.Value)
-	if err != nil {
-		return false, err
-	}
-
-	if _, ok := (*value)["properties"]; ok { // Engagement V3 (New payload)
-		return true, nil
-	}
-
-	if _, ok := (*value)["engagement"]; ok { // Engagement V2 (Old payload)
-		return false, nil
-	}
-
-	return false, errors.New("invalid engagement document")
-}
-
 func syncEngagements(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, document *model.HubspotDocument) int {
-	isEngagementV3, err := checkIfEngagementV3(document)
+	isEngagementV3, err := model.CheckIfEngagementV3(document)
 	if err != nil {
 		log.WithFields(log.Fields{"project_id": project.ID}).WithError(err).Error("failed to check type of engagement record")
 		return http.StatusInternalServerError

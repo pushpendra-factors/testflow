@@ -1,3 +1,5 @@
+@import '../../../styles/abstracts/variables';
+
 .account_profiles {
   &__event_selector {
     position: relative;
@@ -8,4 +10,109 @@
       position: absolute;
     }
   }
+}
+
+.input {
+  color: $fa-color--mono-5;
+  padding: 0.5rem 0.75rem;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 24px;
+  border-radius: 6px;
+  background-color: #f5f6f8;
+  border: 1px solid #e7e9ed;
+}
+
+.filter-button {
+  background: none;
+  border: 1px solid $fa-color-neutral-grey-5;
+  box-shadow: none;
+}
+
+.collapse-button {
+  padding: 0;
+  width: max-content;
+
+  &:hover {
+    background-color: transparent !important;
+  }
+}
+
+.dropdown-menu {
+  box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.15);
+  border-radius: 0.25rem;
+  width: 250px;
+  padding: 0.25rem 0;
+}
+
+.dropdown-menu-item {
+  padding: 0.75rem 1rem;
+}
+
+.filters-box-container {
+  border-radius: 0.5rem;
+  border: 1px solid $fa-color-neutral-grey-5;
+  background: $fa-color--white;
+}
+
+.add-filter-button {
+  width: fit-content;
+  &:hover {
+    background: transparent;
+  }
+}
+
+.and-tag {
+  padding: 2px 0;
+  overflow: hidden;
+  text-align: center;
+  &::before,
+  &::after {
+    background-color: $fa-color-neutral-grey-5;
+    content: '';
+    display: inline-block;
+    height: 1px;
+    position: relative;
+    vertical-align: middle;
+  }
+
+  &:before {
+    margin-left: -50%;
+    width: 5%;
+  }
+
+  &:after {
+    margin-right: -50%;
+    width: 95%;
+  }
+
+  .and-tag-box {
+    border: 1px solid $fa-color-neutral-grey-5;
+    background: linear-gradient(0deg, #fafafa, #fafafa),
+      linear-gradient(0deg, #d9d9d9, #d9d9d9);
+    padding: 0.25rem;
+    border-radius: 0.25rem;
+  }
+}
+
+.buttons-container {
+  border-top: 1px solid $fa-color-neutral-grey-5;
+}
+
+.title-icon-container {
+  background-color: #ffe3e4;
+}
+
+.update-option-container {
+  background-color: $fa-color-neutral-grey-2;
+}
+
+.create-mode-input-box {
+  width: 323px;
+  border-radius: 0.5rem;
+  height: 2.5rem;
+}
+
+.new-segment-input-container {
+  padding-left: 3.5rem;
 }

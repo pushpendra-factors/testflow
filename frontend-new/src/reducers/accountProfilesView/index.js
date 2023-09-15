@@ -3,8 +3,13 @@ import {
   SET_ACCOUNT_PAYLOAD,
   SET_ACCOUNT_SEGMENT_MODAL,
   SET_ACTIVE_SEGMENT,
-  UPDATE_ACCOUNT_PAYLOAD
+  UPDATE_ACCOUNT_PAYLOAD,
+  ENABLE_NEW_SEGMENT_MODE,
+  DISABLE_NEW_SEGMENT_MODE,
+  SET_FILTERS_DIRTY,
+  SET_EXIT_CONFIRMATION_MODAL
 } from './types';
+import { SEGMENT_DELETED } from 'Reducers/timelines/types';
 
 const INITIAL_ACTIVE_SEGMENT = {};
 const INITIAL_ACCOUNT_PAYLOAD = { source: '', filters: [], segment_id: '' };
@@ -12,7 +17,11 @@ const INITIAL_ACCOUNT_PAYLOAD = { source: '', filters: [], segment_id: '' };
 const initialState = {
   accountPayload: INITIAL_ACCOUNT_PAYLOAD,
   activeSegment: INITIAL_ACTIVE_SEGMENT,
-  showSegmentModal: false
+  showSegmentModal: false,
+  newSegmentMode: false,
+  filtersDirty: false,
+  showExitConfirmationModal: false,
+  routingCallback: null
 };
 
 export default function (state = initialState, action) {
@@ -21,11 +30,13 @@ export default function (state = initialState, action) {
       return {
         ...state,
         accountPayload: action.payload,
+        newSegmentMode: false
       };
     case SET_ACTIVE_SEGMENT:
       return {
         ...state,
-        activeSegment: action.payload
+        activeSegment: action.payload,
+        newSegmentMode: false
       };
     case UPDATE_ACCOUNT_PAYLOAD:
       return {
@@ -41,9 +52,42 @@ export default function (state = initialState, action) {
         showSegmentModal: action.payload
       };
     }
+    case ENABLE_NEW_SEGMENT_MODE: {
+      return {
+        ...state,
+        newSegmentMode: true
+      };
+    }
+    case DISABLE_NEW_SEGMENT_MODE: {
+      return {
+        ...state,
+        newSegmentMode: false
+      };
+    }
     case SET_ACTIVE_PROJECT: {
       return {
         ...initialState
+      };
+    }
+    case SEGMENT_DELETED: {
+      return {
+        ...state,
+        activeSegment: INITIAL_ACTIVE_SEGMENT,
+        accountPayload: { ...INITIAL_ACCOUNT_PAYLOAD, source: 'All' }
+      };
+    }
+    case SET_FILTERS_DIRTY: {
+      return {
+        ...state,
+        filtersDirty: action.payload
+      };
+    }
+    case SET_EXIT_CONFIRMATION_MODAL: {
+      const { value, routingCallback } = action.payload;
+      return {
+        ...state,
+        showExitConfirmationModal: value,
+        routingCallback
       };
     }
     default:

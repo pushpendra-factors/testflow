@@ -1,19 +1,19 @@
 import MomentTz from '../MomentTz';
 import { formatDurationIntoString, PropTextFormat } from 'Utils/dataFormatter';
 import {
+  ANY_USER_TYPE,
   EVENT_QUERY_USER_TYPE,
   PREDEFINED_DATES,
   QUERY_TYPE_EVENT,
+  reverse_user_types,
   ReverseProfileMapper,
   TYPE_UNIQUE_USERS
 } from 'Utils/constants';
-import { getEventsWithProperties } from '../../Views/CoreQuery/utils';
-import { generateRandomKey } from 'Utils/global';
 import {
-  operatorMap,
-  reverseDateOperatorMap,
-  reverseOperatorMap
-} from 'Utils/operatorMapping';
+  getEventsWithProperties,
+  getStateQueryFromRequestQuery
+} from '../../Views/CoreQuery/utils';
+import { operatorMap } from 'Utils/operatorMapping';
 
 export const granularityOptions = [
   'Timestamp',
@@ -64,7 +64,16 @@ export const hoverEvents = [
   '$hubspot_engagement_meeting_created',
   '$hubspot_engagement_call_created',
   'sf_task_created',
-  '$sf_event_created'
+  '$sf_event_created',
+  '$g2_sponsored',
+  '$g2_product_profile',
+  '$g2_alternative',
+  '$g2_pricing',
+  '$g2_category',
+  '$g2_comparison',
+  '$g2_report',
+  '$g2_reference',
+  '$g2_deal'
 ];
 
 export const TimelineHoverPropDisplayNames = {
@@ -88,6 +97,27 @@ export const GroupDisplayNames = {
   $g2: 'G2 Engagements'
 };
 
+export const getFiltersRequestPayload = ({
+  source,
+  selectedFilters,
+  table_props
+}) => {
+  const { eventsList, eventProp, filters } = selectedFilters;
+
+  const queryOptions = {
+    group_analysis: source,
+    source: source,
+    caller: 'account_profiles',
+    table_props,
+    globalFilters: filters,
+    date_range: {}
+  };
+
+  return {
+    query: getSegmentQuery(eventsList, queryOptions, eventProp)
+  };
+};
+
 export const formatReqPayload = (payload, segment) => {
   const req = {
     query: {
@@ -106,6 +136,37 @@ export const formatReqPayload = (payload, segment) => {
   };
 
   return req;
+};
+
+export const getSegmentQuery = (queries, queryOptions, userType) => {
+  const query = {};
+  query.grpa = queryOptions?.group_analysis;
+  query.source = queryOptions?.source;
+  query.caller = queryOptions?.caller;
+  query.table_props = queryOptions?.table_props;
+  query.cl = QUERY_TYPE_EVENT;
+  query.ty = TYPE_UNIQUE_USERS;
+
+  const period = {};
+  if (queryOptions.date_range.from && queryOptions.date_range.to) {
+    period.from = MomentTz(queryOptions.date_range.from).utc().unix();
+    period.to = MomentTz(queryOptions.date_range.to).utc().unix();
+  } else {
+    period.from = MomentTz().startOf('week').utc().unix();
+    period.to =
+      MomentTz().format('dddd') !== 'Sunday'
+        ? MomentTz().subtract(1, 'day').utc().unix()
+        : MomentTz().utc().unix();
+  }
+  query.fr = period.from;
+  query.to = period.to;
+
+  query.ewp = getEventsWithProperties(queries);
+  query.gup = formatFiltersForPayload(queryOptions?.globalFilters);
+
+  query.ec = EVENT_QUERY_USER_TYPE[userType];
+  query.tz = localStorage.getItem('project_timeZone') || 'Asia/Kolkata';
+  return query;
 };
 
 const getEntityName = (source, entity) => {
@@ -373,6 +434,11 @@ export const eventIconsColorMap = {
     bgColor: '#E6F7FF',
     borderColor: '#91D5FF'
   },
+  g2crowd: {
+    iconColor: '#FF7A59',
+    bgColor: '#FFE8E2',
+    borderColor: '#FED0C5'
+  },
   window: {
     iconColor: '#FF85C0',
     bgColor: '#FFF0F7',
@@ -406,37 +472,6 @@ export const DefaultDateRangeForSegments = {
     MomentTz().format('dddd') === 'Sunday'
       ? PREDEFINED_DATES.LAST_MONTH
       : PREDEFINED_DATES.THIS_MONTH
-};
-
-export const getSegmentQuery = (queries, queryOptions, userType) => {
-  const query = {};
-  query.grpa = queryOptions?.group_analysis;
-  query.source = queryOptions?.source;
-  query.caller = queryOptions?.caller;
-  query.table_props = queryOptions?.table_props;
-  query.cl = QUERY_TYPE_EVENT;
-  query.ty = TYPE_UNIQUE_USERS;
-
-  const period = {};
-  if (queryOptions.date_range.from && queryOptions.date_range.to) {
-    period.from = MomentTz(queryOptions.date_range.from).utc().unix();
-    period.to = MomentTz(queryOptions.date_range.to).utc().unix();
-  } else {
-    period.from = MomentTz().startOf('week').utc().unix();
-    period.to =
-      MomentTz().format('dddd') !== 'Sunday'
-        ? MomentTz().subtract(1, 'day').utc().unix()
-        : MomentTz().utc().unix();
-  }
-  query.fr = period.from;
-  query.to = period.to;
-
-  query.ewp = getEventsWithProperties(queries);
-  query.gup = formatFiltersForPayload(queryOptions?.globalFilters);
-
-  query.ec = EVENT_QUERY_USER_TYPE[userType];
-  query.tz = localStorage.getItem('project_timeZone') || 'Asia/Kolkata';
-  return query;
 };
 
 export const timestampToString = {
@@ -538,7 +573,12 @@ export const transformWeightConfigForQuery = (config) => {
         : rule.value;
 
       const filter = {
-        props: [rule.property_type, rule.key, rule.value_type, rule.property_type],
+        props: [
+          rule.property_type,
+          rule.key,
+          rule.value_type,
+          rule.property_type
+        ],
         operator: rule.operator,
         values: ruleValues,
         ref: 1
@@ -548,4 +588,22 @@ export const transformWeightConfigForQuery = (config) => {
   }
 
   return output;
+};
+
+export const getSelectedFiltersFromQuery = ({ query, groupsList }) => {
+  const eventProp =
+    reverse_user_types[query.ec] != null
+      ? reverse_user_types[query.ec]
+      : ANY_USER_TYPE;
+  const grpa = Boolean(query.grpa) === true ? query.grpa : 'All';
+  const filters = getStateQueryFromRequestQuery(query);
+  const result = {
+    eventProp,
+    filters: filters.globalFilters,
+    eventsList: filters.events
+  };
+  return {
+    segmentFilters: result,
+    selectedAccount: groupsList.find((g) => g[1] === grpa)
+  };
 };

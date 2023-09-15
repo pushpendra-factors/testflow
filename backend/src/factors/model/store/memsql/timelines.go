@@ -82,14 +82,15 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		return returnData, http.StatusFound, ""
 	}
 
-	for _, p := range payload.Query.GlobalUserProperties {
-		if _, exist := model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]; exist {
+	for i, p := range payload.Query.GlobalUserProperties {
+		if v, exist := model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]; exist {
 
 			if p.Value == "true" {
-				p = model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]
+				payload.Query.GlobalUserProperties[i] = v
 			} else if p.Value == "false" || p.Value == "$none" {
-				p = model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]
-				p.Operator = model.OPPOSITE_OF_OPERATOR_MAP[p.Operator]
+
+				v.Operator = model.OPPOSITE_OF_OPERATOR_MAP[v.Operator]
+				payload.Query.GlobalUserProperties[i] = v
 			}
 
 		}
@@ -193,6 +194,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		log.WithError(err).WithFields(logFields).WithField("status", err).Error("Failed to filter properties from profiles.")
 		return nil, http.StatusInternalServerError, "Query formatting failed."
 	}
+
 	return returnData, http.StatusFound, ""
 }
 
@@ -383,10 +385,10 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 
 	var isGroupUserCheck, allUsersWhere string
 	if !hasUserProperty && (len(groupedFilters) > 0) {
-		isGroupUserCheck = "AND is_group_user=1"
+		isGroupUserCheck = "AND u.is_group_user=1"
 	}
 	if isAllUserProperties && (len(groupedFilters) > 0) {
-		isGroupUserCheck = "AND (is_group_user=0 OR is_group_user IS NULL) AND customer_user_id IS NOT NULL"
+		isGroupUserCheck = "AND (u.is_group_user=0 OR u.is_group_user IS NULL) AND u.customer_user_id IS NOT NULL"
 	}
 
 	whereForGroups := make(map[string]string)
@@ -630,6 +632,7 @@ func BuildSpecialFilter(projectID int64, negativeFilters []model.QueryProperty, 
 		buildWhereString = strings.ReplaceAll(buildWhereString, "user_global_user_properties", "properties")
 		buildWhereString = "WHERE " + buildWhereString
 	}
+	isGroupUserCheck = strings.ReplaceAll(isGroupUserCheck, "u.is_group_user", "is_group_user")
 
 	query := fmt.Sprintf(`filter_special as (
 		SELECT 
@@ -1474,7 +1477,9 @@ func (store *MemSQL) GetUserActivities(projectID int64, identity string, userId 
 				userActivity.DisplayName = userActivity.EventName
 			}
 			// Alias Names
-			if userActivity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED {
+			if aliasName, exists := model.STANDARD_EVENT_NAME_ALIASES[userActivity.EventName]; exists {
+				userActivity.AliasName = aliasName
+			} else if userActivity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED {
 				userActivity.AliasName = fmt.Sprintf("Added to %s", (*properties)[U.EP_SALESFORCE_CAMPAIGN_NAME])
 			} else if userActivity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN {
 				userActivity.AliasName = fmt.Sprintf("Responded to %s", (*properties)[U.EP_SALESFORCE_CAMPAIGN_NAME])
@@ -1507,6 +1512,8 @@ func (store *MemSQL) GetUserActivities(projectID int64, identity string, userId 
 				userActivity.Icon = "salesforce"
 			} else if strings.Contains(userActivity.EventName, "linkedin_") || strings.Contains(userActivity.EventName, "li_") {
 				userActivity.Icon = "linkedin"
+			} else if strings.Contains(userActivity.EventName, "g2_") {
+				userActivity.Icon = "g2crowd"
 			}
 			// Default Icon
 			if userActivity.Icon == "" {
@@ -1698,26 +1705,11 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 	} else {
 		accountDetails.AccountTimeline = append(accountDetails.AccountTimeline, intentTimeline)
 	}
-
-	scoringAvailable, err := store.GetFeatureStatusForProjectV2(projectID, model.FEATURE_ACCOUNT_SCORING)
-	if err != nil {
-		log.WithFields(logFields).Error("Error fetching scoring availability status for the project")
-	}
-
-	if scoringAvailable {
-		overview, err := store.GetAccountOverview(projectID, id, groupName)
-		if err != nil {
-			log.WithFields(logFields).WithError(err)
-		} else {
-			accountDetails.Overview = overview
-		}
-	}
-
 	return &accountDetails, http.StatusFound, ""
 }
 
 // GetAccountOverview gives us a compiled response for account overview
-func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (model.Overview, error) {
+func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (model.Overview, int, string) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"id":         id,
@@ -1800,10 +1792,10 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 	}
 
 	if errGetScore != nil && errGetCount != nil && errGetTopUsers != nil && errGetTopPages != nil {
-		return overview, fmt.Errorf("error getting overview")
+		return overview, http.StatusInternalServerError, "error getting overview"
 	}
 
-	return overview, nil
+	return overview, http.StatusOK, ""
 }
 
 // GetTopPages gives us a list of top pages with visited by the users associated to a group/domain ordered by number of visits

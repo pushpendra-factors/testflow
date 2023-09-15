@@ -203,3 +203,43 @@
   box-shadow: 0px 0px 2px rgba(0, 0, 0, 0.3) !important
 
 }
+
+
+.btn-custom--radio-container{
+
+  .ant-btn{
+    background:#fff;
+    border: 1px solid $fa-color--mono-2;
+    padding: 4px 8px;
+    color: $fa-color--mono-3;
+    padding-left: 14px;
+    padding-right: 14px;
+    transition: all 0.3s;
+    
+    &:first-child{
+      border-radius: 3px 0px 0px 3px; 
+      transition: all 0.3s;
+      &.no-border{
+        border-right-color: transparent;
+      }
+      &.active{
+        // border-right: 1px;
+        border: 1px solid $fa-color--brand-color;
+        color: $fa-color--brand-color;
+      }
+    }
+    &:last-child{
+      border-radius: 0px 3px 3px 0px;
+      &.no-border{
+        border-left-color: transparent;
+      }
+      &.active{ 
+        border: 1px solid $fa-color--brand-color;
+        color: $fa-color--brand-color;
+      }
+    }
+ 
+  }
+
+
+}

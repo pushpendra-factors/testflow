@@ -211,7 +211,7 @@ function processQueue() {
 }
 
 let exposed = { init, reset, track, page, updateEventProperties, 
-    identify, addUserProperties, getUserId, d };
+    identify, addUserProperties, getUserId };
 
 if (process.env.NODE_ENV === "development") {
     exposed["test"] = require("./test/suite.js");

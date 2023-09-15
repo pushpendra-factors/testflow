@@ -12,6 +12,7 @@ import {
 } from 'Reducers/coreQuery/middleware';
 import getGroupIcon from 'Utils/getGroupIcon';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import { processProperties } from 'Utils/dataFormatter';
 function QueryBlock({
   availableGroups,
   index,
@@ -57,9 +58,7 @@ function QueryBlock({
       return {
         iconName: getGroupIcon(opt?.icon),
         label: opt?.label,
-        values: opt?.values?.map((op) => {
-          return { value: op[1], label: op[0] };
-        })
+        values: processProperties(opt?.values)
       };
     });
     // Moving MostRecent as first Option.

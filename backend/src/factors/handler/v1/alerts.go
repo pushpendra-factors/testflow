@@ -82,6 +82,7 @@ func EditAlertHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	return alert, http.StatusOK, "", "", false
 
 }
+
 func GetAlertsHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {

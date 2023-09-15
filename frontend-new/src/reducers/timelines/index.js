@@ -1,6 +1,6 @@
-import { resolve } from 'path';
 import { SET_ACTIVE_PROJECT } from 'Reducers/types';
-import { get, getHostUrl, post, put } from '../../utils/request';
+import { del, get, getHostUrl, post, put } from '../../utils/request';
+import { SEGMENT_DELETED } from './types';
 
 let host = getHostUrl();
 host = host[host.length - 1] === '/' ? host : `${host}/`;
@@ -10,6 +10,7 @@ const initialState = {
   contactDetails: { isLoading: false, data: {} },
   accounts: { isLoading: false, data: [] },
   accountDetails: { isLoading: false, data: {} },
+  accountOverview: { isLoading: false, data: {} },
   segmentCreateStatus: '',
   segmentUpdateStatus: '',
   segments: {}
@@ -52,6 +53,15 @@ export default function (state = initialState, action) {
       };
     case 'FETCH_PROFILE_ACCOUNT_DETAILS_FAILED':
       return { ...state, accountDetails: { isLoading: false, data: {} } };
+    case 'FETCH_PROFILE_ACCOUNT_OVERVIEW_LOADING':
+      return { ...state, accountOverview: { isLoading: true, data: {} } };
+    case 'FETCH_PROFILE_ACCOUNT_OVERVIEW_FULFILLED':
+      return {
+        ...state,
+        accountOverview: { isLoading: false, data: action.payload }
+      };
+    case 'FETCH_PROFILE_ACCOUNT_OVERVIEW_FAILED':
+      return { ...state, accountOverview: { isLoading: false, data: {} } };
     case 'SEGMENT_CREATION_FULFILLED':
       return { ...state, segmentCreateStatus: action.payload };
     case 'SEGMENT_CREATION_REJECTED':
@@ -67,6 +77,14 @@ export default function (state = initialState, action) {
     case SET_ACTIVE_PROJECT:
       return {
         ...initialState
+      };
+    case SEGMENT_DELETED:
+      return {
+        ...state,
+        segments: getUpdatedSegmentsAfterDeleting({
+          segments: state.segments,
+          segmentId: action.payload
+        })
       };
     default:
       return state;
@@ -136,4 +154,23 @@ export const updateSegment = (projectId, id, payload) => {
 export const updateAccountScores = (projectID, payload) => {
   const url = `${host}projects/${projectID}/v1/accscore/weights`;
   return put(null, url, payload);
+};
+
+export const deleteSegmentByID = ({ projectId, segmentId }) => {
+  const url = `${host}projects/${projectId}/segments/${segmentId}`;
+  return del(null, url);
+};
+
+function getUpdatedSegmentsAfterDeleting({ segments, segmentId }) {
+  const updatedSegments = { ...segments };
+  for (const key in updatedSegments) {
+    const list = updatedSegments[key];
+    updatedSegments[key] = list.filter((segment) => segment.id !== segmentId);
+  }
+  return updatedSegments;
+}
+
+export const fetchAccountOverview = (projectID, groupName, accID) => {
+  const url = `${host}projects/${projectID}/v1/profiles/accounts/overview/${groupName}/${accID}`;
+  return get(null, url);
 };

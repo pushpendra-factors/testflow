@@ -9,6 +9,7 @@ import defaultRules from './defaultRules';
 import _ from 'lodash';
 import { DISPLAY_PROP } from 'Utils/constants';
 import { reverseOperatorMap } from 'Utils/operatorMapping';
+import styles from './index.module.scss'
 
 const { confirm } = Modal;
 
@@ -30,6 +31,7 @@ const DCGTable = ({
 
     if (activeProject?.channel_group_rules) {
       ruleSet = activeProject?.channel_group_rules;
+      ruleSet.unshift(defaultRules[0])
     } else {
       ruleSet = defaultRules;
     }
@@ -56,15 +58,26 @@ const DCGTable = ({
 
   const getBaseQueryfromResponse = (el) => {
     const filters = [];
-    el.forEach((item) => {
+    el.forEach((item,i) => {
       if (item.logical_operator === 'AND') {
         let conditionCamelCase = _.camelCase(item.condition);
         filters.push({
           operator: reverseOperatorMap[conditionCamelCase],
           props: ['event',item.property, 'categorical', 'event'],
+          values: [item.value],
+          ref:i
+        });
+      }
+      // check for internal channel 
+      else if(item.property === "" && item.condition === "" && item.logical_operator === ""){
+        filters.push({
+          operator:"",
+          props: [],
           values: [item.value]
         });
-      } else {
+        
+      }
+       else {
         filters[filters.length - 1].values.push(item.value);
       }
     });
@@ -90,23 +103,42 @@ const DCGTable = ({
                   <Text type={"title"} weight={'thin'} color={'grey'} level={8} extraClass={"m-0 mr-1"}>{item.logical_operator}</Text>
                   }
                   <Tag>{`${item.property} ${returnSymbols(item.condition)} ${item.value}`}</Tag> */}
-                <Button type='default'>
+                  {item.props.length > 0 ? (
+                  <Button type='default'>
+                      <Text
+                          type={'title'}
+                          weight={'thin'}
+                          color={'grey'}
+                          level={8}
+                          truncate
+                      >
+                          {`${matchEventName(item.props[1])} ${item.operator} ${_.join(
+                              item.values.map((vl) =>
+                                  DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl
+                              ),
+                              ', '
+                          )}`}
+                      </Text>
+                  </Button>
+                  ) : (
+                    <div className={`${styles.internal}`}>
                   <Text
-                    type={'title'}
-                    weight={'thin'}
-                    color={'grey'}
-                    level={8}
-                    truncate
-                  >{`${matchEventName(item?.props[1])} ${
-                    item?.operator
-                  } ${_.join(
-                    item?.values.map((vl) =>
-                      DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl
-                    ),
-                    [', ']
-                  )}`}</Text>
-                </Button>
-                {queryMap.length !== index + 1 && (
+                      type={'title'}
+                      weight={'thin'}
+                      color={'grey'}
+                      level={8}
+                  >
+                      {`${item.operator} ${_.join(
+                          item.values.map((vl) =>
+                              DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl
+                          ),
+                          ', '
+                      )}`}
+                  </Text>
+                  </div>
+                  )}
+
+                {queryMap.length != index + 1 && (
                   <Text
                     type={'title'}
                     weight={'thin'}
@@ -142,7 +174,7 @@ const DCGTable = ({
       dataIndex: 'actions',
       key: 'actions',
       render: (obj) => {
-        if (enableEdit) {
+        if (enableEdit || obj.item.channel == "Internal") {
           return null;
         }
         return (
@@ -167,7 +199,7 @@ const DCGTable = ({
       onOk() {
         let updatedArr = activeProject?.channel_group_rules?.filter(
           (item, index) => {
-            if (index != el.index) {
+            if(item.channel !== "Internal" && index != el.index){
               return item;
             }
           }

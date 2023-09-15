@@ -20,7 +20,8 @@ import {
   createAlert,
   fetchAlerts,
   deleteAlert,
-  editAlert
+  editAlert,
+  fetchAllAlerts
 } from 'Reducers/global';
 import ConfirmationModal from 'Components/ConfirmationModal';
 import QueryBlock from './QueryBlock';
@@ -47,7 +48,7 @@ const KPIBasedAlert = ({
   activeProject,
   kpi,
   createAlert,
-  fetchAlerts,
+  fetchAllAlerts,
   deleteAlert,
   editAlert,
   savedAlerts,
@@ -96,6 +97,8 @@ const KPIBasedAlert = ({
   const inputComponentRef = useAutoFocus();
   const [form] = Form.useForm();
 
+  const alertDetails = viewAlertDetails?.alert
+
   // KPI SELECTION
   const [queryType, setQueryType] = useState('kpi');
   const [queries, setQueries] = useState([]);
@@ -119,7 +122,7 @@ const KPIBasedAlert = ({
   const confirmRemove = (id) => {
     return deleteAlert(activeProject.id, id).then(
       (res) => {
-        fetchAlerts(activeProject.id);
+        fetchAllAlerts(activeProject.id);
         notification.success({
           message: 'Success',
           description: 'Deleted Alert successfully ',
@@ -161,15 +164,15 @@ const KPIBasedAlert = ({
   }, [operatorState]);
 
   useEffect(() => {
-    if (viewAlertDetails?.alert_description?.query?.fil) {
+    if (alertDetails?.alert_description?.query?.fil) {
       const filter = getStateFromKPIFilters(
-        viewAlertDetails.alert_description.query.fil
+        alertDetails?.alert_description?.query?.fil
       );
       setViewFilter(filter);
     }
-    if (viewAlertDetails?.alert_configuration?.slack_channels_and_user_groups) {
+    if (alertDetails?.alert_configuration?.slack_channels_and_user_groups) {
       let obj =
-        viewAlertDetails?.alert_configuration?.slack_channels_and_user_groups;
+        alertDetails?.alert_configuration?.slack_channels_and_user_groups;
       for (let key in obj) {
         if (obj[key].length > 0) {
           setViewSelectedChannels(obj[key]);
@@ -182,26 +185,26 @@ const KPIBasedAlert = ({
     }
 
     if (
-      viewAlertDetails?.alert_configuration?.teams_channel_config
+      alertDetails?.alert_configuration?.teams_channel_config
         ?.team_channel_list
     ) {
       setTeamsViewSelectedChannels(
-        viewAlertDetails?.alert_configuration?.teams_channel_config
+        alertDetails?.alert_configuration?.teams_channel_config
           ?.team_channel_list
       );
       if (alertState.state === 'edit') {
         setTeamsSaveSelectedChannel(
-          viewAlertDetails?.alert_configuration?.teams_channel_config
+          alertDetails?.alert_configuration?.teams_channel_config
             ?.team_channel_list
         );
         setTeamsSelectedChannel(
-          viewAlertDetails?.alert_configuration?.teams_channel_config
+          alertDetails?.alert_configuration?.teams_channel_config
             ?.team_channel_list
         );
         setSelectedWorkspace({
-          name: viewAlertDetails?.alert_configuration?.teams_channel_config
+          name: alertDetails?.alert_configuration?.teams_channel_config
             ?.team_name,
-          id: viewAlertDetails?.alert_configuration?.teams_channel_config
+          id: alertDetails?.alert_configuration?.teams_channel_config
             ?.team_id
         });
       }
@@ -211,26 +214,26 @@ const KPIBasedAlert = ({
       let queryData = [];
       queryData.push({
         alias: '',
-        label: _.startCase(viewAlertDetails?.alert_description?.name),
+        label: _.startCase(alertDetails?.alert_description?.name),
         filters: getStateFromKPIFilters(
-          viewAlertDetails?.alert_description?.query?.fil
+          alertDetails?.alert_description?.query?.fil ? alertDetails?.alert_description?.query?.fil : []
         ),
-        group: viewAlertDetails?.alert_description?.query?.dc,
-        metric: viewAlertDetails?.alert_description?.name,
+        group: alertDetails?.alert_description?.query?.dc,
+        metric: alertDetails?.alert_description?.name,
         metricType: '',
-        qt: viewAlertDetails?.alert_description?.qt,
-        pageViewVal: viewAlertDetails?.alert_description?.queries?.pgUrl,
-        category: viewAlertDetails?.alert_description?.query?.ca
+        qt: alertDetails?.alert_description?.qt,
+        pageViewVal: alertDetails?.alert_description?.queries?.pgUrl,
+        category: alertDetails?.alert_description?.query?.ca
       });
       setQueries(queryData);
-      setAlertType(viewAlertDetails?.alert_type);
-      setOperatorState(viewAlertDetails?.alert_description?.operator);
-      setValue(viewAlertDetails?.alert_description?.value);
-      setEmailEnabled(viewAlertDetails?.alert_configuration?.email_enabled);
-      setSlackEnabled(viewAlertDetails?.alert_configuration?.slack_enabled);
-      setTeamsEnabled(viewAlertDetails?.alert_configuration?.teams_enabled);
+      setAlertType(alertDetails?.alert_type);
+      setOperatorState(alertDetails?.alert_description?.operator);
+      setValue(alertDetails?.alert_description?.value);
+      setEmailEnabled(alertDetails?.alert_configuration?.email_enabled);
+      setSlackEnabled(alertDetails?.alert_configuration?.slack_enabled);
+      setTeamsEnabled(alertDetails?.alert_configuration?.teams_enabled);
     }
-  }, [alertState?.state, viewAlertDetails]);
+  }, [alertState?.state, alertDetails]);
 
   const queryChange = (newEvent, index, changeType = 'add', flag = null) => {
     const queryupdated = [...queries];
@@ -385,10 +388,10 @@ const KPIBasedAlert = ({
       };
 
       if (alertState?.state === 'edit') {
-        editAlert(activeProject.id, payload, viewAlertDetails?.id)
+        editAlert(activeProject.id, payload, alertDetails?.id)
           .then((res) => {
             setLoading(false);
-            fetchAlerts(activeProject.id);
+            fetchAllAlerts(activeProject.id);
             notification.success({
               message: 'Alerts Saved',
               description: 'Alerts is saved successfully.'
@@ -406,7 +409,7 @@ const KPIBasedAlert = ({
         createAlert(activeProject.id, payload, 0)
           .then((res) => {
             setLoading(false);
-            fetchAlerts(activeProject.id);
+            fetchAllAlerts(activeProject.id);
             notification.success({
               message: 'Alerts Saved',
               description: 'New Alerts is created and saved successfully.'
@@ -462,8 +465,8 @@ const KPIBasedAlert = ({
   };
 
   const emailView = () => {
-    if (viewAlertDetails.alert_configuration.emails) {
-      return viewAlertDetails.alert_configuration.emails.map((item, index) => {
+    if (alertDetails.alert_configuration.emails) {
+      return alertDetails.alert_configuration.emails.map((item, index) => {
         return (
           <div className={'mb-3'}>
             <Input
@@ -523,7 +526,7 @@ const KPIBasedAlert = ({
     <Select
       className={'fa-select w-full'}
       options={DateRangeTypes}
-      value={viewAlertDetails?.alert_description?.date_range}
+      value={alertDetails?.alert_description?.date_range}
       placeholder='Date range'
       showSearch
     ></Select>
@@ -558,7 +561,7 @@ const KPIBasedAlert = ({
       options={operatorOpts}
       placeholder='Operator'
       showSearch
-      value={viewAlertDetails?.alert_description?.operator}
+      value={alertDetails?.alert_description?.operator}
       onChange={(value) => {
         setOperatorState(value);
       }}
@@ -1387,7 +1390,7 @@ const KPIBasedAlert = ({
               <Form.Item
                 name='alert_name'
                 className={'m-0'}
-                initialValue={viewAlertDetails?.alert_name}
+                initialValue={alertDetails?.alert_name}
                 rules={[{ required: true, message: 'Please enter alert name' }]}
               >
                 <Input
@@ -1437,7 +1440,7 @@ const KPIBasedAlert = ({
               <Form.Item
                 name='operator'
                 className={'m-0'}
-                initialValue={viewAlertDetails?.alert_description?.operator}
+                initialValue={alertDetails?.alert_description?.operator}
                 rules={[{ required: true, message: 'Please select Operator' }]}
               >
                 {selectOperator}
@@ -1447,14 +1450,14 @@ const KPIBasedAlert = ({
               <Form.Item
                 name='value'
                 className={'m-0'}
-                initialValue={viewAlertDetails?.alert_description?.value}
+                initialValue={alertDetails?.alert_description?.value}
                 rules={[{ required: true, message: 'Please enter value' }]}
               >
                 <Input
                   className={'fa-input'}
                   type={'number'}
                   placeholder={'Qualifier'}
-                  value={viewAlertDetails?.alert_description?.value}
+                  value={alertDetails?.alert_description?.value}
                   onChange={(e) => setValue(e.target.value)}
                 />
               </Form.Item>
@@ -1475,7 +1478,7 @@ const KPIBasedAlert = ({
               <Form.Item
                 name='date_range'
                 className={'m-0'}
-                initialValue={viewAlertDetails?.alert_description?.date_range}
+                initialValue={alertDetails?.alert_description?.date_range}
                 rules={[
                   {
                     required: true,
@@ -1501,7 +1504,7 @@ const KPIBasedAlert = ({
                   name='compared_to'
                   className={'m-0'}
                   initialValue={
-                    viewAlertDetails?.alert_description?.compared_to ||
+                    alertDetails?.alert_description?.compared_to ||
                     'previous_period'
                   }
                   rules={[{ required: true, message: 'Please select Compare' }]}
@@ -1511,7 +1514,7 @@ const KPIBasedAlert = ({
                     placeholder='Compare'
                     showSearch
                     value={
-                      viewAlertDetails?.alert_description?.compared_to ||
+                      alertDetails?.alert_description?.compared_to ||
                       'previous_period'
                     }
                     disabled={true}
@@ -1756,7 +1759,7 @@ const KPIBasedAlert = ({
               <Row className={'p-4 ml-2'}>
                 <Form.List
                   name='emails'
-                  initialValue={viewAlertDetails?.alert_configuration?.emails}
+                  initialValue={alertDetails?.alert_configuration?.emails}
                 >
                   {(fields, { add, remove }) => (
                     <>
@@ -1768,7 +1771,7 @@ const KPIBasedAlert = ({
                                 <Form.Item
                                   label={null}
                                   initialValue={
-                                    viewAlertDetails?.alert_configuration
+                                    alertDetails?.alert_configuration
                                       ?.emails[field.name]
                                   }
                                   {...field}
@@ -2034,7 +2037,7 @@ const KPIBasedAlert = ({
             <Input
               disabled={true}
               className={'fa-input'}
-              value={viewAlertDetails?.alert_name}
+              value={alertDetails?.alert_name}
             />
           </Col>
         </Row>
@@ -2055,24 +2058,24 @@ const KPIBasedAlert = ({
         <Row className={'m-0 mt-2'}>
           <Col>
             <Button className={`mr-2`} type='link' disabled={true}>
-              {_.startCase(viewAlertDetails?.alert_description?.name) +
+              {_.startCase(alertDetails?.alert_description?.name) +
                 ' [ ' +
-                _.startCase(viewAlertDetails?.alert_description?.query?.dc) +
+                _.startCase(alertDetails?.alert_description?.query?.dc) +
                 ' ]'}
             </Button>
           </Col>
           <Col>
-            {viewAlertDetails?.alert_description?.query?.pgUrl && (
+            {alertDetails?.alert_description?.query?.pgUrl && (
               <div>
                 <span className={'mr-2'}>from</span>
                 <Button className={`mr-2`} type='link' disabled={true}>
-                  {viewAlertDetails?.alert_description?.query?.pgUrl}
+                  {alertDetails?.alert_description?.query?.pgUrl}
                 </Button>
               </div>
             )}
           </Col>
         </Row>
-        {viewAlertDetails?.alert_description?.query?.fil?.length > 0 && (
+        {alertDetails?.alert_description?.query?.fil?.length > 0 && (
           <Row className={'mt-2'}>
             <Col span={18}>
               <Text
@@ -2106,7 +2109,7 @@ const KPIBasedAlert = ({
             <Input
               disabled={true}
               className={'fa-input w-full'}
-              value={(viewAlertDetails?.alert_description?.operator).replace(
+              value={(alertDetails?.alert_description?.operator).replace(
                 /_/g,
                 ' '
               )}
@@ -2117,7 +2120,7 @@ const KPIBasedAlert = ({
               disabled={true}
               className={'fa-input'}
               type={'number'}
-              value={viewAlertDetails?.alert_description?.value}
+              value={alertDetails?.alert_description?.value}
             />
           </Col>
         </Row>
@@ -2137,11 +2140,11 @@ const KPIBasedAlert = ({
               disabled={true}
               className={'fa-input w-full'}
               value={_.startCase(
-                viewAlertDetails?.alert_description?.date_range
+                alertDetails?.alert_description?.date_range
               )}
             />
           </Col>
-          {viewAlertDetails?.alert_description?.compared_to && (
+          {alertDetails?.alert_description?.compared_to && (
             <Col span={8} className={'ml-4'}>
               <Text
                 type={'title'}
@@ -2156,7 +2159,7 @@ const KPIBasedAlert = ({
                 disabled={true}
                 className={'fa-input w-full'}
                 value={_.startCase(
-                  viewAlertDetails?.alert_description?.compared_to
+                  alertDetails?.alert_description?.compared_to
                 )}
               />
             </Col>
@@ -2232,7 +2235,7 @@ const KPIBasedAlert = ({
                         unCheckedChildren='OFF'
                         disabled
                         checked={
-                          viewAlertDetails?.alert_configuration?.slack_enabled
+                          alertDetails?.alert_configuration?.slack_enabled
                         }
                       />
                     </span>{' '}
@@ -2242,8 +2245,8 @@ const KPIBasedAlert = ({
             </Row>
           </div>
 
-          {viewAlertDetails?.alert_configuration?.slack_enabled &&
-            viewAlertDetails?.alert_configuration
+          {alertDetails?.alert_configuration?.slack_enabled &&
+            alertDetails?.alert_configuration
               ?.slack_channels_and_user_groups && (
               <div className='p-4'>
                 {viewSelectedChannels.length > 0 && (
@@ -2340,7 +2343,7 @@ const KPIBasedAlert = ({
                         unCheckedChildren='OFF'
                         disabled
                         checked={
-                          viewAlertDetails?.alert_configuration?.email_enabled
+                          alertDetails?.alert_configuration?.email_enabled
                         }
                       />
                     </span>{' '}
@@ -2407,7 +2410,7 @@ const KPIBasedAlert = ({
                         unCheckedChildren='OFF'
                         disabled
                         checked={
-                          viewAlertDetails?.alert_configuration?.teams_enabled
+                          alertDetails?.alert_configuration?.teams_enabled
                         }
                       />
                     </span>{' '}
@@ -2416,8 +2419,8 @@ const KPIBasedAlert = ({
               </Col>
             </Row>
           </div>
-          {viewAlertDetails?.alert_configuration?.teams_enabled &&
-            viewAlertDetails?.alert_configuration?.teams_channel_config && (
+          {alertDetails?.alert_configuration?.teams_enabled &&
+            alertDetails?.alert_configuration?.teams_channel_config && (
               <div className='p-4'>
                 {teamsViewSelectedChannels.length > 0 && (
                   <div>
@@ -2430,8 +2433,8 @@ const KPIBasedAlert = ({
                           extraClass={'m-0 mt-2 ml-2'}
                         >
                           {teamsViewSelectedChannels.length > 1
-                            ? `Selected channels from the “${viewAlertDetails?.alert_configuration?.teams_channel_config?.team_name}”`
-                            : `Selected channels from the “${viewAlertDetails?.alert_configuration?.teams_channel_config?.team_name}”`}
+                            ? `Selected channels from the “${alertDetails?.alert_configuration?.teams_channel_config?.team_name}”`
+                            : `Selected channels from the “${alertDetails?.alert_configuration?.teams_channel_config?.team_name}”`}
                         </Text>
                       </Col>
                     </Row>
@@ -2467,7 +2470,7 @@ const KPIBasedAlert = ({
               size={'large'}
               style={{ color: '#EE3C3C' }}
               className={'m-0'}
-              onClick={() => showDeleteWidgetModal(viewAlertDetails?.id)}
+              onClick={() => showDeleteWidgetModal(alertDetails?.id)}
             >
               <SVG
                 name={'Delete1'}
@@ -2634,7 +2637,7 @@ const mapStateToProps = (state) => ({
 
 export default connect(mapStateToProps, {
   createAlert,
-  fetchAlerts,
+  fetchAllAlerts,
   deleteAlert,
   editAlert,
   fetchSlackChannels,

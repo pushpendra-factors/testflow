@@ -1409,15 +1409,41 @@ func getHubspotDocumentValuesByPropertyNameAndLimit(hubspotDocuments []model.Hub
 	if len(hubspotDocuments) < 1 || propertyName == "" {
 		return nil
 	}
-
 	valuesAggregate := make(map[interface{}]int)
 	for i := range hubspotDocuments {
+
+		var isCompanyV3, isDealV3, isEngagementV3 bool
 		var err error
-		valuesAggregate, err = getHubspotDocumentValuesByPropertyNameAndLimitForV3Records(hubspotDocuments[i], propertyName, valuesAggregate)
-		if err == nil {
-			continue
+
+		if hubspotDocuments[i].Type == model.HubspotDocumentTypeCompany {
+			isCompanyV3, err = model.CheckIfCompanyV3(&hubspotDocuments[i])
+			if err != nil {
+				log.WithError(err).Error("Failed to CheckIfCompanyV3")
+			}
 		}
 
+		if hubspotDocuments[i].Type == model.HubspotDocumentTypeDeal {
+			isDealV3, err = model.CheckIfDealV3(&hubspotDocuments[i])
+
+			if err != nil {
+				log.WithError(err).Error("Failed to CheckIfDealV3")
+			}
+		}
+
+		if hubspotDocuments[i].Type == model.HubspotDocumentTypeEngagement {
+			isEngagementV3, err = model.CheckIfEngagementV3(&hubspotDocuments[i])
+
+			if err != nil {
+				log.WithError(err).Error("Failed to CheckIfEngagementV3")
+			}
+		}
+
+		if isCompanyV3 || isDealV3 || isEngagementV3 {
+			valuesAggregate, err = getHubspotDocumentValuesByPropertyNameAndLimitForV3Records(hubspotDocuments[i], propertyName, valuesAggregate)
+			if err == nil {
+				continue
+			}
+		}
 		var docProperties model.HubspotDocumentProperties
 		err = json.Unmarshal((hubspotDocuments[i].Value).RawMessage, &docProperties)
 		if err != nil {

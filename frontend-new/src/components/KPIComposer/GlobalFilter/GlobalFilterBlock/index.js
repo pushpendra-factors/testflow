@@ -11,6 +11,8 @@ import GlobalFilterSelect from '../GlobalFilterSelect';
 import { DEFAULT_OPERATOR_PROPS } from '../../../FaFilterSelect/utils';
 import { getKPIPropertyValues } from 'Reducers/coreQuery/middleware';
 import _ from 'lodash';
+import getGroupIcon from 'Utils/getGroupIcon';
+import { groupKPIPropertiesOnCategory } from 'Utils/dataFormatter';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
@@ -130,15 +132,15 @@ function GlobalFilterBlock({
 
   useEffect(() => {
     const filterDD = Object.assign({}, filterDropDownOptions);
-    const propState = [];
-    Object.keys(filterProps).forEach((k, i) => {
-      propState.push({
-        label: k,
-        icon: k === 'event' ? 'mouseclick' : k,
-        values: filterProps[k]
-      });
+    const propertyArrays = [];
+    Object.keys(filterProps).forEach((propertyType) => {
+      const kpiItemsgroupedByCategoryProperty = groupKPIPropertiesOnCategory(
+        filterProps?.[propertyType],
+        propertyType
+      );
+      propertyArrays.push(...Object.values(kpiItemsgroupedByCategoryProperty));
     });
-    filterDD.props = propState;
+    filterDD.props = propertyArrays;
     setFiltDD(filterDD);
   }, [filterProps]);
 

@@ -3,26 +3,22 @@ import { Table, Button, Spin, Popover, Tabs, notification, Input } from 'antd';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { Text, SVG } from '../../factorsComponents';
-import MomentTz from '../../MomentTz';
-import PropertyFilter from '../MyComponents/PropertyFilter';
+import PropertyFilter from './PropertyFilter';
 import { getGroupProperties } from '../../../reducers/coreQuery/middleware';
 import FaSelect from '../../FaSelect';
 import {
   DEFAULT_TIMELINE_CONFIG,
-  EngagementTag,
   formatFiltersForPayload,
   formatReqPayload,
-  getHost,
-  getPropType,
-  propValueFormat,
-  sortNumericalColumn,
-  sortStringColumn
+  getFiltersRequestPayload,
+  getSelectedFiltersFromQuery
 } from '../utils';
 import {
   getProfileAccounts,
   createNewSegment,
   getSavedSegments,
-  updateSegmentForId
+  updateSegmentForId,
+  deleteSegment
 } from '../../../reducers/timelines/middleware';
 import {
   fetchProjectSettings,
@@ -30,8 +26,6 @@ import {
 } from '../../../reducers/global';
 import SearchCheckList from 'Components/SearchCheckList';
 import { formatUserPropertiesToCheckList } from 'Reducers/timelines/utils';
-import { PropTextFormat } from 'Utils/dataFormatter';
-import SegmentModal from '../UserProfiles/SegmentModal';
 import { useHistory, useLocation } from 'react-router-dom';
 import {
   fetchGroupPropertyValues,
@@ -39,30 +33,60 @@ import {
 } from 'Reducers/coreQuery/services';
 import NoDataWithMessage from '../MyComponents/NoDataWithMessage';
 import ProfilesWrapper from '../ProfilesWrapper';
-import { getGroupList } from './accountProfiles.helpers';
+import { checkFiltersEquality, getColumns } from './accountProfiles.helpers';
 import {
   selectAccountPayload,
-  selectActiveSegment,
-  selectSegmentModalState
+  selectActiveSegment
 } from 'Reducers/accountProfilesView/selectors';
 import {
   setAccountPayloadAction,
   setActiveSegmentAction,
-  updateAccountPayloadAction,
-  setSegmentModalStateAction
+  setExitConfirmationModalAction,
+  setFiltersDirtyAction,
+  setNewSegmentModeAction,
+  updateAccountPayloadAction
 } from 'Reducers/accountProfilesView/actions';
 import useFeatureLock from 'hooks/useFeatureLock';
 import { FEATURES } from 'Constants/plans.constants';
 import UpgradeModal from '../UpgradeModal';
 import RangeNudge from 'Components/GenericComponents/RangeNudge';
-import _ from 'lodash';
+import get from 'lodash/get';
+import uniq from 'lodash/uniq';
 import { showUpgradeNudge } from 'Views/Settings/ProjectSettings/Pricing/utils';
+import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
+import SaveSegmentModal from './SaveSegmentModal';
+import MoreActionsDropdown from './MoreActionsDropdown';
+import DeleteSegmentModal from './DeleteSegmentModal';
+import RenameSegmentModal from './RenameSegmentModal';
+import {
+  INITIAL_FILTERS_STATE,
+  moreActionsMode
+} from './accountProfiles.constants';
+import { selectGroupsList } from 'Reducers/groups/selectors';
+import UpdateSegmentModal from './UpdateSegmentModal';
+import { AccountsSidebarIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
+import ExitConfirmationModal from './ExitConfirmationModal';
+
+const groupToCompanyPropMap = {
+  $hubspot_company: '$hubspot_company_name',
+  $salesforce_account: '$salesforce_account_name',
+  $6signal: '$6Signal_name',
+  $linkedin_company: '$li_localized_name',
+  $g2: '$g2_name'
+};
+
+const groupToDomainMap = {
+  $hubspot_company: '$hubspot_company_domain',
+  $salesforce_account: '$salesforce_account_website',
+  $6signal: '$6Signal_domain',
+  $linkedin_company: '$li_domain',
+  $g2: '$g2_domain'
+};
 
 function AccountProfiles({
   activeProject,
   groupOpts,
   accounts,
-  segments,
   createNewSegment,
   getSavedSegments,
   fetchProjectSettings,
@@ -71,7 +95,8 @@ function AccountProfiles({
   currentProjectSettings,
   getProfileAccounts,
   getGroupProperties,
-  updateSegmentForId
+  updateSegmentForId,
+  deleteSegment
 }) {
   const dispatch = useDispatch();
   const history = useHistory();
@@ -82,28 +107,21 @@ function AccountProfiles({
     (state) => state.coreQuery.groupProperties
   );
   const accountPayload = useSelector((state) => {
-    if (location.state?.accountPayload && location.state?.fromDetails) {
-      return location.state.accountPayload;
-    } else {
-      return selectAccountPayload(state);
-    }
+    return selectAccountPayload(state);
   });
 
   const activeSegment = useSelector((state) => {
-    if (location.state?.activeSegment && location.state?.fromDetails) {
-      return location.state.activeSegment;
-    } else {
-      return selectActiveSegment(state);
-    }
+    return selectActiveSegment(state);
   });
 
   const { sixSignalInfo } = useSelector((state) => state.featureConfig);
+  const { newSegmentMode, filtersDirty: areFiltersDirty } = useSelector(
+    (state) => state.accountProfilesView
+  );
+  const groupsList = useSelector((state) => selectGroupsList(state));
+  const agentState = useSelector((state) => state.agent);
 
   const [currentPage, setCurrentPage] = useState(1);
-
-  const showSegmentModal = useSelector((state) =>
-    selectSegmentModalState(state)
-  );
   const [searchBarOpen, setSearchBarOpen] = useState(false);
   const [searchDDOpen, setSearchDDOpen] = useState(false);
   const [listSearchItems, setListSearchItems] = useState([]);
@@ -112,31 +130,55 @@ function AccountProfiles({
   const [checkListAccountProps, setCheckListAccountProps] = useState([]);
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
   const [companyValueOpts, setCompanyValueOpts] = useState({ All: {} });
+  const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
 
-  const agentState = useSelector((state) => state.agent);
-  const activeAgent = agentState?.agent_details?.email;
+  // accounts 2.0
+  const [selectedAccount, setSelectedAccount] = useState({
+    account: null
+  });
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
+  const [saveSegmentModal, setSaveSegmentModal] = useState(false);
+  const [updateSegmentModal, setUpdateSegmentModal] = useState(false);
+  const [selectedFilters, setSelectedFilters] = useState(INITIAL_FILTERS_STATE);
+  const [appliedFilters, setAppliedFilters] = useState(INITIAL_FILTERS_STATE);
+  const [moreActionsModalMode, setMoreActionsModalMode] = useState(null); // DELETE | RENAME
+
   const { isFeatureLocked: isEngagementLocked } = useFeatureLock(
     FEATURES.FEATURE_ENGAGEMENT
   );
 
-  const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
+  const activeAgent = agentState?.agent_details?.email;
 
-  const setShowSegmentModal = useCallback(
-    (value) => {
-      dispatch(setSegmentModalStateAction(value));
+  const setActiveSegment = useCallback(
+    (segmentPayload) => {
+      dispatch(setActiveSegmentAction(segmentPayload));
     },
     [dispatch]
   );
 
-  useEffect(() => {
-    fetchProjectSettings(activeProject?.id);
-    fetchGroups(activeProject?.id, true);
-    getSavedSegments(activeProject?.id);
-  }, [activeProject?.id]);
+  const setFiltersDirty = useCallback(
+    (value) => {
+      dispatch(setFiltersDirtyAction(value));
+    },
+    [dispatch]
+  );
 
-  const groupsList = useMemo(() => {
-    return getGroupList(groupOpts);
-  }, [groupOpts]);
+  const disableNewSegmentMode = useCallback(() => {
+    dispatch(setNewSegmentModeAction(false));
+  }, [dispatch]);
+
+  const handleDeleteActiveSegment = useCallback(() => {
+    deleteSegment({
+      projectId: activeProject.id,
+      segmentId: accountPayload.segment_id
+    }).then((response) => {
+      setMoreActionsModalMode(null);
+      notification.success({
+        message: 'Segment deleted successfully',
+        duration: 5
+      });
+    });
+  }, [accountPayload.segment_id, activeProject.id, deleteSegment]);
 
   const displayTableProps = useMemo(() => {
     const filterPropsMap = {
@@ -160,15 +202,59 @@ function AccountProfiles({
     );
   }, [currentProjectSettings, accountPayload, activeSegment]);
 
-  useEffect(() => {
-    if (!accountPayload.search_filter) {
-      setListSearchItems([]);
-    } else {
-      const listValues = accountPayload?.search_filter || [];
-      setListSearchItems(_.uniq(listValues));
-      setSearchBarOpen(true);
-    }
-  }, [accountPayload?.search_filter]);
+  const handleRenameSegment = useCallback(
+    (name) => {
+      updateSegmentForId(activeProject.id, accountPayload.segment_id, {
+        name
+      }).then((respnse) => {
+        getSavedSegments(activeProject.id);
+        setActiveSegment({ ...activeSegment, name });
+        setMoreActionsModalMode(null);
+        notification.success({
+          message: 'Segment renamed successfully',
+          duration: 5
+        });
+      });
+    },
+    [
+      updateSegmentForId,
+      activeProject.id,
+      accountPayload.segment_id,
+      getSavedSegments,
+      setActiveSegment,
+      activeSegment
+    ]
+  );
+
+  const handleUpdateSegmentDefinition = useCallback(() => {
+    const reqPayload = getFiltersRequestPayload({
+      source: selectedAccount.account[1],
+      selectedFilters,
+      table_props: displayTableProps
+    });
+    updateSegmentForId(
+      activeProject.id,
+      accountPayload.segment_id,
+      reqPayload
+    ).then((respnse) => {
+      getSavedSegments(activeProject.id);
+      setUpdateSegmentModal(false);
+      setFiltersDirty(false);
+      notification.success({
+        message: 'Segment updated successfully',
+        duration: 5
+      });
+    });
+  }, [
+    accountPayload.segment_id,
+    activeProject.id,
+    displayTableProps,
+    getSavedSegments,
+    selectedAccount.account,
+    selectedFilters,
+    updateSegmentForId,
+    setFiltersDirty
+  ]);
 
   const setAccountPayload = useCallback(
     (payload) => {
@@ -184,227 +270,41 @@ function AccountProfiles({
     [dispatch]
   );
 
-  const setActiveSegment = useCallback(
-    (segmentPayload) => {
-      dispatch(setActiveSegmentAction(segmentPayload));
+  const fetchGroupProperties = useCallback(
+    async (groupId) => {
+      if (!groupProperties[groupId]) {
+        await getGroupProperties(activeProject.id, groupId);
+      }
     },
-    [dispatch]
+    [activeProject.id, getGroupProperties, groupProperties]
   );
 
-  useEffect(() => {
-    if (!accountPayload.source) {
-      const source = groupsList?.[0]?.[1] || '';
-      updateAccountPayload({ source });
-    }
-  }, [activeProject?.id, groupsList]);
-
-  useEffect(() => {
-    if (!currentProjectSettings?.timelines_config) return;
-
-    const { disabled_events, user_config, account_config } =
-      currentProjectSettings.timelines_config;
-    const timelinesConfig = {
-      disabled_events: [...disabled_events],
-      user_config: { ...DEFAULT_TIMELINE_CONFIG.user_config, ...user_config },
-      account_config: {
-        ...DEFAULT_TIMELINE_CONFIG.account_config,
-        ...account_config
+  const getAccounts = useCallback(
+    (payload) => {
+      const shouldCache = location.state?.fromDetails;
+      if (payload.source && payload.source !== '' && !shouldCache) {
+        const formatPayload = { ...payload };
+        formatPayload.filters =
+          formatFiltersForPayload(payload?.filters, 'accounts') || [];
+        const reqPayload = formatReqPayload(formatPayload, activeSegment);
+        getProfileAccounts(activeProject.id, reqPayload, activeAgent);
       }
-    };
-    setTLConfig(timelinesConfig);
-  }, [currentProjectSettings?.timelines_config]);
-
-  const fetchGroupProperties = async (groupId) => {
-    if (!groupProperties[groupId]) {
-      await getGroupProperties(activeProject.id, groupId);
-    }
-  };
-
-  useEffect(() => {
-    fetchGroupProperties('$domains');
-    Object.keys(groupOpts || {}).forEach((group) => {
-      fetchGroupProperties(group);
-    });
-  }, [activeProject.id, groupOpts]);
-
-  const getAccounts = (payload) => {
-    const shouldCache = location.state?.fromDetails;
-    if (payload.source && payload.source !== '' && !shouldCache) {
-      const formatPayload = { ...payload };
-      formatPayload.filters =
-        formatFiltersForPayload(payload?.filters, 'accounts') || [];
-      const reqPayload = formatReqPayload(formatPayload, activeSegment);
-      getProfileAccounts(activeProject.id, reqPayload, activeAgent);
-    }
-    if (shouldCache) {
-      setCurrentPage(location.state.currentPage);
-      const localeState = { ...history.location.state, fromDetails: false };
-      history.replace({ state: localeState });
-    }
-  };
-
-  useEffect(() => {
-    getAccounts(accountPayload);
-  }, [accountPayload.source, accountPayload.segment_id]);
-
-  useEffect(() => {
-    let listProps = [];
-    if (accountPayload?.source === 'All') {
-      listProps = Object.keys(groupOpts || {}).reduce((acc, property) => {
-        return groupProperties[property]
-          ? acc.concat(groupProperties[property])
-          : acc;
-      }, []);
-    } else {
-      listProps = groupProperties?.[accountPayload?.source] || [];
-    }
-    setListProperties(listProps);
-  }, [groupProperties, accountPayload?.source]);
-
-  useEffect(() => {
-    const tableProps = accountPayload?.segment_id
-      ? activeSegment?.query?.table_props
-      : currentProjectSettings.timelines_config?.account_config?.table_props;
-    const accountPropsWithEnableKey = formatUserPropertiesToCheckList(
-      listProperties,
-      tableProps
-    );
-    setCheckListAccountProps(accountPropsWithEnableKey);
-  }, [currentProjectSettings, listProperties, activeSegment, accountPayload]);
-
-  const headerClassStr =
-    'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold';
-
-  const getTablePropColumn = (prop) => {
-    const propDisplayName = groupPropNames[prop]
-      ? groupPropNames[prop]
-      : PropTextFormat(prop);
-    const propType = getPropType(listProperties, prop);
-    return {
-      title: (
-        <Text
-          type='title'
-          level={7}
-          color='grey-2'
-          weight='bold'
-          extraClass='m-0'
-          truncate
-          charLimit={25}
-        >
-          {propDisplayName}
-        </Text>
-      ),
-      dataIndex: prop,
-      key: prop,
-      width: 280,
-      sorter: (a, b) =>
-        propType === 'numerical'
-          ? sortNumericalColumn(a[prop], b[prop])
-          : sortStringColumn(a[prop], b[prop]),
-      render: (value) => (
-        <Text type='title' level={7} extraClass='m-0' truncate>
-          {value ? propValueFormat(prop, value, propType) : '-'}
-        </Text>
-      )
-    };
-  };
-
-  const getColumns = () => {
-    const columns = [
-      {
-        // Company Name Column
-        title: (
-          <div className={headerClassStr}>
-            {accountPayload.source === 'All'
-              ? 'Account Domain'
-              : 'Company Name'}
-          </div>
-        ),
-        dataIndex: 'account',
-        key: 'account',
-        width: 300,
-        fixed: 'left',
-        ellipsis: true,
-        sorter: (a, b) => sortStringColumn(a.account.name, b.account.name),
-        render: (item) =>
-          (
-            <div className='flex items-center'>
-              <img
-                src={`https://logo.uplead.com/${getHost(item.host)}`}
-                onError={(e) => {
-                  if (
-                    e.target.src !==
-                    'https://s3.amazonaws.com/www.factors.ai/assets/img/buildings.svg'
-                  ) {
-                    e.target.src =
-                      'https://s3.amazonaws.com/www.factors.ai/assets/img/buildings.svg';
-                  }
-                }}
-                alt=''
-                width='20'
-                height='20'
-              />
-              <span className='ml-2'>{item.name}</span>
-            </div>
-          ) || '-'
+      if (shouldCache) {
+        setCurrentPage(location.state.currentPage);
+        const localeState = { ...history.location.state, fromDetails: false };
+        history.replace({ state: localeState });
       }
-    ];
-    // Engagement Column
-    const engagementExists = accounts.data?.find(
-      (item) =>
-        item.engagement &&
-        (item.engagement !== undefined || item.engagement !== '')
-    );
-    if (engagementExists && !isEngagementLocked) {
-      columns.push({
-        title: <div className={headerClassStr}>Engagement</div>,
-        width: 150,
-        dataIndex: 'engagement',
-        key: 'engagement',
-        fixed: 'left',
-        defaultSortOrder: 'descend',
-        sorter: {
-          compare: (a, b) => sortNumericalColumn(a.score, b.score),
-          multiple: 1
-        },
-        render: (status) =>
-          status ? (
-            <div
-              className='engagement-tag'
-              style={{ '--bg-color': EngagementTag[status]?.bgColor }}
-            >
-              <img
-                src={`../../../assets/icons/${EngagementTag[status]?.icon}.svg`}
-                alt=''
-              />
-              <Text type='title' level={7} extraClass='m-0'>
-                {status}
-              </Text>
-            </div>
-          ) : (
-            '-'
-          )
-      });
-    }
-    // Table Prop Columns
-    displayTableProps?.forEach((prop) => {
-      columns.push(getTablePropColumn(prop));
-    });
-    // Last Activity Column
-    columns.push({
-      title: <div className={headerClassStr}>Last Activity</div>,
-      dataIndex: 'lastActivity',
-      key: 'lastActivity',
-      width: 200,
-      align: 'right',
-      sorter: {
-        compare: (a, b) => sortStringColumn(a.lastActivity, b.lastActivity),
-        multiple: 2
-      },
-      render: (item) => MomentTz(item).fromNow()
-    });
-    return columns;
-  };
+    },
+    [
+      activeAgent,
+      activeProject.id,
+      activeSegment,
+      getProfileAccounts,
+      history,
+      location.state?.currentPage,
+      location.state?.fromDetails
+    ]
+  );
 
   const getTableData = (data) => {
     const sortedData = data.sort(
@@ -416,21 +316,25 @@ function AccountProfiles({
     }));
   };
 
-  const setFilters = (filters) => {
-    const opts = { ...accountPayload };
-    opts.filters = filters;
-    setAccountPayload(opts);
-    setActiveSegment(activeSegment);
-    getAccounts(opts);
-  };
-
-  const clearFilters = () => {
-    const opts = { ...accountPayload };
-    opts.filters = [];
-    setAccountPayload(opts);
-    setActiveSegment(activeSegment);
-    getAccounts(opts);
-  };
+  const applyFilters = useCallback(() => {
+    setAppliedFilters(selectedFilters);
+    setFiltersExpanded(false);
+    setFiltersDirty(true);
+    const reqPayload = getFiltersRequestPayload({
+      source: selectedAccount.account[1],
+      selectedFilters,
+      table_props: displayTableProps
+    });
+    getProfileAccounts(activeProject.id, reqPayload, activeAgent);
+  }, [
+    selectedAccount.account,
+    selectedFilters,
+    displayTableProps,
+    getProfileAccounts,
+    activeProject.id,
+    activeAgent,
+    setFiltersDirty
+  ]);
 
   const handlePropChange = (option) => {
     if (
@@ -454,21 +358,31 @@ function AccountProfiles({
 
   const applyTableProps = () => {
     if (accountPayload?.segment_id?.length) {
+      const newTableProps =
+        checkListAccountProps
+          ?.filter(({ enabled }) => enabled)
+          ?.map(({ prop_name }) => prop_name)
+          ?.filter((entry) => entry !== '' && entry !== undefined) || [];
+
       const updatedQuery = {
         ...activeSegment.query,
-        table_props:
-          checkListAccountProps
-            ?.filter(({ enabled }) => enabled)
-            ?.map(({ prop_name }) => prop_name)
-            ?.filter((entry) => entry !== '' && entry !== undefined) || []
+        table_props: newTableProps
       };
+
+      const queryForFetch = getFiltersRequestPayload({
+        source: selectedAccount.account[1],
+        selectedFilters: appliedFilters,
+        table_props: newTableProps
+      });
 
       updateSegmentForId(activeProject.id, accountPayload.segment_id, {
         query: updatedQuery
       })
         .then(() => getSavedSegments(activeProject.id))
         .then(() => setActiveSegment({ ...activeSegment, query: updatedQuery }))
-        .finally(() => getAccounts(accountPayload));
+        .finally(() =>
+          getProfileAccounts(activeProject.id, queryForFetch, activeAgent)
+        );
     } else {
       const filteredProps =
         accountPayload.source !== 'All'
@@ -491,9 +405,17 @@ function AccountProfiles({
         }
       };
 
+      const queryForFetch = getFiltersRequestPayload({
+        source: selectedAccount.account[1],
+        selectedFilters: appliedFilters,
+        table_props: [...filteredProps, ...enabledProps]
+      });
+
       udpateProjectSettings(activeProject.id, {
         timelines_config: updatedConfig
-      }).then(() => getAccounts(accountPayload));
+      }).then(() =>
+        getProfileAccounts(activeProject.id, queryForFetch, activeAgent)
+      );
     }
     setShowPopOver(false);
   };
@@ -520,72 +442,80 @@ function AccountProfiles({
           showApply
           onApply={applyTableProps}
           showDisabledOption={isEngagementLocked}
-          // disabledOptions={['Engagement', 'Engaged Channels']}
           handleDisableOptionClick={handleDisableOptionClick}
         />
       </Tabs.TabPane>
     </Tabs>
   );
 
-  const handleSaveSegment = async (segmentPayload) => {
-    try {
-      const response = await createNewSegment(activeProject.id, segmentPayload);
-      if (response.type === 'SEGMENT_CREATION_FULFILLED') {
-        notification.success({
-          message: 'Success!',
-          description: response?.payload?.message,
-          duration: 3
-        });
-        setShowSegmentModal(false);
-        // setSegmentDDVisible(false);
-      }
-      await getSavedSegments(activeProject.id);
-    } catch (err) {
-      notification.error({
-        message: 'Error',
-        description:
-          err?.data?.error || 'Segment Creation Failed. Invalid Parameters.',
-        duration: 3
-      });
-    }
-  };
+  const setFiltersList = useCallback((filters) => {
+    setSelectedFilters((curr) => {
+      return {
+        ...curr,
+        filters
+      };
+    });
+  }, []);
 
-  const renderPropertyFilter = () => (
-    <div key={0} className='max-w-3xl'>
+  const setListEvents = useCallback((eventsList) => {
+    setSelectedFilters((curr) => {
+      return {
+        ...curr,
+        eventsList
+      };
+    });
+  }, []);
+
+  const setEventProp = useCallback((eventProp) => {
+    setSelectedFilters((curr) => {
+      return {
+        ...curr,
+        eventProp
+      };
+    });
+  }, []);
+
+  const handleSaveSegmentClick = useCallback(() => {
+    if (newSegmentMode === true) {
+      setSaveSegmentModal(true);
+      return;
+    }
+    if (Boolean(accountPayload.segment_id) === true) {
+      setUpdateSegmentModal(true);
+    } else {
+      setSaveSegmentModal(true);
+    }
+  }, [accountPayload.segment_id, newSegmentMode]);
+
+  const resetSelectedFilters = useCallback(() => {
+    setSelectedFilters(appliedFilters);
+  }, [appliedFilters]);
+
+  const renderPropertyFilter = () => {
+    return (
       <PropertyFilter
         profileType='account'
         source={accountPayload.source}
         filters={accountPayload.filters}
-        setFilters={setFilters}
+        filtersExpanded={filtersExpanded}
+        filtersList={selectedFilters.filters}
+        appliedFilters={appliedFilters}
+        selectedAccount={selectedAccount}
+        listEvents={selectedFilters.eventsList}
         availableGroups={Object.keys(groupOpts || {})}
+        eventProp={selectedFilters.eventProp}
+        areFiltersDirty={areFiltersDirty}
+        applyFilters={applyFilters}
+        setFiltersExpanded={setFiltersExpanded}
+        setSaveSegmentModal={handleSaveSegmentClick}
+        setFiltersList={setFiltersList}
+        setSelectedAccount={setSelectedAccount}
+        setAppliedFilters={setAppliedFilters}
+        setListEvents={setListEvents}
+        setEventProp={setEventProp}
+        resetSelectedFilters={resetSelectedFilters}
       />
-    </div>
-  );
-
-  const renderClearFilterButton = () => (
-    <Button
-      className='dropdown-btn large mr-2'
-      type='text'
-      icon={<SVG name='times_circle' size={16} />}
-      onClick={clearFilters}
-    >
-      Clear Filters
-    </Button>
-  );
-
-  const groupToCompanyPropMap = {
-    $hubspot_company: '$hubspot_company_name',
-    $salesforce_account: '$salesforce_account_name',
-    $6signal: '$6Signal_name',
-    $linkedin_company: '$li_localized_name',
-    $g2: '$g2_name'
-  };
-  const groupToDomainMap = {
-    $hubspot_company: '$hubspot_company_domain',
-    $salesforce_account: '$salesforce_account_website',
-    $6signal: '$6Signal_domain',
-    $linkedin_company: '$li_domain',
-    $g2: '$g2_domain'
+    );
   };
 
   useEffect(() => {
@@ -686,74 +616,143 @@ function AccountProfiles({
     </div>
   );
 
-  const renderSearchSection = () => (
-    <div className='relative'>
-      {searchBarOpen ? (
-        <div className={'flex items-center justify-between'}>
-          {!searchDDOpen && (
-            <Input
-              size='large'
-              value={listSearchItems ? listSearchItems.join(', ') : null}
-              placeholder={'Search Accounts'}
-              style={{
-                width: '240px',
-                'border-radius': '5px'
-              }}
-              prefix={<SVG name='search' size={16} color={'grey'} />}
-              onClick={() => setSearchDDOpen(true)}
-            />
-          )}
-          <Button type='text' className='search-btn' onClick={onSearchClose}>
-            <SVG name={'close'} size={20} color={'grey'} />
-          </Button>
-        </div>
-      ) : (
-        <Button type='text' className='search-btn' onClick={onSearchOpen}>
-          <SVG name={'search'} size={20} color={'grey'} />
+  const { saveButtonDisabled } = useMemo(() => {
+    return checkFiltersEquality({
+      appliedFilters,
+      newSegmentMode,
+      filtersList: selectedFilters.filters,
+      eventProp: selectedFilters.eventProp,
+      eventsList: selectedFilters.eventsList,
+      isActiveSegment: Boolean(accountPayload.segment_id),
+      areFiltersDirty
+    });
+  }, [
+    accountPayload.segment_id,
+    appliedFilters,
+    areFiltersDirty,
+    newSegmentMode,
+    selectedFilters.eventProp,
+    selectedFilters.eventsList,
+    selectedFilters.filters
+  ]);
+
+  const renderSaveSegmentButton = () => {
+    return (
+      <ControlledComponent
+        controller={
+          filtersExpanded === false &&
+          saveButtonDisabled === false &&
+          newSegmentMode === false
+        }
+      >
+        <Button
+          onClick={handleSaveSegmentClick}
+          type='default'
+          className='flex items-center col-gap-1'
+          disabled={saveButtonDisabled}
+        >
+          <SVG
+            color={saveButtonDisabled ? '#BFBFBF' : '#1890ff'}
+            size={16}
+            name='pieChart'
+          />
+          <Text
+            type='title'
+            extraClass='mb-0'
+            color={saveButtonDisabled ? 'disabled' : 'brand-color-6'}
+          >
+            Save segment
+          </Text>
         </Button>
-      )}
-      {searchCompanies()}
-    </div>
+      </ControlledComponent>
+    );
+  };
+
+  const renderSearchSection = () => (
+    <ControlledComponent
+      controller={filtersExpanded === false && newSegmentMode === false}
+    >
+      <div className='relative'>
+        {searchBarOpen ? (
+          <div className={'flex items-center justify-between'}>
+            {!searchDDOpen && (
+              <Input
+                size='large'
+                value={listSearchItems ? listSearchItems.join(', ') : null}
+                placeholder={'Search Accounts'}
+                style={{
+                  width: '240px',
+                  'border-radius': '5px'
+                }}
+                prefix={<SVG name='search' size={16} color={'grey'} />}
+                onClick={() => setSearchDDOpen(true)}
+              />
+            )}
+            <Button type='text' className='search-btn' onClick={onSearchClose}>
+              <SVG name={'close'} size={20} color={'grey'} />
+            </Button>
+          </div>
+        ) : (
+          <Button type='text' className='search-btn' onClick={onSearchOpen}>
+            <SVG name={'search'} size={20} color={'grey'} />
+          </Button>
+        )}
+        {searchCompanies()}
+      </div>
+    </ControlledComponent>
   );
 
-  const renderTablePropsSelect = () => (
-    <Popover
-      overlayClassName='fa-activity--filter'
-      placement='bottomLeft'
-      visible={showPopOver}
-      onVisibleChange={(visible) => {
-        setShowPopOver(visible);
-      }}
-      onClick={() => {
-        setShowPopOver(true);
-      }}
-      trigger='click'
-      content={popoverContent}
-    >
-      <Button
-        size='large'
-        icon={<SVG name='activity_filter' />}
-        className='relative'
+  const renderTablePropsSelect = () => {
+    return (
+      <ControlledComponent
+        controller={filtersExpanded === false && newSegmentMode === false}
       >
-        Edit Columns
-      </Button>
-    </Popover>
-  );
+        <Popover
+          overlayClassName='fa-activity--filter'
+          placement='bottomLeft'
+          visible={showPopOver}
+          onVisibleChange={(visible) => {
+            setShowPopOver(visible);
+          }}
+          onClick={() => {
+            setShowPopOver(true);
+          }}
+          trigger='click'
+          content={popoverContent}
+        >
+          <Button
+            size='large'
+            icon={<SVG name='activity_filter' />}
+            className='relative'
+          >
+            Edit Columns
+          </Button>
+        </Popover>
+      </ControlledComponent>
+    );
+  };
 
   const handleTableChange = (pageParams) => {
     setCurrentPage(pageParams.current);
   };
 
-  const renderActions = () => (
-    <div className='flex justify-between items-start my-4'>
-      <div className='flex justify-between'>{renderPropertyFilter()}</div>
-      <div className='inline-flex gap--6'>
-        {accountPayload?.filters?.length ? renderClearFilterButton() : null}
-        {renderSearchSection()}
-        {renderTablePropsSelect()}
-      </div>
-    </div>
-  );
+  const tableColumns = useMemo(() => {
+    return getColumns({
+      accounts,
+      source: accountPayload?.source,
+      isEngagementLocked,
+      displayTableProps,
+      groupPropNames,
+      listProperties
+    });
+  }, [
+    accounts,
+    accountPayload?.source,
+    displayTableProps,
+    groupPropNames,
+    isEngagementLocked,
+    listProperties
+  ]);
 
   const renderTable = () => (
     <div>
@@ -775,7 +774,7 @@ function AccountProfiles({
         })}
         className='fa-table--userlist'
         dataSource={getTableData(accounts.data)}
-        columns={getColumns()}
+        columns={tableColumns}
         rowClassName='cursor-pointer'
         pagination={{
           position: ['bottom', 'left'],
@@ -802,13 +801,282 @@ function AccountProfiles({
     </div>
   );
 
+  const showRangeNudge = useMemo(() => {
+    return showUpgradeNudge(
+      sixSignalInfo?.usage || 0,
+      sixSignalInfo?.limit || 0,
+      currentProjectSettings
+    );
+  }, [currentProjectSettings, sixSignalInfo?.limit, sixSignalInfo?.usage]);
+
+  const handleSaveSegment = useCallback(
+    async (segmentPayload) => {
+      try {
+        const response = await createNewSegment(
+          activeProject.id,
+          segmentPayload
+        );
+        if (response.type === 'SEGMENT_CREATION_FULFILLED') {
+          notification.success({
+            message: 'Success!',
+            description: response?.payload?.message,
+            duration: 3
+          });
+          setSaveSegmentModal(false);
+          setUpdateSegmentModal(false);
+          setFiltersDirty(false);
+        }
+        await getSavedSegments(activeProject.id);
+      } catch (err) {
+        notification.error({
+          message: 'Error',
+          description:
+            err?.data?.error || 'Segment Creation Failed. Invalid Parameters.',
+          duration: 3
+        });
+      }
+    },
+    [activeProject.id, createNewSegment, getSavedSegments, setFiltersDirty]
+  );
+
+  const handleCreateSegment = useCallback(
+    (newSegmentName) => {
+      const reqPayload = getFiltersRequestPayload({
+        source: selectedAccount.account[1],
+        selectedFilters,
+        table_props: displayTableProps
+      });
+      reqPayload.name = newSegmentName;
+      reqPayload.type = selectedAccount.account[1];
+      handleSaveSegment(reqPayload);
+      disableNewSegmentMode();
+    },
+    [
+      selectedAccount.account,
+      selectedFilters,
+      displayTableProps,
+      handleSaveSegment,
+      disableNewSegmentMode
+    ]
+  );
+
+  const pageTitle = useMemo(() => {
+    if (newSegmentMode === true) {
+      return 'Untitled Segment 1';
+    }
+    if (Boolean(accountPayload.segment_id) === false) {
+      const source = accountPayload.source;
+      const title = get(
+        groupsList.find((elem) => elem[1] === source),
+        0,
+        'All Accounts'
+      );
+      return title;
+    }
+    return activeSegment.name;
+  }, [accountPayload, groupsList, activeSegment, newSegmentMode]);
+
+  const restoreFiltersDefaultState = useCallback(() => {
+    setSelectedFilters(INITIAL_FILTERS_STATE);
+    setAppliedFilters(INITIAL_FILTERS_STATE);
+    setFiltersExpanded(false);
+    setFiltersDirty(false);
+  }, [setFiltersDirty]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const newCompanyValues = { All: {} };
+      for (const [group, prop] of Object.entries(groupToCompanyPropMap)) {
+        if (groupOpts[group]) {
+          try {
+            const res = await fetchGroupPropertyValues(
+              activeProject.id,
+              group,
+              prop
+            );
+            newCompanyValues[group] = { ...res.data };
+            newCompanyValues['All'] = {
+              ...newCompanyValues['All'],
+              ...res.data
+            };
+          } catch (err) {
+            console.log(err);
+          }
+        }
+      }
+      setCompanyValueOpts(newCompanyValues);
+    };
+    fetchData();
+  }, [activeProject.id, groupOpts]);
+
+  useEffect(() => {
+    if (newSegmentMode === false) {
+      getAccounts(accountPayload);
+    }
+  }, [
+    accountPayload.source,
+    accountPayload.segment_id,
+    getAccounts,
+    accountPayload,
+    newSegmentMode
+  ]);
+
+  useEffect(() => {
+    let listProps = [];
+    if (accountPayload?.source === 'All') {
+      listProps = Object.keys(groupOpts || {}).reduce((acc, property) => {
+        return groupProperties[property]
+          ? acc.concat(groupProperties[property])
+          : acc;
+      }, []);
+    } else {
+      listProps = groupProperties?.[accountPayload?.source] || [];
+    }
+    setListProperties(listProps);
+  }, [groupProperties, accountPayload?.source, groupOpts]);
+
+  useEffect(() => {
+    const tableProps = accountPayload?.segment_id
+      ? activeSegment?.query?.table_props
+      : currentProjectSettings.timelines_config?.account_config?.table_props;
+    const accountPropsWithEnableKey = formatUserPropertiesToCheckList(
+      listProperties,
+      tableProps
+    );
+    setCheckListAccountProps(accountPropsWithEnableKey);
+  }, [currentProjectSettings, listProperties, activeSegment, accountPayload]);
+
+  useEffect(() => {
+    fetchGroupProperties('$domains');
+    Object.keys(groupOpts || {}).forEach((group) => {
+      fetchGroupProperties(group);
+    });
+  }, [activeProject.id, fetchGroupProperties, groupOpts]);
+
+  useEffect(() => {
+    if (!accountPayload.source) {
+      const source = groupsList?.[0]?.[1] || '';
+      updateAccountPayload({ source });
+    }
+  }, [
+    accountPayload.source,
+    activeProject.id,
+    groupsList,
+    updateAccountPayload
+  ]);
+
+  useEffect(() => {
+    if (!currentProjectSettings?.timelines_config) return;
+
+    const { disabled_events, user_config, account_config } =
+      currentProjectSettings.timelines_config;
+    const timelinesConfig = {
+      disabled_events: [...disabled_events],
+      user_config: { ...DEFAULT_TIMELINE_CONFIG.user_config, ...user_config },
+      account_config: {
+        ...DEFAULT_TIMELINE_CONFIG.account_config,
+        ...account_config
+      }
+    };
+    setTLConfig(timelinesConfig);
+  }, [currentProjectSettings?.timelines_config]);
+
+  useEffect(() => {
+    if (!accountPayload.search_filter) {
+      setListSearchItems([]);
+    } else {
+      const listValues = accountPayload?.search_filter || [];
+      setListSearchItems(uniq(listValues));
+      setSearchBarOpen(true);
+    }
+  }, [accountPayload?.search_filter]);
+
+  useEffect(() => {
+    fetchProjectSettings(activeProject?.id);
+    fetchGroups(activeProject?.id, true);
+    getSavedSegments(activeProject?.id);
+  }, [activeProject?.id, fetchGroups, fetchProjectSettings, getSavedSegments]);
+
+  useEffect(() => {
+    if (newSegmentMode === true) {
+      restoreFiltersDefaultState();
+    }
+  }, [newSegmentMode, restoreFiltersDefaultState]);
+
+  useEffect(() => {
+    if (newSegmentMode === false) {
+      if (
+        Boolean(accountPayload.segment_id) === true &&
+        activeSegment.query != null
+      ) {
+        const { segmentFilters, selectedAccount } = getSelectedFiltersFromQuery(
+          {
+            query: activeSegment.query,
+            groupsList
+          }
+        );
+        setSelectedAccount({ account: selectedAccount });
+        setAppliedFilters(segmentFilters);
+        setSelectedFilters(segmentFilters);
+        setFiltersExpanded(false);
+        setFiltersDirty(false);
+      } else {
+        const selectedGroup = groupsList.find(
+          (g) => g[1] === accountPayload.source
+        );
+        setSelectedAccount((current) => {
+          return {
+            ...current,
+            account: selectedGroup
+          };
+        });
+        restoreFiltersDefaultState();
+      }
+    }
+  }, [
+    accountPayload,
+    activeSegment.query,
+    groupsList,
+    newSegmentMode,
+    restoreFiltersDefaultState,
+    setFiltersDirty
+  ]);
+
+  useEffect(() => {
+    const handleGoToIntendedPage = (pathname) => {
+      history.push(pathname);
+    };
+
+    const unblock = history.block((location) => {
+      if (areFiltersDirty === false) {
+        return true;
+      }
+      dispatch(
+        setExitConfirmationModalAction(
+          true,
+          handleGoToIntendedPage.bind(null, location.pathname)
+        )
+      );
+      return false;
+    });
+
+    return () => {
+      unblock();
+    };
+  }, [areFiltersDirty, dispatch, history]);
+
+  const titleIcon = useMemo(() => {
+    if (Boolean(accountPayload.segment_id) === true) {
+      return 'pieChart';
+    }
+    return AccountsSidebarIconsMapping[accountPayload.source] != null
+      ? AccountsSidebarIconsMapping[accountPayload.source]
+      : 'buildings';
+  }, [accountPayload]);
+
   return (
     <ProfilesWrapper>
-      {showUpgradeNudge(
-        sixSignalInfo?.usage || 0,
-        sixSignalInfo?.limit || 0,
-        currentProjectSettings
-      ) && (
+      <ControlledComponent controller={showRangeNudge}>
         <div className='mb-4'>
           <RangeNudge
             title='Accounts Identified'
@@ -816,46 +1084,95 @@ function AccountProfiles({
             totalLimit={sixSignalInfo?.limit || 0}
           />
         </div>
-      )}
+      </ControlledComponent>
 
-      <Text type='title' level={3} weight='bold' extraClass='mb-0'>
-        Account Profiles
-      </Text>
-      {renderActions()}
-      {accounts.isLoading ? (
+      <div className='flex justify-between items-center'>
+        <div className='flex col-gap-2  items-center'>
+          <div className='flex items-center rounded justify-center h-10 w-10'>
+            <SVG name={titleIcon} size={32} color='#FF4D4F' />
+          </div>
+          <Text type='title' level={3} weight='bold' extraClass='mb-0'>
+            {pageTitle}
+          </Text>
+        </div>
+        <ControlledComponent controller={Boolean(accountPayload.segment_id)}>
+          <MoreActionsDropdown
+            onRename={() => setMoreActionsModalMode(moreActionsMode.RENAME)}
+            onDelete={() => setMoreActionsModalMode(moreActionsMode.DELETE)}
+          />
+        </ControlledComponent>
+      </div>
+
+      <div className='flex justify-between items-center my-4'>
+        {renderPropertyFilter()}
+        <div className='inline-flex gap--6'>
+          {/* {accountPayload?.filters?.length ? renderClearFilterButton() : null} */}
+          {renderSaveSegmentButton()}
+          {renderSearchSection()}
+          {renderTablePropsSelect()}
+        </div>
+      </div>
+      <ControlledComponent controller={accounts.isLoading === true}>
         <Spin size='large' className='fa-page-loader' />
-      ) : accounts.data.length ? (
-        renderTable()
-      ) : (
-        <NoDataWithMessage message={'No Accounts Found'} />
-      )}
-      <SegmentModal
-        profileType='account'
-        activeProject={activeProject}
-        type={accountPayload.source}
-        typeOptions={groupsList}
-        visible={showSegmentModal}
-        segment={{}}
-        onSave={handleSaveSegment}
-        onCancel={() => setShowSegmentModal(false)}
-        caller={'account_profiles'}
-        tableProps={
-          currentProjectSettings.timelines_config?.account_config?.table_props
+      </ControlledComponent>
+      <ControlledComponent
+        controller={
+          accounts.isLoading === false &&
+          accounts.data.length > 0 &&
+          (newSegmentMode === false || areFiltersDirty === true)
         }
-      />
+      >
+        <>{renderTable()}</>
+      </ControlledComponent>
+      <ControlledComponent
+        controller={
+          accounts.isLoading === false &&
+          accounts.data.length === 0 &&
+          (newSegmentMode === false || areFiltersDirty === true)
+        }
+      >
+        <NoDataWithMessage message={'No Accounts Found'} />
+      </ControlledComponent>
       <UpgradeModal
         visible={isUpgradeModalVisible}
         variant='account'
         onCancel={() => setIsUpgradeModalVisible(false)}
       />
+      <SaveSegmentModal
+        visible={saveSegmentModal}
+        handleCancel={() => setSaveSegmentModal(false)}
+        handleSubmit={handleCreateSegment}
+        isLoading={false}
+      />
+      <DeleteSegmentModal
+        segmentName={activeSegment.name}
+        visible={moreActionsModalMode === moreActionsMode.DELETE}
+        onCancel={() => setMoreActionsModalMode(null)}
+        onOk={handleDeleteActiveSegment}
+      />
+      <RenameSegmentModal
+        segmentName={activeSegment.name}
+        visible={moreActionsModalMode === moreActionsMode.RENAME}
+        onCancel={() => setMoreActionsModalMode(null)}
+        handleSubmit={handleRenameSegment}
+      />
+
+      <UpdateSegmentModal
+        visible={updateSegmentModal}
+        onCancel={() => setUpdateSegmentModal(false)}
+        onCreate={handleCreateSegment}
+        onUpdate={handleUpdateSegmentDefinition}
+      />
+
+      <ExitConfirmationModal />
     </ProfilesWrapper>
   );
 }
+
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   groupOpts: state.groups.data,
   accounts: state.timelines.accounts,
-  segments: state.timelines.segments,
   currentProjectSettings: state.global.currentProjectSettings
 });
 
@@ -869,7 +1186,8 @@ const mapDispatchToProps = (dispatch) =>
       getGroupProperties,
       fetchProjectSettings,
       udpateProjectSettings,
-      updateSegmentForId
+      updateSegmentForId,
+      deleteSegment
     },
     dispatch
   );

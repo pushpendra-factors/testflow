@@ -44,8 +44,6 @@ import {
 
 export const initialState = INITIAL_STATE;
 
-const USER_KPIS = ['form_submission'];
-
 export const labelsObj = {
   [TOTAL_EVENTS_CRITERIA]: 'Event Count',
   [TOTAL_USERS_CRITERIA]: 'User Count',

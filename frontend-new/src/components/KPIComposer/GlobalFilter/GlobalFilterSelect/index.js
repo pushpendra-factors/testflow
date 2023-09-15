@@ -19,6 +19,7 @@ import { DISPLAY_PROP, OPERATORS } from 'Utils/constants';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import FaSelect from 'Components/GenericComponents/FaSelect';
 import { selectedOptionsMapper } from 'Components/GenericComponents/FaSelect/utils';
+import { processProperties } from 'Utils/dataFormatter';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
@@ -183,11 +184,10 @@ const GlobalFilterSelect = ({
 
   const propSelect = (option, group) => {
     const valueType = option.extraProps.valueType;
-    const valuecategory = option.extraProps.category;
+    const valuecategory = option.extraProps.queryType;
     const valueArray = [option.label, option.value, valueType, valuecategory];
-    let prop = [group.iconName, ...valueArray];
     setPropState({
-      icon: group.iconName,
+      icon: option.extraProps?.propertyType || group.iconName,
       name: option.label,
       type: valueType,
       extra: valueArray
@@ -305,16 +305,10 @@ const GlobalFilterSelect = ({
                 return {
                   iconName: groupOpt?.icon,
                   label: getGroupLabel(groupOpt?.label),
-                  values: groupOpt?.values?.map((valueOpt) => {
-                    return {
-                      label: valueOpt[0],
-                      value: valueOpt[1],
-                      extraProps: {
-                        valueType: valueOpt[2],
-                        category: valueOpt[3]
-                      }
-                    };
-                  })
+                  values: processProperties(
+                    groupOpt?.values,
+                    groupOpt?.propertyType
+                  )
                 };
               })}
               onClickOutside={() => setPropSelectOpen(false)}

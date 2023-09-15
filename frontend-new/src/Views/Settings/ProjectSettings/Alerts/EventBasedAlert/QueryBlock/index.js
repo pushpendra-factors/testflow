@@ -17,6 +17,15 @@ import ORButton from 'Components/ORButton';
 import { compareFilters, groupFilters } from 'Utils/global';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
+import { processProperties } from 'Utils/dataFormatter';
+
+const peopleCategoryList = ['others', 'page_views'];
+const accountsCategoryList = [
+  'others',
+  'page_views',
+  'linkedin_company_engagements',
+  'g2_engagements'
+];
 
 function QueryBlock({
   availableGroups,
@@ -48,6 +57,8 @@ function QueryBlock({
     group: []
   });
   const [showGroups, setShowGroups] = useState([]);
+  const [orFilterIndex, setOrFilterIndex] = useState(-1);
+  const [isModalVisible, setIsModalVisible] = useState(false);
 
   const eventGroup = useMemo(() => {
     const group =
@@ -57,35 +68,32 @@ function QueryBlock({
 
   useEffect(() => {
     let showOpts = [];
+
+    const groupNamesList = availableGroups?.map((item) => item[0]);
     if (groupAnalysis === 'users') {
-      showOpts = [...eventOptions];
-    } else {
-      const groupOpts = eventOptions?.filter((item) => {
-        const [groupDisplayName] =
-          availableGroups?.find((group) => group[1] === groupAnalysis) || [];
-        return item.label === groupDisplayName;
-      });
-      const groupNamesList = availableGroups?.map((item) => item[0]);
       const userOpts = eventOptions?.filter(
         (item) => !groupNamesList?.includes(item?.label)
       );
-      showOpts = groupOpts.concat(userOpts);
+
+      showOpts = userOpts;
+    } else {
+      const groupOpts = eventOptions?.filter((item) =>
+        groupNamesList?.includes(item?.label)
+      );
+      // showOpts = groupOpts.concat(userOpts);
+      showOpts = groupOpts;
     }
+
     showOpts = showOpts?.map((opt) => {
       return {
         iconName: getGroupIcon(opt?.icon),
         label: opt?.label,
-        values: opt?.values?.map((op) => {
-          return { value: op[1], label: op[0] };
-        })
+        values: processProperties(opt?.values)
       };
     });
+
     setShowGroups(showOpts);
-  }, [eventOptions, groupAnalysis]);
-
-  const [orFilterIndex, setOrFilterIndex] = useState(-1);
-
-  const [isModalVisible, setIsModalVisible] = useState(false);
+  }, [eventOptions, groupAnalysis, availableGroups]);
 
   const showModal = () => {
     setIsModalVisible(true);
@@ -128,21 +136,27 @@ function QueryBlock({
     });
   }, [queries]);
 
-  useEffect(() => {
-    if (!event || event === undefined) {
-      return;
-    }
-    const assignFilterProps = { ...filterProps };
+  const filterProperties = useMemo(() => {
+    if (!event) return {};
+
+    const props = {
+      event: eventPropertiesV2[event.label] || []
+    };
     if (eventGroup) {
-      assignFilterProps.group = groupProperties[eventGroup];
-      assignFilterProps.user = [];
+      props[eventGroup] = groupProperties[eventGroup];
     } else {
-      assignFilterProps.user = eventUserPropertiesV2;
-      assignFilterProps.group = [];
+      props.user = eventUserPropertiesV2;
     }
-    assignFilterProps.event = eventPropertiesV2[event.label] || [];
-    setFilterProperties(assignFilterProps);
-  }, [eventPropertiesV2, groupProperties, eventUserPropertiesV2]);
+    return props;
+  }, [
+    event,
+    eventGroup,
+    eventPropertiesV2,
+    groupProperties,
+    eventUserPropertiesV2
+  ]);
+
+  
 
   const triggerDropDown = () => {
     setDDVisible(true);
@@ -205,9 +219,10 @@ function QueryBlock({
     setFilterDDVisible(false);
     setOrFilterIndex(-1);
   };
+  
   const selectEventFilter = (ind) => (
     <FilterWrapper
-      filterProps={filterProps}
+      filterProps={filterProperties}
       projectID={activeProject?.id}
       event={event}
       deleteFilter={closeFilter}
@@ -295,7 +310,7 @@ function QueryBlock({
                   index={ind}
                   filter={filter}
                   event={event}
-                  filterProps={filterProps}
+                  filterProps={filterProperties}
                   projectID={activeProject?.id}
                   deleteFilter={removeFilters}
                   insertFilter={insertFilters}
@@ -310,7 +325,7 @@ function QueryBlock({
               {ind === orFilterIndex && (
                 <div key='init'>
                   <FilterWrapper
-                    filterProps={filterProps}
+                    filterProps={filterProperties}
                     projectID={activeProject?.id}
                     event={event}
                     deleteFilter={closeFilter}
@@ -333,7 +348,7 @@ function QueryBlock({
                   index={ind}
                   filter={filtersGr[0]}
                   event={event}
-                  filterProps={filterProps}
+                  filterProps={filterProperties}
                   projectID={activeProject?.id}
                   deleteFilter={removeFilters}
                   insertFilter={insertFilters}
