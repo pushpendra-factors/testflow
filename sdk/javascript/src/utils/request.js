@@ -1,5 +1,6 @@
 var logger = require("./logger");
 const config = require("../config");
+var util = require("./util")
 
 const LOCALSTORAGE_PREFIX = "_faireq_";
 const URI_SERVICE_ERROR = "/sdk/service/error";
