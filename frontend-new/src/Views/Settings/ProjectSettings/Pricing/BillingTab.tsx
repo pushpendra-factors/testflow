@@ -6,7 +6,6 @@ import { FeatureConfigState } from 'Reducers/featureConfig/types';
 import { PathUrls } from 'Routes/pathUrls';
 import { Alert, Button, Divider, Tooltip } from 'antd';
 import useAgentInfo from 'hooks/useAgentInfo';
-import moment from 'moment';
 import { useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 const BillingTab = () => {
@@ -27,9 +26,7 @@ const BillingTab = () => {
     }
     if (isAdmin) {
       window.open(
-        `https://calendly.com/srikrishna-s/30-min-demo-call?month=${moment().format(
-          'yyyy-MM'
-        )}`,
+        `https://factors.schedulehero.io/meet/srikrishna/discovery-call`,
         '_blank'
       );
       return;
