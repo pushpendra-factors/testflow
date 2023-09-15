@@ -11,6 +11,7 @@ import { SVG, Text } from 'Components/factorsComponents';
 import {
   setAccountPayloadAction,
   setActiveSegmentAction,
+  setExitConfirmationModalAction,
   setNewSegmentModeAction
 } from 'Reducers/accountProfilesView/actions';
 import { selectAccountPayload } from 'Reducers/accountProfilesView/selectors';
@@ -37,18 +38,28 @@ const GroupItem = ({ group }) => {
   const activeAccountPayload = useSelector((state) =>
     selectAccountPayload(state)
   );
-  const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
+  const { newSegmentMode, filtersDirty: areFiltersDirty } = useSelector(
+    (state) => state.accountProfilesView
+  );
+
+  const changeAccountPayload = () => {
+    dispatch(
+      setAccountPayloadAction({
+        source: group[1],
+        filters: [],
+        segment_id: ''
+      })
+    );
+    dispatch(setActiveSegmentAction({}));
+  };
 
   const setAccountPayload = () => {
     if (activeAccountPayload.source !== group[1]) {
-      dispatch(
-        setAccountPayloadAction({
-          source: group[1],
-          filters: [],
-          segment_id: ''
-        })
-      );
-      dispatch(setActiveSegmentAction({}));
+      if (areFiltersDirty === false) {
+        changeAccountPayload();
+      } else {
+        dispatch(setExitConfirmationModalAction(true, changeAccountPayload));
+      }
     }
   };
 
@@ -72,17 +83,27 @@ const SegmentItem = ({ segment }) => {
   const activeAccountPayload = useSelector((state) =>
     selectAccountPayload(state)
   );
-  const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
+  const { newSegmentMode, filtersDirty: areFiltersDirty } = useSelector(
+    (state) => state.accountProfilesView
+  );
+
+  const changeActiveSegment = () => {
+    const opts = { ...activeAccountPayload };
+    opts.segment_id = segment[1];
+    opts.source = segment[2].type;
+    opts.filters = [];
+    delete opts.search_filter;
+    dispatch(setActiveSegmentAction(segment[2]));
+    dispatch(setAccountPayloadAction(opts));
+  };
 
   const setActiveSegment = () => {
     if (activeAccountPayload.segment_id !== segment[1]) {
-      const opts = { ...activeAccountPayload };
-      opts.segment_id = segment[1];
-      opts.source = segment[2].type;
-      opts.filters = [];
-      delete opts.search_filter;
-      dispatch(setActiveSegmentAction(segment[2]));
-      dispatch(setAccountPayloadAction(opts));
+      if (areFiltersDirty === false) {
+        changeActiveSegment();
+      } else {
+        dispatch(setExitConfirmationModalAction(true, changeActiveSegment));
+      }
     }
   };
 
@@ -94,6 +115,8 @@ const SegmentItem = ({ segment }) => {
       text={segment[0]}
       isActive={isActive}
       onClick={setActiveSegment}
+      icon='pieChart'
+      iconColor={'#595959'}
     />
   );
 };
@@ -112,27 +135,18 @@ const AccountsSidebar = () => {
     return getGroupList(groupOptions);
   }, [groupOptions]);
 
-  const isAllAccountsSelected =
-    activeAccountPayload.source === 'All' &&
-    Boolean(activeAccountPayload.segment_id) === false;
-
-  const selectAllAccounts = () => {
-    dispatch(
-      setAccountPayloadAction({
-        source: 'All',
-        filters: [],
-        segment_id: ''
-      })
-    );
-    dispatch(setActiveSegmentAction({}));
-  };
-
   const segmentsList = useMemo(() => {
     return generateSegmentsList({
       accountPayload: activeAccountPayload,
       segments
     });
   }, [activeAccountPayload, segments]);
+
+  const filteredGroupsList = groupsList
+    .slice(1)
+    .filter((value) =>
+      value[0].toLowerCase().includes(searchText.toLowerCase())
+    );
 
   return (
     <div className='flex flex-col row-gap-5'>
@@ -142,40 +156,6 @@ const AccountsSidebar = () => {
           styles['accounts-list-container']
         )}
       >
-        <div className='px-4 pb-6 border-b'>
-          <div
-            className={cx(
-              'p-2 flex justify-between items-center',
-              styles['sidebar-menu-item'],
-              {
-                [styles['active']]:
-                  isAllAccountsSelected && newSegmentMode === false
-              }
-            )}
-            role='button'
-            onClick={selectAllAccounts}
-          >
-            <div className='flex col-gap-2 items-center'>
-              <SVG name='regularBuilding' size={20} color='#F5222D' />
-              <Text
-                type='title'
-                extraClass='mb-0'
-                color='character-title'
-                weight='medium'
-              >
-                All Accounts
-              </Text>
-            </div>
-
-            <ControlledComponent
-              controller={
-                isAllAccountsSelected === true && newSegmentMode === false
-              }
-            >
-              <SVG size={16} color='#595959' name='arrowright' />
-            </ControlledComponent>
-          </div>
-        </div>
         <div className='flex flex-col row-gap-3 px-4'>
           <Text
             type='title'
@@ -191,7 +171,7 @@ const AccountsSidebar = () => {
               setSearchText={setSearchText}
               placeholder={'Search segment'}
             />
-            {groupsList.slice(1).map((group) => {
+            {filteredGroupsList.map((group) => {
               return <GroupItem key={group[0]} group={group} />;
             })}
             <ControlledComponent controller={newSegmentMode === true}>

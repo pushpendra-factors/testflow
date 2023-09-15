@@ -196,8 +196,10 @@ export const checkFiltersEquality = ({
     isEventPropEqual === true;
   const saveButtonDisabled =
     isActiveSegment === true
-      ? filtersList.length === 0 || areFiltersDirty === false
-      : applyButtonDisabled === false || filtersList.length === 0;
+      ? (filtersList.length === 0 && eventsList.length === 0) ||
+        areFiltersDirty === false
+      : applyButtonDisabled === false ||
+        (filtersList.length === 0 && eventsList.length === 0);
   return { saveButtonDisabled, applyButtonDisabled };
 };
 
@@ -211,6 +213,7 @@ export const computeFilterProperties = ({
   const props = {};
   if (profileType === 'account') {
     if (source === 'All') {
+      props['$domains'] = groupProperties['$domains'];
       Object.keys(availableGroups).forEach((group) => {
         props[group] = groupProperties[group];
       });

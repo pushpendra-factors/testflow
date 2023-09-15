@@ -176,6 +176,13 @@ func enrichUsingSixSignal(projectId int64, sixSignalKey string, properties *util
 				(*properties)[util.SIX_SIGNAL_DOMAIN] = domain
 				model.SetSixSignalAPICountCacheResult(projectId, util.TimeZoneStringIST)
 
+				// Adding logs for IP List
+				if result.Company.CountryIsoCode == "US" {
+					logCtx.WithFields(log.Fields{"client IP": clientIP}).Info("IP List For US")
+				} else if result.Company.CountryIsoCode == "CA" {
+					logCtx.WithFields(log.Fields{"client IP": clientIP}).Info("IP List For Canada")
+				}
+
 				if meter {
 					timeZone, statusCode := store.GetStore().GetTimezoneForProject(projectId)
 					if statusCode != http.StatusFound {

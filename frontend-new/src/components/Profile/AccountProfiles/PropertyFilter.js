@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import cx from 'classnames';
 import { Button, Dropdown, Menu } from 'antd';
 import { selectGroupsList } from 'Reducers/groups/selectors';
@@ -8,6 +8,7 @@ import styles from './index.module.scss';
 import { Text, SVG } from 'Components/factorsComponents';
 import { INITIAL_FILTERS_STATE } from './accountProfiles.constants';
 import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
+import { setNewSegmentModeAction } from 'Reducers/accountProfilesView/actions';
 
 function PropertyFilter({
   viewMode,
@@ -29,9 +30,11 @@ function PropertyFilter({
   setSelectedAccount,
   setAppliedFilters,
   setEventProp,
-  areFiltersDirty
+  areFiltersDirty,
+  resetSelectedFilters
 }) {
   const groupsList = useSelector((state) => selectGroupsList(state));
+  const dispatch = useDispatch();
   const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
 
   const handleAccountChange = (account) => {
@@ -67,10 +70,16 @@ function PropertyFilter({
 
   const toggleFilters = useCallback(() => {
     setFiltersExpanded((curr) => !curr);
-  }, [setFiltersExpanded]);
+    dispatch(setNewSegmentModeAction(false));
+  }, [dispatch, setFiltersExpanded]);
+
+  const handleCancel = useCallback(() => {
+    toggleFilters();
+    resetSelectedFilters();
+  }, [resetSelectedFilters, toggleFilters]);
 
   if (filtersExpanded === false && newSegmentMode === false) {
-    if (appliedFilters.filters.length > 0) {
+    if (appliedFilters.filters.length + appliedFilters.eventsList.length > 0) {
       return (
         <Button
           className={cx(
@@ -81,7 +90,9 @@ function PropertyFilter({
           onClick={toggleFilters}
         >
           <Text type='title' extraClass='mb-0' weight='medium' color='grey-6'>
-            View {appliedFilters.filters.length} filter(s)
+            View{' '}
+            {appliedFilters.filters.length + appliedFilters.eventsList.length}{' '}
+            filter(s)
           </Text>
           <SVG size={16} name='chevronDown' color='#8C8C8C' />
         </Button>
@@ -160,7 +171,7 @@ function PropertyFilter({
         eventProp={eventProp}
         areFiltersDirty={areFiltersDirty}
         setEventProp={setEventProp}
-        onCancel={toggleFilters}
+        onCancel={handleCancel}
       />
     </div>
   );

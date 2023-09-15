@@ -82,14 +82,15 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		return returnData, http.StatusFound, ""
 	}
 
-	for _, p := range payload.Query.GlobalUserProperties {
-		if _, exist := model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]; exist {
+	for i, p := range payload.Query.GlobalUserProperties {
+		if v, exist := model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]; exist {
 
 			if p.Value == "true" {
-				p = model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]
+				payload.Query.GlobalUserProperties[i] = v
 			} else if p.Value == "false" || p.Value == "$none" {
-				p = model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]
-				p.Operator = model.OPPOSITE_OF_OPERATOR_MAP[p.Operator]
+
+				v.Operator = model.OPPOSITE_OF_OPERATOR_MAP[v.Operator]
+				payload.Query.GlobalUserProperties[i] = v
 			}
 
 		}
@@ -193,6 +194,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		log.WithError(err).WithFields(logFields).WithField("status", err).Error("Failed to filter properties from profiles.")
 		return nil, http.StatusInternalServerError, "Query formatting failed."
 	}
+
 	return returnData, http.StatusFound, ""
 }
 
@@ -383,10 +385,10 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 
 	var isGroupUserCheck, allUsersWhere string
 	if !hasUserProperty && (len(groupedFilters) > 0) {
-		isGroupUserCheck = "AND is_group_user=1"
+		isGroupUserCheck = "AND u.is_group_user=1"
 	}
 	if isAllUserProperties && (len(groupedFilters) > 0) {
-		isGroupUserCheck = "AND (is_group_user=0 OR is_group_user IS NULL) AND customer_user_id IS NOT NULL"
+		isGroupUserCheck = "AND (u.is_group_user=0 OR u.is_group_user IS NULL) AND u.customer_user_id IS NOT NULL"
 	}
 
 	whereForGroups := make(map[string]string)
@@ -630,6 +632,7 @@ func BuildSpecialFilter(projectID int64, negativeFilters []model.QueryProperty, 
 		buildWhereString = strings.ReplaceAll(buildWhereString, "user_global_user_properties", "properties")
 		buildWhereString = "WHERE " + buildWhereString
 	}
+	isGroupUserCheck = strings.ReplaceAll(isGroupUserCheck, "u.is_group_user", "is_group_user")
 
 	query := fmt.Sprintf(`filter_special as (
 		SELECT 
@@ -1509,6 +1512,8 @@ func (store *MemSQL) GetUserActivities(projectID int64, identity string, userId 
 				userActivity.Icon = "salesforce"
 			} else if strings.Contains(userActivity.EventName, "linkedin_") || strings.Contains(userActivity.EventName, "li_") {
 				userActivity.Icon = "linkedin"
+			} else if strings.Contains(userActivity.EventName, "g2_") {
+				userActivity.Icon = "g2crowd"
 			}
 			// Default Icon
 			if userActivity.Icon == "" {

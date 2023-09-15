@@ -473,7 +473,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		}
 		if isSlackIntergrated {
 			partialSlackSuccess, _, errMsg := sendSlackAlertForEventTriggerAlert(eta.ProjectID,
-				eta.SlackChannelAssociatedBy, msg, alertConfiguration.SlackChannels, alertConfiguration.IsSlackHyperlinkEnabled)
+				eta.SlackChannelAssociatedBy, msg, alertConfiguration.SlackChannels, alertConfiguration.IsHyperlinkDisabled)
 			if !partialSlackSuccess {
 				sendReport.SlackFail++
 				errMessage = append(errMessage, errMsg)
@@ -674,7 +674,7 @@ func AddKeyToSortedSet(key *cacheRedis.Key, projectID int64, failPoint string, r
 }
 
 func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
-	msg model.EventTriggerAlertMessage, Schannels *postgres.Jsonb, isHyperlinkEnabled bool) (partialSuccess bool, channelSuccess []bool, errMessage string) {
+	msg model.EventTriggerAlertMessage, Schannels *postgres.Jsonb, isHyperlinkDisabled bool) (partialSuccess bool, channelSuccess []bool, errMessage string) {
 	logCtx := log.WithFields(log.Fields{
 		"project_id":  projectID,
 		"agent_uuid":  agentUUID,
@@ -696,10 +696,10 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
 		for _, channel := range slackChannels {
 			errMsg := "successfully sent"
 			var blockMessage string
-			if isHyperlinkEnabled {
-				getSlackMsgBlock(msg)
+			if !isHyperlinkDisabled {
+				blockMessage = getSlackMsgBlock(msg)
 			} else {
-				getSlackMsgBlockWithoutHyperlinks(msg)
+				blockMessage = getSlackMsgBlockWithoutHyperlinks(msg)
 			}
 			status, err := slack.SendSlackAlert(projectID, blockMessage, agentUUID, channel)
 			partialSuccess = partialSuccess || status

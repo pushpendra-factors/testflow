@@ -170,7 +170,7 @@ const FiltersBox = ({
     areFiltersDirty
   ]);
 
-  const showEventsSection = filtersList.length > 0 && source !== 'All';
+  const showEventsSection = source !== 'All';
 
   return (
     <div className={cx(styles['filters-box-container'], 'flex flex-col')}>
@@ -263,6 +263,7 @@ const FiltersBox = ({
                     groupAnalysis={source}
                     eventChange={handleQueryChange}
                     closeEvent={closeEvent}
+                    initialDDState={false}
                   />
                 </div>
               );
@@ -334,7 +335,7 @@ const FiltersBox = ({
             onClick={applyFilters}
             type='primary'
           >
-            Apply
+            Apply filters
           </Button>
           <Button type='secondary' onClick={onCancel}>
             Cancel
