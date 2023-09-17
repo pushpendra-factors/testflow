@@ -7,10 +7,12 @@ import (
 )
 
 type PlanDetails struct {
-	ID          int64           `gorm:"column:id; primary_key:true; autoIncrement:true" json:"id"`
-	Name        string          `gorm:"column:name; primary_key:true" json:"name"`
-	MtuLimit    int64           `json:"mtu_limit"`
-	FeatureList *postgres.Jsonb `gorm:"column:feature_list" json:"feature_list"` //[]FeatureDetails
+	ID                 int64           `gorm:"column:id; primary_key:true; autoIncrement:true" json:"id"`
+	BillingPlanID      string          `json:"billing_plan_id"`
+	BillingPlanPriceID string          `json:"billing_plan_price_id"`
+	Name               string          `gorm:"column:name; primary_key:true" json:"name"`
+	MtuLimit           int64           `json:"mtu_limit"`
+	FeatureList        *postgres.Jsonb `gorm:"column:feature_list" json:"feature_list"` //[]FeatureDetails
 }
 
 type FeatureDetails struct {

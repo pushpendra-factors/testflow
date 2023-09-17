@@ -12,6 +12,7 @@ type BillingAccount struct {
 	Pincode          string `json:"pincode"`
 	PhoneNo          string `json:"phone_no"` // Optional
 
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	CreatedAt           time.Time `json:"created_at"`
+	UpdatedAt           time.Time `json:"updated_at"`
+	BillingLastSyncedAt time.Time `json:"billing_last_synced_at`
 }

@@ -1,0 +1,1 @@
+ALTER TABLE agents ADD COLUMN billing_customer_id text;

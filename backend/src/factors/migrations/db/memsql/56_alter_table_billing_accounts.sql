@@ -1,0 +1,1 @@
+ALTER TABLE billing_accounts ADD COLUMN billing_last_synced_at timestamp(6);

@@ -24,6 +24,8 @@ type Agent struct {
 	Password          string     `gorm:"type:varchar(100)" json:"-"`
 	PasswordCreatedAt *time.Time `json:"password_created_at"`
 
+	BillingCustomerID string `json:"billing_customer_id"`
+
 	InvitedBy            *string   `gorm:"type:uuid" json:"invited_by"`
 	IsOnboardingFlowSeen bool      `json:"is_onboarding_flow_seen"`
 	CreatedAt            time.Time `json:"created_at"`

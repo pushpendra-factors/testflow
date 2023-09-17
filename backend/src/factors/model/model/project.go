@@ -23,6 +23,10 @@ type Project struct {
 	PrivateToken          string          `gorm:"size:32" json:"private_token"`
 	CreatedAt             time.Time       `json:"created_at"`
 	UpdatedAt             time.Time       `json:"updated_at"`
+	EnableBilling         bool            `json:"enable_billing"`
+	BillingAccountID      string          `json:"billing_account_id"`
+	BillingSubscriptionID string          `json:"billing_subscription_id"`
+	BillingLastSyncedAt   time.Time       `json:"billing_last_synced_at"`
 	ProjectURI            string          `json:"project_uri"`
 	TimeFormat            string          `json:"time_format"`
 	DateFormat            string          `json:"date_format"`
