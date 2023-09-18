@@ -24,6 +24,9 @@ func main() {
 	memSQLCertificate := flag.String("memsql_cert", "", "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
 
+	memSQLDBMaxOpenConnections := flag.Int("memsql_max_open_connections", 50, "Max no.of open connections allowed on connection pool of memsql")
+	memSQLDBMaxIdleConnections := flag.Int("memsql_max_idle_connections", 50, "Max no.of idle connections allowed on connection pool of memsql")
+
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
@@ -110,6 +113,10 @@ func main() {
 			Password:    *memSQLPass,
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
+
+			MaxOpenConnections:     *memSQLDBMaxOpenConnections,
+			MaxIdleConnections:     *memSQLDBMaxIdleConnections,
+			UseExactConnFromConfig: true,
 		},
 		PrimaryDatastore:                              *primaryDatastore,
 		RedisHost:                                     *redisHost,
