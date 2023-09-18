@@ -470,6 +470,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS project_settings (
     int_g2_api_key text,
     six_signal_config JSON,
     onboarding_steps JSON,
+    int_g2 boolean default false,
 
     KEY (updated_at),
     SHARD KEY (project_id),
@@ -1188,6 +1189,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS pathanalysis(
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     is_deleted boolean NOT NULL DEFAULT FALSE,
+    reference_id TEXT,
     PRIMARY KEY (project_id, id),
     SHARD KEY(id)
 );
@@ -1367,7 +1369,7 @@ CREATE TABLE IF NOT EXISTS plan_details (
     name text,
     mtu_limit bigint,
     feature_list json,
-    SHARD KEY (id)
+    SHARD KEY (id),
     PRIMARY KEY (id)
 );
 
@@ -1393,3 +1395,9 @@ CREATE TABLE IF NOT EXISTS g2_documents (
     SHARD KEY (project_id),
     KEY (project_id, type, timestamp) USING CLUSTERED COLUMNSTORE
 );
+
+CREATE TABLE IF NOT EXISTS  upload_filter_files(
+    file_reference  text,
+    project_id bigint,
+    created_at timestamp(6), 
+    updated_at timestamp(6));
