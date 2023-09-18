@@ -24,7 +24,7 @@ function AccountTimelineBirdView({
   collapseAll,
   setCollapseAll,
   loading = false,
-  eventNamesMap,
+  eventNamesMap
 }) {
   const [formattedData, setFormattedData] = useState({});
   const { groupPropNames } = useSelector((state) => state.coreQuery);
@@ -35,7 +35,7 @@ function AccountTimelineBirdView({
       granularity,
       collapseAll
     );
-    document.title = 'Accounts' + ' - FactorsAI';
+    document.title = 'Accounts - FactorsAI';
     setFormattedData(data);
   }, [timelineEvents, granularity]);
 
@@ -65,6 +65,11 @@ function AccountTimelineBirdView({
     ) : (
       <img
         src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${eventIcon}.svg`}
+        onError={(e) => {
+          if (e.target.src !== `../../../../assets/icons/${eventIcon}.svg`) {
+            e.target.src = `../../../../assets/icons/${eventIcon}.svg`;
+          }
+        }}
         alt=''
         height={16}
         width={16}

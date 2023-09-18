@@ -38,6 +38,11 @@ const EventInfoCard = ({ event, eventIcon, sourceIcon, eventPropertiesV2 }) => {
       >
         <img
           src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${eventIcon}.svg`}
+          onError={(e) => {
+            if (e.target.src !== `../../../../assets/icons/${eventIcon}.svg`) {
+              e.target.src = `../../../../assets/icons/${eventIcon}.svg`;
+            }
+          }}
           alt=''
           height={20}
           width={20}
