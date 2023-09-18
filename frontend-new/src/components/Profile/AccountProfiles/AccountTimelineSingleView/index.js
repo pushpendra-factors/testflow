@@ -16,7 +16,7 @@ function AccountTimelineSingleView({
   timelineEvents = [],
   timelineUsers = [],
   loading = false,
-  eventNamesMap,
+  eventNamesMap
 }) {
   const [formattedData, setFormattedData] = useState({});
   useEffect(() => {
@@ -49,7 +49,9 @@ function AccountTimelineSingleView({
         <div className='top-section'>
           {subtitle ? (
             <div className='heading-with-sub'>
-              <div className='main'>{title}</div>
+              <div className='main'>
+                {title === 'group_user' ? 'Account Activity' : title}
+              </div>
               <div className='sub'>{subtitle}</div>
             </div>
           ) : (
