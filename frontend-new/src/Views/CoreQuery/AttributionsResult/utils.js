@@ -160,8 +160,8 @@ const getLegendsLabel = ({ key }) => {
 const getSeriesKey = (seriesKeys, row, isComparisonApplied, rowNum = 0) => {
   const keyVal = row[seriesKeys[rowNum]]
     ? seriesKeys[rowNum]
-    : seriesKeys[rowNum].startsWith('Unique user')
-    ? seriesKeys[rowNum].replace('Unique user', 'unique_user')
+    : seriesKeys[rowNum]?.startsWith('Unique user')
+    ? seriesKeys[rowNum]?.replace('Unique user', 'unique_user')
     : seriesKeys[rowNum];
   return isComparisonApplied ? Number(row[keyVal].value) : Number(row[keyVal]);
 };
@@ -201,7 +201,7 @@ export const getSingleTouchPointChartData = (
     return cat.join(', ');
   });
 
-  const seriesK = (num = 0) => seriesKeys[num].startsWith('Unique user')?  seriesKeys[num].replace('Unique user', 'unique_user') : seriesKeys[num]
+  const seriesK = (num = 0) => seriesKeys[num]?.startsWith('Unique user')?  seriesKeys[num]?.replace('Unique user', 'unique_user') : seriesKeys[num]
   const series = [
     {
       type: 'column',
