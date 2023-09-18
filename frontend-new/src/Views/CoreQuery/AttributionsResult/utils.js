@@ -157,6 +157,15 @@ const getLegendsLabel = ({ key }) => {
   return key;
 };
 
+const getSeriesKey = (seriesKeys, row, isComparisonApplied, rowNum = 0) => {
+  const keyVal = row[seriesKeys[rowNum]]
+    ? seriesKeys[rowNum]
+    : seriesKeys[rowNum].startsWith('Unique user')
+    ? seriesKeys[rowNum].replace('Unique user', 'unique_user')
+    : seriesKeys[rowNum];
+  return isComparisonApplied ? Number(row[keyVal].value) : Number(row[keyVal]);
+};
+
 export const getSingleTouchPointChartData = (
   data,
   visibleIndices,
@@ -192,14 +201,13 @@ export const getSingleTouchPointChartData = (
     return cat.join(', ');
   });
 
+  const seriesK = (num = 0) => seriesKeys[num].startsWith('Unique user')?  seriesKeys[num].replace('Unique user', 'unique_user') : seriesKeys[num]
   const series = [
     {
       type: 'column',
       yAxis: 0,
       data: slicedTableData.map((row) =>
-        isComparisonApplied
-          ? Number(row[seriesKeys[0]].value)
-          : Number(row[[seriesKeys[0]]])
+        getSeriesKey(seriesKeys, row, isComparisonApplied)
       ),
       color: CHART_COLOR_1
     }
@@ -209,7 +217,7 @@ export const getSingleTouchPointChartData = (
       type: 'column',
       yAxis: 0,
       data: slicedTableData.map((row) =>
-        Number(row[seriesKeys[0]].compare_value)
+        Number(row[seriesK(0)].compare_value)
       ),
       color: CHART_COLOR_1
     });
@@ -219,9 +227,7 @@ export const getSingleTouchPointChartData = (
       type: 'line',
       yAxis: 1,
       data: slicedTableData.map((row) =>
-        isComparisonApplied
-          ? Number(row[seriesKeys[1]]?.value)
-          : Number(row[seriesKeys[1]])
+        getSeriesKey(seriesKeys, row, isComparisonApplied, 1)
       ),
       color: CHART_COLOR_8,
       marker: {
@@ -233,7 +239,7 @@ export const getSingleTouchPointChartData = (
         type: 'line',
         yAxis: 1,
         data: slicedTableData.map((row) =>
-          Number(row[seriesKeys[1]]?.compare_value)
+          Number(row[seriesK(1)]?.compare_value)
         ),
         color: CHART_COLOR_8,
         marker: {
@@ -625,9 +631,9 @@ export const getTableColumns = (
       render: (d) => renderMetric(d, comparison_data)
     }));
 
-  const showCPC = ['Source', 'ChannelGroup'].includes(touchpoint)? false :  metrics.find(
-    (elem) => elem.header === 'Cost Per Conversion'
-  )?.enabled;
+  const showCPC = ['Source', 'ChannelGroup'].includes(touchpoint)
+    ? false
+    : metrics.find((elem) => elem.header === 'Cost Per Conversion')?.enabled;
   const showCR = metrics.find((elem) => elem.header === 'ALL CR')?.enabled;
   const showCV = metrics.find((elem) => elem.header === 'CV')?.enabled;
   const showROC = metrics.find((elem) => elem.header === 'ROC')?.enabled;
@@ -1252,8 +1258,12 @@ export const getScatterPlotChartDataV1 = (
 
     categories.push(category.join(', '));
     const metricKeys = Object.keys(d);
-    const xAxisIndex = metricKeys.findIndex((conv)=>{return conv.split('-')?.[1] === ` ${xAxisMetric}`})
-    const yAxisIndex = metricKeys.findIndex((conv)=>{return conv.split('-')?.[1] === ` ${yAxisMetric}`})
+    const xAxisIndex = metricKeys.findIndex((conv) => {
+      return conv.split('-')?.[1] === ` ${xAxisMetric}`;
+    });
+    const yAxisIndex = metricKeys.findIndex((conv) => {
+      return conv.split('-')?.[1] === ` ${yAxisMetric}`;
+    });
 
     if (isComparisonApplied) {
       comparisonPlotData.push([
@@ -1262,8 +1272,11 @@ export const getScatterPlotChartDataV1 = (
       ]);
       return [Number(d[xAxisMetric].value), Number(d[yAxisMetric].value)];
     }
-    
-    return [Number(d[metricKeys[xAxisIndex]]), Number(d[metricKeys[yAxisIndex]])];
+
+    return [
+      Number(d[metricKeys[xAxisIndex]]),
+      Number(d[metricKeys[yAxisIndex]])
+    ];
   });
 
   const finalResult = {
