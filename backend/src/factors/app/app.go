@@ -209,6 +209,7 @@ func main() {
 	allowEventAnalyticsGroupsByProjectID := flag.String("allow_event_analytics_groups_by_project_id", "", "")
 	enableFeatureGatesV2 := flag.Bool("enable_feature_gates_v2", false, "")
 	enableScoreByProjectID := flag.String("enable_score_by_project_id", "", "List of projectIds with scoring enabled.")
+	enableUpdateLastEventAtByProjectID := flag.String("enable_update_last_event_at_by_project_id", "", "")
 
 	flag.Parse()
 
@@ -367,6 +368,7 @@ func main() {
 		EnableFeatureGatesV2:                           *enableFeatureGatesV2,
 		EnableScoringByProjectID:                       *enableScoreByProjectID,
 		EnableNewAllAccountsByProjectID:                *enableNewAllAccountsByProjectID,
+		EnableUpdateLastEventAtByProjectID:             *enableUpdateLastEventAtByProjectID,
 	}
 	C.InitConf(config)
 

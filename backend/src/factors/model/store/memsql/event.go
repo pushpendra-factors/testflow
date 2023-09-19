@@ -439,6 +439,19 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 	event.CreatedAt = transTime
 	event.UpdatedAt = transTime
 
+	if C.IsUpdateLastEventAtEnabled(event.ProjectId) {
+		updateLastEventAtStmt := "UPDATE users SET last_event_at=? WHERE project_id=? AND id=?"
+		updateLastEventAtStmtExec := db.Exec(updateLastEventAtStmt, transTime, event.ProjectId, event.UserId)
+
+		if err := updateLastEventAtStmtExec.Error; err != nil {
+			if gorm.IsRecordNotFoundError(err) {
+				logCtx.WithField("event", event).WithError(err).Error("user not found. last_event_at update Failed")
+			} else {
+				logCtx.WithField("event", event).WithError(err).Error("last_event_at update Failed")
+			}
+		}
+	}
+
 	model.SetCacheUserLastEvent(event.ProjectId, event.UserId,
 		&model.CacheEvent{ID: event.ID, Timestamp: event.Timestamp})
 

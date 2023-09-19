@@ -329,6 +329,7 @@ type Configuration struct {
 	SlackInternalAlertWebhookUrl                        string
 	UseHashIDForCRMGroupUserByProject                   string
 	MoveHubspotCompanyAssocationFlowToContactByPojectID string
+	EnableUpdateLastEventAtByProjectID                  string
 }
 
 type Services struct {
@@ -2282,6 +2283,14 @@ func IsScoringEnabledForAllUsers(projectID int64) bool {
 // IsAllAccountsEnabled - Checks if $domain is enabled for given project_id in all accounts
 func IsAllAccountsEnabled(projectID int64) bool {
 	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableNewAllAccountsByProjectID, "")
+	if allProjects || projectIDsMap[projectID] {
+		return true
+	}
+	return false
+}
+
+func IsUpdateLastEventAtEnabled(projectID int64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableUpdateLastEventAtByProjectID, "")
 	if allProjects || projectIDsMap[projectID] {
 		return true
 	}
