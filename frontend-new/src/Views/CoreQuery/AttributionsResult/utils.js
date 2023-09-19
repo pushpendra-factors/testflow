@@ -45,7 +45,7 @@ export const defaultSortProp = (queryOptions, attrQueries, data) => {
       if (firstQueryLabel) {
         const headers = get(data, 'headers', []);
         const sorterKey = headers.find((header) =>
-          header.startsWith(`${firstQueryLabel} - `)
+          firstQueryLabel === 'Unique users' ? header.startsWith(`unique_users - `) :header.startsWith(`${firstQueryLabel} - `)
         );
         if (sorterKey != null) {
           return [
