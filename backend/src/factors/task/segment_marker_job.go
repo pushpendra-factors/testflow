@@ -39,7 +39,9 @@ func SegmentMarker(projectID int64) int {
 	// list of 1000 domains their associated users with last updated_at in last 1 hour
 	users, statusCode := store.GetStore().GetUsersUpdatedAtGivenHour(projectID, lookBack, domainGroup.ID)
 	if statusCode != http.StatusFound {
-		log.WithField("project_id", projectID).Error("Couldn't find updated records in last one hour")
+		fromTimeString := model.FormatTimeToString(lookBack)
+		log.WithFields(log.Fields{"project_id": projectID, "domain_id": domainGroup.ID, "from_time_string": fromTimeString, "look_back": lookBack}).
+			Error("Couldn't find updated records in last given hours with statuscode ", statusCode)
 		return statusCode
 	}
 
