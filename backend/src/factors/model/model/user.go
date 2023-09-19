@@ -61,6 +61,7 @@ type User struct {
 	Source             *int           `json:"source"`
 	EventAggregate     postgres.Jsonb `json:"event_aggregate"`
 	AssociatedSegments postgres.Jsonb `json:"associated_segments"`
+	LastEventAt        time.Time      `json:"last_event_at"`
 }
 
 type LatestUserPropertiesFromSession struct {
