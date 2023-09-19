@@ -180,12 +180,13 @@ func CallbackHandler(auth *Authenticator) gin.HandlerFunc {
 			}
 			createAgentParams := model.CreateAgentParams{
 				Agent: &model.Agent{
-					Email:           profile.Email,
-					LastName:        profile.LastName,
-					FirstName:       profile.FirstName,
-					IsEmailVerified: profile.IsEmailVerified,
-					IsAuth0User:     true,
-					Value:           value,
+					Email:               profile.Email,
+					LastName:            profile.LastName,
+					FirstName:           profile.FirstName,
+					IsEmailVerified:     profile.IsEmailVerified,
+					IsAuth0User:         true,
+					Value:               value,
+					SubscribeNewsletter: true,
 				},
 				PlanCode: model.FreePlanCode,
 			}
