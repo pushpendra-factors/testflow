@@ -24,11 +24,10 @@ func SignUp(c *gin.Context) {
 	})
 
 	type signupParams struct {
-		Email               string `json:"email" binding:"required"`
-		Phone               string `json:"phone"`
-		CompanyURL          string `json:"company_url"`
-		SubscribeNewsletter bool   `json:"subscribe_newsletter"`
-		PlanCode            string `json:"plan_code"`
+		Email      string `json:"email" binding:"required"`
+		Phone      string `json:"phone"`
+		CompanyURL string `json:"company_url"`
+		PlanCode   string `json:"plan_code"`
 	}
 	params := signupParams{}
 	err := c.BindJSON(&params)
@@ -55,7 +54,7 @@ func SignUp(c *gin.Context) {
 	phone := params.Phone
 	planCode := params.PlanCode
 	companyUrl := params.CompanyURL
-	subscribeNewsletter := params.SubscribeNewsletter
+	subscribeNewsletter := true
 	if planCode == "" {
 		planCode = model.FreePlanCode
 	}
@@ -102,7 +101,7 @@ func SignUp(c *gin.Context) {
 			WithField("email", email).
 			Error("Failed To Send Onboarding Mail")
 	}
-	
+
 	code = onboardingSlackAPICall(agent)
 	if code != http.StatusOK {
 		log.WithField("email", email).
