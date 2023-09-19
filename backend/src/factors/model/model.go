@@ -476,6 +476,7 @@ type Model interface {
 	UpdateAccScoreWeights(projectId int64, weights model.AccWeights) error
 	GetSixsignalEmailListFromProjectSetting(projectId int64) (string, int)
 	AddSixsignalEmailList(projectId int64, emailIds string) int
+	GetSegmentMarkerLastRunTime(projectID int64) (time.Time, int)
 
 	// project
 	UpdateProject(projectID int64, project *model.Project) int
@@ -631,7 +632,7 @@ type Model interface {
 	GetCustomerUserIdFromUserId(projectID int64, id string) (string, int)
 	AssociateUserDomainsGroup(projectID int64, requestUserID string, requestGroupName, requestGroupUserID string) int
 	GetAssociatedDomainForUser(projectID int64, userID string, isAnonymous bool) (string, error)
-	GetUsersUpdatedAtGivenHour(projectID int64, hour int, domainID int) ([]model.User, int)
+	GetUsersUpdatedAtGivenHour(projectID int64, fromTime time.Time, domainID int) ([]model.User, int)
 	UpdateAssociatedSegments(projectID int64, id string, associatedSegments map[string]interface{}) (int, error)
 
 	// web_analytics

@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import cx from 'classnames';
 import AppModal from 'Components/AppModal/AppModal';
 import { Text } from 'Components/factorsComponents';
@@ -28,6 +28,10 @@ const SaveSegmentModal = ({
   const onSubmit = useCallback(() => {
     handleSubmit(newSegmentName);
   }, [handleSubmit, newSegmentName]);
+
+  useEffect(() => {
+    setNewSegmentName('');
+  }, [visible]);
 
   return (
     <AppModal

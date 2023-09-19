@@ -2695,7 +2695,8 @@ func SyncDocuments(ps *model.SalesforceProjectSettings, lastSyncInfo map[string]
 
 		var objectStatus ObjectStatus
 		var err error
-		if C.IsFieldsSyncAllowedForProjectID(ps.ProjectID) {
+		// for activies and task use standard query since they have less fields and to maintain pull performance
+		if C.IsFieldsSyncAllowedForProjectID(ps.ProjectID) && (docType != model.SalesforceDocumentTypeNameTask && docType != model.SalesforceDocumentTypeNameEvent) {
 			log.WithFields(log.Fields{"project_id": ps.ProjectID, "doc_type": docType, "timestamp": timestamp}).Warn("Using syncByTypeUsingFields")
 			objectStatus, err = syncByTypeUsingFields(ps, accessToken, docType, timestamp)
 		} else {
