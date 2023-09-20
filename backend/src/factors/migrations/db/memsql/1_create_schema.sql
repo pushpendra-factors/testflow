@@ -505,7 +505,6 @@ CREATE ROWSTORE TABLE IF NOT EXISTS projects (
     channel_group_rules json,
     profile_picture text,
     enable_billing boolean,
-    billing_account_id string, 
     billing_subscription_id string,
     billing_last_synced_at timestamp(6),
     KEY (updated_at),
