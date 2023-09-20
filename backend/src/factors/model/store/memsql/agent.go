@@ -9,6 +9,7 @@ import (
 
 	U "factors/util"
 
+	"factors/chargebee"
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -76,6 +77,13 @@ func (store *MemSQL) CreateAgentWithDependencies(params *model.CreateAgentParams
 	}
 
 	resp := &model.CreateAgentResponse{}
+
+	customer, status, err := chargebee.CreateChargebeeCustomer(*params.Agent)
+	if err != nil || status != http.StatusCreated {
+		return nil, http.StatusInternalServerError
+
+	}
+	params.Agent.BillingCustomerID = customer.Id
 
 	agent, errCode := store.createAgent(params.Agent)
 	if errCode != http.StatusCreated {

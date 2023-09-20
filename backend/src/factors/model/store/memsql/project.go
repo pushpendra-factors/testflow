@@ -2,18 +2,18 @@ package memsql
 
 import (
 	cacheRedis "factors/cache/redis"
+	"factors/chargebee"
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
-	"net/http"
-	"strings"
-	"time"
-
 	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
+	"net/http"
+	"strings"
+	"time"
 )
 
 const TOKEN_GEN_RETRY_LIMIT = 5
@@ -221,6 +221,11 @@ func (store *MemSQL) UpdateProject(projectId int64, project *model.Project) int 
 		updateFields["channel_group_rules"] = project.ChannelGroupRules
 	}
 
+	if project.BillingSubscriptionID != "" {
+		updateFields["billing_subscription_id"] = project.BillingSubscriptionID
+		updateFields["billing_last_synced_at"] = project.BillingLastSyncedAt
+	}
+
 	err := db.Model(&model.Project{}).Where("id = ?", projectId).Update(updateFields).Error
 	if err != nil {
 		logCtx.WithError(err).Error(
@@ -300,8 +305,33 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 			return errCode
 		}
 	}
+	// creating subscription on chargebee
+	agent, status := store.GetAgentByUUID(agentUUID)
+	if status != http.StatusFound {
+		logCtx.WithField("err_code", status).Error("Failed to get agent while creating default subscription")
+		return errCode
+	}
+	// creating free subscription
+	subscription, status, err := chargebee.CreateChargebeeSubscriptionForCustomer(agent.BillingCustomerID, model.FREE_PLAN_ITEM_PRICE_ID)
+	if err != nil || status != http.StatusCreated {
+		logCtx.WithField("err_code", status).WithError(err).Error("Failed to create default subscription for agent")
+		return errCode
+	}
+
+	// update subscription id on project
+	updatedProject := model.Project{
+		BillingSubscriptionID: subscription.Id,
+		BillingLastSyncedAt:   time.Now(),
+	}
+
+	status = store.UpdateProject(projectID, &updatedProject)
+	if status != 0 {
+		logCtx.WithField("err_code", status).WithError(err).Error("Failed to update subscription id on project")
+		return http.StatusInternalServerError
+	}
+
 	// inserting project into free plan by default
-	status, err := store.CreateDefaultProjectPlanMapping(projectID, model.PLAN_ID_FREE)
+	status, err = store.CreateDefaultProjectPlanMapping(projectID, model.PLAN_ID_FREE)
 	if status != http.StatusCreated {
 		logCtx.Error("Create default project plan mapping failed on create project dependencies for project ID ", projectID)
 		return errCode

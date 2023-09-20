@@ -1,4 +1,4 @@
-package memsql
+package chargebee
 
 import (
 	// C "factors/config"
@@ -14,7 +14,7 @@ import (
 	"net/http"
 )
 
-func (store *MemSQL) CreateChargebeeCustomer(agent model.Agent) (customer.Customer, int, error) {
+func CreateChargebeeCustomer(agent model.Agent) (customer.Customer, int, error) {
 	logCtx := log.Fields{"uuid": agent.UUID}
 	// TODO : set api key in secrets and pull from config
 	chargebee.Configure("{site_api_key}", "{site}")
@@ -32,14 +32,13 @@ func (store *MemSQL) CreateChargebeeCustomer(agent model.Agent) (customer.Custom
 }
 
 // only used to create free subscription which doesn't require a card
-func (store *MemSQL) CreateChargebeeSubscriptionForCustomer(customerID string, planPriceID string, billingCycles int32) (subscription.Subscription, int, error) {
+func CreateChargebeeSubscriptionForCustomer(customerID string, planPriceID string) (subscription.Subscription, int, error) {
 	logCtx := log.Fields{"customer_id": customerID}
 	chargebee.Configure("{site_api_key}", "{site}")
 	res, err := subscriptionAction.CreateWithItems(customerID, &subscription.CreateWithItemsRequestParams{
 		SubscriptionItems: []*subscription.CreateWithItemsSubscriptionItemParams{
 			{
-				ItemPriceId:   planPriceID,
-				BillingCycles: &billingCycles,
+				ItemPriceId: planPriceID,
 			},
 		},
 	}).Request()
@@ -51,18 +50,19 @@ func (store *MemSQL) CreateChargebeeSubscriptionForCustomer(customerID string, p
 	}
 }
 
-func (store *MemSQL) GetUpgradeChargebeeSubscriptionCheckoutURL(subscriptionID string, planPriceID string) (hostedpage.HostedPage, int, error) {
+func GetUpgradeChargebeeSubscriptionCheckoutURL(subscriptionID string, planPriceID string) (hostedpage.HostedPage, int, error) {
 	logCtx := log.Fields{"subscription_ID": subscriptionID}
 	chargebee.Configure("{site_api_key}", "{site}")
 	res, err := hostedPageAction.CheckoutExistingForItems(&hostedpage.CheckoutExistingForItemsRequestParams{
 		Subscription: &hostedpage.CheckoutExistingForItemsSubscriptionParams{
-			Id: "__test__KyVnGWS4EgP3HA",
+			Id: subscriptionID,
 		},
 		SubscriptionItems: []*hostedpage.CheckoutExistingForItemsSubscriptionItemParams{
 			{
 				ItemPriceId: planPriceID,
 			},
 		},
+		// TODO Add redirect url after successful checkout
 	}).Request()
 	if err != nil {
 		log.WithFields(logCtx).WithError(err).Error("Failed to get checkout url for upgrade subscription on chargebee")

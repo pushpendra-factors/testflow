@@ -39,9 +39,10 @@ func (store *MemSQL) createBillingAccount(planCode string, AgentUUID string) (*m
 	}
 
 	bA := &model.BillingAccount{
-		ID:        U.GetUUID(),
-		PlanID:    plan.ID,
-		AgentUUID: AgentUUID,
+		ID:                  U.GetUUID(),
+		PlanID:              plan.ID,
+		AgentUUID:           AgentUUID,
+		BillingLastSyncedAt: time.Now(),
 	}
 
 	if errCode := store.satisfiesBillingAccountForeignConstraints(*bA); errCode != http.StatusOK {
