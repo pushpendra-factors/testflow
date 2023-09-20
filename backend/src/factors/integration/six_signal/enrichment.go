@@ -178,9 +178,9 @@ func enrichUsingSixSignal(projectId int64, sixSignalKey string, properties *util
 
 				// Adding logs for IP List
 				if result.Company.CountryIsoCode == "US" {
-					logCtx.WithFields(log.Fields{"client IP": clientIP}).Info("IP List For US")
+					logCtx.WithFields(log.Fields{"client IP": clientIP, "response": result}).Info("IP List For US with response")
 				} else if result.Company.CountryIsoCode == "CA" {
-					logCtx.WithFields(log.Fields{"client IP": clientIP}).Info("IP List For Canada")
+					logCtx.WithFields(log.Fields{"client IP": clientIP, "response": result}).Info("IP List For Canada with response")
 				}
 
 				if meter {

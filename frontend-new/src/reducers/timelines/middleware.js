@@ -70,10 +70,10 @@ export const getProfileAccountDetails =
     });
   };
 
-export const getAccountOverview = (projectId, id, source) => (dispatch) => {
+export const getAccountOverview = (projectId, source, id) => (dispatch) => {
   dispatch({ type: 'FETCH_PROFILE_ACCOUNT_OVERVIEW_LOADING' });
   return new Promise((resolve) => {
-    fetchAccountOverview(projectId, id, source)
+    fetchAccountOverview(projectId, source, id)
       .then((response) => {
         const data = { ...response.data, id: id };
         resolve(
