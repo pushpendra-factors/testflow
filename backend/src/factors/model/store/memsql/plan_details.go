@@ -16,10 +16,12 @@ import (
 // temp
 var FEATURE_FACTORS_DEANONYMISATION string = "factors_deanonymisation"
 
-func (store *MemSQL) CreateDefaultProjectPlanMapping(projectID int64, planID int) (int, error) {
+func (store *MemSQL) CreateDefaultProjectPlanMapping(projectID int64, planID int, billingPlanPriceID string) (int, error) {
 	ppMapping := model.ProjectPlanMapping{
-		ProjectID: projectID,
-		PlanID:    int64(planID),
+		ProjectID:     projectID,
+		PlanID:        int64(planID),
+		BillingPlanID: billingPlanPriceID,
+		BillingLastSyncedAt: time.Now(),
 	}
 	db := C.GetServices().Db
 	if err := db.Create(&ppMapping).Error; err != nil {

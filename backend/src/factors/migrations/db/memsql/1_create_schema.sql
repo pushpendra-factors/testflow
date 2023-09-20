@@ -1385,6 +1385,7 @@ CREATE TABLE IF NOT EXISTS project_plan_mappings (
     last_renewed_on timestamp(6),
     billing_plan_id text,
     billing_addons json,
+     billing_last_synced_at timestamp(6),
     PRIMARY KEY (project_id),
     SHARD KEY (project_id)
 );

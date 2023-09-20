@@ -1012,5 +1012,5 @@ type Model interface {
 	UpdateFeaturesForCustomPlan(projectID int64, AccountLimit int64, MtuLimit int64, AvailableFeatuers []string) (int, error)
 	UpdateAddonsForProject(projectID int64, addons model.OverWrite) (string, error)
 	CreateAddonsForCustomPlanForProject(projectID int64) error
-	CreateDefaultProjectPlanMapping(projectID int64, planID int) (int, error)
+	CreateDefaultProjectPlanMapping(projectID int64, planID int, billingPlanPriceID string) (int, error)
 }

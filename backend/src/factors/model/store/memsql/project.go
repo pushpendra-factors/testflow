@@ -331,7 +331,7 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 	}
 
 	// inserting project into free plan by default
-	status, err = store.CreateDefaultProjectPlanMapping(projectID, model.PLAN_ID_FREE)
+	status, err = store.CreateDefaultProjectPlanMapping(projectID, model.PLAN_ID_FREE, model.FREE_PLAN_ITEM_PRICE_ID)
 	if status != http.StatusCreated {
 		logCtx.Error("Create default project plan mapping failed on create project dependencies for project ID ", projectID)
 		return errCode
