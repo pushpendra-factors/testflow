@@ -3,6 +3,7 @@ import StepsCounter from 'Components/GenericComponents/StepsCounter';
 import { SVG, Text } from 'Components/factorsComponents';
 import { Button, Dropdown, Menu } from 'antd';
 import useMobileView from 'hooks/useMobileView';
+import HelpButton from 'Components/GenericComponents/HelpButton';
 
 const OnboardingHeader = ({
   currentStep,
@@ -13,15 +14,6 @@ const OnboardingHeader = ({
 }: OnboardingHeaderProps) => {
   const isMobileView = useMobileView();
 
-  const handleHelpClick = () => {
-    if (window?.Intercom) {
-      window.Intercom(
-        'showNewMessage',
-        `Hey, I have few doubts regarding onboarding! Can you guys help me out?`
-      );
-    }
-  };
-
   const getMobileMenu = () => {
     return (
       <Menu>
@@ -29,12 +21,7 @@ const OnboardingHeader = ({
           <StepsCounter currentStep={currentStep} totalSteps={totalSteps} />
         </Menu.Item>
         <Menu.Item key='2'>
-          <Button
-            icon={<SVG name='Headset' size='16' color='#8C8C8C' />}
-            onClick={handleHelpClick}
-          >
-            Need help?
-          </Button>
+          <HelpButton helpMessage='Hey, I have few doubts regarding onboarding! Can you guys help me out?' />
         </Menu.Item>
         {showCloseButton && (
           <Menu.Item key='3'>
@@ -76,12 +63,7 @@ const OnboardingHeader = ({
       {!isMobileView && (
         <div className='flex flex-row-reverse gap-10'>
           <div className='flex gap-2'>
-            <Button
-              icon={<SVG name='Headset' size='16' color='#8C8C8C' />}
-              onClick={handleHelpClick}
-            >
-              Need help?
-            </Button>
+            <HelpButton helpMessage='Hey, I have few doubts regarding onboarding! Can you guys help me out?' />
             {showCloseButton && (
               <Button onClick={handleCloseClick}>Close</Button>
             )}
