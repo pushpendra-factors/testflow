@@ -1,8 +1,7 @@
 package model
 
 import (
-	"math"
-	"strconv"
+	U "factors/util"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -143,23 +142,12 @@ type LatestScore struct {
 }
 
 type DbUpdateAccScoring struct {
-	Userid         string      `json:"uid"`
-	TS             int64       `json:"ts"`
-	Date           string      `json:"date"`
-	CurrEventCount LatestScore `json:"ev"`
-	Lastevent      LatestScore `json:"lev"`
-	IsGroup        bool        `json:"ig"`
-}
-
-func GetDateFromString(ts string) int64 {
-	year := ts[0:4]
-	month := ts[4:6]
-	date := ts[6:8]
-	t, _ := strconv.ParseInt(year, 10, 64)
-	t1, _ := strconv.ParseInt(month, 10, 64)
-	t2, _ := strconv.ParseInt(date, 10, 64)
-	t3 := time.Date(int(t), time.Month(t1), int(t2), 0, 0, 0, 0, time.UTC).Unix()
-	return t3
+	Userid         string                 `json:"uid"`
+	TS             int64                  `json:"ts"`
+	Date           string                 `json:"date"`
+	CurrEventCount map[string]LatestScore `json:"ev"`
+	Lastevent      LatestScore            `json:"lev"`
+	IsGroup        bool                   `json:"ig"`
 }
 
 func GetDefaultAccScoringWeights() AccWeights {
@@ -190,18 +178,9 @@ func GetDefaultAccScoringWeights() AccWeights {
 	return weights
 }
 
-func ComputeDayDifference(ts1 int64, ts2 int64) int {
-
-	t1 := time.Unix(ts1, 0)
-	t2 := time.Unix(ts2, 0)
-	daydiff := t2.Sub(t1).Seconds() / float64(24*60*60)
-	return int(math.Abs(daydiff))
-
-}
-
 func ComputeDecayValue(ts string, SaleWindow int64) float64 {
 	currentTS := time.Now().Unix()
-	EventTs := GetDateFromString(ts)
+	EventTs := U.GetDateFromString(ts)
 	decay := ComputeDecayValueGivenStartEndTS(currentTS, EventTs, SaleWindow)
 
 	return decay
@@ -210,7 +189,7 @@ func ComputeDecayValue(ts string, SaleWindow int64) float64 {
 func ComputeDecayValueGivenStartEndTS(start int64, end int64, SaleWindow int64) float64 {
 	var decay float64
 	// get difference in weeks
-	dayDiff := ComputeDayDifference(start, end)
+	dayDiff := U.ComputeDayDifference(start, end)
 	if int64(dayDiff) > SaleWindow {
 		return 0
 	}
