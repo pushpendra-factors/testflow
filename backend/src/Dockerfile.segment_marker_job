@@ -9,5 +9,6 @@ RUN go build -o $GOPATH/bin/segmentmarkerjob $GOPATH/src/factors/scripts/run_seg
 FROM alpine:3.7
 ENV GOLANG_PROTOBUF_REGISTRATION_CONFLICT=ignore
 RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
+ADD https://github.com/golang/go/raw/master/lib/time/zoneinfo.zip /usr/local/go/lib/time/zoneinfo.zip
 COPY --from=builder /go/bin/segmentmarkerjob /go/bin/segmentmarkerjob
 ENTRYPOINT ["/go/bin/segmentmarkerjob"]
