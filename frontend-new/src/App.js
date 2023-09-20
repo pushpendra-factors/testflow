@@ -16,6 +16,7 @@ import AdBlockerDetector from './components/AdBlockerDetector';
 import { AppRoutes } from 'Routes';
 import { ProductFruits } from 'react-product-fruits';
 import { PRODUCTION_WORKSPACE_CODE } from 'Utils/productFruitsConfig';
+import { ScrollToTop } from 'Routes/feature';
 
 function App({
   agent_details,
@@ -251,6 +252,7 @@ function App({
                 lifeCycle={'unmount'}
               />
             )}
+            <ScrollToTop />
             <AppRoutes />
           </Suspense>
         </ErrorBoundary>
