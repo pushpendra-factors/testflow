@@ -489,6 +489,7 @@ const EventBasedAlert = ({
         closeDropDown={() => setGroupByDDVisible(false)}
         hideText={true}
         noMargin={true}
+        eventGroup={groupsList?.filter((item) => item?.[0] == queries?.[0]?.group)?.[0]?.[1]}
       />
     ) : null;
 
@@ -516,6 +517,7 @@ const EventBasedAlert = ({
                 closeDropDown={() => setGroupByDDVisible(false)}
                 hideText={true}
                 noMargin={true}
+                eventGroup={groupsList?.filter((item) => item?.[0] == queries?.[0]?.group)?.[0]?.[1]}
               />
             </div>
           );
@@ -555,6 +557,7 @@ const EventBasedAlert = ({
                 closeDropDown={() => setGroupByDDVisible(false)}
                 hideText={true}
                 noMargin={true}
+                eventGroup={groupsList?.filter((item) => item?.[0] == queries?.[0]?.group)?.[0]?.[1]}
               />
             </div>
           );
