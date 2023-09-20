@@ -570,7 +570,22 @@ func syncOpportunityPrimaryContact(projectID int64, primaryContactIDs []string, 
 		return nil, 0, true
 	}
 
-	paginatedContacts, err := salesforceDataClient.GetObjectRecordsByIDs(projectID, model.SalesforceDocumentTypeNameContact, primaryContactIDs)
+	distinctDocumentIDs := U.RemoveDuplicateStringInArray(primaryContactIDs)
+	if len(distinctDocumentIDs) == 0 {
+		log.Info("No documentIDs to process in syncMissingObjectsForSalesforceActivities.")
+
+	}
+
+	objectName := model.SalesforceDocumentTypeNameContact
+
+	docIDsMap, errCode := store.GetStore().IsExistSalesforceDocumentByIdsWithBatch(projectID, distinctDocumentIDs, model.GetSalesforceDocTypeByAlias(objectName), 2000)
+	if errCode != http.StatusFound && errCode != http.StatusNotFound {
+		log.Error(fmt.Sprintf("Failed to get salesforce %s documents in getOpportunityPrimaryContactIDs.", objectName))
+	}
+	docIDs := U.GetKeysMapAsArray(docIDsMap)
+	missingPrimaryContactIDs := U.StringSliceDiff(distinctDocumentIDs, docIDs)
+
+	paginatedContacts, err := salesforceDataClient.GetObjectRecordsByIDs(projectID, model.SalesforceDocumentTypeNameContact, missingPrimaryContactIDs)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to initialize salesforce data client for sync oppportunities contact.")
 		return nil, 0, true
@@ -609,6 +624,7 @@ func getLeadIDForOpportunityRecords(projectID int64, records []model.SalesforceR
 	oppIDs := make([]string, 0)
 	for i := range records {
 		oppID := util.GetPropertyValueAsString(records[i]["Id"])
+
 		if oppID != "" {
 			oppIDs = append(oppIDs, oppID)
 			oppToLeadID[oppID] = ""
@@ -625,6 +641,7 @@ func getLeadIDForOpportunityRecords(projectID int64, records []model.SalesforceR
 		}
 
 		filterStmnt := "ConvertedOpportunityId IN (" + "'" + strings.Join(batchedOppIDs[bi], "','") + "')"
+
 		paginatedLeads, err := salesforceDataClient.getRecordByObjectNameANDFilter(projectID, model.SalesforceDocumentTypeNameLead, filterStmnt)
 		if err != nil {
 			return nil, nil, 0, err

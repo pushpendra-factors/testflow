@@ -7,6 +7,7 @@ import (
 	IntHubspot "factors/integration/hubspot"
 	"factors/model/model"
 	"factors/model/store"
+	SDK "factors/sdk"
 	U "factors/util"
 	"io/ioutil"
 	"net/http"
@@ -138,6 +139,8 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
 	stepTimestamp := startTimestamp
 
+	CustomerUserIds := make([]string, 0, 0)
+
 	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: startTimestamp - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID1)
@@ -147,6 +150,21 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: startTimestamp - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID3)
+
+	cu_id := U.RandomString(4)
+	CustomerUserIds = append(CustomerUserIds, cu_id)
+	status, _ := SDK.Identify(project.ID, &SDK.IdentifyPayload{UserId: createdUserID1, CustomerUserId: cu_id, RequestSource: model.UserSourceWeb}, true)
+	assert.Equal(t, http.StatusOK, status)
+
+	cu_id = U.RandomString(4)
+	CustomerUserIds = append(CustomerUserIds, cu_id)
+	status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{UserId: createdUserID2, CustomerUserId: cu_id, RequestSource: model.UserSourceWeb}, true)
+	assert.Equal(t, http.StatusOK, status)
+
+	cu_id = U.RandomString(4)
+	CustomerUserIds = append(CustomerUserIds, cu_id)
+	status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{UserId: createdUserID3, CustomerUserId: cu_id, RequestSource: model.UserSourceWeb}, true)
+	assert.Equal(t, http.StatusOK, status)
 
 	/*
 		user1 -> event s0 with property1 -> s0 with property2 -> s1 with property2
@@ -509,6 +527,106 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.Equal(t, "aggregate", result.Headers[0])
 		assert.Equal(t, len(result.Rows), 1)
+	})
+
+	t.Run("AnalyticsEventsQueryUniqueUserWithColumnPropertyBreakdownEventLevel", func(t *testing.T) {
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 40,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s0",
+				},
+				model.QueryEventWithProperties{
+					Name: "s1",
+				},
+			},
+			GroupByProperties: []model.QueryGroupByProperty{
+				model.QueryGroupByProperty{
+					Entity:         model.PropertyEntityEvent,
+					Property:       U.IDENTIFIED_USER_ID,
+					EventName:      "s0",
+					EventNameIndex: 1,
+				},
+			},
+			Class:           model.QueryClassEvents,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondAllGivenEvent,
+		}
+		result, _, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Equal(t, U.IDENTIFIED_USER_ID, result.Headers[0])
+		for i := 0; i < 3; i++ {
+			assert.Equal(t, true, U.ContainsStringInArray(CustomerUserIds, fmt.Sprintf("%v", result.Rows[i][0])))
+		}
+	})
+
+	t.Run("AnalyticsEventsQueryUniqueUserWithColumnPropertyBreakdownGlobalLevel", func(t *testing.T) {
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 40,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s0",
+				},
+				model.QueryEventWithProperties{
+					Name: "s1",
+				},
+			},
+			GroupByProperties: []model.QueryGroupByProperty{
+				model.QueryGroupByProperty{
+					Entity:    model.PropertyEntityUser,
+					Property:  U.IDENTIFIED_USER_ID,
+					EventName: model.UserPropertyGroupByPresent,
+				},
+			},
+			Class:           model.QueryClassEvents,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondAllGivenEvent,
+		}
+		result, _, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Equal(t, U.IDENTIFIED_USER_ID, result.Headers[0])
+		for i := 0; i < 3; i++ {
+			assert.Equal(t, true, U.ContainsStringInArray(CustomerUserIds, fmt.Sprintf("%v", result.Rows[i][0])))
+		}
+	})
+
+	t.Run("AnalyticsEventsQueryUniqueUserWithColumnPropertyBreakdownWithOtherProperties", func(t *testing.T) {
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 40,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s0",
+				},
+				model.QueryEventWithProperties{
+					Name: "s1",
+				},
+			},
+			GroupByProperties: []model.QueryGroupByProperty{
+				model.QueryGroupByProperty{
+					Entity:    model.PropertyEntityUser,
+					Property:  U.IDENTIFIED_USER_ID,
+					EventName: model.UserPropertyGroupByPresent,
+				},
+				model.QueryGroupByProperty{
+					Entity:         model.PropertyEntityUser,
+					Property:       "$initial_source",
+					EventName:      "s0",
+					EventNameIndex: 1,
+				},
+			},
+			Class:           model.QueryClassEvents,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondAllGivenEvent,
+		}
+		result, _, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Equal(t, U.IDENTIFIED_USER_ID, result.Headers[0])
+		for i := 0; i < 3; i++ {
+			assert.Equal(t, true, U.ContainsStringInArray(CustomerUserIds, fmt.Sprintf("%v", result.Rows[i][0])))
+		}
 	})
 
 }
