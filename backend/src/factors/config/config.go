@@ -329,7 +329,6 @@ type Configuration struct {
 	SlackInternalAlertWebhookUrl                        string
 	UseHashIDForCRMGroupUserByProject                   string
 	MoveHubspotCompanyAssocationFlowToContactByPojectID string
-	EnableUpdateLastEventAtByProjectID                  string
 }
 
 type Services struct {
@@ -2290,11 +2289,7 @@ func IsAllAccountsEnabled(projectID int64) bool {
 }
 
 func IsUpdateLastEventAtEnabled(projectID int64) bool {
-	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableUpdateLastEventAtByProjectID, "")
-	if allProjects || projectIDsMap[projectID] {
-		return true
-	}
-	return false
+	return projectID == 2
 }
 
 // PingHealthcheckForSuccess Ping healthchecks.io for cron success.
