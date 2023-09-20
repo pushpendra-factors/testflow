@@ -179,7 +179,7 @@ func GetGroupPropertiesHandler(c *gin.Context) {
 			if displayName, exists := displayNamesOp[prop]; exists {
 				displayNamesMap[prop] = displayName
 			} else {
-				displayNamesOp[prop] = U.CreateVirtualDisplayName(prop)
+				displayNamesMap[prop] = U.CreateVirtualDisplayName(prop)
 			}
 		}
 	}
