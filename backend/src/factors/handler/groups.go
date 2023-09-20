@@ -147,7 +147,6 @@ func GetGroupPropertiesHandler(c *gin.Context) {
 		return
 
 	} else {
-
 		propertiesFromCache, status = store.GetStore().GetPropertiesByGroup(projectId, groupName, 2500,
 			C.GetLookbackWindowForEventUserCache())
 		if status == http.StatusInternalServerError {
@@ -169,25 +168,31 @@ func GetGroupPropertiesHandler(c *gin.Context) {
 	for property, displayName := range displayNames {
 		displayNamesOp[property] = strings.Title(displayName)
 	}
+
+	for property, displayName := range U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES {
+		displayNamesOp[property] = displayName
+	}
+
+	displayNamesMap := make(map[string]string)
 	for _, props := range propertiesFromCache {
 		for _, prop := range props {
-			displayName := U.CreateVirtualDisplayName(prop)
-			_, exist := displayNamesOp[prop]
-			if !exist {
-				displayNamesOp[prop] = displayName
+			if displayName, exists := displayNamesOp[prop]; exists {
+				displayNamesMap[prop] = displayName
+			} else {
+				displayNamesOp[prop] = U.CreateVirtualDisplayName(prop)
 			}
 		}
 	}
 
 	dupCheck := make(map[string]bool)
 	for _, name := range displayNamesOp {
-		_, exists := dupCheck[name]
-		if exists {
+		if _, exists := dupCheck[name]; exists {
 			logCtx.Warning(fmt.Sprintf("Duplicate display name %s", name))
 		}
 		dupCheck[name] = true
 	}
-	response["display_names"] = U.FilterDisplayNameEmptyKeysAndValues(projectId, displayNamesOp)
+
+	response["display_names"] = U.FilterDisplayNameEmptyKeysAndValues(projectId, displayNamesMap)
 
 	c.JSON(http.StatusOK, response)
 }
