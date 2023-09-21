@@ -913,13 +913,7 @@ function AccountProfiles({
     if (newSegmentMode === false) {
       getAccounts(accountPayload);
     }
-  }, [
-    accountPayload.source,
-    accountPayload.segment_id,
-    getAccounts,
-    accountPayload,
-    newSegmentMode
-  ]);
+  }, [accountPayload.source, accountPayload.segment_id, newSegmentMode]);
 
   useEffect(() => {
     let listProps = [];

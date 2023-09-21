@@ -259,7 +259,6 @@ func (store *MemSQL) GetDistinctDisplayNamesForAllEventProperties(projectID int6
 	return http.StatusFound, displayNamesMap
 }
 
-
 func (store *MemSQL) GetDisplayNamesForAllUserProperties(projectID int64) (int, map[string]string) {
 	logFields := log.Fields{
 		"project_id": projectID,

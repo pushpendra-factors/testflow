@@ -1,0 +1,1 @@
+ALTER TABLE users ADD column last_event_at timestamp(6);
