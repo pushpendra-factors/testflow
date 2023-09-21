@@ -43,8 +43,7 @@ func SegmentMarker(projectID int64) int {
 	// list of 1000 domains their associated users with last updated_at in last 1 hour
 	users, statusCode := store.GetStore().GetUsersUpdatedAtGivenHour(projectID, lookBack, domainGroup.ID)
 	if statusCode != http.StatusFound {
-		fromTimeString := model.FormatTimeToString(lookBack)
-		log.WithFields(log.Fields{"project_id": projectID, "domain_id": domainGroup.ID, "from_time_string": fromTimeString, "look_back": lookBack, "time_now": U.TimeNowZ()}).
+		log.WithFields(log.Fields{"project_id": projectID, "look_back": lookBack}).
 			Error("Couldn't find updated records in last given hours with statuscode ", statusCode)
 		return statusCode
 	}
@@ -233,7 +232,7 @@ func allAccountsSegmentMarkup(projectID int64, users []model.User, segments []mo
 			// decoding user properties col
 			decodedProps, err := U.DecodePostgresJsonb(&user.Properties)
 			if err != nil {
-				log.WithField("project_id", projectID).Error("Unable to decode user properties.")
+				log.WithFields(log.Fields{"project_id": projectID, "user_id": user.ID}).Error("Unable to decode user properties for user.")
 				return http.StatusInternalServerError, err
 			}
 			decodedPropsArr = append(decodedPropsArr, *decodedProps)
@@ -241,7 +240,7 @@ func allAccountsSegmentMarkup(projectID int64, users []model.User, segments []mo
 
 		for index, segmentRule := range segmentsRulesArr {
 			// apply segment rule on the user
-			matched := isRuleMatchedAllAccounts(segmentRule, decodedPropsArr, usersArray)
+			matched := isRuleMatchedAllAccounts(segmentRule, decodedPropsArr, usersArray, segments[index].Id)
 
 			// update associated_segments map on the basis of segment rule applied
 			associatedSegments = updateAllAccountsSegmentMap(matched, usersArray,
@@ -252,7 +251,7 @@ func allAccountsSegmentMarkup(projectID int64, users []model.User, segments []mo
 		status, err := store.GetStore().UpdateAssociatedSegments(projectID, domId,
 			associatedSegments)
 		if status != http.StatusOK {
-			log.WithField("project_id", projectID).Error("Unable to update associated_segments to the user.")
+			log.WithFields(log.Fields{"project_id": projectID, "domain_id": domId}).Error("Unable to update associated_segments to the user")
 			return status, err
 		}
 	}
@@ -283,13 +282,13 @@ func findUserGroupByID(u model.User, id int) (string, error) {
 	}
 }
 
-func isRuleMatchedAllAccounts(segment model.Query, decodedProperties []map[string]interface{}, userArr []model.User) bool {
+func isRuleMatchedAllAccounts(segment model.Query, decodedProperties []map[string]interface{}, userArr []model.User, segmentId string) bool {
 	// isMatched = all rules matched (a or b) AND (c or d)
 	isMatched := false
 
 	if segment.GlobalUserProperties == nil || len(segment.GlobalUserProperties) == 0 {
 		// currently, only support for global properties
-		log.Error("No GlobalUserProperties for the segment found.")
+		log.WithField("segment_id", segmentId).Info("No GlobalUserProperties for the segment found")
 		return isMatched
 	}
 
@@ -319,12 +318,12 @@ func isRuleMatched(segment model.Segment, decodedProperties *map[string]interfac
 	segmentQuery := &model.Query{}
 	err := U.DecodePostgresJsonbToStructType(segment.Query, segmentQuery)
 	if err != nil {
-		log.Error("Unable to decode segment query")
+		log.WithField("segment_id", segment.Id).Error("Unable to decode segment query")
 		return isMatched
 	}
 	if segmentQuery.GlobalUserProperties == nil || len(segmentQuery.GlobalUserProperties) == 0 {
 		// currently, only support for global properties
-		log.Error("No GlobalUserProperties for the segment found.")
+		log.WithField("segment_id", segment.Id).Info("No GlobalUserProperties for the segment found")
 		return isMatched
 	}
 
@@ -515,10 +514,7 @@ func checkDateTypeProperty(segmentRule model.QueryProperty, properties *map[stri
 		return false
 	}
 	var propertyExists bool
-	propertyValue, err := strconv.ParseInt((*properties)[segmentRule.Property].(string), 10, 64)
-	if err != nil {
-		log.WithError(err).Error("Failed reading timestamp on user join query.")
-	}
+	propertyValue := int64((*properties)[segmentRule.Property].(float64))
 	checkValue, err := model.DecodeDateTimePropertyValue(segmentRule.Value)
 	if err != nil {
 		log.WithError(err).Error("Failed reading timestamp on user join query.")
