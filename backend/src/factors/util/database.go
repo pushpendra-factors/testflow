@@ -369,6 +369,15 @@ func LogComputeTimeWithQueryRequestID(startTime time.Time, reqID string, logFiel
 		WithField("time_in_secs", timeTaken).Info("Computations on query results completed.")
 }
 
+func isValidType(value interface{}) bool {
+	switch value.(type) {
+	case int, uint, int8, uint8, int16, uint16, int32, uint32, int64, uint64, float32, float64, string:
+		return true
+	default:
+		return false
+	}
+}
+
 func DiffPostgresJsonb(projectID int64, oldPostgresJsonb, newPostgresJsonb *postgres.Jsonb, caller string) *postgres.Jsonb {
 	logCtx := log.WithField("project_id", projectID).WithField("caller", caller)
 
@@ -385,14 +394,21 @@ func DiffPostgresJsonb(projectID int64, oldPostgresJsonb, newPostgresJsonb *post
 
 	diffMap := make(map[string]interface{}, 0)
 	for k, v := range *oldJMap {
-		if newV, exists := (*newJMap)[k]; exists {
+
+		newV, exists := (*newJMap)[k]
+		if exists && isValidType(newV) && isValidType(v) {
 			if v != newV {
-				// Old keys with new values.
 				diffMap[k] = newV
 			}
-		} else {
-			// New keys.
-			diffMap[k] = v
+		}
+
+		// whitelisted property for a non-primitive type.
+		if k == IDENTIFIED_USER_ID {
+			diffMap[k] = newV
+		}
+
+		if !exists && isValidType(newV) {
+			diffMap[k] = newV
 		}
 	}
 
