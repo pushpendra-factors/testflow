@@ -66,7 +66,6 @@ type AccountDetails struct {
 	LeftPaneProps   map[string]interface{} `json:"left_pane_props"`
 	Milestones      map[string]interface{} `json:"milestones"`
 	AccountTimeline []UserTimeline         `json:"account_timeline"`
-	Overview        Overview               `json:"overview"`
 }
 
 type Overview struct {
