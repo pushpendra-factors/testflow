@@ -1,14 +1,18 @@
 package chargebee
 
 import (
-	// C "factors/config"
+	C "factors/config"
 	"factors/model/model"
 	"github.com/chargebee/chargebee-go/v3"
 	customerAction "github.com/chargebee/chargebee-go/v3/actions/customer"
 	hostedPageAction "github.com/chargebee/chargebee-go/v3/actions/hostedpage"
+	itemAction "github.com/chargebee/chargebee-go/v3/actions/item"
+	itemPriceAction "github.com/chargebee/chargebee-go/v3/actions/itemprice"
 	subscriptionAction "github.com/chargebee/chargebee-go/v3/actions/subscription"
 	"github.com/chargebee/chargebee-go/v3/models/customer"
 	"github.com/chargebee/chargebee-go/v3/models/hostedpage"
+	"github.com/chargebee/chargebee-go/v3/models/item"
+	"github.com/chargebee/chargebee-go/v3/models/itemprice"
 	"github.com/chargebee/chargebee-go/v3/models/subscription"
 	log "github.com/sirupsen/logrus"
 	"net/http"
@@ -17,7 +21,7 @@ import (
 func CreateChargebeeCustomer(agent model.Agent) (customer.Customer, int, error) {
 	logCtx := log.Fields{"uuid": agent.UUID}
 	// TODO : set api key in secrets and pull from config
-	chargebee.Configure("{site_api_key}", "{site}")
+	chargebee.Configure(C.GetChargebeeApiKey(), C.GetChargebeeSiteName())
 	res, err := customerAction.Create(&customer.CreateRequestParams{
 		FirstName: agent.FirstName,
 		LastName:  agent.LastName,
@@ -34,7 +38,7 @@ func CreateChargebeeCustomer(agent model.Agent) (customer.Customer, int, error) 
 // only used to create free subscription which doesn't require a card
 func CreateChargebeeSubscriptionForCustomer(customerID string, planPriceID string) (subscription.Subscription, int, error) {
 	logCtx := log.Fields{"customer_id": customerID}
-	chargebee.Configure("{site_api_key}", "{site}")
+	chargebee.Configure(C.GetChargebeeApiKey(), C.GetChargebeeSiteName())
 	res, err := subscriptionAction.CreateWithItems(customerID, &subscription.CreateWithItemsRequestParams{
 		SubscriptionItems: []*subscription.CreateWithItemsSubscriptionItemParams{
 			{
@@ -52,7 +56,7 @@ func CreateChargebeeSubscriptionForCustomer(customerID string, planPriceID strin
 
 func GetUpgradeChargebeeSubscriptionCheckoutURL(subscriptionID string, planPriceID string) (hostedpage.HostedPage, int, error) {
 	logCtx := log.Fields{"subscription_ID": subscriptionID}
-	chargebee.Configure("{site_api_key}", "{site}")
+	chargebee.Configure(C.GetChargebeeApiKey(), C.GetChargebeeSiteName())
 	res, err := hostedPageAction.CheckoutExistingForItems(&hostedpage.CheckoutExistingForItemsRequestParams{
 		Subscription: &hostedpage.CheckoutExistingForItemsSubscriptionParams{
 			Id: subscriptionID,
@@ -69,4 +73,40 @@ func GetUpgradeChargebeeSubscriptionCheckoutURL(subscriptionID string, planPrice
 		return hostedpage.HostedPage{}, http.StatusInternalServerError, err
 	}
 	return *res.HostedPage, http.StatusAccepted, nil
+}
+
+// lists only plans without billing frequencies available
+func ListPlansAndAddOnsFromChargebee() ([]item.Item, error) {
+	items := []item.Item{}
+	chargebee.Configure(C.GetChargebeeApiKey(), C.GetChargebeeSiteName())
+	res, err := itemAction.List(&item.ListRequestParams{
+		Limit: chargebee.Int32(10),
+	}).ListRequest()
+	if err != nil {
+		log.WithError(err).Error("Failed to fetch plans and addons")
+		return items, nil
+	} else {
+		for idx := 0; idx < len(res.List); idx++ {
+			items = append(items, *res.List[idx].Item)
+		}
+	}
+	return items, nil
+}
+
+// list plans and their prices according to billing frequencies with plan-price-id
+func ListPlansAndAddOnsPricesFromChargebee() ([]itemprice.ItemPrice, error) {
+	itemPrices := []itemprice.ItemPrice{}
+	chargebee.Configure(C.GetChargebeeApiKey(), C.GetChargebeeSiteName())
+	res, err := itemPriceAction.List(&itemprice.ListRequestParams{
+		Limit: chargebee.Int32(10),
+	}).ListRequest()
+	if err != nil {
+		log.WithError(err).Error("Failed to fetch items prices")
+		return itemPrices, nil
+	} else {
+		for idx := 0; idx < len(res.List); idx++ {
+			itemPrices = append(itemPrices, *res.List[idx].ItemPrice)
+		}
+	}
+	return itemPrices, nil
 }

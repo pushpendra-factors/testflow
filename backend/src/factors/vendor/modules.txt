@@ -205,6 +205,8 @@ github.com/certifi/gocertifi
 github.com/chargebee/chargebee-go/v3
 github.com/chargebee/chargebee-go/v3/actions/customer
 github.com/chargebee/chargebee-go/v3/actions/hostedpage
+github.com/chargebee/chargebee-go/v3/actions/item
+github.com/chargebee/chargebee-go/v3/actions/itemprice
 github.com/chargebee/chargebee-go/v3/actions/subscription
 github.com/chargebee/chargebee-go/v3/enum
 github.com/chargebee/chargebee-go/v3/filter

@@ -325,6 +325,8 @@ type Configuration struct {
 	SlackInternalAlertWebhookUrl                        string
 	UseHashIDForCRMGroupUserByProject                   string
 	MoveHubspotCompanyAssocationFlowToContactByPojectID string
+	ChargebeeApiKey                                     string
+	ChargebeeSiteName                                   string
 }
 
 type Services struct {
@@ -2807,6 +2809,14 @@ func IsEnabledFeatureGatesV2() bool {
 
 func GetSlackWebhookUrlForInternalAlerts() string {
 	return configuration.SlackInternalAlertWebhookUrl
+}
+
+func GetChargebeeApiKey() string {
+	return configuration.ChargebeeApiKey
+}
+
+func GetChargebeeSiteName() string {
+	return configuration.ChargebeeSiteName
 }
 
 func EnableSixSignalGroupByProjectID(projectID int64) bool {
