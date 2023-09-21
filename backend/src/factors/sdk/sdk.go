@@ -2048,6 +2048,7 @@ func updateInitialUserPropertiesFromUpdateEventProperties(projectID int64,
 		return http.StatusBadRequest
 	}
 
+	U.DiffPostgresJsonb(projectID, existingUserProperties, updateUserPropertiesJson, C.GetConfig().AppName+"-UPDATE_EVENT_PROPERTIES")
 	return overwriteUserPropertiesOnTable(projectID, userID, eventID, updateUserPropertiesJson)
 }
 
