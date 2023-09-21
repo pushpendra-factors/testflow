@@ -30,21 +30,11 @@ func GetProfileUsersHandler(c *gin.Context) (interface{}, int, string, string, b
 
 	req := c.Request
 
-	getScore, err := getBoolQueryParam(c.Query("score"))
-	if err != nil {
-		logCtx.Error("Invalid score flag .")
-	}
-
-	getDebug, err := getBoolQueryParam(c.Query("debug"))
-	if err != nil {
-		logCtx.Error("Invalid debug flag.")
-	}
-
 	var payload model.TimelinePayload
 
 	decoder := json.NewDecoder(req.Body)
 	decoder.DisallowUnknownFields()
-	err = decoder.Decode(&payload)
+	err := decoder.Decode(&payload)
 
 	logCtx = log.WithFields(log.Fields{
 		"projectId": projectId,
@@ -60,35 +50,6 @@ func GetProfileUsersHandler(c *gin.Context) (interface{}, int, string, string, b
 	if errCode != http.StatusFound {
 		logCtx.Error("User profiles not found. " + errMsg)
 		return nil, errCode, "", errMsg, true
-	}
-
-	scoringAvailable, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_ACCOUNT_SCORING, false)
-	if err != nil {
-		logCtx.Error("Error fetching scoring availability status for project ID-", projectId)
-	}
-
-	showScore := getScore || C.IsScoringEnabledForAllUsers(projectId)
-
-	// Add user scores to the response if scoring is enabled
-	if scoringAvailable && showScore {
-		// Separate anonymous and known user IDs
-		var userIdsAnonymous []string
-		var userIdsNonAnonymous []string
-		for _, profile := range profileUsersList {
-			if profile.IsAnonymous {
-				userIdsAnonymous = append(userIdsAnonymous, profile.Identity) //anonymus=true
-			} else {
-				userIdsNonAnonymous = append(userIdsNonAnonymous, profile.Identity) // anonymus=false
-			}
-		}
-		// Retrieve user scores
-		scoresPerUser, err := store.GetStore().GetUserScoreOnIds(projectId, userIdsAnonymous, userIdsNonAnonymous, getDebug)
-		if err != nil {
-			logCtx.Error("Error while fetching user scores.")
-		} else {
-			// Update user scores in the users list
-			updateProfileUserScores(&profileUsersList, scoresPerUser)
-		}
 	}
 
 	profileUsersList = store.GetStore().AddPropertyValueLabelsToProfileResults(projectId, profileUsersList)

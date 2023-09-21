@@ -26,7 +26,6 @@ import {
 import {
   ALPHANUMSTR,
   DEFAULT_TIMELINE_CONFIG,
-  EngagementTag,
   formatFiltersForPayload,
   getPropType,
   iconColors,
@@ -118,11 +117,6 @@ function UserProfiles({
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
   const [userValueOpts, setUserValueOpts] = useState({});
   const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
-  const agentState = useSelector((state) => state.agent);
-  const activeAgent = agentState?.agent_details?.email;
-  const { isFeatureLocked: isEngagementLocked } = useFeatureLock(
-    FEATURES.FEATURE_ENGAGEMENT
-  );
 
   useEffect(() => {
     if (!timelinePayload.search_filter) {
@@ -282,43 +276,6 @@ function UserProfiles({
         )
       }
     ];
-    // Engagement Column
-    const engagementExists = contacts.data?.find(
-      (item) =>
-        item.engagement &&
-        (item.engagement !== undefined || item.engagement !== '')
-    );
-    if (engagementExists && !isEngagementLocked) {
-      columns.push({
-        title: <div className={headerClassStr}>Engagement</div>,
-        width: 150,
-        dataIndex: 'engagement',
-        key: 'engagement',
-        fixed: 'left',
-        defaultSortOrder: 'descend',
-        sorter: {
-          compare: (a, b) => sortNumericalColumn(a.score, b.score),
-          multiple: 1
-        },
-        render: (status) =>
-          status ? (
-            <div
-              className='engagement-tag'
-              style={{ '--bg-color': EngagementTag[status]?.bgColor }}
-            >
-              <img
-                src={`../../../assets/icons/${EngagementTag[status]?.icon}.svg`}
-                alt=''
-              />
-              <Text type='title' level={7} extraClass='m-0'>
-                {status}
-              </Text>
-            </div>
-          ) : (
-            '-'
-          )
-      });
-    }
 
     const tableProps = timelinePayload?.segment_id
       ? activeSegment?.query?.table_props
@@ -413,7 +370,7 @@ function UserProfiles({
       const formatPayload = { ...payload };
       formatPayload.filters = formatFiltersForPayload(payload?.filters) || [];
       const reqPayload = formatReqPayload(formatPayload, activeSegment);
-      getProfileUsers(activeProject.id, reqPayload, activeAgent);
+      getProfileUsers(activeProject.id, reqPayload);
     }
   };
 
@@ -512,8 +469,6 @@ function UserProfiles({
           onChange={handlePropChange}
           showApply
           onApply={applyTableProps}
-          showDisabledOption={isEngagementLocked}
-          // disabledOptions={['Engagement', 'Engaged Channels']}
           handleDisableOptionClick={handleDisableOptionClick}
         />
       </Tabs.TabPane>
