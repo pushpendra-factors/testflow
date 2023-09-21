@@ -950,6 +950,10 @@ func IsCountryFilterPassed(sixSignalConfig model.SixSignalConfig, isoCode, count
 		}
 	}
 
+	if !isIsoCode {
+		log.Warn("Country name present in sixsignal config with sixsignal config: ", sixSignalConfig)
+	}
+
 	var contains bool
 	if isIsoCode {
 		contains = mapOfCountries[isoCode]
