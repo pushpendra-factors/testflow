@@ -170,7 +170,7 @@ func GetGroupPropertiesHandler(c *gin.Context) {
 	}
 
 	for property, displayName := range U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES {
-		displayNamesOp[property] = displayName
+		displayNamesOp[property] = strings.Title(displayName)
 	}
 
 	displayNamesMap := make(map[string]string)

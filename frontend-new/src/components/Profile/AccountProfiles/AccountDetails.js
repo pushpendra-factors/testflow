@@ -214,24 +214,23 @@ function AccountDetails({
   useEffect(() => {
     const mergedProps = [];
     const filterProps = {};
-
-    Object.keys(groupOpts || {}).forEach((group) => {
-      mergedProps.push(...(groupProperties?.[group] || []));
-      filterProps[group] = groupProperties?.[group];
-    });
-
-    let groupProps = Object.entries(filterProps).map(([group, values]) => ({
-      label: `${PropTextFormat(group)} Properties`,
+  
+    for (const group of Object.keys(groupOpts || {})) {
+      const values = groupProperties?.[group] || [];
+      mergedProps.push(...values);
+      filterProps[group] = values;
+    }
+  
+    const groupProps = Object.entries(filterProps).map(([group, values]) => ({
+      label: groupOpts[group] || PropTextFormat(group),
       iconName: group,
-      values
+      values: processProperties(values)
+    })).map(opt => ({
+      iconName: getGroupIcon(opt.iconName),
+      label: opt.label,
+      values: opt.values
     }));
-    groupProps = groupProps?.map((opt) => {
-      return {
-        iconName: getGroupIcon(opt?.iconName),
-        label: opt?.label,
-        values: processProperties(opt?.values)
-      };
-    });
+  
     setListProperties(mergedProps);
     setFilterProperties(groupProps);
   }, [groupProperties, groupOpts]);

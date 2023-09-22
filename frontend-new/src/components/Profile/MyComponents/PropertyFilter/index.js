@@ -70,7 +70,6 @@ function PropertyFilter({
         list.push(
           <div key={id} className='m-0 mr-2 mb-2'>
             <FilterWrapper
-              groupName={source}
               viewMode={viewMode}
               projectID={activeProject?.id}
               index={id}
@@ -89,7 +88,6 @@ function PropertyFilter({
           list.push(
             <div key={list.length} className='m-0 mr-2 mb-2'>
               <FilterWrapper
-                groupName={source}
                 viewMode={viewMode}
                 projectID={activeProject?.id}
                 index={list.length}
