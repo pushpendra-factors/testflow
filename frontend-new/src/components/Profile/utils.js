@@ -92,7 +92,7 @@ export const GroupDisplayNames = {
   All: 'All Accounts',
   $hubspot_company: 'Hubspot Companies',
   $salesforce_account: 'Salesforce Accounts',
-  $6signal: '6Signal Domains',
+  $6signal: 'Identified Companies',
   $linkedin_company: 'Linkedin Company Engagements',
   $g2: 'G2 Engagements'
 };

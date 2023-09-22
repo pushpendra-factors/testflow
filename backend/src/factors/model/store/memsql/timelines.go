@@ -92,7 +92,6 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 				v.Value = "$none"
 				payload.Query.GlobalUserProperties[i] = v
 			}
-
 		}
 	}
 
@@ -177,12 +176,11 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 
 	// Get merged properties for all accounts
 	if model.IsAccountProfiles(profileType) && C.IsDomainEnabled(projectID) && model.IsDomainGroup(payload.Query.Source) {
-		tablePropsHasUserProp := tablePropsHasUserProperty(payload.Query.TableProps)
 		if isAllUserProperties && !C.IsAllAccountsEnabled(projectID) {
 			userDomains, _ := store.GetUsersAssociatedToDomain(projectID, minMax, groupedFilters)
 			profiles = appendProfiles(profiles, userDomains)
 		}
-		profiles, statusCode = store.AccountPropertiesForDomainsEnabled(projectID, profiles, tablePropsHasUserProp)
+		profiles, statusCode = store.AccountPropertiesForDomainsEnabled(projectID, profiles)
 		if statusCode != http.StatusOK {
 			return nil, statusCode, "Query Transformation Failed."
 		}
@@ -262,7 +260,7 @@ func getGroupUserStatement(profileType, source string) string {
 	return isGroupUserStmt
 }
 
-// getGroupUserStatement generates a where statement for source of the user/account. returns a statement with source value.
+// GetSourceStmtWithParams generates a where statement for source of the user/account. returns a statement with source value.
 func (store *MemSQL) GetSourceStmtWithParams(projectID int64, profileType, source string, hasAllUserProperties bool) (string, int, error) {
 	sourceStmt := ""
 	sourceID := 0
@@ -989,7 +987,7 @@ func (store *MemSQL) GetUsersAssociatedToDomain(projectID int64, minMax *model.M
 	return userProfiles, http.StatusOK
 }
 
-func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile, hasUserProp bool) ([]model.Profile, int) {
+func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile) ([]model.Profile, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -1013,9 +1011,6 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profile
 	}
 
 	isGroupUserString := "is_group_user=1 AND"
-	if hasUserProp {
-		isGroupUserString = ""
-	}
 
 	// Fetching accounts associated to the domain
 	// SELECT group_6_user_id as identity, properties FROM `users`  WHERE (project_id='15000001' AND source!='9' AND
@@ -1056,6 +1051,7 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profile
 	}
 	return profiles, http.StatusOK
 }
+
 func (store *MemSQL) GetSourceStringForAccountsV2(projectID int64, source string, isAllUserProperties bool) (string, int, int) {
 	var sourceString string
 	groupName := source
@@ -2214,6 +2210,9 @@ func (store *MemSQL) GetAnalyzeResultForSegments(projectId int64, profileType st
 	}
 
 	// Update parameters
+	if profileType == model.PROFILE_TYPE_ACCOUNT {
+		query.Source = query.GroupAnalysis
+	}
 	query.Caller = profileType
 	query.Class = model.QueryClassEvents
 	query.From = U.TimeNowZ().AddDate(0, 0, -28).Unix()

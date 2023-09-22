@@ -1013,8 +1013,10 @@ func ComputeAccountScoreOnLastEvent(project_id int64, weights model.AccWeights, 
 	var accountScore float64
 	weightValue := weights.WeightConfig
 	for _, w := range weightValue {
-		if ew, ok := eventsCount[w.WeightId]; ok {
-			accountScore += ew * float64(w.Weight_value)
+		if !w.Is_deleted {
+			if ew, ok := eventsCount[w.WeightId]; ok {
+				accountScore += ew * float64(w.Weight_value)
+			}
 		}
 	}
 	return accountScore, nil

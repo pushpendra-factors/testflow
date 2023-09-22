@@ -871,7 +871,7 @@ type Model interface {
 	GetSourceStringForAccountsV2(projectID int64, source string, isAllUserProperties bool) (string, int, int)
 	AccountPropertiesForDomainsEnabledV2(projectID int64, id string, groupName string) (map[string]interface{}, bool, int)
 	AccountPropertiesForDomainsDisabledV1(projectID int64, id string) (string, map[string]interface{}, []interface{}, int)
-	AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile, hasUserProp bool) ([]model.Profile, int)
+	AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile) ([]model.Profile, int)
 	GetAccountOverview(projectID int64, id, groupName string) (model.Overview, int, string)
 	GetIntentTimeline(projectID int64, groupName string, id string) (model.UserTimeline, error)
 	GetMinAndMaxUpdatedAt(profileType string, whereStmt string, limitVal int, minMaxQParams []interface{}) (*model.MinMaxUpdatedAt, int, string)

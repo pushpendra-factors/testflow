@@ -368,3 +368,60 @@ func LogComputeTimeWithQueryRequestID(startTime time.Time, reqID string, logFiel
 	log.WithFields(*logFields).WithField("req_id", reqID).
 		WithField("time_in_secs", timeTaken).Info("Computations on query results completed.")
 }
+
+func isValidType(value interface{}) bool {
+	switch value.(type) {
+	case int, uint, int8, uint8, int16, uint16, int32, uint32, int64, uint64, float32, float64, string:
+		return true
+	default:
+		return false
+	}
+}
+
+func DiffPostgresJsonb(projectID int64, oldPostgresJsonb, newPostgresJsonb *postgres.Jsonb, caller string) *postgres.Jsonb {
+	logCtx := log.WithField("project_id", projectID).WithField("caller", caller)
+
+	oldJMap, err1 := DecodePostgresJsonb(oldPostgresJsonb)
+	newJMap, err2 := DecodePostgresJsonb(newPostgresJsonb)
+	if err1 != nil || err2 != nil {
+		logCtx.WithField("error1", err1).
+			WithField("error2", err2).
+			WithField("old_json", oldPostgresJsonb).
+			WithField("new_json", newPostgresJsonb).
+			Error("Failed to decode json. Retruning new json as diff.")
+		return newPostgresJsonb
+	}
+
+	diffMap := make(map[string]interface{}, 0)
+	for k, v := range *oldJMap {
+
+		newV, exists := (*newJMap)[k]
+		if exists && isValidType(newV) && isValidType(v) {
+			if v != newV {
+				diffMap[k] = newV
+			}
+		}
+
+		// whitelisted property for a non-primitive type.
+		if k == IDENTIFIED_USER_ID {
+			diffMap[k] = newV
+		}
+
+		if !exists && isValidType(newV) {
+			diffMap[k] = newV
+		}
+	}
+
+	logCtx.WithField("old_len", len(*oldJMap)).
+		WithField("new_len", len(*newJMap)).
+		WithField("delta_len", len(diffMap)).
+		Info("Diff of properties on overwrite.")
+
+	diffPostgresJsonb, err := EncodeToPostgresJsonb(&diffMap)
+	if err != nil {
+		logCtx.Error("Failed to encode the diff json. Retruning new json as diff.")
+		return newPostgresJsonb
+	}
+
+	return diffPostgresJsonb
+}

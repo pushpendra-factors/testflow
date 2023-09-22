@@ -95,10 +95,10 @@ export const getAccountOverview = (projectId, source, id) => (dispatch) => {
   });
 };
 
-export const getProfileUsers = (projectId, payload, agentId) => (dispatch) => {
+export const getProfileUsers = (projectId, payload) => (dispatch) => {
   dispatch({ type: 'FETCH_PROFILE_USERS_LOADING' });
   return new Promise((resolve) => {
-    fetchProfileUsers(projectId, payload, agentId)
+    fetchProfileUsers(projectId, payload)
       .then((response) => {
         const data = response.data.map((user) => ({
           ...user,

@@ -23,6 +23,7 @@ import Testimonial3 from '../../assets/images/testimonials/testimonial-3.png';
 import Testimonial4 from '../../assets/images/testimonials/testimonial-4.png';
 import Testimonial5 from '../../assets/images/testimonials/testimonial-5.png';
 import HappyCustomers from '../../assets/images/happy_curtomers.png';
+import useScript from 'hooks/useScript';
 
 function SignUp({ signup }) {
   const [form] = Form.useForm();
@@ -30,6 +31,15 @@ function SignUp({ signup }) {
   const [errorInfo, seterrorInfo] = useState(null);
   const [formData, setformData] = useState(null);
   const [emailValidateType, setEmailValidateType] = useState('onBlur');
+
+  useScript({
+    url: 'https://js.hs-scripts.com/6188127.js',
+    async: true,
+    defer: true,
+    id: 'hs-script-loader'
+  });
+
+ 
 
   const checkError = () => {
     const url = new URL(window.location.href);

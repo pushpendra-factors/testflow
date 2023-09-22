@@ -4,18 +4,21 @@ export const ADWORDS_INTERNAL_REDIRECT_URI = '?googleAds=manageAccounts';
 export const ADWORDS_REDIRECT_URI_NEW = '/adwords/v1/auth/redirect';
 
 export const getDefaultTimelineConfigForSixSignal = (config) => {
-  const defaultTableProps = [
-    '$6Signal_domain',
+  const defaultProps = [
+    '$6Signal_name',
     '$6Signal_industry',
-    '$6Signal_employee_range'
+    '$6Signal_employee_range',
+    '$6Signal_revenue_range'
   ];
   if (!config) {
     return {
       account_config: {
-        table_props: defaultTableProps
+        table_props: defaultProps,
+        leftpane_props:defaultProps
       },
       user_config: {
-        table_props: [...defaultTableProps, '$session_spent_time']
+        table_props: [...defaultProps, '$session_spent_time'],
+        leftpane_props: [...defaultProps, '$session_spent_time']
       }
     };
   } else {
@@ -25,11 +28,11 @@ export const getDefaultTimelineConfigForSixSignal = (config) => {
       ...config?.timelines_config,
       account_config: {
         ...config?.timelines_config?.account_config,
-        table_props: uniq(prevAccountTableProps.concat(defaultTableProps))
+        table_props: uniq(prevAccountTableProps.concat(defaultProps))
       },
       user_config: {
         ...config?.timelines_config?.user_config,
-        table_props: uniq(prevUsertTableProps.concat(defaultTableProps))
+        table_props: uniq(prevUsertTableProps.concat(defaultProps))
       }
     };
   }

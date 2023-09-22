@@ -950,6 +950,10 @@ func IsCountryFilterPassed(sixSignalConfig model.SixSignalConfig, isoCode, count
 		}
 	}
 
+	if !isIsoCode {
+		log.Warn("Country name present in sixsignal config with sixsignal config: ", sixSignalConfig)
+	}
+
 	var contains bool
 	if isIsoCode {
 		contains = mapOfCountries[isoCode]
@@ -2048,6 +2052,7 @@ func updateInitialUserPropertiesFromUpdateEventProperties(projectID int64,
 		return http.StatusBadRequest
 	}
 
+	U.DiffPostgresJsonb(projectID, existingUserProperties, updateUserPropertiesJson, C.GetConfig().AppName+"-UPDATE_EVENT_PROPERTIES")
 	return overwriteUserPropertiesOnTable(projectID, userID, eventID, updateUserPropertiesJson)
 }
 
