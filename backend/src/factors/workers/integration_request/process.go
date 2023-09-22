@@ -91,6 +91,8 @@ func main() {
 	deviceServiceUrl := flag.String("device_service_url", "http://0.0.0.0:3000/device_service", "URL for the device detection service")
 	enableDeviceServiceByProjectID := flag.String("enable_device_service_by_project_id", "", "")
 
+	userPropertyUpdateOptProjects := flag.String("user_property_update_opt_projects", "", "")
+
 	flag.Parse()
 
 	workerName := defaultWorkerName
@@ -147,6 +149,7 @@ func main() {
 		RemoveDisabledEventUserPropertiesByProjectID:       *removeDisabledEventUserPropertiesByProjectID,
 		DeviceServiceURL:                                   *deviceServiceUrl,
 		EnableDeviceServiceByProjectID:                     *enableDeviceServiceByProjectID,
+		UserPropertyUpdateOptProjects:                      *userPropertyUpdateOptProjects,
 	}
 	C.InitConf(config)
 
