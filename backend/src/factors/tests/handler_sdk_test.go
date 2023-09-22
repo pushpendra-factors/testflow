@@ -626,6 +626,7 @@ func TestSDKTrackHandler(t *testing.T) {
 	assert.NotNil(t, userPropertiesMap3[U.UP_SCREEN_WIDTH])
 	assert.NotNil(t, userPropertiesMap3[U.UP_SCREEN_HEIGHT])
 	assert.NotNil(t, userPropertiesMap3[U.UP_DAY_OF_FIRST_EVENT])
+
 	assert.Equal(t, time.Unix(rEvent.Timestamp, 0).Weekday().String(), userPropertiesMap3[U.UP_DAY_OF_FIRST_EVENT])
 	retUserFirstVisitHour, _, _ := time.Unix(rEvent.Timestamp, 0).Clock()
 	assert.NotNil(t, userPropertiesMap3[U.UP_HOUR_OF_FIRST_EVENT])
