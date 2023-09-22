@@ -124,7 +124,6 @@ const GlobalFilter = ({
                   closeFilter={closeFilter}
                   filterProps={filterProps}
                   refValue={refValue}
-                  groupName={groupName}
                 />
               </div>
               {index !== orFilterIndex && (
@@ -143,7 +142,6 @@ const GlobalFilter = ({
                     closeFilter={closeFilter}
                     refValue={refValue}
                     showOr={true}
-                    groupName={groupName}
                   />
                 </div>
               )}
@@ -169,7 +167,6 @@ const GlobalFilter = ({
                   closeFilter={closeFilter}
                   filterProps={filterProps}
                   refValue={refValue}
-                  groupName={groupName}
                 />
               </div>
               <div key={index + 1} className={`mt-2`}>
@@ -184,7 +181,6 @@ const GlobalFilter = ({
                   filterProps={filterProps}
                   refValue={refValue}
                   showOr={true}
-                  groupName={groupName}
                 />
               </div>
             </div>
@@ -207,7 +203,6 @@ const GlobalFilter = ({
             deleteFilter={() => closeFilter()}
             closeFilter={closeFilter}
             refValue={lastRef + 1}
-            groupName={groupName}
           />
         </div>
       );
