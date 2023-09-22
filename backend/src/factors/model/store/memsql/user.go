@@ -1924,8 +1924,9 @@ func (store *MemSQL) overwriteUserPropertiesByIDWithTransaction(projectID int64,
 	if C.IsUserPropertyUpdateOptProject(projectID) {
 		propertyKeyValues := U.DiffPostgresJsonb(projectID, existingProperties, newProperties, C.GetConfig().AppName)
 
+		_, jsonKeyExists := (*propertyKeyValues)[U.UP_META_OBJECT_IDENTIFIER_KEY]
 		// Use key based update only if the keys to be updated is under the limit.
-		if len(*propertyKeyValues) < 25 {
+		if !jsonKeyExists && len(*propertyKeyValues) < 25 {
 			return store.overwriteUserPropertiesKeysByID(dbTx, projectID, id, propertyKeyValues, propertiesUpdateTimestamp)
 		}
 	}
