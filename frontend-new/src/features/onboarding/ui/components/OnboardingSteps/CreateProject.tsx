@@ -24,7 +24,7 @@ import {
 import { ConnectedProps, connect, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { TimeZoneOffsetValueArr } from 'Utils/constants';
-import { projectAgentInvite } from 'Reducers/agentActions';
+import { projectAgentInvite, fetchProjectAgents } from 'Reducers/agentActions';
 import useMobileView from 'hooks/useMobileView';
 import {
   CommonStepsProps,
@@ -36,6 +36,7 @@ import useQuery from 'hooks/useQuery';
 import { useHistory } from 'react-router-dom';
 import { PathUrls } from 'Routes/pathUrls';
 import style from './index.module.scss';
+import { AdminLock } from 'Routes/feature';
 const { Option } = Select;
 
 const Step1 = ({
@@ -43,7 +44,8 @@ const Step1 = ({
   udpateProjectDetails,
   projectAgentInvite,
   udpateProjectSettings,
-  incrementStepCount
+  incrementStepCount,
+  fetchProjectAgents
 }: OnboardingStep1Props) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
@@ -56,6 +58,11 @@ const Step1 = ({
   const { active_project, currentProjectSettings } = useSelector(
     (state: any) => state.global
   );
+  const { agents } = useSelector((state) => state.agent);
+  const isSolutionsEmailInvited = agents?.find((agent) =>
+    AdminLock(agent?.email)
+  );
+
   const onboarding_steps: OnboardingStepsConfig =
     currentProjectSettings?.onboarding_steps;
   const isMobileView = useMobileView();
@@ -67,6 +74,10 @@ const Step1 = ({
     try {
       setLoading(true);
       if (isFormSubmitted) {
+        if (checkbox && !isSolutionsEmailInvited) {
+          await inviteUser(active_project?.id, 'solutions@factors.ai');
+          await fetchProjectAgents(active_project?.id);
+        }
         if (imageUrl) {
           await uploadImage(active_project?.id);
         }
@@ -92,6 +103,7 @@ const Step1 = ({
       const projectId = createProjectRes?.data?.id;
       if (checkbox) {
         await inviteUser(projectId, 'solutions@factors.ai');
+        await fetchProjectAgents(projectId);
       }
       if (imageUrl) {
         await uploadImage(projectId);
@@ -194,6 +206,17 @@ const Step1 = ({
     form.setFieldsValue(getInitialFormValues());
     setProjectName(getInitialFormValues().projectName);
   }, [isFormSubmitted, form, getInitialFormValues]);
+
+  useEffect(() => {
+    if (isFormSubmitted) {
+      //check if solutions was invited before
+      if (isSolutionsEmailInvited) {
+        setcheckbox(true);
+      } else {
+        setcheckbox(false);
+      }
+    }
+  }, [isFormSubmitted, isSolutionsEmailInvited]);
 
   return (
     <div>
@@ -400,8 +423,8 @@ const Step1 = ({
               <Form.Item label={null} name='invite_support'>
                 <div className='flex items-center'>
                   <Checkbox
-                    disabled={isFormSubmitted}
-                    defaultChecked={checkbox}
+                    checked={checkbox}
+                    disabled={isFormSubmitted && isSolutionsEmailInvited}
                     onChange={(e) => setcheckbox(e.target.checked)}
                     className={'mt-1'}
                   ></Checkbox>
@@ -454,7 +477,8 @@ const mapDispatchToProps = (dispatch) =>
       createProjectWithTimeZone,
       udpateProjectDetails,
       projectAgentInvite,
-      udpateProjectSettings
+      udpateProjectSettings,
+      fetchProjectAgents
     },
     dispatch
   );
