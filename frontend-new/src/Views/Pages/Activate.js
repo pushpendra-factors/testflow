@@ -10,12 +10,20 @@ import { connect } from 'react-redux';
 import styles from './index.module.scss';
 import MoreAuthOptions from './MoreAuthOptions';
 import { SSO_ACTIVATE_URL } from '../../utils/sso';
+import useScript from 'hooks/useScript';
 
 function Activate(props) {
   const [form] = Form.useForm();
   const [errorInfo, seterrorInfo] = useState(null);
   const [dataLoading, setDataLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
+
+  useScript({
+    url: 'https://js.hs-scripts.com/6188127.js',
+    async: true,
+    defer: true,
+    id: 'hs-script-loader'
+  });
 
   const history = useHistory();
   const routeChange = (url) => {
