@@ -11,6 +11,7 @@ import Congrats from './Congrats';
 import MoreAuthOptions from './MoreAuthOptions';
 import { SSO_SIGNUP_URL } from '../../utils/sso';
 import sanitizeInputString from 'Utils/sanitizeInputString';
+import useScript from 'hooks/useScript';
 
 function SignUp({ signup }) {
   const [form] = Form.useForm();
@@ -18,6 +19,13 @@ function SignUp({ signup }) {
   const [errorInfo, seterrorInfo] = useState(null);
   const [formData, setformData] = useState(null);
   const [showForm, setShowForm] = useState(false);
+
+  useScript({
+    url: 'https://js.hs-scripts.com/6188127.js',
+    async: true,
+    defer: true,
+    id: 'hs-script-loader'
+  });
 
   const history = useHistory();
   const routeChange = (url) => {
