@@ -404,7 +404,7 @@ function AccountDetails({
   const handleOptionBackClick = useCallback(() => {
     history.replace(PathUrls.ProfileAccounts, {
       activeSegment: location.state?.activeSegment,
-      fromDetails: location.state?.fromDetails,
+      fromDetails: true,
       accountPayload: location.state?.accountPayload,
       currentPage: location.state?.currentPage
     });

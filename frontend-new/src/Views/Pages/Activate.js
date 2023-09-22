@@ -11,6 +11,7 @@ import LoggedOutScreenHeader from 'Components/GenericComponents/LoggedOutScreenH
 import LoginIllustration from '../../assets/images/login_Illustration.png';
 import PasswordChecks from 'Components/GenericComponents/PasswordChecks';
 import sanitizeInputString from 'Utils/sanitizeInputString';
+import useScript from 'hooks/useScript';
 
 function Activate(props) {
   const [form] = Form.useForm();
@@ -21,6 +22,14 @@ function Activate(props) {
     password: 'onBlur',
     confirmPassword: 'onBlur'
   });
+
+  useScript({
+    url: 'https://js.hs-scripts.com/6188127.js',
+    async: true,
+    defer: true,
+    id: 'hs-script-loader'
+  });
+
   const history = useHistory();
 
   const checkError = () => {

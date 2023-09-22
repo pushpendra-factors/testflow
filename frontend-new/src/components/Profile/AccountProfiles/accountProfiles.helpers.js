@@ -218,7 +218,7 @@ export const computeFilterProperties = ({
         props[group] = groupProperties[group];
       });
     } else props[source] = groupProperties[source];
-    props.user = userProperties;
+    // props.user = userProperties;
   } else if (profileType === 'user') {
     props.user = userProperties;
   }

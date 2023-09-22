@@ -129,6 +129,9 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	assert.True(t, event.CreatedAt.After(start))
 	assert.True(t, event.UpdatedAt.After(start))
 	assert.Equal(t, event.CreatedAt, event.UpdatedAt)
+	user, errCode := store.GetStore().GetUser(projectId, userId)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, event.Timestamp, user.LastEventAt.Unix())
 
 	// Test Get Event on the created.
 	retEvent, errCode := store.GetStore().GetEvent(projectId, userId, event.ID)

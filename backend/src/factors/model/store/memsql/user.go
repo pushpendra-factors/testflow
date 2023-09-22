@@ -1684,6 +1684,8 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID int64, id string,
 
 	// Skip merge by customer_user_id, if customer_user_id is not available.
 	if user.CustomerUserId == "" {
+		// Delta of properties keys to be updated..
+		U.DiffPostgresJsonb(projectID, &user.Properties, newPropertiesMergedJSON, C.GetConfig().AppName)
 		errCode = store.OverwriteUserPropertiesByID(projectID, id, newPropertiesMergedJSON, true, newUpdateTimestamp, sourceValue)
 		if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
 			return nil, http.StatusInternalServerError
@@ -1700,6 +1702,8 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID int64, id string,
 
 	// Skip merge by customer_user_id, if only the current user has the customer_user_id.
 	if len(users) == 1 {
+		// Delta of properties keys to be updated..
+		U.DiffPostgresJsonb(projectID, &user.Properties, newPropertiesMergedJSON, C.GetConfig().AppName)
 		errCode = store.OverwriteUserPropertiesByID(projectID, id, newPropertiesMergedJSON, true, newUpdateTimestamp, sourceValue)
 		if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
 			return nil, http.StatusInternalServerError
@@ -1773,6 +1777,8 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID int64, id string,
 			mergedPropertiesOfUserJSON = mergedPropertiesAfterSkipJSON
 		}
 
+		// Delta of properties keys to be updated..
+		U.DiffPostgresJsonb(projectID, &user.Properties, mergedPropertiesAfterSkipJSON, C.GetConfig().AppName)
 		errCode = store.OverwriteUserPropertiesByID(projectID, user.ID,
 			mergedPropertiesAfterSkipJSON, true, newUpdateTimestamp, sourceValue)
 		if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
@@ -2454,6 +2460,8 @@ func (store *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdatedV2(
 			continue
 		}
 
+		// Delta of properties keys to be updated..
+		U.DiffPostgresJsonb(projectID, existingUserProperties, userPropertiesJsonb, C.GetConfig().AppName)
 		errCode = store.OverwriteUserPropertiesByID(projectID, userID, userPropertiesJsonb, false, 0, "")
 		if errCode != http.StatusAccepted {
 			logCtx.WithField("err_code", errCode).Error("Failed to overwrite user properties record.")
@@ -3006,6 +3014,8 @@ func (store *MemSQL) UpdateUserGroupProperties(projectID int64, userID string,
 		newUpdateTimestamp = user.PropertiesUpdatedTimestamp
 	}
 
+	// Delta of properties keys to be updated..
+	U.DiffPostgresJsonb(projectID, &user.Properties, mergedPropertiesJSON, C.GetConfig().AppName)
 	errCode = store.OverwriteUserPropertiesByID(projectID, user.ID, mergedPropertiesJSON, true, newUpdateTimestamp, "")
 	if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
 		logCtx.WithField("err_code", errCode).WithField("user_id", user.ID).Error("Failed to update user properties on group user.")

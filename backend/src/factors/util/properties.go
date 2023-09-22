@@ -1631,15 +1631,15 @@ var STANDARD_GROUP_DISPLAY_NAMES = map[string]string{
 	GROUP_NAME_HUBSPOT_DEAL:           "Hubspot Deals",
 	GROUP_NAME_SALESFORCE_ACCOUNT:     "Salesforce Accounts",
 	GROUP_NAME_SALESFORCE_OPPORTUNITY: "Salesforce Opportunities",
-	GROUP_NAME_SIX_SIGNAL:             "6Signal Domains",
+	GROUP_NAME_SIX_SIGNAL:             "Identified Companies",
 	GROUP_NAME_LINKEDIN_COMPANY:       "Linkedin Company Engagements",
 	GROUP_NAME_G2:                     "G2 Engagements",
 }
 
 var ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES = map[string]string{
-	IN_LINKEDIN:     "In Linkedin",
+	IN_LINKEDIN:     "Engaged on LinkedIn",
 	IN_HUBSPOT:      "In Hubspot",
-	IN_G2:           "In G2",
+	IN_G2:           "Visited G2",
 	VISITED_WEBSITE: "Visited Website",
 	IN_SALESFORCE:   "In Salesforce",
 }
