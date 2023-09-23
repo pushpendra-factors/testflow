@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"reflect"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -413,8 +414,11 @@ func DiffPostgresJsonb(projectID int64, oldPostgresJsonb,
 	}
 
 	// Whitelisted property of type map.
-	if v, exists := (*newJMap)[UP_META_OBJECT_IDENTIFIER_KEY]; exists {
-		obj, err := json.Marshal(v)
+	vNew, newExists := (*newJMap)[UP_META_OBJECT_IDENTIFIER_KEY]
+	vOld, oldExists := (*oldJMap)[UP_META_OBJECT_IDENTIFIER_KEY]
+	addProperty := (!oldExists && newExists) || (oldExists && newExists && !reflect.DeepEqual(vNew, vOld))
+	if addProperty {
+		obj, err := json.Marshal(vNew)
 		if err == nil {
 			diffMap[UP_META_OBJECT_IDENTIFIER_KEY] = string(obj)
 		}

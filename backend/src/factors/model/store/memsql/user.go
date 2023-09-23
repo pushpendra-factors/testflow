@@ -1978,7 +1978,7 @@ func (store *MemSQL) overwriteUserPropertiesKeysByID(dbTx *gorm.DB, projectID in
 			updateStr = updateStr + ", " + fmt.Sprintf("properties_updated_timestamp = %d", propertiesUpdatedTimestamp)
 		}
 	} else {
-		logCtx.Error("No change in properties. Update skipped.")
+		logCtx.Warn("No change in properties. Update skipped.")
 		return http.StatusAccepted
 	}
 
