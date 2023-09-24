@@ -315,7 +315,7 @@ func (store *MemSQL) GetAccountsScore(projectId int64, groupId int, ts string, d
 			return nil, nil, err
 		}
 
-		currentDate := GetDateOnlyFromTimestamp(counts_map.Date)
+		currentDate := U.GetDateOnlyFromTimestamp(counts_map.Date)
 		account_score = ComputeScoreWithWeightsAndCounts(projectId, weights, counts_map.EventsCount, currentDate)
 		r.Id = account_id
 		r.Score = float32(account_score)
@@ -399,8 +399,8 @@ func ComputeTrendWrapper(projectId int64, currentDate int64, countsMapDays map[s
 
 	for dayIdx := salewindow; dayIdx > 0; dayIdx-- {
 		periodDateInit := periodStartDate.AddDate(0, 0, int(dayIdx)).Unix()
-		dateString := GetDateOnlyFromTimestamp(periodDateInit)
-		orderedDayString := GenDateStringsForLastNdays(periodDateInit, weights.SaleWindow)
+		dateString := U.GetDateOnlyFromTimestamp(periodDateInit)
+		orderedDayString := U.GenDateStringsForLastNdays(periodDateInit, weights.SaleWindow)
 		score := computeTrendInPeriod(projectId, periodDateInit, orderedDayString, countsMapDays, weights)
 		scoreOnDays[dateString] = float32(score)
 	}
@@ -437,7 +437,7 @@ func CalculatescoresPerAccount(projectId int64, weights *model.AccWeights, curre
 		return nil, nil, -1, err
 	}
 
-	orderedDayString := GenDateStringsForLastNdays(currentDate, weights.SaleWindow)
+	orderedDayString := U.GenDateStringsForLastNdays(currentDate, weights.SaleWindow)
 	countsInInt := make(map[string]float64)
 	for _, day := range orderedDayString {
 		accountScore := accountScoreMap[day]
@@ -486,19 +486,6 @@ func OrderCountDays(countDays map[string]model.LatestScore) []string {
 
 	return orderedDays
 
-}
-
-func GenDateStringsForLastNdays(currDate int64, salewindow int64) []string {
-
-	dateStrings := make([]string, 0)
-
-	currts := time.Unix(currDate, 0)
-	for idx := salewindow; idx > 0; idx-- {
-		ts := currts.AddDate(0, 0, -1*int(idx))
-		dstring := GetDateOnlyFromTimestamp(ts.Unix())
-		dateStrings = append(dateStrings, dstring)
-	}
-	return dateStrings
 }
 
 func (store *MemSQL) GetUserScore(projectId int64, userId string, eventTS string, debug bool, is_anonymous bool) (model.PerUserScoreOnDay, error) {
@@ -587,7 +574,7 @@ func ComputeUserScoreOnCustomerId(db *gorm.DB, id string, projectId int64, event
 			return 0, nil, err
 		}
 
-		date := GetDateOnlyFromTimestamp(le.Date)
+		date := U.GetDateOnlyFromTimestamp(le.Date)
 		accountScore := ComputeScoreWithWeightsAndCounts(projectId, &weights, le.EventsCount, date)
 
 		var uday model.PerUserScoreOnDay
@@ -625,13 +612,6 @@ func ComputeAccountScore(weights model.AccWeights, eventsCount map[string]int64,
 
 	account_score_after_decay := accountScore * float32(decay_value)
 	return account_score_after_decay, eventsCountMap, decay_value, nil
-}
-
-func GetDateOnlyFromTimestamp(ts int64) string {
-	year, month, date := time.Unix(ts, 0).UTC().Date()
-	data := fmt.Sprintf("%d%02d%02d", year, month, date)
-	return data
-
 }
 
 func (store *MemSQL) GetUserScoreOnIds(projectId int64, usersAnonymous, usersNonAnonymous []string, debug bool) (map[string]model.PerUserScoreOnDay, error) {
@@ -676,7 +656,7 @@ func (store *MemSQL) GetUserScoreOnIds(projectId int64, usersAnonymous, usersNon
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to unmarshall json counts for users per day")
 		}
-		ts := GetDateOnlyFromTimestamp(le.Date)
+		ts := U.GetDateOnlyFromTimestamp(le.Date)
 
 		accountScore, _ := ComputeAccountScoreOnLastEvent(projectId, *weights, le.EventsCount)
 		accountScore = normalize_score(accountScore)
@@ -744,7 +724,7 @@ func (store *MemSQL) GetAccountScoreOnIds(projectId int64, accountIds []string, 
 			logCtx.WithError(err).Error("Failed to unmarshall json counts for users per day")
 		}
 
-		ts := GetDateOnlyFromTimestamp(le.Date)
+		ts := U.GetDateOnlyFromTimestamp(le.Date)
 		resultPerUser.Timestamp = ts
 
 		accountScore, _ := ComputeAccountScoreOnLastEvent(projectId, *weights, le.EventsCount)
@@ -814,7 +794,7 @@ func ComputeUserScoreNonAnonymous(db *gorm.DB, weights model.AccWeights, project
 	}
 	for userKey, userCounts := range usercountsmap {
 		var r model.PerUserScoreOnDay
-		ts := GetDateOnlyFromTimestamp(userCounts.Date)
+		ts := U.GetDateOnlyFromTimestamp(userCounts.Date)
 		r.Timestamp = ts
 		accountScore := ComputeScoreWithWeightsAndCounts(projectId, &weights, userCounts.EventsCount, ts)
 		accountScore = normalize_score(accountScore)

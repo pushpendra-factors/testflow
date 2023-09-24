@@ -969,15 +969,12 @@ type Model interface {
 
 	//account scoring
 	GetWeightsByProject(project_id int64) (*model.AccWeights, int)
-	UpdateUserEventsCount(ev []model.EventsCountScore, lastev map[string]model.LatestScore) error
-	UpdateGroupEventsCount(ev []model.EventsCountScore, lastev map[string]model.LatestScore) error
+	UpdateUserEventsCount(projectId int64, ev map[string]map[string]model.LatestScore) error
+	UpdateGroupEventsCount(projectId int64, ev map[string]map[string]model.LatestScore, lastev map[string]model.LatestScore) error
 	UpdateUserEventsCountGO(projectId int64, ev map[string]map[string]model.LatestScore) error
 	UpdateGroupEventsCountGO(projectId int64, ev map[string]map[string]model.LatestScore, lastev map[string]model.LatestScore) error
 	GetAccountsScore(project_id int64, group_id int, ts string, debug bool) ([]model.PerAccountScore, *model.AccWeights, error)
 	GetUserScore(project_id int64, user_id string, ts string, debug bool, is_anonymus bool) (model.PerUserScoreOnDay, error)
-	GetAllUserScore(project_id int64, debug bool) ([]model.AllUsersScore, *model.AccWeights, error)
-	GetAllUserScoreOnDay(project_id int64, ts string, debug bool) ([]model.AllUsersScore, *model.AccWeights, error)
-	GetAllUserScoreLatest(project_id int64, debug bool) ([]model.AllUsersScore, *model.AccWeights, error)
 	GetUserScoreOnIds(projectId int64, usersAnonymous, usersNonAnonymous []string, debug bool) (map[string]model.PerUserScoreOnDay, error)
 	GetAccountScoreOnIds(projectId int64, accountIds []string, debug bool) (map[string]model.PerUserScoreOnDay, error)
 	GetPerAccountScore(projectId int64, timestamp string, userId string, num_days int, debug bool) (model.PerAccountScore, *model.AccWeights, error)
