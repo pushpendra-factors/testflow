@@ -29,12 +29,12 @@ type LinkedinLastSyncInfoPayload struct {
 	CustomerAdAccountID string `json:"customer_ad_account_id"`
 }
 type LinkedinLastSyncInfo struct {
-	ProjectID             int64  `json:"project_id"`
-	CustomerAdAccountID   string `json:"customer_ad_account_id"`
-	DocumentType          int    `json:"document_type"`
-	DocumentTypeAlias     string `json:"type_alias"`
-	LastTimestamp         int64  `json:"last_timestamp"`
-	LastBackfillTimestamp int64  `json:"last_backfill_timestamp"`
+	ProjectID              int64  `json:"project_id"`
+	CustomerAdAccountID    string `json:"customer_ad_account_id"`
+	DocumentType           int    `json:"document_type"`
+	DocumentTypeAlias      string `json:"type_alias"`
+	LastTimestamp          int64  `json:"last_timestamp"`
+	BackfillStartTimestamp int64  `json:"backfill_start_timestamp"`
 }
 
 type LinkedinDeleteDocumentsPayload struct {
@@ -42,6 +42,13 @@ type LinkedinDeleteDocumentsPayload struct {
 	CustomerAdAccountID string `json:"customer_ad_account_id"`
 	Timestamp           int64  `json:"timestamp"`
 	TypeAlias           string `json:"type_alias"`
+}
+
+type LinkedinCampaignGroupInfoRequestPayload struct {
+	ProjectID           int64  `json:"project_id"`
+	CustomerAdAccountID string `json:"customer_ad_account_id"`
+	StartTimestamp      string `json:"start_timestamp"`
+	EndTimestamp        string `json:"end_timestamp"`
 }
 type DomainDataResponse struct {
 	ProjectID           int64  `json:"project_id"`
@@ -53,6 +60,8 @@ type DomainDataResponse struct {
 	Domain              string `json:"domain"`
 	HeadQuarters        string `json:"headquarters"`
 	PreferredCountry    string `json:"preferred_country"`
+	CampaignGroupID     string `json:"campaign_group_id"`
+	CampaignGroupName   string `json:"campaign_group_name"`
 	Impressions         int64  `json:"impressions"`
 	Clicks              int64  `json:"clicks"`
 }
@@ -68,7 +77,7 @@ const (
 )
 
 var ObjectsForLinkedin = []string{AdwordsCampaign, AdwordsAdGroup}
-var ObjectsForLinkedinCompany = []string{LinkedinCompany}
+var ObjectsForLinkedinCompany = []string{LinkedinCompany, AdwordsCampaign}
 var ObjectToDisplayCategoryForLinkedin = map[string]string{
 	AdwordsCampaign: "Campaign Group",
 	AdwordsAdGroup:  "Campaign",

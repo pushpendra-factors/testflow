@@ -336,6 +336,8 @@ type Model interface {
 	GetEventsByEventNameIDANDTimeRange(projectID int64, eventNameID string,
 		startTimestamp int64, endTimestamp int64) ([]model.Event, int)
 	PullEventIdsWithEventNameId(projectId int64, startTimestamp int64, endTimestamp int64, eventNameID string) ([]string, map[string]model.EventIdToProperties, error)
+	GetLinkedinEventFieldsBasedOnTimestamp(projectID int64, timestamp int64) (map[int64]map[string]map[string]bool,
+		map[int64]map[string]map[string]bool, map[int64]map[string]bool, map[int64]map[string]bool, int)
 
 	// clickable_elements
 	UpsertCountAndCheckEnabledClickableElement(projectID int64, payload *model.CaptureClickPayload) (isEnabled bool, status int, err error)
@@ -362,7 +364,10 @@ type Model interface {
 	GetSQLQueryAndParametersForLinkedinQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string, fetchSource bool,
 		limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string, int)
 	GetDomainData(projectID string) ([]model.DomainDataResponse, int)
+	GetCompanyDataFromLinkedin(projectID string) ([]model.DomainDataResponse, string, int)
+
 	UpdateLinkedinGroupUserCreationDetails(domainData model.DomainDataResponse) error
+	GetCampaignGroupInfoForGivenTimerange(campaignGroupInfoRequestPayload model.LinkedinCampaignGroupInfoRequestPayload) ([]model.LinkedinDocument, int)
 	//bingads document
 	GetBingadsFilterValuesSQLAndParams(projectID int64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int)
 

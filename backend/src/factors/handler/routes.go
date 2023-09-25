@@ -586,6 +586,9 @@ func InitDataServiceRoutes(r *gin.Engine) {
 	dataServiceRouteGroup.POST("/linkedin/documents/add_multiple", mid.FeatureMiddleware([]string{M.DS_FACEBOOK}),
 		IH.DataServiceLinkedinAddMultipleDocumentsHandler)
 
+	dataServiceRouteGroup.GET("/linkedin/documents/campaign_group_info", mid.FeatureMiddleware([]string{M.DS_LINKEDIN}),
+		IH.DataServiceLinkedinGetCampaignGroupInfoHandler)
+
 	dataServiceRouteGroup.DELETE("/linkedin/documents",
 		mid.FeatureMiddleware([]string{M.DS_LINKEDIN}), IH.DataServiceLinkedinDeleteDocumentsHandler)
 
