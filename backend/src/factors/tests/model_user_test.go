@@ -1788,7 +1788,7 @@ func clearbitAnalysisTestDBClearBit(t *testing.T) {
 
 }
 
-func TestUserGetUserWithoutProperties(t *testing.T) {
+func TestUserGetUserWithoutJSONColumns(t *testing.T) {
 	// Initialize a project for the user.
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
@@ -1805,7 +1805,7 @@ func TestUserGetUserWithoutProperties(t *testing.T) {
 	err = json.Unmarshal(user.Properties.RawMessage, &propertiesMap)
 	assert.Nil(t, err)
 	assert.Equal(t, "india", propertiesMap["country"])
-	user, errCode = store.GetStore().GetUserWithoutProperties(projectID, createUserID)
+	user, errCode = store.GetStore().GetUserWithoutJSONColumns(projectID, createUserID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Nil(t, user.Properties.RawMessage)
 	assert.Equal(t, *user.Source, model.UserSourceWeb)

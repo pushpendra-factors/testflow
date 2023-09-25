@@ -1236,7 +1236,7 @@ func ShouldAllowIdentificationOverwrite(projectID int64, userID string,
 		return false
 	}
 
-	user, status := store.GetStore().GetUserWithoutProperties(projectID, userID)
+	user, status := store.GetStore().GetUserWithoutJSONColumns(projectID, userID)
 	if status != http.StatusFound {
 		if status != http.StatusNotFound {
 			log.WithFields(log.Fields{"project_id": projectID, "user_id": userID, "customer_user_id": incomingCustomerUserid}).
