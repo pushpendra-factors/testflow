@@ -2052,18 +2052,17 @@ func updateInitialUserPropertiesFromUpdateEventProperties(projectID int64,
 		return http.StatusBadRequest
 	}
 
-	U.DiffPostgresJsonb(projectID, existingUserProperties, updateUserPropertiesJson, C.GetConfig().AppName+"-UPDATE_EVENT_PROPERTIES")
-	return overwriteUserPropertiesOnTable(projectID, userID, eventID, updateUserPropertiesJson)
+	return overwriteUserPropertiesOnTable(projectID, userID, eventID, existingUserProperties, updateUserPropertiesJson)
 }
 
-func overwriteUserPropertiesOnTable(projectID int64, userID string, eventID string,
+func overwriteUserPropertiesOnTable(projectID int64, userID string, eventID string, existingUserProperties,
 	updateUserPropertiesJson *postgres.Jsonb) int {
 
 	logCtx := log.WithField("project_id", projectID).
 		WithField("user_id", userID).WithField("eventID", eventID)
 
-	errCode := store.GetStore().OverwriteUserPropertiesByID(
-		projectID, userID, updateUserPropertiesJson, false, 0, "")
+	errCode := store.GetStore().OverwriteUserPropertiesByID(projectID, userID,
+		existingUserProperties, updateUserPropertiesJson, false, 0, "")
 	if errCode != http.StatusAccepted {
 		logCtx.WithField("err_code", errCode).
 			Error("Failed to overwrite user's properties with initial page properties.")

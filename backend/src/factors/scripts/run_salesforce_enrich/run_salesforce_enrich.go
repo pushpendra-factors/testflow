@@ -156,8 +156,10 @@ func main() {
 		"", "List of projects to disable event user property population in events.")
 	enrichRecordProcessLimit := flag.Int("enrich_record_process_limit", 0, "Limit number of records for enrichment at project level")
 	disableOpportunityContactRolesByProjectID := flag.String("disable_opportunity_contact_roles_by_project_id", "", "")
+	userPropertyUpdateOptProjects := flag.String("user_property_update_opt_projects", "", "")
 
 	flag.Parse()
+
 	defaultAppName := "salesforce_enrich"
 	defaultEnrichHealthcheckPingID := C.HealthcheckSalesforceEnrichPingID
 	enrichHealthcheckPingID := C.GetHealthcheckPingID(defaultEnrichHealthcheckPingID, *overrideEnrichHealthcheckPingID)
@@ -228,6 +230,7 @@ func main() {
 		AllowEmailDomainsByProjectID:                       *allowEmailDomainsByProjectID,
 		RemoveDisabledEventUserPropertiesByProjectID:       *removeDisabledEventUserPropertiesByProjectId,
 		DisableOpportunityContactRolesByProjectID:          *disableOpportunityContactRolesByProjectID,
+		UserPropertyUpdateOptProjects:                      *userPropertyUpdateOptProjects,
 	}
 
 	C.InitConf(config)

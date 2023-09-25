@@ -1684,9 +1684,7 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID int64, id string,
 
 	// Skip merge by customer_user_id, if customer_user_id is not available.
 	if user.CustomerUserId == "" {
-		// Delta of properties keys to be updated..
-		U.DiffPostgresJsonb(projectID, &user.Properties, newPropertiesMergedJSON, C.GetConfig().AppName)
-		errCode = store.OverwriteUserPropertiesByID(projectID, id, newPropertiesMergedJSON, true, newUpdateTimestamp, sourceValue)
+		errCode = store.OverwriteUserPropertiesByID(projectID, id, &user.Properties, newPropertiesMergedJSON, true, newUpdateTimestamp, sourceValue)
 		if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
 			return nil, http.StatusInternalServerError
 		}
@@ -1702,9 +1700,7 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID int64, id string,
 
 	// Skip merge by customer_user_id, if only the current user has the customer_user_id.
 	if len(users) == 1 {
-		// Delta of properties keys to be updated..
-		U.DiffPostgresJsonb(projectID, &user.Properties, newPropertiesMergedJSON, C.GetConfig().AppName)
-		errCode = store.OverwriteUserPropertiesByID(projectID, id, newPropertiesMergedJSON, true, newUpdateTimestamp, sourceValue)
+		errCode = store.OverwriteUserPropertiesByID(projectID, id, &user.Properties, newPropertiesMergedJSON, true, newUpdateTimestamp, sourceValue)
 		if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
 			return nil, http.StatusInternalServerError
 		}
@@ -1777,9 +1773,7 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID int64, id string,
 			mergedPropertiesOfUserJSON = mergedPropertiesAfterSkipJSON
 		}
 
-		// Delta of properties keys to be updated..
-		U.DiffPostgresJsonb(projectID, &user.Properties, mergedPropertiesAfterSkipJSON, C.GetConfig().AppName)
-		errCode = store.OverwriteUserPropertiesByID(projectID, user.ID,
+		errCode = store.OverwriteUserPropertiesByID(projectID, user.ID, &user.Properties,
 			mergedPropertiesAfterSkipJSON, true, newUpdateTimestamp, sourceValue)
 		if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
 			logCtx.WithField("err_code", errCode).WithField("user_id", user.ID).Error("Failed to update merged user properties on user.")
@@ -1842,13 +1836,14 @@ func (store *MemSQL) OverwriteUserPropertiesByIDInBatch(batchedOverwriteUserProp
 	for i := range batchedOverwriteUserPropertiesByIDParams {
 		projectID := batchedOverwriteUserPropertiesByIDParams[i].ProjectID
 		userID := batchedOverwriteUserPropertiesByIDParams[i].UserID
+		existingUserProperties := batchedOverwriteUserPropertiesByIDParams[i].ExistingUserProperties
 		userProperties := batchedOverwriteUserPropertiesByIDParams[i].UserProperties
 		withUpdateTimestamp := batchedOverwriteUserPropertiesByIDParams[i].WithUpdateTimestamp
 		updateTimestamps := batchedOverwriteUserPropertiesByIDParams[i].UpdateTimestamp
 		source := batchedOverwriteUserPropertiesByIDParams[i].Source
 
-		status := store.overwriteUserPropertiesByIDWithTransaction(projectID, userID, userProperties,
-			withUpdateTimestamp, updateTimestamps, source, dbTx)
+		status := store.overwriteUserPropertiesByIDWithTransaction(projectID, userID,
+			existingUserProperties, userProperties, withUpdateTimestamp, updateTimestamps, source, dbTx)
 		if status != http.StatusAccepted {
 			log.WithFields(log.Fields{"overwrite_user_properties_by_id_params": batchedOverwriteUserPropertiesByIDParams[i], "err_code": status}).
 				Error("Failed to overwrite user properties in batch using OverwriteUserPropertiesByIDInBatch.")
@@ -1865,18 +1860,19 @@ func (store *MemSQL) OverwriteUserPropertiesByIDInBatch(batchedOverwriteUserProp
 	return hasFailure
 }
 
-func (store *MemSQL) OverwriteUserPropertiesByID(projectID int64, id string,
-	properties *postgres.Jsonb, withUpdateTimestamp bool, updateTimestamp int64, source string) int {
+func (store *MemSQL) OverwriteUserPropertiesByID(projectID int64, id string, existingProperties,
+	newProperties *postgres.Jsonb, withUpdateTimestamp bool, updateTimestamp int64, source string) int {
 	db := C.GetServices().Db
-	return store.overwriteUserPropertiesByIDWithTransaction(projectID, id, properties, withUpdateTimestamp, updateTimestamp, source, db)
+	return store.overwriteUserPropertiesByIDWithTransaction(projectID, id, existingProperties,
+		newProperties, withUpdateTimestamp, updateTimestamp, source, db)
 }
 
-func (store *MemSQL) overwriteUserPropertiesByIDWithTransaction(projectID int64, id string,
-	properties *postgres.Jsonb, withUpdateTimestamp bool, updateTimestamp int64, source string, dbTx *gorm.DB) int {
+func (store *MemSQL) overwriteUserPropertiesByIDWithTransaction(projectID int64, id string, existingProperties,
+	newProperties *postgres.Jsonb, withUpdateTimestamp bool, updateTimestamp int64, source string, dbTx *gorm.DB) int {
 	logFields := log.Fields{
 		"project_id":            projectID,
 		"id":                    id,
-		"properties":            properties,
+		"properties":            newProperties,
 		"update_timestamp":      updateTimestamp,
 		"with_update_timestamp": withUpdateTimestamp,
 		"source":                source,
@@ -1890,7 +1886,7 @@ func (store *MemSQL) overwriteUserPropertiesByIDWithTransaction(projectID int64,
 		return http.StatusBadRequest
 	}
 
-	if properties == nil {
+	if newProperties == nil {
 		logCtx.Error("Failed to overwrite properties. Empty or nil properties.")
 		return http.StatusBadRequest
 	}
@@ -1912,23 +1908,84 @@ func (store *MemSQL) overwriteUserPropertiesByIDWithTransaction(projectID int64,
 	}
 
 	// Explicit cleanup for removing unsupported characters.
-	properties.RawMessage = U.CleanupUnsupportedCharOnStringBytes(properties.RawMessage)
+	newProperties.RawMessage = U.CleanupUnsupportedCharOnStringBytes(newProperties.RawMessage)
 
-	update := map[string]interface{}{"properties": properties}
+	var propertiesUpdateTimestamp int64
 	if updateTimestamp > 0 && updateTimestamp > currentPropertiesUpdatedTimestamp {
 		if C.UseSourcePropertyOverwriteByProjectIDs(projectID) {
 			if !model.BlacklistUserPropertiesUpdateTimestampBySource[source] {
-				update["properties_updated_timestamp"] = updateTimestamp
+				propertiesUpdateTimestamp = updateTimestamp
 			}
 		} else {
-			update["properties_updated_timestamp"] = updateTimestamp
+			propertiesUpdateTimestamp = updateTimestamp
 		}
+	}
+
+	if C.IsUserPropertyUpdateOptProject(projectID) {
+		propertyKeyValues := U.DiffPostgresJsonb(projectID, existingProperties, newProperties, C.GetConfig().AppName)
+
+		_, jsonKeyExists := (*propertyKeyValues)[U.UP_META_OBJECT_IDENTIFIER_KEY]
+		// Use key based update only if the keys to be updated is under the limit.
+		if !jsonKeyExists && len(*propertyKeyValues) < 25 {
+			return store.overwriteUserPropertiesKeysByID(dbTx, projectID, id, propertyKeyValues, propertiesUpdateTimestamp)
+		}
+	}
+
+	update := map[string]interface{}{"properties": newProperties}
+	if propertiesUpdateTimestamp > 0 {
+		update["properties_updated_timestamp"] = propertiesUpdateTimestamp
 	}
 
 	err := dbTx.Model(&model.User{}).Limit(1).
 		Where("project_id = ? AND id = ?", projectID, id).Update(update).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to overwrite user properties.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
+}
+
+func (store *MemSQL) overwriteUserPropertiesKeysByID(dbTx *gorm.DB, projectID int64,
+	id string, propertyKeyValues *map[string]interface{}, propertiesUpdatedTimestamp int64) int {
+
+	logCtx := log.WithField("project_id", projectID).
+		WithField("id", id).
+		WithField("properties", propertyKeyValues)
+
+	updateStr := ""
+	for k, v := range *propertyKeyValues {
+		pStr := "properties::"
+
+		if U.IsTypeNumber(v) {
+			pStr = pStr + fmt.Sprintf("`%s` = %v", k, v)
+		} else if U.IsJsonAllowedProperty(k) {
+			pStr = pStr + fmt.Sprintf("`%s` = '%s'", k, v)
+		} else {
+			// dollar is required for string in singlestore. Not related to $ properties.
+			pStr = pStr + fmt.Sprintf("$%s = '%s'", k, v)
+		}
+
+		if updateStr != "" {
+			updateStr = updateStr + ", "
+		}
+
+		updateStr = updateStr + pStr
+	}
+
+	if updateStr != "" {
+		if propertiesUpdatedTimestamp > 0 {
+			updateStr = updateStr + ", " + fmt.Sprintf("properties_updated_timestamp = %d", propertiesUpdatedTimestamp)
+		}
+	} else {
+		logCtx.Warn("No change in properties. Update skipped.")
+		return http.StatusAccepted
+	}
+
+	query := fmt.Sprintf("UPDATE users SET %s WHERE project_id = %d AND id = '%s'", updateStr, projectID, id)
+	err := dbTx.Exec(query).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to overwrite user properties by keys/values.")
 		return http.StatusInternalServerError
 	}
 
@@ -2451,18 +2508,17 @@ func (store *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdatedV2(
 		if C.GetSessionBatchTransactionBatchSize() > 0 {
 			overwriteUserPropertiesByIDParamsInBatch = append(overwriteUserPropertiesByIDParamsInBatch,
 				model.OverwriteUserPropertiesByIDParams{
-					ProjectID:           projectID,
-					UserID:              userID,
-					UserProperties:      userPropertiesJsonb,
-					WithUpdateTimestamp: false,
-					UpdateTimestamp:     0,
+					ProjectID:              projectID,
+					UserID:                 userID,
+					ExistingUserProperties: existingUserProperties,
+					UserProperties:         userPropertiesJsonb,
+					WithUpdateTimestamp:    false,
+					UpdateTimestamp:        0,
 				})
 			continue
 		}
 
-		// Delta of properties keys to be updated..
-		U.DiffPostgresJsonb(projectID, existingUserProperties, userPropertiesJsonb, C.GetConfig().AppName)
-		errCode = store.OverwriteUserPropertiesByID(projectID, userID, userPropertiesJsonb, false, 0, "")
+		errCode = store.OverwriteUserPropertiesByID(projectID, userID, existingUserProperties, userPropertiesJsonb, false, 0, "")
 		if errCode != http.StatusAccepted {
 			logCtx.WithField("err_code", errCode).Error("Failed to overwrite user properties record.")
 			hasFailure = true
@@ -3014,9 +3070,7 @@ func (store *MemSQL) UpdateUserGroupProperties(projectID int64, userID string,
 		newUpdateTimestamp = user.PropertiesUpdatedTimestamp
 	}
 
-	// Delta of properties keys to be updated..
-	U.DiffPostgresJsonb(projectID, &user.Properties, mergedPropertiesJSON, C.GetConfig().AppName)
-	errCode = store.OverwriteUserPropertiesByID(projectID, user.ID, mergedPropertiesJSON, true, newUpdateTimestamp, "")
+	errCode = store.OverwriteUserPropertiesByID(projectID, user.ID, &user.Properties, mergedPropertiesJSON, true, newUpdateTimestamp, "")
 	if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
 		logCtx.WithField("err_code", errCode).WithField("user_id", user.ID).Error("Failed to update user properties on group user.")
 		return nil, http.StatusInternalServerError

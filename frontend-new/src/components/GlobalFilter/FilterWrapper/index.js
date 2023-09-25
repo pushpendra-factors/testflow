@@ -11,15 +11,14 @@ import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
 import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
 import getGroupIcon from 'Utils/getGroupIcon';
-import { getPropertyGroupLabel } from './utils';
 import { PropTextFormat } from 'Utils/dataFormatter';
+import { CustomGroupNames } from './utils';
 
 function FilterWrapper({
   projectID,
   event,
   index,
   filterProps,
-  groupName,
   filter,
   deleteFilter,
   insertFilter,
@@ -39,7 +38,8 @@ function FilterWrapper({
   getUserPropertyValues,
   propertyValuesMap,
   minEntriesPerGroup,
-  operatorsMap = DEFAULT_OPERATOR_PROPS
+  operatorsMap = DEFAULT_OPERATOR_PROPS,
+  groupOpts
 }) {
   const [newFilterState, setNewFilterState] = useState({
     props: [],
@@ -57,41 +57,49 @@ function FilterWrapper({
 
   useEffect(() => {
     const formattedFilterDDOptions = { ...filterDropDownOptions, props: [] };
-    Object.keys(filterProps || {})?.forEach((propertyKey) => {
-      if (!Array.isArray(filterProps[propertyKey])) {
-        const propertyGroups = filterProps[propertyKey];
+
+    for (const propertyKey of Object.keys(filterProps || {})) {
+      let label, propertyType, icon;
+      const values = filterProps[propertyKey];
+
+      if (!Array.isArray(values)) {
+        const propertyGroups = values;
         if (propertyGroups) {
-          Object.keys(propertyGroups)?.forEach((groupKey) => {
-            const label = PropTextFormat(groupKey);
-            const icon = getGroupIcon(groupKey);
-            const values = propertyGroups?.[groupKey];
+          for (const groupKey of Object.keys(propertyGroups)) {
+            label = PropTextFormat(groupKey);
+            icon = getGroupIcon(groupKey);
             formattedFilterDDOptions.props.push({
               key: propertyKey,
               label,
               icon,
               propertyType: propertyKey,
-              values
+              values: propertyGroups[groupKey]
             });
-          });
+          }
         }
       } else {
-        const label = getPropertyGroupLabel(propertyKey);
-        const propertyType = ['user', 'event'].includes(propertyKey)
+        label = CustomGroupNames[propertyKey]
+          ? CustomGroupNames[propertyKey]
+          : groupOpts[propertyKey]
+          ? groupOpts[propertyKey]
+          : PropTextFormat(propertyKey);
+
+        propertyType = ['user', 'event'].includes(propertyKey)
           ? propertyKey
           : ['button_click', 'page_view'].includes(propertyKey)
           ? 'event'
-          : 'group'; //'button_click', 'page_view' custom types used in pathanalysis
-        const values = filterProps[propertyKey];
-        const icon = getGroupIcon(label);
+          : 'group';
+
+        icon = getGroupIcon(label);
         formattedFilterDDOptions.props.push({
           key: propertyKey,
           label,
           icon,
-          propertyType: propertyType,
+          propertyType,
           values
         });
       }
-    });
+    }
 
     formattedFilterDDOptions.operator = operatorsMap;
     setFiltDD(formattedFilterDDOptions);
@@ -229,7 +237,8 @@ function FilterWrapper({
 }
 
 const mapStateToProps = (state) => ({
-  propertyValuesMap: state.coreQuery.propertyValuesMap
+  propertyValuesMap: state.coreQuery.propertyValuesMap,
+  groupOpts: state.groups.data
 });
 
 const mapDispatchToProps = (dispatch) =>
