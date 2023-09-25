@@ -47,7 +47,7 @@ class DataService:
         return response.json(), ''
 
     
-    def get_last_sync_info(self, linkedin_setting, start_timestamp=None, end_timestamp=None):
+    def get_last_sync_info(self, linkedin_setting, start_timestamp=None, input_end_timestamp=None):
         uri = '/data_service/linkedin/documents/last_sync_info'
         url = self.data_service_host + uri
 
@@ -66,9 +66,9 @@ class DataService:
             if start_timestamp != None:
                 date = datetime.strptime(str(start_timestamp), '%Y%m%d')
             sync_info_with_type[info['type_alias']]= date.strftime('%Y-%m-%d')
-            if info['type_alias'] == 'member_company_insights':
-                sync_info_with_type['last_backfill_timestamp'] = info['last_backfill_timestamp'] 
-        timestamp_exceed = DataService.is_custom_timerange_exceeding_lookback(start_timestamp, end_timestamp)
+            if info['type_alias'] == MEMBER_COMPANY_INSIGHTS:
+                sync_info_with_type['backfill_start_timestamp'] = info['backfill_start_timestamp']
+        timestamp_exceed = DataService.is_custom_timerange_exceeding_lookback(start_timestamp, input_end_timestamp)
         if timestamp_exceed:
             return [], "Given custom timerange exceeds max lookback" 
         return sync_info_with_type, ''
@@ -203,6 +203,27 @@ class DataService:
                 project_id, doc_type, int(timestamp), response.status_code)
         
         return response
+    
+    def get_campaign_group_data_for_given_timerange(self, project_id, ad_account_id, 
+                                                    start_timestamp, input_end_timestamp):
+        uri = '/data_service/linkedin/documents/campaign_group_info'
+        url = self.data_service_host + uri
+        payload = {
+            PROJECT_ID: int(project_id),
+            'customer_ad_account_id': ad_account_id,
+            'start_timestamp': start_timestamp,
+            'end_timestamp': input_end_timestamp
+        }
+        response = requests.get(url, json=payload)
+        if not response.ok:
+            log.error(
+            'Failed to get campaign group info from db for project %s. ad account %s, StatusCode:  %d',
+                project_id, ad_account_id, response.status_code)
+            return [], response.text
+        
+        campaign_group_info = response.json()
+        
+        return campaign_group_info, ''
     
     @staticmethod
     def is_custom_timerange_exceeding_lookback(input_from, input_to):
