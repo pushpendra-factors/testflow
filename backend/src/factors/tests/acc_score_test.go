@@ -13,6 +13,7 @@ import (
 	mm "factors/model/store/memsql"
 	P "factors/pattern"
 	T "factors/task/account_scoring"
+	U "factors/util"
 
 	log "github.com/sirupsen/logrus"
 
@@ -284,7 +285,7 @@ func TestAccScoreFilterCountAndScoreEvents(t *testing.T) {
 	// score should be half on mid of sale window
 	current_time := time.Now()
 	half_num_day := current_time.AddDate(0, 0, -1*int(finalWeights.SaleWindow/2))
-	dateString := T.GetDateOnlyFromTimestamp(half_num_day.Unix())
+	dateString := U.GetDateOnlyFromTimestamp(half_num_day.Unix())
 	account_score, counts_map, decayValue, err := mm.ComputeAccountScore(cr, countsmap, dateString)
 	s := fmt.Sprintf("acc score : %f , decay_value : %f , counts map :%v", account_score, decayValue, counts_map)
 	log.Debugf(s)
@@ -297,7 +298,7 @@ func TestAccScoreFilterCountAndScoreEvents(t *testing.T) {
 	//last day goes to zero as decay is 1 .
 	current_time = time.Now()
 	onlastsaleday := current_time.AddDate(0, 0, -1*int(finalWeights.SaleWindow))
-	dateString = T.GetDateOnlyFromTimestamp(onlastsaleday.Unix())
+	dateString = U.GetDateOnlyFromTimestamp(onlastsaleday.Unix())
 
 	countsmapf64 := make(map[string]float64)
 	for k, v := range countsmapf64 {
@@ -314,7 +315,7 @@ func TestAccScoreFilterCountAndScoreEvents(t *testing.T) {
 	// score should be 0 after the sale window has been exceeded
 	current_time = time.Now()
 	sale_day_exceed := current_time.AddDate(0, 0, -1*int(finalWeights.SaleWindow)-1)
-	dateString = T.GetDateOnlyFromTimestamp(sale_day_exceed.Unix())
+	dateString = U.GetDateOnlyFromTimestamp(sale_day_exceed.Unix())
 
 	countsmapf64 = make(map[string]float64)
 	for k, v := range countsmapf64 {
@@ -400,8 +401,8 @@ func TestAccScoreUpdateLastEventsDay(t *testing.T) {
 	w2_date_unix := currentTimestamp.AddDate(0, 0, -1*2)
 	w3_date_unix := currentTimestamp.AddDate(0, 0, -1*3)
 
-	w2_date_string := T.GetDateOnlyFromTimestamp(w2_date_unix.Unix())
-	w3_date_string := T.GetDateOnlyFromTimestamp(w3_date_unix.Unix())
+	w2_date_string := U.GetDateOnlyFromTimestamp(w2_date_unix.Unix())
+	w3_date_string := U.GetDateOnlyFromTimestamp(w3_date_unix.Unix())
 	p1u2 := make(map[string]map[string]int64)
 	p1u3 := make(map[string]map[string]int64)
 	p1u2["$channel"] = make(map[string]int64)
@@ -419,7 +420,7 @@ func TestAccScoreUpdateLastEventsDay(t *testing.T) {
 	prevCountsOfUser["1"][w3_date_string] = M.LatestScore{Date: w3_date_unix.Unix(), EventsCount: w3, Properties: p1u2}
 	prevCountsOfUser["1"][w2_date_string] = M.LatestScore{Date: w2_date_unix.Unix(), EventsCount: w2, Properties: p1u3}
 
-	dbup, err := T.UpdateLastEventsDay(prevCountsOfUser, usersList, currentTS, finalWeights.SaleWindow)
+	dbup, err := T.UpdateLastEventsDay(prevCountsOfUser, currentTS, finalWeights.SaleWindow)
 	assert.Nil(t, err)
 	log.Debugf("result:%v", dbup)
 	assert.Equal(t, dbup["1"].EventsCount["a"], 2.5)
@@ -434,7 +435,7 @@ func TestGenerateDate(t *testing.T) {
 	currentTimestamp := time.Now()
 	salewindow := int(10)
 
-	ds := mm.GenDateStringsForLastNdays(currentTimestamp.Unix(), int64(salewindow))
+	ds := U.GenDateStringsForLastNdays(currentTimestamp.Unix(), int64(salewindow))
 	log.Debugf("generated dates : %v", ds)
 	assert.Equal(t, salewindow, len(ds))
 
@@ -459,9 +460,9 @@ func TestGenerateAccountScores(t *testing.T) {
 
 	numDaysToTrend := finalWeights.SaleWindow
 	currentTs := time.Now().Unix()
-	DateStringToday := T.GetDateOnlyFromTimestamp(currentTs)
+	DateStringToday := U.GetDateOnlyFromTimestamp(currentTs)
 
-	currentDate := model.GetDateFromString(DateStringToday)
+	currentDate := U.GetDateFromString(DateStringToday)
 	prevDateTotrend := time.Unix(currentDate, 0).AddDate(0, 0, -1*int(numDaysToTrend)).Unix()
 
 	countsMapDays := make(map[string]model.LatestScore)
@@ -469,7 +470,7 @@ func TestGenerateAccountScores(t *testing.T) {
 	for i := (numDaysToTrend + 10); i > 0; i-- {
 		if i%2 == 0 {
 			prevDate := time.Unix(currentDate, 0).AddDate(0, 0, -1*int(i)).Unix()
-			prevDateString := T.GetDateOnlyFromTimestamp(prevDate)
+			prevDateString := U.GetDateOnlyFromTimestamp(prevDate)
 			countsMapDays[prevDateString] = model.LatestScore{Date: prevDate, EventsCount: e1}
 		}
 	}
@@ -508,7 +509,7 @@ func TestGenerationOfScore(t *testing.T) {
 
 	for idx := 0; idx < maxNum; idx++ {
 
-		day := T.GetDateOnlyFromTimestamp(currentTimestamp.AddDate(0, 0, 1*idx).Unix())
+		day := U.GetDateOnlyFromTimestamp(currentTimestamp.AddDate(0, 0, 1*idx).Unix())
 		if idx == 0 {
 			idx1 := 0
 			counts["1"] += float64(idx1)
@@ -522,7 +523,7 @@ func TestGenerationOfScore(t *testing.T) {
 
 	}
 	log.Debugf("Scores : %v", scores)
-	score := mm.ComputeScoreWithWeightsAndCounts(projectId, &finalWeights, counts, T.GetDateOnlyFromTimestamp(time.Now().Unix()))
+	score := mm.ComputeScoreWithWeightsAndCounts(projectId, &finalWeights, counts, U.GetDateOnlyFromTimestamp(time.Now().Unix()))
 	log.Debugf("Scores on current day  : %v,%f", counts, score)
 
 	assert.IsDecreasing(t, scores)
@@ -556,7 +557,7 @@ func TestGenerationOfScoresInPeriod(t *testing.T) {
 		var events M.LatestScore
 		countsEvent := make(map[string]float64)
 		t := currentTimestamp.AddDate(0, 0, 1*idx).Unix()
-		day := T.GetDateOnlyFromTimestamp(t)
+		day := U.GetDateOnlyFromTimestamp(t)
 		events.Date = t
 		idx1 := 1
 		if idx > maxNum/2 {

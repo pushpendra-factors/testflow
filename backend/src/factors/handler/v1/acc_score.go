@@ -189,7 +189,7 @@ func GetUserScore(c *gin.Context) (interface{}, int, string, string, bool) {
 	if dateString == "" {
 		current_time := time.Now()
 		prev_day := current_time.AddDate(0, 0, -1)
-		dateString = T.GetDateOnlyFromTimestamp(prev_day.Unix())
+		dateString = U.GetDateOnlyFromTimestamp(prev_day.Unix())
 	}
 	perAccScore, err := store.GetStore().GetUserScore(projectId, userId, dateString, debug, is_anonymus)
 	if err != nil {
@@ -201,56 +201,5 @@ func GetUserScore(c *gin.Context) (interface{}, int, string, string, bool) {
 	UsersScores.AccResult = append(UsersScores.AccResult, perAccScore)
 	// if project score exist
 	return UsersScores, http.StatusOK, "", "", false
-
-}
-
-// GetAllUsersScores returns all users scores
-func GetAllUsersScores(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
-	reqID, _ := getReqIDAndProjectID(c)
-
-	debug_flag := c.Query("debug")
-	date := c.Query("date")
-	logCtx := log.WithFields(log.Fields{
-		"projectId": projectId,
-		"RequestId": reqID,
-	})
-	if date == "" {
-		errMsg := "Unable to parse Date "
-		logCtx.Error(errMsg)
-		return nil, http.StatusBadRequest, "", "", true
-	}
-
-	var accountScores M.UserScoreResult
-	accountScores.ProjectId = projectId
-	debug, _ := strconv.ParseBool(debug_flag)
-	var perAccScore []M.AllUsersScore
-	var err error
-	var weights *M.AccWeights
-	if date == M.LAST_EVENT {
-		logCtx.Info("getting all user scores latest scores")
-		perAccScore, weights, err = store.GetStore().GetAllUserScoreLatest(projectId, debug)
-		if err != nil {
-			errMsg := "Unable all user latest score."
-			logCtx.WithError(err).Error(errMsg)
-			return nil, http.StatusInternalServerError, "", "", true
-		}
-	} else {
-		logCtx.Info("getting all user scores on day")
-		perAccScore, weights, err = store.GetStore().GetAllUserScoreOnDay(projectId, date, debug)
-		if err != nil {
-			errMsg := "Unable all user latest score on day."
-			logCtx.WithError(err).Error(errMsg)
-			return nil, http.StatusInternalServerError, "", "", true
-		}
-	}
-
-	accountScores.AccResult = make([]M.AllUsersScore, len(perAccScore))
-	accountScores.AccResult = perAccScore
-	if debug {
-		accountScores.Debug = make(map[string]interface{})
-		accountScores.Debug["weights"] = weights
-	}
-	return accountScores, http.StatusOK, "", "", false
 
 }
