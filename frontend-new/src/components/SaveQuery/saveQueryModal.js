@@ -89,6 +89,7 @@ function SaveQueryModal({
   return (
     <AppModal
       okText='Save'
+      cancelText='Close'
       visible={visible}
       onOk={handleSubmit}
       onCancel={handleCancel}
@@ -106,12 +107,16 @@ function SaveQueryModal({
           {modalTitle}
         </Text>
         <div className='flex flex-col gap-y-8'>
+        <div className={`${styles.additionalText}`}>
+            Save this report to keep your efforts safe
+        </div>
           <Input
             onChange={handleTitleChange}
             value={title}
             className={`fa-input ${styles.input}`}
             size='large'
-            placeholder='Name'
+            placeholder='Report Name'
+            style={{ marginTop: '-15px' }}
           />
           <TextArea
             className={styles.input}

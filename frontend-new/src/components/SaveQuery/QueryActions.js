@@ -2,7 +2,7 @@ import React, { memo, useContext, useEffect, useState } from 'react';
 import _ from 'lodash';
 import PropTypes from 'prop-types';
 import { SVG } from 'factorsComponents';
-import { Button, Dropdown, Menu, Tooltip } from 'antd';
+import { Button, Dropdown, Menu, Tooltip,Modal,message,Popover } from 'antd';
 import { BUTTON_TYPES } from '../../constants/buttons.constants';
 import ControlledComponent from '../ControlledComponent';
 import styles from './index.module.scss';
@@ -32,6 +32,7 @@ const QueryActionsComponent = ({
   setShowShareToSlackModal
 }) => {
   const [hideIntercomState, setHideIntercomState] = useState(true);
+  const [isPopoverVisible, setIsPopoverVisible] = useState(false);
 
   useEffect(() => {
     if (window.Intercom) {
@@ -205,6 +206,29 @@ const QueryActionsComponent = ({
     </Menu>
   );
 
+  const handleDropdownClick = () => {
+    setIsPopoverVisible(true);
+  };
+
+  const handleSaveNewClick = () =>{
+    setIsPopoverVisible(false);
+    handleSaveClick();   
+  };
+
+  const messageBoxContent = (
+    <div>
+      <p>Are you sure you want to overwrite these changes on the existing report?</p>
+      <div className={`${styles.buttonContainer}`}>
+        <Button className={`${styles.customWhiteButton}`} onClick={handleSaveNewClick} type="ghost" >
+          Save as New
+        </Button>
+        <Button onClick={handleUpdateClick} type="primary">
+          Yes, overwrite it
+        </Button>
+      </div>
+    </div>
+  );
+
   return (
     <div className='flex gap-x-2 items-center'>
       {/* {(queryType == QUERY_TYPE_ATTRIBUTION ||
@@ -276,15 +300,27 @@ const QueryActionsComponent = ({
           navigatedFromAnalyse?.key ||
           navigatedFromAnalyse?.id) && (
           <div className={`${styles.antdIcon}`}>
-            <Dropdown.Button
-              overlay={menuItems}
-              onClick={handleUpdateClick}
-              type={BUTTON_TYPES.PRIMARY}
-              size={'large'}
-              icon={<SVG name={'CaretDown'} size={20} color={'white'} />}
-            >
-              Save
-            </Dropdown.Button>
+
+          <Popover
+            content={messageBoxContent}
+            trigger="click"
+            visible={isPopoverVisible}
+            placement="bottomLeft"
+            arrowPointAtCenter={true}
+            autoAdjustOverflow
+            onVisibleChange={(visible) => setIsPopoverVisible(visible)}
+            overlayStyle={{ width: '400px', height: 'auto' }}
+          >
+          <Dropdown.Button
+            overlay={menuItems}        
+            onClick={handleDropdownClick}
+            type={BUTTON_TYPES.PRIMARY}
+            size={'large'}
+            icon={<SVG name={'CaretDown'} size={20} color={'white'} />}
+          >
+          Save
+          </Dropdown.Button>
+          </Popover>
           </div>
         )}
     </div>
