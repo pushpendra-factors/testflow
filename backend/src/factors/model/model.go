@@ -477,6 +477,7 @@ type Model interface {
 	GetSixsignalEmailListFromProjectSetting(projectId int64) (string, int)
 	AddSixsignalEmailList(projectId int64, emailIds string) int
 	GetSegmentMarkerLastRunTime(projectID int64) (time.Time, int)
+	UpdateSegmentMarkerLastRun(projectID int64, lastRunTime time.Time) int
 
 	// project
 	UpdateProject(projectID int64, project *model.Project) int
