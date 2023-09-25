@@ -560,7 +560,7 @@ func GetEventPropertyValuesHandler(c *gin.Context) {
 
 	label := c.Query("label")
 	if label == "true" {
-		propertyValueLabel, err, isSourceEmpty := getPropertyValueLabel(projectId, propertyName, propertyValues)
+		propertyValueLabel, err, isSourceEmpty := store.GetStore().GetPropertyValueLabel(projectId, propertyName, propertyValues)
 		if err != nil {
 			logCtx.WithError(err).Error("get event properties labels and values by property name")
 			c.AbortWithStatus(http.StatusInternalServerError)
@@ -620,30 +620,4 @@ func getEventPropertiesFromPatternServer(projectId int64, modelId uint64, eventN
 		}
 	}
 	return properties, 0, ""
-}
-
-func getPropertyValueLabel(projectID int64, propertyName string, propertyValues []string) (map[string]string, error, bool) {
-	var source string
-	if U.IsAllowedCRMPropertyPrefix(propertyName) {
-		source = strings.Split(propertyName, "_")[0]
-		source = strings.TrimPrefix(source, "$")
-	}
-
-	propertyValueLabelMap := make(map[string]string, 0)
-	var err error
-
-	if source != "" {
-		propertyValueLabelMap, err = store.GetStore().GetPropertyLabelAndValuesByProjectIdAndPropertyKey(projectID, source, propertyName)
-		if err != nil {
-			return nil, err, false
-		}
-	}
-
-	for _, value := range propertyValues {
-		if label, exists := propertyValueLabelMap[value]; !exists || label == "" {
-			propertyValueLabelMap[value] = value
-		}
-	}
-
-	return propertyValueLabelMap, nil, source == ""
 }

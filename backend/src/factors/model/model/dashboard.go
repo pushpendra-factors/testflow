@@ -18,6 +18,7 @@ import (
 	"strings"
 )
 
+// TODO migration.
 type Dashboard struct {
 	// Composite primary key, id + project_id + agent_id.
 	ID int64 `gorm:"primary_key:true" json:"id"`
@@ -29,6 +30,7 @@ type Dashboard struct {
 	Type          string          `gorm:"type:varchar(5);not null" json:"type"`
 	Settings      postgres.Jsonb  `json:"settings"`
 	Class         string          `json:"class"`
+	InternalID    int64           `json:"inter_id"`       // Used only for predefined dashboard.
 	UnitsPosition *postgres.Jsonb `json:"units_position"` // map[string]map[uint64]int -> map[unit_type]unit_id:unit_position
 	IsDeleted     bool            `gorm:"not null;default:false" json:"is_deleted"`
 	CreatedAt     time.Time       `json:"created_at"`
@@ -46,6 +48,7 @@ type DashboardString struct {
 	Type          string          `gorm:"type:varchar(5);not null" json:"type"`
 	Settings      postgres.Jsonb  `json:"settings"`
 	Class         string          `json:"class"`
+	InternalID    int64           `json:"inter_id"`       // Used only for predefined dashboard.
 	UnitsPosition *postgres.Jsonb `json:"units_position"` // map[string]map[uint64]int -> map[unit_type]unit_id:unit_position
 	IsDeleted     bool            `gorm:"not null;default:false" json:"is_deleted"`
 	CreatedAt     time.Time       `json:"created_at"`
@@ -95,6 +98,7 @@ const (
 
 	DashboardClassUserCreated      = "user_created"
 	DashboardClassWebsiteAnalytics = "web"
+	DashboardClassPredefined       = "predefined"
 
 	AttributionV1Description = ""
 	AttributionV1Name        = "Attribution Reporting"

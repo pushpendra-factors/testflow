@@ -302,7 +302,8 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 		return errCode
 	}
 
-	return http.StatusCreated
+	statusCode := store.CreatePredefinedDashboards(projectID, agentUUID)
+	return statusCode
 }
 
 // CreateProjectWithDependencies seperate create method with dependencies to avoid breaking tests.
@@ -352,6 +353,7 @@ func (store *MemSQL) CreateProjectWithDependencies(project *model.Project, agent
 			return nil, errCode
 		}
 	}
+
 	_, errCode = store.createProjectBillingAccountMapping(project.ID, billingAccountID)
 	return cProject, errCode
 }
@@ -856,6 +858,28 @@ func (store *MemSQL) GetProjectIDByToken(token string) (int64, int) {
 	model.SetCacheProjectIDByToken(token, project.ID)
 	return project.ID, errCode
 }
+
+// // TODO Add default positions and sizes. Response is not giving all dashboards.
+// // TODO Check if dashboards are being picked in caching. They shouldnt be.
+// func (store *MemSQL) createPredefinedDashboards(projectID int64, predefinedDashboards []model.PredefinedDashboard, agentUUID string) ([]*model.Dashboard, int) {
+// 	dashboards := make([]*model.Dashboard, 0)
+// 	errCode := http.StatusCreated
+// 	for _, predefinedDashboard := range predefinedDashboards {
+// 		_, errCode := store.CreateDashboard(
+// 			projectID, agentUUID,
+// 			&model.Dashboard{
+// 				Name:        predefinedDashboard.DisplayName,
+// 				Description: predefinedDashboard.Description,
+// 				Type:        model.DashboardTypeProjectVisible,
+// 				Class:       model.DashboardClassPredefined,
+// 				InternalID:  predefinedDashboard.InternalID,
+// 			})
+// 		if errCode != http.StatusCreated {
+// 			return dashboards, errCode
+// 		}
+// 	}
+// 	return dashboards, errCode
+// }
 
 func getProjectTimezoneCache(projectID int64) (U.TimeZoneString, int) {
 	logCtx := log.WithField("projectID", projectID)
