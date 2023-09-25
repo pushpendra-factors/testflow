@@ -74,6 +74,7 @@ func main() {
 	batchRangeInSeconds := flag.Int64("batch_range_in_seconds", 0, "Batch size for Add Session job")
 
 	disableUpdateNextSessionTimestamp := flag.Int("disable_update_next_session_timestamp", 0, "Disable the update next session timestamp. Used for historical runs.")
+	userPropertyUpdateOptProjects := flag.String("user_property_update_opt_projects", "", "")
 
 	flag.Parse()
 
@@ -126,6 +127,7 @@ func main() {
 		EventsPullMaxLimit:                           *eventsPullMaxLimit,
 		DisableUpdateNextSessionTimestamp:            *disableUpdateNextSessionTimestamp,
 		RemoveDisabledEventUserPropertiesByProjectID: *removeDisabledEventUserPropertiesByProjectId,
+		UserPropertyUpdateOptProjects:                *userPropertyUpdateOptProjects,
 	}
 
 	C.InitConf(config)

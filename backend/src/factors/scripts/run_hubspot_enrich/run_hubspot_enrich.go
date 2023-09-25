@@ -87,6 +87,7 @@ func main() {
 	useHashIDForCRMGroupUserByProject := flag.String("use_hash_id_for_crm_group_user_by_project_id", "", "")
 	moveHubspotCompanyAssocationFlowToContactByPojectID := flag.String("move_hubspot_company_association_flow_to_contact_by_project_id", "", "")
 	enrichPullLimit := flag.Int("enrich_pull_limit", 0, "Total records to be pulled in single db call")
+	userPropertyUpdateOptProjects := flag.String("user_property_update_opt_projects", "", "")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -151,6 +152,7 @@ func main() {
 		RemoveDisabledEventUserPropertiesByProjectID:        *removeDisabledEventUserPropertiesByProjectId,
 		UseHashIDForCRMGroupUserByProject:                   *useHashIDForCRMGroupUserByProject,
 		MoveHubspotCompanyAssocationFlowToContactByPojectID: *moveHubspotCompanyAssocationFlowToContactByPojectID,
+		UserPropertyUpdateOptProjects:                       *userPropertyUpdateOptProjects,
 	}
 
 	C.InitConf(config)

@@ -1018,6 +1018,7 @@ func TestGetUserByPropertyKey(t *testing.T) {
 	assert.NotNil(t, user)
 
 	errCode := store.GetStore().OverwriteUserPropertiesByID(project.ID, user.ID,
+		&postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{}`))},
 		&postgres.Jsonb{RawMessage: json.RawMessage([]byte(
 			`{"$hubspot_contact_lead_guid": "xxx"}`))}, false, 0, "")
 	assert.Equal(t, http.StatusAccepted, errCode)

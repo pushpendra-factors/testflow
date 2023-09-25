@@ -61,6 +61,7 @@ func main() {
 		"", "List of projects to disable event user property population in events.")
 
 	recordProcessLimit := flag.Int("record_process_limit", 0, "Adding limit for processing records") // By default, pull all records
+	userPropertyUpdateOptProjects := flag.String("user_property_update_opt_projects", "", "")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -106,6 +107,7 @@ func main() {
 		EnableUserDomainsGroupByProjectID:            *enableUserDomainsGroupByProjectID,
 		AllowEmailDomainsByProjectID:                 *allowEmailDomainsByProjectID,
 		RemoveDisabledEventUserPropertiesByProjectID: *removeDisabledEventUserPropertiesByProjectId,
+		UserPropertyUpdateOptProjects:                *userPropertyUpdateOptProjects,
 	}
 
 	C.InitConf(config)

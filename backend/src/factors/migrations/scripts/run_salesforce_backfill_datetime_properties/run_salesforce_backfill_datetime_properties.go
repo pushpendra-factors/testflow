@@ -420,7 +420,7 @@ func updateLatesUserPropeties(projectID int64, userID string, datetimeProperties
 	}
 
 	if wetRun {
-		status = store.GetStore().OverwriteUserPropertiesByID(projectID, userID, userPropertiesJsonb, false, 0, "")
+		status = store.GetStore().OverwriteUserPropertiesByID(projectID, userID, &user.Properties, userPropertiesJsonb, false, 0, "")
 		if status != http.StatusAccepted {
 			return nil, errors.New("failed to overwrite event user properties")
 		}
