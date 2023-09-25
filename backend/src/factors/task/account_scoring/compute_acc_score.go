@@ -44,6 +44,7 @@ type AggEventsOnGroupsPerProj struct {
 func BuildAccScoringDaily(projectId int64, configs map[string]interface{}) (map[string]interface{}, bool) {
 
 	logCtx := log.WithField("projectId", projectId)
+	var prevCountsOfUser map[string]map[string]M.LatestScore = make(map[string]map[string]M.LatestScore)
 	status := make(map[string]interface{})
 	DurationMap := make(map[string]int64)
 	modelCloudManager := configs["modelCloudManager"].(*filestore.FileManager)
