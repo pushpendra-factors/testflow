@@ -189,6 +189,11 @@ type Model interface {
 	GetFailedUnitsByProject(cacheReports []model.CachingUnitReport) map[int64][]model.FailedDashboardUnitReport
 	GetTimedOutUnitsByProject(cacheReports []model.CachingUnitReport) map[int64][]model.FailedDashboardUnitReport
 
+	// Predefined dashboards
+	ExecuteQueryGroupForPredefinedWebsiteAggregation(projectID int64, request model.PredefWebsiteAggregationQueryGroup) ([]model.QueryResult, int, string)
+
+	CreateWebsiteAggregation(websiteAggregation model.WebsiteAggregation) (model.WebsiteAggregation, string, int)
+
 	// all dashboard runs for am unit
 	RunCustomQueryRangeCaching(dashboardUnit model.DashboardUnit, timezoneString U.TimeZoneString,
 		logCtx *log.Entry, queryClass string, reportCollector *sync.Map, enableFilterOpt bool)
@@ -694,6 +699,7 @@ type Model interface {
 	GetDisplayNamesForAllUserProperties(projectID int64) (int, map[string]string)
 	GetDisplayNamesForObjectEntities(projectID int64) (int, map[string]string)
 	CreateOrUpdateDisplayName(projectID int64, eventName, propertyName, displayName, tag string) int
+	GetPropertyValueLabel(projectID int64, propertyName string, propertyValues []string) (map[string]string, error, bool)
 
 	// display name_labels
 	CreateOrUpdateDisplayNameLabel(projectID int64, source, propertyKey, value, label string) int

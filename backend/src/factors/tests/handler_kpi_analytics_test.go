@@ -829,8 +829,6 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 		assert.Equal(t, result[1].Rows[0][0], "india")
 		assert.Equal(t, result[1].Rows[0][1], float64(300))
 
-		log.WithField("result", result).Warn("kark1")
-
 	})
 }
 
@@ -1375,7 +1373,6 @@ func TestDerivedKPIChannels(t *testing.T) {
 
 	result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
 		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
-	log.WithField("result", result).Warn("kark")
 	assert.Equal(t, http.StatusOK, statusCode)
 	assert.Equal(t, result[0].Headers, []string{"datetime", "google_ads_metrics_" + name1})
 	assert.Equal(t, result[1].Headers, []string{"google_ads_metrics_" + name1})

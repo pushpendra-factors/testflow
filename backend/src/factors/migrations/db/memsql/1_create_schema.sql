@@ -251,6 +251,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS dashboards (
     class text,
     is_deleted boolean NOT NULL DEFAULT FALSE,
     settings json,
+    internal_id bigint,
     created_at timestamp(6),
     updated_at timestamp(6),
     SHARD KEY (project_id),
@@ -1395,3 +1396,35 @@ CREATE TABLE IF NOT EXISTS g2_documents (
     SHARD KEY (project_id),
     KEY (project_id, type, timestamp) USING CLUSTERED COLUMNSTORE
 );
+
+--  This is generated from DBT workload. Adding this for running test cases alone.
+CREATE TABLE `website_aggregation` (
+  `project_id` bigint(20) DEFAULT NULL,
+  `timestamp_at_day` datetime(6) DEFAULT NULL,
+  `event_name` longtext CHARACTER SET utf8 COLLATE utf8_general_ci,
+  `event_type` longtext CHARACTER SET utf8 COLLATE utf8_general_ci,
+  `source` longtext CHARACTER SET utf8 COLLATE utf8_general_ci,
+  `medium` longtext CHARACTER SET utf8 COLLATE utf8_general_ci,
+  `campaign` longtext CHARACTER SET utf8 COLLATE utf8_general_ci,
+  `referrer_url` longtext CHARACTER SET utf8 COLLATE utf8_general_ci,
+  `landing_page_url` longtext CHARACTER SET utf8 COLLATE utf8_general_ci,
+  `latest_page_url` longtext CHARACTER SET utf8 COLLATE utf8_general_ci,
+  `country` longtext CHARACTER SET utf8 COLLATE utf8_general_ci,
+  `region` longtext CHARACTER SET utf8 COLLATE utf8_general_ci,
+  `city` longtext CHARACTER SET utf8 COLLATE utf8_general_ci,
+  `browser` longtext CHARACTER SET utf8 COLLATE utf8_general_ci,
+  `browser_version` longtext CHARACTER SET utf8 COLLATE utf8_general_ci,
+  `os` longtext CHARACTER SET utf8 COLLATE utf8_general_ci,
+  `os_version` longtext CHARACTER SET utf8 COLLATE utf8_general_ci,
+  `device` longtext CHARACTER SET utf8 COLLATE utf8_general_ci,
+  `6signal_industry` longtext CHARACTER SET utf8 COLLATE utf8_general_ci,
+  `6signal_employee_range` longtext CHARACTER SET utf8 COLLATE utf8_general_ci,
+  `6signal_revenue_range` longtext CHARACTER SET utf8 COLLATE utf8_general_ci,
+  `6signal_naics_description` longtext CHARACTER SET utf8 COLLATE utf8_general_ci,
+  `6signal_sic_description` longtext CHARACTER SET utf8 COLLATE utf8_general_ci,
+  `count_of_records` bigint(21) DEFAULT NULL,
+  `spent_time` double DEFAULT NULL,
+  `max_updated_at` datetime(6) DEFAULT NULL,
+  KEY ('project_id', 'event_type', 'timestamp_at_day') USING CLUSTERED COLUMNSTORE
+  , SHARD KEY () 
+) AUTOSTATS_CARDINALITY_MODE=INCREMENTAL AUTOSTATS_HISTOGRAM_MODE=CREATE AUTOSTATS_SAMPLING=ON SQL_MODE='STRICT_ALL_TABLES'
