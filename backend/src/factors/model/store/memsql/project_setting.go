@@ -355,6 +355,24 @@ func (store *MemSQL) EnableBigqueryArchivalForProject(projectID int64) int {
 	return http.StatusAccepted
 }
 
+func (store *MemSQL) UpdateSegmentMarkerLastRun(projectID int64, lastRunTime time.Time) int {
+	logFields := log.Fields{
+		"project_id":    projectID,
+		"last_run_time": lastRunTime,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+	logCtx := log.WithFields(logFields)
+
+	if err := db.Model(model.ProjectSetting{}).Where("project_id = ?", projectID).
+		Update("segment_marker_last_run", lastRunTime).Error; err != nil {
+		logCtx.WithError(err).Error("Failed to update project_settings for segment_marker_last_run")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
+}
+
 // getProjectSettingByKey - Get project settings by a column on projects.
 func getProjectSettingByKey(key, value string) (*model.ProjectSetting, int) {
 	logFields := log.Fields{
