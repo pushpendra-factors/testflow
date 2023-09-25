@@ -1,4 +1,4 @@
-package task
+package accountscoring
 
 import (
 	"encoding/json"

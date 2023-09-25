@@ -277,6 +277,7 @@ func main() {
 	configs["beamConfig"] = &beamConfig
 
 	log.WithField("projects", projectIdsArray).Info("Running acc scoring for these projects")
+	IsWeightsAvailable(projectIdsArray)
 
 	for _, projectId := range projectIdsArray {
 
@@ -287,5 +288,16 @@ func main() {
 			C.PingHealthcheckForFailure(healthcheckPingID, status)
 		}
 		C.PingHealthcheckForSuccess(healthcheckPingID, status)
+	}
+}
+
+func IsWeightsAvailable(projectIdsArray []int64) {
+
+	for _, projectId := range projectIdsArray {
+		_, err := AS.GetWeightfromDB(projectId)
+		if err != nil {
+			m1, _ := store.GetStore().GetProject(projectId)
+			log.WithField("project", projectId).WithField("name", m1.Name).Info("weights not set")
+		}
 	}
 }
