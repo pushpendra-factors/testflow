@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { SVG, Text } from '../../factorsComponents';
 import { OptionType, PlacementType } from '../FaSelect/types';
 import useAutoFocus from 'hooks/useAutoFocus';
@@ -12,6 +12,8 @@ import {
 import { getIcon } from './utils';
 import useKey from 'hooks/useKey';
 import { HighlightSearchText } from 'Utils/dataFormatter';
+import useDynamicPosition from 'hooks/useDynamicPosition';
+import { debounce } from 'lodash';
 interface GroupSelectProps {
   options: GroupSelectOptionType[];
   optionClickCallback: GroupSelectOptionClickCallbackType;
@@ -40,7 +42,10 @@ export default function GroupSelect({
 
   const [searchTerm, setSearchTerm] = useState('');
   const inputComponentRef = useAutoFocus(allowSearch);
+  const dropdownRef = useRef(null);
 
+  const position = useDynamicPosition(dropdownRef, placement);
+  console.log('r', position);
   const renderSearchInput = () => {
     return (
       <div className={`fa-filter-select fa-search-select pb-0`}>
@@ -57,20 +62,9 @@ export default function GroupSelect({
       </div>
     );
   };
-
   const updateSearchText = debounce((value) => {
     setSearchTerm(value);
-  });
-
-  function debounce(callback: (value: string) => void, delay = 200) {
-    let timeout;
-    return (...args: any) => {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => {
-        callback(...args);
-      }, delay);
-    };
-  }
+  }, 200);
 
   const handleGroupSelectClickWithSearchEmpty = (group: OptionType) => {
     //When Search is Empty in Group Dropdown.
@@ -314,9 +308,7 @@ export default function GroupSelect({
       <div
         className={`${extraClass}  ${styles.dropdown__select}
           ${
-            placement === 'Right' ||
-            placement === 'TopRight' ||
-            placement === 'BottomRight'
+            position === 'TopRight' || position === 'BottomRight'
               ? styles.dropdown__select_right_0
               : styles.dropdown__select_left_0
           } fa-select  fa-select--group-select
@@ -325,12 +317,13 @@ export default function GroupSelect({
              ? `fa-select--group-select-sm`
              : `fa-select--group-select-mini`
          } ${
-          placement === 'Top' ||
-          placement === 'TopLeft' ||
-          placement === 'TopRight'
+          position === 'Top' ||
+          position === 'TopLeft' ||
+          position === 'TopRight'
             ? styles.dropdown__select_placement_top
             : styles.dropdown__select_placement_bottom
         }`}
+        ref={dropdownRef}
       >
         {!groupSelectorOpen && (
           <div className={`${styles.dropdown__select__header}`}>
