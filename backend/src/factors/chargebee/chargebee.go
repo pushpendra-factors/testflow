@@ -20,7 +20,7 @@ import (
 
 func CreateChargebeeCustomer(agent model.Agent) (customer.Customer, int, error) {
 	logCtx := log.Fields{"uuid": agent.UUID}
-	// TODO : set api key in secrets and pull from config
+	// TODO : set api key in secrets 
 	chargebee.Configure(C.GetChargebeeApiKey(), C.GetChargebeeSiteName())
 	res, err := customerAction.Create(&customer.CreateRequestParams{
 		FirstName: agent.FirstName,
