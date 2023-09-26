@@ -45,7 +45,6 @@ export default function GroupSelect({
   const dropdownRef = useRef(null);
 
   const position = useDynamicPosition(dropdownRef, placement);
-  console.log('r', position);
   const renderSearchInput = () => {
     return (
       <div className={`fa-filter-select fa-search-select pb-0`}>
