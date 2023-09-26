@@ -382,6 +382,11 @@ function AccountDetails({
 
   const handleOptionClick = (option, group) => {
     const timelinesConfig = { ...tlConfig };
+    if (!timelinesConfig.account_config.leftpane_props) {
+      // Initialize leftpane_props as an empty array if it's null
+      timelinesConfig.account_config.leftpane_props = [];
+    }
+  
     if (
       !timelinesConfig.account_config.leftpane_props.includes(option?.value)
     ) {
@@ -399,7 +404,7 @@ function AccountDetails({
     }
     setPropSelectOpen(false);
   };
-
+  
   const handleOptionBackClick = useCallback(() => {
     history.replace(PathUrls.ProfileAccounts, {
       activeSegment: location.state?.activeSegment,
