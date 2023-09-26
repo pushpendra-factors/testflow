@@ -162,7 +162,6 @@ function ProfileBlock({
         insertFilter={insertFilters}
         closeFilter={closeFilter}
         refValue={refValue}
-        groupName={groupAnalysis}
       />
     );
   };

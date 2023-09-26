@@ -9,6 +9,7 @@ import (
 	"factors/model/store"
 	U "factors/util"
 
+	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -65,4 +66,23 @@ func TestMemsqlSpecialCharactersCleanup(t *testing.T) {
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.Equal(t, expectedCustomerUserId, user.CustomerUserId)
 	}
+}
+
+func TestDiffPostgresJsonb(t *testing.T) {
+
+	existingProps := postgres.Jsonb{RawMessage: []byte(`{"$property1": 10,"$property3": "value3", "$property_unchanged": "value", "name": "john"}`)}
+	newProps := postgres.Jsonb{RawMessage: []byte(`{"$property1": 20,"$property2": 10, "$property3": "value31", "$property4": "value4", "name": "johan" }`)}
+
+	pMap := U.DiffPostgresJsonb(1, &existingProps, &newProps, "TEST")
+	// Updated properties.
+	assert.Equal(t, float64(20), (*pMap)["$property1"])
+	assert.Equal(t, "value31", (*pMap)["$property3"])
+	assert.Equal(t, "johan", (*pMap)["name"]) // custom property.
+
+	// New properites.
+	assert.Equal(t, float64(10), (*pMap)["$property2"])
+	assert.Equal(t, "value4", (*pMap)["$property4"])
+
+	// Unchanged property.
+	assert.Nil(t, (*pMap)["property_unchanged"])
 }

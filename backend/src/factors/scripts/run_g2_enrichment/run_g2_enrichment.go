@@ -41,6 +41,7 @@ func main() {
 	removeDisabledEventUserPropertiesByProjectID := flag.String("remove_disabled_event_user_properties",
 		"", "List of projects to disable event user property population in events.")
 	enableFeatureGatesV2 := flag.Bool("enable_feature_gates_v2", false, "")
+	userPropertyUpdateOptProjects := flag.String("user_property_update_opt_projects", "", "")
 
 	flag.Parse()
 	if *env != "development" &&
@@ -74,6 +75,7 @@ func main() {
 		RedisPortPersistent:           *redisPortPersistent,
 		RemoveDisabledEventUserPropertiesByProjectID: *removeDisabledEventUserPropertiesByProjectID,
 		EnableFeatureGatesV2:                         *enableFeatureGatesV2,
+		UserPropertyUpdateOptProjects:                *userPropertyUpdateOptProjects,
 	}
 	defaultHealthcheckETLPingID := C.HeathCheckG2ETLPingID
 	healthcheckETLPingID := C.GetHealthcheckPingID(defaultHealthcheckETLPingID, *overrideHealthcheckETLPingID)

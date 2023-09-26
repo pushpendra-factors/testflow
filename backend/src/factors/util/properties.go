@@ -4597,3 +4597,7 @@ func GetStandardDisplayNameGroups() map[string]string {
 	}
 	return displayNameGroups
 }
+
+func IsJsonAllowedProperty(k string) bool {
+	return k == UP_META_OBJECT_IDENTIFIER_KEY
+}

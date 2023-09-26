@@ -178,12 +178,13 @@ var GroupUserSource = map[string]int{
 const USERS = "users"
 
 type OverwriteUserPropertiesByIDParams struct {
-	ProjectID           int64
-	UserID              string
-	UserProperties      *postgres.Jsonb
-	WithUpdateTimestamp bool
-	UpdateTimestamp     int64
-	Source              string
+	ProjectID              int64
+	UserID                 string
+	ExistingUserProperties *postgres.Jsonb
+	UserProperties         *postgres.Jsonb
+	WithUpdateTimestamp    bool
+	UpdateTimestamp        int64
+	Source                 string
 }
 
 var AccountGroupAssociationPrecedence = []string{

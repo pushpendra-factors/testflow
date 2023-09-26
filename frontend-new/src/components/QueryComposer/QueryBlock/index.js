@@ -228,7 +228,6 @@ function QueryBlock({
   const selectEventFilter = (ind) => (
     <FilterWrapper
       hasPrefix
-      groupName={eventGroup}
       filterProps={filterProperties}
       projectID={activeProject?.id}
       event={event}
@@ -369,7 +368,6 @@ function QueryBlock({
               <div key={ind}>
                 <FilterWrapper
                   hasPrefix
-                  groupName={eventGroup}
                   index={ind}
                   filter={filter}
                   event={event}
@@ -388,7 +386,6 @@ function QueryBlock({
                 <div key='init'>
                   <FilterWrapper
                     hasPrefix
-                    groupName={eventGroup}
                     filterProps={filterProperties}
                     projectID={activeProject?.id}
                     event={event}
@@ -409,7 +406,6 @@ function QueryBlock({
               <div key={ind}>
                 <FilterWrapper
                   hasPrefix
-                  groupName={eventGroup}
                   index={ind}
                   filter={filtersGr[0]}
                   event={event}
@@ -424,7 +420,6 @@ function QueryBlock({
               <div key={ind + 1}>
                 <FilterWrapper
                   hasPrefix
-                  groupName={eventGroup}
                   index={ind + 1}
                   filter={filtersGr[1]}
                   event={event}

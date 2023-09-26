@@ -38,7 +38,7 @@ const FiltersBox = ({
   const [filterProps, setFilterProperties] = useState({});
   const [filterDD, setFilterDD] = useState(false);
   const [isEventsVisible, setEventsVisible] = useState(false);
-  const userProperties = useSelector((state) => state.coreQuery.userProperties);
+  const userProperties = useSelector((state) => state.coreQuery.userPropertiesV2);
   const groupProperties = useSelector(
     (state) => state.coreQuery.groupProperties
   );
@@ -187,7 +187,6 @@ const FiltersBox = ({
           return (
             <FilterWrapper
               key={index}
-              groupName={source}
               viewMode={false}
               projectID={activeProject?.id}
               filter={filter}
@@ -202,7 +201,6 @@ const FiltersBox = ({
         })}
         {filterDD === true ? (
           <FilterWrapper
-            groupName={source}
             viewMode={false}
             projectID={activeProject?.id}
             index={filtersList.length}

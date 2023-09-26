@@ -116,6 +116,12 @@ func InitAppRoutes(r *gin.Engine) {
 	shareRouteGroup.POST("/:project_id/profiles/query", responseWrapper(ProfilesQueryHandler))
 	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/query", responseWrapper(V1.ExecuteKPIQueryHandler))
 
+	// Predefined dashboards and queries
+	// shareRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/predefined_dashboards", )
+	shareRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/predefined_dashboards/:internal_id/config", responseWrapper(V1.GetPredefinedDashboardConfigsHandler))
+	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/predefined_dashboards/:internal_id/filter_values", responseWrapper(V1.GetPredefinedDashboardFilterValues))
+	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/predefined_dashboards/:internal_id/query", responseWrapper(V1.ExecutePredefinedQueryHandler))
+
 	//Six Signal Report
 	shareSixSignalRouteGroup := r.Group(routePrefix + ROUTE_PROJECTS_ROOT)
 	shareSixSignalRouteGroup.Use(mid.ValidateAccessToSharedEntity(M.ShareableURLEntityTypeSixSignal))
@@ -788,6 +794,7 @@ func ConvertDashboard(data M.Dashboard) M.DashboardString {
 		Settings:      data.Settings,
 		Class:         data.Class,
 		UnitsPosition: data.UnitsPosition,
+		InternalID:    data.InternalID,
 		IsDeleted:     data.IsDeleted,
 		CreatedAt:     data.CreatedAt,
 		UpdatedAt:     data.UpdatedAt,

@@ -267,6 +267,15 @@ func IsNumber(num string) bool {
 	return true
 }
 
+func IsTypeNumber(v interface{}) bool {
+	switch v.(type) {
+	case int, uint, int8, uint8, int16, uint16, int32, uint32, int64, uint64, float32, float64:
+		return true
+	default:
+		return false
+	}
+}
+
 func IsEmail(str string) bool {
 	regexpEmail := regexp.MustCompile(`^[A-Za-z0-9._%+\-'’^!]+@[A-Za-z0-9.\-]+\.[A-Za-z-]{2,20}$`)
 	return regexpEmail.MatchString(str)

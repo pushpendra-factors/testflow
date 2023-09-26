@@ -11,6 +11,7 @@ import {
 } from 'Utils/dataFormatter';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
+import { CustomGroupNames } from 'Components/GlobalFilter/FilterWrapper/utils';
 
 function EventGroupBlock({
   eventGroup,
@@ -29,7 +30,8 @@ function EventGroupBlock({
   delGroupState,
   closeDropDown,
   hideText = false, // added to hide the text from UI (Used in event based alerts)
-  noMargin = false
+  noMargin = false,
+  groupOpts
 }) {
   const [filterOptions, setFilterOptions] = useState([]);
   const [propSelVis, setSelVis] = useState(false);
@@ -44,7 +46,11 @@ function EventGroupBlock({
       'event'
     );
     if (eventGroup) {
-      const groupLabel = `${PropTextFormat(eventGroup)} Properties`;
+      const groupLabel = CustomGroupNames[eventGroup]
+        ? CustomGroupNames[eventGroup]
+        : groupOpts[eventGroup]
+        ? groupOpts[eventGroup]
+        : PropTextFormat(eventGroup);
       const groupValues =
         processProperties(groupProperties[eventGroup], 'group', eventGroup) ||
         [];
@@ -282,7 +288,8 @@ const mapStateToProps = (state) => ({
   eventPropertiesV2: state.coreQuery.eventPropertiesV2,
   userPropNames: state.coreQuery.userPropNames,
   eventPropNames: state.coreQuery.eventPropNames,
-  groupPropNames: state.coreQuery.groupPropNames
+  groupPropNames: state.coreQuery.groupPropNames,
+  groupOpts: state.groups.data
 });
 
 export default connect(mapStateToProps)(EventGroupBlock);

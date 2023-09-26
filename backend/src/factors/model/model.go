@@ -189,6 +189,11 @@ type Model interface {
 	GetFailedUnitsByProject(cacheReports []model.CachingUnitReport) map[int64][]model.FailedDashboardUnitReport
 	GetTimedOutUnitsByProject(cacheReports []model.CachingUnitReport) map[int64][]model.FailedDashboardUnitReport
 
+	// Predefined dashboards
+	ExecuteQueryGroupForPredefinedWebsiteAggregation(projectID int64, request model.PredefWebsiteAggregationQueryGroup) ([]model.QueryResult, int, string)
+
+	CreateWebsiteAggregation(websiteAggregation model.WebsiteAggregation) (model.WebsiteAggregation, string, int)
+
 	// all dashboard runs for am unit
 	RunCustomQueryRangeCaching(dashboardUnit model.DashboardUnit, timezoneString U.TimeZoneString,
 		logCtx *log.Entry, queryClass string, reportCollector *sync.Map, enableFilterOpt bool)
@@ -623,7 +628,7 @@ type Model interface {
 	UpdateUser(projectID int64, id string, user *model.User, updateTimestamp int64) (*model.User, int)
 	UpdateUserProperties(projectId int64, id string, properties *postgres.Jsonb, updateTimestamp int64) (*postgres.Jsonb, int)
 	UpdateUserPropertiesV2(projectID int64, id string, newProperties *postgres.Jsonb, newUpdateTimestamp int64, sourceValue string, objectType string) (*postgres.Jsonb, int)
-	OverwriteUserPropertiesByID(projectID int64, id string, properties *postgres.Jsonb, withUpdateTimestamp bool, updateTimestamp int64, source string) int
+	OverwriteUserPropertiesByID(projectID int64, id string, existingProperties, newProperties *postgres.Jsonb, withUpdateTimestamp bool, updateTimestamp int64, source string) int
 	OverwriteUserPropertiesByCustomerUserID(projectID int64, customerUserID string, properties *postgres.Jsonb, updateTimestamp int64) int
 	GetUserByPropertyKey(projectID int64, key string, value interface{}) (*model.User, int)
 	UpdateUserPropertiesForSession(projectID int64, sessionUserPropertiesRecordMap *map[string]model.SessionUserProperties) int
@@ -699,6 +704,7 @@ type Model interface {
 	GetDisplayNamesForAllUserProperties(projectID int64) (int, map[string]string)
 	GetDisplayNamesForObjectEntities(projectID int64) (int, map[string]string)
 	CreateOrUpdateDisplayName(projectID int64, eventName, propertyName, displayName, tag string) int
+	GetPropertyValueLabel(projectID int64, propertyName string, propertyValues []string) (map[string]string, error, bool)
 
 	// display name_labels
 	CreateOrUpdateDisplayNameLabel(projectID int64, source, propertyKey, value, label string) int
