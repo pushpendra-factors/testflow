@@ -279,9 +279,6 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 		"property_type_sync": propertyDetailSyncStatus,
 	}
 	panicError = false
-	if enrichHeavy && syncStatus.AnyProcessLimitExceeded {
-		return jobStatus, false
-	}
 
 	return jobStatus, true
 
