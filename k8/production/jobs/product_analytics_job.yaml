@@ -5,8 +5,6 @@ metadata:
     nodePool: shared-persistent-pool
   name: product-analytics-job
 spec:
-  successfulJobsHistoryLimit: 5
-  failedJobsHistoryLimit: 5
   template:
     metadata:
       labels:

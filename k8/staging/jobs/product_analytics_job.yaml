@@ -5,8 +5,6 @@ metadata:
     nodePool: factors-staging-node-pool
   name: product-analytics-job
 spec:
-  successfulJobsHistoryLimit: 5
-  failedJobsHistoryLimit: 5
   template:
     metadata:
       labels:
