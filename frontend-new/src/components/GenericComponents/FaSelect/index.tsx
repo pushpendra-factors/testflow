@@ -1,4 +1,4 @@
-import React, { ReactNode, useState } from 'react';
+import React, { ReactNode, useRef, useState } from 'react';
 import styles from './index.module.scss';
 import { Input, Spin } from 'antd';
 import { SVG, Text } from '../../factorsComponents';
@@ -13,6 +13,7 @@ import {
 } from './types';
 import SingleSelect from './SingleSelect';
 import MultiSelect from './MultiSelect';
+import useDynamicPosition from 'hooks/useDynamicPosition';
 interface FaSelectProps {
   options: OptionType[];
   optionClickCallback?: SingleSelectOptionClickCallbackType;
@@ -46,6 +47,12 @@ export default function FaSelect({
 }: FaSelectProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const inputComponentRef = useAutoFocus(allowSearch);
+
+  const dropdownRef = useRef(null);
+
+  //Dynamically Positions the Dropdown if parentRef is passed.
+  const position = useDynamicPosition(dropdownRef, placement);
+
   const renderSearchInput = () => {
     return (
       <div
@@ -131,9 +138,7 @@ export default function FaSelect({
       <div
         className={`${extraClass}  ${styles.dropdown__select}
           ${
-            placement === 'Right' ||
-            placement === 'TopRight' ||
-            placement === 'BottomRight'
+            position === 'TopRight' || position === 'BottomRight'
               ? styles.dropdown__select_right_0
               : styles.dropdown__select_left_0
           } fa-select  fa-select--group-select
@@ -142,12 +147,13 @@ export default function FaSelect({
              ? `fa-select--group-select-sm`
              : `fa-select--group-select-mini`
          } ${
-          placement === 'Top' ||
-          placement === 'TopLeft' ||
-          placement === 'TopRight'
+          position === 'Top' ||
+          position === 'TopLeft' ||
+          position === 'TopRight'
             ? styles.dropdown__select_placement_top
             : styles.dropdown__select_placement_bottom
         }`}
+        ref={dropdownRef}
       >
         {allowSearch && renderSearchInput()}
 
