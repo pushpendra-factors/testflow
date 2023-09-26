@@ -1,0 +1,27 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  labels:
+    nodePool: factors-staging-node-pool
+  name: product-analytics-job
+spec:
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  template:
+    metadata:
+      labels:
+        layer: jobs
+        nodePool: factors-staging-node-pool
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: factors-staging-node-pool
+      containers:
+      - name: product-analytics-job
+        image: us.gcr.io/factors-staging/product-analytics-job:0.1
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            memory: "100M"
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      restartPolicy: OnFailure
