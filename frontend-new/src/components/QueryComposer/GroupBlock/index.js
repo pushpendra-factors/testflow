@@ -17,6 +17,7 @@ import {
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
 import { GroupDisplayNames } from 'Components/Profile/utils';
+import { CustomGroupNames } from 'Components/GlobalFilter/FilterWrapper/utils';
 
 function GroupBlock({
   groupByState,
@@ -26,7 +27,8 @@ function GroupBlock({
   groupProperties,
   userPropNames,
   groupPropNames,
-  groupName
+  groupName,
+  groupOpts
 }) {
   const [isDDVisible, setDDVisible] = useState([false]);
   const [isValueDDVisible, setValueDDVisible] = useState([false]);
@@ -45,7 +47,11 @@ function GroupBlock({
         );
       }
     } else if (groupName !== '$domains') {
-      const groupLabel = `${PropTextFormat(groupName)} Properties`;
+      const groupLabel = CustomGroupNames[groupName]
+        ? CustomGroupNames[groupName]
+        : groupOpts[groupName]
+        ? groupOpts[groupName]
+        : PropTextFormat(groupName);
       const groupValues = processProperties(
         groupProperties[groupName],
         'group',
@@ -58,9 +64,13 @@ function GroupBlock({
         values: groupValues
       };
     } else {
-      Object.entries(groupProperties || {}).forEach(([group, properties]) => {
+      for (const [group, properties] of Object.entries(groupProperties || {})) {
         if (Object.keys(GroupDisplayNames).includes(group)) {
-          const groupLabel = `${PropTextFormat(group)} Properties`;
+          const groupLabel = CustomGroupNames[group]
+            ? CustomGroupNames[group]
+            : groupOpts[group]
+            ? groupOpts[group]
+            : PropTextFormat(group);
           const groupValues = processProperties(properties, 'group', group);
           const groupPropIconName = getGroupIcon(groupLabel);
           filterOptsObj[groupLabel] = {
@@ -70,8 +80,9 @@ function GroupBlock({
             values: groupValues
           };
         }
-      });
+      }
     }
+
     setFilterOptions(Object.values(filterOptsObj));
   }, [userPropertiesV2, groupProperties, groupName]);
 
@@ -297,7 +308,8 @@ const mapStateToProps = (state) => ({
   groupProperties: state.coreQuery.groupProperties,
   userPropNames: state.coreQuery.userPropNames,
   groupPropNames: state.coreQuery.groupPropNames,
-  groupByState: state.coreQuery.groupBy
+  groupByState: state.coreQuery.groupBy,
+  groupOpts: state.groups.data
 });
 
 const mapDispatchToProps = (dispatch) =>

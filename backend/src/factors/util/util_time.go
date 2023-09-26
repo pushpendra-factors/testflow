@@ -45,6 +45,11 @@ func GetDateOnlyFormatFromTimestampAndTimezone(timestamp int64, timezone TimeZon
 	return time.Unix(timestamp, 0).In(in).Format(DATETIME_FORMAT_YYYYMMDD)
 }
 
+func GetDBDateFormatFromTimestampAndTimezone(timestamp int64, timezone TimeZoneString) string {
+	in := GetTimeLocationFor(timezone)
+	return time.Unix(timestamp, 0).In(in).Format(DATETIME_FORMAT_DB)
+}
+
 // GetDateFormatFromTimestampAndTimezone Returns date in "02 Jan 2006" format for a given timestamp and timezone
 func GetDateFromTimestampAndTimezone(timestamp int64, timezone TimeZoneString) string {
 	in := GetTimeLocationFor(timezone)

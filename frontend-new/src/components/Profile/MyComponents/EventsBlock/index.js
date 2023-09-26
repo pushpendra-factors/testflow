@@ -141,7 +141,7 @@ function EventsBlock({
         if (eventPropertiesV2[event?.label].hasOwnProperty(key)) {
           eventPropertiesFiltered[key] = eventPropertiesV2[event?.label][
             key
-          ].filter((item) => item?.[2] !== 'datetime');
+          ].filter((item) => item?.[2] === 'categorical');
         }
       }
     }
@@ -150,7 +150,7 @@ function EventsBlock({
       for (const key in eventUserPropertiesV2) {
         if (eventUserPropertiesV2.hasOwnProperty(key)) {
           eventUserPropertiesFiltered[key] = eventUserPropertiesV2[key].filter(
-            (item) => item?.[2] !== 'datetime'
+            (item) => item?.[2] === 'categorical'
           );
         }
       }
