@@ -596,10 +596,6 @@ var UP_INITIAL_ADGROUP_ID string = "$initial_adgroup_id"
 var UP_INITIAL_CREATIVE string = "$initial_creative"
 var UP_INITIAL_GCLID string = "$initial_gclid"
 var UP_INITIAL_FBCLID string = "$initial_fbclid"
-var UP_INITIAL_COST string = "$initial_cost"
-var UP_TOTAL_COST string = "$total_cost"
-var UP_INITIAL_REVENUE string = "$initial_revenue"
-var UP_TOTAL_REVENUE string = "$total_revenue"
 var UP_INITIAL_REFERRER string = "$initial_referrer"
 var UP_INITIAL_REFERRER_URL string = "$initial_referrer_url"
 var UP_INITIAL_REFERRER_DOMAIN string = "$initial_referrer_domain"
@@ -633,8 +629,6 @@ var UP_LATEST_ADGROUP_ID string = "$latest_adgroup_id"
 var UP_LATEST_CREATIVE string = "$latest_creative"
 var UP_LATEST_GCLID string = "$latest_gclid"
 var UP_LATEST_FBCLID string = "$latest_fbclid"
-var UP_LATEST_COST string = "$latest_cost"
-var UP_LATEST_REVENUE string = "$latest_revenue"
 var UP_LATEST_REFERRER string = "$latest_referrer"
 var UP_LATEST_REFERRER_URL string = "$latest_referrer_url"
 var UP_LATEST_REFERRER_DOMAIN string = "$latest_referrer_domain"
@@ -661,8 +655,6 @@ var SP_INITIAL_PAGE_DOMAIN string = UP_INITIAL_PAGE_DOMAIN
 var SP_INITIAL_PAGE_LOAD_TIME string = UP_INITIAL_PAGE_LOAD_TIME
 var SP_INITIAL_PAGE_SPENT_TIME string = UP_INITIAL_PAGE_SPENT_TIME // unit:seconds
 var SP_INITIAL_PAGE_SCROLL_PERCENT string = UP_INITIAL_PAGE_SCROLL_PERCENT
-var SP_INITIAL_COST string = UP_INITIAL_COST
-var SP_INITIAL_REVENUE string = UP_INITIAL_REVENUE
 
 // clearbit properties
 var CLR_PROPERTIES_PREFIX = "$clr_"
@@ -915,10 +907,6 @@ var SDK_ALLOWED_USER_PROPERTIES = [...]string{
 	UP_INITIAL_CREATIVE,
 	UP_INITIAL_GCLID,
 	UP_INITIAL_FBCLID,
-	UP_INITIAL_COST,
-	UP_TOTAL_COST,
-	UP_INITIAL_REVENUE,
-	UP_TOTAL_REVENUE,
 	UP_DAY_OF_FIRST_EVENT,
 	UP_HOUR_OF_FIRST_EVENT,
 	UP_LATEST_PAGE_URL,
@@ -942,8 +930,6 @@ var SDK_ALLOWED_USER_PROPERTIES = [...]string{
 	UP_LATEST_CREATIVE,
 	UP_LATEST_GCLID,
 	UP_LATEST_FBCLID,
-	UP_LATEST_COST,
-	UP_LATEST_REVENUE,
 	UP_LATEST_REFERRER,
 	UP_LATEST_REFERRER_URL,
 	UP_LATEST_REFERRER_DOMAIN,
@@ -1048,10 +1034,6 @@ var NUMERICAL_PROPERTY_BY_NAME = [...]string{
 	UP_INITIAL_PAGE_LOAD_TIME,
 	UP_INITIAL_PAGE_SPENT_TIME,
 	UP_INITIAL_PAGE_SCROLL_PERCENT,
-	UP_INITIAL_COST,
-	UP_TOTAL_COST,
-	UP_INITIAL_REVENUE,
-	UP_TOTAL_REVENUE,
 	UP_SCREEN_WIDTH,
 	UP_SCREEN_HEIGHT,
 	UP_SCREEN_DENSITY,
@@ -1096,8 +1078,6 @@ var EVENT_TO_USER_INITIAL_PROPERTIES = map[string]string{
 	EP_CREATIVE:            UP_INITIAL_CREATIVE,
 	EP_GCLID:               UP_INITIAL_GCLID,
 	EP_FBCLID:              UP_INITIAL_FBCLID,
-	EP_COST:                UP_INITIAL_COST,
-	EP_REVENUE:             UP_INITIAL_REVENUE,
 }
 
 var EVENT_TO_USER_LATEST_PAGE_PROPERTIES = map[string]string{
@@ -1126,8 +1106,6 @@ var EVENT_TO_USER_LATEST_PROPERTIES = map[string]string{
 	EP_CREATIVE:           UP_LATEST_CREATIVE,
 	EP_GCLID:              UP_LATEST_GCLID,
 	EP_FBCLID:             UP_LATEST_FBCLID,
-	EP_COST:               UP_LATEST_COST,
-	EP_REVENUE:            UP_LATEST_REVENUE,
 }
 
 // Uses same name as source user properties.
@@ -1146,8 +1124,6 @@ var USER_TO_SESSION_PROPERTIES = [...]string{
 	UP_POSTAL_CODE,
 	UP_REGION,
 	UP_TIMEZONE,
-	UP_TOTAL_COST,
-	UP_TOTAL_REVENUE,
 }
 
 var EVENT_TO_SESSION_PROPERTIES = map[string]string{
@@ -1157,8 +1133,6 @@ var EVENT_TO_SESSION_PROPERTIES = map[string]string{
 	EP_PAGE_LOAD_TIME:      SP_INITIAL_PAGE_LOAD_TIME,
 	EP_PAGE_SPENT_TIME:     SP_INITIAL_PAGE_SPENT_TIME,
 	EP_PAGE_SCROLL_PERCENT: SP_INITIAL_PAGE_SCROLL_PERCENT,
-	EP_COST:                SP_INITIAL_COST,
-	EP_REVENUE:             SP_INITIAL_REVENUE,
 
 	// Uses same name as event properties.
 	EP_CAMPAIGN:           EP_CAMPAIGN,
@@ -1931,10 +1905,6 @@ var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	UP_INITIAL_CREATIVE:                 "User first creative",
 	UP_INITIAL_GCLID:                    "User first GCLID",
 	UP_INITIAL_FBCLID:                   "User first FBCLID",
-	UP_INITIAL_COST:                     "Initial Cost",
-	UP_TOTAL_COST:                       "Total Cost",
-	UP_INITIAL_REVENUE:                  "Initial Revenue",
-	UP_TOTAL_REVENUE:                    "Total Revenue",
 	UP_INITIAL_REFERRER:                 "User first referrer",
 	UP_INITIAL_REFERRER_URL:             "User first referrer URL",
 	UP_INITIAL_REFERRER_DOMAIN:          "User first referrer domain",
@@ -1962,8 +1932,6 @@ var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	UP_LATEST_CREATIVE:                  "User latest creative",
 	UP_LATEST_GCLID:                     "User latest GCLID",
 	UP_LATEST_FBCLID:                    "User latest FBCLID",
-	UP_LATEST_COST:                      "Latest Cost",
-	UP_LATEST_REVENUE:                   "Latest Revenue",
 	UP_LATEST_REFERRER:                  "User latest referrer",
 	UP_LATEST_REFERRER_URL:              "User latest referrer URL",
 	UP_LATEST_REFERRER_DOMAIN:           "User latest referrer domain",
@@ -2079,10 +2047,6 @@ var STANDARD_USER_PROPERTIES_CATAGORIZATION = map[string]string{
 	UP_INITIAL_CREATIVE:            "Traffic source",
 	UP_INITIAL_GCLID:               "Traffic source",
 	UP_INITIAL_FBCLID:              "Traffic source",
-	UP_INITIAL_COST:                "First Visit",
-	UP_TOTAL_COST:                  "First Visit",
-	UP_INITIAL_REVENUE:             "First Visit",
-	UP_TOTAL_REVENUE:               "First Visit",
 	UP_INITIAL_REFERRER:            "Traffic source",
 	UP_INITIAL_REFERRER_URL:        "Traffic source",
 	UP_INITIAL_REFERRER_DOMAIN:     "Traffic source",
@@ -2108,8 +2072,6 @@ var STANDARD_USER_PROPERTIES_CATAGORIZATION = map[string]string{
 	UP_LATEST_CREATIVE:             "Traffic source",
 	UP_LATEST_GCLID:                "Traffic source",
 	UP_LATEST_FBCLID:               "Traffic source",
-	UP_LATEST_COST:                 "Latest Visit",
-	UP_LATEST_REVENUE:              "Latest Visit",
 	UP_LATEST_REFERRER:             "Traffic source",
 	UP_LATEST_REFERRER_URL:         "Traffic source",
 	UP_LATEST_REFERRER_DOMAIN:      "Traffic source",
@@ -2154,12 +2116,6 @@ var DISABLED_EVENT_USER_PROPERTIES = []string{
 	UP_SESSION_COUNT,
 	UP_PAGE_COUNT,
 	UP_TOTAL_SPENT_TIME,
-	UP_INITIAL_COST,
-	UP_INITIAL_REVENUE,
-	UP_TOTAL_COST,
-	UP_TOTAL_REVENUE,
-	UP_LATEST_COST,
-	UP_LATEST_REVENUE,
 }
 
 var STANDARD_SESSION_PROPERTIES_CATAGORIZATION = map[string]string{
@@ -2178,8 +2134,6 @@ var STANDARD_SESSION_PROPERTIES_CATAGORIZATION = map[string]string{
 	UP_INITIAL_PAGE_LOAD_TIME:      "Session properties",
 	UP_INITIAL_PAGE_SPENT_TIME:     "Session properties",
 	UP_INITIAL_PAGE_SCROLL_PERCENT: "Session properties",
-	UP_INITIAL_COST:                "Session properties",
-	UP_INITIAL_REVENUE:             "Session properties",
 	UP_PLATFORM:                    "Session properties",
 	UP_BROWSER:                     "Session properties",
 	UP_BROWSER_VERSION:             "Session properties",
@@ -2189,8 +2143,6 @@ var STANDARD_SESSION_PROPERTIES_CATAGORIZATION = map[string]string{
 	UP_CITY:                        "Session properties",
 	UP_REGION:                      "Session properties",
 	UP_TIMEZONE:                    "Session properties",
-	UP_TOTAL_COST:                  "Session properties",
-	UP_TOTAL_REVENUE:               "Session properties",
 	UP_POSTAL_CODE:                 "Session properties",
 	UP_CONTINENT:                   "Session properties",
 	EP_CAMPAIGN:                    "Session properties",
@@ -2224,8 +2176,6 @@ var STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	UP_INITIAL_PAGE_LOAD_TIME:      "Session landing page load time",
 	UP_INITIAL_PAGE_SPENT_TIME:     "Session landing page active time",
 	UP_INITIAL_PAGE_SCROLL_PERCENT: "Session landing page scroll percent",
-	UP_INITIAL_COST:                "Initial Cost",
-	UP_INITIAL_REVENUE:             "Initial Revenue",
 	UP_PLATFORM:                    "Session platform",
 	UP_BROWSER:                     "Session browser",
 	UP_BROWSER_VERSION:             "Session browser version",
@@ -2235,8 +2185,6 @@ var STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	UP_CITY:                        "Session city",
 	UP_REGION:                      "Session region",
 	UP_TIMEZONE:                    "Session timezone",
-	UP_TOTAL_COST:                  "Total Cost",
-	UP_TOTAL_REVENUE:               "Total Revenue",
 	UP_POSTAL_CODE:                 "Session postal code",
 	UP_CONTINENT:                   "Session continent",
 	EP_CAMPAIGN:                    "Session campaign",
@@ -2324,7 +2272,6 @@ var USER_PROPERTIES_MERGE_TYPE_INITIAL = [...]string{
 	UP_INITIAL_CAMPAIGN,
 	UP_INITIAL_CAMPAIGN_ID,
 	UP_INITIAL_CONTENT,
-	UP_INITIAL_COST,
 	UP_INITIAL_CREATIVE,
 	UP_INITIAL_FBCLID,
 	UP_INITIAL_GCLID,
@@ -2341,7 +2288,6 @@ var USER_PROPERTIES_MERGE_TYPE_INITIAL = [...]string{
 	UP_INITIAL_REFERRER,
 	UP_INITIAL_REFERRER_DOMAIN,
 	UP_INITIAL_REFERRER_URL,
-	UP_INITIAL_REVENUE,
 	UP_INITIAL_SOURCE,
 	UP_INITIAL_CHANNEL,
 	UP_JOIN_TIME,
