@@ -7,6 +7,8 @@ import (
 	"net/http"
 
 	chargebee "factors/chargebee"
+
+	"github.com/chargebee/chargebee-go/v3/actions/subscription"
 	"github.com/gin-gonic/gin"
 )
 
@@ -52,6 +54,23 @@ func UpgradePlanHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	if err != nil {
 		return nil, http.StatusInternalServerError, "Failed to upgrade plan", ErrorMessages["Failed to upgrade plan"], true
 	}
-	c.Redirect(http.StatusTemporaryRedirect, hostedPage.Url)
+	// redirect from backend ?
+	// c.Redirect(http.StatusTemporaryRedirect, hostedPage.Url)
 	return hostedPage, http.StatusAccepted, "", "", false
+}
+
+func GetSubscriptionDetailsHander(c *gin.Context) (interface{}, int, string, string, bool) {
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		return nil, http.StatusUnauthorized, INVALID_PROJECT, ErrorMessages[INVALID_PROJECT], true
+	}
+	project, status := store.GetStore().GetProject(projectId)
+	if status != http.StatusFound {
+		return nil, http.StatusInternalServerError, "Error", ErrorMessages["Failed to get project"], true
+	}
+	subscription, err := chargebee.GetCurrentSubscriptionDetails(project.BillingSubscriptionID)
+	if err != nil {
+		return nil, http.StatusInternalServerError, "Failed to get subscription details", ErrorMessages["Failed to get subscription details"], true
+	}
+	return subscription, http.StatusFound, "", "", false
 }

@@ -4,6 +4,7 @@ import (
 	C "factors/config"
 	IH "factors/handler/internal"
 	V1 "factors/handler/v1"
+	v1 "factors/handler/v1"
 	mid "factors/middleware"
 	M "factors/model/model"
 	U "factors/util"
@@ -388,6 +389,12 @@ func InitAppRoutes(r *gin.Engine) {
 
 	//six signal
 	authRouteGroup.POST("/:project_id/sixsignal/email", responseWrapper(SendSixSignalReportViaEmailHandler))
+
+	// chargebee
+	authRouteGroup.GET("/:project_id/chargebee/plans", responseWrapper(v1.GetPlansAndAddonsHandler))
+	authRouteGroup.GET("/:project_id/chargebee/pricing", responseWrapper(v1.GetPricingForPlansAndAddonsHandler))
+	authRouteGroup.POST("/:project_id/chargebee/upgrade", responseWrapper(v1.UpgradePlanHandler))
+	authRouteGroup.GET("/:project_id/chargebee/subscription", responseWrapper(v1.GetSubscriptionDetailsHander))
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {

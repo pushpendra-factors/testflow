@@ -9,6 +9,7 @@ import (
 	itemAction "github.com/chargebee/chargebee-go/v3/actions/item"
 	itemPriceAction "github.com/chargebee/chargebee-go/v3/actions/itemprice"
 	subscriptionAction "github.com/chargebee/chargebee-go/v3/actions/subscription"
+
 	"github.com/chargebee/chargebee-go/v3/models/customer"
 	"github.com/chargebee/chargebee-go/v3/models/hostedpage"
 	"github.com/chargebee/chargebee-go/v3/models/item"
@@ -20,7 +21,7 @@ import (
 
 func CreateChargebeeCustomer(agent model.Agent) (customer.Customer, int, error) {
 	logCtx := log.Fields{"uuid": agent.UUID}
-	// TODO : set api key in secrets 
+	// TODO : set api key in secrets
 	chargebee.Configure(C.GetChargebeeApiKey(), C.GetChargebeeSiteName())
 	res, err := customerAction.Create(&customer.CreateRequestParams{
 		FirstName: agent.FirstName,
@@ -109,4 +110,16 @@ func ListPlansAndAddOnsPricesFromChargebee() ([]itemprice.ItemPrice, error) {
 		}
 	}
 	return itemPrices, nil
+}
+
+func GetCurrentSubscriptionDetails(subscriptionID string) (subscription.Subscription, error) {
+	logCtx := log.Fields{"subscription_ID": subscriptionID}
+	chargebee.Configure(C.GetChargebeeApiKey(), C.GetChargebeeSiteName())
+	res, err := subscriptionAction.Retrieve("__test__8asukSOXe0W3SU").Request()
+	if err != nil {
+		log.WithFields(logCtx).WithError(err).Error("Failed to get subscription details")
+		return subscription.Subscription{}, err
+	} else {
+	return *res.Subscription, nil
+	}
 }
