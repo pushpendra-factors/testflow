@@ -72,7 +72,7 @@ function PropertyValueModal({
       let FinalDataSet = [];
       if (editProperty) {
         let currentArr = ruleSet;
-        currentArr[editProperty?.index] = dataSet;
+        currentArr[editProperty?.index-1] = dataSet;
         FinalDataSet = [...currentArr];
       } else {
         FinalDataSet = [...ruleSet, dataSet];

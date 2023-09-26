@@ -730,6 +730,7 @@ var LI_VANITY_NAME = "$li_vanity_name"
 var LI_LOCALIZED_NAME = "$li_localized_name"
 var LI_AD_VIEW_COUNT = "$li_ad_view_count"
 var LI_AD_CLICK_COUNT = "$li_ad_click_count"
+var LI_ORGANIZATION_ID = "$li_org_id"
 
 // Click properties
 var EP_CLICK_ELEMENT_TYPE = "element_type"

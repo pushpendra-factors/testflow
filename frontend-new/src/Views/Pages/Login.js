@@ -1,30 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import { connect } from 'react-redux';
-import { Row, Col, Button, Input, Form, Modal, message } from 'antd';
+import { Row, Col, Button, Input, Form, message, Divider } from 'antd';
 import { Text, SVG } from 'factorsComponents';
-import { useHistory } from 'react-router-dom';
+import { Link, useHistory } from 'react-router-dom';
 import { login } from '../../reducers/agentActions';
 import { EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons';
 import factorsai from 'factorsai';
 import styles from './index.module.scss';
-import MoreAuthOptions from './MoreAuthOptions';
 import { SSO_LOGIN_URL } from '../../utils/sso';
+import LoggedOutScreenHeader from 'Components/GenericComponents/LoggedOutScreenHeader';
+import LoginIllustration from '../../assets/images/login_Illustration.png';
 
 function Login(props) {
   const [form] = Form.useForm();
   const [dataLoading, setDataLoading] = useState(false);
   const [errorInfo, seterrorInfo] = useState(null);
-  const [showModal, setShowModal] = useState(false);
 
   const history = useHistory();
-  const routeChange = (url) => {
-    history.push(url);
-  };
 
   const checkError = () => {
     const url = new URL(window.location.href);
     const error = url.searchParams.get('error');
     if (error) {
+      if (error === 'INVALID_AGENT') {
+        message.error('Account doesn’t exist, please sign up');
+        return;
+      }
       let str = error.replace('_', ' ');
       let finalmsg = str.toLocaleLowerCase();
       message.error(finalmsg);
@@ -85,244 +86,225 @@ function Login(props) {
     <>
       <div className={'fa-container'}>
         <Row justify={'center'} className={`${styles.start}`}>
-          <Col span={12}>
-            <div
-              className={
-                'flex flex-col justify-center items-center login-container'
-              }
+          <Col span={24}>
+            <LoggedOutScreenHeader />
+          </Col>
+          <Col justify='center' className='mt-10'>
+            <Text
+              color='character-primary'
+              type={'title'}
+              level={2}
+              weight={'bold'}
+              extraClass='m-0'
             >
-              <Row>
-                <Col span={24}>
-                  <div className={'flex justify-center items-center'}>
-                    <SVG name={'BrandFull'} size={40} color='white' />
+              Welcome back !
+            </Text>
+          </Col>
+          <Col span={24} justify='center' className='mt-8'>
+            <div className='w-full flex items-center justify-center'>
+              <div
+                className='flex flex-col justify-center items-center'
+                style={{
+                  width: 400,
+                  padding: '40px 48px',
+                  borderRadius: 8,
+                  border: '1px solid  #D9D9D9'
+                }}
+              >
+                <Form
+                  form={form}
+                  name='login'
+                  validateTrigger
+                  initialValues={{ remember: false }}
+                  onFinish={CheckLogin}
+                  onChange={onChange}
+                  className='w-full'
+                >
+                  <div className={'flex justify-center items-center  '}>
+                    <Text
+                      type={'title'}
+                      level={5}
+                      extraClass={'m-0'}
+                      weight={'bold'}
+                      color='character-primary'
+                    >
+                      Login to Continue
+                    </Text>
                   </div>
-                </Col>
+                  <div className={'mt-8'}>
+                    <Form.Item
+                      label={null}
+                      name='form_username'
+                      rules={[
+                        {
+                          required: true,
+                          type: 'email',
+                          message: 'Please enter a valid email'
+                        }
+                      ]}
+                      className='w-full'
+                    >
+                      <Input
+                        className={'fa-input w-full'}
+                        disabled={dataLoading}
+                        size={'large'}
+                        placeholder='Email'
+                      />
+                    </Form.Item>
+                  </div>
+                  <div className={'mt-4'}>
+                    <Form.Item
+                      label={null}
+                      name='form_password'
+                      rules={[
+                        {
+                          required: true,
+                          message: 'Please enter password'
+                        }
+                      ]}
+                      className='w-full'
+                    >
+                      <Input.Password
+                        className={'fa-input w-full'}
+                        size={'large'}
+                        placeholder='Password'
+                        disabled={dataLoading}
+                        iconRender={(visible) =>
+                          visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />
+                        }
+                      />
+                    </Form.Item>
+                  </div>
+                  <div className={' mt-6'}>
+                    <Form.Item className={'m-0'} loading={dataLoading}>
+                      <Button
+                        htmlType='submit'
+                        loading={dataLoading}
+                        type={'primary'}
+                        size={'large'}
+                        className={'w-full'}
+                      >
+                        LOG IN
+                      </Button>
+                    </Form.Item>
+                  </div>
+                  {errorInfo && (
+                    <div
+                      className={
+                        'flex flex-col justify-center items-center mt-1'
+                      }
+                    >
+                      <Text
+                        type={'title'}
+                        color={'red'}
+                        size={'7'}
+                        className={'m-0'}
+                      >
+                        {errorInfo}
+                      </Text>
+                    </div>
+                  )}
+                  <Divider className='my-6'>
+                    <Text
+                      type={'title'}
+                      level={7}
+                      extraClass={'m-0'}
+                      color={'grey'}
+                    >
+                      OR
+                    </Text>
+                  </Divider>
+
+                  <Form.Item className={'m-0'}>
+                    <a href={SSO_LOGIN_URL}>
+                      <Button
+                        type={'default'}
+                        size={'large'}
+                        style={{
+                          background: '#fff',
+                          boxShadow: '0px 0px 2px rgba(0, 0, 0, 0.3)'
+                        }}
+                        className={'w-full'}
+                      >
+                        <SVG name={'Google'} size={24} />
+                        Continue with Google
+                      </Button>
+                    </a>
+                  </Form.Item>
+                  <div className='flex items-center justify-center mt-10'>
+                    <Link
+                      disabled={dataLoading}
+                      to={{
+                        pathname: '/forgotpassword'
+                      }}
+                    >
+                      Forgot Password ?
+                    </Link>
+                  </div>
+                </Form>
+              </div>
+            </div>
+          </Col>
+
+          <Col span={8}>
+            <div className={'flex flex-col justify-center items-center '}>
+              <Row>
+                <Col span={24}></Col>
               </Row>
               <Row>
                 <Col span={24}>
-                  <Form
-                    form={form}
-                    name='login'
-                    validateTrigger
-                    initialValues={{ remember: false }}
-                    onFinish={CheckLogin}
-                    onChange={onChange}
+                  <div
+                    className={'flex flex-col justify-center items-center mt-5'}
                   >
-                    <Row>
-                      <Col span={24}>
-                        <div
-                          className={
-                            'flex justify-center items-center mt-6 ml-4'
-                          }
-                        >
-                          <Text
-                            type={'title'}
-                            level={6}
-                            extraClass={'m-0'}
-                            weight={'bold'}
-                          >
-                            Login to Continue
-                          </Text>
-                        </div>
-                      </Col>
-                      <Col span={24}>
-                        <div
-                          className={
-                            'flex flex-col justify-center items-center mt-8 w-full'
-                          }
-                        >
-                          <Form.Item
-                            label={null}
-                            name='form_username'
-                            rules={[
-                              {
-                                required: true,
-                                type: 'email',
-                                message: 'Please enter a valid email'
-                              }
-                            ]}
-                          >
-                            <Input
-                              className={'fa-input w-full'}
-                              disabled={dataLoading}
-                              size={'large'}
-                              placeholder='Email'
-                            />
-                          </Form.Item>
-                        </div>
-                      </Col>
-                      <Col span={24}>
-                        <div
-                          className={
-                            'flex flex-col justify-center items-center mt-5 w-full'
-                          }
-                        >
-                          <Form.Item
-                            label={null}
-                            name='form_password'
-                            rules={[
-                              {
-                                required: true,
-                                message: 'Please enter password'
-                              }
-                            ]}
-                          >
-                            <Input.Password
-                              className={'fa-input w-full'}
-                              size={'large'}
-                              placeholder='Password'
-                              disabled={dataLoading}
-                              iconRender={(visible) =>
-                                visible ? (
-                                  <EyeTwoTone />
-                                ) : (
-                                  <EyeInvisibleOutlined />
-                                )
-                              }
-                            />
-                          </Form.Item>
-                        </div>
-                      </Col>
-                      <Col span={24}>
-                        <div
-                          className={
-                            'flex flex-col justify-center items-center mt-5'
-                          }
-                        >
-                          <Form.Item className={'m-0'} loading={dataLoading}>
-                            <Button
-                              htmlType='submit'
-                              loading={dataLoading}
-                              type={'primary'}
-                              size={'large'}
-                              className={'w-full'}
-                            >
-                              LOG IN
-                            </Button>
-                          </Form.Item>
-                        </div>
-                      </Col>
-                      {errorInfo && (
-                        <Col span={24}>
-                          <div
-                            className={
-                              'flex flex-col justify-center items-center mt-1'
-                            }
-                          >
-                            <Text
-                              type={'title'}
-                              color={'red'}
-                              size={'7'}
-                              className={'m-0'}
-                            >
-                              {errorInfo}
-                            </Text>
-                          </div>
-                        </Col>
-                      )}
-
-                      <Col span={24}>
-                        <div
-                          className={'flex justify-center items-center mt-6'}
-                        >
-                          <Text
-                            type={'title'}
-                            level={6}
-                            extraClass={'m-0'}
-                            weight={'bold'}
-                            color={'grey'}
-                          >
-                            OR
-                          </Text>
-                        </div>
-                      </Col>
-
-                      <Col span={24}>
-                        <div
-                          className={
-                            'flex flex-col justify-center items-center mt-5'
-                          }
-                        >
-                          <Form.Item className={'m-0'}>
-                            <a href={SSO_LOGIN_URL}>
-                              <Button
-                                type={'default'}
-                                size={'large'}
-                                style={{
-                                  background: '#fff',
-                                  boxShadow: '0px 0px 2px rgba(0, 0, 0, 0.3)'
-                                }}
-                                className={'w-full'}
-                              >
-                                <SVG name={'Google'} size={24} />
-                                Continue with Google
-                              </Button>
-                            </a>
-                          </Form.Item>
-                        </div>
-                      </Col>
-
-                      {/* <Col span={24}>
-                                <div className={'flex flex-col justify-center items-center mt-5'} >
-                                  <Form.Item className={'m-0'} loading={dataLoading}>
-                                    <Button loading={dataLoading} type={'default'} size={'large'} style={{background:'#fff', boxShadow: '0px 0px 2px rgba(0, 0, 0, 0.3)'}} className={'w-full'} onClick={() => setShowModal(true)}><SVG name={'S_Key'} size={24} color={'#8692A3'} /> More Login Options</Button>
-                                  </Form.Item>
-                                </div>
-                            </Col> */}
-
-                      <Col span={24}>
-                        <div
-                          className={
-                            'flex flex-col justify-center items-center mt-10'
-                          }
-                        >
-                          <a
-                            disabled={dataLoading}
-                            type={'text'}
-                            size={'large'}
-                            onClick={() => routeChange('/forgotpassword')}
-                          >
-                            Forgot Password
-                            <SVG
-                              name={'Arrowright'}
-                              size={16}
-                              extraClass={'ml-1 -mt-1 inline'}
-                              color={'blue'}
-                            />
-                          </a>
-                        </div>
-                      </Col>
-                      <Col span={24}>
-                        <div
-                          className={
-                            'flex flex-col justify-center items-center mt-5'
-                          }
-                        >
-                          <Text type={'paragraph'} mini color={'grey'}>
-                            Don’t have an account?{' '}
-                            <a
-                              disabled={dataLoading}
-                              onClick={() => routeChange('/signup')}
-                            >
-                              {' '}
-                              Sign Up
-                            </a>
-                          </Text>
-                          {/* <Text type={'paragraph'} mini color={'grey'}>Want to try out Factors.AI? <a href={'https://www.factors.ai/schedule-a-demo'} target="_blank">Request A Demo</a></Text> */}
-                        </div>
-                      </Col>
-                    </Row>
-                  </Form>
+                    <Text type={'paragraph'} mini color={'grey'}>
+                      Don’t have an account?{' '}
+                      <Link
+                        disabled={dataLoading}
+                        to={{
+                          pathname: '/signup'
+                        }}
+                      >
+                        Sign Up
+                      </Link>
+                    </Text>
+                    {/* <Text type={'paragraph'} mini color={'grey'}>Want to try out Factors.AI? <a href={'https://www.factors.ai/schedule-a-demo'} target="_blank">Request A Demo</a></Text> */}
+                  </div>
                 </Col>
               </Row>
             </div>
           </Col>
         </Row>
         <div className={`${styles.hide}`}>
-          <SVG
-            name={'singlePages'}
-            extraClass={'fa-single-screen--illustration'}
+          <img
+            src={LoginIllustration}
+            className={styles.loginIllustration}
+            alt='illustration'
           />
+        </div>
+        <div className='text-center mt-10'>
+          <Text
+            type={'title'}
+            level={8}
+            color={'grey'}
+            extraClass={'text-center'}
+          >
+            By logging in, I accept the Factors.ai{' '}
+            <a
+              href={'https://www.factors.ai/terms-of-use'}
+              target='_blank'
+              rel='noreferrer'
+            >
+              Terms of Use
+            </a>{' '}
+            and acknowledge having read through the{' '}
+            <a
+              href={'https://www.factors.ai/privacy-policy'}
+              target='_blank'
+              rel='noreferrer'
+            >
+              Privacy policy
+            </a>
+          </Text>
         </div>
       </div>
 

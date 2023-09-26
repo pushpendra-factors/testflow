@@ -43,7 +43,8 @@ import {
   getStateFromKPIFilters,
   DefaultDateRangeFormat,
   getEventsWithPropertiesCustomKPI,
-  getCustomKPIQuery
+  getCustomKPIQuery,
+  getStateFromCustomKPIqueryGroup
 } from 'Views/CoreQuery/utils';
 
 const { Option } = Select;
@@ -77,16 +78,17 @@ function CustomKPI({
   const [filterDDValues, setFilterDDValues] = useState();
   const [filterValues, setFilterValues] = useState([]);
   const [KPIFn, setKPIFn] = useState(false);
-  const [viewMode, KPIviewMode] = useState(false);
+  const [pageMode, setPageMode] = useState('Initial');
   const [viewKPIDetails, setKPIDetails] = useState(false);
   const [showAsPercentage, setShowAsPercentage] = useState(false);
-
   const [selEventName, setEventName] = useState(false);
   const [EventPropertyDetails, setEventPropertyDetails] = useState({});
   const [EventfilterDDValues, setEventFilterDDValues] = useState();
   const [EventfilterValues, setEventFilterValues] = useState([]);
   const [EventFn, setEventFn] = useState(false);
-  const inputComponentRef = useAutoFocus(showForm && !viewMode);
+  const inputComponentRef = useAutoFocus(
+    pageMode === 'Create' || pageMode === 'Edit'
+  );
 
   const [form] = Form.useForm();
 
@@ -104,6 +106,7 @@ function CustomKPI({
   });
 
   const { groupBy } = useSelector((state) => state.coreQuery);
+  const { config: kpiConfig } = useSelector((state) => state.kpi);
 
   const matchEventName = (item) => {
     const findItem = eventPropNames?.[item] || userPropNames?.[item];
@@ -111,23 +114,42 @@ function CustomKPI({
   };
 
   const menu = (item) => (
-    <Menu>
+    <Menu className={`${styles.antdActionMenu}`}>
       <Menu.Item
         key='0'
         onClick={() => {
-          KPIviewMode(true);
+          setPageMode('View');
           setKPIDetails(item);
         }}
       >
-        <a>View</a>
+        <SVG name='Eye' size={18} extraClass={'mr-2 inline'} />
+        <span>View KPI</span>
       </Menu.Item>
       <Menu.Item
         key='1'
         onClick={() => {
+          setPageMode('Edit');
+          setKPIDetails(item);
+          onEdit(item);
+        }}
+      >
+        <SVG name='Copy1' size={18} extraClass={'mr-2 inline'} />
+        <span>Create copy</span>
+      </Menu.Item>
+      <Menu.Divider />
+      <Menu.Item
+        key='2'
+        onClick={() => {
           deleteKPI(item);
         }}
       >
-        <a>Remove</a>
+        <SVG
+          name='Delete1'
+          size={18}
+          color={'red'}
+          extraClass={'mr-2 inline'}
+        />
+        <span className='text-red-600'>Remove</span>
       </Menu.Item>
     </Menu>
   );
@@ -139,9 +161,19 @@ function CustomKPI({
       title: 'KPI Name',
       dataIndex: 'name',
       key: 'name',
-      render: (text) => (
-        <Text type='title' level={7} truncate charLimit={25}>
-          {text}
+      render: (item) => (
+        <Text
+          type='title'
+          level={7}
+          truncate
+          charLimit={25}
+          onClick={() => {
+            setPageMode('View');
+            setKPIDetails(item);
+          }}
+          extraClass={`cursor-pointer`}
+        >
+          {item?.name}
         </Text>
       )
       // width: 100,
@@ -257,6 +289,7 @@ function CustomKPI({
       );
     });
 
+    // New Query
     if (queries.length < 6) {
       blockList.push(
         <div key='init' className={styles.composer_body__query_block}>
@@ -277,9 +310,47 @@ function CustomKPI({
     return blockList;
   };
 
+  const onEdit = (item) => {
+    setPageMode('Edit');
+    form.resetFields();
+    setKPIType(
+      item?.type_of_query === 1
+        ? 'default'
+        : item?.type_of_query === 2
+        ? 'derived_kpi'
+        : 'event_based'
+    );
+    if (item?.type_of_query === 1) {
+      setKPICategory(item?.obj_ty);
+      setKPIFn(item?.transformations?.agFn);
+      setKPIPropertyDetails({
+        name: item?.transformations?.agPr,
+        data_type: item?.transformations?.agPrTy,
+        value: matchEventName(item?.transformations?.agPr)
+      });
+      setGlobalFiltersOption(
+        getStateFromKPIFilters(item?.transformations?.fil)
+      );
+    } else if (item?.type_of_query === 2) {
+      setQueries(
+        getStateFromCustomKPIqueryGroup(item?.transformations, kpiConfig)
+      );
+      setShowAsPercentage(item?.display_result_as !== '' ? true : false);
+    } else {
+      setEventFn(item?.transformations?.agFn);
+      setEventPropertyDetails({
+        name: item?.transformations?.agPr,
+        data_type: item?.transformations?.agPrTy
+      });
+      setEventGlobalFiltersOption(
+        getStateFromKPIFilters(item?.transformations?.fil)
+      );
+      setEventName(item?.transformations?.evNm);
+    }
+  };
   const onReset = () => {
     form.resetFields();
-    setShowForm(false);
+    setPageMode('Initial');
     setFilterValues([]);
     setKPICategory(false);
     setKPIType('default');
@@ -290,6 +361,8 @@ function CustomKPI({
     setEventFn(false);
     setEventFilterValues([]);
     setEventName(false);
+    setKPIDetails(false);
+    setShowAsPercentage(false);
   };
 
   const onFinish = (data) => {
@@ -339,7 +412,10 @@ function CustomKPI({
           agPr: EventPropertyDetails?.name,
           agPrTy: EventPropertyDetails?.data_type,
           fil: EventfilterValues?.globalFilters
-            ? getEventsWithPropertiesCustomKPI(EventfilterValues?.globalFilters, '')
+            ? getEventsWithPropertiesCustomKPI(
+                EventfilterValues?.globalFilters,
+                ''
+              )
             : [],
           daFie: '',
           evNm: selEventName,
@@ -456,7 +532,7 @@ function CustomKPI({
       savedCustomKPI?.map((item, index) => {
         savedArr.push({
           key: index,
-          name: item.name,
+          name: item,
           desc: item.description,
           type:
             item.type_of_query === 1
@@ -500,12 +576,18 @@ function CustomKPI({
             <Text type='title' level={7} extraClass='m-0'>
               Select Event
             </Text>
-            <Form.Item name='event' className='m-0'>
-              <EventQueryBlock
-                selEventName={selEventName}
-                setEventName={setEventName}
-              />
-            </Form.Item>
+            {pageMode === 'Edit' ? (
+              <Form.Item name='event' className='m-0'>
+                <EventQueryBlock
+                  setEventName={setEventName}
+                  selEventName={selEventName}
+                />
+              </Form.Item>
+            ) : (
+              <Form.Item name='event' className='m-0'>
+                <EventQueryBlock setEventName={setEventName} />
+              </Form.Item>
+            )}
           </Col>
         </Row>
 
@@ -524,12 +606,14 @@ function CustomKPI({
                     message: 'Please select a Function'
                   }
                 ]}
+                initialValue={pageMode === 'Edit' ? EventFn : undefined}
               >
                 <Select
                   className='fa-select w-full'
                   size='large'
                   placeholder='Function'
                   onChange={(value) => {
+                    setEventPropertyDetails({});
                     setEventFn(value);
                   }}
                   showSearch
@@ -574,6 +658,11 @@ function CustomKPI({
                       message: 'Please select a property'
                     }
                   ]}
+                  initialValue={
+                    pageMode === 'Edit'
+                      ? eventPropNames[viewKPIDetails?.transformations?.agPr]
+                      : undefined
+                  }
                 >
                   <Select
                     className='fa-select w-full'
@@ -699,7 +788,7 @@ function CustomKPI({
                 )}
                 setGlobalFilters={setGlobalFiltersOption}
                 delFilter={false}
-                viewMode
+                viewMode={pageMode === 'View'}
               />
             </Col>
           </Row>
@@ -713,7 +802,7 @@ function CustomKPI({
       <Row gutter={[24, 24]} justify='center'>
         <Col span={18}>
           <div className='mb-10 pl-4'>
-            {!showForm && !viewMode && (
+            {pageMode === 'Initial' && (
               <>
                 <Row>
                   <Col span={12}>
@@ -723,7 +812,13 @@ function CustomKPI({
                   </Col>
                   <Col span={12}>
                     <div className='flex justify-end'>
-                      <Button size='large' onClick={() => setShowForm(true)}>
+                      <Button
+                        size='large'
+                        onClick={() => {
+                          form.resetFields();
+                          setPageMode('Create');
+                        }}
+                      >
                         <SVG name='plus' extraClass='mr-2' size={16} />
                         Add New
                       </Button>
@@ -773,7 +868,7 @@ function CustomKPI({
                 </Row>
               </>
             )}
-            {showForm && !viewMode && (
+            {(pageMode === 'Create' || pageMode === 'Edit') && (
               <Form
                 form={form}
                 onFinish={onFinish}
@@ -821,6 +916,11 @@ function CustomKPI({
                       rules={[
                         { required: true, message: 'Please enter KPI name' }
                       ]}
+                      initialValue={
+                        pageMode === 'Edit'
+                          ? `${viewKPIDetails?.name} - copy`
+                          : ''
+                      }
                     >
                       <Input
                         disabled={loading}
@@ -846,6 +946,9 @@ function CustomKPI({
                           message: 'Please enter description'
                         }
                       ]}
+                      initialValue={
+                        pageMode === 'Edit' ? viewKPIDetails?.description : ''
+                      }
                     >
                       <Input
                         disabled={loading}
@@ -862,13 +965,18 @@ function CustomKPI({
                     <Text type='title' level={7} extraClass='m-0'>
                       KPI Type
                     </Text>
-                    <Form.Item name='kpi_type' className='m-0'>
+                    <Form.Item
+                      name='kpi_type'
+                      className='m-0'
+                      initialValue={
+                        pageMode === 'Edit' ? selKPIType : 'default'
+                      }
+                    >
                       <Select
                         className='fa-select w-full'
                         size='large'
                         onChange={(value) => onKPITypeChange(value)}
                         placeholder='KPI Type'
-                        defaultValue='default'
                       >
                         <Option value='default'>Default</Option>
                         <Option value='derived_kpi'>Derived KPI</Option>
@@ -900,6 +1008,9 @@ function CustomKPI({
                               message: 'Please select KPI Category'
                             }
                           ]}
+                          initialValue={
+                            pageMode === 'Edit' ? selKPICategory : undefined
+                          }
                         >
                           <Select
                             className='fa-select w-full'
@@ -942,12 +1053,16 @@ function CustomKPI({
                                 message: 'Please select a Function'
                               }
                             ]}
+                            initialValue={
+                              pageMode === 'Edit' ? KPIFn : undefined
+                            }
                           >
                             <Select
                               className='fa-select w-full'
                               size='large'
                               placeholder='Function'
                               onChange={(value) => {
+                                setKPIPropertyDetails({});
                                 setKPIFn(value);
                               }}
                               showSearch
@@ -989,6 +1104,11 @@ function CustomKPI({
                                 message: 'Please select a property'
                               }
                             ]}
+                            initialValue={
+                              pageMode === 'Edit'
+                                ? KPIPropertyDetails?.value
+                                : undefined
+                            }
                           >
                             <Select
                               className='fa-select w-full'
@@ -1076,6 +1196,13 @@ function CustomKPI({
                                   message: 'Please select a date field'
                                 }
                               ]}
+                              initialValue={
+                                pageMode === 'Edit'
+                                  ? matchEventName(
+                                      viewKPIDetails?.transformations?.daFie
+                                    )
+                                  : undefined
+                              }
                             >
                               <Select
                                 className='fa-select w-full'
@@ -1158,6 +1285,11 @@ function CustomKPI({
                                   message: 'Please enter formula'
                                 }
                               ]}
+                              initialValue={
+                                pageMode === 'Edit'
+                                  ? viewKPIDetails?.transformations?.for
+                                  : undefined
+                              }
                             >
                               <Input
                                 // disabled={loading}
@@ -1192,7 +1324,7 @@ function CustomKPI({
               </Form>
             )}
 
-            {viewMode && (
+            {pageMode === 'View' && (
               <>
                 <Row>
                   <Col span={12}>
@@ -1206,7 +1338,7 @@ function CustomKPI({
                         size='large'
                         disabled={loading}
                         onClick={() => {
-                          KPIviewMode(false);
+                          setPageMode('Initial');
                         }}
                       >
                         Back
@@ -1324,7 +1456,7 @@ function CustomKPI({
                             )}
                             setGlobalFilters={setGlobalFiltersOption}
                             delFilter={false}
-                            viewMode
+                            viewMode={pageMode === 'View'}
                           />
                         </Col>
                       </Row>
@@ -1413,7 +1545,7 @@ function CustomKPI({
                                     filters={getStateFromKPIFilters(item.fil)}
                                     setGlobalFilters={setGlobalFiltersOption}
                                     delFilter={false}
-                                    viewMode
+                                    viewMode={pageMode === 'View'}
                                   />
                                 </Col>
                               </Row>
@@ -1467,6 +1599,58 @@ function CustomKPI({
                 ) : (
                   [renderEventBasedKPIView()]
                 )}
+                <Row className={'border-top--thin-2 mt-6 pt-6'}>
+                  <Col span={12}>
+                    {/* <a type={'link'} className={'mr-2'} onClick={() => createDuplicateAlert(viewAlertDetails)}>{'Create copy'}</a>
+                <a type={'link'} color={'red'} onClick={() => confirmDeleteAlert(viewAlertDetails)}>{`Delete`}</a> */}
+
+                    <Button
+                      type={'text'}
+                      color={'blue'}
+                      onClick={() => {
+                        setPageMode('Edit');
+                        onEdit(viewKPIDetails);
+                      }}
+                    >
+                      <div className='flex items-center'>
+                        <SVG
+                          name='Pluscopy'
+                          size={16}
+                          color={'grey'}
+                          extraClass={'mr-1'}
+                        />
+                        <Text type={'title'} level={7} extraClass={'m-0'}>
+                          Create copy{' '}
+                        </Text>
+                      </div>
+                    </Button>
+                    <Button
+                      type={'text'}
+                      color={'red'}
+                      onClick={() => {
+                        setPageMode('Initial');
+                        deleteKPI(viewKPIDetails);
+                      }}
+                    >
+                      <div className='flex items-center'>
+                        <SVG
+                          name='Delete1'
+                          size={16}
+                          color={'red'}
+                          extraClass={'mr-1'}
+                        />
+                        <Text
+                          type={'title'}
+                          level={7}
+                          color={'red'}
+                          extraClass={'m-0'}
+                        >
+                          Delete{' '}
+                        </Text>
+                      </div>
+                    </Button>
+                  </Col>
+                </Row>
               </>
             )}
           </div>

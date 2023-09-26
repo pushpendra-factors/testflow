@@ -128,6 +128,9 @@ const linkedinCampaignMetadataFetchQueryStr = "select campaign_information.campa
 	") as campaign_latest_timestamp_id " +
 	"ON campaign_information.campaign_id_1 = campaign_latest_timestamp_id.campaign_id_1 AND campaign_information.timestamp = campaign_latest_timestamp_id.timestamp "
 const insertLinkedinStr = "INSERT INTO linkedin_documents (project_id,customer_ad_account_id,type,timestamp,id,campaign_group_id,campaign_id,creative_id,value,created_at,updated_at,is_backfilled) VALUES "
+const campaignGroupInfoFetchStr = "With campaign_timestamp as (Select campaign_group_id as c1, max(timestamp) as t1 from linkedin_documents where project_id = ? " +
+	"and customer_ad_account_id = ? and type = 2 and timestamp between ? and ? and (JSON_EXTRACT_STRING(value, 'status') = 'ACTIVE' or JSON_EXTRACT_JSON(value, 'changeAuditStamps', 'lastModified', 'time')>= ?) group by campaign_group_id) select * from linkedin_documents inner join " +
+	"campaign_timestamp on c1 = campaign_group_id and t1=timestamp where project_id = ? and customer_ad_account_id = ? and type = 2 and timestamp between ? and ?"
 
 // we are not deleting many records. Hence taken the direct approach.
 const deleteDocumentQuery = "Delete from linkedin_documents where project_id = ? and customer_ad_account_id = ? and type = ? and timestamp = ?"
@@ -217,6 +220,7 @@ Corner case: min(timestamp) returns nil if data is not present
 	In this case we return backfill timestamp as 0, which means we don't have to refer to this data while backfilling
 	we'll only look at the last sync info timestamp and treat timestamp <= t-8 as backfill and > t-8 as normal run
 */
+
 func (store *MemSQL) GetLinkedinLastSyncInfo(projectID int64, CustomerAdAccountID string) ([]model.LinkedinLastSyncInfo, int) {
 	logFields := log.Fields{
 		"project_id":             projectID,
@@ -263,9 +267,9 @@ func (store *MemSQL) GetLinkedinLastSyncInfo(projectID int64, CustomerAdAccountI
 
 	// backfill part
 	currentTime := time.Now()
-	timestampBefore30Days, errConv := strconv.ParseInt(currentTime.AddDate(0, 0, -30).Format("20060102"), 10, 64)
+	timestampBefore45Days, errConv := strconv.ParseInt(currentTime.AddDate(0, 0, -45).Format("20060102"), 10, 64)
 	if errConv != nil {
-		log.WithError(err).Error("Failed to get timestamp before 31 days")
+		log.WithError(err).Error("Failed to get timestamp before 45 days")
 		return linkedinLastSyncInfos, http.StatusInternalServerError
 	}
 
@@ -273,7 +277,7 @@ func (store *MemSQL) GetLinkedinLastSyncInfo(projectID int64, CustomerAdAccountI
 		"min_timestamp from linkedin_documents where project_id = ? AND customer_ad_account_id = ? " +
 		"and type = 8 and is_backfilled = False and timestamp >= ?"
 	var backfillTimestamp interface{}
-	rows, err = db.Raw(backfillTimestampQuery, projectID, CustomerAdAccountID, timestampBefore30Days).Rows()
+	rows, err = db.Raw(backfillTimestampQuery, projectID, CustomerAdAccountID, timestampBefore45Days).Rows()
 	if err != nil {
 		log.WithError(err).Error("Failed to get backfill timestamp.")
 	}
@@ -292,13 +296,12 @@ func (store *MemSQL) GetLinkedinLastSyncInfo(projectID int64, CustomerAdAccountI
 					linkedinLastSyncInfos[i].DocumentType).Error("Failed to convert backfill timestamp to int64")
 				continue
 			} else {
-				linkedinLastSyncInfos[i].LastBackfillTimestamp = intBackfillTimestamp
+				linkedinLastSyncInfos[i].BackfillStartTimestamp = intBackfillTimestamp
 			}
 		}
 	}
 	return linkedinLastSyncInfos, http.StatusOK
 }
-
 func (store *MemSQL) GetDomainData(projectID string) ([]model.DomainDataResponse, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -340,6 +343,61 @@ func (store *MemSQL) GetDomainData(projectID string) ([]model.DomainDataResponse
 		domainDatas = append(domainDatas, domainData)
 	}
 	return domainDatas, http.StatusOK
+}
+
+func (store *MemSQL) GetCompanyDataFromLinkedin(projectID string) ([]model.DomainDataResponse, string, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+
+	domainDatas := make([]model.DomainDataResponse, 0)
+
+	currentTime := time.Now()
+	timestampBefore45Days, err := strconv.ParseInt(currentTime.AddDate(0, 0, -45).Format("20060102"), 10, 64)
+	if err != nil {
+		log.WithError(err).Error("Failed to get timestamp before 31 days")
+		return domainDatas, "", http.StatusInternalServerError
+	}
+
+	queryStr := "SELECT project_id, id, timestamp, customer_ad_account_id, campaign_group_id, JSON_EXTRACT_STRING(value, 'companyHeadquarters') as headquarters, " +
+		"JSON_EXTRACT_STRING(value, 'localizedWebsite') as domain, JSON_EXTRACT_STRING(value, 'vanityName') as vanity_name, " +
+		"JSON_EXTRACT_STRING(value, 'localizedName') as localized_name, JSON_EXTRACT_STRING(value, 'preferredCountry') as preferred_country, " +
+		"JSON_EXTRACT_STRING(value, 'campaign_group_name') as campaign_group_name " +
+		"SUM(JSON_EXTRACT_STRING(value, 'impressions')) as impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) as clicks " +
+		"FROM linkedin_documents WHERE " +
+		"project_id = ? and type = 8 and is_group_user_created != TRUE and domain != '$none' and timestamp >= ? " +
+		"group by project_id, id, timestamp, customer_ad_account_id, headquarters, domain, vanity_name, localized_name, preferred_country " +
+		"order by timestamp ASC, project_id, id, customer_ad_account_id, campaign_group_id, headquarters, domain, vanity_name, localized_name, campaign_group_name, preferred_country"
+
+	rows, err := db.Raw(queryStr, projectID, timestampBefore45Days).Rows()
+	if err != nil {
+		log.WithError(err).Error("Failed to get last linkedin documents by type for sync info.")
+		return domainDatas, "", http.StatusInternalServerError
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var domainData model.DomainDataResponse
+		if err := db.ScanRows(rows, &domainData); err != nil {
+			log.WithError(err).Error("Failed to scan last linkedin documents by type for sync info.")
+			return []model.DomainDataResponse{}, "", http.StatusInternalServerError
+		}
+
+		domainDatas = append(domainDatas, domainData)
+	}
+
+	var minTimestamp struct {
+		Timestamp string
+	}
+	err = db.Model(&model.LinkedinDocument{}).Where("project_id = ? and type = 8 and "+
+		"is_group_user_created != TRUE and JSON_EXTRACT_STRING(value, 'localizedWebsite') != '$none' and timestamp >= ?",
+		projectID, timestampBefore45Days).Select("min(timestamp) as timestamp").Scan(&minTimestamp).Error
+	if err != nil {
+		log.WithError(err).Error("Failed to scan last linkedin documents by type for min timestmap for event lookup")
+		return []model.DomainDataResponse{}, "", http.StatusInternalServerError
+	}
+	return domainDatas, minTimestamp.Timestamp, http.StatusOK
 }
 func validateLinkedinDocuments(linkedinDocuments []model.LinkedinDocument) int {
 	for index, document := range linkedinDocuments {
@@ -467,6 +525,34 @@ func (store *MemSQL) DeleteLinkedinDocuments(deletePayload model.LinkedinDeleteD
 	return http.StatusAccepted
 }
 
+func (store *MemSQL) GetCampaignGroupInfoForGivenTimerange(campaignGroupInfoRequestPayload model.LinkedinCampaignGroupInfoRequestPayload) ([]model.LinkedinDocument, int) {
+	logFields := log.Fields{"campaign_info_request_payload_linkedin": campaignGroupInfoRequestPayload}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+	db := C.GetServices().Db
+	projectID, adAccountID, startTime, endTime := campaignGroupInfoRequestPayload.ProjectID, campaignGroupInfoRequestPayload.CustomerAdAccountID, campaignGroupInfoRequestPayload.StartTimestamp, campaignGroupInfoRequestPayload.EndTimestamp
+	unixForStartTime := U.GetBeginningoftheDayEpochForDateAndTimezone(startTime, "UTC") * 1000
+	linkedinDocuments := make([]model.LinkedinDocument, 0)
+
+	query := campaignGroupInfoFetchStr
+	rows, err := db.Raw(query, projectID, adAccountID, startTime, endTime, unixForStartTime, projectID, adAccountID, startTime, endTime).Rows()
+
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get campaign group info for given time range.")
+		return make([]model.LinkedinDocument, 0), http.StatusInternalServerError
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var linkedinDocument model.LinkedinDocument
+		if err := db.ScanRows(rows, &linkedinDocument); err != nil {
+			logCtx.WithError(err).Error("Failed to scan campaign group info for given time range.")
+			return make([]model.LinkedinDocument, 0), http.StatusInternalServerError
+		}
+		linkedinDocuments = append(linkedinDocuments, linkedinDocument)
+	}
+	return linkedinDocuments, http.StatusOK
+}
+
 // CreateMultipleLinkedinDocument ...
 func (store *MemSQL) CreateMultipleLinkedinDocument(linkedinDocuments []model.LinkedinDocument) int {
 	logFields := log.Fields{"linkedin_documents": linkedinDocuments}
@@ -548,7 +634,7 @@ func (store *MemSQL) IsLinkedInIntegrationAvailable(projectID int64) bool {
 
 func (store *MemSQL) UpdateLinkedinGroupUserCreationDetails(domainData model.DomainDataResponse) error {
 	db := C.GetServices().Db
-	err := db.Table("linkedin_documents").Where("project_id = ? and customer_ad_account_id = ? and timestamp = ? and id = ? and type = 8", domainData.ProjectID, domainData.CustomerAdAccountID, domainData.Timestamp, domainData.ID).Updates(map[string]interface{}{"is_group_user_created": true}).Error
+	err := db.Table("linkedin_documents").Where("project_id = ? and customer_ad_account_id = ? and timestamp = ? and id = ? and campaign_group_id = ? and type = 8", domainData.ProjectID, domainData.CustomerAdAccountID, domainData.Timestamp, domainData.ID, domainData.CampaignGroupID).Updates(map[string]interface{}{"is_group_user_created": true, "updated_at": time.Now()}).Error
 	if err != nil {
 		return err
 	}

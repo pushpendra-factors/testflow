@@ -341,6 +341,8 @@ type Model interface {
 	GetEventsByEventNameIDANDTimeRange(projectID int64, eventNameID string,
 		startTimestamp int64, endTimestamp int64) ([]model.Event, int)
 	PullEventIdsWithEventNameId(projectId int64, startTimestamp int64, endTimestamp int64, eventNameID string) ([]string, map[string]model.EventIdToProperties, error)
+	GetLinkedinEventFieldsBasedOnTimestamp(projectID int64, timestamp int64) (map[int64]map[string]map[string]bool,
+		map[int64]map[string]map[string]bool, map[int64]map[string]bool, map[int64]map[string]bool, int)
 
 	// clickable_elements
 	UpsertCountAndCheckEnabledClickableElement(projectID int64, payload *model.CaptureClickPayload) (isEnabled bool, status int, err error)
@@ -367,7 +369,10 @@ type Model interface {
 	GetSQLQueryAndParametersForLinkedinQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string, fetchSource bool,
 		limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string, int)
 	GetDomainData(projectID string) ([]model.DomainDataResponse, int)
+	GetCompanyDataFromLinkedin(projectID string) ([]model.DomainDataResponse, string, int)
+
 	UpdateLinkedinGroupUserCreationDetails(domainData model.DomainDataResponse) error
+	GetCampaignGroupInfoForGivenTimerange(campaignGroupInfoRequestPayload model.LinkedinCampaignGroupInfoRequestPayload) ([]model.LinkedinDocument, int)
 	//bingads document
 	GetBingadsFilterValuesSQLAndParams(projectID int64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int)
 
@@ -977,17 +982,16 @@ type Model interface {
 
 	//account scoring
 	GetWeightsByProject(project_id int64) (*model.AccWeights, int)
-	UpdateUserEventsCount(ev []model.EventsCountScore, lastev map[string]model.LatestScore) error
-	UpdateGroupEventsCount(ev []model.EventsCountScore, lastev map[string]model.LatestScore) error
+	UpdateUserEventsCount(projectId int64, ev map[string]map[string]model.LatestScore) error
+	UpdateGroupEventsCount(projectId int64, ev map[string]map[string]model.LatestScore, lastev map[string]model.LatestScore) error
+	UpdateUserEventsCountGO(projectId int64, ev map[string]map[string]model.LatestScore) error
+	UpdateGroupEventsCountGO(projectId int64, ev map[string]map[string]model.LatestScore, lastev map[string]model.LatestScore) error
 	GetAccountsScore(project_id int64, group_id int, ts string, debug bool) ([]model.PerAccountScore, *model.AccWeights, error)
 	GetUserScore(project_id int64, user_id string, ts string, debug bool, is_anonymus bool) (model.PerUserScoreOnDay, error)
-	GetAllUserScore(project_id int64, debug bool) ([]model.AllUsersScore, *model.AccWeights, error)
-	GetAllUserScoreOnDay(project_id int64, ts string, debug bool) ([]model.AllUsersScore, *model.AccWeights, error)
-	GetAllUserScoreLatest(project_id int64, debug bool) ([]model.AllUsersScore, *model.AccWeights, error)
 	GetUserScoreOnIds(projectId int64, usersAnonymous, usersNonAnonymous []string, debug bool) (map[string]model.PerUserScoreOnDay, error)
 	GetAccountScoreOnIds(projectId int64, accountIds []string, debug bool) (map[string]model.PerUserScoreOnDay, error)
 	GetPerAccountScore(projectId int64, timestamp string, userId string, num_days int, debug bool) (model.PerAccountScore, *model.AccWeights, error)
-	GetAllUserEvents(projectId int64, debug bool) (map[string]map[string]model.LatestScore, error)
+	GetAllUserEvents(projectId int64, debug bool) (map[string]map[string]model.LatestScore, map[string]int, error, int64)
 
 	// Slack
 	SetAuthTokenforSlackIntegration(projectID int64, agentUUID string, authTokens model.SlackAccessTokens) error

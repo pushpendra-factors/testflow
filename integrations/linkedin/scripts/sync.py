@@ -1,25 +1,15 @@
 from optparse import OptionParser
 import logging as log
-import datetime
-import requests
-import copy
-from datetime import datetime
 import sys
-import time
 import traceback
 from data_service import DataService
 from data_service import DataService
 from constants import *
 from util import Util as U
 from data_fetch import DataFetch
-from transformations import DataTransformation
-from data_insert import DataInsert
-from linkedin_setting import LinkedinSetting
 from util import Util as U
 from data_fetch import DataFetch
-from transformations import DataTransformation
-from data_insert import DataInsert
-from linkedin_setting import LinkedinSetting
+from weekly_data_fetch import WeeklyDataFetch
 
 parser = OptionParser()
 parser.add_option('--env', dest='env', default='development')
@@ -29,19 +19,17 @@ parser.add_option('--project_ids', dest='project_ids', help='', default=None, ty
 parser.add_option('--exclude_project_ids', dest='exclude_project_ids', help='', default='', type=str)
 parser.add_option('--client_id', dest='client_id', help='',default=None, type=str)
 parser.add_option('--client_secret', dest='client_secret', help='',default=None, type=str)
-parser.add_option('--start_timestamp', dest='start_timestamp', help='', default=None, type=int)
-parser.add_option('--end_timestamp', dest='end_timestamp', help='', default=None, type=int)
-parser.add_option('--insert_metadata', dest='insert_metadata', help='', default='True')
-parser.add_option('--insert_report', dest='insert_report', help='', default='True')
-parser.add_option('--run_ads_heirarchical_data', dest='run_ads_heirarchical_data',
-    help='', default='True')
 parser.add_option('--data_service_host', dest='data_service_host',
     help='Data service host', default='http://localhost:8089')
+parser.add_option('--start_timestamp', dest='start_timestamp', help='', default=None, type=int)
+parser.add_option('--input_end_timestamp', dest='input_end_timestamp', help='', default=None, type=int)
+parser.add_option('--run_ads_heirarchical_data', dest='run_ads_heirarchical_data',
+    help='', default='False')
 parser.add_option('--run_member_company_insights', dest='run_member_company_insights', 
     help='', default='True')
-parser.add_option('--backfill_project_ids', dest='backfill_project_ids', help='', default='1', type=str)
+parser.add_option('--is_weekly_job', default='True', dest='is_weekly_job', help='', type=str)
 
-def ping_healthcheck(successes, failures, token_failures):
+def ping_healthcheck(successes, failures, token_failures, is_weekly_job):
         status_msg = ''
         if len(failures) > 0: status_msg = 'Failures on sync.'
         else: status_msg = 'Successfully synced.'
@@ -50,12 +38,14 @@ def ping_healthcheck(successes, failures, token_failures):
             'failures': failures, 
             'success': successes,
         }
+        healthcheck_ping_id = HEALTHCHECK_PING_ID
+        if is_weekly_job: healthcheck_ping_id = HEALTHCHECK_WEEKLY_JOB
 
         if len(failures) > 0:
-            U.ping_healthcheck(options.env, HEALTHCHECK_PING_ID,
+            U.ping_healthcheck(options.env, healthcheck_ping_id,
                 notification_payload, endpoint='/fail')
         else:
-            U.ping_healthcheck(options.env, HEALTHCHECK_PING_ID, notification_payload)
+            U.ping_healthcheck(options.env, healthcheck_ping_id, notification_payload)
         if len(token_failures) > 0:
             notification_payload = {
                 'status': 'Token failures', 
@@ -65,7 +55,7 @@ def ping_healthcheck(successes, failures, token_failures):
                 notification_payload, endpoint='/fail')
 
 
-def get_collections(options, linkedin_setting, sync_info_with_type, end_timestamp, backfill_project_ids):
+def get_collections(options, linkedin_setting, sync_info_with_type, input_end_timestamp):
     response = {'status': 'success'}
     skipMsgs = []
     campaign_group_meta = {}
@@ -76,61 +66,76 @@ def get_collections(options, linkedin_setting, sync_info_with_type, end_timestam
                                     options.run_member_company_insights == True)
     run_ads_heirarchical_data = (options.run_ads_heirarchical_data == 'True' or 
                                     options.run_ads_heirarchical_data == True)
+    is_weekly_job = (options.is_weekly_job == 'True' or 
+                    options.is_weekly_job == True)
 
     try:
-        if run_ads_heirarchical_data:
-            res = DataFetch.get_ad_account_data(
-                options, linkedin_setting, end_timestamp)
-
-            requests_counter += res[API_REQUESTS]
-            if res['status'] == 'failed':
-                return res
-
-            # don't mutate meta object, return it as a new object from get_campaign_group_function
-            res = DataFetch.etl_ads_hierarchical_data(
-                    options, linkedin_setting, sync_info_with_type, campaign_group_meta,
-                    campaign_meta, creative_meta, CAMPAIGN_GROUPS, CAMPAIGN_GROUP_INSIGHTS,
-                    URL_ENDPOINT_CAMPAIGN_GROUP_META, 'CAMPAIGN_GROUP', end_timestamp)
-
+        # if it's a weekly job the other jobs are not to be run even if flag set to true
+        if is_weekly_job and MEMBER_COMPANY_INSIGHTS in sync_info_with_type:
+            res = WeeklyDataFetch.weekly_job_etl_and_backfill_company_data_with_campaign_group(
+                        options, linkedin_setting,
+                        sync_info_with_type)
             requests_counter += res[API_REQUESTS]
             if res['status'] == 'skipped':
                 skipMsgs.append(res['errMsg'])
             if res['status'] == 'failed':
                 return res
-            
-            res = DataFetch.etl_ads_hierarchical_data(
-                    options, linkedin_setting, sync_info_with_type, campaign_group_meta,
-                    campaign_meta, creative_meta, CAMPAIGNS, CAMPAIGN_INSIGHTS,
-                    URL_ENDPOINT_CAMPAIGN_META, 'CAMPAIGN', end_timestamp)
-
-            requests_counter += res[API_REQUESTS]
-            if res['status'] == 'skipped':
-                skipMsgs.append(res['errMsg'])
-            if res['status'] == 'failed':
-                return res
-            
-            # keeping it commented for future reference
-            
-            # res = DataFetch.etl_ads_hierarchical_data(
-            #         options, linkedin_setting, sync_info_with_type, campaign_group_meta,
-            #         campaign_meta, creative_meta, CREATIVES, CREATIVE_INSIGHTS,
-            #         URL_ENDPOINT_CREATIVE_META, 'CREATIVE', end_timestamp)
-
-            # requests_counter += res[API_REQUESTS]
-            # if res['status'] == 'skipped':
-            #     skipMsgs.append(res['errMsg'])
-            # if res['status'] == 'failed':
-            #     return res
         
-        if run_member_company_insights:
-            res = DataFetch.etl_member_company_data(
-                    options, linkedin_setting,
-                    sync_info_with_type, end_timestamp, backfill_project_ids)
-            requests_counter += res[API_REQUESTS]
-            if res['status'] == 'skipped':
-                skipMsgs.append(res['errMsg'])
-            if res['status'] == 'failed':
-                return res
+        else:
+            if run_ads_heirarchical_data:
+                res = DataFetch.get_ad_account_data(
+                    options, linkedin_setting, input_end_timestamp)
+
+                requests_counter += res[API_REQUESTS]
+                if res['status'] == 'failed':
+                    return res
+
+                # don't mutate meta object, return it as a new object from get_campaign_group_function
+                res = DataFetch.etl_ads_hierarchical_data(
+                        options, linkedin_setting, sync_info_with_type, campaign_group_meta,
+                        campaign_meta, creative_meta, CAMPAIGN_GROUPS, CAMPAIGN_GROUP_INSIGHTS,
+                        URL_ENDPOINT_CAMPAIGN_GROUP_META, 'CAMPAIGN_GROUP', input_end_timestamp)
+
+                requests_counter += res[API_REQUESTS]
+                if res['status'] == 'skipped':
+                    skipMsgs.append(res['errMsg'])
+                if res['status'] == 'failed':
+                    return res
+                
+                res = DataFetch.etl_ads_hierarchical_data(
+                        options, linkedin_setting, sync_info_with_type, campaign_group_meta,
+                        campaign_meta, creative_meta, CAMPAIGNS, CAMPAIGN_INSIGHTS,
+                        URL_ENDPOINT_CAMPAIGN_META, 'CAMPAIGN', input_end_timestamp)
+
+                requests_counter += res[API_REQUESTS]
+                if res['status'] == 'skipped':
+                    skipMsgs.append(res['errMsg'])
+                if res['status'] == 'failed':
+                    return res
+                
+                # keeping it commented for future reference
+                
+                # res = DataFetch.etl_ads_hierarchical_data(
+                #         options, linkedin_setting, sync_info_with_type, campaign_group_meta,
+                #         campaign_meta, creative_meta, CREATIVES, CREATIVE_INSIGHTS,
+                #         URL_ENDPOINT_CREATIVE_META, 'CREATIVE', input_end_timestamp)
+
+                # requests_counter += res[API_REQUESTS]
+                # if res['status'] == 'skipped':
+                #     skipMsgs.append(res['errMsg'])
+                # if res['status'] == 'failed':
+                #     return res
+            
+            if run_member_company_insights:
+                res = DataFetch.etl_member_company_data_with_campaign_group(
+                        options, linkedin_setting,
+                        sync_info_with_type, input_end_timestamp)
+                requests_counter += res[API_REQUESTS]
+                if res['status'] == 'skipped':
+                    skipMsgs.append(res['errMsg'])
+                if res['status'] == 'failed':
+                    return res
+            
         
     except Exception as e:
         traceback.print_tb(e.__traceback__)
@@ -197,7 +202,9 @@ if __name__ == '__main__':
         failures.append({'status': 'failed', 'errMsg': 'Failed to get linkedin settings'})
     
     start_timestamp = options.start_timestamp
-    end_timestamp = options.end_timestamp
+    input_end_timestamp = options.input_end_timestamp
+    is_weekly_job = (options.is_weekly_job == 'True' or 
+                    options.is_weekly_job == True)
     response = {}
 
 
@@ -221,12 +228,12 @@ if __name__ == '__main__':
         for setting in split_linkedin_settings:
             sync_info_with_type = {}
             sync_info_with_type, err = data_service.get_last_sync_info(
-                                    setting, start_timestamp, end_timestamp)
+                                    setting, start_timestamp, input_end_timestamp)
             if err != '':
                 response['status'] = 'failed'
                 response['errMsg'] = err
             else:
-                response = get_collections(options, setting, sync_info_with_type, end_timestamp, options.backfill_project_ids)
+                response = get_collections(options, setting, sync_info_with_type, input_end_timestamp)
 
             response[PROJECT_ID] = setting.project_id
             response[AD_ACCOUNT] = setting.ad_account
@@ -238,6 +245,6 @@ if __name__ == '__main__':
             else:
                 successes.append(response)
 
-        ping_healthcheck(successes, failures, token_failures)       
+        ping_healthcheck(successes, failures, token_failures, is_weekly_job)       
         log.warning('Successfully synced. End of Linkedin sync job.')
         sys.exit(0)

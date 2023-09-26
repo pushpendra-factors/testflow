@@ -1,4 +1,6 @@
 import { WhiteListedAccounts, TestEnvs } from 'Routes/constants';
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 
 export const featureLock = (activeAgent) => {
   return (
@@ -10,4 +12,14 @@ export const featureLock = (activeAgent) => {
 
 export const AdminLock = (activeAgent) => {
   return activeAgent === 'solutions@factors.ai';
+};
+
+export const ScrollToTop = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
 };

@@ -88,6 +88,22 @@ func DataServiceLinkedinAddMultipleDocumentsHandler(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"message": "Created linkedin document."})
 }
 
+func DataServiceLinkedinGetCampaignGroupInfoHandler(c *gin.Context) {
+	r := c.Request
+
+	var campaignGroupInfoRequestPayload model.LinkedinCampaignGroupInfoRequestPayload
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&campaignGroupInfoRequestPayload); err != nil {
+		log.WithError(err).Error("Failed to decode JSON request")
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "Failed to decode JSON request."})
+		return
+	}
+	linkedinDocuments, statusCode := store.GetStore().GetCampaignGroupInfoForGivenTimerange(campaignGroupInfoRequestPayload)
+	c.JSON(statusCode, linkedinDocuments)
+}
+
 // DataServiceLinkedinDeleteDocumentsHandler deletes the db insertions of one doc_type of given timestamp
 func DataServiceLinkedinDeleteDocumentsHandler(c *gin.Context) {
 	r := c.Request
