@@ -1,6 +1,9 @@
 package model
 
-import "strings"
+import (
+	U "factors/util"
+	"strings"
+)
 
 const (
 	LinkedinDisplayCategory = "linkedin_metrics"
@@ -25,7 +28,7 @@ func TransformLinkedinChannelsPropertiesConfigToKpiPropertiesConfig(channelsWith
 				"data_type":    property.Type,
 				"object_type":  channelAndProperties.Name,
 				"entity":       EventEntity,
-				"category":     channelAndProperties.Name,
+				"category":     U.GetSnakeCaseToTitleString(channelAndProperties.Name),
 			}
 			resultantPropertiesConfig = append(resultantPropertiesConfig, tempPropertyConfig)
 		}
