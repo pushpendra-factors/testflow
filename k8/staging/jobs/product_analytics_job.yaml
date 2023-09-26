@@ -2,17 +2,17 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   labels:
-    nodePool: factors-staging-node-pool
+    nodePool: staging-containerd
   name: product-analytics-job
 spec:
   template:
     metadata:
       labels:
         layer: jobs
-        nodePool: factors-staging-node-pool
+        nodePool: staging-containerd
     spec:
       nodeSelector:
-        cloud.google.com/gke-nodepool: factors-staging-node-pool
+        cloud.google.com/gke-nodepool: staging-containerd
       containers:
       - name: product-analytics-job
         image: us.gcr.io/factors-staging/product-analytics-job:0.1
