@@ -2812,7 +2812,7 @@ func Enrich(projectID int64, workerPerProject int, dataPropertiesByType map[int]
 
 	salesforceSmartEventNames := GetSalesforceSmartEventNames(projectID)
 
-	docMinTimestamp, minTimestamp, errCode := store.GetStore().GetSalesforceDocumentBeginingTimestampByDocumentTypeForSync(projectID)
+	docMinTimestamp, minTimestamp, errCode := store.GetStore().GetSalesforceDocumentBeginingTimestampByDocumentTypeForSync(projectID, util.TimeNowZ().AddDate(0, 0, -30).Unix())
 	if errCode != http.StatusFound {
 		if errCode == http.StatusNotFound {
 			statusByProjectAndType = append(statusByProjectAndType, Status{ProjectID: projectID,

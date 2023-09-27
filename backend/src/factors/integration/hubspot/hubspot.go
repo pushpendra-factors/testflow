@@ -4798,7 +4798,7 @@ func Sync(projectID int64, workersPerProject int, recordsMaxCreatedAtSec int64, 
 	}
 
 	var orderedTimeSeries [][]int64
-	minTimestamp, errCode := store.GetStore().GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(projectID, GetHubspotSyncOrderByProjectID(projectID))
+	minTimestamp, errCode := store.GetStore().GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(projectID, GetHubspotSyncOrderByProjectID(projectID), util.TimeNowZ().AddDate(0, 0, -30).Unix())
 	if errCode != http.StatusFound {
 		if errCode == http.StatusNotFound {
 			statusByProjectAndType = append(statusByProjectAndType, Status{ProjectId: projectID,
