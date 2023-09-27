@@ -31,23 +31,18 @@ function PropertyFilter({
   setAppliedFilters,
   setEventProp,
   areFiltersDirty,
-  resetSelectedFilters
+  resetSelectedFilters,
+  onClearFilters
 }) {
   const groupsList = useSelector((state) => selectGroupsList(state));
   const dispatch = useDispatch();
   const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
 
   const handleAccountChange = (account) => {
-    setSelectedAccount((current) => {
-      return {
-        ...current,
-        account
-      };
-    });
+    setSelectedAccount(account);
     setFiltersList(INITIAL_FILTERS_STATE.filters);
     setEventProp(INITIAL_FILTERS_STATE.eventProp);
     setListEvents(INITIAL_FILTERS_STATE.eventsList);
-    setAppliedFilters(INITIAL_FILTERS_STATE);
   };
 
   const analyseMenu = (
@@ -134,7 +129,7 @@ function PropertyFilter({
           onClick={toggleFilters}
         >
           <Text type='title' extraClass='mb-0' weight='medium' color='grey-6'>
-            Collapse conditions
+            Hide filters
           </Text>
           <SVG size={16} name='chevronDown' color='#8C8C8C' />
         </Button>
@@ -172,6 +167,7 @@ function PropertyFilter({
         areFiltersDirty={areFiltersDirty}
         setEventProp={setEventProp}
         onCancel={handleCancel}
+        onClearFilters={onClearFilters}
       />
     </div>
   );

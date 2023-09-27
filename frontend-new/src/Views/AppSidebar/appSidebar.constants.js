@@ -3,5 +3,6 @@ export const AccountsSidebarIconsMapping = {
   $linkedin_company: 'linkedin_ads',
   $hubspot_company: 'hubspot_ads',
   $g2: 'g2crowd',
-  All: 'buildings'
+  All: 'buildings',
+  $6signal: 'sixSignalLogo'
 };
