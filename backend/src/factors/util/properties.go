@@ -658,38 +658,6 @@ var SP_INITIAL_PAGE_SCROLL_PERCENT string = UP_INITIAL_PAGE_SCROLL_PERCENT
 
 // clearbit properties
 var CLR_PROPERTIES_PREFIX = "$clr_"
-var CLR_IP = "$clr_ip"
-var CLR_COMPANY_NAME = "$clr_company_name"
-var CLR_COMPANY_GEO_CITY = "$clr_company_geo_city"
-var CLR_COMPANY_GEO_COUNTRY = "$clr_company_geo_country"
-var CLR_COMPANY_GEO_POSTALCODE = "$clr_company_geo_postalCode"
-var CLR_COMPANY_GEO_STATE = "$clr_company_geo_state"
-var CLR_COMPANY_GEO_STATECODE = "$clr_company_geo_stateCode"
-var CLR_COMPANY_GEO_COUNTRYCODE = "$clr_company_geo_countryCode"
-var CLR_COMPANY_GEO_LATITUDE = "$clr_company_geo_lat"
-var CLR_COMPANY_GEO_LONGTITUDE = "$clr_company_geo_lng"
-var CLR_COMPANY_METRICS_ALEXAUSRANK = "$clr_company_metrics_alexaUsRank"
-var CLR_COMPANY_METRICS_ALEXAGLOBALRANK = "$clr_company_metrics_alexaGlobalRank"
-var CLR_COMPANY_METRICS_EMPLOYEES = "$clr_company_metrics_employees"
-var CLR_COMPANY_METRICS_EMPLOYEESRANGE = "$clr_company_metrics_employeesRange"
-var CLR_COMPANY_METRICS_RAISED = "$clr_company_metrics_raised"
-var CLR_COMPANY_METRICS_ESTIMATED_ANNUAL_REVENUE = "$clr_company_metrics_estimatedAnnualRevenue"
-var CLR_COMPANY_METRICS_MARKET_CAP = "$clr_company_metrics_marketCap"
-var CLR_COMPANY_METRICS_ANNUAL_REVENUE = "$clr_company_metrics_annualRevenue"
-var CLR_COMPANY_METRICS_FISCALYEAR = "$clr_company_metrics_fiscalYearEnd"
-var CLR_COMPANY_FOUNDEDYEAR = "$clr_company_foundedYear"
-var CLR_COMPANY_TYPE = "$clr_company_type"
-var CLR_COMPANY_CATEGORY_SECTOR = "$clr_company_category_sector"
-var CLR_COMPANY_CATEGORY_INDUSTRYGROUP = "$clr_company_category_industryGroup"
-var CLR_COMPANY_CATEGORY_INDUSTRY = "$clr_company_category_industry"
-var CLR_COMPANY_CATEGORY_SUBINDUSTRY = "$clr_company_category_subIndustry"
-var CLR_COMPANY_CATEGORY_SICCODE = "$clr_company_category_sicCode"
-var CLR_COMPANY_CATEGORY_NAICSCODE = "$clr_company_category_naicsCode"
-var CLR_COMPANY_PARENT_DOMAIN = "$clr_company_parent_domain"
-var CLR_COMPANY_ID = "$clr_company_id"
-var CLR_COMPANY_LEGALNAME = "$clr_company_legalname"
-var CLR_COMPANY_TECH = "$clr_company_tech"
-var CLR_COMPANY_TAGS = "$clr_company_tags"
 
 // 6Signal Properties
 var SIX_SIGNAL_PROPERTIES_PREFIX = "$6Signal_"
@@ -712,6 +680,23 @@ var SIX_SIGNAL_REGION = "$6Signal_region"
 var SIX_SIGNAL_NAICS = "$6Signal_naics"
 var SIX_SIGNAL_ANNUAL_REVENUE = "$6Signal_annual_revenue"
 var SIX_SIGNAL_SIC_DESCRIPTION = "$6Signal_sic_description"
+
+// Enriched Company properties
+var ENRICHED_PROPERTIES_PREFIX = "$enriched_"
+var ENRICHMENT_SOURCE = "$enrichment_source"
+var ENRICHED_COMPANY_TYPE = "$enriched_company_type"
+var ENRICHED_COMPANY_ID = "$enriched_company_id"
+var ENRICHED_COMPANY_SUB_INDUSTRY = "$enriched_company_sub_industry"
+var ENRICHED_COMPANY_SECTOR = "$enriched_company_sector"
+var ENRICHED_COMPANY_INDUSTRY_GROUP = "$enriched_company_industry_group"
+var ENRICHED_COMPANY_ALEXA_GLOBAL_RANK = "$enriched_company_alexa_global_rank"
+var ENRICHED_COMPANY_FOUNDED_YEAR = "$enriched_company_founded_year"
+var ENRICHED_COMPANY_LEGAL_NAME = "$enriched_company_legal_name"
+var ENRICHED_COMPANY_ALEXA_US_RANK = "$enriched_company_alexa_us_rank"
+var ENRICHED_COMPANY_FUNDING_RAISED = "$enriched_company_funding_raised"
+var ENRICHED_COMPANY_MARKET_CAP = "$enriched_company_market_cap"
+var ENRICHED_COMPANY_TAGS = "$enriched_company_tags"
+var ENRICHED_COMPANY_TECH = "$enriched_company_tech"
 
 // LinkedinCompany properties
 var LI_PROPERTIES_PREFIX = "$li_"
@@ -933,33 +918,6 @@ var SDK_ALLOWED_USER_PROPERTIES = [...]string{
 	UP_LATEST_REFERRER,
 	UP_LATEST_REFERRER_URL,
 	UP_LATEST_REFERRER_DOMAIN,
-	CLR_COMPANY_NAME,
-	CLR_COMPANY_GEO_CITY,
-	CLR_COMPANY_GEO_COUNTRY,
-	CLR_COMPANY_GEO_POSTALCODE,
-	CLR_COMPANY_GEO_STATE,
-	CLR_COMPANY_GEO_STATECODE,
-	CLR_COMPANY_GEO_COUNTRYCODE,
-	CLR_COMPANY_GEO_LATITUDE,
-	CLR_COMPANY_GEO_LONGTITUDE,
-	CLR_COMPANY_METRICS_ALEXAUSRANK,
-	CLR_COMPANY_METRICS_ALEXAGLOBALRANK,
-	CLR_COMPANY_METRICS_EMPLOYEES,
-	CLR_COMPANY_METRICS_EMPLOYEESRANGE,
-	CLR_COMPANY_METRICS_RAISED,
-	CLR_COMPANY_METRICS_ESTIMATED_ANNUAL_REVENUE,
-	CLR_COMPANY_METRICS_MARKET_CAP,
-	CLR_COMPANY_METRICS_ANNUAL_REVENUE,
-	CLR_COMPANY_METRICS_FISCALYEAR,
-	CLR_COMPANY_FOUNDEDYEAR,
-	CLR_COMPANY_TYPE,
-	CLR_COMPANY_CATEGORY_SECTOR,
-	CLR_COMPANY_CATEGORY_INDUSTRYGROUP,
-	CLR_COMPANY_CATEGORY_INDUSTRY,
-	CLR_COMPANY_CATEGORY_SUBINDUSTRY,
-	CLR_COMPANY_CATEGORY_SICCODE,
-	CLR_COMPANY_CATEGORY_NAICSCODE,
-	CLR_COMPANY_PARENT_DOMAIN,
 }
 
 // Event properties that are not visible to user for analysis.
@@ -1858,145 +1816,126 @@ var STANDARD_EVENT_PROPERTIES_CATAGORIZATION = map[string]string{
 // GetStandardUserPropertiesBasedOnIntegration is using this.
 // Separate logic for integration based properties is there.
 var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
-	UP_PLATFORM:                         "User platform",
-	UP_BROWSER:                          "User browser",
-	UP_BROWSER_VERSION:                  "User browser version",
-	UP_OS:                               "User OS",
-	UP_OS_VERSION:                       "User OS version",
-	UP_SCREEN_WIDTH:                     "Screen width",
-	UP_SCREEN_HEIGHT:                    "Screen height",
-	UP_SCREEN_DENSITY:                   "Screen density",
-	UP_LANGUAGE:                         "Language",
-	UP_LOCALE:                           "Locale",
-	UP_DEVICE_NAME:                      "Device name",
-	UP_DEVICE_BRAND:                     "Device brand",
-	UP_DEVICE_MODEL:                     "Device model",
-	UP_DEVICE_TYPE:                      "Device type",
-	UP_DEVICE_FAMILY:                    "Device family",
-	UP_DEVICE_MANUFACTURER:              "Device manufacturer",
-	UP_DEVICE_CARRIER:                   "Device carrier",
-	UP_COUNTRY:                          "User country",
-	UP_CITY:                             "User city",
-	UP_REGION:                           "User region",
-	UP_TIMEZONE:                         "User timezone",
-	UP_USER_ID:                          "User ID",
-	UP_EMAIL:                            "User email ID",
-	UP_COMPANY:                          "Company",
-	UP_NAME:                             "User Name",
-	UP_FIRST_NAME:                       "User first Name",
-	UP_LAST_NAME:                        "User last Name",
-	UP_PHONE:                            "User phone",
-	UP_INITIAL_PAGE_URL:                 "User first page URL",
-	UP_INITIAL_PAGE_DOMAIN:              "User first page domain",
-	UP_INITIAL_PAGE_RAW_URL:             "User first page raw URL",
-	UP_INITIAL_PAGE_LOAD_TIME:           "User first page load time",
-	UP_INITIAL_PAGE_SPENT_TIME:          "User first page active time",
-	UP_INITIAL_PAGE_SCROLL_PERCENT:      "User first page scroll percent",
-	UP_INITIAL_CAMPAIGN:                 "User first campaign",
-	UP_INITIAL_CAMPAIGN_ID:              "User first campaign ID",
-	UP_INITIAL_SOURCE:                   "User first source",
-	UP_INITIAL_MEDIUM:                   "User first medium",
-	UP_INITIAL_KEYWORD:                  "User first keyword",
-	UP_INITIAL_KEYWORD_MATCH_TYPE:       "User first keyword match type",
-	UP_INITIAL_TERM:                     "User first search term",
-	UP_INITIAL_CONTENT:                  "User first content",
-	UP_INITIAL_ADGROUP:                  "User first adgroup",
-	UP_INITIAL_ADGROUP_ID:               "User first adgroup ID",
-	UP_INITIAL_CREATIVE:                 "User first creative",
-	UP_INITIAL_GCLID:                    "User first GCLID",
-	UP_INITIAL_FBCLID:                   "User first FBCLID",
-	UP_INITIAL_REFERRER:                 "User first referrer",
-	UP_INITIAL_REFERRER_URL:             "User first referrer URL",
-	UP_INITIAL_REFERRER_DOMAIN:          "User first referrer domain",
-	UP_INITIAL_CHANNEL:                  "User first channel",
-	UP_DAY_OF_FIRST_EVENT:               "First seen day",
-	UP_HOUR_OF_FIRST_EVENT:              "First seen hour",
-	UP_PAGE_COUNT:                       "User page count",
-	UP_TOTAL_SPENT_TIME:                 "User total active time",
-	UP_LATEST_PAGE_URL:                  "User latest page URL",
-	UP_LATEST_PAGE_DOMAIN:               "User latest page domain",
-	UP_LATEST_PAGE_RAW_URL:              "User latest page raw URL",
-	UP_LATEST_PAGE_LOAD_TIME:            "User latest page load time",
-	UP_LATEST_PAGE_SPENT_TIME:           "User latest page active time",
-	UP_LATEST_PAGE_SCROLL_PERCENT:       "User latest page scroll percent",
-	UP_LATEST_CAMPAIGN:                  "User latest campaign",
-	UP_LATEST_CAMPAIGN_ID:               "User latest campaign ID",
-	UP_LATEST_SOURCE:                    "User latest source",
-	UP_LATEST_MEDIUM:                    "User latest medium",
-	UP_LATEST_KEYWORD:                   "User latest keyword",
-	UP_LATEST_KEYWORD_MATCH_TYPE:        "User latest keyword match type",
-	UP_LATEST_TERM:                      "User latest search term",
-	UP_LATEST_CONTENT:                   "User latest content",
-	UP_LATEST_ADGROUP:                   "User latest adgroup",
-	UP_LATEST_ADGROUP_ID:                "User latest adgroup ID",
-	UP_LATEST_CREATIVE:                  "User latest creative",
-	UP_LATEST_GCLID:                     "User latest GCLID",
-	UP_LATEST_FBCLID:                    "User latest FBCLID",
-	UP_LATEST_REFERRER:                  "User latest referrer",
-	UP_LATEST_REFERRER_URL:              "User latest referrer URL",
-	UP_LATEST_REFERRER_DOMAIN:           "User latest referrer domain",
-	UP_LATEST_CHANNEL:                   "User latest channel",
-	UP_JOIN_TIME:                        "First seen date",
-	CLR_COMPANY_NAME:                    "Clearbit Company Name",
-	CLR_COMPANY_GEO_CITY:                "Clearbit Company Geo City",
-	CLR_COMPANY_GEO_COUNTRY:             "Clearbit Company Geo Country",
-	CLR_COMPANY_GEO_STATE:               "Clearbit Company Geo State",
-	CLR_COMPANY_GEO_STATECODE:           "Clearbit Company Geo State Code",
-	CLR_COMPANY_METRICS_ALEXAUSRANK:     "Clearbit Company Metrics Alexa US Rank",
-	CLR_COMPANY_METRICS_ALEXAGLOBALRANK: "Clearbit Company Metrics Alexa Global Rank",
-	CLR_COMPANY_METRICS_EMPLOYEES:       "Clearbit Company Metrics Employees",
-	CLR_COMPANY_METRICS_EMPLOYEESRANGE:  "Clearbit Company Metrics Employee Range",
-	CLR_COMPANY_METRICS_RAISED:          "Clearbit Company Metrics Raised",
-	CLR_COMPANY_GEO_POSTALCODE:          "Clearbit Company Geo Postal Code",
-	CLR_COMPANY_GEO_COUNTRYCODE:         "Clearbit Company Geo Country Code",
-	CLR_COMPANY_GEO_LATITUDE:            "Clearbit Company Geo Latitude",
-	CLR_COMPANY_GEO_LONGTITUDE:          "Clearbit Company Geo Longitude",
-	CLR_COMPANY_METRICS_ESTIMATED_ANNUAL_REVENUE: "Clearbit Company Metrics Estimated Annual Revenue",
-	CLR_COMPANY_METRICS_MARKET_CAP:               "Clearbit Company Metrics Market Cap",
-	CLR_COMPANY_METRICS_ANNUAL_REVENUE:           "Clearbit Company Metrics Annual Revenue",
-	CLR_COMPANY_METRICS_FISCALYEAR:               "Clearbit Company Metrics Fiscal Year End",
-	CLR_COMPANY_FOUNDEDYEAR:                      "Clearbit Company Founded Year",
-	CLR_COMPANY_TYPE:                             "Clearbit Company UnitType",
-	CLR_COMPANY_CATEGORY_SECTOR:                  "Clearbit Company Category Sector",
-	CLR_COMPANY_CATEGORY_INDUSTRYGROUP:           "Clearbit Company Category Industry Group",
-	CLR_COMPANY_CATEGORY_INDUSTRY:                "Clearbit Company Category Industry",
-	CLR_COMPANY_CATEGORY_SUBINDUSTRY:             "Clearbit Company Category Sub Industry",
-	CLR_COMPANY_CATEGORY_SICCODE:                 "Clearbit Company Category Sic Code",
-	CLR_COMPANY_CATEGORY_NAICSCODE:               "Clearbit Company Category Naics Code",
-	CLR_COMPANY_PARENT_DOMAIN:                    "Clearbit Company Parent Domain",
-	UP_POSTAL_CODE:                               "User postal code",
-	UP_CONTINENT:                                 "User continent",
-	CLR_IP:                                       "Clearbit IP",
-	CLR_COMPANY_ID:                               "Clearbit Company ID",
-	CLR_COMPANY_LEGALNAME:                        "Clearbit Company Legalname",
-	CLR_COMPANY_TECH:                             "Clearbit Company Tech",
-	CLR_COMPANY_TAGS:                             "Clearbit Company Tags",
-	SIX_SIGNAL_ADDRESS:                           "Company HQ address",
-	SIX_SIGNAL_ANNUAL_REVENUE:                    "Company annual revenue",
-	SIX_SIGNAL_CITY:                              "Company HQ city",
-	SIX_SIGNAL_COUNTRY:                           "Company country",
-	SIX_SIGNAL_COUNTRY_ISO_CODE:                  "Company country ISO code",
-	SIX_SIGNAL_DOMAIN:                            "Company domain",
-	SIX_SIGNAL_EMPLOYEE_COUNT:                    "Company employee count",
-	SIX_SIGNAL_EMPLOYEE_RANGE:                    "Company employee range",
-	SIX_SIGNAL_INDUSTRY:                          "Company industry",
-	SIX_SIGNAL_NAICS:                             "Company NAICS code",
-	SIX_SIGNAL_NAICS_DESCRIPTION:                 "Company NAICS description",
-	SIX_SIGNAL_NAME:                              "Company name",
-	SIX_SIGNAL_PHONE:                             "Company phone",
-	SIX_SIGNAL_REGION:                            "Company region",
-	SIX_SIGNAL_REVENUE_RANGE:                     "Company annual revenue range",
-	SIX_SIGNAL_SIC:                               "Company SIC code",
-	SIX_SIGNAL_SIC_DESCRIPTION:                   "Company SIC description",
-	SIX_SIGNAL_STATE:                             "Company state",
-	SIX_SIGNAL_ZIP:                               "Company ZIP code",
-	G2_DOMAIN:                                    "G2 Company Domain",
-	G2_NAME:                                      "G2 Company Name",
-	G2_LEGAL_NAME:                                "G2 Company Legal Name",
-	G2_COUNTRY:                                   "G2 Company Country",
-	G2_EMPLOYEES_RANGE:                           "G2 Company Employee Range",
-	G2_EMPLOYEES:                                 "G2 No Of Employees",
-	G2_COMPANY_ID:                                "G2 Company ID",
+	UP_PLATFORM:                        "User platform",
+	UP_BROWSER:                         "User browser",
+	UP_BROWSER_VERSION:                 "User browser version",
+	UP_OS:                              "User OS",
+	UP_OS_VERSION:                      "User OS version",
+	UP_SCREEN_WIDTH:                    "Screen width",
+	UP_SCREEN_HEIGHT:                   "Screen height",
+	UP_SCREEN_DENSITY:                  "Screen density",
+	UP_LANGUAGE:                        "Language",
+	UP_LOCALE:                          "Locale",
+	UP_DEVICE_NAME:                     "Device name",
+	UP_DEVICE_BRAND:                    "Device brand",
+	UP_DEVICE_MODEL:                    "Device model",
+	UP_DEVICE_TYPE:                     "Device type",
+	UP_DEVICE_FAMILY:                   "Device family",
+	UP_DEVICE_MANUFACTURER:             "Device manufacturer",
+	UP_DEVICE_CARRIER:                  "Device carrier",
+	UP_COUNTRY:                         "User country",
+	UP_CITY:                            "User city",
+	UP_REGION:                          "User region",
+	UP_TIMEZONE:                        "User timezone",
+	UP_USER_ID:                         "User ID",
+	UP_EMAIL:                           "User email ID",
+	UP_COMPANY:                         "Company",
+	UP_NAME:                            "User Name",
+	UP_FIRST_NAME:                      "User first Name",
+	UP_LAST_NAME:                       "User last Name",
+	UP_PHONE:                           "User phone",
+	UP_INITIAL_PAGE_URL:                "User first page URL",
+	UP_INITIAL_PAGE_DOMAIN:             "User first page domain",
+	UP_INITIAL_PAGE_RAW_URL:            "User first page raw URL",
+	UP_INITIAL_PAGE_LOAD_TIME:          "User first page load time",
+	UP_INITIAL_PAGE_SPENT_TIME:         "User first page active time",
+	UP_INITIAL_PAGE_SCROLL_PERCENT:     "User first page scroll percent",
+	UP_INITIAL_CAMPAIGN:                "User first campaign",
+	UP_INITIAL_CAMPAIGN_ID:             "User first campaign ID",
+	UP_INITIAL_SOURCE:                  "User first source",
+	UP_INITIAL_MEDIUM:                  "User first medium",
+	UP_INITIAL_KEYWORD:                 "User first keyword",
+	UP_INITIAL_KEYWORD_MATCH_TYPE:      "User first keyword match type",
+	UP_INITIAL_TERM:                    "User first search term",
+	UP_INITIAL_CONTENT:                 "User first content",
+	UP_INITIAL_ADGROUP:                 "User first adgroup",
+	UP_INITIAL_ADGROUP_ID:              "User first adgroup ID",
+	UP_INITIAL_CREATIVE:                "User first creative",
+	UP_INITIAL_GCLID:                   "User first GCLID",
+	UP_INITIAL_FBCLID:                  "User first FBCLID",
+	UP_INITIAL_REFERRER:                "User first referrer",
+	UP_INITIAL_REFERRER_URL:            "User first referrer URL",
+	UP_INITIAL_REFERRER_DOMAIN:         "User first referrer domain",
+	UP_INITIAL_CHANNEL:                 "User first channel",
+	UP_DAY_OF_FIRST_EVENT:              "First seen day",
+	UP_HOUR_OF_FIRST_EVENT:             "First seen hour",
+	UP_PAGE_COUNT:                      "User page count",
+	UP_TOTAL_SPENT_TIME:                "User total active time",
+	UP_LATEST_PAGE_URL:                 "User latest page URL",
+	UP_LATEST_PAGE_DOMAIN:              "User latest page domain",
+	UP_LATEST_PAGE_RAW_URL:             "User latest page raw URL",
+	UP_LATEST_PAGE_LOAD_TIME:           "User latest page load time",
+	UP_LATEST_PAGE_SPENT_TIME:          "User latest page active time",
+	UP_LATEST_PAGE_SCROLL_PERCENT:      "User latest page scroll percent",
+	UP_LATEST_CAMPAIGN:                 "User latest campaign",
+	UP_LATEST_CAMPAIGN_ID:              "User latest campaign ID",
+	UP_LATEST_SOURCE:                   "User latest source",
+	UP_LATEST_MEDIUM:                   "User latest medium",
+	UP_LATEST_KEYWORD:                  "User latest keyword",
+	UP_LATEST_KEYWORD_MATCH_TYPE:       "User latest keyword match type",
+	UP_LATEST_TERM:                     "User latest search term",
+	UP_LATEST_CONTENT:                  "User latest content",
+	UP_LATEST_ADGROUP:                  "User latest adgroup",
+	UP_LATEST_ADGROUP_ID:               "User latest adgroup ID",
+	UP_LATEST_CREATIVE:                 "User latest creative",
+	UP_LATEST_GCLID:                    "User latest GCLID",
+	UP_LATEST_FBCLID:                   "User latest FBCLID",
+	UP_LATEST_REFERRER:                 "User latest referrer",
+	UP_LATEST_REFERRER_URL:             "User latest referrer URL",
+	UP_LATEST_REFERRER_DOMAIN:          "User latest referrer domain",
+	UP_LATEST_CHANNEL:                  "User latest channel",
+	UP_JOIN_TIME:                       "First seen date",
+	UP_POSTAL_CODE:                     "User postal code",
+	UP_CONTINENT:                       "User continent",
+	SIX_SIGNAL_ADDRESS:                 "Company HQ address",
+	SIX_SIGNAL_ANNUAL_REVENUE:          "Company annual revenue",
+	SIX_SIGNAL_CITY:                    "Company HQ city",
+	SIX_SIGNAL_COUNTRY:                 "Company country",
+	SIX_SIGNAL_COUNTRY_ISO_CODE:        "Company country ISO code",
+	SIX_SIGNAL_DOMAIN:                  "Company domain",
+	SIX_SIGNAL_EMPLOYEE_COUNT:          "Company employee count",
+	SIX_SIGNAL_EMPLOYEE_RANGE:          "Company employee range",
+	SIX_SIGNAL_INDUSTRY:                "Company industry",
+	SIX_SIGNAL_NAICS:                   "Company NAICS code",
+	SIX_SIGNAL_NAICS_DESCRIPTION:       "Company NAICS description",
+	SIX_SIGNAL_NAME:                    "Company name",
+	SIX_SIGNAL_PHONE:                   "Company phone",
+	SIX_SIGNAL_REGION:                  "Company region",
+	SIX_SIGNAL_REVENUE_RANGE:           "Company annual revenue range",
+	SIX_SIGNAL_SIC:                     "Company SIC code",
+	SIX_SIGNAL_SIC_DESCRIPTION:         "Company SIC description",
+	SIX_SIGNAL_STATE:                   "Company state",
+	SIX_SIGNAL_ZIP:                     "Company ZIP code",
+	ENRICHED_COMPANY_TYPE:              "Company Type",
+	ENRICHED_COMPANY_ID:                "Company ID",
+	ENRICHED_COMPANY_SUB_INDUSTRY:      "Company Sub Industry",
+	ENRICHED_COMPANY_SECTOR:            "Company Sector",
+	ENRICHED_COMPANY_INDUSTRY_GROUP:    "Company Industry Group",
+	ENRICHED_COMPANY_ALEXA_GLOBAL_RANK: "Company Alexa Global Rank",
+	ENRICHED_COMPANY_FOUNDED_YEAR:      "Company Founded Year",
+	ENRICHED_COMPANY_LEGAL_NAME:        "Company Legal Name",
+	ENRICHED_COMPANY_ALEXA_US_RANK:     "Company Alexa US Rank",
+	ENRICHED_COMPANY_FUNDING_RAISED:    "Company Funding Raised",
+	ENRICHED_COMPANY_MARKET_CAP:        "Company Market Cap",
+	ENRICHED_COMPANY_TAGS:              "Company Tags",
+	ENRICHED_COMPANY_TECH:              "Company Tech",
+	G2_DOMAIN:                          "G2 Company Domain",
+	G2_NAME:                            "G2 Company Name",
+	G2_LEGAL_NAME:                      "G2 Company Legal Name",
+	G2_COUNTRY:                         "G2 Company Country",
+	G2_EMPLOYEES_RANGE:                 "G2 Company Employee Range",
+	G2_EMPLOYEES:                       "G2 No Of Employees",
+	G2_COMPANY_ID:                      "G2 Company ID",
 }
 
 var STANDARD_USER_PROPERTIES_CATAGORIZATION = map[string]string{
@@ -4580,4 +4519,20 @@ func GetStandardDisplayNameGroups() map[string]string {
 
 func IsJsonAllowedProperty(k string) bool {
 	return k == UP_META_OBJECT_IDENTIFIER_KEY
+}
+
+func ValidateAndFillEnrichmentPropsForStringValue(value string, propertyName string, properties *PropertiesMap) {
+	if value != "" {
+		if c, ok := (*properties)[propertyName]; !ok || c == "" {
+			(*properties)[propertyName] = value
+		}
+	}
+}
+
+func ValidateAndFillEnrichmentPropsForIntegerValue(value int, propertyName string, properties *PropertiesMap) {
+	if value > 0 {
+		if c, ok := (*properties)[propertyName]; !ok || c == "" {
+			(*properties)[propertyName] = value
+		}
+	}
 }

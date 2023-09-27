@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	H "factors/handler"
 	"factors/integration/clear_bit"
+	"factors/integration/six_signal"
 	"factors/model/model"
 	"factors/model/store"
 	"factors/sdk"
@@ -472,14 +473,123 @@ func clearbitAnalysisTestDBClearbit(t *testing.T) {
 
 	}
 	// IP is not stored in user properties.
-	assert.NotNil(t, propertiesMap1[U.CLR_COMPANY_GEO_COUNTRY])
-	assert.Equal(t, "Poland", propertiesMap1[U.CLR_COMPANY_GEO_COUNTRY])
-	assert.Equal(t, "Wrocław", propertiesMap1[U.CLR_COMPANY_GEO_CITY])
-	assert.Equal(t, "50-203", propertiesMap1[U.CLR_COMPANY_GEO_POSTALCODE])
-	assert.Equal(t, "89.76.236.199", propertiesMap1[U.CLR_IP])
-	assert.Equal(t, "divante.pl", propertiesMap1[U.CLR_COMPANY_PARENT_DOMAIN])
+	assert.NotNil(t, propertiesMap1[U.SIX_SIGNAL_COUNTRY])
+	assert.Equal(t, "Poland", propertiesMap1[U.SIX_SIGNAL_COUNTRY])
+	assert.Equal(t, "Wrocław", propertiesMap1[U.SIX_SIGNAL_CITY])
+	assert.Equal(t, "50-203", propertiesMap1[U.SIX_SIGNAL_ZIP])
+	assert.Equal(t, "divante.pl", propertiesMap1[U.SIX_SIGNAL_DOMAIN])
 
 	assert.NotNil(t, propertiesMap1["prop_1"]) // Should append to existing values.
+}
+
+func TestFillEnrichmentPropertiesForSixSignal(t *testing.T) {
+	projectId := int64(5)
+	var result six_signal.Response
+	result.Company.Zip = "560004"
+	result.Company.Naics = "5416"
+	result.Company.NaicsDescription = "Management, Scientific, and Technical Consulting Services"
+	result.Company.Name = "Factors.AI"
+	result.Company.Country = "India"
+	result.Company.CountryIsoCode = "IN"
+	result.Company.City = "Bengaluru"
+	result.Company.State = "Karnataka"
+	result.Company.Sic = "7372"
+	result.Company.SicDescription = "737256"
+	result.Company.Domain = "www.factors.ai"
+	result.Company.Industry = "Software"
+	result.Company.EmployeeCount = "45"
+	result.Company.EmployeeRange = "20-49"
+	result.Company.AnnualRevenue = "$3.6M"
+	result.Company.RevenueRange = "$5M - $10M"
+	result.Company.Region = "Asia"
+	result.Company.Address = "HSR Layout"
+	result.Company.Phone = "9999999999"
+
+	properties := U.PropertiesMap{"prop_1": "value_1"}
+
+	six_signal.FillEnrichmentPropertiesForSixSignal(result, &properties, projectId, true)
+
+	assert.Equal(t, "560004", properties[U.SIX_SIGNAL_ZIP])
+	assert.Equal(t, "5416", properties[U.SIX_SIGNAL_NAICS])
+	assert.Equal(t, "Management, Scientific, and Technical Consulting Services", properties[U.SIX_SIGNAL_NAICS_DESCRIPTION])
+	assert.Equal(t, "7372", properties[U.SIX_SIGNAL_SIC])
+	assert.Equal(t, "737256", properties[U.SIX_SIGNAL_SIC_DESCRIPTION])
+	assert.Equal(t, "India", properties[U.SIX_SIGNAL_COUNTRY])
+	assert.Equal(t, "Bengaluru", properties[U.SIX_SIGNAL_CITY])
+	assert.Equal(t, "Asia", properties[U.SIX_SIGNAL_REGION])
+	assert.Equal(t, "Karnataka", properties[U.SIX_SIGNAL_STATE])
+	assert.Equal(t, "HSR Layout", properties[U.SIX_SIGNAL_ADDRESS])
+	assert.Equal(t, "9999999999", properties[U.SIX_SIGNAL_PHONE])
+	assert.Equal(t, "$5M - $10M", properties[U.SIX_SIGNAL_REVENUE_RANGE])
+	assert.Equal(t, "$3.6M", properties[U.SIX_SIGNAL_ANNUAL_REVENUE])
+	assert.Equal(t, "45", properties[U.SIX_SIGNAL_EMPLOYEE_COUNT])
+	assert.Equal(t, "20-49", properties[U.SIX_SIGNAL_EMPLOYEE_RANGE])
+	assert.Equal(t, "Software", properties[U.SIX_SIGNAL_INDUSTRY])
+	assert.Equal(t, "www.factors.ai", properties[U.SIX_SIGNAL_DOMAIN])
+	assert.Equal(t, "IN", properties[U.SIX_SIGNAL_COUNTRY_ISO_CODE])
+}
+
+func TestFillEnrichmentPropertiesForClearBit(t *testing.T) {
+
+	var results clearbit.Reveal
+	results.Domain = "www.factors.ai"
+	results.Company.Name = "Factors.AI"
+	results.Company.Category.Industry = "Software"
+	results.Company.Geo.City = "Bengaluru"
+	results.Company.Geo.PostalCode = "560004"
+	results.Company.Geo.Country = "India"
+	results.Company.Geo.CountryCode = "IN"
+	results.Company.Geo.State = "Karnataka"
+	results.Company.Metrics.EmployeesRange = "20-49"
+	results.Company.Metrics.EstimatedAnnualRevenue = "$5M - $10M"
+	results.Company.Category.NaicsCode = "5416"
+	results.Company.Category.SicCode = "7372"
+	results.Company.Metrics.AnnualRevenue = 3
+	results.Company.Metrics.Employees = 45
+	results.Company.Type = "Software"
+	results.Company.ID = "101100"
+	results.Company.LegalName = "BitSlash"
+	results.Company.Category.Sector = "IT Sector"
+	results.Company.Category.Industry = "Software"
+	results.Company.Category.SubIndustry = "Analytics"
+	results.Company.Category.IndustryGroup = "Technology"
+	results.Company.Metrics.Raised = 3
+	results.Company.Metrics.AlexaUsRank = 1
+	results.Company.Metrics.AlexaGlobalRank = 1
+	results.Company.FoundedYear = 2019
+	results.Company.Metrics.MarketCap = 20
+
+	properties := U.PropertiesMap{"prop_1": "value_1"}
+
+	clear_bit.FillEnrichmentPropertiesForClearbit(&results, &properties)
+
+	assert.Equal(t, "560004", properties[U.SIX_SIGNAL_ZIP])
+	assert.Equal(t, "5416", properties[U.SIX_SIGNAL_NAICS])
+	assert.Equal(t, "7372", properties[U.SIX_SIGNAL_SIC])
+	assert.Equal(t, "India", properties[U.SIX_SIGNAL_COUNTRY])
+	assert.Equal(t, "Bengaluru", properties[U.SIX_SIGNAL_CITY])
+	assert.Equal(t, "Karnataka", properties[U.SIX_SIGNAL_STATE])
+	assert.Equal(t, "$5M - $10M", properties[U.SIX_SIGNAL_REVENUE_RANGE])
+	assert.Equal(t, 3, properties[U.SIX_SIGNAL_ANNUAL_REVENUE])
+	assert.Equal(t, 45, properties[U.SIX_SIGNAL_EMPLOYEE_COUNT])
+	assert.Equal(t, "20-49", properties[U.SIX_SIGNAL_EMPLOYEE_RANGE])
+	assert.Equal(t, "Software", properties[U.SIX_SIGNAL_INDUSTRY])
+	assert.Equal(t, "www.factors.ai", properties[U.SIX_SIGNAL_DOMAIN])
+	assert.Equal(t, "IN", properties[U.SIX_SIGNAL_COUNTRY_ISO_CODE])
+	assert.Equal(t, "Factors.AI", properties[U.SIX_SIGNAL_NAME])
+
+	assert.Equal(t, "Software", properties[U.ENRICHED_COMPANY_TYPE])
+	assert.Equal(t, "101100", properties[U.ENRICHED_COMPANY_ID])
+	assert.Equal(t, "BitSlash", properties[U.ENRICHED_COMPANY_LEGAL_NAME])
+	assert.Equal(t, "IT Sector", properties[U.ENRICHED_COMPANY_SECTOR])
+	assert.Equal(t, "Technology", properties[U.ENRICHED_COMPANY_INDUSTRY_GROUP])
+	assert.Equal(t, "Analytics", properties[U.ENRICHED_COMPANY_SUB_INDUSTRY])
+	assert.Equal(t, 3, properties[U.ENRICHED_COMPANY_FUNDING_RAISED])
+	assert.Equal(t, 1, properties[U.ENRICHED_COMPANY_ALEXA_GLOBAL_RANK])
+	assert.Equal(t, 1, properties[U.ENRICHED_COMPANY_ALEXA_US_RANK])
+	assert.Equal(t, 2019, properties[U.ENRICHED_COMPANY_FOUNDED_YEAR])
+	assert.Equal(t, 20, properties[U.ENRICHED_COMPANY_MARKET_CAP])
+
 }
 func TestDBCreateOrGetSegmentUserWithSDKIdentify(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
