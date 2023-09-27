@@ -2176,7 +2176,7 @@ func (store *MemSQL) UpdateAssociatedSegments(projectID int64, id string,
 	}
 	update := map[string]interface{}{"associated_segments": associatedSegmentJsonb}
 
-	if err := db.Model(&model.User{}).Limit(1).
+	if err := db.Table("users").Limit(1).
 		Where("project_id = ? AND id = ?", projectID, id).Update(update).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return http.StatusNotFound, err
