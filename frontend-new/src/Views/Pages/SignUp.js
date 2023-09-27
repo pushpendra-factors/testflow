@@ -108,16 +108,16 @@ function SignUp({ signup }) {
               style={{ background: '#E6F7FF' }}
             >
               <div className='w-full h-screen flex items-center justify-center'>
-                <div style={{ width: 448 }}>
+                <div style={{ width: 460 }}>
                   <div className='flex justify-center items-center w-full'>
-                    <SVG name={'BrandFull'} width={238} color='white' />
+                    <SVG name={'BrandFull'} width={240} height={64} color='white' />
                   </div>
                   <div className='mt-10 flex justify-center'>
                     <Carousel
                       autoplay
                       autoplaySpeed={5000}
                       dots
-                      style={{ width: 448 }}
+                      style={{ width: 460 }}
                       className={styles.signupCarousel}
                     >
                       {[
@@ -138,8 +138,8 @@ function SignUp({ signup }) {
                       ))}
                     </Carousel>
                   </div>
-                  <div className='mt-10 flex justify-center'>
-                    <img src={HappyCustomers} className={'m-0 '} alt='brands' />
+                  <div className='mt-10 flex justify-center' >
+                    <img style={{width: 388}} src={HappyCustomers} className={'m-0 '} alt='brands' />
                   </div>
                 </div>
               </div>
@@ -163,7 +163,7 @@ function SignUp({ signup }) {
                     color={'character-primary'}
                     extraClass={'m-0'}
                   >
-                    Let’s create your account !
+                    Create your free account
                   </Text>
                 </div>
                 <div className='w-full  flex  justify-center mt-8 '>
@@ -185,7 +185,7 @@ function SignUp({ signup }) {
                           extraClass={'m-0'}
                           weight={'bold'}
                         >
-                          Signup to continue
+                          Free forever. No credit card required
                         </Text>
                       </div>
 
@@ -260,7 +260,17 @@ function SignUp({ signup }) {
                                 size={'7'}
                                 className={'m-0'}
                               >
-                                {errorInfo}
+                               
+                                {errorInfo === 'EMAIL_ALREADY_EXIST' ?  (<>Email already exists. Try logging in. {' '}
+                                  <Link
+                            disabled={dataLoading}
+                            to={{
+                              pathname: '/login'
+                            }}
+                          >
+                            Login
+                          </Link>
+                                </>): errorInfo}
                               </Text>
                             </div>
                           </Col>
@@ -305,7 +315,7 @@ function SignUp({ signup }) {
                               pathname: '/login'
                             }}
                           >
-                            Log In
+                            Log in
                           </Link>
                         </Text>
                       </div>

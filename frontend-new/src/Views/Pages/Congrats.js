@@ -35,8 +35,8 @@ function Congrats({ signup, data }) {
               <div
                 className='flex flex-col justify-center items-center'
                 style={{
-                  width: 400,
-                  padding: '40px 48px',
+                  width: 450,
+                  padding: '40px 48px 16px 48px',
                   borderRadius: 8,
                   border: '1px solid  #D9D9D9'
                 }}
@@ -62,7 +62,7 @@ function Congrats({ signup, data }) {
 
                 <div
                   className={
-                    'flex flex-col justify-center items-center my-4 text-center'
+                    'flex flex-col justify-center items-center mt-4 text-center'
                   }
                 >
                   <Text

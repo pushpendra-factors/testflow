@@ -93,7 +93,7 @@ function Activate(props) {
 
   return (
     <>
-      <div className={'fa-container h-screen'}>
+      <div className={'fa-container h-screen relative'}>
         <LoggedOutScreenHeader />
         <div className='text-center'>
           <Text

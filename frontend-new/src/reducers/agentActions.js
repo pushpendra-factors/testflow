@@ -177,7 +177,7 @@ export function signup(data) {
             resolve(r);
           } else {
             dispatch({ type: 'AGENT_SIGNUP_REJECTED', payload: null });
-            reject('Email already exists. Try logging in.');
+            reject('EMAIL_ALREADY_EXIST')
           }
         })
         .catch(() => {
