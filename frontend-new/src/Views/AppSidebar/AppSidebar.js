@@ -16,7 +16,6 @@ import { selectAccountPayload } from 'Reducers/accountProfilesView/selectors';
 import {
   setAccountPayloadAction,
   setActiveSegmentAction,
-  setExitConfirmationModalAction
 } from 'Reducers/accountProfilesView/actions';
 
 const AppSidebar = () => {
@@ -28,7 +27,7 @@ const AppSidebar = () => {
     selectAccountPayload(state)
   );
 
-  const { newSegmentMode, filtersDirty: areFiltersDirty } = useSelector(
+  const { newSegmentMode } = useSelector(
     (state) => state.accountProfilesView
   );
   const isAllAccountsSelected =
@@ -61,11 +60,7 @@ const AppSidebar = () => {
 
   const selectAllAccounts = () => {
     if (isAllAccountsSelected === false) {
-      if (areFiltersDirty === false) {
-        changeAccountPayload();
-      } else {
-        dispatch(setExitConfirmationModalAction(true, changeAccountPayload));
-      }
+      changeAccountPayload();
     }
   };
 

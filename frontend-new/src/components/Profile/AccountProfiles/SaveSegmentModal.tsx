@@ -54,14 +54,14 @@ const SaveSegmentModal = ({
         </Text>
         <div className='flex flex-col row-gap-2'>
           <Text type='title' color='character-primary' extraClass='mb-0'>
-            Enter new segment name
+            Segment name
           </Text>
           <Input
             onChange={handleInputChange}
             value={newSegmentName}
             className={cx('fa-input', styles.input)}
             size='large'
-            placeholder='Name'
+            placeholder='Eg- Paid search visitors'
           />
         </div>
       </div>
