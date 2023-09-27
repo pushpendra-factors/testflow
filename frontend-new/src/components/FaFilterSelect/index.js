@@ -331,6 +331,7 @@ const FaFilterSelect = ({
         }`}
       >
         <Tooltip
+          zIndex={99999}
           title={renderGroupDisplayName(propState)}
           color={TOOLTIP_CONSTANTS.DARK}
         >
@@ -370,6 +371,7 @@ const FaFilterSelect = ({
     return (
       <div className={styles.filter__propContainer}>
         <Tooltip
+          zIndex={99999}
           title='Select an equator to define your filter rules. '
           color={TOOLTIP_CONSTANTS.DARK}
           trigger={viewMode ? [] : 'hover'}
@@ -754,6 +756,7 @@ const FaFilterSelect = ({
         {propState.type === 'categorical' ? (
           <>
             <Tooltip
+              zIndex={99999}
               mouseLeaveDelay={0}
               title={
                 valuesState && valuesState.length
@@ -938,6 +941,7 @@ const FaFilterSelect = ({
         {propState.type === 'categorical' ? (
           <>
             <Tooltip
+              zIndex={99999}
               mouseLeaveDelay={0}
               title={
                 valuesState && valuesState.length
