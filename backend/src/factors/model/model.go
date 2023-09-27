@@ -394,7 +394,7 @@ type Model interface {
 	GetHubspotSyncInfo() (*model.HubspotSyncInfo, int)
 	GetHubspotFirstSyncProjectsInfo() (*model.HubspotSyncInfo, int)
 	UpdateHubspotProjectSettingsBySyncStatus(success []model.HubspotProjectSyncStatus, failure []model.HubspotProjectSyncStatus, syncAll bool) int
-	GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(projectID int64, docTypes []int) (int64, int)
+	GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(projectID int64, docTypes []int, minCreatedAt int64) (int64, int)
 	GetMinTimestampByFirstSync(projectID int64, docType int) (int64, int)
 	GetHubspotFormDocuments(projectID int64) ([]model.HubspotDocument, int)
 	GetHubspotDocumentsByTypeForSync(projectID int64, typ int, maxCreatedAtSec int64) ([]model.HubspotDocument, int)
@@ -554,7 +554,7 @@ type Model interface {
 	GetSalesforceObjectValuesByPropertyName(ProjectID int64, objectType string, propertyName string) []interface{}
 	GetSalesforceDocumentsByTypeForSync(projectID int64, typ int, from, to int64, limit int, offset int) ([]model.SalesforceDocument, int)
 	GetLatestSalesforceDocumentByID(projectID int64, documentIDs []string, docType int, maxTimestamp int64) ([]model.SalesforceDocument, int)
-	GetSalesforceDocumentBeginingTimestampByDocumentTypeForSync(projectID int64) (map[int]int64, int64, int)
+	GetSalesforceDocumentBeginingTimestampByDocumentTypeForSync(projectID int64, minCreatedAt int64) (map[int]int64, int64, int)
 	GetSalesforceDocumentByType(projectID int64, docType int, from, to int64) ([]model.SalesforceDocument, int)
 	IsExistSalesforceDocumentByIds(projectID int64, ids []string, docType int) (map[string]bool, int)
 	IsExistSalesforceDocumentByIdsWithBatch(projectID int64, ids []string, docType int, batchSize int) (map[string]bool, int)
