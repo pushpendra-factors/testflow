@@ -1180,9 +1180,13 @@ function AccountProfiles({
           {/* {accountPayload?.filters?.length ? renderClearFilterButton() : null} */}
           {renderSearchSection()}
           {renderTablePropsSelect()}
-          <div role='button' onClick={() => setShowDownloadCSVModal(true)}>
-            <SVG name='download' />
-          </div>
+          <ControlledComponent
+            controller={filtersExpanded === false && newSegmentMode === false}
+          >
+            <div role='button' onClick={() => setShowDownloadCSVModal(true)}>
+              <SVG name='download' />
+            </div>
+          </ControlledComponent>
         </div>
       </div>
       <ControlledComponent controller={accounts.isLoading === true}>
