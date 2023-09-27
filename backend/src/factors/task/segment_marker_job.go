@@ -185,18 +185,6 @@ func userProcessingWithErrcode(projectID int64, user model.User, allSegmentsMap 
 		}
 	}
 
-	// decoding associated_segments col
-	userPartOfSegments, err := U.DecodePostgresJsonb(&user.AssociatedSegments)
-	if err != nil {
-		log.WithField("project_id", projectID).Error("Unable to decode associated_segments.")
-		return http.StatusInternalServerError
-	}
-
-	// do not update in db if no associated segment
-	if len(*userPartOfSegments) == 0 && len(userAssociatedSegments) == 0 {
-		return http.StatusOK
-	}
-
 	// update associated_segments in db
 	status, _ := store.GetStore().UpdateAssociatedSegments(projectID, user.ID,
 		userAssociatedSegments)

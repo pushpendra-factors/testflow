@@ -41,6 +41,7 @@ const (
 	PresentationHorizontalBar = "ph"
 	HorizontalBar             = "hb"
 	FunnelChart               = "fc"
+	MetricChart               = "mc"
 )
 
 const (

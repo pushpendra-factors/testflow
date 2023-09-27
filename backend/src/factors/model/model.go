@@ -615,7 +615,7 @@ type Model interface {
 	GetUsersByCustomerUserID(projectID int64, customerUserID string) ([]model.User, int)
 	GetUserLatestByCustomerUserId(projectID int64, customerUserId string, requestSource int) (*model.User, int)
 	GetExistingUserByCustomerUserID(projectID int64, arrayCustomerUserID []string, source ...int) (map[string]string, int)
-	GetUserWithoutProperties(projectID int64, id string) (*model.User, int)
+	GetUserWithoutJSONColumns(projectID int64, id string) (*model.User, int)
 	GetUserBySegmentAnonymousId(projectID int64, segAnonId string) (*model.User, int)
 	GetAllUserIDByCustomerUserID(projectID int64, customerUserID string) ([]string, int)
 	GetRecentUserPropertyKeysWithLimits(projectID int64, usersLimit int, propertyLimit int, seedDate time.Time) ([]U.Property, error)

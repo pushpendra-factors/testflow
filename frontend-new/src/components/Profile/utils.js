@@ -607,3 +607,12 @@ export const getSelectedFiltersFromQuery = ({ query, groupsList }) => {
     selectedAccount: groupsList.find((g) => g[1] === grpa)
   };
 };
+
+export const findKeyByValue = (data, targetValue) => {
+  for (const key in data) {
+    if (data[key].includes(targetValue)) {
+      return key;
+    }
+  }
+  return null;
+};
