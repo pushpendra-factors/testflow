@@ -58,7 +58,6 @@ const UpdateSegmentModal = ({
       onCancel={onCancel}
       isLoading={isLoading}
       width={542}
-      cancelText='Discard Changes'
     >
       <div className='flex flex-col row-gap-5'>
         <Text
@@ -153,13 +152,13 @@ const UpdateSegmentModal = ({
                   color='character-secondary'
                   extraClass='mb-0'
                 >
-                  Enter new segment name
+                 Segment name
                 </Text>
                 <Input
                   value={newSegmentName}
                   onChange={handleNameChange}
                   className={styles['create-mode-input-box']}
-                  placeholder='Eg: Paid Search Visitors'
+                  placeholder='Eg- Paid Search Visitors'
                 />
               </div>
             </ControlledComponent>
