@@ -65,7 +65,6 @@ type User struct {
 	// These columns should accessed using direct methods.
 	// This is required to avoid any invalid state as we have
 	// excluded JSON columns for better performance.
-	EventAggregate     postgres.Jsonb `json:"event_aggregate"`
 	AssociatedSegments postgres.Jsonb `json:"associated_segments"`
 }
 
