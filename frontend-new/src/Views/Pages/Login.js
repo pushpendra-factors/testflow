@@ -84,7 +84,7 @@ function Login(props) {
 
   return (
     <>
-      <div className={'fa-container'}>
+      <div className={'fa-container h-screen relative'}>
         <Row justify={'center'} className={`${styles.start}`}>
           <Col span={24}>
             <LoggedOutScreenHeader />
