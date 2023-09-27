@@ -800,11 +800,16 @@ function AccountProfiles({
       <Table
         onRow={(account) => ({
           onClick: () => {
-            window.open(
+            history.push(
               `/profiles/accounts/${btoa(account.identity)}?group=${
                 activeSegment?.type ? activeSegment.type : accountPayload.source
               }&view=birdview`,
-              '_blank'
+              {
+                accountPayload: accountPayload,
+                activeSegment: activeSegment,
+                fromDetails: true,
+                currentPage: currentPage
+              }
             );
           }
         })}
