@@ -18,8 +18,11 @@ export const moreActionsMode = {
   RENAME: 'RENAME'
 };
 
+const INITIAL_ACCOUNT_STATE = ['All Accounts', 'All'];
+
 export const INITIAL_FILTERS_STATE = {
   filters: [],
   eventsList: [],
-  eventProp: 'any'
+  eventProp: 'any',
+  account: INITIAL_ACCOUNT_STATE
 };
