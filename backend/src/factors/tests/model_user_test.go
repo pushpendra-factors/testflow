@@ -462,7 +462,7 @@ func clearbitAnalysisTestDBClearbit(t *testing.T) {
 		log.Info("Get clear_bit key failed.")
 	}
 	logCtx := log.WithField("project_id", projectId)
-	go clear_bit.ExecuteClearBitEnrich(clearbitKey, &propertiesMap1, clientIP, executeClearBitStatusChannel, logCtx) // Our gateway IP.
+	go clear_bit.ExecuteClearBitEnrich(projectId, clearbitKey, &propertiesMap1, clientIP, executeClearBitStatusChannel, logCtx) // Our gateway IP.
 	select {
 	case response, ok := <-executeClearBitStatusChannel:
 		if ok {

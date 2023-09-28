@@ -1085,7 +1085,7 @@ func FillClearbitUserProperties(projectId int64, clearbitKey string,
 		// logCtx.Info("clearbit cache hit")
 	} else {
 		// logCtx.Info("clearbit cache miss")
-		go clear_bit.ExecuteClearBitEnrich(clearbitKey, userProperties, clientIP, executeClearBitStatusChannel, logCtx)
+		go clear_bit.ExecuteClearBitEnrich(projectId, clearbitKey, userProperties, clientIP, executeClearBitStatusChannel, logCtx)
 
 		select {
 		case ok := <-executeClearBitStatusChannel:
