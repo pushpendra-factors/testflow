@@ -417,7 +417,8 @@ function AccountDetails({
       activeSegment: location.state?.activeSegment,
       fromDetails: true,
       accountPayload: location.state?.accountPayload,
-      currentPage: location.state?.currentPage
+      currentPage: location.state?.currentPage,
+      activeSorter: location.state?.activeSorter
     });
   }, []);
 
@@ -690,9 +691,6 @@ function AccountDetails({
   }, [timelineViewMode, activeId]);
 
   const handleTabChange = (val) => {
-    if (val === 'overview' && activeId !== accountOverview?.data?.id) {
-      getAccountOverview(activeProject.id, activeGroup, activeId);
-    }
     insertUrlParam(window.history, 'view', val);
     setTimelineViewMode(val);
     setGranularity(granularity);

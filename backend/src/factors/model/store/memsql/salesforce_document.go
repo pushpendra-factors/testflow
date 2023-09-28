@@ -1038,7 +1038,7 @@ func (store *MemSQL) GetLatestSalesforceDocumentByID(projectID int64, documentID
 }
 
 // GetSalesforceDocumentBeginingTimestampByDocumentTypeForSync returns the minimum timestamp for unsynced document
-func (store *MemSQL) GetSalesforceDocumentBeginingTimestampByDocumentTypeForSync(projectID int64) (map[int]int64, int64, int) {
+func (store *MemSQL) GetSalesforceDocumentBeginingTimestampByDocumentTypeForSync(projectID int64, minCreatedAt int64) (map[int]int64, int64, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -1050,8 +1050,16 @@ func (store *MemSQL) GetSalesforceDocumentBeginingTimestampByDocumentTypeForSync
 		return nil, 0, http.StatusBadRequest
 	}
 
+	whereStmnt := "project_id = ? AND synced = false "
+	params := []interface{}{projectID}
+	if minCreatedAt > 0 {
+		whereStmnt = whereStmnt + " AND " + "created_at > ? "
+		params = append(params, time.Unix(minCreatedAt, 0))
+	}
+
+	stmnt := "SELECT type,MIN(timestamp) FROM salesforce_documents WHERE " + whereStmnt + " GROUP BY type "
 	db := C.GetServices().Db
-	rows, err := db.Raw("SELECT type,MIN(timestamp) FROM salesforce_documents WHERE project_id=? AND synced=false GROUP BY type", projectID).Rows()
+	rows, err := db.Raw(stmnt, params...).Rows()
 	if err != nil {
 		log.WithError(err).Error("Failed to get salesforce minimum timestamp.")
 		return nil, 0, http.StatusInternalServerError

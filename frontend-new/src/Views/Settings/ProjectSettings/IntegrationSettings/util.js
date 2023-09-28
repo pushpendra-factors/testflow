@@ -13,8 +13,8 @@ export const getDefaultTimelineConfigForSixSignal = (config) => {
   if (!config) {
     return {
       account_config: {
-        table_props: defaultProps,
-        leftpane_props:defaultProps
+        table_props: [...defaultProps],
+        leftpane_props: [...defaultProps]
       },
       user_config: {
         table_props: [...defaultProps, '$session_spent_time'],
@@ -28,11 +28,11 @@ export const getDefaultTimelineConfigForSixSignal = (config) => {
       ...config?.timelines_config,
       account_config: {
         ...config?.timelines_config?.account_config,
-        table_props: uniq(prevAccountTableProps.concat(defaultProps))
+        table_props: [...uniq(prevAccountTableProps.concat(defaultProps))]
       },
       user_config: {
         ...config?.timelines_config?.user_config,
-        table_props: uniq(prevUsertTableProps.concat(defaultProps))
+        table_props: [...uniq(prevUsertTableProps.concat(defaultProps))]
       }
     };
   }
