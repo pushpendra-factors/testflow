@@ -146,4 +146,31 @@
   }
     
 }
-  
+
+.buttonContainer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px; 
+  margin-top: 16px; 
+}
+
+.customWhiteButton {
+  background-color: white !important; 
+  color: #333; 
+  font-weight: normal;
+  border: 1px solid #d9d9d9; 
+}
+
+.customWhiteButton:hover {
+  background-color: white !important; 
+  border: 1px solid #d9d9d9; 
+}
+
+.additionalText {
+  font-size: 18px; 
+  font-weight: normal; 
+  color: grey; 
+  margin-top: -30px; 
+  margin-bottom: 8px; 
+}
+
