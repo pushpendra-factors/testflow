@@ -52,9 +52,7 @@ export default function FilterBlock({
   const [dropDownValues, setDropDownValues] = useState({});
   const [selectedRngState, setSelectedRngState] = useState([
     { ...DEFAULT_DATE_RANGE }
-  ]);
-
-  console.log('dropdownVals: ', dropDownValues)
+  ]); 
 
   const placeHolder = {
     props: 'Choose a property',
@@ -281,8 +279,19 @@ export default function FilterBlock({
     };
     newFilter[filterTypeState] = JSON.stringify(rangeValue);
     setNewFilterState(newFilter);
-  };
+  }; 
 
+  let newArr = (grpIndex) => {
+    let Arr = []
+    let item = filterProps[propsConstants[grpIndex]]
+    let keys = Object.keys(item);
+    keys.forEach((el) => {
+      if(item[el][0]){
+        Arr.push(item[el][0]) 
+      } 
+    });
+    return Arr
+  }
   const renderOptions = (options) => {
     const renderOptions = [];
     switch (filterTypeState) {
@@ -333,7 +342,7 @@ export default function FilterBlock({
                 {collState
                   ? (() => {
                       const valuesOptions = [];
-                      filterProps[propsConstants[grpIndex]].forEach((val) => {
+                      newArr(grpIndex)?.forEach((val) => {
                         if (
                           val[0]
                             .toLowerCase()
