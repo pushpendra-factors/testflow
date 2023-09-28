@@ -250,10 +250,17 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 
 	//default timeline config
 	timelinesConfig := model.TimelinesConfig{
-		DisabledEvents: []string{"Contact Updated", "Campaign Member Updated", "Engagement Meeting Updated", "Engagement Call Updated"}, //Display Names. Used on FE only.
+		DisabledEvents: []string{"Contact Updated", "Campaign Member Updated", "Engagement Meeting Updated", "Engagement Call Updated"},
 		UserConfig: model.UserConfig{
+			Milestones:    []string{},
 			TableProps:    []string{U.UP_COUNTRY, U.SP_SPENT_TIME},
 			LeftpaneProps: []string{U.UP_EMAIL, U.UP_COUNTRY, U.UP_PAGE_COUNT},
+		},
+		AccountConfig: model.AccountConfig{
+			Milestones:    []string{},
+			TableProps:    []string{},
+			LeftpaneProps: []string{},
+			UserProp:      "",
 		},
 	}
 	tlConfigEncoded, err := U.EncodeStructTypeToPostgresJsonb(timelinesConfig)

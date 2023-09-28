@@ -562,7 +562,7 @@ func SearchFilterForAllAccounts(searchFilters []string, domainID int) (string, [
 		if index < len(searchFilters)-1 {
 			searchFilterWhere = searchFilterWhere + " OR "
 		}
-		searchFilterParams = append(searchFilterParams, filter)
+		searchFilterParams = append(searchFilterParams, model.GetDomainFromURL(filter))
 	}
 	if searchFilterWhere != "" {
 		searchFilterWhere = fmt.Sprintf("AND (%s)", searchFilterWhere)

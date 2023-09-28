@@ -136,6 +136,7 @@ function AccountProfiles({
   const [selectedFilters, setSelectedFilters] = useState(INITIAL_FILTERS_STATE);
   const [appliedFilters, setAppliedFilters] = useState(INITIAL_FILTERS_STATE);
   const [moreActionsModalMode, setMoreActionsModalMode] = useState(null); // DELETE | RENAME
+  const [defaultSorterInfo, setDefaultSorterInfo] = useState({});
 
   const { isFeatureLocked: isEngagementLocked } = useFeatureLock(
     FEATURES.FEATURE_ENGAGEMENT
@@ -275,6 +276,7 @@ function AccountProfiles({
     (payload) => {
       const shouldCache = location.state?.fromDetails;
       if (payload.source && payload.source !== '' && !shouldCache) {
+        setDefaultSorterInfo({ key: 'engagement', order: 'descend' });
         const formatPayload = { ...payload };
         formatPayload.filters =
           formatFiltersForPayload(payload?.filters, 'accounts') || [];
@@ -283,30 +285,32 @@ function AccountProfiles({
       }
       if (shouldCache) {
         setCurrentPage(location.state.currentPage);
+        setDefaultSorterInfo(location.state.activeSorter);
         const localeState = { ...history.location.state, fromDetails: false };
         history.replace({ state: localeState });
       }
     },
     [
-      activeAgent,
-      activeProject.id,
+      location.state?.fromDetails,
+      location.state.currentPage,
+      location.state.activeSorter,
       activeSegment,
       getProfileAccounts,
-      history,
-      location.state?.currentPage,
-      location.state?.fromDetails
+      activeProject.id,
+      activeAgent,
+      history
     ]
   );
 
-  const getTableData = (data) => {
-    const sortedData = data.sort(
+  const tableData = useMemo(() => {
+    const sortedData = accounts?.data?.sort(
       (a, b) => new Date(b.last_activity) - new Date(a.last_activity)
     );
-    return sortedData.map((row) => ({
+    return sortedData?.map((row) => ({
       ...row,
       ...row?.tableProps
     }));
-  };
+  }, [accounts]);
 
   const applyFilters = useCallback(() => {
     setAppliedFilters(selectedFilters);
@@ -767,8 +771,9 @@ function AccountProfiles({
     );
   };
 
-  const handleTableChange = (pageParams) => {
+  const handleTableChange = (pageParams, _, sorter) => {
     setCurrentPage(pageParams.current);
+    setDefaultSorterInfo({ key: sorter.columnKey, order: sorter.order });
   };
 
   const tableColumns = useMemo(() => {
@@ -778,7 +783,8 @@ function AccountProfiles({
       isEngagementLocked,
       displayTableProps,
       groupPropNames,
-      listProperties
+      listProperties,
+      defaultSorterInfo
     });
   }, [
     accounts,
@@ -786,55 +792,61 @@ function AccountProfiles({
     displayTableProps,
     groupPropNames,
     isEngagementLocked,
-    listProperties
+    listProperties,
+    defaultSorterInfo
   ]);
 
-  const renderTable = () => (
-    <div>
-      <Table
-        onRow={(account) => ({
-          onClick: () => {
-            history.push(
-              `/profiles/accounts/${btoa(account.identity)}?group=${
-                activeSegment?.type ? activeSegment.type : accountPayload.source
-              }&view=birdview`,
-              {
-                accountPayload: accountPayload,
-                activeSegment: activeSegment,
-                fromDetails: true,
-                currentPage: currentPage
-              }
-            );
-          }
-        })}
-        className='fa-table--userlist'
-        dataSource={getTableData(accounts.data)}
-        columns={tableColumns}
-        rowClassName='cursor-pointer'
-        pagination={{
-          position: ['bottom', 'left'],
-          defaultPageSize: '25',
-          current: currentPage
-        }}
-        onChange={handleTableChange}
-        scroll={{
-          x: displayTableProps?.length * 300
-        }}
-        footer={() => (
-          <div className='text-right'>
-            <a
-              className='font-size--small'
-              href='https://www.uplead.com'
-              target='_blank'
-              rel='noopener noreferrer'
-            >
-              Logos provided by UpLead
-            </a>
-          </div>
-        )}
-      />
-    </div>
-  );
+  const renderTable = useCallback(() => {
+    return (
+      <div>
+        <Table
+          onRow={(account) => ({
+            onClick: () => {
+              history.push(
+                `/profiles/accounts/${btoa(account.identity)}?group=${
+                  activeSegment?.type
+                    ? activeSegment.type
+                    : accountPayload.source
+                }&view=birdview`,
+                {
+                  accountPayload: accountPayload,
+                  activeSegment: activeSegment,
+                  fromDetails: true,
+                  currentPage: currentPage,
+                  activeSorter: defaultSorterInfo
+                }
+              );
+            }
+          })}
+          className='fa-table--userlist'
+          dataSource={tableData}
+          columns={tableColumns}
+          rowClassName='cursor-pointer'
+          pagination={{
+            position: ['bottom', 'left'],
+            defaultPageSize: '25',
+            current: currentPage
+          }}
+          onChange={handleTableChange}
+          scroll={{
+            x: displayTableProps?.length * 300
+          }}
+          footer={() => (
+            <div className='text-right'>
+              <a
+                className='font-size--small'
+                href='https://www.uplead.com'
+                target='_blank'
+                rel='noopener noreferrer'
+              >
+                Logos provided by UpLead
+              </a>
+            </div>
+          )}
+        />
+      </div>
+    );
+  }, [tableData, tableColumns]);
 
   const showRangeNudge = useMemo(() => {
     return showUpgradeNudge(
@@ -939,7 +951,7 @@ function AccountProfiles({
     if (newSegmentMode === false) {
       getAccounts(accountPayload);
     }
-  }, [newSegmentMode, getAccounts, accountPayload]);
+  }, [newSegmentMode, accountPayload]);
 
   useEffect(() => {
     let listProps = [];

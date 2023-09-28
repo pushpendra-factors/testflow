@@ -2290,7 +2290,7 @@ func IsAllAccountsEnabled(projectID int64) bool {
 }
 
 func IsUpdateLastEventAtEnabled(projectID int64) bool {
-	return projectID == 2
+	return true
 }
 
 // PingHealthcheckForSuccess Ping healthchecks.io for cron success.
