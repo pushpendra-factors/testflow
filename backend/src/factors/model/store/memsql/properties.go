@@ -19,7 +19,7 @@ func (store *MemSQL) GetStandardUserPropertiesBasedOnIntegration(projectID int64
 
 	if statusCode == http.StatusFound && isClearBitIntegrated {
 		for property, propertyDisplayName := range U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES {
-			if strings.HasPrefix(property, U.ENRICHED_PROPERTIES_PREFIX) {
+			if strings.HasPrefix(property, U.ENRICHED_PROPERTIES_PREFIX) || strings.HasPrefix(property, U.SIX_SIGNAL_PROPERTIES_PREFIX) {
 				finalStandardUserProperties[property] = propertyDisplayName
 			}
 		}
@@ -30,7 +30,9 @@ func (store *MemSQL) GetStandardUserPropertiesBasedOnIntegration(projectID int64
 	if statusCode2 == http.StatusFound && isSixSignalIntegrated {
 		for property, propertyDisplayName := range U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES {
 			if strings.HasPrefix(property, U.SIX_SIGNAL_PROPERTIES_PREFIX) {
-				finalStandardUserProperties[property] = propertyDisplayName
+				if _, exists := finalStandardUserProperties[property]; !exists {
+					finalStandardUserProperties[property] = propertyDisplayName
+				}
 			}
 		}
 	}
