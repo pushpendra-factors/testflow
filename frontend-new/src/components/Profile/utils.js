@@ -516,7 +516,7 @@ export const EngagementTag = {
 export const sortStringColumn = (a = '', b = '') => {
   const compareA = typeof a === 'string' ? a.toLowerCase() : a;
   const compareB = typeof b === 'string' ? b.toLowerCase() : b;
-  return compareB > compareA ? 1 : compareA > compareB ? -1 : 0;
+  return compareA > compareB ? 1 : compareB > compareA ? -1 : 0;
 };
 
 export const sortNumericalColumn = (a = 0, b = 0) => a - b;

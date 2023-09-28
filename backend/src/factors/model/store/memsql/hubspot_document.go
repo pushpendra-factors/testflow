@@ -1187,7 +1187,7 @@ func (store *MemSQL) GetHubspotDocumentsByTypeForSync(projectId int64, typ int, 
 }
 
 // GetHubspotDocumentBeginingTimestampByDocumentTypeForSync returns the minimum timestamp for unsynced document
-func (store *MemSQL) GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(projectID int64, docTypes []int) (int64, int) {
+func (store *MemSQL) GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(projectID int64, docTypes []int, minCreatedAt int64) (int64, int) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &log.Fields{"project_id": projectID})
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_types": docTypes})
@@ -1197,8 +1197,16 @@ func (store *MemSQL) GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(pr
 		return 0, http.StatusBadRequest
 	}
 
+	whereStmnt := "project_id = ? AND synced = false AND type IN ( ? )"
+	params := []interface{}{projectID, docTypes}
+	if minCreatedAt > 0 {
+		whereStmnt = whereStmnt + " AND created_at > ?"
+		params = append(params, time.Unix(minCreatedAt, 0))
+	}
+
+	stmnt := "SELECT MIN(timestamp) FROM hubspot_documents WHERE " + whereStmnt
 	db := C.GetServices().Db
-	rows, err := db.Raw("SELECT MIN(timestamp) FROM hubspot_documents WHERE project_id=? AND synced=false and type IN ( ? )", projectID, docTypes).Rows()
+	rows, err := db.Raw(stmnt, params...).Rows()
 	if err != nil {
 		log.WithError(err).Error("Failed to get hubspot minimum timestamp.")
 		return 0, http.StatusInternalServerError
