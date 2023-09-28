@@ -292,8 +292,8 @@ function AccountProfiles({
     },
     [
       location.state?.fromDetails,
-      location.state.currentPage,
-      location.state.activeSorter,
+      location.state?.currentPage,
+      location.state?.activeSorter,
       activeSegment,
       getProfileAccounts,
       activeProject.id,
