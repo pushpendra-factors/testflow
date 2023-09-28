@@ -86,7 +86,8 @@ const (
 	PredefPropDisp6SignalRevenueRange = "6Signal Revenue Range"
 
 	// Internal Group by
-	PredefPropEventName = "event_name"
+	PredefPropEventName 	= "event_name"
+	PredefPropLatestPageUrl = "latest_page_url"
 )
 
 // Have to check
@@ -129,7 +130,7 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 			// {Name: PredefAvgSessionDuration, DisplayName: PredefDispAvgSessionDuration, InternalEventType: PredefEventTypeSession},
 		},
 		GroupBy:   []PredefinedGroupBy{},
-		ChartType: "",
+		ChartType: CHART_TYPE_LINECHART,
 	},
 	{
 		InternalID:  2,
@@ -143,7 +144,7 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 			{Name: PredefPropMedium, DisplayName: PredefPropDispMedium},
 			{Name: PredefPropCampaign, DisplayName: PredefPropDispCampaign},
 		},
-		ChartType: "",
+		ChartType: CHART_TYPE_BARCHART,
 	},
 	{
 		InternalID:  3,
@@ -159,7 +160,7 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 			{Name: PredefPropReferrerUrl, DisplayName: PredefPropDispReferrerUrl},
 			{Name: PredefPropExitPage, DisplayName: PredefPropDispExitPage},
 		},
-		ChartType: "",
+		ChartType: CHART_TYPE_HORIZONTAL_BAR_CHART,
 	},
 	{
 		InternalID:  4,
@@ -171,7 +172,7 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 		GroupBy: []PredefinedGroupBy{
 			{Name: PredefPropTopPage, DisplayName: PredefPropDispTopPage},
 		},
-		ChartType: "",
+		ChartType: CHART_TYPE_HORIZONTAL_BAR_CHART,
 	},
 	{
 		InternalID:  5,
@@ -186,10 +187,10 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 			{Name: PredefPropCountry, DisplayName: PredefPropDispCountry},
 			{Name: PredefPropRegion, DisplayName: PredefPropDispRegion},
 		},
-		ChartType: "",
+		ChartType: CHART_TYPE_TABLE,
 	},
 	{
-		InternalID:  5,
+		InternalID:  6,
 		Name:        PredefWidTechnographics,
 		DisplayName: PredefWidDispTechnographics,
 		Metrics: []PredefinedMetric{
@@ -202,10 +203,10 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 			{Name: PredefPropOs, DisplayName: PredefPropDispOs},
 			{Name: PredefPropDevice, DisplayName: PredefPropDispDevice},
 		},
-		ChartType: "",
+		ChartType: CHART_TYPE_TABLE,
 	},
 	{
-		InternalID:  6,
+		InternalID:  7,
 		Name:        PredefWidFirmographics,
 		DisplayName: PredefWidDispFirmographics,
 		Metrics: []PredefinedMetric{
@@ -218,7 +219,7 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 			{Name: PredefProp6SignalEmpRange, DisplayName: PredefPropDisp6SignalEmpRange},
 			{Name: PredefProp6SignalRevenueRange, DisplayName: PredefPropDisp6SignalRevenueRange},
 		},
-		ChartType: "",
+		ChartType: CHART_TYPE_TABLE,
 	},
 }
 
@@ -296,10 +297,6 @@ func (q *PredefWebsiteAggregationQuery) IsValid() (bool, string) {
 			}
 		}
 
-		if len(set) != 0 {
-			return false, "Input metrics sent for this widget are wrong"
-		}
-
 		// Checking for groupBy.
 		groupExists := false
 		for _, groupBy := range widgetConfig.GroupBy {
@@ -347,6 +344,7 @@ var PredefWebMetricToInternalTransformations = map[string][]PredefWebsiteAggrega
 
 var MapOfPredefWebsiteAggregGroupByExternalToInternal = map[string]string{
 	PredefPropTopPage: PredefPropEventName,
+	PredefPropExitPage: PredefPropLatestPageUrl,
 }
 
 var MapOfPredefinedWebsiteAggregaFilterExternalToInternal = map[string]string{}

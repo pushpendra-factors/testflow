@@ -10,6 +10,18 @@ const (
 	DBDescend               = "DESC "
 	DBLimit                 = "LIMIT "
 	WebsiteAggregationTable = "website_aggregation"
+
+	CHART_TYPE_BARCHART 			= "pb"
+	CHART_TYPE_LINECHART 			= "pl"
+	CHART_TYPE_TABLE 				= "pt"
+	CHART_TYPE_SPARKLINES 			= "pc"
+	CHART_TYPE_STACKED_AREA 		= "pa"
+	CHART_TYPE_STACKED_BAR 			= "ps"
+	CHART_TYPE_SCATTER_PLOT 		= "sp"
+	CHART_TYPE_HORIZONTAL_BAR_CHART = "hb"
+	CHART_TYPE_PIVOT_CHART 			= "pi"
+	CHART_TYPE_METRIC_CHART 		= "mc"
+	CHART_TYPE_FUNNEL_CHART 		= "fc"
 )
 
 var MapOfOperatorToExpression = map[string]string{
@@ -75,7 +87,7 @@ type PredefinedFilter struct {
 
 var PredefinedDashboards = []PredefinedDashboard{
 	{
-		InternalID: 1, Name: "website_aggregation", DisplayName: "Website Aggregation", Description: "Website Aggregation",
+		InternalID: 1, Name: "Traffic Dashboard", DisplayName: "Traffic Dashboard", Description: "Traffic Dashboard",
 	},
 }
 
