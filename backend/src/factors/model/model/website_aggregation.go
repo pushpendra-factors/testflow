@@ -1,12 +1,9 @@
 package model
 
-import (
-	"time"
-)
 
 type WebsiteAggregation struct {
 	ProjectID                 int64
-	TimestampAtDay            time.Time
+	TimestampAtDay            int64
 	EventName                 string
 	EventType                 string
 	Source                    string

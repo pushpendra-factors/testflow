@@ -129,8 +129,8 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 			// {Name: PredefBounceRate, DisplayName: PredefDispBounceRate, InternalEventType: PredefEventTypeSession},
 			// {Name: PredefAvgSessionDuration, DisplayName: PredefDispAvgSessionDuration, InternalEventType: PredefEventTypeSession},
 		},
-		GroupBy:   []PredefinedGroupBy{},
-		ChartType: CHART_TYPE_LINECHART,
+		GroupBy: []PredefinedGroupBy{},
+		Setting: ChartSetting{ Type: ChartTypeLineChart, Presentation: PresentationTypeChart },
 	},
 	{
 		InternalID:  2,
@@ -144,7 +144,7 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 			{Name: PredefPropMedium, DisplayName: PredefPropDispMedium},
 			{Name: PredefPropCampaign, DisplayName: PredefPropDispCampaign},
 		},
-		ChartType: CHART_TYPE_BARCHART,
+		Setting: ChartSetting{ Type: ChartTypeBarChart, Presentation: PresentationTypeChart },
 	},
 	{
 		InternalID:  3,
@@ -160,7 +160,7 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 			{Name: PredefPropReferrerUrl, DisplayName: PredefPropDispReferrerUrl},
 			{Name: PredefPropExitPage, DisplayName: PredefPropDispExitPage},
 		},
-		ChartType: CHART_TYPE_HORIZONTAL_BAR_CHART,
+		Setting: ChartSetting{Type: ChartTypeHorizontalBarChart, Presentation: PresentationTypeChart},
 	},
 	{
 		InternalID:  4,
@@ -172,7 +172,7 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 		GroupBy: []PredefinedGroupBy{
 			{Name: PredefPropTopPage, DisplayName: PredefPropDispTopPage},
 		},
-		ChartType: CHART_TYPE_HORIZONTAL_BAR_CHART,
+		Setting: ChartSetting{Type: ChartTypeHorizontalBarChart, Presentation: PresentationTypeChart},
 	},
 	{
 		InternalID:  5,
@@ -187,7 +187,7 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 			{Name: PredefPropCountry, DisplayName: PredefPropDispCountry},
 			{Name: PredefPropRegion, DisplayName: PredefPropDispRegion},
 		},
-		ChartType: CHART_TYPE_TABLE,
+		Setting: ChartSetting{Type: ChartTypeBarChart, Presentation: PresentationTypeTable},
 	},
 	{
 		InternalID:  6,
@@ -203,7 +203,7 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 			{Name: PredefPropOs, DisplayName: PredefPropDispOs},
 			{Name: PredefPropDevice, DisplayName: PredefPropDispDevice},
 		},
-		ChartType: CHART_TYPE_TABLE,
+		Setting: ChartSetting{Type: ChartTypeBarChart, Presentation: PresentationTypeTable},
 	},
 	{
 		InternalID:  7,
@@ -219,7 +219,7 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 			{Name: PredefProp6SignalEmpRange, DisplayName: PredefPropDisp6SignalEmpRange},
 			{Name: PredefProp6SignalRevenueRange, DisplayName: PredefPropDisp6SignalRevenueRange},
 		},
-		ChartType: CHART_TYPE_TABLE,
+		Setting: ChartSetting{Type: ChartTypeBarChart, Presentation: PresentationTypeTable},
 	},
 }
 

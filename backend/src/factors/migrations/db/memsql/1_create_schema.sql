@@ -1409,7 +1409,7 @@ CREATE TABLE IF NOT EXISTS  upload_filter_files(
 --  This is generated from DBT workload. Adding this for running test cases alone.
 CREATE TABLE `website_aggregation` (
   `project_id` bigint(20) DEFAULT NULL,
-  `timestamp_at_day` datetime(6) DEFAULT NULL,
+  `timestamp_at_day` bigint(20) unsigned DEFAULT NULL,
   `event_name` longtext CHARACTER SET utf8 COLLATE utf8_general_ci,
   `event_type` longtext CHARACTER SET utf8 COLLATE utf8_general_ci,
   `source` longtext CHARACTER SET utf8 COLLATE utf8_general_ci,
@@ -1434,6 +1434,6 @@ CREATE TABLE `website_aggregation` (
   `count_of_records` bigint(21) DEFAULT NULL,
   `spent_time` double DEFAULT NULL,
   `max_updated_at` datetime(6) DEFAULT NULL,
-  KEY ('project_id', 'event_type', 'timestamp_at_day') USING CLUSTERED COLUMNSTORE
+  SORT KEY `project_id_website_aggregation` (`project_id`,`event_type`,`timestamp_at_day`)
   , SHARD KEY () 
-) AUTOSTATS_CARDINALITY_MODE=INCREMENTAL AUTOSTATS_HISTOGRAM_MODE=CREATE AUTOSTATS_SAMPLING=ON SQL_MODE='STRICT_ALL_TABLES';
+) AUTOSTATS_CARDINALITY_MODE=INCREMENTAL AUTOSTATS_HISTOGRAM_MODE=CREATE AUTOSTATS_SAMPLING=ON SQL_MODE='STRICT_ALL_TABLES'
