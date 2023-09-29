@@ -7,17 +7,17 @@ const (
 )
 
 var KPIPropertiesForFormSubmissions = []map[string]string{
-	MapOfKPIPropertyNameToDataWithCategory(U.EP_REFERRER_URL, EventEntity),
-	MapOfKPIPropertyNameToDataWithCategory(U.EP_PAGE_URL, EventEntity),
-	MapOfKPIPropertyNameToDataWithCategory(U.EP_TIMESTAMP, EventEntity),
+	MapOfKPIPropertyNameToDataWithCategory(U.EP_REFERRER_URL, EventEntity, false),
+	MapOfKPIPropertyNameToDataWithCategory(U.EP_PAGE_URL, EventEntity, false),
+	MapOfKPIPropertyNameToDataWithCategory(U.EP_TIMESTAMP, EventEntity, false),
 
-	MapOfKPIPropertyNameToDataWithCategory(U.UP_OS, EventEntity),
-	MapOfKPIPropertyNameToDataWithCategory(U.UP_OS_VERSION, EventEntity),
-	MapOfKPIPropertyNameToDataWithCategory(U.UP_BROWSER, EventEntity),
-	MapOfKPIPropertyNameToDataWithCategory(U.UP_BROWSER_VERSION, EventEntity),
-	MapOfKPIPropertyNameToDataWithCategory(U.UP_COUNTRY, EventEntity),
-	MapOfKPIPropertyNameToDataWithCategory(U.UP_REGION, EventEntity),
-	MapOfKPIPropertyNameToDataWithCategory(U.UP_CITY, EventEntity),
+	MapOfKPIPropertyNameToDataWithCategory(U.UP_OS, EventEntity, false),
+	MapOfKPIPropertyNameToDataWithCategory(U.UP_OS_VERSION, EventEntity, false),
+	MapOfKPIPropertyNameToDataWithCategory(U.UP_BROWSER, EventEntity, false),
+	MapOfKPIPropertyNameToDataWithCategory(U.UP_BROWSER_VERSION, EventEntity, false),
+	MapOfKPIPropertyNameToDataWithCategory(U.UP_COUNTRY, EventEntity, false),
+	MapOfKPIPropertyNameToDataWithCategory(U.UP_REGION, EventEntity, false),
+	MapOfKPIPropertyNameToDataWithCategory(U.UP_CITY, EventEntity, false),
 }
 
 var KPIConfigForFormSubmissions = map[string]interface{}{
