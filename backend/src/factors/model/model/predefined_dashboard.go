@@ -11,17 +11,19 @@ const (
 	DBLimit                 = "LIMIT "
 	WebsiteAggregationTable = "website_aggregation"
 
-	CHART_TYPE_BARCHART 			= "pb"
-	CHART_TYPE_LINECHART 			= "pl"
-	CHART_TYPE_TABLE 				= "pt"
-	CHART_TYPE_SPARKLINES 			= "pc"
-	CHART_TYPE_STACKED_AREA 		= "pa"
-	CHART_TYPE_STACKED_BAR 			= "ps"
-	CHART_TYPE_SCATTER_PLOT 		= "sp"
-	CHART_TYPE_HORIZONTAL_BAR_CHART = "hb"
-	CHART_TYPE_PIVOT_CHART 			= "pi"
-	CHART_TYPE_METRIC_CHART 		= "mc"
-	CHART_TYPE_FUNNEL_CHART 		= "fc"
+	ChartTypeBarChart 				= "pb"
+	ChartTypeLineChart 				= "pl"
+	ChartTypeTable 					= "pt"
+	ChartTypeSparkLines 			= "pc"
+	ChartTypeStackedAread 			= "pa"
+	ChartTypeStackedBar 			= "ps"
+	ChartTypeScatterPlot 			= "sp"
+	ChartTypeHorizontalBarChart 	= "hb"
+	ChartTypePivotChart 			= "pi"
+	ChartTypeMetricChart 			= "mc"
+	ChartTypeFunnelChart 			= "fc"
+	PresentationTypeChart 			= "chart"
+	PresentationTypeTable 			= "table"
 )
 
 var MapOfOperatorToExpression = map[string]string{
@@ -57,7 +59,7 @@ type PredefinedWidget struct {
 	Metrics     []PredefinedMetric  `json:"me"`
 	GroupBy     []PredefinedGroupBy `json:"g_by"`
 	InternalID  int64               `json:"inter_id"`
-	ChartType   string              `json:"chart_ty"`
+	Setting		ChartSetting		`json:"chart_setting"` 
 }
 
 type PredefinedMetric struct {
@@ -69,6 +71,11 @@ type PredefinedMetric struct {
 type PredefinedGroupBy struct {
 	Name        string `json:"na"`
 	DisplayName string `json:"d_na"`
+}
+
+type ChartSetting struct {
+	Type   	string	`json:"ty"`
+	Presentation	string	`json:"pr"`
 }
 
 // interface for predefined dashboards.

@@ -6,7 +6,6 @@ import (
 	U "factors/util"
 	"net/http"
 	"testing"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -24,7 +23,7 @@ func TestSampleWebsiteAggregation(t *testing.T) {
 	project, errCode := store.GetStore().CreateProjectWithDependencies(&model.Project{Name: projectName}, agent.UUID, model.ADMIN, billingAccount.ID, true)
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	date1 := time.Unix(1672534800, 0).UTC()
+	date1 := int64(1672534800)
 	record1 := model.WebsiteAggregation{ProjectID: project.ID, TimestampAtDay: date1, EventName: "session", EventType: "session", City: "AB", CountOfRecords: 3, SpentTime: 100.0}
 	record2 := model.WebsiteAggregation{ProjectID: project.ID, TimestampAtDay: date1, EventName: "session", EventType: "session", City: "CD", CountOfRecords: 4, SpentTime: 200.0}
 	record3 := model.WebsiteAggregation{ProjectID: project.ID, TimestampAtDay: date1, EventName: "abc.com", EventType: "page_view", City: "AB", CountOfRecords: 3, SpentTime: 100.0}
