@@ -38,6 +38,8 @@ func SegmentMarker(projectID int64) int {
 		lookBack = U.TimeNowZ().Add(time.Duration(-hour) * time.Hour)
 	}
 
+	startTime := time.Now().Unix()
+
 	// list of 1000 domains their associated users with last updated_at in last 1 hour
 	users, statusCode := store.GetStore().GetUsersUpdatedAtGivenHour(projectID, lookBack, domainGroup.ID)
 	if statusCode != http.StatusFound {
@@ -45,6 +47,12 @@ func SegmentMarker(projectID int64) int {
 			Error("Couldn't find updated records in last given hours with given statuscode for this project", statusCode)
 		return statusCode
 	}
+	endTime := time.Now().Unix()
+	timeTaken := endTime - startTime
+
+	// Total no.of records pulled.
+	// Time taken to pull.
+	log.WithFields(log.Fields{"project_id": projectID, "no_of_records": len(users)}).Info("Total no.of records pulled time(sec) ", timeTaken)
 
 	// list of all segments
 	allSegmentsMap, statusCode := store.GetStore().GetAllSegments(projectID)
@@ -94,7 +102,17 @@ func SegmentMarker(projectID int64) int {
 	actualRoutineLimit := U.MinInt(len(users), C.AllowedGoRoutinesSegmentMarker())
 	waitGroup.Add(actualRoutineLimit)
 	count := 0
+
+	usersProcessingStartTime := time.Now().Unix()
+	var totalUsers, totalAccounts int64
 	for _, user := range users {
+
+		if user.IsGroupUser == nil || !*user.IsGroupUser {
+			totalUsers++
+		} else if *user.IsGroupUser {
+			totalAccounts++
+		}
+
 		count++
 		go usersProcessing(projectID, user, allSegmentsMap, decodedSegmentRulesMap, &waitGroup, &statusMap)
 		if count%actualRoutineLimit == 0 {
@@ -105,6 +123,13 @@ func SegmentMarker(projectID int64) int {
 
 	waitGroup.Wait()
 
+	usersProcessingEndTime := time.Now().Unix()
+
+	// Total time taken to process.
+	// Total user records.
+	// Total account records.
+	log.WithFields(log.Fields{"project_id": projectID, "total_accounts_processed": totalAccounts,
+		"total_users_processed": totalUsers, "total_time_for_processing_sec": (usersProcessingEndTime - usersProcessingStartTime)}).Info("Analysing informartion for users processing")
 	if len(statusMap) > 0 {
 		log.WithField("project_id", projectID).Error("failures while running segment_markup for following users ", statusMap)
 	}
@@ -212,6 +237,7 @@ func allAccountsSegmentMarkup(projectID int64, users []model.User, segments []mo
 
 	statusMap := make(map[string]int, 0)
 
+	startTime := time.Now().Unix()
 	var waitGroup sync.WaitGroup
 	actualRoutineLimit := U.MinInt(len(domainUsersMap), C.AllowedGoRoutinesSegmentMarker())
 	waitGroup.Add(actualRoutineLimit)
@@ -226,6 +252,12 @@ func allAccountsSegmentMarkup(projectID int64, users []model.User, segments []mo
 	}
 
 	waitGroup.Wait()
+
+	endTime := time.Now().Unix()
+	timeTaken := endTime - startTime
+
+	// Time taken to process domains.
+	log.WithFields(log.Fields{"project_id": projectID, "no_of_domains": len(domainUsersMap)}).Info("Processing Time for domains in sec ", timeTaken)
 
 	if len(statusMap) > 0 {
 		log.WithField("project_id", projectID).Error("failures while running segment_markup for following domains ", statusMap)
