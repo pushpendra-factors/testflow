@@ -75,6 +75,8 @@ func main() {
 
 	userPropertyUpdateOptProjects := flag.String("user_property_update_opt_projects", "", "")
 
+	companyPropsV1EnabledProjectIDs := flag.String("company_props_v1_enabled_projectIds", "", "To enable clearbit enrichment in new properties")
+
 	flag.Parse()
 
 	workerName := defaultWorkerName
@@ -131,6 +133,7 @@ func main() {
 		DeviceServiceURL:                                   *deviceServiceUrl,
 		EnableDeviceServiceByProjectID:                     *enableDeviceServiceByProjectID,
 		UserPropertyUpdateOptProjects:                      *userPropertyUpdateOptProjects,
+		CompanyPropsV1EnabledProjectIDs:                    *companyPropsV1EnabledProjectIDs,
 	}
 	C.InitConf(config)
 

@@ -1059,6 +1059,9 @@ func CategorizeProperty(property string, propertyType string) string {
 	if strings.HasPrefix(property, "$enriched") {
 		return "Company identification"
 	}
+	if strings.HasPrefix(property, "$clr") {
+		return "Company identification"
+	}
 	if strings.HasPrefix(property, "$segment") {
 		return "Segment"
 	}
