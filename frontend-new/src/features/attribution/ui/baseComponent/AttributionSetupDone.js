@@ -17,6 +17,7 @@ function AttributionSetupDone() {
           weight='bold'
           color='black'
           extraClass='m-0'
+          id={'fa-at-text--page-title'}
         >
           Attribution Reports
         </Text>

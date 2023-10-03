@@ -237,7 +237,7 @@ function EngagementConfig({ fetchProjectSettings }) {
         <Col span={18}>
           <Row>
             <Col span={18}>
-              <Text type='title' level={4} weight='bold'>
+              <Text type='title' level={4} weight='bold' id={'fa-at-text--page-title'}>
                 Engagement Scoring
               </Text>
             </Col>

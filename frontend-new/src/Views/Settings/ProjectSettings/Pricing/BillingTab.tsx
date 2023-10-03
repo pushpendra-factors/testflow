@@ -44,6 +44,7 @@ const BillingTab = () => {
               weight={'bold'}
               color='character-primary'
               extraClass={'m-0 '}
+              id={'fa-at-text--page-title'}
             >
               {plan?.display_name || plan?.name}
             </Text>

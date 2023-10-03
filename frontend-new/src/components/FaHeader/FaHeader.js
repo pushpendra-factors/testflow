@@ -218,7 +218,9 @@ function FaHeader() {
     >
       <div className={'flex items-center w-1/3'}>
         <div className='flex items-center col-gap-6'>
-          <Link to={PathUrls.ProfileAccounts}>
+          <Link to={PathUrls.ProfileAccounts}
+          id="fa-at-link--home"
+          >
             <SVG
               name={'brand'}
               background='transparent'
@@ -227,11 +229,14 @@ function FaHeader() {
             />
           </Link>
           <div className='flex col-gap-6'>
-            <Dropdown overlay={accountsMenu}>
+            <Dropdown overlay={accountsMenu}
+            overlayClassName="fa-at-overlay--accounts"
+            >
               <div
                 className={cx('flex cursor-pointer items-center col-gap-1', {
                   [styles['active-header-item']]: isAccountsUrl(pathname)
                 })}
+                id="fa-at-link--accounts"
               >
                 <Text
                   color='white'
@@ -250,6 +255,7 @@ function FaHeader() {
               className={cx('flex items-center', {
                 [styles['active-header-item']]: isReportsUrl(pathname)
               })}
+              id="fa-at-link--reports"
             >
               <Text
                 type='title'
@@ -261,11 +267,14 @@ function FaHeader() {
                 Reports
               </Text>
             </Link>
-            <Dropdown overlay={journeyMenu}>
+            <Dropdown overlay={journeyMenu}
+            overlayClassName="fa-at-overlay--journeys"
+            >
               <div
                 className={cx('flex cursor-pointer items-center col-gap-1', {
                   [styles['active-header-item']]: isJourneyUrl(pathname)
                 })}
+                id="fa-at-link--journeys"
               >
                 <Text
                   color='white'
@@ -285,6 +294,7 @@ function FaHeader() {
               className={cx('flex items-center', {
                 [styles['active-header-item']]: isAttributionsUrl(pathname)
               })}
+              id="fa-at-link--attribution"
             >
               <Text
                 type='title'
@@ -306,6 +316,7 @@ function FaHeader() {
         <Dropdown
           overlay={renderConfigureMenu(activeAgent)}
           placement='bottomRight'
+          overlayClassName="fa-at-overlay--config"
         >
           <div
             className={cx('cursor-pointer', {
@@ -313,16 +324,18 @@ function FaHeader() {
               [styles['active-header-item-circle']]:
                 isConfigurationUrl(pathname)
             })}
+            id="fa-at-dropdown--config"
           >
             <SVG color='#F0F0F0' size={16} name='config' />
           </div>
         </Dropdown>
-        <Dropdown placement='bottomRight' overlay={SettingsMenu}>
+        <Dropdown placement='bottomRight' overlayClassName="fa-at-overlay--settings" overlay={SettingsMenu}>
           <div
             className={cx('cursor-pointer', {
               [styles['active-header-item']]: isSettingsUrl(pathname),
               [styles['active-header-item-circle']]: isSettingsUrl(pathname)
             })}
+            id="fa-at-dropdown--settings"
           >
             <SVG color='#F0F0F0' size={20} name='settings' />
           </div>

@@ -114,6 +114,7 @@ const DashboardSidebar = () => {
           onClick={() => {
             dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_OPEN });
           }}
+          id={'fa-at-btn--new-dashboard'}
         >
           <SVG name={'plus'} size={16} color='#1890FF' />
           <Text level={7} type='title' color='brand-color-6' extraClass='mb-0'>

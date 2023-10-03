@@ -23,6 +23,7 @@ const PathAnalysisLP = ({ SetfetchingIngishts, setShowReport }) => {
                       level={3}
                       weight={'bold'}
                       extraClass={'m-0'}
+                      id={'fa-at-text--page-title'}
                     >
                       Path Analysis
                     </Text>

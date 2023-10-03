@@ -204,6 +204,7 @@ function UserSettings({
                   level={3}
                   weight={'bold'}
                   extraClass={'m-0'}
+                  id={'fa-at-text--page-title'}
                 >
                   Users and Roles
                 </Text>

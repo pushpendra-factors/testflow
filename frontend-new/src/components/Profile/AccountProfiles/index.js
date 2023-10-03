@@ -1165,7 +1165,7 @@ function AccountProfiles({
           <div className='flex items-center rounded justify-center h-10 w-10'>
             <SVG name={titleIcon} size={32} color='#FF4D4F' />
           </div>
-          <Text type='title' level={3} weight='bold' extraClass='mb-0'>
+          <Text type='title' level={3} weight='bold' extraClass='mb-0' id={'fa-at-text--page-title'}>
             {pageTitle}
           </Text>
         </div>

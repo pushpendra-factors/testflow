@@ -346,6 +346,7 @@ const AttributionSettings = ({
                 level={3}
                 weight={'bold'}
                 extraClass={'m-0 m-1'}
+                id={'fa-at-text--page-title'}
               >
                 Attribution Configuration
               </Text>

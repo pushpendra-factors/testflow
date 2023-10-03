@@ -140,7 +140,7 @@ function EditBasicSettings({
         >
           <Row>
             <Col span={12}>
-              <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>
+              <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} id={'fa-at-text--page-title'}>
                 Basic Details
               </Text>
             </Col>
