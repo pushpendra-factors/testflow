@@ -1,6 +1,6 @@
 import { createSelector } from 'reselect';
 
-export const selectDashboardList = (state) => state.dashboard.dashboards.data;
+export const selectDashboardList = (state) => state.dashboard.dashboards.data.filter(fil => fil?.class !== 'predefined')
 
 export const selectActiveDashboard = (state) => state.dashboard.activeDashboard;
 
