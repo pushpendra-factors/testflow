@@ -35,7 +35,7 @@ func (store *MemSQL) CreatePredefinedWebsiteAggregation(projectID int64, agentUU
 		UnitsPosition: currentPositionJsonb,
 	}
 
-	_, statusCode := store.CreateDashboard(projectID, "", &dashboard)
+	_, statusCode := store.CreateDashboard(projectID, agentUUID, &dashboard)
 	if statusCode != http.StatusCreated {
 		log.WithField("projectID", projectID).WithField("internalID", 1).Warn("Failed in predefined dashboard: website aggregation")
 	}
