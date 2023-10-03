@@ -297,15 +297,17 @@ func (q *PredefWebsiteAggregationQuery) IsValid() (bool, string) {
 			}
 		}
 
-		// Checking for groupBy.
-		groupExists := false
-		for _, groupBy := range widgetConfig.GroupBy {
-			if groupBy.Name == q.GroupBy.Name {
-				groupExists = true
+		if len(widgetConfig.GroupBy) != 0 {
+			// Checking for groupBy.
+			groupExists := false
+			for _, groupBy := range widgetConfig.GroupBy {
+				if groupBy.Name == q.GroupBy.Name {
+					groupExists = true
+				}
 			}
-		}
-		if !groupExists {
-			return false, "Invalid group by provided for this dashboard ID"
+			if !groupExists {
+				return false, "Invalid group by provided for this dashboard ID"
+			}
 		}
 	} else {
 		return false, "Invalid widget internal ID sent"
