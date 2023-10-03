@@ -35,7 +35,7 @@ const LockedStateComponent = ({
         {/* description */}
         <div className='w-1/2 h-full flex items-center'>
           <div className='w-full'>
-            <Text type={'title'} level={3} weight={'bold'}>
+            <Text type={'title'} level={3} weight={'bold'}  id={'fa-at-text--page-title'}>
               {title}
             </Text>
             <div className='flex items-center flex-wrap gap-1 mt-1'>

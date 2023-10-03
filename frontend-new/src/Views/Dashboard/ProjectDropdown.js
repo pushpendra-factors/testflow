@@ -328,12 +328,13 @@ function ProjectDropdown({
                 weight='bold'
                 extraClass='mb-0'
                 type='title'
+                id={'fa-at-text--dashboard-title'}
               >
                 {showDashboardName}
               </Text>
             </div>
             {setDashboard()}
-            <Text level={7} type='title' weight='medium' color='grey'>
+            <Text level={7} type='title' weight='medium' color='grey' id={'fa-at-text--dashboard-desc'}>
               {showDashboardDesc}
             </Text>
           </div>

@@ -185,7 +185,7 @@ const Sharing = ({
                 {(!viewMode) && <>
                     <Row>
                         <Col span={12}>
-                            <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0 ml-1'}>Sharing</Text>
+                            <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0 ml-1'}  id={'fa-at-text--page-title'}>Sharing</Text>
                         </Col>
                     </Row>
                     <Row className={'m-0'}>
