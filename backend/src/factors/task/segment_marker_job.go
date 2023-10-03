@@ -92,6 +92,9 @@ func SegmentMarker(projectID int64) int {
 			} else if segmentQuery.Caller == model.ACCOUNT_PROFILES {
 				segmentQuery.GroupAnalysis = segment.Type
 			}
+			segmentQuery.GlobalUserProperties = transformPayloadForInProperties(segmentQuery.GlobalUserProperties)
+			segmentQuery.From = U.TimeNowZ().AddDate(0, 0, -28).Unix()
+			segmentQuery.To = U.TimeNowZ().Unix()
 			decodedSegmentRulesMap[groupName] = append(decodedSegmentRulesMap[groupName], segmentQuery)
 		}
 	}
@@ -152,6 +155,22 @@ func SegmentMarker(projectID int64) int {
 	}
 
 	return http.StatusOK
+}
+
+func transformPayloadForInProperties(globalUserProperties []model.QueryProperty) []model.QueryProperty {
+	for i, p := range globalUserProperties {
+		if v, exist := model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]; exist {
+			v.LogicalOp = p.LogicalOp
+			if p.Value == "true" {
+				globalUserProperties[i] = v
+			} else if p.Value == "false" || p.Value == "$none" {
+				v.Operator = model.EqualsOpStr
+				v.Value = "$none"
+				globalUserProperties[i] = v
+			}
+		}
+	}
+	return globalUserProperties
 }
 
 func usersProcessing(projectID int64, user model.User, allSegmentsMap map[string][]model.Segment,
@@ -381,7 +400,7 @@ func isRuleMatched(segment model.Segment, decodedProperties *map[string]interfac
 		log.WithField("segment_id", segment.Id).Error("Unable to decode segment query")
 		return isMatched
 	}
-	if segmentQuery.GlobalUserProperties == nil || len(segmentQuery.GlobalUserProperties) == 0 {
+	if (segmentQuery.GlobalUserProperties == nil || len(segmentQuery.GlobalUserProperties) == 0) || (segmentQuery.EventsWithProperties != nil && len(segmentQuery.EventsWithProperties) > 0) {
 		// currently, only support for global properties
 		return isMatched
 	}
