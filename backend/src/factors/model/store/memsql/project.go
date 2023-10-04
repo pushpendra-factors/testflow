@@ -309,8 +309,8 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 		return errCode
 	}
 
-	statusCode := store.CreatePredefinedDashboards(projectID, agentUUID)
-	return statusCode
+	// statusCode := store.CreatePredefinedDashboards(projectID, agentUUID)
+	return http.StatusCreated
 }
 
 // CreateProjectWithDependencies seperate create method with dependencies to avoid breaking tests.
