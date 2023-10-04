@@ -74,7 +74,8 @@ export const getColumns = ({
   isEngagementLocked,
   displayTableProps,
   groupPropNames,
-  listProperties
+  listProperties,
+  defaultSorterInfo
 }) => {
   const headerClassStr =
     'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold';
@@ -129,10 +130,7 @@ export const getColumns = ({
       key: 'engagement',
       fixed: 'left',
       defaultSortOrder: 'descend',
-      sorter: {
-        compare: (a, b) => sortNumericalColumn(a.score, b.score),
-        multiple: 1
-      },
+      sorter: (a, b) => sortNumericalColumn(a.score, b.score),
       render: (status) =>
         status ? (
           <div
@@ -163,12 +161,28 @@ export const getColumns = ({
     key: 'lastActivity',
     width: 200,
     align: 'right',
-    sorter: {
-      compare: (a, b) => sortStringColumn(a.lastActivity, b.lastActivity),
-      multiple: 2
-    },
+    sorter: (a, b) => sortStringColumn(a.lastActivity, b.lastActivity),
     render: (item) => MomentTz(item).fromNow()
   });
+
+  columns.forEach((column) => {
+    if (column.key === defaultSorterInfo?.key) {
+      column.sortOrder = defaultSorterInfo?.order;
+    } else {
+      delete column.sortOrder;
+    }
+  });
+  const hasSorter = columns.find((item) =>
+    ['ascend', 'descend'].includes(item.sortOrder)
+  );
+  if (!hasSorter) {
+    columns.forEach((column) => {
+      if (['engagement', 'lastActivity'].includes(column.key)) {
+        column.defaultSortOrder = 'descend';
+        return;
+      }
+    });
+  }
   return columns;
 };
 

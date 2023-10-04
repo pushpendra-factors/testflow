@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -82,7 +83,11 @@ func main() {
 	db := C.GetServices().Db
 	defer db.Close()
 
+	startTime := time.Now().Unix()
 	isSuccess := RunSegmentMarkerForProjects(projectIdFlag)
+	endTime := time.Now().Unix()
+	timeTaken := endTime - startTime
+	log.Info("Time taken for job to run in sec: ", timeTaken)
 	if !isSuccess {
 		C.PingHealthcheckForFailure(healthcheckPingID, "segment_markup run failed.")
 		return

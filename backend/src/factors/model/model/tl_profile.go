@@ -3,6 +3,7 @@ package model
 import (
 	"encoding/base64"
 	U "factors/util"
+	"regexp"
 	"strings"
 	"time"
 
@@ -258,4 +259,15 @@ func ConvertDomainIdToHostName(domainID string) (string, error) {
 
 	hostName := resultArray[1]
 	return hostName, nil
+}
+
+func GetDomainFromURL(url string) string {
+	re := regexp.MustCompile(`^(?:https?://)?(?:www\.)?([^:/\n?]+)`)
+	match := re.FindStringSubmatch(url)
+
+	if len(match) > 1 {
+		return match[1]
+	} else {
+		return url
+	}
 }

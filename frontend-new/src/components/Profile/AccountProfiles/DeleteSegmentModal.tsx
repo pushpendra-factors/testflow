@@ -33,7 +33,7 @@ const DeleteSegmentModal = ({
         extraClass='mb-0'
         level={5}
       >
-        {`Are you sure you want to delete ${segmentName}?`}
+        {`Are you sure you want to delete "${segmentName}"?`}
       </Text>
     </AppModal>
   );

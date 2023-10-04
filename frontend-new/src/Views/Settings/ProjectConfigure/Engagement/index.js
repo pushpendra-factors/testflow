@@ -1,6 +1,7 @@
 import { Button, Col, Modal, notification, Row, Table } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
 import {
+  findKeyByValue,
   transformPayloadForWeightConfig,
   transformWeightConfigForQuery
 } from 'Components/Profile/utils';
@@ -12,8 +13,9 @@ import { bindActionCreators } from 'redux';
 import { updateAccountScores } from 'Reducers/timelines';
 import { fetchProjectSettings } from 'Reducers/global';
 import SaleWindowModal from './SaleWindowModal';
+import { fetchGroups } from 'Reducers/coreQuery/services';
 
-function EngagementConfig({ fetchProjectSettings }) {
+function EngagementConfig({ fetchProjectSettings, fetchGroups }) {
   const [showModal, setShowModal] = useState(false);
   const [saleWindowValue, setSaleWindowValue] = useState();
   const [showSaleWindowModal, setShowSaleWindowModal] = useState(false);
@@ -22,7 +24,10 @@ function EngagementConfig({ fetchProjectSettings }) {
   const currentProjectSettings = useSelector(
     (state) => state.global.currentProjectSettings
   );
-  const { eventNames } = useSelector((state) => state.coreQuery);
+  const { eventNames, eventNamesMap } = useSelector((state) => state.coreQuery);
+  useEffect(() => {
+    fetchGroups(activeProject?.id);
+  }, [activeProject?.id]);
 
   const columns = [
     {
@@ -168,7 +173,7 @@ function EngagementConfig({ fetchProjectSettings }) {
     const updatedWeightConfig = [...weightsConfig];
 
     updatedWeightConfig[index].is_deleted = true;
-    
+
     updateAccountScores(activeProject.id, {
       WeightConfig: updatedWeightConfig,
       salewindow: parseInt(saleWindowValue)
@@ -203,6 +208,7 @@ function EngagementConfig({ fetchProjectSettings }) {
     return weightsConfig
       ?.map((q, index) => {
         const event = transformWeightConfigForQuery(q);
+        event.group = findKeyByValue(eventNamesMap, event.label);
         return {
           ...event,
           is_deleted: q.is_deleted,
@@ -333,7 +339,8 @@ function EngagementConfig({ fetchProjectSettings }) {
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
-      fetchProjectSettings
+      fetchProjectSettings,
+      fetchGroups
     },
     dispatch
   );

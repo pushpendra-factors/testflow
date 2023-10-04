@@ -44,11 +44,12 @@ const OnboardingRouting = () => {
           routePath = `${PathUrls.Onboarding}?target=invited_user`;
         }
       } else {
-        if (!agent_details?.is_onboarding_flow_seen) {
-          // handle onboarding
-          routeFlag = true;
-          routePath = PathUrls.Onboarding;
-        }
+        //removing the below condition as this is not required -> this is handled when no project is present
+        // if (!agent_details?.is_onboarding_flow_seen) {
+        //   // handle onboarding
+        //   routeFlag = true;
+        //   routePath = PathUrls.Onboarding;
+        // }
       }
     }
 

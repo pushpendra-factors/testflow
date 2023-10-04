@@ -295,7 +295,9 @@ func (store *MemSQL) GetUser(projectId int64, id string) (*model.User, int) {
 	var user model.User
 	db := C.GetServices().Db
 	if err := db.Limit(1).Where("project_id = ?", projectId).
-		Where("id = ?", id).Find(&user).Error; err != nil {
+		Where("id = ?", id).
+		Select(excludeColumns(db, []string{"associated_segments", "event_aggregate"})).
+		Find(&user).Error; err != nil {
 
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
@@ -319,7 +321,9 @@ func (store *MemSQL) GetUsers(projectId int64, offset uint64, limit uint64) ([]m
 	var users []model.User
 	db := C.GetServices().Db
 	if err := db.Order("created_at").Offset(offset).
-		Where("project_id = ?", projectId).Limit(limit).Find(&users).Error; err != nil {
+		Where("project_id = ?", projectId).Limit(limit).
+		Select(excludeColumns(db, []string{"associated_segments", "event_aggregate"})).
+		Find(&users).Error; err != nil {
 		return nil, http.StatusInternalServerError
 	}
 	if len(users) == 0 {
@@ -425,7 +429,9 @@ func (store *MemSQL) GetSelectedUsersByCustomerUserID(projectID int64, customerU
 	}
 
 	var users []model.User
-	if err := db.Where("project_id = ? AND id IN ( ? )", projectID, userIDs).Find(&users).Error; err != nil {
+	if err := db.Where("project_id = ? AND id IN ( ? )", projectID, userIDs).
+		Select(excludeColumns(db, []string{"associated_segments", "event_aggregate"})).
+		Find(&users).Error; err != nil {
 		logCtx.WithError(err).Error("Failed to get selected users for id")
 		return nil, http.StatusInternalServerError
 	}
@@ -554,6 +560,24 @@ func (store *MemSQL) GetExistingUserByCustomerUserID(projectId int64, arrayCusto
 	return customerUserIDMap, http.StatusFound
 }
 
+func excludeColumns(db *gorm.DB, cols []string) string {
+	requiredFields := []string{}
+
+	colsMap := make(map[string]bool, 0)
+	for i := range cols {
+		colsMap[cols[i]] = true
+	}
+
+	for _, field := range db.NewScope(&model.User{}).GetStructFields() {
+		if _, exists := colsMap[field.DBName]; !exists {
+			requiredFields = append(requiredFields, field.DBName)
+		}
+	}
+	selectColumns := strings.Join(requiredFields, ", ")
+
+	return selectColumns
+}
+
 func (store *MemSQL) GetUserBySegmentAnonymousId(projectId int64, segAnonId string) (*model.User, int) {
 	logFields := log.Fields{
 		"project_id":  projectId,
@@ -563,8 +587,11 @@ func (store *MemSQL) GetUserBySegmentAnonymousId(projectId int64, segAnonId stri
 
 	var users []model.User
 	db := C.GetServices().Db
+
 	if err := db.Limit(1).Where("project_id = ?", projectId).Where(
-		"segment_anonymous_id = ?", segAnonId).Find(&users).Error; err != nil {
+		"segment_anonymous_id = ?", segAnonId).
+		Select(excludeColumns(db, []string{"associated_segments", "event_aggregate"})).
+		Find(&users).Error; err != nil {
 		log.WithField("project_id", projectId).WithField(
 			"segment_anonymous_id", segAnonId).Error(
 			"Failed to get user by segment_anonymous_id.")
@@ -1479,8 +1506,10 @@ func (store *MemSQL) GetUserByPropertyKey(projectID int64,
 	var user model.User
 	// $$$ is a gorm alias for ? jsonb operator.
 	db := C.GetServices().Db
-	err := db.Limit(1).Where("project_id=?", projectID).Where(
-		"JSON_EXTRACT_STRING(properties, ?) = ?", key, value).Find(&user).Error
+	err := db.Limit(1).Where("project_id=?", projectID).
+		Where("JSON_EXTRACT_STRING(properties, ?) = ?", key, value).
+		Select(excludeColumns(db, []string{"associated_segments", "event_aggregate"})).
+		Find(&user).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
@@ -2139,22 +2168,18 @@ func (store *MemSQL) UpdateAssociatedSegments(projectID int64, id string,
 		return http.StatusBadRequest, nil
 	}
 
-	db := C.GetServices().Db
-
 	associatedSegmentJsonb, err := U.EncodeToPostgresJsonb(&associatedSegments)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to encode associated_segment map.")
 	}
-	update := map[string]interface{}{"associated_segments": associatedSegmentJsonb}
 
-	if err := db.Model(&model.User{}).Limit(1).
-		Where("project_id = ? AND id = ?", projectID, id).Update(update).Error; err != nil {
-		if gorm.IsRecordNotFoundError(err) {
-			return http.StatusNotFound, err
-		}
+	runQueryStmt := "UPDATE users SET associated_segments = ? WHERE project_id = ? AND id = ? LIMIT 1;"
+	qParams := []interface{}{associatedSegmentJsonb, projectID, id}
 
-		logCtx.WithError(err).Error(
-			"Failed while updating segment on UpdateSegmentById.")
+	db := C.GetServices().Db
+	err = db.Exec(runQueryStmt, qParams...).Error
+	if err != nil {
+		logCtx.Error("Failed to update associated_segments column")
 		return http.StatusInternalServerError, err
 	}
 
@@ -2793,7 +2818,7 @@ func (store *MemSQL) UpdateUserGroup(projectID int64, userID, groupName, groupID
 		return nil, http.StatusInternalServerError
 	}
 
-	user, status := store.GetUserWithoutProperties(projectID, userID)
+	user, status := store.GetUserWithoutJSONColumns(projectID, userID)
 	if status != http.StatusFound {
 		logCtx.WithField("err_code", status).Error("Failed to get user for group association.")
 		return nil, http.StatusInternalServerError
@@ -2945,7 +2970,7 @@ func (store *MemSQL) UpdateGroupUserDomainsGroup(projectID int64, groupUserID, g
 		return nil, http.StatusInternalServerError
 	}
 
-	user, status := store.GetUserWithoutProperties(projectID, groupUserID)
+	user, status := store.GetUserWithoutJSONColumns(projectID, groupUserID)
 	if status != http.StatusFound {
 		logCtx.WithField("err_code", status).Error("Failed to get user for group association.")
 		return nil, http.StatusInternalServerError
@@ -3099,8 +3124,8 @@ func (store *MemSQL) UpdateGroupUserGroupId(projectID int64, userID string,
 	return http.StatusAccepted
 }
 
-// GetUserWithoutProperties Gets the user without properties
-func (store *MemSQL) GetUserWithoutProperties(projectID int64, id string) (*model.User, int) {
+// GetUserWithoutJSONColumns Gets the user without JSON columns
+func (store *MemSQL) GetUserWithoutJSONColumns(projectID int64, id string) (*model.User, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"user_id":    id,
@@ -3115,16 +3140,8 @@ func (store *MemSQL) GetUserWithoutProperties(projectID int64, id string) (*mode
 
 	var user model.User
 	db := C.GetServices().Db
-	requiredFields := []string{}
-	for _, field := range db.NewScope(&model.User{}).GetStructFields() {
-		if field.DBName != "properties" {
-			requiredFields = append(requiredFields, field.DBName)
-		}
-	}
-
-	selectColumns := strings.Join(requiredFields, ",")
-
-	if err := db.Where("project_id = ? AND id = ?", projectID, id).Select(selectColumns).
+	if err := db.Where("project_id = ? AND id = ?", projectID, id).
+		Select(excludeColumns(db, []string{"properties", "associated_segments", "event_aggregate"})).
 		Find(&user).Error; err != nil {
 
 		logCtx.WithError(err).Error("Failed to get users for customer_user_id")
@@ -3250,7 +3267,7 @@ func (store *MemSQL) AssociateUserDomainsGroup(projectID int64, requestUserID st
 		groupIDMap[model.GROUP_NAME_DOMAINS] = domainGroup.ID
 	}
 
-	requestUser, status := store.GetUserWithoutProperties(projectID, requestUserID)
+	requestUser, status := store.GetUserWithoutJSONColumns(projectID, requestUserID)
 	if status != http.StatusFound {
 		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to get user in AssociateUserDomainsGroup.")
 		return http.StatusInternalServerError

@@ -7,6 +7,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -34,7 +35,7 @@ func (store *MemSQL) CreatePredefinedWebsiteAggregation(projectID int64, agentUU
 		UnitsPosition: currentPositionJsonb,
 	}
 
-	_, statusCode := store.CreateDashboard(projectID, "", &dashboard)
+	_, statusCode := store.CreateDashboard(projectID, agentUUID, &dashboard)
 	if statusCode != http.StatusCreated {
 		log.WithField("projectID", projectID).WithField("internalID", 1).Warn("Failed in predefined dashboard: website aggregation")
 	}
@@ -71,6 +72,9 @@ func (store *MemSQL) ExecuteSingleWebAggregationQuery(projectID int64, q model.P
 	}
 
 	transformedResult := transformPWAResultMetrics(q, *result)
+	if q.GroupByTimestamp != "" {
+		transformedResult = transformPWAResultDateValues(*result)
+	}
 	return transformedResult, http.StatusOK, "Successfully executed."
 }
 
@@ -153,10 +157,8 @@ func getPredefinedFilterStmnt(projectID int64, filters []model.PredefinedFilter,
 	rStmnt := ""
 	rParams := make([]interface{}, 0)
 
-	whereStmnt := model.DBWhere + fmt.Sprintf("project_id = %v AND event_type = '%v' AND timestamp_at_day BETWEEN '%v' AND '%v' ", projectID, internalEventType,
-		U.GetDBDateFormatFromTimestampAndTimezone(from, U.TimeZoneString(timezone)),
-		U.GetDBDateFormatFromTimestampAndTimezone(to, U.TimeZoneString(timezone)),
-	)
+	whereStmnt := model.DBWhere + fmt.Sprintf("project_id = %v AND event_type = '%v' AND timestamp_at_day BETWEEN %v AND %v ", 
+		projectID, internalEventType, from, to)
 
 	groupedFilters := getPredefinedFiltersGrouped(filters)
 	for grpIndex, currentFilterGrp := range groupedFilters {
@@ -245,6 +247,17 @@ func transformPWAResultMetrics(q model.PredefWebsiteAggregationQuery, result mod
 					result.Rows[rowIndex][rowLen - 1 - metricIndex] = 0
 			}
 		}
+	}
+	return result
+}
+
+func transformPWAResultDateValues(result model.QueryResult) model.QueryResult {
+
+	for rowIndex, row := range result.Rows {
+		valueInInt := int64(row[0].(float64))
+		valueInUTC := time.Unix(valueInInt, 0).UTC()
+		valueWithOffset := U.GetTimestampAsStrWithTimezone(valueInUTC, "UTC")
+		result.Rows[rowIndex][0] = valueWithOffset
 	}
 	return result
 }

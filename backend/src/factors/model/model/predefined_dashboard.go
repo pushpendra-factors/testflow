@@ -10,6 +10,20 @@ const (
 	DBDescend               = "DESC "
 	DBLimit                 = "LIMIT "
 	WebsiteAggregationTable = "website_aggregation"
+
+	ChartTypeBarChart 				= "pb"
+	ChartTypeLineChart 				= "pl"
+	ChartTypeTable 					= "pt"
+	ChartTypeSparkLines 			= "pc"
+	ChartTypeStackedAread 			= "pa"
+	ChartTypeStackedBar 			= "ps"
+	ChartTypeScatterPlot 			= "sp"
+	ChartTypeHorizontalBarChart 	= "hb"
+	ChartTypePivotChart 			= "pi"
+	ChartTypeMetricChart 			= "mc"
+	ChartTypeFunnelChart 			= "fc"
+	PresentationTypeChart 			= "chart"
+	PresentationTypeTable 			= "table"
 )
 
 var MapOfOperatorToExpression = map[string]string{
@@ -45,7 +59,7 @@ type PredefinedWidget struct {
 	Metrics     []PredefinedMetric  `json:"me"`
 	GroupBy     []PredefinedGroupBy `json:"g_by"`
 	InternalID  int64               `json:"inter_id"`
-	ChartType   string              `json:"chart_ty"`
+	Setting		ChartSetting		`json:"chart_setting"` 
 }
 
 type PredefinedMetric struct {
@@ -57,6 +71,11 @@ type PredefinedMetric struct {
 type PredefinedGroupBy struct {
 	Name        string `json:"na"`
 	DisplayName string `json:"d_na"`
+}
+
+type ChartSetting struct {
+	Type   	string	`json:"ty"`
+	Presentation	string	`json:"pr"`
 }
 
 // interface for predefined dashboards.
@@ -75,7 +94,7 @@ type PredefinedFilter struct {
 
 var PredefinedDashboards = []PredefinedDashboard{
 	{
-		InternalID: 1, Name: "website_aggregation", DisplayName: "Website Aggregation", Description: "Website Aggregation",
+		InternalID: 1, Name: "Traffic Dashboard", DisplayName: "Traffic Dashboard", Description: "Traffic Dashboard",
 	},
 }
 

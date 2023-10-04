@@ -2,6 +2,7 @@ package model
 
 import (
 	"errors"
+	U "factors/util"
 	"strings"
 )
 
@@ -19,7 +20,7 @@ func TransformChannelsPropertiesConfigToKpiPropertiesConfig(channelsWithProperti
 				"data_type":    property.Type,
 				"object_type":  channelAndProperties.Name,
 				"entity":       EventEntity,
-				"category":     channelAndProperties.Name,
+				"category":     U.GetSnakeCaseToTitleString(channelAndProperties.Name),
 			}
 			resultantPropertiesConfig = append(resultantPropertiesConfig, tempPropertyConfig)
 		}

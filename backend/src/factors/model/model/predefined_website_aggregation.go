@@ -86,7 +86,8 @@ const (
 	PredefPropDisp6SignalRevenueRange = "6Signal Revenue Range"
 
 	// Internal Group by
-	PredefPropEventName = "event_name"
+	PredefPropEventName 	= "event_name"
+	PredefPropLatestPageUrl = "latest_page_url"
 )
 
 // Have to check
@@ -128,8 +129,8 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 			// {Name: PredefBounceRate, DisplayName: PredefDispBounceRate, InternalEventType: PredefEventTypeSession},
 			// {Name: PredefAvgSessionDuration, DisplayName: PredefDispAvgSessionDuration, InternalEventType: PredefEventTypeSession},
 		},
-		GroupBy:   []PredefinedGroupBy{},
-		ChartType: "",
+		GroupBy: []PredefinedGroupBy{},
+		Setting: ChartSetting{ Type: ChartTypeLineChart, Presentation: PresentationTypeChart },
 	},
 	{
 		InternalID:  2,
@@ -143,7 +144,7 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 			{Name: PredefPropMedium, DisplayName: PredefPropDispMedium},
 			{Name: PredefPropCampaign, DisplayName: PredefPropDispCampaign},
 		},
-		ChartType: "",
+		Setting: ChartSetting{ Type: ChartTypeBarChart, Presentation: PresentationTypeChart },
 	},
 	{
 		InternalID:  3,
@@ -159,7 +160,7 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 			{Name: PredefPropReferrerUrl, DisplayName: PredefPropDispReferrerUrl},
 			{Name: PredefPropExitPage, DisplayName: PredefPropDispExitPage},
 		},
-		ChartType: "",
+		Setting: ChartSetting{Type: ChartTypeHorizontalBarChart, Presentation: PresentationTypeChart},
 	},
 	{
 		InternalID:  4,
@@ -171,7 +172,7 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 		GroupBy: []PredefinedGroupBy{
 			{Name: PredefPropTopPage, DisplayName: PredefPropDispTopPage},
 		},
-		ChartType: "",
+		Setting: ChartSetting{Type: ChartTypeHorizontalBarChart, Presentation: PresentationTypeChart},
 	},
 	{
 		InternalID:  5,
@@ -186,10 +187,10 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 			{Name: PredefPropCountry, DisplayName: PredefPropDispCountry},
 			{Name: PredefPropRegion, DisplayName: PredefPropDispRegion},
 		},
-		ChartType: "",
+		Setting: ChartSetting{Type: ChartTypeBarChart, Presentation: PresentationTypeTable},
 	},
 	{
-		InternalID:  5,
+		InternalID:  6,
 		Name:        PredefWidTechnographics,
 		DisplayName: PredefWidDispTechnographics,
 		Metrics: []PredefinedMetric{
@@ -202,10 +203,10 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 			{Name: PredefPropOs, DisplayName: PredefPropDispOs},
 			{Name: PredefPropDevice, DisplayName: PredefPropDispDevice},
 		},
-		ChartType: "",
+		Setting: ChartSetting{Type: ChartTypeBarChart, Presentation: PresentationTypeTable},
 	},
 	{
-		InternalID:  6,
+		InternalID:  7,
 		Name:        PredefWidFirmographics,
 		DisplayName: PredefWidDispFirmographics,
 		Metrics: []PredefinedMetric{
@@ -218,7 +219,7 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 			{Name: PredefProp6SignalEmpRange, DisplayName: PredefPropDisp6SignalEmpRange},
 			{Name: PredefProp6SignalRevenueRange, DisplayName: PredefPropDisp6SignalRevenueRange},
 		},
-		ChartType: "",
+		Setting: ChartSetting{Type: ChartTypeBarChart, Presentation: PresentationTypeTable},
 	},
 }
 
@@ -296,19 +297,17 @@ func (q *PredefWebsiteAggregationQuery) IsValid() (bool, string) {
 			}
 		}
 
-		if len(set) != 0 {
-			return false, "Input metrics sent for this widget are wrong"
-		}
-
-		// Checking for groupBy.
-		groupExists := false
-		for _, groupBy := range widgetConfig.GroupBy {
-			if groupBy.Name == q.GroupBy.Name {
-				groupExists = true
+		if len(widgetConfig.GroupBy) != 0 {
+			// Checking for groupBy.
+			groupExists := false
+			for _, groupBy := range widgetConfig.GroupBy {
+				if groupBy.Name == q.GroupBy.Name {
+					groupExists = true
+				}
 			}
-		}
-		if !groupExists {
-			return false, "Invalid group by provided for this dashboard ID"
+			if !groupExists {
+				return false, "Invalid group by provided for this dashboard ID"
+			}
 		}
 	} else {
 		return false, "Invalid widget internal ID sent"
@@ -347,6 +346,7 @@ var PredefWebMetricToInternalTransformations = map[string][]PredefWebsiteAggrega
 
 var MapOfPredefWebsiteAggregGroupByExternalToInternal = map[string]string{
 	PredefPropTopPage: PredefPropEventName,
+	PredefPropExitPage: PredefPropLatestPageUrl,
 }
 
 var MapOfPredefinedWebsiteAggregaFilterExternalToInternal = map[string]string{}

@@ -61,7 +61,7 @@ function ResetPassword(props) {
 
   return (
     <>
-      <div className={'fa-container'}>
+      <div className={'fa-container h-screen relative'}>
         <Row justify={'center'}>
           <Col span={24}>
             <LoggedOutScreenHeader />

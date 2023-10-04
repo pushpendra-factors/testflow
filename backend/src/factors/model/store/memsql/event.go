@@ -2709,6 +2709,7 @@ func (store *MemSQL) GetLatestEventTimeStampByEventNameId(projectId int64, event
 	db := C.GetServices().Db
 
 	var timestamp int64
+	var timestampNull sql.NullInt64
 
 	rows, _ := db.Raw("SELECT MAX(timestamp ) FROM events "+
 		"WHERE events.project_id = ? AND events.event_name_id = ? "+
@@ -2717,13 +2718,15 @@ func (store *MemSQL) GetLatestEventTimeStampByEventNameId(projectId int64, event
 	rowNum := 0
 	for rows.Next() {
 
-		if err := rows.Scan(&timestamp); err != nil {
+		if err := rows.Scan(&timestampNull); err != nil {
 			log.WithError(err).Error("Failed to scan rows")
 			return 0, http.StatusNotFound
 		}
 
 		rowNum++
 	}
+
+	timestamp = U.IfThenElse(timestampNull.Valid, timestampNull.Int64, int64(0)).(int64)
 
 	return timestamp, http.StatusFound
 }

@@ -40,7 +40,7 @@ import { useHistory, useLocation } from 'react-router-dom';
 import { PathUrls } from '../../../routes/pathUrls';
 import { fetchGroups } from 'Reducers/coreQuery/services';
 import UpgradeModal from '../UpgradeModal';
-import { PLANS } from 'Constants/plans.constants';
+import { FEATURES, PLANS } from 'Constants/plans.constants';
 import {
   getGroupProperties,
   getEventPropertiesV2
@@ -49,6 +49,7 @@ import AccountOverview from './AccountOverview';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import { featureLock } from '../../../routes/feature';
 import getGroupIcon from 'Utils/getGroupIcon';
+import useFeatureLock from 'hooks/useFeatureLock';
 
 function AccountDetails({
   accounts,
@@ -88,6 +89,10 @@ function AccountDetails({
   const handleOpenPopoverChange = (value) => {
     setOpenPopover(value);
   };
+
+  const { isFeatureLocked: isScoringLocked } = useFeatureLock(
+    FEATURES.FEATURE_ACCOUNT_SCORING
+  );
 
   const { groupPropNames } = useSelector((state) => state.coreQuery);
   const { plan } = useSelector((state) => state.featureConfig);
@@ -214,23 +219,25 @@ function AccountDetails({
   useEffect(() => {
     const mergedProps = [];
     const filterProps = {};
-  
+
     for (const group of Object.keys(groupOpts || {})) {
       const values = groupProperties?.[group] || [];
       mergedProps.push(...values);
       filterProps[group] = values;
     }
-  
-    const groupProps = Object.entries(filterProps).map(([group, values]) => ({
-      label: groupOpts[group] || PropTextFormat(group),
-      iconName: group,
-      values: processProperties(values)
-    })).map(opt => ({
-      iconName: getGroupIcon(opt.iconName),
-      label: opt.label,
-      values: opt.values
-    }));
-  
+
+    const groupProps = Object.entries(filterProps)
+      .map(([group, values]) => ({
+        label: groupOpts[group] || PropTextFormat(group),
+        iconName: group,
+        values: processProperties(values)
+      }))
+      .map((opt) => ({
+        iconName: getGroupIcon(opt.iconName),
+        label: opt.label,
+        values: opt.values
+      }));
+
     setListProperties(mergedProps);
     setFilterProperties(groupProps);
   }, [groupProperties, groupOpts]);
@@ -382,6 +389,11 @@ function AccountDetails({
 
   const handleOptionClick = (option, group) => {
     const timelinesConfig = { ...tlConfig };
+    if (!timelinesConfig.account_config.leftpane_props) {
+      // Initialize leftpane_props as an empty array if it's null
+      timelinesConfig.account_config.leftpane_props = [];
+    }
+
     if (
       !timelinesConfig.account_config.leftpane_props.includes(option?.value)
     ) {
@@ -405,7 +417,8 @@ function AccountDetails({
       activeSegment: location.state?.activeSegment,
       fromDetails: true,
       accountPayload: location.state?.accountPayload,
-      currentPage: location.state?.currentPage
+      currentPage: location.state?.currentPage,
+      activeSorter: location.state?.activeSorter
     });
   }, []);
 
@@ -678,9 +691,6 @@ function AccountDetails({
   }, [timelineViewMode, activeId]);
 
   const handleTabChange = (val) => {
-    if (val === 'overview' && activeId !== accountOverview?.data?.id) {
-      getAccountOverview(activeProject.id, activeGroup, activeId);
-    }
     insertUrlParam(window.history, 'view', val);
     setTimelineViewMode(val);
     setGranularity(granularity);
@@ -704,11 +714,12 @@ function AccountDetails({
           activeKey={timelineViewMode}
           onChange={handleTabChange}
         >
-          {renderTabPane({
-            key: 'overview',
-            tabName: 'Overview',
-            content: renderOverview()
-          })}
+          {!isScoringLocked &&
+            renderTabPane({
+              key: 'overview',
+              tabName: 'Overview',
+              content: renderOverview()
+            })}
           {renderTabPane({
             key: 'timeline',
             tabName: 'Timeline',

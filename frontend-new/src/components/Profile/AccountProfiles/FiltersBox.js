@@ -30,7 +30,8 @@ const FiltersBox = ({
   areFiltersDirty,
   setListEvents,
   eventProp,
-  setEventProp
+  setEventProp,
+  onClearFilters
 }) => {
   const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
   const groupsList = useSelector((state) => selectGroupsList(state));
@@ -38,7 +39,9 @@ const FiltersBox = ({
   const [filterProps, setFilterProperties] = useState({});
   const [filterDD, setFilterDD] = useState(false);
   const [isEventsVisible, setEventsVisible] = useState(false);
-  const userProperties = useSelector((state) => state.coreQuery.userPropertiesV2);
+  const userProperties = useSelector(
+    (state) => state.coreQuery.userPropertiesV2
+  );
   const groupProperties = useSelector(
     (state) => state.coreQuery.groupProperties
   );
@@ -150,7 +153,7 @@ const FiltersBox = ({
     [listEvents, setListEvents]
   );
 
-  const { saveButtonDisabled, applyButtonDisabled } = useMemo(() => {
+  const { applyButtonDisabled, saveButtonDisabled } = useMemo(() => {
     return checkFiltersEquality({
       appliedFilters,
       filtersList,
@@ -169,6 +172,12 @@ const FiltersBox = ({
     accountPayload.segment_id,
     areFiltersDirty
   ]);
+
+  const showClearAllButton = useMemo(() => {
+    return (
+      appliedFilters.filters.length > 0 || appliedFilters.eventsList.length > 0
+    );
+  }, [appliedFilters.eventsList.length, appliedFilters.filters.length]);
 
   const showEventsSection = source !== 'All';
 
@@ -333,31 +342,46 @@ const FiltersBox = ({
             onClick={applyFilters}
             type='primary'
           >
-            Apply filters
+            Apply changes
           </Button>
           <Button type='secondary' onClick={onCancel}>
-            Cancel
+            Discard changes
           </Button>
         </div>
-        <Button
-          type='default'
-          className='flex items-center col-gap-1'
-          disabled={saveButtonDisabled}
-          onClick={() => setSaveSegmentModal(true)}
+        <ControlledComponent
+          controller={showClearAllButton === true && newSegmentMode === false}
         >
-          <SVG
-            color={saveButtonDisabled ? '#BFBFBF' : '#1890ff'}
-            size={16}
-            name='pieChart'
-          />
-          <Text
-            type='title'
-            extraClass='mb-0'
-            color={saveButtonDisabled ? 'disabled' : 'brand-color-6'}
+          <Button
+            type='text'
+            className='flex items-center col-gap-1'
+            onClick={onClearFilters}
           >
-            Save segment
-          </Text>
-        </Button>
+            <Text type='title' extraClass='mb-0' color={'character-title'}>
+              Clear all filters
+            </Text>
+          </Button>
+        </ControlledComponent>
+        <ControlledComponent controller={newSegmentMode === true}>
+          <Button
+            type='default'
+            className='flex items-center col-gap-1'
+            disabled={saveButtonDisabled}
+            onClick={() => setSaveSegmentModal(true)}
+          >
+            <SVG
+              color={saveButtonDisabled ? '#BFBFBF' : '#1890ff'}
+              size={16}
+              name='pieChart'
+            />
+            <Text
+              type='title'
+              extraClass='mb-0'
+              color={saveButtonDisabled ? 'disabled' : 'brand-color-6'}
+            >
+              Save segment
+            </Text>
+          </Button>
+        </ControlledComponent>
       </div>
     </div>
   );

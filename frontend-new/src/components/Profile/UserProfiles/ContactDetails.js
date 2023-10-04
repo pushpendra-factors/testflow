@@ -307,6 +307,11 @@ function ContactDetails({
 
   const handleOptionClick = (option, group) => {
     const timelinesConfig = { ...tlConfig };
+    if (!timelinesConfig.account_config.leftpane_props) {
+      // Initialize leftpane_props as an empty array if it's null
+      timelinesConfig.account_config.leftpane_props = [];
+    }
+  
     if (!timelinesConfig.user_config.leftpane_props.includes(option?.value)) {
       timelinesConfig.user_config.leftpane_props.push(option?.value);
       udpateProjectSettings(activeProject.id, {

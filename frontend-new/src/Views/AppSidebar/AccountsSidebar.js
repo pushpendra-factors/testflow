@@ -11,7 +11,6 @@ import { SVG, Text } from 'Components/factorsComponents';
 import {
   setAccountPayloadAction,
   setActiveSegmentAction,
-  setExitConfirmationModalAction,
   setNewSegmentModeAction
 } from 'Reducers/accountProfilesView/actions';
 import { selectAccountPayload } from 'Reducers/accountProfilesView/selectors';
@@ -38,9 +37,7 @@ const GroupItem = ({ group }) => {
   const activeAccountPayload = useSelector((state) =>
     selectAccountPayload(state)
   );
-  const { newSegmentMode, filtersDirty: areFiltersDirty } = useSelector(
-    (state) => state.accountProfilesView
-  );
+  const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
 
   const changeAccountPayload = () => {
     dispatch(
@@ -55,11 +52,7 @@ const GroupItem = ({ group }) => {
 
   const setAccountPayload = () => {
     if (activeAccountPayload.source !== group[1]) {
-      if (areFiltersDirty === false) {
-        changeAccountPayload();
-      } else {
-        dispatch(setExitConfirmationModalAction(true, changeAccountPayload));
-      }
+      changeAccountPayload();
     }
   };
 
@@ -83,9 +76,7 @@ const SegmentItem = ({ segment }) => {
   const activeAccountPayload = useSelector((state) =>
     selectAccountPayload(state)
   );
-  const { newSegmentMode, filtersDirty: areFiltersDirty } = useSelector(
-    (state) => state.accountProfilesView
-  );
+  const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
 
   const changeActiveSegment = () => {
     const opts = { ...activeAccountPayload };
@@ -99,11 +90,7 @@ const SegmentItem = ({ segment }) => {
 
   const setActiveSegment = () => {
     if (activeAccountPayload.segment_id !== segment[1]) {
-      if (areFiltersDirty === false) {
-        changeActiveSegment();
-      } else {
-        dispatch(setExitConfirmationModalAction(true, changeActiveSegment));
-      }
+      changeActiveSegment();
     }
   };
 
@@ -116,7 +103,7 @@ const SegmentItem = ({ segment }) => {
       isActive={isActive}
       onClick={setActiveSegment}
       icon='pieChart'
-      iconColor={'#595959'}
+      iconColor={'#8c8c8c'}
     />
   );
 };

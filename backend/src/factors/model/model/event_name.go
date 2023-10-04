@@ -1003,17 +1003,17 @@ func IsUserSmartEventName(projectID int64, eventName *EventName) (string, bool) 
 	return "", false
 }
 
-func CategorizeProperties(properties map[string][]string, propertyType string) map[string]map[string][]string{
+func CategorizeProperties(properties map[string][]string, propertyType string) map[string]map[string][]string {
 	categorizedProperty := make(map[string]map[string][]string)
 	for datatype, propertyList := range properties {
 		_, exists1 := categorizedProperty[datatype]
-		if(!exists1){
+		if !exists1 {
 			categorizedProperty[datatype] = make(map[string][]string)
-		}	
+		}
 		for _, property := range propertyList {
 			category := CategorizeProperty(property, propertyType)
 			_, exists2 := categorizedProperty[datatype][category]
-			if(!exists2){
+			if !exists2 {
 				categorizedProperty[datatype][category] = make([]string, 0)
 			}
 			categorizedProperty[datatype][category] = append(categorizedProperty[datatype][category], property)
@@ -1023,63 +1023,66 @@ func CategorizeProperties(properties map[string][]string, propertyType string) m
 }
 
 func CategorizeProperty(property string, propertyType string) string {
-	if(strings.HasPrefix(property, "$hubspot_company")){
+	if strings.HasPrefix(property, "$hubspot_company") {
 		return "Hubspot Company"
 	}
-	if(strings.HasPrefix(property, "$salesforce_account") || strings.HasPrefix(property, "$sf_account") ){
+	if strings.HasPrefix(property, "$salesforce_account") || strings.HasPrefix(property, "$sf_account") {
 		return "Salesforce Account"
 	}
-	if(strings.HasPrefix(property, "$hubspot_contacts")){
+	if strings.HasPrefix(property, "$hubspot_contacts") {
 		return "Hubspot Contacts"
 	}
-	if(strings.HasPrefix(property, "$salesforce_opportunity") || strings.HasPrefix(property, "$sf_opportunity") ){
+	if strings.HasPrefix(property, "$salesforce_opportunity") || strings.HasPrefix(property, "$sf_opportunity") {
 		return "Salesforce Opportunity"
 	}
-	if(strings.HasPrefix(property, "$hubspot_deal")){
+	if strings.HasPrefix(property, "$hubspot_deal") {
 		return "Hubspot Deal"
 	}
-	if(strings.HasPrefix(property, "$salesforce_lead") || strings.HasPrefix(property, "$sf_lead") ){
+	if strings.HasPrefix(property, "$salesforce_lead") || strings.HasPrefix(property, "$sf_lead") {
 		return "Salesforce Lead"
 	}
-	if(strings.HasPrefix(property, "$hubspot")){
+	if strings.HasPrefix(property, "$hubspot") {
 		return "Hubspot"
 	}
-	if(strings.HasPrefix(property, "$salesforce") || strings.HasPrefix(property, "$sf") ){
+	if strings.HasPrefix(property, "$salesforce") || strings.HasPrefix(property, "$sf") {
 		return "Salesforce"
 	}
-	if(strings.HasPrefix(property, "$leadsquared")){
+	if strings.HasPrefix(property, "$leadsquared") {
 		return "LeadSquared"
 	}
-	if(strings.HasPrefix(property, "$marketo")){
+	if strings.HasPrefix(property, "$marketo") {
 		return "Marketo"
 	}
-	if(strings.HasPrefix(property, "$rudderstack")){
+	if strings.HasPrefix(property, "$rudderstack") {
 		return "Rudderstack"
 	}
-	if(strings.HasPrefix(property, "$clr")){
+	if strings.HasPrefix(property, "$enriched") {
 		return "Company identification"
 	}
-	if(strings.HasPrefix(property, "$segment")){
+	if strings.HasPrefix(property, "$clr") {
+		return "Company identification"
+	}
+	if strings.HasPrefix(property, "$segment") {
 		return "Segment"
 	}
-	if(strings.HasPrefix(property, "$6signal")){
+	if strings.HasPrefix(property, "$6signal") {
 		return "Company identification"
 	}
-	if(propertyType == "session"){
+	if propertyType == "session" {
 		category, exists := U.STANDARD_SESSION_PROPERTIES_CATAGORIZATION[property]
-		if(exists){
+		if exists {
 			return category
 		}
 	}
-	if(propertyType == "user"){
+	if propertyType == "user" {
 		category, exists := U.STANDARD_USER_PROPERTIES_CATAGORIZATION[property]
-		if(exists){
+		if exists {
 			return category
 		}
 	}
-	if(propertyType == "event" || propertyType == "session"){
+	if propertyType == "event" || propertyType == "session" {
 		category, exists := U.STANDARD_EVENT_PROPERTIES_CATAGORIZATION[property]
-		if(exists){
+		if exists {
 			return category
 		}
 	}
