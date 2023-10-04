@@ -126,7 +126,12 @@ func getPredefinedSelectStmnt(metrics []string, metricsToTransformations map[str
 	SelectExpressions := make([]string, 0)
 
 	if groupByTimestamp != "" {
-		SelectExpressions = append(SelectExpressions, fmt.Sprintf("%s as %s", model.PredepPropTimestampAtDay, groupByTimestamp))
+		groupByTimestampString := ""
+		if groupByTimestamp == "date" {
+			groupByTimestampString = "day"
+		}
+		groupByTimestampSql := fmt.Sprintf(DateTruncateInURlPWA, groupByTimestampString)
+		SelectExpressions = append(SelectExpressions, fmt.Sprintf("%s as %s", groupByTimestampSql, groupByTimestamp))
 	}
 
 	if internalGroupBy != "" {
@@ -254,7 +259,14 @@ func transformPWAResultMetrics(q model.PredefWebsiteAggregationQuery, result mod
 func transformPWAResultDateValues(result model.QueryResult) model.QueryResult {
 
 	for rowIndex, row := range result.Rows {
-		valueInInt := int64(row[0].(float64))
+		var valueInInt int64
+		switch row[0].(type) {
+			case float64:
+				valueInInt = int64(row[0].(float64))		
+			case string:
+				valueInString := row[0].(string)
+				valueInInt = int64(U.SafeConvertToFloat64(valueInString))
+		}
 		valueInUTC := time.Unix(valueInInt, 0).UTC()
 		valueWithOffset := U.GetTimestampAsStrWithTimezone(valueInUTC, "UTC")
 		result.Rows[rowIndex][0] = valueWithOffset
