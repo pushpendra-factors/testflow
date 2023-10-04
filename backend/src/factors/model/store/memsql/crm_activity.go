@@ -5,6 +5,7 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -350,4 +351,85 @@ func (store *MemSQL) GetCRMActivityNames(projectID int64, source U.CRMSource) ([
 	}
 
 	return crmActivityNames, http.StatusFound
+}
+
+// GetCRMStatus returns crm status as map
+func (store *MemSQL) GetCRMStatus(ProjectID int64, crmSource string) ([]map[string]interface{}, int) {
+	logFields := log.Fields{
+		"project_id": ProjectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	if ProjectID == 0 {
+		return nil, http.StatusBadRequest
+	}
+
+	status := make([]map[string]interface{}, 0, 0)
+
+	db := C.GetServices().Db
+
+	dateFormat := "%Y-%m-%d"
+
+	var crmString string
+
+	if crmSource == model.SmartCRMEventSourceHubspot {
+		crmString = "hubspot_documents"
+	} else if crmSource == model.SmartCRMEventSourceSalesforce {
+		crmString = "salesforce_documents"
+	}
+	stmt := fmt.Sprintf("select DATE_FORMAT(created_at,'%s') as date_pulled, "+
+		"type, action, count(*) total_pulled, SUM(if(synced = true, 1, 0)) "+
+		"total_enriched, (count(*) -  SUM(if(synced = true, 1, 0))) as yet_to_be_enriched "+
+		"from %s where project_id= ? "+
+		"and created_at > DATE_SUB(now(), INTERVAL 31 day) "+
+		"group by date_pulled, type, action order by date_pulled, type, action", dateFormat, crmString)
+
+	rows, err := db.Raw(stmt, ProjectID).Rows()
+
+	if err != nil {
+		return status, http.StatusInternalServerError
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+
+		var datePulled string
+		var docType int
+		var action int
+		var totalPulled string
+		var totalEnriched int64
+		var yetToBeEnriched int64
+
+		err := rows.Scan(&datePulled, &docType, &action, &totalPulled, &totalEnriched, &yetToBeEnriched)
+		if err != nil {
+			log.WithError(err).Error("Failed to get crm status")
+		}
+
+		result := make(map[string]interface{})
+		if crmSource == model.SmartCRMEventSourceHubspot {
+			result = map[string]interface{}{
+				"date_pulled":        datePulled,
+				"document_type":      model.GetHubspotTypeAliasByType(docType),
+				"action":             model.HubspotDocumentActionAlias[action],
+				"total_pulled":       totalPulled,
+				"total_enriched":     totalEnriched,
+				"yet_to_be_enriched": yetToBeEnriched,
+			}
+		} else if crmSource == model.SmartCRMEventSourceSalesforce {
+			result = map[string]interface{}{
+				"date_pulled":        datePulled,
+				"document_type":      model.GetSalesforceAliasByDocType(docType),
+				"action":             model.SalesforceDocumentActionAlias[action],
+				"total_pulled":       totalPulled,
+				"total_enriched":     totalEnriched,
+				"yet_to_be_enriched": yetToBeEnriched,
+			}
+		}
+
+		status = append(status, result)
+	}
+
+	print(status)
+	return status, http.StatusOK
+
 }

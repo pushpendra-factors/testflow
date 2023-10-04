@@ -166,6 +166,12 @@ var SalesforceStandardDocumentType = []int{
 	SalesforceDocumentTypeOpportunity,
 }
 
+// SalesforceDocumentActionAlias Salesforce document alias and their action
+var SalesforceDocumentActionAlias = map[int]string{
+	int(SalesforceDocumentCreated): "SalesforceDocumentActionCreated",
+	int(SalesforceDocumentUpdated): "SalesforceDocumentActionUpdated",
+}
+
 // SalesforceCampaignDocuments campaign related documents
 var SalesforceCampaignDocuments = []int{
 	SalesforceDocumentTypeCampaign,

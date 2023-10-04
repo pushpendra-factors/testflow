@@ -2168,22 +2168,18 @@ func (store *MemSQL) UpdateAssociatedSegments(projectID int64, id string,
 		return http.StatusBadRequest, nil
 	}
 
-	db := C.GetServices().Db
-
 	associatedSegmentJsonb, err := U.EncodeToPostgresJsonb(&associatedSegments)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to encode associated_segment map.")
 	}
-	update := map[string]interface{}{"associated_segments": associatedSegmentJsonb}
 
-	if err := db.Table("users").Limit(1).
-		Where("project_id = ? AND id = ?", projectID, id).Update(update).Error; err != nil {
-		if gorm.IsRecordNotFoundError(err) {
-			return http.StatusNotFound, err
-		}
+	runQueryStmt := "UPDATE users SET associated_segments = ? WHERE project_id = ? AND id = ? LIMIT 1;"
+	qParams := []interface{}{associatedSegmentJsonb, projectID, id}
 
-		logCtx.WithError(err).Error(
-			"Failed while updating segment on UpdateSegmentById.")
+	db := C.GetServices().Db
+	err = db.Exec(runQueryStmt, qParams...).Error
+	if err != nil {
+		logCtx.Error("Failed to update associated_segments column")
 		return http.StatusInternalServerError, err
 	}
 
