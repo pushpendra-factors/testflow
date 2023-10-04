@@ -835,7 +835,8 @@ function AccountProfiles({
           }}
           onChange={handleTableChange}
           scroll={{
-            x: displayTableProps?.length * 300
+            x: displayTableProps?.length * 300,
+            y:"calc(100vh - 320px)"
           }}
           footer={() => (
             <div className='text-right'>
