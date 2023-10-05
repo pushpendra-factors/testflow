@@ -93,7 +93,7 @@ const useDynamicPosition = (
       } else {
         window.addEventListener('scroll', handleEvent);
       }
-      handleEvent();
+      setTimeout(() => handleEvent(), 500);
     }
 
     return () => {
