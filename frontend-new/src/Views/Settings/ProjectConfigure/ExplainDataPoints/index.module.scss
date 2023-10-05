@@ -3,11 +3,10 @@
     position: relative;
     &__select {
       width: 380px;
-      min-height: 240px;
-      max-height: 480px;
+      height: 400px;
       position: absolute;
       left: auto !important;
-      right:0 !important
+      right: 0 !important;
     }
   }
 }
