@@ -10,6 +10,7 @@ import (
 
 	"factors/model/model"
 	M "factors/model/model"
+	"factors/model/store"
 	mm "factors/model/store/memsql"
 	P "factors/pattern"
 	T "factors/task/account_scoring"
@@ -577,4 +578,48 @@ func TestGenerationOfScoresInPeriod(t *testing.T) {
 	}
 	assert.Equal(t, maxNum, len(countsOnDays))
 	assert.Nil(t, err)
+}
+
+func TestCalculationOfPercentile(t *testing.T) {
+	s1 := []float64{10, 12, 15, 18, 23, 21, 56, 79, 82, 85, 30, 40, 42, 47, 48, 49, 50, 52, 53, 57, 59, 60, 70, 71, 72, 80, 90, 100}
+	s2 := []float64{30, 50, 75, 90, 100}
+	for _, percent := range s2 {
+		pr, err := T.PercentileNearestRank(s1, percent)
+		assert.Nil(t, err, "Error in calculating percentile")
+		log.Debugf("Percentile : %f, %f", percent, pr)
+	}
+}
+
+func TestWriteRangestoDB(t *testing.T) {
+	var bucket M.BucketRanges
+	var buckets []M.BucketRanges
+	var projectId int64 = 6000003
+	var b1 M.Bucket
+	var b2 M.Bucket
+	var b3 M.Bucket
+	var b4 M.Bucket
+
+	b1.Name = "Hot"
+	b2.Name = "Warm"
+	b3.Name = "Cold"
+	b4.Name = "Ice"
+
+	b1.High = 120
+	b2.High = 90
+	b3.High = 80
+	b4.High = 70
+
+	b1.Low = 90
+	b2.Low = 80
+	b3.Low = 70
+	b4.Low = 50
+
+	bucket.Date = "20230910"
+	bucket.Ranges = []M.Bucket{b1, b2, b3, b4}
+
+	buckets = []M.BucketRanges{bucket}
+
+	err := store.GetStore().WriteScoreRanges(projectId, buckets)
+	assert.Nil(t, err)
+
 }

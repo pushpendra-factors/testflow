@@ -176,6 +176,8 @@ const GROUP_EVENT_NAME_G2_REPORT = "$g2_report"
 const GROUP_EVENT_NAME_G2_REFERENCE = "$g2_reference"
 const GROUP_EVENT_NAME_G2_DEAL = "$g2_deal"
 
+const GROUP_EVENT_NAME_ENGAGEMENT_SCORE = "$engagement_score"
+
 // Integration shopify event names.
 const EVENT_NAME_SHOPIFY_CHECKOUT_CREATED = "$shopify_checkout_created"
 const EVENT_NAME_SHOPIFY_CHECKOUT_UPDATED = "$shopify_checkout_updated"
