@@ -5,11 +5,18 @@ import {
   Text
 } from 'Components/factorsComponents';
 import { Avatar, Button, Tag, Tooltip } from 'antd';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { IntegrationConfig } from '../types';
 import useFeatureLock from 'hooks/useFeatureLock';
 import LockedIntegrationCard from '../LockedIntegrationCard';
+import { getHostUrl } from 'Utils/request';
+import { useSelector } from 'react-redux';
+import { AdminLock } from 'Routes/feature';
+import { FEATURES } from 'Constants/plans.constants';
+
+let host = getHostUrl();
+host = host[host.length - 1] === '/' ? host : `${host}/`;
 
 function IntegrationCard({
   integrationConfig,
@@ -19,6 +26,17 @@ function IntegrationCard({
   const [toggle, setToggle] = useState(false);
   const [isStatus, setIsStatus] = useState('');
   const { isFeatureLocked } = useFeatureLock(integrationConfig.featureName);
+
+  const activeProject = useSelector((state) => state.global.active_project);
+  const agentState = useSelector((state) => state.agent);
+  const activeAgent = agentState?.agent_details?.email;
+
+  // CRM Status URL
+  const statusUrl = useMemo(() => {
+    return `${host}projects/${
+      activeProject?.id
+    }/crm_status/${integrationConfig?.name?.toLowerCase()}?html=true`;
+  }, [activeProject?.id, integrationConfig?.name]);
 
   const loadIntegrationForm = () => {
     const { Component } = integrationConfig;
@@ -98,6 +116,14 @@ function IntegrationCard({
                     Active
                   </Tag>
                 )}
+                {[FEATURES.INT_HUBSPOT || FEATURES.INT_SALESFORCE].includes(
+                  integrationConfig.featureName
+                ) &&
+                  AdminLock(activeAgent) && (
+                    <a target={'_blank'} href={statusUrl} rel='noreferrer'>
+                      <div className='mx-2 underline'>Status</div>
+                    </a>
+                  )}
               </div>
 
               {isStatus === 'Pending' && (
