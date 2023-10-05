@@ -8,6 +8,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import ConnectedScreen from './ConnectedScreen';
 import useAgentInfo from 'hooks/useAgentInfo';
 import { SolutionsAccountId } from 'Routes/constants';
+import { getDefaultTimelineConfigForSixSignal } from '../util';
 
 function SixSignalFactorsIntegration({
   fetchProjectSettings,
@@ -39,7 +40,11 @@ function SixSignalFactorsIntegration({
         setLoading(true);
         udpateProjectSettings(activeProject.id, {
           int_factors_six_signal_key: true,
-          six_signal_config: {}
+          six_signal_config: {},
+          //updating table user and account table config when six signal is activated
+          timelines_config: getDefaultTimelineConfigForSixSignal(
+            currentProjectSettings
+          )
         })
           .then(() => {
             setLoading(false);
