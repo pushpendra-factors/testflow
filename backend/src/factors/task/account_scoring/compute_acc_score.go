@@ -8,6 +8,8 @@ import (
 	"factors/model/model"
 	M "factors/model/model"
 	"factors/model/store"
+	MS "factors/model/store/memsql"
+
 	P "factors/pattern"
 	serviceDisk "factors/services/disk"
 	U "factors/util"
@@ -103,10 +105,17 @@ func BuildAccScoringDaily(projectId int64, configs map[string]interface{}) (map[
 
 	// from prevusers pick groups which are avaialable
 	now := time.Now()
-	err = WriteUserCountsToDB(projectId, now.Unix(), prevCountsOfUser, updatedUsers, updatedGroups, groupUserMap, salewindow)
+	updatedGroupsWithAllDates, err := WriteUserCountsAndRangesToDB(projectId, now.Unix(), prevCountsOfUser, updatedUsers, updatedGroups, groupUserMap, *weights, salewindow)
 	if err != nil {
-		logCtx.WithError(err).Errorf("error in updating DB")
+		logCtx.WithError(err).Errorf("error in updating user counts to DB")
 	}
+
+	logCtx.Infof("Number of updated groups:%d", len(updatedGroups))
+	err = ComputeAndWriteRangesToDB(projectId, now.Unix(), int64(lookback), updatedGroupsWithAllDates, weights)
+	if err != nil {
+		logCtx.WithError(err).Errorf("error in updating ranges DB")
+	}
+
 	timeDiff := time.Since(now).Milliseconds()
 	DurationMap["updateDB"] += timeDiff
 	logCtx.WithField("stats:", DurationMap).Info("stats or time in millliseconds")
@@ -415,9 +424,9 @@ func FilterAndUpdateAllEvents(userCounts map[string]*AggEventsOnUserAndGroup, st
 	return nil
 }
 
-func WriteUserCountsToDB(projectId int64, startTime int64, prevcountsofuser,
+func WriteUserCountsAndRangesToDB(projectId int64, startTime int64, prevcountsofuser,
 	updatedUser, updatedGroups map[string]map[string]M.LatestScore, groupUserMap map[string]int,
-	salewindow int64) error {
+	weights M.AccWeights, salewindow int64) (map[string]map[string]M.LatestScore, error) {
 
 	updatedGroupsCopy := make(map[string]map[string]M.LatestScore)
 	for id, count := range updatedGroups {
@@ -430,68 +439,30 @@ func WriteUserCountsToDB(projectId int64, startTime int64, prevcountsofuser,
 	err := extractGroupsFromPrevCounts(projectId, prevcountsofuser, updatedGroupsCopy, groupUserMap)
 	if err != nil {
 		e := fmt.Errorf("unable to update prev events")
-		return e
+		return nil, e
 	}
 
 	// get all groups last event
 	groupsLastEvent, err := UpdateLastEventsDay(updatedGroupsCopy, startTime, salewindow)
 	if err != nil {
 		e := fmt.Errorf("unable to update last event for groups")
-		return e
+		return nil, e
 	}
 
 	// update users who have activity only
 	err = store.GetStore().UpdateUserEventsCountGO(projectId, updatedUser)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// groupsLastevent contains last event data on all users with and without activity
 	// updatedGroups contains groups of users with activity
-	err = store.GetStore().UpdateGroupEventsCountGO(projectId, updatedGroups, groupsLastEvent)
+	err = store.GetStore().UpdateGroupEventsCountGO(projectId, updatedGroups, groupsLastEvent, weights)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
-}
-
-func transformUserActivityies(projectId int64, ev []*AggEventsOnUserAndGroup, ts int64) []M.EventsCountScore {
-
-	var events []M.EventsCountScore
-	events = make([]M.EventsCountScore, 0)
-	dateString := U.GetDateOnlyFromTimestamp(ts)
-	for _, usr := range ev {
-		var usrCount M.EventsCountScore
-		usrCount.UserId = usr.User_id
-		usrCount.EventScore = make(map[string]int64)
-
-		for evKey, evVal := range usr.EventsCount {
-			usrCount.EventScore[evKey] = evVal.EventCount
-		}
-		usrCount.Property = make(map[string]map[string]int64)
-		for _, ev := range usr.Properties {
-			propsName := ev.Name
-			props := ev.Properties
-			if _, ok := usrCount.Property[propsName]; !ok {
-				usrCount.Property[propsName] = make(map[string]int64)
-			}
-
-			// for each property val add the count
-			for k, v := range props {
-				if _, ok := usrCount.Property[propsName][k]; !ok {
-					usrCount.Property[propsName][k] = 0
-				}
-				usrCount.Property[propsName][k] = v
-			}
-		}
-		usrCount.IsGroup = usr.Is_group
-		usrCount.DateStamp = dateString
-		usrCount.ProjectId = projectId
-		events = append(events, usrCount)
-	}
-
-	return events
+	return updatedGroupsCopy, nil
 }
 
 func getChannelInfo(event *P.CounterEventFormat) string {
@@ -612,4 +583,136 @@ func extractGroupsFromPrevCounts(projectId int64, prevcountsofuser, updatedGroup
 
 	log.Infof("Total number of group:%d", len(updatedGroups))
 	return nil
+}
+
+func ComputeAndWriteRangesToDB(projectId int64, currentTime int64, lookback int64,
+	data map[string]map[string]M.LatestScore, weights *M.AccWeights) error {
+
+	buckets, _, err := ComputeScoreRanges(projectId, currentTime, lookback, data, weights)
+	if err != nil {
+		return err
+	}
+	for _, br := range buckets {
+		log.WithField("bucket range : ", br).Info("Bucket range")
+	}
+
+	err = WriteRangestoDB(projectId, buckets)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func WriteRangestoDB(projectId int64, buckets []M.BucketRanges) error {
+
+	err := store.GetStore().WriteScoreRanges(projectId, buckets)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func ComputeScoreRanges(projectId int64, currentTime int64, lookback int64,
+	data map[string]map[string]M.LatestScore, weights *M.AccWeights) ([]M.BucketRanges, map[string]float64, error) {
+
+	var buckets []M.BucketRanges = make([]M.BucketRanges, lookback)
+	var scoresMap map[string]float64 = make(map[string]float64)
+	currentDateString := U.GetDateOnlyFromTimestamp(currentTime)
+	saleWindow := weights.SaleWindow
+	dates := U.GenDateStringsForLastNdays(currentTime, lookback)
+
+	for _, date := range dates {
+		ids := make(map[string]bool)
+		updatedUsers := make(map[string]map[string]M.LatestScore)
+		ts := U.GetDateFromString(date)
+		cDates := U.GenDateStringsForLastNdays(currentTime, lookback)
+		for id, counts := range data {
+			for _, d := range cDates {
+				if _, ok := counts[d]; ok {
+					ids[id] = true
+				}
+			}
+		}
+		for id, _ := range ids {
+			var tmpdata map[string]M.LatestScore = make(map[string]M.LatestScore)
+			tmpuserData, tok := data[id]
+			if tok {
+				for _, d := range cDates {
+					if userOndate, dayOk := tmpuserData[d]; dayOk {
+						tmpdata[d] = userOndate
+					}
+				}
+				updatedUsers[id] = tmpdata
+			}
+		}
+		log.Info("date : %s number of updated users : %d", date, len(updatedUsers))
+		lastEventScores, err := UpdateLastEventsDay(updatedUsers, ts, saleWindow)
+		if err != nil {
+			log.WithField("prjoectID", projectId).Error("Unable to compute last event scores")
+		}
+		log.Info("number of last events score: %d", len(lastEventScores))
+		scores, scoresMaponDate, err := computeScore(projectId, weights, lastEventScores)
+		if date == currentDateString {
+			scoresMap = scoresMaponDate
+		}
+
+		if err != nil {
+			return nil, nil, err
+		}
+		bucket, err := ComputeBucketRanges(scores, date)
+		if err != nil {
+			return nil, nil, err
+		}
+		buckets = append(buckets, bucket)
+	}
+
+	return buckets, scoresMap, nil
+}
+func computeScore(projectId int64, weights *M.AccWeights, lastEvents map[string]M.LatestScore) ([]float64, map[string]float64, error) {
+
+	scores := make([]float64, 0)
+	scoresMap := make(map[string]float64, 0)
+	for id, lastEvent := range lastEvents {
+		score, err := MS.ComputeAccountScoreOnLastEvent(projectId, *weights, lastEvent.EventsCount)
+		if err != nil {
+			log.WithField("id", id).WithField("projectID", projectId).Error("Unable to compute last event scores")
+		}
+		scores = append(scores, score)
+		scoresMap[id] = score
+	}
+
+	return scores, scoresMap, nil
+
+}
+
+func ComputeBucketRanges(scores []float64, date string) (M.BucketRanges, error) {
+
+	var bucket M.BucketRanges
+	bucket.Date = date
+	scoresWithoutZeros := removeZeros(scores)
+	if len(scores) == 0 {
+		return M.BucketRanges{}, fmt.Errorf("not enough scores")
+	}
+
+	for idx := 1; idx < len(M.BUCKETRANGES); idx++ {
+		var b M.Bucket
+		b.Name = M.BUCKETNAMES[idx-1]
+		high, err := PercentileNearestRank(scoresWithoutZeros, M.BUCKETRANGES[idx-1])
+		if err != nil {
+			log.Errorf("unable to compute bucket ranges")
+		}
+		low, err := PercentileNearestRank(scoresWithoutZeros, M.BUCKETRANGES[idx])
+		if err != nil {
+			log.Errorf("unable to compute bucket ranges")
+		}
+		b.High = high
+		b.Low = low
+
+		bucket.Ranges = append(bucket.Ranges, b)
+		de := fmt.Sprintf(" data to compute buckets lenght :%d , brh:%f, brl:%f, h:%f,l:%f", len(scoresWithoutZeros), M.BUCKETRANGES[idx-1], M.BUCKETRANGES[idx], high, low)
+		log.Info(de)
+	}
+	return bucket, nil
 }

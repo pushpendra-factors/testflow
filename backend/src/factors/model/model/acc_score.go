@@ -2,6 +2,7 @@ package model
 
 import (
 	U "factors/util"
+	"strconv"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -10,6 +11,9 @@ import (
 const DEFAULT_EVENT string = "all_events"
 const LAST_EVENT string = "LAST_EVENT"
 const NUM_TREND_DAYS int = 30
+
+var BUCKETRANGES []float64 = []float64{100, 90, 70, 30, 0}
+var BUCKETNAMES []string = []string{"Hot", "warm", "cold", "ice"}
 
 type AccScoreResult struct {
 	ProjectId int64                  `json:"projectid"`
@@ -142,12 +146,42 @@ type LatestScore struct {
 }
 
 type DbUpdateAccScoring struct {
-	Userid         string                 `json:"uid"`
-	TS             int64                  `json:"ts"`
-	Date           string                 `json:"date"`
-	CurrEventCount map[string]LatestScore `json:"ev"`
-	Lastevent      LatestScore            `json:"lev"`
-	IsGroup        bool                   `json:"ig"`
+	Userid         string      `json:"uid"`
+	TS             int64       `json:"ts"`
+	Date           string      `json:"date"`
+	CurrEventCount LatestScore `json:"ev"`
+	Lastevent      LatestScore `json:"lev"`
+	IsGroup        bool        `json:"ig"`
+}
+
+type Bucket struct {
+	Name string  `json:"nm"`
+	High float64 `json:"high"`
+	Low  float64 `json:"low"`
+}
+
+type BucketRanges struct {
+	Date   string   `json:"date"`
+	Ranges []Bucket `json:"bck"`
+}
+
+type AccountScoreRanges struct {
+	ProjectID int64           `gorm:"column:project_id; primary_key:true" json:"project_id"`
+	Date      string          `gorm:"column:date" json:"date"`
+	Buckets   *postgres.Jsonb `gorm:"column:bucket" json:"bucket"`
+	CreatedAt time.Time       `gorm:"column:created_at; autoCreateTime" json:"created_at"`
+	UpdatedAt time.Time       `gorm:"column:updated_at; autoUpdateTime" json:"updated_at"`
+}
+
+func GetDateFromString(ts string) int64 {
+	year := ts[0:4]
+	month := ts[4:6]
+	date := ts[6:8]
+	t, _ := strconv.ParseInt(year, 10, 64)
+	t1, _ := strconv.ParseInt(month, 10, 64)
+	t2, _ := strconv.ParseInt(date, 10, 64)
+	t3 := time.Date(int(t), time.Month(t1), int(t2), 0, 0, 0, 0, time.UTC).Unix()
+	return t3
 }
 
 func GetDefaultAccScoringWeights() AccWeights {
