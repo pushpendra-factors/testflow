@@ -2969,8 +2969,10 @@ func Enrich(projectID int64, workerPerProject int, dataPropertiesByType map[int]
 			Type: docTypeAlias, LimitExceeded: limitExceeded, TotalRecordProcessed: recordsProcessed}
 		if failure || err != nil {
 			status.Status = U.CRM_SYNC_STATUS_FAILURES
-			status.Message = err.Error()
 			anyFailure = true
+			if err != nil {
+				status.Message = err.Error()
+			}
 		} else {
 			status.Status = U.CRM_SYNC_STATUS_SUCCESS
 		}
