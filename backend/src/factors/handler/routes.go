@@ -390,6 +390,11 @@ func InitAppRoutes(r *gin.Engine) {
 
 	//six signal
 	authRouteGroup.POST("/:project_id/sixsignal/email", responseWrapper(SendSixSignalReportViaEmailHandler))
+
+	// billing 
+	authRouteGroup.GET("/:project_id/billing/pricing", V1.GetPricingForPlansAndAddonsHandler)
+	authRouteGroup.POST("/:project_id/billing/upgrade", V1.UpgradePlanHandler)
+	authRouteGroup.GET("/:project_id/billing/subscription", V1.GetSubscriptionDetailsHander)
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {
