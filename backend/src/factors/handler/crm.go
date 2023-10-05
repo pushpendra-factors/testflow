@@ -108,7 +108,7 @@ func GetCRMObjectValuesByPropertyNameHandler(c *gin.Context) {
 // @Param project_id path integer true "Project ID"
 // @Param crm path string true "CRM"
 // @Success 200 {object} _
-// @Router /{project_id}/v1/crm_status/{crm} [get]
+// @Router /{project_id}/crm_status/{crm} [get]
 func GetCRMStatusByProjectIdHandler(c *gin.Context) {
 
 	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
@@ -118,6 +118,7 @@ func GetCRMStatusByProjectIdHandler(c *gin.Context) {
 	}
 
 	source := c.Params.ByName("crm")
+	isHtmlRequired := c.Query("html")
 
 	if source == "" {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid query params."})
@@ -132,5 +133,10 @@ func GetCRMStatusByProjectIdHandler(c *gin.Context) {
 	}
 
 	status = append(make([]map[string]interface{}, 0, 0), status...)
+
+	if isHtmlRequired == "true" {
+		U.ReturnReadableHtmlFromMaps(c, status)
+		return
+	}
 	c.JSON(http.StatusOK, status)
 }

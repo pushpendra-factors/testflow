@@ -9,6 +9,7 @@ import (
 	"errors"
 	"factors/filestore"
 	"fmt"
+	"html/template"
 	"math"
 	"math/rand"
 	"net"
@@ -20,6 +21,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/mssola/user_agent"
@@ -1785,4 +1787,68 @@ func AddTwoNumbersInt64Float64(a, b interface{}) (int64, error) {
 	}
 
 	return sum, nil
+}
+
+func ReturnReadableHtmlFromMaps(c *gin.Context, status []map[string]interface{}) {
+
+	keys := make([]string, 0)
+
+	var HtmlStr = ""
+	for index, data := range status {
+
+		if index%20 == 0 {
+
+			keys = Keys(data)
+			HtmlStr += CreateTableFromKeys(keys) //creating table for each 20 rows.
+		}
+		HtmlStr += InsertDataToTable(data, keys)
+		if (index+1)%20 == 0 || index == len(status)-1 {
+			HtmlStr += "</table><br>" //closing table after every 20th row or before data ends.
+			t := template.New("table")
+			t, err := t.Parse(HtmlStr)
+			if err != nil {
+				log.Error(err)
+				return
+			}
+			t.Execute(c.Writer, nil)
+		}
+
+	}
+
+}
+
+// Keys returns the keys of the map m.
+// The keys will be an indeterminate order.
+func Keys[M ~map[K]V, K comparable, V any](m M) []K {
+	r := make([]K, 0, len(m))
+	for k := range m {
+		r = append(r, k)
+	}
+	return r
+}
+
+func CreateTableFromKeys(keys []string) string {
+
+	columns := ""
+
+	for _, key := range keys {
+		columns = columns + fmt.Sprintf("<th>%s</th>", key)
+	}
+	html := "<table border='1px'> <tr> " + columns + "</tr>"
+	// not closing the table as data is pending to be inserted
+
+	return html
+}
+
+func InsertDataToTable(data map[string]interface{}, keys []string) string {
+
+	rows := ""
+
+	for _, key := range keys {
+		rows = rows + fmt.Sprintf(`<td width="150px" align="center">&nbsp;%v</td>`, data[key])
+	}
+
+	html := "<tr> " + rows + " </tr>"
+
+	return html
 }
