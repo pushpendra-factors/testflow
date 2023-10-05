@@ -285,7 +285,7 @@ func GetGroupPropertyValuesHandler(c *gin.Context) {
 
 	label := c.Query("label")
 	if label == "true" {
-		propertyValueLabel, err, isSourceEmpty := getPropertyValueLabel(projectId, propertyName, propertyValues)
+		propertyValueLabel, err, isSourceEmpty := store.GetStore().GetPropertyValueLabel(projectId, propertyName, propertyValues)
 		if err != nil {
 			logCtx.WithError(err).Error("get group properties labels and values by property name")
 			c.AbortWithStatus(http.StatusInternalServerError)

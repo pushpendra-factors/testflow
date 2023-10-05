@@ -14,7 +14,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type response struct {
+const FACTORS_6SIGNAL = "factors_6sense"
+const API_6SIGNAL = "API_6Sense"
+
+type Response struct {
 	Company struct {
 		Zip              string `json:"zip"`
 		NaicsDescription string `json:"naics_description"`
@@ -42,11 +45,11 @@ func ExecuteSixSignalEnrich(projectId int64, sixSignalKey string, properties *ut
 	defer close(statusChannel)
 	logCtx := log.WithField("project_id", projectId)
 
-	meter := false
+	isFactorsAPIKey := false
 	if sixSignalKey == config.GetFactorsSixSignalAPIKey() {
-		meter = true
+		isFactorsAPIKey = true
 	}
-	err := enrichUsingSixSignal(projectId, sixSignalKey, properties, clientIP, meter)
+	err := enrichUsingSixSignal(projectId, sixSignalKey, properties, clientIP, isFactorsAPIKey)
 
 	if err != nil {
 		logCtx.WithFields(log.Fields{"error": err, "apiKey": sixSignalKey}).Info("enrich --factors debug")
@@ -54,7 +57,7 @@ func ExecuteSixSignalEnrich(projectId int64, sixSignalKey string, properties *ut
 	}
 	statusChannel <- 1
 }
-func enrichUsingSixSignal(projectId int64, sixSignalKey string, properties *util.PropertiesMap, clientIP string, meter bool) error {
+func enrichUsingSixSignal(projectId int64, sixSignalKey string, properties *util.PropertiesMap, clientIP string, isFactorsAPIKey bool) error {
 
 	logCtx := log.WithField("project_id", projectId)
 
@@ -84,78 +87,44 @@ func enrichUsingSixSignal(projectId int64, sixSignalKey string, properties *util
 	defer res.Body.Close()
 	body, err := ioutil.ReadAll(res.Body)
 
-	var result response
+	var result Response
 	if err := json.Unmarshal(body, &result); err != nil {
 		log.WithFields(log.Fields{"Error": err}).Warn("Cannot unmarshal JSON")
 		return err
 	}
 
-	if zip := result.Company.Zip; zip != "" {
-		if c, ok := (*properties)[util.SIX_SIGNAL_ZIP]; !ok || c == "" {
-			(*properties)[util.SIX_SIGNAL_ZIP] = zip
-		}
+	FillEnrichmentPropertiesForSixSignal(result, properties, projectId, isFactorsAPIKey)
+
+	// Adding enrichment source
+	if isFactorsAPIKey {
+		(*properties)[util.ENRICHMENT_SOURCE] = FACTORS_6SIGNAL
+	} else {
+		(*properties)[util.ENRICHMENT_SOURCE] = API_6SIGNAL
 	}
 
-	if naicsDesc := result.Company.NaicsDescription; naicsDesc != "" {
-		if c, ok := (*properties)[util.SIX_SIGNAL_NAICS_DESCRIPTION]; !ok || c == "" {
-			(*properties)[util.SIX_SIGNAL_NAICS_DESCRIPTION] = naicsDesc
-		}
-	}
+	return nil
+}
 
-	if empCount := result.Company.EmployeeCount; empCount != "" {
-		if c, ok := (*properties)[util.SIX_SIGNAL_EMPLOYEE_COUNT]; !ok || c == "" {
-			(*properties)[util.SIX_SIGNAL_EMPLOYEE_COUNT] = empCount
-		}
-	}
+func FillEnrichmentPropertiesForSixSignal(result Response, properties *util.PropertiesMap, projectId int64, isFactorsAPIKey bool) {
 
-	if country := result.Company.Country; country != "" {
-		if c, ok := (*properties)[util.SIX_SIGNAL_COUNTRY]; !ok || c == "" {
-			(*properties)[util.SIX_SIGNAL_COUNTRY] = country
-		}
-	}
+	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.Zip, util.SIX_SIGNAL_ZIP, properties)
+	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.NaicsDescription, util.SIX_SIGNAL_NAICS_DESCRIPTION, properties)
+	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.EmployeeCount, util.SIX_SIGNAL_EMPLOYEE_COUNT, properties)
+	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.Country, util.SIX_SIGNAL_COUNTRY, properties)
+	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.City, util.SIX_SIGNAL_CITY, properties)
+	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.Industry, util.SIX_SIGNAL_INDUSTRY, properties)
+	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.Sic, util.SIX_SIGNAL_SIC, properties)
+	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.RevenueRange, util.SIX_SIGNAL_REVENUE_RANGE, properties)
+	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.CountryIsoCode, util.SIX_SIGNAL_COUNTRY_ISO_CODE, properties)
+	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.Phone, util.SIX_SIGNAL_PHONE, properties)
+	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.State, util.SIX_SIGNAL_STATE, properties)
+	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.Region, util.SIX_SIGNAL_REGION, properties)
+	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.Naics, util.SIX_SIGNAL_NAICS, properties)
+	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.AnnualRevenue, util.SIX_SIGNAL_ANNUAL_REVENUE, properties)
+	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.SicDescription, util.SIX_SIGNAL_SIC_DESCRIPTION, properties)
 
 	empRange := result.Company.EmployeeRange
-	if empRange != "" {
-		if c, ok := (*properties)[util.SIX_SIGNAL_EMPLOYEE_RANGE]; !ok || c == "" {
-			(*properties)[util.SIX_SIGNAL_EMPLOYEE_RANGE] = empRange
-		}
-	}
-
-	if city := result.Company.City; city != "" {
-		if c, ok := (*properties)[util.SIX_SIGNAL_CITY]; !ok || c == "" {
-			(*properties)[util.SIX_SIGNAL_CITY] = city
-		}
-	}
-
-	if industry := result.Company.Industry; industry != "" {
-		if c, ok := (*properties)[util.SIX_SIGNAL_INDUSTRY]; !ok || c == "" {
-			(*properties)[util.SIX_SIGNAL_INDUSTRY] = industry
-		}
-	}
-
-	if sic := result.Company.Sic; sic != "" {
-		if c, ok := (*properties)[util.SIX_SIGNAL_SIC]; !ok || c == "" {
-			(*properties)[util.SIX_SIGNAL_SIC] = sic
-		}
-	}
-
-	if revenueRange := result.Company.RevenueRange; revenueRange != "" {
-		if c, ok := (*properties)[util.SIX_SIGNAL_REVENUE_RANGE]; !ok || c == "" {
-			(*properties)[util.SIX_SIGNAL_REVENUE_RANGE] = revenueRange
-		}
-	}
-
-	if countryIsoCode := result.Company.CountryIsoCode; countryIsoCode != "" {
-		if c, ok := (*properties)[util.SIX_SIGNAL_COUNTRY_ISO_CODE]; !ok || c == "" {
-			(*properties)[util.SIX_SIGNAL_COUNTRY_ISO_CODE] = countryIsoCode
-		}
-	}
-
-	if phone := result.Company.Phone; phone != "" {
-		if c, ok := (*properties)[util.SIX_SIGNAL_PHONE]; !ok || c == "" {
-			(*properties)[util.SIX_SIGNAL_PHONE] = phone
-		}
-	}
+	util.ValidateAndFillEnrichmentPropsForStringValue(empRange, util.SIX_SIGNAL_EMPLOYEE_RANGE, properties)
 
 	//Keeping name,address and domain empty, if empRange is equals to "0 - 9"
 	if empRange == "0 - 9" {
@@ -176,7 +145,7 @@ func enrichUsingSixSignal(projectId int64, sixSignalKey string, properties *util
 				(*properties)[util.SIX_SIGNAL_DOMAIN] = domain
 				model.SetSixSignalAPICountCacheResult(projectId, util.TimeZoneStringIST)
 
-				if meter {
+				if isFactorsAPIKey {
 					timeZone, statusCode := store.GetStore().GetTimezoneForProject(projectId)
 					if statusCode != http.StatusFound {
 						timeZone = util.TimeZoneStringIST
@@ -196,36 +165,4 @@ func enrichUsingSixSignal(projectId int64, sixSignalKey string, properties *util
 			}
 		}
 	}
-
-	if state := result.Company.State; state != "" {
-		if c, ok := (*properties)[util.SIX_SIGNAL_STATE]; !ok || c == "" {
-			(*properties)[util.SIX_SIGNAL_STATE] = state
-		}
-	}
-
-	if region := result.Company.Region; region != "" {
-		if c, ok := (*properties)[util.SIX_SIGNAL_REGION]; !ok || c == "" {
-			(*properties)[util.SIX_SIGNAL_REGION] = region
-		}
-	}
-
-	if naics := result.Company.Naics; naics != "" {
-		if c, ok := (*properties)[util.SIX_SIGNAL_NAICS]; !ok || c == "" {
-			(*properties)[util.SIX_SIGNAL_NAICS] = naics
-		}
-	}
-
-	if annualRevenue := result.Company.AnnualRevenue; annualRevenue != "" {
-		if c, ok := (*properties)[util.SIX_SIGNAL_ANNUAL_REVENUE]; !ok || c == "" {
-			(*properties)[util.SIX_SIGNAL_ANNUAL_REVENUE] = annualRevenue
-		}
-	}
-
-	if sicDesc := result.Company.SicDescription; sicDesc != "" {
-		if c, ok := (*properties)[util.SIX_SIGNAL_SIC_DESCRIPTION]; !ok || c == "" {
-			(*properties)[util.SIX_SIGNAL_SIC_DESCRIPTION] = sicDesc
-		}
-	}
-
-	return nil
 }

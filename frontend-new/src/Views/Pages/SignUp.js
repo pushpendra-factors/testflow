@@ -1,16 +1,28 @@
 import React, { useEffect, useState } from 'react';
 import { connect } from 'react-redux';
 import {
-  Row, Col, Button, Input, Form, Checkbox, Modal, message
+  Row,
+  Col,
+  Button,
+  Input,
+  Form,
+  message,
+  Carousel,
+  Divider
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
-import { useHistory } from 'react-router-dom';
 import { signup } from 'Reducers/agentActions';
-import factorsai from 'factorsai';
 import Congrats from './Congrats';
-import MoreAuthOptions from './MoreAuthOptions';
 import { SSO_SIGNUP_URL } from '../../utils/sso';
-import sanitizeInputString from 'Utils/sanitizeInputString';
+import styles from './index.module.scss';
+import HelpButton from 'Components/GenericComponents/HelpButton';
+import { Link } from 'react-router-dom';
+import Testimonial1 from '../../assets/images/testimonials/testimonial-1.png';
+import Testimonial2 from '../../assets/images/testimonials/testimonial-2.png';
+import Testimonial3 from '../../assets/images/testimonials/testimonial-3.png';
+import Testimonial4 from '../../assets/images/testimonials/testimonial-4.png';
+import Testimonial5 from '../../assets/images/testimonials/testimonial-5.png';
+import HappyCustomers from '../../assets/images/happy_curtomers.png';
 import useScript from 'hooks/useScript';
 
 function SignUp({ signup }) {
@@ -18,7 +30,7 @@ function SignUp({ signup }) {
   const [dataLoading, setDataLoading] = useState(false);
   const [errorInfo, seterrorInfo] = useState(null);
   const [formData, setformData] = useState(null);
-  const [showForm, setShowForm] = useState(false);
+  const [emailValidateType, setEmailValidateType] = useState('onBlur');
 
   useScript({
     url: 'https://js.hs-scripts.com/6188127.js',
@@ -27,56 +39,52 @@ function SignUp({ signup }) {
     id: 'hs-script-loader'
   });
 
-  const history = useHistory();
-  const routeChange = (url) => {
-    history.push(url);
-  };
+ 
 
   const checkError = () => {
     const url = new URL(window.location.href);
     const error = url.searchParams.get('error');
-    if(error) {
-        let str = error.replace("_", " ");
-        let finalmsg = str.toLocaleLowerCase();
-        message.error(finalmsg);
+    if (error) {
+      let str = error.replace('_', ' ');
+      let finalmsg = str.toLocaleLowerCase();
+      message.error(finalmsg);
     }
-  }
+  };
 
   useEffect(() => {
-      checkError();
-  },[]);
+    checkError();
+  }, []);
 
   const SignUpFn = () => {
     setDataLoading(true);
-    form.validateFields().then((values) => {
-        setDataLoading(true); 
-        let sanitizedValues = {
-            ...values,
-            first_name: sanitizeInputString(values?.first_name), 
-            'last_name': '',
-            subscribe_newsletter: values?.subscribe_newsletter ? values?.subscribe_newsletter : true
-        } 
-        
-        //Factors SIGNUP tracking
-        factorsai.track('SIGNUP',{'first_name':sanitizedValues?.first_name,'email':sanitizedValues?.email}); 
-        
-        const filteredValues = Object.fromEntries(
-        Object.entries(sanitizedValues).filter(([key, value]) => key !== 'terms_and_conditions') );
-        
-        signup(filteredValues).then(() => {
+    form
+      .validateFields()
+      .then((values) => {
+        setDataLoading(true);
+
+        // //Factors SIGNUP tracking
+        // factorsai.track('SIGNUP', {
+        //   first_name: sanitizedValues?.first_name,
+        //   email: sanitizedValues?.email
+        // });
+
+        signup(values)
+          .then(() => {
             setDataLoading(false);
-            setformData(filteredValues);
-        }).catch((err) => {
+            setformData(values);
+          })
+          .catch((err) => {
             setDataLoading(false);
             form.resetFields();
             seterrorInfo(err);
-        });
-    }).catch((info) => {
+          });
+      })
+      .catch((info) => {
         setDataLoading(false);
         form.resetFields();
         seterrorInfo(info);
-    });
-};
+      });
+  };
 
   const onChange = () => {
     seterrorInfo(null);
@@ -84,281 +92,274 @@ function SignUp({ signup }) {
 
   return (
     <>
-    { !formData &&
-      <div className={'fa-content-container.no-sidebar fa-content-container--full-height w-full'}>
+      {!formData && (
+        <div
+          className={
+            'fa-content-container.no-sidebar fa-content-container--full-height w-full'
+          }
+        >
+          {/* //parent container starts here */}
 
-            {/* //parent container starts here */}
+          <div className={'flex w-full h-full '}>
+            {/* //left side content starts here */}
+            <Col
+              xs={{ span: 0 }}
+              sm={{ span: 10 }}
+              style={{ background: '#E6F7FF' }}
+            >
+              <div className='w-full h-screen flex items-center justify-center'>
+                <div style={{ width: 460 }}>
+                  <div className='flex justify-center items-center w-full'>
+                    <SVG name={'BrandFull'} width={240} height={64} color='white' />
+                  </div>
+                  <div className='mt-10 flex justify-center'>
+                    <Carousel
+                      autoplay
+                      autoplaySpeed={5000}
+                      dots
+                      style={{ width: 460 }}
+                      className={styles.signupCarousel}
+                    >
+                      {[
+                        Testimonial1,
+                        Testimonial2,
+                        Testimonial3,
+                        Testimonial4,
+                        Testimonial5
+                      ].map((image, i) => (
+                        <div key={i}>
+                          <img
+                            src={image}
+                            className={'m-0'}
+                            style={{ width: '100%' }}
+                            alt='reviews'
+                          />
+                        </div>
+                      ))}
+                    </Carousel>
+                  </div>
+                  <div className='mt-10 flex justify-center' >
+                    <img style={{width: 388}} src={HappyCustomers} className={'m-0 '} alt='brands' />
+                  </div>
+                </div>
+              </div>
+            </Col>
 
-            <div className={'flex w-full h-full '}>
-                {/* //left side content starts here */}
-                <Col xs={{ span: 0}} sm={{ span: 12}} style={{background: '#E6F7FF'}} className={'w-full h-full'}>
-                    <Row align="center" className={'my-32'}>
-                            <Col span={14}>
-                                <Row>
-                                    <Col span={24}>
-                                        <Text type={'title'} level={3} extraClass={'m-0'} weight={'bold'}>Marketing decisioning made radically smarter</Text>
-                                        <Text type={'title'} color={'grey'} level={7} extraClass={'m-0'} >Measure and validate every marketing initiative. Understand the entire buyer journey. Then drive pipeline and revenue like never before, all inside Factors.</Text>
-                                    </Col>
-                                </Row>
-                                <Row>
-                                    <Col span={24}>
-                                        <img src="https://s3.amazonaws.com/www.factors.ai/assets/img/product/review.svg" className={'m-0 mt-4 -ml-2'}/>
-                                    </Col>
-                                </Row>
-                                <Row>
-                                    <Col span={24}>
-                                    <img src="https://s3.amazonaws.com/www.factors.ai/assets/img/product/marketing-teams.svg" className={'m-0 -ml-2'}/>
-                                    </Col>
-                                </Row>
-                            </Col>
-                    </Row>
-                </Col>
-                
-                {/* //left side content ends here */}
+            {/* //left side content ends here */}
 
-                {/* //right side content starts here */}
+            {/* //right side content starts here */}
 
-                <Col xs={{ span: 24}} sm={{ span: 12}} >
-
-                <Row>
-                                <Col span={24}>
-                                    <div className={'flex flex-col justify-end items-end mt-10 mr-10'} >
-                                    <Text type={'paragraph'} mini color={'grey'}>Already have an account? <Button type="text" className='btn-custom--bordered ml-1' disabled={dataLoading} onClick={() => routeChange('/login')}> Log In</Button></Text>
-                                    </div>
-                                </Col>
-                            </Row>
-
-                    <Row align="center">
-                        <Col span={14}>
-                        
-
-                        <Row className={'my-16 flex justify-center'}>
-                        <Col span={20}>
-
-                        <Form
-                        form={form}
-                        name="login"
-                        // validateTrigger
-                        initialValues={{ remember: false }}
-                        onFinish={SignUpFn}
-                        onChange={onChange}
+            <Col xs={{ span: 24 }} sm={{ span: 14 }}>
+              <div className='w-full h-full'>
+                <div className='flex justify-end w-full items-center px-10 h-16'>
+                  <HelpButton />
+                </div>
+                <div className='mt-20'>
+                  <Text
+                    type={'title'}
+                    level={2}
+                    weight={'bold'}
+                    align={'center'}
+                    color={'character-primary'}
+                    extraClass={'m-0'}
+                  >
+                    Create your free account
+                  </Text>
+                </div>
+                <div className='w-full  flex  justify-center mt-8 '>
+                  <div style={{ width: 428 }} className='px-12'>
+                    <Form
+                      form={form}
+                      name='login'
+                      // validateTrigger
+                      initialValues={{ remember: false }}
+                      onFinish={SignUpFn}
+                      onChange={onChange}
+                    >
+                      <div>
+                        <Text
+                          type={'title'}
+                          level={6}
+                          align={'center'}
+                          color={'character-primary'}
+                          extraClass={'m-0'}
+                          weight={'bold'}
                         >
-                            <Row>
-                                <Col span={24}>
-                                    <div style={{marginLeft: '5.5vw'}}>
-                                        <SVG name={'BrandFull'} size={40} color="white"/>
-                                    </div>
-                                </Col>
-                            </Row>
-                            <Row>
-                                <Col span={24}>
-                                    <div>
-                                        <Text type={'title'} level={6} align={'center'} color={'grey-2'} extraClass={'m-0 ml-1 mt-2'} weight={'bold'}>Sign Up to continue</Text>
-                                    </div>
-                                </Col>
-                            </Row>
-                            { showForm ? <>
+                          Free forever. No credit card required
+                        </Text>
+                      </div>
 
-                            <Row>
-                                <Col span={24}>
-                                        <div className={'flex flex-col mt-5 w-full'} >
-                                            {/* <Text type={'title'} level={7} extraClass={'m-0'}>Work Email</Text> */}
-                                            <Form.Item label={null}
-                                                name="email"
-                                                rules={[
-                                                    { 
-                                                        required: true, message: 'Please enter your business email address.' 
-                                                    },
-                                                    ({ getFieldValue }) => ({
-                                                        validator(rule, value) { 
-                                                          if (!value || value.match(/^([A-Za-z0-9!'#$%&*+\/=?^_`{|}~-]+(?:\.[A-Za-z0-9!'#$%&*+\/=?^_`{|}~-]+)*@(?!gmail.com)(?!yahoo.com)(?!hotmail.com)(?!yahoo.co.in)(?!hey.com)(?!icloud.com)(?!me.com)(?!mac.com)(?!aol.com)(?!abc.com)(?!xyz.com)(?!pqr.com)(?!rediffmail.com)(?!live.com)(?!outlook.com)(?!msn.com)(?!ymail.com)([\w-]+\.)+[\w-]{2,})?$/)) {
-                                                            return Promise.resolve();
-                                                          }
-                                                          return Promise.reject(new Error('Please enter your business email address.'));
-                                                        }
-                                                    })
-                                                ]}
-                                                >
-                                                <Input className={'fa-input w-full'} disabled={dataLoading} size={'large'}
-                                                placeholder="Work Email"
-                                                 />
-                                            </Form.Item>
-                                        </div>
-                                </Col>
-                            </Row>
-
-                            <Row>
-                                <Col span={24}>
-                                        <div className={'flex flex-col mt-5'} >
-                                        {/* <Text type={'title'} level={7} extraClass={'m-0'}>First Name</Text> */}
-                                            <Form.Item label={null}
-                                                name="first_name"
-                                                rules={[{ required: true, message: 'Please enter first name' }]}
-                                                className={'w-full'}
-                                                >
-                                                <Input className={'fa-input w-full'} disabled={dataLoading} size={'large'}
-                                                placeholder="First Name"
-                                                 />
-                                            </Form.Item>
-                                        </div>
-                                </Col>
-                                {/* <Col span={12}>
-                                        <div className={'flex flex-col mt-5'} >
-                                        <Text type={'title'} level={7} extraClass={'m-0'}>Last Name</Text>
-                                            <Form.Item label={null}
-                                                name="last_name"
-                                                rules={[{ required: true, message: 'Please enter last name' }]}
-                                                className={'w-full'}
-                                                >
-                                                <Input className={'fa-input w-full'} disabled={dataLoading} size={'large'}
-                                                placeholder="Last Name"
-                                                 />
-                                            </Form.Item>
-                                        </div>
-                                </Col> */}
-                            </Row>
-
-                            <Row>
-                                <Col span={24}>
-                                        <div className={'flex flex-col mt-5 w-full'} >
-                                            {/* <Text type={'title'} level={7} extraClass={'m-0'}>Phone Number</Text> */}
-                                            <Form.Item label={null}
-                                                name="phone"
-                                                rules={[
-                                                    ({ getFieldValue }) => ({
-                                                        validator(rule, value) { 
-                                                          if (!value || value.match(/^[0-9\b]+$/)) {
-                                                            return Promise.resolve();
-                                                          }
-                                                          return Promise.reject(new Error('Please enter valid phone number.'));
-                                                        }
-                                                    })
-                                                ]}
-                                                >
-                                                <Input className={'fa-input w-full'} disabled={dataLoading} size={'large'}
-                                                placeholder="Phone Number (Optional)"
-                                                 />
-                                            </Form.Item>
-                                        </div>
-                                </Col>
-                            </Row>
-
-                            <Row>
-                                <Col span={24}>
-                                        <div className={'flex flex-col mt-5 w-full'} > 
-                                            <Form.Item label={null}
-                                                name="subscribe_newsletter" valuePropName={'checked'}>
-                                                <div className='flex items-center'>
-                                                    <Checkbox disabled={dataLoading} defaultChecked={true} />
-                                                    <Text type={'title'} level={8} color={'grey'} extraClass={'m-0 ml-4'} >Please keep me up to date on Factors, including news, new products, and services.</Text>
-                                                </div>
-                                            </Form.Item>
-                                        </div>
-                                </Col>
-                            </Row>
-                            
-                            {/* <Row>
-                                <Col span={24}>
-                                        <div className={'flex flex-col mt-5 w-full'} >
-                                            <Form.Item label={null} 
-                                                name='terms_and_conditions' valuePropName={'checked'}
-                                                rules={[{ required: true, transform: value => (value || undefined), type: 'boolean', message: 'Please agree to the terms and conditions' }]}
-                                                >
-                                                <div className='flex items-center' >
-                                                    <Checkbox disabled={dataLoading} ></Checkbox>
-                                                    <Text type={'title'} level={7} color={'grey-2'} extraClass={'m-0 ml-4'} >By signing up, I agree to the <a href='https://www.factors.ai/terms-of-use' target='_blank'>terms of service</a> and <a href='https://www.factors.ai/privacy-policy' target='_blank'>privacy policy</a> of factors.ai</Text>
-                                                </div>
-                                            </Form.Item>
-                                        </div>
-                                </Col>
-                            </Row> */}
-
-                            <Row>
-                                <Col span={24}>
-                                    <div className={'flex flex-col justify-center items-center mt-5'} >
-                                        <Form.Item className={'m-0 w-full'} loading={dataLoading}>
-                                            <Button htmlType="submit" loading={dataLoading} type={'primary'} size={'large'} className={'w-full'}>Signup</Button>
-                                        </Form.Item>
-                                    </div>
-                                </Col>
-                            </Row>
-
-                            <Row>
-                                {errorInfo && <Col span={24}>
-                                    <div className={'flex flex-col justify-center items-center mt-1'} >
-                                        <Text type={'title'} color={'red'} size={'7'} className={'m-0'}>{errorInfo}</Text>
-                                    </div>
-                                </Col>
+                      <div className={' mt-8 w-full'}>
+                        {/* <Text type={'title'} level={7} extraClass={'m-0'}>Work Email</Text> */}
+                        <Form.Item
+                          label={null}
+                          name='email'
+                          rules={[
+                            {
+                              required: true,
+                              message:
+                                'Please enter your business email address.'
+                            },
+                            ({ getFieldValue }) => ({
+                              validator(rule, value) {
+                                if (
+                                  !value ||
+                                  value.match(
+                                    /^([A-Za-z0-9!'#$%&*+\/=?^_`{|}~-]+(?:\.[A-Za-z0-9!'#$%&*+\/=?^_`{|}~-]+)*@(?!gmail.com)(?!yahoo.com)(?!hotmail.com)(?!yahoo.co.in)(?!hey.com)(?!icloud.com)(?!me.com)(?!mac.com)(?!aol.com)(?!abc.com)(?!xyz.com)(?!pqr.com)(?!rediffmail.com)(?!live.com)(?!outlook.com)(?!msn.com)(?!ymail.com)([\w-]+\.)+[\w-]{2,})?$/
+                                  )
+                                ) {
+                                  return Promise.resolve();
                                 }
-                            </Row>
+                                return Promise.reject(
+                                  new Error(
+                                    'Please enter your business email address.'
+                                  )
+                                );
+                              }
+                            })
+                          ]}
+                          validateTrigger={emailValidateType}
+                        >
+                          <Input
+                            className={'fa-input w-full'}
+                            disabled={dataLoading}
+                            size={'large'}
+                            placeholder='Work Email'
+                            onBlur={() => setEmailValidateType('onChange')}
+                          />
+                        </Form.Item>
+                      </div>
+                      <div className={' mt-6'}>
+                        <Form.Item
+                          className={'m-0 w-full'}
+                          loading={dataLoading}
+                        >
+                          <Button
+                            htmlType='submit'
+                            loading={dataLoading}
+                            type={'primary'}
+                            size={'large'}
+                            className={'w-full'}
+                          >
+                            Signup with Email
+                          </Button>
+                        </Form.Item>
+                      </div>
 
-                            <Row>
-                                <Col span={24}>
-                                <div className={'flex flex-col justify-center items-center mt-6'} >
-                                    <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'} color={'grey'}>OR</Text>
-                                </div>
-                                </Col>
-                            </Row>
-                            </> 
-                            :
-                            <Row>
-                                <Col span={24}>
-                                    <div className={'flex flex-col justify-center items-center mt-5'} >
-                                        <Form.Item className={'m-0 w-full'} loading={dataLoading}>
-                                            <Button loading={dataLoading} type={'primary'} size={'large'} className={'w-full'} onClick={() => setShowForm(true)}>Signup with Email</Button>
-                                        </Form.Item>
-                                    </div>
-                                </Col>
-                            </Row>}
+                      <Row>
+                        {errorInfo && (
+                          <Col span={24}>
+                            <div
+                              className={
+                                'flex flex-col justify-center items-center mt-1'
+                              }
+                            >
+                              <Text
+                                type={'title'}
+                                color={'red'}
+                                size={'7'}
+                                className={'m-0'}
+                              >
+                               
+                                {errorInfo === 'EMAIL_ALREADY_EXIST' ?  (<>Email already exists. Try logging in. {' '}
+                                  <Link
+                            disabled={dataLoading}
+                            to={{
+                              pathname: '/login'
+                            }}
+                          >
+                            Login
+                          </Link>
+                                </>): errorInfo}
+                              </Text>
+                            </div>
+                          </Col>
+                        )}
+                      </Row>
 
-                            <Row>   
-                                <Col span={24}>
-                                    <div className={'flex flex-col justify-center items-center mt-5'} >
-                                    <Form.Item className={'m-0 w-full'}>
-                                        <a href={SSO_SIGNUP_URL}><Button type={'default'} size={'large'} className='btn-custom--bordered w-full'><SVG name={'Google'} size={24} />Continue with Google</Button></a>
-                                    </Form.Item>
-                                    </div>
-                                </Col>
-                            </Row>
+                      <Divider className='my-6'>
+                        <Text
+                          type={'title'}
+                          level={7}
+                          extraClass={'m-0'}
+                          color={'grey'}
+                        >
+                          OR
+                        </Text>
+                      </Divider>
 
-                            {/* <Row>
-                                <Col span={24}>
-                                    <div className={'flex flex-col justify-center items-center mt-5'} >
-                                    <Form.Item className={'m-0 w-full'} loading={dataLoading}>
-                                        <Button loading={dataLoading} type={'default'} size={'large'} className='btn-custom--bordered' onClick={() => setShowModal(true)}><SVG name={'S_Key'} size={24} color={'#8692A3'} /> More SSO Options</Button>
-                                    </Form.Item>
-                                    </div>
-                                </Col>
-                            </Row> */}
+                      <div className={' mt-6'}>
+                        <Form.Item className={'m-0 w-full'}>
+                          <a href={SSO_SIGNUP_URL}>
+                            <Button
+                              type={'default'}
+                              size={'large'}
+                              className='btn-custom--bordered w-full'
+                            >
+                              <SVG name={'Google'} size={24} />
+                              Continue with Google
+                            </Button>
+                          </a>
+                        </Form.Item>
+                      </div>
+                      <div className={'flex justify-center  mt-8 '}>
+                        <Text
+                          type={'title'}
+                          level={7}
+                          color={'character-primary'}
+                        >
+                          Already have an account?{' '}
+                          <Link
+                            disabled={dataLoading}
+                            to={{
+                              pathname: '/login'
+                            }}
+                          >
+                            Log in
+                          </Link>
+                        </Text>
+                      </div>
+                    </Form>
+                  </div>
+                </div>
+                <div style={{ marginTop: 110 }} className='flex justify-center'>
+                  <div style={{ width: 428 }}>
+                    <Text
+                      type={'title'}
+                      level={8}
+                      color={'grey'}
+                      extraClass={'text-center'}
+                    >
+                      By signing up, I accept the Factors.ai{' '}
+                      <a
+                        href={'https://www.factors.ai/terms-of-use'}
+                        target='_blank'
+                        rel='noreferrer'
+                      >
+                        Terms of Use
+                      </a>{' '}
+                      and acknowledge having read through the{' '}
+                      <a
+                        href={'https://www.factors.ai/privacy-policy'}
+                        target='_blank'
+                        rel='noreferrer'
+                      >
+                        Privacy policy
+                      </a>
+                    </Text>
+                  </div>
+                </div>
+              </div>
+            </Col>
+            {/* //right side content ends here */}
+          </div>
+          {/* //parent container ends here */}
+        </div>
+      )}
+      {formData && <Congrats data={formData} />}
 
-                            <Row>
-                                <Col span={24}>
-                                    <div className={'flex flex-col justify-center items-center mt-6'} >
-                                        <Text type={'title'} level={8} color={'grey'} extraClass={'text-center'}>By signing up, I accept the Factors.ai <a href={"https://www.factors.ai/terms-of-use"} target='_blank' >Terms of Use</a> and acknowledge having read through the <a href={"https://www.factors.ai/privacy-policy"} target='_blank' >Privacy policy</a></Text>
-                                    </div>
-                                </Col>
-                            </Row>
-
-                        </Form>
-                        </Col>
-
-                        </Row>
-
-                        </Col>
-                    </Row>
-                </Col>
-                {/* //right side content ends here */}
-            </div>
-            {/* //parent container ends here */}
-      </div>
-        }
-        {formData &&
-            <Congrats data = {formData} />
-        }
-
-        {/* <MoreAuthOptions showModal={showModal} setShowModal={setShowModal}/>   */}
+      {/* <MoreAuthOptions showModal={showModal} setShowModal={setShowModal}/>   */}
     </>
-
   );
 }
 

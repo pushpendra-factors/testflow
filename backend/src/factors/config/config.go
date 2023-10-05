@@ -330,6 +330,7 @@ type Configuration struct {
 	UseHashIDForCRMGroupUserByProject                   string
 	MoveHubspotCompanyAssocationFlowToContactByPojectID string
 	UserPropertyUpdateOptProjects                       string
+	CompanyPropsV1EnabledProjectIDs                     string
 }
 
 type Services struct {
@@ -2407,6 +2408,28 @@ func GetSDKAndIntegrationMetricNameByConfig(metricName string) string {
 	}
 
 	return metricName
+}
+
+func IsCompanyPropsV1Enabled(projectId int64) bool {
+
+	if configuration.CompanyPropsV1EnabledProjectIDs == "" {
+		return false
+	}
+
+	if configuration.CompanyPropsV1EnabledProjectIDs == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectId)
+	projectIDs := strings.Split(configuration.CompanyPropsV1EnabledProjectIDs, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
+
 }
 
 func IsSortedSetCachingAllowed() bool {

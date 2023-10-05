@@ -22,8 +22,6 @@ export type ApplyClickCallbackType = (
 export type PlacementType =
   | 'Top'
   | 'Bottom'
-  | 'Left'
-  | 'Right'
   | 'TopLeft'
   | 'TopRight'
   | 'BottomLeft'

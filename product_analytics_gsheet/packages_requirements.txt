@@ -1,0 +1,6 @@
+requests
+gspread
+datetime
+numpy
+schedule
+pytz

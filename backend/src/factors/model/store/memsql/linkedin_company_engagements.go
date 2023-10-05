@@ -38,6 +38,9 @@ func (store *MemSQL) buildObjectAndPropertiesForLinkedinCompanyEngagements(proje
 	for _, currentObject := range objects {
 		var currentProperties []model.ChannelProperty
 		currentProperties = buildProperties(LinkedinCompanyEngagementsPropertyToRelated)
+		if currentObject == model.AdwordsCampaign {
+			currentProperties = buildProperties(allChannelsPropertyToRelated)
+		}
 		objectsAndProperties = append(objectsAndProperties, buildObjectsAndProperties(currentProperties, []string{currentObject})...)
 	}
 	return objectsAndProperties

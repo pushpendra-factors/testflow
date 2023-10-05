@@ -210,6 +210,8 @@ func main() {
 	enableFeatureGatesV2 := flag.Bool("enable_feature_gates_v2", false, "")
 	enableScoreByProjectID := flag.String("enable_score_by_project_id", "", "List of projectIds with scoring enabled.")
 
+	companyPropsV1EnabledProjectIDs := flag.String("company_props_v1_enabled_projectIds", "", "To enable clearbit enrichment in new properties")
+
 	flag.Parse()
 
 	defaultAppName := "app_server"
@@ -367,6 +369,7 @@ func main() {
 		EnableFeatureGatesV2:                           *enableFeatureGatesV2,
 		EnableScoringByProjectID:                       *enableScoreByProjectID,
 		EnableNewAllAccountsByProjectID:                *enableNewAllAccountsByProjectID,
+		CompanyPropsV1EnabledProjectIDs:                *companyPropsV1EnabledProjectIDs,
 	}
 	C.InitConf(config)
 

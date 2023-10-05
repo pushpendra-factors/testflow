@@ -313,3 +313,30 @@ func (store *MemSQL) AddPropertyValueLabelsToProfileResults(projectID int64, res
 
 	return results
 }
+
+// This functions is used in predefined_dashboards: GetPredefinedDashboardFilterValues function.
+func (store *MemSQL) GetPropertyValueLabel(projectID int64, propertyName string, propertyValues []string) (map[string]string, error, bool) {
+	var source string
+	if U.IsAllowedCRMPropertyPrefix(propertyName) {
+		source = strings.Split(propertyName, "_")[0]
+		source = strings.TrimPrefix(source, "$")
+	}
+
+	propertyValueLabelMap := make(map[string]string, 0)
+	var err error
+
+	if source != "" {
+		propertyValueLabelMap, err = store.GetPropertyLabelAndValuesByProjectIdAndPropertyKey(projectID, source, propertyName)
+		if err != nil {
+			return nil, err, false
+		}
+	}
+
+	for _, value := range propertyValues {
+		if label, exists := propertyValueLabelMap[value]; !exists || label == "" {
+			propertyValueLabelMap[value] = value
+		}
+	}
+
+	return propertyValueLabelMap, nil, source == ""
+}

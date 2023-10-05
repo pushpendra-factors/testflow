@@ -2730,3 +2730,106 @@ func (store *MemSQL) GetLatestEventTimeStampByEventNameId(projectId int64, event
 
 	return timestamp, http.StatusFound
 }
+
+type LinkedinEventFields struct {
+	Timestamp       int64  `json:"timestamp"`
+	CampaignGroupID string `json:"campaign_group_id"`
+	Domain          string `json:"domain"`
+}
+
+func (store *MemSQL) GetLinkedinEventFieldsBasedOnTimestamp(projectID int64, timestamp int64) (map[int64]map[string]map[string]bool,
+	map[int64]map[string]map[string]bool, map[int64]map[string]bool, map[int64]map[string]bool, int) {
+	if projectID == 0 || timestamp == 0 {
+		return nil, nil, nil, nil, http.StatusBadRequest
+	}
+	imprLinkedinFieldsWithCampaignArr := make([]LinkedinEventFields, 0)
+	db := C.GetServices().Db
+	rows, _ := db.Raw("Select JSON_EXTRACT_STRING(properties, '$campaign_id') as campaign_group_id, "+
+		"JSON_EXTRACT_STRING(user_properties, '$li_domain') as domain, timestamp from events where project_id = ? "+
+		"and timestamp >= ? and JSON_EXTRACT_STRING(properties, '$li_ad_view_count') is not null "+
+		"and JSON_EXTRACT_STRING(properties, '$campaign_id') is not null "+
+		"group by campaign_group_id, domain, timestamp", projectID, timestamp).Rows()
+	for rows.Next() {
+		imprLinkedinFields := LinkedinEventFields{}
+		if err := rows.Scan(&imprLinkedinFields); err != nil {
+			return nil, nil, nil, nil, http.StatusInternalServerError
+		}
+		imprLinkedinFieldsWithCampaignArr = append(imprLinkedinFieldsWithCampaignArr, imprLinkedinFields)
+	}
+	imprLinkedinFieldsWithoutCampaignArr := make([]LinkedinEventFields, 0)
+	rows, _ = db.Raw("Select JSON_EXTRACT_STRING(user_properties, '$li_domain') as domain, timestamp "+
+		"from events where project_id = ? "+
+		"and timestamp >= ? and JSON_EXTRACT_STRING(properties, '$li_ad_view_count') is not null "+
+		"and JSON_EXTRACT_STRING(properties, '$campaign_id') is null "+
+		"group by domain, timestamp", projectID, timestamp).Rows()
+	for rows.Next() {
+		imprLinkedinFields := LinkedinEventFields{}
+		if err := rows.Scan(&imprLinkedinFields); err != nil {
+			return nil, nil, nil, nil, http.StatusInternalServerError
+		}
+		imprLinkedinFieldsWithoutCampaignArr = append(imprLinkedinFieldsWithoutCampaignArr, imprLinkedinFields)
+	}
+
+	clicksLinkedinFieldsWithCampaignArr := make([]LinkedinEventFields, 0)
+	rows, _ = db.Raw("Select JSON_EXTRACT_STRING(properties, '$campaign_id') as campaign_group_id, "+
+		"JSON_EXTRACT_STRING(user_properties, '$li_domain') as domain, timestamp from events where project_id = ? "+
+		"and timestamp >= ? and JSON_EXTRACT_STRING(properties, '$li_ad_click_count') is not null "+
+		"and JSON_EXTRACT_STRING(properties, '$campaign_id') is not null "+
+		"group by campaign_group_id, domain, timestamp", projectID, timestamp).Rows()
+	for rows.Next() {
+		clicksLinkedinFields := LinkedinEventFields{}
+		if err := rows.Scan(&clicksLinkedinFields); err != nil {
+			return nil, nil, nil, nil, http.StatusInternalServerError
+		}
+		clicksLinkedinFieldsWithCampaignArr = append(clicksLinkedinFieldsWithCampaignArr, clicksLinkedinFields)
+	}
+	clicksLinkedinFieldsWithoutCampaignArr := make([]LinkedinEventFields, 0)
+	rows, _ = db.Raw("Select JSON_EXTRACT_STRING(user_properties, '$li_domain') as domain, timestamp "+
+		"from events where project_id = ? "+
+		"and timestamp >= ? and JSON_EXTRACT_STRING(properties, '$li_ad_click_count') is not null "+
+		"and JSON_EXTRACT_STRING(properties, '$campaign_id') is null "+
+		"group by domain, timestamp", projectID, timestamp).Rows()
+	for rows.Next() {
+		clicksLinkedinFields := LinkedinEventFields{}
+		if err := rows.Scan(&clicksLinkedinFields); err != nil {
+			return nil, nil, nil, nil, http.StatusInternalServerError
+		}
+		clicksLinkedinFieldsWithoutCampaignArr = append(clicksLinkedinFieldsWithoutCampaignArr, clicksLinkedinFields)
+	}
+	imprEventsWithCampaignMap := buildMapOfTimestampDomainCampaignGroupID(imprLinkedinFieldsWithCampaignArr)
+	imprEventsWithoutCampaignMap := buildMapOfTimestampDomain(imprLinkedinFieldsWithoutCampaignArr)
+	clicksEventsWithCampaignMap := buildMapOfTimestampDomainCampaignGroupID(clicksLinkedinFieldsWithCampaignArr)
+	clicksEventsWithoutCampaignMap := buildMapOfTimestampDomain(clicksLinkedinFieldsWithoutCampaignArr)
+	return imprEventsWithCampaignMap, clicksEventsWithCampaignMap, imprEventsWithoutCampaignMap, clicksEventsWithoutCampaignMap, http.StatusOK
+}
+
+func buildMapOfTimestampDomainCampaignGroupID(linkedinArr []LinkedinEventFields) map[int64]map[string]map[string]bool {
+	resultantMap := make(map[int64]map[string]map[string]bool)
+	for _, linkedinFields := range linkedinArr {
+		campaignGroupID, domain, timestamp := linkedinFields.CampaignGroupID, linkedinFields.Domain, linkedinFields.Timestamp
+		if _, exists := resultantMap[timestamp]; !exists {
+			resultantMap[timestamp] = make(map[string]map[string]bool)
+		}
+		if _, exists := resultantMap[timestamp][domain]; !exists {
+			resultantMap[timestamp][domain] = make(map[string]bool)
+		}
+		resultantMap[timestamp][domain] = map[string]bool{
+			campaignGroupID: true,
+		}
+	}
+	return resultantMap
+}
+
+func buildMapOfTimestampDomain(linkedinArr []LinkedinEventFields) map[int64]map[string]bool {
+	resultantMap := make(map[int64]map[string]bool)
+	for _, linkedinFields := range linkedinArr {
+		domain, timestamp := linkedinFields.Domain, linkedinFields.Timestamp
+		if _, exists := resultantMap[timestamp]; !exists {
+			resultantMap[timestamp] = make(map[string]bool)
+		}
+		resultantMap[timestamp] = map[string]bool{
+			domain: true,
+		}
+	}
+	return resultantMap
+}

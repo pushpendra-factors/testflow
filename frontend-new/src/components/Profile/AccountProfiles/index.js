@@ -64,6 +64,10 @@ import {
 import { selectGroupsList } from 'Reducers/groups/selectors';
 import UpdateSegmentModal from './UpdateSegmentModal';
 import { AccountsSidebarIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
+import DownloadCSVModal from './DownloadCSVModal';
+import { fetchProfileAccounts } from 'Reducers/timelines';
+import { downloadCSV } from 'Utils/csv';
+import { formatCount } from 'Utils/dataFormatter';
 
 const groupToCompanyPropMap = {
   $hubspot_company: '$hubspot_company_name',
@@ -136,6 +140,8 @@ function AccountProfiles({
   const [selectedFilters, setSelectedFilters] = useState(INITIAL_FILTERS_STATE);
   const [appliedFilters, setAppliedFilters] = useState(INITIAL_FILTERS_STATE);
   const [moreActionsModalMode, setMoreActionsModalMode] = useState(null); // DELETE | RENAME
+  const [showDownloadCSVModal, setShowDownloadCSVModal] = useState(false);
+  const [csvDataLoading, setCSVDataLoading] = useState(false);
   const [defaultSorterInfo, setDefaultSorterInfo] = useState({});
 
   const { isFeatureLocked: isEngagementLocked } = useFeatureLock(
@@ -905,6 +911,80 @@ function AccountProfiles({
     ]
   );
 
+  const generateCSVData = useCallback(
+    (data, selectedOptions) => {
+      const csvRows = [];
+
+      const headers = selectedOptions.map(
+        (prop_name) =>
+          checkListAccountProps.find((elem) => elem.prop_name === prop_name)
+            .display_name
+      );
+      headers.unshift('Name', 'Engagement category', 'Engagement score');
+      csvRows.push(headers.join(','));
+
+      data.forEach((d) => {
+        const values = selectedOptions.map((elem) => {
+          return d.table_props[elem] != null ? `"${d.table_props[elem]}"` : '-';
+        });
+        values.unshift(
+          d.name,
+          d.engagement != null ? d.engagement : '-',
+          d.score != null ? formatCount(d.score) : '-'
+        );
+        csvRows.push(values);
+      });
+
+      return csvRows.join('\n');
+    },
+    [checkListAccountProps]
+  );
+
+  const handleDownloadCSV = useCallback(
+    async (selectedOptions) => {
+      try {
+        setCSVDataLoading(true);
+        const reqPayload = getFiltersRequestPayload({
+          source: selectedAccount.account[1],
+          selectedFilters: appliedFilters,
+          table_props: selectedOptions
+        });
+        const resultAccounts = await fetchProfileAccounts(
+          activeProject.id,
+          reqPayload,
+          activeAgent
+        );
+        console.log(
+          'jklogs ~ file: index.js:908 ~ resultAccounts.data:',
+          resultAccounts.data
+        );
+        const csvData = generateCSVData(resultAccounts.data, selectedOptions);
+        downloadCSV(csvData, 'accounts.csv');
+        setCSVDataLoading(false);
+        setShowDownloadCSVModal(false);
+      } catch (err) {
+        console.log(err);
+        setCSVDataLoading(false);
+        notification.error({
+          message: 'Error',
+          description: 'CSV download failed',
+          duration: 2
+        });
+      }
+    },
+    [
+      activeAgent,
+      activeProject.id,
+      appliedFilters,
+      generateCSVData,
+      selectedAccount.account
+    ]
+  );
+
+  const closeDownloadCSVModal = useCallback(() => {
+    setShowDownloadCSVModal(false);
+  }, []);
+
   const pageTitle = useMemo(() => {
     if (newSegmentMode === true) {
       return 'Untitled Segment 1';
@@ -1112,6 +1192,13 @@ function AccountProfiles({
           {/* {accountPayload?.filters?.length ? renderClearFilterButton() : null} */}
           {renderSearchSection()}
           {renderTablePropsSelect()}
+          <ControlledComponent
+            controller={filtersExpanded === false && newSegmentMode === false}
+          >
+            <div role='button' onClick={() => setShowDownloadCSVModal(true)}>
+              <SVG name='download' />
+            </div>
+          </ControlledComponent>
         </div>
       </div>
       <ControlledComponent controller={accounts.isLoading === true}>
@@ -1164,6 +1251,14 @@ function AccountProfiles({
         onCancel={() => setUpdateSegmentModal(false)}
         onCreate={handleCreateSegment}
         onUpdate={handleUpdateSegmentDefinition}
+      />
+      <DownloadCSVModal
+        visible={showDownloadCSVModal}
+        onCancel={closeDownloadCSVModal}
+        options={checkListAccountProps}
+        displayTableProps={displayTableProps}
+        onSubmit={handleDownloadCSV}
+        isLoading={csvDataLoading}
       />
     </ProfilesWrapper>
   );
