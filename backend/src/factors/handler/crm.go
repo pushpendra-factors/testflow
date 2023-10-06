@@ -125,14 +125,12 @@ func GetCRMStatusByProjectIdHandler(c *gin.Context) {
 		return
 	}
 
-	var status []map[string]interface{}
+	var status map[string][]map[string]interface{}
 	if source == model.SmartCRMEventSourceSalesforce {
 		status, _ = store.GetStore().GetCRMStatus(projectID, source)
 	} else if source == model.SmartCRMEventSourceHubspot {
 		status, _ = store.GetStore().GetCRMStatus(projectID, source)
 	}
-
-	status = append(make([]map[string]interface{}, 0, 0), status...)
 
 	if isHtmlRequired == "true" {
 		U.ReturnReadableHtmlFromMaps(c, status)
