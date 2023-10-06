@@ -1789,64 +1789,70 @@ func AddTwoNumbersInt64Float64(a, b interface{}) (int64, error) {
 	return sum, nil
 }
 
-func ReturnReadableHtmlFromMaps(c *gin.Context, status []map[string]interface{}) {
-
-	keys := make([]string, 0)
+func ReturnReadableHtmlFromMaps(c *gin.Context, status map[string][]map[string]interface{}) {
 
 	var HtmlStr = ""
-	for index, data := range status {
+	for date, data := range status {
 
-		if index%20 == 0 {
-
-			keys = Keys(data)
-			HtmlStr += CreateTableFromKeys(keys) //creating table for each 20 rows.
+		heading := CreateHeadingTemplate(date)
+		t := template.New("date")
+		t, err := t.Parse(heading)
+		if err != nil {
+			log.Error(err)
+			return
 		}
-		HtmlStr += InsertDataToTable(data, keys)
-		if (index+1)%20 == 0 || index == len(status)-1 {
-			HtmlStr += "</table><br>" //closing table after every 20th row or before data ends.
-			t := template.New("table")
-			t, err := t.Parse(HtmlStr)
-			if err != nil {
-				log.Error(err)
-				return
+		t.Execute(c.Writer, nil)
+
+		for index, v := range data {
+			HtmlStr += CreateTableForCRMStatus()
+			HtmlStr += InsertDataToTableForCRMStatus(v)
+			if index == len(status)-1 {
+				HtmlStr += "</table><br>" //closing table before data ends.
+				t := template.New("table")
+				t, err := t.Parse(HtmlStr)
+				if err != nil {
+					log.Error(err)
+					return
+				}
+				t.Execute(c.Writer, nil)
 			}
-			t.Execute(c.Writer, nil)
 		}
 
 	}
 
 }
 
-// Keys returns the keys of the map m.
-// The keys will be an indeterminate order.
-func Keys[M ~map[K]V, K comparable, V any](m M) []K {
-	r := make([]K, 0, len(m))
-	for k := range m {
-		r = append(r, k)
-	}
-	return r
+func CreateHeadingTemplate(date string) string {
+	formated_date := date[0:4] + "-" + date[5:7] + "-" + date[8:10] //yyyy-mm-dd
+	html := fmt.Sprintf(`<h1> Date: &nbsp; %s</h1>
+						`, formated_date)
+	return html
 }
 
-func CreateTableFromKeys(keys []string) string {
+func CreateTableForCRMStatus() string {
 
 	columns := ""
+	columns = columns + fmt.Sprintf("<th>%s</th>", "document_type")
+	columns = columns + fmt.Sprintf("<th>%s</th>", "action")
+	columns = columns + fmt.Sprintf("<th>%s</th>", "total_pulled")
+	columns = columns + fmt.Sprintf("<th>%s</th>", "total_enriched")
+	columns = columns + fmt.Sprintf("<th>%s</th>", "yet_to_be_enriched")
 
-	for _, key := range keys {
-		columns = columns + fmt.Sprintf("<th>%s</th>", key)
-	}
 	html := "<table border='1px'> <tr> " + columns + "</tr>"
 	// not closing the table as data is pending to be inserted
 
 	return html
 }
 
-func InsertDataToTable(data map[string]interface{}, keys []string) string {
+func InsertDataToTableForCRMStatus(data map[string]interface{}) string {
 
 	rows := ""
 
-	for _, key := range keys {
-		rows = rows + fmt.Sprintf(`<td width="150px" align="center">&nbsp;%v</td>`, data[key])
-	}
+	rows = rows + fmt.Sprintf(`<td width="150px" align="center">&nbsp;%v</td>`, data["document_type"])
+	rows = rows + fmt.Sprintf(`<td width="150px" align="center">&nbsp;%v</td>`, data["action"])
+	rows = rows + fmt.Sprintf(`<td width="150px" align="center">&nbsp;%v</td>`, data["total_pulled"])
+	rows = rows + fmt.Sprintf(`<td width="150px" align="center">&nbsp;%v</td>`, data["total_enriched"])
+	rows = rows + fmt.Sprintf(`<td width="150px" align="center">&nbsp;%v</td>`, data["yet_to_be_enriched"])
 
 	html := "<tr> " + rows + " </tr>"
 
