@@ -190,7 +190,7 @@ const FeatureLockedFactorsInsightsNew = withFeatureLockHOC(FactorsInsightsNew, {
     <LockedStateComponent
       title={'Explain'}
       embeddedLink={LockedExplainImage}
-      description='All your important metrics at a glance. The dashboard is where you save your analyses for quick and easy viewing. Create multiple dashboards for different needs, and toggle through them as you wish. Making the right decisions just became easier.'
+      description='Uncover the driving factors behind your conversion goals with Explain. Gain deep insights into the elements that contribute to your objectives, empowering you to make informed decisions and optimize your strategies for success.'
     />
   )
 });
@@ -203,7 +203,7 @@ const FeatureLockedFactorsInsightsOld = withFeatureLockHOC(FactorsInsightsOld, {
     <LockedStateComponent
       title={'Explain'}
       embeddedLink={LockedExplainImage}
-      description='All your important metrics at a glance. The dashboard is where you save your analyses for quick and easy viewing. Create multiple dashboards for different needs, and toggle through them as you wish. Making the right decisions just became easier.'
+      description='Uncover the driving factors behind your conversion goals with Explain. Gain deep insights into the elements that contribute to your objectives, empowering you to make informed decisions and optimize your strategies for success.'
     />
   )
 });
@@ -216,7 +216,7 @@ const FeatureLockedFactors = withFeatureLockHOC(Factors, {
     <LockedStateComponent
       title={'Explain'}
       embeddedLink={LockedExplainImage}
-      description='All your important metrics at a glance. The dashboard is where you save your analyses for quick and easy viewing. Create multiple dashboards for different needs, and toggle through them as you wish. Making the right decisions just became easier.'
+      description='Uncover the driving factors behind your conversion goals with Explain. Gain deep insights into the elements that contribute to your objectives, empowering you to make informed decisions and optimize your strategies for success.'
     />
   )
 });
