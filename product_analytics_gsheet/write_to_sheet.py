@@ -9,12 +9,11 @@ import schedule
 import time
 import datetime
 import pytz
-
+import sys
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
 
-log_file_path = os.path.join(script_dir, "logfile.log")
-logging.basicConfig(filename=log_file_path, level=logging.DEBUG)
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.info("Starting script...")
 
 
