@@ -16,7 +16,7 @@ const FaDatepicker = ({
   presetRange,
   weekPicker,
   monthPicker,
-  quarterPicker,
+  quarterPicker, 
   yearPicker,
   range,
   buttonSize,
@@ -49,6 +49,7 @@ const FaDatepicker = ({
     dateType: null
   };
   const onChange = (startDate, dateString) => {
+    const today = MomentTz();
     setShowDatePicker(false);
     const dateType = datePickerType;
     let endDate = MomentTz(startDate)
@@ -66,6 +67,12 @@ const FaDatepicker = ({
     if (datePickerType === 'month') {
       const startDateMonth = MomentTz(startDate).startOf('month');
       const endDateMonth = MomentTz(startDate).endOf('month');
+
+      if(MomentTz(startDate).month() == MomentTz().month()){
+        startDateMonth = MomentTz(startDate).startOf('month');
+      endDateMonth = MomentTz(today).subtract(1, 'days').endOf('day')
+     }
+
       const newDateDataMonth = {
         ...dateData,
         startDate: startDateMonth,
@@ -73,29 +80,66 @@ const FaDatepicker = ({
         dateType: datePickerType
       };
       onSelect(newDateDataMonth);
-      setDateString('++Month');
-    } else if (datePickerType === 'quarter') {
-      if (endDate.isAfter(MomentTz())) {
-        const endDateMonth = MomentTz();
-        const newDateDataMonth = {
-          ...dateData,
-          startDate,
-          endDate: endDateMonth,
-          dateType: datePickerType
-        };
-        setQuarterDateStr(`${endDate.year()}, Q${startDate.quarter()}`);
-        onSelect(newDateDataMonth);
-      } else {
-        endDate = MomentTz(startDate).endOf('Q');
-        const newDateDataMonth = {
-          ...dateData,
-          startDate,
-          endDate,
-          dateType: datePickerType
-        };
-        setQuarterDateStr(`${endDate.year()}, Q${startDate.quarter()}`);
-        onSelect(newDateDataMonth);
+      setDateString('Month');
+    } else if (datePickerType === 'year') {
+      let startDateMonth = MomentTz(startDate).startOf('year');
+      let endDateMonth = MomentTz(startDate).endOf('year');
+
+      if(MomentTz(startDate).year() == MomentTz().year()){
+         startDateMonth = MomentTz(startDate).startOf('year');
+       endDateMonth = MomentTz(today).subtract(1, 'days').endOf('day')
       }
+      const newDateDataMonth = {
+        ...dateData,
+        startDate: startDateMonth,
+        endDate: endDateMonth,
+        dateType: datePickerType
+      };
+      onSelect(newDateDataMonth);
+      setDateString('Year');
+    }
+     else if (datePickerType === 'quarter') {
+      let startDateMonth = MomentTz(startDate).startOf('quarter');
+      let endDateMonth = MomentTz(startDate).endOf('quarter');
+      
+      if(MomentTz(startDate).quarter() == MomentTz().quarter()){
+        startDateMonth = MomentTz(startDate).startOf('quarter');
+        endDateMonth = MomentTz(today).subtract(1, 'days').endOf('day')
+      }
+      const newDateDataQtr = {
+        ...dateData,
+        startDate: startDateMonth,
+        endDate: endDateMonth,
+        dateType: datePickerType
+      };
+
+      onSelect(newDateDataQtr);
+      setDateString('Quarter');
+
+      // setQuarterDateStr(`${MomentTz(startDate).year()}, Q${MomentTz(startDate).quarter()}`);
+
+      // if (endDate.isAfter(MomentTz())) {
+      //   const endDateMonth = MomentTz();
+      //   const newDateDataMonth = {
+      //     ...dateData,
+      //     startDate,
+      //     endDate: endDateMonth,
+      //     dateType: datePickerType
+      //   };
+      //   setQuarterDateStr(`${endDate.year()}, Q${startDate.quarter()}`);
+      //   onSelect(newDateDataMonth);
+      // } else {
+      //   endDate = MomentTz(startDate).endOf('Q');
+      //   const newDateDataMonth = {
+      //     ...dateData,
+      //     startDate,
+      //     endDate,
+      //     dateType: datePickerType
+      //   };
+      //   setQuarterDateStr(`${endDate.year()}, Q${startDate.quarter()}`);
+      //   onSelect(newDateDataMonth);
+      // }
+
     } else {
       onSelect(newDateData);
     }
@@ -134,6 +178,19 @@ const FaDatepicker = ({
   const returnPreSetDate = (type) => {
     setDatePickerType(null);
     const today = MomentTz();
+
+    if (type === 'year') {
+      const newDateData = {
+        ...dateData,
+        startDate: MomentTz().startOf('year'),
+        endDate: today,
+        dateType: type,
+        dateString: 'Year'
+      };
+      setDateString('Year');
+      onSelect(newDateData);
+    }
+
     if (type === 'now') {
       const newDateData = {
         ...dateData,
@@ -433,13 +490,13 @@ const FaDatepicker = ({
       // return MomentTz(range.startDate).format('MMM DD, YYYY hh:mma')
       return 'Now';
     }
-    if (
-      dateString === 'This Quarter' ||
-      dateString === 'Last Quarter' ||
-      datePickerType === 'quarter'
-    ) {
-      return quarterDateStr;
-    }
+    // if (
+    //   dateString === 'This Quarter' ||
+    //   dateString === 'Last Quarter' ||
+    //   datePickerType === 'quarter'
+    // ) {
+    //   return quarterDateStr;
+    // }
     if (dateString === 'Today' || isEqual(range.startDate === range.endDate)) {
       return MomentTz(range.startDate).format('MMM DD, YYYY');
     }

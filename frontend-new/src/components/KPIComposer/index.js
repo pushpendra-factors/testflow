@@ -190,7 +190,8 @@ function KPIComposer({
                 customPicker
                 presetRange
                 monthPicker
-                quarterPicker
+                quarterPicker 
+                yearPicker
                 placement={
                   areKpisInSameGroup({ kpis: queries })
                     ? 'topRight'
