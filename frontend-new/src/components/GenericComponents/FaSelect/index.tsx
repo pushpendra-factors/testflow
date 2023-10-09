@@ -51,7 +51,6 @@ export default function FaSelect({
   const dropdownRef = useRef(null);
   const relativeRef = useRef(null);
 
-  //Dynamically Positions the Dropdown if parentRef is passed.
   const position = useDynamicPosition(relativeRef, dropdownRef, placement, 250);
 
   const renderSearchInput = () => {
