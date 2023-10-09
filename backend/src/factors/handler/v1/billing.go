@@ -18,11 +18,12 @@ func GetPricingForPlansAndAddonsHandler(c *gin.Context) {
 	}
 	var defaultReponse model.PlansAndAddOnsPrices
 	defaultReponse = append(defaultReponse, model.SubscriptionProductPrice{
-		Name:   "Basic Monthly USD",
-		Type:   "Plan",
-		ID:     "basic-monthly-usd",
-		Price:  100,
-		Period: 1,
+		Name:         "Basic Monthly USD",
+		ExternalName: "Basic",
+		Type:         "Plan",
+		ID:           "basic-monthly-usd",
+		Price:        100,
+		Period:       1,
 	})
 	defaultReponse = append(defaultReponse, model.SubscriptionProductPrice{
 		Name:   "Additional Account",
