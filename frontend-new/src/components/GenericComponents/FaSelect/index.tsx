@@ -49,9 +49,10 @@ export default function FaSelect({
   const inputComponentRef = useAutoFocus(allowSearch);
 
   const dropdownRef = useRef(null);
+  const relativeRef = useRef(null);
 
   //Dynamically Positions the Dropdown if parentRef is passed.
-  const position = useDynamicPosition(dropdownRef, placement);
+  const position = useDynamicPosition(relativeRef, dropdownRef, placement, 250);
 
   const renderSearchInput = () => {
     return (
@@ -135,8 +136,10 @@ export default function FaSelect({
   };
   return (
     <>
-      <div
-        className={`${extraClass}  ${styles.dropdown__select}
+      <div ref={relativeRef}></div>
+      {position && (
+        <div
+          className={`${extraClass}  ${styles.dropdown__select}
           ${
             position === 'TopRight' || position === 'BottomRight'
               ? styles.dropdown__select_right_0
@@ -147,22 +150,23 @@ export default function FaSelect({
              ? `fa-select--group-select-sm`
              : `fa-select--group-select-mini`
          } ${
-          position === 'Top' ||
-          position === 'TopLeft' ||
-          position === 'TopRight'
-            ? styles.dropdown__select_placement_top
-            : styles.dropdown__select_placement_bottom
-        }`}
-        ref={dropdownRef}
-      >
-        {allowSearch && renderSearchInput()}
-
-        <div
-          className={`fa-select-dropdown ${styles.dropdown__select__content}`}
+            position === 'Top' ||
+            position === 'TopLeft' ||
+            position === 'TopRight'
+              ? styles.dropdown__select_placement_top
+              : styles.dropdown__select_placement_bottom
+          }`}
+          ref={dropdownRef}
         >
-          {children || renderOptions()}
+          {allowSearch && renderSearchInput()}
+
+          <div
+            className={`fa-select-dropdown ${styles.dropdown__select__content}`}
+          >
+            {children || renderOptions()}
+          </div>
         </div>
-      </div>
+      )}
       <div
         className={styles.dropdown__hd_overlay}
         onClick={onClickOutside}
