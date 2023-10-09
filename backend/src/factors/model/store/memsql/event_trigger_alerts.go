@@ -534,7 +534,9 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 		criteria := E.MapFilterProperties(config.Filter)
 		if E.EventMatchesFilterCriterionList(projectId, *userPropMap, *eventPropMap, criteria) {
 			matchedAlerts = append(matchedAlerts, alert)
-
+			if projectId == 1125899932000005 && strings.EqualFold(alert.Title, "A Prospect Is Active On Website"){
+				log.WithFields(logFields).WithField("alert", alert).WithField("criteria", criteria).Info("&&&&$$$$ Look this")
+			}
 		}
 	}
 	if len(matchedAlerts) == 0 {
