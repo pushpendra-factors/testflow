@@ -78,12 +78,15 @@ func (store *MemSQL) CreateAgentWithDependencies(params *model.CreateAgentParams
 
 	resp := &model.CreateAgentResponse{}
 
-	customer, status, err := chargebee.CreateChargebeeCustomer(*params.Agent)
-	if err != nil || status != http.StatusCreated {
-		return nil, http.StatusInternalServerError
+	if strings.HasSuffix(params.Agent.Email, "factors.ai") {
+		
+		customer, status, err := chargebee.CreateChargebeeCustomer(*params.Agent)
+		if err != nil || status != http.StatusCreated {
+			return nil, http.StatusInternalServerError
 
+		}
+		params.Agent.BillingCustomerID = customer.Id
 	}
-	params.Agent.BillingCustomerID = customer.Id
 
 	agent, errCode := store.createAgent(params.Agent)
 	if errCode != http.StatusCreated {

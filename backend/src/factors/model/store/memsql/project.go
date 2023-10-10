@@ -428,8 +428,17 @@ func (store *MemSQL) CreateDefaultProjectForAgent(agentUUID string) (*model.Proj
 		return nil, errCode
 	}
 
+	agent, errCode := store.GetAgentByUUID(agentUUID)
+	if errCode != http.StatusFound {
+		log.WithField("err_code", errCode).
+			Error("CreateDefaultProjectForAgent Failed, get agent by uuid error")
+		return nil, errCode
+	}
+
+	enableBilling := agent.BillingCustomerID != ""
+
 	cProject, errCode := store.CreateProjectWithDependencies(
-		&model.Project{Name: model.DefaultProjectName},
+		&model.Project{Name: model.DefaultProjectName, EnableBilling: enableBilling},
 		agentUUID, model.ADMIN, billingAcc.ID, true)
 	if errCode != http.StatusCreated {
 		return nil, errCode

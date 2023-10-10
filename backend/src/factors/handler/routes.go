@@ -4,7 +4,6 @@ import (
 	C "factors/config"
 	IH "factors/handler/internal"
 	V1 "factors/handler/v1"
-	v1 "factors/handler/v1"
 	mid "factors/middleware"
 	M "factors/model/model"
 	U "factors/util"
