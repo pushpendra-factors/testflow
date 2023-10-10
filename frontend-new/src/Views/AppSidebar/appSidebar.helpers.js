@@ -36,7 +36,7 @@ export const isAccountsUrl = (pathname) => {
 };
 
 export const isReportsUrl = (pathname) => {
-  return pathname === PathUrls.Dashboard || pathname === PathUrls.Analyse2;
+  return pathname === PathUrls.Dashboard || pathname === PathUrls.Analyse2 || pathname === PathUrls.PreBuildDashboard;
 };
 
 export const isJourneyUrl = (pathname) => {

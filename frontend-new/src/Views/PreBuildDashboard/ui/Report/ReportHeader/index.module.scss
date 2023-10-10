@@ -1,0 +1,45 @@
+
+
+.topHeader, .report {
+  width: 100%;
+}
+.additionalops {
+  top: 56px;
+  width: fit-content;
+  white-space: nowrap;
+  box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.15);
+  border-radius: 5px;
+  font-size: 14px;
+}
+
+.breadcrumb {
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 24px;
+  color: #0e2647;
+  opacity: 0.56;
+}
+
+.apiCallStatusMsgTooltip {
+  :global(.ant-tooltip-arrow) {
+    right: 4px;
+  }
+}
+
+
+
+.antdActionMenu {
+  min-width: 200px;
+  border-radius: 5px;
+ 
+  :global(.ant-dropdown-menu-item)
+  {
+      border-radius: 10px;
+      padding: 10px 12px !important;
+  }
+
+  :global(.anticon) {
+    vertical-align: 0px !important;
+  }
+    
+}

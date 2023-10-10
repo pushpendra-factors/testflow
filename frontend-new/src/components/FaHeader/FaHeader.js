@@ -156,6 +156,28 @@ const journeyMenu = (
   </Menu>
 );
 
+
+const reportsMenu = (
+  <Menu className={styles['dropdown-menu']}>
+     <Menu.Item className={styles['dropdown-menu-item']}>
+      <Link className='items-center col-gap-2' to={PathUrls.PreBuildDashboard}>
+        <SVG name='QuickBoard' color={'#36CFC9'} />
+        <Text color='black' level={7} type='title' extraClass='mb-0'>
+          Quick Boards
+        </Text>
+      </Link>
+    </Menu.Item>
+    <Menu.Item className={styles['dropdown-menu-item']}>
+      <Link className='items-center col-gap-2' to={PathUrls.Dashboard}>
+        <SVG name='dashboard_Filled' color={'#40A9FF'} />
+        <Text color='black' level={7} type='title' extraClass='mb-0'>
+          Dashboards
+        </Text>
+      </Link>
+    </Menu.Item>
+  </Menu>
+);
+
 const renderConfigureMenu = (email) => (
   <Menu className={styles['dropdown-menu']}>
     <Menu.Item disabled className={styles['dropdown-menu-item']}>
@@ -250,6 +272,7 @@ function FaHeader() {
                 <SVG color='#D9D9D9' size={16} name='chevronDown' />
               </div>
             </Dropdown>
+            {!featureLock(activeAgent) ? 
             <Link
               to={PathUrls.Dashboard}
               className={cx('flex items-center', {
@@ -267,9 +290,28 @@ function FaHeader() {
                 Reports
               </Text>
             </Link>
-            <Dropdown overlay={journeyMenu}
-            overlayClassName="fa-at-overlay--journeys"
-            >
+            :
+             <Dropdown overlay={reportsMenu}>
+              <div
+                className={cx('flex cursor-pointer items-center col-gap-1', {
+                  [styles['active-header-item']]: isReportsUrl(pathname)
+                })}
+                >
+                <Text
+                  color='white'
+                  level={7}
+                  type='title'
+                  extraClass='mb-0'
+                  weight='medium'
+                >
+                  Reports
+                </Text>{' '}
+                <SVG color='#D9D9D9' size={16} name='chevronDown' />
+              </div>
+            </Dropdown>
+            }
+            
+            <Dropdown overlay={journeyMenu}>
               <div
                 className={cx('flex cursor-pointer items-center col-gap-1', {
                   [styles['active-header-item']]: isJourneyUrl(pathname)

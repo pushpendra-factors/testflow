@@ -2,6 +2,7 @@ import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { PathUrls } from '../../routes/pathUrls';
 import DashboardSidebar from './DashboardSidebar';
+import PreBuildDashboardSidebar from './PreBuildDashboardSidebar';
 import AccountsSidebar from './AccountsSidebar';
 import ProfilesSidebar from './ProfilesSidebar';
 import SettingsSidebar from './SettingsSidebar';
@@ -13,6 +14,9 @@ const SidebarContent = () => {
 
   if (pathname === PathUrls.Dashboard) {
     return <DashboardSidebar />;
+  }
+  if (pathname === PathUrls.PreBuildDashboard) {
+    return <PreBuildDashboardSidebar />;
   }
   if (pathname === PathUrls.ProfileAccounts) {
     return <AccountsSidebar />;

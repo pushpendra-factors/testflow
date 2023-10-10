@@ -14,7 +14,7 @@ export const getRearrangedData = (units, dashboard) => {
   let result;
   if (!dashboard.units_position || !dashboard.units_position.position) {
     const clonedUnits = [...units];
-    result = clonedUnits.reverse().map((u, index) => {
+    result = clonedUnits.map((u, index) => {
       return {
         ...u,
         position: index,
@@ -30,7 +30,7 @@ export const getRearrangedData = (units, dashboard) => {
     const positionedUnits = units.filter((u) => {
       return Object.prototype.hasOwnProperty.call(unitsPosition, u.id);
     });
-    const result1 = nonPositionedUnits.reverse().map((u, index) => {
+    const result1 = nonPositionedUnits.map((u, index) => {
       return {
         ...u,
         position: index,

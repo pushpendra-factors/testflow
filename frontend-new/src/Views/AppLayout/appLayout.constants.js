@@ -2,6 +2,7 @@ import { PathUrls } from '../../routes/pathUrls';
 
 export const routesWithSidebar = [
   PathUrls.Dashboard,
+  PathUrls.PreBuildDashboard,
   PathUrls.ProfileAccounts,
   PathUrls.ProfilePeople,
   PathUrls.SettingsGeneral,

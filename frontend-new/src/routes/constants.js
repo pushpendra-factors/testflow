@@ -209,6 +209,7 @@ const FeatureLockedFactorsInsightsOld = withFeatureLockHOC(FactorsInsightsOld, {
 });
 const CoreQuery = lazyWithRetry(() => import('../Views/CoreQuery'));
 const Dashboard = lazyWithRetry(() => import('../Views/Dashboard'));
+const PreBuildDashboard = lazyWithRetry(() => import('../Views/PreBuildDashboard/ui'));
 const Factors = lazyWithRetry(() => import('../Views/Factors'));
 const FeatureLockedFactors = withFeatureLockHOC(Factors, {
   featureName: FEATURES.FEATURE_EXPLAIN,
@@ -228,6 +229,10 @@ const SixSignalReportRedirection = lazyWithRetry(() =>
 );
 
 const componentsLib = lazyWithRetry(() => import('../Views/componentsLib'));
+
+const PreBuildDashboardReport = lazyWithRetry(() =>
+  import('../Views/PreBuildDashboard/ui/Report')
+);
 
 export const APP_ROUTES = {
   Signup: {
@@ -276,6 +281,21 @@ export const APP_LAYOUT_ROUTES = {
     exact: true,
     Private: true,
     Layout: AppLayout
+  },
+  PreBuildDashboard: {
+    title: 'Quick Board',
+    path: PathUrls.PreBuildDashboard,
+    Component: PreBuildDashboard,
+    exact: true,
+    Private: true,
+    Layout: AppLayout
+  },
+  PreBuildDashboardReport: {
+    exact: true,
+    path: PathUrls.PreBuildDashboardReport,
+    Layout: AppLayout,
+    Private: true,
+    Component: PreBuildDashboardReport
   },
   ComponentsLib: {
     title: 'Components Library',

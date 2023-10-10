@@ -13,6 +13,14 @@ const useSidebarTitleConfig = () => {
       iconColor: '#40A9FF'
     };
   }
+
+  if (pathname === PathUrls.PreBuildDashboard) {
+    return {
+      title: 'Quick boards',
+      icon: 'QuickBoard',
+      iconColor: '#36CFC9',
+    };
+  }
   if (pathname === PathUrls.Analyse2) {
     return {
       title: 'Analyse',
