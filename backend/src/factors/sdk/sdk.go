@@ -669,7 +669,7 @@ func Track(projectId int64, request *TrackPayload,
 		userProperties = requestUserProperties
 	}
 
-	_, countryName, isoCode := model.FillLocationUserProperties(userProperties, clientIP)
+	_, _, isoCode := model.FillLocationUserProperties(userProperties, clientIP)
 	pageURLProp := U.GetPropertyValueAsString((*eventProperties)[U.EP_PAGE_URL])
 
 	//Fetching feature flags to check of feature is enabled on the plan.
@@ -694,7 +694,7 @@ func Track(projectId int64, request *TrackPayload,
 		logCtx.Info("Enrichment using client sixsignal")
 	} else if factorsDeanonymisationEnabled && *(projectSettings.IntFactorsSixSignalKey) {
 		if isSixsignalQuotaAvailable, _ := CheckingSixSignalQuotaLimit(projectId); isSixsignalQuotaAvailable {
-			FillSixSignalUserPropertiesViaFactors(projectId, projectSettings, userProperties, request.UserId, clientIP, isoCode, countryName, pageURLProp)
+			FillSixSignalUserPropertiesViaFactors(projectId, projectSettings, userProperties, request.UserId, clientIP, isoCode, pageURLProp)
 			logCtx.Info("Enrichment using factors deanonymisation")
 		}
 	}
@@ -873,7 +873,7 @@ func FillSixSignalUserProperties(projectId int64, apiKey string, userProperties 
 }
 
 func FillSixSignalUserPropertiesViaFactors(projectId int64, projectSettings *model.ProjectSetting,
-	userProperties *U.PropertiesMap, UserId, clientIP, isoCode, countryName, pageURLProp string) {
+	userProperties *U.PropertiesMap, UserId, clientIP, isoCode, pageURLProp string) {
 
 	logCtx := log.WithField("project_id", projectId)
 
@@ -889,7 +889,7 @@ func FillSixSignalUserPropertiesViaFactors(projectId int64, projectSettings *mod
 		}
 	}
 
-	shouldEnrichUsingSixSignal, _ := ApplySixSignalFilters(sixSignalConfig, isoCode, countryName, pageURLProp)
+	shouldEnrichUsingSixSignal, _ := ApplySixSignalFilters(sixSignalConfig, isoCode, pageURLProp)
 	if !shouldEnrichUsingSixSignal {
 		logCtx.Warn("SixSignal configs not matched.")
 		return
@@ -902,7 +902,7 @@ func FillSixSignalUserPropertiesViaFactors(projectId int64, projectSettings *mod
 	FillSixSignalUserProperties(projectId, factors6SignalKey, userProperties, UserId, clientIP)
 }
 
-func ApplySixSignalFilters(sixSignalConfig model.SixSignalConfig, isoCode, countryName, pageUrl string) (bool, error) {
+func ApplySixSignalFilters(sixSignalConfig model.SixSignalConfig, isoCode, pageUrl string) (bool, error) {
 
 	//No filter case is true
 	if (sixSignalConfig.CountryInclude == nil || len(sixSignalConfig.CountryInclude) == 0) &&
@@ -912,7 +912,7 @@ func ApplySixSignalFilters(sixSignalConfig model.SixSignalConfig, isoCode, count
 		return true, nil
 	}
 
-	countryFilterPassed := IsCountryFilterPassed(sixSignalConfig, isoCode, countryName)
+	countryFilterPassed := IsCountryFilterPassed(sixSignalConfig, isoCode)
 	if !countryFilterPassed {
 		return false, nil
 	}
@@ -925,7 +925,7 @@ func ApplySixSignalFilters(sixSignalConfig model.SixSignalConfig, isoCode, count
 	return true, nil
 }
 
-func IsCountryFilterPassed(sixSignalConfig model.SixSignalConfig, isoCode, countryName string) bool {
+func IsCountryFilterPassed(sixSignalConfig model.SixSignalConfig, isoCode string) bool {
 
 	isCountryIncluded := (sixSignalConfig.CountryInclude != nil && len(sixSignalConfig.CountryInclude) != 0)
 	isCountryExcluded := (sixSignalConfig.CountryExclude != nil && len(sixSignalConfig.CountryExclude) != 0)
@@ -935,31 +935,19 @@ func IsCountryFilterPassed(sixSignalConfig model.SixSignalConfig, isoCode, count
 	}
 
 	mapOfCountries := make(map[string]bool)
-	var isIsoCode bool
 
 	if isCountryIncluded {
 		for _, filter := range sixSignalConfig.CountryInclude {
 			mapOfCountries[filter.Value] = true
-			isIsoCode = (model.ISOCODES[filter.Value] == 1)
 		}
 
 	} else if isCountryExcluded {
 		for _, filter := range sixSignalConfig.CountryExclude {
 			mapOfCountries[filter.Value] = true
-			isIsoCode = (model.ISOCODES[filter.Value] == 1)
 		}
 	}
 
-	if !isIsoCode {
-		log.Warn("Country name present in sixsignal config with sixsignal config: ", sixSignalConfig)
-	}
-
-	var contains bool
-	if isIsoCode {
-		contains = mapOfCountries[isoCode]
-	} else {
-		contains = mapOfCountries[countryName]
-	}
+	contains := mapOfCountries[isoCode]
 
 	if isCountryIncluded {
 		return contains

@@ -1791,9 +1791,15 @@ func AddTwoNumbersInt64Float64(a, b interface{}) (int64, error) {
 
 func ReturnReadableHtmlFromMaps(c *gin.Context, status map[string][]map[string]interface{}) {
 
-	var HtmlStr = ""
-	for date, data := range status {
+	date_list := make([]string, 0, len(status))
+	for date := range status {
+		date_list = append(date_list, date)
+	}
+	sort.Sort(sort.Reverse(sort.StringSlice(date_list)))
 
+	for _, date := range date_list {
+
+		data := status[date]
 		heading := CreateHeadingTemplate(date)
 		t := template.New("date")
 		t, err := t.Parse(heading)
@@ -1803,10 +1809,12 @@ func ReturnReadableHtmlFromMaps(c *gin.Context, status map[string][]map[string]i
 		}
 		t.Execute(c.Writer, nil)
 
+		var HtmlStr = ""
+		HtmlStr += CreateTableForCRMStatus()
 		for index, v := range data {
-			HtmlStr += CreateTableForCRMStatus()
+
 			HtmlStr += InsertDataToTableForCRMStatus(v)
-			if index == len(status)-1 {
+			if index == len(data)-1 {
 				HtmlStr += "</table><br>" //closing table before data ends.
 				t := template.New("table")
 				t, err := t.Parse(HtmlStr)

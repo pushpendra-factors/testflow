@@ -5,11 +5,12 @@ import "time"
 type PlansAndAddOnsPrices []SubscriptionProductPrice
 
 type SubscriptionProductPrice struct {
-	Type   string `json:"type"`
-	Name   string `json:"name"`
-	ID     string `json:"id"`
-	Price  int64  `json:"price"`
-	Period int `json:"period"`
+	Type         string `json:"type"`
+	Name         string `json:"name"`
+	ExternalName string `json:"external_name"`
+	ID           string `json:"id"`
+	Price        int64  `json:"price"`
+	Period       int    `json:"period"`
 }
 
 type Subscription struct {

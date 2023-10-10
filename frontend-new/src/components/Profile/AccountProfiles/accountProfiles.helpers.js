@@ -71,7 +71,7 @@ const getTablePropColumn = ({ prop, groupPropNames, listProperties }) => {
 export const getColumns = ({
   accounts,
   source,
-  isEngagementLocked,
+  isScoringLocked,
   displayTableProps,
   groupPropNames,
   listProperties,
@@ -117,12 +117,8 @@ export const getColumns = ({
     }
   ];
   // Engagement Column
-  const engagementExists = accounts.data?.find(
-    (item) =>
-      item.engagement &&
-      (item.engagement !== undefined || item.engagement !== '')
-  );
-  if (engagementExists && !isEngagementLocked) {
+
+  if (!isScoringLocked) {
     columns.push({
       title: <div className={headerClassStr}>Engagement</div>,
       width: 150,
