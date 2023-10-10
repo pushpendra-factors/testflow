@@ -774,6 +774,7 @@ type Model interface {
 	GetPropertyValuesByGroupProperty(projectID int64, groupName string, propertyName string, limit int, lastNDays int) ([]string, error)
 	IsGroupEventName(projectID int64, eventName, eventNameID string) (string, int)
 	UpdateGroupUserDomainsGroup(projectID int64, groupUserID, groupUserGroupName, domainsUserID, domainGroupID string, overwrite bool) (*model.User, int)
+	GetAllGroupUsersByDomainsGroupUserID(projectID int64, groupDomainID int, groupDomainUserID string) ([]model.User, int)
 
 	// Delete channel Integrations
 	DeleteChannelIntegration(projectID int64, channelName string) (int, error)
@@ -944,7 +945,7 @@ type Model interface {
 	GetAllEventTriggerAlertsByProject(projectID int64) ([]model.AlertInfo, int)
 	CreateEventTriggerAlert(userID, oldID string, projectID int64, alertConfig *model.EventTriggerAlertConfig, slackTokenUser, teamTokenUser string, isPausedAlert bool) (*model.EventTriggerAlert, int, string)
 	DeleteEventTriggerAlert(projectID int64, id string) (int, string)
-	MatchEventTriggerAlertWithTrackPayload(projectId int64, name string, eventProps, userProps *postgres.Jsonb, UpdatedEventProps *postgres.Jsonb, isUpdate bool) (*[]model.EventTriggerAlert, *model.EventName, int)
+	MatchEventTriggerAlertWithTrackPayload(projectId int64, name, userID string, eventProps, userProps *postgres.Jsonb, UpdatedEventProps *postgres.Jsonb, isUpdate bool) (*[]model.EventTriggerAlert, *model.EventName, int)
 	UpdateEventTriggerAlertField(projectID int64, id string, field map[string]interface{}) (int, error)
 	GetEventTriggerAlertByID(id string) (*model.EventTriggerAlert, int)
 	UpdateInternalStatusAndGetAlertIDs(projectID int64) ([]string, int, error)

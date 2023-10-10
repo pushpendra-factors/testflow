@@ -329,3 +329,40 @@ func (store *MemSQL) GetGroupUserByGroupID(projectID int64, groupName string, gr
 
 	return &groupUser, http.StatusFound
 }
+
+func (store *MemSQL) GetAllGroupUsersByDomainsGroupUserID(projectID int64, domainsGroupID int, domainsGroupUserID string) ([]model.User, int) {
+	logFields := log.Fields{
+		"project_id":           projectID,
+		"group_domain_user_id": domainsGroupUserID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	if projectID == 0 || domainsGroupUserID == "" {
+		logCtx.Error("Invalid parameters.")
+		return nil, http.StatusBadRequest
+	}
+
+	whereStmnt := fmt.Sprintf("project_id = ? AND group_%d_user_id = ? AND is_group_user = true ", domainsGroupID)
+	whereParams := []interface{}{projectID, domainsGroupUserID}
+
+	db := C.GetServices().Db
+	groupUser := []model.User{}
+	if err := db.Model(&model.User{}).
+		Where(whereStmnt, whereParams...).
+		Find(&groupUser).Error; err != nil {
+
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Failed to get group users")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(groupUser) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	return groupUser, http.StatusFound
+}
