@@ -99,3 +99,42 @@ func GetCRMObjectValuesByPropertyNameHandler(c *gin.Context) {
 	properties = append([]interface{}{model.PropertyValueNone}, properties...)
 	c.JSON(http.StatusOK, properties)
 }
+
+// GetCRMStatusByProjectIdHandler godoc
+// @Summary To get crm status by projectId.
+// @Tags _
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param crm path string true "CRM"
+// @Success 200 {object} _
+// @Router /{project_id}/crm_status/{crm} [get]
+func GetCRMStatusByProjectIdHandler(c *gin.Context) {
+
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectID == 0 {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid project id."})
+		return
+	}
+
+	source := c.Params.ByName("crm")
+	isHtmlRequired := c.Query("html")
+
+	if source == "" {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid query params."})
+		return
+	}
+
+	var status map[string][]map[string]interface{}
+	if source == model.SmartCRMEventSourceSalesforce {
+		status, _ = store.GetStore().GetCRMStatus(projectID, source)
+	} else if source == model.SmartCRMEventSourceHubspot {
+		status, _ = store.GetStore().GetCRMStatus(projectID, source)
+	}
+
+	if isHtmlRequired == "true" {
+		U.ReturnReadableHtmlFromMaps(c, status)
+		return
+	}
+	c.JSON(http.StatusOK, status)
+}

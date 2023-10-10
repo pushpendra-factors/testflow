@@ -97,6 +97,9 @@ func main() {
 	memSQLCertificate := flag.String("memsql_cert", "", "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
 
+	memSQLDBMaxOpenConnections := flag.Int("memsql_max_open_connections", 100, "Max no.of open connections allowed on connection pool of memsql")
+	memSQLDBMaxIdleConnections := flag.Int("memsql_max_idle_connections", 50, "Max no.of idle connections allowed on connection pool of memsql")
+
 	salesforceAppID := flag.String("salesforce_app_id", "", "")
 	salesforceAppSecret := flag.String("salesforce_app_secret", "", "")
 	apiDomain := flag.String("api_domain", "factors-dev.com:8080", "")
@@ -156,8 +159,10 @@ func main() {
 		"", "List of projects to disable event user property population in events.")
 	enrichRecordProcessLimit := flag.Int("enrich_record_process_limit", 0, "Limit number of records for enrichment at project level")
 	disableOpportunityContactRolesByProjectID := flag.String("disable_opportunity_contact_roles_by_project_id", "", "")
+	userPropertyUpdateOptProjects := flag.String("user_property_update_opt_projects", "", "")
 
 	flag.Parse()
+
 	defaultAppName := "salesforce_enrich"
 	defaultEnrichHealthcheckPingID := C.HealthcheckSalesforceEnrichPingID
 	enrichHealthcheckPingID := C.GetHealthcheckPingID(defaultEnrichHealthcheckPingID, *overrideEnrichHealthcheckPingID)
@@ -190,6 +195,10 @@ func main() {
 			Password:    *memSQLPass,
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
+
+			MaxOpenConnections:     *memSQLDBMaxOpenConnections,
+			MaxIdleConnections:     *memSQLDBMaxIdleConnections,
+			UseExactConnFromConfig: true,
 		},
 		PrimaryDatastore:                                   *primaryDatastore,
 		APIDomain:                                          *apiDomain,
@@ -228,6 +237,7 @@ func main() {
 		AllowEmailDomainsByProjectID:                       *allowEmailDomainsByProjectID,
 		RemoveDisabledEventUserPropertiesByProjectID:       *removeDisabledEventUserPropertiesByProjectId,
 		DisableOpportunityContactRolesByProjectID:          *disableOpportunityContactRolesByProjectID,
+		UserPropertyUpdateOptProjects:                      *userPropertyUpdateOptProjects,
 	}
 
 	C.InitConf(config)

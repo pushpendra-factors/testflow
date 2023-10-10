@@ -440,11 +440,13 @@ func (store *MemSQL) UpdatePlanDetailsTable(id int64, features []string, add boo
 	}
 	logCtx := log.WithFields(logFields)
 	model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-
+	allFeatures := model.GetAllAvailableFeatures()
+	featureMap := make(map[string]bool)
 	//Check if the feature to be updated is available or not
 	for _, newF := range features {
+		featureMap[newF] = true
 		found := false
-		for _, f := range model.GetAllAvailableFeatures() {
+		for _, f := range allFeatures {
 			if newF == f {
 				found = true
 				break
@@ -462,40 +464,31 @@ func (store *MemSQL) UpdatePlanDetailsTable(id int64, features []string, add boo
 		return http.StatusNotFound, err
 	}
 
-	featureList := make([]string, 0)
-	err = U.DecodePostgresJsonbToStructType(planDetails.FeatureList, &featureList)
+	var oldFeatureList []model.FeatureDetails
+	err = U.DecodePostgresJsonbToStructType(planDetails.FeatureList, &oldFeatureList)
 	if err != nil {
 		logCtx.WithError(err).Error("unable to decode jsonb for the desired plan")
 		return http.StatusInternalServerError, err
 	}
 	var featureListJson *postgres.Jsonb
-	newFeatureList := make([]string, 0)
+	var newFeatureList []model.FeatureDetails
 	if add {
-		newFeatureList = featureList
-		// Check to avoid adding duplicate entries for same features
-		for _, fl := range featureList {
-			found := false
-			for _, f := range features {
-				if fl == f {
-					found = true
-					break
-				}
-			}
-			if !found {
-				newFeatureList = append(newFeatureList, fl)
+		for _, feature := range oldFeatureList {
+			if _, exists := featureMap[feature.Name]; exists {
+				delete(featureMap, feature.Name)
 			}
 		}
+		newFeatureList = append(newFeatureList, oldFeatureList...)
+		for key := range featureMap {
+			newFeatureList = append(newFeatureList, model.FeatureDetails{
+				Name:             key,
+				IsEnabledFeature: true,
+			})
+		}
 	} else {
-		for _, fl := range featureList {
-			found := false
-			for _, f := range features {
-				if fl == f {
-					found = true
-					break
-				}
-			}
-			if !found {
-				newFeatureList = append(newFeatureList, fl)
+		for _, feature := range oldFeatureList {
+			if _, exists := featureMap[feature.Name]; !exists {
+				newFeatureList = append(newFeatureList, feature)
 			}
 		}
 	}

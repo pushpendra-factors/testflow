@@ -80,9 +80,13 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 		requestPayload.Query.KPIQueries[0].KPI.Queries == nil || len(requestPayload.Query.KPIQueries[0].KPI.Queries) == 0 {
 		return nil, http.StatusBadRequest, INVALID_INPUT, "invalid query. empty query.", true
 	}
-
+	logCtx.WithFields(log.Fields{
+		"requestPayload": requestPayload,
+	}).Info("debug before SetTimezoneForAttributionQueryV1")
 	timezoneString, err = SetTimezoneForAttributionQueryV1(&requestPayload, projectId)
-
+	logCtx.WithFields(log.Fields{
+		"timezoneString": timezoneString,
+	}).Info("debug after SetTimezoneForAttributionQueryV1")
 	if err != nil {
 		return nil, http.StatusBadRequest, INVALID_INPUT, "query failed. Failed to get Timezone", true
 	}
@@ -143,6 +147,7 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 
 	logCtx.WithFields(log.Fields{
 		"requestPayload": requestPayload,
+		"timezoneString": timezoneString,
 	}).Info("Attribution query debug request payload")
 	if !hardRefresh && isDashboardQueryRequest && !H.ShouldAllowHardRefresh(requestPayload.Query.From, requestPayload.Query.To, timezoneString, hardRefresh) {
 		//todo satya: check if we want to use effective to and from in this flow
@@ -396,54 +401,88 @@ func runTheCommonDBFlow(reqId string, projectId int64, dashboardId int64, unitId
 			return H.DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true, RefreshedAt: cacheResult.ComputedAt,
 				CacheMeta: cacheResult.CreatedAt}, http.StatusOK, "", "", false
 		}*/
-
-	// Reached here, it means that the exact date range is not there in the DB result storage
-	// Check for monthly range query, we assume that the range has continuous date range inputs
-	isMonthsQuery, last12Months := U.IsAMonthlyRangeQuery(timezoneString, requestPayload.Query.From, requestPayload.Query.To)
-	if isMonthsQuery {
-
-		monthsToRun := U.GetAllValidRangesInBetween(requestPayload.Query.From, requestPayload.Query.To, last12Months)
-		logCtx.WithFields(log.Fields{
-			"last12Months": last12Months,
-			"monthsToRun":  monthsToRun,
-		}).Info("Figured it a Month range query, running")
+	success, daysRange := U.GetAllDaysBetweenFromTo(timezoneString, requestPayload.Query.From, requestPayload.Query.To)
+	logCtx.WithFields(log.Fields{
+		"timezoneString": timezoneString,
+		"from":           requestPayload.Query.From,
+		"to":             requestPayload.Query.To,
+		"daysRange":      daysRange,
+		"success":        success,
+	}).Info("debug daysRange")
+	if success {
 		hasFailed, mergedResult, computeMeta := RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId, requestPayload,
 			timezoneString, reqId, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery,
-			monthsToRun, logCtx)
+			daysRange, logCtx)
 		if hasFailed {
-			logCtx.Error("Month range query failed to run")
-			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Month range query failed to run", true
+			logCtx.Error("Days range query failed to run")
+			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Days range query failed to run", true
 		}
 
 		return H.DashboardQueryResponsePayload{Result: mergedResult, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
 			CacheMeta: mergedResult.CacheMeta, ComputeMeta: computeMeta}, http.StatusOK, "", "", false
 	}
 
-	// Check for weekly range query, we assume that the range has continuous date range inputs
-	isWeeksQuery, last48Weeks := U.IsAWeeklyRangeQuery(timezoneString, requestPayload.Query.From, requestPayload.Query.To)
-	if isWeeksQuery {
-
-		weeksToRun := U.GetAllValidRangesInBetween(requestPayload.Query.From, requestPayload.Query.To, last48Weeks)
+	/*
+		// Reached here, it means that the exact date range is not there in the DB result storage
+		// Check for monthly range query, we assume that the range has continuous date range inputs
+		isMonthsQuery, last12Months := U.IsAMonthlyRangeQuery(timezoneString, requestPayload.Query.From, requestPayload.Query.To)
 		logCtx.WithFields(log.Fields{
-			"last12Months": last48Weeks,
-			"weeksToRun":   weeksToRun,
-		}).Info("Figured it a Week range query, running")
-		hasFailed, mergedResult, computeMeta := RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId, requestPayload,
-			timezoneString, reqId, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery,
-			weeksToRun, logCtx)
+			"timezoneString": timezoneString,
+			"from":           requestPayload.Query.From,
+			"to":             requestPayload.Query.To,
+			"last12Months":   last12Months,
+			"isMonthsQuery":  isMonthsQuery,
+		}).Info("debug last12Months")
+		if isMonthsQuery {
 
-		if hasFailed {
-			logCtx.Error("Week range query failed to run")
-			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Week range query failed to run", true
+			monthsToRun := U.GetAllValidRangesInBetween(requestPayload.Query.From, requestPayload.Query.To, last12Months)
+			logCtx.WithFields(log.Fields{
+				"monthsToRun": monthsToRun,
+			}).Info("Figured it a Month range query, running")
+			hasFailed, mergedResult, computeMeta := RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId, requestPayload,
+				timezoneString, reqId, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery,
+				monthsToRun, logCtx)
+			if hasFailed {
+				logCtx.Error("Month range query failed to run")
+				return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Month range query failed to run", true
+			}
+
+			return H.DashboardQueryResponsePayload{Result: mergedResult, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
+				CacheMeta: mergedResult.CacheMeta, ComputeMeta: computeMeta}, http.StatusOK, "", "", false
 		}
-		logCtx.WithFields(log.Fields{
-			"mergedResult": mergedResult,
-			"computeMeta":  computeMeta,
-		}).Info("post RunMultipleRangeAttributionQueries merge - mergedRows")
-		return H.DashboardQueryResponsePayload{Result: mergedResult, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
-			CacheMeta: mergedResult.CacheMeta, ComputeMeta: computeMeta}, http.StatusOK, "", "", false
-	}
 
+		// Check for weekly range query, we assume that the range has continuous date range inputs
+		isWeeksQuery, last48Weeks := U.IsAWeeklyRangeQuery(timezoneString, requestPayload.Query.From, requestPayload.Query.To)
+		logCtx.WithFields(log.Fields{
+			"timezoneString": timezoneString,
+			"from":           requestPayload.Query.From,
+			"to":             requestPayload.Query.To,
+			"last48Weeks":    last48Weeks,
+			"isWeeksQuery":   isWeeksQuery,
+		}).Info("debug last48Weeks")
+		if isWeeksQuery {
+
+			weeksToRun := U.GetAllValidRangesInBetween(requestPayload.Query.From, requestPayload.Query.To, last48Weeks)
+			logCtx.WithFields(log.Fields{
+				"weeksToRun": weeksToRun,
+			}).Info("Figured it a Week range query, running")
+			hasFailed, mergedResult, computeMeta := RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId, requestPayload,
+				timezoneString, reqId, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery,
+				weeksToRun, logCtx)
+
+			if hasFailed {
+				logCtx.Error("Week range query failed to run")
+				return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Week range query failed to run", true
+			}
+			logCtx.WithFields(log.Fields{
+				"mergedResult": mergedResult,
+				"computeMeta":  computeMeta,
+			}).Info("post RunMultipleRangeAttributionQueries merge - mergedRows")
+			return H.DashboardQueryResponsePayload{Result: mergedResult, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
+				CacheMeta: mergedResult.CacheMeta, ComputeMeta: computeMeta}, http.StatusOK, "", "", false
+		}
+
+	*/
 	// Nothing worked, fail the query finally
 	logCtx.Error("Query failed. The query range is not a standard range, aborting ")
 	return nil, http.StatusBadRequest, INVALID_INPUT, "Query failed. The query range is not a standard range, aborting ", true

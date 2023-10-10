@@ -5,8 +5,7 @@
     position: relative;
     &__select {
       width: 380px;
-      max-height: 480px;
-      min-height: 240px;
+      height: 400px;
       position: absolute;
     }
   }
@@ -111,6 +110,38 @@
   width: 323px;
   border-radius: 0.5rem;
   height: 2.5rem;
+}
+
+.download-csv-search-input-box {
+  border-radius: 0.5rem;
+  height: 2.25rem;
+}
+
+.download-csv-clear-all-button {
+  background: none;
+  border: 0;
+  &:hover,
+  &:active,
+  &:visited,
+  &:focus-visible,
+  &:focus {
+    border: none;
+    background: none !important;
+    outline: none;
+  }
+}
+
+.download-csv-modal-options-container {
+  height: 348px;
+  overflow: auto;
+}
+
+.download-csv-modal-checkbox {
+  display: flex;
+  align-items: center;
+  :global(.ant-checkbox) {
+    margin-top: 2px;
+  }
 }
 
 .new-segment-input-container {

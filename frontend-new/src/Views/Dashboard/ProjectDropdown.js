@@ -32,6 +32,7 @@ import NewProject from '../Settings/SetupAssist/Modals/NewProject';
 import ExistingReportsModal from './ExistingReportsModal';
 import { changeActiveDashboard as changeActiveDashboardService } from 'Reducers/dashboard/services';
 import NewReportButton from './NewReportButton';
+import { selectActiveDashboard, selectDashboardList } from 'Reducers/dashboard/selectors';
 
 function ProjectDropdown({
   setaddDashboardModal,
@@ -53,9 +54,11 @@ function ProjectDropdown({
   const [deleteApiCalled, setDeleteApiCalled] = useState(false);
   const [widgetModalLoading, setWidgetModalLoading] = useState(false);
   const { active_project } = useSelector((state) => state.global);
-  const { dashboards, activeDashboard, activeDashboardUnits } = useSelector(
+  const { activeDashboardUnits } = useSelector(
     (state) => state.dashboard
   );
+  const activeDashboard = useSelector((state) => selectActiveDashboard(state));
+  const dashboards = useSelector((state) => selectDashboardList(state));
   const [selectVisible, setSelectVisible] = useState(false);
   const [showDashboardName, setDashboardName] = useState('');
   const [showDashboardDesc, setDashboardDesc] = useState('');
@@ -75,14 +78,14 @@ function ProjectDropdown({
       }
       resetDashboardRefreshState();
       setOldestRefreshTime(null);
-      const selectedDashboard = dashboards.data.find((d) => d.id === val);
+      const selectedDashboard = dashboards.find((d) => d.id === val);
       dispatch(changeActiveDashboardService(selectedDashboard));
     },
     [
       activeDashboard?.id,
       resetDashboardRefreshState,
       setOldestRefreshTime,
-      dashboards.data,
+      dashboards,
       dispatch
     ]
   );
@@ -144,9 +147,9 @@ function ProjectDropdown({
       setDashboardDeleteApi(false);
       dispatch({ type: DASHBOARD_DELETED, payload: activeDashboard });
       showDeleteDashboardModal(false);
-      setDashboardName(dashboards.data[0]?.name);
-      setDashboardDesc(dashboards.data[0]?.description);
-      changeActiveDashboard(dashboards.data[0]?.id);
+      setDashboardName(dashboards[0]?.name);
+      setDashboardDesc(dashboards[0]?.description);
+      changeActiveDashboard(dashboards[0]?.id);
     } catch (err) {
       console.log(err);
       setDashboardDeleteApi(false);
@@ -259,23 +262,23 @@ function ProjectDropdown({
       { label: 'All Dashboards', icon: 'dashboard', values: [] }
     ];
 
-    for (let i = 0; i < dashboards.data.length; i++) {
+    for (let i = 0; i < dashboards.length; i++) {
       if (isPinned) {
         dashboardList[0].values.push([
-          dashboards.data[i].name,
-          dashboards.data[i].description,
-          dashboards.data[i].id
+          dashboards[i].name,
+          dashboards[i].description,
+          dashboards[i].id
         ]);
         dashboardList[1].values.push([
-          dashboards.data[i].name,
-          dashboards.data[i].description,
-          dashboards.data[i].id
+          dashboards[i].name,
+          dashboards[i].description,
+          dashboards[i].id
         ]);
       } else {
         dashboardList[1].values.push([
-          dashboards.data[i].name,
-          dashboards.data[i].description,
-          dashboards.data[i].id
+          dashboards[i].name,
+          dashboards[i].description,
+          dashboards[i].id
         ]);
       }
     }
@@ -298,7 +301,7 @@ function ProjectDropdown({
     );
   }
 
-  if (dashboards.data.length) {
+  if (dashboards.length) {
     return (
       <ErrorBoundary
         fallback={
@@ -328,12 +331,13 @@ function ProjectDropdown({
                 weight='bold'
                 extraClass='mb-0'
                 type='title'
+                id={'fa-at-text--dashboard-title'}
               >
                 {showDashboardName}
               </Text>
             </div>
             {setDashboard()}
-            <Text level={7} type='title' weight='medium' color='grey'>
+            <Text level={7} type='title' weight='medium' color='grey' id={'fa-at-text--dashboard-desc'}>
               {showDashboardDesc}
             </Text>
           </div>

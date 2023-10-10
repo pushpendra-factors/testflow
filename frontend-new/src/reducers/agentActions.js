@@ -177,7 +177,7 @@ export function signup(data) {
             resolve(r);
           } else {
             dispatch({ type: 'AGENT_SIGNUP_REJECTED', payload: null });
-            reject('Email already exists. Try logging in.');
+            reject('EMAIL_ALREADY_EXIST')
           }
         })
         .catch(() => {
@@ -188,7 +188,7 @@ export function signup(data) {
   };
 }
 
-export function activate(password, token) {
+export function activate(data, token) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
       dispatch({ type: 'AGENT_VERIFY' });
@@ -196,9 +196,7 @@ export function activate(password, token) {
       post(
         dispatch,
         host + 'agents/activate?skip_project=true&token=' + token,
-        {
-          password: password
-        }
+        data
       )
         .then(() => {
           resolve(

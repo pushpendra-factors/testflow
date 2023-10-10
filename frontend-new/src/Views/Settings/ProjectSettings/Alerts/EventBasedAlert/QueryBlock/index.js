@@ -136,21 +136,27 @@ function QueryBlock({
     });
   }, [queries]);
 
-  useEffect(() => {
-    if (!event || event === undefined) {
-      return;
-    }
-    const assignFilterProps = { ...filterProps };
+  const filterProperties = useMemo(() => {
+    if (!event) return {};
+
+    const props = {
+      event: eventPropertiesV2[event.label] || []
+    };
     if (eventGroup) {
-      assignFilterProps.group = groupProperties[eventGroup];
-      assignFilterProps.user = [];
+      props[eventGroup] = groupProperties[eventGroup];
     } else {
-      assignFilterProps.user = eventUserPropertiesV2;
-      assignFilterProps.group = [];
+      props.user = eventUserPropertiesV2;
     }
-    assignFilterProps.event = eventPropertiesV2[event.label] || [];
-    setFilterProperties(assignFilterProps);
-  }, [eventPropertiesV2, groupProperties, eventUserPropertiesV2]);
+    return props;
+  }, [
+    event,
+    eventGroup,
+    eventPropertiesV2,
+    groupProperties,
+    eventUserPropertiesV2
+  ]);
+
+  
 
   const triggerDropDown = () => {
     setDDVisible(true);
@@ -213,9 +219,10 @@ function QueryBlock({
     setFilterDDVisible(false);
     setOrFilterIndex(-1);
   };
+  
   const selectEventFilter = (ind) => (
     <FilterWrapper
-      filterProps={filterProps}
+      filterProps={filterProperties}
       projectID={activeProject?.id}
       event={event}
       deleteFilter={closeFilter}
@@ -303,7 +310,7 @@ function QueryBlock({
                   index={ind}
                   filter={filter}
                   event={event}
-                  filterProps={filterProps}
+                  filterProps={filterProperties}
                   projectID={activeProject?.id}
                   deleteFilter={removeFilters}
                   insertFilter={insertFilters}
@@ -318,7 +325,7 @@ function QueryBlock({
               {ind === orFilterIndex && (
                 <div key='init'>
                   <FilterWrapper
-                    filterProps={filterProps}
+                    filterProps={filterProperties}
                     projectID={activeProject?.id}
                     event={event}
                     deleteFilter={closeFilter}
@@ -341,7 +348,7 @@ function QueryBlock({
                   index={ind}
                   filter={filtersGr[0]}
                   event={event}
-                  filterProps={filterProps}
+                  filterProps={filterProperties}
                   projectID={activeProject?.id}
                   deleteFilter={removeFilters}
                   insertFilter={insertFilters}

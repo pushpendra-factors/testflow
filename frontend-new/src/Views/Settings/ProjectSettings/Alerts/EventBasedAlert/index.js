@@ -489,6 +489,7 @@ const EventBasedAlert = ({
         closeDropDown={() => setGroupByDDVisible(false)}
         hideText={true}
         noMargin={true}
+        eventGroup={groupsList?.filter((item) => item?.[0] == queries?.[0]?.group)?.[0]?.[1]}
       />
     ) : null;
 
@@ -516,6 +517,7 @@ const EventBasedAlert = ({
                 closeDropDown={() => setGroupByDDVisible(false)}
                 hideText={true}
                 noMargin={true}
+                eventGroup={groupsList?.filter((item) => item?.[0] == queries?.[0]?.group)?.[0]?.[1]}
               />
             </div>
           );
@@ -555,6 +557,7 @@ const EventBasedAlert = ({
                 closeDropDown={() => setGroupByDDVisible(false)}
                 hideText={true}
                 noMargin={true}
+                eventGroup={groupsList?.filter((item) => item?.[0] == queries?.[0]?.group)?.[0]?.[1]}
               />
             </div>
           );
@@ -980,12 +983,16 @@ const EventBasedAlert = ({
       icon: <ExclamationCircleOutlined />,
       content: 'Alerts and webhooks from this event will be paused. You can always turn this back on when needed.',
       onOk() {
+        setLoading(true);
         updateEventAlertStatus(activeProject?.id, item?.id, status).then(() => {
           message.success('Successfully paused/disabled alerts.');
-          setAlertState({ state: 'list', index: 0 });
+          setisAlertEnabled(false);
+          onReset();
           fetchAllAlerts(activeProject.id)
+          setLoading(false);
         }).catch((err) => {
           message.error(err);
+          setLoading(false);
         });
       }
     });
@@ -998,15 +1005,18 @@ const EventBasedAlert = ({
     } else {
       const status = 'active';
       const id = viewAlertDetails?.id;
+      setLoading(true);
       updateEventAlertStatus(activeProject?.id, id, status)
         .then((res) => {
           setisAlertEnabled(true);
           fetchAllAlerts(activeProject.id);
           message.success('Successfully enabled alerts.');
+          setLoading(false);
         })
         .catch((err) => {
           console.log('Oops! something went wrong-->', err);
           message.error('Oops! something went wrong. ' + err?.data?.error);
+          setLoading(false);
         });
     }
   };
@@ -1057,6 +1067,7 @@ const EventBasedAlert = ({
                     onChange={toggleAlertEnabled}
                     checked={isAlertEnabled}
                     size='large'
+                    loading={loading}
                   />
                 </div>
               </Col>

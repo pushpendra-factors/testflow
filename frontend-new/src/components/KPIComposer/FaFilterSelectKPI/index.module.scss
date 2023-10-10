@@ -7,7 +7,6 @@
 
   &__event_selector {
     position: relative;
-    top: 0;
 
     &__btn {
       position: relative;
@@ -17,10 +16,8 @@
       border-radius: 12px;
     }
     &__select {
-      top: 0 !important;
       width: 380px;
-      min-height: 240px;
-      max-height: 480px;
+      height: 400px;
       position: absolute;
     }
   }

@@ -45,6 +45,11 @@ func GetDateOnlyFormatFromTimestampAndTimezone(timestamp int64, timezone TimeZon
 	return time.Unix(timestamp, 0).In(in).Format(DATETIME_FORMAT_YYYYMMDD)
 }
 
+func GetDBDateFormatFromTimestampAndTimezone(timestamp int64, timezone TimeZoneString) string {
+	in := GetTimeLocationFor(timezone)
+	return time.Unix(timestamp, 0).In(in).Format(DATETIME_FORMAT_DB)
+}
+
 // GetDateFormatFromTimestampAndTimezone Returns date in "02 Jan 2006" format for a given timestamp and timezone
 func GetDateFromTimestampAndTimezone(timestamp int64, timezone TimeZoneString) string {
 	in := GetTimeLocationFor(timezone)
@@ -558,6 +563,50 @@ type CustomPreset struct {
 	TZ    TimeZoneString
 }
 
+func GetAllDaysSinceStartTime(startTimestamp int64, zoneString TimeZoneString) []CustomPreset {
+	var result []CustomPreset
+
+	// Parse the timezone
+	loc, err := time.LoadLocation(string(zoneString))
+	if err != nil {
+		panic(err) // Handle the error appropriately
+	}
+
+	// Start from the given startTime
+	currentTime := time.Unix(startTimestamp, 0).In(loc)
+	yesterday := time.Now().In(loc).AddDate(0, 0, -1) // Yesterday
+
+	// Loop through each day until yesterday
+	for !currentTime.After(yesterday) {
+		year, month, day := currentTime.Date()
+
+		// Calculate the start and end timestamps for the day
+		startOfDay := time.Date(year, month, day, 0, 0, 0, 0, loc)
+		endOfDay := time.Date(year, month, day, 23, 59, 59, 999999999, loc)
+
+		// Convert to Unix timestamps
+		startUnix := startOfDay.Unix()
+		endUnix := endOfDay.Unix()
+
+		// Create a CustomPreset for the current day
+		preset := CustomPreset{
+			From:  startUnix,
+			To:    endUnix,
+			Year:  year,
+			Month: month.String(),
+			Day:   day,
+			TZ:    zoneString,
+		}
+
+		// Append the CustomPreset to the result
+		result = append(result, preset)
+
+		// Move to the next day
+		currentTime = currentTime.Add(24 * time.Hour)
+	}
+	return result
+}
+
 func GetAllMonthFromTo(startTime int64, zoneString TimeZoneString) []CustomPreset {
 
 	currentTime := time.Now().Unix()
@@ -652,6 +701,48 @@ func GetAllDaysAsTimestamp(fromUnix int64, toUnix int64, timezone string) ([]tim
 	}
 
 	return rTimestamps, rTimezoneOffsets
+}
+
+func GetAllDaysBetweenFromTo(timezoneString TimeZoneString, effectiveFrom, effectiveTo int64) (bool, []TimestampRange) {
+	var ranges []TimestampRange
+
+	// Parse the timezone
+	loc, err := time.LoadLocation(string(timezoneString))
+	if err != nil {
+		fmt.Println(err)
+		return false, ranges
+	}
+
+	// Start from the effectiveFrom date
+	currentTime := time.Unix(effectiveFrom, 0).In(loc)
+	endTime := time.Unix(effectiveTo, 0).In(loc)
+
+	// Loop through each day until the effectiveTo date
+	for !currentTime.After(endTime) {
+		year, month, day := currentTime.Date()
+
+		// Calculate the start and end timestamps for the day
+		startOfDay := time.Date(year, month, day, 0, 0, 0, 0, loc)
+		endOfDay := time.Date(year, month, day, 23, 59, 59, 999999999, loc)
+
+		// Convert to Unix timestamps
+		startUnix := startOfDay.Unix()
+		endUnix := endOfDay.Unix()
+
+		// Create a TimestampRange for the current day
+		rangeOfDay := TimestampRange{
+			Start: startUnix,
+			End:   endUnix,
+		}
+
+		// Append the TimestampRange to the result
+		ranges = append(ranges, rangeOfDay)
+
+		// Move to the next day
+		currentTime = currentTime.Add(24 * time.Hour)
+	}
+
+	return true, ranges
 }
 
 // SanitizeWeekStart Gives the start of the week for any timestamp in the week for given timeZone

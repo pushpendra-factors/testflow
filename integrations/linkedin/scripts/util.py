@@ -103,13 +103,13 @@ class Util:
         return timestamps
 
     @staticmethod    
-    def get_timestamp_range(doc_type, sync_info_with_type, end_timestamp):
+    def get_timestamp_range(doc_type, sync_info_with_type, input_end_timestamp):
         timestamps =[]
         date_start = ''
         date_end = ''
 
-        if end_timestamp != None:
-            date_end = datetime.strptime(str(end_timestamp), '%Y%m%d').date()
+        if input_end_timestamp != None:
+            date_end = datetime.strptime(str(input_end_timestamp), '%Y%m%d').date()
         else:
             date_end = (datetime.now() - timedelta(days=1)).date()
         
@@ -127,41 +127,11 @@ class Util:
             return timestamps[-MAX_LOOKBACK:], 'Range exceeding'
         return timestamps, ''
     
-    # in case where from and to timestamps are given, 
-    # we only consider from and to timestamps, for the combined range
-    # we don't take backfill timestamp into consideration
     @staticmethod
-    def get_timestamp_ranges_for_company_insights(doc_type, sync_info_with_type, 
-                                                end_timestamp, is_backfill_enable_for_project):
-        timerange_for_insights, timerange_for_backfill = [], []
-        checkBackfill = (end_timestamp == None and 
-                        sync_info_with_type['last_backfill_timestamp'] != 0 
-                        and is_backfill_enable_for_project)
-
-        
-        timerange_for_insights, errMsg = Util.get_timestamp_range(doc_type, sync_info_with_type, 
-                                                end_timestamp)
-        
-        if checkBackfill:
-            timerange_for_backfill = Util.get_timestamp_range_to_be_backfilled(
-                                        sync_info_with_type['last_backfill_timestamp'])
-        
-        combined_range = list(set(timerange_for_insights).union(set(timerange_for_backfill)))
-        combined_range.sort()
-        timestamp_8_days_ago = (datetime.now() - timedelta(days=BACKFILL_DAY)).strftime("%Y%m%d")
-        computed_timerange_insights, computed_timerange_backfill = [], []
-        for timestamp in combined_range:
-            if timestamp <= timestamp_8_days_ago:
-                computed_timerange_backfill.append(timestamp)
-            else:
-                computed_timerange_insights.append(timestamp)
-        
-        return computed_timerange_insights, computed_timerange_backfill, errMsg
-
-    @staticmethod
-    def get_timestamp_range_to_be_backfilled(last_backfill_timestamp):
-        backfill_end_date = (datetime.now() - timedelta(days=BACKFILL_DAY)).date()
-        backfill_start_date = (datetime.strptime(str(last_backfill_timestamp), '%Y%m%d')).date()
+    def get_timestamp_chunks_to_be_backfilled(backfill_start_timestamp):
+        sunday_datetime = Util.get_datetime_for_nearest_sunday_before_given_buffer(BACKFILL_END_DAY)
+        backfill_end_date = sunday_datetime.date()
+        backfill_start_date = (datetime.strptime(str(backfill_start_timestamp), '%Y%m%d')).date()
 
         backfill_timestamps = []
         num_of_days = (backfill_end_date-backfill_start_date).days + 1
@@ -172,10 +142,22 @@ class Util:
             backfill_timestamps.append(date_required)
             backfill_start_date = backfill_start_date + timedelta(days=1)
 
-        if len(backfill_timestamps) > 0:
-            return backfill_timestamps
-        else:
-            return []
+        return Util.get_n_days_chunks_of_timestamps(backfill_timestamps, 7)
+
+    def get_datetime_for_nearest_sunday_before_given_buffer(buffer):
+        datetime_at_buffer = datetime.now() - timedelta(days=buffer)
+        weekday_at_buffer = datetime_at_buffer.isoweekday()
+        sunday_datetime = datetime_at_buffer - timedelta(days=(weekday_at_buffer%7))
+        return sunday_datetime
+    
+    def get_n_days_chunks_of_timestamps(timestamps, n):
+        chunked_list = []
+        rem = len(timestamps)%n
+        if rem != 0:
+            chunked_list = [timestamps[0:rem]]
+            timestamps = timestamps[rem:]
+        chunked_list.extend([timestamps[i * n:(i + 1) * n] for i in range((len(timestamps) + n - 1) // n )])
+        return chunked_list
 
     def separate_valid_and_invalid_tokens(linkedin_settings):
         valid_linkedin_settings = []
@@ -222,24 +204,46 @@ class Util:
         
         return settings_with_updated_tokens, failures
 
-    def get_batch_of_ids(records):
+    def build_map_of_campaign_group_info(campaign_group_info):
+        campaign_group_info_map = {}
+        for campaign_group in campaign_group_info:
+            campaign_group_info_map[campaign_group['id']] = campaign_group
+        return campaign_group_info_map
+    
+    def merge_2_dictionaries(dict1, dict2):
+        final_dict = {}
+        for key, value in dict1.items():
+            if key not in final_dict:
+                final_dict[key] = value
+        
+        for key, value in dict2.items():
+            if key not in final_dict:
+                final_dict[key] = value
+        
+        return final_dict
+
+    def get_batch_of_ids(records, map_of_id_to_company_data):
         mapIDs = {}
         batch_of_ids = []
         len_of_batch = ORG_BATCH_SIZE
         for data in records:
             id = data['pivotValues'][0].split(':')[3]
-            mapIDs[id]= True
+            if id not in map_of_id_to_company_data:
+                mapIDs[id]= True
 
         ids_list = list(mapIDs.keys())
         batch_of_ids = [",".join(ids_list[i:i + len_of_batch]) for i in range(0, len(ids_list), len_of_batch)]
         return batch_of_ids
     
-    @staticmethod    
-    def org_lookup(access_token, ids):
-        url = ORG_LOOKUP_URL.format(ids)
-        headers = {'Authorization': 'Bearer ' + access_token, 
-                    'X-Restli-Protocol-Version': PROTOCOL_VERSION, 'LinkedIn-Version': LINKEDIN_VERSION}
-        return Util.request_with_retries_and_sleep(url, headers)
+    def get_non_present_ids(records, map_of_id_to_company_data):
+        mapIDs = {}
+        for data in records:
+            id = data['pivotValues'][0].split(':')[3]
+            if id not in map_of_id_to_company_data:
+                mapIDs[id]= True
+
+        non_present_ids = list(mapIDs.keys())
+        return non_present_ids
 
     def get_failed_ids(ids, map_id_to_org_data):
         ids_list = ids.split(",")
@@ -263,3 +267,37 @@ class Util:
 
         return response, count
     
+    def build_url_and_headers(pivot, doc_type, linkedin_setting, start_timestamp, 
+                                   request_rows_start_count, campaign_group_id=None, end_timestamp=None):
+        
+        start_year, start_month, start_day = Util.get_split_date_from_timestamp(start_timestamp)
+        end_year, end_month, end_day = Util.get_split_date_from_timestamp(start_timestamp)
+
+        url = INSIGHTS_REQUEST_URL_FORMAT.format(
+                    pivot, start_day, start_month, 
+                    start_year, end_day, end_month, end_year,
+                    REQUESTED_FIELDS, linkedin_setting.ad_account,
+                    request_rows_start_count, REQUESTED_ROWS_LIMIT)
+        if doc_type == MEMBER_COMPANY_INSIGHTS:
+            end_year, end_month, end_day = Util.get_split_date_from_timestamp(end_timestamp)
+            url = COMPANY_CAMPAIGN_GROUP_INSIGHTS_REQUEST_URL_FORMAT.format(
+                pivot, start_day, start_month, 
+                start_year, end_day, end_month, end_year,
+                REQUESTED_FIELDS, linkedin_setting.ad_account, campaign_group_id,
+                request_rows_start_count, REQUESTED_ROWS_LIMIT)
+            
+        headers = {'Authorization': 'Bearer ' + linkedin_setting.access_token,
+                    'X-Restli-Protocol-Version': PROTOCOL_VERSION, 'LinkedIn-Version': LINKEDIN_VERSION}
+        return url, headers
+    
+    def get_timestamp_range_and_length_for_company_data(project_id, 
+                                            sync_info_with_type, input_end_timestamp):
+        timestamp_range, errMsg = Util.get_timestamp_range(
+                                            MEMBER_COMPANY_INSIGHTS,
+                                            sync_info_with_type, input_end_timestamp)
+        if errMsg != '':
+            log.warning("Range exceeded for project_id {} for doc_type {}".format(
+                        project_id, MEMBER_COMPANY_INSIGHTS))
+        
+        len_timerange = len(timestamp_range)
+        return timestamp_range, len_timerange

@@ -24,6 +24,9 @@ func main() {
 	memSQLCertificate := flag.String("memsql_cert", "", "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
 
+	memSQLDBMaxOpenConnections := flag.Int("memsql_max_open_connections", 50, "Max no.of open connections allowed on connection pool of memsql")
+	memSQLDBMaxIdleConnections := flag.Int("memsql_max_idle_connections", 50, "Max no.of idle connections allowed on connection pool of memsql")
+
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
@@ -84,6 +87,7 @@ func main() {
 	useHashIDForCRMGroupUserByProject := flag.String("use_hash_id_for_crm_group_user_by_project_id", "", "")
 	moveHubspotCompanyAssocationFlowToContactByPojectID := flag.String("move_hubspot_company_association_flow_to_contact_by_project_id", "", "")
 	enrichPullLimit := flag.Int("enrich_pull_limit", 0, "Total records to be pulled in single db call")
+	userPropertyUpdateOptProjects := flag.String("user_property_update_opt_projects", "", "")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -110,6 +114,10 @@ func main() {
 			Password:    *memSQLPass,
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
+
+			MaxOpenConnections:     *memSQLDBMaxOpenConnections,
+			MaxIdleConnections:     *memSQLDBMaxIdleConnections,
+			UseExactConnFromConfig: true,
 		},
 		PrimaryDatastore:                              *primaryDatastore,
 		RedisHost:                                     *redisHost,
@@ -144,6 +152,7 @@ func main() {
 		RemoveDisabledEventUserPropertiesByProjectID:        *removeDisabledEventUserPropertiesByProjectId,
 		UseHashIDForCRMGroupUserByProject:                   *useHashIDForCRMGroupUserByProject,
 		MoveHubspotCompanyAssocationFlowToContactByPojectID: *moveHubspotCompanyAssocationFlowToContactByPojectID,
+		UserPropertyUpdateOptProjects:                       *userPropertyUpdateOptProjects,
 	}
 
 	C.InitConf(config)

@@ -6,10 +6,11 @@ import styles from './index.module.scss';
 import GroupSelect2 from '../GroupSelect2';
 import FaSelect from 'Components/FaSelect';
 import {
-  PropTextFormat,
-  convertAndAddPropertiesToGroupSelectOptions
+  convertAndAddPropertiesToGroupSelectOptions,
+  PropTextFormat
 } from 'Utils/dataFormatter';
 import getGroupIcon from 'Utils/getGroupIcon';
+import { CustomGroupNames } from 'Components/GlobalFilter/FilterWrapper/utils';
 
 function EventGroupBlock({
   eventGroup,
@@ -26,7 +27,8 @@ function EventGroupBlock({
   groupPropNames,
   setGroupState,
   delGroupState,
-  closeDropDown
+  closeDropDown,
+  groupOpts
 }) {
   const [filterOptions, setFilterOptions] = useState();
 
@@ -42,7 +44,11 @@ function EventGroupBlock({
       'event'
     );
     if (eventGroup) {
-      const groupLabel = `${PropTextFormat(eventGroup)} Properties`;
+      const groupLabel = CustomGroupNames[eventGroup]
+        ? CustomGroupNames[eventGroup]
+        : groupOpts[eventGroup]
+        ? groupOpts[eventGroup]
+        : PropTextFormat(eventGroup);
       const groupValues =
         groupProperties[eventGroup]?.map((op) => {
           return {
@@ -274,7 +280,8 @@ const mapStateToProps = (state) => ({
   eventPropertiesV2: state.coreQuery.eventPropertiesV2,
   userPropNames: state.coreQuery.userPropNames,
   eventPropNames: state.coreQuery.eventPropNames,
-  groupPropNames: state.coreQuery.groupPropNames
+  groupPropNames: state.coreQuery.groupPropNames,
+  groupOpts: state.groups.data
 });
 
 export default connect(mapStateToProps)(EventGroupBlock);

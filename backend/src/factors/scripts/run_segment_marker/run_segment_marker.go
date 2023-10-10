@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -30,8 +31,11 @@ func main() {
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 
 	projectIdFlag := flag.String("project_ids", "",
-		"Optional: Project Id. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
+		"Project Id. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
 
+	useLookbackSegmentMarker := flag.Bool("use_lookback_segment_marker", false, "Whether to compute look_back time to fetch users in last x hours.")
+	lookbackSegmentMarker := flag.Int("lookback_segment_marker", 0, "Optional: Fetch users from last x hours")
+	allowedGoRoutines := flag.Int("allowed_go_routines", 1, "Number of allowed to routines")
 	flag.Parse()
 
 	if *env != "development" &&
@@ -60,8 +64,11 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		PrimaryDatastore: *primaryDatastore,
-		SentryDSN:        *sentryDSN,
+		PrimaryDatastore:         *primaryDatastore,
+		SentryDSN:                *sentryDSN,
+		UseLookbackSegmentMarker: *useLookbackSegmentMarker,
+		LookbackSegmentMarker:    *lookbackSegmentMarker,
+		AllowedGoRoutines:        *allowedGoRoutines,
 	}
 
 	C.InitConf(config)
@@ -73,7 +80,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	db := C.GetServices().Db
+	defer db.Close()
+
+	startTime := time.Now().Unix()
 	isSuccess := RunSegmentMarkerForProjects(projectIdFlag)
+	endTime := time.Now().Unix()
+	timeTaken := endTime - startTime
+	log.Info("Time taken for job to run in sec: ", timeTaken)
 	if !isSuccess {
 		C.PingHealthcheckForFailure(healthcheckPingID, "segment_markup run failed.")
 		return

@@ -64,6 +64,9 @@ jobs:
           elif [[ "$binary" == "device-server" ]]; then
               path="./device_service"
 
+          elif [[ "$binary" == "product-analytics-job" ]]; then
+              path="./product_analytics_gsheet"   
+                           
           else
               path="./backend/src"
           fi
@@ -89,6 +92,9 @@ jobs:
           elif [[ "$binary" == "device-server" ]]; then
               path="./device_service"
 
+          elif [[ "$binary" == "product-analytics-job" ]]; then
+              path="./product_analytics_gsheet"   
+                           
           else
               path="./backend/src"
           fi

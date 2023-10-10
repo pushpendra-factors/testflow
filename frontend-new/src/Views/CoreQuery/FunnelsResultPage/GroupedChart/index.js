@@ -7,6 +7,7 @@ import React, {
   memo,
   useMemo
 } from 'react';
+import cx from 'classnames';
 import { formatData, getVisibleData } from '../utils';
 import FunnelChart from './Chart';
 import FunnelsResultTable from '../FunnelsResultTable';
@@ -156,7 +157,13 @@ const GroupedChartComponent = forwardRef(
       const compareGroupsByName =
         compareGroups != null ? getCompareGroupsByName({ compareGroups }) : {};
       chart = (
-        <div className='grid grid-cols-3 w-full col-gap-2 row-gap-12'>
+        <div
+          className={cx(
+            'grid w-full col-gap-2 row-gap-12',
+            { 'grid-flow-col': visibleProperties.length < 3 },
+            { 'grid-cols-3': visibleProperties.length >= 3 }
+          )}
+        >
           {visibleProperties.map((elem, index) => {
             const compareGroup = compareGroupsByName[elem.name];
             const value = getValueFromPercentString(elem.value);

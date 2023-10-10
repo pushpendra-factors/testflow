@@ -155,11 +155,10 @@ const Alerts = ({
       <Menu className={`${styles.antdActionMenu}`}>
         <Menu.Item
           key='0'
-          onClick={(e) => {
+          onClick={() => {
             setTabNo(item?.type == "kpi_alert" ? "1" : "2")
             setAlertState({ state: 'edit', index: item });
-            setAlertDetails(item);
-            e.stopPropagation();
+            setAlertDetails(item); 
           }}
         >
           <a>Edit alert</a>
@@ -167,8 +166,7 @@ const Alerts = ({
           <Menu.Item
             key='1'
             onClick={(e) => {
-              createDuplicateAlert(item);
-              e.stopPropagation();
+              createDuplicateAlert(item); 
             }}
           >
             <a>Create copy</a>
@@ -176,9 +174,8 @@ const Alerts = ({
         <Menu.Divider />
         <Menu.Item
           key='2'
-          onClick={(e) => {
+          onClick={() => {
             confirmDeleteAlert(item);
-            e.stopPropagation();
           }}
         >
           <a>
@@ -201,11 +198,11 @@ const Alerts = ({
           level={7}
           truncate={true}
           extraClass={`cursor-pointer m-0`}
-          // onClick={() => { 
-          //   setTabNo(item?.type == "kpi_alert" ? "1" : "2")
-          //   setAlertState({ state: 'edit', index: item });
-          //   setAlertDetails(item);
-          // }}
+          onClick={() => { 
+            setTabNo(item?.type == "kpi_alert" ? "1" : "2")
+            setAlertState({ state: 'edit', index: item });
+            setAlertDetails(item);
+          }}
         >
           {item?.alert_name || item?.title}
         </Text>
@@ -264,7 +261,7 @@ const Alerts = ({
       align: 'right',
       width: 75,
       render: (obj) => (
-        <Dropdown overlay={menu(obj)} placement='bottomRight'>
+        <Dropdown trigger={["click"]} overlay={menu(obj)} placement='bottomRight'>
           <Button
             type='text'
             icon={
@@ -327,7 +324,7 @@ const Alerts = ({
     let title = null;
     if (alertState.state === 'list') {
       title = (
-        <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>
+        <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}  id={'fa-at-text--page-title'}>
           Alerts
         </Text>
       );
@@ -406,15 +403,16 @@ const Alerts = ({
             columns={columns}
             dataSource={tableData}
             pagination={false}
-            onRow={(data,id)=>{
-              return {
-                onClick: () => { 
-                  setTabNo(data.actions?.type == "kpi_alert" ? "1" : "2")
-                  setAlertState({ state: 'edit', index: data.actions});
-                  setAlertDetails(data.actions);
-                }
-              }
-            }}
+            // onRow={(data,id)=>{
+            //   return {
+            //     onClick: (e) => { 
+            //       setTabNo(data.actions?.type == "kpi_alert" ? "1" : "2")
+            //       setAlertState({ state: 'edit', index: data.actions});
+            //       setAlertDetails(data.actions);
+            //       e.stopPropagation();
+            //     }
+            //   }
+            // }}
           />
       );
     }

@@ -13,6 +13,10 @@ import { Text } from 'Components/factorsComponents';
 import MomentTz from 'Components/MomentTz';
 import isEqual from 'lodash/isEqual';
 import { PropTextFormat } from 'Utils/dataFormatter';
+import LazyLoad from 'react-lazyload';
+import { Skeleton } from 'antd';
+
+const placeholderIcon = "assets/avatar/company-placeholder.png";
 
 export const getGroupList = (groupOptions) => {
   const groups = Object.entries(groupOptions || {}).map(
@@ -71,10 +75,11 @@ const getTablePropColumn = ({ prop, groupPropNames, listProperties }) => {
 export const getColumns = ({
   accounts,
   source,
-  isEngagementLocked,
+  isScoringLocked,
   displayTableProps,
   groupPropNames,
-  listProperties
+  listProperties,
+  defaultSorterInfo
 }) => {
   const headerClassStr =
     'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold';
@@ -95,33 +100,36 @@ export const getColumns = ({
       render: (item) =>
         (
           <div className='flex items-center'>
+            <LazyLoad 
+              height={20}  
+              once={true} 
+              overflow={true} 
+              placeholder={<Skeleton.Avatar active={true} size={'small'} shape={'circle'} />}
+            >
             <img
               src={`https://logo.uplead.com/${getHost(item.host)}`}
               onError={(e) => {
                 if (
-                  e.target.src !==
-                  'https://s3.amazonaws.com/www.factors.ai/assets/img/buildings.svg'
-                ) {
-                  e.target.src =
-                    'https://s3.amazonaws.com/www.factors.ai/assets/img/buildings.svg';
-                }
-              }}
-              alt=''
-              width='20'
-              height='20'
-            />
+                  e.target.src !== placeholderIcon
+                  ) {
+                    e.target.src = placeholderIcon
+                  }
+                }}
+                alt=''
+                width='24'
+                height='24'
+                loading="lazy"
+                />
+
+            </LazyLoad>
             <span className='ml-2'>{item.name}</span>
           </div>
         ) || '-'
     }
   ];
   // Engagement Column
-  const engagementExists = accounts.data?.find(
-    (item) =>
-      item.engagement &&
-      (item.engagement !== undefined || item.engagement !== '')
-  );
-  if (engagementExists && !isEngagementLocked) {
+
+  if (!isScoringLocked) {
     columns.push({
       title: <div className={headerClassStr}>Engagement</div>,
       width: 150,
@@ -129,10 +137,7 @@ export const getColumns = ({
       key: 'engagement',
       fixed: 'left',
       defaultSortOrder: 'descend',
-      sorter: {
-        compare: (a, b) => sortNumericalColumn(a.score, b.score),
-        multiple: 1
-      },
+      sorter: (a, b) => sortNumericalColumn(a.score, b.score),
       render: (status) =>
         status ? (
           <div
@@ -142,8 +147,9 @@ export const getColumns = ({
             <img
               src={`../../../assets/icons/${EngagementTag[status]?.icon}.svg`}
               alt=''
+              loading="lazy"
             />
-            <Text type='title' level={7} extraClass='m-0'>
+            <Text type='title' level={7} weight={'thin'} extraClass='m-0'>
               {status}
             </Text>
           </div>
@@ -163,12 +169,28 @@ export const getColumns = ({
     key: 'lastActivity',
     width: 200,
     align: 'right',
-    sorter: {
-      compare: (a, b) => sortStringColumn(a.lastActivity, b.lastActivity),
-      multiple: 2
-    },
+    sorter: (a, b) => sortStringColumn(a.lastActivity, b.lastActivity),
     render: (item) => MomentTz(item).fromNow()
   });
+
+  columns.forEach((column) => {
+    if (column.key === defaultSorterInfo?.key) {
+      column.sortOrder = defaultSorterInfo?.order;
+    } else {
+      delete column.sortOrder;
+    }
+  });
+  const hasSorter = columns.find((item) =>
+    ['ascend', 'descend'].includes(item.sortOrder)
+  );
+  if (!hasSorter) {
+    columns.forEach((column) => {
+      if (['engagement', 'lastActivity'].includes(column.key)) {
+        column.defaultSortOrder = 'descend';
+        return;
+      }
+    });
+  }
   return columns;
 };
 
@@ -196,8 +218,10 @@ export const checkFiltersEquality = ({
     isEventPropEqual === true;
   const saveButtonDisabled =
     isActiveSegment === true
-      ? filtersList.length === 0 || areFiltersDirty === false
-      : applyButtonDisabled === false || filtersList.length === 0;
+      ? (filtersList.length === 0 && eventsList.length === 0) ||
+        areFiltersDirty === false
+      : applyButtonDisabled === false ||
+        (filtersList.length === 0 && eventsList.length === 0);
   return { saveButtonDisabled, applyButtonDisabled };
 };
 
@@ -211,11 +235,12 @@ export const computeFilterProperties = ({
   const props = {};
   if (profileType === 'account') {
     if (source === 'All') {
+      props['$domains'] = groupProperties['$domains'];
       Object.keys(availableGroups).forEach((group) => {
         props[group] = groupProperties[group];
       });
     } else props[source] = groupProperties[source];
-    props.user = userProperties;
+    // props.user = userProperties;
   } else if (profileType === 'user') {
     props.user = userProperties;
   }

@@ -18,10 +18,9 @@
       border-radius: 12px;
     }
     &__select {
-      top: 0 !important;
+      // top: - !important;
       width: 380px;
-      min-height: 240px;
-      max-height: 480px;
+      height: 400px;
       position: absolute;
     }
   }

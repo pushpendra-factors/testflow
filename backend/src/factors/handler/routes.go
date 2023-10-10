@@ -117,6 +117,12 @@ func InitAppRoutes(r *gin.Engine) {
 	shareRouteGroup.POST("/:project_id/profiles/query", responseWrapper(ProfilesQueryHandler))
 	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/query", responseWrapper(V1.ExecuteKPIQueryHandler))
 
+	// Predefined dashboards and queries
+	// shareRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/predefined_dashboards", )
+	shareRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/predefined_dashboards/:internal_id/config", responseWrapper(V1.GetPredefinedDashboardConfigsHandler))
+	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/predefined_dashboards/:internal_id/filter_values", responseWrapper(V1.GetPredefinedDashboardFilterValues))
+	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/predefined_dashboards/:internal_id/query", responseWrapper(V1.ExecutePredefinedQueryHandler))
+
 	//Six Signal Report
 	shareSixSignalRouteGroup := r.Group(routePrefix + ROUTE_PROJECTS_ROOT)
 	shareSixSignalRouteGroup.Use(mid.ValidateAccessToSharedEntity(M.ShareableURLEntityTypeSixSignal))
@@ -304,7 +310,6 @@ func InitAppRoutes(r *gin.Engine) {
 	//acc scoring
 	authRouteGroup.PUT("/:project_id/v1/accscore/weights", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_SCORING}), responseWrapper(V1.UpdateAccScoreWeights))
 	authRouteGroup.GET("/:project_id/v1/accscore/score/user", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_SCORING}), responseWrapper(V1.GetUserScore))
-	authRouteGroup.GET("/:project_id/v1/accscore/score/user/all", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_SCORING}), responseWrapper(V1.GetAllUsersScores))
 	authRouteGroup.GET("/:project_id/v1/accscore/score/account", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_SCORING}), responseWrapper(V1.GetAccountScores))
 	authRouteGroup.GET("/:project_id/v1/accscore/score/paccount/", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_SCORING}), responseWrapper(V1.GetPerAccountScore))
 
@@ -361,6 +366,8 @@ func InitAppRoutes(r *gin.Engine) {
 	// project analytics
 	authRouteGroup.GET("/:project_id/v1/dataobservability/metrics", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.GetAnalyticsMetricsFromStorage))
 	authRouteGroup.GET("/:project_id/v1/dataobservability/alerts", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.GetAnalyticsAlertsFromStorage))
+	authRouteGroup.GET("/:project_id/crm_status/:crm", mid.SetLoggedInAgentInternalOnly(), GetCRMStatusByProjectIdHandler)
+
 	// weekly insights, explain
 	authRouteGroup.PUT("/:project_id/v1/weeklyinsights", mid.SetLoggedInAgentInternalOnly(), UpdateWeeklyInsightsHandler)
 	authRouteGroup.PUT("/:project_id/v1/explain", mid.SetLoggedInAgentInternalOnly(), UpdateExplainHandler)
@@ -390,11 +397,10 @@ func InitAppRoutes(r *gin.Engine) {
 	//six signal
 	authRouteGroup.POST("/:project_id/sixsignal/email", responseWrapper(SendSixSignalReportViaEmailHandler))
 
-	// chargebee
-	authRouteGroup.GET("/:project_id/chargebee/plans", responseWrapper(v1.GetPlansAndAddonsHandler))
-	authRouteGroup.GET("/:project_id/chargebee/pricing", responseWrapper(v1.GetPricingForPlansAndAddonsHandler))
-	authRouteGroup.POST("/:project_id/chargebee/upgrade", responseWrapper(v1.UpgradePlanHandler))
-	authRouteGroup.GET("/:project_id/chargebee/subscription", responseWrapper(v1.GetSubscriptionDetailsHander))
+	// billing 
+	authRouteGroup.GET("/:project_id/billing/pricing", V1.GetPricingForPlansAndAddonsHandler)
+	authRouteGroup.POST("/:project_id/billing/upgrade", V1.UpgradePlanHandler)
+	authRouteGroup.GET("/:project_id/billing/subscription", V1.GetSubscriptionDetailsHander)
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {
@@ -407,23 +413,19 @@ func InitSDKServiceRoutes(r *gin.Engine) {
 
 	r.GET("/", SDKStatusHandler) // Default handler for probes.
 	r.GET(ROUTE_SDK_ROOT+"/service/status", SDKStatusHandler)
-	r.POST(ROUTE_SDK_ROOT+"/service/error", SDKErrorHandler)
 
 	// Robots.txt added to disallow crawling.
 	r.GET("/robots.txt", func(c *gin.Context) {
 		c.Data(http.StatusOK, "text/plain", []byte("User-agent: *\nDisallow: *"))
 	})
 
-	// Todo(Dinesh): Check integrity of token using encrytion/decryption
-	// with secret, on middleware, to avoid spamming queue.
-
-	// Getting project_id is moved to sdk request handler to
-	// support queue workers also.
-	// sdkRouteGroup.Use(mid.SetScopeProjectIdByToken())
+	r.POST(ROUTE_SDK_ROOT+"/service/error",
+		mid.DecodeSDKRequestBody(), SDKErrorHandler)
 
 	sdkRouteGroup := r.Group(ROUTE_SDK_ROOT)
 	sdkRouteGroup.Use(mid.SetScopeProjectToken())
 	sdkRouteGroup.Use(mid.IsBlockedIPByProject())
+	sdkRouteGroup.Use(mid.DecodeSDKRequestBody())
 
 	// DEPRECATED: Kept for backward compatibility.
 	// Used on only on old npm installations. JS_SDK uses /get_info.
@@ -596,6 +598,9 @@ func InitDataServiceRoutes(r *gin.Engine) {
 
 	dataServiceRouteGroup.POST("/linkedin/documents/add_multiple", mid.FeatureMiddleware([]string{M.DS_FACEBOOK}),
 		IH.DataServiceLinkedinAddMultipleDocumentsHandler)
+
+	dataServiceRouteGroup.GET("/linkedin/documents/campaign_group_info", mid.FeatureMiddleware([]string{M.DS_LINKEDIN}),
+		IH.DataServiceLinkedinGetCampaignGroupInfoHandler)
 
 	dataServiceRouteGroup.DELETE("/linkedin/documents",
 		mid.FeatureMiddleware([]string{M.DS_LINKEDIN}), IH.DataServiceLinkedinDeleteDocumentsHandler)
@@ -797,6 +802,7 @@ func ConvertDashboard(data M.Dashboard) M.DashboardString {
 		Settings:      data.Settings,
 		Class:         data.Class,
 		UnitsPosition: data.UnitsPosition,
+		InternalID:    data.InternalID,
 		IsDeleted:     data.IsDeleted,
 		CreatedAt:     data.CreatedAt,
 		UpdatedAt:     data.UpdatedAt,

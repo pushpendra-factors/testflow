@@ -1,7 +1,7 @@
 package model
 
 import (
-	"math"
+	U "factors/util"
 	"strconv"
 	"time"
 
@@ -11,6 +11,9 @@ import (
 const DEFAULT_EVENT string = "all_events"
 const LAST_EVENT string = "LAST_EVENT"
 const NUM_TREND_DAYS int = 30
+
+var BUCKETRANGES []float64 = []float64{100, 90, 70, 30, 0}
+var BUCKETNAMES []string = []string{"Hot", "warm", "cold", "ice"}
 
 type AccScoreResult struct {
 	ProjectId int64                  `json:"projectid"`
@@ -151,6 +154,25 @@ type DbUpdateAccScoring struct {
 	IsGroup        bool        `json:"ig"`
 }
 
+type Bucket struct {
+	Name string  `json:"nm"`
+	High float64 `json:"high"`
+	Low  float64 `json:"low"`
+}
+
+type BucketRanges struct {
+	Date   string   `json:"date"`
+	Ranges []Bucket `json:"bck"`
+}
+
+type AccountScoreRanges struct {
+	ProjectID int64           `gorm:"column:project_id; primary_key:true" json:"project_id"`
+	Date      string          `gorm:"column:date" json:"date"`
+	Buckets   *postgres.Jsonb `gorm:"column:bucket" json:"bucket"`
+	CreatedAt time.Time       `gorm:"column:created_at; autoCreateTime" json:"created_at"`
+	UpdatedAt time.Time       `gorm:"column:updated_at; autoUpdateTime" json:"updated_at"`
+}
+
 func GetDateFromString(ts string) int64 {
 	year := ts[0:4]
 	month := ts[4:6]
@@ -190,18 +212,9 @@ func GetDefaultAccScoringWeights() AccWeights {
 	return weights
 }
 
-func ComputeDayDifference(ts1 int64, ts2 int64) int {
-
-	t1 := time.Unix(ts1, 0)
-	t2 := time.Unix(ts2, 0)
-	daydiff := t2.Sub(t1).Seconds() / float64(24*60*60)
-	return int(math.Abs(daydiff))
-
-}
-
 func ComputeDecayValue(ts string, SaleWindow int64) float64 {
 	currentTS := time.Now().Unix()
-	EventTs := GetDateFromString(ts)
+	EventTs := U.GetDateFromString(ts)
 	decay := ComputeDecayValueGivenStartEndTS(currentTS, EventTs, SaleWindow)
 
 	return decay
@@ -210,7 +223,7 @@ func ComputeDecayValue(ts string, SaleWindow int64) float64 {
 func ComputeDecayValueGivenStartEndTS(start int64, end int64, SaleWindow int64) float64 {
 	var decay float64
 	// get difference in weeks
-	dayDiff := ComputeDayDifference(start, end)
+	dayDiff := U.ComputeDayDifference(start, end)
 	if int64(dayDiff) > SaleWindow {
 		return 0
 	}

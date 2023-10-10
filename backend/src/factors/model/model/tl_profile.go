@@ -3,6 +3,7 @@ package model
 import (
 	"encoding/base64"
 	U "factors/util"
+	"regexp"
 	"strings"
 	"time"
 
@@ -66,7 +67,6 @@ type AccountDetails struct {
 	LeftPaneProps   map[string]interface{} `json:"left_pane_props"`
 	Milestones      map[string]interface{} `json:"milestones"`
 	AccountTimeline []UserTimeline         `json:"account_timeline"`
-	Overview        Overview               `json:"overview"`
 }
 
 type Overview struct {
@@ -114,6 +114,8 @@ const (
 )
 const GROUP_ACTIVITY_USERNAME = "group_user"
 const FILTER_TYPE_USERS = "users"
+const USER_PROFILES = "user_profiles"
+const ACCOUNT_PROFILES = "account_profiles"
 
 // Source number to source name map
 var SourceGroupUser = map[int]string{
@@ -257,4 +259,15 @@ func ConvertDomainIdToHostName(domainID string) (string, error) {
 
 	hostName := resultArray[1]
 	return hostName, nil
+}
+
+func GetDomainFromURL(url string) string {
+	re := regexp.MustCompile(`^(?:https?://)?(?:www\.)?([^:/\n?]+)`)
+	match := re.FindStringSubmatch(url)
+
+	if len(match) > 1 {
+		return match[1]
+	} else {
+		return url
+	}
 }

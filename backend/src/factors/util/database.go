@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"reflect"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -367,4 +368,66 @@ func LogComputeTimeWithQueryRequestID(startTime time.Time, reqID string, logFiel
 	timeTaken := time.Now().Sub(startTime).Seconds()
 	log.WithFields(*logFields).WithField("req_id", reqID).
 		WithField("time_in_secs", timeTaken).Info("Computations on query results completed.")
+}
+
+func isValidType(value interface{}) bool {
+	switch value.(type) {
+	case int, uint, int8, uint8, int16, uint16, int32, uint32, int64, uint64, float32, float64, string, bool:
+		return true
+	default:
+		return false
+	}
+}
+
+func DiffPostgresJsonb(projectID int64, oldPostgresJsonb,
+	newPostgresJsonb *postgres.Jsonb, caller string) *map[string]interface{} {
+
+	logCtx := log.WithField("project_id", projectID).WithField("caller", caller)
+
+	oldJMap, err1 := DecodePostgresJsonb(oldPostgresJsonb)
+	newJMap, err2 := DecodePostgresJsonb(newPostgresJsonb)
+	if err1 != nil || err2 != nil {
+		logCtx.WithField("error1", err1).
+			WithField("error2", err2).
+			WithField("old_json", oldPostgresJsonb).
+			WithField("new_json", newPostgresJsonb).
+			Error("Failed to decode json. Retruning new json as diff.")
+		return nil
+	}
+
+	diffMap := make(map[string]interface{}, 0)
+	for k, v := range *oldJMap {
+		// Old keys with new values.
+		newV, exists := (*newJMap)[k]
+		if exists && isValidType(newV) && isValidType(v) {
+			if v != newV {
+				diffMap[k] = newV
+			}
+		}
+	}
+
+	// New keys.
+	for k, v := range *newJMap {
+		if _, exists := (*oldJMap)[k]; !exists && isValidType(v) {
+			diffMap[k] = v
+		}
+	}
+
+	// Whitelisted property of type map.
+	vNew, newExists := (*newJMap)[UP_META_OBJECT_IDENTIFIER_KEY]
+	vOld, oldExists := (*oldJMap)[UP_META_OBJECT_IDENTIFIER_KEY]
+	addProperty := (!oldExists && newExists) || (oldExists && newExists && !reflect.DeepEqual(vNew, vOld))
+	if addProperty {
+		obj, err := json.Marshal(vNew)
+		if err == nil {
+			diffMap[UP_META_OBJECT_IDENTIFIER_KEY] = string(obj)
+		}
+	}
+
+	logCtx.WithField("old_len", len(*oldJMap)).
+		WithField("new_len", len(*newJMap)).
+		WithField("delta_len", len(diffMap)).
+		Info("Diff of properties on overwrite.")
+
+	return &diffMap
 }

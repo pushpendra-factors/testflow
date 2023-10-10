@@ -212,6 +212,8 @@ func main() {
 	chargebeeApiKey := flag.String("chargebee_api_key", "dummy", "Chargebee api key")
 	chargebeeSiteName := flag.String("chargebee_site_name", "", "Chargebee site name")
 
+	companyPropsV1EnabledProjectIDs := flag.String("company_props_v1_enabled_projectIds", "", "To enable clearbit enrichment in new properties")
+
 	flag.Parse()
 
 	defaultAppName := "app_server"
@@ -371,6 +373,7 @@ func main() {
 		EnableNewAllAccountsByProjectID:                *enableNewAllAccountsByProjectID,
 		ChargebeeApiKey:                                *chargebeeApiKey,
 		ChargebeeSiteName:                              *chargebeeSiteName,
+		CompanyPropsV1EnabledProjectIDs:                *companyPropsV1EnabledProjectIDs,
 	}
 	C.InitConf(config)
 

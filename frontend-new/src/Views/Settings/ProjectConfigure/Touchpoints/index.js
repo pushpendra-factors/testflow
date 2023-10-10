@@ -312,14 +312,14 @@ const Touchpoints = ({
     let title = null;
     if (touchPointState.state === 'list') {
       title = (
-        <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>
+        <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} id={'fa-at-text--page-title'}>
           Touchpoints
         </Text>
       );
     }
     if (touchPointState.state === 'add') {
       title = (
-        <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>
+        <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} id={'fa-at-text--page-title'}>
           Add new Touchpoint
         </Text>
       );
@@ -327,7 +327,7 @@ const Touchpoints = ({
 
     if (touchPointState.state === 'edit') {
       title = (
-        <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>
+        <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} id={'fa-at-text--page-title'}>
           Edit Touchpoint
         </Text>
       );

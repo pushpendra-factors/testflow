@@ -51,7 +51,7 @@ func GetAllAlertsInOneHandler(c *gin.Context) (interface{}, int, string, string,
 		return alerts[p].CreatedAt.After(alerts[q].CreatedAt)
 	})
 
-	return alerts, http.StatusFound, "", "", false
+	return alerts, http.StatusOK, "", "", false
 }
 
 func GetEventTriggerAlertsByProjectHandler(c *gin.Context) (interface{}, int, string, string, bool) {
@@ -241,14 +241,14 @@ func EditEventTriggerAlertHandler(c *gin.Context) (interface{}, int, string, str
 
 	eta, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(userID, id, projectID, &alert, slackAssociatedUserId, teamAssociatedUserId, isPausedAlert)
 	if errMsg != "" || errCode != http.StatusCreated || eta == nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Edit TriggerAlert failed while updating db"})
-		return nil, http.StatusInternalServerError, PROCESSING_FAILED, ErrorMessages[PROCESSING_FAILED], true
+		log.WithFields(log.Fields{"project_id": projectID}).Error(errMsg)
+		return nil, http.StatusInternalServerError, PROCESSING_FAILED, errMsg, true
 	}
 
 	errCode, errMsg = store.GetStore().DeleteEventTriggerAlert(projectID, id)
 	if errCode != http.StatusAccepted || errMsg != "" {
-		log.WithFields(log.Fields{"project_id": projectID}).Error("Cannot find any alert to update")
-		return nil, http.StatusBadRequest, "Cannot find any alert to update", "", true
+		log.WithFields(log.Fields{"project_id": projectID}).Error(errMsg)
+		return nil, http.StatusBadRequest, "Cannot find any alert to update", errMsg, true
 	}
 
 	return alert, http.StatusAccepted, "", "", false

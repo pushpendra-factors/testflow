@@ -111,8 +111,8 @@ const getURLWithQueryParams = (projectId, profileType, agentId) => {
   return url;
 };
 
-export const fetchProfileUsers = (projectId, reqBody, agentId) => {
-  let url = getURLWithQueryParams(projectId, 'users', agentId);
+export const fetchProfileUsers = (projectId, reqBody) => {
+  let url = `${host}projects/${projectId}/v1/profiles/users`;
   return post(null, url, reqBody);
 };
 

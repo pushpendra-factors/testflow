@@ -608,7 +608,9 @@ function CoreQuery({
         setAppliedQueries(
           queriesA.map((q) => {
             const category = KPI_config.find(
-              (elem) => elem.category === q.category
+              (elem) =>
+                elem.category === q.category &&
+                q.group === elem.display_category
             );
             const metric = category?.metrics.find((m) => m.name === q.metric);
             return {
@@ -1205,8 +1207,6 @@ function CoreQuery({
       queryOptions.date_range,
       querySaved,
       runQuery,
-      camp_dateRange,
-      dispatch,
       queryType,
       resetComparisonData,
       runKPIQuery

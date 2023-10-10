@@ -62,8 +62,9 @@ const (
 	ProfileCategory       = "profiles"
 	CustomChannelCategory = "custom_channels"
 
-	EventEntity = "event"
-	UserEntity  = "user"
+	EventEntity   = "event"
+	UserEntity    = "user"
+	SessionEntity = "session"
 )
 
 var KpiCategories = []string{EventCategory, ChannelCategory, ProfileCategory}
@@ -113,9 +114,13 @@ var MapOfKPIPropertyNameToData = map[string]map[string]map[string]string{
 		EventEntity: {"name": U.UP_CITY, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.UP_CITY], "data_type": U.PropertyTypeCategorical, "entity": UserEntity}},
 }
 
-func MapOfKPIPropertyNameToDataWithCategory(property string, entity string) map[string]string {
+func MapOfKPIPropertyNameToDataWithCategory(property string, entity string, isSession bool) map[string]string {
 	properties := MapOfKPIPropertyNameToData[property][entity]
-	properties["category"] = CategorizeProperty(property, entity)
+	if isSession == true {
+		properties["category"] = CategorizeProperty(property, SessionEntity)
+	} else {
+		properties["category"] = CategorizeProperty(property, entity)
+	}
 	return properties
 }
 

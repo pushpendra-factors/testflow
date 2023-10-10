@@ -189,6 +189,11 @@ type Model interface {
 	GetFailedUnitsByProject(cacheReports []model.CachingUnitReport) map[int64][]model.FailedDashboardUnitReport
 	GetTimedOutUnitsByProject(cacheReports []model.CachingUnitReport) map[int64][]model.FailedDashboardUnitReport
 
+	// Predefined dashboards
+	ExecuteQueryGroupForPredefinedWebsiteAggregation(projectID int64, request model.PredefWebsiteAggregationQueryGroup) ([]model.QueryResult, int, string)
+
+	CreateWebsiteAggregation(websiteAggregation model.WebsiteAggregation) (model.WebsiteAggregation, string, int)
+
 	// all dashboard runs for am unit
 	RunCustomQueryRangeCaching(dashboardUnit model.DashboardUnit, timezoneString U.TimeZoneString,
 		logCtx *log.Entry, queryClass string, reportCollector *sync.Map, enableFilterOpt bool)
@@ -336,6 +341,8 @@ type Model interface {
 	GetEventsByEventNameIDANDTimeRange(projectID int64, eventNameID string,
 		startTimestamp int64, endTimestamp int64) ([]model.Event, int)
 	PullEventIdsWithEventNameId(projectId int64, startTimestamp int64, endTimestamp int64, eventNameID string) ([]string, map[string]model.EventIdToProperties, error)
+	GetLinkedinEventFieldsBasedOnTimestamp(projectID int64, timestamp int64) (map[int64]map[string]map[string]bool,
+		map[int64]map[string]map[string]bool, map[int64]map[string]bool, map[int64]map[string]bool, int)
 
 	// clickable_elements
 	UpsertCountAndCheckEnabledClickableElement(projectID int64, payload *model.CaptureClickPayload) (isEnabled bool, status int, err error)
@@ -362,7 +369,10 @@ type Model interface {
 	GetSQLQueryAndParametersForLinkedinQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string, fetchSource bool,
 		limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string, int)
 	GetDomainData(projectID string) ([]model.DomainDataResponse, int)
+	GetCompanyDataFromLinkedin(projectID string) ([]model.DomainDataResponse, string, int)
+
 	UpdateLinkedinGroupUserCreationDetails(domainData model.DomainDataResponse) error
+	GetCampaignGroupInfoForGivenTimerange(campaignGroupInfoRequestPayload model.LinkedinCampaignGroupInfoRequestPayload) ([]model.LinkedinDocument, int)
 	//bingads document
 	GetBingadsFilterValuesSQLAndParams(projectID int64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int)
 
@@ -394,7 +404,7 @@ type Model interface {
 	GetHubspotSyncInfo() (*model.HubspotSyncInfo, int)
 	GetHubspotFirstSyncProjectsInfo() (*model.HubspotSyncInfo, int)
 	UpdateHubspotProjectSettingsBySyncStatus(success []model.HubspotProjectSyncStatus, failure []model.HubspotProjectSyncStatus, syncAll bool) int
-	GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(projectID int64, docTypes []int) (int64, int)
+	GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(projectID int64, docTypes []int, minCreatedAt int64) (int64, int)
 	GetMinTimestampByFirstSync(projectID int64, docType int) (int64, int)
 	GetHubspotFormDocuments(projectID int64) ([]model.HubspotDocument, int)
 	GetHubspotDocumentsByTypeForSync(projectID int64, typ int, maxCreatedAtSec int64) ([]model.HubspotDocument, int)
@@ -476,6 +486,8 @@ type Model interface {
 	UpdateAccScoreWeights(projectId int64, weights model.AccWeights) error
 	GetSixsignalEmailListFromProjectSetting(projectId int64) (string, int)
 	AddSixsignalEmailList(projectId int64, emailIds string) int
+	GetSegmentMarkerLastRunTime(projectID int64) (time.Time, int)
+	UpdateSegmentMarkerLastRun(projectID int64, lastRunTime time.Time) int
 
 	// project
 	UpdateProject(projectID int64, project *model.Project) int
@@ -552,7 +564,7 @@ type Model interface {
 	GetSalesforceObjectValuesByPropertyName(ProjectID int64, objectType string, propertyName string) []interface{}
 	GetSalesforceDocumentsByTypeForSync(projectID int64, typ int, from, to int64, limit int, offset int) ([]model.SalesforceDocument, int)
 	GetLatestSalesforceDocumentByID(projectID int64, documentIDs []string, docType int, maxTimestamp int64) ([]model.SalesforceDocument, int)
-	GetSalesforceDocumentBeginingTimestampByDocumentTypeForSync(projectID int64) (map[int]int64, int64, int)
+	GetSalesforceDocumentBeginingTimestampByDocumentTypeForSync(projectID int64, minCreatedAt int64) (map[int]int64, int64, int)
 	GetSalesforceDocumentByType(projectID int64, docType int, from, to int64) ([]model.SalesforceDocument, int)
 	IsExistSalesforceDocumentByIds(projectID int64, ids []string, docType int) (map[string]bool, int)
 	IsExistSalesforceDocumentByIdsWithBatch(projectID int64, ids []string, docType int, batchSize int) (map[string]bool, int)
@@ -603,7 +615,7 @@ type Model interface {
 	GetUsersByCustomerUserID(projectID int64, customerUserID string) ([]model.User, int)
 	GetUserLatestByCustomerUserId(projectID int64, customerUserId string, requestSource int) (*model.User, int)
 	GetExistingUserByCustomerUserID(projectID int64, arrayCustomerUserID []string, source ...int) (map[string]string, int)
-	GetUserWithoutProperties(projectID int64, id string) (*model.User, int)
+	GetUserWithoutJSONColumns(projectID int64, id string) (*model.User, int)
 	GetUserBySegmentAnonymousId(projectID int64, segAnonId string) (*model.User, int)
 	GetAllUserIDByCustomerUserID(projectID int64, customerUserID string) ([]string, int)
 	GetRecentUserPropertyKeysWithLimits(projectID int64, usersLimit int, propertyLimit int, seedDate time.Time) ([]U.Property, error)
@@ -616,7 +628,7 @@ type Model interface {
 	UpdateUser(projectID int64, id string, user *model.User, updateTimestamp int64) (*model.User, int)
 	UpdateUserProperties(projectId int64, id string, properties *postgres.Jsonb, updateTimestamp int64) (*postgres.Jsonb, int)
 	UpdateUserPropertiesV2(projectID int64, id string, newProperties *postgres.Jsonb, newUpdateTimestamp int64, sourceValue string, objectType string) (*postgres.Jsonb, int)
-	OverwriteUserPropertiesByID(projectID int64, id string, properties *postgres.Jsonb, withUpdateTimestamp bool, updateTimestamp int64, source string) int
+	OverwriteUserPropertiesByID(projectID int64, id string, existingProperties, newProperties *postgres.Jsonb, withUpdateTimestamp bool, updateTimestamp int64, source string) int
 	OverwriteUserPropertiesByCustomerUserID(projectID int64, customerUserID string, properties *postgres.Jsonb, updateTimestamp int64) int
 	GetUserByPropertyKey(projectID int64, key string, value interface{}) (*model.User, int)
 	UpdateUserPropertiesForSession(projectID int64, sessionUserPropertiesRecordMap *map[string]model.SessionUserProperties) int
@@ -631,7 +643,7 @@ type Model interface {
 	GetCustomerUserIdFromUserId(projectID int64, id string) (string, int)
 	AssociateUserDomainsGroup(projectID int64, requestUserID string, requestGroupName, requestGroupUserID string) int
 	GetAssociatedDomainForUser(projectID int64, userID string, isAnonymous bool) (string, error)
-	GetUsersUpdatedAtGivenHour(projectID int64, hour int, domainID int) ([]model.User, int)
+	GetUsersUpdatedAtGivenHour(projectID int64, fromTime time.Time, domainID int) ([]model.User, int)
 	UpdateAssociatedSegments(projectID int64, id string, associatedSegments map[string]interface{}) (int, error)
 
 	// web_analytics
@@ -678,7 +690,7 @@ type Model interface {
 	// project_analytics
 	GetEventUserCountsOfAllProjects(lastNDays int) (map[string][]*model.ProjectAnalytics, error)
 	GetEventUserCountsMerged(projectIdsList []int64, lastNDays int, currentDate time.Time) (map[int64]*model.ProjectAnalytics, error)
-
+	GetCRMStatus(ProjectID int64, crmType string) (map[string][]map[string]interface{}, int)
 	// Property details
 	CreatePropertyDetails(projectID int64, eventName, propertyKey, propertyType string, isUserProperty bool, allowOverWrite bool) int
 	CreateOrDeletePropertyDetails(projectID int64, eventName, enKey, pType string, isUserProperty, allowOverWrite bool) error
@@ -692,6 +704,7 @@ type Model interface {
 	GetDisplayNamesForAllUserProperties(projectID int64) (int, map[string]string)
 	GetDisplayNamesForObjectEntities(projectID int64) (int, map[string]string)
 	CreateOrUpdateDisplayName(projectID int64, eventName, propertyName, displayName, tag string) int
+	GetPropertyValueLabel(projectID int64, propertyName string, propertyValues []string) (map[string]string, error, bool)
 
 	// display name_labels
 	CreateOrUpdateDisplayNameLabel(projectID int64, source, propertyKey, value, label string) int
@@ -870,7 +883,7 @@ type Model interface {
 	GetSourceStringForAccountsV2(projectID int64, source string, isAllUserProperties bool) (string, int, int)
 	AccountPropertiesForDomainsEnabledV2(projectID int64, id string, groupName string) (map[string]interface{}, bool, int)
 	AccountPropertiesForDomainsDisabledV1(projectID int64, id string) (string, map[string]interface{}, []interface{}, int)
-	AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile, hasUserProp bool) ([]model.Profile, int)
+	AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile) ([]model.Profile, int)
 	GetAccountOverview(projectID int64, id, groupName string) (model.Overview, int, string)
 	GetIntentTimeline(projectID int64, groupName string, id string) (model.UserTimeline, error)
 	GetMinAndMaxUpdatedAt(profileType string, whereStmt string, limitVal int, minMaxQParams []interface{}) (*model.MinMaxUpdatedAt, int, string)
@@ -969,18 +982,17 @@ type Model interface {
 
 	//account scoring
 	GetWeightsByProject(project_id int64) (*model.AccWeights, int)
-	UpdateUserEventsCount(ev []model.EventsCountScore, lastev map[string]model.LatestScore) error
-	UpdateGroupEventsCount(ev []model.EventsCountScore, lastev map[string]model.LatestScore) error
+	UpdateUserEventsCount(projectId int64, ev map[string]map[string]model.LatestScore) error
+	UpdateGroupEventsCount(projectId int64, ev map[string]map[string]model.LatestScore, lastev map[string]model.LatestScore) error
+	UpdateUserEventsCountGO(projectId int64, ev map[string]map[string]model.LatestScore) error
+	UpdateGroupEventsCountGO(projectId int64, ev map[string]map[string]model.LatestScore, lastev map[string]model.LatestScore, weights model.AccWeights) error
 	GetAccountsScore(project_id int64, group_id int, ts string, debug bool) ([]model.PerAccountScore, *model.AccWeights, error)
 	GetUserScore(project_id int64, user_id string, ts string, debug bool, is_anonymus bool) (model.PerUserScoreOnDay, error)
-	GetAllUserScore(project_id int64, debug bool) ([]model.AllUsersScore, *model.AccWeights, error)
-	GetAllUserScoreOnDay(project_id int64, ts string, debug bool) ([]model.AllUsersScore, *model.AccWeights, error)
-	GetAllUserScoreLatest(project_id int64, debug bool) ([]model.AllUsersScore, *model.AccWeights, error)
 	GetUserScoreOnIds(projectId int64, usersAnonymous, usersNonAnonymous []string, debug bool) (map[string]model.PerUserScoreOnDay, error)
 	GetAccountScoreOnIds(projectId int64, accountIds []string, debug bool) (map[string]model.PerUserScoreOnDay, error)
 	GetPerAccountScore(projectId int64, timestamp string, userId string, num_days int, debug bool) (model.PerAccountScore, *model.AccWeights, error)
-	GetAllUserEvents(projectId int64, debug bool) (map[string]map[string]model.LatestScore, error)
-
+	GetAllUserEvents(projectId int64, debug bool) (map[string]map[string]model.LatestScore, map[string]int, error, int64)
+	WriteScoreRanges(projectId int64, buckets []model.BucketRanges) error
 	// Slack
 	SetAuthTokenforSlackIntegration(projectID int64, agentUUID string, authTokens model.SlackAccessTokens) error
 	GetSlackAuthToken(projectID int64, agentUUID string) (model.SlackAccessTokens, error)

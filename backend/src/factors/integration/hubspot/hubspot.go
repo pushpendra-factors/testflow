@@ -1673,7 +1673,7 @@ func syncContact(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEve
 	if C.AllowIdentificationOverwriteUsingSource(project.ID) && primaryIdentification != "" {
 
 		for userID := range userByCustomerUserID {
-			user, status := store.GetStore().GetUserWithoutProperties(project.ID, userID)
+			user, status := store.GetStore().GetUserWithoutJSONColumns(project.ID, userID)
 			if status != http.StatusFound {
 				logCtx.WithFields(log.Fields{"err_code": status, "user_id": userID}).Error("Failed to get user from hubspot re-identification.")
 				continue
@@ -4798,7 +4798,7 @@ func Sync(projectID int64, workersPerProject int, recordsMaxCreatedAtSec int64, 
 	}
 
 	var orderedTimeSeries [][]int64
-	minTimestamp, errCode := store.GetStore().GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(projectID, GetHubspotSyncOrderByProjectID(projectID))
+	minTimestamp, errCode := store.GetStore().GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(projectID, GetHubspotSyncOrderByProjectID(projectID), util.TimeNowZ().AddDate(0, 0, -30).Unix())
 	if errCode != http.StatusFound {
 		if errCode == http.StatusNotFound {
 			statusByProjectAndType = append(statusByProjectAndType, Status{ProjectId: projectID,

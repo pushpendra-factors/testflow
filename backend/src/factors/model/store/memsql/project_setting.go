@@ -355,6 +355,24 @@ func (store *MemSQL) EnableBigqueryArchivalForProject(projectID int64) int {
 	return http.StatusAccepted
 }
 
+func (store *MemSQL) UpdateSegmentMarkerLastRun(projectID int64, lastRunTime time.Time) int {
+	logFields := log.Fields{
+		"project_id":    projectID,
+		"last_run_time": lastRunTime,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+	logCtx := log.WithFields(logFields)
+
+	if err := db.Model(model.ProjectSetting{}).Where("project_id = ?", projectID).
+		Update("segment_marker_last_run", lastRunTime).Error; err != nil {
+		logCtx.WithError(err).Error("Failed to update project_settings for segment_marker_last_run")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
+}
+
 // getProjectSettingByKey - Get project settings by a column on projects.
 func getProjectSettingByKey(key, value string) (*model.ProjectSetting, int) {
 	logFields := log.Fields{
@@ -1595,6 +1613,22 @@ func (store *MemSQL) DisableExplain(projectId int64) int {
 		return http.StatusInternalServerError
 	}
 	return http.StatusOK
+}
+
+// fetch segment_marker_last_run for given project_id
+func (store *MemSQL) GetSegmentMarkerLastRunTime(projectID int64) (time.Time, int) {
+	db := C.GetServices().Db
+	var projectSettings model.ProjectSetting
+	err := db.Table("project_settings").Select("segment_marker_last_run").Where("project_id=?", projectID).Find(&projectSettings).Error
+	if err != nil {
+		log.WithField("project_id", projectID).WithError(err).Error("Failed to fetch segment_marker_last_run from project_settings.")
+		return time.Time{}, http.StatusInternalServerError
+	}
+	if projectSettings.SegmentMarkerLastRun.IsZero() {
+		return time.Time{}, http.StatusNotFound
+	}
+
+	return projectSettings.SegmentMarkerLastRun, http.StatusFound
 }
 
 // define a db method to fetch all the rows

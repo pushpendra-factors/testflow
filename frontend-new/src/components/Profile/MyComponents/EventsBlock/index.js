@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Tooltip } from 'antd';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
@@ -6,6 +6,7 @@ import { SVG } from 'Components/factorsComponents';
 import styles from './index.module.scss';
 import {
   getEventPropertiesV2,
+  getGroupProperties,
   getUserPropertiesV2
 } from 'Reducers/coreQuery/middleware';
 import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
@@ -42,9 +43,28 @@ function EventsBlock({
   groupAnalysis,
   viewMode,
   dropdownPlacement = 'top',
-  propertiesScope = ['event']
+  propertiesScope = ['event'],
+  initialDDState = true,
+  groupProperties,
+  getGroupProperties
 }) {
-  const [isDDVisible, setDDVisible] = useState(true);
+  const [isDDVisible, setDDVisible] = useState(initialDDState);
+
+  const eventGroup = useMemo(() => {
+    if (availableGroups && event) {
+      const group =
+        availableGroups.find((group) => group[0] === event.group) || [];
+      return group[1];
+    }
+    return null;
+  }, [availableGroups, event]);
+
+  useEffect(() => {
+    if (event && eventGroup?.length && !groupProperties[eventGroup]) {
+      getGroupProperties(activeProject?.id, eventGroup);
+    }
+  }, [event, activeProject?.id, eventGroup]);
+
   useEffect(() => {
     if (viewMode) {
       setDDVisible(false);
@@ -140,7 +160,7 @@ function EventsBlock({
         if (eventPropertiesV2[event?.label].hasOwnProperty(key)) {
           eventPropertiesFiltered[key] = eventPropertiesV2[event?.label][
             key
-          ].filter((item) => item?.[2] !== 'datetime');
+          ].filter((item) => item?.[2] === 'categorical');
         }
       }
     }
@@ -149,7 +169,7 @@ function EventsBlock({
       for (const key in eventUserPropertiesV2) {
         if (eventUserPropertiesV2.hasOwnProperty(key)) {
           eventUserPropertiesFiltered[key] = eventUserPropertiesV2[key].filter(
-            (item) => item?.[2] !== 'datetime'
+            (item) => item?.[2] === 'categorical'
           );
         }
       }
@@ -162,13 +182,23 @@ function EventsBlock({
           : eventPropertiesV2[event?.label] || {};
       }
       if (scope === 'user') {
-        assignFilterProps.user = isEngagementConfig
-          ? eventUserPropertiesFiltered
-          : eventUserPropertiesV2 || {};
+        if (!eventGroup) {
+          assignFilterProps.user = isEngagementConfig
+            ? eventUserPropertiesFiltered
+            : eventUserPropertiesV2 || {};
+        }
+      }
+      if (scope === 'group') {
+        if (eventGroup) {
+          assignFilterProps[eventGroup] = groupProperties[eventGroup]?.filter(
+            (item) => item?.[2] === 'categorical'
+          );
+          assignFilterProps.user = {};
+        }
       }
     });
     setFilterProperties(assignFilterProps);
-  }, [eventPropertiesV2, eventUserPropertiesV2, event]);
+  }, [eventPropertiesV2, eventUserPropertiesV2, event?.label, eventGroup]);
 
   const deleteItem = () => {
     eventChange(event, index - 1, 'delete');
@@ -403,6 +433,7 @@ function EventsBlock({
           <div className={`flex items-center`}>
             <div className='relative'>
               <Tooltip
+                zIndex={99999}
                 title={
                   eventNames[event?.label]
                     ? eventNames[event?.label]
@@ -463,6 +494,9 @@ const mapStateToProps = (state) => ({
 });
 
 const mapDispatchToProps = (dispatch) =>
-  bindActionCreators({ getEventPropertiesV2, getUserPropertiesV2 }, dispatch);
+  bindActionCreators(
+    { getEventPropertiesV2, getUserPropertiesV2, getGroupProperties },
+    dispatch
+  );
 
 export default connect(mapStateToProps, mapDispatchToProps)(EventsBlock);

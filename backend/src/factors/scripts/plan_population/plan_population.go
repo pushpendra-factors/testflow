@@ -554,17 +554,15 @@ func main() {
 		}
 	}
 	if *action == Update {
-		for _ = range PlanTypes {
-			add := C.GetTokensFromStringListAsString(*updateAdd)
-			remove := C.GetTokensFromStringListAsString(*updateRemove)
-			_, err = store.GetStore().UpdatePlanDetailsTable(*planID, add, true)
-			if err != nil {
-				log.WithError(err).Error("failed to populate plan details table")
-			}
-			_, err = store.GetStore().UpdatePlanDetailsTable(*planID, remove, false)
-			if err != nil {
-				log.WithError(err).Error("failed to populate plan details table")
-			}
+		add := C.GetTokensFromStringListAsString(*updateAdd)
+		remove := C.GetTokensFromStringListAsString(*updateRemove)
+		_, err = store.GetStore().UpdatePlanDetailsTable(*planID, add, true)
+		if err != nil {
+			log.WithError(err).Error("failed to populate plan details table")
+		}
+		_, err = store.GetStore().UpdatePlanDetailsTable(*planID, remove, false)
+		if err != nil {
+			log.WithError(err).Error("failed to populate plan details table")
 		}
 	}
 	if *action == Disable {

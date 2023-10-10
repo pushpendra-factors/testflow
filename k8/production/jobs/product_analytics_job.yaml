@@ -1,0 +1,25 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  labels:
+    nodePool: shared-persistent-pool
+  name: product-analytics-job
+spec:
+  template:
+    metadata:
+      labels:
+        layer: jobs
+        nodePool: shared-persistent-pool
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: shared-persistent-pool
+      containers:
+      - name: product-analytics-job
+        image: us.gcr.io/factors-production/product-analytics-job:0.1
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            memory: "100M"
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      restartPolicy: OnFailure

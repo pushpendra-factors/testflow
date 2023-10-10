@@ -189,6 +189,10 @@ type Configuration struct {
 	CustomerEnabledProjectsLastComputed    []int64
 	SkippedOtpProjectIDs                   string
 	PrimaryDatastore                       string
+	// Segment Marker lookback
+	UseLookbackSegmentMarker bool
+	LookbackSegmentMarker    int
+	AllowedGoRoutines        int
 	// Flag for enabling only the /mql routes for secondary env testing.
 	EnableMQLAPI bool
 	// Flags to disable DB and Redis writes when enabled.
@@ -327,6 +331,8 @@ type Configuration struct {
 	MoveHubspotCompanyAssocationFlowToContactByPojectID string
 	ChargebeeApiKey                                     string
 	ChargebeeSiteName                                   string
+	UserPropertyUpdateOptProjects                       string
+	CompanyPropsV1EnabledProjectIDs                     string
 }
 
 type Services struct {
@@ -633,6 +639,19 @@ func ResetPropertyDetailsCacheByDate(timestamp int64) {
 // IsEnabledPropertyDetailFromDB should allow property type check from DB.
 func IsEnabledPropertyDetailFromDB() bool {
 	return configuration.enablePropertyTypeFromDB
+}
+
+// UseLookbackForSegmentMarker allow next run from LookbackSegmentMarker flag
+func UseLookbackForSegmentMarker() bool {
+	return configuration.UseLookbackSegmentMarker
+}
+
+func LookbackForSegmentMarker() int {
+	return configuration.LookbackSegmentMarker
+}
+
+func AllowedGoRoutinesSegmentMarker() int {
+	return configuration.AllowedGoRoutines
 }
 
 // IsEnabledEventsFilterInSegments should allow event properties to be added in the query.
@@ -2273,6 +2292,10 @@ func IsAllAccountsEnabled(projectID int64) bool {
 	return false
 }
 
+func IsUpdateLastEventAtEnabled(projectID int64) bool {
+	return true
+}
+
 // PingHealthcheckForSuccess Ping healthchecks.io for cron success.
 func PingHealthcheckForSuccess(healthcheckID string, message interface{}) {
 	log.Info("Job successful with message ", message)
@@ -2387,6 +2410,28 @@ func GetSDKAndIntegrationMetricNameByConfig(metricName string) string {
 	}
 
 	return metricName
+}
+
+func IsCompanyPropsV1Enabled(projectId int64) bool {
+
+	if configuration.CompanyPropsV1EnabledProjectIDs == "" {
+		return false
+	}
+
+	if configuration.CompanyPropsV1EnabledProjectIDs == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectId)
+	projectIDs := strings.Split(configuration.CompanyPropsV1EnabledProjectIDs, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
+
 }
 
 func IsSortedSetCachingAllowed() bool {
@@ -3016,4 +3061,13 @@ func MoveHubspotCompanyAssocationFlowToContactByPojectID(projecID int64) bool {
 	}
 
 	return allowedProjectIDs[projecID]
+}
+
+func IsUserPropertyUpdateOptProject(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().UserPropertyUpdateOptProjects, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
 }

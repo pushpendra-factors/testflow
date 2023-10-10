@@ -14,7 +14,7 @@ const CommonLockedComponent = ({
   return (
     <div>
       <div>
-        <Text type={'title'} level={3} weight={'bold'} color='character-title'>
+        <Text type={'title'} level={3} weight={'bold'} color='character-title' id={'fa-at-text--page-title'}>
           {title}
         </Text>
         {description && (
@@ -23,7 +23,7 @@ const CommonLockedComponent = ({
               type={'paragraph'}
               mini
               color='character-primary'
-              extraClass='inline-block'
+              extraClass='inline-block' 
             >
               {description}
               {learnMoreLink && (
@@ -60,6 +60,7 @@ const CommonLockedComponent = ({
             level={3}
             extraClass='m-0 text-center'
             color='character-title'
+            id={'fa-at-text--page-locked'}
           >
             This feature is locked
           </Text>

@@ -58,9 +58,13 @@ type User struct {
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 	// source of the user record (1 = WEB, 2 = HUBSPOT, 3 = SALESFORCE)
-	Source             *int           `json:"source"`
-	EventAggregate     postgres.Jsonb `json:"event_aggregate"`
-	AssociatedSegments postgres.Jsonb `json:"associated_segments"`
+	Source      *int      `json:"source"`
+	LastEventAt time.Time `json:"last_event_at"`
+
+	// Intentionally removed JSON columns apart from properties.
+	// These columns should accessed using direct methods.
+	// This is required to avoid any invalid state as we have
+	// excluded JSON columns for better performance.
 }
 
 type LatestUserPropertiesFromSession struct {
@@ -177,12 +181,13 @@ var GroupUserSource = map[string]int{
 const USERS = "users"
 
 type OverwriteUserPropertiesByIDParams struct {
-	ProjectID           int64
-	UserID              string
-	UserProperties      *postgres.Jsonb
-	WithUpdateTimestamp bool
-	UpdateTimestamp     int64
-	Source              string
+	ProjectID              int64
+	UserID                 string
+	ExistingUserProperties *postgres.Jsonb
+	UserProperties         *postgres.Jsonb
+	WithUpdateTimestamp    bool
+	UpdateTimestamp        int64
+	Source                 string
 }
 
 var AccountGroupAssociationPrecedence = []string{

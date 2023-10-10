@@ -18,7 +18,8 @@ import (
 
 const TOKEN_GEN_RETRY_LIMIT = 5
 const ENABLE_DEFAULT_WEB_ANALYTICS = false
-const VISITOR_IDENTIFICATION_TEMPLATE_ID = "bf721a15-a5c4-4db9-9435-924f4c544850"
+const VISITOR_IDENTIFICATION_PROD_TEMPLATE_ID = "bf721a15-a5c4-4db9-9435-924f4c544850"
+const VISITOR_IDENTIFICATION_STAGING_TEMPLATE_ID = "d14c52fd-7856-4fda-9f2e-0f36c2dd0084"
 
 // Checks for the existence of token already.
 func isTokenExist(token string, private bool) (exists int, err error) {
@@ -255,15 +256,17 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 
 	//default timeline config
 	timelinesConfig := model.TimelinesConfig{
-		DisabledEvents: []string{"Contact Updated", "Campaign Member Updated", "Engagement Meeting Updated", "Engagement Call Updated"}, //Display Names. Used on FE only.
+		DisabledEvents: []string{"Contact Updated", "Campaign Member Updated", "Engagement Meeting Updated", "Engagement Call Updated"},
 		UserConfig: model.UserConfig{
-			TableProps:    []string{U.UP_COUNTRY, U.SIX_SIGNAL_DOMAIN, U.SIX_SIGNAL_INDUSTRY, U.SIX_SIGNAL_EMPLOYEE_RANGE, U.SP_SPENT_TIME},
+			Milestones:    []string{},
+			TableProps:    []string{U.UP_COUNTRY, U.SP_SPENT_TIME},
 			LeftpaneProps: []string{U.UP_EMAIL, U.UP_COUNTRY, U.UP_PAGE_COUNT},
 		},
 		AccountConfig: model.AccountConfig{
-			TableProps:    []string{U.GP_HUBSPOT_COMPANY_COUNTRY, U.GP_HUBSPOT_COMPANY_NUM_ASSOCIATED_CONTACTS, U.SIX_SIGNAL_DOMAIN, U.SIX_SIGNAL_INDUSTRY, U.SIX_SIGNAL_EMPLOYEE_RANGE},
-			LeftpaneProps: []string{U.GP_HUBSPOT_COMPANY_INDUSTRY, U.GP_HUBSPOT_COMPANY_COUNTRY, U.GP_HUBSPOT_COMPANY_NUMBEROFEMPLOYEES},
-			UserProp:      U.UP_USER_ID,
+			Milestones:    []string{},
+			TableProps:    []string{},
+			LeftpaneProps: []string{},
+			UserProp:      "",
 		},
 	}
 	tlConfigEncoded, err := U.EncodeStructTypeToPostgresJsonb(timelinesConfig)
@@ -337,6 +340,7 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 		return errCode
 	}
 
+	// statusCode := store.CreatePredefinedDashboards(projectID, agentUUID)
 	return http.StatusCreated
 }
 
@@ -363,9 +367,16 @@ func (store *MemSQL) CreateProjectWithDependencies(project *model.Project, agent
 	}
 
 	//Generate Website Visitor Identification Dashboard
-	_, errCode, errMsg := store.GenerateDashboardFromTemplate(cProject.ID, agentUUID, VISITOR_IDENTIFICATION_TEMPLATE_ID)
-	if errCode != http.StatusCreated {
-		log.WithField("error", errMsg).Error("Website Visitor Identification dashboard creation failed")
+	if C.GetConfig().Env == C.PRODUCTION {
+		_, errCode, errMsg := store.GenerateDashboardFromTemplate(cProject.ID, agentUUID, VISITOR_IDENTIFICATION_PROD_TEMPLATE_ID)
+		if errCode != http.StatusCreated {
+			log.WithField("error", errMsg).Error("Website Visitor Identification dashboard creation failed")
+		}
+	} else if C.GetConfig().Env == C.STAGING {
+		_, errCode, errMsg := store.GenerateDashboardFromTemplate(cProject.ID, agentUUID, VISITOR_IDENTIFICATION_STAGING_TEMPLATE_ID)
+		if errCode != http.StatusCreated {
+			log.WithField("error", errMsg).Error("Website Visitor Identification dashboard creation failed")
+		}
 	}
 
 	if createDashboard {
@@ -387,6 +398,7 @@ func (store *MemSQL) CreateProjectWithDependencies(project *model.Project, agent
 			return nil, errCode
 		}
 	}
+
 	_, errCode = store.createProjectBillingAccountMapping(project.ID, billingAccountID)
 	return cProject, errCode
 }
@@ -891,6 +903,28 @@ func (store *MemSQL) GetProjectIDByToken(token string) (int64, int) {
 	model.SetCacheProjectIDByToken(token, project.ID)
 	return project.ID, errCode
 }
+
+// // TODO Add default positions and sizes. Response is not giving all dashboards.
+// // TODO Check if dashboards are being picked in caching. They shouldnt be.
+// func (store *MemSQL) createPredefinedDashboards(projectID int64, predefinedDashboards []model.PredefinedDashboard, agentUUID string) ([]*model.Dashboard, int) {
+// 	dashboards := make([]*model.Dashboard, 0)
+// 	errCode := http.StatusCreated
+// 	for _, predefinedDashboard := range predefinedDashboards {
+// 		_, errCode := store.CreateDashboard(
+// 			projectID, agentUUID,
+// 			&model.Dashboard{
+// 				Name:        predefinedDashboard.DisplayName,
+// 				Description: predefinedDashboard.Description,
+// 				Type:        model.DashboardTypeProjectVisible,
+// 				Class:       model.DashboardClassPredefined,
+// 				InternalID:  predefinedDashboard.InternalID,
+// 			})
+// 		if errCode != http.StatusCreated {
+// 			return dashboards, errCode
+// 		}
+// 	}
+// 	return dashboards, errCode
+// }
 
 func getProjectTimezoneCache(projectID int64) (U.TimeZoneString, int) {
 	logCtx := log.WithField("projectID", projectID)

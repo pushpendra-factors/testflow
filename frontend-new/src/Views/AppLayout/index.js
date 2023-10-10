@@ -5,6 +5,8 @@ import { Layout, Spin } from 'antd';
 import { connect, useSelector, useDispatch } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import Highcharts from 'highcharts';
+import factorsai from 'factorsai';
+
 import {
   fetchProjects,
   setActiveProject,
@@ -174,9 +176,32 @@ function AppLayout({
       dispatch(fetchAttributionQueries(active_project?.id));
       dispatch(fetchProjectAgents(active_project.id));
       dispatch(fetchFeatureConfig(active_project?.id));
-      fetchAgentInfo();
     }
   }, [dispatch, active_project]);
+
+  //fetching agent info -> not dependent on active project
+  useEffect(() => {
+    if (isAgentLoggedIn) fetchAgentInfo();
+  }, [isAgentLoggedIn, fetchAgentInfo]);
+
+  //for handling signup event for the first time logged in user
+  useEffect(() => {
+    const login_count = agentState?.agent_details?.login_count;
+    if (activeAgent && login_count) {
+      const signupEventlocalStoragekey = `${activeAgent}-signup_event_sent`;
+      const isSignUpEventSent = localStorage.getItem(
+        signupEventlocalStoragekey
+      );
+      if (login_count === 1 && !isSignUpEventSent) {
+        factorsai.track('SIGNUP', {
+          first_name: agentState?.agent_details?.first_name || '',
+          email: activeAgent,
+          last_name: agentState?.agent_details?.last_name || ''
+        });
+        localStorage.setItem(signupEventlocalStoragekey, 'true');
+      }
+    }
+  }, [activeAgent, agentState]);
 
   if (dataLoading) {
     return <Spin size={'large'} className={'fa-page-loader'} />;

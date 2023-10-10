@@ -103,9 +103,13 @@ const Step3 = ({
     }
   };
 
+  const checkContinueButtonDisablity = () => {
+    return enrichmentType === null;
+  };
+
   useEffect(() => {
     if (!six_signal_config || isEmpty(six_signal_config)) {
-      setEnrichmentType(false);
+      // setEnrichmentType(false);
     } else {
       setEnrichmentType(true);
     }
@@ -135,8 +139,16 @@ const Step3 = ({
             extraClass={'m-0 mt-1'}
             color='character-secondary'
           >
-            You can choose identify all accounts that visit your website or set
-            custom rules to identify only some of them.
+            You can choose to identify all accounts that visit your website or
+            set custom rules to identify some of them.
+          </Text>
+          <Text
+            type={'title'}
+            level={6}
+            extraClass='m-0 mt-1 '
+            color='character-secondary'
+          >
+            (This affects your quota of monthly accounts identified)
           </Text>
         </Col>
         <Col span={24}>
@@ -160,26 +172,6 @@ const Step3 = ({
                 Identify all accounts that visit your website. This ensures that
                 you don’t miss out on any account.
               </Text>
-              <Text
-                type={'title'}
-                level={6}
-                extraClass='m-0 mt-1 italic'
-                color='character-disabled-placeholder'
-              >
-                (This affects your monthly quota of accounts. You can check out
-                our pricing settings for more info.)
-              </Text>
-              <div className='flex items-center my-6 gap-1'>
-                <SVG name='InfoCircle' size='16' />
-                <Text
-                  type={'title'}
-                  level={7}
-                  color='character-secondary'
-                  extraClass='m-0'
-                >
-                  You can also do this later in the pricing settings.
-                </Text>
-              </div>
             </>
           )}
           {enrichmentType && (
@@ -202,6 +194,18 @@ const Step3 = ({
               </div>
             </>
           )}
+          <div className='flex items-center my-6 gap-1'>
+            <SVG name='InfoCircle' size='16' />
+            <Text
+              type={'title'}
+              level={7}
+              color='character-secondary'
+              extraClass='m-0'
+            >
+              You can also do this later in the pricing screen inside the
+              product.
+            </Text>
+          </div>
         </Col>
         {!isMobileView && <Divider className='mt-10 mb-6' />}
         <Col span={24}>
@@ -225,6 +229,7 @@ const Step3 = ({
               className={'m-0'}
               onClick={handleSubmission}
               loading={loading}
+              disabled={checkContinueButtonDisablity()}
             >
               Activate and continue
             </Button>

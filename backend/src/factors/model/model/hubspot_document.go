@@ -228,6 +228,14 @@ var HubspotDocumentTypeAlias = map[string]int{
 	HubspotDocumentTypeNameOwner:          HubspotDocumentTypeOwner,
 }
 
+// HubspotDocumentActionAlias hubspot document alias and their action
+var HubspotDocumentActionAlias = map[int]string{
+	HubspotDocumentActionCreated:             "HubspotDocumentActionCreated",
+	HubspotDocumentActionUpdated:             "HubspotDocumentActionUpdated",
+	HubspotDocumentActionDeleted:             "HubspotDocumentActionDeleted",
+	HubspotDocumentActionAssociationsUpdated: "HubspotDocumentActionAssociationsUpdated",
+}
+
 // GetHubspotTypeByAlias gets document type by document alias
 func GetHubspotTypeByAlias(alias string) (int, error) {
 	if alias == "" {

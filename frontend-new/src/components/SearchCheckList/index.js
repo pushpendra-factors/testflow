@@ -29,6 +29,20 @@ export default function SearchCheckList({
     setSearchTerm('');
   }, [mapArray]);
 
+  const getListWithDisabledOptions = (list) => {
+    if (!showDisabledOption) return list;
+    if (!disabledOptions?.length) return list;
+    const disabledOptionsList =
+      disabledOptions
+        .map((option) => {
+          return { name: option, isDisabled: true };
+        })
+        .filter((option) =>
+          option?.name?.toLowerCase()?.includes(searchTerm?.toLowerCase())
+        ) || [];
+    return [...disabledOptionsList, ...list];
+  };
+
   return (
     <>
       <Input
@@ -39,40 +53,38 @@ export default function SearchCheckList({
       />
       <div>
         <div className={`${showApply ? 'apply_active' : ''}`}>
-          {showDisabledOption && (
-            <>
-              {disabledOptions &&
-                disabledOptions?.length > 0 &&
-                disabledOptions?.map((option) => (
-                  <div
-                    className='flex justify-between items-center py-2 px-3 cursor-not-allowed'
-                    onClick={(option) =>
-                      handleDisableOptionClick &&
-                      handleDisableOptionClick(option)
-                    }
-                  >
-                    <Text
-                      type='title'
-                      level={7}
-                      extraClass='mb-0 truncate'
-                      truncate
-                      charLimit={25}
-                    >
-                      {option}
-                    </Text>
-                    <SVG size={16} name='Lock' />
-                  </div>
-                ))}
-            </>
-          )}
           {mapArray?.length ? (
             <VirtualList
-              data={getUniqueItemsByKeyAndSearchTerm(mapArray, searchTerm)}
+              data={getListWithDisabledOptions(
+                getUniqueItemsByKeyAndSearchTerm(mapArray, searchTerm)
+              )}
               height={showApply ? 348 : 392}
               itemHeight={38}
               itemKey={titleKey}
             >
               {(item, index) => {
+                if (item.isDisabled) {
+                  return (
+                    <div
+                      className='flex justify-between items-center py-2 px-3 cursor-not-allowed'
+                      onClick={(option) =>
+                        handleDisableOptionClick &&
+                        handleDisableOptionClick(option)
+                      }
+                    >
+                      <Text
+                        type='title'
+                        level={7}
+                        extraClass='mb-0 truncate'
+                        truncate
+                        charLimit={25}
+                      >
+                        {item.name}
+                      </Text>
+                      <SVG size={16} name='Lock' />
+                    </div>
+                  );
+                }
                 return (
                   <CustomCheckbox
                     key={item[titleKey]}

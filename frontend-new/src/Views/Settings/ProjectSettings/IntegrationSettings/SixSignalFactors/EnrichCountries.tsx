@@ -27,7 +27,7 @@ const EnrichCountries = ({
   projectId,
   udpateProjectSettings
 }: EnrichCountriesProps) => {
-  const [enrichType, setEnrichType] = useState<EnrichTypes | null>(null);
+  const [enrichType, setEnrichType] = useState<EnrichTypes | null>('include');
   const [countryOptions, setCountryOptions] = useState<CountryLabel[]>([]);
   const [data, setData] = useState<CountryLabel[]>([]);
   const countriesSet = useRef(false);

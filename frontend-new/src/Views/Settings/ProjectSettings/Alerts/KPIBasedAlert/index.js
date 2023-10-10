@@ -166,7 +166,7 @@ const KPIBasedAlert = ({
   useEffect(() => {
     if (alertDetails?.alert_description?.query?.fil) {
       const filter = getStateFromKPIFilters(
-        alertDetails.alert_description.query.fil
+        alertDetails?.alert_description?.query?.fil
       );
       setViewFilter(filter);
     }
@@ -216,7 +216,7 @@ const KPIBasedAlert = ({
         alias: '',
         label: _.startCase(alertDetails?.alert_description?.name),
         filters: getStateFromKPIFilters(
-          alertDetails?.alert_description?.query?.fil
+          alertDetails?.alert_description?.query?.fil ? alertDetails?.alert_description?.query?.fil : []
         ),
         group: alertDetails?.alert_description?.query?.dc,
         metric: alertDetails?.alert_description?.name,

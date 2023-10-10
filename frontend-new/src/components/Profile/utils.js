@@ -92,21 +92,17 @@ export const GroupDisplayNames = {
   All: 'All Accounts',
   $hubspot_company: 'Hubspot Companies',
   $salesforce_account: 'Salesforce Accounts',
-  $6signal: '6Signal Domains',
+  $6signal: 'Identified Companies',
   $linkedin_company: 'Linkedin Company Engagements',
   $g2: 'G2 Engagements'
 };
 
-export const getFiltersRequestPayload = ({
-  source,
-  selectedFilters,
-  table_props
-}) => {
-  const { eventsList, eventProp, filters } = selectedFilters;
+export const getFiltersRequestPayload = ({ selectedFilters, table_props }) => {
+  const { eventsList, eventProp, filters, account } = selectedFilters;
 
   const queryOptions = {
-    group_analysis: source,
-    source: source,
+    group_analysis: account[1],
+    source: account[1],
     caller: 'account_profiles',
     table_props,
     globalFilters: filters,
@@ -434,6 +430,11 @@ export const eventIconsColorMap = {
     bgColor: '#E6F7FF',
     borderColor: '#91D5FF'
   },
+  g2crowd: {
+    iconColor: '#FF7A59',
+    bgColor: '#FFE8E2',
+    borderColor: '#FED0C5'
+  },
   window: {
     iconColor: '#FF85C0',
     bgColor: '#FFF0F7',
@@ -515,7 +516,7 @@ export const EngagementTag = {
 export const sortStringColumn = (a = '', b = '') => {
   const compareA = typeof a === 'string' ? a.toLowerCase() : a;
   const compareB = typeof b === 'string' ? b.toLowerCase() : b;
-  return compareB > compareA ? 1 : compareA > compareB ? -1 : 0;
+  return compareA > compareB ? 1 : compareB > compareA ? -1 : 0;
 };
 
 export const sortNumericalColumn = (a = 0, b = 0) => a - b;
@@ -595,10 +596,17 @@ export const getSelectedFiltersFromQuery = ({ query, groupsList }) => {
   const result = {
     eventProp,
     filters: filters.globalFilters,
-    eventsList: filters.events
+    eventsList: filters.events,
+    account: groupsList.find((g) => g[1] === grpa)
   };
-  return {
-    segmentFilters: result,
-    selectedAccount: groupsList.find((g) => g[1] === grpa)
-  };
+  return result;
+};
+
+export const findKeyByValue = (data, targetValue) => {
+  for (const key in data) {
+    if (data[key].includes(targetValue)) {
+      return key;
+    }
+  }
+  return null;
 };

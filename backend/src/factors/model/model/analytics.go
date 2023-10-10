@@ -41,6 +41,7 @@ const (
 	PresentationHorizontalBar = "ph"
 	HorizontalBar             = "hb"
 	FunnelChart               = "fc"
+	MetricChart               = "mc"
 )
 
 const (
@@ -301,10 +302,6 @@ var PROPERTY_TO_TABLE_COLUMN_MAP = map[string]string{
 
 var USER_PROPERTY_TO_COLUMN_MAP = map[string]string{
 	U.IDENTIFIED_USER_ID: "$user_id",
-}
-var OPPOSITE_OF_OPERATOR_MAP = map[string]string{
-	NotEqualOpStr:    EqualsOpStr,
-	GreaterThanOpStr: LesserThanOrEqualOpStr,
 }
 
 func (q *Query) GetClass() string {

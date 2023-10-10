@@ -53,6 +53,47 @@ function isLocalStorageAvailable() {
     }
 }
 
+function encode(str, shift=4) {
+    var estr = "";
+    for (var i=0; i<str.length; i++) {
+        var cat = str[i].charCodeAt();
+        var last = 126 - shift;
+
+        if (cat >= 33 && cat <= last) {
+            dat = cat + shift
+            estr = estr + String.fromCharCode(dat);
+        } else if (cat > last && cat <= 126) {
+            dat = 32 + (cat % last)
+            estr = estr + String.fromCharCode(dat);
+        } else {
+            estr = estr + str[i];
+        }
+    }
+
+    return estr;
+}
+
+function decode(str, shift=4) {
+    var estr = "";
+    for (var i=0; i<str.length; i++) {
+        var cat = str[i].charCodeAt();
+        var shift = 4;
+        var first = 33 + shift;
+
+        if (cat >= first && cat <= 126) {
+            var dat = cat - shift
+            estr = estr + String.fromCharCode(dat);
+        } else if (cat < first && cat >= 33) {
+            var dat = (cat % 33) + (126 - shift) + 1
+            estr = estr + String.fromCharCode(dat);
+        } else {
+            estr = estr + str[i];
+        }
+    }
+
+    return estr;
+}
+
 module.exports = exports =  {
     validatedStringArg: validatedStringArg,
     convertIfNumber: convertIfNumber,
@@ -60,5 +101,6 @@ module.exports = exports =  {
     parseURLString: parseURLString,
     getCurrentUnixTimestampInMs: getCurrentUnixTimestampInMs,
     isLocalStorageAvailable: isLocalStorageAvailable,
+    encode: encode,
+    decode: decode,
 };
-

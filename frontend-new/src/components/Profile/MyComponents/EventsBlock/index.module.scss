@@ -27,7 +27,7 @@
 
   &__event_selector {
     position: absolute;
-    top: 0;
+    top: 32px;
 
     &__btn {
       position: relative;
@@ -39,8 +39,7 @@
 
     &__select {
       width: 380px;
-      max-height: 480px;
-      min-height: 240px;
+      height: 400px;
       position: absolute;
     }
   }

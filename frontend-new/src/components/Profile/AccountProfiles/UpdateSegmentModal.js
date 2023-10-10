@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import cx from 'classnames';
 import { noop } from 'lodash';
 import AppModal from 'Components/AppModal/AppModal';
@@ -45,6 +45,11 @@ const UpdateSegmentModal = ({
     onUpdate();
   }, [newSegmentName, onCreate, onUpdate, saveMode]);
 
+  useEffect(() => {
+    setSaveMode(null);
+    setNewSegmentName('');
+  }, [visible]);
+
   return (
     <AppModal
       okText={saveMode === 'create' ? 'Save new segment' : 'Save segment'}
@@ -53,7 +58,6 @@ const UpdateSegmentModal = ({
       onCancel={onCancel}
       isLoading={isLoading}
       width={542}
-      cancelText='Discard Changes'
     >
       <div className='flex flex-col row-gap-5'>
         <Text
@@ -148,13 +152,13 @@ const UpdateSegmentModal = ({
                   color='character-secondary'
                   extraClass='mb-0'
                 >
-                  Enter new segment name
+                 Segment name
                 </Text>
                 <Input
                   value={newSegmentName}
                   onChange={handleNameChange}
                   className={styles['create-mode-input-box']}
-                  placeholder='Eg: Paid Search Visitors'
+                  placeholder='Eg- Paid Search Visitors'
                 />
               </div>
             </ControlledComponent>
