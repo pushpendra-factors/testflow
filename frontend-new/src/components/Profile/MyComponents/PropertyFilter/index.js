@@ -21,6 +21,7 @@ function PropertyFilter({
   );
   const availableGroups = useSelector((state) => state.groups.data);
   const activeProject = useSelector((state) => state.global.active_project);
+  const predefinedProperty = useSelector((state) => state.preBuildDashboardConfig.config.data.result);
 
   const [filterProps, setFilterProperties] = useState({});
   const [filterDD, setFilterDD] = useState(false);
@@ -37,9 +38,11 @@ function PropertyFilter({
       props.user = userPropertiesV2;
     } else if (profileType === 'user') {
       props.user = userPropertiesV2;
+    } else if (profileType === 'predefined') {
+      props.user = predefinedProperty?.pr;
     }
     setFilterProperties(props);
-  }, [userPropertiesV2, groupProperties, availableGroups, profileType, source]);
+  }, [userPropertiesV2, groupProperties, availableGroups, profileType, source, predefinedProperty?.pr]);
 
   const updateFilters = (newFilters) => {
     if (viewMode) return;
@@ -79,6 +82,7 @@ function PropertyFilter({
               closeFilter={closeFilter}
               filterProps={filterProps}
               minEntriesPerGroup={3}
+              profileType={profileType}
             />
           </div>
         );
@@ -96,6 +100,7 @@ function PropertyFilter({
                 closeFilter={closeFilter}
                 filterProps={filterProps}
                 minEntriesPerGroup={3}
+                profileType={profileType}
               />
             </div>
           );

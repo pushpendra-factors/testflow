@@ -60,6 +60,8 @@ const BreakdownCharts = ({
       return getNewSorterState(currentSorter, prop);
     });
   }, []);
+  
+  const unitId = unit.id || unit.inter_id;
 
   useEffect(() => {
     const aggData = formatData(
@@ -150,7 +152,7 @@ const BreakdownCharts = ({
         multiColored
         height={DASHBOARD_WIDGET_BAR_CHART_HEIGHT}
         cardSize={unit.cardSize}
-        chartId={`kpi${unit.id}`}
+        chartId={`kpi${unitId}`}
         series={columnSeries}
       />
     );
@@ -172,7 +174,7 @@ const BreakdownCharts = ({
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
         legendsPosition='top'
         cardSize={unit.cardSize}
-        chartId={`line-${unit.id}`}
+        chartId={`line-${unitId}`}
       />
     );
   } else if (chartType === CHART_TYPE_STACKED_AREA) {
@@ -184,7 +186,7 @@ const BreakdownCharts = ({
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
         legendsPosition='top'
         cardSize={unit.cardSize}
-        chartId={`bar-${unit.id}`}
+        chartId={`bar-${unitId}`}
       />
     );
   } else if (chartType === CHART_TYPE_STACKED_BAR) {
@@ -196,7 +198,7 @@ const BreakdownCharts = ({
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
         legendsPosition='top'
         cardSize={unit.cardSize}
-        chartId={`bar-${unit.id}`}
+        chartId={`bar-${unitId}`}
         dateWiseTotals={dateWiseTotals}
       />
     );

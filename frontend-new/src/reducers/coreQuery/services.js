@@ -96,6 +96,11 @@ export function fetchUserPropertyValues(projectId, propertyName) {
   return get(null, url);
 }
 
+export function fetchPredefinedPropertyValues(projectId, propertyName, internalID) {
+  const url = `${host}projects/${projectId}/v1/predefined_dashboards/${internalID}/filter_values`;
+  return post(null, url, {"pr_na": propertyName});
+}
+
 export const getFunnelData = (
   projectId,
   query,

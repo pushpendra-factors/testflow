@@ -50,7 +50,8 @@ import {
   fetchUserPropertyValues,
   fetchButtonClicksPropertyValues,
   fetchPageViewsPropertyValues,
-  fetchUserPropertiesV2
+  fetchUserPropertiesV2,
+  fetchPredefinedPropertyValues
 } from './services';
 import {
   convertToEventOptions,
@@ -377,6 +378,31 @@ export const getUserPropertyValues =
             })
           );
         });
+    });
+  };
+
+  export const getPredefinedPropertyValues =
+  (projectId, propertyName, internalID) => (dispatch) => {
+    return new Promise((resolve, reject) => {
+      dispatch({ type: FETCH_PROPERTY_VALUES_LOADING });
+      fetchPredefinedPropertyValues(projectId, propertyName, internalID).then((response) => {
+        resolve(
+          dispatch({
+            type: FETCH_PROPERTY_VALUES_LOADED,
+            payload: response.data,
+            propName: propertyName
+          })
+        );
+      });
+    }).catch((err) => {
+      console.log(err);
+      resolve(
+        dispatch({
+          type: FETCH_PROPERTY_VALUES_LOADED,
+          payload: {},
+          propName: propertyName
+        })
+      );
     });
   };
 
