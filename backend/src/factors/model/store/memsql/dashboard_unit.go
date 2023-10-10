@@ -1067,12 +1067,12 @@ func (store *MemSQL) RunCachingForLast3MonthsAttribution(dashboardUnit model.Das
 		}
 
 		// Filtering queries on type and range for attribution query
-		allowedPreset := cacheSettings.AttributionCachePresets
-		shouldCache, from, to := model.ShouldCacheUnitForTimeRangeDashboardV1(queryClass, "", from, to,
-			C.GetOnlyAttributionDashboardCaching(), C.GetSkipAttributionDashboardCaching(), allowedPreset[""])
-		if !shouldCache {
-			continue
-		}
+		//allowedPreset := cacheSettings.AttributionCachePresets
+		//shouldCache, from, to := model.ShouldCacheUnitForTimeRangeDashboardV1(queryClass, "", from, to,
+		//	C.GetOnlyAttributionDashboardCaching(), C.GetSkipAttributionDashboardCaching(), allowedPreset[""])
+		//if !shouldCache {
+		//	continue
+		//}
 
 		baseQuery.SetQueryDateRange(from, to)
 		baseQuery.SetTimeZone(timezoneString)
@@ -1169,14 +1169,14 @@ func (store *MemSQL) RunEverydayCachingForAttribution(dashboardUnit model.Dashbo
 		}
 
 		// Filtering queries on type and range for attribution query
-		allowedPreset := cacheSettings.AttributionCachePresets
-		shouldCache, from, to := model.ShouldCacheUnitForTimeRange(queryClass, preset, fr, t,
-			C.GetOnlyAttributionDashboardCaching(), C.GetSkipAttributionDashboardCaching(), allowedPreset[preset])
-		if !shouldCache {
-			continue
-		}
+		//allowedPreset := cacheSettings.AttributionCachePresets
+		//shouldCache, from, to := model.ShouldCacheUnitForTimeRange(queryClass, preset, fr, t,
+		//	C.GetOnlyAttributionDashboardCaching(), C.GetSkipAttributionDashboardCaching(), allowedPreset[preset])
+		//if !shouldCache {
+		//	continue
+		//}
 
-		baseQuery.SetQueryDateRange(from, to)
+		baseQuery.SetQueryDateRange(fr, t)
 		baseQuery.SetTimeZone(timezoneString)
 		baseQuery.SetDefaultGroupByTimestamp()
 		err = baseQuery.TransformDateTypeFilters()
@@ -1280,6 +1280,11 @@ func (store *MemSQL) RunEverydayCaching(dashboardUnit model.DashboardUnit, timez
 
 	for preset, rangeFunction := range U.QueryDateRangePresets {
 
+		// running for yesterday's run, rest all are skipped
+		if preset != U.DateRangePresetYesterday {
+			continue
+		}
+
 		fr, t, errCode := rangeFunction(timezoneString)
 		if errCode != nil {
 			errMsg := fmt.Sprintf("Failed to get proper project Timezone for %d", dashboardUnit.ProjectID)
@@ -1307,7 +1312,8 @@ func (store *MemSQL) RunEverydayCaching(dashboardUnit model.DashboardUnit, timez
 		var cacheSettings model.CacheSettings
 
 		if projectSettingsJSON == nil || statusCodeProjectSettings != http.StatusFound {
-			log.WithField("projectID", dashboardUnit.ProjectID).WithField("statusCodeProjectSettings", statusCodeProjectSettings).Warn("errored in fetching project Settings")
+			log.WithField("projectID", dashboardUnit.ProjectID).WithField("statusCodeProjectSettings",
+				statusCodeProjectSettings).Warn("errored in fetching project Settings")
 			continue
 		}
 
@@ -1320,14 +1326,14 @@ func (store *MemSQL) RunEverydayCaching(dashboardUnit model.DashboardUnit, timez
 		}
 
 		// Filtering queries on type and range for attribution query
-		allowedPreset := cacheSettings.AttributionCachePresets
-		shouldCache, from, to := model.ShouldCacheUnitForTimeRange(queryClass, preset, fr, t,
-			C.GetOnlyAttributionDashboardCaching(), C.GetSkipAttributionDashboardCaching(), allowedPreset[preset])
-		if !shouldCache {
-			continue
-		}
+		// allowedPreset := cacheSettings.AttributionCachePresets
+		// shouldCache, from, to := model.ShouldCacheUnitForTimeRange(queryClass, preset, fr, t,
+		//	C.GetOnlyAttributionDashboardCaching(), C.GetSkipAttributionDashboardCaching(), allowedPreset[preset])
+		//if !shouldCache {
+		//	continue
+		// }
 
-		baseQuery.SetQueryDateRange(from, to)
+		baseQuery.SetQueryDateRange(fr, t)
 		baseQuery.SetTimeZone(timezoneString)
 		baseQuery.SetDefaultGroupByTimestamp()
 		err = baseQuery.TransformDateTypeFilters()
@@ -1360,11 +1366,15 @@ func (store *MemSQL) RunCachingToBackFillRanges(dashboardUnit model.DashboardUni
 	var unitWaitGroup sync.WaitGroup
 
 	// get from and to for all the time ranges!
-	monthRange := U.GetAllMonthFromTo(startTimeForCache, timezoneString)
-	weeksRange := U.GetAllWeeksFromStartTime(startTimeForCache, timezoneString)
 
-	allRange := append(monthRange, weeksRange...)
+	daysRange := U.GetAllDaysSinceStartTime(startTimeForCache, timezoneString)
+	// monthRange := U.GetAllMonthFromTo(startTimeForCache, timezoneString)
+	// weeksRange := U.GetAllWeeksFromStartTime(startTimeForCache, timezoneString)
 
+	allRange := daysRange
+	//allRange = append(monthRange, weeksRange...)
+
+	// Cache for all ranges generated for backfill
 	for _, queryRange := range allRange {
 
 		from := queryRange.From
@@ -1403,12 +1413,12 @@ func (store *MemSQL) RunCachingToBackFillRanges(dashboardUnit model.DashboardUni
 		}
 
 		// Filtering queries on type and range for attribution query
-		allowedPreset := cacheSettings.AttributionCachePresets
-		shouldCache, from, to := model.ShouldCacheUnitForTimeRange(queryClass, "", from, to,
-			C.GetOnlyAttributionDashboardCaching(), C.GetSkipAttributionDashboardCaching(), allowedPreset[""])
-		if !shouldCache {
-			continue
-		}
+		//allowedPreset := cacheSettings.AttributionCachePresets
+		//shouldCache, from, to := model.ShouldCacheUnitForTimeRange(queryClass, "", from, to,
+		//	C.GetOnlyAttributionDashboardCaching(), C.GetSkipAttributionDashboardCaching(), allowedPreset[""])
+		//if !shouldCache {
+		//	continue
+		//}
 
 		baseQuery.SetQueryDateRange(from, to)
 		baseQuery.SetTimeZone(timezoneString)
@@ -1707,6 +1717,11 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 
 		attributionQuery := baseQuery.(*model.AttributionQueryUnit)
 		unitReport.Query = attributionQuery
+
+		// skipping computing Interaction Time based queries
+		if attributionQuery.Query.QueryType == model.AttributionQueryTypeEngagementBased {
+			return http.StatusOK, "", unitReport
+		}
 
 		channel := make(chan Result)
 		go store.runAttributionUnit(projectID, attributionQuery.Query, channel)
