@@ -32,15 +32,16 @@ const useDynamicPosition = (
   const checkForTop = () => {
     const currentPosition = positionRef.current;
     const dropdownRect = targetElement?.current?.getBoundingClientRect();
+    const pageTopOffset = 60;
     if (dropdownRect) {
       if (
         currentPosition === 'Top' ||
         currentPosition === 'TopLeft' ||
         currentPosition === 'TopRight'
       ) {
-        return dropdownRect.bottom < window.innerHeight;
+        return dropdownRect.top > pageTopOffset;
       }
-      return dropdownRect.top - 32 < window.innerHeight;
+      return dropdownRect.top - 32 - dropdownRect.height > pageTopOffset;
     }
     return true;
   };
@@ -51,32 +52,56 @@ const useDynamicPosition = (
         case 'Bottom':
           if (checkForBottom()) {
             setPosition(defaultPosition);
-          } else setPosition('Top');
+          } else if (checkForTop()) {
+            setPosition('Top');
+          } else {
+            setPosition('Bottom');
+          }
           break;
         case 'BottomLeft':
           if (checkForBottom()) {
             setPosition(defaultPosition);
-          } else setPosition('TopLeft');
+          } else if (checkForTop()) {
+            setPosition('TopLeft');
+          } else {
+            setPosition('Bottom');
+          }
           break;
         case 'BottomRight':
           if (checkForBottom()) {
             setPosition(defaultPosition);
-          } else setPosition('TopRight');
+          } else if (checkForTop()) {
+            setPosition('TopRight');
+          } else {
+            setPosition('Bottom');
+          }
           break;
         case 'Top':
           if (checkForTop()) {
             setPosition(defaultPosition);
-          } else setPosition('Bottom');
+          } else if (checkForBottom()) {
+            setPosition('Bottom');
+          } else {
+            setPosition('Bottom');
+          }
           break;
         case 'TopLeft':
           if (checkForTop()) {
             setPosition(defaultPosition);
-          } else setPosition('BottomLeft');
+          } else if (checkForBottom()) {
+            setPosition('BottomLeft');
+          } else {
+            setPosition('Bottom');
+          }
           break;
         case 'TopRight':
           if (checkForTop()) {
             setPosition(defaultPosition);
-          } else setPosition('BottomRight');
+          } else if (checkForBottom()) {
+            setPosition('BottomRight');
+          } else {
+            setPosition('Bottom');
+          }
           break;
       }
     }
@@ -93,7 +118,7 @@ const useDynamicPosition = (
       } else {
         window.addEventListener('scroll', handleEvent);
       }
-      handleEvent();
+      setTimeout(() => handleEvent(), 500);
     }
 
     return () => {

@@ -144,8 +144,8 @@ function AccountProfiles({
   const [csvDataLoading, setCSVDataLoading] = useState(false);
   const [defaultSorterInfo, setDefaultSorterInfo] = useState({});
 
-  const { isFeatureLocked: isEngagementLocked } = useFeatureLock(
-    FEATURES.FEATURE_ENGAGEMENT
+  const { isFeatureLocked: isScoringLocked } = useFeatureLock(
+    FEATURES.FEATURE_ACCOUNT_SCORING
   );
 
   const activeAgent = agentState?.agent_details?.email;
@@ -439,7 +439,8 @@ function AccountProfiles({
           onChange={handlePropChange}
           showApply
           onApply={applyTableProps}
-          showDisabledOption={isEngagementLocked}
+          disabledOptions={['Engagement']}
+          showDisabledOption={isScoringLocked}
           handleDisableOptionClick={handleDisableOptionClick}
         />
       </Tabs.TabPane>
@@ -786,7 +787,7 @@ function AccountProfiles({
     return getColumns({
       accounts,
       source: accountPayload?.source,
-      isEngagementLocked,
+      isScoringLocked,
       displayTableProps,
       groupPropNames,
       listProperties,
@@ -797,7 +798,7 @@ function AccountProfiles({
     accountPayload?.source,
     displayTableProps,
     groupPropNames,
-    isEngagementLocked,
+    isScoringLocked,
     listProperties,
     defaultSorterInfo
   ]);

@@ -365,7 +365,7 @@ func InitAppRoutes(r *gin.Engine) {
 	// project analytics
 	authRouteGroup.GET("/:project_id/v1/dataobservability/metrics", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.GetAnalyticsMetricsFromStorage))
 	authRouteGroup.GET("/:project_id/v1/dataobservability/alerts", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.GetAnalyticsAlertsFromStorage))
-	authRouteGroup.GET("/:project_id/v1/crm_status/:crm", mid.SetLoggedInAgentInternalOnly(), GetCRMStatusByProjectIdHandler)
+	authRouteGroup.GET("/:project_id/crm_status/:crm", mid.SetLoggedInAgentInternalOnly(), GetCRMStatusByProjectIdHandler)
 
 	// weekly insights, explain
 	authRouteGroup.PUT("/:project_id/v1/weeklyinsights", mid.SetLoggedInAgentInternalOnly(), UpdateWeeklyInsightsHandler)
@@ -395,6 +395,11 @@ func InitAppRoutes(r *gin.Engine) {
 
 	//six signal
 	authRouteGroup.POST("/:project_id/sixsignal/email", responseWrapper(SendSixSignalReportViaEmailHandler))
+
+	// billing 
+	authRouteGroup.GET("/:project_id/billing/pricing", V1.GetPricingForPlansAndAddonsHandler)
+	authRouteGroup.POST("/:project_id/billing/upgrade", V1.UpgradePlanHandler)
+	authRouteGroup.GET("/:project_id/billing/subscription", V1.GetSubscriptionDetailsHander)
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {

@@ -1856,8 +1856,8 @@ var STANDARD_EVENT_PROPERTIES_CATAGORIZATION = map[string]string{
 	EP_GCLID:               "Traffic source",
 	EP_FBCLID:              "Traffic source",
 	EP_TIMESTAMP:           "Session properties",
-	EP_HOUR_OF_DAY:         "User identification",
-	EP_DAY_OF_WEEK:         "User identification",
+	EP_HOUR_OF_DAY:         "Session properties",
+	EP_DAY_OF_WEEK:         "Session properties",
 	EP_SESSION_COUNT:       "Session properties",
 	EP_CHANNEL:             "Traffic source",
 	UP_POSTAL_CODE:         "User identification",
@@ -2148,6 +2148,7 @@ var DISABLED_EVENT_USER_PROPERTIES = []string{
 	UP_SESSION_COUNT,
 	UP_PAGE_COUNT,
 	UP_TOTAL_SPENT_TIME,
+	IDENTIFIED_USER_ID,
 }
 
 var STANDARD_SESSION_PROPERTIES_CATAGORIZATION = map[string]string{

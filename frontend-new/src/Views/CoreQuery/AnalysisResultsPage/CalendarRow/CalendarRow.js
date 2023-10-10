@@ -11,7 +11,8 @@ import {
   QUERY_TYPE_CAMPAIGN,
   REPORT_SECTION,
   QUERY_TYPE_PROFILE,
-  QUERY_TYPE_KPI
+  QUERY_TYPE_KPI,
+  QUERY_TYPE_FUNNEL
 } from '../../../../utils/constants';
 import { SVG, Text, Spiner } from '../../../../components/factorsComponents';
 import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
@@ -49,6 +50,7 @@ function CalendarRow({
   } = useContext(CoreQueryContext);
 
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const isYearPickerEnabled = (queryType == QUERY_TYPE_KPI || queryType ==  QUERY_TYPE_EVENT || queryType == QUERY_TYPE_FUNNEL)
 
   const setDateRange = useCallback(
     (range) => {
@@ -196,6 +198,7 @@ function CalendarRow({
           presetRange
           monthPicker
           quarterPicker
+          yearPicker={isYearPickerEnabled}
           range={{
             startDate: durationObj.from,
             endDate: durationObj.to

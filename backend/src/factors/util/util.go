@@ -9,6 +9,7 @@ import (
 	"errors"
 	"factors/filestore"
 	"fmt"
+	"html/template"
 	"math"
 	"math/rand"
 	"net"
@@ -20,6 +21,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/mssola/user_agent"
@@ -1785,4 +1787,82 @@ func AddTwoNumbersInt64Float64(a, b interface{}) (int64, error) {
 	}
 
 	return sum, nil
+}
+
+func ReturnReadableHtmlFromMaps(c *gin.Context, status map[string][]map[string]interface{}) {
+
+	date_list := make([]string, 0, len(status))
+	for date := range status {
+		date_list = append(date_list, date)
+	}
+	sort.Sort(sort.Reverse(sort.StringSlice(date_list)))
+
+	for _, date := range date_list {
+
+		data := status[date]
+		heading := CreateHeadingTemplate(date)
+		t := template.New("date")
+		t, err := t.Parse(heading)
+		if err != nil {
+			log.Error(err)
+			return
+		}
+		t.Execute(c.Writer, nil)
+
+		var HtmlStr = ""
+		HtmlStr += CreateTableForCRMStatus()
+		for index, v := range data {
+
+			HtmlStr += InsertDataToTableForCRMStatus(v)
+			if index == len(data)-1 {
+				HtmlStr += "</table><br>" //closing table before data ends.
+				t := template.New("table")
+				t, err := t.Parse(HtmlStr)
+				if err != nil {
+					log.Error(err)
+					return
+				}
+				t.Execute(c.Writer, nil)
+			}
+		}
+
+	}
+
+}
+
+func CreateHeadingTemplate(date string) string {
+	formated_date := date[0:4] + "-" + date[5:7] + "-" + date[8:10] //yyyy-mm-dd
+	html := fmt.Sprintf(`<h1> Date: &nbsp; %s</h1>
+						`, formated_date)
+	return html
+}
+
+func CreateTableForCRMStatus() string {
+
+	columns := ""
+	columns = columns + fmt.Sprintf("<th>%s</th>", "document_type")
+	columns = columns + fmt.Sprintf("<th>%s</th>", "action")
+	columns = columns + fmt.Sprintf("<th>%s</th>", "total_pulled")
+	columns = columns + fmt.Sprintf("<th>%s</th>", "total_enriched")
+	columns = columns + fmt.Sprintf("<th>%s</th>", "yet_to_be_enriched")
+
+	html := "<table border='1px'> <tr> " + columns + "</tr>"
+	// not closing the table as data is pending to be inserted
+
+	return html
+}
+
+func InsertDataToTableForCRMStatus(data map[string]interface{}) string {
+
+	rows := ""
+
+	rows = rows + fmt.Sprintf(`<td width="150px" align="center">&nbsp;%v</td>`, data["document_type"])
+	rows = rows + fmt.Sprintf(`<td width="150px" align="center">&nbsp;%v</td>`, data["action"])
+	rows = rows + fmt.Sprintf(`<td width="150px" align="center">&nbsp;%v</td>`, data["total_pulled"])
+	rows = rows + fmt.Sprintf(`<td width="150px" align="center">&nbsp;%v</td>`, data["total_enriched"])
+	rows = rows + fmt.Sprintf(`<td width="150px" align="center">&nbsp;%v</td>`, data["yet_to_be_enriched"])
+
+	html := "<tr> " + rows + " </tr>"
+
+	return html
 }

@@ -176,9 +176,13 @@ function AppLayout({
       dispatch(fetchAttributionQueries(active_project?.id));
       dispatch(fetchProjectAgents(active_project.id));
       dispatch(fetchFeatureConfig(active_project?.id));
-      fetchAgentInfo();
     }
   }, [dispatch, active_project]);
+
+  //fetching agent info -> not dependent on active project
+  useEffect(() => {
+    if (isAgentLoggedIn) fetchAgentInfo();
+  }, [isAgentLoggedIn, fetchAgentInfo]);
 
   //for handling signup event for the first time logged in user
   useEffect(() => {

@@ -354,7 +354,7 @@ func (store *MemSQL) GetCRMActivityNames(projectID int64, source U.CRMSource) ([
 }
 
 // GetCRMStatus returns crm status as map
-func (store *MemSQL) GetCRMStatus(ProjectID int64, crmSource string) ([]map[string]interface{}, int) {
+func (store *MemSQL) GetCRMStatus(ProjectID int64, crmSource string) (map[string][]map[string]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": ProjectID,
 	}
@@ -363,7 +363,7 @@ func (store *MemSQL) GetCRMStatus(ProjectID int64, crmSource string) ([]map[stri
 		return nil, http.StatusBadRequest
 	}
 
-	status := make([]map[string]interface{}, 0, 0)
+	status := make(map[string][]map[string]interface{}, 0)
 
 	db := C.GetServices().Db
 
@@ -426,10 +426,9 @@ func (store *MemSQL) GetCRMStatus(ProjectID int64, crmSource string) ([]map[stri
 			}
 		}
 
-		status = append(status, result)
+		status[datePulled] = append(status[datePulled], result)
 	}
 
-	print(status)
 	return status, http.StatusOK
 
 }
