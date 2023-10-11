@@ -157,8 +157,8 @@ class DataTransformation:
                 distributed_records_map_with_timestamp[timestamp].append(updated_record)
         return distributed_records_map_with_timestamp
     
-    def enrich_campaign_company_fields_for_member_company_data(access_token, 
-                            map_of_id_to_company_data, records, campaign_group):
+    def enrich_campaign_company_fields_for_member_company_data(map_of_id_to_company_data, 
+                                                               records, campaign_group):
         
         updated_records = DataTransformation.enrich_campaign_group_info(records, 
                                                                     campaign_group)

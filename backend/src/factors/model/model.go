@@ -341,8 +341,9 @@ type Model interface {
 	GetEventsByEventNameIDANDTimeRange(projectID int64, eventNameID string,
 		startTimestamp int64, endTimestamp int64) ([]model.Event, int)
 	PullEventIdsWithEventNameId(projectId int64, startTimestamp int64, endTimestamp int64, eventNameID string) ([]string, map[string]model.EventIdToProperties, error)
-	GetLinkedinEventFieldsBasedOnTimestamp(projectID int64, timestamp int64) (map[int64]map[string]map[string]bool,
-		map[int64]map[string]map[string]bool, map[int64]map[string]bool, map[int64]map[string]bool, int)
+	GetLinkedinEventFieldsBasedOnTimestamp(projectID int64, timestamp int64,
+		imprEventNameID string, clicksEventNameID string) (map[int64]map[string]map[string]bool,
+		map[int64]map[string]map[string]bool, error)
 
 	// clickable_elements
 	UpsertCountAndCheckEnabledClickableElement(projectID int64, payload *model.CaptureClickPayload) (isEnabled bool, status int, err error)
@@ -369,7 +370,8 @@ type Model interface {
 	GetSQLQueryAndParametersForLinkedinQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string, fetchSource bool,
 		limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string, int)
 	GetDomainData(projectID string) ([]model.DomainDataResponse, int)
-	GetCompanyDataFromLinkedin(projectID string) ([]model.DomainDataResponse, string, int)
+	GetDistinctTimestampsForEventCreation(projectID string) ([]int64, int)
+	GetCompanyDataFromLinkedinForTimestamp(projectID string, timestamp int64) ([]model.DomainDataResponse, int)
 
 	UpdateLinkedinGroupUserCreationDetails(domainData model.DomainDataResponse) error
 	GetCampaignGroupInfoForGivenTimerange(campaignGroupInfoRequestPayload model.LinkedinCampaignGroupInfoRequestPayload) ([]model.LinkedinDocument, int)
@@ -774,6 +776,7 @@ type Model interface {
 	GetPropertyValuesByGroupProperty(projectID int64, groupName string, propertyName string, limit int, lastNDays int) ([]string, error)
 	IsGroupEventName(projectID int64, eventName, eventNameID string) (string, int)
 	UpdateGroupUserDomainsGroup(projectID int64, groupUserID, groupUserGroupName, domainsUserID, domainGroupID string, overwrite bool) (*model.User, int)
+	GetAllGroupUsersByDomainsGroupUserID(projectID int64, groupDomainID int, groupDomainUserID string) ([]model.User, int)
 
 	// Delete channel Integrations
 	DeleteChannelIntegration(projectID int64, channelName string) (int, error)
@@ -944,7 +947,7 @@ type Model interface {
 	GetAllEventTriggerAlertsByProject(projectID int64) ([]model.AlertInfo, int)
 	CreateEventTriggerAlert(userID, oldID string, projectID int64, alertConfig *model.EventTriggerAlertConfig, slackTokenUser, teamTokenUser string, isPausedAlert bool) (*model.EventTriggerAlert, int, string)
 	DeleteEventTriggerAlert(projectID int64, id string) (int, string)
-	MatchEventTriggerAlertWithTrackPayload(projectId int64, name string, eventProps, userProps *postgres.Jsonb, UpdatedEventProps *postgres.Jsonb, isUpdate bool) (*[]model.EventTriggerAlert, *model.EventName, int)
+	MatchEventTriggerAlertWithTrackPayload(projectId int64, name, userID string, eventProps, userProps *postgres.Jsonb, UpdatedEventProps *postgres.Jsonb, isUpdate bool) (*[]model.EventTriggerAlert, *model.EventName, int)
 	UpdateEventTriggerAlertField(projectID int64, id string, field map[string]interface{}) (int, error)
 	GetEventTriggerAlertByID(id string) (*model.EventTriggerAlert, int)
 	UpdateInternalStatusAndGetAlertIDs(projectID int64) ([]string, int, error)

@@ -128,10 +128,10 @@ class Util:
         return timestamps, ''
     
     @staticmethod
-    def get_timestamp_chunks_to_be_backfilled(backfill_start_timestamp):
+    def get_timestamp_chunks_to_be_backfilled(last_backfill_timestamp):
         sunday_datetime = Util.get_datetime_for_nearest_sunday_before_given_buffer(BACKFILL_END_DAY)
         backfill_end_date = sunday_datetime.date()
-        backfill_start_date = (datetime.strptime(str(backfill_start_timestamp), '%Y%m%d')).date()
+        backfill_start_date = (datetime.strptime(str(last_backfill_timestamp), '%Y%m%d')).date()
 
         backfill_timestamps = []
         num_of_days = (backfill_end_date-backfill_start_date).days + 1
