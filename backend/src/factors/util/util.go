@@ -9,7 +9,6 @@ import (
 	"errors"
 	"factors/filestore"
 	"fmt"
-	"html/template"
 	"math"
 	"math/rand"
 	"net"
@@ -18,6 +17,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"text/template"
 	"time"
 	"unicode"
 
@@ -1789,19 +1789,19 @@ func AddTwoNumbersInt64Float64(a, b interface{}) (int64, error) {
 	return sum, nil
 }
 
-func ReturnReadableHtmlFromMaps(c *gin.Context, status map[string][]map[string]interface{}) {
+func ReturnReadableHtmlFromMaps(c *gin.Context, status map[string][]map[string]interface{}, keys []string, toJSONKeys map[string]string) {
 
-	date_list := make([]string, 0, len(status))
-	for date := range status {
-		date_list = append(date_list, date)
+	key_list := make([]string, 0, len(status))
+	for key := range status {
+		key_list = append(key_list, key)
 	}
-	sort.Sort(sort.Reverse(sort.StringSlice(date_list)))
+	sort.Sort(sort.Reverse(sort.StringSlice(key_list)))
 
-	for _, date := range date_list {
+	for _, key := range key_list {
 
-		data := status[date]
-		heading := CreateHeadingTemplate(date)
-		t := template.New("date")
+		data := status[key]
+		heading := CreateHeadingTemplate(key)
+		t := template.New("heading")
 		t, err := t.Parse(heading)
 		if err != nil {
 			log.Error(err)
@@ -1810,10 +1810,12 @@ func ReturnReadableHtmlFromMaps(c *gin.Context, status map[string][]map[string]i
 		t.Execute(c.Writer, nil)
 
 		var HtmlStr = ""
-		HtmlStr += CreateTableForCRMStatus()
+
+		HtmlStr += CreateTableFormKeys(keys)
+
 		for index, v := range data {
 
-			HtmlStr += InsertDataToTableForCRMStatus(v)
+			HtmlStr += InsertDataToTableFormKeys(v, keys, toJSONKeys)
 			if index == len(data)-1 {
 				HtmlStr += "</table><br>" //closing table before data ends.
 				t := template.New("table")
@@ -1827,24 +1829,27 @@ func ReturnReadableHtmlFromMaps(c *gin.Context, status map[string][]map[string]i
 		}
 
 	}
-
 }
 
-func CreateHeadingTemplate(date string) string {
+func CreateHeadingTemplateForDate(date string) string {
 	formated_date := date[0:4] + "-" + date[5:7] + "-" + date[8:10] //yyyy-mm-dd
-	html := fmt.Sprintf(`<h1> Date: &nbsp; %s</h1>
+	html := fmt.Sprintf(`<h1> &nbsp; %s</h1>
 						`, formated_date)
 	return html
 }
 
-func CreateTableForCRMStatus() string {
+func CreateHeadingTemplate(heading string) string {
+	html := fmt.Sprintf(`<h1> &nbsp; %s</h1>
+						`, heading)
+	return html
+}
+
+func CreateTableFormKeys(keys []string) string {
 
 	columns := ""
-	columns = columns + fmt.Sprintf("<th>%s</th>", "document_type")
-	columns = columns + fmt.Sprintf("<th>%s</th>", "action")
-	columns = columns + fmt.Sprintf("<th>%s</th>", "total_pulled")
-	columns = columns + fmt.Sprintf("<th>%s</th>", "total_enriched")
-	columns = columns + fmt.Sprintf("<th>%s</th>", "yet_to_be_enriched")
+	for _, key := range keys {
+		columns = columns + fmt.Sprintf("<th>%s</th>", key)
+	}
 
 	html := "<table border='1px'> <tr> " + columns + "</tr>"
 	// not closing the table as data is pending to be inserted
@@ -1852,17 +1857,26 @@ func CreateTableForCRMStatus() string {
 	return html
 }
 
-func InsertDataToTableForCRMStatus(data map[string]interface{}) string {
+func InsertDataToTableFormKeys(data map[string]interface{}, keys []string, toJSONKeys map[string]string) string {
 
 	rows := ""
 
-	rows = rows + fmt.Sprintf(`<td width="150px" align="center">&nbsp;%v</td>`, data["document_type"])
-	rows = rows + fmt.Sprintf(`<td width="150px" align="center">&nbsp;%v</td>`, data["action"])
-	rows = rows + fmt.Sprintf(`<td width="150px" align="center">&nbsp;%v</td>`, data["total_pulled"])
-	rows = rows + fmt.Sprintf(`<td width="150px" align="center">&nbsp;%v</td>`, data["total_enriched"])
-	rows = rows + fmt.Sprintf(`<td width="150px" align="center">&nbsp;%v</td>`, data["yet_to_be_enriched"])
+	for _, key := range keys {
+		rows = rows + fmt.Sprintf(`<td width="150px" align="center">&nbsp;%v</td>`,
+			data[toJSONKeys[key]])
+	}
 
 	html := "<tr> " + rows + " </tr>"
 
 	return html
+}
+
+// Keys returns the keys of the map m.
+// The keys will be an indeterminate order.
+func GetKeysFromMap[M ~map[K]V, K comparable, V any](m M) []K {
+	r := make([]K, 0, len(m))
+	for k := range m {
+		r = append(r, k)
+	}
+	return r
 }
