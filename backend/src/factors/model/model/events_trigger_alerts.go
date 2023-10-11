@@ -22,6 +22,8 @@ const (
 	counterIndex        = "Counter"
 	cacheExpiry         = 7 * 24 * 60 * 60
 	cacheCounterExpiry  = 24 * 60 * 60
+	EventLevelAccount   = "account"
+	EventLevelUser      = "user"
 	Paused              = "paused"   //Internal status if the difference between failure is greater than success of the alert by 72 hours
 	Active              = "active"   //Default internal status
 	Disabled            = "disabled" //Internal status if the failures from the poison queue are not resolved for 72 more hours
