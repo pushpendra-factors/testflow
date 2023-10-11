@@ -4,7 +4,6 @@ import { get } from 'lodash';
 import {
   getStateQueryFromRequestQuery,
   getAttributionStateFromRequestQuery,
-  getCampaignStateFromRequestQuery,
   getProfileQueryFromRequestQuery,
   getKPIStateFromRequestQuery
 } from '../CoreQuery/utils';
@@ -49,16 +48,8 @@ function CardContent({ unit, resultState, durationObj }) {
   const { config: kpiConfig } = useSelector((state) => state.kpi);
 
   const equivalentQuery = useMemo(() => {
-    if (unit.query.query.query_group) {
-      const isCampaignQuery =
-        unit.query.query.cl && unit.query.query.cl === QUERY_TYPE_CAMPAIGN;
-      if (isCampaignQuery) {
-        return getCampaignStateFromRequestQuery(
-          unit.query.query.query_group[0]
-        );
-      } else {
-        return getStateQueryFromRequestQuery(unit.query.query.query_group[0]);
-      }
+    if (unit.query.query.query_group) { 
+      return getStateQueryFromRequestQuery(unit.query.query.query_group[0]);
     } else if (unit.query.query.cl && unit.query.query.cl === QUERY_TYPE_KPI) {
       return getKPIStateFromRequestQuery(unit.query.query, kpiConfig);
     } else if (

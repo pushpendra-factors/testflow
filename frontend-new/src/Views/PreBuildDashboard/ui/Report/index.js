@@ -19,7 +19,6 @@ import { EMPTY_ARRAY, EMPTY_OBJECT, generateRandomKey } from 'Utils/global';
 import PageSuspenseLoader from 'Components/SuspenseLoaders/PageSuspenseLoader';
 import moment from 'moment';
 import {
-  fetchDemoProject,
   getHubspotContact,
   fetchProjectSettingsV1,
   fetchProjectSettings,
@@ -925,7 +924,6 @@ const mapDispatchToProps = (dispatch) =>
     {
       deleteGroupByForEvent,
       getCampaignConfigData,
-      fetchDemoProject,
       getHubspotContact,
       fetchProjectSettingsV1,
       fetchProjectSettings,
