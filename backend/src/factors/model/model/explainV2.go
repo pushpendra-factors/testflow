@@ -66,3 +66,12 @@ type ExplainV2EntityInfo struct {
 	ModelID        uint64          `json:"mid"`
 	Raw_query      string          `json:"rq"`
 }
+
+type ExplainV3EntityInfo struct {
+	Id             string            `json:"id"`
+	Title          string            `json:"title"`
+	Status         string            `json:"status"`
+	CreatedBy      string            `json:"created_by"`
+	Date           time.Time         `json:"date"`
+	ExplainV2Query ExplainV3GoalRule `json:"query"`
+}

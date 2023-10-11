@@ -955,6 +955,7 @@ type Model interface {
 
 	//ExplainV2
 	GetAllExplainV2EntityByProject(projectID int64) ([]model.ExplainV2EntityInfo, int)
+	GetAllExplainV3EntityByProject(projectID int64) ([]model.ExplainV3EntityInfo, int)
 	GetAllSavedExplainV2EntityByProject(projectID int64) ([]model.ExplainV2, int)
 	GetExplainV2Entity(projectID int64, id string) (model.ExplainV2, int)
 	CreateExplainV2Entity(userID string, projectId int64, entity *model.ExplainV2Query) (*model.ExplainV2, int, string)
