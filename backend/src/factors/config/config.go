@@ -329,6 +329,7 @@ type Configuration struct {
 	SlackInternalAlertWebhookUrl                        string
 	UseHashIDForCRMGroupUserByProject                   string
 	MoveHubspotCompanyAssocationFlowToContactByPojectID string
+	ExplainV3QueryBuilder                               bool
 	UserPropertyUpdateOptProjects                       string
 	CompanyPropsV1EnabledProjectIDs                     string
 }
