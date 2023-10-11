@@ -15,9 +15,11 @@ import SidebarMenuItem from './SidebarMenuItem';
 import { selectAccountPayload } from 'Reducers/accountProfilesView/selectors';
 import {
   setAccountPayloadAction,
-  setActiveSegmentAction,
+  setActiveSegmentAction
 } from 'Reducers/accountProfilesView/actions';
 import { checkMatchPath } from './appSidebar.helpers';
+import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
+import { IsDomainGroup } from 'Components/Profile/utils';
 
 const AppSidebar = () => {
   const { Sider } = Layout;
@@ -28,11 +30,9 @@ const AppSidebar = () => {
     selectAccountPayload(state)
   );
 
-  const { newSegmentMode } = useSelector(
-    (state) => state.accountProfilesView
-  );
+  const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
   const isAllAccountsSelected =
-    activeAccountPayload.source === 'All' &&
+    IsDomainGroup(activeAccountPayload.source) &&
     Boolean(activeAccountPayload.segment_id) === false;
 
   const isSidebarCollapsed = useSelector((state) =>
@@ -51,7 +51,7 @@ const AppSidebar = () => {
   const changeAccountPayload = () => {
     dispatch(
       setAccountPayloadAction({
-        source: 'All',
+        source: GROUP_NAME_DOMAINS,
         filters: [],
         segment_id: ''
       })

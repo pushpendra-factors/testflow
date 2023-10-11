@@ -177,3 +177,26 @@ export function getTouchPointLabel(key) {
     ''
   );
 }
+
+export const formatGroups = (groups) => {
+  const accountGroups = {};
+  const dealGroups = {};
+
+  groups.forEach((group) => {
+    const { group_name, display_name, is_account } = group;
+
+    if (is_account) {
+      accountGroups[group_name] = display_name;
+    } else {
+      dealGroups[group_name] = display_name;
+    }
+  });
+
+  const updatedData = {
+    account_groups: accountGroups,
+    deal_groups: dealGroups,
+    all_groups: { ...accountGroups, ...dealGroups }
+  };
+
+  return updatedData;
+};

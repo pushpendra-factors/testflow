@@ -11,7 +11,7 @@ import (
 	"factors/task/event_user_cache"
 	U "factors/util"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -22,12 +22,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func sendGetGroupsRequest(projectId int64, isAccount string, agent *model.Agent, r *gin.Engine) *httptest.ResponseRecorder {
+func sendGetGroupsRequest(projectId int64, agent *model.Agent, r *gin.Engine) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
 	}
-	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/groups?is_account=%s", projectId, isAccount)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/groups", projectId)).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
@@ -51,39 +51,29 @@ func TestAPIGroupsHandler(t *testing.T) {
 	assert.NotNil(t, project)
 	assert.NotNil(t, agent)
 
-	isAccountCaseList := []string{"true", "false", ""}
-
 	// No Groups
-	for _, isAccount := range isAccountCaseList {
-		w := sendGetGroupsRequest(project.ID, isAccount, agent, r)
-		assert.Equal(t, http.StatusFound, w.Code)
-		jsonResponse, _ := ioutil.ReadAll(w.Body)
-		groupsList := make(map[string]string)
-		json.Unmarshal(jsonResponse, &groupsList)
-		assert.Equal(t, 0, len(groupsList))
-	}
+	w := sendGetGroupsRequest(project.ID, agent, r)
+	assert.Equal(t, http.StatusFound, w.Code)
+	jsonResponse, _ := io.ReadAll(w.Body)
+	groupsList := []model.GroupName{}
+	json.Unmarshal(jsonResponse, &groupsList)
+	assert.Equal(t, 0, len(groupsList))
 
-	// 2 Groups - 1 isAccount
+	// 2 Groups
 	group1, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, model.AllowedGroupNames)
 	assert.Equal(t, http.StatusCreated, status)
 	assert.NotNil(t, group1)
 	group2, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_DEAL, model.AllowedGroupNames)
 	assert.Equal(t, http.StatusCreated, status)
 	assert.NotNil(t, group2)
-	for _, isAccount := range isAccountCaseList {
-		w := sendGetGroupsRequest(project.ID, isAccount, agent, r)
-		assert.Equal(t, http.StatusFound, w.Code)
-		jsonResponse, _ := ioutil.ReadAll(w.Body)
-		groupsList := make(map[string]string)
-		json.Unmarshal(jsonResponse, &groupsList)
-		NoOfGroups := 2
-		if isAccount == "true" || isAccount == "false" {
-			NoOfGroups = 1
-		}
-		assert.Equal(t, NoOfGroups, len(groupsList))
-	}
+	w = sendGetGroupsRequest(project.ID, agent, r)
+	assert.Equal(t, http.StatusFound, w.Code)
+	jsonResponse, _ = io.ReadAll(w.Body)
+	groupsList = []model.GroupName{}
+	json.Unmarshal(jsonResponse, &groupsList)
+	assert.Equal(t, 2, len(groupsList))
 
-	// +3 Groups - +2 isAccount
+	// +3 Groups
 	group3, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.AllowedGroupNames)
 	assert.Equal(t, http.StatusCreated, status)
 	assert.NotNil(t, group3)
@@ -94,21 +84,18 @@ func TestAPIGroupsHandler(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 	assert.NotNil(t, group5)
 
-	for _, isAccount := range isAccountCaseList {
-		w := sendGetGroupsRequest(project.ID, isAccount, agent, r)
-		assert.Equal(t, http.StatusFound, w.Code)
-		jsonResponse, _ := ioutil.ReadAll(w.Body)
-		groupsList := make(map[string]string)
-		json.Unmarshal(jsonResponse, &groupsList)
-		NoOfGroups := 5
-		if isAccount == "true" {
-			NoOfGroups = 3
-		}
-		if isAccount == "false" {
-			NoOfGroups = 2
-		}
-		assert.Equal(t, NoOfGroups, len(groupsList))
-	}
+	w = sendGetGroupsRequest(project.ID, agent, r)
+	assert.Equal(t, http.StatusFound, w.Code)
+	jsonResponse, _ = io.ReadAll(w.Body)
+	groupsList = []model.GroupName{}
+	json.Unmarshal(jsonResponse, &groupsList)
+	assert.Equal(t, 5, len(groupsList))
+
+	segments, status := store.GetStore().GetAllSegments(project.ID)
+	assert.Equal(t, status, http.StatusFound)
+	assert.NotNil(t, segments)
+	assert.NotNil(t, segments[U.GROUP_NAME_DOMAINS])
+	assert.Equal(t, len(segments[U.GROUP_NAME_DOMAINS]), 3)
 }
 
 func TestAPIGroupPropertiesAndValuesHandler(t *testing.T) {
@@ -176,8 +163,9 @@ func TestAPIGroupPropertiesAndValuesHandler(t *testing.T) {
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusOK, w.Code)
-	jsonResponse, _ := ioutil.ReadAll(w.Body)
+	jsonResponse, _ := io.ReadAll(w.Body)
 	err = json.Unmarshal(jsonResponse, &properties)
+	assert.Equal(t, err, nil)
 	assert.Contains(t, properties, "properties")
 	assert.Contains(t, properties["properties"], "categorical")
 	assert.Contains(t, properties["properties"]["categorical"], "property1")
@@ -199,7 +187,7 @@ func TestAPIGroupPropertiesAndValuesHandler(t *testing.T) {
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusOK, w.Code)
-	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	jsonResponse, _ = io.ReadAll(w.Body)
 	err = json.Unmarshal(jsonResponse, &propertyValues)
 	assert.Nil(t, err)
 	assert.Contains(t, propertyValues, "value1")
@@ -222,7 +210,7 @@ func TestAPIGroupPropertiesAndValuesHandler(t *testing.T) {
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusOK, w.Code)
-	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	jsonResponse, _ = io.ReadAll(w.Body)
 	err = json.Unmarshal(jsonResponse, &properties)
 	assert.Nil(t, err)
 	assert.Equal(t, U.ALL_ACCOUNT_DEFAULT_PROPERTIES, properties["properties"]["categorical"])
@@ -302,7 +290,7 @@ func TestGroupPropertyValuesHandler(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var propertyValues []string
-	jsonResponse, err := ioutil.ReadAll(w.Body)
+	jsonResponse, err := io.ReadAll(w.Body)
 	assert.Nil(t, err)
 	json.Unmarshal(jsonResponse, &propertyValues)
 	assert.Equal(t, 1, len(propertyValues))
@@ -312,7 +300,7 @@ func TestGroupPropertyValuesHandler(t *testing.T) {
 	w = sendGetGroupPropertyValues(project.ID, "g1", "$hubspot_company_hubspot_owner_id", false, agent, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	jsonResponse, err = ioutil.ReadAll(w.Body)
+	jsonResponse, err = io.ReadAll(w.Body)
 	assert.Nil(t, err)
 	json.Unmarshal(jsonResponse, &propertyValues)
 	assert.Equal(t, 1, len(propertyValues))
@@ -324,7 +312,7 @@ func TestGroupPropertyValuesHandler(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	propertyValueLabelMap := make(map[string]string, 0)
-	jsonResponse, err = ioutil.ReadAll(w.Body)
+	jsonResponse, err = io.ReadAll(w.Body)
 	assert.Nil(t, err)
 	json.Unmarshal(jsonResponse, &propertyValueLabelMap)
 	assert.Equal(t, 2, len(propertyValueLabelMap))
@@ -338,7 +326,7 @@ func TestGroupPropertyValuesHandler(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	propertyValueLabelMap = make(map[string]string, 0)
-	jsonResponse, err = ioutil.ReadAll(w.Body)
+	jsonResponse, err = io.ReadAll(w.Body)
 	assert.Nil(t, err)
 	json.Unmarshal(jsonResponse, &propertyValueLabelMap)
 	assert.Equal(t, 1, len(propertyValueLabelMap))

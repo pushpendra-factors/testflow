@@ -16,7 +16,6 @@ import {
 import {
   getUserPropertiesV2,
   fetchEventNames,
-  getGroupProperties
 } from '../../../../reducers/coreQuery/middleware';
 import { useHistory } from 'react-router-dom';
 

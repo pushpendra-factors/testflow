@@ -5,6 +5,7 @@ import {
   formatSegmentsObjToGroupSelectObj,
   getHost,
   getPropType,
+  IsDomainGroup,
   propValueFormat,
   sortNumericalColumn,
   sortStringColumn
@@ -15,14 +16,15 @@ import isEqual from 'lodash/isEqual';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import LazyLoad from 'react-lazyload';
 import { Skeleton } from 'antd';
+import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 
-const placeholderIcon = "assets/avatar/company-placeholder.png";
+const placeholderIcon = 'assets/avatar/company-placeholder.png';
 
 export const getGroupList = (groupOptions) => {
   const groups = Object.entries(groupOptions || {}).map(
     ([group_name, display_name]) => [display_name, group_name]
   );
-  groups.unshift(['All Accounts', 'All']);
+  groups.unshift(['All Accounts', GROUP_NAME_DOMAINS]);
   return groups;
 };
 
@@ -88,7 +90,7 @@ export const getColumns = ({
       // Company Name Column
       title: (
         <div className={headerClassStr}>
-          {source === 'All' ? 'Account Domain' : 'Company Name'}
+          {IsDomainGroup(source) ? 'Account Domain' : 'Company Name'}
         </div>
       ),
       dataIndex: 'account',
@@ -100,27 +102,30 @@ export const getColumns = ({
       render: (item) =>
         (
           <div className='flex items-center'>
-            <LazyLoad 
-              height={20}  
-              once={true} 
-              overflow={true} 
-              placeholder={<Skeleton.Avatar active={true} size={'small'} shape={'circle'} />}
+            <LazyLoad
+              height={20}
+              once={true}
+              overflow={true}
+              placeholder={
+                <Skeleton.Avatar
+                  active={true}
+                  size={'small'}
+                  shape={'circle'}
+                />
+              }
             >
-            <img
-              src={`https://logo.uplead.com/${getHost(item.host)}`}
-              onError={(e) => {
-                if (
-                  e.target.src !== placeholderIcon
-                  ) {
-                    e.target.src = placeholderIcon
+              <img
+                src={`https://logo.uplead.com/${getHost(item.host)}`}
+                onError={(e) => {
+                  if (e.target.src !== placeholderIcon) {
+                    e.target.src = placeholderIcon;
                   }
                 }}
                 alt=''
                 width='24'
                 height='24'
-                loading="lazy"
-                />
-
+                loading='lazy'
+              />
             </LazyLoad>
             <span className='ml-2'>{item.name}</span>
           </div>
@@ -147,7 +152,7 @@ export const getColumns = ({
             <img
               src={`../../../assets/icons/${EngagementTag[status]?.icon}.svg`}
               alt=''
-              loading="lazy"
+              loading='lazy'
             />
             <Text type='title' level={7} weight={'thin'} extraClass='m-0'>
               {status}
@@ -234,8 +239,8 @@ export const computeFilterProperties = ({
 }) => {
   const props = {};
   if (profileType === 'account') {
-    if (source === 'All') {
-      props['$domains'] = groupProperties['$domains'];
+    if (IsDomainGroup(source)) {
+      props[GROUP_NAME_DOMAINS] = groupProperties[GROUP_NAME_DOMAINS];
       Object.keys(availableGroups).forEach((group) => {
         props[group] = groupProperties[group];
       });

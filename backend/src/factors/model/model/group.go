@@ -20,6 +20,12 @@ type Group struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+type GroupName struct {
+	Name        string `json:"group_name"`
+	DisplayName string `json:"display_name"`
+	IsAccount   bool   `json:"is_account"`
+}
+
 const GROUP_NAME_HUBSPOT_COMPANY = "$hubspot_company"
 const GROUP_NAME_HUBSPOT_DEAL = "$hubspot_deal"
 const GROUP_NAME_SALESFORCE_ACCOUNT = "$salesforce_account"
@@ -56,9 +62,9 @@ var AllowedGroupToDomainsGroup = map[string]bool{
 }
 
 var DomainNameSourcePropertyKey = map[string][]string{
-	GROUP_NAME_SIX_SIGNAL:         []string{U.SIX_SIGNAL_DOMAIN},
-	GROUP_NAME_HUBSPOT_COMPANY:    []string{"$hubspot_company_domain", "$hubspot_company_website"},
-	GROUP_NAME_SALESFORCE_ACCOUNT: []string{"$salesforce_account_website"},
+	GROUP_NAME_SIX_SIGNAL:         {U.SIX_SIGNAL_DOMAIN},
+	GROUP_NAME_HUBSPOT_COMPANY:    {"$hubspot_company_domain", "$hubspot_company_website"},
+	GROUP_NAME_SALESFORCE_ACCOUNT: {"$salesforce_account_website"},
 }
 
 func GetDomainNameSourcePropertyKey(groupName string) []string {

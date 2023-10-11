@@ -17,7 +17,7 @@ import {
   QUERY_OPTIONS_DEFAULT_VALUE,
   INITIAL_SESSION_ANALYTICS_SEQ
 } from 'Utils/constants';
-import { fetchGroups } from 'Reducers/coreQuery/services';
+import { getGroups } from 'Reducers/coreQuery/middleware';
 import { setShowCriteria } from 'Reducers/analyticsQuery';
 import { generateRandomKey } from 'Utils/global';
 import { deleteGroupByForEvent } from 'Reducers/coreQuery/middleware';
@@ -27,13 +27,13 @@ import { findGroupNameUsingOptionValue } from './utils';
 function EventQueryBlock({
   selEventName,
   setEventName,
-  fetchGroups,
+  getGroups,
   fetchEventNames,
   getUserPropertiesV2,
   getGroupProperties,
   getEventPropertiesV2,
   activeProject,
-  groupOpts,
+  groups,
   eventPropertiesV2,
   setShowCriteria
 }) {
@@ -47,19 +47,21 @@ function EventQueryBlock({
   });
 
   useEffect(() => {
-    fetchGroups(activeProject?.id);
-  }, [activeProject]);
+    if (!groups || Object.keys(groups).length === 0) {
+      getGroups(activeProject?.id);
+    }
+  }, [activeProject?.id, groups]);
 
   const groupsList = useMemo(() => {
-    let groups = [['Users', 'users']];
+    let listGroups = [['Users', 'users']];
     if (queryType === QUERY_TYPE_EVENT) {
-      groups.unshift(['Events', 'events']);
+      listGroups.unshift(['Events', 'events']);
     }
-    Object.entries(groupOpts || {}).forEach(([group_name, display_name]) => {
-      groups.push([display_name, group_name]);
+    Object.entries(groups || {}).forEach(([group_name, display_name]) => {
+      listGroups.push([display_name, group_name]);
     });
-    return groups;
-  }, [groupOpts]);
+    return listGroups;
+  }, [groups]);
 
   useEffect(() => {
     if (selEventName) {
@@ -173,7 +175,7 @@ function EventQueryBlock({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  groupOpts: state.groups.data,
+  groups: state.coreQuery.groups,
   eventPropertiesV2: state.coreQuery.eventPropertiesV2
 });
 
@@ -181,7 +183,7 @@ const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
       setShowCriteria,
-      fetchGroups,
+      getGroups,
       fetchEventNames,
       getEventPropertiesV2,
       getUserPropertiesV2,

@@ -26,7 +26,6 @@ import MarkTouchpointBlock from './MarkTouchpointBlock';
 import AttributionOptions from './AttributionOptions';
 import LinkedEventsBlock from './LinkedEventsBlock';
 import { SET_ATTR_QUERIES } from '../../reducers/coreQuery/actions';
-import { fetchGroups } from 'Reducers/coreQuery/services';
 
 const AttrQueryComposer = ({
   activeProject,
@@ -50,9 +49,7 @@ const AttrQueryComposer = ({
   collapse = false,
   setCollapse,
   queryOptions,
-  setQueryOptions,
-  fetchGroups,
-  groupOpts
+  setQueryOptions
 }) => {
   const [linkEvExpansion, setLinkEvExpansion] = useState(true);
   const [convGblockOpen, setConvGblockOpen] = useState(true);
@@ -66,21 +63,8 @@ const AttrQueryComposer = ({
 
   const dispatch = useDispatch();
 
-  useEffect(() => {
-    fetchGroups(activeProject?.id, false);
-  }, [activeProject]);
 
-  const groupsList = useMemo(() => {
-    let groups = [['Users', 'users']];
-    const valueMap = {
-      $hubspot_deal: 'hubspot_deals',
-      $salesforce_opportunity: 'salesforce_opportunities'
-    };
-    Object.entries(groupOpts || {}).forEach(([group_name, display_name]) => {
-      groups.push([display_name, valueMap[group_name]]);
-    });
-    return groups;
-  }, [groupOpts]);
+  const groupsList = [['Users', 'users']];
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -475,7 +459,6 @@ const mapStateToProps = (state) => ({
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
-      fetchGroups,
       fetchEventNames,
       getEventPropertiesV2,
       getUserPropertiesV2,

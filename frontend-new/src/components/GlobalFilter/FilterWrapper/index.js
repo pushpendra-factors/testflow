@@ -15,7 +15,8 @@ import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
 import getGroupIcon from 'Utils/getGroupIcon';
 import startCase from 'lodash/startCase';
 import { selectActivePreDashboard } from 'Reducers/dashboard/selectors';
-import { CustomGroupNames } from './utils';
+import { CustomGroupDisplayNames } from './utils';
+import { PropTextFormat } from 'Utils/dataFormatter';
 
 function FilterWrapper({
   projectID,
@@ -43,7 +44,7 @@ function FilterWrapper({
   propertyValuesMap,
   minEntriesPerGroup,
   operatorsMap = DEFAULT_OPERATOR_PROPS,
-  groupOpts,
+  groups,
   profileType = ""
 }) {
   const [newFilterState, setNewFilterState] = useState({
@@ -84,10 +85,10 @@ function FilterWrapper({
           }
         }
       } else {
-        label = CustomGroupNames[propertyKey]
-          ? CustomGroupNames[propertyKey]
-          : groupOpts[propertyKey]
-          ? groupOpts[propertyKey]
+        label = CustomGroupDisplayNames[propertyKey]
+          ? CustomGroupDisplayNames[propertyKey]
+          : groups?.all_groups?.[propertyKey]
+          ? groups?.all_groups?.[propertyKey]
           : PropTextFormat(propertyKey);
 
         propertyType = ['user', 'event'].includes(propertyKey)
@@ -256,7 +257,7 @@ function FilterWrapper({
 
 const mapStateToProps = (state) => ({
   propertyValuesMap: state.coreQuery.propertyValuesMap,
-  groupOpts: state.groups.data
+  groups: state.coreQuery.groups
 });
 
 const mapDispatchToProps = (dispatch) =>
