@@ -389,24 +389,24 @@ func getAccountGroupID(enProperties *map[string]interface{}, document *model.Sal
 	return accountID
 }
 
-func enrichGroupAccount(projectID int64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
+func enrichGroupAccount(projectID int64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) (int, string) {
 	logCtx := log.WithField("project_id", projectID).
 		WithFields(log.Fields{"doc_id": document.ID, "doc_action": document.Action, "doc_timestamp": document.Timestamp})
 
 	if projectID == 0 || document == nil {
 		logCtx.Error("Invalid parameters for enrichGroupAccount")
-		return http.StatusBadRequest
+		return http.StatusBadRequest, ""
 	}
 
 	if (document.Type != model.SalesforceDocumentTypeAccount && document.Type != model.SalesforceDocumentTypeGroupAccount) || document.GroupUserID != "" {
 		logCtx.WithField("doc_type", document.Type).Error("Invalid document type for enrichGroupAccount")
-		return http.StatusInternalServerError
+		return http.StatusInternalServerError, ""
 	}
 
 	enProperties, properties, err := GetSalesforceDocumentProperties(projectID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
-		return http.StatusInternalServerError
+		return http.StatusInternalServerError, ""
 	}
 
 	accountID := getAccountGroupID(enProperties, document)
@@ -414,7 +414,7 @@ func enrichGroupAccount(projectID int64, document *model.SalesforceDocument, sal
 	groupAccountUserID, status, eventID := createOrUpdateSalesforceGroupsProperties(projectID, document, model.GROUP_NAME_SALESFORCE_ACCOUNT, accountID)
 	if status != http.StatusOK {
 		logCtx.Error("Failed to create or update salesforce groups properties.")
-		return status
+		return status, ""
 	}
 
 	document.GroupUserID = groupAccountUserID
@@ -442,10 +442,10 @@ func enrichGroupAccount(projectID int64, document *model.SalesforceDocument, sal
 	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, eventID, "", groupAccountUserID, true)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update salesforce account document as synced.")
-		return http.StatusInternalServerError
+		return http.StatusInternalServerError, ""
 	}
 
-	return http.StatusOK
+	return http.StatusOK, groupAccountUserID
 }
 
 // SalesforceSmartEventName struct for holding event_name and filter expression
@@ -905,11 +905,33 @@ func createOrUpdateSalesforceGroupsProperties(projectID int64, document *model.S
 	var processEventTimestamps []int64
 	var groupUserID string
 	if document.Action == model.SalesforceDocumentCreated {
-		groupUserID, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID, "",
-			enProperties, createdTimestamp, lastModifiedTimestamp, model.UserSourceSalesforceString)
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to update salesforce group.")
-			return "", http.StatusInternalServerError, ""
+		if !C.UseHashIDForCRMGroupUserByProject(projectID) {
+			groupUserID, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID, "",
+				enProperties, createdTimestamp, lastModifiedTimestamp, model.UserSourceSalesforceString)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to update salesforce group.")
+				return "", http.StatusInternalServerError, ""
+			}
+		} else {
+			userID, status := store.GetStore().CreateOrGetCRMGroupUser(projectID, groupName, groupID,
+				createdTimestamp, model.UserSourceSalesforce)
+			if status != http.StatusCreated && status != http.StatusConflict && status != http.StatusFound {
+				logCtx.WithError(err).Error("Failed to create group user for salesforce.")
+				return "", http.StatusInternalServerError, ""
+			}
+
+			if status == http.StatusConflict || status == http.StatusFound {
+				return groupUserID, http.StatusOK, ""
+			}
+
+			groupUserID = userID
+
+			_, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID, groupUserID,
+				enProperties, createdTimestamp, lastModifiedTimestamp, model.UserSourceSalesforceString)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to update salesforce group.")
+				return "", http.StatusInternalServerError, ""
+			}
 		}
 
 		errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, "", "", groupUserID, false)
@@ -1032,6 +1054,13 @@ func enrichGroupOpportunity(projectID int64, document *model.SalesforceDocument,
 		logCtx.WithError(err).Error("Failed to getOpportuntityLeadAndContactID on enrich group opportunity")
 	}
 
+	if C.AssociateDealToDomainByProjectID(projectID) {
+		status = associateOpportunityToDomains(projectID, groupUserID, accountID)
+		if status != http.StatusOK {
+			logCtx.Error("Failed to associate opportunity to domain.")
+		}
+	}
+
 	pendingSyncRecords := associateGroupUserOpportunitytoUser(projectID, oppLeadIds, oppContactIds, groupUserID)
 
 	document.GroupUserID = groupUserID
@@ -1087,6 +1116,37 @@ func CreateSalesforceGroupRelationship(projectID int64, leftGroupName, leftgroup
 	}
 
 	return nil
+}
+
+func associateOpportunityToDomains(projectID int64, opportunityGroupUserID string, accountID string) int {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "opportunity_group_user_id": opportunityGroupUserID, "account_id": accountID})
+	if projectID == 0 || opportunityGroupUserID == "" || accountID == "" {
+		logCtx.Error("Missing required fields.")
+		return http.StatusBadRequest
+	}
+
+	document, status := store.GetStore().GetSalesforceDocumentByTypeAndAction(projectID, accountID, model.SalesforceDocumentTypeAccount, model.SalesforceDocumentCreated)
+	if status != http.StatusFound {
+		logCtx.Error("Failed to get account document in associateOpportunityToDomains.")
+		return http.StatusInternalServerError
+	}
+
+	groupUserID := document.GroupUserID
+	if document.GroupUserID == "" {
+		status, userID := enrichGroupAccount(projectID, document, nil)
+		if status != http.StatusOK {
+			logCtx.Error("Failed to enrich account document in associateOpportunityToDomains.")
+			return status
+		}
+		groupUserID = userID
+	}
+
+	status = store.GetStore().UpdateGroupUserDomainAssociationUsingAccountUserID(projectID, opportunityGroupUserID, groupUserID)
+	if status != http.StatusOK {
+		logCtx.Error("Failed to update opportunity domain assciation.")
+		return http.StatusInternalServerError
+	}
+	return status
 }
 
 func enrichOpportunityContactRoles(projectID int64, document *model.SalesforceDocument) int {
@@ -1175,7 +1235,7 @@ func updateSalesforceUserAccountGroups(projectID int64, accountID, userID string
 	groupUserID := documents[0].GroupUserID
 	if groupUserID == "" {
 		// update old record group status
-		status := enrichGroupAccount(projectID, &documents[0], nil)
+		status, _ := enrichGroupAccount(projectID, &documents[0], nil)
 		if status != http.StatusOK || documents[0].GroupUserID == "" {
 			log.WithFields(log.Fields{"project_id": projectID, "account_id": accountID}).
 				Error("Failed to create group user on existing sync record.")
@@ -2459,7 +2519,7 @@ func enrichAllGroup(projectID int64, wg *sync.WaitGroup, docType int, smartEvent
 		var pendingSyncRecords map[string]map[string]string
 		switch documents[i].Type {
 		case model.SalesforceDocumentTypeAccount, model.SalesforceDocumentTypeGroupAccount:
-			errCode = enrichGroupAccount(projectID, &documents[i], smartEventNames)
+			errCode, _ = enrichGroupAccount(projectID, &documents[i], smartEventNames)
 		case model.SalesforceDocumentTypeOpportunity:
 			pendingSyncRecords, errCode = enrichGroupOpportunity(projectID, &documents[i], smartEventNames)
 		}
