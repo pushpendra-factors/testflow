@@ -776,8 +776,10 @@ type Model interface {
 	GetPropertiesByGroup(projectID int64, groupName string, limit int, lastNDays int) (map[string][]string, int)
 	GetPropertyValuesByGroupProperty(projectID int64, groupName string, propertyName string, limit int, lastNDays int) ([]string, error)
 	IsGroupEventName(projectID int64, eventName, eventNameID string) (string, int)
-	UpdateGroupUserDomainsGroup(projectID int64, groupUserID, groupUserGroupName, domainsUserID, domainGroupID string, overwrite bool) (*model.User, int)
+
+	UpdateGroupUserDomainsGroup(projectID int64, groupUserID, domainsUserID, domainGroupID string, overwrite bool) (*model.User, int)
 	GetAllGroupUsersByDomainsGroupUserID(projectID int64, groupDomainID int, groupDomainUserID string) ([]model.User, int)
+	UpdateGroupUserDomainAssociationUsingAccountUserID(projectID int64, groupUserID string, accountGroupUserID string) int
 
 	// Delete channel Integrations
 	DeleteChannelIntegration(projectID int64, channelName string) (int, error)

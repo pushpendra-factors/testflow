@@ -2943,18 +2943,17 @@ func (store *MemSQL) UpdateUserGroupInBatch(projectID int64, userIDs []string, g
 	return http.StatusAccepted
 }
 
-func (store *MemSQL) UpdateGroupUserDomainsGroup(projectID int64, groupUserID, groupUserGroupName, domainsUserID, domainsGroupID string, overwrite bool) (*model.User, int) {
+func (store *MemSQL) UpdateGroupUserDomainsGroup(projectID int64, groupUserID, domainsUserID, domainsGroupID string, overwrite bool) (*model.User, int) {
 	logFields := log.Fields{
-		"project_id":            projectID,
-		"group_user_id":         groupUserID,
-		"domains_user_id":       domainsUserID,
-		"group_user_group_name": groupUserGroupName,
-		"domains_group_id":      domainsGroupID,
+		"project_id":       projectID,
+		"group_user_id":    groupUserID,
+		"domains_user_id":  domainsUserID,
+		"domains_group_id": domainsGroupID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
 
-	if projectID == 0 || groupUserID == "" || groupUserGroupName == "" || domainsGroupID == "" || domainsUserID == "" {
+	if projectID == 0 || groupUserID == "" || domainsGroupID == "" || domainsUserID == "" {
 		logCtx.Error("Invalid parameters.")
 		return nil, http.StatusBadRequest
 	}
@@ -3376,7 +3375,7 @@ func (store *MemSQL) AssociateUserDomainsGroup(projectID int64, requestUserID st
 			}
 
 			// associate domain user id to group user to avoid going through fallback logic later.
-			_, status = store.UpdateGroupUserDomainsGroup(projectID, groupUser.ID, leadingGroupName, domainUserID, groupID, true)
+			_, status = store.UpdateGroupUserDomainsGroup(projectID, groupUser.ID, domainUserID, groupID, true)
 			if status != http.StatusAccepted && status != http.StatusNotModified {
 				logCtx.WithFields(log.Fields{"domain_user_id": domainUserID, "group_user_id": groupUser.ID, "group_name": leadingGroupName, "group_id": groupID}).
 					WithError(err).Error("Failed to update group user association with domains group user on AssociateUserDomainsGroup.")
@@ -3480,4 +3479,41 @@ func (store *MemSQL) GetAssociatedDomainForUser(projectID int64, userID string, 
 		return "", fmt.Errorf("failed to retrieve domain name: %w", err)
 	}
 	return details.Account, nil
+}
+
+// UpdateGroupUserDomainAssociationUsingAccountUserID associates non account group with domain using account groups domain user id
+func (store *MemSQL) UpdateGroupUserDomainAssociationUsingAccountUserID(projectID int64, groupUserID string, accountGroupUserID string) int {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "group_user_id": groupUserID, "account_group_user_id": accountGroupUserID})
+	accountGroupUser, status := store.GetUserWithoutJSONColumns(projectID, accountGroupUserID)
+	if status != http.StatusFound {
+		logCtx.Error("Failed to get account group user in UpdateGroupUserDomainAssociation.")
+		return http.StatusInternalServerError
+	}
+
+	domainGroup, status := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
+	if status != http.StatusFound {
+		logCtx.Error("Failed to get group on associateOpportunityToDomains.")
+		return http.StatusInternalServerError
+	}
+
+	domainUserID, err := model.GetGroupUserDomainsUserID(accountGroupUser, domainGroup.ID)
+	if err != nil || domainUserID == "" {
+		logCtx.WithError(err).Error("Failed to domain user id in account group user.")
+		return http.StatusInternalServerError
+	}
+
+	domainName, err := model.GetGroupUserGroupID(accountGroupUser, domainGroup.ID)
+	if err != nil || domainUserID == "" {
+		logCtx.WithError(err).Error("Failed to domain name from account group user.")
+		return http.StatusInternalServerError
+	}
+
+	_, status = store.UpdateGroupUserDomainsGroup(projectID, groupUserID, domainUserID, domainName, true)
+	if status != http.StatusAccepted && status != http.StatusNotModified {
+		logCtx.WithFields(log.Fields{"domain_user_id": domainUserID, "domain_name": domainName}).
+			WithError(err).Error("Failed to update group user association with domains group user on associateOpportunityToDomains.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusOK
 }
