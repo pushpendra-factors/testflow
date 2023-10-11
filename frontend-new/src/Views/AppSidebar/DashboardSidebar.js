@@ -16,9 +16,12 @@ import { changeActiveDashboard } from 'Reducers/dashboard/services';
 import { NEW_DASHBOARD_TEMPLATES_MODAL_OPEN } from 'Reducers/types';
 import SidebarMenuItem from './SidebarMenuItem';
 import { makeDraftsActiveAction } from 'Reducers/dashboard/actions';
+import { useHistory } from 'react-router-dom';
+import { PathUrls } from 'Routes/pathUrls';
 
 const DashboardItem = ({ dashboard }) => {
   const dispatch = useDispatch();
+  const history = useHistory();
   const activeDashboard = useSelector((state) => selectActiveDashboard(state));
   const dashboards = useSelector((state) => selectDashboardList(state));
   const areDraftsSelected = useSelector((state) =>
@@ -27,7 +30,9 @@ const DashboardItem = ({ dashboard }) => {
 
   const handleActiveDashboardChange = useCallback(() => {
     const selectedDashboard = dashboards.find((d) => d.id === dashboard.id);
+    history.replace(PathUrls.Dashboard + '/' + selectedDashboard.id)
     dispatch(changeActiveDashboard(selectedDashboard));
+    
   }, [dashboard, dashboards, dispatch]);
 
   const isActive =

@@ -43,7 +43,7 @@ import { TOGGLE_GLOBAL_SEARCH } from 'Reducers/types';
 import './index.css';
 import _, { isEmpty } from 'lodash';
 import logger from 'Utils/logger';
-import { useLocation } from 'react-router-dom';
+import { matchPath, useLocation } from 'react-router-dom';
 import GlobalSearchModal from './GlobalSearchModal';
 import AppSidebar from '../AppSidebar';
 import styles from './index.module.scss';
@@ -207,7 +207,13 @@ function AppLayout({
     return <Spin size={'large'} className={'fa-page-loader'} />;
   }
 
-  const hasSidebar = routesWithSidebar.includes(pathname);
+  const hasSidebar = routesWithSidebar.find((route) => {
+    return matchPath(pathname, {
+      path: route,
+      exact: true,
+      strict: false
+    })
+  })
 
   return (
     <Layout>

@@ -32,6 +32,7 @@ import NewProject from '../Settings/SetupAssist/Modals/NewProject';
 import ExistingReportsModal from './ExistingReportsModal';
 import { changeActiveDashboard as changeActiveDashboardService } from 'Reducers/dashboard/services';
 import NewReportButton from './NewReportButton';
+import { useParams } from 'react-router-dom';
 import { selectActiveDashboard, selectDashboardList } from 'Reducers/dashboard/selectors';
 
 function ProjectDropdown({
@@ -69,6 +70,8 @@ function ProjectDropdown({
   const [isReportsModalOpen, setIsReportsModalOpen] = useState(false);
   const dispatch = useDispatch();
 
+  const { dashboard_id } = useParams();
+
   const { agent_details } = useSelector((state) => state.agent);
 
   const changeActiveDashboard = useCallback(
@@ -94,6 +97,12 @@ function ProjectDropdown({
     setDashboardName(activeDashboard?.name);
     setDashboardDesc(activeDashboard?.description);
   }, [activeDashboard]);
+
+  useEffect(() => {
+    if (dashboard_id) {
+      changeActiveDashboard(dashboard_id);
+    }
+  }, [dashboard_id, activeDashboard]);
 
   useEffect(() => {
     if (activeDashboard) {
@@ -337,7 +346,13 @@ function ProjectDropdown({
               </Text>
             </div>
             {setDashboard()}
-            <Text level={7} type='title' weight='medium' color='grey' id={'fa-at-text--dashboard-desc'}>
+            <Text
+              level={7}
+              type='title'
+              weight='medium'
+              color='grey'
+              id={'fa-at-text--dashboard-desc'}
+            >
               {showDashboardDesc}
             </Text>
           </div>

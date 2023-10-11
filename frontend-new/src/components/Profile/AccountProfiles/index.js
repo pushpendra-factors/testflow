@@ -26,7 +26,7 @@ import {
 } from '../../../reducers/global';
 import SearchCheckList from 'Components/SearchCheckList';
 import { formatUserPropertiesToCheckList } from 'Reducers/timelines/utils';
-import { useHistory, useLocation } from 'react-router-dom';
+import { useHistory, useLocation, useParams } from 'react-router-dom';
 import {
   fetchGroupPropertyValues,
   fetchGroups
@@ -66,8 +66,10 @@ import UpdateSegmentModal from './UpdateSegmentModal';
 import { AccountsSidebarIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
 import DownloadCSVModal from './DownloadCSVModal';
 import { fetchProfileAccounts } from 'Reducers/timelines';
+import { selectSegments } from 'Reducers/timelines/selectors';
 import { downloadCSV } from 'Utils/csv';
 import { formatCount } from 'Utils/dataFormatter';
+import { PathUrls } from 'Routes/pathUrls';
 
 const groupToCompanyPropMap = {
   $hubspot_company: '$hubspot_company_name',
@@ -103,6 +105,9 @@ function AccountProfiles({
   const dispatch = useDispatch();
   const history = useHistory();
   const location = useLocation();
+  const {segment_id} = useParams();
+
+  const {segments} = useSelector((state) => selectSegments(state));
 
   const { groupPropNames } = useSelector((state) => state.coreQuery);
   const groupProperties = useSelector(
@@ -150,8 +155,19 @@ function AccountProfiles({
 
   const activeAgent = agentState?.agent_details?.email;
 
+  useEffect(()=> {
+    if(segment_id && segments?.length) {
+      if(segment_id !== activeSegment.id) {
+        const selectedSegment = segments.find((seg) => seg.id === segment_id);
+        setActiveSegment(selectedSegment);
+      }
+    }
+
+  }, [segment_id, segments])
+
   const setActiveSegment = useCallback(
     (segmentPayload) => {
+      // history.replace(PathUrls.ProfileAccountsSegmentsURL + '/' + segmentPayload.id);
       dispatch(setActiveSegmentAction(segmentPayload));
     },
     [dispatch]

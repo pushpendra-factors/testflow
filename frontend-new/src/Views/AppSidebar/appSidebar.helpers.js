@@ -1,5 +1,10 @@
 import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import { PathUrls } from '../../routes/pathUrls';
+import { matchPath } from 'react-router-dom';
+
+export const checkMatchPath = (urlToMatch, internalRouteToMatch) => {
+  return matchPath(urlToMatch, {path: internalRouteToMatch, exact: true, strict: false});
+}
 
 export const isSettingsUrl = (pathname) => {
   return (
