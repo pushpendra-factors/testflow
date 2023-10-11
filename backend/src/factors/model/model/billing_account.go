@@ -4,7 +4,6 @@ import "time"
 
 type BillingAccount struct {
 	ID        string `gorm:"primary_key:true;uuid;default:uuid_generate_v4()" json:"id"`
-	PlanID    uint64 `gorm:"not null;" json:"plan_id"`
 	AgentUUID string `gorm:"not null;" json:"agent_uuid"`
 
 	OrganizationName string `json:"organization_name"`

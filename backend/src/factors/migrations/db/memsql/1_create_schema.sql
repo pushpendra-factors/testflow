@@ -206,7 +206,6 @@ CREATE ROWSTORE TABLE IF NOT EXISTS bigquery_settings (
 
 CREATE ROWSTORE TABLE IF NOT EXISTS billing_accounts (
     id text,
-    plan_id bigint,
     agent_uuid text,
     organization_name text,
     billing_address text,
@@ -396,19 +395,6 @@ CREATE ROWSTORE TABLE IF NOT EXISTS project_agent_mappings (
     -- Ref (invited_by) -> agents(uuid)
 );
 
-CREATE ROWSTORE TABLE IF NOT EXISTS project_billing_account_mappings (
-    project_id bigint,
-    billing_account_id text,
-    created_at timestamp(6) NOT NULL,
-    updated_at timestamp(6) NOT NULL,
-    KEY (updated_at),
-    SHARD KEY (project_id),
-    PRIMARY KEY (project_id, billing_account_id)
-
-    -- Required constraints.
-    -- Ref (project_id) -> projects(id)
-    -- Ref (billing_account_id) -> billing_accounts(id)
-);
 
 CREATE ROWSTORE TABLE IF NOT EXISTS project_settings (
     project_id bigint,
@@ -509,6 +495,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS projects (
     profile_picture text,
     enable_billing boolean,
     billing_subscription_id string,
+    billing_account_id string,
     billing_last_synced_at timestamp(6),
     KEY (updated_at),
     PRIMARY KEY (id),

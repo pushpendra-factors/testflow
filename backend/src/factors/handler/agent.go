@@ -923,47 +923,47 @@ func MapProjectAgentMapping(mapping model.ProjectAgentMapping) model.ProjectAgen
 		UpdatedAt: mapping.UpdatedAt,
 	}
 }
-func GetAgentBillingAccount(c *gin.Context) {
-	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+// func GetAgentBillingAccount(c *gin.Context) {
+// 	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
-	bA, errCode := store.GetStore().GetBillingAccountByAgentUUID(loggedInAgentUUID)
-	if errCode != http.StatusFound {
-		c.AbortWithStatus(errCode)
-		return
-	}
+// 	bA, errCode := store.GetStore().GetBillingAccountByAgentUUID(loggedInAgentUUID)
+// 	if errCode != http.StatusFound {
+// 		c.AbortWithStatus(errCode)
+// 		return
+// 	}
 
-	projects, errCode := store.GetStore().GetProjectsUnderBillingAccountID(bA.ID)
+// 	projects, errCode := store.GetStore().GetProjectsUnderBillingAccountID(bA.ID)
 
-	projectIDs := make([]int64, len(projects), len(projects))
-	for i := range projects {
-		projectIDs[i] = projects[i].ID
-	}
+// 	projectIDs := make([]int64, len(projects), len(projects))
+// 	for i := range projects {
+// 		projectIDs[i] = projects[i].ID
+// 	}
 
-	plan, errCode := store.GetStore().GetPlanByID(bA.PlanID)
-	if errCode != http.StatusFound {
-		c.AbortWithStatus(errCode)
-		return
-	}
+// 	plan, errCode := store.GetStore().GetPlanByID(bA.PlanID)
+// 	if errCode != http.StatusFound {
+// 		c.AbortWithStatus(errCode)
+// 		return
+// 	}
 
-	agents, errCode := store.GetStore().GetAgentsByProjectIDs(projectIDs)
-	if errCode != http.StatusFound {
-		c.AbortWithStatus(errCode)
-		return
-	}
+// 	agents, errCode := store.GetStore().GetAgentsByProjectIDs(projectIDs)
+// 	if errCode != http.StatusFound {
+// 		c.AbortWithStatus(errCode)
+// 		return
+// 	}
 
-	agentsInfo := model.CreateAgentInfos(agents)
+// 	agentsInfo := model.CreateAgentInfos(agents)
 
-	resp := make(map[string]interface{})
-	resp["billing_account"] = bA
-	resp["projects"] = projects
-	resp["agents"] = agentsInfo
-	resp["plan"] = plan
-	resp["available_plans"] = map[string]string{
-		model.FreePlanCode:    "Free",
-		model.StartupPlanCode: "Startup",
-	}
-	c.JSON(http.StatusOK, resp)
-}
+// 	resp := make(map[string]interface{})
+// 	resp["billing_account"] = bA
+// 	resp["projects"] = projects
+// 	resp["agents"] = agentsInfo
+// 	resp["plan"] = plan
+// 	resp["available_plans"] = map[string]string{
+// 		model.FreePlanCode:    "Free",
+// 		model.StartupPlanCode: "Startup",
+// 	}
+// 	c.JSON(http.StatusOK, resp)
+// }
 
 type updateAgentBillingAccParams struct {
 	OrganizationName string `json:"organization_name"`
@@ -982,60 +982,60 @@ func getUpdateAgentBillingAccountParams(c *gin.Context) (*updateAgentBillingAccP
 	return &params, nil
 }
 
-func UpdateAgentBillingAccount(c *gin.Context) {
-	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-	logCtx := log.WithFields(log.Fields{
-		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
-	})
+// func UpdateAgentBillingAccount(c *gin.Context) {
+// 	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+// 	logCtx := log.WithFields(log.Fields{
+// 		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+// 	})
 
-	params, err := getUpdateAgentBillingAccountParams(c)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to parse getUpdateAgentBillingAccountParams")
-		c.AbortWithStatus(http.StatusBadRequest)
-		return
-	}
+// 	params, err := getUpdateAgentBillingAccountParams(c)
+// 	if err != nil {
+// 		logCtx.WithError(err).Error("Failed to parse getUpdateAgentBillingAccountParams")
+// 		c.AbortWithStatus(http.StatusBadRequest)
+// 		return
+// 	}
 
-	bA, errCode := store.GetStore().GetBillingAccountByAgentUUID(loggedInAgentUUID)
-	if errCode != http.StatusFound {
-		c.AbortWithStatus(errCode)
-		return
-	}
+// 	bA, errCode := store.GetStore().GetBillingAccountByAgentUUID(loggedInAgentUUID)
+// 	if errCode != http.StatusFound {
+// 		c.AbortWithStatus(errCode)
+// 		return
+// 	}
 
-	currPlan, errCode := store.GetStore().GetPlanByID(bA.PlanID)
-	if errCode != http.StatusFound {
-		c.AbortWithStatus(errCode)
-		return
-	}
+// 	currPlan, errCode := store.GetStore().GetPlanByID(bA.PlanID)
+// 	if errCode != http.StatusFound {
+// 		c.AbortWithStatus(errCode)
+// 		return
+// 	}
 
-	newPlan, errCode := store.GetStore().GetPlanByCode(params.PlanCode)
-	if errCode != http.StatusFound {
-		c.AbortWithStatus(errCode)
-		return
-	}
+// 	newPlan, errCode := store.GetStore().GetPlanByCode(params.PlanCode)
+// 	if errCode != http.StatusFound {
+// 		c.AbortWithStatus(errCode)
+// 		return
+// 	}
 
-	planToSet := currPlan
-	if newPlan.ID != currPlan.ID {
-		planToSet = newPlan
-	}
+// 	planToSet := currPlan
+// 	if newPlan.ID != currPlan.ID {
+// 		planToSet = newPlan
+// 	}
 
-	errCode = store.GetStore().UpdateBillingAccount(bA.ID, planToSet.ID, params.OrganizationName, params.BillingAddress, params.Pincode, params.PhoneNo)
-	if errCode != http.StatusAccepted {
-		c.AbortWithStatus(errCode)
-		return
-	}
+// 	errCode = store.GetStore().UpdateBillingAccount(bA.ID, planToSet.ID, params.OrganizationName, params.BillingAddress, params.Pincode, params.PhoneNo)
+// 	if errCode != http.StatusAccepted {
+// 		c.AbortWithStatus(errCode)
+// 		return
+// 	}
 
-	// Fetch the updated billing_account and return
-	bA, errCode = store.GetStore().GetBillingAccountByAgentUUID(loggedInAgentUUID)
-	if errCode != http.StatusFound {
-		c.AbortWithStatus(errCode)
-		return
-	}
+// 	// Fetch the updated billing_account and return
+// 	bA, errCode = store.GetStore().GetBillingAccountByAgentUUID(loggedInAgentUUID)
+// 	if errCode != http.StatusFound {
+// 		c.AbortWithStatus(errCode)
+// 		return
+// 	}
 
-	resp := make(map[string]interface{})
-	resp["billing_account"] = bA
-	resp["plan"] = planToSet
-	c.JSON(http.StatusOK, resp)
-}
+// 	resp := make(map[string]interface{})
+// 	resp["billing_account"] = bA
+// 	resp["plan"] = planToSet
+// 	c.JSON(http.StatusOK, resp)
+// }
 
 type updateAgentParams struct {
 	FirstName            string `json:"first_name"`

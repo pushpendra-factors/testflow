@@ -2,13 +2,15 @@ package v1
 
 import (
 	"errors"
+	chargebee "factors/chargebee"
 	mid "factors/middleware"
 	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
+	"fmt"
+	"github.com/gin-gonic/gin"
 	"net/http"
 	"time"
-
-	"github.com/gin-gonic/gin"
 )
 
 func GetPricingForPlansAndAddonsHandler(c *gin.Context) {
@@ -16,41 +18,49 @@ func GetPricingForPlansAndAddonsHandler(c *gin.Context) {
 	if projectId == 0 {
 		c.AbortWithError(http.StatusBadRequest, errors.New("INVALID PROJECT ID"))
 	}
-	var defaultReponse model.PlansAndAddOnsPrices
-	defaultReponse = append(defaultReponse, model.SubscriptionProductPrice{
-		Name:         "Basic Monthly USD",
-		ExternalName: "Basic",
-		Type:         "Plan",
-		ID:           "basic-monthly-usd",
-		Price:        100,
-		Period:       1,
-	})
-	defaultReponse = append(defaultReponse, model.SubscriptionProductPrice{
-		Name:   "Additional Account",
-		Type:   "AddOn",
-		ID:     "additional-accounts",
-		Price:  50,
-		Period: 1,
-	})
-
-	c.JSON(http.StatusOK, defaultReponse)
+	itemPrices, err := chargebee.ListPlansAndAddOnsPricesFromChargebee()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, model.PlansAndAddOnsPrices{})
+	}
+	var res model.PlansAndAddOnsPrices
+	for _, itemPrice := range itemPrices {
+		res = append(res, model.SubscriptionProductPrice{
+			Type:         string(itemPrice.ItemType),
+			Name:         itemPrice.Name,
+			ExternalName: itemPrice.ExternalName,
+			ID:           itemPrice.Id,
+			Price:        itemPrice.Price,
+			Period:       int(itemPrice.Period),
+		})
+	}
+	c.JSON(http.StatusOK, res)
 }
 
-func UpgradePlanHandler(c *gin.Context) {
+func UpdateSubscriptionHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithError(http.StatusBadRequest, errors.New("INVALID PROJECT ID"))
 	}
-	planID := c.Query("updated_plan_id")
-	if planID == "" {
-		c.AbortWithError(http.StatusBadRequest, errors.New("INVALID PLAN"))
+	project, errCode := store.GetStore().GetProject(projectId)
+	if errCode != http.StatusFound {
+		c.AbortWithError(http.StatusBadRequest, errors.New("BAD REQUEST"))
 	}
-	defaultResponse := `{
-		"hosted_page": {
-			"url": "https://factors-test.chargebee.com/pages/v3/3Wcu6cdCdwA8t1bOsFUOh0cutvxwviakKzF/",
-		}
-	}`
-	c.JSON(http.StatusOK, defaultResponse)
+
+	var updateSubscriptionParams model.UpdateSubscriptionParams
+	err := c.BindJSON(&updateSubscriptionParams)
+	if err != nil {
+		c.AbortWithError(http.StatusBadRequest, errors.New("INVALID REQUEST"))
+		return
+	}
+	hostedPage, _, err := chargebee.GetUpgradeChargebeeSubscriptionCheckoutURL(project.BillingSubscriptionID, updateSubscriptionParams)
+	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
+	}
+
+	url := buildCheckoutUrl(hostedPage.Url)
+
+	// redirect
+	c.Redirect(http.StatusPermanentRedirect, url)
 }
 
 func GetSubscriptionDetailsHander(c *gin.Context) {
@@ -58,17 +68,35 @@ func GetSubscriptionDetailsHander(c *gin.Context) {
 	if projectId == 0 {
 		c.AbortWithError(http.StatusBadRequest, errors.New("INVALID PROJECT ID"))
 	}
+	var subscription model.Subscription
 	var subscriptionDetails []model.SubscriptionDetail
-	subscriptionDetails = append(subscriptionDetails, model.SubscriptionDetail{
-		Type:   "Plan",
-		ID:     "Basic-USD-monthly",
-		Amount: 100,
-	})
 
-	defaultResponse := model.Subscription{
-		Status:              "active",
-		RenewsOn:            time.Now(),
-		SubscriptionDetails: subscriptionDetails,
+	project, errCode := store.GetStore().GetProject(projectId)
+	if errCode != http.StatusFound {
+		c.JSON(http.StatusBadRequest, subscription)
 	}
-	c.JSON(http.StatusOK, defaultResponse)
+
+	res, err := chargebee.GetCurrentSubscriptionDetails(project.BillingSubscriptionID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, subscription)
+	}
+
+	subscription.Status = string(res.Status)
+	subscription.RenewsOn = time.Unix(res.NextBillingAt, 0)
+
+	for _, item := range res.SubscriptionItems {
+		subscriptionDetails = append(subscriptionDetails, model.SubscriptionDetail{
+			Type:   string(item.ItemType),
+			ID:     item.ItemPriceId,
+			Amount: item.Amount,
+		})
+	}
+
+	subscription.SubscriptionDetails = subscriptionDetails
+
+	c.JSON(http.StatusOK, subscription)
+}
+
+func buildCheckoutUrl(checkouturl string) string {
+	return fmt.Sprintf("%s&redirect_url=%s", checkouturl, "app.factors.ai/pricing") // change this to const later
 }

@@ -55,19 +55,29 @@ func CreateChargebeeSubscriptionForCustomer(customerID string, planPriceID strin
 	}
 }
 
-func GetUpgradeChargebeeSubscriptionCheckoutURL(subscriptionID string, planPriceID string) (hostedpage.HostedPage, int, error) {
+func GetUpgradeChargebeeSubscriptionCheckoutURL(subscriptionID string, params model.UpdateSubscriptionParams) (hostedpage.HostedPage, int, error) {
 	logCtx := log.Fields{"subscription_ID": subscriptionID}
 	chargebee.Configure(C.GetChargebeeApiKey(), C.GetChargebeeSiteName())
+
+	// manual logic
+	var subscriptionItems []*hostedpage.CheckoutExistingForItemsSubscriptionItemParams
+	if params.UpdatedPlanID != "" {
+		subscriptionItems = append(subscriptionItems, &hostedpage.CheckoutExistingForItemsSubscriptionItemParams{
+			ItemPriceId: params.UpdatedPlanID,
+		})
+	}
+
+	for _, addOn := range params.Addons {
+		subscriptionItems = append(subscriptionItems, &hostedpage.CheckoutExistingForItemsSubscriptionItemParams{
+			ItemPriceId: addOn.AddOnID,
+			Quantity:    &addOn.Quantity,
+		})
+	}
 	res, err := hostedPageAction.CheckoutExistingForItems(&hostedpage.CheckoutExistingForItemsRequestParams{
 		Subscription: &hostedpage.CheckoutExistingForItemsSubscriptionParams{
 			Id: subscriptionID,
 		},
-		SubscriptionItems: []*hostedpage.CheckoutExistingForItemsSubscriptionItemParams{
-			{
-				ItemPriceId: planPriceID,
-			},
-		},
-		// TODO Add redirect url after successful checkout
+		SubscriptionItems: subscriptionItems,
 	}).Request()
 	if err != nil {
 		log.WithFields(logCtx).WithError(err).Error("Failed to get checkout url for upgrade subscription on chargebee")
@@ -120,6 +130,28 @@ func GetCurrentSubscriptionDetails(subscriptionID string) (subscription.Subscrip
 		log.WithFields(logCtx).WithError(err).Error("Failed to get subscription details")
 		return subscription.Subscription{}, err
 	} else {
-	return *res.Subscription, nil
+		return *res.Subscription, nil
 	}
+}
+
+func GetItemDetailsFromItemPriceID(itemPriceID string) (itemprice.ItemPrice, error) {
+	logCtx := log.Fields{"subscription_ID": itemPriceID}
+	chargebee.Configure(C.GetChargebeeApiKey(), C.GetChargebeeSiteName())
+	res, err := itemPriceAction.Retrieve("basic-USD-monthly").Request()
+	if err != nil {
+		log.WithFields(logCtx).WithError(err).Error("Failed to get subscription details")
+		return itemprice.ItemPrice{}, err
+	} else {
+		return *res.ItemPrice, nil
+	}
+
+}
+
+func SyncChargebeePostPurchaseAction(projectID int64) { // Chargebee Recommends using webhooks for this instead of redirect url
+	// get the project billing subscription id
+	// get the latest subscription details
+
+	// update the plan-price-id to project_plan_mapping table
+	// update billing last synced at in project_plan_mappings table
+	// update billing last synced at in projects table
 }

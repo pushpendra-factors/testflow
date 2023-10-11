@@ -237,7 +237,7 @@ func (store *MemSQL) UpdateProject(projectId int64, project *model.Project) int 
 	return 0
 }
 
-func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string) int {
+func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string, billingEnabled bool) int {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"agent_uuid": agentUUID,
@@ -315,22 +315,25 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 		return errCode
 	}
 	// creating free subscription
-	subscription, status, err := chargebee.CreateChargebeeSubscriptionForCustomer(agent.BillingCustomerID, model.FREE_PLAN_ITEM_PRICE_ID)
-	if err != nil || status != http.StatusCreated {
-		logCtx.WithField("err_code", status).WithError(err).Error("Failed to create default subscription for agent")
-		return errCode
-	}
+	if billingEnabled {
+		subscription, status, err := chargebee.CreateChargebeeSubscriptionForCustomer(agent.BillingCustomerID, model.FREE_PLAN_ITEM_PRICE_ID)
+		if err != nil || status != http.StatusCreated {
+			logCtx.WithField("err_code", status).WithError(err).Error("Failed to create default subscription for agent")
+			return errCode
+		}
 
-	// update subscription id on project
-	updatedProject := model.Project{
-		BillingSubscriptionID: subscription.Id,
-		BillingLastSyncedAt:   time.Now(),
-	}
+		// update subscription id on project
+		updatedProject := model.Project{
+			BillingSubscriptionID: subscription.Id,
+			BillingLastSyncedAt:   time.Now(),
+		}
 
-	status = store.UpdateProject(projectID, &updatedProject)
-	if status != 0 {
-		logCtx.WithField("err_code", status).WithError(err).Error("Failed to update subscription id on project")
-		return http.StatusInternalServerError
+		status = store.UpdateProject(projectID, &updatedProject)
+		if status != 0 {
+			logCtx.WithField("err_code", status).WithError(err).Error("Failed to update subscription id on project")
+			return http.StatusInternalServerError
+		}
+
 	}
 
 	// inserting project into free plan by default
@@ -361,7 +364,7 @@ func (store *MemSQL) CreateProjectWithDependencies(project *model.Project, agent
 		return nil, errCode
 	}
 
-	errCode = store.createProjectDependencies(cProject.ID, agentUUID)
+	errCode = store.createProjectDependencies(cProject.ID, agentUUID, project.EnableBilling)
 	if errCode != http.StatusCreated {
 		return nil, errCode
 	}
@@ -438,7 +441,7 @@ func (store *MemSQL) CreateDefaultProjectForAgent(agentUUID string) (*model.Proj
 	enableBilling := agent.BillingCustomerID != ""
 
 	cProject, errCode := store.CreateProjectWithDependencies(
-		&model.Project{Name: model.DefaultProjectName, EnableBilling: enableBilling},
+		&model.Project{Name: model.DefaultProjectName, EnableBilling: enableBilling, BillingAccountID: billingAcc.ID},
 		agentUUID, model.ADMIN, billingAcc.ID, true)
 	if errCode != http.StatusCreated {
 		return nil, errCode

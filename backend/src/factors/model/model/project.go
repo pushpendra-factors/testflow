@@ -25,6 +25,7 @@ type Project struct {
 	UpdatedAt             time.Time       `json:"updated_at"`
 	EnableBilling         bool            `json:"enable_billing"`
 	BillingSubscriptionID string          `json:"billing_subscription_id"`
+	BillingAccountID      string          `json:"billing_account_id"`
 	BillingLastSyncedAt   time.Time       `json:"billing_last_synced_at"`
 	ProjectURI            string          `json:"project_uri"`
 	TimeFormat            string          `json:"time_format"`
