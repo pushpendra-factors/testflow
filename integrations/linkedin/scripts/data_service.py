@@ -67,7 +67,7 @@ class DataService:
                 date = datetime.strptime(str(start_timestamp), '%Y%m%d')
             sync_info_with_type[info['type_alias']]= date.strftime('%Y-%m-%d')
             if info['type_alias'] == MEMBER_COMPANY_INSIGHTS:
-                sync_info_with_type['backfill_start_timestamp'] = info['backfill_start_timestamp']
+                sync_info_with_type['last_backfill_timestamp'] = info['last_backfill_timestamp']
         timestamp_exceed = DataService.is_custom_timerange_exceeding_lookback(start_timestamp, input_end_timestamp)
         if timestamp_exceed:
             return [], "Given custom timerange exceeds max lookback" 
