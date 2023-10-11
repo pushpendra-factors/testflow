@@ -692,6 +692,7 @@ type Model interface {
 	// project_analytics
 	GetEventUserCountsOfAllProjects(lastNDays int) (map[string][]*model.ProjectAnalytics, error)
 	GetEventUserCountsMerged(projectIdsList []int64, lastNDays int, currentDate time.Time) (map[int64]*model.ProjectAnalytics, error)
+	GetEventUserCountsByProjectID(projectID int64, lastNDays int) (map[string][]*model.ProjectAnalytics, error)
 	GetCRMStatus(ProjectID int64, crmType string) (map[string][]map[string]interface{}, int)
 	// Property details
 	CreatePropertyDetails(projectID int64, eventName, propertyKey, propertyType string, isUserProperty bool, allowOverWrite bool) int

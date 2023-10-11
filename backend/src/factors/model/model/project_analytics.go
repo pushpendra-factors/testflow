@@ -15,3 +15,66 @@ type ProjectAnalytics struct {
 	SixSignalAPIHits      uint64 `json:"six_signal_api_hits"`
 	SixSignalAPITotalHits uint64 `json:"six_signal_api_total_hits"`
 }
+
+var ProjectAnalyticsColumnsName = []string{
+	"Date",
+	"Project Name",
+	"Adwords",
+	"Facebook",
+	"Hubspot",
+	"Linkedin",
+	"Salesforce",
+	"Total Events",
+	"Total Unique Events",
+	"Total Unique Users",
+	"6Signal Domain Enrichment Count",
+	"6Signal Total API Hits",
+}
+
+var AllProjectAnalyticsColumnsName = []string{
+	"Project ID",
+	"Project Name",
+	"Adwords",
+	"Facebook",
+	"Hubspot",
+	"Linkedin",
+	"Salesforce",
+	"Total Events",
+	"Total Unique Events",
+	"Total Unique Users",
+	"6Signal Domain Enrichment Count",
+	"6Signal Total API Hits",
+}
+
+var ProjectAnalyticsColumnsNameToJsonKeys = map[string]string{
+
+	"Date":                            "date",
+	"Project Name":                    "project_name",
+	"Adwords":                         "adwords_events",
+	"Facebook":                        "facebook_events",
+	"Hubspot":                         "hubspot_events",
+	"Linkedin":                        "linkedin_events",
+	"Salesforce":                      "salesforce_events",
+	"Total Events":                    "total_events",
+	"Total Unique Events":             "total_unique_events",
+	"Total Unique Users":              "total_unique_users",
+	"6Signal Domain Enrichment Count": "six_signal_api_hits",
+	"6Signal Total API Hits":          "six_signal_api_total_hits",
+	"Project ID":                      "project_id",
+}
+
+var CrmStatusColumnsName = []string{
+	"Document Type",
+	"Action",
+	"Total Pulled",
+	"Total Enriched",
+	"Yet To Be Enriched",
+}
+
+var CrmStatusColumnsNameToJsonKeys = map[string]string{
+	"Document Type":      "document_type",
+	"Action":             "action",
+	"Total Pulled":       "total_pulled",
+	"Total Enriched":     "total_enriched",
+	"Yet To Be Enriched": "yet_to_be_enriched",
+}
