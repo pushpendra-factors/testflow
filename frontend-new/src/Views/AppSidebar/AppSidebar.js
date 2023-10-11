@@ -60,7 +60,6 @@ const AppSidebar = () => {
   };
 
   const selectAllAccounts = () => {
-    console.log(isAllAccountsSelected);
     if (isAllAccountsSelected === false) {
       changeAccountPayload();
     }
