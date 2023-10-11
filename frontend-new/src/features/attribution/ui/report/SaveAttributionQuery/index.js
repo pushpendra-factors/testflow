@@ -68,7 +68,7 @@ const SaveAttributionQuery = ({
 
   const {
     attributionMetrics,
-    coreQueryState: { chartTypes }
+    coreQueryState: { chartTypes, attributionTableFilters }
   } = useContext(CoreQueryContext);
 
   const savedQueryPresentation = useMemo(() => {
@@ -115,6 +115,7 @@ const SaveAttributionQuery = ({
       };
 
       querySettings.attributionMetrics = JSON.stringify(attributionMetrics);
+      querySettings.tableFilters = JSON.stringify(attributionTableFilters)
 
       let queryId;
 
