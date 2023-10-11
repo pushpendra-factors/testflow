@@ -8,7 +8,7 @@ import { Button } from 'antd';
 import ORButton from '../ORButton';
 import { compareFilters, groupFilters } from '../../utils/global';
 import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
-import { GroupDisplayNames } from 'Components/Profile/utils';
+import { GroupDisplayNames, IsDomainGroup } from 'Components/Profile/utils';
 
 const GlobalFilter = ({
   filters = [],
@@ -31,7 +31,7 @@ const GlobalFilter = ({
     }
     if (groupName === 'users' || groupName === 'events') {
       props.user = userPropertiesV2;
-    } else if (groupName === '$domains') {
+    } else if (IsDomainGroup(groupName)) {
       Object.entries(groupProperties || {}).forEach(([group, properties]) => {
         if (Object.keys(GroupDisplayNames).includes(group)) {
           props[group] = properties;

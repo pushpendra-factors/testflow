@@ -4,6 +4,8 @@ import { Button } from 'antd';
 import { SVG } from '../../../factorsComponents';
 import { compareFilters } from '../../../../utils/global';
 import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
+import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
+import { IsDomainGroup } from 'Components/Profile/utils';
 
 function PropertyFilter({
   viewMode,
@@ -19,7 +21,7 @@ function PropertyFilter({
   const groupProperties = useSelector(
     (state) => state.coreQuery.groupProperties
   );
-  const availableGroups = useSelector((state) => state.groups.data);
+  const availableGroups = useSelector((state) => state.coreQuery.groups);
   const activeProject = useSelector((state) => state.global.active_project);
   const predefinedProperty = useSelector((state) => state.preBuildDashboardConfig.config.data.result);
 
@@ -29,9 +31,9 @@ function PropertyFilter({
   useEffect(() => {
     const props = {};
     if (profileType === 'account') {
-      if (source === 'All') {
-        props['$domains'] = groupProperties['$domains'];
-        Object.keys(availableGroups).forEach((group) => {
+      if (IsDomainGroup(source)) {
+        props[GROUP_NAME_DOMAINS] = groupProperties[GROUP_NAME_DOMAINS];
+        Object.keys(availableGroups?.account_groups).forEach((group) => {
           props[group] = groupProperties[group];
         });
       } else props[source] = groupProperties[source];

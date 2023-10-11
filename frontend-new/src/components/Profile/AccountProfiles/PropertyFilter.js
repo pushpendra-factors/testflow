@@ -2,7 +2,6 @@ import React, { useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import cx from 'classnames';
 import { Button, Dropdown, Menu } from 'antd';
-import { selectGroupsList } from 'Reducers/groups/selectors';
 import FiltersBox from './FiltersBox';
 import styles from './index.module.scss';
 import { Text, SVG } from 'Components/factorsComponents';
@@ -34,7 +33,6 @@ function PropertyFilter({
   resetSelectedFilters,
   onClearFilters
 }) {
-  const groupsList = useSelector((state) => selectGroupsList(state));
   const dispatch = useDispatch();
   const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
 
@@ -44,24 +42,6 @@ function PropertyFilter({
     setEventProp(INITIAL_FILTERS_STATE.eventProp);
     setListEvents(INITIAL_FILTERS_STATE.eventsList);
   };
-
-  const analyseMenu = (
-    <Menu className={styles['dropdown-menu']}>
-      {groupsList.map((elem) => {
-        return (
-          <Menu.Item
-            className={styles['dropdown-menu-item']}
-            onClick={() => handleAccountChange(elem)}
-            key={elem[1]}
-          >
-            <Text type='title' extraClass='mb-0'>
-              {elem[0]}
-            </Text>
-          </Menu.Item>
-        );
-      })}
-    </Menu>
-  );
 
   const toggleFilters = useCallback(() => {
     setFiltersExpanded((curr) => !curr);
@@ -134,25 +114,6 @@ function PropertyFilter({
           <SVG size={16} name='chevronDown' color='#8C8C8C' />
         </Button>
       </ControlledComponent>
-      <div className='flex col-gap-2 items-center'>
-        <Text type='title' extraClass='mb-0'>
-          Include
-        </Text>
-        <Dropdown overlay={analyseMenu}>
-          <div className='flex items-center col-gap-1'>
-            <Text
-              level={6}
-              color='character-primary'
-              weight='bold'
-              type='title'
-              extraClass='mb-0'
-            >
-              {selectedAccount.account[0]}
-            </Text>{' '}
-            <SVG size={16} name='caretDown' color='#8c8c8c' />
-          </div>
-        </Dropdown>
-      </div>
       <FiltersBox
         source={selectedAccount.account[1]}
         filtersList={filtersList}

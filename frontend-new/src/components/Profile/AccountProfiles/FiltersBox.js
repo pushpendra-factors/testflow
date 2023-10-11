@@ -16,6 +16,7 @@ import EventsBlock from '../MyComponents/EventsBlock';
 import { selectGroupsList } from 'Reducers/groups/selectors';
 import { generateRandomKey } from 'Utils/global';
 import { selectAccountPayload } from 'Reducers/accountProfilesView/selectors';
+import { IsDomainGroup } from '../utils';
 
 const FiltersBox = ({
   filtersList,
@@ -49,7 +50,7 @@ const FiltersBox = ({
     return selectAccountPayload(state);
   });
 
-  const availableGroups = useSelector((state) => state.groups.data);
+  const availableGroups = useSelector((state) => state.coreQuery.groups);
 
   const handleEventChange = useCallback(
     (eventItem) => {
@@ -80,7 +81,7 @@ const FiltersBox = ({
     const props = computeFilterProperties({
       userProperties,
       groupProperties,
-      availableGroups,
+      availableGroups: availableGroups?.account_groups,
       profileType,
       source
     });
@@ -179,7 +180,7 @@ const FiltersBox = ({
     );
   }, [appliedFilters.eventsList.length, appliedFilters.filters.length]);
 
-  const showEventsSection = source !== 'All';
+  const showEventsSection = !IsDomainGroup(source);
 
   return (
     <div className={cx(styles['filters-box-container'], 'flex flex-col')}>

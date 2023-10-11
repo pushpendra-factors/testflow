@@ -1,4 +1,5 @@
 import { fetchKPIFilterValues } from 'Reducers/kpi';
+import { FETCH_GROUPS_FULFILLED, FETCH_GROUPS_REJECTED } from 'Reducers/types';
 import {
   fetchEventsAction,
   fetchEventPropertiesAction,
@@ -51,7 +52,8 @@ import {
   fetchButtonClicksPropertyValues,
   fetchPageViewsPropertyValues,
   fetchUserPropertiesV2,
-  fetchPredefinedPropertyValues
+  fetchPredefinedPropertyValues,
+  fetchGroups
 } from './services';
 import {
   convertToEventOptions,
@@ -59,7 +61,8 @@ import {
   convertCampaignConfig,
   convertCustomEventCategoryToOptions,
   convertEventsPropsToOptions,
-  convertUserPropsToOptions
+  convertUserPropsToOptions,
+  formatGroups
 } from './utils';
 
 export const fetchEventNames = (projectId) => {
@@ -484,4 +487,23 @@ export const getKPIPropertyValues = (projectId, data) => (dispatch) => {
         );
       });
   });
+};
+
+export const getGroups = (projectID) => async (dispatch) => {
+  try {
+    const response = await fetchGroups(projectID);
+    const data = formatGroups(response.data);
+
+    dispatch({
+      type: FETCH_GROUPS_FULFILLED,
+      payload: data
+    });
+  } catch (err) {
+    console.log(err);
+
+    dispatch({
+      type: FETCH_GROUPS_REJECTED,
+      payload: {}
+    });
+  }
 };

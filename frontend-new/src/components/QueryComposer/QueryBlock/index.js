@@ -21,6 +21,8 @@ import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
 import { processProperties } from 'Utils/dataFormatter';
+import { IsDomainGroup } from 'Components/Profile/utils';
+
 function QueryBlock({
   availableGroups,
   index,
@@ -66,7 +68,7 @@ function QueryBlock({
       return eventOpts.filter(
         (group) => !userGroupExclusions.includes(group?.label)
       );
-    } else if (activeGroup === '$domains') {
+    } else if (IsDomainGroup(activeGroup)) {
       return eventOpts.filter(
         (group) => !domainGroupExclusions.includes(group?.label)
       );

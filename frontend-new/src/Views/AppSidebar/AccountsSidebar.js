@@ -123,22 +123,12 @@ const AccountsSidebar = () => {
   );
   const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
 
-  const groupsList = useMemo(() => {
-    return getGroupList(groupOptions);
-  }, [groupOptions]);
-
   const segmentsList = useMemo(() => {
     return generateSegmentsList({
       accountPayload: activeAccountPayload,
       segments
     });
   }, [activeAccountPayload, segments]);
-
-  const filteredGroupsList = groupsList
-    .slice(1)
-    .filter((value) =>
-      value[0].toLowerCase().includes(searchText.toLowerCase())
-    );
 
   return (
     <div className='flex flex-col row-gap-5'>
@@ -163,9 +153,6 @@ const AccountsSidebar = () => {
               setSearchText={setSearchText}
               placeholder={'Search segment'}
             />
-            {filteredGroupsList.map((group) => {
-              return <GroupItem key={group[0]} group={group} />;
-            })}
             <ControlledComponent controller={newSegmentMode === true}>
               <NewSegmentItem />
             </ControlledComponent>

@@ -15,7 +15,6 @@ import MomentTz from 'Components/MomentTz';
 import FaSelect from '../FaSelect';
 import { INITIALIZE_GROUPBY } from '../../reducers/coreQuery/actions';
 import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
-import { fetchGroups } from 'Reducers/coreQuery/services';
 import GlobalFilter from 'Components/GlobalFilter';
 import GroupBlock from 'Components/QueryComposer/GroupBlock';
 
@@ -25,11 +24,9 @@ function ProfileComposer({
   runProfileQuery,
   eventChange,
   queryType,
-  fetchGroups,
   getUserPropertiesV2,
   getGroupProperties,
   activeProject,
-  groupOpts,
   queryOptions,
   setQueryOptions,
   collapse = false,
@@ -41,18 +38,6 @@ function ProfileComposer({
   const [filterBlockOpen, setFilterBlockOpen] = useState(true);
   const [groupBlockOpen, setGroupBlockOpen] = useState(true);
   const dispatch = useDispatch();
-
-  useEffect(() => {
-    fetchGroups(activeProject?.id);
-  }, [activeProject?.id]);
-
-  const groupsList = useMemo(() => {
-    let groups = [['Users', 'users']];
-    Object.entries(groupOpts || {}).forEach(([group_name, display_name]) => {
-      groups.push([display_name, group_name]);
-    });
-    return groups;
-  }, [groupOpts]);
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -106,70 +91,6 @@ function ProfileComposer({
 
   const triggerDropDown = () => {
     setDDVisible(true);
-  };
-
-  const selectGroup = () => {
-    return (
-      <div className={`${styles.groupsection_dropdown}`}>
-        {isDDVisible ? (
-          <FaSelect
-            extraClass={`${styles.groupsection_dropdown_menu}`}
-            options={groupsList}
-            onClickOutside={() => setDDVisible(false)}
-            optionClick={(val) => onChange(val[1])}
-          ></FaSelect>
-        ) : null}
-      </div>
-    );
-  };
-
-  const renderGroupSection = () => {
-    try {
-      return (
-        <div className={`flex items-center pt-6`}>
-          <Text
-            type={'title'}
-            level={6}
-            weight={'normal'}
-            extraClass={`m-0 mr-3`}
-          >
-            Analyse
-          </Text>
-          <div className={`${styles.groupsection}`}>
-            <Tooltip
-              title='Select profile type to analyse'
-              color={TOOLTIP_CONSTANTS.DARK}
-            >
-              <Button
-                className={`${styles.groupsection_button}`}
-                type='text'
-                onClick={triggerDropDown}
-              >
-                <div className={`flex items-center`}>
-                  <Text
-                    type={'title'}
-                    level={6}
-                    weight={'bold'}
-                    extraClass={`m-0 mr-1`}
-                  >
-                    {
-                      groupsList?.find(
-                        ([_, groupName]) =>
-                          groupName === queryOptions?.group_analysis
-                      )?.[0]
-                    }
-                  </Text>
-                  <SVG name='caretDown' />
-                </div>
-              </Button>
-            </Tooltip>
-            {selectGroup()}
-          </div>
-        </div>
-      );
-    } catch (err) {
-      console.log(err);
-    }
   };
 
   const queryList = () => {
@@ -388,7 +309,6 @@ function ProfileComposer({
 
   return (
     <div className={styles.composer_body}>
-      {renderGroupSection()}
       {renderProfileQueryList()}
       {renderGlobalFilterBlock()}
       {groupByBlock()}
@@ -399,13 +319,11 @@ function ProfileComposer({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  groupOpts: state.groups.data
 });
 
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
-      fetchGroups,
       getUserPropertiesV2,
       getGroupProperties
     },

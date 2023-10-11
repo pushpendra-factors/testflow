@@ -16,8 +16,8 @@ import {
 } from 'Utils/dataFormatter';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
-import { GroupDisplayNames } from 'Components/Profile/utils';
-import { CustomGroupNames } from 'Components/GlobalFilter/FilterWrapper/utils';
+import { GroupDisplayNames, IsDomainGroup } from 'Components/Profile/utils';
+import { CustomGroupDisplayNames } from 'Components/GlobalFilter/FilterWrapper/utils';
 
 function GroupBlock({
   groupByState,
@@ -46,9 +46,9 @@ function GroupBlock({
           'user'
         );
       }
-    } else if (groupName !== '$domains') {
-      const groupLabel = CustomGroupNames[groupName]
-        ? CustomGroupNames[groupName]
+    } else if (!IsDomainGroup(groupName)) {
+      const groupLabel = CustomGroupDisplayNames[groupName]
+        ? CustomGroupDisplayNames[groupName]
         : groupOpts[groupName]
         ? groupOpts[groupName]
         : PropTextFormat(groupName);
@@ -66,8 +66,8 @@ function GroupBlock({
     } else {
       for (const [group, properties] of Object.entries(groupProperties || {})) {
         if (Object.keys(GroupDisplayNames).includes(group)) {
-          const groupLabel = CustomGroupNames[group]
-            ? CustomGroupNames[group]
+          const groupLabel = CustomGroupDisplayNames[group]
+            ? CustomGroupDisplayNames[group]
             : groupOpts[group]
             ? groupOpts[group]
             : PropTextFormat(group);

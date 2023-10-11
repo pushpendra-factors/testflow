@@ -1630,20 +1630,28 @@ var STANDARD_GROUP_DISPLAY_NAMES = map[string]string{
 	GROUP_NAME_G2:                     "G2 Engagements",
 }
 
-var ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES = map[string]string{
-	IN_LINKEDIN:     "Engaged on LinkedIn",
-	IN_HUBSPOT:      "In Hubspot",
-	IN_G2:           "Visited G2",
-	VISITED_WEBSITE: "Visited Website",
-	IN_SALESFORCE:   "In Salesforce",
-}
-
 var ALL_ACCOUNT_DEFAULT_PROPERTIES = []string{
 	IN_LINKEDIN,
 	IN_HUBSPOT,
 	IN_G2,
 	VISITED_WEBSITE,
 	IN_SALESFORCE,
+}
+
+var GROUP_TO_DEFAULT_SEGMENT_MAP = map[string]string{
+	GROUP_NAME_HUBSPOT_COMPANY:    IN_HUBSPOT,
+	GROUP_NAME_SALESFORCE_ACCOUNT: IN_SALESFORCE,
+	GROUP_NAME_SIX_SIGNAL:         VISITED_WEBSITE,
+	GROUP_NAME_LINKEDIN_COMPANY:   IN_LINKEDIN,
+	GROUP_NAME_G2:                 IN_G2,
+}
+
+var ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES = map[string]string{
+	IN_LINKEDIN:     "Engaged on LinkedIn",
+	IN_HUBSPOT:      "In Hubspot",
+	IN_G2:           "Visited G2",
+	VISITED_WEBSITE: "Visited Website",
+	IN_SALESFORCE:   "In Salesforce",
 }
 
 var USER_PROPERTIES_WITH_COLUMN = []string{
