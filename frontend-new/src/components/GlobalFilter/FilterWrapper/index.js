@@ -16,7 +16,6 @@ import getGroupIcon from 'Utils/getGroupIcon';
 import startCase from 'lodash/startCase';
 import { selectActivePreDashboard } from 'Reducers/dashboard/selectors';
 import { CustomGroupDisplayNames } from './utils';
-import { PropTextFormat } from 'Utils/dataFormatter';
 
 function FilterWrapper({
   projectID,
