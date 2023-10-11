@@ -21,6 +21,8 @@ import SidebarMenuItem from './SidebarMenuItem';
 import SidebarSearch from './SidebarSearch';
 import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
 import { AccountsSidebarIconsMapping } from './appSidebar.constants';
+import { useHistory } from 'react-router-dom';
+import { PathUrls } from 'Routes/pathUrls';
 
 const NewSegmentItem = () => {
   return (
@@ -73,10 +75,12 @@ const GroupItem = ({ group }) => {
 
 const SegmentItem = ({ segment }) => {
   const dispatch = useDispatch();
+  const history = useHistory();
   const activeAccountPayload = useSelector((state) =>
     selectAccountPayload(state)
   );
   const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
+  
 
   const changeActiveSegment = () => {
     const opts = { ...activeAccountPayload };
@@ -84,6 +88,7 @@ const SegmentItem = ({ segment }) => {
     opts.source = segment[2].type;
     opts.filters = [];
     delete opts.search_filter;
+    history.replace({pathname: '/accounts/segments/' + segment[1]});
     dispatch(setActiveSegmentAction(segment[2]));
     dispatch(setAccountPayloadAction(opts));
   };

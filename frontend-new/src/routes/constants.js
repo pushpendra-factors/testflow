@@ -282,6 +282,14 @@ export const APP_LAYOUT_ROUTES = {
     Private: true,
     Layout: AppLayout
   },
+  DashboardUrl: {
+    title: 'Dashboard',
+    path: PathUrls.DashboardURL,
+    Component: Dashboard,
+    exact: true,
+    Private: true,
+    Layout: AppLayout
+  },
   PreBuildDashboard: {
     title: 'Quick Board',
     path: PathUrls.PreBuildDashboard,
@@ -478,6 +486,13 @@ export const APP_LAYOUT_ROUTES = {
   ProfileAccounts: {
     exact: true,
     path: PathUrls.ProfileAccounts,
+    Component: AccountProfiles,
+    Private: true,
+    Layout: AppLayout
+  },
+  ProfileAccountsSegmentsURL: {
+    exact: true,
+    path: PathUrls.ProfileAccountsSegmentsURL,
     Component: AccountProfiles,
     Private: true,
     Layout: AppLayout

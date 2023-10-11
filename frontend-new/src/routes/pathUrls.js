@@ -1,5 +1,6 @@
 export const PathUrls = {
   Dashboard: '/reports',
+  DashboardURL: '/reports/:dashboard_id',
   PreBuildDashboard: '/quick-board',
   PreBuildDashboardReport: '/quick-board/report',
   ComponentsLib: '/components',
@@ -10,6 +11,7 @@ export const PathUrls = {
   ExplainInsightsV2: '/explainV2/insights',
   ProfilePeople: '/profiles/people',
   ProfileAccounts: '/',
+  ProfileAccountsSegmentsURL: '/accounts/segments/:segment_id',
   VisitorIdentificationReport: '/reports/visitor_report',
   PathAnalysis: '/path-analysis',
   PathAnalysisInsights: '/path-analysis/insights',

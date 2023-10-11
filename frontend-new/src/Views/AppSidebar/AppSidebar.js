@@ -17,6 +17,7 @@ import {
   setAccountPayloadAction,
   setActiveSegmentAction,
 } from 'Reducers/accountProfilesView/actions';
+import { checkMatchPath } from './appSidebar.helpers';
 
 const AppSidebar = () => {
   const { Sider } = Layout;
@@ -59,6 +60,7 @@ const AppSidebar = () => {
   };
 
   const selectAllAccounts = () => {
+    console.log(isAllAccountsSelected);
     if (isAllAccountsSelected === false) {
       changeAccountPayload();
     }
@@ -81,11 +83,12 @@ const AppSidebar = () => {
           <div
             className={cx('flex justify-between items-center', {
               'pb-5 border-b border-gray-300':
-                pathname === PathUrls.ProfileAccounts
+                checkMatchPath(pathname, PathUrls.ProfileAccounts)
+                || checkMatchPath(pathname, PathUrls.ProfileAccountsSegmentsURL)
             })}
           >
             <ControlledComponent
-              controller={pathname !== PathUrls.ProfileAccounts}
+              controller={!checkMatchPath(pathname, PathUrls.ProfileAccounts) && !checkMatchPath(pathname, PathUrls.ProfileAccountsSegmentsURL)}
             >
               <div className='flex col-gap-2 items-center px-3'>
                 <SVG
@@ -102,7 +105,8 @@ const AppSidebar = () => {
               </div>
             </ControlledComponent>
             <ControlledComponent
-              controller={pathname === PathUrls.ProfileAccounts}
+              controller={checkMatchPath(pathname, PathUrls.ProfileAccounts)
+                || checkMatchPath(pathname, PathUrls.ProfileAccountsSegmentsURL)}
             >
               <div className='w-11/12 pl-4'>
                 <SidebarMenuItem
