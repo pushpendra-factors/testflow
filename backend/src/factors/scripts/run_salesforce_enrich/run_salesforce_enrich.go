@@ -160,6 +160,8 @@ func main() {
 	enrichRecordProcessLimit := flag.Int("enrich_record_process_limit", 0, "Limit number of records for enrichment at project level")
 	disableOpportunityContactRolesByProjectID := flag.String("disable_opportunity_contact_roles_by_project_id", "", "")
 	userPropertyUpdateOptProjects := flag.String("user_property_update_opt_projects", "", "")
+	associateDealToDomainByProjectID := flag.String("associate_deal_to_domain_by_project_id", "", "")
+	useHashIDForCRMGroupUserByProject := flag.String("use_hash_id_for_crm_group_user_by_project_id", "", "")
 
 	flag.Parse()
 
@@ -238,6 +240,8 @@ func main() {
 		RemoveDisabledEventUserPropertiesByProjectID:       *removeDisabledEventUserPropertiesByProjectId,
 		DisableOpportunityContactRolesByProjectID:          *disableOpportunityContactRolesByProjectID,
 		UserPropertyUpdateOptProjects:                      *userPropertyUpdateOptProjects,
+		AssociateDealToDomainByProjectID:                   *associateDealToDomainByProjectID,
+		UseHashIDForCRMGroupUserByProject:                  *useHashIDForCRMGroupUserByProject,
 	}
 
 	C.InitConf(config)

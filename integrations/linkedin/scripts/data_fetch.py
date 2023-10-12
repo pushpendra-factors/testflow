@@ -298,7 +298,7 @@ class DataFetch:
                                                         end_timestamp):
         insights_rows, resp = self.get_insights(linkedin_setting, timestamp,
                                                         MEMBER_COMPANY_INSIGHTS, 
-                                                        'MEMBER_COMPANY', request_counter, 
+                                                        'MEMBER_COMPANY', 0, 
                                                         campaign_group['id'], end_timestamp)
         if resp['status'] == 'failed' or resp['errMsg'] != '':
             return [], resp

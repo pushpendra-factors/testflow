@@ -13,8 +13,8 @@ import {
   getEventsWithProperties,
   getStateQueryFromRequestQuery
 } from '../../Views/CoreQuery/utils';
-import { operatorMap } from 'Utils/operatorMapping';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
+import { operatorMap, reverseOperatorMap } from 'Utils/operatorMapping';
 
 export const granularityOptions = [
   'Timestamp',
@@ -540,7 +540,9 @@ export const transformPayloadForWeightConfig = (payload) => {
       const rule = {
         key: filter.props[1],
         value: filter.values,
-        operator: filter.operator,
+        operator: operatorMap[filter.operator]
+          ? operatorMap[filter.operator]
+          : filter.operator,
         property_type: filter.props[3],
         value_type: filter.props[2]
       };
@@ -579,7 +581,9 @@ export const transformWeightConfigForQuery = (config) => {
           rule.value_type,
           rule.property_type
         ],
-        operator: rule.operator,
+        operator: reverseOperatorMap[rule.operator]
+          ? reverseOperatorMap[rule.operator]
+          : rule.operator,
         values: ruleValues,
         ref: 1
       };

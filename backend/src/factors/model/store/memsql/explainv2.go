@@ -46,6 +46,36 @@ func (store *MemSQL) GetAllExplainV2EntityByProject(projectID int64) ([]model.Ex
 	return et, http.StatusFound
 }
 
+func (store *MemSQL) GetAllExplainV3EntityByProject(projectID int64) ([]model.ExplainV3EntityInfo, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+
+	entity := make([]model.ExplainV2, 0)
+
+	err := db.Table("explain_v2").
+		Where("project_id = ? AND is_deleted = ?", projectID, false).
+		Order("created_at DESC").Limit(LimitExplainV2EntityList).Find(&entity).Error
+	if err != nil {
+		log.WithError(err).Error("Failed to fetch rows from explain table for project")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(entity) == 0 {
+		return nil, http.StatusFound
+	}
+	createdByNames, errCode := store.addCreatedByNameInExplainV2(entity)
+	if errCode != http.StatusFound {
+		log.WithFields(logFields).Error("Cannot fetch created_by names")
+		return nil, http.StatusInternalServerError
+	}
+
+	et := store.convertExplainV2ToExplainV3EntityInfo(entity, createdByNames)
+	return et, http.StatusFound
+}
+
 func (store *MemSQL) convertExplainV2ToExplainV2EntityInfo(list []model.ExplainV2, names map[string]string) []model.ExplainV2EntityInfo {
 
 	res := make([]model.ExplainV2EntityInfo, 0)
@@ -66,6 +96,39 @@ func (store *MemSQL) convertExplainV2ToExplainV2EntityInfo(list []model.ExplainV
 			ExplainV2Query: entity.Query,
 			ModelID:        obj.ModelID,
 			Raw_query:      entity.Raw_query,
+		}
+		res = append(res, e)
+	}
+	return res
+}
+
+func convertFactorsGoalRuleToExplainV3GoalRule(query model.FactorsGoalRule) model.ExplainV3GoalRule {
+
+	var queryV2 model.ExplainV3GoalRule
+	queryV2.StartEvent = model.ExplainV3Event{Label: query.StartEvent}
+	queryV2.EndEvent = model.ExplainV3Event{Label: query.EndEvent}
+	queryV2.Visited = query.Visited
+	return queryV2
+}
+
+func (store *MemSQL) convertExplainV2ToExplainV3EntityInfo(list []model.ExplainV2, names map[string]string) []model.ExplainV3EntityInfo {
+
+	res := make([]model.ExplainV3EntityInfo, 0)
+	var entity model.ExplainV2Query
+
+	for _, obj := range list {
+		err := U.DecodePostgresJsonbToStructType(obj.ExplainV2Query, &entity)
+		if err != nil {
+			log.WithError(err).Error("Problem deserializing explainV2 query.")
+			return nil
+		}
+		e := model.ExplainV3EntityInfo{
+			Id:             obj.ID,
+			Title:          obj.Title,
+			Status:         obj.Status,
+			CreatedBy:      names[obj.CreatedBy],
+			Date:           obj.UpdatedAt,
+			ExplainV2Query: convertFactorsGoalRuleToExplainV3GoalRule(entity.Query),
 		}
 		res = append(res, e)
 	}

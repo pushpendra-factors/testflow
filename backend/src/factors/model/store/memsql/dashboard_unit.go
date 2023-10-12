@@ -1011,11 +1011,12 @@ func (store *MemSQL) RunCachingForLast3MonthsAttribution(dashboardUnit model.Das
 	}
 	resultsComputed, _ := store.GetLast3MonthStoredQueriesFromAndTo(dashboardUnit.ProjectID, dashboardUnit.DashboardId, dashboardUnit.ID, dashboardUnit.QueryId)
 
-	// get from and to for all the time ranges!
-	monthRange := U.GetAllMonthFromTo(startTimeForCache, timezoneString)
-	weeksRange := U.GetAllWeeksFromStartTime(startTimeForCache, timezoneString)
+	daysRange := U.GetAllDaysSinceStartTime(startTimeForCache, timezoneString)
+	// monthRange := U.GetAllMonthFromTo(startTimeForCache, timezoneString)
+	// weeksRange := U.GetAllWeeksFromStartTime(startTimeForCache, timezoneString)
 
-	allRange := append(monthRange, weeksRange...)
+	allRange := daysRange
+	//allRange = append(monthRange, weeksRange...)
 
 	log.WithFields(log.Fields{"projectID": dashboardUnit.ProjectID,
 		"allRange": allRange,
@@ -1110,23 +1111,22 @@ func (store *MemSQL) RunEverydayCachingForAttribution(dashboardUnit model.Dashbo
 
 	// get from and to for all the time ranges!
 	startTimeForCache := time.Now().Unix() - 63*U.SECONDS_IN_A_DAY
-	monthRange := U.GetAllMonthFromTo(startTimeForCache, timezoneString)
-	weeksRange := U.GetAllWeeksFromStartTime(startTimeForCache, timezoneString)
 
-	allRange := append(monthRange, weeksRange...)
+	daysRange := U.GetAllDaysSinceStartTime(startTimeForCache, timezoneString)
+	// monthRange := U.GetAllMonthFromTo(startTimeForCache, timezoneString)
+	// weeksRange := U.GetAllWeeksFromStartTime(startTimeForCache, timezoneString)
+
+	allRange := daysRange
+	//allRange = append(monthRange, weeksRange...)
 
 	log.WithFields(log.Fields{"projectID": dashboardUnit.ProjectID,
 		"allRange": allRange,
 		"Method":   "RunCachingForLast3MonthsAttribution"}).Info("Attribution V1 caching debug")
 
-	for preset, rangeFunction := range U.QueryDateRangePresets {
+	for _, queryRange := range allRange {
 
-		fr, t, errCode := rangeFunction(timezoneString)
-		if errCode != nil {
-			errMsg := fmt.Sprintf("Failed to get proper project Timezone for %d", dashboardUnit.ProjectID)
-			C.PingHealthcheckForFailure(C.HealthcheckDashboardDBAttributionPingID, errMsg)
-			return
-		}
+		fr := queryRange.From
+		t := queryRange.To
 
 		// check if the result exists in DB
 		for _, resultEntry := range *resultsComputed {
@@ -1188,7 +1188,7 @@ func (store *MemSQL) RunEverydayCachingForAttribution(dashboardUnit model.Dashbo
 		cachePayload := model.DashboardUnitCachePayload{
 			DashboardUnit: dashboardUnit,
 			BaseQuery:     baseQuery,
-			Preset:        preset,
+			Preset:        "day_range",
 		}
 		if C.GetIsRunningForMemsql() == 0 {
 			unitWaitGroup.Add(1)
@@ -1360,6 +1360,7 @@ func (store *MemSQL) RunEverydayCaching(dashboardUnit model.DashboardUnit, timez
 	}
 }
 
+// RunCachingToBackFillRanges runs daily from given start time
 func (store *MemSQL) RunCachingToBackFillRanges(dashboardUnit model.DashboardUnit, startTimeForCache int64,
 	timezoneString U.TimeZoneString, logCtx *log.Entry, queryClass string, reportCollector *sync.Map, enableFilterOpt bool) {
 

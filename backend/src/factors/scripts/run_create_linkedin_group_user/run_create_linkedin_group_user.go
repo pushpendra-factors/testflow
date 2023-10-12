@@ -46,7 +46,7 @@ func main() {
 
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
-	runNewChange := flag.Bool("run_new_change", false, "Runs new changes with campaign group data")
+	runNewChange := flag.String("run_new_change", "", "Runs new changes with campaign group data")
 
 	flag.Parse()
 	if *env != "development" &&
@@ -113,7 +113,9 @@ func main() {
 
 	for _, setting := range linkedinProjectSettings {
 		errMsg, errCode := "", 0
-		if *runNewChange {
+		allProjects, allowedProjectIDs, _ := C.GetProjectsFromListWithAllProjectSupport(*runNewChange, "")
+		projectID, _ := strconv.ParseInt(setting.ProjectId, 10, 64)
+		if allProjects || allowedProjectIDs[projectID] {
 			errMsg, errCode = createGroupUserAndEventsNew(setting)
 		} else {
 			errMsg, errCode = createGroupUserAndEvents(setting)
@@ -162,14 +164,11 @@ Note: eligibity criteria for 4.2 & 4.3 -> property value i.e impressions or clic
 */
 
 func createGroupUserAndEventsNew(linkedinProjectSetting model.LinkedinProjectSettings) (string, int) {
-	domainDataSet, minTimestamp, errCode := store.GetStore().GetCompanyDataFromLinkedin(linkedinProjectSetting.ProjectId)
-	if errCode != http.StatusOK {
-		return "Failed to get domain data from linkedin", errCode
-	}
 	projectID, err := strconv.ParseInt(linkedinProjectSetting.ProjectId, 10, 64)
 	if err != nil {
 		return err.Error(), http.StatusInternalServerError
 	}
+	log.Info("Starting processing for project ", projectID)
 	eventNameViewedAD, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{
 		ProjectId: projectID,
 		Name:      U.GROUP_EVENT_NAME_LINKEDIN_VIEWED_AD,
@@ -192,15 +191,56 @@ func createGroupUserAndEventsNew(linkedinProjectSetting model.LinkedinProjectSet
 	if err != nil {
 		return "Failed to load location via timezone", http.StatusInternalServerError
 	}
-	timestampForEventLookup, err := time.ParseInLocation("20060102", minTimestamp, location)
-	if err != nil {
-		return err.Error(), http.StatusInternalServerError
-	}
-	unixTimestampForEventLookup := timestampForEventLookup.Unix()
-	imprEventsMapWithCampaign, clicksEventsMapWithCampaign, imprEventsMapWithoutCampaign, clicksEventsMapWithoutCampaign, errCode := store.GetStore().GetLinkedinEventFieldsBasedOnTimestamp(projectID, unixTimestampForEventLookup)
+
+	distinctTimestamps, errCode := store.GetStore().GetDistinctTimestampsForEventCreation(linkedinProjectSetting.ProjectId)
 	if errCode != http.StatusOK {
-		return "Failed to get existing events data", http.StatusInternalServerError
+		return "Failed to get distinct timestamps for event creation from linkedin", errCode
 	}
+	for _, timestamp := range distinctTimestamps {
+		domainDataSet, errCode := store.GetStore().GetCompanyDataFromLinkedinForTimestamp(linkedinProjectSetting.ProjectId, timestamp)
+		if errCode != http.StatusOK {
+			return "Failed to get domain data from linkedin", errCode
+		}
+		log.WithFields(log.Fields{"count": len(domainDataSet), "timestamp": timestamp}).Info("DebugMetric log 1")
+		timestampStr := strconv.FormatInt(timestamp, 10)
+		timestampForEventLookup, err := time.ParseInLocation("20060102", timestampStr, location)
+		if err != nil {
+			return err.Error(), http.StatusInternalServerError
+		}
+		unixTimestampForEventLookup := timestampForEventLookup.Unix()
+		/*
+			type LinkedinEventFields struct {
+				Timestamp       int64  `json:"timestamp"`
+				CampaignGroupID string `json:"campaign_group_id"`
+				Domain          string `json:"domain"`
+			}
+		*/
+		imprEventsMapWithCampaign, clicksEventsMapWithCampaign, err := store.GetStore().GetLinkedinEventFieldsBasedOnTimestamp(
+			projectID, unixTimestampForEventLookup, eventNameViewedAD.ID, eventNameClickedAD.ID)
+		if err != nil {
+			return err.Error(), http.StatusInternalServerError
+		}
+		for len(domainDataSet) > 0 {
+			errMsg, errCode := createGroupUserAndEventsForGivenDomainData(projectID, eventNameViewedAD,
+				eventNameClickedAD, location, domainDataSet, imprEventsMapWithCampaign, clicksEventsMapWithCampaign)
+			if errCode != http.StatusOK {
+				return errMsg, errCode
+			}
+			domainDataSet, errCode = store.GetStore().GetCompanyDataFromLinkedinForTimestamp(linkedinProjectSetting.ProjectId, timestamp)
+			if errCode != http.StatusOK {
+				return "Failed to get domain data from linkedin", errCode
+			}
+		}
+	}
+	log.Info("Ended processing for project ", projectID)
+	return "", http.StatusOK
+}
+
+func createGroupUserAndEventsForGivenDomainData(projectID int64, eventNameViewedAD *model.EventName,
+	eventNameClickedAD *model.EventName, location *time.Location, domainDataSet []model.DomainDataResponse,
+	imprEventsMapWithCampaign map[int64]map[string]map[string]bool,
+	clicksEventsMapWithCampaign map[int64]map[string]map[string]bool) (string, int) {
+
 	for _, domainData := range domainDataSet {
 		logFields := log.Fields{
 			"project_id": projectID,
@@ -238,7 +278,7 @@ func createGroupUserAndEventsNew(linkedinProjectSetting model.LinkedinProjectSet
 				return "Failed in TrackGroupWithDomain", errCode
 			}
 
-			isImprEventReq := checkIfEventCreationReq(domainData.Impressions, domainData.Domain, unixTimestamp, domainData.CampaignGroupID, imprEventsMapWithCampaign, imprEventsMapWithoutCampaign)
+			isImprEventReq := checkIfEventCreationReq(domainData.Impressions, domainData.Domain, unixTimestamp, domainData.CampaignGroupID, imprEventsMapWithCampaign)
 			if isImprEventReq {
 				viewedADEvent := model.Event{
 					EventNameId: eventNameViewedAD.ID,
@@ -266,7 +306,7 @@ func createGroupUserAndEventsNew(linkedinProjectSetting model.LinkedinProjectSet
 				}
 			}
 
-			isCLickEventReq := checkIfEventCreationReq(domainData.Clicks, domainData.Domain, unixTimestamp+1, domainData.CampaignGroupID, clicksEventsMapWithCampaign, clicksEventsMapWithoutCampaign)
+			isCLickEventReq := checkIfEventCreationReq(domainData.Clicks, domainData.Domain, unixTimestamp+1, domainData.CampaignGroupID, clicksEventsMapWithCampaign)
 			if isCLickEventReq {
 				clickedADEvent := model.Event{
 					EventNameId: eventNameClickedAD.ID,
@@ -295,7 +335,7 @@ func createGroupUserAndEventsNew(linkedinProjectSetting model.LinkedinProjectSet
 			}
 		}
 
-		err = store.GetStore().UpdateLinkedinGroupUserCreationDetails(domainData)
+		err := store.GetStore().UpdateLinkedinGroupUserCreationDetails(domainData)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed in updating user creation details")
 			return "Failed in updating user creation details", http.StatusInternalServerError
@@ -303,13 +343,8 @@ func createGroupUserAndEventsNew(linkedinProjectSetting model.LinkedinProjectSet
 	}
 	return "", http.StatusOK
 }
-
-func checkIfEventCreationReq(propertyValue int64, domain string, timestamp int64, campaignGroupID string, existingEventsWithCampaignData map[int64]map[string]map[string]bool,
-	existingEventsWithoutCampaignData map[int64]map[string]bool) bool {
+func checkIfEventCreationReq(propertyValue int64, domain string, timestamp int64, campaignGroupID string, existingEventsWithCampaignData map[int64]map[string]map[string]bool) bool {
 	if propertyValue <= 0 {
-		return false
-	}
-	if _, exists := existingEventsWithoutCampaignData[timestamp][domain]; exists {
 		return false
 	}
 	if _, exists := existingEventsWithCampaignData[timestamp][domain][campaignGroupID]; exists {
@@ -318,7 +353,6 @@ func checkIfEventCreationReq(propertyValue int64, domain string, timestamp int64
 
 	return true
 }
-
 func createGroupUserAndEvents(linkedinProjectSetting model.LinkedinProjectSettings) (string, int) {
 	domainDataSet, errCode := store.GetStore().GetDomainData(linkedinProjectSetting.ProjectId)
 	if errCode != http.StatusOK {
@@ -365,6 +399,7 @@ func createGroupUserAndEvents(linkedinProjectSetting model.LinkedinProjectSettin
 				U.LI_LOCALIZED_NAME:    domainData.LocalizedName,
 				U.LI_VANITY_NAME:       domainData.VanityName,
 				U.LI_PREFERRED_COUNTRY: domainData.PreferredCountry,
+				U.LI_ORGANIZATION_ID:   domainData.ID,
 			}
 
 			timestamp, err := time.ParseInLocation("20060102", domainData.Timestamp, location)

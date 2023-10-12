@@ -1,113 +1,112 @@
 import { PlacementType } from 'Components/GenericComponents/FaSelect/types';
 import { throttle } from 'lodash';
-import { RefObject, useEffect, useRef, useState } from 'react';
+import { RefObject, useEffect, useState } from 'react';
 
 //Dynamically Positions only For Top and Bottom Based on Screen and Scroll Adjustments.
-const useDynamicPosition = (
-  targetElement: RefObject<HTMLElement>,
-  defaultPosition: PlacementType = 'Bottom'
+
+const checkForBottom = (
+  relativeElement: RefObject<HTMLElement>,
+  height: number
 ) => {
-  const [position, setPosition] = useState(defaultPosition);
-  const positionRef = useRef(defaultPosition);
-  useEffect(() => {
-    positionRef.current = position;
-  }, [position]);
-  const checkForBottom = () => {
-    const currentPosition = positionRef.current;
-    const dropdownRect = targetElement?.current?.getBoundingClientRect();
-    if (dropdownRect) {
-      if (
-        currentPosition === 'Top' ||
-        currentPosition === 'TopLeft' ||
-        currentPosition === 'TopRight'
-      ) {
-        return (
-          dropdownRect.bottom + 32 + dropdownRect.height < window.innerHeight
-        );
+  const targetRect = relativeElement?.current?.getBoundingClientRect();
+  if (targetRect) return targetRect.bottom + height < window.innerHeight;
+  return false;
+};
+const checkForTop = (
+  relativeElement: RefObject<HTMLElement>,
+  height: number
+) => {
+  const targetRect = relativeElement?.current?.getBoundingClientRect();
+  if (targetRect) return targetRect.top - 32 - height > 60;
+  return false;
+};
+
+const calculatePosition = (
+  relativeElement: RefObject<HTMLElement>,
+  defaultPosition: PlacementType,
+  height: number
+) => {
+  let position: PlacementType = 'Bottom';
+  switch (defaultPosition) {
+    case 'Bottom':
+      if (checkForBottom(relativeElement, height)) {
+        position = defaultPosition;
+      } else if (checkForTop(relativeElement, height)) {
+        position = 'Top';
       }
-      return dropdownRect.top + dropdownRect.height < window.innerHeight;
-    }
-    return true;
-  };
-  const checkForTop = () => {
-    const currentPosition = positionRef.current;
-    const dropdownRect = targetElement?.current?.getBoundingClientRect();
-    const pageTopOffset = 60;
-    if (dropdownRect) {
-      if (
-        currentPosition === 'Top' ||
-        currentPosition === 'TopLeft' ||
-        currentPosition === 'TopRight'
-      ) {
-        return dropdownRect.top > pageTopOffset;
+      break;
+    case 'BottomLeft':
+      if (checkForBottom(relativeElement, height)) {
+        position = defaultPosition;
+      } else if (checkForTop(relativeElement, height)) {
+        position = 'TopLeft';
       }
-      return dropdownRect.top - 32 - dropdownRect.height > pageTopOffset;
-    }
-    return true;
-  };
+      break;
+    case 'BottomRight':
+      if (checkForBottom(relativeElement, height)) {
+        position = defaultPosition;
+      } else if (checkForTop(relativeElement, height)) {
+        position = 'TopRight';
+      }
+      break;
+    case 'Top':
+      if (checkForTop(relativeElement, height)) {
+        position = defaultPosition;
+      } else if (checkForBottom(relativeElement, height)) {
+        position = 'Bottom';
+      }
+      break;
+    case 'TopLeft':
+      if (checkForTop(relativeElement, height)) {
+        position = defaultPosition;
+      } else if (checkForBottom(relativeElement, height)) {
+        position = 'BottomLeft';
+      }
+      break;
+    case 'TopRight':
+      if (checkForTop(relativeElement, height)) {
+        position = defaultPosition;
+      } else if (checkForBottom(relativeElement, height)) {
+        position = 'BottomRight';
+      }
+      break;
+  }
+  return position;
+};
+
+//Note:- Try to pass height prop as maxHeight,[Used To calculate Initial Height], Later Dropdown height is used.
+
+const useDynamicPosition = (
+  relativeElement: RefObject<HTMLElement> | null,
+  targetElement: RefObject<HTMLElement>,
+  defaultPosition: PlacementType = 'Bottom',
+  height: number
+) => {
+  const [position, setPosition] = useState<PlacementType | null>();
+
   const handleEvent = throttle(function findPosition() {
-    const dropdownRect = targetElement?.current?.getBoundingClientRect();
-    if (dropdownRect) {
-      switch (defaultPosition) {
-        case 'Bottom':
-          if (checkForBottom()) {
-            setPosition(defaultPosition);
-          } else if (checkForTop()) {
-            setPosition('Top');
-          } else {
-            setPosition('Bottom');
-          }
-          break;
-        case 'BottomLeft':
-          if (checkForBottom()) {
-            setPosition(defaultPosition);
-          } else if (checkForTop()) {
-            setPosition('TopLeft');
-          } else {
-            setPosition('Bottom');
-          }
-          break;
-        case 'BottomRight':
-          if (checkForBottom()) {
-            setPosition(defaultPosition);
-          } else if (checkForTop()) {
-            setPosition('TopRight');
-          } else {
-            setPosition('Bottom');
-          }
-          break;
-        case 'Top':
-          if (checkForTop()) {
-            setPosition(defaultPosition);
-          } else if (checkForBottom()) {
-            setPosition('Bottom');
-          } else {
-            setPosition('Bottom');
-          }
-          break;
-        case 'TopLeft':
-          if (checkForTop()) {
-            setPosition(defaultPosition);
-          } else if (checkForBottom()) {
-            setPosition('BottomLeft');
-          } else {
-            setPosition('Bottom');
-          }
-          break;
-        case 'TopRight':
-          if (checkForTop()) {
-            setPosition(defaultPosition);
-          } else if (checkForBottom()) {
-            setPosition('BottomRight');
-          } else {
-            setPosition('Bottom');
-          }
-          break;
-      }
+    if (relativeElement) {
+      const dropdownHeight =
+        targetElement.current?.getBoundingClientRect()?.height || height;
+      const calculatedPosition = calculatePosition(
+        relativeElement,
+        defaultPosition,
+        dropdownHeight
+      );
+      setPosition(calculatedPosition);
     }
   }, 1000);
+
   useEffect(() => {
-    if (targetElement) {
+    if (relativeElement?.current && !targetElement.current) {
+      const initilPos = calculatePosition(
+        relativeElement,
+        defaultPosition,
+        height
+      );
+      setPosition(initilPos);
+    }
+    if (relativeElement?.current && targetElement?.current) {
       window.addEventListener('resize', handleEvent);
       //Only For Query Composer.
       const myElement = document.querySelector(
@@ -132,7 +131,7 @@ const useDynamicPosition = (
         window.removeEventListener('scroll', handleEvent);
       }
     };
-  }, [targetElement]);
+  }, [targetElement?.current, relativeElement?.current]);
   return position;
 };
 

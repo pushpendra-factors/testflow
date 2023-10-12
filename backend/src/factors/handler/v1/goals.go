@@ -47,6 +47,15 @@ func GetAllFactorsGoalsHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, goals)
 }
 
+type CreateGoalInputParamsV2 struct {
+	StartEvent              model.ExplainV3Event   `json:"st_en"`
+	EndEvent                model.ExplainV3Event   `json:"en_en"`
+	GlobalFilters           []model.QueryProperty  `json:"gpr"`
+	IncludedEvents          []model.ExplainV3Event `json:"in_en"`
+	IncludedUserProperties  []string               `json:"in_upr"`
+	IncludedEventProperties []string               `json:"in_epr"`
+}
+
 type CreateGoalInputParams struct {
 	StartEvent              model.QueryEventWithProperties `json:"st_en"`
 	EndEvent                model.QueryEventWithProperties `json:"en_en"`
@@ -106,6 +115,59 @@ func CreateFactorsGoalsHandler(c *gin.Context) {
 	response["status"] = "success"
 	response["id"] = id
 	c.JSON(http.StatusCreated, response)
+}
+
+func MapRuleV2(ip CreateGoalInputParamsV2) (model.FactorsGoalRule, map[string]bool, map[string]bool, map[string]bool) {
+	op := model.FactorsGoalRule{}
+	op.StartEvent = ip.StartEvent.Label
+	op.EndEvent = ip.EndEvent.Label
+	op.Rule = model.FactorsGoalFilter{}
+	if len(ip.StartEvent.Filter) > 0 || len(ip.EndEvent.Filter) > 0 || len(ip.GlobalFilters) > 0 {
+		op.Rule.StartEnEventFitler = make([]model.KeyValueTuple, 0)
+		op.Rule.EndEnEventFitler = make([]model.KeyValueTuple, 0)
+		op.Rule.StartEnUserFitler = make([]model.KeyValueTuple, 0)
+		op.Rule.EndEnUserFitler = make([]model.KeyValueTuple, 0)
+		op.Rule.GlobalFilters = make([]model.KeyValueTuple, 0)
+	}
+	for _, property := range ip.StartEvent.Filter {
+		if property.Entity == "user" {
+			op.Rule.StartEnUserFitler = append(op.Rule.StartEnUserFitler, mapProperty(property))
+		}
+		if property.Entity == "event" {
+			op.Rule.StartEnEventFitler = append(op.Rule.StartEnEventFitler, mapProperty(property))
+		}
+	}
+	for _, property := range ip.EndEvent.Filter {
+		if property.Entity == "user" {
+			op.Rule.EndEnUserFitler = append(op.Rule.EndEnUserFitler, mapProperty(property))
+		}
+		if property.Entity == "event" {
+			op.Rule.EndEnEventFitler = append(op.Rule.EndEnEventFitler, mapProperty(property))
+		}
+	}
+	for _, property := range ip.GlobalFilters {
+		op.Rule.GlobalFilters = append(op.Rule.GlobalFilters, mapProperty(property))
+	}
+	includeEvents := make([]string, 0)
+	for _, ev := range ip.IncludedEvents {
+		includeEvents = append(includeEvents, ev.Label)
+	}
+	op.Rule.IncludedEvents = includeEvents
+	op.Rule.IncludedEventProperties = ip.IncludedEventProperties
+	op.Rule.IncludedUserProperties = ip.IncludedUserProperties
+	includedEvents := make(map[string]bool)
+	for _, event := range ip.IncludedEvents {
+		includedEvents[event.Label] = true
+	}
+	includedUserProperties := make(map[string]bool)
+	for _, event := range ip.IncludedUserProperties {
+		includedUserProperties[event] = true
+	}
+	includedEventProperties := make(map[string]bool)
+	for _, event := range ip.IncludedEventProperties {
+		includedEventProperties[event] = true
+	}
+	return op, includedEvents, includedEventProperties, includedUserProperties
 }
 
 func MapRule(ip CreateGoalInputParams) (model.FactorsGoalRule, map[string]bool, map[string]bool, map[string]bool) {

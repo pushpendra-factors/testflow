@@ -2214,6 +2214,7 @@ const EventBasedAlert = ({
                 options={teamsWorkspaceOpts}
                 placeholder='Select Workspace'
                 showSearch
+                style={{minWidth: '250px'}}
                 value={
                   selectedWorkspace
                     ? {

@@ -24,10 +24,10 @@ parser.add_option('--data_service_host', dest='data_service_host',
 parser.add_option('--start_timestamp', dest='start_timestamp', help='', default=None, type=int)
 parser.add_option('--input_end_timestamp', dest='input_end_timestamp', help='', default=None, type=int)
 parser.add_option('--run_ads_heirarchical_data', dest='run_ads_heirarchical_data',
-    help='', default='False')
+    help='', default='True')
 parser.add_option('--run_member_company_insights', dest='run_member_company_insights', 
     help='', default='True')
-parser.add_option('--is_weekly_job', default='True', dest='is_weekly_job', help='', type=str)
+parser.add_option('--is_weekly_job', default='False', dest='is_weekly_job', help='', type=str)
 
 def ping_healthcheck(successes, failures, token_failures, is_weekly_job):
         status_msg = ''
