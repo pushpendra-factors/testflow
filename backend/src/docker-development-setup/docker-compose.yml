@@ -8,6 +8,8 @@ services:
                 args:
                     - MEMSQL_VERSION=alma-7.6.13-39da2f5c72-4.0.4-1.13.6
             image: testing/memsql:1.0
+            deploy:
+                replicas: 1
             restart: always
             environment:
                 - LICENSE_KEY=$MEMSQL_LICENSE_KEY
@@ -21,25 +23,21 @@ services:
                 context: ../
                 dockerfile: Dockerfile.redis
             image: testing/redis:1.0
+            deploy:
+                replicas: 1
             restart: always
             ports:
                 - "6379:6379"
-        etcd:
-            image: 'bitnami/etcd:latest'
-            environment:
-                - ALLOW_NONE_AUTHENTICATION=yes
-                - ETCD_ADVERTISE_CLIENT_URLS=http://etcd:2379
-            ports:
-                - 2379:2379
-                - 2380:2380
         builddb:
             build:
                 context: ../
                 dockerfile: docker-development-setup/Dockerfile.db_create.testing
             environment:
                 - PRI_DS=memsql
-                - ROOT_PASSWORD=$ROOT_PASSWORD
+                - ROOT_PASSWORD=$ROOT_PASSWORD    
             image: testing/builddb:1.0
+            deploy:
+                replicas: 0
             depends_on:
                 - memsql
         api:
@@ -49,11 +47,11 @@ services:
             environment:
                 -  GOPATH=/go/src/factors
                 -  REDIS_HOST=redis
-                -  ETCD=etcd:2379
-                -  PS=patternserver
-                -  PRI_DS=memsql
-            entrypoint: [ "sh","-c","/go/bin/app --redis_host_ps=redis --dup_queue_redis_host=redis --queue_redis_host=redis --etcd=etcd:2379 --api_domain=$API_DOMAIN --env=development --memsql_host=memsql --primary_datastore=memsql"]
+                -  PRI_DS=memsql    
+            entrypoint: [ "sh","-c","/go/bin/app --redis_host_ps=redis --dup_queue_redis_host=redis --queue_redis_host=redis  --api_domain=$API_DOMAIN --env=development --memsql_host=memsql --primary_datastore=memsql"]
             image: testing/api:1.0
+            deploy:
+                replicas: 0
             restart: always
             ports:
                 - "8080:8080"
@@ -62,7 +60,6 @@ services:
                 - ../../../devicedetector_data:/usr/local/var/factors/devicedetector_data
             depends_on:
                 - memsql
-                - etcd
                 - redis
         sdkserver:
             build:
@@ -71,9 +68,11 @@ services:
             environment:
                 -  GOPATH=/go/src/factors
                 -  REDIS_HOST=redis
-                -  MEMSQL_HOST=memsql
+                -  MEMSQL_HOST=memsql  
             entrypoint: [ "sh","-c","/go/bin/sdkserver --redis_host=redis --redis_host_ps=redis --dup_queue_redis_host=redis --queue_redis_host=redis --env=development --memsql_host=memsql --primary_datastore=memsql"]
             image: testing/sdk:1.0
+            deploy:
+                replicas: 0
             ports:
                 - "8085:8085"
             restart: always
@@ -83,27 +82,14 @@ services:
             depends_on:
                 - memsql
                 - redis
-        patternserver:
-            build:
-                context: ../
-                dockerfile: docker-development-setup/Dockerfile.patternserver.testing
-            environment:
-                -   GOPATH=/go/src/factors
-                -   ETCD=etcd:2379
-                -   MEMSQL_HOST=memsql
-            image: testing/pattern-server:1.0
-            ports:
-                - "8100:8100"
-            depends_on:
-                - memsql
-                - etcd
-                - redis
         # Frontend docker is not building. Run manually.
         frontend:
             build: 
                 context: ../../../frontend-new
-                dockerfile: Dockerfile.frontend.testing
+                dockerfile: Dockerfile.frontend.testing    
             image: testing/frontend:1.0
+            deploy:
+                replicas: 0
             ports: 
                 - "3000:3000"
         datagen:
@@ -115,8 +101,10 @@ services:
                 - AUTH_TOKEN=78ycpg9dsgok7o4dbk58jtl2rgt0tg0o
                 - SDK_HOST=sdkserver
                 - ENV=docker
-                - SEED_DATE=$SEED_DATE
+                - SEED_DATE=$SEED_DATE   
             image: testing/datagen:1.0
+            deploy:
+                replicas: 0
             depends_on:
                 - sdkserver
         session:
@@ -126,8 +114,10 @@ services:
             environment:
                 - REDIS_HOST=redis
                 - MEMSQL_HOST=memsql
-                - PRI_DS=memsql
+                - PRI_DS=memsql  
             image: testing/session:1.0
+            deploy:
+                replicas: 0
         rollupcache:
             build:
                 context: ../
@@ -135,8 +125,10 @@ services:
             environment:
                 - REDIS_HOST=redis
                 - MEMSQL_HOST=memsql
-                - PRI_DS=memsql
+                - PRI_DS=memsql   
             image: testing/rollupcache:1.0
+            deploy:
+                replicas: 0 
         # Needs to be fixed.
         #documentdatagen:
         #    build:
