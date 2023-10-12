@@ -10,13 +10,14 @@ import (
 	itemPriceAction "github.com/chargebee/chargebee-go/v3/actions/itemprice"
 	subscriptionAction "github.com/chargebee/chargebee-go/v3/actions/subscription"
 
+	"net/http"
+
 	"github.com/chargebee/chargebee-go/v3/models/customer"
 	"github.com/chargebee/chargebee-go/v3/models/hostedpage"
 	"github.com/chargebee/chargebee-go/v3/models/item"
 	"github.com/chargebee/chargebee-go/v3/models/itemprice"
 	"github.com/chargebee/chargebee-go/v3/models/subscription"
 	log "github.com/sirupsen/logrus"
-	"net/http"
 )
 
 func CreateChargebeeCustomer(agent model.Agent) (customer.Customer, int, error) {
@@ -135,7 +136,7 @@ func GetCurrentSubscriptionDetails(subscriptionID string) (subscription.Subscrip
 }
 
 func GetItemDetailsFromItemPriceID(itemPriceID string) (itemprice.ItemPrice, error) {
-	logCtx := log.Fields{"subscription_ID": itemPriceID}
+	logCtx := log.Fields{"item_price_id": itemPriceID}
 	chargebee.Configure(C.GetChargebeeApiKey(), C.GetChargebeeSiteName())
 	res, err := itemPriceAction.Retrieve("basic-USD-monthly").Request()
 	if err != nil {
@@ -145,13 +146,4 @@ func GetItemDetailsFromItemPriceID(itemPriceID string) (itemprice.ItemPrice, err
 		return *res.ItemPrice, nil
 	}
 
-}
-
-func SyncChargebeePostPurchaseAction(projectID int64) { // Chargebee Recommends using webhooks for this instead of redirect url
-	// get the project billing subscription id
-	// get the latest subscription details
-
-	// update the plan-price-id to project_plan_mapping table
-	// update billing last synced at in project_plan_mappings table
-	// update billing last synced at in projects table
 }

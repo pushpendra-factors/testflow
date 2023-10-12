@@ -18,9 +18,9 @@ var FEATURE_FACTORS_DEANONYMISATION string = "factors_deanonymisation"
 
 func (store *MemSQL) CreateDefaultProjectPlanMapping(projectID int64, planID int, billingPlanPriceID string) (int, error) {
 	ppMapping := model.ProjectPlanMapping{
-		ProjectID:     projectID,
-		PlanID:        int64(planID),
-		BillingPlanID: billingPlanPriceID,
+		ProjectID:           projectID,
+		PlanID:              int64(planID),
+		BillingPlanID:       billingPlanPriceID,
 		BillingLastSyncedAt: time.Now(),
 	}
 	db := C.GetServices().Db
@@ -271,6 +271,23 @@ func (store *MemSQL) UpdateProjectPlanMappingField(projectID int64, planType str
 	}
 
 	return http.StatusAccepted, "", nil
+}
+func (store *MemSQL) UpdateProjectPlanMapping(projectID int64, planMapping *model.ProjectPlanMapping) int {
+
+	updateFields := make(map[string]interface{}, 0)
+	db := C.GetServices().Db
+	if planMapping.BillingPlanID != "" {
+		updateFields["billing_plan_id"] = planMapping.BillingPlanID
+		updateFields["billing_last_synced_at"] = planMapping.BillingLastSyncedAt
+
+	}
+	err := db.Model(&model.ProjectPlanMapping{}).Where("id = ?", projectID).Update(updateFields).Error
+	if err != nil {
+		log.WithError(err).Error(
+			"Failed to execute query of update project plan mappings ")
+		return http.StatusInternalServerError
+	}
+	return http.StatusOK
 }
 func (store *MemSQL) UpdateFeaturesForCustomPlan(projectID int64, AccountLimit int64, MtuLimit int64, AvailableFeatuers []string) (int, error) {
 	logFields := log.Fields{
