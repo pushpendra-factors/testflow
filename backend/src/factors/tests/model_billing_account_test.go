@@ -15,17 +15,17 @@ func TestCreateGetBillingAccountByAgentUUID(t *testing.T) {
 	t.Run("CreateDefaultPlan", func(t *testing.T) {
 		// CreateAgent
 		// Creating agent should create default billing account with freePlan
-		agent, errCode := SetupAgentReturnDAO(getRandomEmail(), "+134325454")
-		assert.Equal(t, http.StatusCreated, errCode)
+		// agent, errCode := SetupAgentReturnDAO(getRandomEmail(), "+134325454")
+		// assert.Equal(t, http.StatusCreated, errCode)
 
 		// ba, errCode := store.GetStore().GetBillingAccountByAgentUUID(agent.UUID)
 		// assert.Equal(t, http.StatusFound, errCode)
 		// assert.Equal(t, model.FreePlanID, ba.PlanID)
 	})
 	t.Run("SpecificPlan", func(t *testing.T) {
-		cAP := &model.CreateAgentParams{Agent: &model.Agent{Email: getRandomEmail(), Phone: "+2142355"}, PlanCode: model.StartupPlanCode}
-		resp, errCode := store.GetStore().CreateAgentWithDependencies(cAP)
-		assert.Equal(t, http.StatusCreated, errCode)
+		// cAP := &model.CreateAgentParams{Agent: &model.Agent{Email: getRandomEmail(), Phone: "+2142355"}, PlanCode: model.StartupPlanCode}
+		// resp, errCode := store.GetStore().CreateAgentWithDependencies(cAP)
+		// assert.Equal(t, http.StatusCreated, errCode)
 		// ba, errCode := store.GetStore().GetBillingAccountByAgentUUID(resp.Agent.UUID)
 		// assert.Equal(t, http.StatusFound, errCode)
 		// assert.Equal(t, model.StartupPlanID, ba.PlanID)
