@@ -24,10 +24,11 @@ const MAX_LIMIT = 10000
 const NORM_CONFIG = 10000
 const NUM_ROUTINES = 25
 
-func makeUserUpdateString(user map[string]model.LatestScore) (string, error) {
+func makeUserUpdateString(user map[string]model.LatestScore, score float64) (string, error) {
 
 	updateString := make([]string, 0)
 	finalString := ""
+	engagement_string := U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE
 	for evKey, evCount := range user {
 		eventsCountjson, err := json.Marshal(evCount)
 		if err != nil {
@@ -35,8 +36,14 @@ func makeUserUpdateString(user map[string]model.LatestScore) (string, error) {
 			return "", err
 		}
 
-		ct := fmt.Sprintf("event_aggregate::`%s`='%s'", evKey, string(eventsCountjson))
-		updateString = append(updateString, ct)
+		if score == -1 {
+			ct := fmt.Sprintf("event_aggregate::`%s`='%s'", evKey, string(eventsCountjson))
+			updateString = append(updateString, ct)
+		} else {
+
+			ct := fmt.Sprintf("event_aggregate::`%s`='%s',properties::`%s`=%f", evKey, string(eventsCountjson), engagement_string, score)
+			updateString = append(updateString, ct)
+		}
 	}
 
 	countTotal := 0.0
@@ -77,7 +84,7 @@ func (store *MemSQL) UpdateUserEventsCount(projectId int64, evdata map[string]ma
 			}
 		}
 
-		updateString, nil := makeUserUpdateString(updateCounts)
+		updateString, nil := makeUserUpdateString(updateCounts, float64(-1))
 		if updateString != "" {
 			stmt := fmt.Sprintf("UPDATE users SET event_aggregate = case when event_aggregate is NULL THEN '{}' ELSE  event_aggregate END, %s where id= ? and project_id= ?", updateString)
 			err := db.Exec(stmt, userId, projectId).Error
@@ -145,7 +152,7 @@ func UpdatePerUser(projectId int64, evdata map[string]map[string]model.LatestSco
 		}
 	}
 
-	updateString, nil := makeUserUpdateString(updateCounts)
+	updateString, nil := makeUserUpdateString(updateCounts, float64(-1))
 	if updateString != "" {
 		stmt := fmt.Sprintf("UPDATE users SET event_aggregate = case when event_aggregate is NULL THEN '{}' ELSE  event_aggregate END, %s where id= ? and project_id= ?", updateString)
 		err := db.Exec(stmt, userId, projectId).Error
@@ -160,7 +167,7 @@ func UpdatePerUser(projectId int64, evdata map[string]map[string]model.LatestSco
 }
 
 func UpdatePerAccount(projectId int64, evdata map[string]map[string]model.LatestScore, lastevent map[string]model.LatestScore,
-	userId string, db *gorm.DB, wg *sync.WaitGroup) error {
+	userId string, weights model.AccWeights, db *gorm.DB, wg *sync.WaitGroup) error {
 
 	logFields := log.Fields{
 		"project_id": projectId,
@@ -169,22 +176,26 @@ func UpdatePerAccount(projectId int64, evdata map[string]map[string]model.Latest
 	defer wg.Done()
 
 	var updateCounts map[string]model.LatestScore = make(map[string]model.LatestScore)
-
 	if ev, cok := evdata[userId]; cok {
 		for evDate, evCounts := range ev {
 			updateCounts[evDate] = evCounts
 		}
 	}
 	if _, lok := lastevent[userId]; lok {
-		updateCounts[model.LAST_EVENT] = lastevent[userId]
-	}
-	updateString, nil := makeUserUpdateString(updateCounts)
-	if updateString != "" {
-		stmt := fmt.Sprintf("UPDATE users SET event_aggregate = case when event_aggregate is NULL THEN '{}' ELSE  event_aggregate END, %s where id= ? and project_id= ?", updateString)
-		err := db.Exec(stmt, userId, projectId).Error
+		lastEvent := lastevent[userId]
+		updateCounts[model.LAST_EVENT] = lastEvent
+		score, err := ComputeAccountScoreOnLastEvent(projectId, weights, lastEvent.EventsCount)
 		if err != nil {
-			logCtx.WithError(err).Errorf("Unable to update latest score in user events ")
-			return err
+			logCtx.WithField("last event ", lastevent).Error("unable to compute final score ")
+		}
+		updateString, nil := makeUserUpdateString(updateCounts, score)
+		if updateString != "" {
+			stmt := fmt.Sprintf("UPDATE users SET event_aggregate = case when event_aggregate is NULL THEN '{}' ELSE  event_aggregate END, %s where id= ? and project_id= ?", updateString)
+			err := db.Exec(stmt, userId, projectId).Error
+			if err != nil {
+				logCtx.WithError(err).Errorf("Unable to update latest score in user events ")
+				return err
+			}
 		}
 	}
 
@@ -192,7 +203,7 @@ func UpdatePerAccount(projectId int64, evdata map[string]map[string]model.Latest
 
 }
 
-func (store *MemSQL) UpdateGroupEventsCountGO(projectId int64, evdata map[string]map[string]model.LatestScore, lastevent map[string]model.LatestScore) error {
+func (store *MemSQL) UpdateGroupEventsCountGO(projectId int64, evdata map[string]map[string]model.LatestScore, lastevent map[string]model.LatestScore, weights model.AccWeights) error {
 	logFields := log.Fields{
 		"project_id": projectId,
 	}
@@ -219,7 +230,7 @@ func (store *MemSQL) UpdateGroupEventsCountGO(projectId int64, evdata map[string
 
 		wg.Add(len(userIDList))
 		for i := 0; i < len(userIDList); i++ {
-			go UpdatePerAccount(projectId, evdata, lastevent, userIDList[i], db, &wg)
+			go UpdatePerAccount(projectId, evdata, lastevent, userIDList[i], weights, db, &wg)
 		}
 		wg.Wait()
 	}
@@ -260,7 +271,7 @@ func (store *MemSQL) UpdateGroupEventsCount(projectId int64, evdata map[string]m
 		if _, lok := lastevent[userId]; lok {
 			updateCounts[model.LAST_EVENT] = lastevent[userId]
 		}
-		updateString, nil := makeUserUpdateString(updateCounts)
+		updateString, nil := makeUserUpdateString(updateCounts, float64(-1))
 		if updateString != "" {
 			stmt := fmt.Sprintf("UPDATE users SET event_aggregate = case when event_aggregate is NULL THEN '{}' ELSE  event_aggregate END, %s where id= ? and project_id= ?", updateString)
 			err := db.Exec(stmt, userId, projectId).Error
@@ -811,6 +822,42 @@ func ComputeUserScoreNonAnonymous(db *gorm.DB, weights model.AccWeights, project
 	}
 
 	return result, nil
+}
+
+func (store *MemSQL) WriteScoreRanges(projectId int64, buckets []model.BucketRanges) error {
+	projectID := projectId
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	logCtx := log.WithFields(logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+	for _, bucket := range buckets {
+		if len(bucket.Ranges) > 0 {
+			transTime := gorm.NowFunc()
+			var bucketObj model.AccountScoreRanges
+
+			rangesjson, err := U.EncodeStructTypeToPostgresJsonb(bucket.Ranges)
+			if err != nil {
+				logCtx.WithField("entity", bucket).WithError(err).Error("bucket ranhes  conversion to Jsonb failed")
+			}
+			bucketObj.Buckets = rangesjson
+			bucketObj.ProjectID = projectId
+			bucketObj.Date = bucket.Date
+			bucketObj.CreatedAt = transTime
+			bucketObj.UpdatedAt = transTime
+			if rangesjson != nil {
+				stmt := "INSERT INTO `account_scoring_ranges` (`project_id`,`date`,`bucket`,`created_at`,`updated_at`) VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE bucket = ?, updated_at=?"
+				err = db.Exec(stmt, bucketObj.ProjectID, bucketObj.Date, bucketObj.Buckets, bucketObj.CreatedAt, bucketObj.UpdatedAt, bucketObj.Buckets, bucketObj.UpdatedAt).Error
+				if err != nil {
+					log.WithField("entity", bucketObj).WithError(err).Error("Create Failed")
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 func (store *MemSQL) GetAllUserEvents(projectId int64, debug bool) (map[string]map[string]model.LatestScore, map[string]int, error, int64) {

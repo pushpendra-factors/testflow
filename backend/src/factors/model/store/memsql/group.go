@@ -74,7 +74,33 @@ func (store *MemSQL) CreateGroup(projectID int64, groupName string, allowedGroup
 
 		logCtx.WithError(err).Error("Failed to insert group.")
 		return nil, http.StatusInternalServerError
+	}
 
+	// Create Default Segment for the Account Groups-
+	if model.AccountGroupNames[groupName] {
+		segmentPayload := model.SegmentPayload{
+			Name:        U.ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES[U.GROUP_TO_DEFAULT_SEGMENT_MAP[groupName]],
+			Description: "",
+			Query: model.Query{
+				GlobalUserProperties: []model.QueryProperty{
+					{
+						Entity:    model.PropertyEntityUserGlobal,
+						Type:      U.PropertyTypeCategorical,
+						GroupName: groupName,
+						Property:  U.GROUP_TO_DEFAULT_SEGMENT_MAP[groupName],
+						Operator:  model.EqualsOpStr,
+						Value:     "true",
+						LogicalOp: "AND",
+					},
+				},
+				TableProps: []string{U.SIX_SIGNAL_NAME, U.SIX_SIGNAL_INDUSTRY, U.SIX_SIGNAL_EMPLOYEE_RANGE, U.SIX_SIGNAL_ANNUAL_REVENUE},
+			},
+			Type: U.GROUP_NAME_DOMAINS,
+		}
+		status, err = store.CreateSegment(projectID, &segmentPayload)
+		if status != http.StatusCreated {
+			logCtx.WithError(err).Error("Failed to create default segment.")
+		}
 	}
 
 	return &group, http.StatusCreated

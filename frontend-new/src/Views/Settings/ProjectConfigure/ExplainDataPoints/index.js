@@ -201,7 +201,7 @@ const ConfigureDP = (props) => {
         <Col span={18}>
           <Row className='w-full' justify={'center'}>
             <Col span={24}>
-              <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>
+              <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}  id={'fa-at-text--page-title'}>
                 Top Events and Properties
               </Text>
               <Text

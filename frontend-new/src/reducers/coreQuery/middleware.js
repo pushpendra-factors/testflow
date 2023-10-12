@@ -1,4 +1,5 @@
 import { fetchKPIFilterValues } from 'Reducers/kpi';
+import { FETCH_GROUPS_FULFILLED, FETCH_GROUPS_REJECTED } from 'Reducers/types';
 import {
   fetchEventsAction,
   fetchEventPropertiesAction,
@@ -50,7 +51,9 @@ import {
   fetchUserPropertyValues,
   fetchButtonClicksPropertyValues,
   fetchPageViewsPropertyValues,
-  fetchUserPropertiesV2
+  fetchUserPropertiesV2,
+  fetchPredefinedPropertyValues,
+  fetchGroups
 } from './services';
 import {
   convertToEventOptions,
@@ -58,7 +61,8 @@ import {
   convertCampaignConfig,
   convertCustomEventCategoryToOptions,
   convertEventsPropsToOptions,
-  convertUserPropsToOptions
+  convertUserPropsToOptions,
+  formatGroups
 } from './utils';
 
 export const fetchEventNames = (projectId) => {
@@ -380,6 +384,31 @@ export const getUserPropertyValues =
     });
   };
 
+  export const getPredefinedPropertyValues =
+  (projectId, propertyName, internalID) => (dispatch) => {
+    return new Promise((resolve, reject) => {
+      dispatch({ type: FETCH_PROPERTY_VALUES_LOADING });
+      fetchPredefinedPropertyValues(projectId, propertyName, internalID).then((response) => {
+        resolve(
+          dispatch({
+            type: FETCH_PROPERTY_VALUES_LOADED,
+            payload: response.data,
+            propName: propertyName
+          })
+        );
+      });
+    }).catch((err) => {
+      console.log(err);
+      resolve(
+        dispatch({
+          type: FETCH_PROPERTY_VALUES_LOADED,
+          payload: {},
+          propName: propertyName
+        })
+      );
+    });
+  };
+
 export const getEventPropertyValues =
   (projectId, eventName, propertyName) => (dispatch) => {
     return new Promise((resolve, reject) => {
@@ -458,4 +487,23 @@ export const getKPIPropertyValues = (projectId, data) => (dispatch) => {
         );
       });
   });
+};
+
+export const getGroups = (projectID) => async (dispatch) => {
+  try {
+    const response = await fetchGroups(projectID);
+    const data = formatGroups(response.data);
+
+    dispatch({
+      type: FETCH_GROUPS_FULFILLED,
+      payload: data
+    });
+  } catch (err) {
+    console.log(err);
+
+    dispatch({
+      type: FETCH_GROUPS_REJECTED,
+      payload: {}
+    });
+  }
 };

@@ -393,6 +393,73 @@ export const getDashboardDateRange = () => {
   };
 };
 
+export const getQuickDashboardDateRange = () => {
+  const lastAppliedDuration = JSON.parse(
+    getItemFromLocalStorage(DASHBOARD_KEYS.QUICK_DASHBOARD_DURATION)
+  );
+  if (lastAppliedDuration) {
+    const dateType = lastAppliedDuration.dateType;
+    switch (dateType) {
+      case PREDEFINED_DATES.TODAY: {
+        return {
+          ...lastAppliedDuration,
+          from: MomentTz().startOf('day'),
+          to: MomentTz().endOf('day')
+        };
+      }
+      case PREDEFINED_DATES.YESTERDAY: {
+        return {
+          ...lastAppliedDuration,
+          from: MomentTz().subtract(1, 'day').startOf('day'),
+          to: MomentTz().subtract(1, 'day').endOf('day')
+        };
+      }
+      case PREDEFINED_DATES.THIS_WEEK: {
+        return {
+          ...DefaultDateRangeFormat
+        };
+      }
+      case PREDEFINED_DATES.LAST_WEEK: {
+        return {
+          ...DashboardDefaultDateRangeFormat
+        };
+      }
+      case PREDEFINED_DATES.LAST_MONTH: {
+        return {
+          ...lastAppliedDuration,
+          from: MomentTz().subtract(1, 'month').startOf('month'),
+          to: MomentTz().subtract(1, 'month').endOf('month')
+        };
+      }
+      case PREDEFINED_DATES.THIS_MONTH: {
+        if (MomentTz().format('D') === '1') {
+          return {
+            ...lastAppliedDuration,
+            from: MomentTz().subtract(1, 'day').startOf('month'),
+            to: MomentTz().subtract(1, 'day').endOf('month'),
+            dateType: PREDEFINED_DATES.LAST_MONTH
+          };
+        } else {
+          return {
+            ...lastAppliedDuration,
+            from: MomentTz().startOf('month'),
+            to: MomentTz().subtract(1, 'day').endOf('day')
+          };
+        }
+      }
+      default:
+        return lastAppliedDuration;
+    }
+  }
+  setItemToLocalStorage(
+    DASHBOARD_KEYS.QUICK_DASHBOARD_DURATION,
+    JSON.stringify(DashboardDefaultDateRangeFormat)
+  );
+  return {
+    ...DashboardDefaultDateRangeFormat
+  };
+};
+
 export const getSavedAttributionMetrics = (metrics) => {
   const result = ATTRIBUTION_METRICS.map((am) => {
     const possibleHeaders = am.header.split(' OR ');

@@ -5,6 +5,7 @@ metadata:
     nodePool: staging-containerd
   name: product-analytics-job
 spec:
+  backoffLimit: 1000  
   template:
     metadata:
       labels:
@@ -15,7 +16,7 @@ spec:
         cloud.google.com/gke-nodepool: staging-containerd
       containers:
       - name: product-analytics-job
-        image: us.gcr.io/factors-staging/product-analytics-job:0.1
+        image: us.gcr.io/factors-staging/product-analytics-job:0.2
         imagePullPolicy: IfNotPresent
         resources:
           requests:

@@ -21,6 +21,8 @@ import SidebarMenuItem from './SidebarMenuItem';
 import SidebarSearch from './SidebarSearch';
 import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
 import { AccountsSidebarIconsMapping } from './appSidebar.constants';
+import { useHistory } from 'react-router-dom';
+import { PathUrls } from 'Routes/pathUrls';
 
 const NewSegmentItem = () => {
   return (
@@ -73,10 +75,12 @@ const GroupItem = ({ group }) => {
 
 const SegmentItem = ({ segment }) => {
   const dispatch = useDispatch();
+  const history = useHistory();
   const activeAccountPayload = useSelector((state) =>
     selectAccountPayload(state)
   );
   const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
+  
 
   const changeActiveSegment = () => {
     const opts = { ...activeAccountPayload };
@@ -84,6 +88,7 @@ const SegmentItem = ({ segment }) => {
     opts.source = segment[2].type;
     opts.filters = [];
     delete opts.search_filter;
+    history.replace({pathname: '/accounts/segments/' + segment[1]});
     dispatch(setActiveSegmentAction(segment[2]));
     dispatch(setAccountPayloadAction(opts));
   };
@@ -118,22 +123,12 @@ const AccountsSidebar = () => {
   );
   const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
 
-  const groupsList = useMemo(() => {
-    return getGroupList(groupOptions);
-  }, [groupOptions]);
-
   const segmentsList = useMemo(() => {
     return generateSegmentsList({
       accountPayload: activeAccountPayload,
       segments
     });
   }, [activeAccountPayload, segments]);
-
-  const filteredGroupsList = groupsList
-    .slice(1)
-    .filter((value) =>
-      value[0].toLowerCase().includes(searchText.toLowerCase())
-    );
 
   return (
     <div className='flex flex-col row-gap-5'>
@@ -158,9 +153,6 @@ const AccountsSidebar = () => {
               setSearchText={setSearchText}
               placeholder={'Search segment'}
             />
-            {filteredGroupsList.map((group) => {
-              return <GroupItem key={group[0]} group={group} />;
-            })}
             <ControlledComponent controller={newSegmentMode === true}>
               <NewSegmentItem />
             </ControlledComponent>

@@ -34,12 +34,7 @@ func GetGroupsHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Get groups failed. Invalid project."})
 		return
 	}
-	isAccount := c.Query("is_account")
-	logCtx = log.WithFields(log.Fields{
-		"projectId": projectId,
-		"isAccount": isAccount,
-	})
-	// isAccount : true, false, ""
+
 	groups, errCode := store.GetStore().GetGroups(projectId)
 	if errCode != http.StatusFound {
 		logCtx.Error("Get groups failed.")
@@ -47,38 +42,41 @@ func GetGroupsHandler(c *gin.Context) {
 		return
 	}
 
-	// isAccount : true, false, ""
-	var filteredGroups []model.Group
-	if isAccount == "true" || isAccount == "false" {
-		isTrue := (isAccount == "true")
-		for _, group := range groups {
-			if model.AccountGroupNames[group.Name] == isTrue {
-				filteredGroups = append(filteredGroups, group)
-			}
-		}
-	} else {
-		filteredGroups = groups
-	}
+	groups = filterOutGroupByName(groups, model.GROUP_NAME_DOMAINS)
 
-	// remove $domains group
-	for i, group := range filteredGroups {
-		if group.Name == model.GROUP_NAME_DOMAINS {
-			filteredGroups = append(filteredGroups[:i], filteredGroups[i+1:]...)
-			break
-		}
-	}
-
-	response := make(map[string]string)
-	for _, group := range filteredGroups {
-		name := group.Name
-		displayName, exists := U.STANDARD_GROUP_DISPLAY_NAMES[name]
-		if !exists {
-			displayName = name
-		}
-		response[name] = displayName
-	}
+	response := buildResponseFromGroups(groups)
 
 	c.JSON(http.StatusFound, response)
+}
+
+func filterOutGroupByName(groups []model.Group, nameToRemove string) []model.Group {
+	var updatedGroups []model.Group
+	for _, group := range groups {
+		if group.Name != nameToRemove {
+			updatedGroups = append(updatedGroups, group)
+		}
+	}
+	return updatedGroups
+}
+
+func buildResponseFromGroups(groups []model.Group) []model.GroupName {
+	var response []model.GroupName
+	for _, group := range groups {
+		grp := model.GroupName{
+			Name:        group.Name,
+			DisplayName: getGroupDisplayName(group.Name),
+			IsAccount:   model.AccountGroupNames[group.Name],
+		}
+		response = append(response, grp)
+	}
+	return response
+}
+
+func getGroupDisplayName(groupName string) string {
+	if displayName, exists := U.STANDARD_GROUP_DISPLAY_NAMES[groupName]; exists {
+		return displayName
+	}
+	return U.CreateVirtualDisplayName(groupName)
 }
 
 // GetGroupPropertiesHandler curl -i -X GET http://localhost:8080/projects/1/groups/zzxxzzz==/properties
@@ -136,16 +134,15 @@ func GetGroupPropertiesHandler(c *gin.Context) {
 	var status int
 
 	if model.IsDomainGroup(groupName) {
+		allAccountProperties := getDefaultAllAccountProperties(projectId)
 		response := gin.H{
 			"properties": map[string][]string{
-				"categorical": U.ALL_ACCOUNT_DEFAULT_PROPERTIES,
+				"categorical": allAccountProperties,
 			},
 			"display_names": U.ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES,
 		}
-
 		c.JSON(http.StatusOK, response)
 		return
-
 	} else {
 		propertiesFromCache, status = store.GetStore().GetPropertiesByGroup(projectId, groupName, 2500,
 			C.GetLookbackWindowForEventUserCache())
@@ -153,7 +150,6 @@ func GetGroupPropertiesHandler(c *gin.Context) {
 			c.AbortWithStatus(status)
 			return
 		}
-
 	}
 
 	response := gin.H{"properties": U.FilterEmptyKeysAndValues(projectId, propertiesFromCache)}
@@ -195,6 +191,23 @@ func GetGroupPropertiesHandler(c *gin.Context) {
 	response["display_names"] = U.FilterDisplayNameEmptyKeysAndValues(projectId, displayNamesMap)
 
 	c.JSON(http.StatusOK, response)
+}
+
+func getDefaultAllAccountProperties(projectId int64) []string {
+	groups, errCode := store.GetStore().GetGroups(projectId)
+	if errCode != http.StatusFound {
+		log.WithField("err_code", errCode).Error("Failed to get groups while adding group info")
+		return []string{}
+	}
+
+	var filteredAllAccountProperties []string
+	for _, group := range groups {
+		if prop, exists := U.GROUP_TO_DEFAULT_SEGMENT_MAP[group.Name]; exists {
+			filteredAllAccountProperties = append(filteredAllAccountProperties, prop)
+		}
+	}
+
+	return filteredAllAccountProperties
 }
 
 // GetGroupPropertyValuesHandler curl -i -X GET http://localhost:8080/projects/1/groups/zzxxzzz==/properties/email_id/values

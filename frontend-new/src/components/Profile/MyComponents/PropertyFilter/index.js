@@ -4,6 +4,8 @@ import { Button } from 'antd';
 import { SVG } from '../../../factorsComponents';
 import { compareFilters } from '../../../../utils/global';
 import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
+import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
+import { IsDomainGroup } from 'Components/Profile/utils';
 
 function PropertyFilter({
   viewMode,
@@ -19,8 +21,9 @@ function PropertyFilter({
   const groupProperties = useSelector(
     (state) => state.coreQuery.groupProperties
   );
-  const availableGroups = useSelector((state) => state.groups.data);
+  const availableGroups = useSelector((state) => state.coreQuery.groups);
   const activeProject = useSelector((state) => state.global.active_project);
+  const predefinedProperty = useSelector((state) => state.preBuildDashboardConfig.config.data.result);
 
   const [filterProps, setFilterProperties] = useState({});
   const [filterDD, setFilterDD] = useState(false);
@@ -28,18 +31,20 @@ function PropertyFilter({
   useEffect(() => {
     const props = {};
     if (profileType === 'account') {
-      if (source === 'All') {
-        props['$domains'] = groupProperties['$domains'];
-        Object.keys(availableGroups).forEach((group) => {
+      if (IsDomainGroup(source)) {
+        props[GROUP_NAME_DOMAINS] = groupProperties[GROUP_NAME_DOMAINS];
+        Object.keys(availableGroups?.account_groups).forEach((group) => {
           props[group] = groupProperties[group];
         });
       } else props[source] = groupProperties[source];
       props.user = userPropertiesV2;
     } else if (profileType === 'user') {
       props.user = userPropertiesV2;
+    } else if (profileType === 'predefined') {
+      props.user = predefinedProperty?.pr;
     }
     setFilterProperties(props);
-  }, [userPropertiesV2, groupProperties, availableGroups, profileType, source]);
+  }, [userPropertiesV2, groupProperties, availableGroups, profileType, source, predefinedProperty?.pr]);
 
   const updateFilters = (newFilters) => {
     if (viewMode) return;
@@ -79,6 +84,7 @@ function PropertyFilter({
               closeFilter={closeFilter}
               filterProps={filterProps}
               minEntriesPerGroup={3}
+              profileType={profileType}
             />
           </div>
         );
@@ -96,6 +102,7 @@ function PropertyFilter({
                 closeFilter={closeFilter}
                 filterProps={filterProps}
                 minEntriesPerGroup={3}
+                profileType={profileType}
               />
             </div>
           );

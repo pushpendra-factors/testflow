@@ -40,16 +40,17 @@ import GlobalFilter from 'Components/GlobalFilter';
 import EventFilter from './EventFilter';
 import ExpandBy from './ExpandBy';
 import { formatBreakdownsForQuery, formatFiltersForQuery, processBreakdownsFromQuery, processFiltersFromQuery } from 'Views/CoreQuery/utils';
+import { getGroups } from 'Reducers/coreQuery/middleware';
 
 const QueryBuilder = ({
   queryOptions = {},
   queryType = '',
   fetchSavedPathAnalysis,
   createPathPathAnalysisQuery,
-  fetchGroups,
+  getGroups,
   activeProject,
   activeQuery,
-  groupOpts,
+  groups,
   getGroupProperties,
   getUserPropertiesV2,
   eventOptions,
@@ -79,11 +80,13 @@ const QueryBuilder = ({
   const history = useHistory();
 
   useEffect(() => {
-    fetchGroups(activeProject?.id);
+    if (!groups || Object.keys(groups).length === 0) {
+      getGroups(activeProject?.id);
+    }
     getEventPropertiesV2(activeProject?.id, '$session'); //pre-fetching event-propeties for $session
     getButtonClickProperties(activeProject?.id);
     getPageViewsProperties(activeProject?.id);
-  }, [activeProject?.id]);
+  }, [activeProject?.id, groups]);
 
   useEffect(() => {
     if (groupCategory === 'users') {
@@ -94,12 +97,12 @@ const QueryBuilder = ({
   }, [activeProject?.id, groupCategory]);
 
   const groupsList = useMemo(() => {
-    let groups = [['Users', 'users']];
-    Object.entries(groupOpts || {}).forEach(([group_name, display_name]) => {
-      groups.push([display_name, group_name]);
+    let listGroups = [['Users', 'users']];
+    Object.entries(groups?.all_groups || {}).forEach(([group_name, display_name]) => {
+      listGroups.push([display_name, group_name]);
     });
-    return groups;
-  }, [groupOpts]);
+    return listGroups;
+  }, [groups]);
 
   const returnEventname = (arr) => {
     return arr.map((item) => item.label);
@@ -1022,14 +1025,14 @@ const mapStateToProps = (state) => {
     activeQuery: state.pathAnalysis?.activeQuery,
     activeProject: state.global.active_project,
     eventOptions: state.coreQuery.eventOptions,
-    groupOpts: state.groups.data
+    groups: state.coreQuery.groups
   };
 };
 
 export default connect(mapStateToProps, {
   fetchSavedPathAnalysis,
   createPathPathAnalysisQuery,
-  fetchGroups,
+  getGroups,
   getGroupProperties,
   getUserPropertiesV2,
   fetchPathAnalysisInsights,

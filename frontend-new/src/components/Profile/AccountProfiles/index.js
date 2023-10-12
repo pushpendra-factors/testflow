@@ -11,7 +11,8 @@ import {
   formatFiltersForPayload,
   formatReqPayload,
   getFiltersRequestPayload,
-  getSelectedFiltersFromQuery
+  getSelectedFiltersFromQuery,
+  IsDomainGroup
 } from '../utils';
 import {
   getProfileAccounts,
@@ -26,11 +27,8 @@ import {
 } from '../../../reducers/global';
 import SearchCheckList from 'Components/SearchCheckList';
 import { formatUserPropertiesToCheckList } from 'Reducers/timelines/utils';
-import { useHistory, useLocation } from 'react-router-dom';
-import {
-  fetchGroupPropertyValues,
-  fetchGroups
-} from 'Reducers/coreQuery/services';
+import { useHistory, useLocation, useParams } from 'react-router-dom';
+import { fetchGroupPropertyValues } from 'Reducers/coreQuery/services';
 import NoDataWithMessage from '../MyComponents/NoDataWithMessage';
 import ProfilesWrapper from '../ProfilesWrapper';
 import { checkFiltersEquality, getColumns } from './accountProfiles.helpers';
@@ -66,8 +64,12 @@ import UpdateSegmentModal from './UpdateSegmentModal';
 import { AccountsSidebarIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
 import DownloadCSVModal from './DownloadCSVModal';
 import { fetchProfileAccounts } from 'Reducers/timelines';
+import { selectSegments } from 'Reducers/timelines/selectors';
 import { downloadCSV } from 'Utils/csv';
 import { formatCount } from 'Utils/dataFormatter';
+import { PathUrls } from 'Routes/pathUrls';
+import { getGroups } from '../../../reducers/coreQuery/middleware';
+import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 
 const groupToCompanyPropMap = {
   $hubspot_company: '$hubspot_company_name',
@@ -87,12 +89,12 @@ const groupToDomainMap = {
 
 function AccountProfiles({
   activeProject,
-  groupOpts,
+  groups,
   accounts,
   createNewSegment,
   getSavedSegments,
   fetchProjectSettings,
-  fetchGroups,
+  getGroups,
   udpateProjectSettings,
   currentProjectSettings,
   getProfileAccounts,
@@ -103,6 +105,9 @@ function AccountProfiles({
   const dispatch = useDispatch();
   const history = useHistory();
   const location = useLocation();
+  const {segment_id} = useParams();
+
+  const {segments} = useSelector((state) => selectSegments(state));
 
   const { groupPropNames } = useSelector((state) => state.coreQuery);
   const groupProperties = useSelector(
@@ -150,8 +155,19 @@ function AccountProfiles({
 
   const activeAgent = agentState?.agent_details?.email;
 
+  useEffect(()=> {
+    if(segment_id && segments?.length) {
+      if(segment_id !== activeSegment.id) {
+        const selectedSegment = segments.find((seg) => seg.id === segment_id);
+        setActiveSegment(selectedSegment);
+      }
+    }
+
+  }, [segment_id, segments])
+
   const setActiveSegment = useCallback(
     (segmentPayload) => {
+      // history.replace(PathUrls.ProfileAccountsSegmentsURL + '/' + segmentPayload.id);
       dispatch(setActiveSegmentAction(segmentPayload));
     },
     [dispatch]
@@ -188,7 +204,7 @@ function AccountProfiles({
       $6signal: '6Signal',
       $linkedin_company: '$li_',
       $g2: '$g2',
-      All: ''
+      $domains: ''
     };
     const source = filterPropsMap[accountPayload?.source];
     const tableProps = accountPayload.segment_id
@@ -383,15 +399,12 @@ function AccountProfiles({
           getProfileAccounts(activeProject.id, queryForFetch, activeAgent)
         );
     } else {
-      const filteredProps =
-        accountPayload.source !== 'All'
-          ? tlConfig.account_config.table_props.filter(
-              (item) =>
-                !checkListAccountProps.some(
-                  ({ prop_name }) => prop_name === item
-                )
-            )
-          : [];
+      const filteredProps = !IsDomainGroup(accountPayload.source)
+        ? tlConfig.account_config.table_props.filter(
+            (item) =>
+              !checkListAccountProps.some(({ prop_name }) => prop_name === item)
+          )
+        : [];
       const enabledProps = checkListAccountProps
         .filter(({ enabled }) => enabled)
         .map(({ prop_name }) => prop_name);
@@ -533,8 +546,8 @@ function AccountProfiles({
   }, [selectedFilters.account]);
 
   const availableGroups = useMemo(() => {
-    return Object.keys(groupOpts || {});
-  }, [groupOpts]);
+    return Object.keys(groups?.account_groups || {});
+  }, [groups]);
 
   const renderPropertyFilter = () => {
     return (
@@ -566,9 +579,9 @@ function AccountProfiles({
 
   useEffect(() => {
     const fetchData = async () => {
-      const newCompanyValues = { All: {} };
+      const newCompanyValues = { $domains: {} };
       for (const [group, prop] of Object.entries(groupToCompanyPropMap)) {
-        if (groupOpts[group]) {
+        if (groups?.account_groups[group]) {
           try {
             const res = await fetchGroupPropertyValues(
               activeProject.id,
@@ -582,15 +595,15 @@ function AccountProfiles({
         }
       }
       for (const [group, prop] of Object.entries(groupToDomainMap)) {
-        if (groupOpts[group]) {
+        if (groups?.account_groups[group]) {
           try {
             const res = await fetchGroupPropertyValues(
               activeProject.id,
               group,
               prop
             );
-            newCompanyValues['All'] = {
-              ...newCompanyValues['All'],
+            newCompanyValues[GROUP_NAME_DOMAINS] = {
+              ...newCompanyValues[GROUP_NAME_DOMAINS],
               ...res.data
             };
           } catch (err) {
@@ -601,7 +614,7 @@ function AccountProfiles({
       setCompanyValueOpts(newCompanyValues);
     };
     fetchData();
-  }, [activeProject.id, groupOpts]);
+  }, [activeProject.id, groups]);
 
   const onApplyClick = (values) => {
     const updatedPayload = {
@@ -836,7 +849,8 @@ function AccountProfiles({
           }}
           onChange={handleTableChange}
           scroll={{
-            x: displayTableProps?.length * 300
+            x: displayTableProps?.length * 300,
+            y: 'calc(100vh - 320px)'
           }}
           footer={() => (
             <div className='text-right'>
@@ -1006,7 +1020,7 @@ function AccountProfiles({
     const fetchData = async () => {
       const newCompanyValues = { All: {} };
       for (const [group, prop] of Object.entries(groupToCompanyPropMap)) {
-        if (groupOpts[group]) {
+        if (groups?.account_groups[group]) {
           try {
             const res = await fetchGroupPropertyValues(
               activeProject.id,
@@ -1014,8 +1028,8 @@ function AccountProfiles({
               prop
             );
             newCompanyValues[group] = { ...res.data };
-            newCompanyValues['All'] = {
-              ...newCompanyValues['All'],
+            newCompanyValues[GROUP_NAME_DOMAINS] = {
+              ...newCompanyValues[GROUP_NAME_DOMAINS],
               ...res.data
             };
           } catch (err) {
@@ -1026,7 +1040,7 @@ function AccountProfiles({
       setCompanyValueOpts(newCompanyValues);
     };
     fetchData();
-  }, [activeProject.id, groupOpts]);
+  }, [activeProject.id, groups]);
 
   useEffect(() => {
     if (newSegmentMode === false) {
@@ -1036,17 +1050,20 @@ function AccountProfiles({
 
   useEffect(() => {
     let listProps = [];
-    if (accountPayload?.source === 'All') {
-      listProps = Object.keys(groupOpts || {}).reduce((acc, property) => {
-        return groupProperties[property]
-          ? acc.concat(groupProperties[property])
-          : acc;
-      }, []);
+    if (IsDomainGroup(accountPayload?.source)) {
+      listProps = Object.keys(groups?.account_groups || {}).reduce(
+        (acc, property) => {
+          return groupProperties[property]
+            ? acc.concat(groupProperties[property])
+            : acc;
+        },
+        []
+      );
     } else {
       listProps = groupProperties?.[accountPayload?.source] || [];
     }
     setListProperties(listProps);
-  }, [groupProperties, accountPayload?.source, groupOpts]);
+  }, [groupProperties, accountPayload?.source, groups]);
 
   useEffect(() => {
     const tableProps = accountPayload?.segment_id
@@ -1060,23 +1077,18 @@ function AccountProfiles({
   }, [currentProjectSettings, listProperties, activeSegment, accountPayload]);
 
   useEffect(() => {
-    fetchGroupProperties('$domains');
-    Object.keys(groupOpts || {}).forEach((group) => {
+    fetchGroupProperties(GROUP_NAME_DOMAINS);
+    Object.keys(groups?.account_groups || {}).forEach((group) => {
       fetchGroupProperties(group);
     });
-  }, [activeProject.id, fetchGroupProperties, groupOpts]);
+  }, [activeProject.id, fetchGroupProperties, groups]);
 
   useEffect(() => {
     if (!accountPayload.source) {
-      const source = groupsList?.[0]?.[1] || '';
+      const source = GROUP_NAME_DOMAINS;
       updateAccountPayload({ source });
     }
-  }, [
-    accountPayload.source,
-    activeProject.id,
-    groupsList,
-    updateAccountPayload
-  ]);
+  }, [accountPayload.source, activeProject.id, updateAccountPayload]);
 
   useEffect(() => {
     if (!currentProjectSettings?.timelines_config) return;
@@ -1106,9 +1118,11 @@ function AccountProfiles({
 
   useEffect(() => {
     fetchProjectSettings(activeProject?.id);
-    fetchGroups(activeProject?.id, true);
+    if (!groups || Object.keys(groups).length === 0) {
+      getGroups(activeProject?.id);
+    }
     getSavedSegments(activeProject?.id);
-  }, [activeProject?.id, fetchGroups, fetchProjectSettings, getSavedSegments]);
+  }, [activeProject?.id, groups]);
 
   useEffect(() => {
     if (newSegmentMode === true) {
@@ -1172,7 +1186,13 @@ function AccountProfiles({
           <div className='flex items-center rounded justify-center h-10 w-10'>
             <SVG name={titleIcon} size={32} color='#FF4D4F' />
           </div>
-          <Text type='title' level={3} weight='bold' extraClass='mb-0'>
+          <Text
+            type='title'
+            level={3}
+            weight='bold'
+            extraClass='mb-0'
+            id={'fa-at-text--page-title'}
+          >
             {pageTitle}
           </Text>
         </div>
@@ -1267,7 +1287,7 @@ function AccountProfiles({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  groupOpts: state.groups.data,
+  groups: state.coreQuery.groups,
   accounts: state.timelines.accounts,
   currentProjectSettings: state.global.currentProjectSettings
 });
@@ -1275,7 +1295,7 @@ const mapStateToProps = (state) => ({
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
-      fetchGroups,
+      getGroups,
       getProfileAccounts,
       createNewSegment,
       getSavedSegments,

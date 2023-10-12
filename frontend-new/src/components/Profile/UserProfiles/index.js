@@ -678,7 +678,7 @@ function UserProfiles({
           </div>
         )}
 
-        <Text type='title' level={3} weight='bold' extraClass='mb-0'>
+        <Text type='title' level={3} weight='bold' extraClass='mb-0' id={'fa-at-text--page-title'}>
           User Profiles
         </Text>
         {renderActions()}
