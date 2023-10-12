@@ -40,6 +40,7 @@ import NoDataChart from '../../../components/NoDataChart';
 import { ATTRIBUTION_GROUP_ANALYSIS_KEYS } from './attributionsResult.constants';
 import { CORE_QUERY_INITIAL_STATE, UPDATE_CORE_QUERY_REDUCER } from '../constants';
 import CoreQueryReducer from '../CoreQueryReducer';
+import { setAttributionTableFilters } from 'Attribution/state/actions';
 
 const nodata = (
   <div className='flex justify-center items-center w-full h-full pt-4 pb-4'>
@@ -164,11 +165,8 @@ const AttributionsChartComponent = forwardRef(
     const handleApplyFilters = useCallback(
       (filters) => {
         if(v1) {
-          setAppliedFilters(filters);
-          localDispatch({
-            type: UPDATE_CORE_QUERY_REDUCER,
-            payload: { attributionTableFilters: filters }
-          });
+          // setAppliedFilters(filters);
+          dispatch(setAttributionTableFilters(filters));
         } else {
           updateCoreQueryReducer({ attributionTableFilters: filters });
         }
@@ -471,13 +469,14 @@ const AttributionsChart = (props) => {
     coreQueryState: {
       comparison_data,
       comparison_duration,
-      savedQuerySettings,
-      attributionTableFilters
+      savedQuerySettings
     },
     attributionMetrics,
     setAttributionMetrics,
     updateCoreQueryReducer
   } = useContext(CoreQueryContext);
+
+  const { attributionTableFilters } = useSelector((state) => state.attributionDashboard);
 
   // const applFilters = attributionTableFilters;
   return (

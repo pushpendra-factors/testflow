@@ -60,6 +60,9 @@ const SaveAttributionQuery = ({
   const savedQueries = useSelector((state) =>
     get(state, 'attributionDashboard.attributionQueries.data', EMPTY_ARRAY)
   );
+  const { attributionTableFilters } = useSelector(
+    (state) => state.attributionDashboard
+  );
   const { agent_details } = useSelector((state) => state.agent);
 
   const toggleSaveModalVisibility = useCallback(() => {
@@ -68,7 +71,7 @@ const SaveAttributionQuery = ({
 
   const {
     attributionMetrics,
-    coreQueryState: { chartTypes, attributionTableFilters }
+    coreQueryState: { chartTypes }
   } = useContext(CoreQueryContext);
 
   const savedQueryPresentation = useMemo(() => {
@@ -115,7 +118,7 @@ const SaveAttributionQuery = ({
       };
 
       querySettings.attributionMetrics = JSON.stringify(attributionMetrics);
-      querySettings.tableFilters = JSON.stringify(attributionTableFilters)
+      querySettings.tableFilters = JSON.stringify(attributionTableFilters);
 
       let queryId;
 

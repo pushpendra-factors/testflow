@@ -102,8 +102,7 @@ function SaveQuery({
       chartTypes,
       pivotConfig,
       navigatedFromDashboard,
-      navigatedFromAnalyse,
-      attributionTableFilters
+      navigatedFromAnalyse
     }
   } = useContext(CoreQueryContext);
 
