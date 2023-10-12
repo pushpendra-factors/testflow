@@ -3320,7 +3320,7 @@ func syncGroupCompany(projectID int64, document *model.HubspotDocument, enProper
 }
 
 func syncGroupDeal(projectID int64, enProperties *map[string]interface{}, document *model.HubspotDocument) (string, string, int) {
-	logCtx := log.WithFields(log.Fields{"project_id": projectID, "document": document.ID, "doc_type": document.Type})
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "document_id": document.ID, "doc_type": document.Type})
 	if document.Type != model.HubspotDocumentTypeDeal {
 		logCtx.Error("Invalid document type on syncGroupDeal.")
 		return "", "", http.StatusBadRequest
@@ -3370,14 +3370,15 @@ func syncGroupDeal(projectID int64, enProperties *map[string]interface{}, docume
 		}
 	}
 
+	companyID := ""
 	if len(companyIDList) > 0 {
+		companyID = companyIDList[0] // use first company to associate deal to domain
 		documents, status := store.GetStore().GetHubspotDocumentByTypeAndActions(projectID, companyIDList,
 			model.HubspotDocumentTypeCompany, []int{model.HubspotDocumentActionCreated})
 		if status != http.StatusFound {
 			logCtx.WithFields(log.Fields{"company_ids": companyIDList}).
 				Warning("Failed to get company created documents for syncGroupDeal.")
 		}
-
 		for i := range documents {
 			groupUserID := getGroupUserID(&documents[i])
 			if groupUserID == "" {
@@ -3426,7 +3427,53 @@ func syncGroupDeal(projectID int64, enProperties *map[string]interface{}, docume
 		}
 	}
 
+	if C.AssociateDealToDomainByProjectID(projectID) && companyID != "" {
+		status = associateDealToDomain(projectID, dealGroupUserID, companyID)
+		if status != http.StatusOK {
+			logCtx.Error("Failed to associateDealToDomain.")
+		}
+	}
+
 	return dealGroupUserID, eventId, http.StatusOK
+}
+
+func associateDealToDomain(projectID int64, dealGroupUserID string, companyID string) int {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "deal_group_user_id": dealGroupUserID, "company_id": companyID})
+	if projectID == 0 || dealGroupUserID == "" || companyID == "" {
+		logCtx.Error("Missing required fields.")
+		return http.StatusBadRequest
+	}
+
+	documents, status := store.GetStore().GetHubspotDocumentByTypeAndActions(projectID, []string{companyID}, model.HubspotDocumentTypeCompany,
+		[]int{model.HubspotDocumentActionCreated})
+	if status != http.StatusFound {
+		logCtx.Error("Failed to get company document in associateDealToDomains.")
+		return http.StatusInternalServerError
+	}
+
+	document := documents[0]
+	groupUserID := document.GroupUserId
+	if groupUserID == "" {
+		enProperties, err := getCompanyProperties(projectID, &document)
+		if err != nil {
+			logCtx.WithFields(log.Fields{"document_id": document.ID}).Error("Failed to get company properties in associate deal to domains.")
+			return http.StatusInternalServerError
+		}
+
+		companyUserID, _, err := syncGroupCompany(projectID, &document, &enProperties)
+		if err != nil || companyUserID == "" {
+			logCtx.WithFields(log.Fields{"document_id": document.ID}).WithError(err).Error("Missing group user id in company record in associate deal to domains.")
+			return http.StatusInternalServerError
+		}
+		groupUserID = companyUserID
+	}
+
+	status = store.GetStore().UpdateGroupUserDomainAssociationUsingAccountUserID(projectID, dealGroupUserID, groupUserID)
+	if status != http.StatusOK {
+		logCtx.Error("Failed to update deal domain assciation.")
+		return http.StatusInternalServerError
+	}
+	return status
 }
 
 func syncDeal(projectID int64, document *model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) int {

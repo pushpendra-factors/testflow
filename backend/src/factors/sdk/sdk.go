@@ -2741,7 +2741,7 @@ func TrackDomainsGroup(projectID int64, groupUserID string, groupName string, do
 		return http.StatusInternalServerError
 	}
 
-	_, status = store.GetStore().UpdateGroupUserDomainsGroup(projectID, groupUserID, groupName, domainsGroupUserID, groupID, true)
+	_, status = store.GetStore().UpdateGroupUserDomainsGroup(projectID, groupUserID, domainsGroupUserID, groupID, true)
 	if status != http.StatusAccepted && status != http.StatusNotModified {
 		logCtx.WithError(err).Error("Failed to update group user association with domains group user.")
 		return http.StatusInternalServerError
