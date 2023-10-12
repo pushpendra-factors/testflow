@@ -779,7 +779,7 @@ type Model interface {
 
 	UpdateGroupUserDomainsGroup(projectID int64, groupUserID, domainsUserID, domainGroupID string, overwrite bool) (*model.User, int)
 	GetAllGroupUsersByDomainsGroupUserID(projectID int64, groupDomainID int, groupDomainUserID string) ([]model.User, int)
-	UpdateGroupUserDomainAssociationUsingAccountUserID(projectID int64, groupUserID string, accountGroupUserID string) int
+	UpdateGroupUserDomainAssociationUsingAccountUserID(projectID int64, groupUserID string, accountGroupName string, accountGroupUserID string) int
 
 	// Delete channel Integrations
 	DeleteChannelIntegration(projectID int64, channelName string) (int, error)
