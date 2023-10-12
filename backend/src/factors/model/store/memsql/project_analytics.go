@@ -22,67 +22,9 @@ func (store *MemSQL) GetEventUserCountsOfAllProjects(lastNDays int) (map[string]
 	for _, project := range projects {
 		projectIDNameMap[project.ID] = project.Name
 	}
-	result := make(map[string][]*model.ProjectAnalytics, 0)
-	for i := 0; i < lastNDays; i++ {
-		dateKey := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
-		if result[dateKey] == nil {
-			result[dateKey] = make([]*model.ProjectAnalytics, 0)
-		}
-		totalUniqueUsersKey, err := model.UserCountAnalyticsCacheKey(dateKey)
-		if err != nil {
-			return nil, err
-		}
-		users, err := cacheRedis.ZrangeWithScoresPersistent(true, totalUniqueUsersKey)
-		if err != nil {
-			return nil, err
-		}
-		totalUniqueEventsKey, err := model.UniqueEventNamesAnalyticsCacheKey(dateKey)
-		if err != nil {
-			return nil, err
-		}
-		uniqueEvents, err := cacheRedis.ZrangeWithScoresPersistent(true, totalUniqueEventsKey)
-		if err != nil {
-			return nil, err
-		}
-		totalEventsKey, err := model.EventsCountAnalyticsCacheKey(dateKey)
-		if err != nil {
-			return nil, err
-		}
-		totalEvents, err := cacheRedis.ZrangeWithScoresPersistent(true, totalEventsKey)
-		if err != nil {
-			return nil, err
-		}
-		for projId, count := range users {
-			uniqueUsers, _ := strconv.Atoi(count)
-			totalEvents, _ := strconv.Atoi(totalEvents[projId])
-			uniqueEvents, _ := strconv.Atoi(uniqueEvents[projId])
-			projIdInt, _ := strconv.Atoi(projId)
-			dateKeyInt, _ := strconv.Atoi(dateKey)
-			adwordsEvents, _ := GetEventsFromCacheByDocumentType(projId, "adwords", dateKey)
-			facebookEvents, _ := GetEventsFromCacheByDocumentType(projId, "facebook", dateKey)
-			hubspotEvents, _ := GetEventsFromCacheByDocumentType(projId, "hubspot", dateKey)
-			linkedinEvents, _ := GetEventsFromCacheByDocumentType(projId, "linkedin", dateKey)
-			salesforceEvents, _ := GetEventsFromCacheByDocumentType(projId, "salesforce", dateKey)
-			sixSignalAPIHits := model.GetSixSignalAPICountCacheResult(int64(projIdInt), uint64(dateKeyInt))
-			sixSignalAPITotalHits := model.GetSixSignalAPITotalHitCountCacheResult(int64(projIdInt), uint64(dateKeyInt))
-			result[dateKey] = append(result[dateKey], &model.ProjectAnalytics{
-				ProjectID:             int64(projIdInt),
-				TotalEvents:           uint64(totalEvents),
-				TotalUniqueEvents:     uint64(uniqueEvents),
-				TotalUniqueUsers:      uint64(uniqueUsers),
-				AdwordsEvents:         uint64(adwordsEvents),
-				FacebookEvents:        uint64(facebookEvents),
-				HubspotEvents:         uint64(hubspotEvents),
-				LinkedinEvents:        uint64(linkedinEvents),
-				SalesforceEvents:      uint64(salesforceEvents),
-				SixSignalAPIHits:      uint64(sixSignalAPIHits),
-				SixSignalAPITotalHits: uint64(sixSignalAPITotalHits),
-				ProjectName:           projectIDNameMap[int64(projIdInt)],
-				Date:                  dateKey,
-			})
-
-		}
-
+	result, err := GetProjectAnalyticsData(projectIDNameMap, lastNDays, currentDate, 0)
+	if err != nil {
+		return nil, err
 	}
 
 	return result, nil
@@ -176,6 +118,114 @@ func (store *MemSQL) GetEventUserCountsMerged(projectIdsList []int64, lastNDays 
 
 	return result, nil
 }
+
+func (store *MemSQL) GetEventUserCountsByProjectID(projectId int64, lastNDays int) (map[string][]*model.ProjectAnalytics, error) {
+	logFields := log.Fields{
+		"last_n_days": lastNDays,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	currentDate := time.Now().UTC()
+	project, _ := store.GetProject(projectId)
+
+	projectIDNameMap := make(map[int64]string)
+	projectIDNameMap[project.ID] = project.Name
+
+	result, err := GetProjectAnalyticsData(projectIDNameMap, lastNDays, currentDate, projectId)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func GetProjectAnalyticsData(projectIDNameMap map[int64]string, lastNDays int, currentDate time.Time, projectId int64) (map[string][]*model.ProjectAnalytics, error) {
+
+	result := make(map[string][]*model.ProjectAnalytics, 0)
+
+	for i := 0; i < lastNDays; i++ {
+		dateKey := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
+		if result[dateKey] == nil {
+			result[dateKey] = make([]*model.ProjectAnalytics, 0)
+		}
+		totalUniqueUsersKey, err := model.UserCountAnalyticsCacheKey(dateKey)
+		if err != nil {
+			return nil, err
+		}
+		users, err := cacheRedis.ZrangeWithScoresPersistent(true, totalUniqueUsersKey)
+		if err != nil {
+			return nil, err
+		}
+		totalUniqueEventsKey, err := model.UniqueEventNamesAnalyticsCacheKey(dateKey)
+		if err != nil {
+			return nil, err
+		}
+		uniqueEvents, err := cacheRedis.ZrangeWithScoresPersistent(true, totalUniqueEventsKey)
+		if err != nil {
+			return nil, err
+		}
+		totalEventsKey, err := model.EventsCountAnalyticsCacheKey(dateKey)
+		if err != nil {
+			return nil, err
+		}
+		totalEvents, err := cacheRedis.ZrangeWithScoresPersistent(true, totalEventsKey)
+		if err != nil {
+			return nil, err
+		}
+		for projId, count := range users {
+			uniqueUsers, _ := strconv.Atoi(count)
+			totalEvents, _ := strconv.Atoi(totalEvents[projId])
+			uniqueEvents, _ := strconv.Atoi(uniqueEvents[projId])
+			projIdInt, _ := strconv.Atoi(projId)
+			dateKeyInt, _ := strconv.Atoi(dateKey)
+			adwordsEvents, _ := GetEventsFromCacheByDocumentType(projId, "adwords", dateKey)
+			facebookEvents, _ := GetEventsFromCacheByDocumentType(projId, "facebook", dateKey)
+			hubspotEvents, _ := GetEventsFromCacheByDocumentType(projId, "hubspot", dateKey)
+			linkedinEvents, _ := GetEventsFromCacheByDocumentType(projId, "linkedin", dateKey)
+			salesforceEvents, _ := GetEventsFromCacheByDocumentType(projId, "salesforce", dateKey)
+			sixSignalAPIHits := model.GetSixSignalAPICountCacheResult(int64(projIdInt), uint64(dateKeyInt))
+			sixSignalAPITotalHits := model.GetSixSignalAPITotalHitCountCacheResult(int64(projIdInt), uint64(dateKeyInt))
+
+			if projectId == 0 {
+				result[dateKey] = append(result[dateKey], &model.ProjectAnalytics{
+					ProjectID:             int64(projIdInt),
+					TotalEvents:           uint64(totalEvents),
+					TotalUniqueEvents:     uint64(uniqueEvents),
+					TotalUniqueUsers:      uint64(uniqueUsers),
+					AdwordsEvents:         uint64(adwordsEvents),
+					FacebookEvents:        uint64(facebookEvents),
+					HubspotEvents:         uint64(hubspotEvents),
+					LinkedinEvents:        uint64(linkedinEvents),
+					SalesforceEvents:      uint64(salesforceEvents),
+					SixSignalAPIHits:      uint64(sixSignalAPIHits),
+					SixSignalAPITotalHits: uint64(sixSignalAPITotalHits),
+					ProjectName:           projectIDNameMap[int64(projIdInt)],
+					Date:                  dateKey,
+				})
+			} else if int64(projIdInt) == projectId {
+
+				entry := model.ProjectAnalytics{
+					ProjectID:         int64(projIdInt),
+					TotalEvents:       uint64(totalEvents),
+					TotalUniqueEvents: uint64(uniqueEvents),
+					TotalUniqueUsers:  uint64(uniqueUsers),
+					AdwordsEvents:     uint64(adwordsEvents),
+					FacebookEvents:    uint64(facebookEvents),
+					HubspotEvents:     uint64(hubspotEvents),
+					LinkedinEvents:    uint64(linkedinEvents),
+					SalesforceEvents:  uint64(salesforceEvents),
+					ProjectName:       projectIDNameMap[int64(projIdInt)],
+					Date:              dateKey,
+				}
+				result[projId] = append(result[projId], &entry)
+
+			}
+		}
+
+	}
+
+	return result, nil
+}
+
 func UpdateCountCacheByDocumentType(projectID int64, time *time.Time, documentType string) (status bool) {
 	logFields := log.Fields{
 		"project_id":    projectID,

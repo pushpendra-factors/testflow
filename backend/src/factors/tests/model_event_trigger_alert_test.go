@@ -7,12 +7,15 @@ import (
 	"factors/handler/helpers"
 	"factors/model/model"
 	"factors/model/store"
+	"factors/util"
 	U "factors/util"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	SDK "factors/sdk"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -222,7 +225,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte{}},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "US"}`)}}
 
-		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts)
 	})
@@ -255,7 +258,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte{}},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "UK"}`)}}
 
-		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts)
 	})
@@ -288,7 +291,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte{}},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "UK"}`)}}
 
-		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts)
 	})
@@ -321,7 +324,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte{}},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "UK"}`)}}
 
-		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts)
 	})
@@ -354,7 +357,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte{}},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "USA"}`)}}
 
-		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts)
 	})
@@ -387,7 +390,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte{}},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "USA"}`)}}
 
-		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts)
 	})
@@ -420,7 +423,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte{}},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "USA"}`)}}
 
-		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts)
 	})
@@ -453,7 +456,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte{}},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "USA"}`)}}
 
-		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts)
 	})
@@ -488,7 +491,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte{}},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "US"}`)}}
 
-		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts)
 
@@ -497,7 +500,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte{}},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "UK"}`)}}
 
-		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
+		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event1.Properties, event1.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts1)
 	})
@@ -532,7 +535,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte{}},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "USA"}`)}}
 
-		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts)
 	})
@@ -567,7 +570,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(``)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "US"}`)}}
 
-		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts)
 
@@ -576,7 +579,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "UK"}`)}}
 
-		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
+		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event1.Properties, event1.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts1)
 	})
@@ -613,7 +616,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country":"canada"}`)},
 		}
 
-		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts)
 	})
@@ -648,7 +651,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(``)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "USA"}`)}}
 
-		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts)
 
@@ -659,7 +662,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "Ukraine"}`)},
 		}
 
-		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
+		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event1.Properties, event1.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts1)
 	})
@@ -694,7 +697,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(``)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "Canada"}`)}}
 
-		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts)
 	})
@@ -729,7 +732,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(``)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "USA"}`)}}
 
-		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts)
 
@@ -740,7 +743,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "Ukraine"}`)},
 		}
 
-		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
+		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event1.Properties, event1.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts1)
 
@@ -751,7 +754,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$country": "Canada"}`)},
 		}
 
-		alerts2, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event2.Properties, event2.UserProperties, nil, false)
+		alerts2, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event2.Properties, event2.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts2)
 	})
@@ -812,7 +815,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(``)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3000"}`)}}
 
-		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts)
 
@@ -821,7 +824,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3500"}`)}}
 
-		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
+		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event1.Properties, event1.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts1)
 	})
@@ -855,7 +858,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(``)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3500"}`)}}
 
-		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts)
 
@@ -864,7 +867,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3000"}`)}}
 
-		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
+		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event1.Properties, event1.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts1)
 	})
@@ -898,7 +901,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(``)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3500"}`)}}
 
-		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts)
 
@@ -907,7 +910,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3000"}`)}}
 
-		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
+		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event1.Properties, event1.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts1)
 
@@ -916,7 +919,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "300"}`)}}
 
-		alerts2, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event2.Properties, event2.UserProperties, nil, false)
+		alerts2, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event2.Properties, event2.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts2)
 	})
@@ -950,7 +953,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(``)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "2500"}`)}}
 
-		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts)
 
@@ -959,7 +962,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3000"}`)}}
 
-		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
+		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event1.Properties, event1.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts1)
 
@@ -968,7 +971,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3500"}`)}}
 
-		alerts2, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event2.Properties, event2.UserProperties, nil, false)
+		alerts2, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event2.Properties, event2.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts2)
 	})
@@ -1002,7 +1005,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(``)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3500"}`)}}
 
-		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts)
 
@@ -1011,7 +1014,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3000"}`)}}
 
-		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
+		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event1.Properties, event1.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts1)
 
@@ -1020,7 +1023,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "300"}`)}}
 
-		alerts2, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event2.Properties, event2.UserProperties, nil, false)
+		alerts2, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event2.Properties, event2.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts2)
 	})
@@ -1054,7 +1057,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(``)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "2500"}`)}}
 
-		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts)
 
@@ -1063,7 +1066,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3000"}`)}}
 
-		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
+		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event1.Properties, event1.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts1)
 
@@ -1072,49 +1075,10 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3500"}`)}}
 
-		alerts2, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event2.Properties, event2.UserProperties, nil, false)
+		alerts2, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event2.Properties, event2.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts2)
 	})
-
-	//Test for filter of dateTime type and from-to operator
-	// t.Run("MatchEventTriggerAlert:DatetimeType", func(t *testing.T) {
-	// 	project, user, eventName, err := SetupProjectUserEventNameReturnDAO()
-	// 	assert.NotNil(t, eventName)
-	// 	assert.NotNil(t, project)
-	// 	assert.NotNil(t, user)
-	// 	assert.Nil(t, err)
-
-	// 	//Test for successful CreateAlert
-	// 	alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
-	// 		Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
-	// 		DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{RawMessage: breakdownProps}, AlertLimit: 5, SetAlertLimit: true,
-	// 		Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
-	// 		Filter: []model.QueryProperty{
-	// 			{Entity: "user", Type: "datetime", Property: "$first_seen", Operator: "equals", LogicalOp: "AND", Value: `{"fr":"12345678", "to":"67854321"}`},
-	// 		}})
-	// 	assert.Equal(t, http.StatusCreated, errCode)
-	// 	assert.Empty(t, errMsg)
-	// 	assert.NotNil(t, alert)
-
-	// 	event := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-	// 		UserId: agent.UUID, Timestamp: start.Unix(),
-	// 		UserProperties: &postgres.Jsonb{RawMessage: []byte(`{"$first_seen":"45678912"}`)},
-	// 		Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3500"}`)}}
-
-	// 	alerts, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties)
-	// 	assert.Equal(t, http.StatusFound, errCode)
-	// 	assert.NotNil(t, alerts)
-
-	// 	event1 := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-	// 		UserId: agent.UUID, Timestamp: start.Unix(),
-	// 		UserProperties: &postgres.Jsonb{RawMessage: []byte(`{"$first_seen":"78912999"}`)},
-	// 		Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3000"}`)}}
-
-	// 	alerts1, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties)
-	// 	assert.Equal(t, http.StatusNotFound, errCode)
-	// 	assert.Nil(t, alerts1)
-	// })
 
 	//Test for combination filters
 	t.Run("MatchEventTriggerAlert:CombinationFilters", func(t *testing.T) {
@@ -1147,7 +1111,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{"$country":"US", "$Salesforce_Industry":"EdTech"}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3500"}`)}}
 
-		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts)
 
@@ -1156,11 +1120,10 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{"$country":"US", "$Salesforce_Industry":"Healthcare"}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3000"}`)}}
 
-		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
+		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event1.Properties, event1.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts1)
 	})
-
 
 	t.Run("MatchEventTriggerAlert:ORAcrossFilters", func(t *testing.T) {
 		project, user, eventName, err := SetupProjectUserEventNameReturnDAO()
@@ -1192,7 +1155,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{"$country":"US", "$Salesforce_Industry":"Education"}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3500"}`)}}
 
-		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties, nil, false)
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event.Properties, event.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts)
 
@@ -1201,7 +1164,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{"$country":"India", "$Salesforce_Industry":"Information Technology"}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3000"}`)}}
 
-		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties, nil, false)
+		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event1.Properties, event1.UserProperties, nil, false)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, alerts1)
 
@@ -1210,7 +1173,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{"$country":"India", "$Salesforce_Industry":"Healthcare"}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3000"}`)}}
 
-		alerts2, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event2.Properties, event2.UserProperties, nil, false)
+		alerts2, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event2.Properties, event2.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts2)
 
@@ -1219,7 +1182,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{"$country":"India", "$Salesforce_Industry":"Healthtech"}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "2000"}`)}}
 
-		alerts3, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event3.Properties, event3.UserProperties, nil, false)
+		alerts3, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event3.Properties, event3.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts3)
 
@@ -1228,49 +1191,114 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{"$country":"US", "$Salesforce_Industry":"Healthtech"}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "2000"}`)}}
 
-		alerts4, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event4.Properties, event4.UserProperties, nil, false)
+		alerts4, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event4.Properties, event4.UserProperties, nil, false)
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts4)
 	})
-	// t.Run("MatchEventTriggerAlert:CombinationFilters2", func(t *testing.T) {
-	// 	project, user, eventName, err := SetupProjectUserEventNameReturnDAO()
-	// 	assert.NotNil(t, eventName)
-	// 	assert.NotNil(t, project)
-	// 	assert.NotNil(t, user)
-	// 	assert.Nil(t, err)
 
-	// 	//Test for successful CreateAlert
-	// 	alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
-	// 		Title: rName1, Event: eventName.Name, Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson}, DontRepeatAlerts: true, CoolDownTime: 1800,
-	// BreakdownProperties: &postgres.Jsonb{RawMessage: breakdownProps}, AlertLimit: 5, SetAlertLimit: true,
-	// 		Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
-	// 		Filter: []model.QueryProperty{
-	// 			{Entity: "user", Type: "numerical", Property: "$clicks", Operator: "lessThan", LogicalOp: "OR", Value: "350"},
-	// 			{Entity: "user", Type: "categorical", Property: "$country", Operator: "contains", LogicalOp: "AND", Value: "US"},
-	// 		}})
-	// 	assert.Equal(t, http.StatusCreated, errCode)
-	// 	assert.Empty(t, errMsg)
-	// 	assert.NotNil(t, alert)
+	t.Run("MatchEventTriggerAlert:AccountPropsFilter", func(t *testing.T) {
+		project, user, eventName, err := SetupProjectUserEventNameReturnDAO()
+		assert.NotNil(t, eventName)
+		assert.NotNil(t, project)
+		assert.NotNil(t, user)
+		assert.Nil(t, err)
 
-	// 	event := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-	// 		UserId: agent.UUID, Timestamp: start.Unix(),
-	// 		UserProperties: &postgres.Jsonb{RawMessage: []byte(`{"$country":"USA", "$Salesforce_Industry":"EdTech"}`)},
-	// 		Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3000"}`)}}
+		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
+		assert.NotNil(t, agent)
+		assert.Equal(t, http.StatusCreated, errCode)
 
-	// 	alerts, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event.Properties, event.UserProperties)
-	// 	assert.Equal(t, http.StatusFound, errCode)
-	// 	assert.NotNil(t, alerts)
+		userSixSignal, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+			JoinTimestamp: time.Now().Unix(), Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+		assert.Equal(t, http.StatusCreated, errCode)
 
-	// 	event1 := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-	// 		UserId: agent.UUID, Timestamp: start.Unix(),
-	// 		UserProperties: &postgres.Jsonb{RawMessage: []byte(`{"$country":"Ukraine", "$Salesforce_Industry":"Healthcare"}`)},
-	// 		Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "300"}`)}}
+		sixSignalGroupUserID, status := SDK.TrackGroupWithDomain(project.ID, model.GROUP_NAME_SIX_SIGNAL, "www.sixsignal1.com",
+			map[string]interface{}{"company": "www.sixsignal1.com"}, U.TimeNowUnix())
+		_, status = store.GetStore().UpdateUserGroup(project.ID, userSixSignal, model.GROUP_NAME_SIX_SIGNAL, "", sixSignalGroupUserID, true)
+		assert.Equal(t, http.StatusAccepted, status)
+		status = store.GetStore().AssociateUserDomainsGroup(project.ID, userSixSignal, model.GROUP_NAME_SIX_SIGNAL, sixSignalGroupUserID)
+		assert.Equal(t, http.StatusOK, status)
 
-	// 	alerts1, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, &event1.Properties, event1.UserProperties)
-	// 	assert.Equal(t, http.StatusNotFound, errCode)
-	// 	assert.Nil(t, alerts1)
-	// })
+		domainGroup, status := store.GetStore().GetGroup(project.ID, model.GROUP_NAME_DOMAINS)
+		assert.Equal(t, http.StatusFound, status)
 
+		userSS, status := store.GetStore().GetUser(project.ID, userSixSignal)
+		assert.Equal(t, http.StatusFound, status)
+		domainUserID, err := model.GetUserGroupUserID(userSS, domainGroup.ID)
+		assert.Nil(t, err)
+		domainUser, status := store.GetStore().GetUser(project.ID, domainUserID)
+		assert.Equal(t, http.StatusFound, status)
+		domainName, err := model.GetGroupUserGroupID(domainUser, domainGroup.ID)
+		assert.Nil(t, err)
+		assert.Equal(t, "sixsignal1.com", domainName)
+
+		_, status = store.GetStore().UpdateUserGroupProperties(project.ID, sixSignalGroupUserID, &postgres.Jsonb{json.RawMessage([]byte(`{"hour":1,"count":2,"city":"Bengalore", "$Salesforce_Industry":"HealthTech"}`))}, time.Now().Unix())
+		assert.Equal(t, http.StatusAccepted, status)
+		user_g, status := store.GetStore().GetUser(project.ID, sixSignalGroupUserID)
+		assert.Equal(t, http.StatusFound, status)
+		userPropertiesMap, err := util.DecodePostgresJsonb(&user_g.Properties)
+		assert.Nil(t, err)
+		assert.NotNil(t, user_g.IsGroupUser)
+		assert.Equal(t, true, *user_g.IsGroupUser)
+		assert.Equal(t, float64(1), (*userPropertiesMap)["hour"])
+		assert.Equal(t, float64(2), (*userPropertiesMap)["count"])
+		assert.Equal(t, "Bengalore", (*userPropertiesMap)["city"])
+		assert.Equal(t, "HealthTech", (*userPropertiesMap)["$Salesforce_Industry"])
+
+		//Test for successful CreateAlert
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
+			Title: rName1, Event: eventName.Name, EventLevel: "account", Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{RawMessage: breakdownProps}, AlertLimit: 5, SetAlertLimit: true,
+			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
+			Filter: []model.QueryProperty{
+				{Entity: "user_g", GroupName: model.GROUP_NAME_SALESFORCE_ACCOUNT, Type: "categorical", Property: "$Salesforce_Industry", Operator: "contains", LogicalOp: "AND", Value: "tech"},
+				{Entity: "user", Type: "categorical", Property: "$country", Operator: "equals", LogicalOp: "AND", Value: "US"},
+				{Entity: "event", Type: "numerical", Property: "$time_spent", Operator: "greaterThanOrEqual", LogicalOp: "AND", Value: "3000"},
+			}}, agent.UUID, agent.UUID, false)
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.Empty(t, errMsg)
+		assert.NotNil(t, alert)
+
+		event := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
+			UserId: userSixSignal, Timestamp: start.Unix(),
+			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{"$country":"US"}`)},
+			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3500"}`)}}
+
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event.Properties, event.UserProperties, nil, false)
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.NotNil(t, alerts)
+
+		event1 := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
+			UserId: userSixSignal, Timestamp: start.Unix(),
+			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{"$country":"India"}`)},
+			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3000"}`)}}
+
+		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event1.Properties, event1.UserProperties, nil, false)
+		assert.Equal(t, http.StatusNotFound, errCode)
+		assert.Nil(t, alerts1)
+
+		event2 := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
+			UserId: userSixSignal, Timestamp: start.Unix(),
+			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{"$country":"US"}`)},
+			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3000"}`)}}
+
+
+		_, status = store.GetStore().UpdateUserGroupProperties(project.ID, sixSignalGroupUserID, &postgres.Jsonb{json.RawMessage([]byte(`{"hour":1,"count":2,"city":"Bengalore", "$Salesforce_Industry":"Education"}`))}, time.Now().Unix())
+		assert.Equal(t, http.StatusAccepted, status)
+		user_g, status = store.GetStore().GetUser(project.ID, sixSignalGroupUserID)
+		assert.Equal(t, http.StatusFound, status)
+		userPropertiesMap, err = util.DecodePostgresJsonb(&user_g.Properties)
+		assert.Nil(t, err)
+		assert.NotNil(t, user_g.IsGroupUser)
+		assert.Equal(t, true, *user_g.IsGroupUser)
+		assert.Equal(t, float64(1), (*userPropertiesMap)["hour"])
+		assert.Equal(t, float64(2), (*userPropertiesMap)["count"])
+		assert.Equal(t, "Bengalore", (*userPropertiesMap)["city"])
+		assert.Equal(t, "Education", (*userPropertiesMap)["$Salesforce_Industry"])
+
+		alerts2, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event2.UserId, &event2.Properties, event2.UserProperties, nil, false)
+		assert.Equal(t, http.StatusNotFound, errCode)
+		assert.Nil(t, alerts2)
+	})
 }
 
 func TestEditEventTriggerAlertHandler(t *testing.T) {

@@ -2,6 +2,7 @@ package v1
 
 import (
 	"encoding/json"
+	C "factors/config"
 	mid "factors/middleware"
 	"factors/model/model"
 	"factors/model/store"
@@ -24,12 +25,36 @@ type ExplainV2QueryReq struct {
 	EndTimestamp   int64                 `json:"ets"`
 }
 
+type ExplainV3QueryReq struct {
+	Title          string                  `json:"name"`
+	Query          CreateGoalInputParamsV2 `json:"rule"`
+	StartTimestamp int64                   `json:"sts"`
+	EndTimestamp   int64                   `json:"ets"`
+}
+
 func GetExplainV2EntityHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		return nil, http.StatusForbidden, "", "Get Explain V2 enitity failed. Invalid project.", true
 	}
 	goals, errCode := store.GetStore().GetAllExplainV2EntityByProject(projectID)
+	if errCode != http.StatusFound {
+		return nil, errCode, "", "Get Saved Queries failed.", true
+	}
+
+	return goals, http.StatusOK, "", "", false
+}
+
+func GetExplainV3EntityHandler(c *gin.Context) (interface{}, int, string, string, bool) {
+
+	if !C.GetConfig().ExplainV3QueryBuilder {
+		return GetExplainV2EntityHandler(c)
+	}
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectID == 0 {
+		return nil, http.StatusForbidden, "", "Get Explain V2 enitity failed. Invalid project.", true
+	}
+	goals, errCode := store.GetStore().GetAllExplainV3EntityByProject(projectID)
 	if errCode != http.StatusFound {
 		return nil, errCode, "", "Get Saved Queries failed.", true
 	}
@@ -392,6 +417,52 @@ func PostFactorsHandlerV2(c *gin.Context) {
 		return
 
 	}
+}
+
+func CreateExplainV3EntityHandler(c *gin.Context) (interface{}, int, string, string, bool) {
+
+	if !C.GetConfig().ExplainV3QueryBuilder {
+		return CreateExplainV2EntityHandler(c)
+	}
+
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	userID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+
+	if projectID == 0 {
+		return nil, http.StatusUnauthorized, INVALID_PROJECT, ErrorMessages[INVALID_PROJECT], true
+	}
+	log.Info("Create function handler triggered.")
+
+	var entity ExplainV3QueryReq
+	r := c.Request
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&entity); err != nil {
+		errMsg := "Get Explain v2 failed. Invalid JSON."
+		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error(errMsg)
+		return nil, http.StatusBadRequest, errMsg, "", true
+	}
+
+	rule, _, _, _ := MapRuleV2(entity.Query)
+
+	query_json, err := json.Marshal(entity.Query)
+	if err != nil {
+		return nil, http.StatusBadRequest, "Unable to create json", "", true
+	}
+
+	var explainV2Entity model.ExplainV2Query
+	explainV2Entity.Title = entity.Title
+	explainV2Entity.Query = rule
+	explainV2Entity.StartTimestamp = entity.StartTimestamp
+	explainV2Entity.EndTimestamp = entity.EndTimestamp
+	explainV2Entity.Raw_query = string(query_json)
+
+	_, errCode, errMsg := store.GetStore().CreateExplainV2Entity(userID, projectID, &explainV2Entity)
+	if errCode != http.StatusCreated {
+		log.WithFields(log.Fields{"document": entity, "err-message": errMsg}).Error("Failed to Explain v2 query in handler.")
+		return nil, errCode, PROCESSING_FAILED, errMsg, true
+	}
+
+	return entity, http.StatusCreated, "", "", false
 }
 
 func CreateExplainV2EntityHandler(c *gin.Context) (interface{}, int, string, string, bool) {

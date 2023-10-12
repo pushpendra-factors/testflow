@@ -209,6 +209,7 @@ func main() {
 	allowEventAnalyticsGroupsByProjectID := flag.String("allow_event_analytics_groups_by_project_id", "", "")
 	enableFeatureGatesV2 := flag.Bool("enable_feature_gates_v2", false, "")
 	enableScoreByProjectID := flag.String("enable_score_by_project_id", "", "List of projectIds with scoring enabled.")
+	explainV3Query := flag.Bool("explain_v3_query", false, "whether to implement new query payload")
 
 	companyPropsV1EnabledProjectIDs := flag.String("company_props_v1_enabled_projectIds", "", "To enable clearbit enrichment in new properties")
 
@@ -369,6 +370,7 @@ func main() {
 		EnableFeatureGatesV2:                           *enableFeatureGatesV2,
 		EnableScoringByProjectID:                       *enableScoreByProjectID,
 		EnableNewAllAccountsByProjectID:                *enableNewAllAccountsByProjectID,
+		ExplainV3QueryBuilder:                          *explainV3Query,
 		CompanyPropsV1EnabledProjectIDs:                *companyPropsV1EnabledProjectIDs,
 	}
 	C.InitConf(config)

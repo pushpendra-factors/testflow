@@ -329,8 +329,10 @@ type Configuration struct {
 	SlackInternalAlertWebhookUrl                        string
 	UseHashIDForCRMGroupUserByProject                   string
 	MoveHubspotCompanyAssocationFlowToContactByPojectID string
+	ExplainV3QueryBuilder                               bool
 	UserPropertyUpdateOptProjects                       string
 	CompanyPropsV1EnabledProjectIDs                     string
+	AssociateDealToDomainByProjectID                    string
 }
 
 type Services struct {
@@ -3055,6 +3057,15 @@ func MoveHubspotCompanyAssocationFlowToContactByPojectID(projecID int64) bool {
 
 func IsUserPropertyUpdateOptProject(projectID int64) bool {
 	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().UserPropertyUpdateOptProjects, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
+}
+
+func AssociateDealToDomainByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AssociateDealToDomainByProjectID, "")
 	if allProjects {
 		return true
 	}

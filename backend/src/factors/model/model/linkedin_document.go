@@ -29,12 +29,12 @@ type LinkedinLastSyncInfoPayload struct {
 	CustomerAdAccountID string `json:"customer_ad_account_id"`
 }
 type LinkedinLastSyncInfo struct {
-	ProjectID              int64  `json:"project_id"`
-	CustomerAdAccountID    string `json:"customer_ad_account_id"`
-	DocumentType           int    `json:"document_type"`
-	DocumentTypeAlias      string `json:"type_alias"`
-	LastTimestamp          int64  `json:"last_timestamp"`
-	BackfillStartTimestamp int64  `json:"backfill_start_timestamp"`
+	ProjectID             int64  `json:"project_id"`
+	CustomerAdAccountID   string `json:"customer_ad_account_id"`
+	DocumentType          int    `json:"document_type"`
+	DocumentTypeAlias     string `json:"type_alias"`
+	LastTimestamp         int64  `json:"last_timestamp"`
+	LastBackfillTimestamp int64  `json:"last_backfill_timestamp"`
 }
 
 type LinkedinDeleteDocumentsPayload struct {
