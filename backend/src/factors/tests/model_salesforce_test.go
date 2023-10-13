@@ -6159,4 +6159,57 @@ func TestSalesforceOpportunityDomains(t *testing.T) {
 	domainName = getUserDomainName(project.ID, document.GroupUserID)
 	assert.Equal(t, "abc2.com", domainName)
 
+	account3 := map[string]interface{}{
+		"Id":               "3",
+		"Name":             "account_3",
+		"Website":          "abc3.com",
+		"CreatedDate":      accountCreateDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": accountCreateDate.Format(model.SalesforceDocumentDateTimeLayout),
+	}
+
+	records = []model.SalesforceRecord{account3}
+	err = store.GetStore().BuildAndUpsertDocumentInBatch(project.ID, model.SalesforceDocumentTypeNameAccount, records)
+	assert.Nil(t, err)
+
+	enProperties := map[string]interface{}{}
+	for key := range account3 {
+		enKey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce,
+			model.SalesforceDocumentTypeNameAccount, key)
+		enProperties[enKey] = account3[key]
+	}
+	groupUserID, err := store.GetStore().CreateOrUpdateGroupPropertiesBySource(project.ID, model.GROUP_NAME_SALESFORCE_ACCOUNT,
+		"abc3.com", "", &enProperties, accountCreateDate.Unix(), accountCreateDate.Unix(), model.UserSourceSalesforceString)
+	assert.Nil(t, err)
+	document = &model.SalesforceDocument{
+		ID:        "3",
+		Timestamp: accountCreateDate.Unix(),
+		Type:      model.SalesforceDocumentTypeAccount,
+		Action:    model.SalesforceDocumentCreated,
+	}
+	status = store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, document, "", "", groupUserID, true)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	opportunity3 := map[string]interface{}{
+		"Id":               "3",
+		"AccountId":        "3",
+		"Name":             "opp_3",
+		"CreatedDate":      accountCreateDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": accountCreateDate.Format(model.SalesforceDocumentDateTimeLayout),
+	}
+
+	records = []model.SalesforceRecord{opportunity3}
+	err = store.GetStore().BuildAndUpsertDocumentInBatch(project.ID, model.SalesforceDocumentTypeNameOpportunity, records)
+	assert.Nil(t, err)
+
+	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2, nil, 10, 0)
+	assert.Len(t, enrichStatus, 1)
+
+	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
+	assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[0].Status)
+
+	document, status = store.GetStore().GetSalesforceDocumentByTypeAndAction(project.ID, "3",
+		model.SalesforceDocumentTypeOpportunity, model.SalesforceDocumentCreated)
+	assert.Equal(t, status, http.StatusFound)
+	domainName = getUserDomainName(project.ID, document.GroupUserID)
+	assert.Equal(t, "abc3.com", domainName)
 }

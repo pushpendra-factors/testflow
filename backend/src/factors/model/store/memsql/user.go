@@ -3482,7 +3482,7 @@ func (store *MemSQL) GetAssociatedDomainForUser(projectID int64, userID string, 
 }
 
 // UpdateGroupUserDomainAssociationUsingAccountUserID associates non account group with domain using account groups domain user id
-func (store *MemSQL) UpdateGroupUserDomainAssociationUsingAccountUserID(projectID int64, groupUserID string, accountGroupUserID string) int {
+func (store *MemSQL) UpdateGroupUserDomainAssociationUsingAccountUserID(projectID int64, groupUserID string, accountGroupName string, accountGroupUserID string) int {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "group_user_id": groupUserID, "account_group_user_id": accountGroupUserID})
 	accountGroupUser, status := store.GetUserWithoutJSONColumns(projectID, accountGroupUserID)
 	if status != http.StatusFound {
@@ -3498,8 +3498,31 @@ func (store *MemSQL) UpdateGroupUserDomainAssociationUsingAccountUserID(projectI
 
 	domainUserID, err := model.GetGroupUserDomainsUserID(accountGroupUser, domainGroup.ID)
 	if err != nil || domainUserID == "" {
-		logCtx.WithError(err).Error("Failed to domain user id in account group user.")
-		return http.StatusInternalServerError
+		if err != nil && err != model.ErrMissingDomainUserID {
+			logCtx.WithError(err).Error("Failed to get domain user id in account group user.")
+			return http.StatusInternalServerError
+		}
+
+		accountProperties, status := store.GetUserPropertiesByUserID(projectID, accountGroupUserID)
+		if status != http.StatusFound {
+			logCtx.WithError(err).Error("Failed to get account properties in associating deal to domain.")
+			return http.StatusInternalServerError
+		}
+
+		domainUserID, domainName, status := store.createOrGetDomainUserIDByProperties(projectID, accountGroupName, *accountProperties)
+		if status != http.StatusCreated && status != http.StatusFound {
+			logCtx.WithError(err).Error("Failed to create domain user in associating deal to domain.")
+			return http.StatusInternalServerError
+		}
+
+		_, status = store.UpdateGroupUserDomainsGroup(projectID, groupUserID, domainUserID, domainName, true)
+		if status != http.StatusAccepted && status != http.StatusNotModified {
+			logCtx.WithFields(log.Fields{"domain_user_id": domainUserID, "domain_name": domainName}).
+				WithError(err).Error("Failed to update group user association with domains group user in associating deal to domain.")
+			return http.StatusInternalServerError
+		}
+
+		return http.StatusOK
 	}
 
 	domainName, err := model.GetGroupUserGroupID(accountGroupUser, domainGroup.ID)
@@ -3511,7 +3534,7 @@ func (store *MemSQL) UpdateGroupUserDomainAssociationUsingAccountUserID(projectI
 	_, status = store.UpdateGroupUserDomainsGroup(projectID, groupUserID, domainUserID, domainName, true)
 	if status != http.StatusAccepted && status != http.StatusNotModified {
 		logCtx.WithFields(log.Fields{"domain_user_id": domainUserID, "domain_name": domainName}).
-			WithError(err).Error("Failed to update group user association with domains group user on associateOpportunityToDomains.")
+			WithError(err).Error("Failed to update group user association with domains group user in associating deal to domain.")
 		return http.StatusInternalServerError
 	}
 
