@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLocation } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import cx from 'classnames';
 import { Layout } from 'antd';
@@ -24,6 +24,7 @@ import { IsDomainGroup } from 'Components/Profile/utils';
 const AppSidebar = () => {
   const { Sider } = Layout;
   const dispatch = useDispatch();
+  const history = useHistory();
   const location = useLocation();
   const { pathname } = location;
   const activeAccountPayload = useSelector((state) =>
@@ -57,6 +58,7 @@ const AppSidebar = () => {
       })
     );
     dispatch(setActiveSegmentAction({}));
+    history.replace(PathUrls.ProfileAccounts);
   };
 
   const selectAllAccounts = () => {
