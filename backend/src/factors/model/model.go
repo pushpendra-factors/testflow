@@ -284,6 +284,7 @@ type Model interface {
 	GetPropertiesForSalesforceUsers(projectID int64, reqID string) []map[string]string
 	GetPropertiesForMarketo(projectID int64, reqID string) []map[string]string
 	IsEventExistsWithType(projectId int64, eventType string) (bool, int)
+	GetEventNameIdsWithGivenNames(projectID int64, eventNameIDsMap map[string]interface{}) (map[string]interface{}, int)
 
 	// form_fill
 	CreateFormFillEventById(projectId int64, formFill *model.SDKFormFillPayload) (int, error)
@@ -897,6 +898,7 @@ type Model interface {
 	GetUserPropertiesForAccounts(projectID int64, source string) (string, interface{}, string)
 	GetUsersAssociatedToDomain(projectID int64, minMax *model.MinMaxUpdatedAt, groupedFilters map[string][]model.QueryProperty) ([]model.Profile, int)
 	GenerateAllAccountsQueryString(projectID int64, source string, hasUserProperty bool, isAllUserProperties bool, minMax model.MinMaxUpdatedAt, groupedFilters map[string][]model.QueryProperty, searchFilter []string) (string, []interface{}, error)
+	GetGroupNameIDMap(projectID int64) (map[string]int, int)
 
 	// segment
 	CreateSegment(projectId int64, segment *model.SegmentPayload) (int, error)
@@ -905,6 +907,10 @@ type Model interface {
 	UpdateSegmentById(projectId int64, id string, segmentPayload model.SegmentPayload) (error, int)
 	IsDuplicateSegmentNameCheck(projectID int64, name string) bool
 	DeleteSegmentById(projectId int64, segmentId string) (int, error)
+
+	// segment_marker
+	CheckIfUserPerformedGivenEvents(queryStr string, params []interface{}) ([]int, int)
+	FetchAssociatedSegmentsFromUsers(projectID int64) (int, []model.User, []map[string]interface{})
 
 	// Ads import
 	GetAllAdsImportEnabledProjects() (map[int64]map[string]model.LastProcessedAdsImport, error)
