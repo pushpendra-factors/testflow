@@ -75,7 +75,10 @@ import {
   DEFAULT_PIVOT_CONFIG,
   SET_NAVIGATED_FROM_ANALYSE
 } from 'Views/CoreQuery/constants';
-import { initializeAttributionState } from 'Attribution/state/actions';
+import {
+  initializeAttributionState,
+  setAttributionTableFilters
+} from 'Attribution/state/actions';
 import { shouldDataFetch } from 'Utils/dataFormatter';
 import { getSavedPivotConfig } from 'Views/CoreQuery/coreQuery.helpers';
 import { getChartChangedKey } from 'Views/CoreQuery/AnalysisResultsPage/analysisResultsPage.helpers';
@@ -730,8 +733,10 @@ function CoreQuery({
 
   useEffect(() => {
     const handleQueryIdChange = () => {
+      const record = savedQueries?.find((sq) => sq.id == queryId);
+      setTableFiltersFromRecord(record);
+
       if (queryDataLoaded === queryId || querySaved.id == queryId) return;
-      const record = savedQueries.find((sq) => sq.id == queryId);
       if (
         !record ||
         !record?.query?.cl ||
@@ -763,6 +768,7 @@ function CoreQuery({
           )
         );
       }
+
       delete usefulQuery.queryType;
       initializeAttributionState(usefulQuery);
 
@@ -814,6 +820,14 @@ function CoreQuery({
     if (location?.state?.navigatedFromAnalyse)
       setNavigatedFromAnalyse(location.state.navigatedFromAnalyse);
   }, [location, setNavigatedFromDashboard, setNavigatedFromAnalyse]);
+
+  const setTableFiltersFromRecord = (record) => {
+    if (record?.settings && record?.settings?.tableFilters) {
+      dispatch(
+        setAttributionTableFilters(JSON.parse(record.settings.tableFilters))
+      );
+    }
+  };
 
   if (queryId && QueriesLoading)
     return (
@@ -937,7 +951,7 @@ function CoreQuery({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   KPI_config: state.kpi?.config,
-  currentAgent: state.agent.agent_details,
+  currentAgent: state.agent.agent_details
 });
 
 const mapDispatchToProps = (dispatch) =>
