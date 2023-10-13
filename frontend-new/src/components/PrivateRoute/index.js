@@ -23,7 +23,7 @@ function PrivateRoute({ component: Component, ...restOfProps }) {
       pageName = capitalize(initialPaths[n - 1]);
     }
     if (title && title != '') {
-      document.title = title;
+      document.title = title + ' - FactorsAI';
     } else {
       document.title = pageName + ' - FactorsAI';
     }
