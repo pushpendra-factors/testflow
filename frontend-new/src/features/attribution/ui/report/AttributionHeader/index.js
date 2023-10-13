@@ -1,7 +1,7 @@
 import React, { useEffect, memo, useState, useContext } from 'react';
 import _ from 'lodash';
 import { Button, Tabs } from 'antd';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import { SVG, Text } from 'factorsComponents';
 import { QuestionCircleOutlined } from '@ant-design/icons';
@@ -14,6 +14,7 @@ import styles from './index.module.scss';
 import { CoreQueryContext } from 'Context/CoreQueryContext';
 import AppModal from 'Components/AppModal';
 import useQuery from 'hooks/useQuery';
+import { resetAttributionReducer } from 'Attribution/state/actions';
 const { TabPane } = Tabs;
 
 function AttributionHeader({
@@ -49,6 +50,8 @@ function AttributionHeader({
   }, []);
 
   const history = useHistory();
+  const dispatch = useDispatch();
+
   const {
     coreQueryState: { navigatedFromDashboard }
   } = useContext(CoreQueryContext);
@@ -82,11 +85,14 @@ function AttributionHeader({
     if (!savedQueryId && requestQuery !== null && !close) {
       setVisible(true);
     } else if (navigatedFromDashboard?.id) {
+      dispatch(resetAttributionReducer());
+
       history.push({
         pathname: ATTRIBUTION_ROUTES.reports,
         state: { dashboardWidgetId: navigatedFromDashboard.id }
       });
     } else {
+      dispatch(resetAttributionReducer());
       history.push(ATTRIBUTION_ROUTES.reports);
     }
   };

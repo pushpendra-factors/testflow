@@ -377,12 +377,10 @@ export const DEFAULT_TIMELINE_CONFIG = {
   disabled_events: [],
   user_config: {
     table_props: [],
-    leftpane_props: [],
     milestones: []
   },
   account_config: {
     table_props: [],
-    leftpane_props: [],
     milestones: [],
     user_prop: ''
   }

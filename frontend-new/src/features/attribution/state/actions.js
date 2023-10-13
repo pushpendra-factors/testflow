@@ -19,7 +19,9 @@ import {
   ATTRIBUTION_DASHBOARD_FAILED,
   ATTRIBUTION_QUERIES_LOADING,
   ATTRIBUTION_QUERIES_LOADED,
-  ATTRIBUTION_QUERIES_FAILED
+  ATTRIBUTION_QUERIES_FAILED,
+  SET_ATTRIBUTION_TABLE_FILTERS,
+  RESET_ATTRIBUTION_STATE
 } from './action.constants';
 
 export const setAttributionDashboardUnitsLoading = () => ({
@@ -119,4 +121,13 @@ export const initializeTouchPointDimensions = (payload) => ({
 export const initializeAttributionState = (payload) => ({
   type: INITIALIZE_ATTRIBUTION_STATE,
   payload
+});
+
+export const setAttributionTableFilters = (payload) => ({
+  type: SET_ATTRIBUTION_TABLE_FILTERS,
+  payload
+});
+
+export const resetAttributionReducer = () => ({
+  type: RESET_ATTRIBUTION_STATE
 });

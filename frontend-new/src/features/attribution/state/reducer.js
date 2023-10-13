@@ -29,7 +29,9 @@ import {
   ATTRIBUTION_QUERY_DELETED,
   ATTRIBUTION_QUERY_CREATED,
   ATTRIBUTION_QUERY_UPDATED,
-  ATTRIBUTION_DASHBOARD_UNIT_ADDED
+  ATTRIBUTION_DASHBOARD_UNIT_ADDED,
+  SET_ATTRIBUTION_TABLE_FILTERS,
+  RESET_ATTRIBUTION_STATE
 } from './action.constants';
 import { SET_ACTIVE_PROJECT } from 'Reducers/types';
 
@@ -61,7 +63,8 @@ const defaultState = {
   },
   dashboardLoading: false,
   dashboardLoadFailed: false,
-  dashboard: null
+  dashboard: null,
+  attributionTableFilters: {}
 };
 
 export default function (state = defaultState, action) {
@@ -311,11 +314,29 @@ export default function (state = defaultState, action) {
         attrQueries: action.payload
       };
     }
-
     case INITIALIZE_ATTRIBUTION_STATE: {
       return {
         ...state,
         ...action.payload
+      };
+    }
+    case SET_ATTRIBUTION_TABLE_FILTERS: {
+      return {
+        ...state,
+        attributionTableFilters: action.payload
+      };
+    }
+    case RESET_ATTRIBUTION_STATE: {
+      // FIX default state breaks charts
+      // attrQueries: state.attrQueries,
+      //   attributionDashboardUnits: state.attributionDashboardUnits,
+      //   attributionQueries: state.attributionQueries,
+      //   dashboardLoading: state.dashboardLoading,
+      //   dashboardLoadFailed: state.dashboardLoadFailed,
+      //   dashboard: state.dashboard,
+      return {
+        ...state,
+        attributionTableFilters: defaultState.attributionTableFilters
       };
     }
     case SET_ACTIVE_PROJECT: {

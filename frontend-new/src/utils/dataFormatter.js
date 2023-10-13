@@ -319,7 +319,7 @@ export const formatCount = (count, precision = 1) => {
 };
 
 export const formatDuration = (sec) => {
-  const seconds = Number(sec);
+  const seconds = parseInt(sec);
   if (seconds < 60) {
     return `${Math.floor(seconds)}s`;
   }
