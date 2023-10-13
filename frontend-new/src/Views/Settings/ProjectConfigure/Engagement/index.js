@@ -13,9 +13,9 @@ import { bindActionCreators } from 'redux';
 import { updateAccountScores } from 'Reducers/timelines';
 import { fetchProjectSettings } from 'Reducers/global';
 import SaleWindowModal from './SaleWindowModal';
-import { fetchGroups } from 'Reducers/coreQuery/services';
+import { getGroups } from 'Reducers/coreQuery/middleware';
 
-function EngagementConfig({ fetchProjectSettings, fetchGroups }) {
+function EngagementConfig({ fetchProjectSettings, getGroups }) {
   const [showModal, setShowModal] = useState(false);
   const [saleWindowValue, setSaleWindowValue] = useState();
   const [showSaleWindowModal, setShowSaleWindowModal] = useState(false);
@@ -26,7 +26,7 @@ function EngagementConfig({ fetchProjectSettings, fetchGroups }) {
   );
   const { eventNames, eventNamesMap } = useSelector((state) => state.coreQuery);
   useEffect(() => {
-    fetchGroups(activeProject?.id);
+    getGroups(activeProject?.id);
   }, [activeProject?.id]);
 
   const columns = [
@@ -340,7 +340,7 @@ const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
       fetchProjectSettings,
-      fetchGroups
+      getGroups
     },
     dispatch
   );
