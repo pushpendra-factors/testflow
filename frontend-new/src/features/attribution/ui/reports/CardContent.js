@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Spin } from 'antd';
 import { get } from 'lodash';
@@ -20,6 +20,7 @@ import {
   DASHBOARD_PRESENTATION_KEYS
 } from 'Components/SaveQuery/saveQuery.constants';
 import { SVG, Text } from 'Components/factorsComponents';
+import { setAttributionTableFilters } from 'Attribution/state/actions';
 
 function CardContent({ unit, resultState, durationObj }) {
   let content = null;
@@ -28,6 +29,8 @@ function CardContent({ unit, resultState, durationObj }) {
   );
   const { config: kpiConfig } = useSelector((state) => state.kpi);
 
+  const [tableFilters, setTableFilters] = useState({});
+
   const equivalentQuery = useMemo(() => {
     if (unit.query.query.query_group) {
       return getStateQueryFromRequestQuery(unit.query.query.query_group[0]);
@@ -35,6 +38,13 @@ function CardContent({ unit, resultState, durationObj }) {
       unit.query.query.cl &&
       unit.query.query.cl === QUERY_TYPE_ATTRIBUTION
     ) {
+      if (unit.query.settings && unit.query.settings.tableFilters) {
+        // updateCoreQueryReducer({
+        //   attributionTableFilters: JSON.parse(record.settings.tableFilters)
+        // });
+        setTableFilters(JSON.parse(unit.query.settings.tableFilters));
+        
+      }
       return getAttributionStateFromRequestQuery(
         unit.query.query.query,
         attr_dimensions,
@@ -53,9 +63,10 @@ function CardContent({ unit, resultState, durationObj }) {
       attr_dimensions: equivalentQuery.attr_dimensions,
       content_groups: equivalentQuery.content_groups,
       queryOptions: { group_analysis: 'all' },
-      attrQueries: equivalentQuery.attrQueries
+      attrQueries: equivalentQuery.attrQueries,
+      tableFilters: tableFilters
     };
-  }, [equivalentQuery]);
+  }, [equivalentQuery, tableFilters]);
 
   if (resultState.loading) {
     content = (
@@ -110,7 +121,8 @@ function CardContent({ unit, resultState, durationObj }) {
       attr_dimensions,
       content_groups,
       attrQueries,
-      queryOptions
+      queryOptions,
+      tableFilters
     } = attributionsState;
 
     content = (
@@ -134,6 +146,7 @@ function CardContent({ unit, resultState, durationObj }) {
         unitId={unit.id}
         attrQueries={attrQueries}
         queryOptions={queryOptions}
+        tableFilters={tableFilters}
       />
     );
 

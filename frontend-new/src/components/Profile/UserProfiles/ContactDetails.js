@@ -307,13 +307,12 @@ function ContactDetails({
 
   const handleOptionClick = (option, group) => {
     const timelinesConfig = { ...tlConfig };
-    if (!timelinesConfig.account_config.leftpane_props) {
-      // Initialize leftpane_props as an empty array if it's null
-      timelinesConfig.account_config.leftpane_props = [];
+    if (!timelinesConfig.account_config.table_props) {
+      timelinesConfig.account_config.table_props = [];
     }
   
-    if (!timelinesConfig.user_config.leftpane_props.includes(option?.value)) {
-      timelinesConfig.user_config.leftpane_props.push(option?.value);
+    if (!timelinesConfig.user_config.table_props.includes(option?.value)) {
+      timelinesConfig.user_config.table_props.push(option?.value);
       udpateProjectSettings(activeProject.id, {
         timelines_config: { ...timelinesConfig }
       })
@@ -336,8 +335,8 @@ function ContactDetails({
 
   const onDelete = (option) => {
     const timelinesConfig = { ...tlConfig };
-    timelinesConfig.user_config.leftpane_props.splice(
-      timelinesConfig.user_config.leftpane_props.indexOf(option),
+    timelinesConfig.user_config.table_props.splice(
+      timelinesConfig.user_config.table_props.indexOf(option),
       1
     );
     udpateProjectSettings(activeProject.id, {
@@ -348,7 +347,7 @@ function ContactDetails({
   const listLeftPaneProps = (props = []) => {
     const propsList = [];
     const showProps =
-      currentProjectSettings?.timelines_config?.user_config?.leftpane_props ||
+      currentProjectSettings?.timelines_config?.user_config?.table_props ||
       [];
     const userPropertiesModified = [];
     if (userPropertiesV2) {
@@ -392,8 +391,8 @@ function ContactDetails({
     );
 
   const renderAddNewProp = () =>
-    !currentProjectSettings?.timelines_config?.user_config?.leftpane_props ||
-    currentProjectSettings?.timelines_config?.user_config?.leftpane_props
+    !currentProjectSettings?.timelines_config?.user_config?.table_props ||
+    currentProjectSettings?.timelines_config?.user_config?.table_props
       ?.length < 8 ? (
       <div>
         <Button
