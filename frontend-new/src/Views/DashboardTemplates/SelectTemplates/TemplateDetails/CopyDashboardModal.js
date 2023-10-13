@@ -9,13 +9,13 @@ import { fetchWeeklyIngishtsMetaData } from 'Reducers/insights';
 import { fetchKPIConfig, fetchPageUrls } from '../../../../reducers/kpi';
 import {
   fetchAttrContentGroups,
-  fetchGroups,
   fetchQueries,
   fetchSmartPropertyRules
 } from '../../../../reducers/coreQuery/services';
 import {
   getUserPropertiesV2,
   fetchEventNames,
+  getGroups,
 } from '../../../../reducers/coreQuery/middleware';
 import { useHistory } from 'react-router-dom';
 
@@ -34,7 +34,7 @@ function CopyDashboardModal({
   const fetchDashboardItems = () => {
     dispatch(fetchDashboards(active_project.id));
     dispatch(fetchQueries(active_project.id));
-    dispatch(fetchGroups(active_project.id));
+    dispatch(getGroups(active_project.id));
     dispatch(fetchKPIConfig(active_project.id));
     dispatch(fetchPageUrls(active_project.id));
     // dispatch(deleteQueryTest())
