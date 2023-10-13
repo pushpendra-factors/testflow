@@ -55,8 +55,6 @@ func (store *MemSQL) ExecuteQueryGroupForPredefinedWebsiteAggregation(projectID 
 	return resResults, http.StatusOK, ""
 }
 
-// TODO add missing eventName?
-// Add Query to result Meta?
 // Check if SanitizeQueryResult is required.
 // I think group by doesnt have index. We can proceed with normal it normally.
 // Eventname double encoding. Required later.
@@ -72,8 +70,16 @@ func (store *MemSQL) ExecuteSingleWebAggregationQuery(projectID int64, q model.P
 	}
 
 	transformedResult := transformPWAResultMetrics(q, *result)
-	if q.GroupByTimestamp != "" {
-		transformedResult = transformPWAResultDateValues(*result)
+	if q.GroupByTimestamp == "" {
+		if len(result.Rows[0]) == 0 {
+			emptyRow := make([]interface{}, 1)
+			emptyRow[0] = 0
+			result.Rows[0] = emptyRow
+		}
+	} else {
+		transformedResult = transformPWAResultDateValuesToInt(*result)
+		transformedResult = addMissingColumnsAndTimestampPWAResult(transformedResult, q)
+		transformedResult = transformPWAResultDateValuesToDateFormat(transformedResult)
 	}
 	return transformedResult, http.StatusOK, "Successfully executed."
 }
@@ -143,6 +149,10 @@ func getPredefinedSelectStmnt(metrics []string, metricsToTransformations map[str
 		for index, transformation := range transformations {
 			if index == 0 {
 				currentExpression = "("
+				currentExpression += fmt.Sprintf("CAST(%s(%s) AS UNSIGNED) ", transformation.Operation, transformation.InternalProperty)
+				expression := model.MapOfOperatorToExpression[transformation.ArithmeticOperator]
+				currentExpression += expression + " "
+			} else {
 				currentExpression += fmt.Sprintf("CAST(%s(%s) AS UNSIGNED) ", transformation.Operation, transformation.InternalProperty)
 				expression := model.MapOfOperatorToExpression[transformation.ArithmeticOperator]
 				currentExpression += expression + " "
@@ -256,7 +266,7 @@ func transformPWAResultMetrics(q model.PredefWebsiteAggregationQuery, result mod
 	return result
 }
 
-func transformPWAResultDateValues(result model.QueryResult) model.QueryResult {
+func transformPWAResultDateValuesToInt(result model.QueryResult) model.QueryResult {
 
 	for rowIndex, row := range result.Rows {
 		var valueInInt int64
@@ -267,9 +277,85 @@ func transformPWAResultDateValues(result model.QueryResult) model.QueryResult {
 				valueInString := row[0].(string)
 				valueInInt = int64(U.SafeConvertToFloat64(valueInString))
 		}
+		result.Rows[rowIndex][0] = valueInInt
+	}
+	return result
+}
+
+func transformPWAResultDateValuesToDateFormat(result model.QueryResult) model.QueryResult {
+	for rowIndex, row := range result.Rows {
+		valueInInt := row[0].(int64)
 		valueInUTC := time.Unix(valueInInt, 0).UTC()
 		valueWithOffset := U.GetTimestampAsStrWithTimezone(valueInUTC, "UTC")
 		result.Rows[rowIndex][0] = valueWithOffset
 	}
 	return result
 }
+
+func addMissingColumnsAndTimestampPWAResult(result model.QueryResult, query model.PredefWebsiteAggregationQuery) model.QueryResult {
+	resultantRows := make([][]interface{}, 0)
+	if len(result.Headers) == 2 || len(result.Rows[0]) == 0 {
+		mapOfAllColumValuesToResult := make(map[string][]interface{})
+		for _, row := range result.Rows {
+			key := U.GetkeyFromRow(row)
+			
+			mapOfAllColumValuesToResult[key] = row
+		}
+
+		timestampsInTime, _ := GetAllTimestampsAndOffsetBetweenByType(query.From, query.To,
+			query.GroupByTimestamp, query.Timezone)
+		
+		for _, timestampInTime := range timestampsInTime {
+			timestampInEpoch := timestampInTime.Unix()
+			timestampKey := fmt.Sprintf("$dat%v", timestampInEpoch)
+
+			if row, exists := mapOfAllColumValuesToResult[timestampKey]; exists {
+				resultantRows = append(resultantRows, row)
+			} else {
+				emptyRow := make([]interface{}, 1)
+				emptyRow[0] = timestampInEpoch
+				emptyRow = append(emptyRow, 0)
+				resultantRows = append(resultantRows, emptyRow)
+			}
+		}
+	} else {
+		mapOfGroups := make(map[string][]interface{})
+		mapOfAllColumValuesToResult := make(map[string][]interface{})
+		groupStart, groupEnd := 1, len(result.Rows[0])-2
+		for _, row := range result.Rows {
+			groupsKey := ""
+			for i := groupStart; i<=groupEnd; i++ {
+				groupsKey += fmt.Sprintf("%v:;", row[i])
+			}
+			key := U.GetkeyFromRow(row)
+			mapOfGroups[groupsKey] = row[groupStart:groupEnd+1]
+			mapOfAllColumValuesToResult[key] = row
+		}
+		
+		timestampsInTime, _ := GetAllTimestampsAndOffsetBetweenByType(query.From, query.To,
+			query.GroupByTimestamp, query.Timezone)
+		
+		for _, timestampInTime := range timestampsInTime {
+			timestampInEpoch := timestampInTime.Unix()
+			timestampKey := fmt.Sprintf("%v", timestampInEpoch)
+
+			for groupKey, groupValuesInRow := range mapOfGroups {
+				key := fmt.Sprintf("%v:;%v",timestampKey, groupKey)
+				if row, exists := mapOfAllColumValuesToResult[key]; exists {
+					resultantRows = append(resultantRows, row)
+				} else {
+					log.Warn(groupValuesInRow)
+					emptyRow := make([]interface{}, 1)
+					emptyRow[0] = timestampInEpoch
+					emptyRow = append(emptyRow, groupValuesInRow...)
+					emptyRow = append(emptyRow, 0)
+					resultantRows = append(resultantRows, emptyRow)
+				}
+			}
+		}
+	}
+
+	result.Rows = resultantRows
+	return result
+}
+

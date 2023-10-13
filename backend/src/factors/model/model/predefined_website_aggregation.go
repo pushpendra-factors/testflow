@@ -127,7 +127,7 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 			{Name: PredefTotalSessions, DisplayName: PredefDispTotalSessions, InternalEventType: PredefEventTypeSession},
 			{Name: PredefTotalPageViews, DisplayName: PredefDispTotalPageViews, InternalEventType: PredefEventTypePageViews},
 			// {Name: PredefBounceRate, DisplayName: PredefDispBounceRate, InternalEventType: PredefEventTypeSession},
-			// {Name: PredefAvgSessionDuration, DisplayName: PredefDispAvgSessionDuration, InternalEventType: PredefEventTypeSession},
+			{Name: PredefAvgSessionDuration, DisplayName: PredefDispAvgSessionDuration, InternalEventType: PredefEventTypeSession},
 		},
 		GroupBy: []PredefinedGroupBy{},
 		Setting: ChartSetting{ Type: ChartTypeLineChart, Presentation: PresentationTypeChart },
@@ -153,7 +153,7 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 		Metrics: []PredefinedMetric{
 			{Name: PredefTotalSessions, DisplayName: PredefDispTotalSessions, InternalEventType: PredefEventTypeSession},
 			// {Name: PredefBounceRate, DisplayName: PredefDispBounceRate, InternalEventType: PredefEventTypeSession},
-			// {Name: PredefAvgSessionDuration, DisplayName: PredefDispAvgSessionDuration, InternalEventType: PredefEventTypeSession},
+			{Name: PredefAvgSessionDuration, DisplayName: PredefDispAvgSessionDuration, InternalEventType: PredefEventTypeSession},
 		},
 		GroupBy: []PredefinedGroupBy{
 			{Name: PredefPropLandingPageURl, DisplayName: PredefPropDispLandingPageURl},
@@ -181,7 +181,7 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 		Metrics: []PredefinedMetric{
 			{Name: PredefTotalSessions, DisplayName: PredefDispTotalSessions, InternalEventType: PredefEventTypeSession},
 			// {Name: PredefBounceRate, DisplayName: PredefDispBounceRate, InternalEventType: PredefEventTypeSession},
-			// {Name: PredefAvgSessionDuration, DisplayName: PredefDispAvgSessionDuration, InternalEventType: PredefEventTypeSession},
+			{Name: PredefAvgSessionDuration, DisplayName: PredefDispAvgSessionDuration, InternalEventType: PredefEventTypeSession},
 		},
 		GroupBy: []PredefinedGroupBy{
 			{Name: PredefPropCountry, DisplayName: PredefPropDispCountry},
@@ -196,7 +196,7 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 		Metrics: []PredefinedMetric{
 			{Name: PredefTotalSessions, DisplayName: PredefDispTotalSessions, InternalEventType: PredefEventTypeSession},
 			// {Name: PredefBounceRate, DisplayName: PredefDispBounceRate, InternalEventType: PredefEventTypeSession},
-			// {Name: PredefAvgSessionDuration, DisplayName: PredefDispAvgSessionDuration, InternalEventType: PredefEventTypeSession},
+			{Name: PredefAvgSessionDuration, DisplayName: PredefDispAvgSessionDuration, InternalEventType: PredefEventTypeSession},
 		},
 		GroupBy: []PredefinedGroupBy{
 			{Name: PredefPropBrowser, DisplayName: PredefPropDispBrowser},
@@ -212,7 +212,7 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 		Metrics: []PredefinedMetric{
 			{Name: PredefTotalSessions, DisplayName: PredefDispTotalSessions, InternalEventType: PredefEventTypeSession},
 			// {Name: PredefBounceRate, DisplayName: PredefDispBounceRate, InternalEventType: PredefEventTypeSession},
-			// {Name: PredefAvgSessionDuration, DisplayName: PredefDispAvgSessionDuration, InternalEventType: PredefEventTypeSession},
+			{Name: PredefAvgSessionDuration, DisplayName: PredefDispAvgSessionDuration, InternalEventType: PredefEventTypeSession},
 		},
 		GroupBy: []PredefinedGroupBy{
 			{Name: PredefProp6SignalIndustry, DisplayName: PredefPropDisp6SignalIndustry},
