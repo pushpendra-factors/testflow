@@ -115,6 +115,41 @@ func (store *MemSQL) CreateOrGetUserCreatedEventName(eventName *model.EventName)
 	return store.CreateOrGetEventName(eventName)
 }
 
+func (store *MemSQL) GetEventNameIdsWithGivenNames(projectID int64, eventNameIDsMap map[string]interface{}) (map[string]interface{}, int) {
+	params := []interface{}{projectID}
+	queryStr := "SELECT name, id from event_names where project_id = ? AND ("
+	for name := range eventNameIDsMap {
+		params = append(params, name)
+		if len(params) == 2 {
+			queryStr = queryStr + "name = ?"
+			continue
+		}
+		queryStr = queryStr + " OR name = ?"
+	}
+
+	queryStr = queryStr + ")"
+
+	db := C.GetServices().Db
+
+	var eventNames []model.EventName
+	if err := db.Raw(queryStr, params...).Scan(&eventNames).Error; err != nil {
+		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error("Failed getting event_names")
+
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(eventNames) < 1 {
+		return nil, http.StatusInternalServerError
+	}
+
+	for _, eventName := range eventNames {
+		eventNameIDsMap[eventName.Name] = eventName.ID
+	}
+
+	return eventNameIDsMap, http.StatusFound
+
+}
+
 func (store *MemSQL) CreateOrGetAutoTrackedEventName(eventName *model.EventName) (*model.EventName, int) {
 	logFields := log.Fields{
 		"event_name": eventName,
