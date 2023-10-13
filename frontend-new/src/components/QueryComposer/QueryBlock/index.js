@@ -59,16 +59,16 @@ function QueryBlock({
       'Linkedin Company Engagements',
       'G2 Engagements'
     ];
-    const domainGroupExclusions = ['Hubspot Deals', 'Salesforce Opportunities'];
+    const domainGroupExclusions = [];
     if (activeGroup === 'events') {
       return [...eventOpts];
     } else if (activeGroup === 'users') {
       return eventOpts.filter(
-        (group) => !userGroupExclusions.includes(group?.label)
+        (group) => !userGroupExclusions?.includes(group?.label)
       );
     } else if (activeGroup === '$domains') {
       return eventOpts.filter(
-        (group) => !domainGroupExclusions.includes(group?.label)
+        (group) => !domainGroupExclusions?.includes(group?.label)
       );
     } else {
       const groupDisplayName = availableGroups?.find(

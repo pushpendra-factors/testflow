@@ -2167,9 +2167,9 @@ func GetLeftPanePropertiesFromConfig(timelinesConfig model.TimelinesConfig, prof
 	var leftPaneProps []string
 
 	if model.IsUserProfiles(profileType) {
-		leftPaneProps = timelinesConfig.UserConfig.LeftpaneProps
+		leftPaneProps = timelinesConfig.UserConfig.TableProps
 	} else if model.IsAccountProfiles(profileType) {
-		leftPaneProps = timelinesConfig.AccountConfig.LeftpaneProps
+		leftPaneProps = timelinesConfig.AccountConfig.TableProps
 	}
 	for _, prop := range leftPaneProps {
 		if value, exists := (*propertiesDecoded)[prop]; exists {
