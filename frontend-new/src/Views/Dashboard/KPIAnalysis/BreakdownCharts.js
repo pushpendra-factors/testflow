@@ -7,7 +7,11 @@ import {
   getVisibleSeriesData,
   getDefaultSortProp
 } from '../../CoreQuery/KPIAnalysis/BreakdownCharts/utils';
-import { getNewSorterState, isSeriesChart } from '../../../utils/dataFormatter';
+import {
+  generateColors,
+  getNewSorterState,
+  isSeriesChart
+} from '../../../utils/dataFormatter';
 import NoDataChart from '../../../components/NoDataChart';
 import {
   CHART_TYPE_BARCHART,
@@ -18,7 +22,9 @@ import {
   CHART_TYPE_PIVOT_CHART,
   CHART_TYPE_TABLE,
   DASHBOARD_WIDGET_BAR_CHART_HEIGHT,
-  DASHBOARD_WIDGET_AREA_CHART_HEIGHT
+  DASHBOARD_WIDGET_AREA_CHART_HEIGHT,
+  CHART_TYPE_METRIC_CHART,
+  MAX_ALLOWED_VISIBLE_PROPERTIES
 } from '../../../utils/constants';
 import LineChart from '../../../components/HCLineChart';
 import BreakdownTable from '../../CoreQuery/KPIAnalysis/BreakdownCharts/BreakdownTable';
@@ -27,6 +33,10 @@ import StackedAreaChart from '../../../components/StackedAreaChart';
 import StackedBarChart from '../../../components/StackedBarChart';
 import ColumnChart from 'Components/ColumnChart';
 import { CHART_COLOR_1 } from '../../../constants/color.constants';
+import { cardSizeToMetricCount } from 'Constants/charts.constants';
+import MetricChart from 'Components/MetricChart/MetricChart';
+
+const colors = generateColors(MAX_ALLOWED_VISIBLE_PROPERTIES);
 
 const BreakdownCharts = ({
   breakdown,
@@ -60,6 +70,8 @@ const BreakdownCharts = ({
       return getNewSorterState(currentSorter, prop);
     });
   }, []);
+
+  const unitId = unit.id || unit.inter_id;
 
   useEffect(() => {
     const aggData = formatData(
@@ -150,7 +162,7 @@ const BreakdownCharts = ({
         multiColored
         height={DASHBOARD_WIDGET_BAR_CHART_HEIGHT}
         cardSize={unit.cardSize}
-        chartId={`kpi${unit.id}`}
+        chartId={`kpi${unitId}`}
         series={columnSeries}
       />
     );
@@ -172,7 +184,7 @@ const BreakdownCharts = ({
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
         legendsPosition='top'
         cardSize={unit.cardSize}
-        chartId={`line-${unit.id}`}
+        chartId={`line-${unitId}`}
       />
     );
   } else if (chartType === CHART_TYPE_STACKED_AREA) {
@@ -184,7 +196,7 @@ const BreakdownCharts = ({
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
         legendsPosition='top'
         cardSize={unit.cardSize}
-        chartId={`bar-${unit.id}`}
+        chartId={`bar-${unitId}`}
       />
     );
   } else if (chartType === CHART_TYPE_STACKED_BAR) {
@@ -196,9 +208,26 @@ const BreakdownCharts = ({
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
         legendsPosition='top'
         cardSize={unit.cardSize}
-        chartId={`bar-${unit.id}`}
+        chartId={`bar-${unitId}`}
         dateWiseTotals={dateWiseTotals}
       />
+    );
+  } else if (chartType === CHART_TYPE_METRIC_CHART) {
+    chartContent = (
+      <div className='flex justify-between w-full col-gap-2 h-full'>
+        {aggregateData
+          .slice(0, cardSizeToMetricCount[unit.cardSize])
+          .map((eachAggregateData, index) => {
+            return (
+              <MetricChart
+                key={eachAggregateData.label}
+                headerTitle={eachAggregateData.label}
+                value={eachAggregateData.value}
+                iconColor={colors[index]}
+              />
+            );
+          })}
+      </div>
     );
   }
 
