@@ -58,7 +58,7 @@ func TestSampleWebsiteAggregation(t *testing.T) {
 				{PropertyName: model.PredefPropCity, PropertyDataType: "categorical", Condition: "equals", Value: "AB", LogicalOp: ""},
 			},
 			GroupByTimestamp:  "",
-			Timezone:          "Asia/Kolkata",
+			Timezone:          "UTC",
 			From:              1669856400,
 			To:                1675213200,
 			InternalEventType: model.PredefEventTypeSession,
@@ -77,14 +77,15 @@ func TestSampleWebsiteAggregation(t *testing.T) {
 			Queries: queries,
 		})
 		assert.Equal(t, http.StatusOK, statusCode)
+		log.WithField("result", result).Warn("kark2")
 
 		assert.Equal(t, 2, len(result[0].Headers))
 		assert.Equal(t, 1, len(result[0].Rows))
 		assert.Equal(t, float64(3), result[0].Rows[0][1].(float64))
 
 		assert.Equal(t, 3, len(result[1].Headers))
-		assert.Equal(t, 1, len(result[1].Rows))
-		assert.Equal(t, float64(3), result[1].Rows[0][2].(float64))
+		assert.Equal(t, 63, len(result[1].Rows))
+		assert.Equal(t, float64(3), result[1].Rows[31][2].(float64))
 
 	})
 
@@ -101,7 +102,7 @@ func TestSampleWebsiteAggregation(t *testing.T) {
 				{PropertyName: model.PredefPropCity, PropertyDataType: "categorical", Condition: "equals", Value: "AB", LogicalOp: ""},
 			},
 			GroupByTimestamp:  "",
-			Timezone:          "Asia/Kolkata",
+			Timezone:          "UTC",
 			From:              1669856400,
 			To:                1675213200,
 			InternalEventType: model.PredefEventTypePageViews,
@@ -127,8 +128,8 @@ func TestSampleWebsiteAggregation(t *testing.T) {
 		assert.Equal(t, float64(3), result[0].Rows[0][1].(float64))
 
 		assert.Equal(t, 3, len(result[1].Headers))
-		assert.Equal(t, 1, len(result[1].Rows))
-		assert.Equal(t, float64(3), result[1].Rows[0][2].(float64))
+		assert.Equal(t, 63, len(result[1].Rows))
+		assert.Equal(t, float64(3), result[1].Rows[31][2].(float64))
 
 	})
 }

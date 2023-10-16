@@ -392,15 +392,12 @@ function AccountDetails({
 
   const handleOptionClick = (option, group) => {
     const timelinesConfig = { ...tlConfig };
-    if (!timelinesConfig.account_config.leftpane_props) {
-      // Initialize leftpane_props as an empty array if it's null
-      timelinesConfig.account_config.leftpane_props = [];
+    if (!timelinesConfig.account_config.table_props) {
+      timelinesConfig.account_config.table_props = [];
     }
 
-    if (
-      !timelinesConfig.account_config.leftpane_props.includes(option?.value)
-    ) {
-      timelinesConfig.account_config.leftpane_props.push(option?.value);
+    if (!timelinesConfig.account_config.table_props.includes(option?.value)) {
+      timelinesConfig.account_config.table_props.push(option?.value);
       udpateProjectSettings(activeProject.id, {
         timelines_config: { ...timelinesConfig }
       }).then(() =>
@@ -427,8 +424,8 @@ function AccountDetails({
 
   const onDelete = (option) => {
     const timelinesConfig = { ...tlConfig };
-    timelinesConfig.account_config.leftpane_props.splice(
-      timelinesConfig.account_config.leftpane_props.indexOf(option),
+    timelinesConfig.account_config.table_props.splice(
+      timelinesConfig.account_config.table_props.indexOf(option),
       1
     );
     udpateProjectSettings(activeProject.id, {
@@ -462,8 +459,8 @@ function AccountDetails({
   const listLeftPaneProps = (props = {}) => {
     const propsList = [];
     const showProps =
-      currentProjectSettings?.timelines_config?.account_config
-        ?.leftpane_props || [];
+      currentProjectSettings?.timelines_config?.account_config?.table_props ||
+      [];
     showProps.forEach((prop, index) => {
       const propType = getPropType(listProperties, prop);
       const propDisplayName = groupPropNames[prop]
@@ -499,8 +496,8 @@ function AccountDetails({
     );
 
   const renderAddNewProp = () =>
-    !currentProjectSettings?.timelines_config?.account_config?.leftpane_props ||
-    currentProjectSettings?.timelines_config?.account_config?.leftpane_props
+    !currentProjectSettings?.timelines_config?.account_config?.table_props ||
+    currentProjectSettings?.timelines_config?.account_config?.table_props
       ?.length < 8 ? (
       <div>
         <Button
@@ -519,7 +516,7 @@ function AccountDetails({
       <div className='header'>
         <div className='user'>
           <img
-            src={`https://logo.uplead.com/${getHost(
+            src={`https://logo.clearbit.com/${getHost(
               accountDetails?.data?.host
             )}`}
             onError={(e) => {
@@ -548,11 +545,11 @@ function AccountDetails({
       <div className='logo_attr'>
         <a
           className='font-size--small'
-          href='https://www.uplead.com'
+          href='https://clearbit.com'
           target='_blank'
           rel='noreferrer'
         >
-          Brand Logo provided by UpLead
+          Brand Logo provided by Clearbit
         </a>
       </div>
     </div>

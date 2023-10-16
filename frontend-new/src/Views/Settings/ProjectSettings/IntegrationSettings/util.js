@@ -16,12 +16,10 @@ export const getDefaultTimelineConfigForSixSignal = (config) => {
 
   const defaultTimelineConfig = {
     account_config: {
-      table_props: mergeProps(defaultProps, []),
-      leftpane_props: mergeProps(defaultProps, [])
+      table_props: mergeProps(defaultProps, [])
     },
     user_config: {
-      table_props: mergeProps(defaultProps, ['$session_spent_time']),
-      leftpane_props: mergeProps(defaultProps, ['$session_spent_time'])
+      table_props: mergeProps(defaultProps, ['$session_spent_time'])
     }
   };
 
@@ -30,9 +28,7 @@ export const getDefaultTimelineConfigForSixSignal = (config) => {
   } else {
     const { account_config, user_config } = config.timelines_config || {};
     const prevAccountTableProps = account_config?.table_props || [];
-    const prevAccountLeftpaneProps = account_config?.leftpane_props || [];
     const prevUserTableProps = user_config?.table_props || [];
-    const prevUserLeftpaneProps = user_config?.leftpane_props || [];
 
     return {
       ...config.timelines_config,
@@ -41,10 +37,6 @@ export const getDefaultTimelineConfigForSixSignal = (config) => {
         table_props: mergeProps(
           prevAccountTableProps,
           defaultTimelineConfig.account_config.table_props
-        ),
-        leftpane_props: mergeProps(
-          prevAccountLeftpaneProps,
-          defaultTimelineConfig.account_config.leftpane_props
         )
       },
       user_config: {
@@ -52,10 +44,6 @@ export const getDefaultTimelineConfigForSixSignal = (config) => {
         table_props: mergeProps(
           prevUserTableProps,
           defaultTimelineConfig.user_config.table_props
-        ),
-        leftpane_props: mergeProps(
-          prevUserLeftpaneProps,
-          defaultTimelineConfig.user_config.leftpane_props
         )
       }
     };

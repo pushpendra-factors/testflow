@@ -491,6 +491,7 @@ export const APP_LAYOUT_ROUTES = {
     Layout: AppLayout
   },
   ProfileAccountsSegmentsURL: {
+    title: 'Accounts',
     exact: true,
     path: PathUrls.ProfileAccountsSegmentsURL,
     Component: AccountProfiles,

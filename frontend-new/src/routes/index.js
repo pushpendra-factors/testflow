@@ -34,13 +34,14 @@ const renderRoutes = (routesObj) => {
       const route = routesObj[routeName];
 
       if (!route) return null;
-      const { Component, exact = false, path, Private } = route;
+      const { Component, exact = false, path, Private, title } = route;
 
       if (!Component || !path) return null;
 
       if (Private) {
         return (
           <PrivateRoute
+            title={title}
             exact={exact}
             path={path}
             component={Component}

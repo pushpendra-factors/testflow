@@ -92,7 +92,9 @@ export const TimelineHoverPropDisplayNames = {
 export const GroupDisplayNames = {
   $domains: 'All Accounts',
   $hubspot_company: 'Hubspot Companies',
+  $hubspot_deal:'Hubspot Deals',
   $salesforce_account: 'Salesforce Accounts',
+  $salesforce_opportunity:'Salesforce Opportunities',
   $6signal: 'Identified Companies',
   $linkedin_company: 'Linkedin Company Engagements',
   $g2: 'G2 Engagements'
@@ -377,12 +379,10 @@ export const DEFAULT_TIMELINE_CONFIG = {
   disabled_events: [],
   user_config: {
     table_props: [],
-    leftpane_props: [],
     milestones: []
   },
   account_config: {
     table_props: [],
-    leftpane_props: [],
     milestones: [],
     user_prop: ''
   }

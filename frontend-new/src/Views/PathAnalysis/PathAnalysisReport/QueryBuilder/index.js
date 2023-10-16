@@ -35,7 +35,6 @@ import { useEffect } from 'react';
 import moment from 'moment';
 import _ from 'lodash';
 import FaSelect from 'Components/FaSelect';
-import { fetchGroups } from 'Reducers/coreQuery/services';
 import GlobalFilter from 'Components/GlobalFilter';
 import EventFilter from './EventFilter';
 import ExpandBy from './ExpandBy';

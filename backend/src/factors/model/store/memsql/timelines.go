@@ -1072,7 +1072,7 @@ func (store *MemSQL) GetSourceStringForAccountsV2(projectID int64, source string
 			sourceString = sourceString + " " + fmt.Sprintf("AND users.group_%d_id IS NOT NULL", group.ID)
 		}
 	} else {
-		if model.IsAllowedAccountGroupNames(source) && source == group.Name {
+		if model.IsAllowedGroupName(source) && source == group.Name {
 			sourceString = fmt.Sprintf("AND users.source!=? AND users.group_%d_id IS NOT NULL", group.ID)
 		} else {
 			log.WithField("err_code", errCode).Error(fmt.Sprintf("%s not enabled for this project.", source))
@@ -1166,7 +1166,7 @@ func (store *MemSQL) GetGroupNameIDMap(projectID int64) (map[string]int, int) {
 	groupNameIDMap := make(map[string]int)
 	if len(groups) > 0 {
 		for _, group := range groups {
-			if group.Name == model.GROUP_NAME_DOMAINS || model.IsAllowedAccountGroupNames(group.Name) {
+			if group.Name == model.GROUP_NAME_DOMAINS || model.IsAllowedGroupName(group.Name) {
 				groupNameIDMap[group.Name] = group.ID
 			}
 		}
@@ -1997,7 +1997,7 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabledV2(projectID int64, id, g
 			}
 		}
 	} else {
-		if !model.IsAllowedAccountGroupNames(groupName) {
+		if !model.IsAllowedGroupName(groupName) {
 			log.Error("Invalid group name.")
 			return propertiesDecoded, isUserDetails, http.StatusBadRequest
 		}
@@ -2127,7 +2127,7 @@ func FormatAccountDetails(projectID int64, propertiesDecoded map[string]interfac
 	var accountDetails model.AccountDetails
 
 	if C.IsDomainEnabled(projectID) && groupName != "All" {
-		if model.IsAllowedAccountGroupNames(groupName) {
+		if model.IsAllowedGroupName(groupName) {
 			hostNameProps = []string{model.HostNameGroup[groupName]}
 			companyNameProps = []string{model.AccountNames[groupName], U.UP_COMPANY}
 		}
@@ -2167,9 +2167,9 @@ func GetLeftPanePropertiesFromConfig(timelinesConfig model.TimelinesConfig, prof
 	var leftPaneProps []string
 
 	if model.IsUserProfiles(profileType) {
-		leftPaneProps = timelinesConfig.UserConfig.LeftpaneProps
+		leftPaneProps = timelinesConfig.UserConfig.TableProps
 	} else if model.IsAccountProfiles(profileType) {
-		leftPaneProps = timelinesConfig.AccountConfig.LeftpaneProps
+		leftPaneProps = timelinesConfig.AccountConfig.TableProps
 	}
 	for _, prop := range leftPaneProps {
 		if value, exists := (*propertiesDecoded)[prop]; exists {

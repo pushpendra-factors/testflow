@@ -264,6 +264,11 @@ export const getBreakdownTitle = (
   );
 };
 
+export const isFunnelWithAnyGivenEvent = (resultData) => {
+  const eventsCondition = _.get(resultData, 'meta.query.ec', '');
+  return eventsCondition === 'funnel_any_given_event';
+};
+
 export const getTableColumns = (
   queries,
   currentSorter,
@@ -279,7 +284,6 @@ export const getTableColumns = (
     !tableConfig.showDuration && !tableConfig.showPercentage;
 
   const unsortedBreakdown = _.get(resultData, 'meta.query.gbp', []);
-  const eventsCondition = _.get(resultData, 'meta.query.ec', '');
   const isBreakdownApplied = unsortedBreakdown.length > 0;
   const breakdown = SortData(unsortedBreakdown, 'eni', 'ascend');
 
@@ -355,9 +359,7 @@ export const getTableColumns = (
     ),
     dataIndex: 'Conversion',
     className: `text-right ${
-      eventsCondition === 'funnel_any_given_event'
-        ? 'has-border'
-        : 'border-none'
+      isFunnelWithAnyGivenEvent(resultData) == true ? 'has-border' : 'border-none'
     }`,
     width: 150,
     render: (d) => RenderTotalConversion(d, breakdown, isComparisonApplied)
@@ -542,7 +544,7 @@ export const getTableColumns = (
     ...UserCol,
     conversionRateColumn
   ];
-  if (eventsCondition !== 'funnel_any_given_event')
+  if (isFunnelWithAnyGivenEvent(resultData) === false)
     mergedColumns.push(conversionTimeColumn);
   mergedColumns.push(...eventColumns);
   return mergedColumns;

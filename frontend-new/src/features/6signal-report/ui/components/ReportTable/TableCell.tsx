@@ -41,7 +41,7 @@ const TableCell = ({ text, record, header }: TableCellProps) => {
               width={24}
               height={24}
               className='w-100 h-100 rounded '
-              src={`https://logo.uplead.com/${getHost(domain)}`}
+              src={`https://logo.clearbit.com/${getHost(domain)}`}
               fallback={fallbackImage}
               preview={false}
             />

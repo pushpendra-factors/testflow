@@ -61,13 +61,16 @@ const AttributionsChart = ({
   cardSize,
   unitId,
   attrQueries,
-  queryOptions
+  queryOptions,
+  tableFilters
 }) => {
-  const { attributionMetrics, tableFilters } = useContext(DashboardContext);
+  const { attributionMetrics } = useContext(DashboardContext);
   const displayedAttributionMetrics = useMemo(
     () => getResultantMetrics(touchpoint, attributionMetrics),
     [touchpoint, attributionMetrics]
   );
+
+  // const { attributionTableFilters } = useSelector((state) => state.attributionDashboard);
 
   const { eventNames } = useSelector((state) => state.coreQuery);
 

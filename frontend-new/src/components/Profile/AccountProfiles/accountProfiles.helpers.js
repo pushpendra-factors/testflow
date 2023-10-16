@@ -115,7 +115,7 @@ export const getColumns = ({
               }
             >
               <img
-                src={`https://logo.uplead.com/${getHost(item.host)}`}
+                src={`https://logo.clearbit.com/${getHost(item.host)}`}
                 onError={(e) => {
                   if (e.target.src !== placeholderIcon) {
                     e.target.src = placeholderIcon;
@@ -135,33 +135,47 @@ export const getColumns = ({
   // Engagement Column
 
   if (!isScoringLocked) {
-    columns.push({
-      title: <div className={headerClassStr}>Engagement</div>,
-      width: 150,
-      dataIndex: 'engagement',
-      key: 'engagement',
-      fixed: 'left',
-      defaultSortOrder: 'descend',
-      sorter: (a, b) => sortNumericalColumn(a.score, b.score),
-      render: (status) =>
-        status ? (
-          <div
-            className='engagement-tag'
-            style={{ '--bg-color': EngagementTag[status]?.bgColor }}
-          >
-            <img
-              src={`../../../assets/icons/${EngagementTag[status]?.icon}.svg`}
-              alt=''
-              loading='lazy'
-            />
-            <Text type='title' level={7} weight={'thin'} extraClass='m-0'>
-              {status}
-            </Text>
-          </div>
-        ) : (
-          '-'
+    columns.push(
+      {
+        title: <div className={headerClassStr}>Engagement</div>,
+        width: 150,
+        dataIndex: 'engagement',
+        key: 'engagement',
+        fixed: 'left',
+        defaultSortOrder: 'descend',
+        sorter: (a, b) => sortNumericalColumn(a.score, b.score),
+        render: (status) =>
+          status ? (
+            <div
+              className='engagement-tag'
+              style={{ '--bg-color': EngagementTag[status]?.bgColor }}
+            >
+              <img
+                src={`../../../assets/icons/${EngagementTag[status]?.icon}.svg`}
+                alt=''
+              />
+              <Text type='title' level={7} extraClass='m-0'>
+                {status}
+              </Text>
+            </div>
+          ) : (
+            '-'
+          )
+      },
+      {
+        title: <div className={headerClassStr}>Score</div>,
+        width: 150,
+        dataIndex: 'score',
+        key: 'score',
+        defaultSortOrder: 'descend',
+        sorter: (a, b) => sortNumericalColumn(a.score, b.score),
+        render: (value) => (
+          <Text type='title' level={7} extraClass='m-0'>
+            {value ? value.toFixed() : '-'}
+          </Text>
         )
-    });
+      }
+    );
   }
   // Table Prop Columns
   displayTableProps?.forEach((prop) => {
