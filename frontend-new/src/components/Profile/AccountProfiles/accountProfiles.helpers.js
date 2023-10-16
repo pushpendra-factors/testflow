@@ -115,7 +115,7 @@ export const getColumns = ({
               }
             >
               <img
-                src={`https://logo.uplead.com/${getHost(item.host)}`}
+                src={`https://logo.clearbit.com/${getHost(item.host)}`}
                 onError={(e) => {
                   if (e.target.src !== placeholderIcon) {
                     e.target.src = placeholderIcon;

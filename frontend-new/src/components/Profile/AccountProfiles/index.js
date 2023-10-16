@@ -105,9 +105,9 @@ function AccountProfiles({
   const dispatch = useDispatch();
   const history = useHistory();
   const location = useLocation();
-  const {segment_id} = useParams();
+  const { segment_id } = useParams();
 
-  const {segments} = useSelector((state) => selectSegments(state));
+  const { segments } = useSelector((state) => selectSegments(state));
 
   const { groupPropNames } = useSelector((state) => state.coreQuery);
   const groupProperties = useSelector(
@@ -155,15 +155,14 @@ function AccountProfiles({
 
   const activeAgent = agentState?.agent_details?.email;
 
-  useEffect(()=> {
-    if(segment_id && segments?.length) {
-      if(segment_id !== activeSegment.id) {
+  useEffect(() => {
+    if (segment_id && segments?.length) {
+      if (segment_id !== activeSegment.id) {
         const selectedSegment = segments.find((seg) => seg.id === segment_id);
         setActiveSegment(selectedSegment);
       }
     }
-
-  }, [segment_id, segments])
+  }, [segment_id, segments]);
 
   const setActiveSegment = useCallback(
     (segmentPayload) => {
@@ -856,11 +855,11 @@ function AccountProfiles({
             <div className='text-right'>
               <a
                 className='font-size--small'
-                href='https://www.uplead.com'
+                href='https://clearbit.com'
                 target='_blank'
                 rel='noopener noreferrer'
               >
-                Logos provided by UpLead
+                Logos provided by Clearbit
               </a>
             </div>
           )}
@@ -1051,14 +1050,15 @@ function AccountProfiles({
   useEffect(() => {
     let listProps = [];
     if (IsDomainGroup(accountPayload?.source)) {
-      listProps = Object.keys(groups?.account_groups || {}).reduce(
-        (acc, property) => {
+      listProps = Object.keys(groups?.account_groups || {})
+        .filter(
+          (group) => !['$hubspot_deal', '$salesforce_Account'].includes(group)
+        )
+        .reduce((acc, property) => {
           return groupProperties[property]
             ? acc.concat(groupProperties[property])
             : acc;
-        },
-        []
-      );
+        }, []);
     } else {
       listProps = groupProperties?.[accountPayload?.source] || [];
     }
