@@ -196,23 +196,23 @@ func matchFitlerValuesForCategorical(projectId int64, eventPropValue interface{}
 			continue
 		}
 		if value.Operator == M.EqualsOpStr {
-			results[i] = strings.EqualFold(propertyValue, value.Value)
+			results[i] = strings.EqualFold(strings.TrimSpace(propertyValue), strings.TrimSpace(value.Value))
 		}
 		if value.Operator == M.NotEqualOpStr {
-			results[i] = !strings.EqualFold(propertyValue, value.Value)
+			results[i] = !strings.EqualFold(strings.TrimSpace(propertyValue), strings.TrimSpace(value.Value))
 		}
 		if value.Operator == M.ContainsOpStr {
-			results[i] = strings.Contains(strings.ToLower(propertyValue), strings.ToLower(value.Value))
+			results[i] = strings.Contains(strings.ToLower(strings.TrimSpace(propertyValue)), strings.ToLower(strings.TrimSpace(value.Value)))
 		}
 		if value.Operator == M.NotContainsOpStr {
-			results[i] = !(strings.Contains(strings.ToLower(propertyValue), strings.ToLower(value.Value)))
+			results[i] = !(strings.Contains(strings.ToLower(strings.TrimSpace(propertyValue)), strings.ToLower(strings.TrimSpace(value.Value))))
 		}
 		if value.Operator == M.InList {
 			cacheKeyList, err := M.GetListCacheKey(projectId, value.Value)
 			if err != nil {
 				results[i] = false
 			} else {
-				score, err := cacheRedis.ZScorePersistent(cacheKeyList, propertyValue)
+				score, err := cacheRedis.ZScorePersistent(cacheKeyList, strings.TrimSpace(propertyValue))
 				if err != nil {
 					results[i] = false
 				} else {
@@ -229,7 +229,7 @@ func matchFitlerValuesForCategorical(projectId int64, eventPropValue interface{}
 			if err != nil {
 				results[i] = false
 			} else {
-				score, err := cacheRedis.ZScorePersistent(cacheKeyList, propertyValue)
+				score, err := cacheRedis.ZScorePersistent(cacheKeyList, strings.TrimSpace(propertyValue))
 				if err != nil {
 					results[i] = true
 				} else {
