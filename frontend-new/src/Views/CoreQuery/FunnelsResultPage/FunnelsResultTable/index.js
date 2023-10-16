@@ -3,7 +3,11 @@ import React, { useCallback, useState, useMemo, useEffect } from 'react';
 import moment from 'moment';
 import _ from 'lodash';
 import find from 'lodash/find';
-import { getTableColumns, getTableData } from '../utils';
+import {
+  getTableColumns,
+  getTableData,
+  isFunnelWithAnyGivenEvent
+} from '../utils';
 import DataTable from '../../../../components/DataTable';
 import { GROUPED_MAX_ALLOWED_VISIBLE_PROPERTIES } from '../../../../utils/constants';
 import { getNewSorterState } from '../../../../utils/dataFormatter';
@@ -180,11 +184,13 @@ function FunnelsResultTable({
             `Conversion (${compare_duration_from} - ${compare_duration_to})`
           ] = remaining.Conversion.comparison_conversion;
 
-          rest[`Conversion Time (${duration_from} - ${duration_to})`] =
-            remaining['Conversion Time'].overallDuration;
-          rest[
-            `Conversion Time (${compare_duration_from} - ${compare_duration_to})`
-          ] = remaining['Conversion Time'].comparisonOverallDuration;
+          if (isFunnelWithAnyGivenEvent(resultData) === false) {
+            rest[`Conversion Time (${duration_from} - ${duration_to})`] =
+              remaining['Conversion Time'].overallDuration;
+            rest[
+              `Conversion Time (${compare_duration_from} - ${compare_duration_to})`
+            ] = remaining['Conversion Time'].comparisonOverallDuration;
+          }
 
           arrayMapper.forEach((elem, index) => {
             rest[
@@ -195,16 +201,18 @@ function FunnelsResultTable({
             ] = remaining[`${elem.displayName}-${index}-count`].compare_count;
 
             if (index < arrayMapper.length - 1) {
-              rest[
-                `time[${index}-${
-                  index + 1
-                }] (${duration_from} - ${duration_to})`
-              ] = remaining[`time[${index}-${index + 1}]`].time;
-              rest[
-                `time[${index}-${
-                  index + 1
-                }] (${compare_duration_from} - ${compare_duration_to})`
-              ] = remaining[`time[${index}-${index + 1}]`].compare_time;
+              if (isFunnelWithAnyGivenEvent(resultData) === false) {
+                rest[
+                  `time[${index}-${
+                    index + 1
+                  }] (${duration_from} - ${duration_to})`
+                ] = remaining[`time[${index}-${index + 1}]`]?.time;
+                rest[
+                  `time[${index}-${
+                    index + 1
+                  }] (${compare_duration_from} - ${compare_duration_to})`
+                ] = remaining[`time[${index}-${index + 1}]`]?.compare_time;
+              }
             }
           });
           data.push(rest);
