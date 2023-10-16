@@ -130,6 +130,10 @@ const AccountsSidebar = () => {
   }, [activeAccountPayload, segments]);
 
   const filteredGroupsList = groupsList
+    .filter(
+      (group) =>
+        !['Hubspot Deals', 'Salesforce Opportunities'].includes(group[0])
+    )
     .slice(1)
     .filter((value) =>
       value[0].toLowerCase().includes(searchText.toLowerCase())

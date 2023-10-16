@@ -842,11 +842,11 @@ function AccountProfiles({
             <div className='text-right'>
               <a
                 className='font-size--small'
-                href='https://www.uplead.com'
+                href='https://clearbit.com'
                 target='_blank'
                 rel='noopener noreferrer'
               >
-                Logos provided by UpLead
+                Logos provided by Clearbit
               </a>
             </div>
           )}
@@ -1037,11 +1037,15 @@ function AccountProfiles({
   useEffect(() => {
     let listProps = [];
     if (accountPayload?.source === 'All') {
-      listProps = Object.keys(groupOpts || {}).reduce((acc, property) => {
-        return groupProperties[property]
-          ? acc.concat(groupProperties[property])
-          : acc;
-      }, []);
+      listProps = Object.keys(groupOpts || {})
+        .filter((group) =>
+          !['$hubspot_deal', '$salesforce_Account'].includes(group)
+        )
+        .reduce((acc, property) => {
+          return groupProperties[property]
+            ? acc.concat(groupProperties[property])
+            : acc;
+        }, []);
     } else {
       listProps = groupProperties?.[accountPayload?.source] || [];
     }
@@ -1106,7 +1110,7 @@ function AccountProfiles({
 
   useEffect(() => {
     fetchProjectSettings(activeProject?.id);
-    fetchGroups(activeProject?.id, true);
+    fetchGroups(activeProject?.id);
     getSavedSegments(activeProject?.id);
   }, [activeProject?.id, fetchGroups, fetchProjectSettings, getSavedSegments]);
 
