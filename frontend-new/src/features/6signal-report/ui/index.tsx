@@ -778,14 +778,14 @@ const SixSignalReport = ({
               />
               {!!reportData && reportData.result_group?.[0]?.rows?.length > 0 && (
                 <div className='text-right font-size--small'>
-                  Logos provided by{' '}
+                  Logos provided by
                   <a
                     className='font-size--small'
-                    href='https://www.uplead.com'
+                    href='https://www.clearbit.com'
                     target='_blank'
                     rel='noreferrer'
                   >
-                    UpLead
+                    Clearbit
                   </a>
                 </div>
               )}

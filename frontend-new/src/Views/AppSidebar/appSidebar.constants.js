@@ -4,5 +4,5 @@ export const AccountsSidebarIconsMapping = {
   $hubspot_company: 'hubspot_ads',
   $g2: 'g2crowd',
   $domains: 'buildings',
-  $6signal: 'sixSignalLogo'
+  $6signal: 'sixSignalAccountsLogo'
 };
