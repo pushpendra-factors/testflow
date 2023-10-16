@@ -74,17 +74,18 @@ func Signin(c *gin.Context) {
 		return
 	}
 
+	if strings.TrimSpace(password) == "" {
+		logCtx.WithError(err).Error("Invalid password")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
 	agent, code := store.GetStore().GetAgentByEmail(email)
 	if code == http.StatusInternalServerError {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	} else if code == http.StatusNotFound {
 		c.AbortWithStatus(http.StatusNotFound)
-		return
-	}
-
-	if agent.IsAuth0User {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "You have signed up with OAuth flow, sign in with the same."})
 		return
 	}
 
@@ -756,11 +757,6 @@ func AgentGenerateResetPasswordLinkEmail(c *gin.Context) {
 		return
 	} else if errCode == http.StatusNotFound {
 		c.AbortWithStatus(http.StatusNotFound)
-		return
-	}
-
-	if agent.IsAuth0User {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "User is already registered with Auth0"})
 		return
 	}
 

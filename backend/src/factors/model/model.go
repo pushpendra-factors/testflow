@@ -40,6 +40,7 @@ type Model interface {
 	UpdateAgentInformation(agentUUID, firstName, lastName, phone string, isOnboardingFlowSeen *bool, isFormFilled *bool) int
 	UpdateAgentVerificationDetails(agentUUID, password, firstName, lastName string, verified bool, passUpdatedAt time.Time) int
 	UpdateAgentVerificationDetailsFromAuth0(agentUUID, firstName, lastName string, verified bool, value *postgres.Jsonb) int
+	UpdateAgentEmailVerificationDetails(agentUUID string, isVerfied bool) int
 	GetPrimaryAgentOfProject(projectId int64) (uuid string, errCode int)
 	UpdateAgentSalesforceInstanceURL(agentUUID string, instanceURL string) int
 	IsSlackIntegratedForProject(projectID int64, agentUUID string) (bool, int)
