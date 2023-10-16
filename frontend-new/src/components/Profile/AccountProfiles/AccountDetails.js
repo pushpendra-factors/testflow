@@ -393,9 +393,7 @@ function AccountDetails({
       timelinesConfig.account_config.table_props = [];
     }
 
-    if (
-      !timelinesConfig.account_config.table_props.includes(option?.value)
-    ) {
+    if (!timelinesConfig.account_config.table_props.includes(option?.value)) {
       timelinesConfig.account_config.table_props.push(option?.value);
       udpateProjectSettings(activeProject.id, {
         timelines_config: { ...timelinesConfig }
@@ -458,8 +456,8 @@ function AccountDetails({
   const listLeftPaneProps = (props = {}) => {
     const propsList = [];
     const showProps =
-      currentProjectSettings?.timelines_config?.account_config
-        ?.table_props || [];
+      currentProjectSettings?.timelines_config?.account_config?.table_props ||
+      [];
     showProps.forEach((prop, index) => {
       const propType = getPropType(listProperties, prop);
       const propDisplayName = groupPropNames[prop]
@@ -515,7 +513,7 @@ function AccountDetails({
       <div className='header'>
         <div className='user'>
           <img
-            src={`https://logo.uplead.com/${getHost(
+            src={`https://logo.clearbit.com/${getHost(
               accountDetails?.data?.host
             )}`}
             onError={(e) => {
@@ -544,11 +542,11 @@ function AccountDetails({
       <div className='logo_attr'>
         <a
           className='font-size--small'
-          href='https://www.uplead.com'
+          href='https://clearbit.com'
           target='_blank'
           rel='noreferrer'
         >
-          Brand Logo provided by UpLead
+          Brand Logo provided by Clearbit
         </a>
       </div>
     </div>

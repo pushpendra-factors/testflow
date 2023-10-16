@@ -97,7 +97,7 @@ export const getColumns = ({
         (
           <div className='flex items-center'>
             <img
-              src={`https://logo.uplead.com/${getHost(item.host)}`}
+              src={`https://logo.clearbit.com/${getHost(item.host)}`}
               onError={(e) => {
                 if (
                   e.target.src !==

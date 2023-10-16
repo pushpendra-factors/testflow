@@ -91,7 +91,9 @@ export const TimelineHoverPropDisplayNames = {
 export const GroupDisplayNames = {
   All: 'All Accounts',
   $hubspot_company: 'Hubspot Companies',
+  $hubspot_deal:'Hubspot Deals',
   $salesforce_account: 'Salesforce Accounts',
+  $salesforce_opportunity:'Salesforce Opportunities',
   $6signal: 'Identified Companies',
   $linkedin_company: 'Linkedin Company Engagements',
   $g2: 'G2 Engagements'
