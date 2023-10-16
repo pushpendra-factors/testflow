@@ -93,7 +93,7 @@ func main() {
 
 	userPropertyUpdateOptProjects := flag.String("user_property_update_opt_projects", "", "")
 	companyPropsV1EnabledProjectIDs := flag.String("company_props_v1_enabled_projectIds", "", "To enable clearbit enrichment in new properties")
-	log.Info("properties v1 flow project flag in int-req-worker: ", companyPropsV1EnabledProjectIDs)
+	log.Info("properties v1 flow project flag in int-req-worker: ", *companyPropsV1EnabledProjectIDs)
 	flag.Parse()
 
 	workerName := defaultWorkerName
