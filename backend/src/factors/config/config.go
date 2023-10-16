@@ -20,7 +20,6 @@ import (
 
 	"github.com/getsentry/sentry-go"
 	"github.com/go-sql-driver/mysql"
-	"github.com/pkg/errors"
 
 	"github.com/coreos/etcd/mvcc/mvccpb"
 
@@ -758,7 +757,8 @@ func initAppServerServices(config *Configuration) error {
 
 	err = InitEtcd(config.EtcdEndpoints)
 	if err != nil {
-		return errors.Wrap(err, "Failed to initialize etcd")
+		log.WithError(err).Error("Failed to intialise etcd. Skipping.")
+		return nil
 	}
 
 	InitMailClient(config.AWSKey, config.AWSSecret, config.AWSRegion)
