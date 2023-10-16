@@ -109,11 +109,13 @@ func CallbackHandler(auth *Authenticator) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		state := session.GetSessionStore().GetValueAsString(c, C.GetAuth0StateCookieName())
 		if state == "" {
+			log.Error("Error in auth0 callback handler, No State")
 			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, "", "NO_STATE"))
 			return
 		}
 
 		if state != c.Query("state") {
+			log.Error("Error in auth0 callback handler, Invalid State")
 			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, "", "INVALID_STATE"))
 			return
 		}
@@ -121,111 +123,127 @@ func CallbackHandler(auth *Authenticator) gin.HandlerFunc {
 		err := session.GetSessionStore().DeleteValue(c, C.GetAuth0StateCookieName())
 		if err != nil {
 			log.WithError(err).Error(err.Error())
+			log.Error("Error in auth0 callback handler, Session Error")
 			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, "", "SESSION_ERROR"))
 			return
 		}
 
 		token, err := auth.Exchange(c.Request.Context(), c.Query("code"))
 		if err != nil {
+			log.Error("Error in auth0 callback handler, Token Exchange Error")
 			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, "", "TOKEN_ERROR"))
 			return
 		}
 
 		idToken, err := auth.verifyIDToken(c.Request.Context(), token)
 		if err != nil {
+			log.Error("Error in auth0 callback handler, Token ID verification Error")
 			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, "", "VERIFY_ERROR"))
 			return
 		}
 
 		profile := model.Auth0Profile{}
 		if err := idToken.Claims(&profile); err != nil {
+			log.Error("Error in auth0 callback handler, Token Error")
 			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, "", "TOKEN_ERROR"))
 			return
 		}
 
 		flow, err := decodeState(state)
 		if err != nil {
+			log.Error("Error in auth0 callback handler, Invalid State")
 			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, "", "INVALID_STATE"))
 			return
 		}
 
 		var existingAgent *model.Agent
+		var errCode int
 
 		if flow == SIGNUP_FLOW {
 
 			if U.IsPersonalEmail(strings.TrimSpace(profile.Email)) {
+				log.WithField("email", profile.Email).Error("Failed To Create Agent, Personal Email Provided")
 				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "INVALID_PERSONAL_EMAIL"))
 				return
 			}
-
-			if existingAgent, errCode := store.GetStore().GetAgentByEmail(profile.Email); errCode == http.StatusInternalServerError {
+			alreadyExists := false
+			if existingAgent, errCode = store.GetStore().GetAgentByEmail(profile.Email); errCode == http.StatusInternalServerError {
+				log.WithField("email", profile.Email).Error("Failed To Get Agent By Email")
 				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "DB_ERROR"))
 				return
 			} else if errCode == http.StatusFound {
-				if !existingAgent.IsEmailVerified {
-					err = sendSignUpEmail(existingAgent)
-					if err != nil {
-						c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "ACTIVATE_EMAIL_ERROR"))
-						return
-					}
-				}
-				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "ALREADY_EXISTS"))
-				return
+				alreadyExists = true
 			}
 
 			value, err := generateValueBytes(profile.Subject, profile.IssuedAt, profile.ExpiresAt, profile.UpdatedAt)
 			if err != nil {
+				log.WithField("email", profile.Email).Error("Failed To Generate Value bytes")
 				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "SERVER_ERROR"))
 				return
 			}
-			createAgentParams := model.CreateAgentParams{
-				Agent: &model.Agent{
-					Email:               profile.Email,
-					LastName:            profile.LastName,
-					FirstName:           profile.FirstName,
-					IsEmailVerified:     profile.IsEmailVerified,
-					IsAuth0User:         true,
-					Value:               value,
-					SubscribeNewsletter: true,
-				},
-				PlanCode: model.FreePlanCode,
-			}
-			createAgentResp, errCode := store.GetStore().CreateAgentWithDependencies(&createAgentParams)
-			if errCode == http.StatusInternalServerError {
-				log.WithField("email", profile.Email).Error("Failed To Create Agent")
-				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "SERVER_ERROR"))
-				return
-			}
-			existingAgent = createAgentResp.Agent
 
-			errCode = onboardingMailModoAPICall(existingAgent)
-			if errCode != http.StatusOK {
-				log.WithField("email", existingAgent.Email).
-					WithField("status_code", errCode).
-					Error("Failed To Send Onboarding Mail")
+			var createAgentResp *model.CreateAgentResponse
+
+			if !alreadyExists {
+				createAgentParams := model.CreateAgentParams{
+					Agent: &model.Agent{
+						Email:               profile.Email,
+						LastName:            profile.LastName,
+						FirstName:           profile.FirstName,
+						IsEmailVerified:     profile.IsEmailVerified,
+						IsAuth0User:         true,
+						Value:               value,
+						SubscribeNewsletter: true,
+					},
+					PlanCode: model.FreePlanCode,
+				}
+				createAgentResp, errCode = store.GetStore().CreateAgentWithDependencies(&createAgentParams)
+				if errCode == http.StatusInternalServerError {
+					log.WithField("email", profile.Email).Error("Failed To Create Agent")
+					c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "SERVER_ERROR"))
+					return
+				}
+			} else {
+				errCode = store.GetStore().UpdateAgentEmailVerificationDetails(existingAgent.UUID, true)
+				if errCode != http.StatusAccepted {
+					log.WithField("email", profile.Email).Error("Failed To Update Agent Email Verification Details")
+					c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "SERVER_ERROR"))
+				}
 			}
-			errCode = onboardingHubspotOwner(existingAgent)
-			if errCode != http.StatusOK {
-				log.WithField("email", existingAgent.Email).
-					WithField("status_code", errCode).
-					Error("Failed To Create Hubspot Owner")
-			}
-			errCode = onboardingSlackAPICall(existingAgent)
-			if errCode != http.StatusOK {
-				log.WithField("email", existingAgent.Email).
-					WithField("status_code", errCode).
-					Error("Failed To Send Onboarding Slack")
+			if !alreadyExists {
+				existingAgent = createAgentResp.Agent
+
+				errCode = onboardingMailModoAPICall(existingAgent)
+				if errCode != http.StatusOK {
+					log.WithField("email", existingAgent.Email).
+						WithField("status_code", errCode).
+						Error("Failed To Send Onboarding Mail")
+				}
+				errCode = onboardingHubspotOwner(existingAgent)
+				if errCode != http.StatusOK {
+					log.WithField("email", existingAgent.Email).
+						WithField("status_code", errCode).
+						Error("Failed To Create Hubspot Owner")
+				}
+				errCode = onboardingSlackAPICall(existingAgent)
+				if errCode != http.StatusOK {
+					log.WithField("email", existingAgent.Email).
+						WithField("status_code", errCode).
+						Error("Failed To Send Onboarding Slack")
+				}
 			}
 
 		} else if flow == SIGNIN_FLOW {
 			var errCode int
 			existingAgent, errCode = store.GetStore().GetAgentByEmail(profile.Email)
 			if errCode != http.StatusFound {
+				log.WithField("email", profile.Email).Error("Failed To Sign In, Invalid Agent")
 				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "INVALID_AGENT"))
 				return
 			}
 
 			if !existingAgent.IsEmailVerified {
+				log.WithField("email", profile.Email).Error("Failed To Sign In,Agent not active ")
 				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "AGENT_NOT_ACTIVE"))
 				return
 			}
@@ -242,15 +260,18 @@ func CallbackHandler(auth *Authenticator) gin.HandlerFunc {
 			var errCode int
 			existingAgent, errCode = store.GetStore().GetAgentByEmail(profile.Email)
 			if errCode != http.StatusFound {
+				log.WithField("email", profile.Email).Error("Failed To Activate Agent, Invalid Agent")
 				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "INVALID_AGENT"))
 				return
 			} else if existingAgent.IsEmailVerified {
+				log.WithField("email", profile.Email).Error("Failed To Activate Agent, Aleady Active")
 				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "ALREADY_ACTIVE"))
 				return
 			}
 
 			value, err := generateValueBytes(profile.Subject, profile.IssuedAt, profile.ExpiresAt, profile.UpdatedAt)
 			if err != nil {
+				log.WithField("email", profile.Email).Error("Failed To Activate Agent, Failed at generate value bytes")
 				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "SERVER_ERROR"))
 				return
 			}
@@ -262,11 +283,13 @@ func CallbackHandler(auth *Authenticator) gin.HandlerFunc {
 				return
 			}
 		} else {
+			log.WithField("email", profile.Email).Error("Invalid Flow")
 			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, "", "INVALID_FLOW"))
 			return
 		}
 		cookieData, err := helpers.GetAuthData(existingAgent.Email, existingAgent.UUID, existingAgent.Salt, helpers.SecondsInOneMonth*time.Second)
 		if err != nil {
+			log.WithField("email", profile.Email).Error("Failed in auth0 callback, Failed to generate cookie data")
 			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "SERVER_ERROR"))
 			return
 		}
