@@ -19,6 +19,14 @@ import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
 import { processProperties } from 'Utils/dataFormatter';
 
+const peopleCategoryList = ['others', 'page_views'];
+const accountsCategoryList = [
+  'others',
+  'page_views',
+  'linkedin_company_engagements',
+  'g2_engagements'
+];
+
 function QueryBlock({
   availableGroups,
   index,
@@ -69,10 +77,9 @@ function QueryBlock({
 
       showOpts = userOpts;
     } else {
-      const groupOpts = eventOptions;
-      // const groupOpts = eventOptions?.filter((item) =>
-      //   groupNamesList?.includes(item?.label)
-      // );
+      const groupOpts = eventOptions?.filter((item) =>
+        groupNamesList?.includes(item?.label)
+      );
       // showOpts = groupOpts.concat(userOpts);
       showOpts = groupOpts;
     }
