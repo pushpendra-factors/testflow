@@ -42,6 +42,8 @@ spec:
                 - $(SENTRY_DSN)
                 - --project_id
                 - "*"
+                - --primary_datastore
+                - memsql
               envFrom:
                 - configMapRef:
                     name: config-env
