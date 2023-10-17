@@ -270,6 +270,13 @@ upload-backfill-salesforce-datetime-job: export IMAGE_NAME=backfill-salesforce-d
 upload-backfill-salesforce-datetime-job: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/backfill-salesforce-datetime-job:$(TAG)
 
+pack-backfill-crm-deals-domain:
+	docker build -t us.gcr.io/factors-$(ENV)/backfill-crm-deals-domain:$(TAG) -f Dockerfile.backfill_crm_deals_domain_job .
+
+upload-backfill-crm-deals-domain: export IMAGE_NAME=backfill-crm-deals-domain
+upload-backfill-crm-deals-domain: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/backfill-crm-deals-domain:$(TAG)
+
 pack-backfill-users-domain:
 	docker build -t us.gcr.io/factors-$(ENV)/backfill-users-domain:$(TAG) -f Dockerfile.backfill_users_domain .
 

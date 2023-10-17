@@ -411,7 +411,7 @@ func enrichGroupAccount(projectID int64, document *model.SalesforceDocument, sal
 
 	accountID := getAccountGroupID(enProperties, document)
 
-	groupAccountUserID, status, eventID := createOrUpdateSalesforceGroupsProperties(projectID, document, model.GROUP_NAME_SALESFORCE_ACCOUNT, accountID)
+	groupAccountUserID, status, eventID := CreateOrUpdateSalesforceGroupsProperties(projectID, document, model.GROUP_NAME_SALESFORCE_ACCOUNT, accountID)
 	if status != http.StatusOK {
 		logCtx.Error("Failed to create or update salesforce groups properties.")
 		return status, ""
@@ -867,7 +867,7 @@ func isValidGroupName(documentType int, groupName string) bool {
 	return false
 }
 
-func createOrUpdateSalesforceGroupsProperties(projectID int64, document *model.SalesforceDocument, groupName, groupID string) (string, int, string) {
+func CreateOrUpdateSalesforceGroupsProperties(projectID int64, document *model.SalesforceDocument, groupName, groupID string) (string, int, string) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": document.Type, "document": document, "group_name": groupName,
 		"group_id": groupID})
 
@@ -1024,7 +1024,7 @@ func enrichGroupOpportunity(projectID int64, document *model.SalesforceDocument,
 		return nil, http.StatusOK
 	}
 
-	groupUserID, status, eventID := createOrUpdateSalesforceGroupsProperties(projectID, document, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, document.ID)
+	groupUserID, status, eventID := CreateOrUpdateSalesforceGroupsProperties(projectID, document, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, document.ID)
 	if status != http.StatusOK {
 		logCtx.Error("Failed to create or update salesforce groups properties.")
 		return nil, status
@@ -1055,7 +1055,7 @@ func enrichGroupOpportunity(projectID int64, document *model.SalesforceDocument,
 	}
 
 	if C.AssociateDealToDomainByProjectID(projectID) {
-		status = associateOpportunityToDomains(projectID, groupUserID, accountID)
+		status = AssociateOpportunityToDomains(projectID, groupUserID, accountID)
 		if status != http.StatusOK {
 			logCtx.Error("Failed to associate opportunity to domain.")
 		}
@@ -1118,7 +1118,7 @@ func CreateSalesforceGroupRelationship(projectID int64, leftGroupName, leftgroup
 	return nil
 }
 
-func associateOpportunityToDomains(projectID int64, opportunityGroupUserID string, accountID string) int {
+func AssociateOpportunityToDomains(projectID int64, opportunityGroupUserID string, accountID string) int {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "opportunity_group_user_id": opportunityGroupUserID, "account_id": accountID})
 	if projectID == 0 || opportunityGroupUserID == "" || accountID == "" {
 		logCtx.Error("Missing required fields.")
