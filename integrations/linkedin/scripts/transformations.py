@@ -172,3 +172,49 @@ class DataTransformation:
 
         
     
+    def update_org_data_old(map_id_to_org_data, records):
+        for data in records:
+            id = data['pivotValues'][0].split(':')[3]
+            data['id'] = id
+            if id not in map_id_to_org_data:
+                data['vanityName'] = '$none'
+                data['localizedName'] = '$none'
+                data['localizedWebsite'] = '$none'
+                data['preferredCountry'] = '$none'
+                data['companyHeadquarters'] = '$none'
+        
+            else:
+                if 'vanityName' in map_id_to_org_data[id]:
+                    data['vanityName'] = map_id_to_org_data[id]['vanityName']
+                else:
+                    data['vanityName'] = '$none'
+
+                if 'localizedName' in map_id_to_org_data[id]:
+                    data['localizedName'] = map_id_to_org_data[id]['localizedName']
+                else:
+                    data['localizedName'] = '$none'
+
+                if 'localizedWebsite' in map_id_to_org_data[id]:
+                    data['localizedWebsite'] = map_id_to_org_data[id]['localizedWebsite']
+                else:
+                    data['localizedWebsite'] = '$none'
+                
+                if 'name' in map_id_to_org_data[id] and (
+                    'preferredLocale' in map_id_to_org_data[id]['name']) and (
+                    'country' in map_id_to_org_data[id]['name']['preferredLocale']):
+                    data['preferredCountry'] = map_id_to_org_data[id]['name']['preferredLocale']['country']
+                else:
+                    data['preferredCountry'] = '$none'
+                
+                if 'locations' in map_id_to_org_data[id]:
+                    for location in map_id_to_org_data[id]['locations']:
+                        if 'locationType' in location and (
+                            location['locationType'] == 'HEADQUARTERS') and (
+                            'address' in location) and (
+                            'country' in location['address']):
+                            data['companyHeadquarters'] = location['address']['country']
+                            break
+                        else:
+                            data['companyHeadquarters'] = '$none'
+
+        return records
