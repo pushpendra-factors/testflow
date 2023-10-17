@@ -2,7 +2,7 @@ FROM golang:1.20.3-alpine AS builder
 
 WORKDIR /go/src/factors
 ADD /factors .
-RUN go build -o $GOPATH/bin/defaultsegmentcreationjob $GOPATH/src/factors/scripts/fill_default_segments_for_existing_projects/fill_default_segments_for_existing_projects.go
+RUN go build -o $GOPATH/bin/defaultsegmentcreationjob $GOPATH/src/factors/migrations/scripts/fill_default_segments_for_existing_projects/fill_default_segments_for_existing_projects.go
 
 
 # Create stripped down version without go and source code
