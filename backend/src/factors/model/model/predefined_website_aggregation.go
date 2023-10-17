@@ -50,7 +50,7 @@ const (
 	PredefPropCampaign            = "campaign"
 	PredefPropLandingPageURl      = "landing_page_url"
 	PredefPropReferrerUrl         = "referrer_url"
-	PredefPropExitPage            = "exit_page" // TODO add.
+	PredefPropExitPage            = "exit_page"
 	PredefPropTopPage             = "top_pages"
 	PredefPropCountry             = "country"
 	PredefPropRegion              = "region"
@@ -71,7 +71,7 @@ const (
 	PredefPropDispCampaign            = "Campaign"
 	PredefPropDispLandingPageURl      = "Landing Page URL"
 	PredefPropDispReferrerUrl         = "Referrer URL"
-	PredefPropDispExitPage            = "Exit Page" // TODO add.
+	PredefPropDispExitPage            = "Exit Page"
 	PredefPropDispTopPage             = "Top Pages"
 	PredefPropDispCountry             = "Country"
 	PredefPropDispRegion              = "Region"
@@ -90,15 +90,15 @@ const (
 	PredefPropLatestPageUrl = "latest_page_url"
 )
 
-// Have to check
-// During website_aggregation, we fetch the properties from events table. Here source repsents the details of properties in events table.
+
+// During website_aggregation, we fetch the properties from events table. Here source represent the details of properties in events table.
+// Predefined website aggregation is mostly for session based properties. Hence the source is defined against session data.
 var predefinedWebsiteAggregationProperties = []PredefinedDashboardProperty{
 	{Name: PredefPropSource, DisplayName: PredefPropDispSource, DataType: "categorical", SourceEventName: U.EVENT_NAME_SESSION, SourceEntity: EventEntity, SourceProperty: U.EP_SOURCE},
 	{Name: PredefPropMedium, DisplayName: PredefPropDispMedium, DataType: "categorical", SourceEventName: U.EVENT_NAME_SESSION, SourceEntity: EventEntity, SourceProperty: U.EP_MEDIUM},
 	{Name: PredefPropCampaign, DisplayName: PredefPropDispCampaign, DataType: "categorical", SourceEventName: U.EVENT_NAME_SESSION, SourceEntity: EventEntity, SourceProperty: U.EP_CAMPAIGN},
 
 	{Name: PredefPropLandingPageURl, DisplayName: PredefPropDispLandingPageURl, DataType: "categorical", SourceEventName: U.EVENT_NAME_SESSION, SourceEntity: EventEntity, SourceProperty: U.SP_INITIAL_PAGE_URL},
-	// TODO - CHECK if its event level.
 	{Name: PredefPropReferrerUrl, DisplayName: PredefPropDispReferrerUrl, DataType: "categorical", SourceEventName: U.EVENT_NAME_SESSION, SourceEntity: EventEntity, SourceProperty: U.SP_INITIAL_REFERRER_URL},
 
 	{Name: PredefPropCountry, DisplayName: PredefPropDispCountry, DataType: "categorical", SourceEventName: U.EVENT_NAME_SESSION, SourceEntity: EventEntity, SourceProperty: U.UP_COUNTRY},
@@ -116,8 +116,6 @@ var predefinedWebsiteAggregationProperties = []PredefinedDashboardProperty{
 	{Name: PredefProp6SignalRevenueRange, DisplayName: PredefPropDisp6SignalRevenueRange, DataType: "categorical", SourceEventName: "", SourceEntity: UserEntity, SourceProperty: U.SIX_SIGNAL_REVENUE_RANGE},
 }
 
-// TODO handle for total page Views. I think this should be number of sessions.
-// TODO check PredefWidPageView.
 var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 	{
 		InternalID:  1,
@@ -225,12 +223,25 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 
 var PredefinedDashboardUnitsPosition = map[string]map[string]int{
 	"position": {"1": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6},
-	"size":     {"1": 2, "2": 1, "3": 1, "4": 1, "5": 1, "6": 1},
+	"size":     {"1": 1, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0},
 }
 
-// TODO Check if this is used.
 var MapOfPredefPropertyNameToProperties = map[string]PredefinedDashboardProperty{
 	predefinedWebsiteAggregationProperties[0].Name: predefinedWebsiteAggregationProperties[0],
+	predefinedWebsiteAggregationProperties[1].Name: predefinedWebsiteAggregationProperties[1],
+	predefinedWebsiteAggregationProperties[2].Name: predefinedWebsiteAggregationProperties[2],
+	predefinedWebsiteAggregationProperties[3].Name: predefinedWebsiteAggregationProperties[3],
+	predefinedWebsiteAggregationProperties[4].Name: predefinedWebsiteAggregationProperties[4],
+	predefinedWebsiteAggregationProperties[5].Name: predefinedWebsiteAggregationProperties[5],
+	predefinedWebsiteAggregationProperties[6].Name: predefinedWebsiteAggregationProperties[6],
+	predefinedWebsiteAggregationProperties[7].Name: predefinedWebsiteAggregationProperties[7],
+	predefinedWebsiteAggregationProperties[8].Name: predefinedWebsiteAggregationProperties[8],
+	predefinedWebsiteAggregationProperties[9].Name: predefinedWebsiteAggregationProperties[9],
+	predefinedWebsiteAggregationProperties[10].Name: predefinedWebsiteAggregationProperties[10],
+	predefinedWebsiteAggregationProperties[11].Name: predefinedWebsiteAggregationProperties[11],
+	predefinedWebsiteAggregationProperties[12].Name: predefinedWebsiteAggregationProperties[12],
+	predefinedWebsiteAggregationProperties[13].Name: predefinedWebsiteAggregationProperties[13],
+	predefinedWebsiteAggregationProperties[14].Name: predefinedWebsiteAggregationProperties[14],
 }
 
 var MapOfPredefDashboardIDToWidgets = map[int64]PredefinedWidget{
@@ -243,7 +254,6 @@ var MapOfPredefDashboardIDToWidgets = map[int64]PredefinedWidget{
 	predefinedWebsiteAggregationWidgets[6].InternalID: predefinedWebsiteAggregationWidgets[6],
 }
 
-// TODO change in handler.
 type PredefWebsiteAggregationQueryGroup struct {
 	Class   string                          `json:"cl"`
 	Queries []PredefWebsiteAggregationQuery `json:"q_g"`
@@ -313,6 +323,7 @@ func (q *PredefWebsiteAggregationQuery) IsValid() (bool, string) {
 		return false, "Invalid widget internal ID sent"
 	}
 
+	// TODO if we should move towards MapOfPredefinedDashboardToPropertyNameToProperties.
 	for _, filter := range q.Filters {
 		if _, exists := MapOfPredefPropertyNameToProperties[filter.PropertyName]; !exists {
 			return false, "Invalid Filters provided for this dashboard ID"
