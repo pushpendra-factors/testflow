@@ -361,7 +361,7 @@ func duplicateMessagePropertiesPresent(mp *postgres.Jsonb) bool {
 	for i := 0; i < len(props)-1; i++ {
 		for j := i + 1; j < len(props); j++ {
 			// timestamp property can be selected for multiple granularities like day, hour, and week
-			if strings.EqualFold(props[i].Property, props[j].Property) && props[i].Property != "$timestamp" {
+			if strings.EqualFold(props[i].Property, props[j].Property) && (props[i].Entity == props[j].Entity) && (props[i].Property != "$timestamp") {
 				return true
 			}
 		}
