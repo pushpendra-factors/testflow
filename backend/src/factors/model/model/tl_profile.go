@@ -233,6 +233,8 @@ var GroupPropertyPrefixList = []string{
 	U.GROUP_NAME_SIX_SIGNAL,
 	U.LI_PROPERTIES_PREFIX,
 	U.GROUP_NAME_G2,
+	U.GROUP_NAME_HUBSPOT_DEAL,
+	U.GROUP_NAME_SALESFORCE_OPPORTUNITY,
 }
 
 func UnixToLocalTime(timestamp int64) *time.Time {

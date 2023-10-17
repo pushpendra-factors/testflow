@@ -105,7 +105,7 @@ export const getColumns = ({
             <LazyLoad
               height={20}
               once={true}
-              overflow={true}
+              // overflow={true}
               placeholder={
                 <Skeleton.Avatar
                   active={true}
