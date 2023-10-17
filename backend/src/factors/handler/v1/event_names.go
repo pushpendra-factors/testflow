@@ -187,7 +187,7 @@ func UploadListForFilters(c *gin.Context) {
 	resultTrimmed := make([]string, 0)
 	for _, data := range result {
 		if data != "" {
-			resultTrimmed = append(resultTrimmed, data)
+			resultTrimmed = append(resultTrimmed, strings.TrimSpace(data))
 		}
 	}
 	if len(resultTrimmed) <= 0 {

@@ -188,24 +188,25 @@ func matchFitlerValuesForCategorical(projectId int64, eventPropValue interface{}
 	}
 	// TODO What to do if there is a misclassification
 	results := make(map[int]bool)
-	propertyValue := fmt.Sprintf("%v", eventPropValue)
+	propertyValue := strings.TrimSpace(fmt.Sprintf("%v", eventPropValue))
 
 	for i, value := range filterValues {
+		filterValue := strings.TrimSpace(value.Value)
 		if value.Value == M.PropertyValueNone {
 			results[i] = handleNoneCase(propertyValue, isPresentEventPropValue, value.Operator)
 			continue
 		}
 		if value.Operator == M.EqualsOpStr {
-			results[i] = strings.EqualFold(propertyValue, value.Value)
+			results[i] = strings.EqualFold(propertyValue, filterValue)
 		}
 		if value.Operator == M.NotEqualOpStr {
-			results[i] = !strings.EqualFold(propertyValue, value.Value)
+			results[i] = !strings.EqualFold(propertyValue, filterValue)
 		}
 		if value.Operator == M.ContainsOpStr {
-			results[i] = strings.Contains(strings.ToLower(propertyValue), strings.ToLower(value.Value))
+			results[i] = strings.Contains(strings.ToLower(propertyValue), strings.ToLower(filterValue))
 		}
 		if value.Operator == M.NotContainsOpStr {
-			results[i] = !(strings.Contains(strings.ToLower(propertyValue), strings.ToLower(value.Value)))
+			results[i] = !(strings.Contains(strings.ToLower(propertyValue), strings.ToLower(filterValue)))
 		}
 		if value.Operator == M.InList {
 			cacheKeyList, err := M.GetListCacheKey(projectId, value.Value)
