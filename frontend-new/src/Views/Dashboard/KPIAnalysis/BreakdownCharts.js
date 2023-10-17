@@ -73,8 +73,6 @@ const BreakdownCharts = ({
   
   const unitId = unit.id || unit.inter_id;
 
-  const unitId = unit.id || unit.inter_id;
-
   useEffect(() => {
     const aggData = formatData(
       responseData,
