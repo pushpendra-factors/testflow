@@ -212,7 +212,7 @@ func main() {
 	explainV3Query := flag.Bool("explain_v3_query", false, "whether to implement new query payload")
 
 	companyPropsV1EnabledProjectIDs := flag.String("company_props_v1_enabled_projectIds", "", "To enable clearbit enrichment in new properties")
-	log.Info("properties v1 flow project flag in app-server: ", companyPropsV1EnabledProjectIDs)
+	log.Info("properties v1 flow project flag in app-server: ", *companyPropsV1EnabledProjectIDs)
 	flag.Parse()
 
 	defaultAppName := "app_server"
