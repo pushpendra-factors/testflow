@@ -130,7 +130,8 @@ function EventFilterWrapper({
     });
     const kpiItemsgroupedByCategoryProperty = groupKPIPropertiesOnCategory(
       kpiPropertiesArrays,
-      'user'
+      'user',
+      event?.group
     );
 
     filterDD.props = Object.values(kpiItemsgroupedByCategoryProperty);
