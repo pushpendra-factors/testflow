@@ -180,6 +180,13 @@ func associateDealToDomain(projectID int64, document *model.HubspotDocument) {
 			logCtx.Error("Failed to update deal group properties.")
 			return
 		}
+
+		// update group_user_id column for updated record to reference
+		errCode := store.GetStore().UpdateHubspotDocumentAsSynced(projectID, document.ID, document.Type, "", document.Timestamp, document.Action, "", dealGroupUserID) // marking user_id as empty won't update the column
+		if errCode != http.StatusAccepted {
+			logCtx.Error("Failed to update group user_id in hubspot deal created document as synced.")
+			return
+		}
 		groupUserID = dealGroupUserID
 	}
 
@@ -246,6 +253,13 @@ func associateOpportunityToDomain(projectID int64, document *model.SalesforceDoc
 			logCtx.Error("Failed to create or update salesforce opportunity groups properties.")
 			return
 		}
+
+		errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, "", "", opportunityGroupUserID, true)
+		if errCode != http.StatusAccepted {
+			logCtx.Error("Failed to update group_user_id in salesforce opportunity document.")
+			return
+		}
+
 		groupUserID = opportunityGroupUserID
 	}
 
