@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -28,6 +29,7 @@ func main() {
 	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
+	memSQLCertificate := flag.String("memsql_cert", "", "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
@@ -38,6 +40,19 @@ func main() {
 	startTime := flag.Int64("start_time", 0, "")
 	endTime := flag.Int64("end_time", 0, "")
 	workers := flag.Int("workers", 1, "")
+	associateDealToDomainByProjectID := flag.String("associate_deal_to_domain_by_project_id", "", "")
+	useHashIDForCRMGroupUserByProject := flag.String("use_hash_id_for_crm_group_user_by_project_id", "", "")
+	propertiesTypeCacheSize := flag.Int("property_details_cache_size", 0, "Cache size for in memory property detail.")
+	enablePropertyTypeFromDB := flag.Bool("enable_property_type_from_db", false, "Enable property type check from db.")
+	whitelistedProjectIDPropertyTypeFromDB := flag.String("whitelisted_project_ids_property_type_check_from_db", "", "Allowed project id for property type check from db.")
+	blacklistedProjectIDPropertyTypeFromDB := flag.String("blacklisted_project_ids_property_type_check_from_db", "", "Blocked project id for property type check from db.")
+	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
+	enableDomainsGroupByProjectID := flag.String("enable_domains_group_by_project_id", "", "")
+	enableUserDomainsGroupByProjectID := flag.String("enable_user_domains_group_by_project_id", "", "Allow domains group for users")
+	allowEmailDomainsByProjectID := flag.String("allow_email_domain_by_project_id", "", "Allow email domains for domain group")
+	enableHubspotGroupsByProjectID := flag.String("enable_hubspot_groups_by_project_id", "", "Enable hubspot groups for projects.")
+	captureSourceInUsersTable := flag.String("capture_source_in_users_table", "", "")
+	enableSalesforceGroupsByProjectIDs := flag.String("salesforce_groups_by_project_ids", "", "Enable salesforce groups by projects.")
 
 	flag.Parse()
 
@@ -55,23 +70,38 @@ func main() {
 		AppName: "backfill_crm_deals_domain",
 		Env:     *env,
 		MemSQLInfo: C.DBConf{
-			IsPSCHost: *isPSCHost,
-			Host:      *memSQLHost,
-			Port:      *memSQLPort,
-			User:      *memSQLUser,
-			Name:      *memSQLName,
-			Password:  *memSQLPass,
+			Certificate: *memSQLCertificate,
+			IsPSCHost:   *isPSCHost,
+			Host:        *memSQLHost,
+			Port:        *memSQLPort,
+			User:        *memSQLUser,
+			Name:        *memSQLName,
+			Password:    *memSQLPass,
 		},
-		RedisHost:           *redisHost,
-		RedisPort:           *redisPort,
-		RedisHostPersistent: *redisHostPersistent,
-		RedisPortPersistent: *redisPortPersistent,
-		SentryDSN:           *sentryDSN,
-		PrimaryDatastore:    *primaryDatastore,
+		RedisHost:                           *redisHost,
+		RedisPort:                           *redisPort,
+		RedisHostPersistent:                 *redisHostPersistent,
+		RedisPortPersistent:                 *redisPortPersistent,
+		SentryDSN:                           *sentryDSN,
+		PrimaryDatastore:                    *primaryDatastore,
+		AssociateDealToDomainByProjectID:    *associateDealToDomainByProjectID,
+		UseHashIDForCRMGroupUserByProject:   *useHashIDForCRMGroupUserByProject,
+		CacheSortedSet:                      *cacheSortedSet,
+		EnableDomainsGroupByProjectID:       *enableDomainsGroupByProjectID,
+		EnableUserDomainsGroupByProjectID:   *enableUserDomainsGroupByProjectID,
+		AllowEmailDomainsByProjectID:        *allowEmailDomainsByProjectID,
+		AllowedHubspotGroupsByProjectIDs:    *enableHubspotGroupsByProjectID,
+		CaptureSourceInUsersTable:           *captureSourceInUsersTable,
+		AllowedSalesforceGroupsByProjectIDs: *enableSalesforceGroupsByProjectIDs,
 	}
 
 	C.InitConf(config)
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
+	C.InitSortedSetCache(config.CacheSortedSet)
+	C.InitRedis(config.RedisHost, config.RedisPort)
+	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
+	C.InitPropertiesTypeCache(*enablePropertyTypeFromDB, *propertiesTypeCacheSize, *whitelistedProjectIDPropertyTypeFromDB, *blacklistedProjectIDPropertyTypeFromDB)
+	defer C.WaitAndFlushAllCollectors(65 * time.Second)
 
 	err := C.InitDB(*config)
 	if err != nil {
