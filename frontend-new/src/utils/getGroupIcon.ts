@@ -101,9 +101,6 @@ const getGroupIcon = (groupName: any): GroupIcon => {
   if (checkIcon?.includes('leadsquared')) {
     return 'leadSquared';
   }
-  if (checkIcon?.includes('group')) {
-    return 'profile';
-  }
   if (checkIcon?.includes('linkedin')) {
     return 'linkedin_ads';
   }
