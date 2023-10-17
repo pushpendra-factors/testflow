@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { SVG, Text } from '../../factorsComponents';
 import { OptionType, PlacementType } from '../FaSelect/types';
 import useAutoFocus from 'hooks/useAutoFocus';
@@ -38,6 +38,10 @@ export default function GroupSelect({
   allowSearchTextSelection = true
 }: GroupSelectProps) {
   const [groupSelectorOpen, setGroupSelectorOpen] = useState(true);
+  useEffect(() => {
+    if (options && options.length === 1) setGroupSelectorOpen(false);
+    else setGroupSelectorOpen(true);
+  }, [options]);
   const [selectedGroupIndex, setSelectedGroupIndex] = useState(0);
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -327,7 +331,7 @@ export default function GroupSelect({
           }`}
           ref={dropdownRef}
         >
-          {!groupSelectorOpen && (
+          {!groupSelectorOpen && options.length > 1 && (
             <div className={`${styles.dropdown__select__header}`}>
               {generateOptionHeader()}
             </div>
