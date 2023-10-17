@@ -1153,6 +1153,35 @@ func (store *MemSQL) GetHubspotFormDocuments(projectId int64) ([]model.HubspotDo
 
 	return documents, http.StatusFound
 }
+func (store *MemSQL) GetHubspotDocumentsByTypeAndAction(projectID int64, docType int, action int, fromMs,
+	toMs int64) ([]model.HubspotDocument, int) {
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": docType, "action": action,
+		"from_ms": fromMs, "to_ms": toMs})
+	if projectID == 0 || docType == 0 || action == 0 || fromMs == 0 || toMs == 0 {
+		logCtx.Error("Invalid parameters.")
+		return nil, http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+
+	var documents []model.HubspotDocument
+	err := db.Order("timestamp, created_at ASC").Where("project_id=? AND type=? AND action = ? AND timestamp between ? AND ? ",
+		projectID, docType, action, fromMs, toMs).Find(&documents).Error
+	if err != nil {
+		if !gorm.IsRecordNotFoundError(err) {
+			logCtx.WithError(err).Error("Failed to get hubspot documents by type.")
+			return nil, http.StatusInternalServerError
+		}
+		return nil, http.StatusNotFound
+	}
+
+	if len(documents) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	return documents, http.StatusFound
+}
 
 func (store *MemSQL) GetHubspotDocumentsByTypeForSync(projectId int64, typ int, maxCreatedAtSec int64) ([]model.HubspotDocument, int) {
 	argFields := log.Fields{"project_id": projectId, "type": typ}

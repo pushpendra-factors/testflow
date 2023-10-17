@@ -421,6 +421,8 @@ type Model interface {
 	GetLastSyncedHubspotUpdateDocumentByID(projectID int64, docID string, docType int) (*model.HubspotDocument, int)
 	GetAllHubspotObjectValuesByPropertyName(ProjectID int64, objectType, propertyName string) []interface{}
 	GetHubspotDocumentCountForSync(projectIDs []int64, docTypes []int, maxCreatedAtSec int64) ([]model.HubspotDocumentCount, int)
+	GetHubspotDocumentsByTypeAndAction(projectID int64, docType int, action int, fromMs,
+		toMs int64) ([]model.HubspotDocument, int)
 
 	// plan
 	GetPlanByID(planID uint64) (*model.Plan, int)

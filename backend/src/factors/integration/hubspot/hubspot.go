@@ -614,7 +614,7 @@ func GetHubspotSmartEventPayload(projectID int64, eventName, docID string,
 				_, prevProperties, _, _, _, err = GetContactProperties(projectID, prevDoc)
 			}
 			if docType == model.HubspotDocumentTypeDeal {
-				_, prevProperties, err = getDealProperties(projectID, prevDoc)
+				_, prevProperties, err = GetDealProperties(projectID, prevDoc)
 			}
 
 			if err != nil {
@@ -3026,7 +3026,7 @@ func getHubspotMappedDataTypeValue(projectID int64, eventName, enKey string, val
 	return value, nil
 }
 
-func getDealProperties(projectID int64, document *model.HubspotDocument) (*map[string]interface{}, *map[string]interface{}, error) {
+func GetDealProperties(projectID int64, document *model.HubspotDocument) (*map[string]interface{}, *map[string]interface{}, error) {
 
 	if document.Type != model.HubspotDocumentTypeDeal {
 		return nil, nil, errors.New("invalid type")
@@ -3038,7 +3038,7 @@ func getDealProperties(projectID int64, document *model.HubspotDocument) (*map[s
 	}
 
 	if isDealV3 {
-		return getDealPropertiesV3(projectID, document)
+		return GetDealPropertiesV3(projectID, document)
 	}
 
 	var deal Deal
@@ -3116,7 +3116,7 @@ func getGroupUserID(createdDocument *model.HubspotDocument) string {
 	return ""
 }
 
-func createOrUpdateHubspotGroupsProperties(projectID int64, document *model.HubspotDocument,
+func CreateOrUpdateHubspotGroupsProperties(projectID int64, document *model.HubspotDocument,
 	enProperties *map[string]interface{}, groupName, groupID string) (string, string, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": document.Type, "document": document,
 		"group_name": groupName, "group_id": groupID})
@@ -3257,7 +3257,7 @@ func createOrUpdateHubspotGroupsProperties(projectID int64, document *model.Hubs
 	return groupUserID, eventId, http.StatusOK
 }
 
-func getDealAssociatedIDs(projectID int64, document *model.HubspotDocument) ([]string, []string, error) {
+func GetDealAssociatedIDs(projectID int64, document *model.HubspotDocument) ([]string, []string, error) {
 	if document.Type != model.HubspotDocumentTypeDeal {
 		return nil, nil, errors.New("invalid document type")
 	}
@@ -3292,7 +3292,7 @@ func syncGroupCompany(projectID int64, document *model.HubspotDocument, enProper
 	}
 
 	companyGroupID := getCompanyGroupID(document, companyName, domainName)
-	companyUserID, _, status := createOrUpdateHubspotGroupsProperties(projectID, document, enProperties, model.GROUP_NAME_HUBSPOT_COMPANY, companyGroupID)
+	companyUserID, _, status := CreateOrUpdateHubspotGroupsProperties(projectID, document, enProperties, model.GROUP_NAME_HUBSPOT_COMPANY, companyGroupID)
 	if status != http.StatusOK {
 		return "", "", errors.New("failed to update company group properties")
 	}
@@ -3330,13 +3330,13 @@ func syncGroupDeal(projectID int64, enProperties *map[string]interface{}, docume
 		return document.GroupUserId, "", http.StatusOK
 	}
 
-	dealGroupUserID, eventId, status := createOrUpdateHubspotGroupsProperties(projectID, document, enProperties, model.GROUP_NAME_HUBSPOT_DEAL, document.ID)
+	dealGroupUserID, eventId, status := CreateOrUpdateHubspotGroupsProperties(projectID, document, enProperties, model.GROUP_NAME_HUBSPOT_DEAL, document.ID)
 	if status != http.StatusOK {
 		logCtx.Error("Failed to update deal group properties.")
 		return "", "", http.StatusInternalServerError
 	}
 
-	contactIDList, companyIDList, err := getDealAssociatedIDs(projectID, document)
+	contactIDList, companyIDList, err := GetDealAssociatedIDs(projectID, document)
 	if err != nil {
 		logCtx.WithFields(log.Fields{"contact_ids": contactIDList, "company_ids": companyIDList}).
 			WithError(err).Error("Failed to getDealAssociatedIDs.")
@@ -3428,7 +3428,7 @@ func syncGroupDeal(projectID int64, enProperties *map[string]interface{}, docume
 	}
 
 	if C.AssociateDealToDomainByProjectID(projectID) && companyID != "" {
-		status = associateDealToDomain(projectID, dealGroupUserID, companyID)
+		status = AssociateDealToDomain(projectID, dealGroupUserID, companyID)
 		if status != http.StatusOK {
 			logCtx.Error("Failed to associateDealToDomain.")
 		}
@@ -3437,7 +3437,7 @@ func syncGroupDeal(projectID int64, enProperties *map[string]interface{}, docume
 	return dealGroupUserID, eventId, http.StatusOK
 }
 
-func associateDealToDomain(projectID int64, dealGroupUserID string, companyID string) int {
+func AssociateDealToDomain(projectID int64, dealGroupUserID string, companyID string) int {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "deal_group_user_id": dealGroupUserID, "company_id": companyID})
 	if projectID == 0 || dealGroupUserID == "" || companyID == "" {
 		logCtx.Error("Missing required fields.")
@@ -3505,7 +3505,7 @@ func syncDealV2(projectID int64, document *model.HubspotDocument, hubspotSmartEv
 		return http.StatusInternalServerError
 	}
 
-	enProperties, properties, err := getDealProperties(projectID, document)
+	enProperties, properties, err := GetDealProperties(projectID, document)
 	if err != nil {
 		logCtx.Error("Failed to get hubspot deal document properties")
 		return http.StatusInternalServerError
@@ -3546,7 +3546,7 @@ func syncDealV2(projectID int64, document *model.HubspotDocument, hubspotSmartEv
 	return http.StatusOK
 }
 
-func getDealPropertiesV3(projectID int64, document *model.HubspotDocument) (*map[string]interface{}, *map[string]interface{}, error) {
+func GetDealPropertiesV3(projectID int64, document *model.HubspotDocument) (*map[string]interface{}, *map[string]interface{}, error) {
 	if document.Type != model.HubspotDocumentTypeDeal {
 		return nil, nil, errors.New("invalid type")
 	}
@@ -3591,7 +3591,7 @@ func syncDealV3(projectID int64, document *model.HubspotDocument, hubspotSmartEv
 		return http.StatusInternalServerError
 	}
 
-	enProperties, properties, err := getDealPropertiesV3(projectID, document)
+	enProperties, properties, err := GetDealPropertiesV3(projectID, document)
 	if err != nil {
 		logCtx.Error("Failed to get hubspot deal_v3 document properties")
 		return http.StatusInternalServerError
