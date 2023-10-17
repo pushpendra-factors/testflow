@@ -82,6 +82,34 @@ func Test6SignalEnrichmentInSDKTrackHandler(t *testing.T) {
 
 }
 
+func TestClearbitEnrichmentInAddUserProperties(t *testing.T) {
+	//commenting the code, as the project_id need to be hard coded and api enrichment key should be present in DB.
+	/*
+		userId := U.GetUUID()
+		payload := &SDK.AddUserPropertiesPayload{
+			UserId:   userId,
+			ClientIP: "89.76.236.199",
+			Properties: U.PropertiesMap{
+				"key": "value1",
+			},
+			RequestSource: model.UserSourceWeb,
+		}
+
+		status, response := SDK.AddUserProperties(35000008, payload)
+		assert.Equal(t, http.StatusOK, status)
+		assert.Equal(t, userId, response.UserId)
+		user, _ := store.GetStore().GetUser(35000008, response.UserId)
+		assert.NotNil(t, user)
+		properties, err := U.DecodePostgresJsonb(&user.Properties)
+		assert.NotNil(t, properties)
+		assert.Nil(t, err)
+		assert.Equal(t, "value1", (*properties)["key"])
+		fmt.Println((*properties)["$clr_company_category_industry"])
+		fmt.Println((*properties)["$6Signal_industry"])
+		fmt.Println(*properties)
+	*/
+}
+
 func TestSDK6SignalGroup(t *testing.T) {
 
 	project, _, err := SetupProjectUserReturnDAO()

@@ -659,6 +659,14 @@ func Track(projectId int64, request *TrackPayload,
 		existingUserProperties, isPropertiesDefaultableTrackRequest(source, request.Auto))
 
 	requestUserProperties := U.GetValidatedUserProperties(&request.UserProperties)
+	if projectId == 616 {
+		for k1, _ := range *requestUserProperties {
+			if strings.HasPrefix(k1, U.CLR_PROPERTIES_PREFIX) {
+				logCtx.Info("clearbit props in req user props in Track method: ", k1)
+			}
+		}
+	}
+
 	if userProperties != nil {
 		for k, v := range *requestUserProperties {
 			if _, exists := (*userProperties)[k]; !exists {
@@ -1566,6 +1574,13 @@ func AddUserProperties(projectId int64,
 
 	// Validate properties.
 	validProperties := U.GetValidatedUserProperties(&request.Properties)
+	if projectId == 616 {
+		for k1, _ := range *validProperties {
+			if strings.HasPrefix(k1, U.CLR_PROPERTIES_PREFIX) {
+				logCtx.Info("clearbit props in req user props of addUserProps: ", k1)
+			}
+		}
+	}
 
 	clearbitKey, err1 := store.GetStore().GetClearbitKeyFromProjectSetting(projectId)
 	if err1 != http.StatusFound {
