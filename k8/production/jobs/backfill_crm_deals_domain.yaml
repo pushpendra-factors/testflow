@@ -26,7 +26,9 @@ spec:
             - --env
             - $(ENV)
             - --memsql_host
-            - $(MEMSQL_HOST)
+            - $(MEMSQL_PSC_HOST)
+            - --memsql_is_psc_host
+            - $(MEMSQL_IS_PSC_HOST)
             - --memsql_port
             - $(MEMSQL_PORT)
             - --memsql_name

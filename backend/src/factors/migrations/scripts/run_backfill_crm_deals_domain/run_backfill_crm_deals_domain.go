@@ -22,6 +22,7 @@ func main() {
 
 	env := flag.String("env", C.DEVELOPMENT, "")
 
+	isPSCHost := flag.Int("memsql_is_psc_host", C.MemSQLDefaultDBParams.IsPSCHost, "")
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
 	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
 	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
@@ -54,11 +55,12 @@ func main() {
 		AppName: "backfill_crm_deals_domain",
 		Env:     *env,
 		MemSQLInfo: C.DBConf{
-			Host:     *memSQLHost,
-			Port:     *memSQLPort,
-			User:     *memSQLUser,
-			Name:     *memSQLName,
-			Password: *memSQLPass,
+			IsPSCHost: *isPSCHost,
+			Host:      *memSQLHost,
+			Port:      *memSQLPort,
+			User:      *memSQLUser,
+			Name:      *memSQLName,
+			Password:  *memSQLPass,
 		},
 		RedisHost:           *redisHost,
 		RedisPort:           *redisPort,
