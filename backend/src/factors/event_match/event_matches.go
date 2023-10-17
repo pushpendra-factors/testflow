@@ -188,31 +188,32 @@ func matchFitlerValuesForCategorical(projectId int64, eventPropValue interface{}
 	}
 	// TODO What to do if there is a misclassification
 	results := make(map[int]bool)
-	propertyValue := fmt.Sprintf("%v", eventPropValue)
+	propertyValue := strings.TrimSpace(fmt.Sprintf("%v", eventPropValue))
 
 	for i, value := range filterValues {
+		filterValue := strings.TrimSpace(value.Value)
 		if value.Value == M.PropertyValueNone {
 			results[i] = handleNoneCase(propertyValue, isPresentEventPropValue, value.Operator)
 			continue
 		}
 		if value.Operator == M.EqualsOpStr {
-			results[i] = strings.EqualFold(strings.TrimSpace(propertyValue), strings.TrimSpace(value.Value))
+			results[i] = strings.EqualFold(propertyValue, filterValue)
 		}
 		if value.Operator == M.NotEqualOpStr {
-			results[i] = !strings.EqualFold(strings.TrimSpace(propertyValue), strings.TrimSpace(value.Value))
+			results[i] = !strings.EqualFold(propertyValue, filterValue)
 		}
 		if value.Operator == M.ContainsOpStr {
-			results[i] = strings.Contains(strings.ToLower(strings.TrimSpace(propertyValue)), strings.ToLower(strings.TrimSpace(value.Value)))
+			results[i] = strings.Contains(strings.ToLower(propertyValue), strings.ToLower(filterValue))
 		}
 		if value.Operator == M.NotContainsOpStr {
-			results[i] = !(strings.Contains(strings.ToLower(strings.TrimSpace(propertyValue)), strings.ToLower(strings.TrimSpace(value.Value))))
+			results[i] = !(strings.Contains(propertyValue, strings.ToLower(filterValue)))
 		}
 		if value.Operator == M.InList {
 			cacheKeyList, err := M.GetListCacheKey(projectId, value.Value)
 			if err != nil {
 				results[i] = false
 			} else {
-				score, err := cacheRedis.ZScorePersistent(cacheKeyList, strings.TrimSpace(propertyValue))
+				score, err := cacheRedis.ZScorePersistent(cacheKeyList, propertyValue)
 				if err != nil {
 					results[i] = false
 				} else {
@@ -229,7 +230,7 @@ func matchFitlerValuesForCategorical(projectId int64, eventPropValue interface{}
 			if err != nil {
 				results[i] = false
 			} else {
-				score, err := cacheRedis.ZScorePersistent(cacheKeyList, strings.TrimSpace(propertyValue))
+				score, err := cacheRedis.ZScorePersistent(cacheKeyList, propertyValue)
 				if err != nil {
 					results[i] = true
 				} else {

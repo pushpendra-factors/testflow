@@ -232,7 +232,7 @@ func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int
 				return nil, http.StatusInternalServerError, "get cache key failed"
 			}
 			for _, value := range valuesInFile {
-				err = cacheRedis.ZAddPersistent(cacheKeyList, value, 0)
+				err = cacheRedis.ZAddPersistent(cacheKeyList, strings.TrimSpace(value), 0)
 				if err != nil {
 					log.WithFields(logFields).WithError(err).Error("failed to add new values to sorted set")
 					return nil, http.StatusInternalServerError, "failed to add new values to sorted set"
