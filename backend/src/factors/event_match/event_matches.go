@@ -206,7 +206,7 @@ func matchFitlerValuesForCategorical(projectId int64, eventPropValue interface{}
 			results[i] = strings.Contains(strings.ToLower(propertyValue), strings.ToLower(filterValue))
 		}
 		if value.Operator == M.NotContainsOpStr {
-			results[i] = !(strings.Contains(propertyValue, strings.ToLower(filterValue)))
+			results[i] = !(strings.Contains(strings.ToLower(propertyValue), strings.ToLower(filterValue)))
 		}
 		if value.Operator == M.InList {
 			cacheKeyList, err := M.GetListCacheKey(projectId, value.Value)
