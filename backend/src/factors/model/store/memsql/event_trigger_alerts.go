@@ -232,7 +232,7 @@ func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int
 				return nil, http.StatusInternalServerError, "get cache key failed"
 			}
 			for _, value := range valuesInFile {
-				err = cacheRedis.ZAddPersistent(cacheKeyList, value, 0)
+				err = cacheRedis.ZAddPersistent(cacheKeyList, strings.TrimSpace(value), 0)
 				if err != nil {
 					log.WithFields(logFields).WithError(err).Error("failed to add new values to sorted set")
 					return nil, http.StatusInternalServerError, "failed to add new values to sorted set"
@@ -361,7 +361,7 @@ func duplicateMessagePropertiesPresent(mp *postgres.Jsonb) bool {
 	for i := 0; i < len(props)-1; i++ {
 		for j := i + 1; j < len(props); j++ {
 			// timestamp property can be selected for multiple granularities like day, hour, and week
-			if strings.EqualFold(props[i].Property, props[j].Property) && props[i].Property != "$timestamp" {
+			if strings.EqualFold(props[i].Property, props[j].Property) && (props[i].Entity == props[j].Entity) && (props[i].Property != "$timestamp") {
 				return true
 			}
 		}
