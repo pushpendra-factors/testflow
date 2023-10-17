@@ -85,7 +85,7 @@ class DataFetch:
         return results, {'status': 'success', 'errMsg': '', API_REQUESTS: request_counter}
 
 
-        
+
     def get_ad_account_data(options, linkedin_setting, input_end_timestamp):
         url = AD_ACCOUNT_URL.format(linkedin_setting.ad_account)
         headers = {'Authorization': 'Bearer ' + linkedin_setting.access_token,
@@ -315,3 +315,196 @@ class DataFetch:
         enriched_insights = DataTransformation.enrich_campaign_company_fields_for_member_company_data(
                                 map_of_id_to_company_data, insights_rows, campaign_group)
         return enriched_insights, {'status': 'success', 'errMsg': '', API_REQUESTS: request_counter}
+    
+    @classmethod
+    def etl_member_company_data_old(self, options, linkedin_setting,
+                                                sync_info_with_type, 
+                                                end_timestamp, backfill_project_ids):
+        backfill_project_ids_list = backfill_project_ids.split(",")
+        is_backfill_enable_for_project = (linkedin_setting.project_id in backfill_project_ids_list
+                                            or backfill_project_ids == '*')
+        # for avoiding key error
+        if 'last_backfill_timestamp' not in sync_info_with_type:
+            sync_info_with_type['last_backfill_timestamp'] = 0
+        timerange_for_insights, timerange_for_backfill, errMsg = (U
+                                                .get_timestamp_ranges_for_company_insights_old(
+                                                MEMBER_COMPANY_INSIGHTS, 
+                                                sync_info_with_type, end_timestamp,
+                                                is_backfill_enable_for_project))
+        if errMsg != '':
+            log.warning("Range exceeded for project_id {} for doc_type {}".format(
+                        linkedin_setting.project_id, MEMBER_COMPANY_INSIGHTS))
+
+        request_counter = 0
+        for timestamp in timerange_for_insights:
+            
+            resp = self.etl_company_insights_for_timestamp_old(options,
+                            linkedin_setting, request_counter, timestamp)
+            if resp['status'] == 'failed' or resp['errMsg'] != '':
+                return resp
+            request_counter = resp[API_REQUESTS]
+        
+        
+          
+        if len(timerange_for_backfill) > 0:
+            resp = self.delete_and_backfill_member_company_insights_old(
+                                                options, linkedin_setting, 
+                                                timerange_for_backfill, request_counter)
+            if resp['errMsg'] != '':
+                return resp
+            request_counter = resp[API_REQUESTS]
+        
+        return {'status': 'success', 'errMsg': '', API_REQUESTS: request_counter}
+    
+    @classmethod
+    def etl_company_insights_for_timestamp_old(self, options,
+                                                linkedin_setting, request_counter, 
+                                                timestamp, is_backfill=False):
+        results, resp = self.get_insights_old(linkedin_setting, timestamp,
+                                                MEMBER_COMPANY_INSIGHTS, 
+                                                'MEMBER_COMPANY', request_counter)
+        if resp['status'] == 'failed' or resp['errMsg'] != '':
+            return resp
+        
+        return self.enrich_company_details_and_insert_data_old(options, MEMBER_COMPANY_INSIGHTS,
+                                                linkedin_setting.project_id, 
+                                                linkedin_setting.ad_account,
+                                                linkedin_setting.access_token, 
+                                                results, resp[API_REQUESTS], 
+                                                timestamp, is_backfill)
+    
+    @classmethod
+    def enrich_company_details_and_insert_data_old(self, options, 
+                                                doc_type, project_id, 
+                                                ad_account, access_token, 
+                                                records, request_counter, 
+                                                timestamp, is_backfill=False):
+        updated_records = []
+        if len(records) != 0:
+            ids_batch = U.get_batch_of_ids_old(records)
+            map_id_to_org_data, request_counter, errString = (self
+                                            .get_org_data_from_linkedin_with_retries_old(
+                                                ids_batch, access_token, 
+                                                request_counter))
+            if errString != '':
+                log.error(errString)
+                return {'status': 'failed', 'errMsg': errString, 
+                        API_REQUESTS: request_counter}
+            
+            updated_records = DataTransformation.update_org_data_old(
+                                                map_id_to_org_data, 
+                                                records)
+        else:
+            log.warning(NO_DATA_MEMBER_COMPANY_LOG.format(
+                                                project_id, 
+                                                ad_account))
+        
+        insert_err = DataInsert.insert_insights(options, 
+                                                doc_type, project_id,
+                                                ad_account, updated_records, 
+                                                timestamp, is_backfill)
+        if insert_err != '':
+            return {'status': 'failed', 'errMsg': insert_err, 
+                        API_REQUESTS: request_counter}
+        return {'status': 'success', 'errMsg': '', API_REQUESTS: request_counter}
+    
+
+    @classmethod
+    def delete_and_backfill_member_company_insights_old(
+                                                self, options,
+                                                linkedin_setting, 
+                                                backfill_timestamps, 
+                                                request_counter):
+        response = {}
+        for backfill_timestamp in backfill_timestamps:
+            delete_response = (DataService(options)
+                                .delete_linkedin_documents_for_doc_type_and_timestamp(
+                                                    linkedin_setting.project_id,
+                                                    linkedin_setting.ad_account,
+                                                    MEMBER_COMPANY_INSIGHTS,
+                                                    backfill_timestamp))
+            if not delete_response.ok:
+                return {'status': 'failed', 'errMsg': delete_response.text, 
+                            API_REQUESTS: request_counter}
+            
+            response = self.etl_company_insights_for_timestamp_old(
+                                                    options, linkedin_setting, 
+                                                    request_counter, backfill_timestamp,
+                                                    True)
+            if response['errMsg'] != '':
+                log.warning(response['errMsg'])
+                return response
+            request_counter = response[API_REQUESTS]
+        
+        return {'status': 'success', 'errMsg': '', API_REQUESTS: request_counter}
+        
+            # can't keep very long range, we might hit rate limit   
+    def get_insights_old(linkedin_setting, timestamp, doc_type, pivot, meta_request_count):
+        log.warning(FETCH_LOG_WITH_DOC_TYPE.format(
+            doc_type, linkedin_setting.project_id, timestamp))
+        
+        start_year, start_month, start_day = U.get_split_date_from_timestamp(timestamp)
+        end_year, end_month, end_day = U.get_split_date_from_timestamp(timestamp)
+
+        request_counter = meta_request_count
+        records = 0
+        results =[]
+
+        start = 0
+        is_first_fetch = True
+        # following condition check if it's first pull or pagination is required.
+        while is_first_fetch or len(response.json()[ELEMENTS])>=INSIGHTS_COUNT:
+            is_first_fetch = False
+            url = INSIGHTS_REQUEST_URL_FORMAT.format(
+                    pivot, start_day, start_month, 
+                    start_year, end_day, end_month, end_year,
+                    REQUESTED_FIELDS, linkedin_setting.ad_account,
+                    start, INSIGHTS_COUNT)
+            
+            headers = {'Authorization': 'Bearer ' + linkedin_setting.access_token,
+                    'X-Restli-Protocol-Version': PROTOCOL_VERSION, 'LinkedIn-Version': LINKEDIN_VERSION}
+            response, req_count = U.request_with_retries_and_sleep(url, headers)
+            request_counter += req_count
+            if not response.ok:
+                errString = API_ERROR_FORMAT.format(
+                                pivot, 'insights',
+                                response.status_code, response.text, 
+                                linkedin_setting.project_id, linkedin_setting.ad_account)
+                log.error(errString)
+                return [], {'status': 'failed', 'errMsg': errString,
+                                API_REQUESTS: request_counter}
+            if ELEMENTS in response.json():
+                records += len(response.json()[ELEMENTS])
+                results.extend(response.json()[ELEMENTS])
+            start += INSIGHTS_COUNT
+
+        log.warning(NUM_OF_RECORDS_LOG.format(
+            doc_type, linkedin_setting.project_id, records))
+        return results, {'status': 'success', 'errMsg': '',
+                            API_REQUESTS: request_counter}
+
+      # We get the company name and other related data here
+    # batch_of_ids - ["1,2,3", "4,5,6"] -> batch of ids of length 500
+    # each batch is an string with 500 ids joined together with ','
+    # Used a string because that was required in API request
+    def get_org_data_from_linkedin_with_retries_old(batch_of_ids, access_token, request_counter):
+        map_id_to_org_data = {}
+
+        for ids in batch_of_ids:
+            response, req_count = U.org_lookup(access_token, ids)
+            request_counter += req_count
+            if not response.ok or 'results' not in response.json():
+                return ({}, request_counter, ORG_DATA_FETCH_ERROR.format(
+                            response.text))
+            map_id_to_org_data.update(response.json()['results'])
+
+            # retry in case of failed ids
+            failed_ids_for_batch = U.get_failed_ids(ids, map_id_to_org_data)
+            if failed_ids_for_batch != "":
+                response, req_count = U.org_lookup(access_token, failed_ids_for_batch)
+                request_counter += req_count
+                if 'results' in response.json() and len(response.json()['results']) > 0:
+                    map_id_to_org_data.update(response.json()['results'])
+
+        return map_id_to_org_data, request_counter, ""
+    

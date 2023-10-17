@@ -301,3 +301,73 @@ class Util:
         
         len_timerange = len(timestamp_range)
         return timestamp_range, len_timerange
+    
+    # in case where from and to timestamps are given, 
+    # we only consider from and to timestamps, for the combined range
+    # we don't take backfill timestamp into consideration
+    @staticmethod
+    def get_timestamp_ranges_for_company_insights_old(doc_type, sync_info_with_type, 
+                                                end_timestamp, is_backfill_enable_for_project):
+        timerange_for_insights, timerange_for_backfill = [], []
+        checkBackfill = (end_timestamp == None and 
+                        sync_info_with_type['last_backfill_timestamp'] != 0 
+                        and is_backfill_enable_for_project)
+
+        
+        timerange_for_insights, errMsg = Util.get_timestamp_range(doc_type, sync_info_with_type, 
+                                                end_timestamp)
+        
+        if checkBackfill:
+            timerange_for_backfill = Util.get_timestamp_range_to_be_backfilled_old(
+                                        sync_info_with_type['last_backfill_timestamp'])
+        
+        combined_range = list(set(timerange_for_insights).union(set(timerange_for_backfill)))
+        combined_range.sort()
+        timestamp_8_days_ago = (datetime.now() - timedelta(days=BACKFILL_DAY)).strftime("%Y%m%d")
+        computed_timerange_insights, computed_timerange_backfill = [], []
+        for timestamp in combined_range:
+            if timestamp <= timestamp_8_days_ago:
+                computed_timerange_backfill.append(timestamp)
+            else:
+                computed_timerange_insights.append(timestamp)
+        
+        return computed_timerange_insights, computed_timerange_backfill, errMsg
+
+    @staticmethod
+    def get_timestamp_range_to_be_backfilled_old(last_backfill_timestamp):
+        backfill_end_date = (datetime.now() - timedelta(days=BACKFILL_DAY)).date()
+        backfill_start_date = (datetime.strptime(str(last_backfill_timestamp), '%Y%m%d')).date()
+
+        backfill_timestamps = []
+        num_of_days = (backfill_end_date-backfill_start_date).days + 1
+        if num_of_days <=0:
+            return []
+        for i in range (0, num_of_days):
+            date_required = backfill_start_date.strftime("%Y%m%d")
+            backfill_timestamps.append(date_required)
+            backfill_start_date = backfill_start_date + timedelta(days=1)
+
+        if len(backfill_timestamps) > 0:
+            return backfill_timestamps
+        else:
+            return []
+
+    
+    def get_batch_of_ids_old(records):
+        mapIDs = {}
+        batch_of_ids = []
+        len_of_batch = ORG_BATCH_SIZE
+        for data in records:
+            id = data['pivotValues'][0].split(':')[3]
+            mapIDs[id]= True
+
+        ids_list = list(mapIDs.keys())
+        batch_of_ids = [",".join(ids_list[i:i + len_of_batch]) for i in range(0, len(ids_list), len_of_batch)]
+        return batch_of_ids
+    
+    @staticmethod    
+    def org_lookup(access_token, ids):
+        url = ORG_LOOKUP_URL.format(ids)
+        headers = {'Authorization': 'Bearer ' + access_token, 
+                    'X-Restli-Protocol-Version': PROTOCOL_VERSION, 'LinkedIn-Version': LINKEDIN_VERSION}
+        return Util.request_with_retries_and_sleep(url, headers)
