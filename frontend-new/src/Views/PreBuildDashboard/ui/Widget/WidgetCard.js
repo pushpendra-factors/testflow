@@ -64,6 +64,7 @@ function WidgetCard({
   );
   const activeDashboard = useSelector((state) => selectActivePreDashboard(state));
   const [appliedBreakdown, setAppliedBreakdown] = useState(unit?.g_by);
+  const dashboardFilters = useSelector((state) => state.preBuildDashboardConfig.filters);
 
   const durationWithSavedFrequency = useMemo(() => {
     let savedFrequency = null;
@@ -113,7 +114,7 @@ function WidgetCard({
 
         let lastRefreshedAt = null;
         if (apiCallStatus.required) {
-          const payload = getPredefinedQuery(unit, durationWithSavedFrequency, [], appliedBreakdown?.[0]);
+          const payload = getPredefinedQuery(unit, durationWithSavedFrequency, dashboardFilters, appliedBreakdown?.[0]);
           const res = await getQueryData(
             activeProject.id,
             payload, 
@@ -164,7 +165,7 @@ function WidgetCard({
         });
       }
     },
-    [durationWithSavedFrequency, activeProject.id, activeDashboard?.inter_id, onDataLoadSuccess, setOldestRefreshTime, appliedBreakdown]
+    [durationWithSavedFrequency, activeProject.id, activeDashboard?.inter_id, onDataLoadSuccess, setOldestRefreshTime, appliedBreakdown, dashboardFilters]
   );
 
   useEffect(() => {
@@ -172,7 +173,7 @@ function WidgetCard({
     return () => {
       hasComponentUnmounted.current = true;
     };
-  }, [getData, durationWithSavedFrequency, appliedBreakdown]);
+  }, [getData, durationWithSavedFrequency, appliedBreakdown, dashboardFilters]);
 
 
   // const handleDelete = useCallback(() => {

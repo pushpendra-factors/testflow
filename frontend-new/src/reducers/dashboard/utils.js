@@ -25,10 +25,10 @@ export const getRearrangedData = (units, dashboard) => {
   } else {
     const unitsPosition = dashboard.units_position.position;
     const nonPositionedUnits = units.filter((u) => {
-      return !Object.prototype.hasOwnProperty.call(unitsPosition, u.id);
+      return !Object.prototype.hasOwnProperty.call(unitsPosition, u.id || u.inter_id);
     });
     const positionedUnits = units.filter((u) => {
-      return Object.prototype.hasOwnProperty.call(unitsPosition, u.id);
+      return Object.prototype.hasOwnProperty.call(unitsPosition, u.id || u.inter_id);
     });
     const result1 = nonPositionedUnits.map((u, index) => {
       return {
@@ -42,9 +42,9 @@ export const getRearrangedData = (units, dashboard) => {
     let result2 = positionedUnits.map((u) => {
       return {
         ...u,
-        position: unitsPosition[u.id] + startingPosition,
-        className: cardClassNames[dashboard.units_position.size[u.id]],
-        cardSize: dashboard.units_position.size[u.id]
+        position: unitsPosition[u.id || u.inter_id] + startingPosition,
+        className: cardClassNames[dashboard.units_position.size[u.id || u.inter_id]],
+        cardSize: dashboard.units_position.size[u.id || u.inter_id]
       };
     });
     result2 = SortData(result2, 'position', 'ascend');
@@ -66,6 +66,7 @@ export const getRequestForNewState = (newState) => {
 };
 
 export const getUpdateStateOnDashboardsLoaded = ({ payload }) => {
+  payload = payload.filter(fil => fil?.class !== 'predefined');
   const lastSelectedDashboardID = getItemFromLocalStorage(
     DASHBOARD_KEYS.ACTIVE_DASHBOARD_ID
   );
