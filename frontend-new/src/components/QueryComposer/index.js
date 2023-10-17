@@ -87,6 +87,12 @@ function QueryComposer({
     return customGroups;
   }, [queryType]);
 
+  const getAvailableGroups = useMemo(() => {
+    return Object.entries(groups?.all_groups || {})?.map(
+    ([group_name, display_name]) => [display_name, group_name]
+  )
+  },[groups]);
+
   useEffect(() => {
     if (activeProject && activeProject.id) {
       getUserPropertiesV2(activeProject.id, queryType);
@@ -247,7 +253,7 @@ function QueryComposer({
       blockList.push(
         <div key={index} className={styles.composer_body__query_block}>
           <QueryBlock
-            availableGroups={groupsList}
+            availableGroups={getAvailableGroups}
             index={index + 1}
             queryType={queryType}
             event={event}
@@ -266,7 +272,7 @@ function QueryComposer({
       blockList.push(
         <div key='init' className={styles.composer_body__query_block}>
           <QueryBlock
-            availableGroups={groupsList}
+            availableGroups={getAvailableGroups}
             queryType={queryType}
             index={queries.length + 1}
             queries={queries}
