@@ -209,7 +209,9 @@ const FeatureLockedFactorsInsightsOld = withFeatureLockHOC(FactorsInsightsOld, {
 });
 const CoreQuery = lazyWithRetry(() => import('../Views/CoreQuery'));
 const Dashboard = lazyWithRetry(() => import('../Views/Dashboard'));
-const PreBuildDashboard = lazyWithRetry(() => import('../Views/PreBuildDashboard/ui'));
+const PreBuildDashboard = lazyWithRetry(() =>
+  import('../Views/PreBuildDashboard/ui')
+);
 const Factors = lazyWithRetry(() => import('../Views/Factors'));
 const FeatureLockedFactors = withFeatureLockHOC(Factors, {
   featureName: FEATURES.FEATURE_EXPLAIN,
@@ -274,6 +276,14 @@ export const APP_ROUTES = {
 };
 
 export const APP_LAYOUT_ROUTES = {
+  //moved this to top for matching before /reports/:dashboard_id
+  VisitorIdentificationReport: {
+    exact: true,
+    path: PathUrls.VisitorIdentificationReport,
+    Layout: AppLayout,
+    Private: false,
+    Component: VisitorIdentificationReportComponent
+  },
   Dashboard: {
     title: 'Dashboard',
     path: PathUrls.Dashboard,
@@ -504,13 +514,7 @@ export const APP_LAYOUT_ROUTES = {
     Private: true,
     Layout: AppLayout
   },
-  VisitorIdentificationReport: {
-    exact: true,
-    path: PathUrls.VisitorIdentificationReport,
-    Layout: AppLayout,
-    Private: false,
-    Component: VisitorIdentificationReportComponent
-  },
+
   PathAnalysis: {
     exact: true,
     path: PathUrls.PathAnalysis,
