@@ -214,12 +214,20 @@ function AppLayout({
   }
 
   const hasSidebar = routesWithSidebar.find((route) => {
+    if (
+      matchPath(pathname, {
+        path: PathUrls.VisitorIdentificationReport,
+        exact: true,
+        strict: false
+      })
+    )
+      return false;
     return matchPath(pathname, {
       path: route,
       exact: true,
       strict: false
-    })
-  })
+    });
+  });
 
   return (
     <Layout>
