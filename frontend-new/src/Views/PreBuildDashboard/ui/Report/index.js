@@ -337,17 +337,16 @@ function CoreQuery({
 
         // update the chart type to the saved chart type
         const savedChartType = get(
-          selectedReport,
-          'settings.chart',
+          isQuerySaved,
+          'chart_setting.ty',
           apiChartAnnotations[CHART_TYPE_TABLE]
         );
-
+        
         // even though new queries wont have saved chart type as table but old queries can have saved chart type as table!
         if (savedChartType !== apiChartAnnotations[CHART_TYPE_TABLE]) {
           const changedKey = getChartChangedKey({
             queryType,
-            breakdown: [...groupBy.event, ...groupBy.global],
-            attributionModels: models
+            breakdown: isQuerySaved?.g_by
           });
           updateChartTypes({
             ...DefaultChartTypes,
@@ -770,11 +769,10 @@ function CoreQuery({
 
   const handleChartTypeChange = useCallback(
     ({ key, callUpdateService = true }) => {
+      const breakdown = appliedBreakdown;
       const changedKey = getChartChangedKey({
         queryType,
-        appliedBreakdown,
-        // campaignGroupBy: campaignState.group_by,
-        // attributionModels: attributionsState.models
+        breakdown
       });
 
       updateChartTypes({
@@ -784,8 +782,6 @@ function CoreQuery({
           [changedKey]: key
         }
       });
-      
-      
 
     },
     [queryType, updateChartTypes, appliedBreakdown, chartTypes]

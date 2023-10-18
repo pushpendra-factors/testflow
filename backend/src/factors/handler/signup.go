@@ -68,7 +68,7 @@ func SignUp(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "You have already signed up with OAuth flow with this email."})
 			return
 		} else if !existingAgent.IsEmailVerified {
-			err = sendSignUpEmail(existingAgent)
+			err = SendSignUpEmail(existingAgent)
 			if err != nil {
 				c.AbortWithStatus(http.StatusInternalServerError)
 				return
@@ -89,7 +89,7 @@ func SignUp(c *gin.Context) {
 		return
 	}
 	agent := createAgentResp.Agent
-	err = sendSignUpEmail(agent)
+	err = SendSignUpEmail(agent)
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
@@ -117,7 +117,7 @@ func SignUp(c *gin.Context) {
 	c.JSON(http.StatusCreated, resp)
 }
 
-func sendSignUpEmail(agent *model.Agent) error {
+func SendSignUpEmail(agent *model.Agent) error {
 	authToken, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, time.Second*helpers.SecondsInFifteenDays)
 	if err != nil {
 		log.WithField("email", agent.Email).Error("Failed To Create Agent Auth Token")
