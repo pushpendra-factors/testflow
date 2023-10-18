@@ -956,12 +956,27 @@ func CreateOrUpdateSalesforceGroupsProperties(projectID int64, document *model.S
 		}
 
 		createdDocument := documents[0]
+		groupUserID = createdDocument.GroupUserID
+		if groupUserID == "" && C.UseHashIDForCRMGroupUserByProject(projectID) {
+			userID, status := store.GetStore().CreateOrGetCRMGroupUser(projectID, groupName, groupID,
+				createdTimestamp, model.UserSourceSalesforce)
+			if status != http.StatusCreated && status != http.StatusFound {
+				logCtx.WithError(err).Error("Failed to create group user from updated record for salesforce.")
+				return "", http.StatusInternalServerError, ""
+			}
 
-		groupUserID, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID, createdDocument.GroupUserID,
+			groupUserID = userID
+		}
+
+		groupUser, err := store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID, groupUserID,
 			enProperties, createdTimestamp, lastModifiedTimestamp, model.UserSourceSalesforceString)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to update salesforce group properties.")
 			return "", http.StatusInternalServerError, ""
+		}
+
+		if !C.UseHashIDForCRMGroupUserByProject(projectID) {
+			groupUserID = groupUser
 		}
 
 		if createdDocument.GroupUserID == "" {
