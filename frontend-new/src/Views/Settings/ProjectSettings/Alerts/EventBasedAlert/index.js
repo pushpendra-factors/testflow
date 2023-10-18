@@ -81,7 +81,6 @@ import {
 } from 'Reducers/coreQuery/actions';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import { useHistory } from 'react-router-dom';
-import { featureLock } from 'Routes/feature';
 
 const { Option } = Select;
 
@@ -187,27 +186,22 @@ const EventBasedAlert = ({
     date_range: { ...DefaultDateRangeFormat }
   });
 
-
-  const [activeGrpBtn, setActiveGrpBtn] = useState(queryOptions?.group_analysis);
+  const [activeGrpBtn, setActiveGrpBtn] = useState(QUERY_TYPE_EVENT);
 
   const history = useHistory();
   const routeChange = (url) => {
     history.push(url);
   };
 
-  const enableAlertsPhase1 = featureLock(agent_details?.email, true);
+  useEffect(() => {
+    fetchGroups(activeProject.id);
+  }, [activeProject]);
 
   useEffect(() => {
-    fetchGroups(activeProject?.id);
-  }, [activeProject]);
- 
-  useEffect(() => { 
-    Object.keys(groupOpts || {}).forEach((group) => {
-      if (!groupProperties[group]) {
-        getGroupProperties(activeProject?.id, group);
-      }
-    });
-  }, [activeProject, groupProperties, groupOpts]); 
+    if (queryOptions.group_analysis === 'users') return;
+    getGroupProperties(activeProject.id, queryOptions.group_analysis);
+  }, [activeProject.id, queryOptions.group_analysis]);
+
 
   const groupsList = useMemo(() => {
     let groups = [];
@@ -247,9 +241,6 @@ const EventBasedAlert = ({
     setQueryOptions(opts);
   };
 
-  useEffect(()=>{
-    setGroupAnalysis('events')
-  },[])
 
   const [isGroupByDDVisible, setGroupByDDVisible] = useState(false);
 
@@ -448,7 +439,6 @@ const EventBasedAlert = ({
             queries={queries}
             eventChange={queryChange}
             groupAnalysis={activeGrpBtn}
-            whitelist={enableAlertsPhase1}
           />
         </div>
       );
@@ -465,7 +455,6 @@ const EventBasedAlert = ({
             eventChange={queryChange}
             groupBy={queryOptions.groupBy}
             groupAnalysis={activeGrpBtn}
-            whitelist={enableAlertsPhase1}
           />
         </div>
       );
@@ -500,9 +489,7 @@ const EventBasedAlert = ({
         closeDropDown={() => setGroupByDDVisible(false)}
         hideText={true}
         noMargin={true}
-        eventGroup={queryOptions?.group_analysis === "events" ? groupsList?.filter((item) => item?.[0] == queries?.[0]?.group)?.[0]?.[1] : false}
-        showAllGroups={enableAlertsPhase1}
-        whitelist={enableAlertsPhase1}
+        eventGroup={groupsList?.filter((item) => item?.[0] == queries?.[0]?.group)?.[0]?.[1]}
       />
     ) : null;
 
@@ -530,9 +517,7 @@ const EventBasedAlert = ({
                 closeDropDown={() => setGroupByDDVisible(false)}
                 hideText={true}
                 noMargin={true}
-                eventGroup={queryOptions?.group_analysis === "events" ? groupsList?.filter((item) => item?.[0] == queries?.[0]?.group)?.[0]?.[1] : false}
-                showAllGroups={enableAlertsPhase1}
-                whitelist={enableAlertsPhase1}
+                eventGroup={groupsList?.filter((item) => item?.[0] == queries?.[0]?.group)?.[0]?.[1]}
               />
             </div>
           );
@@ -572,9 +557,7 @@ const EventBasedAlert = ({
                 closeDropDown={() => setGroupByDDVisible(false)}
                 hideText={true}
                 noMargin={true}
-                eventGroup={queryOptions?.group_analysis === "events" ? groupsList?.filter((item) => item?.[0] == queries?.[0]?.group)?.[0]?.[1] : false}
-                whitelist={enableAlertsPhase1}
-                showAllGroups={enableAlertsPhase1}
+                eventGroup={groupsList?.filter((item) => item?.[0] == queries?.[0]?.group)?.[0]?.[1]}
               />
             </div>
           );
@@ -844,9 +827,7 @@ const EventBasedAlert = ({
     }
   }, [activeProject, projectSettings?.int_slack, slackEnabled]);
 
-
   useEffect(() => {
-    if (queryOptions.group_analysis === 'users') return;
     queries.forEach((ev) => {
       if (!eventPropertiesV2[ev.label]) {
         getEventPropertiesV2(activeProject.id, ev.label);
