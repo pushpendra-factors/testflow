@@ -12,10 +12,9 @@ import {
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
 import { CustomGroupNames } from 'Components/GlobalFilter/FilterWrapper/utils';
-import { GroupDisplayNames } from 'Components/Profile/utils';
 
 function EventGroupBlock({
-  eventGroup = false,
+  eventGroup,
   index,
   eventIndex,
   grpIndex,
@@ -32,9 +31,7 @@ function EventGroupBlock({
   closeDropDown,
   hideText = false, // added to hide the text from UI (Used in event based alerts)
   noMargin = false,
-  groupOpts,
-  showAllGroups = false, // added to show other groups in groupBlock ex event-alerts,
-  whitelist = false // added for testing purpose
+  groupOpts
 }) {
   const [filterOptions, setFilterOptions] = useState([]);
   const [propSelVis, setSelVis] = useState(false);
@@ -47,9 +44,8 @@ function EventGroupBlock({
       eventGroups,
       filterOptsObj,
       'event'
-    ); 
-
-    if (eventGroup && !showAllGroups && !whitelist) {
+    );
+    if (eventGroup) {
       const groupLabel = CustomGroupNames[eventGroup]
         ? CustomGroupNames[eventGroup]
         : groupOpts[eventGroup]
@@ -69,26 +65,7 @@ function EventGroupBlock({
       } else {
         filterOptsObj[groupLabel].values.push(...groupValues);
       }
-    }else if(showAllGroups && whitelist && eventGroup) {
-      for (const [group, properties] of Object.entries(groupProperties || {})) {
-        if (Object.keys(GroupDisplayNames).includes(group)) {
-          const groupLabel = CustomGroupNames[group]
-            ? CustomGroupNames[group]
-            : groupOpts[group]
-            ? groupOpts[group]
-            : PropTextFormat(group);
-          const groupValues = processProperties(properties, 'group', group);
-          const groupPropIconName = getGroupIcon(groupLabel);
-          filterOptsObj[groupLabel] = {
-            iconName:
-              groupPropIconName === 'NoImage' ? 'group' : groupPropIconName,
-            label: groupLabel,
-            values: groupValues
-          };
-        }
-      }
-    } 
-    else  {
+    } else {
       if (eventUserPropertiesV2) {
         convertAndAddPropertiesToGroupSelectOptions(
           eventUserPropertiesV2,
