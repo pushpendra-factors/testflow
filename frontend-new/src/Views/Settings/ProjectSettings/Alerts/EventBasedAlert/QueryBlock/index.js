@@ -45,7 +45,8 @@ function QueryBlock({
   groupProperties,
   getGroupProperties,
   groupAnalysis,
-  getEventPropertiesV2
+  getEventPropertiesV2,
+  whitelist = false // added for testing purpose
 }) {
   const [isDDVisible, setDDVisible] = useState(false);
   const [isFilterDDVisible, setFilterDDVisible] = useState(false);
@@ -77,11 +78,16 @@ function QueryBlock({
 
       showOpts = userOpts;
     } else {
-      const groupOpts = eventOptions?.filter((item) =>
-        groupNamesList?.includes(item?.label)
-      );
-      // showOpts = groupOpts.concat(userOpts);
-      showOpts = groupOpts;
+
+      if(whitelist){
+        showOpts = eventOptions;
+      }
+      else{
+        const groupOpts = eventOptions?.filter((item) =>
+          groupNamesList?.includes(item?.label)
+        );
+        showOpts = groupOpts;
+      } 
     }
 
     showOpts = showOpts?.map((opt) => {
@@ -249,6 +255,7 @@ function QueryBlock({
         event={event}
         setGroupState={pushGroupBy}
         closeDropDown={() => setGroupByDDVisible(false)}
+        showAllGroups={true}
       />
     ) : null;
 
@@ -411,6 +418,7 @@ function QueryBlock({
                 delGroupState={(ev) => deleteGroupBy(ev, gbpIndex)}
                 setGroupState={pushGroupBy}
                 closeDropDown={() => setGroupByDDVisible(false)}
+                showAllGroups={true}
               />
             </div>
           );
