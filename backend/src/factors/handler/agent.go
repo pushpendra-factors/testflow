@@ -760,11 +760,20 @@ func AgentGenerateResetPasswordLinkEmail(c *gin.Context) {
 		return
 	}
 
-	err = sendAgentResetPasswordEmail(agent)
-	if err != nil {
-		logCtx.WithField("email", email).Error("Failed to sendAgentResetPasswordEmail")
-		c.AbortWithStatus(http.StatusInternalServerError)
-		return
+	if !agent.IsEmailVerified {
+		err = SendSignUpEmail(agent)
+		if err != nil {
+			logCtx.WithField("email", email).Error("Failed to send Sign Up Email")
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+	} else {
+		err = sendAgentResetPasswordEmail(agent)
+		if err != nil {
+			logCtx.WithField("email", email).Error("Failed to sendAgentResetPasswordEmail")
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
 	}
 
 	resp := map[string]string{
