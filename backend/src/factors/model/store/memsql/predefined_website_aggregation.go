@@ -71,10 +71,15 @@ func (store *MemSQL) ExecuteSingleWebAggregationQuery(projectID int64, q model.P
 
 	transformedResult := transformPWAResultMetrics(q, *result)
 	if q.GroupByTimestamp == "" {
-		if len(result.Rows[0]) == 0 {
-			emptyRow := make([]interface{}, 1)
-			emptyRow[0] = 0
-			result.Rows[0] = emptyRow
+		if len(result.Rows) == 0 || len(result.Rows[0]) == 0 {
+			emptyRow := make([]interface{}, 0)
+			for i := 0; i <= len(result.Headers)-2; i++ {
+				emptyRow = append(emptyRow, "")
+			}
+			emptyRow = append(emptyRow, 0)
+			emptyRows := make([][]interface{}, 1)
+			emptyRows[0] = emptyRow
+			transformedResult.Rows = emptyRows
 		}
 	} else {
 		transformedResult = transformPWAResultDateValuesToInt(*result)
@@ -294,7 +299,8 @@ func transformPWAResultDateValuesToDateFormat(result model.QueryResult) model.Qu
 
 func addMissingColumnsAndTimestampPWAResult(result model.QueryResult, query model.PredefWebsiteAggregationQuery) model.QueryResult {
 	resultantRows := make([][]interface{}, 0)
-	if len(result.Headers) == 2 || len(result.Rows[0]) == 0 {
+
+	if len(result.Headers) == 2 && (len(result.Rows) == 0 || len(result.Rows[0]) == 0) {
 		mapOfAllColumValuesToResult := make(map[string][]interface{})
 		for _, row := range result.Rows {
 			key := U.GetkeyFromRow(row)
@@ -307,7 +313,7 @@ func addMissingColumnsAndTimestampPWAResult(result model.QueryResult, query mode
 		
 		for _, timestampInTime := range timestampsInTime {
 			timestampInEpoch := timestampInTime.Unix()
-			timestampKey := fmt.Sprintf("$dat%v", timestampInEpoch)
+			timestampKey := fmt.Sprintf("%v", timestampInEpoch)
 
 			if row, exists := mapOfAllColumValuesToResult[timestampKey]; exists {
 				resultantRows = append(resultantRows, row)
@@ -321,7 +327,7 @@ func addMissingColumnsAndTimestampPWAResult(result model.QueryResult, query mode
 	} else {
 		mapOfGroups := make(map[string][]interface{})
 		mapOfAllColumValuesToResult := make(map[string][]interface{})
-		groupStart, groupEnd := 1, len(result.Rows[0])-2
+		groupStart, groupEnd := 1, len(result.Headers)-2
 		for _, row := range result.Rows {
 			groupsKey := ""
 			for i := groupStart; i<=groupEnd; i++ {
@@ -339,17 +345,26 @@ func addMissingColumnsAndTimestampPWAResult(result model.QueryResult, query mode
 			timestampInEpoch := timestampInTime.Unix()
 			timestampKey := fmt.Sprintf("%v", timestampInEpoch)
 
-			for groupKey, groupValuesInRow := range mapOfGroups {
-				key := fmt.Sprintf("%v:;%v",timestampKey, groupKey)
-				if row, exists := mapOfAllColumValuesToResult[key]; exists {
-					resultantRows = append(resultantRows, row)
-				} else {
-					log.Warn(groupValuesInRow)
-					emptyRow := make([]interface{}, 1)
-					emptyRow[0] = timestampInEpoch
-					emptyRow = append(emptyRow, groupValuesInRow...)
-					emptyRow = append(emptyRow, 0)
-					resultantRows = append(resultantRows, emptyRow)
+			if len(mapOfGroups) == 0 {
+				emptyRow := make([]interface{}, 1)
+				emptyRow[0] = timestampInEpoch
+				for i := 1; i <= len(result.Headers)-2; i++ {
+					emptyRow = append(emptyRow, "")
+				}
+				emptyRow = append(emptyRow, 0)
+				resultantRows = append(resultantRows, emptyRow)
+			} else {
+				for groupKey, groupValuesInRow := range mapOfGroups {
+					key := fmt.Sprintf("%v:;%v",timestampKey, groupKey)
+					if row, exists := mapOfAllColumValuesToResult[key]; exists {
+						resultantRows = append(resultantRows, row)
+					} else {
+						emptyRow := make([]interface{}, 1)
+						emptyRow[0] = timestampInEpoch
+						emptyRow = append(emptyRow, groupValuesInRow...)
+						emptyRow = append(emptyRow, 0)
+						resultantRows = append(resultantRows, emptyRow)
+					}
 				}
 			}
 		}
