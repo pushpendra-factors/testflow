@@ -190,9 +190,10 @@ type Configuration struct {
 	SkippedOtpProjectIDs                   string
 	PrimaryDatastore                       string
 	// Segment Marker lookback
-	UseLookbackSegmentMarker bool
-	LookbackSegmentMarker    int
-	AllowedGoRoutines        int
+	UseLookbackSegmentMarker   bool
+	LookbackSegmentMarker      int
+	AllowedGoRoutines          int
+	ProcessOnlyAccountSegments bool
 	// Flag for enabling only the /mql routes for secondary env testing.
 	EnableMQLAPI bool
 	// Flags to disable DB and Redis writes when enabled.
@@ -648,6 +649,9 @@ func UseLookbackForSegmentMarker() bool {
 
 func LookbackForSegmentMarker() int {
 	return configuration.LookbackSegmentMarker
+}
+func ProcessOnlyAllAccountsSegments() bool {
+	return configuration.ProcessOnlyAccountSegments
 }
 
 func AllowedGoRoutinesSegmentMarker() int {
