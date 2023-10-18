@@ -66,7 +66,6 @@ export const getRequestForNewState = (newState) => {
 };
 
 export const getUpdateStateOnDashboardsLoaded = ({ payload }) => {
-  payload = payload.filter(fil => fil?.class !== 'predefined');
   const lastSelectedDashboardID = getItemFromLocalStorage(
     DASHBOARD_KEYS.ACTIVE_DASHBOARD_ID
   );

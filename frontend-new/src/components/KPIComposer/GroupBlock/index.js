@@ -26,7 +26,8 @@ function GroupBlock({
   KPIConfigProps,
   textStartCase,
   propertyMaps,
-  isSameKPIGrp
+  isSameKPIGrp,
+  selectedMainCategory
 }) {
   const [isDDVisible, setDDVisible] = useState([false]);
   const [isValueDDVisible, setValueDDVisible] = useState([false]);
@@ -54,7 +55,8 @@ function GroupBlock({
       : [];
     const kpiItemsgroupedByCategoryProperty = groupKPIPropertiesOnCategory(
       kpiProperties,
-      'user'
+      'user',
+      selectedMainCategory?.group
     );
     const propertyArrays = Object.values(kpiItemsgroupedByCategoryProperty);
 
