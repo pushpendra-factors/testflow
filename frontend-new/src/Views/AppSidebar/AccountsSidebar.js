@@ -104,8 +104,6 @@ const SegmentItem = ({ segment }) => {
 
   const isActive = activeSegment?.id === segment[1] && newSegmentMode === false;
 
-  console.log(activeSegment);
-
   return (
     <SidebarMenuItem
       text={segment[0]}
@@ -129,10 +127,6 @@ const AccountsSidebar = () => {
   const { newSegmentMode, activeSegment } = useSelector(
     (state) => state.accountProfilesView
   );
-
-  useEffect(() => {
-    console.log(activeSegment);
-  }, [activeSegment]);
 
   const segmentsList = useMemo(() => {
     return generateSegmentsList({
