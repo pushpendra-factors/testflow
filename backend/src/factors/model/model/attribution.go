@@ -3804,7 +3804,7 @@ func enrichDimensionsWithoutChannel(attributionData *map[string]*AttributionData
 			}
 			(*attributionData)[k].CustomDimensions[dim] = PropertyValueNone
 
-			customDimKey := GetKeyForCustomDimensionsName(v.MarketingInfo.CampaignName, v.MarketingInfo.AdgroupName, attributionKey)
+			customDimKey := GetKeyForCustomDimensionsName(v.MarketingInfo.CampaignID, v.MarketingInfo.AdgroupID, attributionKey)
 			if customDimKey == "" {
 				continue
 			}
@@ -3848,13 +3848,13 @@ func enrichDimensionsWithoutChannel(attributionData *map[string]*AttributionData
 	}
 }
 
-func GetKeyForCustomDimensionsName(cName, adgName, attributionKey string) string {
+func GetKeyForCustomDimensionsName(campaignId, adgroupId, attributionKey string) string {
 
 	key := ""
 	if attributionKey == AttributionKeyCampaign {
-		key = cName
+		key = campaignId
 	} else if attributionKey == AttributionKeyAdgroup {
-		key = adgName
+		key = adgroupId
 	}
 	return key
 }
