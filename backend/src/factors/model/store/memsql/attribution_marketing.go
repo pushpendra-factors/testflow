@@ -15,7 +15,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-//FetchMarketingReports returns the marketing report for given projectId and attribution query
+// FetchMarketingReports returns the marketing report for given projectId and attribution query
 func (store *MemSQL) FetchMarketingReports(projectID int64, q model.AttributionQuery, projectSetting model.ProjectSetting) (*model.MarketingReports, error) {
 	logFields := log.Fields{
 		"project_id":      projectID,
@@ -436,7 +436,7 @@ func (store *MemSQL) FetchMarketingReports(projectID int64, q model.AttributionQ
 	return data, err
 }
 
-//FetchMarketingReportsV1 returns the marketing report for given projectId and attribution query
+// FetchMarketingReportsV1 returns the marketing report for given projectId and attribution query
 func (store *MemSQL) FetchMarketingReportsV1(projectID int64, q model.AttributionQueryV1) (*model.MarketingReports, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -1228,7 +1228,7 @@ func (store *MemSQL) PullSmartProperties(projectID int64, campaignIDPlaceHolder 
 			logCtx1.WithError(err).Error("Failed to decode smart properties. Ignoring row and continuing")
 			continue
 		}
-		key := model.GetKeyForCustomDimensionsName(_campaignName, _adgroupName, attributionKey)
+		key := model.GetKeyForCustomDimensionsName(_campaignID, _adgroupID, attributionKey)
 
 		if key == "" {
 			continue
