@@ -206,6 +206,7 @@ func getDefaultAllAccountProperties(projectId int64) []string {
 			filteredAllAccountProperties = append(filteredAllAccountProperties, prop)
 		}
 	}
+	filteredAllAccountProperties = append(filteredAllAccountProperties, U.VISITED_WEBSITE)
 
 	return filteredAllAccountProperties
 }

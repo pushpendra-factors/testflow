@@ -296,7 +296,7 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 	}
 
 	// Create Default Segment - Visited Website
-	status, err = store.CreateDefaultSegment(projectID, model.GROUP_NAME_SIX_SIGNAL)
+	status, err = store.CreateDefaultSegment(projectID, model.PropertyEntityUser, false)
 	if status != http.StatusCreated {
 		log.WithError(err).Error("Failed to create default segment - \"Visited Website\".")
 	}
