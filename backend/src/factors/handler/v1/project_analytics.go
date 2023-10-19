@@ -67,7 +67,6 @@ func GetFactorsAnalyticsHandler(c *gin.Context) {
 			return
 		}
 
-		resultMap["metrics"] = append(resultMap["metrics"], data...)
 		if isHtmlRequired == "true" {
 
 			U.ReturnReadableHtmlFromMaps(c, globalData, model.GlobalDataProjectAnalyticsColumnsName, model.GlobalDataProjectAnalyticsColumnsNameToJsonKeys, fmt.Sprintf("project : %s (%d)", project.Name, project.ID))
@@ -75,6 +74,7 @@ func GetFactorsAnalyticsHandler(c *gin.Context) {
 			return
 		}
 
+		resultMap["metrics"] = append(resultMap["metrics"], data...)
 		c.JSON(http.StatusOK, resultMap)
 
 		return
