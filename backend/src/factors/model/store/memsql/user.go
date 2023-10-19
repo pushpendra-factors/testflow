@@ -342,32 +342,90 @@ func (store *MemSQL) GetUsersUpdatedAtGivenHour(projectID int64, fromTime time.T
 
 	var users []model.User
 	fromTimeString := model.FormatTimeToString(fromTime)
-	queryParams := []interface{}{projectID, projectID, fromTimeString}
+	queryParams := []interface{}{projectID, model.UserSourceDomains, projectID, model.UserSourceDomains, fromTimeString}
 
-	query := fmt.Sprintf(`SELECT id, 
-	  group_%d_user_id, 
-	  properties, 
-	  is_group_user, 
-	  source, 
-	  updated_at,
-	  associated_segments 
-    FROM 
-	  users 
-    WHERE 
-	  project_id = ?
-	  AND source != 9 
-	  AND group_%d_user_id IN (
-	    SELECT 
-		  DISTINCT(group_%d_user_id) 
-	    FROM 
-		  users 
-	    WHERE 
-		  project_id = ?
-		  AND source != 9 
-		  AND updated_at >= ?
-		  AND group_%d_user_id IS NOT NULL
-		 LIMIT 1000
-		);`, domainID, domainID, domainID, domainID)
+	query := fmt.Sprintf(`SELECT 
+	id, 
+	group_%d_user_id, 
+	properties, 
+	is_group_user, 
+	source, 
+	updated_at 
+  FROM 
+	(
+	  SELECT 
+		id, 
+		group_%d_user_id, 
+		properties, 
+		is_group_user, 
+		source, 
+		updated_at, 
+		ROW_NUMBER() OVER (
+		  PARTITION BY group_%d_user_id 
+		  ORDER BY 
+			updated_at DESC
+		) AS row_num 
+	  FROM 
+		users 
+	  WHERE 
+		project_id = ? 
+		AND source != ? 
+		AND group_%d_user_id IN (
+		  SELECT 
+			DISTINCT(group_%d_user_id) 
+		  FROM 
+			users 
+		  WHERE 
+			project_id = ? 
+			AND source != ? 
+			AND updated_at >= ? 
+			AND group_%d_user_id IS NOT NULL 
+		  LIMIT 
+			100000
+		)
+	) 
+  WHERE 
+	row_num <= 100;`, domainID, domainID, domainID, domainID, domainID, domainID)
+
+	db := C.GetServices().Db
+	err := db.Raw(query, queryParams...).Scan(&users).Error
+	if err != nil {
+		return users, http.StatusInternalServerError
+	}
+	if len(users) == 0 {
+		return nil, http.StatusNotFound
+	}
+	return users, http.StatusFound
+}
+
+// get all non group users where updated in last x hours
+func (store *MemSQL) GetNonGroupUsersUpdatedAtGivenHour(projectID int64, fromTime time.Time) ([]model.User, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"from_time":  fromTime,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	var users []model.User
+	fromTimeString := model.FormatTimeToString(fromTime)
+	queryParams := []interface{}{projectID, fromTimeString}
+
+	query := `SELECT 
+	id, 
+	properties, 
+	source, 
+	updated_at 
+  FROM 
+	users 
+  WHERE 
+	project_id = ?
+	AND (
+	  is_group_user IS NULL 
+	  OR is_group_user = 0
+	) 
+	AND updated_at >= ?
+  LIMIT 
+	100000;`
 
 	db := C.GetServices().Db
 	err := db.Raw(query, queryParams...).Scan(&users).Error

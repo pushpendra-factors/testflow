@@ -36,6 +36,7 @@ func main() {
 	useLookbackSegmentMarker := flag.Bool("use_lookback_segment_marker", false, "Whether to compute look_back time to fetch users in last x hours.")
 	lookbackSegmentMarker := flag.Int("lookback_segment_marker", 0, "Optional: Fetch users from last x hours")
 	allowedGoRoutines := flag.Int("allowed_go_routines", 1, "Number of allowed to routines")
+	processOnlyAccountSegments := flag.Bool("process_only_account_segments", false, "This flag allows only processing of all accounts type segments")
 	flag.Parse()
 
 	if *env != "development" &&
@@ -64,11 +65,12 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		PrimaryDatastore:         *primaryDatastore,
-		SentryDSN:                *sentryDSN,
-		UseLookbackSegmentMarker: *useLookbackSegmentMarker,
-		LookbackSegmentMarker:    *lookbackSegmentMarker,
-		AllowedGoRoutines:        *allowedGoRoutines,
+		PrimaryDatastore:           *primaryDatastore,
+		SentryDSN:                  *sentryDSN,
+		UseLookbackSegmentMarker:   *useLookbackSegmentMarker,
+		LookbackSegmentMarker:      *lookbackSegmentMarker,
+		AllowedGoRoutines:          *allowedGoRoutines,
+		ProcessOnlyAccountSegments: *processOnlyAccountSegments,
 	}
 
 	C.InitConf(config)

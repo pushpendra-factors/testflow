@@ -24,8 +24,7 @@ func SegmentMarker(projectID int64) int {
 
 	domainGroup, status := store.GetStore().GetGroup(projectID, model.GROUP_NAME_DOMAINS)
 	if status != http.StatusFound {
-		log.Error("Domain group not enabled")
-		return status
+		log.WithField("project_id", projectID).Error("Domain group not enabled")
 	}
 
 	var lookBack time.Time
@@ -39,10 +38,17 @@ func SegmentMarker(projectID int64) int {
 		lookBack = U.TimeNowZ().Add(time.Duration(-hour) * time.Hour)
 	}
 
+	var users []model.User
+	var statusCode int
 	startTime := time.Now().Unix()
 
-	// list of 1000 domains their associated users with last updated_at in last 1 hour
-	users, statusCode := store.GetStore().GetUsersUpdatedAtGivenHour(projectID, lookBack, domainGroup.ID)
+	if status != http.StatusFound {
+		// domains not enabled, so fetching list of all the users with last updated_at in last x hour
+		users, statusCode = store.GetStore().GetNonGroupUsersUpdatedAtGivenHour(projectID, lookBack)
+	} else {
+		// list of domains and their associated users with last updated_at in last x hour
+		users, statusCode = store.GetStore().GetUsersUpdatedAtGivenHour(projectID, lookBack, domainGroup.ID)
+	}
 	if statusCode != http.StatusFound {
 		log.WithFields(log.Fields{"project_id": projectID, "look_back": lookBack}).
 			Error("Couldn't find updated records in last given hours with given statuscode for this project", statusCode)
@@ -122,6 +128,56 @@ func SegmentMarker(projectID int64) int {
 		}
 	}
 
+	if !C.ProcessOnlyAllAccountsSegments() {
+		// process user based segments
+		userProfileSegmentsProcessing(projectID, users, allSegmentsMap, decodedSegmentRulesMap, eventNameIDsMap)
+	}
+
+	// check if there is no All type segment in the project
+	var domainsGroupName string
+	if _, exists := allSegmentsMap["All"]; exists {
+		domainsGroupName = "All"
+	} else if _, exists := allSegmentsMap[model.GROUP_NAME_DOMAINS]; exists {
+		domainsGroupName = model.GROUP_NAME_DOMAINS
+	}
+
+	if domainsGroupName != "" {
+		status, err := allAccountsSegmentMarkup(projectID, users, allSegmentsMap[domainsGroupName], decodedSegmentRulesMap[domainsGroupName], domainGroup.ID, eventNameIDsMap)
+		if status != http.StatusOK || err != nil {
+			log.WithField("project_id", projectID).Error("Unable to update associated_segments to the domain user.")
+			return status
+		}
+	}
+
+	// updating segment_marker_last_run in project settings after completing the job
+	errCode := store.GetStore().UpdateSegmentMarkerLastRun(projectID, U.TimeNowZ())
+
+	if errCode != http.StatusAccepted {
+		log.WithField("project_id", projectID).Error("Unable to update segment_marker_last_run in project_settings.")
+		return errCode
+	}
+
+	return http.StatusOK
+}
+
+func transformPayloadForInProperties(globalUserProperties []model.QueryProperty) []model.QueryProperty {
+	for i, p := range globalUserProperties {
+		if v, exist := model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]; exist {
+			v.LogicalOp = p.LogicalOp
+			if p.Value == "true" {
+				globalUserProperties[i] = v
+			} else if p.Value == "false" || p.Value == "$none" {
+				v.Operator = model.EqualsOpStr
+				v.Value = "$none"
+				globalUserProperties[i] = v
+			}
+		}
+	}
+	return globalUserProperties
+}
+
+func userProfileSegmentsProcessing(projectID int64, users []model.User, allSegmentsMap map[string][]model.Segment,
+	decodedSegmentRulesMap map[string][]model.Query, eventNameIDsMap map[string]interface{}) {
 	statusMap := make(map[string]int, 0)
 
 	var waitGroup sync.WaitGroup
@@ -159,41 +215,6 @@ func SegmentMarker(projectID int64) int {
 	if len(statusMap) > 0 {
 		log.WithField("project_id", projectID).Error("failures while running segment_markup for following users ", statusMap)
 	}
-
-	// check if there is no All type segment in the project
-	if _, exists := allSegmentsMap["All"]; exists {
-		status, err := allAccountsSegmentMarkup(projectID, users, allSegmentsMap["All"], decodedSegmentRulesMap["All"], domainGroup.ID, eventNameIDsMap)
-		if status != http.StatusOK || err != nil {
-			log.WithField("project_id", projectID).Error("Unable to update associated_segments to the domain user.")
-			return status
-		}
-	}
-
-	// updating segment_marker_last_run in project settings after completing the job
-	errCode := store.GetStore().UpdateSegmentMarkerLastRun(projectID, U.TimeNowZ())
-
-	if errCode != http.StatusAccepted {
-		log.WithField("project_id", projectID).Error("Unable to update segment_marker_last_run in project_settings.")
-		return errCode
-	}
-
-	return http.StatusOK
-}
-
-func transformPayloadForInProperties(globalUserProperties []model.QueryProperty) []model.QueryProperty {
-	for i, p := range globalUserProperties {
-		if v, exist := model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]; exist {
-			v.LogicalOp = p.LogicalOp
-			if p.Value == "true" {
-				globalUserProperties[i] = v
-			} else if p.Value == "false" || p.Value == "$none" {
-				v.Operator = model.EqualsOpStr
-				v.Value = "$none"
-				globalUserProperties[i] = v
-			}
-		}
-	}
-	return globalUserProperties
 }
 
 func usersProcessing(projectID int64, user model.User, allSegmentsMap map[string][]model.Segment,
