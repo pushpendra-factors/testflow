@@ -190,12 +190,6 @@ type SixSignalFilter struct {
 	Type  string `json:"type"`
 }
 
-type TimelinesConfig struct {
-	DisabledEvents []string      `json:"disabled_events"`
-	UserConfig     UserConfig    `json:"user_config"`
-	AccountConfig  AccountConfig `json:"account_config"`
-}
-
 type FilterIps struct {
 	BlockIps []string `json:"block_ips"`
 }

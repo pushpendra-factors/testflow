@@ -207,6 +207,28 @@ var GROUP_TO_COMPANY_NAME_MAP = map[string]string{
 	U.GROUP_NAME_G2:                 U.G2_NAME,
 }
 
+type TimelinesConfig struct {
+	DisabledEvents []string      `json:"disabled_events"`
+	UserConfig     UserConfig    `json:"user_config"`
+	AccountConfig  AccountConfig `json:"account_config"`
+}
+
+// default timeline config
+var DefaultTimelineConfig = TimelinesConfig{
+	DisabledEvents: []string{"Contact Updated", "Campaign Member Updated", "Engagement Meeting Updated", "Engagement Call Updated"},
+	UserConfig: UserConfig{
+		Milestones:    []string{},
+		TableProps:    []string{U.UP_COUNTRY, U.SP_SPENT_TIME},
+		LeftpaneProps: []string{U.UP_EMAIL, U.UP_COUNTRY, U.UP_PAGE_COUNT},
+	},
+	AccountConfig: AccountConfig{
+		Milestones:    []string{},
+		TableProps:    []string{U.SIX_SIGNAL_NAME, U.SIX_SIGNAL_INDUSTRY, U.SIX_SIGNAL_EMPLOYEE_RANGE, U.SIX_SIGNAL_ANNUAL_REVENUE},
+		LeftpaneProps: []string{},
+		UserProp:      "",
+	},
+}
+
 func FormatTimeToString(time time.Time) string {
 	return time.Format("2006-01-02 15:04:05.000000")
 }

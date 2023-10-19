@@ -104,33 +104,27 @@ func main() {
 			}
 
 			if !groupSegmentExists && model.AccountGroupNames[group.Name] {
-				segmentPayload := model.SegmentPayload{
-					Name:        newSegmentName,
-					Description: "",
-					Query: model.Query{
-						GlobalUserProperties: []model.QueryProperty{
-							{
-								Entity:    model.PropertyEntityUserGlobal,
-								Type:      U.PropertyTypeCategorical,
-								GroupName: group.Name,
-								Property:  U.GROUP_TO_DEFAULT_SEGMENT_MAP[group.Name],
-								Operator:  model.EqualsOpStr,
-								Value:     "true",
-								LogicalOp: "AND",
-							},
-						},
-						TableProps: []string{U.SIX_SIGNAL_NAME, U.SIX_SIGNAL_INDUSTRY, U.SIX_SIGNAL_EMPLOYEE_RANGE, U.SIX_SIGNAL_ANNUAL_REVENUE},
-					},
-					Type: U.GROUP_NAME_DOMAINS,
-				}
-
-				status, err := store.GetStore().CreateSegment(projectID, &segmentPayload)
+				status, err := store.GetStore().CreateDefaultSegment(projectID, group.Name, true)
 				if status != http.StatusCreated {
-					logCtx.WithError(err).Error("Failed to create default segment.")
-					return
+					log.WithError(err).Error("Failed to create default segment.")
 				}
 			}
 		}
+
+		userSegmentExists := false
+		for _, segment := range allSegmentsMap[U.GROUP_NAME_DOMAINS] {
+			if segment.Name == U.ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES[U.VISITED_WEBSITE] {
+				userSegmentExists = true
+			}
+		}
+
+		if !userSegmentExists {
+			status, err := store.GetStore().CreateDefaultSegment(projectID, model.PropertyEntityUser, false)
+			if status != http.StatusCreated {
+				log.WithError(err).Error("Failed to create default segment.")
+			}
+		}
+
 	}
 
 }

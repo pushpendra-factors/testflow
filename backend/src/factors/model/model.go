@@ -911,6 +911,7 @@ type Model interface {
 	UpdateSegmentById(projectId int64, id string, segmentPayload model.SegmentPayload) (error, int)
 	IsDuplicateSegmentNameCheck(projectID int64, name string) bool
 	DeleteSegmentById(projectId int64, segmentId string) (int, error)
+	CreateDefaultSegment(projectID int64, entity string, isGroup bool) (int, error)
 
 	// segment_marker
 	CheckIfUserPerformedGivenEvents(queryStr string, params []interface{}) ([]int, int)

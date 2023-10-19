@@ -4,6 +4,7 @@ import cx from 'classnames';
 import { Button } from 'antd';
 import noop from 'lodash/noop';
 import {
+  defaultSegmentsList,
   generateSegmentsList,
   getGroupList
 } from 'Components/Profile/AccountProfiles/accountProfiles.helpers';
@@ -20,7 +21,7 @@ import styles from './index.module.scss';
 import SidebarMenuItem from './SidebarMenuItem';
 import SidebarSearch from './SidebarSearch';
 import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
-import { AccountsSidebarIconsMapping } from './appSidebar.constants';
+import { defaultSegmentIconsMapping } from './appSidebar.constants';
 import { useHistory } from 'react-router-dom';
 import { PathUrls } from 'Routes/pathUrls';
 import { selectActiveSegment } from 'Reducers/userProfilesView/selectors';
@@ -35,44 +36,11 @@ const NewSegmentItem = () => {
   );
 };
 
-// const GroupItem = ({ group }) => {
-//   const dispatch = useDispatch();
-//   const activeAccountPayload = useSelector((state) =>
-//     selectAccountPayload(state)
-//   );
-//   const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
-
-//   const changeAccountPayload = () => {
-//     dispatch(
-//       setAccountPayloadAction({
-//         source: group[1],
-//         filters: [],
-//         segment_id: ''
-//       })
-//     );
-//     dispatch(setActiveSegmentAction({}));
-//   };
-
-//   const setAccountPayload = () => {
-//     if (activeAccountPayload.source !== group[1]) {
-//       changeAccountPayload();
-//     }
-//   };
-
-//   const isActive =
-//     activeAccountPayload.source === group[1] &&
-//     !activeSegment?.id &&
-//     newSegmentMode === false;
-
-//   return (
-//     <SidebarMenuItem
-//       text={group[0]}
-//       isActive={isActive}
-//       onClick={setAccountPayload}
-//       icon={AccountsSidebarIconsMapping[group[1]]}
-//     />
-//   );
-// };
+const SegmentIcon = (name) => {
+  return defaultSegmentIconsMapping[name]
+    ? defaultSegmentIconsMapping[name]
+    : 'pieChart';
+};
 
 const SegmentItem = ({ segment }) => {
   const dispatch = useDispatch();
@@ -109,7 +77,7 @@ const SegmentItem = ({ segment }) => {
       text={segment[0]}
       isActive={isActive}
       onClick={setActiveSegment}
-      icon='pieChart'
+      icon={SegmentIcon(segment[0])}
       iconColor={'#8c8c8c'}
     />
   );
