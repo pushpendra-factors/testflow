@@ -31,6 +31,34 @@ var ProjectAnalyticsColumnsName = []string{
 	"6Signal Total API Hits",
 }
 
+var GlobalDataProjectAnalyticsColumnsName = []string{
+	"User Count",
+	"Alerts Count",
+	"Segments Count",
+	"Dashboard Count",
+	"Webhooks Count",
+	"Report Count",
+	"SDK Integration Completed",
+	"Identified Count",
+	"Integration Connected",
+	"Integration Disconnected",
+	"Integration Err",
+}
+
+var GlobalDataProjectAnalyticsColumnsNameToJsonKeys = map[string]string{
+	"User Count":                "user_count",
+	"Alerts Count":              "alerts_count",
+	"Segments Count":            "segments_count",
+	"Dashboard Count":           "dashboard_count",
+	"Webhooks Count":            "webhooks_count",
+	"Report Count":              "report_count",
+	"SDK Integration Completed": "sdk_int_completed",
+	"Identified Count":          "identified_count",
+	"Integration Connected":     "integration_connected",
+	"Integration Disconnected":  "integration_disconnected",
+	"Integration Err":           "integration_err",
+}
+
 var AllProjectAnalyticsColumnsName = []string{
 	"Project ID",
 	"Project Name",
