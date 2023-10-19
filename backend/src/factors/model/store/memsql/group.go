@@ -77,6 +77,15 @@ func (store *MemSQL) CreateGroup(projectID int64, groupName string, allowedGroup
 	}
 
 	// Create Default Segment for the Account Groups-
+	status, err = store.CreateDefaultSegment(projectID, groupName)
+	if status != http.StatusCreated {
+		log.WithError(err).Error("Failed to create default segment.")
+	}
+
+	return &group, http.StatusCreated
+}
+
+func (store *MemSQL) CreateDefaultSegment(projectID int64, groupName string) (int, error) {
 	if model.AccountGroupNames[groupName] {
 		segmentPayload := model.SegmentPayload{
 			Name:        U.ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES[U.GROUP_TO_DEFAULT_SEGMENT_MAP[groupName]],
@@ -97,13 +106,13 @@ func (store *MemSQL) CreateGroup(projectID int64, groupName string, allowedGroup
 			},
 			Type: U.GROUP_NAME_DOMAINS,
 		}
-		status, err = store.CreateSegment(projectID, &segmentPayload)
+		status, err := store.CreateSegment(projectID, &segmentPayload)
 		if status != http.StatusCreated {
-			logCtx.WithError(err).Error("Failed to create default segment.")
+			log.WithError(err).Error("Failed to create default segment.")
+			return status, err
 		}
 	}
-
-	return &group, http.StatusCreated
+	return http.StatusCreated, nil
 }
 
 func (store *MemSQL) CreateOrGetGroupByName(projectID int64, groupName string, allowedGroupNames map[string]bool) (*model.Group, int) {

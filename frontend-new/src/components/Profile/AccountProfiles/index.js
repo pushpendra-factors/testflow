@@ -61,7 +61,6 @@ import {
 } from './accountProfiles.constants';
 import { selectGroupsList } from 'Reducers/groups/selectors';
 import UpdateSegmentModal from './UpdateSegmentModal';
-import { AccountsSidebarIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
 import DownloadCSVModal from './DownloadCSVModal';
 import { fetchProfileAccounts } from 'Reducers/timelines';
 import { selectSegments } from 'Reducers/timelines/selectors';
@@ -70,6 +69,7 @@ import { formatCount } from 'Utils/dataFormatter';
 import { PathUrls } from 'Routes/pathUrls';
 import { getGroups } from '../../../reducers/coreQuery/middleware';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
+import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
 
 const groupToCompanyPropMap = {
   $hubspot_company: '$hubspot_company_name',
@@ -1117,11 +1117,11 @@ function AccountProfiles({
 
   const titleIcon = useMemo(() => {
     if (Boolean(accountPayload.segment_id) === true) {
-      return 'pieChart';
+      return defaultSegmentIconsMapping[activeSegment?.name]
+        ? defaultSegmentIconsMapping[activeSegment?.name]
+        : 'pieChart';
     }
-    return AccountsSidebarIconsMapping[accountPayload.source] != null
-      ? AccountsSidebarIconsMapping[accountPayload.source]
-      : 'buildings';
+    return 'buildings';
   }, [accountPayload]);
 
   return (
@@ -1183,7 +1183,7 @@ function AccountProfiles({
       <ControlledComponent
         controller={
           accounts.isLoading === false &&
-          accounts.data.length > 0 &&
+          accounts.data?.length > 0 &&
           (newSegmentMode === false || areFiltersDirty === true)
         }
       >
@@ -1192,7 +1192,7 @@ function AccountProfiles({
       <ControlledComponent
         controller={
           accounts.isLoading === false &&
-          accounts.data.length === 0 &&
+          (!accounts.data || accounts.data?.length === 0) &&
           (newSegmentMode === false || areFiltersDirty === true)
         }
       >
@@ -1223,6 +1223,7 @@ function AccountProfiles({
       />
 
       <UpdateSegmentModal
+        segmentName={activeSegment.name}
         visible={updateSegmentModal}
         onCancel={() => setUpdateSegmentModal(false)}
         onCreate={handleCreateSegment}

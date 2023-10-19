@@ -249,22 +249,7 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 	defaultClearBitIntegrationState := false
 	deafultSixSignalIntegrationState := true
 
-	//default timeline config
-	timelinesConfig := model.TimelinesConfig{
-		DisabledEvents: []string{"Contact Updated", "Campaign Member Updated", "Engagement Meeting Updated", "Engagement Call Updated"},
-		UserConfig: model.UserConfig{
-			Milestones:    []string{},
-			TableProps:    []string{U.UP_COUNTRY, U.SP_SPENT_TIME},
-			LeftpaneProps: []string{U.UP_EMAIL, U.UP_COUNTRY, U.UP_PAGE_COUNT},
-		},
-		AccountConfig: model.AccountConfig{
-			Milestones:    []string{},
-			TableProps:    []string{},
-			LeftpaneProps: []string{},
-			UserProp:      "",
-		},
-	}
-	tlConfigEncoded, err := U.EncodeStructTypeToPostgresJsonb(timelinesConfig)
+	tlConfigEncoded, err := U.EncodeStructTypeToPostgresJsonb(model.DefaultTimelineConfig)
 	if err != nil {
 		logCtx.WithError(err).Error("Default Timelines Config Encode Failed.")
 	}
@@ -306,8 +291,14 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 	// inserting project into free plan by default
 	status, err := store.CreateDefaultProjectPlanMapping(projectID, model.PLAN_ID_FREE)
 	if status != http.StatusCreated {
-		logCtx.Error("Create default project plan mapping failed on create project dependencies for project ID ", projectID)
+		logCtx.WithField("err", err).Error("Create default project plan mapping failed on create project dependencies for project ID ", projectID)
 		return errCode
+	}
+
+	// Create Default Segment - Visited Website
+	status, err = store.CreateDefaultSegment(projectID, model.GROUP_NAME_SIX_SIGNAL)
+	if status != http.StatusCreated {
+		log.WithError(err).Error("Failed to create default segment - \"Visited Website\".")
 	}
 
 	// statusCode := store.CreatePredefinedDashboards(projectID, agentUUID)
