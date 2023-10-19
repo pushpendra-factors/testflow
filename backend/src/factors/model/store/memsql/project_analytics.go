@@ -292,11 +292,6 @@ func (store *MemSQL) GetGlobalProjectAnalyticsDataByProjectId(projectID int64, m
 	result := make([]map[string]interface{}, 0)
 	params := make([]interface{}, 0)
 
-	domainsGroup, errCode := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
-	if errCode != http.StatusFound || domainsGroup == nil {
-		return nil, nil
-	}
-
 	stmt := fmt.Sprintf(` 
 	with 
     step_1 as ( select count(*) as users_count from users where project_id =?),
@@ -305,15 +300,10 @@ func (store *MemSQL) GetGlobalProjectAnalyticsDataByProjectId(projectID int64, m
     step_4 as ( select count(*) as dashboard_count from  dashboards where project_id = ? and is_deleted = ? ),
     step_5 as ( select count(*) as webhooks_count from event_trigger_alerts where project_id = ? and JSON_EXTRACT_STRING(event_trigger_alert,'%s') = ? and is_deleted = ? and internal_status = ? ),
     step_6 as ( select count(*) as report_count from queries where project_id =? and is_deleted = ? ),  
-	step_7 as (SELECT count(*) as identified_users FROM users WHERE project_id = ?  AND source < 8 AND customer_user_id is not null AND is_group_user= false AND
-				group_%d_user_id is not null),
-	step_8 as (select SUM(login_count) as logins_within_project from agents join project_agent_mappings on uuid where project_id = ?),
-	step_9 as (select saved_queries from feature_gates  where project_id = ?)
-	 
-    select * from step_1,step_2,step_3,step_4,step_5,step_6 ,step_7,step_8,step_9;
-	`, model.WEBHOOK, domainsGroup.ID)
+    select * from step_1,step_2,step_3,step_4,step_5,step_6;
+	`, model.WEBHOOK)
 
-	params = append(params, projectID, projectID, false, projectID, projectID, false, projectID, true, false, model.ACTIVE, projectID, false, projectID, projectID, projectID)
+	params = append(params, projectID, projectID, false, projectID, projectID, false, projectID, true, false, model.ACTIVE, projectID, false)
 
 	rows, err := db.Raw(stmt, params).Rows()
 	if err != nil {
@@ -334,9 +324,9 @@ func (store *MemSQL) GetGlobalProjectAnalyticsDataByProjectId(projectID int64, m
 			return nil, err
 		}
 
-		var int_completed bool
+		var intgrationCompleted bool
 		isExist, _ := store.IsEventExistsWithType(projectID, model.TYPE_AUTO_TRACKED_EVENT_NAME)
-		int_completed = isExist
+		intgrationCompleted = isExist
 
 		var settings *model.ProjectSetting
 		var errCode int
@@ -345,7 +335,7 @@ func (store *MemSQL) GetGlobalProjectAnalyticsDataByProjectId(projectID int64, m
 			return nil, err
 		}
 
-		integration_connected, integration_disconnected, integration_err := getIntegrationStatusesCount(*settings)
+		integrationConnectedCount, integrationDisconnectedCount, integrationErrCount := getIntegrationStatusesCount(*settings)
 
 		// metering logic here
 		timeZoneString, statusCode := store.GetTimezoneForProject(projectID)
@@ -367,11 +357,11 @@ func (store *MemSQL) GetGlobalProjectAnalyticsDataByProjectId(projectID int64, m
 			"dashboard_count":          dashboardCount,
 			"webhooks_count":           webhooksCount,
 			"report_count":             reportCount,
-			"sdk_int_completed":        int_completed,
+			"sdk_int_completed":        intgrationCompleted,
 			"identified_count":         identifiedCount,
-			"integration_connected":    integration_connected,
-			"integration_disconnected": integration_disconnected,
-			"integration_err":          integration_err,
+			"integration_connected":    integrationConnectedCount,
+			"integration_disconnected": integrationDisconnectedCount,
+			"integration_err":          integrationErrCount,
 		}
 
 		result = append(result, data)
