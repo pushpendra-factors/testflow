@@ -1,4 +1,4 @@
-import React, { Fragment, useMemo, useState } from 'react';
+import React, { Fragment, useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import cx from 'classnames';
 import { Button } from 'antd';
@@ -23,6 +23,7 @@ import ControlledComponent from 'Components/ControlledComponent/ControlledCompon
 import { AccountsSidebarIconsMapping } from './appSidebar.constants';
 import { useHistory } from 'react-router-dom';
 import { PathUrls } from 'Routes/pathUrls';
+import { selectActiveSegment } from 'Reducers/userProfilesView/selectors';
 
 const NewSegmentItem = () => {
   return (
@@ -34,44 +35,44 @@ const NewSegmentItem = () => {
   );
 };
 
-const GroupItem = ({ group }) => {
-  const dispatch = useDispatch();
-  const activeAccountPayload = useSelector((state) =>
-    selectAccountPayload(state)
-  );
-  const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
+// const GroupItem = ({ group }) => {
+//   const dispatch = useDispatch();
+//   const activeAccountPayload = useSelector((state) =>
+//     selectAccountPayload(state)
+//   );
+//   const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
 
-  const changeAccountPayload = () => {
-    dispatch(
-      setAccountPayloadAction({
-        source: group[1],
-        filters: [],
-        segment_id: ''
-      })
-    );
-    dispatch(setActiveSegmentAction({}));
-  };
+//   const changeAccountPayload = () => {
+//     dispatch(
+//       setAccountPayloadAction({
+//         source: group[1],
+//         filters: [],
+//         segment_id: ''
+//       })
+//     );
+//     dispatch(setActiveSegmentAction({}));
+//   };
 
-  const setAccountPayload = () => {
-    if (activeAccountPayload.source !== group[1]) {
-      changeAccountPayload();
-    }
-  };
+//   const setAccountPayload = () => {
+//     if (activeAccountPayload.source !== group[1]) {
+//       changeAccountPayload();
+//     }
+//   };
 
-  const isActive =
-    activeAccountPayload.source === group[1] &&
-    !activeAccountPayload.segment_id &&
-    newSegmentMode === false;
+//   const isActive =
+//     activeAccountPayload.source === group[1] &&
+//     !activeSegment?.id &&
+//     newSegmentMode === false;
 
-  return (
-    <SidebarMenuItem
-      text={group[0]}
-      isActive={isActive}
-      onClick={setAccountPayload}
-      icon={AccountsSidebarIconsMapping[group[1]]}
-    />
-  );
-};
+//   return (
+//     <SidebarMenuItem
+//       text={group[0]}
+//       isActive={isActive}
+//       onClick={setAccountPayload}
+//       icon={AccountsSidebarIconsMapping[group[1]]}
+//     />
+//   );
+// };
 
 const SegmentItem = ({ segment }) => {
   const dispatch = useDispatch();
@@ -79,8 +80,10 @@ const SegmentItem = ({ segment }) => {
   const activeAccountPayload = useSelector((state) =>
     selectAccountPayload(state)
   );
-  const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
-  
+
+  const { newSegmentMode, activeSegment } = useSelector(
+    (state) => state.accountProfilesView
+  );
 
   const changeActiveSegment = () => {
     const opts = { ...activeAccountPayload };
@@ -88,19 +91,20 @@ const SegmentItem = ({ segment }) => {
     opts.source = segment[2].type;
     opts.filters = [];
     delete opts.search_filter;
-    history.replace({pathname: '/accounts/segments/' + segment[1]});
+    history.replace({ pathname: '/accounts/segments/' + segment[1] });
     dispatch(setActiveSegmentAction(segment[2]));
     dispatch(setAccountPayloadAction(opts));
   };
 
   const setActiveSegment = () => {
-    if (activeAccountPayload.segment_id !== segment[1]) {
+    if (activeSegment?.id !== segment[1]) {
       changeActiveSegment();
     }
   };
 
-  const isActive =
-    activeAccountPayload.segment_id === segment[1] && newSegmentMode === false;
+  const isActive = activeSegment?.id === segment[1] && newSegmentMode === false;
+
+  console.log(activeSegment);
 
   return (
     <SidebarMenuItem
@@ -121,7 +125,14 @@ const AccountsSidebar = () => {
   const activeAccountPayload = useSelector((state) =>
     selectAccountPayload(state)
   );
-  const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
+
+  const { newSegmentMode, activeSegment } = useSelector(
+    (state) => state.accountProfilesView
+  );
+
+  useEffect(() => {
+    console.log(activeSegment);
+  }, [activeSegment]);
 
   const segmentsList = useMemo(() => {
     return generateSegmentsList({

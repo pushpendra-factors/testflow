@@ -31,10 +31,12 @@ const AppSidebar = () => {
     selectAccountPayload(state)
   );
 
-  const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
+  const { newSegmentMode, activeSegment } = useSelector(
+    (state) => state.accountProfilesView
+  );
   const isAllAccountsSelected =
     IsDomainGroup(activeAccountPayload.source) &&
-    Boolean(activeAccountPayload.segment_id) === false;
+    Boolean(activeSegment?.id) === false;
 
   const isSidebarCollapsed = useSelector((state) =>
     selectSidebarCollapsedState(state)
@@ -84,12 +86,15 @@ const AppSidebar = () => {
           <div
             className={cx('flex justify-between items-center', {
               'pb-5 border-b border-gray-300':
-                checkMatchPath(pathname, PathUrls.ProfileAccounts)
-                || checkMatchPath(pathname, PathUrls.ProfileAccountsSegmentsURL)
+                checkMatchPath(pathname, PathUrls.ProfileAccounts) ||
+                checkMatchPath(pathname, PathUrls.ProfileAccountsSegmentsURL)
             })}
           >
             <ControlledComponent
-              controller={!checkMatchPath(pathname, PathUrls.ProfileAccounts) && !checkMatchPath(pathname, PathUrls.ProfileAccountsSegmentsURL)}
+              controller={
+                !checkMatchPath(pathname, PathUrls.ProfileAccounts) &&
+                !checkMatchPath(pathname, PathUrls.ProfileAccountsSegmentsURL)
+              }
             >
               <div className='flex col-gap-2 items-center px-3'>
                 <SVG
@@ -106,8 +111,10 @@ const AppSidebar = () => {
               </div>
             </ControlledComponent>
             <ControlledComponent
-              controller={checkMatchPath(pathname, PathUrls.ProfileAccounts)
-                || checkMatchPath(pathname, PathUrls.ProfileAccountsSegmentsURL)}
+              controller={
+                checkMatchPath(pathname, PathUrls.ProfileAccounts) ||
+                checkMatchPath(pathname, PathUrls.ProfileAccountsSegmentsURL)
+              }
             >
               <div className='w-11/12 pl-4'>
                 <SidebarMenuItem
