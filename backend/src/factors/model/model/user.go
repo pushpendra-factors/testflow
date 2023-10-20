@@ -58,8 +58,8 @@ type User struct {
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 	// source of the user record (1 = WEB, 2 = HUBSPOT, 3 = SALESFORCE)
-	Source      *int      `json:"source"`
-	LastEventAt time.Time `json:"last_event_at"`
+	Source      *int       `json:"source"`
+	LastEventAt *time.Time `json:"last_event_at"`
 
 	// Intentionally removed JSON columns apart from properties.
 	// These columns should accessed using direct methods.
