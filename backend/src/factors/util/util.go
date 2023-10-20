@@ -1789,7 +1789,7 @@ func AddTwoNumbersInt64Float64(a, b interface{}) (int64, error) {
 	return sum, nil
 }
 
-func ReturnReadableHtmlFromMaps(c *gin.Context, status map[string][]map[string]interface{}, keys []string, toJSONKeys map[string]string) {
+func ReturnReadableHtmlFromMaps(c *gin.Context, status map[string][]map[string]interface{}, keys []string, toJSONKeys map[string]string, header string) {
 
 	key_list := make([]string, 0, len(status))
 	for key := range status {
@@ -1802,6 +1802,12 @@ func ReturnReadableHtmlFromMaps(c *gin.Context, status map[string][]map[string]i
 		data := status[key]
 		heading := CreateHeadingTemplate(key)
 		t := template.New("heading")
+		if header != "" {
+			heading = CreateHeadingTemplate(header)
+		}
+		if header == "remove" {
+			heading = ""
+		}
 		t, err := t.Parse(heading)
 		if err != nil {
 			log.Error(err)

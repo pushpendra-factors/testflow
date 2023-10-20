@@ -95,6 +95,13 @@ func GetCurrentMonthYear(timeZone TimeZoneString) string {
 	return TimeNowIn(timeZone).Format("January2006")
 
 }
+
+func GetPreviousMonthYear(timeZone TimeZoneString) string {
+
+	return TimeNowIn(timeZone).AddDate(0, -1, 0).Format("January2006")
+
+}
+
 func GetCurrentDayTimestamp() int64 {
 	currentTime := time.Now()
 	return time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day(), 0, 0, 0, 0, currentTime.Location()).Unix()
