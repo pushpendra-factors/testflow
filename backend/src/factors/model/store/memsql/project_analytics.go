@@ -299,13 +299,13 @@ func (store *MemSQL) GetGlobalProjectAnalyticsDataByProjectId(projectID int64, m
     step_3 as ( select count(*) as segments_count from segments where project_id =? ),
     step_4 as ( select count(*) as dashboard_count from  dashboards where project_id = ? and is_deleted = ? ),
     step_5 as ( select count(*) as webhooks_count from event_trigger_alerts where project_id = ? and JSON_EXTRACT_STRING(event_trigger_alert,'%s') = ? and is_deleted = ? and internal_status = ? ),
-    step_6 as ( select count(*) as report_count from queries where project_id =? and is_deleted = ? ),  
+    step_6 as ( select count(*) as report_count from queries where project_id =? and is_deleted = ? )  
     select * from step_1,step_2,step_3,step_4,step_5,step_6;
 	`, model.WEBHOOK)
 
 	params = append(params, projectID, projectID, false, projectID, projectID, false, projectID, true, false, model.ACTIVE, projectID, false)
 
-	rows, err := db.Raw(stmt, params).Rows()
+	rows, err := db.Raw(stmt, params...).Rows()
 	if err != nil {
 		return nil, err
 	}
