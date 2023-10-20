@@ -216,8 +216,8 @@ const QueryActionsComponent = ({
   };
 
   const messageBoxContent = (
-    <div>
-      <p>Are you sure you want to overwrite these changes on the existing report?</p>
+    <div className={`${styles.messageBox}`}>
+      <p className={`${styles.boxParaContent}`}>Are you sure you want to overwrite these changes on the existing report?</p>
       <div className={`${styles.buttonContainer}`}>
         <Button className={`${styles.customWhiteButton}`} onClick={handleSaveNewClick} type="ghost" >
           Save as New
@@ -309,7 +309,6 @@ const QueryActionsComponent = ({
             arrowPointAtCenter={true}
             autoAdjustOverflow
             onVisibleChange={(visible) => setIsPopoverVisible(visible)}
-            overlayStyle={{ width: '400px', height: 'auto' }}
           >
           <Dropdown.Button
             overlay={menuItems}        
