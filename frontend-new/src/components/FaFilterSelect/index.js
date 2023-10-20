@@ -34,6 +34,7 @@ import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import { selectedOptionsMapper } from 'Components/GenericComponents/FaSelect/utils';
 import { processProperties } from 'Utils/dataFormatter';
 import { PropTextFormat } from 'Utils/dataFormatter';
+import truncateURL from 'Utils/truncateURL';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 const rangePicker = [OPERATORS['equalTo'], OPERATORS['notEqualTo']];
@@ -279,7 +280,7 @@ const FaFilterSelect = ({
 
   const setTextValue = (event) => {
     setValuesState(event.target.value);
-  }
+  };
 
   const parseDateRangeFilter = (fr, to, value) => {
     const fromVal = fr ? fr : new Date(MomentTz().startOf('day')).getTime();
@@ -330,8 +331,9 @@ const FaFilterSelect = ({
   const renderPropSelect = () => {
     return (
       <div
-        className={`${styles.filter__propContainer} ${disabled ? `fa-truncate-150` : ''
-          }`}
+        className={`${styles.filter__propContainer} ${
+          disabled ? `fa-truncate-150` : ''
+        }`}
       >
         <Tooltip
           zIndex={99999}
@@ -341,8 +343,9 @@ const FaFilterSelect = ({
           <Button
             disabled={disabled}
             icon={getIcon(propState)}
-            className={`fa-button--truncate fa-button--truncate-xs ${viewMode ? 'static-button' : ''
-              }  btn-left-round filter-buttons-margin`}
+            className={`fa-button--truncate fa-button--truncate-xs ${
+              viewMode ? 'static-button' : ''
+            }  btn-left-round filter-buttons-margin`}
             type={viewMode ? 'default' : 'link'}
             onClick={() =>
               viewMode ? null : setPropSelectOpen(!propSelectOpen)
@@ -380,8 +383,9 @@ const FaFilterSelect = ({
         >
           <Button
             disabled={disabled}
-            className={`fa-button--truncate ${viewMode ? 'static-button' : ''
-              } filter-buttons-radius filter-buttons-margin`}
+            className={`fa-button--truncate ${
+              viewMode ? 'static-button' : ''
+            } filter-buttons-radius filter-buttons-margin`}
             type={viewMode ? 'default' : 'link'}
             onClick={() => (viewMode ? null : setOperSelectOpen(true))}
           >
@@ -542,8 +546,9 @@ const FaFilterSelect = ({
           <Button
             disabled={disabled}
             trigger={viewMode ? [] : 'hover'}
-            className={`fa-button--truncate ${viewMode ? 'static-button' : ''
-              } filter-buttons-radius filter-buttons-margin`}
+            className={`fa-button--truncate ${
+              viewMode ? 'static-button' : ''
+            } filter-buttons-radius filter-buttons-margin`}
             type={viewMode ? 'default' : 'link'}
             onClick={() => (viewMode ? null : setDateOptionSelectOpen(true))}
           >
@@ -577,8 +582,9 @@ const FaFilterSelect = ({
           <Button
             disabled={disabled}
             trigger={viewMode ? [] : 'hover'}
-            className={`fa-button--truncate ${viewMode ? 'static-button' : ''
-              } filter-buttons-radius filter-buttons-margin`}
+            className={`fa-button--truncate ${
+              viewMode ? 'static-button' : ''
+            } filter-buttons-radius filter-buttons-margin`}
             type={viewMode ? 'default' : 'link'}
             onClick={() => (viewMode ? null : setDateOptionSelectOpen(true))}
           >
@@ -621,10 +627,10 @@ const FaFilterSelect = ({
             operator === OPERATORS['before']
               ? moment(parsedValues['to'])
               : moment(
-                parsedValues['from']
-                  ? parsedValues['from']
-                  : parsedValues['fr']
-              )
+                  parsedValues['from']
+                    ? parsedValues['from']
+                    : parsedValues['fr']
+                )
           }
           size={'small'}
           suffixIcon={null}
@@ -641,21 +647,20 @@ const FaFilterSelect = ({
   const renderValuesSelector = () => {
     let selectionComponent;
     if (propState.type === 'categorical') {
-
       const variant =
         operatorState === OPERATORS['notEqualTo'] ||
-          operatorState === OPERATORS['doesNotContain']
+        operatorState === OPERATORS['doesNotContain']
           ? 'Single'
           : operatorState === OPERATORS['contain']
-            ? 'Input'
-            : 'Multi';
+          ? 'Input'
+          : 'Multi';
       let valueOptions = valueOpts?.[propState?.name]
         ? Object.entries(valueOpts[propState.name]).map((val) => {
-          return {
-            value: val[0],
-            label: val[1]
-          };
-        })
+            return {
+              value: val[0],
+              label: val[1]
+            };
+          })
         : [];
 
       valueOptions = selectedOptionsMapper(valueOptions, valuesState);
@@ -672,16 +677,16 @@ const FaFilterSelect = ({
             loadingState={valueOptsLoading}
           />
         );
-      }
-      else if (variant === 'Input') {
+      } else if (variant === 'Input') {
         selectionComponent = (
           <div>
             {containButton && (
               <Button
                 disabled={disabled}
                 trigger={viewMode ? [] : 'hover'}
-                className={`fa-button--truncate ${viewMode ? 'static-button' : ''
-                  } filter-buttons-radius filter-buttons-margin`}
+                className={`fa-button--truncate ${
+                  viewMode ? 'static-button' : ''
+                } filter-buttons-radius filter-buttons-margin`}
                 type={viewMode ? 'default' : 'link'}
                 onClick={() => (viewMode ? null : setContainButton(false))}
               >
@@ -709,8 +714,7 @@ const FaFilterSelect = ({
             )}
           </div>
         );
-      }
-      else {
+      } else {
         selectionComponent = (
           <FaSelect
             variant={'Multi'}
@@ -756,8 +760,9 @@ const FaFilterSelect = ({
             <Button
               disabled={disabled}
               trigger={viewMode ? [] : 'hover'}
-              className={`fa-button--truncate ${viewMode ? 'static-button' : ''
-                } filter-buttons-radius filter-buttons-margin`}
+              className={`fa-button--truncate ${
+                viewMode ? 'static-button' : ''
+              } filter-buttons-radius filter-buttons-margin`}
               type={viewMode ? 'default' : 'link'}
               onClick={() => (viewMode ? null : setContainButton(false))}
             >
@@ -789,65 +794,67 @@ const FaFilterSelect = ({
 
     return (
       <div
-        className={`${styles.filter__propContainer}${disabled ? `fa-truncate-150` : ''
-          }`}
+        className={`${styles.filter__propContainer}${
+          disabled ? `fa-truncate-150` : ''
+        }`}
       >
         {propState.type === 'categorical' ? (
           <>
-            {
-              operatorState === OPERATORS['contain'] ? (
-                selectionComponent
-              ) : (
-                <>
-                  <Tooltip
-                    zIndex={99999}
-                    mouseLeaveDelay={0}
-                    title={
-                      valuesState && valuesState.length
-                        ? valuesState
+            {operatorState === OPERATORS['contain'] ? (
+              selectionComponent
+            ) : (
+              <>
+                <Tooltip
+                  zIndex={99999}
+                  mouseLeaveDelay={0}
+                  title={
+                    valuesState && valuesState.length
+                      ? valuesState
                           .map((vl) =>
                             valueDisplayNames[vl]
                               ? valueDisplayNames[vl]
                               : formatCsvUploadValue(vl)
                           )
                           .join(', ')
-                        : null
+                      : null
+                  }
+                  color={TOOLTIP_CONSTANTS.DARK}
+                >
+                  <Button
+                    className={`fa-button--truncate ${
+                      caller === 'profiles' ? 'fa-button--truncate-sm' : ''
+                    }  ${
+                      viewMode
+                        ? 'btn-right-round static-button'
+                        : 'filter-buttons-radius'
+                    } filter-buttons-margin`}
+                    type={viewMode ? 'default' : 'link'}
+                    disabled={disabled}
+                    onClick={() =>
+                      viewMode
+                        ? null
+                        : setValuesSelectionOpen(!valuesSelectionOpen)
                     }
-                    color={TOOLTIP_CONSTANTS.DARK}
                   >
-                    <Button
-                      className={`fa-button--truncate ${caller === 'profiles' ? 'fa-button--truncate-sm' : ''
-                        }  ${viewMode
-                          ? 'btn-right-round static-button'
-                          : 'filter-buttons-radius'
-                        } filter-buttons-margin`}
-                      type={viewMode ? 'default' : 'link'}
-                      disabled={disabled}
-                      onClick={() =>
-                        viewMode ? null : setValuesSelectionOpen(!valuesSelectionOpen)
-                      }
-                    >
-                      {valuesState && valuesState.length
-                        ? valuesState
+                    {valuesState && valuesState.length
+                      ? valuesState
                           .map((vl) =>
                             valueDisplayNames[vl]
-                              ? valueDisplayNames[vl]
+                              ? truncateURL(valueDisplayNames[vl])
                               : formatCsvUploadValue(vl)
                           )
                           .join(', ')
-                        : 'Select Values'}
-                    </Button>
-                  </Tooltip>
-                  {valuesSelectionOpen && selectionComponent}
-                </>
-              )
-            }
-
+                      : 'Select Values'}
+                  </Button>
+                </Tooltip>
+                {valuesSelectionOpen && selectionComponent}
+              </>
+            )}
           </>
         ) : null}
 
         {propState.type !== 'categorical' ? selectionComponent : null}
-      </div >
+      </div>
     );
   };
 
@@ -980,8 +987,9 @@ const FaFilterSelect = ({
 
     return (
       <div
-        className={`${styles.filter__propContainer}${disabled ? `fa-truncate-150` : ''
-          }`}
+        className={`${styles.filter__propContainer}${
+          disabled ? `fa-truncate-150` : ''
+        }`}
       >
         {propState.type === 'categorical' ? (
           <>
@@ -991,22 +999,24 @@ const FaFilterSelect = ({
               title={
                 valuesState && valuesState.length
                   ? valuesState
-                    .map((vl) =>
-                      valueDisplayNames[vl]
-                        ? valueDisplayNames[vl]
-                        : formatCsvUploadValue(vl)
-                    )
-                    .join(', ')
+                      .map((vl) =>
+                        valueDisplayNames[vl]
+                          ? valueDisplayNames[vl]
+                          : formatCsvUploadValue(vl)
+                      )
+                      .join(', ')
                   : null
               }
               color={TOOLTIP_CONSTANTS.DARK}
             >
               <Button
-                className={`fa-button--truncate ${caller === 'profiles' ? 'fa-button--truncate-sm' : ''
-                  }  ${viewMode
+                className={`fa-button--truncate ${
+                  caller === 'profiles' ? 'fa-button--truncate-sm' : ''
+                }  ${
+                  viewMode
                     ? 'btn-right-round static-button'
                     : 'filter-buttons-radius'
-                  } filter-buttons-margin`}
+                } filter-buttons-margin`}
                 type={viewMode ? 'default' : 'link'}
                 disabled={disabled}
                 onClick={() =>
@@ -1015,12 +1025,12 @@ const FaFilterSelect = ({
               >
                 {valuesState && valuesState.length
                   ? valuesState
-                    .map((vl) =>
-                      valueDisplayNames[vl]
-                        ? valueDisplayNames[vl]
-                        : formatCsvUploadValue(vl)
-                    )
-                    .join(', ')
+                      .map((vl) =>
+                        valueDisplayNames[vl]
+                          ? truncateURL(valueDisplayNames[vl])
+                          : formatCsvUploadValue(vl)
+                      )
+                      .join(', ')
                   : 'Upload list'}
               </Button>
             </Tooltip>
@@ -1043,8 +1053,8 @@ const FaFilterSelect = ({
         ? renderValuesSelector()
         : operatorState === OPERATORS['inList'] ||
           operatorState === OPERATORS['notInList']
-          ? renderCsvUpload()
-          : null}
+        ? renderCsvUpload()
+        : null}
     </div>
   );
 };
