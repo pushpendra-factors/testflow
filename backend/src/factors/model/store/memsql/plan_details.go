@@ -156,7 +156,7 @@ func (store *MemSQL) GetSixSignalInfoForProject(projectID int64) (model.SixSigna
 		return model.SixSignalInfo{}, errors.New("Failed to get six signal count")
 	}
 	sixSignalLimit, err := store.GetFeatureLimitForProject(projectID, FEATURE_FACTORS_DEANONYMISATION)
-	log.Info("sumit log ", sixSignalCount, sixSignalLimit)
+	
 	if err != nil {
 		logCtx.WithError(err).Error(" Failed to get six signal limit")
 		return model.SixSignalInfo{}, errors.New("Failed to get six signal limit")

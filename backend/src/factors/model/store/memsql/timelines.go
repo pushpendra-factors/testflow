@@ -42,14 +42,14 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectID == 0 {
-		return nil, http.StatusBadRequest, "Project Id is Invalid"
+		return []model.Profile{}, http.StatusBadRequest, "Project Id is Invalid"
 	}
 
 	// set Query Timezone
 	timezoneString, statusCode := store.GetTimezoneForProject(projectID)
 	if statusCode != http.StatusFound {
 		log.WithFields(logFields).Error("Query failed. Failed to get Timezone.")
-		return nil, http.StatusBadRequest, "Failed to fetch project timezone."
+		return []model.Profile{}, http.StatusBadRequest, "Failed to fetch project timezone."
 	}
 	payload.Query.Timezone = string(timezoneString)
 
@@ -71,13 +71,13 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 
 		profiles, errCode, err := store.GetAnalyzeResultForSegments(projectID, profileType, payload.Query)
 		if errCode != http.StatusOK {
-			return nil, errCode, err.Error()
+			return []model.Profile{}, errCode, err.Error()
 		}
 
 		returnData, err := FormatProfilesStruct(projectID, profiles, profileType, payload.Query.TableProps, payload.Query.Source)
 		if err != nil {
 			log.WithFields(logFields).WithField("status", err).Error("Failed to filter properties from profiles.")
-			return nil, http.StatusInternalServerError, "Failed Formatting Profile Results"
+			return []model.Profile{}, http.StatusInternalServerError, "Failed Formatting Profile Results"
 		}
 		return returnData, http.StatusFound, ""
 	}
@@ -117,7 +117,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 			err := groupedFilters[group][index].TransformDateTypeFilters(timezoneString)
 			if err != nil {
 				log.WithFields(logFields).Error("Failed to transform payload filters.")
-				return nil, http.StatusBadRequest, "Datetime Filters Processing Failed"
+				return []model.Profile{}, http.StatusBadRequest, "Datetime Filters Processing Failed"
 			}
 		}
 	}
@@ -128,7 +128,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	isGroupUserStmt := getGroupUserStatement(profileType, payload.Query.Source)
 	sourceStmt, sourceID, err := store.GetSourceStmtWithParams(projectID, profileType, payload.Query.Source, isAllUserProperties)
 	if err != nil {
-		return nil, http.StatusBadRequest, err.Error()
+		return []model.Profile{}, http.StatusBadRequest, err.Error()
 	}
 	if sourceID != 0 {
 		params = append(params, sourceID)
@@ -149,7 +149,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	minMax, errCode, errStr := store.GetMinAndMaxUpdatedAt(profileType, whereStmt, limitVal, minMaxQParams)
 	if errCode != http.StatusOK {
 		log.WithFields(logFields).WithField("status", errCode).Error(errStr)
-		return nil, errCode, errStr
+		return []model.Profile{}, errCode, errStr
 	}
 
 	// Get Profiles
@@ -163,7 +163,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		params = append(params, queryParams...)
 	}
 	if err != nil {
-		return nil, http.StatusInternalServerError, err.Error()
+		return []model.Profile{}, http.StatusInternalServerError, err.Error()
 	}
 
 	var profiles []model.Profile
@@ -171,7 +171,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	err = db.Raw(runQueryStmt, params...).Scan(&profiles).Error
 	if err != nil {
 		log.WithError(err).WithFields(logFields).WithField("status", err).Error("Failed to get profile users.")
-		return nil, http.StatusInternalServerError, "Query Execution Failed."
+		return []model.Profile{}, http.StatusInternalServerError, "Query Execution Failed."
 	}
 
 	// Get merged properties for all accounts
@@ -182,7 +182,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		}
 		profiles, statusCode = store.AccountPropertiesForDomainsEnabled(projectID, profiles)
 		if statusCode != http.StatusOK {
-			return nil, statusCode, "Query Transformation Failed."
+			return []model.Profile{}, statusCode, "Query Transformation Failed."
 		}
 	}
 
@@ -190,7 +190,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	returnData, err := FormatProfilesStruct(projectID, profiles, profileType, payload.Query.TableProps, payload.Query.Source)
 	if err != nil {
 		log.WithError(err).WithFields(logFields).WithField("status", err).Error("Failed to filter properties from profiles.")
-		return nil, http.StatusInternalServerError, "Query formatting failed."
+		return []model.Profile{}, http.StatusInternalServerError, "Query formatting failed."
 	}
 
 	return returnData, http.StatusFound, ""

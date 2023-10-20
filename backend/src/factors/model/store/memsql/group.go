@@ -77,33 +77,50 @@ func (store *MemSQL) CreateGroup(projectID int64, groupName string, allowedGroup
 	}
 
 	// Create Default Segment for the Account Groups-
-	if model.AccountGroupNames[groupName] {
-		segmentPayload := model.SegmentPayload{
-			Name:        U.ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES[U.GROUP_TO_DEFAULT_SEGMENT_MAP[groupName]],
-			Description: "",
-			Query: model.Query{
-				GlobalUserProperties: []model.QueryProperty{
-					{
-						Entity:    model.PropertyEntityUserGlobal,
-						Type:      U.PropertyTypeCategorical,
-						GroupName: groupName,
-						Property:  U.GROUP_TO_DEFAULT_SEGMENT_MAP[groupName],
-						Operator:  model.EqualsOpStr,
-						Value:     "true",
-						LogicalOp: "AND",
-					},
-				},
-				TableProps: []string{U.SIX_SIGNAL_NAME, U.SIX_SIGNAL_INDUSTRY, U.SIX_SIGNAL_EMPLOYEE_RANGE, U.SIX_SIGNAL_ANNUAL_REVENUE},
-			},
-			Type: U.GROUP_NAME_DOMAINS,
-		}
-		status, err = store.CreateSegment(projectID, &segmentPayload)
+	if model.AccountGroupNames[groupName] && groupName != U.GROUP_NAME_SIX_SIGNAL {
+		status, err = store.CreateDefaultSegment(projectID, groupName, true)
 		if status != http.StatusCreated {
-			logCtx.WithError(err).Error("Failed to create default segment.")
+			log.WithError(err).Error("Failed to create default segment.")
 		}
 	}
 
 	return &group, http.StatusCreated
+}
+
+func (store *MemSQL) CreateDefaultSegment(projectID int64, entity string, isGroup bool) (int, error) {
+	var segmentName, segmentProperty string
+	if isGroup {
+		segmentName = U.ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES[U.GROUP_TO_DEFAULT_SEGMENT_MAP[entity]]
+		segmentProperty = U.GROUP_TO_DEFAULT_SEGMENT_MAP[entity]
+	} else {
+		segmentName = U.ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES[U.VISITED_WEBSITE]
+		segmentProperty = U.VISITED_WEBSITE
+	}
+	segmentPayload := model.SegmentPayload{
+		Name:        segmentName,
+		Description: "",
+		Query: model.Query{
+			GlobalUserProperties: []model.QueryProperty{
+				{
+					Entity:    model.PropertyEntityUserGlobal,
+					Type:      U.PropertyTypeCategorical,
+					GroupName: entity,
+					Property:  segmentProperty,
+					Operator:  model.EqualsOpStr,
+					Value:     "true",
+					LogicalOp: "AND",
+				},
+			},
+			TableProps: []string{U.SIX_SIGNAL_NAME, U.SIX_SIGNAL_INDUSTRY, U.SIX_SIGNAL_EMPLOYEE_RANGE, U.SIX_SIGNAL_ANNUAL_REVENUE},
+		},
+		Type: U.GROUP_NAME_DOMAINS,
+	}
+	status, err := store.CreateSegment(projectID, &segmentPayload)
+	if status != http.StatusCreated {
+		log.WithError(err).Error("Failed to create default segment.")
+		return status, err
+	}
+	return http.StatusCreated, nil
 }
 
 func (store *MemSQL) CreateOrGetGroupByName(projectID int64, groupName string, allowedGroupNames map[string]bool) (*model.Group, int) {

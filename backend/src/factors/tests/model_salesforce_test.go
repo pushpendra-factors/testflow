@@ -6213,3 +6213,53 @@ func TestSalesforceOpportunityDomains(t *testing.T) {
 	domainName = getUserDomainName(project.ID, document.GroupUserID)
 	assert.Equal(t, "abc3.com", domainName)
 }
+
+func TestSalesforceUpdateDocumentGroupUserID(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	accountCreateDate := U.TimeNowZ().AddDate(0, 0, -1)
+	records := make([]model.SalesforceRecord, 0)
+
+	account1 := map[string]interface{}{
+		"Id":               "1",
+		"Name":             "account_1",
+		"Website":          "abc.com",
+		"CreatedDate":      accountCreateDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": accountCreateDate.Format(model.SalesforceDocumentDateTimeLayout),
+	}
+
+	records = []model.SalesforceRecord{account1}
+	err = store.GetStore().BuildAndUpsertDocumentInBatch(project.ID, model.SalesforceDocumentTypeNameAccount, records)
+	assert.Nil(t, err)
+	document := &model.SalesforceDocument{
+		ID:        "1",
+		Timestamp: accountCreateDate.Unix(),
+		Type:      model.SalesforceDocumentTypeAccount,
+		Action:    model.SalesforceDocumentCreated,
+	}
+	status := store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, document, "", "", "", true)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	opportunity3 := map[string]interface{}{
+		"Id":               "1",
+		"AccountId":        "1",
+		"Name":             "opp_1",
+		"CreatedDate":      accountCreateDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": accountCreateDate.Format(model.SalesforceDocumentDateTimeLayout),
+	}
+
+	records = []model.SalesforceRecord{opportunity3}
+	err = store.GetStore().BuildAndUpsertDocumentInBatch(project.ID, model.SalesforceDocumentTypeNameOpportunity, records)
+	assert.Nil(t, err)
+
+	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2, nil, 1, 0)
+	assert.Len(t, enrichStatus, 1)
+
+	document, status = store.GetStore().GetSalesforceDocumentByTypeAndAction(project.ID, "1",
+		model.SalesforceDocumentTypeAccount, model.SalesforceDocumentCreated)
+	assert.Equal(t, status, http.StatusFound)
+
+	domainName := getUserDomainName(project.ID, document.GroupUserID)
+	assert.Equal(t, "abc.com", domainName)
+}

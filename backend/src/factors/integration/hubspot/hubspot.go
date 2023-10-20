@@ -3195,12 +3195,27 @@ func CreateOrUpdateHubspotGroupsProperties(projectID int64, document *model.Hubs
 		}
 
 		groupUser := getGroupUserID(createdDocument)
+
+		if groupUser == "" && C.UseHashIDForCRMGroupUserByProject(projectID) {
+			userID, status := store.GetStore().CreateOrGetCRMGroupUser(projectID, groupName, groupID,
+				getEventTimestamp(document.Timestamp), model.UserSourceHubspot)
+			if status != http.StatusCreated && status != http.StatusFound {
+				logCtx.WithError(err).Error("Failed to create group user from updated record for hubspot.")
+				return "", "", http.StatusInternalServerError
+			}
+			groupUser = userID
+		}
+
 		groupUserID, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID,
 			groupUser, enProperties, getEventTimestamp(createdDocument.Timestamp), getEventTimestamp(document.Timestamp),
 			model.UserSourceHubspotString)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to update hubspot updated group properties.")
 			return "", "", http.StatusInternalServerError
+		}
+
+		if C.UseHashIDForCRMGroupUserByProject(projectID) {
+			groupUserID = groupUser
 		}
 
 		processEventNames = append(processEventNames, updatedEventName)

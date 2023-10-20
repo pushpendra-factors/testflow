@@ -133,7 +133,7 @@ func GetCRMStatusByProjectIdHandler(c *gin.Context) {
 	}
 
 	if isHtmlRequired == "true" {
-		U.ReturnReadableHtmlFromMaps(c, status, model.CrmStatusColumnsName, model.CrmStatusColumnsNameToJsonKeys)
+		U.ReturnReadableHtmlFromMaps(c, status, model.CrmStatusColumnsName, model.CrmStatusColumnsNameToJsonKeys, "")
 		return
 	}
 	c.JSON(http.StatusOK, status)

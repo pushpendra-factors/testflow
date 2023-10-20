@@ -138,6 +138,7 @@ func TestMain(m *testing.M) {
 		MoveHubspotCompanyAssocationFlowToContactByPojectID: "*",
 		AllowedGoRoutines:                                   4,
 		AssociateDealToDomainByProjectID:                    "*",
+		ProcessOnlyAccountSegments:                          false,
 	}
 	C.InitConf(config)
 

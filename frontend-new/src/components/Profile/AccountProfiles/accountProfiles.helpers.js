@@ -18,7 +18,32 @@ import LazyLoad from 'react-lazyload';
 import { Skeleton } from 'antd';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 
-const placeholderIcon = 'assets/avatar/company-placeholder.png';
+const placeholderIcon = '/assets/avatar/company-placeholder.png';
+
+export const defaultSegmentsList = [
+  'In Hubspot',
+  'In Salesforce',
+  'Visited Website',
+  'Engaged on LinkedIn',
+  'Visited G2'
+];
+
+const reorderSegments = (segments) => {
+  segments?.[0]?.values.sort((a, b) => {
+    const aIsMatch = defaultSegmentsList.includes(a?.[0]);
+    const bIsMatch = defaultSegmentsList.includes(b?.[0]);
+
+    if (aIsMatch && !bIsMatch) {
+      return -1;
+    } else if (!aIsMatch && bIsMatch) {
+      return 1;
+    }
+
+    return 0;
+  });
+
+  return segments;
+};
 
 export const getGroupList = (groupOptions) => {
   const groups = Object.entries(groupOptions || {}).map(
@@ -37,7 +62,7 @@ export const generateSegmentsList = ({ accountPayload, segments }) => {
     )
     .map(([group, vals]) => formatSegmentsObjToGroupSelectObj(group, vals))
     .forEach((obj) => segmentsList.push(obj));
-  return segmentsList;
+  return reorderSegments(segmentsList);
 };
 
 const getTablePropColumn = ({ prop, groupPropNames, listProperties }) => {
@@ -102,31 +127,18 @@ export const getColumns = ({
       render: (item) =>
         (
           <div className='flex items-center'>
-            <LazyLoad
-              height={20}
-              once={true}
-              // overflow={true}
-              placeholder={
-                <Skeleton.Avatar
-                  active={true}
-                  size={'small'}
-                  shape={'circle'}
-                />
-              }
-            >
-              <img
-                src={`https://logo.clearbit.com/${getHost(item.host)}`}
-                onError={(e) => {
-                  if (e.target.src !== placeholderIcon) {
-                    e.target.src = placeholderIcon;
-                  }
-                }}
-                alt=''
-                width='24'
-                height='24'
-                loading='lazy'
-              />
-            </LazyLoad>
+            <img
+              src={`https://logo.clearbit.com/${getHost(item.host)}`}
+              onError={(e) => {
+                if (e.target.src !== placeholderIcon) {
+                  e.target.src = placeholderIcon;
+                }
+              }}
+              alt=''
+              width='24'
+              height='24'
+              loading='lazy'
+            />
             <span className='ml-2'>{item.name}</span>
           </div>
         ) || '-'

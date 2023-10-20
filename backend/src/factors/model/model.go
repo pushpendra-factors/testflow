@@ -651,6 +651,7 @@ type Model interface {
 	GetAssociatedDomainForUser(projectID int64, userID string, isAnonymous bool) (string, error)
 	GetUsersUpdatedAtGivenHour(projectID int64, fromTime time.Time, domainID int) ([]model.User, int)
 	UpdateAssociatedSegments(projectID int64, id string, associatedSegments map[string]interface{}) (int, error)
+	GetNonGroupUsersUpdatedAtGivenHour(projectID int64, fromTime time.Time) ([]model.User, int)
 
 	// web_analytics
 	GetWebAnalyticsQueriesFromDashboardUnits(projectID int64) (int64, *model.WebAnalyticsQueries, int)
@@ -694,6 +695,7 @@ type Model interface {
 	GetPropertyTypeFromDB(projectID int64, eventName, propertyKey string, isUserProperty bool) (int, *model.PropertyDetail)
 
 	// project_analytics
+	GetGlobalProjectAnalyticsDataByProjectId(projectID int64, monthString string) ([]map[string]interface{}, error)
 	GetEventUserCountsOfAllProjects(lastNDays int) (map[string][]*model.ProjectAnalytics, error)
 	GetEventUserCountsMerged(projectIdsList []int64, lastNDays int, currentDate time.Time) (map[int64]*model.ProjectAnalytics, error)
 	GetEventUserCountsByProjectID(projectID int64, lastNDays int) (map[string][]*model.ProjectAnalytics, error)
@@ -910,6 +912,7 @@ type Model interface {
 	UpdateSegmentById(projectId int64, id string, segmentPayload model.SegmentPayload) (error, int)
 	IsDuplicateSegmentNameCheck(projectID int64, name string) bool
 	DeleteSegmentById(projectId int64, segmentId string) (int, error)
+	CreateDefaultSegment(projectID int64, entity string, isGroup bool) (int, error)
 
 	// segment_marker
 	CheckIfUserPerformedGivenEvents(queryStr string, params []interface{}) ([]int, int)
