@@ -11,8 +11,8 @@ import {
 import { SEGMENT_DELETED } from 'Reducers/timelines/types';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 
-const INITIAL_ACTIVE_SEGMENT = {};
-const INITIAL_ACCOUNT_PAYLOAD = { source: '', filters: [], segment_id: '' };
+export const INITIAL_ACTIVE_SEGMENT = {};
+export const INITIAL_ACCOUNT_PAYLOAD = { source: '', filters: [], segment_id: '' };
 
 const initialState = {
   accountPayload: INITIAL_ACCOUNT_PAYLOAD,
