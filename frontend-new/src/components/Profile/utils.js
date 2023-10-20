@@ -92,9 +92,9 @@ export const TimelineHoverPropDisplayNames = {
 export const GroupDisplayNames = {
   $domains: 'All Accounts',
   $hubspot_company: 'Hubspot Companies',
-  $hubspot_deal:'Hubspot Deals',
+  $hubspot_deal: 'Hubspot Deals',
   $salesforce_account: 'Salesforce Accounts',
-  $salesforce_opportunity:'Salesforce Opportunities',
+  $salesforce_opportunity: 'Salesforce Opportunities',
   $6signal: 'Identified Companies',
   $linkedin_company: 'Linkedin Company Engagements',
   $g2: 'G2 Engagements'
@@ -120,7 +120,7 @@ export const getFiltersRequestPayload = ({ selectedFilters, table_props }) => {
   };
 };
 
-export const formatReqPayload = (payload, segment) => {
+export const formatReqPayload = (payload, segment = {}) => {
   const req = {
     query: {
       grpa: segment.query ? segment.query.grpa : '',

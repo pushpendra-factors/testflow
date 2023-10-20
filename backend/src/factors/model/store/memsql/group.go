@@ -104,7 +104,7 @@ func (store *MemSQL) CreateDefaultSegment(projectID int64, entity string, isGrou
 				{
 					Entity:    model.PropertyEntityUserGlobal,
 					Type:      U.PropertyTypeCategorical,
-					GroupName: entity,
+					GroupName: U.GROUP_NAME_DOMAINS,
 					Property:  segmentProperty,
 					Operator:  model.EqualsOpStr,
 					Value:     "true",
