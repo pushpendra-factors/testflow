@@ -70,7 +70,7 @@ const BreakdownCharts = ({
       return getNewSorterState(currentSorter, prop);
     });
   }, []);
-
+  
   const unitId = unit.id || unit.inter_id;
 
   useEffect(() => {

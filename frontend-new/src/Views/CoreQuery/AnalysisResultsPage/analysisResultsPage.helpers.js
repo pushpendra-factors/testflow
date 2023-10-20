@@ -34,6 +34,9 @@ export const getChartType = ({
   attributionModels,
   campaignGroupBy
 }) => {
+  if(breakdown?.[0] === undefined) {
+    breakdown = [];
+  }
   if (queryType === QUERY_TYPE_FUNNEL) {
     const key = breakdown.length ? 'breakdown' : 'no_breakdown';
     return chartTypes[queryType][key] === CHART_TYPE_TABLE
@@ -102,13 +105,16 @@ export const getChartChangedKey = ({
   campaignGroupBy,
   attributionModels
 }) => {
+  if(breakdown?.[0] === undefined) {
+    breakdown = [];
+  }
   if (
     queryType === QUERY_TYPE_EVENT ||
     queryType === QUERY_TYPE_FUNNEL ||
     queryType === QUERY_TYPE_PROFILE ||
     queryType === QUERY_TYPE_KPI
   ) {
-    return breakdown.length ? 'breakdown' : 'no_breakdown';
+    return breakdown?.length ? 'breakdown' : 'no_breakdown';
   }
   if (queryType === QUERY_TYPE_CAMPAIGN) {
     return campaignGroupBy.length ? 'breakdown' : 'no_breakdown';
@@ -126,6 +132,9 @@ export const shouldShowChartConfigOptions = ({
   breakdown,
   chartType
 }) => {
+  if(breakdown?.[0] === undefined) {
+    breakdown = [];
+  }
   if (
     queryType === QUERY_TYPE_KPI &&
     breakdown.length === 0 &&

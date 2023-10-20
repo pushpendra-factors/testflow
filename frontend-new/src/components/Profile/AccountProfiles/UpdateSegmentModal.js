@@ -6,8 +6,10 @@ import { SVG, Text } from 'Components/factorsComponents';
 import styles from './index.module.scss';
 import { Input, notification } from 'antd';
 import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
+import { defaultSegmentsList } from './accountProfiles.helpers';
 
 const UpdateSegmentModal = ({
+  segmentName,
   visible = false,
   onCreate = noop,
   onUpdate = noop,
@@ -71,10 +73,14 @@ const UpdateSegmentModal = ({
         </Text>
         <div className='flex flex-col row-gap-4'>
           <div
-            className={cx(
+            className={`${cx(
               'p-4 flex justify-between items-center rounded-lg',
               styles['update-option-container']
-            )}
+            )} ${
+              defaultSegmentsList.includes(segmentName)
+                ? 'opacity-25 pointer-events-none'
+                : ''
+            }`}
             role='button'
             onClick={() => setSaveMode('update')}
           >
@@ -152,7 +158,7 @@ const UpdateSegmentModal = ({
                   color='character-secondary'
                   extraClass='mb-0'
                 >
-                 Segment name
+                  Segment name
                 </Text>
                 <Input
                   value={newSegmentName}

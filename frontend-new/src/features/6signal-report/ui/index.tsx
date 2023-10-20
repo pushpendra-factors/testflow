@@ -498,6 +498,7 @@ const SixSignalReport = ({
                     weight={'bold'}
                     color='grey-1'
                     extraClass='mb-1'
+                    id={'fa-at-text--page-title'}
                   >
                     Top accounts that visited your website{' '}
                   </Text>

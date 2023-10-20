@@ -14,7 +14,7 @@ export const getRearrangedData = (units, dashboard) => {
   let result;
   if (!dashboard.units_position || !dashboard.units_position.position) {
     const clonedUnits = [...units];
-    result = clonedUnits.reverse().map((u, index) => {
+    result = clonedUnits.map((u, index) => {
       return {
         ...u,
         position: index,
@@ -25,12 +25,12 @@ export const getRearrangedData = (units, dashboard) => {
   } else {
     const unitsPosition = dashboard.units_position.position;
     const nonPositionedUnits = units.filter((u) => {
-      return !Object.prototype.hasOwnProperty.call(unitsPosition, u.id);
+      return !Object.prototype.hasOwnProperty.call(unitsPosition, u.id || u.inter_id);
     });
     const positionedUnits = units.filter((u) => {
-      return Object.prototype.hasOwnProperty.call(unitsPosition, u.id);
+      return Object.prototype.hasOwnProperty.call(unitsPosition, u.id || u.inter_id);
     });
-    const result1 = nonPositionedUnits.reverse().map((u, index) => {
+    const result1 = nonPositionedUnits.map((u, index) => {
       return {
         ...u,
         position: index,
@@ -42,9 +42,9 @@ export const getRearrangedData = (units, dashboard) => {
     let result2 = positionedUnits.map((u) => {
       return {
         ...u,
-        position: unitsPosition[u.id] + startingPosition,
-        className: cardClassNames[dashboard.units_position.size[u.id]],
-        cardSize: dashboard.units_position.size[u.id]
+        position: unitsPosition[u.id || u.inter_id] + startingPosition,
+        className: cardClassNames[dashboard.units_position.size[u.id || u.inter_id]],
+        cardSize: dashboard.units_position.size[u.id || u.inter_id]
       };
     });
     result2 = SortData(result2, 'position', 'ascend');

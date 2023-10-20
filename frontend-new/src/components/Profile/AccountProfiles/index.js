@@ -11,7 +11,8 @@ import {
   formatFiltersForPayload,
   formatReqPayload,
   getFiltersRequestPayload,
-  getSelectedFiltersFromQuery
+  getSelectedFiltersFromQuery,
+  IsDomainGroup
 } from '../utils';
 import {
   getProfileAccounts,
@@ -26,11 +27,8 @@ import {
 } from '../../../reducers/global';
 import SearchCheckList from 'Components/SearchCheckList';
 import { formatUserPropertiesToCheckList } from 'Reducers/timelines/utils';
-import { useHistory, useLocation } from 'react-router-dom';
-import {
-  fetchGroupPropertyValues,
-  fetchGroups
-} from 'Reducers/coreQuery/services';
+import { useHistory, useLocation, useParams } from 'react-router-dom';
+import { fetchGroupPropertyValues } from 'Reducers/coreQuery/services';
 import NoDataWithMessage from '../MyComponents/NoDataWithMessage';
 import ProfilesWrapper from '../ProfilesWrapper';
 import { checkFiltersEquality, getColumns } from './accountProfiles.helpers';
@@ -63,11 +61,15 @@ import {
 } from './accountProfiles.constants';
 import { selectGroupsList } from 'Reducers/groups/selectors';
 import UpdateSegmentModal from './UpdateSegmentModal';
-import { AccountsSidebarIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
 import DownloadCSVModal from './DownloadCSVModal';
 import { fetchProfileAccounts } from 'Reducers/timelines';
+import { selectSegments } from 'Reducers/timelines/selectors';
 import { downloadCSV } from 'Utils/csv';
 import { formatCount } from 'Utils/dataFormatter';
+import { PathUrls } from 'Routes/pathUrls';
+import { getGroups } from '../../../reducers/coreQuery/middleware';
+import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
+import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
 
 const groupToCompanyPropMap = {
   $hubspot_company: '$hubspot_company_name',
@@ -87,22 +89,26 @@ const groupToDomainMap = {
 
 function AccountProfiles({
   activeProject,
-  groupOpts,
+  groups,
   accounts,
   createNewSegment,
   getSavedSegments,
   fetchProjectSettings,
-  fetchGroups,
+  getGroups,
   udpateProjectSettings,
   currentProjectSettings,
   getProfileAccounts,
   getGroupProperties,
   updateSegmentForId,
-  deleteSegment
+  deleteSegment,
+  segments
 }) {
   const dispatch = useDispatch();
   const history = useHistory();
   const location = useLocation();
+  const { segment_id } = useParams();
+
+  // const { segments } = useSelector((state) => selectSegments(state));
 
   const { groupPropNames } = useSelector((state) => state.coreQuery);
   const groupProperties = useSelector(
@@ -150,8 +156,124 @@ function AccountProfiles({
 
   const activeAgent = agentState?.agent_details?.email;
 
+  useEffect(() => {
+    if (segment_id && segments['$domains']) {
+      if (segment_id !== activeSegment.id) {
+        const selectedSegment = segments['$domains']?.find(
+          (seg) => seg.id === segment_id
+        );
+        setActiveSegment(selectedSegment);
+      }
+    }
+  }, [segment_id, segments]);
+
+  useEffect(() => {
+    let listProps = [];
+    if (IsDomainGroup(accountPayload?.source)) {
+      listProps = Object.keys(groups?.account_groups || {})
+        .filter(
+          (group) => !['$hubspot_deal', '$salesforce_Account'].includes(group)
+        )
+        .reduce((acc, property) => {
+          return groupProperties[property]
+            ? acc.concat(groupProperties[property])
+            : acc;
+        }, []);
+    } else {
+      listProps = groupProperties?.[accountPayload?.source] || [];
+    }
+    setListProperties(listProps);
+  }, [groupProperties, accountPayload?.source, groups]);
+
+  useEffect(() => {
+    const tableProps = accountPayload?.segment_id
+      ? activeSegment?.query?.table_props
+      : currentProjectSettings.timelines_config?.account_config?.table_props;
+    const accountPropsWithEnableKey = formatUserPropertiesToCheckList(
+      listProperties,
+      tableProps
+    );
+    setCheckListAccountProps(accountPropsWithEnableKey);
+  }, [currentProjectSettings, listProperties, activeSegment, accountPayload]);
+
+  useEffect(() => {
+    fetchGroupProperties(GROUP_NAME_DOMAINS);
+    Object.keys(groups?.account_groups || {}).forEach((group) => {
+      fetchGroupProperties(group);
+    });
+  }, [activeProject.id, groups]);
+
+  useEffect(() => {
+    if (!accountPayload.source) {
+      const source = GROUP_NAME_DOMAINS;
+      updateAccountPayload({ source });
+    }
+  }, [accountPayload.source, activeProject.id]);
+
+  useEffect(() => {
+    if (!currentProjectSettings?.timelines_config) return;
+
+    const { disabled_events, user_config, account_config } =
+      currentProjectSettings.timelines_config;
+    const timelinesConfig = {
+      disabled_events: [...disabled_events],
+      user_config: { ...DEFAULT_TIMELINE_CONFIG.user_config, ...user_config },
+      account_config: {
+        ...DEFAULT_TIMELINE_CONFIG.account_config,
+        ...account_config
+      }
+    };
+    setTLConfig(timelinesConfig);
+  }, [currentProjectSettings?.timelines_config]);
+
+  useEffect(() => {
+    if (!accountPayload.search_filter) {
+      setListSearchItems([]);
+    } else {
+      const listValues = accountPayload?.search_filter || [];
+      setListSearchItems(uniq(listValues));
+      setSearchBarOpen(true);
+    }
+  }, [accountPayload?.search_filter]);
+
+  useEffect(() => {
+    fetchProjectSettings(activeProject?.id).then(() => {
+      if (!groups || Object.keys(groups).length === 0) {
+        getGroups(activeProject?.id);
+      }
+      getSavedSegments(activeProject?.id);
+    });
+  }, [activeProject?.id, groups]);
+
+  useEffect(() => {
+    if (newSegmentMode === true) {
+      restoreFiltersDefaultState();
+    }
+  }, [newSegmentMode]);
+
+  useEffect(() => {
+    if (newSegmentMode === false) {
+      if (Boolean(activeSegment?.id) === true && activeSegment.query != null) {
+        const filters = getSelectedFiltersFromQuery({
+          query: activeSegment.query,
+          groupsList
+        });
+        setAppliedFilters(filters);
+        setSelectedFilters(filters);
+        setFiltersExpanded(false);
+        setFiltersDirty(false);
+      } else {
+        const selectedGroup = groupsList.find(
+          (g) => g[1] === accountPayload.source
+        );
+        restoreFiltersDefaultState(selectedGroup);
+      }
+    }
+  }, [accountPayload, activeSegment, groupsList, newSegmentMode]);
+
   const setActiveSegment = useCallback(
     (segmentPayload) => {
+      // history.replace(PathUrls.ProfileAccountsSegmentsURL + '/' + segmentPayload.id);
       dispatch(setActiveSegmentAction(segmentPayload));
     },
     [dispatch]
@@ -188,7 +310,7 @@ function AccountProfiles({
       $6signal: '6Signal',
       $linkedin_company: '$li_',
       $g2: '$g2',
-      All: ''
+      $domains: ''
     };
     const source = filterPropsMap[accountPayload?.source];
     const tableProps = accountPayload.segment_id
@@ -383,15 +505,12 @@ function AccountProfiles({
           getProfileAccounts(activeProject.id, queryForFetch, activeAgent)
         );
     } else {
-      const filteredProps =
-        accountPayload.source !== 'All'
-          ? tlConfig.account_config.table_props.filter(
-              (item) =>
-                !checkListAccountProps.some(
-                  ({ prop_name }) => prop_name === item
-                )
-            )
-          : [];
+      const filteredProps = !IsDomainGroup(accountPayload.source)
+        ? tlConfig.account_config.table_props.filter(
+            (item) =>
+              !checkListAccountProps.some(({ prop_name }) => prop_name === item)
+          )
+        : [];
       const enabledProps = checkListAccountProps
         .filter(({ enabled }) => enabled)
         .map(({ prop_name }) => prop_name);
@@ -533,8 +652,8 @@ function AccountProfiles({
   }, [selectedFilters.account]);
 
   const availableGroups = useMemo(() => {
-    return Object.keys(groupOpts || {});
-  }, [groupOpts]);
+    return Object.keys(groups?.account_groups || {});
+  }, [groups]);
 
   const renderPropertyFilter = () => {
     return (
@@ -565,43 +684,30 @@ function AccountProfiles({
   };
 
   useEffect(() => {
-    const fetchData = async () => {
-      const newCompanyValues = { All: {} };
-      for (const [group, prop] of Object.entries(groupToCompanyPropMap)) {
-        if (groupOpts[group]) {
-          try {
-            const res = await fetchGroupPropertyValues(
-              activeProject.id,
-              group,
-              prop
-            );
-            newCompanyValues[group] = { ...res.data };
-          } catch (err) {
-            console.log(err);
-          }
-        }
-      }
-      for (const [group, prop] of Object.entries(groupToDomainMap)) {
-        if (groupOpts[group]) {
-          try {
-            const res = await fetchGroupPropertyValues(
-              activeProject.id,
-              group,
-              prop
-            );
-            newCompanyValues['All'] = {
-              ...newCompanyValues['All'],
-              ...res.data
-            };
-          } catch (err) {
-            console.log(err);
-          }
-        }
-      }
-      setCompanyValueOpts(newCompanyValues);
-    };
     fetchData();
-  }, [activeProject.id, groupOpts]);
+  }, [activeProject.id, groups]);
+
+  const fetchData = async () => {
+    const newCompanyValues = { $domains: {} };
+    for (const [group, prop] of Object.entries(groupToDomainMap)) {
+      if (groups && groups?.account_groups && groups?.account_groups[group]) {
+        try {
+          const res = await fetchGroupPropertyValues(
+            activeProject.id,
+            group,
+            prop
+          );
+          newCompanyValues[GROUP_NAME_DOMAINS] = {
+            ...newCompanyValues[GROUP_NAME_DOMAINS],
+            ...res.data
+          };
+        } catch (err) {
+          console.log(err);
+        }
+      }
+    }
+    setCompanyValueOpts(newCompanyValues);
+  };
 
   const onApplyClick = (values) => {
     const updatedPayload = {
@@ -837,6 +943,7 @@ function AccountProfiles({
           onChange={handleTableChange}
           scroll={{
             x: displayTableProps?.length * 300
+            // y: 'calc(100vh - 320px)'
           }}
           footer={() => (
             <div className='text-right'>
@@ -990,7 +1097,7 @@ function AccountProfiles({
     if (newSegmentMode === true) {
       return 'Untitled Segment 1';
     }
-    if (Boolean(accountPayload.segment_id) === false) {
+    if (Boolean(activeSegment?.id) === false) {
       const source = accountPayload.source;
       const title = get(
         groupsList.find((elem) => elem[1] === source),
@@ -1003,160 +1110,18 @@ function AccountProfiles({
   }, [accountPayload, groupsList, activeSegment, newSegmentMode]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      const newCompanyValues = { All: {} };
-      for (const [group, prop] of Object.entries(groupToCompanyPropMap)) {
-        if (groupOpts[group]) {
-          try {
-            const res = await fetchGroupPropertyValues(
-              activeProject.id,
-              group,
-              prop
-            );
-            newCompanyValues[group] = { ...res.data };
-            newCompanyValues['All'] = {
-              ...newCompanyValues['All'],
-              ...res.data
-            };
-          } catch (err) {
-            console.log(err);
-          }
-        }
-      }
-      setCompanyValueOpts(newCompanyValues);
-    };
-    fetchData();
-  }, [activeProject.id, groupOpts]);
-
-  useEffect(() => {
     if (newSegmentMode === false) {
       getAccounts(accountPayload);
     }
-  }, [newSegmentMode, accountPayload]);
-
-  useEffect(() => {
-    let listProps = [];
-    if (accountPayload?.source === 'All') {
-      listProps = Object.keys(groupOpts || {})
-        .filter((group) =>
-          !['$hubspot_deal', '$salesforce_Account'].includes(group)
-        )
-        .reduce((acc, property) => {
-          return groupProperties[property]
-            ? acc.concat(groupProperties[property])
-            : acc;
-        }, []);
-    } else {
-      listProps = groupProperties?.[accountPayload?.source] || [];
-    }
-    setListProperties(listProps);
-  }, [groupProperties, accountPayload?.source, groupOpts]);
-
-  useEffect(() => {
-    const tableProps = accountPayload?.segment_id
-      ? activeSegment?.query?.table_props
-      : currentProjectSettings.timelines_config?.account_config?.table_props;
-    const accountPropsWithEnableKey = formatUserPropertiesToCheckList(
-      listProperties,
-      tableProps
-    );
-    setCheckListAccountProps(accountPropsWithEnableKey);
-  }, [currentProjectSettings, listProperties, activeSegment, accountPayload]);
-
-  useEffect(() => {
-    fetchGroupProperties('$domains');
-    Object.keys(groupOpts || {}).forEach((group) => {
-      fetchGroupProperties(group);
-    });
-  }, [activeProject.id, fetchGroupProperties, groupOpts]);
-
-  useEffect(() => {
-    if (!accountPayload.source) {
-      const source = groupsList?.[0]?.[1] || '';
-      updateAccountPayload({ source });
-    }
-  }, [
-    accountPayload.source,
-    activeProject.id,
-    groupsList,
-    updateAccountPayload
-  ]);
-
-  useEffect(() => {
-    if (!currentProjectSettings?.timelines_config) return;
-
-    const { disabled_events, user_config, account_config } =
-      currentProjectSettings.timelines_config;
-    const timelinesConfig = {
-      disabled_events: [...disabled_events],
-      user_config: { ...DEFAULT_TIMELINE_CONFIG.user_config, ...user_config },
-      account_config: {
-        ...DEFAULT_TIMELINE_CONFIG.account_config,
-        ...account_config
-      }
-    };
-    setTLConfig(timelinesConfig);
-  }, [currentProjectSettings?.timelines_config]);
-
-  useEffect(() => {
-    if (!accountPayload.search_filter) {
-      setListSearchItems([]);
-    } else {
-      const listValues = accountPayload?.search_filter || [];
-      setListSearchItems(uniq(listValues));
-      setSearchBarOpen(true);
-    }
-  }, [accountPayload?.search_filter]);
-
-  useEffect(() => {
-    fetchProjectSettings(activeProject?.id);
-    fetchGroups(activeProject?.id);
-    getSavedSegments(activeProject?.id);
-  }, [activeProject?.id, fetchGroups, fetchProjectSettings, getSavedSegments]);
-
-  useEffect(() => {
-    if (newSegmentMode === true) {
-      restoreFiltersDefaultState();
-    }
-  }, [newSegmentMode, restoreFiltersDefaultState]);
-
-  useEffect(() => {
-    if (newSegmentMode === false) {
-      if (
-        Boolean(accountPayload.segment_id) === true &&
-        activeSegment.query != null
-      ) {
-        const filters = getSelectedFiltersFromQuery({
-          query: activeSegment.query,
-          groupsList
-        });
-        setAppliedFilters(filters);
-        setSelectedFilters(filters);
-        setFiltersExpanded(false);
-        setFiltersDirty(false);
-      } else {
-        const selectedGroup = groupsList.find(
-          (g) => g[1] === accountPayload.source
-        );
-        restoreFiltersDefaultState(selectedGroup);
-      }
-    }
-  }, [
-    accountPayload,
-    activeSegment.query,
-    groupsList,
-    newSegmentMode,
-    restoreFiltersDefaultState,
-    setFiltersDirty
-  ]);
+  }, [newSegmentMode, accountPayload, activeSegment]);
 
   const titleIcon = useMemo(() => {
     if (Boolean(accountPayload.segment_id) === true) {
-      return 'pieChart';
+      return defaultSegmentIconsMapping[activeSegment?.name]
+        ? defaultSegmentIconsMapping[activeSegment?.name]
+        : 'pieChart';
     }
-    return AccountsSidebarIconsMapping[accountPayload.source] != null
-      ? AccountsSidebarIconsMapping[accountPayload.source]
-      : 'buildings';
+    return 'buildings';
   }, [accountPayload]);
 
   return (
@@ -1176,7 +1141,13 @@ function AccountProfiles({
           <div className='flex items-center rounded justify-center h-10 w-10'>
             <SVG name={titleIcon} size={32} color='#FF4D4F' />
           </div>
-          <Text type='title' level={3} weight='bold' extraClass='mb-0'>
+          <Text
+            type='title'
+            level={3}
+            weight='bold'
+            extraClass='mb-0'
+            id={'fa-at-text--page-title'}
+          >
             {pageTitle}
           </Text>
         </div>
@@ -1212,7 +1183,7 @@ function AccountProfiles({
       <ControlledComponent
         controller={
           accounts.isLoading === false &&
-          accounts.data.length > 0 &&
+          accounts.data?.length > 0 &&
           (newSegmentMode === false || areFiltersDirty === true)
         }
       >
@@ -1221,7 +1192,7 @@ function AccountProfiles({
       <ControlledComponent
         controller={
           accounts.isLoading === false &&
-          accounts.data.length === 0 &&
+          (!accounts.data || accounts.data?.length === 0) &&
           (newSegmentMode === false || areFiltersDirty === true)
         }
       >
@@ -1252,6 +1223,7 @@ function AccountProfiles({
       />
 
       <UpdateSegmentModal
+        segmentName={activeSegment.name}
         visible={updateSegmentModal}
         onCancel={() => setUpdateSegmentModal(false)}
         onCreate={handleCreateSegment}
@@ -1271,15 +1243,16 @@ function AccountProfiles({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  groupOpts: state.groups.data,
+  groups: state.coreQuery.groups,
   accounts: state.timelines.accounts,
+  segments: state.timelines.segments,
   currentProjectSettings: state.global.currentProjectSettings
 });
 
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
-      fetchGroups,
+      getGroups,
       getProfileAccounts,
       createNewSegment,
       getSavedSegments,

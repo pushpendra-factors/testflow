@@ -5,6 +5,7 @@ import {
   formatSegmentsObjToGroupSelectObj,
   getHost,
   getPropType,
+  IsDomainGroup,
   propValueFormat,
   sortNumericalColumn,
   sortStringColumn
@@ -13,12 +14,42 @@ import { Text } from 'Components/factorsComponents';
 import MomentTz from 'Components/MomentTz';
 import isEqual from 'lodash/isEqual';
 import { PropTextFormat } from 'Utils/dataFormatter';
+import LazyLoad from 'react-lazyload';
+import { Skeleton } from 'antd';
+import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
+
+const placeholderIcon = '/assets/avatar/company-placeholder.png';
+
+export const defaultSegmentsList = [
+  'In Hubspot',
+  'In Salesforce',
+  'Visited Website',
+  'Engaged on LinkedIn',
+  'Visited G2'
+];
+
+const reorderSegments = (segments) => {
+  segments?.[0]?.values.sort((a, b) => {
+    const aIsMatch = defaultSegmentsList.includes(a?.[0]);
+    const bIsMatch = defaultSegmentsList.includes(b?.[0]);
+
+    if (aIsMatch && !bIsMatch) {
+      return -1;
+    } else if (!aIsMatch && bIsMatch) {
+      return 1;
+    }
+
+    return 0;
+  });
+
+  return segments;
+};
 
 export const getGroupList = (groupOptions) => {
   const groups = Object.entries(groupOptions || {}).map(
     ([group_name, display_name]) => [display_name, group_name]
   );
-  groups.unshift(['All Accounts', 'All']);
+  groups.unshift(['All Accounts', GROUP_NAME_DOMAINS]);
   return groups;
 };
 
@@ -31,7 +62,7 @@ export const generateSegmentsList = ({ accountPayload, segments }) => {
     )
     .map(([group, vals]) => formatSegmentsObjToGroupSelectObj(group, vals))
     .forEach((obj) => segmentsList.push(obj));
-  return segmentsList;
+  return reorderSegments(segmentsList);
 };
 
 const getTablePropColumn = ({ prop, groupPropNames, listProperties }) => {
@@ -84,7 +115,7 @@ export const getColumns = ({
       // Company Name Column
       title: (
         <div className={headerClassStr}>
-          {source === 'All' ? 'Account Domain' : 'Company Name'}
+          {IsDomainGroup(source) ? 'Account Domain' : 'Company Name'}
         </div>
       ),
       dataIndex: 'account',
@@ -99,17 +130,14 @@ export const getColumns = ({
             <img
               src={`https://logo.clearbit.com/${getHost(item.host)}`}
               onError={(e) => {
-                if (
-                  e.target.src !==
-                  'https://s3.amazonaws.com/www.factors.ai/assets/img/buildings.svg'
-                ) {
-                  e.target.src =
-                    'https://s3.amazonaws.com/www.factors.ai/assets/img/buildings.svg';
+                if (e.target.src !== placeholderIcon) {
+                  e.target.src = placeholderIcon;
                 }
               }}
               alt=''
-              width='20'
-              height='20'
+              width='24'
+              height='24'
+              loading='lazy'
             />
             <span className='ml-2'>{item.name}</span>
           </div>
@@ -237,8 +265,8 @@ export const computeFilterProperties = ({
 }) => {
   const props = {};
   if (profileType === 'account') {
-    if (source === 'All') {
-      props['$domains'] = groupProperties['$domains'];
+    if (IsDomainGroup(source)) {
+      props[GROUP_NAME_DOMAINS] = groupProperties[GROUP_NAME_DOMAINS];
       Object.keys(availableGroups).forEach((group) => {
         props[group] = groupProperties[group];
       });

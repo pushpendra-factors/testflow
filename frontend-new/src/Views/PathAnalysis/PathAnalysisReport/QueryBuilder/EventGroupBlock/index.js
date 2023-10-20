@@ -10,7 +10,7 @@ import {
   PropTextFormat
 } from 'Utils/dataFormatter';
 import getGroupIcon from 'Utils/getGroupIcon';
-import { CustomGroupNames } from 'Components/GlobalFilter/FilterWrapper/utils';
+import { CustomGroupDisplayNames } from 'Components/GlobalFilter/FilterWrapper/utils';
 
 function EventGroupBlock({
   eventGroup,
@@ -44,8 +44,8 @@ function EventGroupBlock({
       'event'
     );
     if (eventGroup) {
-      const groupLabel = CustomGroupNames[eventGroup]
-        ? CustomGroupNames[eventGroup]
+      const groupLabel = CustomGroupDisplayNames[eventGroup]
+        ? CustomGroupDisplayNames[eventGroup]
         : groupOpts[eventGroup]
         ? groupOpts[eventGroup]
         : PropTextFormat(eventGroup);

@@ -1,3 +1,5 @@
+import { GROUP_NAME_DOMAINS } from "Components/GlobalFilter/FilterWrapper/utils";
+
 export const eventMenuList = {
   any: {
     label: 'Any Event',
@@ -18,7 +20,7 @@ export const moreActionsMode = {
   RENAME: 'RENAME'
 };
 
-const INITIAL_ACCOUNT_STATE = ['All Accounts', 'All'];
+const INITIAL_ACCOUNT_STATE = ['All Accounts', GROUP_NAME_DOMAINS];
 
 export const INITIAL_FILTERS_STATE = {
   filters: [],

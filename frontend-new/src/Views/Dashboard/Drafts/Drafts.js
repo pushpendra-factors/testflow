@@ -14,10 +14,11 @@ const Drafts = () => {
             weight='bold'
             extraClass='mb-0'
             type='title'
+            id={'fa-at-text--draft-title'}
           >
             Drafts
           </Text>
-          <Text color='character-secondary' extraClass='mb-0' type='title'>
+          <Text color='character-secondary' extraClass='mb-0' type='title'id={'fa-at-text--draft-desc'}>
             This is a list of all reports across dashboards with in your current
             project.
           </Text>

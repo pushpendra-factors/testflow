@@ -31,10 +31,11 @@ import {
 } from 'Reducers/coreQuery/actions';
 import { ReactSortable } from 'react-sortablejs';
 import { isEqual } from 'lodash';
-import { fetchGroups } from 'Reducers/coreQuery/services';
 import GlobalFilter from '../GlobalFilter';
 import { setShowCriteria } from 'Reducers/analyticsQuery';
 import CriteriaSection from './CriteriaSection';
+import { getGroups } from '../../reducers/coreQuery/middleware';
+import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 
 function QueryComposer({
   queries = [],
@@ -42,13 +43,13 @@ function QueryComposer({
   runQuery,
   eventChange,
   queryType,
-  fetchGroups,
   fetchEventNames,
   getUserPropertiesV2,
   getGroupProperties,
   getEventPropertiesV2,
   activeProject,
-  groupOpts,
+  getGroups,
+  groups,
   groupProperties,
   eventPropertiesV2,
   queryOptions,
@@ -69,25 +70,28 @@ function QueryComposer({
   const dispatch = useDispatch();
 
   useEffect(() => {
-    fetchGroups(activeProject?.id);
-  }, [activeProject]);
+    if (!groups || Object.keys(groups).length === 0) {
+      getGroups(activeProject?.id);
+    }
+  }, [activeProject?.id, groups]);
 
   const groupsList = useMemo(() => {
     const customGroups = [
       ['Users', 'users'],
-      ['All Accounts', '$domains']
+      ['All Accounts', GROUP_NAME_DOMAINS]
     ];
 
     if (queryType === QUERY_TYPE_EVENT) {
       customGroups.unshift(['Events', 'events']);
     }
+    return customGroups;
+  }, [queryType]);
 
-    const groups = Object.entries(groupOpts || {}).map(
-      ([group_name, display_name]) => [display_name, group_name]
-    );
-
-    return [...customGroups, ...groups];
-  }, [groupOpts, queryType]);
+  const getAvailableGroups = useMemo(() => {
+    return Object.entries(groups?.all_groups || {})?.map(
+    ([group_name, display_name]) => [display_name, group_name]
+  )
+  },[groups]);
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -96,12 +100,12 @@ function QueryComposer({
   }, [activeProject, fetchEventNames, getUserPropertiesV2, queryType]);
 
   useEffect(() => {
-    Object.keys(groupOpts || {}).forEach((group) => {
+    Object.keys(groups?.all_groups || {}).forEach((group) => {
       if (!groupProperties[group]) {
         getGroupProperties(activeProject.id, group);
       }
     });
-  }, [activeProject?.id, groupProperties, groupOpts]);
+  }, [activeProject?.id, groupProperties, groups]);
 
   useEffect(() => {
     queries.forEach((ev) => {
@@ -198,7 +202,7 @@ function QueryComposer({
   const groupsMenuItems = groupsList.map((opt) => ({
     label: opt[0],
     key: opt[1],
-    lineBreak: opt[1] === '$domains'
+    lineBreak: false
   }));
 
   const groupsMenu = (
@@ -249,7 +253,7 @@ function QueryComposer({
       blockList.push(
         <div key={index} className={styles.composer_body__query_block}>
           <QueryBlock
-            availableGroups={groupsList}
+            availableGroups={getAvailableGroups}
             index={index + 1}
             queryType={queryType}
             event={event}
@@ -268,7 +272,7 @@ function QueryComposer({
       blockList.push(
         <div key='init' className={styles.composer_body__query_block}>
           <QueryBlock
-            availableGroups={groupsList}
+            availableGroups={getAvailableGroups}
             queryType={queryType}
             index={queries.length + 1}
             queries={queries}
@@ -523,7 +527,7 @@ function QueryComposer({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  groupOpts: state.groups.data,
+  groups: state.coreQuery.groups,
   eventPropertiesV2: state.coreQuery.eventPropertiesV2,
   groupProperties: state.coreQuery.groupProperties
 });
@@ -532,7 +536,7 @@ const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
       setShowCriteria,
-      fetchGroups,
+      getGroups,
       fetchEventNames,
       getEventPropertiesV2,
       getUserPropertiesV2,

@@ -1,0 +1,143 @@
+$fa-color--mono-2: #e7e9ed;
+$dropdownbtn-mono-1: #f5f6f8;
+.fullModal {
+  border: 1px solid black;
+  width: 100% !important;
+  top: 0;
+  bottom: 0;
+  min-height: 100vh;
+  padding: 0 !important;
+}
+
+.fullModal {
+  :global(.ant-modal-content) {
+    min-height: 100vh;
+  }
+}
+
+.eventCharacter {
+  border-radius: 10px;
+  background: #3e516c;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-right: 0.25rem;
+  color: white;
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.eventName {
+  font-weight: 500;
+  color: #3e516c;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.dashboardDropdown {
+  min-width: 150px;
+
+  :global(.ant-select-selector) {
+    border: none !important;
+  }
+
+  :global(span.ant-select-selection-item) {
+    color: #8692a3;
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  &:hover {
+    :global(.ant-select-selector) {
+      box-shadow: none !important;
+    }
+  }
+}
+
+.expand_icon {
+  visibility: hidden;
+}
+
+.widgetCard {
+  border-bottom: thin solid $fa-color--mono-2;
+}
+
+.dropdownbtn {
+  display: flex;
+  font-weight: 600 !important;
+  font-size: 16px !important;
+  padding: 0 0px 0 20px;
+  min-width: 400px;
+  min-height: 40px;
+  display: flex;
+  justify-content: space-between;
+  background-color: $dropdownbtn-mono-1 !important;
+  & .dropdownbtntext {
+    height: 100%;
+    display: grid;
+    place-content: center;
+    padding-right: 10px;
+    font-size: 18px;
+  }
+  & .dropdownbtnicon {
+    padding: 0 10px 0 10px;
+    height: 100%;
+    display: grid;
+    place-content: center;
+    border-left: 1px solid $fa-color--mono-2;
+  }
+  &:hover,
+  &:focus {
+    background: #efefef !important;
+  }
+}
+
+.event_selector {
+  position: relative;
+  &__btn {
+    position: relative;
+  }
+
+  & > div {
+    padding: 0;
+  }
+
+  .ant-select-selector {
+    border-radius: 12px;
+  }
+}
+
+.divider_newdashboard_btn {
+  margin: 0;
+}
+
+.additionalops {
+  top: 44px;
+  box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+}
+.widgetCardCustomCSS {
+  overflow: hidden;
+
+  &:hover {
+    overflow: auto;
+  }
+}
+
+.addNewDashboardButtonProjectDropdown {
+  margin-left: 10px;
+  background-color: transparent;
+  color: #1890ff;
+  border-color: #1890ff;
+  border-width: 1px;
+  font-size: 2px;
+  &:hover,
+  &:active,
+  &:focus {
+    color: #69c0ff;
+    border-color: #69c0ff;
+  }
+}

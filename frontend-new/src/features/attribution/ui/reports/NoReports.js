@@ -21,6 +21,7 @@ function NoReports() {
           weight='bold'
           color={newLocal}
           extraClass='m-0'
+          id={'fa-at-text--page-title'}
         >
           Attribution Reports
         </Text>

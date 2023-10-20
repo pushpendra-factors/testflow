@@ -11,7 +11,6 @@ import GlobalFilterSelect from '../GlobalFilterSelect';
 import { DEFAULT_OPERATOR_PROPS } from '../../../FaFilterSelect/utils';
 import { getKPIPropertyValues } from 'Reducers/coreQuery/middleware';
 import _ from 'lodash';
-import getGroupIcon from 'Utils/getGroupIcon';
 import { groupKPIPropertiesOnCategory } from 'Utils/dataFormatter';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
@@ -136,7 +135,8 @@ function GlobalFilterBlock({
     Object.keys(filterProps).forEach((propertyType) => {
       const kpiItemsgroupedByCategoryProperty = groupKPIPropertiesOnCategory(
         filterProps?.[propertyType],
-        propertyType
+        propertyType,
+        selectedMainCategory?.group
       );
       propertyArrays.push(...Object.values(kpiItemsgroupedByCategoryProperty));
     });

@@ -246,7 +246,7 @@ function ProjectModal(props) {
     <>
       <Popover
         placement='bottomRight'
-        overlayClassName={'fa-popupcard--wrapper'}
+        overlayClassName={'fa-popupcard--wrapper fa-at-popover--projects'}
         title={false}
         content={popoverContent}
         visible={ShowPopOver}
@@ -257,7 +257,7 @@ function ProjectModal(props) {
           setsearchProjectName('');
           setShowPopOver(true);
         }}
-        trigger='click'
+        trigger='click' 
       >
         <Tooltip
           title='Access your projects, account settings, and more'
@@ -267,6 +267,7 @@ function ProjectModal(props) {
             className={`${styles.button} flex items-center mr-4`}
             type='text'
             size='large'
+            id="fa-at-dropdown--projects"
           >
             <Avatar
               size={36}

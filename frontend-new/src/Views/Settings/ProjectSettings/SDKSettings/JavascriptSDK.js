@@ -1013,7 +1013,7 @@ function JavascriptSDK({
       <div className={'mb-4 pl-4'}>
         <Row style={{ width: '100%', justifyContent: 'space-between' }}>
           <Col span={12}>
-            <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>
+            <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} id={'fa-at-text--page-title'}>
               {isOnBoardFlow === true ? 'Add our ' : ''} Javascript SDK
             </Text>
           </Col>

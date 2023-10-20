@@ -3,9 +3,7 @@ import { Drawer, Button, Row, Col, Select, message } from 'antd';
 import { SVG, Text } from 'factorsComponents';
 import GroupSelect2 from '../../components/QueryComposer/GroupSelect2';
 import {
-  fetchEventNames,
-  getUserProperties,
-  getEventProperties
+  fetchEventNames
 } from 'Reducers/coreQuery/middleware';
 import {
   fetchGoalInsights,
@@ -228,7 +226,7 @@ const CreateGoalDrawer = (props) => {
       }
     }
     if (props.activeProject && props.activeProject.id) {
-      props.getUserProperties(props.activeProject.id, 'channel');
+      // props.getUserProperties(props.activeProject.id, 'channel');
     }
     if (props.tracked_events) {
       const fromatterTrackedEvents = props.tracked_events.map((item) => {
@@ -810,8 +808,6 @@ export default connect(mapStateToProps, {
   fetchFactorsModels,
   saveGoalInsightRules,
   saveGoalInsightModel,
-  getUserProperties,
   fetchUserPropertyValues,
-  getEventProperties,
   fetchFactorsModelMetadata
 })(CreateGoalDrawer);

@@ -474,7 +474,6 @@ CREATE ROWSTORE TABLE IF NOT EXISTS project_settings (
     onboarding_steps JSON,
     segment_marker_last_run timestamp(6),
     int_g2 boolean default false,
-
     KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id)
@@ -1404,6 +1403,16 @@ CREATE TABLE IF NOT EXISTS  upload_filter_files(
     project_id bigint,
     created_at timestamp(6), 
     updated_at timestamp(6)
+);
+
+CREATE TABLE IF NOT EXISTS account_scoring_ranges(
+    project_id bigint NOT NULL,
+    date text NOT NULL,
+    bucket text ,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
+    KEY (project_id, date) USING CLUSTERED COLUMNSTORE,
+    PRIMARY KEY (project_id, date)
 );
 
 --  This is generated from DBT workload. Adding this for running test cases alone.

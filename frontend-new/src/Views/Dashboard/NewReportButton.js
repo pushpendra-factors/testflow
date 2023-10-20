@@ -139,8 +139,8 @@ const NewReportButton = ({ setIsReportsModalOpen, showSavedReport }) => {
   );
 
   return (
-    <Dropdown overlay={menu} placement='bottomRight' trigger={'click'}>
-      <Button type='primary'>
+    <Dropdown overlay={menu} overlayClassName="fa-at-overlay--new-report" placement='bottomRight' trigger={'click'}>
+      <Button type='primary' id="fa-at-btn--new-report">
         <Space>
           <SVG name={'plus'} size={16} color='white' />
           New Report

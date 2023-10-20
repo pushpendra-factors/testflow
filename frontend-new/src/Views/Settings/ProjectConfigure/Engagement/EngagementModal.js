@@ -8,7 +8,7 @@ import { useSelector } from 'react-redux';
 function EngagementModal({ visible, onOk, onCancel, event, editMode }) {
   const [listEvents, setListEvents] = useState([]);
   const [isEventsDDVisible, setEventsDDVisible] = useState(false);
-  const groupOpts = useSelector((state) => state.groups.data);
+  const availableGroups = useSelector((state) => state.coreQuery.groups);
 
   useEffect(() => {
     if (!event || event === undefined || Object.keys(event).length === 0)
@@ -17,8 +17,8 @@ function EngagementModal({ visible, onOk, onCancel, event, editMode }) {
   }, [event]);
 
   const groupsList = useMemo(() => {
-    return getGroupList(groupOpts);
-  }, [groupOpts]);
+    return getGroupList(availableGroups?.all_groups);
+  }, [availableGroups]);
 
   const onCancelState = () => {
     onCancel();

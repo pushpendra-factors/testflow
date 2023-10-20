@@ -13,6 +13,7 @@ import {
   getEventsWithProperties,
   getStateQueryFromRequestQuery
 } from '../../Views/CoreQuery/utils';
+import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 import { operatorMap, reverseOperatorMap } from 'Utils/operatorMapping';
 
 export const granularityOptions = [
@@ -89,7 +90,7 @@ export const TimelineHoverPropDisplayNames = {
 };
 
 export const GroupDisplayNames = {
-  All: 'All Accounts',
+  $domains: 'All Accounts',
   $hubspot_company: 'Hubspot Companies',
   $hubspot_deal:'Hubspot Deals',
   $salesforce_account: 'Salesforce Accounts',
@@ -98,6 +99,9 @@ export const GroupDisplayNames = {
   $linkedin_company: 'Linkedin Company Engagements',
   $g2: 'G2 Engagements'
 };
+
+export const IsDomainGroup = (source) =>
+  source === GROUP_NAME_DOMAINS || source === 'All';
 
 export const getFiltersRequestPayload = ({ selectedFilters, table_props }) => {
   const { eventsList, eventProp, filters, account } = selectedFilters;
@@ -595,7 +599,7 @@ export const getSelectedFiltersFromQuery = ({ query, groupsList }) => {
     reverse_user_types[query.ec] != null
       ? reverse_user_types[query.ec]
       : ANY_USER_TYPE;
-  const grpa = Boolean(query.grpa) === true ? query.grpa : 'All';
+  const grpa = Boolean(query.grpa) === true ? query.grpa : GROUP_NAME_DOMAINS;
   const filters = getStateQueryFromRequestQuery(query);
   const result = {
     eventProp,

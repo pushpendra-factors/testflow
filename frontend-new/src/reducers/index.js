@@ -24,6 +24,7 @@ import accountProfilesViewReducer from './accountProfilesView';
 import userProfilesViewReducer from './userProfilesView';
 import FeatureConfigReducer from './featureConfig';
 import { USER_LOGOUT } from './types';
+import preBuildDashboardConfig from '../Views/PreBuildDashboard/state/reducer'
 
 const appReducer = combineReducers({
   global: GlobalReducer,
@@ -31,6 +32,7 @@ const appReducer = combineReducers({
   coreQuery: CoreQueryReducer,
   analyticsQuery: AnalyticsReducer,
   dashboard: DashboardReducer,
+  preBuildDashboardConfig: preBuildDashboardConfig,
   queries: QueriesReducer,
   settings: settingsReducer,
   factors,
