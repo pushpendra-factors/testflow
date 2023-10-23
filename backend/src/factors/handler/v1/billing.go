@@ -2,7 +2,7 @@ package v1
 
 import (
 	"errors"
-	chargebee "factors/chargebee"
+	billing "factors/billing/chargebee"
 	mid "factors/middleware"
 	"factors/model/model"
 	"factors/model/store"
@@ -18,7 +18,7 @@ func GetPricingForPlansAndAddonsHandler(c *gin.Context) {
 	if projectId == 0 {
 		c.AbortWithError(http.StatusBadRequest, errors.New("INVALID PROJECT ID"))
 	}
-	itemPrices, err := chargebee.ListPlansAndAddOnsPricesFromChargebee()
+	itemPrices, err := billing.ListPlansAndAddOnsPricesFromChargebee()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.PlansAndAddOnsPrices{})
 	}
@@ -52,7 +52,7 @@ func UpdateSubscriptionHandler(c *gin.Context) {
 		c.AbortWithError(http.StatusBadRequest, errors.New("INVALID REQUEST"))
 		return
 	}
-	hostedPage, _, err := chargebee.GetUpgradeChargebeeSubscriptionCheckoutURL(project.BillingSubscriptionID, updateSubscriptionParams)
+	hostedPage, _, err := billing.GetUpgradeChargebeeSubscriptionCheckoutURL(project.BillingSubscriptionID, updateSubscriptionParams)
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
 	}
@@ -76,7 +76,7 @@ func GetSubscriptionDetailsHander(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, subscription)
 	}
 
-	res, err := chargebee.GetCurrentSubscriptionDetails(project.BillingSubscriptionID)
+	res, err := billing.GetCurrentSubscriptionDetails(project.BillingSubscriptionID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, subscription)
 	}

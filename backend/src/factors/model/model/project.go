@@ -74,6 +74,9 @@ const (
 
 const DefaultProjectName = "My Project"
 
+const DEFAULT_PLAN = PLAN_FREE
+const DEFAULT_PLAN_ID = PLAN_ID_FREE
+
 type InteractionSettings struct {
 	UTMMappings map[string][]string `json:"utm_mapping"`
 }

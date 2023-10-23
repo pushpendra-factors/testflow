@@ -1,8 +1,8 @@
 package memsql
 
 import (
+	billing "factors/billing/chargebee"
 	cacheRedis "factors/cache/redis"
-	"factors/chargebee"
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
@@ -316,7 +316,7 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 	}
 	// creating free subscription
 	if billingEnabled {
-		subscription, status, err := chargebee.CreateChargebeeSubscriptionForCustomer(agent.BillingCustomerID, model.FREE_PLAN_ITEM_PRICE_ID)
+		subscription, status, err := billing.CreateChargebeeSubscriptionForCustomer(agent.BillingCustomerID, model.FREE_PLAN_ITEM_PRICE_ID)
 		if err != nil || status != http.StatusCreated {
 			logCtx.WithField("err_code", status).WithError(err).Error("Failed to create default subscription for agent")
 			return errCode
@@ -337,7 +337,7 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 	}
 
 	// inserting project into free plan by default
-	status, err = store.CreateDefaultProjectPlanMapping(projectID, model.PLAN_ID_FREE, model.FREE_PLAN_ITEM_PRICE_ID)
+	status, err = store.CreateDefaultProjectPlanMapping(projectID, model.DEFAULT_PLAN_ID, model.DEFAULT_PLAN_ITEM_PRICE_ID)
 	if status != http.StatusCreated {
 		logCtx.Error("Create default project plan mapping failed on create project dependencies for project ID ", projectID)
 		return errCode

@@ -9,7 +9,7 @@ import (
 
 	U "factors/util"
 
-	"factors/chargebee"
+	billing "factors/billing/chargebee"
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -80,7 +80,7 @@ func (store *MemSQL) CreateAgentWithDependencies(params *model.CreateAgentParams
 
 	if strings.HasSuffix(params.Agent.Email, "factors.ai") {
 		
-		customer, status, err := chargebee.CreateChargebeeCustomer(*params.Agent)
+		customer, status, err := billing.CreateChargebeeCustomer(*params.Agent)
 		if err != nil || status != http.StatusCreated {
 			return nil, http.StatusInternalServerError
 

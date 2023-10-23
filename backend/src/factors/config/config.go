@@ -50,6 +50,7 @@ import (
 	serviceDisk "factors/services/disk"
 	serviceGCS "factors/services/gcstorage"
 
+	"github.com/chargebee/chargebee-go/v3"
 	cache "github.com/hashicorp/golang-lru"
 )
 
@@ -768,6 +769,8 @@ func initAppServerServices(config *Configuration) error {
 	initGeoLocationService(config.GeolocationFile)
 	initDeviceDetectorPath(config.DeviceDetectorPath)
 
+	InitChargebeeObject(config.ChargebeeApiKey, config.ChargebeeSiteName)
+
 	regPatternServers, err := GetServices().Etcd.DiscoverPatternServers()
 	if err != nil && err != serviceEtcd.NotFound {
 		log.WithError(err).Errorln("Falied to initialize discover pattern servers")
@@ -1297,6 +1300,11 @@ func InitSmartEventMode(mode bool) {
 // initializes smart properties mode
 func InitSmartPropertiesMode(mode bool) {
 	configuration.DryRunSmartProperties = mode
+}
+
+// init chargebee
+func InitChargebeeObject(apiKey, siteName string) {
+	chargebee.Configure(apiKey, siteName)
 }
 
 // SetIsBeamPipeline Sets variable to indicate that the job is running from a beam pipeline.

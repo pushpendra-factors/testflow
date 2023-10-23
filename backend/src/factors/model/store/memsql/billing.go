@@ -2,7 +2,7 @@ package memsql
 
 import (
 	"errors"
-	"factors/chargebee"
+	billing "factors/billing/chargebee"
 	"factors/model/model"
 	"net/http"
 	"time"
@@ -34,7 +34,7 @@ func (store *MemSQL) TriggerSyncChargebeeToFactors(projectID int64) error { // C
 		return errors.New("Subscription doesn't exist for this project ")
 	}
 
-	latestSubscription, err := chargebee.GetCurrentSubscriptionDetails(subscriptionID)
+	latestSubscription, err := billing.GetCurrentSubscriptionDetails(subscriptionID)
 
 	if err != nil {
 		log.WithFields(logCtx).Error("Failed to get subscription details from chargebee ")
