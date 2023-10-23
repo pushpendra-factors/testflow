@@ -43,7 +43,7 @@ import { TOGGLE_GLOBAL_SEARCH } from 'Reducers/types';
 import './index.css';
 import _, { isEmpty } from 'lodash';
 import logger from 'Utils/logger';
-import { useLocation } from 'react-router-dom';
+import { matchPath, useLocation } from 'react-router-dom';
 import GlobalSearchModal from './GlobalSearchModal';
 import AppSidebar from '../AppSidebar';
 import styles from './index.module.scss';
@@ -54,6 +54,7 @@ import { fetchFeatureConfig } from 'Reducers/featureConfig/middleware';
 import { selectAreDraftsSelected } from 'Reducers/dashboard/selectors';
 import { PathUrls } from '../../routes/pathUrls';
 import OnboardingRouting from 'Onboarding/ui/OnboardingRouting';
+import moment from 'moment';
 
 // customizing highcharts for project requirements
 customizeHighCharts(Highcharts);
@@ -187,12 +188,17 @@ function AppLayout({
   //for handling signup event for the first time logged in user
   useEffect(() => {
     const login_count = agentState?.agent_details?.login_count;
+    //using last login time so that for existing logged in users with login count 1 we dont trigger the signup event
+    const lastLoggeInTime =
+      moment(agentState?.agent_details?.last_logged_in) || moment();
+    const currentTime = moment();
+    const timeDifference = currentTime.diff(lastLoggeInTime, 'hours');
     if (activeAgent && login_count) {
       const signupEventlocalStoragekey = `${activeAgent}-signup_event_sent`;
       const isSignUpEventSent = localStorage.getItem(
         signupEventlocalStoragekey
       );
-      if (login_count === 1 && !isSignUpEventSent) {
+      if (login_count === 1 && !isSignUpEventSent && timeDifference < 24) {
         factorsai.track('SIGNUP', {
           first_name: agentState?.agent_details?.first_name || '',
           email: activeAgent,
@@ -207,7 +213,21 @@ function AppLayout({
     return <Spin size={'large'} className={'fa-page-loader'} />;
   }
 
-  const hasSidebar = routesWithSidebar.includes(pathname);
+  const hasSidebar = routesWithSidebar.find((route) => {
+    if (
+      matchPath(pathname, {
+        path: PathUrls.VisitorIdentificationReport,
+        exact: true,
+        strict: false
+      })
+    )
+      return false;
+    return matchPath(pathname, {
+      path: route,
+      exact: true,
+      strict: false
+    });
+  });
 
   return (
     <Layout>

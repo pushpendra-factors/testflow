@@ -18,7 +18,7 @@ export const getProfileAccounts =
     return new Promise((resolve) => {
       fetchProfileAccounts(projectId, payload, agentId)
         .then((response) => {
-          const data = response.data.map((account) => ({
+          const data = response.data?.map((account) => ({
             ...account,
             identity: account.identity,
             account: { name: account.name, host: account?.host_name },
@@ -100,7 +100,7 @@ export const getProfileUsers = (projectId, payload) => (dispatch) => {
   return new Promise((resolve) => {
     fetchProfileUsers(projectId, payload)
       .then((response) => {
-        const data = response.data.map((user) => ({
+        const data = response.data?.map((user) => ({
           ...user,
           identity: { id: user.identity, isAnonymous: user.is_anonymous },
           tableProps: user.table_props,

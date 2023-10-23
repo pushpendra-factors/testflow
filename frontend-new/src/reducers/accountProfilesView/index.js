@@ -6,9 +6,10 @@ import {
   UPDATE_ACCOUNT_PAYLOAD,
   ENABLE_NEW_SEGMENT_MODE,
   DISABLE_NEW_SEGMENT_MODE,
-  SET_FILTERS_DIRTY,
+  SET_FILTERS_DIRTY
 } from './types';
 import { SEGMENT_DELETED } from 'Reducers/timelines/types';
+import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 
 const INITIAL_ACTIVE_SEGMENT = {};
 const INITIAL_ACCOUNT_PAYLOAD = { source: '', filters: [], segment_id: '' };
@@ -18,7 +19,7 @@ const initialState = {
   activeSegment: INITIAL_ACTIVE_SEGMENT,
   showSegmentModal: false,
   newSegmentMode: false,
-  filtersDirty: false,
+  filtersDirty: false
 };
 
 export default function (state = initialState, action) {
@@ -70,7 +71,10 @@ export default function (state = initialState, action) {
       return {
         ...state,
         activeSegment: INITIAL_ACTIVE_SEGMENT,
-        accountPayload: { ...INITIAL_ACCOUNT_PAYLOAD, source: 'All' }
+        accountPayload: {
+          ...INITIAL_ACCOUNT_PAYLOAD,
+          source: GROUP_NAME_DOMAINS
+        }
       };
     }
     case SET_FILTERS_DIRTY: {

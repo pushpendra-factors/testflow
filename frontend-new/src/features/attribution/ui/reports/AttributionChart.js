@@ -25,7 +25,8 @@ import AttributionsScatterPlot from 'Views/CoreQuery/AttributionsResult/Attribut
 import AttributionTable from 'Views/CoreQuery/AttributionsResult/AttributionTable';
 import DualTouchPointChart from 'Views/CoreQuery/AttributionsResult/DualTouchPointChart';
 import SingleTouchPointChart from 'Views/CoreQuery/AttributionsResult/SingleTouchPointChart';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { setAttributionTableFilters } from 'Attribution/state/actions';
 
 const nodata = (
   <div className='flex justify-center items-center w-full h-full pt-4 pb-4'>
@@ -52,7 +53,12 @@ function AttributionChart({
   queryOptions,
   attributionMetrics
 }) {
+
   const { eventNames } = useSelector((state) => state.coreQuery);
+  const { attributionTableFilters } = useSelector((state) => state.attributionDashboard);
+
+  const dispatch = useDispatch();
+
   const [aggregateData, setAggregateData] = useState({
     categories: [],
     series: []
@@ -64,12 +70,12 @@ function AttributionChart({
   const [sorter, setSorter] = useState(defaultSortProp());
   const [visibleIndices, setVisibleIndices] = useState([]);
   const [filtersVisible, setFiltersVisibility] = useState(false);
-  const [tableFilters, setAttributionTableFilters] = useState({});
 
 
   const handleApplyFilters = 
     (filters) => {
-      setAttributionTableFilters({ attributionTableFilters: filters });
+      // setAttributionTableFilters({ attributionTableFilters: filters });
+      dispatch(setAttributionTableFilters(filters));
       setFiltersVisibility(false);
     }
 
@@ -219,7 +225,7 @@ function AttributionChart({
       columns={columns}
       tableData={tableData}
       searchText={searchText}
-      appliedFilters={tableFilters.appliedFilters}
+      appliedFilters={attributionTableFilters}
       setAppliedFilters={handleApplyFilters}
       setSearchText={setSearchText}
     />

@@ -8145,3 +8145,367 @@ func TestHubspotEnableEventLevelProperties(t *testing.T) {
 	assert.Contains(t, propertyValues[U.PropertyTypeNumerical], numEnKey1, numEnKey2)
 
 }
+
+func getHubspotDealV3JSON(id string, companyIDS []int, contactIDs []int, createddate, lastModifiedDate int64, properties map[string]interface{}) (string, error) {
+	properties["hs_lastmodifieddate"] = time.Unix(lastModifiedDate, 0).Format(model.HubspotDateTimeLayout)
+	properties["createdate"] = time.Unix(createddate, 0).Format(model.HubspotDateTimeLayout)
+	deal := map[string]interface{}{
+		"associations": map[string]interface{}{
+			"associatedCompanyIds": companyIDS,
+			"associatedVids":       contactIDs,
+		},
+		"id":         id,
+		"properties": properties,
+	}
+
+	dealByte, err := json.Marshal(deal)
+	return string(dealByte), err
+}
+
+func getHubspotContactJSON(id string, companyID string, createddateSec, lastModifiedDateSec int64, properties map[string]interface{}) (string, error) {
+	contactProperties := map[string]IntHubspot.Property{}
+	for key, value := range properties {
+		contactProperties[key] = IntHubspot.Property{Value: U.GetPropertyValueAsString(value)}
+	}
+	contactProperties["createdate"] = IntHubspot.Property{Value: fmt.Sprintf("%d", createddateSec*1000)}
+	contactProperties["lastmodifieddate"] = IntHubspot.Property{Value: fmt.Sprintf("%d", lastModifiedDateSec*1000)}
+	contactProperties["associatedcompanyid"] = IntHubspot.Property{Value: companyID}
+
+	vid, _ := U.GetPropertyValueAsFloat64(id)
+	contact := IntHubspot.Contact{
+		Vid:        int64(vid),
+		Properties: contactProperties,
+		IdentityProfiles: []IntHubspot.ContactIdentityProfile{
+			{
+				Identities: []IntHubspot.ContactIdentity{
+					{
+						Type:  "EMAIL",
+						Value: getRandomEmail(),
+					},
+					{
+						Type:  "LEAD_GUID",
+						Value: getRandomName(),
+					},
+				},
+			},
+		},
+	}
+
+	dealByte, err := json.Marshal(contact)
+	return string(dealByte), err
+}
+
+func getUserDomainName(projectID int64, userID string) string {
+	domainGroup, _ := store.GetStore().GetGroup(projectID, model.GROUP_NAME_DOMAINS)
+
+	user, _ := store.GetStore().GetUser(projectID, userID)
+
+	domainUserID, _ := model.GetUserGroupUserID(user, domainGroup.ID)
+
+	domainUser, _ := store.GetStore().GetUser(projectID, domainUserID)
+	domainName, _ := model.GetGroupUserGroupID(domainUser, domainGroup.ID)
+	return domainName
+}
+
+func TestHubspotDealDomains(t *testing.T) {
+
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	companyCreatedDate := U.TimeNowZ().AddDate(0, 0, -1)
+	companyUpdatedDate := companyCreatedDate
+
+	company := IntHubspot.CompanyV3{
+		CompanyId:  "1",
+		ContactIds: []int64{1},
+		Properties: map[string]string{
+			"createdate":             companyCreatedDate.Format(model.HubspotDateTimeLayout),
+			"hs_lastmodifieddate":    companyUpdatedDate.Format(model.HubspotDateTimeLayout),
+			"company_lifecyclestage": "lead",
+			"demo_booked_on":         companyCreatedDate.Format(model.HubspotDateLayout),
+			"name":                   "testcompanyV3",
+			"website":                "abc.com",
+			"domain":                 "abc.com",
+		},
+	}
+
+	enJSON, err := json.Marshal(company)
+	assert.Nil(t, err)
+	pJSON := postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameCompany,
+		Value:     &pJSON,
+	}
+	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, status, http.StatusCreated)
+
+	company2 := IntHubspot.CompanyV3{
+		CompanyId:  "2",
+		ContactIds: []int64{2},
+		Properties: map[string]string{
+			"createdate":             companyCreatedDate.Format(model.HubspotDateTimeLayout),
+			"hs_lastmodifieddate":    companyUpdatedDate.Format(model.HubspotDateTimeLayout),
+			"company_lifecyclestage": "lead",
+			"demo_booked_on":         companyCreatedDate.Format(model.HubspotDateLayout),
+			"name":                   "testcompanyV3",
+			"website":                "abc2.com",
+			"domain":                 "abc2.com",
+		},
+	}
+
+	enJSON, err = json.Marshal(company2)
+	assert.Nil(t, err)
+	pJSON = postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameCompany,
+		Value:     &pJSON,
+	}
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, status, http.StatusCreated)
+
+	company3 := IntHubspot.CompanyV3{
+		CompanyId:  "3",
+		ContactIds: []int64{2},
+		Properties: map[string]string{
+			"createdate":             companyCreatedDate.AddDate(0, 0, 1).Format(model.HubspotDateTimeLayout),
+			"hs_lastmodifieddate":    companyUpdatedDate.Format(model.HubspotDateTimeLayout),
+			"company_lifecyclestage": "lead",
+			"demo_booked_on":         companyCreatedDate.Format(model.HubspotDateLayout),
+			"name":                   "testcompanyV3",
+			"website":                "abc3.com",
+			"domain":                 "abc3.com",
+		},
+	}
+
+	enJSON, err = json.Marshal(company3)
+	assert.Nil(t, err)
+	pJSON = postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameCompany,
+		Value:     &pJSON,
+	}
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, status, http.StatusCreated)
+
+	contactJSON, err := getHubspotContactJSON("1", "1", companyCreatedDate.Unix(),
+		companyCreatedDate.Unix(), map[string]interface{}{"lifecyclestage": "lead"})
+	assert.Nil(t, err)
+	pJSON = postgres.Jsonb{json.RawMessage(contactJSON)}
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &pJSON,
+	}
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, status, http.StatusCreated)
+
+	contactJSON, err = getHubspotContactJSON("2", "2", companyCreatedDate.Unix(),
+		companyCreatedDate.Unix(), map[string]interface{}{"lifecyclestage": "lead"})
+	assert.Nil(t, err)
+	pJSON = postgres.Jsonb{json.RawMessage(contactJSON)}
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &pJSON,
+	}
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, status, http.StatusCreated)
+
+	dealJSON1, err := getHubspotDealV3JSON("1", []int{1}, []int{1}, companyCreatedDate.Unix(),
+		companyCreatedDate.Unix(), map[string]interface{}{"name": "deal_1"})
+	pJSON = postgres.Jsonb{json.RawMessage(dealJSON1)}
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameDeal,
+		Value:     &pJSON,
+	}
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, status, http.StatusCreated)
+
+	dealJSON2, err := getHubspotDealV3JSON("2", []int{2, 1}, []int{2}, companyCreatedDate.Unix(),
+		companyCreatedDate.Unix(), map[string]interface{}{"name": "deal_2"})
+	pJSON = postgres.Jsonb{json.RawMessage(dealJSON2)}
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameDeal,
+		Value:     &pJSON,
+	}
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, status, http.StatusCreated)
+
+	dealJSON3, err := getHubspotDealV3JSON("3", []int{3}, []int{2}, companyCreatedDate.Unix(),
+		companyCreatedDate.Unix(), map[string]interface{}{"name": "deal_3"})
+	pJSON = postgres.Jsonb{json.RawMessage(dealJSON3)}
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameDeal,
+		Value:     &pJSON,
+	}
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, status, http.StatusCreated)
+
+	// execute sync job
+	allStatus, _ := IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3)
+	for i := range allStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
+	}
+
+	documents, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"1"},
+		model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, status, http.StatusFound)
+
+	domainName := getUserDomainName(project.ID, documents[0].UserId)
+	assert.Equal(t, "abc.com", domainName)
+
+	documents, status = store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"2"},
+		model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, status, http.StatusFound)
+
+	domainName = getUserDomainName(project.ID, documents[0].UserId)
+	assert.Equal(t, "abc2.com", domainName)
+
+	documents, status = store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"1"},
+		model.HubspotDocumentTypeDeal, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, status, http.StatusFound)
+	domainName = getUserDomainName(project.ID, documents[0].GroupUserId)
+	assert.Equal(t, "abc.com", domainName)
+
+	documents, status = store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"2"},
+		model.HubspotDocumentTypeDeal, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, status, http.StatusFound)
+	domainName = getUserDomainName(project.ID, documents[0].GroupUserId)
+	assert.Equal(t, "abc2.com", domainName)
+
+	documents, status = store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"3"},
+		model.HubspotDocumentTypeDeal, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, status, http.StatusFound)
+	domainName = getUserDomainName(project.ID, documents[0].GroupUserId)
+	assert.Equal(t, "abc3.com", domainName)
+
+	company4 := IntHubspot.CompanyV3{
+		CompanyId:  "4",
+		ContactIds: []int64{3},
+		Properties: map[string]string{
+			"createdate":             companyCreatedDate.AddDate(0, 0, 1).Format(model.HubspotDateTimeLayout),
+			"hs_lastmodifieddate":    companyUpdatedDate.Format(model.HubspotDateTimeLayout),
+			"company_lifecyclestage": "lead",
+			"demo_booked_on":         companyCreatedDate.Format(model.HubspotDateLayout),
+			"name":                   "testcompanyV3",
+			"website":                "abc4.com",
+			"domain":                 "abc4.com",
+		},
+	}
+
+	enJSON, err = json.Marshal(company4)
+	assert.Nil(t, err)
+	pJSON = postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameCompany,
+		Value:     &pJSON,
+	}
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, status, http.StatusCreated)
+
+	enProperties := map[string]interface{}{}
+	for key := range company4.Properties {
+		enKey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot,
+			model.HubspotDocumentTypeNameCompany, key)
+		enProperties[enKey] = company4.Properties[key]
+	}
+	groupUserID, err := store.GetStore().CreateOrUpdateGroupPropertiesBySource(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY,
+		"abc4.com", "", &enProperties, companyCreatedDate.Unix(), companyCreatedDate.Unix(), model.UserSourceHubspotString)
+	assert.Nil(t, err)
+	status = store.GetStore().UpdateHubspotDocumentAsSynced(project.ID, "4", model.HubspotDocumentTypeCompany, "",
+		companyCreatedDate.Unix()*1000, model.HubspotDocumentActionCreated, "", groupUserID)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	dealJSON4, err := getHubspotDealV3JSON("4", []int{4}, []int{}, companyCreatedDate.Unix(),
+		companyCreatedDate.Unix(), map[string]interface{}{"name": "deal_4"})
+	pJSON = postgres.Jsonb{json.RawMessage(dealJSON4)}
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameDeal,
+		Value:     &pJSON,
+	}
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, status, http.StatusCreated)
+
+	// execute sync job
+	allStatus, anyFailure := IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3)
+	assert.Equal(t, false, anyFailure)
+	for i := range allStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
+	}
+
+	documents, status = store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"4"},
+		model.HubspotDocumentTypeDeal, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, status, http.StatusFound)
+	domainName = getUserDomainName(project.ID, documents[0].GroupUserId)
+	assert.Equal(t, "abc4.com", domainName)
+}
+
+func TestHubspotUpdateGroupUserColumn(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	companyCreatedDate := U.TimeNowZ().AddDate(0, 0, -1)
+	companyUpdatedDate := companyCreatedDate
+
+	company := IntHubspot.CompanyV3{
+		CompanyId:  "1",
+		ContactIds: []int64{1},
+		Properties: map[string]string{
+			"createdate":             companyCreatedDate.Format(model.HubspotDateTimeLayout),
+			"hs_lastmodifieddate":    companyUpdatedDate.Format(model.HubspotDateTimeLayout),
+			"hs_object_id":"1",
+			"company_lifecyclestage": "lead",
+			"demo_booked_on":         companyCreatedDate.Format(model.HubspotDateLayout),
+			"name":                   "testcompanyV3",
+			"website":                "abc.com",
+			"domain":                 "abc.com",
+		},
+	}
+
+	enJSON, err := json.Marshal(company)
+	assert.Nil(t, err)
+	pJSON := postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameCompany,
+		Value:     &pJSON,
+	}
+	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, status, http.StatusCreated)
+
+	documents, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"1"},
+		model.HubspotDocumentTypeCompany, []int{model.HubspotDocumentActionCreated, model.HubspotDocumentActionUpdated})
+
+	status = store.GetStore().UpdateHubspotDocumentAsSynced(project.ID, "1", model.HubspotDocumentTypeCompany, "",
+		documents[0].Timestamp, documents[0].Action, "", "")
+	assert.Equal(t, http.StatusAccepted, status)
+	status = store.GetStore().UpdateHubspotDocumentAsSynced(project.ID, "1", model.HubspotDocumentTypeCompany, "",
+		documents[0].Timestamp, model.HubspotDocumentActionUpdated, "", "")
+	assert.Equal(t, http.StatusAccepted, status)
+
+	_, status = store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_DEAL, model.AllowedGroupNames)
+	assert.Equal(t, http.StatusCreated, status)
+	_, status = store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, model.AllowedGroupNames)
+	assert.Equal(t, http.StatusCreated, status)
+	dealGroupUserID, err := store.GetStore().CreateOrUpdateGroupPropertiesBySource(project.ID, model.GROUP_NAME_HUBSPOT_DEAL,
+		"123", "", &map[string]interface{}{"name": "deal_1"}, companyCreatedDate.Unix(), companyCreatedDate.Unix(), model.UserSourceHubspotString)
+	assert.Nil(t, err)
+
+	status = IntHubspot.AssociateDealToDomain(project.ID, dealGroupUserID, "1")
+	assert.Equal(t, http.StatusOK, status)
+
+	company.Properties["hs_lastmodifieddate"] = companyUpdatedDate.Add(10 * time.Minute).Format(model.HubspotDateTimeLayout)
+	enJSON, err = json.Marshal(company)
+	assert.Nil(t, err)
+	pJSON = postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameCompany,
+		Value:     &pJSON,
+	}
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, status, http.StatusCreated)
+
+	// execute sync job
+	allStatus, anyFailure := IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3)
+	assert.Equal(t, false, anyFailure)
+	for i := range allStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
+	}
+}

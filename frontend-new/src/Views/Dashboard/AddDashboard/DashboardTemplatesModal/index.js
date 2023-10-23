@@ -39,7 +39,6 @@ import { createDashboardFromTemplate } from 'Reducers/dashboard_templates/servic
 import { fetchDashboards } from 'Reducers/dashboard/services';
 import {
   fetchAttrContentGroups,
-  fetchGroups,
   fetchQueries,
   fetchSmartPropertyRules
 } from 'Reducers/coreQuery/services';
@@ -47,6 +46,7 @@ import { fetchKPIConfig, fetchPageUrls } from 'Reducers/kpi';
 import {
   fetchEventNames,
   getGroupProperties,
+  getGroups,
   getUserPropertiesV2
 } from 'Reducers/coreQuery/middleware';
 import { fetchWeeklyIngishtsMetaData } from 'Reducers/insights';
@@ -394,7 +394,7 @@ let Step2DashboardTemplateModal = ({
   const fetchDashboardItems = () => {
     dispatch(fetchDashboards(activeProject.id));
     dispatch(fetchQueries(activeProject.id));
-    dispatch(fetchGroups(activeProject.id));
+    dispatch(getGroups(activeProject.id));
     dispatch(fetchKPIConfig(activeProject.id));
     dispatch(fetchPageUrls(activeProject.id));
     // dispatch(deleteQueryTest())

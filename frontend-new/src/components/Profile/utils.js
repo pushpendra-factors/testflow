@@ -13,7 +13,8 @@ import {
   getEventsWithProperties,
   getStateQueryFromRequestQuery
 } from '../../Views/CoreQuery/utils';
-import { operatorMap } from 'Utils/operatorMapping';
+import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
+import { operatorMap, reverseOperatorMap } from 'Utils/operatorMapping';
 
 export const granularityOptions = [
   'Timestamp',
@@ -89,13 +90,18 @@ export const TimelineHoverPropDisplayNames = {
 };
 
 export const GroupDisplayNames = {
-  All: 'All Accounts',
+  $domains: 'All Accounts',
   $hubspot_company: 'Hubspot Companies',
+  $hubspot_deal:'Hubspot Deals',
   $salesforce_account: 'Salesforce Accounts',
+  $salesforce_opportunity:'Salesforce Opportunities',
   $6signal: 'Identified Companies',
   $linkedin_company: 'Linkedin Company Engagements',
   $g2: 'G2 Engagements'
 };
+
+export const IsDomainGroup = (source) =>
+  source === GROUP_NAME_DOMAINS || source === 'All';
 
 export const getFiltersRequestPayload = ({ selectedFilters, table_props }) => {
   const { eventsList, eventProp, filters, account } = selectedFilters;
@@ -373,12 +379,10 @@ export const DEFAULT_TIMELINE_CONFIG = {
   disabled_events: [],
   user_config: {
     table_props: [],
-    leftpane_props: [],
     milestones: []
   },
   account_config: {
     table_props: [],
-    leftpane_props: [],
     milestones: [],
     user_prop: ''
   }
@@ -536,7 +540,9 @@ export const transformPayloadForWeightConfig = (payload) => {
       const rule = {
         key: filter.props[1],
         value: filter.values,
-        operator: filter.operator,
+        operator: operatorMap[filter.operator]
+          ? operatorMap[filter.operator]
+          : filter.operator,
         property_type: filter.props[3],
         value_type: filter.props[2]
       };
@@ -575,7 +581,9 @@ export const transformWeightConfigForQuery = (config) => {
           rule.value_type,
           rule.property_type
         ],
-        operator: rule.operator,
+        operator: reverseOperatorMap[rule.operator]
+          ? reverseOperatorMap[rule.operator]
+          : rule.operator,
         values: ruleValues,
         ref: 1
       };
@@ -591,7 +599,7 @@ export const getSelectedFiltersFromQuery = ({ query, groupsList }) => {
     reverse_user_types[query.ec] != null
       ? reverse_user_types[query.ec]
       : ANY_USER_TYPE;
-  const grpa = Boolean(query.grpa) === true ? query.grpa : 'All';
+  const grpa = Boolean(query.grpa) === true ? query.grpa : GROUP_NAME_DOMAINS;
   const filters = getStateQueryFromRequestQuery(query);
   const result = {
     eventProp,

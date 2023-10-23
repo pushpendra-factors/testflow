@@ -3,7 +3,8 @@ import { Modal, Button } from 'antd';
 import {
   DefaultDateRangeForSegments,
   GroupDisplayNames,
-  getSegmentQuery
+  getSegmentQuery,
+  IsDomainGroup
 } from '../utils';
 import { SVG, Text } from 'Components/factorsComponents';
 import InputFieldWithLabel from '../MyComponents/InputFieldWithLabel/index';
@@ -16,6 +17,7 @@ import { compareFilters, generateRandomKey } from 'Utils/global';
 import { useSelector } from 'react-redux';
 import EventsBlock from '../MyComponents/EventsBlock';
 import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
+import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 
 function SegmentModal({
   profileType,
@@ -40,7 +42,11 @@ function SegmentModal({
     ...QUERY_OPTIONS_DEFAULT_VALUE,
     caller: caller,
     group_analysis: profileType === 'user' ? 'users' : type,
-    source: !type ? (profileType === 'user' ? 'web' : 'All') : type,
+    source: !type
+      ? profileType === 'user'
+        ? 'web'
+        : GROUP_NAME_DOMAINS
+      : type,
     date_range: { ...DefaultDateRangeForSegments },
     table_props: tableProps
   };
@@ -72,7 +78,7 @@ function SegmentModal({
   useEffect(() => {
     let setType = type;
     if (!setType) {
-      setType = profileType === 'user' ? 'web' : 'All';
+      setType = profileType === 'user' ? 'web' : GROUP_NAME_DOMAINS;
     }
     const setGrpa = profileType === 'user' ? 'users' : setType;
     setSegmentPayload({ ...DEFAULT_SEGMENT_PAYLOAD, type: setType });
@@ -86,9 +92,9 @@ function SegmentModal({
   useEffect(() => {
     const props = {};
     if (profileType === 'account') {
-      if (segmentPayload.type === 'All') {
+      if (IsDomainGroup(segmentPayload.type)) {
         typeOptions
-          .filter((group) => group[1] !== 'All')
+          .filter((group) => group[1] !== GROUP_NAME_DOMAINS)
           .forEach(([_, group]) => {
             props[group] = groupProperties[group];
           });
@@ -342,7 +348,7 @@ function SegmentModal({
 
   const generateConditionOpts = () => {
     const options = [];
-    if (listEvents.length < 3 && segmentPayload.type !== 'All') {
+    if (listEvents.length < 3 && segmentPayload.type !== '') {
       options.push(['Performed Events', 'event']);
     }
     if (queryOptions.globalFilters.length < 3) {
@@ -392,7 +398,7 @@ function SegmentModal({
         <div className='segment-query_section'>
           {eventsList()}
           {filterList()}
-          {((listEvents.length > 2 || segmentPayload.type === 'All') &&
+          {((listEvents.length > 2 || IsDomainGroup(segmentPayload.type)) &&
             queryOptions.globalFilters.length > 2) ||
           isEventsVisible ||
           isFiltersVisible ? null : (

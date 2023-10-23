@@ -26,16 +26,16 @@ class WeeklyDataFetch:
     def weekly_job_etl_and_backfill_company_data_with_campaign_group(self, options, linkedin_setting,
                                                 sync_info_with_type):
         
-        backfill_start_timestamp = sync_info_with_type['backfill_start_timestamp']
-        # backfill_start_timestamp is minProjectIngestionTimestamp for new integrations
+        last_backfill_timestamp = sync_info_with_type['last_backfill_timestamp']
+        # last_backfill_timestamp is minProjectIngestionTimestamp for new integrations
         # or it's max(backfilled_timestamp) + 1
 
-        if backfill_start_timestamp == None or backfill_start_timestamp == 0:
+        if last_backfill_timestamp == None or last_backfill_timestamp == 0:
             return {'status': 'failed', 'errMsg': "Backfill timestamp is unavailable", 
                             API_REQUESTS: 0}
         
-        # get 7 days chunks of timerange from backfill_start_timestamp to t-15
-        timestamp_range_chunks = U.get_timestamp_chunks_to_be_backfilled(backfill_start_timestamp)
+        # get 7 days chunks of timerange from last_backfill_timestamp to t-15
+        timestamp_range_chunks = U.get_timestamp_chunks_to_be_backfilled(last_backfill_timestamp)
         campaign_group_info = []
         request_counter = 0
         records = []
@@ -45,14 +45,12 @@ class WeeklyDataFetch:
             len_timerange = len(timestamp_range_to_be_backfilled)
             if len_timerange == 0:
                 continue
-            response = DataService(options).get_campaign_group_data_for_given_timerange(
+            campaign_group_info, errMsg = DataService(options).get_campaign_group_data_for_given_timerange(
                     linkedin_setting.project_id, linkedin_setting.ad_account, 
                     timestamp_range_to_be_backfilled[0], timestamp_range_to_be_backfilled[len_timerange-1])
             
-            if response.ok:
-                campaign_group_info = response.json()
-            else:
-                return {'status': 'failed', 'errMsg': "Failed to get campaign group info", 
+            if errMsg != '':
+                return {'status': 'failed', 'errMsg': errMsg, 
                         API_REQUESTS: 0}
             
             distributed_records_map_with_timestamp = OrderedDict()

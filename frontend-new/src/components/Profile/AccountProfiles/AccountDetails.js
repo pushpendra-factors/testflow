@@ -38,7 +38,6 @@ import {
 import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
 import { useHistory, useLocation } from 'react-router-dom';
 import { PathUrls } from '../../../routes/pathUrls';
-import { fetchGroups } from 'Reducers/coreQuery/services';
 import UpgradeModal from '../UpgradeModal';
 import { FEATURES, PLANS } from 'Constants/plans.constants';
 import {
@@ -50,14 +49,16 @@ import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import { featureLock } from '../../../routes/feature';
 import getGroupIcon from 'Utils/getGroupIcon';
 import useFeatureLock from 'hooks/useFeatureLock';
+import { getGroups } from 'Reducers/coreQuery/middleware';
+import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 
 function AccountDetails({
   accounts,
   accountDetails,
   accountOverview,
   activeProject,
-  fetchGroups,
-  groupOpts,
+  getGroups,
+  groups,
   getGroupProperties,
   currentProjectSettings,
   fetchProjectSettings,
@@ -107,8 +108,10 @@ function AccountDetails({
   }, [activeAgent]);
 
   useEffect(() => {
-    fetchGroups(activeProject?.id, true);
-  }, [activeProject?.id]);
+    if (!groups || Object.keys(groups).length === 0) {
+      getGroups(activeProject?.id);
+    }
+  }, [activeProject?.id, groups]);
 
   useEffect(() => {
     return () => {
@@ -129,7 +132,7 @@ function AccountDetails({
     const urlSearchParams = new URLSearchParams(location.search);
     const params = Object.fromEntries(urlSearchParams.entries());
     const id = atob(location.pathname.split('/').pop());
-    const group = params.group ? params.group : 'All';
+    const group = params.group ? params.group : GROUP_NAME_DOMAINS;
     const view = params.view ? params.view : timelineViewMode;
     document.title = 'Accounts - FactorsAI';
     return [id, group, view];
@@ -209,18 +212,18 @@ function AccountDetails({
   ]);
 
   useEffect(() => {
-    Object.keys(groupOpts || {}).forEach((group) => {
+    Object.keys(groups?.account_groups || {}).forEach((group) => {
       if (!groupProperties[group]) {
         getGroupProperties(activeProject?.id, group);
       }
     });
-  }, [activeProject.id, groupOpts]);
+  }, [activeProject.id, groups]);
 
   useEffect(() => {
     const mergedProps = [];
     const filterProps = {};
 
-    for (const group of Object.keys(groupOpts || {})) {
+    for (const group of Object.keys(groups?.account_groups || {})) {
       const values = groupProperties?.[group] || [];
       mergedProps.push(...values);
       filterProps[group] = values;
@@ -228,7 +231,7 @@ function AccountDetails({
 
     const groupProps = Object.entries(filterProps)
       .map(([group, values]) => ({
-        label: groupOpts[group] || PropTextFormat(group),
+        label: groups?.account_groups?.[group] || PropTextFormat(group),
         iconName: group,
         values: processProperties(values)
       }))
@@ -240,7 +243,7 @@ function AccountDetails({
 
     setListProperties(mergedProps);
     setFilterProperties(groupProps);
-  }, [groupProperties, groupOpts]);
+  }, [groupProperties, groups]);
 
   useEffect(() => {
     const userPropertiesModified = [];
@@ -389,15 +392,12 @@ function AccountDetails({
 
   const handleOptionClick = (option, group) => {
     const timelinesConfig = { ...tlConfig };
-    if (!timelinesConfig.account_config.leftpane_props) {
-      // Initialize leftpane_props as an empty array if it's null
-      timelinesConfig.account_config.leftpane_props = [];
+    if (!timelinesConfig.account_config.table_props) {
+      timelinesConfig.account_config.table_props = [];
     }
 
-    if (
-      !timelinesConfig.account_config.leftpane_props.includes(option?.value)
-    ) {
-      timelinesConfig.account_config.leftpane_props.push(option?.value);
+    if (!timelinesConfig.account_config.table_props.includes(option?.value)) {
+      timelinesConfig.account_config.table_props.push(option?.value);
       udpateProjectSettings(activeProject.id, {
         timelines_config: { ...timelinesConfig }
       }).then(() =>
@@ -424,8 +424,8 @@ function AccountDetails({
 
   const onDelete = (option) => {
     const timelinesConfig = { ...tlConfig };
-    timelinesConfig.account_config.leftpane_props.splice(
-      timelinesConfig.account_config.leftpane_props.indexOf(option),
+    timelinesConfig.account_config.table_props.splice(
+      timelinesConfig.account_config.table_props.indexOf(option),
       1
     );
     udpateProjectSettings(activeProject.id, {
@@ -459,8 +459,8 @@ function AccountDetails({
   const listLeftPaneProps = (props = {}) => {
     const propsList = [];
     const showProps =
-      currentProjectSettings?.timelines_config?.account_config
-        ?.leftpane_props || [];
+      currentProjectSettings?.timelines_config?.account_config?.table_props ||
+      [];
     showProps.forEach((prop, index) => {
       const propType = getPropType(listProperties, prop);
       const propDisplayName = groupPropNames[prop]
@@ -496,8 +496,8 @@ function AccountDetails({
     );
 
   const renderAddNewProp = () =>
-    !currentProjectSettings?.timelines_config?.account_config?.leftpane_props ||
-    currentProjectSettings?.timelines_config?.account_config?.leftpane_props
+    !currentProjectSettings?.timelines_config?.account_config?.table_props ||
+    currentProjectSettings?.timelines_config?.account_config?.table_props
       ?.length < 8 ? (
       <div>
         <Button
@@ -516,7 +516,7 @@ function AccountDetails({
       <div className='header'>
         <div className='user'>
           <img
-            src={`https://logo.uplead.com/${getHost(
+            src={`https://logo.clearbit.com/${getHost(
               accountDetails?.data?.host
             )}`}
             onError={(e) => {
@@ -545,11 +545,11 @@ function AccountDetails({
       <div className='logo_attr'>
         <a
           className='font-size--small'
-          href='https://www.uplead.com'
+          href='https://clearbit.com'
           target='_blank'
           rel='noreferrer'
         >
-          Brand Logo provided by UpLead
+          Brand Logo provided by Clearbit
         </a>
       </div>
     </div>
@@ -756,7 +756,7 @@ function AccountDetails({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   currentProjectSettings: state.global.currentProjectSettings,
-  groupOpts: state.groups.data,
+  groups: state.coreQuery.groups,
   accounts: state.timelines.accounts,
   accountDetails: state.timelines.accountDetails,
   accountOverview: state.timelines.accountOverview,
@@ -769,7 +769,7 @@ const mapStateToProps = (state) => ({
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
-      fetchGroups,
+      getGroups,
       getGroupProperties,
       getAccountOverview,
       getEventPropertiesV2,

@@ -5,11 +5,12 @@ import React, {
   useCallback,
   useEffect,
   forwardRef,
+  useReducer,
   useImperativeHandle,
   memo
 } from 'react';
 import get from 'lodash/get';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   defaultSortProp,
   getTableColumns,
@@ -37,6 +38,9 @@ import SingleTouchPointChart from './SingleTouchPointChart';
 import AttributionsScatterPlot from './AttributionsScatterPlot';
 import NoDataChart from '../../../components/NoDataChart';
 import { ATTRIBUTION_GROUP_ANALYSIS_KEYS } from './attributionsResult.constants';
+import { CORE_QUERY_INITIAL_STATE, UPDATE_CORE_QUERY_REDUCER } from '../constants';
+import CoreQueryReducer from '../CoreQueryReducer';
+import { setAttributionTableFilters } from 'Attribution/state/actions';
 
 const nodata = (
   <div className='flex justify-center items-center w-full h-full pt-4 pb-4'>
@@ -80,6 +84,13 @@ const AttributionsChartComponent = forwardRef(
       categories: [],
       series: []
     });
+
+    const dispatch = useDispatch();
+    const [coreQueryState, localDispatch] = useReducer(
+      CoreQueryReducer,
+      CORE_QUERY_INITIAL_STATE
+    );
+
     const [dualTouchpointChartData, setDualTouchpointChartData] = useState([]);
     const [searchText, setSearchText] = useState('');
     const [filters, setFilters] = useState([]);
@@ -154,7 +165,8 @@ const AttributionsChartComponent = forwardRef(
     const handleApplyFilters = useCallback(
       (filters) => {
         if(v1) {
-          setAppliedFilters(filters)
+          // setAppliedFilters(filters);
+          dispatch(setAttributionTableFilters(filters));
         } else {
           updateCoreQueryReducer({ attributionTableFilters: filters });
         }
@@ -457,15 +469,16 @@ const AttributionsChart = (props) => {
     coreQueryState: {
       comparison_data,
       comparison_duration,
-      savedQuerySettings,
-      attributionTableFilters
+      savedQuerySettings
     },
     attributionMetrics,
     setAttributionMetrics,
     updateCoreQueryReducer
   } = useContext(CoreQueryContext);
 
-  const applFilters = rest.v1? appliedFilters : attributionTableFilters;
+  const { attributionTableFilters } = useSelector((state) => state.attributionDashboard);
+
+  // const applFilters = attributionTableFilters;
   return (
     <AttributionsChartMemoized
       setAttributionMetrics={setAttributionMetrics}
@@ -474,7 +487,7 @@ const AttributionsChart = (props) => {
       comparison_data={comparison_data}
       comparison_duration={comparison_duration}
       updateCoreQueryReducer={updateCoreQueryReducer}
-      appliedFilters={applFilters}
+      appliedFilters={attributionTableFilters}
       setAppliedFilters={setAppliedFilters}
       ref={renderedCompRef}
       {...rest}

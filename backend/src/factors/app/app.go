@@ -211,9 +211,9 @@ func main() {
 	enableScoreByProjectID := flag.String("enable_score_by_project_id", "", "List of projectIds with scoring enabled.")
 	chargebeeApiKey := flag.String("chargebee_api_key", "dummy", "Chargebee api key")
 	chargebeeSiteName := flag.String("chargebee_site_name", "", "Chargebee site name")
+	explainV3Query := flag.Bool("explain_v3_query", false, "whether to implement new query payload")
 
 	companyPropsV1EnabledProjectIDs := flag.String("company_props_v1_enabled_projectIds", "", "To enable clearbit enrichment in new properties")
-
 	flag.Parse()
 
 	defaultAppName := "app_server"
@@ -373,6 +373,7 @@ func main() {
 		EnableNewAllAccountsByProjectID:                *enableNewAllAccountsByProjectID,
 		ChargebeeApiKey:                                *chargebeeApiKey,
 		ChargebeeSiteName:                              *chargebeeSiteName,
+		ExplainV3QueryBuilder:                          *explainV3Query,
 		CompanyPropsV1EnabledProjectIDs:                *companyPropsV1EnabledProjectIDs,
 	}
 	C.InitConf(config)

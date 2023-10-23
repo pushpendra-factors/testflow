@@ -21,6 +21,8 @@ import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
 import { processProperties } from 'Utils/dataFormatter';
+import { IsDomainGroup } from 'Components/Profile/utils';
+
 function QueryBlock({
   availableGroups,
   index,
@@ -59,16 +61,16 @@ function QueryBlock({
       'Linkedin Company Engagements',
       'G2 Engagements'
     ];
-    const domainGroupExclusions = ['Hubspot Deals', 'Salesforce Opportunities'];
+    const domainGroupExclusions = [];
     if (activeGroup === 'events') {
       return [...eventOpts];
     } else if (activeGroup === 'users') {
       return eventOpts.filter(
-        (group) => !userGroupExclusions.includes(group?.label)
+        (group) => !userGroupExclusions?.includes(group?.label)
       );
-    } else if (activeGroup === '$domains') {
+    } else if (IsDomainGroup(activeGroup)) {
       return eventOpts.filter(
-        (group) => !domainGroupExclusions.includes(group?.label)
+        (group) => !domainGroupExclusions?.includes(group?.label)
       );
     } else {
       const groupDisplayName = availableGroups?.find(

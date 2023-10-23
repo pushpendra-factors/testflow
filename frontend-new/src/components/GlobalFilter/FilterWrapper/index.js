@@ -5,14 +5,17 @@ import { Button } from 'antd';
 import {
   getEventPropertyValues,
   getGroupPropertyValues,
+  getPredefinedPropertyValues,
   getUserPropertyValues
 } from 'Reducers/coreQuery/middleware';
 import { bindActionCreators } from 'redux';
-import { connect } from 'react-redux';
+import { connect, useSelector } from 'react-redux';
+import { PropTextFormat } from 'Utils/dataFormatter';
 import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
 import getGroupIcon from 'Utils/getGroupIcon';
-import { PropTextFormat } from 'Utils/dataFormatter';
-import { CustomGroupNames } from './utils';
+import startCase from 'lodash/startCase';
+import { selectActivePreDashboard } from 'Reducers/dashboard/selectors';
+import { CustomGroupDisplayNames } from './utils';
 
 function FilterWrapper({
   projectID,
@@ -36,10 +39,12 @@ function FilterWrapper({
   getEventPropertyValues,
   getGroupPropertyValues,
   getUserPropertyValues,
+  getPredefinedPropertyValues,
   propertyValuesMap,
   minEntriesPerGroup,
   operatorsMap = DEFAULT_OPERATOR_PROPS,
-  groupOpts
+  groups,
+  profileType = ""
 }) {
   const [newFilterState, setNewFilterState] = useState({
     props: [],
@@ -47,6 +52,7 @@ function FilterWrapper({
     values: []
   });
   const [filterDropDownOptions, setFiltDD] = useState({});
+  const activeDashboard = useSelector((state) => selectActivePreDashboard(state));
 
   useEffect(() => {
     if (filter && filter.props[2] === 'categorical') {
@@ -78,10 +84,10 @@ function FilterWrapper({
           }
         }
       } else {
-        label = CustomGroupNames[propertyKey]
-          ? CustomGroupNames[propertyKey]
-          : groupOpts[propertyKey]
-          ? groupOpts[propertyKey]
+        label = CustomGroupDisplayNames[propertyKey]
+          ? CustomGroupDisplayNames[propertyKey]
+          : groups?.all_groups?.[propertyKey]
+          ? groups?.all_groups?.[propertyKey]
           : PropTextFormat(propertyKey);
 
         propertyType = ['user', 'event'].includes(propertyKey)
@@ -129,18 +135,25 @@ function FilterWrapper({
     const [groupName, propertyName, propertyType, entity] =
       newFilterState.props;
     const propGrp = groupName || groupName !== '' ? groupName : entity;
-    if (propertyType === 'categorical') {
-      if (['user', 'user_g'].includes(propGrp)) {
-        getUserPropertyValues(projectID, propertyName);
-      } else if (['event', 'page_view', 'button_click'].includes(propGrp)) {
-        getEventPropertyValues(projectID, event.label, propertyName);
-      } else if (
-        !['group', 'user', 'user_g'].includes(propGrp) &&
-        ['group', 'user', 'user_g'].includes(entity)
-      ) {
-        getGroupPropertyValues(projectID, groupName, propertyName);
-      }
+  
+    if(profileType === 'predefined') {
+      getPredefinedPropertyValues(projectID, newFilterState.props[0], activeDashboard?.inter_id);
     }
+    else{
+      if (propertyType === 'categorical') {
+        if (['user', 'user_g'].includes(propGrp)) {
+          getUserPropertyValues(projectID, propertyName);
+        } else if (propGrp === 'event') {
+          getEventPropertyValues(projectID, event.label, propertyName);
+        } else if (
+          !['group', 'user', 'user_g'].includes(propGrp) &&
+          ['group', 'user', 'user_g'].includes(entity)
+        ) {
+          getGroupPropertyValues(projectID, groupName, propertyName);
+        }
+      } 
+    }
+
   }, [newFilterState?.props]);
 
   const delFilter = () => {
@@ -155,17 +168,22 @@ function FilterWrapper({
   };
   const setValuesByProps = (props) => {
     const [groupName, propertyName, propertyType, entity] = props;
-    if (propertyType === 'categorical') {
-      if (['user', 'user_g'].includes(groupName)) {
-        getUserPropertyValues(projectID, propertyName);
-      } else if (['event', 'page_view', 'button_click'].includes(groupName)) {
-        getEventPropertyValues(projectID, event.label, propertyName);
-      } else if (
-        !['group', 'user', 'user_g'].includes(groupName) &&
-        ['group', 'user', 'user_g'].includes(entity)
-      ) {
-        getGroupPropertyValues(projectID, groupName, propertyName);
-      }
+    if(profileType === 'predefined') {
+      getPredefinedPropertyValues(projectID, props[1], activeDashboard?.inter_id)
+    }
+    else{
+      if (propertyType === 'categorical') {
+        if (['user', 'user_g'].includes(groupName)) {
+          getUserPropertyValues(projectID, propertyName);
+        } else if (groupName === 'event') {
+          getEventPropertyValues(projectID, event.label, propertyName);
+        } else if (
+          !['group', 'user', 'user_g'].includes(groupName) &&
+          ['group', 'user', 'user_g'].includes(entity)
+        ) {
+          getGroupPropertyValues(projectID, groupName, propertyName);
+        }
+      } 
     }
   };
 
@@ -238,12 +256,12 @@ function FilterWrapper({
 
 const mapStateToProps = (state) => ({
   propertyValuesMap: state.coreQuery.propertyValuesMap,
-  groupOpts: state.groups.data
+  groups: state.coreQuery.groups
 });
 
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
-    { getEventPropertyValues, getGroupPropertyValues, getUserPropertyValues },
+    { getEventPropertyValues, getGroupPropertyValues, getUserPropertyValues, getPredefinedPropertyValues },
     dispatch
   );
 

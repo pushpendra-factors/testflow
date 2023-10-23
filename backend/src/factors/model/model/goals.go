@@ -40,6 +40,19 @@ type FactorsGoalFilter struct {
 	IncludedUserProperties  []string        `json:"in_upr"`
 }
 
+type ExplainV3Event struct {
+	Alias  string          `json:"alias"`
+	Label  string          `json:"label"`
+	Group  string          `json:"group"`
+	Filter []QueryProperty `json:"filter"`
+}
+
+type ExplainV3GoalRule struct {
+	StartEvent ExplainV3Event `json:"st_en"`
+	EndEvent   ExplainV3Event `json:"en_en"`
+	Visited    bool           `json:"vs"`
+}
+
 // KeyValueTuple - key value pair
 type KeyValueTuple struct {
 	Key        string  `json:"key"`

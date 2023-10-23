@@ -10,9 +10,7 @@ import {
   INITIALIZE_CONTENT_GROUPS,
   EVENT_DISPLAY_NAMES_LOADING,
   EVENT_DISPLAY_NAMES_ERROR,
-  EVENT_DISPLAY_NAMES_LOADED,
-  FETCH_GROUPS_FULFILLED,
-  FETCH_GROUPS_REJECTED
+  EVENT_DISPLAY_NAMES_LOADED
 } from '../types';
 import { getErrorMessage } from '../../utils/dataFormatter';
 // import { SAVED_QUERIES } from '../../utils/SampleResponse';
@@ -23,6 +21,11 @@ import {
 } from '../../utils/constants';
 
 const host = getHostUrl();
+
+export const fetchGroups = (projectID) => {
+  const url = `${host}projects/${projectID}/groups`;
+  return get(null, url);
+};
 
 export const getEventNames = (dispatch, projectId) =>
   get(
@@ -94,6 +97,11 @@ export function fetchUserPropertiesV2(projectId, queryType) {
 export function fetchUserPropertyValues(projectId, propertyName) {
   const url = `${host}projects/${projectId}/user_properties/${propertyName}/values?label=true`;
   return get(null, url);
+}
+
+export function fetchPredefinedPropertyValues(projectId, propertyName, internalID) {
+  const url = `${host}projects/${projectId}/v1/predefined_dashboards/${internalID}/filter_values`;
+  return post(null, url, {"pr_na": propertyName});
 }
 
 export const getFunnelData = (
@@ -190,19 +198,6 @@ export const fetchQueries = (projectId) => async (dispatch) => {
     dispatch({ type: QUERIES_LOADING_FAILED });
   }
 };
-
-export const fetchGroups =
-  (projectId, isAccount = '') =>
-  async (dispatch) => {
-    try {
-      const url = `${host}projects/${projectId}/groups?is_account=${isAccount}`;
-      const res = await get(null, url);
-      dispatch({ type: FETCH_GROUPS_FULFILLED, payload: res.data });
-    } catch (err) {
-      console.log(err);
-      dispatch({ type: FETCH_GROUPS_REJECTED });
-    }
-  };
 
 export const getAttributionsData = (
   projectId,

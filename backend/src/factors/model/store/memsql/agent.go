@@ -365,6 +365,12 @@ func (store *MemSQL) UpdateAgentVerificationDetailsFromAuth0(agentUUID, firstNam
 	return updateAgent(agentUUID, options...)
 }
 
+func (store *MemSQL) UpdateAgentEmailVerificationDetails(agentUUID string, isVerfied bool) int {
+	options := make([]model.Option, 0)
+	options = append(options, model.IsEmailVerified(isVerfied))
+	return updateAgent(agentUUID, options...)
+}
+
 func (store *MemSQL) UpdateAgentInformation(agentUUID, firstName, lastName, phone string, isOnboardingFlowSeen *bool, isFormFilled *bool) int {
 	logFields := log.Fields{
 		"agent_uuid":              agentUUID,

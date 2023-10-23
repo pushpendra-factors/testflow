@@ -2,6 +2,7 @@ import React from 'react';
 import classnames from 'classnames';
 import _ from 'lodash';
 import { Typography, Tooltip } from 'antd';
+import truncateURL from 'Utils/truncateURL';
 
 const { Title, Paragraph } = Typography;
 
@@ -65,7 +66,7 @@ class Text extends React.Component {
     const isOverFlow = children?.length > charLimit;
     let truncatedText = '';
     if (isTextTruncatePossible && isOverFlow) {
-      truncatedText = `${children.slice(0, charLimit)}${'...'}`;
+      truncatedText = `${truncateURL(children.slice(0, charLimit))}${'...'}`;
     }
 
     if (type === textType.title) {

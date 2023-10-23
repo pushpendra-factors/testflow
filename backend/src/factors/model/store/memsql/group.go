@@ -74,10 +74,53 @@ func (store *MemSQL) CreateGroup(projectID int64, groupName string, allowedGroup
 
 		logCtx.WithError(err).Error("Failed to insert group.")
 		return nil, http.StatusInternalServerError
+	}
 
+	// Create Default Segment for the Account Groups-
+	if model.AccountGroupNames[groupName] && groupName != U.GROUP_NAME_SIX_SIGNAL {
+		status, err = store.CreateDefaultSegment(projectID, groupName, true)
+		if status != http.StatusCreated {
+			log.WithError(err).Error("Failed to create default segment.")
+		}
 	}
 
 	return &group, http.StatusCreated
+}
+
+func (store *MemSQL) CreateDefaultSegment(projectID int64, entity string, isGroup bool) (int, error) {
+	var segmentName, segmentProperty string
+	if isGroup {
+		segmentName = U.ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES[U.GROUP_TO_DEFAULT_SEGMENT_MAP[entity]]
+		segmentProperty = U.GROUP_TO_DEFAULT_SEGMENT_MAP[entity]
+	} else {
+		segmentName = U.ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES[U.VISITED_WEBSITE]
+		segmentProperty = U.VISITED_WEBSITE
+	}
+	segmentPayload := model.SegmentPayload{
+		Name:        segmentName,
+		Description: "",
+		Query: model.Query{
+			GlobalUserProperties: []model.QueryProperty{
+				{
+					Entity:    model.PropertyEntityUserGlobal,
+					Type:      U.PropertyTypeCategorical,
+					GroupName: entity,
+					Property:  segmentProperty,
+					Operator:  model.EqualsOpStr,
+					Value:     "true",
+					LogicalOp: "AND",
+				},
+			},
+			TableProps: []string{U.SIX_SIGNAL_NAME, U.SIX_SIGNAL_INDUSTRY, U.SIX_SIGNAL_EMPLOYEE_RANGE, U.SIX_SIGNAL_ANNUAL_REVENUE},
+		},
+		Type: U.GROUP_NAME_DOMAINS,
+	}
+	status, err := store.CreateSegment(projectID, &segmentPayload)
+	if status != http.StatusCreated {
+		log.WithError(err).Error("Failed to create default segment.")
+		return status, err
+	}
+	return http.StatusCreated, nil
 }
 
 func (store *MemSQL) CreateOrGetGroupByName(projectID int64, groupName string, allowedGroupNames map[string]bool) (*model.Group, int) {
@@ -328,4 +371,41 @@ func (store *MemSQL) GetGroupUserByGroupID(projectID int64, groupName string, gr
 	}
 
 	return &groupUser, http.StatusFound
+}
+
+func (store *MemSQL) GetAllGroupUsersByDomainsGroupUserID(projectID int64, domainsGroupID int, domainsGroupUserID string) ([]model.User, int) {
+	logFields := log.Fields{
+		"project_id":           projectID,
+		"group_domain_user_id": domainsGroupUserID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	if projectID == 0 || domainsGroupUserID == "" {
+		logCtx.Error("Invalid parameters.")
+		return nil, http.StatusBadRequest
+	}
+
+	whereStmnt := fmt.Sprintf("project_id = ? AND group_%d_user_id = ? AND is_group_user = true ", domainsGroupID)
+	whereParams := []interface{}{projectID, domainsGroupUserID}
+
+	db := C.GetServices().Db
+	groupUser := []model.User{}
+	if err := db.Model(&model.User{}).
+		Where(whereStmnt, whereParams...).
+		Find(&groupUser).Error; err != nil {
+
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Failed to get group users")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(groupUser) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	return groupUser, http.StatusFound
 }

@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { SVG, Text } from '../../factorsComponents';
 import { OptionType, PlacementType } from '../FaSelect/types';
 import useAutoFocus from 'hooks/useAutoFocus';
@@ -38,13 +38,18 @@ export default function GroupSelect({
   allowSearchTextSelection = true
 }: GroupSelectProps) {
   const [groupSelectorOpen, setGroupSelectorOpen] = useState(true);
+  useEffect(() => {
+    if (options && options.length === 1) setGroupSelectorOpen(false);
+    else setGroupSelectorOpen(true);
+  }, [options]);
   const [selectedGroupIndex, setSelectedGroupIndex] = useState(0);
 
   const [searchTerm, setSearchTerm] = useState('');
   const inputComponentRef = useAutoFocus(allowSearch);
   const dropdownRef = useRef(null);
+  const relativeRef = useRef(null);
 
-  const position = useDynamicPosition(dropdownRef, placement);
+  const position = useDynamicPosition(relativeRef, dropdownRef, placement, 400);
   const renderSearchInput = () => {
     return (
       <div className={`fa-filter-select fa-search-select pb-0`}>
@@ -304,8 +309,10 @@ export default function GroupSelect({
 
   return (
     <>
-      <div
-        className={`${extraClass}  ${styles.dropdown__select}
+      <div ref={relativeRef}></div>
+      {position && (
+        <div
+          className={`${extraClass}  ${styles.dropdown__select}
           ${
             position === 'TopRight' || position === 'BottomRight'
               ? styles.dropdown__select_right_0
@@ -316,27 +323,28 @@ export default function GroupSelect({
              ? `fa-select--group-select-sm`
              : `fa-select--group-select-mini`
          } ${
-          position === 'Top' ||
-          position === 'TopLeft' ||
-          position === 'TopRight'
-            ? styles.dropdown__select_placement_top
-            : styles.dropdown__select_placement_bottom
-        }`}
-        ref={dropdownRef}
-      >
-        {!groupSelectorOpen && (
-          <div className={`${styles.dropdown__select__header}`}>
-            {generateOptionHeader()}
-          </div>
-        )}
-        {allowSearch && renderSearchInput()}
-
-        <div
-          className={`fa-select-dropdown ${styles.dropdown__select__content}`}
+            position === 'Top' ||
+            position === 'TopLeft' ||
+            position === 'TopRight'
+              ? styles.dropdown__select_placement_top
+              : styles.dropdown__select_placement_bottom
+          }`}
+          ref={dropdownRef}
         >
-          {renderOptions()}
+          {!groupSelectorOpen && options.length > 1 && (
+            <div className={`${styles.dropdown__select__header}`}>
+              {generateOptionHeader()}
+            </div>
+          )}
+          {allowSearch && renderSearchInput()}
+
+          <div
+            className={`fa-select-dropdown ${styles.dropdown__select__content}`}
+          >
+            {renderOptions()}
+          </div>
         </div>
-      </div>
+      )}
       <div
         className={styles.dropdown__hd_overlay}
         onClick={onClickOutside}

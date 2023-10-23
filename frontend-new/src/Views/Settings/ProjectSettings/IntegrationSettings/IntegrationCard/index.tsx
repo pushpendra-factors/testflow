@@ -116,7 +116,7 @@ function IntegrationCard({
                     Active
                   </Tag>
                 )}
-                {[FEATURES.INT_HUBSPOT || FEATURES.INT_SALESFORCE].includes(
+                {[FEATURES.INT_HUBSPOT, FEATURES.INT_SALESFORCE].includes(
                   integrationConfig.featureName
                 ) &&
                   AdminLock(activeAgent) && (

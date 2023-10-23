@@ -46,7 +46,9 @@ import {
   EVENT_DISPLAY_NAMES_LOADING,
   EVENT_DISPLAY_NAMES_ERROR,
   EVENT_DISPLAY_NAMES_LOADED,
-  SET_ACTIVE_PROJECT
+  SET_ACTIVE_PROJECT,
+  FETCH_GROUPS_FULFILLED,
+  FETCH_GROUPS_REJECTED
 } from '../types';
 import { DefaultDateRangeFormat } from '../../Views/CoreQuery/utils';
 import { DEFAULT_TOUCHPOINTS } from 'Reducers/coreQuery/utils';
@@ -57,6 +59,7 @@ const defaultState = {
   eventPropertiesV2: {},
   userPropertiesV2: {},
   eventUserPropertiesV2: {},
+  groups:{},
   groupProperties: {},
   propertyValuesMap: {
     loading: false,
@@ -132,6 +135,10 @@ export default function (state = defaultState, action) {
         ...state,
         groupPropNames: { ...state.groupPropNames, ...action.payload }
       };
+    case FETCH_GROUPS_FULFILLED:
+      return { ...state, groups: action.payload };
+    case FETCH_GROUPS_REJECTED:
+      return { ...state, groups: {} };
     case FETCH_GROUP_PROPERTIES:
       const groupPropState = Object.assign({}, state.groupProperties);
       groupPropState[action.groupName] = action.payload;
@@ -149,7 +156,7 @@ export default function (state = defaultState, action) {
         ...state,
         propertyValuesMap: {
           loading: true,
-          data: {...state.propertyValuesMap.data}
+          data: { ...state.propertyValuesMap.data }
         }
       };
     case FETCH_PROPERTY_VALUES_LOADED:

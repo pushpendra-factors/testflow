@@ -42,14 +42,14 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectID == 0 {
-		return nil, http.StatusBadRequest, "Project Id is Invalid"
+		return []model.Profile{}, http.StatusBadRequest, "Project Id is Invalid"
 	}
 
 	// set Query Timezone
 	timezoneString, statusCode := store.GetTimezoneForProject(projectID)
 	if statusCode != http.StatusFound {
 		log.WithFields(logFields).Error("Query failed. Failed to get Timezone.")
-		return nil, http.StatusBadRequest, "Failed to fetch project timezone."
+		return []model.Profile{}, http.StatusBadRequest, "Failed to fetch project timezone."
 	}
 	payload.Query.Timezone = string(timezoneString)
 
@@ -71,13 +71,13 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 
 		profiles, errCode, err := store.GetAnalyzeResultForSegments(projectID, profileType, payload.Query)
 		if errCode != http.StatusOK {
-			return nil, errCode, err.Error()
+			return []model.Profile{}, errCode, err.Error()
 		}
 
 		returnData, err := FormatProfilesStruct(projectID, profiles, profileType, payload.Query.TableProps, payload.Query.Source)
 		if err != nil {
 			log.WithFields(logFields).WithField("status", err).Error("Failed to filter properties from profiles.")
-			return nil, http.StatusInternalServerError, "Failed Formatting Profile Results"
+			return []model.Profile{}, http.StatusInternalServerError, "Failed Formatting Profile Results"
 		}
 		return returnData, http.StatusFound, ""
 	}
@@ -117,7 +117,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 			err := groupedFilters[group][index].TransformDateTypeFilters(timezoneString)
 			if err != nil {
 				log.WithFields(logFields).Error("Failed to transform payload filters.")
-				return nil, http.StatusBadRequest, "Datetime Filters Processing Failed"
+				return []model.Profile{}, http.StatusBadRequest, "Datetime Filters Processing Failed"
 			}
 		}
 	}
@@ -128,7 +128,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	isGroupUserStmt := getGroupUserStatement(profileType, payload.Query.Source)
 	sourceStmt, sourceID, err := store.GetSourceStmtWithParams(projectID, profileType, payload.Query.Source, isAllUserProperties)
 	if err != nil {
-		return nil, http.StatusBadRequest, err.Error()
+		return []model.Profile{}, http.StatusBadRequest, err.Error()
 	}
 	if sourceID != 0 {
 		params = append(params, sourceID)
@@ -149,7 +149,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	minMax, errCode, errStr := store.GetMinAndMaxUpdatedAt(profileType, whereStmt, limitVal, minMaxQParams)
 	if errCode != http.StatusOK {
 		log.WithFields(logFields).WithField("status", errCode).Error(errStr)
-		return nil, errCode, errStr
+		return []model.Profile{}, errCode, errStr
 	}
 
 	// Get Profiles
@@ -163,7 +163,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		params = append(params, queryParams...)
 	}
 	if err != nil {
-		return nil, http.StatusInternalServerError, err.Error()
+		return []model.Profile{}, http.StatusInternalServerError, err.Error()
 	}
 
 	var profiles []model.Profile
@@ -171,7 +171,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	err = db.Raw(runQueryStmt, params...).Scan(&profiles).Error
 	if err != nil {
 		log.WithError(err).WithFields(logFields).WithField("status", err).Error("Failed to get profile users.")
-		return nil, http.StatusInternalServerError, "Query Execution Failed."
+		return []model.Profile{}, http.StatusInternalServerError, "Query Execution Failed."
 	}
 
 	// Get merged properties for all accounts
@@ -182,7 +182,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		}
 		profiles, statusCode = store.AccountPropertiesForDomainsEnabled(projectID, profiles)
 		if statusCode != http.StatusOK {
-			return nil, statusCode, "Query Transformation Failed."
+			return []model.Profile{}, statusCode, "Query Transformation Failed."
 		}
 	}
 
@@ -190,7 +190,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	returnData, err := FormatProfilesStruct(projectID, profiles, profileType, payload.Query.TableProps, payload.Query.Source)
 	if err != nil {
 		log.WithError(err).WithFields(logFields).WithField("status", err).Error("Failed to filter properties from profiles.")
-		return nil, http.StatusInternalServerError, "Query formatting failed."
+		return []model.Profile{}, http.StatusInternalServerError, "Query formatting failed."
 	}
 
 	return returnData, http.StatusFound, ""
@@ -1072,7 +1072,7 @@ func (store *MemSQL) GetSourceStringForAccountsV2(projectID int64, source string
 			sourceString = sourceString + " " + fmt.Sprintf("AND users.group_%d_id IS NOT NULL", group.ID)
 		}
 	} else {
-		if model.IsAllowedAccountGroupNames(source) && source == group.Name {
+		if model.IsAllowedGroupName(source) && source == group.Name {
 			sourceString = fmt.Sprintf("AND users.source!=? AND users.group_%d_id IS NOT NULL", group.ID)
 		} else {
 			log.WithField("err_code", errCode).Error(fmt.Sprintf("%s not enabled for this project.", source))
@@ -1166,7 +1166,7 @@ func (store *MemSQL) GetGroupNameIDMap(projectID int64) (map[string]int, int) {
 	groupNameIDMap := make(map[string]int)
 	if len(groups) > 0 {
 		for _, group := range groups {
-			if group.Name == model.GROUP_NAME_DOMAINS || model.IsAllowedAccountGroupNames(group.Name) {
+			if group.Name == model.GROUP_NAME_DOMAINS || model.IsAllowedGroupName(group.Name) {
 				groupNameIDMap[group.Name] = group.ID
 			}
 		}
@@ -1997,7 +1997,7 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabledV2(projectID int64, id, g
 			}
 		}
 	} else {
-		if !model.IsAllowedAccountGroupNames(groupName) {
+		if !model.IsAllowedGroupName(groupName) {
 			log.Error("Invalid group name.")
 			return propertiesDecoded, isUserDetails, http.StatusBadRequest
 		}
@@ -2127,7 +2127,7 @@ func FormatAccountDetails(projectID int64, propertiesDecoded map[string]interfac
 	var accountDetails model.AccountDetails
 
 	if C.IsDomainEnabled(projectID) && groupName != "All" {
-		if model.IsAllowedAccountGroupNames(groupName) {
+		if model.IsAllowedGroupName(groupName) {
 			hostNameProps = []string{model.HostNameGroup[groupName]}
 			companyNameProps = []string{model.AccountNames[groupName], U.UP_COMPANY}
 		}
@@ -2167,9 +2167,9 @@ func GetLeftPanePropertiesFromConfig(timelinesConfig model.TimelinesConfig, prof
 	var leftPaneProps []string
 
 	if model.IsUserProfiles(profileType) {
-		leftPaneProps = timelinesConfig.UserConfig.LeftpaneProps
+		leftPaneProps = timelinesConfig.UserConfig.TableProps
 	} else if model.IsAccountProfiles(profileType) {
-		leftPaneProps = timelinesConfig.AccountConfig.LeftpaneProps
+		leftPaneProps = timelinesConfig.AccountConfig.TableProps
 	}
 	for _, prop := range leftPaneProps {
 		if value, exists := (*propertiesDecoded)[prop]; exists {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLocation } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import cx from 'classnames';
 import { Layout } from 'antd';
@@ -15,24 +15,28 @@ import SidebarMenuItem from './SidebarMenuItem';
 import { selectAccountPayload } from 'Reducers/accountProfilesView/selectors';
 import {
   setAccountPayloadAction,
-  setActiveSegmentAction,
+  setActiveSegmentAction
 } from 'Reducers/accountProfilesView/actions';
+import { checkMatchPath } from './appSidebar.helpers';
+import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
+import { IsDomainGroup } from 'Components/Profile/utils';
 
 const AppSidebar = () => {
   const { Sider } = Layout;
   const dispatch = useDispatch();
+  const history = useHistory();
   const location = useLocation();
   const { pathname } = location;
   const activeAccountPayload = useSelector((state) =>
     selectAccountPayload(state)
   );
 
-  const { newSegmentMode } = useSelector(
+  const { newSegmentMode, activeSegment } = useSelector(
     (state) => state.accountProfilesView
   );
   const isAllAccountsSelected =
-    activeAccountPayload.source === 'All' &&
-    Boolean(activeAccountPayload.segment_id) === false;
+    IsDomainGroup(activeAccountPayload.source) &&
+    Boolean(activeSegment?.id) === false;
 
   const isSidebarCollapsed = useSelector((state) =>
     selectSidebarCollapsedState(state)
@@ -50,12 +54,13 @@ const AppSidebar = () => {
   const changeAccountPayload = () => {
     dispatch(
       setAccountPayloadAction({
-        source: 'All',
+        source: GROUP_NAME_DOMAINS,
         filters: [],
         segment_id: ''
       })
     );
     dispatch(setActiveSegmentAction({}));
+    history.replace(PathUrls.ProfileAccounts);
   };
 
   const selectAllAccounts = () => {
@@ -81,11 +86,15 @@ const AppSidebar = () => {
           <div
             className={cx('flex justify-between items-center', {
               'pb-5 border-b border-gray-300':
-                pathname === PathUrls.ProfileAccounts
+                checkMatchPath(pathname, PathUrls.ProfileAccounts) ||
+                checkMatchPath(pathname, PathUrls.ProfileAccountsSegmentsURL)
             })}
           >
             <ControlledComponent
-              controller={pathname !== PathUrls.ProfileAccounts}
+              controller={
+                !checkMatchPath(pathname, PathUrls.ProfileAccounts) &&
+                !checkMatchPath(pathname, PathUrls.ProfileAccountsSegmentsURL)
+              }
             >
               <div className='flex col-gap-2 items-center px-3'>
                 <SVG
@@ -102,7 +111,10 @@ const AppSidebar = () => {
               </div>
             </ControlledComponent>
             <ControlledComponent
-              controller={pathname === PathUrls.ProfileAccounts}
+              controller={
+                checkMatchPath(pathname, PathUrls.ProfileAccounts) ||
+                checkMatchPath(pathname, PathUrls.ProfileAccountsSegmentsURL)
+              }
             >
               <div className='w-11/12 pl-4'>
                 <SidebarMenuItem

@@ -1070,9 +1070,9 @@ func FillClearbitUserProperties(projectId int64, clearbitKey string,
 	executeClearBitStatusChannel := make(chan int)
 	clearBitExists, _ := clear_bit.GetClearbitCacheResult(projectId, UserId, clientIP)
 	if clearBitExists {
-		// logCtx.Info("clearbit cache hit")
+		//logCtx.Info("clearbit cache hit")
 	} else {
-		// logCtx.Info("clearbit cache miss")
+		//logCtx.Info("clearbit cache miss")
 		go clear_bit.ExecuteClearBitEnrich(projectId, clearbitKey, userProperties, clientIP, executeClearBitStatusChannel, logCtx)
 
 		select {
@@ -1571,8 +1571,13 @@ func AddUserProperties(projectId int64,
 	if err1 != http.StatusFound {
 		logCtx.Info("Get clear_bit key from project_settings failed.")
 	}
-	if clearbitKey != "" {
+	clearbitEnabled, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_CLEARBIT, false)
+	if err != nil {
+		logCtx.Warn("Failed to fetch clearbit feature flag")
+	}
+	if clearbitKey != "" && clearbitEnabled {
 		FillClearbitUserProperties(projectId, clearbitKey, validProperties, request.UserId, request.ClientIP)
+		log.Info("clearbit enrichment from AddUserProperties for projectId: ", projectId)
 	}
 
 	_, _, _ = model.FillLocationUserProperties(validProperties, request.ClientIP)
@@ -2741,7 +2746,7 @@ func TrackDomainsGroup(projectID int64, groupUserID string, groupName string, do
 		return http.StatusInternalServerError
 	}
 
-	_, status = store.GetStore().UpdateGroupUserDomainsGroup(projectID, groupUserID, groupName, domainsGroupUserID, groupID, true)
+	_, status = store.GetStore().UpdateGroupUserDomainsGroup(projectID, groupUserID, domainsGroupUserID, groupID, true)
 	if status != http.StatusAccepted && status != http.StatusNotModified {
 		logCtx.WithError(err).Error("Failed to update group user association with domains group user.")
 		return http.StatusInternalServerError

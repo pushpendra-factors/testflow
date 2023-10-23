@@ -40,6 +40,7 @@ func EnrichmentUsingclearBit(projectId int64, clearbitKey string, properties *ut
 	if config.IsCompanyPropsV1Enabled(projectId) {
 		FillEnrichmentPropertiesForClearbit(results, properties)
 	} else {
+		log.Error("Clearbit enrichment via old flow for project id: ", projectId)
 		if ip := results.IP; ip != "" {
 			if c, ok := (*properties)[util.CLR_IP]; !ok || c == "" {
 				(*properties)[util.CLR_IP] = ip

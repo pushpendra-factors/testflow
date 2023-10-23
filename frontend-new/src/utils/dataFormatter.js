@@ -319,7 +319,7 @@ export const formatCount = (count, precision = 1) => {
 };
 
 export const formatDuration = (sec) => {
-  const seconds = Number(sec);
+  const seconds = parseInt(sec);
   if (seconds < 60) {
     return `${Math.floor(seconds)}s`;
   }
@@ -786,7 +786,20 @@ export const convertGroupedPropertiesToUngrouped = (
 };
 
 //Array of Arrays.
-export const groupKPIPropertiesOnCategory = (kpiProperties, propertyType) => {
+export const groupKPIPropertiesOnCategory = (
+  kpiProperties,
+  propertyType,
+  groupName
+) => {
+  //For these Categories, Map groupIcon as their icon.
+  const specialCategoryList = [
+    'campaign',
+    'ad group',
+    'keyword',
+    'ad',
+    'campaign group',
+    'channel'
+  ];
   return (
     kpiProperties?.reduce((result, kpiItem) => {
       const category = kpiItem[4];
@@ -794,9 +807,13 @@ export const groupKPIPropertiesOnCategory = (kpiProperties, propertyType) => {
         return result;
       }
       if (!result[category]) {
+        let icon = getGroupIcon(category);
+        if (groupName && specialCategoryList.includes(category.toLowerCase())) {
+          icon = getGroupIcon(groupName);
+        }
         result[category] = {
           label: category,
-          icon: getGroupIcon(category),
+          icon: icon,
           propertyType: propertyType,
           values: []
         };

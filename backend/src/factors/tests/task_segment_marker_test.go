@@ -6,6 +6,7 @@ import (
 	"factors/handler/helpers"
 	"factors/model/model"
 	"factors/model/store"
+	SDK "factors/sdk"
 	U "factors/util"
 	"fmt"
 	"net/http"
@@ -107,6 +108,14 @@ func TestTaskSegmentMarker(t *testing.T) {
 		domainAccounts = append(domainAccounts, domID)
 	}
 
+	eventProperties := map[string]interface{}{
+		U.EP_SALESFORCE_CAMPAIGNMEMBER_STATUS:  "CurrentStatus",
+		U.EP_HUBSPOT_ENGAGEMENT_FROM:           "Somewhere",
+		U.EP_HUBSPOT_ENGAGEMENT_TYPE:           "Some Engagement Type",
+		U.EP_HUBSPOT_ENGAGEMENT_MEETINGOUTCOME: "Some Outcome",
+		U.EP_SALESFORCE_CAMPAIGN_NAME:          "Some Salesforce Campaign Name",
+	}
+
 	// 5 salesforce accounts
 	numUsers := 5
 	accounts := make([]model.User, 0)
@@ -149,6 +158,27 @@ func TestTaskSegmentMarker(t *testing.T) {
 		user, errCode := store.GetStore().GetUser(project.ID, createdUserID1)
 		assert.Equal(t, http.StatusFound, errCode)
 		users = append(users, *user)
+
+		if i > 1 {
+			continue
+		}
+
+		// SalesForce Group Events
+		timestamp := U.UnixTimeBeforeDuration(time.Duration(1+i) * time.Hour)
+		trackPayload := SDK.TrackPayload{
+			UserId:        createdUserID,
+			CreateUser:    false,
+			IsNewUser:     false,
+			Name:          U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
+			Timestamp:     timestamp,
+			ProjectId:     project.ID,
+			Auto:          false,
+			RequestSource: model.UserSourceSalesforce,
+		}
+		status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+		assert.NotEmpty(t, response)
+		assert.Equal(t, http.StatusOK, status)
+
 	}
 
 	// Create 5 Hubspot Companies
@@ -189,6 +219,94 @@ func TestTaskSegmentMarker(t *testing.T) {
 		user, errCode := store.GetStore().GetUser(project.ID, createdUserID1)
 		assert.Equal(t, http.StatusFound, errCode)
 		users = append(users, *user)
+
+		// Event 1 : Campaign Member Created
+		timestamp := U.UnixTimeBeforeDuration(time.Duration(1+i) * time.Hour)
+		trackPayload := SDK.TrackPayload{
+			UserId:          user.ID,
+			CreateUser:      false,
+			IsNewUser:       false,
+			Name:            U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED,
+			EventProperties: eventProperties,
+			UserProperties:  map[string]interface{}{},
+			Timestamp:       timestamp,
+			Auto:            false,
+			RequestSource:   model.UserSourceSalesforce,
+		}
+		status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+		assert.NotNil(t, response.EventId)
+		assert.Empty(t, response.UserId)
+		assert.Equal(t, http.StatusOK, status)
+
+		// Event 2 : Engagement Email
+		timestamp = timestamp - 10000
+		trackPayload = SDK.TrackPayload{
+			UserId:          user.ID,
+			CreateUser:      false,
+			IsNewUser:       false,
+			Name:            U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL,
+			EventProperties: eventProperties,
+			UserProperties:  map[string]interface{}{},
+			Timestamp:       timestamp,
+			Auto:            false,
+			RequestSource:   model.UserSourceSalesforce,
+		}
+		status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+		assert.NotNil(t, response.EventId)
+		assert.Empty(t, response.UserId)
+		assert.Equal(t, http.StatusOK, status)
+
+		// Website session
+		timestamp = timestamp - 10000
+		trackPayload = SDK.TrackPayload{
+			UserId:          user.ID,
+			CreateUser:      false,
+			IsNewUser:       false,
+			Name:            U.EVENT_NAME_SESSION,
+			EventProperties: eventProperties,
+			UserProperties:  map[string]interface{}{},
+			Timestamp:       timestamp,
+			Auto:            false,
+			RequestSource:   model.UserSourceHubspot,
+		}
+		status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+		assert.NotNil(t, response.EventId)
+		assert.Empty(t, response.UserId)
+		assert.Equal(t, http.StatusOK, status)
+
+		if i > 1 {
+			continue
+		}
+
+		// Hubspot Group Events
+		trackPayload = SDK.TrackPayload{
+			UserId:        createdUserID,
+			CreateUser:    false,
+			IsNewUser:     false,
+			Name:          U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+			Timestamp:     timestamp,
+			ProjectId:     project.ID,
+			Auto:          false,
+			RequestSource: model.UserSourceHubspot,
+		}
+		status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+		assert.NotEmpty(t, response)
+		assert.Equal(t, http.StatusOK, status)
+
+		trackPayload = SDK.TrackPayload{
+			UserId:        createdUserID,
+			CreateUser:    false,
+			IsNewUser:     false,
+			Name:          U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_UPDATED,
+			Timestamp:     timestamp,
+			ProjectId:     project.ID,
+			Auto:          false,
+			RequestSource: model.UserSourceHubspot,
+		}
+		status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+		assert.NotEmpty(t, response)
+		assert.Equal(t, http.StatusOK, status)
+
 	}
 
 	// Create 5 Six Signal Domains
@@ -489,11 +607,11 @@ func TestTaskSegmentMarker(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	// To check whether segemnent created
-	getSegementFinal, status := store.GetStore().GetAllSegments(project.ID)
+	getSegement4, status := store.GetStore().GetAllSegments(project.ID)
 	assert.Equal(t, http.StatusFound, status)
 	nameFound2 := false
 
-	for _, segment := range getSegementFinal["All"] {
+	for _, segment := range getSegement4["All"] {
 		if segments5.Name == segment.Name {
 			nameFound2 = true
 			break
@@ -501,9 +619,168 @@ func TestTaskSegmentMarker(t *testing.T) {
 	}
 	assert.True(t, nameFound2)
 
+	// 6. Hubspot user event segment
+	segment6 := &model.SegmentPayload{
+		Name: "Hubspot User Performed Event",
+		Query: model.Query{
+			GlobalUserProperties: []model.QueryProperty{
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$country",
+					Operator:  "contains",
+					Value:     "India",
+					LogicalOp: "AND",
+				},
+			},
+			EventsWithProperties: []model.QueryEventWithProperties{
+				{
+					Name:          U.EVENT_NAME_SESSION,
+					GroupAnalysis: "Most Recent",
+					Properties: []model.QueryProperty{
+						{
+							Entity:    "user",
+							Type:      "categorical",
+							Property:  "$country",
+							Operator:  "contains",
+							Value:     "India",
+							LogicalOp: "AND",
+						},
+					},
+				},
+				{
+					Name:          U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL,
+					GroupAnalysis: "Most Recent",
+				},
+				{
+					Name:          U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED,
+					GroupAnalysis: "Most Recent",
+				},
+			},
+			Caller:          model.USER_PROFILES,
+			EventsCondition: model.EventCondAllGivenEvent,
+			GroupAnalysis:   "users",
+		},
+		Type: "hubspot",
+	}
+
+	w = createSegmentPostReq(r, *segment6, project.ID, agent)
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	// To check whether segemnent created
+	getSegement5, status := store.GetStore().GetAllSegments(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+	nameFound3 := false
+
+	for _, segment := range getSegement5["hubspot"] {
+		if segment6.Name == segment.Name {
+			nameFound3 = true
+			break
+		}
+	}
+	assert.True(t, nameFound3)
+
+	// 7. All event segment
+	segment7 := &model.SegmentPayload{
+		Name: "Hubspot Group Performed Event",
+		Query: model.Query{
+			EventsWithProperties: []model.QueryEventWithProperties{
+				{
+					Name:          U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+					GroupAnalysis: "Most Recent",
+				},
+				{
+					Name:          U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_UPDATED,
+					GroupAnalysis: "Most Recent",
+				},
+			},
+			Caller:          model.ACCOUNT_PROFILES,
+			EventsCondition: model.EventCondAllGivenEvent,
+			GroupAnalysis:   "All",
+		},
+		Type: "All",
+	}
+
+	w = createSegmentPostReq(r, *segment7, project.ID, agent)
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	// To check whether segemnent created
+	getSegement6, status := store.GetStore().GetAllSegments(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+	nameFound4 := false
+
+	for _, segment := range getSegement6["All"] {
+		if segment7.Name == segment.Name {
+			nameFound4 = true
+			break
+		}
+	}
+	assert.True(t, nameFound4)
+
+	// 8. All event different segment
+	segment8 := &model.SegmentPayload{
+		Name: "All Group Performed Event",
+		Query: model.Query{
+			EventsWithProperties: []model.QueryEventWithProperties{
+				{
+					Name:          U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+					GroupAnalysis: "Most Recent",
+				},
+				{
+					Name:          U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
+					GroupAnalysis: "Most Recent",
+				},
+				{
+					Name:          U.EVENT_NAME_SESSION,
+					GroupAnalysis: "Most Recent",
+					Properties: []model.QueryProperty{
+						{
+							Entity:    "user",
+							Type:      "categorical",
+							Property:  "$browser",
+							Operator:  "contains",
+							Value:     "Edge",
+							LogicalOp: "AND",
+						},
+					},
+				},
+			},
+			Caller:          model.ACCOUNT_PROFILES,
+			EventsCondition: model.EventCondAllGivenEvent,
+			GroupAnalysis:   "All",
+		},
+		Type: "All",
+	}
+
+	w = createSegmentPostReq(r, *segment8, project.ID, agent)
+	assert.Equal(t, http.StatusCreated, w.Code)
+
 	// Process all user
 	errCode = T.SegmentMarker(project.ID)
 	assert.Equal(t, errCode, http.StatusOK)
+
+	status, updatedUsers, associatedSegmentsList := store.GetStore().FetchAssociatedSegmentsFromUsers(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+
+	// To check whether segemnent created
+	getSegementFinal, status := store.GetStore().GetAllSegments(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+	nameFound5 := false
+
+	for _, segment := range getSegementFinal["All"] {
+		if segment8.Name == segment.Name {
+			nameFound5 = true
+			break
+		}
+	}
+	assert.True(t, nameFound5)
+
+	allAccountsSegmentNameIDs := make(map[string]string)
+	for _, segmentList := range getSegementFinal {
+		for _, segment := range segmentList {
+			allAccountsSegmentNameIDs[segment.Name] = segment.Id
+		}
+	}
 
 	// to verify updated users
 	// segment1 -> domain1id.com, domain2id.com
@@ -511,29 +788,30 @@ func TestTaskSegmentMarker(t *testing.T) {
 	// segment3 -> domain0id.com, domain1id.com, domain2id.com
 	// segment4 -> hubspot@1user (customer_user_id)
 	// segment5 -> domain1id.com, domain0id.com
+	// segment7 -> domain1id.com, domain0id.com
+	// segment6 -> domain1id.com
+	// segment8 -> hubspot@5user
 
-	updatedUsers, status := store.GetStore().GetUsers(project.ID, 0, 35)
-	assert.Equal(t, http.StatusFound, status)
-
-	resultUsers := make(map[string][]model.User)
-
-	for _, user := range updatedUsers {
-		if user.Group4ID != "" && (user.Group4ID == "domain0id.com" || user.Group4ID == "domain1id.com" || user.Group4ID == "domain2id.com") {
-			resultUsers["All"] = append(resultUsers["All"], user)
-		} else if user.Group2ID != "" && (user.Group2ID == "hbgroupuser3@heyflow.app" || user.Group2ID == "hbgroupuser4@clientjoy.io" || user.Group2ID == "hbgroupuser5@adapt.io") {
-			resultUsers["$hubspot_company"] = append(resultUsers["$hubspot_company"], user)
-		} else if user.CustomerUserId != "" && (user.CustomerUserId == "hubspot@1user") {
-			resultUsers["hubspot"] = append(resultUsers["hubspot"], user)
+	for index, checkUser := range updatedUsers {
+		if checkUser.Group4ID == "domain0id.com" {
+			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["User Group props"])
+			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["Group AND User Group props"])
+			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["Hubspot Group Performed Event"])
+		} else if checkUser.Group4ID == "domain1id.com" {
+			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["User Group props"])
+			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["Group AND User Group props"])
+			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["All accounts segment"])
+			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["All Group Performed Event"])
+			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["Hubspot Group Performed Event"])
+		} else if checkUser.Group4ID == "domain2id.com" {
+			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["User Group props"])
+			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["All accounts segment"])
+		} else if checkUser.Group2ID == "hbgroupuser3@heyflow.app" || checkUser.Group2ID == "hbgroupuser4@clientjoy.io" || checkUser.Group2ID == "hbgroupuser5@adapt.io" {
+			assert.Contains(t, associatedSegmentsList[index], getSegementFinal["$hubspot_company"][0].Id)
+		} else if checkUser.CustomerUserId == "hubspot@5user" {
+			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["Hubspot User Performed Event"])
 		}
 	}
-
-	assert.Equal(t, 3, len(resultUsers))
-
-	allAccountsSegmentNameIDs := make(map[string]string)
-	for _, segment := range getSegementFinal["All"] {
-		allAccountsSegmentNameIDs[segment.Name] = segment.Id
-	}
-
 }
 
 func createSegmentPostReq(r *gin.Engine, request model.SegmentPayload, projectId int64, agent *model.Agent) *httptest.ResponseRecorder {

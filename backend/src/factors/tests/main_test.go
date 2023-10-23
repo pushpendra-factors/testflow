@@ -137,7 +137,8 @@ func TestMain(m *testing.M) {
 		UseHashIDForCRMGroupUserByProject:                   "*",
 		MoveHubspotCompanyAssocationFlowToContactByPojectID: "*",
 		AllowedGoRoutines:                                   4,
-		UserPropertyUpdateOptProjects:                       "*",
+		AssociateDealToDomainByProjectID:                    "*",
+		ProcessOnlyAccountSegments:                          false,
 	}
 	C.InitConf(config)
 

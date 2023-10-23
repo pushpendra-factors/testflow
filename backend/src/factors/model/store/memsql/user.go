@@ -342,32 +342,90 @@ func (store *MemSQL) GetUsersUpdatedAtGivenHour(projectID int64, fromTime time.T
 
 	var users []model.User
 	fromTimeString := model.FormatTimeToString(fromTime)
-	queryParams := []interface{}{projectID, projectID, fromTimeString}
+	queryParams := []interface{}{projectID, model.UserSourceDomains, projectID, model.UserSourceDomains, fromTimeString}
 
-	query := fmt.Sprintf(`SELECT id, 
-	  group_%d_user_id, 
-	  properties, 
-	  is_group_user, 
-	  source, 
-	  updated_at,
-	  associated_segments 
-    FROM 
-	  users 
-    WHERE 
-	  project_id = ?
-	  AND source != 9 
-	  AND group_%d_user_id IN (
-	    SELECT 
-		  DISTINCT(group_%d_user_id) 
-	    FROM 
-		  users 
-	    WHERE 
-		  project_id = ?
-		  AND source != 9 
-		  AND updated_at >= ?
-		  AND group_%d_user_id IS NOT NULL
-		 LIMIT 1000
-		);`, domainID, domainID, domainID, domainID)
+	query := fmt.Sprintf(`SELECT 
+	id, 
+	group_%d_user_id, 
+	properties, 
+	is_group_user, 
+	source, 
+	updated_at 
+  FROM 
+	(
+	  SELECT 
+		id, 
+		group_%d_user_id, 
+		properties, 
+		is_group_user, 
+		source, 
+		updated_at, 
+		ROW_NUMBER() OVER (
+		  PARTITION BY group_%d_user_id 
+		  ORDER BY 
+			updated_at DESC
+		) AS row_num 
+	  FROM 
+		users 
+	  WHERE 
+		project_id = ? 
+		AND source != ? 
+		AND group_%d_user_id IN (
+		  SELECT 
+			DISTINCT(group_%d_user_id) 
+		  FROM 
+			users 
+		  WHERE 
+			project_id = ? 
+			AND source != ? 
+			AND updated_at >= ? 
+			AND group_%d_user_id IS NOT NULL 
+		  LIMIT 
+			100000
+		)
+	) 
+  WHERE 
+	row_num <= 100;`, domainID, domainID, domainID, domainID, domainID, domainID)
+
+	db := C.GetServices().Db
+	err := db.Raw(query, queryParams...).Scan(&users).Error
+	if err != nil {
+		return users, http.StatusInternalServerError
+	}
+	if len(users) == 0 {
+		return nil, http.StatusNotFound
+	}
+	return users, http.StatusFound
+}
+
+// get all non group users where updated in last x hours
+func (store *MemSQL) GetNonGroupUsersUpdatedAtGivenHour(projectID int64, fromTime time.Time) ([]model.User, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"from_time":  fromTime,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	var users []model.User
+	fromTimeString := model.FormatTimeToString(fromTime)
+	queryParams := []interface{}{projectID, fromTimeString}
+
+	query := `SELECT 
+	id, 
+	properties, 
+	source, 
+	updated_at 
+  FROM 
+	users 
+  WHERE 
+	project_id = ?
+	AND (
+	  is_group_user IS NULL 
+	  OR is_group_user = 0
+	) 
+	AND updated_at >= ?
+  LIMIT 
+	100000;`
 
 	db := C.GetServices().Db
 	err := db.Raw(query, queryParams...).Scan(&users).Error
@@ -2943,18 +3001,17 @@ func (store *MemSQL) UpdateUserGroupInBatch(projectID int64, userIDs []string, g
 	return http.StatusAccepted
 }
 
-func (store *MemSQL) UpdateGroupUserDomainsGroup(projectID int64, groupUserID, groupUserGroupName, domainsUserID, domainsGroupID string, overwrite bool) (*model.User, int) {
+func (store *MemSQL) UpdateGroupUserDomainsGroup(projectID int64, groupUserID, domainsUserID, domainsGroupID string, overwrite bool) (*model.User, int) {
 	logFields := log.Fields{
-		"project_id":            projectID,
-		"group_user_id":         groupUserID,
-		"domains_user_id":       domainsUserID,
-		"group_user_group_name": groupUserGroupName,
-		"domains_group_id":      domainsGroupID,
+		"project_id":       projectID,
+		"group_user_id":    groupUserID,
+		"domains_user_id":  domainsUserID,
+		"domains_group_id": domainsGroupID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
 
-	if projectID == 0 || groupUserID == "" || groupUserGroupName == "" || domainsGroupID == "" || domainsUserID == "" {
+	if projectID == 0 || groupUserID == "" || domainsGroupID == "" || domainsUserID == "" {
 		logCtx.Error("Invalid parameters.")
 		return nil, http.StatusBadRequest
 	}
@@ -3376,7 +3433,7 @@ func (store *MemSQL) AssociateUserDomainsGroup(projectID int64, requestUserID st
 			}
 
 			// associate domain user id to group user to avoid going through fallback logic later.
-			_, status = store.UpdateGroupUserDomainsGroup(projectID, groupUser.ID, leadingGroupName, domainUserID, groupID, true)
+			_, status = store.UpdateGroupUserDomainsGroup(projectID, groupUser.ID, domainUserID, groupID, true)
 			if status != http.StatusAccepted && status != http.StatusNotModified {
 				logCtx.WithFields(log.Fields{"domain_user_id": domainUserID, "group_user_id": groupUser.ID, "group_name": leadingGroupName, "group_id": groupID}).
 					WithError(err).Error("Failed to update group user association with domains group user on AssociateUserDomainsGroup.")
@@ -3480,4 +3537,64 @@ func (store *MemSQL) GetAssociatedDomainForUser(projectID int64, userID string, 
 		return "", fmt.Errorf("failed to retrieve domain name: %w", err)
 	}
 	return details.Account, nil
+}
+
+// UpdateGroupUserDomainAssociationUsingAccountUserID associates non account group with domain using account groups domain user id
+func (store *MemSQL) UpdateGroupUserDomainAssociationUsingAccountUserID(projectID int64, groupUserID string, accountGroupName string, accountGroupUserID string) int {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "group_user_id": groupUserID, "account_group_user_id": accountGroupUserID})
+	accountGroupUser, status := store.GetUserWithoutJSONColumns(projectID, accountGroupUserID)
+	if status != http.StatusFound {
+		logCtx.Error("Failed to get account group user in UpdateGroupUserDomainAssociation.")
+		return http.StatusInternalServerError
+	}
+
+	domainGroup, status := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
+	if status != http.StatusFound {
+		logCtx.Error("Failed to get group on associateOpportunityToDomains.")
+		return http.StatusInternalServerError
+	}
+
+	domainUserID, err := model.GetGroupUserDomainsUserID(accountGroupUser, domainGroup.ID)
+	if err != nil || domainUserID == "" {
+		if err != nil && err != model.ErrMissingDomainUserID {
+			logCtx.WithError(err).Error("Failed to get domain user id in account group user.")
+			return http.StatusInternalServerError
+		}
+
+		accountProperties, status := store.GetUserPropertiesByUserID(projectID, accountGroupUserID)
+		if status != http.StatusFound {
+			logCtx.WithError(err).Error("Failed to get account properties in associating deal to domain.")
+			return http.StatusInternalServerError
+		}
+
+		domainUserID, domainName, status := store.createOrGetDomainUserIDByProperties(projectID, accountGroupName, *accountProperties)
+		if status != http.StatusCreated && status != http.StatusFound {
+			logCtx.WithError(err).Error("Failed to create domain user in associating deal to domain.")
+			return http.StatusInternalServerError
+		}
+
+		_, status = store.UpdateGroupUserDomainsGroup(projectID, groupUserID, domainUserID, domainName, true)
+		if status != http.StatusAccepted && status != http.StatusNotModified {
+			logCtx.WithFields(log.Fields{"domain_user_id": domainUserID, "domain_name": domainName}).
+				WithError(err).Error("Failed to update group user association with domains group user in associating deal to domain.")
+			return http.StatusInternalServerError
+		}
+
+		return http.StatusOK
+	}
+
+	domainName, err := model.GetGroupUserGroupID(accountGroupUser, domainGroup.ID)
+	if err != nil || domainUserID == "" {
+		logCtx.WithError(err).Error("Failed to domain name from account group user.")
+		return http.StatusInternalServerError
+	}
+
+	_, status = store.UpdateGroupUserDomainsGroup(projectID, groupUserID, domainUserID, domainName, true)
+	if status != http.StatusAccepted && status != http.StatusNotModified {
+		logCtx.WithFields(log.Fields{"domain_user_id": domainUserID, "domain_name": domainName}).
+			WithError(err).Error("Failed to update group user association with domains group user in associating deal to domain.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusOK
 }

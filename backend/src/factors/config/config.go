@@ -20,7 +20,6 @@ import (
 
 	"github.com/getsentry/sentry-go"
 	"github.com/go-sql-driver/mysql"
-	"github.com/pkg/errors"
 
 	"github.com/coreos/etcd/mvcc/mvccpb"
 
@@ -191,9 +190,10 @@ type Configuration struct {
 	SkippedOtpProjectIDs                   string
 	PrimaryDatastore                       string
 	// Segment Marker lookback
-	UseLookbackSegmentMarker bool
-	LookbackSegmentMarker    int
-	AllowedGoRoutines        int
+	UseLookbackSegmentMarker   bool
+	LookbackSegmentMarker      int
+	AllowedGoRoutines          int
+	ProcessOnlyAccountSegments bool
 	// Flag for enabling only the /mql routes for secondary env testing.
 	EnableMQLAPI bool
 	// Flags to disable DB and Redis writes when enabled.
@@ -332,8 +332,10 @@ type Configuration struct {
 	MoveHubspotCompanyAssocationFlowToContactByPojectID string
 	ChargebeeApiKey                                     string
 	ChargebeeSiteName                                   string
+	ExplainV3QueryBuilder                               bool
 	UserPropertyUpdateOptProjects                       string
 	CompanyPropsV1EnabledProjectIDs                     string
+	AssociateDealToDomainByProjectID                    string
 }
 
 type Services struct {
@@ -650,6 +652,9 @@ func UseLookbackForSegmentMarker() bool {
 func LookbackForSegmentMarker() int {
 	return configuration.LookbackSegmentMarker
 }
+func ProcessOnlyAllAccountsSegments() bool {
+	return configuration.ProcessOnlyAccountSegments
+}
 
 func AllowedGoRoutinesSegmentMarker() int {
 	return configuration.AllowedGoRoutines
@@ -759,7 +764,8 @@ func initAppServerServices(config *Configuration) error {
 
 	err = InitEtcd(config.EtcdEndpoints)
 	if err != nil {
-		return errors.Wrap(err, "Failed to initialize etcd")
+		log.WithError(err).Error("Failed to intialise etcd. Skipping.")
+		return nil
 	}
 
 	InitMailClient(config.AWSKey, config.AWSSecret, config.AWSRegion)
@@ -3073,6 +3079,15 @@ func MoveHubspotCompanyAssocationFlowToContactByPojectID(projecID int64) bool {
 
 func IsUserPropertyUpdateOptProject(projectID int64) bool {
 	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().UserPropertyUpdateOptProjects, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
+}
+
+func AssociateDealToDomainByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AssociateDealToDomainByProjectID, "")
 	if allProjects {
 		return true
 	}

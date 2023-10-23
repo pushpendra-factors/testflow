@@ -302,8 +302,10 @@ func InitAppRoutes(r *gin.Engine) {
 	//explainV2
 	authRouteGroup.GET("/:project_id/v1/explainV2", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), V1.GetFactorsHandlerV2)
 	authRouteGroup.GET("/:project_id/v1/explainV2/goals", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), responseWrapper(V1.GetExplainV2EntityHandler))
+	authRouteGroup.GET("/:project_id/v1/explainV3/goals", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), responseWrapper(V1.GetExplainV3EntityHandler))
 	authRouteGroup.POST("/:project_id/v1/explainV2", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), V1.PostFactorsHandlerV2)
 	authRouteGroup.POST("/:project_id/v1/explainV2/job", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), responseWrapper(V1.CreateExplainV2EntityHandler))
+	authRouteGroup.POST("/:project_id/v1/explainV3/job", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), responseWrapper(V1.CreateExplainV3EntityHandler))
 	authRouteGroup.DELETE("/:project_id/v1/explainV2/:id", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), V1.DeleteSavedExplainV2EntityHandler)
 
 	//acc scoring
@@ -396,7 +398,7 @@ func InitAppRoutes(r *gin.Engine) {
 	//six signal
 	authRouteGroup.POST("/:project_id/sixsignal/email", responseWrapper(SendSixSignalReportViaEmailHandler))
 
-	// billing 
+	// billing
 	authRouteGroup.GET("/:project_id/billing/pricing", V1.GetPricingForPlansAndAddonsHandler)
 	authRouteGroup.POST("/:project_id/billing/upgrade", V1.UpdateSubscriptionHandler)
 	authRouteGroup.GET("/:project_id/billing/subscription", V1.GetSubscriptionDetailsHander)

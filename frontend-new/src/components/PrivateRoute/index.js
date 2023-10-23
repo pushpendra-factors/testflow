@@ -11,6 +11,7 @@ function capitalize(string) {
 function PrivateRoute({ component: Component, ...restOfProps }) {
   const { isLoggedIn } = useSelector((state) => state.agent);
   let location = useLocation();
+  const { title } = restOfProps;
   useEffect(() => {
     let pageName = '';
     if (location.pathname == '/') {
@@ -21,7 +22,11 @@ function PrivateRoute({ component: Component, ...restOfProps }) {
 
       pageName = capitalize(initialPaths[n - 1]);
     }
-    document.title = pageName + ' - FactorsAI';
+    if (title && title != '') {
+      document.title = title + ' - FactorsAI';
+    } else {
+      document.title = pageName + ' - FactorsAI';
+    }
   }, [location]);
   return (
     <Route

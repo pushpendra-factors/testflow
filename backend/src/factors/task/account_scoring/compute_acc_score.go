@@ -288,11 +288,11 @@ func AggEventsOnUsers(file io.ReadCloser, userGroupCount map[string]*AggEventsOn
 				userCounts += 1
 			}
 
-			if !event.IsGroupUser {
-				id := getDomainGroupUserId(event, domainGroup)
+			id := getDomainGroupUserId(event, domainGroup)
+			if id != "" {
 				aggGroupCounts(event, id, userGroupCount, ruleIds)
-
 			}
+
 		}
 
 	}

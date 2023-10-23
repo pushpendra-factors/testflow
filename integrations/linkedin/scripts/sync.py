@@ -24,10 +24,11 @@ parser.add_option('--data_service_host', dest='data_service_host',
 parser.add_option('--start_timestamp', dest='start_timestamp', help='', default=None, type=int)
 parser.add_option('--input_end_timestamp', dest='input_end_timestamp', help='', default=None, type=int)
 parser.add_option('--run_ads_heirarchical_data', dest='run_ads_heirarchical_data',
-    help='', default='False')
+    help='', default='True')
 parser.add_option('--run_member_company_insights', dest='run_member_company_insights', 
     help='', default='True')
-parser.add_option('--is_weekly_job', default='True', dest='is_weekly_job', help='', type=str)
+parser.add_option('--is_weekly_job', default='False', dest='is_weekly_job', help='', type=str)
+parser.add_option('--new_change_project_ids', default='', dest='new_change_project_ids', help='', type=str)
 
 def ping_healthcheck(successes, failures, token_failures, is_weekly_job):
         status_msg = ''
@@ -68,10 +69,12 @@ def get_collections(options, linkedin_setting, sync_info_with_type, input_end_ti
                                     options.run_ads_heirarchical_data == True)
     is_weekly_job = (options.is_weekly_job == 'True' or 
                     options.is_weekly_job == True)
+    new_change_project_ids_list = options.new_change_project_ids.split(",")
+    run_new_change = (linkedin_setting.project_id in new_change_project_ids_list) or options.new_change_project_ids == '*'
 
     try:
         # if it's a weekly job the other jobs are not to be run even if flag set to true
-        if is_weekly_job and MEMBER_COMPANY_INSIGHTS in sync_info_with_type:
+        if is_weekly_job and MEMBER_COMPANY_INSIGHTS in sync_info_with_type and run_new_change:
             res = WeeklyDataFetch.weekly_job_etl_and_backfill_company_data_with_campaign_group(
                         options, linkedin_setting,
                         sync_info_with_type)
@@ -127,14 +130,25 @@ def get_collections(options, linkedin_setting, sync_info_with_type, input_end_ti
                 #     return res
             
             if run_member_company_insights:
-                res = DataFetch.etl_member_company_data_with_campaign_group(
-                        options, linkedin_setting,
-                        sync_info_with_type, input_end_timestamp)
-                requests_counter += res[API_REQUESTS]
-                if res['status'] == 'skipped':
-                    skipMsgs.append(res['errMsg'])
-                if res['status'] == 'failed':
-                    return res
+                if run_new_change:
+                    res = DataFetch.etl_member_company_data_with_campaign_group(
+                            options, linkedin_setting,
+                            sync_info_with_type, input_end_timestamp)
+                    requests_counter += res[API_REQUESTS]
+                    if res['status'] == 'skipped':
+                        skipMsgs.append(res['errMsg'])
+                    if res['status'] == 'failed':
+                        return res
+                else:
+                    res = DataFetch.etl_member_company_data_old(
+                    options, linkedin_setting,
+                    sync_info_with_type, input_end_timestamp, '*')
+                    requests_counter += res[API_REQUESTS]
+                    if res['status'] == 'skipped':
+                        skipMsgs.append(res['errMsg'])
+                    if res['status'] == 'failed':
+                        return res
+                    
             
         
     except Exception as e:
@@ -214,7 +228,7 @@ if __name__ == '__main__':
             linkedin_int_settings, options.exclude_project_ids)
 
         valid_linkedin_settings, invalid_linkedin_settings = U.separate_valid_and_invalid_tokens(
-            linkedin_int_settings)
+            required_linkedin_settings)
         
         settings_with_updated_tokens, token_failures = U.generate_and_update_access_token(
             options, invalid_linkedin_settings)

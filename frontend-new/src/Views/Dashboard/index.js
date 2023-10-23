@@ -243,16 +243,15 @@ function Dashboard({
                 handleWidgetRefresh={handleWidgetRefresh}
               />
             </div>
-
-            <AddDashboard
-              setEditDashboard={setEditDashboard}
-              editDashboard={editDashboard}
-              addDashboardModal={addDashboardModal}
-              setaddDashboardModal={setaddDashboardModal}
-            />
           </>
         )}
         {areDraftsSelected === true && <Drafts />}
+        <AddDashboard
+          setEditDashboard={setEditDashboard}
+          editDashboard={editDashboard}
+          addDashboardModal={addDashboardModal}
+          setaddDashboardModal={setaddDashboardModal}
+        />
       </ErrorBoundary>
     );
   }
