@@ -330,6 +330,7 @@ type Configuration struct {
 	SlackInternalAlertWebhookUrl                        string
 	UseHashIDForCRMGroupUserByProject                   string
 	MoveHubspotCompanyAssocationFlowToContactByPojectID string
+	ExplainV3QueryBuilder                               bool
 	ChargebeeApiKey                                     string
 	ChargebeeSiteName                                   string
 	UserPropertyUpdateOptProjects                       string

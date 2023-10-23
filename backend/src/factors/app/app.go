@@ -209,6 +209,7 @@ func main() {
 	allowEventAnalyticsGroupsByProjectID := flag.String("allow_event_analytics_groups_by_project_id", "", "")
 	enableFeatureGatesV2 := flag.Bool("enable_feature_gates_v2", false, "")
 	enableScoreByProjectID := flag.String("enable_score_by_project_id", "", "List of projectIds with scoring enabled.")
+	explainV3Query := flag.Bool("explain_v3_query", false, "whether to implement new query payload")
 	chargebeeApiKey := flag.String("chargebee_api_key", "dummy", "Chargebee api key")
 	chargebeeSiteName := flag.String("chargebee_site_name", "", "Chargebee site name")
 
@@ -369,6 +370,7 @@ func main() {
 		AllowEventAnalyticsGroupsByProjectID:           *allowEventAnalyticsGroupsByProjectID,
 		EnableFeatureGatesV2:                           *enableFeatureGatesV2,
 		EnableScoringByProjectID:                       *enableScoreByProjectID,
+		ExplainV3QueryBuilder:                          *explainV3Query,
 		EnableNewAllAccountsByProjectID:                *enableNewAllAccountsByProjectID,
 		ChargebeeApiKey:                                *chargebeeApiKey,
 		ChargebeeSiteName:                              *chargebeeSiteName,
