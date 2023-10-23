@@ -67,8 +67,6 @@ func InitAppRoutes(r *gin.Engine) {
 	r.POST(routePrefix+"/agents/setpassword", mid.ValidateAgentSetPasswordRequest(), AgentSetPassword)
 	r.PUT(routePrefix+"/agents/updatepassword", mid.SetLoggedInAgent(), UpdateAgentPassword)
 	r.POST(routePrefix+"/agents/activate", mid.ValidateAgentActivationRequest(), AgentActivate)
-	// r.GET(routePrefix+"/agents/billing", mid.SetLoggedInAgent(), GetAgentBillingAccount)
-	// r.PUT(routePrefix+"/agents/billing", mid.SetLoggedInAgent(), UpdateAgentBillingAccount)
 	r.GET(routePrefix+"/agents/info", mid.SetLoggedInAgent(), AgentInfo)
 	r.PUT(routePrefix+"/agents/info", mid.SetLoggedInAgent(), UpdateAgentInfo)
 	r.GET(routePrefix+"/projectanalytics", mid.SetLoggedInAgentInternalOnly(), V1.GetFactorsAnalyticsHandler)
@@ -402,6 +400,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/billing/pricing", V1.GetPricingForPlansAndAddonsHandler)
 	authRouteGroup.POST("/:project_id/billing/upgrade", V1.UpdateSubscriptionHandler)
 	authRouteGroup.GET("/:project_id/billing/subscription", V1.GetSubscriptionDetailsHander)
+	authRouteGroup.GET("/billing/upgrade/callback", V1.BillingUpgradeCallbackHandler)
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {
