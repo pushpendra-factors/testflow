@@ -386,7 +386,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 		isGroupUserCheck = "AND u.is_group_user=1"
 	}
 	if isAllUserProperties && (len(groupedFilters) > 0) {
-		isGroupUserCheck = "AND (u.is_group_user=0 OR u.is_group_user IS NULL) AND u.customer_user_id IS NOT NULL"
+		isGroupUserCheck = "AND (u.is_group_user=0 OR u.is_group_user IS NULL)"
 	}
 
 	whereForGroups := make(map[string]string)
@@ -428,7 +428,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 	for groupName, filterString := range whereForGroups {
 		isGroupStr := "is_group_user=1"
 		if groupName == model.FILTER_TYPE_USERS {
-			isGroupStr = "(is_group_user=0 OR is_group_user IS NULL) AND customer_user_id IS NOT NULL"
+			isGroupStr = "(is_group_user=0 OR is_group_user IS NULL)"
 		}
 
 		filterSteps = filterSteps + fmt.Sprintf(`, filter_%d as (
