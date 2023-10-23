@@ -1,7 +1,6 @@
 package billing_plan_id
 
 import (
-	C "factors/config"
 	"factors/model/model"
 	"github.com/chargebee/chargebee-go/v3"
 	customerAction "github.com/chargebee/chargebee-go/v3/actions/customer"
@@ -39,7 +38,7 @@ func CreateChargebeeCustomer(agent model.Agent) (customer.Customer, int, error) 
 // only used to create free subscription which doesn't require a card
 func CreateChargebeeSubscriptionForCustomer(customerID string, planPriceID string) (subscription.Subscription, int, error) {
 	logCtx := log.Fields{"customer_id": customerID}
-	
+
 	res, err := subscriptionAction.CreateWithItems(customerID, &subscription.CreateWithItemsRequestParams{
 		SubscriptionItems: []*subscription.CreateWithItemsSubscriptionItemParams{
 			{
