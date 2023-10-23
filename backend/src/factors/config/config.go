@@ -332,7 +332,6 @@ type Configuration struct {
 	MoveHubspotCompanyAssocationFlowToContactByPojectID string
 	ChargebeeApiKey                                     string
 	ChargebeeSiteName                                   string
-	ExplainV3QueryBuilder                               bool
 	UserPropertyUpdateOptProjects                       string
 	CompanyPropsV1EnabledProjectIDs                     string
 	AssociateDealToDomainByProjectID                    string
