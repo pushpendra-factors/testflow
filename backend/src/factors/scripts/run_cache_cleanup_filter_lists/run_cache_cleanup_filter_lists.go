@@ -5,10 +5,11 @@ import (
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	"factors/model/model"
+	"factors/model/store"
 	"flag"
 	"fmt"
 	"io"
-	"strconv"
+	"net/http"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -32,11 +33,9 @@ func main() {
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
-	teamsAppTenantID := flag.String("teams_app_tenant_id", "", "")
-	teamsAppClientID := flag.String("teams_app_client_id", "", "")
-	teamsAppClientSecret := flag.String("teams_app_client_secret", "", "")
-	teamsApplicationID := flag.String("teams_application_id", "", "")
 	enableFeatureGatesV2 := flag.Bool("enable_feature_gates_v2", false, "")
+	projectIdFlag := flag.String("project_ids", "",
+		"Comma separated list of project Ids; '*' for all projects")
 	// blacklistedAlerts := flag.String("blacklisted_alerts", "", "")
 
 	flag.Parse()
@@ -68,10 +67,6 @@ func main() {
 		RedisHostPersistent:  *redisHostPersistent,
 		RedisPortPersistent:  *redisPortPersistent,
 		SentryDSN:            *sentryDSN,
-		TeamsAppTenantID:     *teamsAppTenantID,
-		TeamsAppClientID:     *teamsAppClientID,
-		TeamsAppClientSecret: *teamsAppClientSecret,
-		TeamsApplicationID:   *teamsApplicationID,
 		EnableFeatureGatesV2: *enableFeatureGatesV2,
 	}
 
@@ -79,12 +74,35 @@ func main() {
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 
-	CacheCleanupHelper()
+	err := C.InitDB(*config)
+	if err != nil {
+		log.Fatal("Failed to pull data. Init failed.")
+	}
+	db := C.GetServices().Db
+	defer db.Close()
+
+	allProjects, projectIdsFromList, _ := C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
+	projectIdList := make([]int64, 0)
+	if allProjects {
+		projectIDs, errCode := store.GetStore().GetAllProjectIDs()
+		if errCode != http.StatusFound {
+			log.Fatal("Failed to get all projects and project_ids set to '*'.")
+		}
+		projectIdList = append(projectIdList, projectIDs...)
+	} else {
+		for projectId := range projectIdsFromList {
+			projectIdList = append(projectIdList, projectId)
+		}
+	}
+	for _, pid := range projectIdList {
+		CacheCleanupHelper(pid)
+	}
 
 }
 
-func CacheCleanupHelper() {
-	pattern := "LIST:pid:*"
+func CacheCleanupHelper(projectID int64) {
+	pattern := fmt.Sprintf("LIST:pid:%d*", projectID)
+
 	keys, err := cacheRedis.GetKeysPersistent(pattern)
 	if err != nil {
 		log.Error(fmt.Errorf("get keys from cache failure"))
@@ -106,11 +124,6 @@ func CacheCleanupHelper() {
 
 		// Read the file from the cloud and upload the
 		splitKey := strings.Split(strKey, ":")
-		pid := splitKey[2]
-		projectID, err := strconv.ParseInt(pid, 0, 64)
-		if err != nil {
-			log.Error(fmt.Errorf("failed to retrieve project_id"))
-		}
 		reference := splitKey[len(splitKey)-1]
 
 		err = AddListValuesToCache(projectID, reference)
