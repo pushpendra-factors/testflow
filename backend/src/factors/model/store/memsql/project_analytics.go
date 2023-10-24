@@ -281,7 +281,7 @@ func GetEventsFromCacheByDocumentType(projectID, documentType, dateKey string) (
 	return 0, nil
 }
 
-func (store *MemSQL) GetGlobalProjectAnalyticsDataByProjectId(projectID int64, monthString string) ([]map[string]interface{}, error) {
+func (store *MemSQL) GetGlobalProjectAnalyticsDataByProjectId(projectID int64, monthString, agentUUID string) ([]map[string]interface{}, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -296,14 +296,15 @@ func (store *MemSQL) GetGlobalProjectAnalyticsDataByProjectId(projectID int64, m
 	with 
     step_1 as ( select count(*) as users_count from users where project_id =?),
     step_2 as ( select count(*) as alerts_count from alerts where project_id =? and is_deleted = ? ),
-    step_3 as ( select count(*) as segments_count from segments where project_id =? ),
-    step_4 as ( select count(*) as dashboard_count from  dashboards where project_id = ? and is_deleted = ? ),
-    step_5 as ( select count(*) as webhooks_count from event_trigger_alerts where project_id = ? and JSON_EXTRACT_STRING(event_trigger_alert,'%s') = ? and is_deleted = ? and internal_status = ? ),
-    step_6 as ( select count(*) as report_count from queries where project_id =? and is_deleted = ? )  
-    select * from step_1,step_2,step_3,step_4,step_5,step_6;
+	step_3 as (select count(*) as event_trigger_alerts_count from event_trigger_alerts where project_id =? and  is_deleted = ?),
+    step_4 as ( select count(*) as segments_count from segments where project_id =? ),
+    step_5 as ( select count(*) as dashboard_count from  dashboards where project_id = ? and is_deleted = ? ),
+    step_6 as ( select count(*) as webhooks_count from event_trigger_alerts where project_id = ? and JSON_EXTRACT_STRING(event_trigger_alert,'%s') = ? and is_deleted = ? and internal_status = ? ),
+    step_7 as ( select count(*) as report_count from queries where project_id =? and is_deleted = ? )  
+    select * from step_1,step_2,step_3,step_4,step_5,step_6,step_7;
 	`, model.WEBHOOK)
 
-	params = append(params, projectID, projectID, false, projectID, projectID, false, projectID, true, false, model.ACTIVE, projectID, false)
+	params = append(params, projectID, projectID, false, projectID, false, projectID, projectID, false, projectID, true, false, model.ACTIVE, projectID, false)
 
 	rows, err := db.Raw(stmt, params...).Rows()
 	if err != nil {
@@ -317,8 +318,9 @@ func (store *MemSQL) GetGlobalProjectAnalyticsDataByProjectId(projectID int64, m
 		var dashboardCount string
 		var webhooksCount string
 		var reportCount string
+		var eventAlertsCount string
 
-		if err = rows.Scan(&usersCount, &alertsCount, &segmentsCount, &dashboardCount,
+		if err = rows.Scan(&usersCount, &eventAlertsCount, &alertsCount, &segmentsCount, &dashboardCount,
 			&webhooksCount, &reportCount); err != nil {
 			log.WithFields(log.Fields{"err": err}).Error("SQL Parse failed.")
 			return nil, err
@@ -335,9 +337,8 @@ func (store *MemSQL) GetGlobalProjectAnalyticsDataByProjectId(projectID int64, m
 			return nil, err
 		}
 
-		integrationConnectedCount, integrationDisconnectedCount, integrationErrCount := getIntegrationStatusesCount(*settings)
+		integrationConnectedCount, integrationDisconnectedCount, integrationErrCount := store.GetIntegrationStatusesCount(*settings, projectID, agentUUID)
 
-		// metering logic here
 		timeZoneString, statusCode := store.GetTimezoneForProject(projectID)
 		if statusCode != http.StatusFound {
 			timeZoneString = U.TimeZoneStringIST
@@ -352,7 +353,7 @@ func (store *MemSQL) GetGlobalProjectAnalyticsDataByProjectId(projectID int64, m
 
 		data := map[string]interface{}{
 			"user_count":               usersCount,
-			"alerts_count":             alertsCount,
+			"alerts_count":             U.SafeConvertToFloat64(alertsCount) + U.SafeConvertToFloat64(eventAlertsCount),
 			"segments_count":           segmentsCount,
 			"dashboard_count":          dashboardCount,
 			"webhooks_count":           webhooksCount,
@@ -371,58 +372,102 @@ func (store *MemSQL) GetGlobalProjectAnalyticsDataByProjectId(projectID int64, m
 	return result, nil
 }
 
-func getIntegrationStatusesCount(settings model.ProjectSetting) (int, int, int) {
-	var connected, disconnected, error int
-
-	if *settings.IntHubspot && settings.IntHubspotApiKey != "" {
-		connected++
-	} else if *settings.IntHubspot && settings.IntHubspotApiKey == "" {
-		error++
-	} else {
-		disconnected++
-	}
+func (store *MemSQL) GetIntegrationStatusesCount(settings model.ProjectSetting, projectID int64, agentUUID string) (int, int, int) {
+	connected := 0
+	disconnected := 0
+	error := 0
 
 	if *settings.IntSegment {
 		connected++
 	} else {
 		disconnected++
 	}
-
 	if *settings.IntDrift {
 		connected++
 	} else {
 		disconnected++
 	}
-
-	if *settings.IntClearBit && settings.ClearbitKey != "" {
-		connected++
-	} else if *settings.IntHubspot && settings.ClearbitKey == "" {
-		error++
-	} else {
-		disconnected++
-	}
-
 	if *settings.IntRudderstack {
 		connected++
 	} else {
 		disconnected++
 	}
-
-	if *settings.IntG2 && settings.IntG2ApiKey != "" {
+	if *settings.IntClientSixSignalKey {
 		connected++
-	} else if *settings.IntG2 && settings.IntG2ApiKey == "" {
-		error++
+	} else {
+		disconnected++
+	}
+	if *settings.IntFactorsSixSignalKey {
+		connected++
+	} else {
+		disconnected++
+	}
+	if store.IsHubspotIntegrationAvailable(projectID) {
+		connected++
+	} else {
+		disconnected++
+	}
+	if store.IsSalesforceIntegrationAvailable(projectID) {
+		connected++
+	} else {
+		disconnected++
+	}
+	if store.IsBingIntegrationAvailable(projectID) {
+		connected++
+	} else {
+		disconnected++
+	}
+	if store.IsAdwordsIntegrationAvailable(projectID) {
+		connected++
+	} else {
+		disconnected++
+	}
+	if store.IsFacebookIntegrationAvailable(projectID) {
+		connected++
+	} else {
+		disconnected++
+	}
+	if store.IsLinkedInIntegrationAvailable(projectID) {
+		connected++
 	} else {
 		disconnected++
 	}
 
-	if (*settings.IntClientSixSignalKey && settings.Client6SignalKey != "") ||
-		(*settings.IntFactorsSixSignalKey && settings.Factors6SignalKey != "") {
+	if store.IsGoogleOrganicIntegrationAvailable(projectID) {
 		connected++
-	} else if (*settings.IntClientSixSignalKey && settings.Client6SignalKey == "") ||
-		(*settings.IntFactorsSixSignalKey && settings.Factors6SignalKey == "") {
+	} else {
+		disconnected++
+	}
 
-		error++
+	if store.IsMarketoIntegrationAvailable(projectID) {
+		connected++
+	} else {
+		disconnected++
+	}
+
+	if store.IsG2IntegrationAvailable(projectID) {
+		connected++
+	} else {
+		disconnected++
+	}
+
+	if ok, _ := store.IsClearbitIntegratedByProjectID(projectID); ok {
+		connected++
+	} else {
+		disconnected++
+	}
+	if store.IsLeadSquaredIntegrationAvailble(projectID) {
+		connected++
+	} else {
+		disconnected++
+	}
+	if ok, _ := store.IsSlackIntegratedForProject(projectID, agentUUID); ok {
+		connected++
+	} else {
+		disconnected++
+	}
+	if ok, _ := store.IsTeamsIntegratedForProject(projectID, agentUUID); ok {
+		connected++
 	} else {
 		disconnected++
 	}

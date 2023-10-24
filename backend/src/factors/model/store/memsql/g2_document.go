@@ -80,6 +80,18 @@ func (store *MemSQL) CreateMultipleG2Document(g2Documents []model.G2Document) in
 	return http.StatusCreated
 }
 
+func (store *MemSQL) IsG2IntegrationAvailable(projectID int64) bool {
+	projectSetting, errCode := store.GetProjectSetting(projectID)
+	if errCode != http.StatusFound {
+		return false
+	}
+
+	if projectSetting.IntG2ApiKey == "" || !*projectSetting.IntG2 {
+		return false
+	}
+	return true
+}
+
 func (store *MemSQL) GetG2LastSyncInfo(projectID int64) ([]model.G2LastSyncInfo, int) {
 	logFields := log.Fields{
 		"project_id": projectID,

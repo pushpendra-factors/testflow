@@ -33,7 +33,7 @@ func (store *MemSQL) CreateLeadSquaredMarker(marker model.LeadsquaredMarker) int
 		updatedFields := map[string]interface{}{
 			"index_number":  marker.IndexNumber,
 			"no_of_retries": noOfRetries + 1,
-			"is_done": 		 marker.IsDone,
+			"is_done":       marker.IsDone,
 			"updated_at":    gorm.NowFunc(),
 		}
 		dbErr := db.Model(&model.LeadsquaredMarker{}).Where("project_id = ? AND delta = ? AND document = ? AND tag = ?", marker.ProjectID, marker.Delta, marker.Document, marker.Tag).Update(updatedFields).Error
@@ -44,4 +44,16 @@ func (store *MemSQL) CreateLeadSquaredMarker(marker model.LeadsquaredMarker) int
 		}
 	}
 	return http.StatusOK
+}
+
+func (store *MemSQL) IsLeadSquaredIntegrationAvailble(projectID int64) bool {
+	projectSetting, errCode := store.GetProjectSetting(projectID)
+	if errCode != http.StatusFound {
+		return false
+	}
+
+	if projectSetting.LeadSquaredConfig == nil {
+		return false
+	}
+	return true
 }

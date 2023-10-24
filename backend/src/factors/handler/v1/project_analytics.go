@@ -2,6 +2,7 @@ package v1
 
 import (
 	"encoding/json"
+	mid "factors/middleware"
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
@@ -20,6 +21,8 @@ func GetFactorsAnalyticsHandler(c *gin.Context) {
 	projectID := c.Query("projectID")
 	monthString := c.Query("month")
 	var err error
+
+	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
 	if noOfDaysParam != "" {
 		noOfDays, err = strconv.Atoi(noOfDaysParam)
@@ -40,7 +43,7 @@ func GetFactorsAnalyticsHandler(c *gin.Context) {
 			return
 		}
 
-		data, err := store.GetStore().GetGlobalProjectAnalyticsDataByProjectId(int64(projIdInt), monthString)
+		data, err := store.GetStore().GetGlobalProjectAnalyticsDataByProjectId(int64(projIdInt), monthString, agentUUID)
 
 		project, _ := store.GetStore().GetProject(int64(projIdInt))
 

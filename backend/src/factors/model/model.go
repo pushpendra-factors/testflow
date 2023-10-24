@@ -695,7 +695,8 @@ type Model interface {
 	GetPropertyTypeFromDB(projectID int64, eventName, propertyKey string, isUserProperty bool) (int, *model.PropertyDetail)
 
 	// project_analytics
-	GetGlobalProjectAnalyticsDataByProjectId(projectID int64, monthString string) ([]map[string]interface{}, error)
+	GetGlobalProjectAnalyticsDataByProjectId(projectID int64, monthString, agentUUID string) ([]map[string]interface{}, error)
+	GetIntegrationStatusesCount(settings model.ProjectSetting, projectID int64, agentUUID string) (int, int, int)
 	GetEventUserCountsOfAllProjects(lastNDays int) (map[string][]*model.ProjectAnalytics, error)
 	GetEventUserCountsMerged(projectIdsList []int64, lastNDays int, currentDate time.Time) (map[int64]*model.ProjectAnalytics, error)
 	GetEventUserCountsByProjectID(projectID int64, lastNDays int) (map[string][]*model.ProjectAnalytics, error)
@@ -885,6 +886,7 @@ type Model interface {
 	IsHubspotIntegrationAvailable(projectID int64) bool
 	IsSalesforceIntegrationAvailable(projectID int64) bool
 	IsMarketoIntegrationAvailable(projectID int64) bool
+	IsG2IntegrationAvailable(projectID int64) bool
 
 	// Timeline
 	GetProfilesListByProjectId(projectID int64, payload model.TimelinePayload, profileType string) ([]model.Profile, int, string)
@@ -957,6 +959,7 @@ type Model interface {
 	// leadsquaredmarker
 	CreateLeadSquaredMarker(marker model.LeadsquaredMarker) int
 	GetLeadSquaredMarker(ProjectID int64, Delta int64, Document string, Tag string) (int, int, bool)
+	IsLeadSquaredIntegrationAvailble(projectID int64) bool
 
 	// Event Trigger Alerts
 	GetAllEventTriggerAlertsByProject(projectID int64) ([]model.AlertInfo, int)
