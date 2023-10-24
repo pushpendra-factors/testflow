@@ -1,14 +1,11 @@
 package main
 
 import (
-	"encoding/json"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
-	"factors/model/model"
 	"factors/model/store"
 	"flag"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 
@@ -36,7 +33,6 @@ func main() {
 	enableFeatureGatesV2 := flag.Bool("enable_feature_gates_v2", false, "")
 	projectIdFlag := flag.String("project_ids", "",
 		"Comma separated list of project Ids; '*' for all projects")
-	// blacklistedAlerts := flag.String("blacklisted_alerts", "", "")
 
 	flag.Parse()
 
@@ -110,9 +106,10 @@ func CacheCleanupHelper(projectID int64) {
 	}
 
 	for _, key := range keys {
-		strKey, err := key.Key()
+		// Get all the values from the sorted set
+		valueMap, err := cacheRedis.ZrangeWithScoresPersistent(false, key)
 		if err != nil {
-			log.Error(fmt.Errorf("cache key cannot be converted to string"))
+			log.Error(fmt.Errorf("can not retrieve values from the sorted set"))
 		}
 
 		// Delete sorted set and key
@@ -122,46 +119,22 @@ func CacheCleanupHelper(projectID int64) {
 			return
 		}
 
-		// Read the file from the cloud and upload the
-		splitKey := strings.Split(strKey, ":")
-		reference := splitKey[len(splitKey)-1]
-
-		err = AddListValuesToCache(projectID, reference)
+		// Use the values of the sorted to populate the cache again
+		err = AddListValuesToCache(projectID, key, valueMap)
 		if err != nil {
 			log.Error(fmt.Errorf("could not add sorted set to cache"))
 		}
 	}
 }
 
-func AddListValuesToCache(projectID int64, reference string) error {
+func AddListValuesToCache(projectID int64, key *cacheRedis.Key, values map[string]string) error {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"reference":  reference,
+		"cache_key":  *key,
 	}
-	path, file := C.GetCloudManager().GetListReferenceFileNameAndPathFromCloud(projectID, reference)
-	reader, err := C.GetCloudManager().Get(path, file)
-	if err != nil {
-		log.WithFields(logFields).WithError(err).Error("list File Missing")
-		return fmt.Errorf("List File Missing")
-	}
-	valuesInFile := make([]string, 0)
-	data, err := io.ReadAll(reader)
-	if err != nil {
-		log.WithFields(logFields).WithError(err).Error("File reader failed")
-		return fmt.Errorf("File reader failed")
-	}
-	err = json.Unmarshal(data, &valuesInFile)
-	if err != nil {
-		log.WithFields(logFields).WithError(err).Error("list data unmarshall failed")
-		return fmt.Errorf("list data unmarshall failed")
-	}
-	cacheKeyList, err := model.GetListCacheKey(projectID, reference)
-	if err != nil {
-		log.WithFields(logFields).WithError(err).Error("get cache key failed")
-		return fmt.Errorf("get cache key failed")
-	}
-	for _, value := range valuesInFile {
-		err = cacheRedis.ZAddPersistent(cacheKeyList, strings.TrimSpace(value), 0)
+
+	for value := range values {
+		err := cacheRedis.ZAddPersistent(key, strings.TrimSpace(value), 0)
 		if err != nil {
 			log.WithFields(logFields).WithError(err).Error("failed to add new values to sorted set")
 			return fmt.Errorf("failed to add new values to sorted set")
