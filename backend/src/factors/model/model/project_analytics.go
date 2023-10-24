@@ -42,7 +42,6 @@ var GlobalDataProjectAnalyticsColumnsName = []string{
 	"Identified Count",
 	"Integration Connected",
 	"Integration Disconnected",
-	"Integration Err",
 }
 
 var GlobalDataProjectAnalyticsColumnsNameToJsonKeys = map[string]string{
@@ -56,7 +55,6 @@ var GlobalDataProjectAnalyticsColumnsNameToJsonKeys = map[string]string{
 	"Identified Count":          "identified_count",
 	"Integration Connected":     "integration_connected",
 	"Integration Disconnected":  "integration_disconnected",
-	"Integration Err":           "integration_err",
 }
 
 var AllProjectAnalyticsColumnsName = []string{
