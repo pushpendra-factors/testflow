@@ -210,6 +210,8 @@ func main() {
 	enableFeatureGatesV2 := flag.Bool("enable_feature_gates_v2", false, "")
 	enableScoreByProjectID := flag.String("enable_score_by_project_id", "", "List of projectIds with scoring enabled.")
 	explainV3Query := flag.Bool("explain_v3_query", false, "whether to implement new query payload")
+	chargebeeApiKey := flag.String("chargebee_api_key", "dummy", "Chargebee api key")
+	chargebeeSiteName := flag.String("chargebee_site_name", "", "Chargebee site name")
 
 	companyPropsV1EnabledProjectIDs := flag.String("company_props_v1_enabled_projectIds", "", "To enable clearbit enrichment in new properties")
 	flag.Parse()
@@ -368,8 +370,10 @@ func main() {
 		AllowEventAnalyticsGroupsByProjectID:           *allowEventAnalyticsGroupsByProjectID,
 		EnableFeatureGatesV2:                           *enableFeatureGatesV2,
 		EnableScoringByProjectID:                       *enableScoreByProjectID,
-		EnableNewAllAccountsByProjectID:                *enableNewAllAccountsByProjectID,
 		ExplainV3QueryBuilder:                          *explainV3Query,
+		EnableNewAllAccountsByProjectID:                *enableNewAllAccountsByProjectID,
+		ChargebeeApiKey:                                *chargebeeApiKey,
+		ChargebeeSiteName:                              *chargebeeSiteName,
 		CompanyPropsV1EnabledProjectIDs:                *companyPropsV1EnabledProjectIDs,
 	}
 	C.InitConf(config)

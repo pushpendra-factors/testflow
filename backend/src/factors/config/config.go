@@ -49,6 +49,7 @@ import (
 	serviceDisk "factors/services/disk"
 	serviceGCS "factors/services/gcstorage"
 
+	"github.com/chargebee/chargebee-go/v3"
 	cache "github.com/hashicorp/golang-lru"
 )
 
@@ -330,6 +331,8 @@ type Configuration struct {
 	UseHashIDForCRMGroupUserByProject                   string
 	MoveHubspotCompanyAssocationFlowToContactByPojectID string
 	ExplainV3QueryBuilder                               bool
+	ChargebeeApiKey                                     string
+	ChargebeeSiteName                                   string
 	UserPropertyUpdateOptProjects                       string
 	CompanyPropsV1EnabledProjectIDs                     string
 	AssociateDealToDomainByProjectID                    string
@@ -771,6 +774,8 @@ func initAppServerServices(config *Configuration) error {
 
 	initGeoLocationService(config.GeolocationFile)
 	initDeviceDetectorPath(config.DeviceDetectorPath)
+
+	InitChargebeeObject(config.ChargebeeApiKey, config.ChargebeeSiteName)
 
 	regPatternServers, err := GetServices().Etcd.DiscoverPatternServers()
 	if err != nil && err != serviceEtcd.NotFound {
@@ -1301,6 +1306,11 @@ func InitSmartEventMode(mode bool) {
 // initializes smart properties mode
 func InitSmartPropertiesMode(mode bool) {
 	configuration.DryRunSmartProperties = mode
+}
+
+// init chargebee
+func InitChargebeeObject(apiKey, siteName string) {
+	chargebee.Configure(apiKey, siteName)
 }
 
 // SetIsBeamPipeline Sets variable to indicate that the job is running from a beam pipeline.
@@ -2858,6 +2868,14 @@ func IsEnabledFeatureGatesV2() bool {
 
 func GetSlackWebhookUrlForInternalAlerts() string {
 	return configuration.SlackInternalAlertWebhookUrl
+}
+
+func GetChargebeeApiKey() string {
+	return configuration.ChargebeeApiKey
+}
+
+func GetChargebeeSiteName() string {
+	return configuration.ChargebeeSiteName
 }
 
 func EnableSixSignalGroupByProjectID(projectID int64) bool {
