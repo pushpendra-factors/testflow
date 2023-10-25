@@ -44,17 +44,30 @@ func GetFactorsAnalyticsHandler(c *gin.Context) {
 		}
 
 		data, err := store.GetStore().GetGlobalProjectAnalyticsDataByProjectId(int64(projIdInt), monthString, agentUUID)
-
-		project, _ := store.GetStore().GetProject(int64(projIdInt))
-
-		globalData := make(map[string][]map[string]interface{})
-		globalData["metrics"] = data
-
 		if err != nil {
 			log.WithError(err).Error("GetGlobalProjectAnalyticsDataByProjectId")
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
 		}
+
+		var settings *model.ProjectSetting
+		var errCode int
+		settings, errCode = store.GetStore().GetProjectSetting(int64(projIdInt))
+		if errCode != http.StatusFound {
+			log.WithError(err).Error("project settings not found")
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+
+		integrationList := store.GetStore().GetIntegrationStatusesCount(*settings, int64(projIdInt), agentUUID)
+
+		project, _ := store.GetStore().GetProject(int64(projIdInt))
+
+		globalData := make(map[string][]map[string]interface{})
+		integrations := make(map[string][]map[string]interface{})
+
+		globalData["metrics"] = data
+		integrations["integrations"] = integrationList
 
 		resultJson, err := json.Marshal(analytics)
 		if err != nil {
@@ -73,11 +86,13 @@ func GetFactorsAnalyticsHandler(c *gin.Context) {
 		if isHtmlRequired == "true" {
 
 			U.ReturnReadableHtmlFromMaps(c, globalData, model.GlobalDataProjectAnalyticsColumnsName, model.GlobalDataProjectAnalyticsColumnsNameToJsonKeys, fmt.Sprintf("project : %s (%d)", project.Name, project.ID))
+			U.ReturnReadableHtmlFromList(c, integrations, model.GlobalDataIntegrationListColumnsName, model.GlobalDataIntegrationListColumnsNameToJsonKeys, "")
 			U.ReturnReadableHtmlFromMaps(c, resultMap, model.ProjectAnalyticsColumnsName, model.ProjectAnalyticsColumnsNameToJsonKeys, "remove")
 			return
 		}
 
 		resultMap["metrics"] = append(resultMap["metrics"], data...)
+		resultMap["metrics"] = append(resultMap["metrics"], integrationList...)
 		c.JSON(http.StatusOK, resultMap)
 
 		return
