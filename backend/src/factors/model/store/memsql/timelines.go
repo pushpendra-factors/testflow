@@ -1018,7 +1018,7 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profile
 	var accountGroupDetails []model.Profile
 	db := C.GetServices().Db
 	err := db.Table("users").Select(fmt.Sprintf("group_%d_user_id as identity, properties", domainGroup.ID)).
-		Where(fmt.Sprintf("project_id=? AND source!=? AND %s group_%d_user_id", isGroupUserString, domainGroup.ID)+" IN (?) LIMIT 100000",
+		Where(fmt.Sprintf("project_id=? AND source!=? AND %s group_%d_user_id", isGroupUserString, domainGroup.ID)+" IN (?)",
 			projectID, model.UserSourceDomains, domainIDs).Find(&accountGroupDetails).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get accounts associated to domains.")
