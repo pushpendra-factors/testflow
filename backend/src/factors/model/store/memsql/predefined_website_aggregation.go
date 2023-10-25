@@ -58,6 +58,7 @@ func (store *MemSQL) ExecuteQueryGroupForPredefinedWebsiteAggregation(projectID 
 // Check if SanitizeQueryResult is required.
 // I think group by doesnt have index. We can proceed with normal it normally.
 // Eventname double encoding. Required later.
+// IMP - For the query with no groupby, we are expecting only one metric.
 func (store *MemSQL) ExecuteSingleWebAggregationQuery(projectID int64, q model.PredefWebsiteAggregationQuery) (model.QueryResult, int, string) {
 
 	stmnt, params := buildPredefinedWebsiteAggregationQuery(projectID, q)
@@ -73,10 +74,13 @@ func (store *MemSQL) ExecuteSingleWebAggregationQuery(projectID int64, q model.P
 	if q.GroupByTimestamp == "" {
 		if len(result.Rows) == 0 || len(result.Rows[0]) == 0 {
 			emptyRow := make([]interface{}, 0)
-			for i := 0; i <= len(result.Headers)-2; i++ {
-				emptyRow = append(emptyRow, "")
+
+			if (q.GroupBy != model.PredefinedGroupBy{}) {
+				emptyRow = append(emptyRow, model.PropertyValueNone)
 			}
-			emptyRow = append(emptyRow, 0)
+			for range q.Metrics {
+				emptyRow = append(emptyRow, 0)
+			}
 			emptyRows := make([][]interface{}, 1)
 			emptyRows[0] = emptyRow
 			transformedResult.Rows = emptyRows
@@ -297,80 +301,86 @@ func transformPWAResultDateValuesToDateFormat(result model.QueryResult) model.Qu
 	return result
 }
 
+// if represents state when there is no group by and else represents state where there is group by.
+// Number of metrics in result can be multiple. We cant assume a single. Number of max groupby is 1.
 func addMissingColumnsAndTimestampPWAResult(result model.QueryResult, query model.PredefWebsiteAggregationQuery) model.QueryResult {
 	resultantRows := make([][]interface{}, 0)
 
-	if len(result.Headers) == 2 && (len(result.Rows) == 0 || len(result.Rows[0]) == 0) {
-		mapOfAllColumValuesToResult := make(map[string][]interface{})
-		for _, row := range result.Rows {
-			key := U.GetkeyFromRow(row)
+	if (query.GroupBy == model.PredefinedGroupBy{}) {
+			mapOfAllColumValuesToResult := make(map[string][]interface{})
+			for _, row := range result.Rows {
+	
+				key := U.GetkeyFromRowTillEnd(row, 1)
+				
+				mapOfAllColumValuesToResult[key] = row
+			}
+	
+			timestampsInTime, _ := GetAllTimestampsAndOffsetBetweenByType(query.From, query.To,
+				query.GroupByTimestamp, query.Timezone)
 			
-			mapOfAllColumValuesToResult[key] = row
-		}
-
-		timestampsInTime, _ := GetAllTimestampsAndOffsetBetweenByType(query.From, query.To,
-			query.GroupByTimestamp, query.Timezone)
-		
-		for _, timestampInTime := range timestampsInTime {
-			timestampInEpoch := timestampInTime.Unix()
-			timestampKey := fmt.Sprintf("%v", timestampInEpoch)
-
-			if row, exists := mapOfAllColumValuesToResult[timestampKey]; exists {
-				resultantRows = append(resultantRows, row)
-			} else {
-				emptyRow := make([]interface{}, 1)
-				emptyRow[0] = timestampInEpoch
-				emptyRow = append(emptyRow, 0)
-				resultantRows = append(resultantRows, emptyRow)
-			}
-		}
-	} else {
-		mapOfGroups := make(map[string][]interface{})
-		mapOfAllColumValuesToResult := make(map[string][]interface{})
-		groupStart, groupEnd := 1, len(result.Headers)-2
-		for _, row := range result.Rows {
-			groupsKey := ""
-			for i := groupStart; i<=groupEnd; i++ {
-				groupsKey += fmt.Sprintf("%v:;", row[i])
-			}
-			key := U.GetkeyFromRow(row)
-			mapOfGroups[groupsKey] = row[groupStart:groupEnd+1]
-			mapOfAllColumValuesToResult[key] = row
-		}
-		
-		timestampsInTime, _ := GetAllTimestampsAndOffsetBetweenByType(query.From, query.To,
-			query.GroupByTimestamp, query.Timezone)
-		
-		for _, timestampInTime := range timestampsInTime {
-			timestampInEpoch := timestampInTime.Unix()
-			timestampKey := fmt.Sprintf("%v", timestampInEpoch)
-
-			if len(mapOfGroups) == 0 {
-				emptyRow := make([]interface{}, 1)
-				emptyRow[0] = timestampInEpoch
-				for i := 1; i <= len(result.Headers)-2; i++ {
-					emptyRow = append(emptyRow, "")
-				}
-				emptyRow = append(emptyRow, 0)
-				resultantRows = append(resultantRows, emptyRow)
-			} else {
-				for groupKey, groupValuesInRow := range mapOfGroups {
-					key := fmt.Sprintf("%v:;%v",timestampKey, groupKey)
-					if row, exists := mapOfAllColumValuesToResult[key]; exists {
-						resultantRows = append(resultantRows, row)
-					} else {
-						emptyRow := make([]interface{}, 1)
-						emptyRow[0] = timestampInEpoch
-						emptyRow = append(emptyRow, groupValuesInRow...)
+			for _, timestampInTime := range timestampsInTime {
+				timestampInEpoch := timestampInTime.Unix()
+				timestampKey := fmt.Sprintf("%v", timestampInEpoch)
+	
+				if row, exists := mapOfAllColumValuesToResult[timestampKey]; exists {
+					resultantRows = append(resultantRows, row)
+				} else {
+					emptyRow := make([]interface{}, 1)
+					emptyRow[0] = timestampInEpoch
+					for range query.Metrics {
 						emptyRow = append(emptyRow, 0)
-						resultantRows = append(resultantRows, emptyRow)
+					}
+					resultantRows = append(resultantRows, emptyRow)
+				}
+			}
+		} else {
+			mapOfGroup := make(map[string]interface{})
+			mapOfAllColumValuesToResult := make(map[string][]interface{})
+			groupIndex := 1
+	
+			for _, row := range result.Rows {
+				groupKey := fmt.Sprintf("%v:;", row[groupIndex])
+	
+				key := U.GetkeyFromRowTillEnd(row, 2)
+				mapOfGroup[groupKey] = row[groupIndex]
+				mapOfAllColumValuesToResult[key] = row
+			}
+			
+			timestampsInTime, _ := GetAllTimestampsAndOffsetBetweenByType(query.From, query.To,
+				query.GroupByTimestamp, query.Timezone)
+			
+			for _, timestampInTime := range timestampsInTime {
+				timestampInEpoch := timestampInTime.Unix()
+				timestampKey := fmt.Sprintf("%v", timestampInEpoch)
+	
+				if len(mapOfGroup) == 0 {
+					emptyRow := make([]interface{}, 1)
+					emptyRow[0] = timestampInEpoch
+					emptyRow = append(emptyRow, model.PropertyValueNone)
+					for range query.Metrics {
+						emptyRow = append(emptyRow, 0)
+					}
+					resultantRows = append(resultantRows, emptyRow)
+				} else {
+					for groupKey, groupValue := range mapOfGroup {
+						key := fmt.Sprintf("%v:;%v",timestampKey, groupKey)
+						if row, exists := mapOfAllColumValuesToResult[key]; exists {
+							resultantRows = append(resultantRows, row)
+						} else {
+							emptyRow := make([]interface{}, 1)
+							emptyRow[0] = timestampInEpoch
+							emptyRow = append(emptyRow, groupValue)
+							for range query.Metrics {
+								emptyRow = append(emptyRow, 0)
+							}
+							resultantRows = append(resultantRows, emptyRow)
+						}
 					}
 				}
 			}
 		}
-	}
-
-	result.Rows = resultantRows
-	return result
+	
+		result.Rows = resultantRows
+		return result
 }
 

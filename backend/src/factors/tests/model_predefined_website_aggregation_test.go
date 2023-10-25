@@ -138,6 +138,7 @@ func TestSampleWebsiteAggregation(t *testing.T) {
 		query1 := model.PredefWebsiteAggregationQuery{
 			Metrics: []model.PredefinedMetric{
 				{Name: model.PredefTotalSessions, DisplayName: model.PredefDispTotalSessions},
+				{Name: model.PredefAvgSessionDuration, DisplayName: model.PredefAvgSessionDuration},
 			},
 			GroupBy: model.PredefinedGroupBy{
 				Name: model.PredefPropCity, DisplayName: model.PredefPropDispCity,
@@ -167,14 +168,17 @@ func TestSampleWebsiteAggregation(t *testing.T) {
 		assert.Equal(t, http.StatusOK, statusCode)
 		log.WithField("result", result).Warn("kark2")
 
-		assert.Equal(t, 2, len(result[0].Headers))
+		assert.Equal(t, 3, len(result[0].Headers))
 		assert.Equal(t, 1, len(result[0].Rows))
 		assert.Equal(t, 0, result[0].Rows[0][1].(int))
+		assert.Equal(t, 0, result[0].Rows[0][2].(int))
 
-		assert.Equal(t, 3, len(result[1].Headers))
+		assert.Equal(t, 4, len(result[1].Headers))
 		assert.Equal(t, 2, len(result[1].Rows))
 		assert.Equal(t, 0, result[1].Rows[0][2].(int))
+		assert.Equal(t, 0, result[1].Rows[0][3].(int))
 		assert.Equal(t, 0, result[1].Rows[1][2].(int))
+		assert.Equal(t, 0, result[1].Rows[1][3].(int))
 
 	})
 
@@ -183,6 +187,7 @@ func TestSampleWebsiteAggregation(t *testing.T) {
 		query1 := model.PredefWebsiteAggregationQuery{
 			Metrics: []model.PredefinedMetric{
 				{Name: model.PredefTotalSessions, DisplayName: model.PredefDispTotalSessions},
+				{Name: model.PredefAvgSessionDuration, DisplayName: model.PredefAvgSessionDuration},
 			},
 			GroupBy: model.PredefinedGroupBy{
 			},
@@ -211,13 +216,16 @@ func TestSampleWebsiteAggregation(t *testing.T) {
 		assert.Equal(t, http.StatusOK, statusCode)
 		log.WithField("result", result).Warn("kark2")
 
-		assert.Equal(t, 1, len(result[0].Headers))
+		assert.Equal(t, 2, len(result[0].Headers))
 		assert.Equal(t, 1, len(result[0].Rows))
 		assert.Equal(t, 0, result[0].Rows[0][0].(int))
+		assert.Equal(t, 0, result[0].Rows[0][1].(int))
 
-		assert.Equal(t, 2, len(result[1].Headers))
+		assert.Equal(t, 3, len(result[1].Headers))
 		assert.Equal(t, 2, len(result[1].Rows))
 		assert.Equal(t, 0, result[1].Rows[0][1].(int))
+		assert.Equal(t, 0, result[1].Rows[0][2].(int))
 		assert.Equal(t, 0, result[1].Rows[1][1].(int))
+		assert.Equal(t, 0, result[1].Rows[0][2].(int))
 	})
 }

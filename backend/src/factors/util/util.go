@@ -1331,6 +1331,24 @@ func GetkeyFromRow(row []interface{}) string {
 	return key
 }
 
+// Here rows will have groupBy key and/or timestmap followed by multiple value pattern. Hence end is passed.
+func GetkeyFromRowTillEnd(row []interface{}, end int) string {
+	if len(row) <= 1 {
+		return "1"
+	}
+	var key string
+	for _, value := range row[:end] {
+		if valueTime, ok := (value.(time.Time)); ok {
+			valueInUnix := valueTime.Unix()
+			key = key + fmt.Sprintf("dat$%v:;", valueInUnix)
+		} else {
+			key = key + fmt.Sprintf("%v", value) + ":;"
+		}
+	}
+
+	return key
+}
+
 func RemoveElementFromArray(inputArray []string, value string) []string {
 	finalArray := make([]string, 0)
 	for _, ele := range inputArray {
