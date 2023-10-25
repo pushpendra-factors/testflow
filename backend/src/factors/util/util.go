@@ -1837,6 +1837,56 @@ func ReturnReadableHtmlFromMaps(c *gin.Context, status map[string][]map[string]i
 	}
 }
 
+func ReturnReadableHtmlFromList(c *gin.Context, status map[string][]map[string]interface{}, keys []string, toJSONKeys map[string]string, header string) {
+
+	key_list := make([]string, 0, len(status))
+	for key := range status {
+		key_list = append(key_list, key)
+	}
+	sort.Sort(sort.Reverse(sort.StringSlice(key_list)))
+
+	for _, key := range key_list {
+
+		data := status[key]
+		heading := CreateHeadingTemplate(key)
+		t := template.New("heading")
+		if header != "" {
+			heading = CreateHeadingTemplate(header)
+		}
+		if header == "remove" {
+			heading = ""
+		}
+		t, err := t.Parse(heading)
+		if err != nil {
+			log.Error(err)
+			return
+		}
+		t.Execute(c.Writer, nil)
+
+		var HtmlStr = "<div style ='display: flex'>"
+
+		for i, key := range keys {
+			HtmlStr += "<div>"
+
+			HtmlStr += fmt.Sprintf(`<h4> &nbsp; %s</h4>
+						`, key)
+
+			HtmlStr += CreateListFormInterfaceOfList(data[i][toJSONKeys[key]])
+			HtmlStr += "</div>"
+		}
+		HtmlStr += "</div>"
+		t = template.New("lists")
+		t, err = t.Parse(HtmlStr)
+		if err != nil {
+			log.Error(err)
+			return
+		}
+		t.Execute(c.Writer, nil)
+
+	}
+
+}
+
 func CreateHeadingTemplateForDate(date string) string {
 	formated_date := date[0:4] + "-" + date[5:7] + "-" + date[8:10] //yyyy-mm-dd
 	html := fmt.Sprintf(`<h1> &nbsp; %s</h1>
@@ -1848,6 +1898,20 @@ func CreateHeadingTemplate(heading string) string {
 	html := fmt.Sprintf(`<h1> &nbsp; %s</h1>
 						`, heading)
 	return html
+}
+
+func CreateListFormInterfaceOfList(data interface{}) string {
+
+	lists := "<ol>"
+	switch t := data.(type) {
+	case []string:
+		for _, value := range t {
+			lists = lists + fmt.Sprintf("<li>%s</li>", value)
+		}
+	}
+	lists = lists + "</ol>"
+
+	return lists
 }
 
 func CreateTableFormKeys(keys []string) string {
@@ -1868,8 +1932,9 @@ func InsertDataToTableFormKeys(data map[string]interface{}, keys []string, toJSO
 	rows := ""
 
 	for _, key := range keys {
+		val, _ := GetValueAsString(data[toJSONKeys[key]])
 		rows = rows + fmt.Sprintf(`<td width="150px" align="center">&nbsp;%v</td>`,
-			data[toJSONKeys[key]])
+			val)
 	}
 
 	html := "<tr> " + rows + " </tr>"
