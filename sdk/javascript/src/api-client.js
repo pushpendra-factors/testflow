@@ -9,14 +9,21 @@ const URI_GET_INFO = "/sdk/get_info";
 const URI_CAPTURE_CLICK = "/sdk/capture_click";
 const URI_FORM_FILL = "/sdk/form_fill";
 
-function APIClient(token, host="") {
+function APIClient(token, host="", host2="") {
    this.token = token;
    this.host = host;
+   // Host2 should be using the same token.
+   this.host2=host2;
 }
 
 APIClient.prototype.getURL = function(uri) {
     // use given host if available.
     return this.host != "" ? this.host+uri : (config.api.host+uri);
+}
+
+APIClient.prototype.getURL2 = function(uri) {
+    // use given host if available.
+    return this.host2 == "" ? this.host2 : this.host2+uri;
 }
 
 APIClient.prototype.setToken = function(token) {
@@ -39,7 +46,8 @@ APIClient.prototype.track = function(payload) {
     return Request.post(
         this.getURL(URI_TRACK),
         payload,
-        this.getHeaders()
+        this.getHeaders(),
+        this.getURL2(URI_TRACK),
     );
 }
 
@@ -51,7 +59,8 @@ APIClient.prototype.identify = function(payload) {
     return Request.post(
         this.getURL(URI_IDENTIFY),
         payload,
-        this.getHeaders()
+        this.getHeaders(),
+        this.getURL2(URI_IDENTIFY),
     );
 }
 
@@ -63,7 +72,8 @@ APIClient.prototype.addUserProperties = function(payload) {
     return Request.post(
         this.getURL(URI_ADD_USER_PROPERTIES),
         payload,
-        this.getHeaders()
+        this.getHeaders(),
+        this.getURL2(URI_ADD_USER_PROPERTIES),
     );
 }
 
@@ -75,7 +85,8 @@ APIClient.prototype.updateEventProperties = function(payload) {
     return Request.post(
         this.getURL(URI_UPDATE_EVENT_PROPERTIES),
         payload,
-        this.getHeaders()
+        this.getHeaders(),
+        this.getURL2(URI_UPDATE_EVENT_PROPERTIES),
     );
 }
 
@@ -93,7 +104,8 @@ APIClient.prototype.captureClick = function(payload) {
     return Request.post(
         this.getURL(URI_CAPTURE_CLICK),
         payload,
-        this.getHeaders()
+        this.getHeaders(),
+        this.getURL2(URI_CAPTURE_CLICK),
     );
 }
 
@@ -108,7 +120,8 @@ APIClient.prototype.captureFormFill = function(payload) {
     return Request.post(
         this.getURL(URI_FORM_FILL),
         payload,
-        this.getHeaders()
+        this.getHeaders(),
+        this.getURL2(URI_FORM_FILL),
     );
 }
 
@@ -118,7 +131,8 @@ APIClient.prototype.getInfo = function(payload) {
     return Request.post(
         this.getURL(URI_GET_INFO),
         payload,
-        this.getHeaders()
+        this.getHeaders(),
+        this.getURL2(URI_GET_INFO),
     );
 }
 
