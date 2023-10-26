@@ -183,7 +183,7 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
     
     let _client = null;
     if (opts.host && opts.host !== "")
-        _client = new APIClient(token, opts.host);
+        _client = new APIClient(token, opts.host, opts.host2);
     else 
         _client = new APIClient(token);
 
