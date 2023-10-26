@@ -386,7 +386,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 		isGroupUserCheck = "AND u.is_group_user=1"
 	}
 	if isAllUserProperties && (len(groupedFilters) > 0) {
-		isGroupUserCheck = "AND (u.is_group_user=0 OR u.is_group_user IS NULL) AND u.customer_user_id IS NOT NULL"
+		isGroupUserCheck = "AND (u.is_group_user=0 OR u.is_group_user IS NULL)"
 	}
 
 	whereForGroups := make(map[string]string)
@@ -428,7 +428,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 	for groupName, filterString := range whereForGroups {
 		isGroupStr := "is_group_user=1"
 		if groupName == model.FILTER_TYPE_USERS {
-			isGroupStr = "(is_group_user=0 OR is_group_user IS NULL) AND customer_user_id IS NOT NULL"
+			isGroupStr = "(is_group_user=0 OR is_group_user IS NULL)"
 		}
 
 		filterSteps = filterSteps + fmt.Sprintf(`, filter_%d as (
@@ -999,10 +999,27 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profile
 		return nil, http.StatusOK
 	}
 
-	domainGroup, status := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
+	groups, status := store.GetGroupNameIDMap(projectID)
 	if status != http.StatusFound {
+		logCtx.Error("Groups not found.")
+		return nil, status
+	}
+
+	domainGroupID, domainExists := groups[model.GROUP_NAME_DOMAINS]
+
+	if !domainExists {
 		logCtx.Error("Domain group not found.")
 		return nil, status
+	}
+
+	var isNullCheck string
+	salesforceOpportunityGroup, salesforceOpportunityExists := groups[model.GROUP_NAME_SALESFORCE_OPPORTUNITY]
+	if salesforceOpportunityExists {
+		isNullCheck = fmt.Sprintf("group_%d_id IS NULL AND group_%d_user_id IS NULL AND", salesforceOpportunityGroup, salesforceOpportunityGroup)
+	}
+	hubspotDealsGroup, hubspotDealsExist := groups[model.GROUP_NAME_HUBSPOT_DEAL]
+	if hubspotDealsExist {
+		isNullCheck = isNullCheck + fmt.Sprintf(" group_%d_id IS NULL AND group_%d_user_id IS NULL AND", hubspotDealsGroup, hubspotDealsGroup)
 	}
 
 	domainIDs := make([]string, len(profiles))
@@ -1017,8 +1034,8 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profile
 	// is_group_user=1 AND group_6_user_id IN ('4f88f40d-c571-4bee-b456-298c533d7ef9', 'ed68f40d-c571-4bee-b456-298c533d7ef9'));
 	var accountGroupDetails []model.Profile
 	db := C.GetServices().Db
-	err := db.Table("users").Select(fmt.Sprintf("group_%d_user_id as identity, properties", domainGroup.ID)).
-		Where(fmt.Sprintf("project_id=? AND source!=? AND %s group_%d_user_id", isGroupUserString, domainGroup.ID)+" IN (?)",
+	err := db.Table("users").Select(fmt.Sprintf("group_%d_user_id as identity, properties", domainGroupID)).
+		Where(fmt.Sprintf("project_id=? AND source!=? AND %s %s group_%d_user_id ", isGroupUserString, isNullCheck, domainGroupID)+" IN (?)",
 			projectID, model.UserSourceDomains, domainIDs).Find(&accountGroupDetails).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get accounts associated to domains.")

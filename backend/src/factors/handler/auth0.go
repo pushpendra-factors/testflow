@@ -248,14 +248,6 @@ func CallbackHandler(auth *Authenticator) gin.HandlerFunc {
 				return
 			}
 
-			// Auth0 hence no password check
-			ts := time.Now().UTC()
-			errCode = store.GetStore().UpdateAgentLastLoginInfo(existingAgent.UUID, ts)
-			if errCode != http.StatusAccepted {
-				log.WithField("email", existingAgent.Email).Error("Failed to update Agent lastLoginInfo")
-				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "SERVER_ERROR"))
-				return
-			}
 		} else if flow == ACTIVATE_FLOW {
 			var errCode int
 			existingAgent, errCode = store.GetStore().GetAgentByEmail(profile.Email)
@@ -287,6 +279,16 @@ func CallbackHandler(auth *Authenticator) gin.HandlerFunc {
 			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, "", "INVALID_FLOW"))
 			return
 		}
+		
+		// Auth0 hence no password check
+		ts := time.Now().UTC()
+		errCode = store.GetStore().UpdateAgentLastLoginInfo(existingAgent.UUID, ts)
+		if errCode != http.StatusAccepted {
+			log.WithField("email", existingAgent.Email).Error("Failed to update Agent lastLoginInfo")
+			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "SERVER_ERROR"))
+			return
+		}
+
 		cookieData, err := helpers.GetAuthData(existingAgent.Email, existingAgent.UUID, existingAgent.Salt, helpers.SecondsInOneMonth*time.Second)
 		if err != nil {
 			log.WithField("email", profile.Email).Error("Failed in auth0 callback, Failed to generate cookie data")

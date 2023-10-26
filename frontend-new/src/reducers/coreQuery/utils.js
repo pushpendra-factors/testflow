@@ -182,7 +182,7 @@ export const formatGroups = (groups) => {
   const accountGroups = {};
   const dealGroups = {};
 
-  groups.forEach((group) => {
+  groups?.forEach((group) => {
     const { group_name, display_name, is_account } = group;
 
     if (is_account) {

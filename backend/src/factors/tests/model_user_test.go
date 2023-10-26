@@ -531,7 +531,7 @@ func TestFillEnrichmentPropertiesForSixSignal(t *testing.T) {
 
 func TestFillEnrichmentPropertiesForClearBit(t *testing.T) {
 
-	var results clearbit.Reveal
+	var results clear_bit.Reveal
 	results.Domain = "www.factors.ai"
 	results.Company.Name = "Factors.AI"
 	results.Company.Category.Industry = "Software"
@@ -561,7 +561,7 @@ func TestFillEnrichmentPropertiesForClearBit(t *testing.T) {
 
 	properties := U.PropertiesMap{"prop_1": "value_1"}
 
-	clear_bit.FillEnrichmentPropertiesForClearbit(&results, &properties)
+	clear_bit.FillEnrichmentPropertiesForClearbitV1(results, &properties)
 
 	assert.Equal(t, "560004", properties[U.SIX_SIGNAL_ZIP])
 	assert.Equal(t, "5416", properties[U.SIX_SIGNAL_NAICS])
