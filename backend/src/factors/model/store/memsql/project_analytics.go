@@ -134,7 +134,11 @@ func (store *MemSQL) GetEventUserCountsByProjectID(projectId int64, lastNDays in
 	projectIDNameMap := make(map[int64]string)
 	projectIDNameMap[project.ID] = project.Name
 
+	start := time.Now()
 	result, err := GetProjectAnalyticsData(projectIDNameMap, lastNDays, currentDate, projectId)
+
+	log.WithFields(log.Fields{"start": start, "end": time.Since(start), "func": "GetProjectAnalyticsData"}).Info("debug_logs_for_metrics")
+
 	if err != nil {
 		return nil, err
 	}
@@ -147,6 +151,8 @@ func GetProjectAnalyticsData(projectIDNameMap map[int64]string, lastNDays int, c
 
 	for i := 0; i < lastNDays; i++ {
 		dateKey := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
+
+		start := time.Now()
 
 		totalUniqueUsersKey, err := model.UserCountAnalyticsCacheKey(dateKey)
 		if err != nil {
@@ -172,6 +178,9 @@ func GetProjectAnalyticsData(projectIDNameMap map[int64]string, lastNDays int, c
 		if err != nil {
 			return nil, err
 		}
+
+		log.WithFields(log.Fields{"start": start, "end": time.Since(start), "func": "GetProjectAnalyticsData-cache data"}).Info("debug_logs_for_metrics")
+
 		for projId, count := range users {
 			uniqueUsers, _ := strconv.Atoi(count)
 			totalEvents, _ := strconv.Atoi(totalEvents[projId])
