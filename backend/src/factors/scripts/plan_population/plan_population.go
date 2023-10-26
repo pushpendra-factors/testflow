@@ -26,6 +26,8 @@ const (
 	Create                               = "create"
 	Update                               = "update"
 	Disable                              = "disable"
+	Enable                               = "enable"
+	UpdateCustom                         = "update_custom"
 )
 
 // Add new features for the custom plan other than the features already in the free plan
@@ -553,7 +555,7 @@ func main() {
 			}
 		}
 	}
-	if *action == Update {
+	if *action == Update { // free
 		add := C.GetTokensFromStringListAsString(*updateAdd)
 		remove := C.GetTokensFromStringListAsString(*updateRemove)
 		_, err = store.GetStore().UpdatePlanDetailsTable(*planID, add, true)
@@ -565,7 +567,7 @@ func main() {
 			log.WithError(err).Error("failed to populate plan details table")
 		}
 	}
-	if *action == Disable {
+	if *action == Disable || *action == Enable {
 		// only allowing in Custom Plan
 		features := C.GetTokensFromStringListAsString(*disableFeatures)
 		featureMap := make(map[string]bool)
@@ -584,12 +586,33 @@ func main() {
 			projectIDS = C.GetTokensFromStringListAsUint64(*ProjectIDs)
 		}
 		for _, id := range projectIDS {
-			DisableFeaturesForCustomPlan(id, featureMap)
+			UpdateFeatureStatusForCustomPlan(id, featureMap, *action)
+
 		}
+	}
+
+	if *action == UpdateCustom {
+		add := C.GetTokensFromStringListAsString(*updateAdd)
+		// remove := C.GetTokensFromStringListAsString(*updateRemove)
+		var projectIDS []int64
+		var err error
+		if *ProjectIDs == "*" {
+			projectIDS, _, _, err = store.GetStore().GetAllProjectIdsUsingPlanId(model.PLAN_ID_CUSTOM)
+			if err != nil {
+				log.Error("Failed to get project ID with custom plan")
+				return
+			}
+		} else {
+			projectIDS = C.GetTokensFromStringListAsUint64(*ProjectIDs)
+		}
+		for _, id := range projectIDS {
+			AddFeatureToCustomPlan(id, add)
+		}
+
 	}
 }
 
-func DisableFeaturesForCustomPlan(ProjectID int64, featuresMap map[string]bool) {
+func UpdateFeatureStatusForCustomPlan(ProjectID int64, featuresMap map[string]bool, action string) {
 	ppmapping, err := store.GetStore().GetProjectPlanMappingforProject(ProjectID)
 	if err != nil {
 		log.Error("Failed to disable features for ID ", ProjectID)
@@ -605,8 +628,38 @@ func DisableFeaturesForCustomPlan(ProjectID int64, featuresMap map[string]bool) 
 	}
 	for idx, feature := range addOns {
 		if _, ok := featuresMap[feature.Name]; ok {
-			addOns[idx].IsEnabledFeature = false
+			if action == Enable {
+				addOns[idx].IsEnabledFeature = true
+			} else if action == Disable {
+				addOns[idx].IsEnabledFeature = false
+			}
 		}
+	}
+	_, err = store.GetStore().UpdateAddonsForProject(ProjectID, addOns)
+	if err != nil {
+		log.Error("Failed to update addons for project ", ProjectID)
+	}
+}
+
+func AddFeatureToCustomPlan(ProjectID int64, features []string) {
+	ppmapping, err := store.GetStore().GetProjectPlanMappingforProject(ProjectID)
+	if err != nil {
+		log.Error("Failed to add features for ID ", ProjectID)
+		return
+	}
+	var addOns model.OverWrite
+	if ppmapping.OverWrite != nil {
+		err := U.DecodePostgresJsonbToStructType(ppmapping.OverWrite, &addOns)
+		if err != nil {
+			log.Error(err, " ID ", ProjectID)
+			return
+		}
+	}
+	for _, feature := range features {
+		addOns = append(addOns, model.FeatureDetails{
+			Name:             feature,
+			IsEnabledFeature: false,
+		})
 	}
 	_, err = store.GetStore().UpdateAddonsForProject(ProjectID, addOns)
 	if err != nil {
