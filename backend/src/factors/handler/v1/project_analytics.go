@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -37,7 +36,7 @@ func GetFactorsAnalyticsHandler(c *gin.Context) {
 
 	if projectID != "" {
 		projIdInt, _ := strconv.Atoi(projectID)
-		start := time.Now()
+
 		analytics, err = store.GetStore().GetEventUserCountsByProjectID(int64(projIdInt), noOfDays)
 		if err != nil {
 			log.WithError(err).Error("GetEventUserCountsByProjectID")
@@ -45,17 +44,12 @@ func GetFactorsAnalyticsHandler(c *gin.Context) {
 			return
 		}
 
-		log.WithFields(log.Fields{"start": start, "end": time.Since(start), "func": "GetEventUserCountsByProjectID"}).Info("debug_logs_for_metrics")
-
-		start = time.Now()
 		data, err := store.GetStore().GetGlobalProjectAnalyticsDataByProjectId(int64(projIdInt), monthString, agentUUID)
 		if err != nil {
 			log.WithError(err).Error("GetGlobalProjectAnalyticsDataByProjectId")
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
 		}
-
-		log.WithFields(log.Fields{"start": start, "end": time.Since(start), "func": "GetGlobalProjectAnalyticsDataByProjectId"}).Info("debug_logs_for_metrics")
 
 		var settings *model.ProjectSetting
 		var errCode int
@@ -66,11 +60,7 @@ func GetFactorsAnalyticsHandler(c *gin.Context) {
 			return
 		}
 
-		start = time.Now()
-
 		integrationList := store.GetStore().GetIntegrationStatusesCount(*settings, int64(projIdInt), agentUUID)
-
-		log.WithFields(log.Fields{"start": start, "end": time.Since(start), "func": "GetIntegrationStatusesCount"}).Info("debug_logs_for_metrics")
 
 		project, _ := store.GetStore().GetProject(int64(projIdInt))
 
@@ -96,13 +86,9 @@ func GetFactorsAnalyticsHandler(c *gin.Context) {
 
 		if isHtmlRequired == "true" {
 
-			start = time.Now()
-
 			U.ReturnReadableHtmlFromMaps(c, globalData, model.GlobalDataProjectAnalyticsColumnsName, model.GlobalDataProjectAnalyticsColumnsNameToJsonKeys, fmt.Sprintf("project : %s (%d)", project.Name, project.ID))
 			U.ReturnReadableHtmlFromList(c, integrations, model.GlobalDataIntegrationListColumnsName, model.GlobalDataIntegrationListColumnsNameToJsonKeys, "")
 			U.ReturnReadableHtmlFromMaps(c, resultMap, model.ProjectAnalyticsColumnsName, model.ProjectAnalyticsColumnsNameToJsonKeys, "remove")
-
-			log.WithFields(log.Fields{"start": start, "end": time.Since(start), "func": "GetIntegrationStatusesCount"}).Info("debug_logs_for_metrics")
 
 			return
 		}
