@@ -101,13 +101,28 @@ func removeZeros(input []float64) []float64 {
 	return result
 }
 
+func getUniqueScores(input []float64) []float64 {
+	uniqueMap := make(map[float64]bool)
+	result := []float64{}
+
+	for _, item := range input {
+		if _, found := uniqueMap[item]; !found {
+			uniqueMap[item] = true
+			result = append(result, item)
+		}
+	}
+
+	return result
+}
+
 func GetEngagementLevels(scores []float64) map[float64]string {
 	result := make(map[float64]string)
 	result[0] = getEngagement(0)
 
 	nonZeroScores := removeZeros(scores)
+	uniqueScores := getUniqueScores(nonZeroScores)
 
-	for _, score := range nonZeroScores {
+	for _, score := range uniqueScores {
 		percentile := calculatePercentile(nonZeroScores, score)
 		result[score] = getEngagement(percentile)
 	}
@@ -315,7 +330,7 @@ func GetProfileAccountOverviewHandler(c *gin.Context) (interface{}, int, string,
 
 	scoringAvailable, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_ACCOUNT_SCORING, false)
 	if err != nil {
-		logCtx.Error("Error fetching scoring availability status for project ID-", projectId)
+		logCtx.Error("Error fetching scoring availability status for project ID.")
 		return nil, http.StatusBadRequest, PROCESSING_FAILED, "Scoring Unavailable for this project", true
 	}
 
