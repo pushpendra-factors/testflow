@@ -9,5 +9,5 @@ FROM alpine:3.7
 ENV GOLANG_PROTOBUF_REGISTRATION_CONFLICT=ignore
 RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
 ADD https://github.com/golang/go/raw/master/lib/time/zoneinfo.zip /usr/local/go/lib/time/zoneinfo.zip
-COPY --from=builder /go/bin/run_event_trigger_alerts /go/bin/run_cache_cleanup_filter_lists
+COPY --from=builder /go/bin/run_cache_cleanup_filter_lists /go/bin/run_cache_cleanup_filter_lists
 ENTRYPOINT ["/go/bin/run_cache_cleanup_filter_lists"]
