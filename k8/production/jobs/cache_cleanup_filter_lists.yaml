@@ -1,11 +1,11 @@
-apiVersion: batch/v1beta1
+apiVersion: batch/v1
 kind: CronJob
 metadata:
   labels:
     nodePool: shared-persistent-pool2
   name: cache-cleanup-filter-lists-job
 spec:
-  schedule: "0 0 0 0 0"
+  schedule: "1 2 3 4 5"
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 5
   failedJobsHistoryLimit: 5
