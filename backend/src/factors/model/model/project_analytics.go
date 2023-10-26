@@ -40,9 +40,16 @@ var GlobalDataProjectAnalyticsColumnsName = []string{
 	"Report Count",
 	"SDK Integration Completed",
 	"Identified Count",
+}
+
+var GlobalDataIntegrationListColumnsName = []string{
 	"Integration Connected",
 	"Integration Disconnected",
-	"Integration Err",
+}
+
+var GlobalDataIntegrationListColumnsNameToJsonKeys = map[string]string{
+	"Integration Connected":    "connected",
+	"Integration Disconnected": "disconnected",
 }
 
 var GlobalDataProjectAnalyticsColumnsNameToJsonKeys = map[string]string{
@@ -56,7 +63,6 @@ var GlobalDataProjectAnalyticsColumnsNameToJsonKeys = map[string]string{
 	"Identified Count":          "identified_count",
 	"Integration Connected":     "integration_connected",
 	"Integration Disconnected":  "integration_disconnected",
-	"Integration Err":           "integration_err",
 }
 
 var AllProjectAnalyticsColumnsName = []string{

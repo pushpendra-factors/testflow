@@ -78,6 +78,9 @@ func Test6SignalEnrichmentInSDKTrackHandler(t *testing.T) {
 	//println("start and")
 	//fmt.Println(sessionUserProperties[U.SIX_SIGNAL_CITY])
 	//fmt.Println(sessionUserProperties[U.SIX_SIGNAL_COUNTRY])
+	//fmt.Println(sessionUserProperties[U.ENRICHED_COMPANY_TRAFFIC_RANK])
+	//fmt.Println(sessionUserProperties[U.ENRICHED_COMPANY_LINKEDIN_URL])
+	//fmt.Println(sessionUserProperties[U.ENRICHED_COMPANY_DESCRIPTION])
 	//println("END")
 
 }

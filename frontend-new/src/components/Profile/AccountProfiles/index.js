@@ -31,7 +31,11 @@ import { useHistory, useLocation, useParams } from 'react-router-dom';
 import { fetchGroupPropertyValues } from 'Reducers/coreQuery/services';
 import NoDataWithMessage from '../MyComponents/NoDataWithMessage';
 import ProfilesWrapper from '../ProfilesWrapper';
-import { checkFiltersEquality, getColumns } from './accountProfiles.helpers';
+import {
+  checkFiltersEquality,
+  defaultSegmentsList,
+  getColumns
+} from './accountProfiles.helpers';
 import {
   selectAccountPayload,
   selectActiveSegment
@@ -121,7 +125,6 @@ function AccountProfiles({
   const activeSegment = useSelector((state) => {
     return selectActiveSegment(state);
   });
-
   const { sixSignalInfo } = useSelector((state) => state.featureConfig);
   const { newSegmentMode, filtersDirty: areFiltersDirty } = useSelector(
     (state) => state.accountProfilesView
@@ -294,13 +297,15 @@ function AccountProfiles({
     deleteSegment({
       projectId: activeProject.id,
       segmentId: accountPayload.segment_id
-    }).then((response) => {
-      setMoreActionsModalMode(null);
-      notification.success({
-        message: 'Segment deleted successfully',
-        duration: 5
-      });
-    });
+    })
+      .then((response) => {
+        setMoreActionsModalMode(null);
+        notification.success({
+          message: 'Segment deleted successfully',
+          duration: 5
+        });
+      })
+      .finally(() => history.replace(PathUrls.ProfileAccounts));
   }, [accountPayload.segment_id, activeProject.id, deleteSegment]);
 
   const displayTableProps = useMemo(() => {
@@ -339,14 +344,7 @@ function AccountProfiles({
         });
       });
     },
-    [
-      updateSegmentForId,
-      activeProject.id,
-      accountPayload.segment_id,
-      getSavedSegments,
-      setActiveSegment,
-      activeSegment
-    ]
+    [activeProject.id, accountPayload.segment_id, activeSegment]
   );
 
   const handleUpdateSegmentDefinition = useCallback(() => {
@@ -1116,13 +1114,13 @@ function AccountProfiles({
   }, [newSegmentMode, accountPayload, activeSegment]);
 
   const titleIcon = useMemo(() => {
-    if (Boolean(accountPayload.segment_id) === true) {
+    if (Boolean(activeSegment?.id) === true) {
       return defaultSegmentIconsMapping[activeSegment?.name]
         ? defaultSegmentIconsMapping[activeSegment?.name]
         : 'pieChart';
     }
     return 'buildings';
-  }, [accountPayload]);
+  }, [activeSegment]);
 
   return (
     <ProfilesWrapper>
@@ -1151,7 +1149,12 @@ function AccountProfiles({
             {pageTitle}
           </Text>
         </div>
-        <ControlledComponent controller={Boolean(accountPayload.segment_id)}>
+        <ControlledComponent
+          controller={
+            Boolean(accountPayload.segment_id) &&
+            !defaultSegmentsList.includes(activeSegment?.name)
+          }
+        >
           <MoreActionsDropdown
             onRename={() => setMoreActionsModalMode(moreActionsMode.RENAME)}
             onDelete={() => setMoreActionsModalMode(moreActionsMode.DELETE)}
@@ -1210,20 +1213,20 @@ function AccountProfiles({
         isLoading={false}
       />
       <DeleteSegmentModal
-        segmentName={activeSegment.name}
+        segmentName={activeSegment?.name}
         visible={moreActionsModalMode === moreActionsMode.DELETE}
         onCancel={() => setMoreActionsModalMode(null)}
         onOk={handleDeleteActiveSegment}
       />
       <RenameSegmentModal
-        segmentName={activeSegment.name}
+        segmentName={activeSegment?.name}
         visible={moreActionsModalMode === moreActionsMode.RENAME}
         onCancel={() => setMoreActionsModalMode(null)}
         handleSubmit={handleRenameSegment}
       />
 
       <UpdateSegmentModal
-        segmentName={activeSegment.name}
+        segmentName={activeSegment?.name}
         visible={updateSegmentModal}
         onCancel={() => setUpdateSegmentModal(false)}
         onCreate={handleCreateSegment}

@@ -9,6 +9,7 @@ import (
 	"factors/util"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -109,7 +110,6 @@ func FillEnrichmentPropertiesForSixSignal(result Response, properties *util.Prop
 
 	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.Zip, util.SIX_SIGNAL_ZIP, properties)
 	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.NaicsDescription, util.SIX_SIGNAL_NAICS_DESCRIPTION, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.EmployeeCount, util.SIX_SIGNAL_EMPLOYEE_COUNT, properties)
 	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.Country, util.SIX_SIGNAL_COUNTRY, properties)
 	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.City, util.SIX_SIGNAL_CITY, properties)
 	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.Industry, util.SIX_SIGNAL_INDUSTRY, properties)
@@ -120,8 +120,19 @@ func FillEnrichmentPropertiesForSixSignal(result Response, properties *util.Prop
 	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.State, util.SIX_SIGNAL_STATE, properties)
 	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.Region, util.SIX_SIGNAL_REGION, properties)
 	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.Naics, util.SIX_SIGNAL_NAICS, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.AnnualRevenue, util.SIX_SIGNAL_ANNUAL_REVENUE, properties)
 	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.SicDescription, util.SIX_SIGNAL_SIC_DESCRIPTION, properties)
+
+	empCountInt, err := strconv.Atoi(result.Company.EmployeeCount)
+	if err != nil {
+		util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.EmployeeCount, util.SIX_SIGNAL_EMPLOYEE_COUNT, properties)
+	}
+	util.ValidateAndFillEnrichmentPropsForIntegerValue(empCountInt, util.SIX_SIGNAL_EMPLOYEE_COUNT, properties)
+
+	annualRevInt, err := strconv.Atoi(result.Company.AnnualRevenue)
+	if err != nil {
+		util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.AnnualRevenue, util.SIX_SIGNAL_ANNUAL_REVENUE, properties)
+	}
+	util.ValidateAndFillEnrichmentPropsForIntegerValue(annualRevInt, util.SIX_SIGNAL_ANNUAL_REVENUE, properties)
 
 	empRange := result.Company.EmployeeRange
 	util.ValidateAndFillEnrichmentPropsForStringValue(empRange, util.SIX_SIGNAL_EMPLOYEE_RANGE, properties)

@@ -262,6 +262,8 @@ class Util:
             response = requests.get(url, headers=headers)
             if response.ok:
                 break
+            elif "Max retries exceeded" in response.text:
+                time.sleep(300)
             else:
                 time.sleep(30)
 
