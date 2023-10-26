@@ -8,7 +8,6 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
-	MM "math"
 	"sync"
 
 	"net/http"
@@ -961,8 +960,9 @@ func ComputeScoreWithWeightsAndCountsWithDecay(projectId int64, weights *model.A
 
 func normalize_score(x float64) float64 {
 	//100 * tanh(x/100000) range 0 to 100000
-	val := x / float64(NORM_CONFIG)
-	return 100 * MM.Tanh(val)
+	// val := x / float64(NORM_CONFIG)
+	// return 100 * MM.Tanh(val)
+	return x
 }
 
 func ComputeAccountScoreOnLastEvent(project_id int64, weights model.AccWeights, eventsCount map[string]float64) (float64, error) {
