@@ -125,7 +125,6 @@ func (store *MemSQL) GetEventUserCountsMerged(projectIdsList []int64, lastNDays 
 func (store *MemSQL) GetEventUserCountsByProjectID(projectId int64, lastNDays int) (map[string][]*model.ProjectAnalytics, error) {
 	logFields := log.Fields{
 		"last_n_days": lastNDays,
-		"projectId":   projectId,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
@@ -134,7 +133,6 @@ func (store *MemSQL) GetEventUserCountsByProjectID(projectId int64, lastNDays in
 
 	projectIDNameMap := make(map[int64]string)
 	projectIDNameMap[project.ID] = project.Name
-	log.WithFields(logFields).Info("metric-debugs-139", U.GetKeysFromMap(projectIDNameMap)[0])
 
 	result, err := GetProjectAnalyticsData(projectIDNameMap, lastNDays, currentDate, projectId)
 
@@ -189,8 +187,6 @@ func GetProjectAnalyticsData(projectIDNameMap map[int64]string, lastNDays int, c
 			salesforceEvents, _ := GetEventsFromCacheByDocumentType(projId, "salesforce", dateKey)
 			sixSignalAPIHits := model.GetSixSignalAPICountCacheResult(int64(projIdInt), uint64(dateKeyInt))
 			sixSignalAPITotalHits := model.GetSixSignalAPITotalHitCountCacheResult(int64(projIdInt), uint64(dateKeyInt))
-
-			log.Info("debug-log-194", projId, " ", projIdInt, " ", int64(projIdInt))
 
 			if projectId == 0 {
 				result[dateKey] = append(result[dateKey], &model.ProjectAnalytics{
