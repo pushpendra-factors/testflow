@@ -36,7 +36,7 @@ func GetFactorsAnalyticsHandler(c *gin.Context) {
 
 	if projectID != "" {
 		projIdInt, _ := strconv.Atoi(projectID)
-
+		log.Info("debug-handler", projectID, " ", projIdInt, " ", int64(projIdInt))
 		analytics, err = store.GetStore().GetEventUserCountsByProjectID(int64(projIdInt), noOfDays)
 		if err != nil {
 			log.WithError(err).Error("GetEventUserCountsByProjectID")
