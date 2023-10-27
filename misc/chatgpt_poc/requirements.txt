@@ -1,0 +1,6 @@
+pandas
+openai
+flask
+torch
+transformers
+scikit-learn
