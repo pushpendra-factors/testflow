@@ -3136,15 +3136,39 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 	assert.NotNil(t, group2)
 	assert.Equal(t, http.StatusCreated, status)
 
+	// creating domain group
+	group, status := store.GetStore().CreateOrGetDomainsGroup(project.ID)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.NotNil(t, group)
+
+	// 5 domainn groups
+	domProperties := postgres.Jsonb{RawMessage: json.RawMessage(`{}`)}
+	source := model.GetRequestSourcePointer(model.UserSourceDomains)
+	groupUser := true
+	domainAccounts := make([]string, 0)
+
+	companyNames := []string{"FreshWorks", "CleverTap", "Adsup", "ChargeBee", "Heyflow"}
+	for i := 0; i < 5; i++ {
+		domID, _ := store.GetStore().CreateUser(&model.User{
+			ProjectId:   project.ID,
+			Source:      source,
+			Group3ID:    fmt.Sprintf("%s@domainid.com", companyNames[i]),
+			Properties:  domProperties,
+			IsGroupUser: &groupUser,
+		})
+		_, errCode := store.GetStore().GetUser(project.ID, domID)
+		assert.Equal(t, http.StatusFound, errCode)
+		domainAccounts = append(domainAccounts, domID)
+	}
+
 	// 5 hubspot accounts
 	var accounts []string
-	groupUser := true
-	companyNames := []string{"FreshWorks", "CleverTap", "Adsup", "ChargeBee", "Heyflow"}
 	cities := []string{"London", "London", "DC", "Delhi", "Paris"}
 	for i := 0; i < 5; i++ {
 		props := map[string]interface{}{
 			U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED: companyNames[i],
-			"$city": cities[i],
+			"$city":                         cities[i],
+			"$hubspot_company_hs_object_id": 124,
 		}
 		propertiesJSON, err := json.Marshal(props)
 		if err != nil {
@@ -3157,11 +3181,12 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 		source := model.GetRequestSourcePointer(model.UserSourceHubspot)
 
 		createdUserID, _ := store.GetStore().CreateUser(&model.User{
-			ProjectId:   project.ID,
-			Source:      source,
-			Group1ID:    fmt.Sprintf("%d", group1.ID),
-			Properties:  accProps,
-			IsGroupUser: &groupUser,
+			ProjectId:    project.ID,
+			Source:       source,
+			Group1ID:     fmt.Sprintf("%d", group1.ID),
+			Properties:   accProps,
+			IsGroupUser:  &groupUser,
+			Group3UserID: domainAccounts[i],
 		})
 		account, errCode := store.GetStore().GetUser(project.ID, createdUserID)
 		assert.Equal(t, http.StatusFound, errCode)
@@ -3177,7 +3202,8 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 			ProjectId:       project.ID,
 			Auto:            false,
 			RequestSource:   model.UserSourceHubspot,
-			EventProperties: props,
+			UserProperties:  props,
+			EventProperties: eventProperties,
 		}
 		status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 		assert.NotEmpty(t, response)
@@ -3198,11 +3224,12 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 		source := model.GetRequestSourcePointer(model.UserSourceSalesforce)
 
 		createdUserID, _ := store.GetStore().CreateUser(&model.User{
-			ProjectId:   project.ID,
-			Source:      source,
-			Group2ID:    fmt.Sprintf("%d", group2.ID),
-			Properties:  accProps,
-			IsGroupUser: &groupUser,
+			ProjectId:    project.ID,
+			Source:       source,
+			Group2ID:     fmt.Sprintf("%d", group2.ID),
+			Properties:   accProps,
+			IsGroupUser:  &groupUser,
+			Group3UserID: domainAccounts[i],
 		})
 		account, errCode := store.GetStore().GetUser(project.ID, createdUserID)
 		assert.Equal(t, http.StatusFound, errCode)
@@ -3210,14 +3237,15 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 
 		timestamp := U.UnixTimeBeforeDuration(time.Duration(1+i) * time.Hour)
 		trackPayload := SDK.TrackPayload{
-			UserId:        account.ID,
-			CreateUser:    false,
-			IsNewUser:     false,
-			Name:          U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
-			Timestamp:     timestamp,
-			ProjectId:     project.ID,
-			Auto:          false,
-			RequestSource: model.UserSourceSalesforce,
+			UserId:          account.ID,
+			CreateUser:      false,
+			IsNewUser:       false,
+			Name:            U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
+			Timestamp:       timestamp,
+			ProjectId:       project.ID,
+			Auto:            false,
+			RequestSource:   model.UserSourceSalesforce,
+			EventProperties: props,
 		}
 		status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 		assert.NotEmpty(t, response)
@@ -3243,6 +3271,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 				Group1UserID:   accounts[i%5],
 				Group1ID:       "1",
 				CustomerUserId: fmt.Sprintf("hubspot@%daccount", (i%10)+1),
+				Group3UserID:   domainAccounts[i%5],
 			})
 		} else {
 			src = model.GetRequestSourcePointer(model.UserSourceSalesforce)
@@ -3253,6 +3282,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 				Group2ID:       "2",
 				Group2UserID:   accounts[5+i%5],
 				CustomerUserId: fmt.Sprintf("salesforce@%daccount", (i%10)+1),
+				Group3UserID:   domainAccounts[i%5],
 			})
 		}
 		user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
@@ -3411,140 +3441,32 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 		assert.NotNil(t, profile.LastActivity)
 	}
 
-	// account segment with ewp and gup
+	// All accounts
+
+	// 1. group performed event
 	payload = model.TimelinePayload{
 		Query: model.Query{
+			GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: "all_given_event",
 			EventsWithProperties: []model.QueryEventWithProperties{
 				{
-					Name: U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+					Name:          U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+					GroupAnalysis: "Hubspot Companies",
 					Properties: []model.QueryProperty{
 						{
 							Type:      "categorical",
 							Property:  U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
 							Operator:  "equals",
-							Value:     "FreshWorks",
+							Value:     "Heyflow",
 							LogicalOp: "AND",
-							Entity:    "event",
-						},
-					},
-				},
-				{
-					Name: U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL,
-					Properties: []model.QueryProperty{
-						{
-							Type:      "categorical",
-							Property:  U.EP_HUBSPOT_ENGAGEMENT_FROM,
-							Operator:  "equals",
-							Value:     "Somewhere",
-							LogicalOp: "AND",
-							Entity:    "event",
+							Entity:    "user",
+							GroupName: "$hubspot_company",
 						},
 					},
 				},
 			},
-			GlobalUserProperties: []model.QueryProperty{
-				{
-					Type:      "categorical",
-					Property:  "$city",
-					Operator:  "equals",
-					Value:     "London",
-					LogicalOp: "AND",
-					Entity:    "user_g",
-				},
-			},
-			Type:            model.QueryTypeUniqueUsers,
-			EventsCondition: model.EventCondEachGivenEvent,
-			Source:          model.GROUP_NAME_HUBSPOT_COMPANY,
-			TableProps:      []string{"$hubspot_company_created", "$hour_of_first_event"},
-			GroupAnalysis:   model.GROUP_NAME_HUBSPOT_COMPANY,
-		},
-	}
-
-	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
-	assert.Equal(t, http.StatusOK, w.Code)
-	jsonResponse, _ = io.ReadAll(w.Body)
-	resp = make([]model.Profile, 0)
-	err = json.Unmarshal(jsonResponse, &resp)
-	assert.Nil(t, err)
-	assert.Equal(t, len(resp), 2)
-	for idx, profile := range resp {
-		assert.Equal(t, companyNames[1-idx], profile.TableProps["$hubspot_company_created"])
-		assert.NotNil(t, profile.Identity)
-		assert.NotNil(t, profile.LastActivity)
-		assert.NotNil(t, profile.Name)
-	}
-
-	// account segment with ewp (user event)
-
-	payload = model.TimelinePayload{
-		Query: model.Query{
-			GroupAnalysis:   model.GROUP_NAME_HUBSPOT_COMPANY,
-			Type:            model.QueryTypeUniqueUsers,
-			EventsCondition: "any_given_event",
-			EventsWithProperties: []model.QueryEventWithProperties{
-				{
-					Name:          U.EVENT_NAME_SESSION,
-					GroupAnalysis: "Most Recent",
-				},
-			},
-			Source:     model.GROUP_NAME_HUBSPOT_COMPANY,
-			TableProps: []string{"$country", "$hubspot_company_created", "$hour_of_first_event"},
-		},
-	}
-
-	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
-	assert.Equal(t, http.StatusOK, w.Code)
-	jsonResponse, _ = io.ReadAll(w.Body)
-	resp = make([]model.Profile, 0)
-	err = json.Unmarshal(jsonResponse, &resp)
-	assert.Nil(t, err)
-	assert.Equal(t, len(resp), 5)
-	for _, profile := range resp {
-		assert.NotNil(t, profile.TableProps["$hubspot_company_created"])
-		assert.NotNil(t, profile.Identity)
-		assert.NotNil(t, profile.LastActivity)
-	}
-
-	// account segment with only ewp
-	payload = model.TimelinePayload{
-		Query: model.Query{
-			EventsWithProperties: []model.QueryEventWithProperties{
-				{
-					Name: U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
-					Properties: []model.QueryProperty{
-						{
-							Type:      "categorical",
-							Property:  U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
-							Operator:  "equals",
-							Value:     "FreshWorks",
-							LogicalOp: "AND",
-							Entity:    "event",
-						},
-					},
-				},
-				{
-					Name: U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL,
-					Properties: []model.QueryProperty{
-						{
-							Type:      "categorical",
-							Property:  U.EP_HUBSPOT_ENGAGEMENT_FROM,
-							Operator:  "equals",
-							Value:     "Somewhere",
-							LogicalOp: "AND",
-							Entity:    "event",
-						},
-					},
-				},
-				{
-					Name:          U.EVENT_NAME_SESSION,
-					GroupAnalysis: "Most Recent",
-				},
-			},
-			Type:            model.QueryTypeUniqueUsers,
-			EventsCondition: model.EventCondAllGivenEvent,
-			Source:          model.GROUP_NAME_HUBSPOT_COMPANY,
-			TableProps:      []string{"$country", "$hubspot_company_created"},
-			GroupAnalysis:   model.GROUP_NAME_HUBSPOT_COMPANY,
+			Caller: "account_profiles",
 		},
 	}
 
@@ -3555,39 +3477,109 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 	err = json.Unmarshal(jsonResponse, &resp)
 	assert.Nil(t, err)
 	assert.Equal(t, len(resp), 1)
-
 	for _, profile := range resp {
-		assert.Equal(t, "FreshWorks", profile.TableProps["$hubspot_company_created"])
 		assert.NotNil(t, profile.Identity)
 		assert.NotNil(t, profile.LastActivity)
+		assert.Equal(t, "Heyflow@domainid.com", profile.HostName)
 	}
 
-	// account segment with ewp (user event) and gup
+	// 2. user performed event
 
 	payload = model.TimelinePayload{
 		Query: model.Query{
-			GroupAnalysis:   model.GROUP_NAME_HUBSPOT_COMPANY,
+			GroupAnalysis:   model.GROUP_NAME_DOMAINS,
 			Type:            model.QueryTypeUniqueUsers,
-			EventsCondition: "any_given_event",
+			EventsCondition: "all_given_event",
+			EventsWithProperties: []model.QueryEventWithProperties{
+				{
+					Name:          U.EVENT_NAME_SESSION,
+					GroupAnalysis: "Page views",
+				},
+			},
+			Caller: "account_profiles",
+			Source: "$domains",
+		},
+		SearchFilter: []string{"adsup", "charge", "hey"},
+	}
+
+	hostNames := []string{"ChargeBee@domainid.com", "Adsup@domainid.com", "Heyflow@domainid.com"}
+	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = io.ReadAll(w.Body)
+	resp = make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 3)
+	for _, profile := range resp {
+		assert.NotNil(t, profile.Identity)
+		assert.NotNil(t, profile.LastActivity)
+		assert.Contains(t, hostNames, profile.HostName)
+	}
+
+	// 3. group and user events with props
+
+	payload = model.TimelinePayload{
+		Query: model.Query{
+			GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: "all_given_event",
+			EventsWithProperties: []model.QueryEventWithProperties{
+				{
+					Name:          U.EVENT_NAME_SESSION,
+					GroupAnalysis: "Page views",
+					Properties: []model.QueryProperty{
+						{
+							Type:      "categorical",
+							Property:  U.EP_HUBSPOT_ENGAGEMENT_FROM,
+							Operator:  "equals",
+							Value:     "Somewhere",
+							LogicalOp: "AND",
+							Entity:    "event",
+							GroupName: "event",
+						},
+					},
+				},
+				{
+					Name:          U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+					GroupAnalysis: "Hubspot Companies",
+					Properties: []model.QueryProperty{
+						{
+							Type:      "categorical",
+							Property:  U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+							Operator:  "equals",
+							Value:     "Heyflow",
+							LogicalOp: "AND",
+							Entity:    "user",
+							GroupName: "$hubspot_company",
+						},
+						{
+							Type:      "categorical",
+							Property:  U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+							Operator:  "equals",
+							Value:     "ChargeBee",
+							LogicalOp: "OR",
+							Entity:    "user",
+							GroupName: "$hubspot_company",
+						},
+					},
+				},
+			},
 			GlobalUserProperties: []model.QueryProperty{
 				{
 					Entity:    "user_g",
 					Type:      "categorical",
-					Property:  "$city",
+					Property:  "$in_hubspot",
 					Operator:  "equals",
-					Value:     "London",
+					Value:     "true",
 					LogicalOp: "AND",
+					GroupName: "$hubspot_company",
 				},
 			},
-			EventsWithProperties: []model.QueryEventWithProperties{
-				{
-					Name:          U.EVENT_NAME_SESSION,
-					GroupAnalysis: "Most Recent",
-				},
-			},
-			Source:     model.GROUP_NAME_HUBSPOT_COMPANY,
+			Caller:     "account_profiles",
+			Source:     "$domains",
 			TableProps: []string{"$country", "$hubspot_company_created", "$hour_of_first_event"},
 		},
+		SearchFilter: []string{"adsup", "charge", "hey"},
 	}
 
 	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
@@ -3596,13 +3588,15 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 	resp = make([]model.Profile, 0)
 	err = json.Unmarshal(jsonResponse, &resp)
 	assert.Nil(t, err)
+
+	hostNames = []string{"ChargeBee@domainid.com", "Heyflow@domainid.com"}
 	assert.Equal(t, len(resp), 2)
 	for _, profile := range resp {
 		assert.NotNil(t, profile.TableProps["$hubspot_company_created"])
 		assert.NotNil(t, profile.Identity)
 		assert.NotNil(t, profile.LastActivity)
+		assert.Contains(t, hostNames, profile.HostName)
 	}
-
 }
 
 func TestAllAccountDefaultGroupProperties(t *testing.T) {
