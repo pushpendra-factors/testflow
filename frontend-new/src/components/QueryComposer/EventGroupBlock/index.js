@@ -12,6 +12,7 @@ import {
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
 import { CustomGroupDisplayNames } from 'Components/GlobalFilter/FilterWrapper/utils';
+import {defaultPropertyList, alertsGroupPropertyList} from './utils';
 
 function EventGroupBlock({
   eventGroup,
@@ -31,49 +32,28 @@ function EventGroupBlock({
   closeDropDown,
   hideText = false, // added to hide the text from UI (Used in event based alerts)
   noMargin = false,
-  groupOpts
+  groupOpts,
+  userPropertiesV2,
+  groupAnalysis = false
 }) {
   const [filterOptions, setFilterOptions] = useState([]);
   const [propSelVis, setSelVis] = useState(false);
-  const [isGroupByDDVisible, setGroupByDDVisible] = useState(false);
+  const [isGroupByDDVisible, setGroupByDDVisible] = useState(false); 
 
   useEffect(() => {
-    const filterOptsObj = {};
-    const eventGroups = eventPropertiesV2[event?.label] || {};
-    convertAndAddPropertiesToGroupSelectOptions(
-      eventGroups,
-      filterOptsObj,
-      'event'
-    );
-    if (eventGroup) {
-      const groupLabel = CustomGroupDisplayNames[eventGroup]
-        ? CustomGroupDisplayNames[eventGroup]
-        : groupOpts[eventGroup]
-        ? groupOpts[eventGroup]
-        : PropTextFormat(eventGroup);
-      const groupValues =
-        processProperties(groupProperties[eventGroup], 'group', eventGroup) ||
-        [];
-      const groupPropIconName = getGroupIcon(groupLabel);
-      if (!filterOptsObj[groupLabel]) {
-        filterOptsObj[groupLabel] = {
-          iconName:
-            groupPropIconName === 'NoImage' ? 'group' : groupPropIconName,
-          label: groupLabel,
-          values: groupValues
-        };
-      } else {
-        filterOptsObj[groupLabel].values.push(...groupValues);
+    let filterOptsObj = {}
+    //moved calculating options logic to uitls file 
+    if(groupAnalysis){
+      if(groupAnalysis == "users"){
+        filterOptsObj = defaultPropertyList(eventPropertiesV2, eventUserPropertiesV2, groupProperties, eventGroup, groupOpts);
       }
-    } else {
-      if (eventUserPropertiesV2) {
-        convertAndAddPropertiesToGroupSelectOptions(
-          eventUserPropertiesV2,
-          filterOptsObj,
-          'user'
-        );
+      else{
+        filterOptsObj = alertsGroupPropertyList(eventPropertiesV2, userPropertiesV2, groupProperties, eventGroup, groupOpts, eventGroup); 
       }
     }
+    else{
+      filterOptsObj = defaultPropertyList(eventPropertiesV2, eventUserPropertiesV2, groupProperties, eventGroup, groupOpts);
+    } 
     setFilterOptions(Object.values(filterOptsObj));
   }, [eventUserPropertiesV2, eventPropertiesV2, groupProperties]);
 
@@ -286,6 +266,7 @@ const mapStateToProps = (state) => ({
   groupProperties: state.coreQuery.groupProperties,
   eventUserPropertiesV2: state.coreQuery.eventUserPropertiesV2,
   eventPropertiesV2: state.coreQuery.eventPropertiesV2,
+  userPropertiesV2: state.coreQuery.userPropertiesV2,
   userPropNames: state.coreQuery.userPropNames,
   eventPropNames: state.coreQuery.eventPropNames,
   groupPropNames: state.coreQuery.groupPropNames,
