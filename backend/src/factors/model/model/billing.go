@@ -16,11 +16,14 @@ type SubscriptionProductPrice struct {
 type Subscription struct {
 	Status              string               `json:"status"`
 	RenewsOn            time.Time            `json:"renews_on"`
+	BillingPeriod       int                  `json:"period"`
+	BillingPeriodUnit   string               `json:"billing_period_unit"`
 	SubscriptionDetails []SubscriptionDetail `json:"subscription_details"`
 }
 
 type SubscriptionDetail struct {
-	Type   string `json:"type"`
-	ID     string `json:"id"`
-	Amount int64  `json:"amount"`
+	Type         string `json:"type"`
+	ID           string `json:"id"`
+	Amount       int64  `json:"amount"`
+	ExternalName string `json:"external_name"`
 }
