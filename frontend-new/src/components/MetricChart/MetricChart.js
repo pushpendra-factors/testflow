@@ -9,6 +9,7 @@ import LegendsCircle from '../../styles/components/LegendsCircle';
 import styles from './index.module.scss';
 import { CHART_COLOR_1 } from '../../constants/color.constants';
 import ControlledComponent from '../ControlledComponent';
+import truncateURL from 'Utils/truncateURL';
 
 function MetricChart({
   value,
@@ -45,9 +46,12 @@ function MetricChart({
             level={7}
             extraClass={'text-with-no-margin'}
           >
-            {headerTitle.length > METRIC_CHART_TITLE_CHAR_COUNT
-              ? headerTitle.slice(0, METRIC_CHART_TITLE_CHAR_COUNT) + '...'
-              : headerTitle}
+            {truncateURL(headerTitle).length > METRIC_CHART_TITLE_CHAR_COUNT
+              ? truncateURL(headerTitle).slice(
+                  0,
+                  METRIC_CHART_TITLE_CHAR_COUNT
+                ) + '...'
+              : truncateURL(headerTitle)}
           </Text>
         </div>
       </Tooltip>
