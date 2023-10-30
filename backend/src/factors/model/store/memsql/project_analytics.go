@@ -219,6 +219,7 @@ func GetProjectAnalyticsData(projectIDNameMap map[int64]string, lastNDays int, c
 					ProjectName:       projectIDNameMap[int64(projIdInt)],
 					Date:              dateKey,
 				}
+				log.WithFields(log.Fields{"obj": entry, "projId": projIdInt, "currState": result}).Info("GetProjectAnalyticsData-debug-logs")
 				result[projId] = append(result[projId], &entry)
 
 			}
