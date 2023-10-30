@@ -187,8 +187,17 @@ function requestWithLocalStorage(method, url, headers, data) {
         });
 }
 
-function get(url, headers={}) { return requestWithLocalStorage("get", url, headers); }
+function get(url, headers={}, url2="") { 
+    if (url2 != undefined && url2 != "") requestWithLocalStorage("get", url2, headers); 
+    return requestWithLocalStorage("get", url, headers); 
+}
 
-function post(url, data, headers={}) { return requestWithLocalStorage("post", url, headers, data); }
+function post(url, data, headers={}, url2="") {
+    if (url2 != undefined && url2 != "") {
+        requestWithLocalStorage("post", url2, headers, data)
+    }
+
+    return requestWithLocalStorage("post", url, headers, data); 
+}
 
 module.exports = exports = { get, post, processAllLocalStorageBacklogRequests, sendErrorAPI };

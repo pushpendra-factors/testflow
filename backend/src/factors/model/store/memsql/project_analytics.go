@@ -127,6 +127,7 @@ func (store *MemSQL) GetEventUserCountsByProjectID(projectId int64, lastNDays in
 		"last_n_days": lastNDays,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	log.WithFields(log.Fields{"projectId": projectId}).Info("GetEventUserCountsByProjectID")
 
 	currentDate := time.Now().UTC()
 	project, _ := store.GetProject(projectId)
@@ -135,6 +136,7 @@ func (store *MemSQL) GetEventUserCountsByProjectID(projectId int64, lastNDays in
 	projectIDNameMap[project.ID] = project.Name
 
 	result, err := GetProjectAnalyticsData(projectIDNameMap, lastNDays, currentDate, projectId)
+
 	if err != nil {
 		return nil, err
 	}
@@ -144,6 +146,8 @@ func (store *MemSQL) GetEventUserCountsByProjectID(projectId int64, lastNDays in
 func GetProjectAnalyticsData(projectIDNameMap map[int64]string, lastNDays int, currentDate time.Time, projectId int64) (map[string][]*model.ProjectAnalytics, error) {
 
 	result := make(map[string][]*model.ProjectAnalytics, 0)
+
+	log.WithFields(log.Fields{"projectId": projectId}).Info("GetProjectAnalyticsData-debug-logs-1")
 
 	for i := 0; i < lastNDays; i++ {
 		dateKey := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
@@ -172,6 +176,7 @@ func GetProjectAnalyticsData(projectIDNameMap map[int64]string, lastNDays int, c
 		if err != nil {
 			return nil, err
 		}
+
 		for projId, count := range users {
 			uniqueUsers, _ := strconv.Atoi(count)
 			totalEvents, _ := strconv.Atoi(totalEvents[projId])
@@ -217,6 +222,7 @@ func GetProjectAnalyticsData(projectIDNameMap map[int64]string, lastNDays int, c
 					ProjectName:       projectIDNameMap[int64(projIdInt)],
 					Date:              dateKey,
 				}
+				log.WithFields(log.Fields{"obj": entry, "projId": projIdInt, "projectId": projectId, "currState": result}).Info("GetProjectAnalyticsData-debug-logs")
 				result[projId] = append(result[projId], &entry)
 
 			}
