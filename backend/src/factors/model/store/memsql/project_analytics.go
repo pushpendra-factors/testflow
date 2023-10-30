@@ -127,13 +127,14 @@ func (store *MemSQL) GetEventUserCountsByProjectID(projectId int64, lastNDays in
 		"last_n_days": lastNDays,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	log.WithFields(log.Fields{"projectId": projectId}).Info("GetEventUserCountsByProjectID")
 
 	currentDate := time.Now().UTC()
 	project, _ := store.GetProject(projectId)
 
 	projectIDNameMap := make(map[int64]string)
 	projectIDNameMap[project.ID] = project.Name
+
+	log.WithFields(log.Fields{"projectId": projectId}).Info("GetEventUserCountsByProjectID")
 
 	result, err := GetProjectAnalyticsData(projectIDNameMap, lastNDays, currentDate, projectId)
 
@@ -147,7 +148,7 @@ func GetProjectAnalyticsData(projectIDNameMap map[int64]string, lastNDays int, c
 
 	result := make(map[string][]*model.ProjectAnalytics, 0)
 
-	log.WithFields(log.Fields{"projectId": projectId}).Info("GetProjectAnalyticsData-debug-logs-1")
+	log.WithFields(log.Fields{"projectId": projectId, "projectMap": projectIDNameMap}).Info("GetProjectAnalyticsData")
 
 	for i := 0; i < lastNDays; i++ {
 		dateKey := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
@@ -181,19 +182,19 @@ func GetProjectAnalyticsData(projectIDNameMap map[int64]string, lastNDays int, c
 			uniqueUsers, _ := strconv.Atoi(count)
 			totalEvents, _ := strconv.Atoi(totalEvents[projId])
 			uniqueEvents, _ := strconv.Atoi(uniqueEvents[projId])
-			projIdInt, _ := strconv.Atoi(projId)
+			projIdInt64, _ := strconv.ParseInt(projId, 10, 64)
 			dateKeyInt, _ := strconv.Atoi(dateKey)
 			adwordsEvents, _ := GetEventsFromCacheByDocumentType(projId, "adwords", dateKey)
 			facebookEvents, _ := GetEventsFromCacheByDocumentType(projId, "facebook", dateKey)
 			hubspotEvents, _ := GetEventsFromCacheByDocumentType(projId, "hubspot", dateKey)
 			linkedinEvents, _ := GetEventsFromCacheByDocumentType(projId, "linkedin", dateKey)
 			salesforceEvents, _ := GetEventsFromCacheByDocumentType(projId, "salesforce", dateKey)
-			sixSignalAPIHits := model.GetSixSignalAPICountCacheResult(int64(projIdInt), uint64(dateKeyInt))
-			sixSignalAPITotalHits := model.GetSixSignalAPITotalHitCountCacheResult(int64(projIdInt), uint64(dateKeyInt))
+			sixSignalAPIHits := model.GetSixSignalAPICountCacheResult(projIdInt64, uint64(dateKeyInt))
+			sixSignalAPITotalHits := model.GetSixSignalAPITotalHitCountCacheResult(projIdInt64, uint64(dateKeyInt))
 
 			if projectId == 0 {
 				result[dateKey] = append(result[dateKey], &model.ProjectAnalytics{
-					ProjectID:             int64(projIdInt),
+					ProjectID:             projIdInt64,
 					TotalEvents:           uint64(totalEvents),
 					TotalUniqueEvents:     uint64(uniqueEvents),
 					TotalUniqueUsers:      uint64(uniqueUsers),
@@ -204,25 +205,27 @@ func GetProjectAnalyticsData(projectIDNameMap map[int64]string, lastNDays int, c
 					SalesforceEvents:      uint64(salesforceEvents),
 					SixSignalAPIHits:      uint64(sixSignalAPIHits),
 					SixSignalAPITotalHits: uint64(sixSignalAPITotalHits),
-					ProjectName:           projectIDNameMap[int64(projIdInt)],
+					ProjectName:           projectIDNameMap[projIdInt64],
 					Date:                  dateKey,
 				})
-			} else if int64(projIdInt) == projectId {
+			} else if projIdInt64 == projectId {
 
 				entry := model.ProjectAnalytics{
-					ProjectID:         int64(projIdInt),
-					TotalEvents:       uint64(totalEvents),
-					TotalUniqueEvents: uint64(uniqueEvents),
-					TotalUniqueUsers:  uint64(uniqueUsers),
-					AdwordsEvents:     uint64(adwordsEvents),
-					FacebookEvents:    uint64(facebookEvents),
-					HubspotEvents:     uint64(hubspotEvents),
-					LinkedinEvents:    uint64(linkedinEvents),
-					SalesforceEvents:  uint64(salesforceEvents),
-					ProjectName:       projectIDNameMap[int64(projIdInt)],
-					Date:              dateKey,
+					ProjectID:             projIdInt64,
+					TotalEvents:           uint64(totalEvents),
+					TotalUniqueEvents:     uint64(uniqueEvents),
+					TotalUniqueUsers:      uint64(uniqueUsers),
+					AdwordsEvents:         uint64(adwordsEvents),
+					FacebookEvents:        uint64(facebookEvents),
+					HubspotEvents:         uint64(hubspotEvents),
+					LinkedinEvents:        uint64(linkedinEvents),
+					SalesforceEvents:      uint64(salesforceEvents),
+					SixSignalAPIHits:      uint64(sixSignalAPIHits),
+					SixSignalAPITotalHits: uint64(sixSignalAPITotalHits),
+					ProjectName:           projectIDNameMap[projIdInt64],
+					Date:                  dateKey,
 				}
-				log.WithFields(log.Fields{"obj": entry, "projId": projIdInt, "projectId": projectId, "currState": result}).Info("GetProjectAnalyticsData-debug-logs")
+
 				result[projId] = append(result[projId], &entry)
 
 			}
