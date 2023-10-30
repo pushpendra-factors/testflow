@@ -812,7 +812,7 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 				PropValue:   getDisplayLikePropValue(messageProperty.Type, exi, propVal),
 			}
 
-		} else if messageProperty.Entity == model.PropertyEntityUserGlobal {
+		} else if messageProperty.Entity == model.PropertyEntityUserGlobal && groupPropMap != nil {
 
 			displayName, exists := displayNamesUP[p]
 			if !exists {
