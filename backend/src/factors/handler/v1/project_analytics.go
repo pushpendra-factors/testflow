@@ -22,6 +22,8 @@ func GetFactorsAnalyticsHandler(c *gin.Context) {
 	monthString := c.Query("month")
 	var err error
 
+	log.WithFields(log.Fields{"projectId": projectID}).Info("GetFactorsAnalyticsHandler")
+
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
 	if noOfDaysParam != "" {
