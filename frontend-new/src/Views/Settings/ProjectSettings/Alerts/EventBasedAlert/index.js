@@ -200,9 +200,12 @@ const EventBasedAlert = ({
   }, [activeProject?.id, groups]);
 
   useEffect(() => {
-    if (queryOptions.group_analysis === 'users') return;
-    getGroupProperties(activeProject.id, queryOptions.group_analysis);
-  }, [activeProject.id, queryOptions.group_analysis]);
+    if(groups && Object.keys(groups).length != 0){
+      Object.keys(groups?.all_groups).forEach((item)=>{
+        getGroupProperties(activeProject.id, item) 
+      }); 
+    }
+  }, [activeProject.id, groups]);
 
   const groupsList = useMemo(() => {
     let listGroups = [];
@@ -381,6 +384,10 @@ const EventBasedAlert = ({
         setHideTestMessageBtn(true);
       }
     }
+    return () => {
+      //reset form values on unmount
+      onReset();
+    }
   }, [viewAlertDetails, alertState]);
 
   const queryChange = useCallback(
@@ -484,6 +491,7 @@ const EventBasedAlert = ({
             (item) => item?.[0] == queries?.[0]?.group
           )?.[0]?.[1]
         }
+        groupAnalysis={activeGrpBtn}
       />
     ) : null;
 
@@ -516,6 +524,7 @@ const EventBasedAlert = ({
                     (item) => item?.[0] == queries?.[0]?.group
                   )?.[0]?.[1]
                 }
+                groupAnalysis={activeGrpBtn}
               />
             </div>
           );
@@ -560,6 +569,7 @@ const EventBasedAlert = ({
                     (item) => item?.[0] == queries?.[0]?.group
                   )?.[0]?.[1]
                 }
+                groupAnalysis={activeGrpBtn}
               />
             </div>
           );
