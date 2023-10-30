@@ -4,11 +4,12 @@ import { Tooltip } from 'antd';
 import { Text } from '../factorsComponents';
 import { legend_counts } from '../../utils/constants';
 import LegendsCircle from '../../styles/components/LegendsCircle';
+import truncateURL from 'Utils/truncateURL';
 
 const legend_length = {
   0: 15,
   1: 20,
-  2: 10,
+  2: 10
 };
 
 function TopLegends({
@@ -17,7 +18,7 @@ function TopLegends({
   parentClassName = 'flex flex-wrap justify-center col-gap-3 row-gap-3',
   cardSize,
   showAllLegends = false,
-  showFullLengthLegends = false,
+  showFullLengthLegends = false
 }) {
   const itemsCount = showAllLegends ? legends.length : legend_counts[cardSize];
 
@@ -25,11 +26,13 @@ function TopLegends({
 
   const displayLegend = (legend) => {
     if (!legend) return null;
+    let urlTruncatedlegend = truncateURL(legend);
     return (
       <Text mini type='paragraph'>
-        {legend.length > legend_length[cardSize] && !showFullLengthLegends
-          ? legend.substr(0, legend_length[cardSize]) + '...'
-          : legend}
+        {urlTruncatedlegend.length > legend_length[cardSize] &&
+        !showFullLengthLegends
+          ? urlTruncatedlegend.slice(0, legend_length[cardSize]) + '...'
+          : urlTruncatedlegend}
       </Text>
     );
   };
