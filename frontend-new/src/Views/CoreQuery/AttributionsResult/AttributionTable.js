@@ -44,10 +44,11 @@ function AttributionTable({
         if (
           !enabledAttributionMetricKeys.includes(key) &&
           key !== 'Conversion' &&
+          !key.includes('Conversion') &&
           key !== 'Cost Per Conversion' &&
           key !== 'Conversion Rate' &&
           !key.includes('Linked Event')
-        ) {
+          ) {
           result[key] = rest[key];
         } else {
           const changePercent = calcChangePerc(
@@ -64,6 +65,7 @@ function AttributionTable({
             : changePercent + '%';
         }
       });
+      
       return result;
     });
 

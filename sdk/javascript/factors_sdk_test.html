@@ -33,7 +33,8 @@
                 }
                 this.message();
                 this.init("e00jerl4ojnsx0jd5i5c63fyaf5wk1y9", {
-                                host: "https://dyh8ken8pc.com"
+                                host: "https://dyh8ken8pc.com",
+                                host2: "https://staging-api.factors.ai"
                         }, function(){console.log("Init callback")});
                 return this;
             })();
@@ -107,7 +108,7 @@
             faitracker.call('track', '$form_submitted', {'$email': 'ak@ems.com'});
 
             setTimeout(function(){
-                faitracker.track('$form_submitted', {'$email': 'ak@time.com'});
+                faitracker.call('track', '$form_submitted', {'$email': 'ak@time.com'});
             }, 20000)
         </script>
     </body>

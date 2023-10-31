@@ -49,7 +49,7 @@ export const FEATURES = {
   FEATURE_ACCOUNT_PROFILES: 'account_profiles',
   FEATURE_PEOPLE_PROFILES: 'people_profiles',
   FEATURE_REPORT_SHARING: 'report_sharing',
-  FEATURE_WEB_ANALYTICS_BOARD: 'website_aggregation_v1',
+  FEATURE_WEB_ANALYTICS_DASHBOARD: 'web_analytics_dashboard',
 
   //Integrations
   INT_SHOPFIY: 'int_shopify',

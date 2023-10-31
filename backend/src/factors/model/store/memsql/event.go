@@ -440,14 +440,27 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 	event.UpdatedAt = transTime
 
 	if C.IsUpdateLastEventAtEnabled(event.ProjectId) {
-		updateLastEventAtStmt := "UPDATE users SET last_event_at=? WHERE project_id=? AND id=?"
-		updateLastEventAtStmtExec := db.Exec(updateLastEventAtStmt, transTime, event.ProjectId, event.UserId)
 
-		if err := updateLastEventAtStmtExec.Error; err != nil {
-			if gorm.IsRecordNotFoundError(err) {
-				logCtx.WithField("event", event).WithError(err).Error("user not found. last_event_at update Failed")
-			} else {
-				logCtx.WithField("event", event).WithError(err).Error("last_event_at update Failed")
+		// Get Event Name for Event ID
+		eventName := model.EventName{}
+		if err := db.Model(&model.EventName{}).
+			Where("project_id=? AND id=?", event.ProjectId, event.EventNameId).
+			Limit(1).
+			Find(&eventName).Error; err != nil {
+			logCtx.WithField("event", event).WithError(err).Error("Failed getting event_name")
+		}
+
+		//To skip last_event_at update if event is excluded from timeline.
+		if !model.ExcludedEventsBool[eventName.Name] {
+			updateLastEventAtStmt := "UPDATE users SET last_event_at=? WHERE project_id=? AND id=?"
+			updateLastEventAtStmtExec := db.Exec(updateLastEventAtStmt, transTime, event.ProjectId, event.UserId)
+
+			if err := updateLastEventAtStmtExec.Error; err != nil {
+				if gorm.IsRecordNotFoundError(err) {
+					logCtx.WithField("event", event).WithError(err).Error("user not found. last_event_at update Failed")
+				} else {
+					logCtx.WithField("event", event).WithError(err).Error("last_event_at update Failed")
+				}
 			}
 		}
 	}

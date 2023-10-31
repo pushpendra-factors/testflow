@@ -1499,7 +1499,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	assert.Equal(t, len(resp), 1)
 	assert.Equal(t, resp[0].Identity, domID)
 	assert.NotNil(t, resp[0].LastActivity)
-	assert.Contains(t, filteredCompaniesNameHostNameMap, resp[0].Name)
+	assert.Contains(t, filteredCompaniesNameHostNameMap["Clientjoy Ads"], resp[0].Name)
 	assert.NotNil(t, resp[0].HostName)
 	assert.Equal(t, resp[0].TableProps["$salesforce_city"], "New Delhi")
 	assert.Equal(t, resp[0].TableProps["$hubspot_company_is_public"], "true")
@@ -2074,7 +2074,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		}
 	})
 	t.Run("Success", func(t *testing.T) {
-		w := sendGetProfileAccountOverviewRequest(r, projectID, agent, domainUser.ID, "All")
+		w := sendGetProfileAccountOverviewRequest(r, projectID, agent, domainUser.ID, U.GROUP_NAME_DOMAINS)
 		assert.Equal(t, http.StatusOK, w.Code)
 		jsonResponse, _ := io.ReadAll(w.Body)
 		resp := &model.Overview{}

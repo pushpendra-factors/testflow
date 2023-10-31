@@ -17,23 +17,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-/*
-Sample Timeline Listing Queries:
-
-// Users Listing Without Filters
-SELECT MIN(updated_at) AS min_updated_at, MAX(updated_at) AS max_updated_at FROM (SELECT updated_at FROM users WHERE project_id=11000005 AND (is_group_user=0 OR is_group_user IS NULL) AND (source=1 OR source IS NULL) AND updated_at < '2022-09-15 13:07:24.336972' ORDER BY updated_at DESC LIMIT 100000);
-SELECT COALESCE(customer_user_id, id) AS identity, ISNULL(customer_user_id) AS is_anonymous, JSON_EXTRACT_STRING(properties, '$country') AS country, MAX(updated_at) AS last_activity FROM users WHERE project_id=11000005 AND (is_group_user=0 OR is_group_user IS NULL) AND (source=1 OR source IS NULL) AND updated_at BETWEEN '2022-09-15 13:07:24.044412' AND '2022-09-15 13:07:24.322378'  GROUP BY identity ORDER BY last_activity DESC LIMIT 1000;
-// Users Listing With Filters
-SELECT MIN(updated_at) AS min_updated_at, MAX(updated_at) AS max_updated_at FROM (SELECT updated_at FROM users WHERE project_id=11000005 AND (is_group_user=0 OR is_group_user IS NULL) AND (source=1 OR source IS NULL) AND updated_at < '2022-09-15 14:11:44.769131' ORDER BY updated_at DESC LIMIT 500000);
-SELECT COALESCE(customer_user_id, id) AS identity, ISNULL(customer_user_id) AS is_anonymous, JSON_EXTRACT_STRING(properties, '$country') AS country, MAX(updated_at) AS last_activity FROM (SELECT id, customer_user_id, properties, updated_at FROM users WHERE project_id=11000005 AND (is_group_user=0 OR is_group_user IS NULL) AND (source=1 OR source IS NULL) AND updated_at BETWEEN '2022-09-15 13:07:24.044412' AND '2022-09-15 13:07:24.322378'  LIMIT 1000000) AS select_view WHERE ((JSON_EXTRACT_STRING(select_view.properties, '$country') = 'Ukraine')) GROUP BY identity ORDER BY last_activity DESC LIMIT 1000;
-
-// Users Listing Without Filters
-SELECT MIN(updated_at) AS min_updated_at, MAX(updated_at) AS max_updated_at FROM (SELECT updated_at FROM users WHERE project_id=11000006 AND is_group_user=1 AND (group_1_id IS NOT NULL OR group_2_id IS NOT NULL) AND updated_at < '2022-09-15 13:23:20.702165' ORDER BY updated_at DESC LIMIT 100000);
-SELECT id AS identity, properties, updated_at AS last_activity FROM users WHERE project_id=11000006 AND is_group_user=1 AND (group_1_id IS NOT NULL OR group_2_id IS NOT NULL) AND updated_at BETWEEN '2022-09-15 13:23:20.480649' AND '2022-09-15 13:23:20.615161'   ORDER BY last_activity DESC LIMIT 1000;
-// Users Listing With Filters
-SELECT MIN(updated_at) AS min_updated_at, MAX(updated_at) AS max_updated_at FROM (SELECT updated_at FROM users WHERE project_id=11000006 AND is_group_user=1 AND (group_1_id IS NOT NULL OR group_2_id IS NOT NULL) AND updated_at < '2022-09-15 13:23:20.702165' ORDER BY updated_at DESC LIMIT 500000);
-SELECT id AS identity, properties, updated_at AS last_activity FROM (SELECT id, properties, updated_at FROM users WHERE project_id=11000006 AND is_group_user=1 AND (group_1_id IS NOT NULL OR group_2_id IS NOT NULL) AND updated_at BETWEEN '2022-09-15 13:23:20.480649' AND '2022-09-15 13:23:20.615161'  LIMIT 1000000) AS select_view WHERE ((JSON_EXTRACT_STRING(select_view.properties, '$salesforce_account_billingcountry') = 'India') OR (JSON_EXTRACT_STRING(select_view.properties, '$hubspot_company_country') = 'US'))  ORDER BY last_activity DESC LIMIT 1000;
-*/
 func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.TimelinePayload, profileType string) ([]model.Profile, int, string) {
 	logFields := log.Fields{
 		"project_id":   projectID,
@@ -122,7 +105,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		}
 	}
 
-	var params, minMaxQParams []interface{}
+	var params, timeWindowQParams []interface{}
 	params = append(params, projectID)
 
 	isGroupUserStmt := getGroupUserStatement(profileType, payload.Query.Source)
@@ -133,7 +116,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	if sourceID != 0 {
 		params = append(params, sourceID)
 	}
-	minMaxQParams = append(minMaxQParams, params...)
+	timeWindowQParams = append(timeWindowQParams, params...)
 
 	var whereStmt string
 	if isUserProperty {
@@ -146,7 +129,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	if len(payload.Query.GlobalUserProperties) > 0 {
 		limitVal = 1000000
 	}
-	minMax, errCode, errStr := store.GetMinAndMaxUpdatedAt(profileType, whereStmt, limitVal, minMaxQParams)
+	timeWindow, errCode, errStr := store.GetTimeRangeWindow(profileType, whereStmt, limitVal, timeWindowQParams)
 	if errCode != http.StatusOK {
 		log.WithFields(logFields).WithField("status", errCode).Error(errStr)
 		return []model.Profile{}, errCode, errStr
@@ -156,10 +139,10 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	var runQueryStmt string
 	var queryParams []interface{}
 	if model.IsAccountProfiles(profileType) && model.IsDomainGroup(payload.Query.Source) && C.IsAllAccountsEnabled(projectID) {
-		runQueryStmt, queryParams, err = store.GenerateAllAccountsQueryString(projectID, payload.Query.Source, isUserProperty, isAllUserProperties, *minMax, groupedFilters, payload.SearchFilter)
+		runQueryStmt, queryParams, err = store.GenerateAllAccountsQueryString(projectID, payload.Query.Source, isUserProperty, isAllUserProperties, *timeWindow, groupedFilters, payload.SearchFilter)
 		params = queryParams
 	} else {
-		runQueryStmt, queryParams, err = store.GenerateQueryString(projectID, profileType, payload.Query.Source, sourceStmt, isUserProperty, whereStmt, *minMax, groupedFilters)
+		runQueryStmt, queryParams, err = store.GenerateQueryString(projectID, profileType, payload.Query.Source, sourceStmt, isUserProperty, whereStmt, *timeWindow, groupedFilters)
 		params = append(params, queryParams...)
 	}
 	if err != nil {
@@ -177,7 +160,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	// Get merged properties for all accounts
 	if model.IsAccountProfiles(profileType) && C.IsDomainEnabled(projectID) && model.IsDomainGroup(payload.Query.Source) {
 		if isAllUserProperties && !C.IsAllAccountsEnabled(projectID) {
-			userDomains, _ := store.GetUsersAssociatedToDomain(projectID, minMax, groupedFilters)
+			userDomains, _ := store.GetUsersAssociatedToDomain(projectID, timeWindow, groupedFilters)
 			profiles = appendProfiles(profiles, userDomains)
 		}
 		profiles, statusCode = store.AccountPropertiesForDomainsEnabled(projectID, profiles)
@@ -287,21 +270,21 @@ func (store *MemSQL) GetSourceStmtWithParams(projectID int64, profileType, sourc
 	return sourceStmt, sourceID, nil
 }
 
-// GetMinAndMaxUpdatedAt returns timestamps used for windowing the profiles listing query
-func (store *MemSQL) GetMinAndMaxUpdatedAt(profileType string, whereStmt string, limitVal int, minMaxQParams []interface{}) (*model.MinMaxUpdatedAt, int, string) {
-	var minMax model.MinMaxUpdatedAt
-	windowSelectStr := "MIN(updated_at) AS min_updated_at, MAX(updated_at) AS max_updated_at"
+// GetTimeRangeWindow returns timestamps used for windowing the profiles listing query
+func (store *MemSQL) GetTimeRangeWindow(profileType string, whereStmt string, limitVal int, timeWindowQParams []interface{}) (*model.ListingTimeWindow, int, string) {
+	var timeWindow model.ListingTimeWindow
+	windowSelectStr := "MIN(last_activity) AS lower_bound, MAX(last_activity) AS upper_bound"
 
-	fromStr := fmt.Sprintf("%s AND updated_at < ?", whereStmt)
-	minMaxQParams = append(minMaxQParams, model.FormatTimeToString(gorm.NowFunc()))
+	fromStr := fmt.Sprintf("%s AND last_activity < ?", whereStmt)
+	timeWindowQParams = append(timeWindowQParams, model.FormatTimeToString(gorm.NowFunc()))
 
-	queryStrmt := fmt.Sprintf("SELECT %s FROM (SELECT updated_at FROM users %s ORDER BY updated_at DESC LIMIT %d);", windowSelectStr, fromStr, limitVal)
+	queryStrmt := fmt.Sprintf("SELECT %s FROM (SELECT COALESCE(last_event_at, updated_at) AS last_activity FROM users %s ORDER BY last_activity DESC LIMIT %d);", windowSelectStr, fromStr, limitVal)
 	db := C.GetServices().Db
-	err := db.Raw(queryStrmt, minMaxQParams...).Scan(&minMax).Error
+	err := db.Raw(queryStrmt, timeWindowQParams...).Scan(&timeWindow).Error
 	if err != nil {
 		return nil, http.StatusInternalServerError, "Failed Setting Time Range."
 	}
-	return &minMax, http.StatusOK, ""
+	return &timeWindow, http.StatusOK, ""
 }
 
 // buildFilterStringAndParams generates a where string and a list of parameters for property filters.
@@ -357,7 +340,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 	source string,
 	hasUserProperty bool,
 	isAllUserProperties bool,
-	minMax model.MinMaxUpdatedAt,
+	timeWindow model.ListingTimeWindow,
 	groupedFilters map[string][]model.QueryProperty,
 	searchFilter []string,
 ) (string, []interface{}, error) {
@@ -366,7 +349,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 		"source":                 source,
 		"has_user_property":      hasUserProperty,
 		"is_all_user_properties": isAllUserProperties,
-		"min_max":                minMax,
+		"time_window":            timeWindow,
 		"grouped_filters":        groupedFilters,
 		"search_filter":          searchFilter,
 	}
@@ -374,7 +357,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
 
-	params := []interface{}{projectID, model.UserSourceDomains, minMax.MinUpdatedAt, minMax.MaxUpdatedAt}
+	params := []interface{}{projectID, model.UserSourceDomains, timeWindow.LowerBound, timeWindow.UpperBound}
 
 	domainGroup, errCode := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
 	if errCode != http.StatusFound || domainGroup == nil {
@@ -444,7 +427,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 	requireSpecialFilter, negativeFilters := CheckForNegativeFilters(groupedFilters)
 
 	if requireSpecialFilter {
-		specialFilterParams := []interface{}{projectID, model.UserSourceDomains, minMax.MinUpdatedAt, minMax.MaxUpdatedAt}
+		specialFilterParams := []interface{}{projectID, model.UserSourceDomains, timeWindow.LowerBound, timeWindow.UpperBound}
 		specialFilterString, filterparams, err := BuildSpecialFilter(projectID, negativeFilters, domainGroup.ID, isGroupUserCheck)
 		if err != nil {
 			return "", params, err
@@ -463,7 +446,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 				addSpecialFilter = "WHERE filter_1.identity NOT IN (SELECT identity FROM filter_special) "
 			}
 			intersectStep = fmt.Sprintf(`SELECT 
-			filter_1.properties, filter_1.identity, filter_1.host_name, MAX(filter_1.updated_at) as last_activity 
+			filter_1.properties, filter_1.identity, filter_1.host_name, MAX(filter_1.last_activity) as last_activity 
 			FROM filter_1 %s
 			GROUP BY filter_1.identity 
 			ORDER BY last_activity DESC LIMIT 1000;`, addSpecialFilter)
@@ -471,7 +454,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 		}
 		if stepNo == 1 {
 			intersectStep = `SELECT 
-			filter_1.properties, filter_1.identity, filter_1.host_name, MAX(filter_1.updated_at) as last_activity FROM filter_1 `
+			filter_1.properties, filter_1.identity, filter_1.host_name, MAX(filter_1.last_activity) as last_activity FROM filter_1 `
 		}
 		intersectStep = intersectStep + fmt.Sprintf(`INNER JOIN filter_%d 
 		ON filter_%d.identity = filter_%d.identity `, stepNo+1, stepNo, stepNo+1)
@@ -489,7 +472,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 
 	if len(groupedFilters) == 0 {
 		intersectStep = `SELECT 
-		properties, identity, host_name, MAX(updated_at) as last_activity 
+		properties, identity, host_name, last_activity 
 		FROM all_users 
 		GROUP BY identity 
 		ORDER BY last_activity DESC LIMIT 1000;`
@@ -498,7 +481,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 	query := fmt.Sprintf(`WITH all_users as (
 		SELECT * FROM (
 		  SELECT u.properties,
-		  u.updated_at, 
+		  COALESCE(u.last_event_at, u.updated_at) as last_activity,
 		  d.id as identity,
 		  d.group_%d_id as host_name,
 		  u.is_group_user,
@@ -513,7 +496,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 		  ON u.group_%d_user_id = d.id 
 		  WHERE u.project_id = ? %s 
 		    AND u.source != ? 
-		    AND u.updated_at BETWEEN ? AND ?
+		    AND last_activity BETWEEN ? AND ?
 		  LIMIT 10000000 
 		) %s
 	) %s %s`, domainGroup.ID, domainGroup.ID, whereForSearchFilters, domainGroup.ID, isGroupUserCheck, allUsersWhere, filterSteps, intersectStep)
@@ -647,7 +630,7 @@ func BuildSpecialFilter(projectID int64, negativeFilters []model.QueryProperty, 
 			  project_id = ? %s
 			  AND users.source != ? 
 			  AND users.group_%d_user_id IS NOT NULL 
-			  AND users.updated_at BETWEEN ?
+			  AND users.last_event_at BETWEEN ?
 			  AND ? 
 			LIMIT 
 			  10000000
@@ -666,7 +649,7 @@ func (store *MemSQL) GenerateQueryString(
 	sourceStmt string,
 	hasUserProperty bool,
 	whereStmt string,
-	minMax model.MinMaxUpdatedAt,
+	timeWindow model.ListingTimeWindow,
 	groupedFilters map[string][]model.QueryProperty,
 ) (string, []interface{}, error) {
 	var params []interface{}
@@ -689,8 +672,8 @@ func (store *MemSQL) GenerateQueryString(
 			whereStmt = joinStr + " " + whereStmt
 		}
 
-		selectString = "id AS identity, properties, updated_at AS last_activity, properties_updated_timestamp"
-		selectColumnsStr = "users.id, users.properties, users.updated_at, users.properties_updated_timestamp"
+		selectString = "id AS identity, properties, last_activity"
+		selectColumnsStr = "users.id, users.properties,  COALESCE(users.last_event_at, users.updated_at) as last_activity"
 
 		// selecting property col of users in case of user props in account profiles
 		if hasUserProperty {
@@ -698,13 +681,18 @@ func (store *MemSQL) GenerateQueryString(
 		}
 
 	} else if model.IsUserProfiles(profileType) {
-		selectString = "COALESCE(customer_user_id, id) AS identity, ISNULL(customer_user_id) AS is_anonymous, properties, MAX(updated_at) AS last_activity"
-		selectColumnsStr = "id, customer_user_id, properties, updated_at"
+		selectString = "COALESCE(customer_user_id, id) AS identity, ISNULL(customer_user_id) AS is_anonymous, properties"
+		if filterString != "" {
+			selectString = selectString + ", MAX(last_activity) AS last_activity"
+		} else {
+			selectString = selectString + ", COALESCE(last_event_at, updated_at) as last_activity"
+		}
+		selectColumnsStr = "id, customer_user_id, properties, COALESCE(last_event_at, updated_at) as last_activity"
 	}
 
 	groupByStr = "GROUP BY identity"
-	timeAndRecordsLimit := "users.updated_at BETWEEN ? AND ? LIMIT 100000000"
-	params = append(params, model.FormatTimeToString(minMax.MinUpdatedAt), model.FormatTimeToString(minMax.MaxUpdatedAt))
+	timeAndRecordsLimit := "last_activity BETWEEN ? AND ? LIMIT 100000000"
+	params = append(params, model.FormatTimeToString(timeWindow.LowerBound), model.FormatTimeToString(timeWindow.UpperBound))
 
 	if filterString != "" {
 		fromStr = fmt.Sprintf("(SELECT %s FROM users %s AND ", selectColumnsStr, whereStmt) +
@@ -718,7 +706,7 @@ func (store *MemSQL) GenerateQueryString(
 			}
 		}
 	} else {
-		fromStr = fmt.Sprintf("users %s AND updated_at BETWEEN ? AND ?", whereStmt)
+		fromStr = fmt.Sprintf("users %s AND last_activity BETWEEN ? AND ?", whereStmt)
 	}
 
 	if model.IsAccountProfiles(profileType) && isDomainGroup {
@@ -784,14 +772,14 @@ func (store *MemSQL) BuildQueryStringForDomains(projectID int64, filterString st
 	whereForDomainGroupQuery := fmt.Sprintf(strings.Replace(whereForUserQuery, "users.source!=", "source=",
 		1) + " AND is_group_user = 1")
 	whereForUserQuery = whereForUserQuery + " AND " + userTimeAndRecordsLimit
-	selectUserColumnsString := fmt.Sprintf("properties, updated_at, group_%d_user_id, id, customer_user_id, is_group_user, group_%d_id", domainGroup.ID, domainGroup.ID)
+	selectUserColumnsString := fmt.Sprintf("properties, COALESCE(last_event_at, updated_at) as last_activity, group_%d_user_id, id, customer_user_id, is_group_user, group_%d_id", domainGroup.ID, domainGroup.ID)
 	userQueryString := fmt.Sprintf("(SELECT " + selectUserColumnsString + " FROM users " + whereForUserQuery + " ) AS users")
 	selectDomainGroupColString := fmt.Sprintf("SELECT id, group_%d_id FROM users", domainGroup.ID)
 	domainGroupQueryString := "( " + selectDomainGroupColString + " " + whereForDomainGroupQuery +
 		" ) AS domain_groups"
 	onCondition := fmt.Sprintf("ON users.group_%d_user_id = domain_groups.id", domainGroup.ID)
 	groupByStr := "GROUP BY identity"
-	selectString := fmt.Sprintf("domain_groups.id AS identity, users.properties as properties, MAX(users.updated_at) AS last_activity, domain_groups.group_%d_id as host_name", domainGroup.ID)
+	selectString := fmt.Sprintf("domain_groups.id AS identity, users.properties as properties, MAX(users.last_activity) AS last_activity, domain_groups.group_%d_id as host_name", domainGroup.ID)
 	selectFilterString, havingString, havingFilterParams := SelectFilterAndHavingStringsForAccounts(filters, nullFilterMap)
 	if selectFilterString != "" {
 		selectString = selectString + ", " + selectFilterString
@@ -908,7 +896,7 @@ func (store *MemSQL) GetUserPropertiesForAccounts(projectID int64, source string
 	return joinStmnt, param, ""
 }
 
-func (store *MemSQL) GetUsersAssociatedToDomain(projectID int64, minMax *model.MinMaxUpdatedAt, groupedFilters map[string][]model.QueryProperty) ([]model.Profile, int) {
+func (store *MemSQL) GetUsersAssociatedToDomain(projectID int64, timeWindow *model.ListingTimeWindow, groupedFilters map[string][]model.QueryProperty) ([]model.Profile, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -922,8 +910,8 @@ func (store *MemSQL) GetUsersAssociatedToDomain(projectID int64, minMax *model.M
 		return nil, http.StatusOK
 	}
 
-	timeAndRecordsLimit := "users.updated_at BETWEEN ? AND ? LIMIT 100000000"
-	limitParams := []interface{}{model.FormatTimeToString(minMax.MinUpdatedAt), model.FormatTimeToString(minMax.MaxUpdatedAt)}
+	timeAndRecordsLimit := "last_activity BETWEEN ? AND ? LIMIT 100000000"
+	limitParams := []interface{}{model.FormatTimeToString(timeWindow.LowerBound), model.FormatTimeToString(timeWindow.UpperBound)}
 
 	groupIdsMap, status := store.GetGroupNameIDMap(projectID)
 	if status != http.StatusFound {
@@ -946,12 +934,12 @@ func (store *MemSQL) GetUsersAssociatedToDomain(projectID int64, minMax *model.M
 	domainID := groupIdsMap[model.GROUP_NAME_DOMAINS]
 	query := fmt.Sprintf(`SELECT domain_groups.id AS identity, 
 	  user_global_user_properties as properties, 
-	  MAX(users.updated_at) AS last_activity, 
+	  MAX(users.last_activity) AS last_activity, 
 	  domain_groups.group_%d_id as host_name 
 	FROM (
 		SELECT id,
 		  properties as user_global_user_properties, 
-		  updated_at,
+		  COALESCE(last_event_at, updated_at) as last_activity,
 		  group_%d_user_id
 		FROM users 
 		WHERE project_id = ? 
@@ -1292,10 +1280,6 @@ func formatAccountProfilesList(profiles []model.Profile, tableProps []string, so
 				profiles[index].Name = profiles[index].HostName
 			}
 		}
-
-		if !(model.IsDomainGroup(source)) && profile.PropertiesUpdatedTimestamp > 0 {
-			profiles[index].LastActivity = *model.UnixToLocalTime(profile.PropertiesUpdatedTimestamp)
-		}
 	}
 }
 
@@ -1347,7 +1331,7 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 	if err := db.Table("users").Select("COALESCE(customer_user_id,id) AS user_id, ISNULL(customer_user_id) AS is_anonymous, properties").
 		Where("project_id=? AND "+userId+"=?", projectID, identity).
 		Group("user_id").
-		Order("updated_at desc").
+		Order("updated_at DESC").
 		Limit(1).
 		Find(&uniqueUser).Error; err != nil {
 		log.WithError(err).WithFields(logFields).WithField("status", err).Error("Failed to get contact details.")
@@ -1393,27 +1377,7 @@ func (store *MemSQL) GetUserActivities(projectID int64, identity string, userId 
 
 	var userActivities []model.UserActivity
 
-	eventNamesToExclude := []string{
-		U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
-		U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED,
-		U.EVENT_NAME_SALESFORCE_LEAD_UPDATED,
-		U.EVENT_NAME_LEAD_SQUARED_LEAD_UPDATED,
-		U.EVENT_NAME_MARKETO_LEAD_UPDATED,
-		U.EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
-		U.EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED,
-		U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED,
-		U.EVENT_NAME_SALESFORCE_TASK_UPDATED,
-		U.EVENT_NAME_SALESFORCE_EVENT_UPDATED,
-		U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED,
-		U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED,
-		U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_UPDATED,
-		U.GROUP_EVENT_NAME_HUBSPOT_DEAL_UPDATED,
-		U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
-		U.GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED,
-		U.GROUP_EVENT_NAME_G2_ALL,
-	}
-
-	eventNamesToExcludePlaceholders := strings.Repeat("?,", len(eventNamesToExclude)-1) + "?"
+	eventNamesToExcludePlaceholders := strings.Repeat("?,", len(model.ExcludedEvents)-1) + "?"
 	eventsQuery := fmt.Sprintf(`SELECT event_names.name AS event_name, 
         event_names.type as event_type, 
         events1.timestamp AS timestamp, 
@@ -1432,8 +1396,8 @@ func (store *MemSQL) GetUserActivities(projectID int64, identity string, userId 
     ON events1.event_name_id=event_names.id 
     AND event_names.project_id=?;`, userId, eventNamesToExcludePlaceholders)
 
-	excludedEventNamesArgs := make([]interface{}, len(eventNamesToExclude))
-	for i, name := range eventNamesToExclude {
+	excludedEventNamesArgs := make([]interface{}, len(model.ExcludedEvents))
+	for i, name := range model.ExcludedEvents {
 		excludedEventNamesArgs[i] = name
 	}
 	queryArgs := []interface{}{

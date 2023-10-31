@@ -20,22 +20,41 @@ func GetPricingForPlansAndAddonsHandler(c *gin.Context) {
 	if projectId == 0 {
 		c.AbortWithError(http.StatusBadRequest, errors.New("INVALID PROJECT ID"))
 	}
-	itemPrices, err := billing.ListPlansAndAddOnsPricesFromChargebee()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, model.PlansAndAddOnsPrices{})
-	}
-	var res model.PlansAndAddOnsPrices
-	for _, itemPrice := range itemPrices {
-		res = append(res, model.SubscriptionProductPrice{
-			Type:         string(itemPrice.ItemType),
-			Name:         itemPrice.Name,
-			ExternalName: itemPrice.ExternalName,
-			ID:           itemPrice.Id,
-			Price:        itemPrice.Price,
-			Period:       int(itemPrice.Period),
-		})
-	}
-	c.JSON(http.StatusOK, res)
+	var defaultReponse model.PlansAndAddOnsPrices
+	defaultReponse = append(defaultReponse, model.SubscriptionProductPrice{
+		Name:         "Basic Monthly USD",
+		ExternalName: "Basic",
+		Type:         "Plan",
+		ID:           "basic-monthly-usd",
+		Price:        100,
+		Period:       1,
+	})
+	defaultReponse = append(defaultReponse, model.SubscriptionProductPrice{
+		Name:         "Basic Yearly USD",
+		ExternalName: "Basic",
+		Type:         "Plan",
+		ID:           "basic-yearly-usd",
+		Price:        1200,
+		Period:       1,
+	})
+	defaultReponse = append(defaultReponse, model.SubscriptionProductPrice{
+		Name:         "Free montly USD",
+		ExternalName: "Free",
+		Type:         "Plan",
+		ID:           "basic-yearly-usd",
+		Price:        0,
+		Period:       1,
+	})
+
+	defaultReponse = append(defaultReponse, model.SubscriptionProductPrice{
+		Name:   "Additional Account",
+		Type:   "AddOn",
+		ID:     "additional-accounts",
+		Price:  50,
+		Period: 1,
+	})
+
+	c.JSON(http.StatusOK, defaultReponse)
 }
 
 func UpdateSubscriptionHandler(c *gin.Context) {
@@ -111,6 +130,19 @@ func BillingUpgradeCallbackHandler(c *gin.Context) {
 	if err != nil {
 		c.Redirect(http.StatusPermanentRedirect, C.GetProtocol()+C.GetAPPDomain()+"/pricing?error=SERVER_ERROR")
 		return
+	subscriptionDetails = append(subscriptionDetails, model.SubscriptionDetail{
+		Type:         "Plan",
+		ID:           "Basic-USD-monthly",
+		Amount:       100,
+		ExternalName: "Basic",
+	})
+
+	defaultResponse := model.Subscription{
+		Status:              "active",
+		RenewsOn:            time.Now(),
+		BillingPeriod:       1,
+		BillingPeriodUnit:   "month",
+		SubscriptionDetails: subscriptionDetails,
 	}
 	c.Redirect(http.StatusPermanentRedirect, C.GetProtocol()+C.GetAPPDomain()+"/pricing")
 }
