@@ -11,21 +11,20 @@ import (
 )
 
 type Profile struct {
-	Identity                   string                 `json:"identity"`
-	Properties                 *postgres.Jsonb        `json:"-"`
-	Name                       string                 `json:"name,omitempty"`
-	HostName                   string                 `json:"host_name,omitempty"`
-	IsAnonymous                bool                   `json:"is_anonymous"`
-	LastActivity               time.Time              `json:"last_activity"`
-	PropertiesUpdatedTimestamp int64                  `json:"-"`
-	TableProps                 map[string]interface{} `json:"table_props"`
-	Score                      float64                `json:"score"`
-	Engagement                 string                 `json:"engagement,omitempty"`
+	Identity     string                 `json:"identity"`
+	Properties   *postgres.Jsonb        `json:"-"`
+	Name         string                 `json:"name,omitempty"`
+	HostName     string                 `json:"host_name,omitempty"`
+	IsAnonymous  bool                   `json:"is_anonymous"`
+	LastActivity time.Time              `json:"last_activity"`
+	TableProps   map[string]interface{} `json:"table_props"`
+	Score        float64                `json:"score"`
+	Engagement   string                 `json:"engagement,omitempty"`
 }
 
-type MinMaxUpdatedAt struct {
-	MinUpdatedAt time.Time `json:"min_updated_at"`
-	MaxUpdatedAt time.Time `json:"max_updated_at"`
+type ListingTimeWindow struct {
+	LowerBound time.Time `json:"lower_bound"`
+	UpperBound time.Time `json:"upper_bound"`
 }
 
 type ContactDetails struct {
@@ -294,4 +293,44 @@ func GetDomainFromURL(url string) string {
 	} else {
 		return url
 	}
+}
+
+var ExcludedEvents = []string{
+	U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
+	U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED,
+	U.EVENT_NAME_SALESFORCE_LEAD_UPDATED,
+	U.EVENT_NAME_LEAD_SQUARED_LEAD_UPDATED,
+	U.EVENT_NAME_MARKETO_LEAD_UPDATED,
+	U.EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
+	U.EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED,
+	U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED,
+	U.EVENT_NAME_SALESFORCE_TASK_UPDATED,
+	U.EVENT_NAME_SALESFORCE_EVENT_UPDATED,
+	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED,
+	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED,
+	U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_UPDATED,
+	U.GROUP_EVENT_NAME_HUBSPOT_DEAL_UPDATED,
+	U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
+	U.GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED,
+	U.GROUP_EVENT_NAME_G2_ALL,
+}
+
+var ExcludedEventsBool = map[string]bool{
+	U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED:              true,
+	U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED:           true,
+	U.EVENT_NAME_SALESFORCE_LEAD_UPDATED:              true,
+	U.EVENT_NAME_LEAD_SQUARED_LEAD_UPDATED:            true,
+	U.EVENT_NAME_MARKETO_LEAD_UPDATED:                 true,
+	U.EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED:           true,
+	U.EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED:       true,
+	U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED:    true,
+	U.EVENT_NAME_SALESFORCE_TASK_UPDATED:              true,
+	U.EVENT_NAME_SALESFORCE_EVENT_UPDATED:             true,
+	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED:   true,
+	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED:      true,
+	U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_UPDATED:        true,
+	U.GROUP_EVENT_NAME_HUBSPOT_DEAL_UPDATED:           true,
+	U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED:     true,
+	U.GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED: true,
+	U.GROUP_EVENT_NAME_G2_ALL:                         true,
 }

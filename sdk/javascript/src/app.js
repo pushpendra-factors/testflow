@@ -183,7 +183,7 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
     
     let _client = null;
     if (opts.host && opts.host !== "")
-        _client = new APIClient(token, opts.host);
+        _client = new APIClient(token, opts.host, opts.host2);
     else 
         _client = new APIClient(token);
 
@@ -270,9 +270,6 @@ function runPostInitProcess(_this, trackOnInit) {
     })
     .then(function() {
         return _this.autoDriftEventsCapture(_this, _this.getConfig("int_drift"));
-    })
-    .then(function() {
-        return _this.autoClearbitRevealCapture(_this, _this.getConfig("int_clear_bit"));
     })
     .catch(function(err) {
         logger.debug(err);
@@ -672,18 +669,6 @@ function handleRevealData(appInstance) {
   }
 }
 
-App.prototype.autoClearbitRevealCapture = function (appInstance, enabled) {
-  if (!enabled) return false; // not enabled.
-  waitForGlobalKey(
-    'dataLayer',
-    handleRevealData.bind(null, appInstance),
-    0,
-    'reveal',
-    2000,
-    20
-  );
-  return true;
-};
 
 App.prototype.autoFormCapture = function(enabled=false) {
     if (!enabled) return false; // not enabled.

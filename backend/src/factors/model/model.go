@@ -900,11 +900,11 @@ type Model interface {
 	AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile) ([]model.Profile, int)
 	GetAccountOverview(projectID int64, id, groupName string) (model.Overview, int, string)
 	GetIntentTimeline(projectID int64, groupName string, id string) (model.UserTimeline, error)
-	GetMinAndMaxUpdatedAt(profileType string, whereStmt string, limitVal int, minMaxQParams []interface{}) (*model.MinMaxUpdatedAt, int, string)
+	GetTimeRangeWindow(profileType string, whereStmt string, limitVal int, timeWindowQParams []interface{}) (*model.ListingTimeWindow, int, string)
 	GetUserDetailsAssociatedToDomain(projectID int64, id string) (model.AccountDetails, map[string]interface{}, int)
 	GetUserPropertiesForAccounts(projectID int64, source string) (string, interface{}, string)
-	GetUsersAssociatedToDomain(projectID int64, minMax *model.MinMaxUpdatedAt, groupedFilters map[string][]model.QueryProperty) ([]model.Profile, int)
-	GenerateAllAccountsQueryString(projectID int64, source string, hasUserProperty bool, isAllUserProperties bool, minMax model.MinMaxUpdatedAt, groupedFilters map[string][]model.QueryProperty, searchFilter []string) (string, []interface{}, error)
+	GetUsersAssociatedToDomain(projectID int64, minMax *model.ListingTimeWindow, groupedFilters map[string][]model.QueryProperty) ([]model.Profile, int)
+	GenerateAllAccountsQueryString(projectID int64, source string, hasUserProperty bool, isAllUserProperties bool, minMax model.ListingTimeWindow, groupedFilters map[string][]model.QueryProperty, searchFilter []string) (string, []interface{}, error)
 	GetGroupNameIDMap(projectID int64) (map[string]int, int)
 
 	// segment

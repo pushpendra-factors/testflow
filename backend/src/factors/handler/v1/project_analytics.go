@@ -22,6 +22,8 @@ func GetFactorsAnalyticsHandler(c *gin.Context) {
 	monthString := c.Query("month")
 	var err error
 
+	log.WithFields(log.Fields{"projectId": projectID}).Info("GetFactorsAnalyticsHandler")
+
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
 	if noOfDaysParam != "" {
@@ -36,6 +38,7 @@ func GetFactorsAnalyticsHandler(c *gin.Context) {
 
 	if projectID != "" {
 		projIdInt, _ := strconv.Atoi(projectID)
+
 		analytics, err = store.GetStore().GetEventUserCountsByProjectID(int64(projIdInt), noOfDays)
 		if err != nil {
 			log.WithError(err).Error("GetEventUserCountsByProjectID")
@@ -88,6 +91,7 @@ func GetFactorsAnalyticsHandler(c *gin.Context) {
 			U.ReturnReadableHtmlFromMaps(c, globalData, model.GlobalDataProjectAnalyticsColumnsName, model.GlobalDataProjectAnalyticsColumnsNameToJsonKeys, fmt.Sprintf("project : %s (%d)", project.Name, project.ID))
 			U.ReturnReadableHtmlFromList(c, integrations, model.GlobalDataIntegrationListColumnsName, model.GlobalDataIntegrationListColumnsNameToJsonKeys, "")
 			U.ReturnReadableHtmlFromMaps(c, resultMap, model.ProjectAnalyticsColumnsName, model.ProjectAnalyticsColumnsNameToJsonKeys, "remove")
+
 			return
 		}
 
