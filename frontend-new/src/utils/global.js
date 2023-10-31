@@ -71,3 +71,13 @@ export function insertUrlParam(history, key, value) {
     window.history.pushState({ path: newurl }, '', newurl);
   }
 }
+
+export function isOnboarded(currentProjectSettings) {
+  return (
+    currentProjectSettings?.onboarding_steps?.more_info_form &&
+    currentProjectSettings?.onboarding_steps?.project_created &&
+    currentProjectSettings?.onboarding_steps?.sdk_setup &&
+    currentProjectSettings?.onboarding_steps?.setup_completed &&
+    currentProjectSettings?.onboarding_steps?.visitor_identification_setup
+  );
+}

@@ -16,6 +16,7 @@ import FaSelect from '../../FaSelect';
 import { getUserPropertiesV2 } from '../../../reducers/coreQuery/middleware';
 import PropertyFilter from '../MyComponents/PropertyFilter';
 import MomentTz from '../../MomentTz';
+import NoDataWithMessage from '../MyComponents/NoDataWithMessage';
 import {
   fetchProjectSettingsV1,
   fetchProjectSettings,
@@ -69,6 +70,7 @@ import UpgradeModal from '../UpgradeModal';
 import RangeNudge from 'Components/GenericComponents/RangeNudge';
 import { showUpgradeNudge } from 'Views/Settings/ProjectSettings/Pricing/utils';
 import CommonBeforeIntegrationPage from 'Components/GenericComponents/CommonBeforeIntegrationPage';
+import { isOnboarded } from 'Utils/global';
 
 const userOptions = getUserOptions();
 
@@ -117,6 +119,8 @@ function UserProfiles({
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
   const [userValueOpts, setUserValueOpts] = useState({});
   const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
+  const [errMsg,setErrMsg]=useState("");
+
 
   useEffect(() => {
     if (!timelinePayload.search_filter) {
@@ -370,7 +374,26 @@ function UserProfiles({
       const formatPayload = { ...payload };
       formatPayload.filters = formatFiltersForPayload(payload?.filters) || [];
       const reqPayload = formatReqPayload(formatPayload, activeSegment);
-      getProfileUsers(activeProject.id, reqPayload);
+      getProfileUsers(activeProject.id, reqPayload).then((response) =>{
+          
+        if (response.type === "FETCH_PROFILE_USERS_FAILED"){
+          if(response.error.status === 400){
+            setErrMsg('400 Bad Request');
+          }
+          else  if(response.error.status === 500){
+            setErrMsg('The server encountered an internal error and could not complete your request');
+          }
+        }
+
+        if (response.type === "FETCH_PROFILE_USERS_FULFILLED"){
+          if (response.status === 200){
+            if(response.payload.length === 0){
+              setErrMsg('No User Profiles Found')
+            }
+          }
+        }
+
+      });
     }
   };
 
@@ -709,7 +732,27 @@ function UserProfiles({
       </ProfilesWrapper>
     );
   }
-  return <CommonBeforeIntegrationPage />;
+
+  if (errMsg !== ""&& isIntegrationEnabled) {
+    return (
+      <NoDataWithMessage
+      message={
+         errMsg
+      }
+    />
+    );
+
+  }
+
+  return (    
+    
+    isOnboarded(currentProjectSettings)? (
+        <CommonBeforeIntegrationPage />) 
+        :(   <NoDataWithMessage
+      message={
+      'Onboarding Not Completed'          
+      }
+    /> ));
 }
 
 const mapStateToProps = (state) => ({
