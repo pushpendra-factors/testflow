@@ -46,10 +46,11 @@ func DropWebhook(url, secret string, payload interface{}) (map[string]interface{
 	defer resp.Body.Close()
 	bodyBytes, _ := ioutil.ReadAll(resp.Body)
 	response := make(map[string]interface{})
-	if resp.StatusCode == 201 || resp.StatusCode == 200 {
-		response["status"] = "ok"
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		response["status"] = "success"
 	} else {
 		log.WithField("request", request).Error("Failed to send webhook request")
+		response["status"] = "failure"
 		response["error"] = string(bodyBytes)
 		response["statuscode"] = resp.StatusCode
 	}
