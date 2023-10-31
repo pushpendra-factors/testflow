@@ -130,19 +130,6 @@ func BillingUpgradeCallbackHandler(c *gin.Context) {
 	if err != nil {
 		c.Redirect(http.StatusPermanentRedirect, C.GetProtocol()+C.GetAPPDomain()+"/pricing?error=SERVER_ERROR")
 		return
-	subscriptionDetails = append(subscriptionDetails, model.SubscriptionDetail{
-		Type:         "Plan",
-		ID:           "Basic-USD-monthly",
-		Amount:       100,
-		ExternalName: "Basic",
-	})
-
-	defaultResponse := model.Subscription{
-		Status:              "active",
-		RenewsOn:            time.Now(),
-		BillingPeriod:       1,
-		BillingPeriodUnit:   "month",
-		SubscriptionDetails: subscriptionDetails,
 	}
 	c.Redirect(http.StatusPermanentRedirect, C.GetProtocol()+C.GetAPPDomain()+"/pricing")
 }
