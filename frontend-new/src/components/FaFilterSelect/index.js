@@ -34,6 +34,7 @@ import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import { selectedOptionsMapper } from 'Components/GenericComponents/FaSelect/utils';
 import { processProperties } from 'Utils/dataFormatter';
 import { PropTextFormat } from 'Utils/dataFormatter';
+import truncateURL from 'Utils/truncateURL';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 const rangePicker = [OPERATORS['equalTo'], OPERATORS['notEqualTo']];
@@ -275,6 +276,10 @@ const FaFilterSelect = ({
     // onNumericalSelect(ev);
 
     setValuesState(String(ev.target.value).toString());
+  };
+
+  const setTextValue = (event) => {
+    setValuesState(event.target.value);
   };
 
   const parseDateRangeFilter = (fr, to, value) => {
@@ -646,6 +651,8 @@ const FaFilterSelect = ({
         operatorState === OPERATORS['notEqualTo'] ||
         operatorState === OPERATORS['doesNotContain']
           ? 'Single'
+          : operatorState === OPERATORS['contain']
+          ? 'Input'
           : 'Multi';
       let valueOptions = valueOpts?.[propState?.name]
         ? Object.entries(valueOpts[propState.name]).map((val) => {
@@ -655,6 +662,7 @@ const FaFilterSelect = ({
             };
           })
         : [];
+
       valueOptions = selectedOptionsMapper(valueOptions, valuesState);
       if (variant === 'Single') {
         selectionComponent = (
@@ -668,6 +676,43 @@ const FaFilterSelect = ({
             allowSearch={true}
             loadingState={valueOptsLoading}
           />
+        );
+      } else if (variant === 'Input') {
+        selectionComponent = (
+          <div>
+            {containButton && (
+              <Button
+                disabled={disabled}
+                trigger={viewMode ? [] : 'hover'}
+                className={`fa-button--truncate ${
+                  viewMode ? 'static-button' : ''
+                } filter-buttons-radius filter-buttons-margin`}
+                type={viewMode ? 'default' : 'link'}
+                onClick={() => (viewMode ? null : setContainButton(false))}
+              >
+                {valuesState ? valuesState : 'Enter Value'}
+              </Button>
+            )}
+            {!containButton && (
+              <Input
+                type='text'
+                value={valuesState}
+                placeholder={'Enter Value'}
+                autoFocus={true}
+                onBlur={() => {
+                  emitFilter();
+                  setContainButton(true);
+                }}
+                onPressEnter={() => {
+                  emitFilter();
+                  setContainButton(true);
+                }}
+                onChange={setTextValue}
+                disabled={disabled}
+                className={`input-value filter-buttons-radius filter-buttons-margin`}
+              ></Input>
+            )}
+          </div>
         );
       } else {
         selectionComponent = (
@@ -755,48 +800,56 @@ const FaFilterSelect = ({
       >
         {propState.type === 'categorical' ? (
           <>
-            <Tooltip
-              zIndex={99999}
-              mouseLeaveDelay={0}
-              title={
-                valuesState && valuesState.length
-                  ? valuesState
-                      .map((vl) =>
-                        valueDisplayNames[vl]
-                          ? valueDisplayNames[vl]
-                          : formatCsvUploadValue(vl)
-                      )
-                      .join(', ')
-                  : null
-              }
-              color={TOOLTIP_CONSTANTS.DARK}
-            >
-              <Button
-                className={`fa-button--truncate ${
-                  caller === 'profiles' ? 'fa-button--truncate-sm' : ''
-                }  ${
-                  viewMode
-                    ? 'btn-right-round static-button'
-                    : 'filter-buttons-radius'
-                } filter-buttons-margin`}
-                type={viewMode ? 'default' : 'link'}
-                disabled={disabled}
-                onClick={() =>
-                  viewMode ? null : setValuesSelectionOpen(!valuesSelectionOpen)
-                }
-              >
-                {valuesState && valuesState.length
-                  ? valuesState
-                      .map((vl) =>
-                        valueDisplayNames[vl]
-                          ? valueDisplayNames[vl]
-                          : formatCsvUploadValue(vl)
-                      )
-                      .join(', ')
-                  : 'Select Values'}
-              </Button>
-            </Tooltip>
-            {valuesSelectionOpen && selectionComponent}
+            {operatorState === OPERATORS['contain'] ? (
+              selectionComponent
+            ) : (
+              <>
+                <Tooltip
+                  zIndex={99999}
+                  mouseLeaveDelay={0}
+                  title={
+                    valuesState && valuesState.length
+                      ? valuesState
+                          .map((vl) =>
+                            valueDisplayNames[vl]
+                              ? valueDisplayNames[vl]
+                              : formatCsvUploadValue(vl)
+                          )
+                          .join(', ')
+                      : null
+                  }
+                  color={TOOLTIP_CONSTANTS.DARK}
+                >
+                  <Button
+                    className={`fa-button--truncate ${
+                      caller === 'profiles' ? 'fa-button--truncate-sm' : ''
+                    }  ${
+                      viewMode
+                        ? 'btn-right-round static-button'
+                        : 'filter-buttons-radius'
+                    } filter-buttons-margin`}
+                    type={viewMode ? 'default' : 'link'}
+                    disabled={disabled}
+                    onClick={() =>
+                      viewMode
+                        ? null
+                        : setValuesSelectionOpen(!valuesSelectionOpen)
+                    }
+                  >
+                    {valuesState && valuesState.length
+                      ? valuesState
+                          .map((vl) =>
+                            valueDisplayNames[vl]
+                              ? truncateURL(valueDisplayNames[vl])
+                              : formatCsvUploadValue(vl)
+                          )
+                          .join(', ')
+                      : 'Select Values'}
+                  </Button>
+                </Tooltip>
+                {valuesSelectionOpen && selectionComponent}
+              </>
+            )}
           </>
         ) : null}
 
@@ -974,7 +1027,7 @@ const FaFilterSelect = ({
                   ? valuesState
                       .map((vl) =>
                         valueDisplayNames[vl]
-                          ? valueDisplayNames[vl]
+                          ? truncateURL(valueDisplayNames[vl])
                           : formatCsvUploadValue(vl)
                       )
                       .join(', ')

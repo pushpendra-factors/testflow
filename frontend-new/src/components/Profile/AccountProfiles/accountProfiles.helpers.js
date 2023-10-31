@@ -113,11 +113,7 @@ export const getColumns = ({
   const columns = [
     {
       // Company Name Column
-      title: (
-        <div className={headerClassStr}>
-          {IsDomainGroup(source) ? 'Account Domain' : 'Company Name'}
-        </div>
-      ),
+      title: <div className={headerClassStr}>Account Domain</div>,
       dataIndex: 'account',
       key: 'account',
       width: 300,
@@ -267,7 +263,7 @@ export const computeFilterProperties = ({
   if (profileType === 'account') {
     if (IsDomainGroup(source)) {
       props[GROUP_NAME_DOMAINS] = groupProperties[GROUP_NAME_DOMAINS];
-      Object.keys(availableGroups).forEach((group) => {
+      Object.keys(availableGroups || {}).forEach((group) => {
         props[group] = groupProperties[group];
       });
     } else props[source] = groupProperties[source];

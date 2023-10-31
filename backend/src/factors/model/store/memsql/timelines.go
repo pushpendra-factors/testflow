@@ -2252,6 +2252,7 @@ func FormatAnalyzeResultForProfiles(result *model.QueryResult, profileType strin
 			if err != nil {
 				return nil, fmt.Errorf("failed at encoding props")
 			}
+			row.HostName = profile[3].(string)
 		}
 
 		profiles = append(profiles, row)

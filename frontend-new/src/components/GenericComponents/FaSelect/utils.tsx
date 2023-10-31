@@ -7,7 +7,7 @@ export const selectedOptionsMapper = (
   selectedOptions: string[]
 ) => {
   const optionsValues = options?.map((op) => op.value);
-  if (!selectedOptions) return options;
+  if (!selectedOptions || !Array.isArray(selectedOptions)) return options;
   selectedOptions?.map((opValue) => {
     const index = optionsValues.indexOf(opValue);
     if (index > -1) {

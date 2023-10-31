@@ -23,6 +23,10 @@ type Project struct {
 	PrivateToken          string          `gorm:"size:32" json:"private_token"`
 	CreatedAt             time.Time       `json:"created_at"`
 	UpdatedAt             time.Time       `json:"updated_at"`
+	EnableBilling         bool            `json:"enable_billing"`
+	BillingSubscriptionID string          `json:"billing_subscription_id"`
+	BillingAccountID      string          `json:"billing_account_id"`
+	BillingLastSyncedAt   time.Time       `json:"billing_last_synced_at"`
 	ProjectURI            string          `json:"project_uri"`
 	TimeFormat            string          `json:"time_format"`
 	DateFormat            string          `json:"date_format"`
@@ -69,6 +73,9 @@ const (
 )
 
 const DefaultProjectName = "My Project"
+
+const DEFAULT_PLAN = PLAN_FREE
+const DEFAULT_PLAN_ID = PLAN_ID_FREE
 
 type InteractionSettings struct {
 	UTMMappings map[string][]string `json:"utm_mapping"`

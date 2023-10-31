@@ -875,36 +875,41 @@ func GetAllTimestampsAndOffsetBetweenByType(from, to int64, typ, timezone string
 	return []time.Time{}, []string{}
 }
 
-func buildAddJoinForEventAnalyticsGroupQuery(projectID int64, groupID, scopeGroupID int, source string, globalUserProperties []model.QueryProperty, isAcconutsSegment, isScopeDomains bool) (string, []interface{}) {
+func buildAddJoinForEventAnalyticsGroupQuery(projectID int64, groupID, scopeGroupID int, source string, globalUserProperties []model.QueryProperty, isAccountSegment, isScopeDomains bool) (string, []interface{}) {
 
 	hasGlobalGroupPropertiesFilter := model.CheckIfHasGlobalUserFilter(globalUserProperties)
 
-	isGroupEventUser := groupID > 0
+	isGroupEvent := groupID > 0
 
 	if isScopeDomains {
+		jointStmnt := " LEFT JOIN users as user_groups on events.user_id = user_groups.id AND user_groups.project_id = ? "
+		params := []interface{}{projectID}
 
-		if hasGlobalGroupPropertiesFilter {
-			globalGroupIDColumns, globalGroupSource := model.GetDomainsAsscocaitedGroupSourceANDColumnIDs(globalUserProperties, nil)
-			jointStmnt := fmt.Sprintf(" LEFT JOIN users as user_groups on events.user_id = user_groups.id AND user_groups.project_id = ? LEFT JOIN "+
+		if hasGlobalGroupPropertiesFilter || (isAccountSegment && !isGroupEvent) {
+			groupUsersJoin := fmt.Sprintf(" LEFT JOIN users as user_groups on events.user_id = user_groups.id AND user_groups.project_id = ? LEFT JOIN "+
 				"users as group_users ON user_groups.group_%d_user_id = group_users.group_%d_user_id AND group_users.project_id = ? "+
-				"AND group_users.is_group_user = true AND group_users.source IN ( %s ) AND ( %s )", scopeGroupID, scopeGroupID, globalGroupSource,
-				globalGroupIDColumns)
-			return jointStmnt, []interface{}{projectID, projectID}
+				"AND group_users.is_group_user = true", scopeGroupID, scopeGroupID)
+
+			jointStmnt = groupUsersJoin
+			params = append(params, projectID)
+
+			if hasGlobalGroupPropertiesFilter {
+				globalGroupIDColumns, globalGroupSource := model.GetDomainsAsscocaitedGroupSourceANDColumnIDs(globalUserProperties, nil)
+				jointStmnt = jointStmnt + fmt.Sprintf(" AND group_users.source IN ( %s ) AND ( %s )", globalGroupSource, globalGroupIDColumns)
+			}
+
+			if isAccountSegment && !isGroupEvent {
+				jointStmnt = jointStmnt + fmt.Sprintf(" JOIN users as domains ON user_groups.group_%d_user_id = domains.id "+
+					"AND domains.project_id = ? AND domains.is_group_user = true AND domains.source = ?", scopeGroupID)
+
+				params = append(params, projectID, model.UserSourceDomains)
+			}
 		}
 
-		jointStmnt := " LEFT JOIN users as user_groups on events.user_id = user_groups.id AND user_groups.project_id = ? "
-		return jointStmnt, []interface{}{projectID}
+		return jointStmnt, params
 	}
 
-	if !isGroupEventUser {
-		if isAcconutsSegment {
-			addSelect := fmt.Sprintf(" LEFT JOIN users ON events.user_id = users.id AND users.project_id = ? LEFT JOIN "+
-				"users AS user_groups ON users.customer_user_id = user_groups.customer_user_id AND "+
-				"user_groups.project_id = ? AND user_groups.group_%d_user_id IS NOT NULL AND user_groups.source = ? "+
-				"LEFT JOIN users AS group_users ON COALESCE(user_groups.group_%d_user_id, users.group_%d_user_id) = group_users.id AND group_users.project_id = ? AND "+
-				"group_users.source = ? ", scopeGroupID, scopeGroupID, scopeGroupID)
-			return addSelect, []interface{}{projectID, projectID, model.GroupUserSource[source], projectID, model.GroupUserSource[source]}
-		}
+	if !isGroupEvent {
 
 		if hasGlobalGroupPropertiesFilter {
 			addSelect := fmt.Sprintf(" LEFT JOIN users ON events.user_id = users.id AND users.project_id = ? LEFT JOIN "+
@@ -949,10 +954,11 @@ func GetUserSelectStmntForUserORGroup(caller string, scopeGroupID int, isGroupEv
 
 	if model.IsAccountProfiles(caller) {
 		if scopeGroupID > 0 {
+			str := "users.coal_group_user_id as coal_group_user_id"
 			if isGroupEvent {
-				return "events.user_id as coal_group_user_id, users.properties as properties"
+				return str + ", COALESCE(users.last_event_at, users.updated_at) as last_activity, users.properties as properties"
 			}
-			return fmt.Sprintf("COALESCE(user_groups.group_%d_user_id, users.group_%d_user_id) as coal_group_user_id, users.group_properties as properties", scopeGroupID, scopeGroupID)
+			return str + ",users.user_last_event as last_activity, users.group_properties as properties"
 		}
 		return ""
 	}
@@ -1030,7 +1036,7 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 	isEventGroupQuery := scopeGroupID > 0
 	isEventGroupQueryDomains := isEventGroupQuery && model.IsQueryGroupNameAllAccounts(q.GroupAnalysis)
 
-	selectStringStmt, err := store.selectStringForSegments(projectID, q.Source, q.Caller, scopeGroupID)
+	selectStringStmt, err := store.selectStringForSegments(projectID, q.Caller, scopeGroupID)
 	if err != nil {
 		return steps, stepsToKeysMap, err
 	}
@@ -1064,6 +1070,10 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 		}
 	}
 
+	// add search filter for all accounts
+	searchFilterStmt, searchParams, globalPropsWithoutSearchFil := searchFilterStringForSegments(q.Caller, scopeGroupID, q.GlobalUserProperties)
+	q.GlobalUserProperties = globalPropsWithoutSearchFil
+
 	var commonSelectArr []string
 	for i := range q.EventsWithProperties {
 		userSelect := GetUserSelectStmntForUserORGroup(q.Caller, scopeGroupID, groupIDS[i] != 0, isEventGroupQueryDomains)
@@ -1088,20 +1098,35 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 		}
 	}
 
-	// Adding source string for segments
-	var addSourceStmt, addColsString string
-	var status int
-	if model.IsAnyProfiles(q.Caller) {
-		if scopeGroupID == 0 {
-			addSourceStmt, addColsString, status = store.addSourceFilterForSegments(projectID, q.Source, q.Caller)
-			if status != http.StatusOK {
-				return steps, stepsToKeysMap, errors.New("CRMs not enabled for accounts timeline")
-			}
-		} else {
-			addColsString = "users.updated_at, users.properties_updated_timestamp"
-		}
+	var addSourceStmt string
+	if model.IsUserProfiles(q.Caller) {
+		addSourceStmt = store.addSourceFilterForSegments(projectID, q.Source, q.Caller)
 	}
+
+	var addColsStringArr []string
+
 	for i, ewp := range q.EventsWithProperties {
+
+		// Adding source string for segments
+		if model.IsAnyProfiles(q.Caller) {
+			var addColsString string
+			if model.IsAccountProfiles(q.Caller) && groupIDS[i] == 0 {
+				addColsString = "COALESCE(user_groups.last_event_at,user_groups.updated_at) as user_last_event"
+			} else {
+				addColsString = "users.updated_at, users.last_event_at"
+			}
+
+			if model.IsUserProfiles(q.Caller) {
+				addColsString = addColsString + ", users.is_group_user, users.source"
+			}
+
+			if model.IsAccountProfiles(q.Caller) {
+				addColsString = addColsString + fmt.Sprintf(", domains.group_%d_id as host_name, domains.id as coal_group_user_id", scopeGroupID)
+			}
+
+			addColsStringArr = append(addColsStringArr, addColsString)
+		}
+
 		refStepName := stepNameByIndex(i)
 		steps = append(steps, refStepName)
 
@@ -1145,8 +1170,15 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 		// Join support for original users of group.
 		if groupIDS[i] != 0 {
 			if model.IsAccountProfiles(q.Caller) {
-				addJoinStmnt = "LEFT JOIN users ON events.user_id=users.id AND users.project_id = ?"
-				stepParams = append(stepParams, projectID)
+				addJoinStmnt = fmt.Sprintf("LEFT JOIN users ON events.user_id=users.id AND users.project_id = ? "+
+					"JOIN users as domains ON users.group_%d_user_id = domains.id AND domains.project_id = ? "+
+					"AND domains.is_group_user = true AND domains.source = ?", scopeGroupID)
+
+				stepParams = append(stepParams, projectID, projectID, model.UserSourceDomains)
+				if searchFilterStmt != "" {
+					addJoinStmnt = addJoinStmnt + " " + searchFilterStmt
+					stepParams = append(stepParams, searchParams...)
+				}
 			} else if isEventGroupQuery {
 				var groupJoinParams []interface{}
 				addJoinStmnt, groupJoinParams = buildAddJoinForEventAnalyticsGroupQuery(projectID, groupIDS[i], scopeGroupID, q.GroupAnalysis, q.GlobalUserProperties, model.IsAccountProfiles(q.Caller), isEventGroupQueryDomains)
@@ -1159,6 +1191,11 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 			var groupJoinParams []interface{}
 			addJoinStmnt, groupJoinParams = buildAddJoinForEventAnalyticsGroupQuery(projectID, groupIDS[i], scopeGroupID, q.GroupAnalysis, q.GlobalUserProperties, model.IsAccountProfiles(q.Caller), isEventGroupQueryDomains)
 			stepParams = append(stepParams, groupJoinParams...)
+
+			if searchFilterStmt != "" {
+				addJoinStmnt = addJoinStmnt + " " + searchFilterStmt
+				stepParams = append(stepParams, searchParams...)
+			}
 		} else {
 			stepParams = append(stepParams, projectID)
 		}
@@ -1177,7 +1214,7 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 			"", refStepName, stepSelect, stepParams, addJoinStmnt, stepGroupBy, stepOrderBy, q.GlobalUserProperties, isEventGroupQueryDomains)
 
 		// adding source check for segments
-		if model.IsAnyProfiles(q.Caller) && scopeGroupID == 0 {
+		if model.IsUserProfiles(q.Caller) {
 			if C.EnableOptimisedFilterOnEventUserQuery() {
 				if i == 0 {
 					addSourceStmt = strings.ReplaceAll(addSourceStmt, "_event_users_view.", fmt.Sprintf("%s_event_users_view.", refStepName))
@@ -1197,10 +1234,11 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 		if i < len(q.EventsWithProperties)-1 {
 			*qStmnt = *qStmnt + ","
 		}
+
 	}
 
 	// adding source columns
-	result := addSourceColForSegment(qStmnt, q.Caller, addColsString)
+	result := addSourceColForSegment(qStmnt, q.Caller, addColsStringArr)
 	if result != "" {
 		*qStmnt = result
 	}
@@ -1211,47 +1249,68 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 	return steps, stepsToKeysMap, nil
 }
 
-func (store *MemSQL) selectStringForSegments(projectID int64, source string, caller string, scopeGroupID int) (string, error) {
+// payload is sent such that queryProp.Property is empty for search filter
+// removing such queryProps from payload and forming a string of search filters
+func searchFilterStringForSegments(caller string, scopeGroupID int, globalUserProperties []model.QueryProperty) (string, []interface{}, []model.QueryProperty) {
+	if !model.IsAccountProfiles(caller) {
+		return "", nil, globalUserProperties
+	}
+
+	newGlobalUserProps := make([]model.QueryProperty, 0)
+	var searchFilterStr string
+	searchFiltersParams := make([]interface{}, 0)
+
+	for _, queryProp := range globalUserProperties {
+		if queryProp.Property != "" {
+			newGlobalUserProps = append(newGlobalUserProps, queryProp)
+			continue
+		}
+
+		if searchFilterStr == "" {
+			searchFilterStr = fmt.Sprintf("AND (domains.group_%d_id RLIKE ?", scopeGroupID)
+		} else {
+			searchFilterStr = searchFilterStr + fmt.Sprintf(" OR domains.group_%d_id RLIKE ?", scopeGroupID)
+		}
+		searchFiltersParams = append(searchFiltersParams, queryProp.Value)
+	}
+
+	if searchFilterStr != "" {
+		searchFilterStr = searchFilterStr + ")"
+	}
+
+	return searchFilterStr, searchFiltersParams, newGlobalUserProps
+}
+
+func (store *MemSQL) selectStringForSegments(projectID int64, caller string, scopeGroupID int) (string, error) {
 	commonSelect := ""
 	if model.IsUserProfiles(caller) {
 		commonSelect = fmt.Sprintf("%%, users.updated_at as last_activity, ISNULL(users.customer_user_id) AS is_anonymous, users.properties as properties")
 		commonSelect = strings.ReplaceAll(commonSelect, "%", "%s")
 
 	} else if model.IsAccountProfiles(caller) {
-		group, errCode := store.GetGroup(projectID, source)
+		group, errCode := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
 		if errCode != http.StatusFound || group == nil {
 			log.WithField("status", errCode).Error("Failed to get group while adding group info.")
 			return commonSelect, errors.New("group not found")
 		}
-		if model.IsAllowedAccountGroupNames(source) && source == group.Name {
-			commonSelect = fmt.Sprintf("CASE WHEN users.is_group_user = 1 THEN events.user_id ELSE users.group_%d_user_id END AS identity%%, users.updated_at as last_activity, users.properties as properties", group.ID)
-			if scopeGroupID > 0 {
-				commonSelect = fmt.Sprintf("%%, users.updated_at as last_activity, users.properties_updated_timestamp")
-			}
-			commonSelect = strings.ReplaceAll(commonSelect, "%", "%s")
-		} else {
-			return commonSelect, errors.New("CRMs not enabled for accounts timeline")
+		if scopeGroupID > 0 {
+			commonSelect = fmt.Sprintf("%%, users.host_name as host_name")
 		}
+		commonSelect = strings.ReplaceAll(commonSelect, "%", "%s")
 	}
 	return commonSelect, nil
 }
 
-func addSourceColForSegment(qStmnt *string, caller string, addColsString string) string {
+func addSourceColForSegment(qStmnt *string, caller string, addColsString []string) string {
 	result := ""
 	if model.IsAnyProfiles(caller) && C.EnableOptimisedFilterOnEventUserQuery() {
 		qStmtSplit := strings.Split(*qStmnt, "(SELECT")
 		result = qStmtSplit[0] + "(SELECT" + qStmtSplit[1]
+		index := 0
 		for idx := 2; idx < len(qStmtSplit); idx++ {
 			if idx%2 == 0 {
-				colString := ""
-				if !strings.Contains(qStmtSplit[idx], "as global_user_properties") {
-					colString = "users.properties as global_user_properties, "
-				}
-				if !strings.Contains(qStmtSplit[idx], "users.customer_user_id,") {
-					colString = colString + "users.customer_user_id" + ", "
-				}
-				colString = colString + addColsString
-				result = result + "(SELECT " + colString + ", " + qStmtSplit[idx]
+				result = result + "(SELECT " + addColsString[index] + ", " + qStmtSplit[idx]
+				index++
 			} else {
 				result = result + "(SELECT " + qStmtSplit[idx]
 			}
@@ -1260,58 +1319,29 @@ func addSourceColForSegment(qStmnt *string, caller string, addColsString string)
 	return result
 }
 
-// Adds source string, Example
-// WITH  step_0 AS (SELECT users.id as identity, users.updated_at as last_activity, users.properties as properties
-// FROM events  JOIN users ON events.user_id=users.id AND users.project_id = '2000009' WHERE events.project_id='2000009'
-// AND timestamp='1671686385' AND timestamp='1674105588' AND  ( events.event_name_id = '061b66b9-ea69-4aae-bd09-551e868ba320' )
-// AND ( (JSON_EXTRACT_STRING(events.properties, '$salesforce_campaign_type') = 'Some Salesforce Type') )
-// AND (users.is_group_user=1) AND users.group_1_id IS NOT NULL), step_1 AS (SELECT users.id as identity,
-// users.updated_at as last_activity, users.properties as properties FROM events  JOIN users ON
-// events.user_id=users.id AND users.project_id = '2000009' WHERE events.project_id='2000009' AND timestamp='1671686385'
-// AND timestamp='1674105588' AND  ( events.event_name_id = '061b66b9-ea69-4aae-bd09-551e868ba320' )  AND
-// ( (JSON_EXTRACT_STRING(events.properties, '$channel') = 'ChannelName1') ) AND (users.is_group_user=1) AND
-// users.group_1_id IS NOT NULL)
 func (store *MemSQL) addSourceFilterForSegments(projectID int64,
-	source string, caller string) (string, string, int) {
+	source string, caller string) string {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var addSourceStmt string
-	addColString := " " + "users.updated_at, users.properties_updated_timestamp,"
 	var selectVal string
 	if C.EnableOptimisedFilterOnEventUserQuery() {
 		selectVal = "_event_users_view"
 	} else {
 		selectVal = "users"
 	}
-	status := http.StatusBadRequest
-	if model.IsUserProfiles(caller) {
-		addSourceStmt = " " + fmt.Sprintf("(%s.is_group_user=0 OR %s.is_group_user IS NULL)", selectVal, selectVal)
-		if model.UserSourceMap[source] == model.UserSourceWeb {
-			addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND (%s.source="+strconv.Itoa(model.UserSourceMap[source])+" OR %s.source IS NULL)", selectVal, selectVal)
-		} else if model.IsDomainGroup(source) {
-			addSourceStmt = addSourceStmt + ""
-		} else {
-			addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.source=", selectVal) + strconv.Itoa(model.UserSourceMap[source])
-		}
-		addColString = addColString + " users.is_group_user, users.source"
-		status = http.StatusOK
-	} else if model.IsAccountProfiles(caller) {
-		group, errCode := store.GetGroup(projectID, source)
-		if errCode != http.StatusFound || group == nil {
-			log.WithField("status", errCode).Error("Failed to get group while adding group info.")
-		}
-		addSourceStmt = " " + fmt.Sprintf("%s.source!=%d", selectVal, model.UserSourceDomains)
-		if model.IsAllowedAccountGroupNames(source) && source == group.Name {
-			addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.group_%d_id IS NOT NULL", selectVal, group.ID)
-			addColString = addColString + " " + fmt.Sprintf("users.group_%d_id, users.source, users.group_%d_user_id, users.is_group_user", group.ID, group.ID)
-			status = http.StatusOK
-		} else {
-			log.WithFields(logFields).Error(fmt.Sprintf("%s not enabled for this project.", source))
-		}
+	addSourceStmt = " " + fmt.Sprintf("(%s.is_group_user=0 OR %s.is_group_user IS NULL)", selectVal, selectVal)
+	if model.UserSourceMap[source] == model.UserSourceWeb {
+		addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND (%s.source="+strconv.Itoa(model.UserSourceMap[source])+" OR %s.source IS NULL)", selectVal, selectVal)
+	} else if model.IsDomainGroup(source) {
+		addSourceStmt = addSourceStmt + ""
+	} else {
+		addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.source=", selectVal) + strconv.Itoa(model.UserSourceMap[source])
 	}
-	return addSourceStmt, addColString, status
+
+	return addSourceStmt
 }
 
 /*
@@ -1510,9 +1540,8 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 			aggregateSelect = fmt.Sprintf("SELECT coal_group_user_id as identity, is_anonymous, last_activity, properties FROM %s GROUP BY identity ORDER BY last_activity DESC LIMIT 1000", aggregateFromStepName)
 		}
 	} else if model.IsAccountProfiles(query.Caller) {
-		aggregateSelect = fmt.Sprintf("SELECT identity, last_activity, properties FROM %s GROUP BY identity ORDER BY last_activity DESC LIMIT 1000", aggregateFromStepName)
 		if scopeGroupID > 0 {
-			aggregateSelect = fmt.Sprintf("SELECT coal_group_user_id as identity, last_activity, properties FROM %s GROUP BY identity ORDER BY last_activity DESC LIMIT 1000", aggregateFromStepName)
+			aggregateSelect = fmt.Sprintf("SELECT coal_group_user_id as identity, last_activity, properties, host_name FROM %s GROUP BY identity ORDER BY last_activity DESC LIMIT 1000", aggregateFromStepName)
 		}
 	} else {
 		// Limit is applicable only on the following. Because attribution calls this.
@@ -1987,7 +2016,7 @@ func buildSegmentSelectString(caller string, scopeGroupID int, step string) stri
 	} else if model.IsAccountProfiles(caller) {
 		selectString = fmt.Sprintf("%s.identity, %s.last_activity, %s.properties", step, step, step)
 		if scopeGroupID > 0 {
-			selectString = fmt.Sprintf("%s.coal_group_user_id as coal_group_user_id, %s.last_activity, %s.properties", step, step, step)
+			selectString = fmt.Sprintf("%s.coal_group_user_id as coal_group_user_id, %s.last_activity, %s.properties, %s.host_name", step, step, step, step)
 		}
 	}
 	return selectString

@@ -17,6 +17,7 @@ import { OPERATORS } from 'Utils/constants';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
 import { processProperties } from 'Utils/dataFormatter';
+import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 
 const ENGAGEMENT_SUPPORTED_OPERATORS = [
   OPERATORS['equalTo'],
@@ -88,7 +89,6 @@ function EventsBlock({
 
   useEffect(() => {
     let showOpts = [];
-
     if (groupAnalysis === 'users') {
       showOpts = [
         ...eventOptions.filter(
@@ -98,7 +98,10 @@ function EventsBlock({
             )
         )
       ];
-    } else if (groupAnalysis === 'events') {
+    } else if (
+      groupAnalysis === 'events' ||
+      groupAnalysis === GROUP_NAME_DOMAINS
+    ) {
       showOpts = [...eventOptions];
     } else {
       const [label] =

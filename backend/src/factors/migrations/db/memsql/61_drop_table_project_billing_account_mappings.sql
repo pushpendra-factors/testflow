@@ -1,0 +1,1 @@
+DROP TABLE project_billing_account_mappings;

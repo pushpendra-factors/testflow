@@ -27,3 +27,13 @@ type SubscriptionDetail struct {
 	Amount       int64  `json:"amount"`
 	ExternalName string `json:"external_name"`
 }
+
+type UpdateSubscriptionParams struct {
+	UpdatedPlanID string         `json:"updated_plan_id"`
+	Addons        []AddOnsUpdate `json:"add_ons"`
+}
+
+type AddOnsUpdate struct {
+	AddOnID  string `json:"addon_id"`
+	Quantity int32  `json:"quantity"`
+}

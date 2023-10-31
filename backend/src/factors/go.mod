@@ -60,6 +60,8 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
+require github.com/chargebee/chargebee-go/v3 v3.9.1
+
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/KyleBanks/depth v1.2.1 // indirect
