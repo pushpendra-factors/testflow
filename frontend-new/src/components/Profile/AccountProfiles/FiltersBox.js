@@ -180,8 +180,6 @@ const FiltersBox = ({
     );
   }, [appliedFilters.eventsList.length, appliedFilters.filters.length]);
 
-  const showEventsSection = !IsDomainGroup(source);
-
   return (
     <div className={cx(styles['filters-box-container'], 'flex flex-col')}>
       <div className='px-6 pt-4 pb-8 flex flex-col row-gap-3'>
@@ -237,7 +235,7 @@ const FiltersBox = ({
           </Text>
         </Button>
       </div>
-      <ControlledComponent controller={showEventsSection === true}>
+      <ControlledComponent controller={true}>
         <>
           <div className={styles['and-tag']}>
             <div className={cx(styles['and-tag-box'], 'inline')}>
