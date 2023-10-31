@@ -7,15 +7,19 @@ var INVALID_INPUT string = "INVALID_INPUT"
 var PROCESSING_FAILED string = "PROCESSING_FAILED"
 var DUPLICATE_RECORD string = "DUPLICATE_RECORD"
 var DEPENDENT_RECORD_PRESENT string = "DEPENDENT_RECORD_PRESENT"
+var NO_DATA_FOUND string = "No Data Found"
+var SERVER_ERROR string = "Internal Server Error"
 
 var ErrorMessages = map[string]string{
 	INVALID_PROJECT:   "Project Id is Invalid",
 	INVALID_INPUT:     "Input Params are incorrect",
 	PROCESSING_FAILED: "Processing Failed",
 	DUPLICATE_RECORD:  "Entity with the same name exists, please try a different name.",
+	NO_DATA_FOUND:     "No Data Found",
+	SERVER_ERROR:      "Internal Server Error",
 }
 
-// Takes the objects which depend on the entity to build an error message 
+// Takes the objects which depend on the entity to build an error message
 // Currently being used in KPI - Custom Metrics and Property Mappings delete to build a error message when dependent objects are present
 func BuildDependentsErrorMessage(entity string, dependentObjectLists [][]string, dependentObjectTypeNames []string) string {
 	if len(dependentObjectLists) != len(dependentObjectTypeNames) {

@@ -25,7 +25,7 @@ func GetProfileUsersHandler(c *gin.Context) (interface{}, int, string, string, b
 	})
 	if projectId == 0 {
 		logCtx.Error("Invalid project_id.")
-		return "", http.StatusBadRequest, "", "invalid project_id", true
+		return "", http.StatusBadRequest, INVALID_PROJECT, "invalid project_id", true
 	}
 
 	req := c.Request
@@ -43,7 +43,7 @@ func GetProfileUsersHandler(c *gin.Context) (interface{}, int, string, string, b
 	if err != nil {
 		logCtx.Error("Json decode failed.")
 		message := "Query failed. Invalid payload"
-		return nil, http.StatusBadRequest, "", message, true
+		return nil, http.StatusBadRequest, INVALID_INPUT, message, true
 	}
 
 	profileUsersList, errCode, errMsg := store.GetStore().GetProfilesListByProjectId(projectId, payload, model.PROFILE_TYPE_USER)
@@ -181,7 +181,7 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 	})
 	if projectId == 0 {
 		logCtx.Error("Invalid project_id.")
-		return "", http.StatusBadRequest, "", "invalid project_id", true
+		return "", http.StatusBadRequest, INVALID_PROJECT, "invalid project_id", true
 	}
 
 	req := c.Request
@@ -206,7 +206,7 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 	if err := decoder.Decode(&payload); err != nil {
 		logCtx.Error("Json decode failed.")
 		message := "Query failed. Invalid payload"
-		return nil, http.StatusBadRequest, "", message, true
+		return nil, http.StatusBadRequest, INVALID_INPUT, message, true
 	}
 
 	startTime := time.Now().UnixMilli()

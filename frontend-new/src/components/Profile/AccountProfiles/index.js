@@ -74,6 +74,8 @@ import { PathUrls } from 'Routes/pathUrls';
 import { getGroups } from '../../../reducers/coreQuery/middleware';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
+import { isOnboarded } from 'Utils/global';
+
 
 const groupToCompanyPropMap = {
   $hubspot_company: '$hubspot_company_name',
@@ -152,6 +154,7 @@ function AccountProfiles({
   const [showDownloadCSVModal, setShowDownloadCSVModal] = useState(false);
   const [csvDataLoading, setCSVDataLoading] = useState(false);
   const [defaultSorterInfo, setDefaultSorterInfo] = useState({});
+  const [errMsg,setErrMsg]=useState("");
 
   const { isFeatureLocked: isScoringLocked } = useFeatureLock(
     FEATURES.FEATURE_ACCOUNT_SCORING
@@ -407,7 +410,25 @@ function AccountProfiles({
         formatPayload.filters =
           formatFiltersForPayload(payload?.filters, 'accounts') || [];
         const reqPayload = formatReqPayload(formatPayload, activeSegment);
-        getProfileAccounts(activeProject.id, reqPayload, activeAgent);
+        getProfileAccounts(activeProject.id, reqPayload, activeAgent).then((response) =>{
+
+          if (response.type === "FETCH_PROFILE_ACCOUNTS_FAILED"){
+          if(response.error.status === 400){
+            setErrMsg('400 Bad Request');
+          }
+          else  if(response.error.status === 500){
+            setErrMsg('The server encountered an internal error and could not complete your request');
+          }
+        }
+
+        if (response.type === "FETCH_PROFILE_ACCOUNTS_FULFILLED"){
+          if (response.status === 200){
+            if(response.payload.length === 0){
+              setErrMsg('No accounts Found')
+            }
+          }
+        }
+        });
       }
       if (shouldCache) {
         setCurrentPage(location.state.currentPage);
@@ -1113,6 +1134,7 @@ function AccountProfiles({
     }
   }, [newSegmentMode, accountPayload, activeSegment]);
 
+
   const titleIcon = useMemo(() => {
     if (Boolean(activeSegment?.id) === true) {
       return defaultSegmentIconsMapping[activeSegment?.name]
@@ -1193,14 +1215,20 @@ function AccountProfiles({
         <>{renderTable()}</>
       </ControlledComponent>
       <ControlledComponent
-        controller={
-          accounts.isLoading === false &&
-          (!accounts.data || accounts.data?.length === 0) &&
-          (newSegmentMode === false || areFiltersDirty === true)
-        }
-      >
-        <NoDataWithMessage message={'No Accounts Found'} />
-      </ControlledComponent>
+      controller={
+        accounts.isLoading === false &&
+        accounts.data.length === 0 &&
+        (newSegmentMode === false || areFiltersDirty === true)
+      }
+    >
+      <NoDataWithMessage
+       message={
+        isOnboarded(currentProjectSettings)
+          ? errMsg
+          : 'Onboarding not completed'
+      }
+      />
+    </ControlledComponent>
       <UpgradeModal
         visible={isUpgradeModalVisible}
         variant='account'

@@ -28,7 +28,8 @@ export const getProfileAccounts =
           resolve(
             dispatch({
               type: 'FETCH_PROFILE_ACCOUNTS_FULFILLED',
-              payload: data
+              payload: data,
+              status:response.status
             })
           );
         })
@@ -37,7 +38,8 @@ export const getProfileAccounts =
           resolve(
             dispatch({
               type: 'FETCH_PROFILE_ACCOUNTS_FAILED',
-              payload: []
+              payload: [],
+              error:err
             })
           );
         });
@@ -109,7 +111,8 @@ export const getProfileUsers = (projectId, payload) => (dispatch) => {
         resolve(
           dispatch({
             type: 'FETCH_PROFILE_USERS_FULFILLED',
-            payload: data
+            payload: data,
+            status:response.status
           })
         );
       })
@@ -118,7 +121,8 @@ export const getProfileUsers = (projectId, payload) => (dispatch) => {
         resolve(
           dispatch({
             type: 'FETCH_PROFILE_USERS_FAILED',
-            payload: []
+            payload: [],
+            error:err
           })
         );
       });
