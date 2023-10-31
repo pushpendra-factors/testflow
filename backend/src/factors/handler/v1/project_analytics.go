@@ -22,8 +22,6 @@ func GetFactorsAnalyticsHandler(c *gin.Context) {
 	monthString := c.Query("month")
 	var err error
 
-	log.WithFields(log.Fields{"projectId": projectID}).Info("GetFactorsAnalyticsHandler")
-
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
 	if noOfDaysParam != "" {
@@ -37,16 +35,24 @@ func GetFactorsAnalyticsHandler(c *gin.Context) {
 	var analytics map[string][]*model.ProjectAnalytics
 
 	if projectID != "" {
-		projIdInt, _ := strconv.Atoi(projectID)
 
-		analytics, err = store.GetStore().GetEventUserCountsByProjectID(int64(projIdInt), noOfDays)
+		log.WithFields(log.Fields{"projectId": projectID}).Info("GetFactorsAnalyticsHandler-before")
+
+		projId, err := strconv.ParseInt(projectID, 10, 64)
+		if err != nil {
+			return
+		}
+
+		log.WithFields(log.Fields{"projectId": projId}).Info("GetFactorsAnalyticsHandler-after")
+
+		analytics, err = store.GetStore().GetEventUserCountsByProjectID(projId, noOfDays)
 		if err != nil {
 			log.WithError(err).Error("GetEventUserCountsByProjectID")
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
 		}
 
-		data, err := store.GetStore().GetGlobalProjectAnalyticsDataByProjectId(int64(projIdInt), monthString, agentUUID)
+		data, err := store.GetStore().GetGlobalProjectAnalyticsDataByProjectId(projId, monthString, agentUUID)
 		if err != nil {
 			log.WithError(err).Error("GetGlobalProjectAnalyticsDataByProjectId")
 			c.AbortWithStatus(http.StatusInternalServerError)
@@ -55,16 +61,16 @@ func GetFactorsAnalyticsHandler(c *gin.Context) {
 
 		var settings *model.ProjectSetting
 		var errCode int
-		settings, errCode = store.GetStore().GetProjectSetting(int64(projIdInt))
+		settings, errCode = store.GetStore().GetProjectSetting(projId)
 		if errCode != http.StatusFound {
 			log.WithError(err).Error("project settings not found")
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
 		}
 
-		integrationList := store.GetStore().GetIntegrationStatusesCount(*settings, int64(projIdInt), agentUUID)
+		integrationList := store.GetStore().GetIntegrationStatusesCount(*settings, projId, agentUUID)
 
-		project, _ := store.GetStore().GetProject(int64(projIdInt))
+		project, _ := store.GetStore().GetProject(projId)
 
 		globalData := make(map[string][]map[string]interface{})
 		integrations := make(map[string][]map[string]interface{})

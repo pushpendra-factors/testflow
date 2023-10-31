@@ -135,34 +135,34 @@ func GetPathAnalysisData(c *gin.Context) (interface{}, int, string, string, bool
 
 	result := delta.GetPathAnalysisData(projectID, id)
 	finalResult := filterNodes(result, int(noOfNodes), actualQuery.EventType == "startswith")
-	if(version == "2"){
-		return convertToArray(finalResult, actualQuery.EventType == "startswith"), http.StatusOK, "", "", false
+	if version == "2" {
+		return convertToArray(finalResult, result, actualQuery.EventType == "startswith"), http.StatusOK, "", "", false
 	}
 	return finalResult, http.StatusOK, "", "", false
 }
 
 type ResultStruct struct {
-	Key string `json:"key"`
-	Count int `json:"count"`
+	Key        string  `json:"key"`
+	Count      int     `json:"count"`
 	Percentage float64 `json:"percentage"`
 }
 
-func convertToArray(resultMap map[int]map[string]int, startsWith bool) []ResultStruct {
+func convertToArray(resultMapFiltered, resultMap map[int]map[string]int, startsWith bool) []ResultStruct {
 	resultArray := make([]ResultStruct, 0)
-	for i := 1; i <= len(resultMap) ; i++ {
+	for i := 1; i <= len(resultMapFiltered); i++ {
 		othersArray := make([]ResultStruct, 0)
-		if(resultMap[i] == nil){
+		if resultMapFiltered[i] == nil {
 			continue
 		}
-		for key, count := range resultMap[i] {
+		for key, count := range resultMapFiltered[i] {
 			percentage := 0.0
-			if( i != 1){
+			if i != 1 {
 				rootElement := returnRootElement(key, startsWith)
 				percentage = float64(count) * 100.0 / float64(resultMap[i-1][rootElement])
 			} else {
 				percentage = float64(100)
 			}
-			if strings.Contains(key, "OTHERS"){
+			if strings.Contains(key, "OTHERS") {
 				othersArray = append(othersArray, ResultStruct{Key: key, Count: count, Percentage: percentage})
 			} else {
 				resultArray = append(resultArray, ResultStruct{Key: key, Count: count, Percentage: percentage})
@@ -173,7 +173,7 @@ func convertToArray(resultMap map[int]map[string]int, startsWith bool) []ResultS
 	return resultArray
 }
 
-func filterNodes(result map[int]map[string]int, n int, startsWith bool)map[int]map[string]int {
+func filterNodes(result map[int]map[string]int, n int, startsWith bool) map[int]map[string]int {
 	type labelCount struct {
 		label string
 		count int
@@ -248,7 +248,7 @@ func filterNodes(result map[int]map[string]int, n int, startsWith bool)map[int]m
 	return finalResult
 }
 
-func returnRootElement(label string, startsWith bool)string{
+func returnRootElement(label string, startsWith bool) string {
 	labelEvents := strings.Split(label, ",")
 	rootEvent := ""
 	if startsWith == true {
