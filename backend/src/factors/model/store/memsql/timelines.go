@@ -569,14 +569,9 @@ func CheckForNegativeFilters(groupedFilters map[string][]model.QueryProperty) (b
 	negativeFilterExists := false
 	negativeFilters := make([]model.QueryProperty, 0)
 	for _, filterArray := range groupedFilters {
-		for _, filter := range filterArray {
-			if (filter.Operator == model.NotContainsOpStr && filter.Value != model.PropertyValueNone) ||
-				(filter.Operator == model.ContainsOpStr && filter.Value == model.PropertyValueNone) ||
-				(filter.Operator == model.NotEqualOpStr && filter.Value != model.PropertyValueNone) ||
-				(filter.Operator == model.EqualsOpStr && filter.Value == model.PropertyValueNone) {
-				negativeFilterExists = true
-				negativeFilters = append(negativeFilters, filter)
-			}
+		if filteredProperties := model.GetPropertyToHasNegativeFilter(filterArray); len(filteredProperties) > 0 {
+			negativeFilterExists = true
+			negativeFilters = append(negativeFilters, filteredProperties...)
 		}
 	}
 
