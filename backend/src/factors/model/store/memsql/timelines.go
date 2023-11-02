@@ -80,7 +80,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 
 	// transforming datetime filters
 	addSearchFiltersToFilters := true
-	groupedFilters := GroupFiltersByPrefix(payload.Query.GlobalUserProperties)
+	groupedFilters := GroupFiltersByGroupName(payload.Query.GlobalUserProperties)
 	if model.IsAccountProfiles(profileType) && model.IsDomainGroup(payload.Query.Source) && C.IsAllAccountsEnabled(projectID) {
 		addSearchFiltersToFilters = false
 	}
@@ -409,6 +409,9 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 	var filterSteps string
 	stepNumber := 1
 	for groupName, filterString := range whereForGroups {
+		if groupName == U.GROUP_NAME_DOMAINS {
+			continue
+		}
 		isGroupStr := "is_group_user=1"
 		if groupName == model.FILTER_TYPE_USERS {
 			isGroupStr = "(is_group_user=0 OR is_group_user IS NULL)"
@@ -421,6 +424,12 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 
 		params = append(params, paramsForGroupFilters[groupName]...)
 		stepNumber++
+	}
+
+	// Domain Level Properties Filter Statement
+	var domainFilterStmt string
+	if filterStmt, exists := whereForGroups[U.GROUP_NAME_DOMAINS]; exists {
+		domainFilterStmt = "AND " + filterStmt
 	}
 
 	// check if payload contains a "NULL", "notEquals", "notContains"
@@ -439,6 +448,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 
 	// building intersect step for the query
 	var intersectStep string
+	delete(groupedFilters, U.GROUP_NAME_DOMAINS)
 	for stepNo := 1; stepNo <= len(groupedFilters); stepNo++ {
 		if len(groupedFilters) == 1 {
 			var addSpecialFilter string
@@ -492,14 +502,20 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
             FROM users 
             WHERE project_id = ?
               AND source = ?
-              %s) as d
+			  %s %s) as d
 		  ON u.group_%d_user_id = d.id 
 		  WHERE u.project_id = ? %s 
 		    AND u.source != ? 
 		    AND last_activity BETWEEN ? AND ?
 		  LIMIT 10000000 
 		) %s
-	) %s %s`, domainGroup.ID, domainGroup.ID, whereForSearchFilters, domainGroup.ID, isGroupUserCheck, allUsersWhere, filterSteps, intersectStep)
+	) %s %s`, domainGroup.ID, domainGroup.ID, domainFilterStmt, whereForSearchFilters, domainGroup.ID, isGroupUserCheck, allUsersWhere, filterSteps, intersectStep)
+
+	if len(paramsForGroupFilters[U.GROUP_NAME_DOMAINS]) > 0 {
+		temp := append([]interface{}{}, params[2:]...)
+		params = append(params[:2], paramsForGroupFilters[U.GROUP_NAME_DOMAINS]...)
+		params = append(params, temp...)
+	}
 
 	logCtx.Info("Generated query for all accounts: ", query)
 	return query, params, nil
@@ -555,7 +571,10 @@ func SearchFilterForAllAccounts(searchFilters []string, domainID int) (string, [
 
 func BuildAllUsersFilterArray(groupedFilters map[string][]model.QueryProperty) []model.QueryProperty {
 	allUsersFilters := make([]model.QueryProperty, 0)
-	for _, filterArray := range groupedFilters {
+	for groupName, filterArray := range groupedFilters {
+		if groupName == U.GROUP_NAME_DOMAINS {
+			continue
+		}
 		for _, filter := range filterArray {
 			filter.LogicalOp = "OR"
 			allUsersFilters = append(allUsersFilters, filter)
@@ -2281,6 +2300,15 @@ func GroupFiltersByPrefix(filters []model.QueryProperty) map[string][]model.Quer
 		filtersMap[groupName] = append(filtersMap[groupName], filter)
 	}
 
+	return filtersMap
+}
+
+func GroupFiltersByGroupName(filters []model.QueryProperty) map[string][]model.QueryProperty {
+	filtersMap := make(map[string][]model.QueryProperty)
+
+	for _, filter := range filters {
+		filtersMap[filter.GroupName] = append(filtersMap[filter.GroupName], filter)
+	}
 	return filtersMap
 }
 
