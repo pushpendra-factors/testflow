@@ -452,8 +452,9 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 
 		//To skip last_event_at update if event is excluded from timeline.
 		if !model.ExcludedEventsBool[eventName.Name] {
+			eventCreatedAt := time.Unix(event.Timestamp, 0)
 			updateLastEventAtStmt := "UPDATE users SET last_event_at=? WHERE project_id=? AND id=?"
-			updateLastEventAtStmtExec := db.Exec(updateLastEventAtStmt, transTime, event.ProjectId, event.UserId)
+			updateLastEventAtStmtExec := db.Exec(updateLastEventAtStmt, eventCreatedAt, event.ProjectId, event.UserId)
 
 			if err := updateLastEventAtStmtExec.Error; err != nil {
 				if gorm.IsRecordNotFoundError(err) {

@@ -729,7 +729,7 @@ func getSortedSetCacheKey(projectId int64) (*cacheRedis.Key, error) {
 	return key, err
 }
 
-func getDisplayLikePropValue(typ string, exi bool, value interface{}) interface{} {
+func getDisplayLikePropValue(typ, grn string, exi bool, value interface{}) interface{} {
 
 	var res interface{}
 	if exi {
@@ -738,7 +738,16 @@ func getDisplayLikePropValue(typ string, exi bool, value interface{}) interface{
 			if !ok {
 				val = int64(value.(float64))
 			}
-			res = U.GetDateOnlyHyphenFormatFromTimestampZ(val)
+			if grn == "hour" {
+				res = time.Unix(val, 0).Hour()
+			} else if grn == "week" {
+				year, week := time.Unix(val, 0).ISOWeek()
+				res = fmt.Sprintf("%d-W%d", year, week)
+			} else if grn == "month" {
+				res = time.Unix(val, 0).Month()
+			} else {
+				res = U.GetDateOnlyHyphenFormatFromTimestampZ(val)
+			}
 		} else {
 			res = U.GetPropertyValueAsString(value)
 		}
@@ -809,7 +818,7 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 			propVal, exi := (*userPropMap)[p]
 			msgPropMap[fmt.Sprintf("%d", idx)] = model.MessagePropMapStruct{
 				DisplayName: displayName,
-				PropValue:   getDisplayLikePropValue(messageProperty.Type, exi, propVal),
+				PropValue:   getDisplayLikePropValue(messageProperty.Type, messageProperty.Granularity, exi, propVal),
 			}
 
 		} else if messageProperty.Entity == model.PropertyEntityUserGlobal && groupPropMap != nil {
@@ -821,7 +830,7 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 			propVal, exi := (*groupPropMap)[p]
 			msgPropMap[fmt.Sprintf("%d", idx)] = model.MessagePropMapStruct{
 				DisplayName: displayName,
-				PropValue:   getDisplayLikePropValue(messageProperty.Type, exi, propVal),
+				PropValue:   getDisplayLikePropValue(messageProperty.Type, messageProperty.Granularity, exi, propVal),
 			}
 
 		} else if messageProperty.Entity == "event" {
@@ -832,7 +841,7 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 			propVal, exi := (*eventPropMap)[p]
 			msgPropMap[fmt.Sprintf("%d", idx)] = model.MessagePropMapStruct{
 				DisplayName: displayName,
-				PropValue:   getDisplayLikePropValue(messageProperty.Type, exi, propVal),
+				PropValue:   getDisplayLikePropValue(messageProperty.Type, messageProperty.Granularity, exi, propVal),
 			}
 		} else {
 			log.Warn("can not find the message property in user and event prop sets")

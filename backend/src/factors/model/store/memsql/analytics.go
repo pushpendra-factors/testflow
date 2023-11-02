@@ -457,17 +457,22 @@ func getFilterSQLStmtForScopeDomainsLatestGroupProperties(projectID int64,
 		return wStmt, wParams, nil, nil, nil
 	}
 
+	propertyFilterGroupIDs := []int{}
+	for _, filterProperties := range groupedPoperties {
+		propertyFilterGroupIDs = append(propertyFilterGroupIDs, filterProperties[0].GroupNameID)
+	}
+
 	/*
 		select max(group_x_id) as max_group_x_id,max(group_y_id) as max_group_y_id from users
 		where group_x.properties->'aa' OR group_y.properties->'aa'
 		having max_group_x_id is not null and max_group_y_id is not null
 	*/
-
 	if isOnlyAND {
 		havingColumnConditions := []string{}
 		selectColumns := []string{}
 		wStmt := ""
 		wParams := []interface{}{}
+		addNoneFitlerGroupAccounts := false
 		// use OR in where condition and AND in Having condition
 		// (groupA.A AND groupA.B) OR (groupB.A AND groupB.B) HAVING groupA AND groupB
 		for _, filterProperties := range groupedPoperties {
@@ -480,10 +485,30 @@ func getFilterSQLStmtForScopeDomainsLatestGroupProperties(projectID int64,
 				return "", nil, nil, nil, err
 			}
 
-			wStmt = wStmt + fmt.Sprintf("( %s )", groupWStmt)
+			wStmt = wStmt + fmt.Sprintf("( group_%d_id is not null AND %s )", filterProperties[0].GroupNameID, groupWStmt)
 			wParams = append(wParams, groupWParams...)
 			selectColumns = append(selectColumns, fmt.Sprintf("group_%d_id", filterProperties[0].GroupNameID))
-			havingColumnConditions = append(havingColumnConditions, fmt.Sprintf("group_%d_id IS NOT NULL", filterProperties[0].GroupNameID))
+			negativeFilters := model.GetPropertyToHasNegativeFilter(filterProperties)
+
+			// in case of purely negative grouped filter include all non filter group account
+			if len(negativeFilters) == len(filterProperties) {
+				addNoneFitlerGroupAccounts = true
+			}
+			// in case on purely negative grouped filter, accounts from non filters groups will also be considered in available, hence NOT NULL won't be mandatory
+			if len(negativeFilters) != len(filterProperties) {
+				havingColumnConditions = append(havingColumnConditions, fmt.Sprintf("group_%d_id IS NOT NULL", filterProperties[0].GroupNameID))
+			}
+		}
+
+		if addNoneFitlerGroupAccounts {
+			excludeStmnt := ""
+			for i := range propertyFilterGroupIDs {
+				if i != 0 {
+					excludeStmnt = excludeStmnt + " AND "
+				}
+				excludeStmnt = excludeStmnt + fmt.Sprintf("group_%d_id is NULL", propertyFilterGroupIDs[i])
+			}
+			wStmt = fmt.Sprintf("( %s OR ( %s ) )", wStmt, excludeStmnt)
 		}
 
 		return wStmt, wParams, selectColumns, havingColumnConditions, nil
@@ -495,6 +520,7 @@ func getFilterSQLStmtForScopeDomainsLatestGroupProperties(projectID int64,
 	selectColumns := []string{}
 	wStmt := ""
 	wParams := []interface{}{}
+	addNoneFitlerGroupAccounts := false
 	for _, filterProperties := range groupedPoperties {
 		if wStmt != "" {
 			wStmt = wStmt + " OR "
@@ -508,10 +534,29 @@ func getFilterSQLStmtForScopeDomainsLatestGroupProperties(projectID int64,
 		if err != nil {
 			return "", nil, nil, nil, err
 		}
-		wStmt = wStmt + groupWStmt
+		wStmt = wStmt + fmt.Sprintf("( group_%d_id is not null AND %s )", filterProperties[0].GroupNameID, groupWStmt)
 		wParams = append(wParams, groupWParams...)
 		selectColumns = append(selectColumns, fmt.Sprintf("group_%d_id", filterProperties[0].GroupNameID))
-		havingColumnConditions = append(havingColumnConditions, fmt.Sprintf("group_%d_id IS NOT NULL", filterProperties[0].GroupNameID))
+		negativeFilters := model.GetPropertyToHasNegativeFilter(filterProperties)
+		// in case of OR group any negative filter will also inlcude non filter group account
+		if len(negativeFilters) > 0 {
+			addNoneFitlerGroupAccounts = true
+		}
+		// in case on purely negative grouped filter, accounts from non filters groups will also be considered in available, hence NOT NULL won't be mandatory
+		if len(negativeFilters) == 0 {
+			havingColumnConditions = append(havingColumnConditions, fmt.Sprintf("group_%d_id IS NOT NULL", filterProperties[0].GroupNameID))
+		}
+	}
+
+	if addNoneFitlerGroupAccounts {
+		excludeStmnt := ""
+		for i := range propertyFilterGroupIDs {
+			if i != 0 {
+				excludeStmnt = excludeStmnt + " AND "
+			}
+			excludeStmnt = excludeStmnt + fmt.Sprintf("group_%d_id is NULL", propertyFilterGroupIDs[i])
+		}
+		wStmt = fmt.Sprintf("( %s OR ( %s ) )", wStmt, excludeStmnt)
 	}
 
 	return wStmt, wParams, selectColumns, havingColumnConditions, nil
