@@ -4522,6 +4522,7 @@ func TestAllAccounts(t *testing.T) {
 					Operator:  "equals",
 					Value:     "London",
 					LogicalOp: "AND",
+					GroupName: "users",
 				}, {
 					Entity:    "user_g",
 					Type:      "categorical",
@@ -4529,6 +4530,7 @@ func TestAllAccounts(t *testing.T) {
 					Operator:  "equals",
 					Value:     "India",
 					LogicalOp: "AND",
+					GroupName: U.GROUP_NAME_HUBSPOT_COMPANY,
 				},
 			}, Source: "$domains",
 		},
@@ -4542,4 +4544,75 @@ func TestAllAccounts(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, len(resp), 1)
 	assert.Contains(t, resp[0].HostName, "adapt")
+
+	payload = model.TimelinePayload{
+		Query: model.Query{
+			GlobalUserProperties: []model.QueryProperty{
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$salesforce_account_name",
+					Operator:  "equals",
+					Value:     "Adapt.IO",
+					LogicalOp: "AND",
+					GroupName: U.GROUP_NAME_SALESFORCE_ACCOUNT,
+				},
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$hubspot_company_country",
+					Operator:  "equals",
+					Value:     "India",
+					LogicalOp: "AND",
+					GroupName: U.GROUP_NAME_HUBSPOT_COMPANY,
+				},
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$hubspot_company_country",
+					Operator:  "equals",
+					Value:     "Pakistan",
+					LogicalOp: "AND",
+					GroupName: U.GROUP_NAME_HUBSPOT_COMPANY,
+				},
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$li_country",
+					Operator:  "equals",
+					Value:     "Germany",
+					LogicalOp: "AND",
+					GroupName: U.GROUP_NAME_LINKEDIN_COMPANY,
+				},
+				{
+					Entity:    "user_g",
+					Type:      "numerical",
+					Property:  "$engagement_score",
+					Operator:  "equals",
+					Value:     "50",
+					LogicalOp: "AND",
+					GroupName: U.GROUP_NAME_DOMAINS,
+				},
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$g2_entity",
+					Operator:  "equals",
+					Value:     "something",
+					LogicalOp: "AND",
+					GroupName: U.GROUP_NAME_G2,
+				},
+			},
+			Source: "$domains",
+		},
+		SearchFilter: []string{"adapt", "hey"},
+	}
+
+	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = io.ReadAll(w.Body)
+	resp = make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 0)
 }
