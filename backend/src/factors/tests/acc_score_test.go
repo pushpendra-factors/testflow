@@ -196,8 +196,10 @@ func TestAccScoreCountingEvents(t *testing.T) {
 		weights.WeightConfig = append(weights.WeightConfig, r)
 	}
 
+	config["domain_group"] = "1"
 	cr, err := T.DeduplicateWeights(weights) //new ids will not be added, as weight id is already filled
 	assert.Nil(t, err)
+	log.WithField("event", cr).Debugf("filters")
 
 	fileEvents, err := os.Open("./data/events_score_data.txt")
 	assert.Nil(t, err)
@@ -208,10 +210,9 @@ func TestAccScoreCountingEvents(t *testing.T) {
 	err = T.AggEventsOnUsers(fileEvents, userGroupCount, weightmap, config)
 
 	for k, v := range userGroupCount {
-		// log.Debugf("uid :%s", k)
 		line, err := json.Marshal(v)
 		assert.Nil(t, err)
-		log.Debugf("%s, %s", k, string(line))
+		log.Debugf(" -- %s, %s", k, string(line))
 	}
 	assert.Nil(t, err)
 }

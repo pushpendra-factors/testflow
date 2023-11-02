@@ -98,7 +98,6 @@ func ProcessSingleFilterOnEvent(event *P.CounterEventFormat, filter M.AccEventWe
 
 	ruleId := filter.WeightId
 	ruleResultMap := make(map[int]bool, 0)
-
 	for idx, singleRule := range filter.Rule {
 
 		if singleRule.Type == "event" {
@@ -111,12 +110,12 @@ func ProcessSingleFilterOnEvent(event *P.CounterEventFormat, filter M.AccEventWe
 	}
 
 	for _, resVal := range ruleResultMap {
-		if !resVal {
-			return "", false
+		if resVal {
+			return ruleId, true
 		}
 	}
 
-	return ruleId, true
+	return "", false
 }
 
 func evalProperty(properties map[string]interface{}, propFilter M.WeightKeyValueTuple) bool {
@@ -141,13 +140,18 @@ func evalProperty(properties map[string]interface{}, propFilter M.WeightKeyValue
 		}
 	} else if propFilter.Operator == model.ContainsOpStr {
 		propval := U.GetPropertyValueAsString(propvalKey)
-		if _, ok := propFilterMap[propval]; ok {
-			return true
+		for propFilterKey, _ := range propFilterMap {
+			if strings.Contains(propval, propFilterKey) == true {
+				return true
+			}
 		}
+
 	} else if propFilter.Operator == model.NotContainsOpStr {
 		propval := U.GetPropertyValueAsString(propvalKey)
-		if _, ok := propFilterMap[propval]; !ok {
-			return true
+		for propFilterKey, _ := range propFilterMap {
+			if strings.Contains(propval, propFilterKey) == false {
+				return true
+			}
 		}
 	}
 
