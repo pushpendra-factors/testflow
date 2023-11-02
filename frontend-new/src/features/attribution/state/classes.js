@@ -16,5 +16,5 @@ export class AttributionQueryV1 {
     to = 0;
     query_type = '';
     tactic_offer_type = '';
-    time_zone = '';
+    time_zone = localStorage.getItem('project_timeZone') || 'Asia/Kolkata';
   }
