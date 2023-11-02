@@ -295,9 +295,11 @@ func IsWeightsAvailable(projectIdsArray []int64) {
 
 	for _, projectId := range projectIdsArray {
 		_, err := AS.GetWeightfromDB(projectId)
+
 		if err != nil {
 			m1, _ := store.GetStore().GetProject(projectId)
 			log.WithField("project", projectId).WithField("name", m1.Name).Info("weights not set")
 		}
 	}
+
 }
