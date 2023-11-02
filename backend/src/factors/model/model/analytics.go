@@ -1083,7 +1083,10 @@ func GetPropertiesGrouped(properties []QueryProperty) [][]QueryProperty {
 // GetPropertiesGroupedByGroupName groups properties by their group and tells if
 // it is only OR or only AND properties
 func GetPropertiesGroupedByGroupName(properties []QueryProperty) ([][]QueryProperty, bool, bool) {
-	groupedPropertiesMap := make(map[string][]QueryProperty, 0)
+
+	if len(properties) == 0 {
+		return nil, false, false
+	}
 
 	isOnlyOR := true
 	isOnlyAND := true
@@ -1092,17 +1095,29 @@ func GetPropertiesGroupedByGroupName(properties []QueryProperty) ([][]QueryPrope
 		isOnlyAND = true
 	}
 
-	for i := range properties {
-		property := properties[i]
+	groupPropertyVisited := make(map[string]map[string]bool)
+	for _, property := range properties[1:] {
 
-		if i != 0 && property.LogicalOp == "AND" {
+		if _, exist := groupPropertyVisited[property.GroupName]; !exist {
+			groupPropertyVisited[property.GroupName] = make(map[string]bool)
+		}
+
+		visited := groupPropertyVisited[property.GroupName][property.Property]
+
+		if !visited && property.LogicalOp == "AND" {
 			isOnlyOR = false
 		}
 
-		if i != 0 && property.LogicalOp == "OR" {
+		if !visited && property.LogicalOp == "OR" {
 			isOnlyAND = false
 		}
 
+		groupPropertyVisited[property.GroupName][property.Property] = true
+	}
+
+	groupedPropertiesMap := make(map[string][]QueryProperty, 0)
+	for i := range properties {
+		property := properties[i]
 		if _, exist := groupedPropertiesMap[property.GroupName]; !exist {
 			groupedPropertiesMap[property.GroupName] = make([]QueryProperty, 0)
 		}

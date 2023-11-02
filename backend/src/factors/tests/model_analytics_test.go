@@ -9711,4 +9711,171 @@ func TestAnalyticsAllAccountNegativeFilters(t *testing.T) {
 	assert.Equal(t, float64(0), result.Rows[3][3])
 	assert.Equal(t, "0.0", result.Rows[3][4])
 
+	query = model.Query{
+		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       "www.xyz.com",
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       "www.xyz2.com",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GlobalUserProperties: []model.QueryProperty{
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_domain",
+				Operator:  model.NotEqualOpStr,
+				Value:     "$none",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "AND",
+			},
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_DOMAIN,
+				Operator:  model.NotEqualOpStr,
+				Value:     "$none",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "AND",
+			},
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_REGION,
+				Operator:  model.EqualsOpStr,
+				Value:     "A",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "AND",
+			},
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_REGION,
+				Operator:  model.EqualsOpStr,
+				Value:     "B",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "OR",
+			},
+		},
+
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_name",
+				EventName: model.UserPropertyGroupByPresent,
+			},
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_DOMAIN,
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+		Class:           model.QueryClassFunnel,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][1])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][1])
+		return p1 < p2
+	})
+	assert.Equal(t, float64(2), result.Rows[0][2])
+	assert.Equal(t, float64(2), result.Rows[0][3])
+	assert.Equal(t, "100.0", result.Rows[0][4])
+	assert.Equal(t, "abc1", result.Rows[1][0])
+	assert.Equal(t, "abc1.com", result.Rows[1][1])
+	assert.Equal(t, float64(1), result.Rows[1][2])
+	assert.Equal(t, float64(1), result.Rows[1][3])
+	assert.Equal(t, "100.0", result.Rows[1][4])
+
+	assert.Equal(t, "abc2", result.Rows[2][0])
+	assert.Equal(t, "abc2.com", result.Rows[2][1])
+	assert.Equal(t, float64(1), result.Rows[2][2])
+	assert.Equal(t, float64(1), result.Rows[2][3])
+	assert.Equal(t, "100.0", result.Rows[2][4])
+
+	query = model.Query{
+		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       "www.xyz.com",
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       "www.xyz2.com",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GlobalUserProperties: []model.QueryProperty{
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_REGION,
+				Operator:  model.EqualsOpStr,
+				Value:     "A",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "AND",
+			},
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_REGION,
+				Operator:  model.EqualsOpStr,
+				Value:     "B",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "OR",
+			},
+		},
+
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_name",
+				EventName: model.UserPropertyGroupByPresent,
+			},
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_DOMAIN,
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+		Class:           model.QueryClassFunnel,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][1])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][1])
+		return p1 < p2
+	})
+	assert.Equal(t, float64(2), result.Rows[0][2])
+	assert.Equal(t, float64(2), result.Rows[0][3])
+	assert.Equal(t, "100.0", result.Rows[0][4])
+	assert.Equal(t, "abc1", result.Rows[1][0])
+	assert.Equal(t, "abc1.com", result.Rows[1][1])
+	assert.Equal(t, float64(1), result.Rows[1][2])
+	assert.Equal(t, float64(1), result.Rows[1][3])
+	assert.Equal(t, "100.0", result.Rows[1][4])
+
+	assert.Equal(t, "abc2", result.Rows[2][0])
+	assert.Equal(t, "abc2.com", result.Rows[2][1])
+	assert.Equal(t, float64(1), result.Rows[2][2])
+	assert.Equal(t, float64(1), result.Rows[2][3])
+	assert.Equal(t, "100.0", result.Rows[2][4])
 }
