@@ -1046,6 +1046,19 @@ func GetPropertyToHasNoneFilter(properties []QueryProperty) map[string]bool {
 	return propertyToHasNoneFilter
 }
 
+func GetPropertyToHasNegativeFilter(properties []QueryProperty) []QueryProperty {
+	negativeFilters := make([]QueryProperty, 0)
+	for _, filter := range properties {
+		if (filter.Operator == NotContainsOpStr && filter.Value != PropertyValueNone) ||
+			(filter.Operator == ContainsOpStr && filter.Value == PropertyValueNone) ||
+			(filter.Operator == NotEqualOpStr && filter.Value != PropertyValueNone) ||
+			(filter.Operator == EqualsOpStr && filter.Value == PropertyValueNone) {
+			negativeFilters = append(negativeFilters, filter)
+		}
+	}
+	return negativeFilters
+}
+
 // If UI presents filters in "(a or b) AND (c or D)" order, Request has it as "a or b AND c or D"
 // Using AND as a separation between lines and execution order to achieve the same as above.
 func GetPropertiesGrouped(properties []QueryProperty) [][]QueryProperty {
@@ -1071,8 +1084,14 @@ func GetPropertiesGrouped(properties []QueryProperty) [][]QueryProperty {
 // it is only OR or only AND properties
 func GetPropertiesGroupedByGroupName(properties []QueryProperty) ([][]QueryProperty, bool, bool) {
 	groupedPropertiesMap := make(map[string][]QueryProperty, 0)
+
 	isOnlyOR := true
 	isOnlyAND := true
+	if len(properties) == 1 {
+		isOnlyOR = false
+		isOnlyAND = true
+	}
+
 	for i := range properties {
 		property := properties[i]
 
@@ -1149,6 +1168,7 @@ func GetDomainsAsscocaitedGroupSourceANDColumnIDs(globalUserProperties []QueryPr
 		globalGroupIDColumns += fmt.Sprintf("group_users.group_%d_id IS NOT NULL", groupID)
 		globalGroupSource += fmt.Sprintf("%d", GroupUserSource[groupName])
 	}
+
 	return globalGroupIDColumns, globalGroupSource
 }
 
