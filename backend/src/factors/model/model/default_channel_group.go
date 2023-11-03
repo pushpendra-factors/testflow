@@ -547,36 +547,36 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		},
 	},
 	{
+		Channel: ChannelInternal,
+		Conditions: []ChannelPropertyFilter{
+			{
+				Property:  U.SP_INITIAL_PAGE_DOMAIN,
+				Condition: NotEqualOpStr,
+				Value:     "$none",
+				LogicalOp: LOGICAL_OP_AND,
+			},
+			{
+				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
+				Condition: NotEqualOpStr,
+				Value:     "$none",
+				LogicalOp: LOGICAL_OP_AND,
+			},
+			{
+				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
+				Condition: PropertyValueEqualsOpStr,
+				// Value used as key for referring another property.
+				Value:     U.SP_INITIAL_PAGE_DOMAIN,
+				LogicalOp: LOGICAL_OP_AND,
+			},
+		},
+	},
+	{
 		Channel: ChannelReferral,
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
 				Condition: NotEqualOpStr,
 				Value:     "$none",
-				LogicalOp: LOGICAL_OP_AND,
-			},
-		},
-	},
-	{
-		Channel: ChannelInternal,
-		Conditions: []ChannelPropertyFilter{
-			{
-				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: NotEqualOpStr,
-				Value:     "$none",
-				LogicalOp: LOGICAL_OP_AND,
-			},
-			{
-				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: NotEqualOpStr,
-				Value:     "$none",
-				LogicalOp: LOGICAL_OP_AND,
-			},
-			{
-				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: EqualsOp,
-				// Value used as key for referring another property.
-				Value:     U.SP_INITIAL_PAGE_DOMAIN,
 				LogicalOp: LOGICAL_OP_AND,
 			},
 		},
