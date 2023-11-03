@@ -34,53 +34,6 @@ const (
 
 var DefaultChannelPropertyRules = []ChannelPropertyRule{
 	{
-		Channel: ChannelDirect,
-		Conditions: []ChannelPropertyFilter{
-			{
-				Property:  U.EP_SOURCE,
-				Condition: EqualsOpStr,
-				Value:     "$none",
-				LogicalOp: LOGICAL_OP_AND,
-			},
-			{
-				Property:  U.EP_MEDIUM,
-				Condition: EqualsOpStr,
-				Value:     "$none",
-				LogicalOp: LOGICAL_OP_AND,
-			},
-			{
-				Property:  U.SP_INITIAL_REFERRER,
-				Condition: EqualsOpStr,
-				Value:     "$none",
-				LogicalOp: LOGICAL_OP_AND,
-			},
-			{
-				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: EqualsOpStr,
-				Value:     "$none",
-				LogicalOp: LOGICAL_OP_AND,
-			},
-			{
-				Property:  U.EP_GCLID,
-				Condition: EqualsOpStr,
-				Value:     "$none",
-				LogicalOp: LOGICAL_OP_AND,
-			},
-			{
-				Property:  U.EP_FBCLID,
-				Condition: EqualsOpStr,
-				Value:     "$none",
-				LogicalOp: LOGICAL_OP_AND,
-			},
-			{
-				Property:  U.EP_CAMPAIGN,
-				Condition: EqualsOpStr,
-				Value:     "$none",
-				LogicalOp: LOGICAL_OP_AND,
-			},
-		},
-	},
-	{
 		Channel: ChannelPaidSearch,
 		Conditions: []ChannelPropertyFilter{
 			{
@@ -604,6 +557,77 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 			},
 		},
 	},
+	{
+		Channel: ChannelInternal,
+		Conditions: []ChannelPropertyFilter{
+			{
+				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
+				Condition: NotEqualOpStr,
+				Value:     "$none",
+				LogicalOp: LOGICAL_OP_AND,
+			},
+			{
+				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
+				Condition: NotEqualOpStr,
+				Value:     "$none",
+				LogicalOp: LOGICAL_OP_AND,
+			},
+			{
+				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
+				Condition: EqualsOp,
+				// Value used as key for referring another property.
+				Value:     U.SP_INITIAL_PAGE_DOMAIN,
+				LogicalOp: LOGICAL_OP_AND,
+			},
+		},
+	},
+	{
+		Channel: ChannelDirect,
+		Conditions: []ChannelPropertyFilter{
+			{
+				Property:  U.EP_SOURCE,
+				Condition: EqualsOpStr,
+				Value:     "$none",
+				LogicalOp: LOGICAL_OP_AND,
+			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: EqualsOpStr,
+				Value:     "$none",
+				LogicalOp: LOGICAL_OP_AND,
+			},
+			{
+				Property:  U.SP_INITIAL_REFERRER,
+				Condition: EqualsOpStr,
+				Value:     "$none",
+				LogicalOp: LOGICAL_OP_AND,
+			},
+			{
+				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
+				Condition: EqualsOpStr,
+				Value:     "$none",
+				LogicalOp: LOGICAL_OP_AND,
+			},
+			{
+				Property:  U.EP_GCLID,
+				Condition: EqualsOpStr,
+				Value:     "$none",
+				LogicalOp: LOGICAL_OP_AND,
+			},
+			{
+				Property:  U.EP_FBCLID,
+				Condition: EqualsOpStr,
+				Value:     "$none",
+				LogicalOp: LOGICAL_OP_AND,
+			},
+			{
+				Property:  U.EP_CAMPAIGN,
+				Condition: EqualsOpStr,
+				Value:     "$none",
+				LogicalOp: LOGICAL_OP_AND,
+			},
+		},
+	},
 }
 
 // condition : (medium=paid OR medium=cpc ) AND (referral domain contains either of ("facebook.","linkedin.")
@@ -622,10 +646,12 @@ func groupConditionsBasedOnProperty(conditions []ChannelPropertyFilter) map[stri
 	}
 	return groupedConditions
 }
+
 func EvaluateChannelPropertyRules(channelGroupRules []ChannelPropertyRule, sessionPropertiesMap U.PropertiesMap, projectID int64) string {
 	for _, rule := range channelGroupRules {
 		groupedConditions := groupConditionsBasedOnProperty(rule.Conditions)
 		checkCondition := true
+
 		for _, conditions := range groupedConditions {
 			var checkConditionForProperty bool
 			for index, filter := range conditions {
@@ -645,7 +671,16 @@ func EvaluateChannelPropertyRules(channelGroupRules []ChannelPropertyRule, sessi
 			return rule.Channel
 		}
 	}
+
 	return ChannelOthers
+}
+
+func compareEqualPropertyKeyValue(propertiesMap U.PropertiesMap, propertyValue, filterValueKey string) bool {
+	filterKeyValueInt, fkvExists := propertiesMap[filterValueKey]
+	filterKeyValue := fmt.Sprintf("%v", filterKeyValueInt)
+	lowerFilterKeyValue := strings.ToLower(filterKeyValue)
+
+	return compareEqual(fkvExists, propertyValue, lowerFilterKeyValue)
 }
 
 func checkFilter(sessionPropertesMap U.PropertiesMap, filter ChannelPropertyFilter) bool {
@@ -664,9 +699,14 @@ func checkFilter(sessionPropertesMap U.PropertiesMap, filter ChannelPropertyFilt
 		return strings.Contains(lowerCasePropertyValue, lowerCaseFilterValue)
 	case NotContainsOpStr:
 		return !strings.Contains(lowerCasePropertyValue, lowerCaseFilterValue)
+	case PropertyValueEqualsOpStr:
+		return compareEqualPropertyKeyValue(sessionPropertesMap, lowerCasePropertyValue, filter.Value)
+	case PropertyValueNotEqualsOpStr:
+		return !compareEqualPropertyKeyValue(sessionPropertesMap, lowerCasePropertyValue, filter.Value)
 	}
 	return false
 }
+
 func compareEqual(isExists bool, propertyValue string, filterValue string) bool {
 	if filterValue == "$none" {
 		return !isExists || propertyValue == filterValue || propertyValue == ""

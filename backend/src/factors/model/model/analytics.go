@@ -157,6 +157,15 @@ const (
 	NotInList               = "notInList"
 )
 
+// Special operator for mapping an another property on a filter/.
+const (
+	PropertyValueEqualsOp    = "pv="
+	PropertyValueEqualsOpStr = "propertyValueEquals"
+
+	PropertyValueNotEqualsOp    = "pv!="
+	PropertyValueNotEqualsOpStr = "propertyValueNotEquals"
+)
+
 // UserPropertyGroupByPresent Sent from frontend for breakdown on latest user property.
 const UserPropertyGroupByPresent string = "$present"
 
