@@ -136,8 +136,6 @@ func (store *MemSQL) GetEventUserCountsByProjectID(projectId int64, lastNDays in
 	projId, _ := U.GetValueAsString(project.ID)
 	projectIDNameMap[projId] = project.Name
 
-	log.WithFields(log.Fields{"projectId": projectId}).Info("GetEventUserCountsByProjectID")
-
 	result, err := GetProjectAnalyticsData(projectIDNameMap, lastNDays, currentDate, projectId)
 
 	if err != nil {
@@ -149,8 +147,6 @@ func (store *MemSQL) GetEventUserCountsByProjectID(projectId int64, lastNDays in
 func GetProjectAnalyticsData(projectIDNameMap map[string]string, lastNDays int, currentDate time.Time, projectId int64) (map[string][]*model.ProjectAnalytics, error) {
 
 	result := make(map[string][]*model.ProjectAnalytics, 0)
-
-	log.WithFields(log.Fields{"projectId": projectId, "projectMap": projectIDNameMap}).Info("GetProjectAnalyticsData")
 
 	for i := 0; i < lastNDays; i++ {
 		dateKey := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)

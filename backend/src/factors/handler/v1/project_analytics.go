@@ -14,6 +14,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// GetFactorsAnalyticsHandler godoc
+// @Summary To project analytics of all projects
+// @Tags V1ApiSmartEvent
+// @Accept  json
+// @Produce json
+// @Success 200 {object} map[string][]map[string]interface{}
+// @Router /projectanalytics [get]
 func GetFactorsAnalyticsHandler(c *gin.Context) {
 	noOfDays := int(7)
 	noOfDaysParam := c.Query("days")
@@ -58,6 +65,14 @@ func GetFactorsAnalyticsHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"analytics": analytics})
 }
 
+// GetFactorsAnalyticsByprojectIDHandler godoc
+// @Summary To project analytics by project id
+// @Tags V1ApiSmartEvent
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Success 200 {object} map[string][]map[string]interface{}
+// @Router /{project_id}/projectanalytics [get]
 func GetFactorsAnalyticsByprojectIDHandler(c *gin.Context) {
 	noOfDays := int(7)
 	noOfDaysParam := c.Query("days")
@@ -66,7 +81,14 @@ func GetFactorsAnalyticsByprojectIDHandler(c *gin.Context) {
 	var err error
 
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	projIdStr := c.Params.ByName("project_id")
+	projectID, _ := strconv.ParseInt(projIdStr, 10, 64)
+
+	if projectID == 0 {
+		log.Error("Query failed. Invalid project.")
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
 
 	if noOfDaysParam != "" {
 		noOfDays, err = strconv.Atoi(noOfDaysParam)
