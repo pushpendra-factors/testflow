@@ -563,7 +563,7 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 			},
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: PropertyValueEqualsOpStr,
+				Condition: EqualsOpStr,
 				// Value used as key for referring another property.
 				Value:     U.SP_INITIAL_PAGE_DOMAIN,
 				LogicalOp: LOGICAL_OP_AND,
@@ -683,6 +683,11 @@ func compareEqualPropertyKeyValue(propertiesMap U.PropertiesMap, propertyValue, 
 	return compareEqual(fkvExists, propertyValue, lowerFilterKeyValue)
 }
 
+func isPropertyValueAllowedKey(filterValue string) bool {
+	// Allowed properties to use as value based property key.
+	return filterValue == U.SP_INITIAL_PAGE_DOMAIN || filterValue == U.SP_INITIAL_REFERRER_DOMAIN
+}
+
 func checkFilter(sessionPropertesMap U.PropertiesMap, filter ChannelPropertyFilter) bool {
 	propertyValueInterface, isExists := sessionPropertesMap[filter.Property]
 	propertyValue := fmt.Sprintf("%v", propertyValueInterface)
@@ -692,17 +697,19 @@ func checkFilter(sessionPropertesMap U.PropertiesMap, filter ChannelPropertyFilt
 
 	switch filter.Condition {
 	case EqualsOpStr:
+		if isPropertyValueAllowedKey(filter.Value) {
+			return compareEqualPropertyKeyValue(sessionPropertesMap, lowerCasePropertyValue, filter.Value)
+		}
 		return compareEqual(isExists, lowerCasePropertyValue, lowerCaseFilterValue)
 	case NotEqualOpStr:
+		if isPropertyValueAllowedKey(filter.Value) {
+			return !compareEqualPropertyKeyValue(sessionPropertesMap, lowerCasePropertyValue, filter.Value)
+		}
 		return !compareEqual(isExists, lowerCasePropertyValue, lowerCaseFilterValue)
 	case ContainsOpStr:
 		return strings.Contains(lowerCasePropertyValue, lowerCaseFilterValue)
 	case NotContainsOpStr:
 		return !strings.Contains(lowerCasePropertyValue, lowerCaseFilterValue)
-	case PropertyValueEqualsOpStr:
-		return compareEqualPropertyKeyValue(sessionPropertesMap, lowerCasePropertyValue, filter.Value)
-	case PropertyValueNotEqualsOpStr:
-		return !compareEqualPropertyKeyValue(sessionPropertesMap, lowerCasePropertyValue, filter.Value)
 	}
 	return false
 }
