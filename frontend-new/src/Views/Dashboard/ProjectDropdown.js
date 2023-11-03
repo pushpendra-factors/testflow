@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Col, Divider, Row, Spin } from 'antd';
+import { useParams } from 'react-router-dom';
+import { Button, Divider, Spin } from 'antd';
 import { useSelector, useDispatch, connect } from 'react-redux';
 import { ErrorBoundary } from 'react-error-boundary';
 import FaSelect from 'Components/FaSelect';
@@ -32,11 +33,12 @@ import NewProject from '../Settings/SetupAssist/Modals/NewProject';
 import ExistingReportsModal from './ExistingReportsModal';
 import { changeActiveDashboard as changeActiveDashboardService } from 'Reducers/dashboard/services';
 import NewReportButton from './NewReportButton';
-import { useParams } from 'react-router-dom';
-import { selectActiveDashboard, selectDashboardList } from 'Reducers/dashboard/selectors';
+import {
+  selectActiveDashboard,
+  selectDashboardList
+} from 'Reducers/dashboard/selectors';
 
 function ProjectDropdown({
-  setaddDashboardModal,
   handleEditClick,
   durationObj,
   handleDurationChange,
@@ -55,9 +57,7 @@ function ProjectDropdown({
   const [deleteApiCalled, setDeleteApiCalled] = useState(false);
   const [widgetModalLoading, setWidgetModalLoading] = useState(false);
   const { active_project } = useSelector((state) => state.global);
-  const { activeDashboardUnits } = useSelector(
-    (state) => state.dashboard
-  );
+  const { activeDashboardUnits } = useSelector((state) => state.dashboard);
   const activeDashboard = useSelector((state) => selectActiveDashboard(state));
   const dashboards = useSelector((state) => selectDashboardList(state));
   const [selectVisible, setSelectVisible] = useState(false);
@@ -82,7 +82,9 @@ function ProjectDropdown({
       resetDashboardRefreshState();
       setOldestRefreshTime(null);
       const selectedDashboard = dashboards.find((d) => d.id === val);
-      dispatch(changeActiveDashboardService(selectedDashboard));
+      if (selectedDashboard != null) {
+        dispatch(changeActiveDashboardService(selectedDashboard));
+      }
     },
     [
       activeDashboard?.id,
@@ -260,10 +262,6 @@ function ProjectDropdown({
       </div>
     </div>
   );
-
-  const handleTour = () => {
-    // userflow.start('c162ed75-0983-41f3-ae56-8aedd7dbbfbd');
-  };
 
   const generateDBList = () => {
     const dashboardList = [
