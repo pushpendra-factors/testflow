@@ -61,14 +61,21 @@ class Text extends React.Component {
     // AntD throws error for level>4
     const isSizeDefined = level || size;
 
-    //checks if truncation and is child is string. ignores if its array.
+    //checks if text truncation and is child is string. ignores if its array.
     const isTextTruncatePossible = truncate && !_.isArray(children);
-    const isOverFlow = children?.length > charLimit;
+    //checks if text is a URL.
     const isValidURLCheck = !_.isArray(children) && isValidURL(children);
+
+    const truncatedURLText = isValidURLCheck ? truncateURL(children) : '';
+    const isOverFlow = isValidURLCheck
+      ? truncatedURLText?.length > charLimit
+      : children?.length > charLimit;
+
     let truncatedText = children || '';
     if (isValidURLCheck) {
-      truncatedText = truncateURL(children);
+      truncatedText = truncatedURLText;
     }
+
     if (isTextTruncatePossible && isOverFlow) {
       truncatedText = `${truncatedText.slice(0, charLimit)}${'...'}`;
     }
