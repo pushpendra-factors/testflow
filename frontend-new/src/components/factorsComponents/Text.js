@@ -2,7 +2,7 @@ import React from 'react';
 import classnames from 'classnames';
 import _ from 'lodash';
 import { Typography, Tooltip } from 'antd';
-import truncateURL from 'Utils/truncateURL';
+import truncateURL, { isValidURL } from 'Utils/truncateURL';
 
 const { Title, Paragraph } = Typography;
 
@@ -64,14 +64,18 @@ class Text extends React.Component {
     //checks if truncation and is child is string. ignores if its array.
     const isTextTruncatePossible = truncate && !_.isArray(children);
     const isOverFlow = children?.length > charLimit;
-    let truncatedText = '';
+    const isValidURLCheck = !_.isArray(children) && isValidURL(children);
+    let truncatedText = children || '';
+    if (isValidURLCheck) {
+      truncatedText = truncateURL(children);
+    }
     if (isTextTruncatePossible && isOverFlow) {
-      truncatedText = `${truncateURL(children.slice(0, charLimit))}${'...'}`;
+      truncatedText = `${truncatedText.slice(0, charLimit)}${'...'}`;
     }
 
     if (type === textType.title) {
       const sizeValue = isSizeDefined > 4 ? 4 : isSizeDefined;
-      if (isTextTruncatePossible && isOverFlow) {
+      if ((isTextTruncatePossible && isOverFlow) || isValidURLCheck) {
         return (
           <Tooltip placement={'top'} title={children}>
             <Title
