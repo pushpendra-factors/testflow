@@ -26,7 +26,7 @@ import {
 } from 'Components/SaveQuery/saveQuery.constants';
 import { ErrorBoundary } from 'react-error-boundary';
 
-function CardContent({ unit, resultState, durationObj, breakdown }) {
+function CardContent({ unit, resultState, durationObj, breakdown, currMetricsValue }) {
   let content = null;
 
   const queryType = 'kpi';
@@ -98,6 +98,7 @@ function CardContent({ unit, resultState, durationObj, breakdown }) {
             }
           ] : []}
           unit={unit}
+          currMetricsValue={currMetricsValue}
           arrayMapper={[]}
           durationObj={durationObj}
         />
