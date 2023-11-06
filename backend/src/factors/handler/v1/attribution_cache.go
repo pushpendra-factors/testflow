@@ -53,24 +53,33 @@ func RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId int64, re
 			computedM := H.ComputedRangeInfo{From: qRange.Start, To: qRange.End, TimeZone: string(timezoneString), FromCache: true}
 			computedMeta = append(computedMeta, computedM)
 		} else {
-			// compute if not found in cache
-			requestPayload.Query.From = qRange.Start
-			requestPayload.Query.To = qRange.End
-			attributionQueryUnitPayload := model.AttributionQueryUnitV1{
-				Class: model.QueryClassAttribution,
-				Query: requestPayload.Query,
-			}
-			QueryKey, _ := attributionQueryUnitPayload.GetQueryCacheRedisKey(projectId)
-			debugQueryKey := model.GetStringKeyFromCacheRedisKey(QueryKey)
-			resultForRange, err = store.GetStore().ExecuteAttributionQueryV1(projectId, requestPayload.Query, debugQueryKey,
-				enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery, unitId)
-			logCtx.WithError(err).WithFields(log.Fields{"RIndex": idx, "RStart": qRange.Start, "REnd": qRange.End}).Info("Found there ExecuteAttributionQueryV1")
+
+			// Not allowing query
 			if err != nil {
-				logCtx.Info("Failed to process query when not found in  DB - attribution v1")
+				logCtx.Info("Failing the query as the all parts of the query was not found in DB - attribution v1")
 				return true, mergedResult, computedMeta
 			}
-			computedM := H.ComputedRangeInfo{From: qRange.Start, To: qRange.End, TimeZone: string(timezoneString), FromCache: false}
-			computedMeta = append(computedMeta, computedM)
+
+			// compute if not found in cache
+			/*
+				requestPayload.Query.From = qRange.Start
+				requestPayload.Query.To = qRange.End
+				attributionQueryUnitPayload := model.AttributionQueryUnitV1{
+					Class: model.QueryClassAttribution,
+					Query: requestPayload.Query,
+				}
+				QueryKey, _ := attributionQueryUnitPayload.GetQueryCacheRedisKey(projectId)
+				debugQueryKey := model.GetStringKeyFromCacheRedisKey(QueryKey)
+				resultForRange, err = store.GetStore().ExecuteAttributionQueryV1(projectId, requestPayload.Query, debugQueryKey,
+					enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery, unitId)
+				logCtx.WithError(err).WithFields(log.Fields{"RIndex": idx, "RStart": qRange.Start, "REnd": qRange.End}).Info("Found there ExecuteAttributionQueryV1")
+				if err != nil {
+					logCtx.Info("Failed to process query when not found in  DB - attribution v1")
+					return true, mergedResult, computedMeta
+				}
+				computedM := H.ComputedRangeInfo{From: qRange.Start, To: qRange.End, TimeZone: string(timezoneString), FromCache: false}
+				computedMeta = append(computedMeta, computedM)
+			*/
 		}
 		keyIndex := model.GetLastKeyValueIndex(resultForRange.Headers)
 		if requestPayload.Query.AttributionKey == model.AttributionKeyLandingPage ||
