@@ -971,8 +971,8 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 		{"$salesforce_account_name": "AdPushup", "$salesforce_account_billingcountry": "India", "$salesforce_account_website": "adpushup.com", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Target", "$browser": "Chrome", "$device_type": "PC"},
 		{"$salesforce_account_name": "Mad Street Den", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "madstreetden.com", "$salesforce_account_sales_play": "Shape", "$salesforce_account_status": "Unknown", "$browser": "Chrome", "$device_type": "PC"},
 		{"$salesforce_account_name": "Heyflow", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "heyflow.app", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Unknown", "$browser": "Chrome", "$device_type": "PC"},
-		{"$salesforce_account_name": "Clientjoy Ads", "$salesforce_account_billingcountry": "New Zealand", "$salesforce_account_website": "clientjoy.io", "$salesforce_account_sales_play": "Win", "$salesforce_account_status": "Vendor", "$browser": "Chrome", "$device_type": "PC", "$salesforce_city": "New Delhi"},
-		{"$salesforce_account_name": "Adapt.IO", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "adapt.io", "$salesforce_account_sales_play": "Shape", "$salesforce_account_status": "Customer", "$browser": "Chrome", "$device_type": "PC"},
+		{"$salesforce_account_name": "Clientjoy Ads", "$salesforce_account_billingcountry": "New Zealand", "$salesforce_account_website": "clientjoy.io", "$salesforce_account_sales_play": "Win", "$salesforce_account_status": "Vendor", "$browser": "Chrome", "$device_type": "PC", "$salesforce_account_city": "London"},
+		{"$salesforce_account_name": "Adapt.IO", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "adapt.io", "$salesforce_account_sales_play": "Shape", "$salesforce_account_status": "Customer", "$browser": "Chrome", "$device_type": "PC", "$salesforce_account_city": "New Delhi"},
 		{"$hubspot_company_name": "AdPushup", "$hubspot_company_country": "US", "$hubspot_company_domain": "adpushup.com", "$hubspot_company_num_associated_contacts": 50, "$hubspot_company_industry": "Technology, Information and Internet", "$browser": "Chrome", "$device_type": "PC"},
 		{"$hubspot_company_name": "Mad Street Den", "$hubspot_company_country": "US", "$hubspot_company_domain": "madstreetden.com", "$hubspot_company_num_associated_contacts": 100, "$hubspot_company_industry": "Software Development", "$browser": "Chrome", "$device_type": "PC"},
 		{"$hubspot_company_name": "Heyflow", "$hubspot_company_country": "Germany", "$hubspot_company_domain": "heyflow.app", "$hubspot_company_num_associated_contacts": 20, "$hubspot_company_industry": "Software Development", "$browser": "Chrome", "$device_type": "PC", "$hubspot_company_is_public": "true"},
@@ -1386,7 +1386,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 
 	timelinesConfig = &model.TimelinesConfig{
 		AccountConfig: model.AccountConfig{
-			TableProps: []string{"$salesforce_account_billingcountry", "$hubspot_company_country", U.SIX_SIGNAL_COUNTRY, "$salesforce_city", "$hubspot_company_is_public"},
+			TableProps: []string{"$salesforce_account_billingcountry", "$hubspot_company_country", U.SIX_SIGNAL_COUNTRY, "$salesforce_account_city", "$hubspot_company_is_public"},
 		},
 	}
 
@@ -1448,6 +1448,22 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 				{
 					Entity:    "user_g",
 					Type:      "categorical",
+					Property:  "$salesforce_account_name",
+					Operator:  "equals",
+					Value:     "Clientjoy Ads",
+					LogicalOp: "OR",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$salesforce_account_city",
+					Operator:  "equals",
+					Value:     "New Delhi",
+					LogicalOp: "AND",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
 					Property:  "$hubspot_company_country",
 					Operator:  "equals",
 					Value:     "India",
@@ -1486,6 +1502,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 					LogicalOp: "OR",
 				},
 			},
+			TableProps: []string{"$salesforce_account_city", "$hubspot_company_is_public"},
 		},
 	}
 
@@ -1501,7 +1518,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	assert.NotNil(t, resp[0].LastActivity)
 	assert.Contains(t, filteredCompaniesNameHostNameMap["Clientjoy Ads"], resp[0].Name)
 	assert.NotNil(t, resp[0].HostName)
-	assert.Equal(t, resp[0].TableProps["$salesforce_city"], "New Delhi")
+	assert.Equal(t, resp[0].TableProps["$salesforce_account_city"], "New Delhi")
 	assert.Equal(t, resp[0].TableProps["$hubspot_company_is_public"], "true")
 }
 
@@ -3617,7 +3634,7 @@ func TestAllAccountDefaultGroupProperties(t *testing.T) {
 		{"$salesforce_account_name": "Adapt.IO", "$page_count": 4, "$salesforce_account_id": "123", "$salesforce_account_website": "adapt.io", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Target", "$browser": "Chrome", "$device_type": "PC"},
 		{"$salesforce_account_name": "o9 Solutions", "$page_count": 4, "$salesforce_account_id": "123", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "o9solutions.com", "$salesforce_account_sales_play": "Shape", "$salesforce_account_status": "Unknown", "$browser": "Chrome", "$device_type": "PC"},
 		{"$salesforce_account_name": "GoLinks Reporting", "$page_count": 4, "$salesforce_account_id": "123", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "golinks.io", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Unknown", "$browser": "Chrome", "$device_type": "PC"},
-		{"$salesforce_account_name": "Cin7", "$page_count": 4, "$salesforce_account_id": "123", "$salesforce_account_billingcountry": "New Zealand", "$salesforce_account_website": "cin7.com", "$salesforce_account_sales_play": "Win", "$salesforce_account_status": "Vendor", "$browser": "Chrome", "$device_type": "PC", "$salesforce_city": "New Delhi"},
+		{"$salesforce_account_name": "Cin7", "$page_count": 4, "$salesforce_account_id": "123", "$salesforce_account_billingcountry": "New Zealand", "$salesforce_account_website": "cin7.com", "$salesforce_account_sales_play": "Win", "$salesforce_account_status": "Vendor", "$browser": "Chrome", "$device_type": "PC", "$salesforce_account_city": "New Delhi"},
 		{"$salesforce_account_name": "Repair Desk", "$page_count": 5, "$salesforce_account_id": "123", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "repairdesk.co", "$salesforce_account_sales_play": "Shape", "$salesforce_account_status": "Customer", "$browser": "Chrome", "$device_type": "PC"},
 		{"$hubspot_company_name": "AdPushup", "$page_count": 5, "$hubspot_company_hs_object_id": 123, "$hubspot_company_country": "US", "$hubspot_company_domain": "adpushup.com", "$hubspot_company_num_associated_contacts": 50, "$hubspot_company_industry": "Technology, Information and Internet", "$browser": "Chrome", "$device_type": "PC"},
 		{"$hubspot_company_name": "Mad Street Den", "$page_count": 5, "$hubspot_company_hs_object_id": 123, "$hubspot_company_country": "US", "$hubspot_company_domain": "madstreetden.com", "$hubspot_company_num_associated_contacts": 100, "$hubspot_company_industry": "Software Development", "$browser": "Chrome", "$device_type": "PC"},
@@ -4373,7 +4390,7 @@ func TestAllAccounts(t *testing.T) {
 		{"$salesforce_account_name": "AdPushup", "$salesforce_account_billingcountry": "India", "$salesforce_account_website": "adpushup.com", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Target", "$browser": "Chrome", "$device_type": "PC"},
 		{"$salesforce_account_name": "Mad Street Den", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "madstreetden.com", "$salesforce_account_sales_play": "Shape", "$salesforce_account_status": "Unknown", "$browser": "Chrome", "$device_type": "PC"},
 		{"$salesforce_account_name": "Heyflow", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "heyflow.app", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Unknown", "$browser": "Chrome", "$device_type": "PC"},
-		{"$salesforce_account_name": "Clientjoy Ads", "$salesforce_account_billingcountry": "New Zealand", "$salesforce_account_website": "clientjoy.io", "$salesforce_account_sales_play": "Win", "$salesforce_account_status": "Vendor", "$browser": "Chrome", "$device_type": "PC", "$salesforce_city": "New Delhi"},
+		{"$salesforce_account_name": "Clientjoy Ads", "$salesforce_account_billingcountry": "New Zealand", "$salesforce_account_website": "clientjoy.io", "$salesforce_account_sales_play": "Win", "$salesforce_account_status": "Vendor", "$browser": "Chrome", "$device_type": "PC", "$salesforce_account_city": "New Delhi"},
 		{"$salesforce_account_name": "Adapt.IO", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "adapt.io", "$salesforce_account_sales_play": "Shape", "$salesforce_account_status": "Customer", "$browser": "Chrome", "$device_type": "PC"},
 		{U.SIX_SIGNAL_NAME: "AdPushup", U.SIX_SIGNAL_COUNTRY: "US", U.SIX_SIGNAL_DOMAIN: "adpushup.com", "$hubspot_company_num_associated_contacts": 50, "$hubspot_company_industry": "Technology, Information and Internet", "$browser": "Chrome"},
 		{U.SIX_SIGNAL_NAME: "Mad Street Den", U.SIX_SIGNAL_COUNTRY: "US", U.SIX_SIGNAL_DOMAIN: "madstreetden.com", "$hubspot_company_num_associated_contacts": 100, "$hubspot_company_industry": "Software Development", "$browser": "Chrome"},
