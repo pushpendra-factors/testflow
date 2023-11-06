@@ -204,7 +204,7 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 				commonQueryFrom, commonQueryTo, requestPayload.GetTimeZone(), meta)
 		} else {
 			model.SetCacheResultByDashboardIdAndUnitId(resultGroup, projectId, dashboardId, unitId,
-				commonQueryFrom, commonQueryTo, requestPayload.GetTimeZone(), meta)
+				commonQueryFrom, commonQueryTo, requestPayload.GetTimeZone(), meta, false)
 		}
 
 		if allowSyncReferenceFields {
@@ -397,7 +397,7 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 				requestPayload.Query.From, requestPayload.Query.To, requestPayload.Query.GetTimeZone(), meta)
 		} else {
 			model.SetCacheResultByDashboardIdAndUnitId(result, projectId, dashboardId, unitId,
-				requestPayload.Query.From, requestPayload.Query.To, requestPayload.Query.GetTimeZone(), meta)
+				requestPayload.Query.From, requestPayload.Query.To, requestPayload.Query.GetTimeZone(), meta, false)
 		}
 		return H.DashboardQueryResponsePayload{Result: result, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), TimeZone: string(requestPayload.Query.GetTimeZone()), CacheMeta: meta}, http.StatusOK, "", "", false
 	}

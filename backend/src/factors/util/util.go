@@ -140,11 +140,12 @@ const (
 	CacheExpiryWeeklyRangeInSeconds = 6 * 7 * SECONDS_IN_A_DAY // 6 Weeks.
 	CacheExpiryDefaultInSeconds     = 62 * SECONDS_IN_A_DAY    // 62 Days.
 
-	CacheExpiryQueryMaxInSecondsTwoDays     = 2 * SECONDS_IN_A_DAY
-	CacheExpiryQueryMaxInSecondsSevenDays   = 7 * SECONDS_IN_A_DAY
-	CacheExpiryQueryTodaysDataInSeconds     = 10 * 60      // 10 minutes.
-	CacheExpiryDashboardTodaysDataInSeconds = 12 * 60 * 60 // 12 hours.
-	CacheExpiryDashboard30MinutesInSeconds  = 12 * 60 * 60 // 12 hours.
+	CacheExpiryQueryMaxInSecondsTwoDays      = 2 * SECONDS_IN_A_DAY
+	CacheExpiryQueryMaxInSecondsSevenDays    = 7 * SECONDS_IN_A_DAY
+	CacheExpiryQueryTodaysDataInSeconds      = 10 * 60      // 10 minutes.
+	CacheExpiryDashboardTodaysDataInSeconds  = 12 * 60 * 60 // 12 hours.
+	CacheExpiryDashboard30MinutesInSeconds   = 12 * 60 * 60 // 12 hours.
+	CacheExpiryAttributionDashboardInSeconds = 7 * 24 * 60 * 60
 )
 
 // Group Names
