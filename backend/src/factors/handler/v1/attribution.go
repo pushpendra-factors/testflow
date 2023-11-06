@@ -149,12 +149,11 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 		"requestPayload": requestPayload,
 		"timezoneString": timezoneString,
 	}).Info("Attribution query debug request payload")
-	if !hardRefresh && isDashboardQueryRequest && !H.ShouldAllowHardRefresh(requestPayload.Query.From, requestPayload.Query.To, timezoneString, hardRefresh) {
-		//todo satya: check if we want to use effective to and from in this flow
+	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(requestPayload.Query.From, requestPayload.Query.To, timezoneString, hardRefresh) {
 		// if common flow and merge is enabled for the project
 		if C.IsAllowedAttributionCommonFlow(projectId) {
 			logCtx.Info("Running the common DB cache flow")
-			return runTheCommonDBFlow(reqId, projectId, dashboardId, unitId, requestPayload, timezoneString, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery, logCtx)
+			return runTheCommonDBFlow(hardRefresh, reqId, projectId, dashboardId, unitId, requestPayload, timezoneString, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery, logCtx)
 		}
 	}
 
@@ -273,7 +272,7 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 				effectiveFrom, effectiveTo, timezoneString, meta)
 		} else {
 			model.SetCacheResultByDashboardIdAndUnitId(result, projectId, dashboardId, unitId,
-				effectiveFrom, effectiveTo, timezoneString, meta)
+				effectiveFrom, effectiveTo, timezoneString, meta, false)
 		}
 
 		return H.DashboardQueryResponsePayload{Result: result, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), CacheMeta: meta}, http.StatusOK, "", "", false
@@ -373,23 +372,38 @@ func getValidAttributionQueryAndDetailsFromRequestV1(r *http.Request, c *gin.Con
 	return queryPayload, dashboardId, unitId, isDashboardQueryRequest, isDashboardQueryLocked, http.StatusOK, "", "", false
 }
 
-func runTheCommonDBFlow(reqId string, projectId int64, dashboardId int64, unitId int64, requestPayload AttributionRequestPayloadV1,
+func runTheCommonDBFlow(hardRefresh bool, reqId string, projectId int64, dashboardId int64, unitId int64, requestPayload AttributionRequestPayloadV1,
 	timezoneString U.TimeZoneString, enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool,
 	logCtx *log.Entry) (interface{}, int, string, string, bool) {
 
-	logCtx.Info("Hitting the DB cache lookup runTheCommonDBFlow")
-	shouldReturn, resCode, resMsg := H.GetResponseFromDBCaching(reqId, projectId, dashboardId, unitId,
-		requestPayload.Query.From, requestPayload.Query.To, timezoneString)
-	logCtx.WithFields(log.Fields{
-		"should_return": shouldReturn,
-		"res_code":      resCode,
-		"dashboard_Id":  dashboardId,
-		"unit_id":       unitId,
-	}).Info("Hitting the DB cache lookup")
-	if shouldReturn {
-		logCtx.Info("Found the result in DB runTheCommonDBFlow")
-		if resCode == http.StatusOK {
-			return resMsg, resCode, "", "", false
+	if !hardRefresh {
+		logCtx.Info("Hitting the DB cache lookup runTheCommonDBFlow")
+		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(reqId, projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To, timezoneString)
+		logCtx.WithFields(log.Fields{
+			"should_return": shouldReturn,
+			"res_code":      resCode,
+			"res_msg":       resMsg,
+			"method":        "runTheCommonDBFlow",
+		}).Info("Response from GetResponseIfCachedDashboardQuery")
+		if shouldReturn {
+			if resCode == http.StatusOK {
+				return H.DashboardQueryResponsePayload{Result: resMsg, Cache: true, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
+					CacheMeta: "", ComputeMeta: ""}, http.StatusOK, "", "", false
+			}
+		}
+		shouldReturn, resCode, resMsg = H.GetResponseFromDBCaching(reqId, projectId, dashboardId, unitId,
+			requestPayload.Query.From, requestPayload.Query.To, timezoneString)
+		logCtx.WithFields(log.Fields{
+			"should_return": shouldReturn,
+			"res_code":      resCode,
+			"dashboard_Id":  dashboardId,
+			"unit_id":       unitId,
+		}).Info("Hitting the DB cache lookup")
+		if shouldReturn {
+			logCtx.Info("Found the result in DB runTheCommonDBFlow")
+			if resCode == http.StatusOK {
+				return resMsg, resCode, "", "", false
+			}
 		}
 	}
 
@@ -418,6 +432,19 @@ func runTheCommonDBFlow(reqId string, projectId int64, dashboardId int64, unitId
 			logCtx.Error("Days range query failed to run - reason " + errRunMulti.Error())
 			return nil, http.StatusInternalServerError, PROCESSING_FAILED, errRunMulti.Error(), true
 		}
+
+		meta := model.CacheMeta{
+			Timezone:       string(requestPayload.Query.GetTimeZone()),
+			From:           requestPayload.Query.From,
+			To:             requestPayload.Query.To,
+			RefreshedAt:    U.TimeNowIn(U.TimeZoneStringIST).Unix(),
+			LastComputedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
+			Preset:         "none",
+		}
+		mergedResult.CacheMeta = meta
+
+		model.SetCacheResultByDashboardIdAndUnitId(mergedResult, projectId, dashboardId, unitId,
+			requestPayload.Query.From, requestPayload.Query.To, timezoneString, meta, true)
 
 		return H.DashboardQueryResponsePayload{Result: mergedResult, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
 			CacheMeta: mergedResult.CacheMeta, ComputeMeta: computeMeta}, http.StatusOK, "", "", false
