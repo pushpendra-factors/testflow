@@ -410,12 +410,13 @@ func runTheCommonDBFlow(reqId string, projectId int64, dashboardId int64, unitId
 		"success":        success,
 	}).Info("debug daysRange")
 	if success {
-		hasFailed, mergedResult, computeMeta := RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId, requestPayload,
+		hasFailed, mergedResult, computeMeta, errRunMulti := RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId, requestPayload,
 			timezoneString, reqId, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery,
 			daysRange, logCtx)
 		if hasFailed {
-			logCtx.Error("Days range query failed to run")
-			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Days range query failed to run", true
+			// adding the actual error while running multiple queries
+			logCtx.Error("Days range query failed to run - reason " + errRunMulti.Error())
+			return nil, http.StatusInternalServerError, PROCESSING_FAILED, errRunMulti.Error(), true
 		}
 
 		return H.DashboardQueryResponsePayload{Result: mergedResult, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
