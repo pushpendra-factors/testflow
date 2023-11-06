@@ -1072,7 +1072,7 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profile
 				for _, filter := range filterArr {
 					isFound := CheckPropertyOfGivenType(filter, propertiesDecoded)
 					if isFound {
-						domainsIDPropsMap[userDetail.ID][tablePropName] = filter.Value
+						domainsIDPropsMap[userDetail.ID][tablePropName] = (*propertiesDecoded)[tablePropName]
 						break
 					}
 				}
