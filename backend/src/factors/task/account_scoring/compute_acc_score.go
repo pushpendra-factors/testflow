@@ -716,3 +716,46 @@ func ComputeBucketRanges(scores []float64, date string) (M.BucketRanges, error) 
 	}
 	return bucket, nil
 }
+
+func GetEngagementBuckets(projectId int64, scoresPerUser map[string]model.PerUserScoreOnDay) (model.BucketRanges, error) {
+
+	maxTimeStamp := int64(0)
+	for _, userScores := range scoresPerUser {
+		timestamp := U.GetDateFromString(userScores.Timestamp)
+		maxTimeStamp = U.Max(maxTimeStamp, timestamp)
+	}
+	dateTofetch := U.GetDateOnlyFromTimestamp(maxTimeStamp)
+	buckets, err := store.GetStore().GetEngagementBucketsOnProject(projectId, dateTofetch)
+	if err != nil {
+		return model.BucketRanges{}, err
+	}
+	return buckets, nil
+
+}
+
+func GetEngagement(percentile float64, buckets model.BucketRanges) string {
+	for _, bucket := range buckets.Ranges {
+		if bucket.Low <= percentile && percentile < bucket.High {
+			return bucket.Name
+		}
+	}
+	return "ice"
+}
+
+func GetEngagementLevelOnUser(projectId int64, event model.LatestScore, userId string, fscore float64) string {
+	scoresPerUser := make(map[string]model.PerUserScoreOnDay)
+
+	dateString := U.GetDateOnlyFromTimestamp(event.Date)
+	var userOnDay model.PerUserScoreOnDay
+	userOnDay.Id = userId
+	userOnDay.Timestamp = dateString
+	userOnDay.Score = float32(fscore)
+	scoresPerUser[dateString] = userOnDay
+	buckets, errGetBuckets := GetEngagementBuckets(projectId, scoresPerUser)
+	if errGetBuckets != nil {
+		log.WithError(errGetBuckets).Error("Error retrieving account score buckets")
+
+	}
+	engagementLevel := GetEngagement(float64(fscore), buckets)
+	return engagementLevel
+}
