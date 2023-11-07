@@ -46,6 +46,7 @@ const Onboarding = ({
   const routerQuery = useQuery();
   const paramTarget = routerQuery.get('target');
   const paramSetup = routerQuery.get('setup');
+  const { active_project } = useSelector((state) => state.global);
 
   const onboarding_steps: OnboardingStepsConfig = useSelector(
     (state) => state?.global?.currentProjectSettings?.onboarding_steps
@@ -76,6 +77,17 @@ const Onboarding = ({
 
       //handling project redirection
       let projectDetails = isEmpty(activeItem) ? projects[0] : activeItem[0];
+      //if previous projectId and current projectId are same then changing the project
+      if (projectDetails?.id === active_project?.id) {
+        if (projects[0]?.id !== active_project?.id) {
+          projectDetails = projects[0];
+        } else if (
+          projects?.length > 1 &&
+          projects[1]?.id !== active_project?.id
+        ) {
+          projectDetails = projects[1];
+        }
+      }
       localStorage.setItem(
         'prevActiveProject',
         localStorage.getItem('activeProject') || ''
