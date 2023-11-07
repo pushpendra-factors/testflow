@@ -317,7 +317,16 @@ func checkCategoricalTypeProperty(segmentRule model.QueryProperty, properties *m
 	}
 	var propertyExists bool
 	checkValue := segmentRule.Value
-	propertyValue := (*properties)[segmentRule.Property].(string)
+	var propertyValue string
+	if stringVal, ok := (*properties)[segmentRule.Property].(string); ok {
+		if stringVal != "" {
+			propertyValue = stringVal
+		}
+	} else if floatVal, ok := (*properties)[segmentRule.Property].(float64); ok {
+		propertyValue = fmt.Sprintf("%v", floatVal)
+	} else if intVal, ok := (*properties)[segmentRule.Property].(int64); ok {
+		propertyValue = fmt.Sprintf("%d", intVal)
+	}
 	switch segmentRule.Operator {
 	case model.ContainsOpStr:
 		if strings.Contains(propertyValue, checkValue) {
