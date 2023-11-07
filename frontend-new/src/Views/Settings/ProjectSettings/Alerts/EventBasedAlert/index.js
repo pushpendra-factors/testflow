@@ -20,7 +20,9 @@ import {
   Popover,
   Tooltip,
   Avatar,
-  Switch
+  Switch,
+  Menu,
+  Dropdown
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import {
@@ -79,8 +81,9 @@ import {
   INITIALIZE_GROUPBY,
   setEventGroupBy
 } from 'Reducers/coreQuery/actions';
-import { ExclamationCircleOutlined } from '@ant-design/icons';
+import { ExclamationCircleOutlined, MoreOutlined } from '@ant-design/icons';
 import { useHistory } from 'react-router-dom';
+import { ScrollToTop } from 'Routes/feature';
 
 const { Option } = Select;
 
@@ -132,6 +135,7 @@ const EventBasedAlert = ({
   const [teamsEnabled, setTeamsEnabled] = useState(false);
   const [notRepeat, setNotRepeat] = useState(false);
   const [notifications, setNotifications] = useState(false);
+  const [isHyperLinkEnabled, setIsHyperLinkEnabled] = useState(false);
   const [alertLimit, setAlertLimit] = useState(5);
   const [coolDownTime, setCoolDownTime] = useState(0.5);
   const [viewFilter, setViewFilter] = useState([]);
@@ -200,10 +204,10 @@ const EventBasedAlert = ({
   }, [activeProject?.id, groups]);
 
   useEffect(() => {
-    if(groups && Object.keys(groups).length != 0){
-      Object.keys(groups?.all_groups).forEach((item)=>{
-        getGroupProperties(activeProject.id, item) 
-      }); 
+    if (groups && Object.keys(groups).length != 0) {
+      Object.keys(groups?.all_groups).forEach((item) => {
+        getGroupProperties(activeProject.id, item)
+      });
     }
   }, [activeProject.id, groups]);
 
@@ -218,33 +222,54 @@ const EventBasedAlert = ({
   }, [groups]);
 
   const setGroupAnalysis = (group) => {
+    
     setActiveGrpBtn(group);
 
-    if (!['users', 'events'].includes(group)) {
-      getGroupProperties(activeProject.id, group);
+        if (!['users', 'events'].includes(group)) {
+          getGroupProperties(activeProject.id, group);
+        }
+    
+        const criteria =
+          group === 'events' ? TOTAL_EVENTS_CRITERIA : TOTAL_USERS_CRITERIA;
+        setShowCriteria(criteria);
+    
+        const opts = {
+          ...queryOptions,
+          group_analysis: group,
+          globalFilters: []
+        };
+    
+        dispatch({
+          type: INITIALIZE_GROUPBY,
+          payload: {
+            global: [],
+            event: []
+          }
+        });
+    
+        setQueries([]);
+        setQueryOptions(opts);
+  };
+
+  const confirmGroupSwitch = (group) =>{
+
+    if(queries.length > 0){
+      Modal.confirm({
+        title: 'Are you sure?',
+        content:
+          'Switching between "Account and People" will lose your current configured data',
+        okText: 'Yes, proceed',
+        cancelText: 'No, go back',
+        onOk: () => { 
+          setGroupAnalysis(group)
+        }
+      }); 
+    }
+    else{
+      setGroupAnalysis(group)
     }
 
-    const criteria =
-      group === 'events' ? TOTAL_EVENTS_CRITERIA : TOTAL_USERS_CRITERIA;
-    setShowCriteria(criteria);
-
-    const opts = {
-      ...queryOptions,
-      group_analysis: group,
-      globalFilters: []
-    };
-
-    dispatch({
-      type: INITIALIZE_GROUPBY,
-      payload: {
-        global: [],
-        event: []
-      }
-    });
-
-    setQueries([]);
-    setQueryOptions(opts);
-  };
+  }
 
   const [isGroupByDDVisible, setGroupByDDVisible] = useState(false);
 
@@ -354,10 +379,16 @@ const EventBasedAlert = ({
       setCoolDownTime(viewAlertDetails?.alert?.cool_down_time / 3600);
       setNotRepeat(viewAlertDetails?.alert?.repeat_alerts);
       setNotifications(viewAlertDetails?.alert?.notifications);
+      setIsHyperLinkEnabled(!viewAlertDetails?.alert?.is_hyperlink_disabled);
       const messageProperty = processBreakdownsFromQuery(
         viewAlertDetails?.alert?.message_property
       );
       messageProperty.forEach((property) => pushGroupBy(property));
+
+      //open advanced settings by default
+      if (viewAlertDetails?.alert?.repeat_alerts || !viewAlertDetails?.alert?.is_hyperlink_disabled) {
+        setShowAdvSettings(true)
+      }
 
       // webhook settings
       if (viewAlertDetails?.alert?.webhook) {
@@ -389,6 +420,55 @@ const EventBasedAlert = ({
       onReset();
     }
   }, [viewAlertDetails, alertState]);
+
+
+  const menu = () => {
+    return (
+      <Menu style={{width:'140px'}}>
+        <Menu.Item
+          key='1'
+          onClick={() => createDuplicateAlert(viewAlertDetails)}
+        >
+             <div className='flex items-center'>
+
+          <SVG
+            name='Pluscopy'
+            size={16}
+            color={'grey'}
+            extraClass={'mr-1'}
+            />
+            <Text
+                        type={'title'}
+                        level={7} 
+                        color={'grey-2'}
+                        extraClass={'m-0 ml-1'}
+                        >Create copy</Text> 
+            </div>
+        </Menu.Item>
+        <Menu.Divider />
+        <Menu.Item
+          key='2'
+          onClick={() => confirmDeleteAlert(viewAlertDetails)}
+        >
+             <div className='flex items-center'>
+
+          <SVG
+            name='Delete1'
+            size={16}
+            color={'red'}
+            extraClass={'mr-1'}
+            /> 
+          <Text
+                        type={'title'}
+                        level={7} 
+                        color={'red'}
+                        extraClass={'m-0 ml-1'}
+                        >Delete</Text>  
+            </div>
+        </Menu.Item>
+      </Menu>
+    );
+  };
 
   const queryChange = useCallback(
     (newEvent, index, changeType = 'add', flag = null) => {
@@ -593,6 +673,7 @@ const EventBasedAlert = ({
     setAlertLimit(5);
     setNotRepeat(false);
     setNotifications(false);
+    setIsHyperLinkEnabled(false);
     setSelectedChannel([]);
     setSaveSelectedChannel([]);
     form.resetFields();
@@ -664,18 +745,19 @@ const EventBasedAlert = ({
         event: queries[0]?.label,
         filter: formatFiltersForQuery(queries?.[0]?.filters),
         notifications: notifications,
+        is_hyperlink_disabled: !isHyperLinkEnabled,
         message: data?.message,
         message_property:
           groupBy && groupBy.length && groupBy[0] && groupBy[0].property
             ? formatBreakdownsForQuery(
-                groupBy
-                  .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
-                  .filter(
-                    (gbp) =>
-                      gbp.eventName === queries[0]?.label &&
-                      gbp.eventIndex === 1
-                  )
-              )
+              groupBy
+                .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
+                .filter(
+                  (gbp) =>
+                    gbp.eventName === queries[0]?.label &&
+                    gbp.eventIndex === 1
+                )
+            )
             : [],
         alert_limit: alertLimit,
         repeat_alerts: notRepeat,
@@ -939,13 +1021,13 @@ const EventBasedAlert = ({
       message_property:
         groupBy && groupBy.length && groupBy[0] && groupBy[0].property
           ? formatBreakdownsForQuery(
-              groupBy
-                .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
-                .filter(
-                  (gbp) =>
-                    gbp.eventName === queries[0]?.label && gbp.eventIndex === 1
-                )
-            )
+            groupBy
+              .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
+              .filter(
+                (gbp) =>
+                  gbp.eventName === queries[0]?.label && gbp.eventIndex === 1
+              )
+          )
           : [],
       message: alertMessage,
       url: webhookUrl,
@@ -1069,26 +1151,70 @@ const EventBasedAlert = ({
             {alertState.state == 'edit' ? (
               <>
                 <Col span={12}>
-                  <Text
-                    type={'title'}
-                    level={3}
-                    weight={'bold'}
-                    color={'grey-2'}
-                    extraClass={'m-0'}
-                  >
-                    Triggers alerts from an event
-                  </Text>
+                  <div className='flex items-center'>
+                    <div className='flex items-baseline'>
+                      <Text
+                        type={'title'}
+                        level={3}
+                        weight={'bold'}
+                        extraClass={'m-0'}
+                      >
+                        {`${viewAlertDetails?.title}`}
+                      </Text>
+                      {/* <Text
+                        type={'title'}
+                        level={7} 
+                        color={'grey'}
+                        extraClass={'m-0 ml-1'}
+                        >
+                        {`(${viewAlertDetails?.type == "kpi_alert" ? "Weekly alerts" : "Real-time"})`}
+                      </Text> */}
+                    </div>
+                    <div className='ml-4'>
+                      <Switch
+                        checkedChildren='On'
+                        unCheckedChildren='OFF'
+                        onChange={toggleAlertEnabled}
+                        checked={isAlertEnabled}
+                        size='large'
+                        loading={loading}
+                      />
+                    </div>
+                  </div>
                 </Col>
                 <Col span={12}>
                   <div className={'flex justify-end items-center'}>
-                    <Switch
-                      checkedChildren='On'
-                      unCheckedChildren='OFF'
-                      onChange={toggleAlertEnabled}
-                      checked={isAlertEnabled}
-                      size='large'
+                    <Dropdown trigger={["click"]} overlay={menu} placement='bottomRight' className='mr-2'>
+                      <Button
+                        type='text'
+                        icon={
+                          <MoreOutlined
+                            rotate={90}
+                            style={{ color: 'gray', fontSize: '18px' }}
+                          />
+                        }
+                      />
+                    </Dropdown>
+
+                    <Button
+                      size={'large'}
+                      disabled={loading}
+                      onClick={() => {
+                        onReset();
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size={'large'}
+                      disabled={loading}
                       loading={loading}
-                    />
+                      className={'ml-2'}
+                      type={'primary'}
+                      htmlType='submit'
+                    >
+                      Save
+                    </Button>
                   </div>
                 </Col>
               </>
@@ -1099,7 +1225,6 @@ const EventBasedAlert = ({
                     type={'title'}
                     level={3}
                     weight={'bold'}
-                    color={'grey-2'}
                     extraClass={'m-0'}
                   >
                     Create new alert
@@ -1132,17 +1257,15 @@ const EventBasedAlert = ({
             )}
           </Row>
 
-          <Row className={'mt-6 border-top--thin pt-6'}>
+          <Row className={'mt-6 border-top--thin-2 pt-6'}>
             <Col span={18}>
               <Text
                 type={'title'}
                 level={7}
                 weight={'bold'}
-                color={'grey-2'}
                 extraClass={'m-0'}
               >
-                {' '}
-                When to trigger alert{' '}
+                When to trigger alert
               </Text>
               <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>
                 Choose the event you wish to be alerted for. You can choose
@@ -1162,26 +1285,24 @@ const EventBasedAlert = ({
               <div className='flex items-center justify-start btn-custom--radio-container'>
                 <Button
                   type='default'
-                  className={`${
-                    activeGrpBtn == 'events' ? 'active' : 'no-border'
-                  }`}
-                  onClick={() => setGroupAnalysis('events')}
+                  className={`${activeGrpBtn == 'events' ? 'active' : 'no-border'
+                    }`}
+                  onClick={() => confirmGroupSwitch('events')}
                 >
                   Accounts
                 </Button>
                 <Button
                   type='default'
-                  className={`${
-                    activeGrpBtn == 'users' ? 'active' : 'no-border'
-                  }`}
-                  onClick={() => setGroupAnalysis('users')}
+                  className={`${activeGrpBtn == 'users' ? 'active' : 'no-border'
+                    }`}
+                  onClick={() => confirmGroupSwitch('users')}
                 >
                   People
                 </Button>
               </div>
             </Col>
           </Row>
-          <Row className={'mt-4 mb-4 border-bottom--thin pb-6'}>
+          <Row className={'mt-4 mb-4 border-bottom--thin-2 pb-6'}>
             <Col span={2}>
               <div className='flex justify-start'>
                 <Text type={'title'} level={8} extraClass={'m-0'}>
@@ -1189,7 +1310,7 @@ const EventBasedAlert = ({
                 </Text>
               </div>
             </Col>
-            <Col span={16}>
+            <Col span={22}>
               <div className='border--thin-2 px-4 py-2 border-radius--sm'>
                 <Form.Item name='event_name' className={'m-0'}>
                   {queryList()}
@@ -1226,7 +1347,7 @@ const EventBasedAlert = ({
                   className={'fa-input'}
                   placeholder={'Enter name'}
                   onChange={(e) => setAlertName(e.target.value)}
-                  // ref={inputComponentRef}
+                // ref={inputComponentRef}
                 />
               </Form.Item>
             </Col>
@@ -1291,7 +1412,7 @@ const EventBasedAlert = ({
                     level={7}
                     extraClass={'m-0 inline mb-1 mr-1'}
                   >
-                    Choose properties to use as a payload to other apps
+                    Add properties to show
                   </Text>
                   <Popover
                     placement='rightTop'
@@ -1933,47 +2054,27 @@ const EventBasedAlert = ({
                       checked={notRepeat}
                       onChange={(e) => setNotRepeat(e.target.checked)}
                     >
-                      Do not repeat alerts more than once within
+                      Limit alerts
                     </Checkbox>
-                    <div className='inline -ml-2'>
-                      <Select
-                        bordered={false}
-                        size='small'
-                        className='m-0 inline'
-                        style={{
-                          width: 110
-                        }}
-                        defaultValue={0.5}
-                        onChange={handleCoolDownTimeChange}
-                      >
-                        <Option value={0.5}>0.5 hours</Option>
-                        <Option value={1}>1 hours</Option>
-                        <Option value={2}>2 hours</Option>
-                        <Option value={4}>4 hours</Option>
-                        <Option value={6}>6 hours</Option>
-                        <Option value={8}>8 hours</Option>
-                        <Option value={12}>12 hours</Option>
-                        <Option value={24}>24 hours</Option>
-                      </Select>
-                    </div>
+
                   </Form.Item>
                 </Col>
-                <Col span={16}>
+                <Col span={20}>
                   <Form.Item name='event_property' className='m-0 inline'>
                     <Text
                       type={'title'}
                       level={7}
                       color={'grey-2'}
-                      extraClass={'m-0 inline ml-10'}
+                      extraClass={'m-0 inline'}
                     >
-                      for the same value of
+                      For the  value of
                     </Text>
 
                     <div className='inline ml-2'>
                       <Select
                         className='inline fa-select'
                         style={{
-                          width: 200
+                          width: 250
                         }}
                         // dropdownMatchSelectWidth={false}
                         value={EventPropertyDetails}
@@ -2004,33 +2105,43 @@ const EventBasedAlert = ({
                         })}
                       </Select>
                     </div>
+                    <Text
+                      type={'title'}
+                      level={7}
+                      color={'grey-2'}
+                      extraClass={'m-0 inline ml-2 mr-2'}
+                    >
+                      show alert every
+                    </Text>
+                    <div className='inline ml-2'>
+                      <Select
+                        className='inline fa-select'
+                        style={{
+                          width: 110
+                        }}
+                        defaultValue={0.5}
+                        onChange={handleCoolDownTimeChange}
+                      >
+                        <Option value={0.5}>0.5 hours</Option>
+                        <Option value={1}>1 hours</Option>
+                        <Option value={2}>2 hours</Option>
+                        <Option value={4}>4 hours</Option>
+                        <Option value={6}>6 hours</Option>
+                        <Option value={8}>8 hours</Option>
+                        <Option value={12}>12 hours</Option>
+                        <Option value={24}>24 hours</Option>
+                      </Select>
+                    </div>
                   </Form.Item>
                 </Col>
                 <Col span={16} className={'m-0 mt-2'}>
-                  <Form.Item name='notifications' className={'m-0'}>
+                  <Form.Item name='is_hyperlink_enabled' className={'m-0'}>
                     <Checkbox
-                      checked={notifications}
-                      onChange={(e) => setNotifications(e.target.checked)}
+                      checked={isHyperLinkEnabled}
+                      onChange={(e) => setIsHyperLinkEnabled(e.target.checked)}
                     >
-                      Set limit for alerts per day to
+                      Show buttons and hyperlinks in alerts
                     </Checkbox>
-                    <div className='inline -ml-2'>
-                      <Select
-                        bordered={false}
-                        size='small'
-                        className='m-0 inline'
-                        style={{
-                          width: 100
-                        }}
-                        defaultValue={5}
-                        onChange={handleAlertLimit}
-                      >
-                        <Option value={5}>5 alerts</Option>
-                        <Option value={10}>10 alerts</Option>
-                        <Option value={15}>15 alerts</Option>
-                        <Option value={20}>20 alerts</Option>
-                      </Select>
-                    </div>
                   </Form.Item>
                 </Col>{' '}
               </>
@@ -2040,11 +2151,10 @@ const EventBasedAlert = ({
               <a
                 type={'link'}
                 onClick={() => setShowAdvSettings(!showAdvSettings)}
-              >{`${
-                showAdvSettings
+              >{`${showAdvSettings
                   ? 'Hide advanced options'
                   : 'Show advanced options'
-              }`}</a>
+                }`}</a>
             </Col>
           </Row>
 
@@ -2121,7 +2231,32 @@ const EventBasedAlert = ({
               </Row>
             </>
           ) : (
-            ''
+            <Row className={'border-top--thin-2 mt-6 pt-6'}>
+           <Col span={12}></Col>
+           <Col span={12}>
+                  <div className={'flex justify-end'}>
+                    <Button
+                      size={'large'}
+                      disabled={loading}
+                      onClick={() => {
+                        onReset();
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size={'large'}
+                      disabled={loading}
+                      loading={loading}
+                      className={'ml-2'}
+                      type={'primary'}
+                      htmlType='submit'
+                    >
+                      Save
+                    </Button>
+                  </div>
+                </Col>
+            </Row>
           )}
         </Form>
       </>
@@ -2130,12 +2265,12 @@ const EventBasedAlert = ({
 
   return (
     <div className={'fa-container'}>
+      <ScrollToTop />
       <Row gutter={[24, 24]} justify='center'>
-        <Col span={18}>
+        <Col span={22}>
           <div className={'mb-10 pl-4'}>{renderEventForm()}</div>
         </Col>
-      </Row>
-
+      </Row> 
       <Modal
         title={null}
         visible={showSelectChannelsModal}
@@ -2154,8 +2289,8 @@ const EventBasedAlert = ({
         cancelButtonProps={{ size: 'large' }}
       >
         <div>
-          <Row>
-            <Col span={24}>
+        <Row gutter={[24, 24]} justify='center'>
+            <Col span={22}>
               <Text
                 type={'title'}
                 level={4}
@@ -2167,8 +2302,8 @@ const EventBasedAlert = ({
               </Text>
             </Col>
           </Row>
-          <Row>
-            <Col span={24}>
+          <Row gutter={[24, 24]} justify='center'>
+            <Col span={22}>
               <SelectChannels
                 channelOpts={channelOpts}
                 selectedChannel={selectedChannel}
@@ -2196,8 +2331,8 @@ const EventBasedAlert = ({
         cancelButtonProps={{ size: 'large' }}
       >
         <div>
-          <Row>
-            <Col span={24}>
+          <Row gutter={[24, 24]} justify='center'>
+            <Col span={22}>
               <Text
                 type={'title'}
                 level={4}
@@ -2224,13 +2359,13 @@ const EventBasedAlert = ({
                 options={teamsWorkspaceOpts}
                 placeholder='Select Workspace'
                 showSearch
-                style={{minWidth: '250px'}}
+                style={{ minWidth: '250px' }}
                 value={
                   selectedWorkspace
                     ? {
-                        label: selectedWorkspace?.name,
-                        value: selectedWorkspace?.id
-                      }
+                      label: selectedWorkspace?.name,
+                      value: selectedWorkspace?.id
+                    }
                     : null
                 }
                 onChange={(value, op) => {
@@ -2241,8 +2376,8 @@ const EventBasedAlert = ({
               ></Select>
             </Col>
           </Row>
-          <Row>
-            <Col span={24}>
+          <Row gutter={[24, 24]} justify='center'>
+            <Col span={22}>
               <SelectChannels
                 channelOpts={teamsChannelOpts}
                 selectedChannel={teamsSelectedChannel}
