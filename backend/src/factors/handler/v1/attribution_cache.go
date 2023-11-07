@@ -23,8 +23,19 @@ func RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId int64, re
 
 	var computedMeta []H.ComputedRangeInfo
 
+	var query *model.AttributionQueryV1
+	// building a query with 10 secs range to get GetRawAttributionQueryParams faster
+	if len(rangesToRun) > 1 {
+		U.DeepCopy(requestPayload.Query, &query)
+		query.From = rangesToRun[0].Start
+		query.To = rangesToRun[0].Start + 10
+	} else {
+		logCtx.Error("Can't run as date range is not correct")
+		return true, mergedResult, computedMeta, errors.New("can't run as date range is not correct")
+	}
+
 	// Get the basic parameters for merging
-	_, kpiAggFunctionType, errKpi := store.GetStore().GetRawAttributionQueryParams(projectId, requestPayload.Query,
+	_, kpiAggFunctionType, errKpi := store.GetStore().GetRawAttributionQueryParams(projectId, query,
 		enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 	logCtx.WithFields(log.Fields{"kpiAggFunctionType": kpiAggFunctionType}).Info("GetRawAttributionQueryParams for the query merge")
 
