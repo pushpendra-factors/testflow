@@ -1836,7 +1836,7 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 			from, to, timezoneString, meta)
 	} else {
 		model.SetCacheResultByDashboardIdAndUnitId(result, projectID, dashboardID, dashboardUnitID,
-			from, to, timezoneString, meta)
+			from, to, timezoneString, meta, false)
 	}
 	// Set in query cache result as well in case someone runs the same query from query handler.
 	model.SetQueryCacheResult(projectID, baseQuery, result)

@@ -21,9 +21,10 @@ func (store *MemSQL) GetEventUserCountsOfAllProjects(lastNDays int) (map[string]
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	currentDate := time.Now().UTC()
 	projects, _ := store.GetProjects()
-	projectIDNameMap := make(map[int64]string)
+	projectIDNameMap := make(map[string]string)
 	for _, project := range projects {
-		projectIDNameMap[project.ID] = project.Name
+		projId, _ := U.GetValueAsString(project.ID)
+		projectIDNameMap[projId] = project.Name
 	}
 	result, err := GetProjectAnalyticsData(projectIDNameMap, lastNDays, currentDate, 0)
 	if err != nil {
@@ -85,7 +86,7 @@ func (store *MemSQL) GetEventUserCountsMerged(projectIdsList []int64, lastNDays 
 			salesforceEvents, _ := GetEventsFromCacheByDocumentType(projId, "salesforce", dateKey)
 			if result[int64(projIdInt)] == nil {
 				firstEntry := model.ProjectAnalytics{
-					ProjectID:         int64(projIdInt),
+					ProjectID:         projId,
 					TotalEvents:       uint64(totalEvents),
 					TotalUniqueEvents: uint64(uniqueEvents),
 					TotalUniqueUsers:  uint64(uniqueUsers),
@@ -100,7 +101,7 @@ func (store *MemSQL) GetEventUserCountsMerged(projectIdsList []int64, lastNDays 
 			} else {
 				old := result[int64(projIdInt)]
 				new := model.ProjectAnalytics{
-					ProjectID:         int64(projIdInt),
+					ProjectID:         projId,
 					TotalEvents:       old.TotalEvents + uint64(totalEvents),
 					TotalUniqueEvents: uint64(uniqueEvents),
 					TotalUniqueUsers:  uint64(uniqueUsers),
@@ -131,10 +132,9 @@ func (store *MemSQL) GetEventUserCountsByProjectID(projectId int64, lastNDays in
 	currentDate := time.Now().UTC()
 	project, _ := store.GetProject(projectId)
 
-	projectIDNameMap := make(map[int64]string)
-	projectIDNameMap[project.ID] = project.Name
-
-	log.WithFields(log.Fields{"projectId": projectId}).Info("GetEventUserCountsByProjectID")
+	projectIDNameMap := make(map[string]string)
+	projId, _ := U.GetValueAsString(project.ID)
+	projectIDNameMap[projId] = project.Name
 
 	result, err := GetProjectAnalyticsData(projectIDNameMap, lastNDays, currentDate, projectId)
 
@@ -144,11 +144,9 @@ func (store *MemSQL) GetEventUserCountsByProjectID(projectId int64, lastNDays in
 	return result, nil
 }
 
-func GetProjectAnalyticsData(projectIDNameMap map[int64]string, lastNDays int, currentDate time.Time, projectId int64) (map[string][]*model.ProjectAnalytics, error) {
+func GetProjectAnalyticsData(projectIDNameMap map[string]string, lastNDays int, currentDate time.Time, projectId int64) (map[string][]*model.ProjectAnalytics, error) {
 
 	result := make(map[string][]*model.ProjectAnalytics, 0)
-
-	log.WithFields(log.Fields{"projectId": projectId, "projectMap": projectIDNameMap}).Info("GetProjectAnalyticsData")
 
 	for i := 0; i < lastNDays; i++ {
 		dateKey := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
@@ -194,7 +192,7 @@ func GetProjectAnalyticsData(projectIDNameMap map[int64]string, lastNDays int, c
 
 			if projectId == 0 {
 				result[dateKey] = append(result[dateKey], &model.ProjectAnalytics{
-					ProjectID:             projIdInt64,
+					ProjectID:             projId,
 					TotalEvents:           uint64(totalEvents),
 					TotalUniqueEvents:     uint64(uniqueEvents),
 					TotalUniqueUsers:      uint64(uniqueUsers),
@@ -205,13 +203,13 @@ func GetProjectAnalyticsData(projectIDNameMap map[int64]string, lastNDays int, c
 					SalesforceEvents:      uint64(salesforceEvents),
 					SixSignalAPIHits:      uint64(sixSignalAPIHits),
 					SixSignalAPITotalHits: uint64(sixSignalAPITotalHits),
-					ProjectName:           projectIDNameMap[projIdInt64],
+					ProjectName:           projectIDNameMap[projId],
 					Date:                  dateKey,
 				})
 			} else if projIdInt64 == projectId {
 
 				entry := model.ProjectAnalytics{
-					ProjectID:             projIdInt64,
+					ProjectID:             projId,
 					TotalEvents:           uint64(totalEvents),
 					TotalUniqueEvents:     uint64(uniqueEvents),
 					TotalUniqueUsers:      uint64(uniqueUsers),
@@ -222,7 +220,7 @@ func GetProjectAnalyticsData(projectIDNameMap map[int64]string, lastNDays int, c
 					SalesforceEvents:      uint64(salesforceEvents),
 					SixSignalAPIHits:      uint64(sixSignalAPIHits),
 					SixSignalAPITotalHits: uint64(sixSignalAPITotalHits),
-					ProjectName:           projectIDNameMap[projIdInt64],
+					ProjectName:           projectIDNameMap[projId],
 					Date:                  dateKey,
 				}
 

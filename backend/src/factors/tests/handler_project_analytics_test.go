@@ -93,7 +93,7 @@ func incrementCacheCountOfAllDocumentTypes(project *model.Project, currentDate t
 }
 
 func validateData(data *model.ProjectAnalytics, projectId int64) bool {
-	if data.ProjectID != projectId {
+	if data.ProjectID != fmt.Sprintf("%v", projectId) {
 		return false
 	}
 	values := []int{int(data.AdwordsEvents), int(data.FacebookEvents),

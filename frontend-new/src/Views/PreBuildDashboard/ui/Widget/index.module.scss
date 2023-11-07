@@ -1,3 +1,7 @@
+
+@import '../../../../styles/abstracts/variables';
+
+
 $fa-color--mono-2: #e7e9ed;
 $dropdownbtn-mono-1: #f5f6f8;
 .fullModal {
@@ -140,4 +144,49 @@ $dropdownbtn-mono-1: #f5f6f8;
     color: #69c0ff;
     border-color: #69c0ff;
   }
+}
+
+
+.container {
+    width: 150px;
+    height: 50px;
+    
+    cursor: pointer;
+    border-right: 1px solid #E7E9ED;
+}
+
+.text1Active {
+  font-family: $font-family;
+  font-style: normal;
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 10px;
+  color: #1890FF;
+}
+
+.text2Active {
+  font-family: $font-family;
+  font-style: normal;
+  font-weight: 600;
+  font-size: 25px;
+  line-height: 20px;
+  color: rgb(68, 54, 54);
+}
+
+.text1 {
+    font-family: $font-family;
+    font-style: normal;
+    font-weight: 500;
+    font-size: 13px;
+    line-height: 10px;
+    color: lightslategray;
+}
+
+.text2 {
+    font-family: $font-family;
+    font-style: normal;
+    font-weight: 600;
+    font-size: 25px;
+    line-height: 20px;
+    color: lightslategray;
 }
