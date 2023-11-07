@@ -1132,6 +1132,40 @@ func GetPropertiesGroupedByGroupName(properties []QueryProperty) ([][]QueryPrope
 	return groupedProperties, isOnlyOR, isOnlyAND
 }
 
+// IsEventLevelGroupBy Checks if the groupBy is for a particular event in query.ewp.
+func IsEventLevelGroupBy(groupBy QueryGroupByProperty) bool {
+
+	return groupBy.EventName != "" && groupBy.EventNameIndex != 0
+}
+
+func FilterGroupPropsByType(gp []QueryGroupByProperty, entity string) []QueryGroupByProperty {
+	groupProps := make([]QueryGroupByProperty, 0)
+
+	for _, v := range gp {
+		if v.Entity == entity {
+			groupProps = append(groupProps, v)
+		}
+	}
+	return groupProps
+}
+
+func removeEventSpecificUserGroupBys(groupBys []QueryGroupByProperty) []QueryGroupByProperty {
+	filteredProps := make([]QueryGroupByProperty, 0)
+	for _, prop := range groupBys {
+		if IsEventLevelGroupBy(prop) {
+			// For $present, event name index is not set and is default 0.
+			continue
+		}
+		filteredProps = append(filteredProps, prop)
+	}
+	return filteredProps
+}
+
+func GetGlobalGroupByUserProperties(properties []QueryGroupByProperty) []QueryGroupByProperty {
+	userGroupProps := FilterGroupPropsByType(properties, PropertyEntityUser)
+	return removeEventSpecificUserGroupBys(userGroupProps)
+}
+
 // CheckIfHasNoneFilter Returns if set of filters has $none as a value
 func CheckIfHasNoneFilter(properties []QueryProperty) bool {
 
