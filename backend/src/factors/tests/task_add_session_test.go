@@ -786,8 +786,8 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 		U.EP_PAGE_URL:        "https://example.com/1/2/",
 		U.EP_PAGE_RAW_URL:    "https://example.com/1/2?x=1",
 		U.EP_PAGE_SPENT_TIME: 10,
-		U.EP_REFERRER_DOMAIN: "facebook.com",
-		U.EP_PAGE_DOMAIN:     "facebook.com",
+		U.EP_REFERRER_DOMAIN: "example.com",
+		U.EP_PAGE_DOMAIN:     "example.com",
 		U.EP_MEDIUM:          "something",
 	}
 	trackUserProperties14 := U.PropertiesMap{
@@ -815,8 +815,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	// session event properties added from event properties.
 	lsEventProperties15, err := U.DecodePostgresJsonb(&sessionEvent15.Properties)
 	assert.Nil(t, err)
-	assert.Equal(t, (*lsEventProperties15)[U.EP_CHANNEL], model.ChannelInternal)
-
+	assert.Equal(t, model.ChannelInternal, (*lsEventProperties15)[U.EP_CHANNEL])
 }
 
 func TestMultipleEventsWithSingleAddSessionCallWithChannelGroup(t *testing.T) {

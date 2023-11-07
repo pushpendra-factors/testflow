@@ -897,7 +897,7 @@ type Model interface {
 	GetSourceStringForAccountsV2(projectID int64, source string, isAllUserProperties bool) (string, int, int)
 	AccountPropertiesForDomainsEnabledV2(projectID int64, id string, groupName string) (map[string]interface{}, bool, int)
 	AccountPropertiesForDomainsDisabledV1(projectID int64, id string) (string, map[string]interface{}, []interface{}, int)
-	AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile) ([]model.Profile, int)
+	AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile, groupedFilters map[string][]model.QueryProperty, tableProps []string) ([]model.Profile, int)
 	GetAccountOverview(projectID int64, id, groupName string) (model.Overview, int, string)
 	GetIntentTimeline(projectID int64, groupName string, id string) (model.UserTimeline, error)
 	GetTimeRangeWindow(profileType string, whereStmt string, limitVal int, timeWindowQParams []interface{}) (*model.ListingTimeWindow, int, string)

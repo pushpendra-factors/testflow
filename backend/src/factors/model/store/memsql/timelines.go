@@ -163,7 +163,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 			userDomains, _ := store.GetUsersAssociatedToDomain(projectID, timeWindow, groupedFilters)
 			profiles = appendProfiles(profiles, userDomains)
 		}
-		profiles, statusCode = store.AccountPropertiesForDomainsEnabled(projectID, profiles)
+		profiles, statusCode = store.AccountPropertiesForDomainsEnabled(projectID, profiles, groupedFilters, payload.Query.TableProps)
 		if statusCode != http.StatusOK {
 			return []model.Profile{}, statusCode, "Query Transformation Failed."
 		}
@@ -989,7 +989,7 @@ func (store *MemSQL) GetUsersAssociatedToDomain(projectID int64, timeWindow *mod
 	return userProfiles, http.StatusOK
 }
 
-func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile) ([]model.Profile, int) {
+func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile, groupedFilters map[string][]model.QueryProperty, tableProps []string) ([]model.Profile, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -1031,14 +1031,23 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profile
 
 	isGroupUserString := "is_group_user=1 AND"
 
+	var groupedFiltersByName map[string]map[string][]model.QueryProperty
+	if len(groupedFilters) > 0 {
+		// group these
+		groupedFiltersByName = groupedFiltersByPropName(groupedFilters)
+	}
+
+	// grouping tableProps by prefix
+	tablePropsMap := tablePropsMapGrouping(tableProps)
+
 	// Fetching accounts associated to the domain
-	// SELECT group_6_user_id as identity, properties FROM `users`  WHERE (project_id='15000001' AND source!='9' AND
+	// SELECT group_6_user_id as identity, properties, source FROM `users`  WHERE (project_id='15000001' AND source!='9' AND
 	// is_group_user=1 AND group_6_user_id IN ('4f88f40d-c571-4bee-b456-298c533d7ef9', 'ed68f40d-c571-4bee-b456-298c533d7ef9'));
-	var accountGroupDetails []model.Profile
+	var userDetails []model.User
 	db := C.GetServices().Db
-	err := db.Table("users").Select(fmt.Sprintf("group_%d_user_id as identity, properties", domainGroupID)).
+	err := db.Table("users").Select(fmt.Sprintf("group_%d_user_id as id, properties, source", domainGroupID)).
 		Where(fmt.Sprintf("project_id=? AND source!=? AND %s %s group_%d_user_id ", isGroupUserString, isNullCheck, domainGroupID)+" IN (?)",
-			projectID, model.UserSourceDomains, domainIDs).Find(&accountGroupDetails).Error
+			projectID, model.UserSourceDomains, domainIDs).Find(&userDetails).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get accounts associated to domains.")
 		return nil, http.StatusInternalServerError
@@ -1046,16 +1055,49 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profile
 
 	// map of domain ids and their decoded merged properties
 	domainsIDPropsMap := make(map[string]map[string]interface{})
-	for _, accountDetails := range accountGroupDetails {
-		propertiesDecoded, err := U.DecodePostgresJsonb(accountDetails.Properties)
+	for _, userDetail := range userDetails {
+		propertiesDecoded, err := U.DecodePostgresJsonb(&userDetail.Properties)
 		if err != nil {
 			log.Error("Unable to decode account properties.")
 			return nil, http.StatusInternalServerError
 		}
-		if _, exists := domainsIDPropsMap[accountDetails.Identity]; !exists {
-			domainsIDPropsMap[accountDetails.Identity] = (*propertiesDecoded)
-		} else {
-			domainsIDPropsMap[accountDetails.Identity] = U.MergeJSONMaps(domainsIDPropsMap[accountDetails.Identity], *propertiesDecoded)
+		if _, exists := domainsIDPropsMap[userDetail.ID]; !exists {
+			domainsIDPropsMap[userDetail.ID] = make(map[string]interface{})
+		}
+
+		if _, exists := model.SourceGroupUser[*userDetail.Source]; !exists {
+			continue
+		}
+
+		groupName := model.SourceGroupUser[*userDetail.Source]
+
+		if _, tablePropGroupExist := tablePropsMap[groupName]; !tablePropGroupExist {
+			continue
+		}
+
+		filterMap, groupFilterExists := groupedFiltersByName[groupName]
+
+		for _, tablePropName := range tablePropsMap[groupName] {
+			if _, propExists := domainsIDPropsMap[userDetail.ID][tablePropName]; propExists {
+				continue
+			}
+
+			if _, propExists := (*propertiesDecoded)[tablePropName]; !propExists {
+				continue
+			}
+			filterArr, filterExists := filterMap[tablePropName]
+			if groupFilterExists && filterExists {
+				// check for property
+				for _, filter := range filterArr {
+					isFound := CheckPropertyOfGivenType(filter, propertiesDecoded)
+					if isFound {
+						domainsIDPropsMap[userDetail.ID][tablePropName] = (*propertiesDecoded)[tablePropName]
+						break
+					}
+				}
+			} else {
+				domainsIDPropsMap[userDetail.ID][tablePropName] = (*propertiesDecoded)[tablePropName]
+			}
 		}
 	}
 
@@ -2310,6 +2352,47 @@ func GroupFiltersByGroupName(filters []model.QueryProperty) map[string][]model.Q
 		filtersMap[filter.GroupName] = append(filtersMap[filter.GroupName], filter)
 	}
 	return filtersMap
+}
+
+func groupedFiltersByPropName(groupedFilters map[string][]model.QueryProperty) map[string]map[string][]model.QueryProperty {
+	groupedByName := make(map[string]map[string][]model.QueryProperty)
+
+	for name, queryPropArr := range groupedFilters {
+		for _, queryProp := range queryPropArr {
+			if _, exists := groupedByName[name]; exists {
+				groupedByName[name][queryProp.Property] = append(groupedByName[name][queryProp.Property], queryProp)
+				continue
+			}
+			groupedByName[name] = make(map[string][]model.QueryProperty)
+			groupedByName[name][queryProp.Property] = append(groupedByName[name][queryProp.Property], queryProp)
+		}
+	}
+
+	return groupedByName
+}
+
+func tablePropsMapGrouping(tableProps []string) map[string][]string {
+	tablePropsMap := make(map[string][]string)
+
+	for _, tableProp := range tableProps {
+		var groupName string
+		for _, prefix := range model.GroupPropertyPrefixList {
+			if strings.Contains(strings.ToLower(tableProp), prefix) {
+				groupName = prefix
+				break
+			}
+		}
+
+		if groupName == "" {
+			groupName = model.FILTER_TYPE_USERS
+		} else if groupName == U.LI_PROPERTIES_PREFIX {
+			groupName = U.GROUP_NAME_LINKEDIN_COMPANY
+		}
+
+		tablePropsMap[groupName] = append(tablePropsMap[groupName], tableProp)
+	}
+
+	return tablePropsMap
 }
 
 func tablePropsHasUserProperty(props []string) bool {

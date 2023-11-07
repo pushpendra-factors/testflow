@@ -474,7 +474,7 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 				commonQueryFrom, commonQueryTo, timezoneString, meta)
 		} else {
 			model.SetCacheResultByDashboardIdAndUnitId(queryResult, projectID, dashboardId, unitId,
-				commonQueryFrom, commonQueryTo, timezoneString, meta)
+				commonQueryFrom, commonQueryTo, timezoneString, meta, false)
 		}
 
 		if allowSyncReferenceFields {
