@@ -342,7 +342,7 @@ func (store *MemSQL) GetAccountsScore(projectId int64, groupId int, ts string, d
 	return result, weights, nil
 }
 
-func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userId string, numDaysToTrend int, debug bool) (model.PerAccountScore, *model.AccWeights, error) {
+func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userId string, numDaysToTrend int, debug bool) (model.PerAccountScore, *model.AccWeights, string, error) {
 	// get score of each account on current date
 
 	projectID := projectId
@@ -366,7 +366,7 @@ func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userI
 
 	weights, errStatus := store.GetWeightsByProject(projectId)
 	if errStatus != http.StatusFound {
-		return result, nil, fmt.Errorf("unable to get weights for project %d", projectId)
+		return result, nil, "", fmt.Errorf("unable to get weights for project %d", projectId)
 	}
 
 	stmt := "select event_aggregate from users where id=? and project_id=?"
@@ -374,7 +374,7 @@ func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userI
 	err := tx.Scan(&rt)
 	if err != nil {
 		logCtx.WithError(err).Error("Unable to read user counts data from DB")
-		return result, nil, err
+		return result, nil, "", err
 	}
 
 	err = json.Unmarshal([]byte(rt), &countsMapDays)
@@ -384,19 +384,62 @@ func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userI
 
 	resultmap, scoreOnDays, fscore, err = CalculatescoresPerAccount(projectId, weights, currentDate, prevDateTotrend, countsMapDays)
 	if err != nil {
-		return model.PerAccountScore{}, nil, err
+		return model.PerAccountScore{}, nil, "", err
 	}
 
 	if debug {
 		result.Debug = make(map[string]interface{})
 		result.Debug["info"] = resultmap
 	}
+
+	ev := countsMapDays[model.LAST_EVENT]
+	dateString := U.GetDateOnlyFromTimestamp(ev.Date)
+
+	buckets, errOnbuckets := store.GetEngagementBucketsOnProject(projectId, dateString)
+	if errOnbuckets != nil {
+		logCtx.WithError(errOnbuckets).Error("unable to get bucket ranges from DB")
+
+	}
+
+	engagementLevel := getEngagement(fscore, buckets)
 	result.Id = userId
 	result.Trend = make(map[string]float32)
 	result.Trend = scoreOnDays
 	result.Score = float32(fscore)
 	result.Timestamp = timestamp
-	return result, weights, nil
+	return result, weights, engagementLevel, nil
+}
+
+func (store *MemSQL) GetEngagementBucketsOnProject(projectId int64, timestamp string) (model.BucketRanges, error) {
+	// get score of each account on current date
+
+	projectID := projectId
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+	db := C.GetServices().Db
+
+	var rawDateString string
+	var rawBucketString string
+	var result model.BucketRanges
+	stmt := "select date,bucket from account_scoring_ranges where  project_id=? and date=?"
+	tx := db.Raw(stmt, projectId, timestamp).Row()
+	err := tx.Scan(&rawDateString, &rawBucketString)
+	if err != nil {
+		logCtx.WithError(err).Error("Unable to read bucket ranges data from DB")
+		return model.BucketRanges{}, err
+	}
+	result.Date = rawDateString
+	result.Ranges = make([]model.Bucket, 0)
+	err = json.Unmarshal([]byte(rawBucketString), &result.Ranges)
+	if err != nil {
+		logCtx.WithError(err).Error("Unable to unmarshall bucket ranges ")
+		return model.BucketRanges{}, err
+	}
+
+	return result, nil
 
 }
 
@@ -977,4 +1020,13 @@ func ComputeAccountScoreOnLastEvent(project_id int64, weights model.AccWeights, 
 		}
 	}
 	return accountScore, nil
+}
+
+func getEngagement(percentile float64, buckets model.BucketRanges) string {
+	for _, bucket := range buckets.Ranges {
+		if bucket.Low <= percentile && percentile < bucket.High {
+			return bucket.Name
+		}
+	}
+	return "ice"
 }

@@ -6,6 +6,7 @@ import (
 	mid "factors/middleware"
 	"factors/model/model"
 	"factors/model/store"
+	AS "factors/task/account_scoring"
 	U "factors/util"
 	"fmt"
 	"net/http"
@@ -67,7 +68,7 @@ func getBoolQueryParam(value string) (bool, error) {
 	return status, nil
 }
 
-func updateProfileUserScores(profileUsersList *[]model.Profile, scoresPerUser map[string]model.PerUserScoreOnDay) {
+func updateProfileUserScores(profileUsersList *[]model.Profile, scoresPerUser map[string]model.PerUserScoreOnDay, buckets model.BucketRanges) {
 	var scores []float64
 	for i := range *profileUsersList {
 		if prof, ok := scoresPerUser[(*profileUsersList)[i].Identity]; ok {
@@ -79,7 +80,7 @@ func updateProfileUserScores(profileUsersList *[]model.Profile, scoresPerUser ma
 		}
 	}
 
-	engagementLevels := GetEngagementLevels(scores)
+	engagementLevels := GetEngagementLevels(scores, buckets)
 
 	for i := range *profileUsersList {
 		if prof, ok := scoresPerUser[(*profileUsersList)[i].Identity]; ok {
@@ -115,16 +116,16 @@ func getUniqueScores(input []float64) []float64 {
 	return result
 }
 
-func GetEngagementLevels(scores []float64) map[float64]string {
+func GetEngagementLevels(scores []float64, buckets model.BucketRanges) map[float64]string {
 	result := make(map[float64]string)
-	result[0] = getEngagement(0)
+	result[0] = getEngagement(0, buckets)
 
 	nonZeroScores := removeZeros(scores)
 	uniqueScores := getUniqueScores(nonZeroScores)
 
 	for _, score := range uniqueScores {
-		percentile := calculatePercentile(nonZeroScores, score)
-		result[score] = getEngagement(percentile)
+		// calculating percentile is not used in the current implementation
+		result[score] = getEngagement(score, buckets)
 	}
 
 	return result
@@ -137,14 +138,13 @@ func calculatePercentile(data []float64, value float64) float64 {
 	return percentile
 }
 
-func getEngagement(percentile float64) string {
-	if percentile > 90 {
-		return "Hot"
-	} else if percentile > 70 {
-		return "Warm"
-	} else {
-		return "Cool"
+func getEngagement(percentile float64, buckets model.BucketRanges) string {
+	for _, bucket := range buckets.Ranges {
+		if bucket.Low <= percentile && percentile < bucket.High {
+			return bucket.Name
+		}
 	}
+	return "ice"
 }
 
 func GetProfileUserDetailsHandler(c *gin.Context) (interface{}, int, string, string, bool) {
@@ -253,8 +253,13 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 		if err != nil {
 			logCtx.Error("Error while fetching account scores.")
 		} else {
+
+			buckets, err := AS.GetEngagementBuckets(projectId, scoresPerAccount)
+			if err != nil {
+				logCtx.Error("Error while fetching account scoring bucket ranges.")
+			}
 			// Update account scores in the accounts list
-			updateProfileUserScores(&profileAccountsList, scoresPerAccount)
+			updateProfileUserScores(&profileAccountsList, scoresPerAccount, buckets)
 		}
 	}
 

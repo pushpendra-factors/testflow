@@ -144,7 +144,7 @@ func GetPerAccountScore(c *gin.Context) (interface{}, int, string, string, bool)
 	}
 
 	logCtx.Info("getting account scores")
-	perAccScore, weights, err := store.GetStore().GetPerAccountScore(projectId, dateString, userId, numDaysToTrend, debug)
+	perAccScore, weights, _, err := store.GetStore().GetPerAccountScore(projectId, dateString, userId, numDaysToTrend, debug)
 	if err != nil {
 		errMsg := "Unable to get account score."
 		logCtx.WithError(err).Error(errMsg)
