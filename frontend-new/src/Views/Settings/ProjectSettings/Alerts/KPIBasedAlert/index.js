@@ -673,7 +673,6 @@ const KPIBasedAlert = ({
                 type={'title'}
                 level={3}
                 weight={'bold'}
-                color={'grey-2'}
                 extraClass={'m-0'}
               >
                 Create new alert
@@ -2489,7 +2488,7 @@ const KPIBasedAlert = ({
   return (
     <div className={'fa-container '}>
       <Row gutter={[24, 24]} justify='center'>
-        <Col span={18}>
+        <Col span={22}>
           <div className={'mb-10 pl-4'}>
             {alertState.state == 'add' && renderKPIForm()}
 
@@ -2529,15 +2528,15 @@ const KPIBasedAlert = ({
         cancelButtonProps={{ size: 'large' }}
       >
         <div>
-          <Row>
-            <Col span={24}>
+        <Row gutter={[24, 24]} justify='center'>
+            <Col span={22}>
               <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'}>
                 Select slack channels
               </Text>
             </Col>
           </Row>
-          <Row>
-            <Col span={24}>
+          <Row gutter={[24, 24]} justify='center'>
+            <Col span={22}>
               <SelectChannels
                 channelOpts={channelOpts}
                 selectedChannel={selectedChannel}

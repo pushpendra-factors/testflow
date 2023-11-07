@@ -6,7 +6,7 @@ import { fetchExplainGoalInsights, saveGoalInsightRules, removeSavedExplainGoal,
 import { connect } from 'react-redux';
 import { MoreOutlined, ExclamationCircleOutlined } from '@ant-design/icons'; 
 import moment from 'moment';
-
+import { ScrollToTop } from 'Routes/feature';
 
 const { confirm } = Modal;
 
@@ -174,7 +174,7 @@ const SavedGoals = ({ savedExplainGoals, fetchExplainGoalInsights, factors_model
 
 
   return (<>
-
+<ScrollToTop />
 <div className='flex items-end justify-between mt-5 mb-2'>
       <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>{'Saved Reports'}</Text>
 
