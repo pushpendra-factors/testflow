@@ -390,10 +390,10 @@ func (store *MemSQL) GetUsersUpdatedAtGivenHour(projectID int64, fromTime time.T
 	db := C.GetServices().Db
 	err := db.Raw(query, queryParams...).Scan(&users).Error
 	if err != nil {
-		return users, http.StatusInternalServerError
+		return []model.User{}, http.StatusInternalServerError
 	}
 	if len(users) == 0 {
-		return nil, http.StatusNotFound
+		return []model.User{}, http.StatusNotFound
 	}
 	return users, http.StatusFound
 }
@@ -430,10 +430,10 @@ func (store *MemSQL) GetNonGroupUsersUpdatedAtGivenHour(projectID int64, fromTim
 	db := C.GetServices().Db
 	err := db.Raw(query, queryParams...).Scan(&users).Error
 	if err != nil {
-		return users, http.StatusInternalServerError
+		return []model.User{}, http.StatusInternalServerError
 	}
 	if len(users) == 0 {
-		return nil, http.StatusNotFound
+		return []model.User{}, http.StatusNotFound
 	}
 	return users, http.StatusFound
 }
