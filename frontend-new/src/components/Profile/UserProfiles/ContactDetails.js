@@ -296,12 +296,9 @@ function ContactDetails({
           Contact Details
         </Text>
       </div>
-      <Button
-        size='large'
-        type='text'
-        onClick={handleOptionBackClick}
-        icon={<SVG name='times' />}
-      />
+      <Button size='large' onClick={handleOptionBackClick}>
+        Close
+      </Button>
     </div>
   );
 
