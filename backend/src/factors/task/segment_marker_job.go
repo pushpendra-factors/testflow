@@ -3,8 +3,6 @@ package task
 import (
 	"fmt"
 	"net/http"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -13,9 +11,9 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"factors/model/model"
+	"factors/model/store/memsql"
 
 	"factors/model/store"
-	"factors/model/store/memsql"
 
 	U "factors/util"
 )
@@ -24,7 +22,7 @@ func SegmentMarker(projectID int64) int {
 
 	domainGroup, status := store.GetStore().GetGroup(projectID, model.GROUP_NAME_DOMAINS)
 	if status != http.StatusFound {
-		log.WithField("project_id", projectID).Error("Domain group not enabled")
+		log.WithField("project_id", projectID).Info("Domain group not enabled")
 	}
 
 	var lookBack time.Time
@@ -51,8 +49,8 @@ func SegmentMarker(projectID int64) int {
 	}
 	if statusCode != http.StatusFound {
 		log.WithFields(log.Fields{"project_id": projectID, "look_back": lookBack}).
-			Error("Couldn't find updated records in last given hours with given statuscode for this project", statusCode)
-		return statusCode
+			Warn("Couldn't find updated records in last given hours with given statuscode for this project", statusCode)
+		return http.StatusOK
 	}
 	endTime := time.Now().Unix()
 	timeTaken := endTime - startTime
@@ -64,8 +62,8 @@ func SegmentMarker(projectID int64) int {
 	// list of all segments
 	allSegmentsMap, statusCode := store.GetStore().GetAllSegments(projectID)
 	if statusCode != http.StatusFound {
-		log.WithField("project_id", projectID).Error("No segment found for this project")
-		return statusCode
+		log.WithField("project_id", projectID).Warn("No segment found for this project")
+		return http.StatusOK
 	}
 
 	// set Query Timezone
@@ -142,10 +140,13 @@ func SegmentMarker(projectID int64) int {
 	}
 
 	if domainsGroupName != "" {
-		status, err := allAccountsSegmentMarkup(projectID, users, allSegmentsMap[domainsGroupName], decodedSegmentRulesMap[domainsGroupName], domainGroup.ID, eventNameIDsMap)
-		if status != http.StatusOK || err != nil {
-			log.WithField("project_id", projectID).Error("Unable to update associated_segments to the domain user.")
-			return status
+		allAccountsDecodedSegmentRule, exists := decodedSegmentRulesMap[domainsGroupName]
+		if exists {
+			status, err := allAccountsSegmentMarkup(projectID, users, allSegmentsMap[domainsGroupName], allAccountsDecodedSegmentRule, domainGroup.ID, eventNameIDsMap)
+			if status != http.StatusOK || err != nil {
+				log.WithField("project_id", projectID).Error("Unable to update associated_segments to the domain user.")
+				return status
+			}
 		}
 	}
 
@@ -470,7 +471,7 @@ func isRuleMatched(projectID int64, segment model.Segment, decodedProperties *ma
 			if p.Entity != model.PropertyEntityUserGlobal {
 				continue
 			}
-			isValueFound := checkPropertyOfGivenType(p, decodedProperties)
+			isValueFound := memsql.CheckPropertyOfGivenType(p, decodedProperties)
 			if idx == 0 {
 				groupedPropsMatched = isValueFound
 			} else {
@@ -499,7 +500,7 @@ func checkPropertyInAllUsers(grpa string, p model.QueryProperty, decodedProperti
 		if p.Entity == model.PropertyEntityUserGroup && (user.IsGroupUser != nil && *user.IsGroupUser) {
 			continue
 		}
-		isValueFound = checkPropertyOfGivenType(p, &decodedProperties[index])
+		isValueFound = memsql.CheckPropertyOfGivenType(p, &decodedProperties[index])
 
 		// check for negative filters
 		if (p.Operator == model.NotContainsOpStr && p.Value != model.PropertyValueNone) ||
@@ -514,32 +515,6 @@ func checkPropertyInAllUsers(grpa string, p model.QueryProperty, decodedProperti
 
 		if isValueFound {
 			return isValueFound
-		}
-	}
-	return isValueFound
-}
-
-func checkPropertyOfGivenType(p model.QueryProperty, decodedProperties *map[string]interface{}) bool {
-	isValueFound := false
-	if p.Value != model.PropertyValueNone {
-		if p.Type == U.PropertyTypeDateTime {
-			isValueFound = checkDateTypeProperty(p, decodedProperties)
-		} else if p.Type == U.PropertyTypeNumerical {
-			isValueFound = checkNumericalTypeProperty(p, decodedProperties)
-		} else {
-			isValueFound = checkCategoricalTypeProperty(p, decodedProperties)
-		}
-	} else {
-		// where condition for $none value.
-		propertyValue := (*decodedProperties)[p.Property]
-		if p.Operator == model.EqualsOpStr || p.Operator == model.ContainsOpStr {
-			if propertyValue == nil || propertyValue == "" {
-				isValueFound = true
-			}
-		} else if p.Operator == model.NotEqualOpStr || p.Operator == model.NotContainsOpStr {
-			if propertyValue != nil && propertyValue != "" {
-				isValueFound = true
-			}
 		}
 	}
 	return isValueFound
@@ -569,147 +544,6 @@ func updateAllAccountsSegmentMap(matched bool, userArr []model.User, userPartOfS
 	}
 
 	return segmentMap
-}
-
-func checkNumericalTypeProperty(segmentRule model.QueryProperty, properties *map[string]interface{}) bool {
-	if _, exists := (*properties)[segmentRule.Property]; !exists {
-		return false
-	}
-	var propertyExists bool
-	checkValue, err := strconv.ParseFloat(segmentRule.Value, 64)
-	if err != nil {
-		log.WithError(err).Error("Failed to convert payload value to float type")
-	}
-	var propertyValue float64
-	if floatVal, ok := (*properties)[segmentRule.Property].(float64); ok {
-		propertyValue = floatVal
-	} else if stringVal, ok := (*properties)[segmentRule.Property].(string); ok {
-		if stringVal != "" {
-			propertyValue, err = strconv.ParseFloat(stringVal, 64)
-			if err != nil {
-				log.WithError(err).Error("Failed to convert property value to float type")
-			}
-		}
-	} else if intVal, ok := (*properties)[segmentRule.Property].(int64); ok {
-		propertyValue = float64(intVal)
-	}
-	switch segmentRule.Operator {
-	case model.EqualsOpStr:
-		if propertyValue == checkValue {
-			propertyExists = true
-		}
-	case model.NotEqualOpStr:
-		if propertyValue != checkValue {
-			propertyExists = true
-		}
-	case model.GreaterThanOpStr:
-		if propertyValue > checkValue {
-			propertyExists = true
-		}
-	case model.LesserThanOpStr:
-		if propertyValue < checkValue {
-			propertyExists = true
-		}
-	case model.GreaterThanOrEqualOpStr:
-		if propertyValue >= checkValue {
-			propertyExists = true
-		}
-	case model.LesserThanOrEqualOpStr:
-		if propertyValue <= checkValue {
-			propertyExists = true
-		}
-	default:
-		propertyExists = false
-	}
-
-	return propertyExists
-}
-
-func checkCategoricalTypeProperty(segmentRule model.QueryProperty, properties *map[string]interface{}) bool {
-	if (segmentRule.Operator == model.NotContainsOpStr && segmentRule.Value != model.PropertyValueNone) ||
-		(segmentRule.Operator == model.ContainsOpStr && segmentRule.Value == model.PropertyValueNone) ||
-		(segmentRule.Operator == model.NotEqualOpStr && segmentRule.Value != model.PropertyValueNone) ||
-		(segmentRule.Operator == model.EqualsOpStr && segmentRule.Value == model.PropertyValueNone) {
-		if _, exists := (*properties)[segmentRule.Property]; !exists {
-			return true
-		}
-	}
-	if _, exists := (*properties)[segmentRule.Property]; !exists {
-		return false
-	}
-	var propertyExists bool
-	checkValue := segmentRule.Value
-	propertyValue := (*properties)[segmentRule.Property].(string)
-	switch segmentRule.Operator {
-	case model.ContainsOpStr:
-		if strings.Contains(propertyValue, checkValue) {
-			propertyExists = true
-		}
-	case model.NotContainsOpStr:
-		if !strings.Contains(propertyValue, checkValue) {
-			propertyExists = true
-		}
-	case model.EqualsOpStr:
-		if propertyValue == checkValue {
-			propertyExists = true
-		}
-	case model.NotEqualOpStr:
-		if propertyValue != checkValue {
-			propertyExists = true
-		}
-	default:
-		propertyExists = false
-	}
-	return propertyExists
-}
-
-func checkDateTypeProperty(segmentRule model.QueryProperty, properties *map[string]interface{}) bool {
-	if _, exists := (*properties)[segmentRule.Property]; !exists {
-		return false
-	}
-	var propertyExists bool
-	checkValue, err := model.DecodeDateTimePropertyValue(segmentRule.Value)
-	if err != nil {
-		log.WithError(err).Error("Failed to convert datetime property from payload.")
-	}
-	var propertyValue int64
-	if floatVal, ok := (*properties)[segmentRule.Property].(float64); ok {
-		propertyValue = int64(floatVal)
-	} else if stringVal, ok := (*properties)[segmentRule.Property].(string); ok {
-		if stringVal != "" {
-			propertyValue, err = strconv.ParseInt(stringVal, 10, 64)
-			if err != nil {
-				log.WithError(err).Error("Failed to convert datetime property from properties.")
-			}
-		}
-	} else if intVal, ok := (*properties)[segmentRule.Property].(int64); ok {
-		propertyValue = intVal
-	}
-	switch segmentRule.Operator {
-	case model.BeforeStr:
-		if propertyValue < checkValue.To {
-			propertyExists = true
-		}
-	case model.NotInCurrent:
-		if propertyValue < checkValue.From {
-			propertyExists = true
-		}
-	case model.SinceStr, model.InCurrent:
-		if propertyValue >= checkValue.From {
-			propertyExists = true
-		}
-	case model.EqualsOpStr, model.BetweenStr, model.InPrevious, model.InLastStr:
-		if checkValue.From <= propertyValue && propertyValue <= checkValue.To {
-			propertyExists = true
-		}
-	case model.NotInBetweenStr, model.NotInPrevious, model.NotInLastStr:
-		if !(checkValue.From <= propertyValue) && !(propertyValue <= checkValue.To) {
-			propertyExists = true
-		}
-	default:
-		propertyExists = false
-	}
-	return propertyExists
 }
 
 func performedEventsCheck(projectID int64, segmentID string, eventNameIDsMap map[string]interface{},

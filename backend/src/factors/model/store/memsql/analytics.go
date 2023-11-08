@@ -68,7 +68,7 @@ func getPropertyEntityField(projectID int64, groupProp model.QueryGroupByPropert
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if groupProp.Entity == model.PropertyEntityUser {
 		// Use event level user properties for event level group by.
-		if isEventLevelGroupBy(groupProp) {
+		if model.IsEventLevelGroupBy(groupProp) {
 			return "events.user_properties"
 		}
 
@@ -1384,6 +1384,7 @@ func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[
 
 			if strings.Contains(addJoinStmnt, "group_users") {
 				eventsWrapSelect = joinWithComma(eventsWrapSelect, "group_users.properties as group_properties")
+				eventsWrapSelect = joinWithComma(eventsWrapSelect, "group_users.id as group_users_user_id")
 			}
 		}
 	}
@@ -1465,6 +1466,7 @@ func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[
 	addSelecStmnt = strings.ReplaceAll(addSelecStmnt, "events.properties", eventsWrapViewName+".event_properties")
 	addSelecStmnt = strings.ReplaceAll(addSelecStmnt, "events.user_properties", eventsWrapViewName+".event_user_properties")
 	addSelecStmnt = strings.ReplaceAll(addSelecStmnt, "group_users.properties", eventsWrapViewName+".group_properties")
+	addSelecStmnt = strings.ReplaceAll(addSelecStmnt, "group_users.id", eventsWrapViewName+".group_users_user_id")
 	// Use view instead of events and users table.
 	addSelecStmnt = replaceTableWithViewForEventsAndUsers(addSelecStmnt, eventsWrapViewName)
 
@@ -1701,38 +1703,6 @@ func addJoinLatestUserPropsQuery(projectID int64, groupProps []model.QueryGroupB
 	return gKeys
 }
 
-func filterGroupPropsByType(gp []model.QueryGroupByProperty, entity string) []model.QueryGroupByProperty {
-	logFields := log.Fields{
-		"gp":     gp,
-		"entity": entity,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	groupProps := make([]model.QueryGroupByProperty, 0)
-
-	for _, v := range gp {
-		if v.Entity == entity {
-			groupProps = append(groupProps, v)
-		}
-	}
-	return groupProps
-}
-
-func removeEventSpecificUserGroupBys(groupBys []model.QueryGroupByProperty) []model.QueryGroupByProperty {
-	logFields := log.Fields{
-		"group_bys": groupBys,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	filteredProps := make([]model.QueryGroupByProperty, 0)
-	for _, prop := range groupBys {
-		if isEventLevelGroupBy(prop) {
-			// For $present, event name index is not set and is default 0.
-			continue
-		}
-		filteredProps = append(filteredProps, prop)
-	}
-	return filteredProps
-}
-
 func appendOrderByAggr(qStmnt string) string {
 	logFields := log.Fields{
 		"q_stmnt": qStmnt,
@@ -1909,7 +1879,7 @@ func separateEventLevelGroupBys(allGroupBys []model.QueryGroupByProperty) (
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	for _, groupby := range allGroupBys {
-		if isEventLevelGroupBy(groupby) {
+		if model.IsEventLevelGroupBy(groupby) {
 			eventLevelGroupBys = append(eventLevelGroupBys, groupby)
 		} else {
 			// This will also have $present event.
@@ -1917,15 +1887,6 @@ func separateEventLevelGroupBys(allGroupBys []model.QueryGroupByProperty) (
 		}
 	}
 	return
-}
-
-// isEventLevelGroupBy Checks if the groupBy is for a particular event in query.ewp.
-func isEventLevelGroupBy(groupBy model.QueryGroupByProperty) bool {
-	logFields := log.Fields{
-		"group_by": groupBy,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	return groupBy.EventName != "" && groupBy.EventNameIndex != 0
 }
 
 // TranslateGroupKeysIntoColumnNames - Replaces groupKeys on result

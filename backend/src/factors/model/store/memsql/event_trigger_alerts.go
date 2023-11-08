@@ -741,8 +741,7 @@ func getDisplayLikePropValue(typ, grn string, exi bool, value interface{}) inter
 			if grn == "hour" {
 				res = time.Unix(val, 0).Hour()
 			} else if grn == "week" {
-				year, week := time.Unix(val, 0).ISOWeek()
-				res = fmt.Sprintf("%d-W%d", year, week)
+				_, res = time.Unix(val, 0).ISOWeek()
 			} else if grn == "month" {
 				res = time.Unix(val, 0).Month()
 			} else {
@@ -837,6 +836,18 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 			displayName, exists := displayNamesEP[p]
 			if !exists {
 				displayName = U.CreateVirtualDisplayName(p)
+			}
+			// Using granularity for $timestamp property
+			if p == "$timestamp" {
+				if messageProperty.Granularity == "hour" {
+					displayName += " - Hour"
+				} else if messageProperty.Granularity == "week" {
+					displayName += " - Week"
+				} else if messageProperty.Granularity == "month" {
+					displayName += " - Month"
+				} else {
+					displayName += " - Date"
+				}
 			}
 			propVal, exi := (*eventPropMap)[p]
 			msgPropMap[fmt.Sprintf("%d", idx)] = model.MessagePropMapStruct{

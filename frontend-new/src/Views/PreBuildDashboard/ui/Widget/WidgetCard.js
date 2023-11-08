@@ -43,6 +43,8 @@ import FaSelect from 'Components/FaSelect';
 import { getQueryData } from 'Views/PreBuildDashboard/state/services';
 import { getPredefinedQuery } from 'Views/PreBuildDashboard/utils';
 import { selectActivePreDashboard } from 'Reducers/dashboard/selectors';
+import CampaignMetricsDropdown from './CampaignMetricsDropdown';
+import { getKpiLabel } from 'Views/CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
 const { Option } = Select;
 
 function WidgetCard({
@@ -51,7 +53,7 @@ function WidgetCard({
   durationObj,
   setOldestRefreshTime,
   onDataLoadSuccess,
-  dashboardRefreshState,
+  dashboardRefreshState
   // handleWidgetRefresh
 }) {
   const hasComponentUnmounted = useRef(false);
@@ -62,14 +64,18 @@ function WidgetCard({
   const { active_project: activeProject } = useSelector(
     (state) => state.global
   );
-  const activeDashboard = useSelector((state) => selectActivePreDashboard(state));
+  const activeDashboard = useSelector((state) =>
+    selectActivePreDashboard(state)
+  );
   const [appliedBreakdown, setAppliedBreakdown] = useState(unit?.g_by);
-  const dashboardFilters = useSelector((state) => state.preBuildDashboardConfig.filters);
+  const dashboardFilters = useSelector(
+    (state) => state.preBuildDashboardConfig.filters
+  );
 
   const durationWithSavedFrequency = useMemo(() => {
     let savedFrequency = null;
     let queryType = 'kpi';
-    if(queryType == QUERY_TYPE_KPI) {
+    if (queryType == QUERY_TYPE_KPI) {
       const frequency = getValidGranularityForSavedQueryWithSavedGranularity({
         durationObj,
         savedFrequency
@@ -114,20 +120,22 @@ function WidgetCard({
 
         let lastRefreshedAt = null;
         if (apiCallStatus.required) {
-          const payload = getPredefinedQuery(unit, durationWithSavedFrequency, dashboardFilters, appliedBreakdown?.[0]);
+          const payload = getPredefinedQuery(
+            unit,
+            durationWithSavedFrequency,
+            dashboardFilters,
+            appliedBreakdown?.[0]
+          );
           const res = await getQueryData(
             activeProject.id,
-            payload, 
+            payload,
             activeDashboard?.inter_id
           );
 
           if (!hasComponentUnmounted.current) {
             onDataLoadSuccess({ unitId: unit.inter_id });
           }
-          if (
-            queryType === QUERY_TYPE_KPI &&
-            !hasComponentUnmounted.current
-          ) {
+          if (queryType === QUERY_TYPE_KPI && !hasComponentUnmounted.current) {
             lastRefreshedAt = _.get(
               res,
               'data.cache_meta.last_computed_at',
@@ -165,7 +173,15 @@ function WidgetCard({
         });
       }
     },
-    [durationWithSavedFrequency, activeProject.id, activeDashboard?.inter_id, onDataLoadSuccess, setOldestRefreshTime, appliedBreakdown, dashboardFilters]
+    [
+      durationWithSavedFrequency,
+      activeProject.id,
+      activeDashboard?.inter_id,
+      onDataLoadSuccess,
+      setOldestRefreshTime,
+      appliedBreakdown,
+      dashboardFilters
+    ]
   );
 
   useEffect(() => {
@@ -174,7 +190,6 @@ function WidgetCard({
       hasComponentUnmounted.current = true;
     };
   }, [getData, durationWithSavedFrequency, appliedBreakdown, dashboardFilters]);
-
 
   // const handleDelete = useCallback(() => {
   //   showDeleteWidgetModal(unit);
@@ -198,10 +213,8 @@ function WidgetCard({
   //     </Menu.Item>
   //   </Menu>
   // );
- 
 
   const handleEditQuery = useCallback(() => {
-
     history.push({
       pathname: '/quick-board/report',
       state: {
@@ -223,6 +236,15 @@ function WidgetCard({
     const result = unit?.g_by?.filter((item) => value === item.na);
     setAppliedBreakdown(result);
   }
+
+  // metric change
+
+  const [currMetricsValue, setCurrMetricsValue] = useState(0);
+
+  const kpiData = unit.me.map((obj) => {
+    const { inter_e_type, na, d_na, ...rest } = obj; // Use destructuring to exclude "inter_e_type" and "na"
+    return { ...rest, label: d_na }; // Return the object without "inter_e_type" and "na"
+  });
 
   return (
     <div
@@ -264,19 +286,23 @@ function WidgetCard({
                   name='arrowright'
                 />
               </div>
-              {unit?.g_by?.length ?
-              <div className='mr-4'>
-                  <Select value={appliedBreakdown?.[0]?.d_na} onChange={handleBreakdownChange} style={{ width: 120 }} className='fa-select' 
-                  suffixIcon={<SVG name='caretDown' size={16} extraClass={'-mt-1'} />}
+              {unit?.g_by?.length ? (
+                <div className='mr-4'>
+                  <Select
+                    value={appliedBreakdown?.[0]?.d_na}
+                    onChange={handleBreakdownChange}
+                    style={{ width: 120 }}
+                    className='fa-select'
+                    suffixIcon={
+                      <SVG name='caretDown' size={16} extraClass={'-mt-1'} />
+                    }
                   >
-
                     {unit?.g_by?.map((val) => (
                       <Option value={val.na}>{val.d_na}</Option>
-                    )
-
-                    )}
+                    ))}
                   </Select>
-              </div> : null}
+                </div>
+              ) : null}
               <div className='flex items-center'>
                 {resultState.apiCallStatus &&
                 resultState.apiCallStatus.required &&
@@ -302,16 +328,32 @@ function WidgetCard({
                 </Dropdown> */}
               </div>
             </div>
+            {!unit?.g_by?.length ? (
+              <div>
+                <CampaignMetricsDropdown
+                  metrics={kpiData.map((q) => getKpiLabel(q))}
+                  currValue={currMetricsValue}
+                  onChange={setCurrMetricsValue}
+                />
+              </div>
+            ) : null}
             <DashboardContext.Provider value={contextValue}>
               <CardContent
                 durationObj={durationWithSavedFrequency}
                 unit={unit}
                 resultState={resultState}
-                breakdown={appliedBreakdown} 
+                breakdown={appliedBreakdown}
+                currMetricsValue={currMetricsValue}
               />
             </DashboardContext.Provider>
           </div>
         </div>
+      </div>
+      <div
+        id={`resize-${unit.inter_id}`}
+        className='fa-widget-card--resize-container'
+      >
+        <span style={{ padding: '5px 8px' }}></span>
       </div>
     </div>
   );

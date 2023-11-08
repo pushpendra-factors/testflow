@@ -1,6 +1,7 @@
 import React, { useCallback, useRef, useMemo } from 'react';
 import WidgetCard from './WidgetCard';
 import { Text } from 'Components/factorsComponents';
+import { ReactSortable } from 'react-sortablejs';
 
 function NoDataDashboard() {
   return (
@@ -34,7 +35,9 @@ function SortableCards({
 
   if (widget?.length) {
     return (
-      <div>
+      <div
+        className='flex flex-wrap'
+      >
         {widget?.map((item) => {
 
           return (
