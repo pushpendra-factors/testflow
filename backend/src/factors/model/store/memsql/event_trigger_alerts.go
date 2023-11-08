@@ -566,9 +566,6 @@ func updateUserPropMapWithGroupProperties(userPropMap, groupProps *map[string]in
 	}
 
 	for key, value := range *groupProps {
-		if _, exists := (*userPropMap)[key]; exists {
-			continue
-		}
 		(*userPropMap)[key] = value
 	}
 }
@@ -797,6 +794,9 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 	}
 	if isGroupPropertyRequired {
 		groupPropMap = store.GetGroupProperties(event.ProjectId, event.UserId)
+		if groupPropMap != nil {
+			updateUserPropMapWithGroupProperties(userPropMap, groupPropMap, log.WithFields(logFields))
+		}
 	}
 
 	displayNamesEP := store.getDisplayNamesForEP(event.ProjectId, eventName.Name)
@@ -808,25 +808,13 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 	msgPropMap := make(U.PropertiesMap, 0)
 	for idx, messageProperty := range messageProperties {
 		p := messageProperty.Property
-		if messageProperty.Entity == "user" {
+		if messageProperty.Entity == "user" || messageProperty.Entity == model.PropertyEntityUserGlobal {
 
 			displayName, exists := displayNamesUP[p]
 			if !exists {
 				displayName = U.CreateVirtualDisplayName(p)
 			}
 			propVal, exi := (*userPropMap)[p]
-			msgPropMap[fmt.Sprintf("%d", idx)] = model.MessagePropMapStruct{
-				DisplayName: displayName,
-				PropValue:   getDisplayLikePropValue(messageProperty.Type, messageProperty.Granularity, exi, propVal),
-			}
-
-		} else if messageProperty.Entity == model.PropertyEntityUserGlobal && groupPropMap != nil {
-
-			displayName, exists := displayNamesUP[p]
-			if !exists {
-				displayName = U.CreateVirtualDisplayName(p)
-			}
-			propVal, exi := (*groupPropMap)[p]
 			msgPropMap[fmt.Sprintf("%d", idx)] = model.MessagePropMapStruct{
 				DisplayName: displayName,
 				PropValue:   getDisplayLikePropValue(messageProperty.Type, messageProperty.Granularity, exi, propVal),
