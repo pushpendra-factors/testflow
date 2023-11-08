@@ -5,6 +5,7 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -133,8 +134,14 @@ func validateSmartPropertyRules(projectID int64, smartPropertyRulesDoc *model.Sm
 	if model.SmartPropertyReservedNames[strings.ToLower(smartPropertyRulesDoc.Name)] {
 		return "Entered Name is not allowed.", false
 	}
-	if strings.Contains(smartPropertyRulesDoc.Name, " ") {
-		return "Space in property name is not allowed.", false
+
+	// allows only '_' as special char, and '_' should not be at start or end
+	isValidName, _ := regexp.MatchString(
+		"^[A-Za-z0-9]([A-Za-z0-9_]*[A-Za-z0-9])?$",
+		smartPropertyRulesDoc.Name,
+	)
+	if isValidName {
+		return "Invalid characters in property name", false
 	}
 
 	isValidRules := validationRules(smartPropertyRulesDoc.Rules, customSources)
