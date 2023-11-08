@@ -15,7 +15,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func EventsPerformedCheck(projectID int64, segmentId string, eventNameIDsMap map[string]interface{},
+func EventsPerformedCheck(projectID int64, segmentId string, eventNameIDsMap map[string]string,
 	segmentQuery *model.Query, userID string, isAllAccounts bool, userArray []model.User) bool {
 
 	isMatched := false
