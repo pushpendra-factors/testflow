@@ -255,7 +255,7 @@ func SetCacheResultByDashboardIdAndUnitIdWithPreset(result interface{}, projectI
 	}
 }
 
-func SetCacheResultByDashboardIdAndUnitId(result interface{}, projectId int64, dashboardId int64, unitId int64, from, to int64, timezoneString U.TimeZoneString, meta interface{}) {
+func SetCacheResultByDashboardIdAndUnitId(result interface{}, projectId int64, dashboardId int64, unitId int64, from, to int64, timezoneString U.TimeZoneString, meta interface{}, isAttributionDashboard bool) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectId,
 		"dashboard_id": dashboardId, "dashboard_unit_id": unitId,
 	})
@@ -293,11 +293,18 @@ func SetCacheResultByDashboardIdAndUnitId(result interface{}, projectId int64, d
 		logCtx.WithError(err).Error("Failed to encode dashboardCacheResult.")
 		return
 	}
-
-	err = cacheRedis.SetPersistent(cacheKey, string(enDashboardCacheResult), U.GetDashboardCacheResultExpiryInSeconds(from, to, timezoneString))
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to set cache for channel query")
-		return
+	if isAttributionDashboard {
+		err = cacheRedis.SetPersistent(cacheKey, string(enDashboardCacheResult), U.CacheExpiryAttributionDashboardInSeconds)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to set cache for channel query")
+			return
+		}
+	} else {
+		err = cacheRedis.SetPersistent(cacheKey, string(enDashboardCacheResult), U.GetDashboardCacheResultExpiryInSeconds(from, to, timezoneString))
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to set cache for channel query")
+			return
+		}
 	}
 }
 

@@ -1,8 +1,8 @@
 import anchorme from 'anchorme';
 
-function isValidURL(str: string) {
+export const isValidURL = (str: string) => {
   return anchorme.validate.url(str);
-}
+};
 
 function addProtocolIfMissing(url: string) {
   if (!/^https?:\/\//i.test(url)) {

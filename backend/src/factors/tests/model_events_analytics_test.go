@@ -3959,7 +3959,7 @@ func TestEventPropertyValueLabels(t *testing.T) {
 	}
 	resultGroup.CacheMeta = meta
 
-	model.SetCacheResultByDashboardIdAndUnitId(resultGroup, project.ID, dashboard.ID, dashboardUnit.ID, meta.From, meta.To, U.TimeZoneString(meta.Timezone), meta)
+	model.SetCacheResultByDashboardIdAndUnitId(resultGroup, project.ID, dashboard.ID, dashboardUnit.ID, meta.From, meta.To, U.TimeZoneString(meta.Timezone), meta, false)
 
 	shouldReturn, resCode, resMsgInt := helpers.GetResponseIfCachedDashboardQuery("", project.ID, dashboard.ID, dashboardUnit.ID, meta.From, meta.To, U.TimeZoneString(meta.Timezone))
 	assert.Equal(t, http.StatusOK, resCode)
@@ -4241,7 +4241,7 @@ func TestGroupPropertyValueLabels(t *testing.T) {
 	}
 	resultGroup.CacheMeta = meta
 
-	model.SetCacheResultByDashboardIdAndUnitId(resultGroup, project.ID, dashboard.ID, dashboardUnit.ID, meta.From, meta.To, U.TimeZoneString(meta.Timezone), meta)
+	model.SetCacheResultByDashboardIdAndUnitId(resultGroup, project.ID, dashboard.ID, dashboardUnit.ID, meta.From, meta.To, U.TimeZoneString(meta.Timezone), meta, false)
 
 	shouldReturn, resCode, resMsgInt := helpers.GetResponseIfCachedDashboardQuery("", project.ID, dashboard.ID, dashboardUnit.ID, meta.From, meta.To, U.TimeZoneString(meta.Timezone))
 	assert.Equal(t, http.StatusOK, resCode)

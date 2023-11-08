@@ -792,7 +792,6 @@ func (store *MemSQL) GetAccountScoreOnIds(projectId int64, accountIds []string, 
 			resultPerUser.Debug["date"] = ts
 		}
 
-		log.Infof("Result on account user :%v", resultPerUser)
 		result[userId] = resultPerUser
 	}
 	if rows.Err() != nil {

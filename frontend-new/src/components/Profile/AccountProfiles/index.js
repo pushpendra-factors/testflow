@@ -135,6 +135,7 @@ function AccountProfiles({
   const agentState = useSelector((state) => state.agent);
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [currentPageSize, setCurrentPageSize] = useState(25);
   const [searchBarOpen, setSearchBarOpen] = useState(false);
   const [searchDDOpen, setSearchDDOpen] = useState(false);
   const [listSearchItems, setListSearchItems] = useState([]);
@@ -432,6 +433,7 @@ function AccountProfiles({
       }
       if (shouldCache) {
         setCurrentPage(location.state.currentPage);
+        setCurrentPageSize(location.state.currentPageSize);
         setDefaultSorterInfo(location.state.activeSorter);
         const localeState = { ...history.location.state, fromDetails: false };
         history.replace({ state: localeState });
@@ -442,7 +444,6 @@ function AccountProfiles({
       location.state?.currentPage,
       location.state?.activeSorter,
       activeSegment,
-      getProfileAccounts,
       activeProject.id,
       activeAgent,
       history
@@ -903,8 +904,9 @@ function AccountProfiles({
     );
   };
 
-  const handleTableChange = (pageParams, _, sorter) => {
+  const handleTableChange = (pageParams, somedata, sorter) => {
     setCurrentPage(pageParams.current);
+    setCurrentPageSize(pageParams.pageSize);
     setDefaultSorterInfo({ key: sorter.columnKey, order: sorter.order });
   };
 
@@ -945,6 +947,7 @@ function AccountProfiles({
                   activeSegment: activeSegment,
                   fromDetails: true,
                   currentPage: currentPage,
+                  currentPageSize: currentPageSize,
                   activeSorter: defaultSorterInfo
                 }
               );
@@ -957,25 +960,13 @@ function AccountProfiles({
           pagination={{
             position: ['bottom', 'left'],
             defaultPageSize: '25',
-            current: currentPage
+            current: currentPage,
+            pageSize: currentPageSize
           }}
           onChange={handleTableChange}
           scroll={{
             x: displayTableProps?.length * 300
-            // y: 'calc(100vh - 320px)'
           }}
-          footer={() => (
-            <div className='text-right'>
-              <a
-                className='font-size--small'
-                href='https://clearbit.com'
-                target='_blank'
-                rel='noopener noreferrer'
-              >
-                Logos provided by Clearbit
-              </a>
-            </div>
-          )}
         />
       </div>
     );
@@ -1193,6 +1184,7 @@ function AccountProfiles({
           {/* {accountPayload?.filters?.length ? renderClearFilterButton() : null} */}
           {renderSearchSection()}
           {renderTablePropsSelect()}
+
           <ControlledComponent
             controller={filtersExpanded === false && newSegmentMode === false}
           >
@@ -1212,7 +1204,19 @@ function AccountProfiles({
           (newSegmentMode === false || areFiltersDirty === true)
         }
       >
-        <>{renderTable()}</>
+        <>
+          {renderTable()}
+          <div className='logo-attrib'>
+            <a
+              className='font-size--small'
+              href='https://clearbit.com'
+              target='_blank'
+              rel='noopener noreferrer'
+            >
+              Logos provided by Clearbit
+            </a>
+          </div>
+        </>
       </ControlledComponent>
       <ControlledComponent
       controller={
