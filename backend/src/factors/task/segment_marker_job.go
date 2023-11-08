@@ -22,7 +22,7 @@ func SegmentMarker(projectID int64) int {
 
 	domainGroup, status := store.GetStore().GetGroup(projectID, model.GROUP_NAME_DOMAINS)
 	if status != http.StatusFound {
-		log.WithField("project_id", projectID).Error("Domain group not enabled")
+		log.WithField("project_id", projectID).Info("Domain group not enabled")
 	}
 
 	var lookBack time.Time
@@ -49,8 +49,8 @@ func SegmentMarker(projectID int64) int {
 	}
 	if statusCode != http.StatusFound {
 		log.WithFields(log.Fields{"project_id": projectID, "look_back": lookBack}).
-			Error("Couldn't find updated records in last given hours with given statuscode for this project", statusCode)
-		return statusCode
+			Warn("Couldn't find updated records in last given hours with given statuscode for this project", statusCode)
+		return http.StatusOK
 	}
 	endTime := time.Now().Unix()
 	timeTaken := endTime - startTime
@@ -62,8 +62,8 @@ func SegmentMarker(projectID int64) int {
 	// list of all segments
 	allSegmentsMap, statusCode := store.GetStore().GetAllSegments(projectID)
 	if statusCode != http.StatusFound {
-		log.WithField("project_id", projectID).Error("No segment found for this project")
-		return statusCode
+		log.WithField("project_id", projectID).Warn("No segment found for this project")
+		return http.StatusOK
 	}
 
 	// set Query Timezone
@@ -140,10 +140,13 @@ func SegmentMarker(projectID int64) int {
 	}
 
 	if domainsGroupName != "" {
-		status, err := allAccountsSegmentMarkup(projectID, users, allSegmentsMap[domainsGroupName], decodedSegmentRulesMap[domainsGroupName], domainGroup.ID, eventNameIDsMap)
-		if status != http.StatusOK || err != nil {
-			log.WithField("project_id", projectID).Error("Unable to update associated_segments to the domain user.")
-			return status
+		allAccountsDecodedSegmentRule, exists := decodedSegmentRulesMap[domainsGroupName]
+		if exists {
+			status, err := allAccountsSegmentMarkup(projectID, users, allSegmentsMap[domainsGroupName], allAccountsDecodedSegmentRule, domainGroup.ID, eventNameIDsMap)
+			if status != http.StatusOK || err != nil {
+				log.WithField("project_id", projectID).Error("Unable to update associated_segments to the domain user.")
+				return status
+			}
 		}
 	}
 
