@@ -135,7 +135,7 @@ const EventBasedAlert = ({
   const [teamsEnabled, setTeamsEnabled] = useState(false);
   const [notRepeat, setNotRepeat] = useState(false);
   const [notifications, setNotifications] = useState(false);
-  const [isHyperLinkEnabled, setIsHyperLinkEnabled] = useState(false);
+  const [isHyperLinkEnabled, setIsHyperLinkEnabled] = useState(true);
   const [alertLimit, setAlertLimit] = useState(5);
   const [coolDownTime, setCoolDownTime] = useState(0.5);
   const [viewFilter, setViewFilter] = useState([]);
@@ -1269,7 +1269,7 @@ const EventBasedAlert = ({
               </Text>
               <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>
                 Choose the event you wish to be alerted for. You can choose
-                events at an account level or at a user people
+                events at an account level or at a people level
               </Text>
             </Col>
           </Row>
@@ -1497,8 +1497,7 @@ const EventBasedAlert = ({
                         color='grey'
                         lineHeight='medium'
                       >
-                        Post to slack when events you care about happen.
-                        Motivate the right actions.
+                        Get your alerts inside your Slack channel. You can also choose to send the alert to multiple channels.
                       </Text>
                     </div>
                   </div>
@@ -1650,10 +1649,9 @@ const EventBasedAlert = ({
                         color='grey'
                         lineHeight='medium'
                       >
-                        When this alert happens, send this information to other
-                        apps to enable more flows.
+                        Create a webhook with this event trigger and send the selected properties to other tools for automation.
                       </Text>
-                      <Text
+                      {/* <Text
                         type='paragraph'
                         mini
                         extraClass='m-0'
@@ -1662,7 +1660,7 @@ const EventBasedAlert = ({
                       >
                         <span className='font-bold'>Note:</span> Please add
                         payload to enable this option.
-                      </Text>
+                      </Text> */}
                     </div>
                     {isWebHookFeatureLocked && (
                       <div className='p-2'>
@@ -1910,8 +1908,7 @@ const EventBasedAlert = ({
                         color='grey'
                         lineHeight='medium'
                       >
-                        Post to teams when events you care about happen.
-                        Motivate the right actions.
+                        Get your alerts inside Microsoft Teams. You can also choose to send the alert to multiple channels.
                       </Text>
                     </div>
                   </div>
@@ -2067,7 +2064,7 @@ const EventBasedAlert = ({
                       color={'grey-2'}
                       extraClass={'m-0 inline'}
                     >
-                      For the  value of
+                      For the same value of
                     </Text>
 
                     <div className='inline ml-2'>
