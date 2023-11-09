@@ -1621,7 +1621,7 @@ func (store *MemSQL) GetSegmentMarkerLastRunTime(projectID int64) (time.Time, in
 	var projectSettings model.ProjectSetting
 	err := db.Table("project_settings").Select("segment_marker_last_run").Where("project_id=?", projectID).Find(&projectSettings).Error
 	if err != nil {
-		log.WithField("project_id", projectID).WithError(err).Error("Failed to fetch segment_marker_last_run from project_settings.")
+		log.WithField("project_id", projectID).WithError(err).Warn("Failed to fetch segment_marker_last_run from project_settings.")
 		return time.Time{}, http.StatusInternalServerError
 	}
 	if projectSettings.SegmentMarkerLastRun.IsZero() {
