@@ -10,11 +10,7 @@ import ControlledComponent from 'Components/ControlledComponent/ControlledCompon
 import { setNewSegmentModeAction } from 'Reducers/accountProfilesView/actions';
 
 function PropertyFilter({
-  viewMode,
-  filtersLimit = 3,
   profileType,
-  source,
-  filters = [],
   applyFilters,
   filtersExpanded,
   setFiltersExpanded,
@@ -26,8 +22,6 @@ function PropertyFilter({
   eventProp,
   setSaveSegmentModal,
   selectedAccount,
-  setSelectedAccount,
-  setAppliedFilters,
   setEventProp,
   areFiltersDirty,
   resetSelectedFilters,
@@ -35,13 +29,6 @@ function PropertyFilter({
 }) {
   const dispatch = useDispatch();
   const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
-
-  const handleAccountChange = (account) => {
-    setSelectedAccount(account);
-    setFiltersList(INITIAL_FILTERS_STATE.filters);
-    setEventProp(INITIAL_FILTERS_STATE.eventProp);
-    setListEvents(INITIAL_FILTERS_STATE.eventsList);
-  };
 
   const toggleFilters = useCallback(() => {
     setFiltersExpanded((curr) => !curr);
