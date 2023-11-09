@@ -9722,7 +9722,7 @@ func TestAnalyticsAllAccountsFilterBreadkdown(t *testing.T) {
 	_, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.AllowedGroupNames)
 	assert.Equal(t, http.StatusCreated, status)
 
-	properties := postgres.Jsonb{[]byte(`{"user_no":"w1"}`)}
+	properties := postgres.Jsonb{[]byte(fmt.Sprintf(`{"user_no":"w1","%s":1}`,U.SP_PAGE_COUNT))}
 	userWeb1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: properties,
 		Source: model.GetRequestSourcePointer(model.UserSourceWeb), CustomerUserId: "cuid1"})
 	assert.Equal(t, http.StatusCreated, errCode)
@@ -10274,5 +10274,80 @@ func TestAnalyticsAllAccountsFilterBreadkdown(t *testing.T) {
 	assert.Equal(t, "www.xyz2.com", result.Rows[0][1])
 	assert.Equal(t, "$none", result.Rows[0][2])
 	assert.Equal(t, "B", result.Rows[0][3])
+	assert.Equal(t, "abc1.com", result.Rows[0][4])
+
+
+
+	query = model.Query{
+		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name: "www.xyz2.com",
+				Properties: []model.QueryProperty{
+					{
+						Entity:    model.PropertyEntityUser,
+						Property:  "user_no",
+						Operator:  model.EqualsOpStr,
+						Value:     "w1",
+						Type:      U.PropertyTypeCategorical,
+						LogicalOp: "AND",
+					},
+				},
+			},
+		},
+		GlobalUserProperties: []model.QueryProperty{
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_DOMAINS,
+				Property:  U.VISITED_WEBSITE,
+				Operator:  model.EqualsOpStr,
+				Value:     "true",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "AND",
+			},
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_region",
+				Operator:  model.EqualsOpStr,
+				Value:     "A",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "AND",
+			},
+		},
+
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:         model.PropertyEntityUser,
+				EventNameIndex: 1,
+				Property:       "$hubspot_company_region",
+				EventName:      "www.xyz2.com",
+			},
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_region",
+				EventName: model.UserPropertyGroupByPresent,
+			},
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_DOMAIN,
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+		Class:           model.QueryClassEvents,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Len(t, result.Rows, 1)
+	assert.Nil(t, err)
+	assert.Equal(t, "www.xyz2.com", result.Rows[0][1])
+	assert.Equal(t, "$none", result.Rows[0][2])
+	assert.Equal(t, "A", result.Rows[0][3])
 	assert.Equal(t, "abc1.com", result.Rows[0][4])
 }

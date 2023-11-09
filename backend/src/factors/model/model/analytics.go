@@ -1404,3 +1404,32 @@ func IsFunnelQueryGroupNameUser(group string) bool {
 func IsQueryGroupNameAllAccounts(group string) bool {
 	return group == GROUP_NAME_DOMAINS
 }
+
+func IsFiltersContainGlobalUserPropertyForDomains(filters []QueryProperty) bool {
+	for i := range filters {
+		if IsFilterGlobalUserPropertiesByDefaultQueryMap(filters[i].Property) {
+			return true
+		}
+	}
+	return false
+}
+
+func IsFilterGlobalUserPropertiesByDefaultQueryMap(property string) bool {
+	defaultProperty, exist := IN_PROPERTIES_DEFAULT_QUERY_MAP[property]
+	if !exist {
+		return false
+	}
+
+	return defaultProperty.Entity == PropertyEntityUserGroup
+}
+
+func FilterGlobalUserPropertiesFilterForDomains(filters []QueryProperty) []QueryProperty {
+	filteredGlobalGroupProperties := make([]QueryProperty, 0)
+	for i := range filters {
+		if IsFilterGlobalUserPropertiesByDefaultQueryMap(filters[i].Property) {
+			continue
+		}
+		filteredGlobalGroupProperties = append(filteredGlobalGroupProperties, filters[i])
+	}
+	return filteredGlobalGroupProperties
+}
