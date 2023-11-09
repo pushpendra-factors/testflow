@@ -383,6 +383,7 @@ func (store *MemSQL) GetUsersUpdatedAtGivenHour(projectID int64, fromTime time.T
 		  LIMIT 
 			100000
 		)
+		LIMIT 250000
 	) 
   WHERE 
 	row_num <= 100;`, domainID, domainID, domainID, domainID, domainID, domainID)

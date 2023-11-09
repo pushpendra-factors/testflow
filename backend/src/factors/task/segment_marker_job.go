@@ -21,9 +21,6 @@ import (
 func SegmentMarker(projectID int64) int {
 
 	domainGroup, status := store.GetStore().GetGroup(projectID, model.GROUP_NAME_DOMAINS)
-	if status != http.StatusFound {
-		log.WithField("project_id", projectID).Info("Domain group not enabled")
-	}
 
 	var lookBack time.Time
 
@@ -62,6 +59,10 @@ func SegmentMarker(projectID int64) int {
 	// Total no.of records pulled.
 	// Time taken to pull.
 	log.WithFields(log.Fields{"project_id": projectID, "no_of_records": len(users)}).Info("Total no.of records pulled time(sec) ", timeTaken)
+
+	if len(users) >= 250000 {
+		log.WithFields(log.Fields{"project_id": projectID}).Warn("Total records exceeded 250k")
+	}
 
 	// list of all segments
 	allSegmentsMap, statusCode := store.GetStore().GetAllSegments(projectID)
@@ -120,9 +121,7 @@ func SegmentMarker(projectID int64) int {
 	eventNameIDsMap := make(map[string]string)
 
 	// adding ids for all the event_names
-	if len(eventNameIDsList) == 0 {
-		log.WithField("project_id", projectID).Info("No segments with performed events for this project")
-	} else {
+	if len(eventNameIDsList) > 0 {
 		eventNameIDsMap, status = store.GetStore().GetEventNameIdsWithGivenNames(projectID, eventNameIDsList)
 		if status != http.StatusFound {
 			log.WithField("project_id", projectID).Error("Error fetching event_names for the project")
