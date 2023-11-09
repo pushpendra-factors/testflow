@@ -222,50 +222,50 @@ const EventBasedAlert = ({
   }, [groups]);
 
   const setGroupAnalysis = (group) => {
-    
+
     setActiveGrpBtn(group);
 
-        if (!['users', 'events'].includes(group)) {
-          getGroupProperties(activeProject.id, group);
-        }
-    
-        const criteria =
-          group === 'events' ? TOTAL_EVENTS_CRITERIA : TOTAL_USERS_CRITERIA;
-        setShowCriteria(criteria);
-    
-        const opts = {
-          ...queryOptions,
-          group_analysis: group,
-          globalFilters: []
-        };
-    
-        dispatch({
-          type: INITIALIZE_GROUPBY,
-          payload: {
-            global: [],
-            event: []
-          }
-        });
-    
-        setQueries([]);
-        setQueryOptions(opts);
+    if (!['users', 'events'].includes(group)) {
+      getGroupProperties(activeProject.id, group);
+    }
+
+    const criteria =
+      group === 'events' ? TOTAL_EVENTS_CRITERIA : TOTAL_USERS_CRITERIA;
+    setShowCriteria(criteria);
+
+    const opts = {
+      ...queryOptions,
+      group_analysis: group,
+      globalFilters: []
+    };
+
+    dispatch({
+      type: INITIALIZE_GROUPBY,
+      payload: {
+        global: [],
+        event: []
+      }
+    });
+
+    setQueries([]);
+    setQueryOptions(opts);
   };
 
-  const confirmGroupSwitch = (group) =>{
+  const confirmGroupSwitch = (group) => {
 
-    if(queries.length > 0){
+    if (queries.length > 0) {
       Modal.confirm({
         title: 'Are you sure?',
         content:
           'Switching between "Account and People" will lose your current configured data',
         okText: 'Yes, proceed',
         cancelText: 'No, go back',
-        onOk: () => { 
+        onOk: () => {
           setGroupAnalysis(group)
         }
-      }); 
+      });
     }
-    else{
+    else {
       setGroupAnalysis(group)
     }
 
@@ -424,47 +424,47 @@ const EventBasedAlert = ({
 
   const menu = () => {
     return (
-      <Menu style={{width:'140px'}}>
+      <Menu style={{ width: '140px' }}>
         <Menu.Item
           key='1'
           onClick={() => createDuplicateAlert(viewAlertDetails)}
         >
-             <div className='flex items-center'>
+          <div className='flex items-center'>
 
-          <SVG
-            name='Pluscopy'
-            size={16}
-            color={'grey'}
-            extraClass={'mr-1'}
+            <SVG
+              name='Pluscopy'
+              size={16}
+              color={'grey'}
+              extraClass={'mr-1'}
             />
             <Text
-                        type={'title'}
-                        level={7} 
-                        color={'grey-2'}
-                        extraClass={'m-0 ml-1'}
-                        >Create copy</Text> 
-            </div>
+              type={'title'}
+              level={7}
+              color={'grey-2'}
+              extraClass={'m-0 ml-1'}
+            >Create copy</Text>
+          </div>
         </Menu.Item>
         <Menu.Divider />
         <Menu.Item
           key='2'
           onClick={() => confirmDeleteAlert(viewAlertDetails)}
         >
-             <div className='flex items-center'>
+          <div className='flex items-center'>
 
-          <SVG
-            name='Delete1'
-            size={16}
-            color={'red'}
-            extraClass={'mr-1'}
-            /> 
-          <Text
-                        type={'title'}
-                        level={7} 
-                        color={'red'}
-                        extraClass={'m-0 ml-1'}
-                        >Delete</Text>  
-            </div>
+            <SVG
+              name='Delete1'
+              size={16}
+              color={'red'}
+              extraClass={'mr-1'}
+            />
+            <Text
+              type={'title'}
+              level={7}
+              color={'red'}
+              extraClass={'m-0 ml-1'}
+            >Delete</Text>
+          </div>
         </Menu.Item>
       </Menu>
     );
@@ -1468,7 +1468,7 @@ const EventBasedAlert = ({
 
           <div className='border rounded mt-4'>
             <div style={{ backgroundColor: '#fafafa' }}>
-              <Row className={'ml-2'}>
+              <Row className={'ml-2 mr-2'}>
                 <Col span={20}>
                   <div className='flex justify-between p-3'>
                     <div className='flex'>
@@ -1502,9 +1502,9 @@ const EventBasedAlert = ({
                     </div>
                   </div>
                 </Col>
-                <Col className={'m-0 mt-4'}>
+                <Col span={4} className={'m-0 mt-4 flex justify-end'}>
                   <Form.Item name='slack_enabled' className={'m-0'}>
-                    <div span={24} className={'flex flex-start items-center'}>
+                    <div className={'flex flex-end items-center'}>
                       <Text
                         type={'title'}
                         level={7}
@@ -1620,7 +1620,7 @@ const EventBasedAlert = ({
 
           <div className='border rounded mt-4'>
             <div style={{ backgroundColor: '#fafafa' }}>
-              <Row className={'ml-2'}>
+              <Row className={'ml-2 mr-2'}>
                 <Col span={20}>
                   <div className='flex justify-between p-3'>
                     <div className='flex'>
@@ -1662,42 +1662,44 @@ const EventBasedAlert = ({
                         payload to enable this option.
                       </Text> */}
                     </div>
-                    {isWebHookFeatureLocked && (
-                      <div className='p-2'>
-                        <UpgradeButton />
-                      </div>
-                    )}
+
                   </div>
                 </Col>
-                <Col className={'m-0 mt-4'}>
-                  <Form.Item name='webhook_enabled' className={'m-0'}>
-                    <div span={24} className={'flex flex-start items-center'}>
-                      <Text
-                        type={'title'}
-                        level={7}
-                        weight='medium'
-                        extraClass={'m-0 mr-2'}
-                      >
-                        Enable
-                      </Text>
-                      <span style={{ width: '50px' }}>
-                        <Switch
-                          checkedChildren='On'
-                          unCheckedChildren='OFF'
-                          disabled={
-                            !(
-                              groupBy &&
-                              groupBy.length &&
-                              groupBy[0] &&
-                              groupBy[0].property
-                            ) || isWebHookFeatureLocked
-                          }
-                          onChange={(checked) => setWebhookEnabled(checked)}
-                          checked={webhookEnabled}
-                        />
-                      </span>{' '}
+                <Col span={4} className={'m-0 mt-4 flex justify-end'}>
+
+                  {isWebHookFeatureLocked ? (
+                    <div className='p-2'>
+                      <UpgradeButton />
                     </div>
-                  </Form.Item>
+                  ) : <Form.Item name='webhook_enabled' className={'m-0'}>
+                      <div className={'flex flex-end items-center'}>
+                        <Text
+                          type={'title'}
+                          level={7}
+                          weight='medium'
+                          extraClass={'m-0 mr-2'}
+                        >
+                          Enable
+                        </Text>
+                        <span style={{ width: '50px' }}>
+                          <Switch
+                            checkedChildren='On'
+                            unCheckedChildren='OFF'
+                            disabled={
+                              !(
+                                groupBy &&
+                                groupBy.length &&
+                                groupBy[0] &&
+                                groupBy[0].property
+                              ) || isWebHookFeatureLocked
+                            }
+                            onChange={(checked) => setWebhookEnabled(checked)}
+                            checked={webhookEnabled}
+                          />
+                        </span>{' '}
+                      </div>
+                    </Form.Item>
+                  }
                 </Col>
               </Row>
             </div>
@@ -1879,7 +1881,7 @@ const EventBasedAlert = ({
 
           <div className='border rounded mt-4'>
             <div style={{ backgroundColor: '#fafafa' }}>
-              <Row className={'ml-2'}>
+              <Row className={'ml-2 mr-2'}>
                 <Col span={20}>
                   <div className='flex justify-between p-3'>
                     <div className='flex'>
@@ -1913,9 +1915,9 @@ const EventBasedAlert = ({
                     </div>
                   </div>
                 </Col>
-                <Col className={'m-0 mt-4'}>
+                <Col span={4} className={'m-0 mt-4 flex justify-end'}>
                   <Form.Item name='teams_enabled' className={'m-0'}>
-                    <div span={24} className={'flex flex-start items-center'}>
+                    <div className={'flex flex-end items-center'}>
                       <Text
                         type={'title'}
                         level={7}
@@ -2149,8 +2151,8 @@ const EventBasedAlert = ({
                 type={'link'}
                 onClick={() => setShowAdvSettings(!showAdvSettings)}
               >{`${showAdvSettings
-                  ? 'Hide advanced options'
-                  : 'Show advanced options'
+                ? 'Hide advanced options'
+                : 'Show advanced options'
                 }`}</a>
             </Col>
           </Row>
@@ -2229,30 +2231,30 @@ const EventBasedAlert = ({
             </>
           ) : (
             <Row className={'border-top--thin-2 mt-6 pt-6'}>
-           <Col span={12}></Col>
-           <Col span={12}>
-                  <div className={'flex justify-end'}>
-                    <Button
-                      size={'large'}
-                      disabled={loading}
-                      onClick={() => {
-                        onReset();
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      size={'large'}
-                      disabled={loading}
-                      loading={loading}
-                      className={'ml-2'}
-                      type={'primary'}
-                      htmlType='submit'
-                    >
-                      Save
-                    </Button>
-                  </div>
-                </Col>
+              <Col span={12}></Col>
+              <Col span={12}>
+                <div className={'flex justify-end'}>
+                  <Button
+                    size={'large'}
+                    disabled={loading}
+                    onClick={() => {
+                      onReset();
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size={'large'}
+                    disabled={loading}
+                    loading={loading}
+                    className={'ml-2'}
+                    type={'primary'}
+                    htmlType='submit'
+                  >
+                    Save
+                  </Button>
+                </div>
+              </Col>
             </Row>
           )}
         </Form>
@@ -2267,7 +2269,7 @@ const EventBasedAlert = ({
         <Col span={22}>
           <div className={'mb-10 pl-4'}>{renderEventForm()}</div>
         </Col>
-      </Row> 
+      </Row>
       <Modal
         title={null}
         visible={showSelectChannelsModal}
@@ -2286,7 +2288,7 @@ const EventBasedAlert = ({
         cancelButtonProps={{ size: 'large' }}
       >
         <div>
-        <Row gutter={[24, 24]} justify='center'>
+          <Row gutter={[24, 24]} justify='center'>
             <Col span={22}>
               <Text
                 type={'title'}
