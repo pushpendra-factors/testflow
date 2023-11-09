@@ -1716,9 +1716,10 @@ func buildUniqueUsersFunnelQueryV3(projectId int64, q model.Query, groupIds []in
 	stepFunnelName := "funnel"
 
 	funnelWhereStmnt := ""
-	if isFunnelGroupQueryDomains && len(q.GlobalUserProperties) > 0 &&
+	if isFunnelGroupQueryDomains && len(model.FilterGlobalUserPropertiesFilterForDomains(q.GlobalUserProperties)) > 0 &&
 		len(model.GetGlobalGroupByUserProperties(q.GroupByProperties)) > 0 {
-		funnelWhereStmnt = getGlobalBreakdownreakdownWhereConditionForDomains(q.GlobalUserProperties, funnelSteps[0])
+		funnelWhereStmnt = getGlobalBreakdownreakdownWhereConditionForDomains(model.FilterGlobalUserPropertiesFilterForDomains(q.GlobalUserProperties),
+			funnelSteps[0])
 	}
 
 	// select step counts, user properties and event properties group_keys.
