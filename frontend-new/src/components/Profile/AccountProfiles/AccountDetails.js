@@ -51,6 +51,8 @@ import getGroupIcon from 'Utils/getGroupIcon';
 import useFeatureLock from 'hooks/useFeatureLock';
 import { getGroups } from 'Reducers/coreQuery/middleware';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
+import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
+import { ArrowLeftOutlined } from '@ant-design/icons';
 
 function AccountDetails({
   accounts,
@@ -107,6 +109,22 @@ function AccountDetails({
     }
   }, [activeAgent]);
 
+  const titleIcon = useMemo(() => {
+    if (Boolean(location?.state?.activeSegment?.id)) {
+      return defaultSegmentIconsMapping[location?.state?.activeSegment?.name]
+        ? defaultSegmentIconsMapping[location?.state?.activeSegment?.name]
+        : 'pieChart';
+    }
+    return 'buildings';
+  }, [location]);
+
+  const pageTitle = useMemo(() => {
+    if (location?.state?.activeSegment?.name) {
+      return location?.state?.activeSegment?.name;
+    }
+    return 'All Accounts';
+  }, [location]);
+
   useEffect(() => {
     if (!groups || Object.keys(groups).length === 0) {
       getGroups(activeProject?.id);
@@ -120,13 +138,6 @@ function AccountDetails({
       setPropSelectOpen(false);
     };
   }, []);
-
-  useEffect(() => {
-    dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
-    return () => {
-      dispatch({ type: SHOW_ANALYTICS_RESULT, payload: false });
-    };
-  }, [dispatch]);
 
   const [activeId, activeGroup, activeView] = useMemo(() => {
     const urlSearchParams = new URLSearchParams(location.search);
@@ -418,6 +429,7 @@ function AccountDetails({
       fromDetails: true,
       accountPayload: location.state?.accountPayload,
       currentPage: location.state?.currentPage,
+      currentPageSize: location.state?.currentPageSize,
       activeSorter: location.state?.activeSorter
     });
   }, []);
@@ -433,25 +445,42 @@ function AccountDetails({
     });
   };
 
-  const renderModalHeader = () => (
-    <div className='fa-timeline-modal--header'>
-      <div className='flex items-center'>
+  const renderModalHeader = () => {
+    const accountName = accountDetails?.data?.name;
+    return (
+      <div className='fa-timeline-modal--header'>
+        <div className='flex items-center'>
+          <div
+            className='flex items-center cursor-pointer'
+            onClick={handleOptionBackClick}
+          >
+            <div className='flex items-center rounded justify-center mr-1'>
+              <SVG name={titleIcon} size={32} color='#FF4D4F' />
+            </div>
+            <Text
+              type='title'
+              level={6}
+              weight='bold'
+              extraClass='m-0 underline'
+            >
+              {pageTitle}
+            </Text>
+          </div>
+          {accountName && (
+            <Text type='title' level={6} weight='bold' extraClass='m-0'>
+              {'\u00A0/ ' + accountName}
+            </Text>
+          )}
+        </div>
         <Button
-          style={{ padding: 0 }}
-          type='text'
-          icon={<SVG name='brand' size={36} />}
           size='large'
           onClick={handleOptionBackClick}
-        />
-        <Text type='title' level={4} weight='bold' extraClass='m-0'>
-          Account Details
-        </Text>
+        >
+          Close
+        </Button>
       </div>
-      <Button size='large' onClick={handleOptionBackClick}>
-        Close
-      </Button>
-    </div>
-  );
+    );
+  };
 
   const listLeftPaneProps = (props = {}) => {
     const propsList = [];

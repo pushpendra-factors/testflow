@@ -19,13 +19,18 @@ import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
 import { processProperties } from 'Utils/dataFormatter';
 
-const peopleCategoryList = ['others', 'page_views'];
-const accountsCategoryList = [
-  'others',
-  'page_views',
-  'linkedin_company_engagements',
-  'g2_engagements'
-];
+
+
+const blackListedCategories = [
+  'Hubspot Contacts',
+  'Salesforce Users',
+  'LeadSquared Person',
+  'Marketo Person',
+  'Hubspot Companies',
+  'Hubspot Deals',
+  'Salesforce Accounts',
+  'Salesforce Opportunities',
+]
 
 function QueryBlock({
   availableGroups,
@@ -68,19 +73,22 @@ function QueryBlock({
 
   useEffect(() => {
     let showOpts = [];
-
+ 
     const groupNamesList = availableGroups?.map((item) => item[0]);
     if (groupAnalysis === 'users') {
       const userOpts = eventOptions?.filter(
         (item) => !groupNamesList?.includes(item?.label)
       );
-
-      showOpts = userOpts;
-    } else {
-      const groupOpts = eventOptions?.filter((item) =>
-        groupNamesList?.includes(item?.label)
+      //remove blacklisted events
+      const userOptsNew = userOpts?.filter(
+        (item) => !blackListedCategories?.includes(item?.label)
       );
-      // showOpts = groupOpts.concat(userOpts);
+      showOpts = userOptsNew;
+    } else {
+      //remove blacklisted events
+      const groupOpts = eventOptions?.filter((item) =>
+      !blackListedCategories?.includes(item?.label)
+      ); 
       showOpts = groupOpts;
     }
 

@@ -10,17 +10,29 @@ type SubscriptionProductPrice struct {
 	ExternalName string `json:"external_name"`
 	ID           string `json:"id"`
 	Price        int64  `json:"price"`
-	Period       int    `json:"period"`
+	PeriodUnit   string `json:"period_unit"`
 }
 
 type Subscription struct {
 	Status              string               `json:"status"`
 	RenewsOn            time.Time            `json:"renews_on"`
+	BillingPeriodUnit   string               `json:"period_unit"`
 	SubscriptionDetails []SubscriptionDetail `json:"subscription_details"`
 }
 
 type SubscriptionDetail struct {
-	Type   string `json:"type"`
-	ID     string `json:"id"`
-	Amount int64  `json:"amount"`
+	Type         string `json:"type"`
+	ID           string `json:"id"`
+	Amount       int64  `json:"amount"`
+	ExternalName string `json:"external_name"`
+}
+
+type UpdateSubscriptionParams struct {
+	UpdatedPlanID string         `json:"updated_plan_id"`
+	Addons        []AddOnsUpdate `json:"add_ons"`
+}
+
+type AddOnsUpdate struct {
+	AddOnID  string `json:"addon_id"`
+	Quantity int32  `json:"quantity"`
 }

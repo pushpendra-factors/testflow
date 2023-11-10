@@ -175,6 +175,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS agents (
     teams_access_tokens JSON,
     last_logged_out bigint DEFAULT 0,
     is_form_filled boolean DEFAULT false,
+    billing_customer_id text,
     SHARD KEY (uuid),
     PRIMARY KEY (uuid),
     KEY (updated_at),
@@ -205,7 +206,6 @@ CREATE ROWSTORE TABLE IF NOT EXISTS bigquery_settings (
 
 CREATE ROWSTORE TABLE IF NOT EXISTS billing_accounts (
     id text,
-    plan_id bigint,
     agent_uuid text,
     organization_name text,
     billing_address text,
@@ -213,6 +213,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS billing_accounts (
     phone_no text,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
+    billing_last_synced_at timestamp(6),
     KEY (updated_at),
     PRIMARY KEY (agent_uuid, id)
 
@@ -394,19 +395,6 @@ CREATE ROWSTORE TABLE IF NOT EXISTS project_agent_mappings (
     -- Ref (invited_by) -> agents(uuid)
 );
 
-CREATE ROWSTORE TABLE IF NOT EXISTS project_billing_account_mappings (
-    project_id bigint,
-    billing_account_id text,
-    created_at timestamp(6) NOT NULL,
-    updated_at timestamp(6) NOT NULL,
-    KEY (updated_at),
-    SHARD KEY (project_id),
-    PRIMARY KEY (project_id, billing_account_id)
-
-    -- Required constraints.
-    -- Ref (project_id) -> projects(id)
-    -- Ref (billing_account_id) -> billing_accounts(id)
-);
 
 CREATE ROWSTORE TABLE IF NOT EXISTS project_settings (
     project_id bigint,
@@ -505,6 +493,10 @@ CREATE ROWSTORE TABLE IF NOT EXISTS projects (
     jobs_metadata json,
     channel_group_rules json,
     profile_picture text,
+    enable_billing boolean,
+    billing_subscription_id string,
+    billing_account_id string,
+    billing_last_synced_at timestamp(6),
     KEY (updated_at),
     PRIMARY KEY (id),
     KEY (token),
@@ -1371,7 +1363,9 @@ CREATE TABLE IF NOT EXISTS plan_details (
     name text,
     mtu_limit bigint,
     feature_list json,
-    SHARD KEY (id),
+    billing_plan_id text,
+    billing_plan_price_id text,
+    SHARD KEY (id)
     PRIMARY KEY (id)
 );
 
@@ -1380,6 +1374,9 @@ CREATE TABLE IF NOT EXISTS project_plan_mappings (
     plan_id bigint NOT NULL,
     over_write json,
     last_renewed_on timestamp(6),
+    billing_plan_id text,
+    billing_addons json,
+     billing_last_synced_at timestamp(6),
     PRIMARY KEY (project_id),
     SHARD KEY (project_id)
 );

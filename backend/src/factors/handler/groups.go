@@ -136,9 +136,7 @@ func GetGroupPropertiesHandler(c *gin.Context) {
 	if model.IsDomainGroup(groupName) {
 		allAccountProperties := getDefaultAllAccountProperties(projectId)
 		response := gin.H{
-			"properties": map[string][]string{
-				"categorical": allAccountProperties,
-			},
+			"properties":    allAccountProperties,
 			"display_names": U.ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES,
 		}
 		c.JSON(http.StatusOK, response)
@@ -193,22 +191,34 @@ func GetGroupPropertiesHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-func getDefaultAllAccountProperties(projectId int64) []string {
+func getDefaultAllAccountProperties(projectId int64) map[string][]string {
 	groups, errCode := store.GetStore().GetGroups(projectId)
 	if errCode != http.StatusFound {
 		log.WithField("err_code", errCode).Error("Failed to get groups while adding group info")
-		return []string{}
+		return map[string][]string{}
 	}
 
-	var filteredAllAccountProperties []string
+	var allAccountPropertiesCategorical, allAccountPropertiesNumerical []string
 	for _, group := range groups {
 		if prop, exists := U.GROUP_TO_DEFAULT_SEGMENT_MAP[group.Name]; exists {
-			filteredAllAccountProperties = append(filteredAllAccountProperties, prop)
+			allAccountPropertiesCategorical = append(allAccountPropertiesCategorical, prop)
 		}
 	}
-	filteredAllAccountProperties = append(filteredAllAccountProperties, U.VISITED_WEBSITE)
+	allAccountPropertiesCategorical = append(allAccountPropertiesCategorical, U.VISITED_WEBSITE)
 
-	return filteredAllAccountProperties
+	scoringAvailable, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_ACCOUNT_SCORING, false)
+	if err != nil {
+		log.WithField("err_code", errCode).WithField("project_id", projectId).Error("Error fetching scoring availability status for the project")
+	}
+	if scoringAvailable {
+		allAccountPropertiesNumerical = append(allAccountPropertiesNumerical, U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE)
+	}
+
+	allAccountProperties := map[string][]string{
+		"categorical": allAccountPropertiesCategorical,
+		"numerical":   allAccountPropertiesNumerical,
+	}
+	return allAccountProperties
 }
 
 // GetGroupPropertyValuesHandler curl -i -X GET http://localhost:8080/projects/1/groups/zzxxzzz==/properties/email_id/values

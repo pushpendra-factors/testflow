@@ -62,7 +62,7 @@ import {
   setActiveSegmentAction,
   setSegmentModalStateAction
 } from 'Reducers/userProfilesView/actions';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import useFeatureLock from 'hooks/useFeatureLock';
 import { FEATURES } from 'Constants/plans.constants';
 import UpgradeModal from '../UpgradeModal';
@@ -91,6 +91,7 @@ function UserProfiles({
 }) {
   const dispatch = useDispatch();
   const history = useHistory();
+  const location = useLocation();
   const integration = useSelector(
     (state) => state.global.currentProjectSettings
   );
@@ -117,6 +118,9 @@ function UserProfiles({
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
   const [userValueOpts, setUserValueOpts] = useState({});
   const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPageSize, setCurrentPageSize] = useState(25);
+  const [defaultSorterInfo, setDefaultSorterInfo] = useState({});
 
   useEffect(() => {
     if (!timelinePayload.search_filter) {
@@ -336,8 +340,33 @@ function UserProfiles({
       },
       render: (item) => MomentTz(item).fromNow()
     });
+
+    columns.forEach((column) => {
+      if (column.key === defaultSorterInfo?.key) {
+        column.sortOrder = defaultSorterInfo?.order;
+      } else {
+        delete column.sortOrder;
+      }
+    });
+    const hasSorter = columns.find((item) =>
+      ['ascend', 'descend'].includes(item.sortOrder)
+    );
+    if (!hasSorter) {
+      columns.forEach((column) => {
+        if (['engagement', 'lastActivity'].includes(column.key)) {
+          column.defaultSortOrder = 'descend';
+          return;
+        }
+      });
+    }
     return { tableProperties: tableProps, tableColumns: columns };
-  }, [contacts?.data, currentProjectSettings, timelinePayload, activeSegment]);
+  }, [
+    contacts?.data,
+    currentProjectSettings,
+    timelinePayload,
+    activeSegment,
+    defaultSorterInfo
+  ]);
 
   const getTableData = (data) => {
     const sortedData = data.sort(
@@ -365,14 +394,34 @@ function UserProfiles({
     getUsers(opts);
   };
 
-  const getUsers = (payload) => {
-    if (payload.source && payload.source !== '') {
-      const formatPayload = { ...payload };
-      formatPayload.filters = formatFiltersForPayload(payload?.filters) || [];
-      const reqPayload = formatReqPayload(formatPayload, activeSegment);
-      getProfileUsers(activeProject.id, reqPayload);
-    }
-  };
+  const getUsers = useCallback(
+    (payload) => {
+      const shouldCache =
+        location.state?.fromDetails && contacts?.data?.length > 0;
+      if (payload.source && payload.source !== '' && !shouldCache) {
+        setDefaultSorterInfo({ key: 'lastActivity', order: 'descend' });
+        const formatPayload = { ...payload };
+        formatPayload.filters = formatFiltersForPayload(payload?.filters) || [];
+        const reqPayload = formatReqPayload(formatPayload, activeSegment);
+        getProfileUsers(activeProject.id, reqPayload);
+      }
+      if (shouldCache) {
+        setCurrentPage(location.state.currentPage);
+        setCurrentPageSize(location.state.currentPageSize);
+        setDefaultSorterInfo(location.state.activeSorter);
+        const localeState = { ...history.location.state, fromDetails: false };
+        history.replace({ state: localeState });
+      }
+    },
+    [
+      location.state?.fromDetails,
+      location.state?.currentPage,
+      location.state?.activeSorter,
+      activeSegment,
+      activeProject.id,
+      history
+    ]
+  );
 
   useEffect(() => {
     getUsers(timelinePayload);
@@ -627,6 +676,12 @@ function UserProfiles({
     </div>
   );
 
+  const handleTableChange = (pageParams, somedata, sorter) => {
+    setCurrentPage(pageParams.current);
+    setCurrentPageSize(pageParams.pageSize);
+    setDefaultSorterInfo({ key: sorter.columnKey, order: sorter.order });
+  };
+
   const renderTable = () => (
     <div>
       <Table
@@ -636,7 +691,15 @@ function UserProfiles({
             history.push(
               `/profiles/people/${btoa(user.identity.id)}?is_anonymous=${
                 user.identity.isAnonymous
-              }`
+              }`,
+              {
+                timelinePayload: timelinePayload,
+                activeSegment: activeSegment,
+                fromDetails: true,
+                currentPage: currentPage,
+                currentPageSize: currentPageSize,
+                activeSorter: defaultSorterInfo
+              }
             );
           }
         })}
@@ -644,7 +707,13 @@ function UserProfiles({
         dataSource={getTableData(contacts.data)}
         columns={tableColumns}
         rowClassName='cursor-pointer'
-        pagination={{ position: ['bottom', 'left'], defaultPageSize: '25' }}
+        pagination={{
+          position: ['bottom', 'left'],
+          defaultPageSize: '25',
+          current: currentPage,
+          pageSize: currentPageSize
+        }}
+        onChange={handleTableChange}
         scroll={{
           x: tableProperties?.length * 250
         }}
@@ -678,7 +747,13 @@ function UserProfiles({
           </div>
         )}
 
-        <Text type='title' level={3} weight='bold' extraClass='mb-0' id={'fa-at-text--page-title'}>
+        <Text
+          type='title'
+          level={3}
+          weight='bold'
+          extraClass='mb-0'
+          id={'fa-at-text--page-title'}
+        >
           User Profiles
         </Text>
         {renderActions()}

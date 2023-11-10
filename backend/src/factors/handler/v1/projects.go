@@ -99,5 +99,6 @@ func MapProjectToString(project model.Project) model.ProjectString {
 		HubspotTouchPoints:    project.HubspotTouchPoints,
 		JobsMetadata:          project.JobsMetadata,
 		ChannelGroupRules:     project.ChannelGroupRules,
+		EnableBilling:         project.EnableBilling,
 	}
 }

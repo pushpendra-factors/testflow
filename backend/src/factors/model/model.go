@@ -439,9 +439,6 @@ type Model interface {
 	DeleteProjectAgentMapping(projectID int64, agentUUIDToRemove string) int
 	EditProjectAgentMapping(projectID int64, agentUUIDToEdit string, role int64) int
 
-	// project_billing_account
-	GetProjectBillingAccountMappings(billingAccountID string) ([]model.ProjectBillingAccountMapping, int)
-	GetProjectBillingAccountMapping(projectID int64) (*model.ProjectBillingAccountMapping, int)
 
 	// project_setting
 	GetProjectSetting(projectID int64) (*model.ProjectSetting, int)
@@ -992,6 +989,7 @@ type Model interface {
 	GetFeatureLimitForProject(projectID int64, featureName string) (int64, error)
 	UpdateFeatureStatusForProject(projectID int64, feature model.FeatureDetails) (string, error)
 	GetProjectsArrayWithFeatureEnabledFromProjectIdFlag(stringProjectsIDs, featureName string) ([]int64, error)
+	UpdateProjectPlanMapping(projectID int64, planMapping *model.ProjectPlanMapping) int
 
 	// Property Mapping
 	CreatePropertyMapping(propertyMapping model.PropertyMapping) (*model.PropertyMapping, string, int)
@@ -1046,5 +1044,6 @@ type Model interface {
 	UpdateFeaturesForCustomPlan(projectID int64, AccountLimit int64, MtuLimit int64, AvailableFeatuers []string) (int, error)
 	UpdateAddonsForProject(projectID int64, addons model.OverWrite) (string, error)
 	CreateAddonsForCustomPlanForProject(projectID int64) error
-	CreateDefaultProjectPlanMapping(projectID int64, planID int) (int, error)
+	CreateDefaultProjectPlanMapping(projectID int64, planID int, billingPlanPriceID string) (int, error)
+	TriggerSyncChargebeeToFactors(projectID int64) error
 }

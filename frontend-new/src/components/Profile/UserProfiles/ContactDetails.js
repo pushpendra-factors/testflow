@@ -1,4 +1,4 @@
-import React, { useCallback,useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Button,
   Avatar,
@@ -43,6 +43,9 @@ import { useHistory, useLocation } from 'react-router-dom';
 import { getEventPropertiesV2 } from 'Reducers/coreQuery/middleware';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import useKey from 'hooks/useKey';
+import { PathUrls } from 'Routes/pathUrls';
+import { ArrowLeftOutlined } from '@ant-design/icons';
+
 function ContactDetails({
   userDetails,
   activeProject,
@@ -73,13 +76,6 @@ function ContactDetails({
   };
 
   const { userPropNames } = useSelector((state) => state.coreQuery);
-
-  useEffect(() => {
-    dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
-    return () => {
-      dispatch({ type: SHOW_ANALYTICS_RESULT, payload: false });
-    };
-  }, [dispatch]);
 
   useEffect(() => {
     return () => {
@@ -282,32 +278,45 @@ function ContactDetails({
     </Tabs>
   );
 
-  const renderModalHeader = () => (
-    <div className='fa-timeline-modal--header'>
-      <div className='flex items-center'>
+  const renderModalHeader = () => {
+    return (
+      <div className='fa-timeline-modal--header'>
+        <div className='flex items-center'>
+          <div
+            className='flex items-center cursor-pointer'
+            onClick={handleOptionBackClick}
+          >
+            <Text
+              type='title'
+              level={6}
+              weight='bold'
+              extraClass='m-0 underline'
+            >
+              User Profiles
+            </Text>
+          </div>
+          {userDetails.data?.title && (
+            <Text type='title' level={6} weight='bold' extraClass='m-0'>
+              {'\u00A0/ ' + userDetails.data.title}
+            </Text>
+          )}
+        </div>
         <Button
-          style={{ padding: 0 }}
-          type='text'
-          icon={<SVG name='brand' size={36} />}
           size='large'
           onClick={handleOptionBackClick}
-        />
-        <Text type='title' level={4} weight='bold' extraClass='m-0'>
-          Contact Details
-        </Text>
+        >
+          Close
+        </Button>
       </div>
-      <Button size='large' onClick={handleOptionBackClick}>
-        Close
-      </Button>
-    </div>
-  );
+    );
+  };
 
   const handleOptionClick = (option, group) => {
     const timelinesConfig = { ...tlConfig };
     if (!timelinesConfig.account_config.table_props) {
       timelinesConfig.account_config.table_props = [];
     }
-  
+
     if (!timelinesConfig.user_config.table_props.includes(option?.value)) {
       timelinesConfig.user_config.table_props.push(option?.value);
       udpateProjectSettings(activeProject.id, {
@@ -326,9 +335,16 @@ function ContactDetails({
     setPropSelectOpen(false);
   };
 
-  const handleOptionBackClick = useCallback(() =>{
-    history.goBack();
-  },[]);
+  const handleOptionBackClick = useCallback(() => {
+    history.replace(PathUrls.ProfilePeople, {
+      activeSegment: location.state?.activeSegment,
+      fromDetails: true,
+      timelinePayload: location.state?.timelinePayload,
+      currentPage: location.state?.currentPage,
+      currentPageSize: location.state?.currentPageSize,
+      activeSorter: location.state?.activeSorter
+    });
+  }, []);
 
   const onDelete = (option) => {
     const timelinesConfig = { ...tlConfig };
@@ -344,8 +360,7 @@ function ContactDetails({
   const listLeftPaneProps = (props = []) => {
     const propsList = [];
     const showProps =
-      currentProjectSettings?.timelines_config?.user_config?.table_props ||
-      [];
+      currentProjectSettings?.timelines_config?.user_config?.table_props || [];
     const userPropertiesModified = [];
     if (userPropertiesV2) {
       convertGroupedPropertiesToUngrouped(
@@ -389,8 +404,8 @@ function ContactDetails({
 
   const renderAddNewProp = () =>
     !currentProjectSettings?.timelines_config?.user_config?.table_props ||
-    currentProjectSettings?.timelines_config?.user_config?.table_props
-      ?.length < 8 ? (
+    currentProjectSettings?.timelines_config?.user_config?.table_props?.length <
+      8 ? (
       <div>
         <Button
           type='link'

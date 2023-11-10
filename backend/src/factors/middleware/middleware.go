@@ -119,7 +119,7 @@ func SetScopeProjectToken() gin.HandlerFunc {
 }
 
 func isJSONRequestBody(body string) bool {
-	return strings.HasPrefix(body, "{") && strings.HasSuffix(body, "}")
+	return strings.HasPrefix(body, "{") || strings.HasPrefix(body, "[")
 }
 
 func DecodeSDKRequestBody() gin.HandlerFunc {

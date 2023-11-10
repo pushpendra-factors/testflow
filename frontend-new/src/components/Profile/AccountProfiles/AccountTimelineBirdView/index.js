@@ -16,6 +16,7 @@ import { SVG, Text } from '../../../factorsComponents';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import NoDataWithMessage from 'Components/Profile/MyComponents/NoDataWithMessage';
 import { useSelector } from 'react-redux';
+import truncateURL from 'Utils/truncateURL';
 
 function AccountTimelineBirdView({
   timelineEvents = [],
@@ -127,7 +128,7 @@ function AccountTimelineBirdView({
                   !hoverConditionals && eventName.length >= 30 ? 'hover' : []
                 }
               >
-                {eventName}
+                {truncateURL(eventName)}
               </Tooltip>
             </div>
             {hoverConditionals ? (
