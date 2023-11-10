@@ -462,6 +462,27 @@ func getFilterSQLStmtForScopeDomainsLatestGroupProperties(projectID int64,
 		propertyFilterGroupIDs = append(propertyFilterGroupIDs, filterProperties[0].GroupNameID)
 	}
 
+	groupGroupedProperties := make([][]model.QueryProperty, 0)
+	userGroupedProperties := make([]model.QueryProperty, 0)
+	for i := range groupedPoperties {
+		if model.IsFilterGlobalUserPropertiesByDefaultQueryMap(groupedPoperties[i][0].Property) {
+			userGroupedProperties = append(userGroupedProperties, groupedPoperties[i]...)
+			continue
+		}
+		groupGroupedProperties = append(groupGroupedProperties, groupedPoperties[i])
+	}
+
+	userGroupedStmnt := ""
+	userGroupedParams := []interface{}{}
+	if len(userGroupedProperties) > 0 {
+		groupWStmt, groupWParams, err := buildWhereFromProperties(projectID, userGroupedProperties, fromTimestamp)
+		if err != nil {
+			return "", nil, nil, nil, err
+		}
+		userGroupedStmnt = groupWStmt
+		userGroupedParams = groupWParams
+	}
+
 	/*
 		select max(group_x_id) as max_group_x_id,max(group_y_id) as max_group_y_id from users
 		where group_x.properties->'aa' OR group_y.properties->'aa'
@@ -475,7 +496,7 @@ func getFilterSQLStmtForScopeDomainsLatestGroupProperties(projectID int64,
 		addNoneFitlerGroupAccounts := false
 		// use OR in where condition and AND in Having condition
 		// (groupA.A AND groupA.B) OR (groupB.A AND groupB.B) HAVING groupA AND groupB
-		for _, filterProperties := range groupedPoperties {
+		for _, filterProperties := range groupGroupedProperties {
 			if wStmt != "" {
 				wStmt = wStmt + " OR "
 			}
@@ -511,6 +532,15 @@ func getFilterSQLStmtForScopeDomainsLatestGroupProperties(projectID int64,
 			wStmt = fmt.Sprintf("( %s OR ( %s ) )", wStmt, excludeStmnt)
 		}
 
+		if userGroupedStmnt != "" {
+			if wStmt == "" {
+				wStmt = userGroupedStmnt
+			} else {
+				wStmt = fmt.Sprintf("( %s ) AND ( %s )", wStmt, userGroupedStmnt)
+			}
+			wParams = append(wParams, userGroupedParams...)
+		}
+
 		return wStmt, wParams, selectColumns, havingColumnConditions, nil
 	}
 
@@ -521,7 +551,7 @@ func getFilterSQLStmtForScopeDomainsLatestGroupProperties(projectID int64,
 	wStmt := ""
 	wParams := []interface{}{}
 	addNoneFitlerGroupAccounts := false
-	for _, filterProperties := range groupedPoperties {
+	for _, filterProperties := range groupGroupedProperties {
 		if wStmt != "" {
 			wStmt = wStmt + " OR "
 		}
@@ -557,6 +587,15 @@ func getFilterSQLStmtForScopeDomainsLatestGroupProperties(projectID int64,
 			excludeStmnt = excludeStmnt + fmt.Sprintf("group_%d_id is NULL", propertyFilterGroupIDs[i])
 		}
 		wStmt = fmt.Sprintf("( %s OR ( %s ) )", wStmt, excludeStmnt)
+	}
+
+	if userGroupedStmnt != "" {
+		if wStmt == "" {
+			wStmt = userGroupedStmnt
+		} else {
+			wStmt = fmt.Sprintf("( %s ) AND ( %s )", wStmt, userGroupedStmnt)
+		}
+		wParams = append(wParams, userGroupedParams...)
 	}
 
 	return wStmt, wParams, selectColumns, havingColumnConditions, nil
@@ -1395,6 +1434,10 @@ func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[
 			projectId, globalUserFilter, from)
 		for i := range selectColumns {
 			eventsWrapSelect = joinWithComma(eventsWrapSelect, fmt.Sprintf("group_users.%s as %s", selectColumns[i], selectColumns[i]))
+		}
+
+		if model.IsFiltersContainGlobalUserPropertyForDomains(globalUserFilter) {
+			eventsWrapSelect = joinWithComma(eventsWrapSelect, "user_groups.properties as user_global_user_properties")
 		}
 
 	}

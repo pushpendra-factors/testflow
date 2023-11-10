@@ -67,7 +67,6 @@ import { selectGroupsList } from 'Reducers/groups/selectors';
 import UpdateSegmentModal from './UpdateSegmentModal';
 import DownloadCSVModal from './DownloadCSVModal';
 import { fetchProfileAccounts } from 'Reducers/timelines';
-import { selectSegments } from 'Reducers/timelines/selectors';
 import { downloadCSV } from 'Utils/csv';
 import { formatCount } from 'Utils/dataFormatter';
 import { PathUrls } from 'Routes/pathUrls';
@@ -75,7 +74,7 @@ import { getGroups } from '../../../reducers/coreQuery/middleware';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
 import { isOnboarded } from 'Utils/global';
-
+import { cloneDeep } from 'lodash';
 
 const groupToCompanyPropMap = {
   $hubspot_company: '$hubspot_company_name',
@@ -265,7 +264,7 @@ function AccountProfiles({
           query: activeSegment.query,
           groupsList
         });
-        setAppliedFilters(filters);
+        setAppliedFilters(cloneDeep(filters));
         setSelectedFilters(filters);
         setFiltersExpanded(false);
         setFiltersDirty(false);
@@ -302,7 +301,7 @@ function AccountProfiles({
       projectId: activeProject.id,
       segmentId: accountPayload.segment_id
     })
-      .then((response) => {
+      .then(() => {
         setMoreActionsModalMode(null);
         notification.success({
           message: 'Segment deleted successfully',
@@ -338,7 +337,7 @@ function AccountProfiles({
     (name) => {
       updateSegmentForId(activeProject.id, accountPayload.segment_id, {
         name
-      }).then((respnse) => {
+      }).then(() => {
         getSavedSegments(activeProject.id);
         setActiveSegment({ ...activeSegment, name });
         setMoreActionsModalMode(null);
@@ -360,7 +359,7 @@ function AccountProfiles({
       activeProject.id,
       accountPayload.segment_id,
       reqPayload
-    ).then((respnse) => {
+    ).then(() => {
       getSavedSegments(activeProject.id);
       setUpdateSegmentModal(false);
       setFiltersDirty(false);
@@ -461,7 +460,7 @@ function AccountProfiles({
   }, [accounts]);
 
   const applyFilters = useCallback(() => {
-    setAppliedFilters(selectedFilters);
+    setAppliedFilters(cloneDeep(selectedFilters));
     setFiltersExpanded(false);
     setFiltersDirty(true);
     const reqPayload = getFiltersRequestPayload({
@@ -593,7 +592,7 @@ function AccountProfiles({
         account: selectedAccount
       };
       setSelectedFilters(initialFiltersStateWithSelectedAccount);
-      setAppliedFilters(initialFiltersStateWithSelectedAccount);
+      setAppliedFilters(cloneDeep(initialFiltersStateWithSelectedAccount));
       setFiltersExpanded(false);
       setFiltersDirty(false);
     },
@@ -693,7 +692,6 @@ function AccountProfiles({
         setFiltersExpanded={setFiltersExpanded}
         setSaveSegmentModal={handleSaveSegmentClick}
         setFiltersList={setFiltersList}
-        setAppliedFilters={setAppliedFilters}
         setListEvents={setListEvents}
         setEventProp={setEventProp}
         resetSelectedFilters={resetSelectedFilters}

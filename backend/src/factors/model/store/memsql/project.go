@@ -225,6 +225,8 @@ func (store *MemSQL) UpdateProject(projectId int64, project *model.Project) int 
 	if project.BillingSubscriptionID != "" {
 		updateFields["billing_subscription_id"] = project.BillingSubscriptionID
 		updateFields["billing_last_synced_at"] = project.BillingLastSyncedAt
+		updateFields["enable_billing"] = project.EnableBilling
+		updateFields["billing_account_id"] = project.BillingAccountID
 	}
 
 	err := db.Model(&model.Project{}).Where("id = ?", projectId).Update(updateFields).Error
@@ -293,22 +295,31 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 			return errCode
 		}
 	}
-	// creating subscription on chargebee
-	agent, status := store.GetAgentByUUID(agentUUID)
-	if status != http.StatusFound {
-		logCtx.WithField("err_code", status).Error("Failed to get agent while creating default subscription")
-		return errCode
-	}
+
 	// creating free subscription
 	if billingEnabled {
+		// creating subscription on chargebee
+		agent, status := store.GetAgentByUUID(agentUUID)
+		if status != http.StatusFound {
+			logCtx.WithField("err_code", status).Error("Failed to get agent while creating default subscription")
+			return errCode
+		}
+
 		subscription, status, err := billing.CreateChargebeeSubscriptionForCustomer(agent.BillingCustomerID, model.FREE_PLAN_ITEM_PRICE_ID)
 		if err != nil || status != http.StatusCreated {
 			logCtx.WithField("err_code", status).WithError(err).Error("Failed to create default subscription for agent")
 			return errCode
 		}
 
+		bAccount, status := store.GetBillingAccountByAgentUUID(agentUUID)
+		if status != http.StatusFound {
+			logCtx.WithField("err_code", status).WithError(err).Error("Failed to get billing account agent")
+			return errCode
+		}
 		// update subscription id on project
 		updatedProject := model.Project{
+			BillingAccountID:      bAccount.ID,
+			EnableBilling:         true,
 			BillingSubscriptionID: subscription.Id,
 			BillingLastSyncedAt:   time.Now(),
 		}
@@ -322,7 +333,7 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 	}
 
 	// inserting project into free plan by default
-	status, err = store.CreateDefaultProjectPlanMapping(projectID, model.DEFAULT_PLAN_ID, model.DEFAULT_PLAN_ITEM_PRICE_ID)
+	status, err := store.CreateDefaultProjectPlanMapping(projectID, model.DEFAULT_PLAN_ID, model.DEFAULT_PLAN_ITEM_PRICE_ID)
 	if status != http.StatusCreated {
 		logCtx.WithField("err", err).Error("Create default project plan mapping failed on create project dependencies for project ID ", projectID)
 		return errCode
@@ -354,6 +365,15 @@ func (store *MemSQL) CreateProjectWithDependencies(project *model.Project, agent
 	if errCode != http.StatusCreated {
 		return nil, errCode
 	}
+
+	agent, errCode := store.GetAgentByUUID(agentUUID)
+	if errCode != http.StatusFound {
+		log.WithField("err_code", errCode).
+			Error("CreateProjectForAgent Failed, get agent by uuid error")
+		return nil, errCode
+	}
+
+	project.EnableBilling = agent.BillingCustomerID != ""
 
 	errCode = store.createProjectDependencies(cProject.ID, agentUUID, project.EnableBilling)
 	if errCode != http.StatusCreated {
@@ -393,7 +413,6 @@ func (store *MemSQL) CreateProjectWithDependencies(project *model.Project, agent
 		}
 	}
 
-	_, errCode = store.createProjectBillingAccountMapping(project.ID, billingAccountID)
 	return cProject, errCode
 }
 
