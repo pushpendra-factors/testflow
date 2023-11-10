@@ -285,7 +285,7 @@ type Model interface {
 	GetPropertiesForSalesforceUsers(projectID int64, reqID string) []map[string]string
 	GetPropertiesForMarketo(projectID int64, reqID string) []map[string]string
 	IsEventExistsWithType(projectId int64, eventType string) (bool, int)
-	GetEventNameIdsWithGivenNames(projectID int64, eventNameIDsMap map[string]interface{}) (map[string]interface{}, int)
+	GetEventNameIdsWithGivenNames(projectID int64, eventNameIDsMap map[string]bool) (map[string]string, int)
 
 	// form_fill
 	CreateFormFillEventById(projectId int64, formFill *model.SDKFormFillPayload) (int, error)
@@ -439,9 +439,6 @@ type Model interface {
 	DeleteProjectAgentMapping(projectID int64, agentUUIDToRemove string) int
 	EditProjectAgentMapping(projectID int64, agentUUIDToEdit string, role int64) int
 
-	// project_billing_account
-	GetProjectBillingAccountMappings(billingAccountID string) ([]model.ProjectBillingAccountMapping, int)
-	GetProjectBillingAccountMapping(projectID int64) (*model.ProjectBillingAccountMapping, int)
 
 	// project_setting
 	GetProjectSetting(projectID int64) (*model.ProjectSetting, int)

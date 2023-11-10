@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	U "factors/util"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -42,12 +43,28 @@ func (store *MemSQL) TriggerSyncChargebeeToFactors(projectID int64) error { // C
 	}
 
 	var planMapping model.ProjectPlanMapping
+	var addOns model.BillingAddons
 
 	for _, subscriptionItem := range latestSubscription.SubscriptionItems {
 		if subscriptionItem.ItemType == "plan" {
 			planMapping.BillingPlanID = subscriptionItem.ItemPriceId
 			planMapping.BillingLastSyncedAt = time.Now()
+		} else if subscriptionItem.ItemType == "addon" {
+			addOn := model.BillingAddOn{
+				ItemPriceID: subscriptionItem.ItemPriceId,
+				Quantity:    int(subscriptionItem.Quantity),
+			}
+			addOns = append(addOns, addOn)
 		}
+	}
+
+	if len(addOns) != 0 {
+		addOnsJson, err := U.EncodeStructTypeToPostgresJsonb(addOns)
+		if err != nil {
+			log.WithFields(logCtx).Error("Failed to encode addons to Json")
+			return errors.New("Failed to encode addons to Json")
+		}
+		planMapping.BillingAddons = addOnsJson
 	}
 
 	status := store.UpdateProjectPlanMapping(projectID, &planMapping)

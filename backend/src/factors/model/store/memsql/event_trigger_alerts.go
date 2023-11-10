@@ -22,14 +22,15 @@ import (
 )
 
 const (
-	ETA                = "event_based_alert"
-	ListLimit          = 1000
-	AlertCreationLimit = 100
-	SortedSetCacheKey  = "ETA:pid"
-	CoolDownPrefix     = "ETA:CoolDown"
-	oneDayInSeconds    = 24 * 60 * 60
-	PoisonTime         = 24             // Hours after which the alert will be paused internally
-	DisableTime        = 2 * PoisonTime // Hours after which the alert will not be processed from sdk
+	ETA                                  = "event_based_alert"
+	ListLimit                            = 1000
+	AlertCreationLimit                   = 100
+	SortedSetCacheKey                    = "ETA:pid"
+	CoolDownPrefix                       = "ETA:CoolDown"
+	oneDayInSeconds                      = 24 * 60 * 60
+	PoisonTime                           = 24             // Hours after which the alert will be paused internally
+	DisableTime                          = 2 * PoisonTime // Hours after which the alert will not be processed from sdk
+	DATETIME_FORMAT_YYYYMMDD_HYPHEN_HHMM = "2006-01-02 15:04"
 )
 
 func (store *MemSQL) GetAllEventTriggerAlertsByProject(projectID int64) ([]model.AlertInfo, int) {
@@ -566,9 +567,6 @@ func updateUserPropMapWithGroupProperties(userPropMap, groupProps *map[string]in
 	}
 
 	for key, value := range *groupProps {
-		if _, exists := (*userPropMap)[key]; exists {
-			continue
-		}
 		(*userPropMap)[key] = value
 	}
 }
@@ -729,7 +727,7 @@ func getSortedSetCacheKey(projectId int64) (*cacheRedis.Key, error) {
 	return key, err
 }
 
-func getDisplayLikePropValue(typ, grn string, exi bool, value interface{}) interface{} {
+func getDisplayLikePropValue(typ string, exi bool, value interface{}) interface{} {
 
 	var res interface{}
 	if exi {
@@ -738,15 +736,7 @@ func getDisplayLikePropValue(typ, grn string, exi bool, value interface{}) inter
 			if !ok {
 				val = int64(value.(float64))
 			}
-			if grn == "hour" {
-				res = time.Unix(val, 0).Hour()
-			} else if grn == "week" {
-				_, res = time.Unix(val, 0).ISOWeek()
-			} else if grn == "month" {
-				res = time.Unix(val, 0).Month()
-			} else {
-				res = U.GetDateOnlyHyphenFormatFromTimestampZ(val)
-			}
+			res = val
 		} else {
 			res = U.GetPropertyValueAsString(value)
 		}
@@ -797,6 +787,9 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 	}
 	if isGroupPropertyRequired {
 		groupPropMap = store.GetGroupProperties(event.ProjectId, event.UserId)
+		if groupPropMap != nil {
+			updateUserPropMapWithGroupProperties(userPropMap, groupPropMap, log.WithFields(logFields))
+		}
 	}
 
 	displayNamesEP := store.getDisplayNamesForEP(event.ProjectId, eventName.Name)
@@ -808,7 +801,7 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 	msgPropMap := make(U.PropertiesMap, 0)
 	for idx, messageProperty := range messageProperties {
 		p := messageProperty.Property
-		if messageProperty.Entity == "user" {
+		if messageProperty.Entity == "user" || messageProperty.Entity == model.PropertyEntityUserGlobal {
 
 			displayName, exists := displayNamesUP[p]
 			if !exists {
@@ -817,19 +810,7 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 			propVal, exi := (*userPropMap)[p]
 			msgPropMap[fmt.Sprintf("%d", idx)] = model.MessagePropMapStruct{
 				DisplayName: displayName,
-				PropValue:   getDisplayLikePropValue(messageProperty.Type, messageProperty.Granularity, exi, propVal),
-			}
-
-		} else if messageProperty.Entity == model.PropertyEntityUserGlobal && groupPropMap != nil {
-
-			displayName, exists := displayNamesUP[p]
-			if !exists {
-				displayName = U.CreateVirtualDisplayName(p)
-			}
-			propVal, exi := (*groupPropMap)[p]
-			msgPropMap[fmt.Sprintf("%d", idx)] = model.MessagePropMapStruct{
-				DisplayName: displayName,
-				PropValue:   getDisplayLikePropValue(messageProperty.Type, messageProperty.Granularity, exi, propVal),
+				PropValue:   getDisplayLikePropValue(messageProperty.Type, exi, propVal),
 			}
 
 		} else if messageProperty.Entity == "event" {
@@ -837,22 +818,16 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 			if !exists {
 				displayName = U.CreateVirtualDisplayName(p)
 			}
+			propVal, exi := (*eventPropMap)[p]
+			displayPropVal := getDisplayLikePropValue(messageProperty.Type, exi, propVal)
+
 			// Using granularity for $timestamp property
 			if p == "$timestamp" {
-				if messageProperty.Granularity == "hour" {
-					displayName += " - Hour"
-				} else if messageProperty.Granularity == "week" {
-					displayName += " - Week"
-				} else if messageProperty.Granularity == "month" {
-					displayName += " - Month"
-				} else {
-					displayName += " - Date"
-				}
+				displayName, displayPropVal = store.getDisplayLikeNameAndPropValForTimestamp(event.ProjectId, displayName, messageProperty.Granularity, displayPropVal)
 			}
-			propVal, exi := (*eventPropMap)[p]
 			msgPropMap[fmt.Sprintf("%d", idx)] = model.MessagePropMapStruct{
 				DisplayName: displayName,
-				PropValue:   getDisplayLikePropValue(messageProperty.Type, messageProperty.Granularity, exi, propVal),
+				PropValue:   displayPropVal,
 			}
 		} else {
 			log.Warn("can not find the message property in user and event prop sets")
@@ -895,6 +870,32 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 	}
 
 	return msgPropMap, breakdownPropMap, nil
+}
+
+func (store *MemSQL) getDisplayLikeNameAndPropValForTimestamp(projectID int64, displayName, granularity string, propVal interface{}) (string, interface{}) {
+
+	var displayPropVal interface{}
+	timezoneString, errCode := store.GetTimezoneForProject(projectID)
+	if errCode != http.StatusFound {
+		log.WithField("project_id", projectID).Error("failed to get Timezone from project")
+	}
+	timeLocation := U.GetTimeLocationFor(timezoneString)
+
+	if granularity == "hour" {
+		displayName += " - Hour"
+		displayPropVal = time.Unix(propVal.(int64), 0).In(timeLocation).Format(DATETIME_FORMAT_YYYYMMDD_HYPHEN_HHMM)
+	} else if granularity == "week" {
+		displayName += " - Week"
+		_, displayPropVal = time.Unix(propVal.(int64), 0).In(timeLocation).ISOWeek()
+	} else if granularity == "month" {
+		displayName += " - Month"
+		displayPropVal = time.Unix(propVal.(int64), 0).In(timeLocation).Month()
+	} else {
+		displayName += " - Date"
+		displayPropVal = time.Unix(propVal.(int64), 0).In(timeLocation).Format(U.DATETIME_FORMAT_YYYYMMDD_HYPHEN)
+	}
+
+	return displayName, displayPropVal
 }
 
 func (store *MemSQL) transformBreakdownPropertiesToPropertyLabels(projectID int64, breakdownPropertiesMap map[string]interface{}) (map[string]interface{}, error) {
@@ -1101,6 +1102,7 @@ func (store *MemSQL) CacheEventTriggerAlert(alert *model.EventTriggerAlert, even
 		log.WithFields(logFields).Error("Failed to send alert.")
 		return false
 	}
+	
 
 	return true
 }

@@ -115,10 +115,11 @@ func (store *MemSQL) CreateOrGetUserCreatedEventName(eventName *model.EventName)
 	return store.CreateOrGetEventName(eventName)
 }
 
-func (store *MemSQL) GetEventNameIdsWithGivenNames(projectID int64, eventNameIDsMap map[string]interface{}) (map[string]interface{}, int) {
+func (store *MemSQL) GetEventNameIdsWithGivenNames(projectID int64, eventNameIDsList map[string]bool) (map[string]string, int) {
 	params := []interface{}{projectID}
 	queryStr := "SELECT name, id from event_names where project_id = ? AND ("
-	for name := range eventNameIDsMap {
+	eventNameIDsMap := make(map[string]string)
+	for name := range eventNameIDsList {
 		params = append(params, name)
 		if len(params) == 2 {
 			queryStr = queryStr + "name = ?"
@@ -135,11 +136,11 @@ func (store *MemSQL) GetEventNameIdsWithGivenNames(projectID int64, eventNameIDs
 	if err := db.Raw(queryStr, params...).Scan(&eventNames).Error; err != nil {
 		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error("Failed getting event_names")
 
-		return nil, http.StatusInternalServerError
+		return map[string]string{}, http.StatusInternalServerError
 	}
 
 	if len(eventNames) < 1 {
-		return nil, http.StatusInternalServerError
+		return map[string]string{}, http.StatusInternalServerError
 	}
 
 	for _, eventName := range eventNames {

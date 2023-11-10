@@ -57,6 +57,7 @@ type ProjectString struct {
 	HubspotTouchPoints    postgres.Jsonb  `json:"hubspot_touch_points"`
 	JobsMetadata          *postgres.Jsonb `json:"jobs_metadata"`
 	ChannelGroupRules     postgres.Jsonb  `json:"channel_group_rules"`
+	EnableBilling         bool            `json:"enable_billing"`
 }
 
 const (

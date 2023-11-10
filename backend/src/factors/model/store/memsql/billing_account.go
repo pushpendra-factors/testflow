@@ -33,14 +33,9 @@ func (store *MemSQL) createBillingAccount(planCode string, AgentUUID string) (*m
 		return nil, http.StatusBadRequest
 	}
 
-	// plan, errCode := store.GetPlanByCode(planCode)
-	// if errCode != http.StatusFound {
-	// 	return nil, http.StatusInternalServerError
-	// }
 
 	bA := &model.BillingAccount{
 		ID:                  U.GetUUID(),
-		// PlanID:              plan.ID,
 		AgentUUID:           AgentUUID,
 		BillingLastSyncedAt: time.Now(),
 	}
@@ -50,10 +45,6 @@ func (store *MemSQL) createBillingAccount(planCode string, AgentUUID string) (*m
 	}
 
 	db := C.GetServices().Db
-	// if bA.PlanID == 0 {
-	// 	log.Errorf("Error Creating Billing Account for agent: %s, missing planID", AgentUUID)
-	// 	return nil, http.StatusBadRequest
-	// }
 
 	if err := db.Create(bA).Error; err != nil {
 		log.WithError(err).Error("createBillingAccount Failed")

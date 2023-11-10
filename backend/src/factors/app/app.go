@@ -211,7 +211,7 @@ func main() {
 	enableScoreByProjectID := flag.String("enable_score_by_project_id", "", "List of projectIds with scoring enabled.")
 	explainV3Query := flag.Bool("explain_v3_query", false, "whether to implement new query payload")
 	chargebeeApiKey := flag.String("chargebee_api_key", "dummy", "Chargebee api key")
-	chargebeeSiteName := flag.String("chargebee_site_name", "", "Chargebee site name")
+	chargebeeSiteName := flag.String("chargebee_site_name", "dummy", "Chargebee site name")
 
 	companyPropsV1EnabledProjectIDs := flag.String("company_props_v1_enabled_projectIds", "", "To enable clearbit enrichment in new properties")
 	flag.Parse()
