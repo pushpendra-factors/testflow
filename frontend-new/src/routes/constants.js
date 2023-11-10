@@ -174,7 +174,7 @@ const FeatureLockConfigurationAlerts = withFeatureLockHOC(Alerts, {
 const FeatureLockedConfigurationEngagement = withFeatureLockHOC(
   EngagementConfig,
   {
-    featureName: FEATURES.CONF_TOUCHPOINTS,
+    featureName: FEATURES.FEATURE_ENGAGEMENT,
     LockedComponent: () => (
       <CommonLockedComponent
         title='Engagement Scoring'

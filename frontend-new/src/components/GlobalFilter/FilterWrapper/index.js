@@ -143,7 +143,7 @@ function FilterWrapper({
       if (propertyType === 'categorical') {
         if (['user', 'user_g'].includes(propGrp)) {
           getUserPropertyValues(projectID, propertyName);
-        } else if (propGrp === 'event') {
+        } else if (['event', 'page_view', 'button_click'].includes(propGrp)) { 
           getEventPropertyValues(projectID, event.label, propertyName);
         } else if (
           !['group', 'user', 'user_g'].includes(propGrp) &&
@@ -175,7 +175,7 @@ function FilterWrapper({
       if (propertyType === 'categorical') {
         if (['user', 'user_g'].includes(groupName)) {
           getUserPropertyValues(projectID, propertyName);
-        } else if (groupName === 'event') {
+        } else if (['event', 'page_view', 'button_click'].includes(groupName)) {
           getEventPropertyValues(projectID, event.label, propertyName);
         } else if (
           !['group', 'user', 'user_g'].includes(groupName) &&

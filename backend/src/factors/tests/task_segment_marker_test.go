@@ -359,8 +359,8 @@ func TestTaskSegmentMarker(t *testing.T) {
 			Caller:          "account_profiles",
 			Class:           "events",
 			EventsCondition: "any_given_event",
-			GroupAnalysis:   "All",
-			Source:          "All",
+			GroupAnalysis:   "$domains",
+			Source:          "$domains",
 			Type:            "unique_users",
 			From:            time.Now().AddDate(0, 0, -28).Unix(),
 			To:              time.Now().Unix(),
@@ -408,7 +408,7 @@ func TestTaskSegmentMarker(t *testing.T) {
 				},
 			},
 		},
-		Type: "All",
+		Type: "$domains",
 	}
 
 	w := createSegmentPostReq(r, *segment1, project.ID, agent)
@@ -419,7 +419,7 @@ func TestTaskSegmentMarker(t *testing.T) {
 	assert.Equal(t, http.StatusFound, status)
 	nameFound := false
 
-	for _, segment := range getSegement["All"] {
+	for _, segment := range getSegement["$domains"] {
 		if segment1.Name == segment.Name {
 			nameFound = true
 			break
@@ -501,9 +501,9 @@ func TestTaskSegmentMarker(t *testing.T) {
 					LogicalOp: "AND",
 				},
 			},
-			Source: "All",
+			Source: "$domains",
 		},
-		Type: "All",
+		Type: "$domains",
 	}
 
 	w = createSegmentPostReq(r, *segments3, project.ID, agent)
@@ -514,7 +514,7 @@ func TestTaskSegmentMarker(t *testing.T) {
 	assert.Equal(t, http.StatusFound, status)
 	nameFound1 := false
 
-	for _, segment := range getSegement2["All"] {
+	for _, segment := range getSegement2["$domains"] {
 		if segments3.Name == segment.Name {
 			nameFound1 = true
 			break
@@ -598,9 +598,9 @@ func TestTaskSegmentMarker(t *testing.T) {
 					LogicalOp: "AND",
 				},
 			},
-			Source: "All",
+			Source: "$domains",
 		},
-		Type: "All",
+		Type: "$domains",
 	}
 
 	w = createSegmentPostReq(r, *segments5, project.ID, agent)
@@ -611,7 +611,7 @@ func TestTaskSegmentMarker(t *testing.T) {
 	assert.Equal(t, http.StatusFound, status)
 	nameFound2 := false
 
-	for _, segment := range getSegement4["All"] {
+	for _, segment := range getSegement4["$domains"] {
 		if segments5.Name == segment.Name {
 			nameFound2 = true
 			break
@@ -696,9 +696,9 @@ func TestTaskSegmentMarker(t *testing.T) {
 			},
 			Caller:          model.ACCOUNT_PROFILES,
 			EventsCondition: model.EventCondAllGivenEvent,
-			GroupAnalysis:   "All",
+			GroupAnalysis:   "$domains",
 		},
-		Type: "All",
+		Type: "$domains",
 	}
 
 	w = createSegmentPostReq(r, *segment7, project.ID, agent)
@@ -709,7 +709,7 @@ func TestTaskSegmentMarker(t *testing.T) {
 	assert.Equal(t, http.StatusFound, status)
 	nameFound4 := false
 
-	for _, segment := range getSegement6["All"] {
+	for _, segment := range getSegement6["$domains"] {
 		if segment7.Name == segment.Name {
 			nameFound4 = true
 			break
@@ -747,9 +747,9 @@ func TestTaskSegmentMarker(t *testing.T) {
 			},
 			Caller:          model.ACCOUNT_PROFILES,
 			EventsCondition: model.EventCondAllGivenEvent,
-			GroupAnalysis:   "All",
+			GroupAnalysis:   "$domains",
 		},
-		Type: "All",
+		Type: "$domains",
 	}
 
 	w = createSegmentPostReq(r, *segment8, project.ID, agent)
@@ -767,7 +767,7 @@ func TestTaskSegmentMarker(t *testing.T) {
 	assert.Equal(t, http.StatusFound, status)
 	nameFound5 := false
 
-	for _, segment := range getSegementFinal["All"] {
+	for _, segment := range getSegementFinal["$domains"] {
 		if segment8.Name == segment.Name {
 			nameFound5 = true
 			break

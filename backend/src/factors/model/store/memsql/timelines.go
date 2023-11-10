@@ -637,14 +637,15 @@ func BuildSpecialFilter(projectID int64, negativeFilters []model.QueryProperty, 
 		  (
 			SELECT 
 			  properties, 
-			  group_%d_user_id as identity
+			  group_%d_user_id as identity,
+			  COALESCE(last_event_at, updated_at) as last_activity
 			FROM 
 			  users 
 			WHERE 
 			  project_id = ? %s
-			  AND users.source != ? 
-			  AND users.group_%d_user_id IS NOT NULL 
-			  AND users.last_event_at BETWEEN ?
+			  AND source != ? 
+			  AND group_%d_user_id IS NOT NULL 
+			  AND last_activity BETWEEN ?
 			  AND ? 
 			LIMIT 
 			  10000000

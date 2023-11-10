@@ -529,7 +529,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		}
 		logCtx.WithField("response", response).Info("Webhook dropped for alert.")
 		stat := response["status"]
-		if stat != "ok" {
+		if stat != "success" {
 			log.WithField("status", stat).WithField("response", response).Error("Web hook error details")
 			sendReport.WebhookFail++
 			errMessage = append(errMessage, fmt.Sprintf("%+v", response))
