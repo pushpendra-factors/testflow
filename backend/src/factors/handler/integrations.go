@@ -64,6 +64,11 @@ func IntSegmentHandler(c *gin.Context) {
 		return
 	}
 
+	// Debugging for Venly.
+	if token == "vyb14mpm2029e19sawr3996jv36edxzt" || token == "98w2ncu8xee8zbnbjyr49b9203belpge" {
+		logCtx.WithFields(log.Fields{"event": event, "context": event.Context}).Info("Payload from Venly")
+	}
+
 	// Debug raw request payload from segment.
 	var rawRequestPayload map[string]interface{}
 	logDebugCtx := logCtx.WithField("token", token).WithField("tag", "segment_request_payload")
