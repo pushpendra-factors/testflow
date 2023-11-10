@@ -807,7 +807,17 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 			if !exists {
 				displayName = U.CreateVirtualDisplayName(p)
 			}
+
 			propVal, exi := (*userPropMap)[p]
+
+			// check and get for display name labels for crm property keys
+			if U.IsAllowedCRMPropertyPrefix(p) && exi {
+				propertyLabel, exist := store.getDisplayNameLabelForThisProperty(event.ProjectId, p, propVal)
+				if exist {
+					propVal = propertyLabel
+				}
+			}
+
 			msgPropMap[fmt.Sprintf("%d", idx)] = model.MessagePropMapStruct{
 				DisplayName: displayName,
 				PropValue:   getDisplayLikePropValue(messageProperty.Type, exi, propVal),
@@ -870,6 +880,21 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 	}
 
 	return msgPropMap, breakdownPropMap, nil
+}
+
+func (store *MemSQL) getDisplayNameLabelForThisProperty(projectID int64, propertyKey string, propVal interface{}) (string, bool) {
+	source := strings.Split(propertyKey, "_")[0]
+	source = strings.TrimPrefix(source, "$")
+
+	value := U.GetPropertyValueAsString(propVal)
+
+	displayLabel, errCode, err := store.GetDisplayNameLabel(projectID, source, propertyKey, value)
+	if errCode != http.StatusFound && errCode != http.StatusNotFound {
+		log.WithFields(log.Fields{"project_id": projectID, "source": source,
+			"property_key": propertyKey, "value": value}).WithError(err).Error("Failed to get display name label.")
+		return "", false
+	}
+	return displayLabel.Label, true
 }
 
 func (store *MemSQL) getDisplayLikeNameAndPropValForTimestamp(projectID int64, displayName, granularity string, propVal interface{}) (string, interface{}) {
@@ -1102,7 +1127,6 @@ func (store *MemSQL) CacheEventTriggerAlert(alert *model.EventTriggerAlert, even
 		log.WithFields(logFields).Error("Failed to send alert.")
 		return false
 	}
-	
 
 	return true
 }
