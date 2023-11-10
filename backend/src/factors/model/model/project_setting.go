@@ -326,6 +326,7 @@ func GetIdentifierPrecendenceOrderByProjectID(projectID int64) []string {
 var HubspotCustomIdentificationFieldByProjectID = map[int64]string{
 	// use raw property name
 	2251799836000005: "user_id",
+	2000255:          "segment_anonymous_id",
 }
 
 // GetHubspotCustomIdentificationFieldByProjectID use to get custom field for hubspot custom identification enabled project
