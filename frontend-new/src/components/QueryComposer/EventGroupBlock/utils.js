@@ -8,7 +8,7 @@ import getGroupIcon from 'Utils/getGroupIcon';
 import { GroupDisplayNames, IsDomainGroup } from 'Components/Profile/utils';
 import _ from 'lodash';
 
-export const defaultPropertyList = (eventPropertiesV2, eventUserPropertiesV2, groupProperties, eventGroup, groupOpts) => {
+export const defaultPropertyList = (eventPropertiesV2, eventUserPropertiesV2, groupProperties, eventGroup, groupOpts, event) => {
 
   const filterOptsObj = {};
   const eventGroups = eventPropertiesV2[event?.label] || {};
