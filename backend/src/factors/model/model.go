@@ -439,9 +439,6 @@ type Model interface {
 	DeleteProjectAgentMapping(projectID int64, agentUUIDToRemove string) int
 	EditProjectAgentMapping(projectID int64, agentUUIDToEdit string, role int64) int
 
-	// project_billing_account
-	GetProjectBillingAccountMappings(billingAccountID string) ([]model.ProjectBillingAccountMapping, int)
-	GetProjectBillingAccountMapping(projectID int64) (*model.ProjectBillingAccountMapping, int)
 
 	// project_setting
 	GetProjectSetting(projectID int64) (*model.ProjectSetting, int)
