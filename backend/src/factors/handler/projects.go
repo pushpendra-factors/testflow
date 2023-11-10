@@ -61,13 +61,13 @@ func CreateProjectHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Creating project failed"})
 		return
 	}
-	_, errCode = store.GetStore().CreateProjectWithDependencies(&project, loggedInAgentUUID, model.ADMIN, billingAcc.ID, createDashboard)
+	updatedProject, errCode := store.GetStore().CreateProjectWithDependencies(&project, loggedInAgentUUID, model.ADMIN, billingAcc.ID, createDashboard)
 
 	if errCode != http.StatusCreated {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Creating project failed."})
 		return
 	}
-	c.JSON(http.StatusCreated, V1.MapProjectToString(project))
+	c.JSON(http.StatusCreated, V1.MapProjectToString(*updatedProject))
 	return
 }
 

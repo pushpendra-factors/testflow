@@ -10,8 +10,11 @@ import (
 	U "factors/util"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 	"net/http"
+	UR "net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -20,43 +23,23 @@ func GetPricingForPlansAndAddonsHandler(c *gin.Context) {
 	if projectId == 0 {
 		c.AbortWithError(http.StatusBadRequest, errors.New("INVALID PROJECT ID"))
 	}
-	var defaultReponse model.PlansAndAddOnsPrices
-	defaultReponse = append(defaultReponse, model.SubscriptionProductPrice{
-		Name:         "Basic Monthly USD",
-		ExternalName: "Basic",
-		Type:         "Plan",
-		ID:           "basic-monthly-usd",
-		Price:        100,
-		Period:       1,
-	})
-	defaultReponse = append(defaultReponse, model.SubscriptionProductPrice{
-		Name:         "Basic Yearly USD",
-		ExternalName: "Basic",
-		Type:         "Plan",
-		ID:           "basic-yearly-usd",
-		Price:        1200,
-		Period:       1,
-	})
-	defaultReponse = append(defaultReponse, model.SubscriptionProductPrice{
-		Name:         "Free montly USD",
-		ExternalName: "Free",
-		Type:         "Plan",
-		ID:           "basic-yearly-usd",
-		Price:        0,
-		Period:       1,
-	})
-
-	defaultReponse = append(defaultReponse, model.SubscriptionProductPrice{
-		Name:   "Additional Account",
-		Type:   "AddOn",
-		ID:     "additional-accounts",
-		Price:  50,
-		Period: 1,
-	})
-
-	c.JSON(http.StatusOK, defaultReponse)
+	itemPrices, err := billing.ListPlansAndAddOnsPricesFromChargebee()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, model.PlansAndAddOnsPrices{})
+	}
+	var res model.PlansAndAddOnsPrices
+	for _, itemPrice := range itemPrices {
+		res = append(res, model.SubscriptionProductPrice{
+			Type:         string(itemPrice.ItemType),
+			Name:         itemPrice.Name,
+			ExternalName: itemPrice.ExternalName,
+			ID:           itemPrice.Id,
+			Price:        itemPrice.Price,
+			PeriodUnit:   string(itemPrice.PeriodUnit),
+		})
+	}
+	c.JSON(http.StatusOK, res)
 }
-
 func UpdateSubscriptionHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
@@ -70,6 +53,7 @@ func UpdateSubscriptionHandler(c *gin.Context) {
 	var updateSubscriptionParams model.UpdateSubscriptionParams
 	err := c.BindJSON(&updateSubscriptionParams)
 	if err != nil {
+		log.WithError(err).Error("failed to bind request params")
 		c.AbortWithError(http.StatusBadRequest, errors.New("INVALID REQUEST"))
 		return
 	}
@@ -81,7 +65,8 @@ func UpdateSubscriptionHandler(c *gin.Context) {
 	url := buildCheckoutUrl(projectId, hostedPage.Url)
 
 	// redirect
-	c.Redirect(http.StatusPermanentRedirect, url)
+	c.JSON(http.StatusOK, UR.QueryEscape(url))
+	// c.Redirect(http.StatusPermanentRedirect, url)
 }
 
 func GetSubscriptionDetailsHander(c *gin.Context) {
@@ -104,12 +89,14 @@ func GetSubscriptionDetailsHander(c *gin.Context) {
 
 	subscription.Status = string(res.Status)
 	subscription.RenewsOn = time.Unix(res.NextBillingAt, 0)
+	subscription.BillingPeriodUnit = string(res.BillingPeriodUnit)
 
 	for _, item := range res.SubscriptionItems {
 		subscriptionDetails = append(subscriptionDetails, model.SubscriptionDetail{
-			Type:   string(item.ItemType),
-			ID:     item.ItemPriceId,
-			Amount: item.Amount,
+			Type:         string(item.ItemType),
+			ID:           item.ItemPriceId,
+			Amount:       item.Amount,
+			ExternalName: getExternalNameFromPlanID(item.ItemPriceId),
 		})
 	}
 
@@ -117,16 +104,26 @@ func GetSubscriptionDetailsHander(c *gin.Context) {
 
 	c.JSON(http.StatusOK, subscription)
 }
-
+func getExternalNameFromPlanID(planID string) string {
+	arr := strings.Split(planID, "-")
+	if len(arr) > 0 {
+		return arr[0]
+	}
+	return ""
+}
 func buildCheckoutUrl(projectID int64, checkouturl string) string {
 	callBackUrl := C.GetProtocol() + C.GetAPIDomain() + "/billing/upgarde/callback" + "&state=" + fmt.Sprint(projectID)
-	return fmt.Sprintf("%s&redirect_url=%s", checkouturl, callBackUrl) // change this to const later
+	return fmt.Sprintf("%s?redirect_url=%s", checkouturl, callBackUrl) // change this to const later
 }
 
 func BillingUpgradeCallbackHandler(c *gin.Context) {
-	state := c.Query("state")
-	projectID, _ := strconv.ParseInt(state, 10, 64)
-	err := store.GetStore().TriggerSyncChargebeeToFactors(projectID)
+	log.Info("redirect happened billing")
+	state := c.Query("state") // TODO :change this to session cookie id
+	projectID, err := strconv.ParseInt(state, 10, 64)
+	if err != nil {
+		c.Redirect(http.StatusPermanentRedirect, C.GetProtocol()+C.GetAPPDomain()+"/pricing?error=BAD_REQUEST")
+	}
+	err = store.GetStore().TriggerSyncChargebeeToFactors(projectID)
 	if err != nil {
 		c.Redirect(http.StatusPermanentRedirect, C.GetProtocol()+C.GetAPPDomain()+"/pricing?error=SERVER_ERROR")
 		return

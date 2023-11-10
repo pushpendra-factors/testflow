@@ -15,3 +15,9 @@ type ProjectPlanMapping struct {
 	LastRenewedOn       time.Time       `gorm:"column:last_renewed_on" json:"last_renewed_on"`
 	BillingLastSyncedAt time.Time       `json:"billing_last_synced_at"`
 }
+
+type BillingAddons []BillingAddOn
+type BillingAddOn struct {
+	ItemPriceID string `json:"item_price_id"`
+	Quantity    int    `json:"quantity"`
+}

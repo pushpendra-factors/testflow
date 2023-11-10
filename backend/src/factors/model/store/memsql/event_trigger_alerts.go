@@ -1102,6 +1102,7 @@ func (store *MemSQL) CacheEventTriggerAlert(alert *model.EventTriggerAlert, even
 		log.WithFields(logFields).Error("Failed to send alert.")
 		return false
 	}
+	
 
 	return true
 }

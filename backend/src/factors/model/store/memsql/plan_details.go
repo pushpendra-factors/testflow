@@ -158,7 +158,7 @@ func (store *MemSQL) GetSixSignalInfoForProject(projectID int64) (model.SixSigna
 		return model.SixSignalInfo{}, errors.New("Failed to get six signal count")
 	}
 	sixSignalLimit, err := store.GetFeatureLimitForProject(projectID, FEATURE_FACTORS_DEANONYMISATION)
-	
+
 	if err != nil {
 		logCtx.WithError(err).Error(" Failed to get six signal limit")
 		return model.SixSignalInfo{}, errors.New("Failed to get six signal limit")
@@ -281,6 +281,11 @@ func (store *MemSQL) UpdateProjectPlanMapping(projectID int64, planMapping *mode
 		updateFields["billing_last_synced_at"] = planMapping.BillingLastSyncedAt
 
 	}
+	
+	if planMapping.BillingAddons != nil {
+		updateFields["billing_add_ons"] = planMapping.BillingAddons
+	}
+
 	err := db.Model(&model.ProjectPlanMapping{}).Where("id = ?", projectID).Update(updateFields).Error
 	if err != nil {
 		log.WithError(err).Error(

@@ -402,6 +402,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/billing/upgrade", V1.UpdateSubscriptionHandler)
 	authRouteGroup.GET("/:project_id/billing/subscription", V1.GetSubscriptionDetailsHander)
 	authRouteGroup.GET("/billing/upgrade/callback", V1.BillingUpgradeCallbackHandler)
+	authRouteGroup.POST("/:project_id/billing/hooks/invoice", V1.UpdateSubscriptionHandler)
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {
