@@ -1,4 +1,10 @@
-import React, { useEffect, useState, useCallback, Suspense } from 'react';
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  Suspense,
+  useRef
+} from 'react';
 import cx from 'classnames';
 import { Layout, Spin } from 'antd';
 
@@ -11,7 +17,8 @@ import {
   fetchProjects,
   setActiveProject,
   fetchProjectSettings,
-  fetchProjectSettingsV1
+  fetchProjectSettingsV1,
+  triggerHubspotCustomFormFillEvent
 } from 'Reducers/global';
 import customizeHighCharts from 'Utils/customizeHighcharts';
 import {
@@ -47,7 +54,11 @@ import { matchPath, useLocation } from 'react-router-dom';
 import GlobalSearchModal from './GlobalSearchModal';
 import AppSidebar from '../AppSidebar';
 import styles from './index.module.scss';
-import { routesWithSidebar } from './appLayout.constants';
+import {
+  SIGNUP_HS_FORM_ID,
+  SIGNUP_HS_PORTAL_ID,
+  routesWithSidebar
+} from './appLayout.constants';
 import { selectSidebarCollapsedState } from 'Reducers/global/selectors';
 import { fetchProjectAgents, fetchAgentInfo } from 'Reducers/agentActions';
 import { fetchFeatureConfig } from 'Reducers/featureConfig/middleware';
@@ -55,6 +66,7 @@ import { selectAreDraftsSelected } from 'Reducers/dashboard/selectors';
 import { PathUrls } from '../../routes/pathUrls';
 import OnboardingRouting from 'Onboarding/ui/OnboardingRouting';
 import moment from 'moment';
+import useAgentInfo from 'hooks/useAgentInfo';
 
 // customizing highcharts for project requirements
 customizeHighCharts(Highcharts);
@@ -87,6 +99,9 @@ function AppLayout({
   );
   const dispatch = useDispatch();
   const location = useLocation();
+  const agentInfo = useAgentInfo();
+  const agentInfoRef = useRef(agentInfo);
+
   const { pathname } = location;
 
   const activeAgent = agentState?.agent_details?.email;
@@ -199,11 +214,37 @@ function AppLayout({
         signupEventlocalStoragekey
       );
       if (login_count === 1 && !isSignUpEventSent && timeDifference < 24) {
-        factorsai.track('SIGNUP', {
-          first_name: agentState?.agent_details?.first_name || '',
-          email: activeAgent,
-          last_name: agentState?.agent_details?.last_name || ''
-        });
+        //triggering inside settimeout to prevent triggering event before sdk is initialised
+        setTimeout(() => {
+          factorsai.track('SIGNUP', {
+            first_name: agentInfo.firstName || '',
+            email: agentInfo.email,
+            last_name: agentInfo.lastName || ''
+          });
+          triggerHubspotCustomFormFillEvent(
+            SIGNUP_HS_PORTAL_ID,
+            SIGNUP_HS_FORM_ID,
+            [
+              {
+                name: 'email',
+                value: agentInfo.email
+              },
+              {
+                name: 'firstname',
+                value: agentInfo.firstName || ''
+              },
+              {
+                name: 'lastname',
+                value: agentInfo.lastName || ''
+              },
+              {
+                name: 'invited_user_',
+                value: agentInfo.isAgentInvited
+              }
+            ]
+          );
+        }, 3000);
+
         localStorage.setItem(signupEventlocalStoragekey, 'true');
       }
     }
