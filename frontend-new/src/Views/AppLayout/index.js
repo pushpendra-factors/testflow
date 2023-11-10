@@ -217,9 +217,9 @@ function AppLayout({
         //triggering inside settimeout to prevent triggering event before sdk is initialised
         setTimeout(() => {
           factorsai.track('SIGNUP', {
-            first_name: agentInfo.firstName || '',
-            email: agentInfo.email,
-            last_name: agentInfo.lastName || ''
+            first_name: agentInfo?.firstName || '',
+            email: agentInfo?.email,
+            last_name: agentInfo?.lastName || ''
           });
           triggerHubspotCustomFormFillEvent(
             SIGNUP_HS_PORTAL_ID,
@@ -227,19 +227,19 @@ function AppLayout({
             [
               {
                 name: 'email',
-                value: agentInfo.email
+                value: agentInfo?.email
               },
               {
                 name: 'firstname',
-                value: agentInfo.firstName || ''
+                value: agentInfo?.firstName || ''
               },
               {
                 name: 'lastname',
-                value: agentInfo.lastName || ''
+                value: agentInfo?.lastName || ''
               },
               {
                 name: 'invited_user_',
-                value: agentInfo.isAgentInvited
+                value: agentInfo?.isAgentInvited ? true : false
               }
             ]
           );
