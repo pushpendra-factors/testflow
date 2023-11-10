@@ -439,7 +439,6 @@ type Model interface {
 	DeleteProjectAgentMapping(projectID int64, agentUUIDToRemove string) int
 	EditProjectAgentMapping(projectID int64, agentUUIDToEdit string, role int64) int
 
-
 	// project_setting
 	GetProjectSetting(projectID int64) (*model.ProjectSetting, int)
 	IsClearbitIntegratedByProjectID(projectID int64) (bool, int)
@@ -1005,7 +1004,7 @@ type Model interface {
 	UpdateUserEventsCount(projectId int64, ev map[string]map[string]model.LatestScore) error
 	UpdateGroupEventsCount(projectId int64, ev map[string]map[string]model.LatestScore, lastev map[string]model.LatestScore) error
 	UpdateUserEventsCountGO(projectId int64, ev map[string]map[string]model.LatestScore) error
-	UpdateGroupEventsCountGO(projectId int64, ev map[string]map[string]model.LatestScore, lastev map[string]model.LatestScore, weights model.AccWeights) error
+	UpdateGroupEventsCountGO(projectId int64, ev map[string]map[string]model.LatestScore, lastev map[string]model.LatestScore, allev map[string]model.LatestScore, weights model.AccWeights) error
 	GetAccountsScore(project_id int64, group_id int, ts string, debug bool) ([]model.PerAccountScore, *model.AccWeights, error)
 	GetUserScore(project_id int64, user_id string, ts string, debug bool, is_anonymus bool) (model.PerUserScoreOnDay, error)
 	GetUserScoreOnIds(projectId int64, usersAnonymous, usersNonAnonymous []string, debug bool) (map[string]model.PerUserScoreOnDay, error)

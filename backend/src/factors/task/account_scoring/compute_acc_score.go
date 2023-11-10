@@ -443,7 +443,7 @@ func WriteUserCountsAndRangesToDB(projectId int64, startTime int64, prevcountsof
 	}
 
 	// get all groups last event
-	groupsLastEvent, err := UpdateLastEventsDay(updatedGroupsCopy, startTime, salewindow)
+	groupsLastEvent, groupAllEvents, err := UpdateLastEventsDay(updatedGroupsCopy, startTime, salewindow)
 	if err != nil {
 		e := fmt.Errorf("unable to update last event for groups")
 		return nil, e
@@ -457,7 +457,7 @@ func WriteUserCountsAndRangesToDB(projectId int64, startTime int64, prevcountsof
 
 	// groupsLastevent contains last event data on all users with and without activity
 	// updatedGroups contains groups of users with activity
-	err = store.GetStore().UpdateGroupEventsCountGO(projectId, updatedGroups, groupsLastEvent, weights)
+	err = store.GetStore().UpdateGroupEventsCountGO(projectId, updatedGroups, groupsLastEvent, groupAllEvents, weights)
 	if err != nil {
 		return nil, err
 	}
@@ -494,9 +494,11 @@ func updateEventChannel(user *AggEventsOnUserAndGroup, event *P.CounterEventForm
 }
 
 func UpdateLastEventsDay(prevCountsOfUser map[string]map[string]M.LatestScore,
-	currentTS int64, saleWindow int64) (map[string]M.LatestScore, error) {
+	currentTS int64, saleWindow int64) (map[string]M.LatestScore, map[string]M.LatestScore, error) {
 
 	updatedLastScore := make(map[string]M.LatestScore, 0)
+	updatedAllEventsScore := make(map[string]M.LatestScore, 0)
+
 	currentDate := U.GetDateOnlyFromTimestamp(currentTS)
 	userIdsmap := make(map[string]bool, 0)
 	for usrkey, _ := range prevCountsOfUser {
@@ -509,8 +511,13 @@ func UpdateLastEventsDay(prevCountsOfUser map[string]map[string]M.LatestScore,
 		lastevent.Properties = make(map[string]map[string]int64)
 		lastevent.EventsCount = make(map[string]float64)
 
+		var allEventsInrange M.LatestScore
+		allEventsInrange.Properties = make(map[string]map[string]int64)
+		allEventsInrange.EventsCount = make(map[string]float64)
+
 		properties := make(map[string]map[string]int64)
 		eventsCountWithDecay := make(map[string]float64)
+		eventsCountWithoutDecay := make(map[string]float64)
 
 		if prevCountsOnday, ok := prevCountsOfUser[currentUser]; ok {
 			for _, dateOfCount := range ordereddays {
@@ -527,6 +534,16 @@ func UpdateLastEventsDay(prevCountsOfUser map[string]map[string]M.LatestScore,
 						eventsCountWithDecay[eventKey] += decayval * eventVal
 					}
 				}
+
+				// take counts of all events happened from start till today ..ignoring decay value
+				for eventKey, eventVal := range counts.EventsCount {
+					if _, eok := eventsCountWithoutDecay[eventKey]; !eok {
+						eventsCountWithoutDecay[eventKey] = 0
+
+					}
+					eventsCountWithoutDecay[eventKey] += eventVal
+				}
+
 				for peruserProperties, eprops := range counts.Properties {
 					if _, prKeyok := properties[peruserProperties]; !prKeyok {
 						properties[peruserProperties] = make(map[string]int64)
@@ -545,9 +562,14 @@ func UpdateLastEventsDay(prevCountsOfUser map[string]map[string]M.LatestScore,
 		lastevent.Date = currentDateTS
 		lastevent.Properties = properties
 		lastevent.EventsCount = eventsCountWithDecay
+
+		allEventsInrange.Date = currentDateTS
+		allEventsInrange.Properties = properties
+		allEventsInrange.EventsCount = eventsCountWithoutDecay
 		updatedLastScore[currentUser] = lastevent
+		updatedAllEventsScore[currentUser] = allEventsInrange
 	}
-	return updatedLastScore, nil
+	return updatedLastScore, updatedAllEventsScore, nil
 
 }
 
@@ -648,7 +670,7 @@ func ComputeScoreRanges(projectId int64, currentTime int64, lookback int64,
 			}
 		}
 		log.Info("date : %s number of updated users : %d", date, len(updatedUsers))
-		lastEventScores, err := UpdateLastEventsDay(updatedUsers, ts, saleWindow)
+		lastEventScores, _, err := UpdateLastEventsDay(updatedUsers, ts, saleWindow)
 		if err != nil {
 			log.WithField("prjoectID", projectId).Error("Unable to compute last event scores")
 		}
