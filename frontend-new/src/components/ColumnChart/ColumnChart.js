@@ -171,7 +171,7 @@ function ColumnChart({
           dataLabels: {
             align: 'center',
             enabled: true,
-            useHTML: true,
+            useHTML: false,
             formatter() {
               const self = this;
               return ReactDOMServer.renderToString(
@@ -193,8 +193,9 @@ function ColumnChart({
         backgroundColor: 'white',
         borderWidth: 1,
         borderRadius: 12,
-        shadow: false,
+        shadow: true,
         useHTML: true,
+        borderColor: 'black',
         formatter() {
           const self = this;
           return ReactDOMServer.renderToString(

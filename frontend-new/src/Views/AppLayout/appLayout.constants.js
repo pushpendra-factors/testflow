@@ -24,3 +24,6 @@ export const routesWithSidebar = [
   PathUrls.ConfigurePlans,
   PathUrls.ConfigureAttribution
 ];
+
+export const SIGNUP_HS_FORM_ID = 'f36f9253-ece9-46e4-9d56-8f873c65b731';
+export const SIGNUP_HS_PORTAL_ID = '6188127';
