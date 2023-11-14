@@ -41,10 +41,14 @@ func UpdateAccScoreWeights(c *gin.Context) (interface{}, int, string, string, bo
 	// check for duplicate rule names first , in case of empty rule name
 	// fill it with the event names
 	for _, wtVal := range weightsRequest.WeightConfig {
-		if _, wtOk := filterNamesMap[wtVal.FilterName]; wtOk {
-			errMsg := "Duplicate rule name detected"
-			logCtx.WithField("duplicate name : ", wtVal.FilterName).Error(errMsg)
-			return nil, http.StatusBadRequest, errMsg, "", true
+		if len(wtVal.FilterName) > 0 {
+			if _, wtOk := filterNamesMap[wtVal.FilterName]; wtOk {
+				errMsg := "Duplicate rule name detected"
+				logCtx.WithField("duplicate name : ", wtVal.FilterName).Error(errMsg)
+				return nil, http.StatusBadRequest, errMsg, "", true
+			} else {
+				filterNamesMap[wtVal.FilterName] = 1
+			}
 		}
 	}
 
