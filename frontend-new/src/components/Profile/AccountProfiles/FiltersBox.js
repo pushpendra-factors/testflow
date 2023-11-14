@@ -16,7 +16,7 @@ import EventsBlock from '../MyComponents/EventsBlock';
 import { selectGroupsList } from 'Reducers/groups/selectors';
 import { generateRandomKey } from 'Utils/global';
 import { selectAccountPayload } from 'Reducers/accountProfilesView/selectors';
-import { IsDomainGroup } from '../utils';
+import { cloneDeep } from 'lodash';
 
 const FiltersBox = ({
   filtersList,
@@ -132,7 +132,7 @@ const FiltersBox = ({
 
   const handleQueryChange = useCallback(
     (newEvent, index, changeType = 'add') => {
-      const updatedQuery = [...listEvents];
+      const updatedQuery = cloneDeep(listEvents);
       if (updatedQuery[index]) {
         if (changeType === 'add' || changeType === 'filters_updated') {
           updatedQuery[index] = newEvent;
@@ -179,8 +179,6 @@ const FiltersBox = ({
       appliedFilters.filters.length > 0 || appliedFilters.eventsList.length > 0
     );
   }, [appliedFilters.eventsList.length, appliedFilters.filters.length]);
-
-  const showEventsSection = !IsDomainGroup(source);
 
   return (
     <div className={cx(styles['filters-box-container'], 'flex flex-col')}>
@@ -237,7 +235,7 @@ const FiltersBox = ({
           </Text>
         </Button>
       </div>
-      <ControlledComponent controller={showEventsSection === true}>
+      <ControlledComponent controller={true}>
         <>
           <div className={styles['and-tag']}>
             <div className={cx(styles['and-tag-box'], 'inline')}>

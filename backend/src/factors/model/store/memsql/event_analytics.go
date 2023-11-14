@@ -157,7 +157,7 @@ func (store *MemSQL) fillGroupNameIDs(projectID int64, query *model.Query) (int,
 
 	for i := range query.GroupByProperties {
 		// skip group name id for event specific property
-		if query.GroupByProperties[i].Entity != model.PropertyEntityUser || isEventLevelGroupBy(query.GroupByProperties[i]) {
+		if query.GroupByProperties[i].Entity != model.PropertyEntityUser || model.IsEventLevelGroupBy(query.GroupByProperties[i]) {
 			continue
 		}
 
@@ -935,7 +935,8 @@ func buildAddJoinForEventAnalyticsGroupQuery(projectID int64, groupID, scopeGrou
 	return "", nil
 }
 
-func GetUserSelectStmntForUserORGroup(caller string, scopeGroupID int, isGroupEvent bool, isScopeDomains bool) string {
+func GetUserSelectStmntForUserORGroup(caller string, scopeGroupID int, isGroupEvent bool, isScopeDomains bool, isExistGlobalGroupByProperties bool,
+	isExistGlobalUserPropertiesFilter bool) string {
 	var commonUserSelect = "COALESCE(users.customer_user_id, %s) as coal_user_id"
 	if model.IsUserProfiles(caller) {
 		if scopeGroupID > 0 {
@@ -965,6 +966,10 @@ func GetUserSelectStmntForUserORGroup(caller string, scopeGroupID int, isGroupEv
 
 	selectEventUserID := "FIRST(%s, FROM_UNIXTIME(events.timestamp)) as event_user_id"
 	if isScopeDomains {
+		if isExistGlobalGroupByProperties && isExistGlobalUserPropertiesFilter {
+			return fmt.Sprintf("user_groups.group_%d_user_id  as coal_group_user_id, GROUP_CONCAT(group_users.id) as group_users_user_ids", scopeGroupID) +
+				", " + fmt.Sprintf(selectEventUserID, "events.user_id")
+		}
 		return fmt.Sprintf("user_groups.group_%d_user_id  as coal_group_user_id", scopeGroupID) + ", " + fmt.Sprintf(selectEventUserID, "events.user_id")
 	}
 
@@ -1076,7 +1081,8 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 
 	var commonSelectArr []string
 	for i := range q.EventsWithProperties {
-		userSelect := GetUserSelectStmntForUserORGroup(q.Caller, scopeGroupID, groupIDS[i] != 0, isEventGroupQueryDomains)
+		userSelect := GetUserSelectStmntForUserORGroup(q.Caller, scopeGroupID, groupIDS[i] != 0, isEventGroupQueryDomains,
+			len(q.GlobalUserProperties) > 0, len(q.GroupByProperties) > 0)
 		stepCommonSelect := userSelect + commonSelect
 		commonSelectArr = append(commonSelectArr, stepCommonSelect)
 	}
@@ -1388,7 +1394,7 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 	}
 
 	// select
-	userGroupProps := filterGroupPropsByType(otherGroupBys, model.PropertyEntityUser)
+	userGroupProps := model.FilterGroupPropsByType(otherGroupBys, model.PropertyEntityUser)
 	ugSelect, ugSelectParams := "", []interface{}{}
 	if isScopeDomains {
 		ugSelect, ugSelectParams, _ = buildGroupKeysForDomains(projectID, userGroupProps, query.Timezone, refStep)
@@ -1439,7 +1445,8 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 	if ugSelect != "" {
 		if scopeGroupID > 0 {
 			if isScopeDomains {
-				propertiesJoinStmnt, propertiesJoinParams := buildAddJoinForFunnelAllAccountsFunnelStep(projectID, query.GroupByProperties, scopeGroupID, refStep)
+				propertiesJoinStmnt, propertiesJoinParams := buildAddJoinForFunnelAllAccountsFunnelStep(projectID, query.GroupByProperties,
+					scopeGroupID, refStep)
 				termStmnt = termStmnt + " " + propertiesJoinStmnt
 				*qParams = append(*qParams, propertiesJoinParams...)
 			} else {
@@ -1457,8 +1464,19 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 	}
 
 	if isScopeDomains {
+		if len(model.FilterGlobalUserPropertiesFilterForDomains(query.GlobalUserProperties)) > 0 &&
+			len(model.GetGlobalGroupByUserProperties(query.GroupByProperties)) > 0 {
+			termStmnt = termStmnt + " WHERE " + getGlobalBreakdownreakdownWhereConditionForDomains(model.FilterGlobalUserPropertiesFilterForDomains(query.GlobalUserProperties),
+				refStep)
+		}
+
 		if ugSelect, ugSelectParams, _ = buildGroupKeysForDomains(projectID, userGroupProps, query.Timezone, refStep); len(ugSelectParams) > 0 {
-			termStmnt = termStmnt + " GROUP BY " + fmt.Sprintf("%s.coal_group_user_id", refStep)
+			groupBy := ""
+			if query.EventsCondition == model.EventCondEachGivenEvent {
+				groupBy = fmt.Sprintf("%s.event_name, ", refStep)
+			}
+			groupBy = groupBy + fmt.Sprintf("%s.coal_group_user_id", refStep)
+			termStmnt = termStmnt + " GROUP BY " + groupBy
 		}
 	}
 
@@ -1601,7 +1619,7 @@ func buildEventsOccurrenceSingleEventQuery(projectId int64,
 	var qStmnt string
 	var qParams []interface{}
 
-	eventGroupProps := filterGroupPropsByType(q.GroupByProperties, model.PropertyEntityEvent)
+	eventGroupProps := model.FilterGroupPropsByType(q.GroupByProperties, model.PropertyEntityEvent)
 	egSelect, egSelectParams, egKeys := buildGroupKeys(projectId, eventGroupProps, q.Timezone, false, false)
 	isGroupByTimestamp := q.GetGroupByTimestamp() != ""
 
@@ -1753,10 +1771,14 @@ func (store *MemSQL) buildUniqueUsersWithEachGivenEventsQuery(projectID int64,
 	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
 	var unionStmnt string
 
+	isEventGroupQueryDomains := scopeGroupID > 0 && model.IsQueryGroupNameAllAccounts(query.GroupAnalysis)
 	for i, step := range steps {
 		selectStr := ""
 		if scopeGroupID > 0 {
 			selectStr = fmt.Sprintf("%s.event_name as event_name, %s.coal_group_user_id as coal_group_user_id, %s.event_user_id as event_user_id", step, step, step)
+			if isEventGroupQueryDomains && len(query.GlobalUserProperties) > 0 && len(model.GetGlobalGroupByUserProperties(query.GroupByProperties)) > 0 {
+				selectStr = selectStr + "," + fmt.Sprintf("%s.group_users_user_ids", step)
+			}
 		} else {
 			selectStr = fmt.Sprintf("%s.event_name as event_name, %s.coal_user_id as coal_user_id, %s.event_user_id as event_user_id", step, step, step)
 		}
@@ -1946,6 +1968,7 @@ func (store *MemSQL) buildUniqueUsersWithAllGivenEventsQuery(projectID int64,
 		return qStmnt, qParams, err
 	}
 
+	isEventGroupQueryDomains := scopeGroupID > 0 && model.IsQueryGroupNameAllAccounts(query.GroupAnalysis)
 	// users intersection
 	var intersectSelect string
 	segmentSelectString := buildSegmentSelectString(query.Caller, scopeGroupID, steps[0])
@@ -1953,6 +1976,9 @@ func (store *MemSQL) buildUniqueUsersWithAllGivenEventsQuery(projectID int64,
 		intersectSelect = segmentSelectString
 	} else if scopeGroupID > 0 {
 		intersectSelect = fmt.Sprintf("%s.event_user_id as event_user_id, %s.coal_group_user_id as coal_group_user_id", steps[0], steps[0])
+		if isEventGroupQueryDomains && len(query.GlobalUserProperties) > 0 && len(model.GetGlobalGroupByUserProperties(query.GroupByProperties)) > 0 {
+			intersectSelect = intersectSelect + "," + fmt.Sprintf("%s.group_users_user_ids", steps[0])
+		}
 	} else {
 		intersectSelect = fmt.Sprintf("%s.event_user_id as event_user_id, %s.coal_user_id as coal_user_id", steps[0], steps[0])
 	}
@@ -2135,12 +2161,16 @@ func (store *MemSQL) buildUniqueUsersWithAnyGivenEventsQuery(projectID int64,
 		totalGroupKeys = totalGroupKeys + len(val)
 	}
 
+	isEventGroupQueryDomains := scopeGroupID > 0 && model.IsQueryGroupNameAllAccounts(query.GroupAnalysis)
 	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
 	var unionStmnt string
 	for i, step := range steps {
 		selectStr := ""
 		if scopeGroupID > 0 {
 			selectStr = fmt.Sprintf("%s.event_user_id as event_user_id, %s.coal_group_user_id as coal_group_user_id", step, step)
+			if isEventGroupQueryDomains && len(query.GlobalUserProperties) > 0 && len(model.GetGlobalGroupByUserProperties(query.GroupByProperties)) > 0 {
+				selectStr = selectStr + "," + fmt.Sprintf("%s.group_users_user_ids", step)
+			}
 		} else {
 			selectStr = fmt.Sprintf("%s.event_user_id as event_user_id, %s.coal_user_id as coal_user_id", step, step)
 		}
@@ -2307,7 +2337,7 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID int64, q model.Query,
 	qStmnt := ""
 	qParams := make([]interface{}, 0)
 
-	eventGroupProps := filterGroupPropsByType(q.GroupByProperties, model.PropertyEntityEvent)
+	eventGroupProps := model.FilterGroupPropsByType(q.GroupByProperties, model.PropertyEntityEvent)
 	egSelect, egParams, egKeys := buildGroupKeys(projectID, eventGroupProps, q.Timezone, false, false)
 	isGroupByTimestamp := q.GetGroupByTimestamp() != ""
 
@@ -2354,7 +2384,7 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID int64, q model.Query,
 	}
 
 	// count.
-	userGroupProps := filterGroupPropsByType(q.GroupByProperties, model.PropertyEntityUser)
+	userGroupProps := model.FilterGroupPropsByType(q.GroupByProperties, model.PropertyEntityUser)
 	ugSelect, ugSelectParams, _ := buildGroupKeys(projectID, userGroupProps, q.Timezone, false, false)
 	_, _, groupKeys := buildGroupKeys(projectID, q.GroupByProperties, q.Timezone, false, false)
 	qParams = append(qParams, ugSelectParams...)
@@ -2804,7 +2834,7 @@ func addEventCountAggregationQuery(projectID int64, query *model.Query, qStmnt *
 	unionStepName = "each_users_union"
 
 	// select
-	userGroupProps := filterGroupPropsByType(otherGroupBys, model.PropertyEntityUser)
+	userGroupProps := model.FilterGroupPropsByType(otherGroupBys, model.PropertyEntityUser)
 	ugSelect, ugSelectParams, _ := buildGroupKeys(projectID, userGroupProps, query.Timezone, false, true)
 	*qParams = append(*qParams, ugSelectParams...)
 	termSelect := ""

@@ -1046,6 +1046,19 @@ func GetPropertyToHasNoneFilter(properties []QueryProperty) map[string]bool {
 	return propertyToHasNoneFilter
 }
 
+func GetPropertyToHasNegativeFilter(properties []QueryProperty) []QueryProperty {
+	negativeFilters := make([]QueryProperty, 0)
+	for _, filter := range properties {
+		if (filter.Operator == NotContainsOpStr && filter.Value != PropertyValueNone) ||
+			(filter.Operator == ContainsOpStr && filter.Value == PropertyValueNone) ||
+			(filter.Operator == NotEqualOpStr && filter.Value != PropertyValueNone) ||
+			(filter.Operator == EqualsOpStr && filter.Value == PropertyValueNone) {
+			negativeFilters = append(negativeFilters, filter)
+		}
+	}
+	return negativeFilters
+}
+
 // If UI presents filters in "(a or b) AND (c or D)" order, Request has it as "a or b AND c or D"
 // Using AND as a separation between lines and execution order to achieve the same as above.
 func GetPropertiesGrouped(properties []QueryProperty) [][]QueryProperty {
@@ -1070,20 +1083,41 @@ func GetPropertiesGrouped(properties []QueryProperty) [][]QueryProperty {
 // GetPropertiesGroupedByGroupName groups properties by their group and tells if
 // it is only OR or only AND properties
 func GetPropertiesGroupedByGroupName(properties []QueryProperty) ([][]QueryProperty, bool, bool) {
-	groupedPropertiesMap := make(map[string][]QueryProperty, 0)
+
+	if len(properties) == 0 {
+		return nil, false, false
+	}
+
 	isOnlyOR := true
 	isOnlyAND := true
-	for i := range properties {
-		property := properties[i]
+	if len(properties) == 1 {
+		isOnlyOR = false
+		isOnlyAND = true
+	}
 
-		if i != 0 && property.LogicalOp == "AND" {
+	groupPropertyVisited := make(map[string]map[string]bool)
+	for _, property := range properties[1:] {
+
+		if _, exist := groupPropertyVisited[property.GroupName]; !exist {
+			groupPropertyVisited[property.GroupName] = make(map[string]bool)
+		}
+
+		visited := groupPropertyVisited[property.GroupName][property.Property]
+
+		if !visited && property.LogicalOp == "AND" {
 			isOnlyOR = false
 		}
 
-		if i != 0 && property.LogicalOp == "OR" {
+		if !visited && property.LogicalOp == "OR" {
 			isOnlyAND = false
 		}
 
+		groupPropertyVisited[property.GroupName][property.Property] = true
+	}
+
+	groupedPropertiesMap := make(map[string][]QueryProperty, 0)
+	for i := range properties {
+		property := properties[i]
 		if _, exist := groupedPropertiesMap[property.GroupName]; !exist {
 			groupedPropertiesMap[property.GroupName] = make([]QueryProperty, 0)
 		}
@@ -1096,6 +1130,40 @@ func GetPropertiesGroupedByGroupName(properties []QueryProperty) ([][]QueryPrope
 	}
 
 	return groupedProperties, isOnlyOR, isOnlyAND
+}
+
+// IsEventLevelGroupBy Checks if the groupBy is for a particular event in query.ewp.
+func IsEventLevelGroupBy(groupBy QueryGroupByProperty) bool {
+
+	return groupBy.EventName != "" && groupBy.EventNameIndex != 0
+}
+
+func FilterGroupPropsByType(gp []QueryGroupByProperty, entity string) []QueryGroupByProperty {
+	groupProps := make([]QueryGroupByProperty, 0)
+
+	for _, v := range gp {
+		if v.Entity == entity {
+			groupProps = append(groupProps, v)
+		}
+	}
+	return groupProps
+}
+
+func removeEventSpecificUserGroupBys(groupBys []QueryGroupByProperty) []QueryGroupByProperty {
+	filteredProps := make([]QueryGroupByProperty, 0)
+	for _, prop := range groupBys {
+		if IsEventLevelGroupBy(prop) {
+			// For $present, event name index is not set and is default 0.
+			continue
+		}
+		filteredProps = append(filteredProps, prop)
+	}
+	return filteredProps
+}
+
+func GetGlobalGroupByUserProperties(properties []QueryGroupByProperty) []QueryGroupByProperty {
+	userGroupProps := FilterGroupPropsByType(properties, PropertyEntityUser)
+	return removeEventSpecificUserGroupBys(userGroupProps)
 }
 
 // CheckIfHasNoneFilter Returns if set of filters has $none as a value
@@ -1149,6 +1217,7 @@ func GetDomainsAsscocaitedGroupSourceANDColumnIDs(globalUserProperties []QueryPr
 		globalGroupIDColumns += fmt.Sprintf("group_users.group_%d_id IS NOT NULL", groupID)
 		globalGroupSource += fmt.Sprintf("%d", GroupUserSource[groupName])
 	}
+
 	return globalGroupIDColumns, globalGroupSource
 }
 
@@ -1334,4 +1403,33 @@ func IsFunnelQueryGroupNameUser(group string) bool {
 
 func IsQueryGroupNameAllAccounts(group string) bool {
 	return group == GROUP_NAME_DOMAINS
+}
+
+func IsFiltersContainGlobalUserPropertyForDomains(filters []QueryProperty) bool {
+	for i := range filters {
+		if IsFilterGlobalUserPropertiesByDefaultQueryMap(filters[i].Property) {
+			return true
+		}
+	}
+	return false
+}
+
+func IsFilterGlobalUserPropertiesByDefaultQueryMap(property string) bool {
+	defaultProperty, exist := IN_PROPERTIES_DEFAULT_QUERY_MAP[property]
+	if !exist {
+		return false
+	}
+
+	return defaultProperty.Entity == PropertyEntityUserGroup
+}
+
+func FilterGlobalUserPropertiesFilterForDomains(filters []QueryProperty) []QueryProperty {
+	filteredGlobalGroupProperties := make([]QueryProperty, 0)
+	for i := range filters {
+		if IsFilterGlobalUserPropertiesByDefaultQueryMap(filters[i].Property) {
+			continue
+		}
+		filteredGlobalGroupProperties = append(filteredGlobalGroupProperties, filters[i])
+	}
+	return filteredGlobalGroupProperties
 }

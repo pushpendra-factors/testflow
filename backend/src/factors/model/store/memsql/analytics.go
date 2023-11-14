@@ -68,7 +68,7 @@ func getPropertyEntityField(projectID int64, groupProp model.QueryGroupByPropert
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if groupProp.Entity == model.PropertyEntityUser {
 		// Use event level user properties for event level group by.
-		if isEventLevelGroupBy(groupProp) {
+		if model.IsEventLevelGroupBy(groupProp) {
 			return "events.user_properties"
 		}
 
@@ -457,20 +457,46 @@ func getFilterSQLStmtForScopeDomainsLatestGroupProperties(projectID int64,
 		return wStmt, wParams, nil, nil, nil
 	}
 
+	propertyFilterGroupIDs := []int{}
+	for _, filterProperties := range groupedPoperties {
+		propertyFilterGroupIDs = append(propertyFilterGroupIDs, filterProperties[0].GroupNameID)
+	}
+
+	groupGroupedProperties := make([][]model.QueryProperty, 0)
+	userGroupedProperties := make([]model.QueryProperty, 0)
+	for i := range groupedPoperties {
+		if model.IsFilterGlobalUserPropertiesByDefaultQueryMap(groupedPoperties[i][0].Property) {
+			userGroupedProperties = append(userGroupedProperties, groupedPoperties[i]...)
+			continue
+		}
+		groupGroupedProperties = append(groupGroupedProperties, groupedPoperties[i])
+	}
+
+	userGroupedStmnt := ""
+	userGroupedParams := []interface{}{}
+	if len(userGroupedProperties) > 0 {
+		groupWStmt, groupWParams, err := buildWhereFromProperties(projectID, userGroupedProperties, fromTimestamp)
+		if err != nil {
+			return "", nil, nil, nil, err
+		}
+		userGroupedStmnt = groupWStmt
+		userGroupedParams = groupWParams
+	}
+
 	/*
 		select max(group_x_id) as max_group_x_id,max(group_y_id) as max_group_y_id from users
 		where group_x.properties->'aa' OR group_y.properties->'aa'
 		having max_group_x_id is not null and max_group_y_id is not null
 	*/
-
 	if isOnlyAND {
 		havingColumnConditions := []string{}
 		selectColumns := []string{}
 		wStmt := ""
 		wParams := []interface{}{}
+		addNoneFitlerGroupAccounts := false
 		// use OR in where condition and AND in Having condition
 		// (groupA.A AND groupA.B) OR (groupB.A AND groupB.B) HAVING groupA AND groupB
-		for _, filterProperties := range groupedPoperties {
+		for _, filterProperties := range groupGroupedProperties {
 			if wStmt != "" {
 				wStmt = wStmt + " OR "
 			}
@@ -480,10 +506,39 @@ func getFilterSQLStmtForScopeDomainsLatestGroupProperties(projectID int64,
 				return "", nil, nil, nil, err
 			}
 
-			wStmt = wStmt + fmt.Sprintf("( %s )", groupWStmt)
+			wStmt = wStmt + fmt.Sprintf("( group_%d_id is not null AND %s )", filterProperties[0].GroupNameID, groupWStmt)
 			wParams = append(wParams, groupWParams...)
 			selectColumns = append(selectColumns, fmt.Sprintf("group_%d_id", filterProperties[0].GroupNameID))
-			havingColumnConditions = append(havingColumnConditions, fmt.Sprintf("group_%d_id IS NOT NULL", filterProperties[0].GroupNameID))
+			negativeFilters := model.GetPropertyToHasNegativeFilter(filterProperties)
+
+			// in case of purely negative grouped filter include all non filter group account
+			if len(negativeFilters) == len(filterProperties) {
+				addNoneFitlerGroupAccounts = true
+			}
+			// in case on purely negative grouped filter, accounts from non filters groups will also be considered in available, hence NOT NULL won't be mandatory
+			if len(negativeFilters) != len(filterProperties) {
+				havingColumnConditions = append(havingColumnConditions, fmt.Sprintf("group_%d_id IS NOT NULL", filterProperties[0].GroupNameID))
+			}
+		}
+
+		if addNoneFitlerGroupAccounts {
+			excludeStmnt := ""
+			for i := range propertyFilterGroupIDs {
+				if i != 0 {
+					excludeStmnt = excludeStmnt + " AND "
+				}
+				excludeStmnt = excludeStmnt + fmt.Sprintf("group_%d_id is NULL", propertyFilterGroupIDs[i])
+			}
+			wStmt = fmt.Sprintf("( %s OR ( %s ) )", wStmt, excludeStmnt)
+		}
+
+		if userGroupedStmnt != "" {
+			if wStmt == "" {
+				wStmt = userGroupedStmnt
+			} else {
+				wStmt = fmt.Sprintf("( %s ) AND ( %s )", wStmt, userGroupedStmnt)
+			}
+			wParams = append(wParams, userGroupedParams...)
 		}
 
 		return wStmt, wParams, selectColumns, havingColumnConditions, nil
@@ -495,7 +550,8 @@ func getFilterSQLStmtForScopeDomainsLatestGroupProperties(projectID int64,
 	selectColumns := []string{}
 	wStmt := ""
 	wParams := []interface{}{}
-	for _, filterProperties := range groupedPoperties {
+	addNoneFitlerGroupAccounts := false
+	for _, filterProperties := range groupGroupedProperties {
 		if wStmt != "" {
 			wStmt = wStmt + " OR "
 		}
@@ -508,10 +564,38 @@ func getFilterSQLStmtForScopeDomainsLatestGroupProperties(projectID int64,
 		if err != nil {
 			return "", nil, nil, nil, err
 		}
-		wStmt = wStmt + groupWStmt
+		wStmt = wStmt + fmt.Sprintf("( group_%d_id is not null AND %s )", filterProperties[0].GroupNameID, groupWStmt)
 		wParams = append(wParams, groupWParams...)
 		selectColumns = append(selectColumns, fmt.Sprintf("group_%d_id", filterProperties[0].GroupNameID))
-		havingColumnConditions = append(havingColumnConditions, fmt.Sprintf("group_%d_id IS NOT NULL", filterProperties[0].GroupNameID))
+		negativeFilters := model.GetPropertyToHasNegativeFilter(filterProperties)
+		// in case of OR group any negative filter will also inlcude non filter group account
+		if len(negativeFilters) > 0 {
+			addNoneFitlerGroupAccounts = true
+		}
+		// in case on purely negative grouped filter, accounts from non filters groups will also be considered in available, hence NOT NULL won't be mandatory
+		if len(negativeFilters) == 0 {
+			havingColumnConditions = append(havingColumnConditions, fmt.Sprintf("group_%d_id IS NOT NULL", filterProperties[0].GroupNameID))
+		}
+	}
+
+	if addNoneFitlerGroupAccounts {
+		excludeStmnt := ""
+		for i := range propertyFilterGroupIDs {
+			if i != 0 {
+				excludeStmnt = excludeStmnt + " AND "
+			}
+			excludeStmnt = excludeStmnt + fmt.Sprintf("group_%d_id is NULL", propertyFilterGroupIDs[i])
+		}
+		wStmt = fmt.Sprintf("( %s OR ( %s ) )", wStmt, excludeStmnt)
+	}
+
+	if userGroupedStmnt != "" {
+		if wStmt == "" {
+			wStmt = userGroupedStmnt
+		} else {
+			wStmt = fmt.Sprintf("( %s ) AND ( %s )", wStmt, userGroupedStmnt)
+		}
+		wParams = append(wParams, userGroupedParams...)
 	}
 
 	return wStmt, wParams, selectColumns, havingColumnConditions, nil
@@ -1339,6 +1423,7 @@ func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[
 
 			if strings.Contains(addJoinStmnt, "group_users") {
 				eventsWrapSelect = joinWithComma(eventsWrapSelect, "group_users.properties as group_properties")
+				eventsWrapSelect = joinWithComma(eventsWrapSelect, "group_users.id as group_users_user_id")
 			}
 		}
 	}
@@ -1349,6 +1434,10 @@ func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[
 			projectId, globalUserFilter, from)
 		for i := range selectColumns {
 			eventsWrapSelect = joinWithComma(eventsWrapSelect, fmt.Sprintf("group_users.%s as %s", selectColumns[i], selectColumns[i]))
+		}
+
+		if model.IsFiltersContainGlobalUserPropertyForDomains(globalUserFilter) {
+			eventsWrapSelect = joinWithComma(eventsWrapSelect, "user_groups.properties as user_global_user_properties")
 		}
 
 	}
@@ -1420,6 +1509,7 @@ func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[
 	addSelecStmnt = strings.ReplaceAll(addSelecStmnt, "events.properties", eventsWrapViewName+".event_properties")
 	addSelecStmnt = strings.ReplaceAll(addSelecStmnt, "events.user_properties", eventsWrapViewName+".event_user_properties")
 	addSelecStmnt = strings.ReplaceAll(addSelecStmnt, "group_users.properties", eventsWrapViewName+".group_properties")
+	addSelecStmnt = strings.ReplaceAll(addSelecStmnt, "group_users.id", eventsWrapViewName+".group_users_user_id")
 	// Use view instead of events and users table.
 	addSelecStmnt = replaceTableWithViewForEventsAndUsers(addSelecStmnt, eventsWrapViewName)
 
@@ -1656,38 +1746,6 @@ func addJoinLatestUserPropsQuery(projectID int64, groupProps []model.QueryGroupB
 	return gKeys
 }
 
-func filterGroupPropsByType(gp []model.QueryGroupByProperty, entity string) []model.QueryGroupByProperty {
-	logFields := log.Fields{
-		"gp":     gp,
-		"entity": entity,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	groupProps := make([]model.QueryGroupByProperty, 0)
-
-	for _, v := range gp {
-		if v.Entity == entity {
-			groupProps = append(groupProps, v)
-		}
-	}
-	return groupProps
-}
-
-func removeEventSpecificUserGroupBys(groupBys []model.QueryGroupByProperty) []model.QueryGroupByProperty {
-	logFields := log.Fields{
-		"group_bys": groupBys,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	filteredProps := make([]model.QueryGroupByProperty, 0)
-	for _, prop := range groupBys {
-		if isEventLevelGroupBy(prop) {
-			// For $present, event name index is not set and is default 0.
-			continue
-		}
-		filteredProps = append(filteredProps, prop)
-	}
-	return filteredProps
-}
-
 func appendOrderByAggr(qStmnt string) string {
 	logFields := log.Fields{
 		"q_stmnt": qStmnt,
@@ -1864,7 +1922,7 @@ func separateEventLevelGroupBys(allGroupBys []model.QueryGroupByProperty) (
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	for _, groupby := range allGroupBys {
-		if isEventLevelGroupBy(groupby) {
+		if model.IsEventLevelGroupBy(groupby) {
 			eventLevelGroupBys = append(eventLevelGroupBys, groupby)
 		} else {
 			// This will also have $present event.
@@ -1872,15 +1930,6 @@ func separateEventLevelGroupBys(allGroupBys []model.QueryGroupByProperty) (
 		}
 	}
 	return
-}
-
-// isEventLevelGroupBy Checks if the groupBy is for a particular event in query.ewp.
-func isEventLevelGroupBy(groupBy model.QueryGroupByProperty) bool {
-	logFields := log.Fields{
-		"group_by": groupBy,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	return groupBy.EventName != "" && groupBy.EventNameIndex != 0
 }
 
 // TranslateGroupKeysIntoColumnNames - Replaces groupKeys on result

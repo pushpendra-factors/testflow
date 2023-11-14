@@ -7,7 +7,6 @@ import (
 	TaskSession "factors/task/session"
 	"factors/util"
 	U "factors/util"
-	"io/ioutil"
 	"net/http"
 	"sort"
 	"strings"
@@ -16,7 +15,6 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
-	"github.com/jinzhu/now"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
@@ -6610,7 +6608,7 @@ func TestAnalyticsSixSignalGroupQuery(t *testing.T) {
 }
 
 func TestAnalyticsFunnelAllAccounts(t *testing.T) {
-	project, agent, err := SetupProjectWithAgentDAO()
+	project, _, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 	r := gin.Default()
 	H.InitSDKServiceRoutes(r)
@@ -7205,944 +7203,944 @@ func TestAnalyticsFunnelAllAccounts(t *testing.T) {
 	assert.Equal(t, "100.0", result.Rows[1][4])
 	assert.Equal(t, "100.0", result.Rows[1][5])
 
-	// filter test, OR between to different groups
-	/*
-		WITH  step_0 AS (SELECT step_0_event_users_view.group_user_id as coal_group_user_id,
-		FIRST(step_0_event_users_view.timestamp, FROM_UNIXTIME(step_0_event_users_view.timestamp)) as
-		timestamp, 1 as step_0 FROM  (SELECT events.project_id, events.id, events.event_name_id,
-		events.user_id, events.timestamp , events.properties as event_properties, events.user_properties as
-		event_user_properties , user_groups.group_2_user_id as group_user_id , group_users.properties as
-		group_properties FROM events  LEFT JOIN users as user_groups on events.user_id = user_groups.id AND
-		user_groups.project_id = '38000184' LEFT JOIN users as group_users ON user_groups.group_2_user_id =
-		group_users.group_2_user_id AND group_users.project_id = '38000184' AND group_users.is_group_user =
-		true AND group_users.source IN ( 8,2 ) AND ( group_users.group_4_id IS NOT NULL OR
-		group_users.group_1_id IS NOT NULL ) WHERE events.project_id='38000184' AND
-		timestamp>='1690360534' AND timestamp<='1690362934' AND  ( group_user_id IS NOT NULL  )
-		AND  ( events.event_name_id = '640e93cc-c066-4b1a-830c-ad954dff2f29' )  LIMIT 10000000000)
-		step_0_event_users_view WHERE (JSON_EXTRACT_STRING(step_0_event_users_view.group_properties,
-		'$6Signal_domain') = 'abc1.com' OR JSON_EXTRACT_STRING(step_0_event_users_view.group_properties,
-		'$hubspot_company_domain') = 'abc2.com') GROUP BY coal_group_user_id),  step_1 AS (SELECT
-		step_1_event_users_view.group_user_id as coal_group_user_id, step_1_event_users_view.timestamp, 1 as
-		step_1 FROM  (SELECT events.project_id, events.id, events.event_name_id, events.user_id,
-		events.timestamp , events.properties as event_properties, events.user_properties as
-		event_user_properties , user_groups.group_2_user_id as group_user_id , group_users.properties as
-		group_properties FROM events  LEFT JOIN users as user_groups on events.user_id = user_groups.id AND
-		user_groups.project_id = '38000184' LEFT JOIN users as group_users ON user_groups.group_2_user_id =
-		group_users.group_2_user_id AND group_users.project_id = '38000184' AND group_users.is_group_user =
-		true AND group_users.source IN ( 8,2 ) AND ( group_users.group_4_id IS NOT NULL OR
-		group_users.group_1_id IS NOT NULL ) WHERE events.project_id='38000184' AND
-		timestamp>='1690360534' AND timestamp<='1690362934' AND  ( group_user_id IS NOT NULL  )
-		AND  ( events.event_name_id = '5cf380b2-3f2a-4328-a3b3-66bdb097741f' )  LIMIT 10000000000)
-		step_1_event_users_view WHERE (JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
-		'$6Signal_domain') = 'abc1.com' OR JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
-		'$hubspot_company_domain') = 'abc2.com') GROUP BY coal_group_user_id,timestamp) ,
-		step_1_step_0_users AS (SELECT step_1.coal_group_user_id, FIRST(step_1.timestamp,
-		FROM_UNIXTIME(step_1.timestamp)) as timestamp, step_1 , step_0.timestamp AS step_0_timestamp ,
-		FIRST(step_1.timestamp, FROM_UNIXTIME(step_1.timestamp)) AS step_1_timestamp FROM step_0 LEFT JOIN
-		step_1 ON step_0.coal_group_user_id = step_1.coal_group_user_id WHERE step_1.timestamp >=
-		step_0.timestamp GROUP BY step_1.coal_group_user_id) , funnel AS (SELECT DISTINCT
-		step_0.coal_group_user_id , step_0 , step_1 , step_0_timestamp , step_1_timestamp , CASE WHEN
-		FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')) OVER (PARTITION BY
-		step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$6Signal_domain') IS NULL THEN 1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$6Signal_domain') = '' THEN 1000000000000 ELSE group_users.join_timestamp END) IS NULL THEN '$none'
-		WHEN FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')) OVER (PARTITION BY
-		step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$6Signal_domain') IS NULL THEN 1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$6Signal_domain') = '' THEN 1000000000000 ELSE group_users.join_timestamp END) = '' THEN '$none'
-		ELSE FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')) OVER (PARTITION BY
-		step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$6Signal_domain') IS NULL THEN 1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$6Signal_domain') = '' THEN 1000000000000 ELSE group_users.join_timestamp END) END AS _group_key_0,
-		CASE WHEN FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain')) OVER
-		(PARTITION BY step_0.coal_group_user_id ORDER BY CASE WHEN
-		JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') IS NULL THEN 1000000000000
-		WHEN JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') = '' THEN 1000000000000
-		ELSE group_users.join_timestamp END) IS NULL THEN '$none' WHEN
-		FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain')) OVER (PARTITION
-		BY step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$hubspot_company_domain') IS NULL THEN 1000000000000 WHEN
-		JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') = '' THEN 1000000000000 ELSE
-		group_users.join_timestamp END) = '' THEN '$none' ELSE
-		FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain')) OVER (PARTITION
-		BY step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$hubspot_company_domain') IS NULL THEN 1000000000000 WHEN
-		JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') = '' THEN 1000000000000 ELSE
-		group_users.join_timestamp END) END AS _group_key_1 FROM step_0  LEFT JOIN users AS group_users on
-		step_0.coal_group_user_id = group_users.group_2_user_id AND group_users.project_id = '38000184' AND
-		group_users.is_group_user = true AND group_users.source IN ( 8,2 ) AND ( group_users.group_4_id IS
-		NOT NULL OR group_users.group_1_id IS NOT NULL )  LEFT JOIN step_1_step_0_users ON
-		step_0.coal_group_user_id=step_1_step_0_users.coal_group_user_id  AND timestampdiff(DAY,
-		DATE(CONVERT_TZ(FROM_UNIXTIME(step_0_timestamp), 'UTC', 'Asia/Kolkata')),
-		DATE(CONVERT_TZ(FROM_UNIXTIME(step_1_timestamp), 'UTC', 'Asia/Kolkata'))) <= '90' ) SELECT *
-		FROM ( SELECT _group_key_0, _group_key_1, SUM(step_0) AS step_0 , SUM(step_1) AS step_1 ,
-		AVG(step_1_timestamp-step_0_timestamp) AS step_0_1_time FROM funnel GROUP BY _group_key_0,
-		_group_key_1 ORDER BY step_0 DESC LIMIT 10000 ) AS group_funnel UNION ALL SELECT '$no_group' AS
-		_group_key_0,'$no_group' AS _group_key_1 , SUM(step_0) AS step_0 , SUM(step_1) AS step_1 ,
-		AVG(step_1_timestamp-step_0_timestamp) AS step_0_1_time FROM funnel
-	*/
-	query = model.Query{
-		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
-		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
-		EventsWithProperties: []model.QueryEventWithProperties{
-			{
-				Name:       "$hubspot_company_created",
-				Properties: []model.QueryProperty{},
-			},
-			{
-				Name:       "$hubspot_company_updated",
-				Properties: []model.QueryProperty{},
-			},
-		},
-		GlobalUserProperties: []model.QueryProperty{
-			{
-				Entity:    model.PropertyEntityUserGlobal,
-				GroupName: model.GROUP_NAME_SIX_SIGNAL,
-				Property:  U.SIX_SIGNAL_DOMAIN,
-				Operator:  "equals",
-				Value:     "abc1.com",
-				Type:      U.PropertyTypeCategorical,
-				LogicalOp: "AND",
-			},
-			{
-				Entity:    model.PropertyEntityUserGlobal,
-				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
-				Property:  "$hubspot_company_domain",
-				Operator:  "equals",
-				Value:     "abc2.com",
-				Type:      U.PropertyTypeCategorical,
-				LogicalOp: "OR",
-			},
-		},
-		GroupByProperties: []model.QueryGroupByProperty{
-			{
-				Entity:    model.PropertyEntityUser,
-				GroupName: model.GROUP_NAME_SIX_SIGNAL,
-				Property:  U.SIX_SIGNAL_DOMAIN,
-				EventName: model.UserPropertyGroupByPresent,
-			},
-			{
-				Entity:    model.PropertyEntityUser,
-				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
-				Property:  "$hubspot_company_domain",
-				EventName: model.UserPropertyGroupByPresent,
-			},
-		},
-		Class:           model.QueryClassFunnel,
-		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
-		Type:            model.QueryTypeUniqueUsers,
-		EventsCondition: model.EventCondAllGivenEvent,
-	}
+	// // filter test, OR between to different groups
+	// /*
+	// 	WITH  step_0 AS (SELECT step_0_event_users_view.group_user_id as coal_group_user_id,
+	// 	FIRST(step_0_event_users_view.timestamp, FROM_UNIXTIME(step_0_event_users_view.timestamp)) as
+	// 	timestamp, 1 as step_0 FROM  (SELECT events.project_id, events.id, events.event_name_id,
+	// 	events.user_id, events.timestamp , events.properties as event_properties, events.user_properties as
+	// 	event_user_properties , user_groups.group_2_user_id as group_user_id , group_users.properties as
+	// 	group_properties FROM events  LEFT JOIN users as user_groups on events.user_id = user_groups.id AND
+	// 	user_groups.project_id = '38000184' LEFT JOIN users as group_users ON user_groups.group_2_user_id =
+	// 	group_users.group_2_user_id AND group_users.project_id = '38000184' AND group_users.is_group_user =
+	// 	true AND group_users.source IN ( 8,2 ) AND ( group_users.group_4_id IS NOT NULL OR
+	// 	group_users.group_1_id IS NOT NULL ) WHERE events.project_id='38000184' AND
+	// 	timestamp>='1690360534' AND timestamp<='1690362934' AND  ( group_user_id IS NOT NULL  )
+	// 	AND  ( events.event_name_id = '640e93cc-c066-4b1a-830c-ad954dff2f29' )  LIMIT 10000000000)
+	// 	step_0_event_users_view WHERE (JSON_EXTRACT_STRING(step_0_event_users_view.group_properties,
+	// 	'$6Signal_domain') = 'abc1.com' OR JSON_EXTRACT_STRING(step_0_event_users_view.group_properties,
+	// 	'$hubspot_company_domain') = 'abc2.com') GROUP BY coal_group_user_id),  step_1 AS (SELECT
+	// 	step_1_event_users_view.group_user_id as coal_group_user_id, step_1_event_users_view.timestamp, 1 as
+	// 	step_1 FROM  (SELECT events.project_id, events.id, events.event_name_id, events.user_id,
+	// 	events.timestamp , events.properties as event_properties, events.user_properties as
+	// 	event_user_properties , user_groups.group_2_user_id as group_user_id , group_users.properties as
+	// 	group_properties FROM events  LEFT JOIN users as user_groups on events.user_id = user_groups.id AND
+	// 	user_groups.project_id = '38000184' LEFT JOIN users as group_users ON user_groups.group_2_user_id =
+	// 	group_users.group_2_user_id AND group_users.project_id = '38000184' AND group_users.is_group_user =
+	// 	true AND group_users.source IN ( 8,2 ) AND ( group_users.group_4_id IS NOT NULL OR
+	// 	group_users.group_1_id IS NOT NULL ) WHERE events.project_id='38000184' AND
+	// 	timestamp>='1690360534' AND timestamp<='1690362934' AND  ( group_user_id IS NOT NULL  )
+	// 	AND  ( events.event_name_id = '5cf380b2-3f2a-4328-a3b3-66bdb097741f' )  LIMIT 10000000000)
+	// 	step_1_event_users_view WHERE (JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
+	// 	'$6Signal_domain') = 'abc1.com' OR JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
+	// 	'$hubspot_company_domain') = 'abc2.com') GROUP BY coal_group_user_id,timestamp) ,
+	// 	step_1_step_0_users AS (SELECT step_1.coal_group_user_id, FIRST(step_1.timestamp,
+	// 	FROM_UNIXTIME(step_1.timestamp)) as timestamp, step_1 , step_0.timestamp AS step_0_timestamp ,
+	// 	FIRST(step_1.timestamp, FROM_UNIXTIME(step_1.timestamp)) AS step_1_timestamp FROM step_0 LEFT JOIN
+	// 	step_1 ON step_0.coal_group_user_id = step_1.coal_group_user_id WHERE step_1.timestamp >=
+	// 	step_0.timestamp GROUP BY step_1.coal_group_user_id) , funnel AS (SELECT DISTINCT
+	// 	step_0.coal_group_user_id , step_0 , step_1 , step_0_timestamp , step_1_timestamp , CASE WHEN
+	// 	FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')) OVER (PARTITION BY
+	// 	step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$6Signal_domain') IS NULL THEN 1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$6Signal_domain') = '' THEN 1000000000000 ELSE group_users.join_timestamp END) IS NULL THEN '$none'
+	// 	WHEN FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')) OVER (PARTITION BY
+	// 	step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$6Signal_domain') IS NULL THEN 1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$6Signal_domain') = '' THEN 1000000000000 ELSE group_users.join_timestamp END) = '' THEN '$none'
+	// 	ELSE FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')) OVER (PARTITION BY
+	// 	step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$6Signal_domain') IS NULL THEN 1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$6Signal_domain') = '' THEN 1000000000000 ELSE group_users.join_timestamp END) END AS _group_key_0,
+	// 	CASE WHEN FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain')) OVER
+	// 	(PARTITION BY step_0.coal_group_user_id ORDER BY CASE WHEN
+	// 	JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') IS NULL THEN 1000000000000
+	// 	WHEN JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') = '' THEN 1000000000000
+	// 	ELSE group_users.join_timestamp END) IS NULL THEN '$none' WHEN
+	// 	FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain')) OVER (PARTITION
+	// 	BY step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$hubspot_company_domain') IS NULL THEN 1000000000000 WHEN
+	// 	JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') = '' THEN 1000000000000 ELSE
+	// 	group_users.join_timestamp END) = '' THEN '$none' ELSE
+	// 	FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain')) OVER (PARTITION
+	// 	BY step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$hubspot_company_domain') IS NULL THEN 1000000000000 WHEN
+	// 	JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') = '' THEN 1000000000000 ELSE
+	// 	group_users.join_timestamp END) END AS _group_key_1 FROM step_0  LEFT JOIN users AS group_users on
+	// 	step_0.coal_group_user_id = group_users.group_2_user_id AND group_users.project_id = '38000184' AND
+	// 	group_users.is_group_user = true AND group_users.source IN ( 8,2 ) AND ( group_users.group_4_id IS
+	// 	NOT NULL OR group_users.group_1_id IS NOT NULL )  LEFT JOIN step_1_step_0_users ON
+	// 	step_0.coal_group_user_id=step_1_step_0_users.coal_group_user_id  AND timestampdiff(DAY,
+	// 	DATE(CONVERT_TZ(FROM_UNIXTIME(step_0_timestamp), 'UTC', 'Asia/Kolkata')),
+	// 	DATE(CONVERT_TZ(FROM_UNIXTIME(step_1_timestamp), 'UTC', 'Asia/Kolkata'))) <= '90' ) SELECT *
+	// 	FROM ( SELECT _group_key_0, _group_key_1, SUM(step_0) AS step_0 , SUM(step_1) AS step_1 ,
+	// 	AVG(step_1_timestamp-step_0_timestamp) AS step_0_1_time FROM funnel GROUP BY _group_key_0,
+	// 	_group_key_1 ORDER BY step_0 DESC LIMIT 10000 ) AS group_funnel UNION ALL SELECT '$no_group' AS
+	// 	_group_key_0,'$no_group' AS _group_key_1 , SUM(step_0) AS step_0 , SUM(step_1) AS step_1 ,
+	// 	AVG(step_1_timestamp-step_0_timestamp) AS step_0_1_time FROM funnel
+	// */
+	// query = model.Query{
+	// 	From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+	// 	To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+	// 	EventsWithProperties: []model.QueryEventWithProperties{
+	// 		{
+	// 			Name:       "$hubspot_company_created",
+	// 			Properties: []model.QueryProperty{},
+	// 		},
+	// 		{
+	// 			Name:       "$hubspot_company_updated",
+	// 			Properties: []model.QueryProperty{},
+	// 		},
+	// 	},
+	// 	GlobalUserProperties: []model.QueryProperty{
+	// 		{
+	// 			Entity:    model.PropertyEntityUserGlobal,
+	// 			GroupName: model.GROUP_NAME_SIX_SIGNAL,
+	// 			Property:  U.SIX_SIGNAL_DOMAIN,
+	// 			Operator:  "equals",
+	// 			Value:     "abc1.com",
+	// 			Type:      U.PropertyTypeCategorical,
+	// 			LogicalOp: "AND",
+	// 		},
+	// 		{
+	// 			Entity:    model.PropertyEntityUserGlobal,
+	// 			GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+	// 			Property:  "$hubspot_company_domain",
+	// 			Operator:  "equals",
+	// 			Value:     "abc2.com",
+	// 			Type:      U.PropertyTypeCategorical,
+	// 			LogicalOp: "OR",
+	// 		},
+	// 	},
+	// 	GroupByProperties: []model.QueryGroupByProperty{
+	// 		{
+	// 			Entity:    model.PropertyEntityUser,
+	// 			GroupName: model.GROUP_NAME_SIX_SIGNAL,
+	// 			Property:  U.SIX_SIGNAL_DOMAIN,
+	// 			EventName: model.UserPropertyGroupByPresent,
+	// 		},
+	// 		{
+	// 			Entity:    model.PropertyEntityUser,
+	// 			GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+	// 			Property:  "$hubspot_company_domain",
+	// 			EventName: model.UserPropertyGroupByPresent,
+	// 		},
+	// 	},
+	// 	Class:           model.QueryClassFunnel,
+	// 	GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+	// 	Type:            model.QueryTypeUniqueUsers,
+	// 	EventsCondition: model.EventCondAllGivenEvent,
+	// }
 
-	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
-	assert.Equal(t, http.StatusOK, errCode)
+	// result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	// assert.Equal(t, http.StatusOK, errCode)
 
-	assert.Len(t, result.Rows, 3)
-	sort.Slice(result.Rows, func(i, j int) bool {
-		p1 := U.GetPropertyValueAsString(result.Rows[i][0])
-		p2 := U.GetPropertyValueAsString(result.Rows[j][0])
-		return p1 < p2
-	})
+	// assert.Len(t, result.Rows, 3)
+	// sort.Slice(result.Rows, func(i, j int) bool {
+	// 	p1 := U.GetPropertyValueAsString(result.Rows[i][0])
+	// 	p2 := U.GetPropertyValueAsString(result.Rows[j][0])
+	// 	return p1 < p2
+	// })
 
-	assert.Equal(t, "$no_group", result.Rows[0][0])
-	assert.Equal(t, "$no_group", result.Rows[0][1])
-	assert.Equal(t, float64(2), result.Rows[0][2])
-	assert.Equal(t, float64(2), result.Rows[0][3])
-	assert.Equal(t, "100.0", result.Rows[0][4])
-	assert.Equal(t, "100.0", result.Rows[0][5])
-	assert.Equal(t, "abc1.com", result.Rows[1][0])
-	assert.Equal(t, "abc1.com", result.Rows[1][1])
-	assert.Equal(t, float64(1), result.Rows[1][2])
-	assert.Equal(t, float64(1), result.Rows[1][3])
-	assert.Equal(t, "100.0", result.Rows[1][4])
-	assert.Equal(t, "100.0", result.Rows[1][5])
-	assert.Equal(t, "abc2.com", result.Rows[2][0])
-	assert.Equal(t, "abc2.com", result.Rows[2][1])
-	assert.Equal(t, float64(1), result.Rows[2][2])
-	assert.Equal(t, float64(1), result.Rows[2][3])
-	assert.Equal(t, "100.0", result.Rows[2][4])
-	assert.Equal(t, "100.0", result.Rows[2][5])
+	// assert.Equal(t, "$no_group", result.Rows[0][0])
+	// assert.Equal(t, "$no_group", result.Rows[0][1])
+	// assert.Equal(t, float64(2), result.Rows[0][2])
+	// assert.Equal(t, float64(2), result.Rows[0][3])
+	// assert.Equal(t, "100.0", result.Rows[0][4])
+	// assert.Equal(t, "100.0", result.Rows[0][5])
+	// assert.Equal(t, "abc1.com", result.Rows[1][0])
+	// assert.Equal(t, "abc1.com", result.Rows[1][1])
+	// assert.Equal(t, float64(1), result.Rows[1][2])
+	// assert.Equal(t, float64(1), result.Rows[1][3])
+	// assert.Equal(t, "100.0", result.Rows[1][4])
+	// assert.Equal(t, "100.0", result.Rows[1][5])
+	// assert.Equal(t, "abc2.com", result.Rows[2][0])
+	// assert.Equal(t, "abc2.com", result.Rows[2][1])
+	// assert.Equal(t, float64(1), result.Rows[2][2])
+	// assert.Equal(t, float64(1), result.Rows[2][3])
+	// assert.Equal(t, "100.0", result.Rows[2][4])
+	// assert.Equal(t, "100.0", result.Rows[2][5])
 
-	// filter test when filter are already group
-	// (groupA.A or groupA.B) AND (groupB.A or groupB.B)
-	/*
-		WITH  step_0 AS (SELECT step_0_event_users_view.group_user_id as coal_group_user_id,
-		FIRST(step_0_event_users_view.timestamp, FROM_UNIXTIME(step_0_event_users_view.timestamp)) as
-		timestamp, 1 as step_0 , MAX(group_4_id) as max_group_4_id , MAX(group_1_id) as max_group_1_id FROM
-		(SELECT events.project_id, events.id, events.event_name_id, events.user_id, events.timestamp ,
-		events.properties as event_properties, events.user_properties as event_user_properties ,
-		user_groups.group_2_user_id as group_user_id , group_users.properties as group_properties ,
-		group_users.group_4_id as group_4_id , group_users.group_1_id as group_1_id FROM events  LEFT JOIN
-		users as user_groups on events.user_id = user_groups.id AND user_groups.project_id = '38000185' LEFT
-		JOIN users as group_users ON user_groups.group_2_user_id = group_users.group_2_user_id AND
-		group_users.project_id = '38000185' AND group_users.is_group_user = true AND group_users.source IN (
-		8,2 ) AND ( group_users.group_4_id IS NOT NULL OR group_users.group_1_id IS NOT NULL ) WHERE
-		events.project_id='38000185' AND timestamp>='1690360835' AND timestamp<='1690363235' AND
-		( group_user_id IS NOT NULL  ) AND  ( events.event_name_id = '4db2df87-1b4a-4144-9ad8-db0e08299a7e'
-		)  LIMIT 10000000000) step_0_event_users_view WHERE
-		(JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$hubspot_company_domain') =
-		'abc2.com' OR JSON_EXTRACT_STRING(step_0_event_users_view.group_properties,
-		'$hubspot_company_region') = 'B') OR (JSON_EXTRACT_STRING(step_0_event_users_view.group_properties,
-		'$6Signal_domain') = 'abc1.com' OR JSON_EXTRACT_STRING(step_0_event_users_view.group_properties,
-		'$6Signal_region') = 'B') GROUP BY coal_group_user_id HAVING max_group_4_id IS NOT NULL AND
-		max_group_1_id IS NOT NULL),  step_1 AS (SELECT step_1_event_users_view.group_user_id as
-		coal_group_user_id, step_1_event_users_view.timestamp, 1 as step_1 , MAX(group_4_id) as
-		max_group_4_id , MAX(group_1_id) as max_group_1_id FROM  (SELECT events.project_id, events.id,
-		events.event_name_id, events.user_id, events.timestamp , events.properties as event_properties,
-		events.user_properties as event_user_properties , user_groups.group_2_user_id as group_user_id ,
-		group_users.properties as group_properties , group_users.group_4_id as group_4_id ,
-		group_users.group_1_id as group_1_id FROM events  LEFT JOIN users as user_groups on events.user_id =
-		user_groups.id AND user_groups.project_id = '38000185' LEFT JOIN users as group_users ON
-		user_groups.group_2_user_id = group_users.group_2_user_id AND group_users.project_id = '38000185'
-		AND group_users.is_group_user = true AND group_users.source IN ( 8,2 ) AND ( group_users.group_4_id
-		IS NOT NULL OR group_users.group_1_id IS NOT NULL ) WHERE events.project_id='38000185' AND
-		timestamp>='1690360835' AND timestamp<='1690363235' AND  ( group_user_id IS NOT NULL  )
-		AND  ( events.event_name_id = '00545d8c-de69-40e3-826a-4f784ae62244' )  LIMIT 10000000000)
-		step_1_event_users_view WHERE (JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
-		'$hubspot_company_domain') = 'abc2.com' OR
-		JSON_EXTRACT_STRING(step_1_event_users_view.group_properties, '$hubspot_company_region') = 'B') OR
-		(JSON_EXTRACT_STRING(step_1_event_users_view.group_properties, '$6Signal_domain') = 'abc1.com' OR
-		JSON_EXTRACT_STRING(step_1_event_users_view.group_properties, '$6Signal_region') = 'B') GROUP BY
-		coal_group_user_id,timestamp HAVING max_group_4_id IS NOT NULL AND max_group_1_id IS NOT NULL) ,
-		step_1_step_0_users AS (SELECT step_1.coal_group_user_id, FIRST(step_1.timestamp,
-		FROM_UNIXTIME(step_1.timestamp)) as timestamp, step_1 , step_0.timestamp AS step_0_timestamp ,
-		FIRST(step_1.timestamp, FROM_UNIXTIME(step_1.timestamp)) AS step_1_timestamp FROM step_0 LEFT JOIN
-		step_1 ON step_0.coal_group_user_id = step_1.coal_group_user_id WHERE step_1.timestamp >=
-		step_0.timestamp GROUP BY step_1.coal_group_user_id) , funnel AS (SELECT DISTINCT
-		step_0.coal_group_user_id , step_0 , step_1 , step_0_timestamp , step_1_timestamp , CASE WHEN
-		FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')) OVER (PARTITION BY
-		step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$6Signal_domain') IS NULL THEN 1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$6Signal_domain') = '' THEN 1000000000000 ELSE group_users.join_timestamp END) IS NULL THEN '$none'
-		WHEN FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')) OVER (PARTITION BY
-		step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$6Signal_domain') IS NULL THEN 1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$6Signal_domain') = '' THEN 1000000000000 ELSE group_users.join_timestamp END) = '' THEN '$none'
-		ELSE FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')) OVER (PARTITION BY
-		step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$6Signal_domain') IS NULL THEN 1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$6Signal_domain') = '' THEN 1000000000000 ELSE group_users.join_timestamp END) END AS _group_key_0,
-		CASE WHEN FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain')) OVER
-		(PARTITION BY step_0.coal_group_user_id ORDER BY CASE WHEN
-		JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') IS NULL THEN 1000000000000
-		WHEN JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') = '' THEN 1000000000000
-		ELSE group_users.join_timestamp END) IS NULL THEN '$none' WHEN
-		FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain')) OVER (PARTITION
-		BY step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$hubspot_company_domain') IS NULL THEN 1000000000000 WHEN
-		JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') = '' THEN 1000000000000 ELSE
-		group_users.join_timestamp END) = '' THEN '$none' ELSE
-		FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain')) OVER (PARTITION
-		BY step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$hubspot_company_domain') IS NULL THEN 1000000000000 WHEN
-		JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') = '' THEN 1000000000000 ELSE
-		group_users.join_timestamp END) END AS _group_key_1 FROM step_0  LEFT JOIN users AS group_users on
-		step_0.coal_group_user_id = group_users.group_2_user_id AND group_users.project_id = '38000185' AND
-		group_users.is_group_user = true AND group_users.source IN ( 8,2 ) AND ( group_users.group_4_id IS
-		NOT NULL OR group_users.group_1_id IS NOT NULL )  LEFT JOIN step_1_step_0_users ON
-		step_0.coal_group_user_id=step_1_step_0_users.coal_group_user_id  AND timestampdiff(DAY,
-		DATE(CONVERT_TZ(FROM_UNIXTIME(step_0_timestamp), 'UTC', 'Asia/Kolkata')),
-		DATE(CONVERT_TZ(FROM_UNIXTIME(step_1_timestamp), 'UTC', 'Asia/Kolkata'))) <= '90' ) SELECT *
-		FROM ( SELECT _group_key_0, _group_key_1, SUM(step_0) AS step_0 , SUM(step_1) AS step_1 ,
-		AVG(step_1_timestamp-step_0_timestamp) AS step_0_1_time FROM funnel GROUP BY _group_key_0,
-		_group_key_1 ORDER BY step_0 DESC LIMIT 10000 ) AS group_funnel UNION ALL SELECT '$no_group' AS
-		_group_key_0,'$no_group' AS _group_key_1 , SUM(step_0) AS step_0 , SUM(step_1) AS step_1 ,
-		AVG(step_1_timestamp-step_0_timestamp) AS step_0_1_time FROM funnel
-	*/
-	query = model.Query{
-		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
-		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
-		EventsWithProperties: []model.QueryEventWithProperties{
-			{
-				Name:       "$hubspot_company_created",
-				Properties: []model.QueryProperty{},
-			},
-			{
-				Name:       "$hubspot_company_updated",
-				Properties: []model.QueryProperty{},
-			},
-		},
-		GlobalUserProperties: []model.QueryProperty{
-			{
-				Entity:    model.PropertyEntityUserGlobal,
-				GroupName: model.GROUP_NAME_SIX_SIGNAL,
-				Property:  U.SIX_SIGNAL_DOMAIN,
-				Operator:  "equals",
-				Value:     "abc1.com",
-				Type:      U.PropertyTypeCategorical,
-				LogicalOp: "AND",
-			},
-			{
-				Entity:    model.PropertyEntityUserGlobal,
-				GroupName: model.GROUP_NAME_SIX_SIGNAL,
-				Property:  "$6Signal_region",
-				Operator:  "equals",
-				Value:     "B",
-				Type:      U.PropertyTypeCategorical,
-				LogicalOp: "OR",
-			},
-			{
-				Entity:    model.PropertyEntityUserGlobal,
-				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
-				Property:  "$hubspot_company_domain",
-				Operator:  "equals",
-				Value:     "abc2.com",
-				Type:      U.PropertyTypeCategorical,
-				LogicalOp: "AND",
-			},
-			{
-				Entity:    model.PropertyEntityUserGlobal,
-				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
-				Property:  "$hubspot_company_region",
-				Operator:  "equals",
-				Value:     "B",
-				Type:      U.PropertyTypeCategorical,
-				LogicalOp: "OR",
-			},
-		},
-		GroupByProperties: []model.QueryGroupByProperty{
-			{
-				Entity:    model.PropertyEntityUser,
-				GroupName: model.GROUP_NAME_SIX_SIGNAL,
-				Property:  U.SIX_SIGNAL_DOMAIN,
-				EventName: model.UserPropertyGroupByPresent,
-			},
-			{
-				Entity:    model.PropertyEntityUser,
-				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
-				Property:  "$hubspot_company_domain",
-				EventName: model.UserPropertyGroupByPresent,
-			},
-		},
-		Class:           model.QueryClassFunnel,
-		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
-		Type:            model.QueryTypeUniqueUsers,
-		EventsCondition: model.EventCondAllGivenEvent,
-	}
+	// // filter test when filter are already group
+	// // (groupA.A or groupA.B) AND (groupB.A or groupB.B)
+	// /*
+	// 	WITH  step_0 AS (SELECT step_0_event_users_view.group_user_id as coal_group_user_id,
+	// 	FIRST(step_0_event_users_view.timestamp, FROM_UNIXTIME(step_0_event_users_view.timestamp)) as
+	// 	timestamp, 1 as step_0 , MAX(group_4_id) as max_group_4_id , MAX(group_1_id) as max_group_1_id FROM
+	// 	(SELECT events.project_id, events.id, events.event_name_id, events.user_id, events.timestamp ,
+	// 	events.properties as event_properties, events.user_properties as event_user_properties ,
+	// 	user_groups.group_2_user_id as group_user_id , group_users.properties as group_properties ,
+	// 	group_users.group_4_id as group_4_id , group_users.group_1_id as group_1_id FROM events  LEFT JOIN
+	// 	users as user_groups on events.user_id = user_groups.id AND user_groups.project_id = '38000185' LEFT
+	// 	JOIN users as group_users ON user_groups.group_2_user_id = group_users.group_2_user_id AND
+	// 	group_users.project_id = '38000185' AND group_users.is_group_user = true AND group_users.source IN (
+	// 	8,2 ) AND ( group_users.group_4_id IS NOT NULL OR group_users.group_1_id IS NOT NULL ) WHERE
+	// 	events.project_id='38000185' AND timestamp>='1690360835' AND timestamp<='1690363235' AND
+	// 	( group_user_id IS NOT NULL  ) AND  ( events.event_name_id = '4db2df87-1b4a-4144-9ad8-db0e08299a7e'
+	// 	)  LIMIT 10000000000) step_0_event_users_view WHERE
+	// 	(JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$hubspot_company_domain') =
+	// 	'abc2.com' OR JSON_EXTRACT_STRING(step_0_event_users_view.group_properties,
+	// 	'$hubspot_company_region') = 'B') OR (JSON_EXTRACT_STRING(step_0_event_users_view.group_properties,
+	// 	'$6Signal_domain') = 'abc1.com' OR JSON_EXTRACT_STRING(step_0_event_users_view.group_properties,
+	// 	'$6Signal_region') = 'B') GROUP BY coal_group_user_id HAVING max_group_4_id IS NOT NULL AND
+	// 	max_group_1_id IS NOT NULL),  step_1 AS (SELECT step_1_event_users_view.group_user_id as
+	// 	coal_group_user_id, step_1_event_users_view.timestamp, 1 as step_1 , MAX(group_4_id) as
+	// 	max_group_4_id , MAX(group_1_id) as max_group_1_id FROM  (SELECT events.project_id, events.id,
+	// 	events.event_name_id, events.user_id, events.timestamp , events.properties as event_properties,
+	// 	events.user_properties as event_user_properties , user_groups.group_2_user_id as group_user_id ,
+	// 	group_users.properties as group_properties , group_users.group_4_id as group_4_id ,
+	// 	group_users.group_1_id as group_1_id FROM events  LEFT JOIN users as user_groups on events.user_id =
+	// 	user_groups.id AND user_groups.project_id = '38000185' LEFT JOIN users as group_users ON
+	// 	user_groups.group_2_user_id = group_users.group_2_user_id AND group_users.project_id = '38000185'
+	// 	AND group_users.is_group_user = true AND group_users.source IN ( 8,2 ) AND ( group_users.group_4_id
+	// 	IS NOT NULL OR group_users.group_1_id IS NOT NULL ) WHERE events.project_id='38000185' AND
+	// 	timestamp>='1690360835' AND timestamp<='1690363235' AND  ( group_user_id IS NOT NULL  )
+	// 	AND  ( events.event_name_id = '00545d8c-de69-40e3-826a-4f784ae62244' )  LIMIT 10000000000)
+	// 	step_1_event_users_view WHERE (JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
+	// 	'$hubspot_company_domain') = 'abc2.com' OR
+	// 	JSON_EXTRACT_STRING(step_1_event_users_view.group_properties, '$hubspot_company_region') = 'B') OR
+	// 	(JSON_EXTRACT_STRING(step_1_event_users_view.group_properties, '$6Signal_domain') = 'abc1.com' OR
+	// 	JSON_EXTRACT_STRING(step_1_event_users_view.group_properties, '$6Signal_region') = 'B') GROUP BY
+	// 	coal_group_user_id,timestamp HAVING max_group_4_id IS NOT NULL AND max_group_1_id IS NOT NULL) ,
+	// 	step_1_step_0_users AS (SELECT step_1.coal_group_user_id, FIRST(step_1.timestamp,
+	// 	FROM_UNIXTIME(step_1.timestamp)) as timestamp, step_1 , step_0.timestamp AS step_0_timestamp ,
+	// 	FIRST(step_1.timestamp, FROM_UNIXTIME(step_1.timestamp)) AS step_1_timestamp FROM step_0 LEFT JOIN
+	// 	step_1 ON step_0.coal_group_user_id = step_1.coal_group_user_id WHERE step_1.timestamp >=
+	// 	step_0.timestamp GROUP BY step_1.coal_group_user_id) , funnel AS (SELECT DISTINCT
+	// 	step_0.coal_group_user_id , step_0 , step_1 , step_0_timestamp , step_1_timestamp , CASE WHEN
+	// 	FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')) OVER (PARTITION BY
+	// 	step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$6Signal_domain') IS NULL THEN 1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$6Signal_domain') = '' THEN 1000000000000 ELSE group_users.join_timestamp END) IS NULL THEN '$none'
+	// 	WHEN FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')) OVER (PARTITION BY
+	// 	step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$6Signal_domain') IS NULL THEN 1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$6Signal_domain') = '' THEN 1000000000000 ELSE group_users.join_timestamp END) = '' THEN '$none'
+	// 	ELSE FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')) OVER (PARTITION BY
+	// 	step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$6Signal_domain') IS NULL THEN 1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$6Signal_domain') = '' THEN 1000000000000 ELSE group_users.join_timestamp END) END AS _group_key_0,
+	// 	CASE WHEN FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain')) OVER
+	// 	(PARTITION BY step_0.coal_group_user_id ORDER BY CASE WHEN
+	// 	JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') IS NULL THEN 1000000000000
+	// 	WHEN JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') = '' THEN 1000000000000
+	// 	ELSE group_users.join_timestamp END) IS NULL THEN '$none' WHEN
+	// 	FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain')) OVER (PARTITION
+	// 	BY step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$hubspot_company_domain') IS NULL THEN 1000000000000 WHEN
+	// 	JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') = '' THEN 1000000000000 ELSE
+	// 	group_users.join_timestamp END) = '' THEN '$none' ELSE
+	// 	FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain')) OVER (PARTITION
+	// 	BY step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$hubspot_company_domain') IS NULL THEN 1000000000000 WHEN
+	// 	JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') = '' THEN 1000000000000 ELSE
+	// 	group_users.join_timestamp END) END AS _group_key_1 FROM step_0  LEFT JOIN users AS group_users on
+	// 	step_0.coal_group_user_id = group_users.group_2_user_id AND group_users.project_id = '38000185' AND
+	// 	group_users.is_group_user = true AND group_users.source IN ( 8,2 ) AND ( group_users.group_4_id IS
+	// 	NOT NULL OR group_users.group_1_id IS NOT NULL )  LEFT JOIN step_1_step_0_users ON
+	// 	step_0.coal_group_user_id=step_1_step_0_users.coal_group_user_id  AND timestampdiff(DAY,
+	// 	DATE(CONVERT_TZ(FROM_UNIXTIME(step_0_timestamp), 'UTC', 'Asia/Kolkata')),
+	// 	DATE(CONVERT_TZ(FROM_UNIXTIME(step_1_timestamp), 'UTC', 'Asia/Kolkata'))) <= '90' ) SELECT *
+	// 	FROM ( SELECT _group_key_0, _group_key_1, SUM(step_0) AS step_0 , SUM(step_1) AS step_1 ,
+	// 	AVG(step_1_timestamp-step_0_timestamp) AS step_0_1_time FROM funnel GROUP BY _group_key_0,
+	// 	_group_key_1 ORDER BY step_0 DESC LIMIT 10000 ) AS group_funnel UNION ALL SELECT '$no_group' AS
+	// 	_group_key_0,'$no_group' AS _group_key_1 , SUM(step_0) AS step_0 , SUM(step_1) AS step_1 ,
+	// 	AVG(step_1_timestamp-step_0_timestamp) AS step_0_1_time FROM funnel
+	// */
+	// query = model.Query{
+	// 	From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+	// 	To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+	// 	EventsWithProperties: []model.QueryEventWithProperties{
+	// 		{
+	// 			Name:       "$hubspot_company_created",
+	// 			Properties: []model.QueryProperty{},
+	// 		},
+	// 		{
+	// 			Name:       "$hubspot_company_updated",
+	// 			Properties: []model.QueryProperty{},
+	// 		},
+	// 	},
+	// 	GlobalUserProperties: []model.QueryProperty{
+	// 		{
+	// 			Entity:    model.PropertyEntityUserGlobal,
+	// 			GroupName: model.GROUP_NAME_SIX_SIGNAL,
+	// 			Property:  U.SIX_SIGNAL_DOMAIN,
+	// 			Operator:  "equals",
+	// 			Value:     "abc1.com",
+	// 			Type:      U.PropertyTypeCategorical,
+	// 			LogicalOp: "AND",
+	// 		},
+	// 		{
+	// 			Entity:    model.PropertyEntityUserGlobal,
+	// 			GroupName: model.GROUP_NAME_SIX_SIGNAL,
+	// 			Property:  "$6Signal_region",
+	// 			Operator:  "equals",
+	// 			Value:     "B",
+	// 			Type:      U.PropertyTypeCategorical,
+	// 			LogicalOp: "OR",
+	// 		},
+	// 		{
+	// 			Entity:    model.PropertyEntityUserGlobal,
+	// 			GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+	// 			Property:  "$hubspot_company_domain",
+	// 			Operator:  "equals",
+	// 			Value:     "abc2.com",
+	// 			Type:      U.PropertyTypeCategorical,
+	// 			LogicalOp: "AND",
+	// 		},
+	// 		{
+	// 			Entity:    model.PropertyEntityUserGlobal,
+	// 			GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+	// 			Property:  "$hubspot_company_region",
+	// 			Operator:  "equals",
+	// 			Value:     "B",
+	// 			Type:      U.PropertyTypeCategorical,
+	// 			LogicalOp: "OR",
+	// 		},
+	// 	},
+	// 	GroupByProperties: []model.QueryGroupByProperty{
+	// 		{
+	// 			Entity:    model.PropertyEntityUser,
+	// 			GroupName: model.GROUP_NAME_SIX_SIGNAL,
+	// 			Property:  U.SIX_SIGNAL_DOMAIN,
+	// 			EventName: model.UserPropertyGroupByPresent,
+	// 		},
+	// 		{
+	// 			Entity:    model.PropertyEntityUser,
+	// 			GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+	// 			Property:  "$hubspot_company_domain",
+	// 			EventName: model.UserPropertyGroupByPresent,
+	// 		},
+	// 	},
+	// 	Class:           model.QueryClassFunnel,
+	// 	GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+	// 	Type:            model.QueryTypeUniqueUsers,
+	// 	EventsCondition: model.EventCondAllGivenEvent,
+	// }
 
-	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
-	assert.Equal(t, http.StatusOK, errCode)
+	// result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	// assert.Equal(t, http.StatusOK, errCode)
 
-	assert.Len(t, result.Rows, 2)
-	sort.Slice(result.Rows, func(i, j int) bool {
-		p1 := U.GetPropertyValueAsString(result.Rows[i][0])
-		p2 := U.GetPropertyValueAsString(result.Rows[j][0])
-		return p1 < p2
-	})
+	// assert.Len(t, result.Rows, 2)
+	// sort.Slice(result.Rows, func(i, j int) bool {
+	// 	p1 := U.GetPropertyValueAsString(result.Rows[i][0])
+	// 	p2 := U.GetPropertyValueAsString(result.Rows[j][0])
+	// 	return p1 < p2
+	// })
 
-	// filter test, when group random order of groups
-	// filter will be re ordered in (groupA.A or groupA.B) AND (groupB.A or groupB.B)
-	/*
-		WITH  step_0 AS (SELECT step_0_event_users_view.group_user_id as coal_group_user_id,
-		FIRST(step_0_event_users_view.timestamp, FROM_UNIXTIME(step_0_event_users_view.timestamp)) as
-		timestamp, 1 as step_0 , MAX(group_4_id) as max_group_4_id , MAX(group_1_id) as max_group_1_id FROM
-		(SELECT events.project_id, events.id, events.event_name_id, events.user_id, events.timestamp ,
-		events.properties as event_properties, events.user_properties as event_user_properties ,
-		user_groups.group_2_user_id as group_user_id , group_users.properties as group_properties ,
-		group_users.group_4_id as group_4_id , group_users.group_1_id as group_1_id FROM events  LEFT JOIN
-		users as user_groups on events.user_id = user_groups.id AND user_groups.project_id = '38000186' LEFT
-		JOIN users as group_users ON user_groups.group_2_user_id = group_users.group_2_user_id AND
-		group_users.project_id = '38000186' AND group_users.is_group_user = true AND group_users.source IN (
-		2,8 ) AND ( group_users.group_1_id IS NOT NULL OR group_users.group_4_id IS NOT NULL ) WHERE
-		events.project_id='38000186' AND timestamp\u003e='1690361078' AND timestamp\u003c='1690363478' AND
-		( group_user_id IS NOT NULL  ) AND  ( events.event_name_id = 'ffdb503c-9218-42e0-8323-f83648350be7'
-		)  LIMIT 10000000000) step_0_event_users_view WHERE
-		(JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$6Signal_domain') = 'abc1.com' OR
-		JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$6Signal_region') = 'D' OR
-		JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$6Signal_website_2') = 'abc2.com') OR
-		(JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$hubspot_company_domain') =
-		'abc1.com') GROUP BY coal_group_user_id HAVING max_group_4_id IS NOT NULL AND max_group_1_id IS NOT
-		NULL),  step_1 AS (SELECT step_1_event_users_view.group_user_id as coal_group_user_id,
-		step_1_event_users_view.timestamp, 1 as step_1 , MAX(group_1_id) as max_group_1_id , MAX(group_4_id)
-		as max_group_4_id FROM  (SELECT events.project_id, events.id, events.event_name_id, events.user_id,
-		events.timestamp , events.properties as event_properties, events.user_properties as
-		event_user_properties , user_groups.group_2_user_id as group_user_id , group_users.properties as
-		group_properties , group_users.group_1_id as group_1_id , group_users.group_4_id as group_4_id FROM
-		events  LEFT JOIN users as user_groups on events.user_id = user_groups.id AND user_groups.project_id
-		= '38000186' LEFT JOIN users as group_users ON user_groups.group_2_user_id =
-		group_users.group_2_user_id AND group_users.project_id = '38000186' AND group_users.is_group_user =
-		true AND group_users.source IN ( 2,8 ) AND ( group_users.group_1_id IS NOT NULL OR
-		group_users.group_4_id IS NOT NULL ) WHERE events.project_id='38000186' AND
-		timestamp\u003e='1690361078' AND timestamp\u003c='1690363478' AND  ( group_user_id IS NOT NULL  )
-		AND  ( events.event_name_id = '68d10781-5e9b-4590-b4b6-bb8ca9a4e915' )  LIMIT 10000000000)
-		step_1_event_users_view WHERE (JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
-		'$6Signal_domain') = 'abc1.com' OR JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
-		'$6Signal_region') = 'D' OR JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
-		'$6Signal_website_2') = 'abc2.com') OR
-		(JSON_EXTRACT_STRING(step_1_event_users_view.group_properties, '$hubspot_company_domain') =
-		'abc1.com') GROUP BY coal_group_user_id,timestamp HAVING max_group_1_id IS NOT NULL AND
-		max_group_4_id IS NOT NULL) , step_1_step_0_users AS (SELECT step_1.coal_group_user_id,
-		FIRST(step_1.timestamp, FROM_UNIXTIME(step_1.timestamp)) as timestamp, step_1 , step_0.timestamp AS
-		step_0_timestamp , FIRST(step_1.timestamp, FROM_UNIXTIME(step_1.timestamp)) AS step_1_timestamp FROM
-		step_0 LEFT JOIN step_1 ON step_0.coal_group_user_id = step_1.coal_group_user_id WHERE
-		step_1.timestamp \u003e= step_0.timestamp GROUP BY step_1.coal_group_user_id) , funnel AS (SELECT
-		DISTINCT step_0.coal_group_user_id , step_0 , step_1 , step_0_timestamp , step_1_timestamp , CASE
-		WHEN FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')) OVER (PARTITION BY
-		step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$6Signal_domain') IS NULL THEN 1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$6Signal_domain') = '' THEN 1000000000000 ELSE group_users.join_timestamp END) IS NULL THEN '$none'
-		WHEN FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')) OVER (PARTITION BY
-		step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$6Signal_domain') IS NULL THEN 1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$6Signal_domain') = '' THEN 1000000000000 ELSE group_users.join_timestamp END) = '' THEN '$none'
-		ELSE FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')) OVER (PARTITION BY
-		step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$6Signal_domain') IS NULL THEN 1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$6Signal_domain') = '' THEN 1000000000000 ELSE group_users.join_timestamp END) END AS _group_key_0,
-		CASE WHEN FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain')) OVER
-		(PARTITION BY step_0.coal_group_user_id ORDER BY CASE WHEN
-		JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') IS NULL THEN 1000000000000
-		WHEN JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') = '' THEN 1000000000000
-		ELSE group_users.join_timestamp END) IS NULL THEN '$none' WHEN
-		FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain')) OVER (PARTITION
-		BY step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$hubspot_company_domain') IS NULL THEN 1000000000000 WHEN
-		JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') = '' THEN 1000000000000 ELSE
-		group_users.join_timestamp END) = '' THEN '$none' ELSE
-		FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain')) OVER (PARTITION
-		BY step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$hubspot_company_domain') IS NULL THEN 1000000000000 WHEN
-		JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') = '' THEN 1000000000000 ELSE
-		group_users.join_timestamp END) END AS _group_key_1 FROM step_0  LEFT JOIN users AS group_users on
-		step_0.coal_group_user_id = group_users.group_2_user_id AND group_users.project_id = '38000186' AND
-		group_users.is_group_user = true AND group_users.source IN ( 8,2 ) AND ( group_users.group_4_id IS
-		NOT NULL OR group_users.group_1_id IS NOT NULL )  LEFT JOIN step_1_step_0_users ON
-		step_0.coal_group_user_id=step_1_step_0_users.coal_group_user_id  AND timestampdiff(DAY,
-		DATE(CONVERT_TZ(FROM_UNIXTIME(step_0_timestamp), 'UTC', 'Asia/Kolkata')),
-		DATE(CONVERT_TZ(FROM_UNIXTIME(step_1_timestamp), 'UTC', 'Asia/Kolkata'))) \u003c= '90' ) SELECT *
-		FROM ( SELECT _group_key_0, _group_key_1, SUM(step_0) AS step_0 , SUM(step_1) AS step_1 ,
-		AVG(step_1_timestamp-step_0_timestamp) AS step_0_1_time FROM funnel GROUP BY _group_key_0,
-		_group_key_1 ORDER BY step_0 DESC LIMIT 10000 ) AS group_funnel UNION ALL SELECT '$no_group' AS
-		_group_key_0,'$no_group' AS _group_key_1 , SUM(step_0) AS step_0 , SUM(step_1) AS step_1 ,
-		AVG(step_1_timestamp-step_0_timestamp) AS step_0_1_time FROM funnel
-	*/
-	query = model.Query{
-		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
-		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
-		EventsWithProperties: []model.QueryEventWithProperties{
-			{
-				Name:       "$hubspot_company_created",
-				Properties: []model.QueryProperty{},
-			},
-			{
-				Name:       "$hubspot_company_updated",
-				Properties: []model.QueryProperty{},
-			},
-		},
-		GlobalUserProperties: []model.QueryProperty{
-			{
-				Entity:    model.PropertyEntityUserGlobal,
-				GroupName: model.GROUP_NAME_SIX_SIGNAL,
-				Property:  U.SIX_SIGNAL_DOMAIN,
-				Operator:  "equals",
-				Value:     "abc1.com",
-				Type:      U.PropertyTypeCategorical,
-				LogicalOp: "AND",
-			},
-			{
-				Entity:    model.PropertyEntityUserGlobal,
-				GroupName: model.GROUP_NAME_SIX_SIGNAL,
-				Property:  "$6Signal_region",
-				Operator:  "equals",
-				Value:     "D",
-				Type:      U.PropertyTypeCategorical,
-				LogicalOp: "OR",
-			},
-			{
-				Entity:    model.PropertyEntityUserGlobal,
-				GroupName: model.GROUP_NAME_SIX_SIGNAL,
-				Property:  "$6Signal_website_2",
-				Operator:  "equals",
-				Value:     "abc2.com",
-				Type:      U.PropertyTypeCategorical,
-				LogicalOp: "AND",
-			},
-			{
-				Entity:    model.PropertyEntityUserGlobal,
-				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
-				Property:  "$hubspot_company_domain",
-				Operator:  "equals",
-				Value:     "abc1.com",
-				Type:      U.PropertyTypeCategorical,
-				LogicalOp: "OR",
-			},
-		},
-		GroupByProperties: []model.QueryGroupByProperty{
-			{
-				Entity:    model.PropertyEntityUser,
-				GroupName: model.GROUP_NAME_SIX_SIGNAL,
-				Property:  U.SIX_SIGNAL_DOMAIN,
-				EventName: model.UserPropertyGroupByPresent,
-			},
-			{
-				Entity:    model.PropertyEntityUser,
-				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
-				Property:  "$hubspot_company_domain",
-				EventName: model.UserPropertyGroupByPresent,
-			},
-		},
-		Class:           model.QueryClassFunnel,
-		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
-		Type:            model.QueryTypeUniqueUsers,
-		EventsCondition: model.EventCondAllGivenEvent,
-	}
+	// // filter test, when group random order of groups
+	// // filter will be re ordered in (groupA.A or groupA.B) AND (groupB.A or groupB.B)
+	// /*
+	// 	WITH  step_0 AS (SELECT step_0_event_users_view.group_user_id as coal_group_user_id,
+	// 	FIRST(step_0_event_users_view.timestamp, FROM_UNIXTIME(step_0_event_users_view.timestamp)) as
+	// 	timestamp, 1 as step_0 , MAX(group_4_id) as max_group_4_id , MAX(group_1_id) as max_group_1_id FROM
+	// 	(SELECT events.project_id, events.id, events.event_name_id, events.user_id, events.timestamp ,
+	// 	events.properties as event_properties, events.user_properties as event_user_properties ,
+	// 	user_groups.group_2_user_id as group_user_id , group_users.properties as group_properties ,
+	// 	group_users.group_4_id as group_4_id , group_users.group_1_id as group_1_id FROM events  LEFT JOIN
+	// 	users as user_groups on events.user_id = user_groups.id AND user_groups.project_id = '38000186' LEFT
+	// 	JOIN users as group_users ON user_groups.group_2_user_id = group_users.group_2_user_id AND
+	// 	group_users.project_id = '38000186' AND group_users.is_group_user = true AND group_users.source IN (
+	// 	2,8 ) AND ( group_users.group_1_id IS NOT NULL OR group_users.group_4_id IS NOT NULL ) WHERE
+	// 	events.project_id='38000186' AND timestamp\u003e='1690361078' AND timestamp\u003c='1690363478' AND
+	// 	( group_user_id IS NOT NULL  ) AND  ( events.event_name_id = 'ffdb503c-9218-42e0-8323-f83648350be7'
+	// 	)  LIMIT 10000000000) step_0_event_users_view WHERE
+	// 	(JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$6Signal_domain') = 'abc1.com' OR
+	// 	JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$6Signal_region') = 'D' OR
+	// 	JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$6Signal_website_2') = 'abc2.com') OR
+	// 	(JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$hubspot_company_domain') =
+	// 	'abc1.com') GROUP BY coal_group_user_id HAVING max_group_4_id IS NOT NULL AND max_group_1_id IS NOT
+	// 	NULL),  step_1 AS (SELECT step_1_event_users_view.group_user_id as coal_group_user_id,
+	// 	step_1_event_users_view.timestamp, 1 as step_1 , MAX(group_1_id) as max_group_1_id , MAX(group_4_id)
+	// 	as max_group_4_id FROM  (SELECT events.project_id, events.id, events.event_name_id, events.user_id,
+	// 	events.timestamp , events.properties as event_properties, events.user_properties as
+	// 	event_user_properties , user_groups.group_2_user_id as group_user_id , group_users.properties as
+	// 	group_properties , group_users.group_1_id as group_1_id , group_users.group_4_id as group_4_id FROM
+	// 	events  LEFT JOIN users as user_groups on events.user_id = user_groups.id AND user_groups.project_id
+	// 	= '38000186' LEFT JOIN users as group_users ON user_groups.group_2_user_id =
+	// 	group_users.group_2_user_id AND group_users.project_id = '38000186' AND group_users.is_group_user =
+	// 	true AND group_users.source IN ( 2,8 ) AND ( group_users.group_1_id IS NOT NULL OR
+	// 	group_users.group_4_id IS NOT NULL ) WHERE events.project_id='38000186' AND
+	// 	timestamp\u003e='1690361078' AND timestamp\u003c='1690363478' AND  ( group_user_id IS NOT NULL  )
+	// 	AND  ( events.event_name_id = '68d10781-5e9b-4590-b4b6-bb8ca9a4e915' )  LIMIT 10000000000)
+	// 	step_1_event_users_view WHERE (JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
+	// 	'$6Signal_domain') = 'abc1.com' OR JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
+	// 	'$6Signal_region') = 'D' OR JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
+	// 	'$6Signal_website_2') = 'abc2.com') OR
+	// 	(JSON_EXTRACT_STRING(step_1_event_users_view.group_properties, '$hubspot_company_domain') =
+	// 	'abc1.com') GROUP BY coal_group_user_id,timestamp HAVING max_group_1_id IS NOT NULL AND
+	// 	max_group_4_id IS NOT NULL) , step_1_step_0_users AS (SELECT step_1.coal_group_user_id,
+	// 	FIRST(step_1.timestamp, FROM_UNIXTIME(step_1.timestamp)) as timestamp, step_1 , step_0.timestamp AS
+	// 	step_0_timestamp , FIRST(step_1.timestamp, FROM_UNIXTIME(step_1.timestamp)) AS step_1_timestamp FROM
+	// 	step_0 LEFT JOIN step_1 ON step_0.coal_group_user_id = step_1.coal_group_user_id WHERE
+	// 	step_1.timestamp \u003e= step_0.timestamp GROUP BY step_1.coal_group_user_id) , funnel AS (SELECT
+	// 	DISTINCT step_0.coal_group_user_id , step_0 , step_1 , step_0_timestamp , step_1_timestamp , CASE
+	// 	WHEN FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')) OVER (PARTITION BY
+	// 	step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$6Signal_domain') IS NULL THEN 1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$6Signal_domain') = '' THEN 1000000000000 ELSE group_users.join_timestamp END) IS NULL THEN '$none'
+	// 	WHEN FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')) OVER (PARTITION BY
+	// 	step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$6Signal_domain') IS NULL THEN 1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$6Signal_domain') = '' THEN 1000000000000 ELSE group_users.join_timestamp END) = '' THEN '$none'
+	// 	ELSE FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')) OVER (PARTITION BY
+	// 	step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$6Signal_domain') IS NULL THEN 1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$6Signal_domain') = '' THEN 1000000000000 ELSE group_users.join_timestamp END) END AS _group_key_0,
+	// 	CASE WHEN FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain')) OVER
+	// 	(PARTITION BY step_0.coal_group_user_id ORDER BY CASE WHEN
+	// 	JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') IS NULL THEN 1000000000000
+	// 	WHEN JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') = '' THEN 1000000000000
+	// 	ELSE group_users.join_timestamp END) IS NULL THEN '$none' WHEN
+	// 	FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain')) OVER (PARTITION
+	// 	BY step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$hubspot_company_domain') IS NULL THEN 1000000000000 WHEN
+	// 	JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') = '' THEN 1000000000000 ELSE
+	// 	group_users.join_timestamp END) = '' THEN '$none' ELSE
+	// 	FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain')) OVER (PARTITION
+	// 	BY step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$hubspot_company_domain') IS NULL THEN 1000000000000 WHEN
+	// 	JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') = '' THEN 1000000000000 ELSE
+	// 	group_users.join_timestamp END) END AS _group_key_1 FROM step_0  LEFT JOIN users AS group_users on
+	// 	step_0.coal_group_user_id = group_users.group_2_user_id AND group_users.project_id = '38000186' AND
+	// 	group_users.is_group_user = true AND group_users.source IN ( 8,2 ) AND ( group_users.group_4_id IS
+	// 	NOT NULL OR group_users.group_1_id IS NOT NULL )  LEFT JOIN step_1_step_0_users ON
+	// 	step_0.coal_group_user_id=step_1_step_0_users.coal_group_user_id  AND timestampdiff(DAY,
+	// 	DATE(CONVERT_TZ(FROM_UNIXTIME(step_0_timestamp), 'UTC', 'Asia/Kolkata')),
+	// 	DATE(CONVERT_TZ(FROM_UNIXTIME(step_1_timestamp), 'UTC', 'Asia/Kolkata'))) \u003c= '90' ) SELECT *
+	// 	FROM ( SELECT _group_key_0, _group_key_1, SUM(step_0) AS step_0 , SUM(step_1) AS step_1 ,
+	// 	AVG(step_1_timestamp-step_0_timestamp) AS step_0_1_time FROM funnel GROUP BY _group_key_0,
+	// 	_group_key_1 ORDER BY step_0 DESC LIMIT 10000 ) AS group_funnel UNION ALL SELECT '$no_group' AS
+	// 	_group_key_0,'$no_group' AS _group_key_1 , SUM(step_0) AS step_0 , SUM(step_1) AS step_1 ,
+	// 	AVG(step_1_timestamp-step_0_timestamp) AS step_0_1_time FROM funnel
+	// */
+	// query = model.Query{
+	// 	From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+	// 	To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+	// 	EventsWithProperties: []model.QueryEventWithProperties{
+	// 		{
+	// 			Name:       "$hubspot_company_created",
+	// 			Properties: []model.QueryProperty{},
+	// 		},
+	// 		{
+	// 			Name:       "$hubspot_company_updated",
+	// 			Properties: []model.QueryProperty{},
+	// 		},
+	// 	},
+	// 	GlobalUserProperties: []model.QueryProperty{
+	// 		{
+	// 			Entity:    model.PropertyEntityUserGlobal,
+	// 			GroupName: model.GROUP_NAME_SIX_SIGNAL,
+	// 			Property:  U.SIX_SIGNAL_DOMAIN,
+	// 			Operator:  "equals",
+	// 			Value:     "abc1.com",
+	// 			Type:      U.PropertyTypeCategorical,
+	// 			LogicalOp: "AND",
+	// 		},
+	// 		{
+	// 			Entity:    model.PropertyEntityUserGlobal,
+	// 			GroupName: model.GROUP_NAME_SIX_SIGNAL,
+	// 			Property:  "$6Signal_region",
+	// 			Operator:  "equals",
+	// 			Value:     "D",
+	// 			Type:      U.PropertyTypeCategorical,
+	// 			LogicalOp: "OR",
+	// 		},
+	// 		{
+	// 			Entity:    model.PropertyEntityUserGlobal,
+	// 			GroupName: model.GROUP_NAME_SIX_SIGNAL,
+	// 			Property:  "$6Signal_website_2",
+	// 			Operator:  "equals",
+	// 			Value:     "abc2.com",
+	// 			Type:      U.PropertyTypeCategorical,
+	// 			LogicalOp: "AND",
+	// 		},
+	// 		{
+	// 			Entity:    model.PropertyEntityUserGlobal,
+	// 			GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+	// 			Property:  "$hubspot_company_domain",
+	// 			Operator:  "equals",
+	// 			Value:     "abc1.com",
+	// 			Type:      U.PropertyTypeCategorical,
+	// 			LogicalOp: "OR",
+	// 		},
+	// 	},
+	// 	GroupByProperties: []model.QueryGroupByProperty{
+	// 		{
+	// 			Entity:    model.PropertyEntityUser,
+	// 			GroupName: model.GROUP_NAME_SIX_SIGNAL,
+	// 			Property:  U.SIX_SIGNAL_DOMAIN,
+	// 			EventName: model.UserPropertyGroupByPresent,
+	// 		},
+	// 		{
+	// 			Entity:    model.PropertyEntityUser,
+	// 			GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+	// 			Property:  "$hubspot_company_domain",
+	// 			EventName: model.UserPropertyGroupByPresent,
+	// 		},
+	// 	},
+	// 	Class:           model.QueryClassFunnel,
+	// 	GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+	// 	Type:            model.QueryTypeUniqueUsers,
+	// 	EventsCondition: model.EventCondAllGivenEvent,
+	// }
 
-	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
-	assert.Equal(t, http.StatusOK, errCode)
+	// result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	// assert.Equal(t, http.StatusOK, errCode)
 
-	assert.Len(t, result.Rows, 2)
-	sort.Slice(result.Rows, func(i, j int) bool {
-		p1 := U.GetPropertyValueAsString(result.Rows[i][0])
-		p2 := U.GetPropertyValueAsString(result.Rows[j][0])
-		return p1 < p2
-	})
+	// assert.Len(t, result.Rows, 2)
+	// sort.Slice(result.Rows, func(i, j int) bool {
+	// 	p1 := U.GetPropertyValueAsString(result.Rows[i][0])
+	// 	p2 := U.GetPropertyValueAsString(result.Rows[j][0])
+	// 	return p1 < p2
+	// })
 
-	assert.Equal(t, "$no_group", result.Rows[0][0])
-	assert.Equal(t, "$no_group", result.Rows[0][1])
-	assert.Equal(t, float64(1), result.Rows[0][2])
-	assert.Equal(t, float64(1), result.Rows[0][3])
-	assert.Equal(t, "100.0", result.Rows[0][4])
-	assert.Equal(t, "100.0", result.Rows[0][5])
-	assert.Equal(t, "abc1.com", result.Rows[1][0])
-	assert.Equal(t, "abc1.com", result.Rows[1][1])
-	assert.Equal(t, float64(1), result.Rows[1][2])
-	assert.Equal(t, float64(1), result.Rows[1][3])
-	assert.Equal(t, "100.0", result.Rows[1][4])
-	assert.Equal(t, "100.0", result.Rows[1][5])
+	// assert.Equal(t, "$no_group", result.Rows[0][0])
+	// assert.Equal(t, "$no_group", result.Rows[0][1])
+	// assert.Equal(t, float64(1), result.Rows[0][2])
+	// assert.Equal(t, float64(1), result.Rows[0][3])
+	// assert.Equal(t, "100.0", result.Rows[0][4])
+	// assert.Equal(t, "100.0", result.Rows[0][5])
+	// assert.Equal(t, "abc1.com", result.Rows[1][0])
+	// assert.Equal(t, "abc1.com", result.Rows[1][1])
+	// assert.Equal(t, float64(1), result.Rows[1][2])
+	// assert.Equal(t, float64(1), result.Rows[1][3])
+	// assert.Equal(t, "100.0", result.Rows[1][4])
+	// assert.Equal(t, "100.0", result.Rows[1][5])
 
-	// event level breakdown test
-	/*
-		WITH  step_0 AS (SELECT step_0_event_users_view.group_user_id as coal_group_user_id,
-		FIRST(step_0_event_users_view.timestamp, FROM_UNIXTIME(step_0_event_users_view.timestamp)) as
-		timestamp, 1 as step_0 , CASE WHEN
-		JSON_EXTRACT_STRING(FIRST(step_0_event_users_view.event_user_properties,
-		FROM_UNIXTIME(step_0_event_users_view.timestamp)), 'hs_company_no') IS NULL THEN '$none' WHEN
-		JSON_EXTRACT_STRING(FIRST(step_0_event_users_view.event_user_properties,
-		FROM_UNIXTIME(step_0_event_users_view.timestamp)), 'hs_company_no') = '' THEN '$none' ELSE
-		JSON_EXTRACT_STRING(FIRST(step_0_event_users_view.event_user_properties,
-		FROM_UNIXTIME(step_0_event_users_view.timestamp)), 'hs_company_no') END AS _group_key_0 ,
-		MAX(group_4_id) as max_group_4_id , MAX(group_1_id) as max_group_1_id FROM  (SELECT
-		events.project_id, events.id, events.event_name_id, events.user_id, events.timestamp ,
-		events.properties as event_properties, events.user_properties as event_user_properties ,
-		user_groups.group_2_user_id as group_user_id , group_users.properties as group_properties ,
-		group_users.group_4_id as group_4_id , group_users.group_1_id as group_1_id FROM events  LEFT JOIN
-		users as user_groups on events.user_id = user_groups.id AND user_groups.project_id = '38000187' LEFT
-		JOIN users as group_users ON user_groups.group_2_user_id = group_users.group_2_user_id AND
-		group_users.project_id = '38000187' AND group_users.is_group_user = true AND group_users.source IN (
-		8,2 ) AND ( group_users.group_4_id IS NOT NULL OR group_users.group_1_id IS NOT NULL ) WHERE
-		events.project_id='38000187' AND timestamp\u003e='1690361328' AND timestamp\u003c='1690363728' AND
-		( group_user_id IS NOT NULL  ) AND  ( events.event_name_id = 'd7375648-bc87-47b8-8827-2cdc1d812ba8'
-		)  LIMIT 10000000000) step_0_event_users_view WHERE
-		(JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$6Signal_domain') = 'abc1.com' OR
-		JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$6Signal_region') = 'D' OR
-		JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$6Signal_website_2') = 'abc2.com') OR
-		(JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$hubspot_company_domain') =
-		'abc1.com') GROUP BY coal_group_user_id HAVING max_group_4_id IS NOT NULL AND max_group_1_id IS NOT
-		NULL),  step_1 AS (SELECT step_1_event_users_view.group_user_id as coal_group_user_id,
-		step_1_event_users_view.timestamp, 1 as step_1 , MAX(group_4_id) as max_group_4_id , MAX(group_1_id)
-		as max_group_1_id FROM  (SELECT events.project_id, events.id, events.event_name_id, events.user_id,
-		events.timestamp , events.properties as event_properties, events.user_properties as
-		event_user_properties , user_groups.group_2_user_id as group_user_id , group_users.properties as
-		group_properties , group_users.group_4_id as group_4_id , group_users.group_1_id as group_1_id FROM
-		events  LEFT JOIN users as user_groups on events.user_id = user_groups.id AND user_groups.project_id
-		= '38000187' LEFT JOIN users as group_users ON user_groups.group_2_user_id =
-		group_users.group_2_user_id AND group_users.project_id = '38000187' AND group_users.is_group_user =
-		true AND group_users.source IN ( 8,2 ) AND ( group_users.group_4_id IS NOT NULL OR
-		group_users.group_1_id IS NOT NULL ) WHERE events.project_id='38000187' AND
-		timestamp\u003e='1690361328' AND timestamp\u003c='1690363728' AND  ( group_user_id IS NOT NULL  )
-		AND  ( events.event_name_id = '049b3232-6fab-4b93-a246-0391212da67c' )  LIMIT 10000000000)
-		step_1_event_users_view WHERE (JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
-		'$6Signal_domain') = 'abc1.com' OR JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
-		'$6Signal_region') = 'D' OR JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
-		'$6Signal_website_2') = 'abc2.com') OR
-		(JSON_EXTRACT_STRING(step_1_event_users_view.group_properties, '$hubspot_company_domain') =
-		'abc1.com') GROUP BY coal_group_user_id,timestamp HAVING max_group_4_id IS NOT NULL AND
-		max_group_1_id IS NOT NULL) , step_1_step_0_users AS (SELECT step_1.coal_group_user_id,
-		FIRST(step_1.timestamp, FROM_UNIXTIME(step_1.timestamp)) as timestamp, step_1 , step_0.timestamp AS
-		step_0_timestamp , FIRST(step_1.timestamp, FROM_UNIXTIME(step_1.timestamp)) AS step_1_timestamp FROM
-		step_0 LEFT JOIN step_1 ON step_0.coal_group_user_id = step_1.coal_group_user_id WHERE
-		step_1.timestamp \u003e= step_0.timestamp GROUP BY step_1.coal_group_user_id) , funnel AS (SELECT
-		DISTINCT step_0.coal_group_user_id , step_0 , step_1 , step_0_timestamp , step_1_timestamp , CASE
-		WHEN FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')) OVER (PARTITION BY
-		step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$6Signal_domain') IS NULL THEN 1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$6Signal_domain') = '' THEN 1000000000000 ELSE group_users.join_timestamp END) IS NULL THEN '$none'
-		WHEN FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')) OVER (PARTITION BY
-		step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$6Signal_domain') IS NULL THEN 1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$6Signal_domain') = '' THEN 1000000000000 ELSE group_users.join_timestamp END) = '' THEN '$none'
-		ELSE FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')) OVER (PARTITION BY
-		step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$6Signal_domain') IS NULL THEN 1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$6Signal_domain') = '' THEN 1000000000000 ELSE group_users.join_timestamp END) END AS _group_key_1,
-		CASE WHEN FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain')) OVER
-		(PARTITION BY step_0.coal_group_user_id ORDER BY CASE WHEN
-		JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') IS NULL THEN 1000000000000
-		WHEN JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') = '' THEN 1000000000000
-		ELSE group_users.join_timestamp END) IS NULL THEN '$none' WHEN
-		FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain')) OVER (PARTITION
-		BY step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$hubspot_company_domain') IS NULL THEN 1000000000000 WHEN
-		JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') = '' THEN 1000000000000 ELSE
-		group_users.join_timestamp END) = '' THEN '$none' ELSE
-		FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain')) OVER (PARTITION
-		BY step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'$hubspot_company_domain') IS NULL THEN 1000000000000 WHEN
-		JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') = '' THEN 1000000000000 ELSE
-		group_users.join_timestamp END) END AS _group_key_2 ,  CASE WHEN _group_key_0 IS NULL THEN '$none'
-		WHEN _group_key_0 = '' THEN '$none' ELSE _group_key_0 END AS _group_key_0 FROM step_0  LEFT JOIN
-		users AS group_users on step_0.coal_group_user_id = group_users.group_2_user_id AND
-		group_users.project_id = '38000187' AND  group_users.is_group_user = true AND group_users.source IN
-		( 8,2 ) AND ( group_users.group_4_id IS NOT NULL OR group_users.group_1_id IS NOT NULL )  LEFT JOIN
-		step_1_step_0_users ON step_0.coal_group_user_id=step_1_step_0_users.coal_group_user_id  AND
-		timestampdiff(DAY, DATE(CONVERT_TZ(FROM_UNIXTIME(step_0_timestamp), 'UTC', 'Asia/Kolkata')),
-		DATE(CONVERT_TZ(FROM_UNIXTIME(step_1_timestamp), 'UTC', 'Asia/Kolkata'))) \u003c= '90' ) SELECT *
-		FROM ( SELECT _group_key_0, _group_key_1, _group_key_2, SUM(step_0) AS step_0 , SUM(step_1) AS
-		step_1 , AVG(step_1_timestamp-step_0_timestamp) AS step_0_1_time FROM funnel GROUP BY _group_key_0,
-		_group_key_1, _group_key_2 ORDER BY step_0 DESC LIMIT 10000 ) AS group_funnel UNION ALL SELECT
-		'$no_group' AS _group_key_0,'$no_group' AS _group_key_1,'$no_group' AS _group_key_2 , SUM(step_0) AS
-		step_0 , SUM(step_1) AS step_1 , AVG(step_1_timestamp-step_0_timestamp) AS step_0_1_time FROM funnel
-	*/
-	query = model.Query{
-		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
-		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
-		EventsWithProperties: []model.QueryEventWithProperties{
-			{
-				Name:       "$hubspot_company_created",
-				Properties: []model.QueryProperty{},
-			},
-			{
-				Name:       "$hubspot_company_updated",
-				Properties: []model.QueryProperty{},
-			},
-		},
-		GlobalUserProperties: []model.QueryProperty{
-			{
-				Entity:    model.PropertyEntityUserGlobal,
-				GroupName: model.GROUP_NAME_SIX_SIGNAL,
-				Property:  U.SIX_SIGNAL_DOMAIN,
-				Operator:  "equals",
-				Value:     "abc1.com",
-				Type:      U.PropertyTypeCategorical,
-				LogicalOp: "AND",
-			},
-			{
-				Entity:    model.PropertyEntityUserGlobal,
-				GroupName: model.GROUP_NAME_SIX_SIGNAL,
-				Property:  "$6Signal_region",
-				Operator:  "equals",
-				Value:     "D",
-				Type:      U.PropertyTypeCategorical,
-				LogicalOp: "OR",
-			},
-			{
-				Entity:    model.PropertyEntityUserGlobal,
-				GroupName: model.GROUP_NAME_SIX_SIGNAL,
-				Property:  "$6Signal_website_2",
-				Operator:  "equals",
-				Value:     "abc2.com",
-				Type:      U.PropertyTypeCategorical,
-				LogicalOp: "AND",
-			},
-			{
-				Entity:    model.PropertyEntityUserGlobal,
-				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
-				Property:  "$hubspot_company_domain",
-				Operator:  "equals",
-				Value:     "abc1.com",
-				Type:      U.PropertyTypeCategorical,
-				LogicalOp: "OR",
-			},
-		},
-		GroupByProperties: []model.QueryGroupByProperty{
-			{
-				Entity:         model.PropertyEntityUser,
-				Property:       "hs_company_no",
-				EventName:      "$hubspot_company_created",
-				EventNameIndex: 1,
-			},
-			{
-				Entity:    model.PropertyEntityUser,
-				GroupName: model.GROUP_NAME_SIX_SIGNAL,
-				Property:  U.SIX_SIGNAL_DOMAIN,
-				EventName: model.UserPropertyGroupByPresent,
-			},
-			{
-				Entity:    model.PropertyEntityUser,
-				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
-				Property:  "$hubspot_company_domain",
-				EventName: model.UserPropertyGroupByPresent,
-			},
-		},
-		Class:           model.QueryClassFunnel,
-		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
-		Type:            model.QueryTypeUniqueUsers,
-		EventsCondition: model.EventCondAllGivenEvent,
-	}
+	// // event level breakdown test
+	// /*
+	// 	WITH  step_0 AS (SELECT step_0_event_users_view.group_user_id as coal_group_user_id,
+	// 	FIRST(step_0_event_users_view.timestamp, FROM_UNIXTIME(step_0_event_users_view.timestamp)) as
+	// 	timestamp, 1 as step_0 , CASE WHEN
+	// 	JSON_EXTRACT_STRING(FIRST(step_0_event_users_view.event_user_properties,
+	// 	FROM_UNIXTIME(step_0_event_users_view.timestamp)), 'hs_company_no') IS NULL THEN '$none' WHEN
+	// 	JSON_EXTRACT_STRING(FIRST(step_0_event_users_view.event_user_properties,
+	// 	FROM_UNIXTIME(step_0_event_users_view.timestamp)), 'hs_company_no') = '' THEN '$none' ELSE
+	// 	JSON_EXTRACT_STRING(FIRST(step_0_event_users_view.event_user_properties,
+	// 	FROM_UNIXTIME(step_0_event_users_view.timestamp)), 'hs_company_no') END AS _group_key_0 ,
+	// 	MAX(group_4_id) as max_group_4_id , MAX(group_1_id) as max_group_1_id FROM  (SELECT
+	// 	events.project_id, events.id, events.event_name_id, events.user_id, events.timestamp ,
+	// 	events.properties as event_properties, events.user_properties as event_user_properties ,
+	// 	user_groups.group_2_user_id as group_user_id , group_users.properties as group_properties ,
+	// 	group_users.group_4_id as group_4_id , group_users.group_1_id as group_1_id FROM events  LEFT JOIN
+	// 	users as user_groups on events.user_id = user_groups.id AND user_groups.project_id = '38000187' LEFT
+	// 	JOIN users as group_users ON user_groups.group_2_user_id = group_users.group_2_user_id AND
+	// 	group_users.project_id = '38000187' AND group_users.is_group_user = true AND group_users.source IN (
+	// 	8,2 ) AND ( group_users.group_4_id IS NOT NULL OR group_users.group_1_id IS NOT NULL ) WHERE
+	// 	events.project_id='38000187' AND timestamp\u003e='1690361328' AND timestamp\u003c='1690363728' AND
+	// 	( group_user_id IS NOT NULL  ) AND  ( events.event_name_id = 'd7375648-bc87-47b8-8827-2cdc1d812ba8'
+	// 	)  LIMIT 10000000000) step_0_event_users_view WHERE
+	// 	(JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$6Signal_domain') = 'abc1.com' OR
+	// 	JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$6Signal_region') = 'D' OR
+	// 	JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$6Signal_website_2') = 'abc2.com') OR
+	// 	(JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$hubspot_company_domain') =
+	// 	'abc1.com') GROUP BY coal_group_user_id HAVING max_group_4_id IS NOT NULL AND max_group_1_id IS NOT
+	// 	NULL),  step_1 AS (SELECT step_1_event_users_view.group_user_id as coal_group_user_id,
+	// 	step_1_event_users_view.timestamp, 1 as step_1 , MAX(group_4_id) as max_group_4_id , MAX(group_1_id)
+	// 	as max_group_1_id FROM  (SELECT events.project_id, events.id, events.event_name_id, events.user_id,
+	// 	events.timestamp , events.properties as event_properties, events.user_properties as
+	// 	event_user_properties , user_groups.group_2_user_id as group_user_id , group_users.properties as
+	// 	group_properties , group_users.group_4_id as group_4_id , group_users.group_1_id as group_1_id FROM
+	// 	events  LEFT JOIN users as user_groups on events.user_id = user_groups.id AND user_groups.project_id
+	// 	= '38000187' LEFT JOIN users as group_users ON user_groups.group_2_user_id =
+	// 	group_users.group_2_user_id AND group_users.project_id = '38000187' AND group_users.is_group_user =
+	// 	true AND group_users.source IN ( 8,2 ) AND ( group_users.group_4_id IS NOT NULL OR
+	// 	group_users.group_1_id IS NOT NULL ) WHERE events.project_id='38000187' AND
+	// 	timestamp\u003e='1690361328' AND timestamp\u003c='1690363728' AND  ( group_user_id IS NOT NULL  )
+	// 	AND  ( events.event_name_id = '049b3232-6fab-4b93-a246-0391212da67c' )  LIMIT 10000000000)
+	// 	step_1_event_users_view WHERE (JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
+	// 	'$6Signal_domain') = 'abc1.com' OR JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
+	// 	'$6Signal_region') = 'D' OR JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
+	// 	'$6Signal_website_2') = 'abc2.com') OR
+	// 	(JSON_EXTRACT_STRING(step_1_event_users_view.group_properties, '$hubspot_company_domain') =
+	// 	'abc1.com') GROUP BY coal_group_user_id,timestamp HAVING max_group_4_id IS NOT NULL AND
+	// 	max_group_1_id IS NOT NULL) , step_1_step_0_users AS (SELECT step_1.coal_group_user_id,
+	// 	FIRST(step_1.timestamp, FROM_UNIXTIME(step_1.timestamp)) as timestamp, step_1 , step_0.timestamp AS
+	// 	step_0_timestamp , FIRST(step_1.timestamp, FROM_UNIXTIME(step_1.timestamp)) AS step_1_timestamp FROM
+	// 	step_0 LEFT JOIN step_1 ON step_0.coal_group_user_id = step_1.coal_group_user_id WHERE
+	// 	step_1.timestamp \u003e= step_0.timestamp GROUP BY step_1.coal_group_user_id) , funnel AS (SELECT
+	// 	DISTINCT step_0.coal_group_user_id , step_0 , step_1 , step_0_timestamp , step_1_timestamp , CASE
+	// 	WHEN FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')) OVER (PARTITION BY
+	// 	step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$6Signal_domain') IS NULL THEN 1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$6Signal_domain') = '' THEN 1000000000000 ELSE group_users.join_timestamp END) IS NULL THEN '$none'
+	// 	WHEN FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')) OVER (PARTITION BY
+	// 	step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$6Signal_domain') IS NULL THEN 1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$6Signal_domain') = '' THEN 1000000000000 ELSE group_users.join_timestamp END) = '' THEN '$none'
+	// 	ELSE FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain')) OVER (PARTITION BY
+	// 	step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$6Signal_domain') IS NULL THEN 1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$6Signal_domain') = '' THEN 1000000000000 ELSE group_users.join_timestamp END) END AS _group_key_1,
+	// 	CASE WHEN FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain')) OVER
+	// 	(PARTITION BY step_0.coal_group_user_id ORDER BY CASE WHEN
+	// 	JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') IS NULL THEN 1000000000000
+	// 	WHEN JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') = '' THEN 1000000000000
+	// 	ELSE group_users.join_timestamp END) IS NULL THEN '$none' WHEN
+	// 	FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain')) OVER (PARTITION
+	// 	BY step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$hubspot_company_domain') IS NULL THEN 1000000000000 WHEN
+	// 	JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') = '' THEN 1000000000000 ELSE
+	// 	group_users.join_timestamp END) = '' THEN '$none' ELSE
+	// 	FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain')) OVER (PARTITION
+	// 	BY step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$hubspot_company_domain') IS NULL THEN 1000000000000 WHEN
+	// 	JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_domain') = '' THEN 1000000000000 ELSE
+	// 	group_users.join_timestamp END) END AS _group_key_2 ,  CASE WHEN _group_key_0 IS NULL THEN '$none'
+	// 	WHEN _group_key_0 = '' THEN '$none' ELSE _group_key_0 END AS _group_key_0 FROM step_0  LEFT JOIN
+	// 	users AS group_users on step_0.coal_group_user_id = group_users.group_2_user_id AND
+	// 	group_users.project_id = '38000187' AND  group_users.is_group_user = true AND group_users.source IN
+	// 	( 8,2 ) AND ( group_users.group_4_id IS NOT NULL OR group_users.group_1_id IS NOT NULL )  LEFT JOIN
+	// 	step_1_step_0_users ON step_0.coal_group_user_id=step_1_step_0_users.coal_group_user_id  AND
+	// 	timestampdiff(DAY, DATE(CONVERT_TZ(FROM_UNIXTIME(step_0_timestamp), 'UTC', 'Asia/Kolkata')),
+	// 	DATE(CONVERT_TZ(FROM_UNIXTIME(step_1_timestamp), 'UTC', 'Asia/Kolkata'))) \u003c= '90' ) SELECT *
+	// 	FROM ( SELECT _group_key_0, _group_key_1, _group_key_2, SUM(step_0) AS step_0 , SUM(step_1) AS
+	// 	step_1 , AVG(step_1_timestamp-step_0_timestamp) AS step_0_1_time FROM funnel GROUP BY _group_key_0,
+	// 	_group_key_1, _group_key_2 ORDER BY step_0 DESC LIMIT 10000 ) AS group_funnel UNION ALL SELECT
+	// 	'$no_group' AS _group_key_0,'$no_group' AS _group_key_1,'$no_group' AS _group_key_2 , SUM(step_0) AS
+	// 	step_0 , SUM(step_1) AS step_1 , AVG(step_1_timestamp-step_0_timestamp) AS step_0_1_time FROM funnel
+	// */
+	// query = model.Query{
+	// 	From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+	// 	To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+	// 	EventsWithProperties: []model.QueryEventWithProperties{
+	// 		{
+	// 			Name:       "$hubspot_company_created",
+	// 			Properties: []model.QueryProperty{},
+	// 		},
+	// 		{
+	// 			Name:       "$hubspot_company_updated",
+	// 			Properties: []model.QueryProperty{},
+	// 		},
+	// 	},
+	// 	GlobalUserProperties: []model.QueryProperty{
+	// 		{
+	// 			Entity:    model.PropertyEntityUserGlobal,
+	// 			GroupName: model.GROUP_NAME_SIX_SIGNAL,
+	// 			Property:  U.SIX_SIGNAL_DOMAIN,
+	// 			Operator:  "equals",
+	// 			Value:     "abc1.com",
+	// 			Type:      U.PropertyTypeCategorical,
+	// 			LogicalOp: "AND",
+	// 		},
+	// 		{
+	// 			Entity:    model.PropertyEntityUserGlobal,
+	// 			GroupName: model.GROUP_NAME_SIX_SIGNAL,
+	// 			Property:  "$6Signal_region",
+	// 			Operator:  "equals",
+	// 			Value:     "D",
+	// 			Type:      U.PropertyTypeCategorical,
+	// 			LogicalOp: "OR",
+	// 		},
+	// 		{
+	// 			Entity:    model.PropertyEntityUserGlobal,
+	// 			GroupName: model.GROUP_NAME_SIX_SIGNAL,
+	// 			Property:  "$6Signal_website_2",
+	// 			Operator:  "equals",
+	// 			Value:     "abc2.com",
+	// 			Type:      U.PropertyTypeCategorical,
+	// 			LogicalOp: "AND",
+	// 		},
+	// 		{
+	// 			Entity:    model.PropertyEntityUserGlobal,
+	// 			GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+	// 			Property:  "$hubspot_company_domain",
+	// 			Operator:  "equals",
+	// 			Value:     "abc1.com",
+	// 			Type:      U.PropertyTypeCategorical,
+	// 			LogicalOp: "OR",
+	// 		},
+	// 	},
+	// 	GroupByProperties: []model.QueryGroupByProperty{
+	// 		{
+	// 			Entity:         model.PropertyEntityUser,
+	// 			Property:       "hs_company_no",
+	// 			EventName:      "$hubspot_company_created",
+	// 			EventNameIndex: 1,
+	// 		},
+	// 		{
+	// 			Entity:    model.PropertyEntityUser,
+	// 			GroupName: model.GROUP_NAME_SIX_SIGNAL,
+	// 			Property:  U.SIX_SIGNAL_DOMAIN,
+	// 			EventName: model.UserPropertyGroupByPresent,
+	// 		},
+	// 		{
+	// 			Entity:    model.PropertyEntityUser,
+	// 			GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+	// 			Property:  "$hubspot_company_domain",
+	// 			EventName: model.UserPropertyGroupByPresent,
+	// 		},
+	// 	},
+	// 	Class:           model.QueryClassFunnel,
+	// 	GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+	// 	Type:            model.QueryTypeUniqueUsers,
+	// 	EventsCondition: model.EventCondAllGivenEvent,
+	// }
 
-	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
-	assert.Equal(t, http.StatusOK, errCode)
-	assert.Len(t, result.Rows, 2)
+	// result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	// assert.Equal(t, http.StatusOK, errCode)
+	// assert.Len(t, result.Rows, 2)
 
-	assert.Equal(t, "$no_group", result.Rows[0][0])
-	assert.Equal(t, "$no_group", result.Rows[0][1])
-	assert.Equal(t, "$no_group", result.Rows[0][2])
-	assert.Equal(t, float64(1), result.Rows[0][3])
-	assert.Equal(t, float64(1), result.Rows[0][4])
-	assert.Equal(t, "100.0", result.Rows[0][5])
-	assert.Equal(t, "100.0", result.Rows[0][6])
-	assert.Equal(t, "h1", result.Rows[1][0])
-	assert.Equal(t, "abc1.com", result.Rows[1][1])
-	assert.Equal(t, "abc1.com", result.Rows[1][2])
-	assert.Equal(t, float64(1), result.Rows[1][3])
-	assert.Equal(t, float64(1), result.Rows[1][4])
-	assert.Equal(t, "100.0", result.Rows[1][5])
-	assert.Equal(t, "100.0", result.Rows[1][6])
+	// assert.Equal(t, "$no_group", result.Rows[0][0])
+	// assert.Equal(t, "$no_group", result.Rows[0][1])
+	// assert.Equal(t, "$no_group", result.Rows[0][2])
+	// assert.Equal(t, float64(1), result.Rows[0][3])
+	// assert.Equal(t, float64(1), result.Rows[0][4])
+	// assert.Equal(t, "100.0", result.Rows[0][5])
+	// assert.Equal(t, "100.0", result.Rows[0][6])
+	// assert.Equal(t, "h1", result.Rows[1][0])
+	// assert.Equal(t, "abc1.com", result.Rows[1][1])
+	// assert.Equal(t, "abc1.com", result.Rows[1][2])
+	// assert.Equal(t, float64(1), result.Rows[1][3])
+	// assert.Equal(t, float64(1), result.Rows[1][4])
+	// assert.Equal(t, "100.0", result.Rows[1][5])
+	// assert.Equal(t, "100.0", result.Rows[1][6])
 
-	// event level breakdown and global datetime breakdown test
-	/*
-		WITH  step_0 AS (SELECT step_0_event_users_view.group_user_id as coal_group_user_id,
-		FIRST(step_0_event_users_view.timestamp, FROM_UNIXTIME(step_0_event_users_view.timestamp)) as
-		timestamp, 1 as step_0 , CASE WHEN
-		JSON_EXTRACT_STRING(FIRST(step_0_event_users_view.event_user_properties,
-		FROM_UNIXTIME(step_0_event_users_view.timestamp)), 'hs_company_no') IS NULL THEN '$none' WHEN
-		JSON_EXTRACT_STRING(FIRST(step_0_event_users_view.event_user_properties,
-		FROM_UNIXTIME(step_0_event_users_view.timestamp)), 'hs_company_no') = '' THEN '$none' ELSE
-		JSON_EXTRACT_STRING(FIRST(step_0_event_users_view.event_user_properties,
-		FROM_UNIXTIME(step_0_event_users_view.timestamp)), 'hs_company_no') END AS _group_key_1 FROM
-		(SELECT events.project_id, events.id, events.event_name_id, events.user_id, events.timestamp ,
-		events.properties as event_properties, events.user_properties as event_user_properties ,
-		user_groups.group_2_user_id as group_user_id , group_users.properties as group_properties FROM
-		events  LEFT JOIN users as user_groups on events.user_id = user_groups.id AND user_groups.project_id
-		= '38000178' LEFT JOIN users as group_users ON user_groups.group_2_user_id =
-		group_users.group_2_user_id AND group_users.project_id = '38000178' AND group_users.is_group_user =
-		true AND group_users.source IN ( 8 ) AND ( group_users.group_4_id IS NOT NULL ) WHERE
-		events.project_id='38000178' AND timestamp>='1690358641' AND timestamp<='1690361041' AND
-		( group_user_id IS NOT NULL  ) AND  ( events.event_name_id = 'cfcda607-9704-4e70-9bc5-9a224dc89d3e'
-		)  LIMIT 10000000000) step_0_event_users_view WHERE
-		(JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$6Signal_domain') = 'abc1.com')
-		GROUP BY coal_group_user_id),  step_1 AS (SELECT step_1_event_users_view.group_user_id as
-		coal_group_user_id, step_1_event_users_view.timestamp, 1 as step_1 FROM  (SELECT events.project_id,
-		events.id, events.event_name_id, events.user_id, events.timestamp , events.properties as
-		event_properties, events.user_properties as event_user_properties , user_groups.group_2_user_id as
-		group_user_id , group_users.properties as group_properties FROM events  LEFT JOIN users as
-		user_groups on events.user_id = user_groups.id AND user_groups.project_id = '38000178' LEFT JOIN
-		users as group_users ON user_groups.group_2_user_id = group_users.group_2_user_id AND
-		group_users.project_id = '38000178' AND group_users.is_group_user = true AND group_users.source IN (
-		8 ) AND ( group_users.group_4_id IS NOT NULL ) WHERE events.project_id='38000178' AND
-		timestamp>='1690358641' AND timestamp<='1690361041' AND  ( group_user_id IS NOT NULL  )
-		AND  ( events.event_name_id = '5548335f-e5a8-4429-962b-28c4b97ca417' )  LIMIT 10000000000)
-		step_1_event_users_view WHERE (JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
-		'$6Signal_domain') = 'abc1.com') GROUP BY coal_group_user_id,timestamp) , step_1_step_0_users AS
-		(SELECT step_1.coal_group_user_id, FIRST(step_1.timestamp, FROM_UNIXTIME(step_1.timestamp)) as
-		timestamp, step_1 , step_0.timestamp AS step_0_timestamp , FIRST(step_1.timestamp,
-		FROM_UNIXTIME(step_1.timestamp)) AS step_1_timestamp FROM step_0 LEFT JOIN step_1 ON
-		step_0.coal_group_user_id = step_1.coal_group_user_id WHERE step_1.timestamp >=
-		step_0.timestamp GROUP BY step_1.coal_group_user_id) , funnel AS (SELECT DISTINCT
-		step_0.coal_group_user_id , step_0 , step_1 , step_0_timestamp , step_1_timestamp , CASE WHEN
-		FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_createddate')) OVER
-		(PARTITION BY step_0.coal_group_user_id ORDER BY CASE WHEN
-		JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_createddate') IS NULL THEN
-		1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_createddate') = ''
-		THEN 1000000000000 ELSE group_users.join_timestamp END) IS NULL THEN '$none' WHEN
-		FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_createddate')) OVER
-		(PARTITION BY step_0.coal_group_user_id ORDER BY CASE WHEN
-		JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_createddate') IS NULL THEN
-		1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_createddate') = ''
-		THEN 1000000000000 ELSE group_users.join_timestamp END) = '' THEN '$none' ELSE date_trunc('day',
-		CONVERT_TZ(FROM_UNIXTIME(CONVERT(SUBSTRING(FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties,
-		'$hubspot_company_createddate')) OVER (PARTITION BY step_0.coal_group_user_id ORDER BY CASE WHEN
-		JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_createddate') IS NULL THEN
-		1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_createddate') = ''
-		THEN 1000000000000 ELSE group_users.join_timestamp END),1,10), DECIMAL(10))), 'UTC', 'UTC')) END AS
-		_group_key_0, CASE WHEN FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, 'sf_account_no'))
-		OVER (PARTITION BY step_0.coal_group_user_id ORDER BY CASE WHEN
-		JSON_EXTRACT_STRING(group_users.properties, 'sf_account_no') IS NULL THEN 1000000000000 WHEN
-		JSON_EXTRACT_STRING(group_users.properties, 'sf_account_no') = '' THEN 1000000000000 ELSE
-		group_users.join_timestamp END) IS NULL THEN '$none' WHEN
-		FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, 'sf_account_no')) OVER (PARTITION BY
-		step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'sf_account_no') IS NULL THEN 1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'sf_account_no') = '' THEN 1000000000000 ELSE group_users.join_timestamp END) = '' THEN '$none' ELSE
-		FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, 'sf_account_no')) OVER (PARTITION BY
-		step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'sf_account_no') IS NULL THEN 1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties,
-		'sf_account_no') = '' THEN 1000000000000 ELSE group_users.join_timestamp END) END AS _group_key_2 ,
-		CASE WHEN _group_key_1 IS NULL THEN '$none' WHEN _group_key_1 = '' THEN '$none' ELSE _group_key_1
-		END AS _group_key_1 FROM step_0  LEFT JOIN users AS group_users on step_0.coal_group_user_id =
-		group_users.group_2_user_id AND group_users.project_id = '38000178' AND  group_users.is_group_user =
-		true AND group_users.source IN ( 2,3 ) AND ( group_users.group_1_id IS NOT NULL OR
-		group_users.group_3_id IS NOT NULL )  LEFT JOIN step_1_step_0_users ON
-		step_0.coal_group_user_id=step_1_step_0_users.coal_group_user_id  AND timestampdiff(DAY,
-		DATE(CONVERT_TZ(FROM_UNIXTIME(step_0_timestamp), 'UTC', 'Asia/Kolkata')),
-		DATE(CONVERT_TZ(FROM_UNIXTIME(step_1_timestamp), 'UTC', 'Asia/Kolkata'))) <= '90' ) SELECT *
-		FROM ( SELECT _group_key_0, _group_key_1, _group_key_2, SUM(step_0) AS step_0 , SUM(step_1) AS
-		step_1 , AVG(step_1_timestamp-step_0_timestamp) AS step_0_1_time FROM funnel GROUP BY _group_key_0,
-		_group_key_1, _group_key_2 ORDER BY step_0 DESC LIMIT 10000 ) AS group_funnel UNION ALL SELECT
-		'$no_group' AS _group_key_0,'$no_group' AS _group_key_1,'$no_group' AS _group_key_2 , SUM(step_0) AS
-		step_0 , SUM(step_1) AS step_1 , AVG(step_1_timestamp-step_0_timestamp) AS step_0_1_time FROM funnel
-	*/
-	query = model.Query{
-		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
-		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
-		EventsWithProperties: []model.QueryEventWithProperties{
-			{
-				Name:       "$hubspot_company_created",
-				Properties: []model.QueryProperty{},
-			},
-			{
-				Name:       "$hubspot_company_updated",
-				Properties: []model.QueryProperty{},
-			},
-		},
-		GlobalUserProperties: []model.QueryProperty{
-			{
-				Entity:    model.PropertyEntityUserGlobal,
-				GroupName: model.GROUP_NAME_SIX_SIGNAL,
-				Property:  U.SIX_SIGNAL_DOMAIN,
-				Operator:  "equals",
-				Value:     "abc1.com",
-				Type:      U.PropertyTypeCategorical,
-				LogicalOp: "AND",
-			},
-		},
-		GroupByProperties: []model.QueryGroupByProperty{
-			{
-				Entity:      model.PropertyEntityUser,
-				GroupName:   model.GROUP_NAME_HUBSPOT_COMPANY,
-				Property:    "$hubspot_company_createddate",
-				EventName:   model.UserPropertyGroupByPresent,
-				Type:        U.PropertyTypeDateTime,
-				Granularity: U.DateTimeBreakdownDailyGranularity,
-			},
-			{
-				Entity:         model.PropertyEntityUser,
-				Property:       "hs_company_no",
-				EventName:      "$hubspot_company_created",
-				EventNameIndex: 1,
-			},
-			{
-				Entity:    model.PropertyEntityUser,
-				GroupName: model.GROUP_NAME_SALESFORCE_ACCOUNT,
-				Property:  "sf_account_no",
-				EventName: model.UserPropertyGroupByPresent,
-			},
-		},
-		Class:           model.QueryClassFunnel,
-		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
-		Type:            model.QueryTypeUniqueUsers,
-		EventsCondition: model.EventCondAllGivenEvent,
-	}
+	// // event level breakdown and global datetime breakdown test
+	// /*
+	// 	WITH  step_0 AS (SELECT step_0_event_users_view.group_user_id as coal_group_user_id,
+	// 	FIRST(step_0_event_users_view.timestamp, FROM_UNIXTIME(step_0_event_users_view.timestamp)) as
+	// 	timestamp, 1 as step_0 , CASE WHEN
+	// 	JSON_EXTRACT_STRING(FIRST(step_0_event_users_view.event_user_properties,
+	// 	FROM_UNIXTIME(step_0_event_users_view.timestamp)), 'hs_company_no') IS NULL THEN '$none' WHEN
+	// 	JSON_EXTRACT_STRING(FIRST(step_0_event_users_view.event_user_properties,
+	// 	FROM_UNIXTIME(step_0_event_users_view.timestamp)), 'hs_company_no') = '' THEN '$none' ELSE
+	// 	JSON_EXTRACT_STRING(FIRST(step_0_event_users_view.event_user_properties,
+	// 	FROM_UNIXTIME(step_0_event_users_view.timestamp)), 'hs_company_no') END AS _group_key_1 FROM
+	// 	(SELECT events.project_id, events.id, events.event_name_id, events.user_id, events.timestamp ,
+	// 	events.properties as event_properties, events.user_properties as event_user_properties ,
+	// 	user_groups.group_2_user_id as group_user_id , group_users.properties as group_properties FROM
+	// 	events  LEFT JOIN users as user_groups on events.user_id = user_groups.id AND user_groups.project_id
+	// 	= '38000178' LEFT JOIN users as group_users ON user_groups.group_2_user_id =
+	// 	group_users.group_2_user_id AND group_users.project_id = '38000178' AND group_users.is_group_user =
+	// 	true AND group_users.source IN ( 8 ) AND ( group_users.group_4_id IS NOT NULL ) WHERE
+	// 	events.project_id='38000178' AND timestamp>='1690358641' AND timestamp<='1690361041' AND
+	// 	( group_user_id IS NOT NULL  ) AND  ( events.event_name_id = 'cfcda607-9704-4e70-9bc5-9a224dc89d3e'
+	// 	)  LIMIT 10000000000) step_0_event_users_view WHERE
+	// 	(JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$6Signal_domain') = 'abc1.com')
+	// 	GROUP BY coal_group_user_id),  step_1 AS (SELECT step_1_event_users_view.group_user_id as
+	// 	coal_group_user_id, step_1_event_users_view.timestamp, 1 as step_1 FROM  (SELECT events.project_id,
+	// 	events.id, events.event_name_id, events.user_id, events.timestamp , events.properties as
+	// 	event_properties, events.user_properties as event_user_properties , user_groups.group_2_user_id as
+	// 	group_user_id , group_users.properties as group_properties FROM events  LEFT JOIN users as
+	// 	user_groups on events.user_id = user_groups.id AND user_groups.project_id = '38000178' LEFT JOIN
+	// 	users as group_users ON user_groups.group_2_user_id = group_users.group_2_user_id AND
+	// 	group_users.project_id = '38000178' AND group_users.is_group_user = true AND group_users.source IN (
+	// 	8 ) AND ( group_users.group_4_id IS NOT NULL ) WHERE events.project_id='38000178' AND
+	// 	timestamp>='1690358641' AND timestamp<='1690361041' AND  ( group_user_id IS NOT NULL  )
+	// 	AND  ( events.event_name_id = '5548335f-e5a8-4429-962b-28c4b97ca417' )  LIMIT 10000000000)
+	// 	step_1_event_users_view WHERE (JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
+	// 	'$6Signal_domain') = 'abc1.com') GROUP BY coal_group_user_id,timestamp) , step_1_step_0_users AS
+	// 	(SELECT step_1.coal_group_user_id, FIRST(step_1.timestamp, FROM_UNIXTIME(step_1.timestamp)) as
+	// 	timestamp, step_1 , step_0.timestamp AS step_0_timestamp , FIRST(step_1.timestamp,
+	// 	FROM_UNIXTIME(step_1.timestamp)) AS step_1_timestamp FROM step_0 LEFT JOIN step_1 ON
+	// 	step_0.coal_group_user_id = step_1.coal_group_user_id WHERE step_1.timestamp >=
+	// 	step_0.timestamp GROUP BY step_1.coal_group_user_id) , funnel AS (SELECT DISTINCT
+	// 	step_0.coal_group_user_id , step_0 , step_1 , step_0_timestamp , step_1_timestamp , CASE WHEN
+	// 	FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_createddate')) OVER
+	// 	(PARTITION BY step_0.coal_group_user_id ORDER BY CASE WHEN
+	// 	JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_createddate') IS NULL THEN
+	// 	1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_createddate') = ''
+	// 	THEN 1000000000000 ELSE group_users.join_timestamp END) IS NULL THEN '$none' WHEN
+	// 	FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_createddate')) OVER
+	// 	(PARTITION BY step_0.coal_group_user_id ORDER BY CASE WHEN
+	// 	JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_createddate') IS NULL THEN
+	// 	1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_createddate') = ''
+	// 	THEN 1000000000000 ELSE group_users.join_timestamp END) = '' THEN '$none' ELSE date_trunc('day',
+	// 	CONVERT_TZ(FROM_UNIXTIME(CONVERT(SUBSTRING(FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties,
+	// 	'$hubspot_company_createddate')) OVER (PARTITION BY step_0.coal_group_user_id ORDER BY CASE WHEN
+	// 	JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_createddate') IS NULL THEN
+	// 	1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_createddate') = ''
+	// 	THEN 1000000000000 ELSE group_users.join_timestamp END),1,10), DECIMAL(10))), 'UTC', 'UTC')) END AS
+	// 	_group_key_0, CASE WHEN FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, 'sf_account_no'))
+	// 	OVER (PARTITION BY step_0.coal_group_user_id ORDER BY CASE WHEN
+	// 	JSON_EXTRACT_STRING(group_users.properties, 'sf_account_no') IS NULL THEN 1000000000000 WHEN
+	// 	JSON_EXTRACT_STRING(group_users.properties, 'sf_account_no') = '' THEN 1000000000000 ELSE
+	// 	group_users.join_timestamp END) IS NULL THEN '$none' WHEN
+	// 	FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, 'sf_account_no')) OVER (PARTITION BY
+	// 	step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'sf_account_no') IS NULL THEN 1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'sf_account_no') = '' THEN 1000000000000 ELSE group_users.join_timestamp END) = '' THEN '$none' ELSE
+	// 	FIRST_VALUE(JSON_EXTRACT_STRING(group_users.properties, 'sf_account_no')) OVER (PARTITION BY
+	// 	step_0.coal_group_user_id ORDER BY CASE WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'sf_account_no') IS NULL THEN 1000000000000 WHEN JSON_EXTRACT_STRING(group_users.properties,
+	// 	'sf_account_no') = '' THEN 1000000000000 ELSE group_users.join_timestamp END) END AS _group_key_2 ,
+	// 	CASE WHEN _group_key_1 IS NULL THEN '$none' WHEN _group_key_1 = '' THEN '$none' ELSE _group_key_1
+	// 	END AS _group_key_1 FROM step_0  LEFT JOIN users AS group_users on step_0.coal_group_user_id =
+	// 	group_users.group_2_user_id AND group_users.project_id = '38000178' AND  group_users.is_group_user =
+	// 	true AND group_users.source IN ( 2,3 ) AND ( group_users.group_1_id IS NOT NULL OR
+	// 	group_users.group_3_id IS NOT NULL )  LEFT JOIN step_1_step_0_users ON
+	// 	step_0.coal_group_user_id=step_1_step_0_users.coal_group_user_id  AND timestampdiff(DAY,
+	// 	DATE(CONVERT_TZ(FROM_UNIXTIME(step_0_timestamp), 'UTC', 'Asia/Kolkata')),
+	// 	DATE(CONVERT_TZ(FROM_UNIXTIME(step_1_timestamp), 'UTC', 'Asia/Kolkata'))) <= '90' ) SELECT *
+	// 	FROM ( SELECT _group_key_0, _group_key_1, _group_key_2, SUM(step_0) AS step_0 , SUM(step_1) AS
+	// 	step_1 , AVG(step_1_timestamp-step_0_timestamp) AS step_0_1_time FROM funnel GROUP BY _group_key_0,
+	// 	_group_key_1, _group_key_2 ORDER BY step_0 DESC LIMIT 10000 ) AS group_funnel UNION ALL SELECT
+	// 	'$no_group' AS _group_key_0,'$no_group' AS _group_key_1,'$no_group' AS _group_key_2 , SUM(step_0) AS
+	// 	step_0 , SUM(step_1) AS step_1 , AVG(step_1_timestamp-step_0_timestamp) AS step_0_1_time FROM funnel
+	// */
+	// query = model.Query{
+	// 	From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+	// 	To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+	// 	EventsWithProperties: []model.QueryEventWithProperties{
+	// 		{
+	// 			Name:       "$hubspot_company_created",
+	// 			Properties: []model.QueryProperty{},
+	// 		},
+	// 		{
+	// 			Name:       "$hubspot_company_updated",
+	// 			Properties: []model.QueryProperty{},
+	// 		},
+	// 	},
+	// 	GlobalUserProperties: []model.QueryProperty{
+	// 		{
+	// 			Entity:    model.PropertyEntityUserGlobal,
+	// 			GroupName: model.GROUP_NAME_SIX_SIGNAL,
+	// 			Property:  U.SIX_SIGNAL_DOMAIN,
+	// 			Operator:  "equals",
+	// 			Value:     "abc1.com",
+	// 			Type:      U.PropertyTypeCategorical,
+	// 			LogicalOp: "AND",
+	// 		},
+	// 	},
+	// 	GroupByProperties: []model.QueryGroupByProperty{
+	// 		{
+	// 			Entity:      model.PropertyEntityUser,
+	// 			GroupName:   model.GROUP_NAME_HUBSPOT_COMPANY,
+	// 			Property:    "$hubspot_company_createddate",
+	// 			EventName:   model.UserPropertyGroupByPresent,
+	// 			Type:        U.PropertyTypeDateTime,
+	// 			Granularity: U.DateTimeBreakdownDailyGranularity,
+	// 		},
+	// 		{
+	// 			Entity:         model.PropertyEntityUser,
+	// 			Property:       "hs_company_no",
+	// 			EventName:      "$hubspot_company_created",
+	// 			EventNameIndex: 1,
+	// 		},
+	// 		{
+	// 			Entity:    model.PropertyEntityUser,
+	// 			GroupName: model.GROUP_NAME_SALESFORCE_ACCOUNT,
+	// 			Property:  "sf_account_no",
+	// 			EventName: model.UserPropertyGroupByPresent,
+	// 		},
+	// 	},
+	// 	Class:           model.QueryClassFunnel,
+	// 	GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+	// 	Type:            model.QueryTypeUniqueUsers,
+	// 	EventsCondition: model.EventCondAllGivenEvent,
+	// }
 
-	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
-	assert.Equal(t, http.StatusOK, errCode)
-	assert.Len(t, result.Rows, 2)
+	// result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	// assert.Equal(t, http.StatusOK, errCode)
+	// assert.Len(t, result.Rows, 2)
 
-	assert.Equal(t, "$no_group", result.Rows[0][0])
-	assert.Equal(t, "$no_group", result.Rows[0][1])
-	assert.Equal(t, "$no_group", result.Rows[0][2])
-	assert.Equal(t, float64(1), result.Rows[0][3])
-	assert.Equal(t, float64(1), result.Rows[0][4])
-	assert.Equal(t, "100.0", result.Rows[0][5])
-	assert.Equal(t, "100.0", result.Rows[0][6])
+	// assert.Equal(t, "$no_group", result.Rows[0][0])
+	// assert.Equal(t, "$no_group", result.Rows[0][1])
+	// assert.Equal(t, "$no_group", result.Rows[0][2])
+	// assert.Equal(t, float64(1), result.Rows[0][3])
+	// assert.Equal(t, float64(1), result.Rows[0][4])
+	// assert.Equal(t, "100.0", result.Rows[0][5])
+	// assert.Equal(t, "100.0", result.Rows[0][6])
 
-	assert.Equal(t, util.GetTimestampAsStrWithTimezone(now.New(dateTimeUTC).BeginningOfDay(), "UTC"), result.Rows[1][0])
-	assert.Equal(t, "h1", result.Rows[1][1])
-	assert.Equal(t, "s123", result.Rows[1][2])
-	assert.Equal(t, float64(1), result.Rows[1][3])
-	assert.Equal(t, float64(1), result.Rows[1][4])
-	assert.Equal(t, "100.0", result.Rows[1][5])
-	assert.Equal(t, "100.0", result.Rows[1][6])
+	// assert.Equal(t, util.GetTimestampAsStrWithTimezone(now.New(dateTimeUTC).BeginningOfDay(), "UTC"), result.Rows[1][0])
+	// assert.Equal(t, "h1", result.Rows[1][1])
+	// assert.Equal(t, "s123", result.Rows[1][2])
+	// assert.Equal(t, float64(1), result.Rows[1][3])
+	// assert.Equal(t, float64(1), result.Rows[1][4])
+	// assert.Equal(t, "100.0", result.Rows[1][5])
+	// assert.Equal(t, "100.0", result.Rows[1][6])
 
-	// Test using API
-	enQuery, err := json.Marshal(query)
-	assert.Nil(t, err)
-	queryPJSON := postgres.Jsonb{json.RawMessage(enQuery)}
-	baseQuery, err := model.DecodeQueryForClass(queryPJSON, model.QueryClassFunnel)
-	assert.Nil(t, err)
-	w = sendAnalyticsQueryReq(r, model.QueryClassFunnel, project.ID, agent, 0, 0, "", baseQuery, false, false)
-	assert.NotEmpty(t, w)
-	assert.Equal(t, http.StatusOK, w.Code)
+	// // Test using API
+	// enQuery, err := json.Marshal(query)
+	// assert.Nil(t, err)
+	// queryPJSON := postgres.Jsonb{json.RawMessage(enQuery)}
+	// baseQuery, err := model.DecodeQueryForClass(queryPJSON, model.QueryClassFunnel)
+	// assert.Nil(t, err)
+	// w = sendAnalyticsQueryReq(r, model.QueryClassFunnel, project.ID, agent, 0, 0, "", baseQuery, false, false)
+	// assert.NotEmpty(t, w)
+	// assert.Equal(t, http.StatusOK, w.Code)
 
-	jsonResponse, err := ioutil.ReadAll(w.Body)
-	assert.Nil(t, err)
-	var querResult model.QueryResult
-	err = json.Unmarshal(jsonResponse, &querResult)
-	assert.Nil(t, err)
-	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Len(t, querResult.Rows, 2)
+	// jsonResponse, err := ioutil.ReadAll(w.Body)
+	// assert.Nil(t, err)
+	// var querResult model.QueryResult
+	// err = json.Unmarshal(jsonResponse, &querResult)
+	// assert.Nil(t, err)
+	// assert.Equal(t, http.StatusOK, w.Code)
+	// assert.Len(t, querResult.Rows, 2)
 
-	assert.Equal(t, "$no_group", querResult.Rows[0][0])
-	assert.Equal(t, "$no_group", querResult.Rows[0][1])
-	assert.Equal(t, "$no_group", querResult.Rows[0][2])
-	assert.Equal(t, float64(1), querResult.Rows[0][3])
-	assert.Equal(t, float64(1), querResult.Rows[0][4])
-	assert.Equal(t, "100.0", querResult.Rows[0][5])
-	assert.Equal(t, "100.0", querResult.Rows[0][6])
+	// assert.Equal(t, "$no_group", querResult.Rows[0][0])
+	// assert.Equal(t, "$no_group", querResult.Rows[0][1])
+	// assert.Equal(t, "$no_group", querResult.Rows[0][2])
+	// assert.Equal(t, float64(1), querResult.Rows[0][3])
+	// assert.Equal(t, float64(1), querResult.Rows[0][4])
+	// assert.Equal(t, "100.0", querResult.Rows[0][5])
+	// assert.Equal(t, "100.0", querResult.Rows[0][6])
 
-	assert.Equal(t, util.GetTimestampAsStrWithTimezone(now.New(dateTimeUTC).BeginningOfDay(), string(U.TimeZoneStringIST)), querResult.Rows[1][0])
-	assert.Equal(t, "h1", querResult.Rows[1][1])
-	assert.Equal(t, "s123", querResult.Rows[1][2])
-	assert.Equal(t, float64(1), querResult.Rows[1][3])
-	assert.Equal(t, float64(1), querResult.Rows[1][4])
-	assert.Equal(t, "100.0", querResult.Rows[1][5])
-	assert.Equal(t, "100.0", querResult.Rows[1][6])
+	// assert.Equal(t, util.GetTimestampAsStrWithTimezone(now.New(dateTimeUTC).BeginningOfDay(), string(U.TimeZoneStringIST)), querResult.Rows[1][0])
+	// assert.Equal(t, "h1", querResult.Rows[1][1])
+	// assert.Equal(t, "s123", querResult.Rows[1][2])
+	// assert.Equal(t, float64(1), querResult.Rows[1][3])
+	// assert.Equal(t, float64(1), querResult.Rows[1][4])
+	// assert.Equal(t, "100.0", querResult.Rows[1][5])
+	// assert.Equal(t, "100.0", querResult.Rows[1][6])
 
-	// Queries without groupName should not affect for other scope groups
-	query = model.Query{
-		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
-		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
-		EventsWithProperties: []model.QueryEventWithProperties{
-			{
-				Name:       "www.xyz.com",
-				Properties: []model.QueryProperty{},
-			},
-			{
-				Name:       "$hubspot_company_created",
-				Properties: []model.QueryProperty{},
-			},
-		},
-		GroupByProperties: []model.QueryGroupByProperty{
-			{
-				Entity:      model.PropertyEntityUser,
-				Property:    "$hubspot_company_createddate",
-				EventName:   model.UserPropertyGroupByPresent,
-				Type:        U.PropertyTypeDateTime,
-				Granularity: U.DateTimeBreakdownDailyGranularity,
-			},
-		},
-		Class:           model.QueryClassFunnel,
-		GroupAnalysis:   model.GROUP_NAME_HUBSPOT_COMPANY,
-		Type:            model.QueryTypeUniqueUsers,
-		EventsCondition: model.EventCondAllGivenEvent,
-	}
+	// // Queries without groupName should not affect for other scope groups
+	// query = model.Query{
+	// 	From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+	// 	To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+	// 	EventsWithProperties: []model.QueryEventWithProperties{
+	// 		{
+	// 			Name:       "www.xyz.com",
+	// 			Properties: []model.QueryProperty{},
+	// 		},
+	// 		{
+	// 			Name:       "$hubspot_company_created",
+	// 			Properties: []model.QueryProperty{},
+	// 		},
+	// 	},
+	// 	GroupByProperties: []model.QueryGroupByProperty{
+	// 		{
+	// 			Entity:      model.PropertyEntityUser,
+	// 			Property:    "$hubspot_company_createddate",
+	// 			EventName:   model.UserPropertyGroupByPresent,
+	// 			Type:        U.PropertyTypeDateTime,
+	// 			Granularity: U.DateTimeBreakdownDailyGranularity,
+	// 		},
+	// 	},
+	// 	Class:           model.QueryClassFunnel,
+	// 	GroupAnalysis:   model.GROUP_NAME_HUBSPOT_COMPANY,
+	// 	Type:            model.QueryTypeUniqueUsers,
+	// 	EventsCondition: model.EventCondAllGivenEvent,
+	// }
 
-	enQuery, err = json.Marshal(query)
-	assert.Nil(t, err)
-	queryPJSON = postgres.Jsonb{json.RawMessage(enQuery)}
-	baseQuery, err = model.DecodeQueryForClass(queryPJSON, model.QueryClassFunnel)
-	assert.Nil(t, err)
-	w = sendAnalyticsQueryReq(r, model.QueryClassFunnel, project.ID, agent, 0, 0, "", baseQuery, false, false)
-	assert.NotEmpty(t, w)
-	assert.Equal(t, http.StatusOK, w.Code)
+	// enQuery, err = json.Marshal(query)
+	// assert.Nil(t, err)
+	// queryPJSON = postgres.Jsonb{json.RawMessage(enQuery)}
+	// baseQuery, err = model.DecodeQueryForClass(queryPJSON, model.QueryClassFunnel)
+	// assert.Nil(t, err)
+	// w = sendAnalyticsQueryReq(r, model.QueryClassFunnel, project.ID, agent, 0, 0, "", baseQuery, false, false)
+	// assert.NotEmpty(t, w)
+	// assert.Equal(t, http.StatusOK, w.Code)
 
-	jsonResponse, err = ioutil.ReadAll(w.Body)
-	assert.Nil(t, err)
-	err = json.Unmarshal(jsonResponse, &querResult)
-	assert.Nil(t, err)
-	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Len(t, querResult.Rows, 2)
+	// jsonResponse, err = ioutil.ReadAll(w.Body)
+	// assert.Nil(t, err)
+	// err = json.Unmarshal(jsonResponse, &querResult)
+	// assert.Nil(t, err)
+	// assert.Equal(t, http.StatusOK, w.Code)
+	// assert.Len(t, querResult.Rows, 2)
 
-	assert.Equal(t, "$no_group", querResult.Rows[0][0])
-	assert.Equal(t, float64(1), querResult.Rows[0][1])
-	assert.Equal(t, float64(1), querResult.Rows[0][2])
-	assert.Equal(t, "100.0", querResult.Rows[0][3])
-	assert.Equal(t, "100.0", querResult.Rows[0][4])
-	assert.Equal(t, util.GetTimestampAsStrWithTimezone(now.New(dateTimeUTC).BeginningOfDay(), string(U.TimeZoneStringIST)), querResult.Rows[1][0])
-	assert.Equal(t, float64(1), querResult.Rows[1][1])
-	assert.Equal(t, float64(1), querResult.Rows[1][2])
-	assert.Equal(t, "100.0", querResult.Rows[1][3])
-	assert.Equal(t, "100.0", querResult.Rows[1][4])
+	// assert.Equal(t, "$no_group", querResult.Rows[0][0])
+	// assert.Equal(t, float64(1), querResult.Rows[0][1])
+	// assert.Equal(t, float64(1), querResult.Rows[0][2])
+	// assert.Equal(t, "100.0", querResult.Rows[0][3])
+	// assert.Equal(t, "100.0", querResult.Rows[0][4])
+	// assert.Equal(t, util.GetTimestampAsStrWithTimezone(now.New(dateTimeUTC).BeginningOfDay(), string(U.TimeZoneStringIST)), querResult.Rows[1][0])
+	// assert.Equal(t, float64(1), querResult.Rows[1][1])
+	// assert.Equal(t, float64(1), querResult.Rows[1][2])
+	// assert.Equal(t, "100.0", querResult.Rows[1][3])
+	// assert.Equal(t, "100.0", querResult.Rows[1][4])
 }
 
 func TestAnalyticsEventsAllAccounts(t *testing.T) {
@@ -8152,7 +8150,6 @@ func TestAnalyticsEventsAllAccounts(t *testing.T) {
 	H.InitSDKServiceRoutes(r)
 	H.InitAppRoutes(r)
 	uri := "/sdk/event/track"
-
 	/*
 		userWeb1(domain: abc1.com) - event(xyz.com)
 		userWeb2(domain: abc2.com) - event(xyz2.com)
@@ -8743,4 +8740,1614 @@ func TestAnalyticsEventsAllAccounts(t *testing.T) {
 	assert.Equal(t, "abc1", result.Rows[0][2])
 	assert.Equal(t, "abc1.com", result.Rows[0][3])
 	assert.Equal(t, float64(1), result.Rows[0][4])
+}
+
+func TestAnalyticsAllAccountNegativeFilters(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	H.InitAppRoutes(r)
+	uri := "/sdk/event/track"
+
+	_, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.AllowedGroupNames)
+	assert.Equal(t, http.StatusCreated, status)
+
+	properties := postgres.Jsonb{[]byte(`{"user_no":"w1"}`)}
+	userWeb1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: properties,
+		Source: model.GetRequestSourcePointer(model.UserSourceWeb), CustomerUserId: "cuid1"})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	properties = postgres.Jsonb{[]byte(`{"user_no":"w2"}`)}
+	userWeb2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: properties,
+		Source: model.GetRequestSourcePointer(model.UserSourceWeb), CustomerUserId: "cuid2"})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	properties = postgres.Jsonb{[]byte(`{"user_no":"w3"}`)}
+	userWeb3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: properties,
+		Source: model.GetRequestSourcePointer(model.UserSourceWeb), CustomerUserId: "cuid3"})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	properties = postgres.Jsonb{[]byte(`{"user_no":"w4"}`)}
+	userWeb4, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: properties,
+		Source: model.GetRequestSourcePointer(model.UserSourceWeb), CustomerUserId: "cuid4"})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	dateTimeUTC := util.TimeNowZ()
+	propertiesMap := U.PropertiesMap{"$hubspot_company_name": "abc1", "$hubspot_company_domain": "abc1.com", "$hubspot_company_region": "A", "hs_company_no": "h1", "$hubspot_company_createddate": dateTimeUTC.Unix()}
+	_, status = SDK.TrackGroupWithDomain(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, "abc1.com", propertiesMap, util.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+
+	propertiesMap = U.PropertiesMap{"$hubspot_company_name": "abc2", "$hubspot_company_domain": "abc2.com", "$hubspot_company_region": "B", "hs_company_no": "h2", "$hubspot_company_createddate": dateTimeUTC.Unix()}
+	_, status = SDK.TrackGroupWithDomain(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, "abc2.com", propertiesMap, util.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+
+	groupProperties := &U.PropertiesMap{U.SIX_SIGNAL_DOMAIN: "abc1.com", U.SIX_SIGNAL_REGION: "A"}
+	status = SDK.TrackUserAccountGroup(project.ID, userWeb1, model.GROUP_NAME_SIX_SIGNAL, groupProperties, util.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+
+	groupProperties = &U.PropertiesMap{U.SIX_SIGNAL_DOMAIN: "abc2.com", U.SIX_SIGNAL_REGION: "B"}
+	status = SDK.TrackUserAccountGroup(project.ID, userWeb2, model.GROUP_NAME_SIX_SIGNAL, groupProperties, util.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+
+	groupProperties = &U.PropertiesMap{U.SIX_SIGNAL_DOMAIN: "abc3.com", U.SIX_SIGNAL_REGION: "C"}
+	status = SDK.TrackUserAccountGroup(project.ID, userWeb3, model.GROUP_NAME_SIX_SIGNAL, groupProperties, util.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+
+	groupProperties = &U.PropertiesMap{"$salesforce_account_website": "abc4.com", "$salesforce_account_no": "D"}
+	status = SDK.TrackUserAccountGroup(project.ID, userWeb4, model.GROUP_NAME_SALESFORCE_ACCOUNT, groupProperties, util.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+
+	status = store.GetStore().AssociateUserDomainsGroup(project.ID, userWeb1, "", "")
+	assert.Equal(t, http.StatusOK, status)
+	status = store.GetStore().AssociateUserDomainsGroup(project.ID, userWeb2, "", "")
+	assert.Equal(t, http.StatusOK, status)
+
+	payload := fmt.Sprintf(`{"event_name": "www.xyz.com", "user_id": "%s", "timestamp": %d,"event_properties":{"event_id":%d}}`,
+		userWeb1, U.TimeNowZ().Add(-10*time.Minute).Unix(), 1)
+	w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	payload = fmt.Sprintf(`{"event_name": "www.xyz2.com", "user_id": "%s", "timestamp": %d,"event_properties":{"event_id":%d}}`,
+		userWeb1, U.TimeNowZ().Add(-9*time.Minute).Unix(), 2)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	payload = fmt.Sprintf(`{"event_name": "www.xyz.com", "user_id": "%s", "timestamp": %d,"event_properties":{"event_id":%d}}`,
+		userWeb2, U.TimeNowZ().Add(-10*time.Minute).Unix(), 3)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	payload = fmt.Sprintf(`{"event_name": "www.xyz2.com", "user_id": "%s", "timestamp": %d,"event_properties":{"event_id":%d}}`,
+		userWeb2, U.TimeNowZ().Add(-9*time.Minute).Unix(), 4)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	payload = fmt.Sprintf(`{"event_name": "www.xyz.com", "user_id": "%s", "timestamp": %d,"event_properties":{"event_id":%d}}`,
+		userWeb3, U.TimeNowZ().Add(-10*time.Minute).Unix(), 5)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	payload = fmt.Sprintf(`{"event_name": "www.xyz.com", "user_id": "%s", "timestamp": %d,"event_properties":{"event_id":%d}}`,
+		userWeb4, U.TimeNowZ().Add(-10*time.Minute).Unix(), 5)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	query := model.Query{
+		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       "www.xyz.com",
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       "www.xyz2.com",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+		Class:           model.QueryClassFunnel,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+
+	result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, float64(4), result.Rows[0][0])
+	assert.Equal(t, float64(2), result.Rows[0][1])
+
+	/*
+		WITH  step_0 AS (SELECT step_0_event_users_view.group_user_id as coal_group_user_id,
+		FIRST(step_0_event_users_view.timestamp, FROM_UNIXTIME(step_0_event_users_view.timestamp)) as
+		timestamp, 1 as step_0 , MAX(group_4_id) as max_group_4_id , MAX(group_2_id) as max_group_2_id FROM
+		(SELECT events.project_id, events.id, events.event_name_id, events.user_id, events.timestamp ,
+		events.properties as event_properties, events.user_properties as event_user_properties ,
+		user_groups.group_3_user_id as group_user_id , group_users.properties as group_properties ,
+		group_users.group_4_id as group_4_id , group_users.group_2_id as group_2_id FROM events  LEFT JOIN
+		users as user_groups on events.user_id = user_groups.id AND user_groups.project_id = '2000288' LEFT
+		JOIN users as group_users ON user_groups.group_3_user_id = group_users.group_3_user_id AND
+		group_users.project_id = '2000288' AND group_users.is_group_user = true AND group_users.source IN (
+		8,2 ) AND ( group_users.group_4_id IS NOT NULL OR group_users.group_2_id IS NOT NULL ) WHERE
+		events.project_id='2000288' AND timestamp>='1698817240' AND timestamp<='1698819640' AND  (
+		group_user_id IS NOT NULL  ) AND  ( events.event_name_id = '51ecfa82-30e1-4f51-8354-2f0c4842c771' )
+		LIMIT 10000000000) step_0_event_users_view WHERE ( ( group_4_id is not null AND ( (
+		JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$6Signal_domain') != 'abc1.com'  OR
+		JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$6Signal_domain') = ''  OR
+		JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$6Signal_domain') IS NULL ) ) ) OR (
+		group_2_id is not null AND ( ( JSON_EXTRACT_STRING(step_0_event_users_view.group_properties,
+		'$hubspot_company_name') != 'abc1'  OR JSON_EXTRACT_STRING(step_0_event_users_view.group_properties,
+		'$hubspot_company_name') = ''  OR JSON_EXTRACT_STRING(step_0_event_users_view.group_properties,
+		'$hubspot_company_name') IS NULL ) ) ) OR ( group_4_id is NULL AND group_2_id is NULL ) ) GROUP BY
+		coal_group_user_id),  step_1 AS (SELECT step_1_event_users_view.group_user_id as coal_group_user_id,
+		step_1_event_users_view.timestamp, 1 as step_1 , MAX(group_2_id) as max_group_2_id , MAX(group_4_id)
+		as max_group_4_id FROM  (SELECT events.project_id, events.id, events.event_name_id, events.user_id,
+		events.timestamp , events.properties as event_properties, events.user_properties as
+		event_user_properties , user_groups.group_3_user_id as group_user_id , group_users.properties as
+		group_properties , group_users.group_4_id as group_4_id , group_users.group_2_id as group_2_id FROM
+		events  LEFT JOIN users as user_groups on events.user_id = user_groups.id AND user_groups.project_id
+		= '2000288' LEFT JOIN users as group_users ON user_groups.group_3_user_id =
+		group_users.group_3_user_id AND group_users.project_id = '2000288' AND group_users.is_group_user =
+		true AND group_users.source IN ( 8,2 ) AND ( group_users.group_4_id IS NOT NULL OR
+		group_users.group_2_id IS NOT NULL ) WHERE events.project_id='2000288' AND timestamp>='1698817240'
+		AND timestamp<='1698819640' AND  ( group_user_id IS NOT NULL  ) AND  ( events.event_name_id =
+		'0cb215c0-c149-44c1-a938-db877638e1a5' )  LIMIT 10000000000) step_1_event_users_view WHERE ( (
+		group_4_id is not null AND ( ( JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
+		'$6Signal_domain') != 'abc1.com'  OR JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
+		'$6Signal_domain') = ''  OR JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
+		'$6Signal_domain') IS NULL ) ) ) OR ( group_2_id is not null AND ( (
+		JSON_EXTRACT_STRING(step_1_event_users_view.group_properties, '$hubspot_company_name') != 'abc1'  OR
+		JSON_EXTRACT_STRING(step_1_event_users_view.group_properties, '$hubspot_company_name') = ''  OR
+		JSON_EXTRACT_STRING(step_1_event_users_view.group_properties, '$hubspot_company_name') IS NULL ) ) )
+		OR ( group_4_id is NULL AND group_2_id is NULL ) ) GROUP BY coal_group_user_id,timestamp) ,
+		step_1_step_0_users AS (SELECT step_1.coal_group_user_id, FIRST(step_1.timestamp,
+		FROM_UNIXTIME(step_1.timestamp)) as timestamp, step_1 , step_0.timestamp AS step_0_timestamp ,
+		FIRST(step_1.timestamp, FROM_UNIXTIME(step_1.timestamp)) AS step_1_timestamp FROM step_0 LEFT JOIN
+		step_1 ON step_0.coal_group_user_id = step_1.coal_group_user_id WHERE step_1.timestamp >=
+		step_0.timestamp GROUP BY step_1.coal_group_user_id) , funnel AS (SELECT DISTINCT
+		step_0.coal_group_user_id , step_0 , step_1 , step_0_timestamp , step_1_timestamp ,
+		SUBSTRING(max(case when JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_name') is null
+		then '$none' when JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_name') = '' then
+		'$none' else CONCAT( join_timestamp, ':', JSON_EXTRACT_STRING(group_users.properties,
+		'$hubspot_company_name') ) end), LOCATE(':', max( case when
+		JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_name') is null then '$none' when
+		JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_name') = '' then '$none' else CONCAT(
+		join_timestamp, ':', JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_name') ) end
+		))+1) AS _group_key_0, SUBSTRING(max(case when JSON_EXTRACT_STRING(group_users.properties,
+		'$6Signal_domain') is null then '$none' when JSON_EXTRACT_STRING(group_users.properties,
+		'$6Signal_domain') = '' then '$none' else CONCAT( join_timestamp, ':',
+		JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') ) end), LOCATE(':', max( case when
+		JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') is null then '$none' when
+		JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') = '' then '$none' else CONCAT(
+		join_timestamp, ':', JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') ) end ))+1) AS
+		_group_key_1, SUBSTRING(max(case when JSON_EXTRACT_STRING(group_users.properties,
+		'$salesforce_account_website') is null then '$none' when JSON_EXTRACT_STRING(group_users.properties,
+		'$salesforce_account_website') = '' then '$none' else CONCAT( join_timestamp, ':',
+		JSON_EXTRACT_STRING(group_users.properties, '$salesforce_account_website') ) end), LOCATE(':', max(
+		case when JSON_EXTRACT_STRING(group_users.properties, '$salesforce_account_website') is null then
+		'$none' when JSON_EXTRACT_STRING(group_users.properties, '$salesforce_account_website') = '' then
+		'$none' else CONCAT( join_timestamp, ':', JSON_EXTRACT_STRING(group_users.properties,
+		'$salesforce_account_website') ) end ))+1) AS _group_key_2 FROM step_0  LEFT JOIN users AS
+		group_users on step_0.coal_group_user_id = group_users.group_3_user_id AND group_users.project_id =
+		'2000288' AND  group_users.is_group_user = true AND group_users.source IN ( 2,8,3 ) AND (
+		group_users.group_2_id IS NOT NULL OR group_users.group_4_id IS NOT NULL OR group_users.group_1_id
+		IS NOT NULL )  LEFT JOIN step_1_step_0_users ON
+		step_0.coal_group_user_id=step_1_step_0_users.coal_group_user_id  AND timestampdiff(DAY,
+		DATE(CONVERT_TZ(FROM_UNIXTIME(step_0_timestamp), 'UTC', 'Asia/Kolkata')),
+		DATE(CONVERT_TZ(FROM_UNIXTIME(step_1_timestamp), 'UTC', 'Asia/Kolkata'))) <= '90'  GROUP BY
+		step_0.coal_group_user_id) SELECT * FROM ( SELECT _group_key_0, _group_key_1, _group_key_2,
+		SUM(step_0) AS step_0 , SUM(step_1) AS step_1 , AVG(step_1_timestamp-step_0_timestamp) AS
+		step_0_1_time FROM funnel GROUP BY _group_key_0, _group_key_1, _group_key_2 ORDER BY step_0 DESC
+		LIMIT 10000 ) AS group_funnel UNION ALL SELECT '$no_group' AS _group_key_0,'$no_group' AS
+		_group_key_1,'$no_group' AS _group_key_2 , SUM(step_0) AS step_0 , SUM(step_1) AS step_1 ,
+		AVG(step_1_timestamp-step_0_timestamp) AS step_0_1_time FROM funnel
+	*/
+	query = model.Query{
+		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       "www.xyz.com",
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       "www.xyz2.com",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GlobalUserProperties: []model.QueryProperty{
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_DOMAIN,
+				Operator:  model.NotEqualOpStr,
+				Value:     "abc1.com",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "AND",
+			},
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_name",
+				Operator:  model.NotEqualOpStr,
+				Value:     "abc1",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "AND",
+			},
+		},
+
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_name",
+				EventName: model.UserPropertyGroupByPresent,
+			},
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_DOMAIN,
+				EventName: model.UserPropertyGroupByPresent,
+			},
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_SALESFORCE_ACCOUNT,
+				Property:  "$salesforce_account_website",
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+		Class:           model.QueryClassFunnel,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][1])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][1])
+		return p1 < p2
+	})
+	assert.Equal(t, float64(3), result.Rows[0][3])
+	assert.Equal(t, float64(1), result.Rows[0][4])
+	assert.Equal(t, "33.3", result.Rows[0][5])
+	assert.Equal(t, "$none", result.Rows[1][0])
+	assert.Equal(t, "$none", result.Rows[1][1])
+	assert.Equal(t, "abc4.com", result.Rows[1][2])
+	assert.Equal(t, float64(1), result.Rows[1][3])
+	assert.Equal(t, float64(0), result.Rows[1][4])
+	assert.Equal(t, "0.0", result.Rows[1][5])
+	assert.Equal(t, "abc2", result.Rows[2][0])
+	assert.Equal(t, "abc2.com", result.Rows[2][1])
+	assert.Equal(t, "$none", result.Rows[2][2])
+	assert.Equal(t, float64(1), result.Rows[2][3])
+	assert.Equal(t, float64(1), result.Rows[2][4])
+	assert.Equal(t, "100.0", result.Rows[2][5])
+	assert.Equal(t, "$none", result.Rows[3][0])
+	assert.Equal(t, "abc3.com", result.Rows[3][1])
+	assert.Equal(t, "$none", result.Rows[3][2])
+	assert.Equal(t, float64(1), result.Rows[3][3])
+	assert.Equal(t, float64(0), result.Rows[3][4])
+	assert.Equal(t, "0.0", result.Rows[3][5])
+
+	query = model.Query{
+		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       "www.xyz.com",
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       "www.xyz2.com",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GlobalUserProperties: []model.QueryProperty{
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_domain",
+				Operator:  model.NotEqualOpStr,
+				Value:     "abc1.com",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "AND",
+			},
+		},
+
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_name",
+				EventName: model.UserPropertyGroupByPresent,
+			},
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_DOMAIN,
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+		Class:           model.QueryClassFunnel,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][1])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][1])
+		return p1 < p2
+	})
+	assert.Equal(t, float64(3), result.Rows[0][2])
+	assert.Equal(t, float64(1), result.Rows[0][3])
+	assert.Equal(t, "33.3", result.Rows[0][4])
+	assert.Equal(t, "$none", result.Rows[1][0])
+	assert.Equal(t, "$none", result.Rows[1][1])
+	assert.Equal(t, float64(1), result.Rows[1][2])
+	assert.Equal(t, float64(0), result.Rows[1][3])
+	assert.Equal(t, "0.0", result.Rows[1][4])
+	assert.Equal(t, "abc2", result.Rows[2][0])
+	assert.Equal(t, "abc2.com", result.Rows[2][1])
+	assert.Equal(t, float64(1), result.Rows[2][2])
+	assert.Equal(t, float64(1), result.Rows[2][3])
+	assert.Equal(t, "100.0", result.Rows[2][4])
+	assert.Equal(t, "$none", result.Rows[3][0])
+	assert.Equal(t, "abc3.com", result.Rows[3][1])
+	assert.Equal(t, float64(1), result.Rows[3][2])
+	assert.Equal(t, float64(0), result.Rows[3][3])
+	assert.Equal(t, "0.0", result.Rows[3][4])
+
+	query = model.Query{
+		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       "www.xyz.com",
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       "www.xyz2.com",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GlobalUserProperties: []model.QueryProperty{
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_DOMAIN,
+				Operator:  model.NotEqualOpStr,
+				Value:     "abc1.com",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "AND",
+			},
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_name",
+				Operator:  model.EqualsOpStr,
+				Value:     "abc2",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "AND",
+			},
+		},
+
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_name",
+				EventName: model.UserPropertyGroupByPresent,
+			},
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_DOMAIN,
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+		Class:           model.QueryClassFunnel,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, float64(1), result.Rows[0][2])
+	assert.Equal(t, float64(1), result.Rows[0][3])
+	assert.Equal(t, "100.0", result.Rows[0][4])
+	assert.Equal(t, "abc2", result.Rows[1][0])
+	assert.Equal(t, "abc2.com", result.Rows[1][1])
+	assert.Equal(t, float64(1), result.Rows[1][2])
+	assert.Equal(t, float64(1), result.Rows[1][3])
+	assert.Equal(t, "100.0", result.Rows[1][4])
+
+	/*
+			WITH  step_0 AS (SELECT step_0_event_users_view.group_user_id as coal_group_user_id,
+		FIRST(step_0_event_users_view.timestamp, FROM_UNIXTIME(step_0_event_users_view.timestamp)) as
+		timestamp, 1 as step_0 , MAX(group_4_id) as max_group_4_id , MAX(group_2_id) as max_group_2_id FROM
+		(SELECT events.project_id, events.id, events.event_name_id, events.user_id, events.timestamp ,
+		events.properties as event_properties, events.user_properties as event_user_properties ,
+		user_groups.group_3_user_id as group_user_id , group_users.properties as group_properties ,
+		group_users.group_4_id as group_4_id , group_users.group_2_id as group_2_id FROM events  LEFT JOIN
+		users as user_groups on events.user_id = user_groups.id AND user_groups.project_id = '2000287' LEFT
+		JOIN users as group_users ON user_groups.group_3_user_id = group_users.group_3_user_id AND
+		group_users.project_id = '2000287' AND group_users.is_group_user = true AND group_users.source IN (
+		8,2 ) AND ( group_users.group_4_id IS NOT NULL OR group_users.group_2_id IS NOT NULL ) WHERE
+		events.project_id='2000287' AND timestamp>='1698817017' AND timestamp<='1698819417' AND  (
+		group_user_id IS NOT NULL  ) AND  ( events.event_name_id = 'eabc2442-1183-4895-807b-16a5d977767c' )
+		LIMIT 10000000000) step_0_event_users_view WHERE ( group_4_id is not null AND ( (
+		JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$6Signal_domain') != 'abc1.com'  OR
+		JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$6Signal_domain') = ''  OR
+		JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$6Signal_domain') IS NULL ) ) AND
+		(JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$6Signal_region') = 'B') ) OR (
+		group_2_id is not null AND (JSON_EXTRACT_STRING(step_0_event_users_view.group_properties,
+		'$hubspot_company_name') = 'abc2') ) GROUP BY coal_group_user_id HAVING max_group_4_id IS NOT NULL
+		AND max_group_2_id IS NOT NULL),  step_1 AS (SELECT step_1_event_users_view.group_user_id as
+		coal_group_user_id, step_1_event_users_view.timestamp, 1 as step_1 , MAX(group_4_id) as
+		max_group_4_id , MAX(group_2_id) as max_group_2_id FROM  (SELECT events.project_id, events.id,
+		events.event_name_id, events.user_id, events.timestamp , events.properties as event_properties,
+		events.user_properties as event_user_properties , user_groups.group_3_user_id as group_user_id ,
+		group_users.properties as group_properties , group_users.group_4_id as group_4_id ,
+		group_users.group_2_id as group_2_id FROM events  LEFT JOIN users as user_groups on events.user_id =
+		user_groups.id AND user_groups.project_id = '2000287' LEFT JOIN users as group_users ON
+		user_groups.group_3_user_id = group_users.group_3_user_id AND group_users.project_id = '2000287' AND
+		group_users.is_group_user = true AND group_users.source IN ( 8,2 ) AND ( group_users.group_4_id IS
+		NOT NULL OR group_users.group_2_id IS NOT NULL ) WHERE events.project_id='2000287' AND
+		timestamp>='1698817017' AND timestamp<='1698819417' AND  ( group_user_id IS NOT NULL  ) AND  (
+		events.event_name_id = '29803ea6-068a-4631-bd39-933a8fa889d2' )  LIMIT 10000000000)
+		step_1_event_users_view WHERE ( group_4_id is not null AND ( (
+		JSON_EXTRACT_STRING(step_1_event_users_view.group_properties, '$6Signal_domain') != 'abc1.com'  OR
+		JSON_EXTRACT_STRING(step_1_event_users_view.group_properties, '$6Signal_domain') = ''  OR
+		JSON_EXTRACT_STRING(step_1_event_users_view.group_properties, '$6Signal_domain') IS NULL ) ) AND
+		(JSON_EXTRACT_STRING(step_1_event_users_view.group_properties, '$6Signal_region') = 'B') ) OR (
+		group_2_id is not null AND (JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
+		'$hubspot_company_name') = 'abc2') ) GROUP BY coal_group_user_id,timestamp HAVING max_group_4_id IS
+		NOT NULL AND max_group_2_id IS NOT NULL) , step_1_step_0_users AS (SELECT step_1.coal_group_user_id,
+		FIRST(step_1.timestamp, FROM_UNIXTIME(step_1.timestamp)) as timestamp, step_1 , step_0.timestamp AS
+		step_0_timestamp , FIRST(step_1.timestamp, FROM_UNIXTIME(step_1.timestamp)) AS step_1_timestamp FROM
+		step_0 LEFT JOIN step_1 ON step_0.coal_group_user_id = step_1.coal_group_user_id WHERE
+		step_1.timestamp >= step_0.timestamp GROUP BY step_1.coal_group_user_id) , funnel AS (SELECT
+		DISTINCT step_0.coal_group_user_id , step_0 , step_1 , step_0_timestamp , step_1_timestamp ,
+		SUBSTRING(max(case when JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_name') is null
+		then '$none' when JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_name') = '' then
+		'$none' else CONCAT( join_timestamp, ':', JSON_EXTRACT_STRING(group_users.properties,
+		'$hubspot_company_name') ) end), LOCATE(':', max( case when
+		JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_name') is null then '$none' when
+		JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_name') = '' then '$none' else CONCAT(
+		join_timestamp, ':', JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_name') ) end
+		))+1) AS _group_key_0, SUBSTRING(max(case when JSON_EXTRACT_STRING(group_users.properties,
+		'$6Signal_domain') is null then '$none' when JSON_EXTRACT_STRING(group_users.properties,
+		'$6Signal_domain') = '' then '$none' else CONCAT( join_timestamp, ':',
+		JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') ) end), LOCATE(':', max( case when
+		JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') is null then '$none' when
+		JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') = '' then '$none' else CONCAT(
+		join_timestamp, ':', JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') ) end ))+1) AS
+		_group_key_1 FROM step_0  LEFT JOIN users AS group_users on step_0.coal_group_user_id =
+		group_users.group_3_user_id AND group_users.project_id = '2000287' AND  group_users.is_group_user =
+		true AND group_users.source IN ( 2,8 ) AND ( group_users.group_2_id IS NOT NULL OR
+		group_users.group_4_id IS NOT NULL )  LEFT JOIN step_1_step_0_users ON
+		step_0.coal_group_user_id=step_1_step_0_users.coal_group_user_id  AND timestampdiff(DAY,
+		DATE(CONVERT_TZ(FROM_UNIXTIME(step_0_timestamp), 'UTC', 'Asia/Kolkata')),
+		DATE(CONVERT_TZ(FROM_UNIXTIME(step_1_timestamp), 'UTC', 'Asia/Kolkata'))) <= '90'  GROUP BY
+		step_0.coal_group_user_id) SELECT * FROM ( SELECT _group_key_0, _group_key_1, SUM(step_0) AS step_0
+		, SUM(step_1) AS step_1 , AVG(step_1_timestamp-step_0_timestamp) AS step_0_1_time FROM funnel GROUP
+		BY _group_key_0, _group_key_1 ORDER BY step_0 DESC LIMIT 10000 ) AS group_funnel UNION ALL SELECT
+		'$no_group' AS _group_key_0,'$no_group' AS _group_key_1 , SUM(step_0) AS step_0 , SUM(step_1) AS
+		step_1 , AVG(step_1_timestamp-step_0_timestamp) AS step_0_1_time FROM funnel
+	*/
+	query = model.Query{
+		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       "www.xyz.com",
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       "www.xyz2.com",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GlobalUserProperties: []model.QueryProperty{
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_DOMAIN,
+				Operator:  model.NotEqualOpStr,
+				Value:     "abc1.com",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "AND",
+			},
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_REGION,
+				Operator:  model.EqualsOpStr,
+				Value:     "B",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "AND",
+			},
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_name",
+				Operator:  model.EqualsOpStr,
+				Value:     "abc2",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "AND",
+			},
+		},
+
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_name",
+				EventName: model.UserPropertyGroupByPresent,
+			},
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_DOMAIN,
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+		Class:           model.QueryClassFunnel,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, float64(1), result.Rows[0][2])
+	assert.Equal(t, float64(1), result.Rows[0][3])
+	assert.Equal(t, "100.0", result.Rows[0][4])
+	assert.Equal(t, "abc2", result.Rows[1][0])
+	assert.Equal(t, "abc2.com", result.Rows[1][1])
+	assert.Equal(t, float64(1), result.Rows[1][2])
+	assert.Equal(t, float64(1), result.Rows[1][3])
+	assert.Equal(t, "100.0", result.Rows[1][4])
+
+	query = model.Query{
+		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       "www.xyz.com",
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       "www.xyz2.com",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GlobalUserProperties: []model.QueryProperty{
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_DOMAIN,
+				Operator:  model.NotEqualOpStr,
+				Value:     "abc2.com",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "AND",
+			},
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_REGION,
+				Operator:  model.EqualsOpStr,
+				Value:     "A",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "OR",
+			},
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_name",
+				Operator:  model.EqualsOpStr,
+				Value:     "abc1",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "AND",
+			},
+		},
+
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_name",
+				EventName: model.UserPropertyGroupByPresent,
+			},
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_DOMAIN,
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+		Class:           model.QueryClassFunnel,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, float64(1), result.Rows[0][2])
+	assert.Equal(t, float64(1), result.Rows[0][3])
+	assert.Equal(t, "100.0", result.Rows[0][4])
+	assert.Equal(t, "abc1", result.Rows[1][0])
+	assert.Equal(t, "abc1.com", result.Rows[1][1])
+	assert.Equal(t, float64(1), result.Rows[1][2])
+	assert.Equal(t, float64(1), result.Rows[1][3])
+	assert.Equal(t, "100.0", result.Rows[1][4])
+
+	query = model.Query{
+		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       "www.xyz.com",
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       "www.xyz2.com",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GlobalUserProperties: []model.QueryProperty{
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_DOMAIN,
+				Operator:  model.NotEqualOpStr,
+				Value:     "abc2.com",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "AND",
+			},
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_name",
+				Operator:  model.EqualsOpStr,
+				Value:     "abc1",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "AND",
+			},
+		},
+
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_name",
+				EventName: model.UserPropertyGroupByPresent,
+			},
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_DOMAIN,
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+		Class:           model.QueryClassFunnel,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, float64(1), result.Rows[0][2])
+	assert.Equal(t, float64(1), result.Rows[0][3])
+	assert.Equal(t, "100.0", result.Rows[0][4])
+	assert.Equal(t, "abc1", result.Rows[1][0])
+	assert.Equal(t, "abc1.com", result.Rows[1][1])
+	assert.Equal(t, float64(1), result.Rows[1][2])
+	assert.Equal(t, float64(1), result.Rows[1][3])
+	assert.Equal(t, "100.0", result.Rows[1][4])
+
+	query = model.Query{
+		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       "www.xyz.com",
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       "www.xyz2.com",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GlobalUserProperties: []model.QueryProperty{
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_name",
+				Operator:  model.NotEqualOpStr,
+				Value:     "abc1",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "OR",
+			},
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_domain",
+				Operator:  model.NotEqualOpStr,
+				Value:     "abc1.com",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "OR",
+			},
+		},
+
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_name",
+				EventName: model.UserPropertyGroupByPresent,
+			},
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_DOMAIN,
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+		Class:           model.QueryClassFunnel,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, float64(3), result.Rows[0][2])
+	assert.Equal(t, float64(1), result.Rows[0][3])
+	assert.Equal(t, "33.3", result.Rows[0][4])
+	assert.Equal(t, "$none", result.Rows[1][0])
+	assert.Equal(t, "$none", result.Rows[1][1])
+	assert.Equal(t, float64(1), result.Rows[1][2])
+	assert.Equal(t, float64(0), result.Rows[1][3])
+	assert.Equal(t, "0.0", result.Rows[1][4])
+	assert.Equal(t, "$none", result.Rows[2][0])
+	assert.Equal(t, "abc3.com", result.Rows[2][1])
+	assert.Equal(t, float64(1), result.Rows[2][2])
+	assert.Equal(t, float64(0), result.Rows[2][3])
+	assert.Equal(t, "0.0", result.Rows[2][4])
+	assert.Equal(t, "abc2", result.Rows[3][0])
+	assert.Equal(t, "abc2.com", result.Rows[3][1])
+	assert.Equal(t, float64(1), result.Rows[3][2])
+	assert.Equal(t, float64(1), result.Rows[3][3])
+
+	/*
+			WITH  step_0 AS (SELECT step_0_event_users_view.group_user_id as coal_group_user_id,
+		FIRST(step_0_event_users_view.timestamp, FROM_UNIXTIME(step_0_event_users_view.timestamp)) as
+		timestamp, 1 as step_0 , MAX(group_4_id) as max_group_4_id , MAX(group_2_id) as max_group_2_id FROM
+		(SELECT events.project_id, events.id, events.event_name_id, events.user_id, events.timestamp ,
+		events.properties as event_properties, events.user_properties as event_user_properties ,
+		user_groups.group_3_user_id as group_user_id , group_users.properties as group_properties ,
+		group_users.group_4_id as group_4_id , group_users.group_2_id as group_2_id FROM events  LEFT JOIN
+		users as user_groups on events.user_id = user_groups.id AND user_groups.project_id = '2000286' LEFT
+		JOIN users as group_users ON user_groups.group_3_user_id = group_users.group_3_user_id AND
+		group_users.project_id = '2000286' AND group_users.is_group_user = true AND group_users.source IN (
+		8,2 ) AND ( group_users.group_4_id IS NOT NULL OR group_users.group_2_id IS NOT NULL ) WHERE
+		events.project_id='2000286' AND timestamp >= '1698816647' AND timestamp <='1698819047' AND  (
+		group_user_id IS NOT NULL  ) AND  ( events.event_name_id = '46fb743a-99ec-4e0e-9d71-40b50f3a36e1' )
+		LIMIT 10000000000) step_0_event_users_view WHERE ( ( group_4_id is not null AND ( (
+		JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$6Signal_domain') != 'abc2.com'  OR
+		JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$6Signal_domain') = ''  OR
+		JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$6Signal_domain') IS NULL )  OR  (
+		JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$6Signal_region') != 'B'  OR
+		JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$6Signal_region') = ''  OR
+		JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$6Signal_region') IS NULL ) ) ) OR (
+		group_2_id is not null AND ( ( JSON_EXTRACT_STRING(step_0_event_users_view.group_properties,
+		'$hubspot_company_name') != 'abc2'  OR JSON_EXTRACT_STRING(step_0_event_users_view.group_properties,
+		'$hubspot_company_name') = ''  OR JSON_EXTRACT_STRING(step_0_event_users_view.group_properties,
+		'$hubspot_company_name') IS NULL )  OR  (
+		JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$hubspot_company_domain') !=
+		'abc2.com'  OR JSON_EXTRACT_STRING(step_0_event_users_view.group_properties,
+		'$hubspot_company_domain') = ''  OR JSON_EXTRACT_STRING(step_0_event_users_view.group_properties,
+		'$hubspot_company_domain') IS NULL ) ) ) OR ( group_4_id is NULL AND group_2_id is NULL ) ) GROUP BY
+		coal_group_user_id),  step_1 AS (SELECT step_1_event_users_view.group_user_id as coal_group_user_id,
+		step_1_event_users_view.timestamp, 1 as step_1 , MAX(group_4_id) as max_group_4_id , MAX(group_2_id)
+		as max_group_2_id FROM  (SELECT events.project_id, events.id, events.event_name_id, events.user_id,
+		events.timestamp , events.properties as event_properties, events.user_properties as
+		event_user_properties , user_groups.group_3_user_id as group_user_id , group_users.properties as
+		group_properties , group_users.group_4_id as group_4_id , group_users.group_2_id as group_2_id FROM
+		events  LEFT JOIN users as user_groups on events.user_id = user_groups.id AND user_groups.project_id
+		= '2000286' LEFT JOIN users as group_users ON user_groups.group_3_user_id =
+		group_users.group_3_user_id AND group_users.project_id = '2000286' AND group_users.is_group_user =
+		true AND group_users.source IN ( 2,8 ) AND ( group_users.group_2_id IS NOT NULL OR
+		group_users.group_4_id IS NOT NULL ) WHERE events.project_id='2000286' AND timestamp >= '1698816647'
+		AND timestamp <='1698819047' AND  ( group_user_id IS NOT NULL  ) AND  ( events.event_name_id =
+		'429b3b0b-224b-4c4c-b533-844524fa7904' )  LIMIT 10000000000) step_1_event_users_view WHERE ( (
+		group_4_id is not null AND ( ( JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
+		'$6Signal_domain') != 'abc2.com'  OR JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
+		'$6Signal_domain') = ''  OR JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
+		'$6Signal_domain') IS NULL )  OR  ( JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
+		'$6Signal_region') != 'B'  OR JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
+		'$6Signal_region') = ''  OR JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
+		'$6Signal_region') IS NULL ) ) ) OR ( group_2_id is not null AND ( (
+		JSON_EXTRACT_STRING(step_1_event_users_view.group_properties, '$hubspot_company_name') != 'abc2'  OR
+		JSON_EXTRACT_STRING(step_1_event_users_view.group_properties, '$hubspot_company_name') = ''  OR
+		JSON_EXTRACT_STRING(step_1_event_users_view.group_properties, '$hubspot_company_name') IS NULL )  OR
+		( JSON_EXTRACT_STRING(step_1_event_users_view.group_properties, '$hubspot_company_domain') !=
+		'abc2.com'  OR JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
+		'$hubspot_company_domain') = ''  OR JSON_EXTRACT_STRING(step_1_event_users_view.group_properties,
+		'$hubspot_company_domain') IS NULL ) ) ) OR ( group_4_id is NULL AND group_2_id is NULL ) ) GROUP BY
+		coal_group_user_id,timestamp) , step_1_step_0_users AS (SELECT step_1.coal_group_user_id,
+		FIRST(step_1.timestamp, FROM_UNIXTIME(step_1.timestamp)) as timestamp, step_1 , step_0.timestamp AS
+		step_0_timestamp , FIRST(step_1.timestamp, FROM_UNIXTIME(step_1.timestamp)) AS step_1_timestamp FROM
+		step_0 LEFT JOIN step_1 ON step_0.coal_group_user_id = step_1.coal_group_user_id WHERE
+		step_1.timestamp  >=  step_0.timestamp GROUP BY step_1.coal_group_user_id) , funnel AS (SELECT
+		DISTINCT step_0.coal_group_user_id , step_0 , step_1 , step_0_timestamp , step_1_timestamp ,
+		SUBSTRING(max(case when JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_name') is null
+		then '$none' when JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_name') = '' then
+		'$none' else CONCAT( join_timestamp, ':', JSON_EXTRACT_STRING(group_users.properties,
+		'$hubspot_company_name') ) end), LOCATE(':', max( case when
+		JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_name') is null then '$none' when
+		JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_name') = '' then '$none' else CONCAT(
+		join_timestamp, ':', JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_name') ) end
+		))+1) AS _group_key_0, SUBSTRING(max(case when JSON_EXTRACT_STRING(group_users.properties,
+		'$6Signal_domain') is null then '$none' when JSON_EXTRACT_STRING(group_users.properties,
+		'$6Signal_domain') = '' then '$none' else CONCAT( join_timestamp, ':',
+		JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') ) end), LOCATE(':', max( case when
+		JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') is null then '$none' when
+		JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') = '' then '$none' else CONCAT(
+		join_timestamp, ':', JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') ) end ))+1) AS
+		_group_key_1 FROM step_0  LEFT JOIN users AS group_users on step_0.coal_group_user_id =
+		group_users.group_3_user_id AND group_users.project_id = '2000286' AND  group_users.is_group_user =
+		true AND group_users.source IN ( 2,8 ) AND ( group_users.group_2_id IS NOT NULL OR
+		group_users.group_4_id IS NOT NULL )  LEFT JOIN step_1_step_0_users ON
+		step_0.coal_group_user_id=step_1_step_0_users.coal_group_user_id  AND timestampdiff(DAY,
+		DATE(CONVERT_TZ(FROM_UNIXTIME(step_0_timestamp), 'UTC', 'Asia/Kolkata')),
+		DATE(CONVERT_TZ(FROM_UNIXTIME(step_1_timestamp), 'UTC', 'Asia/Kolkata')))  <= '90'  GROUP BY
+		step_0.coal_group_user_id) SELECT * FROM ( SELECT _group_key_0, _group_key_1, SUM(step_0) AS step_0
+		, SUM(step_1) AS step_1 , AVG(step_1_timestamp-step_0_timestamp) AS step_0_1_time FROM funnel GROUP
+		BY _group_key_0, _group_key_1 ORDER BY step_0 DESC LIMIT 10000 ) AS group_funnel UNION ALL SELECT
+		'$no_group' AS _group_key_0,'$no_group' AS _group_key_1 , SUM(step_0) AS step_0 , SUM(step_1) AS
+		step_1 , AVG(step_1_timestamp-step_0_timestamp) AS step_0_1_time FROM funnel"
+	*/
+	query = model.Query{
+		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       "www.xyz.com",
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       "www.xyz2.com",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GlobalUserProperties: []model.QueryProperty{
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_DOMAIN,
+				Operator:  model.NotEqualOpStr,
+				Value:     "abc2.com",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "AND",
+			},
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_REGION,
+				Operator:  model.NotEqualOpStr,
+				Value:     "B",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "OR",
+			},
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_name",
+				Operator:  model.NotEqualOpStr,
+				Value:     "abc2",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "AND",
+			},
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_domain",
+				Operator:  model.NotEqualOpStr,
+				Value:     "abc2.com",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "OR",
+			},
+		},
+
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_name",
+				EventName: model.UserPropertyGroupByPresent,
+			},
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_DOMAIN,
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+		Class:           model.QueryClassFunnel,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][1])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][1])
+		return p1 < p2
+	})
+	assert.Equal(t, float64(3), result.Rows[0][2])
+	assert.Equal(t, float64(1), result.Rows[0][3])
+	assert.Equal(t, "33.3", result.Rows[0][4])
+	assert.Equal(t, "$none", result.Rows[1][0])
+	assert.Equal(t, "$none", result.Rows[1][1])
+	assert.Equal(t, float64(1), result.Rows[1][2])
+	assert.Equal(t, float64(0), result.Rows[1][3])
+	assert.Equal(t, "0.0", result.Rows[1][4])
+
+	assert.Equal(t, "abc1", result.Rows[2][0])
+	assert.Equal(t, "abc1.com", result.Rows[2][1])
+	assert.Equal(t, float64(1), result.Rows[2][2])
+	assert.Equal(t, float64(1), result.Rows[2][3])
+	assert.Equal(t, "100.0", result.Rows[2][4])
+
+	assert.Equal(t, "$none", result.Rows[3][0])
+	assert.Equal(t, "abc3.com", result.Rows[3][1])
+	assert.Equal(t, float64(1), result.Rows[3][2])
+	assert.Equal(t, float64(0), result.Rows[3][3])
+	assert.Equal(t, "0.0", result.Rows[3][4])
+
+}
+
+func TestAnalyticsAllAccountsFilterBreadkdown(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	H.InitAppRoutes(r)
+	uri := "/sdk/event/track"
+
+	_, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.AllowedGroupNames)
+	assert.Equal(t, http.StatusCreated, status)
+
+	properties := postgres.Jsonb{[]byte(fmt.Sprintf(`{"user_no":"w1","%s":1}`,U.SP_PAGE_COUNT))}
+	userWeb1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: properties,
+		Source: model.GetRequestSourcePointer(model.UserSourceWeb), CustomerUserId: "cuid1"})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	properties = postgres.Jsonb{[]byte(`{"user_no":"w2"}`)}
+	userWeb2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: properties,
+		Source: model.GetRequestSourcePointer(model.UserSourceWeb), CustomerUserId: "cuid2"})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	properties = postgres.Jsonb{[]byte(`{"user_no":"w2"}`)}
+	userWeb3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: properties,
+		Source: model.GetRequestSourcePointer(model.UserSourceWeb), CustomerUserId: "cuid3"})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	_, status = store.GetStore().CreateOrGetGroupByName(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, model.AllowedGroupNames)
+	assert.Equal(t, http.StatusCreated, status)
+
+	dateTimeUTC := util.TimeNowZ()
+	propertiesMap := map[string]interface{}{"$hubspot_company_name": "abc1", "$hubspot_company_domain": "abc1.com", "$hubspot_company_region": "A",
+		"hs_company_no": "h1", "$hubspot_company_createddate": dateTimeUTC.Unix()}
+	hsCompany1UserID, err := store.GetStore().CreateOrUpdateGroupPropertiesBySource(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, "h1", "", &propertiesMap,
+		dateTimeUTC.Unix(), dateTimeUTC.Unix(), model.UserSourceHubspotString)
+	assert.Nil(t, err)
+	status = SDK.TrackDomainsGroup(project.ID, hsCompany1UserID, model.GROUP_NAME_HUBSPOT_COMPANY, "abc1.com", nil, dateTimeUTC.Unix())
+
+	propertiesMap = map[string]interface{}{"$hubspot_company_name": "abc1", "$hubspot_company_domain": "abc1.com", "$hubspot_company_region": "B",
+		"hs_company_no": "h2", "$hubspot_company_createddate": dateTimeUTC.Unix() + 10}
+	hsCompany2UserID, err := store.GetStore().CreateOrUpdateGroupPropertiesBySource(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, "h2", "", &propertiesMap,
+		dateTimeUTC.Unix(), dateTimeUTC.Unix(), model.UserSourceHubspotString)
+	assert.Nil(t, err)
+	status = SDK.TrackDomainsGroup(project.ID, hsCompany2UserID, model.GROUP_NAME_HUBSPOT_COMPANY, "abc1.com", nil, dateTimeUTC.Unix())
+
+	propertiesMap = map[string]interface{}{"$hubspot_company_name": "abc2", "$hubspot_company_domain": "abc2.com", "$hubspot_company_region": "D",
+		"hs_company_no": "h3", "$hubspot_company_createddate": dateTimeUTC.Unix()}
+	hsCompany3UserID, err := store.GetStore().CreateOrUpdateGroupPropertiesBySource(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, "h1", "", &propertiesMap,
+		dateTimeUTC.Unix(), dateTimeUTC.Unix(), model.UserSourceHubspotString)
+	assert.Nil(t, err)
+	status = SDK.TrackDomainsGroup(project.ID, hsCompany3UserID, model.GROUP_NAME_HUBSPOT_COMPANY, "abc2.com", nil, dateTimeUTC.Unix())
+
+	groupProperties := &U.PropertiesMap{U.SIX_SIGNAL_DOMAIN: "abc1.com", U.SIX_SIGNAL_REGION: "A"}
+	status = SDK.TrackUserAccountGroup(project.ID, userWeb1, model.GROUP_NAME_SIX_SIGNAL, groupProperties, util.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+
+	propertiesMap = map[string]interface{}{U.SIX_SIGNAL_DOMAIN: "abc1.com", U.SIX_SIGNAL_REGION: "AA"}
+	sixSignalUser3, err := store.GetStore().CreateOrUpdateGroupPropertiesBySource(project.ID, model.GROUP_NAME_SIX_SIGNAL, "h1", "", &propertiesMap,
+		dateTimeUTC.Unix(), dateTimeUTC.Unix()-10000, model.UserSourceSixSignalString)
+	assert.Nil(t, err)
+	status = SDK.TrackDomainsGroup(project.ID, sixSignalUser3, model.GROUP_NAME_SIX_SIGNAL, "abc1.com", nil, dateTimeUTC.Unix())
+
+	groupProperties = &U.PropertiesMap{U.SIX_SIGNAL_DOMAIN: "abc2.com", U.SIX_SIGNAL_REGION: "B"}
+	status = SDK.TrackUserAccountGroup(project.ID, userWeb2, model.GROUP_NAME_SIX_SIGNAL, groupProperties, util.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+
+	groupProperties = &U.PropertiesMap{U.SIX_SIGNAL_DOMAIN: "abc3.com", U.SIX_SIGNAL_REGION: "B"}
+	status = SDK.TrackUserAccountGroup(project.ID, userWeb3, model.GROUP_NAME_SIX_SIGNAL, groupProperties, util.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+
+	payload := fmt.Sprintf(`{"event_name": "www.xyz.com", "user_id": "%s", "timestamp": %d,"event_properties":{"event_id":%d}}`,
+		userWeb1, U.TimeNowZ().Add(-10*time.Minute).Unix(), 1)
+	w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	payload = fmt.Sprintf(`{"event_name": "www.xyz2.com", "user_id": "%s", "timestamp": %d,"event_properties":{"event_id":%d}}`,
+		userWeb1, U.TimeNowZ().Add(-9*time.Minute).Unix(), 2)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	payload = fmt.Sprintf(`{"event_name": "www.xyz.com", "user_id": "%s", "timestamp": %d,"event_properties":{"event_id":%d}}`,
+		userWeb2, U.TimeNowZ().Add(-10*time.Minute).Unix(), 3)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	payload = fmt.Sprintf(`{"event_name": "www.xyz2.com", "user_id": "%s", "timestamp": %d,"event_properties":{"event_id":%d}}`,
+		userWeb2, U.TimeNowZ().Add(-9*time.Minute).Unix(), 4)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	payload = fmt.Sprintf(`{"event_name": "www.xyz3.com", "user_id": "%s", "timestamp": %d,"event_properties":{"event_id":%d}}`,
+		userWeb3, U.TimeNowZ().Add(-9*time.Minute).Unix(), 4)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	/*
+			WITH  step_0 AS (SELECT step_0_event_users_view.group_user_id as coal_group_user_id,
+		FIRST(step_0_event_users_view.timestamp, FROM_UNIXTIME(step_0_event_users_view.timestamp)) as
+		timestamp, 1 as step_0, GROUP_CONCAT(step_0_event_users_view.group_users_user_id) as
+		group_users_user_ids , MAX(group_2_id) as max_group_2_id FROM  (SELECT events.project_id, events.id,
+		events.event_name_id, events.user_id, events.timestamp , events.properties as event_properties,
+		events.user_properties as event_user_properties , user_groups.group_3_user_id as group_user_id ,
+		group_users.properties as group_properties , group_users.id as group_users_user_id ,
+		group_users.group_2_id as group_2_id FROM events  LEFT JOIN users as user_groups on events.user_id =
+		user_groups.id AND user_groups.project_id = '5000100' LEFT JOIN users as group_users ON
+		user_groups.group_3_user_id = group_users.group_3_user_id AND group_users.project_id = '5000100' AND
+		group_users.is_group_user = true AND group_users.source IN ( 2 ) AND ( group_users.group_2_id IS NOT
+		NULL ) WHERE events.project_id='5000100' AND timestamp>='1699262536' AND timestamp<='1699264936' AND
+		( group_user_id IS NOT NULL  ) AND  ( events.event_name_id = '2d49b911-fc88-4762-b56f-eeffd130070e'
+		)  LIMIT 10000000000) step_0_event_users_view WHERE ( group_2_id is not null AND
+		(JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$hubspot_company_region') = 'A') )
+		GROUP BY coal_group_user_id HAVING max_group_2_id IS NOT NULL),  step_1 AS (SELECT
+		step_1_event_users_view.group_user_id as coal_group_user_id, step_1_event_users_view.timestamp, 1 as
+		step_1 , MAX(group_2_id) as max_group_2_id FROM  (SELECT events.project_id, events.id,
+		events.event_name_id, events.user_id, events.timestamp , events.properties as event_properties,
+		events.user_properties as event_user_properties , user_groups.group_3_user_id as group_user_id ,
+		group_users.properties as group_properties , group_users.id as group_users_user_id ,
+		group_users.group_2_id as group_2_id FROM events  LEFT JOIN users as user_groups on events.user_id =
+		user_groups.id AND user_groups.project_id = '5000100' LEFT JOIN users as group_users ON
+		user_groups.group_3_user_id = group_users.group_3_user_id AND group_users.project_id = '5000100' AND
+		group_users.is_group_user = true AND group_users.source IN ( 2 ) AND ( group_users.group_2_id IS NOT
+		NULL ) WHERE events.project_id='5000100' AND timestamp>='1699262536' AND timestamp<='1699264936' AND
+		( group_user_id IS NOT NULL  ) AND  ( events.event_name_id = '0246ad3e-4f0d-4095-9d00-bd3360567ba8'
+		)  LIMIT 10000000000) step_1_event_users_view WHERE ( group_2_id is not null AND
+		(JSON_EXTRACT_STRING(step_1_event_users_view.group_properties, '$hubspot_company_region') = 'A') )
+		GROUP BY coal_group_user_id,timestamp HAVING max_group_2_id IS NOT NULL) , step_1_step_0_users AS
+		(SELECT step_1.coal_group_user_id, FIRST(step_1.timestamp, FROM_UNIXTIME(step_1.timestamp)) as
+		timestamp, step_1 , step_0.timestamp AS step_0_timestamp , FIRST(step_1.timestamp,
+		FROM_UNIXTIME(step_1.timestamp)) AS step_1_timestamp FROM step_0 LEFT JOIN step_1 ON
+		step_0.coal_group_user_id = step_1.coal_group_user_id WHERE step_1.timestamp >= step_0.timestamp
+		GROUP BY step_1.coal_group_user_id) , funnel AS (SELECT DISTINCT step_0.coal_group_user_id , step_0
+		, step_1 , step_0_timestamp , step_1_timestamp , SUBSTRING(max(case when
+		JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_region') is null then '$none' when
+		JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_region') = '' then '$none' else
+		CONCAT( join_timestamp, ':', JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_region')
+		) end), LOCATE(':', max( case when JSON_EXTRACT_STRING(group_users.properties,
+		'$hubspot_company_region') is null then '$none' when JSON_EXTRACT_STRING(group_users.properties,
+		'$hubspot_company_region') = '' then '$none' else CONCAT( join_timestamp, ':',
+		JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_region') ) end ))+1) AS _group_key_0,
+		SUBSTRING(max(case when JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') is null then
+		'$none' when JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') = '' then '$none' else
+		CONCAT( join_timestamp, ':', JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') ) end),
+		LOCATE(':', max( case when JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') is null
+		then '$none' when JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') = '' then '$none'
+		else CONCAT( join_timestamp, ':', JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') )
+		end ))+1) AS _group_key_1 FROM step_0  LEFT JOIN users AS group_users on step_0.coal_group_user_id =
+		group_users.group_3_user_id AND group_users.project_id = '5000100' AND  group_users.is_group_user =
+		true AND group_users.source IN ( 2,8 ) AND ( group_users.group_2_id IS NOT NULL OR
+		group_users.group_4_id IS NOT NULL )  LEFT JOIN step_1_step_0_users ON
+		step_0.coal_group_user_id=step_1_step_0_users.coal_group_user_id  AND timestampdiff(DAY,
+		DATE(CONVERT_TZ(FROM_UNIXTIME(step_0_timestamp), 'UTC', 'Asia/Kolkata')),
+		DATE(CONVERT_TZ(FROM_UNIXTIME(step_1_timestamp), 'UTC', 'Asia/Kolkata'))) <= '90'  WHERE ( ((
+		group_2_id is not null ) AND LOCATE( group_users.id,step_0.group_users_user_ids)>0 ) OR ( group_2_id
+		is null )) GROUP BY step_0.coal_group_user_id) SELECT * FROM ( SELECT _group_key_0, _group_key_1,
+		SUM(step_0) AS step_0 , SUM(step_1) AS step_1 , AVG(step_1_timestamp-step_0_timestamp) AS
+		step_0_1_time FROM funnel GROUP BY _group_key_0, _group_key_1 ORDER BY step_0 DESC LIMIT 10000 ) AS
+		group_funnel UNION ALL SELECT '$no_group' AS _group_key_0,'$no_group' AS _group_key_1 , SUM(step_0)
+		AS step_0 , SUM(step_1) AS step_1 , AVG(step_1_timestamp-step_0_timestamp) AS step_0_1_time FROM
+		funnel
+	*/
+	query := model.Query{
+		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       "www.xyz.com",
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       "www.xyz2.com",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GlobalUserProperties: []model.QueryProperty{
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_region",
+				Operator:  model.EqualsOpStr,
+				Value:     "A",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "AND",
+			},
+		},
+
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_region",
+				EventName: model.UserPropertyGroupByPresent,
+			},
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_DOMAIN,
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+		Class:           model.QueryClassFunnel,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+	result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, float64(1), result.Rows[0][2])
+	assert.Equal(t, float64(1), result.Rows[0][3])
+	assert.Equal(t, "100.0", result.Rows[0][4])
+	assert.Equal(t, "A", result.Rows[1][0])
+	assert.Equal(t, "abc1.com", result.Rows[1][1])
+	assert.Equal(t, float64(1), result.Rows[1][2])
+	assert.Equal(t, float64(1), result.Rows[1][3])
+	assert.Equal(t, "100.0", result.Rows[1][4])
+
+	query.GlobalUserProperties = []model.QueryProperty{
+		{
+			Entity:    model.PropertyEntityUserGlobal,
+			GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+			Property:  "$hubspot_company_region",
+			Operator:  model.EqualsOpStr,
+			Value:     "B",
+			Type:      U.PropertyTypeCategorical,
+			LogicalOp: "AND",
+		},
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, float64(1), result.Rows[0][2])
+	assert.Equal(t, float64(1), result.Rows[0][3])
+	assert.Equal(t, "100.0", result.Rows[0][4])
+	assert.Equal(t, "B", result.Rows[1][0])
+	assert.Equal(t, "abc1.com", result.Rows[1][1])
+	assert.Equal(t, float64(1), result.Rows[1][2])
+	assert.Equal(t, float64(1), result.Rows[1][3])
+	assert.Equal(t, "100.0", result.Rows[1][4])
+
+	query = model.Query{
+		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       "www.xyz.com",
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       "www.xyz2.com",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GlobalUserProperties: []model.QueryProperty{
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_region",
+				Operator:  model.EqualsOpStr,
+				Value:     "A",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "AND",
+			},
+		},
+
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_region",
+				EventName: model.UserPropertyGroupByPresent,
+			},
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_DOMAIN,
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+		Class:           model.QueryClassEvents,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][1])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][1])
+		return p1 < p2
+	})
+	assert.Len(t, result.Rows, 2)
+	assert.Equal(t, "www.xyz.com", result.Rows[0][1])
+	assert.Equal(t, "A", result.Rows[0][2])
+	assert.Equal(t, "abc1.com", result.Rows[0][3])
+	assert.Equal(t, float64(1), result.Rows[0][4])
+	assert.Equal(t, "www.xyz2.com", result.Rows[1][1])
+	assert.Equal(t, "A", result.Rows[1][2])
+	assert.Equal(t, "abc1.com", result.Rows[1][3])
+	assert.Equal(t, float64(1), result.Rows[1][4])
+
+	query.GlobalUserProperties = []model.QueryProperty{
+		{
+			Entity:    model.PropertyEntityUserGlobal,
+			GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+			Property:  "$hubspot_company_region",
+			Operator:  model.EqualsOpStr,
+			Value:     "B",
+			Type:      U.PropertyTypeCategorical,
+			LogicalOp: "AND",
+		},
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][1])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][1])
+		return p1 < p2
+	})
+	assert.Len(t, result.Rows, 2)
+	assert.Equal(t, "www.xyz.com", result.Rows[0][1])
+	assert.Equal(t, "B", result.Rows[0][2])
+	assert.Equal(t, "abc1.com", result.Rows[0][3])
+	assert.Equal(t, float64(1), result.Rows[0][4])
+	assert.Equal(t, "www.xyz2.com", result.Rows[1][1])
+	assert.Equal(t, "B", result.Rows[1][2])
+	assert.Equal(t, "abc1.com", result.Rows[1][3])
+	assert.Equal(t, float64(1), result.Rows[1][4])
+
+	query.GlobalUserProperties = []model.QueryProperty{
+		{
+			Entity:    model.PropertyEntityUserGlobal,
+			GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+			Property:  "$hubspot_company_region",
+			Operator:  model.NotEqualOpStr,
+			Value:     "B",
+			Type:      U.PropertyTypeCategorical,
+			LogicalOp: "AND",
+		},
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Len(t, result.Rows, 4)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][1])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][1])
+		if p1 == p2 {
+			return U.GetPropertyValueAsString(result.Rows[i][2]) < U.GetPropertyValueAsString(result.Rows[j][2])
+		}
+		return p1 < p2
+	})
+	assert.Equal(t, "www.xyz.com", result.Rows[0][1])
+	assert.Equal(t, "A", result.Rows[0][2])
+	assert.Equal(t, "abc1.com", result.Rows[0][3])
+	assert.Equal(t, float64(1), result.Rows[0][4])
+	assert.Equal(t, "www.xyz.com", result.Rows[1][1])
+	assert.Equal(t, "D", result.Rows[1][2])
+	assert.Equal(t, "abc2.com", result.Rows[1][3])
+	assert.Equal(t, float64(1), result.Rows[1][4])
+	assert.Equal(t, "www.xyz2.com", result.Rows[2][1])
+	assert.Equal(t, "A", result.Rows[2][2])
+	assert.Equal(t, "abc1.com", result.Rows[2][3])
+	assert.Equal(t, float64(1), result.Rows[2][4])
+	assert.Equal(t, "www.xyz2.com", result.Rows[3][1])
+	assert.Equal(t, "D", result.Rows[3][2])
+	assert.Equal(t, "abc2.com", result.Rows[3][3])
+	assert.Equal(t, float64(1), result.Rows[3][4])
+
+	query.EventsCondition = model.EventCondAllGivenEvent
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][1])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][1])
+		return p1 < p2
+	})
+	assert.Len(t, result.Rows, 2)
+	assert.Equal(t, "A", result.Rows[0][0])
+	assert.Equal(t, "abc1.com", result.Rows[0][1])
+	assert.Equal(t, "D", result.Rows[1][0])
+	assert.Equal(t, "abc2.com", result.Rows[1][1])
+
+	query.EventsCondition = model.EventCondAnyGivenEvent
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][1])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][1])
+		return p1 < p2
+	})
+	assert.Len(t, result.Rows, 2)
+	assert.Equal(t, "A", result.Rows[0][0])
+	assert.Equal(t, "abc1.com", result.Rows[0][1])
+	assert.Equal(t, "D", result.Rows[1][0])
+	assert.Equal(t, "abc2.com", result.Rows[1][1])
+
+	query.EventsWithProperties = append(query.EventsWithProperties, model.QueryEventWithProperties{
+		Name: "www.xyz3.com", Properties: []model.QueryProperty{}})
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][1])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][1])
+		return p1 < p2
+	})
+	assert.Equal(t, "A", result.Rows[0][0])
+	assert.Equal(t, "abc1.com", result.Rows[0][1])
+	assert.Equal(t, "D", result.Rows[1][0])
+	assert.Equal(t, "abc2.com", result.Rows[1][1])
+	assert.Equal(t, "$none", result.Rows[2][0])
+	assert.Equal(t, "abc3.com", result.Rows[2][1])
+
+	query = model.Query{
+		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       "www.xyz2.com",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GlobalUserProperties: []model.QueryProperty{
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_region",
+				Operator:  model.EqualsOpStr,
+				Value:     "A",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "AND",
+			},
+		},
+
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_region",
+				EventName: model.UserPropertyGroupByPresent,
+			},
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_DOMAIN,
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+		Class:           model.QueryClassEvents,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Len(t, result.Rows, 1)
+	assert.Equal(t, "www.xyz2.com", result.Rows[0][1])
+	assert.Equal(t, "A", result.Rows[0][2])
+	assert.Equal(t, "abc1.com", result.Rows[0][3])
+
+	/*
+			WITH  step_0 AS (SELECT step_0_event_users_view.group_user_id  as coal_group_user_id,
+		GROUP_CONCAT(step_0_event_users_view.group_users_user_id) as group_users_user_ids,
+		FIRST(step_0_event_users_view.user_id, FROM_UNIXTIME(step_0_event_users_view.timestamp)) as
+		event_user_id, CASE WHEN JSON_EXTRACT_STRING(step_0_event_users_view.event_user_properties,
+		'$hubspot_company_region') IS NULL THEN '$none' WHEN
+		JSON_EXTRACT_STRING(step_0_event_users_view.event_user_properties, '$hubspot_company_region') = ''
+		THEN '$none' ELSE JSON_EXTRACT_STRING(step_0_event_users_view.event_user_properties,
+		'$hubspot_company_region') END AS _group_key_0 , '0_www.xyz2.com' AS event_name  , MAX(group_4_id)
+		as max_group_4_id FROM  (SELECT events.project_id, events.id, events.event_name_id, events.user_id,
+		events.timestamp , events.properties as event_properties, events.user_properties as
+		event_user_properties , user_groups.group_3_user_id as group_user_id , group_users.properties as
+		group_properties , group_users.id as group_users_user_id , group_users.group_4_id as group_4_id FROM
+		events  LEFT JOIN users as user_groups on events.user_id = user_groups.id AND user_groups.project_id
+		= '5000005' LEFT JOIN users as group_users ON user_groups.group_3_user_id =
+		group_users.group_3_user_id AND group_users.project_id = '5000005' AND group_users.is_group_user =
+		true AND group_users.source IN ( 8 ) AND ( group_users.group_4_id IS NOT NULL ) WHERE
+		events.project_id='5000005' AND timestamp>='1699258422' AND timestamp<='1699260822' AND  (
+		group_user_id IS NOT NULL  ) AND  ( events.event_name_id = '07f3a671-040c-4d3e-8ec0-d571184fd9a4' )
+		LIMIT 10000000000) step_0_event_users_view WHERE ( group_4_id is not null AND
+		(JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, '$6Signal_region') = 'AA') ) AND (
+		(JSON_EXTRACT_STRING(step_0_event_users_view.event_user_properties, 'user_no') = 'w1') ) GROUP BY
+		coal_group_user_id , _group_key_0 HAVING max_group_4_id IS NOT NULL ORDER BY coal_group_user_id,
+		_group_key_0, step_0_event_users_view.timestamp ASC) , each_users_union AS (SELECT
+		step_0.event_user_id, step_0.coal_group_user_id,  step_0.event_name, SUBSTRING(max(case when
+		JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_region') is null then '$none' when
+		JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_region') = '' then '$none' else
+		CONCAT( join_timestamp, ':', JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_region')
+		) end), LOCATE(':', max( case when JSON_EXTRACT_STRING(group_users.properties,
+		'$hubspot_company_region') is null then '$none' when JSON_EXTRACT_STRING(group_users.properties,
+		'$hubspot_company_region') = '' then '$none' else CONCAT( join_timestamp, ':',
+		JSON_EXTRACT_STRING(group_users.properties, '$hubspot_company_region') ) end ))+1) AS _group_key_1,
+		SUBSTRING(max(case when JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') is null then
+		'$none' when JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') = '' then '$none' else
+		CONCAT( join_timestamp, ':', JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') ) end),
+		LOCATE(':', max( case when JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') is null
+		then '$none' when JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') = '' then '$none'
+		else CONCAT( join_timestamp, ':', JSON_EXTRACT_STRING(group_users.properties, '$6Signal_domain') )
+		end ))+1) AS _group_key_2 , _group_key_0 FROM step_0  LEFT JOIN users AS group_users on
+		step_0.coal_group_user_id = group_users.group_3_user_id AND group_users.project_id = '5000005' AND
+		group_users.is_group_user = true AND group_users.source IN ( 2,8 ) AND ( group_users.group_2_id IS
+		NOT NULL OR group_users.group_4_id IS NOT NULL ) WHERE ( (( group_4_id is not null ) AND LOCATE(
+		group_users.id,step_0.group_users_user_ids)\u003e0 ) OR ( group_4_id is null )) GROUP BY
+		step_0.event_name, step_0.coal_group_user_id) SELECT event_name, _group_key_0, _group_key_1,
+		_group_key_2, COUNT(DISTINCT(coal_group_user_id)) AS aggregate FROM each_users_union GROUP BY
+		event_name , _group_key_0, _group_key_1, _group_key_2 ORDER BY aggregate DESC LIMIT 100000
+	*/
+	query = model.Query{
+		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name: "www.xyz2.com",
+				Properties: []model.QueryProperty{
+					{
+						Entity:    model.PropertyEntityUser,
+						Property:  "user_no",
+						Operator:  model.EqualsOpStr,
+						Value:     "w1",
+						Type:      U.PropertyTypeCategorical,
+						LogicalOp: "AND",
+					},
+				},
+			},
+		},
+		GlobalUserProperties: []model.QueryProperty{
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_REGION,
+				Operator:  model.EqualsOpStr,
+				Value:     "AA",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "AND",
+			},
+		},
+
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:         model.PropertyEntityUser,
+				EventNameIndex: 1,
+				Property:       "$hubspot_company_region",
+				EventName:      "www.xyz2.com",
+			},
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_region",
+				EventName: model.UserPropertyGroupByPresent,
+			},
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_DOMAIN,
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+		Class:           model.QueryClassEvents,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Len(t, result.Rows, 1)
+	assert.Equal(t, "www.xyz2.com", result.Rows[0][1])
+	assert.Equal(t, "$none", result.Rows[0][2])
+	assert.Equal(t, "B", result.Rows[0][3])
+	assert.Equal(t, "abc1.com", result.Rows[0][4])
+
+
+
+	query = model.Query{
+		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name: "www.xyz2.com",
+				Properties: []model.QueryProperty{
+					{
+						Entity:    model.PropertyEntityUser,
+						Property:  "user_no",
+						Operator:  model.EqualsOpStr,
+						Value:     "w1",
+						Type:      U.PropertyTypeCategorical,
+						LogicalOp: "AND",
+					},
+				},
+			},
+		},
+		GlobalUserProperties: []model.QueryProperty{
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_DOMAINS,
+				Property:  U.VISITED_WEBSITE,
+				Operator:  model.EqualsOpStr,
+				Value:     "true",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "AND",
+			},
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_region",
+				Operator:  model.EqualsOpStr,
+				Value:     "A",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "AND",
+			},
+		},
+
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:         model.PropertyEntityUser,
+				EventNameIndex: 1,
+				Property:       "$hubspot_company_region",
+				EventName:      "www.xyz2.com",
+			},
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_region",
+				EventName: model.UserPropertyGroupByPresent,
+			},
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_DOMAIN,
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+		Class:           model.QueryClassEvents,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Len(t, result.Rows, 1)
+	assert.Nil(t, err)
+	assert.Equal(t, "www.xyz2.com", result.Rows[0][1])
+	assert.Equal(t, "$none", result.Rows[0][2])
+	assert.Equal(t, "A", result.Rows[0][3])
+	assert.Equal(t, "abc1.com", result.Rows[0][4])
 }

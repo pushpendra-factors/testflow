@@ -1,0 +1,18 @@
+{
+    "New Users": "new_users",
+    "Repeat Users": "repeat_users",
+    "Engaged Sessions per user": "engaged_sessions_per_user",
+    "Avg session duration": "average_session_duration",
+    "Engaged Users": "engaged_users",
+    "Total time on site": "total_time_on_site",
+    "Avg page views per session": "average_page_views_per_session",
+    "Avg initial page load time": "average_initial_page_load_time",
+    "Engaged Sessions": "engaged_sessions",
+    "Engagement rate": "engagement_rate",
+    "Total Sessions": "total_sessions",
+    "Sessions": "total_sessions",
+    "Unique Users": "unique_users",
+    "Users": "unique_users",
+    "Session Per User": "sessions_per_user",
+    "Bounce rate": "bounce_rate"
+}

@@ -210,18 +210,7 @@ func AgentInvite(c *gin.Context) {
 	if createDefaultDashBoard == "false" {
 		createDashboard = false
 	}
-
-	createProjectAgentMapping, errCode := store.GetStore().IsNewProjectAgentMappingCreationAllowed(projectId, emailOfAgentToInvite)
-	if errCode != http.StatusOK {
-		c.AbortWithStatus(errCode)
-		return
-	}
-
-	if !createProjectAgentMapping {
-		c.AbortWithStatus(http.StatusConflict)
-		return
-	}
-
+	
 	project, errCode := store.GetStore().GetProject(projectId)
 	if errCode != http.StatusFound {
 		c.AbortWithStatus(http.StatusInternalServerError)

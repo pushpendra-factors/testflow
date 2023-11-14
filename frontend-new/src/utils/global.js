@@ -71,3 +71,29 @@ export function insertUrlParam(history, key, value) {
     window.history.pushState({ path: newurl }, '', newurl);
   }
 }
+
+export function isOnboarded(currentProjectSettings) {
+  return (
+    currentProjectSettings?.onboarding_steps?.more_info_form &&
+    currentProjectSettings?.onboarding_steps?.project_created &&
+    currentProjectSettings?.onboarding_steps?.sdk_setup &&
+    currentProjectSettings?.onboarding_steps?.setup_completed &&
+    currentProjectSettings?.onboarding_steps?.visitor_identification_setup
+  );
+}
+
+export function getCookieValue(cookieName) {
+  const name = cookieName + '=';
+  const decodedCookie = decodeURIComponent(document.cookie);
+  const cookieArray = decodedCookie.split(';');
+
+  for (let i = 0; i < cookieArray.length; i++) {
+    let cookie = cookieArray[i].trim();
+    if (cookie.indexOf(name) === 0) {
+      return cookie.substring(name.length, cookie.length);
+    }
+  }
+
+  // Return null if the cookie with the specified name is not found
+  return null;
+}

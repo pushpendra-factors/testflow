@@ -14,6 +14,7 @@ import styles from './index.module.scss';
 import { getFormattedKpiValue } from '../../Views/CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
 import { COLOR_CLASSNAMES } from '../../constants/charts.constants';
 import { visualizationColors } from '../../utils/dataFormatter';
+import truncateURL from 'Utils/truncateURL';
 
 function HorizontalBarChart({
   series,
@@ -138,18 +139,19 @@ function HorizontalBarChart({
           useHTML: true,
           formatter() {
             const self = this;
+            const label = truncateURL(self.value);
             return ReactDOMServer.renderToString(
               <Text
                 color='grey-2'
                 type='title'
                 extraClass={`${styles.xAxisLabels} mb-0`}
               >
-                {self.value.length > BAR_CHART_XAXIS_TICK_LENGTH[cardSize]
-                  ? `${self.value.substr(
+                {label.length > BAR_CHART_XAXIS_TICK_LENGTH[cardSize]
+                  ? `${label.slice(
                       0,
                       BAR_CHART_XAXIS_TICK_LENGTH[cardSize]
                     )}...`
-                  : self.value}
+                  : label}
               </Text>
             );
           }

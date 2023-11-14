@@ -70,6 +70,7 @@ func InitAppRoutes(r *gin.Engine) {
 	r.GET(routePrefix+"/agents/info", mid.SetLoggedInAgent(), AgentInfo)
 	r.PUT(routePrefix+"/agents/info", mid.SetLoggedInAgent(), UpdateAgentInfo)
 	r.GET(routePrefix+"/projectanalytics", mid.SetLoggedInAgentInternalOnly(), V1.GetFactorsAnalyticsHandler)
+	r.GET(routePrefix+"/:project_id/projectanalytics", mid.SetLoggedInAgentInternalOnly(), V1.GetFactorsAnalyticsByprojectIDHandler)
 	r.POST(routePrefix+"/registertask", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.RegisterTaskHandler))
 	r.POST(routePrefix+"/registertaskdependency", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.RegisterTaskDependencyHandler))
 	r.GET(routePrefix+"/GetAllProcessedIntervals", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.GetAllProcessedIntervalsHandler))
@@ -401,6 +402,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/billing/upgrade", V1.UpdateSubscriptionHandler)
 	authRouteGroup.GET("/:project_id/billing/subscription", V1.GetSubscriptionDetailsHander)
 	authRouteGroup.GET("/billing/upgrade/callback", V1.BillingUpgradeCallbackHandler)
+	authRouteGroup.POST("/:project_id/billing/hooks/invoice", V1.UpdateSubscriptionHandler)
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {

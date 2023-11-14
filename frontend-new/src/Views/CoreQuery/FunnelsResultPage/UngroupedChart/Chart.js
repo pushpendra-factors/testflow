@@ -6,20 +6,21 @@ import {
   BAR_CHART_XAXIS_TICK_LENGTH,
   DASHBOARD_MODAL,
   FUNNELS_COUNT,
-  FUNNEL_CHART_MARGIN,
+  FUNNEL_CHART_MARGIN
 } from '../../../../utils/constants';
 import {
   generateColors,
   calculatePercentage,
-  formatCount,
+  formatCount
 } from '../../../../utils/dataFormatter';
 import { getOverAllDuration, getStepDuration } from '../utils';
 import {
   Text,
   SVG,
-  Number as NumFormat,
+  Number as NumFormat
 } from '../../../../components/factorsComponents';
 import LegendsCircle from '../../../../styles/components/LegendsCircle';
+import truncateURL from 'Utils/truncateURL';
 
 function Chart({
   chartData,
@@ -32,7 +33,7 @@ function Chart({
   showXAxisLabels = true,
   showYAxisLabels = true,
   margin = FUNNEL_CHART_MARGIN,
-  showStripes = false,
+  showStripes = false
 }) {
   const chartRef = useRef(null);
   const tooltipRef = useRef(null);
@@ -68,8 +69,9 @@ function Chart({
     const y = d3.scaleLinear().rangeRound([height, 0]);
 
     const showTooltip = (d, index) => {
-      const label = arrayMapper.find((elem) => elem.mapper === d.event)
-        .displayName;
+      const label = arrayMapper.find(
+        (elem) => elem.mapper === d.event
+      ).displayName;
 
       let padY = index ? 200 : 100;
       let padX = 10;
@@ -212,7 +214,7 @@ function Chart({
       0,
       d3.max(renderedData, function (d) {
         return Number(d.value);
-      }),
+      })
     ]);
     const yAxisGrid = d3.axisLeft(y).tickSize(-width).tickFormat('').ticks(5);
 
@@ -233,14 +235,21 @@ function Chart({
         .attr('transform', 'translate(0,' + height + ')')
         .call(
           d3.axisBottom(x).tickFormat((d) => {
-            const label = arrayMapper.find((elem) => elem.mapper === d)
-              .displayName;
-            if (label.length > BAR_CHART_XAXIS_TICK_LENGTH[cardSize]) {
+            const label = arrayMapper.find(
+              (elem) => elem.mapper === d
+            ).displayName;
+            const urlTruncatedlabel = truncateURL(label);
+            if (
+              urlTruncatedlabel.length > BAR_CHART_XAXIS_TICK_LENGTH[cardSize]
+            ) {
               return (
-                label.substr(0, BAR_CHART_XAXIS_TICK_LENGTH[cardSize]) + '...'
+                urlTruncatedlabel.slice(
+                  0,
+                  BAR_CHART_XAXIS_TICK_LENGTH[cardSize]
+                ) + '...'
               );
             }
-            return label;
+            return urlTruncatedlabel;
           })
         );
     }

@@ -1,63 +1,5 @@
 const defaultRules =
 [
-   {
-      "channel":"Internal",
-      "conditions":[
-         {
-            "value":"*Channel is set as Internal when the Referrer Domain is same as the Landing Page Domain",
-            "property":"",
-            "condition":"",
-            "logical_operator":""
-         }
-      ]
-    },
-    {
-       "channel":"Direct",
-       "conditions":[
-          {
-             "value":"$none",
-             "property":"$source",
-             "condition":"equals",
-             "logical_operator":"AND"
-          },
-          {
-             "value":"$none",
-             "property":"$medium",
-             "condition":"equals",
-             "logical_operator":"AND"
-          },
-          {
-             "value":"$none",
-             "property":"$initial_referrer",
-             "condition":"equals",
-             "logical_operator":"AND"
-          },
-          {
-             "value":"$none",
-             "property":"$initial_referrer_domain",
-             "condition":"equals",
-             "logical_operator":"AND"
-          },
-          {
-             "value":"$none",
-             "property":"$gclid",
-             "condition":"equals",
-             "logical_operator":"AND"
-          },
-          {
-             "value":"$none",
-             "property":"$fbclid",
-             "condition":"equals",
-             "logical_operator":"AND"
-          },
-          {
-             "value":"$none",
-             "property":"$campaign",
-             "condition":"equals",
-             "logical_operator":"AND"
-          }
-       ]
-    },
     {
        "channel":"Paid Search",
        "conditions":[
@@ -572,6 +514,29 @@ const defaultRules =
        ]
     },
     {
+      "channel":"Internal",
+      "conditions":[
+         {
+            "value":"$none",
+            "property":"$initial_referrer_domain",
+            "condition":"notEqual",
+            "logical_operator":"AND"
+         },
+         {
+            "value":"$none",
+            "property":"$initial_page_domain",
+            "condition":"notEqual",
+            "logical_operator":"AND"
+         },
+         {
+            "value":"$initial_page_domain",
+            "property":"$initial_referrer_domain",
+            "condition":"equals",
+            "logical_operator":"AND"
+         }
+      ]
+    },
+    {
        "channel":"Referral",
        "conditions":[
           {
@@ -581,7 +546,54 @@ const defaultRules =
              "logical_operator":"AND"
           }
        ]
-    }
+    },
+    {
+      "channel":"Direct",
+      "conditions":[
+         {
+            "value":"$none",
+            "property":"$source",
+            "condition":"equals",
+            "logical_operator":"AND"
+         },
+         {
+            "value":"$none",
+            "property":"$medium",
+            "condition":"equals",
+            "logical_operator":"AND"
+         },
+         {
+            "value":"$none",
+            "property":"$initial_referrer",
+            "condition":"equals",
+            "logical_operator":"AND"
+         },
+         {
+            "value":"$none",
+            "property":"$initial_referrer_domain",
+            "condition":"equals",
+            "logical_operator":"AND"
+         },
+         {
+            "value":"$none",
+            "property":"$gclid",
+            "condition":"equals",
+            "logical_operator":"AND"
+         },
+         {
+            "value":"$none",
+            "property":"$fbclid",
+            "condition":"equals",
+            "logical_operator":"AND"
+         },
+         {
+            "value":"$none",
+            "property":"$campaign",
+            "condition":"equals",
+            "logical_operator":"AND"
+         }
+      ]
+   }
  ]
 export default defaultRules
 

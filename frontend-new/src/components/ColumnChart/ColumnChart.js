@@ -16,6 +16,7 @@ import { COLOR_CLASSNAMES } from '../../constants/charts.constants';
 import { addQforQuarter, generateColors } from '../../utils/dataFormatter';
 import TopLegends from 'Components/GroupedBarChart/TopLegends';
 import { getDateFormatForTimeSeriesChart } from 'Utils/chart.helpers';
+import truncateURL from 'Utils/truncateURL';
 
 const defaultColors = generateColors(10);
 
@@ -147,7 +148,7 @@ function ColumnChart({
         labels: {
           formatter() {
             const self = this;
-            const label = self.value;
+            const label = truncateURL(self.value);
             if (xAxisType === 'date-time') {
               return (
                 addQforQuarter(frequency) +
@@ -156,7 +157,7 @@ function ColumnChart({
             }
             const tickLength = BAR_CHART_XAXIS_TICK_LENGTH[cardSize];
             if (label.length > tickLength) {
-              return `${label.substr(0, tickLength)}...`;
+              return `${label.slice(0, tickLength)}...`;
             }
             return label;
           }
@@ -170,7 +171,7 @@ function ColumnChart({
           dataLabels: {
             align: 'center',
             enabled: true,
-            useHTML: true,
+            useHTML: false,
             formatter() {
               const self = this;
               return ReactDOMServer.renderToString(
@@ -192,8 +193,9 @@ function ColumnChart({
         backgroundColor: 'white',
         borderWidth: 1,
         borderRadius: 12,
-        shadow: false,
+        shadow: true,
         useHTML: true,
+        borderColor: 'black',
         formatter() {
           const self = this;
           return ReactDOMServer.renderToString(

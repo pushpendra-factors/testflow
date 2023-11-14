@@ -60,6 +60,44 @@ func makeUserUpdateString(user map[string]model.LatestScore, score float64) (str
 	return finalString, nil
 }
 
+func makeAccountUpdateString(user map[string]model.LatestScore, score, allEventsSCore float64) (string, error) {
+
+	updateString := make([]string, 0)
+	finalString := ""
+	engagement_string := U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE
+	total_engagement_string := U.GROUP_EVENT_NAME_TOTAL_ENGAGEMENT_SCORE
+
+	for evKey, evCount := range user {
+		eventsCountjson, err := json.Marshal(evCount)
+		if err != nil {
+			log.WithError(err).Errorf("Unable to convert map to json in event counts ")
+			return "", err
+		}
+
+		if score == -1 {
+			ct := fmt.Sprintf("event_aggregate::`%s`='%s'", evKey, string(eventsCountjson))
+			updateString = append(updateString, ct)
+		} else {
+			ct := fmt.Sprintf("event_aggregate::`%s`='%s',properties::`%s`=%f,properties::`%s`=%f ", evKey, string(eventsCountjson), engagement_string, score, total_engagement_string, allEventsSCore)
+			updateString = append(updateString, ct)
+		}
+	}
+
+	countTotal := 0.0
+	if evCounts, cok := user[model.LAST_EVENT]; cok {
+
+		for _, v := range evCounts.EventsCount {
+			countTotal += v
+		}
+	}
+
+	if countTotal != 0.0 {
+		finalString = strings.Join(updateString, ",")
+	}
+
+	return finalString, nil
+}
+
 func (store *MemSQL) UpdateUserEventsCount(projectId int64, evdata map[string]map[string]model.LatestScore) error {
 	projectID := projectId
 	logFields := log.Fields{
@@ -166,6 +204,7 @@ func UpdatePerUser(projectId int64, evdata map[string]map[string]model.LatestSco
 }
 
 func UpdatePerAccount(projectId int64, evdata map[string]map[string]model.LatestScore, lastevent map[string]model.LatestScore,
+	allEvents map[string]model.LatestScore,
 	userId string, weights model.AccWeights, db *gorm.DB, wg *sync.WaitGroup) error {
 
 	logFields := log.Fields{
@@ -182,12 +221,17 @@ func UpdatePerAccount(projectId int64, evdata map[string]map[string]model.Latest
 	}
 	if _, lok := lastevent[userId]; lok {
 		lastEvent := lastevent[userId]
+		allEvent := allEvents[userId]
 		updateCounts[model.LAST_EVENT] = lastEvent
 		score, err := ComputeAccountScoreOnLastEvent(projectId, weights, lastEvent.EventsCount)
 		if err != nil {
 			logCtx.WithField("last event ", lastevent).Error("unable to compute final score ")
 		}
-		updateString, nil := makeUserUpdateString(updateCounts, score)
+		allEventscore, err := ComputeAccountScoreOnLastEvent(projectId, weights, allEvent.EventsCount)
+		if err != nil {
+			logCtx.WithField("last event ", lastevent).Error("unable to compute final score ")
+		}
+		updateString, nil := makeAccountUpdateString(updateCounts, score, allEventscore)
 		if updateString != "" {
 			stmt := fmt.Sprintf("UPDATE users SET event_aggregate = case when event_aggregate is NULL THEN '{}' ELSE  event_aggregate END, %s where id= ? and project_id= ?", updateString)
 			err := db.Exec(stmt, userId, projectId).Error
@@ -202,7 +246,8 @@ func UpdatePerAccount(projectId int64, evdata map[string]map[string]model.Latest
 
 }
 
-func (store *MemSQL) UpdateGroupEventsCountGO(projectId int64, evdata map[string]map[string]model.LatestScore, lastevent map[string]model.LatestScore, weights model.AccWeights) error {
+func (store *MemSQL) UpdateGroupEventsCountGO(projectId int64, evdata map[string]map[string]model.LatestScore,
+	lastevent map[string]model.LatestScore, allEvents map[string]model.LatestScore, weights model.AccWeights) error {
 	logFields := log.Fields{
 		"project_id": projectId,
 	}
@@ -218,6 +263,9 @@ func (store *MemSQL) UpdateGroupEventsCountGO(projectId int64, evdata map[string
 	for uid, _ := range lastevent {
 		userIDs[uid] = 1
 	}
+	for uid, _ := range allEvents {
+		userIDs[uid] = 1
+	}
 	for uid, _ := range userIDs {
 		usersIdsList = append(usersIdsList, uid)
 	}
@@ -229,7 +277,7 @@ func (store *MemSQL) UpdateGroupEventsCountGO(projectId int64, evdata map[string
 
 		wg.Add(len(userIDList))
 		for i := 0; i < len(userIDList); i++ {
-			go UpdatePerAccount(projectId, evdata, lastevent, userIDList[i], weights, db, &wg)
+			go UpdatePerAccount(projectId, evdata, lastevent, allEvents, userIDList[i], weights, db, &wg)
 		}
 		wg.Wait()
 	}
@@ -270,7 +318,7 @@ func (store *MemSQL) UpdateGroupEventsCount(projectId int64, evdata map[string]m
 		if _, lok := lastevent[userId]; lok {
 			updateCounts[model.LAST_EVENT] = lastevent[userId]
 		}
-		updateString, nil := makeUserUpdateString(updateCounts, float64(-1))
+		updateString, nil := makeAccountUpdateString(updateCounts, float64(-1), float64(-1))
 		if updateString != "" {
 			stmt := fmt.Sprintf("UPDATE users SET event_aggregate = case when event_aggregate is NULL THEN '{}' ELSE  event_aggregate END, %s where id= ? and project_id= ?", updateString)
 			err := db.Exec(stmt, userId, projectId).Error
@@ -342,7 +390,7 @@ func (store *MemSQL) GetAccountsScore(projectId int64, groupId int, ts string, d
 	return result, weights, nil
 }
 
-func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userId string, numDaysToTrend int, debug bool) (model.PerAccountScore, *model.AccWeights, error) {
+func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userId string, numDaysToTrend int, debug bool) (model.PerAccountScore, *model.AccWeights, string, error) {
 	// get score of each account on current date
 
 	projectID := projectId
@@ -366,7 +414,7 @@ func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userI
 
 	weights, errStatus := store.GetWeightsByProject(projectId)
 	if errStatus != http.StatusFound {
-		return result, nil, fmt.Errorf("unable to get weights for project %d", projectId)
+		return result, nil, "", fmt.Errorf("unable to get weights for project %d", projectId)
 	}
 
 	stmt := "select event_aggregate from users where id=? and project_id=?"
@@ -374,7 +422,7 @@ func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userI
 	err := tx.Scan(&rt)
 	if err != nil {
 		logCtx.WithError(err).Error("Unable to read user counts data from DB")
-		return result, nil, err
+		return result, nil, "", err
 	}
 
 	err = json.Unmarshal([]byte(rt), &countsMapDays)
@@ -384,19 +432,62 @@ func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userI
 
 	resultmap, scoreOnDays, fscore, err = CalculatescoresPerAccount(projectId, weights, currentDate, prevDateTotrend, countsMapDays)
 	if err != nil {
-		return model.PerAccountScore{}, nil, err
+		return model.PerAccountScore{}, nil, "", err
 	}
 
 	if debug {
 		result.Debug = make(map[string]interface{})
 		result.Debug["info"] = resultmap
 	}
+
+	ev := countsMapDays[model.LAST_EVENT]
+	dateString := U.GetDateOnlyFromTimestamp(ev.Date)
+
+	buckets, errOnbuckets := store.GetEngagementBucketsOnProject(projectId, dateString)
+	if errOnbuckets != nil {
+		logCtx.WithError(errOnbuckets).Error("unable to get bucket ranges from DB")
+
+	}
+
+	engagementLevel := getEngagement(fscore, buckets)
 	result.Id = userId
 	result.Trend = make(map[string]float32)
 	result.Trend = scoreOnDays
 	result.Score = float32(fscore)
 	result.Timestamp = timestamp
-	return result, weights, nil
+	return result, weights, engagementLevel, nil
+}
+
+func (store *MemSQL) GetEngagementBucketsOnProject(projectId int64, timestamp string) (model.BucketRanges, error) {
+	// get score of each account on current date
+
+	projectID := projectId
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+	db := C.GetServices().Db
+
+	var rawDateString string
+	var rawBucketString string
+	var result model.BucketRanges
+	stmt := "select date,bucket from account_scoring_ranges where  project_id=? and date=?"
+	tx := db.Raw(stmt, projectId, timestamp).Row()
+	err := tx.Scan(&rawDateString, &rawBucketString)
+	if err != nil {
+		logCtx.WithError(err).Error("Unable to read bucket ranges data from DB")
+		return model.BucketRanges{}, err
+	}
+	result.Date = rawDateString
+	result.Ranges = make([]model.Bucket, 0)
+	err = json.Unmarshal([]byte(rawBucketString), &result.Ranges)
+	if err != nil {
+		logCtx.WithError(err).Error("Unable to unmarshall bucket ranges ")
+		return model.BucketRanges{}, err
+	}
+
+	return result, nil
 
 }
 
@@ -749,7 +840,6 @@ func (store *MemSQL) GetAccountScoreOnIds(projectId int64, accountIds []string, 
 			resultPerUser.Debug["date"] = ts
 		}
 
-		log.Infof("Result on account user :%v", resultPerUser)
 		result[userId] = resultPerUser
 	}
 	if rows.Err() != nil {
@@ -977,4 +1067,13 @@ func ComputeAccountScoreOnLastEvent(project_id int64, weights model.AccWeights, 
 		}
 	}
 	return accountScore, nil
+}
+
+func getEngagement(percentile float64, buckets model.BucketRanges) string {
+	for _, bucket := range buckets.Ranges {
+		if bucket.Low <= percentile && percentile < bucket.High {
+			return bucket.Name
+		}
+	}
+	return "ice"
 }

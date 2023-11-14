@@ -177,6 +177,7 @@ const GROUP_EVENT_NAME_G2_REFERENCE = "$g2_reference"
 const GROUP_EVENT_NAME_G2_DEAL = "$g2_deal"
 
 const GROUP_EVENT_NAME_ENGAGEMENT_SCORE = "$engagement_score"
+const GROUP_EVENT_NAME_TOTAL_ENGAGEMENT_SCORE = "$total_enagagement_score"
 
 // Integration shopify event names.
 const EVENT_NAME_SHOPIFY_CHECKOUT_CREATED = "$shopify_checkout_created"
@@ -1520,6 +1521,7 @@ var STANDARD_EVENTS_DISPLAY_NAMES = map[string]string{
 	"$hubspot_engagement_meeting_updated":       "Engagement Meeting Updated",
 	"$hubspot_engagement_call_created":          "Engagement Call Created",
 	"$hubspot_engagement_call_updated":          "Engagement Call Updated",
+	"$hubspot_contact_list":                     "Contact List",
 	"$sf_contact_created":                       "Contact Created",
 	"$sf_contact_updated":                       "Contact Updated",
 	"$sf_lead_created":                          "Lead Created",
@@ -1587,11 +1589,12 @@ var GROUP_TO_DEFAULT_SEGMENT_MAP = map[string]string{
 }
 
 var ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES = map[string]string{
-	IN_LINKEDIN:     "Engaged on LinkedIn",
-	IN_HUBSPOT:      "In Hubspot",
-	IN_G2:           "Visited G2",
-	VISITED_WEBSITE: "Visited Website",
-	IN_SALESFORCE:   "In Salesforce",
+	IN_LINKEDIN:                       "Engaged on LinkedIn",
+	IN_HUBSPOT:                        "In Hubspot",
+	IN_G2:                             "Visited G2",
+	VISITED_WEBSITE:                   "Visited Website",
+	IN_SALESFORCE:                     "In Salesforce",
+	GROUP_EVENT_NAME_ENGAGEMENT_SCORE: "Engagement Score",
 }
 
 var USER_PROPERTIES_WITH_COLUMN = []string{
@@ -1610,6 +1613,7 @@ var CRM_USER_EVENT_NAME_LABELS = map[string]string{
 	"$hubspot_engagement_meeting_updated":       "Hubspot Contacts",
 	"$hubspot_engagement_call_created":          "Hubspot Contacts",
 	"$hubspot_engagement_call_updated":          "Hubspot Contacts",
+	"$hubspot_contact_list":                     "Hubspot Contacts",
 	"$marketo_lead_created":                     "Marketo Person",
 	"$marketo_lead_updated":                     "Marketo Person",
 	"$leadsquared_lead_created":                 "LeadSquared Person",
@@ -1636,6 +1640,7 @@ var STANDARD_EVENTS_GROUP_NAMES = map[string]string{
 	"$hubspot_deal_created":                     "Hubspot",
 	"$hubspot_deal_updated":                     "Hubspot",
 	"$hubspot_form_submission":                  "Hubspot",
+	"$hubspot_contact_list":                     "Hubspot",
 	"$sf_contact_created":                       "Salesforce",
 	"$sf_contact_updated":                       "Salesforce",
 	"$sf_lead_created":                          "Salesforce",
@@ -1664,6 +1669,7 @@ var STANDARD_EVENTS_GROUP_NAMES = map[string]string{
 var STANDARD_EVENTS_IN_DROPDOWN = []string{
 	"$hubspot_contact_created",
 	"$hubspot_contact_updated",
+	"$hubspot_contact_list",
 	"$hubspot_company_created",
 	"$hubspot_company_updated",
 	"$hubspot_deal_created",

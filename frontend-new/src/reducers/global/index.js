@@ -8,6 +8,8 @@ import {
 } from '../types';
 import { get, getHostUrl, post, put, del } from '../../utils/request';
 import toArray from 'lodash/toArray';
+import logger from 'Utils/logger';
+import { getCookieValue } from 'Utils/global';
 
 var host = getHostUrl();
 host = host[host.length - 1] === '/' ? host : host + '/';
@@ -1449,4 +1451,39 @@ export function updateEventAlertStatus(projectId, id, status) {
         });
     });
   };
+}
+
+export async function triggerHubspotCustomFormFillEvent(
+  portalId,
+  formId,
+  fields
+) {
+  if (!portalId || !formId) {
+    logger.error('Missing required parameters');
+    return;
+  }
+  //triggering only for prod env
+  if (window.location.href.indexOf('https://app.factors.ai/') === -1) return;
+  try {
+    const url = `https://api.hsforms.com/submissions/v3/integration/submit/${portalId}/${formId}`;
+    let reqBody = {};
+    const HSCookie = getCookieValue('hubspotutk');
+    if (HSCookie) {
+      reqBody.hutk = HSCookie;
+    }
+
+    if (fields) {
+      reqBody.fields = fields;
+    }
+
+    const res = await fetch(url, {
+      method: 'POST',
+      body: JSON.stringify(reqBody),
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+  } catch (error) {
+    logger.error('Error in triggering HS custom form', error);
+  }
 }

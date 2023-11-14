@@ -46,6 +46,7 @@ type AccWeights struct {
 }
 
 type AccEventWeight struct {
+	FilterName   string                `json:"fname"`
 	WeightId     string                `json:"wid"`
 	Weight_value float32               `json:"weight"`
 	Is_deleted   bool                  `json:"is_deleted"`

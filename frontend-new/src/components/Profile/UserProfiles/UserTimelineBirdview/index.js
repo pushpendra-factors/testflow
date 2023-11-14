@@ -13,6 +13,7 @@ import {
 import { PropTextFormat } from 'Utils/dataFormatter';
 import { useSelector } from 'react-redux';
 import NoDataWithMessage from 'Components/Profile/MyComponents/NoDataWithMessage';
+import truncateURL from 'Utils/truncateURL';
 
 function UserTimelineBirdview({
   activities = [],
@@ -20,7 +21,7 @@ function UserTimelineBirdview({
   collapse,
   setCollapse,
   loading,
-  eventNamesMap,
+  eventNamesMap
 }) {
   const [showAll, setShowAll] = useState([]);
   const { userPropNames } = useSelector((state) => state.coreQuery);
@@ -109,7 +110,7 @@ function UserTimelineBirdview({
                   !hoverConditionals && eventName.length >= 30 ? 'hover' : []
                 }
               >
-                {eventName}
+                {truncateURL(eventName)}
               </Tooltip>
             </div>
             {hoverConditionals ? (

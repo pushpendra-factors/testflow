@@ -285,7 +285,7 @@ type Model interface {
 	GetPropertiesForSalesforceUsers(projectID int64, reqID string) []map[string]string
 	GetPropertiesForMarketo(projectID int64, reqID string) []map[string]string
 	IsEventExistsWithType(projectId int64, eventType string) (bool, int)
-	GetEventNameIdsWithGivenNames(projectID int64, eventNameIDsMap map[string]interface{}) (map[string]interface{}, int)
+	GetEventNameIdsWithGivenNames(projectID int64, eventNameIDsMap map[string]bool) (map[string]string, int)
 
 	// form_fill
 	CreateFormFillEventById(projectId int64, formFill *model.SDKFormFillPayload) (int, error)
@@ -438,10 +438,6 @@ type Model interface {
 	DoesAgentHaveProject(agentUUID string) int
 	DeleteProjectAgentMapping(projectID int64, agentUUIDToRemove string) int
 	EditProjectAgentMapping(projectID int64, agentUUIDToEdit string, role int64) int
-
-	// project_billing_account
-	GetProjectBillingAccountMappings(billingAccountID string) ([]model.ProjectBillingAccountMapping, int)
-	GetProjectBillingAccountMapping(projectID int64) (*model.ProjectBillingAccountMapping, int)
 
 	// project_setting
 	GetProjectSetting(projectID int64) (*model.ProjectSetting, int)
@@ -897,7 +893,7 @@ type Model interface {
 	GetSourceStringForAccountsV2(projectID int64, source string, isAllUserProperties bool) (string, int, int)
 	AccountPropertiesForDomainsEnabledV2(projectID int64, id string, groupName string) (map[string]interface{}, bool, int)
 	AccountPropertiesForDomainsDisabledV1(projectID int64, id string) (string, map[string]interface{}, []interface{}, int)
-	AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile) ([]model.Profile, int)
+	AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile, groupedFilters map[string][]model.QueryProperty, tableProps []string) ([]model.Profile, int)
 	GetAccountOverview(projectID int64, id, groupName string) (model.Overview, int, string)
 	GetIntentTimeline(projectID int64, groupName string, id string) (model.UserTimeline, error)
 	GetTimeRangeWindow(profileType string, whereStmt string, limitVal int, timeWindowQParams []interface{}) (*model.ListingTimeWindow, int, string)
@@ -1008,14 +1004,16 @@ type Model interface {
 	UpdateUserEventsCount(projectId int64, ev map[string]map[string]model.LatestScore) error
 	UpdateGroupEventsCount(projectId int64, ev map[string]map[string]model.LatestScore, lastev map[string]model.LatestScore) error
 	UpdateUserEventsCountGO(projectId int64, ev map[string]map[string]model.LatestScore) error
-	UpdateGroupEventsCountGO(projectId int64, ev map[string]map[string]model.LatestScore, lastev map[string]model.LatestScore, weights model.AccWeights) error
+	UpdateGroupEventsCountGO(projectId int64, ev map[string]map[string]model.LatestScore, lastev map[string]model.LatestScore, allev map[string]model.LatestScore, weights model.AccWeights) error
 	GetAccountsScore(project_id int64, group_id int, ts string, debug bool) ([]model.PerAccountScore, *model.AccWeights, error)
 	GetUserScore(project_id int64, user_id string, ts string, debug bool, is_anonymus bool) (model.PerUserScoreOnDay, error)
 	GetUserScoreOnIds(projectId int64, usersAnonymous, usersNonAnonymous []string, debug bool) (map[string]model.PerUserScoreOnDay, error)
 	GetAccountScoreOnIds(projectId int64, accountIds []string, debug bool) (map[string]model.PerUserScoreOnDay, error)
-	GetPerAccountScore(projectId int64, timestamp string, userId string, num_days int, debug bool) (model.PerAccountScore, *model.AccWeights, error)
+	GetPerAccountScore(projectId int64, timestamp string, userId string, num_days int, debug bool) (model.PerAccountScore, *model.AccWeights, string, error)
 	GetAllUserEvents(projectId int64, debug bool) (map[string]map[string]model.LatestScore, map[string]int, error, int64)
 	WriteScoreRanges(projectId int64, buckets []model.BucketRanges) error
+	GetEngagementBucketsOnProject(projectId int64, timestamp string) (model.BucketRanges, error)
+
 	// Slack
 	SetAuthTokenforSlackIntegration(projectID int64, agentUUID string, authTokens model.SlackAccessTokens) error
 	GetSlackAuthToken(projectID int64, agentUUID string) (model.SlackAccessTokens, error)

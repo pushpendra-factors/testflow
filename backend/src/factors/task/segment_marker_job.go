@@ -3,8 +3,6 @@ package task
 import (
 	"fmt"
 	"net/http"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -13,9 +11,9 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"factors/model/model"
+	"factors/model/store/memsql"
 
 	"factors/model/store"
-	"factors/model/store/memsql"
 
 	U "factors/util"
 )
@@ -23,9 +21,6 @@ import (
 func SegmentMarker(projectID int64) int {
 
 	domainGroup, status := store.GetStore().GetGroup(projectID, model.GROUP_NAME_DOMAINS)
-	if status != http.StatusFound {
-		log.WithField("project_id", projectID).Error("Domain group not enabled")
-	}
 
 	var lookBack time.Time
 
@@ -49,10 +44,14 @@ func SegmentMarker(projectID int64) int {
 		// list of domains and their associated users with last updated_at in last x hour
 		users, statusCode = store.GetStore().GetUsersUpdatedAtGivenHour(projectID, lookBack, domainGroup.ID)
 	}
-	if statusCode != http.StatusFound {
-		log.WithFields(log.Fields{"project_id": projectID, "look_back": lookBack}).
-			Error("Couldn't find updated records in last given hours with given statuscode for this project", statusCode)
+	if statusCode == http.StatusInternalServerError {
+		log.WithFields(log.Fields{"project_id": projectID, "look_back": lookBack, "status_code": statusCode}).
+			Error("Server error, couldn't find updated records")
 		return statusCode
+	} else if statusCode == http.StatusNotFound {
+		log.WithFields(log.Fields{"project_id": projectID, "look_back": lookBack, "status_code": statusCode}).
+			Warn("Couldn't find updated records in last given hours for this project ")
+		return http.StatusOK
 	}
 	endTime := time.Now().Unix()
 	timeTaken := endTime - startTime
@@ -61,11 +60,15 @@ func SegmentMarker(projectID int64) int {
 	// Time taken to pull.
 	log.WithFields(log.Fields{"project_id": projectID, "no_of_records": len(users)}).Info("Total no.of records pulled time(sec) ", timeTaken)
 
+	if len(users) >= 250000 {
+		log.WithFields(log.Fields{"project_id": projectID}).Warn("Total records exceeded 250k")
+	}
+
 	// list of all segments
 	allSegmentsMap, statusCode := store.GetStore().GetAllSegments(projectID)
 	if statusCode != http.StatusFound {
-		log.WithField("project_id", projectID).Error("No segment found for this project")
-		return statusCode
+		log.WithField("project_id", projectID).Warn("No segment found for this project")
+		return http.StatusOK
 	}
 
 	// set Query Timezone
@@ -76,7 +79,7 @@ func SegmentMarker(projectID int64) int {
 	}
 
 	// list of all event_names and all ids for it
-	eventNameIDsList := make(map[string]interface{})
+	eventNameIDsList := make(map[string]bool)
 
 	// decoding all json segment rules
 	decodedSegmentRulesMap := make(map[string][]model.Query)
@@ -115,12 +118,10 @@ func SegmentMarker(projectID int64) int {
 	}
 
 	// map for all event_names and all ids for it
-	eventNameIDsMap := make(map[string]interface{})
+	eventNameIDsMap := make(map[string]string)
 
 	// adding ids for all the event_names
-	if len(eventNameIDsList) == 0 {
-		log.WithField("project_id", projectID).Info("No segments with performed events for this project")
-	} else {
+	if len(eventNameIDsList) > 0 {
 		eventNameIDsMap, status = store.GetStore().GetEventNameIdsWithGivenNames(projectID, eventNameIDsList)
 		if status != http.StatusFound {
 			log.WithField("project_id", projectID).Error("Error fetching event_names for the project")
@@ -134,15 +135,19 @@ func SegmentMarker(projectID int64) int {
 	}
 
 	// check if there is no All type segment in the project
-	var domainsGroupName string
-	if _, exists := allSegmentsMap["All"]; exists {
-		domainsGroupName = "All"
-	} else if _, exists := allSegmentsMap[model.GROUP_NAME_DOMAINS]; exists {
-		domainsGroupName = model.GROUP_NAME_DOMAINS
+	if _, exists := allSegmentsMap[model.GROUP_NAME_DOMAINS]; !exists {
+		errCode := store.GetStore().UpdateSegmentMarkerLastRun(projectID, U.TimeNowZ())
+		if errCode != http.StatusAccepted {
+			log.WithField("project_id", projectID).Error("Unable to update segment_marker_last_run in project_settings.")
+			return errCode
+		}
+
+		return http.StatusOK
 	}
 
-	if domainsGroupName != "" {
-		status, err := allAccountsSegmentMarkup(projectID, users, allSegmentsMap[domainsGroupName], decodedSegmentRulesMap[domainsGroupName], domainGroup.ID, eventNameIDsMap)
+	allAccountsDecodedSegmentRule, ruleExists := decodedSegmentRulesMap[model.GROUP_NAME_DOMAINS]
+	if ruleExists && (domainGroup != nil && domainGroup.ID > 0) {
+		status, err := allAccountsSegmentMarkup(projectID, users, allSegmentsMap[model.GROUP_NAME_DOMAINS], allAccountsDecodedSegmentRule, domainGroup.ID, eventNameIDsMap)
 		if status != http.StatusOK || err != nil {
 			log.WithField("project_id", projectID).Error("Unable to update associated_segments to the domain user.")
 			return status
@@ -177,7 +182,7 @@ func transformPayloadForInProperties(globalUserProperties []model.QueryProperty)
 }
 
 func userProfileSegmentsProcessing(projectID int64, users []model.User, allSegmentsMap map[string][]model.Segment,
-	decodedSegmentRulesMap map[string][]model.Query, eventNameIDsMap map[string]interface{}) {
+	decodedSegmentRulesMap map[string][]model.Query, eventNameIDsMap map[string]string) {
 	statusMap := make(map[string]int, 0)
 
 	var waitGroup sync.WaitGroup
@@ -218,7 +223,7 @@ func userProfileSegmentsProcessing(projectID int64, users []model.User, allSegme
 }
 
 func usersProcessing(projectID int64, user model.User, allSegmentsMap map[string][]model.Segment,
-	decodedSegmentRulesMap map[string][]model.Query, eventNameIDsMap map[string]interface{}, waitGroup *sync.WaitGroup, statusMap *map[string]int) {
+	decodedSegmentRulesMap map[string][]model.Query, eventNameIDsMap map[string]string, waitGroup *sync.WaitGroup, statusMap *map[string]int) {
 	logFields := log.Fields{
 		"project_id":                projectID,
 		"user":                      user,
@@ -241,7 +246,7 @@ func usersProcessing(projectID int64, user model.User, allSegmentsMap map[string
 }
 
 func userProcessingWithErrcode(projectID int64, user model.User, allSegmentsMap map[string][]model.Segment,
-	decodedSegmentRulesMap map[string][]model.Query, eventNameIDsMap map[string]interface{}) int {
+	decodedSegmentRulesMap map[string][]model.Query, eventNameIDsMap map[string]string) int {
 	userAssociatedSegments := make(map[string]interface{})
 
 	// decoding user properties col
@@ -285,7 +290,7 @@ func userProcessingWithErrcode(projectID int64, user model.User, allSegmentsMap 
 }
 
 func allAccountsSegmentMarkup(projectID int64, users []model.User, segments []model.Segment, segmentsRulesArr []model.Query,
-	domainGroupId int, eventNameIDsMap map[string]interface{}) (int, error) {
+	domainGroupId int, eventNameIDsMap map[string]string) (int, error) {
 	if len(segments) == 0 {
 		return http.StatusOK, nil
 	}
@@ -331,7 +336,7 @@ func allAccountsSegmentMarkup(projectID int64, users []model.User, segments []mo
 }
 
 func domainusersProcessing(projectID int64, domId string, users []model.User, segments []model.Segment, segmentsRulesArr []model.Query,
-	eventNameIDsMap map[string]interface{}, waitGroup *sync.WaitGroup, statusMap *map[string]int) {
+	eventNameIDsMap map[string]string, waitGroup *sync.WaitGroup, statusMap *map[string]int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"domain_id":  domId,
@@ -352,7 +357,7 @@ func domainusersProcessing(projectID int64, domId string, users []model.User, se
 
 }
 
-func domainUsersProcessingWithErrcode(projectID int64, domId string, usersArray []model.User, segments []model.Segment, segmentsRulesArr []model.Query, eventNameIDsMap map[string]interface{}) (int, error) {
+func domainUsersProcessingWithErrcode(projectID int64, domId string, usersArray []model.User, segments []model.Segment, segmentsRulesArr []model.Query, eventNameIDsMap map[string]string) (int, error) {
 	associatedSegments := make(map[string]interface{})
 	decodedPropsArr := make([]map[string]interface{}, 0)
 	for _, user := range usersArray {
@@ -409,7 +414,7 @@ func findUserGroupByID(u model.User, id int) (string, error) {
 }
 
 func isRuleMatchedAllAccounts(projectID int64, segment model.Query, decodedProperties []map[string]interface{}, userArr []model.User,
-	segmentId string, domId string, eventNameIDsMap map[string]interface{}) bool {
+	segmentId string, domId string, eventNameIDsMap map[string]string) bool {
 	// isMatched = all rules matched (a or b) AND (c or d)
 	isMatched := false
 
@@ -443,7 +448,7 @@ func isRuleMatchedAllAccounts(projectID int64, segment model.Query, decodedPrope
 	return isMatched
 }
 
-func isRuleMatched(projectID int64, segment model.Segment, decodedProperties *map[string]interface{}, eventNameIDsMap map[string]interface{}, userID string) bool {
+func isRuleMatched(projectID int64, segment model.Segment, decodedProperties *map[string]interface{}, eventNameIDsMap map[string]string, userID string) bool {
 	// isMatched = all rules matched (a or b) AND (c or d)
 	isMatched := false
 	segmentQuery := &model.Query{}
@@ -470,7 +475,7 @@ func isRuleMatched(projectID int64, segment model.Segment, decodedProperties *ma
 			if p.Entity != model.PropertyEntityUserGlobal {
 				continue
 			}
-			isValueFound := checkPropertyOfGivenType(p, decodedProperties)
+			isValueFound := memsql.CheckPropertyOfGivenType(p, decodedProperties)
 			if idx == 0 {
 				groupedPropsMatched = isValueFound
 			} else {
@@ -499,7 +504,7 @@ func checkPropertyInAllUsers(grpa string, p model.QueryProperty, decodedProperti
 		if p.Entity == model.PropertyEntityUserGroup && (user.IsGroupUser != nil && *user.IsGroupUser) {
 			continue
 		}
-		isValueFound = checkPropertyOfGivenType(p, &decodedProperties[index])
+		isValueFound = memsql.CheckPropertyOfGivenType(p, &decodedProperties[index])
 
 		// check for negative filters
 		if (p.Operator == model.NotContainsOpStr && p.Value != model.PropertyValueNone) ||
@@ -514,32 +519,6 @@ func checkPropertyInAllUsers(grpa string, p model.QueryProperty, decodedProperti
 
 		if isValueFound {
 			return isValueFound
-		}
-	}
-	return isValueFound
-}
-
-func checkPropertyOfGivenType(p model.QueryProperty, decodedProperties *map[string]interface{}) bool {
-	isValueFound := false
-	if p.Value != model.PropertyValueNone {
-		if p.Type == U.PropertyTypeDateTime {
-			isValueFound = checkDateTypeProperty(p, decodedProperties)
-		} else if p.Type == U.PropertyTypeNumerical {
-			isValueFound = checkNumericalTypeProperty(p, decodedProperties)
-		} else {
-			isValueFound = checkCategoricalTypeProperty(p, decodedProperties)
-		}
-	} else {
-		// where condition for $none value.
-		propertyValue := (*decodedProperties)[p.Property]
-		if p.Operator == model.EqualsOpStr || p.Operator == model.ContainsOpStr {
-			if propertyValue == nil || propertyValue == "" {
-				isValueFound = true
-			}
-		} else if p.Operator == model.NotEqualOpStr || p.Operator == model.NotContainsOpStr {
-			if propertyValue != nil && propertyValue != "" {
-				isValueFound = true
-			}
 		}
 	}
 	return isValueFound
@@ -571,148 +550,7 @@ func updateAllAccountsSegmentMap(matched bool, userArr []model.User, userPartOfS
 	return segmentMap
 }
 
-func checkNumericalTypeProperty(segmentRule model.QueryProperty, properties *map[string]interface{}) bool {
-	if _, exists := (*properties)[segmentRule.Property]; !exists {
-		return false
-	}
-	var propertyExists bool
-	checkValue, err := strconv.ParseFloat(segmentRule.Value, 64)
-	if err != nil {
-		log.WithError(err).Error("Failed to convert payload value to float type")
-	}
-	var propertyValue float64
-	if floatVal, ok := (*properties)[segmentRule.Property].(float64); ok {
-		propertyValue = floatVal
-	} else if stringVal, ok := (*properties)[segmentRule.Property].(string); ok {
-		if stringVal != "" {
-			propertyValue, err = strconv.ParseFloat(stringVal, 64)
-			if err != nil {
-				log.WithError(err).Error("Failed to convert property value to float type")
-			}
-		}
-	} else if intVal, ok := (*properties)[segmentRule.Property].(int64); ok {
-		propertyValue = float64(intVal)
-	}
-	switch segmentRule.Operator {
-	case model.EqualsOpStr:
-		if propertyValue == checkValue {
-			propertyExists = true
-		}
-	case model.NotEqualOpStr:
-		if propertyValue != checkValue {
-			propertyExists = true
-		}
-	case model.GreaterThanOpStr:
-		if propertyValue > checkValue {
-			propertyExists = true
-		}
-	case model.LesserThanOpStr:
-		if propertyValue < checkValue {
-			propertyExists = true
-		}
-	case model.GreaterThanOrEqualOpStr:
-		if propertyValue >= checkValue {
-			propertyExists = true
-		}
-	case model.LesserThanOrEqualOpStr:
-		if propertyValue <= checkValue {
-			propertyExists = true
-		}
-	default:
-		propertyExists = false
-	}
-
-	return propertyExists
-}
-
-func checkCategoricalTypeProperty(segmentRule model.QueryProperty, properties *map[string]interface{}) bool {
-	if (segmentRule.Operator == model.NotContainsOpStr && segmentRule.Value != model.PropertyValueNone) ||
-		(segmentRule.Operator == model.ContainsOpStr && segmentRule.Value == model.PropertyValueNone) ||
-		(segmentRule.Operator == model.NotEqualOpStr && segmentRule.Value != model.PropertyValueNone) ||
-		(segmentRule.Operator == model.EqualsOpStr && segmentRule.Value == model.PropertyValueNone) {
-		if _, exists := (*properties)[segmentRule.Property]; !exists {
-			return true
-		}
-	}
-	if _, exists := (*properties)[segmentRule.Property]; !exists {
-		return false
-	}
-	var propertyExists bool
-	checkValue := segmentRule.Value
-	propertyValue := (*properties)[segmentRule.Property].(string)
-	switch segmentRule.Operator {
-	case model.ContainsOpStr:
-		if strings.Contains(propertyValue, checkValue) {
-			propertyExists = true
-		}
-	case model.NotContainsOpStr:
-		if !strings.Contains(propertyValue, checkValue) {
-			propertyExists = true
-		}
-	case model.EqualsOpStr:
-		if propertyValue == checkValue {
-			propertyExists = true
-		}
-	case model.NotEqualOpStr:
-		if propertyValue != checkValue {
-			propertyExists = true
-		}
-	default:
-		propertyExists = false
-	}
-	return propertyExists
-}
-
-func checkDateTypeProperty(segmentRule model.QueryProperty, properties *map[string]interface{}) bool {
-	if _, exists := (*properties)[segmentRule.Property]; !exists {
-		return false
-	}
-	var propertyExists bool
-	checkValue, err := model.DecodeDateTimePropertyValue(segmentRule.Value)
-	if err != nil {
-		log.WithError(err).Error("Failed to convert datetime property from payload.")
-	}
-	var propertyValue int64
-	if floatVal, ok := (*properties)[segmentRule.Property].(float64); ok {
-		propertyValue = int64(floatVal)
-	} else if stringVal, ok := (*properties)[segmentRule.Property].(string); ok {
-		if stringVal != "" {
-			propertyValue, err = strconv.ParseInt(stringVal, 10, 64)
-			if err != nil {
-				log.WithError(err).Error("Failed to convert datetime property from properties.")
-			}
-		}
-	} else if intVal, ok := (*properties)[segmentRule.Property].(int64); ok {
-		propertyValue = intVal
-	}
-	switch segmentRule.Operator {
-	case model.BeforeStr:
-		if propertyValue < checkValue.To {
-			propertyExists = true
-		}
-	case model.NotInCurrent:
-		if propertyValue < checkValue.From {
-			propertyExists = true
-		}
-	case model.SinceStr, model.InCurrent:
-		if propertyValue >= checkValue.From {
-			propertyExists = true
-		}
-	case model.EqualsOpStr, model.BetweenStr, model.InPrevious, model.InLastStr:
-		if checkValue.From <= propertyValue && propertyValue <= checkValue.To {
-			propertyExists = true
-		}
-	case model.NotInBetweenStr, model.NotInPrevious, model.NotInLastStr:
-		if !(checkValue.From <= propertyValue) && !(propertyValue <= checkValue.To) {
-			propertyExists = true
-		}
-	default:
-		propertyExists = false
-	}
-	return propertyExists
-}
-
-func performedEventsCheck(projectID int64, segmentID string, eventNameIDsMap map[string]interface{},
+func performedEventsCheck(projectID int64, segmentID string, eventNameIDsMap map[string]string,
 	segmentQuery *model.Query, userID string, userArr []model.User) bool {
 
 	isPerformedEvent, isAllAccounts := false, false
