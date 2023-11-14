@@ -20,7 +20,7 @@ import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import FaSelect from 'Components/GenericComponents/FaSelect';
 import { selectedOptionsMapper } from 'Components/GenericComponents/FaSelect/utils';
 import { processProperties } from 'Utils/dataFormatter';
-import truncateURL from 'Utils/truncateURL';
+// import truncateURL from 'Utils/truncateURL';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
@@ -739,7 +739,8 @@ const GlobalFilterSelect = ({
                 ? valuesState
                     .map((vl) =>
                       DISPLAY_PROP[vl]
-                        ? truncateURL(DISPLAY_PROP[vl])
+                        ? // ? truncateURL(DISPLAY_PROP[vl])
+                          DISPLAY_PROP[vl]
                         : formatCsvUploadValue(vl)
                     )
                     .join(', ')
