@@ -16,6 +16,12 @@ export default function reducer(state = initialState, action) {
     case 'FETCH_GOALS_FULFILLED': {
       return { ...state, goals: action.payload };
     }
+    case 'SET_ACTIVE_EXPLAIN_INSIGHTS': {
+      return { ...state, activeQuery: action.payload };
+    }
+    case 'SET_ACTIVE_EXPLAIN_RESET': {
+      return { ...state, activeQuery: action.payload };
+    }
     case 'FETCH_TRACKED_EVENTS_FULFILLED': {
       return { ...state, tracked_events: action.payload };
     }
@@ -376,7 +382,24 @@ export function removeSavedGoal(projectID, data) {
 export function fetchSavedExplainGoals(projectID) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      get(dispatch, host + 'projects/' + projectID + '/v1/explainV2/goals')
+      get(dispatch, host + 'projects/' + projectID + '/v1/explainV3/goals')
+        .then((response) => {
+          dispatch({ type: 'FETCH_GOALS_FULFILLED', payload: response.data });
+          resolve(response);
+        })
+        .catch((err) => {
+          dispatch({ type: 'FETCH_GOALS_REJECTED', payload: err });
+          reject(err);
+        });
+    });
+  };
+}
+
+//Explain V3 APIs
+export function fetchSavedExplainGoalsV3(projectID) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      get(dispatch, host + 'projects/' + projectID + '/v1/explainV3/goals')
         .then((response) => {
           dispatch({ type: 'FETCH_GOALS_FULFILLED', payload: response.data });
           resolve(response);
@@ -408,6 +431,25 @@ export function createExplainJob(projectID, data) {
     });
   };
 }
+export function createExplainJobv3(projectID, data) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      // const insightsUrl = `/v1/factor?type=${isJourney ? 'journey' : 'singleevent'}&model_id=${modelId}`;
+      post(dispatch, host + 'projects/' + projectID + '/v1/explainV3/job', data)
+        .then((response) => {
+          dispatch({
+            type: 'FETCH_GOAL_INSIGHTS_FULFILLED',
+            payload: response.data
+          });
+          resolve(response);
+        })
+        .catch((err) => {
+          dispatch({ type: 'FETCH_GOAL_INSIGHTS_REJECTED', payload: err });
+          reject(err);
+        });
+    });
+  };
+}
 
 export function removeSavedExplainGoal(projectID, data) {
   return function (dispatch) {
@@ -425,11 +467,21 @@ export function removeSavedExplainGoal(projectID, data) {
   };
 }
 
+export function setActiveExplainQuery(data) {
+  return function (dispatch) {
+    if (data) {
+      dispatch({ type: 'SET_ACTIVE_EXPLAIN_INSIGHTS', payload: data });
+    } else {
+      dispatch({ type: 'SET_ACTIVE_EXPLAIN_RESET', payload: null });
+    }
+  };
+}
+
 export function fetchExplainGoalInsights(projectID, queryID, data) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
       // const insightsUrl = `/v1/explainV2?type=journey&pattern_mode=AllPatterns&job_id=`;
-      const insightsUrl = `/v1/explainV2?type=journey&job_id=`;
+      const insightsUrl = `/v1/explainV3?type=journey&job_id=`;
       post(
         dispatch,
         host + 'projects/' + projectID + insightsUrl + queryID,
