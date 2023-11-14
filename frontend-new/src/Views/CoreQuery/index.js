@@ -457,7 +457,8 @@ function CoreQuery({
         // updateAppliedBreakdown();
         updateResultState({
           ...initialState,
-          data: res.data.result || res.data
+          data: res.data.result || res.data,
+          status:res.status
         });
       },
       (err) => {
@@ -670,18 +671,21 @@ function CoreQuery({
     if (result_criteria === TOTAL_EVENTS_CRITERIA) {
       updateResultState({
         ...initialState,
-        data: formatApiData(data.result_group[0], data.result_group[1])
+        data: formatApiData(data.result_group[0], data.result_group[1]),
+        status:res.status
       });
     } else if (result_criteria === TOTAL_USERS_CRITERIA) {
       if (user_type === EACH_USER_TYPE) {
         updateResultState({
           ...initialState,
-          data: formatApiData(data.result_group[0], data.result_group[1])
+          data: formatApiData(data.result_group[0], data.result_group[1]),
+          status:res.status
         });
       } else {
         updateResultState({
           ...initialState,
-          data: data.result_group[0]
+          data: data.result_group[0],
+          status:res.status
         });
       }
     }
@@ -759,13 +763,14 @@ function CoreQuery({
           setLoading(false);
           updateResultState({
             ...initialState,
-            data: resultantData
+            data: resultantData,
+            status:res.status
           });
         }
       } catch (err) {
         console.log(err);
         setLoading(false);
-        updateResultState({ ...initialState, loading: false, error: true });
+        updateResultState({ ...initialState, loading: false, error: true ,status:err.status});
       }
     },
     [
@@ -839,13 +844,14 @@ function CoreQuery({
           setLoading(false);
           updateResultState({
             ...initialState,
-            data: res.data.result || res.data
+            data: res.data.result || res.data,
+            status:res.status
           });
         }
       } catch (err) {
         console.log(err);
         setLoading(false);
-        updateResultState({ ...initialState, error: true });
+        updateResultState({ ...initialState, error: true ,status:err.status});
       }
     },
     [
@@ -980,6 +986,7 @@ function CoreQuery({
             updateResultState({
               ...initialState,
               data: res.data.result || res.data,
+              status:res.status,
               apiCallStatus
             });
           } else {
@@ -1009,7 +1016,8 @@ function CoreQuery({
         setLoading(false);
         updateResultState({
           ...initialState,
-          error: true
+          error: true,
+          status:err.status
         });
       }
     },
@@ -1095,7 +1103,8 @@ function CoreQuery({
           setLoading(false);
           updateResultState({
             ...initialState,
-            data: res.data.result || res.data
+            data: res.data.result || res.data,
+            status:res.status
           });
         }
       } catch (err) {
@@ -1103,7 +1112,8 @@ function CoreQuery({
         setLoading(false);
         updateResultState({
           ...initialState,
-          error: true
+          error: true,
+          status:err.status
         });
       }
     },
@@ -1160,12 +1170,13 @@ function CoreQuery({
         setLoading(false);
         updateResultState({
           ...initialState,
-          data: res.data.result || res.data
+          data: res.data.result || res.data,
+          status:res.status
         });
       } catch (err) {
         setLoading(false);
         console.log(err);
-        updateResultState({ ...initialState, error: true });
+        updateResultState({ ...initialState, error: true,status:err.status });
       }
     },
     [

@@ -146,7 +146,7 @@ func UpdateDashboardHandler(c *gin.Context) {
 	errCode := store.GetStore().UpdateDashboard(projectId, agentUUID, dashboardId, &requestPayload)
 	if errCode != http.StatusAccepted {
 		errMsg := "Update dashboard failed."
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": errMsg})
+		c.AbortWithStatusJSON(errCode, gin.H{"error": errMsg})
 		return
 	}
 
