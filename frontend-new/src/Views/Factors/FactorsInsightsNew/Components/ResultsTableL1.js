@@ -22,43 +22,49 @@ import CardInsight from './CardInsight';
 import { renderAttributeValue } from '../Utils/renderAttributeVal';
 
 const CardInsightWrapper = ({ data }) => {
-  return (
-    <>
-      <div className={'flex items-center flex-col'}>
-        <div
-          className={
-            'flex items-center justify-center explain-insight--wrapper'
-          }
-        >
-          <CardInsight
-            title={data?.goal?.st_en ? data?.goal?.st_en : 'All Visitors'}
-            count={data?.total_users_count}
-            arrow={true}
-            tagTitle={`A`}
-          />
-          <CardInsight
-            title={data?.goal?.en_en}
-            count={data?.goal_user_count}
-            arrow={false}
-            tagTitle={`B`}
-          />
+  try{
+    return (
+      <>
+        <div className={'flex items-center flex-col'}>
+          <div
+            className={
+              'flex items-center justify-center explain-insight--wrapper'
+            }
+          >
+            <CardInsight
+              title={data?.goal?.st_en ? data?.goal?.st_en?.label : 'All Visitors'}
+              count={data?.total_users_count}
+              arrow={true}
+              tagTitle={`A`}
+            />
+            <CardInsight
+              title={data?.goal?.en_en?.label}
+              count={data?.goal_user_count}
+              arrow={false}
+              tagTitle={`B`}
+            />
+          </div>
+          <Text
+            type={'title'}
+            level={4}
+            weight={'bold'}
+            extraClass={'m-0 mt-4 flex items-center'}
+          >
+            <Number
+              suffix={'%'}
+              number={data?.overall_percentage}
+              className={'mr-1'}
+            />
+            {` Conversions from A to B`}
+          </Text>
         </div>
-        <Text
-          type={'title'}
-          level={4}
-          weight={'bold'}
-          extraClass={'m-0 mt-4 flex items-center'}
-        >
-          <Number
-            suffix={'%'}
-            number={data?.overall_percentage}
-            className={'mr-1'}
-          />
-          {` Conversions from A to B`}
-        </Text>
-      </div>
-    </>
-  );
+      </>
+    );
+
+  }
+  catch (err){
+    console.log("error in CardInsightWrapper-->>", err )
+  }
 };
 
 const InsightColumnTitle = ({ title, isIncreased, resultTitle }) => {
@@ -105,6 +111,9 @@ const InsightItem = ({
   explainMatchEventName
 }) => {
   let dataSet = sort ? data?.insights?.sort() : data?.insights?.reverse();
+  if(!dataSet){
+    return null
+  }
 
   return dataSet?.map((item) => {
     if (
@@ -354,6 +363,9 @@ const ResultsTableL1 = ({ goalInsights, explainMatchEventName }) => {
   const handleCancel = () => {
     setConfigureDPModal(false);
   };
+  if(!goalInsights){
+    return null
+  }
 
   return (
     <>
@@ -397,7 +409,7 @@ const ResultsTableL1 = ({ goalInsights, explainMatchEventName }) => {
                     data={goalInsights}
                     explainMatchEventName={explainMatchEventName}
                   />
-
+{/* 
                   <InsightTable
                     showSearch={showSearch}
                     showModalL2={showModalL2}
@@ -406,7 +418,7 @@ const ResultsTableL1 = ({ goalInsights, explainMatchEventName }) => {
                     setModalData={setModalData}
                     data={goalInsights}
                     explainMatchEventName={explainMatchEventName}
-                  />
+                  /> */}
                 </div>{' '}
               </>
             ) : (
