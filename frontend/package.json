@@ -8,7 +8,7 @@
     "@coreui/icons": "0.2.0",
     "ansi-regex": "^6.0.1",
     "array-move": "^2.1.0",
-    "axios": "^0.21.2",
+    "axios": "^1.6.0",
     "bootstrap": "^4.3.1",
     "browserslist": "^4.19.1",
     "chart.js": "^2.7.2",
