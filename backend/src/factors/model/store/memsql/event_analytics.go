@@ -885,7 +885,7 @@ func buildAddJoinForEventAnalyticsGroupQuery(projectID int64, groupID, scopeGrou
 		jointStmnt := " LEFT JOIN users as user_groups on events.user_id = user_groups.id AND user_groups.project_id = ? "
 		params := []interface{}{projectID}
 
-		if hasGlobalGroupPropertiesFilter || (isAccountSegment && !isGroupEvent) {
+		if hasGlobalGroupPropertiesFilter || (isAccountSegment) {
 			groupUsersJoin := fmt.Sprintf(" LEFT JOIN users as user_groups on events.user_id = user_groups.id AND user_groups.project_id = ? LEFT JOIN "+
 				"users as group_users ON user_groups.group_%d_user_id = group_users.group_%d_user_id AND group_users.project_id = ? "+
 				"AND group_users.is_group_user = true", scopeGroupID, scopeGroupID)
@@ -898,7 +898,7 @@ func buildAddJoinForEventAnalyticsGroupQuery(projectID int64, groupID, scopeGrou
 				jointStmnt = jointStmnt + fmt.Sprintf(" AND group_users.source IN ( %s ) AND ( %s )", globalGroupSource, globalGroupIDColumns)
 			}
 
-			if isAccountSegment && !isGroupEvent {
+			if isAccountSegment {
 				jointStmnt = jointStmnt + fmt.Sprintf(" JOIN users as domains ON user_groups.group_%d_user_id = domains.id "+
 					"AND domains.project_id = ? AND domains.is_group_user = true AND domains.source = ?", scopeGroupID)
 
@@ -957,7 +957,7 @@ func GetUserSelectStmntForUserORGroup(caller string, scopeGroupID int, isGroupEv
 		if scopeGroupID > 0 {
 			str := "users.coal_group_user_id as coal_group_user_id"
 			if isGroupEvent {
-				return str + ", COALESCE(users.last_event_at, users.updated_at) as last_activity, users.properties as properties"
+				return str + ", COALESCE(users.last_event_at, users.updated_at) as last_activity, users.group_properties as properties"
 			}
 			return str + ",users.user_last_event as last_activity, users.group_properties as properties"
 		}
@@ -1047,6 +1047,9 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 	}
 	if selectStringStmt != "" {
 		commonSelect = selectStringStmt
+		if scopeGroupID > 0 {
+			commonGroupBy = "coal_group_user_id"
+		}
 	} else {
 		if q.GetGroupByTimestamp() != "" {
 			selectTimestamp := getSelectTimestampByType(q.GetGroupByTimestamp(), q.Timezone)
@@ -1118,12 +1121,12 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 			var addColsString string
 			if model.IsAccountProfiles(q.Caller) && groupIDS[i] == 0 {
 				addColsString = "COALESCE(user_groups.last_event_at,user_groups.updated_at) as user_last_event"
-			} else {
-				addColsString = "users.updated_at, users.last_event_at"
+			} else if model.IsAccountProfiles(q.Caller) {
+				addColsString = "group_users.updated_at, group_users.last_event_at"
 			}
 
 			if model.IsUserProfiles(q.Caller) {
-				addColsString = addColsString + ", users.is_group_user, users.source"
+				addColsString = "users.updated_at, users.last_event_at, users.is_group_user, users.source"
 			}
 
 			if model.IsAccountProfiles(q.Caller) {
@@ -1176,11 +1179,9 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 		// Join support for original users of group.
 		if groupIDS[i] != 0 {
 			if model.IsAccountProfiles(q.Caller) {
-				addJoinStmnt = fmt.Sprintf("LEFT JOIN users ON events.user_id=users.id AND users.project_id = ? "+
-					"JOIN users as domains ON users.group_%d_user_id = domains.id AND domains.project_id = ? "+
-					"AND domains.is_group_user = true AND domains.source = ?", scopeGroupID)
-
-				stepParams = append(stepParams, projectID, projectID, model.UserSourceDomains)
+				var groupJoinParams []interface{}
+				addJoinStmnt, groupJoinParams = buildAddJoinForEventAnalyticsGroupQuery(projectID, groupIDS[i], scopeGroupID, q.GroupAnalysis, q.GlobalUserProperties, model.IsAccountProfiles(q.Caller), isEventGroupQueryDomains)
+				stepParams = append(stepParams, groupJoinParams...)
 				if searchFilterStmt != "" {
 					addJoinStmnt = addJoinStmnt + " " + searchFilterStmt
 					stepParams = append(stepParams, searchParams...)
