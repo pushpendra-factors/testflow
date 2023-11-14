@@ -17,7 +17,14 @@ function LeftPanePropBlock({ property, type, displayName, value, onDelete }) {
         >
           {`${displayName}`}
         </Text>
-        <Text type='title' level={7} truncate charLimit={25} extraClass='m-0'>
+        <Text
+          type='title'
+          level={7}
+          truncate
+          charLimit={25}
+          extraClass='m-0'
+          shouldTruncateURL
+        >
           {value ? propValueFormat(property, value, type) : '-'}
         </Text>
       </div>

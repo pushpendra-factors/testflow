@@ -78,6 +78,7 @@ function InfoCard({
                 extraClass='break-all text-right'
                 truncate
                 charLimit={40}
+                shouldTruncateURL
               >
                 {eventType === 'FE' ? title : eventName}
               </Text>
@@ -105,6 +106,7 @@ function InfoCard({
               }  text-right`}
               truncate
               charLimit={40}
+              shouldTruncateURL
             >
               {propValueFormat(key, value, propType) || '-'}
             </Text>
