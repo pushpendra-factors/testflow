@@ -4,7 +4,7 @@ import { Tooltip } from 'antd';
 import { Text } from '../factorsComponents';
 import { legend_counts } from '../../utils/constants';
 import LegendsCircle from '../../styles/components/LegendsCircle';
-import truncateURL from 'Utils/truncateURL';
+// import truncateURL from 'Utils/truncateURL';
 
 const legend_length = {
   0: 15,
@@ -26,7 +26,8 @@ function TopLegends({
 
   const displayLegend = (legend) => {
     if (!legend) return null;
-    let urlTruncatedlegend = truncateURL(legend);
+    // let urlTruncatedlegend = truncateURL(legend);
+    let urlTruncatedlegend = legend;
     return (
       <Text mini type='paragraph'>
         {urlTruncatedlegend.length > legend_length[cardSize] &&

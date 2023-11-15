@@ -26,7 +26,7 @@ import {
 import LegendsCircle from '../../../../styles/components/LegendsCircle';
 import TopLegends from '../../../../components/GroupedBarChart/TopLegends';
 import styles from './styles.module.scss';
-import truncateURL from 'Utils/truncateURL';
+// import truncateURL from 'Utils/truncateURL';
 
 function Chart({
   eventsData,
@@ -442,7 +442,8 @@ function Chart({
           } else {
             label = d;
           }
-          const urlTruncatedlabel = truncateURL(label);
+          // const urlTruncatedlabel = truncateURL(label);
+          const urlTruncatedlabel = label;
           if (
             urlTruncatedlabel.length > BAR_CHART_XAXIS_TICK_LENGTH[cardSize]
           ) {

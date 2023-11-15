@@ -14,7 +14,7 @@ import styles from './index.module.scss';
 import { getFormattedKpiValue } from '../../Views/CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
 import { COLOR_CLASSNAMES } from '../../constants/charts.constants';
 import { visualizationColors } from '../../utils/dataFormatter';
-import truncateURL from 'Utils/truncateURL';
+// import truncateURL from 'Utils/truncateURL';
 
 function HorizontalBarChart({
   series,
@@ -139,7 +139,8 @@ function HorizontalBarChart({
           useHTML: true,
           formatter() {
             const self = this;
-            const label = truncateURL(self.value);
+            // const label = truncateURL(self.value);
+            const label = self.value;
             return ReactDOMServer.renderToString(
               <Text
                 color='grey-2'
