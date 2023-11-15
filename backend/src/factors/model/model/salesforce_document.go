@@ -29,6 +29,7 @@ type SalesforceDocument struct {
 	// fields for internal use
 	dateTimeZone   util.TimeZoneString `gorm:"-" json:"-"`
 	dateProperties *map[string]bool    `gorm:"-" json:"-"`
+	SyncTries      int                 `gorm:"default:0" json:"sync_tries"`
 }
 
 type SalesforceAction int

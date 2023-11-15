@@ -33,6 +33,7 @@ type HubspotDocument struct {
 	// for internal use only
 	timeZone       U.TimeZoneString `gorm:"-" json:"-"`
 	dateProperties *map[string]bool `gorm:"-" json:"-"`
+	SyncTries      int              `gorm:"default:0" json:"sync_tries"`
 }
 
 // HubspotLastSyncInfo doc type last sync info
