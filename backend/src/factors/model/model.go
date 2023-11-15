@@ -439,7 +439,6 @@ type Model interface {
 	DeleteProjectAgentMapping(projectID int64, agentUUIDToRemove string) int
 	EditProjectAgentMapping(projectID int64, agentUUIDToEdit string, role int64) int
 
-
 	// project_setting
 	GetProjectSetting(projectID int64) (*model.ProjectSetting, int)
 	IsClearbitIntegratedByProjectID(projectID int64) (bool, int)
@@ -722,6 +721,7 @@ type Model interface {
 	AddPropertyValueLabelToQueryResults(projectID int64, oldResults []model.QueryResult) ([]model.QueryResult, error)
 	TransformQueryResultsColumnValuesToLabel(projectID int64, result map[string]interface{}) (map[string]interface{}, error)
 	AddPropertyValueLabelsToProfileResults(projectID int64, results []model.Profile) []model.Profile
+	AddPropertyValueLabelToQueryResult(projectID int64, oldResult *model.QueryResult) (*model.QueryResult, error)
 
 	// task and task-execution
 	RegisterTaskWithDefaultConfiguration(taskName string, source string, frequency int, isProjectEnabled bool) (uint64, int, string)

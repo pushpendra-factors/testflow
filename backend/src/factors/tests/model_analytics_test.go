@@ -9722,7 +9722,7 @@ func TestAnalyticsAllAccountsFilterBreadkdown(t *testing.T) {
 	_, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.AllowedGroupNames)
 	assert.Equal(t, http.StatusCreated, status)
 
-	properties := postgres.Jsonb{[]byte(fmt.Sprintf(`{"user_no":"w1","%s":1}`,U.SP_PAGE_COUNT))}
+	properties := postgres.Jsonb{[]byte(fmt.Sprintf(`{"user_no":"w1","%s":1}`, U.SP_PAGE_COUNT))}
 	userWeb1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: properties,
 		Source: model.GetRequestSourcePointer(model.UserSourceWeb), CustomerUserId: "cuid1"})
 	assert.Equal(t, http.StatusCreated, errCode)
@@ -10276,8 +10276,6 @@ func TestAnalyticsAllAccountsFilterBreadkdown(t *testing.T) {
 	assert.Equal(t, "B", result.Rows[0][3])
 	assert.Equal(t, "abc1.com", result.Rows[0][4])
 
-
-
 	query = model.Query{
 		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
 		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
@@ -10350,4 +10348,104 @@ func TestAnalyticsAllAccountsFilterBreadkdown(t *testing.T) {
 	assert.Equal(t, "$none", result.Rows[0][2])
 	assert.Equal(t, "A", result.Rows[0][3])
 	assert.Equal(t, "abc1.com", result.Rows[0][4])
+}
+
+func TestAnalyticsFunnelValueLabel(t *testing.T) {
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	H.InitAppRoutes(r)
+	uri := "/sdk/event/track"
+
+	status := store.GetStore().CreateOrUpdateDisplayNameLabel(project.ID, "hubspot", "$hubspot_contact_owner", "1", "o1")
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreateOrUpdateDisplayNameLabel(project.ID, "hubspot", "$hubspot_contact_owner", "2", "o2")
+	assert.Equal(t, http.StatusCreated, status)
+
+	properties := postgres.Jsonb{[]byte(fmt.Sprintf(`{"user_no":"w1","$hubspot_contact_owner":1}`))}
+	userWeb1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: properties,
+		Source: model.GetRequestSourcePointer(model.UserSourceWeb), CustomerUserId: "cuid1"})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	properties = postgres.Jsonb{[]byte(`{"user_no":"w2","$hubspot_contact_owner":2}`)}
+	userWeb2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: properties,
+		Source: model.GetRequestSourcePointer(model.UserSourceWeb), CustomerUserId: "cuid2"})
+	assert.Equal(t, http.StatusCreated, errCode)
+	payload := fmt.Sprintf(`{"event_name": "www.xyz.com", "user_id": "%s", "timestamp": %d,"event_properties":{"event_id":%d}}`,
+		userWeb1, U.TimeNowZ().Add(-10*time.Minute).Unix(), 1)
+	w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	payload = fmt.Sprintf(`{"event_name": "www.xyz2.com", "user_id": "%s", "timestamp": %d,"event_properties":{"event_id":%d}}`,
+		userWeb1, U.TimeNowZ().Add(-9*time.Minute).Unix(), 2)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	payload = fmt.Sprintf(`{"event_name": "www.xyz.com", "user_id": "%s", "timestamp": %d,"event_properties":{"event_id":%d}}`,
+		userWeb2, U.TimeNowZ().Add(-10*time.Minute).Unix(), 3)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	payload = fmt.Sprintf(`{"event_name": "www.xyz2.com", "user_id": "%s", "timestamp": %d,"event_properties":{"event_id":%d}}`,
+		userWeb2, U.TimeNowZ().Add(-9*time.Minute).Unix(), 4)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	query := model.Query{
+		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       "www.xyz.com",
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       "www.xyz2.com",
+				Properties: []model.QueryProperty{},
+			},
+		},
+
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:         model.PropertyEntityUser,
+				EventNameIndex: 1,
+				Property:       "$hubspot_contact_owner",
+				EventName:      "www.xyz.com",
+			},
+			{
+				Entity:         model.PropertyEntityUser,
+				EventNameIndex: 1,
+				Property:       "user_no",
+				EventName:      "www.xyz.com",
+			},
+		},
+		Class:           model.QueryClassFunnel,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondAllGivenEvent,
+	}
+
+	w = sendAnalyticsQueryReq(r, model.QueryClassFunnel, project.ID, agent, 0, 0, "", &query, true, false)
+	assert.NotEmpty(t, w)
+	result := DecodeJSONResponseToAnalyticsResult(w.Body)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][1])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][1])
+		return p1 < p2
+	})
+
+	assert.Len(t, result.Rows, 3)
+	assert.Nil(t, err)
+	assert.Equal(t, "o1", result.Rows[1][0])
+	assert.Equal(t, "w1", result.Rows[1][1])
+	assert.Equal(t, float64(1), result.Rows[1][2])
+	assert.Equal(t, float64(1), result.Rows[1][3])
+	assert.Equal(t, "100.0", result.Rows[1][4])
+	assert.Equal(t, "100.0", result.Rows[1][5])
+	assert.Equal(t, "o2", result.Rows[2][0])
+	assert.Equal(t, "w2", result.Rows[2][1])
+	assert.Equal(t, float64(1), result.Rows[2][2])
+	assert.Equal(t, float64(1), result.Rows[2][3])
+	assert.Equal(t, "100.0", result.Rows[2][4])
+	assert.Equal(t, "100.0", result.Rows[2][5])
 }
