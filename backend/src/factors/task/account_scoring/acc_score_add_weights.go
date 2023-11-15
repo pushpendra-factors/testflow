@@ -98,8 +98,14 @@ func ProcessSingleFilterOnEvent(event *P.CounterEventFormat, filter M.AccEventWe
 
 	ruleId := filter.WeightId
 	ruleResultMap := make(map[int]bool, 0)
-	for idx, singleRule := range filter.Rule {
 
+	if len(filter.Rule) == 0 {
+		if event.EventName == filter.EventName {
+			return filter.WeightId, true
+		}
+	}
+
+	for idx, singleRule := range filter.Rule {
 		if singleRule.Type == "event" {
 			match := evalProperty(event.EventProperties, singleRule)
 			ruleResultMap[idx] = match
