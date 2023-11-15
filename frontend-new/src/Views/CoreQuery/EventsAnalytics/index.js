@@ -9,6 +9,7 @@ import {
   ALL_USER_TYPE,
 } from '../../../utils/constants';
 import EventBreakdownCharts from './EventBreakdown/EventBreakdownCharts';
+import { getErrorMessage } from 'Utils/global';
 
 function EventsAnalytics({
   queries,
@@ -24,13 +25,20 @@ function EventsAnalytics({
   renderedCompRef,
 }) {
   let content = null;
+
+  const [errMsg,setErrMsg]=useState('');
+  useEffect(() => {
+    const errorMessage = getErrorMessage(resultState);
+    setErrMsg(errorMessage);
+  }, [resultState]);
+
   
   if (breakdownType === EACH_USER_TYPE) {
     if (resultState.data && !resultState.data.metrics.rows.length) {
       content = (
-        <div className='h-64 flex items-center justify-center w-full'>
-          No Data Found!
-        </div>
+        <div className='flex justify-center items-center w-full h-full pt-4 pb-4'>
+        <NoDataInTimeRange message={errMsg}/>
+      </div>
       );
     }
 

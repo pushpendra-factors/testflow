@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState ,useEffect} from 'react';
 import { Spin } from 'antd';
 import { get } from 'lodash';
 import {
@@ -39,12 +39,15 @@ import {
   DASHBOARD_PRESENTATION_KEYS
 } from '../../components/SaveQuery/saveQuery.constants';
 import { ErrorBoundary } from 'react-error-boundary';
+import NoDataInTimeRange from 'Components/NoDataInTimeRange';
+import { getErrorMessage } from 'Utils/global';
 
 function CardContent({ unit, resultState, durationObj }) {
   let content = null;
   const { eventNames, attr_dimensions, content_groups } = useSelector(
     (state) => state.coreQuery
   );
+  const [errMsg,setErrMsg]=useState('');
   const { config: kpiConfig } = useSelector((state) => state.kpi);
 
   const equivalentQuery = useMemo(() => {
@@ -143,6 +146,11 @@ function CardContent({ unit, resultState, durationObj }) {
     }
   }, [equivalentQuery, queryType]);
 
+  useEffect(() => {
+    const errorMessage = getErrorMessage(resultState);
+    setErrMsg(errorMessage);
+  }, [resultState]);
+
   const campaignState = useMemo(() => {
     if (queryType === QUERY_TYPE_CAMPAIGN) {
       return {
@@ -175,9 +183,10 @@ function CardContent({ unit, resultState, durationObj }) {
   }
 
   if (resultState.error) {
-    content = (
-      <div className='flex justify-center items-center w-full h-full pt-4 pb-4'>
-        <NoDataChart />
+
+    return (
+        <div className='flex justify-center items-center w-full h-full pt-4 pb-4'>
+        <NoDataInTimeRange message={errMsg}/>
       </div>
     );
   }

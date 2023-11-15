@@ -38,6 +38,8 @@ import {
 import { getKpiLabel } from '../KPIAnalysis/kpiAnalysis.helpers';
 import { ATTRIBUTION_GROUP_ANALYSIS_KEYS } from '../AttributionsResult/attributionsResult.constants';
 import NoDataChart from 'Components/NoDataChart';
+import { getErrorMessage } from 'Utils/global';
+import NoDataInTimeRange from 'Components/NoDataInTimeRange';
 const nodata = (
   <div className='flex justify-center items-center w-full h-full pt-4 pb-4'>
     <NoDataChart />
@@ -76,6 +78,8 @@ function ReportContent({
   } = useContext(CoreQueryContext);
 
   const { attrQueries } = useSelector((state) => state.coreQuery);
+  const [errMsg,setErrMsg]=useState('');
+
 
   const chartType = useMemo(
     () =>
@@ -120,6 +124,11 @@ function ReportContent({
     attributionsState?.touchpoint
   ]);
 
+  useEffect(() => {
+    const errorMessage = getErrorMessage(resultState);
+    setErrMsg(errorMessage);
+  }, [resultState]);
+
   if (resultState.loading) {
     content = (
       <div className='h-64 flex items-center justify-center w-full'>
@@ -129,11 +138,11 @@ function ReportContent({
   }
 
   if (resultState.error) {
-    content = (
-      <div className='h-64 flex items-center justify-center w-full'>
-        Something Went Wrong!
-      </div>
-    );
+    return (
+      <div className='flex justify-center items-center w-full h-full pt-4 pb-4'>
+      <NoDataInTimeRange message={errMsg}/>
+    </div>
+  );
   }
 
   if (resultState.apiCallStatus && !resultState.apiCallStatus.required) {
