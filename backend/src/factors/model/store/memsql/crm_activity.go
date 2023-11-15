@@ -433,17 +433,16 @@ func (store *MemSQL) GetCRMStatus(ProjectID int64, crmSource string) (map[string
 
 }
 
-func (store *MemSQL) IncrementSyncTriesForCrmEnrichment(crmSource, docId string, projectId, timestamp int64, action, doctype int) int {
+func (store *MemSQL) IncrementSyncTriesForCrmEnrichment(crmString, docId string, projectId, timestamp int64, action, doctype int) int {
 
 	logFields := log.Fields{
 		"project_id": projectId,
 		"timestamp":  timestamp,
 		"action":     action,
 		"doctype":    doctype,
+		"crmSource":  crmString,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-
-	var crmString string
 
 	db := C.GetServices().Db
 	stmt := fmt.Sprintf("UPDATE %s SET sync_tries = sync_tries + 1 where id = ? and project_id = ? and type = ? and action = ? and timestamp = ? ", crmString)

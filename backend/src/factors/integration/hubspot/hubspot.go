@@ -4566,9 +4566,9 @@ func syncAll(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKe
 		logCtx = logCtx.WithFields(log.Fields{"document_id": documents[i].ID, "doc_type": documents[i].Type, "document_timestamp": documents[i].Timestamp})
 		startTime := time.Now().Unix()
 
-		errCode := store.GetStore().IncrementSyncTriesForCrmEnrichment("hubspot_document", documents[i].ID, documents[i].ProjectId, documents[i].Timestamp, documents[i].Action, documents[i].Type)
+		errCode := store.GetStore().IncrementSyncTriesForCrmEnrichment("hubspot_documents", documents[i].ID, documents[i].ProjectId, documents[i].Timestamp, documents[i].Action, documents[i].Type)
 		if errCode != http.StatusOK {
-			logCtx.Error("incremention of sync tries failed")
+			logCtx.Error("Failed to increment sync tries.")
 		}
 
 		switch documents[i].Type {

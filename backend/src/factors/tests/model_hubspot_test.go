@@ -8451,7 +8451,7 @@ func TestHubspotUpdateGroupUserColumn(t *testing.T) {
 		Properties: map[string]string{
 			"createdate":             companyCreatedDate.Format(model.HubspotDateTimeLayout),
 			"hs_lastmodifieddate":    companyUpdatedDate.Format(model.HubspotDateTimeLayout),
-			"hs_object_id":"1",
+			"hs_object_id":           "1",
 			"company_lifecyclestage": "lead",
 			"demo_booked_on":         companyCreatedDate.Format(model.HubspotDateLayout),
 			"name":                   "testcompanyV3",
@@ -8508,4 +8508,48 @@ func TestHubspotUpdateGroupUserColumn(t *testing.T) {
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
 	}
+}
+
+func TestHubspotDocumentsSyncTries(t *testing.T) {
+
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	companyCreatedDate := U.TimeNowZ().AddDate(0, 0, -1)
+	companyUpdatedDate := companyCreatedDate
+
+	company := IntHubspot.CompanyV3{
+		CompanyId:  "1",
+		ContactIds: []int64{1},
+		Properties: map[string]string{
+			"createdate":             companyCreatedDate.Format(model.HubspotDateTimeLayout),
+			"hs_lastmodifieddate":    companyUpdatedDate.Format(model.HubspotDateTimeLayout),
+			"hs_object_id":           "1",
+			"company_lifecyclestage": "lead",
+			"demo_booked_on":         companyCreatedDate.Format(model.HubspotDateLayout),
+			"name":                   "testcompanyV3",
+			"website":                "abc.com",
+			"domain":                 "abc.com",
+		},
+	}
+
+	enJSON, err := json.Marshal(company)
+	assert.Nil(t, err)
+	pJSON := postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameCompany,
+		Value:     &pJSON,
+	}
+	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, status, http.StatusCreated)
+
+	documents, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"1"},
+		model.HubspotDocumentTypeCompany, []int{model.HubspotDocumentActionCreated, model.HubspotDocumentActionUpdated})
+
+	status = store.GetStore().UpdateHubspotDocumentAsSynced(project.ID, "1", model.HubspotDocumentTypeCompany, "",
+		documents[0].Timestamp, documents[0].Action, "", "")
+	assert.Equal(t, http.StatusAccepted, status)
+	status = store.GetStore().UpdateHubspotDocumentAsSynced(project.ID, "1", model.HubspotDocumentTypeCompany, "",
+		documents[0].Timestamp, model.HubspotDocumentActionUpdated, "", "")
+	assert.Equal(t, http.StatusAccepted, status)
 }
