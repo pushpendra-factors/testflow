@@ -26,6 +26,7 @@ class Text extends React.Component {
       isUppercase,
       extraClass,
       truncate = false,
+      shouldTruncateURL = false,
       charLimit = 30,
       ...otherProps
     } = this.props;
@@ -64,7 +65,8 @@ class Text extends React.Component {
     //checks if text truncation and is child is string. ignores if its array.
     const isTextTruncatePossible = truncate && !_.isArray(children);
     //checks if text is a URL.
-    const isValidURLCheck = !_.isArray(children) && isValidURL(children);
+    const isValidURLCheck =
+      shouldTruncateURL && !_.isArray(children) && isValidURL(children);
 
     const truncatedURLText = isValidURLCheck ? truncateURL(children) : '';
     const isOverFlow = isValidURLCheck

@@ -4539,7 +4539,7 @@ func TestAllAccounts(t *testing.T) {
 					Operator:  "equals",
 					Value:     "London",
 					LogicalOp: "AND",
-					GroupName: "users",
+					GroupName: "user",
 				}, {
 					Entity:    "user_g",
 					Type:      "categorical",

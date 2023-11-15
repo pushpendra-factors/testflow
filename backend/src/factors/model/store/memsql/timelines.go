@@ -2350,6 +2350,10 @@ func GroupFiltersByGroupName(filters []model.QueryProperty) map[string][]model.Q
 	filtersMap := make(map[string][]model.QueryProperty)
 
 	for _, filter := range filters {
+		if filter.GroupName == model.PROFILE_TYPE_USER {
+			filtersMap[model.FILTER_TYPE_USERS] = append(filtersMap[model.FILTER_TYPE_USERS], filter)
+			continue
+		}
 		filtersMap[filter.GroupName] = append(filtersMap[filter.GroupName], filter)
 	}
 	return filtersMap
