@@ -45,6 +45,8 @@ func TestMain(m *testing.M) {
 	appDomain := flag.String("app_domain", "factors-dev.com:3000", "")
 	lookbackWindowForEventUserCache := flag.Int("lookback_window_event_user_cache",
 		30, "look back window in cache for event/user cache")
+	chargebeeApiKey := flag.String("chargebee_api_key", "dummy", "Chargebee api key")
+	chargebeeSiteName := flag.String("chargebee_site_name", "dummy", "Chargebee site name")
 
 	flag.Parse()
 
@@ -139,6 +141,8 @@ func TestMain(m *testing.M) {
 		AllowedGoRoutines:                                   4,
 		AssociateDealToDomainByProjectID:                    "*",
 		ProcessOnlyAccountSegments:                          false,
+		ChargebeeApiKey:                                     *chargebeeApiKey,
+		ChargebeeSiteName:                                   *chargebeeSiteName,
 	}
 	C.InitConf(config)
 
