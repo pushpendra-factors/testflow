@@ -71,16 +71,19 @@ function ExpandableView({
           setResultState({
             ...initialState,
             data: res.data.result,
+            status:res.status
           });
         } else if (queryType === QUERY_TYPE_ATTRIBUTION) {
           setResultState({
             ...initialState,
             data: res.data.result,
+            status:res.status
           });
         } else if (queryType === QUERY_TYPE_CAMPAIGN) {
           setResultState({
             ...initialState,
             data: res.data.result,
+            status:res.status
           });
         } else {
           setResultState({
@@ -89,6 +92,7 @@ function ExpandableView({
               res.data.result.result_group[0],
               res.data.result.result_group[1]
             ),
+            status:res.status
           });
         }
       } catch (err) {
@@ -97,6 +101,7 @@ function ExpandableView({
         setResultState({
           ...initialState,
           error: true,
+          status:err.status
         });
       }
     },

@@ -6,7 +6,7 @@ import { saveGoalInsights } from 'Reducers/factors';
 import { connect } from 'react-redux';
 import factorsai from 'factorsai';
 
-function Header({ saveGoalInsights, activeProject, factors_insight_rules, setSavedName, goalInsights }) {
+function Header({ saveGoalInsights, activeProject, factors_insight_rules, setSavedName, goalInsights, activeQuery }) {
   const { Header } = Layout;
 
 
@@ -78,7 +78,7 @@ function Header({ saveGoalInsights, activeProject, factors_insight_rules, setSav
           </div>
           {/* <div style={{ color: '#0E2647', opacity: 0.56, fontSize: '14px' }} className="font-bold leading-5 ml-2">  <Link to="/explain" style={{ color: '#0E2647', fontSize: '14px' }} >Factors</Link> / New Goal</div> */}
         </div>
-        <div style={{ color: '#0E2647', opacity: 0.56, fontSize: '14px' }} className="font-bold leading-5 ml-2">{`Conversions Explorer`}</div>
+        <div style={{ color: '#0E2647', opacity: 0.56, fontSize: '14px' }} className="font-bold leading-5 ml-2">{activeQuery? activeQuery?.title : `Conversions Explorer`}</div>
         <div className="flex items-center items-center"> 
           {/* {goalInsights && <Button
             onClick={() => setshowSaveModal(true)}

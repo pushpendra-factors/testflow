@@ -45,14 +45,14 @@ function EventGroupBlock({
     //moved calculating options logic to uitls file 
     if(groupAnalysis){
       if(groupAnalysis == "users"){
-        filterOptsObj = defaultPropertyList(eventPropertiesV2, eventUserPropertiesV2, groupProperties, eventGroup, groupOpts);
+        filterOptsObj = defaultPropertyList(eventPropertiesV2, eventUserPropertiesV2, groupProperties, eventGroup, groupOpts, event);
       }
       else{
         filterOptsObj = alertsGroupPropertyList(eventPropertiesV2, userPropertiesV2, groupProperties, eventGroup, groupOpts, eventGroup); 
       }
     }
     else{
-      filterOptsObj = defaultPropertyList(eventPropertiesV2, eventUserPropertiesV2, groupProperties, eventGroup, groupOpts);
+      filterOptsObj = defaultPropertyList(eventPropertiesV2, eventUserPropertiesV2, groupProperties, eventGroup, groupOpts, event);
     } 
     setFilterOptions(Object.values(filterOptsObj));
   }, [eventUserPropertiesV2, eventPropertiesV2, groupProperties]);

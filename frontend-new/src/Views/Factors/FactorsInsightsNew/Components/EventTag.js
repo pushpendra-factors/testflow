@@ -8,7 +8,7 @@ import { Text, SVG, FaErrorComp, FaErrorLog, Number } from 'factorsComponents';
 
 const EventTag = ({ text = 'A', color = 'blue' }) => {
     return (
-        <div className={`explain-insight--tag flex justify-center items-center mr-2 ${color ? color : 'blue'}`} style={{ height: '24px', width: '24px' }}><Text type={'title'} level={7} weight={'bold'} color={'white'} extraClass={'m-0'}>{text}</Text> </div>
+        <div className={`explain-insight--tag flex justify-center items-center mr-2 mt-3 ${color ? color : 'blue'}`} style={{ height: '24px', width: '24px' }}><Text type={'title'} level={7} weight={'bold'} color={'white'} extraClass={'m-0'}>{text}</Text> </div>
     )
 }
 export default EventTag
