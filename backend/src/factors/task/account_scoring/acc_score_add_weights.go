@@ -126,33 +126,97 @@ func evalProperty(properties map[string]interface{}, propFilter M.WeightKeyValue
 	}
 	propvalKey := properties[propFilter.Key]
 
-	if propFilter.Operator == model.EqualsOpStr {
-		propval := U.GetPropertyValueAsString(propvalKey)
-		filterval := propFilter.Value[0]
-		if strings.Compare(propval, filterval) == 0 {
-			return true
+	if propFilter.ValueType == U.PropertyTypeCategorical {
+
+		if propFilter.Operator == model.EqualsOpStr {
+			propval := U.GetPropertyValueAsString(propvalKey)
+			filterval := propFilter.Value[0]
+			if strings.Compare(propval, filterval) == 0 {
+				return true
+			}
+		} else if propFilter.Operator == model.NotEqualOpStr {
+			propval := U.GetPropertyValueAsString(propvalKey)
+			filterval := propFilter.Value[0]
+			if strings.Compare(propval, filterval) != 0 {
+				return true
+			}
+		} else if propFilter.Operator == model.ContainsOpStr {
+			propval := U.GetPropertyValueAsString(propvalKey)
+			for propFilterKey, _ := range propFilterMap {
+				if strings.Contains(propval, propFilterKey) == true {
+					return true
+				}
+			}
+		} else if propFilter.Operator == model.NotContainsOpStr {
+			propval := U.GetPropertyValueAsString(propvalKey)
+			for propFilterKey, _ := range propFilterMap {
+				if strings.Contains(propval, propFilterKey) == false {
+					return true
+				}
+			}
 		}
-	} else if propFilter.Operator == model.NotEqualOpStr {
-		propval := U.GetPropertyValueAsString(propvalKey)
-		filterval := propFilter.Value[0]
-		if strings.Compare(propval, filterval) != 0 {
-			return true
-		}
-	} else if propFilter.Operator == model.ContainsOpStr {
-		propval := U.GetPropertyValueAsString(propvalKey)
-		for propFilterKey, _ := range propFilterMap {
-			if strings.Contains(propval, propFilterKey) == true {
+	} else if propFilter.ValueType == U.PropertyTypeNumerical {
+
+		if propFilter.Operator == model.EqualsOp {
+			propval, err := U.GetPropertyValueAsFloat64(propvalKey)
+			if err != nil {
+				log.WithField("key", propvalKey).Error("Unable to decode property key")
+				return false
+			}
+			filterVal := propFilter.LowerBound
+			return propval == filterVal
+		} else if propFilter.Operator == model.NotEqualOp {
+			propval, err := U.GetPropertyValueAsFloat64(propvalKey)
+			if err != nil {
+				log.WithField("key", propvalKey).Error("Unable to decode property key")
+				return false
+			}
+			filterVal := propFilter.LowerBound
+			return propval != filterVal
+		} else if propFilter.Operator == model.GreaterThanOrEqualOpStr {
+			propval, err := U.GetPropertyValueAsFloat64(propvalKey)
+			if err != nil {
+				log.WithField("key", propvalKey).Error("Unable to decode property key")
+				return false
+			}
+			filterVal := propFilter.LowerBound
+			return propval >= filterVal
+		} else if propFilter.Operator == model.GreaterThanOpStr {
+			propval, err := U.GetPropertyValueAsFloat64(propvalKey)
+			if err != nil {
+				log.WithField("key", propvalKey).Error("Unable to decode property key")
+				return false
+			}
+			filterVal := propFilter.LowerBound
+			return propval > filterVal
+		} else if propFilter.Operator == model.LesserThanOrEqualOpStr {
+			propval, err := U.GetPropertyValueAsFloat64(propvalKey)
+			if err != nil {
+				log.WithField("key", propvalKey).Error("Unable to decode property key")
+				return false
+			}
+			filterVal := propFilter.LowerBound
+			return propval <= filterVal
+		} else if propFilter.Operator == model.BetweenStr {
+			propval, err := U.GetPropertyValueAsFloat64(propvalKey)
+			if err != nil {
+				log.WithField("key", propvalKey).Error("Unable to decode property key")
+				return false
+			}
+			if propval >= propFilter.LowerBound && propval <= propFilter.UpperBound {
+				return true
+			}
+		} else if propFilter.Operator == model.NotInBetweenStr {
+			propval, err := U.GetPropertyValueAsFloat64(propvalKey)
+			if err != nil {
+				log.WithField("key", propvalKey).Error("Unable to decode property key")
+				return false
+			}
+			if !(propval >= propFilter.LowerBound && propval <= propFilter.UpperBound) {
 				return true
 			}
 		}
 
-	} else if propFilter.Operator == model.NotContainsOpStr {
-		propval := U.GetPropertyValueAsString(propvalKey)
-		for propFilterKey, _ := range propFilterMap {
-			if strings.Contains(propval, propFilterKey) == false {
-				return true
-			}
-		}
 	}
 
 	return false
