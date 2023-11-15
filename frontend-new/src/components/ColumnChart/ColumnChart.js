@@ -16,7 +16,7 @@ import { COLOR_CLASSNAMES } from '../../constants/charts.constants';
 import { addQforQuarter, generateColors } from '../../utils/dataFormatter';
 import TopLegends from 'Components/GroupedBarChart/TopLegends';
 import { getDateFormatForTimeSeriesChart } from 'Utils/chart.helpers';
-import truncateURL from 'Utils/truncateURL';
+// import truncateURL from 'Utils/truncateURL';
 
 const defaultColors = generateColors(10);
 
@@ -148,7 +148,8 @@ function ColumnChart({
         labels: {
           formatter() {
             const self = this;
-            const label = truncateURL(self.value);
+            // const label = truncateURL(self.value);
+            const label = self.value;
             if (xAxisType === 'date-time') {
               return (
                 addQforQuarter(frequency) +
