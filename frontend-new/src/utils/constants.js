@@ -524,12 +524,6 @@ export const TimeZoneOffsetValueArr = [
     abbr: 'CEST',
     name: 'Central European Standard Time',
     offset: '+01:00',
-    city: 'Europe/Dublin'
-  },
-  {
-    abbr: 'CEST',
-    name: 'Central European Standard Time',
-    offset: '+02:00',
     city: 'Europe/Budapest'
   },
   {
