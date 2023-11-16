@@ -624,3 +624,30 @@ func TestWriteRangestoDB(t *testing.T) {
 	assert.Nil(t, err)
 
 }
+
+func TestUpdateTopKScoreContribution(t *testing.T) {
+	topk := 4
+	testMap := make(map[string]float64)
+	resExpected := make([]string, 0)
+	testMap["a"] = 1
+	testMap["b"] = 2
+	testMap["c"] = 3
+	testMap["e"] = 4
+	testMap["f"] = 5
+	testMap["g"] = 6
+	testMap["h"] = 7
+	testMap["i"] = 8
+
+	resExpected = []string{"i", "h", "f", "g"}
+
+	result := T.GetTopkEventsOnCounts(testMap, topk)
+	log.Debugf("result - %v", result)
+	res := make([]string, 0)
+	for k, _ := range result {
+		res = append(res, k)
+	}
+
+	assert.Equal(t, topk, len(result))
+	assert.ElementsMatch(t, resExpected, res, "results are not matching")
+
+}

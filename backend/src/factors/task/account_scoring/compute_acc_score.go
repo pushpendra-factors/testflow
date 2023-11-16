@@ -510,10 +510,12 @@ func UpdateLastEventsDay(prevCountsOfUser map[string]map[string]M.LatestScore,
 		var lastevent M.LatestScore
 		lastevent.Properties = make(map[string]map[string]int64)
 		lastevent.EventsCount = make(map[string]float64)
+		lastevent.TopEvents = make(map[string]float64)
 
 		var allEventsInrange M.LatestScore
 		allEventsInrange.Properties = make(map[string]map[string]int64)
 		allEventsInrange.EventsCount = make(map[string]float64)
+		allEventsInrange.TopEvents = make(map[string]float64)
 
 		properties := make(map[string]map[string]int64)
 		eventsCountWithDecay := make(map[string]float64)
@@ -558,14 +560,21 @@ func UpdateLastEventsDay(prevCountsOfUser map[string]map[string]M.LatestScore,
 				}
 			}
 		}
+
+		//take top k events contribution to score
+		// using undecayed counts
+		topEventsOnScore := GetTopkEventsOnCounts(eventsCountWithoutDecay, TAKETOPK)
+
 		currentDateTS := U.GetDateFromString(currentDate)
 		lastevent.Date = currentDateTS
 		lastevent.Properties = properties
 		lastevent.EventsCount = eventsCountWithDecay
+		lastevent.TopEvents = topEventsOnScore
 
 		allEventsInrange.Date = currentDateTS
 		allEventsInrange.Properties = properties
 		allEventsInrange.EventsCount = eventsCountWithoutDecay
+
 		updatedLastScore[currentUser] = lastevent
 		updatedAllEventsScore[currentUser] = allEventsInrange
 	}
@@ -780,4 +789,13 @@ func GetEngagementLevelOnUser(projectId int64, event model.LatestScore, userId s
 	}
 	engagementLevel := GetEngagement(float64(fscore), buckets)
 	return engagementLevel
+}
+
+func GetTopkEventsOnCounts(events map[string]float64, topK int) map[string]float64 {
+	// if num events less than topk return events
+	if len(events) <= topK {
+		return events
+	}
+	result := U.TakeTopKOnSortedmap(events, topK)
+	return result
 }

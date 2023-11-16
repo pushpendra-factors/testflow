@@ -682,6 +682,7 @@ func ComputeUserScoreOnCustomerId(db *gorm.DB, id string, projectId int64, event
 		uday.Id = user_id
 		uday.Score = float32(accountScore)
 		addProperty(&uday, &le)
+		addTopEvents(&uday, &le)
 		uday.Debug = make(map[string]interface{})
 		uday.Debug["customer_id"] = id
 		uday.Debug["date"] = eventTs
@@ -765,6 +766,7 @@ func (store *MemSQL) GetUserScoreOnIds(projectId int64, usersAnonymous, usersNon
 		resultPerUser.Id = userId
 		resultPerUser.Score = float32(accountScore)
 		addProperty(&resultPerUser, &le)
+		addTopEvents(&resultPerUser, &le)
 		if debug {
 			resultPerUser.Debug = make(map[string]interface{})
 			resultPerUser.Debug["counts"] = le.EventsCount
@@ -833,7 +835,9 @@ func (store *MemSQL) GetAccountScoreOnIds(projectId int64, accountIds []string, 
 
 		resultPerUser.Id = userId
 		resultPerUser.Score = float32(accountScore)
+		resultPerUser.TopEvents = le.TopEvents
 		addProperty(&resultPerUser, &le)
+		addTopEvents(&resultPerUser, &le)
 		if debug {
 			resultPerUser.Debug = make(map[string]interface{})
 			resultPerUser.Debug["counts"] = le.EventsCount
@@ -902,6 +906,7 @@ func ComputeUserScoreNonAnonymous(db *gorm.DB, weights model.AccWeights, project
 		r.Id = userKey
 		r.Score = float32(accountScore)
 		addProperty(&r, &userCounts)
+		addTopEvents(&r, &userCounts)
 		if debug {
 			r.Debug = make(map[string]interface{})
 			r.Debug["counts"] = userCounts.EventsCount
@@ -1028,6 +1033,13 @@ func addProperty(result *model.PerUserScoreOnDay, le *model.LatestScore) {
 		for pk, _ := range propVal {
 			result.Property[propKey] = append(result.Property[propKey], pk)
 		}
+	}
+}
+
+func addTopEvents(result *model.PerUserScoreOnDay, le *model.LatestScore) {
+	result.TopEvents = make(map[string]float64)
+	for propKey, propVal := range le.TopEvents {
+		result.TopEvents[propKey] += propVal
 	}
 }
 
