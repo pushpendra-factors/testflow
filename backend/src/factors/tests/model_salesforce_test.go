@@ -6263,3 +6263,32 @@ func TestSalesforceUpdateDocumentGroupUserID(t *testing.T) {
 	domainName := getUserDomainName(project.ID, document.GroupUserID)
 	assert.Equal(t, "abc.com", domainName)
 }
+
+func TestSalesForceDocumentsSyncTries(t *testing.T) {
+
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	createdDate := time.Now()
+	accountID := "acc_" + getRandomName()
+	name := U.RandomLowerAphaNumString(5)
+
+	// salesforce record with created == updated.
+	jsonData := fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, accountID, name, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
+	salesforceDocument := &model.SalesforceDocument{
+		ProjectID: project.ID,
+		TypeAlias: model.SalesforceDocumentTypeNameAccount,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
+	}
+
+	errCode := store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
+	assert.Equal(t, http.StatusOK, errCode)
+
+	errCode = store.GetStore().IncrementSyncTriesForCrmEnrichment("salesforce_documents", accountID, project.ID, createdDate.Unix(), int(model.SalesforceDocumentCreated), model.SalesforceDocumentTypeAccount)
+	assert.Equal(t, errCode, http.StatusOK)
+
+	document, status := store.GetStore().GetSalesforceDocumentByTypeAndAction(project.ID, accountID, model.SalesforceDocumentTypeAccount, model.SalesforceDocumentCreated)
+	assert.Equal(t, status, http.StatusFound)
+	assert.Equal(t, document.SyncTries, 1)
+
+}

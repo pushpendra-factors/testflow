@@ -8542,14 +8542,13 @@ func TestHubspotDocumentsSyncTries(t *testing.T) {
 	}
 	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
 	assert.Equal(t, status, http.StatusCreated)
+	errCode := store.GetStore().IncrementSyncTriesForCrmEnrichment("hubspot_documents", "1", project.ID, companyCreatedDate.UnixNano()/int64(time.Millisecond), model.HubspotDocumentTypeCompany, model.HubspotDocumentActionCreated)
+	assert.Equal(t, errCode, http.StatusOK)
 
-	documents, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"1"},
-		model.HubspotDocumentTypeCompany, []int{model.HubspotDocumentActionCreated, model.HubspotDocumentActionUpdated})
+	docs, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"1"}, model.HubspotDocumentTypeCompany, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, status, http.StatusFound)
+	for _, document := range docs {
+		assert.Equal(t, document.SyncTries, 1)
+	}
 
-	status = store.GetStore().UpdateHubspotDocumentAsSynced(project.ID, "1", model.HubspotDocumentTypeCompany, "",
-		documents[0].Timestamp, documents[0].Action, "", "")
-	assert.Equal(t, http.StatusAccepted, status)
-	status = store.GetStore().UpdateHubspotDocumentAsSynced(project.ID, "1", model.HubspotDocumentTypeCompany, "",
-		documents[0].Timestamp, model.HubspotDocumentActionUpdated, "", "")
-	assert.Equal(t, http.StatusAccepted, status)
 }
