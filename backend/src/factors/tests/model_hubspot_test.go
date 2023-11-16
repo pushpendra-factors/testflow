@@ -8542,10 +8542,28 @@ func TestHubspotDocumentsSyncTries(t *testing.T) {
 	}
 	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
 	assert.Equal(t, status, http.StatusCreated)
-	errCode := store.GetStore().IncrementSyncTriesForCrmEnrichment("hubspot_documents", "1", project.ID, companyCreatedDate.UnixNano()/int64(time.Millisecond), model.HubspotDocumentTypeCompany, model.HubspotDocumentActionCreated)
-	assert.Equal(t, errCode, http.StatusOK)
 
-	docs, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"1"}, model.HubspotDocumentTypeCompany, []int{model.HubspotDocumentActionCreated})
+	// execute sync job
+	allStatus, anyFailure := IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3)
+	assert.Equal(t, false, anyFailure)
+	for i := range allStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
+	}
+
+	docs, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"1"}, model.HubspotDocumentTypeCompany, []int{model.HubspotDocumentActionCreated, model.HubspotDocumentActionUpdated})
+	assert.Equal(t, status, http.StatusFound)
+	for _, document := range docs {
+		assert.Equal(t, document.SyncTries, 1)
+	}
+
+	// execute sync job second time
+	allStatus, anyFailure = IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3)
+	assert.Equal(t, false, anyFailure)
+	for i := range allStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
+	}
+
+	docs, status = store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"1"}, model.HubspotDocumentTypeCompany, []int{model.HubspotDocumentActionCreated, model.HubspotDocumentActionUpdated})
 	assert.Equal(t, status, http.StatusFound)
 	for _, document := range docs {
 		assert.Equal(t, document.SyncTries, 1)

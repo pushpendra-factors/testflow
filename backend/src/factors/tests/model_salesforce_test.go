@@ -6269,26 +6269,94 @@ func TestSalesForceDocumentsSyncTries(t *testing.T) {
 	project, _, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
-	createdDate := time.Now()
-	accountID := "acc_" + getRandomName()
-	name := U.RandomLowerAphaNumString(5)
+	accountCreateDate := U.TimeNowZ().AddDate(0, 0, -1)
+	records := make([]model.SalesforceRecord, 0)
 
-	// salesforce record with created == updated.
-	jsonData := fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, accountID, name, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
-	salesforceDocument := &model.SalesforceDocument{
-		ProjectID: project.ID,
-		TypeAlias: model.SalesforceDocumentTypeNameAccount,
-		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
+	account1 := map[string]interface{}{
+		"Id":               "1",
+		"Name":             "account_1",
+		"Website":          "abc.com",
+		"CreatedDate":      accountCreateDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": accountCreateDate.Format(model.SalesforceDocumentDateTimeLayout),
 	}
 
-	errCode := store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
-	assert.Equal(t, http.StatusOK, errCode)
+	records = []model.SalesforceRecord{account1}
+	err = store.GetStore().BuildAndUpsertDocumentInBatch(project.ID, model.SalesforceDocumentTypeNameLead, records)
+	assert.Nil(t, err)
+	document := &model.SalesforceDocument{
+		ID:        "1",
+		Timestamp: accountCreateDate.Unix(),
+		Type:      model.SalesforceDocumentTypeContact,
+		Action:    model.SalesforceDocumentCreated,
+	}
+	status := store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, document, "", "", "", true)
+	assert.Equal(t, http.StatusAccepted, status)
 
-	errCode = store.GetStore().IncrementSyncTriesForCrmEnrichment("salesforce_documents", accountID, project.ID, createdDate.Unix(), int(model.SalesforceDocumentCreated), model.SalesforceDocumentTypeAccount)
-	assert.Equal(t, errCode, http.StatusOK)
+	opportunity3 := map[string]interface{}{
+		"Id":               "1",
+		"AccountId":        "1",
+		"Name":             "opp_1",
+		"CreatedDate":      accountCreateDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": accountCreateDate.Format(model.SalesforceDocumentDateTimeLayout),
+	}
 
-	document, status := store.GetStore().GetSalesforceDocumentByTypeAndAction(project.ID, accountID, model.SalesforceDocumentTypeAccount, model.SalesforceDocumentCreated)
+	records = []model.SalesforceRecord{opportunity3}
+	err = store.GetStore().BuildAndUpsertDocumentInBatch(project.ID, model.SalesforceDocumentTypeNameContact, records)
+	assert.Nil(t, err)
+
+	contactID2 := U.RandomLowerAphaNumString(5)
+
+	eventName3 := U.RandomString(10)
+	eventCreatedAt3 := time.Now().Format(model.SalesforceDocumentDateTimeLayout)
+	event3 := map[string]interface{}{
+		"Id":               "2",
+		"Name":             eventName3,
+		"CreatedDate":      eventCreatedAt3,
+		"LastModifiedDate": time.Now().Format(model.SalesforceDocumentDateTimeLayout),
+		"Who": IntSalesforce.RelationshipActivityWho{
+			ID:   contactID2,
+			Type: U.CapitalizeFirstLetter(model.SalesforceDocumentTypeNameContact),
+			Attributes: map[string]interface{}{
+				"type": "Name",
+				"url":  fmt.Sprintf("/services/data/v49.0/sobjects/%s/%s", U.CapitalizeFirstLetter(model.SalesforceDocumentTypeNameContact), contactID2),
+			},
+		},
+		"WhoId": contactID2,
+	}
+	err = createDummySalesforceDocument(project.ID, event3, model.SalesforceDocumentTypeNameEvent)
+	assert.Nil(t, err)
+
+	enrichStatus, anyFailure := IntSalesforce.Enrich(project.ID, 2, nil, 1, 0)
+	assert.Equal(t, true, anyFailure)
+	assert.Len(t, enrichStatus, 3)
+
+	document, status = store.GetStore().GetSalesforceDocumentByTypeAndAction(project.ID, "1", model.SalesforceDocumentTypeLead, model.SalesforceDocumentCreated)
 	assert.Equal(t, status, http.StatusFound)
 	assert.Equal(t, document.SyncTries, 1)
+
+	document, status = store.GetStore().GetSalesforceDocumentByTypeAndAction(project.ID, "1", model.SalesforceDocumentTypeContact, model.SalesforceDocumentCreated)
+	assert.Equal(t, status, http.StatusFound)
+	assert.Equal(t, document.SyncTries, 1)
+
+	document, status = store.GetStore().GetSalesforceDocumentByTypeAndAction(project.ID, "2", model.SalesforceDocumentTypeEvent, model.SalesforceDocumentCreated)
+	assert.Equal(t, status, http.StatusFound)
+	assert.Equal(t, document.SyncTries, 1)
+
+	// enriching second time
+	enrichStatus, anyFailure = IntSalesforce.Enrich(project.ID, 2, nil, 1, 0)
+	assert.Equal(t, true, anyFailure)
+	assert.Len(t, enrichStatus, 1)
+
+	document, status = store.GetStore().GetSalesforceDocumentByTypeAndAction(project.ID, "1", model.SalesforceDocumentTypeLead, model.SalesforceDocumentCreated)
+	assert.Equal(t, status, http.StatusFound)
+	assert.Equal(t, document.SyncTries, 1)
+
+	document, status = store.GetStore().GetSalesforceDocumentByTypeAndAction(project.ID, "1", model.SalesforceDocumentTypeContact, model.SalesforceDocumentCreated)
+	assert.Equal(t, status, http.StatusFound)
+	assert.Equal(t, document.SyncTries, 1)
+
+	document, status = store.GetStore().GetSalesforceDocumentByTypeAndAction(project.ID, "2", model.SalesforceDocumentTypeEvent, model.SalesforceDocumentCreated)
+	assert.Equal(t, status, http.StatusFound)
+	assert.Equal(t, document.SyncTries, 2)
 
 }
