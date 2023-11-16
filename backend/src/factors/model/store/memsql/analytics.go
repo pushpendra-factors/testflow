@@ -442,7 +442,7 @@ func getFilterSQLStmtForScopeDomainsLatestGroupProperties(projectID int64,
 
 	var filteredProperty []model.QueryProperty
 	for _, p := range properties {
-		if p.Entity == model.PropertyEntityUserGlobal {
+		if p.Entity == model.PropertyEntityUserGlobal || p.Entity == model.PropertyEntityUserGroup {
 			filteredProperty = append(filteredProperty, p)
 		}
 	}
@@ -465,7 +465,7 @@ func getFilterSQLStmtForScopeDomainsLatestGroupProperties(projectID int64,
 	groupGroupedProperties := make([][]model.QueryProperty, 0)
 	userGroupedProperties := make([]model.QueryProperty, 0)
 	for i := range groupedPoperties {
-		if model.IsFilterGlobalUserPropertiesByDefaultQueryMap(groupedPoperties[i][0].Property) {
+		if model.IsFilterGlobalUserPropertiesByDefaultQueryMap(groupedPoperties[i][0].Entity) {
 			userGroupedProperties = append(userGroupedProperties, groupedPoperties[i]...)
 			continue
 		}
