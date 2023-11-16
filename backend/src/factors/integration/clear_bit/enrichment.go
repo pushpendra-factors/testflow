@@ -3,16 +3,19 @@ package clear_bit
 import (
 	"encoding/json"
 	"factors/config"
-	"factors/util"
+	U "factors/util"
 	"fmt"
-	"net/http"
 	"time"
 
-	"github.com/clearbit/clearbit-go/clearbit"
 	log "github.com/sirupsen/logrus"
 )
 
 const API_CLEARBIT = "clearbit_api"
+
+type ResultChannel struct {
+	ExecuteStatus int
+	Domain        string
+}
 
 // Introduction of this struct is necessitated by the transition away from the deprecated
 // vendor package, which was no longer actively maintained.
@@ -106,10 +109,22 @@ type Reveal struct {
 	ConfidenceScore int `json:"confidence_score,omitempty"`
 }
 
-func ExecuteClearBitEnrich(projectId int64, clearbitKey string, properties *util.PropertiesMap, clientIP string, statusChannel chan int, logCtx *log.Entry) {
+func ExecuteClearBitEnrichV1(projectId int64, clearbitKey string, properties *U.PropertiesMap, clientIP string, resultChannel chan ResultChannel, logCtx *log.Entry) {
+	defer close(resultChannel)
+
+	domain, err := EnrichmentUsingclearBit(projectId, clearbitKey, properties, clientIP)
+
+	if err != nil {
+		logCtx.WithFields(log.Fields{"error": err, "apiKey": clearbitKey}).Warn("clearbit enrichment debug")
+		resultChannel <- ResultChannel{ExecuteStatus: 0, Domain: ""}
+	}
+	resultChannel <- ResultChannel{ExecuteStatus: 1, Domain: domain}
+}
+
+func ExecuteClearBitEnrich(projectId int64, clearbitKey string, properties *U.PropertiesMap, clientIP string, statusChannel chan int, logCtx *log.Entry) {
 	defer close(statusChannel)
 
-	err := EnrichmentUsingclearBit(projectId, clearbitKey, properties, clientIP)
+	_, err := EnrichmentUsingclearBit(projectId, clearbitKey, properties, clientIP)
 
 	if err != nil {
 		logCtx.WithFields(log.Fields{"error": err, "apiKey": clearbitKey}).Warn("clearbit enrichment debug")
@@ -117,139 +132,76 @@ func ExecuteClearBitEnrich(projectId int64, clearbitKey string, properties *util
 	}
 	statusChannel <- 1
 }
-func EnrichmentUsingclearBit(projectId int64, clearbitKey string, properties *util.PropertiesMap, clientIP string) error {
+
+func EnrichmentUsingclearBit(projectId int64, clearbitKey string, properties *U.PropertiesMap, clientIP string) (string, error) {
+
 	if clientIP == "" {
-		return fmt.Errorf("invalid IP, failed adding user properties")
+		return "", fmt.Errorf("invalid IP, failed adding user properties")
 	}
 
-	if config.IsCompanyPropsV1Enabled(projectId) {
-		baseUrl := "https://reveal.clearbit.com/v1/companies/find?ip="
-		method := "GET"
-		url := baseUrl + clientIP
-		client := &http.Client{
-			Timeout: util.TimeoutOneSecond + 100*time.Millisecond,
-		}
-		req, err := http.NewRequest(method, url, nil)
-		if err != nil {
-			return err
-		}
-		clearbitKey = "Bearer " + clearbitKey
-		req.Header.Add("Authorization", clearbitKey)
-		res, err := client.Do(req)
-		if err != nil {
-			return err
-		}
-		defer res.Body.Close()
+	res, err := ClearbitHTTPRequest(clientIP, clearbitKey)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
 
-		var results Reveal
-		err = json.NewDecoder(res.Body).Decode(&results)
-		if err != nil {
-			return err
-		}
-		FillEnrichmentPropertiesForClearbitV1(results, properties)
+	var results Reveal
+	err = json.NewDecoder(res.Body).Decode(&results)
+	if err != nil {
+		return "", err
+	}
+	FillEnrichmentPropertiesForClearbit(results, properties)
 
-	} else {
-		client := clearbit.NewClient(clearbit.WithAPIKey(clearbitKey), clearbit.WithTimeout(util.TimeoutOneSecond+100*time.Millisecond))
-		results, _, err := client.Reveal.Find(clearbit.RevealFindParams{
-			IP: clientIP,
-		})
-		if err != nil {
-			return err
-		}
-		FillEnrichmentPropertiesForClearbit(results, properties)
+	if !config.IsCompanyEnrichmentV1Enabled(projectId) {
+		(*properties)[U.ENRICHMENT_SOURCE] = API_CLEARBIT
 	}
 
-	(*properties)[util.ENRICHMENT_SOURCE] = API_CLEARBIT
-
-	return nil
+	return results.Domain, nil
 }
 
-func FillEnrichmentPropertiesForClearbit(results *clearbit.Reveal, properties *util.PropertiesMap) {
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Domain, util.SIX_SIGNAL_DOMAIN, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Name, util.SIX_SIGNAL_NAME, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Category.Industry, util.SIX_SIGNAL_INDUSTRY, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Geo.City, util.SIX_SIGNAL_CITY, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Geo.PostalCode, util.SIX_SIGNAL_ZIP, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Geo.Country, util.SIX_SIGNAL_COUNTRY, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Metrics.EmployeesRange, util.SIX_SIGNAL_EMPLOYEE_RANGE, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Metrics.EstimatedAnnualRevenue, util.SIX_SIGNAL_REVENUE_RANGE, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Category.NaicsCode, util.SIX_SIGNAL_NAICS, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Category.SicCode, util.SIX_SIGNAL_SIC, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Geo.CountryCode, util.SIX_SIGNAL_COUNTRY_ISO_CODE, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Geo.State, util.SIX_SIGNAL_STATE, properties)
-	util.ValidateAndFillEnrichmentPropsForIntegerValue(results.Company.Metrics.AnnualRevenue, util.SIX_SIGNAL_ANNUAL_REVENUE, properties)
-	util.ValidateAndFillEnrichmentPropsForIntegerValue(results.Company.Metrics.Employees, util.SIX_SIGNAL_EMPLOYEE_COUNT, properties)
+func FillEnrichmentPropertiesForClearbit(results Reveal, properties *U.PropertiesMap) {
 
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Type, util.ENRICHED_COMPANY_TYPE, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.ID, util.ENRICHED_COMPANY_ID, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.LegalName, util.ENRICHED_COMPANY_LEGAL_NAME, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Category.Sector, util.ENRICHED_COMPANY_SECTOR, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Category.IndustryGroup, util.ENRICHED_COMPANY_INDUSTRY_GROUP, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Category.SubIndustry, util.ENRICHED_COMPANY_SUB_INDUSTRY, properties)
-	util.ValidateAndFillEnrichmentPropsForIntegerValue(results.Company.Metrics.Raised, util.ENRICHED_COMPANY_FUNDING_RAISED, properties)
-	util.ValidateAndFillEnrichmentPropsForIntegerValue(results.Company.Metrics.AlexaUsRank, util.ENRICHED_COMPANY_ALEXA_US_RANK, properties)
-	util.ValidateAndFillEnrichmentPropsForIntegerValue(results.Company.Metrics.AlexaGlobalRank, util.ENRICHED_COMPANY_ALEXA_GLOBAL_RANK, properties)
-	util.ValidateAndFillEnrichmentPropsForIntegerValue(results.Company.FoundedYear, util.ENRICHED_COMPANY_FOUNDED_YEAR, properties)
-	util.ValidateAndFillEnrichmentPropsForIntegerValue(results.Company.Metrics.MarketCap, util.ENRICHED_COMPANY_MARKET_CAP, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(results.Domain, U.SIX_SIGNAL_DOMAIN, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Name, U.SIX_SIGNAL_NAME, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Category.Industry, U.SIX_SIGNAL_INDUSTRY, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Geo.City, U.SIX_SIGNAL_CITY, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Geo.PostalCode, U.SIX_SIGNAL_ZIP, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Geo.Country, U.SIX_SIGNAL_COUNTRY, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Metrics.EmployeesRange, U.SIX_SIGNAL_EMPLOYEE_RANGE, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Metrics.EstimatedAnnualRevenue, U.SIX_SIGNAL_REVENUE_RANGE, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Category.NaicsCode, U.SIX_SIGNAL_NAICS, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Category.SicCode, U.SIX_SIGNAL_SIC, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Geo.CountryCode, U.SIX_SIGNAL_COUNTRY_ISO_CODE, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Geo.State, U.SIX_SIGNAL_STATE, properties)
+	U.ValidateAndFillEnrichmentPropsForIntegerValue(results.Company.Metrics.AnnualRevenue, U.SIX_SIGNAL_ANNUAL_REVENUE, properties)
+	U.ValidateAndFillEnrichmentPropsForIntegerValue(results.Company.Metrics.Employees, U.SIX_SIGNAL_EMPLOYEE_COUNT, properties)
+
+	U.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Type, U.ENRICHED_COMPANY_TYPE, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(results.Company.ID, U.ENRICHED_COMPANY_ID, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(results.Company.LegalName, U.ENRICHED_COMPANY_LEGAL_NAME, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Category.Sector, U.ENRICHED_COMPANY_SECTOR, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Category.IndustryGroup, U.ENRICHED_COMPANY_INDUSTRY_GROUP, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Category.SubIndustry, U.ENRICHED_COMPANY_SUB_INDUSTRY, properties)
+	U.ValidateAndFillEnrichmentPropsForIntegerValue(results.Company.Metrics.Raised, U.ENRICHED_COMPANY_FUNDING_RAISED, properties)
+	U.ValidateAndFillEnrichmentPropsForIntegerValue(results.Company.Metrics.AlexaUsRank, U.ENRICHED_COMPANY_ALEXA_US_RANK, properties)
+	U.ValidateAndFillEnrichmentPropsForIntegerValue(results.Company.Metrics.AlexaGlobalRank, U.ENRICHED_COMPANY_ALEXA_GLOBAL_RANK, properties)
+	U.ValidateAndFillEnrichmentPropsForIntegerValue(results.Company.FoundedYear, U.ENRICHED_COMPANY_FOUNDED_YEAR, properties)
+	U.ValidateAndFillEnrichmentPropsForIntegerValue(results.Company.Metrics.MarketCap, U.ENRICHED_COMPANY_MARKET_CAP, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Description, U.ENRICHED_COMPANY_DESCRIPTION, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(results.Company.LinkedIn.Handle, U.ENRICHED_COMPANY_LINKEDIN_URL, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Metrics.TrafficRank, U.ENRICHED_COMPANY_TRAFFIC_RANK, properties)
 
 	//company object: tech
 	if techs := results.Company.Tech; len(techs) > 0 {
-		if c, ok := (*properties)[util.ENRICHED_COMPANY_TECH]; !ok || c == "" {
-			(*properties)[util.ENRICHED_COMPANY_TECH] = techs
+		if c, ok := (*properties)[U.ENRICHED_COMPANY_TECH]; !ok || c == "" {
+			(*properties)[U.ENRICHED_COMPANY_TECH] = techs
 		}
 	}
 
 	// company object: tags
 	if tags := results.Company.Tags; len(tags) > 0 {
-		if c, ok := (*properties)[util.ENRICHED_COMPANY_TAGS]; !ok || c == "" {
-			(*properties)[util.ENRICHED_COMPANY_TAGS] = tags
-		}
-	}
-}
-
-func FillEnrichmentPropertiesForClearbitV1(results Reveal, properties *util.PropertiesMap) {
-
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Domain, util.SIX_SIGNAL_DOMAIN, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Name, util.SIX_SIGNAL_NAME, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Category.Industry, util.SIX_SIGNAL_INDUSTRY, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Geo.City, util.SIX_SIGNAL_CITY, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Geo.PostalCode, util.SIX_SIGNAL_ZIP, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Geo.Country, util.SIX_SIGNAL_COUNTRY, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Metrics.EmployeesRange, util.SIX_SIGNAL_EMPLOYEE_RANGE, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Metrics.EstimatedAnnualRevenue, util.SIX_SIGNAL_REVENUE_RANGE, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Category.NaicsCode, util.SIX_SIGNAL_NAICS, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Category.SicCode, util.SIX_SIGNAL_SIC, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Geo.CountryCode, util.SIX_SIGNAL_COUNTRY_ISO_CODE, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Geo.State, util.SIX_SIGNAL_STATE, properties)
-	util.ValidateAndFillEnrichmentPropsForIntegerValue(results.Company.Metrics.AnnualRevenue, util.SIX_SIGNAL_ANNUAL_REVENUE, properties)
-	util.ValidateAndFillEnrichmentPropsForIntegerValue(results.Company.Metrics.Employees, util.SIX_SIGNAL_EMPLOYEE_COUNT, properties)
-
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Type, util.ENRICHED_COMPANY_TYPE, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.ID, util.ENRICHED_COMPANY_ID, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.LegalName, util.ENRICHED_COMPANY_LEGAL_NAME, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Category.Sector, util.ENRICHED_COMPANY_SECTOR, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Category.IndustryGroup, util.ENRICHED_COMPANY_INDUSTRY_GROUP, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Category.SubIndustry, util.ENRICHED_COMPANY_SUB_INDUSTRY, properties)
-	util.ValidateAndFillEnrichmentPropsForIntegerValue(results.Company.Metrics.Raised, util.ENRICHED_COMPANY_FUNDING_RAISED, properties)
-	util.ValidateAndFillEnrichmentPropsForIntegerValue(results.Company.Metrics.AlexaUsRank, util.ENRICHED_COMPANY_ALEXA_US_RANK, properties)
-	util.ValidateAndFillEnrichmentPropsForIntegerValue(results.Company.Metrics.AlexaGlobalRank, util.ENRICHED_COMPANY_ALEXA_GLOBAL_RANK, properties)
-	util.ValidateAndFillEnrichmentPropsForIntegerValue(results.Company.FoundedYear, util.ENRICHED_COMPANY_FOUNDED_YEAR, properties)
-	util.ValidateAndFillEnrichmentPropsForIntegerValue(results.Company.Metrics.MarketCap, util.ENRICHED_COMPANY_MARKET_CAP, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Description, util.ENRICHED_COMPANY_DESCRIPTION, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.LinkedIn.Handle, util.ENRICHED_COMPANY_LINKEDIN_URL, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(results.Company.Metrics.TrafficRank, util.ENRICHED_COMPANY_TRAFFIC_RANK, properties)
-
-	//company object: tech
-	if techs := results.Company.Tech; len(techs) > 0 {
-		if c, ok := (*properties)[util.ENRICHED_COMPANY_TECH]; !ok || c == "" {
-			(*properties)[util.ENRICHED_COMPANY_TECH] = techs
-		}
-	}
-
-	// company object: tags
-	if tags := results.Company.Tags; len(tags) > 0 {
-		if c, ok := (*properties)[util.ENRICHED_COMPANY_TAGS]; !ok || c == "" {
-			(*properties)[util.ENRICHED_COMPANY_TAGS] = tags
+		if c, ok := (*properties)[U.ENRICHED_COMPANY_TAGS]; !ok || c == "" {
+			(*properties)[U.ENRICHED_COMPANY_TAGS] = tags
 		}
 	}
 }
