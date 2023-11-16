@@ -430,9 +430,8 @@ func (store *MemSQL) UpdateSavedQuery(projectID int64, queryID int64, query *mod
 
 	if !U.IsEmptyPostgresJsonb(&query.Query) {
 		updateFields["query"] = query.Query
+		updateFields["locked_for_cache_invalidation"] = query.LockedForCacheInvalidation
 	}
-
-	updateFields["locked_for_cache_invalidation"] = query.LockedForCacheInvalidation
 
 	err := db.Model(&model.Queries{}).Where("project_id = ? AND id=? AND is_deleted = ?",
 		projectID, queryID, false).Update(updateFields).Error

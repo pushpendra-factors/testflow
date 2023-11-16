@@ -34,7 +34,7 @@ import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import { selectedOptionsMapper } from 'Components/GenericComponents/FaSelect/utils';
 import { processProperties } from 'Utils/dataFormatter';
 import { PropTextFormat } from 'Utils/dataFormatter';
-import truncateURL from 'Utils/truncateURL';
+// import truncateURL from 'Utils/truncateURL';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 const rangePicker = [OPERATORS['equalTo'], OPERATORS['notEqualTo']];
@@ -840,7 +840,8 @@ const FaFilterSelect = ({
                       ? valuesState
                           .map((vl) =>
                             valueDisplayNames[vl]
-                              ? truncateURL(valueDisplayNames[vl])
+                              ? // ? truncateURL(valueDisplayNames[vl])
+                                valueDisplayNames[vl]
                               : formatCsvUploadValue(vl)
                           )
                           .join(', ')
@@ -1027,7 +1028,8 @@ const FaFilterSelect = ({
                   ? valuesState
                       .map((vl) =>
                         valueDisplayNames[vl]
-                          ? truncateURL(valueDisplayNames[vl])
+                          ? // ? truncateURL(valueDisplayNames[vl])
+                            valueDisplayNames[vl]
                           : formatCsvUploadValue(vl)
                       )
                       .join(', ')

@@ -325,7 +325,13 @@ function UserProfiles({
               ? sortNumericalColumn(a[prop], b[prop])
               : sortStringColumn(a[prop], b[prop]),
           render: (value) => (
-            <Text type='title' level={7} extraClass='m-0' truncate>
+            <Text
+              type='title'
+              level={7}
+              extraClass='m-0'
+              truncate
+              shouldTruncateURL
+            >
               {value ? propValueFormat(prop, value, propType) : '-'}
             </Text>
           )

@@ -95,6 +95,7 @@ const EventInfoCard = ({ event, eventIcon, sourceIcon, eventPropertiesV2 }) => {
                   extraClass='break-all text-right'
                   truncate
                   charLimit={40}
+                  shouldTruncateURL
                 >
                   {event.event_type === 'FE'
                     ? event.alias_name
@@ -124,6 +125,7 @@ const EventInfoCard = ({ event, eventIcon, sourceIcon, eventPropertiesV2 }) => {
                 }  text-right`}
                 truncate
                 charLimit={40}
+                shouldTruncateURL
               >
                 {propValueFormat(key, value, propType) || '-'}
               </Text>
