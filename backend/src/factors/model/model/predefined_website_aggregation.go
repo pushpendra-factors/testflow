@@ -222,8 +222,8 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 }
 
 var PredefinedDashboardUnitsPosition = map[string]map[string]int{
-	"position": {"1": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6},
-	"size":     {"1": 1, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0},
+	"position": {"1": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7},
+	"size":     {"1": 1, "2": 1, "3": 0, "4": 0, "5": 0, "6": 0, "7": 1},
 }
 
 var MapOfPredefPropertyNameToProperties = map[string]PredefinedDashboardProperty{
