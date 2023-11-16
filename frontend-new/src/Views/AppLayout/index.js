@@ -62,6 +62,10 @@ import {
 import { selectSidebarCollapsedState } from 'Reducers/global/selectors';
 import { fetchProjectAgents, fetchAgentInfo } from 'Reducers/agentActions';
 import { fetchFeatureConfig } from 'Reducers/featureConfig/middleware';
+import {
+  fetchCurrentSubscriptionDetail,
+  fetchPlansDetail
+} from 'Reducers/plansConfig/middleware';
 import { selectAreDraftsSelected } from 'Reducers/dashboard/selectors';
 import { PathUrls } from '../../routes/pathUrls';
 import OnboardingRouting from 'Onboarding/ui/OnboardingRouting';
@@ -192,6 +196,12 @@ function AppLayout({
       dispatch(fetchAttributionQueries(active_project?.id));
       dispatch(fetchProjectAgents(active_project.id));
       dispatch(fetchFeatureConfig(active_project?.id));
+
+      //calling V2 pricing API's only if flag is enabled.
+      if (active_project?.enable_billing) {
+        dispatch(fetchCurrentSubscriptionDetail(active_project?.id));
+        dispatch(fetchPlansDetail(active_project?.id));
+      }
     }
   }, [dispatch, active_project]);
 

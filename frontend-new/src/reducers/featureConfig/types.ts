@@ -1,4 +1,4 @@
-import { FEATURES, PLANS } from 'Constants/plans.constants';
+import { FEATURES } from 'Constants/plans.constants';
 
 export interface FeatureConfigState {
   activeFeatures: FeatureConfig[];
@@ -23,7 +23,10 @@ export enum FeatureConfigActionType {
   UPDATE_FEATURE_CONFIG = 'UPDATE_FEATURE_CONFIG',
   RESET_FEATURE_CONFIG = 'RESET_FEATURE_CONFIG',
   SET_FEATURE_CONFIG_LOADING = 'SET_LOADING',
-  SET_FEATURE_CONFIG_ERROR = 'SET_FEATURE_CONFIG_ERROR'
+  SET_FEATURE_CONFIG_ERROR = 'SET_FEATURE_CONFIG_ERROR',
+  SET_PLANS_DETAIL_LOADING = 'SET_PLANS_DETAIL_LOADING',
+  SET_ADDONS_DETAIL = 'SET_ADDONS_DETAIL',
+  SET_PLANS_DETAIL = 'SET_PLANS_DETAIL'
 }
 
 interface updateActiveFeatures {
@@ -55,9 +58,12 @@ export type FeatureConfigActions =
   | setFeatureConfigLoading
   | setFeatureConfigError;
 
-export interface FeatureConfigApiResponse {
+interface ApiResponse {
   status: number;
   ok: boolean;
+  data?: any;
+}
+export interface FeatureConfigApiResponse extends ApiResponse {
   data?: ResponseData;
 }
 

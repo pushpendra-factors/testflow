@@ -1,0 +1,36 @@
+@import '../../../styles/abstracts/variables';
+
+.planDescriptionCard {
+  padding: 40px 48px;
+  border-radius: 16px;
+  border: 1px solid $fa-color-neutral-grey-5;
+}
+
+.planAmountContainer {
+  width: 370px;
+}
+
+.outlineButton {
+  border: 1px solid #d9d9d9 !important;
+  background: #fff;
+  width: 100%;
+  margin-top: 24px;
+}
+
+.reccommendationTag {
+  :global(.ant-tag-orange) {
+    color: #d4380d;
+    background: #fff2e8;
+    border-color: #ffbb96;
+    border-radius: 2px;
+  }
+}
+
+.activePlanTag {
+  :global(.ant-tag-orange) {
+    color: #fa8c16;
+    background: #fff7e6;
+    border-color: #ffd591;
+    border-radius: 2px;
+  }
+}
