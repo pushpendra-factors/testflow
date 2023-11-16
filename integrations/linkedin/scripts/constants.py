@@ -57,3 +57,4 @@ URL_ENDPOINT_CREATIVE_META = 'adCreatives'
 BACKFILL_NOT_REQUIRED = "Backfill not required for %s for project %s for ad account %s"
 AD_ACCOUNT_FAILURE = 'Failed to get ad account metadata from linkedin'
 ORG_DATA_FETCH_ERROR = "Failed getting organisation data with error {}"
+SLACK_URL ='https://hooks.slack.com/services/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'
