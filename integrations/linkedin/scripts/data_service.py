@@ -3,7 +3,6 @@ import logging as log
 import time
 import string
 import random
-import requests
 import logging as log
 import time
 import string
