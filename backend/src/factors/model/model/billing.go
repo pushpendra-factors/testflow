@@ -36,3 +36,17 @@ type AddOnsUpdate struct {
 	AddOnID  string `json:"addon_id"`
 	Quantity int32  `json:"quantity"`
 }
+
+type Invoice struct {
+	ID          string    `json:"id"`
+	BillingDate time.Time `json:"billing_date"`
+	Amount      int64     `json:"amount`
+	AmountPaid  int64     `json:"amount_paid"`
+	AmountDue   int64     `json:"amount_due`
+	Items       []string  `json:"items"`
+}
+
+type DownloadInvoice struct {
+	Url       string    `json:"url"`
+	ValidTill time.Time `json:"valid_till"`
+}
