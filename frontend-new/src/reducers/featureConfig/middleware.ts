@@ -1,6 +1,14 @@
 import { Dispatch } from 'redux';
-import { changePlanType, getFeatureConfigData } from './services';
-import { FeatureConfigActionType, FeatureConfigApiResponse } from './types';
+import {
+  changePlanType,
+  getFeatureConfigData,
+  getPlansDetails
+} from './services';
+import {
+  FeatureConfigActionType,
+  FeatureConfigApiResponse,
+  PlansDetailAPIResponse
+} from './types';
 import logger from 'Utils/logger';
 
 export const fetchFeatureConfig = (projectId: string) => {

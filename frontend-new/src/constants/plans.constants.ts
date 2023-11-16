@@ -92,9 +92,97 @@ export const FEATURES = {
 };
 
 export const PLANS = {
-  PLAN_FREE: 'FREE',
-  PLAN_STARTUP: 'STARTUP',
-  PLAN_BASIC: 'BASIC',
-  PLAN_PROFESSIONAL: 'PROFESSIONAL',
-  PLAN_CUSTOM: 'CUSTOM'
+  PLAN_FREE: 'Free',
+  PLAN_GROWTH: 'Growth',
+  PLAN_BASIC: 'Basic',
+  PLAN_PROFESSIONAL: 'Professional',
+  PLAN_CUSTOM: 'Custom'
 };
+
+export const PLANS_COFIG: PLANS_COFIG_INTERFACE = {
+  [PLANS.PLAN_FREE]: {
+    name: PLANS.PLAN_FREE,
+    description: 'Essential marketing tools to engage and convert leads',
+    uniqueFeatures: [
+      'Account identification',
+      'Account enrichment',
+      'Core analytics & reporting',
+      'Account timelines',
+      'Real-time alerts'
+    ],
+    isRecommendedPlan: false,
+    planIcon: 'Userplus',
+    planIconColor: '#40A9FF',
+    mtuLimit: 5000,
+    accountIdentifiedLimit: 100
+  },
+
+  [PLANS.PLAN_BASIC]: {
+    name: PLANS.PLAN_BASIC,
+    description:
+      'Essential marketing tools with powerfull analytics and attribution',
+    uniqueFeatures: [
+      'Everything in Free +',
+      'Custom events & KPIs',
+      'Custom properties',
+      'Content groups',
+      'Onboarding support'
+    ],
+    isRecommendedPlan: false,
+    planIcon: 'User_friends',
+    planIconColor: '#73D13D',
+    mtuLimit: 10000,
+    accountIdentifiedLimit: 350
+  },
+  [PLANS.PLAN_GROWTH]: {
+    name: PLANS.PLAN_GROWTH,
+    description: 'Essential marketing tools to engage and convert leads',
+    uniqueFeatures: [
+      'Everything in Basic +',
+      'Account & lead scoring',
+      'Engaged channels (Coming Soon)',
+      'Priority CSM'
+    ],
+    isRecommendedPlan: true,
+    planIcon: 'User',
+    planIconColor: '#36CFC9',
+    mtuLimit: 50000,
+    accountIdentifiedLimit: 5000
+  },
+  [PLANS.PLAN_PROFESSIONAL]: {
+    name: PLANS.PLAN_PROFESSIONAL,
+    description:
+      'Essential marketing tools with powerfull analytics and attribution',
+    uniqueFeatures: [
+      'Everything in Growth +',
+      'Multi-touch attribution',
+      'Path analysis',
+      'AI-fuelled Explain',
+      'Dedicated CSM'
+    ],
+    isRecommendedPlan: true,
+    planIcon: 'Buildings',
+    planIconColor: '#FF7A45',
+    mtuLimit: 100000,
+    accountIdentifiedLimit: 10000
+  }
+};
+
+export interface PLANS_COFIG_INTERFACE {
+  [key: typeof PLANS[keyof typeof PLANS]]: PLAN_COFIG;
+}
+
+export interface PLAN_COFIG {
+  name: typeof PLANS[keyof typeof PLANS];
+  description: string;
+  uniqueFeatures: string[];
+  isRecommendedPlan: boolean;
+  planIcon: string;
+  planIconColor: string;
+  mtuLimit: number;
+  accountIdentifiedLimit: number;
+}
+
+export const ADDITIONAL_ACCOUNTS_ADDON_ID =
+  'Additional-Account-100-USD-Monthly';
+export const ADDITIONAL_ACCOUNTS_ADDON_LIMIT = 500;
