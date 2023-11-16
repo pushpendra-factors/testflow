@@ -174,6 +174,23 @@ func (store *MemSQL) GetPropertyLabelAndValuesByProjectIdAndPropertyKey(projectI
 	return propertyValueLabelMap, nil
 }
 
+func (store *MemSQL) AddPropertyValueLabelToQueryResult(projectID int64, oldResult *model.QueryResult) (*model.QueryResult, error) {
+	if oldResult == nil {
+		return oldResult, nil
+	}
+
+	result, err := store.AddPropertyValueLabelToQueryResults(projectID, []model.QueryResult{*oldResult})
+	if err != nil {
+		return oldResult, err
+	}
+
+	if len(result) == 0 {
+		return oldResult, nil
+	}
+
+	return &result[0], nil
+}
+
 func (store *MemSQL) AddPropertyValueLabelToQueryResults(projectID int64, oldResults []model.QueryResult) ([]model.QueryResult, error) {
 	newResults := make([]model.QueryResult, 0, 0)
 	for i := range oldResults {

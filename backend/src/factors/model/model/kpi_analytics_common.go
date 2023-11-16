@@ -455,7 +455,10 @@ type KPIFilter struct {
 
 // Basic type validation.
 func (qFilter *KPIFilter) IsValid() bool {
-	return !(strings.Contains(qFilter.Entity, " ") || strings.Contains(qFilter.ObjectType, " ") || strings.Contains(qFilter.PropertyName, " "))
+	containsEmptyValues := (strings.Contains(qFilter.Entity, " ") && strings.Contains(qFilter.ObjectType, " ") && strings.Contains(qFilter.PropertyName, " "))
+	propertyDataTypeValid := U.ContainsStringInArray([]string{U.PropertyTypeNumerical, U.PropertyTypeCategorical, U.PropertyTypeDateTime}, qFilter.PropertyDataType)
+	validEntity := U.ContainsStringInArray([]string{PropertyEntityEvent, PropertyEntityUser , ""}, qFilter.Entity)
+	return !containsEmptyValues && propertyDataTypeValid && validEntity
 }
 
 func (qFilter *KPIFilter) ConvertAllDatesFromTimezone1ToTimzone2(currentTimezone, nextTimezone string) error {

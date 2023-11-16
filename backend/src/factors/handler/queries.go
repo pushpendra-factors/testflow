@@ -188,7 +188,7 @@ func UpdateSavedQueryHandler(c *gin.Context) {
 	}
 	queryRequest.IdText = query.IdText
 
-	if query.LockedForCacheInvalidation {
+	if query.LockedForCacheInvalidation && requestPayloadContainsQueryUpdate {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to update Saved Query. There is already an update"})
 		return
 	}

@@ -322,6 +322,12 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 			logCtx.Error(" Result is nil - " + errMsg)
 			return nil, errCode, V1.PROCESSING_FAILED, "Result is nil - " + errMsg, true
 		}
+
+		result, err = store.GetStore().AddPropertyValueLabelToQueryResult(projectId, result)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to get labels for query result.")
+		}
+
 		return H.DashboardQueryResponsePayload{Result: result, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), TimeZone: string(requestPayload.Query.GetTimeZone()), CacheMeta: nil}, http.StatusOK, "", "", false
 	}
 
@@ -399,8 +405,19 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 			model.SetCacheResultByDashboardIdAndUnitId(result, projectId, dashboardId, unitId,
 				requestPayload.Query.From, requestPayload.Query.To, requestPayload.Query.GetTimeZone(), meta, false)
 		}
+
+		result, err = store.GetStore().AddPropertyValueLabelToQueryResult(projectId, result)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to get labels for dashboard query result.")
+		}
 		return H.DashboardQueryResponsePayload{Result: result, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), TimeZone: string(requestPayload.Query.GetTimeZone()), CacheMeta: meta}, http.StatusOK, "", "", false
 	}
+
+	result, err = store.GetStore().AddPropertyValueLabelToQueryResult(projectId, result)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get labels for query result.")
+	}
+
 	result.Query = requestPayload.Query
 	return result, http.StatusOK, "", "", false
 }
