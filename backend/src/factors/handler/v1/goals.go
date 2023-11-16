@@ -6,7 +6,6 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
-	"fmt"
 	"math"
 	"net/http"
 	"strconv"
@@ -117,7 +116,7 @@ func CreateFactorsGoalsHandler(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
-func MapRuleV2(ip CreateGoalInputParamsV2) (model.FactorsGoalRule, map[string]bool, map[string]bool, map[string]bool) {
+func MapRuleV2(ip CreateGoalInputParamsV2) model.FactorsGoalRule {
 	op := model.FactorsGoalRule{}
 	op.StartEvent = ip.StartEvent.Label
 	op.EndEvent = ip.EndEvent.Label
@@ -155,19 +154,7 @@ func MapRuleV2(ip CreateGoalInputParamsV2) (model.FactorsGoalRule, map[string]bo
 	op.Rule.IncludedEvents = includeEvents
 	op.Rule.IncludedEventProperties = ip.IncludedEventProperties
 	op.Rule.IncludedUserProperties = ip.IncludedUserProperties
-	includedEvents := make(map[string]bool)
-	for _, event := range ip.IncludedEvents {
-		includedEvents[event.Label] = true
-	}
-	includedUserProperties := make(map[string]bool)
-	for _, event := range ip.IncludedUserProperties {
-		includedUserProperties[event] = true
-	}
-	includedEventProperties := make(map[string]bool)
-	for _, event := range ip.IncludedEventProperties {
-		includedEventProperties[event] = true
-	}
-	return op, includedEvents, includedEventProperties, includedUserProperties
+	return op
 }
 
 func MapRule(ip CreateGoalInputParams) (model.FactorsGoalRule, map[string]bool, map[string]bool, map[string]bool) {
@@ -428,43 +415,22 @@ func ReverseMapRule(ip model.FactorsGoalRule) CreateGoalInputParams {
 	op.StartEvent.Name = ip.StartEvent
 	op.EndEvent.Name = ip.EndEvent
 	for _, filter := range ip.Rule.StartEnEventFitler {
-		op.StartEvent.Properties = append(op.StartEvent.Properties, ReverseMapProperty(filter, "event"))
+		op.StartEvent.Properties = append(op.StartEvent.Properties, model.ReverseMapProperty(filter, "event"))
 	}
 	for _, filter := range ip.Rule.EndEnEventFitler {
-		op.EndEvent.Properties = append(op.EndEvent.Properties, ReverseMapProperty(filter, "event"))
+		op.EndEvent.Properties = append(op.EndEvent.Properties, model.ReverseMapProperty(filter, "event"))
 	}
 	for _, filter := range ip.Rule.StartEnUserFitler {
-		op.StartEvent.Properties = append(op.StartEvent.Properties, ReverseMapProperty(filter, "user"))
+		op.StartEvent.Properties = append(op.StartEvent.Properties, model.ReverseMapProperty(filter, "user"))
 	}
 	for _, filter := range ip.Rule.EndEnUserFitler {
-		op.EndEvent.Properties = append(op.EndEvent.Properties, ReverseMapProperty(filter, "user"))
+		op.EndEvent.Properties = append(op.EndEvent.Properties, model.ReverseMapProperty(filter, "user"))
 	}
 	for _, filter := range ip.Rule.GlobalFilters {
-		op.GlobalFilters = append(op.GlobalFilters, ReverseMapProperty(filter, "user"))
+		op.GlobalFilters = append(op.GlobalFilters, model.ReverseMapProperty(filter, "user"))
 	}
 	op.IncludedEvents = ip.Rule.IncludedEvents
 	op.IncludedEventProperties = ip.Rule.IncludedEventProperties
 	op.IncludedUserProperties = ip.Rule.IncludedUserProperties
-	return op
-}
-
-func ReverseMapProperty(ip model.KeyValueTuple, entity string) model.QueryProperty {
-	op := model.QueryProperty{}
-	op.Entity = entity
-	op.Type = ip.Type
-	op.Property = ip.Key
-	op.Value = ip.Value
-	if ip.Type == "categorical" {
-		op.Value = ip.Value
-	}
-	if ip.Type == "numerical" {
-		if ip.LowerBound != -math.MaxFloat64 {
-			op.Value = fmt.Sprintf("%f", ip.LowerBound)
-			op.Operator = "lowerThan"
-		} else {
-			op.Value = fmt.Sprintf("%f", ip.UpperBound)
-			op.Operator = "greaterThan"
-		}
-	}
 	return op
 }

@@ -102,25 +102,21 @@ func (store *MemSQL) convertExplainV2ToExplainV2EntityInfo(list []model.ExplainV
 	return res
 }
 
-func convertFactorsGoalRuleToExplainV3GoalRule(query model.FactorsGoalRule) model.ExplainV3GoalRule {
-
-	var queryV2 model.ExplainV3GoalRule
-	queryV2.StartEvent = model.ExplainV3Event{Label: query.StartEvent}
-	queryV2.EndEvent = model.ExplainV3Event{Label: query.EndEvent}
-	queryV2.Visited = query.Visited
-	return queryV2
-}
-
 func (store *MemSQL) convertExplainV2ToExplainV3EntityInfo(list []model.ExplainV2, names map[string]string) []model.ExplainV3EntityInfo {
 
 	res := make([]model.ExplainV3EntityInfo, 0)
-	var entity model.ExplainV2Query
-
 	for _, obj := range list {
+		var entity model.ExplainV2Query
 		err := U.DecodePostgresJsonbToStructType(obj.ExplainV2Query, &entity)
 		if err != nil {
 			log.WithError(err).Error("Problem deserializing explainV2 query.")
 			return nil
+		}
+		var v3query model.ExplainV3GoalRule
+		if entity.IsV3 {
+			v3query = entity.QueryV3
+		} else {
+			v3query = model.ConvertFactorsGoalRuleToExplainV3GoalRule(entity.Query)
 		}
 		e := model.ExplainV3EntityInfo{
 			Id:             obj.ID,
@@ -128,7 +124,9 @@ func (store *MemSQL) convertExplainV2ToExplainV3EntityInfo(list []model.ExplainV
 			Status:         obj.Status,
 			CreatedBy:      names[obj.CreatedBy],
 			Date:           obj.UpdatedAt,
-			ExplainV2Query: convertFactorsGoalRuleToExplainV3GoalRule(entity.Query),
+			ExplainV3Query: v3query,
+			StartTimestamp: entity.StartTimestamp,
+			EndTimestamp:   entity.EndTimestamp,
 		}
 		res = append(res, e)
 	}
