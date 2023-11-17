@@ -506,7 +506,9 @@ const Step2 = ({
   const handleSDkSubmission = async () => {
     try {
       setLoading(true);
-      if (!sdkVerified) {
+      const res = await fetchProjectSettingsV1(active_project.id);
+
+      if (!res?.data?.int_completed) {
         notification.warn({
           message: 'Warning',
           description:
@@ -552,6 +554,9 @@ const Step2 = ({
   useEffect(() => {
     if (int_completed && !sdkVerified) {
       setSdkVerified(true);
+    }
+    if (!int_completed && sdkVerified) {
+      setSdkVerified(false);
     }
   }, [int_completed, sdkVerified]);
   return (
