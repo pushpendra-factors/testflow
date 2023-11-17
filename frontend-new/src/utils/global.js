@@ -85,7 +85,6 @@ export function isOnboarded(currentProjectSettings) {
 export function getErrorMessage(resultState) {
   let errorMessage = '';
 
-  if(resultState.error){
   if (resultState.status === 500) {
     errorMessage = 'The server encountered an internal error and could not complete your request';
   } else if (resultState.status === 400) {
@@ -94,18 +93,22 @@ export function getErrorMessage(resultState) {
     errorMessage = 'Resource Not Found! Please check your request.';
   }else{
     // check for no data found
-   if (!resultState.data || resultState.data.length === 0) {
+    if(resultState.status === 200){
+     if(!resultState.data || resultState.data.length === 0) {
           errorMessage = 'No Data Found! Try a Different Time Range';
      }
+     else if(resultState.data.metrics.rows.length === 0){
+      errorMessage = 'No Data Found! Try Changing Filters or Time Range';      
+     }
+    }
      else{
       errorMessage='We are facing trouble loading UI. Drop us a message on the in-app chat';
      }
-
   }
-}
 
   return errorMessage; 
 }
+
 export function getCookieValue(cookieName) {
   const name = cookieName + '=';
   const decodedCookie = decodeURIComponent(document.cookie);
