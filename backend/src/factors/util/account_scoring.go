@@ -3,8 +3,11 @@ package util
 import (
 	"fmt"
 	"math"
+	"sort"
 	"strconv"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func GetDateOnlyFromTimestamp(ts int64) string {
@@ -47,4 +50,62 @@ func GetDateFromString(ts string) int64 {
 	t2, _ := strconv.ParseInt(date, 10, 64)
 	t3 := time.Date(int(t), time.Month(t1), int(t2), 0, 0, 0, 0, time.UTC).Unix()
 	return t3
+}
+
+type keyVal struct {
+	Key   string
+	Value float64
+}
+
+func TakeTopKOnSortedmap(wordFreq map[string]float64, topk int) map[string]float64 {
+	resultMap := make(map[string]float64)
+	resultString := SortOnFreq(wordFreq, true)
+	log.Debugf("result string --- %v", resultString)
+
+	for idx := 0; idx < topk; idx++ {
+		wrd := resultString[idx]
+		log.Debugf("wrd --- %s", wrd)
+		resultMap[wrd] = wordFreq[wrd]
+	}
+
+	return resultMap
+}
+
+func SortOnFreq(pq map[string]float64, desending bool) []string {
+	ll := make([]string, len(pq))
+	idx := 0
+	for k, _ := range pq {
+		ll[idx] = k
+		idx += 1
+	}
+	log.Debugf("top ll :%v", ll)
+	return SortOnFreqList(ll, pq, desending)
+}
+
+func SortOnFreqList(ll []string, pq map[string]float64, desending bool) []string {
+	// sort the string-ints in ascending order
+	//https://play.golang.org/p/fpv2lVpzVCO
+	res := make([]string, len(ll))
+
+	var ss []keyVal
+	ss = make([]keyVal, 0)
+	for _, k := range ll {
+		v := pq[k]
+		ss = append(ss, keyVal{k, v})
+	}
+
+	sort.SliceStable(ss, func(i, j int) bool {
+		return ss[i].Value > ss[j].Value
+	})
+	if !desending {
+		for i, kv := range ss {
+			res[i] = kv.Key
+		}
+	} else {
+		for i := len(ss) - 1; i >= 0; i-- {
+			res[i] = ss[i].Key
+		}
+	}
+
+	return res
 }
