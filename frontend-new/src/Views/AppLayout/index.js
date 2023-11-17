@@ -152,7 +152,6 @@ function AppLayout({
       let projectDetails = _.isEmpty(activeItem) ? projects[0] : activeItem[0];
 
       localStorage.setItem('activeProject', projectDetails?.id);
-      localStorage.setItem('prevActiveProject', '');
       setActiveProject(projectDetails);
     }
   }, [projects]);

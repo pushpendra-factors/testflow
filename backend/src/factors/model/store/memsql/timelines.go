@@ -57,6 +57,14 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 			return []model.Profile{}, errCode, err.Error()
 		}
 
+		if profileType == model.PROFILE_TYPE_ACCOUNT && payload.Query.GroupAnalysis == model.GROUP_NAME_DOMAINS {
+			groupedFilters := GroupFiltersByGroupName(payload.Query.GlobalUserProperties)
+			profiles, statusCode = store.AccountPropertiesForDomainsEnabled(projectID, profiles, groupedFilters, payload.Query.TableProps)
+			if statusCode != http.StatusOK {
+				return []model.Profile{}, statusCode, "Query Transformation Failed."
+			}
+		}
+
 		returnData, err := FormatProfilesStruct(projectID, profiles, profileType, payload.Query.TableProps, payload.Query.Source)
 		if err != nil {
 			log.WithFields(logFields).WithField("status", err).Error("Failed to filter properties from profiles.")
@@ -2300,6 +2308,11 @@ func FormatAnalyzeResultForProfiles(result *model.QueryResult, profileType strin
 		} else if model.IsAccountProfiles(profileType) {
 			row.TableProps = make(map[string]interface{}, 0)
 			row.LastActivity = profile[1].(time.Time)
+			if profile[2] == nil || (reflect.ValueOf(profile[2])).Len() == 0 {
+				row.HostName = profile[3].(string)
+				profiles = append(profiles, row)
+				continue
+			}
 			reflectProps := reflect.ValueOf(profile[2])
 			props := make(map[string]interface{}, 0)
 			if err := json.Unmarshal([]byte(reflectProps.String()), &props); err != nil {

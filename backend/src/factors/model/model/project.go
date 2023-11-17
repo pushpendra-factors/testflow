@@ -58,6 +58,7 @@ type ProjectString struct {
 	JobsMetadata          *postgres.Jsonb `json:"jobs_metadata"`
 	ChannelGroupRules     postgres.Jsonb  `json:"channel_group_rules"`
 	EnableBilling         bool            `json:"enable_billing"`
+	BillingAdminAgentUUID string          `json:"billing_admin_agent_uuid"`
 }
 
 const (

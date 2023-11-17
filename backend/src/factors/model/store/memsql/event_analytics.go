@@ -148,6 +148,9 @@ func (store *MemSQL) fillGroupNameIDs(projectID int64, query *model.Query) (int,
 
 	for i := range query.GlobalUserProperties {
 		if allGroupIDs[query.GlobalUserProperties[i].GroupName] == 0 {
+			if query.GlobalUserProperties[i].Entity == model.PropertyEntityUserGroup {
+				continue
+			}
 			logCtx.WithFields(log.Fields{"group_name": query.GlobalUserProperties[i].GroupName, "all_group_ids": allGroupIDs}).
 				Error("Invalid group name in property filter.")
 			return http.StatusBadRequest, errors.New("invalid global property filter")
@@ -191,6 +194,18 @@ func (store *MemSQL) RunInsightsQuery(projectId int64, query model.Query, enable
 	}
 
 	if model.IsQueryGroupNameAllAccounts(query.GroupAnalysis) {
+		for i, p := range query.GlobalUserProperties {
+			if v, exist := model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]; exist {
+				v.LogicalOp = p.LogicalOp
+				if p.Value == "true" {
+					query.GlobalUserProperties[i] = v
+				} else if p.Value == "false" || p.Value == "$none" {
+					v.Operator = model.EqualsOpStr
+					v.Value = "$none"
+					query.GlobalUserProperties[i] = v
+				}
+			}
+		}
 		status, err := store.fillGroupNameIDs(projectId, &query)
 		if err != nil {
 			return nil, status, err.Error()
@@ -894,8 +909,14 @@ func buildAddJoinForEventAnalyticsGroupQuery(projectID int64, groupID, scopeGrou
 			params = append(params, projectID)
 
 			if hasGlobalGroupPropertiesFilter {
-				globalGroupIDColumns, globalGroupSource := model.GetDomainsAsscocaitedGroupSourceANDColumnIDs(globalUserProperties, nil)
-				jointStmnt = jointStmnt + fmt.Sprintf(" AND group_users.source IN ( %s ) AND ( %s )", globalGroupSource, globalGroupIDColumns)
+				var globalGroupIDColumns, globalGroupSource string
+				// do not include user_group source for timelines all accounts
+				transformedGlobalProps := transformGlobalFilters(globalUserProperties)
+				globalGroupIDColumns, globalGroupSource = model.GetDomainsAsscocaitedGroupSourceANDColumnIDs(transformedGlobalProps, nil)
+
+				if globalGroupIDColumns != "" && globalGroupSource != "" {
+					jointStmnt = jointStmnt + fmt.Sprintf(" AND group_users.source IN ( %s ) AND ( %s )", globalGroupSource, globalGroupIDColumns)
+				}
 			}
 
 			if isAccountSegment {
@@ -933,6 +954,19 @@ func buildAddJoinForEventAnalyticsGroupQuery(projectID int64, groupID, scopeGrou
 	}
 
 	return "", nil
+}
+
+func transformGlobalFilters(globalUserProperties []model.QueryProperty) []model.QueryProperty {
+	// convert in_properties and do not include visited_website in group properties
+	transformedProps := make([]model.QueryProperty, 0)
+	for _, p := range globalUserProperties {
+		if p.Entity == model.PropertyEntityUserGroup {
+			continue
+		}
+		transformedProps = append(transformedProps, p)
+	}
+
+	return transformedProps
 }
 
 func GetUserSelectStmntForUserORGroup(caller string, scopeGroupID int, isGroupEvent bool, isScopeDomains bool, isExistGlobalGroupByProperties bool,
