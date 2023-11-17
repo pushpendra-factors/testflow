@@ -99,6 +99,7 @@ type Model interface {
 	// billing_account
 	GetBillingAccountByProjectID(projectID int64) (*model.BillingAccount, int)
 	GetBillingAccountByAgentUUID(AgentUUID string) (*model.BillingAccount, int)
+	GetAgentUUIDByBillingAccountID(BillingAccountID string) (string, int)
 	UpdateBillingAccount(id string, planId uint64, orgName, billingAddr, pinCode, phoneNo string) int
 	GetProjectsUnderBillingAccountID(ID string) ([]model.Project, int)
 	GetAgentsByProjectIDs(projectIDs []int64) ([]*model.Agent, int)
