@@ -85,19 +85,19 @@ export function isOnboarded(currentProjectSettings) {
 export function getErrorMessage(resultState) {
   let errorMessage = '';
 
-  if (resultState.status === 500) {
+  if (resultState?.status === 500) {
     errorMessage = 'The server encountered an internal error and could not complete your request';
-  } else if (resultState.status === 400) {
+  } else if (resultState?.status === 400) {
     errorMessage = '400 Bad Request. Please check your request parameters';
-  } else if (resultState.status === 404) {
+  } else if (resultState?.status === 404) {
     errorMessage = 'Resource Not Found! Please check your request.';
   }else{
     // check for no data found
-    if(resultState.status === 200){
-     if(!resultState.data || resultState.data.length === 0) {
+    if(resultState?.status === 200){
+     if(!resultState?.data || resultState?.data?.length === 0) {
           errorMessage = 'No Data Found! Try a Different Time Range';
      }
-     else if(resultState.data.metrics.rows.length === 0){
+     else if(resultState?.data?.metrics?.rows?.length === 0){
       errorMessage = 'No Data Found! Try Changing Filters or Time Range';      
      }
     }
