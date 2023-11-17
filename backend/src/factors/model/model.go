@@ -864,6 +864,7 @@ type Model interface {
 	UpdateCRMActivityAsSynced(projectID int64, source U.CRMSource, crmActivity *model.CRMActivity, syncID, userID string) (*model.CRMActivity, int)
 	GetCRMUsersTypeAndAction(projectID int64, source U.CRMSource) ([]model.CRMUser, int)
 	GetCRMActivityNames(projectID int64, source U.CRMSource) ([]string, int)
+	IncrementSyncTriesForCrmEnrichment(crmSource, docId string, projectId, timestamp int64, action, doctype int) int
 
 	GetCRMSetting(projectID int64) (*model.CRMSetting, int)
 	GetAllCRMSetting() ([]model.CRMSetting, int)

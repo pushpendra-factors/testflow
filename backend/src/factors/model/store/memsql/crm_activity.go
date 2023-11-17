@@ -432,3 +432,27 @@ func (store *MemSQL) GetCRMStatus(ProjectID int64, crmSource string) (map[string
 	return status, http.StatusOK
 
 }
+
+func (store *MemSQL) IncrementSyncTriesForCrmEnrichment(crmString, docId string, projectId, timestamp int64, action, doctype int) int {
+
+	logFields := log.Fields{
+		"project_id": projectId,
+		"timestamp":  timestamp,
+		"action":     action,
+		"doctype":    doctype,
+		"crmSource":  crmString,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	db := C.GetServices().Db
+	stmt := fmt.Sprintf("UPDATE %s SET sync_tries = sync_tries + 1 where id = ? and project_id = ? and type = ? and action = ? and timestamp = ? ", crmString)
+
+	rows, err := db.Raw(stmt, docId, projectId, doctype, action, timestamp).Rows()
+	if err != nil {
+		log.WithError(err).Error("Failed to increment sync tries")
+		return http.StatusInternalServerError
+	}
+	defer rows.Close()
+
+	return http.StatusOK
+}

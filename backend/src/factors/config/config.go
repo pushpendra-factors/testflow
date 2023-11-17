@@ -18,6 +18,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/chargebee/chargebee-go/v3"
 	"github.com/getsentry/sentry-go"
 	"github.com/go-sql-driver/mysql"
 
@@ -49,7 +50,6 @@ import (
 	serviceDisk "factors/services/disk"
 	serviceGCS "factors/services/gcstorage"
 
-	"github.com/chargebee/chargebee-go/v3"
 	cache "github.com/hashicorp/golang-lru"
 )
 
