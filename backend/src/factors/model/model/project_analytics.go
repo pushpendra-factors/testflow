@@ -34,12 +34,14 @@ var ProjectAnalyticsColumnsName = []string{
 var GlobalDataProjectAnalyticsColumnsName = []string{
 	"User Count",
 	"Alerts Count",
-	"Segments Count",
+	"People Segments Count",
+	"Accounts Segments Count",
 	"Dashboard Count",
 	"Webhooks Count",
 	"Report Count",
 	"SDK Integration Completed",
 	"Identified Count",
+	"Login Count",
 }
 
 var GlobalDataIntegrationListColumnsName = []string{
@@ -55,10 +57,12 @@ var GlobalDataIntegrationListColumnsNameToJsonKeys = map[string]string{
 var GlobalDataProjectAnalyticsColumnsNameToJsonKeys = map[string]string{
 	"User Count":                "user_count",
 	"Alerts Count":              "alerts_count",
-	"Segments Count":            "segments_count",
+	"People Segments Count":     "segment_count_user",
+	"Accounts Segments Count":   "segment_count_account",
 	"Dashboard Count":           "dashboard_count",
 	"Webhooks Count":            "webhooks_count",
 	"Report Count":              "report_count",
+	"Login Count":               "login_count",
 	"SDK Integration Completed": "sdk_int_completed",
 	"Identified Count":          "identified_count",
 	"Integration Connected":     "integration_connected",
@@ -111,4 +115,59 @@ var CrmStatusColumnsNameToJsonKeys = map[string]string{
 	"Total Pulled":       "total_pulled",
 	"Total Enriched":     "total_enriched",
 	"Yet To Be Enriched": "yet_to_be_enriched",
+}
+
+var LoginCountQueryStmnt = `
+        {
+            "cl": "events",
+            "ty": "unique_users",
+            "grpa": "users",
+            "ewp": [
+                {
+                    "an": "",
+                    "na": "app.factors.ai",
+                    "grpa": "Page Views",
+                    "pr": [
+                        {
+                            "en": "user",
+                            "grpn": "user",
+                            "lop": "AND",
+                            "op": "notEqual",
+                            "pr": "email",
+                            "ty": "categorical",
+                            "va": "$none"
+                        }
+                    ]
+                }
+            ],
+            "gup": [
+				{
+				  "en": "user_g",
+				  "grpn": "user",
+				  "lop": "AND",
+				  "op": "equals",
+				  "pr": "project_id",
+				  "ty": "categorical",
+				  "va": "%v"
+				}
+			  ],
+            "gbt": "",
+            "gbp": [
+                {
+                    "pr": "project_id",
+                    "en": "user",
+                    "pty": "categorical",
+                    "grpn": "OTHERS",
+                    "ena": "$present"
+                }
+            ],
+            "ec": "each_given_event",
+            "tz": "%v",
+            "fr": %v,
+            "to": %v
+        }
+    `
+
+var ProjectAnalyticsEventSingleQueryStmnt = map[string]string{
+	"login_count": LoginCountQueryStmnt,
 }

@@ -1,6 +1,7 @@
 package memsql
 
 import (
+	"encoding/json"
 	"errors"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
@@ -303,15 +304,16 @@ func (store *MemSQL) GetGlobalProjectAnalyticsDataByProjectId(projectID int64, m
 	with 
     step_1 as ( select count(*) as users_count from project_agent_mappings where project_id =?),
     step_2 as ( select count(*) as alerts_count from alerts where project_id =? and alert_type != 3 and is_deleted = ? ),
-	step_3 as (select count(*) as event_trigger_alerts_count from event_trigger_alerts where project_id =? and  is_deleted = ?),
-    step_4 as ( select count(*) as segments_count from segments where project_id =? ),
-    step_5 as ( select count(*) as dashboard_count from  dashboards where project_id = ? and is_deleted = ? ),
-    step_6 as ( select count(*) as webhooks_count from event_trigger_alerts where project_id = ? and JSON_EXTRACT_STRING(event_trigger_alert,'%s') = ? and is_deleted = ? and internal_status = ? ),
-    step_7 as ( select count(*) as report_count from queries where project_id =? and is_deleted = ? )  
-    select * from step_1,step_2,step_3,step_4,step_5,step_6,step_7;
-	`, model.WEBHOOK)
+	step_3 as (select count(*) as event_trigger_alerts_count from event_trigger_alerts where project_id =? and internal_status != ? and is_deleted = ?),
+    step_4 as ( select count(*) as segment_count_user from segments where project_id =? and JSON_EXTRACT_STRING(query,'%s') = '%s'),
+	step_5 as ( select count(*) as segment_count_account from segments where project_id =? and JSON_EXTRACT_STRING(query,'%s') = '%s'),
+    step_6 as ( select count(*) as dashboard_count from  dashboards where project_id = ? and is_deleted = ? ),
+    step_7 as ( select count(*) as webhooks_count from event_trigger_alerts where project_id = ? and JSON_EXTRACT_STRING(event_trigger_alert,'%s') = ? and internal_status != ? and is_deleted = ? ),
+    step_8 as ( select count(*) as report_count from queries where project_id =? and type != 3 and type != 4 and is_deleted = ? ) 
+	select * from step_1,step_2,step_3,step_4,step_5,step_6,step_7,step_8;
+	`, "caller", "user_profiles", "caller", "account_profiles", model.WEBHOOK)
 
-	params = append(params, projectID, projectID, false, projectID, false, projectID, projectID, false, projectID, true, false, model.ACTIVE, projectID, false)
+	params = append(params, projectID, projectID, false, projectID, model.Disabled, false, projectID, projectID, projectID, false, projectID, "true", model.Disabled, false, projectID, false)
 
 	rows, err := db.Raw(stmt, params...).Rows()
 	if err != nil {
@@ -321,13 +323,14 @@ func (store *MemSQL) GetGlobalProjectAnalyticsDataByProjectId(projectID int64, m
 	for rows.Next() {
 		var usersCount string
 		var alertsCount string
-		var segmentsCount string
+		var peopleSegmentsCount string
+		var accountSegmentsCount string
 		var dashboardCount string
 		var webhooksCount string
 		var reportCount string
 		var eventAlertsCount string
 
-		if err = rows.Scan(&usersCount, &eventAlertsCount, &alertsCount, &segmentsCount, &dashboardCount,
+		if err = rows.Scan(&usersCount, &eventAlertsCount, &alertsCount, &peopleSegmentsCount, &accountSegmentsCount, &dashboardCount,
 			&webhooksCount, &reportCount); err != nil {
 			log.WithFields(log.Fields{"err": err}).Error("SQL Parse failed.")
 			return nil, err
@@ -350,18 +353,65 @@ func (store *MemSQL) GetGlobalProjectAnalyticsDataByProjectId(projectID int64, m
 		}
 
 		data := map[string]interface{}{
-			"user_count":        usersCount,
-			"alerts_count":      U.SafeConvertToFloat64(alertsCount) + U.SafeConvertToFloat64(eventAlertsCount),
-			"segments_count":    segmentsCount,
-			"dashboard_count":   dashboardCount,
-			"webhooks_count":    webhooksCount,
-			"report_count":      reportCount,
-			"sdk_int_completed": intgrationCompleted,
-			"identified_count":  identifiedCount,
+			"user_count":            usersCount,
+			"alerts_count":          U.SafeConvertToFloat64(alertsCount) + U.SafeConvertToFloat64(eventAlertsCount),
+			"segment_count_user":    peopleSegmentsCount,
+			"segment_count_account": accountSegmentsCount,
+			"dashboard_count":       dashboardCount,
+			"webhooks_count":        webhooksCount,
+			"report_count":          reportCount,
+			"sdk_int_completed":     intgrationCompleted,
+			"identified_count":      identifiedCount,
+		}
+
+		for key, queryStmnt := range model.ProjectAnalyticsEventSingleQueryStmnt {
+			eventData, err := store.GetGlobalProjectAnalyticsEventDataByProjectId(projectID, queryStmnt)
+			if err != nil {
+				return nil, errors.New("failed to event base metrics data")
+			}
+
+			val, _ := U.GetValueAsString(eventData["aggregate"])
+			data[key], _ = strconv.ParseInt(val, 10, 64)
+
 		}
 
 		result = append(result, data)
 
+	}
+
+	return result, nil
+}
+
+func (store *MemSQL) GetGlobalProjectAnalyticsEventDataByProjectId(projectID int64, queryStmnt string) (map[string]interface{}, error) {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	timeZoneString, statusCode := store.GetTimezoneForProject(projectID)
+	if statusCode != http.StatusFound {
+		timeZoneString = U.TimeZoneStringIST
+	}
+
+	startTime := U.GetBeginningOfTodayTime(timeZoneString)
+
+	var query model.Query
+	jsonString := fmt.Sprintf(queryStmnt, projectID, timeZoneString, startTime.Unix(), time.Now().Unix())
+	err := json.Unmarshal([]byte(jsonString), &query)
+	if err != nil {
+		return nil, err
+	}
+
+	singleResult, errCode, _ := store.ExecuteEventsQuery(projectID, query, true)
+
+	if errCode != http.StatusOK {
+		return nil, nil
+	}
+	result := make(map[string]interface{})
+	for _, row := range singleResult.Rows {
+		for i, key := range singleResult.Headers {
+			result[key] = row[i]
+		}
 	}
 
 	return result, nil
