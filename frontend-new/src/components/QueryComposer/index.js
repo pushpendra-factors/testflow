@@ -77,12 +77,12 @@ function QueryComposer({
 
   const groupsList = useMemo(() => {
     const customGroups = [
-      ['Users', 'users'],
-      ['All Accounts', GROUP_NAME_DOMAINS]
+      ['All Accounts', GROUP_NAME_DOMAINS],
+      ['Users', 'users']
     ];
 
     if (queryType === QUERY_TYPE_EVENT) {
-      customGroups.unshift(['Events', 'events']);
+      customGroups.push(['Events', 'events']);
     }
     return customGroups;
   }, [queryType]);
