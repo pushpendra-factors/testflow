@@ -284,3 +284,35 @@ func TestOverwritePropertyDetails(t *testing.T) {
 	assert.Equal(t, http.StatusFound, status)
 
 }
+
+func TestSortByTimestampAndCount(t *testing.T) {
+
+	event1 := U.NameCountTimestampCategory{
+		U.EVENT_NAME_SESSION, 10, 1700200806, "cat1", ""}
+	event2 := U.NameCountTimestampCategory{
+		"event2", 20, 1700200807, U.PageViewEvent, ""}
+	event3 := U.NameCountTimestampCategory{
+		U.EVENT_NAME_FORM_SUBMITTED, 30, 1700200808, "cat3", ""}
+	event4 := U.NameCountTimestampCategory{
+		"event4", 40, 1700200809, U.SmartEvent, ""}
+	event5 := U.NameCountTimestampCategory{
+		"event5", 50, 17002008070, "category2", ""}
+
+	modifiedEvent1 := U.NameCountTimestampCategory{
+		U.EVENT_NAME_SESSION, 10, 1700200806, "cat1", "Others"}
+	modifiedEvent2 := U.NameCountTimestampCategory{
+		"event2", 20, 1700200807, U.PageViewEvent, U.PageViewEvent}
+	modifiedEvent3 := U.NameCountTimestampCategory{
+		U.EVENT_NAME_FORM_SUBMITTED, 30, 1700200808, "cat3", "Others"}
+	modifiedEvent4 := U.NameCountTimestampCategory{
+		"event4", 40, 1700200809, U.SmartEvent, U.SmartEvent}
+	modifiedEvent5 := U.NameCountTimestampCategory{
+		"event5", 50, 17002008070, "category2", "Others"}
+
+	eventsAggregatedSlice := []U.NameCountTimestampCategory{event4, event3, event1, event2, event5}
+
+	eventsAggregatedSlice = U.SortByTimestampAndCount(eventsAggregatedSlice)
+
+	assert.Equal(t, []U.NameCountTimestampCategory{modifiedEvent4, modifiedEvent3, modifiedEvent1, modifiedEvent2, modifiedEvent5}, U.SortByTimestampAndCount([]U.NameCountTimestampCategory{event1, event2, event3, event4, event5}))
+
+}
