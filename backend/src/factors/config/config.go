@@ -18,6 +18,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/chargebee/chargebee-go/v3"
 	"github.com/getsentry/sentry-go"
 	"github.com/go-sql-driver/mysql"
 
@@ -49,7 +50,6 @@ import (
 	serviceDisk "factors/services/disk"
 	serviceGCS "factors/services/gcstorage"
 
-	"github.com/chargebee/chargebee-go/v3"
 	cache "github.com/hashicorp/golang-lru"
 )
 
@@ -334,7 +334,7 @@ type Configuration struct {
 	ChargebeeApiKey                                     string
 	ChargebeeSiteName                                   string
 	UserPropertyUpdateOptProjects                       string
-	CompanyPropsV1EnabledProjectIDs                     string
+	CompanyEnrichmentV1ProjectIDs                       string
 	AssociateDealToDomainByProjectID                    string
 }
 
@@ -2426,18 +2426,18 @@ func GetSDKAndIntegrationMetricNameByConfig(metricName string) string {
 	return metricName
 }
 
-func IsCompanyPropsV1Enabled(projectId int64) bool {
+func IsCompanyEnrichmentV1Enabled(projectId int64) bool {
 
-	if configuration.CompanyPropsV1EnabledProjectIDs == "" {
+	if configuration.CompanyEnrichmentV1ProjectIDs == "" {
 		return false
 	}
 
-	if configuration.CompanyPropsV1EnabledProjectIDs == "*" {
+	if configuration.CompanyEnrichmentV1ProjectIDs == "*" {
 		return true
 	}
 
 	projectIDstr := fmt.Sprintf("%d", projectId)
-	projectIDs := strings.Split(configuration.CompanyPropsV1EnabledProjectIDs, ",")
+	projectIDs := strings.Split(configuration.CompanyEnrichmentV1ProjectIDs, ",")
 	for i := range projectIDs {
 		if projectIDs[i] == projectIDstr {
 			return true

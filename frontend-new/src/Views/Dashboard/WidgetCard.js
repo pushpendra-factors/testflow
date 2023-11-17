@@ -188,7 +188,8 @@ function WidgetCard({
             );
             setResultState({
               ...initialState,
-              data: res.data.result
+              data: res.data.result,
+              status:res.status
             });
           } else if (
             queryType === QUERY_TYPE_PROFILE &&
@@ -201,7 +202,8 @@ function WidgetCard({
             );
             setResultState({
               ...initialState,
-              data: res.data.result
+              data: res.data.result,
+              status:res.status
             });
           } else if (
             queryType === QUERY_TYPE_ATTRIBUTION &&
@@ -215,6 +217,7 @@ function WidgetCard({
             setResultState({
               ...initialState,
               data: res.data.result,
+              status:res.status,
               apiCallStatus
             });
           } else if (
@@ -228,7 +231,8 @@ function WidgetCard({
             );
             setResultState({
               ...initialState,
-              data: res.data.result
+              data: res.data.result,
+              status:res.status
             });
           } else if (
             queryType === QUERY_TYPE_KPI &&
@@ -241,7 +245,8 @@ function WidgetCard({
             );
             setResultState({
               ...initialState,
-              data: res.data.result || res.data
+              data: res.data.result || res.data,
+              status:res.status
             });
           } else if (!hasComponentUnmounted.current) {
             lastRefreshedAt = _.get(
@@ -261,7 +266,8 @@ function WidgetCard({
             if (unit.query.query.query_group.length === 1) {
               setResultState({
                 ...initialState,
-                data: resultGroup[0]
+                data: resultGroup[0],
+                status:res.status
               });
             } else if (unit.query.query.query_group.length === 3) {
               const userData = formatApiData(resultGroup[0], resultGroup[1]);
@@ -273,7 +279,8 @@ function WidgetCard({
               );
               setResultState({
                 ...initialState,
-                data: activeUsersData
+                data: activeUsersData,
+                status:res.status
               });
             } else if (unit.query.query.query_group.length === 4) {
               const eventsData = formatApiData(resultGroup[0], resultGroup[1]);
@@ -285,12 +292,14 @@ function WidgetCard({
               );
               setResultState({
                 ...initialState,
-                data: frequencyData
+                data: frequencyData,
+                status:res.status
               });
             } else {
               setResultState({
                 ...initialState,
-                data: formatApiData(resultGroup[0], resultGroup[1])
+                data: formatApiData(resultGroup[0], resultGroup[1]),
+                status:res.status
               });
             }
           }
@@ -310,13 +319,13 @@ function WidgetCard({
         }
       } catch (err) {
         console.log(err);
-        console.log(err.response);
         if (!hasComponentUnmounted.current) {
           onDataLoadSuccess({ unitId: unit.id });
         }
         setResultState({
           ...initialState,
-          error: true
+          error: true,
+          status:err.status
         });
       }
     },

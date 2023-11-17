@@ -16,5 +16,14 @@ export const showUpgradeNudge = (
 
 export const PRICING_PAGE_TABS = {
   BILLING: 'billing',
-  ENRICHMENT_RULES: 'enrichment_rules'
+  ENRICHMENT_RULES: 'enrichment_rules',
+  UPGRADE: 'upgrade',
+  INVOICES: 'invoices'
+};
+
+export const showV2PricingVersion = (activeProject: any) => {
+  // return true;
+
+  if (activeProject?.enable_billing) return true;
+  return false;
 };

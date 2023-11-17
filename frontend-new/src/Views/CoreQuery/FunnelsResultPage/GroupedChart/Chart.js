@@ -26,6 +26,7 @@ import {
 import LegendsCircle from '../../../../styles/components/LegendsCircle';
 import TopLegends from '../../../../components/GroupedBarChart/TopLegends';
 import styles from './styles.module.scss';
+// import truncateURL from 'Utils/truncateURL';
 
 function Chart({
   eventsData,
@@ -144,27 +145,27 @@ function Chart({
         .html(
           ReactDOMServer.renderToString(
             <>
-              <div className="pb-3 groupInfo">
+              <div className='pb-3 groupInfo'>
                 <Text
-                  type="title"
-                  weight="bold"
-                  color="grey-8"
-                  extraClass="mb-0"
+                  type='title'
+                  weight='bold'
+                  color='grey-8'
+                  extraClass='mb-0'
                 >
                   {data.group.includes('$no_group') ? 'Overall' : data.group}
                 </Text>
-                <Text type="title" color="grey-2" extraClass="mb-0">
+                <Text type='title' color='grey-2' extraClass='mb-0'>
                   {currGrp.value} Overall Conversion
                 </Text>
               </div>
-              <div className="pt-3">
+              <div className='pt-3'>
                 {prevEventData ? (
                   <Text
-                    type="title"
-                    color="grey"
-                    weight="bold"
-                    extraClass="text-xs mb-0"
-                    lineHeight="small"
+                    type='title'
+                    color='grey'
+                    weight='bold'
+                    extraClass='text-xs mb-0'
+                    lineHeight='small'
                   >
                     Between steps:
                   </Text>
@@ -172,23 +173,23 @@ function Chart({
                 {prevEventData ? (
                   <div className={'flex items-center mt-1'}>
                     <LegendsCircle
-                      extraClass="mr-1"
+                      extraClass='mr-1'
                       color={colors[prevEventData.index - 1]}
                     />
                     <Text
-                      extraClass="mr-1 mb-0 text-base"
-                      lineHeight="medium"
-                      type="title"
-                      weight="bold"
+                      extraClass='mr-1 mb-0 text-base'
+                      lineHeight='medium'
+                      type='title'
+                      weight='bold'
                     >
                       <NumFormat number={prevEventData.data[data.group]} />
                     </Text>
                     <Text
-                      extraClass="mr-1 mb-0 text-base"
-                      lineHeight="medium"
-                      color="grey"
-                      type="title"
-                      weight="medium"
+                      extraClass='mr-1 mb-0 text-base'
+                      lineHeight='medium'
+                      color='grey'
+                      type='title'
+                      weight='medium'
                     >
                       (
                       {calculatePercentage(
@@ -201,23 +202,23 @@ function Chart({
                 ) : null}
                 <div className={'flex items-center mt-1'}>
                   <LegendsCircle
-                    extraClass="mr-1"
+                    extraClass='mr-1'
                     color={colors[currEventData.index - 1]}
                   />
                   <Text
-                    extraClass="mr-1 mb-0 text-base"
-                    lineHeight="medium"
-                    type="title"
-                    weight="bold"
+                    extraClass='mr-1 mb-0 text-base'
+                    lineHeight='medium'
+                    type='title'
+                    weight='bold'
                   >
                     <NumFormat number={currEventData.data[data.group]} />
                   </Text>
                   <Text
-                    extraClass="mr-1 mb-0 text-base"
-                    lineHeight="medium"
-                    color="grey"
-                    type="title"
-                    weight="medium"
+                    extraClass='mr-1 mb-0 text-base'
+                    lineHeight='medium'
+                    color='grey'
+                    type='title'
+                    weight='medium'
                   >
                     (
                     {calculatePercentage(
@@ -228,37 +229,37 @@ function Chart({
                   </Text>
                 </div>
                 {prevEventData ? (
-                  <div className="flex justify-between items-center mt-2">
-                    <div className="flex flex-col items-start">
-                      <div className="flex items-center">
-                        <SVG name="clock" fill="#8692A3" />
+                  <div className='flex justify-between items-center mt-2'>
+                    <div className='flex flex-col items-start'>
+                      <div className='flex items-center'>
+                        <SVG name='clock' fill='#8692A3' />
                         <Text
-                          type="title"
-                          color="grey-2"
-                          weight="medium"
-                          extraClass="text-xs mb-0 ml-1 mt-1"
-                          lineHeight="1"
+                          type='title'
+                          color='grey-2'
+                          weight='medium'
+                          extraClass='text-xs mb-0 ml-1 mt-1'
+                          lineHeight='1'
                         >
                           {timeTaken}
                         </Text>
                       </div>
                       <Text
-                        type="title"
-                        color="grey"
-                        weight="medium"
-                        extraClass="text-xs mb-0 mt-1"
+                        type='title'
+                        color='grey'
+                        weight='medium'
+                        extraClass='text-xs mb-0 mt-1'
                       >
                         TIME TAKEN
                       </Text>
                     </div>
-                    <div className="flex flex-col items-start">
-                      <div className="flex items-center">
+                    <div className='flex flex-col items-start'>
+                      <div className='flex items-center'>
                         <Text
-                          type="title"
-                          color="grey-2"
-                          weight="medium"
-                          extraClass="text-xs mb-0 mr-1"
-                          lineHeight="1"
+                          type='title'
+                          color='grey-2'
+                          weight='medium'
+                          extraClass='text-xs mb-0 mr-1'
+                          lineHeight='1'
                         >
                           {formatCount(
                             100 -
@@ -270,13 +271,13 @@ function Chart({
                           )}
                           %
                         </Text>
-                        <SVG name="dropoff" fill="#8692A3" />
+                        <SVG name='dropoff' fill='#8692A3' />
                       </div>
                       <Text
-                        type="title"
-                        color="grey"
-                        weight="medium"
-                        extraClass="text-xs mb-0 mt-1"
+                        type='title'
+                        color='grey'
+                        weight='medium'
+                        extraClass='text-xs mb-0 mt-1'
                       >
                         DROP-OFF
                       </Text>
@@ -410,18 +411,18 @@ function Chart({
           return ReactDOMServer.renderToString(
             <>
               <Text
-                type="title"
-                weight="medium"
-                color="grey-2"
-                extraClass="text-xs mb-0 percent"
+                type='title'
+                weight='medium'
+                color='grey-2'
+                extraClass='text-xs mb-0 percent'
               >
                 {d[`event${keys.length}`]}%
               </Text>
               <Text
-                type="title"
-                weight="medium"
-                color="grey"
-                extraClass="text-xs mb-0 count"
+                type='title'
+                weight='medium'
+                color='grey'
+                extraClass='text-xs mb-0 count'
               >
                 {formatDuration(total)}
               </Text>
@@ -441,12 +442,19 @@ function Chart({
           } else {
             label = d;
           }
-          if (label.length > BAR_CHART_XAXIS_TICK_LENGTH[cardSize]) {
+          // const urlTruncatedlabel = truncateURL(label);
+          const urlTruncatedlabel = label;
+          if (
+            urlTruncatedlabel.length > BAR_CHART_XAXIS_TICK_LENGTH[cardSize]
+          ) {
             return (
-              label.substr(0, BAR_CHART_XAXIS_TICK_LENGTH[cardSize]) + '...'
+              urlTruncatedlabel.slice(
+                0,
+                BAR_CHART_XAXIS_TICK_LENGTH[cardSize]
+              ) + '...'
             );
           }
-          return label;
+          return urlTruncatedlabel;
         })
       );
 
@@ -480,7 +488,7 @@ function Chart({
   }, [drawChart, cardSize]);
 
   return (
-    <div className="w-full">
+    <div className='w-full'>
       {section === DASHBOARD_WIDGET_SECTION ? (
         <TopLegends
           colors={colors}
@@ -496,19 +504,19 @@ function Chart({
         />
       ) : null}
       <div ref={chartRef} className={styles.groupedChart}></div>
-      <svg width="0" height="0">
+      <svg width='0' height='0'>
         <defs>
           {colors.map((color, index) => {
             return (
               <linearGradient
                 key={index}
                 id={`funnel-grouped-gradient-${title}-${index}`}
-                x1=".5"
-                x2=".5"
-                y2="1"
+                x1='.5'
+                x2='.5'
+                y2='1'
               >
-                <stop stopColor={color} stopOpacity="0.5" />
-                <stop offset="1" stopColor={color} stopOpacity="0.1" />
+                <stop stopColor={color} stopOpacity='0.5' />
+                <stop offset='1' stopColor={color} stopOpacity='0.1' />
               </linearGradient>
             );
           })}

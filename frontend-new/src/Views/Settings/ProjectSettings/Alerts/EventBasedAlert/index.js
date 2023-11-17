@@ -222,33 +222,32 @@ const EventBasedAlert = ({
   }, [groups]);
 
   const setGroupAnalysis = (group) => {
-
     setActiveGrpBtn(group);
 
-    if (!['users', 'events'].includes(group)) {
-      getGroupProperties(activeProject.id, group);
-    }
-
-    const criteria =
-      group === 'events' ? TOTAL_EVENTS_CRITERIA : TOTAL_USERS_CRITERIA;
-    setShowCriteria(criteria);
-
-    const opts = {
-      ...queryOptions,
-      group_analysis: group,
-      globalFilters: []
-    };
-
-    dispatch({
-      type: INITIALIZE_GROUPBY,
-      payload: {
-        global: [],
-        event: []
-      }
-    });
-
-    setQueries([]);
-    setQueryOptions(opts);
+        if (!['users', 'events'].includes(group)) {
+          getGroupProperties(activeProject.id, group);
+        }
+    
+        const criteria =
+          group === 'events' ? TOTAL_EVENTS_CRITERIA : TOTAL_USERS_CRITERIA;
+        setShowCriteria(criteria);
+    
+        const opts = {
+          ...queryOptions,
+          group_analysis: group,
+          globalFilters: []
+        };
+    
+        dispatch({
+          type: INITIALIZE_GROUPBY,
+          payload: {
+            global: [],
+            event: []
+          }
+        });
+    
+        setQueries([]);
+        setQueryOptions(opts);
   };
 
   const confirmGroupSwitch = (group) => {

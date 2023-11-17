@@ -82,6 +82,27 @@ class Util:
             log.error('Ping failed to healthchecks.io: %s' % e)
 
     
+    @staticmethod
+    def build_message_and_ping_slack(env, slack_url, token_failures):
+        project_ids_list = []
+        if env != 'production': 
+            return
+        
+        for failure in token_failures:
+            project_ids_list.append(str(failure.project_id))
+        
+        message = Util.build_slack_block(project_ids_list)
+        count = 0
+        response = {}
+        # retrying
+        while count<= 3:
+            count += 1
+            response = requests.post(slack_url, json=message, timeout=10)
+            if response.ok:
+                break
+        if not response.ok:
+            log.error('Ping failed to slack alerts')
+
     @staticmethod    
     def sort_by_timestamp(data):
         date = data['dateRange']['end']
@@ -373,3 +394,27 @@ class Util:
         headers = {'Authorization': 'Bearer ' + access_token, 
                     'X-Restli-Protocol-Version': PROTOCOL_VERSION, 'LinkedIn-Version': LINKEDIN_VERSION}
         return Util.request_with_retries_and_sleep(url, headers)
+    
+    def build_slack_block(project_ids):
+        message = {}
+        blocks = [{
+			"type": "header",
+			"text": {
+				"type": "plain_text",
+				"text": "Linkedin token failures"
+			}
+		}]
+        project_ids_str = ", ".join(project_ids)
+
+        fields = [{
+                "type": "plain_text",
+                "text": project_ids_str
+            }]
+        section = {
+            "type" : "section",
+            "fields": fields
+        }
+        blocks.append(section)
+        message["blocks"] = blocks
+
+        return message

@@ -25,13 +25,13 @@ func TestAccScoreDeduplicateWeights(t *testing.T) {
 
 	var finalWeights M.AccWeights
 
-	w0 := M.AccEventWeight{WeightId: "", Weight_value: 5.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$Country", Value: []string{"India"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "categorical"}}}
-	w1 := M.AccEventWeight{WeightId: "", Weight_value: 7.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$Country", Value: []string{"India"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "categorical"}}}
-	w2 := M.AccEventWeight{WeightId: "", Weight_value: 8.0, Is_deleted: false, EventName: "$session", Rule: []M.WeightKeyValueTuple{{Key: "$Country", Value: []string{"India"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "categorical"}}}
-	w3 := M.AccEventWeight{WeightId: "", Weight_value: 9.0, Is_deleted: false, EventName: "$form_submitted", Rule: []M.WeightKeyValueTuple{{Key: "$Country", Value: []string{"India"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "categorical"}}}
-	w4 := M.AccEventWeight{WeightId: "", Weight_value: 10.0, Is_deleted: false, EventName: "www.acme.com", Rule: []M.WeightKeyValueTuple{{Key: "$Country", Value: []string{"India"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "categorical"}}}
-	w5 := M.AccEventWeight{WeightId: "", Weight_value: 11.0, Is_deleted: false, EventName: "www.acme.com/pricing", Rule: []M.WeightKeyValueTuple{{Key: "$Country", Value: []string{"India"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "categorical"}}}
-	w6 := M.AccEventWeight{WeightId: "1", Weight_value: 5.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "user", ValueType: "categorical"}}}
+	w0 := M.AccEventWeight{FilterName: "f1", WeightId: "", Weight_value: 5.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$Country", Value: []string{"India"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "categorical"}}}
+	w1 := M.AccEventWeight{FilterName: "f2", WeightId: "", Weight_value: 7.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$Country", Value: []string{"India"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "categorical"}}}
+	w2 := M.AccEventWeight{FilterName: "f3", WeightId: "", Weight_value: 8.0, Is_deleted: false, EventName: "$session", Rule: []M.WeightKeyValueTuple{{Key: "$Country", Value: []string{"India"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "categorical"}}}
+	w3 := M.AccEventWeight{FilterName: "f4", WeightId: "", Weight_value: 9.0, Is_deleted: false, EventName: "$form_submitted", Rule: []M.WeightKeyValueTuple{{Key: "$Country", Value: []string{"India"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "categorical"}}}
+	w4 := M.AccEventWeight{FilterName: "f5", WeightId: "", Weight_value: 10.0, Is_deleted: false, EventName: "www.acme.com", Rule: []M.WeightKeyValueTuple{{Key: "$Country", Value: []string{"India"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "categorical"}}}
+	w5 := M.AccEventWeight{FilterName: "f6", WeightId: "", Weight_value: 11.0, Is_deleted: false, EventName: "www.acme.com/pricing", Rule: []M.WeightKeyValueTuple{{Key: "$Country", Value: []string{"India"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "categorical"}}}
+	w6 := M.AccEventWeight{FilterName: "f7", WeightId: "", Weight_value: 5.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "user", ValueType: "categorical"}}}
 
 	weightRules := []M.AccEventWeight{w0, w1, w2, w3, w4, w5, w6}
 	finalWeights.WeightConfig = weightRules
@@ -67,24 +67,24 @@ func TestAccScoreFilterAndCountEvents(t *testing.T) {
 	var finalWeights M.AccWeights
 
 	// update weights
-	w0 := M.AccEventWeight{WeightId: "1", Weight_value: 5.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
-	w1 := M.AccEventWeight{WeightId: "2", Weight_value: 7.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
-	w2 := M.AccEventWeight{WeightId: "3", Weight_value: 8.0, Is_deleted: false, EventName: "$session", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
-	w3 := M.AccEventWeight{WeightId: "4", Weight_value: 9.0, Is_deleted: false, EventName: "$form_submitted", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
-	w4 := M.AccEventWeight{WeightId: "5", Weight_value: 10.0, Is_deleted: false, EventName: "www.acme.com", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
-	w5 := M.AccEventWeight{WeightId: "6", Weight_value: 11.0, Is_deleted: false, EventName: "www.acme.com/pricing", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
-	w6 := M.AccEventWeight{WeightId: "7", Weight_value: 8.0, Is_deleted: false, EventName: "$session"}
-	w7 := M.AccEventWeight{WeightId: "8", Weight_value: 11.0, Is_deleted: false, EventName: "", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Kenya"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
-	w8 := M.AccEventWeight{WeightId: "9", Weight_value: 11.0, Is_deleted: false, EventName: "", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Brazil"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w0 := M.AccEventWeight{FilterName: "f1", WeightId: "1", Weight_value: 5.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w1 := M.AccEventWeight{FilterName: "f2", WeightId: "2", Weight_value: 7.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w2 := M.AccEventWeight{FilterName: "f3", WeightId: "3", Weight_value: 8.0, Is_deleted: false, EventName: "$session", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w3 := M.AccEventWeight{FilterName: "f4", WeightId: "4", Weight_value: 9.0, Is_deleted: false, EventName: "$form_submitted", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w4 := M.AccEventWeight{FilterName: "f5", WeightId: "5", Weight_value: 10.0, Is_deleted: false, EventName: "www.acme.com", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w5 := M.AccEventWeight{FilterName: "f6", WeightId: "6", Weight_value: 11.0, Is_deleted: false, EventName: "www.acme.com/pricing", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Australia"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w6 := M.AccEventWeight{FilterName: "f7", WeightId: "7", Weight_value: 8.0, Is_deleted: false, EventName: "$session"}
+	w7 := M.AccEventWeight{FilterName: "f8", WeightId: "8", Weight_value: 11.0, Is_deleted: false, EventName: "", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Kenya"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w8 := M.AccEventWeight{FilterName: "f9", WeightId: "9", Weight_value: 11.0, Is_deleted: false, EventName: "", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Brazil"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
 
 	weightRules := []M.AccEventWeight{w0, w1, w2, w3, w4, w5, w6, w7, w8}
 	finalWeights.WeightConfig = weightRules
 	finalWeights.SaleWindow = 10
 
-	ev_r1 := []string{"3", "7"}
+	ev_r1 := []string{"3"}
 	ev_r2 := []string{"1", "2"}
 	ev_r3 := []string{"4"}
-	ev_r4 := []string{"3", "7"}
+	ev_r4 := []string{"3"}
 	ev_r5 := []string{"8"}
 	ev_r6 := []string{"8"}
 	ev_r7 := []string{"8"}
@@ -422,7 +422,7 @@ func TestAccScoreUpdateLastEventsDay(t *testing.T) {
 	prevCountsOfUser["1"][w3_date_string] = M.LatestScore{Date: w3_date_unix.Unix(), EventsCount: w3, Properties: p1u2}
 	prevCountsOfUser["1"][w2_date_string] = M.LatestScore{Date: w2_date_unix.Unix(), EventsCount: w2, Properties: p1u3}
 
-	dbup, err := T.UpdateLastEventsDay(prevCountsOfUser, currentTS, finalWeights.SaleWindow)
+	dbup, _, err := T.UpdateLastEventsDay(prevCountsOfUser, currentTS, finalWeights.SaleWindow)
 	assert.Nil(t, err)
 	log.Debugf("result:%v", dbup)
 	assert.Equal(t, dbup["1"].EventsCount["a"], 2.5)
@@ -622,5 +622,32 @@ func TestWriteRangestoDB(t *testing.T) {
 
 	err := store.GetStore().WriteScoreRanges(projectId, buckets)
 	assert.Nil(t, err)
+
+}
+
+func TestUpdateTopKScoreContribution(t *testing.T) {
+	topk := 4
+	testMap := make(map[string]float64)
+	resExpected := make([]string, 0)
+	testMap["a"] = 1
+	testMap["b"] = 2
+	testMap["c"] = 3
+	testMap["e"] = 4
+	testMap["f"] = 5
+	testMap["g"] = 6
+	testMap["h"] = 7
+	testMap["i"] = 8
+
+	resExpected = []string{"i", "h", "f", "g"}
+
+	result := T.GetTopkEventsOnCounts(testMap, topk)
+	log.Debugf("result - %v", result)
+	res := make([]string, 0)
+	for k, _ := range result {
+		res = append(res, k)
+	}
+
+	assert.Equal(t, topk, len(result))
+	assert.ElementsMatch(t, resExpected, res, "results are not matching")
 
 }

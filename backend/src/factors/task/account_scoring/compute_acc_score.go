@@ -443,7 +443,7 @@ func WriteUserCountsAndRangesToDB(projectId int64, startTime int64, prevcountsof
 	}
 
 	// get all groups last event
-	groupsLastEvent, err := UpdateLastEventsDay(updatedGroupsCopy, startTime, salewindow)
+	groupsLastEvent, groupAllEvents, err := UpdateLastEventsDay(updatedGroupsCopy, startTime, salewindow)
 	if err != nil {
 		e := fmt.Errorf("unable to update last event for groups")
 		return nil, e
@@ -457,7 +457,7 @@ func WriteUserCountsAndRangesToDB(projectId int64, startTime int64, prevcountsof
 
 	// groupsLastevent contains last event data on all users with and without activity
 	// updatedGroups contains groups of users with activity
-	err = store.GetStore().UpdateGroupEventsCountGO(projectId, updatedGroups, groupsLastEvent, weights)
+	err = store.GetStore().UpdateGroupEventsCountGO(projectId, updatedGroups, groupsLastEvent, groupAllEvents, weights)
 	if err != nil {
 		return nil, err
 	}
@@ -494,9 +494,11 @@ func updateEventChannel(user *AggEventsOnUserAndGroup, event *P.CounterEventForm
 }
 
 func UpdateLastEventsDay(prevCountsOfUser map[string]map[string]M.LatestScore,
-	currentTS int64, saleWindow int64) (map[string]M.LatestScore, error) {
+	currentTS int64, saleWindow int64) (map[string]M.LatestScore, map[string]M.LatestScore, error) {
 
 	updatedLastScore := make(map[string]M.LatestScore, 0)
+	updatedAllEventsScore := make(map[string]M.LatestScore, 0)
+
 	currentDate := U.GetDateOnlyFromTimestamp(currentTS)
 	userIdsmap := make(map[string]bool, 0)
 	for usrkey, _ := range prevCountsOfUser {
@@ -508,9 +510,16 @@ func UpdateLastEventsDay(prevCountsOfUser map[string]map[string]M.LatestScore,
 		var lastevent M.LatestScore
 		lastevent.Properties = make(map[string]map[string]int64)
 		lastevent.EventsCount = make(map[string]float64)
+		lastevent.TopEvents = make(map[string]float64)
+
+		var allEventsInrange M.LatestScore
+		allEventsInrange.Properties = make(map[string]map[string]int64)
+		allEventsInrange.EventsCount = make(map[string]float64)
+		allEventsInrange.TopEvents = make(map[string]float64)
 
 		properties := make(map[string]map[string]int64)
 		eventsCountWithDecay := make(map[string]float64)
+		eventsCountWithoutDecay := make(map[string]float64)
 
 		if prevCountsOnday, ok := prevCountsOfUser[currentUser]; ok {
 			for _, dateOfCount := range ordereddays {
@@ -527,6 +536,16 @@ func UpdateLastEventsDay(prevCountsOfUser map[string]map[string]M.LatestScore,
 						eventsCountWithDecay[eventKey] += decayval * eventVal
 					}
 				}
+
+				// take counts of all events happened from start till today ..ignoring decay value
+				for eventKey, eventVal := range counts.EventsCount {
+					if _, eok := eventsCountWithoutDecay[eventKey]; !eok {
+						eventsCountWithoutDecay[eventKey] = 0
+
+					}
+					eventsCountWithoutDecay[eventKey] += eventVal
+				}
+
 				for peruserProperties, eprops := range counts.Properties {
 					if _, prKeyok := properties[peruserProperties]; !prKeyok {
 						properties[peruserProperties] = make(map[string]int64)
@@ -541,13 +560,25 @@ func UpdateLastEventsDay(prevCountsOfUser map[string]map[string]M.LatestScore,
 				}
 			}
 		}
+
+		//take top k events contribution to score
+		// using undecayed counts
+		topEventsOnScore := GetTopkEventsOnCounts(eventsCountWithoutDecay, TAKETOPK)
+
 		currentDateTS := U.GetDateFromString(currentDate)
 		lastevent.Date = currentDateTS
 		lastevent.Properties = properties
 		lastevent.EventsCount = eventsCountWithDecay
+		lastevent.TopEvents = topEventsOnScore
+
+		allEventsInrange.Date = currentDateTS
+		allEventsInrange.Properties = properties
+		allEventsInrange.EventsCount = eventsCountWithoutDecay
+
 		updatedLastScore[currentUser] = lastevent
+		updatedAllEventsScore[currentUser] = allEventsInrange
 	}
-	return updatedLastScore, nil
+	return updatedLastScore, updatedAllEventsScore, nil
 
 }
 
@@ -648,7 +679,7 @@ func ComputeScoreRanges(projectId int64, currentTime int64, lookback int64,
 			}
 		}
 		log.Info("date : %s number of updated users : %d", date, len(updatedUsers))
-		lastEventScores, err := UpdateLastEventsDay(updatedUsers, ts, saleWindow)
+		lastEventScores, _, err := UpdateLastEventsDay(updatedUsers, ts, saleWindow)
 		if err != nil {
 			log.WithField("prjoectID", projectId).Error("Unable to compute last event scores")
 		}
@@ -715,4 +746,56 @@ func ComputeBucketRanges(scores []float64, date string) (M.BucketRanges, error) 
 		log.Info(de)
 	}
 	return bucket, nil
+}
+
+func GetEngagementBuckets(projectId int64, scoresPerUser map[string]model.PerUserScoreOnDay) (model.BucketRanges, error) {
+
+	maxTimeStamp := int64(0)
+	for _, userScores := range scoresPerUser {
+		timestamp := U.GetDateFromString(userScores.Timestamp)
+		maxTimeStamp = U.Max(maxTimeStamp, timestamp)
+	}
+	dateTofetch := U.GetDateOnlyFromTimestamp(maxTimeStamp)
+	buckets, err := store.GetStore().GetEngagementBucketsOnProject(projectId, dateTofetch)
+	if err != nil {
+		return model.BucketRanges{}, err
+	}
+	return buckets, nil
+
+}
+
+func GetEngagement(percentile float64, buckets model.BucketRanges) string {
+	for _, bucket := range buckets.Ranges {
+		if bucket.Low <= percentile && percentile < bucket.High {
+			return bucket.Name
+		}
+	}
+	return "ice"
+}
+
+func GetEngagementLevelOnUser(projectId int64, event model.LatestScore, userId string, fscore float64) string {
+	scoresPerUser := make(map[string]model.PerUserScoreOnDay)
+
+	dateString := U.GetDateOnlyFromTimestamp(event.Date)
+	var userOnDay model.PerUserScoreOnDay
+	userOnDay.Id = userId
+	userOnDay.Timestamp = dateString
+	userOnDay.Score = float32(fscore)
+	scoresPerUser[dateString] = userOnDay
+	buckets, errGetBuckets := GetEngagementBuckets(projectId, scoresPerUser)
+	if errGetBuckets != nil {
+		log.WithError(errGetBuckets).Error("Error retrieving account score buckets")
+
+	}
+	engagementLevel := GetEngagement(float64(fscore), buckets)
+	return engagementLevel
+}
+
+func GetTopkEventsOnCounts(events map[string]float64, topK int) map[string]float64 {
+	// if num events less than topk return events
+	if len(events) <= topK {
+		return events
+	}
+	result := U.TakeTopKOnSortedmap(events, topK)
+	return result
 }

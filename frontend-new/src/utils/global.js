@@ -72,6 +72,43 @@ export function insertUrlParam(history, key, value) {
   }
 }
 
+export function isOnboarded(currentProjectSettings) {
+  return (
+    currentProjectSettings?.onboarding_steps?.more_info_form &&
+    currentProjectSettings?.onboarding_steps?.project_created &&
+    currentProjectSettings?.onboarding_steps?.sdk_setup &&
+    currentProjectSettings?.onboarding_steps?.setup_completed &&
+    currentProjectSettings?.onboarding_steps?.visitor_identification_setup
+  );
+}
+
+export function getErrorMessage(resultState) {
+  let errorMessage = '';
+
+  if (resultState.status === 500) {
+    errorMessage = 'The server encountered an internal error and could not complete your request';
+  } else if (resultState.status === 400) {
+    errorMessage = '400 Bad Request. Please check your request parameters';
+  } else if (resultState.status === 404) {
+    errorMessage = 'Resource Not Found! Please check your request.';
+  }else{
+    // check for no data found
+    if(resultState.status === 200){
+     if(!resultState.data || resultState.data.length === 0) {
+          errorMessage = 'No Data Found! Try a Different Time Range';
+     }
+     else if(resultState.data.metrics.rows.length === 0){
+      errorMessage = 'No Data Found! Try Changing Filters or Time Range';      
+     }
+    }
+     else{
+      errorMessage='We are facing trouble loading UI. Drop us a message on the in-app chat';
+     }
+  }
+
+  return errorMessage; 
+}
+
 export function getCookieValue(cookieName) {
   const name = cookieName + '=';
   const decodedCookie = decodeURIComponent(document.cookie);

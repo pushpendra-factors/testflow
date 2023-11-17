@@ -532,7 +532,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		if stat != "success" {
 			log.WithField("status", stat).WithField("response", response).Error("Web hook error details")
 			sendReport.WebhookFail++
-			errMessage = append(errMessage, fmt.Sprintf("%+v", response))
+			errMessage = append(errMessage, fmt.Sprintf("Webhook host reported %v error", response["error"]))
 			deliveryFailures = append(deliveryFailures, WEBHOOK)
 
 		} else {
@@ -705,12 +705,15 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
 			partialSuccess = partialSuccess || status
 			if err != nil || !status {
 				errMsg = err.Error()
+				slackErr, exists := model.SlackErrorStates[errMsg]
+				if !exists {
+					slackErr = fmt.Sprintf("Slack reported %s", errMsg)
+				}
 				channelSuccess = append(channelSuccess, false)
-				errMessage += "&&&" + fmt.Sprintf("%v: %s", channel, errMsg)
+				errMessage += "; " + fmt.Sprintf("%v: %s", channel, slackErr)
 				logCtx.WithField("channel", channel).WithError(err).Error("failed to send slack alert")
 				continue
 			}
-			errMessage += "&&&" + errMsg
 			channelSuccess = append(channelSuccess, true)
 		}
 	} else {
@@ -1097,8 +1100,12 @@ func sendTeamsAlertForEventTriggerAlert(projectID int64, agentUUID string,
 				channel.ChannelId, message)
 			if err != nil {
 				errMsg := err.Error()
+				teamsErr, exists := model.TeamsErrorStates[errMsg]
+				if !exists {
+					teamsErr = fmt.Sprintf("Teams reported %s error.", errMsg)
+				}
 				logCtx.WithError(err).Error("failed to send teams message")
-				return false, errMsg
+				return false, teamsErr
 			}
 
 			logCtx.Info("teams alert sent: ", channel, message)

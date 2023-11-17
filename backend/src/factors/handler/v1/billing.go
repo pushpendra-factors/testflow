@@ -22,10 +22,12 @@ func GetPricingForPlansAndAddonsHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithError(http.StatusBadRequest, errors.New("INVALID PROJECT ID"))
+		return
 	}
 	itemPrices, err := billing.ListPlansAndAddOnsPricesFromChargebee()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.PlansAndAddOnsPrices{})
+		return
 	}
 	var res model.PlansAndAddOnsPrices
 	for _, itemPrice := range itemPrices {
@@ -44,10 +46,12 @@ func UpdateSubscriptionHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithError(http.StatusBadRequest, errors.New("INVALID PROJECT ID"))
+		return
 	}
 	project, errCode := store.GetStore().GetProject(projectId)
 	if errCode != http.StatusFound {
 		c.AbortWithError(http.StatusBadRequest, errors.New("BAD REQUEST"))
+		return
 	}
 
 	var updateSubscriptionParams model.UpdateSubscriptionParams
@@ -73,6 +77,7 @@ func GetSubscriptionDetailsHander(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithError(http.StatusBadRequest, errors.New("INVALID PROJECT ID"))
+		return
 	}
 	var subscription model.Subscription
 	var subscriptionDetails []model.SubscriptionDetail
@@ -80,11 +85,13 @@ func GetSubscriptionDetailsHander(c *gin.Context) {
 	project, errCode := store.GetStore().GetProject(projectId)
 	if errCode != http.StatusFound {
 		c.JSON(http.StatusBadRequest, subscription)
+		return
 	}
 
 	res, err := billing.GetCurrentSubscriptionDetails(project.BillingSubscriptionID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, subscription)
+		return
 	}
 
 	subscription.Status = string(res.Status)
@@ -129,4 +136,72 @@ func BillingUpgradeCallbackHandler(c *gin.Context) {
 		return
 	}
 	c.Redirect(http.StatusPermanentRedirect, C.GetProtocol()+C.GetAPPDomain()+"/pricing")
+}
+
+func ListAllInvoicesHandler(c *gin.Context) {
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		c.AbortWithError(http.StatusBadRequest, errors.New("INVALID PROJECT ID"))
+		return
+	}
+
+	var invoices []model.Invoice
+	project, errCode := store.GetStore().GetProject(projectId)
+	if errCode != http.StatusFound {
+		c.JSON(http.StatusBadRequest, invoices)
+		return
+	}
+
+	invoicesTemp, err := billing.ListAllInvoicesForSubscription(project.BillingSubscriptionID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, invoices)
+		return
+	}
+
+	for _, invoice := range invoicesTemp {
+		inv := model.Invoice{
+			ID:          invoice.Id,
+			BillingDate: time.Unix(invoice.Date, 0),
+			Amount:      invoice.Total,
+			AmountPaid:  invoice.AmountPaid,
+			AmountDue:   invoice.AmountDue,
+		}
+		var items []string
+		for _, item := range invoice.LineItems {
+			items = append(items, item.Description)
+		}
+		inv.Items = items
+
+		invoices = append(invoices, inv)
+	}
+
+	c.JSON(http.StatusOK, invoices)
+
+}
+
+func DownloadInvoiceHandler(c *gin.Context) {
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		c.AbortWithError(http.StatusBadRequest, errors.New("INVALID PROJECT ID"))
+		return
+	}
+	invoiceID := c.Query("invoice_id")
+
+	if invoiceID == "" {
+		c.AbortWithError(http.StatusBadRequest, errors.New("INVALID INVOICE ID"))
+		return
+	}
+
+	var invoice model.DownloadInvoice
+
+	iv, err := billing.DownloadInvoiceByInvoiceID(invoiceID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, invoice)
+		return
+	}
+
+	invoice.Url = iv.DownloadUrl
+	invoice.ValidTill = time.Unix(iv.ValidTill, 0)
+
+	c.JSON(http.StatusOK, invoice)
 }

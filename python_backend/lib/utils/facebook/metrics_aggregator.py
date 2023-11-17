@@ -6,6 +6,7 @@ import logging as log
 from lib.utils.facebook.sns_notifier import SnsNotifier
 from lib.utils.facebook.task_stats import TaskStats
 from lib.utils.healthchecks import HealthChecksUtil
+from lib.utils.slack import SlackUtil
 from lib.utils.json import JsonUtil
 
 class MetricsAggregator:
@@ -24,6 +25,8 @@ class MetricsAggregator:
     env = None
     HEALTHCHECK_PING_ID = 'f2265955-a71c-42fe-a5ba-36d22a98419c'
     HEALTHCHECK_PING_ID_TOKEN_FAILURE = '2305bb1e-30db-4567-8c1a-2559ea738cbf'
+    SLACK_PING_URL = 'https://hooks.slack.com/services/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'
+    token_failure_project_ids = []
 
     @classmethod
     def init(cls, env, type_of_run):
@@ -69,10 +72,11 @@ class MetricsAggregator:
         elif status == "failed":
             # In our observation we have encountered that "No such object" error comes when extract has failed due to some reason(highly due to token expiry)
             # We'll keep monitoring it manually, if we figure some other cases happening, we'll seprate the two.
-            if ("Error validating access token".lower() in message.lower()) or ("Missing permissions".lower() in message.lower()):
+            if ("Error validating access token".lower() in message.lower()) or ("Missing permissions".lower() in message.lower()) or ("cannot access".lower() in message.lower()):
                 cls.etl_stats["token_failures"].setdefault(message, {})
                 cls.etl_stats["token_failures"][message].setdefault(doc_type, set())
                 cls.etl_stats["token_failures"][message][doc_type].add(project_id)
+                cls.token_failure_project_ids.append(str(project_id))
             else:
                 cls.etl_stats["failures"].setdefault(message, {})
                 cls.etl_stats["failures"][message].setdefault(doc_type, {})
@@ -125,6 +129,11 @@ class MetricsAggregator:
     def publish_to_healthcheck_token_failure(cls):
         HealthChecksUtil.ping(cls.env, cls.etl_stats["token_failures"], cls.HEALTHCHECK_PING_ID_TOKEN_FAILURE, endpoint="/fail")
 
+    @classmethod
+    def publish_to_slack_token_failure(cls):
+        message = SlackUtil.build_slack_block(cls.token_failure_project_ids, "Facebook")
+        SlackUtil.ping(cls.env, message, cls.SLACK_PING_URL)
+        
     @classmethod
     def compare_load_and_extract(cls):
         return cls.load_stats.processed_equal_records(cls.extract_stats)

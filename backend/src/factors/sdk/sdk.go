@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	cacheRedis "factors/cache/redis"
+	"factors/company_enrichment/clearbit"
+	"factors/company_enrichment/factors_deanon"
+	"factors/company_enrichment/sixsignal"
 	"factors/integration/clear_bit"
 	"factors/integration/six_signal"
 	"factors/model/model"
@@ -672,30 +675,34 @@ func Track(projectId int64, request *TrackPayload,
 	_, _, isoCode := model.FillLocationUserProperties(userProperties, clientIP)
 	pageURLProp := U.GetPropertyValueAsString((*eventProperties)[U.EP_PAGE_URL])
 
-	//Fetching feature flags to check of feature is enabled on the plan.
-	factorsDeanonymisationEnabled, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_FACTORS_DEANONYMISATION, false)
-	if err != nil {
-		logCtx.Error("Failed to fetch factors deanonymisation feature flag")
-	}
-	sixsignalEnabled, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_SIX_SIGNAL, false)
-	if err != nil {
-		logCtx.Error("Failed to fetch client sixsignal feature flag")
-	}
-	clearbitEnabled, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_CLEARBIT, false)
-	if err != nil {
-		logCtx.Warn("Failed to fetch clearbit feature flag")
-	}
+	if C.IsCompanyEnrichmentV1Enabled(projectId) {
+		FillCompanyIdentificationUserProperties(projectId, clientIP, projectSettings, userProperties, request.UserId, isoCode, pageURL)
+	} else {
+		//Fetching feature flags to check of feature is enabled on the plan.
+		factorsDeanonymisationEnabled, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_FACTORS_DEANONYMISATION, false)
+		if err != nil {
+			logCtx.Error("Failed to fetch factors deanonymisation feature flag")
+		}
+		sixsignalEnabled, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_SIX_SIGNAL, false)
+		if err != nil {
+			logCtx.Error("Failed to fetch client sixsignal feature flag")
+		}
+		clearbitEnabled, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_CLEARBIT, false)
+		if err != nil {
+			logCtx.Warn("Failed to fetch clearbit feature flag")
+		}
 
-	if clearbitEnabled && projectSettings.ClearbitKey != "" && *(projectSettings.IntClearBit) {
-		FillClearbitUserProperties(projectId, projectSettings.ClearbitKey, userProperties, request.UserId, clientIP)
-		logCtx.Info("Enrichment using clearbit")
-	} else if sixsignalEnabled && projectSettings.Client6SignalKey != "" && *(projectSettings.IntClientSixSignalKey) {
-		FillSixSignalUserProperties(projectId, projectSettings.Client6SignalKey, userProperties, request.UserId, clientIP)
-		logCtx.Info("Enrichment using client sixsignal")
-	} else if factorsDeanonymisationEnabled && *(projectSettings.IntFactorsSixSignalKey) {
-		if isSixsignalQuotaAvailable, _ := CheckingSixSignalQuotaLimit(projectId); isSixsignalQuotaAvailable {
-			FillSixSignalUserPropertiesViaFactors(projectId, projectSettings, userProperties, request.UserId, clientIP, isoCode, pageURLProp)
-			logCtx.Info("Enrichment using factors deanonymisation")
+		if clearbitEnabled && projectSettings.ClearbitKey != "" && *(projectSettings.IntClearBit) {
+			FillClearbitUserProperties(projectId, projectSettings.ClearbitKey, userProperties, request.UserId, clientIP)
+			logCtx.Info("Enrichment using clearbit")
+		} else if sixsignalEnabled && projectSettings.Client6SignalKey != "" && *(projectSettings.IntClientSixSignalKey) {
+			FillSixSignalUserProperties(projectId, projectSettings.Client6SignalKey, userProperties, request.UserId, clientIP)
+			logCtx.Info("Enrichment using client sixsignal")
+		} else if factorsDeanonymisationEnabled && *(projectSettings.IntFactorsSixSignalKey) {
+			if isSixsignalQuotaAvailable, _ := CheckingSixSignalQuotaLimit(projectId); isSixsignalQuotaAvailable {
+				FillSixSignalUserPropertiesViaFactors(projectId, projectSettings, userProperties, request.UserId, clientIP, isoCode, pageURLProp)
+				logCtx.Info("Enrichment using factors deanonymisation")
+			}
 		}
 	}
 
@@ -842,6 +849,26 @@ func Track(projectId int64, request *TrackPayload,
 	return http.StatusOK, response
 }
 
+func FillCompanyIdentificationUserProperties(projectId int64, clientIP string, projectSettings *model.ProjectSetting, userProperties *U.PropertiesMap, userId string, isoCode string, pageUrl string) {
+
+	var customerClearbit clearbit.CustomerClearbit
+	var customerSixSignal sixsignal.CustomerSixSignal
+	var factorsDeanon factors_deanon.FactorsDeanon
+
+	if enrichByCustomerClearbit, _ := customerClearbit.IsEligible(projectSettings); enrichByCustomerClearbit {
+		customerClearbit.Enrich(projectSettings, userProperties, userId, clientIP)
+	} else if enrichByCustomerSixSignal, _ := customerSixSignal.IsEligible(projectSettings); enrichByCustomerSixSignal {
+		customerSixSignal.Enrich(projectSettings, userProperties, userId, clientIP)
+	} else if enrichByFactorsDeanon, _ := factorsDeanon.IsEligible(projectSettings, isoCode, pageUrl); enrichByFactorsDeanon {
+		domain, status := factorsDeanon.Enrich(projectSettings, userProperties, userId, clientIP)
+		if status == 1 {
+			factorsDeanon.Meter(projectId, domain)
+		}
+
+	}
+
+}
+
 func FillSixSignalUserProperties(projectId int64, apiKey string, userProperties *U.PropertiesMap,
 	UserId, clientIP string) {
 
@@ -895,11 +922,8 @@ func FillSixSignalUserPropertiesViaFactors(projectId int64, projectSettings *mod
 		return
 	}
 
-	if projectId == 588 && isoCode != "US" && isoCode != "CA" {
-		logCtx.WithFields(log.Fields{"isoCode: ": sixSignalConfig.CountryInclude, "shouldEnrinchSixSignal: ": shouldEnrichUsingSixSignal}).Warn("Selective filtering debug for mailmodo")
-	}
-
 	FillSixSignalUserProperties(projectId, factors6SignalKey, userProperties, UserId, clientIP)
+
 }
 
 func ApplySixSignalFilters(sixSignalConfig model.SixSignalConfig, isoCode, pageUrl string) (bool, error) {
@@ -1086,7 +1110,6 @@ func FillClearbitUserProperties(projectId int64, clearbitKey string,
 			logCtx.Warn("clear_bit enrichment timed out in Track call")
 		}
 	}
-
 }
 
 func getURLFromPageEvent(properties U.PropertiesMap) string {
