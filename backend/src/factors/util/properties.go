@@ -4298,42 +4298,57 @@ type NameCountTimestampCategory struct {
 	GroupName string
 }
 
+// isElementPresent checks if an element is present in a slice
+func isElementPresent(elementsList []string, element string) bool {
+	for _, value := range elementsList {
+		if value == element {
+			return true
+		}
+	}
+	return false
+}
+
 // SortByTimestampAndCount Sorts the given array by timestamp/count
 // Pick all past 24 hours event and sort the remaining by count and return
 // No filtering is done in this method
 func SortByTimestampAndCount(data []NameCountTimestampCategory) []NameCountTimestampCategory {
-
+	mandatoryEventsList := []string{EVENT_NAME_SESSION, EVENT_NAME_FORM_SUBMITTED, EVENT_NAME_FORM_FILL}
 	smartEventNames := make([]NameCountTimestampCategory, 0)
 	pageViewEventNames := make([]NameCountTimestampCategory, 0)
 	sorted := make([]NameCountTimestampCategory, 0)
-	sessionEvent := NameCountTimestampCategory{}
+	mandatoryEventNames := make([]NameCountTimestampCategory, 0)
 	trimmed := make([]NameCountTimestampCategory, 0)
 
 	sort.Slice(data, func(i, j int) bool {
 		return data[i].Count > data[j].Count
 	})
 
+	for index := range data {
+		if data[index].Category == SmartEvent {
+			data[index].GroupName = SmartEvent
+		} else if data[index].Category == PageViewEvent {
+			data[index].GroupName = PageViewEvent
+		} else {
+			data[index].GroupName = FrequentlySeen
+		}
+
+	}
+
 	for _, details := range data {
-		if details.Category == SmartEvent {
-			details.GroupName = SmartEvent
+		if isElementPresent(mandatoryEventsList, details.Name) {
+			mandatoryEventNames = append(mandatoryEventNames, details)
+		} else if details.Category == SmartEvent {
 			smartEventNames = append(smartEventNames, details)
 		} else if details.Category == PageViewEvent {
-			details.GroupName = PageViewEvent
 			pageViewEventNames = append(pageViewEventNames, details)
-		} else if details.Name == EVENT_NAME_SESSION {
-			details.GroupName = FrequentlySeen
-			sessionEvent = details
 		} else {
-			details.GroupName = FrequentlySeen
 			trimmed = append(trimmed, details)
 		}
 
 	}
 
 	sorted = append(smartEventNames, sorted...)
-	if sessionEvent.Name != "" {
-		sorted = append(sorted, sessionEvent)
-	}
+	sorted = append(sorted, mandatoryEventNames...)
 	sorted = append(sorted, pageViewEventNames...)
 
 	for _, data := range trimmed {
