@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import NoBreakdownCharts from './NoBreakdownCharts';
 import SingleEventSingleBreakdown from './SingleEventSingleBreakdown';
 import SingleEventMultipleBreakdown from './SingleEventMultipleBreakdown';
@@ -10,6 +10,7 @@ import {
 } from '../../../utils/constants';
 import EventBreakdownCharts from './EventBreakdown/EventBreakdownCharts';
 import { getErrorMessage } from 'Utils/global';
+import NoDataInTimeRange from 'Components/NoDataInTimeRange';
 
 function EventsAnalytics({
   queries,
