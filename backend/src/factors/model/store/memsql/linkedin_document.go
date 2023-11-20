@@ -17,6 +17,20 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+/*
+Points for reviewers to avoid confusion:
+
+In linkedin there are 4 objects
+1. Campaign group
+2. Campaign
+3. Creative
+4. Company
+
+With a similar name there are 8 doc types, the ones with insights suffix contain the report data
+
+For filters we use the metadata to fetch the values and for query data we use report data
+*/
+
 var LinkedinDocumentTypeAlias = map[string]int{
 	"creative":                1,
 	"campaign_group":          2,
@@ -695,6 +709,10 @@ func (store *MemSQL) buildObjectAndPropertiesForLinkedin(projectID int64, object
 	return objectsAndProperties
 }
 
+/*
+This func uses metadata to get the values, as paused camapigns and deleted campaigns won't show up in report data and
+if someone wants to look at old data it'll cause issues
+*/
 func (store *MemSQL) GetLinkedinFilterValues(projectID int64, requestFilterObject string, requestFilterProperty string, reqID string) ([]interface{}, int) {
 	logFields := log.Fields{
 		"project_id":              projectID,
@@ -1505,6 +1523,24 @@ func getNotNullFilterStatementForSmartPropertyLinkedinGroupBys(groupBys []model.
 	return resultStatement + ")"
 }
 
+/*
+campaign group, campaign, creative are in a heirarchy but each level contains the data of the higher heirarchy.
+E.g campaign_insights would contain the data of campaign group
+If there's a combination of filters at a different heirarchy,
+we need to decide what is the lowest level of heirarchy, that'll have all the data we require.
+
+In contrast to the above, company enagements data is stored at a single level
+It contains both company and campaign group data. Hence if a query is fired for company enagements data,
+the following function should point to member company insights
+
+ObjectType is used to define which record type the query is supposed to be executed.
+    - if Campaign is there, we would earlier fetch from "campaign_insights". But with company engagements, we might need to query other record type.
+    "member_company_insights", this is decided with query.Channel property of query object. We couldn't add more categories as it would involve a lot of changes.
+	Using quuery.Channel property is a hacky but an accurate solution. It reduces the number of changes and keeps the complications to a minimum.
+
+The reason we have avoided directly associating object type to record type is avoid SQL query complications
+*/
+
 func getLowestHierarchyLevelForLinkedin(query *model.ChannelQueryV1) string {
 	logFields := log.Fields{
 		"query": query,
@@ -1518,6 +1554,11 @@ func getLowestHierarchyLevelForLinkedin(query *model.ChannelQueryV1) string {
 
 	for _, groupBy := range query.GroupBy {
 		objectNames = append(objectNames, groupBy.Object)
+	}
+
+	// pointing to member_company_insights incase of company enagements query
+	if query.Channel == model.LinkedinCompanyEngagementsDisplayCategory {
+		return model.LinkedInMemberCompany
 	}
 
 	// Check if present
@@ -1537,16 +1578,6 @@ func getLowestHierarchyLevelForLinkedin(query *model.ChannelQueryV1) string {
 		if objectName == model.LinkedinCampaignGroup {
 			return model.LinkedinCampaignGroup
 		}
-	}
-
-	for _, objectName := range objectNames {
-		if objectName == model.LinkedInMemberCompanyInsights {
-			return model.LinkedInMemberCompany
-		}
-	}
-
-	if query.Channel == model.LinkedinCompanyEngagementsDisplayCategory {
-		return model.LinkedInMemberCompany
 	}
 
 	return model.LinkedinCampaignGroup
