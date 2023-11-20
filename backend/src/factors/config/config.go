@@ -336,6 +336,7 @@ type Configuration struct {
 	UserPropertyUpdateOptProjects                       string
 	CompanyEnrichmentV1ProjectIDs                       string
 	AssociateDealToDomainByProjectID                    string
+	EnableSyncTriesFlag                                 bool
 }
 
 type Services struct {
@@ -3093,4 +3094,8 @@ func AssociateDealToDomainByProjectID(projectID int64) bool {
 	}
 
 	return allowedProjectIDs[projectID]
+}
+
+func IsSyncTriesEnabled() bool {
+	return configuration.EnableSyncTriesFlag
 }

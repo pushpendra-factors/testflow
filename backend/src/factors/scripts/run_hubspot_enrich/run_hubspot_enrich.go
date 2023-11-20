@@ -89,6 +89,7 @@ func main() {
 	enrichPullLimit := flag.Int("enrich_pull_limit", 0, "Total records to be pulled in single db call")
 	userPropertyUpdateOptProjects := flag.String("user_property_update_opt_projects", "", "")
 	associateDealToDomainByProjectID := flag.String("associate_deal_to_domain_by_project_id", "", "")
+	enableSyncTries := flag.Bool("enable_sync_tries", false, "Filter using un-sync document using sync-tries")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -155,6 +156,7 @@ func main() {
 		MoveHubspotCompanyAssocationFlowToContactByPojectID: *moveHubspotCompanyAssocationFlowToContactByPojectID,
 		UserPropertyUpdateOptProjects:                       *userPropertyUpdateOptProjects,
 		AssociateDealToDomainByProjectID:                    *associateDealToDomainByProjectID,
+		EnableSyncTriesFlag:                                 *enableSyncTries,
 	}
 
 	C.InitConf(config)

@@ -1197,9 +1197,16 @@ func (store *MemSQL) GetHubspotDocumentsByTypeForSync(projectId int64, typ int, 
 	maxCreatedAtFmt := time.Unix(maxCreatedAtSec+1, 0).Format("2006-01-02 15:04:05")
 	var documents []model.HubspotDocument
 
+	wheStmnt := "project_id=? AND type=? AND synced=false AND created_at < ?  "
+	whereParams := []interface{}{projectId, typ, maxCreatedAtFmt}
+
+	if C.IsSyncTriesEnabled() {
+		wheStmnt = wheStmnt + "AND sync_tries < ? "
+		whereParams = append(whereParams, model.MaxSyncTries)
+	}
+
 	db := C.GetServices().Db
-	err := db.Order("timestamp, created_at ASC").Where("project_id=? AND type=? AND synced=false AND created_at < ? ",
-		projectId, typ, maxCreatedAtFmt).Find(&documents).Error
+	err := db.Order("timestamp, created_at ASC").Where(wheStmnt, whereParams).Find(&documents).Error
 	if err != nil {
 		if !gorm.IsRecordNotFoundError(err) {
 			logCtx.WithError(err).Error("Failed to get hubspot documents by type.")
@@ -1316,8 +1323,17 @@ func (store *MemSQL) GetHubspotDocumentCountForSync(projectIDs []int64, docTypes
 
 	maxCreatedAtFmt := time.Unix(maxCreatedAtSec+1, 0).Format("2006-01-02 15:04:05")
 	db := C.GetServices().Db
+
+	wheStmnt := "project_id IN (?) AND synced=false and type IN ( ? ) AND created_at < ?  "
+	whereParams := []interface{}{projectIDs, docTypes, maxCreatedAtFmt}
+
+	if C.IsSyncTriesEnabled() {
+		wheStmnt = wheStmnt + "AND sync_tries < ? "
+		whereParams = append(whereParams, model.MaxSyncTries)
+	}
+
 	err := db.Model(model.HubspotDocument{}).Select("project_id, count(*) as count").
-		Where("project_id IN (?) AND synced=false and type IN ( ? ) AND created_at <= ? ", projectIDs, docTypes, maxCreatedAtFmt).
+		Where(wheStmnt, whereParams).
 		Group("project_id").Scan(&projectRecordCount).Error
 	if err != nil {
 		log.WithError(err).Error("Failed to get hubspot minimum timestamp.")
@@ -1348,8 +1364,16 @@ func (store *MemSQL) GetHubspotDocumentsByTypeANDRangeForSync(projectID int64,
 	var documents []model.HubspotDocument
 
 	db := C.GetServices().Db
-	dbTx := db.Order("timestamp, created_at ASC").Where("project_id=? AND type=? AND synced=false AND timestamp BETWEEN ? AND ? AND created_at < ? ",
-		projectID, docType, from, to, maxCreatedAtFmt)
+
+	wheStmnt := "project_id=? AND type=? AND synced=false AND timestamp BETWEEN ? AND ? AND created_at < ? "
+	whereParams := []interface{}{projectID, docType, from, to, maxCreatedAtFmt}
+
+	if C.IsSyncTriesEnabled() {
+		wheStmnt = wheStmnt + "AND sync_tries < ? "
+		whereParams = append(whereParams, model.MaxSyncTries)
+	}
+
+	dbTx := db.Order("timestamp, created_at ASC").Where(wheStmnt, whereParams)
 
 	if limit > 0 {
 		dbTx = dbTx.Limit(limit)
