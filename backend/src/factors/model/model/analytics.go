@@ -1096,6 +1096,9 @@ func GetPropertiesGroupedByGroupName(properties []QueryProperty) ([][]QueryPrope
 	}
 
 	groupPropertyVisited := make(map[string]map[string]bool)
+	groupPropertyVisited[properties[0].GroupName] = map[string]bool{
+		properties[0].Property: true,
+	}
 	for _, property := range properties[1:] {
 
 		if _, exist := groupPropertyVisited[property.GroupName]; !exist {
