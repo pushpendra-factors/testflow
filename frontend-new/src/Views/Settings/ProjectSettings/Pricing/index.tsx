@@ -10,6 +10,7 @@ import useQuery from 'hooks/useQuery';
 import UpgradeTab from './UpgradeTab';
 import InvoiceTab from './InvoiceTab';
 import { useSelector } from 'react-redux';
+import { startCase } from 'lodash';
 
 const Pricing = () => {
   const [activeKey, setActiveKey] = useState(PRICING_PAGE_TABS.BILLING);
@@ -42,7 +43,7 @@ const Pricing = () => {
           <Breadcrumb>
             <Breadcrumb.Item>Settings</Breadcrumb.Item>
             <Breadcrumb.Item>Pricing</Breadcrumb.Item>
-            <Breadcrumb.Item>{activeKey}</Breadcrumb.Item>
+            <Breadcrumb.Item>{startCase(activeKey)}</Breadcrumb.Item>
           </Breadcrumb>
         </div>
       </div>

@@ -2,7 +2,14 @@ import AppModal from 'Components/AppModal';
 import { Number, SVG, Text } from 'Components/factorsComponents';
 import React, { useEffect, useState } from 'react';
 import style from './index.module.scss';
-import { Button, Divider, InputNumber, Radio, RadioChangeEvent } from 'antd';
+import {
+  Button,
+  Divider,
+  InputNumber,
+  Radio,
+  RadioChangeEvent,
+  notification
+} from 'antd';
 import { MinusCircleOutlined } from '@ant-design/icons';
 import {
   ADDITIONAL_ACCOUNTS_ADDON_LIMIT,
@@ -27,7 +34,9 @@ const PriceUpgradeModal = ({
 }: UpgradeModalProps) => {
   const [loading, setIsLoading] = useState<boolean>(false);
   const [addonVisible, setAddonVisible] = useState<boolean>(false);
-  const [addonCount, setAddonCount] = useState<number>(1);
+  const [addonCount, setAddonCount] = useState<number>(
+    variant === 'only-addon' ? 1 : 0
+  );
   const planConfig = PLANS_COFIG[plan?.name || ''] || {};
   const [selectedPlanTerm, setSelectedPlanTerm] =
     useState<PlanTerm | null>(null);
@@ -85,22 +94,40 @@ const PriceUpgradeModal = ({
   const handleContinueClick = async () => {
     try {
       setIsLoading(true);
-
+      let paymentUrl = '';
       if (variant === 'only-addon') {
-        await upgradePlan(active_project?.id, '', [
+        const res = await upgradePlan(active_project?.id, '', [
           { addon_id: ADDITIONAL_ACCOUNTS_ADDON_ID, quantity: addonCount }
         ]);
+        paymentUrl = res?.data?.url;
       } else if (addonVisible && addonCount) {
-        await upgradePlan(active_project?.id, selectedPlanTerm?.id, [
-          { addon_id: ADDITIONAL_ACCOUNTS_ADDON_ID, quantity: addonCount }
-        ]);
+        const res = await upgradePlan(
+          active_project?.id,
+          selectedPlanTerm?.id,
+          [{ addon_id: ADDITIONAL_ACCOUNTS_ADDON_ID, quantity: addonCount }]
+        );
+        paymentUrl = res?.data?.url;
       } else {
-        await upgradePlan(active_project?.id, selectedPlanTerm?.id);
+        const res = await upgradePlan(active_project?.id, selectedPlanTerm?.id);
+        paymentUrl = res?.data?.url;
       }
-
+      if (!paymentUrl) {
+        notification.error({
+          message: 'Failed!',
+          description: 'Payment URL not found!',
+          duration: 3
+        });
+      } else {
+        window.open(paymentUrl, '_self');
+      }
       setIsLoading(false);
     } catch (error) {
       logger.error('Error in upgrading plan', error);
+      notification.error({
+        message: 'Failed!',
+        description: 'Something went wrong!',
+        duration: 3
+      });
       setIsLoading(false);
     }
   };
