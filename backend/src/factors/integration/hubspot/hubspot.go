@@ -3488,7 +3488,7 @@ func AssociateDealToDomain(projectID int64, dealGroupUserID string, companyID st
 		logCtx.Error("Failed to update deal domain assciation.")
 		return http.StatusInternalServerError
 	}
-	return status
+	return http.StatusOK
 }
 
 func syncDeal(projectID int64, document *model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) int {
