@@ -65,6 +65,9 @@ function EventGroupBlock({
     newGroupByState.prop_type = option?.extraProps?.valueType;
     newGroupByState.eventIndex = eventIndex;
 
+    if(groupAnalysis){
+      newGroupByState.groupName = option?.extraProps?.groupName
+    }
     if (newGroupByState.prop_type === 'numerical') {
       newGroupByState.gbty = 'raw_values';
     }

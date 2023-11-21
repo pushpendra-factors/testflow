@@ -1,0 +1,13 @@
+FROM alpine:latest
+
+WORKDIR /root
+
+RUN apk update && apk add --no-cache \
+    redis \
+    mysql-client
+
+COPY copy_project_data.sh /root/copy_project_data.sh
+
+RUN chmod +x /root/copy_project_data.sh
+
+ENTRYPOINT ["/root/copy_project_data.sh"]

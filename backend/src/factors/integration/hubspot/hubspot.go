@@ -3484,7 +3484,7 @@ func AssociateDealToDomain(projectID int64, dealGroupUserID string, companyID st
 	}
 
 	status = store.GetStore().UpdateGroupUserDomainAssociationUsingAccountUserID(projectID, dealGroupUserID, model.GROUP_NAME_HUBSPOT_COMPANY, groupUserID)
-	if status != http.StatusOK {
+	if status != http.StatusOK && status != http.StatusNotFound {
 		logCtx.Error("Failed to update deal domain assciation.")
 		return http.StatusInternalServerError
 	}

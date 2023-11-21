@@ -1055,14 +1055,14 @@ func TestExecuteKPIForLinkedinCompanyEngagements(t *testing.T) {
 	assert.Equal(t, http.StatusAccepted, errCode)
 
 	campaignID1 := U.RandomNumericString(8)
-	campaign1Value, _ := json.Marshal(map[string]interface{}{"costInLocalCurrency": "100", "clicks": "50", "impressions": "1000", "vanityName": "Org1", "preferredCountry": "US", "localizedWebsite": "xyz.com", "localizedName": "Org_1", "companyHeadquarters": "US"})
+	campaign1Value, _ := json.Marshal(map[string]interface{}{"costInLocalCurrency": "100", "clicks": "50", "impressions": "1000", "vanityName": "Org1", "preferredCountry": "US", "localizedWebsite": "xyz.com", "localizedName": "Org_1", "companyHeadquarters": "US", "campaign_group_name": "CG1", "campaign_group_id": "1"})
 	campaignID2 := U.RandomNumericString(8)
-	campaign2Value, _ := json.Marshal(map[string]interface{}{"costInLocalCurrency": "200", "clicks": "100", "impressions": "2000", "vanityName": "Org2", "preferredCountry": "IN", "localizedWebsite": "abc.com", "localizedName": "Org_2", "companyHeadquarters": "IN"})
+	campaign2Value, _ := json.Marshal(map[string]interface{}{"costInLocalCurrency": "200", "clicks": "100", "impressions": "2000", "vanityName": "Org2", "preferredCountry": "IN", "localizedWebsite": "abc.com", "localizedName": "Org_2", "companyHeadquarters": "IN", "campaign_group_name": "CG1", "campaign_group_id": "1"})
 	linkedinDocuments := []model.LinkedinDocument{
-		{ID: campaignID1, ProjectID: project.ID, CustomerAdAccountID: customerAccountID, TypeAlias: "member_company_insights", Timestamp: 20210205,
+		{ID: campaignID1, ProjectID: project.ID, CustomerAdAccountID: customerAccountID, TypeAlias: "member_company_insights", Timestamp: 20210205, CampaignGroupID: "1",
 			Value: &postgres.Jsonb{RawMessage: campaign1Value}},
 
-		{ID: campaignID2, ProjectID: project.ID, CustomerAdAccountID: customerAccountID, TypeAlias: "member_company_insights", Timestamp: 20210206,
+		{ID: campaignID2, ProjectID: project.ID, CustomerAdAccountID: customerAccountID, TypeAlias: "member_company_insights", Timestamp: 20210206, CampaignGroupID: "1",
 			Value: &postgres.Jsonb{RawMessage: campaign2Value}},
 	}
 
@@ -1071,6 +1071,16 @@ func TestExecuteKPIForLinkedinCompanyEngagements(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, status)
 	}
 
+	queryGBT := model.KPIQuery{
+		Category:         "channels",
+		DisplayCategory:  "linkedin_company_engagements",
+		PageUrl:          "",
+		Metrics:          []string{"impressions"},
+		GroupBy:          []M.KPIGroupBy{},
+		From:             1612314000,
+		To:               1612746000,
+		GroupByTimestamp: "date",
+	}
 	// No filter no groupby, no gbt
 	query := model.KPIQuery{
 		Category:        "channels",
@@ -1083,29 +1093,29 @@ func TestExecuteKPIForLinkedinCompanyEngagements(t *testing.T) {
 	}
 	kpiQueryGroup := model.KPIQueryGroup{
 		Class:         "kpi",
-		Queries:       []model.KPIQuery{query},
+		Queries:       []model.KPIQuery{query, queryGBT},
 		GlobalFilters: []model.KPIFilter{},
 		GlobalGroupBy: []model.KPIGroupBy{},
 	}
 	result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
 		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	log.Info("Ashhar1 ", result)
 	assert.Equal(t, http.StatusOK, statusCode)
-	assert.Equal(t, float64(3000), result[0].Rows[0][0])
+	assert.Equal(t, float64(3000), result[1].Rows[0][0])
 
 	// No filter no groupby, with gbt
 	query = model.KPIQuery{
-		Category:         "channels",
-		DisplayCategory:  "linkedin_company_engagements",
-		PageUrl:          "",
-		Metrics:          []string{"impressions"},
-		GroupBy:          []M.KPIGroupBy{},
-		GroupByTimestamp: "date",
-		From:             1612314000,
-		To:               1612746000,
+		Category:        "channels",
+		DisplayCategory: "linkedin_company_engagements",
+		PageUrl:         "",
+		Metrics:         []string{"impressions"},
+		GroupBy:         []M.KPIGroupBy{},
+		From:            1612314000,
+		To:              1612746000,
 	}
 	kpiQueryGroup = model.KPIQueryGroup{
 		Class:         "kpi",
-		Queries:       []model.KPIQuery{query},
+		Queries:       []model.KPIQuery{query, queryGBT},
 		GlobalFilters: []model.KPIFilter{},
 		GlobalGroupBy: []model.KPIGroupBy{},
 	}
@@ -1119,18 +1129,17 @@ func TestExecuteKPIForLinkedinCompanyEngagements(t *testing.T) {
 
 	// groupby with gbt
 	query = model.KPIQuery{
-		Category:         "channels",
-		DisplayCategory:  "linkedin_company_engagements",
-		PageUrl:          "",
-		Metrics:          []string{"impressions"},
-		GroupBy:          []M.KPIGroupBy{},
-		GroupByTimestamp: "date",
-		From:             1612314000,
-		To:               1612746000,
+		Category:        "channels",
+		DisplayCategory: "linkedin_company_engagements",
+		PageUrl:         "",
+		Metrics:         []string{"impressions"},
+		GroupBy:         []M.KPIGroupBy{},
+		From:            1612314000,
+		To:              1612746000,
 	}
 	kpiQueryGroup = model.KPIQueryGroup{
 		Class:         "kpi",
-		Queries:       []model.KPIQuery{query},
+		Queries:       []model.KPIQuery{query, queryGBT},
 		GlobalFilters: []model.KPIFilter{},
 		GlobalGroupBy: []model.KPIGroupBy{
 			{
@@ -1185,7 +1194,7 @@ func TestExecuteKPIForLinkedinCompanyEngagements(t *testing.T) {
 	}
 	kpiQueryGroup = model.KPIQueryGroup{
 		Class:   "kpi",
-		Queries: []model.KPIQuery{query},
+		Queries: []model.KPIQuery{query, queryGBT},
 		GlobalFilters: []model.KPIFilter{
 			{
 				ObjectType:       "company",
@@ -1215,8 +1224,8 @@ func TestExecuteKPIForLinkedinCompanyEngagements(t *testing.T) {
 	result, statusCode = store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
 		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, statusCode)
-	assert.Equal(t, []string{"company_vanity_name", "company_domain", "linkedin_company_engagements_impressions"}, result[0].Headers)
-	assert.Equal(t, []interface{}{"Org1", "xyz.com", float64(1000)}, result[0].Rows[0])
+	assert.Equal(t, []string{"company_vanity_name", "company_domain", "linkedin_company_engagements_impressions"}, result[1].Headers)
+	assert.Equal(t, []interface{}{"Org1", "xyz.com", float64(1000)}, result[1].Rows[0])
 
 	// filters: campaignName equals '$none'
 	query = model.KPIQuery{
@@ -1230,7 +1239,7 @@ func TestExecuteKPIForLinkedinCompanyEngagements(t *testing.T) {
 	}
 	kpiQueryGroup = model.KPIQueryGroup{
 		Class:   "kpi",
-		Queries: []model.KPIQuery{query},
+		Queries: []model.KPIQuery{query, queryGBT},
 		GlobalFilters: []model.KPIFilter{
 			{
 				ObjectType:       "company",
@@ -1247,8 +1256,8 @@ func TestExecuteKPIForLinkedinCompanyEngagements(t *testing.T) {
 	result, statusCode = store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
 		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, statusCode)
-	assert.Equal(t, []string{"linkedin_company_engagements_impressions"}, result[0].Headers)
-	assert.Equal(t, []interface{}{0}, result[0].Rows[0])
+	assert.Equal(t, []string{"linkedin_company_engagements_impressions"}, result[1].Headers)
+	assert.Equal(t, []interface{}{0}, result[1].Rows[0])
 
 	// filters: campaignName not equals '$none'
 	query = model.KPIQuery{
@@ -1262,7 +1271,7 @@ func TestExecuteKPIForLinkedinCompanyEngagements(t *testing.T) {
 	}
 	kpiQueryGroup = model.KPIQueryGroup{
 		Class:   "kpi",
-		Queries: []model.KPIQuery{query},
+		Queries: []model.KPIQuery{query, queryGBT},
 		GlobalFilters: []model.KPIFilter{
 			{
 				ObjectType:       "company",
@@ -1279,9 +1288,88 @@ func TestExecuteKPIForLinkedinCompanyEngagements(t *testing.T) {
 	result, statusCode = store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
 		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 	assert.Equal(t, http.StatusOK, statusCode)
-	assert.Equal(t, []string{"linkedin_company_engagements_impressions"}, result[0].Headers)
-	assert.Equal(t, []interface{}{float64(3000)}, result[0].Rows[0])
+	assert.Equal(t, []string{"linkedin_company_engagements_impressions"}, result[1].Headers)
+	assert.Equal(t, []interface{}{float64(3000)}, result[1].Rows[0])
+
+	// campaign filter campaign name contains CG and group by camapaign name
+	query = model.KPIQuery{
+		Category:        "channels",
+		DisplayCategory: "linkedin_company_engagements",
+		PageUrl:         "",
+		Metrics:         []string{"impressions"},
+		GroupBy:         []M.KPIGroupBy{},
+		From:            1612314000,
+		To:              1612746000,
+	}
+	kpiQueryGroup = model.KPIQueryGroup{
+		Class:   "kpi",
+		Queries: []model.KPIQuery{query, queryGBT},
+		GlobalFilters: []model.KPIFilter{
+			{
+				ObjectType:       "campaign",
+				PropertyName:     "name",
+				PropertyDataType: "categorical",
+				Entity:           "",
+				Condition:        "contains",
+				Value:            "CG",
+				LogicalOp:        "AND",
+			},
+		},
+		GlobalGroupBy: []model.KPIGroupBy{
+			{
+				ObjectType:       "campaign",
+				PropertyName:     "name",
+				PropertyDataType: "categorical",
+				Entity:           "",
+			},
+			{
+				ObjectType:       "company",
+				PropertyName:     "company_vanity_name",
+				PropertyDataType: "categorical",
+				Entity:           "",
+			},
+		},
+	}
+	result, statusCode = store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
+		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	assert.Equal(t, http.StatusOK, statusCode)
+	assert.Equal(t, []string{"campaign_name", "company_vanity_name", "linkedin_company_engagements_impressions"}, result[1].Headers)
+	assert.Equal(t, []interface{}{"CG1", "Org1", float64(1000)}, result[1].Rows[0])
+	assert.Equal(t, []interface{}{"CG1", "Org2", float64(2000)}, result[1].Rows[1])
+
+	// campaign filter campaign name not equals CG1
+	query = model.KPIQuery{
+		Category:        "channels",
+		DisplayCategory: "linkedin_company_engagements",
+		PageUrl:         "",
+		Metrics:         []string{"impressions"},
+		GroupBy:         []M.KPIGroupBy{},
+		From:            1612314000,
+		To:              1612746000,
+	}
+	kpiQueryGroup = model.KPIQueryGroup{
+		Class:   "kpi",
+		Queries: []model.KPIQuery{query, queryGBT},
+		GlobalFilters: []model.KPIFilter{
+			{
+				ObjectType:       "campaign",
+				PropertyName:     "name",
+				PropertyDataType: "categorical",
+				Entity:           "",
+				Condition:        "notEqual",
+				Value:            "CG1",
+				LogicalOp:        "AND",
+			},
+		},
+		GlobalGroupBy: []model.KPIGroupBy{},
+	}
+	result, statusCode = store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
+		C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+	assert.Equal(t, http.StatusOK, statusCode)
+	assert.Equal(t, []string{"linkedin_company_engagements_impressions"}, result[1].Headers)
+	assert.Equal(t, []interface{}{0}, result[1].Rows[0])
 }
+
 func TestExecuteKPIForSearchConsole(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)

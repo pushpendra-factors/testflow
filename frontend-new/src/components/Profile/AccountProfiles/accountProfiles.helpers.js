@@ -57,9 +57,7 @@ export const generateSegmentsList = ({ accountPayload, segments }) => {
   const segmentsList = [];
 
   Object.entries(segments)
-    .filter(
-      (segment) => !Object.keys(ReverseProfileMapper).includes(segment[0])
-    )
+    .filter((segment) => segment[0] === GROUP_NAME_DOMAINS)
     .map(([group, vals]) => formatSegmentsObjToGroupSelectObj(group, vals))
     .forEach((obj) => segmentsList.push(obj));
   return reorderSegments(segmentsList);

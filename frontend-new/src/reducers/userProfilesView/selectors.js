@@ -2,6 +2,7 @@ import { formatSegmentsObjToGroupSelectObj } from 'Components/Profile/utils';
 import { selectSegments } from 'Reducers/timelines/selectors';
 import { ReverseProfileMapper } from 'Utils/constants';
 import { createSelector } from 'reselect';
+import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 
 export const selectTimelinePayload = (state) =>
   state.userProfilesView.timelinePayload;
@@ -18,9 +19,7 @@ export const selectSegmentsList = createSelector(
   (timelinePayload, segments) => {
     const segmentsList = [];
     Object.entries(segments)
-      .filter((segment) =>
-        Object.keys(ReverseProfileMapper).includes(segment[0])
-      )
+      .filter((segment) => segment[0] !== GROUP_NAME_DOMAINS)
       .forEach(([group, vals]) => {
         const obj = formatSegmentsObjToGroupSelectObj(group, vals);
         segmentsList.push(obj);
