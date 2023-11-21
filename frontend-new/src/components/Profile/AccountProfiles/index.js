@@ -316,7 +316,7 @@ function AccountProfiles({
           item.includes(source)
         )
       : currentProjectSettings?.timelines_config?.account_config?.table_props?.filter(
-          (item) => item.includes(source)
+          (item) => item? item.includes(source): false
         );
     return (
       tableProps?.filter((entry) => entry !== '' && entry !== undefined) || []
