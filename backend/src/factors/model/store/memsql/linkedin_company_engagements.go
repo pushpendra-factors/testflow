@@ -37,7 +37,9 @@ func (store *MemSQL) buildObjectAndPropertiesForLinkedinCompanyEngagements(proje
 	objectsAndProperties := make([]model.ChannelObjectAndProperties, 0, 0)
 	for _, currentObject := range objects {
 		var currentProperties []model.ChannelProperty
-		currentProperties = buildProperties(LinkedinCompanyEngagementsPropertyToRelated)
+		if currentObject == model.LinkedinCompany {
+			currentProperties = buildProperties(LinkedinCompanyEngagementsPropertyToRelated)
+		}
 		if currentObject == model.AdwordsCampaign {
 			currentProperties = buildProperties(allChannelsPropertyToRelated)
 		}

@@ -162,6 +162,7 @@ func main() {
 	userPropertyUpdateOptProjects := flag.String("user_property_update_opt_projects", "", "")
 	associateDealToDomainByProjectID := flag.String("associate_deal_to_domain_by_project_id", "", "")
 	useHashIDForCRMGroupUserByProject := flag.String("use_hash_id_for_crm_group_user_by_project_id", "", "")
+	enableSyncTries := flag.Bool("enable_sync_tries", false, "Filter using un-sync document using sync-tries")
 
 	flag.Parse()
 
@@ -242,6 +243,7 @@ func main() {
 		UserPropertyUpdateOptProjects:                      *userPropertyUpdateOptProjects,
 		AssociateDealToDomainByProjectID:                   *associateDealToDomainByProjectID,
 		UseHashIDForCRMGroupUserByProject:                  *useHashIDForCRMGroupUserByProject,
+		EnableSyncTriesFlag:                                *enableSyncTries,
 	}
 
 	C.InitConf(config)

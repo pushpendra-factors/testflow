@@ -3570,6 +3570,10 @@ func (store *MemSQL) UpdateGroupUserDomainAssociationUsingAccountUserID(projectI
 
 		domainUserID, domainName, status := store.createOrGetDomainUserIDByProperties(projectID, accountGroupName, *accountProperties)
 		if status != http.StatusCreated && status != http.StatusFound {
+			if status == http.StatusNotFound {
+				return status
+			}
+
 			logCtx.WithError(err).Error("Failed to create domain user in associating deal to domain.")
 			return http.StatusInternalServerError
 		}

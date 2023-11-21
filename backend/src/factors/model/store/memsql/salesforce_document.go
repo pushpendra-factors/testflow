@@ -950,8 +950,16 @@ func (store *MemSQL) GetSalesforceDocumentsByTypeForSync(projectID int64, typ in
 
 	var documents []model.SalesforceDocument
 
-	whereStmnt := "project_id=? AND type=? AND synced=false"
+	whereStmnt := "project_id=? AND type=? AND synced=false "
 	whereParams := []interface{}{projectID, typ}
+
+	if C.IsSyncTriesEnabled() {
+
+		whereStmnt = whereStmnt + "AND sync_tries < ?"
+		whereParams = append(whereParams, model.MaxSyncTries)
+
+	}
+
 	if from > 0 && to > 0 {
 		whereStmnt = whereStmnt + " AND " + "timestamp BETWEEN ? AND ?"
 		whereParams = append(whereParams, from, to)

@@ -62,6 +62,7 @@ func GetCRMActivityBatchedOrderedRecordsByID(records []CRMActivity, batchSize in
 }
 
 const EmptyJsonStr = "{}"
+const MaxSyncTries = 5
 
 type EventIdToProperties struct {
 	ID                         string                 `gorm:"primary_key:true;type:uuid" json:"id"`

@@ -1157,7 +1157,7 @@ func AssociateOpportunityToDomains(projectID int64, opportunityGroupUserID strin
 	}
 
 	status = store.GetStore().UpdateGroupUserDomainAssociationUsingAccountUserID(projectID, opportunityGroupUserID, model.GROUP_NAME_SALESFORCE_ACCOUNT, groupUserID)
-	if status != http.StatusOK {
+	if status != http.StatusOK && status != http.StatusNotFound {
 		logCtx.Error("Failed to update opportunity domain assciation.")
 		return http.StatusInternalServerError
 	}
