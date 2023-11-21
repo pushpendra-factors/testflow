@@ -60,7 +60,7 @@ ReactDOM.render(
       <PersistGate loading={null} persistor={persistor}>
         <ErrorBoundary>
           {/* <TourProvider steps={steps}> */}
-          <Router>
+          <Router getUserConfirmation={() => {}}>
             <App />
           </Router>
           {/* </TourProvider> */}
