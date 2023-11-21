@@ -1,3 +1,31 @@
-.internal{
-    font-style: italic;
+.internal {
+  font-style: italic;
+}
+.dcgTable {
+  &__additional_actions {
+    visibility: hidden;
+    &:hover {
+      cursor: grab;
+    }
+  }
+
+  &__table_row {
+    &:hover {
+      .dcgTable__additional_actions {
+        visibility: visible;
+      }
+    }
+  }
+
+  &__changesCard {
+    position: fixed;
+    bottom: 0;
+    display: inline-flex;
+    padding: 16px 24px 16px 24.5px;
+    justify-content: center;
+    align-items: center;
+    background: #fff;
+    gap: 50px;
+    box-shadow: 0px -4px 7px 0px rgba(0, 0, 0, 0.07);
+  }
 }
