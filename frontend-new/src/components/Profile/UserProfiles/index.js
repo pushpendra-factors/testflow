@@ -297,7 +297,7 @@ function UserProfiles({
       ?.forEach((prop) => {
         const propDisplayName = userPropNames[prop]
           ? userPropNames[prop]
-          : PropTextFormat(prop);
+          : prop? PropTextFormat(prop): '';
         const propType = getPropType(userPropertiesModified, prop);
         columns.push({
           title: (
