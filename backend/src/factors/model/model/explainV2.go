@@ -1,6 +1,8 @@
 package model
 
 import (
+	"fmt"
+	"math"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -49,11 +51,13 @@ type ExplainV2 struct {
 }
 
 type ExplainV2Query struct {
-	Title          string          `json:"name"`
-	Query          FactorsGoalRule `json:"rule"`
-	StartTimestamp int64           `json:"sts"`
-	EndTimestamp   int64           `json:"ets"`
-	Raw_query      string          `json:"rw"`
+	Title          string            `json:"name"`
+	Query          FactorsGoalRule   `json:"rule"`
+	StartTimestamp int64             `json:"sts"`
+	EndTimestamp   int64             `json:"ets"`
+	Raw_query      string            `json:"rw"`
+	QueryV3        ExplainV3GoalRule `json:"rulev3"`
+	IsV3           bool              `json:"v3"`
 }
 
 type ExplainV2EntityInfo struct {
@@ -73,5 +77,64 @@ type ExplainV3EntityInfo struct {
 	Status         string            `json:"status"`
 	CreatedBy      string            `json:"created_by"`
 	Date           time.Time         `json:"date"`
-	ExplainV2Query ExplainV3GoalRule `json:"query"`
+	ExplainV3Query ExplainV3GoalRule `json:"query"`
+	StartTimestamp int64             `json:"sts"`
+	EndTimestamp   int64             `json:"ets"`
+}
+
+func ConvertFactorsGoalRuleToExplainV3GoalRule(query FactorsGoalRule) ExplainV3GoalRule {
+
+	var queryV2 ExplainV3GoalRule
+	if query.StartEvent != "" {
+		queryV2.StartEvent = ExplainV3Event{Label: query.StartEvent}
+	}
+	if query.EndEvent != "" {
+		queryV2.EndEvent = ExplainV3Event{Label: query.EndEvent}
+	}
+	for _, evName := range query.Rule.IncludedEvents {
+		queryV2.IncludedEvents = append(queryV2.IncludedEvents, ExplainV3Event{Label: evName})
+	}
+	queryV2.Visited = query.Visited
+	var startFilters = make([]QueryProperty, 0)
+	for _, filter := range query.Rule.StartEnEventFitler {
+		startFilters = append(startFilters, ReverseMapProperty(filter, "event"))
+	}
+	for _, filter := range query.Rule.StartEnUserFitler {
+		startFilters = append(startFilters, ReverseMapProperty(filter, "user"))
+	}
+	queryV2.StartEvent.Filter = startFilters
+	var endFilters = make([]QueryProperty, 0)
+	for _, filter := range query.Rule.EndEnEventFitler {
+		endFilters = append(endFilters, ReverseMapProperty(filter, "event"))
+	}
+	for _, filter := range query.Rule.EndEnUserFitler {
+		endFilters = append(endFilters, ReverseMapProperty(filter, "user"))
+	}
+	queryV2.EndEvent.Filter = endFilters
+	return queryV2
+}
+
+func ReverseMapProperty(ip KeyValueTuple, entity string) QueryProperty {
+	op := QueryProperty{}
+	op.Entity = entity
+	op.Type = ip.Type
+	op.Property = ip.Key
+	if ip.Type == "categorical" {
+		op.Value = ip.Value
+		if ip.Operator {
+			op.Operator = "equals"
+		} else {
+			op.Operator = "notEqual"
+		}
+	}
+	if ip.Type == "numerical" {
+		if ip.LowerBound != -math.MaxFloat64 {
+			op.Value = fmt.Sprintf("%f", ip.LowerBound)
+			op.Operator = "lowerThan"
+		} else {
+			op.Value = fmt.Sprintf("%f", ip.UpperBound)
+			op.Operator = "greaterThan"
+		}
+	}
+	return op
 }

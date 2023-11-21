@@ -1281,7 +1281,6 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{"$country":"US"}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3000"}`)}}
 
-
 		_, status = store.GetStore().UpdateUserGroupProperties(project.ID, sixSignalGroupUserID, &postgres.Jsonb{json.RawMessage([]byte(`{"hour":1,"count":2,"city":"Bengalore", "$Salesforce_Industry":"Education"}`))}, time.Now().Unix())
 		assert.Equal(t, http.StatusAccepted, status)
 		user_g, status = store.GetStore().GetUser(project.ID, sixSignalGroupUserID)

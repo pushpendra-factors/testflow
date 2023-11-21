@@ -35,6 +35,8 @@ type FactorsGoalFilter struct {
 	StartEnUserFitler       []KeyValueTuple `json:"st_us_ft"`
 	EndEnUserFitler         []KeyValueTuple `json:"en_us_ft"`
 	GlobalFilters           []KeyValueTuple `json:"ft"`
+	StartEnGroup            string          `json:"st_en_gp"`
+	EndEnGroup              string          `json:"en_en_gp"`
 	IncludedEvents          []string        `json:"in_en"`
 	IncludedEventProperties []string        `json:"in_epr"`
 	IncludedUserProperties  []string        `json:"in_upr"`
@@ -48,9 +50,10 @@ type ExplainV3Event struct {
 }
 
 type ExplainV3GoalRule struct {
-	StartEvent ExplainV3Event `json:"st_en"`
-	EndEvent   ExplainV3Event `json:"en_en"`
-	Visited    bool           `json:"vs"`
+	StartEvent     ExplainV3Event   `json:"st_en"`
+	EndEvent       ExplainV3Event   `json:"en_en"`
+	IncludedEvents []ExplainV3Event `json:"in_en"`
+	Visited        bool             `json:"vs"`
 }
 
 // KeyValueTuple - key value pair
