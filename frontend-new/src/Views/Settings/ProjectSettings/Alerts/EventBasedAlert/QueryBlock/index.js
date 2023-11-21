@@ -19,8 +19,6 @@ import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
 import { processProperties } from 'Utils/dataFormatter';
 
-
-
 const blackListedCategories = [
   'Hubspot Contacts',
   'Salesforce Users',
@@ -136,6 +134,26 @@ function QueryBlock({
     }
   }, [event]);
 
+  const  removeDuplicateAndEmptyKeys = (obj) => {
+    const uniqueKeys = {};
+    //blacklisted groups
+    let removeGroupList = ["Company identification"];
+    for (const key in obj) {
+      //remove duplicate keys
+      if (!uniqueKeys.hasOwnProperty(key)) {
+        //remove blacklisted keys
+        if(!key.includes(removeGroupList)){
+          //remove empty keys
+          if(!_.isEmpty(obj[key])){
+          uniqueKeys[key] = obj[key]; 
+          }
+        }
+        
+      }     
+    }
+    return uniqueKeys;
+  }
+
   useEffect(() => {
     queries.forEach((ev) => {
       if (!eventPropertiesV2[ev.label]) {
@@ -147,15 +165,25 @@ function QueryBlock({
   const filterProperties = useMemo(() => {
     if (!event) return {};
 
-    const props = {
+    let props = {
       event: eventPropertiesV2[event.label] || []
     };
     if (eventGroup) {
       props[eventGroup] = groupProperties[eventGroup];
     } else {
-      props.user = eventUserPropertiesV2;
+      if (groupAnalysis === 'users') {
+        props.user = eventUserPropertiesV2;
+      }
+      else{
+        props = {
+          ...eventPropertiesV2[event.label],
+          ...eventUserPropertiesV2,
+          ...groupProperties
+        } 
+      }
     }
-    return props;
+    let finalProps = removeDuplicateAndEmptyKeys(props)
+    return finalProps;
   }, [
     event,
     eventGroup,
