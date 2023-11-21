@@ -303,6 +303,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/v1/explainV2/goals", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), responseWrapper(V1.GetExplainV2EntityHandler))
 	authRouteGroup.GET("/:project_id/v1/explainV3/goals", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), responseWrapper(V1.GetExplainV3EntityHandler))
 	authRouteGroup.POST("/:project_id/v1/explainV2", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), V1.PostFactorsHandlerV2)
+	authRouteGroup.POST("/:project_id/v1/explainV3", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), V1.PostFactorsHandlerV3)
 	authRouteGroup.POST("/:project_id/v1/explainV2/job", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), responseWrapper(V1.CreateExplainV2EntityHandler))
 	authRouteGroup.POST("/:project_id/v1/explainV3/job", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), responseWrapper(V1.CreateExplainV3EntityHandler))
 	authRouteGroup.DELETE("/:project_id/v1/explainV2/:id", mid.FeatureMiddleware([]string{M.FEATURE_EXPLAIN}), V1.DeleteSavedExplainV2EntityHandler)

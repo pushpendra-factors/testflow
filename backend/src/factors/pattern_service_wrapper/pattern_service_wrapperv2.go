@@ -31,6 +31,18 @@ type ExplainV2Goals struct {
 	EndTimestamp      int64                 `json:"ets"`
 }
 
+type ExplainV3Goals struct {
+	GoalRule          model.ExplainV3GoalRule `json:"goal"`
+	Insights          []*FactorsInsights      `json:"insights"`
+	GoalUserCount     float64                 `json:"goal_user_count"`
+	TotalUsersCount   float64                 `json:"total_users_count"`
+	OverallPercentage float64                 `json:"overall_percentage"`
+	OverallMultiplier float64                 `json:"overall_multiplier"`
+	Type              string                  `json:"type"`
+	StartTimestamp    int64                   `json:"sts"`
+	EndTimestamp      int64                   `json:"ets"`
+}
+
 func (pw *PatternServiceWrapperV2) GetUserAndEventsInfo() *P.UserAndEventsInfo {
 	userAndEventsInfo, _ := PC.GetUserAndEventsInfoV2("", pw.projectId, pw.modelId)
 	pw.userAndEventsInfo = userAndEventsInfo
