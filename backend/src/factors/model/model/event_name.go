@@ -1029,7 +1029,7 @@ func CategorizeProperty(property string, propertyType string) string {
 	if strings.HasPrefix(property, "$salesforce_account") || strings.HasPrefix(property, "$sf_account") {
 		return "Salesforce Account"
 	}
-	if strings.HasPrefix(property, "$hubspot_contacts") {
+	if strings.HasPrefix(property, "$hubspot_contact") {
 		return "Hubspot Contacts"
 	}
 	if strings.HasPrefix(property, "$salesforce_opportunity") || strings.HasPrefix(property, "$sf_opportunity") {
@@ -1040,6 +1040,9 @@ func CategorizeProperty(property string, propertyType string) string {
 	}
 	if strings.HasPrefix(property, "$salesforce_lead") || strings.HasPrefix(property, "$sf_lead") {
 		return "Salesforce Lead"
+	}
+	if strings.HasPrefix(property, "$salesforce_contact") || strings.HasPrefix(property, "$sf_contact") {
+		return "Salesforce Contacts"
 	}
 	if strings.HasPrefix(property, "$hubspot") {
 		return "Hubspot"
