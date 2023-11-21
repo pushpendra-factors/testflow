@@ -1,13 +1,9 @@
-import React, { Fragment, useEffect, useMemo, useState } from 'react';
+import React, { Fragment, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import cx from 'classnames';
 import { Button } from 'antd';
 import noop from 'lodash/noop';
-import {
-  defaultSegmentsList,
-  generateSegmentsList,
-  getGroupList
-} from 'Components/Profile/AccountProfiles/accountProfiles.helpers';
+import { generateSegmentsList } from 'Components/Profile/AccountProfiles/accountProfiles.helpers';
 import { SVG, Text } from 'Components/factorsComponents';
 import {
   setAccountPayloadAction,
@@ -15,7 +11,6 @@ import {
   setNewSegmentModeAction
 } from 'Reducers/accountProfilesView/actions';
 import { selectAccountPayload } from 'Reducers/accountProfilesView/selectors';
-import { selectGroupOptions } from 'Reducers/groups/selectors';
 import { selectSegments } from 'Reducers/timelines/selectors';
 import styles from './index.module.scss';
 import SidebarMenuItem from './SidebarMenuItem';
@@ -23,8 +18,7 @@ import SidebarSearch from './SidebarSearch';
 import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
 import { defaultSegmentIconsMapping } from './appSidebar.constants';
 import { useHistory } from 'react-router-dom';
-import { PathUrls } from 'Routes/pathUrls';
-import { selectActiveSegment } from 'Reducers/userProfilesView/selectors';
+import { getSegmentColorCode } from './appSidebar.helpers';
 
 const NewSegmentItem = () => {
   return (
@@ -71,6 +65,7 @@ const SegmentItem = ({ segment }) => {
   };
 
   const isActive = activeSegment?.id === segment[1] && newSegmentMode === false;
+  const iconColor = getSegmentColorCode(segment[0]);
 
   return (
     <SidebarMenuItem
@@ -78,7 +73,7 @@ const SegmentItem = ({ segment }) => {
       isActive={isActive}
       onClick={setActiveSegment}
       icon={SegmentIcon(segment[0])}
-      iconColor={'#8c8c8c'}
+      iconColor={iconColor}
     />
   );
 };
@@ -86,13 +81,12 @@ const SegmentItem = ({ segment }) => {
 const AccountsSidebar = () => {
   const [searchText, setSearchText] = useState('');
   const dispatch = useDispatch();
-  const groupOptions = useSelector((state) => selectGroupOptions(state));
   const segments = useSelector((state) => selectSegments(state));
   const activeAccountPayload = useSelector((state) =>
     selectAccountPayload(state)
   );
 
-  const { newSegmentMode, activeSegment } = useSelector(
+  const { newSegmentMode } = useSelector(
     (state) => state.accountProfilesView
   );
 

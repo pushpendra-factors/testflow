@@ -1,10 +1,16 @@
 import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import { PathUrls } from '../../routes/pathUrls';
 import { matchPath } from 'react-router-dom';
+import { getASCIISum } from 'Utils/global';
+import { segmentColorCodes } from './appSidebar.constants';
 
 export const checkMatchPath = (urlToMatch, internalRouteToMatch) => {
-  return matchPath(urlToMatch, {path: internalRouteToMatch, exact: true, strict: false});
-}
+  return matchPath(urlToMatch, {
+    path: internalRouteToMatch,
+    exact: true,
+    strict: false
+  });
+};
 
 export const isSettingsUrl = (pathname) => {
   return (
@@ -41,7 +47,11 @@ export const isAccountsUrl = (pathname) => {
 };
 
 export const isReportsUrl = (pathname) => {
-  return pathname === PathUrls.Dashboard || pathname === PathUrls.Analyse2 || pathname === PathUrls.PreBuildDashboard;
+  return (
+    pathname === PathUrls.Dashboard ||
+    pathname === PathUrls.Analyse2 ||
+    pathname === PathUrls.PreBuildDashboard
+  );
 };
 
 export const isJourneyUrl = (pathname) => {
@@ -54,4 +64,10 @@ export const isAttributionsUrl = (pathname) => {
     pathname === ATTRIBUTION_ROUTES.report ||
     pathname === ATTRIBUTION_ROUTES.reports
   );
+};
+
+export const getSegmentColorCode = (str) => {
+  const asciiSum = getASCIISum(str);
+  const index = asciiSum % segmentColorCodes.length;
+  return segmentColorCodes[index];
 };

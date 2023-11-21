@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import cx from 'classnames';
+import get from 'lodash/get';
 import {
   Table,
   Button,
@@ -14,7 +16,7 @@ import { bindActionCreators } from 'redux';
 import { Text, SVG } from '../../factorsComponents';
 import FaSelect from '../../FaSelect';
 import { getUserPropertiesV2 } from '../../../reducers/coreQuery/middleware';
-import PropertyFilter from '../MyComponents/PropertyFilter';
+import PropertyFilter from '../AccountProfiles/PropertyFilter';
 import MomentTz from '../../MomentTz';
 import NoDataWithMessage from '../MyComponents/NoDataWithMessage';
 import {
@@ -33,17 +35,19 @@ import {
   propValueFormat,
   sortStringColumn,
   sortNumericalColumn,
-  formatReqPayload
+  formatReqPayload,
+  getFiltersRequestPayload,
+  getSelectedFiltersFromQuery
 } from '../utils';
 import {
   getProfileUsers,
   getProfileUserDetails,
   createNewSegment,
   getSavedSegments,
-  updateSegmentForId
+  updateSegmentForId,
+  deleteSegment
 } from '../../../reducers/timelines/middleware';
-import _ from 'lodash';
-import SegmentModal from './SegmentModal';
+import _, { isEqual } from 'lodash';
 import SearchCheckList from 'Components/SearchCheckList';
 import { formatUserPropertiesToCheckList } from 'Reducers/timelines/utils';
 import {
@@ -55,33 +59,43 @@ import ProfilesWrapper from '../ProfilesWrapper';
 import { getUserOptions } from './userProfiles.helpers';
 import {
   selectActiveSegment,
-  selectSegmentModalState,
   selectTimelinePayload
 } from 'Reducers/userProfilesView/selectors';
 import {
   setTimelinePayloadAction,
   setActiveSegmentAction,
-  setSegmentModalStateAction
+  setFiltersDirtyAction,
+  setNewSegmentModeAction
 } from 'Reducers/userProfilesView/actions';
 import { useHistory, useLocation } from 'react-router-dom';
-import useFeatureLock from 'hooks/useFeatureLock';
-import { FEATURES } from 'Constants/plans.constants';
 import UpgradeModal from '../UpgradeModal';
 import RangeNudge from 'Components/GenericComponents/RangeNudge';
 import { showUpgradeNudge } from 'Views/Settings/ProjectSettings/Pricing/utils';
 import CommonBeforeIntegrationPage from 'Components/GenericComponents/CommonBeforeIntegrationPage';
+import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
+import {
+  INITIAL_USER_PROFILES_FILTERS_STATE,
+  moreActionsMode
+} from '../AccountProfiles/accountProfiles.constants';
+import { ProfilesSidebarIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
+import { checkFiltersEquality } from '../AccountProfiles/accountProfiles.helpers';
+import SaveSegmentModal from '../AccountProfiles/SaveSegmentModal';
+import DeleteSegmentModal from '../AccountProfiles/DeleteSegmentModal';
+import RenameSegmentModal from '../AccountProfiles/RenameSegmentModal';
+import UpdateSegmentModal from '../AccountProfiles/UpdateSegmentModal';
 import { isOnboarded } from 'Utils/global';
+import { PathUrls } from 'Routes/pathUrls';
+import styles from './index.module.scss';
+import { getSegmentColorCode } from 'Views/AppSidebar/appSidebar.helpers';
 
 const userOptions = getUserOptions();
 
 function UserProfiles({
   activeProject,
   contacts,
-  segments,
   createNewSegment,
   getSavedSegments,
   getProfileUsers,
-  getProfileUserDetails,
   getUserPropertiesV2,
   fetchProjectSettingsV1,
   fetchProjectSettings,
@@ -89,7 +103,8 @@ function UserProfiles({
   fetchBingAdsIntegration,
   currentProjectSettings,
   udpateProjectSettings,
-  updateSegmentForId
+  updateSegmentForId,
+  deleteSegment
 }) {
   const dispatch = useDispatch();
   const history = useHistory();
@@ -106,10 +121,15 @@ function UserProfiles({
   const { userPropNames } = useSelector((state) => state.coreQuery);
   const timelinePayload = useSelector((state) => selectTimelinePayload(state));
   const activeSegment = useSelector((state) => selectActiveSegment(state));
-  const showSegmentModal = useSelector((state) =>
-    selectSegmentModalState(state)
-  );
+  // const showSegmentModal = useSelector((state) =>
+  //   selectSegmentModalState(state)
+  // );
   const { sixSignalInfo } = useSelector((state) => state.featureConfig);
+
+  //// segments 2.0 selectors
+  const { newSegmentMode, filtersDirty: areFiltersDirty } = useSelector(
+    (state) => state.userProfilesView
+  );
 
   const [listSearchItems, setListSearchItems] = useState([]);
   const [searchBarOpen, setSearchBarOpen] = useState(false);
@@ -120,21 +140,31 @@ function UserProfiles({
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
   const [userValueOpts, setUserValueOpts] = useState({});
   const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
-  const [errMsg,setErrMsg]=useState("");
+  const [errMsg, setErrMsg] = useState('');
 
   const [currentPage, setCurrentPage] = useState(1);
   const [currentPageSize, setCurrentPageSize] = useState(25);
   const [defaultSorterInfo, setDefaultSorterInfo] = useState({});
 
-  useEffect(() => {
-    if (!timelinePayload.search_filter) {
-      setListSearchItems([]);
-    } else {
-      const listValues = timelinePayload?.search_filter || [];
-      setListSearchItems(_.uniq(listValues));
-      setSearchBarOpen(true);
-    }
-  }, [timelinePayload?.search_filter]);
+  // segments 2.0 state
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
+  const [saveSegmentModal, setSaveSegmentModal] = useState(false);
+  const [updateSegmentModal, setUpdateSegmentModal] = useState(false);
+  const [selectedFilters, setSelectedFilters] = useState(
+    INITIAL_USER_PROFILES_FILTERS_STATE
+  );
+  const [appliedFilters, setAppliedFilters] = useState(
+    INITIAL_USER_PROFILES_FILTERS_STATE
+  );
+  const [showSegmentActions, setShowSegmentActions] = useState(false);
+  const [moreActionsModalMode, setMoreActionsModalMode] = useState(null); // DELETE | RENAME
+
+  const setFiltersDirty = useCallback(
+    (value) => {
+      dispatch(setFiltersDirtyAction(value));
+    },
+    [dispatch]
+  );
 
   const setTimelinePayload = useCallback(
     (payload) => {
@@ -150,12 +180,176 @@ function UserProfiles({
     [dispatch]
   );
 
-  const setShowSegmentModal = useCallback(
-    (value) => {
-      dispatch(setSegmentModalStateAction(value));
+  const displayTableProps = useMemo(() => {
+    const tableProps = timelinePayload.segment_id
+      ? activeSegment?.query?.table_props
+      : currentProjectSettings?.timelines_config?.user_config?.table_props;
+    return (
+      tableProps?.filter((entry) => entry !== '' && entry !== undefined) || []
+    );
+  }, [currentProjectSettings, timelinePayload, activeSegment]);
+
+  const restoreFiltersDefaultState = useCallback(
+    (selectedAccount = INITIAL_USER_PROFILES_FILTERS_STATE.account) => {
+      const initialFiltersStateWithSelectedAccount = {
+        ...INITIAL_USER_PROFILES_FILTERS_STATE,
+        account: selectedAccount
+      };
+      setSelectedFilters(initialFiltersStateWithSelectedAccount);
+      setAppliedFilters(initialFiltersStateWithSelectedAccount);
+      setFiltersExpanded(false);
+      setFiltersDirty(false);
     },
-    [dispatch]
+    [setFiltersDirty]
   );
+
+  const handleClearFilters = useCallback(() => {
+    restoreFiltersDefaultState();
+    const reqPayload = getFiltersRequestPayload({
+      selectedFilters: INITIAL_USER_PROFILES_FILTERS_STATE,
+      table_props: displayTableProps
+    });
+    getProfileUsers(activeProject.id, reqPayload);
+  }, [
+    activeProject.id,
+    displayTableProps,
+    getProfileUsers,
+    restoreFiltersDefaultState
+  ]);
+
+  const handleSaveSegment = useCallback(
+    async (segmentPayload) => {
+      try {
+        const response = await createNewSegment(
+          activeProject.id,
+          segmentPayload
+        );
+        if (response.type === 'SEGMENT_CREATION_FULFILLED') {
+          notification.success({
+            message: 'Success!',
+            description: response?.payload?.message,
+            duration: 3
+          });
+          setSaveSegmentModal(false);
+          setUpdateSegmentModal(false);
+          setFiltersDirty(false);
+        }
+        await getSavedSegments(activeProject.id);
+      } catch (err) {
+        notification.error({
+          message: 'Error',
+          description:
+            err?.data?.error || 'Segment Creation Failed. Invalid Parameters.',
+          duration: 3
+        });
+      }
+    },
+    [activeProject.id, createNewSegment, getSavedSegments, setFiltersDirty]
+  );
+
+  const disableNewSegmentMode = useCallback(() => {
+    dispatch(setNewSegmentModeAction(false));
+  }, [dispatch]);
+
+  const handleCreateSegment = useCallback(
+    (newSegmentName) => {
+      const reqPayload = getFiltersRequestPayload({
+        selectedFilters,
+        table_props: displayTableProps,
+        caller: 'user_profiles'
+      });
+      reqPayload.name = newSegmentName;
+      reqPayload.type = 'All';
+      handleSaveSegment(reqPayload);
+      disableNewSegmentMode();
+    },
+    [
+      selectedFilters,
+      displayTableProps,
+      handleSaveSegment,
+      disableNewSegmentMode
+    ]
+  );
+
+  const handleDeleteActiveSegment = useCallback(() => {
+    deleteSegment({
+      projectId: activeProject.id,
+      segmentId: timelinePayload.segment_id
+    })
+      .then(() => {
+        setMoreActionsModalMode(null);
+        notification.success({
+          message: 'Segment deleted successfully',
+          duration: 5
+        });
+      })
+      .finally(() => {
+        dispatch(
+          setTimelinePayloadAction({
+            source: 'All',
+            filters: [],
+            segment_id: ''
+          })
+        );
+        dispatch(setActiveSegmentAction({}));
+      });
+  }, [timelinePayload.segment_id, activeProject.id, deleteSegment]);
+
+  const handleRenameSegment = useCallback(
+    (name) => {
+      updateSegmentForId(activeProject.id, timelinePayload.segment_id, {
+        name
+      }).then(() => {
+        getSavedSegments(activeProject.id);
+        setActiveSegment({ ...activeSegment, name });
+        setMoreActionsModalMode(null);
+        notification.success({
+          message: 'Segment renamed successfully',
+          duration: 5
+        });
+      });
+    },
+    [activeProject.id, timelinePayload.segment_id, activeSegment]
+  );
+
+  const handleUpdateSegmentDefinition = useCallback(() => {
+    const reqPayload = getFiltersRequestPayload({
+      selectedFilters,
+      table_props: displayTableProps,
+      caller: 'user_profiles'
+    });
+    updateSegmentForId(
+      activeProject.id,
+      timelinePayload.segment_id,
+      reqPayload
+    ).then(() => {
+      getSavedSegments(activeProject.id);
+      setUpdateSegmentModal(false);
+      setFiltersDirty(false);
+      notification.success({
+        message: 'Segment updated successfully',
+        duration: 5
+      });
+    });
+  }, [
+    selectedFilters,
+    displayTableProps,
+    updateSegmentForId,
+    activeProject.id,
+    timelinePayload.segment_id,
+    getSavedSegments,
+    setFiltersDirty
+  ]);
+
+  useEffect(() => {
+    if (!timelinePayload.search_filter) {
+      setListSearchItems([]);
+    } else {
+      const listValues = timelinePayload?.search_filter || [];
+      setListSearchItems(_.uniq(listValues));
+      setSearchBarOpen(true);
+    }
+  }, [timelinePayload?.search_filter]);
 
   useEffect(() => {
     if (currentProjectSettings?.timelines_config) {
@@ -388,22 +582,6 @@ function UserProfiles({
     }));
   };
 
-  const setFilters = (filters) => {
-    const opts = { ...timelinePayload };
-    opts.filters = filters;
-    setTimelinePayload(opts);
-    setActiveSegment(activeSegment);
-    getUsers(opts);
-  };
-
-  const clearFilters = () => {
-    const opts = { ...timelinePayload };
-    opts.filters = [];
-    setTimelinePayload(opts);
-    setActiveSegment(activeSegment);
-    getUsers(opts);
-  };
-
   const getUsers = useCallback(
     (payload) => {
       const shouldCache =
@@ -455,29 +633,32 @@ function UserProfiles({
     getUsers(timelinePayload);
   }, [timelinePayload.source, timelinePayload.segment_id]);
 
-  const handleSaveSegment = (segmentPayload) => {
-    createNewSegment(activeProject.id, segmentPayload)
-      .then((response) => {
-        if (response.type === 'SEGMENT_CREATION_FULFILLED') {
-          notification.success({
-            message: 'Success!',
-            description: response?.payload?.message,
-            duration: 3
-          });
-          setShowSegmentModal(false);
-          // setSegmentDDVisible(false);
-        }
-      })
-      .then(() => getSavedSegments(activeProject.id))
-      .catch((err) => {
-        notification.error({
-          message: 'Error',
-          description:
-            err?.data?.error || 'Segment Creation Failed. Invalid Parameters.',
-          duration: 3
+  useEffect(() => {
+    if (newSegmentMode === true) {
+      restoreFiltersDefaultState();
+    }
+  }, [newSegmentMode]);
+
+  useEffect(() => {
+    if (newSegmentMode === false) {
+      if (
+        Boolean(activeSegment?.name) === true &&
+        activeSegment.query != null
+      ) {
+        const filters = getSelectedFiltersFromQuery({
+          query: activeSegment.query,
+          groupsList: [],
+          caller: 'user_profiles'
         });
-      });
-  };
+        setAppliedFilters(filters);
+        setSelectedFilters(filters);
+        setFiltersExpanded(false);
+        setFiltersDirty(false);
+      } else {
+        restoreFiltersDefaultState();
+      }
+    }
+  }, [activeSegment, newSegmentMode]);
 
   const handlePropChange = (option) => {
     if (
@@ -552,27 +733,165 @@ function UserProfiles({
     </Tabs>
   );
 
+  const selectedAccount = useMemo(() => {
+    return { account: selectedFilters.account };
+  }, [selectedFilters.account]);
+
+  const setFiltersList = useCallback((filters) => {
+    setSelectedFilters((curr) => {
+      return {
+        ...curr,
+        filters
+      };
+    });
+  }, []);
+
+  const resetSelectedFilters = useCallback(() => {
+    setSelectedFilters(appliedFilters);
+  }, [appliedFilters]);
+
+  const setSelectedAccount = useCallback((account) => {
+    setSelectedFilters((current) => {
+      return {
+        ...current,
+        account
+      };
+    });
+  }, []);
+
+  const setListEvents = useCallback((eventsList) => {
+    setSelectedFilters((curr) => {
+      return {
+        ...curr,
+        eventsList
+      };
+    });
+  }, []);
+
+  const setEventProp = useCallback((eventProp) => {
+    setSelectedFilters((curr) => {
+      return {
+        ...curr,
+        eventProp
+      };
+    });
+  }, []);
+
+  const availableGroups = [];
+
+  const disableDiscardButton = useMemo(() => {
+    return isEqual(selectedFilters, appliedFilters);
+  }, [selectedFilters, appliedFilters]);
+
+  const applyFilters = useCallback(() => {
+    setAppliedFilters(selectedFilters);
+    setFiltersExpanded(false);
+    setFiltersDirty(true);
+    const reqPayload = getFiltersRequestPayload({
+      selectedFilters,
+      table_props: displayTableProps,
+      caller: 'user_profiles'
+    });
+    getProfileUsers(activeProject.id, reqPayload);
+  }, [
+    selectedFilters,
+    displayTableProps,
+    getProfileUsers,
+    activeProject.id,
+    setFiltersDirty
+  ]);
+
   const renderPropertyFilter = () => (
-    <div key={0} className='max-w-3xl'>
-      <PropertyFilter
-        profileType='user'
-        source={timelinePayload.source}
-        filters={timelinePayload.filters}
-        setFilters={setFilters}
-      />
-    </div>
+    <PropertyFilter
+      profileType='user'
+      source={timelinePayload.source}
+      filters={timelinePayload.filters}
+      filtersExpanded={filtersExpanded}
+      filtersList={selectedFilters.filters}
+      appliedFilters={appliedFilters}
+      selectedAccount={selectedAccount}
+      listEvents={selectedFilters.eventsList}
+      availableGroups={availableGroups}
+      eventProp={selectedFilters.eventProp}
+      areFiltersDirty={areFiltersDirty}
+      disableDiscardButton={disableDiscardButton}
+      isActiveSegment={Boolean(timelinePayload.segment_id) === true}
+      applyFilters={applyFilters}
+      setFiltersExpanded={setFiltersExpanded}
+      setSaveSegmentModal={handleSaveSegmentClick}
+      setFiltersList={setFiltersList}
+      setAppliedFilters={setAppliedFilters}
+      setListEvents={setListEvents}
+      setEventProp={setEventProp}
+      resetSelectedFilters={resetSelectedFilters}
+      onClearFilters={handleClearFilters}
+      setSelectedAccount={setSelectedAccount}
+    />
   );
 
-  const renderClearFilterButton = () => (
-    <Button
-      className='dropdown-btn mr-2'
-      type='text'
-      icon={<SVG name='times_circle' size={16} />}
-      onClick={clearFilters}
-    >
-      Clear Filters
-    </Button>
-  );
+  const { saveButtonDisabled } = useMemo(() => {
+    return checkFiltersEquality({
+      appliedFilters,
+      newSegmentMode,
+      filtersList: selectedFilters.filters,
+      eventProp: selectedFilters.eventProp,
+      eventsList: selectedFilters.eventsList,
+      isActiveSegment: Boolean(timelinePayload.segment_id),
+      areFiltersDirty
+    });
+  }, [
+    timelinePayload.segment_id,
+    appliedFilters,
+    areFiltersDirty,
+    newSegmentMode,
+    selectedFilters.eventProp,
+    selectedFilters.eventsList,
+    selectedFilters.filters
+  ]);
+
+  const handleSaveSegmentClick = useCallback(() => {
+    if (newSegmentMode === true) {
+      setSaveSegmentModal(true);
+      return;
+    }
+    if (Boolean(timelinePayload.segment_id) === true) {
+      setUpdateSegmentModal(true);
+    } else {
+      setSaveSegmentModal(true);
+    }
+  }, [timelinePayload.segment_id, newSegmentMode]);
+
+  const renderSaveSegmentButton = () => {
+    return (
+      <ControlledComponent
+        controller={
+          filtersExpanded === false &&
+          saveButtonDisabled === false &&
+          newSegmentMode === false
+        }
+      >
+        <Button
+          onClick={handleSaveSegmentClick}
+          type='default'
+          className='flex items-center col-gap-1'
+          disabled={saveButtonDisabled}
+        >
+          <SVG
+            color={saveButtonDisabled ? '#BFBFBF' : '#1890ff'}
+            size={16}
+            name='pieChart'
+          />
+          <Text
+            type='title'
+            extraClass='mb-0'
+            color={saveButtonDisabled ? 'disabled' : 'brand-color-6'}
+          >
+            Save as Segment
+          </Text>
+        </Button>
+      </ControlledComponent>
+    );
+  };
 
   useEffect(() => {
     fetchUserPropertyValues(activeProject.id, '$user_id')
@@ -643,66 +962,138 @@ function UserProfiles({
   };
 
   const renderSearchSection = () => (
-    <div className='relative'>
-      {searchBarOpen ? (
-        <div className={'flex items-center justify-between'}>
-          {!searchDDOpen && (
-            <Input
-              size='large'
-              value={listSearchItems ? listSearchItems.join(', ') : null}
-              placeholder={'Search Users'}
-              style={{ width: '240px', 'border-radius': '5px' }}
-              prefix={<SVG name='search' size={16} color={'grey'} />}
-              onClick={() => setSearchDDOpen(true)}
-            />
-          )}
-          <Button type='text' className='search-btn' onClick={onSearchClose}>
-            <SVG name={'close'} size={20} color={'grey'} />
-          </Button>
-        </div>
-      ) : (
-        <Button type='text' className='search-btn' onClick={onSearchOpen}>
-          <SVG name={'search'} size={20} color={'grey'} />
-        </Button>
-      )}
-      {searchUsers()}
-    </div>
-  );
-
-  const renderTablePropsSelect = () => (
-    <Popover
-      overlayClassName='fa-activity--filter'
-      placement='bottomLeft'
-      visible={showPopOver}
-      onVisibleChange={(visible) => {
-        setShowPopOver(visible);
-      }}
-      onClick={() => {
-        setShowPopOver(true);
-      }}
-      trigger='click'
-      content={popoverContent}
+    <ControlledComponent
+      controller={filtersExpanded === false && newSegmentMode === false}
     >
-      <Button
-        size='large'
-        icon={<SVG name='activity_filter' />}
-        className='relative'
-      >
-        Edit Columns
-      </Button>
-    </Popover>
+      <div className='relative'>
+        {searchBarOpen ? (
+          <div className={'flex items-center justify-between'}>
+            {!searchDDOpen && (
+              <Input
+                size='large'
+                value={listSearchItems ? listSearchItems.join(', ') : null}
+                placeholder={'Search Users'}
+                style={{ width: '240px', 'border-radius': '5px' }}
+                prefix={<SVG name='search' size={16} color={'grey'} />}
+                onClick={() => setSearchDDOpen(true)}
+              />
+            )}
+            <Button type='text' className='search-btn' onClick={onSearchClose}>
+              <SVG name={'close'} size={20} color={'grey'} />
+            </Button>
+          </div>
+        ) : (
+          <Button type='text' className='search-btn' onClick={onSearchOpen}>
+            <SVG name={'search'} size={20} color={'grey'} />
+          </Button>
+        )}
+        {searchUsers()}
+      </div>
+    </ControlledComponent>
   );
 
-  const renderActions = () => (
-    <div className='flex justify-between items-start my-4'>
-      <div className='flex justify-between'>{renderPropertyFilter()}</div>
-      <div className='inline-flex gap--6'>
-        {timelinePayload.filters.length ? renderClearFilterButton() : null}
-        {renderSearchSection()}
-        {renderTablePropsSelect()}
+  const renderTablePropsSelect = () => {
+    return (
+      <Popover
+        overlayClassName='fa-activity--filter'
+        placement='bottomLeft'
+        visible={showPopOver}
+        onVisibleChange={(visible) => {
+          setShowPopOver(visible);
+        }}
+        onClick={() => {
+          setShowPopOver(true);
+        }}
+        trigger='click'
+        content={popoverContent}
+      >
+        <Button type='text'>
+          <SVG size={24} name={'tableColumns'} />
+        </Button>
+      </Popover>
+    );
+  };
+
+  const navigateToAccountsEngagement = useCallback(() => {
+    history.push(PathUrls.ConfigureEngagements);
+  }, []);
+
+  const moreActionsContent = () => {
+    const accountEngagement = (
+      <div
+        role='button'
+        onClick={navigateToAccountsEngagement}
+        className='flex cursor-pointer col-gap-4 items-center py-2 px-4 hover:bg-gray-100'
+      >
+        <SVG size={20} name='fireFlameCurved' color='#8c8c8c' />
+        <Text type='title' color='character-primary' extraClass='mb-0'>
+          Account engagement rules
+        </Text>
       </div>
-    </div>
-  );
+    );
+
+    if (Boolean(timelinePayload.segment_id) === false) {
+      return accountEngagement;
+    }
+    return (
+      <div className='flex flex-col'>
+        <div className='flex flex-col'>
+          <div
+            role='button'
+            onClick={() => {
+              setShowSegmentActions(false);
+              setMoreActionsModalMode(moreActionsMode.RENAME);
+            }}
+            className='flex cursor-pointer hover:bg-gray-100 col-gap-4 items-center py-2 px-4'
+          >
+            <SVG size={20} name='edit_query' color='#8c8c8c' />
+            <Text type='title' color='character-primary' extraClass='mb-0'>
+              Rename Segment
+            </Text>
+          </div>
+          <div
+            role='button'
+            onClick={() => {
+              setShowSegmentActions(false);
+              setMoreActionsModalMode(moreActionsMode.DELETE);
+            }}
+            className='flex cursor-pointer hover:bg-gray-100 col-gap-4 border-b items-center py-2 px-4'
+          >
+            <SVG size={20} name='trash' color='#8c8c8c' />
+            <Text type='title' color='character-primary' extraClass='mb-0'>
+              Delete Segment
+            </Text>
+          </div>
+        </div>
+        {accountEngagement}
+      </div>
+    );
+  };
+
+  const renderMoreActions = () => {
+    return (
+      <Popover
+        placement='bottomLeft'
+        visible={showSegmentActions}
+        onVisibleChange={(visible) => {
+          setShowSegmentActions(visible);
+        }}
+        onClick={() => {
+          setShowSegmentActions(true);
+        }}
+        trigger='click'
+        content={moreActionsContent}
+        overlayClassName={cx(
+          'fa-activity--filter',
+          styles['more-actions-popover']
+        )}
+      >
+        <Button type='default'>
+          <SVG size={24} name={'more'} />
+        </Button>
+      </Popover>
+    );
+  };
 
   const handleTableChange = (pageParams, somedata, sorter) => {
     setCurrentPage(pageParams.current);
@@ -750,6 +1141,43 @@ function UserProfiles({
     </div>
   );
 
+  const showRangeNudge = useMemo(() => {
+    return showUpgradeNudge(
+      sixSignalInfo?.usage || 0,
+      sixSignalInfo?.limit || 0,
+      currentProjectSettings
+    );
+  }, [sixSignalInfo?.usage, sixSignalInfo?.limit, currentProjectSettings]);
+
+  const titleIcon = useMemo(() => {
+    if (Boolean(timelinePayload.segment_id) === true) {
+      return 'pieChart';
+    }
+    return ProfilesSidebarIconsMapping[timelinePayload.source] != null
+      ? ProfilesSidebarIconsMapping[timelinePayload.source]
+      : 'userGroup';
+  }, [timelinePayload]);
+
+  const titleIconColor = useMemo(() => {
+    return getSegmentColorCode(activeSegment?.name ?? '');
+  }, [activeSegment?.name]);
+
+  const pageTitle = useMemo(() => {
+    if (newSegmentMode === true) {
+      return 'Untitled Segment 1';
+    }
+    if (Boolean(timelinePayload.segment_id) === false) {
+      const source = timelinePayload.source;
+      const title = get(
+        userOptions.find((elem) => elem[1] === source),
+        0,
+        'All People'
+      );
+      return title;
+    }
+    return activeSegment.name;
+  }, [timelinePayload, userOptions, activeSegment, newSegmentMode]);
+
   if (loading) {
     return (
       <div className='flex justify-center items-center w-full h-64'>
@@ -761,78 +1189,115 @@ function UserProfiles({
   if (isIntegrationEnabled) {
     return (
       <ProfilesWrapper>
-        {showUpgradeNudge(
-          sixSignalInfo?.usage || 0,
-          sixSignalInfo?.limit || 0,
-          currentProjectSettings
-        ) && (
+        <ControlledComponent controller={showRangeNudge === true}>
           <div className='mb-4'>
             <RangeNudge
-              title='Accounts Identified'
+              title='Users Identified'
               amountUsed={sixSignalInfo?.usage || 0}
               totalLimit={sixSignalInfo?.limit || 0}
             />
           </div>
-        )}
+        </ControlledComponent>
 
-        <Text
-          type='title'
-          level={3}
-          weight='bold'
-          extraClass='mb-0'
-          id={'fa-at-text--page-title'}
-        >
-          User Profiles
-        </Text>
-        {renderActions()}
-        {contacts.isLoading ? (
+        <div className='flex justify-between items-center'>
+          <div className='flex col-gap-2  items-center'>
+            <div className='flex items-center rounded justify-center h-10 w-10'>
+              <SVG name={titleIcon} size={32} color={titleIconColor} />
+            </div>
+            <Text
+              type='title'
+              level={3}
+              weight='bold'
+              extraClass='mb-0'
+              id={'fa-at-text--page-title'}
+            >
+              {pageTitle}
+            </Text>
+          </div>
+        </div>
+
+        <div className='flex justify-between items-center my-4'>
+          <div className='flex items-center col-gap-2 w-full'>
+            {renderPropertyFilter()}
+            {renderSaveSegmentButton()}
+          </div>
+          <div className='inline-flex col-gap-2'>
+            <ControlledComponent
+              controller={filtersExpanded === false && newSegmentMode === false}
+            >
+              {renderSearchSection()}
+              {renderTablePropsSelect()}
+              {renderMoreActions()}
+            </ControlledComponent>
+          </div>
+        </div>
+
+        <ControlledComponent controller={contacts.isLoading}>
           <Spin size='large' className='fa-page-loader' />
-        ) : (
-          renderTable()
-        )}
-        <SegmentModal
-          profileType='user'
-          activeProject={activeProject}
-          type={timelinePayload.source}
-          typeOptions={userOptions}
-          tableProps={
-            currentProjectSettings.timelines_config?.user_config?.table_props
+        </ControlledComponent>
+        <ControlledComponent
+          controller={
+            contacts.isLoading === false &&
+            contacts.data.length > 0 &&
+            (newSegmentMode === false || areFiltersDirty === true)
           }
-          visible={showSegmentModal}
-          segment={{}}
-          onSave={handleSaveSegment}
-          onCancel={() => setShowSegmentModal(false)}
-          caller={'user_profiles'}
-        />
+        >
+          <>{renderTable()}</>
+        </ControlledComponent>
+        <ControlledComponent
+          controller={
+            contacts.isLoading === false &&
+            contacts.data.length === 0 &&
+            (newSegmentMode === false || areFiltersDirty === true)
+          }
+        >
+          <NoDataWithMessage message={'No Profiles Found'} />
+        </ControlledComponent>
+
         <UpgradeModal
           visible={isUpgradeModalVisible}
           variant='account'
           onCancel={() => setIsUpgradeModalVisible(false)}
         />
+        <SaveSegmentModal
+          visible={saveSegmentModal}
+          handleCancel={() => setSaveSegmentModal(false)}
+          handleSubmit={handleCreateSegment}
+          isLoading={false}
+        />
+        <DeleteSegmentModal
+          segmentName={activeSegment?.name}
+          visible={moreActionsModalMode === moreActionsMode.DELETE}
+          onCancel={() => setMoreActionsModalMode(null)}
+          onOk={handleDeleteActiveSegment}
+        />
+        <RenameSegmentModal
+          segmentName={activeSegment?.name}
+          visible={moreActionsModalMode === moreActionsMode.RENAME}
+          onCancel={() => setMoreActionsModalMode(null)}
+          handleSubmit={handleRenameSegment}
+        />
+
+        <UpdateSegmentModal
+          segmentName={activeSegment?.name}
+          visible={updateSegmentModal}
+          onCancel={() => setUpdateSegmentModal(false)}
+          onCreate={handleCreateSegment}
+          onUpdate={handleUpdateSegmentDefinition}
+        />
       </ProfilesWrapper>
     );
   }
 
-  if (errMsg !== ""&& isIntegrationEnabled) {
-    return (
-      <NoDataWithMessage
-      message={
-         errMsg
-      }
-    />
-    );
-
+  if (errMsg !== '' && isIntegrationEnabled) {
+    return <NoDataWithMessage message={errMsg} />;
   }
 
-  return (    
-    
-    isOnboarded(currentProjectSettings)? (
-        <CommonBeforeIntegrationPage />) 
-        :(   <NoDataWithMessage
-      message={
-      'Onboarding Not Completed'          
-      }
-    /> ));
+  return isOnboarded(currentProjectSettings) ? (
+    <CommonBeforeIntegrationPage />
+  ) : (
+    <NoDataWithMessage message={'Onboarding Not Completed'} />
+  );
 }
 
 const mapStateToProps = (state) => ({
@@ -855,7 +1320,8 @@ const mapDispatchToProps = (dispatch) =>
       fetchMarketoIntegration,
       fetchBingAdsIntegration,
       udpateProjectSettings,
-      updateSegmentForId
+      updateSegmentForId,
+      deleteSegment
     },
     dispatch
   );

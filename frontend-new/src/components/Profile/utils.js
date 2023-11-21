@@ -15,6 +15,7 @@ import {
 } from '../../Views/CoreQuery/utils';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 import { operatorMap, reverseOperatorMap } from 'Utils/operatorMapping';
+import { INITIAL_USER_PROFILES_FILTERS_STATE } from './AccountProfiles/accountProfiles.constants';
 
 export const granularityOptions = [
   'Timestamp',
@@ -103,13 +104,17 @@ export const GroupDisplayNames = {
 export const IsDomainGroup = (source) =>
   source === GROUP_NAME_DOMAINS || source === 'All';
 
-export const getFiltersRequestPayload = ({ selectedFilters, table_props }) => {
+export const getFiltersRequestPayload = ({
+  selectedFilters,
+  table_props,
+  caller = 'account_profiles'
+}) => {
   const { eventsList, eventProp, filters, account } = selectedFilters;
 
   const queryOptions = {
     group_analysis: account[1],
-    source: account[1],
-    caller: 'account_profiles',
+    source: caller === 'account_profiles' ? account[1] : 'All',
+    caller,
     table_props,
     globalFilters: filters,
     date_range: {}
@@ -594,7 +599,11 @@ export const transformWeightConfigForQuery = (config) => {
   return output;
 };
 
-export const getSelectedFiltersFromQuery = ({ query, groupsList }) => {
+export const getSelectedFiltersFromQuery = ({
+  query,
+  groupsList,
+  caller = 'account_profiles'
+}) => {
   const eventProp =
     reverse_user_types[query.ec] != null
       ? reverse_user_types[query.ec]
@@ -605,7 +614,10 @@ export const getSelectedFiltersFromQuery = ({ query, groupsList }) => {
     eventProp,
     filters: filters.globalFilters,
     eventsList: filters.events,
-    account: groupsList.find((g) => g[1] === grpa)
+    account:
+      caller === 'account_profiles'
+        ? groupsList.find((g) => g[1] === grpa)
+        : INITIAL_USER_PROFILES_FILTERS_STATE.account
   };
   return result;
 };

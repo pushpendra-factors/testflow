@@ -14,3 +14,25 @@ export const defaultSegmentIconsMapping = {
   'Visited G2': 'g2crowd',
   'Visited Website': 'sixSignalAccountsLogo'
 };
+
+export const ProfilesSidebarIconsMapping = {
+  web: 'user',
+  salesforce: 'salesforce_ads',
+  hubspot: 'hubspot_ads',
+  leadsquared: 'leadSquared',
+  marketo: 'marketo'
+};
+
+export const segmentColorCodes = [
+  '#FF4D4F',
+  '#FF7A45',
+  '#FFA940',
+  '#FFC53D',
+  '#FFEC3D',
+  '#BAE637',
+  '#73D13D',
+  '#36CFC9',
+  '#597EF7',
+  '#9254DE',
+  '#F759AB'
+];
