@@ -187,7 +187,9 @@ function AccountProfiles({
       : currentProjectSettings.timelines_config?.account_config?.table_props;
     const accountPropsWithEnableKey = formatUserPropertiesToCheckList(
       listProperties,
-      tableProps
+      tableProps?.filter(
+        (entry) => entry !== '' && entry !== undefined && entry !== null
+      )
     );
     setCheckListAccountProps(accountPropsWithEnableKey);
   }, [currentProjectSettings, listProperties, activeSegment, accountPayload]);
@@ -312,12 +314,16 @@ function AccountProfiles({
     };
     const source = filterPropsMap[accountPayload?.source];
     const tableProps = accountPayload.segment_id
-      ? activeSegment?.query?.table_props?.filter((item) =>
-          item.includes(source)
-        )
-      : currentProjectSettings?.timelines_config?.account_config?.table_props?.filter(
-          (item) => item? item.includes(source): false
-        );
+      ? activeSegment?.query?.table_props
+          ?.filter(
+            (entry) => entry !== '' && entry !== undefined && entry !== null
+          )
+          .filter((item) => item.includes(source))
+      : currentProjectSettings?.timelines_config?.account_config?.table_props
+          ?.filter(
+            (entry) => entry !== '' && entry !== undefined && entry !== null
+          )
+          .filter((item) => item.includes(source));
     return (
       tableProps?.filter((entry) => entry !== '' && entry !== undefined) || []
     );
@@ -497,10 +503,16 @@ function AccountProfiles({
         );
     } else {
       const filteredProps = !IsDomainGroup(accountPayload.source)
-        ? tlConfig.account_config.table_props.filter(
-            (item) =>
-              !checkListAccountProps.some(({ prop_name }) => prop_name === item)
-          )
+        ? tlConfig.account_config.table_props
+            ?.filter(
+              (entry) => entry !== '' && entry !== undefined && entry !== null
+            )
+            .filter(
+              (item) =>
+                !checkListAccountProps.some(
+                  ({ prop_name }) => prop_name === item
+                )
+            )
         : [];
       const enabledProps = checkListAccountProps
         .filter(({ enabled }) => enabled)

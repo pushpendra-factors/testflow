@@ -472,10 +472,7 @@ function AccountDetails({
             </Text>
           )}
         </div>
-        <Button
-          size='large'
-          onClick={handleOptionBackClick}
-        >
+        <Button size='large' onClick={handleOptionBackClick}>
           Close
         </Button>
       </div>
@@ -485,8 +482,9 @@ function AccountDetails({
   const listLeftPaneProps = (props = {}) => {
     const propsList = [];
     const showProps =
-      currentProjectSettings?.timelines_config?.account_config?.table_props ||
-      [];
+      currentProjectSettings?.timelines_config?.account_config?.table_props?.filter(
+        (entry) => entry !== '' && entry !== undefined && entry !== null
+      ) || [];
     showProps.forEach((prop, index) => {
       const propType = getPropType(listProperties, prop);
       const propDisplayName = groupPropNames[prop]
