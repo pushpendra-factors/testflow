@@ -8,3 +8,9 @@
     }
   }
 }
+
+.more-actions-popover {
+  :global(.ant-popover-inner-content) {
+    padding: 0.5rem 0 !important;
+  }
+}
