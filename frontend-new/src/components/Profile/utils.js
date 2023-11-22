@@ -272,19 +272,19 @@ export const getPropType = (propsList, searchProp) => {
 export const propValueFormat = (searchKey, value, type) => {
   switch (type) {
     case 'datetime':
-      if (searchKey.toLowerCase().includes('date'))
+      if (searchKey?.toLowerCase()?.includes('date'))
         return MomentTz(value * 1000).format('DD MMM YYYY');
       else return MomentTz(value * 1000).format('DD MMM YYYY, hh:mm A zz');
     case 'numerical':
-      if (searchKey.toLowerCase().includes('time'))
+      if (searchKey?.toLowerCase()?.includes('time'))
         return formatDurationIntoString(parseInt(value));
-      else if (searchKey.includes('durationmilliseconds'))
+      else if (searchKey?.includes('durationmilliseconds'))
         return formatDurationIntoString(parseInt(value / 1000));
       else return parseInt(value);
     case 'categorical':
-      if (searchKey.includes('timestamp'))
+      if (searchKey?.includes('timestamp'))
         return MomentTz(value * 1000).format('DD MMM YYYY, hh:mm A zz');
-      else if (searchKey.endsWith('time'))
+      else if (searchKey?.endsWith('time'))
         return formatDurationIntoString(parseInt(value));
       else return value;
     default:

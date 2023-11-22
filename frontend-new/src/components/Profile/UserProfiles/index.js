@@ -226,7 +226,9 @@ function UserProfiles({
     }
     const userPropsWithEnableKey = formatUserPropertiesToCheckList(
       userPropertiesModified,
-      tableProps
+      tableProps.filter(
+        (entry) => entry !== '' && entry !== undefined && entry !== null
+      )
     );
     setCheckListUserProps(userPropsWithEnableKey);
   }, [
@@ -297,11 +299,13 @@ function UserProfiles({
       );
     }
     tableProps
-      ?.filter((entry) => entry !== '' && entry !== undefined)
+      ?.filter((entry) => entry !== '' && entry !== undefined && entry !== null)
       ?.forEach((prop) => {
         const propDisplayName = userPropNames[prop]
           ? userPropNames[prop]
-          : PropTextFormat(prop);
+          : prop
+          ? PropTextFormat(prop)
+          : '';
         const propType = getPropType(userPropertiesModified, prop);
         columns.push({
           title: (
@@ -506,7 +510,9 @@ function UserProfiles({
         checkListUserProps
           ?.filter((item) => item.enabled === true)
           ?.map((item) => item?.prop_name)
-          ?.filter((entry) => entry !== '' && entry !== undefined) || [];
+          ?.filter(
+            (entry) => entry !== '' && entry !== undefined && entry !== null
+          ) || [];
       updateSegmentForId(activeProject.id, timelinePayload.segment_id, {
         query: { ...updatedQuery }
       })
