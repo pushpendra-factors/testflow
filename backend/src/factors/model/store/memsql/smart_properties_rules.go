@@ -140,7 +140,7 @@ func validateSmartPropertyRules(projectID int64, smartPropertyRulesDoc *model.Sm
 		"^[A-Za-z0-9]([A-Za-z0-9_]*[A-Za-z0-9])?$",
 		smartPropertyRulesDoc.Name,
 	)
-	if isValidName {
+	if !isValidName {
 		return "Invalid characters in property name", false
 	}
 

@@ -1305,6 +1305,10 @@ func (store *MemSQL) GetSourceStringForAccountsV1(projectID int64, source string
 
 // FormatProfilesStruct transforms the results into a processed version suitable for the response payload.
 func FormatProfilesStruct(projectID int64, profiles []model.Profile, profileType string, tableProps []string, source string) ([]model.Profile, error) {
+	if profiles == nil {
+		return []model.Profile{}, nil
+	}
+
 	if model.IsAccountProfiles(profileType) {
 		formatAccountProfilesList(profiles, tableProps, source)
 	} else if model.IsUserProfiles(profileType) {
