@@ -97,7 +97,7 @@ export function getErrorMessage(resultState) {
      if(!resultState.data || resultState.data.length === 0) {
           errorMessage = 'No Data Found! Try a Different Time Range';
      }
-     else if(resultState.data.metrics.rows.length === 0){
+     else if(resultState.data?.metrics?.rows?.length === 0){
       errorMessage = 'No Data Found! Try Changing Filters or Time Range';      
      }
     }
