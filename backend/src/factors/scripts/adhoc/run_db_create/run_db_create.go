@@ -322,27 +322,6 @@ func main() {
 		log.Info("Created unique index on billing_accounts(agent_uuid).")
 	}
 
-	// Create project_billing_account_mappings table
-	if err := db.CreateTable(&model.ProjectBillingAccountMapping{}).Error; err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("project_billing_account_mappings table creation failed.")
-	} else {
-		log.Info("project_billing_account_mappings table creation failed.")
-	}
-
-	// Add foreign key constraints.
-	if err := db.Model(&model.ProjectBillingAccountMapping{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("project_billing_account_mappings table association with projects table failed.")
-	} else {
-		log.Info("project_billing_account_mappings table is associated with projects table.")
-	}
-
-	// Add foreign key constraints.
-	if err := db.Model(&model.ProjectBillingAccountMapping{}).AddForeignKey("billing_account_id", "billing_accounts(id)", "RESTRICT", "RESTRICT").Error; err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("project_billing_account_mappings table association with billing_accounts table failed.")
-	} else {
-		log.Info("project_billing_account_mappings table is associated with billing_accounts table.")
-	}
-
 	// Add sort index on billing_account_id, project_id
 	if err := db.Exec("CREATE INDEX billing_account_id_project_id_idx ON project_billing_account_mappings (billing_account_id ,project_id) ;").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("project_billing_account_mappings table billing_account_id_project_id_idx sort index failed.")
@@ -791,7 +770,7 @@ func main() {
 	} else {
 		log.Info("Created Sharable URL Audit table.")
 	}
-	
+
 	// Create Alerts Table
 	if err := db.CreateTable(&model.Alert{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("Alert table creation failed.")
