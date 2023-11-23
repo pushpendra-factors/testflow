@@ -35,7 +35,8 @@ function SortableCards({
   setOldestRefreshTime,
   dashboardRefreshState,
   onDataLoadSuccess,
-  handleWidgetRefresh
+  handleWidgetRefresh,
+  resetDashboardRefreshState
 }) {
   const dispatch = useDispatch();
   const timerRef = useRef(null);
@@ -129,6 +130,7 @@ function SortableCards({
         webAnalyticsUnits={webAnalyticsUnits}
         setwidgetModal={setwidgetModal}
         dashboardRefreshState={dashboardRefreshState}
+        resetDashboardRefreshState={resetDashboardRefreshState}
       />
     );
   }
