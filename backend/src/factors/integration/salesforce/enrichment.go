@@ -1161,7 +1161,7 @@ func AssociateOpportunityToDomains(projectID int64, opportunityGroupUserID strin
 		logCtx.Error("Failed to update opportunity domain assciation.")
 		return http.StatusInternalServerError
 	}
-	return status
+	return http.StatusOK
 }
 
 func enrichOpportunityContactRoles(projectID int64, document *model.SalesforceDocument) int {

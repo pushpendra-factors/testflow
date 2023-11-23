@@ -301,10 +301,7 @@ function ContactDetails({
             </Text>
           )}
         </div>
-        <Button
-          size='large'
-          onClick={handleOptionBackClick}
-        >
+        <Button size='large' onClick={handleOptionBackClick}>
           Close
         </Button>
       </div>
@@ -360,7 +357,9 @@ function ContactDetails({
   const listLeftPaneProps = (props = []) => {
     const propsList = [];
     const showProps =
-      currentProjectSettings?.timelines_config?.user_config?.table_props || [];
+      currentProjectSettings?.timelines_config?.user_config?.table_props?.filter(
+        (entry) => entry !== '' && entry !== undefined && entry !== null
+      ) || [];
     const userPropertiesModified = [];
     if (userPropertiesV2) {
       convertGroupedPropertiesToUngrouped(

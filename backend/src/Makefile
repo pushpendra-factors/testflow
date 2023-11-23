@@ -669,8 +669,8 @@ upload-k8-backup: notify-deployment
 pack-copy-project-data:
 	docker build -t us.gcr.io/factors-$(ENV)/copy-project-data:$(TAG) -f Dockerfile.copy_project_data_into_vm_job .
 
-upload-k8-backup: export IMAGE_NAME=copy-project-data
-upload-k8-backup: notify-deployment
+upload-copy-project-data: export IMAGE_NAME=copy-project-data
+upload-copy-project-data: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/copy-project-data:$(TAG)
 
 pack-compute-and-send-alerts:

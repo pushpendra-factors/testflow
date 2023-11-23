@@ -257,7 +257,7 @@ function ProjectModal(props) {
           setsearchProjectName('');
           setShowPopOver(true);
         }}
-        trigger='click' 
+        trigger='click'
       >
         <Tooltip
           title='Access your projects, account settings, and more'
@@ -267,17 +267,21 @@ function ProjectModal(props) {
             className={`${styles.button} flex items-center mr-4`}
             type='text'
             size='large'
-            id="fa-at-dropdown--projects"
+            id='fa-at-dropdown--projects'
           >
             <Avatar
               size={36}
               shape='square'
               style={{
-                background: '#FF7875',
+                background:
+                  props.active_project?.profile_picture?.length > 0
+                    ? '#FFFFFF'
+                    : '#FF7875',
                 textTransform: 'uppercase',
                 fontWeight: '600',
                 borderRadius: '8px'
               }}
+              src={props.active_project?.profile_picture}
             >{`${props.active_project?.name?.charAt(0)}`}</Avatar>
 
             <div className='flex flex-col items-start ml-2'>

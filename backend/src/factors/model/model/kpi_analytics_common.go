@@ -457,7 +457,7 @@ type KPIFilter struct {
 func (qFilter *KPIFilter) IsValid() bool {
 	containsEmptyValues := (strings.Contains(qFilter.Entity, " ") && strings.Contains(qFilter.ObjectType, " ") && strings.Contains(qFilter.PropertyName, " "))
 	propertyDataTypeValid := U.ContainsStringInArray([]string{U.PropertyTypeNumerical, U.PropertyTypeCategorical, U.PropertyTypeDateTime}, qFilter.PropertyDataType)
-	validEntity := U.ContainsStringInArray([]string{PropertyEntityEvent, PropertyEntityUser , ""}, qFilter.Entity)
+	validEntity := U.ContainsStringInArray([]string{PropertyEntityEvent, PropertyEntityUser, ""}, qFilter.Entity)
 	return !containsEmptyValues && propertyDataTypeValid && validEntity
 }
 
@@ -726,21 +726,36 @@ func TransformEventPropertiesToKPIConfigProperties(properties map[string][]strin
 func TransformCRMPropertiesToKPIConfigProperties(properties map[string][]string, propertiesToDisplayNames map[string]string, prefix string) []map[string]string {
 	var resultantKPIConfigProperties []map[string]string
 	var tempKPIConfigProperty map[string]string
-	category := "OTHERS"
-	if prefix == "$hubspot" {
+	var category string
+	switch prefix {
+	case "$hubspot_company":
+		category = "Hubspot Company"
+	case "$hubspot_contact":
+		category = "Hubspot Contacts"
+	case "$hubspot_deal":
+		category = "Hubspot Deal"
+	case "$hubspot":
 		category = "Hubspot"
-	}
-	if prefix == "$salesforce" {
+	case "$salesforce_opportunity", "$sf_opportunity":
+		category = "Salesforce Opportunity"
+	case "$salesforce_account", "$sf_account":
+		category = "Salesforce Account"
+	case "$salesforce", "$sf":
 		category = "Salesforce"
-	}
-	if prefix == "$leadsquared" {
+	case "$leadsquared":
 		category = "Leadsquared"
-	}
-	if prefix == "$marketo" {
+	case "$marketo":
 		category = "Marketo"
+	default:
+		category = "OTHERS"
 	}
 	for dataType, propertyNames := range properties {
 		for _, propertyName := range propertyNames {
+			if strings.HasPrefix(propertyName, "$salesforce_lead") || strings.HasPrefix(propertyName, "$sf_lead") {
+				category = "Salesforce Lead"
+			} else if strings.HasPrefix(propertyName, "$salesforce_contact") || strings.HasPrefix(propertyName, "$sf_contact") {
+				category = "Salesforce Contacts"
+			}
 			if strings.HasPrefix(propertyName, prefix) {
 				var displayName string
 				displayName, exists := propertiesToDisplayNames[propertyName]

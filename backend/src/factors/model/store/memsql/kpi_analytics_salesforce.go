@@ -79,7 +79,7 @@ func (store *MemSQL) getConfigForSpecificSalesforceCategory(projectID int64, req
 
 func (store *MemSQL) getPropertiesForSalesforceByDisplayCategory(projectID int64, reqID, displayCategory string) []map[string]string {
 	finalProperties := make([]map[string]string, 0)
-	
+
 	switch displayCategory {
 	case model.SalesforceOpportunitiesDisplayCategory:
 		finalProperties = store.GetPropertiesForSalesforceOpportunities(projectID, reqID)
@@ -150,7 +150,7 @@ func (store *MemSQL) GetPropertiesForSalesforceOpportunities(projectID int64, re
 	}
 
 	// transforming to kpi structure.
-	return model.TransformCRMPropertiesToKPIConfigProperties(groupProperties, displayNamesOp, "$salesforce")
+	return model.TransformCRMPropertiesToKPIConfigProperties(groupProperties, displayNamesOp, "$salesforce_opportunity")
 }
 
 func (store *MemSQL) GetPropertiesForSalesforceAccounts(projectID int64, reqID string) []map[string]string {
@@ -188,5 +188,5 @@ func (store *MemSQL) GetPropertiesForSalesforceAccounts(projectID int64, reqID s
 	}
 
 	// transforming to kpi structure.
-	return model.TransformCRMPropertiesToKPIConfigProperties(groupProperties, displayNamesOp, "$salesforce")
+	return model.TransformCRMPropertiesToKPIConfigProperties(groupProperties, displayNamesOp, "$salesforce_account")
 }

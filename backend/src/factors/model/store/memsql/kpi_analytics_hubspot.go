@@ -108,7 +108,7 @@ func (store *MemSQL) GetPropertiesForHubspotContacts(projectID int64, reqID stri
 	}
 
 	// transforming to kpi structure.
-	hubspotContactsOnlyProperties := model.TransformCRMPropertiesToKPIConfigProperties(properties, propertiesToDisplayNames, "$hubspot")
+	hubspotContactsOnlyProperties := model.TransformCRMPropertiesToKPIConfigProperties(properties, propertiesToDisplayNames, "$hubspot_contact")
 	standardUserProperties := store.GetKPIConfigFromStandardUserProperties(projectID)
 	return append(standardUserProperties, hubspotContactsOnlyProperties...)
 }
@@ -148,7 +148,7 @@ func (store *MemSQL) GetPropertiesForHubspotCompanies(projectID int64, reqID str
 	}
 
 	// transforming to kpi structure.
-	return model.TransformCRMPropertiesToKPIConfigProperties(groupProperties, displayNamesOp, "$hubspot")
+	return model.TransformCRMPropertiesToKPIConfigProperties(groupProperties, displayNamesOp, "$hubspot_company")
 
 }
 
@@ -187,5 +187,5 @@ func (store *MemSQL) GetPropertiesForHubspotDeals(projectID int64, reqID string)
 	}
 
 	// transforming to kpi structure.
-	return model.TransformCRMPropertiesToKPIConfigProperties(groupProperties, displayNamesOp, "$hubspot")
+	return model.TransformCRMPropertiesToKPIConfigProperties(groupProperties, displayNamesOp, "$hubspot_deal")
 }
