@@ -292,18 +292,18 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	err = json.Unmarshal(user.Properties.RawMessage, &propertiesMap)
 	assert.Nil(t, err)
 	assert.Equal(t, propertiesMap[U.UP_INITIAL_CHANNEL], model.ChannelDirect)
-	assert.Equal(t, propertiesMap[U.UP_LATEST_CHANNEL], model.ChannelPaidSearch)
+	assert.Equal(t, propertiesMap[U.UP_LATEST_CHANNEL], model.ChannelGoogleNetwork)
 
 	sessionEvent2 := assertAssociatedSession(t, project.ID, []string{eventId},
 		[]string{}, "Session 2")
 	// session event properties added from event properties.
 	lsEventProperties2, err := U.DecodePostgresJsonb(&sessionEvent2.Properties)
 	assert.Nil(t, err)
-	assert.Equal(t, (*lsEventProperties2)[U.EP_CHANNEL], model.ChannelPaidSearch)
+	assert.Equal(t, (*lsEventProperties2)[U.EP_CHANNEL], model.ChannelGoogleNetwork)
 	lsUserProperties2, err := U.DecodePostgresJsonb(sessionEvent2.UserProperties)
 	assert.Nil(t, err)
 	assert.Equal(t, (*lsUserProperties2)[U.UP_INITIAL_CHANNEL], model.ChannelDirect)
-	assert.Equal(t, (*lsUserProperties2)[U.UP_LATEST_CHANNEL], model.ChannelPaidSearch)
+	assert.Equal(t, (*lsUserProperties2)[U.UP_LATEST_CHANNEL], model.ChannelGoogleNetwork)
 
 	timestamp = timestamp + 2000
 	// Updating project timestamp to before events start timestamp.
@@ -357,7 +357,6 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 		U.EP_PAGE_URL:        "https://example.com/1/2/",
 		U.EP_PAGE_RAW_URL:    "https://example.com/1/2?x=1",
 		U.EP_PAGE_SPENT_TIME: 10,
-		U.EP_CAMPAIGN:        "google",
 		U.EP_REFERRER_DOMAIN: "bing.com",
 	}
 	trackUserProperties3 := U.PropertiesMap{
@@ -385,7 +384,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	// session event properties added from event properties.
 	lsEventProperties4, err := U.DecodePostgresJsonb(&sessionEvent4.Properties)
 	assert.Nil(t, err)
-	assert.Equal(t, (*lsEventProperties4)[U.EP_CHANNEL], model.ChannelPaidSearch)
+	assert.Equal(t, model.ChannelOrganicSearch, (*lsEventProperties4)[U.EP_CHANNEL])
 
 	timestamp = timestamp + 2000
 	// Updating project timestamp to before events start timestamp.
@@ -506,7 +505,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	// session event properties added from event properties.
 	lsEventProperties7, err := U.DecodePostgresJsonb(&sessionEvent7.Properties)
 	assert.Nil(t, err)
-	assert.Equal(t, (*lsEventProperties7)[U.EP_CHANNEL], model.ChannelPaidSocial)
+	assert.Equal(t, model.ChannelPaidSocial, (*lsEventProperties7)[U.EP_CHANNEL])
 
 	timestamp = timestamp + 2000
 	// Updating project timestamp to before events start timestamp.
