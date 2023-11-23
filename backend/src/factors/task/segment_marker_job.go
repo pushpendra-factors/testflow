@@ -39,7 +39,9 @@ func SegmentMarker(projectID int64) int {
 
 	if status != http.StatusFound {
 		// domains not enabled, so fetching list of all the users with last updated_at in last x hour
-		users, statusCode = store.GetStore().GetNonGroupUsersUpdatedAtGivenHour(projectID, lookBack)
+		if !C.ProcessOnlyAllAccountsSegments() {
+			users, statusCode = store.GetStore().GetNonGroupUsersUpdatedAtGivenHour(projectID, lookBack)
+		}
 	} else {
 		// list of domains and their associated users with last updated_at in last x hour
 		users, statusCode = store.GetStore().GetUsersUpdatedAtGivenHour(projectID, lookBack, domainGroup.ID)
@@ -247,7 +249,7 @@ func usersProcessing(projectID int64, user model.User, allSegmentsMap map[string
 
 func userProcessingWithErrcode(projectID int64, user model.User, allSegmentsMap map[string][]model.Segment,
 	decodedSegmentRulesMap map[string][]model.Query, eventNameIDsMap map[string]string) int {
-	userAssociatedSegments := make(map[string]interface{})
+	userAssociatedSegments := make(map[string]model.AssociatedSegments)
 
 	// decoding user properties col
 	decodedProps, err := U.DecodePostgresJsonb(&user.Properties)
@@ -358,7 +360,7 @@ func domainusersProcessing(projectID int64, domId string, users []model.User, se
 }
 
 func domainUsersProcessingWithErrcode(projectID int64, domId string, usersArray []model.User, segments []model.Segment, segmentsRulesArr []model.Query, eventNameIDsMap map[string]string) (int, error) {
-	associatedSegments := make(map[string]interface{})
+	associatedSegments := make(map[string]model.AssociatedSegments)
 	decodedPropsArr := make([]map[string]interface{}, 0)
 	for _, user := range usersArray {
 		// decoding user properties col
@@ -524,27 +526,44 @@ func checkPropertyInAllUsers(grpa string, p model.QueryProperty, decodedProperti
 	return isValueFound
 }
 
-func updateSegmentMap(matched bool, user model.User, userPartOfSegments map[string]interface{},
-	segmentId string) map[string]interface{} {
+func updateSegmentMap(matched bool, user model.User, userPartOfSegments map[string]model.AssociatedSegments,
+	segmentId string) map[string]model.AssociatedSegments {
 	segmentMap := userPartOfSegments
+	var updatedMap model.AssociatedSegments
+
 	if matched {
-		updatedAt := model.FormatTimeToString(user.UpdatedAt)
-		segmentMap[segmentId] = updatedAt
+		updatedMap.UpdatedAt = model.FormatTimeToString(user.UpdatedAt)
+		if user.LastEventAt != nil {
+			updatedMap.LastEventAt = model.FormatTimeToString(*user.LastEventAt)
+		}
+		updatedMap.V = 0
+		segmentMap[segmentId] = updatedMap
 	}
 	return segmentMap
 }
 
-func updateAllAccountsSegmentMap(matched bool, userArr []model.User, userPartOfSegments map[string]interface{}, segmentId string) map[string]interface{} {
+func updateAllAccountsSegmentMap(matched bool, userArr []model.User, userPartOfSegments map[string]model.AssociatedSegments, segmentId string) map[string]model.AssociatedSegments {
 	segmentMap := userPartOfSegments
+	var updatedMap model.AssociatedSegments
 	if matched {
 		maxUpadtedAt := userArr[0].UpdatedAt
+		maxLastEventAt := time.Time{}
 		for _, user := range userArr {
 			if (user.UpdatedAt).After(maxUpadtedAt) {
 				maxUpadtedAt = user.UpdatedAt
 			}
+			if user.LastEventAt != nil {
+				if (*user.LastEventAt).After(maxLastEventAt) {
+					maxLastEventAt = *user.LastEventAt
+				}
+			}
 		}
-		updatedAt := model.FormatTimeToString(maxUpadtedAt)
-		segmentMap[segmentId] = updatedAt
+		updatedMap.UpdatedAt = model.FormatTimeToString(maxUpadtedAt)
+		if (maxLastEventAt.Compare(time.Time{})) != 0 {
+			updatedMap.LastEventAt = model.FormatTimeToString(maxLastEventAt)
+		}
+		updatedMap.V = 0
+		segmentMap[segmentId] = updatedMap
 	}
 
 	return segmentMap

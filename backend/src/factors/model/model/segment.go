@@ -1,6 +1,8 @@
 package model
 
-import "github.com/jinzhu/gorm/dialects/postgres"
+import (
+	"github.com/jinzhu/gorm/dialects/postgres"
+)
 
 type SegmentResponse struct {
 	Message string `json:"message,omitempty"`
@@ -21,4 +23,10 @@ type Segment struct {
 	Description string          `json:"description"`
 	Query       *postgres.Jsonb `json:"query"`
 	Type        string          `json:"type"`
+}
+
+type AssociatedSegments struct {
+	UpdatedAt   string `json:"updated_at"`
+	LastEventAt string `json:"last_event_at"`
+	V           int    `json:"v"` // indicates version, currently version: 0
 }
