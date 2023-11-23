@@ -308,20 +308,22 @@ brew install python3
 
 * Install dependencies
 ```
-cd $PATH_TO_FACTORS/factors/integrations/adwords/service
-pip install -r requirements.txt
+cd $PATH_TO_FACTORS/factors/python_backend
+pip install -r adwords_requirements.txt
 # Use pip3 in case pip is not found
 ```
 
 * Run
 ```
-cd $PATH_TO_FACTORS/factors/integrations/service
+cd $PATH_TO_FACTORS/factors/python_backend
 
 python app.py --env development --developer_token <ADS_DEVELOPER_TOKEN> --oauth_secret  $(cat <GOOGLE_OAUTH_CLIENT_JSON_FILEPATH>)
 
 or
 
 python app.py --env development --port 8091 --host_url http://localhost:8091 --developer_token <ADS_DEVELOPER_TOKEN> --oauth_secret $(cat <GOOGLE_OAUTH_CLIENT_JSON_FILEPATH>) --api_host_url http://localhost:8080 ----app_host_url http://localhost:3000
+
+# Use python3 instead of python in case of dependency errors
 ```
 
 
