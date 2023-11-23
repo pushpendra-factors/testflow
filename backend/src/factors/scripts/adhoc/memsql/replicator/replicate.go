@@ -922,8 +922,6 @@ func getRecordInterfaceByTableName(tableName string) interface{} {
 		record = &model.HubspotDocument{}
 	case tableProjectAgentMappings:
 		record = &model.ProjectAgentMapping{}
-	case tableProjectBillingAccountMappings:
-		record = &model.ProjectBillingAccountMapping{}
 	case tableProjectSettings:
 		record = &model.ProjectSetting{}
 	case tableSalesforceDocuments:
