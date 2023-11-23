@@ -110,8 +110,9 @@ func createDataFileFromSortedFiles(projectId int64, fileNamePrefix string, sorte
 		if projectDetails.TimeZone != "" {
 			// Input time is in UTC. We need the same time in the other timezone
 			// if 2021-08-30 00:00:00 is UTC then we need the epoch equivalent in 2021-08-30 00:00:00 IST(project time zone)
-			offset := U.FindOffsetInUTC(U.TimeZoneString(projectDetails.TimeZone))
+			offset := U.FindOffsetInUTCForTimestamp(U.TimeZoneString(projectDetails.TimeZone), startTimestamp)
 			startTimestampInProjectTimezone = startTimestamp - int64(offset)
+			offset = U.FindOffsetInUTCForTimestamp(U.TimeZoneString(projectDetails.TimeZone), endTimestamp)
 			endTimestampInProjectTimezone = endTimestamp - int64(offset)
 		}
 		log.WithFields(log.Fields{"fileDir": reqFile.dir, "fileName": reqFile.name}).Info("Reading file")
@@ -228,8 +229,9 @@ func MergeAndWriteSortedFile(projectId int64, dataType, channelOrDatefield strin
 		projectDetails, _ := store.GetStore().GetProject(projectId)
 		if projectDetails.TimeZone != "" {
 			log.Infof("Project Timezone not UTC - Converting timestamps to UTC from project timezone(%s)", projectDetails.TimeZone)
-			offset := U.FindOffsetInUTC(U.TimeZoneString(projectDetails.TimeZone))
+			offset := U.FindOffsetInUTCForTimestamp(U.TimeZoneString(projectDetails.TimeZone), startTimestamp)
 			startTimestamp = startTimestamp + int64(offset)
+			offset = U.FindOffsetInUTCForTimestamp(U.TimeZoneString(projectDetails.TimeZone), endTimestamp)
 			endTimestamp = endTimestamp + int64(offset)
 		}
 	}
