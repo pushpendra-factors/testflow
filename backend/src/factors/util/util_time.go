@@ -30,6 +30,26 @@ type TimestampRange struct {
 	End   int64
 }
 
+// If 15ThAug, 2020 00:00:00 Asia/Kolkata is result will be 15ThAug, 2020 00:00:00 UTC.
+func ConvertEqualTimeFromOtherTimezoneToUTC(timestamp int64, timezone TimeZoneString) int64  {
+	in := GetTimeLocationFor(timezone)
+	locTime := time.Unix(timestamp, 0).In(in)
+	utcLoc := GetTimeLocationFor(TimeZoneString("UTC"))
+
+	t := time.Date(locTime.Year(), locTime.Month(), locTime.Day(), locTime.Hour(), locTime.Minute(), locTime.Second(), 0, utcLoc)
+	return t.Unix()
+}
+
+
+// If 15ThAug, 2020 00:00:00 UTC is result will be 15ThAug, 2020 00:00:00 Asia/Kolkata.
+func ConvertEqualTimeFromUTCToInOtherTimezone(timestamp int64, timezone TimeZoneString) int64  {
+	utcTime := time.Unix(timestamp, 0).UTC()
+	in := GetTimeLocationFor(timezone)
+
+	t := time.Date(utcTime.Year(), utcTime.Month(), utcTime.Day(), utcTime.Hour(), utcTime.Minute(), utcTime.Second(), 0, in)
+	return t.Unix()
+}
+
 // Returns date in YYYYMMDD format
 func GetDateOnlyFromTimestampZ(timestamp int64) string {
 	return time.Unix(timestamp, 0).UTC().Format(DATETIME_FORMAT_YYYYMMDD)

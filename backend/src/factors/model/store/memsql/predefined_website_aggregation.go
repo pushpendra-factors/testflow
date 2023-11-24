@@ -61,17 +61,23 @@ func (store *MemSQL) ExecuteQueryGroupForPredefinedWebsiteAggregation(projectID 
 // IMP - For the query with no groupby, we are expecting only one metric.
 func (store *MemSQL) ExecuteSingleWebAggregationQuery(projectID int64, q model.PredefWebsiteAggregationQuery) (model.QueryResult, int, string) {
 
-	stmnt, params := buildPredefinedWebsiteAggregationQuery(projectID, q)
+	var dupQ model.PredefWebsiteAggregationQuery
+	U.DeepCopy(&q, &dupQ)
+	dupQ.From = U.ConvertEqualTimeFromOtherTimezoneToUTC(q.From, U.TimeZoneString(q.Timezone))
+	dupQ.To = U.ConvertEqualTimeFromOtherTimezoneToUTC(q.To, U.TimeZoneString(q.Timezone))
+	dupQ.Timezone = "UTC"
+
+	stmnt, params := buildPredefinedWebsiteAggregationQuery(projectID, dupQ)
 	result, err, reqID := store.ExecQuery(stmnt, params)
-	result.Query = q
 	if err != nil {
 		log.WithField("projectID", projectID).WithField("query", q).WithField("reqID", reqID).
 			WithError(err).Error("Failed during predefined query execute.")
 		return model.QueryResult{}, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
 
-	transformedResult := transformPWAResultMetrics(q, *result)
-	if q.GroupByTimestamp == "" {
+	transformedResult := transformPWAResultMetrics(dupQ, *result)
+	log.WithField("transformedResult", transformedResult).WithField("q", q).WithField("dupQ", dupQ).Warn("kark2-1")
+	if dupQ.GetGroupByTimestamp() == "" {
 		if len(result.Rows) == 0 || len(result.Rows[0]) == 0 {
 			emptyRow := make([]interface{}, 0)
 
@@ -87,9 +93,12 @@ func (store *MemSQL) ExecuteSingleWebAggregationQuery(projectID int64, q model.P
 		}
 	} else {
 		transformedResult = transformPWAResultDateValuesToInt(*result)
-		transformedResult = addMissingColumnsAndTimestampPWAResult(transformedResult, q)
-		transformedResult = transformPWAResultDateValuesToDateFormat(transformedResult)
+		transformedResult = addMissingColumnsAndTimestampPWAResult(transformedResult, dupQ)
+
+		transformedResult = transformPWAResultDateValuesToDateFormat(transformedResult, q.Timezone)
 	}
+
+	transformedResult.Query = q
 	return transformedResult, http.StatusOK, "Successfully executed."
 }
 
@@ -114,13 +123,13 @@ func buildPredefinedWebsiteAggregationQuery(projectID int64, q model.PredefWebsi
 		internalGroupBy = q.GroupBy.Name
 	}
 
-	resSelectStatement := getPredefinedSelectStmnt(resMetrics, resMetricsToTransformations, resGroupBy, internalGroupBy, q.GroupByTimestamp)
+	resSelectStatement := getPredefinedSelectStmnt(resMetrics, resMetricsToTransformations, resGroupBy, internalGroupBy, q.GetGroupByTimestamp())
 
 	resFromStmnt := fmt.Sprintf("%s %s ", model.DBFrom, model.WebsiteAggregationTable)
 
 	resFilterStmnt, resFilterParams := getPredefinedFilterStmnt(projectID, q.Filters, internalEventType, q.From, q.To, q.Timezone)
 
-	resGroupByStmnt := getGroupByStmnt(resGroupBy, q.GroupByTimestamp)
+	resGroupByStmnt := getGroupByStmnt(resGroupBy, q.GetGroupByTimestamp())
 
 	resOrderByStmnt := fmt.Sprintf("%s %s DESC ", model.DBOrderBy, joinWithComma(resMetrics...))
 
@@ -133,6 +142,20 @@ func buildPredefinedWebsiteAggregationQuery(projectID int64, q model.PredefWebsi
 	return resStmnt, resParams
 }
 
+func getPredefSelectTimestampByType(groupByTimestamp string) string {
+	var groupByTimestampSql string
+	if (groupByTimestamp == model.GroupByTimestampWeek) {
+		groupByTimestampSql = DateTruncateInURlForWeekPWA
+	} else {
+		if dateTrunVal, ok := mapOfGroupByTimestampToDateTrunc[groupByTimestamp]; ok {
+			groupByTimestampSql = fmt.Sprintf(DateTruncateInURlPWA, dateTrunVal)
+		} else {
+			groupByTimestampSql = fmt.Sprintf(DateTruncateInURlPWA, groupByTimestamp)
+		}
+	}
+	return groupByTimestampSql
+}
+
 // This is used to form all transformations and groupBy. This cant be reusable.
 func getPredefinedSelectStmnt(metrics []string, metricsToTransformations map[string][]model.PredefWebsiteAggregationMetricTransform,
 	externalGroupBy, internalGroupBy, groupByTimestamp string) string {
@@ -141,12 +164,8 @@ func getPredefinedSelectStmnt(metrics []string, metricsToTransformations map[str
 	SelectExpressions := make([]string, 0)
 
 	if groupByTimestamp != "" {
-		groupByTimestampString := ""
-		if groupByTimestamp == "date" {
-			groupByTimestampString = "day"
-		}
-		groupByTimestampSql := fmt.Sprintf(DateTruncateInURlPWA, groupByTimestampString)
-		SelectExpressions = append(SelectExpressions, fmt.Sprintf("%s as %s", groupByTimestampSql, groupByTimestamp))
+		groupByTimestampSql := getPredefSelectTimestampByType(groupByTimestamp)
+		SelectExpressions = append(SelectExpressions, fmt.Sprintf("%s as %s", groupByTimestampSql, model.AliasDateTime))
 	}
 
 	if internalGroupBy != "" {
@@ -240,7 +259,7 @@ func getPredefinedFiltersGrouped(filters []model.PredefinedFilter) [][]model.Pre
 func getGroupByStmnt(groupBy, groupByTimestamp string) string {
 	groupBys := make([]string, 0)
 	if groupByTimestamp != "" {
-		groupBys = append(groupBys, groupByTimestamp)
+		groupBys = append(groupBys, model.AliasDateTime)
 	}
 	if groupBy != "" {
 		groupBys = append(groupBys, groupBy)
@@ -291,11 +310,11 @@ func transformPWAResultDateValuesToInt(result model.QueryResult) model.QueryResu
 	return result
 }
 
-func transformPWAResultDateValuesToDateFormat(result model.QueryResult) model.QueryResult {
+func transformPWAResultDateValuesToDateFormat(result model.QueryResult, timezone string) model.QueryResult {
 	for rowIndex, row := range result.Rows {
 		valueInInt := row[0].(int64)
 		valueInUTC := time.Unix(valueInInt, 0).UTC()
-		valueWithOffset := U.GetTimestampAsStrWithTimezone(valueInUTC, "UTC")
+		valueWithOffset := U.GetTimestampAsStrWithTimezone(valueInUTC, timezone)
 		result.Rows[rowIndex][0] = valueWithOffset
 	}
 	return result
@@ -316,8 +335,8 @@ func addMissingColumnsAndTimestampPWAResult(result model.QueryResult, query mode
 			}
 	
 			timestampsInTime, _ := GetAllTimestampsAndOffsetBetweenByType(query.From, query.To,
-				query.GroupByTimestamp, query.Timezone)
-			
+				query.GetGroupByTimestamp(), query.Timezone)
+
 			for _, timestampInTime := range timestampsInTime {
 				timestampInEpoch := timestampInTime.Unix()
 				timestampKey := fmt.Sprintf("%v", timestampInEpoch)
@@ -349,6 +368,10 @@ func addMissingColumnsAndTimestampPWAResult(result model.QueryResult, query mode
 			timestampsInTime, _ := GetAllTimestampsAndOffsetBetweenByType(query.From, query.To,
 				query.GroupByTimestamp, query.Timezone)
 			
+			log.WithField("timestampsInTime", timestampsInTime).
+				WithField("query", query).WithField("mapOfAllColumValuesToResult", mapOfAllColumValuesToResult).
+				WithField("mapOfGroup", mapOfGroup).
+				Warn("kark2-3")
 			for _, timestampInTime := range timestampsInTime {
 				timestampInEpoch := timestampInTime.Unix()
 				timestampKey := fmt.Sprintf("%v", timestampInEpoch)
@@ -383,4 +406,3 @@ func addMissingColumnsAndTimestampPWAResult(result model.QueryResult, query mode
 		result.Rows = resultantRows
 		return result
 }
-
