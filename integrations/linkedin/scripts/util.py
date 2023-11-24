@@ -239,6 +239,10 @@ class Util:
         mapIDs = {}
         for data in records:
             id = data['pivotValues'][0].split(':')[3]
+            # temporary fix start. this specific org id is causing error. Escalating the error to linkedin team
+            if str(id) == '1757051':
+                continue
+            # temporary fix end
             if id not in map_of_id_to_company_data:
                 mapIDs[id]= True
 
