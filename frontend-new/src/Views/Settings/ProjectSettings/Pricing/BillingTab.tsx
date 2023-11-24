@@ -1,7 +1,7 @@
 import React from 'react';
 import ProgressBar from 'Components/GenericComponents/Progress';
 import { SVG, Text } from 'Components/factorsComponents';
-import { PLANS } from 'Constants/plans.constants';
+import { PLANS, PLANS_V0 } from 'Constants/plans.constants';
 import { FeatureConfigState } from 'Reducers/featureConfig/types';
 import { PathUrls } from 'Routes/pathUrls';
 import { Alert, Button, Divider, Tag, Tooltip } from 'antd';
@@ -25,7 +25,8 @@ const BillingTab = () => {
   const sixSignalLimit = sixSignalInfo?.limit || 0;
   const sixSignalUsage = sixSignalInfo?.usage || 0;
   const isSolutionsAdmin = email === 'solutions@factors.ai';
-  const isFreePlan = plan?.name === PLANS.PLAN_FREE;
+  const isFreePlan =
+    plan?.name === PLANS.PLAN_FREE || plan?.name === PLANS_V0?.PLAN_FREE;
   const showV2PricingVersionFlag = showV2PricingVersion(active_project);
 
   const handleUpgradePlan = () => {
