@@ -61,7 +61,7 @@ const (
 	PredefPropOsVersion           = "os_version"
 	PredefPropDevice              = "device"
 	PredefProp6SignalIndustry     = "6signal_industry"
-	PredefProp6SignalEmpRange     = "6signal_emp_range"
+	PredefProp6SignalEmpRange     = "6signal_employee_range"
 	PredefProp6SignalRevenueRange = "6signal_revenue_range"
 	PredepPropTimestampAtDay      = "timestamp_at_day"
 
@@ -330,6 +330,10 @@ func (q *PredefWebsiteAggregationQuery) IsValid() (bool, string) {
 		}
 	}
 	return true, ""
+}
+
+func (q *PredefWebsiteAggregationQuery) GetGroupByTimestamp() string {
+	return q.GroupByTimestamp
 }
 
 type PredefWebsiteAggregationMetricTransform struct {
