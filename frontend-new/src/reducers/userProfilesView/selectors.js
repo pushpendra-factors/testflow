@@ -2,7 +2,6 @@ import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils'
 import { formatSegmentsObjToGroupSelectObj } from 'Components/Profile/utils';
 import { selectSegments } from 'Reducers/timelines/selectors';
 import { createSelector } from 'reselect';
-import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 
 export const selectTimelinePayload = (state) =>
   state.userProfilesView.timelinePayload;

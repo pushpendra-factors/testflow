@@ -86,9 +86,7 @@ const AccountsSidebar = () => {
     selectAccountPayload(state)
   );
 
-  const { newSegmentMode } = useSelector(
-    (state) => state.accountProfilesView
-  );
+  const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
 
   const segmentsList = useMemo(() => {
     return generateSegmentsList({
@@ -147,13 +145,13 @@ const AccountsSidebar = () => {
             'flex col-gap-2 items-center w-full',
             styles['sidebar-action-button']
           )}
-          type='secondary'
+          type='dashed'
           onClick={() => {
             dispatch(setNewSegmentModeAction(true));
           }}
         >
-          <SVG name={'plus'} size={16} color='#1890FF' />
-          <Text level={7} type='title' color='brand-color-6' extraClass='mb-0'>
+          <SVG name={'plus'} size={16} />
+          <Text level={7} type='title' extraClass='mb-0'>
             New Segment
           </Text>
         </Button>

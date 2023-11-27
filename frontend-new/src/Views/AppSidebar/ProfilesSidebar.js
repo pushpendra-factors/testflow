@@ -50,7 +50,9 @@ const GroupItem = ({ group }) => {
   };
 
   const isActive =
-    timelinePayload.source === group[1] && !timelinePayload.segment_id && newSegmentMode === false;
+    timelinePayload.source === group[1] &&
+    !timelinePayload.segment_id &&
+    newSegmentMode === false;
 
   return (
     <SidebarMenuItem
@@ -79,7 +81,8 @@ const SegmentItem = ({ segment }) => {
     }
   };
 
-  const isActive = timelinePayload.segment_id === segment[1] && newSegmentMode === false;
+  const isActive =
+    timelinePayload.segment_id === segment[1] && newSegmentMode === false;
   const iconColor = getSegmentColorCode(segment[0]);
 
   return (
@@ -154,13 +157,13 @@ const ProfilesSidebar = () => {
             'flex col-gap-2 items-center w-full',
             styles['sidebar-action-button']
           )}
-          type='secondary'
+          type='dashed'
           onClick={() => {
             dispatch(setNewSegmentModeAction(true));
           }}
         >
-          <SVG name={'plus'} size={16} color='#1890FF' />
-          <Text level={7} type='title' color='brand-color-6' extraClass='mb-0'>
+          <SVG name={'plus'} size={16} />
+          <Text level={7} type='title' extraClass='mb-0'>
             New Segment
           </Text>
         </Button>
