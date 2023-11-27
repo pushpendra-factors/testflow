@@ -862,3 +862,33 @@ func TestEvaluateRulesV1(t *testing.T) {
 
 	})
 }
+
+func TestGetDomainNamesByProjectID(t *testing.T) {
+
+	projectId, userId, eventNameId, err := SetupProjectUserEventName()
+	assert.Nil(t, err)
+
+	newEvent := &model.Event{EventNameId: eventNameId, ProjectId: projectId, UserId: userId, Timestamp: time.Now().Unix(),
+		Properties: postgres.Jsonb{RawMessage: []byte(fmt.Sprintf(`{"$is_page_view":true , "$page_url":"app.factors.ai/accounts"}`))}}
+
+	_, errCode := store.GetStore().CreateEvent(newEvent)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	newEvent = &model.Event{EventNameId: eventNameId, ProjectId: projectId, UserId: userId, Timestamp: time.Now().Unix(),
+		Properties: postgres.Jsonb{RawMessage: []byte(fmt.Sprintf(`{"$is_page_view":true , "$page_url":"app.factors.ai/analyze"}`))}}
+
+	_, errCode = store.GetStore().CreateEvent(newEvent)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	newEvent = &model.Event{EventNameId: eventNameId, ProjectId: projectId, UserId: userId, Timestamp: time.Now().Unix(),
+		Properties: postgres.Jsonb{RawMessage: []byte(fmt.Sprintf(`{"$is_page_view":true , "$page_url":"app.xyz.ai/accounts"}`))}}
+
+	_, errCode = store.GetStore().CreateEvent(newEvent)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	domains, errCode := store.GetStore().GetDomainNamesByProjectID(projectId)
+	assert.Equal(t, len(domains), 2)
+	assert.True(t, U.ContainsStringInArray(domains, "app.factors.ai"))
+	assert.True(t, U.ContainsStringInArray(domains, "app.xyz.ai"))
+	assert.Equal(t, http.StatusFound, errCode)
+}
