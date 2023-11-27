@@ -18,6 +18,7 @@ import (
 var peLog = taskLog.WithField("prefix", "Task#PullEvents")
 
 const DATA_FAILURE_ALERT_LIMIT = 2 //number of days after which data unavailability is considered to be an error
+var allSupportedIntegrations = []string{M.HUBSPOT, M.SALESFORCE, M.ADWORDS, M.BINGADS, M.FACEBOOK, M.LINKEDIN, M.GOOGLE_ORGANIC}
 
 // Pull daily data (created_at in a day) into respective folders(based on timestamp) in archive bucket
 func PullAllDataV2(projectId int64, configs map[string]interface{}) (map[string]interface{}, bool) {
@@ -27,7 +28,8 @@ func PullAllDataV2(projectId int64, configs map[string]interface{}) (map[string]
 	cloudManager := configs["cloudManager"].(*filestore.FileManager)
 	hardPull := configs["hardPull"].(*bool)
 	fileTypes := configs["fileTypes"].(map[int64]bool)
-	splitRangeProjectIds := configs["splitRangeProjectIds"].([]int64)
+	eventSplitRangeProjectIds := configs["eventSplitRangeProjectIds"].([]int64)
+	userSplitRangeProjectIds := configs["userSplitRangeProjectIds"].([]int64)
 	noOfSplits := configs["noOfSplits"].(int)
 
 	status := make(map[string]interface{})
@@ -65,17 +67,16 @@ func PullAllDataV2(projectId int64, configs map[string]interface{}) (map[string]
 
 	success := true
 
-	allIntegrationsSupported := []string{M.HUBSPOT, M.SALESFORCE, M.ADWORDS, M.BINGADS, M.FACEBOOK, M.LINKEDIN, M.GOOGLE_ORGANIC}
 	var pullFileTypes map[string]bool
 	var err error
-	pullFileTypes, success, err = checkIntegrationsDataAvailabilityAndHardPull(allIntegrationsSupported, projectId, startTimestamp, endTimestamp, endTimestampInProjectTimezone, cloudManager, fileTypes, *hardPull, status, logCtx)
+	pullFileTypes, success, err = checkIntegrationsDataAvailabilityAndHardPull(allSupportedIntegrations, projectId, startTimestamp, endTimestamp, endTimestampInProjectTimezone, cloudManager, fileTypes, *hardPull, status, logCtx)
 	if err != nil {
 		return status, false
 	}
 
 	// EVENTS
 	if pullFileTypes["events"] {
-		if _, ok := pull.PullDataForEvents(projectId, cloudManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, splitRangeProjectIds, noOfSplits, status, logCtx); !ok {
+		if _, ok := pull.PullDataForEvents(projectId, cloudManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, eventSplitRangeProjectIds, noOfSplits, status, logCtx); !ok {
 			return status, false
 		}
 	}
@@ -91,7 +92,7 @@ func PullAllDataV2(projectId int64, configs map[string]interface{}) (map[string]
 
 	//USERS
 	if pullFileTypes[M.USERS] {
-		if _, ok := pull.PullUsersDataForCustomMetrics(projectId, cloudManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, hardPull, status, logCtx); !ok {
+		if _, ok := pull.PullUsersDataForCustomMetrics(projectId, cloudManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, userSplitRangeProjectIds, noOfSplits, hardPull, status, logCtx); !ok {
 			return status, false
 		}
 	}
@@ -101,10 +102,10 @@ func PullAllDataV2(projectId int64, configs map[string]interface{}) (map[string]
 
 // Check which integrations are present, whether data is available and if the required file already exists or not
 // Return a bool map (pullFileTypes) telling which files to actually pull from db and a bool (success) telling whether job is successful till now
-func checkIntegrationsDataAvailabilityAndHardPull(allIntegrationsSupported []string, projectId, startTimestamp, endTimestamp, endTimestampInProjectTimezone int64, cloudManager *filestore.FileManager, fileTypes map[int64]bool, hardPull bool, status map[string]interface{}, logCtx *log.Entry) (map[string]bool, bool, error) {
+func checkIntegrationsDataAvailabilityAndHardPull(allSupportedIntegrations []string, projectId, startTimestamp, endTimestamp, endTimestampInProjectTimezone int64, cloudManager *filestore.FileManager, fileTypes map[int64]bool, hardPull bool, status map[string]interface{}, logCtx *log.Entry) (map[string]bool, bool, error) {
 	var pullFileTypes = make(map[string]bool)
 	success := true
-	if integrationsStatus, err := store.GetStore().GetLatestDataStatus(allIntegrationsSupported, projectId, false); err != nil {
+	if integrationsStatus, err := store.GetStore().GetLatestDataStatus(allSupportedIntegrations, projectId, false); err != nil {
 		logCtx.WithError(err).Error("error getting integrations status")
 		status["error"] = err.Error()
 		return pullFileTypes, false, err
@@ -115,7 +116,11 @@ func checkIntegrationsDataAvailabilityAndHardPull(allIntegrationsSupported []str
 			}
 			if fileType == "events" {
 				if !hardPull {
-					if ok, _ := pull.CheckEventFileExists(cloudManager, projectId, startTimestamp, startTimestamp, endTimestamp); ok {
+					if ok, err := pull.CheckEventFileExists(cloudManager, projectId, startTimestamp, startTimestamp, endTimestamp); err != nil {
+						logCtx.WithError(err).Error("error checking for existing events file")
+						status["events-error"] = "error checking for existing events file"
+						continue
+					} else if ok {
 						status["events-info"] = "File already exists"
 						continue
 					}
