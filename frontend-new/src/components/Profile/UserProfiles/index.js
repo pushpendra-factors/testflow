@@ -728,6 +728,7 @@ function UserProfiles({
         <SearchCheckList
           placeholder='Search Properties'
           mapArray={checkListUserProps}
+          updateList={setCheckListUserProps}
           titleKey='display_name'
           checkedKey='enabled'
           onChange={handlePropChange}
