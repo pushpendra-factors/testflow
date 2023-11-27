@@ -468,6 +468,42 @@ func (store *MemSQL) IsEventExistsWithType(projectId int64, eventType string) (b
 	return true, http.StatusFound
 }
 
+func (store *MemSQL) GetDomainNamesByProjectID(projectId int64) ([]string, int) {
+	logFields := log.Fields{
+		"project_id": projectId,
+	}
+	domainNames := make([]string, 0)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	if projectId == 0 {
+		log.Error("GetEventExists With Type Failed. Missing projectId")
+		return domainNames, http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+
+	query := " select DISTINCT(LEFT(JSON_EXTRACT_STRING(properties, '$page_url'), POSITION('/' in  JSON_EXTRACT_STRING(properties, '$page_url') ) - 1)) as domain from events where project_id = ? and timestamp > (SELECT MAX(timestamp) - 604800 FROM events WHERE project_id= ? ) and JSON_EXTRACT_STRING(properties, '$is_page_view') = 'true' limit 25000 "
+
+	rows, err := db.Raw(query, projectId, projectId).Rows()
+	if err != nil {
+		log.WithError(err).Error("Failed to get GetEventNamesByType")
+		return domainNames, http.StatusInternalServerError
+	}
+
+	for rows.Next() {
+		var domainName string
+		if err := rows.Scan(&domainName); err != nil {
+			log.WithError(err).
+				Error("Failed to scan row on GetEventNamesByType.")
+			continue
+		}
+		if domainName != "" {
+			domainNames = append(domainNames, domainName)
+		}
+	}
+
+	return domainNames, http.StatusFound
+}
+
 // GetOrderedEventNamesFromDb - Get 'limit' events from DB sort by occurence for a given time period
 func (store *MemSQL) GetOrderedEventNamesFromDb(
 	projectID int64, startTimestamp int64, endTimestamp int64, limit int) ([]model.EventNameWithAggregation, error) {

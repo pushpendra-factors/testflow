@@ -128,6 +128,37 @@ func RemoveLabeledEventNamesFromOtherUserEventNames(categoryToEventNames map[str
 	return categoryToEventNames
 }
 
+// GetURLDomainsHandler godoc
+// @Summary Te fetch url domain for a given project id.
+// @Tags Events
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Success 200 {string} json "{"event_names": []string}"
+// @Router /{project_id}/event_names/auto_tracked_domains [get]
+func GetURLDomainsHandler(c *gin.Context) {
+
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectId,
+	})
+
+	domainNames, err := store.GetStore().GetDomainNamesByProjectID(projectId)
+	if err != http.StatusFound {
+		logCtx.Error("get event names ordered by occurence and recency")
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"domains": domainNames})
+
+}
+
 // GetEventNamesHandler godoc
 // @Summary Te fetch event names for a given project id.
 // @Tags Events
