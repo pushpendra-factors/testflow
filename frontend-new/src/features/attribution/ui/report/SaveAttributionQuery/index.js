@@ -5,7 +5,7 @@ import React, {
   useMemo,
   useEffect
 } from 'react';
-import { Button, notification, Tooltip } from 'antd';
+import { Button, Dropdown, Menu, notification, Popover, Tooltip } from 'antd';
 import { useDispatch, useSelector } from 'react-redux';
 import { BUTTON_TYPES } from 'Constants/buttons.constants';
 import SaveQueryModal from './SaveQueryModal';
@@ -53,6 +53,7 @@ const SaveAttributionQuery = ({
   const [options, setOptions] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activeAction, setActiveAction] = useState(null);
+  const [isPopoverVisible, setIsPopoverVisible] = useState(false);
   const routerQuery = useQuery();
   const paramQueryId = routerQuery.get('queryId');
   const dispatch = useDispatch();
@@ -338,21 +339,65 @@ const SaveAttributionQuery = ({
     }
   }, [showSaveOrUpdateModal]);
 
+  const handleMenuClick = (e) => {
+    if (e?.key === '1') {
+      handleSaveClick();
+    } else {
+      handleUpdateClick();
+    }
+  };
+
+  const handleDropdownClick = () => {
+    setIsPopoverVisible(true);
+  };
+
+  const handleSaveNewClick = () =>{
+    setIsPopoverVisible(false);
+    handleSaveClick();   
+  };
+
+  const menuItems = (
+    <Menu onClick={handleMenuClick} className={`${styles.antdActionMenu}`}>
+      <Menu.Item key='1'>
+        <SVG
+          name={'pluscopy'}
+          size={20}
+          color={'grey'}
+          extraClass={'inline -mt-1 mr-1'}
+        />
+        Save as New
+      </Menu.Item>
+      <Menu.Item key='2'>
+        <SVG
+          name={'SaveLight'}
+          size={20}
+          color={'grey'}
+          extraClass={'inline -mt-1 mr-1'}
+        />
+        Save
+      </Menu.Item>
+    </Menu>
+  );
+
+  const messageBoxContent = (
+    <div className={`${styles.messageBox}`}>
+      <p className={`${styles.boxParaContent}`}>Are you sure you want to overwrite these changes on the existing report?</p>
+      <div className={`${styles.buttonContainer}`}>
+        <Button className={`${styles.customWhiteButton}`} onClick={handleSaveNewClick} type="ghost" >
+          Save as New
+        </Button>
+        <Button onClick={handleUpdateClick} type="primary">
+          Yes, overwrite it
+        </Button>
+      </div>
+    </div>
+  );
+
   return (
     <div className='flex gap-x-2 items-center'>
-      {paramQueryId && !savedQueryId && (
-        <Tooltip placement='bottom' title='Save as New'>
-          <Button
-            onClick={handleSaveClick}
-            size='large'
-            type='text'
-            icon={<SVG name={'pluscopy'} />}
-          ></Button>
-        </Tooltip>
-      )}
       {savedQueryId ? (
         <Tooltip placement='bottom' title={'No changes to be saved'}>
-          <Button
+          {/* <Button
             onClick={handleSaveClick}
             disabled={savedQueryId}
             type={BUTTON_TYPES.PRIMARY}
@@ -360,18 +405,43 @@ const SaveAttributionQuery = ({
             icon={<SVG name={'save'} size={20} color={'white'} />}
           >
             {'Save'}
-          </Button>
+          </Button> */}
+            <div className={`${styles.antdIcon}`}>
+            <Dropdown.Button
+              overlay={menuItems}
+              disabled={savedQueryId}
+              type={BUTTON_TYPES.PRIMARY}
+              size={'large'}
+              icon={<SVG name={'CaretDown'} size={20} color={'white'} />}
+            >
+              Save
+            </Dropdown.Button>
+            </div>
         </Tooltip>
       ) : (
-        <Button
-          onClick={paramQueryId ? handleUpdateClick : handleSaveClick}
+
+        <div className={`${styles.antdIcon}`}>
+
+        <Popover
+          content={messageBoxContent}
+          trigger="click"
+          visible={isPopoverVisible}
+          placement="bottomLeft"
+          arrowPointAtCenter={true}
+          autoAdjustOverflow
+          onVisibleChange={(visible) => setIsPopoverVisible(visible)}
+        >
+        <Dropdown.Button
+          overlay={menuItems}        
+          onClick={handleDropdownClick}
           type={BUTTON_TYPES.PRIMARY}
           size={'large'}
-          disabled={savedQueryId}
-          icon={<SVG name={'save'} size={20} color={'white'} />}
+          icon={<SVG name={'CaretDown'} size={20} color={'white'} />}
         >
-          {'Save'}
-        </Button>
+        Save
+        </Dropdown.Button>
+        </Popover>
+        </div>
       )}
       <ControlledComponent controller={!!savedQueryId}>
         <div className={'relative'}>
