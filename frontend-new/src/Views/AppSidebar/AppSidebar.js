@@ -125,7 +125,11 @@ const AppSidebar = () => {
                 !checkMatchPath(pathname, PathUrls.ProfilePeople)
               }
             >
-              <div className='flex col-gap-2 items-center px-3'>
+              <div
+                className={cx('flex col-gap-2 items-center px-3', {
+                  'pl-6': sidebarTitleConfig.title === 'Dashboards'
+                })}
+              >
                 <SVG
                   color={sidebarTitleConfig.iconColor}
                   name={sidebarTitleConfig.icon}
