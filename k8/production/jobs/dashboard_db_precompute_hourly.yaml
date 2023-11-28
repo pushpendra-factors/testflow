@@ -1,0 +1,108 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  labels:
+    nodePool: preemptible-high-mem
+  name: dashboard-db-precompute-hourly
+spec:
+  schedule: "0 1/6 * * *" # In UTC. Every 6 hours.
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+            nodePool: preemptible-high-mem
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: preemptible-high-mem
+          containers:
+            - name: dashboard-db-precompute-hourly
+              image: us.gcr.io/factors-production/dashboard-db-precompute:v0.1
+              imagePullPolicy: IfNotPresent
+              args:
+              - --env
+              - $(ENV)
+              - --memsql_host
+              - $(MEMSQL_PSC_HOST)
+              - --memsql_is_psc_host
+              - $(MEMSQL_IS_PSC_HOST)
+              - --memsql_port
+              - $(MEMSQL_PORT)
+              - --memsql_name
+              - $(MEMSQL_DB)
+              - --memsql_user
+              - $(MEMSQL_HEAVY_USER)
+              - -memsql_pass
+              - $(MEMSQL_PASSWORD)
+              - --memsql_cert
+              - $(MEMSQL_CERTIFICATE)
+              - --primary_datastore
+              - memsql
+              - --memsql_max_open_connections
+              - "10"
+              - --memsql_max_idle_connections
+              - "10"
+              - --resource_pool_for_analytics
+              - $(MEMSQL_RPOOL_HEAVY)
+              - --redis_host
+              - $(PERSISTENT_REDIS_HOST)
+              - --redis_port
+              - $(PERSISTENT_REDIS_PORT)
+              - --sentry_dsn
+              - $(SENTRY_DSN)
+              - --gcp_project_id
+              - $(GCP_PROJECT_ID)
+              - --gcp_project_location
+              - $(GCP_PROJECT_LOCATION)
+              - --project_id
+              - '*'
+              - --start_timestamp_week_month
+              - "1688149800"
+              - --attribution_debug
+              - "0"
+              - --run_hourly
+              - "0"
+              - --cache_only_dashboard_units
+              - '*'
+              - --exclude_project_id
+              - 637,645,2251799815000004,641,595,628,616,2251799816000005,2251799815000003,2251799815000001,1125899912000000,446,2251799817000006,658,2251799817000004,380,1125899911000002,22,631,694,1125899908000000,662,340,336,587,684,655,293,216,597,1125899914000011,496,147,688,427,385,343,64,588,590,401,451,579,567,3,703,60,686,591,11,20,592,379,412,426,561,589,614,498,445,119
+              - --num_routines
+              - "2"
+              - --running_for_memsql
+              - "0"
+              - --app_name
+              - dashboard-db-precompute-hourly
+              - --skip_event_name_step_by_project_id
+              - '*'
+              - --skip_user_join_in_event_query_by_project_id
+              - '*'
+              - --enable_usage_based_caching
+              - "1"
+              - --customer_enabled_projects_last_computed
+              - '*'
+              - --enable_optimised_filter_on_profile_query
+              - "1"
+              - --enable_optimised_filter_on_event_user_query
+              - "1"
+              - --increase_kpi_limit_for_projectids
+              - ""
+              - --allow_profiles_group_support
+              - '*'
+              - --debug_enabled
+              - "false"
+              envFrom:
+                - configMapRef:
+                    name: config-env
+                - configMapRef:
+                    name: config-persistent-redis
+                - configMapRef:
+                    name: config-memsql
+                - secretRef:
+                    name: secret-memsql
+                - secretRef:
+                    name: secret-sentry
+          restartPolicy: OnFailure

@@ -216,6 +216,7 @@ type Configuration struct {
 	OnlyAttributionDashboardCaching                     int
 	SkipAttributionDashboardCaching                     int
 	IsRunningForMemsql                                  int
+	IsHourlyRunEnabled                                  int
 	UseSourcePropertyOverwriteByProjectIDs              string
 	AllowedSalesforceGroupsByProjectIDs                 string
 	DevBox                                              bool
@@ -2142,6 +2143,10 @@ func GetOnlyAttributionDashboardCaching() int {
 
 func GetIsRunningForMemsql() int {
 	return configuration.IsRunningForMemsql
+}
+
+func GetIsHourlyRunEnabled() int {
+	return configuration.IsHourlyRunEnabled
 }
 
 func GetSkipAttributionDashboardCaching() int {
