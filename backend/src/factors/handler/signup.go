@@ -95,13 +95,6 @@ func SignUp(c *gin.Context) {
 		return
 	}
 
-	code = onboardingMailModoAPICall(agent)
-	if code != http.StatusOK {
-		log.WithField("status_code", code).
-			WithField("email", email).
-			Error("Failed To Send Onboarding Mail")
-	}
-
 	code = onboardingSlackAPICall(agent)
 	if code != http.StatusOK {
 		log.WithField("email", email).
