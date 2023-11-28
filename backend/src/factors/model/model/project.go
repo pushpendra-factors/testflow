@@ -26,7 +26,7 @@ type Project struct {
 	EnableBilling         bool            `json:"enable_billing"`
 	BillingSubscriptionID string          `json:"billing_subscription_id"`
 	BillingAccountID      string          `json:"billing_account_id"`
-	BillingLastSyncedAt   time.Time       `json:"billing_last_synced_at"`
+	BillingLastSyncedAt   time.Time       `gorm:"default:"1000-01-01 00:00:00" json:"billing_last_synced_at"`
 	ProjectURI            string          `json:"project_uri"`
 	TimeFormat            string          `json:"time_format"`
 	DateFormat            string          `json:"date_format"`

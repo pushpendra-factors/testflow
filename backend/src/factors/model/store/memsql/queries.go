@@ -87,6 +87,7 @@ func (store *MemSQL) GetALLQueriesWithProjectId(projectID int64) ([]model.Querie
 			"by name for queries")
 		return queries, http.StatusFound
 	}
+	q = store.setGroupAnalysisOnQueriesIfRequired(q)
 	queriesResponse := make([]model.Queries, 0)
 	for _, query := range q {
 		exists := existsDashboardUnitForQueryID(projectID, query.ID)
@@ -97,6 +98,7 @@ func (store *MemSQL) GetALLQueriesWithProjectId(projectID int64) ([]model.Querie
 }
 
 // fetching deleted, non-deleted queries.
+// Not used in general flow.
 func (store *MemSQL) GetAllNonConvertedQueries(projectID int64) ([]model.Queries, int) {
 	db := C.GetServices().Db
 
@@ -474,6 +476,7 @@ func (store *MemSQL) SearchQueriesWithProjectId(projectID int64, searchString st
 	if err != nil || len(queries) == 0 {
 		return nil, http.StatusNotFound
 	}
+	queries = store.setGroupAnalysisOnQueriesIfRequired(queries)
 	return queries, http.StatusFound
 }
 
@@ -486,4 +489,79 @@ func (store *MemSQL) DeleteAttributionDBResult(projectID int64, queryId int64) {
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to delete attribution db result")
 	}
+}
+
+func (store *MemSQL) setGroupAnalysisOnQueriesIfRequired(q []model.Queries) []model.Queries {
+	// log.WithField("q", q).Warn("kark1")
+	for index, dbQuery := range q {
+		queryClass, errMsg := store.GetQueryClassFromQueries(dbQuery)
+		log.WithField("queryClass", queryClass).Warn("kark1-1")
+		if errMsg != "" {
+			log.WithField("dbQuery", dbQuery).Warn("Failed in GetQueryClassFromQueries. Hence skipping")
+		}
+		if (queryClass == model.QueryClassInsights || queryClass == model.QueryClassFunnel) {
+			var internalQuery model.Query
+			err := U.DecodePostgresJsonbToStructType(&dbQuery.Query, &internalQuery)
+			if err != nil {
+				log.WithField("dbQuery", dbQuery).Warn("Failed in DecodePostgresJsonbToStructType. Hence skipping - insights")
+				continue
+			}
+			internalQuery = setDefaultGroupAnalysisIfRequiredForModelQuery(internalQuery)
+			log.WithField("internalQuery", internalQuery).Warn("kark2")
+			queryInPostgresFormat, err2 := U.EncodeStructTypeToPostgresJsonb(internalQuery)
+			if err2 != nil {
+				log.WithField("dbQuery", dbQuery).Warn("Failed in EncodeStructTypeToPostgresJsonb. Hence skipping - insights")
+				continue
+			}
+			q[index].Query = *queryInPostgresFormat
+			log.WithField("q[index]", q[index]).WithField("queryInPostgresFormat", queryInPostgresFormat).Warn("kark2")
+		} else if queryClass == model.QueryClassEvents {
+			var internalQuery model.QueryGroup
+			err := U.DecodePostgresJsonbToStructType(&dbQuery.Query, &internalQuery)
+			if err != nil {
+				log.WithField("dbQuery", dbQuery).Warn("Failed in DecodePostgresJsonbToStructType. Hence skipping - events")
+				continue
+			}
+			internalQuery = setDefaultGroupAnalysisIfRequiredForQueryGroupQuery(internalQuery)
+			log.WithField("internalQuery", internalQuery).Warn("kark3")
+			queryInPostgresFormat, err2 := U.EncodeStructTypeToPostgresJsonb(internalQuery)
+			if err2 != nil {
+				log.WithField("dbQuery", dbQuery).Warn("Failed in EncodeStructTypeToPostgresJsonb. Hence skipping - events")
+				continue
+			}
+			q[index].Query = *queryInPostgresFormat
+		} else {
+			continue
+		}
+	}
+
+	return q
+}
+
+func setDefaultGroupAnalysisIfRequiredForQueryGroupQuery(input model.QueryGroup) model.QueryGroup {
+	if input.Queries[0].GroupAnalysis != "" { return input}
+
+	for index, q := range input.Queries {
+		if (q.Type == model.QueryTypeUniqueUsers ) {
+			input.Queries[index].GroupAnalysis = "users"
+		} else if (q.Type == model.QueryTypeEventsOccurrence) {
+			input.Queries[index].GroupAnalysis = "events"
+		} else {
+			input.Queries[index].GroupAnalysis = "events"
+		}
+	}
+	return input
+}
+
+func setDefaultGroupAnalysisIfRequiredForModelQuery(input model.Query) model.Query {
+	if input.GroupAnalysis != "" { return input}
+
+	if (input.Type == model.QueryTypeUniqueUsers ) {
+		input.GroupAnalysis = "users"
+	} else if (input.Type == model.QueryTypeEventsOccurrence) {
+		input.GroupAnalysis = "events"
+	} else {
+		input.GroupAnalysis = "events"
+	}
+	return input
 }
