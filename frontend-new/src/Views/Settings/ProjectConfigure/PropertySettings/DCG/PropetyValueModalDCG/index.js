@@ -18,7 +18,6 @@ function PropertyValueModal({
   setShowModalVisible,
   setShowDCGForm,
   udpateProjectDetails,
-  setTabNo,
   editProperty,
   setEditProperty
 }) {
@@ -40,11 +39,7 @@ function PropertyValueModal({
     }
   }, [eventPropertiesV2]);
 
-  // console.log('eventPropertiesV2',eventPropertiesV2);
   const onReset = () => {
-    // seterrorInfo(null);
-    // setVisible(false);
-    // handleCancel();
     form.resetFields();
   };
 
@@ -60,19 +55,12 @@ function PropertyValueModal({
       let ruleSet = null;
       if (activeProject?.channel_group_rules) {
         ruleSet = activeProject?.channel_group_rules;
-      } else {
-        ruleSet = defaultRules;
       }
-      ruleSet = ruleSet.filter(rule => rule.channel !== "Internal");
-  
-      // if (_.isEmpty(activeProject?.channel_group_rules)) {
-      //   ruleSet = defaultRules;
-      // }
 
       let FinalDataSet = [];
       if (editProperty) {
         let currentArr = ruleSet;
-        currentArr[editProperty?.index-1] = dataSet;
+        currentArr[editProperty?.index - 1] = dataSet;
         FinalDataSet = [...currentArr];
       } else {
         FinalDataSet = [...ruleSet, dataSet];
@@ -82,9 +70,6 @@ function PropertyValueModal({
       })
         .then(() => {
           message.success('Channel Group added!');
-          // setVisible(false);
-          onReset();
-          setLoading(false);
           handleCancel();
         })
         .catch((err) => {
@@ -97,19 +82,19 @@ function PropertyValueModal({
       seterrorInfo('Please add condition(s)');
     }
   };
+
   const onChangeValue = () => {
     seterrorInfo('');
   };
 
   const handleCancel = () => {
     onReset();
-    setTabNo(2);
     setShowDCGForm(false);
-    setShowModalVisible(false);
     setEditProperty(null);
     setLoading(false);
     setGlobalFilters([]);
     seterrorInfo(null);
+    setShowModalVisible(false);
   };
 
   const getGlobalFilters = (globalFilters = []) => {

@@ -414,7 +414,8 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 	params = append(domainQParams, params...)
 
 	// building filter steps for query
-	var filterSteps string
+	var filterSteps, lastActivityStr string
+	useGreatestLastActivity := false
 	stepNumber := 1
 	for groupName, filterString := range whereForGroups {
 		if groupName == U.GROUP_NAME_DOMAINS {
@@ -431,7 +432,23 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 		)`, stepNumber, isGroupStr, filterString)
 
 		params = append(params, paramsForGroupFilters[groupName]...)
+
+		if groupName == model.FILTER_TYPE_USERS {
+			stepNumber++
+			continue
+		}
+		if lastActivityStr == "" {
+			lastActivityStr = fmt.Sprintf("MAX(filter_%d.last_activity)", stepNumber)
+		} else {
+			lastActivityStr = lastActivityStr + fmt.Sprintf(", MAX(filter_%d.last_activity)", stepNumber)
+			useGreatestLastActivity = true
+		}
 		stepNumber++
+	}
+
+	// use GREATEST only when more than 1 different type of group filter (not including user type filter)
+	if useGreatestLastActivity {
+		lastActivityStr = fmt.Sprintf("GREATEST(%s)", lastActivityStr)
 	}
 
 	// Domain Level Properties Filter Statement
@@ -471,8 +488,8 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 			break
 		}
 		if stepNo == 1 {
-			intersectStep = `SELECT 
-			filter_1.properties, filter_1.identity, filter_1.host_name, MAX(filter_1.last_activity) as last_activity FROM filter_1 `
+			intersectStep = fmt.Sprintf(`SELECT 
+			filter_1.properties, filter_1.identity, filter_1.host_name, %s as last_activity FROM filter_1 `, lastActivityStr)
 		}
 		intersectStep = intersectStep + fmt.Sprintf(`INNER JOIN filter_%d 
 		ON filter_%d.identity = filter_%d.identity `, stepNo+1, stepNo, stepNo+1)

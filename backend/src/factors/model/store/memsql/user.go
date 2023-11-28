@@ -350,7 +350,8 @@ func (store *MemSQL) GetUsersUpdatedAtGivenHour(projectID int64, fromTime time.T
 	properties, 
 	is_group_user, 
 	source, 
-	updated_at 
+	updated_at,
+	last_event_at 
   FROM 
 	(
 	  SELECT 
@@ -360,6 +361,7 @@ func (store *MemSQL) GetUsersUpdatedAtGivenHour(projectID int64, fromTime time.T
 		is_group_user, 
 		source, 
 		updated_at, 
+		last_event_at,
 		ROW_NUMBER() OVER (
 		  PARTITION BY group_%d_user_id 
 		  ORDER BY 
@@ -415,7 +417,8 @@ func (store *MemSQL) GetNonGroupUsersUpdatedAtGivenHour(projectID int64, fromTim
 	id, 
 	properties, 
 	source, 
-	updated_at 
+	updated_at,
+	last_event_at 
   FROM 
 	users 
   WHERE 
@@ -2217,8 +2220,8 @@ func (store *MemSQL) UpdateUserPropertiesForSession(projectID int64,
 
 // UpdateAssociatedSegments - Updates segments associated to the user
 func (store *MemSQL) UpdateAssociatedSegments(projectID int64, id string,
-	associatedSegments map[string]interface{}) (int, error) {
-	params := log.Fields{"project_id": projectID, "user_id": id, "associated_segments": associatedSegments}
+	associatedSegmentsStruct map[string]model.AssociatedSegments) (int, error) {
+	params := log.Fields{"project_id": projectID, "user_id": id, "associated_segments": associatedSegmentsStruct}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &params)
 	logCtx := log.WithFields(params)
 
@@ -2227,10 +2230,13 @@ func (store *MemSQL) UpdateAssociatedSegments(projectID int64, id string,
 		return http.StatusBadRequest, nil
 	}
 
-	associatedSegmentJsonb, err := U.EncodeToPostgresJsonb(&associatedSegments)
+	sourceJsonBytes, err := json.Marshal(associatedSegmentsStruct)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to encode associated_segment map.")
+		return http.StatusInternalServerError, err
 	}
+
+	associatedSegmentJsonb := &postgres.Jsonb{sourceJsonBytes}
 
 	runQueryStmt := "UPDATE users SET associated_segments = ? WHERE project_id = ? AND id = ? LIMIT 1;"
 	qParams := []interface{}{associatedSegmentJsonb, projectID, id}

@@ -286,6 +286,7 @@ type Model interface {
 	GetPropertiesForSalesforceUsers(projectID int64, reqID string) []map[string]string
 	GetPropertiesForMarketo(projectID int64, reqID string) []map[string]string
 	IsEventExistsWithType(projectId int64, eventType string) (bool, int)
+	GetDomainNamesByProjectID(projectId int64) ([]string, int)
 	GetEventNameIdsWithGivenNames(projectID int64, eventNameIDsMap map[string]bool) (map[string]string, int)
 
 	// form_fill
@@ -640,7 +641,7 @@ type Model interface {
 	AssociateUserDomainsGroup(projectID int64, requestUserID string, requestGroupName, requestGroupUserID string) int
 	GetAssociatedDomainForUser(projectID int64, userID string, isAnonymous bool) (string, error)
 	GetUsersUpdatedAtGivenHour(projectID int64, fromTime time.Time, domainID int) ([]model.User, int)
-	UpdateAssociatedSegments(projectID int64, id string, associatedSegments map[string]interface{}) (int, error)
+	UpdateAssociatedSegments(projectID int64, id string, associatedSegments map[string]model.AssociatedSegments) (int, error)
 	GetNonGroupUsersUpdatedAtGivenHour(projectID int64, fromTime time.Time) ([]model.User, int)
 
 	// web_analytics

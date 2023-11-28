@@ -99,6 +99,15 @@ export const PLANS = {
   PLAN_CUSTOM: 'Custom'
 };
 
+//adding for backward compatibility will be removed once we fully move to chargebee
+export const PLANS_V0 = {
+  PLAN_FREE: 'FREE',
+  PLAN_STARTUP: 'STARTUP',
+  PLAN_BASIC: 'BASIC',
+  PLAN_PROFESSIONAL: 'PROFESSIONAL',
+  PLAN_CUSTOM: 'CUSTOM'
+};
+
 export const PLANS_COFIG: PLANS_COFIG_INTERFACE = {
   [PLANS.PLAN_FREE]: {
     name: PLANS.PLAN_FREE,
