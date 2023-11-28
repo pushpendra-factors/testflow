@@ -15,7 +15,7 @@ spec:
         cloud.google.com/gke-nodepool: shared-persistent-pool2
       containers:
         - name: product-analytics-job
-          image: us.gcr.io/factors-production/product-analytics-job:0.2
+          image: us.gcr.io/factors-production/product-analytics-job:0.4
           imagePullPolicy: IfNotPresent
           resources:
             requests:

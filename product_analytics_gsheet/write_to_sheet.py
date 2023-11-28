@@ -465,58 +465,65 @@ def job2(t):
     logging.info("login 2 completed.")
 
     for project in project_list:
-        metrics_list = [yesterday_date, project[0], project[1]]
-        connected_list = [yesterday_date, project[0], project[1]]
+        try:
+            time.sleep(0.5)
+            metrics_list = [yesterday_date, project[0], project[1]]
+            connected_list = [yesterday_date, project[0], project[1]]
 
-        response = requests.get(
-            'https://api.factors.ai/'+project[0]+'/projectanalytics',
-            params=params,
-            cookies=cookies,
-            headers=headers,
-        )
-        project_data = response.json()
-        master_connect_list = ["Factors 6Signal", "Adwords", "Linkedin", "Google Organic", "Segment", "Drift",	"Rudderstack",
-                            "Clinet 6Signal",	"Hubspot",	"Salesforce",	"Bing",	"Facebook",	"Marketo", "G2", "Clearbit", "Lead Squared",	"Slack", "Teams"]
+            response = requests.get(
+                'https://api.factors.ai/'+project[0]+'/projectanalytics',
+                params=params,
+                cookies=cookies,
+                headers=headers,
+            )
+            project_data = response.json()
+            master_connect_list = ["Factors 6Signal", "Adwords", "Linkedin", "Google Organic", "Segment", "Drift",	"Rudderstack",
+                                "Clinet 6Signal",	"Hubspot",	"Salesforce",	"Bing",	"Facebook",	"Marketo", "G2", "Clearbit", "Lead Squared",	"Slack", "Teams"]
 
-        index_list = ["No", "No", "No", "No", "No", "No", "No", "No",
-                    "No", "No", "No", "No", "No", "No", "No", "No", "No", "No"]
-        for index, metrics in enumerate(master_connect_list):
-            if metrics in project_data['metrics'][1]['connected']:
-                index_list[index] = "Yes"
+            index_list = ["No", "No", "No", "No", "No", "No", "No", "No",
+                        "No", "No", "No", "No", "No", "No", "No", "No", "No", "No"]
+            for index, metrics in enumerate(master_connect_list):
+                if metrics in project_data['metrics'][1]['connected']:
+                    index_list[index] = "Yes"
 
-        connected_list = connected_list+index_list
+            connected_list = connected_list+index_list
 
-        sh.values_append(
-            'Integrations Table - Master!A:Z',
-            params={
-                'valueInputOption': 'USER_ENTERED'
-            },
-            body={
-                'values': [connected_list]
-            }
-        )
+            sh.values_append(
+                'Integrations Table - Master!A:Z',
+                params={
+                    'valueInputOption': 'USER_ENTERED'
+                },
+                body={
+                    'values': [connected_list]
+                }
+            )
 
-        for metrics in list(project_data['metrics'][0].values()):
-            metrics_list.append(metrics)
+            for metrics in list(project_data['metrics'][0].values()):
+                metrics_list.append(metrics)
 
-        connected_list = project_data['metrics'][1]['connected']
-        disconnected_list = project_data['metrics'][2]['disconnected']
+            connected_list = project_data['metrics'][1]['connected']
+            disconnected_list = project_data['metrics'][2]['disconnected']
 
-        sh.values_append(
-            'Metrics Table- Master!A:Z',
-            params={
-                'valueInputOption': 'USER_ENTERED'
-            },
-            body={
-                'values': [metrics_list]
-            }
-        )
-        logging.info("job 2 completed for project: %s", project)
+            sh.values_append(
+                'Metrics Table- Master!A:Z',
+                params={
+                    'valueInputOption': 'USER_ENTERED'
+                },
+                body={
+                    'values': [metrics_list]
+                }
+            )
+            logging.info("job 2 completed for project: %s", project)
+        except Exception as e:
+            logging.error("Error processing project %s: %s", project, str(e))
+                # Continue to the next project even if an exception occurs
+        continue
+
 
 ist = pytz.timezone("Asia/Kolkata")
 
 # time defined as (13:15:00 PM) for cron job
-scheduled_time = datetime.time(15, 10)
+scheduled_time = datetime.time(16, 30)
 
 scheduled_datetime = datetime.datetime.combine(datetime.date.today(), scheduled_time)
 scheduled_datetime = ist.localize(scheduled_datetime)
