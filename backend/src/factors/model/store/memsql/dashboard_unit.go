@@ -2,6 +2,7 @@ package memsql
 
 import (
 	"encoding/json"
+	"errors"
 	C "factors/config"
 	"factors/model/model"
 	M "factors/model/model"
@@ -1475,6 +1476,7 @@ func (store *MemSQL) RunCachingToBackFillRanges(dashboardUnit model.DashboardUni
 func (store *MemSQL) CacheAttributionDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload,
 	enableFilterOpt bool) (int, string, model.CachingUnitReport) {
 
+	var statusCode int
 	logFields := log.Fields{
 		"cache_payload": cachePayload,
 	}
@@ -1533,6 +1535,22 @@ func (store *MemSQL) CacheAttributionDashboardUnitForDateRange(cachePayload mode
 
 		channel := make(chan Result)
 		logCtx.Info("Running attribution V1 caching")
+		logCtx.WithFields(log.Fields{
+			"requestPayload": attributionQuery,
+		}).Info("debug before SetTimezoneForAttrQueryV1 caching")
+		timezoneString, statusCode = store.GetTimezoneForProject(projectID)
+		if statusCode != http.StatusFound {
+			logCtx.Error("query failed. Failed to get Timezone from project")
+			return http.StatusInternalServerError, fmt.Sprintf("query failed. Failed to get Timezone from project"), unitReport
+		}
+		err = SetTimezoneForAttrQueryV1(attributionQuery, projectID, timezoneString)
+		if err != nil {
+			return http.StatusInternalServerError, fmt.Sprintf("Error while running query %s", errMsg), unitReport
+		}
+		logCtx.WithFields(log.Fields{
+			"timezoneString": timezoneString,
+		}).Info("debug after SetTimezoneForAttrQueryV1 caching")
+
 		go store.runAttributionUnitV1(projectID, attributionQuery.Query, channel, dashboardUnitID)
 
 		select {
@@ -2141,4 +2159,26 @@ func (store *MemSQL) GetTimedOutUnitsByProject(cacheReports []model.CachingUnitR
 		}
 	}
 	return projectTimedOutUnits
+}
+
+// SetTimezoneForAttrQueryV1 sets timezone for the attribution query
+func SetTimezoneForAttrQueryV1(requestPayload *model.AttributionQueryUnitV1, projectId int64, timezoneString U.TimeZoneString) error {
+
+	//sets timezone for outer attribution query
+	requestPayload.Query.SetTimeZone(timezoneString)
+	err := requestPayload.Query.TransformDateTypeFilters()
+	if err != nil {
+		errors.New("query failed. Failed to Transform DateType Filters")
+	}
+
+	//sets timezone for internal KPI queries
+	for index := range requestPayload.Query.KPIQueries {
+		requestPayload.Query.KPIQueries[index].KPI.SetTimeZone(timezoneString)
+		err := requestPayload.Query.KPIQueries[index].KPI.TransformDateTypeFilters()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
