@@ -286,6 +286,7 @@ type Model interface {
 	GetPropertiesForSalesforceUsers(projectID int64, reqID string) []map[string]string
 	GetPropertiesForMarketo(projectID int64, reqID string) []map[string]string
 	IsEventExistsWithType(projectId int64, eventType string) (bool, int)
+	GetDomainNamesByProjectID(projectId int64) ([]string, int)
 	GetEventNameIdsWithGivenNames(projectID int64, eventNameIDsMap map[string]bool) (map[string]string, int)
 
 	// form_fill

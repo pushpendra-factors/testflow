@@ -38,7 +38,7 @@ const getPredefinedqueryGroupForWidget1 = (widget, filter, groupBy, period) => {
       gbt: period.frequency,
       fr: period.from,
       to: period.to,
-      tz: 'UTC',
+      tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata',
       inter_id: widget.inter_id
     });
     queryArr.push({
@@ -49,7 +49,7 @@ const getPredefinedqueryGroupForWidget1 = (widget, filter, groupBy, period) => {
       gbt: '',
       fr: period.from,
       to: period.to,
-      tz: 'UTC',
+      tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata',
       inter_id: widget.inter_id
     });
   });
@@ -69,7 +69,7 @@ const getPredefinedqueryGroup = (widget, filter, groupBy, period) => {
     gbt: period.frequency,
     fr: period.from,
     to: period.to,
-    tz: 'UTC',
+    tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata',
     inter_id: widget.inter_id
   });
   queryArr.push({
@@ -83,7 +83,7 @@ const getPredefinedqueryGroup = (widget, filter, groupBy, period) => {
     gbt: '',
     fr: period.from,
     to: period.to,
-    tz: 'UTC',
+    tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata',
     inter_id: widget.inter_id
   });
   return queryArr;

@@ -9,7 +9,7 @@ import defaultRules from './defaultRules';
 import _ from 'lodash';
 import { DISPLAY_PROP } from 'Utils/constants';
 import { reverseOperatorMap } from 'Utils/operatorMapping';
-import styles from './index.module.scss'
+import styles from './index.module.scss';
 
 const { confirm } = Modal;
 
@@ -27,57 +27,39 @@ const DCGTable = ({
 
   useEffect(() => {
     setTableLoading(true);
-    let ruleSet = null;
 
     if (activeProject?.channel_group_rules) {
-      ruleSet = activeProject?.channel_group_rules;
-      ruleSet.unshift(defaultRules[0])
+      const ruleSet = activeProject.channel_group_rules;
+
+      const transformedData = ruleSet.map((item, index) => ({
+        key: index,
+        channel: item.channel,
+        conditions: item.conditions,
+        actions: { index, item }
+      }));
+
+      setDCGData(transformedData);
     } else {
-      ruleSet = defaultRules;
+      setDCGData([]);
     }
 
-    // if (_.isEmpty(activeProject?.channel_group_rules)) {
-    //   ruleSet = defaultRules;
-    // }
-
-    if (ruleSet) {
-      let DS = ruleSet?.map((item, index) => {
-        return {
-          key: index,
-          channel: item.channel,
-          conditions: item.conditions,
-          actions: { index, item }
-        };
-      });
-      setDCGData(DS);
-      setTableLoading(false);
-    } else {
-      setTableLoading(false);
-    }
+    setTableLoading(false);
   }, [activeProject]);
 
-  const getBaseQueryfromResponse = (el) => {
+  const getBaseQueryFromResponse = (el) => {
     const filters = [];
-    el.forEach((item,i) => {
+
+    el.forEach((item, i) => {
       if (item.logical_operator === 'AND') {
-        let conditionCamelCase = _.camelCase(item.condition);
+        const conditionCamelCase = _.camelCase(item.condition);
+
         filters.push({
           operator: reverseOperatorMap[conditionCamelCase],
-          props: ['event',item.property, 'categorical', 'event'],
+          props: ['event', item.property, 'categorical', 'event'],
           values: [item.value],
-          ref:i
+          ref: i
         });
-      }
-      // check for internal channel 
-      else if(item.property === "" && item.condition === "" && item.logical_operator === ""){
-        filters.push({
-          operator:"",
-          props: [],
-          values: [item.value]
-        });
-        
-      }
-       else {
+      } else if (filters.length > 0) {
         filters[filters.length - 1].values.push(item.value);
       }
     });
@@ -91,77 +73,69 @@ const DCGTable = ({
   };
 
   const renderRow = (data) => {
-    if (data) {
-      let queryMap = getBaseQueryfromResponse(data);
-      return (
-        <div className={'w-full'} style={{ maxWidth: '550px' }}>
-          {queryMap.map((item, index) => {
-            return (
-              <div className={'inline-flex items-center mb-2'} key={index}>
-                {/* {
-                    index != 0 && 
-                  <Text type={"title"} weight={'thin'} color={'grey'} level={8} extraClass={"m-0 mr-1"}>{item.logical_operator}</Text>
-                  }
-                  <Tag>{`${item.property} ${returnSymbols(item.condition)} ${item.value}`}</Tag> */}
-                  {item.props.length > 0 ? (
-                  <Button type='default'>
-                      <Text
-                          type={'title'}
-                          weight={'thin'}
-                          color={'grey'}
-                          level={8}
-                          truncate
-                      >
-                          {`${matchEventName(item.props[1])} ${item.operator} ${_.join(
-                              item.values.map((vl) =>
-                                  DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl
-                              ),
-                              ', '
-                          )}`}
-                      </Text>
-                  </Button>
-                  ) : (
-                    <div className={`${styles.internal}`}>
-                  <Text
-                      type={'title'}
-                      weight={'thin'}
-                      color={'grey'}
-                      level={8}
-                  >
-                      {`${item.operator} ${_.join(
-                          item.values.map((vl) =>
-                              DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl
-                          ),
-                          ', '
-                      )}`}
-                  </Text>
-                  </div>
-                  )}
-
-                {queryMap.length != index + 1 && (
-                  <Text
-                    type={'title'}
-                    weight={'thin'}
-                    color={'grey'}
-                    level={8}
-                    extraClass={'m-0 mr-1'}
-                  >{`AND`}</Text>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      );
-    } else {
-      return null;
+    if (!data) {
+      return null; // Return early if data is falsy
     }
+
+    const queryMap = getBaseQueryFromResponse(data);
+
+    return (
+      <div className='w-full' style={{ maxWidth: '550px' }}>
+        {queryMap.map((item, index) => (
+          <div className='inline-flex items-center mb-2' key={index}>
+            {item.props.length > 0 ? (
+              <Button type='default'>
+                <Text
+                  type='title'
+                  weight='thin'
+                  color='grey'
+                  level={8}
+                  truncate
+                >
+                  {`${matchEventName(item.props[1])} ${item.operator} ${_.join(
+                    item.values.map((vl) =>
+                      DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl
+                    ),
+                    ', '
+                  )}`}
+                </Text>
+              </Button>
+            ) : (
+              <div className={styles.internal}>
+                <Text type='title' weight='thin' color='grey' level={8}>
+                  {`${item.operator} ${_.join(
+                    item.values.map((vl) =>
+                      DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl
+                    ),
+                    ', '
+                  )}`}
+                </Text>
+              </div>
+            )}
+
+            {queryMap.length !== index + 1 && (
+              <Text
+                type='title'
+                weight='thin'
+                color='grey'
+                level={8}
+                extraClass='m-0 mr-1'
+              >
+                AND
+              </Text>
+            )}
+          </div>
+        ))}
+      </div>
+    );
   };
+
   const columns = [
     {
       title: 'Channel',
       dataIndex: 'channel',
       key: 'channel',
-      render: (text) => <span className={'capitalize'}>{text}</span>
+      render: (text) => <span className='capitalize'>{text}</span>
     },
     {
       title: 'Conditions',
@@ -174,13 +148,14 @@ const DCGTable = ({
       dataIndex: 'actions',
       key: 'actions',
       render: (obj) => {
-        if (enableEdit || obj.item.channel == "Internal") {
+        if (enableEdit) {
           return null;
         }
+
         return (
-          <div className={`flex justify-end`}>
+          <div className='flex justify-end'>
             <Dropdown overlay={() => menu(obj)} trigger={['click']}>
-              <Button size={'large'} type='text' icon={<MoreOutlined />} />
+              <Button size='large' type='text' icon={<MoreOutlined />} />
             </Dropdown>
           </div>
         );
@@ -189,20 +164,14 @@ const DCGTable = ({
   ];
 
   const confirmRemove = (el) => {
-    // activeProject?.channel_group_rules?.filter(item => item !== value)
-
     confirm({
       title: 'Do you want to remove this channel group?',
       icon: <ExclamationCircleOutlined />,
       content: 'Please confirm to proceed',
       okText: 'Yes',
       onOk() {
-        let updatedArr = activeProject?.channel_group_rules?.filter(
-          (item, index) => {
-            if(item.channel !== "Internal" && index != el.index){
-              return item;
-            }
-          }
+        const updatedArr = (activeProject?.channel_group_rules || []).filter(
+          (item, index) => index !== el.index
         );
 
         udpateProjectDetails(activeProject.id, {
@@ -212,14 +181,14 @@ const DCGTable = ({
             message.success('Channel group removed!');
           })
           .catch((err) => {
-            console.log('err->', err);
+            console.error('Error:', err);
           });
       }
     });
   };
 
   const EditProperty = (obj) => {
-    let queryMap = getBaseQueryfromResponse(obj?.item?.conditions);
+    let queryMap = getBaseQueryFromResponse(obj?.item?.conditions);
     let finalData = {
       index: obj?.index,
       channel: obj?.item?.channel,

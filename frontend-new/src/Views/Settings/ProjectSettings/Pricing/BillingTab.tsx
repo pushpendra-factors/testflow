@@ -36,7 +36,7 @@ const BillingTab = () => {
     }
     if (isAdmin && !showV2PricingVersionFlag) {
       window.open(
-        `https://factors.schedulehero.io/meet/srikrishna/discovery-call`,
+        `https://factors.schedulehero.io/meet/yogeshpai/sso`,
         '_blank'
       );
       return;
