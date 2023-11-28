@@ -433,8 +433,6 @@ def job2(t):
     yesterday_date = get_previous_day_date()
     project_list = project_list_extractor()
 
-    # print(project_list)
-
     headers = {
         'authority': 'api.factors.ai',
         'accept': '*/*',
@@ -486,7 +484,6 @@ def job2(t):
             if metrics in project_data['metrics'][1]['connected']:
                 index_list[index] = "Yes"
 
-        print(index_list)
         connected_list = connected_list+index_list
 
         sh.values_append(
@@ -514,12 +511,12 @@ def job2(t):
                 'values': [metrics_list]
             }
         )
-        logging.info("job 2 completed for project.",project)
+        logging.info("job 2 completed for project: %s", project)
 
 ist = pytz.timezone("Asia/Kolkata")
 
 # time defined as (13:15:00 PM) for cron job
-scheduled_time = datetime.time(13, 15)
+scheduled_time = datetime.time(15, 10)
 
 scheduled_datetime = datetime.datetime.combine(datetime.date.today(), scheduled_time)
 scheduled_datetime = ist.localize(scheduled_datetime)
