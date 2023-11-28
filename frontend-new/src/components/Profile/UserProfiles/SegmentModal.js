@@ -77,7 +77,7 @@ function SegmentModal({
 
   useEffect(() => {
     let setType = type;
-    if (!setType) {
+    if (!setType || setType === 'All') {
       setType = profileType === 'user' ? 'web' : GROUP_NAME_DOMAINS;
     }
     const setGrpa = profileType === 'user' ? 'users' : setType;
