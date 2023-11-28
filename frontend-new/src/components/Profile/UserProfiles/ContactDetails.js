@@ -256,6 +256,7 @@ function ContactDetails({
         <SearchCheckList
           placeholder='Select Events to Show'
           mapArray={activities}
+          updateList={setActivities}
           titleKey='display_name'
           checkedKey='enabled'
           onChange={handleEventsChange}
@@ -268,6 +269,7 @@ function ContactDetails({
         <SearchCheckList
           placeholder='Select Upto 5 Milestones'
           mapArray={checkListMilestones}
+          updateList={setCheckListMilestones}
           titleKey='display_name'
           checkedKey='enabled'
           onChange={handleMilestonesChange}
