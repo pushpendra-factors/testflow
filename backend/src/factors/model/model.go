@@ -503,6 +503,7 @@ type Model interface {
 	GetProjects() ([]model.Project, int)
 	GetProjectsByIDs(ids []int64) ([]model.Project, int)
 	GetAllProjectIDs() ([]int64, int)
+	GetProjectIDByBillingSubscriptionID(id string) (int64, int)
 	GetNextSessionStartTimestampForProject(projectID int64) (int64, int)
 	UpdateNextSessionStartTimestampForProject(projectID int64, timestamp int64) int
 	GetProjectsToRunForIncludeExcludeString(projectIDs, excludeProjectIDs string) []int64

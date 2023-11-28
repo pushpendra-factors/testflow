@@ -305,7 +305,7 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 			return errCode
 		}
 
-		subscription, status, err := billing.CreateChargebeeSubscriptionForCustomer(agent.BillingCustomerID, model.FREE_PLAN_ITEM_PRICE_ID)
+		subscription, status, err := billing.CreateChargebeeSubscriptionForCustomer(projectID, agent.BillingCustomerID, model.FREE_PLAN_ITEM_PRICE_ID)
 		if err != nil || status != http.StatusCreated {
 			logCtx.WithField("err_code", status).WithError(err).Error("Failed to create default subscription for agent")
 			return errCode
@@ -924,6 +924,24 @@ func (store *MemSQL) GetProjectIDByToken(token string) (int64, int) {
 
 	model.SetCacheProjectIDByToken(token, project.ID)
 	return project.ID, errCode
+}
+
+func (store *MemSQL) GetProjectIDByBillingSubscriptionID(id string) (int64, int) {
+	logFields := log.Fields{
+		"subscription_id": id,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+
+	var project model.Project
+	if err := db.Where("billing_subscription_id = ?", id).First(&project).Error; err != nil {
+		log.WithFields(logFields).WithError(err).Error("Getting project by subscription id failed")
+		if gorm.IsRecordNotFoundError(err) {
+			return 0, http.StatusNotFound
+		}
+		return 0, http.StatusInternalServerError
+	}
+	return project.ID, http.StatusFound
 }
 
 // // TODO Add default positions and sizes. Response is not giving all dashboards.
