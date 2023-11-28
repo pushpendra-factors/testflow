@@ -213,7 +213,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS billing_accounts (
     phone_no text,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
-    billing_last_synced_at timestamp(6),
+    billing_last_synced_at timestamp(6) DEFAULT '1000-01-01 00:00:00',
     KEY (updated_at),
     PRIMARY KEY (agent_uuid, id)
 
@@ -460,7 +460,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS project_settings (
     int_g2_api_key text,
     six_signal_config JSON,
     onboarding_steps JSON,
-    segment_marker_last_run timestamp(6),
+    segment_marker_last_run timestamp(6) DEFAULT '1000-01-01 00:00:00',
     int_g2 boolean default false,
     factors_deanon_config JSON,
     factors_clearbit_key text,
@@ -498,7 +498,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS projects (
     enable_billing boolean,
     billing_subscription_id text,
     billing_account_id text,
-    billing_last_synced_at timestamp(6),
+    billing_last_synced_at timestamp(6) DEFAULT '1000-01-01 00:00:00',
     KEY (updated_at),
     PRIMARY KEY (id),
     KEY (token),
@@ -1375,10 +1375,10 @@ CREATE TABLE IF NOT EXISTS project_plan_mappings (
     project_id bigint,
     plan_id bigint NOT NULL,
     over_write json,
-    last_renewed_on timestamp(6),
+    last_renewed_on timestamp(6) DEFAULT '1000-01-01 00:00:00',
     billing_plan_id text,
     billing_addons json,
-     billing_last_synced_at timestamp(6),
+    billing_last_synced_at timestamp(6) DEFAULT '1000-01-01 00:00:00',
     PRIMARY KEY (project_id),
     SHARD KEY (project_id)
 );
