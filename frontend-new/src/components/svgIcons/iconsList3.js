@@ -1879,3 +1879,21 @@ export const FireFlameCurvedSVG = ({
     </svg>
   );
 };
+
+export const CaretUpSVG = ({ size = 16, color, extraClass }) => {
+  return (
+    <svg
+      xmlns='http://www.w3.org/2000/svg'
+      width={size}
+      height={size}
+      className={extraClass}
+      viewBox='0 0 16 16'
+      fill='none'
+    >
+      <path
+        d='M11.2175 11.125C11.6862 11.125 11.9206 10.5781 11.582 10.2396L8.2487 6.90625C8.04037 6.69792 7.70183 6.69792 7.4935 6.90625L4.16016 10.2396C3.82162 10.5781 4.056 11.125 4.52475 11.125H11.2175Z'
+        fill={color}
+      />
+    </svg>
+  );
+};
