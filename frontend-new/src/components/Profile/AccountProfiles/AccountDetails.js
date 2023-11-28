@@ -29,7 +29,6 @@ import {
 } from '../../../reducers/timelines/utils';
 import SearchCheckList from '../../SearchCheckList';
 import LeftPanePropBlock from '../MyComponents/LeftPanePropBlock';
-import AccountTimelineSingleView from './AccountTimelineSingleView';
 import {
   PropTextFormat,
   convertGroupedPropertiesToUngrouped,
@@ -53,6 +52,7 @@ import { getGroups } from 'Reducers/coreQuery/middleware';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
 import { ArrowLeftOutlined } from '@ant-design/icons';
+import AccountTimelineTableView from './AccountTimelineTableView';
 
 function AccountDetails({
   accounts,
@@ -600,12 +600,13 @@ function AccountDetails({
   );
 
   const renderSingleTimelineView = () => (
-    <AccountTimelineSingleView
+    <AccountTimelineTableView
       timelineEvents={
-        activities?.filter((activity) => activity.enabled === true) || []
+        activities
+          ?.filter((activity) => activity.enabled === true)
+          .slice(0, 1000) || []
       }
-      timelineUsers={accountDetails.data?.account_users || []}
-      milestones={accountDetails.data?.milestones}
+      timelineUsers={getTimelineUsers()}
       loading={accountDetails?.isLoading}
       eventNamesMap={eventNamesMap}
     />

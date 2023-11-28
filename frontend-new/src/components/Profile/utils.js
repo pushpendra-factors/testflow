@@ -52,7 +52,11 @@ export const groups = {
   Monthly: (item) =>
     MomentTz(item.timestamp * 1000)
       .startOf('month')
-      .format('MMM YYYY')
+      .format('MMM YYYY'),
+  Timeline: (item) =>
+    MomentTz(item.timestamp * 1000)
+      .startOf('day')
+      .format(' DD MMM YYYY ddd')
 };
 
 export const hoverEvents = [
@@ -77,6 +81,31 @@ export const hoverEvents = [
   '$g2_reference',
   '$g2_deal'
 ];
+
+export const hoverEventsColumnProp = {
+  $hubspot_contact_list:'$hubspot_contact_list_list_name',
+  $hubspot_contact_created:'$hubspot_contact_email',
+  $session: '$channel',
+  $form_submitted: '$page_title',
+  $offline_touch_point: '$channel',
+  $sf_campaign_member_created: '$salesforce_campaign_name',
+  $sf_campaign_member_updated: '$salesforce_campaign_name',
+  $hubspot_form_submission: '$hubspot_form_submission_title',
+  $hubspot_engagement_email: '$hubspot_engagement_subject',
+  $hubspot_engagement_meeting_created: '$hubspot_engagement_title',
+  $hubspot_engagement_call_created: '',
+  sf_task_created: '$salesforce_task_subject',
+  $sf_event_created: '$salesforce_event_subject',
+  $g2_sponsored: '$page_title',
+  $g2_product_profile: '$page_title',
+  $g2_alternative: '$page_title',
+  $g2_pricing: '$page_title',
+  $g2_category: '$page_title',
+  $g2_comparison: '$page_title',
+  $g2_report: '$page_title',
+  $g2_reference: '$page_title',
+  $g2_deal: '$page_title'
+};
 
 export const TimelineHoverPropDisplayNames = {
   $timestamp: 'Date and Time',
@@ -222,6 +251,22 @@ export const eventsFormattedForGranularity = (
     return result;
   }, {});
   return output;
+};
+
+export const eventsGroupedByGranularity = (events, granularity) => {
+  const groupedEvents = events.reduce((result, item) => {
+    const timestampKey = groups[granularity](item);
+
+    if (!result[timestampKey]) {
+      result[timestampKey] = [];
+    }
+
+    result[timestampKey].push(item);
+
+    return result;
+  }, {});
+
+  return groupedEvents;
 };
 
 export const toggleCellCollapse = (

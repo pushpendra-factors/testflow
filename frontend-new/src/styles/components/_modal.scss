@@ -17,9 +17,11 @@
     overflow-x: hidden;
     overflow-y: auto;
   }
+
   .ant-modal-body {
     padding: 0;
   }
+
   .fa-modal--header {
     position: fixed;
     top: 0;
@@ -31,26 +33,32 @@
     // border-bottom: thin solid $fa-color--mono-1;
     box-shadow: 0px 0px 8px rgba($fa-color--mono-1, 1);
   }
-  .fa-modal--header + .fa-container {
+
+  .fa-modal--header+.fa-container {
     margin-top: 75px;
   }
 }
+
 .fa-modal--regular {
   &.fa-modal--slideInDown {
     animation-name: fa-fadeInDown;
     animation-duration: 0.2s;
   }
+
   &.fa-modal--slideInUp {
     animation-name: fa-slideInUp;
     animation-duration: 0.2s;
   }
+
   .ant-modal-content {
     border-radius: 12px;
   }
+
   .ant-modal-header {
     border-top-right-radius: 12px;
     border-top-left-radius: 12px;
   }
+
   .ant-modal-footer {
     background: white;
     border-top: none;
@@ -58,22 +66,26 @@
     border-bottom-right-radius: 10px;
   }
 }
+
 .fa-modal-header--no-padding {
   .ant-modal-header {
     padding: 0;
   }
 }
+
 .fa-modal-body--no-padding {
   .ant-modal-body {
     padding: 0;
   }
 }
+
 .fa-modal-body--custom-scrollable {
   max-height: 80vh;
   overflow-x: hidden;
   overflow-y: auto;
   padding-bottom: 5em;
 }
+
 .fa-modal-body--custom-scrollable-1 {
   max-height: calc(80vh - 48px);
 }
@@ -82,9 +94,11 @@
 .ant-modal-close {
   outline: none !important;
 }
+
 .fa-notification--zindex {
   z-index: 3000 !important;
 }
+
 .ant-modal-footer {
   .ant-btn:disabled {
     background: $fa-color--mono-3;
