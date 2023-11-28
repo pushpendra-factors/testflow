@@ -62,6 +62,7 @@ export default function GroupSelect({
             updateSearchText(event.target.value);
           }}
           ref={inputComponentRef}
+          autoFocus={true}
         ></Input>
       </div>
     );

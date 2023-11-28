@@ -301,6 +301,7 @@ function FaSelect({
           placeholder={placeholder}
           onChange={search}
           ref={inputComponentRef}
+          autoFocus={true}
         ></Input>
       </div>
     );
