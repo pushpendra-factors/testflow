@@ -26,7 +26,7 @@ const BillingTab = () => {
     }
     if (isAdmin) {
       window.open(
-        `https://factors.schedulehero.io/meet/srikrishna/discovery-call`,
+        `https://factors.schedulehero.io/meet/yogeshpai/sso`,
         '_blank'
       );
       return;
