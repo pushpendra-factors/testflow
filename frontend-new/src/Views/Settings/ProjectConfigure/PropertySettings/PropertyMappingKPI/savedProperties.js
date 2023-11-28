@@ -36,7 +36,7 @@ const SavedProperties = ({
 
   useEffect(() => {
     const propertyMaps = [];
-    propertyMapping.forEach((prop) => {
+    propertyMapping?.forEach((prop) => {
       propertyMaps.push({
         name: prop.display_name,
         properties: prop.properties,

@@ -188,10 +188,10 @@ class DataFetch:
                                                 linkedin_setting.project_id, 
                                                 linkedin_setting.ad_account,
                                                 metadata, timestamp, updated_meta)
-            if not insert_response.ok and insert_response.status != 409:
+            if not insert_response.ok and insert_response.status_code != 409:
                 errString = DOC_INSERT_ERROR.format(
                                 meta_doc_type, "metadata",
-                                insert_response.status, insert_response.text,
+                                insert_response.status_code, insert_response.text,
                                 linkedin_setting.project_id, linkedin_setting.ad_account, 
                                 timestamp)
                 log.error(errString)
