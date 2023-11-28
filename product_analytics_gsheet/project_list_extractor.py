@@ -34,8 +34,6 @@ def project_list_extractor():
         headers=headers,
     )
 
-# print(response_list.json())
-
     project_dump = response_list.json()
     project_list = []
     # print(project_dump)
