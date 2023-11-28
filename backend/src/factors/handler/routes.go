@@ -90,7 +90,9 @@ func InitAppRoutes(r *gin.Engine) {
 		mid.SetLoggedInAgent(),
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		V1.GetProjectsHandler)
-
+	r.POST("/billing/hooks/subscription/hbeqjomjhxjvx2z", V1.BillingSubscriptionChangedWebhookListner) // random string as a part of security measure
+	r.POST("/billing/hooks/invoice/ksh4jcjw245 ", V1.BillingInvoiceGeneratedWebhookListner)            // random string as a part of security measure
+	r.GET("/billing/upgrade/callback", V1.BillingUpgradeCallbackHandler)
 	// Feature Gates Auth Group
 	// authRouteGroup := r.Group(routePrefix + ROUTE_PROJECTS_ROOT)
 	// authRouteGroup.Use(mid.SetLoggedInAgent())
@@ -404,8 +406,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/billing/subscription", V1.GetSubscriptionDetailsHander)
 	authRouteGroup.GET("/:project_id/billing/invoices", V1.ListAllInvoicesHandler)
 	authRouteGroup.GET("/:project_id/billing/invoice/download", V1.DownloadInvoiceHandler)
-	authRouteGroup.GET("/billing/upgrade/callback", V1.BillingUpgradeCallbackHandler)
-	authRouteGroup.POST("/:project_id/billing/hooks/invoice", V1.UpdateSubscriptionHandler)
+
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {
