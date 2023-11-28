@@ -433,10 +433,6 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 
 		params = append(params, paramsForGroupFilters[groupName]...)
 
-		if groupName == model.FILTER_TYPE_USERS {
-			stepNumber++
-			continue
-		}
 		if lastActivityStr == "" {
 			lastActivityStr = fmt.Sprintf("MAX(filter_%d.last_activity)", stepNumber)
 		} else {
@@ -507,7 +503,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 
 	if len(groupedFilters) == 0 {
 		intersectStep = `SELECT 
-		properties, identity, host_name, last_activity 
+		properties, identity, host_name, MAX(last_activity) 
 		FROM all_users 
 		GROUP BY identity 
 		ORDER BY last_activity DESC LIMIT 1000;`
