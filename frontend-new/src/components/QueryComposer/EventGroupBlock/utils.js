@@ -76,17 +76,18 @@ function removeDuplicateAndEmptyKeys(obj) {
 
 
 
-export const alertsGroupPropertyList = (eventPropertiesV2, userPropertiesV2, groupProperties, eventGroup, groupOpts, groupName = "") => {
+export const alertsGroupPropertyList = (eventPropertiesV2, userPropertiesV2, groupProperties, eventGroup="", groupOpts, event) => {
   const filterOptsObj = {};
 
-  if (userPropertiesV2) {
-    convertAndAddPropertiesToGroupSelectOptions(
-      userPropertiesV2,
-      filterOptsObj,
-      'user'
-    );
-  }
+  const eventGroups = eventPropertiesV2[event?.label] || {};
+  convertAndAddPropertiesToGroupSelectOptions(
+    eventGroups,
+    filterOptsObj,
+    'event'
+  );
+
   if (groupProperties) {
+    
     for (const [group, properties] of Object.entries(groupProperties || {})) {
       if (Object.keys(GroupDisplayNames).includes(group)) {
         const groupLabel = CustomGroupDisplayNames[group]
@@ -106,6 +107,15 @@ export const alertsGroupPropertyList = (eventPropertiesV2, userPropertiesV2, gro
     }
   }
   if (!eventGroup) {
+
+      if (userPropertiesV2) {
+    convertAndAddPropertiesToGroupSelectOptions(
+      userPropertiesV2,
+      filterOptsObj,
+      'user'
+    );
+  }
+
     const groupLabel = CustomGroupDisplayNames[eventGroup]
       ? CustomGroupDisplayNames[eventGroup]
       : groupOpts[eventGroup]
