@@ -295,6 +295,10 @@ func (q *AttributionQueryUnit) SetTimeZone(timezoneString U.TimeZoneString) {
 	q.Query.Timezone = string(timezoneString)
 }
 
+func (q *AttributionQueryV1) SetTimeZone(timezoneString U.TimeZoneString) {
+	q.Timezone = string(timezoneString)
+}
+
 func (q *AttributionQueryUnit) GetTimeZone() U.TimeZoneString {
 	return q.Query.GetTimeZone()
 }

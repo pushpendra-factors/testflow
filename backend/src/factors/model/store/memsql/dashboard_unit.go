@@ -2,6 +2,7 @@ package memsql
 
 import (
 	"encoding/json"
+	"errors"
 	C "factors/config"
 	"factors/model/model"
 	M "factors/model/model"
@@ -218,7 +219,11 @@ func (store *MemSQL) GetAttributionDashboardUnitsForProjectID(projectID int64) (
 		return dashboardUnits, errCode
 	}
 
-	dashboardUnits, errCode = store.GetDashboardUnitByDashboardID(projectID, dashboard.ID)
+	if C.GetIsHourlyRunEnabled() == 1 {
+		dashboardUnits, errCode = store.GetDashboardUnitByDashboardIDCreatedLast1Hour(projectID, dashboard.ID)
+	} else {
+		dashboardUnits, errCode = store.GetDashboardUnitByDashboardID(projectID, dashboard.ID)
+	}
 
 	if errCode != http.StatusFound || len(dashboardUnits) == 0 {
 		log.WithFields(log.Fields{"method": "GetAttributionV1DashboardByDashboardName", "dashboard": dashboard}).Info("Failed to get dashboard units for Attribution V1 dashboard")
@@ -280,6 +285,46 @@ func (store *MemSQL) GetDashboardUnitByDashboardID(projectId int64, dashboardId 
 	}
 
 	return dashboardUnits, http.StatusFound
+}
+
+// GetDashboardUnitByDashboardIDCreatedLast1Hour To get a dashboard unit by project id and dashboard id created in last one hour.
+func (store *MemSQL) GetDashboardUnitByDashboardIDCreatedLast1Hour(projectId int64, dashboardId int64) ([]model.DashboardUnit, int) {
+	logFields := log.Fields{
+		"project_id":   projectId,
+		"dashboard_id": dashboardId,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+
+	var dashboardUnits []model.DashboardUnit
+	if projectId == 0 || dashboardId == 0 {
+		log.Error("Failed to get dashboard units. Invalid project_id or dashboard_id or agent_id")
+		return dashboardUnits, http.StatusBadRequest
+	}
+
+	err := db.Order("created_at DESC").Where("project_id = ? AND dashboard_id = ? AND is_deleted = ?",
+		projectId, dashboardId, false).Find(&dashboardUnits).Error
+	if err != nil {
+		log.WithField("project_id", projectId).WithError(err).Error("Failed to get dashboard units.")
+		return dashboardUnits, http.StatusInternalServerError
+	}
+
+	timeInSecLast65Mins := int64(65 * 60 * 60)
+	lastValidTill := time.Now().Unix() - timeInSecLast65Mins
+	var dashboardUnitsCratedUpdateInOneHr []model.DashboardUnit
+	for _, unit := range dashboardUnits {
+		if unit.CreatedAt.Unix() >= lastValidTill || unit.UpdatedAt.Unix() >= lastValidTill {
+			dashboardUnitsCratedUpdateInOneHr = append(dashboardUnitsCratedUpdateInOneHr, unit)
+		}
+	}
+
+	if len(dashboardUnitsCratedUpdateInOneHr) == 0 {
+		log.WithField("project_id", projectId).Info("No new dashboard unit in last one hour")
+	} else {
+		log.WithField("project_id", projectId).WithField("units", dashboardUnitsCratedUpdateInOneHr).
+			Info("new dashboard units created / updated found hour")
+	}
+	return dashboardUnitsCratedUpdateInOneHr, http.StatusFound
 }
 
 func (store *MemSQL) GetQueryFromUnitID(projectID int64, unitID int64) (queryClass string, queryInfo *model.Queries, errMsg string) {
@@ -691,6 +736,7 @@ func (store *MemSQL) DBCacheAttributionDashboardUnitsForProjects(stringProjectsI
 		startTime := U.TimeNowUnix()
 		unitsCount := 0
 
+		/// ....
 		dashboardUnits, errCode := store.GetAttributionDashboardUnitsForProjectID(projectID)
 		if errCode != http.StatusFound || len(dashboardUnits) == 0 {
 			logCtx.Info("not running caching for the project - units not found")
@@ -1475,6 +1521,7 @@ func (store *MemSQL) RunCachingToBackFillRanges(dashboardUnit model.DashboardUni
 func (store *MemSQL) CacheAttributionDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload,
 	enableFilterOpt bool) (int, string, model.CachingUnitReport) {
 
+	var statusCode int
 	logFields := log.Fields{
 		"cache_payload": cachePayload,
 	}
@@ -1533,6 +1580,22 @@ func (store *MemSQL) CacheAttributionDashboardUnitForDateRange(cachePayload mode
 
 		channel := make(chan Result)
 		logCtx.Info("Running attribution V1 caching")
+		logCtx.WithFields(log.Fields{
+			"requestPayload": attributionQuery,
+		}).Info("debug before SetTimezoneForAttrQueryV1 caching")
+		timezoneString, statusCode = store.GetTimezoneForProject(projectID)
+		if statusCode != http.StatusFound {
+			logCtx.Error("query failed. Failed to get Timezone from project")
+			return http.StatusInternalServerError, fmt.Sprintf("query failed. Failed to get Timezone from project"), unitReport
+		}
+		err = SetTimezoneForAttrQueryV1(attributionQuery, projectID, timezoneString)
+		if err != nil {
+			return http.StatusInternalServerError, fmt.Sprintf("Error while running query %s", errMsg), unitReport
+		}
+		logCtx.WithFields(log.Fields{
+			"timezoneString": timezoneString,
+		}).Info("debug after SetTimezoneForAttrQueryV1 caching")
+
 		go store.runAttributionUnitV1(projectID, attributionQuery.Query, channel, dashboardUnitID)
 
 		select {
@@ -2141,4 +2204,26 @@ func (store *MemSQL) GetTimedOutUnitsByProject(cacheReports []model.CachingUnitR
 		}
 	}
 	return projectTimedOutUnits
+}
+
+// SetTimezoneForAttrQueryV1 sets timezone for the attribution query
+func SetTimezoneForAttrQueryV1(requestPayload *model.AttributionQueryUnitV1, projectId int64, timezoneString U.TimeZoneString) error {
+
+	//sets timezone for outer attribution query
+	requestPayload.Query.SetTimeZone(timezoneString)
+	err := requestPayload.Query.TransformDateTypeFilters()
+	if err != nil {
+		errors.New("query failed. Failed to Transform DateType Filters")
+	}
+
+	//sets timezone for internal KPI queries
+	for index := range requestPayload.Query.KPIQueries {
+		requestPayload.Query.KPIQueries[index].KPI.SetTimeZone(timezoneString)
+		err := requestPayload.Query.KPIQueries[index].KPI.TransformDateTypeFilters()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

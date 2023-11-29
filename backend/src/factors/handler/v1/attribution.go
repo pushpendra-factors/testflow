@@ -15,12 +15,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
 
+	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
 	"strconv"
-	"time"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type AttributionRequestPayloadV1 struct {
@@ -80,16 +78,6 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 		requestPayload.Query.KPIQueries[0].KPI.Queries == nil || len(requestPayload.Query.KPIQueries[0].KPI.Queries) == 0 {
 		return nil, http.StatusBadRequest, INVALID_INPUT, "invalid query. empty query.", true
 	}
-	logCtx.WithFields(log.Fields{
-		"requestPayload": requestPayload,
-	}).Info("debug before SetTimezoneForAttributionQueryV1")
-	timezoneString, err = SetTimezoneForAttributionQueryV1(&requestPayload, projectId)
-	logCtx.WithFields(log.Fields{
-		"timezoneString": timezoneString,
-	}).Info("debug after SetTimezoneForAttributionQueryV1")
-	if err != nil {
-		return nil, http.StatusBadRequest, INVALID_INPUT, "query failed. Failed to get Timezone", true
-	}
 
 	queryRange := float64(requestPayload.Query.To-requestPayload.Query.From) / float64(model.SecsInADay)
 	if queryRange > model.QueryRangeLimit {
@@ -107,16 +95,28 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 
 	enableOptimisedFilterOnEventUserQuery := c.Request.Header.Get(H.HeaderUserFilterOptForEventsAndUsers) == "true" ||
 		C.EnableOptimisedFilterOnEventUserQuery()
+
+	logCtx.WithFields(log.Fields{
+		"requestPayload": requestPayload,
+	}).Info("debug before SetTimezoneForAttributionQueryV1")
+
+	timezoneString, statusCode = store.GetStore().GetTimezoneForProject(projectId)
+	if statusCode != http.StatusFound {
+		logCtx.Error("query failed. Failed to get Timezone from project")
+		return nil, statusCode, PROCESSING_FAILED, "query failed. Failed to get Timezone", true
+	}
+	err = SetTimezoneForAttributionQueryV1(&requestPayload, projectId, timezoneString)
+	if err != nil {
+		return nil, statusCode, PROCESSING_FAILED, "query failed. Failed to set Timezone", true
+	}
+	logCtx.WithFields(log.Fields{
+		"timezoneString": timezoneString,
+	}).Info("debug after SetTimezoneForAttributionQueryV1")
+
 	attributionQueryUnitPayload := model.AttributionQueryUnitV1{
 		Class: model.QueryClassAttribution,
 		Query: requestPayload.Query,
 	}
-	attributionQueryUnitPayload.SetTimeZone(timezoneString)
-	err = attributionQueryUnitPayload.TransformDateTypeFilters()
-	if err != nil {
-		return nil, http.StatusBadRequest, INVALID_INPUT, err.Error(), true
-	}
-
 	// Tracking dashboard query request.
 	if isDashboardQueryRequest {
 		model.SetDashboardCacheAnalytics(projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To, timezoneString)
@@ -623,48 +623,22 @@ func decodeAttributionPayload(r *http.Request, logCtx *log.Entry) (bool, string,
 }
 
 // SetTimezoneForAttributionQueryV1 sets timezone for the attribution query
-func SetTimezoneForAttributionQueryV1(requestPayload *AttributionRequestPayloadV1, projectId int64) (U.TimeZoneString, error) {
-	var timezoneString U.TimeZoneString
-	logCtx := log.WithField("project_id", projectId)
-	if requestPayload.Query.Timezone != "" {
-		_, err := time.LoadLocation(requestPayload.Query.Timezone)
+func SetTimezoneForAttributionQueryV1(requestPayload *AttributionRequestPayloadV1, projectId int64, timezoneString U.TimeZoneString) error {
+
+	//sets timezone for outer attribution query
+	requestPayload.Query.SetTimeZone(timezoneString)
+	err := requestPayload.Query.TransformDateTypeFilters()
+	if err != nil {
+		return errors.New("query failed. Failed to Transform DateType Filters")
+	}
+
+	//sets timezone for internal KPI queries
+	for index := range requestPayload.Query.KPIQueries {
+		requestPayload.Query.KPIQueries[index].KPI.SetTimeZone(timezoneString)
+		err := requestPayload.Query.KPIQueries[index].KPI.TransformDateTypeFilters()
 		if err != nil {
-			logCtx.WithError(err).Error("Query failed. Invalid Timezone")
-			return "", err
-		}
-		timezoneString = U.TimeZoneString(requestPayload.Query.Timezone)
-
-	} else {
-		var statusCode int
-		timezoneString, statusCode = store.GetStore().GetTimezoneForProject(projectId)
-		if statusCode != http.StatusFound {
-			logCtx.Error("query failed. Failed to get Timezone from project")
-			return "", errors.New("query failed. Failed to get Timezone from project")
-		}
-
-		// For a KPI query, set the timezone internally for correct execution
-		if requestPayload.Query.KPIQueries[0].KPI.Queries[0].Timezone != "" {
-			_, err := time.LoadLocation(string(requestPayload.Query.KPIQueries[0].KPI.Queries[0].Timezone))
-			if err != nil {
-				logCtx.WithError(err).Error("Query failed. Invalid Timezone")
-				return "", err
-			}
-
-			timezoneString = U.TimeZoneString(requestPayload.Query.KPIQueries[0].KPI.Queries[0].Timezone)
-		} else {
-			timezoneString, statusCode = store.GetStore().GetTimezoneForProject(projectId)
-			if statusCode != http.StatusFound {
-				logCtx.Error("query failed. Failed to get Timezone")
-				return "", errors.New("query failed. Failed to get Timezone")
-			}
-		}
-		for index := range requestPayload.Query.KPIQueries {
-			requestPayload.Query.KPIQueries[index].KPI.SetTimeZone(timezoneString)
-			err := requestPayload.Query.KPIQueries[index].KPI.TransformDateTypeFilters()
-			if err != nil {
-				return "", err
-			}
+			return err
 		}
 	}
-	return timezoneString, nil
+	return nil
 }

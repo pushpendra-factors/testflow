@@ -889,10 +889,14 @@ func (store *MemSQL) getDisplayNameLabelForThisProperty(projectID int64, propert
 	value := U.GetPropertyValueAsString(propVal)
 
 	displayLabel, errCode, err := store.GetDisplayNameLabel(projectID, source, propertyKey, value)
-	if errCode != http.StatusFound || err != nil || displayLabel == nil {
+	if (errCode != http.StatusFound && errCode != http.StatusNotFound) || err != nil {
 		log.WithFields(log.Fields{"project_id": projectID, "source": source,
 			"property_key": propertyKey, "value": value}).WithError(err).Error("Failed to get display name label.")
 		return "", false
+	}
+
+	if errCode == http.StatusNotFound {
+		return value, false
 	}
 
 	return displayLabel.Label, true
