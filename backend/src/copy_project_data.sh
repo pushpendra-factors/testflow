@@ -1,21 +1,4 @@
-#!/bin/bash
-
-# Default values for REDIS HOST , REDIS PORT and PROJECT ID    
-REDIS_HOST="localhost"
-REDIS_PORT="6379"
-PROJECT_ID="35000000"
-
-
-
-# Parsing command line arguments for REDIS HOST and REDIS PORT
-while [[ "$#" -gt 0 ]]; do
-    case $1 in
-        -h|--host) REDIS_HOST="$2"; shift ;;
-        -p|--port) REDIS_PORT="$2"; shift ;;
-        *) echo "Unknown parameter passed: $1"; exit 1 ;;
-    esac
-    shift
-done
+#!/bin/sh
 
 # Retrieve keys matching the pattern using the provided REDIS_HOST , REDIS_PORT and KEY_PATTERN
 keys=$(redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" --raw keys "*:pid:$PROJECT_ID:*")
@@ -33,4 +16,4 @@ mysqldump -u $DB_USER_NAME -h $DB_HOST -p$DB_PASSWORD factors projects --where="
 
 mysqldump -u $DB_USER_NAME -h $DB_HOST -p$DB_PASSWORD factors agents --where="uuid IN (select agent_uuid from project_agent_mappings where project_id=$PROJECT_ID\)" | mysql -h $EXTERNAL_IP --port 3306 -u root -pdbfactors123 -D factors
 
-mysqldump -u $DB_USER_NAME -h $DB_HOST -p$DB_PASSWORD factors  billing_accounts --where="id IN (select billing_account_id from project_billing_account_mappings where project_id=$PROJECT_ID)" | mysql -h $EXTERNAL_IP --port 3306 -u root -pdbfactors123 -D factors
+mysqldump -u $DB_USER_NAME -h $DB_HOST -p$DB_PASSWORD factors  billing_accounts --where="id IN (select billing_account_id from project_billing_account_mappings where project_id=$PROJECT_ID)" | mysql -h $EXTERNAL_IP --port 3306 -u root -pdbfactors123 -D factor
