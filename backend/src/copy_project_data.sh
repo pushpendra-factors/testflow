@@ -16,4 +16,4 @@ mysqldump -u $DB_USER_NAME -h $DB_HOST -p$DB_PASSWORD factors projects --where="
 
 mysqldump -u $DB_USER_NAME -h $DB_HOST -p$DB_PASSWORD factors agents --where="uuid IN (select agent_uuid from project_agent_mappings where project_id=$PROJECT_ID\)" | mysql -h $EXTERNAL_IP --port 3306 -u root -pdbfactors123 -D factors
 
-mysqldump -u $DB_USER_NAME -h $DB_HOST -p$DB_PASSWORD factors  billing_accounts --where="id IN (select billing_account_id from project_billing_account_mappings where project_id=$PROJECT_ID)" | mysql -h $EXTERNAL_IP --port 3306 -u root -pdbfactors123 -D factor
+mysqldump -u $DB_USER_NAME -h $DB_HOST -p$DB_PASSWORD factors  billing_accounts --where="id IN (select billing_account_id from project_billing_account_mappings where project_id=$PROJECT_ID)" | mysql -h $EXTERNAL_IP --port 3306 -u root -pdbfactors123 -D factors
