@@ -2871,6 +2871,11 @@ func TestSalesforceOpportunitySkipOnUnsyncedLead(t *testing.T) {
 	assert.Equal(t, "success", enrichStatus[0].Status)
 	assert.Equal(t, "success", enrichStatus[1].Status)
 
+	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2, nil, 1, 0)
+	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
+	assert.Len(t, enrichStatus, 1)
+	assert.Equal(t, "success", enrichStatus[0].Status)
+
 	query := model.Query{
 		From: leadCreatedDate.AddDate(0, 0, -1).Unix(),
 		To:   oppLastModifiedDate.AddDate(0, 0, 1).Unix(),
@@ -3494,7 +3499,7 @@ func TestSalesforceGroups(t *testing.T) {
 
 	// process opportunity contact roles
 	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2, nil, 1, 0)
-	assert.Len(t, enrichStatus, 1) // opportunity contact roles
+	assert.Len(t, enrichStatus, 1) // group account status, contact roles and group opportunity status
 	assert.Equal(t, "success", enrichStatus[0].Status)
 
 	account1GroupUserId := ""
@@ -3503,6 +3508,7 @@ func TestSalesforceGroups(t *testing.T) {
 	opportunity2GroupUserId := ""
 	opportunity3GroupUserId := ""
 	opportunity4GroupUserId := ""
+
 	opportunityID4ContactRole1ContactUserID := ""
 	opportunityID4ContactRole2ContactUserID := ""
 	for i := range processRecords {
@@ -4214,11 +4220,11 @@ func TestSalesforceGroupUserFix(t *testing.T) {
 	assert.NotNil(t, user)
 
 	// create salesforce-account record
-	contactID1 := U.RandomLowerAphaNumString(5)
+	accountID1 := U.RandomLowerAphaNumString(5)
 	name1 := U.RandomLowerAphaNumString(5)
 	timestamp := time.Now().AddDate(0, 0, 0)
 
-	jsonData := fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactID1, name1, timestamp.UTC().Format(model.SalesforceDocumentDateTimeLayout), timestamp.UTC().Format(model.SalesforceDocumentDateTimeLayout))
+	jsonData := fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, accountID1, name1, timestamp.UTC().Format(model.SalesforceDocumentDateTimeLayout), timestamp.UTC().Format(model.SalesforceDocumentDateTimeLayout))
 	salesforceDocument := &model.SalesforceDocument{
 		ProjectID: project.ID,
 		TypeAlias: model.SalesforceDocumentTypeNameAccount,
@@ -4229,10 +4235,10 @@ func TestSalesforceGroupUserFix(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 
 	// create salesforce-opportunity record
-	contactID2 := U.RandomLowerAphaNumString(5)
+	opportunityID1 := U.RandomLowerAphaNumString(5)
 	name2 := U.RandomLowerAphaNumString(5)
 
-	jsonData = fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactID2, name2, timestamp.UTC().Format(model.SalesforceDocumentDateTimeLayout), timestamp.UTC().Format(model.SalesforceDocumentDateTimeLayout))
+	jsonData = fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, opportunityID1, name2, timestamp.UTC().Format(model.SalesforceDocumentDateTimeLayout), timestamp.UTC().Format(model.SalesforceDocumentDateTimeLayout))
 	salesforceDocument = &model.SalesforceDocument{
 		ProjectID: project.ID,
 		TypeAlias: model.SalesforceDocumentTypeNameOpportunity,
@@ -4249,7 +4255,7 @@ func TestSalesforceGroupUserFix(t *testing.T) {
 	}
 
 	// verification for groupID.
-	createDocument, status := store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{contactID1}, model.SalesforceDocumentTypeAccount, false)
+	createDocument, status := store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{accountID1}, model.SalesforceDocumentTypeAccount, false)
 	assert.Equal(t, http.StatusFound, status)
 	// verify group_user_id in the document
 	assert.NotNil(t, createDocument[0].GroupUserID)
@@ -4260,7 +4266,7 @@ func TestSalesforceGroupUserFix(t *testing.T) {
 	assert.Equal(t, groupID, createDocument[0].ID)
 
 	// verification for groupID.
-	createDocument, status = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{contactID2}, model.SalesforceDocumentTypeOpportunity, false)
+	createDocument, status = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{opportunityID1}, model.SalesforceDocumentTypeOpportunity, false)
 	assert.Equal(t, http.StatusFound, status)
 	// verify group_user_id in the document
 	assert.NotNil(t, createDocument[0].GroupUserID)
@@ -4271,10 +4277,10 @@ func TestSalesforceGroupUserFix(t *testing.T) {
 	assert.Equal(t, groupID, createDocument[0].ID)
 
 	// create salesforce-account record
-	contactID3 := U.RandomLowerAphaNumString(5)
+	accountID3 := U.RandomLowerAphaNumString(5)
 	name3 := U.RandomLowerAphaNumString(5)
 
-	jsonData = fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactID3, name3, timestamp.UTC().Format(model.SalesforceDocumentDateTimeLayout), timestamp.UTC().Format(model.SalesforceDocumentDateTimeLayout))
+	jsonData = fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, accountID3, name3, timestamp.UTC().Format(model.SalesforceDocumentDateTimeLayout), timestamp.UTC().Format(model.SalesforceDocumentDateTimeLayout))
 	salesforceDocument = &model.SalesforceDocument{
 		ProjectID: project.ID,
 		TypeAlias: model.SalesforceDocumentTypeNameAccount,
@@ -4284,21 +4290,9 @@ func TestSalesforceGroupUserFix(t *testing.T) {
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
 	assert.Equal(t, http.StatusOK, status)
 
-	// get groupName
-	groupName := model.GROUP_NAME_SALESFORCE_ACCOUNT
-
-	// create group user with random groupID
-	groupID = U.RandomLowerAphaNumString(5)
-	groupUserID, status := store.GetStore().CreateGroupUser(&model.User{
-		ProjectId: project.ID, JoinTimestamp: timestamp.Unix(), Source: model.GetRequestSourcePointer(model.UserSourceSalesforce),
-	}, groupName, groupID)
-	assert.Equal(t, http.StatusCreated, status)
-	// update group_user_id in the account document, and mark it as synced
-	status = store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, salesforceDocument, "", "", groupUserID, true)
-	assert.Equal(t, http.StatusAccepted, status)
 	// create another update on account record
 	timestampT2 := timestamp.AddDate(0, 0, 5)
-	jsonData = fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactID3, name3, timestampT2.UTC().Format(model.SalesforceDocumentDateTimeLayout), timestampT2.UTC().Format(model.SalesforceDocumentDateTimeLayout))
+	jsonData = fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, accountID3, name3, timestampT2.UTC().Format(model.SalesforceDocumentDateTimeLayout), timestampT2.UTC().Format(model.SalesforceDocumentDateTimeLayout))
 	salesforceDocument = &model.SalesforceDocument{
 		ProjectID: project.ID,
 		TypeAlias: model.SalesforceDocumentTypeNameAccount,
@@ -4313,9 +4307,9 @@ func TestSalesforceGroupUserFix(t *testing.T) {
 	for i := range enrichStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
 	}
-	createDocument, status = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{contactID3}, model.SalesforceDocumentTypeAccount, false)
+	createDocument, status = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{accountID3}, model.SalesforceDocumentTypeAccount, false)
 	assert.Equal(t, http.StatusFound, status)
-	user, status = store.GetStore().GetUser(project.ID, groupUserID)
+	user, status = store.GetStore().GetUser(project.ID, createDocument[0].GroupUserID)
 	assert.Equal(t, http.StatusFound, status)
 	groupID = GetGroupID(user)
 	assert.Equal(t, groupID, createDocument[0].ID)
