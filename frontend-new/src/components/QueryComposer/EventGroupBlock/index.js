@@ -48,7 +48,7 @@ function EventGroupBlock({
         filterOptsObj = defaultPropertyList(eventPropertiesV2, eventUserPropertiesV2, groupProperties, eventGroup, groupOpts, event);
       }
       else{
-        filterOptsObj = alertsGroupPropertyList(eventPropertiesV2, userPropertiesV2, groupProperties, eventGroup, groupOpts, eventGroup); 
+        filterOptsObj = alertsGroupPropertyList(eventPropertiesV2, userPropertiesV2, groupProperties, eventGroup, groupOpts, event); 
       }
     }
     else{
