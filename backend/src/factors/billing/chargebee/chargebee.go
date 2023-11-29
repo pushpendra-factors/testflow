@@ -187,6 +187,6 @@ func DownloadInvoiceByInvoiceID(invoiceID string) (download.Download, error) {
 }
 
 func GetRedirectUrl(projectID int64) string {
-	callBackUrl := C.GetProtocol() + C.GetAPIDomain() + fmt.Sprintf("/billing/upgarde/callback?project_id=%d", projectID)
+	callBackUrl := C.GetProtocol() + C.GetAPIDomain() + fmt.Sprintf("/billing/upgrade/callback?project_id=%d", projectID)
 	return callBackUrl
 }
