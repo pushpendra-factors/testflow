@@ -31,13 +31,13 @@ spec:
             -- REDIS_PORT
             - "6379"
             -- EXTERNAL_IP
-            - "104.196.253.121"
+            - "34.82.239.248"
             -- DB_USER_NAME
             - "root"
             -- DB_HOST
-            - "104.196.253.121"
+            - "34.82.239.248"
             -- DB_PASSWORD
-            - "dbfacttors"
+            - "dbfactors123"
             -- PROJECT_ID
             - "35000000"
           restartPolicy: OnFailure
