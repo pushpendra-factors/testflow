@@ -1,21 +1,4 @@
-#!/bin/bash
-
-# Default values for REDIS HOST , REDIS PORT and PROJECT ID    
-REDIS_HOST="localhost"
-REDIS_PORT="6379"
-PROJECT_ID="35000000"
-
-
-
-# Parsing command line arguments for REDIS HOST and REDIS PORT
-while [[ "$#" -gt 0 ]]; do
-    case $1 in
-        -h|--host) REDIS_HOST="$2"; shift ;;
-        -p|--port) REDIS_PORT="$2"; shift ;;
-        *) echo "Unknown parameter passed: $1"; exit 1 ;;
-    esac
-    shift
-done
+#!/bin/sh
 
 # Retrieve keys matching the pattern using the provided REDIS_HOST , REDIS_PORT and KEY_PATTERN
 keys=$(redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" --raw keys "*:pid:$PROJECT_ID:*")

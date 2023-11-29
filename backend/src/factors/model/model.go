@@ -575,6 +575,7 @@ type Model interface {
 	IsExistSalesforceDocumentByIds(projectID int64, ids []string, docType int) (map[string]bool, int)
 	IsExistSalesforceDocumentByIdsWithBatch(projectID int64, ids []string, docType int, batchSize int) (map[string]bool, int)
 	GetSalesforceDocumentByTypeAndAction(projectID int64, id string, docType int, action model.SalesforceAction) (*model.SalesforceDocument, int)
+	GetSalesforceDocumentsByIDTypeAndAction(projectID int64, ids []string, docType int, action model.SalesforceAction) ([]model.SalesforceDocument, int)
 
 	// scheduled_task
 	CreateScheduledTask(task *model.ScheduledTask) int
