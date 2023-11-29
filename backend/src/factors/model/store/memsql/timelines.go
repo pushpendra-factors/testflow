@@ -503,7 +503,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 
 	if len(groupedFilters) == 0 {
 		intersectStep = `SELECT 
-		properties, identity, host_name, MAX(last_activity) 
+		properties, identity, host_name, MAX(last_activity) AS last_activity
 		FROM all_users 
 		GROUP BY identity 
 		ORDER BY last_activity DESC LIMIT 1000;`
