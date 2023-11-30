@@ -497,14 +497,16 @@ func main() {
 
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 
-	action := flag.String("action", "", "Enter 'create' for creating new plan else enter 'update' to update new plan")
+	action := flag.String("action", "", "Enter 'create' for creating new plan else enter 'update' to update new plan enable or disable for updating feautre status")
 	planType := flag.String("plan_type", "", "Enter comma separated values: 'free' for free plan; 'basic' for basic plan; 'pro' for professional plan; 'custom' for custom plan; 'startup' for startup plan")
 
 	//update action
 	planID := flag.Int64("id", -1, "Enter plan id to be updated")
 	updateAdd := flag.String("add", "", "Add feature to the feature list of an existing plan")
 	updateRemove := flag.String("remove", "", "Remove feature from the feature list of an existing plan")
-	disableFeatures := flag.String("disable_features", "", "")
+	updateFeaturesStatus := flag.String("update_features_status", "", "")
+	updateAccountLimits := flag.Bool("update_accounts_limit", false, "")
+	updatedAccountLimit := flag.Int64("updated_account_limit", 100, "")
 	ProjectIDs := flag.String("project_ids", "", "comma separeted list of project ids, * for all")
 	flag.Parse()
 
@@ -569,7 +571,7 @@ func main() {
 	}
 	if *action == Disable || *action == Enable {
 		// only allowing in Custom Plan
-		features := C.GetTokensFromStringListAsString(*disableFeatures)
+		features := C.GetTokensFromStringListAsString(*updateFeaturesStatus)
 		featureMap := make(map[string]bool)
 		for _, feature := range features {
 			featureMap[feature] = true
@@ -586,7 +588,7 @@ func main() {
 			projectIDS = C.GetTokensFromStringListAsUint64(*ProjectIDs)
 		}
 		for _, id := range projectIDS {
-			UpdateFeatureStatusForCustomPlan(id, featureMap, *action)
+			UpdateFeatureStatusForCustomPlan(id, featureMap, *action, *updateAccountLimits, *updatedAccountLimit)
 
 		}
 	}
@@ -612,7 +614,7 @@ func main() {
 	}
 }
 
-func UpdateFeatureStatusForCustomPlan(ProjectID int64, featuresMap map[string]bool, action string) {
+func UpdateFeatureStatusForCustomPlan(ProjectID int64, featuresMap map[string]bool, action string, updateAcccountLimits bool, accountsLimit int64) { // only to update accounts identification limit
 	ppmapping, err := store.GetStore().GetProjectPlanMappingforProject(ProjectID)
 	if err != nil {
 		log.Error("Failed to disable features for ID ", ProjectID)
@@ -630,6 +632,9 @@ func UpdateFeatureStatusForCustomPlan(ProjectID int64, featuresMap map[string]bo
 		if _, ok := featuresMap[feature.Name]; ok {
 			if action == Enable {
 				addOns[idx].IsEnabledFeature = true
+				if updateAcccountLimits && feature.Name == model.FEATURE_FACTORS_DEANONYMISATION {
+					addOns[idx].Limit = accountsLimit
+				}
 			} else if action == Disable {
 				addOns[idx].IsEnabledFeature = false
 			}
