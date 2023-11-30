@@ -14,6 +14,7 @@ type ProjectAnalytics struct {
 	TotalUniqueUsers      uint64 `json:"total_unique_users"`
 	SixSignalAPIHits      uint64 `json:"six_signal_api_hits"`
 	SixSignalAPITotalHits uint64 `json:"six_signal_api_total_hits"`
+	DailyLoginCount       int64  `json:"daily_login_count"`
 }
 
 var ProjectAnalyticsColumnsName = []string{
@@ -29,6 +30,7 @@ var ProjectAnalyticsColumnsName = []string{
 	"Total Unique Users",
 	"6Signal Domain Enrichment Count",
 	"6Signal Total API Hits",
+	"Daily Login Count",
 }
 
 var GlobalDataProjectAnalyticsColumnsName = []string{
@@ -99,6 +101,7 @@ var ProjectAnalyticsColumnsNameToJsonKeys = map[string]string{
 	"6Signal Domain Enrichment Count": "six_signal_api_hits",
 	"6Signal Total API Hits":          "six_signal_api_total_hits",
 	"Project ID":                      "project_id",
+	"Daily Login Count":               "daily_login_count",
 }
 
 var CrmStatusColumnsName = []string{
