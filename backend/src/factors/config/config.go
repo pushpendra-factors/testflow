@@ -375,6 +375,7 @@ const (
 	HealthcheckCleanupEventUserCachePingID            = "85e21b5c-5503-4172-af40-de918741a4d1"
 	HealthcheckDashboardCachingPingID                 = "72e5eadc-b46e-45ca-ba78-29819532307d"
 	HealthcheckDashboardDBAttributionPingID           = "5dfce175-273d-4096-ad70-578270621e8c"
+	HealthcheckDashboardDBAttributionHourlyPingID     = "8f4dd14f-642f-4eed-b4aa-2f971c3bbbc0"
 	HealthcheckHubspotEnrichPingID                    = "6f522e60-6bf8-4aea-99fe-f5a1c68a00e7"
 	HealthcheckOTPHubspotPingID                       = "c937adf4-a54d-4ee8-8ec9-3e5ed8a83e42"
 	HealthcheckOTPSalesforcePingID                    = "4ffe2119-64bc-41d4-bc5a-64bea0f121b7"

@@ -85,6 +85,9 @@ func main() {
 		taskID = *overrideAppName
 	}
 	defaultHealthcheckPingID := C.HealthcheckDashboardDBAttributionPingID
+	if *hourlyRun == 1 {
+		defaultHealthcheckPingID = C.HealthcheckDashboardDBAttributionHourlyPingID
+	}
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)
 	defer C.PingHealthcheckForPanic(taskID, *envFlag, healthcheckPingID)
 	logCtx := log.WithFields(log.Fields{"Prefix": taskID})
