@@ -766,11 +766,11 @@ func GetEngagementBuckets(projectId int64, scoresPerUser map[string]model.PerUse
 
 func GetEngagement(percentile float64, buckets model.BucketRanges) string {
 	for _, bucket := range buckets.Ranges {
-		if bucket.Low <= percentile && percentile < bucket.High {
+		if bucket.Low <= percentile && percentile <= bucket.High {
 			return bucket.Name
 		}
 	}
-	return "ice"
+	return "Ice"
 }
 
 func GetEngagementLevelOnUser(projectId int64, event model.LatestScore, userId string, fscore float64) string {

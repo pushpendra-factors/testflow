@@ -13,7 +13,7 @@ const LAST_EVENT string = "LAST_EVENT"
 const NUM_TREND_DAYS int = 30
 
 var BUCKETRANGES []float64 = []float64{100, 90, 70, 30, 0}
-var BUCKETNAMES []string = []string{"Hot", "warm", "cold", "ice"}
+var BUCKETNAMES []string = []string{"Hot", "Warm", "Cool", "Ice"}
 
 type AccScoreResult struct {
 	ProjectId int64                  `json:"projectid"`
