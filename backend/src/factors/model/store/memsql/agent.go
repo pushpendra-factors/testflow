@@ -10,6 +10,7 @@ import (
 	U "factors/util"
 
 	billing "factors/billing/chargebee"
+
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -79,7 +80,7 @@ func (store *MemSQL) CreateAgentWithDependencies(params *model.CreateAgentParams
 	resp := &model.CreateAgentResponse{}
 
 	if strings.HasSuffix(params.Agent.Email, "factors.ai") {
-		
+
 		customer, status, err := billing.CreateChargebeeCustomer(*params.Agent)
 		if err != nil || status != http.StatusCreated {
 			return nil, http.StatusInternalServerError
@@ -511,4 +512,23 @@ func (store *MemSQL) IsTeamsIntegratedForProject(projectID int64, agentUUID stri
 
 	}
 	return false, http.StatusOK
+}
+
+func (store *MemSQL) IsTeamsIntegrated(projectID int64) (bool, int) {
+
+	var isIntegrated bool
+	queryStmnt := "select  count(*) > 0  from agents where JSON_EXTRACT_STRING(JSON_EXTRACT_STRING(teams_access_tokens, '?' ) , 'refresh_token') is not null "
+
+	db := C.GetServices().Db
+
+	row := db.Raw(queryStmnt, projectID).Row()
+
+	err := row.Scan(&isIntegrated)
+	if err != nil {
+		log.WithFields(log.Fields{"projectID": projectID}).Error("Failed getting team integration info")
+		return false, http.StatusInternalServerError
+	}
+
+	return isIntegrated, http.StatusOK
+
 }

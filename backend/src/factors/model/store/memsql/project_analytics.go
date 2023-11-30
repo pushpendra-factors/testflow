@@ -27,7 +27,7 @@ func (store *MemSQL) GetEventUserCountsOfAllProjects(lastNDays int) (map[string]
 		projId, _ := U.GetValueAsString(project.ID)
 		projectIDNameMap[projId] = project.Name
 	}
-	result, err := GetProjectAnalyticsData(projectIDNameMap, lastNDays, currentDate, 0)
+	result, err := store.GetProjectAnalyticsData(projectIDNameMap, lastNDays, currentDate, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,7 @@ func (store *MemSQL) GetEventUserCountsByProjectID(projectId int64, lastNDays in
 	projId, _ := U.GetValueAsString(project.ID)
 	projectIDNameMap[projId] = project.Name
 
-	result, err := GetProjectAnalyticsData(projectIDNameMap, lastNDays, currentDate, projectId)
+	result, err := store.GetProjectAnalyticsData(projectIDNameMap, lastNDays, currentDate, projectId)
 
 	if err != nil {
 		return nil, err
@@ -145,13 +145,13 @@ func (store *MemSQL) GetEventUserCountsByProjectID(projectId int64, lastNDays in
 	return result, nil
 }
 
-func GetProjectAnalyticsData(projectIDNameMap map[string]string, lastNDays int, currentDate time.Time, projectId int64) (map[string][]*model.ProjectAnalytics, error) {
+func (store *MemSQL) GetProjectAnalyticsData(projectIDNameMap map[string]string, lastNDays int, currentDate time.Time, projectId int64) (map[string][]*model.ProjectAnalytics, error) {
 
 	result := make(map[string][]*model.ProjectAnalytics, 0)
 
 	for i := 0; i < lastNDays; i++ {
-		dateKey := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
 
+		dateKey := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
 		totalUniqueUsersKey, err := model.UserCountAnalyticsCacheKey(dateKey)
 		if err != nil {
 			return nil, err
@@ -191,6 +191,23 @@ func GetProjectAnalyticsData(projectIDNameMap map[string]string, lastNDays int, 
 			sixSignalAPIHits := model.GetSixSignalAPICountCacheResult(projIdInt64, uint64(dateKeyInt))
 			sixSignalAPITotalHits := model.GetSixSignalAPITotalHitCountCacheResult(projIdInt64, uint64(dateKeyInt))
 
+			timezoneString, statusCode := store.GetTimezoneForProject(projIdInt64)
+			if statusCode != http.StatusFound {
+				log.Errorf("Failed to get project Timezone for %d", projIdInt64)
+				continue
+			}
+
+			from := U.GetBeginningOfDayTimestampIn(currentDate.AddDate(0, 0, -i).Unix(), timezoneString)
+			end := U.GetEndOfDayTimestampIn(currentDate.AddDate(0, 0, -i).Unix(), timezoneString)
+
+			eventData, err := store.GetGlobalProjectAnalyticsEventDataByProjectId(projIdInt64, model.ProjectAnalyticsEventSingleQueryStmnt["login_count"], timezoneString, from, end)
+			if err != nil {
+				return nil, errors.New("failed to event base metrics data")
+			}
+
+			val, _ := U.GetValueAsString(eventData["aggregate"])
+			valInt64, _ := strconv.ParseInt(val, 10, 64)
+
 			if projectId == 0 {
 				result[dateKey] = append(result[dateKey], &model.ProjectAnalytics{
 					ProjectID:             projId,
@@ -206,6 +223,7 @@ func GetProjectAnalyticsData(projectIDNameMap map[string]string, lastNDays int, 
 					SixSignalAPITotalHits: uint64(sixSignalAPITotalHits),
 					ProjectName:           projectIDNameMap[projId],
 					Date:                  dateKey,
+					DailyLoginCount:       valInt64,
 				})
 			} else if projIdInt64 == projectId {
 
@@ -223,6 +241,7 @@ func GetProjectAnalyticsData(projectIDNameMap map[string]string, lastNDays int, 
 					SixSignalAPITotalHits: uint64(sixSignalAPITotalHits),
 					ProjectName:           projectIDNameMap[projId],
 					Date:                  dateKey,
+					DailyLoginCount:       valInt64,
 				}
 
 				result[projId] = append(result[projId], &entry)
@@ -364,8 +383,10 @@ func (store *MemSQL) GetGlobalProjectAnalyticsDataByProjectId(projectID int64, m
 			"identified_count":      identifiedCount,
 		}
 
+		startTimestamp := time.Now().AddDate(0, 0, -30)
+
 		for key, queryStmnt := range model.ProjectAnalyticsEventSingleQueryStmnt {
-			eventData, err := store.GetGlobalProjectAnalyticsEventDataByProjectId(projectID, queryStmnt)
+			eventData, err := store.GetGlobalProjectAnalyticsEventDataByProjectId(projectID, queryStmnt, timeZoneString, startTimestamp.Unix(), time.Now().Unix())
 			if err != nil {
 				return nil, errors.New("failed to event base metrics data")
 			}
@@ -382,21 +403,14 @@ func (store *MemSQL) GetGlobalProjectAnalyticsDataByProjectId(projectID int64, m
 	return result, nil
 }
 
-func (store *MemSQL) GetGlobalProjectAnalyticsEventDataByProjectId(projectID int64, queryStmnt string) (map[string]interface{}, error) {
+func (store *MemSQL) GetGlobalProjectAnalyticsEventDataByProjectId(projectID int64, queryStmnt string, timeZoneString U.TimeZoneString, startTimestmap, endTimestamp int64) (map[string]interface{}, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	timeZoneString, statusCode := store.GetTimezoneForProject(projectID)
-	if statusCode != http.StatusFound {
-		timeZoneString = U.TimeZoneStringIST
-	}
-
-	startTime := U.GetBeginningOfTodayTime(timeZoneString)
-
 	var query model.Query
-	jsonString := fmt.Sprintf(queryStmnt, projectID, timeZoneString, startTime.Unix(), time.Now().Unix())
+	jsonString := fmt.Sprintf(queryStmnt, projectID, timeZoneString, startTimestmap, endTimestamp)
 	err := json.Unmarshal([]byte(jsonString), &query)
 	if err != nil {
 		return nil, err
@@ -437,9 +451,9 @@ func (store *MemSQL) GetIntegrationStatusesCount(settings model.ProjectSetting, 
 		disconnected = append(disconnected, "Rudderstack")
 	}
 	if *settings.IntClientSixSignalKey {
-		connected = append(connected, "Clinet 6Signal")
+		connected = append(connected, "Client 6Signal")
 	} else {
-		disconnected = append(disconnected, "Clinet 6Signal")
+		disconnected = append(disconnected, "Client 6Signal")
 	}
 	if *settings.IntFactorsSixSignalKey {
 		connected = append(connected, "Factors 6Signal")
@@ -510,7 +524,7 @@ func (store *MemSQL) GetIntegrationStatusesCount(settings model.ProjectSetting, 
 	} else {
 		disconnected = append(disconnected, "Slack")
 	}
-	if ok, _ := store.IsTeamsIntegratedForProject(projectID, agentUUID); ok {
+	if ok, _ := store.IsTeamsIntegrated(projectID); ok {
 		connected = append(connected, "Teams")
 	} else {
 		disconnected = append(disconnected, "Teams")
