@@ -193,5 +193,5 @@ export interface PLAN_COFIG {
 }
 
 export const ADDITIONAL_ACCOUNTS_ADDON_ID =
-  'Additional-Account-100-USD-Monthly';
+  'Additional-500-Accounts-USD-Monthly';
 export const ADDITIONAL_ACCOUNTS_ADDON_LIMIT = 500;

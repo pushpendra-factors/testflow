@@ -33,7 +33,7 @@ const LastPlanCard = () => {
           style={{ width: 290 }}
           onClick={() =>
             window.open(
-              `https://factors.schedulehero.io/meet/srikrishna/discovery-call`,
+              `https://factors.schedulehero.io/meet/yogeshpai/sso`,
               '_blank'
             )
           }
