@@ -25,21 +25,40 @@ spec:
           - name: copy-project-data
             image: us.gcr.io/factors-staging/copy-project-data:v1-test
             imagePullPolicy: IfNotPresent
-            args:
-            -- REDIS_HOST
-            - "10.0.0.67"
-            -- REDIS_PORT
-            - "6379"
-            -- EXTERNAL_IP
-            - "34.82.239.248"
-            -- DB_USER_NAME
-            - "root"
-            -- DB_HOST
-            - "34.82.239.248"
-            -- DB_PASSWORD
-            - "dbfactors123"
-            -- PROJECT_ID
-            - "35000000"
+            env:
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: config-redis
+                  key: REDIS_HOST
+            - name: REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: config-redis
+                  key: REDIS_PORT
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: config-memsql
+                  key: MEMSQL_HOST               
+            - name: DB_USER_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: secret-memsql
+                  key: MEMSQL_USER             
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: secret-memsql
+                  key: MEMSQL_PASSWORD
+            - name: PROJECT_ID
+              value: "35000000"
+            - name: EXTERNAL_IP
+              value: "34.82.239.248"
+            - name: REDIS_VM_HOST
+              value: "$(EXTERNAL_IP)"
+            - name: REDIS_VM_PORT
+              value: "6379"     
           restartPolicy: OnFailure
 
   
