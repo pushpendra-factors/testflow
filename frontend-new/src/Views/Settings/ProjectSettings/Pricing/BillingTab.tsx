@@ -1,37 +1,52 @@
 import React from 'react';
 import ProgressBar from 'Components/GenericComponents/Progress';
 import { SVG, Text } from 'Components/factorsComponents';
-import { PLANS } from 'Constants/plans.constants';
+import { PLANS, PLANS_V0 } from 'Constants/plans.constants';
 import { FeatureConfigState } from 'Reducers/featureConfig/types';
 import { PathUrls } from 'Routes/pathUrls';
-import { Alert, Button, Divider, Tooltip } from 'antd';
+import { Alert, Button, Divider, Tag, Tooltip } from 'antd';
 import useAgentInfo from 'hooks/useAgentInfo';
 import { useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
+import { PRICING_PAGE_TABS, showV2PricingVersion } from './utils';
+import { PlansConfigState } from 'Reducers/plansConfig/types';
+import moment from 'moment';
 const BillingTab = () => {
   const history = useHistory();
   const { email, isAdmin } = useAgentInfo();
   const { plan, sixSignalInfo } = useSelector(
     (state: any) => state.featureConfig
   ) as FeatureConfigState;
+  const { currentPlanDetail } = useSelector(
+    (state: any) => state.plansConfig
+  ) as PlansConfigState;
+  const { active_project } = useSelector((state) => state.global);
+
   const sixSignalLimit = sixSignalInfo?.limit || 0;
   const sixSignalUsage = sixSignalInfo?.usage || 0;
   const isSolutionsAdmin = email === 'solutions@factors.ai';
-  const isFreePlan = plan?.name === PLANS.PLAN_FREE;
+  const isFreePlan =
+    plan?.name === PLANS.PLAN_FREE || plan?.name === PLANS_V0?.PLAN_FREE;
+  const showV2PricingVersionFlag = showV2PricingVersion(active_project);
 
   const handleUpgradePlan = () => {
-    if (isSolutionsAdmin) {
-      history.push(PathUrls.ConfigurePlans);
-      return;
-    }
-    if (isAdmin) {
-      window.open(
-        `https://factors.schedulehero.io/meet/yogeshpai/sso`,
-        '_blank'
+    if (showV2PricingVersionFlag) {
+      history.push(
+        `${PathUrls.SettingsPricing}?activeTab=${PRICING_PAGE_TABS.UPGRADE}`
       );
-      return;
+    } else {
+      if (isSolutionsAdmin) {
+        history.push(PathUrls.ConfigurePlans);
+        return;
+      } else {
+        window.open(
+          `https://factors.schedulehero.io/meet/yogeshpai/sso`,
+          '_blank'
+        );
+      }
     }
   };
+
   return (
     <div className='py-4'>
       <div className='flex justify-between'>
@@ -46,12 +61,23 @@ const BillingTab = () => {
               extraClass={'m-0 '}
               id={'fa-at-text--page-title'}
             >
-              {plan?.display_name || plan?.name}
+              {showV2PricingVersionFlag && currentPlanDetail?.plan?.externalName
+                ? currentPlanDetail.plan.externalName
+                : plan?.display_name || plan?.name}
             </Text>
+            {showV2PricingVersionFlag && currentPlanDetail?.period && (
+              <>
+                {currentPlanDetail.period === 'month' && (
+                  <Tag color='orange'>Monthly</Tag>
+                )}
 
-            {/* <Tag color='orange'>Monthly</Tag> */}
+                {currentPlanDetail.period == 'year' && (
+                  <Tag color='orange'>Yearly</Tag>
+                )}
+              </>
+            )}
           </div>
-          {isFreePlan && (
+          {!showV2PricingVersionFlag && isFreePlan && (
             <div className='mt-2'>
               <Text
                 type={'paragraph'}
@@ -62,18 +88,37 @@ const BillingTab = () => {
               </Text>
             </div>
           )}
+          {showV2PricingVersionFlag && (
+            <div className='mt-2'>
+              <Text
+                type={'paragraph'}
+                extraClass='m-0'
+                color='character-primary'
+              >
+                ${currentPlanDetail?.plan?.amount || '0.0'}
+                {' USD / '}
+                {currentPlanDetail.period ? currentPlanDetail.period : ''}
+              </Text>
+            </div>
+          )}
 
           <div className='mt-5'>
             <Tooltip
               title={`${
-                isSolutionsAdmin
+                showV2PricingVersionFlag
+                  ? 'Upgrade Plan'
+                  : isSolutionsAdmin
                   ? 'Configure Plans'
                   : 'Talk to our Sales team to upgrade'
               }`}
             >
               <Button
                 type='primary'
-                disabled={!isSolutionsAdmin && !isAdmin}
+                disabled={
+                  showV2PricingVersionFlag
+                    ? false
+                    : !isSolutionsAdmin && !isAdmin
+                }
                 onClick={handleUpgradePlan}
               >
                 Upgrade Plan
@@ -81,25 +126,27 @@ const BillingTab = () => {
             </Tooltip>
           </div>
         </div>
-        {/* <div>
-                  <Text
-                    type={'title'}
-                    level={5}
-                    extraClass={'m-0 text-right opacity-60'}
-                    color='character-primary'
-                  >
-                    Billing period
-                  </Text>
-                  <Text
-                    type={'title'}
-                    level={6}
-                    weight={'bold'}
-                    extraClass={'m-0 text-right'}
-                    color='brand-color'
-                  >
-                    Renews August 16th 2023
-                  </Text>
-                </div> */}
+        {showV2PricingVersionFlag && currentPlanDetail?.renews_on && (
+          <div>
+            <Text
+              type={'title'}
+              level={5}
+              extraClass={'m-0 text-right opacity-60'}
+              color='character-primary'
+            >
+              Billing period
+            </Text>
+            <Text
+              type={'title'}
+              level={6}
+              extraClass={'m-0 text-right mt-1'}
+              color='brand-color'
+            >
+              Renews{' '}
+              {moment(currentPlanDetail.renews_on).format('MMMM Do YYYY')}
+            </Text>
+          </div>
+        )}
       </div>
       <Divider />
       <div
@@ -139,9 +186,27 @@ const BillingTab = () => {
               />
             </div>
           )}
+          {/* {showV2PricingVersionFlag && (
+            <>
+              <div className='flex justify-between items-center mt-4'>
+                <Text type={'paragraph'} mini>
+                  Ad on - 27 Jul
+                </Text>
+                <Text type={'paragraph'} mini>
+                  {`${sixSignalUsage} / ${sixSignalLimit}`}
+                </Text>
+              </div>
+              <ProgressBar
+                percentage={(sixSignalUsage / sixSignalLimit) * 100}
+              />
+            </>
+          )} */}
+
           <Tooltip
             title={`${
-              isSolutionsAdmin
+              showV2PricingVersionFlag
+                ? 'Buy Add on'
+                : isSolutionsAdmin
                 ? 'Configure Plans'
                 : 'Talk to our Sales team to upgrade'
             }`}
@@ -150,7 +215,9 @@ const BillingTab = () => {
               type='link'
               style={{ marginTop: 20 }}
               onClick={handleUpgradePlan}
-              disabled={!isSolutionsAdmin && !isAdmin}
+              disabled={
+                showV2PricingVersionFlag ? false : !isSolutionsAdmin && !isAdmin
+              }
             >
               Buy Add on
             </Button>

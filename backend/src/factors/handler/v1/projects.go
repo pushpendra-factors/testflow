@@ -100,5 +100,11 @@ func MapProjectToString(project model.Project) model.ProjectString {
 		JobsMetadata:          project.JobsMetadata,
 		ChannelGroupRules:     project.ChannelGroupRules,
 		EnableBilling:         project.EnableBilling,
+		BillingAdminAgentUUID: GetBillingAgentUUIDForProject(project.BillingAccountID),
 	}
+}
+
+func GetBillingAgentUUIDForProject(billingAccountID string) string {
+	agentUUID, _ := store.GetStore().GetAgentUUIDByBillingAccountID(billingAccountID)
+	return agentUUID
 }

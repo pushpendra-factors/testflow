@@ -1196,7 +1196,7 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
   const globalFilters =
     requestQuery?.gup && Array.isArray(requestQuery.gup)
       ? processFiltersFromQuery(requestQuery.gup)
-      : null;
+      : [];
 
   const queryType = requestQuery.cl;
   const eventsCondition = requestQuery.ec;
@@ -1689,7 +1689,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
     let ref = -1;
     let lastProp = '';
     let lastOp = '';
-    fil.forEach((pr, index) => {
+    fil.forEach((pr) => {
       if (pr.lOp === 'AND') {
         ref += 1;
         const val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
@@ -1870,7 +1870,7 @@ export const getStateFromCustomKPIqueryGroup = (
     let ref = -1;
     let lastProp = '';
     let lastOp = '';
-    fil.forEach((pr, index) => {
+    fil.forEach((pr) => {
       if (pr.lOp === 'AND') {
         ref += 1;
         const val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;

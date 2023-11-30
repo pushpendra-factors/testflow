@@ -46,6 +46,7 @@ type AccWeights struct {
 }
 
 type AccEventWeight struct {
+	FilterName   string                `json:"fname"`
 	WeightId     string                `json:"wid"`
 	Weight_value float32               `json:"weight"`
 	Is_deleted   bool                  `json:"is_deleted"`
@@ -109,6 +110,7 @@ type PerUserScoreOnDay struct {
 	Score     float32                `json:"score"`
 	Timestamp string                 `json:"timestamp"`
 	Property  map[string][]string    `json:"prp"`
+	TopEvents map[string]float64     `json:"tpe"`
 	Debug     map[string]interface{} `json:"debug"`
 }
 
@@ -143,6 +145,7 @@ type LatestScore struct {
 	Date        int64                       `json:"date"`
 	EventsCount map[string]float64          `json:"events"`
 	Properties  map[string]map[string]int64 `json:"prop"`
+	TopEvents   map[string]float64
 }
 
 type DbUpdateAccScoring struct {

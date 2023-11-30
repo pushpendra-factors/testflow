@@ -33,7 +33,6 @@ func (store *MemSQL) createBillingAccount(planCode string, AgentUUID string) (*m
 		return nil, http.StatusBadRequest
 	}
 
-
 	bA := &model.BillingAccount{
 		ID:                  U.GetUUID(),
 		AgentUUID:           AgentUUID,
@@ -117,6 +116,29 @@ func (store *MemSQL) GetBillingAccountByAgentUUID(AgentUUID string) (*model.Bill
 		return nil, http.StatusInternalServerError
 	}
 	return &bA, http.StatusFound
+}
+
+func (store *MemSQL) GetAgentUUIDByBillingAccountID(BillingAccountID string) (string, int) {
+	logFields := log.Fields{
+		"billing_account_id": BillingAccountID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	if BillingAccountID == "" {
+		return "", http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+
+	bA := model.BillingAccount{}
+	if err := db.Limit(1).Where("id = ?", BillingAccountID).Find(&bA).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			log.WithFields(logFields).WithError(err).Error("agent uuid not found for billing account.")
+			return "", http.StatusNotFound
+		}
+		log.WithFields(logFields).WithError(err).Error("failed to get agent uuid for billing account.")
+		return "", http.StatusInternalServerError
+	}
+	return bA.AgentUUID, http.StatusFound
 }
 
 func (store *MemSQL) UpdateBillingAccount(id string, planId uint64, orgName, billingAddr, pinCode, phoneNo string) int {

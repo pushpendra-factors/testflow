@@ -1,13 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { connect } from 'react-redux';
-import {
-  Row,
-  Col,
-  Form,
-  Button,
-  Input,
-  message
-} from 'antd';
+import { Row, Col, Form, Button, Input, message } from 'antd';
 import { Text } from 'factorsComponents';
 import QueryBlock from './QueryBlock';
 import { getPropertiesDetails } from './utils';
@@ -17,15 +10,11 @@ import {
   addPropertyMapping
 } from 'Reducers/settings/middleware';
 
-
-
 const validateRegex = /^[a-zA-Z0-9_ ]{1,}$/;
-
 
 const PropertyMappingForm = ({
   KPI_config,
   setShowForm,
-  setTabNo,
   activeProject,
   fetchPropertyMappings,
   addPropertyMapping
@@ -37,41 +26,30 @@ const PropertyMappingForm = ({
   const createEventMapping = (values) => {
     setLoading(true);
     let payload = {
-      "display_name": values?.name,
-      "properties": queries ? getPropertiesDetails(queries) : []
-    }
-    addPropertyMapping(activeProject?.id, payload).then(() => {
-      fetchPropertyMappings(activeProject?.id);
-      setLoading(false);
-      setTabNo(3);
-      setShowForm(false)
-      message.success('Property Map added!');
-    }).catch((err) => {
-      message.error(err?.data?.error);
-      console.log('Property Map creation failed-->', err);
-      setLoading(false);
-    });
-  }
+      display_name: values?.name,
+      properties: queries ? getPropertiesDetails(queries) : []
+    };
+    addPropertyMapping(activeProject?.id, payload)
+      .then(() => {
+        fetchPropertyMappings(activeProject?.id);
+        setLoading(false);
+        setShowForm(false);
+        message.success('Property Map added!');
+      })
+      .catch((err) => {
+        message.error(err?.data?.error);
+        console.log('Property Map creation failed-->', err);
+        setLoading(false);
+      });
+  };
 
   const renderPropertyForm = () => {
     return (
       <>
-        <Form
-          form={form}
-          name="login"
-          onFinish={createEventMapping}
-
-        >
-
-
+        <Form form={form} name='login' onFinish={createEventMapping}>
           <Row>
             <Col span={12}>
-              <Text
-                type={'title'}
-                level={3}
-                weight={'bold'}
-                extraClass={'m-0'}
-              >
+              <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>
                 Add new mapping
               </Text>
             </Col>
@@ -100,7 +78,6 @@ const PropertyMappingForm = ({
             </Col>
           </Row>
 
-
           <Row className={'mt-8'}>
             <Col span={18}>
               <Text type={'title'} level={7} extraClass={'m-0'}>
@@ -109,11 +86,12 @@ const PropertyMappingForm = ({
               <Form.Item
                 name='name'
                 rules={[
-                  { 
-                    // required: true,  
-                    message: 'Please input Display name (Only letters, numbers, and underscores are allowed)',
+                  {
+                    // required: true,
+                    message:
+                      'Please input Display name (Only letters, numbers, and underscores are allowed)',
                     pattern: validateRegex
-                   }
+                  }
                 ]}
               >
                 <Input
@@ -144,26 +122,21 @@ const PropertyMappingForm = ({
               </Form.Item>
             </Col>
           </Row> */}
-
         </Form>
-
       </>
     );
   };
 
-
   const handleEventChange = (...props) => {
     // console.log('handleEventChange', props)
-    queryChange(...props)
+    queryChange(...props);
   };
 
   const queryChange = (newEvent, index, changeType = 'add') => {
     const queryupdated = [...queries];
     if (queryupdated[index]) {
       if (changeType === 'add') {
-        if (
-          JSON.stringify(queryupdated[index]) !== JSON.stringify(newEvent)
-        ) {
+        if (JSON.stringify(queryupdated[index]) !== JSON.stringify(newEvent)) {
           // deleteGroupByForEvent(newEvent, index);
         }
         queryupdated[index] = newEvent;
@@ -177,10 +150,9 @@ const PropertyMappingForm = ({
     } else {
       queryupdated.push(newEvent);
     }
-    setQueries(queryupdated)
+    setQueries(queryupdated);
     // setProfileQueries(queryupdated);
-  }
-
+  };
 
   const queryList = () => {
     const blockList = [];
@@ -188,16 +160,15 @@ const PropertyMappingForm = ({
 
     queries.forEach((event, index) => {
       blockList.push(
-        <div key={index}
-        >
+        <div key={index}>
           <QueryBlock
             index={index + 1}
             queryType={'KPI'}
             event={event}
             queries={queries}
             eventChange={handleEventChange}
-          // setSelectedMainCategory={setSelectedMainCategory}
-          // KPIConfigProps={KPIConfigProps}
+            // setSelectedMainCategory={setSelectedMainCategory}
+            // KPIConfigProps={KPIConfigProps}
           />
         </div>
       );
@@ -205,17 +176,18 @@ const PropertyMappingForm = ({
 
     if (queries.length < 10) {
       blockList.push(
-        <div key={'init'}
-        //  className={styles.composer_body__query_block}
+        <div
+          key={'init'}
+          //  className={styles.composer_body__query_block}
         >
           <QueryBlock
             queryType={'KPI'}
             index={queries.length + 1}
             queries={queries}
             eventChange={handleEventChange}
-          // groupBy={queryOptions.groupBy}
-          // selectedMainCategory={selectedMainCategory} 
-          // KPIConfigProps={KPIConfigProps}
+            // groupBy={queryOptions.groupBy}
+            // selectedMainCategory={selectedMainCategory}
+            // KPIConfigProps={KPIConfigProps}
           />
         </div>
       );
@@ -230,8 +202,10 @@ const PropertyMappingForm = ({
 
       <Row>
         <Col span={24}>
-          <div className='flex flex-col mt-8' style={{minHeight: "650px"}}>
-            <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>Properties to Map</Text>
+          <div className='flex flex-col mt-8' style={{ minHeight: '650px' }}>
+            <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>
+              Properties to Map
+            </Text>
             <div className='flex items-center flex-wrap mr-10'>
               {queryList()}
             </div>
@@ -239,14 +213,15 @@ const PropertyMappingForm = ({
         </Col>
       </Row>
     </>
-  )
-}
-
-
+  );
+};
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  KPI_config: state.kpi?.config,
+  KPI_config: state.kpi?.config
 });
 
-export default connect(mapStateToProps, { fetchPropertyMappings, addPropertyMapping })(PropertyMappingForm)
+export default connect(mapStateToProps, {
+  fetchPropertyMappings,
+  addPropertyMapping
+})(PropertyMappingForm);

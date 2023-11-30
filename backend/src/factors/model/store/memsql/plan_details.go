@@ -206,6 +206,24 @@ func (store *MemSQL) GetPlanDetailsAndAddonsForProject(projectID int64) (model.F
 	return featureList, addOns, nil
 
 }
+
+func (store *MemSQL) GetBillingAddonsForProject(projectID int64) (model.BillingAddons, error) {
+	projectPlanMaping, err := store.GetProjectPlanMappingforProject(projectID)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+	var billingAddOns model.BillingAddons
+	if projectPlanMaping.BillingAddons != nil {
+		err = U.DecodePostgresJsonbToStructType(projectPlanMaping.BillingAddons, &billingAddOns)
+		if err != nil && err.Error() != "Empty jsonb object" {
+			log.WithError(err).Error("Failed to decode project plan mapping billing addons.")
+			return nil, err
+		}
+	}
+	return billingAddOns, nil
+}
+
 func (store *MemSQL) GetAllProjectIdsUsingPlanId(id int64) ([]int64, int, string, error) {
 	logFields := log.Fields{
 		"plan_id": id,
@@ -281,12 +299,12 @@ func (store *MemSQL) UpdateProjectPlanMapping(projectID int64, planMapping *mode
 		updateFields["billing_last_synced_at"] = planMapping.BillingLastSyncedAt
 
 	}
-	
+
 	if planMapping.BillingAddons != nil {
 		updateFields["billing_add_ons"] = planMapping.BillingAddons
 	}
 
-	err := db.Model(&model.ProjectPlanMapping{}).Where("id = ?", projectID).Update(updateFields).Error
+	err := db.Model(&model.ProjectPlanMapping{}).Where("project_id = ?", projectID).Update(updateFields).Error
 	if err != nil {
 		log.WithError(err).Error(
 			"Failed to execute query of update project plan mappings ")

@@ -206,7 +206,9 @@ github.com/certifi/gocertifi
 ## explicit; go 1.18
 github.com/chargebee/chargebee-go/v3
 github.com/chargebee/chargebee-go/v3/actions/customer
+github.com/chargebee/chargebee-go/v3/actions/event
 github.com/chargebee/chargebee-go/v3/actions/hostedpage
+github.com/chargebee/chargebee-go/v3/actions/invoice
 github.com/chargebee/chargebee-go/v3/actions/item
 github.com/chargebee/chargebee-go/v3/actions/itemprice
 github.com/chargebee/chargebee-go/v3/actions/subscription

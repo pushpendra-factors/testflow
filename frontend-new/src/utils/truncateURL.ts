@@ -11,22 +11,26 @@ function addProtocolIfMissing(url: string) {
   return url;
 }
 
-const truncateURL = (url: string) => {
-  if (!isValidURL(url)) {
-    return url;
-  }
-  const urlWithProtocol = addProtocolIfMissing(url);
-  const urlObject = new URL(urlWithProtocol);
-  const path = urlObject.pathname;
+const truncateURL = (urlString: string) => {
+  let urlArray = urlString.split(',');
+  urlArray = urlArray.map((urlText) => {
+    const url = urlText.trim();
+    if (!isValidURL(url)) {
+      return url;
+    }
+    const urlWithProtocol = addProtocolIfMissing(url);
+    const urlObject = new URL(urlWithProtocol);
+    const path = urlObject.pathname;
 
-  // Check if there's a subdirectory
-  const parts = path.split('/').filter(Boolean);
+    // Check if there's a subdirectory
+    const parts = path.split('/').filter(Boolean);
 
-  if (parts.length > 0) {
-    return `/${parts.slice(0).join('/')}`;
-  } else {
-    return url;
-  }
+    if (parts.length > 0) {
+      return `/${parts.slice(0).join('/')}`;
+    } else {
+      return url;
+    }
+  });
+  return urlArray.join(', ');
 };
-
 export default truncateURL;

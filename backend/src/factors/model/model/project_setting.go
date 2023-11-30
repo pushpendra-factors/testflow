@@ -48,7 +48,7 @@ type ProjectSetting struct {
 	IntHubspotSyncInfo        *postgres.Jsonb `json:"int_hubspot_sync_info,omitempty" `
 	CreatedAt                 time.Time       `json:"created_at"`
 	UpdatedAt                 time.Time       `json:"updated_at"`
-	SegmentMarkerLastRun      time.Time       `json:"segment_marker_last_run"`
+	SegmentMarkerLastRun      time.Time       `gorm:"default:"1000-01-01 00:00:00" json:"segment_marker_last_run"`
 	FilterIps                 *postgres.Jsonb `json:"filter_ips,omitempty"`
 	//Facebook settings
 	IntFacebookEmail       string  `json:"int_facebook_email,omitempty"`
@@ -97,6 +97,8 @@ type ProjectSetting struct {
 	OnboardingSteps            *postgres.Jsonb `json:"onboarding_steps"`
 	SDKAPIURL                  string          `gorm:"-" json:"sdk_api_url"`
 	SDKAssetURL                string          `gorm:"-" json:"sdk_asset_url"`
+	FactorsDeanonConfig        *postgres.Jsonb `json:"factors_deanon_config"`
+	FactorsClearbitKey         string          `json:"factors_clearbit_key"`
 }
 
 /* Sample Attribution Setting
@@ -188,6 +190,15 @@ type SixSignalConfig struct {
 type SixSignalFilter struct {
 	Value string `json:"value"`
 	Type  string `json:"type"`
+}
+
+type FactorsDeanonConfig struct {
+	Clearbit  DeanonVendorConfig `json:"clearbit"`
+	SixSignal DeanonVendorConfig `json:"6signal"`
+}
+
+type DeanonVendorConfig struct {
+	TrafficFraction float64 `json:"traffic_fraction"`
 }
 
 type FilterIps struct {

@@ -2,17 +2,24 @@ package billing_plan_id
 
 import (
 	"factors/model/model"
+
 	"github.com/chargebee/chargebee-go/v3"
 	customerAction "github.com/chargebee/chargebee-go/v3/actions/customer"
 	hostedPageAction "github.com/chargebee/chargebee-go/v3/actions/hostedpage"
+	invoiceAction "github.com/chargebee/chargebee-go/v3/actions/invoice"
 	itemAction "github.com/chargebee/chargebee-go/v3/actions/item"
 	itemPriceAction "github.com/chargebee/chargebee-go/v3/actions/itemprice"
 	subscriptionAction "github.com/chargebee/chargebee-go/v3/actions/subscription"
 
 	"net/http"
 
+	C "factors/config"
+	"fmt"
+	"github.com/chargebee/chargebee-go/v3/filter"
 	"github.com/chargebee/chargebee-go/v3/models/customer"
+	"github.com/chargebee/chargebee-go/v3/models/download"
 	"github.com/chargebee/chargebee-go/v3/models/hostedpage"
+	"github.com/chargebee/chargebee-go/v3/models/invoice"
 	"github.com/chargebee/chargebee-go/v3/models/item"
 	"github.com/chargebee/chargebee-go/v3/models/itemprice"
 	"github.com/chargebee/chargebee-go/v3/models/subscription"
@@ -36,8 +43,10 @@ func CreateChargebeeCustomer(agent model.Agent) (customer.Customer, int, error) 
 }
 
 // only used to create free subscription which doesn't require a card
-func CreateChargebeeSubscriptionForCustomer(customerID string, planPriceID string) (subscription.Subscription, int, error) {
-	logCtx := log.Fields{"customer_id": customerID}
+func CreateChargebeeSubscriptionForCustomer(projectID int64, customerID string, planPriceID string) (subscription.Subscription, int, error) {
+	logCtx := log.Fields{"customer_id": customerID,
+		"project_id": projectID,
+	}
 
 	res, err := subscriptionAction.CreateWithItems(customerID, &subscription.CreateWithItemsRequestParams{
 		SubscriptionItems: []*subscription.CreateWithItemsSubscriptionItemParams{
@@ -54,7 +63,7 @@ func CreateChargebeeSubscriptionForCustomer(customerID string, planPriceID strin
 	}
 }
 
-func GetUpgradeChargebeeSubscriptionCheckoutURL(subscriptionID string, params model.UpdateSubscriptionParams) (hostedpage.HostedPage, int, error) {
+func GetUpgradeChargebeeSubscriptionCheckoutURL(projectID int64, subscriptionID string, params model.UpdateSubscriptionParams) (hostedpage.HostedPage, int, error) {
 	logCtx := log.Fields{"subscription_ID": subscriptionID}
 
 	// manual logic
@@ -76,6 +85,7 @@ func GetUpgradeChargebeeSubscriptionCheckoutURL(subscriptionID string, params mo
 			Id: subscriptionID,
 		},
 		SubscriptionItems: subscriptionItems,
+		RedirectUrl:       GetRedirectUrl(projectID),
 	}).Request()
 	if err != nil {
 		log.WithFields(logCtx).WithError(err).Error("Failed to get checkout url for upgrade subscription on chargebee")
@@ -105,7 +115,7 @@ func ListPlansAndAddOnsFromChargebee() ([]item.Item, error) {
 func ListPlansAndAddOnsPricesFromChargebee() ([]itemprice.ItemPrice, error) {
 	itemPrices := []itemprice.ItemPrice{}
 	res, err := itemPriceAction.List(&itemprice.ListRequestParams{
-		Limit: chargebee.Int32(10),
+		Limit: chargebee.Int32(50),
 	}).ListRequest()
 	if err != nil {
 		log.WithError(err).Error("Failed to fetch items prices")
@@ -118,8 +128,10 @@ func ListPlansAndAddOnsPricesFromChargebee() ([]itemprice.ItemPrice, error) {
 	return itemPrices, nil
 }
 
-func GetCurrentSubscriptionDetails(subscriptionID string) (subscription.Subscription, error) {
-	logCtx := log.Fields{"subscription_ID": subscriptionID}
+func GetCurrentSubscriptionDetails(projectID int64, subscriptionID string) (subscription.Subscription, error) {
+	logCtx := log.Fields{"subscription_ID": subscriptionID,
+		"project_id": projectID,
+	}
 
 	res, err := subscriptionAction.Retrieve(subscriptionID).Request()
 	if err != nil {
@@ -141,4 +153,40 @@ func GetItemDetailsFromItemPriceID(itemPriceID string) (itemprice.ItemPrice, err
 		return *res.ItemPrice, nil
 	}
 
+}
+
+func ListAllInvoicesForSubscription(subscriptionID string) ([]invoice.Invoice, error) {
+	logCtx := log.Fields{"subscription_ID": subscriptionID}
+
+	var invoices []invoice.Invoice
+	res, err := invoiceAction.List(&invoice.ListRequestParams{
+		Limit: chargebee.Int32(10),
+		SubscriptionId: &filter.StringFilter{
+			Is: subscriptionID,
+		},
+		// SortBy: date,
+	}).ListRequest()
+	if err != nil {
+		log.WithFields(logCtx).WithError(err).Error("Failed to get invoices from chargebee")
+		return invoices, err
+	} else {
+		for idx := 0; idx < len(res.List); idx++ {
+			invoices = append(invoices, *res.List[idx].Invoice)
+		}
+	}
+	return invoices, nil
+}
+
+func DownloadInvoiceByInvoiceID(invoiceID string) (download.Download, error) {
+	logCtx := log.Fields{"invoice_id": invoiceID}
+	res, err := invoiceAction.Pdf(invoiceID, nil).Request()
+	if err != nil {
+		log.WithFields(logCtx).WithError(err).Error("Failed to download invoice from chargebee")
+	}
+	return *res.Download, nil
+}
+
+func GetRedirectUrl(projectID int64) string {
+	callBackUrl := C.GetProtocol() + C.GetAPIDomain() + fmt.Sprintf("/billing/upgrade/callback?project_id=%d", projectID)
+	return callBackUrl
 }

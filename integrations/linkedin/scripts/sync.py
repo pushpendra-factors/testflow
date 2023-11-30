@@ -30,7 +30,7 @@ parser.add_option('--run_member_company_insights', dest='run_member_company_insi
 parser.add_option('--is_weekly_job', default='False', dest='is_weekly_job', help='', type=str)
 parser.add_option('--new_change_project_ids', default='', dest='new_change_project_ids', help='', type=str)
 
-def ping_healthcheck(successes, failures, token_failures, is_weekly_job):
+def ping_notification_services(successes, failures, token_failures, is_weekly_job):
         status_msg = ''
         if len(failures) > 0: status_msg = 'Failures on sync.'
         else: status_msg = 'Successfully synced.'
@@ -54,6 +54,8 @@ def ping_healthcheck(successes, failures, token_failures, is_weekly_job):
             }
             U.ping_healthcheck(options.env, HEALTHCHECK_TOKEN_FAILURE_PING_ID, 
                 notification_payload, endpoint='/fail')
+            
+            U.build_message_and_ping_slack(options.env, SLACK_URL, token_failures)
 
 
 def get_collections(options, linkedin_setting, sync_info_with_type, input_end_timestamp):
@@ -259,6 +261,6 @@ if __name__ == '__main__':
             else:
                 successes.append(response)
 
-        ping_healthcheck(successes, failures, token_failures, is_weekly_job)       
+        ping_notification_services(successes, failures, token_failures, is_weekly_job)       
         log.warning('Successfully synced. End of Linkedin sync job.')
         sys.exit(0)

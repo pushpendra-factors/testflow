@@ -1,0 +1,1 @@
+ALTER TABLE hubspot_documents ADD column sync_tries integer DEFAULT 0;

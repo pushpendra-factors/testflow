@@ -6,11 +6,9 @@ import (
 	"factors/config"
 	"factors/model/model"
 	"factors/model/store"
-	"factors/util"
-	"io/ioutil"
+	U "factors/util"
 	"net/http"
 	"strconv"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -18,6 +16,10 @@ import (
 const FACTORS_6SIGNAL = "factors_6sense"
 const API_6SIGNAL = "API_6Sense"
 
+type ResultChannel struct {
+	ExecuteStatus int
+	Domain        string
+}
 type Response struct {
 	Company struct {
 		Zip              string `json:"zip"`
@@ -42,128 +44,130 @@ type Response struct {
 	} `json:"company"`
 }
 
-func ExecuteSixSignalEnrich(projectId int64, sixSignalKey string, properties *util.PropertiesMap, clientIP string, statusChannel chan int) {
+func ExecuteSixSignalEnrichV1(projectId int64, sixSignalAPIKey string, properties *U.PropertiesMap, clientIP string, resultChannel chan ResultChannel) {
+	defer close(resultChannel)
+	logCtx := log.WithField("project_id", projectId)
+
+	domain, err := enrichUsingSixSignal(projectId, sixSignalAPIKey, properties, clientIP, false)
+	if err != nil {
+		logCtx.WithFields(log.Fields{"error": err, "apiKey": sixSignalAPIKey}).Info("enrich --factors debug")
+		resultChannel <- ResultChannel{ExecuteStatus: 0, Domain: ""}
+	}
+	resultChannel <- ResultChannel{ExecuteStatus: 1, Domain: domain}
+}
+
+func ExecuteSixSignalEnrich(projectId int64, sixSignalAPIKey string, properties *U.PropertiesMap, clientIP string, statusChannel chan int) {
 	defer close(statusChannel)
 	logCtx := log.WithField("project_id", projectId)
 
 	isFactorsAPIKey := false
-	if sixSignalKey == config.GetFactorsSixSignalAPIKey() {
+	if sixSignalAPIKey == config.GetFactorsSixSignalAPIKey() {
 		isFactorsAPIKey = true
 	}
-	err := enrichUsingSixSignal(projectId, sixSignalKey, properties, clientIP, isFactorsAPIKey)
+	_, err := enrichUsingSixSignal(projectId, sixSignalAPIKey, properties, clientIP, isFactorsAPIKey)
 
 	if err != nil {
-		logCtx.WithFields(log.Fields{"error": err, "apiKey": sixSignalKey}).Info("enrich --factors debug")
+		logCtx.WithFields(log.Fields{"error": err, "apiKey": sixSignalAPIKey}).Info("enrich --factors debug")
 		statusChannel <- 0
 	}
 	statusChannel <- 1
 }
-func enrichUsingSixSignal(projectId int64, sixSignalKey string, properties *util.PropertiesMap, clientIP string, isFactorsAPIKey bool) error {
+
+func enrichUsingSixSignal(projectId int64, sixSignalAPIKey string, properties *U.PropertiesMap, clientIP string, isFactorsAPIKey bool) (string, error) {
 
 	logCtx := log.WithField("project_id", projectId)
 
 	if clientIP == "" {
-		return errors.New("invalid IP, failed adding user properties")
+		return "", errors.New("invalid IP, failed adding user properties")
 	}
 
-	url := "https://epsilon.6sense.com/v1/company/details"
-	method := "GET"
-	client := &http.Client{
-		Timeout: util.TimeoutOneSecond + 100*time.Millisecond,
-	}
-	req, err := http.NewRequest(method, url, nil)
+	res, err := SixSignalHTTPRequest(clientIP, sixSignalAPIKey)
 	if err != nil {
-		logCtx.WithFields(log.Fields{"error": err, "apiKey": sixSignalKey}).Info("creating new request --factors debug")
-		return err
-	}
-	sixSignalKey = "Token " + sixSignalKey
-	req.Header.Add("Authorization", sixSignalKey)
-	req.Header.Add("X-Forwarded-For", clientIP)
-
-	res, err := client.Do(req)
-	if err != nil {
-		logCtx.WithFields(log.Fields{"error": err, "apiKey": sixSignalKey}).Info("client call --factors debug")
-		return err
+		logCtx.WithFields(log.Fields{"error": err, "apiKey": sixSignalAPIKey}).Info("client call --factors debug")
+		return "", err
 	}
 	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
 
 	var result Response
-	if err := json.Unmarshal(body, &result); err != nil {
-		log.WithFields(log.Fields{"Error": err}).Warn("Cannot unmarshal JSON")
-		return err
+	err = json.NewDecoder(res.Body).Decode(&result)
+	if err != nil {
+		return "", err
 	}
 
 	FillEnrichmentPropertiesForSixSignal(result, properties, projectId, isFactorsAPIKey)
 
-	// Adding enrichment source
-	if isFactorsAPIKey {
-		(*properties)[util.ENRICHMENT_SOURCE] = FACTORS_6SIGNAL
-	} else {
-		(*properties)[util.ENRICHMENT_SOURCE] = API_6SIGNAL
+	if !config.IsCompanyEnrichmentV1Enabled(projectId) {
+		// Adding enrichment source
+		if isFactorsAPIKey {
+			(*properties)[U.ENRICHMENT_SOURCE] = FACTORS_6SIGNAL
+		} else {
+			(*properties)[U.ENRICHMENT_SOURCE] = API_6SIGNAL
+		}
 	}
 
-	return nil
+	return result.Company.Domain, nil
 }
 
-func FillEnrichmentPropertiesForSixSignal(result Response, properties *util.PropertiesMap, projectId int64, isFactorsAPIKey bool) {
+func FillEnrichmentPropertiesForSixSignal(result Response, properties *U.PropertiesMap, projectId int64, isFactorsAPIKey bool) {
 
-	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.Zip, util.SIX_SIGNAL_ZIP, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.NaicsDescription, util.SIX_SIGNAL_NAICS_DESCRIPTION, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.Country, util.SIX_SIGNAL_COUNTRY, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.City, util.SIX_SIGNAL_CITY, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.Industry, util.SIX_SIGNAL_INDUSTRY, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.Sic, util.SIX_SIGNAL_SIC, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.RevenueRange, util.SIX_SIGNAL_REVENUE_RANGE, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.CountryIsoCode, util.SIX_SIGNAL_COUNTRY_ISO_CODE, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.Phone, util.SIX_SIGNAL_PHONE, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.State, util.SIX_SIGNAL_STATE, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.Region, util.SIX_SIGNAL_REGION, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.Naics, util.SIX_SIGNAL_NAICS, properties)
-	util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.SicDescription, util.SIX_SIGNAL_SIC_DESCRIPTION, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(result.Company.Zip, U.SIX_SIGNAL_ZIP, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(result.Company.NaicsDescription, U.SIX_SIGNAL_NAICS_DESCRIPTION, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(result.Company.Country, U.SIX_SIGNAL_COUNTRY, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(result.Company.City, U.SIX_SIGNAL_CITY, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(result.Company.Industry, U.SIX_SIGNAL_INDUSTRY, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(result.Company.Sic, U.SIX_SIGNAL_SIC, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(result.Company.RevenueRange, U.SIX_SIGNAL_REVENUE_RANGE, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(result.Company.CountryIsoCode, U.SIX_SIGNAL_COUNTRY_ISO_CODE, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(result.Company.Phone, U.SIX_SIGNAL_PHONE, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(result.Company.State, U.SIX_SIGNAL_STATE, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(result.Company.Region, U.SIX_SIGNAL_REGION, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(result.Company.Naics, U.SIX_SIGNAL_NAICS, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(result.Company.SicDescription, U.SIX_SIGNAL_SIC_DESCRIPTION, properties)
 
 	empCountInt, err := strconv.Atoi(result.Company.EmployeeCount)
 	if err != nil {
-		util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.EmployeeCount, util.SIX_SIGNAL_EMPLOYEE_COUNT, properties)
+		U.ValidateAndFillEnrichmentPropsForStringValue(result.Company.EmployeeCount, U.SIX_SIGNAL_EMPLOYEE_COUNT, properties)
 	}
-	util.ValidateAndFillEnrichmentPropsForIntegerValue(empCountInt, util.SIX_SIGNAL_EMPLOYEE_COUNT, properties)
+	U.ValidateAndFillEnrichmentPropsForIntegerValue(empCountInt, U.SIX_SIGNAL_EMPLOYEE_COUNT, properties)
 
 	annualRevInt, err := strconv.Atoi(result.Company.AnnualRevenue)
 	if err != nil {
-		util.ValidateAndFillEnrichmentPropsForStringValue(result.Company.AnnualRevenue, util.SIX_SIGNAL_ANNUAL_REVENUE, properties)
+		U.ValidateAndFillEnrichmentPropsForStringValue(result.Company.AnnualRevenue, U.SIX_SIGNAL_ANNUAL_REVENUE, properties)
 	}
-	util.ValidateAndFillEnrichmentPropsForIntegerValue(annualRevInt, util.SIX_SIGNAL_ANNUAL_REVENUE, properties)
+	U.ValidateAndFillEnrichmentPropsForIntegerValue(annualRevInt, U.SIX_SIGNAL_ANNUAL_REVENUE, properties)
 
 	empRange := result.Company.EmployeeRange
-	util.ValidateAndFillEnrichmentPropsForStringValue(empRange, util.SIX_SIGNAL_EMPLOYEE_RANGE, properties)
+	U.ValidateAndFillEnrichmentPropsForStringValue(empRange, U.SIX_SIGNAL_EMPLOYEE_RANGE, properties)
 
 	//Keeping name,address and domain empty, if empRange is equals to "0 - 9"
 	if empRange == "0 - 9" {
-		(*properties)[util.SIX_SIGNAL_ADDRESS] = ""
-		(*properties)[util.SIX_SIGNAL_DOMAIN] = ""
-		(*properties)[util.SIX_SIGNAL_NAME] = ""
+		(*properties)[U.SIX_SIGNAL_ADDRESS] = ""
+		(*properties)[U.SIX_SIGNAL_DOMAIN] = ""
+		(*properties)[U.SIX_SIGNAL_NAME] = ""
 	} else {
 
 		if address := result.Company.Address; address != "" {
-			if c, ok := (*properties)[util.SIX_SIGNAL_ADDRESS]; !ok || c == "" {
-				(*properties)[util.SIX_SIGNAL_ADDRESS] = address
+			if c, ok := (*properties)[U.SIX_SIGNAL_ADDRESS]; !ok || c == "" {
+				(*properties)[U.SIX_SIGNAL_ADDRESS] = address
 			}
 		}
 
 		if domain := result.Company.Domain; domain != "" {
-			if c, ok := (*properties)[util.SIX_SIGNAL_DOMAIN]; !ok || c == "" {
+			if c, ok := (*properties)[U.SIX_SIGNAL_DOMAIN]; !ok || c == "" {
 
-				(*properties)[util.SIX_SIGNAL_DOMAIN] = domain
-				model.SetSixSignalAPICountCacheResult(projectId, util.TimeZoneStringIST)
+				(*properties)[U.SIX_SIGNAL_DOMAIN] = domain
+				if !config.IsCompanyEnrichmentV1Enabled(projectId) {
+					model.SetSixSignalAPICountCacheResult(projectId, U.TimeZoneStringIST)
 
-				if isFactorsAPIKey {
-					timeZone, statusCode := store.GetStore().GetTimezoneForProject(projectId)
-					if statusCode != http.StatusFound {
-						timeZone = util.TimeZoneStringIST
-					}
-					err := model.SetSixSignalMonthlyUniqueEnrichmentCount(projectId, domain, timeZone)
-					if err != nil {
-						log.Error("SetSixSignalMonthlyUniqueEnrichmentCount Failed.")
+					if isFactorsAPIKey {
+						timeZone, statusCode := store.GetStore().GetTimezoneForProject(projectId)
+						if statusCode != http.StatusFound {
+							timeZone = U.TimeZoneStringIST
+						}
+						err := model.SetSixSignalMonthlyUniqueEnrichmentCount(projectId, domain, timeZone)
+						if err != nil {
+							log.Error("SetSixSignalMonthlyUniqueEnrichmentCount Failed.")
+						}
 					}
 				}
 
@@ -171,8 +175,8 @@ func FillEnrichmentPropertiesForSixSignal(result Response, properties *util.Prop
 		}
 
 		if name := result.Company.Name; name != "" {
-			if c, ok := (*properties)[util.SIX_SIGNAL_NAME]; !ok || c == "" {
-				(*properties)[util.SIX_SIGNAL_NAME] = name
+			if c, ok := (*properties)[U.SIX_SIGNAL_NAME]; !ok || c == "" {
+				(*properties)[U.SIX_SIGNAL_NAME] = name
 			}
 		}
 	}

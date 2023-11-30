@@ -2448,6 +2448,12 @@ func enrichAll(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEvent
 	var errCode int
 	totalProcessed := 0
 	for i := range documents {
+
+		errCode = store.GetStore().IncrementSyncTriesForCrmEnrichment("salesforce_documents", documents[i].ID, documents[i].ProjectID, documents[i].Timestamp, int(documents[i].Action), documents[i].Type)
+		if errCode != http.StatusOK {
+			logCtx.Error("Failed to increment sync tries.")
+		}
+
 		startTime := time.Now().Unix()
 		switch documents[i].Type {
 		case model.SalesforceDocumentTypeContact:
@@ -2577,6 +2583,12 @@ func enrichAllGroup(projectID int64, wg *sync.WaitGroup, docType int, smartEvent
 
 		var errCode int
 		var pendingSyncRecords map[string]map[string]string
+
+		errCode = store.GetStore().IncrementSyncTriesForCrmEnrichment("salesforce_documents", documents[i].ID, documents[i].ProjectID, documents[i].Timestamp, int(documents[i].Action), documents[i].Type)
+		if errCode != http.StatusOK {
+			log.Error("Failed to increment sync tries.")
+		}
+
 		switch documents[i].Type {
 		case model.SalesforceDocumentTypeAccount, model.SalesforceDocumentTypeGroupAccount:
 			errCode, _ = enrichGroupAccount(projectID, &documents[i], smartEventNames)

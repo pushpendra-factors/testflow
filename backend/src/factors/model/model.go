@@ -99,6 +99,7 @@ type Model interface {
 	// billing_account
 	GetBillingAccountByProjectID(projectID int64) (*model.BillingAccount, int)
 	GetBillingAccountByAgentUUID(AgentUUID string) (*model.BillingAccount, int)
+	GetAgentUUIDByBillingAccountID(BillingAccountID string) (string, int)
 	UpdateBillingAccount(id string, planId uint64, orgName, billingAddr, pinCode, phoneNo string) int
 	GetProjectsUnderBillingAccountID(ID string) ([]model.Project, int)
 	GetAgentsByProjectIDs(projectIDs []int64) ([]*model.Agent, int)
@@ -503,6 +504,7 @@ type Model interface {
 	GetProjects() ([]model.Project, int)
 	GetProjectsByIDs(ids []int64) ([]model.Project, int)
 	GetAllProjectIDs() ([]int64, int)
+	GetProjectIDByBillingSubscriptionID(id string) (int64, int)
 	GetNextSessionStartTimestampForProject(projectID int64) (int64, int)
 	UpdateNextSessionStartTimestampForProject(projectID int64, timestamp int64) int
 	GetProjectsToRunForIncludeExcludeString(projectIDs, excludeProjectIDs string) []int64
@@ -868,6 +870,7 @@ type Model interface {
 	UpdateCRMActivityAsSynced(projectID int64, source U.CRMSource, crmActivity *model.CRMActivity, syncID, userID string) (*model.CRMActivity, int)
 	GetCRMUsersTypeAndAction(projectID int64, source U.CRMSource) ([]model.CRMUser, int)
 	GetCRMActivityNames(projectID int64, source U.CRMSource) ([]string, int)
+	IncrementSyncTriesForCrmEnrichment(crmSource, docId string, projectId, timestamp int64, action, doctype int) int
 
 	GetCRMSetting(projectID int64) (*model.CRMSetting, int)
 	GetAllCRMSetting() ([]model.CRMSetting, int)
@@ -1009,14 +1012,16 @@ type Model interface {
 	UpdateUserEventsCount(projectId int64, ev map[string]map[string]model.LatestScore) error
 	UpdateGroupEventsCount(projectId int64, ev map[string]map[string]model.LatestScore, lastev map[string]model.LatestScore) error
 	UpdateUserEventsCountGO(projectId int64, ev map[string]map[string]model.LatestScore) error
-	UpdateGroupEventsCountGO(projectId int64, ev map[string]map[string]model.LatestScore, lastev map[string]model.LatestScore, weights model.AccWeights) error
+	UpdateGroupEventsCountGO(projectId int64, ev map[string]map[string]model.LatestScore, lastev map[string]model.LatestScore, allev map[string]model.LatestScore, weights model.AccWeights) error
 	GetAccountsScore(project_id int64, group_id int, ts string, debug bool) ([]model.PerAccountScore, *model.AccWeights, error)
 	GetUserScore(project_id int64, user_id string, ts string, debug bool, is_anonymus bool) (model.PerUserScoreOnDay, error)
 	GetUserScoreOnIds(projectId int64, usersAnonymous, usersNonAnonymous []string, debug bool) (map[string]model.PerUserScoreOnDay, error)
 	GetAccountScoreOnIds(projectId int64, accountIds []string, debug bool) (map[string]model.PerUserScoreOnDay, error)
-	GetPerAccountScore(projectId int64, timestamp string, userId string, num_days int, debug bool) (model.PerAccountScore, *model.AccWeights, error)
+	GetPerAccountScore(projectId int64, timestamp string, userId string, num_days int, debug bool) (model.PerAccountScore, *model.AccWeights, string, error)
 	GetAllUserEvents(projectId int64, debug bool) (map[string]map[string]model.LatestScore, map[string]int, error, int64)
 	WriteScoreRanges(projectId int64, buckets []model.BucketRanges) error
+	GetEngagementBucketsOnProject(projectId int64, timestamp string) (model.BucketRanges, error)
+
 	// Slack
 	SetAuthTokenforSlackIntegration(projectID int64, agentUUID string, authTokens model.SlackAccessTokens) error
 	GetSlackAuthToken(projectID int64, agentUUID string) (model.SlackAccessTokens, error)

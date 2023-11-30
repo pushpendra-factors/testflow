@@ -1318,6 +1318,10 @@ func (store *MemSQL) GetSourceStringForAccountsV1(projectID int64, source string
 
 // FormatProfilesStruct transforms the results into a processed version suitable for the response payload.
 func FormatProfilesStruct(projectID int64, profiles []model.Profile, profileType string, tableProps []string, source string) ([]model.Profile, error) {
+	if profiles == nil {
+		return []model.Profile{}, nil
+	}
+
 	if model.IsAccountProfiles(profileType) {
 		formatAccountProfilesList(profiles, tableProps, source)
 	} else if model.IsUserProfiles(profileType) {
@@ -1824,12 +1828,13 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 	}
 
 	// Get Account Engagement Score and Trends
-	accountScore, _, errGetScore := store.GetPerAccountScore(projectID, time.Now().Format("20060102"), id, model.NUM_TREND_DAYS, false)
+	accountScore, _, engagementLevel, errGetScore := store.GetPerAccountScore(projectID, time.Now().Format("20060102"), id, model.NUM_TREND_DAYS, false)
 	if errGetScore != nil {
 		log.WithFields(logFields).WithError(errGetScore).Error("Error retrieving account score")
 	} else {
 		overview.Temperature = accountScore.Score
 		overview.ScoresList = accountScore.Trend
+		overview.Engagement = engagementLevel
 	}
 
 	// Get Top Pages and Top Users

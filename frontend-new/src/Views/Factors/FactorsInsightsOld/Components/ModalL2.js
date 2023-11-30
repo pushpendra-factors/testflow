@@ -9,8 +9,8 @@ import ModalTable from './ModalTable';
 
 const L2Modal = ({ data, setModalL2, showModalL2, modalData, explainMatchEventName }) => {
 
-    console.log('Debug Mode: Insights L1 -->', data)
-    console.log('Debug Mode: Subinsights L2+ -->', modalData)
+    // console.log('Debug Mode: Insights L1 -->', data)
+    // console.log('Debug Mode: Subinsights L2+ -->', modalData)
     const isAttribute = modalData?.factors_insights_type == "attribute";
     return (
         <>

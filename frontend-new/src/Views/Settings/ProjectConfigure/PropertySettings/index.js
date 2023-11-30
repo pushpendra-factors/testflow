@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { connect } from 'react-redux';
 
 import { Text, SVG } from 'factorsComponents';
@@ -173,9 +173,15 @@ function Properties({
       }
     );
   };
-  function callback(key) {
+
+  function handleTabChange(key) {
     setTabNo(key);
+    localStorage.setItem('propertiesActiveTab', key);
   }
+
+  useEffect(() => {
+    setTabNo(localStorage.getItem('propertiesActiveTab') || 1);
+  }, []);
 
   const confirmDelete = useCallback(async () => {
     try {
@@ -188,12 +194,19 @@ function Properties({
       console.log(err.response);
     }
   }, [deleteWidgetModal]);
+
   const renderSmartPropertyTable = () => {
     return (
       <>
         <Row>
           <Col span={12}>
-            <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} id={'fa-at-text--page-title'}>
+            <Text
+              type={'title'}
+              level={3}
+              weight={'bold'}
+              extraClass={'m-0'}
+              id={'fa-at-text--page-title'}
+            >
               Properties
             </Text>
           </Col>
@@ -203,7 +216,6 @@ function Properties({
                 <Button
                   size={'large'}
                   onClick={() => {
-                    //   setTabNo(1);
                     setShowPropertyForm(true);
                   }}
                 >
@@ -224,35 +236,27 @@ function Properties({
                 </Button>
               )}
 
-              {
-                tabNo == 2 && (
-                  <>
-                    <Tooltip
-                      placement='top'
-                      trigger={'hover'}
-                      title={enableEdit ? 'Only Admin can edit' : null}
+              {tabNo == 2 && (
+                <>
+                  <Tooltip
+                    placement='top'
+                    trigger={'hover'}
+                    title={enableEdit ? 'Only Admin can edit' : null}
+                  >
+                    <Button
+                      size={'large'}
+                      disabled={enableEdit}
+                      onClick={() => {
+                        setShowDCGForm(true);
+                        setShowModalVisible(true);
+                      }}
                     >
-                      <Button
-                        size={'large'}
-                        disabled={enableEdit}
-                        onClick={() => {
-                          setShowDCGForm(true);
-                          setShowModalVisible(true);
-                        }}
-                      >
-                        <SVG name={'plus'} extraClass={'mr-2'} size={16} />
-                        Add New
-                      </Button>
-                    </Tooltip>
-                  </>
-                )
-                // <Button size={'large'} className={'ml-2'} onClick={() => {
-                //     //   setTabNo(2);
-                //     setShowDCGForm(true)
-                //     setShowModalVisible(true)
-                // }
-                // }><SVG name={'plus'} extraClass={'mr-2'} size={16} />Add New</Button>
-              }
+                      <SVG name={'plus'} extraClass={'mr-2'} size={16} />
+                      Add New
+                    </Button>
+                  </Tooltip>
+                </>
+              )}
             </div>
           </Col>
         </Row>
@@ -279,12 +283,19 @@ function Properties({
                 Customize and tailor your data to align perfectly with your
                 business objectives, ensuring optimal insights and enhanced
                 advertising optimization.
-                <a href='https://help.factors.ai/en/articles/7284109-custom-properties' target='_blank'>
+                <a
+                  href='https://help.factors.ai/en/articles/7284109-custom-properties'
+                  target='_blank'
+                >
                   Learn more
                 </a>
               </Text>
 
-              <Tabs activeKey={`${tabNo}`} onChange={callback}>
+              <Tabs
+                activeKey={`${tabNo}`}
+                defaultActiveKey={'1'}
+                onChange={handleTabChange}
+              >
                 <TabPane tab='Custom Dimensions' key='1'>
                   <Table
                     className='fa-table--basic mt-4'
@@ -350,7 +361,6 @@ function Properties({
                   isModalVisible={isModalVisible}
                   setShowModalVisible={setShowModalVisible}
                   setShowDCGForm={setShowDCGForm}
-                  setTabNo={setTabNo}
                   editProperty={editProperty}
                   setEditProperty={setEditProperty}
                 />
@@ -362,12 +372,7 @@ function Properties({
               <>
                 {!showForm && <>{renderSmartPropertyTable()}</>}
 
-                {showForm && (
-                  <PropertyMappingKPI
-                    setShowForm={setShowForm}
-                    setTabNo={setTabNo}
-                  />
-                )}
+                {showForm && <PropertyMappingKPI setShowForm={setShowForm} />}
               </>
             )}
             <ConfirmationModal

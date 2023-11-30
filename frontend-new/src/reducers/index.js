@@ -25,6 +25,7 @@ import userProfilesViewReducer from './userProfilesView';
 import FeatureConfigReducer from './featureConfig';
 import { USER_LOGOUT } from './types';
 import preBuildDashboardConfig from '../Views/PreBuildDashboard/state/reducer'
+import PlansConfigReducer from './plansConfig';
 
 const appReducer = combineReducers({
   global: GlobalReducer,
@@ -51,7 +52,8 @@ const appReducer = combineReducers({
   onBoardFlow: onBoardFlow,
   accountProfilesView: accountProfilesViewReducer,
   userProfilesView: userProfilesViewReducer,
-  featureConfig: FeatureConfigReducer
+  featureConfig: FeatureConfigReducer,
+  plansConfig: PlansConfigReducer
 });
 
 const rootReducer = (state, action) => {

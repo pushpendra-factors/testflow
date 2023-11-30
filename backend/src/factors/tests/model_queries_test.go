@@ -13,6 +13,119 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestInsightsOrFunnelsGetAllQueriesGroupAnalysis(t *testing.T) {
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	agent2, errCode := SetupAgentReturnDAO(getRandomEmail(), "+13425356")
+	assert.Equal(t, http.StatusCreated, errCode)
+	_, errCode = store.GetStore().CreateProjectAgentMappingWithDependencies(&model.ProjectAgentMapping{
+		ProjectID: project.ID, AgentUUID: agent2.UUID})
+	assert.Equal(t, http.StatusCreated, errCode)
+	
+	q1 := model.Query{
+		From: 0,
+		To:   0,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{
+				Name:       "abcd",
+				Properties: []model.QueryProperty{},
+			},
+			model.QueryEventWithProperties{
+				Name:       "abcd1",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		Class: model.QueryClassFunnel,
+
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondAllGivenEvent,
+	}
+	q1InPostgresFormat, _ := U.EncodeStructTypeToPostgresJsonb(q1)
+	_, errCode, errMsg := store.GetStore().CreateQuery(project.ID, &model.Queries{ProjectID: project.ID,
+		Title: "abcd", Type: 2, CreatedBy: agent.UUID, Query: *q1InPostgresFormat,
+		Settings: postgres.Jsonb{RawMessage: json.RawMessage(`{"size": 303}`)}})
+	assert.Equal(t, "", errMsg)
+
+	q1.Class = model.QueryClassInsights
+	q2InPostgresFormat, _ := U.EncodeStructTypeToPostgresJsonb(q1)
+	_, errCode, errMsg = store.GetStore().CreateQuery(project.ID, &model.Queries{ProjectID: project.ID,
+		Title: "abcde", Type: 2, CreatedBy: agent.UUID, Query: *q2InPostgresFormat,
+		Settings: postgres.Jsonb{RawMessage: json.RawMessage(`{"size": 303}`)}})
+	assert.Equal(t, "", errMsg)
+
+	dbQueries, _ := store.GetStore().GetALLQueriesWithProjectId(project.ID)
+	for _, dbQuery := range dbQueries {
+		var internalQuery model.Query
+		U.DecodePostgresJsonbToStructType(&dbQuery.Query, &internalQuery)
+		assert.NotEmpty(t, internalQuery.Class)
+	}
+}
+
+func TestEventsGetAllQueriesGroupAnalysis(t *testing.T) {
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	agent2, errCode := SetupAgentReturnDAO(getRandomEmail(), "+13425356")
+	assert.Equal(t, http.StatusCreated, errCode)
+	_, errCode = store.GetStore().CreateProjectAgentMappingWithDependencies(&model.ProjectAgentMapping{
+		ProjectID: project.ID, AgentUUID: agent2.UUID})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	
+		query1 := model.Query{
+			From: 0,
+			To:   0,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "abc",
+					Properties: []model.QueryProperty{
+					},
+				},
+			},
+			Class: model.QueryClassEvents,
+
+			Type:            model.QueryTypeEventsOccurrence,
+			EventsCondition: model.EventCondAnyGivenEvent,
+		}
+
+		query2 := model.Query{
+			From: 0,
+			To:   0,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "abc1",
+					Properties: []model.QueryProperty{
+					},
+				},
+			},
+			Class: model.QueryClassEvents,
+
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondAnyGivenEvent,
+		}
+
+		queryGroup := model.QueryGroup{}
+		queryGroup.Queries = make([]model.Query, 0)
+		queryGroup.Queries = append(queryGroup.Queries, query1)
+		queryGroup.Queries = append(queryGroup.Queries, query2)
+
+		q1InPostgresFormat, _ := U.EncodeStructTypeToPostgresJsonb(queryGroup)
+		_, errCode, errMsg := store.GetStore().CreateQuery(project.ID, &model.Queries{ProjectID: project.ID,
+			Title: "abc", Type: 2, CreatedBy: agent.UUID, Query: *q1InPostgresFormat,
+			Settings: postgres.Jsonb{RawMessage: json.RawMessage(`{"size": 303}`)}})
+		assert.Equal(t, "", errMsg)
+	
+	dbQueries, _ := store.GetStore().GetALLQueriesWithProjectId(project.ID)
+	for _, dbQuery := range dbQueries {
+		var internalQuery model.QueryGroup
+		U.DecodePostgresJsonbToStructType(&dbQuery.Query, &internalQuery)
+		assert.NotEmpty(t, internalQuery.Queries[0].Class)
+		assert.NotEmpty(t, internalQuery.Queries[1].Class)
+	}
+
+}
+
 func TestModelQuery(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)

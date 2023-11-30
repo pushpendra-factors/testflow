@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Header from '../../AppLayout/Header';
 import SearchBar from '../../../components/SearchBar';
-import { Row, Col, Button, Spin } from 'antd';
+import { Row, Col, Button, Spin, Empty } from 'antd';
 import {
   fetchSavedExplainGoals,
   fetchFactorsModels,
@@ -9,8 +9,9 @@ import {
   saveGoalInsightRules,
   saveGoalInsightModel,
   fetchFactorsTrackedEvents,
-  fetchFactorsTrackedUserProperties
-} from 'Reducers/factors';
+  fetchFactorsTrackedUserProperties,
+  setActiveExplainQuery
+} from 'Reducers/factors'; 
 import {
   fetchEventNames,
   getUserPropertiesV2
@@ -43,7 +44,9 @@ const Factors = ({
   saveGoalInsightModel,
   setGoalInsight,
   eventPropNames,
-  userPropNames
+  userPropNames,
+  activeQuery,
+  setActiveExplainQuery
 }) => {
   const [loadingTable, SetLoadingTable] = useState(true);
   const [fetchingIngishts, SetfetchingIngishts] = useState(false);
@@ -66,8 +69,9 @@ const Factors = ({
     };
     getData1();
 
-    return () => {
-      dispatch({ type: SHOW_ANALYTICS_RESULT, payload: false });
+    return () => { 
+      dispatch({ type: SHOW_ANALYTICS_RESULT, payload: false }); 
+      setActiveExplainQuery(false)
     };
   }, [activeProject]);
 
@@ -78,7 +82,7 @@ const Factors = ({
   };
 
   useEffect(() => {
-    if (goalInsights) {
+    if (goalInsights || activeQuery) {
       setTimeout(() => {
         smoothScroll('#explain-builder--footer');
       }, 200);
@@ -107,6 +111,23 @@ const Factors = ({
     );
   };
 
+  const DataBuildMessage = () => { 
+    return (
+      <div className='flex flex-col items-center justify-center mt-20'>
+        <img
+          style={{ maxWidth: '200px', height: 'auto' }}
+          src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/report-building.png'
+        />
+        <Text type={'title'} weight={'bold'} extraClass={'mt-4'} level={6}>
+          Your report is being built
+        </Text>
+        <Text type={'title'} weight={'thin'} level={7}>
+          This might take a while.
+        </Text>
+      </div>
+    );
+  };
+
   return (
     <>
       <ErrorBoundary
@@ -125,17 +146,36 @@ const Factors = ({
           <Spin size={'large'} className={'fa-page-loader'} />
         ) : (
           <>
-            <HeaderContents />
+            <HeaderContents activeQuery={activeQuery} />
             <div className={'fa-container'}>
               <div className={'mt-24 '}>
                 <ExplainQueryBuilder />
                 <div id='fa-explain-results--container' className='px-20'>
-                  {!_.isEmpty(goalInsights?.insights) && (
+                  {/* {!_.isEmpty(goalInsights?.insights) && (
                     <ResultsTableL1
                       goalInsights={goalInsights}
                       explainMatchEventName={explainMatchEventName}
                     />
-                  )}
+                  )}  */}
+
+                  {!_.isEmpty(activeQuery) && _.isEmpty(goalInsights?.insights) ? (
+                            activeQuery?.status == 'building' ||
+                            activeQuery?.status == 'saved' ? (
+                              <div className='mb-20'>
+                                <DataBuildMessage />
+                              </div>
+                            ) : (
+                              <div className='mb-20'>
+                                <Empty /> 
+                              </div>
+                            )
+                          ) : (
+                            <ResultsTableL1
+                      goalInsights={goalInsights}
+                      explainMatchEventName={explainMatchEventName}
+                    />
+                          )}
+
                 </div>
               </div>
             </div>
@@ -153,7 +193,8 @@ const mapStateToProps = (state) => {
     factors_models: state.factors.factors_models,
     goalInsights: state.factors.goal_insights,
     eventPropNames: state.coreQuery.eventPropNames,
-    userPropNames: state.coreQuery.userPropNames
+    userPropNames: state.coreQuery.userPropNames,
+    activeQuery: state.factors.activeQuery,
   };
 };
 export default connect(mapStateToProps, {
@@ -166,5 +207,6 @@ export default connect(mapStateToProps, {
   saveGoalInsightRules,
   fetchFactorsModels,
   fetchEventNames,
-  getUserPropertiesV2
+  getUserPropertiesV2,
+  setActiveExplainQuery
 })(Factors);

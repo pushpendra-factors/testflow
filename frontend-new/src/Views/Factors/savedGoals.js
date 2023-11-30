@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Text, SVG } from 'factorsComponents';
 import { Button, Table, Avatar, Menu, Dropdown, Modal, message, Badge, Input } from 'antd';
 import { useHistory } from 'react-router-dom';
-import { fetchExplainGoalInsights, saveGoalInsightRules, removeSavedExplainGoal, fetchSavedExplainGoals } from 'Reducers/factors';
+import { fetchExplainGoalInsights, setActiveExplainQuery, saveGoalInsightRules, removeSavedExplainGoal, fetchSavedExplainGoals, fetchSavedExplainGoalsV3 } from 'Reducers/factors';
 import { connect } from 'react-redux';
 import { MoreOutlined, ExclamationCircleOutlined } from '@ant-design/icons'; 
 import moment from 'moment';
@@ -11,7 +11,7 @@ import { ScrollToTop } from 'Routes/feature';
 const { confirm } = Modal;
 
 
-const SavedGoals = ({ savedExplainGoals, fetchExplainGoalInsights, factors_models, activeProject, saveGoalInsightRules, SetfetchingIngishts, removeSavedExplainGoal, fetchSavedExplainGoals }) => {
+const SavedGoals = ({ savedExplainGoals, fetchExplainGoalInsights, setActiveExplainQuery, factors_models, activeProject, saveGoalInsightRules, SetfetchingIngishts, removeSavedExplainGoal, fetchSavedExplainGoals, fetchSavedExplainGoalsV3 }) => {
 
   const [loadingTable, SetLoadingTable] = useState(true);
   const [dataSource, setdataSource] = useState(null);
@@ -51,9 +51,9 @@ const SavedGoals = ({ savedExplainGoals, fetchExplainGoalInsights, factors_model
       key: 'data',
       width: '350px',
       render: (data) => <Text type={'title'} level={7} truncate={true}
-      extraClass={`${(data?.status == 'saved' || data?.status == 'building') ? "" : "cursor-pointer"} m-0`} 
-      onClick={(data?.status == 'saved' || data?.status == 'building') ? "" : () => getInsights(data)}
-      // onClick={() => getInsights(data)}
+      extraClass={"cursor-pointer"} 
+      // onClick={(data?.status == 'saved' || data?.status == 'building') ? "" : () => getInsights(data)}
+      onClick={() => getInsights(data)}
       >{data?.title}</Text>
     },
     {
@@ -99,7 +99,7 @@ const SavedGoals = ({ savedExplainGoals, fetchExplainGoalInsights, factors_model
       onOk() {
         removeSavedExplainGoal(activeProject?.id, values?.id).then(() => {
           message.success('Saved report removed!');
-          fetchSavedExplainGoals(activeProject?.id)
+          fetchSavedExplainGoalsV3(activeProject?.id)
         }).catch((err) => {
           message.error(err);
         });
@@ -130,29 +130,42 @@ const SavedGoals = ({ savedExplainGoals, fetchExplainGoalInsights, factors_model
     else{
       setdataSource([]);
       SetLoadingTable(true); 
-      fetchSavedExplainGoals(activeProject?.id).then(() => {
+      fetchSavedExplainGoalsV3(activeProject?.id).then(() => {
         SetLoadingTable(false)
       })
     }
   }, [savedExplainGoals]); 
 
   const getInsights = (data) => {
+      
+    let payload = { 
+      ...data,
+      rule: data?.query
+    } 
     
     SetfetchingIngishts(true);   
-    let payload = {
-      ...data?.query,
-      rule: JSON.parse(data?.rq)
-    }
+    setActiveExplainQuery(data);
+    // fetchExplainGoalInsights(activeProject?.id, data?.id, payload).then(()=>{
+    //   history.push('/explainV2/insights');
+    //   SetfetchingIngishts(false) 
+    // }).catch((err) => {
+    //   console.log("fetchExplainGoalInsights catch", err);
+    //   const ErrMsg = err?.data?.error ? err.data.error : `Oops! Something went wrong!`;
+    //   message.error(ErrMsg);
+    //   SetfetchingIngishts(false) 
+    // });
 
-    fetchExplainGoalInsights(activeProject?.id, data?.id, payload).then(()=>{
+    const getData = async () => {
+      await  fetchExplainGoalInsights(activeProject?.id, data?.id, payload);
+    };
+    getData().then(() => {
       history.push('/explainV2/insights');
-      SetfetchingIngishts(false) 
+      SetfetchingIngishts(false); 
     }).catch((err) => {
-      console.log("fetchExplainGoalInsights catch", err);
-      const ErrMsg = err?.data?.error ? err.data.error : `Oops! Something went wrong!`;
-      message.error(ErrMsg);
-      SetfetchingIngishts(false) 
-    });
+        history.push('/explainV2/insights'); 
+        SetfetchingIngishts(false) 
+      });
+
   };
 
   const statusRefreshColumn = () => {
@@ -165,7 +178,7 @@ const SavedGoals = ({ savedExplainGoals, fetchExplainGoalInsights, factors_model
         shape="square"
         onClick={() => {
           SetLoadingTable(true)
-          fetchSavedExplainGoals(activeProject?.id).then(() => {
+          fetchSavedExplainGoalsV3(activeProject?.id).then(() => {
             SetLoadingTable(false)
           })
         }} />
@@ -237,4 +250,4 @@ const mapStateToProps = (state) => {
 };
 
 
-export default connect(mapStateToProps, { fetchExplainGoalInsights, saveGoalInsightRules, removeSavedExplainGoal, fetchSavedExplainGoals })(SavedGoals);
+export default connect(mapStateToProps, { fetchExplainGoalInsights, setActiveExplainQuery, saveGoalInsightRules, removeSavedExplainGoal, fetchSavedExplainGoals, fetchSavedExplainGoalsV3 })(SavedGoals);

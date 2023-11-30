@@ -39,7 +39,7 @@ import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
 import { useHistory, useLocation } from 'react-router-dom';
 import { PathUrls } from '../../../routes/pathUrls';
 import UpgradeModal from '../UpgradeModal';
-import { FEATURES, PLANS } from 'Constants/plans.constants';
+import { FEATURES, PLANS, PLANS_V0 } from 'Constants/plans.constants';
 import {
   getGroupProperties,
   getEventPropertiesV2
@@ -99,7 +99,8 @@ function AccountDetails({
 
   const { groupPropNames } = useSelector((state) => state.coreQuery);
   const { plan } = useSelector((state) => state.featureConfig);
-  const isFreePlan = plan?.name === PLANS.PLAN_FREE;
+  const isFreePlan =
+    plan?.name === PLANS.PLAN_FREE || plan?.name === PLANS_V0.PLAN_FREE;
   const agentState = useSelector((state) => state.agent);
   const activeAgent = agentState?.agent_details?.email;
 
