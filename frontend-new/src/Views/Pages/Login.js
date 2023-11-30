@@ -26,7 +26,7 @@ function Login(props) {
         message.error('Account doesn’t exist, please sign up');
         return;
       } else if (error === 'AGENT_NOT_ACTIVE') {
-        message.error('Already an user. Verify your email or Signup again.');
+        message.error('Already a user. Verify your email or Signup again.');
         return;
       }
       let str = error.replace('_', ' ');
