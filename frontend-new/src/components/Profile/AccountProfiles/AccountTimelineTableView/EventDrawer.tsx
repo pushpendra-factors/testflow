@@ -1,10 +1,7 @@
 import { Button, Drawer } from 'antd';
 import { Text } from 'Components/factorsComponents';
-import {
-  eventIconsColorMap,
-  TimelineHoverPropDisplayNames
-} from 'Components/Profile/utils';
-import React, { useEffect, useState } from 'react';
+import { eventIconsColorMap } from 'Components/Profile/utils';
+import React from 'react';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import EventIcon from './EventIcon';
 import { EventDrawerProps } from './types';
@@ -12,14 +9,13 @@ import { EventDrawerProps } from './types';
 const EventDrawer: React.FC<EventDrawerProps> = ({
   visible,
   onClose,
-  selectedEvent
+  event
 }) => {
-
   const renderEventDetails = () => {
-    if (!selectedEvent) return null;
+    if (!event) return null;
 
-    const eventIcon = eventIconsColorMap[selectedEvent.icon]
-      ? selectedEvent.icon
+    const eventIcon = eventIconsColorMap[event.icon]
+      ? event.icon
       : 'calendar-star';
 
     return (
@@ -27,63 +23,57 @@ const EventDrawer: React.FC<EventDrawerProps> = ({
         <div className='top-section mb-4'>
           <div className='flex items-center'>
             <EventIcon icon={eventIcon} size={20} />
-            {selectedEvent.alias_name ? (
+            {event.alias_name ? (
               <div className='heading-with-sub ml-2'>
-                <div className='sub'>
-                  {PropTextFormat(selectedEvent.display_name)}
-                </div>
+                <div className='sub'>{PropTextFormat(event.display_name)}</div>
                 <div className='main'>
-                  {selectedEvent.event_type === 'FE'
-                    ? selectedEvent.event_name
-                    : selectedEvent.alias_name}
+                  {event.event_type === 'FE'
+                    ? event.event_name
+                    : event.alias_name}
                 </div>
               </div>
             ) : (
               <div className='heading ml-2'>
-                {PropTextFormat(selectedEvent.display_name)}
+                {PropTextFormat(event.display_name)}
               </div>
             )}
           </div>
         </div>
         <div>
-          {Object.entries(selectedEvent.properties || {}).map(
-            ([key, value]) => (
-              <div className='leftpane-prop' key={key}>
-                <div className='flex flex-col items-start truncate'>
-                  <Text
-                    type='title'
-                    level={8}
-                    color='grey'
-                    truncate
-                    charLimit={40}
-                    extraClass='m-0'
-                  >
-                    {key === '$is_page_view' && value === true
-                      ? 'Page URL'
-                      : TimelineHoverPropDisplayNames[key]
-                      ? TimelineHoverPropDisplayNames[key]
-                      : PropTextFormat(key)}
-                  </Text>
-                  <Text
-                    type='title'
-                    level={7}
-                    truncate
-                    charLimit={36}
-                    extraClass='m-0'
-                    shouldTruncateURL
-                  >
-                    {key === '$is_page_view' && value === true
-                      ? selectedEvent.event_type === 'FE'
-                        ? selectedEvent.alias_name
-                        : selectedEvent.event_name
-                      : value
-                      ? value
-                      : '-'}
-                  </Text>
-                </div>
+          {Object.entries(event.properties || {}).map(([key, value]) => (
+            <div className='leftpane-prop' key={key}>
+              <div className='flex flex-col items-start truncate'>
+                <Text
+                  type='title'
+                  level={8}
+                  color='grey'
+                  truncate
+                  charLimit={40}
+                  extraClass='m-0'
+                >
+                  {key === '$is_page_view' && value === true
+                    ? 'Page URL'
+                    : PropTextFormat(key)}
+                </Text>
+                <Text
+                  type='title'
+                  level={7}
+                  truncate
+                  charLimit={36}
+                  extraClass='m-0'
+                  shouldTruncateURL
+                >
+                  {key === '$is_page_view' && value === true
+                    ? event.event_type === 'FE'
+                      ? event.alias_name
+                      : event.event_name
+                    : value
+                    ? value
+                    : '-'}
+                </Text>
               </div>
-            )
-          )}
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -101,10 +91,11 @@ const EventDrawer: React.FC<EventDrawerProps> = ({
       }
       placement='right'
       closable={false}
-      mask={false}
+      mask={true}
       maskClosable={true}
       visible={visible}
       className={'fa-drawer--right'}
+      onClose={onClose}
     >
       {renderEventDetails()}
     </Drawer>
