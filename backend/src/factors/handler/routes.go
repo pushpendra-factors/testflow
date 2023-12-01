@@ -348,7 +348,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/v1/settings", V1.GetProjectSettingHandler)
 	authRouteGroup.PUT("/:project_id/settings", UpdateProjectSettingsHandler)
 	authRouteGroup.PUT("/:project_id", EditProjectHandler)
-	authRouteGroup.PUT("/:project_id", GetProjectHandler)
+	authRouteGroup.GET("/:project_id", GetProjectHandler)
 	authRouteGroup.GET("/:project_id/event_names", GetEventNamesHandler)
 	authRouteGroup.GET("/:project_id/event_names/auto_tracked_domains", GetURLDomainsHandler)
 	authRouteGroup.GET("/:project_id/user/event_names", GetEventNamesByUserHandler)
