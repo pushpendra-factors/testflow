@@ -503,6 +503,7 @@ type Model interface {
 	GetProjectByPrivateToken(privateToken string) (*model.Project, int)
 	GetProjects() ([]model.Project, int)
 	GetProjectsByIDs(ids []int64) ([]model.Project, int)
+	GetProjectsInfoByIDs(ids []int64) ([]model.ProjectInfo, int)
 	GetAllProjectIDs() ([]int64, int)
 	GetProjectIDByBillingSubscriptionID(id string) (int64, int)
 	GetNextSessionStartTimestampForProject(projectID int64) (int64, int)

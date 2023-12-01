@@ -80,6 +80,7 @@ func InitAppRoutes(r *gin.Engine) {
 		mid.SetLoggedInAgent(),
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		GetProjectsHandler)
+
 	r.GET(routePrefix+"/GetTaskDetailsByName", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.GetTaskDetailsByNameHandler))
 	r.GET(routePrefix+"/GetAllToBeExecutedDeltas", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.GetAllToBeExecutedDeltasHandler))
 	r.GET(routePrefix+"/IsDependentTaskDone", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.IsDependentTaskDoneHandler))
@@ -90,6 +91,17 @@ func InitAppRoutes(r *gin.Engine) {
 		mid.SetLoggedInAgent(),
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		V1.GetProjectsHandler)
+
+	r.GET(routePrefix+"/"+ROUTE_PROJECTS_ROOT_V1+"/list",
+		mid.SetLoggedInAgent(),
+		mid.SetAuthorizedProjectsByLoggedInAgent(),
+		V1.GetProjectsListHandler)
+
+	r.GET(routePrefix+"/"+ROUTE_PROJECTS_ROOT_V1+"/:project_id",
+		mid.SetLoggedInAgent(),
+		mid.SetAuthorizedProjectsByLoggedInAgent(),
+		V1.GetProjectHandler)
+
 	r.POST("/billing/hooks/subscription/hbeqjomjhxjvx2z", V1.BillingSubscriptionChangedWebhookListner) // random string as a part of security measure
 	r.POST("/billing/hooks/invoice/ksh4jcjw245 ", V1.BillingInvoiceGeneratedWebhookListner)            // random string as a part of security measure
 	r.GET("/billing/upgrade/callback", V1.BillingUpgradeCallbackHandler)
