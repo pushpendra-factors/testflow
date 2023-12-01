@@ -25,7 +25,7 @@ export const defaultSegmentsList = [
   'Visited G2'
 ];
 
-const reorderSegments = (segments) => {
+const reorderDefaultSegmentsToTop = (segments) => {
   segments?.[0]?.values.sort((a, b) => {
     const aIsMatch = defaultSegmentsList.includes(a?.[0]);
     const bIsMatch = defaultSegmentsList.includes(b?.[0]);
@@ -57,7 +57,7 @@ export const generateSegmentsList = ({ segments }) => {
     .filter((segment) => segment[0] === GROUP_NAME_DOMAINS)
     .map(([group, vals]) => formatSegmentsObjToGroupSelectObj(group, vals))
     .forEach((obj) => segmentsList.push(obj));
-  return reorderSegments(segmentsList);
+  return reorderDefaultSegmentsToTop(segmentsList);
 };
 
 const getTablePropColumn = ({ prop, groupPropNames, listProperties }) => {

@@ -94,7 +94,7 @@
     }
 }
 
-.fa-timeline-modal--header {
+.fa-timeline--header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -112,24 +112,29 @@
 }
 
 .fa-timeline {
+    position: relative;
+    top: 32px;
     display: flex;
-    align-items: flex-start;
     margin: 0 -36px;
-
+    height: calc(100vh - 112px);
+    overflow-y: hidden;
 
     .leftpane {
+        position: sticky;
+        top: 0;
+        left: 0;
         width: 20%;
         min-width: 300px;
-        min-height: 100vh;
-        max-height: 100%;
-        background: #FFFFFF;
+        height: 100vh;
+        background: #FFF;
         padding: 0;
         z-index: 15;
+        border-right: 1px solid #E7E9ED;
 
         .header {
             position: sticky;
             background-color: #FFF;
-            top: 112px;
+            top: 0;
             padding: 0 16px;
             z-index: 15;
 
@@ -165,14 +170,16 @@
             }
         }
 
-
-
         .props {
-            padding: 64px 0 0;
+            padding: 32px 0 0;
+
+            .add-prop-btn{
+position: sticky;
+background: #FFF;
+            }
         }
 
         .logo_attr {
-            width: calc(20% - 2px);
             position: fixed;
             top: calc(100% - 54px);
             left: 0;
@@ -184,18 +191,7 @@
 
     .timeline-view {
         width: 80%;
-        height: 100vh;
-        padding: 96px 36px 36px;
-        border-left: 1px solid #E7E9ED;
-        overflow-y: scroll;
-
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-
-        &::-webkit-scrollbar {
-            display: none;
-        }
-
+        padding: 48px 36px 36px;
     }
 }
 
@@ -222,9 +218,13 @@
 }
 
 .timeline-actions {
+    position: sticky;
+    top: 0;
+    background: #FFF;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    z-index: 11;
 
     &__group {
         display: flex;
@@ -259,7 +259,7 @@
 }
 
 .table-scroll {
-    max-height: 80vh;
+    max-height: calc(100vh - 296px);
     overflow: scroll;
     border-bottom: 1px solid #E7E9ED;
 
@@ -1005,14 +1005,15 @@
 }
 
 .account-timeline-table-container {
-    height: 80vh;
-    overflow: auto;
+    max-height: calc(100vh - 252px);
+    margin-top: 20px;
+    border-bottom: 1px solid #E7E9ED;
+    overflow-y: scroll;
 }
 
 .account-timeline-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 20px;
     border-bottom: 1px solid #E7E9ED;
 
     td {
@@ -1051,7 +1052,7 @@
             span {
                 width: 80%;
                 max-width: 80%;
-                margin-left: 8px;
+                // margin-left: 8px;
                 font-weight: bold;
                 overflow: hidden;
                 text-overflow: ellipsis;
@@ -1104,11 +1105,25 @@
 
 .fa-drawer--right {
     &.ant-drawer {
-        width: 30% !important;
         top: 56px;
+    }
+
+    .ant-drawer-content-wrapper {
+        width: 30% !important;
     }
 
     .ant-drawer-header {
         padding: 12px 24px;
+    }
+}
+
+.timeline-view--tabs {
+    .ant-tabs-nav {
+        margin: 0;
+    }
+
+    .ant-tabs-content-holder {
+        max-height: calc(100vh - 232px);
+        overflow-y: scroll;
     }
 }
