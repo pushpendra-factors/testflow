@@ -149,6 +149,25 @@ func (store *MemSQL) GetProjectAnalyticsData(projectIDNameMap map[string]string,
 
 	result := make(map[string][]*model.ProjectAnalytics, 0)
 
+	timezoneString, statusCode := store.GetTimezoneForProject(projectId)
+	if statusCode != http.StatusFound {
+		log.Errorf("Failed to get project Timezone for %d", projectId)
+	}
+
+	from := U.GetBeginningOfDayTimestampIn(currentDate.AddDate(0, 0, -lastNDays+1).Unix(), timezoneString)
+	end := U.GetEndOfDayTimestampIn(currentDate.Unix(), timezoneString)
+
+	var err error
+
+	eventData, err := store.GetGlobalProjectAnalyticsEventDataByProjectId(projectId, model.ProjectAnalyticsEventSingleQueryStmnt["daily_login_count"], timezoneString, from, end)
+	if err != nil {
+		return nil, errors.New("failed to event base metrics data")
+	}
+
+	if len(eventData) == 0 {
+		eventData = make([]map[string]interface{}, lastNDays)
+	}
+
 	for i := 0; i < lastNDays; i++ {
 
 		dateKey := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
@@ -191,23 +210,6 @@ func (store *MemSQL) GetProjectAnalyticsData(projectIDNameMap map[string]string,
 			sixSignalAPIHits := model.GetSixSignalAPICountCacheResult(projIdInt64, uint64(dateKeyInt))
 			sixSignalAPITotalHits := model.GetSixSignalAPITotalHitCountCacheResult(projIdInt64, uint64(dateKeyInt))
 
-			timezoneString, statusCode := store.GetTimezoneForProject(projIdInt64)
-			if statusCode != http.StatusFound {
-				log.Errorf("Failed to get project Timezone for %d", projIdInt64)
-				continue
-			}
-
-			from := U.GetBeginningOfDayTimestampIn(currentDate.AddDate(0, 0, -i).Unix(), timezoneString)
-			end := U.GetEndOfDayTimestampIn(currentDate.AddDate(0, 0, -i).Unix(), timezoneString)
-
-			eventData, err := store.GetGlobalProjectAnalyticsEventDataByProjectId(projIdInt64, model.ProjectAnalyticsEventSingleQueryStmnt["login_count"], timezoneString, from, end)
-			if err != nil {
-				return nil, errors.New("failed to event base metrics data")
-			}
-
-			val, _ := U.GetValueAsString(eventData["aggregate"])
-			valInt64, _ := strconv.ParseInt(val, 10, 64)
-
 			if projectId == 0 {
 				result[dateKey] = append(result[dateKey], &model.ProjectAnalytics{
 					ProjectID:             projId,
@@ -223,7 +225,6 @@ func (store *MemSQL) GetProjectAnalyticsData(projectIDNameMap map[string]string,
 					SixSignalAPITotalHits: uint64(sixSignalAPITotalHits),
 					ProjectName:           projectIDNameMap[projId],
 					Date:                  dateKey,
-					DailyLoginCount:       valInt64,
 				})
 			} else if projIdInt64 == projectId {
 
@@ -241,7 +242,7 @@ func (store *MemSQL) GetProjectAnalyticsData(projectIDNameMap map[string]string,
 					SixSignalAPITotalHits: uint64(sixSignalAPITotalHits),
 					ProjectName:           projectIDNameMap[projId],
 					Date:                  dateKey,
-					DailyLoginCount:       valInt64,
+					DailyLoginCount:       int64(U.SafeConvertToFloat64(eventData[i]["aggregate"])),
 				}
 
 				result[projId] = append(result[projId], &entry)
@@ -383,15 +384,18 @@ func (store *MemSQL) GetGlobalProjectAnalyticsDataByProjectId(projectID int64, m
 			"identified_count":      identifiedCount,
 		}
 
-		startTimestamp := time.Now().AddDate(0, 0, -30)
+		startTimestamp := time.Now().AddDate(0, 0, -90)
 
 		for key, queryStmnt := range model.ProjectAnalyticsEventSingleQueryStmnt {
 			eventData, err := store.GetGlobalProjectAnalyticsEventDataByProjectId(projectID, queryStmnt, timeZoneString, startTimestamp.Unix(), time.Now().Unix())
+			if len(eventData) == 0 {
+				eventData = make([]map[string]interface{}, 2)
+			}
 			if err != nil {
 				return nil, errors.New("failed to event base metrics data")
 			}
 
-			val, _ := U.GetValueAsString(eventData["aggregate"])
+			val, _ := U.GetValueAsString(eventData[0]["aggregate"])
 			data[key], _ = strconv.ParseInt(val, 10, 64)
 
 		}
@@ -403,7 +407,7 @@ func (store *MemSQL) GetGlobalProjectAnalyticsDataByProjectId(projectID int64, m
 	return result, nil
 }
 
-func (store *MemSQL) GetGlobalProjectAnalyticsEventDataByProjectId(projectID int64, queryStmnt string, timeZoneString U.TimeZoneString, startTimestmap, endTimestamp int64) (map[string]interface{}, error) {
+func (store *MemSQL) GetGlobalProjectAnalyticsEventDataByProjectId(projectID int64, queryStmnt string, timeZoneString U.TimeZoneString, startTimestmap, endTimestamp int64) ([]map[string]interface{}, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -421,11 +425,14 @@ func (store *MemSQL) GetGlobalProjectAnalyticsEventDataByProjectId(projectID int
 	if errCode != http.StatusOK {
 		return nil, nil
 	}
-	result := make(map[string]interface{})
+
+	result := make([]map[string]interface{}, 0)
 	for _, row := range singleResult.Rows {
+		val := make(map[string]interface{})
 		for i, key := range singleResult.Headers {
-			result[key] = row[i]
+			val[key] = row[i]
 		}
+		result = append(result, val)
 	}
 
 	return result, nil

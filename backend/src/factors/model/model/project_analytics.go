@@ -171,6 +171,58 @@ var LoginCountQueryStmnt = `
         }
     `
 
+var DailyLoginCountQueryStmnt = `
+	{
+		"cl": "events",
+		"ty": "unique_users",
+		"grpa": "users",
+		"ewp": [
+			{
+				"an": "",
+				"na": "app.factors.ai",
+				"grpa": "Page Views",
+				"pr": [
+					{
+						"en": "user",
+						"grpn": "user",
+						"lop": "AND",
+						"op": "notEqual",
+						"pr": "email",
+						"ty": "categorical",
+						"va": "$none"
+					}
+				]
+			}
+		],
+		"gup": [
+			{
+			  "en": "user_g",
+			  "grpn": "user",
+			  "lop": "AND",
+			  "op": "equals",
+			  "pr": "project_id",
+			  "ty": "categorical",
+			  "va": "%v"
+			}
+		  ],
+		"gbt": "date",
+		"gbp": [
+			{
+				"pr": "project_id",
+				"en": "user",
+				"pty": "categorical",
+				"grpn": "OTHERS",
+				"ena": "$present"
+			}
+		],
+		"ec": "each_given_event",
+		"tz": "%v",
+		"fr": %v,
+		"to": %v
+	}
+`
+
 var ProjectAnalyticsEventSingleQueryStmnt = map[string]string{
-	"login_count": LoginCountQueryStmnt,
+	"login_count":       LoginCountQueryStmnt,
+	"daily_login_count": DailyLoginCountQueryStmnt,
 }
