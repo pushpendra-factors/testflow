@@ -140,11 +140,11 @@ func calculatePercentile(data []float64, value float64) float64 {
 
 func getEngagement(percentile float64, buckets model.BucketRanges) string {
 	for _, bucket := range buckets.Ranges {
-		if bucket.Low <= percentile && percentile < bucket.High {
+		if bucket.Low <= percentile && percentile <= bucket.High {
 			return bucket.Name
 		}
 	}
-	return "ice"
+	return "Ice"
 }
 
 func GetProfileUserDetailsHandler(c *gin.Context) (interface{}, int, string, string, bool) {
