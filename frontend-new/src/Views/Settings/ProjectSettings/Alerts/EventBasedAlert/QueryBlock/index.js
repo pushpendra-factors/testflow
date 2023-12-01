@@ -139,7 +139,11 @@ function QueryBlock({
       event: eventPropertiesV2[event.label] || []
     };
     if (eventGroup) {
-      props[eventGroup] = groupProperties[eventGroup];
+      if(groupProperties){
+        Object?.keys(groupProperties)?.map((key)=>{
+          props[key] = groupProperties[key];
+        })
+      }
     } else {
       props.user = eventUserPropertiesV2;
       if (groupAnalysis === 'events') {
