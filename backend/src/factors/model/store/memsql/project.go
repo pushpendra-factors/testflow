@@ -594,7 +594,7 @@ func (store *MemSQL) GetProjectsInfoByIDs(ids []int64) ([]model.ProjectInfo, int
 	var projects []model.ProjectInfo
 
 	db := C.GetServices().Db
-	if err := db.Limit(len(ids)).Where(ids).Find(&projects).Error; err != nil {
+	if err := db.Table("projects").Limit(len(ids)).Where(ids).Find(&projects).Error; err != nil {
 		log.WithError(err).Error("Getting projects info using ids failed")
 		return nil, http.StatusInternalServerError
 	}
