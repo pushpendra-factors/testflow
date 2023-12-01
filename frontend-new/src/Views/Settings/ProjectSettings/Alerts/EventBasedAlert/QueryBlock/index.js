@@ -18,17 +18,7 @@ import { compareFilters, groupFilters } from 'Utils/global';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
 import { processProperties } from 'Utils/dataFormatter';
-
-const blackListedCategories = [
-  'Hubspot Contacts',
-  'Salesforce Users',
-  'LeadSquared Person',
-  'Marketo Person',
-  'Hubspot Companies',
-  'Hubspot Deals',
-  'Salesforce Accounts',
-  'Salesforce Opportunities',
-]
+import { removeDuplicateAndEmptyKeys, blackListedCategories } from './util';
 
 function QueryBlock({
   availableGroups,
@@ -134,26 +124,7 @@ function QueryBlock({
     }
   }, [event]);
 
-  const  removeDuplicateAndEmptyKeys = (obj) => {
-    const uniqueKeys = {};
-    //blacklisted groups
-    let removeGroupList = ["Company identification"];
-    for (const key in obj) {
-      //remove duplicate keys
-      if (!uniqueKeys.hasOwnProperty(key)) {
-        //remove blacklisted keys
-        if(!key.includes(removeGroupList)){
-          //remove empty keys
-          if(!_.isEmpty(obj[key])){
-          uniqueKeys[key] = obj[key]; 
-          }
-        }
-        
-      }     
-    }
-    return uniqueKeys;
-  }
-
+   
   useEffect(() => {
     queries.forEach((ev) => {
       if (!eventPropertiesV2[ev.label]) {
@@ -164,25 +135,22 @@ function QueryBlock({
 
   const filterProperties = useMemo(() => {
     if (!event) return {};
-
-    let props = {
+    const props = {
       event: eventPropertiesV2[event.label] || []
     };
     if (eventGroup) {
       props[eventGroup] = groupProperties[eventGroup];
     } else {
-      if (groupAnalysis === 'users') {
-        props.user = eventUserPropertiesV2;
-      }
-      else{
-        props = {
-          ...eventPropertiesV2[event.label],
-          ...eventUserPropertiesV2,
-          ...groupProperties
+      props.user = eventUserPropertiesV2;
+      if (groupAnalysis === 'events') {
+        if(groupProperties){
+          Object?.keys(groupProperties)?.map((key)=>{
+            props[key] = groupProperties[key];
+          }) 
         } 
       }
-    }
-    let finalProps = removeDuplicateAndEmptyKeys(props)
+    } 
+    let finalProps = removeDuplicateAndEmptyKeys(props);
     return finalProps;
   }, [
     event,
@@ -191,8 +159,6 @@ function QueryBlock({
     groupProperties,
     eventUserPropertiesV2
   ]);
-
-  
 
   const triggerDropDown = () => {
     setDDVisible(true);
@@ -398,7 +364,7 @@ function QueryBlock({
                   index={ind + 1}
                   filter={filtersGr[1]}
                   event={event}
-                  filterProps={filterProps}
+                  filterProps={filterProperties}
                   projectID={activeProject?.id}
                   deleteFilter={removeFilters}
                   insertFilter={insertFilters}
