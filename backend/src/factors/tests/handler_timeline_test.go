@@ -909,7 +909,7 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 			if activity.DisplayName == "Page View" || eventExistsInMap {
 				var lookInProps []string
 				if activity.DisplayName == "Page View" {
-					lookInProps = model.PAGE_VIEW_HOVERPROPS_LIST
+					lookInProps = model.PAGEVIEW_EVENTPROPS
 				} else if eventExistsInMap {
 					lookInProps = eventFromMap
 				}
@@ -2214,7 +2214,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 				if activity.DisplayName == "Page View" || eventExistsInMap {
 					var lookInProps []string
 					if activity.DisplayName == "Page View" {
-						lookInProps = model.PAGE_VIEW_HOVERPROPS_LIST
+						lookInProps = model.PAGEVIEW_EVENTPROPS
 					} else if eventExistsInMap {
 						lookInProps = eventFromMap
 					}
