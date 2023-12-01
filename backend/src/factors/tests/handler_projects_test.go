@@ -68,6 +68,29 @@ func sendGetProjectsRequest(r *gin.Engine, agent *model.Agent) *httptest.Respons
 
 }
 
+func sendGetProjectRequest(r *gin.Engine, agent *model.Agent, projectId int64) *httptest.ResponseRecorder {
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error Creating cookieData")
+	}
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/v1/projects/%v", projectId)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error Getting projects")
+	}
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+
+}
+
 func sendEditProjectRequest(r *gin.Engine, projectId int64, projectName string, agent *model.Agent) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -92,6 +115,7 @@ func sendEditProjectRequest(r *gin.Engine, projectId int64, projectName string, 
 	return w
 
 }
+
 func TestAPICreateProject(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
@@ -308,4 +332,22 @@ func TestAccessControl(t *testing.T) {
 		w = sendGetProjectSettingsReq(r, demoProjectId, agent)
 		assert.Equal(t, http.StatusOK, w.Code)
 	})
+}
+
+func TestGetProject(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+	assert.NotNil(t, agent)
+
+	w := sendGetProjectRequest(r, agent, project.ID)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ := ioutil.ReadAll(w.Body)
+	var projectResp model.ProjectString
+	json.Unmarshal(jsonResponse, &projectResp)
+
+	assert.Equal(t, fmt.Sprintf("%v", project.ID), projectResp.ID)
 }

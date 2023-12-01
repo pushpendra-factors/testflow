@@ -61,6 +61,25 @@ type ProjectString struct {
 	BillingAdminAgentUUID string          `json:"billing_admin_agent_uuid"`
 }
 
+type ProjectInfo struct {
+	ID             int64     `json:"id"`
+	Name           string    `json:"name"`
+	ProfilePicture string    `json:"profile_picture"`
+	ProjectURI     string    `json:"project_uri"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+
+type ProjectInfoString struct {
+	// ProjectInfo with stringified ID.
+	ID             string    `json:"id"`
+	Name           string    `json:"name"`
+	ProfilePicture string    `json:"profile_picture"`
+	ProjectURI     string    `json:"project_uri"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+
 const (
 	JobsMetadataKeyNextSessionStartTimestamp = "next_session_start_timestamp"
 	JobsMetadataColumnName                   = "jobs_metadata"
