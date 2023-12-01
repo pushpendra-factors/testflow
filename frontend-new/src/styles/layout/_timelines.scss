@@ -1052,7 +1052,6 @@ background: #FFF;
             span {
                 width: 80%;
                 max-width: 80%;
-                // margin-left: 8px;
                 font-weight: bold;
                 overflow: hidden;
                 text-overflow: ellipsis;
@@ -1061,6 +1060,7 @@ background: #FFF;
         }
 
         .properties-cell {
+            padding: 8px 12px;
             width: 50%;
             overflow: hidden;
             display: flex;

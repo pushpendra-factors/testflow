@@ -16,41 +16,26 @@ export interface UsernameWithIconProps {
 
 export interface EventDrawerProps {
   visible: boolean;
-  selectedEvent: any;
+  event: TimelineEvent;
   onClose: () => void;
-}
-
-interface Event {
-  timestamp: number;
-  icon: string;
-  event_name: string;
-  alias_name: string;
-  display_name: string;
-  properties?: { [key: string]: string };
-  user: string;
-  id: string;
-}
-
-interface User {
-  title: string;
-  subtitle: string;
-  userId: string;
-  isAnonymous: boolean;
-}
-
-export interface TableRowProps {
-  event: Event;
-  user: User;
-  onEventClick: (event: Event) => void;
 }
 
 interface TimelineEvent {
   timestamp: number;
   icon: string;
-  eventName: string;
-  properties?: { [key: string]: string };
+  event_name: string;
+  alias_name: string;
+  display_name: string;
+  event_type:string;
+  properties?: { [key: string]: any };
   user: string;
   id: string;
+}
+
+export interface TableRowProps {
+  event: TimelineEvent;
+  user: TimelineUser;
+  onEventClick: (event: TimelineEvent) => void;
 }
 
 interface TimelineUser {
@@ -59,16 +44,8 @@ interface TimelineUser {
   userId: string;
   isAnonymous: boolean;
 }
-
-interface EventNamesMap {
-  [key: string]: {
-    [nestedKey: string]: string;
-  };
-}
-
 export interface AccountTimelineTableViewProps {
   timelineEvents?: TimelineEvent[];
   timelineUsers?: TimelineUser[];
   loading: boolean;
-  eventNamesMap: EventNamesMap;
 }

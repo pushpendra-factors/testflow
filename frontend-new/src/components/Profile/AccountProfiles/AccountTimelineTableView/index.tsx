@@ -8,8 +8,7 @@ import TableRow from './TableRow';
 const AccountTimelineTableView: React.FC<AccountTimelineTableViewProps> = ({
   timelineEvents = [],
   timelineUsers = [],
-  loading,
-  eventNamesMap
+  loading
 }) => {
   const [formattedData, setFormattedData] = useState<{ [key: string]: any }>(
     {}
@@ -48,7 +47,7 @@ const AccountTimelineTableView: React.FC<AccountTimelineTableViewProps> = ({
                   );
                   return (
                     <TableRow
-                      key={event.id}
+                      key={event.timestamp}
                       event={event}
                       user={currentUser}
                       onEventClick={() => handleEventClick(event)}
@@ -63,8 +62,7 @@ const AccountTimelineTableView: React.FC<AccountTimelineTableViewProps> = ({
       <EventDrawer
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        selectedEvent={selectedEvent}
-        eventNamesMap={eventNamesMap}
+        event={selectedEvent}
       />
     </>
   );
