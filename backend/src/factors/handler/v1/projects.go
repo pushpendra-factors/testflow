@@ -152,23 +152,6 @@ func MapProjectToString(project model.Project) model.ProjectString {
 	}
 }
 
-func GetProjectHandler(c *gin.Context) {
-	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
-	if projectId == 0 {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid project id."})
-		return
-	}
-
-	project, errCode := store.GetStore().GetProject(projectId)
-	if errCode != http.StatusFound {
-		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to get project."})
-		return
-	}
-
-	c.JSON(http.StatusOK, MapProjectToString(*project))
-	return
-}
-
 func GetBillingAgentUUIDForProject(billingAccountID string) string {
 	agentUUID, _ := store.GetStore().GetAgentUUIDByBillingAccountID(billingAccountID)
 	return agentUUID
