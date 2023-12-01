@@ -514,6 +514,10 @@ export const EngagementTag = {
   Cool: {
     bgColor: '#F0F5FF',
     icon: 'snowflake'
+  },
+  Ice: {
+    bgColor: '#E6F7FF',
+    icon: 'icecube'
   }
 };
 
