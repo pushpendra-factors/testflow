@@ -9,6 +9,7 @@ import (
 	M "factors/model/model"
 	"factors/model/store"
 	MS "factors/model/store/memsql"
+	"math"
 
 	P "factors/pattern"
 	serviceDisk "factors/services/disk"
@@ -658,7 +659,7 @@ func ComputeScoreRanges(projectId int64, currentTime int64, lookback int64,
 		ids := make(map[string]bool)
 		updatedUsers := make(map[string]map[string]M.LatestScore)
 		ts := U.GetDateFromString(date)
-		cDates := U.GenDateStringsForLastNdays(currentTime, lookback)
+		cDates := U.GenDateStringsForLastNdays(currentTime, weights.SaleWindow)
 		for id, counts := range data {
 			for _, d := range cDates {
 				if _, ok := counts[d]; ok {
@@ -738,8 +739,11 @@ func ComputeBucketRanges(scores []float64, date string) (M.BucketRanges, error) 
 		if err != nil {
 			log.Errorf("unable to compute bucket ranges")
 		}
-		b.High = high
-		b.Low = low
+		b.High = math.Round(high)
+		b.Low = math.Round(low)
+		if b.Name == "Hot" {
+			b.High += 1
+		}
 
 		bucket.Ranges = append(bucket.Ranges, b)
 		de := fmt.Sprintf(" data to compute buckets lenght :%d , brh:%f, brl:%f, h:%f,l:%f", len(scoresWithoutZeros), M.BUCKETRANGES[idx-1], M.BUCKETRANGES[idx], high, low)
