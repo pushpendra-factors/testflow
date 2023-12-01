@@ -81,9 +81,7 @@ function EventsBlock({
         categorical: DEFAULT_OPERATOR_PROPS.categorical.filter((item) =>
           ENGAGEMENT_SUPPORTED_OPERATORS.includes(item)
         ),
-        numerical: DEFAULT_OPERATOR_PROPS.numerical.filter((item) =>
-          ENGAGEMENT_SUPPORTED_OPERATORS.includes(item)
-        )
+        numerical: DEFAULT_OPERATOR_PROPS.numerical
       }
     : DEFAULT_OPERATOR_PROPS;
 
@@ -157,26 +155,27 @@ function EventsBlock({
     if (!event || event === undefined) {
       return;
     }
-    const eventPropertiesFiltered = {};
-    if (eventPropertiesV2?.[event?.label]) {
-      for (const key in eventPropertiesV2[event?.label]) {
-        if (eventPropertiesV2[event?.label].hasOwnProperty(key)) {
-          eventPropertiesFiltered[key] = eventPropertiesV2[event?.label][
-            key
-          ].filter((item) => item?.[2] === 'categorical');
-        }
-      }
-    }
-    const eventUserPropertiesFiltered = {};
-    if (eventUserPropertiesV2) {
-      for (const key in eventUserPropertiesV2) {
-        if (eventUserPropertiesV2.hasOwnProperty(key)) {
-          eventUserPropertiesFiltered[key] = eventUserPropertiesV2[key].filter(
-            (item) => item?.[2] === 'categorical'
+
+    const filterEngagementProperties = (properties) => {
+      const filteredProps = {};
+      for (const key in properties) {
+        if (properties.hasOwnProperty(key)) {
+          filteredProps[key] = properties[key].filter((item) =>
+            ['categorical', 'numerical'].includes(item?.[2])
           );
         }
       }
-    }
+      return filteredProps;
+    };
+
+    const eventPropertiesFiltered = eventPropertiesV2?.[event?.label]
+      ? filterEngagementProperties(eventPropertiesV2[event?.label])
+      : {};
+
+    const eventUserPropertiesFiltered = eventUserPropertiesV2
+      ? filterEngagementProperties(eventUserPropertiesV2)
+      : {};
+
     const assignFilterProps = {};
     propertiesScope.forEach((scope) => {
       if (scope === 'event') {
@@ -191,15 +190,16 @@ function EventsBlock({
             : eventUserPropertiesV2 || {};
         }
       }
-      if (scope === 'group') {
-        if (eventGroup) {
-          assignFilterProps[eventGroup] = groupProperties[eventGroup]?.filter(
-            (item) => item?.[2] === 'categorical'
-          );
-          assignFilterProps.user = {};
-        }
+      if (scope === 'group' && eventGroup) {
+        assignFilterProps[eventGroup] = isEngagementConfig
+          ? groupProperties[eventGroup]?.filter((item) =>
+              ['categorical', 'numerical'].includes(item?.[2])
+            )
+          : groupProperties[eventGroup];
+        assignFilterProps.user = {};
       }
     });
+
     setFilterProperties(assignFilterProps);
   }, [eventPropertiesV2, eventUserPropertiesV2, event?.label, eventGroup]);
 
