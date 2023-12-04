@@ -98,6 +98,17 @@ function ReportContent({
     queries
   ]);
 
+  if(breakdown?.[0] === undefined) {
+    breakdown = [];
+  }
+
+
+  function handleBreakdownChange(key) {
+    const result = querySaved?.g_by?.filter((item) => key === item.na);
+    updateAppliedBreakdown(result);
+    runKPIQuery(querySaved, result[0]);
+  }
+
   if (resultState.loading) {
     content = (
       <div className='h-64 flex items-center justify-center w-full'>
@@ -193,12 +204,6 @@ function ReportContent({
       );
     }
 
-  }
-
-  function handleBreakdownChange(key) {
-    const result = querySaved?.g_by?.filter((item) => key === item.na);
-    updateAppliedBreakdown(result);
-    runKPIQuery(querySaved, result[0]);
   }
 
   return (

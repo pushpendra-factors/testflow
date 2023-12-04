@@ -236,7 +236,7 @@ function NoBreakdownCharts({
         categories={categories}
         data={data}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
-        legendsPosition='top'
+        legendsPosition={unit?.inter_id == 1 ? '' : 'top'}
         cardSize={unit.cardSize}
         chartId={`line-${unit.id}`}
       />

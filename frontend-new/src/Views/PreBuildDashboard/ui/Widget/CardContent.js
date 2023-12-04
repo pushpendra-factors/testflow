@@ -77,11 +77,34 @@ function CardContent({ unit, resultState, durationObj, breakdown, currMetricsVal
     ? reportSelectedChart
     : apiChartAnnotations[CHART_TYPE_TABLE];
 
-    const kpiData = unit.me.map(obj => {
+
+    const arrayMapper = useMemo(() => {
+      if (
+        queryType === QUERY_TYPE_EVENT ||
+        queryType === QUERY_TYPE_KPI
+      ) {
+        const am = [];
+        unit?.me?.forEach((q, index) => {
+          am.push({
+            eventName: q?.na,
+            index,
+            mapper: `event${index + 1}`,
+            displayName: q?.d_na
+          });
+        });
+        return am;
+      }
+    }, [queryType, unit]);
+
+    const kpiData = unit?.me?.map(obj => {
       const { inter_e_type, na, d_na, ...rest } = obj; // Use destructuring to exclude "inter_e_type" and "na"
       return { ...rest, label: d_na };; // Return the object without "inter_e_type" and "na"
     })
 
+    unit.id = unit.inter_id;
+    if(breakdown?.[0] === undefined) {
+      breakdown = [];
+    }
 
     if (queryType === QUERY_TYPE_KPI) {
       content = (
@@ -99,7 +122,7 @@ function CardContent({ unit, resultState, durationObj, breakdown, currMetricsVal
           ] : []}
           unit={unit}
           currMetricsValue={currMetricsValue}
-          arrayMapper={[]}
+          arrayMapper={arrayMapper}
           durationObj={durationObj}
         />
       );
