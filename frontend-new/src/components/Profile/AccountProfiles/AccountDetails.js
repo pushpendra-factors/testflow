@@ -452,7 +452,7 @@ function AccountDetails({
   const renderModalHeader = () => {
     const accountName = accountDetails?.data?.name;
     return (
-      <div className='fa-timeline-modal--header'>
+      <div className='fa-timeline--header'>
         <div className='flex items-center'>
           <div
             className='flex items-center cursor-pointer'
@@ -561,19 +561,19 @@ function AccountDetails({
             width={96}
           />
           <a
-             href={`https://${encodeURIComponent(accountDetails?.data?.name)}`}
-             target="_blank"
-            rel="noopener noreferrer"
-            >
-          <Text type='title' level={6} extraClass='m-0 py-2' weight='bold'>
-            {accountDetails?.data?.name}
-          </Text>
+            href={`https://${encodeURIComponent(accountDetails?.data?.name)}`}
+            target='_blank'
+            rel='noopener noreferrer'
+          >
+            <Text type='title' level={6} extraClass='m-0 py-2' weight='bold'>
+              {accountDetails?.data?.name}
+            </Text>
           </a>
         </div>
       </div>
 
       <div className='props'>
-        {listLeftPaneProps(accountDetails.data.left_pane_props)}
+        {listLeftPaneProps(accountDetails.data.leftpane_props)}
         <div className='px-8 pb-8 pt-2'>{renderAddNewProp()}</div>
       </div>
       <div className='logo_attr'>
@@ -744,6 +744,7 @@ function AccountDetails({
     return (
       <div className='timeline-view'>
         <Tabs
+          className='timeline-view--tabs'
           defaultActiveKey='birdview'
           size='small'
           activeKey={timelineViewMode}
@@ -774,8 +775,8 @@ function AccountDetails({
 
   return (
     <div>
-      {renderModalHeader()}
       <div className='fa-timeline'>
+        {renderModalHeader()}
         {renderLeftPane()}
         {renderTimelineView()}
       </div>

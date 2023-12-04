@@ -175,15 +175,14 @@ function AccountProfiles({
   useEffect(() => {
     let listProps = [];
     if (IsDomainGroup(accountPayload?.source)) {
-      listProps = Object.keys(groups?.account_groups || {})
-        .filter(
-          (group) => !['$hubspot_deal', '$salesforce_Account'].includes(group)
-        )
-        .reduce((acc, property) => {
-          return groupProperties[property]
-            ? acc.concat(groupProperties[property])
-            : acc;
-        }, []);
+      listProps = Object.keys(groups?.account_groups || {}).reduce(
+        (properties, group) => {
+          return groupProperties[group]
+            ? properties.concat(groupProperties[group])
+            : properties;
+        },
+        []
+      );
     } else {
       listProps = groupProperties?.[accountPayload?.source] || [];
     }

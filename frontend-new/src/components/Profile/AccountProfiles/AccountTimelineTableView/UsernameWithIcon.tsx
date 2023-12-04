@@ -38,7 +38,7 @@ const UsernameWithIcon: React.FC<UsernameWithIconProps> = ({
           : title
       }
     >
-      <span>
+      <span className='ml-2'>
         {title === 'group_user'
           ? 'Account Activity'
           : isAnonymous

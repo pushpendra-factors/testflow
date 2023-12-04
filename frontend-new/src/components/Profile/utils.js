@@ -83,8 +83,8 @@ export const hoverEvents = [
 ];
 
 export const hoverEventsColumnProp = {
-  $hubspot_contact_list:'$hubspot_contact_list_list_name',
-  $hubspot_contact_created:'$hubspot_contact_email',
+  $hubspot_contact_list: '$hubspot_contact_list_list_name',
+  $hubspot_contact_created: '$hubspot_contact_email',
   $session: '$channel',
   $form_submitted: '$page_title',
   $offline_touch_point: '$channel',
@@ -320,23 +320,32 @@ export const getPropType = (propsList, searchProp) => {
 };
 
 export const propValueFormat = (searchKey, value, type) => {
+  const isDate = searchKey?.toLowerCase()?.includes('date');
+  const isNumDuration = searchKey?.toLowerCase()?.includes('time');
+  const isCatDuration = searchKey?.endsWith('time');
+  const isDurationMilliseconds = searchKey?.includes('durationmilliseconds');
+  const isTimestamp = searchKey?.includes('timestamp');
+
   switch (type) {
     case 'datetime':
-      if (searchKey?.toLowerCase()?.includes('date'))
-        return MomentTz(value * 1000).format('DD MMM YYYY');
-      else return MomentTz(value * 1000).format('DD MMM YYYY, hh:mm A zz');
+      return isDate
+        ? MomentTz(value * 1000).format('DD MMM YYYY')
+        : MomentTz(value * 1000).format('DD MMM YYYY, hh:mm A zz');
+
     case 'numerical':
-      if (searchKey?.toLowerCase()?.includes('time'))
-        return formatDurationIntoString(parseInt(value));
-      else if (searchKey?.includes('durationmilliseconds'))
-        return formatDurationIntoString(parseInt(value / 1000));
-      else return parseInt(value);
+      return isNumDuration
+        ? formatDurationIntoString(parseInt(value))
+        : isDurationMilliseconds
+        ? formatDurationIntoString(parseInt(value / 1000))
+        : parseInt(value);
+
     case 'categorical':
-      if (searchKey?.includes('timestamp'))
-        return MomentTz(value * 1000).format('DD MMM YYYY, hh:mm A zz');
-      else if (searchKey?.endsWith('time'))
-        return formatDurationIntoString(parseInt(value));
-      else return value;
+      return isTimestamp
+        ? MomentTz(value * 1000).format('DD MMM YYYY, hh:mm A zz')
+        : isCatDuration
+        ? formatDurationIntoString(parseInt(value))
+        : value;
+
     default:
       return value;
   }
@@ -394,35 +403,6 @@ export const getIconForCategory = (category) => {
     return 'globe';
   }
   return 'events_blue';
-};
-
-export const convertSVGtoURL = (svg = '') => {
-  // svg needs to be passed with backticks
-  const escapeRegExp = (str) => {
-    return str.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, '\\$1');
-  };
-
-  const replaceAll = (str, find, replace) => {
-    return str.replace(new RegExp(escapeRegExp(find), 'g'), replace);
-  };
-
-  var encoded = svg.replace(/\s+/g, ' ');
-  encoded = replaceAll(encoded, '%', '%25');
-  encoded = replaceAll(encoded, '> <', '><');
-  encoded = replaceAll(encoded, '; }', ';}');
-  encoded = replaceAll(encoded, '<', '%3c');
-  encoded = replaceAll(encoded, '>', '%3e');
-  encoded = replaceAll(encoded, '"', "'");
-  encoded = replaceAll(encoded, '#', '%23');
-  encoded = replaceAll(encoded, '{', '%7b');
-  encoded = replaceAll(encoded, '}', '%7d');
-  encoded = replaceAll(encoded, '|', '%7c');
-  encoded = replaceAll(encoded, '^', '%5e');
-  encoded = replaceAll(encoded, '`', '%60');
-  encoded = replaceAll(encoded, '@', '%40');
-
-  var uri = 'url("data:image/svg+xml;charset=UTF-8,' + encoded + '")';
-  return uri;
 };
 
 export const DEFAULT_TIMELINE_CONFIG = {
