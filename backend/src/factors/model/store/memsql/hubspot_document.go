@@ -1206,7 +1206,7 @@ func (store *MemSQL) GetHubspotDocumentsByTypeForSync(projectId int64, typ int, 
 	}
 
 	db := C.GetServices().Db
-	err := db.Order("timestamp, created_at ASC").Where(wheStmnt, whereParams).Find(&documents).Error
+	err := db.Order("timestamp, created_at ASC").Where(wheStmnt, whereParams...).Find(&documents).Error
 	if err != nil {
 		if !gorm.IsRecordNotFoundError(err) {
 			logCtx.WithError(err).Error("Failed to get hubspot documents by type.")
@@ -1333,7 +1333,7 @@ func (store *MemSQL) GetHubspotDocumentCountForSync(projectIDs []int64, docTypes
 	}
 
 	err := db.Model(model.HubspotDocument{}).Select("project_id, count(*) as count").
-		Where(wheStmnt, whereParams).
+		Where(wheStmnt, whereParams...).
 		Group("project_id").Scan(&projectRecordCount).Error
 	if err != nil {
 		log.WithError(err).Error("Failed to get hubspot minimum timestamp.")
@@ -1373,7 +1373,7 @@ func (store *MemSQL) GetHubspotDocumentsByTypeANDRangeForSync(projectID int64,
 		whereParams = append(whereParams, model.MaxSyncTries)
 	}
 
-	dbTx := db.Order("timestamp, created_at ASC").Where(wheStmnt, whereParams)
+	dbTx := db.Order("timestamp, created_at ASC").Where(wheStmnt, whereParams...)
 
 	if limit > 0 {
 		dbTx = dbTx.Limit(limit)
