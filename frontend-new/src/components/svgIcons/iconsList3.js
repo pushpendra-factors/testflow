@@ -1897,3 +1897,26 @@ export const CaretUpSVG = ({ size = 16, color, extraClass }) => {
     </svg>
   );
 };
+
+export const RoundedFileSVG = ({
+  size = 25,
+  extraClass,
+  color = '#1890FF'
+}) => {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+      className={extraClass}
+      fill='none'
+      xmlns='http://www.w3.org/2000/svg'
+    >
+      <rect x='0.75' y='0.5' width='24' height='24' rx='12' fill='#E6F7FF' />
+      <path
+        d='M9.04102 8.49996C9.04102 7.77079 9.62435 7.16663 10.3743 7.16663H13.7077V9.83329C13.7077 10.2083 13.9993 10.5 14.3743 10.5H17.041V16.5C17.041 17.25 16.4368 17.8333 15.7077 17.8333H10.3743C9.62435 17.8333 9.04102 17.25 9.04102 16.5V8.49996ZM14.3743 9.83329V7.16663L17.041 9.83329H14.3743Z'
+        fill={color}
+      />
+    </svg>
+  );
+};
