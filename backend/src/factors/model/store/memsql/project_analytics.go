@@ -242,7 +242,7 @@ func (store *MemSQL) GetProjectAnalyticsData(projectIDNameMap map[string]string,
 					SixSignalAPITotalHits: uint64(sixSignalAPITotalHits),
 					ProjectName:           projectIDNameMap[projId],
 					Date:                  dateKey,
-					DailyLoginCount:       int64(U.SafeConvertToFloat64(eventData[i]["aggregate"])),
+					DailyLoginCount:       int64(U.SafeConvertToFloat64(eventData[lastNDays-1-i]["aggregate"])),
 				}
 
 				result[projId] = append(result[projId], &entry)
