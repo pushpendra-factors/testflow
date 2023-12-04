@@ -25,7 +25,7 @@ func RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId int64, re
 
 	var query *model.AttributionQueryV1
 	// building a query with 10 secs range to get GetRawAttributionQueryParams faster
-	if len(rangesToRun) > 1 {
+	if len(rangesToRun) >= 1 {
 		U.DeepCopy(requestPayload.Query, &query)
 		query.From = rangesToRun[0].Start
 		query.To = rangesToRun[0].Start + 10
