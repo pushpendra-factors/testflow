@@ -364,11 +364,14 @@ func TestGetDomainGroupDomainName(t *testing.T) {
 		"btinternet.comcom":             "btinternet.com",
 		"pentopaper.co.uyk":             "pentopaper.co.uy",
 		"abcdxyz":                       "abcdxyz", // not valid url return as it is
+		"www.a.edu":                     "a.edu",
+		"www.a.edu.pk":                  "a.edu.pk",
+		"http://a.edu.pk":               "a.edu.pk",
+		"http://abc.a.edu.pk":           "a.edu.pk",
 	}
 	for rawDomain := range expectedDomainNames {
 		assert.Equal(t, expectedDomainNames[rawDomain], U.GetDomainGroupDomainName(project.ID, rawDomain), fmt.Sprintf("Input %s", rawDomain))
 	}
-
 }
 
 func TestGetUserGroupID(t *testing.T) {

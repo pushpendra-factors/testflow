@@ -52,8 +52,9 @@ func PullAllDataV2(projectId int64, configs map[string]interface{}) (map[string]
 	if projectDetails.TimeZone != "" {
 		// Input time is in UTC. We need the same time in the other timezone
 		// if 2021-08-30 00:00:00 is UTC then we need the epoch equivalent in 2021-08-30 00:00:00 IST(project time zone)
-		offset := U.FindOffsetInUTC(U.TimeZoneString(projectDetails.TimeZone))
+		offset := U.FindOffsetInUTCForTimestamp(U.TimeZoneString(projectDetails.TimeZone), startTimestamp)
 		startTimestampInProjectTimezone = startTimestamp - int64(offset)
+		offset = U.FindOffsetInUTCForTimestamp(U.TimeZoneString(projectDetails.TimeZone), endTimestamp)
 		endTimestampInProjectTimezone = endTimestamp - int64(offset)
 	}
 

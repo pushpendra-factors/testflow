@@ -811,8 +811,8 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 			propVal, exi := (*userPropMap)[p]
 
 			// check and get for display name labels for crm property keys
-			if U.IsAllowedCRMPropertyPrefix(p) && exi {
-				propertyLabel, exist := store.getDisplayNameLabelForThisProperty(event.ProjectId, p, propVal)
+			if value := U.GetPropertyValueAsString(propVal); U.IsAllowedCRMPropertyPrefix(p) && exi && value != "" {
+				propertyLabel, exist := store.getDisplayNameLabelForThisProperty(event.ProjectId, p, value)
 				if exist {
 					propVal = propertyLabel
 				}
@@ -882,17 +882,19 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 	return msgPropMap, breakdownPropMap, nil
 }
 
-func (store *MemSQL) getDisplayNameLabelForThisProperty(projectID int64, propertyKey string, propVal interface{}) (string, bool) {
+func (store *MemSQL) getDisplayNameLabelForThisProperty(projectID int64, propertyKey, value string) (string, bool) {
 	source := strings.Split(propertyKey, "_")[0]
 	source = strings.TrimPrefix(source, "$")
 
-	value := U.GetPropertyValueAsString(propVal)
-
 	displayLabel, errCode, err := store.GetDisplayNameLabel(projectID, source, propertyKey, value)
-	if errCode != http.StatusFound || err != nil || displayLabel == nil {
+	if (errCode != http.StatusFound && errCode != http.StatusNotFound) || err != nil {
 		log.WithFields(log.Fields{"project_id": projectID, "source": source,
 			"property_key": propertyKey, "value": value}).WithError(err).Error("Failed to get display name label.")
 		return "", false
+	}
+
+	if errCode == http.StatusNotFound {
+		return value, false
 	}
 
 	return displayLabel.Label, true

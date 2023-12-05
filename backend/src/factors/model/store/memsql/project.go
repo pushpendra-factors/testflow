@@ -7,13 +7,14 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
+	"net/http"
+	"strings"
+	"time"
+
 	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
-	"net/http"
-	"strings"
-	"time"
 )
 
 const TOKEN_GEN_RETRY_LIMIT = 5
@@ -305,7 +306,7 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 			return errCode
 		}
 
-		subscription, status, err := billing.CreateChargebeeSubscriptionForCustomer(agent.BillingCustomerID, model.FREE_PLAN_ITEM_PRICE_ID)
+		subscription, status, err := billing.CreateChargebeeSubscriptionForCustomer(projectID, agent.BillingCustomerID, model.FREE_PLAN_ITEM_PRICE_ID)
 		if err != nil || status != http.StatusCreated {
 			logCtx.WithField("err_code", status).WithError(err).Error("Failed to create default subscription for agent")
 			return errCode
@@ -469,7 +470,7 @@ func (store *MemSQL) GetProject(id int64) (*model.Project, int) {
 	logCtx := log.WithFields(logFields)
 
 	var project model.Project
-	if err := db.Where("id = ?", id).First(&project).Error; err != nil {
+	if err := db.Limit(1).Where("id = ?", id).Find(&project).Error; err != nil {
 		logCtx.WithError(err).Error("Getting project by id failed")
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
@@ -571,6 +572,30 @@ func (store *MemSQL) GetProjectsByIDs(ids []int64) ([]model.Project, int) {
 	var projects []model.Project
 	if err := db.Limit(len(ids)).Where(ids).Find(&projects).Error; err != nil {
 		log.WithError(err).Error("Getting projects using ids failed")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(projects) == 0 {
+		return projects, http.StatusNoContent
+	}
+
+	return projects, http.StatusFound
+}
+
+func (store *MemSQL) GetProjectsInfoByIDs(ids []int64) ([]model.ProjectInfo, int) {
+	logFields := log.Fields{
+		"ids": ids,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	if len(ids) == 0 {
+		return nil, http.StatusBadRequest
+	}
+
+	var projects []model.ProjectInfo
+
+	db := C.GetServices().Db
+	if err := db.Table("projects").Limit(len(ids)).Where(ids).Find(&projects).Error; err != nil {
+		log.WithError(err).Error("Getting projects info using ids failed")
 		return nil, http.StatusInternalServerError
 	}
 
@@ -924,6 +949,24 @@ func (store *MemSQL) GetProjectIDByToken(token string) (int64, int) {
 
 	model.SetCacheProjectIDByToken(token, project.ID)
 	return project.ID, errCode
+}
+
+func (store *MemSQL) GetProjectIDByBillingSubscriptionID(id string) (int64, int) {
+	logFields := log.Fields{
+		"subscription_id": id,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+
+	var project model.Project
+	if err := db.Where("billing_subscription_id = ?", id).First(&project).Error; err != nil {
+		log.WithFields(logFields).WithError(err).Error("Getting project by subscription id failed")
+		if gorm.IsRecordNotFoundError(err) {
+			return 0, http.StatusNotFound
+		}
+		return 0, http.StatusInternalServerError
+	}
+	return project.ID, http.StatusFound
 }
 
 // // TODO Add default positions and sizes. Response is not giving all dashboards.

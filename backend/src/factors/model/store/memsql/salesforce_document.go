@@ -1136,24 +1136,34 @@ func (store *MemSQL) GetSalesforceDocumentByType(projectID int64, docType int, f
 
 }
 
-func (store *MemSQL) GetSalesforceDocumentByTypeAndAction(projectID int64, id string, docType int, action model.SalesforceAction) (*model.SalesforceDocument, int) {
+func (store *MemSQL) GetSalesforceDocumentsByIDTypeAndAction(projectID int64, ids []string, docType int, action model.SalesforceAction) ([]model.SalesforceDocument, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"id":         id,
+		"ids":        ids,
 		"doc_type":   docType,
 		"action":     action,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
 
-	var document []model.SalesforceDocument
-	if projectID == 0 || id == "" || docType == 0 || action == 0 {
+	var documents []model.SalesforceDocument
+	if projectID == 0 || len(ids) == 0 || docType == 0 || action == 0 {
 		logCtx.Error("Failed to get salesforce document by id and type and action. Invalid project_id or id or type or action.")
 		return nil, http.StatusBadRequest
 	}
 
+	whereStmnt := "project_id = ? AND type = ? AND action = ?"
+	whereParams := []interface{}{projectID, docType, action}
+	if len(ids) > 1 {
+		whereStmnt = whereStmnt + " AND id in ( ? )"
+		whereParams = append(whereParams, ids)
+	} else {
+		whereStmnt = whereStmnt + " AND id = ?"
+		whereParams = append(whereParams, ids[0])
+	}
+
 	db := C.GetServices().Db
-	err := db.Where("project_id = ? AND id = ? AND type = ? AND action = ?", projectID, id, docType, action).Find(&document).Error
+	err := db.Where(whereStmnt, whereParams...).Find(&documents).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
@@ -1162,9 +1172,21 @@ func (store *MemSQL) GetSalesforceDocumentByTypeAndAction(projectID int64, id st
 		return nil, http.StatusInternalServerError
 	}
 
-	if len(document) != 1 {
+	if len(documents) < 1 {
 		return nil, http.StatusNotFound
 	}
 
-	return &document[0], http.StatusFound
+	return documents, http.StatusFound
+}
+
+func (store *MemSQL) GetSalesforceDocumentByTypeAndAction(projectID int64, id string, docType int, action model.SalesforceAction) (*model.SalesforceDocument, int) {
+	documents, status := store.GetSalesforceDocumentsByIDTypeAndAction(projectID, []string{id}, docType, action)
+	if status != http.StatusFound {
+		return nil, status
+	}
+
+	if len(documents) != 1 {
+		return nil, http.StatusNotFound
+	}
+	return &documents[0], http.StatusFound
 }

@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -3379,6 +3380,10 @@ var TLDList = map[string]bool{
 	".한국":               true,
 }
 
+var whiteListedDomainForSubdomain = map[string]bool{
+	".edu.": true,
+}
+
 func GetTLDFromDomainName(domainName string) string {
 	domainNameRune := []rune(domainName)
 	for i := range domainNameRune {
@@ -3386,6 +3391,25 @@ func GetTLDFromDomainName(domainName string) string {
 		if TLDList[suffix] == true {
 			return suffix
 		}
+	}
+
+	return ""
+}
+
+var domainSubdomainsRegexEdu = regexp.MustCompile(`\.?([^\./]+\.edu\.?[^\.]+)$`)
+
+func getSubDomainIfDomainEdu(domainName string) string {
+	if domainName == "" {
+		return ""
+	}
+
+	if !strings.Contains(domainName, ".edu.") {
+		return ""
+	}
+
+	subDomains := domainSubdomainsRegexEdu.FindSubmatch([]byte(domainName))
+	if len(subDomains) == 2 && string(subDomains[1]) != "" {
+		return string(subDomains[1])
 	}
 
 	return ""
@@ -3413,6 +3437,10 @@ func GetDomainGroupDomainName(projectID int64, domainName string) string {
 	}
 
 	domainName = paths[0]
+
+	if subDomain := getSubDomainIfDomainEdu(domainName); subDomain != "" {
+		return subDomain
+	}
 
 	tld := GetTLDFromDomainName(domainName)
 	if tld == "" { // if no match found log and return the domain name

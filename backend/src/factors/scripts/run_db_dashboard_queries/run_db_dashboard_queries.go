@@ -50,7 +50,10 @@ func main() {
 	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
 	enableUsageBasedDashboardCaching := flag.Int("enable_usage_based_caching", 1, "Usage based dashboard caching analytics for 14 days limit.")
 
-	// This `running_for_memsql` flag can be used to turn off multi-thread for the job. Set 1 to disable. 0 to enable based on `num_routines` value
+	// The 'run_hourly' flag enables job to run every hr for new queries added in last 65 mins. Cron timing are to set separately - for one hr = '0 * * * *'
+	hourlyRun := flag.Int("run_hourly", 0, "If enabled by setting 1, the job runs every hr to cache only new queries.")
+
+	// The `running_for_memsql` flag can be used to turn off multi-thread for the job. Set 1 to disable. 0 to enable based on `num_routines` value
 	runningForMemsql := flag.Int("running_for_memsql", 0, "Disable routines for memsql.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
@@ -82,6 +85,9 @@ func main() {
 		taskID = *overrideAppName
 	}
 	defaultHealthcheckPingID := C.HealthcheckDashboardDBAttributionPingID
+	if *hourlyRun == 1 {
+		defaultHealthcheckPingID = C.HealthcheckDashboardDBAttributionHourlyPingID
+	}
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)
 	defer C.PingHealthcheckForPanic(taskID, *envFlag, healthcheckPingID)
 	logCtx := log.WithFields(log.Fields{"Prefix": taskID})
@@ -123,6 +129,7 @@ func main() {
 		FilterPropertiesStartTimestamp:        *filterPropertiesStartTimestamp,
 		AttributionDebug:                      *attributionDebug,
 		IsRunningForMemsql:                    *runningForMemsql,
+		IsHourlyRunEnabled:                    *hourlyRun,
 		SkipEventNameStepByProjectID:          *skipEventNameStepByProjectID,
 		SkipUserJoinInEventQueryByProjectID:   *skipUserJoinInEventQueryByProjectID,
 		DebugEnabled:                          *debugEnabled,

@@ -80,6 +80,7 @@ func InitAppRoutes(r *gin.Engine) {
 		mid.SetLoggedInAgent(),
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		GetProjectsHandler)
+
 	r.GET(routePrefix+"/GetTaskDetailsByName", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.GetTaskDetailsByNameHandler))
 	r.GET(routePrefix+"/GetAllToBeExecutedDeltas", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.GetAllToBeExecutedDeltasHandler))
 	r.GET(routePrefix+"/IsDependentTaskDone", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.IsDependentTaskDoneHandler))
@@ -91,6 +92,14 @@ func InitAppRoutes(r *gin.Engine) {
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		V1.GetProjectsHandler)
 
+	r.GET(routePrefix+"/"+ROUTE_PROJECTS_ROOT_V1+"/list",
+		mid.SetLoggedInAgent(),
+		mid.SetAuthorizedProjectsByLoggedInAgent(),
+		V1.GetProjectsListHandler)
+
+	r.POST("/billing/hooks/subscription/hbeqjomjhxjvx2z", V1.BillingSubscriptionChangedWebhookListner) // random string as a part of security measure
+	r.POST("/billing/hooks/invoice/ksh4jcjw245 ", V1.BillingInvoiceGeneratedWebhookListner)            // random string as a part of security measure
+	r.GET("/billing/upgrade/callback", V1.BillingUpgradeCallbackHandler)
 	// Feature Gates Auth Group
 	// authRouteGroup := r.Group(routePrefix + ROUTE_PROJECTS_ROOT)
 	// authRouteGroup.Use(mid.SetLoggedInAgent())
@@ -340,6 +349,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/v1/settings", V1.GetProjectSettingHandler)
 	authRouteGroup.PUT("/:project_id/settings", UpdateProjectSettingsHandler)
 	authRouteGroup.PUT("/:project_id", EditProjectHandler)
+	authRouteGroup.GET("/:project_id", GetProjectHandler)
 	authRouteGroup.GET("/:project_id/event_names", GetEventNamesHandler)
 	authRouteGroup.GET("/:project_id/event_names/auto_tracked_domains", GetURLDomainsHandler)
 	authRouteGroup.GET("/:project_id/user/event_names", GetEventNamesByUserHandler)
@@ -405,8 +415,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/billing/subscription", V1.GetSubscriptionDetailsHander)
 	authRouteGroup.GET("/:project_id/billing/invoices", V1.ListAllInvoicesHandler)
 	authRouteGroup.GET("/:project_id/billing/invoice/download", V1.DownloadInvoiceHandler)
-	authRouteGroup.GET("/billing/upgrade/callback", V1.BillingUpgradeCallbackHandler)
-	authRouteGroup.POST("/:project_id/billing/hooks/invoice", V1.UpdateSubscriptionHandler)
+
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {

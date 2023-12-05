@@ -35,7 +35,7 @@ func (store *MemSQL) TriggerSyncChargebeeToFactors(projectID int64) error { // C
 		return errors.New("Subscription doesn't exist for this project ")
 	}
 
-	latestSubscription, err := billing.GetCurrentSubscriptionDetails(subscriptionID)
+	latestSubscription, err := billing.GetCurrentSubscriptionDetails(projectID, subscriptionID)
 
 	if err != nil {
 		log.WithFields(logCtx).Error("Failed to get subscription details from chargebee ")

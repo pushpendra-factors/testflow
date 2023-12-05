@@ -12,7 +12,7 @@ type ProjectPlanMapping struct {
 	BillingPlanID       string          `gorm:"billing_plan_id"`
 	BillingAddons       *postgres.Jsonb `gorm:"billing_addons"`                      // addons from chargebee
 	OverWrite           *postgres.Jsonb `gorm:"column:over_write" json:"over_write"` //OverWrite type from plan_details model
-	LastRenewedOn       time.Time       `gorm:"column:last_renewed_on default:"1000-01-01 00:00:00"" json:"last_renewed_on"`
+	LastRenewedOn       time.Time       `gorm:"column:last_renewed_on; default:"1000-01-01 00:00:00"" json:"last_renewed_on"`
 	BillingLastSyncedAt time.Time       `gorm:"default:"1000-01-01 00:00:00" json:"billing_last_synced_at"`
 }
 

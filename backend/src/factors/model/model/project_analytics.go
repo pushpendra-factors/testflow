@@ -14,6 +14,7 @@ type ProjectAnalytics struct {
 	TotalUniqueUsers      uint64 `json:"total_unique_users"`
 	SixSignalAPIHits      uint64 `json:"six_signal_api_hits"`
 	SixSignalAPITotalHits uint64 `json:"six_signal_api_total_hits"`
+	DailyLoginCount       int64  `json:"daily_login_count"`
 }
 
 var ProjectAnalyticsColumnsName = []string{
@@ -29,6 +30,7 @@ var ProjectAnalyticsColumnsName = []string{
 	"Total Unique Users",
 	"6Signal Domain Enrichment Count",
 	"6Signal Total API Hits",
+	"Daily Login Count",
 }
 
 var GlobalDataProjectAnalyticsColumnsName = []string{
@@ -99,6 +101,7 @@ var ProjectAnalyticsColumnsNameToJsonKeys = map[string]string{
 	"6Signal Domain Enrichment Count": "six_signal_api_hits",
 	"6Signal Total API Hits":          "six_signal_api_total_hits",
 	"Project ID":                      "project_id",
+	"Daily Login Count":               "daily_login_count",
 }
 
 var CrmStatusColumnsName = []string{
@@ -168,6 +171,58 @@ var LoginCountQueryStmnt = `
         }
     `
 
+var DailyLoginCountQueryStmnt = `
+	{
+		"cl": "events",
+		"ty": "unique_users",
+		"grpa": "users",
+		"ewp": [
+			{
+				"an": "",
+				"na": "app.factors.ai",
+				"grpa": "Page Views",
+				"pr": [
+					{
+						"en": "user",
+						"grpn": "user",
+						"lop": "AND",
+						"op": "notEqual",
+						"pr": "email",
+						"ty": "categorical",
+						"va": "$none"
+					}
+				]
+			}
+		],
+		"gup": [
+			{
+			  "en": "user_g",
+			  "grpn": "user",
+			  "lop": "AND",
+			  "op": "equals",
+			  "pr": "project_id",
+			  "ty": "categorical",
+			  "va": "%v"
+			}
+		  ],
+		"gbt": "date",
+		"gbp": [
+			{
+				"pr": "project_id",
+				"en": "user",
+				"pty": "categorical",
+				"grpn": "OTHERS",
+				"ena": "$present"
+			}
+		],
+		"ec": "each_given_event",
+		"tz": "%v",
+		"fr": %v,
+		"to": %v
+	}
+`
+
 var ProjectAnalyticsEventSingleQueryStmnt = map[string]string{
-	"login_count": LoginCountQueryStmnt,
+	"login_count":       LoginCountQueryStmnt,
+	"daily_login_count": DailyLoginCountQueryStmnt,
 }

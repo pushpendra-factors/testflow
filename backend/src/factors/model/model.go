@@ -174,6 +174,7 @@ type Model interface {
 	GetAttributionDashboardUnitsForProjectID(projectID int64) ([]model.DashboardUnit, int)
 	GetDashboardUnits(projectID int64, agentUUID string, dashboardId int64) ([]model.DashboardUnit, int)
 	GetDashboardUnitByDashboardID(projectId int64, dashboardId int64) ([]model.DashboardUnit, int)
+	GetDashboardUnitByDashboardIDCreatedLast1Hour(projectId int64, dashboardId int64) ([]model.DashboardUnit, int)
 	GetQueryFromUnitID(projectID int64, unitID int64) (queryClass string, queryInfo *model.Queries, errMsg string)
 	GetDashboardUnitByUnitID(projectID int64, unitID int64) (*model.DashboardUnit, int)
 	GetDashboardUnitsByProjectIDAndDashboardIDAndTypes(projectID int64, dashboardID int64, types []string) ([]model.DashboardUnit, int)
@@ -495,7 +496,9 @@ type Model interface {
 	GetProjectByPrivateToken(privateToken string) (*model.Project, int)
 	GetProjects() ([]model.Project, int)
 	GetProjectsByIDs(ids []int64) ([]model.Project, int)
+	GetProjectsInfoByIDs(ids []int64) ([]model.ProjectInfo, int)
 	GetAllProjectIDs() ([]int64, int)
+	GetProjectIDByBillingSubscriptionID(id string) (int64, int)
 	GetNextSessionStartTimestampForProject(projectID int64) (int64, int)
 	UpdateNextSessionStartTimestampForProject(projectID int64, timestamp int64) int
 	GetProjectsToRunForIncludeExcludeString(projectIDs, excludeProjectIDs string) []int64
@@ -566,6 +569,7 @@ type Model interface {
 	IsExistSalesforceDocumentByIds(projectID int64, ids []string, docType int) (map[string]bool, int)
 	IsExistSalesforceDocumentByIdsWithBatch(projectID int64, ids []string, docType int, batchSize int) (map[string]bool, int)
 	GetSalesforceDocumentByTypeAndAction(projectID int64, id string, docType int, action model.SalesforceAction) (*model.SalesforceDocument, int)
+	GetSalesforceDocumentsByIDTypeAndAction(projectID int64, ids []string, docType int, action model.SalesforceAction) ([]model.SalesforceDocument, int)
 
 	// scheduled_task
 	CreateScheduledTask(task *model.ScheduledTask) int
@@ -687,11 +691,12 @@ type Model interface {
 
 	// project_analytics
 	GetGlobalProjectAnalyticsDataByProjectId(projectID int64, monthString, agentUUID string) ([]map[string]interface{}, error)
-	GetGlobalProjectAnalyticsEventDataByProjectId(projectID int64, queryStmnt string) (map[string]interface{}, error)
+	GetGlobalProjectAnalyticsEventDataByProjectId(projectID int64, queryStmnt string, timeZoneString U.TimeZoneString, startTimestmap, endTimestamp int64) ([]map[string]interface{}, error)
 	GetIntegrationStatusesCount(settings model.ProjectSetting, projectID int64, agentUUID string) []map[string]interface{}
 	GetEventUserCountsOfAllProjects(lastNDays int) (map[string][]*model.ProjectAnalytics, error)
 	GetEventUserCountsMerged(projectIdsList []int64, lastNDays int, currentDate time.Time) (map[int64]*model.ProjectAnalytics, error)
 	GetEventUserCountsByProjectID(projectID int64, lastNDays int) (map[string][]*model.ProjectAnalytics, error)
+	GetProjectAnalyticsData(projectIDNameMap map[string]string, lastNDays int, currentDate time.Time, projectId int64) (map[string][]*model.ProjectAnalytics, error)
 	GetCRMStatus(ProjectID int64, crmType string) (map[string][]map[string]interface{}, int)
 	// Property details
 	CreatePropertyDetails(projectID int64, eventName, propertyKey, propertyType string, isUserProperty bool, allowOverWrite bool) int

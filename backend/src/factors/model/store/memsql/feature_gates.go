@@ -126,6 +126,26 @@ func (store *MemSQL) GetFeatureLimitForProject(projectID int64, featureName stri
 		return 0, errors.New("Feature not enabled for this project")
 	}
 
+	if featureName != model.FEATURE_FACTORS_DEANONYMISATION { // limits are only for factors deanonymisation for now.
+		return limit, nil
+	}
+
+	// billing add-ons for additional accounts
+
+	billlingAddOns, err := store.GetBillingAddonsForProject(projectID)
+	if err != nil {
+		log.WithError(err).Error("Failed to get billing addons Project ID ", projectID)
+		return 0, err
+	}
+
+	if len(billlingAddOns) > 0 {
+		for _, addOn := range billlingAddOns {
+			if addOn.ItemPriceID == model.ADD_ON_ADDITIONAL_500_ACCOUNTS_MONTHLY || addOn.ItemPriceID == model.ADD_ON_ADDITIONAL_500_ACCOUNTS_YEARLY {
+				limit += int64(model.GetNumberOfAccountsForAddOnID(addOn.ItemPriceID))
+			}
+		}
+	}
+
 	return limit, nil
 
 }

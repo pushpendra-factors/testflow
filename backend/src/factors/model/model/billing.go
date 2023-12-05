@@ -1,8 +1,30 @@
 package model
 
-import "time"
+import (
+	"github.com/chargebee/chargebee-go/v3/models/invoice"
+	"github.com/chargebee/chargebee-go/v3/models/subscription"
+	"time"
+)
 
 type PlansAndAddOnsPrices []SubscriptionProductPrice
+
+const (
+	ADD_ON_ADDITIONAL_500_ACCOUNTS_MONTHLY          = "Additional-500-Accounts-USD-Monthly"
+	ADD_ON_ADDITIONAL_500_ACCOUNTS_YEARLY           = "Additional-500-Accounts-USD-Yearly"
+	ADD_ON_ADDITIONAL_500_ACCOUNTS_MONTHLY_ACCOUNTS = 500
+	ADD_ON_ADDITIONAL_500_ACCOUNTS_YEARLY_ACCOUNTS  = 500
+)
+
+func GetNumberOfAccountsForAddOnID(addOnID string) int {
+	switch addOnID {
+	case ADD_ON_ADDITIONAL_500_ACCOUNTS_MONTHLY:
+		return ADD_ON_ADDITIONAL_500_ACCOUNTS_MONTHLY_ACCOUNTS
+	case ADD_ON_ADDITIONAL_500_ACCOUNTS_YEARLY:
+		return ADD_ON_ADDITIONAL_500_ACCOUNTS_YEARLY_ACCOUNTS
+	default:
+		return 0
+	}
+}
 
 type SubscriptionProductPrice struct {
 	Type         string `json:"type"`
@@ -49,4 +71,10 @@ type Invoice struct {
 type DownloadInvoice struct {
 	Url       string    `json:"url"`
 	ValidTill time.Time `json:"valid_till"`
+}
+
+// webhook structs
+type Content struct {
+	Subscription subscription.Subscription `json:"subscription"`
+	Invoice      invoice.Invoice           `json:"invoice"`
 }

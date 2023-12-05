@@ -1367,7 +1367,7 @@ CREATE TABLE IF NOT EXISTS plan_details (
     feature_list json,
     billing_plan_id text,
     billing_plan_price_id text,
-    SHARD KEY (id)
+    SHARD KEY (id),
     PRIMARY KEY (id)
 );
 

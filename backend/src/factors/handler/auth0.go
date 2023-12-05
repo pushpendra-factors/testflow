@@ -213,18 +213,6 @@ func CallbackHandler(auth *Authenticator) gin.HandlerFunc {
 			if !alreadyExists {
 				existingAgent = createAgentResp.Agent
 
-				errCode = onboardingMailModoAPICall(existingAgent)
-				if errCode != http.StatusOK {
-					log.WithField("email", existingAgent.Email).
-						WithField("status_code", errCode).
-						Error("Failed To Send Onboarding Mail")
-				}
-				errCode = onboardingHubspotOwner(existingAgent)
-				if errCode != http.StatusOK {
-					log.WithField("email", existingAgent.Email).
-						WithField("status_code", errCode).
-						Error("Failed To Create Hubspot Owner")
-				}
 				errCode = onboardingSlackAPICall(existingAgent)
 				if errCode != http.StatusOK {
 					log.WithField("email", existingAgent.Email).
@@ -279,7 +267,7 @@ func CallbackHandler(auth *Authenticator) gin.HandlerFunc {
 			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, "", "INVALID_FLOW"))
 			return
 		}
-		
+
 		// Auth0 hence no password check
 		ts := time.Now().UTC()
 		errCode = store.GetStore().UpdateAgentLastLoginInfo(existingAgent.UUID, ts)

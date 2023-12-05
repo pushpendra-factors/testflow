@@ -1039,6 +1039,17 @@ func enrichGroupOpportunity(projectID int64, document *model.SalesforceDocument,
 		return nil, http.StatusOK
 	}
 
+	oppLeadIds, oppContactIds, _, _, err := getOpportuntityLeadAndContactID(document)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to getOpportuntityLeadAndContactID on enrich group opportunity")
+	}
+
+	isAssociationProcessed := isAllOpportunityAssociatedRecordProcessed(projectID, document.ID, oppLeadIds, oppContactIds)
+	if !isAssociationProcessed {
+		logCtx.Warning("Opportunity associated records not process. Skip processing.")
+		return nil, http.StatusNotModified
+	}
+
 	groupUserID, status, eventID := CreateOrUpdateSalesforceGroupsProperties(projectID, document, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, document.ID)
 	if status != http.StatusOK {
 		logCtx.Error("Failed to create or update salesforce groups properties.")
@@ -1062,11 +1073,6 @@ func enrichGroupOpportunity(projectID int64, document *model.SalesforceDocument,
 		}
 	} else {
 		logCtx.Warning("No account id found for group relationship.")
-	}
-
-	oppLeadIds, oppContactIds, _, _, err := getOpportuntityLeadAndContactID(document)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to getOpportuntityLeadAndContactID on enrich group opportunity")
 	}
 
 	if C.AssociateDealToDomainByProjectID(projectID) {
@@ -1162,6 +1168,39 @@ func AssociateOpportunityToDomains(projectID int64, opportunityGroupUserID strin
 		return http.StatusInternalServerError
 	}
 	return http.StatusOK
+}
+
+func isAllOpportunityAssociatedRecordProcessed(projectID int64, id string, oppLeadIds, oppContactIds []string) bool {
+
+	if len(oppLeadIds) > 0 {
+		documents, status := store.GetStore().GetSalesforceDocumentsByIDTypeAndAction(projectID, oppLeadIds, model.SalesforceDocumentTypeLead, model.SalesforceDocumentCreated)
+		if status != http.StatusFound && status != http.StatusNotFound {
+			log.WithFields(log.Fields{"document_id": id, "opp_lead_ids": oppLeadIds}).Error("Failed to get lead documents on isAllOpportunityAssociatedRecordProcessed.")
+			return false
+		}
+
+		for i := range documents {
+			if documents[i].Synced == false {
+				return false
+			}
+		}
+	}
+
+	if len(oppContactIds) > 0 {
+		documents, status := store.GetStore().GetSalesforceDocumentsByIDTypeAndAction(projectID, oppContactIds, model.SalesforceDocumentTypeContact, model.SalesforceDocumentCreated)
+		if status != http.StatusFound && status != http.StatusNotFound {
+			log.WithFields(log.Fields{"document_id": id, "opp_contat_ids": oppContactIds}).Error("Failed to get contact documents on isAllOpportunityAssociatedRecordProcessed.")
+			return false
+		}
+
+		for i := range documents {
+			if documents[i].Synced == false {
+				return false
+			}
+		}
+	}
+
+	return true
 }
 
 func enrichOpportunityContactRoles(projectID int64, document *model.SalesforceDocument) int {
@@ -2504,12 +2543,18 @@ type enrichGroupWorkerStatus struct {
 	HasFailure                bool
 	OverAllPendingSyncRecords map[string]map[string]string
 	Lock                      sync.Mutex
+	TotalProcessed            int
 }
 
 func updateGroupWorkerStatus(errCode int, pendingSyncRecords map[string]map[string]string, status *enrichGroupWorkerStatus) {
 	status.Lock.Lock()
 	defer status.Lock.Unlock()
-	if errCode != http.StatusOK {
+
+	if errCode == http.StatusOK {
+		status.TotalProcessed++
+	}
+
+	if errCode != http.StatusOK && errCode != http.StatusNotModified {
 		status.HasFailure = true
 	}
 
@@ -2615,14 +2660,16 @@ func (dp *DocumentPaginator) GetNextBatch() ([]model.SalesforceDocument, int, bo
 }
 
 func getAndProcessUnSyncedGroupDocuments(projectID int64, docType int, workerPerProject int, salesforceSmartEventNames *map[string][]SalesforceSmartEventName,
-	timeZoneStr U.TimeZoneString, dataPropertiesByType map[int]*map[string]bool, pullLimit int, recordProcessLimit int) (bool, map[string]map[string]string, int, bool) {
+	timeZoneStr U.TimeZoneString, dataPropertiesByType map[int]*map[string]bool, pullLimit int, recordProcessLimit int, startTime int64, endTime int64) (bool, map[string]map[string]string, int, bool) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": docType, "worker_per_project": workerPerProject, "salesforce_smart_event_names": salesforceSmartEventNames})
 
 	docTypeFailure := false
 	overAllPendingSyncRecords := make(map[string]map[string]string)
-	documentPaginator := NewSalesforceDocumentPaginator(projectID, docType, 0, 0, pullLimit)
+
+	documentPaginator := NewSalesforceDocumentPaginator(projectID, docType, startTime, endTime, pullLimit)
+
 	hasMore := true
-	totalRecordsProcessed := 0
+	var status enrichGroupWorkerStatus
 	for hasMore {
 		var documents []model.SalesforceDocument
 		var errCode int
@@ -2630,23 +2677,22 @@ func getAndProcessUnSyncedGroupDocuments(projectID int64, docType int, workerPer
 		if errCode != http.StatusFound {
 			if errCode != http.StatusNotFound {
 				logCtx.WithFields(log.Fields{"err_code": errCode}).Error("Failed to get salesforce account documents for groups.")
-				return true, overAllPendingSyncRecords, totalRecordsProcessed, false
+				return true, overAllPendingSyncRecords, status.TotalProcessed, false
 			}
 
-			return docTypeFailure, overAllPendingSyncRecords, totalRecordsProcessed, false
+			return docTypeFailure, overAllPendingSyncRecords, status.TotalProcessed, false
 		}
 
 		fillTimeZoneAndDateProperty(documents, timeZoneStr, dataPropertiesByType[docType])
 
 		batches := GetBatchedOrderedDocumentsByID(documents, workerPerProject)
 		docTypeAlias := model.GetSalesforceAliasByDocType(docType)
-		var status enrichGroupWorkerStatus
+
 		workerIndex := 0
 		for i := range batches {
 			batch := batches[i]
 			var wg sync.WaitGroup
 			for docID := range batch {
-				totalRecordsProcessed += len(batch[docID])
 				logCtx.WithFields(log.Fields{"worker": workerIndex, "doc_id": docID, "type": docTypeAlias, "is_group": true}).Info("Processing Batch by doc_id")
 				wg.Add(1)
 				go enrichAllGroup(projectID, &wg, docType, (*salesforceSmartEventNames)[docTypeAlias], batch[docID], &status)
@@ -2657,30 +2703,30 @@ func getAndProcessUnSyncedGroupDocuments(projectID int64, docType int, workerPer
 				docTypeFailure = true
 			}
 
-			if recordProcessLimit > 0 && totalRecordsProcessed > recordProcessLimit {
+			if recordProcessLimit > 0 && status.TotalProcessed > recordProcessLimit {
 				break
 			}
 		}
+	}
 
-		for key, value := range status.OverAllPendingSyncRecords {
-			if _, exist := overAllPendingSyncRecords[key]; !exist {
-				overAllPendingSyncRecords[key] = make(map[string]string)
-			}
-			for subKey := range value {
-				overAllPendingSyncRecords[key][subKey] = value[subKey]
-			}
+	for key, value := range status.OverAllPendingSyncRecords {
+		if _, exist := overAllPendingSyncRecords[key]; !exist {
+			overAllPendingSyncRecords[key] = make(map[string]string)
 		}
-
-		if recordProcessLimit > 0 && totalRecordsProcessed > recordProcessLimit {
-			return docTypeFailure, overAllPendingSyncRecords, totalRecordsProcessed, true
+		for subKey := range value {
+			overAllPendingSyncRecords[key][subKey] = value[subKey]
 		}
 	}
 
-	return docTypeFailure, overAllPendingSyncRecords, totalRecordsProcessed, false
+	if recordProcessLimit > 0 && status.TotalProcessed > recordProcessLimit {
+		return docTypeFailure, overAllPendingSyncRecords, status.TotalProcessed, true
+	}
+
+	return docTypeFailure, overAllPendingSyncRecords, status.TotalProcessed, false
 }
 
 func enrichGroup(projectID int64, workerPerProject int, orderedType []string, docMinTimestamp map[int]int64, salesforceSmartEventNames *map[string][]SalesforceSmartEventName, timeZoneStr U.TimeZoneString,
-	dataPropertiesByType map[int]*map[string]bool, pullLimit int, recordProcessLimit int) (map[string]bool, map[string]map[string]string, int, int, bool) {
+	dataPropertiesByType map[int]*map[string]bool, pullLimit int, recordProcessLimit int, startTime, endTime int64) (map[string]bool, map[string]map[string]string, int, int, bool) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 
 	if projectID == 0 {
@@ -2703,7 +2749,7 @@ func enrichGroup(projectID int64, workerPerProject int, orderedType []string, do
 		recordsProcessed := 0
 		limitExceeded := false
 		overAllSyncStatus[docTypeAlias], overAllPendingSyncRecords, recordsProcessed, limitExceeded = getAndProcessUnSyncedGroupDocuments(projectID, docType, workerPerProject, salesforceSmartEventNames, timeZoneStr,
-			dataPropertiesByType, pullLimit, recordProcessLimit-totalRecordsProcessed)
+			dataPropertiesByType, pullLimit, recordProcessLimit-totalRecordsProcessed, startTime, endTime)
 		totalRecordsProcessed += recordsProcessed
 		if limitExceeded {
 			return overAllSyncStatus, overAllPendingSyncRecords, http.StatusOK, totalRecordsProcessed, true
@@ -2721,13 +2767,13 @@ func associateGroupUserOpportunitytoUser(projectID int64, oppLeadIds, oppContact
 		docType := model.GetSalesforceDocTypeByAlias(docTypeAlias)
 		for i := range docIDs {
 			logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": docType, "doc_id": docIDs[i]})
-			documents, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{docIDs[i]}, docType, true)
+			document, status := store.GetStore().GetSalesforceDocumentByTypeAndAction(projectID, docIDs[i], docType, model.SalesforceDocumentCreated)
 			if status != http.StatusFound {
-				logCtx.Error("Failed to get synced salesforce document for opportunity group association.")
+				logCtx.Error("Failed to get salesforce document for opportunity group association.")
 				continue
 			}
 
-			createdDocument := documents[0]
+			createdDocument := document
 			if createdDocument.Synced == false {
 				// only the first occurrence of associations
 				if _, exist := pendingSyncRecords[docTypeAlias]; !exist {
@@ -2881,6 +2927,29 @@ func enrichWithOrderedTimeSeries(project *model.Project, orderedTimeSeries [][]i
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID})
 	for _, timeRange := range orderedTimeSeries {
+
+		newRecordProcessLimit := recordProcessLimit - totalRecordsProcessed
+		if C.IsAllowedSalesforceGroupsByProjectID(project.ID) {
+
+			if docMinTimestamp[model.SalesforceDocumentTypeAccount] > 0 &&
+				timeRange[1] >= docMinTimestamp[model.SalesforceDocumentTypeAccount] {
+				syncStatus, _, status, recordProcessed, limitExceeded := enrichGroup(project.ID, workerPerProject, []string{model.SalesforceDocumentTypeNameAccount}, docMinTimestamp,
+					salesforceSmartEventNames, timeZoneStr, dataPropertiesByType, pullLimit, newRecordProcessLimit, timeRange[0], timeRange[1])
+				if status != http.StatusOK {
+					overAllSyncStatus["groups"] = true
+				}
+
+				totalRecordsProcessed += recordProcessed
+				for docType := range syncStatus {
+					overAllSyncStatus[fmt.Sprintf("groups_%s", docType)] = syncStatus[docType]
+				}
+
+				if limitExceeded {
+					return overAllSyncStatus, true, totalRecordsProcessed
+				}
+			}
+		}
+
 		for _, docType := range enrichOrderByType {
 			if docMinTimestamp[docType] <= 0 || timeRange[1] < docMinTimestamp[docType] {
 				continue
@@ -2894,7 +2963,7 @@ func enrichWithOrderedTimeSeries(project *model.Project, orderedTimeSeries [][]i
 			logCtx := logCtx.WithFields(log.Fields{"type": docTypeAlias, "time_range": timeRange})
 			logCtx.Info("Processing started for given time range.")
 
-			newRecordProcessLimit := recordProcessLimit - totalRecordsProcessed
+			newRecordProcessLimit = recordProcessLimit - totalRecordsProcessed
 			failure, limitExceeded, recordsProcessed := getAndProcessUnSyncedDocuments(project, docType, workerPerProject, otpRules, uniqueOTPEventKeys, salesforceSmartEventNames,
 				pendingOpportunityGroupAssociations, timeZoneStr, dataPropertiesByType, timeRange[0], timeRange[1], pullLimit, newRecordProcessLimit)
 
@@ -2913,6 +2982,31 @@ func enrichWithOrderedTimeSeries(project *model.Project, orderedTimeSeries [][]i
 				logCtx.WithField("record_process_limit", recordProcessLimit).Info("Record process limit hit for project.")
 				return overAllSyncStatus, true, totalRecordsProcessed
 			}
+		}
+
+		// process opportunity group at the end as they are dependent on leads and contacts. Skip opportunities if associations are not processed.
+		newRecordProcessLimit = recordProcessLimit - totalRecordsProcessed
+		if C.IsAllowedSalesforceGroupsByProjectID(project.ID) {
+
+			if docMinTimestamp[model.SalesforceDocumentTypeOpportunity] > 0 &&
+				timeRange[1] >= docMinTimestamp[model.SalesforceDocumentTypeOpportunity] {
+				var syncStatus map[string]bool
+				syncStatus, _, status, recordsProcessed, limitExceeded := enrichGroup(project.ID, workerPerProject, []string{model.SalesforceDocumentTypeNameOpportunity}, docMinTimestamp,
+					salesforceSmartEventNames, timeZoneStr, dataPropertiesByType, pullLimit, newRecordProcessLimit, timeRange[0], timeRange[1])
+				if status != http.StatusOK {
+					overAllSyncStatus["groups"] = true
+				}
+				totalRecordsProcessed += recordsProcessed
+
+				for docType := range syncStatus {
+					overAllSyncStatus[fmt.Sprintf("groups_%s", docType)] = syncStatus[docType]
+				}
+
+				if limitExceeded {
+					return overAllSyncStatus, true, totalRecordsProcessed
+				}
+			}
+
 		}
 	}
 
@@ -2936,22 +3030,6 @@ func enrichWithLimit(project *model.Project, workerPerProject int, timeZoneStr U
 
 	totalRecordsProcessed := 0
 	overAllSyncStatus := make(map[string]bool)
-	if C.IsAllowedSalesforceGroupsByProjectID(project.ID) {
-		syncStatus, _, status, recordProcessed, limitExceeded := enrichGroup(project.ID, workerPerProject, []string{model.SalesforceDocumentTypeNameAccount}, docMinTimestamp,
-			salesforceSmartEventNames, timeZoneStr, dataPropertiesByType, pullLimit, recordProcessLimit)
-		if status != http.StatusOK {
-			overAllSyncStatus["groups"] = true
-		}
-
-		totalRecordsProcessed += recordProcessed
-		for docType := range syncStatus {
-			overAllSyncStatus[fmt.Sprintf("groups_%s", docType)] = syncStatus[docType]
-		}
-
-		if limitExceeded {
-			return nil, overAllSyncStatus, totalRecordsProcessed, true
-		}
-	}
 
 	syncStatus, limitExceeded, recordsProcessed := enrichWithOrderedTimeSeries(project, orderedTimeSeries, enrichOrderByType, docMinTimestamp, recordProcessLimit-totalRecordsProcessed, workerPerProject,
 		otpRules, uniqueOTPEventKeys, salesforceSmartEventNames, nil, timeZoneStr, dataPropertiesByType, pullLimit)
@@ -2961,25 +3039,6 @@ func enrichWithLimit(project *model.Project, workerPerProject int, timeZoneStr U
 	totalRecordsProcessed += recordsProcessed
 	if limitExceeded {
 		return nil, overAllSyncStatus, totalRecordsProcessed, true
-	}
-
-	// process opportunity group at the end as they are dependent on leads and contacts
-	if C.IsAllowedSalesforceGroupsByProjectID(project.ID) {
-		var syncStatus map[string]bool
-		syncStatus, _, status, recordsProcessed, limitExceeded := enrichGroup(project.ID, workerPerProject, []string{model.SalesforceDocumentTypeNameOpportunity}, docMinTimestamp,
-			salesforceSmartEventNames, timeZoneStr, dataPropertiesByType, pullLimit, recordProcessLimit-totalRecordsProcessed)
-		if status != http.StatusOK {
-			overAllSyncStatus["groups"] = true
-		}
-		totalRecordsProcessed += recordsProcessed
-
-		for docType := range syncStatus {
-			overAllSyncStatus[fmt.Sprintf("groups_%s", docType)] = syncStatus[docType]
-		}
-
-		if limitExceeded {
-			return nil, overAllSyncStatus, totalRecordsProcessed, true
-		}
 	}
 
 	return nil, overAllSyncStatus, totalRecordsProcessed, false

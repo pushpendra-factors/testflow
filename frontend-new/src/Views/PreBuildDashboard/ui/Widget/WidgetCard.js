@@ -41,7 +41,10 @@ import { shouldDataFetch } from 'Utils/dataFormatter';
 import styles from './index.module.scss';
 import FaSelect from 'Components/FaSelect';
 import { getQueryData } from 'Views/PreBuildDashboard/state/services';
-import { getPredefinedQuery } from 'Views/PreBuildDashboard/utils';
+import {
+  getPredefinedQuery,
+  transformWidgetResponse
+} from 'Views/PreBuildDashboard/utils';
 import { selectActivePreDashboard } from 'Reducers/dashboard/selectors';
 import CampaignMetricsDropdown from './CampaignMetricsDropdown';
 import { getKpiLabel } from 'Views/CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
@@ -126,11 +129,18 @@ function WidgetCard({
             dashboardFilters,
             appliedBreakdown?.[0]
           );
-          const res = await getQueryData(
+
+          let res = await getQueryData(
             activeProject.id,
             payload,
             activeDashboard?.inter_id
           );
+
+          if (unit?.inter_id === 1) {
+            res.data = transformWidgetResponse(
+              res.data.result || res.data
+            );
+          }
 
           if (!hasComponentUnmounted.current) {
             onDataLoadSuccess({ unitId: unit.inter_id });
@@ -141,6 +151,7 @@ function WidgetCard({
               'data.cache_meta.last_computed_at',
               null
             );
+
             setResultState({
               ...initialState,
               data: res.data.result || res.data
@@ -291,7 +302,7 @@ function WidgetCard({
                   <Select
                     value={appliedBreakdown?.[0]?.d_na}
                     onChange={handleBreakdownChange}
-                    style={{ width: 120 }}
+                    style={{ minWidth: 120 }}
                     className='fa-select'
                     suffixIcon={
                       <SVG name='caretDown' size={16} extraClass={'-mt-1'} />
@@ -333,7 +344,8 @@ function WidgetCard({
                 <CampaignMetricsDropdown
                   metrics={kpiData.map((q) => getKpiLabel(q))}
                   currValue={currMetricsValue}
-                  onChange={setCurrMetricsValue}
+                  setCurrMetricsValue={setCurrMetricsValue}
+                  metricsValue={resultState?.data?.[1]?.rows?.[0]}
                 />
               </div>
             ) : null}

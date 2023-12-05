@@ -30,20 +30,21 @@ const BillingTab = () => {
   const showV2PricingVersionFlag = showV2PricingVersion(active_project);
 
   const handleUpgradePlan = () => {
-    if (isSolutionsAdmin) {
-      history.push(PathUrls.ConfigurePlans);
-      return;
-    }
-    if (isAdmin && !showV2PricingVersionFlag) {
-      window.open(
-        `https://factors.schedulehero.io/meet/yogeshpai/sso`,
-        '_blank'
+    if (showV2PricingVersionFlag) {
+      history.push(
+        `${PathUrls.SettingsPricing}?activeTab=${PRICING_PAGE_TABS.UPGRADE}`
       );
-      return;
+    } else {
+      if (isSolutionsAdmin) {
+        history.push(PathUrls.ConfigurePlans);
+        return;
+      } else {
+        window.open(
+          `https://factors.schedulehero.io/meet/yogeshpai/sso`,
+          '_blank'
+        );
+      }
     }
-    history.push(
-      `${PathUrls.SettingsPricing}?activeTab=${PRICING_PAGE_TABS.UPGRADE}`
-    );
   };
 
   return (
@@ -104,14 +105,20 @@ const BillingTab = () => {
           <div className='mt-5'>
             <Tooltip
               title={`${
-                isSolutionsAdmin
+                showV2PricingVersionFlag
+                  ? 'Upgrade Plan'
+                  : isSolutionsAdmin
                   ? 'Configure Plans'
                   : 'Talk to our Sales team to upgrade'
               }`}
             >
               <Button
                 type='primary'
-                disabled={!isSolutionsAdmin && !isAdmin}
+                disabled={
+                  showV2PricingVersionFlag
+                    ? false
+                    : !isSolutionsAdmin && !isAdmin
+                }
                 onClick={handleUpgradePlan}
               >
                 Upgrade Plan
@@ -197,7 +204,9 @@ const BillingTab = () => {
 
           <Tooltip
             title={`${
-              isSolutionsAdmin
+              showV2PricingVersionFlag
+                ? 'Buy Add on'
+                : isSolutionsAdmin
                 ? 'Configure Plans'
                 : 'Talk to our Sales team to upgrade'
             }`}
@@ -206,7 +215,9 @@ const BillingTab = () => {
               type='link'
               style={{ marginTop: 20 }}
               onClick={handleUpgradePlan}
-              disabled={!isSolutionsAdmin && !isAdmin}
+              disabled={
+                showV2PricingVersionFlag ? false : !isSolutionsAdmin && !isAdmin
+              }
             >
               Buy Add on
             </Button>
