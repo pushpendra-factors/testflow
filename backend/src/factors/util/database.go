@@ -114,6 +114,22 @@ func IsEmptyPostgresJsonb(jsonb *postgres.Jsonb) bool {
 	return strJson == "" || strJson == "null"
 }
 
+func AreJsonbEqual(jsonb1 postgres.Jsonb, jsonb2 postgres.Jsonb) bool {
+	jsonString1, err := json.Marshal(jsonb1)
+	if err != nil {
+		fmt.Println("Error marshalling jsonb1:", err)
+		return false
+	}
+
+	jsonString2, err := json.Marshal(jsonb2)
+	if err != nil {
+		fmt.Println("Error marshalling jsonb2:", err)
+		return false
+	}
+
+	return string(jsonString1) == string(jsonString2)
+}
+
 // AddToJsonb adds key values to the jsonb. To overwrite
 // existing keys set overwriteExisting to true.
 func AddToPostgresJsonb(sourceJsonb *postgres.Jsonb,

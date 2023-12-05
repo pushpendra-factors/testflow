@@ -61,10 +61,7 @@ const SubMenu = ({config, durationObj, handleDurationChange, activeDashboard}) =
 
   return (
     <div className={'flex items-center px-0'}>
-         <div className={'flex justify-between items-center mr-2'}>
-            <Text type={'title'} level={7} extraClass={'m-0 mr-2'}>
-              Data from
-            </Text>
+         <div className={'flex justify-between'}>
             <FaDatepicker
               customPicker
               nowPicker={activeDashboard?.name === 'Website Aggregation' ? true : false}
@@ -79,8 +76,10 @@ const SubMenu = ({config, durationObj, handleDurationChange, activeDashboard}) =
               buttonSize={'default'}
               className={'datepicker-minWidth'}
             />
+            <div className='ml-2 -mt-2'>
+              {renderActions()}
+            </div>
           </div>
-        {renderActions()}
     </div>
   );
 }

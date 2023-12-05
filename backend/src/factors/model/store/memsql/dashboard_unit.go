@@ -309,7 +309,7 @@ func (store *MemSQL) GetDashboardUnitByDashboardIDCreatedLast1Hour(projectId int
 		return dashboardUnits, http.StatusInternalServerError
 	}
 
-	timeInSecLast65Mins := int64(65 * 60 * 60)
+	timeInSecLast65Mins := int64(65 * 60)
 	lastValidTill := time.Now().Unix() - timeInSecLast65Mins
 	var dashboardUnitsCratedUpdateInOneHr []model.DashboardUnit
 	for _, unit := range dashboardUnits {

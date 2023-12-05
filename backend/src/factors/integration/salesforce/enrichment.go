@@ -2992,7 +2992,7 @@ func enrichWithOrderedTimeSeries(project *model.Project, orderedTimeSeries [][]i
 				timeRange[1] >= docMinTimestamp[model.SalesforceDocumentTypeOpportunity] {
 				var syncStatus map[string]bool
 				syncStatus, _, status, recordsProcessed, limitExceeded := enrichGroup(project.ID, workerPerProject, []string{model.SalesforceDocumentTypeNameOpportunity}, docMinTimestamp,
-					salesforceSmartEventNames, timeZoneStr, dataPropertiesByType, pullLimit, recordProcessLimit-newRecordProcessLimit, timeRange[0], timeRange[1])
+					salesforceSmartEventNames, timeZoneStr, dataPropertiesByType, pullLimit, newRecordProcessLimit, timeRange[0], timeRange[1])
 				if status != http.StatusOK {
 					overAllSyncStatus["groups"] = true
 				}

@@ -7,13 +7,14 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
+	"net/http"
+	"strings"
+	"time"
+
 	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
-	"net/http"
-	"strings"
-	"time"
 )
 
 const TOKEN_GEN_RETRY_LIMIT = 5
@@ -469,7 +470,7 @@ func (store *MemSQL) GetProject(id int64) (*model.Project, int) {
 	logCtx := log.WithFields(logFields)
 
 	var project model.Project
-	if err := db.Where("id = ?", id).First(&project).Error; err != nil {
+	if err := db.Limit(1).Where("id = ?", id).Find(&project).Error; err != nil {
 		logCtx.WithError(err).Error("Getting project by id failed")
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
@@ -571,6 +572,30 @@ func (store *MemSQL) GetProjectsByIDs(ids []int64) ([]model.Project, int) {
 	var projects []model.Project
 	if err := db.Limit(len(ids)).Where(ids).Find(&projects).Error; err != nil {
 		log.WithError(err).Error("Getting projects using ids failed")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(projects) == 0 {
+		return projects, http.StatusNoContent
+	}
+
+	return projects, http.StatusFound
+}
+
+func (store *MemSQL) GetProjectsInfoByIDs(ids []int64) ([]model.ProjectInfo, int) {
+	logFields := log.Fields{
+		"ids": ids,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	if len(ids) == 0 {
+		return nil, http.StatusBadRequest
+	}
+
+	var projects []model.ProjectInfo
+
+	db := C.GetServices().Db
+	if err := db.Table("projects").Limit(len(ids)).Where(ids).Find(&projects).Error; err != nil {
+		log.WithError(err).Error("Getting projects info using ids failed")
 		return nil, http.StatusInternalServerError
 	}
 

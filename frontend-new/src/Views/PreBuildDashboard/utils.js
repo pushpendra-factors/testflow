@@ -124,3 +124,55 @@ export const getPredefinedQuery = (
 
   return query;
 };
+
+export const transformWidgetResponse = (response) => {
+  // Initialize empty arrays for odd and even elements
+  const originalData = response;
+  let oddHeaders = [];
+  let evenHeaders = [];
+  let oddRows = [];
+  let evenRows = [];
+
+  // Separate odd and even elements
+  for (let i = 0; i < response.length; i++) {
+    if (i % 2 === 0) {
+      // Even element
+      evenHeaders.push(...response[i].headers);
+      evenRows.push(response[i].rows);
+    } else {
+      // Odd element
+      oddHeaders.push(...response[i].headers);
+      oddRows.push(...response[i].rows);
+    }
+  }
+
+  evenHeaders = evenHeaders.filter((obj) => obj != 'datetime');
+
+  let evenRowTransform = evenRows[0];
+  for(let i = 1; i < evenRows.length; i++) {
+    for(let j = 0; j < evenRowTransform.length; j++) {
+      evenRowTransform[j].push(evenRows[i][j][1])
+    }
+  }
+  
+  const formateData = {
+    result : [
+      {
+        "cache_meta": originalData.cache_meta,
+        "headers": ['datetime', ...evenHeaders],
+        "meta": originalData.meta,
+        "query": originalData.query,
+        "rows": evenRowTransform,
+      },
+      {
+        "cache_meta": originalData.cache_meta,
+        "headers": oddHeaders,
+        "meta": originalData.meta,
+        "query": originalData.query,
+        "rows": [oddRows.flat()],
+      }
+    ]
+  }
+
+  return formateData;
+};

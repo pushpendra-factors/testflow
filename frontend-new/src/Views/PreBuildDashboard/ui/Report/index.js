@@ -106,7 +106,7 @@ import { getQuickDashboardDateRange } from 'Views/Dashboard/utils';
 import { CoreQueryContext } from 'Context/CoreQueryContext';
 import ReportContent from './ReportContent';
 import { getQueryData } from 'Views/PreBuildDashboard/state/services';
-import { getPredefinedQuery } from 'Views/PreBuildDashboard/utils';
+import { getPredefinedQuery, transformWidgetResponse } from 'Views/PreBuildDashboard/utils';
 import { selectActivePreDashboard } from 'Reducers/dashboard/selectors';
 
 function CoreQuery({
@@ -240,9 +240,7 @@ function CoreQuery({
   }, []);
 
   const updateAppliedBreakdown = useCallback((data) => {
-    // const newAppliedBreakdown = [...groupBy.event, ...groupBy.global];
     setAppliedBreakdown(data);
-    // runKPIQuery(querySaved, data);
   }, []);
 
   const updateLocalReducer = useCallback((type, payload) => {
@@ -413,22 +411,8 @@ function CoreQuery({
           return { ...rest, label: d_na };; // Return the object without "inter_e_type" and "na"
         })
         setAppliedQueries(kpiData);
-        // setAppliedBreakdown(breakdown);
-
-        // const newDateRange = getQuickDashboardDateRange();
 
         const payload = getPredefinedQuery(query, durationObj,[], breakdown);
-        // const res = await getQueryData(
-        //   activeProject.id,
-        //   payload, 
-        //   activeDashboard?.inter_id
-        // );
-        // const KPIquery = getKPIQuery(
-        //   queriesA,
-        //   durationObj,
-        //   groupBy,
-        //   queryOptions
-        // );
 
         setDateFromTo({ from: payload?.q_g[0]?.fr, to: payload?.q_g[0]?.to });
 
@@ -448,6 +432,12 @@ function CoreQuery({
           payload,
           activeDashboard?.inter_id,
         );
+
+        if (query?.inter_id === 1) {
+          res.data = transformWidgetResponse(
+            res.data.result || res.data
+          );
+        }
         
         if (isCompareQuery) {
           updateLocalReducer(
@@ -475,11 +465,6 @@ function CoreQuery({
 
   useEffect(() => {
     if (location.state && location.state.web_analytics) {
-      // setQueryToState(
-      //   location.state.query,
-      //   location.state.navigatedFromDashboard
-      // );
-      // const newDateRange = getQuickDashboardDateRange();
       runKPIQuery(location.state.query, location.state.query.g_by?.[0]);
       setAppliedBreakdown([location.state.query.g_by?.[0]]);
       
@@ -508,9 +493,6 @@ function CoreQuery({
           ...currState,
           date_range: appliedDateRange
         }));
-        // if (queryType === QUERY_TYPE_EVENT) {
-        //   runQuery(querySaved, appliedDateRange, true);
-        // }
         if (queryType === QUERY_TYPE_KPI) {
           runKPIQuery(querySaved, appliedBreakdown?.[0], appliedDateRange, true);
         }
@@ -520,7 +502,6 @@ function CoreQuery({
     [
       queryOptions.date_range,
       querySaved,
-      // runQuery,
       camp_dateRange,
       dispatch,
       queryType,
@@ -597,38 +578,10 @@ function CoreQuery({
         ...payload
       };
 
-    
-
-      // if (queryType === QUERY_TYPE_EVENT) {
-      //   runQuery(querySaved, appliedDateRange, false, isCompareDate);
-      // }
-      // if (queryType === QUERY_TYPE_KPI) {
         runKPIQuery(querySaved, appliedBreakdown?.[0], appliedDateRange, false, isCompareDate);
-      // }
     },
     [queryType, queryOptions.date_range, runKPIQuery, querySaved, appliedBreakdown]
   );
-
-  // useEffect(() => {
-  //   if (clickedSavedReport) {
-  //    if (clickedSavedReport.queryType === QUERY_TYPE_KPI) {
-  //       runKPIQuery({
-  //         id: clickedSavedReport.query_id,
-  //         name: clickedSavedReport.queryName
-  //       });
-  //     } else {
-  //       runQuery({
-  //         id: clickedSavedReport.query_id,
-  //         name: clickedSavedReport.queryName
-  //       });
-  //     }
-  //     setClickedSavedReport(false);
-  //   }
-  // }, [
-  //   clickedSavedReport,
-  //   runQuery,
-  //   runKPIQuery,
-  // ]);
 
   useEffect(
     () => () => {
@@ -744,17 +697,6 @@ function CoreQuery({
     [KPI_config]
   );
 
-  // useEffect(() => {
-  //   setKPIConfigProps(findKPIitem(selectedMainCategory?.group));
-  // }, [findKPIitem, selectedMainCategory]);
-
-  // useEffect(() => {
-  //   //collapsing the query composer once run query is executed
-  //   if (loading) {
-  //     setQueryOpen(false);
-  //   }
-  // }, [loading]);
-
   const getCurrentSorter = useCallback(() => {
     if (renderedCompRef.current && renderedCompRef.current.currentSorter) {
       return renderedCompRef.current.currentSorter;
@@ -790,29 +732,17 @@ function CoreQuery({
   const contextValue = useMemo(
     () => ({
       coreQueryState,
-      // attributionMetrics,
-      // queriesA,
-      // profileQueries,
       queryOptions,
-      // selectedMainCategory,
       activeKey,
       showResult,
-      // KPIConfigProps,
-      // setAttributionMetrics,
       setNavigatedFromDashboard,
       setNavigatedFromAnalyse,
       resetComparisonData,
       handleCompareWithClick,
       updatePivotConfig,
-      // updateFunnelTableConfig,
-      // setSelectedMainCategory,
-      // runQuery,
       queryChange,
-      // profileQueryChange,
       setExtraOptions,
       // runKPIQuery,
-      // setQueries,
-      // setProfileQueries,
       updateCoreQueryReducer
     }),
     [coreQueryState, queryOptions, activeKey, showResult, resetComparisonData, handleCompareWithClick, updatePivotConfig, queryChange, setExtraOptions, setNavigatedFromDashboard, setNavigatedFromAnalyse, updateCoreQueryReducer]
@@ -899,11 +829,6 @@ function CoreQuery({
           </ErrorBoundary>
         </div>
       </CoreQueryContext.Provider>
-      {/* create project modal */}
-      {/* <NewProject
-          visible={showProjectModal}
-          handleCancel={() => setShowProjectModal(false)}
-        /> */}
     </ErrorBoundary>
   );
 }

@@ -206,7 +206,10 @@ func UpdateSavedQueryHandler(c *gin.Context) {
 
 	if requestPayloadContainsQueryUpdate {
 		if query.Type == model.QueryTypeAttributionV1Query {
-			go store.GetStore().DeleteAttributionDBResult(projectID, queryID)
+			// check if the query update had query body json changes w.r.t the saved query in DB or not
+			if !U.AreJsonbEqual(queryRequest.Query, query.Query) {
+				go store.GetStore().DeleteAttributionDBResult(projectID, queryID)
+			}
 		}
 		go invalidateSavedQueryCache(projectID, queryRequest)
 	}
