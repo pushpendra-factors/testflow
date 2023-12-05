@@ -1,8 +1,9 @@
 package v1
 
-import(
+import (
 	"encoding/json"
 	C "factors/config"
+	slack "factors/integration/slack"
 	mid "factors/middleware"
 	"factors/model/model"
 	"factors/model/store"
@@ -10,10 +11,11 @@ import(
 	"fmt"
 	"net/http"
 	"net/url"
-	slack "factors/integration/slack"
+
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
+
 type oauthState struct {
 	ProjectID int64   `json:"project_id"`
 	AgentUUID *string `json:"agent_uuid"`
@@ -48,7 +50,7 @@ func SlackAuthRedirectHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"redirectURL": redirectURL})
 }
 func GetSlackAuthorisationURL(clientID string, state string) string {
-	url := fmt.Sprintf(`https://slack.com/oauth/v2/authorize?client_id=%s&scope=channels:read,chat:write,chat:write.public,im:read&user_scope=channels:read,chat:write,groups:read,mpim:read&state=%s`, clientID, state)
+	url := fmt.Sprintf(`https://slack.com/oauth/v2/authorize?client_id=%s&scope=channels:read,chat:write,chat:write.public,im:read,users:read,users:read.email&user_scope=channels:read,chat:write,groups:read,mpim:read,users:read,users:read.email&state=%s`, clientID, state)
 	return url
 }
 func SlackCallbackHandler(c *gin.Context) {
@@ -229,4 +231,67 @@ func DeleteSlackIntegrationHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"success": "Slack integration deleted successfully"})
+}
+
+func GetSlackUsersListHandler(c *gin.Context) {
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	if projectID == 0 || loggedInAgentUUID == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid project id or agent id"})
+		return
+	}
+
+	logCtx := log.WithField("project_id", projectID)
+
+	jsonResponse, status, err := slack.GetSlackUsers(projectID, loggedInAgentUUID, "")
+	if err != nil {
+		c.JSON(status, gin.H{"error": err})
+	}
+
+	if !jsonResponse.Ok {
+		err := jsonResponse.Error
+		if err == "missing_scope" {
+			logCtx.WithError(fmt.Errorf("%v", err)).Error("permission not granted for reading users, please reintegrate")
+		}
+		logCtx.WithError(fmt.Errorf("%v", err)).Error("error received from slack server")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "error received from slack server"})
+		return
+	}
+
+	members := jsonResponse.Members
+	if members == nil {
+		logCtx.Error("nil json response found for users error")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "nil json response found for users error"})
+		return
+	}
+
+	jsonMetadata := jsonResponse.ResponseMetadata
+	if jsonMetadata == nil {
+		logCtx.Error("no metadata from json response error")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "no metadata from json response error"})
+		return
+	}
+
+	nextCursor := jsonMetadata["next_cursor"].(string)
+	for nextCursor != "" {
+		jsonResponse, status, err = slack.GetSlackUsers(projectID, loggedInAgentUUID, nextCursor)
+		if err != nil {
+			c.JSON(status, gin.H{"error": err})
+			return
+		}
+
+		if newMembers := jsonResponse.Members; newMembers != nil {
+			members = append(members, newMembers...)
+			if metadata := jsonResponse.ResponseMetadata; metadata != nil {
+				nextCursor = metadata["next_cursor"].(string)
+			} else {
+				break
+			}
+		} else {
+			break
+		}
+
+	}
+
+	c.JSON(http.StatusOK, members)
 }
