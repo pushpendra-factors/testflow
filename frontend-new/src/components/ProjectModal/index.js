@@ -18,7 +18,7 @@ import {
   signout
 } from 'Reducers/agentActions';
 import { USER_LOGOUT } from 'Reducers/types';
-import { setActiveProject } from 'Reducers/global';
+import { getActiveProjectDetails } from 'Reducers/global';
 import UserSettings from '../../Views/Settings/UserSettings';
 // import NewProject from '../../Views/Settings/SetupAssist/Modals/NewProject';
 import { connect, useDispatch } from 'react-redux';
@@ -55,7 +55,7 @@ function ProjectModal(props) {
   const switchProject = () => {
     localStorage.setItem('activeProject', selectedProject?.id);
     localStorage.setItem('prevActiveProject', props?.active_project?.id || '');
-    props.setActiveProject(selectedProject);
+    props.getActiveProjectDetails(selectedProject?.id);
     props.fetchProjectSettings(selectedProject?.id);
     history.push('/');
     notification.success({
@@ -170,6 +170,13 @@ function ProjectModal(props) {
             project?.name
               .toLowerCase()
               .includes(searchProjectName.toLowerCase())
+          )
+          .sort((a, b) =>
+            props.active_project?.id === a?.id
+              ? -1
+              : props.active_project?.id === b?.id
+              ? 1
+              : 0
           )
           .map((project, index) => (
             <div
@@ -365,7 +372,7 @@ const mapStateToProps = (state) => {
 };
 export default connect(mapStateToProps, {
   fetchProjectAgents,
-  setActiveProject,
+  getActiveProjectDetails,
   signout,
   updateAgentInfo,
   fetchAgentInfo,
