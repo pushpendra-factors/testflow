@@ -89,7 +89,7 @@ class Util:
             return
         
         for failure in token_failures:
-            project_ids_list.append(str(failure.project_id))
+            project_ids_list.append(str(failure[PROJECT_ID]))
         
         message = Util.build_slack_block(project_ids_list)
         count = 0
