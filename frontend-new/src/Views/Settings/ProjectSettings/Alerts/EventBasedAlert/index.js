@@ -1149,7 +1149,7 @@ const EventBasedAlert = ({
           <Row>
             {alertState.state == 'edit' ? (
               <>
-                <Col span={12}>
+                <Col span={18}>
                   <div className='flex items-center'>
                     <div className='flex items-baseline'>
                       <Text
@@ -1157,17 +1157,11 @@ const EventBasedAlert = ({
                         level={3}
                         weight={'bold'}
                         extraClass={'m-0'}
+                        truncate={true}
+                        charLimit={50}
                       >
                         {`${viewAlertDetails?.title}`}
                       </Text>
-                      {/* <Text
-                        type={'title'}
-                        level={7} 
-                        color={'grey'}
-                        extraClass={'m-0 ml-1'}
-                        >
-                        {`(${viewAlertDetails?.type == "kpi_alert" ? "Weekly alerts" : "Real-time"})`}
-                      </Text> */}
                     </div>
                     <div className='ml-4'>
                       <Switch
@@ -1178,10 +1172,10 @@ const EventBasedAlert = ({
                         size='large'
                         loading={loading}
                       />
-                    </div>
+                    </div>                   
                   </div>
                 </Col>
-                <Col span={12}>
+                <Col span={6}>
                   <div className={'flex justify-end items-center'}>
                     <Dropdown trigger={["click"]} overlay={menu} placement='bottomRight' className='mr-2'>
                       <Button
