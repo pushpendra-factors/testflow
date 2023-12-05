@@ -473,7 +473,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		}
 		if isSlackIntergrated {
 			partialSlackSuccess, _, errMsg := sendSlackAlertForEventTriggerAlert(eta.ProjectID,
-				eta.SlackChannelAssociatedBy, msg, alertConfiguration.SlackChannels, alertConfiguration.IsHyperlinkDisabled)
+				eta.SlackChannelAssociatedBy, msg, alertConfiguration.SlackChannels, alertConfiguration.SlackMentions, alertConfiguration.IsHyperlinkDisabled)
 			if !partialSlackSuccess {
 				sendReport.SlackFail++
 				errMessage = append(errMessage, errMsg)
@@ -674,7 +674,7 @@ func AddKeyToSortedSet(key *cacheRedis.Key, projectID int64, failPoint string, r
 }
 
 func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
-	msg model.EventTriggerAlertMessage, Schannels *postgres.Jsonb, isHyperlinkDisabled bool) (partialSuccess bool, channelSuccess []bool, errMessage string) {
+	msg model.EventTriggerAlertMessage, Schannels, sMentions *postgres.Jsonb, isHyperlinkDisabled bool) (partialSuccess bool, channelSuccess []bool, errMessage string) {
 	logCtx := log.WithFields(log.Fields{
 		"project_id":  projectID,
 		"agent_uuid":  agentUUID,
@@ -691,15 +691,23 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
 		return false, channelSuccess, errMessage
 	}
 
+	slackMentions := make([]model.SlackMember, 0)
+	if err := U.DecodePostgresJsonbToStructType(sMentions, &slackMentions); err != nil {
+		errMsg := "failed to decode slack mentions"
+		errMessage += errMsg
+		logCtx.WithError(err).Error(errMsg)
+		return false, channelSuccess, errMessage
+	}
+
 	wetRun := true
 	if wetRun {
 		for _, channel := range slackChannels {
 			errMsg := "successfully sent"
 			var blockMessage string
 			if !isHyperlinkDisabled {
-				blockMessage = getSlackMsgBlock(msg)
+				blockMessage = getSlackMsgBlock(msg, slackMentions)
 			} else {
-				blockMessage = getSlackMsgBlockWithoutHyperlinks(msg)
+				blockMessage = getSlackMsgBlockWithoutHyperlinks(msg, slackMentions)
 			}
 			status, err := slack.SendSlackAlert(projectID, blockMessage, agentUUID, channel)
 			partialSuccess = partialSuccess || status
@@ -870,10 +878,19 @@ func getPropsBlockV2(propMap U.PropertiesMap) string {
 	return propBlock
 }
 
-func getSlackMsgBlock(msg model.EventTriggerAlertMessage) string {
+func getSlackMentionsStr(slackMentions []model.SlackMember) string {
+	result := ""
+	for _, member := range slackMentions {
+		result += fmt.Sprintf("<@%s> ", member.Id)
+	}
+	return result
+}
+
+func getSlackMsgBlock(msg model.EventTriggerAlertMessage, slackMentions []model.SlackMember) string {
 
 	propBlock := getPropsBlockV2(msg.MessageProperty)
 
+	slackMentionStr := getSlackMentionsStr(slackMentions)
 	// added next two lines to support double quotes(") and backslash(\) in slack templates
 	title := strings.ReplaceAll(strings.ReplaceAll(msg.Title, "\\", "\\\\"), "\"", "\\\"")
 	message := strings.ReplaceAll(strings.ReplaceAll(msg.Message, "\\", "\\\\"), "\"", "\\\"")
@@ -883,7 +900,7 @@ func getSlackMsgBlock(msg model.EventTriggerAlertMessage) string {
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": "%s\n*%s*\n"
+				"text": "%s\n*%s*\n %s\n"
 			}
 		},
 		%s
@@ -894,7 +911,7 @@ func getSlackMsgBlock(msg model.EventTriggerAlertMessage) string {
 							"text": "*<https://app.factors.ai/profiles/people|Know More>*"
 						}
 		}
-	]`, title, message, propBlock)
+	]`, title, message, slackMentionStr, propBlock)
 
 	return mainBlock
 }
@@ -978,7 +995,7 @@ func getPropsBlockV2WithoutHyperlinks(propMap U.PropertiesMap) string {
 	return propBlock
 }
 
-func getSlackMsgBlockWithoutHyperlinks(msg model.EventTriggerAlertMessage) string {
+func getSlackMsgBlockWithoutHyperlinks(msg model.EventTriggerAlertMessage, slackMentions []model.SlackMember) string {
 
 	propBlock := getPropsBlockV2WithoutHyperlinks(msg.MessageProperty)
 
@@ -986,12 +1003,14 @@ func getSlackMsgBlockWithoutHyperlinks(msg model.EventTriggerAlertMessage) strin
 	title := strings.ReplaceAll(strings.ReplaceAll(msg.Title, "\\", "\\\\"), "\"", "\\\"")
 	message := strings.ReplaceAll(strings.ReplaceAll(msg.Message, "\\", "\\\\"), "\"", "\\\"")
 
+	slackMentionStr := getSlackMentionsStr(slackMentions)
+
 	mainBlock := fmt.Sprintf(`[
 		{
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": "%s\n*%s*\n"
+				"text": "%s\n*%s*%s\n"
 			}
 		},
 		%s
@@ -1002,7 +1021,7 @@ func getSlackMsgBlockWithoutHyperlinks(msg model.EventTriggerAlertMessage) strin
 							"text": "*<https://app.factors.ai/profiles/people|Know More>*"
 						}
 		}
-	]`, title, message, propBlock)
+	]`, title, message, slackMentionStr, propBlock)
 
 	return mainBlock
 }

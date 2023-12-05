@@ -68,6 +68,7 @@ type EventTriggerAlertConfig struct {
 	AlertLimit          int64           `json:"alert_limit"`
 	Slack               bool            `json:"slack"`
 	SlackChannels       *postgres.Jsonb `json:"slack_channels"`
+	SlackMentions       *postgres.Jsonb `json:"slack_mentions"`
 	IsHyperlinkDisabled bool            `json:"is_hyperlink_disabled"`
 	Webhook             bool            `json:"webhook"`
 	Secret              string          `json:"secret"`

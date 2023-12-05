@@ -93,3 +93,46 @@ func SendSlackAlert(projectID int64, message, agentUUID string, channel model.Sl
 	defer resp.Body.Close()
 	return false, fmt.Errorf("failure response: %v", response)
 }
+
+func GetSlackUsers(projectID int64, agentID string, nextCursor string) (response *model.SlackGetUsersResponse, status int, err error) {
+
+	// get the auth token from the agent_uuid and project_id map
+	accessTokens, err := store.GetStore().GetSlackAuthToken(projectID, agentID)
+	if err != nil {
+		log.WithFields(log.Fields{"project_id": projectID, "agent_id": agentID}).Error("failed to get slack auth token")
+		return nil, http.StatusBadRequest, err
+	}
+	
+	request, err := http.NewRequest("GET", "https://slack.com/api/users.list", nil)
+	if err != nil {
+		log.Error("failed at request creation for users list")
+		return nil, http.StatusInternalServerError, fmt.Errorf("failed at request creation for users list")
+	}
+	
+	q := request.URL.Query()
+	q.Add("limit", "200")
+	if nextCursor != "" {
+		q.Add("cursor", nextCursor)
+	}
+	
+	request.URL.RawQuery = q.Encode()
+	request.Header.Set("Content-Type", "application/json; charset=utf-8")
+	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessTokens.UserAccessToken))
+	client := &http.Client{}
+	resp, err := client.Do(request)
+	if err != nil {
+		log.WithError(err).Error("failed to get slack users list")
+		return nil, http.StatusInternalServerError, fmt.Errorf("failed to get slack users list")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	var jsonResponse model.SlackGetUsersResponse
+	err = json.NewDecoder(body).Decode(&jsonResponse)
+	if err != nil {
+		log.WithError(err).Error("failed to decode json response")
+		return &jsonResponse, http.StatusInternalServerError, fmt.Errorf("failed to decode json response")
+	}
+	
+	return &jsonResponse, http.StatusOK, nil
+}
