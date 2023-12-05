@@ -165,7 +165,7 @@ func main() {
 	associateDealToDomainByProjectID := flag.String("associate_deal_to_domain_by_project_id", "", "")
 	useHashIDForCRMGroupUserByProject := flag.String("use_hash_id_for_crm_group_user_by_project_id", "", "")
 	enableSyncTries := flag.Bool("enable_sync_tries", false, "Filter using un-sync document using sync-tries")
-	salesforceSkipLeadUpdatesProcessing := flag.Bool("salesforce_skip_lead_update_processing", false, "Skip lead updates processing")
+	salesforceSkipLeadUpdatesProcessingByProjectID := flag.String("salesforce_skip_lead_update_processing_by_project_id", "", "Skip lead updates processing")
 	documentLookbackDays := flag.Int("document_lookback_days", 45, "")
 
 	flag.Parse()
@@ -248,7 +248,7 @@ func main() {
 		AssociateDealToDomainByProjectID:                   *associateDealToDomainByProjectID,
 		UseHashIDForCRMGroupUserByProject:                  *useHashIDForCRMGroupUserByProject,
 		EnableSyncTriesFlag:                                *enableSyncTries,
-		SalesforceSkipLeadUpdatesProcessing:                *salesforceSkipLeadUpdatesProcessing,
+		SalesforceSkipLeadUpdatesProcessingByProjectID:     *salesforceSkipLeadUpdatesProcessingByProjectID,
 	}
 
 	C.InitConf(config)
