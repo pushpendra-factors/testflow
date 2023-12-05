@@ -203,6 +203,14 @@ func evalProperty(properties map[string]interface{}, propFilter M.WeightKeyValue
 			}
 			filterVal := propFilter.LowerBound
 			return propval <= filterVal
+		} else if propFilter.Operator == model.LesserThanOpStr {
+			propval, err := U.GetPropertyValueAsFloat64(propvalKey)
+			if err != nil {
+				log.WithField("key", propvalKey).Error("Unable to decode property key")
+				return false
+			}
+			filterVal := propFilter.LowerBound
+			return propval < filterVal
 		} else if propFilter.Operator == model.BetweenStr {
 			propval, err := U.GetPropertyValueAsFloat64(propvalKey)
 			if err != nil {

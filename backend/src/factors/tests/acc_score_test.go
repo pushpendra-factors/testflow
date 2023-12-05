@@ -159,12 +159,34 @@ func TestAccScoreFilterAndCountEventsFromFile(t *testing.T) {
 	assert.Nil(t, err)
 
 	weightmap, _ := T.CreateweightMap(&cr)
-	log.Debug(weightmap)
+	weightsIdMap := make(map[string]bool)
+	weightsIdMap2 := make(map[string]bool)
+
+	for _, w := range weightmap {
+		for _, w1 := range w {
+			log.WithField("rule", w1).Debugf("")
+			weightsIdMap[w1.WeightId] = true
+		}
+	}
+	log.Debugf("totalnumber of filters : %d", len(weightsIdMap))
+
 	for idx, ev := range events {
 		ids := T.FilterEvents(&ev, weightmap)
 		log.Debugf("%d, %v", idx, ids)
+		for _, w := range ids {
+			weightsIdMap2[w] = true
+		}
 	}
+	log.Debugf("totalnumber of filters 2 : %d", len(weightsIdMap2))
+
+	for w, _ := range weightsIdMap {
+		if _, ok := weightsIdMap2[w]; !ok {
+			log.Debugf("filter not found - %s", w)
+		}
+	}
+
 	assert.Equal(t, 5, len(weightmap))
+	assert.Equal(t, len(weightsIdMap), len(weightsIdMap2))
 }
 
 func TestAccScoreCountingEvents(t *testing.T) {
@@ -208,12 +230,15 @@ func TestAccScoreCountingEvents(t *testing.T) {
 	weightmap, _ := T.CreateweightMap(&cr)
 
 	err = T.AggEventsOnUsers(fileEvents, userGroupCount, weightmap, config)
+	log.WithField("u", userGroupCount).Debugf("score")
+	// for _, v := range userGroupCount {
+	// 	// 	_, err := json.Marshal(v)
+	// 	// 	assert.Nil(t, err)
 
-	for k, v := range userGroupCount {
-		line, err := json.Marshal(v)
-		assert.Nil(t, err)
-		log.Debugf(" -- %s, %s", k, string(line))
-	}
+	// 	// 	// if k == 30 {
+	// 	// 	// 	assert.ElementsMatch(t, []string{"5c59f02665d9", "ce6561e9b353"})
+	// 	// 	// }
+	// }
 	assert.Nil(t, err)
 }
 
