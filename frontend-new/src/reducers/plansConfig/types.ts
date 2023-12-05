@@ -143,3 +143,16 @@ export interface AddonsStateInterface {
   id: string;
   price: number;
 }
+
+export interface GetInvoicesAPIResponse extends ApiResponse {
+  data?: Invoice[];
+}
+
+export interface Invoice {
+  id: string;
+  billing_date: string;
+  Amount: number;
+  amount_paid: number;
+  AmountDue: number;
+  items: string[];
+}
