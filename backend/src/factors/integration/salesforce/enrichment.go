@@ -2611,20 +2611,27 @@ type DocumentPaginator struct {
 	LastDocument *model.SalesforceDocument `json:"previous_last_document"`
 	Limit        int                       `json:"limit"`
 	Offset       int                       `json:"offset"`
+	SkipAction   model.SalesforceAction    `json:"skip_action"`
 }
 
-func NewSalesforceDocumentPaginator(projectID int64, docType int, startTime, endTime int64, limit int) *DocumentPaginator {
-	return &DocumentPaginator{
+func NewSalesforceDocumentPaginator(projectID int64, docType int, startTime, endTime int64, limit int, skipLeadUpdates bool) *DocumentPaginator {
+	documentPaginator := &DocumentPaginator{
 		ProjectID: projectID,
 		DocType:   docType,
 		StartTime: startTime,
 		EndTime:   endTime,
 		Limit:     limit,
 	}
+
+	if docType == model.SalesforceDocumentTypeLead && skipLeadUpdates {
+		documentPaginator.SkipAction = model.SalesforceDocumentUpdated
+	}
+
+	return documentPaginator
 }
 
 func (dp *DocumentPaginator) GetNextBatch() ([]model.SalesforceDocument, int, bool) {
-	documents, status := store.GetStore().GetSalesforceDocumentsByTypeForSync(dp.ProjectID, dp.DocType, dp.StartTime, dp.EndTime, dp.Limit, dp.Offset)
+	documents, status := store.GetStore().GetSalesforceDocumentsByTypeForSync(dp.ProjectID, dp.DocType, dp.SkipAction, dp.StartTime, dp.EndTime, dp.Limit, dp.Offset)
 	if status != http.StatusFound {
 		if status != http.StatusNotFound {
 			log.WithFields(log.Fields{"paginator": dp}).Error("Failed to get salesforce documents using pagination.")
@@ -2643,7 +2650,7 @@ func (dp *DocumentPaginator) GetNextBatch() ([]model.SalesforceDocument, int, bo
 			dp.Offset += len(documents)
 
 			log.WithFields(log.Fields{"paginator": dp, "total_records": len(documents)}).Info("Same records received on salesforce documents paginator. Shifting offest.")
-			documents, status = store.GetStore().GetSalesforceDocumentsByTypeForSync(dp.ProjectID, dp.DocType, dp.StartTime, dp.EndTime, dp.Limit, dp.Offset)
+			documents, status = store.GetStore().GetSalesforceDocumentsByTypeForSync(dp.ProjectID, dp.DocType, dp.SkipAction, dp.StartTime, dp.EndTime, dp.Limit, dp.Offset)
 			if status != http.StatusFound {
 				if status != http.StatusNotFound {
 					log.WithFields(log.Fields{"paginator": dp}).Error("Failed to get salesforce documents using pagination with offset.")
@@ -2666,7 +2673,7 @@ func getAndProcessUnSyncedGroupDocuments(projectID int64, docType int, workerPer
 	docTypeFailure := false
 	overAllPendingSyncRecords := make(map[string]map[string]string)
 
-	documentPaginator := NewSalesforceDocumentPaginator(projectID, docType, startTime, endTime, pullLimit)
+	documentPaginator := NewSalesforceDocumentPaginator(projectID, docType, startTime, endTime, pullLimit, C.SalesforceSkipLeadUpdatesProcessingByProjectID(projectID))
 
 	hasMore := true
 	var status enrichGroupWorkerStatus
@@ -2871,7 +2878,7 @@ func getAndProcessUnSyncedDocuments(project *model.Project, docType int, workerP
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "doc_type": docType, "start_time": startTime, "end_time": endTime, "limit": limit})
 	docTypFailure := false
 
-	documentPaginator := NewSalesforceDocumentPaginator(project.ID, docType, startTime, endTime, limit)
+	documentPaginator := NewSalesforceDocumentPaginator(project.ID, docType, startTime, endTime, limit, C.SalesforceSkipLeadUpdatesProcessingByProjectID(project.ID))
 	hasMore := true
 	var enrichStatus enrichWorkerStatus
 	for hasMore {
@@ -3014,9 +3021,9 @@ func enrichWithOrderedTimeSeries(project *model.Project, orderedTimeSeries [][]i
 }
 
 func enrichWithLimit(project *model.Project, workerPerProject int, timeZoneStr U.TimeZoneString, enrichOrderByType []int,
-	dataPropertiesByType map[int]*map[string]bool, pullLimit int, recordProcessLimit int, uniqueOTPEventKeys []string, otpRules []model.OTPRule) (error, map[string]bool, int, bool) {
+	dataPropertiesByType map[int]*map[string]bool, pullLimit int, recordProcessLimit int, uniqueOTPEventKeys []string, otpRules []model.OTPRule, documentLookbackDays int) (error, map[string]bool, int, bool) {
 
-	docMinTimestamp, minTimestamp, errCode := store.GetStore().GetSalesforceDocumentBeginingTimestampByDocumentTypeForSync(project.ID, util.TimeNowZ().AddDate(0, 0, -30).Unix())
+	docMinTimestamp, minTimestamp, errCode := store.GetStore().GetSalesforceDocumentBeginingTimestampByDocumentTypeForSync(project.ID, util.TimeNowZ().AddDate(0, 0, -1*documentLookbackDays).Unix())
 	if errCode != http.StatusFound {
 		if errCode == http.StatusNotFound {
 			return nil, nil, 0, false
@@ -3045,7 +3052,7 @@ func enrichWithLimit(project *model.Project, workerPerProject int, timeZoneStr U
 }
 
 // Enrich sync salesforce documents to events
-func Enrich(projectID int64, workerPerProject int, dataPropertiesByType map[int]*map[string]bool, pullLimit int, recordProcessLimit int) ([]Status, bool) {
+func Enrich(projectID int64, workerPerProject int, dataPropertiesByType map[int]*map[string]bool, pullLimit int, recordProcessLimit int, documentLookbackDays int) ([]Status, bool) {
 
 	logCtx := log.WithField("project_id", projectID)
 
@@ -3107,7 +3114,7 @@ func Enrich(projectID int64, workerPerProject int, dataPropertiesByType map[int]
 		return statusByProjectAndType, true
 	}
 
-	err, syncStatus, recordsProcessed, limitExceeded := enrichWithLimit(project, workerPerProject, timeZoneStr, enrichOrderByType, dataPropertiesByType, pullLimit, recordProcessLimit, uniqueOTPEventKeys, otpRules)
+	err, syncStatus, recordsProcessed, limitExceeded := enrichWithLimit(project, workerPerProject, timeZoneStr, enrichOrderByType, dataPropertiesByType, pullLimit, recordProcessLimit, uniqueOTPEventKeys, otpRules, documentLookbackDays)
 
 	anyFailure := false
 	for docTypeAlias, failure := range syncStatus {

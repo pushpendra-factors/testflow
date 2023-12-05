@@ -22,17 +22,22 @@ const OnboardingRouting = () => {
     let routeFlag = false;
     let routePath = '';
 
-    if (
-      !isLoggedIn ||
+    if (!isLoggedIn) {
+      return;
+    }
+
+    if (!projects || projects?.length === 0) {
+      //if no projects are available
+      routeFlag = true;
+      routePath = PathUrls.Onboarding;
+    } else if (
+      !active_project?.id ||
+      !currentProjectSettings?.project_id ||
       (currentProjectSettings?.project_id && active_project?.id
         ? currentProjectSettings.project_id != active_project.id
         : false)
     ) {
       return;
-    } else if (!projects || projects?.length === 0) {
-      //if no projects are available
-      routeFlag = true;
-      routePath = PathUrls.Onboarding;
     } else if (currentProjectSettings && !onboarding_steps?.[SETUP_COMPLETED]) {
       routeFlag = true;
       routePath = PathUrls.Onboarding;

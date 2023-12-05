@@ -176,7 +176,7 @@ class MetricsController:
         if len(cls.etl_stats["token_failures"].keys()) != 0:
             HealthChecksUtil.ping(scripts.adwords.CONFIG.ADWORDS_APP.env, cls.etl_stats["token_failures"], cls.ADWORDS_PING_ID_TOKEN_FAILURE, endpoint="/fail")
             
-            cls.publish_to_slack_token_failure(cls.adwords_token_failure_project_ids, "Adwords")
+            cls.publish_to_slack_token_failure(scripts.adwords.CONFIG.ADWORDS_APP.env, cls.adwords_token_failure_project_ids, "Adwords")
             
             log.warning("Job has token errors. Failed synced Projects and customer accounts are: %s", json.dumps(cls.etl_stats["token_failures"], default=JsonUtil.serialize_sets))
 
@@ -196,7 +196,7 @@ class MetricsController:
         if len(cls.etl_stats["token_failures"].keys()) != 0:
             HealthChecksUtil.ping(scripts.gsc.CONFIG.GSC_APP.env, cls.etl_stats["token_failures"], cls.GSC_PING_ID_TOKEN_FAILURE, endpoint="/fail")
             
-            cls.publish_to_slack_token_failure(cls.gsc_token_failure_project_ids, "GSC")
+            cls.publish_to_slack_token_failure(scripts.gsc.CONFIG.GSC_APP.env, cls.gsc_token_failure_project_ids, "GSC")
             
             log.warning("Job has token errors. Failed synced Projects and customer accounts are: %s", json.dumps(cls.etl_stats["token_failures"], default=JsonUtil.serialize_sets))
 
@@ -205,6 +205,6 @@ class MetricsController:
         return cls.load_stats.processed_equal_records(cls.extract_stats)
     
     @classmethod
-    def publish_to_slack_token_failure(cls, token_failure_project_ids, channel_name):
+    def publish_to_slack_token_failure(cls, env, token_failure_project_ids, channel_name):
         message = SlackUtil.build_slack_block(token_failure_project_ids, channel_name)
-        SlackUtil.ping(cls.env, message, cls.SLACK_PING_URL)
+        SlackUtil.ping(env, message, cls.SLACK_PING_URL)

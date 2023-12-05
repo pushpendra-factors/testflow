@@ -45,7 +45,8 @@ func (es *EnrichStatus) AddEnrichStatus(status []IntSalesforce.Status, hasFailur
 	}
 }
 
-func syncWorker(projectID int64, wg *sync.WaitGroup, workerIndex, workerPerProject int, enrichStatus *EnrichStatus, salesforceProjectSettings *model.SalesforceProjectSettings, enrichPullLimit int, enrichRecordProcessLimit int) {
+func syncWorker(projectID int64, wg *sync.WaitGroup, workerIndex, workerPerProject int, enrichStatus *EnrichStatus,
+	salesforceProjectSettings *model.SalesforceProjectSettings, enrichPullLimit int, enrichRecordProcessLimit int, documentLookbackDays int) {
 	defer wg.Done()
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "worder_index": workerIndex})
@@ -58,14 +59,15 @@ func syncWorker(projectID int64, wg *sync.WaitGroup, workerIndex, workerPerProje
 		return
 	}
 
-	dataPropertyByType, errCode := IntSalesforce.GetSalesforcePropertiesByDataType(projectID, model.SalesforceDataTypeDate, model.GetSalesforceAllowedObjects(projectID), accessToken, instanceURL)
+	dataPropertyByType, errCode := IntSalesforce.GetSalesforcePropertiesByDataType(projectID, model.SalesforceDataTypeDate,
+		model.GetSalesforceAllowedObjects(projectID), accessToken, instanceURL)
 	if errCode != http.StatusOK {
 		log.WithField("project_id", salesforceProjectSettings.ProjectID).Error("Failed to get salesforce date properties.")
 		enrichStatus.AddEnrichStatus([]IntSalesforce.Status{{ProjectID: projectID, Message: "Failed to get date properies"}}, true)
 		return
 	}
 
-	status, hasFailure := IntSalesforce.Enrich(projectID, workerPerProject, dataPropertyByType, enrichPullLimit, enrichRecordProcessLimit)
+	status, hasFailure := IntSalesforce.Enrich(projectID, workerPerProject, dataPropertyByType, enrichPullLimit, enrichRecordProcessLimit, documentLookbackDays)
 	enrichStatus.AddEnrichStatus(status, hasFailure)
 	logCtx.Info("Processing completed for given project.")
 }
@@ -163,6 +165,8 @@ func main() {
 	associateDealToDomainByProjectID := flag.String("associate_deal_to_domain_by_project_id", "", "")
 	useHashIDForCRMGroupUserByProject := flag.String("use_hash_id_for_crm_group_user_by_project_id", "", "")
 	enableSyncTries := flag.Bool("enable_sync_tries", false, "Filter using un-sync document using sync-tries")
+	salesforceSkipLeadUpdatesProcessingByProjectID := flag.String("salesforce_skip_lead_update_processing_by_project_id", "", "Skip lead updates processing")
+	documentLookbackDays := flag.Int("document_lookback_days", 45, "")
 
 	flag.Parse()
 
@@ -244,6 +248,7 @@ func main() {
 		AssociateDealToDomainByProjectID:                   *associateDealToDomainByProjectID,
 		UseHashIDForCRMGroupUserByProject:                  *useHashIDForCRMGroupUserByProject,
 		EnableSyncTriesFlag:                                *enableSyncTries,
+		SalesforceSkipLeadUpdatesProcessingByProjectID:     *salesforceSkipLeadUpdatesProcessingByProjectID,
 	}
 
 	C.InitConf(config)
@@ -380,7 +385,7 @@ func main() {
 			var wg sync.WaitGroup
 			for pi := range batch {
 				wg.Add(1)
-				go syncWorker(batch[pi], &wg, workerIndex, *numDocRoutines, &enrichStatus, allowedSalesforceProjectSettings[batch[pi]], *enrichPullLimit, *enrichRecordProcessLimit)
+				go syncWorker(batch[pi], &wg, workerIndex, *numDocRoutines, &enrichStatus, allowedSalesforceProjectSettings[batch[pi]], *enrichPullLimit, *enrichRecordProcessLimit, *documentLookbackDays)
 				workerIndex++
 			}
 			wg.Wait()
