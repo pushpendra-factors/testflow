@@ -5,7 +5,6 @@ import { connect, useDispatch, useSelector } from 'react-redux';
 import { Link, useHistory } from 'react-router-dom';
 import {
   getHubspotContact,
-  setActiveProject,
   fetchProjectSettings,
   fetchProjectSettingsV1
 } from 'Reducers/global';
@@ -77,8 +76,6 @@ const Welcome = ({
   currentAgent,
   activeProject,
   getHubspotContact,
-  setActiveProject,
-  projects,
   fetchProjectSettings,
   fetchProjectSettingsV1
 }) => {
@@ -304,12 +301,10 @@ const Welcome = ({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   currentAgent: state.agent.agent_details,
-  projects: state.global.projects
 });
 
 export default connect(mapStateToProps, {
   getHubspotContact,
-  setActiveProject,
   fetchProjectSettings,
   fetchProjectSettingsV1
 })(Welcome);

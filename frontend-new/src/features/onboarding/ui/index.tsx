@@ -18,7 +18,7 @@ import { OnboardingStepsConfig } from './types';
 import { getCurrentStep } from '../utils';
 import { useProductFruitsApi } from 'react-product-fruits';
 import { useHistory } from 'react-router-dom';
-import { setActiveProject } from 'Reducers/global';
+import { getActiveProjectDetails } from 'Reducers/global';
 import { isEmpty } from 'lodash';
 import { PathUrls } from 'Routes/pathUrls';
 
@@ -39,7 +39,7 @@ const getIllustrationImage = (currentStep: number): string => {
 
 const Onboarding = ({
   setShowAnalyticsResult,
-  setActiveProject
+  getActiveProjectDetails
 }: OnboardingComponentProps) => {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const history = useHistory();
@@ -60,7 +60,7 @@ const Onboarding = ({
     if (currentStep < 5) setCurrentStep(currentStep + 1);
   };
 
-  const handleCloseClick = () => {
+  const handleCloseClick = () => {    
     if (paramSetup === 'new') {
       history.goBack();
       return;
@@ -93,7 +93,7 @@ const Onboarding = ({
         localStorage.getItem('activeProject') || ''
       );
       localStorage.setItem('activeProject', projectDetails?.id);
-      setActiveProject(projectDetails);
+      getActiveProjectDetails(projectDetails?.id);
       history.push(PathUrls.ProfileAccounts);
     }
   };
@@ -195,7 +195,7 @@ const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
       setShowAnalyticsResult,
-      setActiveProject
+      getActiveProjectDetails
     },
     dispatch
   );
