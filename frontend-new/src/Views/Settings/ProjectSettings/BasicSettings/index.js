@@ -3,13 +3,13 @@ import ViewBasicSettings from './ViewBasicSettings';
 import EditBasicSettings from './EditBasicSettings';
 import { connect } from 'react-redux';
 import { fetchProjectAgents, fetchAgentInfo } from 'Reducers/agentActions';
-import { fetchProjects } from 'Reducers/global';
+import { fetchProjectsList } from 'Reducers/global';
 import { Row, Col } from 'antd';
 
 function BasicSettings({
   fetchProjectAgents,
   fetchAgentInfo,
-  fetchProjects,
+  fetchProjectsList,
   activeProject,
 }) {
   const [editMode, setEditMode] = useState(false);
@@ -17,7 +17,7 @@ function BasicSettings({
   useEffect(() => {
     const getData = async () => {
       await fetchAgentInfo();
-      await fetchProjects();
+      await fetchProjectsList();
       await fetchProjectAgents(activeProject.id);
     };
     getData();
@@ -42,5 +42,5 @@ const mapStateToProps = (state) => ({
 export default connect(mapStateToProps, {
   fetchProjectAgents,
   fetchAgentInfo,
-  fetchProjects,
+  fetchProjectsList,
 })(BasicSettings);

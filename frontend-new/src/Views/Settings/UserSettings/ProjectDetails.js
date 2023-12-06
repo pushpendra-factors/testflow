@@ -6,12 +6,12 @@ import { Text } from 'factorsComponents';
 import { projectAgentRemove, fetchAgentInfo } from 'Reducers/agentActions';
 import { connect } from 'react-redux';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
-import { fetchProjects } from "Reducers/global";
+import { fetchProjectsList } from "Reducers/global";
 
 const { confirm } = Modal;
 
 function ProjectDetails({
-  fetchProjects, projects, projectAgentRemove, fetchAgentInfo, currentAgent
+  fetchProjectsList, projects, projectAgentRemove, fetchAgentInfo, currentAgent
 }) {
   const [dataLoading, setDataLoading] = useState(true);
   const leaveProject = (projectId, agentUUID, projectName) => {
@@ -34,10 +34,10 @@ function ProjectDetails({
       await fetchAgentInfo();
     };
     getData();
-    fetchProjects().then(() => {
+    fetchProjectsList().then(() => {
       setDataLoading(false);
     });
-  }, [fetchProjects]);
+  }, [fetchProjectsList]);
   return (
     <>
       <div className={'mb-10 pl-4'}>
@@ -86,8 +86,7 @@ const mapStateToProps = (state) => {
   return ({
     projects: state.global.projects,
     currentAgent: state.agent.agent_details
-
   }
   );
 };
-export default connect(mapStateToProps, { fetchProjects, projectAgentRemove, fetchAgentInfo })(ProjectDetails);
+export default connect(mapStateToProps, { fetchProjectsList, projectAgentRemove, fetchAgentInfo })(ProjectDetails);

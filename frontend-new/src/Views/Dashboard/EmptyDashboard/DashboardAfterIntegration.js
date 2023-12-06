@@ -5,15 +5,13 @@ import { FaErrorComp, FaErrorLog } from '../../../components/factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Button } from 'antd';
 import { connect } from 'react-redux';
-import { getHubspotContact, setActiveProject } from 'Reducers/global';
+import { getHubspotContact } from 'Reducers/global';
 import DashboardTemplates from '../../DashboardTemplates';
 import { PathUrls } from 'Routes/pathUrls';
 function DashboardAfterIntegration({
   setaddDashboardModal,
   getHubspotContact,
   currentAgent,
-  setActiveProject,
-  projects
 }) {
   const history = useHistory();
 
@@ -96,10 +94,8 @@ function DashboardAfterIntegration({
 
 const mapStateToProps = (state) => ({
   currentAgent: state.agent.agent_details,
-  projects: state.global.projects
 });
 
 export default connect(mapStateToProps, {
-  getHubspotContact,
-  setActiveProject
+  getHubspotContact
 })(DashboardAfterIntegration);
