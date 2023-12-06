@@ -18,7 +18,7 @@ import { OnboardingStepsConfig } from './types';
 import { getCurrentStep } from '../utils';
 import { useProductFruitsApi } from 'react-product-fruits';
 import { useHistory } from 'react-router-dom';
-import { getActiveProjectDetails } from 'Reducers/global';
+import { fetchProjectSettings, getActiveProjectDetails } from 'Reducers/global';
 import { isEmpty } from 'lodash';
 import { PathUrls } from 'Routes/pathUrls';
 
@@ -94,6 +94,7 @@ const Onboarding = ({
       );
       localStorage.setItem('activeProject', projectDetails?.id);
       getActiveProjectDetails(projectDetails?.id);
+      fetchProjectSettings(projectDetails?.id);
       history.push(PathUrls.ProfileAccounts);
     }
   };
