@@ -933,12 +933,13 @@ func (store *MemSQL) BuildAndUpsertDocument(projectID int64, objectName string, 
 }
 
 // GetSalesforceDocumentsByTypeForSync - Pulls salesforce documents which are not synced
-func (store *MemSQL) GetSalesforceDocumentsByTypeForSync(projectID int64, typ int, from, to int64, limit, offset int) ([]model.SalesforceDocument, int) {
+func (store *MemSQL) GetSalesforceDocumentsByTypeForSync(projectID int64, typ int, skipAction model.SalesforceAction, from, to int64, limit, offset int) ([]model.SalesforceDocument, int) {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"typ":        typ,
-		"from":       from,
-		"to":         to,
+		"project_id":  projectID,
+		"typ":         typ,
+		"from":        from,
+		"to":          to,
+		"skip_action": skipAction,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -952,6 +953,11 @@ func (store *MemSQL) GetSalesforceDocumentsByTypeForSync(projectID int64, typ in
 
 	whereStmnt := "project_id=? AND type=? AND synced=false "
 	whereParams := []interface{}{projectID, typ}
+
+	if skipAction > 0 {
+		whereStmnt = whereStmnt + " AND action != ? "
+		whereParams = append(whereParams, skipAction)
+	}
 
 	if C.IsSyncTriesEnabled() {
 

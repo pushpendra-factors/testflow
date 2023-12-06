@@ -338,6 +338,7 @@ type Configuration struct {
 	CompanyEnrichmentV1ProjectIDs                       string
 	AssociateDealToDomainByProjectID                    string
 	EnableSyncTriesFlag                                 bool
+	SalesforceSkipLeadUpdatesProcessingByProjectID      string
 }
 
 type Services struct {
@@ -3104,4 +3105,10 @@ func AssociateDealToDomainByProjectID(projectID int64) bool {
 
 func IsSyncTriesEnabled() bool {
 	return configuration.EnableSyncTriesFlag
+}
+
+func SalesforceSkipLeadUpdatesProcessingByProjectID(projectID int64) bool {
+	_, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().SalesforceSkipLeadUpdatesProcessingByProjectID, "")
+
+	return allowedProjectIDs[projectID]
 }

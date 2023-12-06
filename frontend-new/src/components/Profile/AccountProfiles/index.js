@@ -192,7 +192,8 @@ function AccountProfiles({
   useEffect(() => {
     const tableProps = accountPayload?.segment_id
       ? activeSegment?.query?.table_props
-      : currentProjectSettings.timelines_config?.account_config?.table_props;
+      : currentProjectSettings.timelines_config?.account_config?.table_props ||
+        [];
     const accountPropsWithEnableKey = formatUserPropertiesToCheckList(
       listProperties,
       tableProps?.filter(
@@ -312,21 +313,22 @@ function AccountProfiles({
   }, [accountPayload.segment_id, activeProject.id, deleteSegment]);
 
   const displayTableProps = useMemo(() => {
-    const source = filterPropsMap[accountPayload?.source];
+    const filterNullEntries = (entry) =>
+      entry !== '' && entry !== undefined && entry !== null;
+
+    const getFilteredTableProps = (tableProps) => {
+      return tableProps?.filter(filterNullEntries) || [];
+    };
+
+    const segmentTableProps = activeSegment?.query?.table_props;
+    const projectTableProps =
+      currentProjectSettings?.timelines_config?.account_config?.table_props;
+
     const tableProps = accountPayload.segment_id
-      ? activeSegment?.query?.table_props
-          ?.filter(
-            (entry) => entry !== '' && entry !== undefined && entry !== null
-          )
-          .filter((item) => item.includes(source))
-      : currentProjectSettings?.timelines_config?.account_config?.table_props
-          ?.filter(
-            (entry) => entry !== '' && entry !== undefined && entry !== null
-          )
-          .filter((item) => item.includes(source));
-    return (
-      tableProps?.filter((entry) => entry !== '' && entry !== undefined) || []
-    );
+      ? getFilteredTableProps(segmentTableProps)
+      : getFilteredTableProps(projectTableProps);
+
+    return tableProps;
   }, [currentProjectSettings, accountPayload, activeSegment]);
 
   const handleRenameSegment = useCallback(

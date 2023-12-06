@@ -14,11 +14,11 @@ import Highcharts from 'highcharts';
 import factorsai from 'factorsai';
 
 import {
-  fetchProjects,
-  setActiveProject,
+  fetchProjectsList,
   fetchProjectSettings,
   fetchProjectSettingsV1,
-  triggerHubspotCustomFormFillEvent
+  triggerHubspotCustomFormFillEvent,
+  getActiveProjectDetails
 } from 'Reducers/global';
 import customizeHighCharts from 'Utils/customizeHighcharts';
 import {
@@ -76,13 +76,13 @@ import useAgentInfo from 'hooks/useAgentInfo';
 customizeHighCharts(Highcharts);
 
 function AppLayout({
-  fetchProjects,
+  fetchProjectsList,
   fetchEventNames,
   getEventPropertiesV2,
   getUserPropertiesV2,
   getGroupProperties,
   fetchWeeklyIngishtsMetaData,
-  setActiveProject,
+  getActiveProjectDetails,
   fetchProjectSettings,
   fetchProjectSettingsV1,
   fetchAgentInfo
@@ -91,13 +91,16 @@ function AppLayout({
   const { Content } = Layout;
   const agentState = useSelector((state) => state.agent);
   const isAgentLoggedIn = agentState.isLoggedIn;
-  const { active_project } = useSelector((state) => state.global);
+  const {
+    projects,
+    active_project,
+    activeProjectLoading,
+    currentProjectSettings
+  } = useSelector((state) => state.global);
   const isSidebarCollapsed = useSelector((state) =>
     selectSidebarCollapsedState(state)
   );
-  const { projects } = useSelector((state) => state.global);
   const { show_analytics_result } = useSelector((state) => state.coreQuery);
-  const { currentProjectSettings } = useSelector((state) => state.global);
   const areDraftsSelected = useSelector((state) =>
     selectAreDraftsSelected(state)
   );
@@ -113,16 +116,16 @@ function AppLayout({
   const fetchProjectsOnLoad = useCallback(async () => {
     try {
       if (isAgentLoggedIn) {
-        const res = await fetchProjects();
+        const res = await fetchProjectsList();
         //handling when no project is present
-        if (isEmpty(res?.data)) {
+        if (isEmpty(res?.status === 200)) {
           setDataLoading(false);
         }
       } else setDataLoading(false);
     } catch (err) {
       console.log(err);
     }
-  }, [fetchProjects, isAgentLoggedIn]);
+  }, [fetchProjectsList, isAgentLoggedIn]);
 
   useEffect(() => {
     const onKeyDown = (e) => {
@@ -143,18 +146,20 @@ function AppLayout({
   }, [fetchProjectsOnLoad]);
 
   useEffect(() => {
-    if (projects.length && _.isEmpty(active_project)) {
-      let activeItem = projects?.filter(
-        (item) => item.id === localStorage.getItem('activeProject')
+    if (projects.length > 0 && _.isEmpty(active_project)) {
+      const storedActiveProjectId = localStorage.getItem('activeProject');
+      const activeItem = projects.find(
+        (item) => item.id === storedActiveProjectId
       );
 
-      //handling project redirection
-      let projectDetails = _.isEmpty(activeItem) ? projects[0] : activeItem[0];
+      const projectID = _.isEmpty(activeItem)
+        ? projects[0]?.id
+        : activeItem?.id;
 
-      localStorage.setItem('activeProject', projectDetails?.id);
-      setActiveProject(projectDetails);
+      localStorage.setItem('activeProject', projectID);
+      getActiveProjectDetails(projectID);
     }
-  }, [projects]);
+  }, [projects, active_project]);
 
   const handleRedirection = async () => {
     try {
@@ -259,7 +264,7 @@ function AppLayout({
     }
   }, [activeAgent, agentState]);
 
-  if (dataLoading) {
+  if (dataLoading || activeProjectLoading) {
     return <Spin size={'large'} className={'fa-page-loader'} />;
   }
 
@@ -330,7 +335,7 @@ function AppLayout({
           </Layout>
         </Layout>
         <GlobalSearchModal />
-        <OnboardingRouting />
+        {!activeProjectLoading && <OnboardingRouting />}
       </ErrorBoundary>
     </Layout>
   );
@@ -339,14 +344,14 @@ function AppLayout({
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
-      fetchProjects,
+      fetchProjectsList,
       fetchDashboards,
       fetchEventNames,
       getEventPropertiesV2,
       getUserPropertiesV2,
       getGroupProperties,
       fetchWeeklyIngishtsMetaData,
-      setActiveProject,
+      getActiveProjectDetails,
       fetchProjectSettings,
       fetchProjectSettingsV1,
       fetchAgentInfo

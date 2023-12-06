@@ -560,25 +560,27 @@ export const sortStringColumn = (a = '', b = '') => {
 export const sortNumericalColumn = (a = 0, b = 0) => a - b;
 
 export const transformPayloadForWeightConfig = (payload) => {
+  const { key: wid, label: event_name, weight, vr, filters } = payload;
   const output = {
-    wid: payload.key,
-    event_name: payload.label,
-    weight: payload.weight,
+    wid,
+    event_name,
+    weight,
     is_deleted: false,
     rule: [],
-    vr: payload.vr === 0 ? 0 : 1
+    vr: vr === 0 ? 0 : 1
   };
 
-  if (payload?.filters?.length) {
-    payload.filters.forEach((filter) => {
+  if (filters?.length) {
+    filters.forEach((filter) => {
+      const { props, operator, values } = filter;
+      const [property_type, key, value_type] = props;
       const rule = {
-        key: filter.props[1],
-        value: filter.values,
-        operator: operatorMap[filter.operator]
-          ? operatorMap[filter.operator]
-          : filter.operator,
-        property_type: filter.props[3],
-        value_type: filter.props[2]
+        key,
+        value: value_type === 'categorical' ? values : [],
+        operator: operatorMap[operator] || operator,
+        property_type,
+        value_type,
+        lower_bound: value_type === 'numerical' ? parseInt(values) : 0
       };
       output.rule.push(rule);
     });
@@ -590,34 +592,32 @@ export const transformPayloadForWeightConfig = (payload) => {
 };
 
 export const transformWeightConfigForQuery = (config) => {
+  const { wid: key, event_name: label, weight, vr, rule } = config;
   const output = {
-    key: config.wid,
-    label: config.event_name,
-    weight: config.weight,
+    key,
+    label,
+    weight,
     filters: [],
-    vr: config.vr
+    vr
   };
 
-  if (config.rule) {
-    const rules = Array.isArray(config.rule) ? config.rule : [config.rule];
+  if (rule) {
+    const rules = Array.isArray(rule) ? rule : [rule];
 
     rules.forEach((rule) => {
-      const ruleValues = Array.isArray(rule.value)
-        ? rule.value
-        : rule.value_type === 'categorical'
-        ? [rule.value]
-        : rule.value;
-
+      const { value, value_type, lower_bound, property_type, key, operator } =
+        rule;
+      const ruleValues =
+        Array.isArray(value) && value.length > 0
+          ? value
+          : value_type === 'categorical'
+          ? [value]
+          : value_type === 'numerical'
+          ? lower_bound
+          : value;
       const filter = {
-        props: [
-          rule.property_type,
-          rule.key,
-          rule.value_type,
-          rule.property_type
-        ],
-        operator: reverseOperatorMap[rule.operator]
-          ? reverseOperatorMap[rule.operator]
-          : rule.operator,
+        props: [property_type, key, value_type, property_type],
+        operator: reverseOperatorMap[operator] || operator,
         values: ruleValues,
         ref: 1
       };

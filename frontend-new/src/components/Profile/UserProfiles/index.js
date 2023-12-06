@@ -410,7 +410,7 @@ function UserProfiles({
   useEffect(() => {
     const tableProps = timelinePayload?.segment_id
       ? activeSegment?.query?.table_props
-      : currentProjectSettings.timelines_config?.user_config?.table_props;
+      : currentProjectSettings.timelines_config?.user_config?.table_props || [];
     const userPropertiesModified = [];
     if (userPropertiesV2) {
       convertGroupedPropertiesToUngrouped(
@@ -483,7 +483,7 @@ function UserProfiles({
 
     const tableProps = timelinePayload?.segment_id
       ? activeSegment?.query?.table_props
-      : currentProjectSettings?.timelines_config?.user_config?.table_props;
+      : currentProjectSettings?.timelines_config?.user_config?.table_props || [];
 
     const userPropertiesModified = [];
     if (userPropertiesV2) {

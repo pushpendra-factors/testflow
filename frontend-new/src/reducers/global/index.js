@@ -19,6 +19,7 @@ const defaultState = {
   funnel_events: [],
   projects: [],
   active_project: {},
+  activeProjectLoading: false,
   fetchingProjects: null,
   projectsError: null,
   currentProjectSettings: {},
@@ -33,8 +34,24 @@ export default function (state = defaultState, action) {
   switch (action.type) {
     case SET_PROJECTS:
       return { ...state, projects: action.payload };
+    case 'SET_ACTIVE_PROJECT_LOADING': {
+      return {
+        ...state,
+        activeProjectLoading: true
+      };
+    }
     case SET_ACTIVE_PROJECT:
-      return { ...state, active_project: action.payload };
+      return {
+        ...state,
+        active_project: action.payload,
+        activeProjectLoading: false
+      };
+    case 'SET_ACTIVE_PROJECT_REJECTED': {
+      return {
+        ...state,
+        activeProjectLoading: false
+      };
+    }
     case CREATE_PROJECT_FULFILLED: {
       let _state = { ...state };
       _state.projects = [..._state.projects, action.payload];
@@ -157,7 +174,6 @@ export default function (state = defaultState, action) {
           projectsWithRoles.push(projectDetails);
         });
       });
-
       return {
         ...state,
         projects: projectsWithRoles
@@ -248,35 +264,10 @@ export default function (state = defaultState, action) {
   }
 }
 
-// Action creators
-export function fetchProjectAction(projects, status = 'success') {
-  return { type: SET_PROJECTS, payload: projects };
-}
-
-export const setActiveProject = (project) => {
-  return { type: SET_ACTIVE_PROJECT, payload: project };
-};
-
-// Service Call
-
-// export function fetchProjects(projects) {
-//   return function (dispatch) {
-//     return new Promise((resolve, reject) => {
-//       get(dispatch, host + 'projects', {})
-//         .then((response) => {
-//           // dispatch(setActiveProject(response.data.projects[0]));
-//           resolve(dispatch(fetchProjectAction(response.data.projects)));
-//         }).catch((err) => {
-//           resolve(dispatch(fetchProjectAction([])));
-//         });
-//     });
-//   };
-// }
-
-export function fetchProjects() {
+export function fetchProjectsList() {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      get(dispatch, host + 'v1/projects')
+      get(dispatch, host + 'v1/projects/list')
         .then((response) => {
           dispatch({
             type: 'FETCH_PROJECTS_FULFILLED',
@@ -286,6 +277,28 @@ export function fetchProjects() {
         })
         .catch((err) => {
           dispatch({ type: 'FETCH_PROJECTS_REJECTED', payload: err });
+          reject(err);
+        });
+    });
+  };
+}
+
+export function getActiveProjectDetails(projectID) {
+  return function (dispatch) {
+    dispatch({
+      type: 'SET_ACTIVE_PROJECT_LOADING'
+    });
+    return new Promise((resolve, reject) => {
+      get(dispatch, host + `projects/${projectID}`)
+        .then((response) => {
+          dispatch({
+            type: SET_ACTIVE_PROJECT,
+            payload: response.data
+          });
+          resolve(response);
+        })
+        .catch((err) => {
+          dispatch({ type: 'SET_ACTIVE_PROJECT_REJECTED', payload: err });
           reject(err);
         });
     });
