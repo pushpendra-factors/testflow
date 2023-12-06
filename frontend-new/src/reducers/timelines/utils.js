@@ -95,7 +95,7 @@ export const formatAccountTimeline = (data, config) => {
   };
 };
 
-const addEnabledFlagToActivity = (activity, disabledEvents) => {
+const addEnabledFlagToActivity = (activity, disabledEvents = []) => {
   const enabled = !disabledEvents.includes(activity.display_name);
   return { ...activity, enabled };
 };
