@@ -10,6 +10,9 @@
         ],
         "sloth-staging": [
           "sloth-staging-1"
+        ],
+        "violet": [
+          "factors-violet"
         ]
       }
     },
