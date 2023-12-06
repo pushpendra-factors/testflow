@@ -100,15 +100,11 @@ export const SortDataByDuration = (arr, key, order) => {
   return result;
 };
 
-export const SortDataByDate = (arr, key, order, format = null) => {
+export const SortDataByDate = (arr, key, order) => {
   const result = [...arr];
   result.sort((a, b) => {
-    const val1 = format
-      ? moment(a[key], format).utc().unix()
-      : moment(a[key]).utc().unix();
-    const val2 = format
-      ? moment(b[key], format).utc().unix()
-      : moment(b[key]).utc().unix();
+    const val1 = moment(a[key]).utc().unix();
+    const val2 = moment(b[key]).utc().unix();
     if (order === 'ascend') {
       return val1 >= val2 ? 1 : -1;
     }
