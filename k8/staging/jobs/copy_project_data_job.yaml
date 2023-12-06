@@ -53,12 +53,12 @@ spec:
                   key: MEMSQL_PASSWORD
             - name: PROJECT_ID
               value: "35000000"
-            - name: EXTERNAL_IP
+            - name: VM_HOST
               value: "34.82.239.248"
-            - name: REDIS_VM_HOST
-              value: "$(EXTERNAL_IP)"
-            - name: REDIS_VM_PORT
-              value: "6379"     
+            - name: VM_REDIS_PORT
+              value: "6379"
+            - name: RECREATE
+              value: "false"       
           restartPolicy: OnFailure
 
   
