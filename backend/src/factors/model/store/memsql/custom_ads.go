@@ -186,12 +186,7 @@ func (store *MemSQL) ExecuteCustomAdsChannelQueryV1(projectID int64, query *mode
 	fetchSource := false
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	logCtx := log.WithField("xreq_id", reqID)
-	limitString := ""
-	if C.IsKPILimitIncreaseAllowedForProject(projectID) {
-		limitString = fmt.Sprintf(" LIMIT %d", model.MaxResultsLimit)
-	} else {
-		limitString = fmt.Sprintf(" LIMIT %d", model.ResultsLimit)
-	}
+	limitString := fmt.Sprintf(" LIMIT %d", model.ChannelsLimit)
 	if query.GroupByTimestamp == "" {
 		sql, params, selectKeys, selectMetrics, errCode := store.GetSQLQueryAndParametersForCustomAdsQueryV1(projectID,
 			query, reqID, fetchSource, limitString, false, nil)

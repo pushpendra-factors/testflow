@@ -257,6 +257,7 @@ func (store *MemSQL) RunInsightsQuery(projectId int64, query model.Query, enable
 	startComputeTime := time.Now()
 	groupPropsLen := len(query.GroupByProperties)
 	if !query.IsLimitNotApplicable {
+		// kark 2
 		err = LimitQueryResult(projectId, result, groupPropsLen, query.GetGroupByTimestamp() != "")
 		if err != nil {
 			logCtx.WithError(err).Error("Failed processing query results for limiting.")
@@ -685,10 +686,7 @@ func limitGroupByTimestampResult(projectID int64, result *model.QueryResult, gro
 
 		_, keyExists := keyLookup[key]
 		// Limits no.of keys to ResultsLimit.
-		maxLimit := model.ResultsLimit
-		if C.IsKPILimitIncreaseAllowedForProject(projectID) {
-			maxLimit = model.MaxResultsLimit
-		}
+		maxLimit := model.EventsLimit
 
 		if !keyExists && len(keyLookup) < maxLimit {
 			keyLookup[key] = true
@@ -729,10 +727,7 @@ func limitMultiGroupByPropertiesResult(projectID int64, result *model.QueryResul
 
 		_, leftKeyExists := keyLookup[leftKey]
 		// Limits no.of left keys to ResultsLimit.
-		maxLimit := model.ResultsLimit
-		if C.IsKPILimitIncreaseAllowedForProject(projectID) {
-			maxLimit = model.MaxResultsLimit
-		}
+		maxLimit := model.EventsLimit
 
 		if !leftKeyExists && len(keyLookup) < maxLimit {
 			keyLookup[leftKey] = make(map[interface{}]bool, 0)

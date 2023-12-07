@@ -289,7 +289,6 @@ type Configuration struct {
 	AllowedSalesforceActivityEventsByProjectIDs         string
 	DisallowedSalesforceActivityTasksByProjectIDs       string
 	DisallowedSalesforceActivityEventsByProjectIDs      string
-	IncreaseKPILimitForProjectIDs                       string
 	EnableUserLevelEventPullForAddSessionByProjectID    string
 	EventsPullMaxLimit                                  int
 	EnableFeatureGates                                  bool
@@ -2836,26 +2835,6 @@ func IsAllowedSalesforceActivityEventsByProjectID(projectId int64) bool {
 	}
 
 	return true
-}
-
-func IsKPILimitIncreaseAllowedForProject(projectID int64) bool {
-	if configuration.IncreaseKPILimitForProjectIDs == "" {
-		return false
-	}
-
-	if configuration.IncreaseKPILimitForProjectIDs == "*" {
-		return true
-	}
-
-	projectIDstr := fmt.Sprintf("%d", projectID)
-	configProjectIDs := strings.Split(configuration.IncreaseKPILimitForProjectIDs, ",")
-	for i := range configProjectIDs {
-		if configProjectIDs[i] == projectIDstr {
-			return true
-		}
-	}
-
-	return false
 }
 
 func EnableUserLevelEventPullForAddSessionByProjectID(projectID int64) bool {
