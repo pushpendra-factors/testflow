@@ -3,12 +3,13 @@ name: Deploy Frontend - Test
 on:
   workflow_dispatch:
     inputs:
+      env_name:
+        description: "Environment name"
+        default: ""
       description:
         description: "Description about deployment"
         default: ""
-      env_name:
-        description: "Environment name"
-        default: "violet"
+      
 
 env:
   DEV_NAME: ${{ github.actor }}
@@ -66,7 +67,7 @@ jobs:
           firebaseServiceAccount: "${{ secrets.GKE_STAGING_SA_KEY }}"
           projectId: factors-staging
           channelId: live
-          target: ${{ github.event.inputs.env_name }}
+          target: violet
           entrypoint: ./sdk/javascript
           firebaseToolsVersion: 11.30.0
 
@@ -77,6 +78,6 @@ jobs:
           firebaseServiceAccount: "${{ secrets.GKE_STAGING_SA_KEY }}"
           projectId: factors-staging
           channelId: live
-          target: ${{ github.event.inputs.env_name }}
+          target: violet
           entrypoint: ./frontend-new
           firebaseToolsVersion: 11.30.0
