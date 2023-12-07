@@ -2112,7 +2112,6 @@ const EventBasedAlert = ({
                           width: 110
                         }}
                         defaultValue={0.5}
-                        value={coolDownTime}
                         onChange={handleCoolDownTimeChange}
                       >
                         <Option value={0.5}>0.5 hours</Option>
