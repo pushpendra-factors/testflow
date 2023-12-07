@@ -63,7 +63,7 @@ func TestSampleWebsiteAggregation(t *testing.T) {
 			To: 			   1675189800,
 			InternalEventType: model.PredefEventTypeSession,
 			WidgetInternalID:  2,
-			WidgetName:        model.PredefWidGtmParams,
+			WidgetName:        model.PredefWidUtmParams,
 		}
 
 		query2 := model.PredefWebsiteAggregationQuery{}
@@ -152,7 +152,7 @@ func TestSampleWebsiteAggregation(t *testing.T) {
 			To: 				1669833000 + 90400,
 			InternalEventType: model.PredefEventTypeSession,
 			WidgetInternalID:  2,
-			WidgetName:        model.PredefWidGtmParams,
+			WidgetName:        model.PredefWidUtmParams,
 		}
 
 		query2 := model.PredefWebsiteAggregationQuery{}
@@ -200,7 +200,7 @@ func TestSampleWebsiteAggregation(t *testing.T) {
 			To: 				1669833000 + 90400,
 			InternalEventType: model.PredefEventTypeSession,
 			WidgetInternalID:  1,
-			WidgetName:        model.PredefWidGtmParams,
+			WidgetName:        model.PredefWidUtmParams,
 		}
 
 		query2 := model.PredefWebsiteAggregationQuery{}
