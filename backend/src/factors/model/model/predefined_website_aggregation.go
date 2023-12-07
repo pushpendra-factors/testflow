@@ -8,22 +8,22 @@ import (
 const (
 
 	// Widget names
-	PredefWidFirst          = "first"
-	PredefWidGtmParams      = "web_traffic_by_GTM_parameters"
-	PredefWidpageUrl        = "session_by_page_URL"
-	PredefWidPageView       = "top_page_by_page_views"
-	PredefWidGeography      = "sessions_by_geography"
-	PredefWidTechnographics = "sessions_by_technographics"
-	PredefWidFirmographics  = "sessions_by_6signal_firmographics"
+	PredefWidWebsiteOverview    = "website_traffic_overview"
+	PredefWidUtmParams      	= "web_traffic_by_UTM_parameters"
+	PredefWidpageUrl        	= "website_sessions_by_page_URL"
+	PredefWidPageView       	= "top_pages_visited_by_page_URL"
+	PredefWidGeography      	= "website_sessions_by_geography"
+	PredefWidTechnographics 	= "website_sessions_by_browser"
+	PredefWidFirmographics  	= "website_sessions_by_company_firmographics"
 
 	// Widget Display Names
-	PredefWidDispFirst          = "First"
-	PredefWidDispGtmParams      = "Web traffic by GTM parameters"
-	PredefWidDispPageUrl        = "Session by Page URL"
-	PredefWidDispPageView       = "Top page by page views"
-	PredefWidDispGeography      = "Sessions by Geography"
-	PredefWidDispTechnographics = "Sessions by Technographics"
-	PredefWidDispFirmographics  = "Sessions by 6Signal firmographics"
+	PredefWidDispWebsiteOverview	= "Website traffic overview"
+	PredefWidDispUtmParams      	= "Web traffic by UTM parameters"
+	PredefWidDispPageUrl       		= "Website sessions by page URL"
+	PredefWidDispPageView       	= "Top pages visited by page URL"
+	PredefWidDispGeography      	= "Website sessions by geography"
+	PredefWidDispTechnographics 	= "Website sessions by browser"
+	PredefWidDispFirmographics  	= "Website sessions by company firmographics"
 
 	PredefEventTypeSession   = "session"
 	PredefEventTypePageViews = "page_view"
@@ -53,7 +53,6 @@ const (
 	PredefPropExitPage            = "exit_page"
 	PredefPropTopPage             = "top_pages"
 	PredefPropCountry             = "country"
-	PredefPropRegion              = "region"
 	PredefPropCity                = "city"
 	PredefPropBrowser             = "browser"
 	PredefPropBrowserVersion      = "browser_version"
@@ -102,14 +101,11 @@ var predefinedWebsiteAggregationProperties = []PredefinedDashboardProperty{
 	{Name: PredefPropReferrerUrl, DisplayName: PredefPropDispReferrerUrl, DataType: "categorical", SourceEventName: U.EVENT_NAME_SESSION, SourceEntity: EventEntity, SourceProperty: U.SP_INITIAL_REFERRER_URL},
 
 	{Name: PredefPropCountry, DisplayName: PredefPropDispCountry, DataType: "categorical", SourceEventName: U.EVENT_NAME_SESSION, SourceEntity: EventEntity, SourceProperty: U.UP_COUNTRY},
-	{Name: PredefPropRegion, DisplayName: PredefPropDispRegion, DataType: "categorical", SourceEventName: U.EVENT_NAME_SESSION, SourceEntity: EventEntity, SourceProperty: U.UP_REGION},
 	{Name: PredefPropCity, DisplayName: PredefPropDispCity, DataType: "categorical", SourceEventName: U.EVENT_NAME_SESSION, SourceEntity: EventEntity, SourceProperty: U.UP_CITY},
 
 	{Name: PredefPropBrowser, DisplayName: PredefPropDispBrowser, DataType: "categorical", SourceEventName: U.EVENT_NAME_SESSION, SourceEntity: EventEntity, SourceProperty: U.UP_BROWSER},
-	{Name: PredefPropBrowserVersion, DisplayName: PredefPropBrowserVersion, DataType: "categorical", SourceEventName: U.EVENT_NAME_SESSION, SourceEntity: EventEntity, SourceProperty: U.UP_BROWSER_VERSION},
 
 	{Name: PredefPropOs, DisplayName: PredefPropDispOs, DataType: "categorical", SourceEventName: U.EVENT_NAME_SESSION, SourceEntity: EventEntity, SourceProperty: U.UP_OS},
-	{Name: PredefPropOsVersion, DisplayName: PredefPropDispOsVersion, DataType: "categorical", SourceEventName: U.EVENT_NAME_SESSION, SourceEntity: EventEntity, SourceProperty: U.UP_OS_VERSION},
 
 	{Name: PredefProp6SignalIndustry, DisplayName: PredefPropDisp6SignalIndustry, DataType: "categorical", SourceEventName: "", SourceEntity: UserEntity, SourceProperty: U.SIX_SIGNAL_INDUSTRY},
 	{Name: PredefProp6SignalEmpRange, DisplayName: PredefPropDisp6SignalEmpRange, DataType: "categorical", SourceEventName: "", SourceEntity: UserEntity, SourceProperty: U.SIX_SIGNAL_EMPLOYEE_RANGE},
@@ -119,8 +115,8 @@ var predefinedWebsiteAggregationProperties = []PredefinedDashboardProperty{
 var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 	{
 		InternalID:  1,
-		Name:        PredefWidFirst,
-		DisplayName: PredefWidDispFirst,
+		Name:        PredefWidWebsiteOverview,
+		DisplayName: PredefWidDispWebsiteOverview,
 		Metrics: []PredefinedMetric{
 			{Name: PredefTotalSessions, DisplayName: PredefDispTotalSessions, InternalEventType: PredefEventTypeSession},
 			{Name: PredefTotalPageViews, DisplayName: PredefDispTotalPageViews, InternalEventType: PredefEventTypePageViews},
@@ -132,8 +128,8 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 	},
 	{
 		InternalID:  2,
-		Name:        PredefWidGtmParams,
-		DisplayName: PredefWidDispGtmParams,
+		Name:        PredefWidUtmParams,
+		DisplayName: PredefWidDispUtmParams,
 		Metrics: []PredefinedMetric{
 			{Name: PredefTotalSessions, DisplayName: PredefDispTotalSessions, InternalEventType: PredefEventTypeSession},
 		},
@@ -183,7 +179,7 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 		},
 		GroupBy: []PredefinedGroupBy{
 			{Name: PredefPropCountry, DisplayName: PredefPropDispCountry},
-			{Name: PredefPropRegion, DisplayName: PredefPropDispRegion},
+			{Name: PredefPropCity, DisplayName: PredefPropDispCity},
 		},
 		Setting: ChartSetting{Type: ChartTypeBarChart, Presentation: PresentationTypeTable},
 	},
@@ -239,9 +235,6 @@ var MapOfPredefPropertyNameToProperties = map[string]PredefinedDashboardProperty
 	predefinedWebsiteAggregationProperties[9].Name: predefinedWebsiteAggregationProperties[9],
 	predefinedWebsiteAggregationProperties[10].Name: predefinedWebsiteAggregationProperties[10],
 	predefinedWebsiteAggregationProperties[11].Name: predefinedWebsiteAggregationProperties[11],
-	predefinedWebsiteAggregationProperties[12].Name: predefinedWebsiteAggregationProperties[12],
-	predefinedWebsiteAggregationProperties[13].Name: predefinedWebsiteAggregationProperties[13],
-	predefinedWebsiteAggregationProperties[14].Name: predefinedWebsiteAggregationProperties[14],
 }
 
 var MapOfPredefDashboardIDToWidgets = map[int64]PredefinedWidget{
