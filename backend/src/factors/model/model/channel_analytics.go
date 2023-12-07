@@ -21,6 +21,7 @@ const (
 	OldLinkedinAds = "linkedin_ads"
 	NewBingAds     = "Bing Ads"
 	CustomAds      = "custom_ads"
+	ChannelsLimit  = 2500
 )
 
 type ChannelConfigResult struct {

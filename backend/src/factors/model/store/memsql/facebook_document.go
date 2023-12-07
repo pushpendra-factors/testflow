@@ -538,12 +538,8 @@ func (store *MemSQL) ExecuteFacebookChannelQueryV1(projectID int64, query *model
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	var fetchSource = false
 	logCtx := log.WithFields(logFields)
-	limitString := ""
-	if C.IsKPILimitIncreaseAllowedForProject(projectID) {
-		limitString = fmt.Sprintf(" LIMIT %d", model.MaxResultsLimit)
-	} else {
-		limitString = fmt.Sprintf(" LIMIT %d", model.ResultsLimit)
-	}
+	limitString := fmt.Sprintf(" LIMIT %d", model.ResultsLimit)
+
 	if query.GroupByTimestamp == "" {
 		sql, params, selectKeys, selectMetrics, errCode := store.GetSQLQueryAndParametersForFacebookQueryV1(projectID,
 			query, reqID, fetchSource, limitString, false, nil)
