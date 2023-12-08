@@ -245,6 +245,10 @@ type Model interface {
 	ExecuteSixSignalQuery(projectId int64, query model.SixSignalQuery) (*model.SixSignalQueryResult, int, string)
 	GetSixSignalInfoForProject(projectID int64) (model.SixSignalInfo, error)
 
+	//clearbit_provision_account
+	ProvisionClearbitAccount(projectId []int64, emailId []string, domainName []string) map[int64]interface{}
+	ProvisionClearbitAccountForSingleProject(projectId int64, emailId string, domainName string) error
+
 	// event_name
 	CreateOrGetEventName(eventName *model.EventName) (*model.EventName, int)
 	CreateOrGetUserCreatedEventName(eventName *model.EventName) (*model.EventName, int)
