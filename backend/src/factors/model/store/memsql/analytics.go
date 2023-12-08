@@ -1908,11 +1908,11 @@ func appendLimitByCondition(qStmnt string, groupProps []model.QueryGroupByProper
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if len(groupProps) == 1 && !groupByTimestamp {
-		return fmt.Sprintf("%s LIMIT %d", qStmnt, model.ResultsLimit)
+		return fmt.Sprintf("%s LIMIT %d", qStmnt, model.EventsLimit)
 	}
 
 	// Limited with max limit on SQL. Limited on server side.
-	return fmt.Sprintf("%s LIMIT %d", qStmnt, model.MaxResultsLimit)
+	return fmt.Sprintf("%s LIMIT %d", qStmnt, model.MaxEventsLimitInSQL)
 }
 
 func separateEventLevelGroupBys(allGroupBys []model.QueryGroupByProperty) (

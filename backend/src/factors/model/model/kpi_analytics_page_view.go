@@ -19,7 +19,6 @@ var KPIPropertiesForPageViews = []map[string]string{
 	MapOfKPIPropertyNameToDataWithCategory(U.UP_BROWSER, EventEntity, false),
 	MapOfKPIPropertyNameToDataWithCategory(U.UP_BROWSER_VERSION, EventEntity, false),
 	MapOfKPIPropertyNameToDataWithCategory(U.UP_COUNTRY, EventEntity, false),
-	MapOfKPIPropertyNameToDataWithCategory(U.UP_REGION, EventEntity, false),
 	MapOfKPIPropertyNameToDataWithCategory(U.UP_CITY, EventEntity, false),
 }
 

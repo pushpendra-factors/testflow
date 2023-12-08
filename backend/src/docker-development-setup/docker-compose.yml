@@ -48,7 +48,7 @@ services:
                 -  GOPATH=/go/src/factors
                 -  REDIS_HOST=redis
                 -  PRI_DS=memsql    
-            entrypoint: [ "sh","-c","/go/bin/app --redis_host_ps=redis --dup_queue_redis_host=redis --queue_redis_host=redis  --api_domain=$API_DOMAIN --env=development --memsql_host=memsql --primary_datastore=memsql"]
+            entrypoint: [ "sh","-c","/go/bin/app --redis_host_ps=redis --dup_queue_redis_host=redis --queue_redis_host=redis  --api_domain=$API_DOMAIN --env=development --memsql_host=$DB_HOST"]
             image: testing/api:1.0
             deploy:
                 replicas: 0
@@ -69,7 +69,7 @@ services:
                 -  GOPATH=/go/src/factors
                 -  REDIS_HOST=redis
                 -  MEMSQL_HOST=memsql  
-            entrypoint: [ "sh","-c","/go/bin/sdkserver --redis_host=redis --redis_host_ps=redis --dup_queue_redis_host=redis --queue_redis_host=redis --env=development --memsql_host=memsql --primary_datastore=memsql"]
+            entrypoint: [ "sh","-c","/go/bin/sdkserver --redis_host=redis --redis_host_ps=redis --dup_queue_redis_host=redis --queue_redis_host=redis --env=development --memsql_host=$DB_HOST"]
             image: testing/sdk:1.0
             deploy:
                 replicas: 0
