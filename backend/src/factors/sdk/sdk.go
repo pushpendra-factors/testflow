@@ -1336,6 +1336,12 @@ func Identify(projectId int64, request *IdentifyPayload, overwrite bool) (int, *
 			Error: "Identification failed. Missing mandatory keys c_uid."}
 	}
 
+	if projectId == 588 && strings.HasSuffix(request.CustomerUserId, "@mailmodo.com") {
+		log.Warn("Identification failed. Blocked identification.")
+		return http.StatusBadRequest, &IdentifyResponse{
+			Error: "Blocked identification."}
+	}
+
 	if request.Timestamp == 0 {
 		request.Timestamp = time.Now().Unix()
 	}
