@@ -134,6 +134,7 @@ function QueryBlock({
   }, [queries]);
 
   const filterProperties = useMemo(() => {
+    const Company_identification = "Company identification";
     if (!event) return {};
     const props = {
       event: eventPropertiesV2[event.label] || []
@@ -151,7 +152,16 @@ function QueryBlock({
           Object?.keys(groupProperties)?.map((key)=>{
             props[key] = groupProperties[key];
           }) 
-        } 
+        }
+        //only for accounts - user events
+        if(!eventGroup){
+          //remove 'Company identification' from user properties since the same duplicate properties is available in $6_signal
+          if(props?.hasOwnProperty('user')){
+            if(props?.user?.hasOwnProperty(Company_identification)){
+              delete props?.user[Company_identification];
+            }
+          }
+        }
       }
     } 
     let finalProps = removeDuplicateAndEmptyKeys(props);
