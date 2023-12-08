@@ -101,6 +101,11 @@ const getURLWithQueryParams = (projectId, profileType, agentId) => {
   if (window.SCORE_DEBUG) {
     queryParams.push('debug=true');
   }
+  
+  if (window.USE_MARKER) {
+    queryParams.push('user_marker=true');
+  }
+  
 
   const queryString = queryParams.join('&');
 
