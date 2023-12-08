@@ -1302,7 +1302,9 @@ function AccountProfiles({
         <NoDataWithMessage
           message={
             isOnboarded(currentProjectSettings)
-              ? errMsg
+              ? accounts?.data?.length === 0
+                ? 'No Accounts found'
+                : errMsg
               : 'Onboarding not completed'
           }
         />
