@@ -66,6 +66,8 @@ const (
 	PropertyEntityUserGlobal = "user_g"
 	PropertyEntityGroup      = "group"
 	PropertyEntityUserGroup  = "user_group"
+	MaxEventsLimitInSQL		 = 25000
+	EventsLimit				 = 2500
 )
 
 const PropertyValueNone = "$none"

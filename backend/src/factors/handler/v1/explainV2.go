@@ -499,6 +499,17 @@ func PostFactorsHandlerV3(c *gin.Context) {
 		return
 	}
 
+	if entity.Status != "active" {
+		var ex PW.ExplainV3Goals
+		ex.GoalRule = params
+		ex.Type = inputType
+		ex.StartTimestamp = entityv2.StartTimestamp
+		ex.EndTimestamp = entityv2.EndTimestamp
+
+		c.JSON(http.StatusOK, ex)
+		return
+	}
+
 	ps, err := PW.NewPatternServiceWrapperV2(reqID, projectId, modelId)
 	if err != nil {
 		logCtx.WithError(err).Error("Pattern Service initialization failed.")
@@ -594,10 +605,10 @@ func PostFactorsHandlerV3(c *gin.Context) {
 
 func convertCreateGoalInputParamsV2ToExplainV3GoalRule(ip CreateGoalInputParamsV2) model.ExplainV3GoalRule {
 	var rule model.ExplainV3GoalRule
-	if rule.StartEvent.Label != "" {
+	if ip.StartEvent.Label != "" {
 		rule.StartEvent = ip.StartEvent
 	}
-	if rule.EndEvent.Label != "" {
+	if ip.EndEvent.Label != "" {
 		rule.EndEvent = ip.EndEvent
 	}
 	rule.IncludedEvents = ip.IncludedEvents

@@ -339,8 +339,7 @@ func addMissingColumnsAndTimestampPWAResult(result model.QueryResult, query mode
 
 			for _, timestampInTime := range timestampsInTime {
 				timestampInEpoch := timestampInTime.Unix()
-				timestampKey := fmt.Sprintf("%v", timestampInEpoch)
-	
+				timestampKey := fmt.Sprintf("%v:;", timestampInEpoch)
 				if row, exists := mapOfAllColumValuesToResult[timestampKey]; exists {
 					resultantRows = append(resultantRows, row)
 				} else {
