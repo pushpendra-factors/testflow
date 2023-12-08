@@ -125,9 +125,6 @@ var MapOfPredefinedDashboardToPropertyNameToProperties = map[int64]map[string]Pr
 		predefinedWebsiteAggregationProperties[9].Name:  predefinedWebsiteAggregationProperties[9],
 		predefinedWebsiteAggregationProperties[10].Name: predefinedWebsiteAggregationProperties[10],
 		predefinedWebsiteAggregationProperties[11].Name: predefinedWebsiteAggregationProperties[11],
-		predefinedWebsiteAggregationProperties[12].Name: predefinedWebsiteAggregationProperties[12],
-		predefinedWebsiteAggregationProperties[13].Name: predefinedWebsiteAggregationProperties[13],
-		predefinedWebsiteAggregationProperties[14].Name: predefinedWebsiteAggregationProperties[14],
 	},
 }
 

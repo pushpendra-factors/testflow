@@ -205,12 +205,7 @@ func buildAllUsersQuery(projectID int64, query model.ProfileQuery) (string, []in
 
 	stepSqlStmnt = fmt.Sprintf("%s %s ORDER BY %s", stepSqlStmnt, groupByStmnt, model.AliasAggr)
 	if !query.LimitNotApplicable {
-		if C.IsKPILimitIncreaseAllowedForProject(projectID) {
-			stepSqlStmnt = fmt.Sprintf("%s LIMIT %d", stepSqlStmnt, model.MaxResultsLimit)
-		} else {
-			stepSqlStmnt = fmt.Sprintf("%s LIMIT %d", stepSqlStmnt, model.ResultsLimit)
-
-		}
+		stepSqlStmnt = fmt.Sprintf("%s LIMIT %d", stepSqlStmnt, model.ProfilesLimit)
 	}
 
 	finalSQLStmnt := ""
@@ -228,11 +223,7 @@ func buildAllUsersQuery(projectID int64, query model.ProfileQuery) (string, []in
 		finalSQLStmnt = fmt.Sprintf("%s SELECT %s FROM %s GROUP BY %s ORDER BY %s", sqlStmnt, selectAliases, bucketedStepName, finalGroupBy, finalOrderBy)
 
 		if !query.LimitNotApplicable {
-			if C.IsKPILimitIncreaseAllowedForProject(projectID) {
-				finalSQLStmnt = fmt.Sprintf("%s LIMIT %d", finalSQLStmnt, model.MaxResultsLimit)
-			} else {
-				finalSQLStmnt = fmt.Sprintf("%s LIMIT %d", finalSQLStmnt, model.ResultsLimit)
-			}
+			finalSQLStmnt = fmt.Sprintf("%s LIMIT %d", finalSQLStmnt, model.ProfilesLimit)
 		}
 
 	} else {
@@ -319,7 +310,7 @@ func buildAllUsersQueryV2(projectID int64, query model.ProfileQuery) (string, []
 
 	wrappedSqlStmnt = fmt.Sprintf("%s %s ORDER BY %s", wrappedSqlStmnt, groupByStmnt, model.AliasAggr)
 	if !query.LimitNotApplicable {
-		wrappedSqlStmnt += " LIMIT 10000"
+		wrappedSqlStmnt = fmt.Sprintf("%s LIMIT %d", wrappedSqlStmnt, model.ProfilesLimit)
 	}
 
 	finalSQLStmnt := ""
@@ -336,7 +327,7 @@ func buildAllUsersQueryV2(projectID int64, query model.ProfileQuery) (string, []
 		finalOrderBy := model.AliasAggr + ", " + strings.Join(aggregateOrderBys, ",")
 		finalSQLStmnt = fmt.Sprintf("%s SELECT %s FROM %s GROUP BY %s ORDER BY %s", sqlStmnt, selectAliases, bucketedStepName, finalGroupBy, finalOrderBy)
 		if !query.LimitNotApplicable {
-			wrappedSqlStmnt += " LIMIT 10000"
+			wrappedSqlStmnt = fmt.Sprintf("%s LIMIT %d", wrappedSqlStmnt, model.ProfilesLimit)
 		}
 	} else {
 		finalSQLStmnt = wrappedSqlStmnt

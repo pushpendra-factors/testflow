@@ -751,12 +751,12 @@ func TransformCRMPropertiesToKPIConfigProperties(properties map[string][]string,
 	}
 	for dataType, propertyNames := range properties {
 		for _, propertyName := range propertyNames {
-			if strings.HasPrefix(propertyName, "$salesforce_lead") || strings.HasPrefix(propertyName, "$sf_lead") {
-				category = "Salesforce Lead"
-			} else if strings.HasPrefix(propertyName, "$salesforce_contact") || strings.HasPrefix(propertyName, "$sf_contact") {
-				category = "Salesforce Contacts"
-			}
 			if strings.HasPrefix(propertyName, prefix) {
+				if strings.HasPrefix(propertyName, "$salesforce_lead") || strings.HasPrefix(propertyName, "$sf_lead") {
+					category = "Salesforce Lead"
+				} else if strings.HasPrefix(propertyName, "$salesforce_contact") || strings.HasPrefix(propertyName, "$sf_contact") {
+					category = "Salesforce Contacts"
+				}
 				var displayName string
 				displayName, exists := propertiesToDisplayNames[propertyName]
 				if !exists {

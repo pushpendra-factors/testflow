@@ -11,6 +11,7 @@ import (
 const ProfileQueryClass = "profiles"
 const UsersjoinTimeStampField = "join_timestamp"
 const EpochOf2000InGMT = 946688461
+const ProfilesLimit = 2500
 
 // From and to refer to JoinTime
 // LimitNotApplicable Used only in attribution since results of profiles is used for further computation.

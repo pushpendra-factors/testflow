@@ -24,7 +24,6 @@ var KPIPropertiesForWebsiteSessions = []map[string]string{
 	MapOfKPIPropertyNameToDataWithCategory(U.UP_BROWSER, EventEntity, true),
 	MapOfKPIPropertyNameToDataWithCategory(U.UP_BROWSER_VERSION, EventEntity, true),
 	MapOfKPIPropertyNameToDataWithCategory(U.UP_COUNTRY, EventEntity, true),
-	MapOfKPIPropertyNameToDataWithCategory(U.UP_REGION, EventEntity, true),
 	MapOfKPIPropertyNameToDataWithCategory(U.UP_CITY, EventEntity, true),
 	MapOfKPIPropertyNameToDataWithCategory(U.EP_TIMESTAMP, EventEntity, true),
 	MapOfKPIPropertyNameToDataWithCategory(U.SP_SPENT_TIME, EventEntity, true),

@@ -1228,12 +1228,8 @@ func (store *MemSQL) ExecuteAdwordsChannelQueryV1(projectID int64, query *model.
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	fetchSource := false
 	logCtx := log.WithFields(logFields)
-	limitString := ""
-	if C.IsKPILimitIncreaseAllowedForProject(projectID) {
-		limitString = fmt.Sprintf(" LIMIT %d", model.MaxResultsLimit)
-	} else {
-		limitString = fmt.Sprintf(" LIMIT %d", model.ResultsLimit)
-	}
+	limitString := fmt.Sprintf(" LIMIT %d", model.ChannelsLimit)
+
 	if query.GroupByTimestamp == "" {
 		sql, params, selectKeys, selectMetrics, errCode := store.GetSQLQueryAndParametersForAdwordsQueryV1(
 			projectID, query, reqID, fetchSource, limitString, false, nil)

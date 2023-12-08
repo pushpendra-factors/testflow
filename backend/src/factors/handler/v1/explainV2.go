@@ -419,6 +419,202 @@ func PostFactorsHandlerV2(c *gin.Context) {
 	}
 }
 
+func PostFactorsHandlerV3(c *gin.Context) {
+	log.Infof("Inside post factors handler")
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	reqID, _ := getReqIDAndProjectID(c)
+
+	if projectId == 611 {
+		fac := PW.Factors{}
+		if err := json.Unmarshal([]byte(returnConstantData()), &fac); err != nil {
+			return
+		}
+		c.JSON(http.StatusOK, fac)
+		return
+	}
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectId,
+		"RequestId": reqID,
+	})
+
+	modelId := uint64(0)
+	jobId := c.Query("job_id")
+	var err error
+
+	entity, errInt := GetEntityforJob(projectId, jobId)
+	if errInt != http.StatusFound {
+		log.Errorf(" err integer :%d", errInt)
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	modelId = entity.ModelID
+	in_en := make(map[string]bool)
+	in_epr := make(map[string]bool)
+	in_upr := make(map[string]bool)
+
+	inputType := c.Query("type")
+	patternMode := ""
+	var entityv2 model.ExplainV2Query
+	err = U.DecodePostgresJsonbToStructType(entity.ExplainV2Query, &entityv2)
+	if err != nil {
+		log.Errorf("Unable to create goal params")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	var params model.ExplainV3GoalRule
+	if entityv2.IsV3 {
+		params = entityv2.QueryV3
+	} else {
+		params = model.ConvertFactorsGoalRuleToExplainV3GoalRule(entityv2.Query)
+	}
+
+	result, err := T.GetResultCache(projectId, modelId)
+	if err != nil {
+		log.Errorf("unable to get result from cache :%d,%d", projectId, modelId)
+	}
+	if result != "" {
+		var ex PW.ExplainV3Goals
+		var results PW.Factors
+		err := json.Unmarshal([]byte(result), &results)
+		if err != nil {
+			log.Errorf("Unable to unmarshall result string")
+		}
+
+		results.Type = inputType
+		ex.GoalRule = params
+		ex.Insights = results.Insights
+		ex.GoalUserCount = results.GoalUserCount
+		ex.TotalUsersCount = results.TotalUsersCount
+		ex.OverallPercentage = results.OverallPercentage
+		ex.OverallMultiplier = results.OverallMultiplier
+		ex.Type = results.Type
+		ex.StartTimestamp = entityv2.StartTimestamp
+		ex.EndTimestamp = entityv2.EndTimestamp
+
+		c.JSON(http.StatusOK, ex)
+		return
+	}
+
+	if entity.Status != "active" {
+		var ex PW.ExplainV3Goals
+		ex.GoalRule = params
+		ex.Type = inputType
+		ex.StartTimestamp = entityv2.StartTimestamp
+		ex.EndTimestamp = entityv2.EndTimestamp
+
+		c.JSON(http.StatusOK, ex)
+		return
+	}
+
+	ps, err := PW.NewPatternServiceWrapperV2(reqID, projectId, modelId)
+	if err != nil {
+		logCtx.WithError(err).Error("Pattern Service initialization failed.")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":  err.Error(),
+			"status": http.StatusBadRequest,
+		})
+		return
+	}
+	startConstraints, endConstraints := parseConstraints(entityv2.Query.Rule)
+	if patternMode == "AllPatterns" {
+		allEventPatterns := make([]string, 0)
+		allPatterns, _ := ps.GetAllPatterns(reqID, params.StartEvent.Label, params.EndEvent.Label)
+		for _, eventPattern := range allPatterns {
+			pattern := fmt.Sprintf("%v", eventPattern.PerUserCount)
+			for _, eventName := range eventPattern.EventNames {
+				pattern = pattern + "," + eventName
+			}
+			allEventPatterns = append(allEventPatterns, pattern)
+		}
+		c.JSON(http.StatusOK, allEventPatterns)
+		return
+	}
+	if patternMode == "GetCount" {
+		var count uint
+		if params.StartEvent.Label == "" {
+			count, _ = ps.GetPerUserCount("", []string{params.EndEvent.Label}, []P.EventConstraints{*endConstraints})
+		} else {
+			count, _ = ps.GetPerUserCount("", []string{params.StartEvent.Label, params.EndEvent.Label}, []P.EventConstraints{*startConstraints, *endConstraints})
+		}
+		c.JSON(http.StatusOK, count)
+		return
+	}
+	if patternMode == "AllProperties" {
+		userInfo := ps.GetUserAndEventsInfo()
+		c.JSON(http.StatusOK, userInfo)
+		return
+	}
+	if patternMode == "AllHistogram" {
+		var patternHistogram *P.Pattern
+		if params.StartEvent.Label == "" {
+			patternHistogram = ps.GetPattern("", []string{params.EndEvent.Label})
+		} else {
+			patternHistogram = ps.GetPattern("", []string{params.StartEvent.Label, params.EndEvent.Label})
+		}
+		c.JSON(http.StatusOK, patternHistogram)
+		return
+	}
+	debugParams := make(map[string]string)
+
+	if results, err, debugData := PW.FactorV1(reqID,
+		projectId, params.StartEvent.Label, startConstraints,
+		params.EndEvent.Label, endConstraints, P.COUNT_TYPE_PER_USER, ps, patternMode, debugParams, in_en, in_epr, in_upr); err != nil {
+		logCtx.WithError(err).Error("Factors failed.")
+		if err.Error() == "root node not found or frequency 0" {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "No Insights Found"})
+		}
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	} else {
+		var ex PW.ExplainV3Goals
+		expiry := model.QueryCacheMutableResultMonth
+
+		if patternMode != "" {
+			c.JSON(http.StatusOK, debugData)
+		}
+		results.Type = inputType
+		ex.GoalRule = params
+		ex.Insights = results.Insights
+		ex.GoalUserCount = results.GoalUserCount
+		ex.TotalUsersCount = results.TotalUsersCount
+		ex.OverallPercentage = results.OverallPercentage
+		ex.OverallMultiplier = results.OverallMultiplier
+		ex.Type = results.Type
+		ex.StartTimestamp = entityv2.StartTimestamp
+		ex.EndTimestamp = entityv2.EndTimestamp
+
+		result_byte, err := json.Marshal(results)
+		if err != nil {
+			log.Errorf("Unable to marshal results string:%v", err)
+		}
+		result_string := string(result_byte)
+		err = T.SetResultCache(projectId, modelId, expiry, result_string)
+		if err != nil {
+			log.Errorf("Unable to cache expv2 results:%d,%d", projectId, modelId)
+		}
+
+		c.JSON(http.StatusOK, ex)
+		return
+
+	}
+}
+
+func convertCreateGoalInputParamsV2ToExplainV3GoalRule(ip CreateGoalInputParamsV2) model.ExplainV3GoalRule {
+	var rule model.ExplainV3GoalRule
+	if ip.StartEvent.Label != "" {
+		rule.StartEvent = ip.StartEvent
+	}
+	if ip.EndEvent.Label != "" {
+		rule.EndEvent = ip.EndEvent
+	}
+	rule.IncludedEvents = ip.IncludedEvents
+	return rule
+}
+
 func CreateExplainV3EntityHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 
 	if !C.GetConfig().ExplainV3QueryBuilder {
@@ -442,7 +638,8 @@ func CreateExplainV3EntityHandler(c *gin.Context) (interface{}, int, string, str
 		return nil, http.StatusBadRequest, errMsg, "", true
 	}
 
-	rule, _, _, _ := MapRuleV2(entity.Query)
+	rule := MapRuleV2(entity.Query)
+	v3Query := convertCreateGoalInputParamsV2ToExplainV3GoalRule(entity.Query)
 
 	query_json, err := json.Marshal(entity.Query)
 	if err != nil {
@@ -452,6 +649,8 @@ func CreateExplainV3EntityHandler(c *gin.Context) (interface{}, int, string, str
 	var explainV2Entity model.ExplainV2Query
 	explainV2Entity.Title = entity.Title
 	explainV2Entity.Query = rule
+	explainV2Entity.QueryV3 = v3Query
+	explainV2Entity.IsV3 = true
 	explainV2Entity.StartTimestamp = entity.StartTimestamp
 	explainV2Entity.EndTimestamp = entity.EndTimestamp
 	explainV2Entity.Raw_query = string(query_json)
