@@ -211,7 +211,12 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 		logCtx.Error("Invalid debug flag.")
 	}
 
-	var payload model.TimelinePayload
+	getUserMarker, err := getBoolQueryParam(c.Query("user_marker"))
+	if err != nil {
+		logCtx.Error("Invalid marker flag.")
+	}
+
+	var payload model.TimelinePayloadSegment
 	logCtx = log.WithFields(log.Fields{
 		"projectId": projectId,
 		"payload":   payload,
@@ -224,8 +229,21 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 		return nil, http.StatusBadRequest, INVALID_INPUT, message, true
 	}
 
+	oldTimelineFlow := model.TimelinePayload{
+		Query:        payload.Query,
+		SearchFilter: payload.SearchFilter,
+	}
+
+	var profileAccountsList []model.Profile
+	var errCode int
+	var errMsg string
+
 	startTime := time.Now().UnixMilli()
-	profileAccountsList, errCode, errMsg := store.GetStore().GetProfilesListByProjectId(projectId, payload, model.PROFILE_TYPE_ACCOUNT)
+	if getUserMarker {
+		profileAccountsList, errCode, errMsg = store.GetStore().GetMarkedDomainsListByProjectId(projectId, payload)
+	} else {
+		profileAccountsList, errCode, errMsg = store.GetStore().GetProfilesListByProjectId(projectId, oldTimelineFlow, model.PROFILE_TYPE_ACCOUNT)
+	}
 	endTime := time.Now().UnixMilli()
 	if timeTaken := endTime - startTime; timeTaken > 2000 {
 		logCtx.Warn("Accounts time exceeded 2 seconds. Time taken is ", timeTaken)
