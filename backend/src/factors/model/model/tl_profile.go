@@ -59,6 +59,12 @@ type TimelinePayload struct {
 	SearchFilter []string `json:"search_filter"`
 }
 
+type TimelinePayloadSegment struct {
+	Query        Query    `json:"query"`
+	SearchFilter []string `json:"search_filter"`
+	SegmentId    string   `json:"segment_id"`
+}
+
 type AccountDetails struct {
 	Properties      *postgres.Jsonb        `json:"-"`
 	HostName        string                 `json:"host_name"`

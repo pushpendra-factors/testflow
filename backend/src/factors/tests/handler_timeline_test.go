@@ -4682,3 +4682,204 @@ func TestAllAccounts(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, len(resp), 0)
 }
+
+func sendGetProfileAccountRequestConsumingMarker(r *gin.Engine, projectId int64, agent *model.Agent, payload model.TimelinePayloadSegment) *httptest.ResponseRecorder {
+
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error Creating cookieData")
+	}
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/v1/profiles/accounts?score=true&debug=true&user_marker=true", projectId)).
+		WithPostParams(payload).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	w := httptest.NewRecorder()
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error Creating getProjectSetting Req")
+	}
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func TestAccountsConsumingMarker(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	SegmentMarkerTest(t, project, agent, r)
+
+	segments, status := store.GetStore().GetAllSegments(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+
+	var segmentID string
+	for _, segment := range segments["$domains"] {
+		if segment.Name == "User Group props" {
+			segmentID = segment.Id
+			break
+		}
+	}
+
+	// global props type segment
+	payload := model.TimelinePayloadSegment{
+		SegmentId: segmentID,
+		Query: model.Query{
+			Source: "$domains",
+			GlobalUserProperties: []model.QueryProperty{
+				{
+					Entity:    "user_group",
+					Type:      "categorical",
+					Property:  "$country",
+					Operator:  "equals",
+					Value:     "US",
+					LogicalOp: "OR",
+				},
+				{
+					Entity:    "user_group",
+					Type:      "categorical",
+					Property:  "$country",
+					Operator:  "contains",
+					Value:     "India",
+					LogicalOp: "AND",
+				},
+				{
+					Entity:    "user_group",
+					Type:      "categorical",
+					Property:  "$device_type",
+					Operator:  "notEqual",
+					Value:     "macBook",
+					LogicalOp: "AND",
+				},
+			},
+			TableProps: []string{"$hubspot_company_name", U.SIX_SIGNAL_NAME, "$salesforce_account_name"},
+		},
+	}
+
+	w := sendGetProfileAccountRequestConsumingMarker(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ := io.ReadAll(w.Body)
+	resp := make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 3)
+	domNames := []string{"domain0id.com", "domain1id.com", "domain2id.com"}
+
+	for _, profile := range resp {
+		assert.Contains(t, domNames, profile.HostName)
+		assert.NotEmpty(t, profile.Identity)
+		assert.Greater(t, profile.LastActivity, U.TimeNowZ().AddDate(0, 0, -1))
+		assert.NotEmpty(t, profile.TableProps[U.SIX_SIGNAL_NAME])
+		assert.NotEmpty(t, profile.TableProps["$hubspot_company_name"])
+		assert.NotEmpty(t, profile.TableProps["$salesforce_account_name"])
+	}
+
+	for _, segment := range segments["$domains"] {
+		if segment.Name == "Hubspot Group Performed Event" {
+			segmentID = segment.Id
+			break
+		}
+	}
+
+	// adding a search filter (performed event segment)
+	payload = model.TimelinePayloadSegment{
+		SegmentId: segmentID,
+		Query: model.Query{
+			Source: "$domains",
+			EventsWithProperties: []model.QueryEventWithProperties{
+				{
+					Name:          U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_UPDATED,
+					GroupAnalysis: "Most Recent",
+				},
+				{
+					Name:          U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+					GroupAnalysis: "Most Recent",
+				},
+			},
+			TableProps:      []string{"$hubspot_company_name", U.SIX_SIGNAL_NAME, "$salesforce_account_name"},
+			EventsCondition: model.EventCondAllGivenEvent,
+		},
+		SearchFilter: []string{"domain0id.com", "domain1id.com"},
+	}
+
+	w = sendGetProfileAccountRequestConsumingMarker(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = io.ReadAll(w.Body)
+	resp = make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 2)
+
+	for _, profile := range resp {
+		assert.Contains(t, domNames, profile.HostName)
+		assert.NotEmpty(t, profile.Identity)
+		assert.Greater(t, profile.LastActivity, U.TimeNowZ().AddDate(0, 0, -1))
+		assert.NotEmpty(t, profile.TableProps[U.SIX_SIGNAL_NAME])
+		assert.NotEmpty(t, profile.TableProps["$hubspot_company_name"])
+		assert.NotEmpty(t, profile.TableProps["$salesforce_account_name"])
+	}
+
+	// adding a search filter (performed event segment) and additional filters
+	today := time.Now()
+	dayOfWeek := today.Weekday()
+	payload = model.TimelinePayloadSegment{
+		SegmentId: segmentID,
+		Query: model.Query{
+			Type:            "unique_users",
+			EventsCondition: "all_given_event",
+			Caller:          "account_profiles",
+			Source:          "$domains",
+			GroupAnalysis:   "$domains",
+
+			EventsWithProperties: []model.QueryEventWithProperties{
+				{
+					Name:          U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_UPDATED,
+					GroupAnalysis: "Most Recent",
+				},
+				{
+					Name:          U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+					GroupAnalysis: "Hubspot Company Created",
+					Properties: []model.QueryProperty{
+						{
+							Entity:    "event",
+							GroupName: "event",
+							Type:      "categorical",
+							Property:  "$day_of_week",
+							Operator:  "equals",
+							Value:     dayOfWeek.String(),
+							LogicalOp: "AND",
+						},
+					},
+				},
+			},
+			TableProps: []string{"$hubspot_company_name", U.SIX_SIGNAL_NAME, "$salesforce_account_name"},
+		},
+		SearchFilter: []string{"domain0id.com", "domain1id.com"},
+	}
+
+	w = sendGetProfileAccountRequestConsumingMarker(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = io.ReadAll(w.Body)
+	resp = make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 2)
+
+	// query where source is All
+	payload = model.TimelinePayloadSegment{
+		SegmentId: segmentID,
+		Query: model.Query{
+			Source:     "All",
+			TableProps: []string{"$hubspot_company_name", U.SIX_SIGNAL_NAME, "$salesforce_account_name"},
+		},
+		SearchFilter: []string{"domain0id.com", "domain1id.com"},
+	}
+
+	w = sendGetProfileAccountRequestConsumingMarker(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+}

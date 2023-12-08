@@ -31,6 +31,10 @@ func TestTaskSegmentMarker(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
+	SegmentMarkerTest(t, project, agent, r)
+}
+
+func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent, r *gin.Engine) {
 	_, errCode := store.GetStore().UpdateProjectSettings(project.ID,
 		&model.ProjectSetting{SegmentMarkerLastRun: U.TimeNowZ().Add(time.Duration(-3) * time.Hour)})
 	assert.Equal(t, errCode, http.StatusAccepted)
