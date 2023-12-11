@@ -410,25 +410,27 @@ function AccountProfiles({
         formatPayload.filters =
           formatFiltersForPayload(payload?.filters, 'accounts') || [];
         const reqPayload = formatReqPayload(formatPayload, activeSegment);
-        getProfileAccounts(activeProject.id, reqPayload, activeAgent).then((response) =>{
+        getProfileAccounts(activeProject.id, reqPayload, activeAgent).then(
+          (response) => {
+            if (response.type === 'FETCH_PROFILE_ACCOUNTS_FAILED') {
+              if (response.error.status === 400) {
+                setErrMsg('400 Bad Request');
+              } else if (response.error.status === 500) {
+                setErrMsg(
+                  'The server encountered an internal error and could not complete your request'
+                );
+              }
+            }
 
-          if (response.type === "FETCH_PROFILE_ACCOUNTS_FAILED"){
-          if(response.error.status === 400){
-            setErrMsg('400 Bad Request');
-          }
-          else  if(response.error.status === 500){
-            setErrMsg('The server encountered an internal error and could not complete your request');
-          }
-        }
-
-        if (response.type === "FETCH_PROFILE_ACCOUNTS_FULFILLED"){
-          if (response.status === 200){
-            if(response.payload.length === 0){
-              setErrMsg('No accounts Found')
+            if (response.type === 'FETCH_PROFILE_ACCOUNTS_FULFILLED') {
+              if (response.status === 200) {
+                if (response.payload.length === 0) {
+                  setErrMsg('No accounts Found');
+                }
+              }
             }
           }
-        }
-        });
+        );
       }
       if (shouldCache) {
         setCurrentPage(location.state.currentPage);
@@ -1222,20 +1224,22 @@ function AccountProfiles({
         </>
       </ControlledComponent>
       <ControlledComponent
-      controller={
-        accounts.isLoading === false &&
-        accounts.data.length === 0 &&
-        (newSegmentMode === false || areFiltersDirty === true)
-      }
-    >
-      <NoDataWithMessage
-       message={
-        isOnboarded(currentProjectSettings)
-          ? errMsg
-          : 'Onboarding not completed'
-      }
-      />
-    </ControlledComponent>
+        controller={
+          accounts.isLoading === false &&
+          accounts.data.length === 0 &&
+          (newSegmentMode === false || areFiltersDirty === true)
+        }
+      >
+        <NoDataWithMessage
+          message={
+            isOnboarded(currentProjectSettings)
+              ? accounts?.data?.length === 0
+                ? 'No Accounts found'
+                : errMsg
+              : 'Onboarding not completed'
+          }
+        />
+      </ControlledComponent>
       <UpgradeModal
         visible={isUpgradeModalVisible}
         variant='account'

@@ -914,7 +914,7 @@ type Model interface {
 	GetGroupNameIDMap(projectID int64) (map[string]int, int)
 
 	// Timeline consuming segment_marker
-	GetMarkedDomainsListByProjectId(projectID int64, payload model.TimelinePayloadSegment) ([]model.Profile, int, string)
+	GetMarkedDomainsListByProjectId(projectID int64, payload model.TimelinePayload) ([]model.Profile, int, string)
 
 	// segment
 	CreateSegment(projectId int64, segment *model.SegmentPayload) (int, error)

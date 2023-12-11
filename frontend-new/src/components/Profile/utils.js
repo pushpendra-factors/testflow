@@ -134,6 +134,7 @@ export const formatReqPayload = (payload, segment = {}) => {
       ],
       table_props: segment.query ? segment.query.table_props || [] : []
     },
+    segment_id: segment?.id || '',
     search_filter: [...(payload.search_filter || [])]
   };
 
@@ -581,10 +582,10 @@ export const transformWeightConfigForQuery = (config) => {
         Array.isArray(value) && value.length > 0
           ? value
           : value_type === 'categorical'
-          ? [value]
-          : value_type === 'numerical'
-          ? lower_bound
-          : value;
+            ? [value]
+            : value_type === 'numerical'
+              ? lower_bound
+              : value;
       const filter = {
         props: [property_type, key, value_type, property_type],
         operator: reverseOperatorMap[operator] || operator,

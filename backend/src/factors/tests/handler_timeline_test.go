@@ -141,6 +141,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	assert.Equal(t, len(users), 15)
 
 	var payload model.TimelinePayload
+	payload.SegmentId = ""
 
 	// Test Cases :-
 	// 1. Users from Different Sources (No filter, no segment applied)
@@ -189,6 +190,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 			},
 			Source: "web",
 		},
+		SegmentId: "",
 	}
 	w := sendGetProfileUserRequest(r, project.ID, agent, payload)
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -212,6 +214,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 		Query: model.Query{
 			Source: "web",
 		}, SearchFilter: []string{"user2"},
+		SegmentId: "",
 	}
 	w = sendGetProfileUserRequest(r, project.ID, agent, payload)
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -270,6 +273,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 			Source:        "web",
 			TableProps:    []string{"$country", "$page_count"},
 		},
+		SegmentId: "",
 	}
 
 	w = sendGetProfileUserRequest(r, project.ID, agent, payload)
@@ -311,6 +315,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 			},
 			Source: "web",
 		},
+		SegmentId: "",
 	}
 
 	w = sendGetProfileUserRequest(r, project.ID, agent, payload)
@@ -346,6 +351,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 			},
 			Source: "web",
 		},
+		SegmentId: "",
 	}
 
 	w = sendGetProfileUserRequest(r, project.ID, agent, payload)
@@ -368,6 +374,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 
 	// 6. (c) Test for dateTime type filters (inCurrent)
 	payload = model.TimelinePayload{
+		SegmentId: "",
 		Query: model.Query{
 			GlobalUserProperties: []model.QueryProperty{
 				{
@@ -4683,7 +4690,7 @@ func TestAllAccounts(t *testing.T) {
 	assert.Equal(t, len(resp), 0)
 }
 
-func sendGetProfileAccountRequestConsumingMarker(r *gin.Engine, projectId int64, agent *model.Agent, payload model.TimelinePayloadSegment) *httptest.ResponseRecorder {
+func sendGetProfileAccountRequestConsumingMarker(r *gin.Engine, projectId int64, agent *model.Agent, payload model.TimelinePayload) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -4726,7 +4733,7 @@ func TestAccountsConsumingMarker(t *testing.T) {
 	}
 
 	// global props type segment
-	payload := model.TimelinePayloadSegment{
+	payload := model.TimelinePayload{
 		SegmentId: segmentID,
 		Query: model.Query{
 			Source: "$domains",
@@ -4786,7 +4793,7 @@ func TestAccountsConsumingMarker(t *testing.T) {
 	}
 
 	// adding a search filter (performed event segment)
-	payload = model.TimelinePayloadSegment{
+	payload = model.TimelinePayload{
 		SegmentId: segmentID,
 		Query: model.Query{
 			Source: "$domains",
@@ -4826,7 +4833,7 @@ func TestAccountsConsumingMarker(t *testing.T) {
 	// adding a search filter (performed event segment) and additional filters
 	today := time.Now()
 	dayOfWeek := today.Weekday()
-	payload = model.TimelinePayloadSegment{
+	payload = model.TimelinePayload{
 		SegmentId: segmentID,
 		Query: model.Query{
 			Type:            "unique_users",
@@ -4870,7 +4877,7 @@ func TestAccountsConsumingMarker(t *testing.T) {
 	assert.Equal(t, len(resp), 2)
 
 	// query where source is All
-	payload = model.TimelinePayloadSegment{
+	payload = model.TimelinePayload{
 		SegmentId: segmentID,
 		Query: model.Query{
 			Source:     "All",
