@@ -57,11 +57,6 @@ type UserActivity struct {
 type TimelinePayload struct {
 	Query        Query    `json:"query"`
 	SearchFilter []string `json:"search_filter"`
-}
-
-type TimelinePayloadSegment struct {
-	Query        Query    `json:"query"`
-	SearchFilter []string `json:"search_filter"`
 	SegmentId    string   `json:"segment_id"`
 }
 
