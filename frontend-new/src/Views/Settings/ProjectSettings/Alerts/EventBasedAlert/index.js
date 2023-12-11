@@ -1044,12 +1044,12 @@ const EventBasedAlert = ({
   const handleClickConfirmBtn = () => {
     setConfirmedMessageBtn(true);
     setDisbleWebhookInput(true);
+    setFinalWebhookUrl(webhookUrl);
     setTimeout(() => {
       setConfirmedMessageBtn(false);
       setShowEditBtn(true);
       setTestMassageResponse('');
       setTestMessageBtn(true);
-      setFinalWebhookUrl(webhookUrl);
       setHideTestMessageBtn(false);
     }, 2000);
   };
