@@ -13,7 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) GetMarkedDomainsListByProjectId(projectID int64, payload model.TimelinePayloadSegment) ([]model.Profile, int, string) {
+func (store *MemSQL) GetMarkedDomainsListByProjectId(projectID int64, payload model.TimelinePayload) ([]model.Profile, int, string) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"payload":    payload,
@@ -31,14 +31,9 @@ func (store *MemSQL) GetMarkedDomainsListByProjectId(projectID int64, payload mo
 		return []model.Profile{}, http.StatusBadRequest, "Failed to fetch source."
 	}
 
-	oldTimelineFlow := model.TimelinePayload{
-		Query:        payload.Query,
-		SearchFilter: payload.SearchFilter,
-	}
-
 	// Redirect to old flow if segment_id is empty
 	if payload.SegmentId == "" {
-		return store.GetProfilesListByProjectId(projectID, oldTimelineFlow, model.PROFILE_TYPE_ACCOUNT)
+		return store.GetProfilesListByProjectId(projectID, payload, model.PROFILE_TYPE_ACCOUNT)
 	}
 
 	// Redirect to old flow if additional filters exist
@@ -57,7 +52,7 @@ func (store *MemSQL) GetMarkedDomainsListByProjectId(projectID int64, payload mo
 	additionalFiltersExist := CompareFilters(segmentQuery, payload.Query)
 
 	if additionalFiltersExist {
-		return store.GetProfilesListByProjectId(projectID, oldTimelineFlow, model.PROFILE_TYPE_ACCOUNT)
+		return store.GetProfilesListByProjectId(projectID, payload, model.PROFILE_TYPE_ACCOUNT)
 	}
 
 	// set Query Timezone
@@ -159,7 +154,7 @@ func (store *MemSQL) GetMarkedDomainsListByProjectId(projectID int64, payload mo
 
 	// Redirect to old flow if no profiles found
 	if len(profiles) == 0 {
-		return store.GetProfilesListByProjectId(projectID, oldTimelineFlow, model.PROFILE_TYPE_ACCOUNT)
+		return store.GetProfilesListByProjectId(projectID, payload, model.PROFILE_TYPE_ACCOUNT)
 	}
 
 	// datetime conversion
