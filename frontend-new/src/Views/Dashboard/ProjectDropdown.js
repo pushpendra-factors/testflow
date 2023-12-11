@@ -82,7 +82,8 @@ function ProjectDropdown({
       resetDashboardRefreshState();
       setOldestRefreshTime(null);
       const selectedDashboard = dashboards.find((d) => d.id === val);
-      dispatch(changeActiveDashboardService(selectedDashboard));
+      if (selectedDashboard)
+        dispatch(changeActiveDashboardService(selectedDashboard));
     },
     [
       activeDashboard?.id,
