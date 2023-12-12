@@ -241,56 +241,18 @@ func GetSlackUsersListHandler(c *gin.Context) {
 		return
 	}
 
-	logCtx := log.WithField("project_id", projectID)
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "agent_id": loggedInAgentUUID})
 
-	jsonResponse, status, err := slack.GetSlackUsers(projectID, loggedInAgentUUID, "")
-	if err != nil {
-		c.JSON(status, gin.H{"error": err})
-	}
-
-	if !jsonResponse.Ok {
-		err := jsonResponse.Error
-		if err == "missing_scope" {
-			logCtx.WithError(fmt.Errorf("%v", err)).Error("permission not granted for reading users, please reintegrate")
-		}
-		logCtx.WithError(fmt.Errorf("%v", err)).Error("error received from slack server")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "error received from slack server"})
-		return
-	}
-
-	members := jsonResponse.Members
-	if members == nil {
-		logCtx.Error("nil json response found for users error")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "nil json response found for users error"})
-		return
-	}
-
-	jsonMetadata := jsonResponse.ResponseMetadata
-	if jsonMetadata == nil {
-		logCtx.Error("no metadata from json response error")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "no metadata from json response error"})
-		return
-	}
-
-	nextCursor := jsonMetadata["next_cursor"].(string)
-	for nextCursor != "" {
-		jsonResponse, status, err = slack.GetSlackUsers(projectID, loggedInAgentUUID, nextCursor)
-		if err != nil {
-			c.JSON(status, gin.H{"error": err})
+	members, errCode, err := slack.GetSlackUsersList(projectID, loggedInAgentUUID)
+	if err != nil || errCode != http.StatusFound {
+		if errCode == http.StatusNotFound {
+			logCtx.WithError(err).Error("no users found")
+			c.AbortWithStatusJSON(errCode, gin.H{"error": "no users found"})
 			return
 		}
-
-		if newMembers := jsonResponse.Members; newMembers != nil {
-			members = append(members, newMembers...)
-			if metadata := jsonResponse.ResponseMetadata; metadata != nil {
-				nextCursor = metadata["next_cursor"].(string)
-			} else {
-				break
-			}
-		} else {
-			break
-		}
-
+		logCtx.WithError(err).Error("failed to fetch slack users list")
+		c.AbortWithStatusJSON(errCode, gin.H{"error": err.Error()})
+		return
 	}
 
 	c.JSON(http.StatusOK, members)

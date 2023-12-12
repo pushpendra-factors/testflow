@@ -11,11 +11,11 @@ type SlackChannel struct {
 }
 
 type SlackGetUsersResponse struct {
-	Ok bool `json:"ok"`
-	Members []SlackMember `json:"members"`
-	CacheTs int64 `json:"cache_ts"`
+	Ok               bool                  `json:"ok"`
+	Members          []SlackMember         `json:"members"`
+	CacheTs          int64                 `json:"cache_ts"`
 	ResponseMetadata SlackResponseMetadata `json:"response_metadata"`
-	Error string `json:"error"`
+	Error            string                `json:"error"`
 }
 
 type SlackResponseMetadata map[string]interface{}
@@ -29,6 +29,7 @@ type SlackMember struct {
 	IsOwner   bool          `json:"is_owner"`
 	IsBot     bool          `json:"is_bot"`
 	IsAppUser bool          `json:"is_app_user"`
+	Deleted   bool          `json:"deleted"`
 	Profile   MemberProfile `json:"profile"`
 }
 
