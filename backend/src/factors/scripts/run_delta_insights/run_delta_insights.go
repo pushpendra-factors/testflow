@@ -130,6 +130,8 @@ func mainRunDeltaInsights() {
 
 	// init Config and DB.
 	var appName = "compute_delta_insights"
+	healthcheckPingID := C.HealthCheckWeeklyInsightsPingID
+	defer C.PingHealthcheckForPanic(appName, *envFlag, healthcheckPingID)
 
 	config := &C.Configuration{
 		AppName: appName,
@@ -256,9 +258,6 @@ func mainRunDeltaInsights() {
 	configs["skipWpi2"] = (*skipWpi2)
 	configs["runKpi"] = (*runKpi)
 
-	healthcheckPingID := C.HealthCheckWeeklyInsightsPingID
-	defer C.PingHealthcheckForPanic(appName, *envFlag, healthcheckPingID)
-
 	fileTypesList := strings.TrimSpace(*fileTypesFlag)
 	var fileTypes []int64
 	if fileTypesList == "*" {
@@ -282,7 +281,7 @@ func mainRunDeltaInsights() {
 	}
 
 	if *isWeeklyEnabled && *isMailerRun {
-		healthcheckPingID := C.HealthcheckMailWIPingID
+		healthcheckPingID = C.HealthcheckMailWIPingID
 		taskName := "WIWeeklyMailerV2"
 		configs["run_type"] = "mailer"
 		C.PingHealthcheckForStart(healthcheckPingID)

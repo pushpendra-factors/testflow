@@ -63,9 +63,9 @@ const Pricing = () => {
               <Tabs.TabPane tab='Upgrade' key={PRICING_PAGE_TABS.UPGRADE}>
                 <UpgradeTab />
               </Tabs.TabPane>
-              {/* <Tabs.TabPane tab='Invoices' key={PRICING_PAGE_TABS.INVOICES}>
+              <Tabs.TabPane tab='Invoices' key={PRICING_PAGE_TABS.INVOICES}>
                 <InvoiceTab />
-              </Tabs.TabPane> */}
+              </Tabs.TabPane>
             </>
           )}
         </Tabs>

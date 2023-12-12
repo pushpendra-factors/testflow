@@ -1594,7 +1594,7 @@ func GetFilteredProperties(eventName string, eventType string, properties *map[s
 	filteredProperties := make(map[string]interface{})
 	filterProps, eventExistsInMap := model.HOVER_EVENTS_NAME_PROPERTY_MAP[eventName]
 	if (*properties)[U.EP_IS_PAGE_VIEW] == true {
-		for _, prop := range model.PAGE_VIEW_HOVERPROPS_LIST {
+		for _, prop := range model.PAGEVIEW_EVENTPROPS {
 			if value, propExists := (*properties)[prop]; propExists {
 				filteredProperties[prop] = value
 			}

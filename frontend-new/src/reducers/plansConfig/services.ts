@@ -53,3 +53,29 @@ export const upgradePlan = async (
     return null;
   }
 };
+
+export const getInvoices = async (projectId: string) => {
+  try {
+    if (!projectId) {
+      throw new Error('Invalid parameters passed');
+    }
+    const url = `${host}projects/${projectId}/billing/invoices`;
+    return get(null, url);
+  } catch (error) {
+    logger.error(error);
+    return null;
+  }
+};
+
+export const downloadInvoice = async (projectId: string, invoiceId: string) => {
+  try {
+    if (!projectId || !invoiceId) {
+      throw new Error('Invalid parameters passed');
+    }
+    const url = `${host}projects/${projectId}/billing/invoice/download?invoice_id=${invoiceId}`;
+    return get(null, url);
+  } catch (error) {
+    logger.error(error);
+    return null;
+  }
+};

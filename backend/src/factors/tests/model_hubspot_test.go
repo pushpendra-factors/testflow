@@ -8570,3 +8570,93 @@ func TestHubspotDocumentsSyncTries(t *testing.T) {
 	}
 
 }
+
+func TestGetHubspotOwnerEmailFromOwnerId(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	jsonOwner := `{
+		"portalId": 62515,
+		"ownerId": 66,
+		"type": "PERSON",
+		"firstName": "Blog Api",
+		"lastName": "Test",
+		"email": "blogapitest@hubspot.com",
+		"createdAt": 1405605858898,
+		"updatedAt": 1502455466553,
+		"remoteList": [
+			{
+				"id": 29451,
+				"portalId": 62515,
+				"ownerId": 66,
+				"remoteId": "166656",
+				"remoteType": "HUBSPOT",
+				"active": true
+			}
+		],
+		"hasContactsAccess": false,
+		"activeUserId": 166656,
+		"userIdIncludingInactive": 166656,
+		"activeSalesforceId": null,
+		"isActive": true
+	}`
+
+	dealPropertiesWithOwnerJson := `{
+		"name": "hubspot_owner_id",
+		"label": "HubSpot Owner",
+		"description": "The owner of the deal",
+		"groupName": "dealinformation",
+		"type": "enumeration",
+		"fieldType": "select",
+		"options": [],
+		"formField": false,
+		"displayOrder": 6,
+		"readOnlyValue": false,
+		"readOnlyDefinition": true,
+		"hidden": false,
+		"mutableDefinitionNotDeletable": true,
+		"calculated": false,
+		"externalOptions": true,
+		"displayMode": "current_value",
+		"hubspotDefined": true,
+		"externalOptionsReferenceType": "OWNER"
+	}`
+
+	ownerRecordJson := postgres.Jsonb{json.RawMessage(jsonOwner)}
+	ownerRecord := &model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameOwner,
+		Value:     &ownerRecordJson,
+	}
+
+	status := store.GetStore().CreateHubspotDocument(project.ID, ownerRecord)
+	assert.Equal(t, http.StatusCreated, status)
+
+	dealPropertiesWithOwnerJsonb := postgres.Jsonb{json.RawMessage(dealPropertiesWithOwnerJson)}
+	dealPropertiesWithOwnerPropertyDetail := IntHubspot.PropertyDetail{}
+	err = U.DecodePostgresJsonbToStructType(&dealPropertiesWithOwnerJsonb, &dealPropertiesWithOwnerPropertyDetail)
+	assert.Nil(t, err)
+
+	dealPropertiesWithOwner := map[string][]IntHubspot.PropertyDetail{
+		model.HubspotDocumentTypeNameDeal: {dealPropertiesWithOwnerPropertyDetail},
+	}
+	failures := IntHubspot.SyncOwnerReferenceFields(project.ID, dealPropertiesWithOwner, time.Now().Unix())
+	assert.False(t, failures)
+
+	propertyDetails, errCode := store.GetStore().GetDisplayNameLabelsByProjectIdAndSource(project.ID, model.SmartCRMEventSourceHubspot)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, 1, len(propertyDetails))
+
+	assert.Equal(t, project.ID, propertyDetails[0].ProjectID)
+	assert.NotNil(t, propertyDetails[0].ID)
+	assert.Equal(t, model.SmartCRMEventSourceHubspot, propertyDetails[0].Source)
+	assert.Equal(t, "$hubspot_deal_hubspot_owner_id", propertyDetails[0].PropertyKey)
+	assert.LessOrEqual(t, propertyDetails[0].CreatedAt.UnixNano(), propertyDetails[0].UpdatedAt.UnixNano())
+	assert.Equal(t, "66", propertyDetails[0].Value)
+	assert.Equal(t, "Blog Api Test", propertyDetails[0].Label)
+
+	email, errCode, err := store.GetStore().GetHubspotOwnerEmailFromOwnerId(project.ID, "66")
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotEmpty(t, email)
+	assert.Equal(t, "blogapitest@hubspot.com", email)
+}

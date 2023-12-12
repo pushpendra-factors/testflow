@@ -1,8 +1,9 @@
 package v1
 
-import(
+import (
 	"encoding/json"
 	C "factors/config"
+	slack "factors/integration/slack"
 	mid "factors/middleware"
 	"factors/model/model"
 	"factors/model/store"
@@ -10,10 +11,11 @@ import(
 	"fmt"
 	"net/http"
 	"net/url"
-	slack "factors/integration/slack"
+
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
+
 type oauthState struct {
 	ProjectID int64   `json:"project_id"`
 	AgentUUID *string `json:"agent_uuid"`
@@ -48,7 +50,7 @@ func SlackAuthRedirectHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"redirectURL": redirectURL})
 }
 func GetSlackAuthorisationURL(clientID string, state string) string {
-	url := fmt.Sprintf(`https://slack.com/oauth/v2/authorize?client_id=%s&scope=channels:read,chat:write,chat:write.public,im:read&user_scope=channels:read,chat:write,groups:read,mpim:read&state=%s`, clientID, state)
+	url := fmt.Sprintf(`https://slack.com/oauth/v2/authorize?client_id=%s&scope=channels:read,chat:write,chat:write.public,im:read,users:read,users:read.email&user_scope=channels:read,chat:write,groups:read,mpim:read,users:read,users:read.email&state=%s`, clientID, state)
 	return url
 }
 func SlackCallbackHandler(c *gin.Context) {
@@ -229,4 +231,29 @@ func DeleteSlackIntegrationHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"success": "Slack integration deleted successfully"})
+}
+
+func GetSlackUsersListHandler(c *gin.Context) {
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	if projectID == 0 || loggedInAgentUUID == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid project id or agent id"})
+		return
+	}
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "agent_id": loggedInAgentUUID})
+
+	members, errCode, err := slack.GetSlackUsersList(projectID, loggedInAgentUUID)
+	if err != nil || errCode != http.StatusFound {
+		if errCode == http.StatusNotFound {
+			logCtx.WithError(err).Error("no users found")
+			c.AbortWithStatusJSON(errCode, gin.H{"error": "no users found"})
+			return
+		}
+		logCtx.WithError(err).Error("failed to fetch slack users list")
+		c.AbortWithStatusJSON(errCode, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, members)
 }

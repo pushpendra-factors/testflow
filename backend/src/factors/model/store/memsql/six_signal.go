@@ -257,6 +257,7 @@ func (store *MemSQL) RunSixSignalPageViewQuery(projectId int64, query model.SixS
 
 }
 
+// buildSixSignalPageViewQuery builds the SQL Query for the Page View Filter on the Visitor identification Page .
 func (store *MemSQL) buildSixSignalPageViewQuery(projectId int64, query model.SixSignalQuery) (string, []interface{}) {
 	logFields := log.Fields{
 		"project_id": projectId,
@@ -289,6 +290,7 @@ func (store *MemSQL) buildSixSignalPageViewQuery(projectId int64, query model.Si
 	return qStmt, qParams
 }
 
+// ExecSixSignalPageViewQuery executes the SQL Query statement with the respective params .
 func (store *MemSQL) ExecSixSignalPageViewQuery(stmt string, params []interface{}) ([]string, error, string) {
 	logFields := log.Fields{
 		"stmt":   stmt,
@@ -325,7 +327,7 @@ func (store *MemSQL) ExecSixSignalPageViewQuery(stmt string, params []interface{
 	return companyList, nil, reqID
 }
 
-// buildSixSignalErrorResult takes the failure msg and wraps it into a model.SixSignalQueryResult object
+// buildSixSignalErrorResult takes the failure msg and wraps it into a model.SixSignalQueryResult object .
 func buildSixSignalErrorResult(errMsg string) *model.SixSignalQueryResult {
 	logFields := log.Fields{
 		"err_msg": errMsg,
@@ -341,6 +343,7 @@ func buildSixSignalErrorResult(errMsg string) *model.SixSignalQueryResult {
 	return errorResult
 }
 
+// validateSixSignalQueryProps validates the props of the query .
 func validateSixSignalQueryProps(query *model.SixSignalQuery) (string, bool) {
 	logFields := log.Fields{
 		"query": query,
@@ -354,7 +357,7 @@ func validateSixSignalQueryProps(query *model.SixSignalQuery) (string, bool) {
 	return "", false
 }
 
-// SendSixSignalReportViaEmail send email to the given list of emailIds along with info provided in the request Payload
+// SendSixSignalReportViaEmail send email to the given list of emailIds along with info provided in the request Payload .
 func SendSixSignalReportViaEmail(requestPayload model.SixSignalEmailAndMessage) (string, []string) {
 
 	fromDate := U.GetDateFromTimestampAndTimezone(requestPayload.From, requestPayload.Timezone)

@@ -68,6 +68,8 @@ type EventTriggerAlertConfig struct {
 	AlertLimit          int64           `json:"alert_limit"`
 	Slack               bool            `json:"slack"`
 	SlackChannels       *postgres.Jsonb `json:"slack_channels"`
+	SlackMentions       *postgres.Jsonb `json:"slack_mentions"`
+	SlackFieldsTag      []string        `json:"slack_fields_tag"`
 	IsHyperlinkDisabled bool            `json:"is_hyperlink_disabled"`
 	Webhook             bool            `json:"webhook"`
 	Secret              string          `json:"secret"`
@@ -88,7 +90,8 @@ type AlertInfo struct {
 }
 
 type CachedEventTriggerAlert struct {
-	Message EventTriggerAlertMessage
+	Message   EventTriggerAlertMessage
+	FieldTags map[string]string
 }
 
 type EventTriggerAlertMessage struct {
@@ -118,26 +121,32 @@ type LastFailDetails struct {
 	Details  []string  `json:"details"`
 }
 
+var ValidAlertTagsForHubspotOwners = map[string]string{
+	"#contact_owner": "$hubspot_contact_contact_owner_fs_",
+	"#deal_owner":    "$hubspot_deal_hubspot_owner_id",
+	"#company_owner": "$hubspot_company_hubspot_owner_id",
+}
+
 var SlackErrorStates = map[string]string{
-	"channel_not_found": "Channel not found. Please check the channel is not archived.",
-	"is_archived": "The channel has been archived.",
+	"channel_not_found":      "Channel not found. Please check the channel is not archived.",
+	"is_archived":            "The channel has been archived.",
 	"message_limit_exceeded": "Members on this team are sending too many messages.",
-	"msg_too_long": "Message text is too long. Consider shortening it.",
-	"no_text": "No message text provided.",
-	"rate_limited": "Application has posted too many message. Try using more filters to prevent spamming.",
-	"too_many_attachments": "Too many attachments were provided with this message. A maximum of 100 attachments are allowed on a message.",
-	"access_denied": "Access to a resource specified in the request is denied.",
-	"account_inactive": "Authentication token is for a deleted user or workspace when using a bot token. Please re-authenticate.",
-	"invalid_auth": "Authentication cannot be validated",
-	"missing_scope": "The token used is not granted the specific scope permissions required to complete this request.",
-	"token_expired": "Authentication token has expired",
-	"token_revoked": "Authentication token is for a deleted user or workspace or the app has been removed when using a user token.",
-	"request_timeout": "The method was called via a POST request, but the POST data was either missing or truncated.",
+	"msg_too_long":           "Message text is too long. Consider shortening it.",
+	"no_text":                "No message text provided.",
+	"rate_limited":           "Application has posted too many message. Try using more filters to prevent spamming.",
+	"too_many_attachments":   "Too many attachments were provided with this message. A maximum of 100 attachments are allowed on a message.",
+	"access_denied":          "Access to a resource specified in the request is denied.",
+	"account_inactive":       "Authentication token is for a deleted user or workspace when using a bot token. Please re-authenticate.",
+	"invalid_auth":           "Authentication cannot be validated",
+	"missing_scope":          "The token used is not granted the specific scope permissions required to complete this request.",
+	"token_expired":          "Authentication token has expired",
+	"token_revoked":          "Authentication token is for a deleted user or workspace or the app has been removed when using a user token.",
+	"request_timeout":        "The method was called via a POST request, but the POST data was either missing or truncated.",
 }
 
 var TeamsErrorStates = map[string]string{
-	"Unauthorized": "Please re-integrate teams.",
-	"Forbidden": "Please re-integrate teams with work account.",
+	"Unauthorized":      "Please re-integrate teams.",
+	"Forbidden":         "Please re-integrate teams with work account.",
 	"Too Many Requests": "Too many messages in a short while. Try refining the alerts filter",
 }
 

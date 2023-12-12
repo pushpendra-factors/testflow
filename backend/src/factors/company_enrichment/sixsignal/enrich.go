@@ -15,6 +15,14 @@ const API_6SIGNAL = "API_6Sense"
 type CustomerSixSignal struct {
 }
 
+/*
+Customer clearbit enrichment and metering flow:
+	1. IsEligible method checks for the eligibility creteria. If eligible,
+	2. Enrich method fetches the API Key and call the method to fill the company identification props.
+	3. FillSixSignalUserProperties fill the props on the basis of the API Key.
+*/
+
+// IsEligible checks the eligibilty of enrichment via customer sixsignal.
 func (ss *CustomerSixSignal) IsEligible(projectSettings *model.ProjectSetting) (bool, error) {
 
 	projectId := projectSettings.ProjectId
@@ -31,6 +39,7 @@ func (ss *CustomerSixSignal) IsEligible(projectSettings *model.ProjectSetting) (
 	return eligible, nil
 }
 
+// Enrich method fetches the customer sixsignal API Key and calls the method for enrichment via sixsignal.
 func (ss *CustomerSixSignal) Enrich(projectSettings *model.ProjectSetting,
 	userProperties *U.PropertiesMap, userId, clientIP string) {
 
@@ -41,6 +50,7 @@ func (ss *CustomerSixSignal) Enrich(projectSettings *model.ProjectSetting,
 	(*userProperties)[U.ENRICHMENT_SOURCE] = API_6SIGNAL
 }
 
+// FillSixSignalUserProperties checks if the cache exists, if not it executes the enrich method using goroutine.
 func FillSixSignalUserProperties(projectId int64, apiKey string, userProperties *U.PropertiesMap,
 	UserId, clientIP string) (string, int) {
 

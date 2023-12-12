@@ -411,6 +411,46 @@ func findTotalAndPartialSuccess(report SendReportLogCount) (bool, bool) {
 	return total == 0, partial > 0
 }
 
+func GetSlackIdForCorrespondingHubspotOwnerIds(projectID int64, agentID string, fieldTagsMap map[string]string) []string {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"agent_uuid": agentID,
+	}
+	logCtx := log.WithFields(logFields)
+
+	fieldTagsWithEmailId := make(map[string]string)
+
+	for tag, ownerId := range fieldTagsMap {
+		email, errCode, err := store.GetStore().GetHubspotOwnerEmailFromOwnerId(projectID, ownerId)
+		if errCode != http.StatusFound || err != nil || email == "" {
+			if err != nil {
+				logCtx.WithField("owner_id", ownerId).WithError(err).Error("fetch email from hubspot document failed")
+				continue
+			}
+			logCtx.WithField("owner_id", ownerId).Warn("No email available for owner_id")
+			continue
+		}
+		fieldTagsWithEmailId[tag] = email
+	}
+
+	// get slack users
+	slackUsersList, errCode, err := slack.GetSlackUsersList(projectID, agentID)
+	if err != nil || errCode != http.StatusFound || slackUsersList == nil {
+		logCtx.WithError(err).Error("failed to fetch slack users")
+		return nil
+	}
+
+	slackIdsToBeTagged := make([]string, 0)
+	for _, email := range fieldTagsWithEmailId {
+		for _, user := range slackUsersList {
+			if !user.Deleted && user.Profile.Email == email {
+				slackIdsToBeTagged = append(slackIdsToBeTagged, user.Id)
+			}
+		}
+	}
+	return slackIdsToBeTagged
+}
+
 /*
 SEND HELPER FOR EVENT TRIGGER ALERT
 
@@ -454,7 +494,6 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		return false, false, sendReport
 	}
 
-	msg := alert.Message
 	if sendTo == "RejectedQueue" {
 		rejectedQueue = true
 	}
@@ -473,7 +512,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		}
 		if isSlackIntergrated {
 			partialSlackSuccess, _, errMsg := sendSlackAlertForEventTriggerAlert(eta.ProjectID,
-				eta.SlackChannelAssociatedBy, msg, alertConfiguration.SlackChannels, alertConfiguration.IsHyperlinkDisabled)
+				eta.SlackChannelAssociatedBy, alert, alertConfiguration.SlackChannels, alertConfiguration.SlackMentions, alertConfiguration.IsHyperlinkDisabled)
 			if !partialSlackSuccess {
 				sendReport.SlackFail++
 				errMessage = append(errMessage, errMsg)
@@ -502,7 +541,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		}
 		if isTeamsIntergrated {
 			teamsSuccess, errMsg := sendTeamsAlertForEventTriggerAlert(eta.ProjectID,
-				eta.TeamsChannelAssociatedBy, msg, alertConfiguration.TeamsChannelsConfig)
+				eta.TeamsChannelAssociatedBy, alert.Message, alertConfiguration.TeamsChannelsConfig)
 			if !teamsSuccess {
 				sendReport.TeamsFail++
 				errMessage = append(errMessage, errMsg)
@@ -522,7 +561,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 	//		for alert is set for Webhook option
 	if (retry && strings.EqualFold(WEBHOOK, sendTo)) || (!retry && alertConfiguration.Webhook) {
 
-		response, err := webhook.DropWebhook(alertConfiguration.WebhookURL, alertConfiguration.Secret, msg)
+		response, err := webhook.DropWebhook(alertConfiguration.WebhookURL, alertConfiguration.Secret, alert.Message)
 		if err != nil {
 			logCtx.WithFields(log.Fields{"alert_id": alertID, "server_response": response}).
 				WithError(err).Error("Webhook failure")
@@ -674,11 +713,11 @@ func AddKeyToSortedSet(key *cacheRedis.Key, projectID int64, failPoint string, r
 }
 
 func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
-	msg model.EventTriggerAlertMessage, Schannels *postgres.Jsonb, isHyperlinkDisabled bool) (partialSuccess bool, channelSuccess []bool, errMessage string) {
+	alert *model.CachedEventTriggerAlert, Schannels, sMentions *postgres.Jsonb, isHyperlinkDisabled bool) (partialSuccess bool, channelSuccess []bool, errMessage string) {
 	logCtx := log.WithFields(log.Fields{
 		"project_id":  projectID,
 		"agent_uuid":  agentUUID,
-		"alert_title": msg.Title,
+		"alert_title": alert.Message.Title,
 	})
 	var slackChannels []model.SlackChannel
 	partialSuccess = false
@@ -691,15 +730,26 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
 		return false, channelSuccess, errMessage
 	}
 
+	slackMentions := make([]model.SlackMember, 0)
+	if err := U.DecodePostgresJsonbToStructType(sMentions, &slackMentions); err != nil {
+		errMsg := "failed to decode slack mentions"
+		errMessage += errMsg
+		logCtx.WithError(err).Error(errMsg)
+		return false, channelSuccess, errMessage
+	}
+
+	slackTags := GetSlackIdForCorrespondingHubspotOwnerIds(projectID, agentUUID, alert.FieldTags)
+
 	wetRun := true
 	if wetRun {
 		for _, channel := range slackChannels {
 			errMsg := "successfully sent"
 			var blockMessage string
+			slackMentionStr := getSlackMentionsStr(slackMentions, slackTags)
 			if !isHyperlinkDisabled {
-				blockMessage = getSlackMsgBlock(msg)
+				blockMessage = getSlackMsgBlock(alert.Message, slackMentionStr)
 			} else {
-				blockMessage = getSlackMsgBlockWithoutHyperlinks(msg)
+				blockMessage = getSlackMsgBlockWithoutHyperlinks(alert.Message, slackMentionStr)
 			}
 			status, err := slack.SendSlackAlert(projectID, blockMessage, agentUUID, channel)
 			partialSuccess = partialSuccess || status
@@ -720,7 +770,7 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
 		channelSuccess = append(channelSuccess, true)
 		errMessage = ""
 		log.Info("Dry run mode enabled. No alerts will be sent")
-		log.Info("*****", msg, projectID)
+		log.Info("*****", alert.Message, projectID)
 		return true, channelSuccess, errMessage
 	}
 
@@ -870,7 +920,18 @@ func getPropsBlockV2(propMap U.PropertiesMap) string {
 	return propBlock
 }
 
-func getSlackMsgBlock(msg model.EventTriggerAlertMessage) string {
+func getSlackMentionsStr(slackMentions []model.SlackMember, slackTags []string) string {
+	result := ""
+	for _, member := range slackMentions {
+		result += fmt.Sprintf("<@%s> ", member.Id)
+	}
+	for _, tag := range slackTags {
+		result += fmt.Sprintf("<@%s> ", tag)
+	}
+	return result
+}
+
+func getSlackMsgBlock(msg model.EventTriggerAlertMessage, slackMentions string) string {
 
 	propBlock := getPropsBlockV2(msg.MessageProperty)
 
@@ -883,7 +944,7 @@ func getSlackMsgBlock(msg model.EventTriggerAlertMessage) string {
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": "%s\n*%s*\n"
+				"text": "%s\n*%s*\n %s\n"
 			}
 		},
 		%s
@@ -894,7 +955,7 @@ func getSlackMsgBlock(msg model.EventTriggerAlertMessage) string {
 							"text": "*<https://app.factors.ai/profiles/people|Know More>*"
 						}
 		}
-	]`, title, message, propBlock)
+	]`, title, message, slackMentions, propBlock)
 
 	return mainBlock
 }
@@ -978,7 +1039,7 @@ func getPropsBlockV2WithoutHyperlinks(propMap U.PropertiesMap) string {
 	return propBlock
 }
 
-func getSlackMsgBlockWithoutHyperlinks(msg model.EventTriggerAlertMessage) string {
+func getSlackMsgBlockWithoutHyperlinks(msg model.EventTriggerAlertMessage, slackMentions string) string {
 
 	propBlock := getPropsBlockV2WithoutHyperlinks(msg.MessageProperty)
 
@@ -991,7 +1052,7 @@ func getSlackMsgBlockWithoutHyperlinks(msg model.EventTriggerAlertMessage) strin
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": "%s\n*%s*\n"
+				"text": "%s\n*%s*%s\n"
 			}
 		},
 		%s
@@ -1002,7 +1063,7 @@ func getSlackMsgBlockWithoutHyperlinks(msg model.EventTriggerAlertMessage) strin
 							"text": "*<https://app.factors.ai/profiles/people|Know More>*"
 						}
 		}
-	]`, title, message, propBlock)
+	]`, title, message, slackMentions, propBlock)
 
 	return mainBlock
 }

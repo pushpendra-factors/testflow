@@ -15,6 +15,7 @@ import {
 } from '../../Views/CoreQuery/utils';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 import { operatorMap, reverseOperatorMap } from 'Utils/operatorMapping';
+import { INITIAL_USER_PROFILES_FILTERS_STATE } from './AccountProfiles/accountProfiles.constants';
 
 export const granularityOptions = [
   'Timestamp',
@@ -51,7 +52,11 @@ export const groups = {
   Monthly: (item) =>
     MomentTz(item.timestamp * 1000)
       .startOf('month')
-      .format('MMM YYYY')
+      .format('MMM YYYY'),
+  Timeline: (item) =>
+    MomentTz(item.timestamp * 1000)
+      .startOf('day')
+      .format(' DD MMM YYYY ddd')
 };
 
 export const hoverEvents = [
@@ -76,6 +81,31 @@ export const hoverEvents = [
   '$g2_reference',
   '$g2_deal'
 ];
+
+export const hoverEventsColumnProp = {
+  $hubspot_contact_list: '$hubspot_contact_list_list_name',
+  $hubspot_contact_created: '$hubspot_contact_email',
+  $session: '$channel',
+  $form_submitted: '$page_title',
+  $offline_touch_point: '$channel',
+  $sf_campaign_member_created: '$salesforce_campaign_name',
+  $sf_campaign_member_updated: '$salesforce_campaign_name',
+  $hubspot_form_submission: '$hubspot_form_submission_title',
+  $hubspot_engagement_email: '$hubspot_engagement_subject',
+  $hubspot_engagement_meeting_created: '$hubspot_engagement_title',
+  $hubspot_engagement_call_created: '',
+  sf_task_created: '$salesforce_task_subject',
+  $sf_event_created: '$salesforce_event_subject',
+  $g2_sponsored: '$page_title',
+  $g2_product_profile: '$page_title',
+  $g2_alternative: '$page_title',
+  $g2_pricing: '$page_title',
+  $g2_category: '$page_title',
+  $g2_comparison: '$page_title',
+  $g2_report: '$page_title',
+  $g2_reference: '$page_title',
+  $g2_deal: '$page_title'
+};
 
 export const TimelineHoverPropDisplayNames = {
   $timestamp: 'Date and Time',
@@ -103,13 +133,17 @@ export const GroupDisplayNames = {
 export const IsDomainGroup = (source) =>
   source === GROUP_NAME_DOMAINS || source === 'All';
 
-export const getFiltersRequestPayload = ({ selectedFilters, table_props }) => {
+export const getFiltersRequestPayload = ({
+  selectedFilters,
+  table_props,
+  caller = 'account_profiles'
+}) => {
   const { eventsList, eventProp, filters, account } = selectedFilters;
 
   const queryOptions = {
     group_analysis: account[1],
-    source: account[1],
-    caller: 'account_profiles',
+    source: caller === 'account_profiles' ? account[1] : 'All',
+    caller,
     table_props,
     globalFilters: filters,
     date_range: {}
@@ -220,6 +254,22 @@ export const eventsFormattedForGranularity = (
   return output;
 };
 
+export const eventsGroupedByGranularity = (events, granularity) => {
+  const groupedEvents = events.reduce((result, item) => {
+    const timestampKey = groups[granularity](item);
+
+    if (!result[timestampKey]) {
+      result[timestampKey] = [];
+    }
+
+    result[timestampKey].push(item);
+
+    return result;
+  }, {});
+
+  return groupedEvents;
+};
+
 export const toggleCellCollapse = (
   formattedData,
   timestamp,
@@ -271,23 +321,32 @@ export const getPropType = (propsList, searchProp) => {
 };
 
 export const propValueFormat = (searchKey, value, type) => {
+  const isDate = searchKey?.toLowerCase()?.includes('date');
+  const isNumDuration = searchKey?.toLowerCase()?.includes('time');
+  const isCatDuration = searchKey?.endsWith('time');
+  const isDurationMilliseconds = searchKey?.includes('durationmilliseconds');
+  const isTimestamp = searchKey?.includes('timestamp');
+
   switch (type) {
     case 'datetime':
-      if (searchKey?.toLowerCase()?.includes('date'))
-        return MomentTz(value * 1000).format('DD MMM YYYY');
-      else return MomentTz(value * 1000).format('DD MMM YYYY, hh:mm A zz');
+      return isDate
+        ? MomentTz(value * 1000).format('DD MMM YYYY')
+        : MomentTz(value * 1000).format('DD MMM YYYY, hh:mm A zz');
+
     case 'numerical':
-      if (searchKey?.toLowerCase()?.includes('time'))
-        return formatDurationIntoString(parseInt(value));
-      else if (searchKey?.includes('durationmilliseconds'))
-        return formatDurationIntoString(parseInt(value / 1000));
-      else return parseInt(value);
+      return isNumDuration
+        ? formatDurationIntoString(parseInt(value))
+        : isDurationMilliseconds
+        ? formatDurationIntoString(parseInt(value / 1000))
+        : parseInt(value);
+
     case 'categorical':
-      if (searchKey?.includes('timestamp'))
-        return MomentTz(value * 1000).format('DD MMM YYYY, hh:mm A zz');
-      else if (searchKey?.endsWith('time'))
-        return formatDurationIntoString(parseInt(value));
-      else return value;
+      return isTimestamp
+        ? MomentTz(value * 1000).format('DD MMM YYYY, hh:mm A zz')
+        : isCatDuration
+        ? formatDurationIntoString(parseInt(value))
+        : value;
+
     default:
       return value;
   }
@@ -345,35 +404,6 @@ export const getIconForCategory = (category) => {
     return 'globe';
   }
   return 'events_blue';
-};
-
-export const convertSVGtoURL = (svg = '') => {
-  // svg needs to be passed with backticks
-  const escapeRegExp = (str) => {
-    return str.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, '\\$1');
-  };
-
-  const replaceAll = (str, find, replace) => {
-    return str.replace(new RegExp(escapeRegExp(find), 'g'), replace);
-  };
-
-  var encoded = svg.replace(/\s+/g, ' ');
-  encoded = replaceAll(encoded, '%', '%25');
-  encoded = replaceAll(encoded, '> <', '><');
-  encoded = replaceAll(encoded, '; }', ';}');
-  encoded = replaceAll(encoded, '<', '%3c');
-  encoded = replaceAll(encoded, '>', '%3e');
-  encoded = replaceAll(encoded, '"', "'");
-  encoded = replaceAll(encoded, '#', '%23');
-  encoded = replaceAll(encoded, '{', '%7b');
-  encoded = replaceAll(encoded, '}', '%7d');
-  encoded = replaceAll(encoded, '|', '%7c');
-  encoded = replaceAll(encoded, '^', '%5e');
-  encoded = replaceAll(encoded, '`', '%60');
-  encoded = replaceAll(encoded, '@', '%40');
-
-  var uri = 'url("data:image/svg+xml;charset=UTF-8,' + encoded + '")';
-  return uri;
 };
 
 export const DEFAULT_TIMELINE_CONFIG = {
@@ -599,7 +629,11 @@ export const transformWeightConfigForQuery = (config) => {
   return output;
 };
 
-export const getSelectedFiltersFromQuery = ({ query, groupsList }) => {
+export const getSelectedFiltersFromQuery = ({
+  query,
+  groupsList,
+  caller = 'account_profiles'
+}) => {
   const eventProp =
     reverse_user_types[query.ec] != null
       ? reverse_user_types[query.ec]
@@ -610,7 +644,10 @@ export const getSelectedFiltersFromQuery = ({ query, groupsList }) => {
     eventProp,
     filters: filters.globalFilters,
     eventsList: filters.events,
-    account: groupsList.find((g) => g[1] === grpa)
+    account:
+      caller === 'account_profiles'
+        ? groupsList.find((g) => g[1] === grpa)
+        : INITIAL_USER_PROFILES_FILTERS_STATE.account
   };
   return result;
 };

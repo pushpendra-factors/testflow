@@ -1949,3 +1949,41 @@ func (store *MemSQL) CreateOrUpdateGroupPropertiesBySource(projectID int64, grou
 
 	return userID, nil
 }
+
+func(store *MemSQL) GetHubspotOwnerEmailFromOwnerId(projectID int64, ownerID string) (string, int, error) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"owner_id": ownerID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+
+	if projectID == 0 || ownerID == "" {
+		logCtx.Error("invalid parameters")
+		return "", http.StatusBadRequest,fmt.Errorf("invalid parameters")
+	}
+
+	var ownerDocument model.HubspotDocument 
+	db := C.GetServices().Db
+	err := db.Where("project_id = ?", projectID).
+	Where("type = ?", model.HubspotDocumentTypeOwner).
+	Where("id = ?", ownerID).Find(&ownerDocument).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return "", http.StatusNotFound, err
+		}
+		logCtx.WithError(err).Error("failed to fetch hubpost_document for owner")
+		return "", http.StatusInternalServerError, err
+	}
+
+	doc, err := U.DecodePostgresJsonb(ownerDocument.Value)
+	if err != nil {
+		logCtx.WithError(err).Error("failed to decode value field of hubspot_document to map")
+		return "", http.StatusInternalServerError, err
+	}
+	
+	email := U.GetPropertyValueAsString((*doc)["email"])
+
+	return email, http.StatusFound, nil
+}

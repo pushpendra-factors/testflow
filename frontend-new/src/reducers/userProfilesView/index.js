@@ -3,7 +3,10 @@ import {
   SET_TIMELINE_PAYLOAD,
   SET_PROFILES_ACTIVE_SEGMENT,
   UPDATE_TIMELINE_PAYLOAD,
-  SET_PROFILE_SEGMENT_MODAL
+  SET_PROFILE_SEGMENT_MODAL,
+  SET_PROFILE_FILTERS_DIRTY,
+  ENABLE_PROFILE_NEW_SEGMENT_MODE,
+  DISABLE_PROFILE_NEW_SEGMENT_MODE,
 } from './types';
 
 const INITIAL_ACTIVE_SEGMENT = {};
@@ -12,7 +15,9 @@ const INITIAL_TIMELINE_PAYLOAD = { source: 'web', filters: [], segment_id: '' };
 const initialState = {
   timelinePayload: INITIAL_TIMELINE_PAYLOAD,
   activeSegment: INITIAL_ACTIVE_SEGMENT,
-  showSegmentModal: false
+  showSegmentModal: false,
+  newSegmentMode: false,
+  filtersDirty: false
 };
 
 export default function (state = initialState, action) {
@@ -21,11 +26,13 @@ export default function (state = initialState, action) {
       return {
         ...state,
         timelinePayload: action.payload,
+        newSegmentMode: false
       };
     case SET_PROFILES_ACTIVE_SEGMENT:
       return {
         ...state,
-        activeSegment: action.payload
+        activeSegment: action.payload,
+        newSegmentMode: false
       };
     case UPDATE_TIMELINE_PAYLOAD:
       return {
@@ -44,6 +51,24 @@ export default function (state = initialState, action) {
     case SET_ACTIVE_PROJECT: {
       return {
         ...initialState
+      };
+    }
+    case SET_PROFILE_FILTERS_DIRTY: {
+      return {
+        ...state,
+        filtersDirty: action.payload
+      };
+    }
+    case ENABLE_PROFILE_NEW_SEGMENT_MODE: {
+      return {
+        ...state,
+        newSegmentMode: true
+      };
+    }
+    case DISABLE_PROFILE_NEW_SEGMENT_MODE: {
+      return {
+        ...state,
+        newSegmentMode: false
       };
     }
     default:

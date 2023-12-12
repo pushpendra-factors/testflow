@@ -1,5 +1,4 @@
 import React from 'react';
-import { ReverseProfileMapper } from 'Utils/constants';
 import {
   EngagementTag,
   formatSegmentsObjToGroupSelectObj,
@@ -14,8 +13,6 @@ import { Text } from 'Components/factorsComponents';
 import MomentTz from 'Components/MomentTz';
 import isEqual from 'lodash/isEqual';
 import { PropTextFormat } from 'Utils/dataFormatter';
-import LazyLoad from 'react-lazyload';
-import { Skeleton } from 'antd';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 
 const placeholderIcon = '/assets/avatar/company-placeholder.png';
@@ -28,7 +25,7 @@ export const defaultSegmentsList = [
   'Visited G2'
 ];
 
-const reorderSegments = (segments) => {
+const reorderDefaultSegmentsToTop = (segments) => {
   segments?.[0]?.values.sort((a, b) => {
     const aIsMatch = defaultSegmentsList.includes(a?.[0]);
     const bIsMatch = defaultSegmentsList.includes(b?.[0]);
@@ -53,14 +50,14 @@ export const getGroupList = (groupOptions) => {
   return groups;
 };
 
-export const generateSegmentsList = ({ accountPayload, segments }) => {
+export const generateSegmentsList = ({ segments }) => {
   const segmentsList = [];
 
   Object.entries(segments)
     .filter((segment) => segment[0] === GROUP_NAME_DOMAINS)
     .map(([group, vals]) => formatSegmentsObjToGroupSelectObj(group, vals))
     .forEach((obj) => segmentsList.push(obj));
-  return reorderSegments(segmentsList);
+  return reorderDefaultSegmentsToTop(segmentsList);
 };
 
 const getTablePropColumn = ({ prop, groupPropNames, listProperties }) => {
@@ -98,8 +95,6 @@ const getTablePropColumn = ({ prop, groupPropNames, listProperties }) => {
 };
 
 export const getColumns = ({
-  accounts,
-  source,
   isScoringLocked,
   displayTableProps,
   groupPropNames,

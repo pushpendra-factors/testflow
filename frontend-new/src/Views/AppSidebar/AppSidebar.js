@@ -20,6 +20,8 @@ import {
 import { checkMatchPath } from './appSidebar.helpers';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 import { IsDomainGroup } from 'Components/Profile/utils';
+import { selectTimelinePayload } from 'Reducers/userProfilesView/selectors';
+import { setTimelinePayloadAction } from 'Reducers/userProfilesView/actions';
 
 const AppSidebar = () => {
   const { Sider } = Layout;
@@ -30,6 +32,7 @@ const AppSidebar = () => {
   const activeAccountPayload = useSelector((state) =>
     selectAccountPayload(state)
   );
+  const timelinePayload = useSelector((state) => selectTimelinePayload(state));
 
   const { newSegmentMode, activeSegment } = useSelector(
     (state) => state.accountProfilesView
@@ -37,6 +40,15 @@ const AppSidebar = () => {
   const isAllAccountsSelected =
     IsDomainGroup(activeAccountPayload.source) &&
     Boolean(activeSegment?.id) === false;
+
+  const {
+    newSegmentMode: profileNewSegmentMode,
+    activeSegment: profileActiveSegment
+  } = useSelector((state) => state.userProfilesView);
+
+  const isAllUsersSelected =
+    timelinePayload.source === 'All' &&
+    Boolean(profileActiveSegment?.name) === false;
 
   const isSidebarCollapsed = useSelector((state) =>
     selectSidebarCollapsedState(state)
@@ -69,6 +81,18 @@ const AppSidebar = () => {
     }
   };
 
+  const selectAllUsers = () => {
+    if (isAllUsersSelected === false) {
+      dispatch(
+        setTimelinePayloadAction({
+          source: 'All',
+          filters: [],
+          segment_id: ''
+        })
+      );
+    }
+  };
+
   return (
     <Sider
       className={cx(styles['app-sidebar'], 'fixed h-full', {
@@ -87,16 +111,25 @@ const AppSidebar = () => {
             className={cx('flex justify-between items-center', {
               'pb-5 border-b border-gray-300':
                 checkMatchPath(pathname, PathUrls.ProfileAccounts) ||
-                checkMatchPath(pathname, PathUrls.ProfileAccountsSegmentsURL)
+                checkMatchPath(pathname, PathUrls.ProfileAccountsSegmentsURL) ||
+                checkMatchPath(pathname, PathUrls.ProfilePeople)
             })}
           >
             <ControlledComponent
               controller={
                 !checkMatchPath(pathname, PathUrls.ProfileAccounts) &&
-                !checkMatchPath(pathname, PathUrls.ProfileAccountsSegmentsURL)
+                !checkMatchPath(
+                  pathname,
+                  PathUrls.ProfileAccountsSegmentsURL
+                ) &&
+                !checkMatchPath(pathname, PathUrls.ProfilePeople)
               }
             >
-              <div className='flex col-gap-2 items-center px-3'>
+              <div
+                className={cx('flex col-gap-2 items-center px-3', {
+                  'pl-6': sidebarTitleConfig.title === 'Dashboards'
+                })}
+              >
                 <SVG
                   color={sidebarTitleConfig.iconColor}
                   name={sidebarTitleConfig.icon}
@@ -113,21 +146,46 @@ const AppSidebar = () => {
             <ControlledComponent
               controller={
                 checkMatchPath(pathname, PathUrls.ProfileAccounts) ||
-                checkMatchPath(pathname, PathUrls.ProfileAccountsSegmentsURL)
+                checkMatchPath(pathname, PathUrls.ProfileAccountsSegmentsURL) ||
+                checkMatchPath(pathname, PathUrls.ProfilePeople)
               }
             >
-              <div className='w-11/12 pl-4'>
-                <SidebarMenuItem
-                  isActive={
-                    isAllAccountsSelected === true && newSegmentMode === false
-                  }
-                  text='All Accounts'
-                  onClick={selectAllAccounts}
-                  icon='regularBuilding'
-                  iconColor={'#F5222D'}
-                  iconSize={20}
-                />
-              </div>
+              <ControlledComponent
+                controller={
+                  checkMatchPath(pathname, PathUrls.ProfileAccounts) ||
+                  checkMatchPath(pathname, PathUrls.ProfileAccountsSegmentsURL)
+                }
+              >
+                <div className='w-11/12 pl-4'>
+                  <SidebarMenuItem
+                    isActive={
+                      isAllAccountsSelected === true && newSegmentMode === false
+                    }
+                    text={'All Accounts'}
+                    onClick={selectAllAccounts}
+                    icon='regularBuilding'
+                    iconColor={'#F5222D'}
+                    iconSize={20}
+                  />
+                </div>
+              </ControlledComponent>
+              <ControlledComponent
+                controller={checkMatchPath(pathname, PathUrls.ProfilePeople)}
+              >
+                <div className='w-11/12 pl-4'>
+                  <SidebarMenuItem
+                    isActive={
+                      isAllUsersSelected === true &&
+                      profileNewSegmentMode === false
+                    }
+                    text={'All People'}
+                    onClick={selectAllUsers}
+                    icon='userGroup'
+                    iconColor={'#FA541C'}
+                    iconSize={20}
+                  />
+                </div>
+              </ControlledComponent>
             </ControlledComponent>
             <div
               role='button'

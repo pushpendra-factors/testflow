@@ -88,7 +88,7 @@ export const formatAccountTimeline = (data, config) => {
   return {
     name: data.name,
     host: data.host_name,
-    left_pane_props: data.left_pane_props,
+    leftpane_props: data.leftpane_props,
     overview: data.overview,
     account_users: [...non_anonymous_users, ...anonymous_user, ...intent_user],
     account_events
@@ -112,7 +112,7 @@ export const formatUsersTimeline = (data, config) => {
   const returnData = {
     title: data.is_anonymous ? 'New User' : data.name || data.user_id,
     subtitle: data.company || data.user_id,
-    left_pane_props: data.left_pane_props,
+    leftpane_props: data.leftpane_props,
     account: data.account,
     user_activities: []
   };

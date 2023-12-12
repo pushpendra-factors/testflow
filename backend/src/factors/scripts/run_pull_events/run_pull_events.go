@@ -44,7 +44,9 @@ func main() {
 		"Optional: file type. A comma separated list of file types and supports '*' for all files. ex: 1,2,6,9") //refer to pull.FileType map
 	projectIdFlag := flag.String("project_ids", "",
 		"Optional: Project Id. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
-	splitRangeProjectIdFlag := flag.String("split_range_project_ids", "",
+	eventSplitRangeProjectIdFlag := flag.String("event_split_project_ids", "",
+		"Optional: Project Id. A comma separated list of project Ids where query range is spli nto multiple parts and supports '*' for all projects. ex: 1,2,6,9")
+	userSplitRangeProjectIdFlag := flag.String("user_split_project_ids", "",
 		"Optional: Project Id. A comma separated list of project Ids where query range is spli nto multiple parts and supports '*' for all projects. ex: 1,2,6,9")
 	noOfSplits := flag.Int("number_splits", 1, "number of parts to split the range into for db query")
 	lookback := flag.Int("lookback", 30, "lookback_for_delta lookup")
@@ -113,25 +115,38 @@ func main() {
 		fileTypesMap[i] = true
 	}
 
-	projectIdsArray := make([]int64, 0)
+	eventsProjectIdsArray := make([]int64, 0)
+	allDataProjectIdsArray := make([]int64, 0)
 	{
 		projectIdsToRun := make(map[int64]bool)
 		if *projectsFromDB {
-			wi_projects, _ := store.GetStore().GetAllProjectsWithFeatureEnabled(M.FEATURE_WEEKLY_INSIGHTS, false)
-			explain_projects, _ := store.GetStore().GetAllProjectsWithFeatureEnabled(M.FEATURE_EXPLAIN, false)
-			path_analysis_projects, _ := store.GetStore().GetAllProjectsWithFeatureEnabled(M.FEATURE_PATH_ANALYSIS, false)
-			acc_scoring_projects, _ := store.GetStore().GetAllProjectsWithFeatureEnabled(M.FEATURE_ACCOUNT_SCORING, false)
-			for _, id := range wi_projects {
-				projectIdsToRun[id] = true
+			if path_analysis_projects, err := store.GetStore().GetAllProjectsWithFeatureEnabled(M.FEATURE_PATH_ANALYSIS, false); err != nil {
+				log.WithError(err).Fatal("failed to get path analysis enabled projects")
+			} else {
+				for _, id := range path_analysis_projects {
+					projectIdsToRun[id] = false
+				}
 			}
-			for _, id := range explain_projects {
-				projectIdsToRun[id] = true
+			if explain_projects, err := store.GetStore().GetAllProjectsWithFeatureEnabled(M.FEATURE_EXPLAIN, false); err != nil {
+				log.WithError(err).Fatal("failed to get explain enabled projects")
+			} else {
+				for _, id := range explain_projects {
+					projectIdsToRun[id] = false
+				}
 			}
-			for _, id := range path_analysis_projects {
-				projectIdsToRun[id] = true
+			if acc_scoring_projects, err := store.GetStore().GetAllProjectsWithFeatureEnabled(M.FEATURE_ACCOUNT_SCORING, false); err != nil {
+				log.WithError(err).Fatal("failed to get account scoring enabled projects")
+			} else {
+				for _, id := range acc_scoring_projects {
+					projectIdsToRun[id] = false
+				}
 			}
-			for _, id := range acc_scoring_projects {
-				projectIdsToRun[id] = true
+			if wi_projects, err := store.GetStore().GetAllProjectsWithFeatureEnabled(M.FEATURE_WEEKLY_INSIGHTS, false); err != nil {
+				log.WithError(err).Fatal("failed to get weekly insights enabled projects")
+			} else {
+				for _, id := range wi_projects {
+					projectIdsToRun[id] = true
+				}
 			}
 		}
 		{
@@ -149,28 +164,39 @@ func main() {
 				projectIdsToRun[projectId] = true
 			}
 		}
-		for projectId := range projectIdsToRun {
-			projectIdsArray = append(projectIdsArray, projectId)
+		for projectId, yesData := range projectIdsToRun {
+			eventsProjectIdsArray = append(eventsProjectIdsArray, projectId)
+			if yesData {
+				allDataProjectIdsArray = append(allDataProjectIdsArray, projectId)
+			}
 		}
 	}
 
-	splitRangeProjectIds := make([]int64, 0)
+	eventSplitRangeProjectIds := make([]int64, 0)
 	{
-		splitRangeProjectIdsMap := make(map[int64]bool, 0)
-		var allProjects bool
-		allProjects, splitRangeProjectIdsMap, _ = C.GetProjectsFromListWithAllProjectSupport(*splitRangeProjectIdFlag, "")
+		allProjects, splitRangeProjectIdsMap, _ := C.GetProjectsFromListWithAllProjectSupport(*eventSplitRangeProjectIdFlag, "")
 		if allProjects {
-			projectIDs, errCode := store.GetStore().GetAllProjectIDs()
-			if errCode != http.StatusFound {
-				log.Fatal("Failed to get all projects and project_ids set to '*'.")
-			}
-			for _, projectID := range projectIDs {
+			for _, projectID := range eventsProjectIdsArray {
 				splitRangeProjectIdsMap[projectID] = true
 			}
 		}
 
 		for projectId := range splitRangeProjectIdsMap {
-			splitRangeProjectIds = append(splitRangeProjectIds, projectId)
+			eventSplitRangeProjectIds = append(eventSplitRangeProjectIds, projectId)
+		}
+	}
+
+	userSplitRangeProjectIds := make([]int64, 0)
+	{
+		allProjects, splitRangeProjectIdsMap, _ := C.GetProjectsFromListWithAllProjectSupport(*userSplitRangeProjectIdFlag, "")
+		if allProjects {
+			for _, projectID := range eventsProjectIdsArray {
+				splitRangeProjectIdsMap[projectID] = true
+			}
+		}
+
+		for projectId := range splitRangeProjectIdsMap {
+			userSplitRangeProjectIds = append(userSplitRangeProjectIds, projectId)
 		}
 	}
 
@@ -188,7 +214,8 @@ func main() {
 	configs["cloudManager"] = &archiveCloudManager
 
 	configs["hardPull"] = hardPull
-	configs["splitRangeProjectIds"] = splitRangeProjectIds
+	configs["eventSplitRangeProjectIds"] = eventSplitRangeProjectIds
+	configs["userSplitRangeProjectIds"] = userSplitRangeProjectIds
 	configs["noOfSplits"] = *noOfSplits
 
 	var statusEvents map[string]interface{}
@@ -197,7 +224,7 @@ func main() {
 		fileTypesMapOnlyEvents[1] = true
 		configs["fileTypes"] = fileTypesMapOnlyEvents
 		C.PingHealthcheckForStart(healthcheckPingID)
-		statusEvents = taskWrapper.TaskFuncWithProjectId("PullEventsDaily", *lookback, projectIdsArray, T.PullAllDataV2, configs)
+		statusEvents = taskWrapper.TaskFuncWithProjectId("PullEventsDaily", *lookback, eventsProjectIdsArray, T.PullAllDataV2, configs)
 		log.Info("PullEventsDaily: ", statusEvents)
 		C.PingHealthCheckBasedOnStatus(statusEvents, healthcheckPingID)
 	}
@@ -205,7 +232,7 @@ func main() {
 	if len(fileTypesMap) != 0 {
 		configs["fileTypes"] = fileTypesMap
 		C.PingHealthcheckForStart(healthcheckPingID)
-		status := taskWrapper.TaskFuncWithProjectId("PullDataDaily", *lookback, projectIdsArray, T.PullAllDataV2, configs)
+		status := taskWrapper.TaskFuncWithProjectId("PullDataDaily", *lookback, allDataProjectIdsArray, T.PullAllDataV2, configs)
 		log.Info("PullDataDaily: ", status)
 		log.Info("PullEventsDaily: ", statusEvents)
 		C.PingHealthCheckBasedOnStatus(status, healthcheckPingID)

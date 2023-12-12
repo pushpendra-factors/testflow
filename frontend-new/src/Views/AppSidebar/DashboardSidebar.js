@@ -30,9 +30,8 @@ const DashboardItem = ({ dashboard }) => {
 
   const handleActiveDashboardChange = useCallback(() => {
     const selectedDashboard = dashboards.find((d) => d.id === dashboard.id);
-    history.replace(PathUrls.Dashboard + '/' + selectedDashboard.id)
+    history.replace(PathUrls.Dashboard + '/' + selectedDashboard.id);
     dispatch(changeActiveDashboard(selectedDashboard));
-    
   }, [dashboard, dashboards, dispatch]);
 
   const isActive =
@@ -68,10 +67,10 @@ const DashboardSidebar = () => {
       <div role='button' onClick={handleDraftsClick} className='px-4 w-full'>
         <div
           className={cx(
-            'flex col-gap-1 cursor-pointer py-2 rounded-md items-center w-full',
+            'flex col-gap-1 cursor-pointer py-2 rounded-md items-center w-full px-2',
+            styles['draft-title'],
             {
-              [styles['item-active']]: areDraftsSelected,
-              'px-2': areDraftsSelected
+              [styles['item-active']]: areDraftsSelected
             }
           )}
         >
@@ -115,14 +114,14 @@ const DashboardSidebar = () => {
             'flex col-gap-2 items-center',
             styles['sidebar-action-button']
           )}
-          type='secondary'
+          type='dashed'
           onClick={() => {
             dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_OPEN });
           }}
           id={'fa-at-btn--new-dashboard'}
         >
-          <SVG name={'plus'} size={16} color='#1890FF' />
-          <Text level={7} type='title' color='brand-color-6' extraClass='mb-0'>
+          <SVG name={'plus'} size={16} />
+          <Text level={7} type='title' extraClass='mb-0'>
             New Dashboard
           </Text>
         </Button>

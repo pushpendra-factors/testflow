@@ -29,7 +29,6 @@ import {
 } from '../../../reducers/timelines/utils';
 import SearchCheckList from '../../SearchCheckList';
 import LeftPanePropBlock from '../MyComponents/LeftPanePropBlock';
-import AccountTimelineSingleView from './AccountTimelineSingleView';
 import {
   PropTextFormat,
   convertGroupedPropertiesToUngrouped,
@@ -53,6 +52,7 @@ import { getGroups } from 'Reducers/coreQuery/middleware';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
 import { ArrowLeftOutlined } from '@ant-design/icons';
+import AccountTimelineTableView from './AccountTimelineTableView';
 
 function AccountDetails({
   accounts,
@@ -356,6 +356,7 @@ function AccountDetails({
         <SearchCheckList
           placeholder='Select Events to Show'
           mapArray={activities}
+          updateList={setActivities}
           titleKey='display_name'
           checkedKey='enabled'
           onChange={handleEventsChange}
@@ -368,6 +369,7 @@ function AccountDetails({
         <SearchCheckList
           placeholder='Select a User Property'
           mapArray={checkListUserProps}
+          updateList={setCheckListUserProps}
           titleKey='display_name'
           checkedKey='enabled'
           onChange={handlePropChange}
@@ -380,6 +382,7 @@ function AccountDetails({
         <SearchCheckList
           placeholder='Select Up To 5 Milestones'
           mapArray={checkListMilestones}
+          updateList={setCheckListMilestones}
           titleKey='display_name'
           checkedKey='enabled'
           onChange={handleMilestonesChange}
@@ -449,7 +452,7 @@ function AccountDetails({
   const renderModalHeader = () => {
     const accountName = accountDetails?.data?.name;
     return (
-      <div className='fa-timeline-modal--header'>
+      <div className='fa-timeline--header'>
         <div className='flex items-center'>
           <div
             className='flex items-center cursor-pointer'
@@ -557,14 +560,20 @@ function AccountDetails({
             height={96}
             width={96}
           />
-          <Text type='title' level={6} extraClass='m-0 py-2' weight='bold'>
-            {accountDetails?.data?.name}
-          </Text>
+          <a
+            href={`https://${encodeURIComponent(accountDetails?.data?.name)}`}
+            target='_blank'
+            rel='noopener noreferrer'
+          >
+            <Text type='title' level={6} extraClass='m-0 py-2' weight='bold'>
+              {accountDetails?.data?.name}
+            </Text>
+          </a>
         </div>
       </div>
 
       <div className='props'>
-        {listLeftPaneProps(accountDetails.data.left_pane_props)}
+        {listLeftPaneProps(accountDetails.data.leftpane_props)}
         <div className='px-8 pb-8 pt-2'>{renderAddNewProp()}</div>
       </div>
       <div className='logo_attr'>
@@ -598,12 +607,13 @@ function AccountDetails({
   );
 
   const renderSingleTimelineView = () => (
-    <AccountTimelineSingleView
+    <AccountTimelineTableView
       timelineEvents={
-        activities?.filter((activity) => activity.enabled === true) || []
+        activities
+          ?.filter((activity) => activity.enabled === true)
+          .slice(0, 1000) || []
       }
-      timelineUsers={accountDetails.data?.account_users || []}
-      milestones={accountDetails.data?.milestones}
+      timelineUsers={getTimelineUsers()}
       loading={accountDetails?.isLoading}
       eventNamesMap={eventNamesMap}
     />
@@ -734,6 +744,7 @@ function AccountDetails({
     return (
       <div className='timeline-view'>
         <Tabs
+          className='timeline-view--tabs'
           defaultActiveKey='birdview'
           size='small'
           activeKey={timelineViewMode}
@@ -764,8 +775,8 @@ function AccountDetails({
 
   return (
     <div>
-      {renderModalHeader()}
       <div className='fa-timeline'>
+        {renderModalHeader()}
         {renderLeftPane()}
         {renderTimelineView()}
       </div>

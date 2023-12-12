@@ -9,5 +9,5 @@ export const getUserOptions = () => {
 };
 
 export const getUserOptionsForDropdown = () => {
-  return [['All Users', 'All'], ...getUserOptions()];
+  return [['All People', 'All'], ...getUserOptions()];
 };

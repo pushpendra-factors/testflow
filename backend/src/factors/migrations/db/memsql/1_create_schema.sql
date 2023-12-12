@@ -464,6 +464,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS project_settings (
     int_g2 boolean default false,
     factors_deanon_config JSON,
     factors_clearbit_key text,
+    clearbit_provision_acc_response JSON,
     KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id)
