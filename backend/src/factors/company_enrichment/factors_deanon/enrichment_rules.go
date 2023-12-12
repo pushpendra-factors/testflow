@@ -10,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// ApplyFactorsDeanonRules fetches the sixsignal config and checks the country filter on basis of isoCode and pageURL filter.
 func ApplyFactorsDeanonRules(factorsDeanonRulesJson *postgres.Jsonb, isoCode, pageURL string) (bool, error) {
 
 	var factorsDeanonRules model.SixSignalConfig
@@ -42,6 +43,7 @@ func ApplyFactorsDeanonRules(factorsDeanonRulesJson *postgres.Jsonb, isoCode, pa
 	return true, nil
 }
 
+// IsCountryRulesPassed checks whether the country filter is successfully applied or not.
 func IsCountryRulesPassed(factorsDeanonRules model.SixSignalConfig, isoCode string) bool {
 
 	isCountryIncluded := (factorsDeanonRules.CountryInclude != nil && len(factorsDeanonRules.CountryInclude) != 0)
@@ -72,6 +74,7 @@ func IsCountryRulesPassed(factorsDeanonRules model.SixSignalConfig, isoCode stri
 	return !contains
 }
 
+// IsPageUrlRulesPassed checks whether the page url filter is successfully applied or not.
 func IsPageUrlRulesPassed(factorsDeanonRules model.SixSignalConfig, pageUrl string) (bool, error) {
 
 	pageFilterPassed := true

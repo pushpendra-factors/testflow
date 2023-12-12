@@ -15,6 +15,13 @@ const API_CLEARBIT = "clearbit_api"
 type CustomerClearbit struct {
 }
 
+/*
+Customer clearbit enrichment and metering flow:
+	1. IsEligible method checks for the eligibility creteria. If eligible,
+	2. Enrich method fetches the API Key and call the method to fill the company identification props.
+	3. FillClearbitUserProperties fill the props on the basis of the API Key.
+*/
+
 // IsEligible is a method on CustomerClearbit to check the eligibility of enrichment by customer clearbit API.
 func (cb *CustomerClearbit) IsEligible(projectSettings *model.ProjectSetting) (bool, error) {
 
@@ -42,6 +49,7 @@ func (cb *CustomerClearbit) Enrich(projectSettings *model.ProjectSetting, userPr
 	(*userProperties)[U.ENRICHMENT_SOURCE] = API_CLEARBIT
 }
 
+// FillClearbitUserProperties checks the cache and if not present it calls the goroutine func for enrichment.
 func FillClearbitUserProperties(projectId int64, clearbitKey string,
 	userProperties *U.PropertiesMap, UserId string, clientIP string) (string, int) {
 
