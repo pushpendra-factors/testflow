@@ -45,7 +45,7 @@ export const defaultSortProp = (queryOptions, attrQueries, data) => {
       if (firstQueryLabel) {
         const headers = get(data, 'headers', []);
         const sorterKey = headers.find((header) =>
-          firstQueryLabel === 'Unique users' ? header.startsWith(`unique_users - `) :header.startsWith(`${firstQueryLabel} - `)
+          firstQueryLabel === 'Unique users' || 'Unique Users' ? header.startsWith(`unique_users - `) :header.startsWith(`${firstQueryLabel} - `)
         );
         if (sorterKey != null) {
           return [
@@ -56,7 +56,7 @@ export const defaultSortProp = (queryOptions, attrQueries, data) => {
               subtype: null
             }
           ];
-        }
+        } 
       }
     }
   }
@@ -158,10 +158,18 @@ const getLegendsLabel = ({ key }) => {
 };
 
 const getSeriesKey = (seriesKeys, row, isComparisonApplied, rowNum = 0) => {
+  const seriesKeyReplaceUnique = (seriesKeys, rowNum) => {
+    const replObj = {"Unique user":"unique_user","Unique User":"unique_user"};
+
+    const re = new RegExp(Object.keys(replObj).join("|"),"gi");
+    seriesKeys[rowNum] = seriesKeys[rowNum].replace(re, function(matched){
+      return replObj[matched];
+    });
+  }
   const keyVal = row[seriesKeys[rowNum]]
     ? seriesKeys[rowNum]
-    : seriesKeys[rowNum]?.startsWith('Unique user')
-    ? seriesKeys[rowNum]?.replace('Unique user', 'unique_user')
+    : seriesKeys[rowNum].startsWith('Unique user') || seriesKeys[rowNum].startsWith('Unique User')  
+    ? seriesKeyReplaceUnique(seriesKeys, rowNum)
     : seriesKeys[rowNum];
   return isComparisonApplied ? Number(row[keyVal].value) : Number(row[keyVal]);
 };
@@ -201,7 +209,7 @@ export const getSingleTouchPointChartData = (
     return cat.join(', ');
   });
 
-  const seriesK = (num = 0) => seriesKeys[num]?.startsWith('Unique user')?  seriesKeys[num]?.replace('Unique user', 'unique_user') : seriesKeys[num]
+  const seriesK = (num = 0) => seriesKeys[num].startsWith('Unique user') || seriesKeys[num].startsWith('Unique User')? seriesKeys[num]?.replace('Unique user', 'unique_user') : seriesKeys[num]
   const series = [
     {
       type: 'column',
