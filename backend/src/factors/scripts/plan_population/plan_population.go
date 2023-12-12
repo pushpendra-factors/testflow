@@ -572,6 +572,9 @@ func main() {
 	if *action == Disable || *action == Enable {
 		// only allowing in Custom Plan
 		features := C.GetTokensFromStringListAsString(*updateFeaturesStatus)
+		if *updateFeaturesStatus == "*" {
+			features = model.GetAllAvailableFeatures()
+		}
 		featureMap := make(map[string]bool)
 		for _, feature := range features {
 			featureMap[feature] = true
@@ -660,7 +663,18 @@ func AddFeatureToCustomPlan(ProjectID int64, features []string) {
 			return
 		}
 	}
+
+	featureMap := make(map[string]bool)
+	for _, feature := range addOns {
+		featureMap[feature.Name] = true
+	}
+
 	for _, feature := range features {
+		if _, exists := featureMap[feature]; exists {
+			log.Info("Feature already exists for project ", feature, ProjectID)
+			continue
+		}
+
 		addOns = append(addOns, model.FeatureDetails{
 			Name:             feature,
 			IsEnabledFeature: false,
