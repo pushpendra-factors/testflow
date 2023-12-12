@@ -423,6 +423,7 @@ type Model interface {
 	GetHubspotDocumentCountForSync(projectIDs []int64, docTypes []int, maxCreatedAtSec int64) ([]model.HubspotDocumentCount, int)
 	GetHubspotDocumentsByTypeAndAction(projectID int64, docType int, action int, fromMs,
 		toMs int64) ([]model.HubspotDocument, int)
+	GetHubspotOwnerEmailFromOwnerId(projectID int64, ownerID string) (string, int, error)
 
 	// plan
 	GetPlanByID(planID uint64) (*model.Plan, int)

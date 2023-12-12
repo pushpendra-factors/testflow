@@ -94,7 +94,62 @@ func SendSlackAlert(projectID int64, message, agentUUID string, channel model.Sl
 	return false, fmt.Errorf("failure response: %v", response)
 }
 
-func GetSlackUsers(projectID int64, agentID string, nextCursor string) (response *model.SlackGetUsersResponse, status int, err error) {
+func GetSlackUsersList(projectID int64, agentID string) ([]model.SlackMember, int, error){
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "agent_uuid": agentID})
+	if projectID == 0 || agentID == "" {
+		logCtx.Error("invalid parameters")
+		return nil, http.StatusBadRequest, fmt.Errorf("invalid parameters")
+	}
+
+	jsonResponse, status, err := getSlackUsers(projectID, agentID, "")
+	if err != nil {
+		return nil, status, err
+	}
+
+	if !jsonResponse.Ok {
+		err := jsonResponse.Error
+		if err == "missing_scope" {
+			logCtx.WithError(fmt.Errorf("%v", err)).Error("permission not granted for reading users, please reintegrate")
+		}
+		logCtx.WithError(fmt.Errorf("%v", err)).Error("error received from slack server")
+		return nil, http.StatusInternalServerError, fmt.Errorf("error received from slack server")
+	}
+
+	members := jsonResponse.Members
+	if members == nil {
+		logCtx.Error("nil json response found for users error")
+		return nil, http.StatusInternalServerError, fmt.Errorf("nil json response found for users error")
+	}
+
+	jsonMetadata := jsonResponse.ResponseMetadata
+	if jsonMetadata == nil {
+		logCtx.Error("no metadata from json response error")
+		return nil, http.StatusInternalServerError, fmt.Errorf("no metadata from json response error")	
+	}
+
+	nextCursor := jsonMetadata["next_cursor"].(string)
+	for nextCursor != "" {
+		jsonResponse, status, err = getSlackUsers(projectID, agentID, nextCursor)
+		if err != nil {
+			return nil, status, err
+		}
+
+		if newMembers := jsonResponse.Members; newMembers != nil {
+			members = append(members, newMembers...)
+			if metadata := jsonResponse.ResponseMetadata; metadata != nil {
+				nextCursor = metadata["next_cursor"].(string)
+			} else {
+				break
+			}
+		} else {
+			break
+		}
+	}
+	
+	return members, http.StatusFound, nil
+}
+
+func getSlackUsers(projectID int64, agentID string, nextCursor string) (response *model.SlackGetUsersResponse, status int, err error) {
 
 	// get the auth token from the agent_uuid and project_id map
 	accessTokens, err := store.GetStore().GetSlackAuthToken(projectID, agentID)
