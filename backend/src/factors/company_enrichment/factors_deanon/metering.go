@@ -10,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// CheckingFactorsDeanonQuotaLimit compares the usage and limit for the project id.
 func CheckingFactorsDeanonQuotaLimit(projectId int64) (bool, error) {
 
 	logCtx := log.WithField("project_id", projectId)
@@ -25,6 +26,7 @@ func CheckingFactorsDeanonQuotaLimit(projectId int64) (bool, error) {
 	return true, nil
 }
 
+// GetFactorsDeanonCountAndLimit fetches the count and limit of factors deanon enrichment
 func GetFactorsDeanonCountAndLimit(projectId int64) (int64, int64, error) {
 
 	logCtx := log.WithField("project_id", projectId)
