@@ -30,11 +30,10 @@ const (
 	ChannelAffiliate                 = "Affiliate"
 	ChannelOtherCampaigns            = "Other Campaigns"
 	ChannelReferral                  = "Referral"
-	ChannelInternal                  = "Internal"
 	ChannelProductReviewsAndListings = "Product Reviews And Listings"
 	ChannelBusinessTools             = "Business Tools"
 	ChannelOthers                    = "Others"
-	ChannelGoogleNetwork             = "Google Network"
+	ChannelGoogleAdsNetwork          = "Google Ads Network"
 )
 
 var DefaultChannelPropertyRules = []ChannelPropertyRule{
@@ -270,45 +269,153 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
-				Property:  U.EP_MEDIUM,
-				Condition: EqualsOpStr,
-				Value:     "paid",
-				LogicalOp: LOGICAL_OP_AND,
-			},
-			{
-				Property:  U.EP_MEDIUM,
-				Condition: EqualsOpStr,
-				Value:     "cpc",
-				LogicalOp: LOGICAL_OP_OR,
-			},
-			{
-				Property:  U.EP_MEDIUM,
-				Condition: EqualsOpStr,
-				Value:     "ppc",
-				LogicalOp: LOGICAL_OP_OR,
-			},
-			{
-				Property:  U.EP_MEDIUM,
+				Property:  U.EP_SOURCE,
 				Condition: EqualsOpStr,
 				Value:     "adwords",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
-				Property:  U.EP_MEDIUM,
+				Property:  U.EP_SOURCE,
 				Condition: EqualsOpStr,
+				Value:     "ad-words",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_SOURCE,
+				Condition: EqualsOpStr,
+				Value:     "ad words",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_SOURCE,
+				Condition: EqualsOpStr,
+				Value:     "adword",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_SOURCE,
+				Condition: EqualsOpStr,
+				Value:     "ad-word",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_SOURCE,
+				Condition: EqualsOpStr,
+				Value:     "ad word",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_SOURCE,
+				Condition: EqualsOpStr,
+				Value:     "googleads",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_SOURCE,
+				Condition: EqualsOpStr,
+				Value:     "google-ads",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_SOURCE,
+				Condition: EqualsOpStr,
+				Value:     "google ads",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_SOURCE,
+				Condition: EqualsOpStr,
+				Value:     "googlead",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_SOURCE,
+				Condition: EqualsOpStr,
+				Value:     "google-ad",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_SOURCE,
+				Condition: EqualsOpStr,
+				Value:     "google ad",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_SOURCE,
+				Condition: EqualsOpStr,
+				Value:     "search",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_SOURCE,
+				Condition: EqualsOpStr,
+				Value:     "paidsearch",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_SOURCE,
+				Condition: EqualsOpStr,
+				Value:     "paid-search",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_SOURCE,
+				Condition: EqualsOpStr,
+				Value:     "paid search",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: ContainsOpStr,
+				Value:     "paid",
+				LogicalOp: LOGICAL_OP_AND,
+			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: ContainsOpStr,
+				Value:     "cpc",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: ContainsOpStr,
+				Value:     "ppc",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: ContainsOpStr,
+				Value:     "adwords",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: ContainsOpStr,
 				Value:     "display",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: EqualsOpStr,
+				Condition: ContainsOpStr,
 				Value:     "cpm",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: EqualsOpStr,
+				Condition: ContainsOpStr,
 				Value:     "retargeting",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: ContainsOpStr,
+				Value:     "rtg",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: ContainsOpStr,
+				Value:     "search",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 		},
@@ -321,6 +428,83 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 				Condition: NotEqualOpStr,
 				Value:     "$none",
 				LogicalOp: LOGICAL_OP_AND,
+			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: ContainsOpStr,
+				Value:     "paid",
+				LogicalOp: LOGICAL_OP_AND,
+			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: ContainsOpStr,
+				Value:     "cpc",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: ContainsOpStr,
+				Value:     "ppc",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: ContainsOpStr,
+				Value:     "cpm",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: ContainsOpStr,
+				Value:     "retargeting",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: ContainsOpStr,
+				Value:     "rtg",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+		},
+	},
+	{
+		Channel: ChannelPaidSocial,
+		Conditions: []ChannelPropertyFilter{
+			{
+				Property:  U.EP_SOURCE,
+				Condition: EqualsOpStr,
+				Value:     "linkedinad",
+				LogicalOp: LOGICAL_OP_AND,
+			},
+			{
+				Property:  U.EP_SOURCE,
+				Condition: EqualsOpStr,
+				Value:     "linkedin-ad",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_SOURCE,
+				Condition: EqualsOpStr,
+				Value:     "linkedin ad",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_SOURCE,
+				Condition: EqualsOpStr,
+				Value:     "linkedinads",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_SOURCE,
+				Condition: EqualsOpStr,
+				Value:     "linkedin-ads",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_SOURCE,
+				Condition: EqualsOpStr,
+				Value:     "linkedin ads",
+				LogicalOp: LOGICAL_OP_OR,
 			},
 		},
 	},
@@ -1535,32 +1719,38 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: EqualsOpStr,
+				Condition: ContainsOpStr,
 				Value:     "paid",
 				LogicalOp: LOGICAL_OP_AND,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: EqualsOpStr,
+				Condition: ContainsOpStr,
 				Value:     "cpc",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: EqualsOpStr,
+				Condition: ContainsOpStr,
 				Value:     "ppc",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: EqualsOpStr,
+				Condition: ContainsOpStr,
 				Value:     "cpm",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: EqualsOpStr,
+				Condition: ContainsOpStr,
 				Value:     "retargeting",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: ContainsOpStr,
+				Value:     "rtg",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 		},
@@ -1569,55 +1759,39 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		Channel: ChannelPaidSocial,
 		Conditions: []ChannelPropertyFilter{
 			{
-				Property:  U.EP_SOURCE,
-				Condition: EqualsOpStr,
-				Value:     "paidsocial",
-				LogicalOp: LOGICAL_OP_AND,
-			},
-		},
-	},
-	{
-		Channel: ChannelPaidSocial,
-		Conditions: []ChannelPropertyFilter{
-			{
 				Property:  U.EP_MEDIUM,
-				Condition: EqualsOpStr,
-				Value:     "paidsocial",
-				LogicalOp: LOGICAL_OP_AND,
-			},
-		},
-	},
-	{
-		Channel: ChannelPaidSocial,
-		Conditions: []ChannelPropertyFilter{
-			{
-				Property:  U.EP_MEDIUM,
-				Condition: EqualsOpStr,
+				Condition: ContainsOpStr,
 				Value:     "paid",
 				LogicalOp: LOGICAL_OP_AND,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: EqualsOpStr,
+				Condition: ContainsOpStr,
 				Value:     "cpc",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: EqualsOpStr,
+				Condition: ContainsOpStr,
 				Value:     "ppc",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: EqualsOpStr,
+				Condition: ContainsOpStr,
 				Value:     "cpm",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: EqualsOpStr,
+				Condition: ContainsOpStr,
 				Value:     "retargeting",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: ContainsOpStr,
+				Value:     "rtg",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
@@ -2923,32 +3097,38 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: EqualsOpStr,
+				Condition: ContainsOpStr,
 				Value:     "paid",
 				LogicalOp: LOGICAL_OP_AND,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: EqualsOpStr,
+				Condition: ContainsOpStr,
 				Value:     "cpc",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: EqualsOpStr,
+				Condition: ContainsOpStr,
 				Value:     "ppc",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: EqualsOpStr,
+				Condition: ContainsOpStr,
 				Value:     "cpm",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: EqualsOpStr,
+				Condition: ContainsOpStr,
 				Value:     "retargeting",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: ContainsOpStr,
+				Value:     "rtg",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 		},
@@ -3074,6 +3254,12 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 				Property:  U.EP_MEDIUM,
 				Condition: NotEqualOpStr,
 				Value:     "retargeting",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: NotEqualOpStr,
+				Value:     "rtg",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 		},
@@ -4296,6 +4482,12 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 			{
 				Property:  U.EP_MEDIUM,
 				Condition: EqualsOpStr,
+				Value:     "socialnetwork",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: EqualsOpStr,
 				Value:     "social-network",
 				LogicalOp: LOGICAL_OP_OR,
 			},
@@ -4303,6 +4495,12 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 				Property:  U.EP_MEDIUM,
 				Condition: EqualsOpStr,
 				Value:     "social network",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: EqualsOpStr,
+				Value:     "socialmedia",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
@@ -5564,6 +5762,12 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 				Value:     "retargeting",
 				LogicalOp: LOGICAL_OP_OR,
 			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: NotEqualOpStr,
+				Value:     "rtg",
+				LogicalOp: LOGICAL_OP_OR,
+			},
 		},
 	},
 	{
@@ -6322,12 +6526,6 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
 				Condition: ContainsOpStr,
-				Value:     "ning.",
-				LogicalOp: LOGICAL_OP_OR,
-			},
-			{
-				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: ContainsOpStr,
 				Value:     "onstartups.",
 				LogicalOp: LOGICAL_OP_OR,
 			},
@@ -6805,6 +7003,12 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 				Value:     "retargeting",
 				LogicalOp: LOGICAL_OP_OR,
 			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: NotEqualOpStr,
+				Value:     "rtg",
+				LogicalOp: LOGICAL_OP_OR,
+			},
 		},
 	},
 	{
@@ -7145,6 +7349,24 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 				Value:     "alternativeto.",
 				LogicalOp: LOGICAL_OP_OR,
 			},
+			{
+				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
+				Condition: ContainsOpStr,
+				Value:     "saasworthy.",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
+				Condition: ContainsOpStr,
+				Value:     "startupstash.",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
+				Condition: ContainsOpStr,
+				Value:     "selectsoftwarereviews.",
+				LogicalOp: LOGICAL_OP_OR,
+			},
 		},
 	},
 	{
@@ -7192,6 +7414,24 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 				Value:     "github.",
 				LogicalOp: LOGICAL_OP_OR,
 			},
+			{
+				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
+				Condition: ContainsOpStr,
+				Value:     "zoom.us",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
+				Condition: ContainsOpStr,
+				Value:     "teams.cdn.office.net",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
+				Condition: ContainsOpStr,
+				Value:     "chat.openai.com",
+				LogicalOp: LOGICAL_OP_OR,
+			},
 		},
 	},
 	{
@@ -7215,6 +7455,24 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 				Value:     "e mail",
 				LogicalOp: LOGICAL_OP_OR,
 			},
+			{
+				Property:  U.EP_SOURCE,
+				Condition: EqualsOpStr,
+				Value:     "newsletter",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_SOURCE,
+				Condition: EqualsOpStr,
+				Value:     "news-letter",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_SOURCE,
+				Condition: EqualsOpStr,
+				Value:     "news letter",
+				LogicalOp: LOGICAL_OP_OR,
+			},
 		},
 	},
 	{
@@ -7236,6 +7494,24 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 				Property:  U.EP_MEDIUM,
 				Condition: EqualsOpStr,
 				Value:     "e mail",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: EqualsOpStr,
+				Value:     "newsletter",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: EqualsOpStr,
+				Value:     "news-letter",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: EqualsOpStr,
+				Value:     "news letter",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 		},
@@ -7267,6 +7543,12 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 				Value:     "icloud.com/mail",
 				LogicalOp: LOGICAL_OP_OR,
 			},
+			{
+				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
+				Condition: ContainsOpStr,
+				Value:     "outlookindia.",
+				LogicalOp: LOGICAL_OP_OR,
+			},
 		},
 	},
 	{
@@ -7292,6 +7574,17 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		},
 	},
 	{
+		Channel: ChannelGoogleAdsNetwork,
+		Conditions: []ChannelPropertyFilter{
+			{
+				Property:  U.EP_GCLID,
+				Condition: NotEqualOpStr,
+				Value:     "$none",
+				LogicalOp: LOGICAL_OP_AND,
+			},
+		},
+	},
+	{
 		Channel: ChannelOtherCampaigns,
 		Conditions: []ChannelPropertyFilter{
 			{
@@ -7303,37 +7596,37 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		},
 	},
 	{
-		Channel: ChannelGoogleNetwork,
+		Channel: ChannelReferral,
 		Conditions: []ChannelPropertyFilter{
 			{
-				Property:  U.EP_GCLID,
-				Condition: NotEqualOpStr,
-				Value:     "$none",
-				LogicalOp: LOGICAL_OP_AND,
-			},
-		},
-	},
-	{
-		Channel: ChannelInternal,
-		Conditions: []ChannelPropertyFilter{
-			{
-				Property:  U.SP_INITIAL_PAGE_DOMAIN,
-				Condition: NotEqualOpStr,
-				Value:     "$none",
-				LogicalOp: LOGICAL_OP_AND,
-			},
-			{
-				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: NotEqualOpStr,
-				Value:     "$none",
-				LogicalOp: LOGICAL_OP_AND,
-			},
-			{
-				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
+				Property:  U.EP_MEDIUM,
 				Condition: EqualsOpStr,
-				// Value used as key for referring another property.
-				Value:     U.SP_INITIAL_PAGE_DOMAIN,
+				Value:     "ref",
 				LogicalOp: LOGICAL_OP_AND,
+			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: EqualsOpStr,
+				Value:     "referral",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: EqualsOpStr,
+				Value:     "app",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: EqualsOpStr,
+				Value:     "link",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: EqualsOpStr,
+				Value:     "partner",
+				LogicalOp: LOGICAL_OP_OR,
 			},
 		},
 	},
@@ -7344,6 +7637,12 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
 				Condition: NotEqualOpStr,
 				Value:     "$none",
+				LogicalOp: LOGICAL_OP_AND,
+			},
+			{
+				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
+				Condition: NotEqualOpStr,
+				Value:     U.SP_INITIAL_PAGE_DOMAIN,
 				LogicalOp: LOGICAL_OP_AND,
 			},
 		},
@@ -7377,18 +7676,6 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 			},
 			{
 				Property:  U.EP_CAMPAIGN,
-				Condition: EqualsOpStr,
-				Value:     "$none",
-				LogicalOp: LOGICAL_OP_OR,
-			},
-			{
-				Property:  U.SP_INITIAL_REFERRER,
-				Condition: EqualsOpStr,
-				Value:     "$none",
-				LogicalOp: LOGICAL_OP_OR,
-			},
-			{
-				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
 				Condition: EqualsOpStr,
 				Value:     "$none",
 				LogicalOp: LOGICAL_OP_OR,
