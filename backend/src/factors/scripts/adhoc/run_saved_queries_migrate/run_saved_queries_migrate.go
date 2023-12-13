@@ -96,7 +96,7 @@ func main() {
 
 	projectIDsFlag := flag.String("project_ids", "*", "List of project_id to run for.")
 	disabledProjectIDsFlag := flag.String("disabled_project_ids", "", "List of project_ids to exclude.")
-	runUserObjectMigration := flag.Bool("run_user_object_migration", false, "")
+	// runUserObjectMigration := flag.Bool("run_user_object_migration", false, "")
 	runSleep := flag.Bool("run_sleep", false, "")
 
 	flag.Parse()
@@ -264,12 +264,14 @@ func updateSavedQueriesForAttribution(allProjects bool, projectIdsArray []int64,
 				}
 			}
 		}
+		internalQuery.Query.ConversionEvent.Properties = make([]model.QueryProperty, 0) 
+		internalQuery.Query.ConversionEventCompare.Properties = make([]model.QueryProperty, 0) 
 
 		queryInPostgresFormat, err := U.EncodeStructTypeToPostgresJsonb(internalQuery)
-			if err != nil {
-				log.WithField("dbQuery", dbQuery).Warn("Failed in EncodeStructTypeToPostgresJsonb. Hence skipping - attr.")
-				continue
-			}
+		if err != nil {
+			log.WithField("dbQuery", dbQuery).Warn("Failed in EncodeStructTypeToPostgresJsonb. Hence skipping - attr.")
+			continue
+		}
 		dbQuery.Query = *queryInPostgresFormat
 
 		if err := db.Table("queries").Save(&dbQuery).Error; err != nil {
@@ -289,150 +291,150 @@ func updateSavedQueriesForAttribution(allProjects bool, projectIdsArray []int64,
 	log.WithField("count", count).Warn("Completed with count - Attribution")
 }
 
-// Check if we need to give a sleep because it can bring down sdk processing - persistent cache.
-// We are going ahead with other approach of changing in saved query response.
-func updateGroupAnalysisForSavedEventQueries(allProjects bool, projectIdsArray []int64, runSleep bool) {
-	savedQueries := []model.Queries{}
-	db := C.GetServices().Db
+// // Check if we need to give a sleep because it can bring down sdk processing - persistent cache.
+// // We are going ahead with other approach of changing in saved query response.
+// func updateGroupAnalysisForSavedEventQueries(allProjects bool, projectIdsArray []int64, runSleep bool) {
+// 	savedQueries := []model.Queries{}
+// 	db := C.GetServices().Db
 
-	query1 := db.Table("queries").Where("type = 2 AND (JSON_EXTRACT_STRING(query, 'cl') = 'insights'  OR JSON_EXTRACT_STRING(query, 'cl') = 'funnel') AND is_deleted = 0 ")
-	if !allProjects {
-		query1 = query1.Where("project_id IN (?)", projectIdsArray)
-	}
-	query1 = query1.Limit(1000)
-	if err := query1.Find(&savedQueries).Error; err !=nil {
-		log.WithField("err", err.Error()).Warn("Failed during query fetch of saved queries")
-		return
-	}
+// 	query1 := db.Table("queries").Where("type = 2 AND (JSON_EXTRACT_STRING(query, 'cl') = 'insights'  OR JSON_EXTRACT_STRING(query, 'cl') = 'funnel') AND is_deleted = 0 ")
+// 	if !allProjects {
+// 		query1 = query1.Where("project_id IN (?)", projectIdsArray)
+// 	}
+// 	query1 = query1.Limit(1000)
+// 	if err := query1.Find(&savedQueries).Error; err !=nil {
+// 		log.WithField("err", err.Error()).Warn("Failed during query fetch of saved queries")
+// 		return
+// 	}
 
-	count := 0
-	for _, dbQuery := range savedQueries {
-		queryClass, errMsg := store.GetStore().GetQueryClassFromQueries(dbQuery)
-		var internalQuery model.Query
-		if errMsg != "" {
-			log.WithField("dbQuery", dbQuery).Warn("Failed in GetQueryClassFromQueries. Hence skipping.")
-			continue
-		}
+// 	count := 0
+// 	for _, dbQuery := range savedQueries {
+// 		queryClass, errMsg := store.GetStore().GetQueryClassFromQueries(dbQuery)
+// 		var internalQuery model.Query
+// 		if errMsg != "" {
+// 			log.WithField("dbQuery", dbQuery).Warn("Failed in GetQueryClassFromQueries. Hence skipping.")
+// 			continue
+// 		}
 
-		if !(queryClass == model.QueryClassInsights || queryClass == model.QueryClassFunnel) {
-			log.WithField("queryClass", queryClass).Warn("Failed - insights")
-		} else {
-			err := U.DecodePostgresJsonbToStructType(&dbQuery.Query, &internalQuery)
-			if err != nil {
-				log.WithField("dbQuery", dbQuery).Warn("Failed in DecodePostgresJsonbToStructType. Hence skipping - insights")
-				continue
-			}
-		}
+// 		if !(queryClass == model.QueryClassInsights || queryClass == model.QueryClassFunnel) {
+// 			log.WithField("queryClass", queryClass).Warn("Failed - insights")
+// 		} else {
+// 			err := U.DecodePostgresJsonbToStructType(&dbQuery.Query, &internalQuery)
+// 			if err != nil {
+// 				log.WithField("dbQuery", dbQuery).Warn("Failed in DecodePostgresJsonbToStructType. Hence skipping - insights")
+// 				continue
+// 			}
+// 		}
 
-		if internalQuery.GroupAnalysis != "" {
-			continue
-		}
+// 		if internalQuery.GroupAnalysis != "" {
+// 			continue
+// 		}
 
-		if (internalQuery.Type == model.QueryTypeUniqueUsers ) {
-			internalQuery.GroupAnalysis = "users"
-		} else if (internalQuery.Type == model.QueryTypeEventsOccurrence) {
-			internalQuery.GroupAnalysis = "events"
-		} else {
-			internalQuery.GroupAnalysis = "events"
-		}
+// 		if (internalQuery.Type == model.QueryTypeUniqueUsers ) {
+// 			internalQuery.GroupAnalysis = "users"
+// 		} else if (internalQuery.Type == model.QueryTypeEventsOccurrence) {
+// 			internalQuery.GroupAnalysis = "events"
+// 		} else {
+// 			internalQuery.GroupAnalysis = "events"
+// 		}
 
-		queryInPostgresFormat, err := U.EncodeStructTypeToPostgresJsonb(internalQuery)
-		if err != nil {
-			log.WithField("dbQuery", dbQuery).Warn("Failed in EncodeStructTypeToPostgresJsonb. Hence skipping - insights")
-			continue
-		}
-		dbQuery.Query = *queryInPostgresFormat
+// 		queryInPostgresFormat, err := U.EncodeStructTypeToPostgresJsonb(internalQuery)
+// 		if err != nil {
+// 			log.WithField("dbQuery", dbQuery).Warn("Failed in EncodeStructTypeToPostgresJsonb. Hence skipping - insights")
+// 			continue
+// 		}
+// 		dbQuery.Query = *queryInPostgresFormat
 
-		if err := db.Table("queries").Save(&dbQuery).Error; err != nil {
-			log.WithField("err", err).WithField("dbQuery", dbQuery).Warn("failed in saving transformed Query json Marshal. Hence skipping.")
-			continue
-		}
-		statusCode := H.InValidateSavedQueryCache(&dbQuery)
-		if statusCode != http.StatusOK {
-			log.WithField("query_id", dbQuery.ID).Error("Failed in invalidating saved query cache.")
-		}
+// 		if err := db.Table("queries").Save(&dbQuery).Error; err != nil {
+// 			log.WithField("err", err).WithField("dbQuery", dbQuery).Warn("failed in saving transformed Query json Marshal. Hence skipping.")
+// 			continue
+// 		}
+// 		statusCode := H.InValidateSavedQueryCache(&dbQuery)
+// 		if statusCode != http.StatusOK {
+// 			log.WithField("query_id", dbQuery.ID).Error("Failed in invalidating saved query cache.")
+// 		}
 
-		count += 1
+// 		count += 1
 
-		if runSleep && count%5 == 0 {
-			time.Sleep(30 * time.Second)
-		}
+// 		if runSleep && count%5 == 0 {
+// 			time.Sleep(30 * time.Second)
+// 		}
 
-	}
-	log.WithField("count", count).Warn("Completed with count - Insights")
-
-
-	savedQueries2 := []model.Queries{}
-
-	query2 := db.Table("queries").Where("type = 2 AND JSON_EXTRACT_STRING(query, 'query_group', 0, 'cl') = 'events' AND is_deleted = 0 ")
-	if !allProjects {
-		query2 = query2.Where("project_id IN (?)", projectIdsArray)
-	}
-	query2 = query2.Limit(2000)
-	if err := query2.Find(&savedQueries2).Error; err !=nil {
-		log.WithField("err", err.Error()).Warn("Failed during query fetch of saved queries - events ")
-		return
-	}
-
-	count2 := 0
-	for _, dbQuery := range savedQueries2 {
-		queryClass, errMsg := store.GetStore().GetQueryClassFromQueries(dbQuery)
-		var internalQuery model.QueryGroup
-		if errMsg != "" {
-			log.WithField("dbQuery", dbQuery).Warn("Failed in GetQueryClassFromQueries. Hence skipping - events")
-			continue
-		}
-
-		if queryClass != model.QueryClassEvents {
-			log.WithField("queryClass", queryClass).Warn("Failed  No  events")
-		} else {
-			err := U.DecodePostgresJsonbToStructType(&dbQuery.Query, &internalQuery)
-			if err != nil {
-				log.WithField("dbQuery", dbQuery).Warn("Failed in DecodePostgresJsonbToStructType. Hence skipping - events")
-				continue
-			}
-		}
-
-		if internalQuery.GroupAnalysis != "" {
-			continue
-		}
+// 	}
+// 	log.WithField("count", count).Warn("Completed with count - Insights")
 
 
-		for index, q := range internalQuery.Queries {
-			if (q.Type == model.QueryTypeUniqueUsers ) {
-				internalQuery.Queries[index].GroupAnalysis = "users"
-			} else if (q.Type == model.QueryTypeEventsOccurrence) {
-				internalQuery.Queries[index].GroupAnalysis = "events"
-			} else {
-				internalQuery.Queries[index].GroupAnalysis = "events"
-			}
-		}
-		queryInPostgresFormat, err := U.EncodeStructTypeToPostgresJsonb(internalQuery)
-		if err != nil {
-			log.WithField("dbQuery", dbQuery).Warn("Failed in EncodeStructTypeToPostgresJsonb. Hence skipping - events")
-			continue
-		}
-		dbQuery.Query = *queryInPostgresFormat
+// 	savedQueries2 := []model.Queries{}
 
-		if err := db.Table("queries").Save(&dbQuery).Error; err != nil {
-			log.WithField("err", err).WithField("dbQuery", dbQuery).Warn("failed in saving transformed Query json Marshal. Hence skipping.")
-			continue
-		}
-		statusCode := H.InValidateSavedQueryCache(&dbQuery)
-		if statusCode != http.StatusOK {
-			log.WithField("query_id", dbQuery.ID).Error("Failed in invalidating saved query cache.")
-		}
+// 	query2 := db.Table("queries").Where("type = 2 AND JSON_EXTRACT_STRING(query, 'query_group', 0, 'cl') = 'events' AND is_deleted = 0 ")
+// 	if !allProjects {
+// 		query2 = query2.Where("project_id IN (?)", projectIdsArray)
+// 	}
+// 	query2 = query2.Limit(2000)
+// 	if err := query2.Find(&savedQueries2).Error; err !=nil {
+// 		log.WithField("err", err.Error()).Warn("Failed during query fetch of saved queries - events ")
+// 		return
+// 	}
 
-		count2 += 1
+// 	count2 := 0
+// 	for _, dbQuery := range savedQueries2 {
+// 		queryClass, errMsg := store.GetStore().GetQueryClassFromQueries(dbQuery)
+// 		var internalQuery model.QueryGroup
+// 		if errMsg != "" {
+// 			log.WithField("dbQuery", dbQuery).Warn("Failed in GetQueryClassFromQueries. Hence skipping - events")
+// 			continue
+// 		}
 
-		if runSleep && count2%5 == 0 {
-			time.Sleep(30 * time.Second)
-		}
+// 		if queryClass != model.QueryClassEvents {
+// 			log.WithField("queryClass", queryClass).Warn("Failed  No  events")
+// 		} else {
+// 			err := U.DecodePostgresJsonbToStructType(&dbQuery.Query, &internalQuery)
+// 			if err != nil {
+// 				log.WithField("dbQuery", dbQuery).Warn("Failed in DecodePostgresJsonbToStructType. Hence skipping - events")
+// 				continue
+// 			}
+// 		}
 
-	}
-	log.WithField("count", count2).Warn("Completed with count - Events")
+// 		if internalQuery.GroupAnalysis != "" {
+// 			continue
+// 		}
 
-}
+
+// 		for index, q := range internalQuery.Queries {
+// 			if (q.Type == model.QueryTypeUniqueUsers ) {
+// 				internalQuery.Queries[index].GroupAnalysis = "users"
+// 			} else if (q.Type == model.QueryTypeEventsOccurrence) {
+// 				internalQuery.Queries[index].GroupAnalysis = "events"
+// 			} else {
+// 				internalQuery.Queries[index].GroupAnalysis = "events"
+// 			}
+// 		}
+// 		queryInPostgresFormat, err := U.EncodeStructTypeToPostgresJsonb(internalQuery)
+// 		if err != nil {
+// 			log.WithField("dbQuery", dbQuery).Warn("Failed in EncodeStructTypeToPostgresJsonb. Hence skipping - events")
+// 			continue
+// 		}
+// 		dbQuery.Query = *queryInPostgresFormat
+
+// 		if err := db.Table("queries").Save(&dbQuery).Error; err != nil {
+// 			log.WithField("err", err).WithField("dbQuery", dbQuery).Warn("failed in saving transformed Query json Marshal. Hence skipping.")
+// 			continue
+// 		}
+// 		statusCode := H.InValidateSavedQueryCache(&dbQuery)
+// 		if statusCode != http.StatusOK {
+// 			log.WithField("query_id", dbQuery.ID).Error("Failed in invalidating saved query cache.")
+// 		}
+
+// 		count2 += 1
+
+// 		if runSleep && count2%5 == 0 {
+// 			time.Sleep(30 * time.Second)
+// 		}
+
+// 	}
+// 	log.WithField("count", count2).Warn("Completed with count - Events")
+
+// }
 
 /* Not Required.
 func migrateNonDerivedCustomMetricToGroupUser(allProjects bool, projectIdsArray []int64, objectType, transformationString string)  {
