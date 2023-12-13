@@ -2279,7 +2279,7 @@ func (store *MemSQL) GetAnalyzeResultForSegments(projectId int64, profileType st
 	}
 	query.Caller = profileType
 	query.Class = model.QueryClassEvents
-	query.From = U.TimeNowZ().AddDate(0, 0, -28).Unix()
+	query.From = U.TimeNowZ().AddDate(0, 0, -90).Unix()
 	query.To = U.TimeNowZ().Unix()
 	err := query.TransformDateTypeFilters()
 	if err != nil {
