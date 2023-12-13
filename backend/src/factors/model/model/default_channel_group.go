@@ -34,6 +34,10 @@ const (
 	ChannelBusinessTools             = "Business Tools"
 	ChannelOthers                    = "Others"
 	ChannelGoogleAdsNetwork          = "Google Ads Network"
+
+	// Removed from usage. Keeping it for backward compatibility of existing rules.
+	ChannelGoogleNetwork = "Google Network"
+	ChannelInternal      = "Internal"
 )
 
 var DefaultChannelPropertyRules = []ChannelPropertyRule{
