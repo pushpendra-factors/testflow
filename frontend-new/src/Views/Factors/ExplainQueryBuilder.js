@@ -186,12 +186,12 @@ const queryList = (type) => {
 
   let filterConfig = {
         eventLimit: 2,
-        extraActions: true
+        extraActions: false //disabling individual level filter/breakdown
       }
   if(type === INCLUDE_EVENTS){
     filterConfig = {
       eventLimit: 10,
-      extraActions: false
+      extraActions: false //disabling individual level filter/breakdown
     }
   }
 
