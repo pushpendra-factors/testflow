@@ -23,7 +23,10 @@ import { bindActionCreators } from 'redux';
 import { fetchProjectSettingsV1, udpateProjectSettings } from 'Reducers/global';
 import _ from 'lodash';
 import ScriptHtml from 'Views/Settings/ProjectSettings/SDKSettings/ScriptHtml';
-import { generateSdkScriptCode } from 'Views/Settings/ProjectSettings/SDKSettings/utils';
+import {
+  generateSdkScriptCode,
+  generateSdkScriptCodeForPdf
+} from 'Views/Settings/ProjectSettings/SDKSettings/utils';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import StepsPdf from './StepsPdf';
 import { generateCopyText } from '../../../utils';
@@ -362,7 +365,7 @@ const Step2 = ({
             <PDFDownloadLink
               document={
                 <StepsPdf
-                  scriptCode={generateSdkScriptCode(
+                  scriptCode={generateSdkScriptCodeForPdf(
                     assetURL,
                     projectToken,
                     apiURL,

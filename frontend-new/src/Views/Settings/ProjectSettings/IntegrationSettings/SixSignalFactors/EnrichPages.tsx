@@ -114,7 +114,7 @@ const EnrichPages = ({
 
       let errorIndexes = [];
       const urlRegex =
-        /^[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/;
+        /^(?:(?:http|https):\/\/)?(?:www\.)?[a-zA-Z0-9-]+(?:\.[a-zA-Z]{2,})+(?:\/[^\s]*)?$/;
       let errorMessage = '';
       for (let i = 0; i < data.length; i++) {
         const currentData = data[i];
