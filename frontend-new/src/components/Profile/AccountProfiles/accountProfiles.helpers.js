@@ -81,7 +81,8 @@ const getTablePropColumn = ({ prop, groupPropNames, listProperties }) => {
     ),
     dataIndex: prop,
     key: prop,
-    width: 280,
+    width: 264,
+    showSorterTooltip: null,
     sorter: (a, b) =>
       propType === 'numerical'
         ? sortNumericalColumn(a[prop], b[prop])
@@ -109,13 +110,14 @@ export const getColumns = ({
       title: <div className={headerClassStr}>Account Domain</div>,
       dataIndex: 'account',
       key: 'account',
-      width: 300,
+      width: 264,
+      type: 'string',
       fixed: 'left',
       ellipsis: true,
       sorter: (a, b) => sortStringColumn(a.account.name, b.account.name),
       render: (item) =>
         (
-          <div className='flex items-center'>
+          <div className='flex items-center' id={item.name}>
             <img
               src={`https://logo.clearbit.com/${getHost(item.host)}`}
               onError={(e) => {
@@ -128,7 +130,24 @@ export const getColumns = ({
               height='24'
               loading='lazy'
             />
-            <span className='ml-2'>{item.name}</span>
+            <span
+              style={{
+                textOverflow: 'ellipsis',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap'
+              }}
+              className='ml-2'
+            >
+              <Text
+                type={'title'}
+                level={7}
+                extraClass={'truncate'}
+                truncate={true}
+                charLimit={25}
+              >
+                {item.name}
+              </Text>
+            </span>
           </div>
         ) || '-'
     }
@@ -139,7 +158,8 @@ export const getColumns = ({
     columns.push(
       {
         title: <div className={headerClassStr}>Engagement</div>,
-        width: 150,
+        width: 152,
+        type: 'string',
         dataIndex: 'engagement',
         key: 'engagement',
         fixed: 'left',
@@ -165,7 +185,8 @@ export const getColumns = ({
       },
       {
         title: <div className={headerClassStr}>Score</div>,
-        width: 150,
+        width: 152,
+        type: 'number',
         dataIndex: 'score',
         key: 'score',
         defaultSortOrder: 'descend',
@@ -187,7 +208,8 @@ export const getColumns = ({
     title: <div className={headerClassStr}>Last Activity</div>,
     dataIndex: 'lastActivity',
     key: 'lastActivity',
-    width: 200,
+    width: 224,
+    type: 'datetime',
     align: 'right',
     sorter: (a, b) => sortStringColumn(a.lastActivity, b.lastActivity),
     render: (item) => MomentTz(item).fromNow()
