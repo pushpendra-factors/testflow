@@ -75,6 +75,9 @@ import { isOnboarded } from 'Utils/global';
 import { cloneDeep } from 'lodash';
 import { getSegmentColorCode } from 'Views/AppSidebar/appSidebar.helpers';
 
+import { COLUMN_TYPE_PROPS } from 'Utils/table';
+import ResizableTitle from 'Components/Resizable';
+
 const groupToDomainMap = {
   $hubspot_company: '$hubspot_company_domain',
   $salesforce_account: '$salesforce_account_website',
@@ -435,7 +438,7 @@ function AccountProfiles({
         setCurrentPageSize(location.state.currentPageSize);
         setDefaultSorterInfo(location.state.activeSorter);
         const localeState = { ...history.location.state, fromDetails: false };
-        history.replace({ state: localeState });
+        history.replace('/' + location.hash, { state: localeState });
       }
     },
     [
@@ -998,17 +1001,21 @@ function AccountProfiles({
     setCurrentPageSize(pageParams.pageSize);
     setDefaultSorterInfo({ key: sorter.columnKey, order: sorter.order });
   };
+  const [newTableColumns, setNewTableColumns] = useState([]);
+  const [columnsType, setColumnTypes] = useState({});
 
-  const tableColumns = useMemo(() => {
-    return getColumns({
-      accounts,
-      source: accountPayload?.source,
-      isScoringLocked,
-      displayTableProps,
-      groupPropNames,
-      listProperties,
-      defaultSorterInfo
-    });
+  useEffect(() => {
+    setNewTableColumns(
+      getColumns({
+        accounts,
+        source: accountPayload?.source,
+        isScoringLocked,
+        displayTableProps,
+        groupPropNames,
+        listProperties,
+        defaultSorterInfo
+      })
+    );
   }, [
     accounts,
     accountPayload?.source,
@@ -1018,11 +1025,74 @@ function AccountProfiles({
     listProperties,
     defaultSorterInfo
   ]);
+  // const tableColumns = useMemo(() => {
+  //   return getColumns({
+  //     accounts,
+  //     source: accountPayload?.source,
+  //     isScoringLocked,
+  //     displayTableProps,
+  //     groupPropNames,
+  //     listProperties,
+  //     defaultSorterInfo
+  //   });
+  // }, [
+  //   accounts,
+  //   accountPayload?.source,
+  //   displayTableProps,
+  //   groupPropNames,
+  //   isScoringLocked,
+  //   listProperties,
+  //   defaultSorterInfo
+  // ]);
+  useEffect(() => {
+    let from = location.state?.state?.accountsTableRow;
+    if (from && document.getElementById(from)) {
+      const element = document.getElementById(from);
+      const y = element?.getBoundingClientRect().top + window.scrollY - 100;
 
+      window.scrollTo({ top: y, behavior: 'smooth' });
+
+      location.state.state.accountsTableRow = '';
+      // document.getElementById(location.hash.split('#')[1])?.scrollIntoView();
+      // window.scrollBy(0, -150);
+    }
+  }, [newTableColumns]);
   const renderTable = useCallback(() => {
+    const handleResize =
+      (index) =>
+      (_, { size }) => {
+        const tmpColType = newTableColumns[index]?.type;
+        const tmpColWidthRange =
+          COLUMN_TYPE_PROPS[tmpColType ? tmpColType : 'string'];
+        const newColumns = [...newTableColumns];
+        newColumns[index] = {
+          ...newColumns[index],
+          width: (() => {
+            if (size.width < tmpColWidthRange.min) return tmpColWidthRange.min;
+            else if (size.width > tmpColWidthRange.max)
+              return tmpColWidthRange.max;
+            return size.width;
+          })()
+        };
+        setNewTableColumns(newColumns);
+      };
+
+    const mergeColumns = newTableColumns.map((col, index) => ({
+      ...col,
+      onHeaderCell: (column) => ({
+        width: column.width,
+        onResize: handleResize(index)
+      })
+    }));
+
     return (
       <div>
         <Table
+          components={{
+            header: {
+              cell: ResizableTitle
+            }
+          }}
           onRow={(account) => ({
             onClick: () => {
               history.push(
@@ -1037,14 +1107,15 @@ function AccountProfiles({
                   fromDetails: true,
                   currentPage: currentPage,
                   currentPageSize: currentPageSize,
-                  activeSorter: defaultSorterInfo
+                  activeSorter: defaultSorterInfo,
+                  accountsTableRow: account.name
                 }
               );
             }
           })}
           className='fa-table--userlist'
           dataSource={tableData}
-          columns={tableColumns}
+          columns={mergeColumns}
           rowClassName='cursor-pointer'
           pagination={{
             position: ['bottom', 'left'],
@@ -1059,7 +1130,7 @@ function AccountProfiles({
         />
       </div>
     );
-  }, [tableData, tableColumns]);
+  }, [tableData, newTableColumns]);
 
   const showRangeNudge = useMemo(() => {
     return showUpgradeNudge(

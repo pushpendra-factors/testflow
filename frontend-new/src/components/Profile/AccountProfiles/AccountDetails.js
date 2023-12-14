@@ -434,7 +434,8 @@ function AccountDetails({
       accountPayload: location.state?.accountPayload,
       currentPage: location.state?.currentPage,
       currentPageSize: location.state?.currentPageSize,
-      activeSorter: location.state?.activeSorter
+      activeSorter: location.state?.activeSorter,
+      accountsTableRow: location.state?.accountsTableRow
     });
   }, []);
 
