@@ -36,7 +36,9 @@ export const formatAccountTimeline = (data, config) => {
           subtitle: `${
             anonymous_users.length === 1
               ? '1 Anonymous User'
-              : `${anonymous_users.length} Anonymous Users`
+              : `${
+                  anonymous_users.length > 25 ? '25+' : anonymous_users.length
+                } Anonymous Users`
           }`,
           userId: 'new_user',
           isAnonymous: true
