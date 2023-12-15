@@ -1113,7 +1113,7 @@ function AccountProfiles({
               );
             }
           })}
-          className='fa-table--userlist'
+          className={`fa-table--userlist ${styles['account-profiles-table']}`}
           dataSource={tableData}
           columns={mergeColumns}
           rowClassName='cursor-pointer'
@@ -1125,7 +1125,8 @@ function AccountProfiles({
           }}
           onChange={handleTableChange}
           scroll={{
-            x: displayTableProps?.length * 300
+            x: displayTableProps?.length * 300,
+            y: 'calc(100vh - 200px)'
           }}
         />
       </div>
