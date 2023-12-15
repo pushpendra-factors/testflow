@@ -72,7 +72,7 @@ const getTablePropColumn = ({ prop, groupPropNames, listProperties }) => {
         level={7}
         color='grey-2'
         weight='bold'
-        extraClass='m-0'
+        extraClass='m-0 truncate'
         truncate
         charLimit={25}
       >
@@ -210,7 +210,7 @@ export const getColumns = ({
     key: 'lastActivity',
     width: 224,
     type: 'datetime',
-    align: 'right',
+    align: 'left',
     sorter: (a, b) => sortStringColumn(a.lastActivity, b.lastActivity),
     render: (item) => MomentTz(item).fromNow()
   });
