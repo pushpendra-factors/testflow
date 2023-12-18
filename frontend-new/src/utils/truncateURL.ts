@@ -10,11 +10,21 @@ function addProtocolIfMissing(url: string) {
   }
   return url;
 }
+function urlHasBracketsOrBraces(inputString: string) {
+  const regex = /[\[\](){}]/;
+  return regex.test(inputString);
+}
 
-const truncateURL = (urlString: string) => {
+const truncateURL = (urlString: string) => { 
   let urlArray = urlString.split(',');
   urlArray = urlArray.map((urlText) => {
     const url = urlText.trim();
+
+    //check URL is containing brakcets or braces. (not handled in anchorme npm package, hence added as spl conditional check)
+    if(urlHasBracketsOrBraces(url)){
+      return url
+    }    
+    //check URL is valid using anchorme npm package
     if (!isValidURL(url)) {
       return url;
     }

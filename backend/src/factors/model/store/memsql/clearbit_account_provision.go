@@ -48,7 +48,7 @@ func (store *MemSQL) ProvisionClearbitAccountForSingleProject(projectId int64, e
 	responseJSON := postgres.Jsonb{RawMessage: body}
 
 	//Update Project Settings Table
-	store.UpdateProjectSettings(projectId, &model.ProjectSetting{FactorsClearbitKey: response.Keys.Secret, ClearbitProvisionAPIResponse: &responseJSON})
+	store.UpdateProjectSettings(projectId, &model.ProjectSetting{FactorsClearbitKey: response.Keys.Secret, ClearbitProvisionAccResponse: &responseJSON})
 
 	return nil
 }

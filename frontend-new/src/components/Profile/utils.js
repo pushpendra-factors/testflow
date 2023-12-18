@@ -321,6 +321,7 @@ export const getPropType = (propsList, searchProp) => {
 };
 
 export const propValueFormat = (searchKey, value, type) => {
+  if (!value) return '-';
   const isDate = searchKey?.toLowerCase()?.includes('date');
   const isNumDuration = searchKey?.toLowerCase()?.includes('time');
   const isCatDuration = searchKey?.endsWith('time');
@@ -337,15 +338,15 @@ export const propValueFormat = (searchKey, value, type) => {
       return isNumDuration
         ? formatDurationIntoString(parseInt(value))
         : isDurationMilliseconds
-        ? formatDurationIntoString(parseInt(value / 1000))
-        : parseInt(value);
+          ? formatDurationIntoString(parseInt(value / 1000))
+          : parseInt(value);
 
     case 'categorical':
       return isTimestamp
         ? MomentTz(value * 1000).format('DD MMM YYYY, hh:mm A zz')
         : isCatDuration
-        ? formatDurationIntoString(parseInt(value))
-        : value;
+          ? formatDurationIntoString(parseInt(value))
+          : value;
 
     default:
       return value;
@@ -420,11 +421,6 @@ export const DEFAULT_TIMELINE_CONFIG = {
 };
 
 export const eventIconsColorMap = {
-  brand: {
-    iconColor: '#EE3C3C',
-    bgColor: '#FAFAFA',
-    borderColor: '#EEEEEE'
-  },
   envelope: {
     iconColor: '#FF7875',
     bgColor: '#FFF4F4',
@@ -479,6 +475,14 @@ export const eventIconsColorMap = {
     iconColor: '#B37FEB',
     bgColor: '#F6EDFF',
     borderColor: '#E9D4FF'
+  },
+  globepointer: {
+    bgColor: '#E6F7FF',
+    borderColor: '#BAE7FF'
+  },
+  clipboard: {
+    bgColor: '#E6FFFB',
+    borderColor: '#B5F5EC'
   }
 };
 
