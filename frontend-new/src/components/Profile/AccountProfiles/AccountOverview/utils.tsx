@@ -15,6 +15,10 @@ export const EngagementTag: {
   Cool: {
     bgColor: '#F0F5FF',
     icon: 'snowflake'
+  },
+  Ice: {
+    bgColor: '#E6F7FF',
+    icon: 'icecube'
   }
 };
 
@@ -44,7 +48,7 @@ export function transformDate(yyyymmdd: string): string {
     '09': 'Sep',
     '10': 'Oct',
     '11': 'Nov',
-    '12': 'Dec',
+    '12': 'Dec'
   };
 
   const monthAbbreviation = monthsMap[month];
