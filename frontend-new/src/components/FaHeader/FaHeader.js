@@ -19,6 +19,8 @@ import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import { useSelector } from 'react-redux';
 import { featureLock } from '../../routes/feature';
 import { SolutionsAccountId } from 'Routes/constants';
+import useFeatureLock from 'hooks/useFeatureLock';
+import { FEATURES } from 'Constants/plans.constants';
 
 export const getConfigureMenuItems = (email) => {
   let configureMenuItems = [
@@ -234,6 +236,10 @@ function FaHeader() {
   const agentState = useSelector((state) => state.agent);
   const activeAgent = agentState?.agent_details?.email;
 
+  const { isFeatureLocked: isWebAnalyticsLocked } = useFeatureLock(
+    FEATURES.FEATURE_WEB_ANALYTICS_DASHBOARD
+  );
+
   return (
     <Header
       className={`px-6 fixed py-3 flex items-center w-full justify-between ${styles['fa-header']}`}
@@ -272,7 +278,7 @@ function FaHeader() {
                 <SVG color='#D9D9D9' size={16} name='chevronDown' />
               </div>
             </Dropdown>
-            {!featureLock(activeAgent) ? 
+            {isWebAnalyticsLocked ? 
             <Link
               to={PathUrls.Dashboard}
               className={cx('flex items-center', {
