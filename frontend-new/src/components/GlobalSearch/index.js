@@ -170,7 +170,7 @@ const Part1GlobalSearch = ({
                         key={eachIndex}
                         className={styles['reports-new-items-container']}
                         onClick={() => openSavedReports(eachItem)}
-                        onKeDown={(e) =>
+                        onKeyDown={(e) =>
                           e.key === 'Enter' ? openSavedReports(eachItem) : ''
                         }
                       >
@@ -499,7 +499,11 @@ const SearchResults = ({ searchString, openSavedReports }) => {
     let ans = '';
     for (let i = 0; i < n; i++) {
       if (arr[i].length > 0) {
-        ans += arr[i];
+        if (arr[i].length <= 3) {
+          ans += arr[i].toUpperCase();
+        } else {
+          ans += arr[i];
+        }
 
         if (i < n - 1) {
           ans += ' > ';
@@ -507,7 +511,6 @@ const SearchResults = ({ searchString, openSavedReports }) => {
         selectedPaths.push(arr[i]);
       }
     }
-
     return ans;
   };
   const moveToRoute = (path) => {
@@ -628,7 +631,7 @@ const SearchResults = ({ searchString, openSavedReports }) => {
                                     color='#0E2647'
                                   >
                                     {eachRoute !== '/'
-                                      ? renderRoute(eachRoute)?.toLowerCase()
+                                      ? renderRoute(eachRoute)
                                       : 'Dashboard'}
                                   </Text>
                                 </span>
@@ -803,7 +806,10 @@ const GlobalSearch = () => {
 
   const globalSearchRef = useRef();
   const OnKeyDownEvent = useCallback((e) => {
-    e.preventDefault();
+    // Conditional PreventDefault()
+    // This prevents page from scrolling if shifted focus using up/down
+    // And Makes it possible to enter into search box
+    if (e.keyCode === 40 || e.keyCode === 38) e.preventDefault();
     // Define focusable selectors
     const focusableSelectors = '[tabindex]:not([tabindex="-1"])';
     const focusableElements = Array.from(
