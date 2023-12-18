@@ -99,7 +99,7 @@ type ProjectSetting struct {
 	SDKAssetURL                  string          `gorm:"-" json:"sdk_asset_url"`
 	FactorsDeanonConfig          *postgres.Jsonb `json:"factors_deanon_config"`
 	FactorsClearbitKey           string          `json:"factors_clearbit_key"`
-	ClearbitProvisionAPIResponse *postgres.Jsonb `json:"clearbit_provision_acc_response"`
+	ClearbitProvisionAccResponse *postgres.Jsonb `json:"clearbit_provision_acc_response"`
 }
 
 /* Sample Attribution Setting
