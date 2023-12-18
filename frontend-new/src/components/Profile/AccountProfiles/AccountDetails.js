@@ -589,19 +589,9 @@ function AccountDetails({
     </div>
   );
 
-  // temp hack for engagement
-  const formatOverview = useMemo(() => {
-    const account = accounts?.data?.find((item) => item?.identity === activeId);
-    const formattedOverview = {
-      ...accountOverview?.data,
-      engagement: account?.engagement
-    };
-    return formattedOverview;
-  }, [accounts, accountOverview, activeId]);
-
   const renderOverview = () => (
     <AccountOverview
-      overview={formatOverview || {}}
+      overview={accountOverview?.data || {}}
       loading={accountOverview?.isLoading}
     />
   );
