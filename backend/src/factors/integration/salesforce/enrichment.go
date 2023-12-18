@@ -411,7 +411,7 @@ func enrichGroupAccount(projectID int64, document *model.SalesforceDocument, sal
 
 	accountID := getAccountGroupID(enProperties, document)
 
-	groupAccountUserID, status, eventID := CreateOrUpdateSalesforceGroupsProperties(projectID, document, model.GROUP_NAME_SALESFORCE_ACCOUNT, accountID)
+	groupAccountUserID, status, eventID := CreateOrUpdateSalesforceGroupsProperties(projectID, document, model.GROUP_NAME_SALESFORCE_ACCOUNT, accountID, false)
 	if status != http.StatusOK {
 		logCtx.Error("Failed to create or update salesforce groups properties.")
 		return status, ""
@@ -867,7 +867,7 @@ func isValidGroupName(documentType int, groupName string) bool {
 	return false
 }
 
-func CreateOrUpdateSalesforceGroupsProperties(projectID int64, document *model.SalesforceDocument, groupName, groupID string) (string, int, string) {
+func CreateOrUpdateSalesforceGroupsProperties(projectID int64, document *model.SalesforceDocument, groupName, groupID string, createCreatedEvent bool) (string, int, string) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": document.Type, "document": document, "group_name": groupName,
 		"group_id": groupID})
 
@@ -920,7 +920,7 @@ func CreateOrUpdateSalesforceGroupsProperties(projectID int64, document *model.S
 				return "", http.StatusInternalServerError, ""
 			}
 
-			if status == http.StatusConflict || status == http.StatusFound {
+			if !createCreatedEvent && (status == http.StatusConflict || status == http.StatusFound) {
 				return groupUserID, http.StatusOK, ""
 			}
 
@@ -1032,11 +1032,43 @@ func enrichGroupOpportunity(projectID int64, document *model.SalesforceDocument,
 		return nil, http.StatusInternalServerError
 	}
 
+	createCreatedEvent := false
 	if document.GroupUserID != "" {
-		// we skip opportunity processing if associated lead or contact record not processed.
-		// Groups would have already processed this record
-		logCtx.Error("Opportuntiy already processed for groups. Skipping record.")
-		return nil, http.StatusOK
+
+		// process created updates if recent update was processed before
+		if C.SalesforceAllowOpportunityOverrideCreateCreatedEvent(projectID) && document.Action == model.SalesforceDocumentCreated &&
+			document.Synced == false && document.SyncID == "" {
+			logCtx.Warning("Opportuntiy already processed for groups. Checking events created.")
+			eventName, status := store.GetStore().GetEventName(util.GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED, projectID)
+			if status != http.StatusFound {
+				logCtx.Error("Failed to get event name on enrichGroupOpportunity.")
+				return nil, http.StatusInternalServerError
+			}
+
+			events, status := store.GetStore().GetUserEventsByEventNameId(projectID, document.GroupUserID, eventName.ID)
+			if status != http.StatusFound && status != http.StatusNotFound {
+				logCtx.Error("Failed to get group user events name on enrichGroupOpportunity.")
+				return nil, http.StatusInternalServerError
+			}
+
+			if status == http.StatusFound {
+				errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, events[0].ID, "", document.GroupUserID, true)
+				if errCode != http.StatusAccepted {
+					logCtx.Error("Failed to update salesforce opportunity document as synced.")
+					return nil, http.StatusInternalServerError
+				}
+
+				return nil, http.StatusOK
+			}
+
+			createCreatedEvent = true
+		} else {
+			// we skip opportunity processing if associated lead or contact record not processed.
+			// Groups would have already processed this record
+			logCtx.Error("Opportuntiy already processed for groups. Skipping record.")
+			return nil, http.StatusOK
+		}
+
 	}
 
 	oppLeadIds, oppContactIds, _, _, err := getOpportuntityLeadAndContactID(document)
@@ -1050,7 +1082,7 @@ func enrichGroupOpportunity(projectID int64, document *model.SalesforceDocument,
 		return nil, http.StatusNotModified
 	}
 
-	groupUserID, status, eventID := CreateOrUpdateSalesforceGroupsProperties(projectID, document, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, document.ID)
+	groupUserID, status, eventID := CreateOrUpdateSalesforceGroupsProperties(projectID, document, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, document.ID, createCreatedEvent)
 	if status != http.StatusOK {
 		logCtx.Error("Failed to create or update salesforce groups properties.")
 		return nil, status
