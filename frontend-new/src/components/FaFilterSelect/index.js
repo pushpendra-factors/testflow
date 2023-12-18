@@ -650,9 +650,9 @@ const FaFilterSelect = ({
       const variant =
         operatorState === OPERATORS['notEqualTo'] ||
         operatorState === OPERATORS['doesNotContain']
-          ? 'Single'
+          ? 'Multi'
           : operatorState === OPERATORS['contain']
-          ? 'Input'
+          ? 'Multi'
           : 'Multi';
       let valueOptions = valueOpts?.[propState?.name]
         ? Object.entries(valueOpts[propState.name]).map((val) => {
@@ -800,9 +800,9 @@ const FaFilterSelect = ({
       >
         {propState.type === 'categorical' ? (
           <>
-            {operatorState === OPERATORS['contain'] ? (
+            {/* {operatorState === OPERATORS['contain'] ? (
               selectionComponent
-            ) : (
+            ) :  */}
               <>
                 <Tooltip
                   zIndex={99999}
@@ -850,7 +850,6 @@ const FaFilterSelect = ({
                 </Tooltip>
                 {valuesSelectionOpen && selectionComponent}
               </>
-            )}
           </>
         ) : null}
 
