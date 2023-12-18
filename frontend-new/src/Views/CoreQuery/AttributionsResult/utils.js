@@ -44,9 +44,13 @@ export const defaultSortProp = (queryOptions, attrQueries, data) => {
       const firstQueryLabel = get(attrQueries[0], 'label', undefined);
       if (firstQueryLabel) {
         const headers = get(data, 'headers', []);
-        const sorterKey = headers.find((header) =>
-          firstQueryLabel === 'Unique users' || 'Unique Users' ? header.startsWith(`unique_users - `) :header.startsWith(`${firstQueryLabel} - `)
-        );
+        const sorterKey = headers.find((header) => {
+          if(firstQueryLabel === 'Unique users' || firstQueryLabel === 'Unique Users') {
+            return header.startsWith(`unique_users - `);
+          } else {
+            return header.startsWith(`${firstQueryLabel} - `);
+          }
+        });
         if (sorterKey != null) {
           return [
             {
