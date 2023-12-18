@@ -1,13 +1,32 @@
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import MomentTz from 'Components/MomentTz';
 import { Tooltip } from 'antd';
 import EventIcon from './EventIcon';
 import UsernameWithIcon from './UsernameWithIcon';
 import { TableRowProps } from './types';
-import { PropTextFormat } from 'Utils/dataFormatter';
+import {
+  PropTextFormat,
+  convertGroupedPropertiesToUngrouped
+} from 'Utils/dataFormatter';
 import truncateURL, { isValidURL } from 'Utils/truncateURL';
+import { useSelector } from 'react-redux';
+import { getPropType, propValueFormat } from 'Components/Profile/utils';
 
 const TableRow: React.FC<TableRowProps> = ({ event, user, onEventClick }) => {
+  const { eventPropertiesV2 } = useSelector((state: any) => state.coreQuery);
+
+  const eventPropertiesModified = useMemo(() => {
+    if (!event.event_name) return null;
+    const eventProps: any = [];
+    if (eventPropertiesV2?.[event.event_name]) {
+      convertGroupedPropertiesToUngrouped(
+        eventPropertiesV2?.[event.event_name],
+        eventProps
+      );
+    }
+    return eventProps;
+  }, [event.event_name, eventPropertiesV2]);
+
   const timestamp = event?.timestamp
     ? MomentTz(event.timestamp * 1000).format('hh:mm A')
     : '';
@@ -31,25 +50,34 @@ const TableRow: React.FC<TableRowProps> = ({ event, user, onEventClick }) => {
       return null;
     }
 
-    const value =
-      display_name === 'Page View'
-        ? event_name
-        : properties?.[Object.keys(properties || {})[0]];
+    const [propertyName, propertyValue] =
+      Object.entries(properties || {})[0] || [];
+    const value = display_name === 'Page View' ? event_name : propertyValue;
 
-    const isURL = isValidURL(value);
-    const finalValue = isURL ? truncateURL(value) : value;
+    if (isValidURL(value)) {
+      return truncateURL(value);
+    }
 
-    return finalValue;
+    const propType = getPropType(eventPropertiesModified, propertyName);
+    const formattedValue = propValueFormat(propertyName, value, propType);
+
+    return formattedValue;
+  };
+
+  const renderPropValTooltip = () => {
+    return event?.display_name === 'Page View'
+      ? event?.event_name
+      : Object.entries(event?.properties || {})?.[0]?.[1];
   };
 
   return (
-    <tr className='table-row'>
+    <tr
+      className={`table-row ${isEventClickable ? 'active cursor-pointer' : ''}`}
+      onClick={() => isEventClickable && onEventClick(event)}
+    >
       <td className='timestamp-cell'>{timestamp}</td>
-      <td
-        className={`icon-cell ${isEventClickable ? 'cursor-pointer' : ''}`}
-        onClick={() => isEventClickable && onEventClick(event)}
-      >
-        <EventIcon icon={event.icon} size={16} />
+      <td className='icon-cell'>
+        <EventIcon icon={event.icon} size={24} />
         <Tooltip title={event.display_name || event.event_name}>
           <span className='ml-2'>{event.display_name || event.event_name}</span>
         </Tooltip>
@@ -57,7 +85,7 @@ const TableRow: React.FC<TableRowProps> = ({ event, user, onEventClick }) => {
       <td className='properties-cell'>
         <div className='propkey'>{renderPropertyName()}</div>
         <div className='propvalue'>
-          <Tooltip title={renderPropertyValue()}>
+          <Tooltip title={renderPropValTooltip()}>
             {renderPropertyValue()}
           </Tooltip>
         </div>

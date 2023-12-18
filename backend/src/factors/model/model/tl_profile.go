@@ -15,7 +15,7 @@ type Profile struct {
 	Properties   *postgres.Jsonb        `json:"-"`
 	Name         string                 `json:"name,omitempty"`
 	HostName     string                 `json:"host_name,omitempty"`
-	IsAnonymous  bool                   `json:"is_anonymous,omitempty"`
+	IsAnonymous  bool                   `json:"is_anonymous"`
 	LastActivity time.Time              `json:"last_activity"`
 	TableProps   map[string]interface{} `json:"table_props"`
 	Score        float64                `json:"score"`
@@ -345,14 +345,14 @@ var STANDARD_EVENT_NAME_ALIASES = map[string]string{
 }
 
 var EVENT_ICONS_MAP = map[string]string{
-	U.EVENT_NAME_SESSION:                            "globe",
+	U.EVENT_NAME_SESSION:                            "globepointer",
 	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL:           "envelope",
 	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED: "handshake",
 	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED: "handshake",
 	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED:    "phone",
 	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED:    "phone",
 	U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION:    "listcheck",
-	U.EVENT_NAME_FORM_SUBMITTED:                     "hand-pointer",
+	U.EVENT_NAME_FORM_SUBMITTED:                     "clipboard",
 }
 
 var GROUP_TO_COMPANY_NAME_MAP = map[string]string{
