@@ -3188,6 +3188,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 	// 5 hubspot accounts
 	var accounts []string
 	cities := []string{"London", "London", "DC", "Delhi", "Paris"}
+	lastEventTime := time.Now()
 	for i := 0; i < 5; i++ {
 		props := map[string]interface{}{
 			U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED: companyNames[i],
@@ -3211,6 +3212,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 			Properties:   accProps,
 			IsGroupUser:  &groupUser,
 			Group3UserID: domainAccounts[i],
+			LastEventAt:  &lastEventTime,
 		})
 		account, errCode := store.GetStore().GetUser(project.ID, createdUserID)
 		assert.Equal(t, http.StatusFound, errCode)
@@ -3254,6 +3256,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 			Properties:   accProps,
 			IsGroupUser:  &groupUser,
 			Group3UserID: domainAccounts[i],
+			LastEventAt:  &lastEventTime,
 		})
 		account, errCode := store.GetStore().GetUser(project.ID, createdUserID)
 		assert.Equal(t, http.StatusFound, errCode)
@@ -3296,6 +3299,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 				Group1ID:       "1",
 				CustomerUserId: fmt.Sprintf("hubspot@%daccount", (i%10)+1),
 				Group3UserID:   domainAccounts[i%5],
+				LastEventAt:    &lastEventTime,
 			})
 		} else {
 			src = model.GetRequestSourcePointer(model.UserSourceSalesforce)
@@ -3307,6 +3311,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 				Group2UserID:   accounts[5+i%5],
 				CustomerUserId: fmt.Sprintf("salesforce@%daccount", (i%10)+1),
 				Group3UserID:   domainAccounts[i%5],
+				LastEventAt:    &lastEventTime,
 			})
 		}
 		user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
