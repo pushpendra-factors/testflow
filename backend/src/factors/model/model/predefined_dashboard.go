@@ -63,9 +63,10 @@ type PredefinedWidget struct {
 }
 
 type PredefinedMetric struct {
-	Name              string `json:"na"`
-	DisplayName       string `json:"d_na"`
-	InternalEventType string `json:"inter_e_type"`
+	Name              	string `json:"na"`
+	DisplayName       	string `json:"d_na"`
+	InternalEventType 	string `json:"inter_e_type"`
+	Type				string `json:"ty"`
 }
 
 type PredefinedGroupBy struct {
