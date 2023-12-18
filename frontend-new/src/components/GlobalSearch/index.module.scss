@@ -131,9 +131,10 @@
             & .item-container {
               display: flex;
               justify-content: space-between;
-
+              padding-left: 5px;
               width: 100%;
               & .item-title {
+                text-transform: capitalize;
               }
             }
           }
