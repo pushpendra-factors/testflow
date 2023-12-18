@@ -20,7 +20,7 @@ function AccountTimelineSingleView({
   document.title = 'People' + ' - FactorsAI';
 
   const SingleTimelineViewTable = ({ data = [] }) => (
-    <div className='table-scroll'>
+    <div className='table-scroll mt-8'>
       <table>
         <thead>
           <tr>

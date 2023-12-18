@@ -6,6 +6,7 @@ export interface EventIconProps {
 export interface CustomStyles {
   '--bg-color': string;
   '--border-color': string;
+  '--icon-size': string;
 }
 
 export interface UsernameWithIconProps {
@@ -26,7 +27,7 @@ interface TimelineEvent {
   event_name: string;
   alias_name: string;
   display_name: string;
-  event_type:string;
+  event_type: string;
   properties?: { [key: string]: any };
   user: string;
   id: string;
