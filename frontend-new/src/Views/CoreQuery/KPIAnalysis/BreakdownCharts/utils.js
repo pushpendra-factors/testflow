@@ -38,6 +38,8 @@ import { getKpiLabel, getFormattedKpiValue } from '../kpiAnalysis.helpers';
 import { BREAKDOWN_TYPES } from '../../constants';
 import { getDifferentDates } from '../../coreQuery.helpers';
 import { isNumeric } from 'Utils/global';
+import { getCountryCode } from 'Utils/country';
+import { AVAILABLE_FLAGS } from 'Constants/country.list';
 
 export const getDefaultSortProp = ({ kpis, breakdown }) => {
   const dateTimeBreakdownIndex = findIndex(
@@ -295,7 +297,9 @@ export const getTableColumns = (
         ) {
           return <NumFormat number={d} />;
         }
-        return d;
+        let country_isoCode = getCountryCode(d);
+        const isFlagAvailable = AVAILABLE_FLAGS.includes(country_isoCode);
+        return <>{isFlagAvailable && <div className={`fflag fflag-${country_isoCode} ff-sm mr-1`} style={{marginTop:'-3px'}}></div>}{d}</>;
       }
     };
   });
