@@ -1,6 +1,5 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import MomentTz from 'Components/MomentTz';
-import { Tooltip } from 'antd';
 import EventIcon from './EventIcon';
 import UsernameWithIcon from './UsernameWithIcon';
 import { TableRowProps } from './types';
@@ -11,6 +10,7 @@ import {
 import truncateURL, { isValidURL } from 'Utils/truncateURL';
 import { useSelector } from 'react-redux';
 import { getPropType, propValueFormat } from 'Components/Profile/utils';
+import TextWithOverflowTooltip from 'Components/GenericComponents/TextWithOverflowTooltip';
 
 const TableRow: React.FC<TableRowProps> = ({ event, user, onEventClick }) => {
   const { eventPropertiesV2 } = useSelector((state: any) => state.coreQuery);
@@ -78,17 +78,18 @@ const TableRow: React.FC<TableRowProps> = ({ event, user, onEventClick }) => {
       <td className='timestamp-cell'>{timestamp}</td>
       <td className='icon-cell'>
         <EventIcon icon={event.icon} size={24} />
-        <Tooltip title={event.display_name || event.event_name}>
-          <span className='ml-2'>{event.display_name || event.event_name}</span>
-        </Tooltip>
+        <TextWithOverflowTooltip
+          text={event.display_name || event.event_name}
+          extraClass='ml-2'
+        />
       </td>
       <td className='properties-cell'>
         <div className='propkey'>{renderPropertyName()}</div>
-        <div className='propvalue'>
-          <Tooltip title={renderPropValTooltip()}>
-            {renderPropertyValue()}
-          </Tooltip>
-        </div>
+        <TextWithOverflowTooltip
+          text={renderPropertyValue()}
+          tooltipText={renderPropValTooltip()}
+          extraClass='propvalue'
+        />
       </td>
       <td className='user-cell'>
         <UsernameWithIcon
