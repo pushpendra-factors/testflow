@@ -6,7 +6,7 @@ services:
                 context: .
                 dockerfile: Dockerfile.memsql.testing
                 args:
-                    - MEMSQL_VERSION=alma-8.1.20-4f3dd4ecc3-4.0.13-1.17.2
+                    - MEMSQL_VERSION=alma-8.1.31-d5850b922e-4.0.16-1.17.6
             image: testing/memsql:1.0
             deploy:
                 replicas: 1
@@ -51,14 +51,17 @@ services:
                 -  GOPATH=/go/src/factors
                 -  REDIS_HOST=redis
                 -  PRI_DS=memsql
-                -  DB_HOST="172.0.0.2"    
+                -  DB_HOST="172.30.0.2"    
             entrypoint: [ "sh","-c","/go/bin/app --redis_host_ps=redis --dup_queue_redis_host=redis --queue_redis_host=redis  --api_domain=$API_DOMAIN --env=development --memsql_host=$DB_HOST"]
             image: testing/api:1.0
             deploy:
                 replicas: 0
             restart: always
             ports:
-                - "8080:8080"   
+                - "8080:8080"
+            networks:
+                network:
+                    ipv4_address: 172.30.0.3       
             volumes: 
                 - ../../../geolocation_data:/usr/local/var/factors/geolocation_data
                 - ../../../devicedetector_data:/usr/local/var/factors/devicedetector_data
