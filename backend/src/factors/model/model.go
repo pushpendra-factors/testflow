@@ -194,8 +194,11 @@ type Model interface {
 
 	// Predefined dashboards
 	ExecuteQueryGroupForPredefinedWebsiteAggregation(projectID int64, request model.PredefWebsiteAggregationQueryGroup) ([]model.QueryResult, int, string)
-
 	CreateWebsiteAggregation(websiteAggregation model.WebsiteAggregation) (model.WebsiteAggregation, string, int)
+	CreatePredefWebAggDashboardIfNotExists(projectID int64) int
+	TableOfWebsiteAggregationExists() (bool, int)
+	GetMaxTimestampOfDataPresenceFromWebsiteAggregation(projectID int64, timezone string) (time.Time, int)
+
 
 	// all dashboard runs for am unit
 	RunCustomQueryRangeCaching(dashboardUnit model.DashboardUnit, timezoneString U.TimeZoneString,
@@ -509,6 +512,7 @@ type Model interface {
 	GetProjectsToRunForIncludeExcludeString(projectIDs, excludeProjectIDs string) []int64
 	GetProjectsWithoutWebAnalyticsDashboard(onlyProjectsMap map[int64]bool) (projectIds []int64, errCode int)
 	GetTimezoneForProject(projectID int64) (U.TimeZoneString, int)
+	GetIDAndTimezoneForAllProjects() ([]model.Project, int)
 	GetProjectIDsWithSixSignalEnabled() []int64
 	GetProjectsToRunForVisitorIdentificationReport(projectIDs, excludeProjectIDs string) []int64
 

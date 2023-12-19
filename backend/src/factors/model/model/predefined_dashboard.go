@@ -94,7 +94,7 @@ type PredefinedFilter struct {
 
 var PredefinedDashboards = []PredefinedDashboard{
 	{
-		InternalID: 1, Name: "Traffic Dashboard", DisplayName: "Traffic Dashboard", Description: "Traffic Dashboard",
+		InternalID: 1, Name: "Traffic Dashboard", DisplayName: "Get quick insights into your website's performance. Dive into audience details like demographics, technographics, and firmographics. Identify traffic sources and top-performing pages to optimize your strategy effectively", Description: "Get quick insights into your website's performance. Dive into audience details like demographics, technographics, and firmographics. Identify traffic sources and top-performing pages to optimize your strategy effectively",
 	},
 }
 
