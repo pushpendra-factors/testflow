@@ -986,7 +986,7 @@ func GetUserSelectStmntForUserORGroup(caller string, scopeGroupID int, isGroupEv
 		if scopeGroupID > 0 {
 			str := "users.coal_group_user_id as coal_group_user_id"
 			if isGroupEvent {
-				return str + ", COALESCE(users.last_event_at, users.updated_at) as last_activity, users.group_properties as properties"
+				return str + ", users.last_event_at as last_activity, users.group_properties as properties"
 			}
 			return str + ",users.user_last_event as last_activity, users.group_properties as properties"
 		}
@@ -1149,13 +1149,13 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 		if model.IsAnyProfiles(q.Caller) {
 			var addColsString string
 			if model.IsAccountProfiles(q.Caller) && groupIDS[i] == 0 {
-				addColsString = "COALESCE(user_groups.last_event_at,user_groups.updated_at) as user_last_event"
+				addColsString = "user_groups.last_event_at as user_last_event"
 			} else if model.IsAccountProfiles(q.Caller) {
-				addColsString = "group_users.updated_at, group_users.last_event_at"
+				addColsString = "group_users.last_event_at"
 			}
 
 			if model.IsUserProfiles(q.Caller) {
-				addColsString = "users.updated_at, users.last_event_at, users.is_group_user, users.source"
+				addColsString = "users.last_event_at, users.is_group_user, users.source"
 			}
 
 			if model.IsAccountProfiles(q.Caller) {
@@ -1320,7 +1320,7 @@ func searchFilterStringForSegments(caller string, scopeGroupID int, globalUserPr
 func (store *MemSQL) selectStringForSegments(projectID int64, caller string, scopeGroupID int) (string, error) {
 	commonSelect := ""
 	if model.IsUserProfiles(caller) {
-		commonSelect = fmt.Sprintf("%%, users.updated_at as last_activity, ISNULL(users.customer_user_id) AS is_anonymous, users.properties as properties")
+		commonSelect = fmt.Sprintf("%%, users.last_event_at as last_activity, ISNULL(users.customer_user_id) AS is_anonymous, users.properties as properties")
 		commonSelect = strings.ReplaceAll(commonSelect, "%", "%s")
 
 	} else if model.IsAccountProfiles(caller) {
@@ -1368,7 +1368,7 @@ func (store *MemSQL) addSourceFilterForSegments(projectID int64,
 	} else {
 		selectVal = "users"
 	}
-	addSourceStmt = " " + fmt.Sprintf("(%s.is_group_user=0 OR %s.is_group_user IS NULL)", selectVal, selectVal)
+	addSourceStmt = " " + fmt.Sprintf("(%s.is_group_user=0 OR %s.is_group_user IS NULL) AND %s.last_event_at IS NOT NULL", selectVal, selectVal, selectVal)
 	if model.UserSourceMap[source] == model.UserSourceWeb {
 		addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND (%s.source="+strconv.Itoa(model.UserSourceMap[source])+" OR %s.source IS NULL)", selectVal, selectVal)
 	} else if model.IsDomainGroup(source) {
@@ -1589,7 +1589,7 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 		}
 	} else if model.IsAccountProfiles(query.Caller) {
 		if scopeGroupID > 0 {
-			aggregateSelect = fmt.Sprintf("SELECT coal_group_user_id as identity, last_activity, properties, host_name FROM %s GROUP BY identity ORDER BY last_activity DESC LIMIT 1000", aggregateFromStepName)
+			aggregateSelect = fmt.Sprintf("SELECT coal_group_user_id as identity, MAX(last_activity) as last_activity, properties, host_name FROM %s GROUP BY identity HAVING last_activity IS NOT NULL ORDER BY last_activity DESC LIMIT 1000", aggregateFromStepName)
 		}
 	} else {
 		// Limit is applicable only on the following. Because attribution calls this.

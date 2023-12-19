@@ -42,7 +42,9 @@ export const defaultState = {
           ...state,
           config: {
             ...defaultState.data,
-            data: action.payload
+            data: action.payload,
+            loading: false,
+            error: false,
           },
           widget: getRearrangedData(action.payload.result.wid, state.activePreBuildDashboard)
         };
