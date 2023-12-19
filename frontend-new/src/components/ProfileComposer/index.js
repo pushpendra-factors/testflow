@@ -32,12 +32,12 @@ function ProfileComposer({
   collapse = false,
   setCollapse
 }) {
-  const [isDDVisible, setDDVisible] = useState(false);
+  // const [isDDVisible, setDDVisible] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [profileBlockOpen, setProfileBlockOpen] = useState(true);
   const [filterBlockOpen, setFilterBlockOpen] = useState(true);
   const [groupBlockOpen, setGroupBlockOpen] = useState(true);
-  const dispatch = useDispatch();
+  // const dispatch = useDispatch();
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -50,48 +50,48 @@ function ProfileComposer({
     getGroupProperties(activeProject.id, queryOptions.group_analysis);
   }, [activeProject.id, queryOptions.group_analysis]);
 
-  const setGroupAnalysis = (group) => {
-    if (group !== 'users') {
-      getGroupProperties(activeProject.id, group);
-    }
-    const opts = Object.assign({}, queryOptions);
-    opts.group_analysis = group;
-    opts.globalFilters = [];
-    dispatch({
-      type: INITIALIZE_GROUPBY,
-      payload: {
-        global: [],
-        event: []
-      }
-    });
-    setQueryOptions(opts);
-  };
+  // const setGroupAnalysis = (group) => {
+  //   if (group !== 'users') {
+  //     getGroupProperties(activeProject.id, group);
+  //   }
+  //   const opts = Object.assign({}, queryOptions);
+  //   opts.group_analysis = group;
+  //   opts.globalFilters = [];
+  //   dispatch({
+  //     type: INITIALIZE_GROUPBY,
+  //     payload: {
+  //       global: [],
+  //       event: []
+  //     }
+  //   });
+  //   setQueryOptions(opts);
+  // };
 
-  const resetLabel = (group) => {
-    const labelMap = [
-      'salesforce',
-      'hubspot',
-      '6signal',
-      'linkedin_company',
-      'g2'
-    ];
-    const label =
-      labelMap.find((key) => group.toLowerCase().includes(key)) || 'web';
-    const query = { ...queries, label, alias: '', filters: [] };
-    setQueries([query]);
-  };
+  // const resetLabel = (group) => {
+  //   const labelMap = [
+  //     'salesforce',
+  //     'hubspot',
+  //     '6signal',
+  //     'linkedin_company',
+  //     'g2'
+  //   ];
+  //   const label =
+  //     labelMap.find((key) => group.toLowerCase().includes(key)) || 'web';
+  //   const query = { ...queries, label, alias: '', filters: [] };
+  //   setQueries([query]);
+  // };
 
-  const onChange = (value) => {
-    if (value !== queryOptions.group_analysis) {
-      setGroupAnalysis(value);
-      resetLabel(value);
-    }
-    setDDVisible(false);
-  };
+  // const onChange = (value) => {
+  //   if (value !== queryOptions.group_analysis) {
+  //     setGroupAnalysis(value);
+  //     resetLabel(value);
+  //   }
+  //   setDDVisible(false);
+  // };
 
-  const triggerDropDown = () => {
-    setDDVisible(true);
-  };
+  // const triggerDropDown = () => {
+  //   setDDVisible(true);
+  // };
 
   const queryList = () => {
     const blockList = [];
@@ -105,7 +105,7 @@ function ProfileComposer({
             event={event}
             queries={queries}
             eventChange={eventChange}
-            groupAnalysis={queryOptions.group_analysis}
+            groupAnalysis={'users'}
             queryOptions={queryOptions}
             setQueryOptions={setQueryOptions}
           ></ProfileBlock>
@@ -122,7 +122,7 @@ function ProfileComposer({
             queries={queries}
             eventChange={eventChange}
             groupBy={queryOptions.groupBy}
-            groupAnalysis={queryOptions.group_analysis}
+            groupAnalysis={'users'}
             queryOptions={queryOptions}
             setQueryOptions={setQueryOptions}
           ></ProfileBlock>
@@ -173,7 +173,7 @@ function ProfileComposer({
             <GlobalFilter
               filters={queryOptions.globalFilters}
               setGlobalFilters={setGlobalFiltersOption}
-              groupName={queryOptions.group_analysis}
+              groupName={'users'}
             />
           </div>
         </ComposerBlock>
@@ -197,7 +197,7 @@ function ProfileComposer({
           extraClass={`no-padding-l no-padding-r`}
         >
           <div key={0} className={'fa--query_block borderless no-padding '}>
-            <GroupBlock groupName={queryOptions.group_analysis} />
+            <GroupBlock groupName={'users'} />
           </div>
         </ComposerBlock>
       );
@@ -318,7 +318,7 @@ function ProfileComposer({
 }
 
 const mapStateToProps = (state) => ({
-  activeProject: state.global.active_project,
+  activeProject: state.global.active_project
 });
 
 const mapDispatchToProps = (dispatch) =>
