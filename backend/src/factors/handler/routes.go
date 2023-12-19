@@ -202,10 +202,10 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/prebuilt/add_missing", mid.FeatureMiddleware([]string{M.FEATURE_CUSTOM_METRICS}), responseWrapper(V1.CreateMissingPreBuiltCustomKPI))
 
 	// v1 CRM And Smart Event endpoints
-	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_event", mid.FeatureMiddleware([]string{M.FEATURE_SMART_EVENTS}), GetSmartEventFiltersHandler)
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/smart_event", mid.FeatureMiddleware([]string{M.FEATURE_SMART_EVENTS}), CreateSmartEventFilterHandler)
-	authRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/smart_event", mid.FeatureMiddleware([]string{M.FEATURE_SMART_EVENTS}), UpdateSmartEventFilterHandler)
-	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/smart_event", mid.FeatureMiddleware([]string{M.FEATURE_SMART_EVENTS}), responseWrapper(DeleteSmartEventFilterHandler))
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_event", mid.FeatureMiddleware([]string{M.CONF_CUSTOM_EVENTS}), GetSmartEventFiltersHandler)
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/smart_event", mid.FeatureMiddleware([]string{M.CONF_CUSTOM_EVENTS}), CreateSmartEventFilterHandler)
+	authRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/smart_event", mid.FeatureMiddleware([]string{M.CONF_CUSTOM_EVENTS}), UpdateSmartEventFilterHandler)
+	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/smart_event", mid.FeatureMiddleware([]string{M.CONF_CUSTOM_EVENTS}), responseWrapper(DeleteSmartEventFilterHandler))
 
 	// template
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/templates/:type/config", mid.FeatureMiddleware([]string{M.FEATURE_TEMPLATES}), responseWrapper(V1.GetTemplateConfigHandler))
@@ -284,11 +284,11 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/v1/all_alerts", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS, M.FEATURE_KPI_ALERTS}), responseWrapper(V1.GetAllAlertsInOneHandler))
 
 	// slack
-	authRouteGroup.POST("/:project_id/slack/auth", mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.INT_SLACK}), V1.SlackAuthRedirectHandler)
-	authRouteGroup.GET("/:project_id/slack/channels", mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.INT_SLACK}), V1.GetSlackChannelsListHandler)
-	authRouteGroup.DELETE("/:project_id/slack/delete", mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.INT_SLACK}), V1.DeleteSlackIntegrationHandler)
-	authRouteGroup.POST("/:project_id/v1/alerts/send_now", mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.INT_SLACK}), V1.QuerySendNowHandler)
-	authRouteGroup.GET("/:project_id/slack/users",  mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.INT_SLACK}), V1.GetSlackUsersListHandler)
+	authRouteGroup.POST("/:project_id/slack/auth", mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.FEATURE_SLACK}), V1.SlackAuthRedirectHandler)
+	authRouteGroup.GET("/:project_id/slack/channels", mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.FEATURE_SLACK}), V1.GetSlackChannelsListHandler)
+	authRouteGroup.DELETE("/:project_id/slack/delete", mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.FEATURE_SLACK}), V1.DeleteSlackIntegrationHandler)
+	authRouteGroup.POST("/:project_id/v1/alerts/send_now", mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.FEATURE_SLACK}), V1.QuerySendNowHandler)
+	authRouteGroup.GET("/:project_id/slack/users", mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.FEATURE_SLACK}), V1.GetSlackUsersListHandler)
 
 	// Timeline
 	authRouteGroup.POST("/:project_id/v1/profiles/users", mid.FeatureMiddleware([]string{M.FEATURE_PEOPLE_PROFILES}), responseWrapper(V1.GetProfileUsersHandler))
