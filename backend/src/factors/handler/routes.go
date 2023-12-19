@@ -195,17 +195,17 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/attribution/dashboards/:dashboard_id/units/:unit_id/query/:query_id", mid.FeatureMiddleware([]string{M.FEATURE_ATTRIBUTION}), V1.DeleteAttributionDashboardUnitAndQueryHandler)
 
 	// v1 custom metrics - admin/settings side.
-	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/config/v1", mid.FeatureMiddleware([]string{M.FEATURE_CUSTOM_METRICS, M.CONF_CUSTOM_KPIS}), V1.GetCustomMetricsConfigV1)
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics", mid.FeatureMiddleware([]string{M.FEATURE_CUSTOM_METRICS, M.CONF_CUSTOM_KPIS}), responseWrapper(V1.CreateCustomMetric))
-	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics", mid.FeatureMiddleware([]string{M.FEATURE_CUSTOM_METRICS, M.CONF_CUSTOM_KPIS}), responseWrapper(V1.GetCustomMetrics))
-	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/:id", mid.FeatureMiddleware([]string{M.FEATURE_CUSTOM_METRICS, M.CONF_CUSTOM_KPIS}), responseWrapper(V1.DeleteCustomMetrics))
-	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/prebuilt/add_missing", mid.FeatureMiddleware([]string{M.FEATURE_CUSTOM_METRICS, M.CONF_CUSTOM_KPIS}), responseWrapper(V1.CreateMissingPreBuiltCustomKPI))
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/config/v1", mid.FeatureMiddleware([]string{M.FEATURE_CUSTOM_METRICS}), V1.GetCustomMetricsConfigV1)
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics", mid.FeatureMiddleware([]string{M.FEATURE_CUSTOM_METRICS}), responseWrapper(V1.CreateCustomMetric))
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics", mid.FeatureMiddleware([]string{M.FEATURE_CUSTOM_METRICS}), responseWrapper(V1.GetCustomMetrics))
+	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/:id", mid.FeatureMiddleware([]string{M.FEATURE_CUSTOM_METRICS}), responseWrapper(V1.DeleteCustomMetrics))
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/custom_metrics/prebuilt/add_missing", mid.FeatureMiddleware([]string{M.FEATURE_CUSTOM_METRICS}), responseWrapper(V1.CreateMissingPreBuiltCustomKPI))
 
 	// v1 CRM And Smart Event endpoints
-	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_event", mid.FeatureMiddleware([]string{M.FEATURE_SMART_EVENTS}), GetSmartEventFiltersHandler)
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/smart_event", mid.FeatureMiddleware([]string{M.FEATURE_SMART_EVENTS}), CreateSmartEventFilterHandler)
-	authRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/smart_event", mid.FeatureMiddleware([]string{M.FEATURE_SMART_EVENTS}), UpdateSmartEventFilterHandler)
-	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/smart_event", mid.FeatureMiddleware([]string{M.FEATURE_SMART_EVENTS}), responseWrapper(DeleteSmartEventFilterHandler))
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_event", mid.FeatureMiddleware([]string{M.CONF_CUSTOM_EVENTS}), GetSmartEventFiltersHandler)
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/smart_event", mid.FeatureMiddleware([]string{M.CONF_CUSTOM_EVENTS}), CreateSmartEventFilterHandler)
+	authRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/smart_event", mid.FeatureMiddleware([]string{M.CONF_CUSTOM_EVENTS}), UpdateSmartEventFilterHandler)
+	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/smart_event", mid.FeatureMiddleware([]string{M.CONF_CUSTOM_EVENTS}), responseWrapper(DeleteSmartEventFilterHandler))
 
 	// template
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/templates/:type/config", mid.FeatureMiddleware([]string{M.FEATURE_TEMPLATES}), responseWrapper(V1.GetTemplateConfigHandler))
@@ -284,11 +284,11 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/v1/all_alerts", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS, M.FEATURE_KPI_ALERTS}), responseWrapper(V1.GetAllAlertsInOneHandler))
 
 	// slack
-	authRouteGroup.POST("/:project_id/slack/auth", mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.INT_SLACK}), V1.SlackAuthRedirectHandler)
-	authRouteGroup.GET("/:project_id/slack/channels", mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.INT_SLACK}), V1.GetSlackChannelsListHandler)
-	authRouteGroup.DELETE("/:project_id/slack/delete", mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.INT_SLACK}), V1.DeleteSlackIntegrationHandler)
-	authRouteGroup.POST("/:project_id/v1/alerts/send_now", mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.INT_SLACK}), V1.QuerySendNowHandler)
-	authRouteGroup.GET("/:project_id/slack/users",  mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.INT_SLACK}), V1.GetSlackUsersListHandler)
+	authRouteGroup.POST("/:project_id/slack/auth", mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.FEATURE_SLACK}), V1.SlackAuthRedirectHandler)
+	authRouteGroup.GET("/:project_id/slack/channels", mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.FEATURE_SLACK}), V1.GetSlackChannelsListHandler)
+	authRouteGroup.DELETE("/:project_id/slack/delete", mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.FEATURE_SLACK}), V1.DeleteSlackIntegrationHandler)
+	authRouteGroup.POST("/:project_id/v1/alerts/send_now", mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.FEATURE_SLACK}), V1.QuerySendNowHandler)
+	authRouteGroup.GET("/:project_id/slack/users", mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.FEATURE_SLACK}), V1.GetSlackUsersListHandler)
 
 	// Timeline
 	authRouteGroup.POST("/:project_id/v1/profiles/users", mid.FeatureMiddleware([]string{M.FEATURE_PEOPLE_PROFILES}), responseWrapper(V1.GetProfileUsersHandler))
@@ -334,7 +334,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.PUT("/:project_id/v1/eventtriggeralert/:id/status", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), responseWrapper(V1.UpdateEventTriggerAlertInternalStatusHandler))
 
 	// teams
-	authRouteGroup.POST("/:project_id/teams/auth", mid.FeatureMiddleware([]string{M.FEATURE_TEAMS, M.INT_TEAMS}), V1.TeamsAuthRedirectHandler)
+	authRouteGroup.POST("/:project_id/teams/auth", mid.FeatureMiddleware([]string{M.FEATURE_TEAMS}), V1.TeamsAuthRedirectHandler)
 	authRouteGroup.GET("/:project_id/teams/get_teams", mid.FeatureMiddleware([]string{M.FEATURE_TEAMS}), V1.GetAllTeamsHandler)
 	authRouteGroup.GET("/:project_id/teams/channels", mid.FeatureMiddleware([]string{M.FEATURE_TEAMS}), V1.GetTeamsChannelsHandler)
 	authRouteGroup.DELETE("/:project_id/teams/delete", mid.FeatureMiddleware([]string{M.FEATURE_TEAMS}), V1.DeleteTeamsIntegrationHandler)
@@ -479,56 +479,56 @@ func InitIntRoutes(r *gin.Engine) {
 	// blocked gracefully for existing projects.
 	intRouteGroup.POST("/shopify",
 		mid.BlockRequestGracefully(),
-		mid.SetScopeProjectIdByStoreAndSecret(), mid.FeatureMiddleware([]string{M.INT_SHOPFIY}),
+		mid.SetScopeProjectIdByStoreAndSecret(),
 		IntShopifyHandler)
 	intRouteGroup.POST("/shopify_sdk",
 		mid.BlockRequestGracefully(),
-		mid.SetScopeProjectIdByToken(), mid.FeatureMiddleware([]string{M.INT_SHOPFIY}),
+		mid.SetScopeProjectIdByToken(),
 		IntShopifySDKHandler)
 
 	intRouteGroup.POST("/adwords/enable",
 		mid.SetLoggedInAgent(),
-		mid.SetAuthorizedProjectsByLoggedInAgent(), mid.FeatureMiddleware([]string{M.INT_ADWORDS}),
+		mid.SetAuthorizedProjectsByLoggedInAgent(), mid.FeatureMiddleware([]string{M.FEATURE_GOOGLE_ADS}),
 		IntEnableAdwordsHandler)
 
 	intRouteGroup.POST("/google_organic/enable",
 		mid.SetLoggedInAgent(),
-		mid.SetAuthorizedProjectsByLoggedInAgent(), mid.FeatureMiddleware([]string{M.INT_GOOGLE_ORGANIC}),
+		mid.SetAuthorizedProjectsByLoggedInAgent(), mid.FeatureMiddleware([]string{M.FEATURE_GOOGLE_ORGANIC}),
 		IntEnableGoogleOrganicHandler)
 
 	intRouteGroup.POST("/facebook/add_access_token",
 		mid.SetLoggedInAgent(),
-		mid.SetAuthorizedProjectsByLoggedInAgent(), mid.FeatureMiddleware([]string{M.INT_FACEBOOK}),
+		mid.SetAuthorizedProjectsByLoggedInAgent(), mid.FeatureMiddleware([]string{M.FEATURE_FACEBOOK}),
 		IntFacebookAddAccessTokenHandler)
 
-	intRouteGroup.POST("/linkedin/auth", mid.FeatureMiddleware([]string{M.INT_LINKEDIN}), IntLinkedinAuthHandler)
-	intRouteGroup.POST("/linkedin/ad_accounts", mid.FeatureMiddleware([]string{M.INT_LINKEDIN}), IntLinkedinAccountHandler)
+	intRouteGroup.POST("/linkedin/auth", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}), IntLinkedinAuthHandler)
+	intRouteGroup.POST("/linkedin/ad_accounts", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}), IntLinkedinAccountHandler)
 
 	intRouteGroup.POST("/linkedin/add_access_token",
 		mid.SetLoggedInAgent(),
-		mid.SetAuthorizedProjectsByLoggedInAgent(), mid.FeatureMiddleware([]string{M.INT_LINKEDIN}),
+		mid.SetAuthorizedProjectsByLoggedInAgent(), mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}),
 		IntLinkedinAddAccessTokenHandler)
 
 	intRouteGroup.POST("/salesforce/enable",
 		mid.SetLoggedInAgent(),
-		mid.SetAuthorizedProjectsByLoggedInAgent(), mid.FeatureMiddleware([]string{M.INT_SALESFORCE}),
+		mid.SetAuthorizedProjectsByLoggedInAgent(), mid.FeatureMiddleware([]string{M.FEATURE_SALESFORCE}),
 		IntEnableSalesforceHandler)
 
 	intRouteGroup.POST("/salesforce/auth",
 		mid.SetLoggedInAgent(),
-		mid.SetAuthorizedProjectsByLoggedInAgent(), mid.FeatureMiddleware([]string{M.INT_SALESFORCE}),
+		mid.SetAuthorizedProjectsByLoggedInAgent(), mid.FeatureMiddleware([]string{M.FEATURE_SALESFORCE}),
 		SalesforceAuthRedirectHandler)
 	// salesforce integration.
-	intRouteGroup.GET(SalesforceCallbackRoute, mid.FeatureMiddleware([]string{M.INT_SALESFORCE}),
+	intRouteGroup.GET(SalesforceCallbackRoute, mid.FeatureMiddleware([]string{M.FEATURE_SALESFORCE}),
 		SalesforceCallbackHandler)
 
 	intRouteGroup.POST("/hubspot/auth",
 		mid.SetLoggedInAgent(),
-		mid.SetAuthorizedProjectsByLoggedInAgent(), mid.FeatureMiddleware([]string{M.INT_HUBSPOT}),
+		mid.SetAuthorizedProjectsByLoggedInAgent(), mid.FeatureMiddleware([]string{M.FEATURE_HUBSPOT}),
 		HubspotAuthRedirectHandler)
 
 	// hubspot integration.
-	intRouteGroup.GET(HubspotCallbackRoute, mid.FeatureMiddleware([]string{M.INT_HUBSPOT}),
+	intRouteGroup.GET(HubspotCallbackRoute, mid.FeatureMiddleware([]string{M.FEATURE_HUBSPOT}),
 		HubspotCallbackHandler)
 
 	intRouteGroup.DELETE("/:project_id/:channel_name",
@@ -537,9 +537,9 @@ func InitIntRoutes(r *gin.Engine) {
 		mid.FeatureMiddleware([]string{M.FEATURE_GOOGLE_ADS, M.FEATURE_FACEBOOK, M.FEATURE_LINKEDIN, M.FEATURE_GOOGLE_ORGANIC}),
 		IntDeleteHandler)
 
-	intRouteGroup.GET("/slack/callback", mid.FeatureMiddleware([]string{M.INT_SLACK}), V1.SlackCallbackHandler)
+	intRouteGroup.GET("/slack/callback", mid.FeatureMiddleware([]string{M.FEATURE_SLACK}), V1.SlackCallbackHandler)
 
-	intRouteGroup.GET("/teams/callback", mid.FeatureMiddleware([]string{M.INT_SLACK}), V1.TeamsCallbackHandler)
+	intRouteGroup.GET("/teams/callback", mid.FeatureMiddleware([]string{M.FEATURE_SLACK}), V1.TeamsCallbackHandler)
 
 }
 
@@ -547,91 +547,91 @@ func InitDataServiceRoutes(r *gin.Engine) {
 	dataServiceRouteGroup := r.Group(ROUTE_DATA_SERVICE_ROOT)
 
 	//todo @ashhar: merge adwords and google_organic whereever possible
-	dataServiceRouteGroup.POST("/adwords/documents/add", mid.FeatureMiddleware([]string{M.DS_ADWORDS}),
+	dataServiceRouteGroup.POST("/adwords/documents/add", mid.FeatureMiddleware([]string{M.FEATURE_GOOGLE_ADS}),
 		IH.DataServiceAdwordsAddDocumentHandler)
-	dataServiceRouteGroup.POST("/adwords/documents/add_multiple", mid.FeatureMiddleware([]string{M.DS_ADWORDS}),
+	dataServiceRouteGroup.POST("/adwords/documents/add_multiple", mid.FeatureMiddleware([]string{M.FEATURE_GOOGLE_ADS}),
 		IH.DataServiceAdwordsAddMultipleDocumentsHandler)
 
-	dataServiceRouteGroup.POST("/adwords/add_refresh_token", mid.FeatureMiddleware([]string{M.DS_ADWORDS}),
+	dataServiceRouteGroup.POST("/adwords/add_refresh_token", mid.FeatureMiddleware([]string{M.FEATURE_GOOGLE_ADS}),
 		IntAdwordsAddRefreshTokenHandler)
 
-	dataServiceRouteGroup.POST("/adwords/get_refresh_token", mid.FeatureMiddleware([]string{M.DS_ADWORDS}),
+	dataServiceRouteGroup.POST("/adwords/get_refresh_token", mid.FeatureMiddleware([]string{M.FEATURE_GOOGLE_ADS}),
 		IntAdwordsGetRefreshTokenHandler)
 
-	dataServiceRouteGroup.GET("/adwords/documents/project_last_sync_info", mid.FeatureMiddleware([]string{M.DS_ADWORDS}),
+	dataServiceRouteGroup.GET("/adwords/documents/project_last_sync_info", mid.FeatureMiddleware([]string{M.FEATURE_GOOGLE_ADS}),
 		IH.DataServiceAdwordsGetLastSyncForProjectInfoHandler)
 
-	dataServiceRouteGroup.GET("/adwords/documents/last_sync_info", mid.FeatureMiddleware([]string{M.DS_ADWORDS}),
+	dataServiceRouteGroup.GET("/adwords/documents/last_sync_info", mid.FeatureMiddleware([]string{M.FEATURE_GOOGLE_ADS}),
 		IH.DataServiceAdwordsGetLastSyncInfoHandler)
 
-	dataServiceRouteGroup.POST("/google_organic/documents/add", mid.FeatureMiddleware([]string{M.DS_GOOGLE_ORGANIC}),
+	dataServiceRouteGroup.POST("/google_organic/documents/add", mid.FeatureMiddleware([]string{M.FEATURE_GOOGLE_ORGANIC}),
 		IH.DataServiceGoogleOrganicAddDocumentHandler)
 
-	dataServiceRouteGroup.POST("/google_organic/documents/add_multiple", mid.FeatureMiddleware([]string{M.DS_GOOGLE_ORGANIC}),
+	dataServiceRouteGroup.POST("/google_organic/documents/add_multiple", mid.FeatureMiddleware([]string{M.FEATURE_GOOGLE_ORGANIC}),
 		IH.DataServiceGoogleOrganicAddMultipleDocumentsHandler)
 
-	dataServiceRouteGroup.POST("/google_organic/add_refresh_token", mid.FeatureMiddleware([]string{M.DS_GOOGLE_ORGANIC}),
+	dataServiceRouteGroup.POST("/google_organic/add_refresh_token", mid.FeatureMiddleware([]string{M.FEATURE_GOOGLE_ORGANIC}),
 		IntGoogleOrganicAddRefreshTokenHandler)
 
-	dataServiceRouteGroup.POST("/google_organic/get_refresh_token", mid.FeatureMiddleware([]string{M.DS_GOOGLE_ORGANIC}),
+	dataServiceRouteGroup.POST("/google_organic/get_refresh_token", mid.FeatureMiddleware([]string{M.FEATURE_GOOGLE_ADS}),
 		IntGoogleOrganicGetRefreshTokenHandler)
 
-	dataServiceRouteGroup.GET("/google_organic/documents/project_last_sync_info", mid.FeatureMiddleware([]string{M.DS_GOOGLE_ORGANIC}),
+	dataServiceRouteGroup.GET("/google_organic/documents/project_last_sync_info", mid.FeatureMiddleware([]string{M.FEATURE_GOOGLE_ORGANIC}),
 		IH.DataServiceGoogleOrganicGetLastSyncForProjectInfoHandler)
 
-	dataServiceRouteGroup.GET("/google_organic/documents/last_sync_info", mid.FeatureMiddleware([]string{M.DS_GOOGLE_ORGANIC}),
+	dataServiceRouteGroup.GET("/google_organic/documents/last_sync_info", mid.FeatureMiddleware([]string{M.FEATURE_GOOGLE_ORGANIC}),
 		IH.DataServiceGoogleOrganicGetLastSyncInfoHandler)
 
-	dataServiceRouteGroup.POST("/hubspot/documents/add", mid.FeatureMiddleware([]string{M.DS_HUBSPOT}),
+	dataServiceRouteGroup.POST("/hubspot/documents/add", mid.FeatureMiddleware([]string{M.FEATURE_HUBSPOT}),
 		IH.DataServiceHubspotAddDocumentHandler)
 
-	dataServiceRouteGroup.POST("/hubspot/documents/add_batch", mid.FeatureMiddleware([]string{M.DS_HUBSPOT}),
+	dataServiceRouteGroup.POST("/hubspot/documents/add_batch", mid.FeatureMiddleware([]string{M.FEATURE_HUBSPOT}),
 		IH.DataServiceHubspotAddBatchDocumentHandler)
 
-	dataServiceRouteGroup.GET("/hubspot/documents/sync_info", mid.FeatureMiddleware([]string{M.DS_HUBSPOT}),
+	dataServiceRouteGroup.GET("/hubspot/documents/sync_info", mid.FeatureMiddleware([]string{M.FEATURE_HUBSPOT}),
 		IH.DataServiceHubspotGetSyncInfoHandler)
 
-	dataServiceRouteGroup.POST("/hubspot/documents/sync_info", mid.FeatureMiddleware([]string{M.DS_HUBSPOT}),
+	dataServiceRouteGroup.POST("/hubspot/documents/sync_info", mid.FeatureMiddleware([]string{M.FEATURE_HUBSPOT}),
 		IH.DataServiceHubspotUpdateSyncInfo)
 
-	dataServiceRouteGroup.GET("/hubspot/documents/types/form", mid.FeatureMiddleware([]string{M.DS_HUBSPOT}),
+	dataServiceRouteGroup.GET("/hubspot/documents/types/form", mid.FeatureMiddleware([]string{M.FEATURE_HUBSPOT}),
 		IH.DataServiceGetHubspotFormDocumentsHandler)
 
-	dataServiceRouteGroup.GET("/facebook/project/settings", mid.FeatureMiddleware([]string{M.DS_FACEBOOK}),
+	dataServiceRouteGroup.GET("/facebook/project/settings", mid.FeatureMiddleware([]string{M.FEATURE_FACEBOOK}),
 		IH.DataServiceFacebookGetProjectSettings)
 
-	dataServiceRouteGroup.POST("/facebook/documents/add", mid.FeatureMiddleware([]string{M.DS_FACEBOOK}),
+	dataServiceRouteGroup.POST("/facebook/documents/add", mid.FeatureMiddleware([]string{M.FEATURE_FACEBOOK}),
 		IH.DataServiceFacebookAddDocumentHandler)
 
-	dataServiceRouteGroup.GET("/facebook/documents/last_sync_info", mid.FeatureMiddleware([]string{M.DS_FACEBOOK}),
+	dataServiceRouteGroup.GET("/facebook/documents/last_sync_info", mid.FeatureMiddleware([]string{M.FEATURE_FACEBOOK}),
 		IH.DataServiceFacebookGetLastSyncInfoHandler)
 
-	dataServiceRouteGroup.GET("linkedin/documents/last_sync_info", mid.FeatureMiddleware([]string{M.DS_LINKEDIN}),
+	dataServiceRouteGroup.GET("linkedin/documents/last_sync_info", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}),
 		IH.DataServiceLinkedinGetLastSyncInfoHandler)
 
-	dataServiceRouteGroup.POST("/linkedin/documents/add", mid.FeatureMiddleware([]string{M.DS_LINKEDIN}),
+	dataServiceRouteGroup.POST("/linkedin/documents/add", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}),
 		IH.DataServiceLinkedinAddDocumentHandler)
 
-	dataServiceRouteGroup.POST("/linkedin/documents/add_multiple", mid.FeatureMiddleware([]string{M.DS_FACEBOOK}),
+	dataServiceRouteGroup.POST("/linkedin/documents/add_multiple", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}),
 		IH.DataServiceLinkedinAddMultipleDocumentsHandler)
 
-	dataServiceRouteGroup.GET("/linkedin/documents/campaign_group_info", mid.FeatureMiddleware([]string{M.DS_LINKEDIN}),
+	dataServiceRouteGroup.GET("/linkedin/documents/campaign_group_info", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}),
 		IH.DataServiceLinkedinGetCampaignGroupInfoHandler)
 
 	dataServiceRouteGroup.DELETE("/linkedin/documents",
-		mid.FeatureMiddleware([]string{M.DS_LINKEDIN}), IH.DataServiceLinkedinDeleteDocumentsHandler)
+		mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}), IH.DataServiceLinkedinDeleteDocumentsHandler)
 
 	dataServiceRouteGroup.PUT("/linkedin/access_token", mid.FeatureMiddleware([]string{}),
-		mid.FeatureMiddleware([]string{M.DS_LINKEDIN}), IH.DataServiceLinkedinUpdateAccessToken)
+		mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}), IH.DataServiceLinkedinUpdateAccessToken)
 
 	dataServiceRouteGroup.POST("/metrics", mid.FeatureMiddleware([]string{}),
-		mid.FeatureMiddleware([]string{M.DS_METRICS}), IH.DataServiceRecordMetricHandler)
+		mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}), IH.DataServiceRecordMetricHandler)
 
 	dataServiceRouteGroup.GET("/linkedin/project/settings", mid.FeatureMiddleware([]string{}),
-		mid.FeatureMiddleware([]string{M.DS_LINKEDIN}), IH.DataServiceLinkedinGetProjectSettings)
+		mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}), IH.DataServiceLinkedinGetProjectSettings)
 
 	dataServiceRouteGroup.GET("/linkedin/project/settings/projects", mid.FeatureMiddleware([]string{}),
-		mid.FeatureMiddleware([]string{M.DS_LINKEDIN}), IH.DataServiceLinkedinGetProjectSettingsForProjects)
+		mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}), IH.DataServiceLinkedinGetProjectSettingsForProjects)
 
 	dataServiceRouteGroup.GET("/task/details", responseWrapper(V1.GetTaskDetailsByNameHandler))
 	dataServiceRouteGroup.GET("/task/deltas", responseWrapper(V1.GetAllToBeExecutedDeltasHandler))
