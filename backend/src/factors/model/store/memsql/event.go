@@ -453,7 +453,7 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 		//To skip last_event_at update if event is excluded from timeline.
 		if !model.ExcludedEventsBool[eventName.Name] {
 			eventCreatedAt := time.Unix(event.Timestamp, 0)
-			updateLastEventAtStmt := "UPDATE users SET last_event_at=? WHERE project_id=? AND id=? AND last_event_at<?"
+			updateLastEventAtStmt := "UPDATE users SET last_event_at=? WHERE project_id=? AND id=? AND (last_event_at IS NULL OR last_event_at<?)"
 			updateLastEventAtStmtExec := db.Exec(updateLastEventAtStmt, eventCreatedAt, event.ProjectId, event.UserId, eventCreatedAt)
 
 			if err := updateLastEventAtStmtExec.Error; err != nil {
