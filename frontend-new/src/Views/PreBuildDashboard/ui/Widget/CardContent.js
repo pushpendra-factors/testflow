@@ -97,8 +97,8 @@ function CardContent({ unit, resultState, durationObj, breakdown, currMetricsVal
     }, [queryType, unit]);
 
     const kpiData = unit?.me?.map(obj => {
-      const { inter_e_type, na, d_na, ...rest } = obj; // Use destructuring to exclude "inter_e_type" and "na"
-      return { ...rest, label: d_na };; // Return the object without "inter_e_type" and "na"
+      const { inter_e_type, ty, na, d_na, ...rest } = obj;
+      return { ...rest, metric: na, label: d_na, metricType: ty };
     })
 
     unit.id = unit.inter_id;

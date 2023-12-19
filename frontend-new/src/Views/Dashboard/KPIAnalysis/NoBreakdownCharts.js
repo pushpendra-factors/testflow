@@ -64,6 +64,12 @@ function NoBreakdownCharts({
     });
   }, []);
 
+  const lineChartData = useMemo(() => {
+    return unit?.inter_id != null
+      ? data.slice(currentEventIndex, currentEventIndex + 1)
+      : data;
+  }, [unit?.inter_id, data, currentEventIndex]);
+
   useEffect(() => {
     const aggData = formatData(responseData, kpis);
     const { categories: cats, data: d } = formatDataInSeriesFormat(aggData);
@@ -234,7 +240,7 @@ function NoBreakdownCharts({
       <LineChart
         frequency={durationObj.frequency}
         categories={categories}
-        data={data}
+        data={lineChartData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
         legendsPosition={unit?.inter_id == 1 ? '' : 'top'}
         cardSize={unit.cardSize}

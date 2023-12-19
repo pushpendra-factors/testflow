@@ -63,6 +63,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 	// Create 5 Unidentified Users
 	users := make([]model.User, 0)
 	numUsers := 5
+	lastEventTime := time.Now().Add(time.Duration(-6) * time.Hour)
 	for i := 0; i < numUsers; i++ {
 		propertiesJSON, err := json.Marshal(propsMap[9-i])
 		if err != nil {
@@ -70,9 +71,10 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 		}
 		properties := postgres.Jsonb{RawMessage: propertiesJSON}
 		createdUserID, _ := store.GetStore().CreateUser(&model.User{
-			ProjectId:  project.ID,
-			Source:     model.GetRequestSourcePointer(model.UserSourceWeb),
-			Properties: properties,
+			ProjectId:   project.ID,
+			Source:      model.GetRequestSourcePointer(model.UserSourceWeb),
+			Properties:  properties,
+			LastEventAt: &lastEventTime,
 		})
 		user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
 		assert.Equal(t, http.StatusFound, errCode)
@@ -82,6 +84,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 
 	// Create 5 Identified Users from UserSourceWeb
 	numUsers = 5
+	lastEventTime = time.Now().Add(time.Duration(-5) * time.Hour)
 	for i := 0; i < numUsers; i++ {
 		propertiesJSON, err := json.Marshal(propsMap[i])
 		if err != nil {
@@ -93,6 +96,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 			Source:         model.GetRequestSourcePointer(model.UserSourceWeb),
 			CustomerUserId: "user" + strconv.Itoa(i+1) + "@example.com",
 			Properties:     properties,
+			LastEventAt:    &lastEventTime,
 		})
 		user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
 		assert.Equal(t, http.StatusFound, errCode)
@@ -102,6 +106,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 
 	// Create 2 Identified Users from UserSourceSalesforce
 	numUsers = 2
+	lastEventTime = time.Now().Add(time.Duration(-4) * time.Hour)
 	for i := 5; i < 5+numUsers; i++ {
 		propertiesJSON, err := json.Marshal(propsMap[i])
 		if err != nil {
@@ -113,6 +118,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 			Source:         model.GetRequestSourcePointer(model.UserSourceSalesforce),
 			CustomerUserId: "user" + strconv.Itoa(i+1) + "@example.com",
 			Properties:     properties,
+			LastEventAt:    &lastEventTime,
 		})
 		user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
 		assert.Equal(t, http.StatusFound, errCode)
@@ -122,6 +128,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 
 	// Create 3 Identified Users from UserSourceHubspot
 	numUsers = 3
+	lastEventTime = time.Now().Add(time.Duration(-3) * time.Hour)
 	for i := 7; i < 7+numUsers; i++ {
 		propertiesJSON, err := json.Marshal(propsMap[i])
 		if err != nil {
@@ -133,6 +140,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 			Source:         model.GetRequestSourcePointer(model.UserSourceHubspot),
 			CustomerUserId: "user" + strconv.Itoa(i+1) + "@example.com",
 			Properties:     properties,
+			LastEventAt:    &lastEventTime,
 		})
 		user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
 		assert.Equal(t, http.StatusFound, errCode)
@@ -466,6 +474,7 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	group5, status := store.GetStore().CreateOrGetDomainsGroup(project.ID)
 	assert.Equal(t, http.StatusCreated, status)
 	assert.NotNil(t, group5)
+	lastEventTime := time.Now()
 
 	// Create Domain Group
 	domProperties := postgres.Jsonb{RawMessage: json.RawMessage(`{}`)}
@@ -501,6 +510,7 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		Group1ID:    "1",
 		Group2ID:    "2",
 		Source:      model.GetRequestSourcePointer(model.UserSourceHubspot),
+		LastEventAt: &lastEventTime,
 	})
 
 	props = map[string]interface{}{
@@ -534,6 +544,7 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		CustomerUserId: customerEmail,
 		Properties:     properties,
 		IsGroupUser:    &isGroupUser,
+		LastEventAt:    &lastEventTime,
 	})
 	user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
 	assert.Equal(t, user.ID, createdUserID)
@@ -3188,6 +3199,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 	// 5 hubspot accounts
 	var accounts []string
 	cities := []string{"London", "London", "DC", "Delhi", "Paris"}
+	lastEventTime := time.Now()
 	for i := 0; i < 5; i++ {
 		props := map[string]interface{}{
 			U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED: companyNames[i],
@@ -3211,6 +3223,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 			Properties:   accProps,
 			IsGroupUser:  &groupUser,
 			Group3UserID: domainAccounts[i],
+			LastEventAt:  &lastEventTime,
 		})
 		account, errCode := store.GetStore().GetUser(project.ID, createdUserID)
 		assert.Equal(t, http.StatusFound, errCode)
@@ -3254,6 +3267,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 			Properties:   accProps,
 			IsGroupUser:  &groupUser,
 			Group3UserID: domainAccounts[i],
+			LastEventAt:  &lastEventTime,
 		})
 		account, errCode := store.GetStore().GetUser(project.ID, createdUserID)
 		assert.Equal(t, http.StatusFound, errCode)
@@ -3296,6 +3310,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 				Group1ID:       "1",
 				CustomerUserId: fmt.Sprintf("hubspot@%daccount", (i%10)+1),
 				Group3UserID:   domainAccounts[i%5],
+				LastEventAt:    &lastEventTime,
 			})
 		} else {
 			src = model.GetRequestSourcePointer(model.UserSourceSalesforce)
@@ -3307,6 +3322,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 				Group2UserID:   accounts[5+i%5],
 				CustomerUserId: fmt.Sprintf("salesforce@%daccount", (i%10)+1),
 				Group3UserID:   domainAccounts[i%5],
+				LastEventAt:    &lastEventTime,
 			})
 		}
 		user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
@@ -4461,6 +4477,7 @@ func TestAllAccounts(t *testing.T) {
 	users := make([]model.User, 0)
 	numUsers := 15
 	// Create 5 Hubspot Companies
+	lastEventTime := time.Now()
 	for i := 0; i < numUsers; i++ {
 		isGroupUser := true
 		propertiesJSON, err := json.Marshal(dummyPropsMap[i])
@@ -4496,6 +4513,7 @@ func TestAllAccounts(t *testing.T) {
 			Group3ID:     isSalesforce,
 			Group4ID:     isSixSignal,
 			Source:       source,
+			LastEventAt:  &lastEventTime,
 		})
 		account, errCode := store.GetStore().GetUser(project.ID, createdGroupUserID)
 		assert.Equal(t, http.StatusFound, errCode)
@@ -4526,6 +4544,7 @@ func TestAllAccounts(t *testing.T) {
 			Group4UserID:   sixsUserID,
 			CustomerUserId: customerUserID,
 			Source:         source,
+			LastEventAt:    &lastEventTime,
 		})
 		user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
 		assert.Equal(t, http.StatusFound, errCode)
@@ -4567,10 +4586,11 @@ func TestAllAccounts(t *testing.T) {
 	err = json.Unmarshal(jsonResponse, &resp)
 	assert.Nil(t, err)
 	assert.Equal(t, len(resp), 2)
-	assert.Contains(t, resp[0].HostName, "adapt")
-	assert.Contains(t, resp[1].HostName, "hey")
-	assert.Contains(t, resp[0].Name, "adapt")
-	assert.Contains(t, resp[1].Name, "hey")
+	searchNames := []string{"heyflow.app", "adapt.io"}
+	assert.Contains(t, searchNames, resp[0].HostName)
+	assert.Contains(t, searchNames, resp[1].HostName)
+	assert.Contains(t, searchNames, resp[0].Name)
+	assert.Contains(t, searchNames, resp[1].Name)
 
 	payload = model.TimelinePayload{
 		Query: model.Query{

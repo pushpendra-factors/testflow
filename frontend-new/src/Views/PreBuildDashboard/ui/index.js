@@ -6,7 +6,7 @@ import {
   FaErrorLog,
   Text
 } from 'Components/factorsComponents';
-import { Button, Dropdown, Menu } from 'antd';
+import { Button, Dropdown, Menu, Spin } from 'antd';
 import SortableCards from './Widget/SortableCards';
 import SubMenu from './Widget/SubMenu';
 import { useHistory } from 'react-router-dom';
@@ -17,6 +17,10 @@ import { fetchActiveDashboardConfig } from '../state/services';
 import { get } from 'lodash';
 import { setItemToLocalStorage } from 'Utils/localStorage.helpers';
 import { DASHBOARD_KEYS } from 'Constants/localStorage.constants';
+import NoDataChart from 'Components/NoDataChart';
+import useFeatureLock from 'hooks/useFeatureLock';
+import { FEATURES } from 'Constants/plans.constants';
+import { PathUrls } from 'Routes/pathUrls';
 
 const dashboardRefreshInitialState = {
   inProgress: false,
@@ -40,6 +44,7 @@ const PreBuildDashboard = ({}) => {
   const { active_project } = useSelector((state) => state.global);
   const config = useSelector((state) => state.preBuildDashboardConfig.config.data.result);
   const widget = useSelector((state) => state.preBuildDashboardConfig.widget);
+  const predefinedConfigData = useSelector((state) => state.preBuildDashboardConfig.config);
 
   const fetchConfig = useCallback(() => {
     if (active_project.id && activeDashboard?.inter_id) {
@@ -48,6 +53,16 @@ const PreBuildDashboard = ({}) => {
       );
     }
   }, [active_project.id, activeDashboard?.inter_id, dispatch]);
+
+  const { isFeatureLocked: isWebAnalyticsLocked } = useFeatureLock(
+    FEATURES.FEATURE_WEB_ANALYTICS_DASHBOARD
+  );
+
+  useEffect(() => {
+    if(isWebAnalyticsLocked) {
+      history.push(PathUrls.Dashboard)
+    }
+  }, [isWebAnalyticsLocked])
 
   useEffect(() => {
     fetchConfig();
@@ -113,6 +128,21 @@ const PreBuildDashboard = ({}) => {
     });
   }, []);
   
+  if (predefinedConfigData?.loading) {
+    return (
+      <div className='flex justify-center items-center w-full h-64'>
+        <Spin size='large' />
+      </div>
+    );
+  }
+
+  if (predefinedConfigData?.error) {
+    return (
+      <div className='flex justify-center items-center w-full h-full pt-4 pb-4'>
+        <NoDataChart />
+      </div>
+    );
+  }
 
   const menu = (
     <Menu
