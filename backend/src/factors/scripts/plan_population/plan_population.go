@@ -58,7 +58,6 @@ var CustomFeatureList = []string{
 	M.FEATURE_FILTERS,
 	M.FEATURE_SHAREABLE_URL,
 	M.FEATURE_CUSTOM_METRICS,
-	M.FEATURE_SMART_EVENTS,
 	M.FEATURE_SMART_PROPERTIES,
 	M.FEATURE_CONTENT_GROUPS,
 	M.FEATURE_DISPLAY_NAMES,
@@ -82,45 +81,6 @@ var CustomFeatureList = []string{
 	M.FEATURE_WEBHOOK,
 	M.FEATURE_ACCOUNT_PROFILES,
 	M.FEATURE_PEOPLE_PROFILES,
-
-	// INTEGRATION
-	M.INT_SHOPFIY,
-	M.INT_ADWORDS,
-	M.INT_GOOGLE_ORGANIC,
-	M.INT_FACEBOOK,
-	M.INT_LINKEDIN,
-	M.INT_SALESFORCE,
-	M.INT_HUBSPOT,
-	M.INT_DELETE,
-	M.INT_SLACK,
-	M.INT_TEAMS,
-	M.INT_SEGMENT,
-	M.INT_RUDDERSTACK,
-	M.INT_MARKETO,
-	M.INT_DRIFT,
-	M.INT_BING_ADS,
-	M.INT_CLEARBIT,
-	M.INT_LEADSQUARED,
-	M.INT_SIX_SIGNAL,
-	M.INT_FACTORS_DEANONYMISATION,
-	M.INT_G2,
-
-	// DATA SERVICE
-	M.DS_ADWORDS,
-	M.DS_GOOGLE_ORGANIC,
-	M.DS_HUBSPOT,
-	M.DS_FACEBOOK,
-	M.DS_LINKEDIN,
-	M.DS_METRICS,
-
-	// CONFIGURATIONS
-	M.CONF_ATTRUBUTION_SETTINGS,
-	M.CONF_CUSTOM_EVENTS,
-	M.CONF_CUSTOM_PROPERTIES,
-	M.CONF_CONTENT_GROUPS,
-	M.CONF_TOUCHPOINTS,
-	M.CONF_CUSTOM_KPIS,
-	M.CONF_ALERTS,
 }
 
 var PlanFreeLimitMap = map[string]int64{
@@ -223,19 +183,15 @@ func GetFreePlanFeatures() []string {
 		// Alerts
 		M.FEATURE_KPI_ALERTS,
 		M.FEATURE_EVENT_BASED_ALERTS,
-		M.CONF_ALERTS,
 		M.FEATURE_REPORT_SHARING,
 
 		// Slack
 		M.FEATURE_SLACK,
-		M.INT_SLACK,
 
 		// Teams
 		M.FEATURE_TEAMS,
-		M.INT_TEAMS,
 
 		// Factors deanonymisation
-		M.INT_FACTORS_DEANONYMISATION,
 		M.FEATURE_FACTORS_DEANONYMISATION,
 
 		// Website Visitor Identification
@@ -243,16 +199,8 @@ func GetFreePlanFeatures() []string {
 		M.FEATURE_SIX_SIGNAL_REPORT,
 
 		// Adwords
-		M.INT_ADWORDS,
-		M.INT_GOOGLE_ORGANIC,
-		M.INT_FACEBOOK,
-		M.INT_LINKEDIN,
 
 		// Data service for ad words
-		M.DS_ADWORDS,
-		M.DS_GOOGLE_ORGANIC,
-		M.DS_FACEBOOK,
-		M.DS_LINKEDIN,
 	}
 }
 
@@ -274,70 +222,39 @@ func GetStartupPlanFeatures() []string {
 		// People Profiles
 		M.FEATURE_PEOPLE_PROFILES,
 
-		// Custom Events
-		M.CONF_CUSTOM_EVENTS,
-
-		// Custom Properties
-		M.CONF_CUSTOM_PROPERTIES,
-
-		// Content Groups
-		M.CONF_CONTENT_GROUPS,
-
-		// Touch points
-		M.CONF_TOUCHPOINTS,
-
-		// Custom KPIs
-		M.CONF_CUSTOM_KPIS,
-
-		// Top Event and properties
-
 		// Alerts
 		M.FEATURE_KPI_ALERTS,
 		M.FEATURE_EVENT_BASED_ALERTS,
-		M.CONF_ALERTS,
 
 		// Slack
 		M.FEATURE_SLACK,
-		M.INT_SLACK,
 
 		// Teams
 		M.FEATURE_TEAMS,
-		M.INT_TEAMS,
 
 		// Google Ads
 		M.FEATURE_GOOGLE_ADS,
-		M.DS_ADWORDS,
 
 		// Facebook
 		M.FEATURE_FACEBOOK,
-		M.INT_FACEBOOK,
-		M.DS_FACEBOOK,
 
 		// LinkedIn
 		M.FEATURE_LINKEDIN,
-		M.INT_LINKEDIN,
-		M.DS_LINKEDIN,
 
 		// Drift
 		M.FEATURE_DRIFT,
-		M.INT_DRIFT,
 
 		// Google search Console
 		M.FEATURE_GOOGLE_ORGANIC,
-		M.INT_GOOGLE_ORGANIC,
-		M.DS_GOOGLE_ORGANIC,
 
 		// Bing Ads
 		M.FEATURE_BING_ADS,
-		M.INT_BING_ADS,
 
 		// Clearbit Reveal
 		M.FEATURE_CLEARBIT,
-		M.INT_CLEARBIT,
 
 		// Leadsquared
 		M.FEATURE_LEADSQUARED,
-		M.INT_LEADSQUARED,
 
 		// Factors deanonymisation
 		M.FEATURE_FACTORS_DEANONYMISATION,
@@ -347,7 +264,6 @@ func GetStartupPlanFeatures() []string {
 		M.FEATURE_SIX_SIGNAL_REPORT,
 
 		// Six signal
-		M.INT_SIX_SIGNAL,
 	}
 }
 
@@ -368,90 +284,48 @@ func GetBasicPlanFeatures() []string {
 		// People Profiles
 		M.FEATURE_PEOPLE_PROFILES,
 
-		// Custom Events
-		M.CONF_CUSTOM_EVENTS,
-
-		// Custom Properties
-		M.CONF_CUSTOM_PROPERTIES,
-
-		// Content Groups
-		M.CONF_CONTENT_GROUPS,
-
-		// Touch points
-		M.CONF_TOUCHPOINTS,
-
-		// Custom KPIs
-		M.CONF_CUSTOM_KPIS,
-
 		// Top Event and properties
 
 		// Alerts
 		M.FEATURE_KPI_ALERTS,
 		M.FEATURE_EVENT_BASED_ALERTS,
-		M.CONF_ALERTS,
 
-		// Segment
 		M.FEATURE_SEGMENT,
-		M.INT_SEGMENT,
-
-		// Rudderstack
-		M.INT_RUDDERSTACK,
-
-		// Marketo
-		M.INT_MARKETO,
 		M.FEATURE_MARKETO,
 
 		// Slack
 		M.FEATURE_SLACK,
-		M.INT_SLACK,
 
 		// Teams
 		M.FEATURE_TEAMS,
-		M.INT_TEAMS,
 
 		// Hubspot
 		M.FEATURE_HUBSPOT,
-		M.INT_HUBSPOT,
-		M.DS_HUBSPOT,
 
 		// Salesforce
-		M.INT_SALESFORCE,
 		M.FEATURE_SALESFORCE,
 
 		// Google Ads
 		M.FEATURE_GOOGLE_ADS,
-		M.DS_ADWORDS,
 
 		// Facebook
 		M.FEATURE_FACEBOOK,
-		M.INT_FACEBOOK,
-		M.DS_FACEBOOK,
 
 		// LinkedIn
 		M.FEATURE_LINKEDIN,
-		M.INT_LINKEDIN,
-		M.DS_LINKEDIN,
-
 		// Drift
 		M.FEATURE_DRIFT,
-		M.INT_DRIFT,
-
 		// Google search Console
 		M.FEATURE_GOOGLE_ORGANIC,
-		M.INT_GOOGLE_ORGANIC,
-		M.DS_GOOGLE_ORGANIC,
 
 		// Bing Ads
 		M.FEATURE_BING_ADS,
-		M.INT_BING_ADS,
 
 		// Clearbit Reveal
 		M.FEATURE_CLEARBIT,
-		M.INT_CLEARBIT,
 
 		// Leadsquared
 		M.FEATURE_LEADSQUARED,
-		M.INT_LEADSQUARED,
 
 		// Factors deanonymisation
 		M.FEATURE_FACTORS_DEANONYMISATION,
@@ -459,12 +333,6 @@ func GetBasicPlanFeatures() []string {
 		// Website Visitor Identification
 		M.FEATURE_SIX_SIGNAL,
 		M.FEATURE_SIX_SIGNAL_REPORT,
-
-		// Six signal
-		M.INT_SIX_SIGNAL,
-
-		// G2
-		M.INT_G2,
 	}
 }
 
