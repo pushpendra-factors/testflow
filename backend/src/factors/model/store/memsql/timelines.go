@@ -286,7 +286,7 @@ func (store *MemSQL) GetTimeRangeWindow(profileType string, whereStmt string, li
 	fromStr := fmt.Sprintf("%s AND last_activity < ?", whereStmt)
 	timeWindowQParams = append(timeWindowQParams, model.FormatTimeToString(gorm.NowFunc()))
 
-	queryStrmt := fmt.Sprintf("SELECT %s FROM (SELECT COALESCE(last_event_at, updated_at) AS last_activity FROM users %s ORDER BY last_activity DESC LIMIT %d);", windowSelectStr, fromStr, limitVal)
+	queryStrmt := fmt.Sprintf("SELECT %s FROM (SELECT last_event_at AS last_activity FROM users %s ORDER BY last_activity DESC LIMIT %d);", windowSelectStr, fromStr, limitVal)
 	db := C.GetServices().Db
 	err := db.Raw(queryStrmt, timeWindowQParams...).Scan(&timeWindow).Error
 	if err != nil {
@@ -512,7 +512,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 	query := fmt.Sprintf(`WITH all_users as (
 		SELECT * FROM (
 		  SELECT u.properties,
-		  COALESCE(u.last_event_at, u.updated_at) as last_activity,
+		  u.last_event_at as last_activity,
 		  d.id as identity,
 		  d.group_%d_id as host_name,
 		  u.is_group_user,
@@ -659,7 +659,7 @@ func BuildSpecialFilter(projectID int64, negativeFilters []model.QueryProperty, 
 			SELECT 
 			  properties, 
 			  group_%d_user_id as identity,
-			  COALESCE(last_event_at, updated_at) as last_activity
+			  last_event_at as last_activity
 			FROM 
 			  users 
 			WHERE 
@@ -709,7 +709,7 @@ func (store *MemSQL) GenerateQueryString(
 		}
 
 		selectString = "id AS identity, properties, last_activity"
-		selectColumnsStr = "users.id, users.properties,  COALESCE(users.last_event_at, users.updated_at) as last_activity"
+		selectColumnsStr = "users.id, users.properties,  users.last_event_at as last_activity"
 
 		// selecting property col of users in case of user props in account profiles
 		if hasUserProperty {
@@ -721,9 +721,9 @@ func (store *MemSQL) GenerateQueryString(
 		if filterString != "" {
 			selectString = selectString + ", MAX(last_activity) AS last_activity"
 		} else {
-			selectString = selectString + ", COALESCE(last_event_at, updated_at) as last_activity"
+			selectString = selectString + ", last_event_at as last_activity"
 		}
-		selectColumnsStr = "id, customer_user_id, properties, COALESCE(last_event_at, updated_at) as last_activity"
+		selectColumnsStr = "id, customer_user_id, properties, last_event_at as last_activity"
 	}
 
 	groupByStr = "GROUP BY identity"
@@ -808,7 +808,7 @@ func (store *MemSQL) BuildQueryStringForDomains(projectID int64, filterString st
 	whereForDomainGroupQuery := fmt.Sprintf(strings.Replace(whereForUserQuery, "users.source!=", "source=",
 		1) + " AND is_group_user = 1")
 	whereForUserQuery = whereForUserQuery + " AND " + userTimeAndRecordsLimit
-	selectUserColumnsString := fmt.Sprintf("properties, COALESCE(last_event_at, updated_at) as last_activity, group_%d_user_id, id, customer_user_id, is_group_user, group_%d_id", domainGroup.ID, domainGroup.ID)
+	selectUserColumnsString := fmt.Sprintf("properties, last_event_at as last_activity, group_%d_user_id, id, customer_user_id, is_group_user, group_%d_id", domainGroup.ID, domainGroup.ID)
 	userQueryString := fmt.Sprintf("(SELECT " + selectUserColumnsString + " FROM users " + whereForUserQuery + " ) AS users")
 	selectDomainGroupColString := fmt.Sprintf("SELECT id, group_%d_id FROM users", domainGroup.ID)
 	domainGroupQueryString := "( " + selectDomainGroupColString + " " + whereForDomainGroupQuery +
@@ -975,7 +975,7 @@ func (store *MemSQL) GetUsersAssociatedToDomain(projectID int64, timeWindow *mod
 	FROM (
 		SELECT id,
 		  properties as user_global_user_properties, 
-		  COALESCE(last_event_at, updated_at) as last_activity,
+		  last_event_at as last_activity,
 		  group_%d_user_id
 		FROM users 
 		WHERE project_id = ? 
@@ -1413,7 +1413,7 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 	if err := db.Table("users").Select("COALESCE(customer_user_id,id) AS user_id, ISNULL(customer_user_id) AS is_anonymous, properties").
 		Where("project_id=? AND "+userId+"=?", projectID, identity).
 		Group("user_id").
-		Order("updated_at DESC").
+		Order("last_event_at DESC").
 		Limit(1).
 		Find(&uniqueUser).Error; err != nil {
 		log.WithError(err).WithFields(logFields).WithField("status", err).Error("Failed to get contact details.")
@@ -1710,7 +1710,7 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 	  AND (is_group_user = 0 OR is_group_user IS NULL)
 	  AND (%s)
     GROUP BY user_id 
-    ORDER BY updated_at DESC 
+    ORDER BY last_event_at DESC 
     LIMIT 26;`, U.UP_NAME, selectStrAdditionalProp, groupUserString)
 
 	// Get Timeline for <=25 users
@@ -1800,7 +1800,7 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 		SELECT COUNT(DISTINCT(id)) AS users_count, 
 			SUM(JSON_EXTRACT_STRING(properties, '%s')) AS time_active 
 		FROM (
-			SELECT LAST(id, updated_at) AS id, properties 
+			SELECT LAST(id, last_event_at) AS id, properties 
 			FROM users 
 			WHERE project_id = ?
 			  AND (is_group_user=0 OR is_group_user IS NULL)

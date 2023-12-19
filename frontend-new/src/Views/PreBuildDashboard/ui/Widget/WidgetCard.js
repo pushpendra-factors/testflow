@@ -252,10 +252,10 @@ function WidgetCard({
 
   const [currMetricsValue, setCurrMetricsValue] = useState(0);
 
-  const kpiData = unit.me.map((obj) => {
-    const { inter_e_type, na, d_na, ...rest } = obj; // Use destructuring to exclude "inter_e_type" and "na"
-    return { ...rest, label: d_na }; // Return the object without "inter_e_type" and "na"
-  });
+  const kpiData = unit?.me?.map(obj => {
+    const { inter_e_type, ty, na, d_na, ...rest } = obj;
+    return { ...rest, metric: na, label: d_na, metricType: ty };
+  })
 
   return (
     <div
@@ -342,7 +342,7 @@ function WidgetCard({
             {!unit?.g_by?.length ? (
               <div>
                 <CampaignMetricsDropdown
-                  metrics={kpiData.map((q) => getKpiLabel(q))}
+                  metrics={kpiData}
                   currValue={currMetricsValue}
                   setCurrMetricsValue={setCurrMetricsValue}
                   metricsValue={resultState?.data?.[1]?.rows?.[0]}

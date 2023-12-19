@@ -148,11 +148,19 @@ $dropdownbtn-mono-1: #f5f6f8;
 
 
 .container {
-    width: 150px;
-    height: 50px;
-    
-    cursor: pointer;
-    border-right: 1px solid #E7E9ED;
+  display: flex;
+  width: 150px;
+  height: 50px;
+  
+  cursor: pointer;
+  // border-right: 1px solid #E7E9ED;
+}
+
+.line {
+  position: relative;
+  border-left: 1px solid #E7E9ED;
+  height: 50px;
+  left: 40px;
 }
 
 .text1Active {

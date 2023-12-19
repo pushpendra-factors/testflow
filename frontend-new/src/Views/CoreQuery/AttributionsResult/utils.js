@@ -164,11 +164,13 @@ const getLegendsLabel = ({ key }) => {
 const getSeriesKey = (seriesKeys, row, isComparisonApplied, rowNum = 0) => {
   const seriesKeyReplaceUnique = (seriesKeys, rowNum) => {
     const replObj = {"Unique user":"unique_user","Unique User":"unique_user"};
+    let replacedKey;
 
     const re = new RegExp(Object.keys(replObj).join("|"),"gi");
-    seriesKeys[rowNum] = seriesKeys[rowNum].replace(re, function(matched){
+    replacedKey = seriesKeys[rowNum].replace(re, function(matched){
       return replObj[matched];
     });
+    return replacedKey;
   }
   const keyVal = row[seriesKeys[rowNum]]
     ? seriesKeys[rowNum]
