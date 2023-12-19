@@ -1,0 +1,10 @@
+FROM python:3.7-alpine
+
+RUN mkdir -p /usr/local/var/factors
+
+WORKDIR /usr/local/var/factors
+
+COPY debug_start.sh ./
+
+RUN ["chmod", "+x", "./debug_start.sh"]
+ENTRYPOINT ["sh", "./debug_start.sh"]

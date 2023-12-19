@@ -120,6 +120,29 @@ func (store *MemSQL) existsDashboardByID(projectID int64, dashboardID int64) boo
 	return false
 }
 
+func (store *MemSQL) existsDashboardByInternalID(projectID int64, internalID int64) bool {
+	logFields := log.Fields{
+		"dashboard_id": internalID,
+		"project_id":   projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+
+	var dashboard model.Dashboard
+	err := db.Limit(1).Where("project_id = ? AND internal_id = ?", projectID, internalID).Select("id").Find(&dashboard).Error
+	if err != nil {
+		if !gorm.IsRecordNotFoundError(err) {
+			log.WithField("project_id", projectID).WithField("internal_id", internalID).Error("Failed to check dashboard by internal id")
+			return true
+		}
+		return false
+	}
+	if dashboard.ID != 0 {
+		return true
+	}
+	return false
+}
+
 func (store *MemSQL) GetDashboards(projectId int64, agentUUID string) ([]model.Dashboard, int) {
 	logFields := log.Fields{
 		"project_id": projectId,

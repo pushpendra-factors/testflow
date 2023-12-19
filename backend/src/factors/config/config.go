@@ -416,6 +416,7 @@ const (
 	HeathCheckG2ETLPingID                             = "4ccbf168-5175-4e08-84e6-7a6ce58bcb08"
 	HeathCheckG2EnrichmentPingID                      = "3b240e93-e130-4ea6-b698-5d5d0ea0a83f"
 	HealthcheckAccScoringJobPingID                    = "3f93c58e-708c-413e-abc4-0e112ae07260"
+	HealthcheckEventCubeAggregationPingID             = "a9ebad9d-4d78-4ea3-9e92-002188102cdd"
 	HealthCheckClearbitAccountProvisioningJobPingID   = "a18e152a-7978-4d9f-aa4a-da5121823203"
 
 	// Other services ping IDs. Only reported when alert conditions are met, not periodically.

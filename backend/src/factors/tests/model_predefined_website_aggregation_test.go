@@ -229,3 +229,53 @@ func TestSampleWebsiteAggregation(t *testing.T) {
 		assert.Equal(t, 0, result[1].Rows[0][2].(int))
 	})
 }
+
+func TestPredefWebAggDashboard(t *testing.T) {
+	agent, errCode := SetupAgentReturnDAO(getRandomEmail(), "+13425356")
+	assert.Equal(t, http.StatusCreated, errCode)
+	billingAccount, errCode := store.GetStore().GetBillingAccountByAgentUUID(agent.UUID)
+	assert.Equal(t, http.StatusFound, errCode)
+
+	// Test successful create project.
+	projectName := U.RandomLowerAphaNumString(15)
+	project, errCode := store.GetStore().CreateProjectWithDependencies(&model.Project{Name: projectName}, agent.UUID, model.ADMIN, billingAccount.ID, true)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	statusCode := store.GetStore().CreatePredefWebAggDashboardIfNotExists(project.ID)
+	assert.Equal(t, statusCode, http.StatusCreated)
+
+	statusCode2 := store.GetStore().CreatePredefWebAggDashboardIfNotExists(project.ID)
+	assert.Equal(t, statusCode2, http.StatusFound)
+
+}
+
+func TestDupReportCreation(t *testing.T) {
+	j1 := getDefaultJobReport()
+	j2 := getDuplicateJobReportWithoutSuccessKeys(j1)
+	log.WithField("j2", j2).Warn("duplicated job")
+}
+
+func getDefaultJobReport() map[string]map[string]interface{} {
+	jobReport := make(map[string]map[string]interface{})
+	jobReport["success"] = make(map[string]interface{})
+	jobReport["success"]["count"] = 0
+	jobReport["success"]["count"] = 1
+	jobReport["success"]["abc"] = ""
+
+	jobReport["failures"] = make(map[string]interface{})
+	jobReport["failures"]["def"] = "asbdfasd"	
+	jobReport["long_run_projects"] = make(map[string]interface{})
+	return jobReport
+}
+
+func getDuplicateJobReportWithoutSuccessKeys(jobReport map[string]map[string]interface{}) map[string]map[string]interface{} {
+	dupJobReport := make(map[string]map[string]interface{})
+	dupJobReport["success"] = make(map[string]interface{})
+	dupJobReport["failures"] = make(map[string]interface{})
+	dupJobReport["long_run_projects"] = make(map[string]interface{})
+
+	dupJobReport["success"]["count"] = jobReport["success"]["count"]
+	dupJobReport["failures"] = jobReport["failures"]
+	dupJobReport["long_run_projects"] = jobReport["long_run_projects"]
+	return dupJobReport
+}
