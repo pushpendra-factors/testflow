@@ -302,7 +302,7 @@ export const getUniqueItemsByKeyAndSearchTerm = (activities, searchTerm) => {
   const isUnique = (value, index, self) =>
     index === self.findIndex((t) => t.display_name === value.display_name);
   const matchesSearchTerm = (value) =>
-    value.display_name.toLowerCase().includes(searchTerm.toLowerCase());
+    value.display_name?.toLowerCase().includes(searchTerm.toLowerCase());
 
   return activities
     ?.filter(isNotMilestone)
