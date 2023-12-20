@@ -535,7 +535,7 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 		var groupProps *map[string]interface{}
 		isGroupPropertyRequired := false
 		for _, fil := range config.Filter {
-			if model.AllowedGroupNames[fil.GroupName] {
+			if model.AllowedGroupNames[fil.GroupName] || fil.GroupName == model.GROUP_NAME_DOMAINS {
 				isGroupPropertyRequired = true
 				break
 			}
@@ -604,26 +604,39 @@ func (store *MemSQL) GetGroupProperties(projectID int64, userID string) *map[str
 
 	groupPropsMap := make(map[string]interface{})
 
+	// Get user properties from all groups and add them to groupPropsMap
 	for _, gpUser := range groupUsers {
-		var gpMap *map[string]interface{}
-		if isEmptyPostgresJsonb(&gpUser.Properties) {
-			logCtx.WithField("group_user", gpUser).Info("no properties for group user")
-			continue
-		}
-
-		gpMap, err = U.DecodePostgresJsonb(&gpUser.Properties)
-		if err != nil {
-			logCtx.WithError(err).Error("unable to decode postgres jsonb")
-			return nil
-		}
-		for key, value := range *gpMap {
-			if _, exist := groupPropsMap[key]; !exist {
-				groupPropsMap[key] = value
-			}
-		}
+		getUserPropertiesFromGroupUser(&gpUser, &groupPropsMap, logCtx)
 	}
 
+	//Get $domains user to get all account properties
+	domainsUser, errCode := store.GetUser(projectID, domainsGroupUserID)
+	if errCode != http.StatusFound {
+		logCtx.Error("failed to get domains user")
+		return &groupPropsMap
+	}
+	// Get user properties from $domains user and add them to groupPropsMap
+	getUserPropertiesFromGroupUser(domainsUser, &groupPropsMap, logCtx)
+
 	return &groupPropsMap
+}
+
+func getUserPropertiesFromGroupUser(user *model.User, groupPropMap *map[string]interface{}, logCtx *log.Entry) {
+
+	if isEmptyPostgresJsonb(&user.Properties) {
+		logCtx.WithField("group_user", user).Info("no properties for user")
+		return
+	}
+
+	propMap, err := U.DecodePostgresJsonb(&user.Properties)
+	if err != nil {
+		logCtx.WithError(err).Error("unable to decode postgres jsonb for properties")
+		return
+	}
+
+	// Update groupPropMap with properties from propMap
+	updateUserPropMapWithGroupProperties(groupPropMap, propMap, logCtx)
+
 }
 
 func (store *MemSQL) getDisplayNamesForEP(projectId int64, eventName string) map[string]string {

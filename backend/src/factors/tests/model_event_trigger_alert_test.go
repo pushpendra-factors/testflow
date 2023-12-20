@@ -1298,6 +1298,89 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.Nil(t, alerts2)
 	})
+
+	t.Run("MatchEventTriggerAlert:AllAccountPropsFilter", func(t *testing.T) {
+		project, user, eventName, err := SetupProjectUserEventNameReturnDAO()
+		assert.NotNil(t, eventName)
+		assert.NotNil(t, project)
+		assert.NotNil(t, user)
+		assert.Nil(t, err)
+
+		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
+		assert.NotNil(t, agent)
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		userSixSignal, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+			JoinTimestamp: time.Now().Unix(), Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		sixSignalGroupUserID, status := SDK.TrackGroupWithDomain(project.ID, model.GROUP_NAME_SIX_SIGNAL, "www.sixsignal1.com",
+			map[string]interface{}{"company": "www.sixsignal1.com"}, U.TimeNowUnix())
+		_, status = store.GetStore().UpdateUserGroup(project.ID, userSixSignal, model.GROUP_NAME_SIX_SIGNAL, "", sixSignalGroupUserID, true)
+		assert.Equal(t, http.StatusAccepted, status)
+		status = store.GetStore().AssociateUserDomainsGroup(project.ID, userSixSignal, model.GROUP_NAME_SIX_SIGNAL, sixSignalGroupUserID)
+		assert.Equal(t, http.StatusOK, status)
+
+		domainGroup, status := store.GetStore().GetGroup(project.ID, model.GROUP_NAME_DOMAINS)
+		assert.Equal(t, http.StatusFound, status)
+
+		userSS, status := store.GetStore().GetUser(project.ID, userSixSignal)
+		assert.Equal(t, http.StatusFound, status)
+		domainUserID, err := model.GetUserGroupUserID(userSS, domainGroup.ID)
+		assert.Nil(t, err)
+		domainUser, status := store.GetStore().GetUser(project.ID, domainUserID)
+		assert.Equal(t, http.StatusFound, status)
+		domainName, err := model.GetGroupUserGroupID(domainUser, domainGroup.ID)
+		assert.Nil(t, err)
+		assert.Equal(t, "sixsignal1.com", domainName)
+
+		existingProps := &postgres.Jsonb{}
+		newProps := &postgres.Jsonb{json.RawMessage([]byte(`{"hour":1,"count":2,"city":"Bengalore", "$Salesforce_Industry":"HealthTech"}`))}
+		status = store.GetStore().OverwriteUserPropertiesByID(project.ID, domainUserID, existingProps, newProps, true, time.Now().Unix(), "9")
+		assert.Equal(t, http.StatusAccepted, status)
+		user_g, status := store.GetStore().GetUser(project.ID, domainUserID)
+		assert.Equal(t, http.StatusFound, status)
+		userPropertiesMap, err := util.DecodePostgresJsonb(&user_g.Properties)
+		assert.Nil(t, err)
+		assert.NotNil(t, user_g.IsGroupUser)
+		assert.Equal(t, true, *user_g.IsGroupUser)
+		assert.Equal(t, float64(1), (*userPropertiesMap)["hour"])
+		assert.Equal(t, float64(2), (*userPropertiesMap)["count"])
+		assert.Equal(t, "Bengalore", (*userPropertiesMap)["city"])
+		assert.Equal(t, "HealthTech", (*userPropertiesMap)["$Salesforce_Industry"])
+
+		//Test for successful CreateAlert
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
+			Title: rName1, Event: eventName.Name, EventLevel: "account", Message: "Remember", MessageProperty: &postgres.Jsonb{RawMessage: messagePropertyJson},
+			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{RawMessage: breakdownProps}, AlertLimit: 5, SetAlertLimit: true,
+			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
+			Filter: []model.QueryProperty{
+				{Entity: "user_g", GroupName: model.GROUP_NAME_DOMAINS, Type: "categorical", Property: "$Salesforce_Industry", Operator: "contains", LogicalOp: "AND", Value: "tech"},
+				{Entity: "user", Type: "categorical", Property: "$country", Operator: "equals", LogicalOp: "AND", Value: "US"},
+				{Entity: "event", Type: "numerical", Property: "$time_spent", Operator: "greaterThanOrEqual", LogicalOp: "AND", Value: "3000"},
+			}}, agent.UUID, agent.UUID, false)
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.Empty(t, errMsg)
+		assert.NotNil(t, alert)
+
+		event := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
+			UserId: userSixSignal, Timestamp: start.Unix(),
+			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{"$country":"US"}`)},
+			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3500"}`)}}
+
+		alerts, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event.Properties, event.UserProperties, nil, false)
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.NotNil(t, alerts)
+
+		event1 := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
+			UserId: userSixSignal, Timestamp: start.Unix(),
+			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{"$country":"India"}`)},
+			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3000"}`)}}
+
+		alerts1, _, errCode := store.GetStore().MatchEventTriggerAlertWithTrackPayload(project.ID, eventName.ID, event.UserId, &event1.Properties, event1.UserProperties, nil, false)
+		assert.Equal(t, http.StatusNotFound, errCode)
+		assert.Nil(t, alerts1)
+	})
 }
 
 func TestEditEventTriggerAlertHandler(t *testing.T) {
