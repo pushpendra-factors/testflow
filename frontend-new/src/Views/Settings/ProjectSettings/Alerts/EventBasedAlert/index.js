@@ -204,10 +204,6 @@ const EventBasedAlert = ({
   }, [activeProject?.id, groups]);
 
   useEffect(() => {
-    resetGroupBy(); 
-  }, [activeProject]);
-
-  useEffect(() => {
     if (groups && Object.keys(groups).length != 0) {
       Object.keys(groups?.all_groups).forEach((item) => {
         getGroupProperties(activeProject.id, item)
