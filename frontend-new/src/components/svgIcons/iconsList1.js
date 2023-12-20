@@ -423,21 +423,21 @@ export const EmojiSVG = ({ size = 16, color, extraClass }) => {
   );
 };
 
-export const PlusSVG = ({ size = 16, color, extraClass }) => {
+export const PlusSVG = ({ size = 16, color, extraClass, isFill = true }) => {
   return (
     <svg
       width={size}
       height={size}
       className={extraClass}
       viewBox='0 0 24 24'
-      fill={color}
+      fill={isFill ? color : null}
       xmlns='http://www.w3.org/2000/svg'
     >
       <path
         fillRule='evenodd'
         clipRule='evenodd'
         d='M13 3.5C13 2.94772 12.5523 2.5 12 2.5C11.4477 2.5 11 2.94772 11 3.5V10.5H4C3.44771 10.5 3 10.9477 3 11.5C3 12.0523 3.44771 12.5 4 12.5H11V19.5C11 20.0523 11.4477 20.5 12 20.5C12.5523 20.5 13 20.0523 13 19.5V12.5H20C20.5523 12.5 21 12.0523 21 11.5C21 10.9477 20.5523 10.5 20 10.5H13V3.5Z'
-        fill={color}
+        fill={isFill ? color : null}
       />
     </svg>
   );

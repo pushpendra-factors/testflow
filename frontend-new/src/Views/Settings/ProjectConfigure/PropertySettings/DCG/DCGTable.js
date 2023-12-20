@@ -283,8 +283,18 @@ const DCGTable = ({
   };
   return (
     <div>
+      <Text
+        type='paragraph'
+        mini={6}
+        weight={'thin'}
+        color={'#3E516C'}
+        extraClass={'mt-2'}
+      >
+        These rules are checked sequentially from top of bottom to assign
+        channel
+      </Text>
       <Table
-        className='fa-table--basic mt-4'
+        className='fa-table--basic mt-6'
         columns={columns}
         dataSource={DCGData}
         pagination={false}
@@ -308,15 +318,8 @@ const DCGTable = ({
             new order?
           </Text>
           <div className='flex flex-row gap-4'>
-            <Button size={'large'} onClick={handleCancel}>
-              Discard Changes
-            </Button>
-            <Button
-              size={'large'}
-              className={'ml-2'}
-              type={'primary'}
-              onClick={handleSave}
-            >
+            <Button onClick={handleCancel}>Discard Changes</Button>
+            <Button className={'ml-2'} type={'primary'} onClick={handleSave}>
               Save Changes
             </Button>
           </div>

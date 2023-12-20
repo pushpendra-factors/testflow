@@ -155,15 +155,23 @@ const ProfilesSidebar = () => {
         <Button
           className={cx(
             'flex col-gap-2 items-center w-full',
-            styles['sidebar-action-button']
+            styles.sidebar_action_button
           )}
-          type='dashed'
           onClick={() => {
             dispatch(setNewSegmentModeAction(true));
           }}
         >
-          <SVG name={'plus'} size={16} />
-          <Text level={7} type='title' extraClass='mb-0'>
+          <SVG
+            name={'plus'}
+            size={16}
+            extraClass={styles.sidebar_action_button__content}
+            isFill={false}
+          />
+          <Text
+            level={6}
+            type='title'
+            extraClass={cx('m-0', styles.sidebar_action_button__content)}
+          >
             New Segment
           </Text>
         </Button>
