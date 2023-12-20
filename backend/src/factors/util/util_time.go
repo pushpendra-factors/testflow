@@ -31,7 +31,7 @@ type TimestampRange struct {
 }
 
 // If 15ThAug, 2020 00:00:00 Asia/Kolkata is result will be 15ThAug, 2020 00:00:00 UTC.
-func ConvertEqualTimeFromOtherTimezoneToUTC(timestamp int64, timezone TimeZoneString) int64  {
+func ConvertEqualTimeFromOtherTimezoneToUTC(timestamp int64, timezone TimeZoneString) int64 {
 	in := GetTimeLocationFor(timezone)
 	locTime := time.Unix(timestamp, 0).In(in)
 	utcLoc := GetTimeLocationFor(TimeZoneString("UTC"))
@@ -40,9 +40,8 @@ func ConvertEqualTimeFromOtherTimezoneToUTC(timestamp int64, timezone TimeZoneSt
 	return t.Unix()
 }
 
-
 // If 15ThAug, 2020 00:00:00 UTC is result will be 15ThAug, 2020 00:00:00 Asia/Kolkata.
-func ConvertEqualTimeFromUTCToInOtherTimezone(timestamp int64, timezone TimeZoneString) int64  {
+func ConvertEqualTimeFromUTCToInOtherTimezone(timestamp int64, timezone TimeZoneString) int64 {
 	utcTime := time.Unix(timestamp, 0).UTC()
 	in := GetTimeLocationFor(timezone)
 
@@ -500,6 +499,18 @@ func GetQueryRangePresetYesterdayIn(timezoneString TimeZoneString) (int64, int64
 	return rangeStartTime, rangeEndTime, nil
 }
 
+// GetQueryRangePresetDayBeforeYesterdayIn Returns start and end unix timestamp for day before yesterday's range.
+func GetQueryRangePresetDayBeforeYesterdayIn(timezoneString TimeZoneString) (int64, int64, error) {
+	location, errCode := time.LoadLocation(string(timezoneString))
+	if errCode != nil {
+		return 0, 0, errCode
+	}
+	timeNow := time.Now().In(location)
+	rangeStartTime := GetBeginningOfDayTimestampIn(timeNow.AddDate(0, 0, -2).Unix(), timezoneString)
+	rangeEndTime := GetBeginningOfDayTimestampIn(timeNow.AddDate(0, 0, -1).Unix(), timezoneString) - 1
+	return rangeStartTime, rangeEndTime, nil
+}
+
 // GetQueryRangePresetTodayIn Returns start and end unix timestamp for today's range.
 func GetQueryRangePresetTodayIn(timezoneString TimeZoneString) (int64, int64, error) {
 	location, errCode := time.LoadLocation(string(timezoneString))
@@ -607,10 +618,54 @@ func GetAllDaysSinceStartTime(startTimestamp int64, zoneString TimeZoneString) [
 
 	// Start from the given startTime
 	currentTime := time.Unix(startTimestamp, 0).In(loc)
-	yesterday := time.Now().In(loc).AddDate(0, 0, -1) // Yesterday
+	yesterday := time.Now().In(loc).AddDate(0, 0, -1) //Yesterday
 
 	// Loop through each day until yesterday
 	for !currentTime.After(yesterday) {
+		year, month, day := currentTime.Date()
+
+		// Calculate the start and end timestamps for the day
+		startOfDay := time.Date(year, month, day, 0, 0, 0, 0, loc)
+		endOfDay := time.Date(year, month, day, 23, 59, 59, 999999999, loc)
+
+		// Convert to Unix timestamps
+		startUnix := startOfDay.Unix()
+		endUnix := endOfDay.Unix()
+
+		// Create a CustomPreset for the current day
+		preset := CustomPreset{
+			From:  startUnix,
+			To:    endUnix,
+			Year:  year,
+			Month: month.String(),
+			Day:   day,
+			TZ:    zoneString,
+		}
+
+		// Append the CustomPreset to the result
+		result = append(result, preset)
+
+		// Move to the next day
+		currentTime = currentTime.Add(24 * time.Hour)
+	}
+	return result
+}
+
+func GetAllDaysTillDayB4YesterdaySinceStartTime(startTimestamp int64, zoneString TimeZoneString) []CustomPreset {
+	var result []CustomPreset
+
+	// Parse the timezone
+	loc, err := time.LoadLocation(string(zoneString))
+	if err != nil {
+		panic(err) // Handle the error appropriately
+	}
+
+	// Start from the given startTime
+	currentTime := time.Unix(startTimestamp, 0).In(loc)
+	dayBeforeYesterday := time.Now().In(loc).AddDate(0, 0, -2) // n-2 day or DayBeforeYesterday
+
+	// Loop through each day until dayBeforeYesterday
+	for !currentTime.After(dayBeforeYesterday) {
 		year, month, day := currentTime.Date()
 
 		// Calculate the start and end timestamps for the day

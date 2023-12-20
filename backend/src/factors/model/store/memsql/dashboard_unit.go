@@ -1060,7 +1060,8 @@ func (store *MemSQL) RunCachingForLast3MonthsAttribution(dashboardUnit model.Das
 	}
 	resultsComputed, _ := store.GetLast3MonthStoredQueriesFromAndTo(dashboardUnit.ProjectID, dashboardUnit.DashboardId, dashboardUnit.ID, dashboardUnit.QueryId)
 
-	daysRange := U.GetAllDaysSinceStartTime(startTimeForCache, timezoneString)
+	// from start to day before yesterday
+	daysRange := U.GetAllDaysTillDayB4YesterdaySinceStartTime(startTimeForCache, timezoneString)
 	// monthRange := U.GetAllMonthFromTo(startTimeForCache, timezoneString)
 	// weeksRange := U.GetAllWeeksFromStartTime(startTimeForCache, timezoneString)
 
@@ -1169,101 +1170,107 @@ func (store *MemSQL) RunEverydayCachingForAttribution(dashboardUnit model.Dashbo
 
 	resultsComputed, _ := store.GetLast3MonthStoredQueriesFromAndTo(dashboardUnit.ProjectID, dashboardUnit.DashboardId, dashboardUnit.ID, dashboardUnit.QueryId)
 
-	// get from and to for all the time ranges!
-	startTimeForCache := time.Now().Unix() - 63*U.SECONDS_IN_A_DAY
+	// get from and to for all the time ranges, starting from last 2 days
+	// startTimeForCache := time.Now().Unix() - 63*2*U.SECONDS_IN_A_DAY
 
-	daysRange := U.GetAllDaysSinceStartTime(startTimeForCache, timezoneString)
+	// daysRange := U.GetAllDaysSinceStartTime(startTimeForCache, timezoneString)
 	// monthRange := U.GetAllMonthFromTo(startTimeForCache, timezoneString)
 	// weeksRange := U.GetAllWeeksFromStartTime(startTimeForCache, timezoneString)
 
-	allRange := daysRange
+	// allRange := daysRange
 	//allRange = append(monthRange, weeksRange...)
 
+	dayB4YestStart, dayB4YestEnd, errCode := U.GetQueryRangePresetDayBeforeYesterdayIn(timezoneString)
+	if errCode != nil {
+		errMsg := fmt.Sprintf("Failed to get proper project Timezone for %d", dashboardUnit.ProjectID)
+		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+		return
+	}
 	log.WithFields(log.Fields{"projectID": dashboardUnit.ProjectID,
-		"allRange": allRange,
-		"Method":   "RunEverydayCachingForAttribution"}).Info("Attribution V1 caching debug")
+		"dayB4YestStart": dayB4YestStart,
+		"dayB4YestEnd":   dayB4YestEnd,
+		"Method":         "RunEverydayCachingForAttribution"}).Info("Attribution V1 caching debug")
 
-	for _, queryRange := range allRange {
+	fr := dayB4YestStart
+	t := dayB4YestEnd
+	foundInDb := false
 
-		fr := queryRange.From
-		t := queryRange.To
-		foundInDb := false
-
-		// check if the result exists in DB
-		for _, resultEntry := range *resultsComputed {
-			if resultEntry.FromT == fr && resultEntry.ToT == t {
-				foundInDb = true
-				break
-			}
-		}
-
-		if foundInDb {
-			// already computed hence skip computing
-			logCtx.Info("Already computed unit, skipping")
-			continue
-		}
-		computingRanges = append(computingRanges, queryRange)
-
-		queryInfo, errC := store.GetQueryWithQueryId(dashboardUnit.ProjectID, dashboardUnit.QueryId)
-		if errC != http.StatusFound {
-			logCtx.WithField("err_code", errC).Errorf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
-			continue
-		}
-
-		// Create a new baseQuery instance every time to avoid overwriting from, to values in routines.
-		baseQuery, err := model.DecodeQueryForClass(queryInfo.Query, queryClass)
-		if err != nil {
-			errMsg := fmt.Sprintf("Error decoding query, query_id %d", dashboardUnit.QueryId)
-			C.PingHealthcheckForFailure(C.HealthcheckDashboardDBAttributionPingID, errMsg)
-			return
-		}
-
-		projectSettingsJSON, statusCodeProjectSettings := store.GetProjectSetting(dashboardUnit.ProjectID)
-		var cacheSettings model.CacheSettings
-
-		if projectSettingsJSON == nil || statusCodeProjectSettings != http.StatusFound {
-			log.WithField("projectID", dashboardUnit.ProjectID).WithField("statusCodeProjectSettings",
-				statusCodeProjectSettings).Warn("errored in fetching project Settings")
-			continue
-		}
-
-		if projectSettingsJSON.CacheSettings != nil && !U.IsEmptyPostgresJsonb(projectSettingsJSON.CacheSettings) {
-			err = json.Unmarshal(projectSettingsJSON.CacheSettings.RawMessage, &cacheSettings)
-		}
-
-		if err != nil {
-			continue
-		}
-
-		// Filtering queries on type and range for attribution query
-		//allowedPreset := cacheSettings.AttributionCachePresets
-		//shouldCache, from, to := model.ShouldCacheUnitForTimeRange(queryClass, preset, fr, t,
-		//	C.GetOnlyAttributionDashboardCaching(), C.GetSkipAttributionDashboardCaching(), allowedPreset[preset])
-		//if !shouldCache {
-		//	continue
-		//}
-
-		baseQuery.SetQueryDateRange(fr, t)
-		baseQuery.SetTimeZone(timezoneString)
-		baseQuery.SetDefaultGroupByTimestamp()
-		err = baseQuery.TransformDateTypeFilters()
-		if err != nil {
-			errMsg := fmt.Sprintf("Error decoding query Value, query_id %d", dashboardUnit.QueryId)
-			C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
-			return
-		}
-		cachePayload := model.DashboardUnitCachePayload{
-			DashboardUnit: dashboardUnit,
-			BaseQuery:     baseQuery,
-			Preset:        "day_range",
-		}
-		if C.GetIsRunningForMemsql() == 0 {
-			unitWaitGroup.Add(1)
-			go store._cacheAttributionDashboardUnitForDateRange(cachePayload, &unitWaitGroup, reportCollector, enableFilterOpt)
-		} else {
-			store._cacheAttributionDashboardUnitForDateRange(cachePayload, &unitWaitGroup, reportCollector, enableFilterOpt)
+	// check if the result exists in DB
+	for _, resultEntry := range *resultsComputed {
+		if resultEntry.FromT == fr && resultEntry.ToT == t {
+			foundInDb = true
+			break
 		}
 	}
+
+	if foundInDb {
+		// already computed hence skip computing
+		logCtx.Info("Already computed unit, skipping")
+		return
+	}
+
+	queryInfo, errC := store.GetQueryWithQueryId(dashboardUnit.ProjectID, dashboardUnit.QueryId)
+	if errC != http.StatusFound {
+		logCtx.WithField("err_code", errC).Errorf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
+		return
+	}
+
+	// Create a new baseQuery instance every time to avoid overwriting from, to values in routines.
+	baseQuery, err := model.DecodeQueryForClass(queryInfo.Query, queryClass)
+	if err != nil {
+		errMsg := fmt.Sprintf("Error decoding query, query_id %d", dashboardUnit.QueryId)
+		C.PingHealthcheckForFailure(C.HealthcheckDashboardDBAttributionPingID, errMsg)
+		return
+	}
+
+	projectSettingsJSON, statusCodeProjectSettings := store.GetProjectSetting(dashboardUnit.ProjectID)
+	var cacheSettings model.CacheSettings
+
+	if projectSettingsJSON == nil || statusCodeProjectSettings != http.StatusFound {
+		log.WithField("projectID", dashboardUnit.ProjectID).WithField("statusCodeProjectSettings",
+			statusCodeProjectSettings).Warn("errored in fetching project Settings")
+		return
+	}
+
+	if projectSettingsJSON.CacheSettings != nil && !U.IsEmptyPostgresJsonb(projectSettingsJSON.CacheSettings) {
+		err = json.Unmarshal(projectSettingsJSON.CacheSettings.RawMessage, &cacheSettings)
+	}
+
+	if err != nil {
+		errMsg := fmt.Sprintf("Error decoding project Settings JSON, query_id %d", dashboardUnit.QueryId)
+		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+		return
+	}
+
+	// Filtering queries on type and range for attribution query
+	//allowedPreset := cacheSettings.AttributionCachePresets
+	//shouldCache, from, to := model.ShouldCacheUnitForTimeRange(queryClass, preset, fr, t,
+	//	C.GetOnlyAttributionDashboardCaching(), C.GetSkipAttributionDashboardCaching(), allowedPreset[preset])
+	//if !shouldCache {
+	//	continue
+	//}
+
+	baseQuery.SetQueryDateRange(fr, t)
+	baseQuery.SetTimeZone(timezoneString)
+	baseQuery.SetDefaultGroupByTimestamp()
+	err = baseQuery.TransformDateTypeFilters()
+	if err != nil {
+		errMsg := fmt.Sprintf("Error decoding query Value, query_id %d", dashboardUnit.QueryId)
+		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+		return
+	}
+	cachePayload := model.DashboardUnitCachePayload{
+		DashboardUnit: dashboardUnit,
+		BaseQuery:     baseQuery,
+		Preset:        "day_range",
+	}
+	if C.GetIsRunningForMemsql() == 0 {
+		unitWaitGroup.Add(1)
+		go store._cacheAttributionDashboardUnitForDateRange(cachePayload, &unitWaitGroup, reportCollector, enableFilterOpt)
+	} else {
+		store._cacheAttributionDashboardUnitForDateRange(cachePayload, &unitWaitGroup, reportCollector, enableFilterOpt)
+	}
+
 	log.WithFields(log.Fields{"projectID": dashboardUnit.ProjectID,
 		"UnitId":          dashboardUnit.ID,
 		"computingRanges": computingRanges,
