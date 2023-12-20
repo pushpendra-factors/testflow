@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo } from 'react';
-import { connect, ConnectedProps, useSelector } from 'react-redux';
-import { bindActionCreators } from 'redux';
-import { Button, Drawer, Tooltip } from 'antd';
+import React, { useMemo } from 'react';
+import { useSelector } from 'react-redux';
+import { EventDrawerProps } from './types';
+import { Button, Drawer } from 'antd';
 import { Text } from 'Components/factorsComponents';
 import {
   eventIconsColorMap,
@@ -13,6 +13,8 @@ import {
   PropTextFormat
 } from 'Utils/dataFormatter';
 import EventIcon from './EventIcon';
+import TextWithOverflowTooltip from 'Components/GenericComponents/TextWithOverflowTooltip';
+
 const EventDrawer: React.FC<EventDrawerProps> = ({
   visible,
   onClose,
@@ -39,13 +41,10 @@ const EventDrawer: React.FC<EventDrawerProps> = ({
       : 'calendar-star';
 
     const renderAliasName = () => (
-      <Tooltip
-        title={event.event_type === 'FE' ? event.event_name : event.alias_name}
-      >
-        <div className='main'>
-          {event.event_type === 'FE' ? event.event_name : event.alias_name}
-        </div>
-      </Tooltip>
+      <TextWithOverflowTooltip
+        text={event.event_type === 'FE' ? event.event_name : event.alias_name}
+        extraClass='main'
+      />
     );
 
     return (
@@ -59,11 +58,10 @@ const EventDrawer: React.FC<EventDrawerProps> = ({
                 {renderAliasName()}
               </div>
             ) : (
-              <Tooltip title={PropTextFormat(event.display_name)}>
-                <div className='heading ml-2'>
-                  {PropTextFormat(event.display_name)}
-                </div>
-              </Tooltip>
+              <TextWithOverflowTooltip
+                text={PropTextFormat(event.display_name)}
+                extraClass='heading ml-2'
+              />
             )}
           </div>
         </div>

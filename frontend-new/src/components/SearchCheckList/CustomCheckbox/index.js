@@ -4,7 +4,6 @@ import { SVG, Text } from '../../factorsComponents';
 import { HolderOutlined } from '@ant-design/icons';
 
 export default function CustomCheckbox({ key, name, checked, onChange }) {
-  
   const [isHovered, setIsHovered] = useState(false);
 
   const handleMouseEnter = () => {
@@ -22,37 +21,37 @@ export default function CustomCheckbox({ key, name, checked, onChange }) {
       onClick={onChange}
       style={{
         background: checked ? '#F5F5F5' : null,
-        cursor: isHovered ? 'grab' : 'pointer',
+        cursor: isHovered ? 'grab' : 'pointer'
       }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      
-      {checked &&
-      (
-      <div style={{ cursor: isHovered ? 'grab' : 'pointer' }}>
-          {checked && <HolderOutlined />}
-        </div>
-      )}
+      <div className='inline-flex'>
+        {checked && (
+          <div style={{ cursor: isHovered ? 'grab' : 'pointer' }}>
+            {checked && <HolderOutlined />}
+          </div>
+        )}
 
-      <Text
-        type='title'
-        level={7}
-        extraClass='mb-0 truncate not-draggable'
-        truncate
-        charLimit={25}
-      >
-        {name}
-      </Text>
+        <Text
+          type='title'
+          level={7}
+          extraClass='mb-0 truncate not-draggable pl-1'
+          truncate
+          charLimit={25}
+        >
+          {name}
+        </Text>
+      </div>
 
       {checked && (
         <div className='not-draggable'>
-        <SVG
-          name='checkmark'
-          extraClass={'self-center not-draggable'}
-          size={17}
-          color={'purple'}
-        />
+          <SVG
+            name='checkmark'
+            extraClass={'self-center not-draggable'}
+            size={17}
+            color={'purple'}
+          />
         </div>
       )}
     </div>

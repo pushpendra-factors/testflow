@@ -296,18 +296,29 @@ export const getHost = (urlstr) => {
   return uri;
 };
 
-export const getUniqueItemsByKeyAndSearchTerm = (activities, searchTerm) => {
+export const getUniqueItemsByKeyAndSearchTerm = (
+  activities,
+  searchTerm = ''
+) => {
+  if (!activities) {
+    return [];
+  }
+
   const isNotMilestone = (event) =>
-    event.user !== 'milestone' && event.event_type !== 'milestone';
+    event && event.user !== 'milestone' && event.event_type !== 'milestone';
+
   const isUnique = (value, index, self) =>
-    index === self.findIndex((t) => t.display_name === value.display_name);
+    index === self.findIndex((t) => t && t.display_name === value.display_name);
+
   const matchesSearchTerm = (value) =>
+    value &&
+    value.display_name &&
     value.display_name.toLowerCase().includes(searchTerm.toLowerCase());
 
   return activities
-    ?.filter(isNotMilestone)
-    ?.filter(isUnique)
-    ?.filter(matchesSearchTerm);
+    .filter(isNotMilestone)
+    .filter(isUnique)
+    .filter(matchesSearchTerm);
 };
 
 export const getPropType = (propsList, searchProp) => {

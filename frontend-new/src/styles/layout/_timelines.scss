@@ -1057,11 +1057,13 @@
             align-items: flex-start;
             overflow: hidden;
 
-            span {
-                width: 80%;
+            div {
+                width: fit-content;
                 max-width: 80%;
                 font-weight: 500;
-                color: #000000;
+                font-size: 16px;
+                line-height: 24px;
+                color: #000000A6;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
@@ -1114,8 +1116,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    height: var(--icon-size, 24px);
-    width: var(--icon-size, 24px);
+    height: var(--icon-size, 24px) !important;
+    width: var(--icon-size, 24px) !important;
     border-radius: 50%;
     border: 1px solid var(--border-color, #ccc);
     background-color: var(--bg-color, #f9f9f9);
@@ -1149,4 +1151,12 @@
         max-height: calc(100vh - 232px);
         overflow-y: scroll;
     }
+}
+
+.text-with-tooltip {
+    width: fit-content;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }

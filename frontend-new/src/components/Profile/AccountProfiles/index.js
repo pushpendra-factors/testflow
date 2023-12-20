@@ -485,12 +485,18 @@ function AccountProfiles({
       option.enabled ||
       checkListAccountProps.filter((item) => item.enabled === true).length < 8
     ) {
-      const checkListProps = [...checkListAccountProps];
-      const optIndex = checkListProps.findIndex(
-        (obj) => obj.prop_name === option.prop_name
-      );
-      checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
-      setCheckListAccountProps(checkListProps);
+      setCheckListAccountProps((prev) => {
+        const checkListProps = [...prev];
+        const optIndex = checkListProps.findIndex(
+          (obj) => obj.prop_name === option.prop_name
+        );
+        checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
+        // Sorting to bubble up the selected elements onClick
+        checkListProps.sort((a, b) => {
+          return (b?.enabled || 0) - (a?.enabled || 0);
+        });
+        return checkListProps;
+      });
     } else {
       notification.error({
         message: 'Error',
