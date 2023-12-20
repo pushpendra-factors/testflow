@@ -296,6 +296,7 @@ const PriceUpgradeModal = ({
           type='primary'
           style={{ width: 120 }}
           onClick={handleContinueClick}
+          loading={loading}
         >
           Continue
         </Button>
@@ -463,6 +464,7 @@ const PriceUpgradeModal = ({
           style={{ width: 120 }}
           onClick={handleContinueClick}
           disabled={addonCount < 1}
+          loading={loading}
         >
           Continue
         </Button>
