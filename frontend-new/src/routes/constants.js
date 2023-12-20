@@ -34,20 +34,20 @@ import LockedExplainImage from '../assets/images/locked_explain.png';
 import LockedPathAnalysisImage from '../assets/images/locked_path_analysis.png';
 
 const Login = lazyWithRetry(() => import('../Views/Pages/Login'));
-const ForgotPassword = lazyWithRetry(() =>
-  import('../Views/Pages/ForgotPassword')
+const ForgotPassword = lazyWithRetry(
+  () => import('../Views/Pages/ForgotPassword')
 );
-const ResetPassword = lazyWithRetry(() =>
-  import('../Views/Pages/ResetPassword')
+const ResetPassword = lazyWithRetry(
+  () => import('../Views/Pages/ResetPassword')
 );
 const SignUp = lazyWithRetry(() => import('../Views/Pages/SignUp'));
 const Activate = lazyWithRetry(() => import('../Views/Pages/Activate'));
-const Templates = lazyWithRetry(() =>
-  import('../Views/CoreQuery/Templates/ResultsPage')
+const Templates = lazyWithRetry(
+  () => import('../Views/CoreQuery/Templates/ResultsPage')
 );
 
-const FactorsInsightsNew = lazyWithRetry(() =>
-  import('../Views/Factors/FactorsInsightsNew')
+const FactorsInsightsNew = lazyWithRetry(
+  () => import('../Views/Factors/FactorsInsightsNew')
 );
 
 const PathAnalysis = lazyWithRetry(() => import('../Views/PathAnalysis'));
@@ -61,8 +61,8 @@ const FeatureLockedPathAnalysis = withFeatureLockHOC(PathAnalysis, {
     />
   )
 });
-const PathAnalysisReport = lazyWithRetry(() =>
-  import('../Views/PathAnalysis/PathAnalysisReport')
+const PathAnalysisReport = lazyWithRetry(
+  () => import('../Views/PathAnalysis/PathAnalysisReport')
 );
 const FeatureLockedPathAnalysisReport = withFeatureLockHOC(PathAnalysisReport, {
   featureName: FEATURES.FEATURE_PATH_ANALYSIS,
@@ -86,7 +86,7 @@ const FeatureLockedPropertySettings = withFeatureLockHOC(PropertySettings, {
 });
 
 const FeatureLockedConfigureContentGroups = withFeatureLockHOC(ContentGroups, {
-  featureName: FEATURES.CONF_CONTENT_GROUPS,
+  featureName: FEATURES.FEATURE_CONTENT_GROUPS,
   LockedComponent: () => (
     <CommonLockedComponent
       title='Content Groups'
@@ -97,7 +97,7 @@ const FeatureLockedConfigureContentGroups = withFeatureLockHOC(ContentGroups, {
 });
 
 const FeatureLockedConfigureTouchpoints = withFeatureLockHOC(Touchpoints, {
-  featureName: FEATURES.CONF_TOUCHPOINTS,
+  featureName: FEATURES.FEATURE_OFFLINE_TOUCHPOINTS,
   LockedComponent: () => (
     <CommonLockedComponent
       title='Touchpoints'
@@ -107,7 +107,7 @@ const FeatureLockedConfigureTouchpoints = withFeatureLockHOC(Touchpoints, {
 });
 
 const FeatureLockedConfigureCustomKPI = withFeatureLockHOC(CustomKPI, {
-  featureName: FEATURES.CONF_CUSTOM_KPIPS,
+  featureName: FEATURES.FEATURE_CUSTOM_METRICS,
   LockedComponent: () => (
     <CommonLockedComponent
       title='Custom KPIs'
@@ -131,7 +131,7 @@ const FeatureLockedConfigureEvents = withFeatureLockHOC(Events, {
 const FeatureLockedConfigureExplainDataPoints = withFeatureLockHOC(
   ExplainDataPoints,
   {
-    featureName: FEATURES.CONF_TOUCHPOINTS,
+    featureName: FEATURES.FEATURE_EXPLAIN,
     LockedComponent: () => (
       <CommonLockedComponent
         title='Top Events and Properties'
@@ -145,7 +145,7 @@ const FeatureLockedConfigureExplainDataPoints = withFeatureLockHOC(
 const FeatureLockConfigurationAttribution = withFeatureLockHOC(
   AttributionSettings,
   {
-    featureName: FEATURES.CONF_ATTRUBUTION_SETTINGS,
+    featureName: FEATURES.FEATURE_ATTRIBUTION,
     LockedComponent: () => (
       <CommonLockedComponent
         title='Attribution'
@@ -161,7 +161,7 @@ const FeatureLockedReportSharing = withFeatureLockHOC(Sharing, {
 });
 
 const FeatureLockConfigurationAlerts = withFeatureLockHOC(Alerts, {
-  featureName: FEATURES.CONF_ALERTS,
+  featureName: FEATURES.FEATURE_EVENT_BASED_ALERTS,
   LockedComponent: () => (
     <CommonLockedComponent
       title='Alerts'
@@ -174,7 +174,7 @@ const FeatureLockConfigurationAlerts = withFeatureLockHOC(Alerts, {
 const FeatureLockedConfigurationEngagement = withFeatureLockHOC(
   EngagementConfig,
   {
-    featureName: FEATURES.FEATURE_ENGAGEMENT,
+    featureName: FEATURES.FEATURE_ACCOUNT_SCORING,
     LockedComponent: () => (
       <CommonLockedComponent
         title='Engagement Scoring'
@@ -194,8 +194,8 @@ const FeatureLockedFactorsInsightsNew = withFeatureLockHOC(FactorsInsightsNew, {
     />
   )
 });
-const FactorsInsightsOld = lazyWithRetry(() =>
-  import('../Views/Factors/FactorsInsightsOld')
+const FactorsInsightsOld = lazyWithRetry(
+  () => import('../Views/Factors/FactorsInsightsOld')
 );
 const FeatureLockedFactorsInsightsOld = withFeatureLockHOC(FactorsInsightsOld, {
   featureName: FEATURES.FEATURE_EXPLAIN,
@@ -209,8 +209,8 @@ const FeatureLockedFactorsInsightsOld = withFeatureLockHOC(FactorsInsightsOld, {
 });
 const CoreQuery = lazyWithRetry(() => import('../Views/CoreQuery'));
 const Dashboard = lazyWithRetry(() => import('../Views/Dashboard'));
-const PreBuildDashboard = lazyWithRetry(() =>
-  import('../Views/PreBuildDashboard/ui')
+const PreBuildDashboard = lazyWithRetry(
+  () => import('../Views/PreBuildDashboard/ui')
 );
 const Factors = lazyWithRetry(() => import('../Views/Factors'));
 const FeatureLockedFactors = withFeatureLockHOC(Factors, {
@@ -223,17 +223,17 @@ const FeatureLockedFactors = withFeatureLockHOC(Factors, {
     />
   )
 });
-const VisitorIdentificationReportComponent = lazyWithRetry(() =>
-  import('../features/6signal-report/ui')
+const VisitorIdentificationReportComponent = lazyWithRetry(
+  () => import('../features/6signal-report/ui')
 );
-const SixSignalReportRedirection = lazyWithRetry(() =>
-  import('../features/6signal-report/ui/SixSignalRedirection')
+const SixSignalReportRedirection = lazyWithRetry(
+  () => import('../features/6signal-report/ui/SixSignalRedirection')
 );
 
 const componentsLib = lazyWithRetry(() => import('../Views/componentsLib'));
 
-const PreBuildDashboardReport = lazyWithRetry(() =>
-  import('../Views/PreBuildDashboard/ui/Report')
+const PreBuildDashboardReport = lazyWithRetry(
+  () => import('../Views/PreBuildDashboard/ui/Report')
 );
 
 export const APP_ROUTES = {
