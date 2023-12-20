@@ -169,7 +169,7 @@ export const PLANS_COFIG: PLANS_COFIG_INTERFACE = {
       'AI-fuelled Explain',
       'Dedicated CSM'
     ],
-    isRecommendedPlan: true,
+    isRecommendedPlan: false,
     planIcon: 'Buildings',
     planIconColor: '#FF7A45',
     mtuLimit: 100000,
