@@ -86,7 +86,7 @@ function AccountDetails({
   const [propSelectOpen, setPropSelectOpen] = useState(false);
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
   const { TabPane } = Tabs;
-  const [timelineViewMode, setTimelineViewMode] = useState('timeline');
+  const [timelineViewMode, setTimelineViewMode] = useState('birdview');
   const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
   const [openPopover, setOpenPopover] = useState(false);
   const handleOpenPopoverChange = (value) => {
@@ -748,7 +748,7 @@ function AccountDetails({
       <div className='timeline-view'>
         <Tabs
           className='timeline-view--tabs'
-          defaultActiveKey='timeline'
+          defaultActiveKey='birdview'
           size='small'
           activeKey={timelineViewMode}
           onChange={handleTabChange}
