@@ -2,12 +2,12 @@ FROM ubuntu:latest
 
 WORKDIR /root
 
-RUN apt-get update 
-RUN apt-get install mariadb-client -y
-RUN apt-get install redis -y 
+RUN apt-get update && apt-get install -y \
+    redis-server \
+    mysql-client
 
 COPY copy_project_data.sh /root/copy_project_data.sh
 
 RUN chmod +x /root/copy_project_data.sh
 
-ENTRYPOINT ["/root/copy_project_data.sh"]
+ENTRYPOINT ["/bin/bash", "/root/copy_project_data.sh"]
