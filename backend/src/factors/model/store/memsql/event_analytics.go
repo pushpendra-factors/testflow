@@ -1114,7 +1114,7 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 	var commonSelectArr []string
 	for i := range q.EventsWithProperties {
 		userSelect := GetUserSelectStmntForUserORGroup(q.Caller, scopeGroupID, groupIDS[i] != 0, isEventGroupQueryDomains,
-			len(q.GlobalUserProperties) > 0, len(q.GroupByProperties) > 0)
+			len(q.GroupByProperties) > 0, len(model.FilterGlobalGroupPropertiesFilterForDomains(q.GlobalUserProperties)) > 0)
 		stepCommonSelect := userSelect + commonSelect
 		commonSelectArr = append(commonSelectArr, stepCommonSelect)
 	}
@@ -1494,9 +1494,9 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 	}
 
 	if isScopeDomains {
-		if len(model.FilterGlobalUserPropertiesFilterForDomains(query.GlobalUserProperties)) > 0 &&
+		if len(model.FilterGlobalGroupPropertiesFilterForDomains(query.GlobalUserProperties)) > 0 &&
 			len(model.GetGlobalGroupByUserProperties(query.GroupByProperties)) > 0 {
-			termStmnt = termStmnt + " WHERE " + getGlobalBreakdownreakdownWhereConditionForDomains(model.FilterGlobalUserPropertiesFilterForDomains(query.GlobalUserProperties),
+			termStmnt = termStmnt + " WHERE " + getGlobalBreakdownreakdownWhereConditionForDomains(model.FilterGlobalGroupPropertiesFilterForDomains(query.GlobalUserProperties),
 				refStep)
 		}
 
@@ -1806,7 +1806,7 @@ func (store *MemSQL) buildUniqueUsersWithEachGivenEventsQuery(projectID int64,
 		selectStr := ""
 		if scopeGroupID > 0 {
 			selectStr = fmt.Sprintf("%s.event_name as event_name, %s.coal_group_user_id as coal_group_user_id, %s.event_user_id as event_user_id", step, step, step)
-			if isEventGroupQueryDomains && len(query.GlobalUserProperties) > 0 && len(model.GetGlobalGroupByUserProperties(query.GroupByProperties)) > 0 {
+			if isEventGroupQueryDomains && len(model.FilterGlobalGroupPropertiesFilterForDomains(query.GlobalUserProperties)) > 0 && len(model.GetGlobalGroupByUserProperties(query.GroupByProperties)) > 0 {
 				selectStr = selectStr + "," + fmt.Sprintf("%s.group_users_user_ids", step)
 			}
 		} else {
@@ -2006,7 +2006,7 @@ func (store *MemSQL) buildUniqueUsersWithAllGivenEventsQuery(projectID int64,
 		intersectSelect = segmentSelectString
 	} else if scopeGroupID > 0 {
 		intersectSelect = fmt.Sprintf("%s.event_user_id as event_user_id, %s.coal_group_user_id as coal_group_user_id", steps[0], steps[0])
-		if isEventGroupQueryDomains && len(query.GlobalUserProperties) > 0 && len(model.GetGlobalGroupByUserProperties(query.GroupByProperties)) > 0 {
+		if isEventGroupQueryDomains && len(model.FilterGlobalGroupPropertiesFilterForDomains(query.GlobalUserProperties)) > 0 && len(model.GetGlobalGroupByUserProperties(query.GroupByProperties)) > 0 {
 			intersectSelect = intersectSelect + "," + fmt.Sprintf("%s.group_users_user_ids", steps[0])
 		}
 	} else {
@@ -2198,7 +2198,7 @@ func (store *MemSQL) buildUniqueUsersWithAnyGivenEventsQuery(projectID int64,
 		selectStr := ""
 		if scopeGroupID > 0 {
 			selectStr = fmt.Sprintf("%s.event_user_id as event_user_id, %s.coal_group_user_id as coal_group_user_id", step, step)
-			if isEventGroupQueryDomains && len(query.GlobalUserProperties) > 0 && len(model.GetGlobalGroupByUserProperties(query.GroupByProperties)) > 0 {
+			if isEventGroupQueryDomains && len(model.FilterGlobalGroupPropertiesFilterForDomains(query.GlobalUserProperties)) > 0 && len(model.GetGlobalGroupByUserProperties(query.GroupByProperties)) > 0 {
 				selectStr = selectStr + "," + fmt.Sprintf("%s.group_users_user_ids", step)
 			}
 		} else {
