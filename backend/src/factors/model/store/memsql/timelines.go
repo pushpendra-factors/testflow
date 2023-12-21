@@ -286,7 +286,7 @@ func (store *MemSQL) GetTimeRangeWindow(profileType string, whereStmt string, li
 	fromStr := fmt.Sprintf("%s AND last_activity < ?", whereStmt)
 	timeWindowQParams = append(timeWindowQParams, model.FormatTimeToString(gorm.NowFunc()))
 
-	queryStrmt := fmt.Sprintf("SELECT %s FROM (SELECT last_event_at AS last_activity FROM users %s ORDER BY last_activity DESC LIMIT %d);", windowSelectStr, fromStr, limitVal)
+	queryStrmt := fmt.Sprintf("SELECT %s FROM (SELECT COALESCE(last_event_at, updated_at) AS last_activity FROM users %s ORDER BY last_activity DESC LIMIT %d);", windowSelectStr, fromStr, limitVal)
 	db := C.GetServices().Db
 	err := db.Raw(queryStrmt, timeWindowQParams...).Scan(&timeWindow).Error
 	if err != nil {
