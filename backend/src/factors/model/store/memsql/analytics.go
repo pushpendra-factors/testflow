@@ -1549,7 +1549,7 @@ func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[
 
 	isWhereAdded := false
 	hasGlobalPropertiesFilter := globalUserFilter != nil && len(globalUserFilter) != 0
-	hasGlobalGroupProperties := hasGlobalPropertiesFilter && strings.Contains(addJoinStmnt, "group_users")
+	hasGlobalGroupProperties := hasGlobalPropertiesFilter && (strings.Contains(addJoinStmnt, "group_users") || strings.Contains(addJoinStmnt, "user_group"))
 	if hasGlobalPropertiesFilter {
 
 		if !hasGlobalGroupProperties {
