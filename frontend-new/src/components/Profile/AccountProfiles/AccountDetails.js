@@ -617,7 +617,7 @@ function AccountDetails({
 
   const getFilteredEvents = (events) => {
     if (isFreePlan) {
-      return events.filter((activity) => activity?.user !== 'group_user');
+      return events.filter((activity) => !activity.isGroupEvent);
     }
     return events;
   };
