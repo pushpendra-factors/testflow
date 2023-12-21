@@ -28,7 +28,6 @@ function SingleEventMultipleBreakdownTable({
   chartType,
   visibleProperties,
   setVisibleProperties,
-  page,
   isWidgetModal,
   durationObj,
   categories,
@@ -39,7 +38,8 @@ function SingleEventMultipleBreakdownTable({
   dateSorter,
   handleDateSorting,
   visibleSeriesData,
-  setVisibleSeriesData
+  setVisibleSeriesData,
+  eventGroup
 }) {
   const [searchText, setSearchText] = useState('');
   const {
@@ -61,21 +61,21 @@ function SingleEventMultipleBreakdownTable({
         breakdown,
         sorter,
         handleSorting,
-        page,
         eventNames,
         userPropNames,
-        eventPropertiesDisplayNames
+        eventPropertiesDisplayNames,
+        eventGroup
       )
     );
   }, [
     events,
     breakdown,
     sorter,
-    page,
     handleSorting,
     eventNames,
     userPropNames,
-    eventPropertiesDisplayNames
+    eventPropertiesDisplayNames,
+    eventGroup
   ]);
 
   useEffect(() => {

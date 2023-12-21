@@ -17,13 +17,10 @@ import {
   TOTAL_EVENTS_CRITERIA,
   TYPE_EVENTS_OCCURRENCE,
   TYPE_UNIQUE_USERS,
-  ACTIVE_USERS_CRITERIA,
-  FREQUENCY_CRITERIA,
   EVENT_QUERY_USER_TYPE,
   ANY_USER_TYPE,
   ALL_USER_TYPE,
   EACH_USER_TYPE,
-  TOTAL_USERS_CRITERIA,
   INITIAL_SESSION_ANALYTICS_SEQ,
   MARKETING_TOUCHPOINTS,
   PREDEFINED_DATES,
@@ -46,10 +43,9 @@ import moment from 'moment';
 export const initialState = INITIAL_STATE;
 
 export const labelsObj = {
-  [TOTAL_EVENTS_CRITERIA]: 'Event Count',
-  [TOTAL_USERS_CRITERIA]: 'User Count',
-  [ACTIVE_USERS_CRITERIA]: 'User Count',
-  [FREQUENCY_CRITERIA]: 'Count'
+  $domains: 'Accounts Count',
+  events: 'Event Count',
+  users: 'User Count'
 };
 
 export const formatFiltersForQuery = (filters, scope = 'event') => {

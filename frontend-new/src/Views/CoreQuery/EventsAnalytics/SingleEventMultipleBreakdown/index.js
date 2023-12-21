@@ -38,16 +38,7 @@ import MetricChart from 'Components/MetricChart/MetricChart';
 
 const SingleEventMultipleBreakdown = forwardRef(
   (
-    {
-      queries,
-      breakdown,
-      resultState,
-      page,
-      chartType,
-      durationObj,
-      title,
-      section
-    },
+    { queries, breakdown, resultState, chartType, durationObj, title, section },
     ref
   ) => {
     const {
@@ -129,7 +120,6 @@ const SingleEventMultipleBreakdown = forwardRef(
           breakdown={breakdown}
           events={queries}
           chartType={chartType}
-          page={page}
           setVisibleProperties={setVisibleProperties}
           visibleProperties={visibleProperties}
           durationObj={durationObj}
@@ -140,6 +130,7 @@ const SingleEventMultipleBreakdown = forwardRef(
           handleDateSorting={handleDateSorting}
           visibleSeriesData={visibleSeriesData}
           setVisibleSeriesData={setVisibleSeriesData}
+          eventGroup={resultState?.data?.meta?.query?.grpa}
         />
       </div>
     );
@@ -199,11 +190,13 @@ const SingleEventMultipleBreakdown = forwardRef(
       );
     } else if (chartType === CHART_TYPE_METRIC_CHART) {
       chart = (
-        <div className={cx(
-          'grid w-full col-gap-2 row-gap-12',
-          { 'grid-flow-col': visibleSeriesData.length < 3 },
-          { 'grid-cols-3': visibleSeriesData.length >= 3 }
-        )}>
+        <div
+          className={cx(
+            'grid w-full col-gap-2 row-gap-12',
+            { 'grid-flow-col': visibleSeriesData.length < 3 },
+            { 'grid-cols-3': visibleSeriesData.length >= 3 }
+          )}
+        >
           {visibleSeriesData &&
             visibleSeriesData.map((eachSeriesData) => {
               return (
