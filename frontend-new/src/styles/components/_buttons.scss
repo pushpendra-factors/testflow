@@ -145,18 +145,6 @@
   //Dashed Button
   &.ant-btn-dashed {
     border-style: dashed;
-    border-color: $fa-color-neutral-grey-5;
-    background: $fa-color--white;
-    border-style: dashed;
-    &:focus,
-    &:active {
-      outline: 0;
-    }
-    &:hover {
-      border-color: $fa-color--brand-color;
-      color: $fa-color--brand-color;
-      text-decoration: none;
-    }
   }
 
   //Text Button

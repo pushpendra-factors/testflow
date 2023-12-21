@@ -284,6 +284,7 @@ export const getTableColumns = (
     !tableConfig.showDuration && !tableConfig.showPercentage;
 
   const unsortedBreakdown = _.get(resultData, 'meta.query.gbp', []);
+  const queryGroup = _.get(resultData, 'meta.query.grpa', 'users');
   const isBreakdownApplied = unsortedBreakdown.length > 0;
   const breakdown = SortData(unsortedBreakdown, 'eni', 'ascend');
 
@@ -359,7 +360,9 @@ export const getTableColumns = (
     ),
     dataIndex: 'Conversion',
     className: `text-right ${
-      isFunnelWithAnyGivenEvent(resultData) == true ? 'has-border' : 'border-none'
+      isFunnelWithAnyGivenEvent(resultData) == true
+        ? 'has-border'
+        : 'border-none'
     }`,
     width: 150,
     render: (d) => RenderTotalConversion(d, breakdown, isComparisonApplied)
@@ -442,7 +445,7 @@ export const getTableColumns = (
 
     const countLabelText = (
       <Text color='grey-2' type='title' level={7} extraClass='mb-0'>
-        count of users
+        {queryGroup === '$domains' ? 'count of accounts' : 'count of users'}
       </Text>
     );
 
@@ -660,11 +663,15 @@ export const getTableData = (
         const comparePercentageValue = !currentIndex
           ? 100
           : compareGroup != null
-          ? calculatePercentage(
-              compareGroup[`${currentItem.displayName}-${currentIndex}-count`],
-              compareGroup[`${prevItem.displayName}-${currentIndex - 1}-count`]
-            )
-          : 0;
+            ? calculatePercentage(
+                compareGroup[
+                  `${currentItem.displayName}-${currentIndex}-count`
+                ],
+                compareGroup[
+                  `${prevItem.displayName}-${currentIndex - 1}-count`
+                ]
+              )
+            : 0;
         return {
           ...agg,
           // if comparison is applied, we have to pass both count and compare_count, time and compare_time, percent and compare_percent
