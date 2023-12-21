@@ -3378,6 +3378,9 @@ var TLDList = map[string]bool{
 	".닷컴":               true,
 	".삼성":               true,
 	".한국":               true,
+	".res.in":           true,
+	".ac.jp":            true,
+	".gov.in":           true,
 }
 
 var whiteListedDomainForSubdomain = map[string]bool{
