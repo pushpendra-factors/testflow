@@ -2320,23 +2320,10 @@ func FormatAnalyzeResultForProfiles(result *model.QueryResult, profileType strin
 			}
 		} else if model.IsAccountProfiles(profileType) {
 			row.TableProps = make(map[string]interface{}, 0)
-			row.LastActivity = profile[1].(time.Time)
-			if profile[2] == nil || (reflect.ValueOf(profile[2])).Len() == 0 {
-				row.HostName = profile[3].(string)
-				profiles = append(profiles, row)
-				continue
+			if profile[1] != nil {
+				row.LastActivity = profile[1].(time.Time)
 			}
-			reflectProps := reflect.ValueOf(profile[2])
-			props := make(map[string]interface{}, 0)
-			if err := json.Unmarshal([]byte(reflectProps.String()), &props); err != nil {
-				return nil, fmt.Errorf("failed at unmarshalling props")
-			}
-			var err error
-			row.Properties, err = U.EncodeToPostgresJsonb(&props)
-			if err != nil {
-				return nil, fmt.Errorf("failed at encoding props")
-			}
-			row.HostName = profile[3].(string)
+			row.HostName = profile[2].(string)
 		}
 
 		profiles = append(profiles, row)
