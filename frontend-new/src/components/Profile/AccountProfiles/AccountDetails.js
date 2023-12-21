@@ -206,25 +206,21 @@ function AccountDetails({
     setActivities(listActivities);
   }, [currentProjectSettings, accountDetails]);
 
-  useEffect(() => {
-    const uniqueEventNames = new Set();
+  // useEffect(() => {
+  //   if (!accountDetails.data?.account_events) return;
+  //   const uniqueEventNames = new Set();
 
-    accountDetails.data?.account_events?.forEach((event) => {
-      if (Object.keys(event?.properties || {}).length) {
-        uniqueEventNames.add(event.event_name);
-      }
-    });
-
-    uniqueEventNames.forEach((eventName) => {
-      if (!eventPropertiesV2[eventName]) {
-        getEventPropertiesV2(activeProject?.id, eventName);
-      }
-    });
-  }, [
-    activeProject?.id,
-    eventPropertiesV2,
-    accountDetails.data?.account_events
-  ]);
+  //   accountDetails.data?.account_events?.forEach((event) => {
+  //     if (Object.keys(event?.properties || {}).length) {
+  //       uniqueEventNames.add(event.event_name);
+  //     }
+  //   });
+  //   uniqueEventNames.forEach((eventName) => {
+  //     if (!eventPropertiesV2[eventName]) {
+  //       getEventPropertiesV2(activeProject?.id, eventName);
+  //     }
+  //   });
+  // }, [activeProject?.id, accountDetails.data?.account_events]);
 
   useEffect(() => {
     Object.keys(groups?.account_groups || {}).forEach((group) => {
