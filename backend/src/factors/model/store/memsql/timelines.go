@@ -414,8 +414,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 	params = append(domainQParams, params...)
 
 	// building filter steps for query
-	var filterSteps, lastActivityStr string
-	useGreatestLastActivity := false
+	var filterSteps string
 	stepNumber := 1
 	for groupName, filterString := range whereForGroups {
 		if groupName == U.GROUP_NAME_DOMAINS {
@@ -427,24 +426,13 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 		}
 
 		filterSteps = filterSteps + fmt.Sprintf(`, filter_%d as (
-			SELECT * FROM all_users WHERE %s AND 
+			SELECT identity, host_name FROM all_users WHERE %s AND 
 				%s
 		)`, stepNumber, isGroupStr, filterString)
 
 		params = append(params, paramsForGroupFilters[groupName]...)
 
-		if lastActivityStr == "" {
-			lastActivityStr = fmt.Sprintf("MAX(filter_%d.last_activity)", stepNumber)
-		} else {
-			lastActivityStr = lastActivityStr + fmt.Sprintf(", MAX(filter_%d.last_activity)", stepNumber)
-			useGreatestLastActivity = true
-		}
 		stepNumber++
-	}
-
-	// use GREATEST only when more than 1 different type of group filter (not including user type filter)
-	if useGreatestLastActivity {
-		lastActivityStr = fmt.Sprintf("GREATEST(%s)", lastActivityStr)
 	}
 
 	// Domain Level Properties Filter Statement
@@ -477,15 +465,14 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 				addSpecialFilter = "WHERE filter_1.identity NOT IN (SELECT identity FROM filter_special) "
 			}
 			intersectStep = fmt.Sprintf(`SELECT 
-			filter_1.properties, filter_1.identity, filter_1.host_name, MAX(filter_1.last_activity) as last_activity 
+			filter_1.identity, filter_1.host_name
 			FROM filter_1 %s
-			GROUP BY filter_1.identity 
-			ORDER BY last_activity DESC LIMIT 1000;`, addSpecialFilter)
+			GROUP BY filter_1.identity`, addSpecialFilter)
 			break
 		}
 		if stepNo == 1 {
-			intersectStep = fmt.Sprintf(`SELECT 
-			filter_1.properties, filter_1.identity, filter_1.host_name, %s as last_activity FROM filter_1 `, lastActivityStr)
+			intersectStep = `SELECT 
+			filter_1.identity, filter_1.host_name FROM filter_1 `
 		}
 		intersectStep = intersectStep + fmt.Sprintf(`INNER JOIN filter_%d 
 		ON filter_%d.identity = filter_%d.identity `, stepNo+1, stepNo, stepNo+1)
@@ -495,19 +482,26 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 			if requireSpecialFilter {
 				addSpecialFilter = " WHERE filter_1.identity NOT IN (SELECT identity FROM filter_special) "
 			}
-			intersectStep = intersectStep + addSpecialFilter + `GROUP BY filter_1.identity 
-			ORDER BY last_activity DESC LIMIT 1000;`
+			intersectStep = intersectStep + addSpecialFilter + `GROUP BY filter_1.identity`
 			break
 		}
 	}
 
 	if len(groupedFilters) == 0 {
 		intersectStep = `SELECT 
-		properties, identity, host_name, MAX(last_activity) AS last_activity
+		identity, host_name 
 		FROM all_users 
-		GROUP BY identity 
-		ORDER BY last_activity DESC LIMIT 1000;`
+		GROUP BY identity`
 	}
+
+	finalStep := fmt.Sprintf(`, final_step as (%s)
+		SELECT 
+        final_step.identity as identity, final_step.host_name as host_name, MAX(users.last_event_at) as last_activity 
+		FROM final_step JOIN (SELECT last_event_at, group_%d_user_id FROM users WHERE users.project_id=? AND users.source!=? AND 
+		last_event_at IS NOT NULL ) AS users ON 
+		final_step.identity = users.group_%d_user_id
+		GROUP BY identity 
+		ORDER BY last_activity DESC LIMIT 1000;`, intersectStep, domainGroup.ID, domainGroup.ID)
 
 	query := fmt.Sprintf(`WITH all_users as (
 		SELECT * FROM (
@@ -530,13 +524,15 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 		    AND last_activity BETWEEN ? AND ?
 		  LIMIT 10000000 
 		) %s
-	) %s %s`, domainGroup.ID, domainGroup.ID, domainFilterStmt, whereForSearchFilters, domainGroup.ID, isGroupUserCheck, allUsersWhere, filterSteps, intersectStep)
+	) %s %s`, domainGroup.ID, domainGroup.ID, domainFilterStmt, whereForSearchFilters, domainGroup.ID, isGroupUserCheck, allUsersWhere, filterSteps, finalStep)
 
 	if len(paramsForGroupFilters[U.GROUP_NAME_DOMAINS]) > 0 {
 		temp := append([]interface{}{}, params[2:]...)
 		params = append(params[:2], paramsForGroupFilters[U.GROUP_NAME_DOMAINS]...)
 		params = append(params, temp...)
 	}
+
+	params = append(params, projectID, model.UserSourceDomains)
 
 	logCtx.Info("Generated query for all accounts: ", query)
 	return query, params, nil
