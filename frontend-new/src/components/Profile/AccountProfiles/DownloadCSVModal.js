@@ -60,8 +60,14 @@ const DownloadCSVModal = ({
   }, [displayTableProps, options]);
 
   const filteredOptions = useMemo(() => {
+    if (!options || !searchText) {
+      return options;
+    }
+
     return options.filter((option) =>
-      option.display_name.toLowerCase().includes(searchText.toLowerCase())
+      option && option.display_name
+        ? option.display_name.toLowerCase().includes(searchText.toLowerCase())
+        : false
     );
   }, [options, searchText]);
 

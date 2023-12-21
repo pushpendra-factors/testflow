@@ -1,3 +1,5 @@
+import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
+
 export const QUERY_TYPE_FUNNEL = 'funnel';
 export const QUERY_TYPE_EVENT = 'events';
 export const QUERY_TYPE_ATTRIBUTION = 'attribution';
@@ -641,7 +643,7 @@ export const METRIC_TYPES = {
 };
 
 export const QUERY_OPTIONS_DEFAULT_VALUE = {
-  group_analysis: 'users',
+  group_analysis: GROUP_NAME_DOMAINS,
   groupBy: [
     {
       prop_category: '', // user / event

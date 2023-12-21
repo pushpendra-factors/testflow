@@ -94,7 +94,7 @@
     }
 }
 
-.fa-timeline-modal--header {
+.fa-timeline--header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -112,24 +112,29 @@
 }
 
 .fa-timeline {
+    position: relative;
+    top: 32px;
     display: flex;
-    align-items: flex-start;
     margin: 0 -36px;
-
+    height: calc(100vh - 112px);
+    overflow-y: hidden;
 
     .leftpane {
+        position: sticky;
+        top: 0;
+        left: 0;
         width: 20%;
         min-width: 300px;
-        min-height: 100vh;
-        max-height: 100%;
-        background: #FFFFFF;
+        height: 100vh;
+        background: #FFF;
         padding: 0;
         z-index: 15;
+        border-right: 1px solid #E7E9ED;
 
         .header {
             position: sticky;
             background-color: #FFF;
-            top: 112px;
+            top: 0;
             padding: 0 16px;
             z-index: 15;
 
@@ -165,14 +170,16 @@
             }
         }
 
-
-
         .props {
-            padding: 64px 0 0;
+            padding: 32px 0 0;
+
+            .add-prop-btn {
+                position: sticky;
+                background: #FFF;
+            }
         }
 
         .logo_attr {
-            width: calc(20% - 2px);
             position: fixed;
             top: calc(100% - 54px);
             left: 0;
@@ -184,18 +191,7 @@
 
     .timeline-view {
         width: 80%;
-        height: 100vh;
-        padding: 96px 36px 36px;
-        border-left: 1px solid #E7E9ED;
-        overflow-y: scroll;
-
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-
-        &::-webkit-scrollbar {
-            display: none;
-        }
-
+        padding: 48px 36px 36px;
     }
 }
 
@@ -222,9 +218,13 @@
 }
 
 .timeline-actions {
+    position: sticky;
+    top: 0;
+    background: #FFF;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    z-index: 11;
 
     &__group {
         display: flex;
@@ -259,7 +259,7 @@
 }
 
 .table-scroll {
-    max-height: 80vh;
+    max-height: calc(100vh - 296px);
     overflow: scroll;
     border-bottom: 1px solid #E7E9ED;
 
@@ -599,6 +599,9 @@
         font-weight: 600;
         font-size: 16px;
         line-height: 24px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .heading-with-sub {
@@ -608,19 +611,27 @@
         align-items: flex-start;
 
         .sub {
+            width: 100%;
             font-family: 'Inter';
             font-style: normal;
             font-weight: 500;
             font-size: 10px;
             line-height: 16px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .main {
+            width: 100%;
             font-family: 'Inter';
             font-style: normal;
             font-weight: 600;
             font-size: 16px;
             line-height: 24px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
     }
 
@@ -999,4 +1010,153 @@
     text-align: right;
     bottom: 24px;
     right: 72px;
+}
+
+.account-timeline-table-container {
+    max-height: calc(100vh - 252px);
+    margin-top: 20px;
+    border-bottom: 1px solid #E7E9ED;
+    overflow-y: scroll;
+}
+
+.account-timeline-table {
+    width: 100%;
+    border-collapse: collapse;
+    border-bottom: 1px solid #E7E9ED;
+
+    td {
+        padding: 12px;
+        text-align: left;
+    }
+
+    .timestamp-row td {
+        position: sticky;
+        top: 0;
+        background: #F5F6F8;
+        font-weight: 600;
+        height: 40px;
+        color: #000000A6;
+        z-index: 1;
+    }
+
+    .table-row {
+        display: flex;
+        border-top: 1px solid #E7E9ED;
+        height: 60px;
+
+        .timestamp-cell {
+            width: 10%;
+            overflow: hidden;
+            color: #00000073;
+        }
+
+        .icon-cell,
+        .user-cell {
+            width: 25%;
+            display: flex;
+            align-items: flex-start;
+            overflow: hidden;
+
+            div {
+                width: fit-content;
+                max-width: 80%;
+                font-weight: 500;
+                font-size: 16px;
+                line-height: 24px;
+                color: #000000A6;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+        }
+
+        .properties-cell {
+            padding: 8px 12px;
+            width: 40%;
+            display: flex;
+            flex-direction: column;
+
+            .propkey {
+                font-family: Inter;
+                font-size: 12px;
+                font-weight: 400;
+                line-height: 18px;
+                letter-spacing: 0.01em;
+                text-align: left;
+                width: 100%;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .propvalue {
+                font-family: Inter;
+                font-size: 16px;
+                font-weight: 400;
+                line-height: 24px;
+                letter-spacing: 0em;
+                text-align: left;
+                width: 100%;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+        }
+    }
+
+    .active {
+        &:hover {
+            background-color: #F0F0F0;
+        }
+
+    }
+}
+
+.event-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--icon-size, 24px) !important;
+    width: var(--icon-size, 24px) !important;
+    border-radius: 50%;
+    border: 1px solid var(--border-color, #ccc);
+    background-color: var(--bg-color, #f9f9f9);
+
+    img {
+        width: calc(100% - 6px);
+        height: calc(100% - 6px);
+    }
+}
+
+.fa-drawer--right {
+    &.ant-drawer {
+        top: 56px;
+    }
+
+    .ant-drawer-content-wrapper {
+        width: 30% !important;
+    }
+
+    .ant-drawer-header {
+        padding: 12px 24px;
+    }
+}
+
+.timeline-view--tabs {
+    .ant-tabs-nav {
+        margin: 0;
+    }
+
+    .ant-tabs-content-holder {
+        max-height: calc(100vh - 232px);
+        overflow-y: scroll;
+    }
+}
+
+.text-with-tooltip {
+    width: fit-content;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }

@@ -256,6 +256,7 @@ function ContactDetails({
         <SearchCheckList
           placeholder='Select Events to Show'
           mapArray={activities}
+          updateList={setActivities}
           titleKey='display_name'
           checkedKey='enabled'
           onChange={handleEventsChange}
@@ -268,6 +269,7 @@ function ContactDetails({
         <SearchCheckList
           placeholder='Select Upto 5 Milestones'
           mapArray={checkListMilestones}
+          updateList={setCheckListMilestones}
           titleKey='display_name'
           checkedKey='enabled'
           onChange={handleMilestonesChange}
@@ -280,7 +282,7 @@ function ContactDetails({
 
   const renderModalHeader = () => {
     return (
-      <div className='fa-timeline-modal--header'>
+      <div className='fa-timeline--header'>
         <div className='flex items-center'>
           <div
             className='flex items-center cursor-pointer'
@@ -468,7 +470,7 @@ function ContactDetails({
         </div>
       </div>
       <div className='props'>
-        {listLeftPaneProps(userDetails.data.left_pane_props)}
+        {listLeftPaneProps(userDetails.data.leftpane_props)}
         <div className='px-8 pb-8 pt-2'>{renderAddNewProp()}</div>
       </div>
     </div>
@@ -547,6 +549,7 @@ function ContactDetails({
     return (
       <div className='timeline-view'>
         <Tabs
+          className='timeline-view--tabs'
           defaultActiveKey='birdview'
           size='small'
           onChange={() => setGranularity(granularity)}

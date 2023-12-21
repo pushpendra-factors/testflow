@@ -214,24 +214,24 @@ function Properties({
             <div className={'flex justify-end'}>
               {tabNo == 1 && (
                 <Button
-                  size={'large'}
                   onClick={() => {
                     setShowPropertyForm(true);
                   }}
+                  type='primary'
                 >
-                  <SVG name={'plus'} extraClass={'mr-2'} size={16} />
+                  <SVG name={'plus'} size={16} color='white' />
                   Add New
                 </Button>
               )}
 
               {tabNo == 3 && (
                 <Button
-                  size={'large'}
                   onClick={() => {
                     setShowForm(true);
                   }}
+                  type='primary'
                 >
-                  <SVG name={'plus'} extraClass={'mr-2'} size={16} />
+                  <SVG name={'plus'} size={16} color='white' />
                   Add New
                 </Button>
               )}
@@ -244,14 +244,14 @@ function Properties({
                     title={enableEdit ? 'Only Admin can edit' : null}
                   >
                     <Button
-                      size={'large'}
                       disabled={enableEdit}
                       onClick={() => {
                         setShowDCGForm(true);
                         setShowModalVisible(true);
                       }}
+                      type='primary'
                     >
-                      <SVG name={'plus'} extraClass={'mr-2'} size={16} />
+                      <SVG name={'plus'} size={16} color='white' />
                       Add New
                     </Button>
                   </Tooltip>

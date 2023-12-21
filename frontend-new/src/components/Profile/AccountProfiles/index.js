@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import isEqual from 'lodash/isEqual';
+import cx from 'classnames';
 import { Table, Button, Spin, Popover, Tabs, notification, Input } from 'antd';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
+import { useHistory, useLocation, useParams } from 'react-router-dom';
 import { Text, SVG } from '../../factorsComponents';
 import PropertyFilter from './PropertyFilter';
 import { getGroupProperties } from '../../../reducers/coreQuery/middleware';
@@ -27,15 +30,10 @@ import {
 } from '../../../reducers/global';
 import SearchCheckList from 'Components/SearchCheckList';
 import { formatUserPropertiesToCheckList } from 'Reducers/timelines/utils';
-import { useHistory, useLocation, useParams } from 'react-router-dom';
 import { fetchGroupPropertyValues } from 'Reducers/coreQuery/services';
 import NoDataWithMessage from '../MyComponents/NoDataWithMessage';
 import ProfilesWrapper from '../ProfilesWrapper';
-import {
-  checkFiltersEquality,
-  defaultSegmentsList,
-  getColumns
-} from './accountProfiles.helpers';
+import { checkFiltersEquality, getColumns } from './accountProfiles.helpers';
 import {
   selectAccountPayload,
   selectActiveSegment
@@ -56,7 +54,6 @@ import uniq from 'lodash/uniq';
 import { showUpgradeNudge } from 'Views/Settings/ProjectSettings/Pricing/utils';
 import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
 import SaveSegmentModal from './SaveSegmentModal';
-import MoreActionsDropdown from './MoreActionsDropdown';
 import DeleteSegmentModal from './DeleteSegmentModal';
 import RenameSegmentModal from './RenameSegmentModal';
 import {
@@ -72,17 +69,11 @@ import { formatCount } from 'Utils/dataFormatter';
 import { PathUrls } from 'Routes/pathUrls';
 import { getGroups } from '../../../reducers/coreQuery/middleware';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
+import styles from './index.module.scss';
 import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
 import { isOnboarded } from 'Utils/global';
 import { cloneDeep } from 'lodash';
-
-const groupToCompanyPropMap = {
-  $hubspot_company: '$hubspot_company_name',
-  $salesforce_account: '$salesforce_account_name',
-  $6signal: '$6Signal_name',
-  $linkedin_company: '$li_localized_name',
-  $g2: '$g2_name'
-};
+import { getSegmentColorCode } from 'Views/AppSidebar/appSidebar.helpers';
 
 const groupToDomainMap = {
   $hubspot_company: '$hubspot_company_domain',
@@ -90,6 +81,15 @@ const groupToDomainMap = {
   $6signal: '$6Signal_domain',
   $linkedin_company: '$li_domain',
   $g2: '$g2_domain'
+};
+
+const filterPropsMap = {
+  $hubspot_company: 'hubspot',
+  $salesforce_account: 'salesforce',
+  $6signal: '6Signal',
+  $linkedin_company: '$li_',
+  $g2: '$g2',
+  $domains: ''
 };
 
 function AccountProfiles({
@@ -112,8 +112,6 @@ function AccountProfiles({
   const history = useHistory();
   const location = useLocation();
   const { segment_id } = useParams();
-
-  // const { segments } = useSelector((state) => selectSegments(state));
 
   const { groupPropNames } = useSelector((state) => state.coreQuery);
   const groupProperties = useSelector(
@@ -154,6 +152,7 @@ function AccountProfiles({
   const [showDownloadCSVModal, setShowDownloadCSVModal] = useState(false);
   const [csvDataLoading, setCSVDataLoading] = useState(false);
   const [defaultSorterInfo, setDefaultSorterInfo] = useState({});
+  const [showSegmentActions, setShowSegmentActions] = useState(false);
   const [errMsg, setErrMsg] = useState('');
 
   const { isFeatureLocked: isScoringLocked } = useFeatureLock(
@@ -176,15 +175,14 @@ function AccountProfiles({
   useEffect(() => {
     let listProps = [];
     if (IsDomainGroup(accountPayload?.source)) {
-      listProps = Object.keys(groups?.account_groups || {})
-        .filter(
-          (group) => !['$hubspot_deal', '$salesforce_Account'].includes(group)
-        )
-        .reduce((acc, property) => {
-          return groupProperties[property]
-            ? acc.concat(groupProperties[property])
-            : acc;
-        }, []);
+      listProps = Object.keys(groups?.account_groups || {}).reduce(
+        (properties, group) => {
+          return groupProperties[group]
+            ? properties.concat(groupProperties[group])
+            : properties;
+        },
+        []
+      );
     } else {
       listProps = groupProperties?.[accountPayload?.source] || [];
     }
@@ -484,12 +482,18 @@ function AccountProfiles({
       option.enabled ||
       checkListAccountProps.filter((item) => item.enabled === true).length < 8
     ) {
-      const checkListProps = [...checkListAccountProps];
-      const optIndex = checkListProps.findIndex(
-        (obj) => obj.prop_name === option.prop_name
-      );
-      checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
-      setCheckListAccountProps(checkListProps);
+      setCheckListAccountProps((prev) => {
+        const checkListProps = [...prev];
+        const optIndex = checkListProps.findIndex(
+          (obj) => obj.prop_name === option.prop_name
+        );
+        checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
+        // Sorting to bubble up the selected elements onClick
+        checkListProps.sort((a, b) => {
+          return (b?.enabled || 0) - (a?.enabled || 0);
+        });
+        return checkListProps;
+      });
     } else {
       notification.error({
         message: 'Error',
@@ -580,6 +584,7 @@ function AccountProfiles({
         <SearchCheckList
           placeholder='Search Properties'
           mapArray={checkListAccountProps}
+          updateList={setCheckListAccountProps}
           titleKey='display_name'
           checkedKey='enabled'
           onChange={handlePropChange}
@@ -592,6 +597,62 @@ function AccountProfiles({
       </Tabs.TabPane>
     </Tabs>
   );
+
+  const navigateToAccountsEngagement = useCallback(() => {
+    history.push(PathUrls.ConfigureEngagements);
+  }, []);
+
+  const moreActionsContent = () => {
+    const accountEngagement = (
+      <div
+        role='button'
+        onClick={navigateToAccountsEngagement}
+        className='flex cursor-pointer col-gap-4 items-center py-2 px-4 hover:bg-gray-100'
+      >
+        <SVG size={20} name='fireFlameCurved' color='#8c8c8c' />
+        <Text type='title' color='character-primary' extraClass='mb-0'>
+          Account engagement rules
+        </Text>
+      </div>
+    );
+
+    if (Boolean(accountPayload.segment_id) === false) {
+      return accountEngagement;
+    }
+    return (
+      <div className='flex flex-col'>
+        <div className='flex flex-col'>
+          <div
+            role='button'
+            onClick={() => {
+              setShowSegmentActions(false);
+              setMoreActionsModalMode(moreActionsMode.RENAME);
+            }}
+            className='flex cursor-pointer hover:bg-gray-100 col-gap-4 items-center py-2 px-4'
+          >
+            <SVG size={20} name='edit_query' color='#8c8c8c' />
+            <Text type='title' color='character-primary' extraClass='mb-0'>
+              Rename Segment
+            </Text>
+          </div>
+          <div
+            role='button'
+            onClick={() => {
+              setShowSegmentActions(false);
+              setMoreActionsModalMode(moreActionsMode.DELETE);
+            }}
+            className='flex cursor-pointer hover:bg-gray-100 col-gap-4 border-b items-center py-2 px-4'
+          >
+            <SVG size={20} name='trash' color='#8c8c8c' />
+            <Text type='title' color='character-primary' extraClass='mb-0'>
+              Delete Segment
+            </Text>
+          </div>
+        </div>
+        {accountEngagement}
+      </div>
+    );
+  };
 
   const restoreFiltersDefaultState = useCallback(
     (selectedAccount = INITIAL_FILTERS_STATE.account) => {
@@ -682,6 +743,10 @@ function AccountProfiles({
     return Object.keys(groups?.account_groups || {});
   }, [groups]);
 
+  const disableDiscardButton = useMemo(() => {
+    return isEqual(selectedFilters, appliedFilters);
+  }, [selectedFilters, appliedFilters]);
+
   const renderPropertyFilter = () => {
     return (
       <PropertyFilter
@@ -696,6 +761,8 @@ function AccountProfiles({
         availableGroups={availableGroups}
         eventProp={selectedFilters.eventProp}
         areFiltersDirty={areFiltersDirty}
+        disableDiscardButton={disableDiscardButton}
+        isActiveSegment={Boolean(accountPayload.segment_id) === true}
         applyFilters={applyFilters}
         setFiltersExpanded={setFiltersExpanded}
         setSaveSegmentModal={handleSaveSegmentClick}
@@ -847,66 +914,88 @@ function AccountProfiles({
   };
 
   const renderSearchSection = () => (
-    <ControlledComponent
-      controller={filtersExpanded === false && newSegmentMode === false}
-    >
-      <div className='relative'>
-        {searchBarOpen ? (
-          <div className={'flex items-center justify-between'}>
-            {!searchDDOpen && (
-              <Input
-                size='large'
-                value={listSearchItems ? listSearchItems.join(', ') : null}
-                placeholder={'Search Accounts'}
-                style={{
-                  width: '240px',
-                  'border-radius': '5px'
-                }}
-                prefix={<SVG name='search' size={16} color={'grey'} />}
-                onClick={() => setSearchDDOpen(true)}
-              />
-            )}
-            <Button type='text' className='search-btn' onClick={onSearchClose}>
-              <SVG name={'close'} size={20} color={'grey'} />
-            </Button>
-          </div>
-        ) : (
-          <Button type='text' className='search-btn' onClick={onSearchOpen}>
-            <SVG name={'search'} size={20} color={'grey'} />
+    <div className='relative'>
+      <ControlledComponent controller={searchBarOpen}>
+        <div className={'flex items-center justify-between'}>
+          {!searchDDOpen && (
+            <Input
+              size='large'
+              value={listSearchItems ? listSearchItems.join(', ') : null}
+              placeholder={'Search Accounts'}
+              style={{
+                width: '240px',
+                'border-radius': '5px'
+              }}
+              prefix={<SVG name='search' size={16} color={'#8C8C8C'} />}
+              onClick={() => setSearchDDOpen(true)}
+            />
+          )}
+          <Button type='text' onClick={onSearchClose}>
+            <SVG name={'close'} size={24} color={'grey'} />
           </Button>
-        )}
-        {searchCompanies()}
-      </div>
-    </ControlledComponent>
+        </div>
+      </ControlledComponent>
+      <ControlledComponent controller={!searchBarOpen}>
+        <Button type='text' onClick={onSearchOpen}>
+          <SVG name={'search'} size={24} color={'#8c8c8c'} />
+        </Button>
+      </ControlledComponent>
+      {searchCompanies()}
+    </div>
   );
+
+  const renderDownloadSection = () => {
+    return (
+      <Button onClick={() => setShowDownloadCSVModal(true)} type='text'>
+        <SVG size={24} name={'download'} color={'#8c8c8c'} />
+      </Button>
+    );
+  };
+
+  const renderMoreActions = () => {
+    return (
+      <Popover
+        placement='bottomLeft'
+        visible={showSegmentActions}
+        onVisibleChange={(visible) => {
+          setShowSegmentActions(visible);
+        }}
+        onClick={() => {
+          setShowSegmentActions(true);
+        }}
+        trigger='click'
+        content={moreActionsContent}
+        overlayClassName={cx(
+          'fa-activity--filter',
+          styles['more-actions-popover']
+        )}
+      >
+        <Button type='default'>
+          <SVG size={24} name={'more'} />
+        </Button>
+      </Popover>
+    );
+  };
 
   const renderTablePropsSelect = () => {
     return (
-      <ControlledComponent
-        controller={filtersExpanded === false && newSegmentMode === false}
+      <Popover
+        overlayClassName='fa-activity--filter'
+        placement='bottomLeft'
+        visible={showPopOver}
+        onVisibleChange={(visible) => {
+          setShowPopOver(visible);
+        }}
+        onClick={() => {
+          setShowPopOver(true);
+        }}
+        trigger='click'
+        content={popoverContent}
       >
-        <Popover
-          overlayClassName='fa-activity--filter'
-          placement='bottomLeft'
-          visible={showPopOver}
-          onVisibleChange={(visible) => {
-            setShowPopOver(visible);
-          }}
-          onClick={() => {
-            setShowPopOver(true);
-          }}
-          trigger='click'
-          content={popoverContent}
-        >
-          <Button
-            size='large'
-            icon={<SVG name='activity_filter' />}
-            className='relative'
-          >
-            Edit Columns
-          </Button>
-        </Popover>
-      </ControlledComponent>
+        <Button type='text'>
+          <SVG size={24} name={'tableColumns'} />
+        </Button>
+      </Popover>
     );
   };
 
@@ -947,7 +1036,7 @@ function AccountProfiles({
                   activeSegment?.type
                     ? activeSegment.type
                     : accountPayload.source
-                }&view=birdview`,
+                }&view=timeline`,
                 {
                   accountPayload: accountPayload,
                   activeSegment: activeSegment,
@@ -1078,10 +1167,6 @@ function AccountProfiles({
           reqPayload,
           activeAgent
         );
-        console.log(
-          'jklogs ~ file: index.js:908 ~ resultAccounts.data:',
-          resultAccounts.data
-        );
         const csvData = generateCSVData(resultAccounts.data, selectedOptions);
         downloadCSV(csvData, 'accounts.csv');
         setCSVDataLoading(false);
@@ -1140,6 +1225,10 @@ function AccountProfiles({
     return 'buildings';
   }, [activeSegment]);
 
+  const titleIconColor = useMemo(() => {
+    return getSegmentColorCode(activeSegment?.name ?? '');
+  }, [activeSegment?.name]);
+
   return (
     <ProfilesWrapper>
       <ControlledComponent controller={showRangeNudge}>
@@ -1155,7 +1244,7 @@ function AccountProfiles({
       <div className='flex justify-between items-center'>
         <div className='flex col-gap-2  items-center'>
           <div className='flex items-center rounded justify-center h-10 w-10'>
-            <SVG name={titleIcon} size={32} color='#FF4D4F' />
+            <SVG name={titleIcon} size={32} color={titleIconColor} />
           </div>
           <Text
             type='title'
@@ -1167,17 +1256,6 @@ function AccountProfiles({
             {pageTitle}
           </Text>
         </div>
-        <ControlledComponent
-          controller={
-            Boolean(accountPayload.segment_id) &&
-            !defaultSegmentsList.includes(activeSegment?.name)
-          }
-        >
-          <MoreActionsDropdown
-            onRename={() => setMoreActionsModalMode(moreActionsMode.RENAME)}
-            onDelete={() => setMoreActionsModalMode(moreActionsMode.DELETE)}
-          />
-        </ControlledComponent>
       </div>
 
       <div className='flex justify-between items-center my-4'>
@@ -1185,17 +1263,14 @@ function AccountProfiles({
           {renderPropertyFilter()}
           {renderSaveSegmentButton()}
         </div>
-        <div className='inline-flex gap--6'>
-          {/* {accountPayload?.filters?.length ? renderClearFilterButton() : null} */}
-          {renderSearchSection()}
-          {renderTablePropsSelect()}
-
+        <div className='inline-flex col-gap-2'>
           <ControlledComponent
             controller={filtersExpanded === false && newSegmentMode === false}
           >
-            <div role='button' onClick={() => setShowDownloadCSVModal(true)}>
-              <SVG name='download' />
-            </div>
+            {renderSearchSection()}
+            {renderDownloadSection()}
+            {renderTablePropsSelect()}
+            {renderMoreActions()}
           </ControlledComponent>
         </div>
       </div>

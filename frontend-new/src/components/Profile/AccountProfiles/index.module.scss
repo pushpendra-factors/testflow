@@ -147,3 +147,9 @@
 .new-segment-input-container {
   padding-left: 3.5rem;
 }
+
+.more-actions-popover {
+  :global(.ant-popover-inner-content) {
+    padding: 0.5rem 0 !important;
+  }
+}

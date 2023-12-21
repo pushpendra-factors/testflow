@@ -1838,3 +1838,85 @@ export const DownloadOutlineSVG = ({
   </svg>
 );
 
+export const TableColumnsSVG = ({
+  size = 24,
+  extraClass,
+  color = '#8C8C8C'
+}) => {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox='0 0 24 24'
+      fill='none'
+      xmlns='http://www.w3.org/2000/svg'
+    >
+      <path
+        d='M4.6875 17.5C4.6875 17.8164 4.93359 18.0625 5.25 18.0625H11.1562V8.5H4.6875V17.5ZM12.8438 18.0625H18.75C19.0312 18.0625 19.3125 17.8164 19.3125 17.5V8.5H12.8438V18.0625ZM5.25 4H18.75C19.9805 4 21 5.01953 21 6.25V17.5C21 18.7656 19.9805 19.75 18.75 19.75H5.25C3.98438 19.75 3 18.7656 3 17.5V6.25C3 5.01953 3.98438 4 5.25 4Z'
+        fill={color}
+      />
+    </svg>
+  );
+};
+
+export const FireFlameCurvedSVG = ({
+  size = 24,
+  extraClass,
+  color = '#8C8C8C'
+}) => {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox='0 0 24 24'
+      fill='none'
+      xmlns='http://www.w3.org/2000/svg'
+    >
+      <path
+        d='M18.5185 14.0098C18.5185 17.7415 15.4557 20.769 11.7592 20.769C8.02757 20.769 5 17.7415 5 14.0098C5 11.968 5.95052 10.2782 6.90103 9.29243C7.4291 8.72916 8.37962 9.08121 8.37962 9.8557V12.8481C8.37962 14.1154 9.33013 15.1364 10.5975 15.1364C11.8296 15.1716 12.8858 14.1506 12.8858 12.8833C12.8858 9.78529 6.68981 9.50366 11.0199 3.13168C11.5128 2.46279 12.6041 2.77963 12.6041 3.58933C12.5689 7.21538 18.5185 8.02508 18.5185 14.0098Z'
+        fill={color}
+      />
+    </svg>
+  );
+};
+
+export const CaretUpSVG = ({ size = 16, color, extraClass }) => {
+  return (
+    <svg
+      xmlns='http://www.w3.org/2000/svg'
+      width={size}
+      height={size}
+      className={extraClass}
+      viewBox='0 0 16 16'
+      fill='none'
+    >
+      <path
+        d='M11.2175 11.125C11.6862 11.125 11.9206 10.5781 11.582 10.2396L8.2487 6.90625C8.04037 6.69792 7.70183 6.69792 7.4935 6.90625L4.16016 10.2396C3.82162 10.5781 4.056 11.125 4.52475 11.125H11.2175Z'
+        fill={color}
+      />
+    </svg>
+  );
+};
+
+export const RoundedFileSVG = ({
+  size = 25,
+  extraClass,
+  color = '#1890FF'
+}) => {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+      className={extraClass}
+      fill='none'
+      xmlns='http://www.w3.org/2000/svg'
+    >
+      <rect x='0.75' y='0.5' width='24' height='24' rx='12' fill='#E6F7FF' />
+      <path
+        d='M9.04102 8.49996C9.04102 7.77079 9.62435 7.16663 10.3743 7.16663H13.7077V9.83329C13.7077 10.2083 13.9993 10.5 14.3743 10.5H17.041V16.5C17.041 17.25 16.4368 17.8333 15.7077 17.8333H10.3743C9.62435 17.8333 9.04102 17.25 9.04102 16.5V8.49996ZM14.3743 9.83329V7.16663L17.041 9.83329H14.3743Z'
+        fill={color}
+      />
+    </svg>
+  );
+};

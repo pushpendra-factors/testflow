@@ -288,6 +288,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/slack/channels", mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.INT_SLACK}), V1.GetSlackChannelsListHandler)
 	authRouteGroup.DELETE("/:project_id/slack/delete", mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.INT_SLACK}), V1.DeleteSlackIntegrationHandler)
 	authRouteGroup.POST("/:project_id/v1/alerts/send_now", mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.INT_SLACK}), V1.QuerySendNowHandler)
+	authRouteGroup.GET("/:project_id/slack/users",  mid.FeatureMiddleware([]string{M.FEATURE_SLACK, M.INT_SLACK}), V1.GetSlackUsersListHandler)
 
 	// Timeline
 	authRouteGroup.POST("/:project_id/v1/profiles/users", mid.FeatureMiddleware([]string{M.FEATURE_PEOPLE_PROFILES}), responseWrapper(V1.GetProfileUsersHandler))

@@ -28,3 +28,10 @@ export const INITIAL_FILTERS_STATE = {
   eventProp: 'any',
   account: INITIAL_ACCOUNT_STATE
 };
+
+export const INITIAL_USER_PROFILES_FILTERS_STATE = {
+  filters: [],
+  eventsList: [],
+  eventProp: 'any',
+  account: ['All People', 'users']
+};

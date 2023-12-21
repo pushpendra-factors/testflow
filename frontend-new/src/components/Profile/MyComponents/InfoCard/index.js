@@ -77,7 +77,7 @@ function InfoCard({
                 weight='medium'
                 extraClass='break-all text-right'
                 truncate
-                charLimit={40}
+                charLimit={32}
                 shouldTruncateURL
               >
                 {eventType === 'FE' ? title : eventName}
@@ -105,7 +105,7 @@ function InfoCard({
                 value?.length > 30 ? 'break-words' : 'whitespace-no-wrap'
               }  text-right`}
               truncate
-              charLimit={40}
+              charLimit={32}
               shouldTruncateURL
             >
               {propValueFormat(key, value, propType) || '-'}

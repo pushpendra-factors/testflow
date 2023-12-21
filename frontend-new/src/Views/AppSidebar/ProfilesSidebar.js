@@ -1,4 +1,5 @@
 import React, { Fragment, useState } from 'react';
+import noop from 'lodash/noop';
 import cx from 'classnames';
 import { useDispatch, useSelector } from 'react-redux';
 import { Button } from 'antd';
@@ -10,19 +11,33 @@ import {
 } from 'Reducers/userProfilesView/selectors';
 import {
   setActiveSegmentAction,
-  setSegmentModalStateAction,
+  setNewSegmentModeAction,
   setTimelinePayloadAction
 } from 'Reducers/userProfilesView/actions';
 import styles from './index.module.scss';
 import SidebarMenuItem from './SidebarMenuItem';
 import SidebarSearch from './SidebarSearch';
+import { ProfilesSidebarIconsMapping } from './appSidebar.constants';
+import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
+import { getSegmentColorCode } from './appSidebar.helpers';
+
+const NewSegmentItem = () => {
+  return (
+    <SidebarMenuItem
+      text={'Untitled Segment 1'}
+      isActive={true}
+      onClick={noop}
+    />
+  );
+};
 
 const GroupItem = ({ group }) => {
   const dispatch = useDispatch();
   const timelinePayload = useSelector((state) => selectTimelinePayload(state));
+  const { newSegmentMode } = useSelector((state) => state.userProfilesView);
 
   const setTimelinePayload = () => {
-    if (timelinePayload.source !== group[1]) {
+    if (timelinePayload.source !== group[1] || newSegmentMode === true) {
       dispatch(
         setTimelinePayloadAction({
           source: group[1],
@@ -35,13 +50,16 @@ const GroupItem = ({ group }) => {
   };
 
   const isActive =
-    timelinePayload.source === group[1] && !timelinePayload.segment_id;
+    timelinePayload.source === group[1] &&
+    !timelinePayload.segment_id &&
+    newSegmentMode === false;
 
   return (
     <SidebarMenuItem
       text={group[0]}
       isActive={isActive}
       onClick={setTimelinePayload}
+      icon={ProfilesSidebarIconsMapping[group[1]]}
     />
   );
 };
@@ -49,9 +67,10 @@ const GroupItem = ({ group }) => {
 const SegmentItem = ({ segment }) => {
   const dispatch = useDispatch();
   const timelinePayload = useSelector((state) => selectTimelinePayload(state));
+  const { newSegmentMode } = useSelector((state) => state.userProfilesView);
 
   const setActiveSegment = () => {
-    if (timelinePayload.segment_id !== segment[1]) {
+    if (timelinePayload.segment_id !== segment[1] || newSegmentMode === true) {
       const opts = { ...timelinePayload };
       opts.source = segment[2].type;
       opts.segment_id = segment[1];
@@ -60,17 +79,19 @@ const SegmentItem = ({ segment }) => {
       dispatch(setActiveSegmentAction(segment[2]));
       dispatch(setTimelinePayloadAction(opts));
     }
-
-
   };
 
-  const isActive = timelinePayload.segment_id === segment[1];
+  const isActive =
+    timelinePayload.segment_id === segment[1] && newSegmentMode === false;
+  const iconColor = getSegmentColorCode(segment[0]);
 
   return (
     <SidebarMenuItem
       text={segment[0]}
       isActive={isActive}
       onClick={setActiveSegment}
+      icon={'pieChart'}
+      iconColor={iconColor}
     />
   );
 };
@@ -79,6 +100,7 @@ const ProfilesSidebar = () => {
   const [searchText, setSearchText] = useState('');
   const dispatch = useDispatch();
   const userOptions = getUserOptionsForDropdown();
+  const { newSegmentMode } = useSelector((state) => state.userProfilesView);
 
   const segmentsList = useSelector((state) => selectSegmentsList(state));
 
@@ -90,19 +112,6 @@ const ProfilesSidebar = () => {
           styles['accounts-list-container']
         )}
       >
-        <div className='flex flex-col row-gap-1 px-4 pb-6 border-b'>
-          <Text
-            type='title'
-            level={8}
-            extraClass='mb-0 px-2'
-            color='character-secondary'
-          >
-            Default
-          </Text>
-          {userOptions.map((option) => {
-            return <GroupItem key={option[0]} group={option} />;
-          })}
-        </div>
         <div className='flex flex-col row-gap-3 px-4'>
           <Text
             type='title'
@@ -118,6 +127,12 @@ const ProfilesSidebar = () => {
               setSearchText={setSearchText}
               placeholder={'Search segment'}
             />
+            <ControlledComponent controller={newSegmentMode === true}>
+              <NewSegmentItem />
+            </ControlledComponent>
+            {userOptions.slice(1).map((option) => {
+              return <GroupItem key={option[0]} group={option} />;
+            })}
             {segmentsList.map((segment) => {
               if (segment.values != null) {
                 const filteredSegments = segment.values.filter((value) =>
@@ -140,15 +155,23 @@ const ProfilesSidebar = () => {
         <Button
           className={cx(
             'flex col-gap-2 items-center w-full',
-            styles['sidebar-action-button']
+            styles.sidebar_action_button
           )}
-          type='secondary'
           onClick={() => {
-            dispatch(setSegmentModalStateAction(true));
+            dispatch(setNewSegmentModeAction(true));
           }}
         >
-          <SVG name={'plus'} size={16} color='#1890FF' />
-          <Text level={7} type='title' color='brand-color-6' extraClass='mb-0'>
+          <SVG
+            name={'plus'}
+            size={16}
+            extraClass={styles.sidebar_action_button__content}
+            isFill={false}
+          />
+          <Text
+            level={6}
+            type='title'
+            extraClass={cx('m-0', styles.sidebar_action_button__content)}
+          >
             New Segment
           </Text>
         </Button>

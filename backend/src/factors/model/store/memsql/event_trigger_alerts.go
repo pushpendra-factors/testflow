@@ -690,7 +690,7 @@ func (store *MemSQL) getDisplayNamesForUP(projectId int64) map[string]string {
 	return displayNamesOp
 }
 
-func (store *MemSQL) AddAlertToCache(alert *model.EventTriggerAlertConfig, msgProps *U.PropertiesMap, key *cacheRedis.Key) (int, error) {
+func (store *MemSQL) AddAlertToCache(alert *model.EventTriggerAlertConfig, msgProps *U.PropertiesMap, fieldTagsMap map[string]string, key *cacheRedis.Key) (int, error) {
 	logFields := log.Fields{
 		"event_trigger_alert": alert,
 		"CacheKey":            key,
@@ -705,7 +705,8 @@ func (store *MemSQL) AddAlertToCache(alert *model.EventTriggerAlertConfig, msgPr
 	}
 
 	cachePackage := model.CachedEventTriggerAlert{
-		Message: message,
+		Message:   message,
+		FieldTags: fieldTagsMap,
 	}
 
 	err := model.SetCacheForEventTriggerAlert(key, &cachePackage)
@@ -745,7 +746,7 @@ func getDisplayLikePropValue(typ string, exi bool, value interface{}) interface{
 	return res
 }
 
-func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, alert *model.EventTriggerAlertConfig, eventName *model.EventName) (U.PropertiesMap, map[string]interface{}, error) {
+func (store *MemSQL) GetMessageAndBreakdownPropertiesAndFieldsTagMap(event *model.Event, alert *model.EventTriggerAlertConfig, eventName *model.EventName) (U.PropertiesMap, map[string]interface{}, map[string]string, error) {
 	logFields := log.Fields{
 		"event_trigger_alert": *alert,
 		"event":               *event,
@@ -757,7 +758,7 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 		err := U.DecodePostgresJsonbToStructType(alert.MessageProperty, &messageProperties)
 		if err != nil {
 			log.WithError(err).Error("Jsonb decoding to struct failure")
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 
@@ -767,14 +768,14 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 		userPropMap, err = U.DecodePostgresJsonb(event.UserProperties)
 		if err != nil {
 			log.WithError(err).Error("Jsonb decoding to propMap failure")
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 	if &event.Properties != nil && len(event.Properties.RawMessage) != 0 {
 		eventPropMap, err = U.DecodePostgresJsonb(&event.Properties)
 		if err != nil {
 			log.WithError(err).Error("Jsonb decoding to propMap failure")
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 
@@ -785,7 +786,13 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 			break
 		}
 	}
-	if isGroupPropertyRequired {
+
+	isFieldsTagPresent := false
+	if alert.EventLevel == model.EventLevelAccount && alert.SlackFieldsTag != nil {
+		isFieldsTagPresent = true
+	}
+
+	if isGroupPropertyRequired || isFieldsTagPresent {
 		groupPropMap = store.GetGroupProperties(event.ProjectId, event.UserId)
 		if groupPropMap != nil {
 			updateUserPropMapWithGroupProperties(userPropMap, groupPropMap, log.WithFields(logFields))
@@ -850,7 +857,7 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 		err = U.DecodePostgresJsonbToStructType(alert.BreakdownProperties, &breakdownProperties)
 		if err != nil {
 			log.WithError(err).Error("breakdownProperty Jsonb decoding to queryGroupByProperty failure")
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 
@@ -870,16 +877,27 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesMap(event *model.Event, ale
 		breakdownPropMap[prop] = value
 	}
 
+	fieldTagsMap := make(map[string]string)
+	for _, tag := range alert.SlackFieldsTag {
+		if ownerField := model.ValidAlertTagsForHubspotOwners[tag]; ownerField != "" {
+			ownerId := U.GetPropertyValueAsString((*userPropMap)[ownerField])
+			if ownerId != "" {
+				log.Warn("Unable to find owner id for the field tag")
+			}
+			fieldTagsMap[tag] = ownerId
+		}
+	}
+
 	projectID := event.ProjectId
 	if C.AllowSyncReferenceFields(projectID) {
 		breakdownPropMap, err = store.transformBreakdownPropertiesToPropertyLabels(projectID, breakdownPropMap)
 		if err != nil {
 			log.WithError(err).Error("Failed to get property labels on GetMessageAndBreakdownPropertiesMap")
-			return msgPropMap, breakdownPropMap, err
+			return msgPropMap, breakdownPropMap, fieldTagsMap, err
 		}
 	}
 
-	return msgPropMap, breakdownPropMap, nil
+	return msgPropMap, breakdownPropMap, fieldTagsMap, nil
 }
 
 func (store *MemSQL) getDisplayNameLabelForThisProperty(projectID int64, propertyKey, value string) (string, bool) {
@@ -1074,7 +1092,7 @@ func (store *MemSQL) CacheEventTriggerAlert(alert *model.EventTriggerAlert, even
 	timestamp := tt.UnixNano()
 	date := tt.UTC().Format(U.DATETIME_FORMAT_YYYYMMDD)
 
-	messageProps, breakdownProps, err := store.GetMessageAndBreakdownPropertiesMap(event, &eta, eventName)
+	messageProps, breakdownProps, fieldsTagMap, err := store.GetMessageAndBreakdownPropertiesAndFieldsTagMap(event, &eta, eventName)
 	if err != nil {
 		log.WithError(err).Error("key and sortedTuple fetching error")
 		return false
@@ -1125,7 +1143,7 @@ func (store *MemSQL) CacheEventTriggerAlert(alert *model.EventTriggerAlert, even
 		return false
 	}
 
-	successCode, err := store.AddAlertToCache(&eta, &messageProps, key)
+	successCode, err := store.AddAlertToCache(&eta, &messageProps, fieldsTagMap, key)
 	if err != nil || successCode != http.StatusCreated {
 		log.WithFields(logFields).Error("Failed to send alert.")
 		return false

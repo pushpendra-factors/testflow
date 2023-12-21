@@ -29,7 +29,6 @@ import {
 } from '../../../reducers/timelines/utils';
 import SearchCheckList from '../../SearchCheckList';
 import LeftPanePropBlock from '../MyComponents/LeftPanePropBlock';
-import AccountTimelineSingleView from './AccountTimelineSingleView';
 import {
   PropTextFormat,
   convertGroupedPropertiesToUngrouped,
@@ -53,6 +52,7 @@ import { getGroups } from 'Reducers/coreQuery/middleware';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
 import { ArrowLeftOutlined } from '@ant-design/icons';
+import AccountTimelineTableView from './AccountTimelineTableView';
 
 function AccountDetails({
   accounts,
@@ -86,7 +86,7 @@ function AccountDetails({
   const [propSelectOpen, setPropSelectOpen] = useState(false);
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
   const { TabPane } = Tabs;
-  const [timelineViewMode, setTimelineViewMode] = useState('birdview');
+  const [timelineViewMode, setTimelineViewMode] = useState('timeline');
   const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
   const [openPopover, setOpenPopover] = useState(false);
   const handleOpenPopoverChange = (value) => {
@@ -207,14 +207,17 @@ function AccountDetails({
   }, [currentProjectSettings, accountDetails]);
 
   useEffect(() => {
-    hoverEvents.forEach((event) => {
-      if (
-        !eventPropertiesV2[event] &&
-        accountDetails.data?.account_events?.some(
-          (activity) => activity?.event_name === event
-        )
-      ) {
-        getEventPropertiesV2(activeProject?.id, event);
+    const uniqueEventNames = new Set();
+
+    accountDetails.data?.account_events?.forEach((event) => {
+      if (Object.keys(event?.properties || {}).length) {
+        uniqueEventNames.add(event.event_name);
+      }
+    });
+
+    uniqueEventNames.forEach((eventName) => {
+      if (!eventPropertiesV2[eventName]) {
+        getEventPropertiesV2(activeProject?.id, eventName);
       }
     });
   }, [
@@ -356,6 +359,7 @@ function AccountDetails({
         <SearchCheckList
           placeholder='Select Events to Show'
           mapArray={activities}
+          updateList={setActivities}
           titleKey='display_name'
           checkedKey='enabled'
           onChange={handleEventsChange}
@@ -368,6 +372,7 @@ function AccountDetails({
         <SearchCheckList
           placeholder='Select a User Property'
           mapArray={checkListUserProps}
+          updateList={setCheckListUserProps}
           titleKey='display_name'
           checkedKey='enabled'
           onChange={handlePropChange}
@@ -380,6 +385,7 @@ function AccountDetails({
         <SearchCheckList
           placeholder='Select Up To 5 Milestones'
           mapArray={checkListMilestones}
+          updateList={setCheckListMilestones}
           titleKey='display_name'
           checkedKey='enabled'
           onChange={handleMilestonesChange}
@@ -449,7 +455,7 @@ function AccountDetails({
   const renderModalHeader = () => {
     const accountName = accountDetails?.data?.name;
     return (
-      <div className='fa-timeline-modal--header'>
+      <div className='fa-timeline--header'>
         <div className='flex items-center'>
           <div
             className='flex items-center cursor-pointer'
@@ -557,14 +563,27 @@ function AccountDetails({
             height={96}
             width={96}
           />
-          <Text type='title' level={6} extraClass='m-0 py-2' weight='bold'>
-            {accountDetails?.data?.name}
-          </Text>
+          <a
+            className='flex items-center'
+            href={`https://${encodeURIComponent(accountDetails?.data?.name)}`}
+            target='_blank'
+            rel='noopener noreferrer'
+          >
+            <Text
+              type='title'
+              level={6}
+              extraClass='m-0 mr-1 py-2'
+              weight='bold'
+            >
+              {accountDetails?.data?.name}
+            </Text>
+            <SVG name='ArrowUpRightSquare' />
+          </a>
         </div>
       </div>
 
       <div className='props'>
-        {listLeftPaneProps(accountDetails.data.left_pane_props)}
+        {listLeftPaneProps(accountDetails.data.leftpane_props)}
         <div className='px-8 pb-8 pt-2'>{renderAddNewProp()}</div>
       </div>
       <div className='logo_attr'>
@@ -588,16 +607,24 @@ function AccountDetails({
   );
 
   const renderSingleTimelineView = () => (
-    <AccountTimelineSingleView
-      timelineEvents={
-        activities?.filter((activity) => activity.enabled === true) || []
-      }
-      timelineUsers={accountDetails.data?.account_users || []}
-      milestones={accountDetails.data?.milestones}
+    <AccountTimelineTableView
+      timelineEvents={getFilteredEvents(
+        activities
+          ?.filter((activity) => activity.enabled === true)
+          .slice(0, 1000) || []
+      )}
+      timelineUsers={getTimelineUsers()}
       loading={accountDetails?.isLoading}
       eventNamesMap={eventNamesMap}
     />
   );
+
+  const getFilteredEvents = (events) => {
+    if (isFreePlan) {
+      return events.filter((activity) => activity?.user !== 'group_user');
+    }
+    return events;
+  };
 
   const getTimelineUsers = () => {
     const timelineUsers = accountDetails.data?.account_users || [];
@@ -683,9 +710,9 @@ function AccountDetails({
         </div>
       </div>
       <AccountTimelineBirdView
-        timelineEvents={
+        timelineEvents={getFilteredEvents(
           activities?.filter((activity) => activity.enabled === true) || []
-        }
+        )}
         timelineUsers={getTimelineUsers()}
         collapseAll={collapseAll}
         setCollapseAll={setCollapseAll}
@@ -724,7 +751,8 @@ function AccountDetails({
     return (
       <div className='timeline-view'>
         <Tabs
-          defaultActiveKey='birdview'
+          className='timeline-view--tabs'
+          defaultActiveKey='timeline'
           size='small'
           activeKey={timelineViewMode}
           onChange={handleTabChange}
@@ -754,8 +782,8 @@ function AccountDetails({
 
   return (
     <div>
-      {renderModalHeader()}
       <div className='fa-timeline'>
+        {renderModalHeader()}
         {renderLeftPane()}
         {renderTimelineView()}
       </div>

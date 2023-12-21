@@ -73,14 +73,6 @@ type AlertConfiguration struct {
 	SlackChannelsAndUserGroups *postgres.Jsonb `json:"slack_channels_and_user_groups"`
 	TeamsChannelConfig         *postgres.Jsonb `json:"teams_channel_config"`
 }
-type SlackChannelsAndUserGroups struct {
-	SlackChannelsAndUserGroups map[string][]SlackChannel `json:"slack_channels_and_user_groups"`
-}
-type SlackChannel struct {
-	Name      string `json:"name"`
-	Id        string `json:"id"`
-	IsPrivate bool   `json:"is_private"`
-}
 type Team struct {
 	TeamsId          string         `json:"team_id"`
 	TeamsName        string         `json:"team_name"`

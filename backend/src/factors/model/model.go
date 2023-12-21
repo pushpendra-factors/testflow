@@ -245,6 +245,10 @@ type Model interface {
 	ExecuteSixSignalQuery(projectId int64, query model.SixSignalQuery) (*model.SixSignalQueryResult, int, string)
 	GetSixSignalInfoForProject(projectID int64) (model.SixSignalInfo, error)
 
+	//clearbit_provision_account
+	ProvisionClearbitAccount(projectId []int64, emailId []string, domainName []string) map[int64]interface{}
+	ProvisionClearbitAccountForSingleProject(projectId int64, emailId string, domainName string) error
+
 	// event_name
 	CreateOrGetEventName(eventName *model.EventName) (*model.EventName, int)
 	CreateOrGetUserCreatedEventName(eventName *model.EventName) (*model.EventName, int)
@@ -316,13 +320,6 @@ type Model interface {
 	GetAllEventsForSessionCreationAsUserEventsMap(projectID int64, sessionEventNameId string, startTimestamp, endTimestamp int64) (*map[string][]model.Event, int, int)
 	GetEventsWithoutPropertiesAndWithPropertiesByNameForYourStory(projectID int64, from, to int64, mandatoryProperties []string) ([]model.EventWithProperties, *map[string]U.PropertiesMap, int)
 	OverwriteEventUserPropertiesByID(projectID int64, userID, id string, properties *postgres.Jsonb) int
-	PullEventRowsV1(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
-	PullAdwordsRowsV1(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
-	PullFacebookRowsV1(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
-	PullBingAdsRowsV1(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
-	PullLinkedInRowsV1(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
-	PullGoogleOrganicRowsV1(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
-	PullUsersRowsForWIV1(projectID int64, startTime, endTime int64, dateField string, source int, group int) (*sql.Rows, *sql.Tx, error)
 	PullEventRowsV2(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
 	PullAdwordsRowsV2(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
 	PullFacebookRowsV2(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
@@ -426,6 +423,7 @@ type Model interface {
 	GetHubspotDocumentCountForSync(projectIDs []int64, docTypes []int, maxCreatedAtSec int64) ([]model.HubspotDocumentCount, int)
 	GetHubspotDocumentsByTypeAndAction(projectID int64, docType int, action int, fromMs,
 		toMs int64) ([]model.HubspotDocument, int)
+	GetHubspotOwnerEmailFromOwnerId(projectID int64, ownerID string) (string, int, error)
 
 	// plan
 	GetPlanByID(planID uint64) (*model.Plan, int)

@@ -41,6 +41,7 @@ import {
   reverseOperatorMap,
   reverseDateOperatorMap
 } from 'Utils/operatorMapping';
+import moment from 'moment';
 
 export const initialState = INITIAL_STATE;
 
@@ -154,7 +155,7 @@ export const getQuery = (
     grpa: groupAnalysis,
     ewp: getEventsWithProperties(queries),
     gup: formatFiltersForQuery(globalFilters, 'global'),
-    gbt: userType === EACH_USER_TYPE ? dateRange.frequency : '',
+    gbt: calcGbtFromDateRange(userType, dateRange),
     gbp: formatBreakdownsForQuery([...groupBy.event, ...groupBy.global]),
     ec: EVENT_QUERY_USER_TYPE[userType],
     tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata'
@@ -182,6 +183,13 @@ export const getQuery = (
   return [query, { ...query, gbt: '' }];
 };
 
+const calcGbtFromDateRange = (userType, dateRange) => {
+  if (userType !== EACH_USER_TYPE) return '';
+  const difference = moment.duration(dateRange.to.diff(dateRange.from));
+  if (parseInt(difference.asDays()) >= 365) return 'month';
+  return dateRange.frequency;
+};
+
 export const getFunnelQuery = (
   groupBy,
   queries,
@@ -204,8 +212,8 @@ export const getFunnelQuery = (
     to: dateRange.to
       ? MomentTz(dateRange.to).endOf('day').utc().unix()
       : MomentTz().format('dddd') !== 'Sunday'
-      ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
-      : MomentTz().utc().unix(),
+        ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
+        : MomentTz().utc().unix(),
     ewp: getEventsWithProperties(queries),
     gbt: dateRange.frequency,
     cnvtm:
@@ -244,7 +252,7 @@ export const getProfileQuery = (
 ) => {
   const query = {
     cl: QUERY_TYPE_PROFILE,
-    grpa: groupAnalysis,
+    grpa: 'users',
     queries: getProfileWithProperties(queries),
     gup: formatFiltersForQuery(globalFilters, 'global'),
     from: MomentTz(dateRange.from).utc().unix(),
@@ -277,8 +285,8 @@ export const getEventsWithPropertiesCustomKPI = (filters, category) => {
               category === 'channels' || category === 'custom_channels'
                 ? ''
                 : fil?.extra
-                ? fil?.extra[3]
-                : fil?.props?.[2],
+                  ? fil?.extra[3]
+                  : fil?.props?.[2],
             objTy:
               category === 'channels' || category === 'custom_channels'
                 ? fil?.extra
@@ -298,8 +306,8 @@ export const getEventsWithPropertiesCustomKPI = (filters, category) => {
             category === 'channels' || category === 'custom_channels'
               ? ''
               : fil?.extra
-              ? fil?.extra[3]
-              : fil?.props?.[2],
+                ? fil?.extra[3]
+                : fil?.props?.[2],
           objTy:
             category === 'channels' || category === 'custom_channels'
               ? fil?.extra
@@ -325,8 +333,8 @@ export const getEventsWithPropertiesCustomKPI = (filters, category) => {
               category === 'channels' || category === 'custom_channels'
                 ? ''
                 : fil?.extra
-                ? fil?.extra[3]
-                : fil?.props?.[2],
+                  ? fil?.extra[3]
+                  : fil?.props?.[2],
             objTy:
               category === 'channels' || category === 'custom_channels'
                 ? fil?.extra
@@ -346,8 +354,8 @@ export const getEventsWithPropertiesCustomKPI = (filters, category) => {
             category === 'channels' || category === 'custom_channels'
               ? ''
               : fil?.extra
-              ? fil?.extra[3]
-              : fil?.props?.[2],
+                ? fil?.extra[3]
+                : fil?.props?.[2],
           objTy:
             category === 'channels' || category === 'custom_channels'
               ? fil?.extra
@@ -372,8 +380,8 @@ export const getEventsWithPropertiesCustomKPI = (filters, category) => {
               category === 'channels' || category === 'custom_channels'
                 ? ''
                 : fil?.extra
-                ? fil?.extra[3]
-                : fil?.props?.[2],
+                  ? fil?.extra[3]
+                  : fil?.props?.[2],
             objTy:
               category === 'channels' || category === 'custom_channels'
                 ? fil?.extra
@@ -393,8 +401,8 @@ export const getEventsWithPropertiesCustomKPI = (filters, category) => {
             category === 'channels' || category === 'custom_channels'
               ? ''
               : fil?.extra
-              ? fil?.extra[3]
-              : fil?.props?.[2],
+                ? fil?.extra[3]
+                : fil?.props?.[2],
           objTy:
             category === 'channels' || category === 'custom_channels'
               ? fil?.extra
@@ -434,18 +442,18 @@ export const getEventsWithPropertiesKPI = (filters, category) => {
               category === 'channels' || category === 'custom_channels'
                 ? ''
                 : fil?.extra
-                ? fil?.extra[3] === 'propMap'
-                  ? ''
-                  : fil?.extra[3]
-                : 'event',
+                  ? fil?.extra[3] === 'propMap'
+                    ? ''
+                    : fil?.extra[3]
+                  : 'event',
             objTy:
               fil?.extra?.[3] == 'propMap'
                 ? ''
                 : category === 'channels' || category === 'custom_channels'
-                ? fil?.extra
-                  ? fil?.extra[3]
-                  : 'event'
-                : '',
+                  ? fil?.extra
+                    ? fil?.extra[3]
+                    : 'event'
+                  : '',
             va: fil.props?.[1] === 'datetime' ? formatFilterDate(val) : val,
             isPrMa: fil?.extra?.[3] == 'propMap' ? true : false
           });
@@ -461,18 +469,18 @@ export const getEventsWithPropertiesKPI = (filters, category) => {
             category === 'channels' || category === 'custom_channels'
               ? ''
               : fil?.extra
-              ? fil?.extra[3] === 'propMap'
-                ? ''
-                : fil?.extra[3]
-              : 'event',
+                ? fil?.extra[3] === 'propMap'
+                  ? ''
+                  : fil?.extra[3]
+                : 'event',
           objTy:
             fil?.extra?.[3] == 'propMap'
               ? ''
               : category === 'channels' || category === 'custom_channels'
-              ? fil?.extra
-                ? fil?.extra[3]
-                : 'event'
-              : '',
+                ? fil?.extra
+                  ? fil?.extra[3]
+                  : 'event'
+                : '',
           va:
             fil.props?.[1] === 'datetime'
               ? formatFilterDate(fil.values)
@@ -494,18 +502,18 @@ export const getEventsWithPropertiesKPI = (filters, category) => {
               category === 'channels' || category === 'custom_channels'
                 ? ''
                 : fil?.extra
-                ? fil?.extra[3] === 'propMap'
-                  ? ''
-                  : fil?.extra[3]
-                : 'event',
+                  ? fil?.extra[3] === 'propMap'
+                    ? ''
+                    : fil?.extra[3]
+                  : 'event',
             objTy:
               fil?.extra?.[3] == 'propMap'
                 ? ''
                 : category === 'channels' || category === 'custom_channels'
-                ? fil?.extra
-                  ? fil?.extra[3]
-                  : 'event'
-                : '',
+                  ? fil?.extra
+                    ? fil?.extra[3]
+                    : 'event'
+                  : '',
             va: fil.props?.[1] === 'datetime' ? formatFilterDate(val) : val,
             isPrMa: fil?.extra?.[3] == 'propMap' ? true : false
           });
@@ -521,18 +529,18 @@ export const getEventsWithPropertiesKPI = (filters, category) => {
             category === 'channels' || category === 'custom_channels'
               ? ''
               : fil?.extra
-              ? fil?.extra[3]
-              : 'event',
+                ? fil?.extra[3]
+                : 'event',
           objTy:
             fil?.extra?.[3] == 'propMap'
               ? ''
               : category === 'channels' || category === 'custom_channels'
-              ? fil?.extra
-                ? fil?.extra[3] === 'propMap'
-                  ? ''
-                  : fil?.extra[3]
-                : 'event'
-              : '',
+                ? fil?.extra
+                  ? fil?.extra[3] === 'propMap'
+                    ? ''
+                    : fil?.extra[3]
+                  : 'event'
+                : '',
           va:
             fil.props?.[1] === 'datetime'
               ? formatFilterDate(fil.values)
@@ -553,18 +561,18 @@ export const getEventsWithPropertiesKPI = (filters, category) => {
               category === 'channels' || category === 'custom_channels'
                 ? ''
                 : fil?.extra
-                ? fil?.extra[3] === 'propMap'
-                  ? ''
-                  : fil?.extra[3]
-                : 'event',
+                  ? fil?.extra[3] === 'propMap'
+                    ? ''
+                    : fil?.extra[3]
+                  : 'event',
             objTy:
               fil?.extra?.[3] == 'propMap'
                 ? ''
                 : category === 'channels' || category === 'custom_channels'
-                ? fil?.extra
-                  ? fil?.extra[3]
-                  : 'event'
-                : '',
+                  ? fil?.extra
+                    ? fil?.extra[3]
+                    : 'event'
+                  : '',
             va: fil.props?.[1] === 'datetime' ? formatFilterDate(val) : val,
             isPrMa: fil?.extra?.[3] == 'propMap' ? true : false
           });
@@ -580,18 +588,18 @@ export const getEventsWithPropertiesKPI = (filters, category) => {
             category === 'channels' || category === 'custom_channels'
               ? ''
               : fil?.extra
-              ? fil?.extra[3] === 'propMap'
-                ? ''
-                : fil?.extra[3]
-              : 'event',
+                ? fil?.extra[3] === 'propMap'
+                  ? ''
+                  : fil?.extra[3]
+                : 'event',
           objTy:
             fil?.extra?.[3] == 'propMap'
               ? ''
               : category === 'channels' || category === 'custom_channels'
-              ? fil?.extra
-                ? fil?.extra[3]
-                : 'event'
-              : '',
+                ? fil?.extra
+                  ? fil?.extra[3]
+                  : 'event'
+                : '',
           va:
             fil.props?.[1] === 'datetime'
               ? formatFilterDate(fil.values)
@@ -617,8 +625,8 @@ const getGroupByWithPropertiesKPI = (appliedGroupBy, index, category) =>
           category === 'channels' || category === 'custom_channels'
             ? ''
             : opt.prop_category === 'propMap'
-            ? ''
-            : opt.prop_category,
+              ? ''
+              : opt.prop_category,
         objTy:
           category === 'channels' || category === 'custom_channels'
             ? opt.prop_category === 'propMap'
@@ -637,8 +645,8 @@ const getGroupByWithPropertiesKPI = (appliedGroupBy, index, category) =>
           category === 'channels' || category === 'custom_channels'
             ? ''
             : opt.prop_category === 'propMap'
-            ? ''
-            : opt.prop_category,
+              ? ''
+              : opt.prop_category,
         objTy:
           category === 'channels' || category === 'custom_channels'
             ? opt.prop_category === 'propMap'

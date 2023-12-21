@@ -15,7 +15,6 @@ import { eventMenuList } from './accountProfiles.constants';
 import EventsBlock from '../MyComponents/EventsBlock';
 import { selectGroupsList } from 'Reducers/groups/selectors';
 import { generateRandomKey } from 'Utils/global';
-import { selectAccountPayload } from 'Reducers/accountProfilesView/selectors';
 import { cloneDeep } from 'lodash';
 
 const FiltersBox = ({
@@ -32,9 +31,18 @@ const FiltersBox = ({
   setListEvents,
   eventProp,
   setEventProp,
-  onClearFilters
+  onClearFilters,
+  disableDiscardButton,
+  isActiveSegment
 }) => {
-  const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
+  const { newSegmentMode: accountsNewSegmentMode } = useSelector(
+    (state) => state.accountProfilesView
+  );
+  const { newSegmentMode: profilesNewSegmentMode } = useSelector(
+    (state) => state.userProfilesView
+  );
+
+  const newSegmentMode = accountsNewSegmentMode || profilesNewSegmentMode;
   const groupsList = useSelector((state) => selectGroupsList(state));
   const activeProject = useSelector((state) => state.global.active_project);
   const [filterProps, setFilterProperties] = useState({});
@@ -46,9 +54,6 @@ const FiltersBox = ({
   const groupProperties = useSelector(
     (state) => state.coreQuery.groupProperties
   );
-  const accountPayload = useSelector((state) => {
-    return selectAccountPayload(state);
-  });
 
   const availableGroups = useSelector((state) => state.coreQuery.groups);
 
@@ -161,7 +166,7 @@ const FiltersBox = ({
       newSegmentMode,
       eventsList: listEvents,
       eventProp,
-      isActiveSegment: Boolean(accountPayload.segment_id),
+      isActiveSegment,
       areFiltersDirty
     });
   }, [
@@ -170,7 +175,7 @@ const FiltersBox = ({
     newSegmentMode,
     listEvents,
     eventProp,
-    accountPayload.segment_id,
+    isActiveSegment,
     areFiltersDirty
   ]);
 
@@ -343,7 +348,11 @@ const FiltersBox = ({
           >
             Apply changes
           </Button>
-          <Button type='secondary' onClick={onCancel}>
+          <Button
+            disabled={disableDiscardButton}
+            type='secondary'
+            onClick={onCancel}
+          >
             Discard changes
           </Button>
         </div>

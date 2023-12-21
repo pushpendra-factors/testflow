@@ -1,17 +1,17 @@
 import React, { useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import cx from 'classnames';
-import { Button, Dropdown, Menu } from 'antd';
+import { Button } from 'antd';
 import FiltersBox from './FiltersBox';
 import styles from './index.module.scss';
 import { Text, SVG } from 'Components/factorsComponents';
-import { INITIAL_FILTERS_STATE } from './accountProfiles.constants';
 import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
 import { setNewSegmentModeAction } from 'Reducers/accountProfilesView/actions';
 
 function PropertyFilter({
   profileType,
   applyFilters,
+  disableDiscardButton,
   filtersExpanded,
   setFiltersExpanded,
   filtersList,
@@ -25,10 +25,18 @@ function PropertyFilter({
   setEventProp,
   areFiltersDirty,
   resetSelectedFilters,
-  onClearFilters
+  onClearFilters,
+  isActiveSegment
 }) {
   const dispatch = useDispatch();
-  const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
+  const { newSegmentMode: accountsNewSegmentMode } = useSelector(
+    (state) => state.accountProfilesView
+  );
+  const { newSegmentMode: profilesNewSegmentMode } = useSelector(
+    (state) => state.userProfilesView
+  );
+
+  const newSegmentMode = accountsNewSegmentMode || profilesNewSegmentMode;
 
   const toggleFilters = useCallback(() => {
     setFiltersExpanded((curr) => !curr);
@@ -116,6 +124,8 @@ function PropertyFilter({
         setEventProp={setEventProp}
         onCancel={handleCancel}
         onClearFilters={onClearFilters}
+        disableDiscardButton={disableDiscardButton}
+        isActiveSegment={isActiveSegment}
       />
     </div>
   );

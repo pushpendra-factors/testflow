@@ -23,6 +23,15 @@ var defaultFactorsDeanonConfig = model.FactorsDeanonConfig{
 type FactorsDeanon struct {
 }
 
+/*
+Factors Deanonymisation enrichment and metering flow:
+	1. IsEligible method checks for the eligibility creteria. If eligible,
+	2. Enrich method fetches the factors deanon config and call the method to fill the company identification props.
+	3. FillFactorsDeanonUserProps fill the props on the basis of the config and return the domain enriched.
+	4. Meter method meters the unique domain enrichment count on monthly basis, daily successful enrichment count, daily total API calls.
+*/
+
+// IsEligible method checks the eligibility creteria for enrichment via factors deanonymisation .
 func (fd *FactorsDeanon) IsEligible(projectSettings *model.ProjectSetting, isoCode, pageURL string) (bool, error) {
 
 	projectId := projectSettings.ProjectId
@@ -50,6 +59,8 @@ func (fd *FactorsDeanon) IsEligible(projectSettings *model.ProjectSetting, isoCo
 	return eligible, nil
 }
 
+// Enrich method fetches the factors deanon config and calls the method
+// to enrich the company identification props on basis of the config.
 func (fd *FactorsDeanon) Enrich(projectSettings *model.ProjectSetting,
 	userProperties *U.PropertiesMap, userId, clientIP string) (string, int) {
 
@@ -68,6 +79,8 @@ func (fd *FactorsDeanon) Enrich(projectSettings *model.ProjectSetting,
 	return domain, status
 }
 
+// Meter method meters the count of unique domain enrichment for the calendar month
+// and successful domain enrichment count and total API calls count for each day.
 func (fd *FactorsDeanon) Meter(projectId int64, domain string) {
 	timeZone, statusCode := store.GetStore().GetTimezoneForProject(projectId)
 	if statusCode != http.StatusFound {
@@ -90,6 +103,8 @@ func (fd *FactorsDeanon) Meter(projectId int64, domain string) {
 
 }
 
+// FillFactorsDeanonUserProperties calls the respective method for clearbit and sixsignal enrichment
+// on basis of factors deanon config.
 func FillFactorsDeanonUserProperties(projectId int64, factorsDeanonConfig model.FactorsDeanonConfig,
 	projectSettings *model.ProjectSetting, userProperties *U.PropertiesMap, userId, clientIP string) (string, int) {
 
