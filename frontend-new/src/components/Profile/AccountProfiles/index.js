@@ -1036,7 +1036,7 @@ function AccountProfiles({
                   activeSegment?.type
                     ? activeSegment.type
                     : accountPayload.source
-                }&view=birdview`,
+                }&view=timeline`,
                 {
                   accountPayload: accountPayload,
                   activeSegment: activeSegment,

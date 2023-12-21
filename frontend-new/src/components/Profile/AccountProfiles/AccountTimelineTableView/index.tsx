@@ -46,11 +46,13 @@ const AccountTimelineTableView: React.FC<AccountTimelineTableViewProps> = ({
                     (obj) => obj.userId === event.user
                   );
                   return (
-                    <TableRow
-                      event={event}
-                      user={currentUser}
-                      onEventClick={() => handleEventClick(event)}
-                    />
+                    currentUser && (
+                      <TableRow
+                        event={event}
+                        user={currentUser}
+                        onEventClick={() => handleEventClick(event)}
+                      />
+                    )
                   );
                 })}
               </React.Fragment>

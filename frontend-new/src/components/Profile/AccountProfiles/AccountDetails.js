@@ -86,7 +86,7 @@ function AccountDetails({
   const [propSelectOpen, setPropSelectOpen] = useState(false);
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
   const { TabPane } = Tabs;
-  const [timelineViewMode, setTimelineViewMode] = useState('birdview');
+  const [timelineViewMode, setTimelineViewMode] = useState('timeline');
   const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
   const [openPopover, setOpenPopover] = useState(false);
   const handleOpenPopoverChange = (value) => {
@@ -608,16 +608,23 @@ function AccountDetails({
 
   const renderSingleTimelineView = () => (
     <AccountTimelineTableView
-      timelineEvents={
+      timelineEvents={getFilteredEvents(
         activities
           ?.filter((activity) => activity.enabled === true)
           .slice(0, 1000) || []
-      }
+      )}
       timelineUsers={getTimelineUsers()}
       loading={accountDetails?.isLoading}
       eventNamesMap={eventNamesMap}
     />
   );
+
+  const getFilteredEvents = (events) => {
+    if (isFreePlan) {
+      return events.filter((activity) => activity?.user !== 'group_user');
+    }
+    return events;
+  };
 
   const getTimelineUsers = () => {
     const timelineUsers = accountDetails.data?.account_users || [];
@@ -703,9 +710,9 @@ function AccountDetails({
         </div>
       </div>
       <AccountTimelineBirdView
-        timelineEvents={
+        timelineEvents={getFilteredEvents(
           activities?.filter((activity) => activity.enabled === true) || []
-        }
+        )}
         timelineUsers={getTimelineUsers()}
         collapseAll={collapseAll}
         setCollapseAll={setCollapseAll}
@@ -745,7 +752,7 @@ function AccountDetails({
       <div className='timeline-view'>
         <Tabs
           className='timeline-view--tabs'
-          defaultActiveKey='birdview'
+          defaultActiveKey='timeline'
           size='small'
           activeKey={timelineViewMode}
           onChange={handleTabChange}

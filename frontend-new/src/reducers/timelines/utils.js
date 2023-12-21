@@ -10,7 +10,7 @@ export const getAccountActivitiesWithEnableKeyConfig = (
       const isEnabled = !disabledEvents.includes(activity.display_name);
       return {
         ...activity,
-        user: user.is_anonymous ? 'new_user' : user.user_id,
+        user: user.is_anonymous ? 'new_user' : user.user_name,
         id: user.user_id,
         enabled: isEnabled
       };
