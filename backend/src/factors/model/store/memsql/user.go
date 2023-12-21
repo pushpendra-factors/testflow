@@ -380,7 +380,8 @@ func (store *MemSQL) GetUsersUpdatedAtGivenHour(projectID int64, fromTime time.T
 		  WHERE 
 			project_id = ? 
 			AND source != ? 
-			AND updated_at >= ? 
+			AND last_event_at IS NOT NULL
+			AND last_event_at >= ? 
 			AND group_%d_user_id IS NOT NULL 
 		  LIMIT 
 			100000
@@ -427,7 +428,8 @@ func (store *MemSQL) GetNonGroupUsersUpdatedAtGivenHour(projectID int64, fromTim
 	  is_group_user IS NULL 
 	  OR is_group_user = 0
 	) 
-	AND updated_at >= ?
+	AND last_event_at IS NOT NULL 
+	AND last_event_at >= ?
   LIMIT 
 	100000;`
 
