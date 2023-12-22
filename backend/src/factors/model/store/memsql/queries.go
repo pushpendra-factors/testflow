@@ -492,10 +492,8 @@ func (store *MemSQL) DeleteAttributionDBResult(projectID int64, queryId int64) {
 }
 
 func (store *MemSQL) setGroupAnalysisOnQueriesIfRequired(q []model.Queries) []model.Queries {
-	// log.WithField("q", q).Warn("kark1")
 	for index, dbQuery := range q {
 		queryClass, errMsg := store.GetQueryClassFromQueries(dbQuery)
-		log.WithField("queryClass", queryClass).Warn("kark1-1")
 		if errMsg != "" {
 			log.WithField("dbQuery", dbQuery).Warn("Failed in GetQueryClassFromQueries. Hence skipping")
 		}
@@ -507,14 +505,12 @@ func (store *MemSQL) setGroupAnalysisOnQueriesIfRequired(q []model.Queries) []mo
 				continue
 			}
 			internalQuery = setDefaultGroupAnalysisIfRequiredForModelQuery(internalQuery)
-			log.WithField("internalQuery", internalQuery).Warn("kark2")
 			queryInPostgresFormat, err2 := U.EncodeStructTypeToPostgresJsonb(internalQuery)
 			if err2 != nil {
 				log.WithField("dbQuery", dbQuery).Warn("Failed in EncodeStructTypeToPostgresJsonb. Hence skipping - insights")
 				continue
 			}
 			q[index].Query = *queryInPostgresFormat
-			log.WithField("q[index]", q[index]).WithField("queryInPostgresFormat", queryInPostgresFormat).Warn("kark2")
 		} else if queryClass == model.QueryClassEvents {
 			var internalQuery model.QueryGroup
 			err := U.DecodePostgresJsonbToStructType(&dbQuery.Query, &internalQuery)
@@ -523,7 +519,6 @@ func (store *MemSQL) setGroupAnalysisOnQueriesIfRequired(q []model.Queries) []mo
 				continue
 			}
 			internalQuery = setDefaultGroupAnalysisIfRequiredForQueryGroupQuery(internalQuery)
-			log.WithField("internalQuery", internalQuery).Warn("kark3")
 			queryInPostgresFormat, err2 := U.EncodeStructTypeToPostgresJsonb(internalQuery)
 			if err2 != nil {
 				log.WithField("dbQuery", dbQuery).Warn("Failed in EncodeStructTypeToPostgresJsonb. Hence skipping - events")
