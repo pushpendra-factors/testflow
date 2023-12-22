@@ -64,9 +64,17 @@ const InvoiceTab = () => {
       render: (_, { Amount }) => `USD ${Amount}`
     },
     {
-      title: 'Plan',
+      title: 'Item',
       key: 'plan',
-      render: (_, record) => <>{record.items.join(', ')}</>
+      render: (_, record) => (
+        <div>
+          {record.items.map((record) => (
+            <div key={record}>
+              {record} <br />
+            </div>
+          ))}
+        </div>
+      )
     },
     {
       title: '',

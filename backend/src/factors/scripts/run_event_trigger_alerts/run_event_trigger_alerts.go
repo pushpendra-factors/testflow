@@ -722,6 +722,13 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
 	var slackChannels []model.SlackChannel
 	partialSuccess = false
 
+	if Schannels == nil {
+		errMsg := "no slack channels provided"
+		errMessage += errMsg
+		logCtx.Error(errMsg)
+		return false, channelSuccess, errMessage
+	}
+
 	err := U.DecodePostgresJsonbToStructType(Schannels, &slackChannels)
 	if err != nil {
 		errMsg := "failed to decode slack channels"
@@ -731,21 +738,24 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
 	}
 
 	slackMentions := make([]model.SlackMember, 0)
-	if err := U.DecodePostgresJsonbToStructType(sMentions, &slackMentions); err != nil {
-		errMsg := "failed to decode slack mentions"
-		errMessage += errMsg
-		logCtx.WithError(err).Error(errMsg)
-		return false, channelSuccess, errMessage
+	if sMentions != nil {
+		if err := U.DecodePostgresJsonbToStructType(sMentions, &slackMentions); err != nil {
+			errMsg := "failed to decode slack mentions"
+			errMessage += errMsg
+			logCtx.WithError(err).Error(errMsg)
+			return false, channelSuccess, errMessage
+		}
 	}
-
 	slackTags := GetSlackIdForCorrespondingHubspotOwnerIds(projectID, agentUUID, alert.FieldTags)
 
 	wetRun := true
 	if wetRun {
 		for _, channel := range slackChannels {
 			errMsg := "successfully sent"
-			var blockMessage string
-			slackMentionStr := getSlackMentionsStr(slackMentions, slackTags)
+			var blockMessage, slackMentionStr string
+			if slackMentions != nil {
+				slackMentionStr = getSlackMentionsStr(slackMentions, slackTags)
+			}
 			if !isHyperlinkDisabled {
 				blockMessage = getSlackMsgBlock(alert.Message, slackMentionStr)
 			} else {
@@ -1144,7 +1154,12 @@ func sendTeamsAlertForEventTriggerAlert(projectID int64, agentUUID string,
 		"alert_title": msg.Title,
 	})
 	var teamsChannels model.Team
-
+	if Tchannels == nil {
+		errMsg := "no teams channels found"
+		log.Error(errMsg)
+		return false, errMsg
+	}
+	
 	err := U.DecodePostgresJsonbToStructType(Tchannels, &teamsChannels)
 	if err != nil {
 		errMsg := err.Error()

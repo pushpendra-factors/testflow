@@ -82,6 +82,11 @@ const UpgradeTab = () => {
           {plansDetail &&
             plansDetail?.length > 0 &&
             plansDetail
+              .filter((plan) => {
+                const localPlansConfig = PLANS_COFIG?.[plan.name];
+                if (!localPlansConfig) false;
+                return true;
+              })
               .sort((a, b) => {
                 if (
                   b.name === currentPlanDetail?.plan?.externalName ||

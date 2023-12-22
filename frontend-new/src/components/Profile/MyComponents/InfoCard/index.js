@@ -11,8 +11,6 @@ import {
   TimelineHoverPropDisplayNames
 } from '../../utils';
 import { connect } from 'react-redux';
-import { bindActionCreators } from 'redux';
-import { getEventPropertiesV2 } from 'Reducers/coreQuery/middleware';
 
 function InfoCard({
   title,
@@ -23,14 +21,8 @@ function InfoCard({
   properties = {},
   trigger,
   children,
-  activeProject,
   eventPropertiesV2
 }) {
-  useEffect(() => {
-    if (!eventPropertiesV2[eventName])
-      getEventPropertiesV2(activeProject?.id, eventName);
-  }, [activeProject?.id, eventName]);
-
   const eventPropertiesModified = useMemo(() => {
     const eventProps = [];
     if (eventPropertiesV2?.[eventName]) {
@@ -133,12 +125,4 @@ const mapStateToProps = (state) => ({
   eventPropertiesV2: state.coreQuery.eventPropertiesV2
 });
 
-const mapDispatchToProps = (dispatch) =>
-  bindActionCreators(
-    {
-      getEventPropertiesV2
-    },
-    dispatch
-  );
-
-export default connect(mapStateToProps, mapDispatchToProps)(InfoCard);
+export default connect(mapStateToProps, null)(InfoCard);

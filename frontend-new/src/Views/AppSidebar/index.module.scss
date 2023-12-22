@@ -33,12 +33,30 @@
   }
 }
 
-.sidebar-action-button {
-  padding-left: 32px;
-  box-shadow: none;
-  border-radius: 4px;
+.sidebar_action_button {
+  display: flex;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  color: rgba(0, 0, 0, 0.85);
+  background: #fff;
+  border-color: #d9d9d9;
+  border-style: dashed;
+  &:focus,
   &:hover {
-    background-color: $fa-color-neutral-grey-3;
+    color: #40a9ff;
+    background: #fff;
+    border-color: #40a9ff;
+    .sidebar_action_button__content {
+      color: #40a9ff;
+      fill: #40a9ff;
+    }
+  }
+  &__content {
+    color: rgba(0, 0, 0, 0.85);
+    fill: rgba(0, 0, 0, 0.85);
   }
 }
 

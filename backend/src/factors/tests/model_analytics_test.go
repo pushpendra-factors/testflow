@@ -10348,6 +10348,75 @@ func TestAnalyticsAllAccountsFilterBreadkdown(t *testing.T) {
 	assert.Equal(t, "$none", result.Rows[0][2])
 	assert.Equal(t, "A", result.Rows[0][3])
 	assert.Equal(t, "abc1.com", result.Rows[0][4])
+
+	query.GlobalUserProperties = []model.QueryProperty{
+		{
+			Entity:    model.PropertyEntityUserGlobal,
+			GroupName: model.GROUP_NAME_DOMAINS,
+			Property:  U.VISITED_WEBSITE,
+			Operator:  model.EqualsOpStr,
+			Value:     "true",
+			Type:      U.PropertyTypeCategorical,
+			LogicalOp: "AND",
+		},
+	}
+
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Len(t, result.Rows, 1)
+	assert.Nil(t, err)
+	assert.Equal(t, "www.xyz2.com", result.Rows[0][1])
+	assert.Equal(t, "$none", result.Rows[0][2])
+	assert.Equal(t, "B", result.Rows[0][3])
+	assert.Equal(t, "abc1.com", result.Rows[0][4])
+
+	query = model.Query{
+		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       "www.xyz.com",
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       "www.xyz2.com",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GlobalUserProperties: []model.QueryProperty{
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_DOMAINS,
+				Property:  U.VISITED_WEBSITE,
+				Operator:  model.EqualsOpStr,
+				Value:     "true",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "AND",
+			},
+		},
+
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_region",
+				EventName: model.UserPropertyGroupByPresent,
+			},
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  U.SIX_SIGNAL_DOMAIN,
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+		Class:           model.QueryClassFunnel,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+
 }
 
 func TestAnalyticsFunnelValueLabel(t *testing.T) {

@@ -39,18 +39,22 @@ const AccountTimelineTableView: React.FC<AccountTimelineTableViewProps> = ({
             {Object.entries(formattedData || {}).map(([timestamp, events]) => (
               <React.Fragment>
                 <tr className='timestamp-row'>
-                  <td colSpan={4}>{timestamp}</td>
+                  <td>
+                    <span>{timestamp}</span>
+                  </td>
                 </tr>
                 {events.map((event: any) => {
                   const currentUser = timelineUsers.find(
                     (obj) => obj.userId === event.user
                   );
                   return (
-                    <TableRow
-                      event={event}
-                      user={currentUser}
-                      onEventClick={() => handleEventClick(event)}
-                    />
+                    currentUser && (
+                      <TableRow
+                        event={event}
+                        user={currentUser}
+                        onEventClick={() => handleEventClick(event)}
+                      />
+                    )
                   );
                 })}
               </React.Fragment>

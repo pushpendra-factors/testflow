@@ -66,8 +66,8 @@ const (
 	PropertyEntityUserGlobal = "user_g"
 	PropertyEntityGroup      = "group"
 	PropertyEntityUserGroup  = "user_group"
-	MaxEventsLimitInSQL		 = 25000
-	EventsLimit				 = 2500
+	MaxEventsLimitInSQL      = 25000
+	EventsLimit              = 2500
 )
 
 const PropertyValueNone = "$none"
@@ -1423,7 +1423,7 @@ func IsFilterGlobalUserPropertiesByDefaultQueryMap(entity string) bool {
 	return entity == PropertyEntityUserGroup
 }
 
-func FilterGlobalUserPropertiesFilterForDomains(filters []QueryProperty) []QueryProperty {
+func FilterGlobalGroupPropertiesFilterForDomains(filters []QueryProperty) []QueryProperty {
 	filteredGlobalGroupProperties := make([]QueryProperty, 0)
 	for i := range filters {
 		if IsFilterGlobalUserPropertiesByDefaultQueryMap(filters[i].Entity) {

@@ -111,17 +111,25 @@ const DashboardSidebar = () => {
         </div>
         <Button
           className={cx(
-            'flex col-gap-2 items-center',
-            styles['sidebar-action-button']
+            'flex col-gap-2 items-center w-full',
+            styles.sidebar_action_button
           )}
-          type='dashed'
           onClick={() => {
             dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_OPEN });
           }}
           id={'fa-at-btn--new-dashboard'}
         >
-          <SVG name={'plus'} size={16} />
-          <Text level={7} type='title' extraClass='mb-0'>
+          <SVG
+            name={'plus'}
+            size={16}
+            extraClass={styles.sidebar_action_button__content}
+            isFill={false}
+          />
+          <Text
+            level={6}
+            type='title'
+            extraClass={cx('m-0', styles.sidebar_action_button__content)}
+          >
             New Dashboard
           </Text>
         </Button>

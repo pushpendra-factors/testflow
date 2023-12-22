@@ -984,11 +984,7 @@ func GetUserSelectStmntForUserORGroup(caller string, scopeGroupID int, isGroupEv
 
 	if model.IsAccountProfiles(caller) {
 		if scopeGroupID > 0 {
-			str := "users.coal_group_user_id as coal_group_user_id"
-			if isGroupEvent {
-				return str + ", users.last_event_at as last_activity, users.group_properties as properties"
-			}
-			return str + ",users.user_last_event as last_activity, users.group_properties as properties"
+			return "users.coal_group_user_id as coal_group_user_id"
 		}
 		return ""
 	}
@@ -1114,7 +1110,7 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 	var commonSelectArr []string
 	for i := range q.EventsWithProperties {
 		userSelect := GetUserSelectStmntForUserORGroup(q.Caller, scopeGroupID, groupIDS[i] != 0, isEventGroupQueryDomains,
-			len(q.GlobalUserProperties) > 0, len(q.GroupByProperties) > 0)
+			len(q.GroupByProperties) > 0, len(model.FilterGlobalGroupPropertiesFilterForDomains(q.GlobalUserProperties)) > 0)
 		stepCommonSelect := userSelect + commonSelect
 		commonSelectArr = append(commonSelectArr, stepCommonSelect)
 	}
@@ -1148,18 +1144,13 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 		// Adding source string for segments
 		if model.IsAnyProfiles(q.Caller) {
 			var addColsString string
-			if model.IsAccountProfiles(q.Caller) && groupIDS[i] == 0 {
-				addColsString = "user_groups.last_event_at as user_last_event"
-			} else if model.IsAccountProfiles(q.Caller) {
-				addColsString = "group_users.last_event_at"
-			}
 
 			if model.IsUserProfiles(q.Caller) {
 				addColsString = "users.last_event_at, users.is_group_user, users.source"
 			}
 
 			if model.IsAccountProfiles(q.Caller) {
-				addColsString = addColsString + fmt.Sprintf(", domains.group_%d_id as host_name, domains.id as coal_group_user_id", scopeGroupID)
+				addColsString = addColsString + fmt.Sprintf("domains.group_%d_id as host_name, domains.id as coal_group_user_id", scopeGroupID)
 			}
 
 			addColsStringArr = append(addColsStringArr, addColsString)
@@ -1494,9 +1485,9 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 	}
 
 	if isScopeDomains {
-		if len(model.FilterGlobalUserPropertiesFilterForDomains(query.GlobalUserProperties)) > 0 &&
+		if len(model.FilterGlobalGroupPropertiesFilterForDomains(query.GlobalUserProperties)) > 0 &&
 			len(model.GetGlobalGroupByUserProperties(query.GroupByProperties)) > 0 {
-			termStmnt = termStmnt + " WHERE " + getGlobalBreakdownreakdownWhereConditionForDomains(model.FilterGlobalUserPropertiesFilterForDomains(query.GlobalUserProperties),
+			termStmnt = termStmnt + " WHERE " + getGlobalBreakdownreakdownWhereConditionForDomains(model.FilterGlobalGroupPropertiesFilterForDomains(query.GlobalUserProperties),
 				refStep)
 		}
 
@@ -1588,8 +1579,8 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 			aggregateSelect = fmt.Sprintf("SELECT coal_group_user_id as identity, is_anonymous, last_activity, properties FROM %s GROUP BY identity ORDER BY last_activity DESC LIMIT 1000", aggregateFromStepName)
 		}
 	} else if model.IsAccountProfiles(query.Caller) {
-		if scopeGroupID > 0 {
-			aggregateSelect = fmt.Sprintf("SELECT coal_group_user_id as identity, MAX(last_activity) as last_activity, properties, host_name FROM %s GROUP BY identity HAVING last_activity IS NOT NULL ORDER BY last_activity DESC LIMIT 1000", aggregateFromStepName)
+		if scopeGroupID > 0 && isScopeDomains {
+			aggregateSelect = "SELECT coal_group_user_id as identity, last_activity, host_name FROM final_res GROUP BY identity ORDER BY last_activity DESC LIMIT 1000"
 		}
 	} else {
 		// Limit is applicable only on the following. Because attribution calls this.
@@ -1806,7 +1797,7 @@ func (store *MemSQL) buildUniqueUsersWithEachGivenEventsQuery(projectID int64,
 		selectStr := ""
 		if scopeGroupID > 0 {
 			selectStr = fmt.Sprintf("%s.event_name as event_name, %s.coal_group_user_id as coal_group_user_id, %s.event_user_id as event_user_id", step, step, step)
-			if isEventGroupQueryDomains && len(query.GlobalUserProperties) > 0 && len(model.GetGlobalGroupByUserProperties(query.GroupByProperties)) > 0 {
+			if isEventGroupQueryDomains && len(model.FilterGlobalGroupPropertiesFilterForDomains(query.GlobalUserProperties)) > 0 && len(model.GetGlobalGroupByUserProperties(query.GroupByProperties)) > 0 {
 				selectStr = selectStr + "," + fmt.Sprintf("%s.group_users_user_ids", step)
 			}
 		} else {
@@ -1830,6 +1821,15 @@ func (store *MemSQL) buildUniqueUsersWithEachGivenEventsQuery(projectID int64,
 	}
 
 	qStmnt = joinWithComma(qStmnt, as(stepUsersUnion, unionStmnt))
+
+	// add join for all accounts query (only for all account timeline listing and segments)
+	joinStmt, params := addLatestActivityJoinForAllAccounts(projectID, stepUsersUnion, scopeGroupID, query.Caller)
+
+	if joinStmt != "" {
+		qStmnt = qStmnt + joinStmt
+		qParams = append(qParams, params...)
+	}
+
 	addUniqueUsersAggregationQuery(projectID, &query, &qStmnt, &qParams, stepUsersUnion, scopeGroupID, model.IsQueryGroupNameAllAccounts(query.GroupAnalysis))
 	qStmnt = with(qStmnt)
 
@@ -2006,7 +2006,7 @@ func (store *MemSQL) buildUniqueUsersWithAllGivenEventsQuery(projectID int64,
 		intersectSelect = segmentSelectString
 	} else if scopeGroupID > 0 {
 		intersectSelect = fmt.Sprintf("%s.event_user_id as event_user_id, %s.coal_group_user_id as coal_group_user_id", steps[0], steps[0])
-		if isEventGroupQueryDomains && len(query.GlobalUserProperties) > 0 && len(model.GetGlobalGroupByUserProperties(query.GroupByProperties)) > 0 {
+		if isEventGroupQueryDomains && len(model.FilterGlobalGroupPropertiesFilterForDomains(query.GlobalUserProperties)) > 0 && len(model.GetGlobalGroupByUserProperties(query.GroupByProperties)) > 0 {
 			intersectSelect = intersectSelect + "," + fmt.Sprintf("%s.group_users_user_ids", steps[0])
 		}
 	} else {
@@ -2056,6 +2056,14 @@ func (store *MemSQL) buildUniqueUsersWithAllGivenEventsQuery(projectID int64,
 	qStmnt = joinWithComma(qStmnt, as(stepEventsIntersect,
 		fmt.Sprintf("SELECT %s FROM %s %s", intersectSelect, steps[0], intersectJoin)))
 
+	// add join for all accounts query (only for all account timeline listing and segments)
+	joinStmt, params := addLatestActivityJoinForAllAccounts(projectID, stepEventsIntersect, scopeGroupID, query.Caller)
+
+	if joinStmt != "" {
+		qStmnt = qStmnt + joinStmt
+		qParams = append(qParams, params...)
+	}
+
 	addUniqueUsersAggregationQuery(projectID, &query, &qStmnt, &qParams, stepEventsIntersect, scopeGroupID, model.IsQueryGroupNameAllAccounts(query.GroupAnalysis))
 	qStmnt = with(qStmnt)
 
@@ -2072,10 +2080,25 @@ func buildSegmentSelectString(caller string, scopeGroupID int, step string) stri
 	} else if model.IsAccountProfiles(caller) {
 		selectString = fmt.Sprintf("%s.identity, %s.last_activity, %s.properties", step, step, step)
 		if scopeGroupID > 0 {
-			selectString = fmt.Sprintf("%s.coal_group_user_id as coal_group_user_id, %s.last_activity, %s.properties, %s.host_name", step, step, step, step)
+			selectString = fmt.Sprintf("%s.coal_group_user_id as coal_group_user_id, %s.host_name", step, step)
 		}
 	}
 	return selectString
+}
+
+// join for all accounts listing and segments
+func addLatestActivityJoinForAllAccounts(projectID int64, stepselect string, scopeGroupID int, caller string) (string, []interface{}) {
+	var params []interface{}
+	if !model.IsAccountProfiles(caller) || scopeGroupID <= 0 || stepselect == "" {
+		return "", params
+	}
+	addJoinStmt := fmt.Sprintf(", final_res AS ( SELECT %s.coal_group_user_id as coal_group_user_id, %s.host_name, "+
+		"MAX(users.last_event_at) as last_activity FROM %s JOIN users ON %s.coal_group_user_id = users.group_%d_user_id "+
+		"WHERE users.project_id=? AND users.source != ? AND users.last_event_at IS NOT NULL GROUP BY coal_group_user_id)", stepselect, stepselect, stepselect, stepselect, scopeGroupID)
+
+	params = []interface{}{projectID, model.UserSourceDomains}
+
+	return addJoinStmt, params
 }
 
 /*
@@ -2198,7 +2221,7 @@ func (store *MemSQL) buildUniqueUsersWithAnyGivenEventsQuery(projectID int64,
 		selectStr := ""
 		if scopeGroupID > 0 {
 			selectStr = fmt.Sprintf("%s.event_user_id as event_user_id, %s.coal_group_user_id as coal_group_user_id", step, step)
-			if isEventGroupQueryDomains && len(query.GlobalUserProperties) > 0 && len(model.GetGlobalGroupByUserProperties(query.GroupByProperties)) > 0 {
+			if isEventGroupQueryDomains && len(model.FilterGlobalGroupPropertiesFilterForDomains(query.GlobalUserProperties)) > 0 && len(model.GetGlobalGroupByUserProperties(query.GroupByProperties)) > 0 {
 				selectStr = selectStr + "," + fmt.Sprintf("%s.group_users_user_ids", step)
 			}
 		} else {
@@ -2223,6 +2246,14 @@ func (store *MemSQL) buildUniqueUsersWithAnyGivenEventsQuery(projectID int64,
 
 	stepUsersUnion := "events_union"
 	qStmnt = joinWithComma(qStmnt, as(stepUsersUnion, unionStmnt))
+
+	// add join for all accounts query (only for all account timeline listing and segments)
+	joinStmt, params := addLatestActivityJoinForAllAccounts(projectID, stepUsersUnion, scopeGroupID, query.Caller)
+
+	if joinStmt != "" {
+		qStmnt = qStmnt + joinStmt
+		qParams = append(qParams, params...)
+	}
 
 	addUniqueUsersAggregationQuery(projectID, &query, &qStmnt, &qParams, stepUsersUnion, scopeGroupID, model.IsQueryGroupNameAllAccounts(query.GroupAnalysis))
 	qStmnt = with(qStmnt)
@@ -2286,6 +2317,15 @@ func (store *MemSQL) buildUniqueUsersSingleEventQuery(projectID int64,
 	if err != nil {
 		return qStmnt, qParams, err
 	}
+
+	// add join for all accounts query (only for all account timeline listing and segments)
+	joinStmt, params := addLatestActivityJoinForAllAccounts(projectID, steps[0], scopeGroupID, query.Caller)
+
+	if joinStmt != "" {
+		qStmnt = qStmnt + joinStmt
+		qParams = append(qParams, params...)
+	}
+
 	addUniqueUsersAggregationQuery(projectID, &query, &qStmnt, &qParams, steps[0], scopeGroupID, model.IsQueryGroupNameAllAccounts(query.GroupAnalysis))
 	qStmnt = with(qStmnt)
 

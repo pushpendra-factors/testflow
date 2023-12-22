@@ -124,6 +124,7 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 	numUsers := 5
 	accounts := make([]model.User, 0)
 	users := make([]model.User, 0)
+	lastEventTime := time.Now().Add(time.Duration(-15) * time.Minute)
 	for i := 0; i < numUsers; i++ {
 		propertiesJSON, err := json.Marshal(accountPropertiesMap[i])
 		if err != nil {
@@ -139,6 +140,7 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 			Group4UserID: domainAccounts[i],
 			Properties:   properties,
 			IsGroupUser:  &groupUser,
+			LastEventAt:  &lastEventTime,
 		})
 		account, errCode := store.GetStore().GetUser(project.ID, createdUserID)
 		assert.Equal(t, http.StatusFound, errCode)
@@ -158,6 +160,7 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 			Group1UserID:   account.ID,
 			Group4UserID:   domainAccounts[i],
 			CustomerUserId: fmt.Sprintf("salesforce@%duser", (i%5)+1),
+			LastEventAt:    &lastEventTime,
 		})
 		user, errCode := store.GetStore().GetUser(project.ID, createdUserID1)
 		assert.Equal(t, http.StatusFound, errCode)
@@ -201,6 +204,7 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 			Group4UserID: domainAccounts[i],
 			Properties:   properties,
 			IsGroupUser:  &groupUser,
+			LastEventAt:  &lastEventTime,
 		})
 		account, errCode := store.GetStore().GetUser(project.ID, createdUserID)
 		assert.Equal(t, http.StatusFound, errCode)
@@ -219,6 +223,7 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 			Group2UserID:   account.ID,
 			Group4UserID:   domainAccounts[i],
 			CustomerUserId: fmt.Sprintf("hubspot@%duser", (i%5)+1),
+			LastEventAt:    &lastEventTime,
 		})
 		user, errCode := store.GetStore().GetUser(project.ID, createdUserID1)
 		assert.Equal(t, http.StatusFound, errCode)
@@ -329,6 +334,7 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 			Group4UserID: domainAccounts[i],
 			Properties:   properties,
 			IsGroupUser:  &groupUser,
+			LastEventAt:  &lastEventTime,
 		})
 		account, errCode := store.GetStore().GetUser(project.ID, createdUserID)
 		assert.Equal(t, http.StatusFound, errCode)
@@ -347,6 +353,7 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 			Group3UserID:   account.ID,
 			Group4UserID:   domainAccounts[i],
 			CustomerUserId: fmt.Sprintf("sixsignal@%duser", (i%5)+1),
+			LastEventAt:    &lastEventTime,
 		})
 		user, errCode := store.GetStore().GetUser(project.ID, createdUserID1)
 		assert.Equal(t, http.StatusFound, errCode)

@@ -12,7 +12,8 @@ export const getAccountActivitiesWithEnableKeyConfig = (
         ...activity,
         user: user.is_anonymous ? 'new_user' : user.user_id,
         id: user.user_id,
-        enabled: isEnabled
+        enabled: isEnabled,
+        isGroupEvent: user.user_name === 'group_user'
       };
     });
     timelineArray.push(...newOpts);
