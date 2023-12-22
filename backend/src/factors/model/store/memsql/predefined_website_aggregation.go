@@ -76,7 +76,6 @@ func (store *MemSQL) ExecuteSingleWebAggregationQuery(projectID int64, q model.P
 	}
 
 	transformedResult := transformPWAResultMetrics(dupQ, *result)
-	log.WithField("transformedResult", transformedResult).WithField("q", q).WithField("dupQ", dupQ).Warn("kark2-1")
 	if dupQ.GetGroupByTimestamp() == "" {
 		if len(result.Rows) == 0 || len(result.Rows[0]) == 0 {
 			emptyRow := make([]interface{}, 0)
@@ -367,10 +366,6 @@ func addMissingColumnsAndTimestampPWAResult(result model.QueryResult, query mode
 			timestampsInTime, _ := GetAllTimestampsAndOffsetBetweenByType(query.From, query.To,
 				query.GroupByTimestamp, query.Timezone)
 			
-			log.WithField("timestampsInTime", timestampsInTime).
-				WithField("query", query).WithField("mapOfAllColumValuesToResult", mapOfAllColumValuesToResult).
-				WithField("mapOfGroup", mapOfGroup).
-				Warn("kark2-3")
 			for _, timestampInTime := range timestampsInTime {
 				timestampInEpoch := timestampInTime.Unix()
 				timestampKey := fmt.Sprintf("%v", timestampInEpoch)
