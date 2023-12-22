@@ -1,5 +1,5 @@
 import { Avatar, Spin, Tooltip } from 'antd';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { CaretRightOutlined, CaretUpOutlined } from '@ant-design/icons';
 import InfoCard from '../../MyComponents/InfoCard';
 import {
@@ -8,7 +8,6 @@ import {
   eventsFormattedForGranularity,
   getEventCategory,
   getIconForCategory,
-  hoverEvents,
   iconColors,
   toggleCellCollapse
 } from '../../utils';
@@ -17,6 +16,7 @@ import { PropTextFormat } from 'Utils/dataFormatter';
 import NoDataWithMessage from 'Components/Profile/MyComponents/NoDataWithMessage';
 import { useSelector } from 'react-redux';
 import truncateURL from 'Utils/truncateURL';
+import TextWithOverflowTooltip from 'Components/GenericComponents/TextWithOverflowTooltip';
 
 function AccountTimelineBirdView({
   timelineEvents = [],
@@ -25,12 +25,15 @@ function AccountTimelineBirdView({
   collapseAll,
   setCollapseAll,
   loading = false,
+  propertiesType,
   eventNamesMap
 }) {
-  const [formattedData, setFormattedData] = useState({});
   const { groupPropNames } = useSelector((state) => state.coreQuery);
+  const [formattedData, setFormattedData] = useState({});
 
   useEffect(() => {
+    if (!timelineEvents) return;
+
     const data = eventsFormattedForGranularity(
       timelineEvents,
       granularity,
@@ -41,17 +44,19 @@ function AccountTimelineBirdView({
   }, [timelineEvents, granularity]);
 
   useEffect(() => {
-    const data = {};
-    Object.keys(formattedData).forEach((key) => {
-      data[key] = formattedData[key];
-      Object.keys(formattedData[key]).forEach((username) => {
-        data[key][username] = formattedData[key][username];
-        data[key][username].collapsed =
-          collapseAll === undefined
-            ? formattedData[key][username].collapsed
-            : collapseAll;
-      });
-    });
+    const data = Object.keys(formattedData).reduce((acc, key) => {
+      acc[key] = Object.keys(formattedData[key]).reduce((userAcc, username) => {
+        userAcc[username] = {
+          ...formattedData[key][username],
+          collapsed:
+            collapseAll === undefined
+              ? formattedData[key][username].collapsed
+              : collapseAll
+        };
+        return userAcc;
+      }, {});
+      return acc;
+    }, {});
     setFormattedData(data);
   }, [collapseAll]);
 
@@ -61,6 +66,7 @@ function AccountTimelineBirdView({
       : 'calendar-star';
     const { borderColor, bgColor } = eventIconsColorMap[eventIcon] || {};
     const isTrackedUser = event.user === 'new_user';
+
     const iconContent = isTrackedUser ? (
       <SVG name={`TrackedUser${event.id.match(/\d/g)?.[0] || 0}`} size={20} />
     ) : (
@@ -94,10 +100,7 @@ function AccountTimelineBirdView({
       (event.display_name !== 'Page View' &&
         PropTextFormat(event.display_name)) ||
       event.event_name;
-    const hoverConditionals =
-      hoverEvents.includes(event.event_name) ||
-      event.display_name === 'Page View' ||
-      ['CH', 'CS'].includes(event.event_type);
+    const isHoverable = Object.keys(event.properties || {}).length > 0;
     const category = getEventCategory(event, eventNamesMap);
     const icon = getIconForCategory(category);
 
@@ -109,7 +112,8 @@ function AccountTimelineBirdView({
           eventSource={event?.display_name}
           eventName={event?.event_name}
           properties={event?.properties || {}}
-          trigger={hoverConditionals ? 'hover' : []}
+          propertiesType={propertiesType}
+          trigger={isHoverable ? 'hover' : []}
           icon={
             <img
               src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${icon}.svg`}
@@ -122,20 +126,16 @@ function AccountTimelineBirdView({
         >
           <div className='inline-flex gap--4 items-center'>
             <div className='event-name--sm'>
-              <Tooltip
-                title={eventName}
-                trigger={
-                  !hoverConditionals && eventName.length >= 30 ? 'hover' : []
-                }
-              >
-                {truncateURL(eventName)}
-              </Tooltip>
+              <TextWithOverflowTooltip
+                text={truncateURL(eventName)}
+                disabled={isHoverable}
+              />
             </div>
-            {hoverConditionals ? (
+            {isHoverable && (
               <CaretRightOutlined
                 style={{ fontSize: '12px', color: '#8692A3' }}
               />
-            ) : null}
+            )}
           </div>
         </InfoCard>
       </div>
@@ -241,15 +241,14 @@ function AccountTimelineBirdView({
                 <tr>
                   <td className={`pb-${milestones?.events?.length * 8}`}>
                     <div className='timestamp top-64'>{timestamp}</div>
-                    {milestones ? renderMilestoneStrip(milestones, true) : null}
+                    {milestones && renderMilestoneStrip(milestones, true)}
                   </td>
                   {timelineUsers.map((user) => {
                     if (!allEvents[user.userId])
                       return (
                         <td className='bg-gradient--44px'>
-                          {milestones
-                            ? renderMilestoneStrip(milestones, false)
-                            : null}
+                          {milestones &&
+                            renderMilestoneStrip(milestones, false)}
                         </td>
                       );
                     const eventsList = allEvents[user.userId].collapsed
@@ -290,9 +289,7 @@ function AccountTimelineBirdView({
                             }
                           )}
                         </div>
-                        {milestones
-                          ? renderMilestoneStrip(milestones, false)
-                          : null}
+                        {milestones && renderMilestoneStrip(milestones, false)}
                       </td>
                     );
                   })}
@@ -315,4 +312,5 @@ function AccountTimelineBirdView({
     renderTimeline()
   );
 }
+
 export default AccountTimelineBirdView;

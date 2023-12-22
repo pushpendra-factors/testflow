@@ -45,6 +45,7 @@ import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import useKey from 'hooks/useKey';
 import { PathUrls } from 'Routes/pathUrls';
 import { ArrowLeftOutlined } from '@ant-design/icons';
+import { isValidURL } from 'Utils/truncateURL';
 
 function ContactDetails({
   userDetails,
@@ -67,6 +68,8 @@ function ContactDetails({
   const [propSelectOpen, setPropSelectOpen] = useState(false);
   const [tlConfig, setTLConfig] = useState({});
   const [checkListMilestones, setCheckListMilestones] = useState([]);
+  const [requestedEvents, setRequestedEvents] = useState({});
+  const [eventPropertiesType, setEventPropertiesType] = useState({});
   const { TabPane } = Tabs;
 
   const [openPopover, setOpenPopover] = useState(false);
@@ -84,6 +87,57 @@ function ContactDetails({
       setPropSelectOpen(false);
     };
   }, []);
+
+  const uniqueEventNames = useMemo(() => {
+    const userEvents = userDetails.data?.user_activities || [];
+
+    const eventsArray = userEvents
+      .filter(
+        (event) =>
+          !isValidURL(event.event_name) &&
+          Object.keys(event?.properties || {}).length
+      )
+      .map((event) => event.event_name);
+
+    const pageViewEvent = userEvents.find(
+      (event) => event?.properties?.['$is_page_view']
+    );
+
+    if (pageViewEvent) {
+      eventsArray.push(pageViewEvent.event_name);
+    }
+
+    return Array.from(new Set(eventsArray));
+  }, [userDetails.data?.user_activities]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const promises = uniqueEventNames.map(async (eventName) => {
+        if (!requestedEvents[eventName]) {
+          setRequestedEvents((prevRequestedEvents) => ({
+            ...prevRequestedEvents,
+            [eventName]: true
+          }));
+          if (!eventPropertiesV2[eventName])
+            await getEventPropertiesV2(activeProject?.id, eventName);
+        }
+      });
+
+      await Promise.all(promises);
+
+      const typeMap = {};
+      Object.values(eventPropertiesV2).forEach((propertyGroup) => {
+        Object.values(propertyGroup || {}).forEach((arr) => {
+          arr.forEach((property) => {
+            typeMap[property[1]] = property[2];
+          });
+        });
+      });
+      setEventPropertiesType(typeMap);
+    };
+
+    fetchData();
+  }, [uniqueEventNames, requestedEvents, activeProject?.id, eventPropertiesV2]);
 
   const [userID, isAnonymous] = useMemo(() => {
     const decodedUserID = atob(location.pathname.split('/').pop());
@@ -481,6 +535,7 @@ function ContactDetails({
       activities={activities?.filter((activity) => activity.enabled === true)}
       milestones={userDetails.data?.milestones || {}}
       loading={userDetails.isLoading}
+      propertiesType={eventPropertiesType}
       eventNamesMap={eventNamesMap}
     />
   );
@@ -541,6 +596,7 @@ function ContactDetails({
         collapse={collapse}
         setCollapse={setCollapse}
         eventNamesMap={eventNamesMap}
+        propertiesType={eventPropertiesType}
       />
     </div>
   );

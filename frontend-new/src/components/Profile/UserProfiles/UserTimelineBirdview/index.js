@@ -21,6 +21,7 @@ function UserTimelineBirdview({
   collapse,
   setCollapse,
   loading,
+  propertiesType,
   eventNamesMap
 }) {
   const [showAll, setShowAll] = useState([]);
@@ -91,6 +92,7 @@ function UserTimelineBirdview({
           eventSource={event?.display_name}
           eventName={event?.event_name}
           properties={event?.properties || {}}
+          propertiesType={propertiesType}
           trigger={hoverConditionals ? 'hover' : []}
           icon={
             <img
