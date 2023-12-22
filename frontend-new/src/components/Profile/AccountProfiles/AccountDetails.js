@@ -86,7 +86,7 @@ function AccountDetails({
   const [propSelectOpen, setPropSelectOpen] = useState(false);
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
   const { TabPane } = Tabs;
-  const [timelineViewMode, setTimelineViewMode] = useState('timeline');
+  const [timelineViewMode, setTimelineViewMode] = useState('birdview');
   const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
   const [openPopover, setOpenPopover] = useState(false);
   const handleOpenPopoverChange = (value) => {
@@ -206,25 +206,21 @@ function AccountDetails({
     setActivities(listActivities);
   }, [currentProjectSettings, accountDetails]);
 
-  useEffect(() => {
-    const uniqueEventNames = new Set();
+  // useEffect(() => {
+  //   if (!accountDetails.data?.account_events) return;
+  //   const uniqueEventNames = new Set();
 
-    accountDetails.data?.account_events?.forEach((event) => {
-      if (Object.keys(event?.properties || {}).length) {
-        uniqueEventNames.add(event.event_name);
-      }
-    });
-
-    uniqueEventNames.forEach((eventName) => {
-      if (!eventPropertiesV2[eventName]) {
-        getEventPropertiesV2(activeProject?.id, eventName);
-      }
-    });
-  }, [
-    activeProject?.id,
-    eventPropertiesV2,
-    accountDetails.data?.account_events
-  ]);
+  //   accountDetails.data?.account_events?.forEach((event) => {
+  //     if (Object.keys(event?.properties || {}).length) {
+  //       uniqueEventNames.add(event.event_name);
+  //     }
+  //   });
+  //   uniqueEventNames.forEach((eventName) => {
+  //     if (!eventPropertiesV2[eventName]) {
+  //       getEventPropertiesV2(activeProject?.id, eventName);
+  //     }
+  //   });
+  // }, [activeProject?.id, accountDetails.data?.account_events]);
 
   useEffect(() => {
     Object.keys(groups?.account_groups || {}).forEach((group) => {
@@ -621,7 +617,7 @@ function AccountDetails({
 
   const getFilteredEvents = (events) => {
     if (isFreePlan) {
-      return events.filter((activity) => activity?.user !== 'group_user');
+      return events.filter((activity) => !activity.isGroupEvent);
     }
     return events;
   };
@@ -752,7 +748,7 @@ function AccountDetails({
       <div className='timeline-view'>
         <Tabs
           className='timeline-view--tabs'
-          defaultActiveKey='timeline'
+          defaultActiveKey='birdview'
           size='small'
           activeKey={timelineViewMode}
           onChange={handleTabChange}

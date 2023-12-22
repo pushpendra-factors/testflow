@@ -34,6 +34,18 @@ func (store *MemSQL) RunFunnelQuery(projectId int64, query model.Query, enableFi
 	}
 
 	if model.IsQueryGroupNameAllAccounts(query.GroupAnalysis) {
+		for i, p := range query.GlobalUserProperties {
+			if v, exist := model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]; exist {
+				v.LogicalOp = p.LogicalOp
+				if p.Value == "true" {
+					query.GlobalUserProperties[i] = v
+				} else if p.Value == "false" || p.Value == "$none" {
+					v.Operator = model.EqualsOpStr
+					v.Value = "$none"
+					query.GlobalUserProperties[i] = v
+				}
+			}
+		}
 		status, err := store.fillGroupNameIDs(projectId, &query)
 		if err != nil {
 			return nil, status, err.Error()
@@ -1530,7 +1542,7 @@ func buildUniqueUsersFunnelQueryV3(projectId int64, q model.Query, groupIds []in
 		var addSelect string
 		if isFunnelGroupQuery {
 			addSelect = buildAddSelectForFunnelGroup(stepName, i, groupIds[i], scopeGroupID, isFunnelGroupQueryDomains,
-				len(model.GetGlobalGroupByUserProperties(q.GroupByProperties)) > 0, len(q.GlobalUserProperties) > 0)
+				len(model.GetGlobalGroupByUserProperties(q.GroupByProperties)) > 0, len(model.FilterGlobalGroupPropertiesFilterForDomains(q.GlobalUserProperties)) > 0)
 		} else if groupIds[i] != 0 {
 			addSelect = buildAddSelectForGroup(stepName, i)
 		} else {
@@ -1716,9 +1728,9 @@ func buildUniqueUsersFunnelQueryV3(projectId int64, q model.Query, groupIds []in
 	stepFunnelName := "funnel"
 
 	funnelWhereStmnt := ""
-	if isFunnelGroupQueryDomains && len(model.FilterGlobalUserPropertiesFilterForDomains(q.GlobalUserProperties)) > 0 &&
+	if isFunnelGroupQueryDomains && len(model.FilterGlobalGroupPropertiesFilterForDomains(q.GlobalUserProperties)) > 0 &&
 		len(model.GetGlobalGroupByUserProperties(q.GroupByProperties)) > 0 {
-		funnelWhereStmnt = getGlobalBreakdownreakdownWhereConditionForDomains(model.FilterGlobalUserPropertiesFilterForDomains(q.GlobalUserProperties),
+		funnelWhereStmnt = getGlobalBreakdownreakdownWhereConditionForDomains(model.FilterGlobalGroupPropertiesFilterForDomains(q.GlobalUserProperties),
 			funnelSteps[0])
 	}
 

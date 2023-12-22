@@ -10,9 +10,10 @@ export const getAccountActivitiesWithEnableKeyConfig = (
       const isEnabled = !disabledEvents.includes(activity.display_name);
       return {
         ...activity,
-        user: user.is_anonymous ? 'new_user' : user.user_name,
+        user: user.is_anonymous ? 'new_user' : user.user_id,
         id: user.user_id,
-        enabled: isEnabled
+        enabled: isEnabled,
+        isGroupEvent: user.user_name === 'group_user'
       };
     });
     timelineArray.push(...newOpts);

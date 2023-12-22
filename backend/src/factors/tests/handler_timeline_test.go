@@ -4626,6 +4626,7 @@ func TestAllAccounts(t *testing.T) {
 					GroupName: U.GROUP_NAME_HUBSPOT_COMPANY,
 				},
 			}, Source: "$domains",
+			TableProps: []string{"$hubspot_company_name", U.SIX_SIGNAL_NAME, "$salesforce_account_name"},
 		},
 		SearchFilter: []string{"adapt", "hey"},
 	}
@@ -4637,6 +4638,10 @@ func TestAllAccounts(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, len(resp), 1)
 	assert.Contains(t, resp[0].HostName, "adapt")
+	assert.Greater(t, resp[0].LastActivity, U.TimeNowZ().AddDate(0, 0, -1))
+	assert.NotEmpty(t, resp[0].TableProps[U.SIX_SIGNAL_NAME])
+	assert.NotEmpty(t, resp[0].TableProps["$hubspot_company_name"])
+	assert.NotEmpty(t, resp[0].TableProps["$salesforce_account_name"])
 
 	payload = model.TimelinePayload{
 		Query: model.Query{
@@ -4654,7 +4659,7 @@ func TestAllAccounts(t *testing.T) {
 					Entity:    "user_g",
 					Type:      "categorical",
 					Property:  "$hubspot_company_country",
-					Operator:  "equals",
+					Operator:  "notEqual",
 					Value:     "India",
 					LogicalOp: "AND",
 					GroupName: U.GROUP_NAME_HUBSPOT_COMPANY,
