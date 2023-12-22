@@ -11,6 +11,11 @@ import {
   fetchProjectSettings as fetchProjectSettingsService
 } from 'Reducers/global';
 
+import {
+  selectAreDraftsSelected,
+  selectDashboardList
+} from 'Reducers/dashboard/selectors';
+import CommonBeforeIntegrationPage from 'Components/GenericComponents/CommonBeforeIntegrationPage';
 import AddDashboard from './AddDashboard';
 import {
   ADD_DASHBOARD_MODAL_OPEN,
@@ -22,9 +27,7 @@ import { getDashboardDateRange } from './utils';
 import DashboardAfterIntegration from './EmptyDashboard/DashboardAfterIntegration';
 import ProjectDropdown from './ProjectDropdown';
 import { DASHBOARD_KEYS } from '../../constants/localStorage.constants';
-import { selectAreDraftsSelected } from 'Reducers/dashboard/selectors';
 import Drafts from './Drafts';
-import CommonBeforeIntegrationPage from 'Components/GenericComponents/CommonBeforeIntegrationPage';
 
 const dashboardRefreshInitialState = {
   inProgress: false,
@@ -49,9 +52,8 @@ function Dashboard({
     dashboardRefreshInitialState
   );
 
-  const { dashboards, activeDashboardUnits } = useSelector(
-    (state) => state.dashboard
-  );
+  const { activeDashboardUnits } = useSelector((state) => state.dashboard);
+  const dashboards = useSelector((state) => selectDashboardList(state));
 
   const areDraftsSelected = useSelector((state) =>
     selectAreDraftsSelected(state)
@@ -77,7 +79,7 @@ function Dashboard({
 
     fetchProjectSettings(activeProject?.id);
 
-    if (isEmpty(dashboards?.data)) {
+    if (isEmpty(dashboards)) {
       fetchBingAdsIntegration(activeProject?.id);
       fetchMarketoIntegration(activeProject?.id);
     }
@@ -214,7 +216,7 @@ function Dashboard({
     );
   }
 
-  if (dashboards.data.length) {
+  if (dashboards.length) {
     return (
       <ErrorBoundary
         fallback={
@@ -227,23 +229,21 @@ function Dashboard({
         onError={FaErrorLog}
       >
         {areDraftsSelected === false && (
-          <>
-            <div className='flex-1 flex flex-col'>
-              <ProjectDropdown
-                handleEditClick={handleEditClick}
-                setaddDashboardModal={setaddDashboardModal}
-                durationObj={durationObj}
-                handleDurationChange={handleDurationChange}
-                oldestRefreshTime={oldestRefreshTime}
-                setOldestRefreshTime={setOldestRefreshTime}
-                handleRefreshClick={handleRefreshClick}
-                dashboardRefreshState={dashboardRefreshState}
-                onDataLoadSuccess={onDataLoadSuccess}
-                resetDashboardRefreshState={resetDashboardRefreshState}
-                handleWidgetRefresh={handleWidgetRefresh}
-              />
-            </div>
-          </>
+          <div className='flex-1 flex flex-col'>
+            <ProjectDropdown
+              handleEditClick={handleEditClick}
+              setaddDashboardModal={setaddDashboardModal}
+              durationObj={durationObj}
+              handleDurationChange={handleDurationChange}
+              oldestRefreshTime={oldestRefreshTime}
+              setOldestRefreshTime={setOldestRefreshTime}
+              handleRefreshClick={handleRefreshClick}
+              dashboardRefreshState={dashboardRefreshState}
+              onDataLoadSuccess={onDataLoadSuccess}
+              resetDashboardRefreshState={resetDashboardRefreshState}
+              handleWidgetRefresh={handleWidgetRefresh}
+            />
+          </div>
         )}
         {areDraftsSelected === true && <Drafts />}
         <AddDashboard

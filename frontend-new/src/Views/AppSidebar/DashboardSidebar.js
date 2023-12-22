@@ -9,17 +9,17 @@ import {
   selectActiveDashboard,
   selectAreDraftsSelected
 } from 'Reducers/dashboard/selectors';
-import styles from './index.module.scss';
 
-import SidebarSearch from './SidebarSearch';
 import { changeActiveDashboard } from 'Reducers/dashboard/services';
 import { NEW_DASHBOARD_TEMPLATES_MODAL_OPEN } from 'Reducers/types';
-import SidebarMenuItem from './SidebarMenuItem';
 import { makeDraftsActiveAction } from 'Reducers/dashboard/actions';
 import { useHistory } from 'react-router-dom';
 import { PathUrls } from 'Routes/pathUrls';
+import SidebarMenuItem from './SidebarMenuItem';
+import SidebarSearch from './SidebarSearch';
+import styles from './index.module.scss';
 
-const DashboardItem = ({ dashboard }) => {
+function DashboardItem({ dashboard }) {
   const dispatch = useDispatch();
   const history = useHistory();
   const activeDashboard = useSelector((state) => selectActiveDashboard(state));
@@ -30,7 +30,7 @@ const DashboardItem = ({ dashboard }) => {
 
   const handleActiveDashboardChange = useCallback(() => {
     const selectedDashboard = dashboards.find((d) => d.id === dashboard.id);
-    history.replace(PathUrls.Dashboard + '/' + selectedDashboard.id);
+    history.replace(`${PathUrls.Dashboard}/${selectedDashboard.id}`);
     dispatch(changeActiveDashboard(selectedDashboard));
   }, [dashboard, dashboards, dispatch]);
 
@@ -44,9 +44,9 @@ const DashboardItem = ({ dashboard }) => {
       isActive={isActive}
     />
   );
-};
+}
 
-const DashboardSidebar = () => {
+function DashboardSidebar() {
   const [searchText, setSearchText] = useState('');
   const areDraftsSelected = useSelector((state) =>
     selectAreDraftsSelected(state)
@@ -95,7 +95,7 @@ const DashboardSidebar = () => {
       </div>
       <div className='flex flex-col row-gap-5 px-4'>
         <SidebarSearch
-          placeholder={'Search board'}
+          placeholder='Search board'
           setSearchText={setSearchText}
           searchText={searchText}
         />
@@ -105,9 +105,9 @@ const DashboardSidebar = () => {
             styles['dashboard-list-container']
           )}
         >
-          {filteredDashboardList.map((dashboard) => {
-            return <DashboardItem dashboard={dashboard} key={dashboard.id} />;
-          })}
+          {filteredDashboardList.map((dashboard) => (
+            <DashboardItem dashboard={dashboard} key={dashboard.id} />
+          ))}
         </div>
         <Button
           className={cx(
@@ -117,10 +117,10 @@ const DashboardSidebar = () => {
           onClick={() => {
             dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_OPEN });
           }}
-          id={'fa-at-btn--new-dashboard'}
+          id='fa-at-btn--new-dashboard'
         >
           <SVG
-            name={'plus'}
+            name='plus'
             size={16}
             extraClass={styles.sidebar_action_button__content}
             isFill={false}
@@ -136,6 +136,6 @@ const DashboardSidebar = () => {
       </div>
     </div>
   );
-};
+}
 
 export default memo(DashboardSidebar);
