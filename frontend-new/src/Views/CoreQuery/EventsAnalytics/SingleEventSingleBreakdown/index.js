@@ -52,7 +52,6 @@ const SingleEventSingleBreakdownComponent = forwardRef(
       queries,
       breakdown,
       resultState,
-      page,
       chartType,
       durationObj,
       section,
@@ -160,7 +159,6 @@ const SingleEventSingleBreakdownComponent = forwardRef(
           breakdown={breakdown}
           events={queries}
           chartType={chartType}
-          page={page}
           setVisibleProperties={setVisibleProperties}
           visibleProperties={visibleProperties}
           durationObj={durationObj}
@@ -174,6 +172,7 @@ const SingleEventSingleBreakdownComponent = forwardRef(
           comparisonApplied={comparisonData.data != null}
           compareCategories={compareCategories}
           frequency={durationObj.frequency}
+          eventGroup={resultState?.data?.meta?.query?.grpa}
         />
       </div>
     );
@@ -228,11 +227,13 @@ const SingleEventSingleBreakdownComponent = forwardRef(
       );
     } else if (chartType === CHART_TYPE_METRIC_CHART) {
       chart = (
-        <div className={cx(
-          'grid w-full col-gap-2 row-gap-12',
-          { 'grid-flow-col': visibleSeriesData.length < 3 },
-          { 'grid-cols-3': visibleSeriesData.length >= 3 }
-        )}>
+        <div
+          className={cx(
+            'grid w-full col-gap-2 row-gap-12',
+            { 'grid-flow-col': visibleSeriesData.length < 3 },
+            { 'grid-cols-3': visibleSeriesData.length >= 3 }
+          )}
+        >
           {visibleSeriesData &&
             visibleSeriesData.map((eachSeriesData, eachIndex) => {
               return (

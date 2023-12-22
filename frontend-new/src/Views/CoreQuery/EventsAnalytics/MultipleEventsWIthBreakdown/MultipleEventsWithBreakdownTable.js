@@ -24,7 +24,6 @@ function MultipleEventsWithBreakdownTable({
   categories,
   visibleProperties,
   setVisibleProperties,
-  page,
   isWidgetModal,
   durationObj,
   reportTitle = 'Events Analytics',
@@ -34,7 +33,8 @@ function MultipleEventsWithBreakdownTable({
   dateSorter,
   handleDateSorting,
   visibleSeriesData,
-  setVisibleSeriesData
+  setVisibleSeriesData,
+  eventGroup
 }) {
   const [searchText, setSearchText] = useState('');
   const {
@@ -57,20 +57,20 @@ function MultipleEventsWithBreakdownTable({
         breakdown,
         sorter,
         handleSorting,
-        page,
         eventNames,
         userPropNames,
-        eventPropertiesDisplayNames
+        eventPropertiesDisplayNames,
+        eventGroup
       )
     );
   }, [
     breakdown,
     sorter,
     handleSorting,
-    page,
     eventNames,
     userPropNames,
-    eventPropertiesDisplayNames
+    eventPropertiesDisplayNames,
+    eventGroup
   ]);
 
   useEffect(() => {

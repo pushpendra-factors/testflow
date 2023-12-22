@@ -101,10 +101,10 @@ export const getTableColumns = (
   breakdown,
   currentSorter,
   handleSorting,
-  page,
   eventNames,
   userPropNames,
-  eventPropertiesDisplayNames
+  eventPropertiesDisplayNames,
+  eventGroup
 ) => {
   const breakdownColumns = breakdown.map((e) => {
     const displayTitle = getBreakdownDisplayName({
@@ -140,7 +140,7 @@ export const getTableColumns = (
 
   const countColumn = {
     title: getClickableTitleSorter(
-      `${title}: ${labelsObj[page]}`,
+      `${title}: ${labelsObj[eventGroup] || 'Count'}`,
       { key: EVENT_COUNT_KEY, type: 'numerical', subtype: null },
       currentSorter,
       handleSorting,
