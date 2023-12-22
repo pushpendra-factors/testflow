@@ -394,7 +394,6 @@ function AccountDetails({
         <SearchCheckList
           placeholder='Select Events to Show'
           mapArray={activities}
-          updateList={setActivities}
           titleKey='display_name'
           checkedKey='enabled'
           onChange={handleEventsChange}
@@ -407,7 +406,6 @@ function AccountDetails({
         <SearchCheckList
           placeholder='Select a User Property'
           mapArray={checkListUserProps}
-          updateList={setCheckListUserProps}
           titleKey='display_name'
           checkedKey='enabled'
           onChange={handlePropChange}
@@ -420,7 +418,6 @@ function AccountDetails({
         <SearchCheckList
           placeholder='Select Up To 5 Milestones'
           mapArray={checkListMilestones}
-          updateList={setCheckListMilestones}
           titleKey='display_name'
           checkedKey='enabled'
           onChange={handleMilestonesChange}

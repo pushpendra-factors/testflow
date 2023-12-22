@@ -483,7 +483,8 @@ function UserProfiles({
 
     const tableProps = timelinePayload?.segment_id
       ? activeSegment?.query?.table_props
-      : currentProjectSettings?.timelines_config?.user_config?.table_props || [];
+      : currentProjectSettings?.timelines_config?.user_config?.table_props ||
+        [];
 
     const userPropertiesModified = [];
     if (userPropertiesV2) {
@@ -498,8 +499,8 @@ function UserProfiles({
         const propDisplayName = userPropNames[prop]
           ? userPropNames[prop]
           : prop
-          ? PropTextFormat(prop)
-          : '';
+            ? PropTextFormat(prop)
+            : '';
         const propType = getPropType(userPropertiesModified, prop);
         columns.push({
           title: (
@@ -728,6 +729,7 @@ function UserProfiles({
         <SearchCheckList
           placeholder='Search Properties'
           mapArray={checkListUserProps}
+          sortable
           updateList={setCheckListUserProps}
           titleKey='display_name'
           checkedKey='enabled'
