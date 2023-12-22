@@ -85,8 +85,9 @@ export const getUpdateStateOnDashboardsLoaded = ({ payload }) => {
       };
     }
   }
+  const data = payload?.[0]?.class !== 'predefined' ? payload[0] : payload[1];
   return {
     ...fixedState,
-    activeDashboard: payload[0]
+    activeDashboard: data
   };
 };
