@@ -133,7 +133,7 @@ func buildPredefinedWebsiteAggregationQuery(projectID int64, q model.PredefWebsi
 
 	resOrderByStmnt := fmt.Sprintf("%s %s DESC ", model.DBOrderBy, joinWithComma(resMetrics...))
 
-	resLimitStmnt := fmt.Sprintf("%s %v", model.DBLimit, model.ResultsLimit)
+	resLimitStmnt := fmt.Sprintf("%s %v", model.DBLimit, model.PredefinedWebAggrLimit)
 
 	resStmnt := resSelectStatement + resFromStmnt + resFilterStmnt + resGroupByStmnt + resOrderByStmnt + resLimitStmnt
 
