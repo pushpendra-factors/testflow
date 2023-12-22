@@ -1,21 +1,21 @@
 import { Text } from 'Components/factorsComponents';
 import { Button } from 'antd';
 import React from 'react';
-import { Link, useHistory } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import style from './index.module.scss';
 import YouTubePlayer from '../YoutubePlayer';
-import { PathUrls } from 'Routes/pathUrls';
+import usePlanUpgrade from 'hooks/usePlanUpgrade';
 
-const LockedStateComponent = ({
+function LockedStateComponent({
   title,
   description,
   learnMoreLink,
   upgradeText = 'To use this feature, you should upgrade from your current plan to Professional',
   upgradeButtonText = 'Upgrade plan',
-  upgradeLink = PathUrls.SettingsPricing,
-  embeddedLink = 'https://global-uploads.webflow.com/5f28f6242b5cee6e96d76336/649505b5b4c5c322af5ec115_RA%20In%20Feture%202.webp'
-}: LockedStateComponentProps) => {
-  const history = useHistory();
+  embeddedLink = 'https://global-uploads.webflow.com/5f28f6242b5cee6e96d76336/649505b5b4c5c322af5ec115_RA%20In%20Feture%202.webp',
+  featureName
+}: LockedStateComponentProps) {
+  const { handlePlanUpgradeClick } = usePlanUpgrade();
   return (
     <div className={style.container}>
       <div
@@ -35,7 +35,12 @@ const LockedStateComponent = ({
         {/* description */}
         <div className='w-1/2 h-full flex items-center'>
           <div className='w-full'>
-            <Text type={'title'} level={3} weight={'bold'}  id={'fa-at-text--page-title'}>
+            <Text
+              type={'title'}
+              level={3}
+              weight={'bold'}
+              id={'fa-at-text--page-title'}
+            >
               {title}
             </Text>
             <div className='flex items-center flex-wrap gap-1 mt-1'>
@@ -67,7 +72,10 @@ const LockedStateComponent = ({
             </Text>
 
             <div className={style.upgradeButton}>
-              <Button type='primary' onClick={() => history.push(upgradeLink)}>
+              <Button
+                type='primary'
+                onClick={() => handlePlanUpgradeClick(featureName)}
+              >
                 {upgradeButtonText}
               </Button>
             </div>
@@ -76,7 +84,7 @@ const LockedStateComponent = ({
       </div>
     </div>
   );
-};
+}
 
 type LockedStateComponentProps = {
   title: string;
@@ -84,8 +92,8 @@ type LockedStateComponentProps = {
   learnMoreLink?: string;
   upgradeText?: string;
   upgradeButtonText?: string;
-  upgradeLink?: string;
   embeddedLink: string;
+  featureName: string;
 };
 
 export default LockedStateComponent;

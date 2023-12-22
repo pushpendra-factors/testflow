@@ -3,18 +3,17 @@ import { IntegrationConfig } from '../types';
 import { Avatar, Button } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
 import UpgradeButton from 'Components/GenericComponents/UpgradeButton';
-import { useHistory } from 'react-router-dom';
-import { PathUrls } from 'Routes/pathUrls';
+import usePlanUpgrade from 'hooks/usePlanUpgrade';
 
-const LockedIntegrationCard = ({
+function LockedIntegrationCard({
   integrationConfig
-}: LockedIntegrationCardProps) => {
-  const history = useHistory();
+}: LockedIntegrationCardProps) {
+  const { handlePlanUpgradeClick } = usePlanUpgrade();
   return (
     <div className='fa-intergration-card' style={{ background: '#FAFAFA' }}>
       <div
         className='flex justify-between cursor-pointer'
-        onClick={() => history.push(PathUrls.SettingsPricing)}
+        onClick={() => handlePlanUpgradeClick(integrationConfig.featureName)}
       >
         <div className='flex'>
           <Avatar
@@ -49,11 +48,11 @@ const LockedIntegrationCard = ({
             <Button disabled>View documentation</Button>
           </div>
         </div>
-        <UpgradeButton />
+        <UpgradeButton featureName={integrationConfig.featureName} />
       </div>
     </div>
   );
-};
+}
 
 type LockedIntegrationCardProps = {
   integrationConfig: IntegrationConfig;

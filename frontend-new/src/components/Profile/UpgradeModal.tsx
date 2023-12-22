@@ -7,11 +7,11 @@ import { ProfileUpgradeModalType } from 'Context/types';
 import { SVG, Text } from 'Components/factorsComponents';
 import AccountTableImage from '../../assets/images/account_table.png';
 import TimelineTableImage from '../../assets/images/timeline_table.png';
-import { useHistory } from 'react-router-dom';
-import { PathUrls } from 'Routes/pathUrls';
+import usePlanUpgrade from 'hooks/usePlanUpgrade';
+import { FEATURES } from 'Constants/plans.constants';
 
-const UpgradeModal = ({ visible, onCancel, variant }: UpgradeModalProps) => {
-  const history = useHistory();
+function UpgradeModal({ visible, onCancel, variant }: UpgradeModalProps) {
+  const { handlePlanUpgradeClick } = usePlanUpgrade();
   return (
     <Modal
       visible={visible}
@@ -79,7 +79,9 @@ const UpgradeModal = ({ visible, onCancel, variant }: UpgradeModalProps) => {
           <Button
             type='primary'
             className='text-center mt-4'
-            onClick={() => history.push(PathUrls.SettingsPricing)}
+            onClick={() =>
+              handlePlanUpgradeClick(FEATURES.FEATURE_ACCOUNT_SCORING)
+            }
           >
             Upgrade
           </Button>
@@ -87,7 +89,7 @@ const UpgradeModal = ({ visible, onCancel, variant }: UpgradeModalProps) => {
       </div>
     </Modal>
   );
-};
+}
 
 type UpgradeModalProps = {
   visible: boolean;
