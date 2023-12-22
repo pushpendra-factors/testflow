@@ -159,7 +159,7 @@ func (store *MemSQL) GetProjectAnalyticsData(projectIDNameMap map[string]string,
 
 	var err error
 
-	eventData, err := store.GetGlobalProjectAnalyticsEventDataByProjectId(projectId, model.ProjectAnalyticsEventSingleQueryStmnt["daily_login_count"], timezoneString, from, end)
+	eventData, err := store.GetGlobalProjectAnalyticsEventDataByProjectId(projectId, "daily_login_count", timezoneString, from, end)
 	if err != nil {
 		return nil, errors.New("failed to event base metrics data")
 	}
@@ -386,8 +386,8 @@ func (store *MemSQL) GetGlobalProjectAnalyticsDataByProjectId(projectID int64, m
 
 		startTimestamp := time.Now().AddDate(0, 0, -90)
 
-		for key, queryStmnt := range model.ProjectAnalyticsEventSingleQueryStmnt {
-			eventData, err := store.GetGlobalProjectAnalyticsEventDataByProjectId(projectID, queryStmnt, timeZoneString, startTimestamp.Unix(), time.Now().Unix())
+		for key, _ := range model.ProjectAnalyticsEventSingleQueryStmnt {
+			eventData, err := store.GetGlobalProjectAnalyticsEventDataByProjectId(projectID, key, timeZoneString, startTimestamp.Unix(), time.Now().Unix())
 			if len(eventData) == 0 {
 				eventData = make([]map[string]interface{}, 2)
 			}
@@ -407,17 +407,22 @@ func (store *MemSQL) GetGlobalProjectAnalyticsDataByProjectId(projectID int64, m
 	return result, nil
 }
 
-func (store *MemSQL) GetGlobalProjectAnalyticsEventDataByProjectId(projectID int64, queryStmnt string, timeZoneString U.TimeZoneString, startTimestmap, endTimestamp int64) ([]map[string]interface{}, error) {
+func (store *MemSQL) GetGlobalProjectAnalyticsEventDataByProjectId(projectID int64, queryStmntKey string, timeZoneString U.TimeZoneString, startTimestmap, endTimestamp int64) ([]map[string]interface{}, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	var query model.Query
-	jsonString := fmt.Sprintf(queryStmnt, projectID, timeZoneString, startTimestmap, endTimestamp)
+
+	jsonString := fmt.Sprintf(model.ProjectAnalyticsEventSingleQueryStmnt[queryStmntKey], projectID, timeZoneString, startTimestmap, endTimestamp)
 	err := json.Unmarshal([]byte(jsonString), &query)
 	if err != nil {
 		return nil, err
+	}
+
+	if queryStmntKey == "daily_login_count" {
+		projectID = int64(2)
 	}
 
 	singleResult, errCode, _ := store.ExecuteEventsQuery(projectID, query, true)
