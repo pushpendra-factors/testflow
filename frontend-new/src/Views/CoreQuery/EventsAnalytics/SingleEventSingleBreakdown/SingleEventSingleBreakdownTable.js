@@ -25,7 +25,6 @@ function SingleEventSingleBreakdownTable({
   chartType,
   visibleProperties,
   setVisibleProperties,
-  page,
   isWidgetModal,
   durationObj,
   categories,
@@ -39,7 +38,8 @@ function SingleEventSingleBreakdownTable({
   setVisibleSeriesData,
   comparisonApplied,
   compareCategories,
-  frequency
+  frequency,
+  eventGroup
 }) {
   const [searchText, setSearchText] = useState('');
   const {
@@ -98,21 +98,21 @@ function SingleEventSingleBreakdownTable({
         breakdown,
         sorter,
         handleSorting,
-        page,
         eventNames,
         userPropNames,
-        eventPropertiesDisplayNames
+        eventPropertiesDisplayNames,
+        eventGroup
       )
     );
   }, [
     events,
     breakdown,
     sorter,
-    page,
     handleSorting,
     eventNames,
     userPropNames,
-    eventPropertiesDisplayNames
+    eventPropertiesDisplayNames,
+    eventGroup
   ]);
 
   useEffect(() => {

@@ -18,6 +18,7 @@ export interface UsernameWithIconProps {
 export interface EventDrawerProps {
   visible: boolean;
   event: TimelineEvent;
+  eventPropsType: { [key: string]: string };
   onClose: () => void;
 }
 
@@ -35,6 +36,7 @@ interface TimelineEvent {
 
 export interface TableRowProps {
   event: TimelineEvent;
+  eventPropsType: { [key: string]: string };
   user: TimelineUser;
   onEventClick: (event: TimelineEvent) => void;
 }
@@ -49,4 +51,5 @@ export interface AccountTimelineTableViewProps {
   timelineEvents?: TimelineEvent[];
   timelineUsers?: TimelineUser[];
   loading: boolean;
+  eventPropsType: { [key: string]: string };
 }

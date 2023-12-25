@@ -1,38 +1,20 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { useSelector } from 'react-redux';
 import { EventDrawerProps } from './types';
 import { Button, Drawer } from 'antd';
 import { Text } from 'Components/factorsComponents';
-import {
-  eventIconsColorMap,
-  getPropType,
-  propValueFormat
-} from 'Components/Profile/utils';
-import {
-  convertGroupedPropertiesToUngrouped,
-  PropTextFormat
-} from 'Utils/dataFormatter';
+import { eventIconsColorMap, propValueFormat } from 'Components/Profile/utils';
+import { PropTextFormat } from 'Utils/dataFormatter';
 import EventIcon from './EventIcon';
 import TextWithOverflowTooltip from 'Components/GenericComponents/TextWithOverflowTooltip';
 
 const EventDrawer: React.FC<EventDrawerProps> = ({
   visible,
   onClose,
-  event
+  event,
+  eventPropsType
 }) => {
-  const { eventPropertiesV2 } = useSelector((state: any) => state.coreQuery);
-  const eventPropertiesModified = useMemo(() => {
-    if (!event || !event.event_name || !eventPropertiesV2?.[event.event_name])
-      return null;
-
-    const eventProps: any = [];
-    convertGroupedPropertiesToUngrouped(
-      eventPropertiesV2[event.event_name],
-      eventProps
-    );
-    return eventProps;
-  }, [event?.event_name, eventPropertiesV2]);
-
+  const { eventPropNames } = useSelector((state: any) => state.coreQuery);
   const renderEventDetails = () => {
     if (!event) return null;
 
@@ -48,7 +30,7 @@ const EventDrawer: React.FC<EventDrawerProps> = ({
     );
 
     return (
-      <div className='p-4'>
+      <div className='py-4'>
         <div className='top-section mb-4'>
           <div className='flex items-center w-full'>
             <EventIcon icon={eventIcon} size={28} />
@@ -67,14 +49,8 @@ const EventDrawer: React.FC<EventDrawerProps> = ({
         </div>
         <div>
           {Object.entries(event.properties || {}).map(([key, value]) => {
-            const propType = getPropType(eventPropertiesModified, key);
-            const isPageView = key === '$is_page_view' && value === true;
-            const customValue = isPageView
-              ? event.event_type === 'FE'
-                ? event.alias_name
-                : event.event_name
-              : null;
-
+            const propType = eventPropsType[key];
+            if (key === '$is_page_view' && value === true) return null;
             return (
               <div className='leftpane-prop' key={key}>
                 <div className='flex flex-col items-start truncate'>
@@ -86,7 +62,7 @@ const EventDrawer: React.FC<EventDrawerProps> = ({
                     charLimit={44}
                     extraClass='m-0'
                   >
-                    {isPageView ? 'Page URL' : PropTextFormat(key)}
+                    {eventPropNames[key] || PropTextFormat(key)}
                   </Text>
                   <Text
                     type='title'
@@ -96,7 +72,7 @@ const EventDrawer: React.FC<EventDrawerProps> = ({
                     extraClass='m-0'
                     shouldTruncateURL
                   >
-                    {customValue || propValueFormat(key, value, propType)}
+                    {propValueFormat(key, value, propType) || '-'}
                   </Text>
                 </div>
               </div>

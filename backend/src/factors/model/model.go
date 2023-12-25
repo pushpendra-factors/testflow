@@ -696,7 +696,7 @@ type Model interface {
 
 	// project_analytics
 	GetGlobalProjectAnalyticsDataByProjectId(projectID int64, monthString, agentUUID string) ([]map[string]interface{}, error)
-	GetGlobalProjectAnalyticsEventDataByProjectId(projectID int64, queryStmnt string, timeZoneString U.TimeZoneString, startTimestmap, endTimestamp int64) ([]map[string]interface{}, error)
+	GetGlobalProjectAnalyticsEventDataByProjectId(projectID int64, queryStmntKey string, timeZoneString U.TimeZoneString, startTimestmap, endTimestamp int64) ([]map[string]interface{}, error)
 	GetIntegrationStatusesCount(settings model.ProjectSetting, projectID int64, agentUUID string) []map[string]interface{}
 	GetEventUserCountsOfAllProjects(lastNDays int) (map[string][]*model.ProjectAnalytics, error)
 	GetEventUserCountsMerged(projectIdsList []int64, lastNDays int, currentDate time.Time) (map[int64]*model.ProjectAnalytics, error)

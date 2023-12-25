@@ -1,29 +1,12 @@
 import { Text } from 'Components/factorsComponents';
 import MomentTz from 'Components/MomentTz';
-import {
-  eventIconsColorMap,
-  getPropType,
-  propValueFormat,
-  TimelineHoverPropDisplayNames
-} from 'Components/Profile/utils';
-import React, { useMemo } from 'react';
-import { connect } from 'react-redux';
-import {
-  convertGroupedPropertiesToUngrouped,
-  PropTextFormat
-} from 'Utils/dataFormatter';
+import { eventIconsColorMap, propValueFormat } from 'Components/Profile/utils';
+import React from 'react';
+import { useSelector } from 'react-redux';
+import { PropTextFormat } from 'Utils/dataFormatter';
 
-const EventInfoCard = ({ event, eventIcon, sourceIcon, eventPropertiesV2 }) => {
-  const eventPropertiesModified = useMemo(() => {
-    const eventProps = [];
-    if (eventPropertiesV2?.[event?.event_name]) {
-      convertGroupedPropertiesToUngrouped(
-        eventPropertiesV2?.[event?.event_name],
-        eventProps
-      );
-    }
-    return eventProps;
-  }, [event, eventPropertiesV2]);
+const EventInfoCard = ({ event, eventIcon, sourceIcon, propertiesType }) => {
+  const { eventPropNames } = useSelector((state) => state.coreQuery);
   return (
     <div className='timeline-event__container'>
       <div className='timestamp'>
@@ -33,7 +16,8 @@ const EventInfoCard = ({ event, eventIcon, sourceIcon, eventPropertiesV2 }) => {
         className='event-icon'
         style={{
           '--border-color': `${eventIconsColorMap[eventIcon]?.borderColor}`,
-          '--bg-color': `${eventIconsColorMap[eventIcon]?.bgColor}`
+          '--bg-color': `${eventIconsColorMap[eventIcon]?.bgColor}`,
+          '--icon-size': '32px'
         }}
       >
         <img
@@ -75,34 +59,8 @@ const EventInfoCard = ({ event, eventIcon, sourceIcon, eventPropertiesV2 }) => {
         </div>
 
         {Object.entries(event?.properties || {}).map(([key, value]) => {
-          const propType = getPropType(eventPropertiesModified, key);
-          if (key === '$is_page_view' && value === true)
-            return (
-              <div className='flex justify-between py-2'>
-                <Text
-                  mini
-                  type='title'
-                  color='grey'
-                  extraClass='whitespace-no-wrap mr-2'
-                >
-                  Page URL
-                </Text>
-                <Text
-                  mini
-                  type='title'
-                  color='grey-2'
-                  weight='medium'
-                  extraClass='break-all text-right'
-                  truncate
-                  charLimit={40}
-                  shouldTruncateURL
-                >
-                  {event.event_type === 'FE'
-                    ? event.alias_name
-                    : event.event_name}
-                </Text>
-              </div>
-            );
+          const propType = propertiesType[key];
+          if (key === '$is_page_view' && value === true) return null;
           return (
             <div className='flex justify-between py-2'>
               <Text
@@ -113,7 +71,7 @@ const EventInfoCard = ({ event, eventIcon, sourceIcon, eventPropertiesV2 }) => {
                   key.length > 20 ? 'break-words' : 'whitespace-no-wrap'
                 } max-w-xs mr-2`}
               >
-                {TimelineHoverPropDisplayNames[key] || PropTextFormat(key)}
+                {eventPropNames[key] || PropTextFormat(key)}
               </Text>
               <Text
                 mini
@@ -137,8 +95,4 @@ const EventInfoCard = ({ event, eventIcon, sourceIcon, eventPropertiesV2 }) => {
   );
 };
 
-const mapStateToProps = (state) => ({
-  eventPropertiesV2: state.coreQuery.eventPropertiesV2
-});
-
-export default connect(mapStateToProps, null)(EventInfoCard);
+export default EventInfoCard;
