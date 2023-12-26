@@ -89,9 +89,9 @@ function QueryComposer({
 
   const getAvailableGroups = useMemo(() => {
     return Object.entries(groups?.all_groups || {})?.map(
-    ([group_name, display_name]) => [display_name, group_name]
-  )
-  },[groups]);
+      ([group_name, display_name]) => [display_name, group_name]
+    );
+  }, [groups]);
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -99,13 +99,21 @@ function QueryComposer({
     }
   }, [activeProject, fetchEventNames, getUserPropertiesV2, queryType]);
 
-  useEffect(() => {
-    Object.keys(groups?.all_groups || {}).forEach((group) => {
+  const getGroupPropsFromAPI = useCallback(
+    async (group) => {
       if (!groupProperties[group]) {
-        getGroupProperties(activeProject.id, group);
+        await getGroupProperties(activeProject.id, group);
       }
+    },
+    [activeProject.id, groupProperties]
+  );
+
+  useEffect(() => {
+    getGroupPropsFromAPI(GROUP_NAME_DOMAINS);
+    Object.keys(groups?.all_groups || {}).forEach((group) => {
+      getGroupPropsFromAPI(group);
     });
-  }, [activeProject?.id, groupProperties, groups]);
+  }, [activeProject.id, groups]);
 
   useEffect(() => {
     queries.forEach((ev) => {

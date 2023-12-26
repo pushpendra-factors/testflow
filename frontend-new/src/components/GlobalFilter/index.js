@@ -8,7 +8,8 @@ import { Button } from 'antd';
 import ORButton from '../ORButton';
 import { compareFilters, groupFilters } from '../../utils/global';
 import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
-import { GroupDisplayNames, IsDomainGroup } from 'Components/Profile/utils';
+import { IsDomainGroup } from 'Components/Profile/utils';
+import { GROUP_NAME_DOMAINS } from './FilterWrapper/utils';
 
 const GlobalFilter = ({
   filters = [],
@@ -16,9 +17,8 @@ const GlobalFilter = ({
   groupName = 'users',
   event
 }) => {
-  const { groupProperties, userPropertiesV2, eventPropertiesV2 } = useSelector(
-    (state) => state.coreQuery
-  );
+  const { groups, groupProperties, userPropertiesV2, eventPropertiesV2 } =
+    useSelector((state) => state.coreQuery);
   const activeProject = useSelector((state) => state.global.active_project);
   const [filterProps, setFilterProperties] = useState({});
   const [filterDD, setFilterDD] = useState(false);
@@ -32,8 +32,9 @@ const GlobalFilter = ({
     if (groupName === 'users' || groupName === 'events') {
       props.user = userPropertiesV2;
     } else if (IsDomainGroup(groupName)) {
+      props[GROUP_NAME_DOMAINS] = groupProperties[GROUP_NAME_DOMAINS];
       Object.entries(groupProperties || {}).forEach(([group, properties]) => {
-        if (Object.keys(GroupDisplayNames).includes(group)) {
+        if (Object.keys(groups?.all_groups || {}).includes(group)) {
           props[group] = properties;
         }
       });

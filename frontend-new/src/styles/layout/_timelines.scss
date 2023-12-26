@@ -136,7 +136,7 @@
             background-color: #FFF;
             top: 0;
             padding: 0 16px;
-            z-index: 15;
+            z-index: 0;
 
             .user {
                 padding: 32px 16px 0;
@@ -172,18 +172,28 @@
 
         .props {
             padding: 32px 0 0;
+            background: #FFF;
+            max-height: calc(100% - 400px);
+            overflow-y: scroll;
+        }
 
-            .add-prop-btn {
-                position: sticky;
-                background: #FFF;
+        .add-prop-btn {
+            position: sticky;
+            bottom:0;
+            width: 100%;
+            background-color: white;
+            padding: 8px 32px 24px;
+
+            &.with-attr{
+                bottom: 32px;
             }
         }
 
         .logo_attr {
             position: fixed;
-            top: calc(100% - 54px);
+            top: calc(100% - 32px);
             left: 0;
-            padding: 16px 32px;
+            padding: 4px 32px;
             background-color: white;
             white-space: nowrap;
         }
@@ -1024,43 +1034,43 @@
         table-layout: fixed;
         width: 100%;
         border-bottom: 1px solid #E7E9ED;
-    
+
         td {
             padding: 12px;
             text-align: left;
         }
-    
+
         .timestamp-row {
             position: sticky;
             top: 0;
             background: #F5F6F8;
             height: 40px;
             z-index: 1;
-    
+
             td {
                 font-weight: 600;
                 color: #000000A6;
             }
         }
-    
+
         .table-row {
             display: flex;
             border-top: 1px solid #E7E9ED;
             height: 60px;
-    
+
             .timestamp-cell {
                 width: 10%;
                 overflow: hidden;
                 color: #00000073;
             }
-    
+
             .event-cell,
             .user-cell {
                 width: 25%;
                 display: flex;
                 align-items: flex-start;
                 overflow: hidden;
-    
+
                 div {
                     width: fit-content;
                     max-width: 80% !important;
@@ -1073,13 +1083,13 @@
                     white-space: nowrap;
                 }
             }
-    
+
             .properties-cell {
                 padding: 8px 12px;
                 width: 40%;
                 display: flex;
                 flex-direction: column;
-    
+
                 .propkey {
                     font-family: Inter;
                     font-size: 12px;
@@ -1092,7 +1102,7 @@
                     overflow: hidden;
                     text-overflow: ellipsis;
                 }
-    
+
                 .propvalue {
                     font-family: Inter;
                     font-size: 16px;
@@ -1107,12 +1117,12 @@
                 }
             }
         }
-    
+
         .clickable {
             &:hover {
                 background-color: #F0F0F0;
             }
-    
+
         }
     }
 }
