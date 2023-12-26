@@ -290,8 +290,8 @@ const DCGTable = ({
         color={'#3E516C'}
         extraClass={'mt-2'}
       >
-        These rules are checked sequentially from top of bottom to assign
-        channel
+        These rules are checked sequentially from top to bottom to assign
+        channel.
       </Text>
       <Table
         className='fa-table--basic mt-6'
