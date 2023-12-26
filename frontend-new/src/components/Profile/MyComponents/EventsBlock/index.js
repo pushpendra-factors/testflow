@@ -47,7 +47,8 @@ function EventsBlock({
   propertiesScope = ['event'],
   initialDDState = true,
   groupProperties,
-  getGroupProperties
+  getGroupProperties,
+  showInList = false
 }) {
   const [isDDVisible, setDDVisible] = useState(initialDDState);
 
@@ -276,6 +277,7 @@ function EventsBlock({
       caller='profiles'
       dropdownPlacement={dropdownPlacement}
       dropdownMaxHeight={344}
+      showInList={showInList}
     />
   );
 
@@ -339,6 +341,7 @@ function EventsBlock({
                     caller='profiles'
                     dropdownPlacement={dropdownPlacement}
                     dropdownMaxHeight={344}
+                    showInList={showInList}
                   />
                 </div>
                 {ind !== orFilterIndex && !viewMode && (
@@ -361,6 +364,7 @@ function EventsBlock({
                     caller='profiles'
                     dropdownPlacement={dropdownPlacement}
                     dropdownMaxHeight={344}
+                    showInList={showInList}
                   />
                 </div>
               )}
@@ -386,6 +390,7 @@ function EventsBlock({
                   caller='profiles'
                   dropdownPlacement={dropdownPlacement}
                   dropdownMaxHeight={344}
+                  showInList={showInList}
                 />
               </div>
               <div key={ind + 1}>
@@ -405,6 +410,7 @@ function EventsBlock({
                   caller='profiles'
                   dropdownPlacement={dropdownPlacement}
                   dropdownMaxHeight={344}
+                  showInList={showInList}
                 />
               </div>
             </div>
