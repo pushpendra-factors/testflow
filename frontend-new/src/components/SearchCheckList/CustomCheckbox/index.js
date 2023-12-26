@@ -3,7 +3,13 @@ import { Checkbox } from 'antd';
 import { SVG, Text } from '../../factorsComponents';
 import { HolderOutlined } from '@ant-design/icons';
 
-export default function CustomCheckbox({ key, name, checked, onChange }) {
+export default function CustomCheckbox({
+  key,
+  name,
+  checked,
+  onChange,
+  draggable = false
+}) {
   const [isHovered, setIsHovered] = useState(false);
 
   const handleMouseEnter = () => {
@@ -21,15 +27,15 @@ export default function CustomCheckbox({ key, name, checked, onChange }) {
       onClick={onChange}
       style={{
         background: checked ? '#F5F5F5' : null,
-        cursor: isHovered ? 'grab' : 'pointer'
+        cursor: isHovered && draggable ? 'grab' : 'pointer'
       }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
       <div className='inline-flex'>
         {checked && (
-          <div style={{ cursor: isHovered ? 'grab' : 'pointer' }}>
-            {checked && <HolderOutlined />}
+          <div style={{ cursor: isHovered && draggable ? 'grab' : 'pointer' }}>
+            {checked && draggable && <HolderOutlined />}
           </div>
         )}
 

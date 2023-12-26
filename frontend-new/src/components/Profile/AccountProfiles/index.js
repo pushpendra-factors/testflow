@@ -584,6 +584,7 @@ function AccountProfiles({
         <SearchCheckList
           placeholder='Search Properties'
           mapArray={checkListAccountProps}
+          sortable
           updateList={setCheckListAccountProps}
           titleKey='display_name'
           checkedKey='enabled'
