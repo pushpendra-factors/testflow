@@ -30,7 +30,10 @@ services:
                 replicas: 1
             restart: always
             ports:
-                - "6379:6379"               
+                - "6379:6379"
+            networks:
+                network:
+                    ipv4_address: 172.30.0.4                   
         builddb:
             build:
                 context: ../
