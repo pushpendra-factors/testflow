@@ -483,7 +483,8 @@ function UserProfiles({
 
     const tableProps = timelinePayload?.segment_id
       ? activeSegment?.query?.table_props
-      : currentProjectSettings?.timelines_config?.user_config?.table_props || [];
+      : currentProjectSettings?.timelines_config?.user_config?.table_props ||
+        [];
 
     const userPropertiesModified = [];
     if (userPropertiesV2) {
@@ -498,8 +499,8 @@ function UserProfiles({
         const propDisplayName = userPropNames[prop]
           ? userPropNames[prop]
           : prop
-          ? PropTextFormat(prop)
-          : '';
+            ? PropTextFormat(prop)
+            : '';
         const propType = getPropType(userPropertiesModified, prop);
         columns.push({
           title: (
@@ -669,12 +670,17 @@ function UserProfiles({
       option.enabled ||
       checkListUserProps.filter((item) => item.enabled === true).length < 8
     ) {
-      const checkListProps = [...checkListUserProps];
-      const optIndex = checkListProps.findIndex(
-        (obj) => obj.prop_name === option.prop_name
-      );
-      checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
-      setCheckListUserProps(checkListProps);
+      setCheckListUserProps((prev) => {
+        const checkListProps = [...prev];
+        const optIndex = checkListProps.findIndex(
+          (obj) => obj.prop_name === option.prop_name
+        );
+        checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
+        checkListProps.sort((a, b) => {
+          return (b?.enabled || 0) - (a?.enabled || 0);
+        });
+        return checkListProps;
+      });
     } else {
       notification.error({
         message: 'Error',
