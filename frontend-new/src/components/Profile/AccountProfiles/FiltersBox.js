@@ -209,6 +209,7 @@ const FiltersBox = ({
               insertFilter={handleInsertFilter}
               closeFilter={handleCloseFilter}
               deleteFilter={handleDeleteFilter}
+              showInList
             />
           );
         })}
@@ -222,6 +223,7 @@ const FiltersBox = ({
             insertFilter={handleInsertFilter}
             closeFilter={handleCloseFilter}
             deleteFilter={handleDeleteFilter}
+            showInList
           />
         ) : null}
         <Button
@@ -275,6 +277,7 @@ const FiltersBox = ({
                     eventChange={handleQueryChange}
                     closeEvent={closeEvent}
                     initialDDState={false}
+                    showInList
                   />
                 </div>
               );
@@ -291,6 +294,7 @@ const FiltersBox = ({
                   groupAnalysis={source}
                   eventChange={handleQueryChange}
                   closeEvent={closeEvent}
+                  showInList
                 />
               </div>
             </ControlledComponent>
