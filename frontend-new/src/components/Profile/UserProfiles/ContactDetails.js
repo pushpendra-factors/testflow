@@ -525,8 +525,8 @@ function ContactDetails({
       </div>
       <div className='props'>
         {listLeftPaneProps(userDetails.data.leftpane_props)}
-        <div className='px-8 pb-8 pt-2'>{renderAddNewProp()}</div>
       </div>
+      <div className='add-prop-btn'>{renderAddNewProp()}</div>
     </div>
   );
 
