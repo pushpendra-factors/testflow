@@ -26,7 +26,8 @@ const FaDatepicker = ({
   handleCompareWithClick,
   disabled = false,
   todayPicker = true,
-  disabledDateRange = null
+  disabledDateRange = null,
+  withoutYesterday=false
 }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerType, setDatePickerType] = useState('');
@@ -227,7 +228,10 @@ const FaDatepicker = ({
     if (type === 'this_week') {
       const dateRng = getRangeByLabel('This Week');
       const { startDate } = dateRng;
-      const { endDate } = dateRng;
+      let { endDate } = dateRng;
+      if(withoutYesterday) {
+        endDate = endDate.subtract(1, 'days').endOf('day');
+      }
       const newDateData = {
         ...dateData,
         startDate,
@@ -254,7 +258,10 @@ const FaDatepicker = ({
     if (type === 'this_month') {
       const dateRng = getRangeByLabel('This Month');
       const { startDate } = dateRng;
-      const { endDate } = dateRng;
+      let { endDate } = dateRng;
+      if(withoutYesterday) {
+        endDate = endDate.subtract(1, 'days').endOf('day');
+      }
       const newDateData = {
         ...dateData,
         startDate,
@@ -281,7 +288,10 @@ const FaDatepicker = ({
     if (type === 'this_quarter') {
       const dateRng = getRangeByLabel('This Quarter');
       const { startDate } = dateRng;
-      const { endDate } = dateRng;
+      let { endDate } = dateRng;
+      if(withoutYesterday) {
+        endDate = endDate.subtract(1, 'days').endOf('day');
+      }
       const newDateData = {
         ...dateData,
         startDate,
