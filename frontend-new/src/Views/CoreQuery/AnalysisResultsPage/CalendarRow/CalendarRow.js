@@ -12,7 +12,8 @@ import {
   REPORT_SECTION,
   QUERY_TYPE_PROFILE,
   QUERY_TYPE_KPI,
-  QUERY_TYPE_FUNNEL
+  QUERY_TYPE_FUNNEL,
+  QUERY_TYPE_ATTRIBUTION
 } from '../../../../utils/constants';
 import { SVG, Text, Spiner } from '../../../../components/factorsComponents';
 import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
@@ -207,6 +208,7 @@ function CalendarRow({
           onSelect={setDateRange}
           comparison_supported={comparisonSupported}
           handleCompareWithClick={handleCompareWithClick}
+          withoutYesterday={queryType===QUERY_TYPE_ATTRIBUTION}
         />
       </div>
     );
