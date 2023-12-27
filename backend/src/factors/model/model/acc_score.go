@@ -235,3 +235,12 @@ func ComputeDecayValueGivenStartEndTS(start int64, end int64, SaleWindow int64) 
 
 	return decay
 }
+
+func GetEngagement(percentile float64, buckets BucketRanges) string {
+	for _, bucket := range buckets.Ranges {
+		if bucket.Low <= percentile && percentile <= bucket.High {
+			return bucket.Name
+		}
+	}
+	return "Ice"
+}
