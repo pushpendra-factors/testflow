@@ -87,6 +87,7 @@ import { isOnboarded } from 'Utils/global';
 import { PathUrls } from 'Routes/pathUrls';
 import styles from './index.module.scss';
 import { getSegmentColorCode } from 'Views/AppSidebar/appSidebar.helpers';
+import { AdminLock } from 'Routes/feature';
 
 const userOptions = getUserOptions();
 
@@ -130,6 +131,9 @@ function UserProfiles({
   const { newSegmentMode, filtersDirty: areFiltersDirty } = useSelector(
     (state) => state.userProfilesView
   );
+
+  const agentState = useSelector((state) => state.agent);
+  const activeAgent = agentState?.agent_details?.email;
 
   const [listSearchItems, setListSearchItems] = useState([]);
   const [searchBarOpen, setSearchBarOpen] = useState(false);
@@ -529,7 +533,7 @@ function UserProfiles({
               level={7}
               extraClass='m-0'
               truncate
-              shouldTruncateURL
+              shouldTruncateURL={AdminLock(activeAgent)}
             >
               {value ? propValueFormat(prop, value, propType) : '-'}
             </Text>
