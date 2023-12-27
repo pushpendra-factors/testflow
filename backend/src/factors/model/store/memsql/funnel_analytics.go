@@ -668,8 +668,7 @@ func buildAddSelect(stepName string, i int) string {
 	return addSelect
 }
 
-func buildAddSelectForFunnelGroup(stepName string, stepIndex int, groupID, scopeGroupID int, isScopeDomains bool, isExistGlobalGroupByProperties bool,
-	isExistGlobalUserPropertiesFilter bool) string {
+func buildAddSelectForFunnelGroup(stepName string, stepIndex int, groupID, scopeGroupID int, isScopeDomains bool, isDependentBreakdown bool) string {
 	logFields := log.Fields{
 		"step_name":  stepName,
 		"step_index": stepIndex,
@@ -679,7 +678,7 @@ func buildAddSelectForFunnelGroup(stepName string, stepIndex int, groupID, scope
 	if isScopeDomains {
 		addSelect := fmt.Sprintf("user_groups.group_%d_user_id as coal_group_user_id,"+
 			" FIRST(events.timestamp, FROM_UNIXTIME(events.timestamp)) as timestamp, 1 as %s", scopeGroupID, stepName)
-		if isExistGlobalGroupByProperties && isExistGlobalUserPropertiesFilter {
+		if isDependentBreakdown {
 			addSelect = addSelect + ", " + "GROUP_CONCAT(group_users.id) as group_users_user_ids"
 		}
 		if stepIndex > 0 {
@@ -940,7 +939,7 @@ func buildUniqueUsersFunnelQuery(projectId int64, q model.Query, groupIds []int,
 			addFilterFunc = addFilterEventsWithPropsQueryV2
 		}
 		addFilterFunc(projectId, &qStmnt, &qParams, q.EventsWithProperties[i], q.From, q.To,
-			"", stepName, addSelect, addParams, addJoinStatement, groupBy, "", q.GlobalUserProperties, false)
+			"", stepName, addSelect, addParams, addJoinStatement, groupBy, "", q.GlobalUserProperties, false, "", "")
 		if len(q.EventsWithProperties) > 1 && i == 0 {
 			qStmnt = qStmnt + ", "
 		}
@@ -1237,7 +1236,7 @@ func buildUniqueUsersFunnelQueryV2(projectId int64, q model.Query, groupIds []in
 		// Unique users from events filter.
 		var addSelect string
 		if isFunnelGroupQuery {
-			addSelect = buildAddSelectForFunnelGroup(stepName, i, groupIds[i], scopeGroupID, false, false, false)
+			addSelect = buildAddSelectForFunnelGroup(stepName, i, groupIds[i], scopeGroupID, false, len(q.GroupByProperties) > 0 && len(q.GlobalUserProperties) > 0)
 		} else if groupIds[i] != 0 {
 			addSelect = buildAddSelectForGroup(stepName, i)
 		} else {
@@ -1302,7 +1301,7 @@ func buildUniqueUsersFunnelQueryV2(projectId int64, q model.Query, groupIds []in
 			addFilterFunc = addFilterEventsWithPropsQueryV3
 		}
 		addFilterFunc(projectId, &qStmnt, &qParams, q.EventsWithProperties[i], q.From, q.To,
-			"", stepName, addSelect, addParams, addJoinStatement, groupBy, "", q.GlobalUserProperties, false)
+			"", stepName, addSelect, addParams, addJoinStatement, groupBy, "", q.GlobalUserProperties, false, "", "")
 		if len(q.EventsWithProperties) > 1 && i == 0 {
 			qStmnt = qStmnt + ", "
 		}
@@ -1542,7 +1541,7 @@ func buildUniqueUsersFunnelQueryV3(projectId int64, q model.Query, groupIds []in
 		var addSelect string
 		if isFunnelGroupQuery {
 			addSelect = buildAddSelectForFunnelGroup(stepName, i, groupIds[i], scopeGroupID, isFunnelGroupQueryDomains,
-				len(model.GetGlobalGroupByUserProperties(q.GroupByProperties)) > 0, len(model.FilterGlobalGroupPropertiesFilterForDomains(q.GlobalUserProperties)) > 0)
+				len(model.GetGlobalGroupByUserProperties(q.GroupByProperties)) > 0 && len(model.FilterGlobalGroupPropertiesFilterForDomains(q.GlobalUserProperties)) > 0)
 		} else if groupIds[i] != 0 {
 			addSelect = buildAddSelectForGroup(stepName, i)
 		} else {
@@ -1572,13 +1571,14 @@ func buildUniqueUsersFunnelQueryV3(projectId int64, q model.Query, groupIds []in
 			}
 		}
 
+		negativeFilters, _ := model.GetPropertyGroupedNegativeAndPostiveFilter(q.GlobalUserProperties)
 		addParams = egParams
 		var addJoinStatement string
+		var addGroupJoinParams []interface{}
 		if isFunnelGroupQuery {
-			addGroupJoinStatement, addGroupJoinParams := buildAddJoinForFunnelGroup(projectId, groupIds[i], scopeGroupID, isFunnelGroupQuery,
+			addJoinStatement, addGroupJoinParams = buildAddJoinForFunnelGroup(projectId, groupIds[i], scopeGroupID, isFunnelGroupQuery,
 				q.GroupAnalysis, q.GlobalUserProperties, q.GroupByProperties)
 			addParams = append(addParams, addGroupJoinParams...)
-			addJoinStatement = addGroupJoinStatement
 
 		} else if groupIds[i] != 0 {
 			addJoinStatement = fmt.Sprintf("LEFT JOIN users ON users.group_%d_user_id = events.user_id AND users.project_id = ? ", groupIds[i])
@@ -1605,8 +1605,12 @@ func buildUniqueUsersFunnelQueryV3(projectId int64, q model.Query, groupIds []in
 		if enableFilterOpt {
 			addFilterFunc = addFilterEventsWithPropsQueryV3
 		}
-		addFilterFunc(projectId, &qStmnt, &qParams, q.EventsWithProperties[i], q.From, q.To,
-			"", stepName, addSelect, addParams, addJoinStatement, groupBy, "", q.GlobalUserProperties, isFunnelGroupQueryDomains)
+		if isFunnelGroupQueryDomains && len(negativeFilters) > 0 {
+			addNegativeSetCache(projectId, true, &qStmnt, addJoinStatement, addSelect, groupBy, "", addParams, &qParams, &q, stepName, groupIds[i], scopeGroupID, i)
+		} else {
+			addFilterFunc(projectId, &qStmnt, &qParams, q.EventsWithProperties[i], q.From, q.To,
+				"", stepName, addSelect, addParams, addJoinStatement, groupBy, "", q.GlobalUserProperties, isFunnelGroupQueryDomains, "", "")
+		}
 		if len(q.EventsWithProperties) > 1 && i == 0 {
 			qStmnt = qStmnt + ", "
 		}
