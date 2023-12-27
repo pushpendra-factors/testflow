@@ -465,6 +465,8 @@ CREATE ROWSTORE TABLE IF NOT EXISTS project_settings (
     factors_deanon_config JSON,
     factors_clearbit_key text,
     clearbit_provision_acc_response JSON,
+    int_paragon_token text,
+    int_paragon_enabling_agent_id text,
     KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id)
@@ -1213,6 +1215,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS event_trigger_alerts(
     created_by text,
     slack_channel_associated_by text,
     teams_channel_associated_by text,
+    paragon_metadata json,
     event_trigger_alert json,
     last_alert_at timestamp(6),
     last_fail_details json,

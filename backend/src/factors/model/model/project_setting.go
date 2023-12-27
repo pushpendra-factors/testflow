@@ -100,6 +100,8 @@ type ProjectSetting struct {
 	FactorsDeanonConfig          *postgres.Jsonb `json:"factors_deanon_config"`
 	FactorsClearbitKey           string          `json:"factors_clearbit_key"`
 	ClearbitProvisionAccResponse *postgres.Jsonb `json:"clearbit_provision_acc_response"`
+	IntParagonToken              string          `gorm:"column:int_paragon_token" json:"int_paragon_token"`
+	IntParagonEnablingAgentID    string          `gorm:"column int_paragon_enabling_agent_id" json:"int_paragon_enabling_agent_id"`
 }
 
 /* Sample Attribution Setting
