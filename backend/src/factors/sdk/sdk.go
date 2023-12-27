@@ -672,10 +672,6 @@ func Track(projectId int64, request *TrackPayload,
 		userProperties = requestUserProperties
 	}
 
-	if eventName.Name == "$form_submitted" {
-		logCtx.WithFields(log.Fields{"event_name": eventName.Name, "email": (*userProperties)["$email"], "project_id": projectId, "IP Address": clientIP}).Info("IP Address info for evaluation")
-	}
-
 	_, _, isoCode := model.FillLocationUserProperties(userProperties, clientIP)
 	pageURLProp := U.GetPropertyValueAsString((*eventProperties)[U.EP_PAGE_URL])
 
@@ -770,6 +766,10 @@ func Track(projectId int64, request *TrackPayload,
 				}
 			}
 		}
+	}
+
+	if eventName.Name == U.EVENT_NAME_FORM_SUBMITTED {
+		logCtx.WithFields(log.Fields{"email": U.GetPropertyValueAsString((*eventProperties)[U.UP_EMAIL]), "project_id": projectId, "IP Address": clientIP}).Info("IP Address info for evaluation")
 	}
 
 	if existingUserProperties == nil {
