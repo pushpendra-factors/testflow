@@ -199,7 +199,6 @@ type Model interface {
 	TableOfWebsiteAggregationExists() (bool, int)
 	GetMaxTimestampOfDataPresenceFromWebsiteAggregation(projectID int64, timezone string) (time.Time, int)
 
-
 	// all dashboard runs for am unit
 	RunCustomQueryRangeCaching(dashboardUnit model.DashboardUnit, timezoneString U.TimeZoneString,
 		logCtx *log.Entry, queryClass string, reportCollector *sync.Map, enableFilterOpt bool)
@@ -494,6 +493,9 @@ type Model interface {
 	AddSixsignalEmailList(projectId int64, emailIds string) int
 	GetSegmentMarkerLastRunTime(projectID int64) (time.Time, int)
 	UpdateSegmentMarkerLastRun(projectID int64, lastRunTime time.Time) int
+	GetParagonTokenFromProjectSetting(projectID int64) (string, int, error)
+	GetParagonEnabledProjectsCount(projectID int64) (int64, int, error)
+	AddParagonTokenAndEnablingAgentToProjectSetting(projectID int64, agentID, token string) (int, error)
 
 	// project
 	UpdateProject(projectID int64, project *model.Project) int
@@ -981,6 +983,7 @@ type Model interface {
 	GetEventTriggerAlertByID(id string) (*model.EventTriggerAlert, int)
 	UpdateInternalStatusAndGetAlertIDs(projectID int64) ([]string, int, error)
 	GetInternalStatusForEventTriggerAlert(projectID int64, id string) (string, int, error)
+	GetParagonMetadataForEventTriggerAlert(projectID int64, alertID string) (map[string]interface{}, int, error)
 
 	//ExplainV2
 	GetAllExplainV2EntityByProject(projectID int64) ([]model.ExplainV2EntityInfo, int)

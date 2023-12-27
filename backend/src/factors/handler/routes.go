@@ -417,6 +417,15 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/billing/invoices", V1.ListAllInvoicesHandler)
 	authRouteGroup.GET("/:project_id/billing/invoice/download", V1.DownloadInvoiceHandler)
 
+	// paragon
+	authRouteGroup.GET("/:project_id/paragon/auth", responseWrapper(V1.GetParagonAuthenticationTokenForProject))
+	authRouteGroup.GET("/:project_id/paragon/user", V1.GetParagonUser)
+	authRouteGroup.GET("/:project_id/paragon/integrations", V1.GetParagonProjectIntegrations)
+	authRouteGroup.GET("/:project_id/paragon/metadata", V1.GetParagonIntegrationsMetadata)
+	authRouteGroup.DELETE("/:project_id/paragon/integration", V1.DeleteParagonProjectIntegrations)
+	authRouteGroup.POST("/:project_id/paragon/workflow", V1.TriggerParagonWorkflow)
+	authRouteGroup.DELETE("/:project_id/paragon/workflow", V1.DisableParagonWorflowForUser)
+
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {

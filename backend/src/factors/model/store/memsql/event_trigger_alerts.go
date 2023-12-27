@@ -1257,3 +1257,36 @@ func (store *MemSQL) UpdateInternalStatusAndGetAlertIDs(projectID int64) ([]stri
 
 	return alertIDs, http.StatusOK, nil
 }
+
+func (store *MemSQL) GetParagonMetadataForEventTriggerAlert(projectID int64, alertID string) (map[string]interface{}, int, error) {
+	if projectID == 0 || alertID == "" {
+		return nil, http.StatusBadRequest, fmt.Errorf("invalid parameters")
+	}
+
+	logFields := log.Fields{
+		"project_id": projectID,
+		"alert_id":   alertID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+
+	var alert model.EventTriggerAlert
+	db := C.GetServices().Db
+	err := db.Where("project_id = ?", projectID).Where("id = ?", alertID).Find(&alert).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound, err
+		}
+		logCtx.WithError(err).Error("failed to fetch alert for the given params")
+		return nil, http.StatusInternalServerError, err
+	}
+
+	metadata, err := U.DecodePostgresJsonb(alert.ParagonMetadata)
+	if err != nil {
+		logCtx.WithError(err).Error("failed to decode metadata json")
+		return nil, http.StatusInternalServerError, err
+	}
+
+	return *metadata, http.StatusFound, nil
+}

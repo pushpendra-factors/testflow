@@ -1,0 +1,1 @@
+ALTER TABLE event_trigger_alerts ADD COLUMN paragon_metadata JSON;
