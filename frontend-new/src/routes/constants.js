@@ -53,11 +53,12 @@ const FactorsInsightsNew = lazyWithRetry(
 const PathAnalysis = lazyWithRetry(() => import('../Views/PathAnalysis'));
 const FeatureLockedPathAnalysis = withFeatureLockHOC(PathAnalysis, {
   featureName: FEATURES.FEATURE_PATH_ANALYSIS,
-  LockedComponent: () => (
+  LockedComponent: (props) => (
     <LockedStateComponent
       title={'Path Analysis'}
       embeddedLink={LockedPathAnalysisImage}
       description='Gain valuable insights into customer journeys and optimize conversion paths. Understand how prospects navigate your website, attribute revenue to specific marketing efforts, optimize content and campaigns, and deliver personalized experiences for increased conversions and marketing success'
+      {...props}
     />
   )
 });
@@ -66,64 +67,70 @@ const PathAnalysisReport = lazyWithRetry(
 );
 const FeatureLockedPathAnalysisReport = withFeatureLockHOC(PathAnalysisReport, {
   featureName: FEATURES.FEATURE_PATH_ANALYSIS,
-  LockedComponent: () => (
+  LockedComponent: (props) => (
     <LockedStateComponent
       title={'Path Analysis'}
       embeddedLink={LockedPathAnalysisImage}
       description='Gain valuable insights into customer journeys and optimize conversion paths. Understand how prospects navigate your website, attribute revenue to specific marketing efforts, optimize content and campaigns, and deliver personalized experiences for increased conversions and marketing success'
+      {...props}
     />
   )
 });
 const FeatureLockedPropertySettings = withFeatureLockHOC(PropertySettings, {
   featureName: FEATURES.CONF_CUSTOM_PROPERTIES,
-  LockedComponent: () => (
+  LockedComponent: (props) => (
     <CommonLockedComponent
       title='Properties'
       description='Harness the full potential of your advertising data with Custom Properties. By associating distinct attributes with your data, you gain precise control over configuring and analyzing your ad campaigns. Customize and tailor your data to align perfectly with your business objectives, ensuring optimal insights and enhanced advertising optimization.'
       learnMoreLink='https://help.factors.ai/en/articles/7284109-custom-properties'
+      {...props}
     />
   )
 });
 
 const FeatureLockedConfigureContentGroups = withFeatureLockHOC(ContentGroups, {
   featureName: FEATURES.FEATURE_CONTENT_GROUPS,
-  LockedComponent: () => (
+  LockedComponent: (props) => (
     <CommonLockedComponent
       title='Content Groups'
       description='Create logical collections of related URLs, such as blog articles or product pages, to analyze their impact on leads, revenue, and pipeline stages. Compare the performance of different content groups, identify optimization opportunities, and enhance your content marketing efforts to drive better results.'
       learnMoreLink='https://help.factors.ai/en/articles/7284125-content-groups'
+      {...props}
     />
   )
 });
 
 const FeatureLockedConfigureTouchpoints = withFeatureLockHOC(Touchpoints, {
   featureName: FEATURES.FEATURE_OFFLINE_TOUCHPOINTS,
-  LockedComponent: () => (
+  LockedComponent: (props) => (
     <CommonLockedComponent
       title='Touchpoints'
       description='Effortlessly map and standardize your marketing parameters. Connect and align UTMs and other parameters used across your marketing efforts to a standardized set. Query and filter by different parameter values within Factors, enabling seamless tracking and analysis of customer touchpoints'
+      {...props}
     />
   )
 });
 
 const FeatureLockedConfigureCustomKPI = withFeatureLockHOC(CustomKPI, {
   featureName: FEATURES.FEATURE_CUSTOM_METRICS,
-  LockedComponent: () => (
+  LockedComponent: (props) => (
     <CommonLockedComponent
       title='Custom KPIs'
       description="Create personalized metrics tailored to your specific objectives, whether it's conversion rates, engagement metrics, or revenue targets. Monitor progress, measure success, and gain actionable insights to drive continuous improvement and achieve your business milestones."
       learnMoreLink='https://help.factors.ai/en/articles/7284181-custom-kpis'
+      {...props}
     />
   )
 });
 
 const FeatureLockedConfigureEvents = withFeatureLockHOC(Events, {
   featureName: FEATURES.CONF_CUSTOM_EVENTS,
-  LockedComponent: () => (
+  LockedComponent: (props) => (
     <CommonLockedComponent
       title='Events'
       description='Track and analyze user interactions in a way that aligns perfectly with your business objectives. Define and capture custom events that matter most to your business, such as clicks, form submissions, lifecycle stage changes, or other specific actions.'
       learnMoreLink='https://help.factors.ai/en/articles/7284092-custom-events'
+      {...props}
     />
   )
 });
@@ -132,11 +139,12 @@ const FeatureLockedConfigureExplainDataPoints = withFeatureLockHOC(
   ExplainDataPoints,
   {
     featureName: FEATURES.FEATURE_EXPLAIN,
-    LockedComponent: () => (
+    LockedComponent: (props) => (
       <CommonLockedComponent
         title='Top Events and Properties'
         description='Elevate the importance of key events and properties in your project with our Top Events and Properties feature. By designating specific events and properties as top priorities, you can ensure they are closely monitored and tracked. These vital metrics will be prominently displayed in the Explain section of Factors, providing you with instant visibility and easy access to the most critical data points.'
         learnMoreLink='https://help.factors.ai/en/articles/6294993-top-events-and-properties'
+        {...props}
       />
     )
   }
@@ -146,10 +154,11 @@ const FeatureLockConfigurationAttribution = withFeatureLockHOC(
   AttributionSettings,
   {
     featureName: FEATURES.FEATURE_ATTRIBUTION,
-    LockedComponent: () => (
+    LockedComponent: (props) => (
       <CommonLockedComponent
         title='Attribution'
         description='Attribute revenue and conversions to the right marketing channels, campaigns, and touchpoints to gain a clear understanding of what drives success. Identify the most effective marketing strategies, optimize your budget allocation, and make data-driven decisions to maximize ROI and achieve your business goals.'
+        {...props}
       />
     )
   }
@@ -157,16 +166,17 @@ const FeatureLockConfigurationAttribution = withFeatureLockHOC(
 
 const FeatureLockedReportSharing = withFeatureLockHOC(Sharing, {
   featureName: FEATURES.FEATURE_REPORT_SHARING,
-  LockedComponent: () => <CommonLockedComponent title='Sharing' />
+  LockedComponent: (props) => <CommonLockedComponent title='Sharing'  {...props}/>
 });
 
 const FeatureLockConfigurationAlerts = withFeatureLockHOC(Alerts, {
   featureName: FEATURES.FEATURE_EVENT_BASED_ALERTS,
-  LockedComponent: () => (
+  LockedComponent: (props) => (
     <CommonLockedComponent
       title='Alerts'
       description='With real-time alerts in Slack, stay informed the moment a prospect visits a high-intent page on your website or when a significant change occurs in a KPI that matters to your organization. Be instantly notified, take immediate action, and seize every opportunity to drive conversions, optimize performance, and achieve your business objectives.'
       learnMoreLink='https://help.factors.ai/en/articles/7284705-alerts'
+      {...props}
     />
   )
 });
@@ -175,10 +185,11 @@ const FeatureLockedConfigurationEngagement = withFeatureLockHOC(
   EngagementConfig,
   {
     featureName: FEATURES.FEATURE_ACCOUNT_SCORING,
-    LockedComponent: () => (
+    LockedComponent: (props) => (
       <CommonLockedComponent
         title='Engagement Scoring'
         description='Some events matter more than others, and are better indicators of buying intent. Configure scores for them, tag them as intent signals, and more.'
+        {...props}
       />
     )
   }
@@ -186,11 +197,12 @@ const FeatureLockedConfigurationEngagement = withFeatureLockHOC(
 
 const FeatureLockedFactorsInsightsNew = withFeatureLockHOC(FactorsInsightsNew, {
   featureName: FEATURES.FEATURE_EXPLAIN,
-  LockedComponent: () => (
+  LockedComponent: (props) => (
     <LockedStateComponent
       title={'Explain'}
       embeddedLink={LockedExplainImage}
       description='Uncover the driving factors behind your conversion goals with Explain. Gain deep insights into the elements that contribute to your objectives, empowering you to make informed decisions and optimize your strategies for success.'
+      {...props}
     />
   )
 });
@@ -199,11 +211,12 @@ const FactorsInsightsOld = lazyWithRetry(
 );
 const FeatureLockedFactorsInsightsOld = withFeatureLockHOC(FactorsInsightsOld, {
   featureName: FEATURES.FEATURE_EXPLAIN,
-  LockedComponent: () => (
+  LockedComponent: (props) => (
     <LockedStateComponent
       title={'Explain'}
       embeddedLink={LockedExplainImage}
       description='Uncover the driving factors behind your conversion goals with Explain. Gain deep insights into the elements that contribute to your objectives, empowering you to make informed decisions and optimize your strategies for success.'
+      {...props}
     />
   )
 });
@@ -215,11 +228,12 @@ const PreBuildDashboard = lazyWithRetry(
 const Factors = lazyWithRetry(() => import('../Views/Factors'));
 const FeatureLockedFactors = withFeatureLockHOC(Factors, {
   featureName: FEATURES.FEATURE_EXPLAIN,
-  LockedComponent: () => (
+  LockedComponent: (props) => (
     <LockedStateComponent
       title={'Explain'}
       embeddedLink={LockedExplainImage}
       description='Uncover the driving factors behind your conversion goals with Explain. Gain deep insights into the elements that contribute to your objectives, empowering you to make informed decisions and optimize your strategies for success.'
+      {...props}
     />
   )
 });

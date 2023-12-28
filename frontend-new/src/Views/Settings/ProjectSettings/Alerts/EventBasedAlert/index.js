@@ -1662,7 +1662,7 @@ const EventBasedAlert = ({
 
                   {isWebHookFeatureLocked ? (
                     <div className='p-2'>
-                      <UpgradeButton />
+                      <UpgradeButton featureName={FEATURES.FEATURE_WEBHOOK} />
                     </div>
                   ) : <Form.Item name='webhook_enabled' className={'m-0'}>
                       <div className={'flex flex-end items-center'}>
