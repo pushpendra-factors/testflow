@@ -7,7 +7,9 @@ RUN apt-get update && apt-get install -y \
     mysql-client
 
 COPY copy_project_data.sh /root/copy_project_data.sh
+COPY factors/migrations/db/memsql/1_create_schema.sql  /root/1_create_schema.sql
 
 RUN chmod +x /root/copy_project_data.sh
+RUN chmod +x /root/1_create_schema.sql
 
 ENTRYPOINT ["/bin/bash", "/root/copy_project_data.sh"]
