@@ -1936,3 +1936,18 @@ func TestUserGetUsersForDomainUserAssociationUpdate(t *testing.T) {
 	}
 
 }
+
+func TestUserDomainsProperty(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	_, status := store.GetStore().CreateOrGetDomainsGroup(project.ID)
+	assert.Equal(t, http.StatusCreated, status)
+	userID, status := store.GetStore().CreateOrGetDomainGroupUser(project.ID, model.GROUP_NAME_DOMAINS, "abc.com", U.TimeNowZ().Unix(), model.UserSourceDomains)
+	assert.Equal(t, http.StatusCreated, status)
+	user, status := store.GetStore().GetUser(project.ID, userID)
+	assert.Equal(t, http.StatusFound, status)
+	properties, err := U.DecodePostgresJsonb(&user.Properties)
+	assert.Equal(t, "abc.com", (*properties)[U.DP_DOMAIN_NAME])
+}
