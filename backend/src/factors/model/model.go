@@ -214,7 +214,7 @@ type Model interface {
 	GetQueryWithDashboardUnitIdString(projectID int64, dashboardUnitId int64) (*model.Queries, int)
 
 	CacheDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload, enableFilterOpt bool) (int, string, model.CachingUnitReport)
-	CacheAttributionDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload, enableFilterOpt bool) (int, string, model.CachingUnitReport)
+	CacheAttributionDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload, enableFilterOpt bool, foundInDb bool) (int, string, model.CachingUnitReport)
 	CacheDashboardsForMonthlyRange(projectIDs, excludeProjectIDs string, numMonths, numRoutines int, reportCollector *sync.Map, enableFilterOpt bool)
 	GetDashboardUnitNamesByProjectIdTypeAndName(projectID int64, reqID string, typeOfQuery string, nameOfQuery string) ([]string, int)
 	GetDashboardUnitNamesByProjectIdTypeAndPropertyMappingName(projectID int64, reqID, propertyMappingName string) ([]string, int)
