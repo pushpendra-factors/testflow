@@ -1049,16 +1049,56 @@ func GetPropertyToHasNoneFilter(properties []QueryProperty) map[string]bool {
 }
 
 func GetPropertyToHasNegativeFilter(properties []QueryProperty) []QueryProperty {
+
+	negativeFilters, _ := GetPropertyGroupedNegativeAndPostiveFilter(properties)
+	return negativeFilters
+}
+
+func GetPropertyGroupedNegativeAndPostiveFilter(properties []QueryProperty) ([]QueryProperty, []QueryProperty) {
 	negativeFilters := make([]QueryProperty, 0)
+	positiveFilters := make([]QueryProperty, 0)
 	for _, filter := range properties {
 		if (filter.Operator == NotContainsOpStr && filter.Value != PropertyValueNone) ||
 			(filter.Operator == ContainsOpStr && filter.Value == PropertyValueNone) ||
 			(filter.Operator == NotEqualOpStr && filter.Value != PropertyValueNone) ||
 			(filter.Operator == EqualsOpStr && filter.Value == PropertyValueNone) {
 			negativeFilters = append(negativeFilters, filter)
+			continue
+		}
+		positiveFilters = append(positiveFilters, filter)
+	}
+	return negativeFilters, positiveFilters
+}
+
+func GetNegativeFilterNegated(negativeFilters []QueryProperty) []QueryProperty {
+	filters := make([]QueryProperty, 0)
+	for _, filter := range negativeFilters {
+
+		if filter.Operator == NotContainsOpStr {
+			filter.Operator = ContainsOpStr
+		} else if filter.Operator == NotEqualOpStr {
+			filter.Operator = EqualsOpStr
+		} else if filter.Operator == ContainsOpStr {
+			filter.Operator = NotContainsOpStr
+		} else if filter.Operator == EqualsOpStr {
+			filter.Operator = NotEqualOpStr
+		}
+
+		filter.LogicalOp = "OR"
+		filters = append(filters, filter)
+	}
+	return filters
+}
+
+func GetFilterPropertyGroupIDs(properties [][]QueryProperty) map[int]bool {
+	groupIDsMap := make(map[int]bool)
+	for i := range properties {
+		for _, p := range properties[i] {
+			groupIDsMap[p.GroupNameID] = true
+
 		}
 	}
-	return negativeFilters
+	return groupIDsMap
 }
 
 // If UI presents filters in "(a or b) AND (c or D)" order, Request has it as "a or b AND c or D"
@@ -1382,6 +1422,7 @@ func IsQueryGroupByLatestUserProperty(queryGroupByProperty []QueryGroupByPropert
 
 var funnelQueryGroupUserID = regexp.MustCompile("user_groups\\.group_\\d_user_id")
 var funnelQueryUserGroupUserID = regexp.MustCompile("users\\.group_\\d_user_id")
+var queryDomainGroupID = regexp.MustCompile("domains\\.group_\\d_id")
 
 func GetQueryGroupUserID(stmnt string) string {
 
@@ -1391,6 +1432,11 @@ func GetQueryGroupUserID(stmnt string) string {
 func GetQueryUserGroupUserID(stmnt string) string {
 
 	return funnelQueryUserGroupUserID.FindString(stmnt)
+}
+
+func GetQueryDomainGroupID(stmnt string) string {
+
+	return queryDomainGroupID.FindString(stmnt)
 }
 
 func IsValidFunnelQueryGroupName(group string) bool {

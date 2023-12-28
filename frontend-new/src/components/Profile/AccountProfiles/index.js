@@ -204,9 +204,9 @@ function AccountProfiles({
   }, [currentProjectSettings, listProperties, activeSegment, accountPayload]);
 
   useEffect(() => {
-    fetchGroupProperties(GROUP_NAME_DOMAINS);
+    getGroupPropsFromAPI(GROUP_NAME_DOMAINS);
     Object.keys(groups?.account_groups || {}).forEach((group) => {
-      fetchGroupProperties(group);
+      getGroupPropsFromAPI(group);
     });
   }, [activeProject.id, groups]);
 
@@ -390,13 +390,13 @@ function AccountProfiles({
     [dispatch]
   );
 
-  const fetchGroupProperties = useCallback(
+  const getGroupPropsFromAPI = useCallback(
     async (groupId) => {
       if (!groupProperties[groupId]) {
         await getGroupProperties(activeProject.id, groupId);
       }
     },
-    [activeProject.id, getGroupProperties, groupProperties]
+    [activeProject.id, groupProperties]
   );
 
   const getAccounts = useCallback(
@@ -584,6 +584,7 @@ function AccountProfiles({
         <SearchCheckList
           placeholder='Search Properties'
           mapArray={checkListAccountProps}
+          sortable
           updateList={setCheckListAccountProps}
           titleKey='display_name'
           checkedKey='enabled'

@@ -30,13 +30,16 @@ services:
                 replicas: 1
             restart: always
             ports:
-                - "6379:6379"               
+                - "6379:6379"
+            networks:
+                network:
+                    ipv4_address: 172.30.0.4                   
         builddb:
             build:
                 context: ../
                 dockerfile: docker-development-setup/Dockerfile.db_create.testing
             environment:
-                - PRI_DS=memsql
+                - PRI_DS=172.30.0.2
                 - ROOT_PASSWORD=$ROOT_PASSWORD    
             image: testing/builddb:1.0
             deploy:
@@ -49,13 +52,13 @@ services:
                 dockerfile: Dockerfile.appserver
             environment:
                 -  GOPATH=/go/src/factors
-                -  REDIS_HOST=redis
-                -  PRI_DS=memsql
-                -  DB_HOST="172.30.0.2"    
-            entrypoint: [ "sh","-c","/go/bin/app --redis_host_ps=redis --dup_queue_redis_host=redis --queue_redis_host=redis  --api_domain=$API_DOMAIN --env=development --memsql_host=$DB_HOST"]
+                -  REDIS_HOST=172.30.0.4
+                -  PRI_DS=172.30.0.2
+                -  DB_HOST=172.30.0.2    
+            entrypoint: [ "sh","-c","/go/bin/app --redis_host_ps=$REDIS_HOST --dup_queue_redis_host=$REDIS_HOST --queue_redis_host=$REDIS_HOST  --memsql_is_psc_host=1 --api_domain=$API_DOMAIN --env=staging --memsql_host=$DB_HOST"]
             image: testing/api:1.0
             deploy:
-                replicas: 0
+                replicas: 1
             restart: always
             ports:
                 - "8080:8080"
@@ -74,9 +77,9 @@ services:
                 dockerfile: docker-development-setup/Dockerfile.sdkserver.testing
             environment:
                 -  GOPATH=/go/src/factors
-                -  REDIS_HOST=redis
-                -  MEMSQL_HOST=memsql  
-            entrypoint: [ "sh","-c","/go/bin/sdkserver --redis_host=redis --redis_host_ps=redis --dup_queue_redis_host=redis --queue_redis_host=redis --env=development --memsql_host=$DB_HOST"]
+                -  REDIS_HOST=172.30.0.4
+                -  DB_HOST=172.30.0.2  
+            entrypoint: [ "sh","-c","/go/bin/sdkserver --redis_host=$REDIS_HOST --redis_host_ps=$REDIS_HOST --dup_queue_redis_host=$REDIS_HOST --queue_redis_host=$REDIS_HOST --env=staging --memsql_host=$DB_HOST"]
             image: testing/sdk:1.0
             deploy:
                 replicas: 0
@@ -119,9 +122,9 @@ services:
                 context: ../
                 dockerfile: docker-development-setup/Dockerfile.session.testing
             environment:
-                - REDIS_HOST=redis
-                - MEMSQL_HOST=memsql
-                - PRI_DS=memsql  
+                - REDIS_HOST=172.30.0.4
+                - DB_HOST=172.30.0.2
+                - PRI_DS=172.30.0.2  
             image: testing/session:1.0
             deploy:
                 replicas: 0
@@ -130,9 +133,9 @@ services:
                 context: ../
                 dockerfile: docker-development-setup/Dockerfile.rollup_cache.testing
             environment:
-                - REDIS_HOST=redis
-                - MEMSQL_HOST=memsql
-                - PRI_DS=memsql   
+                - REDIS_HOST=172.30.0.4
+                - DB_HOST=172.30.0.2
+                - PRI_DS=172.30.0.2   
             image: testing/rollupcache:1.0
             deploy:
                 replicas: 0

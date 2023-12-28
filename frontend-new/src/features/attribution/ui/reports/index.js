@@ -164,6 +164,7 @@ function Reports({
             placement='bottomRight'
             className='mr-2'
             onSelect={handleDurationChange}
+            withoutYesterday={true}
           />
         </div>
         <div className='flex items-center gap-2'>

@@ -87,6 +87,7 @@ import { isOnboarded } from 'Utils/global';
 import { PathUrls } from 'Routes/pathUrls';
 import styles from './index.module.scss';
 import { getSegmentColorCode } from 'Views/AppSidebar/appSidebar.helpers';
+import { AdminLock } from 'Routes/feature';
 
 const userOptions = getUserOptions();
 
@@ -130,6 +131,9 @@ function UserProfiles({
   const { newSegmentMode, filtersDirty: areFiltersDirty } = useSelector(
     (state) => state.userProfilesView
   );
+
+  const agentState = useSelector((state) => state.agent);
+  const activeAgent = agentState?.agent_details?.email;
 
   const [listSearchItems, setListSearchItems] = useState([]);
   const [searchBarOpen, setSearchBarOpen] = useState(false);
@@ -483,7 +487,8 @@ function UserProfiles({
 
     const tableProps = timelinePayload?.segment_id
       ? activeSegment?.query?.table_props
-      : currentProjectSettings?.timelines_config?.user_config?.table_props || [];
+      : currentProjectSettings?.timelines_config?.user_config?.table_props ||
+        [];
 
     const userPropertiesModified = [];
     if (userPropertiesV2) {
@@ -498,8 +503,8 @@ function UserProfiles({
         const propDisplayName = userPropNames[prop]
           ? userPropNames[prop]
           : prop
-          ? PropTextFormat(prop)
-          : '';
+            ? PropTextFormat(prop)
+            : '';
         const propType = getPropType(userPropertiesModified, prop);
         columns.push({
           title: (
@@ -528,7 +533,7 @@ function UserProfiles({
               level={7}
               extraClass='m-0'
               truncate
-              shouldTruncateURL
+              shouldTruncateURL={AdminLock(activeAgent)}
             >
               {value ? propValueFormat(prop, value, propType) : '-'}
             </Text>
@@ -669,12 +674,17 @@ function UserProfiles({
       option.enabled ||
       checkListUserProps.filter((item) => item.enabled === true).length < 8
     ) {
-      const checkListProps = [...checkListUserProps];
-      const optIndex = checkListProps.findIndex(
-        (obj) => obj.prop_name === option.prop_name
-      );
-      checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
-      setCheckListUserProps(checkListProps);
+      setCheckListUserProps((prev) => {
+        const checkListProps = [...prev];
+        const optIndex = checkListProps.findIndex(
+          (obj) => obj.prop_name === option.prop_name
+        );
+        checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
+        checkListProps.sort((a, b) => {
+          return (b?.enabled || 0) - (a?.enabled || 0);
+        });
+        return checkListProps;
+      });
     } else {
       notification.error({
         message: 'Error',
@@ -728,6 +738,7 @@ function UserProfiles({
         <SearchCheckList
           placeholder='Search Properties'
           mapArray={checkListUserProps}
+          sortable
           updateList={setCheckListUserProps}
           titleKey='display_name'
           checkedKey='enabled'
