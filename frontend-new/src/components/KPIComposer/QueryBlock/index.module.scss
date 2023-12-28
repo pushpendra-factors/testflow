@@ -6,7 +6,6 @@
   &__event {
     position: relative;
     margin-top: 12px;
-
     &:hover {
       .query_block__additional_actions {
         visibility: visible;
@@ -66,6 +65,12 @@
       font-size: 12px;
       color: #0e2647;
       text-transform: uppercase;
+    }
+  }
+
+  .drag-icon {
+    &:hover {
+      cursor: grab;
     }
   }
 }
