@@ -47,6 +47,7 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	assert.InDelta(t, user.JoinTimestamp, start.Unix()-60, 3)
 	assert.True(t, user.CreatedAt.After(start))
 	assert.True(t, user.UpdatedAt.After(start))
+	assert.Nil(t, user.LastEventAt)
 
 	// Test Get User on the created one.
 	retUser, errCode := store.GetStore().GetUser(projectId, user.ID)
@@ -1566,6 +1567,7 @@ func TestUserGroupsPropertiesUpdate(t *testing.T) {
 	userPropertiesMap, err := util.DecodePostgresJsonb(&user.Properties)
 	assert.Nil(t, err)
 	assert.NotNil(t, user.IsGroupUser)
+	assert.NotNil(t, user.LastEventAt)
 	assert.Equal(t, true, *user.IsGroupUser)
 	assert.Equal(t, float64(1), (*userPropertiesMap)["hour"])
 	assert.Equal(t, float64(2), (*userPropertiesMap)["count"])
