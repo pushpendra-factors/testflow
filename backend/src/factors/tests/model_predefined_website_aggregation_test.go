@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"testing"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -59,7 +60,7 @@ func TestSampleWebsiteAggregation(t *testing.T) {
 			GroupByTimestamp:  "",
 			Timezone:          "Asia/Kolkata",
 			From:              1669833000,
-			To: 			   1675189800,
+			To:                1675189800,
 			InternalEventType: model.PredefEventTypeSession,
 			WidgetInternalID:  2,
 			WidgetName:        model.PredefWidUtmParams,
@@ -143,10 +144,10 @@ func TestSampleWebsiteAggregation(t *testing.T) {
 			Filters: []model.PredefinedFilter{
 				{PropertyName: model.PredefPropCity, PropertyDataType: "categorical", Condition: "equals", Value: "AB", LogicalOp: ""},
 			},
-			GroupByTimestamp:  	"",
-			Timezone:          	"Asia/Kolkata",
-			From:              	1669833000,
-			To: 				1669833000 + 90400,
+			GroupByTimestamp:  "",
+			Timezone:          "Asia/Kolkata",
+			From:              1669833000,
+			To:                1669833000 + 90400,
 			InternalEventType: model.PredefEventTypeSession,
 			WidgetInternalID:  2,
 			WidgetName:        model.PredefWidUtmParams,
@@ -185,15 +186,14 @@ func TestSampleWebsiteAggregation(t *testing.T) {
 				{Name: model.PredefTotalSessions, DisplayName: model.PredefDispTotalSessions},
 				{Name: model.PredefAvgSessionDuration, DisplayName: model.PredefAvgSessionDuration},
 			},
-			GroupBy: model.PredefinedGroupBy{
-			},
+			GroupBy: model.PredefinedGroupBy{},
 			Filters: []model.PredefinedFilter{
 				{PropertyName: model.PredefPropCity, PropertyDataType: "categorical", Condition: "equals", Value: "AB", LogicalOp: ""},
 			},
-			GroupByTimestamp:  	"",
-			Timezone:          	"Asia/Kolkata",
-			From:              	1669833000,
-			To: 				1669833000 + 90400,
+			GroupByTimestamp:  "",
+			Timezone:          "Asia/Kolkata",
+			From:              1669833000,
+			To:                1669833000 + 90400,
 			InternalEventType: model.PredefEventTypeSession,
 			WidgetInternalID:  1,
 			WidgetName:        model.PredefWidUtmParams,
@@ -258,7 +258,7 @@ func getDefaultJobReport() map[string]map[string]interface{} {
 	jobReport["success"]["abc"] = ""
 
 	jobReport["failures"] = make(map[string]interface{})
-	jobReport["failures"]["def"] = "asbdfasd"	
+	jobReport["failures"]["def"] = "asbdfasd"
 	jobReport["long_run_projects"] = make(map[string]interface{})
 	return jobReport
 }
