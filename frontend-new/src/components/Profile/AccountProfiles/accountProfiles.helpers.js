@@ -221,7 +221,8 @@ export const checkFiltersEquality = ({
   eventsList,
   eventProp,
   areFiltersDirty,
-  isActiveSegment
+  isActiveSegment,
+  secondaryFiltersList
 }) => {
   if (newSegmentMode === true && filtersList.length > 0) {
     return {
@@ -230,9 +231,14 @@ export const checkFiltersEquality = ({
     };
   }
   const areFiltersEqual = isEqual(filtersList, appliedFilters.filters);
+  const areSecondaryFiltersEqual = isEqual(
+    secondaryFiltersList,
+    appliedFilters.secondaryFilters
+  );
   const areEventsEqual = isEqual(eventsList, appliedFilters.eventsList);
   const isEventPropEqual = eventProp === appliedFilters.eventProp;
   const applyButtonDisabled =
+    areSecondaryFiltersEqual &&
     areFiltersEqual === true &&
     areEventsEqual === true &&
     isEventPropEqual === true;
