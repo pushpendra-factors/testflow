@@ -136,7 +136,7 @@
             background-color: #FFF;
             top: 0;
             padding: 0 16px;
-            z-index: 15;
+            z-index: 0;
 
             .user {
                 padding: 32px 16px 0;
@@ -172,18 +172,28 @@
 
         .props {
             padding: 32px 0 0;
+            background: #FFF;
+            max-height: calc(100% - 400px);
+            overflow-y: scroll;
+        }
 
-            .add-prop-btn {
-                position: sticky;
-                background: #FFF;
+        .add-prop-btn {
+            position: sticky;
+            bottom:0;
+            width: 100%;
+            background-color: white;
+            padding: 8px 32px 24px;
+
+            &.with-attr{
+                bottom: 32px;
             }
         }
 
         .logo_attr {
             position: fixed;
-            top: calc(100% - 54px);
+            top: calc(100% - 32px);
             left: 0;
-            padding: 16px 32px;
+            padding: 4px 32px;
             background-color: white;
             white-space: nowrap;
         }
@@ -1017,100 +1027,103 @@
     margin-top: 20px;
     border-bottom: 1px solid #E7E9ED;
     overflow-y: scroll;
-}
 
-.account-timeline-table {
-    width: 100%;
-    border-collapse: collapse;
-    border-bottom: 1px solid #E7E9ED;
+    table {
+        border-collapse: separate;
+        border-spacing: 0;
+        table-layout: fixed;
+        width: 100%;
+        border-bottom: 1px solid #E7E9ED;
 
-    td {
-        width: fit-content;
-        padding: 12px;
-        text-align: left;
-    }
-
-    .timestamp-row {
-        position: sticky;
-        top: 0;
-        background: #F5F6F8;
-        font-weight: 600;
-        height: 40px;
-        color: #000000A6;
-        z-index: 1;
-    }
-
-    .table-row {
-        display: flex;
-        border-top: 1px solid #E7E9ED;
-        height: 60px;
-        max-width: 100%;
-
-        .timestamp-cell {
-            width: 10%;
-            overflow: hidden;
-            color: #00000073;
+        td {
+            padding: 12px;
+            text-align: left;
         }
 
-        .icon-cell,
-        .user-cell {
-            width: 25%;
-            display: flex;
-            align-items: flex-start;
-            overflow: hidden;
+        .timestamp-row {
+            position: sticky;
+            top: 0;
+            background: #F5F6F8;
+            height: 40px;
+            z-index: 1;
 
-            div {
-                width: fit-content;
-                max-width: 80% !important;
-                font-weight: 500;
-                font-size: 16px;
-                line-height: 24px;
+            td {
+                font-weight: 600;
                 color: #000000A6;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
             }
         }
 
-        .properties-cell {
-            padding: 8px 12px;
-            width: 40%;
+        .table-row {
             display: flex;
-            flex-direction: column;
+            border-top: 1px solid #E7E9ED;
+            height: 60px;
 
-            .propkey {
-                font-family: Inter;
-                font-size: 12px;
-                font-weight: 400;
-                line-height: 18px;
-                letter-spacing: 0.01em;
-                text-align: left;
-                width: 100%;
-                white-space: nowrap;
+            .timestamp-cell {
+                width: 10%;
                 overflow: hidden;
-                text-overflow: ellipsis;
+                color: #00000073;
             }
 
-            .propvalue {
-                font-family: Inter;
-                font-size: 16px;
-                font-weight: 400;
-                line-height: 24px;
-                letter-spacing: 0em;
-                text-align: left;
-                width: 100%;
-                white-space: nowrap;
+            .event-cell,
+            .user-cell {
+                width: 25%;
+                display: flex;
+                align-items: flex-start;
                 overflow: hidden;
-                text-overflow: ellipsis;
+
+                div {
+                    width: fit-content;
+                    max-width: 80% !important;
+                    font-weight: 500;
+                    font-size: 16px;
+                    line-height: 24px;
+                    color: #000000A6;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                }
+            }
+
+            .properties-cell {
+                padding: 8px 12px;
+                width: 40%;
+                display: flex;
+                flex-direction: column;
+
+                .propkey {
+                    font-family: Inter;
+                    font-size: 12px;
+                    font-weight: 400;
+                    line-height: 18px;
+                    letter-spacing: 0.01em;
+                    text-align: left;
+                    width: 100%;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+
+                .propvalue {
+                    font-family: Inter;
+                    font-size: 16px;
+                    font-weight: 400;
+                    line-height: 24px;
+                    letter-spacing: 0em;
+                    text-align: left;
+                    width: 100%;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
             }
         }
-    }
 
-    .active {
-        &:hover {
-            background-color: #F0F0F0;
+        .clickable {
+            &:hover {
+                background-color: #F0F0F0;
+            }
+
         }
-
     }
 }
 

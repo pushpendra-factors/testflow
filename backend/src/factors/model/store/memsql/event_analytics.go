@@ -257,7 +257,6 @@ func (store *MemSQL) RunInsightsQuery(projectId int64, query model.Query, enable
 	startComputeTime := time.Now()
 	groupPropsLen := len(query.GroupByProperties)
 	if !query.IsLimitNotApplicable {
-		// kark 2
 		err = LimitQueryResult(projectId, result, groupPropsLen, query.GetGroupByTimestamp() != "")
 		if err != nil {
 			logCtx.WithError(err).Error("Failed processing query results for limiting.")
@@ -984,7 +983,7 @@ func GetUserSelectStmntForUserORGroup(caller string, scopeGroupID int, isGroupEv
 
 	if model.IsAccountProfiles(caller) {
 		if scopeGroupID > 0 {
-			return "users.coal_group_user_id as coal_group_user_id"
+			return "domains.id as coal_group_user_id"
 		}
 		return ""
 	}
@@ -1137,24 +1136,7 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 		addSourceStmt = store.addSourceFilterForSegments(projectID, q.Source, q.Caller)
 	}
 
-	var addColsStringArr []string
-
 	for i, ewp := range q.EventsWithProperties {
-
-		// Adding source string for segments
-		if model.IsAnyProfiles(q.Caller) {
-			var addColsString string
-
-			if model.IsUserProfiles(q.Caller) {
-				addColsString = "users.last_event_at, users.is_group_user, users.source"
-			}
-
-			if model.IsAccountProfiles(q.Caller) {
-				addColsString = addColsString + fmt.Sprintf("domains.group_%d_id as host_name, domains.id as coal_group_user_id", scopeGroupID)
-			}
-
-			addColsStringArr = append(addColsStringArr, addColsString)
-		}
 
 		refStepName := stepNameByIndex(i)
 		steps = append(steps, refStepName)
@@ -1196,10 +1178,12 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 		// Default join statement for users.
 		addJoinStmnt := "JOIN users ON events.user_id=users.id AND users.project_id = ?"
 
+		negativeFilters, _ := model.GetPropertyGroupedNegativeAndPostiveFilter(q.GlobalUserProperties)
+
 		// Join support for original users of group.
+		var groupJoinParams []interface{}
 		if groupIDS[i] != 0 {
 			if model.IsAccountProfiles(q.Caller) {
-				var groupJoinParams []interface{}
 				addJoinStmnt, groupJoinParams = buildAddJoinForEventAnalyticsGroupQuery(projectID, groupIDS[i], scopeGroupID, q.GroupAnalysis, q.GlobalUserProperties, model.IsAccountProfiles(q.Caller), isEventGroupQueryDomains)
 				stepParams = append(stepParams, groupJoinParams...)
 				if searchFilterStmt != "" {
@@ -1207,15 +1191,14 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 					stepParams = append(stepParams, searchParams...)
 				}
 			} else if isEventGroupQuery {
-				var groupJoinParams []interface{}
 				addJoinStmnt, groupJoinParams = buildAddJoinForEventAnalyticsGroupQuery(projectID, groupIDS[i], scopeGroupID, q.GroupAnalysis, q.GlobalUserProperties, model.IsAccountProfiles(q.Caller), isEventGroupQueryDomains)
 				stepParams = append(stepParams, groupJoinParams...)
+
 			} else {
 				addJoinStmnt = fmt.Sprintf("LEFT JOIN users ON events.user_id=users.group_%d_user_id AND users.project_id = ? ", groupIDS[i])
 				stepParams = append(stepParams, projectID)
 			}
 		} else if isEventGroupQuery && groupIDS[i] == 0 {
-			var groupJoinParams []interface{}
 			addJoinStmnt, groupJoinParams = buildAddJoinForEventAnalyticsGroupQuery(projectID, groupIDS[i], scopeGroupID, q.GroupAnalysis, q.GlobalUserProperties, model.IsAccountProfiles(q.Caller), isEventGroupQueryDomains)
 			stepParams = append(stepParams, groupJoinParams...)
 
@@ -1233,12 +1216,16 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 				addFilterFunc = addFilterEventsWithPropsQueryV3
 			} else {
 				addFilterFunc = addFilterEventsWithPropsQueryV2
-
 			}
 		}
 
-		addFilterFunc(projectID, qStmnt, qParams, ewp, q.From, q.To,
-			"", refStepName, stepSelect, stepParams, addJoinStmnt, stepGroupBy, stepOrderBy, q.GlobalUserProperties, isEventGroupQueryDomains)
+		if isEventGroupQueryDomains && len(negativeFilters) > 0 {
+			addNegativeSetCache(projectID, isEventGroupQuery, qStmnt, addJoinStmnt, stepSelect, stepGroupBy, stepOrderBy, stepParams,
+				qParams, q, refStepName, groupIDS[i], scopeGroupID, i)
+		} else {
+			addFilterFunc(projectID, qStmnt, qParams, ewp, q.From, q.To,
+				"", refStepName, stepSelect, stepParams, addJoinStmnt, stepGroupBy, stepOrderBy, q.GlobalUserProperties, isEventGroupQueryDomains, "", q.Caller)
+		}
 
 		// adding source check for segments
 		if model.IsUserProfiles(q.Caller) {
@@ -1264,16 +1251,54 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 
 	}
 
-	// adding source columns
-	result := addSourceColForSegment(qStmnt, q.Caller, addColsStringArr)
-	if result != "" {
-		*qStmnt = result
-	}
 	if model.IsAnyProfiles(q.Caller) {
 		*qStmnt = strings.ReplaceAll(*qStmnt, "global_user_properties_updated_timestamp", "properties_updated_timestamp")
 	}
 
 	return steps, stepsToKeysMap, nil
+}
+
+/*
+WITH  step_0_exclude_set AS (SELECT step_0_exclude_set_event_users_view.group_user_id as
+coal_group_user_id , MAX(group_2_id) as max_group_2_id FROM  (SELECT events.project_id, events.id,
+events.event_name_id, events.user_id, events.timestamp , events.properties as event_properties,
+events.user_properties as event_user_properties , user_groups.group_3_user_id as group_user_id ,
+group_users.properties as group_properties , group_users.group_2_id as group_2_id FROM events  LEFT
+JOIN users as user_groups on events.user_id = user_groups.id AND user_groups.project_id = '20000006'
+LEFT JOIN users as group_users ON user_groups.group_3_user_id = group_users.group_3_user_id AND
+group_users.project_id = '20000006' AND group_users.is_group_user = true AND group_users.source IN (
+2 ) AND ( group_users.group_2_id IS NOT NULL ) WHERE events.project_id='20000006' AND
+timestamp>='1703569963' AND timestamp<='1703572363' AND  ( group_user_id IS NOT NULL  ) AND  (
+events.event_name_id = '46b0c74b-1543-4225-bcb8-a1ed8c477027' )  LIMIT 10000000000)
+step_0_exclude_set_event_users_view WHERE  ( ( group_2_id is not null AND
+((JSON_EXTRACT_STRING(step_0_exclude_set_event_users_view.group_properties, '$hubspot_company_name')
+IS NOT NULL AND JSON_EXTRACT_STRING(step_0_exclude_set_event_users_view.group_properties,
+'$hubspot_company_name')!=”)) ) OR  ( group_2_id IS NULL )  )  GROUP BY coal_group_user_id HAVING
+max_group_2_id IS NOT NULL)
+*/
+func addNegativeSetCache(projectID int64, isEventGroupQuery bool, qStmnt *string, addJoinStmnt string, stepSelect string, stepGroupBy, stepOrderBy string,
+	stepParams []interface{}, qParams *[]interface{}, query *model.Query, refStepName string, eventGroupID int,
+	scopeGroupID int, ewpIndex int) {
+
+	addFilterFunc := addFilterEventsWithPropsQueryV2
+	if isEventGroupQuery {
+		addFilterFunc = addFilterEventsWithPropsQueryV3
+	}
+
+	negativeFilters, positiveFilters := model.GetPropertyGroupedNegativeAndPostiveFilter(query.GlobalUserProperties)
+	negativeSetStmnt := ""
+	negativeSetRef := fmt.Sprintf("%s_exclude_set", refStepName)
+	negativeSetSelect := fmt.Sprintf("user_groups.group_%d_user_id as coal_group_user_id", scopeGroupID)
+	negativeSetJoinStmnt, groupJoinParams := buildAddJoinForEventAnalyticsGroupQuery(projectID, eventGroupID, scopeGroupID, query.GroupAnalysis, model.GetNegativeFilterNegated(negativeFilters),
+		model.IsAccountProfiles(query.Caller), true)
+	addFilterFunc(projectID, &negativeSetStmnt, qParams, query.EventsWithProperties[ewpIndex], query.From, query.To,
+		"", negativeSetRef, negativeSetSelect, groupJoinParams, negativeSetJoinStmnt, "coal_group_user_id", "", model.GetNegativeFilterNegated(negativeFilters), true, "", "")
+	addJoinStmnt = addJoinStmnt + fmt.Sprintf(" LEFT JOIN %s ON %s.coal_group_user_id = user_groups.group_%d_user_id", negativeSetRef, negativeSetRef, scopeGroupID)
+
+	tempStmnt := ""
+	addFilterFunc(projectID, &tempStmnt, qParams, query.EventsWithProperties[ewpIndex], query.From, query.To,
+		"", refStepName, stepSelect, stepParams, addJoinStmnt, stepGroupBy, stepOrderBy, positiveFilters, true, fmt.Sprintf(" %s.coal_group_user_id IS NULL ", negativeSetRef), query.Caller)
+	*qStmnt = *qStmnt + negativeSetStmnt + ", " + tempStmnt
 }
 
 // payload is sent such that queryProp.Property is empty for search filter
@@ -1321,7 +1346,7 @@ func (store *MemSQL) selectStringForSegments(projectID int64, caller string, sco
 			return commonSelect, errors.New("group not found")
 		}
 		if scopeGroupID > 0 {
-			commonSelect = fmt.Sprintf("%%, users.host_name as host_name")
+			commonSelect = fmt.Sprintf("%%, domains.group_%d_id as host_name", scopeGroupID)
 		}
 		commonSelect = strings.ReplaceAll(commonSelect, "%", "%s")
 	}
@@ -1653,7 +1678,7 @@ func buildEventsOccurrenceSingleEventQuery(projectId int64,
 		addFilterFunc = addFilterEventsWithPropsQueryV2
 	}
 	addFilterFunc(projectId, &qStmnt, &qParams, q.EventsWithProperties[0], q.From, q.To,
-		"", "", qSelect, egSelectParams, "", "", "", q.GlobalUserProperties, false)
+		"", "", qSelect, egSelectParams, "", "", "", q.GlobalUserProperties, false, "", "")
 
 	qStmnt = appendGroupByTimestampIfRequired(qStmnt, isGroupByTimestamp, egKeys)
 	qStmnt = appendOrderByAggr(qStmnt)
@@ -2427,7 +2452,7 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID int64, q model.Query,
 			addFilterFunc = addFilterEventsWithPropsQueryV2
 		}
 		addFilterFunc(projectID, &qStmnt, &qParams, ewp, q.From, q.To, "",
-			refStepName, filterSelect, egParams, "", "", "", q.GlobalUserProperties, false)
+			refStepName, filterSelect, egParams, "", "", "", q.GlobalUserProperties, false, "", "")
 		if len(q.EventsWithProperties) > 1 {
 			qStmnt = qStmnt + ", "
 		}
@@ -2834,7 +2859,7 @@ func (store *MemSQL) addEventFilterStepsForEventCountQuery(projectID int64, q *m
 			addFilterFunc = addFilterEventsWithPropsQueryV2
 		}
 		err := addFilterFunc(projectID, qStmnt, qParams, ewp, q.From, q.To,
-			"", refStepName, stepSelect, stepParams, addJoinStmnt, "", stepOrderBy, q.GlobalUserProperties, false)
+			"", refStepName, stepSelect, stepParams, addJoinStmnt, "", stepOrderBy, q.GlobalUserProperties, false, "", "")
 		if err != nil {
 			return steps, stepsToKeysMap, err
 		}

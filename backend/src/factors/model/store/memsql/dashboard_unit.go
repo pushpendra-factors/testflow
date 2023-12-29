@@ -8,6 +8,7 @@ import (
 	M "factors/model/model"
 	U "factors/util"
 	"fmt"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	"net/http"
 	"reflect"
 	"sort"
@@ -1147,9 +1148,9 @@ func (store *MemSQL) RunCachingForLast3MonthsAttribution(dashboardUnit model.Das
 		}
 		if C.GetIsRunningForMemsql() == 0 {
 			unitWaitGroup.Add(1)
-			go store._cacheAttributionDashboardUnitForDateRange(cachePayload, &unitWaitGroup, reportCollector, enableFilterOpt)
+			go store._cacheAttributionDashboardUnitForDateRange(cachePayload, &unitWaitGroup, reportCollector, enableFilterOpt, false)
 		} else {
-			store._cacheAttributionDashboardUnitForDateRange(cachePayload, &unitWaitGroup, reportCollector, enableFilterOpt)
+			store._cacheAttributionDashboardUnitForDateRange(cachePayload, &unitWaitGroup, reportCollector, enableFilterOpt, false)
 		}
 	}
 	log.WithFields(log.Fields{"projectID": dashboardUnit.ProjectID,
@@ -1170,15 +1171,15 @@ func (store *MemSQL) RunEverydayCachingForAttribution(dashboardUnit model.Dashbo
 
 	resultsComputed, _ := store.GetLast3MonthStoredQueriesFromAndTo(dashboardUnit.ProjectID, dashboardUnit.DashboardId, dashboardUnit.ID, dashboardUnit.QueryId)
 
-	// get from and to for all the time ranges, starting from last 2 days
-	// startTimeForCache := time.Now().Unix() - 63*2*U.SECONDS_IN_A_DAY
+	/*get from and to for all the time ranges, starting from last 2 days
+	startTimeForCache := time.Now().Unix() - 63*2*U.SECONDS_IN_A_DAY
 
-	// daysRange := U.GetAllDaysSinceStartTime(startTimeForCache, timezoneString)
-	// monthRange := U.GetAllMonthFromTo(startTimeForCache, timezoneString)
-	// weeksRange := U.GetAllWeeksFromStartTime(startTimeForCache, timezoneString)
+	daysRange := U.GetAllDaysSinceStartTime(startTimeForCache, timezoneString)
+	monthRange := U.GetAllMonthFromTo(startTimeForCache, timezoneString)
+	weeksRange := U.GetAllWeeksFromStartTime(startTimeForCache, timezoneString)
 
-	// allRange := daysRange
-	//allRange = append(monthRange, weeksRange...)
+	allRange := daysRange
+	allRange = append(monthRange, weeksRange...)*/
 
 	dayB4YestStart, dayB4YestEnd, errCode := U.GetQueryRangePresetDayBeforeYesterdayIn(timezoneString)
 	if errCode != nil {
@@ -1191,84 +1192,79 @@ func (store *MemSQL) RunEverydayCachingForAttribution(dashboardUnit model.Dashbo
 		"dayB4YestEnd":   dayB4YestEnd,
 		"Method":         "RunEverydayCachingForAttribution"}).Info("Attribution V1 caching debug")
 
-	fr := dayB4YestStart
-	t := dayB4YestEnd
-	foundInDb := false
+	rangesToRun := []U.CustomPreset{}
+	// append day before yesterday
+	rangesToRun = append(rangesToRun, U.CustomPreset{From: dayB4YestStart, To: dayB4YestEnd, TZ: timezoneString})
+	// append n - 8 days or n-7 w.r.t day before yesterday
+	rangesToRun = append(rangesToRun, U.CustomPreset{From: dayB4YestStart - (7 * M.SecsInADay), To: dayB4YestEnd - (7 * M.SecsInADay), TZ: timezoneString})
 
-	// check if the result exists in DB
-	for _, resultEntry := range *resultsComputed {
-		if resultEntry.FromT == fr && resultEntry.ToT == t {
-			foundInDb = true
-			break
+	for _, dateRange := range rangesToRun {
+		fr := dateRange.From
+		t := dateRange.To
+
+		foundInDb := false
+
+		// check if the result exists in DB
+		for _, resultEntry := range *resultsComputed {
+			if resultEntry.FromT == fr && resultEntry.ToT == t {
+				foundInDb = true
+				break
+			}
 		}
-	}
 
-	if foundInDb {
-		// already computed hence skip computing
-		logCtx.Info("Already computed unit, skipping")
-		return
-	}
+		queryInfo, errC := store.GetQueryWithQueryId(dashboardUnit.ProjectID, dashboardUnit.QueryId)
+		if errC != http.StatusFound {
+			logCtx.WithField("err_code", errC).Errorf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
+			return
+		}
 
-	queryInfo, errC := store.GetQueryWithQueryId(dashboardUnit.ProjectID, dashboardUnit.QueryId)
-	if errC != http.StatusFound {
-		logCtx.WithField("err_code", errC).Errorf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
-		return
-	}
+		// Create a new baseQuery instance every time to avoid overwriting from, to values in routines.
+		baseQuery, err := model.DecodeQueryForClass(queryInfo.Query, queryClass)
+		if err != nil {
+			errMsg := fmt.Sprintf("Error decoding query, query_id %d", dashboardUnit.QueryId)
+			C.PingHealthcheckForFailure(C.HealthcheckDashboardDBAttributionPingID, errMsg)
+			return
+		}
 
-	// Create a new baseQuery instance every time to avoid overwriting from, to values in routines.
-	baseQuery, err := model.DecodeQueryForClass(queryInfo.Query, queryClass)
-	if err != nil {
-		errMsg := fmt.Sprintf("Error decoding query, query_id %d", dashboardUnit.QueryId)
-		C.PingHealthcheckForFailure(C.HealthcheckDashboardDBAttributionPingID, errMsg)
-		return
-	}
+		projectSettingsJSON, statusCodeProjectSettings := store.GetProjectSetting(dashboardUnit.ProjectID)
+		var cacheSettings model.CacheSettings
 
-	projectSettingsJSON, statusCodeProjectSettings := store.GetProjectSetting(dashboardUnit.ProjectID)
-	var cacheSettings model.CacheSettings
+		if projectSettingsJSON == nil || statusCodeProjectSettings != http.StatusFound {
+			log.WithField("projectID", dashboardUnit.ProjectID).WithField("statusCodeProjectSettings",
+				statusCodeProjectSettings).Warn("errored in fetching project Settings")
+			return
+		}
 
-	if projectSettingsJSON == nil || statusCodeProjectSettings != http.StatusFound {
-		log.WithField("projectID", dashboardUnit.ProjectID).WithField("statusCodeProjectSettings",
-			statusCodeProjectSettings).Warn("errored in fetching project Settings")
-		return
-	}
+		if projectSettingsJSON.CacheSettings != nil && !U.IsEmptyPostgresJsonb(projectSettingsJSON.CacheSettings) {
+			err = json.Unmarshal(projectSettingsJSON.CacheSettings.RawMessage, &cacheSettings)
+		}
 
-	if projectSettingsJSON.CacheSettings != nil && !U.IsEmptyPostgresJsonb(projectSettingsJSON.CacheSettings) {
-		err = json.Unmarshal(projectSettingsJSON.CacheSettings.RawMessage, &cacheSettings)
-	}
+		if err != nil {
+			errMsg := fmt.Sprintf("Error decoding project Settings JSON, query_id %d", dashboardUnit.QueryId)
+			C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+			return
+		}
 
-	if err != nil {
-		errMsg := fmt.Sprintf("Error decoding project Settings JSON, query_id %d", dashboardUnit.QueryId)
-		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
-		return
-	}
-
-	// Filtering queries on type and range for attribution query
-	//allowedPreset := cacheSettings.AttributionCachePresets
-	//shouldCache, from, to := model.ShouldCacheUnitForTimeRange(queryClass, preset, fr, t,
-	//	C.GetOnlyAttributionDashboardCaching(), C.GetSkipAttributionDashboardCaching(), allowedPreset[preset])
-	//if !shouldCache {
-	//	continue
-	//}
-
-	baseQuery.SetQueryDateRange(fr, t)
-	baseQuery.SetTimeZone(timezoneString)
-	baseQuery.SetDefaultGroupByTimestamp()
-	err = baseQuery.TransformDateTypeFilters()
-	if err != nil {
-		errMsg := fmt.Sprintf("Error decoding query Value, query_id %d", dashboardUnit.QueryId)
-		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
-		return
-	}
-	cachePayload := model.DashboardUnitCachePayload{
-		DashboardUnit: dashboardUnit,
-		BaseQuery:     baseQuery,
-		Preset:        "day_range",
-	}
-	if C.GetIsRunningForMemsql() == 0 {
-		unitWaitGroup.Add(1)
-		go store._cacheAttributionDashboardUnitForDateRange(cachePayload, &unitWaitGroup, reportCollector, enableFilterOpt)
-	} else {
-		store._cacheAttributionDashboardUnitForDateRange(cachePayload, &unitWaitGroup, reportCollector, enableFilterOpt)
+		baseQuery.SetQueryDateRange(fr, t)
+		baseQuery.SetTimeZone(timezoneString)
+		baseQuery.SetDefaultGroupByTimestamp()
+		err = baseQuery.TransformDateTypeFilters()
+		if err != nil {
+			errMsg := fmt.Sprintf("Error decoding query Value, query_id %d", dashboardUnit.QueryId)
+			C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+			return
+		}
+		cachePayload := model.DashboardUnitCachePayload{
+			DashboardUnit: dashboardUnit,
+			BaseQuery:     baseQuery,
+			Preset:        "day_range",
+		}
+		if C.GetIsRunningForMemsql() == 0 {
+			unitWaitGroup.Add(1)
+			go store._cacheAttributionDashboardUnitForDateRange(cachePayload, &unitWaitGroup, reportCollector, enableFilterOpt, foundInDb)
+		} else {
+			store._cacheAttributionDashboardUnitForDateRange(cachePayload, &unitWaitGroup, reportCollector, enableFilterOpt, foundInDb)
+		}
 	}
 
 	log.WithFields(log.Fields{"projectID": dashboardUnit.ProjectID,
@@ -1526,7 +1522,7 @@ func (store *MemSQL) RunCachingToBackFillRanges(dashboardUnit model.DashboardUni
 
 // CacheAttributionDashboardUnitForDateRange To cache a dashboard unit for the given range. ###5
 func (store *MemSQL) CacheAttributionDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload,
-	enableFilterOpt bool) (int, string, model.CachingUnitReport) {
+	enableFilterOpt bool, foundInDb bool) (int, string, model.CachingUnitReport) {
 
 	var statusCode int
 	logFields := log.Fields{
@@ -1658,10 +1654,18 @@ func (store *MemSQL) CacheAttributionDashboardUnitForDateRange(cachePayload mode
 		Preset:         preset,
 	}
 
-	model.SetCacheResultByDashboardIdAndUnitIdWithPreset(result, projectID, dashboardID, dashboardUnitID, preset,
-		from, to, timezoneString, meta)
-	errCode, errMsg = store.CreateResultInDB(result, projectID, dashboardID, dashboardUnitID, dashboardUnit.QueryId, preset,
-		from, to, timezoneString, meta)
+	// Todo Validate if we need to do this or not?
+	// model.SetCacheResultByDashboardIdAndUnitIdWithPreset(result, projectID, dashboardID, dashboardUnitID, preset,
+	// from, to, timezoneString, meta)
+
+	if foundInDb {
+		errCode, errMsg = store.UpdateResultInDB(result, projectID, dashboardID, dashboardUnitID, dashboardUnit.QueryId, preset,
+			from, to, timezoneString, meta)
+	} else {
+		errCode, errMsg = store.CreateResultInDB(result, projectID, dashboardID, dashboardUnitID, dashboardUnit.QueryId, preset,
+			from, to, timezoneString, meta)
+	}
+
 	if errCode != http.StatusCreated {
 		logCtx.WithFields(log.Fields{"ErrorCode": errCode, "ErrorMsg": errMsg}).Error("Failed to crease database entry")
 	} else {
@@ -1718,6 +1722,46 @@ func (store *MemSQL) CreateResultInDB(result interface{}, projectId int64, dashb
 	}
 	return http.StatusCreated, ""
 
+}
+
+// UpdateResultInDB updates the computed dashboard query into existing DB row under table DashQueryResult
+func (store *MemSQL) UpdateResultInDB(result interface{}, projectId int64, dashboardId int64, unitId int64, queryId int64,
+	preset string, from, to int64, timezoneString U.TimeZoneString, meta interface{}) (int, string) {
+
+	// Get the known ID from passing from has found. And then use it
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectId,
+		"dashboard_id": dashboardId, "dashboard_unit_id": unitId,
+		"preset": preset, "from": from, "to": to,
+	})
+
+	if projectId == 0 || dashboardId == 0 || unitId == 0 {
+		logCtx.Error("Invalid scope ids.")
+		return http.StatusInternalServerError, "Invalid scope Ids"
+	}
+	db := C.GetServices().Db
+
+	resMarshalled, err := json.Marshal(result)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to encode dashboardCacheResult - resMarshalled.")
+		return http.StatusInternalServerError, "Failed to encode dashboardCacheResult - resMarshalled."
+	}
+	resJson := &postgres.Jsonb{RawMessage: json.RawMessage(resMarshalled)}
+	updateFields := make(map[string]interface{}, 0)
+	// update allowed fields.
+	updateFields["result"] = resJson
+	updateFields["computed_at"] = U.TimeNowIn(U.TimeZoneStringIST).Unix()
+
+	err = db.Model(&model.DashQueryResult{}).Where("project_id = ? AND dashboard_id = ? AND dashboard_unit_id = ? AND from_t = ? AND to_t = ? AND is_deleted = ?",
+		projectId, dashboardId, unitId, from, to, false).Update(updateFields).Error
+
+	if err != nil {
+		errMsg := "Failed to update the result."
+		logCtx.WithError(err).Error(errMsg)
+		return http.StatusInternalServerError, errMsg
+	}
+
+	return http.StatusCreated, ""
 }
 
 // CacheDashboardUnitForDateRange To cache a dashboard unit for the given range.
@@ -1988,8 +2032,7 @@ func (store *MemSQL) WrapperForExecuteAttributionQueryV0(projectID int64, queryO
 }
 
 // _cacheAttributionDashboardUnitForDateRange acts as collector to the core query caching method for Attribution V1 ###8
-func (store *MemSQL) _cacheAttributionDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload,
-	waitGroup *sync.WaitGroup, reportCollector *sync.Map, enableFilterOpt bool) {
+func (store *MemSQL) _cacheAttributionDashboardUnitForDateRange(cachePayload M.DashboardUnitCachePayload, waitGroup *sync.WaitGroup, reportCollector *sync.Map, enableFilterOpt bool, foundInDb bool) {
 	logFields := log.Fields{
 		"cache_payload":    cachePayload,
 		"wait_group":       waitGroup,
@@ -2016,7 +2059,7 @@ func (store *MemSQL) _cacheAttributionDashboardUnitForDateRange(cachePayload mod
 		"FromTo":          fmt.Sprintf("%d-%d", from, to),
 	})
 
-	errCode, errMsg, report := store.CacheAttributionDashboardUnitForDateRange(cachePayload, enableFilterOpt)
+	errCode, errMsg, report := store.CacheAttributionDashboardUnitForDateRange(cachePayload, enableFilterOpt, foundInDb)
 	reportCollector.Store(model.GetCachingUnitReportUniqueKey(report), report)
 	if errCode != http.StatusOK {
 		logCtx.WithField("err_code", errCode).Errorf("Error while running attribution v1 query %s", errMsg)

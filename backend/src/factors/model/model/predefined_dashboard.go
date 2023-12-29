@@ -10,6 +10,7 @@ const (
 	DBDescend               = "DESC "
 	DBLimit                 = "LIMIT "
 	WebsiteAggregationTable = "website_aggregation"
+	PredefinedWebAggrLimit  = "2500"
 
 	ChartTypeBarChart 				= "pb"
 	ChartTypeLineChart 				= "pl"

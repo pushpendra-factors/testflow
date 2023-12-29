@@ -53,6 +53,7 @@ import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils'
 import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import AccountTimelineTableView from './AccountTimelineTableView';
+import { isValidURL } from 'Utils/truncateURL';
 
 function AccountDetails({
   accounts,
@@ -89,6 +90,9 @@ function AccountDetails({
   const [timelineViewMode, setTimelineViewMode] = useState('birdview');
   const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
   const [openPopover, setOpenPopover] = useState(false);
+  const [requestedEvents, setRequestedEvents] = useState({});
+  const [eventPropertiesType, setEventPropertiesType] = useState({});
+
   const handleOpenPopoverChange = (value) => {
     setOpenPopover(value);
   };
@@ -109,6 +113,57 @@ function AccountDetails({
       setTimelineViewMode('overview');
     }
   }, [activeAgent]);
+
+  const uniqueEventNames = useMemo(() => {
+    const accountEvents = accountDetails.data?.account_events || [];
+
+    const eventsArray = accountEvents
+      .filter(
+        (event) =>
+          !isValidURL(event.event_name) &&
+          Object.keys(event?.properties || {}).length
+      )
+      .map((event) => event.event_name);
+
+    const pageViewEvent = accountEvents.find(
+      (event) => event?.properties?.['$is_page_view']
+    );
+
+    if (pageViewEvent) {
+      eventsArray.push(pageViewEvent.event_name);
+    }
+
+    return Array.from(new Set(eventsArray));
+  }, [accountDetails.data?.account_events]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const promises = uniqueEventNames.map(async (eventName) => {
+        if (!requestedEvents[eventName]) {
+          setRequestedEvents((prevRequestedEvents) => ({
+            ...prevRequestedEvents,
+            [eventName]: true
+          }));
+          if (!eventPropertiesV2[eventName])
+            await getEventPropertiesV2(activeProject?.id, eventName);
+        }
+      });
+
+      await Promise.all(promises);
+
+      const typeMap = {};
+      Object.values(eventPropertiesV2).forEach((propertyGroup) => {
+        Object.values(propertyGroup || {}).forEach((arr) => {
+          arr.forEach((property) => {
+            typeMap[property[1]] = property[2];
+          });
+        });
+      });
+      setEventPropertiesType(typeMap);
+    };
+
+    fetchData();
+  }, [uniqueEventNames, requestedEvents, activeProject?.id, eventPropertiesV2]);
 
   const titleIcon = useMemo(() => {
     if (Boolean(location?.state?.activeSegment?.id)) {
@@ -205,22 +260,6 @@ function AccountDetails({
     );
     setActivities(listActivities);
   }, [currentProjectSettings, accountDetails]);
-
-  // useEffect(() => {
-  //   if (!accountDetails.data?.account_events) return;
-  //   const uniqueEventNames = new Set();
-
-  //   accountDetails.data?.account_events?.forEach((event) => {
-  //     if (Object.keys(event?.properties || {}).length) {
-  //       uniqueEventNames.add(event.event_name);
-  //     }
-  //   });
-  //   uniqueEventNames.forEach((eventName) => {
-  //     if (!eventPropertiesV2[eventName]) {
-  //       getEventPropertiesV2(activeProject?.id, eventName);
-  //     }
-  //   });
-  // }, [activeProject?.id, accountDetails.data?.account_events]);
 
   useEffect(() => {
     Object.keys(groups?.account_groups || {}).forEach((group) => {
@@ -355,7 +394,6 @@ function AccountDetails({
         <SearchCheckList
           placeholder='Select Events to Show'
           mapArray={activities}
-          updateList={setActivities}
           titleKey='display_name'
           checkedKey='enabled'
           onChange={handleEventsChange}
@@ -368,7 +406,6 @@ function AccountDetails({
         <SearchCheckList
           placeholder='Select a User Property'
           mapArray={checkListUserProps}
-          updateList={setCheckListUserProps}
           titleKey='display_name'
           checkedKey='enabled'
           onChange={handlePropChange}
@@ -381,7 +418,6 @@ function AccountDetails({
         <SearchCheckList
           placeholder='Select Up To 5 Milestones'
           mapArray={checkListMilestones}
-          updateList={setCheckListMilestones}
           titleKey='display_name'
           checkedKey='enabled'
           onChange={handleMilestonesChange}
@@ -581,8 +617,8 @@ function AccountDetails({
 
       <div className='props'>
         {listLeftPaneProps(accountDetails.data.leftpane_props)}
-        <div className='px-8 pb-8 pt-2'>{renderAddNewProp()}</div>
       </div>
+      <div className='add-prop-btn with-attr'>{renderAddNewProp()}</div>
       <div className='logo_attr'>
         <a
           className='font-size--small'
@@ -612,7 +648,7 @@ function AccountDetails({
       )}
       timelineUsers={getTimelineUsers()}
       loading={accountDetails?.isLoading}
-      eventNamesMap={eventNamesMap}
+      eventPropsType={eventPropertiesType}
     />
   );
 
@@ -715,6 +751,7 @@ function AccountDetails({
         setCollapseAll={setCollapseAll}
         granularity={granularity}
         loading={accountDetails?.isLoading}
+        propertiesType={eventPropertiesType}
         eventNamesMap={eventNamesMap}
       />
     </div>

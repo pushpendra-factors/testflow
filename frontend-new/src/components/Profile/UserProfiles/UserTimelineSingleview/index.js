@@ -10,10 +10,11 @@ import _ from 'lodash';
 import EventInfoCard from 'Components/Profile/MyComponents/EventInfoCard';
 import NoDataWithMessage from 'Components/Profile/MyComponents/NoDataWithMessage';
 
-function AccountTimelineSingleView({
+function UserTimelineSingleView({
   activities = [],
   loading = false,
-  eventNamesMap,
+  propertiesType,
+  eventNamesMap
 }) {
   const groupedActivities = _.groupBy(activities, groups['Daily']);
 
@@ -55,6 +56,7 @@ function AccountTimelineSingleView({
                           event={event}
                           eventIcon={eventIcon}
                           sourceIcon={sourceIcon}
+                          propertiesType={propertiesType}
                         />
                       );
                     })}
@@ -77,4 +79,4 @@ function AccountTimelineSingleView({
   );
 }
 
-export default AccountTimelineSingleView;
+export default UserTimelineSingleView;

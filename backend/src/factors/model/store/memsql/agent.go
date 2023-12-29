@@ -3,6 +3,7 @@ package memsql
 import (
 	C "factors/config"
 	"factors/model/model"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -516,19 +517,19 @@ func (store *MemSQL) IsTeamsIntegratedForProject(projectID int64, agentUUID stri
 
 func (store *MemSQL) IsTeamsIntegrated(projectID int64) (bool, int) {
 
-	var isIntegrated bool
-	queryStmnt := "select  count(*) > 0  from agents where JSON_EXTRACT_STRING(JSON_EXTRACT_STRING(teams_access_tokens, '?' ) , 'refresh_token') is not null "
+	var isIntegrated int64
+	queryStmnt := "select  count(*) > 0  from agents where JSON_EXTRACT_STRING(JSON_EXTRACT_STRING(teams_access_tokens, '%d' ) , 'refresh_token') is not null "
 
 	db := C.GetServices().Db
 
-	row := db.Raw(queryStmnt, projectID).Row()
+	row := db.Raw(fmt.Sprintf(queryStmnt, projectID)).Row()
 
 	err := row.Scan(&isIntegrated)
 	if err != nil {
-		log.WithFields(log.Fields{"projectID": projectID}).Error("Failed getting team integration info")
+		log.WithFields(log.Fields{"projectID": projectID, "error": err}).Error("Failed getting team integration info")
 		return false, http.StatusInternalServerError
 	}
 
-	return isIntegrated, http.StatusOK
+	return isIntegrated == 1, http.StatusOK
 
 }

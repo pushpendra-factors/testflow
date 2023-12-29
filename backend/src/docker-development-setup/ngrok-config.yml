@@ -1,0 +1,10 @@
+version: "2"
+authtoken: 2Yq1B3UKeqtTXiBih6BLo5ddZmz_7EopEkVbw9uczC7PVS4mq
+
+tunnels:
+    api_service:
+        addr: 8080
+        proto: http
+        hostname: violet-api.factors.app
+        request_header:
+           add: ["X-Client-Encrypted: true"] 

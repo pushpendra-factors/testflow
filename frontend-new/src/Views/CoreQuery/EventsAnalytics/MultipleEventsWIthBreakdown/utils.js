@@ -167,10 +167,10 @@ export const getTableColumns = (
   breakdown,
   currentSorter,
   handleSorting,
-  page,
   eventNames,
   userPropNames,
-  eventPropertiesDisplayNames
+  eventPropertiesDisplayNames,
+  eventGroup
 ) => {
   console.log('mewb getTableColumns');
   const result = [];
@@ -209,7 +209,7 @@ export const getTableColumns = (
   });
   result.push({
     title: getClickableTitleSorter(
-      labelsObj[page],
+      labelsObj[eventGroup] || 'Count',
       { key: EVENT_COUNT_KEY, type: 'numerical', subtype: null },
       currentSorter,
       handleSorting,

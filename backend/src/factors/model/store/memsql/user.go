@@ -79,6 +79,14 @@ func (store *MemSQL) createUserWithError(user *model.User) (*model.User, error) 
 		// Initializing properties updated timestamp at time of creation.
 		user.PropertiesUpdatedTimestamp = user.JoinTimestamp
 	}
+
+	if user.IsGroupUser != nil && *user.IsGroupUser {
+		lastEventAt := time.Unix(user.PropertiesUpdatedTimestamp, 0)
+		user.LastEventAt = &lastEventAt
+	} else {
+		user.LastEventAt = nil
+	}
+
 	// adds join timestamp to user properties.
 	newUserProperties := map[string]interface{}{
 		U.UP_JOIN_TIME: user.JoinTimestamp,

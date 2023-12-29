@@ -1,5 +1,6 @@
 export interface TextWithTooltipProps {
-    text: string;
-    tooltipText?: string;
-    extraClass: string;
-  }
+  text: string;
+  tooltipText?: string;
+  extraClass: string;
+  disabled?: boolean;
+}

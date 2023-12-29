@@ -1228,7 +1228,6 @@ func TestEventAnalyticsEachEventQueryWithFilterAndBreakdown(t *testing.T) {
 		}
 		result, code, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, code)
-		log.WithField("rows", result.Rows).Warn("kark2")
 		assert.Equal(t, 1, len(result.Rows))
 		assert.Equal(t, "s0", result.Rows[0][1])
 		assert.Equal(t, float64(4), result.Rows[0][2])
@@ -1262,7 +1261,6 @@ func TestEventAnalyticsEachEventQueryWithFilterAndBreakdown(t *testing.T) {
 		}
 		result, code, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
 		assert.Equal(t, http.StatusOK, code)
-		log.WithField("rows", result.Rows).Warn("kark2")
 		assert.Equal(t, 1, len(result.Rows))
 		assert.Equal(t, "s0", result.Rows[0][1])
 		assert.Equal(t, "$none", result.Rows[0][2])

@@ -1,31 +1,21 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import MomentTz from 'Components/MomentTz';
 import EventIcon from './EventIcon';
 import UsernameWithIcon from './UsernameWithIcon';
 import { TableRowProps } from './types';
-import {
-  PropTextFormat,
-  convertGroupedPropertiesToUngrouped
-} from 'Utils/dataFormatter';
+import { PropTextFormat } from 'Utils/dataFormatter';
 import truncateURL, { isValidURL } from 'Utils/truncateURL';
 import { useSelector } from 'react-redux';
-import { getPropType, propValueFormat } from 'Components/Profile/utils';
+import { propValueFormat } from 'Components/Profile/utils';
 import TextWithOverflowTooltip from 'Components/GenericComponents/TextWithOverflowTooltip';
 
-const TableRow: React.FC<TableRowProps> = ({ event, user, onEventClick }) => {
-  const { eventPropertiesV2 } = useSelector((state: any) => state.coreQuery);
-
-  const eventPropertiesModified = useMemo(() => {
-    if (!event.event_name) return null;
-    const eventProps: any = [];
-    if (eventPropertiesV2?.[event.event_name]) {
-      convertGroupedPropertiesToUngrouped(
-        eventPropertiesV2?.[event.event_name],
-        eventProps
-      );
-    }
-    return eventProps;
-  }, [event.event_name, eventPropertiesV2]);
+const TableRow: React.FC<TableRowProps> = ({
+  event,
+  eventPropsType = {},
+  user,
+  onEventClick
+}) => {
+  const { eventPropNames } = useSelector((state: any) => state.coreQuery);
 
   const timestamp = event?.timestamp
     ? MomentTz(event.timestamp * 1000).format('hh:mm A')
@@ -38,7 +28,10 @@ const TableRow: React.FC<TableRowProps> = ({ event, user, onEventClick }) => {
       return 'Page URL:';
     }
     return isEventClickable
-      ? `${PropTextFormat(Object.keys(event?.properties || {})[0])}:`
+      ? `${
+          eventPropNames[Object.keys(event?.properties || {})[0]] ||
+          PropTextFormat(Object.keys(event?.properties || {})[0])
+        }:`
       : null;
   };
 
@@ -58,7 +51,7 @@ const TableRow: React.FC<TableRowProps> = ({ event, user, onEventClick }) => {
       return truncateURL(value);
     }
 
-    const propType = getPropType(eventPropertiesModified, propertyName);
+    const propType = eventPropsType[propertyName];
     const formattedValue = propValueFormat(propertyName, value, propType);
 
     return formattedValue;
@@ -72,11 +65,13 @@ const TableRow: React.FC<TableRowProps> = ({ event, user, onEventClick }) => {
 
   return (
     <tr
-      className={`table-row ${isEventClickable ? 'active cursor-pointer' : ''}`}
+      className={`table-row ${
+        isEventClickable ? 'clickable cursor-pointer' : ''
+      }`}
       onClick={() => isEventClickable && onEventClick(event)}
     >
       <td className='timestamp-cell'>{timestamp}</td>
-      <td className='icon-cell'>
+      <td className='event-cell'>
         <EventIcon icon={event.icon} size={24} />
         <TextWithOverflowTooltip
           text={event.display_name || event.event_name}

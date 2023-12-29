@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"testing"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -77,7 +76,6 @@ func TestSampleWebsiteAggregation(t *testing.T) {
 			Queries: queries,
 		})
 		assert.Equal(t, http.StatusOK, statusCode)
-		log.WithField("result", result).Warn("kark2")
 
 		assert.Equal(t, 2, len(result[0].Headers))
 		assert.Equal(t, 1, len(result[0].Rows))
@@ -120,7 +118,6 @@ func TestSampleWebsiteAggregation(t *testing.T) {
 			Class:   "predefined_dashboard",
 			Queries: queries,
 		})
-		log.WithField("result", result).Warn("kark2")
 		assert.Equal(t, http.StatusOK, statusCode)
 
 		assert.Equal(t, 2, len(result[0].Headers))
@@ -166,7 +163,6 @@ func TestSampleWebsiteAggregation(t *testing.T) {
 			Queries: queries,
 		})
 		assert.Equal(t, http.StatusOK, statusCode)
-		log.WithField("result", result).Warn("kark2")
 
 		assert.Equal(t, 3, len(result[0].Headers))
 		assert.Equal(t, 1, len(result[0].Rows))
@@ -214,7 +210,6 @@ func TestSampleWebsiteAggregation(t *testing.T) {
 			Queries: queries,
 		})
 		assert.Equal(t, http.StatusOK, statusCode)
-		log.WithField("result", result).Warn("kark2")
 
 		assert.Equal(t, 2, len(result[0].Headers))
 		assert.Equal(t, 1, len(result[0].Rows))

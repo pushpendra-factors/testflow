@@ -1,16 +1,10 @@
-import React, { useEffect, useMemo } from 'react';
+import React from 'react';
 import { Popover } from 'antd';
 import { Text } from 'Components/factorsComponents';
-import {
-  PropTextFormat,
-  convertGroupedPropertiesToUngrouped
-} from 'Utils/dataFormatter';
-import {
-  getPropType,
-  propValueFormat,
-  TimelineHoverPropDisplayNames
-} from '../../utils';
-import { connect } from 'react-redux';
+import { PropTextFormat } from 'Utils/dataFormatter';
+import { propValueFormat } from '../../utils';
+import { useSelector } from 'react-redux';
+import TextWithOverflowTooltip from 'Components/GenericComponents/TextWithOverflowTooltip';
 
 function InfoCard({
   title,
@@ -19,94 +13,69 @@ function InfoCard({
   icon,
   eventName,
   properties = {},
+  propertiesType,
   trigger,
-  children,
-  eventPropertiesV2
+  children
 }) {
-  const eventPropertiesModified = useMemo(() => {
-    const eventProps = [];
-    if (eventPropertiesV2?.[eventName]) {
-      convertGroupedPropertiesToUngrouped(
-        eventPropertiesV2?.[eventName],
-        eventProps
-      );
-    }
-    return eventProps;
-  }, [eventName, eventPropertiesV2]);
+  const { eventPropNames } = useSelector((state) => state.coreQuery);
+  const renderPropRow = (key, value) => {
+    const propType = propertiesType[key];
+    if (key === '$is_page_view' && value === true) return null;
 
-  const popoverContent = () => (
+    return (
+      <div className='flex justify-between py-2' key={key}>
+        <Text
+          mini
+          type='title'
+          color='grey'
+          extraClass='whitespace-no-wrap mr-2'
+        >
+          {eventPropNames[key] || PropTextFormat(key)}
+        </Text>
+        <Text
+          mini
+          type='title'
+          color='grey-2'
+          weight='medium'
+          extraClass='break-all text-right'
+          truncate
+          charLimit={32}
+          shouldTruncateURL
+        >
+          {eventType === 'FE'
+            ? title
+            : propValueFormat(key, value, propType) || '-'}
+        </Text>
+      </div>
+    );
+  };
+
+  const popoverContent = (
     <div className='fa-popupcard'>
       <div className='top-section mb-2'>
         {title ? (
           <div className='heading-with-sub'>
             <div className='sub'>{PropTextFormat(eventSource)}</div>
-            <div className='main'>{eventType === 'FE' ? eventName : title}</div>
+            <TextWithOverflowTooltip
+              text={eventType === 'FE' ? eventName : title}
+              extraClass='main'
+            />
           </div>
         ) : (
-          <div className='heading'>{PropTextFormat(eventSource)}</div>
+          <TextWithOverflowTooltip
+            text={PropTextFormat(eventSource)}
+            extraClass='heading'
+          />
         )}
         <div className='source-icon'>{icon}</div>
       </div>
 
-      {Object.entries(properties).map(([key, value]) => {
-        const propType = getPropType(eventPropertiesModified, key);
-        if (key === '$is_page_view' && value === true)
-          return (
-            <div className='flex justify-between py-2'>
-              <Text
-                mini
-                type='title'
-                color='grey'
-                extraClass='whitespace-no-wrap mr-2'
-              >
-                Page URL
-              </Text>
-
-              <Text
-                mini
-                type='title'
-                color='grey-2'
-                weight='medium'
-                extraClass='break-all text-right'
-                truncate
-                charLimit={32}
-                shouldTruncateURL
-              >
-                {eventType === 'FE' ? title : eventName}
-              </Text>
-            </div>
-          );
-        return (
-          <div className='flex justify-between py-2'>
-            <Text
-              mini
-              type='title'
-              color='grey'
-              extraClass={`${
-                key.length > 20 ? 'break-words' : 'whitespace-no-wrap'
-              } max-w-xs mr-2`}
-            >
-              {TimelineHoverPropDisplayNames[key] || PropTextFormat(key)}
-            </Text>
-            <Text
-              mini
-              type='title'
-              color='grey-2'
-              weight='medium'
-              extraClass={`${
-                value?.length > 30 ? 'break-words' : 'whitespace-no-wrap'
-              }  text-right`}
-              truncate
-              charLimit={32}
-              shouldTruncateURL
-            >
-              {propValueFormat(key, value, propType) || '-'}
-            </Text>
-          </div>
-        );
-      })}
+      {Object.entries(properties).map(([key, value]) =>
+        renderPropRow(key, value)
+      )}
     </div>
   );
+
   return (
     <Popover
       key={title}
@@ -120,9 +89,4 @@ function InfoCard({
   );
 }
 
-const mapStateToProps = (state) => ({
-  activeProject: state.global.active_project,
-  eventPropertiesV2: state.coreQuery.eventPropertiesV2
-});
-
-export default connect(mapStateToProps, null)(InfoCard);
+export default InfoCard;

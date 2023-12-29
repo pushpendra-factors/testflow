@@ -4,10 +4,12 @@ import { eventsGroupedByGranularity } from '../../utils';
 import { AccountTimelineTableViewProps } from './types';
 import EventDrawer from './EventDrawer';
 import TableRow from './TableRow';
+import NoDataWithMessage from 'Components/Profile/MyComponents/NoDataWithMessage';
 
 const AccountTimelineTableView: React.FC<AccountTimelineTableViewProps> = ({
   timelineEvents = [],
   timelineUsers = [],
+  eventPropsType,
   loading
 }) => {
   const [formattedData, setFormattedData] = useState<{ [key: string]: any }>(
@@ -22,6 +24,7 @@ const AccountTimelineTableView: React.FC<AccountTimelineTableViewProps> = ({
       'Timeline'
     );
     setFormattedData(data);
+    document.title = 'Accounts - FactorsAI';
   }, [timelineEvents]);
 
   const handleEventClick = (event: any) => {
@@ -31,17 +34,19 @@ const AccountTimelineTableView: React.FC<AccountTimelineTableViewProps> = ({
 
   return loading ? (
     <Spin size='large' className='fa-page-loader' />
+  ) : timelineUsers.length === 0 ? (
+    <NoDataWithMessage message={'No Associated Users'} />
+  ) : timelineEvents.length === 0 ? (
+    <NoDataWithMessage message={'No Events Enabled to Show'} />
   ) : (
     <>
       <div className='account-timeline-table-container'>
-        <table className='account-timeline-table'>
+        <table>
           <tbody>
             {Object.entries(formattedData || {}).map(([timestamp, events]) => (
               <React.Fragment>
                 <tr className='timestamp-row'>
-                  <td>
-                    <span>{timestamp}</span>
-                  </td>
+                  <td>{timestamp}</td>
                 </tr>
                 {events.map((event: any) => {
                   const currentUser = timelineUsers.find(
@@ -51,6 +56,7 @@ const AccountTimelineTableView: React.FC<AccountTimelineTableViewProps> = ({
                     currentUser && (
                       <TableRow
                         event={event}
+                        eventPropsType={eventPropsType}
                         user={currentUser}
                         onEventClick={() => handleEventClick(event)}
                       />
@@ -66,6 +72,7 @@ const AccountTimelineTableView: React.FC<AccountTimelineTableViewProps> = ({
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         event={selectedEvent}
+        eventPropsType={eventPropsType}
       />
     </>
   );

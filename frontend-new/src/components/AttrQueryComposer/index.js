@@ -277,6 +277,7 @@ const AttrQueryComposer = ({
             }}
             placement='topRight'
             onSelect={setDateRange}
+            withoutYesterday={true}
           />
         ) : (
           <Button
