@@ -60,12 +60,13 @@ func makeUserUpdateString(user map[string]model.LatestScore, score float64) (str
 	return finalString, nil
 }
 
-func makeAccountUpdateString(user map[string]model.LatestScore, score, allEventsSCore float64) (string, error) {
+func makeAccountUpdateString(user map[string]model.LatestScore, score, allEventsSCore float64, engagement_level string) (string, error) {
 
 	updateString := make([]string, 0)
 	finalString := ""
 	engagement_string := U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE
 	total_engagement_string := U.GROUP_EVENT_NAME_TOTAL_ENGAGEMENT_SCORE
+	engagement_level_string := U.GROUP_EVENT_NAME_ENGAGEMENT_LEVEL
 
 	for evKey, evCount := range user {
 		eventsCountjson, err := json.Marshal(evCount)
@@ -85,13 +86,15 @@ func makeAccountUpdateString(user map[string]model.LatestScore, score, allEvents
 
 	countTotal := 0.0
 	if evCounts, cok := user[model.LAST_EVENT]; cok {
-
 		for _, v := range evCounts.EventsCount {
 			countTotal += v
 		}
 	}
 
 	if countTotal != 0.0 {
+		engagementLevelStringModified := strings.Join([]string{"$", engagement_level_string}, "")
+		ct := fmt.Sprintf("properties::%s='%s'", engagementLevelStringModified, engagement_level)
+		updateString = append(updateString, ct)
 		finalString = strings.Join(updateString, ",")
 	}
 
@@ -205,7 +208,7 @@ func UpdatePerUser(projectId int64, evdata map[string]map[string]model.LatestSco
 
 func UpdatePerAccount(projectId int64, evdata map[string]map[string]model.LatestScore, lastevent map[string]model.LatestScore,
 	allEvents map[string]model.LatestScore,
-	userId string, weights model.AccWeights, db *gorm.DB, wg *sync.WaitGroup) error {
+	userId string, weights model.AccWeights, bucket model.BucketRanges, db *gorm.DB, wg *sync.WaitGroup) error {
 
 	logFields := log.Fields{
 		"project_id": projectId,
@@ -231,15 +234,18 @@ func UpdatePerAccount(projectId int64, evdata map[string]map[string]model.Latest
 		if err != nil {
 			logCtx.WithField("last event ", lastevent).Error("unable to compute final score ")
 		}
-		updateString, nil := makeAccountUpdateString(updateCounts, score, allEventscore)
+		engagementLevel := model.GetEngagement(allEventscore, bucket)
+
+		updateString, nil := makeAccountUpdateString(updateCounts, score, allEventscore, engagementLevel)
 		if updateString != "" {
 			stmt := fmt.Sprintf("UPDATE users SET event_aggregate = case when event_aggregate is NULL THEN '{}' ELSE  event_aggregate END, %s where id= ? and project_id= ?", updateString)
 			err := db.Exec(stmt, userId, projectId).Error
 			if err != nil {
-				logCtx.WithError(err).Errorf("Unable to update latest score in user events ")
+				logCtx.WithError(err).WithField("statement ", stmt).Errorf("Unable to update latest score in user events ")
 				return err
 			}
 		}
+
 	}
 
 	return nil
@@ -247,7 +253,7 @@ func UpdatePerAccount(projectId int64, evdata map[string]map[string]model.Latest
 }
 
 func (store *MemSQL) UpdateGroupEventsCountGO(projectId int64, evdata map[string]map[string]model.LatestScore,
-	lastevent map[string]model.LatestScore, allEvents map[string]model.LatestScore, weights model.AccWeights) error {
+	lastevent map[string]model.LatestScore, allEvents map[string]model.LatestScore, weights model.AccWeights, bucket model.BucketRanges) error {
 	logFields := log.Fields{
 		"project_id": projectId,
 	}
@@ -277,61 +283,12 @@ func (store *MemSQL) UpdateGroupEventsCountGO(projectId int64, evdata map[string
 
 		wg.Add(len(userIDList))
 		for i := 0; i < len(userIDList); i++ {
-			go UpdatePerAccount(projectId, evdata, lastevent, allEvents, userIDList[i], weights, db, &wg)
+			go UpdatePerAccount(projectId, evdata, lastevent, allEvents, userIDList[i], weights, bucket, db, &wg)
 		}
 		wg.Wait()
 	}
 	logCtx.Info("Done Updating groups in DB")
 
-	return nil
-
-}
-
-func (store *MemSQL) UpdateGroupEventsCount(projectId int64, evdata map[string]map[string]model.LatestScore, lastevent map[string]model.LatestScore) error {
-	logFields := log.Fields{
-		"project_id": projectId,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
-	db := C.GetServices().Db
-	group_ids := 0
-	numLines := 0
-	userIDs := make(map[string]int, 0)
-	usersIdsList := make([]string, 0)
-	for uid, _ := range evdata {
-		userIDs[uid] = 1
-	}
-	for uid, _ := range lastevent {
-		userIDs[uid] = 1
-	}
-	for uid, _ := range userIDs {
-		usersIdsList = append(usersIdsList, uid)
-	}
-	for userId, _ := range userIDs {
-		var updateCounts map[string]model.LatestScore = make(map[string]model.LatestScore)
-
-		if ev, cok := evdata[userId]; cok {
-			for evDate, evCounts := range ev {
-				updateCounts[evDate] = evCounts
-			}
-		}
-		if _, lok := lastevent[userId]; lok {
-			updateCounts[model.LAST_EVENT] = lastevent[userId]
-		}
-		updateString, nil := makeAccountUpdateString(updateCounts, float64(-1), float64(-1))
-		if updateString != "" {
-			stmt := fmt.Sprintf("UPDATE users SET event_aggregate = case when event_aggregate is NULL THEN '{}' ELSE  event_aggregate END, %s where id= ? and project_id= ?", updateString)
-			err := db.Exec(stmt, userId, projectId).Error
-			if err != nil {
-				logCtx.WithError(err).Errorf("Unable to update latest score in user events ")
-				return err
-			}
-			group_ids += 1
-			numLines += 1
-		}
-	}
-	logCtx.WithField("updates", numLines).Info("Numer of rows (group) written to DB")
-	logCtx.WithField("Num of groups added", group_ids).Infof("groups")
 	return nil
 
 }
@@ -449,7 +406,7 @@ func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userI
 
 	}
 
-	engagementLevel := getEngagement(fscore, buckets)
+	engagementLevel := model.GetEngagement(fscore, buckets)
 	result.Id = userId
 	result.Trend = make(map[string]float32)
 	result.Trend = scoreOnDays
@@ -1079,13 +1036,4 @@ func ComputeAccountScoreOnLastEvent(project_id int64, weights model.AccWeights, 
 		}
 	}
 	return accountScore, nil
-}
-
-func getEngagement(percentile float64, buckets model.BucketRanges) string {
-	for _, bucket := range buckets.Ranges {
-		if bucket.Low <= percentile && percentile < bucket.High {
-			return bucket.Name
-		}
-	}
-	return "ice"
 }

@@ -1020,9 +1020,8 @@ type Model interface {
 	//account scoring
 	GetWeightsByProject(project_id int64) (*model.AccWeights, int)
 	UpdateUserEventsCount(projectId int64, ev map[string]map[string]model.LatestScore) error
-	UpdateGroupEventsCount(projectId int64, ev map[string]map[string]model.LatestScore, lastev map[string]model.LatestScore) error
 	UpdateUserEventsCountGO(projectId int64, ev map[string]map[string]model.LatestScore) error
-	UpdateGroupEventsCountGO(projectId int64, ev map[string]map[string]model.LatestScore, lastev map[string]model.LatestScore, allev map[string]model.LatestScore, weights model.AccWeights) error
+	UpdateGroupEventsCountGO(projectId int64, ev map[string]map[string]model.LatestScore, lastev map[string]model.LatestScore, allev map[string]model.LatestScore, weights model.AccWeights, buckets model.BucketRanges) error
 	GetAccountsScore(project_id int64, group_id int, ts string, debug bool) ([]model.PerAccountScore, *model.AccWeights, error)
 	GetUserScore(project_id int64, user_id string, ts string, debug bool, is_anonymus bool) (model.PerUserScoreOnDay, error)
 	GetUserScoreOnIds(projectId int64, usersAnonymous, usersNonAnonymous []string, debug bool) (map[string]model.PerUserScoreOnDay, error)
