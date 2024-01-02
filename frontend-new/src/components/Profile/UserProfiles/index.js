@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import cx from 'classnames';
 import get from 'lodash/get';
+import cloneDeep from 'lodash/cloneDeep';
 import {
   Table,
   Button,
@@ -649,22 +650,32 @@ function UserProfiles({
   }, [newSegmentMode]);
 
   useEffect(() => {
-    if (newSegmentMode === false) {
-      if (
-        Boolean(activeSegment?.name) === true &&
-        activeSegment.query != null
-      ) {
-        const filters = getSelectedFiltersFromQuery({
-          query: activeSegment.query,
-          groupsList: [],
-          caller: 'user_profiles'
-        });
-        setAppliedFilters(filters);
-        setSelectedFilters(filters);
-        setFiltersExpanded(false);
-        setFiltersDirty(false);
-      } else {
-        restoreFiltersDefaultState();
+    if (
+      location.state?.fromDetails === true &&
+      location.state?.appliedFilters != null
+    ) {
+      setAppliedFilters(cloneDeep(location.state?.appliedFilters));
+      setSelectedFilters(location.state?.appliedFilters);
+      setFiltersExpanded(false);
+      setFiltersDirty(true);
+    } else {
+      if (newSegmentMode === false) {
+        if (
+          Boolean(activeSegment?.name) === true &&
+          activeSegment.query != null
+        ) {
+          const filters = getSelectedFiltersFromQuery({
+            query: activeSegment.query,
+            groupsList: [],
+            caller: 'user_profiles'
+          });
+          setAppliedFilters(filters);
+          setSelectedFilters(filters);
+          setFiltersExpanded(false);
+          setFiltersDirty(false);
+        } else {
+          restoreFiltersDefaultState();
+        }
       }
     }
   }, [activeSegment, newSegmentMode]);
@@ -801,6 +812,15 @@ function UserProfiles({
     return isEqual(selectedFilters, appliedFilters);
   }, [selectedFilters, appliedFilters]);
 
+  const setSecondaryFiltersList = useCallback((secondaryFilters) => {
+    setSelectedFilters((curr) => {
+      return {
+        ...curr,
+        secondaryFilters
+      };
+    });
+  }, []);
+
   const applyFilters = useCallback(() => {
     setAppliedFilters(selectedFilters);
     setFiltersExpanded(false);
@@ -819,11 +839,21 @@ function UserProfiles({
     setFiltersDirty
   ]);
 
+  const setEventTimeline = useCallback((eventTimeline) => {
+    setSelectedFilters((curr) => {
+      return {
+        ...curr,
+        eventTimeline
+      };
+    });
+  }, []);
+
   const renderPropertyFilter = () => (
     <PropertyFilter
       profileType='user'
       source={timelinePayload.source}
       filters={timelinePayload.filters}
+      secondaryFiltersList={selectedFilters.secondaryFilters}
       filtersExpanded={filtersExpanded}
       filtersList={selectedFilters.filters}
       appliedFilters={appliedFilters}
@@ -831,6 +861,7 @@ function UserProfiles({
       listEvents={selectedFilters.eventsList}
       availableGroups={availableGroups}
       eventProp={selectedFilters.eventProp}
+      eventTimeline={selectedFilters.eventTimeline}
       areFiltersDirty={areFiltersDirty}
       disableDiscardButton={disableDiscardButton}
       isActiveSegment={Boolean(timelinePayload.segment_id) === true}
@@ -844,6 +875,8 @@ function UserProfiles({
       resetSelectedFilters={resetSelectedFilters}
       onClearFilters={handleClearFilters}
       setSelectedAccount={setSelectedAccount}
+      setSecondaryFiltersList={setSecondaryFiltersList}
+      setEventTimeline={setEventTimeline}
     />
   );
 
@@ -852,6 +885,7 @@ function UserProfiles({
       appliedFilters,
       newSegmentMode,
       filtersList: selectedFilters.filters,
+      secondaryFiltersList: selectedFilters.secondaryFilters,
       eventProp: selectedFilters.eventProp,
       eventsList: selectedFilters.eventsList,
       isActiveSegment: Boolean(timelinePayload.segment_id),
@@ -864,7 +898,8 @@ function UserProfiles({
     newSegmentMode,
     selectedFilters.eventProp,
     selectedFilters.eventsList,
-    selectedFilters.filters
+    selectedFilters.filters,
+    selectedFilters.secondaryFilters
   ]);
 
   const handleSaveSegmentClick = useCallback(() => {
@@ -992,7 +1027,7 @@ function UserProfiles({
                 value={listSearchItems ? listSearchItems.join(', ') : null}
                 placeholder={'Search Users'}
                 style={{ width: '240px', 'border-radius': '5px' }}
-                prefix={<SVG name='search' size={16} color={'grey'} />}
+                prefix={<SVG name='search' size={20} color={'grey'} />}
                 onClick={() => setSearchDDOpen(true)}
               />
             )}
@@ -1026,7 +1061,7 @@ function UserProfiles({
         content={popoverContent}
       >
         <Button type='text'>
-          <SVG size={24} name={'tableColumns'} />
+          <SVG size={20} name={'tableColumns'} />
         </Button>
       </Popover>
     );
@@ -1106,8 +1141,8 @@ function UserProfiles({
           styles['more-actions-popover']
         )}
       >
-        <Button type='default'>
-          <SVG size={24} name={'more'} />
+        <Button className={styles['more-actions-button']} type='default'>
+          <SVG size={20} name={'more'} />
         </Button>
       </Popover>
     );
@@ -1135,7 +1170,8 @@ function UserProfiles({
                 fromDetails: true,
                 currentPage: currentPage,
                 currentPageSize: currentPageSize,
-                activeSorter: defaultSorterInfo
+                activeSorter: defaultSorterInfo,
+                appliedFilters: areFiltersDirty ? appliedFilters : null
               }
             );
           }

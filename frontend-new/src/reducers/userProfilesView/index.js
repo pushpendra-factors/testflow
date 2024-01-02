@@ -10,7 +10,7 @@ import {
 } from './types';
 
 const INITIAL_ACTIVE_SEGMENT = {};
-const INITIAL_TIMELINE_PAYLOAD = { source: 'web', filters: [], segment_id: '' };
+const INITIAL_TIMELINE_PAYLOAD = { source: 'All', filters: [], segment_id: '' };
 
 const initialState = {
   timelinePayload: INITIAL_TIMELINE_PAYLOAD,

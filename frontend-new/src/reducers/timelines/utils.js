@@ -23,22 +23,22 @@ export const getAccountActivitiesWithEnableKeyConfig = (
 
 export const formatAccountTimeline = (data, config) => {
   const milestones = data.milestones || {};
-  const account_timeline = data.account_timeline || [];
-  const account_activities = getAccountActivitiesWithEnableKeyConfig(
-    account_timeline,
+  const accountTimeline = data.account_timeline || [];
+  const accountActivities = getAccountActivitiesWithEnableKeyConfig(
+    accountTimeline,
     config?.disabled_events
   );
 
-  const anonymous_users = account_timeline.filter((user) => user.is_anonymous);
-  const anonymous_user = anonymous_users.length
+  const anonymousUsers = accountTimeline.filter((user) => user.is_anonymous);
+  const anonymousUser = anonymousUsers.length
     ? [
         {
           title: 'Anonymous Users',
           subtitle: `${
-            anonymous_users.length === 1
+            anonymousUsers.length === 1
               ? '1 Anonymous User'
               : `${
-                  anonymous_users.length > 25 ? '25+' : anonymous_users.length
+                  anonymousUsers.length > 25 ? '25+' : anonymousUsers.length
                 } Anonymous Users`
           }`,
           userId: 'new_user',
@@ -47,53 +47,49 @@ export const formatAccountTimeline = (data, config) => {
       ]
     : [];
 
-  const is_intent_user = account_timeline.find(
-    (user) => user.user_name === 'group_user'
-  );
-  const intent_user = is_intent_user
-    ? [
-        {
-          title: is_intent_user.user_name,
-          subtitle: is_intent_user.additional_prop,
-          userId: is_intent_user.user_id,
-          isAnonymous: is_intent_user.is_anonymous
-        }
-      ]
-    : [];
+  const mapUser = ({
+    user_name: title,
+    additional_prop: subtitle,
+    user_id: userId,
+    is_anonymous: isAnonymous
+  }) => ({
+    title,
+    subtitle,
+    userId,
+    isAnonymous
+  });
 
-  const non_anonymous_users = account_timeline
+  const intentUser = accountTimeline
+    .filter((user) => user.user_name === 'group_user')
+    .map(mapUser);
+
+  const nonAnonymousUsers = accountTimeline
     .filter((user) => !user.is_anonymous && user.user_name !== 'group_user')
-    .sort(
-      (a, b) =>
-        a.user_activities &&
-        b.user_activities &&
-        compareObjTimestampsDesc(a.user_activities[0], b.user_activities[0])
-    )
-    .map(
-      ({
-        user_name: title,
-        additional_prop: subtitle,
-        user_id: userId,
-        is_anonymous: isAnonymous
-      }) => ({ title, subtitle, userId, isAnonymous })
-    );
+    .map(({ user_activities, ...rest }) => ({
+      ...mapUser(rest),
+      lastEventAt: user_activities?.sort(compareObjTimestampsDesc)?.[0]
+        ?.timestamp
+    }))
+    .sort((a, b) => b.lastEventAt - a.lastEventAt);
 
-  const account_events = account_activities
-    .concat(
-      Object.entries(milestones).map(([event_name, timestamp]) => ({
-        event_name,
-        timestamp,
-        user: 'milestone'
-      }))
-    )
-    .sort(compareObjTimestampsDesc);
+  const milestoneEvents = Object.entries(milestones).map(
+    ([event_name, timestamp]) => ({
+      event_name,
+      timestamp,
+      user: 'milestone'
+    })
+  );
+
+  const account_events = [...accountActivities, ...milestoneEvents].sort(
+    compareObjTimestampsDesc
+  );
 
   return {
     name: data.name,
     host: data.host_name,
     leftpane_props: data.leftpane_props,
     overview: data.overview,
-    account_users: [...non_anonymous_users, ...anonymous_user, ...intent_user],
+    account_users: [...nonAnonymousUsers, ...anonymousUser, ...intentUser],
     account_events
   };
 };
