@@ -618,6 +618,12 @@ func InitDataServiceRoutes(r *gin.Engine) {
 	dataServiceRouteGroup.GET("linkedin/documents/last_sync_info", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}),
 		IH.DataServiceLinkedinGetLastSyncInfoHandler)
 
+	dataServiceRouteGroup.GET("linkedin/documents/ads/last_sync_info/V1", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}),
+		IH.DataServiceLinkedinAdsGetLastSyncInfoV1Handler)
+
+	dataServiceRouteGroup.GET("linkedin/documents/company/last_sync_info/V1", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}),
+		IH.DataServiceLinkedinCompanyGetLastSyncInfoV1Handler)
+
 	dataServiceRouteGroup.POST("/linkedin/documents/add", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}),
 		IH.DataServiceLinkedinAddDocumentHandler)
 
@@ -626,6 +632,9 @@ func InitDataServiceRoutes(r *gin.Engine) {
 
 	dataServiceRouteGroup.GET("/linkedin/documents/campaign_group_info", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}),
 		IH.DataServiceLinkedinGetCampaignGroupInfoHandler)
+
+	dataServiceRouteGroup.GET("/linkedin/documents/validation", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}),
+		IH.DataServiceLinkedinValidationHandler)
 
 	dataServiceRouteGroup.DELETE("/linkedin/documents",
 		mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}), IH.DataServiceLinkedinDeleteDocumentsHandler)

@@ -141,7 +141,7 @@ const linkedinCampaignMetadataFetchQueryStr = "select campaign_information.campa
 	"from linkedin_documents where type = ? AND project_id = ? AND timestamp between ? AND ? AND customer_ad_account_id IN (?) group by campaign_id_1 " +
 	") as campaign_latest_timestamp_id " +
 	"ON campaign_information.campaign_id_1 = campaign_latest_timestamp_id.campaign_id_1 AND campaign_information.timestamp = campaign_latest_timestamp_id.timestamp "
-const insertLinkedinStr = "INSERT INTO linkedin_documents (project_id,customer_ad_account_id,type,timestamp,id,campaign_group_id,campaign_id,creative_id,value,created_at,updated_at,is_backfilled) VALUES "
+const insertLinkedinStr = "INSERT INTO linkedin_documents (project_id,customer_ad_account_id,type,timestamp,id,campaign_group_id,campaign_id,creative_id,value,created_at,updated_at,is_backfilled,sync_status) VALUES "
 const campaignGroupInfoFetchStr = "With campaign_timestamp as (Select campaign_group_id as c1, max(timestamp) as t1 from linkedin_documents where project_id = ? " +
 	"and customer_ad_account_id = ? and type = 2 and timestamp between ? and ? and (JSON_EXTRACT_STRING(value, 'status') = 'ACTIVE' or JSON_EXTRACT_JSON(value, 'changeAuditStamps', 'lastModified', 'time')>= ?) group by campaign_group_id) select * from linkedin_documents inner join " +
 	"campaign_timestamp on c1 = campaign_group_id and t1=timestamp where project_id = ? and customer_ad_account_id = ? and type = 2 and timestamp between ? and ?"
@@ -227,14 +227,11 @@ func getLinkedinDocumentTypeAliasByType() map[int]string {
 }
 
 /*
-Backfill logic: get min timestamp in last 30 days where is_backfilled is false
-This will be our backfill start date.
-Corner case: min(timestamp) returns nil if data is not present
-
-	In this case we return backfill timestamp as 0, which means we don't have to refer to this data while backfilling
-	we'll only look at the last sync info timestamp and treat timestamp <= t-8 as backfill and > t-8 as normal run
+lastSyncInfo {project_id: , ad_account:, doc_type: , doc_type_alias:, last_timestamp:, last_backfill_timestamp:}
+lastBackfill timestamp is used in weekly pull and is filled for MEMBER_COMPANY_INSIGHTS only
+expected doc types:
+ad_account, campaign group meta, campaign meta, camapign group insights, campaign insights, member_company insights (along with last backfill)
 */
-
 func (store *MemSQL) GetLinkedinLastSyncInfo(projectID int64, CustomerAdAccountID string) ([]model.LinkedinLastSyncInfo, int) {
 	logFields := log.Fields{
 		"project_id":             projectID,
@@ -316,6 +313,186 @@ func (store *MemSQL) GetLinkedinLastSyncInfo(projectID int64, CustomerAdAccountI
 	}
 	return linkedinLastSyncInfos, http.StatusOK
 }
+
+/*
+When I return getLastSyncInfos
+  - We are return array of Objects. But the length of objects should be static.
+  - So when we change that, we have to make it as backward compatible.
+
+Had lastSyncInfos been return in following way, it would have been caught
+LastSyncInfo {Campaign: 202, Adgroup: 303, CampaignDaily: , Campaignt22: , Campaignt8: }
+
+In this v1 change, we are separating out normal ads data and company enagements data
+here we only get last sync info for normal ads data
+expected doc type here are: ad_acccount, campaign_group meta, campaign meta, campaign_group insights, campaign insights
+*/
+func (store *MemSQL) GetLinkedinAdsLastSyncInfoV1(projectID int64, customerAdAccountID string) ([]model.LinkedinLastSyncInfo, int) {
+	logFields := log.Fields{
+		"project_id":             projectID,
+		"customer_ad_account_id": customerAdAccountID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+
+	linkedinLastSyncInfos := make([]model.LinkedinLastSyncInfo, 0)
+
+	queryStr := "SELECT project_id, customer_ad_account_id, type as document_type, max(timestamp) as last_timestamp" +
+		" FROM linkedin_documents WHERE project_id = ? AND customer_ad_account_id = ? and type != ?" +
+		" GROUP BY project_id, customer_ad_account_id, type "
+
+	rows, err := db.Raw(queryStr, projectID, customerAdAccountID, LinkedinDocumentTypeAlias["member_company_insights"]).Rows()
+	if err != nil {
+		log.WithError(err).Error("Failed to get last linkedin documents by type for sync info.")
+		return linkedinLastSyncInfos, http.StatusInternalServerError
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var linkedinLastSyncInfo model.LinkedinLastSyncInfo
+		if err := db.ScanRows(rows, &linkedinLastSyncInfo); err != nil {
+			log.WithError(err).Error("Failed to scan last linkedin documents by type for sync info.")
+			return []model.LinkedinLastSyncInfo{}, http.StatusInternalServerError
+		}
+
+		linkedinLastSyncInfos = append(linkedinLastSyncInfos, linkedinLastSyncInfo)
+	}
+	documentTypeAliasByType := getLinkedinDocumentTypeAliasByType()
+
+	for i := range linkedinLastSyncInfos {
+		logCtx := log.WithFields(logFields)
+		typeAlias, typeAliasExists := documentTypeAliasByType[linkedinLastSyncInfos[i].DocumentType]
+		if !typeAliasExists {
+			logCtx.WithField("document_type",
+				linkedinLastSyncInfos[i].DocumentType).Error("Invalid document type given. No type alias name.")
+			return []model.LinkedinLastSyncInfo{}, http.StatusInternalServerError
+		}
+
+		linkedinLastSyncInfos[i].DocumentTypeAlias = typeAlias
+	}
+
+	return linkedinLastSyncInfos, http.StatusOK
+}
+
+/*
+this is for company engagement
+3 types of last sync infos are fetched here
+ 1. for daily pull, we want to fetch the data from the next day where any type(sync_status=0,1,2) is present
+    - 	that's why we return max ingestion timestamp for this
+ 2. for type1 we get max(timestamp) where sync_status =1
+    or 0 in case sync_status is not present
+    - We are not worried about timestamp > n days, because here we're only concerned with knowing when the last sync was done
+    - All calculations regarding data fetch are done on sync job side
+    - it's is possible to have sync_status =2 data, but it is validated on the sync job
+ 3. for type2 we get max(timestamp) where sync_status =2
+    or 0 in case sync_status is not present
+    - all the points mentioned above are valid here as well
+*/
+func (store *MemSQL) GetLinkedinCompanyLastSyncInfoV1(projectID int64, customerAdAccountID string) ([]model.LinkedinLastSyncInfo, int) {
+	logFields := log.Fields{
+		"project_id":             projectID,
+		"customer_ad_account_id": customerAdAccountID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+
+	linkedinLastSyncInfos := make([]model.LinkedinLastSyncInfo, 0)
+
+	queryStr := "SELECT project_id, customer_ad_account_id, type as document_type, max(timestamp) as last_timestamp" +
+		" FROM linkedin_documents WHERE project_id = ? AND customer_ad_account_id = ? and type = ?" +
+		" GROUP BY project_id, customer_ad_account_id, type "
+
+	rows, err := db.Raw(queryStr, projectID, customerAdAccountID, LinkedinDocumentTypeAlias["member_company_insights"]).Rows()
+	if err != nil {
+		log.WithError(err).Error("Failed to get last linkedin documents by type for sync info.")
+		return linkedinLastSyncInfos, http.StatusInternalServerError
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var linkedinLastSyncInfo model.LinkedinLastSyncInfo
+		if err := db.ScanRows(rows, &linkedinLastSyncInfo); err != nil {
+			log.WithError(err).Error("Failed to scan last linkedin documents by type for sync info.")
+			return []model.LinkedinLastSyncInfo{}, http.StatusInternalServerError
+		}
+
+		linkedinLastSyncInfos = append(linkedinLastSyncInfos, linkedinLastSyncInfo)
+	}
+	documentTypeAliasByType := getLinkedinDocumentTypeAliasByType()
+
+	for i := range linkedinLastSyncInfos {
+		logCtx := log.WithFields(logFields)
+		typeAlias, typeAliasExists := documentTypeAliasByType[linkedinLastSyncInfos[i].DocumentType]
+		if !typeAliasExists {
+			logCtx.WithField("document_type",
+				linkedinLastSyncInfos[i].DocumentType).Error("Invalid document type given. No type alias name.")
+			return []model.LinkedinLastSyncInfo{}, http.StatusInternalServerError
+		}
+
+		linkedinLastSyncInfos[i].DocumentTypeAlias = typeAlias
+		linkedinLastSyncInfos[i].SyncType = model.CompanySyncJobTypeMap["daily"]
+	}
+
+	t8TimestampQuery := "SELECT CASE WHEN max(timestamp) is NULL THEN 0 ELSE max(timestamp) END AS " +
+		"max_timestamp from linkedin_documents where project_id = ? AND customer_ad_account_id = ? " +
+		"and type = ? and sync_status = 1"
+	var t8EndTimestamp interface{}
+	rows, err = db.Raw(t8TimestampQuery, projectID, customerAdAccountID, LinkedinDocumentTypeAlias["member_company_insights"]).Rows()
+	if err != nil {
+		log.WithError(err).Error("Failed to get backfill timestamp.")
+		return []model.LinkedinLastSyncInfo{}, http.StatusInternalServerError
+	}
+	for rows.Next() {
+		if err := rows.Scan(&t8EndTimestamp); err != nil {
+			log.WithError(err).Error("Failed to scan backfill timestamp.")
+			return []model.LinkedinLastSyncInfo{}, http.StatusInternalServerError
+		}
+	}
+	intT8EndTimestamp, ok := t8EndTimestamp.(int64)
+	if !ok {
+		log.WithError(err).Error("Failed to convert t22 timestamp into integer.")
+		return []model.LinkedinLastSyncInfo{}, http.StatusInternalServerError
+	}
+	t8_last_sync_info := model.LinkedinLastSyncInfo{
+		ProjectID:           projectID,
+		CustomerAdAccountID: customerAdAccountID,
+		DocumentTypeAlias:   "member_company_insights",
+		SyncType:            model.CompanySyncJobTypeMap["t8"],
+		LastTimestamp:       intT8EndTimestamp,
+	}
+	linkedinLastSyncInfos = append(linkedinLastSyncInfos, t8_last_sync_info)
+
+	t22TimestampQuery := "SELECT CASE WHEN max(timestamp) is NULL THEN 0 ELSE max(timestamp) END AS " +
+		"max_timestamp from linkedin_documents where project_id = ? AND customer_ad_account_id = ? " +
+		"and type = ? and sync_status = 2"
+	var t22EndTimestamp interface{}
+	rows, err = db.Raw(t22TimestampQuery, projectID, customerAdAccountID, LinkedinDocumentTypeAlias["member_company_insights"]).Rows()
+	if err != nil {
+		log.WithError(err).Error("Failed to get backfill timestamp.")
+		return []model.LinkedinLastSyncInfo{}, http.StatusInternalServerError
+	}
+	for rows.Next() {
+		if err := rows.Scan(&t22EndTimestamp); err != nil {
+			log.WithError(err).Error("Failed to scan backfill timestamp.")
+			return []model.LinkedinLastSyncInfo{}, http.StatusInternalServerError
+		}
+	}
+	intT22EndTimestamp, ok := t22EndTimestamp.(int64)
+	if !ok {
+		log.WithError(err).Error("Failed to convert t22 timestamp into integer.")
+		return []model.LinkedinLastSyncInfo{}, http.StatusInternalServerError
+	}
+	t22_last_sync_info := model.LinkedinLastSyncInfo{
+		ProjectID:           projectID,
+		CustomerAdAccountID: customerAdAccountID,
+		DocumentTypeAlias:   "member_company_insights",
+		LastTimestamp:       intT22EndTimestamp,
+		SyncType:            model.CompanySyncJobTypeMap["t22"],
+	}
+	linkedinLastSyncInfos = append(linkedinLastSyncInfos, t22_last_sync_info)
+
+	return linkedinLastSyncInfos, http.StatusOK
+}
+
 func (store *MemSQL) GetDomainData(projectID string) ([]model.DomainDataResponse, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -337,11 +514,11 @@ func (store *MemSQL) GetDomainData(projectID string) ([]model.DomainDataResponse
 		"JSON_EXTRACT_STRING(value, 'localizedName') as localized_name, JSON_EXTRACT_STRING(value, 'preferredCountry') as preferred_country, " +
 		"SUM(JSON_EXTRACT_STRING(value, 'impressions')) as impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) as clicks " +
 		"FROM linkedin_documents WHERE " +
-		"project_id = ? and type = 8 and is_backfilled = TRUE and is_group_user_created != TRUE and domain != '$none' and timestamp >= ? " +
+		"project_id = ? and type = ? and is_backfilled = TRUE and is_group_user_created != TRUE and domain != '$none' and timestamp >= ? " +
 		"group by project_id, id, timestamp, customer_ad_account_id, headquarters, domain, vanity_name, localized_name, preferred_country " +
 		"order by timestamp ASC, project_id, id, customer_ad_account_id, headquarters, domain, vanity_name, localized_name, preferred_country"
 
-	rows, err := db.Raw(queryStr, projectID, timestampBefore30Days).Rows()
+	rows, err := db.Raw(queryStr, projectID, LinkedinDocumentTypeAlias["member_company_insights"], timestampBefore30Days).Rows()
 	if err != nil {
 		log.WithError(err).Error("Failed to get last linkedin documents by type for sync info.")
 		return domainDatas, http.StatusInternalServerError
@@ -406,12 +583,12 @@ func (store *MemSQL) GetCompanyDataFromLinkedinForTimestamp(projectID string, ti
 		"JSON_EXTRACT_STRING(value, 'campaign_group_name') as campaign_group_name, " +
 		"JSON_EXTRACT_STRING(value, 'impressions') as impressions, JSON_EXTRACT_STRING(value, 'clicks') as clicks " +
 		"FROM linkedin_documents WHERE " +
-		"project_id = ? and type = 8 and is_group_user_created != TRUE and timestamp = ? " +
+		"project_id = ? and type = ? and is_group_user_created != TRUE and timestamp = ? " +
 		"group by project_id, id, timestamp, customer_ad_account_id, headquarters, domain, vanity_name, localized_name, preferred_country, impressions, clicks " +
 		"order by timestamp ASC, project_id, id, customer_ad_account_id, campaign_group_id, headquarters, domain, vanity_name, localized_name, " +
 		"campaign_group_name, preferred_country limit 10000"
 
-	rows, err := db.Raw(fetchDomainDataFieldsQueryStr, projectID, timestamp).Rows()
+	rows, err := db.Raw(fetchDomainDataFieldsQueryStr, projectID, LinkedinDocumentTypeAlias["member_company_insights"], timestamp).Rows()
 	if err != nil {
 		log.WithError(err).Error("Failed to get domain data for given timestamp.")
 		return make([]model.DomainDataResponse, 0), http.StatusInternalServerError
@@ -582,6 +759,51 @@ func (store *MemSQL) GetCampaignGroupInfoForGivenTimerange(campaignGroupInfoRequ
 	return linkedinDocuments, http.StatusOK
 }
 
+/*
+validation logic for a given timerange
+ 1. for daily job (sync_status=0), the give timerange should not have any data and this is represented by sync_status > -1
+ 2. for type1/t8 job (sync_status=1), the give timerange should not have type2 job data, the range can contain daily data
+    and this is represented by sync_status > 1
+ 3. for type2/t22 job (sync_status=2), there are not validations req
+
+**note**; sync_state -> 0 -> dailydata, 1 -> t8 data, 2 -> t22 data
+*/
+func (store *MemSQL) GetValidationForGivenTimerangeAndJobType(validateRequestPayload model.LinkedinValidationRequestPayload) (bool, int) {
+	logFields := log.Fields{"validateRequestPayload": validateRequestPayload}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+	db := C.GetServices().Db
+	projectID, adAccountID, startTime, endTime, syncStatus := validateRequestPayload.ProjectID, validateRequestPayload.CustomerAdAccountID, validateRequestPayload.StartTimestamp, validateRequestPayload.EndTimestamp, validateRequestPayload.SyncStatus
+
+	if syncStatus == model.CompanySyncJobTypeMap["t22"] {
+		return true, http.StatusOK
+	}
+	if syncStatus == model.CompanySyncJobTypeMap["daily"] {
+		syncStatus = -1 // changing to satisfy the condition explained above
+	}
+	query := "SELECT count(*) as count from linkedin_documents where project_id = ? AND customer_ad_account_id = ? " +
+		"and type = ? and sync_status > ? and timestamp between ? and ?"
+
+	rows, err := db.Raw(query, projectID, adAccountID, LinkedinDocumentTypeAlias["member_company_insights"], syncStatus, startTime, endTime).Rows()
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to query count of rows.")
+		return false, http.StatusInternalServerError
+	}
+	var count int
+	for rows.Next() {
+		if err := rows.Scan(&count); err != nil {
+			logCtx.WithError(err).Error("Failed to scan count of rows")
+			return false, http.StatusInternalServerError
+		}
+	}
+
+	if count > 0 {
+		return false, http.StatusOK
+	}
+
+	return true, http.StatusOK
+}
+
 // CreateMultipleLinkedinDocument ...
 func (store *MemSQL) CreateMultipleLinkedinDocument(linkedinDocuments []model.LinkedinDocument) int {
 	logFields := log.Fields{"linkedin_documents": linkedinDocuments}
@@ -601,10 +823,10 @@ func (store *MemSQL) CreateMultipleLinkedinDocument(linkedinDocuments []model.Li
 	insertValuesStatement := make([]string, 0)
 	insertValues := make([]interface{}, 0)
 	for _, linkedinDoc := range linkedinDocuments {
-		insertValuesStatement = append(insertValuesStatement, fmt.Sprintf("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"))
+		insertValuesStatement = append(insertValuesStatement, fmt.Sprintf("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"))
 		insertValues = append(insertValues, linkedinDoc.ProjectID, linkedinDoc.CustomerAdAccountID,
 			linkedinDoc.Type, linkedinDoc.Timestamp, linkedinDoc.ID, linkedinDoc.CampaignGroupID, linkedinDoc.CampaignID,
-			linkedinDoc.CreativeID, linkedinDoc.Value, time.Now(), time.Now(), linkedinDoc.IsBackfilled)
+			linkedinDoc.CreativeID, linkedinDoc.Value, time.Now(), time.Now(), linkedinDoc.IsBackfilled, linkedinDoc.SyncStatus)
 		UpdateCountCacheByDocumentType(linkedinDoc.ProjectID, &linkedinDoc.CreatedAt, "linkedin")
 	}
 	insertStatement += joinWithComma(insertValuesStatement...)

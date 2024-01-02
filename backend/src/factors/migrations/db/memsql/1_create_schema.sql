@@ -594,6 +594,7 @@ CREATE TABLE IF NOT EXISTS linkedin_documents (
     campaign_id text,
     is_backfilled boolean default FALSE NOT NULL,
     is_group_user_created BOOLEAN default FALSE,
+    sync_status int default 0,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     KEY (updated_at) USING HASH,
