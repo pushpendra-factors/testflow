@@ -171,20 +171,21 @@
         }
 
         .props {
-            padding: 32px 0 0;
+            margin: 24px 0 0;
+            padding: 8px 0;
             background: #FFF;
-            max-height: calc(100% - 400px);
+            max-height: calc(100% - 412px);
             overflow-y: scroll;
         }
 
         .add-prop-btn {
             position: sticky;
-            bottom:0;
+            bottom: 0;
             width: 100%;
             background-color: white;
             padding: 8px 32px 24px;
 
-            &.with-attr{
+            &.with-attr {
                 bottom: 32px;
             }
         }
