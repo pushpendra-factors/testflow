@@ -130,6 +130,7 @@ func TestMain(m *testing.M) {
 		AllowEventAnalyticsGroupsByProjectID:                "*",
 		EnableEventFiltersInSegments:                        true,
 		AllAccountsProjectId:                                "*",
+		UseMarkerByProjectID:                                "*",
 		AllowEmailDomainsByProjectID:                        "*",
 		UseHubspotCompaniesV3APIByProjectID:                 "*",
 		UseHubspotEngagementsV3APIByProjectID:               "*",

@@ -102,8 +102,10 @@ const getURLWithQueryParams = (projectId, profileType, agentId) => {
     queryParams.push('debug=true');
   }
   
-  if (window.USE_MARKER) {
-    queryParams.push('user_marker=true');
+  if (window.NOT_USE_MARKER) {
+    queryParams.push('user_marker=false');
+  } else {
+	queryParams.push('user_marker=true');
   }
   
 

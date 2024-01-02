@@ -196,6 +196,7 @@ func main() {
 	blockedIPList := flag.String("blocked_IP_list", "", "List containing all the blocked IP address")
 	blockedEmailDomainList := flag.String("blocked_email_domain_list", "", "List containing all blocked email domains")
 	allAccountsProjectId := flag.String("all_accounts_project_id", "", "List of projectIds to enable domain.")
+	useMarkerByProjectID := flag.String("use_marker_by_project_id", "", "List of projectIds to enable segment marker.")
 	enableNewAllAccountsByProjectID := flag.String("enable_new_all_accounts_by_project_id", "", "List of projectIds to enable domain.")
 	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
 	enableEventFiltersInSegments := flag.Bool("enable_event_filters_in_segments", false, "Enables adding event filters in segment query")
@@ -354,6 +355,7 @@ func main() {
 		BlockedIPList:                                  C.GetBlockedIPFromStringListAsString(*blockedIPList),
 		BlockedEmailDomainList:                         C.GetBlockedEmailDomainFromStringListAsString(*blockedEmailDomainList),
 		AllAccountsProjectId:                           *allAccountsProjectId,
+		UseMarkerByProjectID:                           *useMarkerByProjectID,
 		IngestionTimezoneEnabledProjectIDs:             C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
 		EnableEventFiltersInSegments:                   *enableEventFiltersInSegments,
 		EnableFeatureGates:                             *enableFeatureGates,
