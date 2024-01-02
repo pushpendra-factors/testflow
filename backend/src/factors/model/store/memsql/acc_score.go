@@ -618,6 +618,15 @@ func ComputeUserScoreOnCustomerId(db *gorm.DB, id string, projectId int64, event
 	defer tx.Close()
 	final_score := float32(0)
 	usersOnDay := make([]model.PerUserScoreOnDay, 0)
+	var weightNamesMap map[string]string = make(map[string]string, 0)
+
+	for _, w := range weights.WeightConfig {
+		if len(w.FilterName) > 0 {
+			weightNamesMap[w.WeightId] = w.FilterName
+		} else {
+			weightNamesMap[w.WeightId] = w.EventName
+		}
+	}
 	for tx.Next() {
 		var events_count_string string
 		var le model.LatestScore
@@ -639,7 +648,7 @@ func ComputeUserScoreOnCustomerId(db *gorm.DB, id string, projectId int64, event
 		uday.Id = user_id
 		uday.Score = float32(accountScore)
 		addProperty(&uday, &le)
-		addTopEvents(&uday, &le)
+		addTopEvents(&uday, &le, weightNamesMap)
 		uday.Debug = make(map[string]interface{})
 		uday.Debug["customer_id"] = id
 		uday.Debug["date"] = eventTs
@@ -690,6 +699,16 @@ func (store *MemSQL) GetUserScoreOnIds(projectId int64, usersAnonymous, usersNon
 		return nil, errors.New("weights not found")
 	}
 
+	var weightNamesMap map[string]string = make(map[string]string, 0)
+
+	for _, w := range weights.WeightConfig {
+		if len(w.FilterName) > 0 {
+			weightNamesMap[w.WeightId] = w.FilterName
+		} else {
+			weightNamesMap[w.WeightId] = w.EventName
+		}
+	}
+
 	stmt := fmt.Sprintf("select id, json_extract_json(event_aggregate,'%s') from users where  project_id = ? AND ID IN ( ? ) AND json_length(event_aggregate)>=1 LIMIT %d", model.LAST_EVENT, MAX_LIMIT)
 	rows, err := db.Raw(stmt, projectId, usersAnonymous).Rows()
 	if err != nil {
@@ -723,7 +742,7 @@ func (store *MemSQL) GetUserScoreOnIds(projectId int64, usersAnonymous, usersNon
 		resultPerUser.Id = userId
 		resultPerUser.Score = float32(accountScore)
 		addProperty(&resultPerUser, &le)
-		addTopEvents(&resultPerUser, &le)
+		addTopEvents(&resultPerUser, &le, weightNamesMap)
 		if debug {
 			resultPerUser.Debug = make(map[string]interface{})
 			resultPerUser.Debug["counts"] = le.EventsCount
@@ -756,9 +775,19 @@ func (store *MemSQL) GetAccountScoreOnIds(projectId int64, accountIds []string, 
 	logCtx := log.WithFields(logFields)
 	db := C.GetServices().Db
 
+	var weightNamesMap map[string]string = make(map[string]string, 0)
+
 	weights, errStatus := store.GetWeightsByProject(projectId)
 	if errStatus != http.StatusFound {
 		return nil, errors.New("weights not found")
+	}
+
+	for _, w := range weights.WeightConfig {
+		if len(w.FilterName) > 0 {
+			weightNamesMap[w.WeightId] = w.FilterName
+		} else {
+			weightNamesMap[w.WeightId] = w.EventName
+		}
 	}
 
 	stmt := fmt.Sprintf("SELECT id, JSON_EXTRACT_JSON(event_aggregate,'%s') from users where  is_group_user=1  and project_id = ? AND ID IN ( ? ) AND JSON_LENGTH(event_aggregate)>=1 LIMIT %d", model.LAST_EVENT, MAX_LIMIT)
@@ -794,7 +823,7 @@ func (store *MemSQL) GetAccountScoreOnIds(projectId int64, accountIds []string, 
 		resultPerUser.Score = float32(accountScore)
 		resultPerUser.TopEvents = le.TopEvents
 		addProperty(&resultPerUser, &le)
-		addTopEvents(&resultPerUser, &le)
+		addTopEvents(&resultPerUser, &le, weightNamesMap)
 		if debug {
 			resultPerUser.Debug = make(map[string]interface{})
 			resultPerUser.Debug["counts"] = le.EventsCount
@@ -820,6 +849,15 @@ func ComputeUserScoreNonAnonymous(db *gorm.DB, weights model.AccWeights, project
 	logCtx := log.WithFields(logFields)
 
 	result := make(map[string]model.PerUserScoreOnDay, 0)
+	var weightNamesMap map[string]string = make(map[string]string, 0)
+
+	for _, w := range weights.WeightConfig {
+		if len(w.FilterName) > 0 {
+			weightNamesMap[w.WeightId] = w.FilterName
+		} else {
+			weightNamesMap[w.WeightId] = w.EventName
+		}
+	}
 
 	stmt_customer := fmt.Sprintf("select customer_user_id, json_extract_json(event_aggregate,'%s') from users where project_id=? and customer_user_id IN (?) AND JSON_LENGTH(event_aggregate)>=1 LIMIT %d", model.LAST_EVENT, MAX_LIMIT)
 	rows, err := db.Raw(stmt_customer, projectId, knownUsers).Rows()
@@ -863,7 +901,7 @@ func ComputeUserScoreNonAnonymous(db *gorm.DB, weights model.AccWeights, project
 		r.Id = userKey
 		r.Score = float32(accountScore)
 		addProperty(&r, &userCounts)
-		addTopEvents(&r, &userCounts)
+		addTopEvents(&r, &userCounts, weightNamesMap)
 		if debug {
 			r.Debug = make(map[string]interface{})
 			r.Debug["counts"] = userCounts.EventsCount
@@ -993,10 +1031,14 @@ func addProperty(result *model.PerUserScoreOnDay, le *model.LatestScore) {
 	}
 }
 
-func addTopEvents(result *model.PerUserScoreOnDay, le *model.LatestScore) {
+func addTopEvents(result *model.PerUserScoreOnDay, le *model.LatestScore, weightsMap map[string]string) {
 	result.TopEvents = make(map[string]float64)
 	for propKey, propVal := range le.TopEvents {
-		result.TopEvents[propKey] += propVal
+		filtername, ok := weightsMap[propKey]
+		if !ok {
+			filtername = propKey
+		}
+		result.TopEvents[filtername] += propVal
 	}
 }
 

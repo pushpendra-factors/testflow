@@ -85,6 +85,10 @@ func updateProfileUserScores(profileUsersList *[]model.Profile, scoresPerUser ma
 	for i := range *profileUsersList {
 		if prof, ok := scoresPerUser[(*profileUsersList)[i].Identity]; ok {
 			(*profileUsersList)[i].Engagement = engagementLevels[float64(prof.Score)]
+			(*profileUsersList)[i].TopEngagements = make(map[string]float64)
+			for engagementKey, engengagementval := range prof.TopEvents {
+				(*profileUsersList)[i].TopEngagements[engagementKey] += engengagementval
+			}
 		} else {
 			(*profileUsersList)[i].Engagement = ""
 		}
@@ -262,6 +266,7 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 			if err != nil {
 				logCtx.Error("Error while fetching account scoring bucket ranges.")
 			}
+
 			// Update account scores in the accounts list
 			updateProfileUserScores(&profileAccountsList, scoresPerAccount, buckets)
 		}
