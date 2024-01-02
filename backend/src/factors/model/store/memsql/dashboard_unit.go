@@ -883,6 +883,7 @@ func (store *MemSQL) CacheDashboardUnitsForProjectID(projectID int64, dashboardU
 	}
 	if C.GetIsRunningForMemsql() == 0 {
 		waitGroup.Wait()
+		log.Warn("Didnt get stuck after waitGroup CacheDashboardUnit")
 	}
 	return len(dashboardUnits)
 }
@@ -1517,6 +1518,7 @@ func (store *MemSQL) RunCachingToBackFillRanges(dashboardUnit model.DashboardUni
 	}
 	if C.GetIsRunningForMemsql() == 0 {
 		unitWaitGroup.Wait()
+		log.Warn("Didnt get stuck after unit waitGroup cacheDashboardUnitForDateRange")
 	}
 }
 
@@ -2187,6 +2189,7 @@ func (store *MemSQL) CacheDashboardsForMonthlyRange(projectIDs, excludeProjectID
 			}
 			if C.GetIsRunningForMemsql() == 0 {
 				waitGroup.Wait()
+				log.Warn("Didnt get stuck after waitGroup")
 			}
 		}
 	}
