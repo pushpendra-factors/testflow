@@ -38,6 +38,7 @@ function ProjectModal(props) {
   const [selectedProject, setselectedProject] = useState(null);
   const history = useHistory();
   const inputComponentRef = useAutoFocus(ShowPopOver);
+  const variant = props?.variant === 'onboarding' ? 'onboarding' : 'app';
 
   const dispatch = useDispatch();
 
@@ -101,10 +102,14 @@ function ProjectModal(props) {
     <div data-tour='step-9' className='fa-popupcard'>
       <div className={`${styles.popover_content__header}`}>Signed in as</div>
       <div
-        className={`${styles.popover_content__settings}`}
+        className={`${styles.popover_content__settings} ${
+          variant === 'app' ? 'cursor-pointer' : ''
+        }`}
         onClick={() => {
-          setShowPopOver(false);
-          showUserSettingsModal();
+          if (variant === 'app') {
+            setShowPopOver(false);
+            showUserSettingsModal();
+          }
         }}
       >
         <div className='flex items-center'>
@@ -128,31 +133,35 @@ function ProjectModal(props) {
             <div className='text-xs'>{props.currentAgent?.email}</div>
           </div>
         </div>
-        <SVG name='settings' size={24} />
+        {variant === 'app' && <SVG name='settings' size={24} />}
       </div>
-      <div className='fa-popupcard-divider' />
-      <div className={`${styles.popover_content__projectList}`}>
-        <Text
-          type='title'
-          level={7}
-          weight='bold'
-          extraClass='m-0'
-          color='grey-2'
-        >
-          Your Projects
-        </Text>
-        <Button
-          type='text'
-          className='fa-btn--custom'
-          onClick={() => {
-            setShowPopOver(false);
-            // setShowProjectModal(true);
-            history.push(`${PathUrls.Onboarding}?setup=new`);
-          }}
-        >
-          <SVG name='plus' />
-        </Button>
-      </div>
+      <div className={'fa-popupcard-divider'} />
+      {props.projects?.length > 0 && (
+        <div className={`${styles.popover_content__projectList}`}>
+          <Text
+            type={'title'}
+            level={7}
+            weight={'bold'}
+            extraClass={'m-0'}
+            color='grey-2'
+          >
+            Your Projects
+          </Text>
+          {variant === 'app' && (
+            <Button
+              type={'text'}
+              className='fa-btn--custom'
+              onClick={() => {
+                setShowPopOver(false);
+                // setShowProjectModal(true);
+                history.push(`${PathUrls.Onboarding}?setup=new`);
+              }}
+            >
+              <SVG name='plus' />
+            </Button>
+          )}
+        </div>
+      )}
 
       {props.projects?.length > 6 ? (
         <input
@@ -223,19 +232,24 @@ function ProjectModal(props) {
             </div>
           ))}
       </div>
-      <div className='fa-popupcard-divider' />
-      <div className={styles.popover_content__additionalActions}>
-        <a href='https://help.factors.ai' target='_blank' rel='noreferrer'>
-          Help
-        </a>
-      </div>
-      <div className={styles.popover_content__additionalActions}>
-        <a onClick={() => window.open(PathUrls.Checklist, '_self')}>
-          Setup Assist
-        </a>
-      </div>
+      {props.projects?.length > 0 && <div className={'fa-popupcard-divider'} />}
 
-      <div style={{ borderTop: 'thin solid #e7e9ed' }}>
+      {variant === 'app' && (
+        <>
+          <div className={styles.popover_content__additionalActions}>
+            <a href='https://help.factors.ai' target='_blank'>
+              Help
+            </a>
+          </div>
+          <div className={styles.popover_content__additionalActions}>
+            <a onClick={() => window.open(PathUrls.Checklist, '_self')}>
+              Setup Assist
+            </a>
+          </div>
+        </>
+      )}
+
+      <div style={{ borderTop: variant === 'app' ? 'thin solid #e7e9ed' : '' }}>
         <Button
           size='large'
           type='text'
@@ -271,7 +285,11 @@ function ProjectModal(props) {
         trigger='click'
       >
         <Tooltip
-          title='Access your projects, account settings, and more'
+          title={
+            variant === 'app'
+              ? 'Access your projects, account settings, and more'
+              : ''
+          }
           color={TOOLTIP_CONSTANTS.DARK}
         >
           <Button
@@ -285,30 +303,41 @@ function ProjectModal(props) {
               shape='square'
               style={{
                 background:
-                  props.active_project?.profile_picture?.length > 0
+                  props?.active_project?.profile_picture?.length > 0
                     ? '#FFFFFF'
                     : '#FF7875',
                 textTransform: 'uppercase',
                 fontWeight: '600',
                 borderRadius: '8px'
               }}
-              src={props.active_project?.profile_picture}
-            >{`${props.active_project?.name?.charAt(0)}`}</Avatar>
+              src={props?.active_project?.profile_picture}
+            >
+              {' '}
+              {props?.active_project?.name?.charAt(0)
+                ? `${props.active_project?.name?.charAt(0)}`
+                : props?.currentAgent?.first_name?.charAt(0)}
+            </Avatar>
 
             <div className='flex flex-col items-start ml-2'>
               <div className='flex items-center'>
                 <Text
                   type='title'
                   level={7}
-                  extraClass='m-0'
-                  weight='bold'
-                  color='white'
+                  extraClass={'m-0'}
+                  weight={'bold'}
+                  color={variant === 'app' ? 'white' : undefined}
                 >
-                  {`${props.active_project?.name}`}
+                  {props?.active_project?.name
+                    ? props.active_project.name
+                    : props?.currentAgent?.first_name}
                 </Text>
                 <SVG name='caretDown' size={20} color='#BFBFBF' />
               </div>
-              <div className='text-xs text-white opacity-80'>
+              <div
+                className={`text-xs ${
+                  variant === 'app' ? 'text-white' : ''
+                }  opacity-80`}
+              >
                 {props.currentAgent?.email}
               </div>
             </div>
