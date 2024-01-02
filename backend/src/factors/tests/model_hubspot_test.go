@@ -4042,6 +4042,8 @@ func TestHubspotCompanyGroups(t *testing.T) {
 		domainUser, status := store.GetStore().GetUser(project.ID, user.Group3UserID)
 		assert.Equal(t, http.StatusFound, status)
 		assert.Equal(t, "testcompany.com", domainUser.Group3ID)
+		properties, _ := U.DecodePostgresJsonb(&domainUser.Properties)
+		assert.Equal(t, "testcompany.com", (*properties)[U.DP_DOMAIN_NAME])
 	}
 }
 
