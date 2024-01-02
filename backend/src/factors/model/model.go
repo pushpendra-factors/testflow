@@ -371,6 +371,8 @@ type Model interface {
 	GetLinkedinSQLQueryAndParametersForFilterValues(projectID int64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int)
 	ExecuteLinkedinChannelQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int)
 	GetLinkedinLastSyncInfo(projectID int64, CustomerAdAccountID string) ([]model.LinkedinLastSyncInfo, int)
+	GetLinkedinAdsLastSyncInfoV1(projectID int64, CustomerAdAccountID string) ([]model.LinkedinLastSyncInfo, int)
+	GetLinkedinCompanyLastSyncInfoV1(projectID int64, CustomerAdAccountID string) ([]model.LinkedinLastSyncInfo, int)
 	GetSQLQueryAndParametersForLinkedinQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string, fetchSource bool,
 		limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string, int)
 	GetDomainData(projectID string) ([]model.DomainDataResponse, int)
@@ -379,6 +381,7 @@ type Model interface {
 
 	UpdateLinkedinGroupUserCreationDetails(domainData model.DomainDataResponse) error
 	GetCampaignGroupInfoForGivenTimerange(campaignGroupInfoRequestPayload model.LinkedinCampaignGroupInfoRequestPayload) ([]model.LinkedinDocument, int)
+	GetValidationForGivenTimerangeAndJobType(validationRequestPayload model.LinkedinValidationRequestPayload) (bool, int)
 	//bingads document
 	GetBingadsFilterValuesSQLAndParams(projectID int64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int)
 
