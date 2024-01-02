@@ -4,33 +4,32 @@ import { SVG, Text } from 'Components/factorsComponents';
 import { Button, Dropdown, Menu } from 'antd';
 import useMobileView from 'hooks/useMobileView';
 import HelpButton from 'Components/GenericComponents/HelpButton';
+import ProjectModal from 'Components/ProjectModal';
 
-const OnboardingHeader = ({
+function OnboardingHeader({
   currentStep,
   totalSteps,
   showStepsCounter = true,
   showCloseButton = false,
   handleCloseClick
-}: OnboardingHeaderProps) => {
+}: OnboardingHeaderProps) {
   const isMobileView = useMobileView();
 
-  const getMobileMenu = () => {
-    return (
-      <Menu>
-        <Menu.Item key='1'>
-          <StepsCounter currentStep={currentStep} totalSteps={totalSteps} />
+  const getMobileMenu = () => (
+    <Menu>
+      <Menu.Item key='1'>
+        <StepsCounter currentStep={currentStep} totalSteps={totalSteps} />
+      </Menu.Item>
+      <Menu.Item key='2'>
+        <HelpButton helpMessage='Hey, I have few doubts regarding onboarding! Can you guys help me out?' />
+      </Menu.Item>
+      {showCloseButton && (
+        <Menu.Item key='3'>
+          <Button onClick={handleCloseClick}>Close</Button>
         </Menu.Item>
-        <Menu.Item key='2'>
-          <HelpButton helpMessage='Hey, I have few doubts regarding onboarding! Can you guys help me out?' />
-        </Menu.Item>
-        {showCloseButton && (
-          <Menu.Item key='3'>
-            <Button onClick={handleCloseClick}>Close</Button>
-          </Menu.Item>
-        )}
-      </Menu>
-    );
-  };
+      )}
+    </Menu>
+  );
   return (
     <div
       className='flex justify-between items-center'
@@ -53,20 +52,19 @@ const OnboardingHeader = ({
         </Text>
       </div>
       {isMobileView && (
-        <>
-          <Dropdown placement='bottomRight' overlay={getMobileMenu()}>
-            <Button icon={<SVG name='Bars' size='16' />} />
-          </Dropdown>
-        </>
+        <Dropdown placement='bottomRight' overlay={getMobileMenu()}>
+          <Button icon={<SVG name='Bars' size='16' />} />
+        </Dropdown>
       )}
 
       {!isMobileView && (
         <div className='flex flex-row-reverse gap-10'>
-          <div className='flex gap-2'>
+          <div className='flex gap-2 items-center '>
             <HelpButton helpMessage='Hey, I have few doubts regarding onboarding! Can you guys help me out?' />
             {showCloseButton && (
               <Button onClick={handleCloseClick}>Close</Button>
             )}
+            {!showCloseButton && <ProjectModal variant='onboarding' />}
           </div>
 
           {showStepsCounter && (
@@ -76,7 +74,7 @@ const OnboardingHeader = ({
       )}
     </div>
   );
-};
+}
 
 interface OnboardingHeaderProps {
   totalSteps: number;

@@ -10,7 +10,8 @@ import {
   Input,
   Tooltip,
   Dropdown,
-  Menu
+  Menu,
+  Spin
 } from 'antd';
 import useMobileView from 'hooks/useMobileView';
 import React, { useEffect, useState } from 'react';
@@ -36,21 +37,37 @@ import {
   SDK_SETUP
 } from '../../types';
 import GTMSteps from 'Views/Settings/ProjectSettings/SDKSettings/GTMSteps';
+import { LoadingOutlined } from '@ant-design/icons';
+
+import { delay } from 'Utils/global';
 
 const { Panel } = Collapse;
+const LoadingIcon = <LoadingOutlined style={{ fontSize: 20 }} spin />;
 
-const Step2 = ({
+interface VerificationType {
+  gtm: boolean;
+  manual: boolean;
+  cdp: boolean;
+}
+
+const defaultVerificationType: VerificationType = {
+  gtm: false,
+  manual: false,
+  cdp: false
+};
+
+function Step2({
   fetchProjectSettingsV1,
   udpateProjectSettings,
   incrementStepCount,
   decrementStepCount
-}: OnboardingStep2Props) => {
-  const [loading, setLoading] = useState(false);
-  const [errorState, setErrorState] = useState<{
-    gtm: boolean;
-    manual: boolean;
-    cdp: boolean;
-  }>({ gtm: false, manual: false, cdp: false });
+}: OnboardingStep2Props) {
+  const [loading, setLoading] = useState<boolean>(false);
+  const [verificationLoading, setVerificationLoading] =
+    useState<VerificationType>(defaultVerificationType);
+  const [errorState, setErrorState] = useState<VerificationType>(
+    defaultVerificationType
+  );
   const [cdpType, setCdpType] = useState('');
   const isMobileView = useMobileView();
   const { active_project, projectSettingsV1, currentProjectSettings } =
@@ -89,7 +106,24 @@ const Step2 = ({
   const renderSDKVerificationFooter = (type: 'gtm' | 'manual' | 'cdp') => (
     <div className='mt-4'>
       <Divider />
-      {sdkVerified && (
+      {verificationLoading[type] && (
+        <div className='flex gap-2 items-center'>
+          <div className='flex items-center justify-center'>
+            <Spin indicator={LoadingIcon} />
+          </div>
+
+          <Text
+            type={'title'}
+            level={6}
+            color={'character-primary'}
+            extraClass={'m-0 '}
+          >
+            Checking for website data. It may take some time
+          </Text>
+        </div>
+      )}
+
+      {sdkVerified && !verificationLoading[type] && (
         <div className='flex justify-between items-center'>
           <div>
             <SVG name={'CheckCircle'} extraClass={'inline'} />
@@ -100,8 +134,8 @@ const Step2 = ({
               extraClass={'m-0 ml-2 inline'}
             >
               {type === 'cdp'
-                ? 'Events recieved successfully.'
-                : 'Verified. Your script is up and running.'}
+                ? 'Events recieved successfully. 🎉'
+                : 'Verified. Your script is up and running. 🎉'}
             </Text>
           </div>
           <Button
@@ -109,25 +143,28 @@ const Step2 = ({
             size={'small'}
             style={{ color: '#1890FF' }}
             onClick={() => handleSdkVerification(type)}
-            loading={loading}
+            loading={verificationLoading[type]}
           >
             {type === 'cdp' ? 'Check again' : 'Verify again'}
           </Button>
         </div>
       )}
-      {!int_completed && !errorState[type] && (
+      {!int_completed && !errorState[type] && !verificationLoading[type] && (
         <div className='flex gap-2 items-center'>
           <Text type='paragraph' color='mono-6' extraClass='m-0'>
             {type === 'cdp'
               ? 'No events received yet'
               : 'Have you already added the code?'}
           </Text>
-          <Button onClick={() => handleSdkVerification(type)}>
+          <Button
+            onClick={() => handleSdkVerification(type)}
+            loading={verificationLoading[type]}
+          >
             {type === 'cdp' ? 'Check for events' : 'Verify it now'}
           </Button>
         </div>
       )}
-      {errorState[type] && (
+      {errorState[type] && !verificationLoading[type] && (
         <div className='flex items-center'>
           <SVG name={'CloseCircle'} extraClass={'inline'} color='#F5222D' />
           <Text
@@ -145,7 +182,7 @@ const Step2 = ({
             size={'small'}
             style={{ color: '#1890FF', padding: 0 }}
             onClick={() => handleSdkVerification(type)}
-            loading={loading}
+            loading={verificationLoading[type]}
           >
             Verify again
           </Button>
@@ -337,70 +374,82 @@ const Step2 = ({
     }
   };
 
-  const getInstructionMenu = () => {
-    return (
-      <Menu>
-        <Menu.Item key='1'>
-          <Button
-            type='text'
-            icon={<SVG name='TextCopy' size='24' color='#8C8C8C' />}
-            onClick={copyInstruction}
+  const getInstructionMenu = () => (
+    <Menu>
+      <Menu.Item key='1'>
+        <Button
+          type='text'
+          icon={<SVG name='TextCopy' size='24' color='#8C8C8C' />}
+          onClick={copyInstruction}
+        >
+          <Text
+            color='character-primary'
+            type={'title'}
+            level={7}
+            extraClass='m-0 inline'
           >
-            <Text
-              color='character-primary'
-              type={'title'}
-              level={7}
-              extraClass='m-0 inline'
-            >
-              {' '}
-              Copy instructions
-            </Text>
-          </Button>
-        </Menu.Item>
-        <Menu.Item key='2'>
-          <Button
-            type='text'
-            icon={<SVG name='DownloadOutline' size='24' color='#8C8C8C' />}
+            {' '}
+            Copy instructions
+          </Text>
+        </Button>
+      </Menu.Item>
+      <Menu.Item key='2'>
+        <Button
+          type='text'
+          icon={<SVG name='DownloadOutline' size='24' color='#8C8C8C' />}
+        >
+          <PDFDownloadLink
+            document={
+              <StepsPdf
+                scriptCode={generateSdkScriptCodeForPdf(
+                  assetURL,
+                  projectToken,
+                  apiURL,
+                  false
+                )}
+              />
+            }
+            style={{
+              color: 'rgba(0, 0, 0, 0.65)',
+              marginLeft: 5,
+              fontWeight: 400,
+              fontSize: 14
+            }}
+            fileName='onboarding_steps.pdf'
           >
-            <PDFDownloadLink
-              document={
-                <StepsPdf
-                  scriptCode={generateSdkScriptCodeForPdf(
-                    assetURL,
-                    projectToken,
-                    apiURL,
-                    false
-                  )}
-                />
-              }
-              style={{
-                color: 'rgba(0, 0, 0, 0.65)',
-                marginLeft: 5,
-                fontWeight: 400,
-                fontSize: 14
-              }}
-              fileName='onboarding_steps.pdf'
-            >
-              {({ blob, url, _loading, error }) =>
-                _loading ? 'Loading...' : 'Download as PDF'
-              }
-            </PDFDownloadLink>
-          </Button>
-        </Menu.Item>
-      </Menu>
-    );
-  };
+            {({ blob, url, _loading, error }) =>
+              _loading ? 'Loading...' : 'Download as PDF'
+            }
+          </PDFDownloadLink>
+        </Button>
+      </Menu.Item>
+    </Menu>
+  );
 
   const handleSdkVerification = async (type: 'gtm' | 'manual' | 'cdp') => {
     try {
-      setLoading(true);
+      if (
+        verificationLoading.cdp ||
+        verificationLoading.gtm ||
+        verificationLoading.manual
+      ) {
+        notification.warning({
+          message: 'Processing',
+          description: 'SDK Verification already in process!',
+          duration: 2
+        });
+        return;
+      }
+
+      setVerificationLoading({ ...defaultVerificationType, [type]: true });
+      await delay(5000);
+
       setErrorState({
         gtm: false,
         manual: false,
         cdp: false
       });
       const res = await fetchProjectSettingsV1(active_project.id);
-
       if (res?.data?.int_completed) {
         setSdkVerified(true);
         notification.success({
@@ -417,11 +466,11 @@ const Step2 = ({
         setErrorState({ ...errorState, [type]: true });
       }
 
-      setLoading(false);
+      setVerificationLoading(defaultVerificationType);
     } catch (error) {
       logger.error(error);
       setErrorState({ ...errorState, [type]: true });
-      setLoading(false);
+      setVerificationLoading(defaultVerificationType);
     }
   };
 
@@ -710,7 +759,7 @@ const Step2 = ({
       </Row>
     </div>
   );
-};
+}
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
