@@ -1,29 +1,20 @@
-import React, { useCallback, useState } from 'react';
-import { Button, Tooltip } from 'antd';
-import { Text, SVG } from 'Components/factorsComponents';
-import FaDatepicker from 'Components/FaDatepicker';
+import React, { useCallback } from 'react';
+import { Button } from 'antd';
+import { SVG } from 'Components/factorsComponents';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import PropertyFilter from 'Components/Profile/MyComponents/PropertyFilter';
-import {
-  setFilterPayloadAction,
-  setReportFilterPayloadAction
-} from 'Views/PreBuildDashboard/state/services';
+import { setReportFilterPayloadAction } from 'Views/PreBuildDashboard/state/services';
 
-function SubMenu({
-  config,
-  durationObj,
-  handleDurationChange,
-  activeDashboard
-}) {
+function Filter({ handleFilterChange }) {
   const dispatch = useDispatch();
   const filtersData = useSelector(
-    (state) => state.preBuildDashboardConfig.filters
+    (state) => state.preBuildDashboardConfig.reportFilters
   );
 
   const setFilterPayload = useCallback(
     (payload) => {
-      dispatch(setFilterPayloadAction(payload));
       dispatch(setReportFilterPayloadAction(payload));
+      handleFilterChange(payload);
     },
     [dispatch]
   );
@@ -69,20 +60,6 @@ function SubMenu({
   return (
     <div className='flex items-center px-0'>
       <div className='flex justify-between'>
-        <FaDatepicker
-          customPicker
-          nowPicker={activeDashboard?.name === 'Website Aggregation'}
-          presetRange
-          quarterPicker
-          range={{
-            startDate: durationObj.from,
-            endDate: durationObj.to
-          }}
-          placement='bottomLeft'
-          onSelect={handleDurationChange}
-          buttonSize='default'
-          className='datepicker-minWidth'
-        />
         <div className='ml-2 -mt-2'>{renderActions()}</div>
       </div>
     </div>
@@ -93,4 +70,4 @@ const mapStateToProps = () => ({
   // activeDashboard: state.dashboard.activeDashboard
 });
 
-export default connect(mapStateToProps)(SubMenu);
+export default connect(mapStateToProps)(Filter);

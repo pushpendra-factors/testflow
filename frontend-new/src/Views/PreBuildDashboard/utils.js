@@ -31,7 +31,7 @@ const getPredefinedqueryGroupForWidget1 = (widget, filter, groupBy, period) => {
   const queryArr = [];
   widget?.me?.forEach((item, index) => {
     queryArr.push({
-      me: [{ na: item?.na, d_na: item?.d_na }],
+      me: [{ na: item?.na, d_na: item?.d_na, ty: item?.ty }],
       inter_e_type: item?.inter_e_type,
       fil: formatFiltersForPayload(filter),
       g_by: groupBy,
@@ -42,7 +42,7 @@ const getPredefinedqueryGroupForWidget1 = (widget, filter, groupBy, period) => {
       inter_id: widget.inter_id
     });
     queryArr.push({
-      me: [{ na: item?.na, d_na: item?.d_na }],
+      me: [{ na: item?.na, d_na: item?.d_na, ty: item?.ty }],
       inter_e_type: item?.inter_e_type,
       fil: formatFiltersForPayload(filter),
       g_by: groupBy,
@@ -111,6 +111,12 @@ export const getPredefinedQuery = (
     period.frequency = dateRange.frequency;
   }
 
+  if (groupBy?.length === 0) {
+    groupBy = {};
+  } else if (groupBy?.length > 0) {
+    groupBy = groupBy?.[0];
+  }
+
   if (widget?.inter_id === 1) {
     query.q_g = getPredefinedqueryGroupForWidget1(
       widget,
@@ -128,10 +134,10 @@ export const getPredefinedQuery = (
 export const transformWidgetResponse = (response) => {
   // Initialize empty arrays for odd and even elements
   const originalData = response;
-  let oddHeaders = [];
+  const oddHeaders = [];
   let evenHeaders = [];
-  let oddRows = [];
-  let evenRows = [];
+  const oddRows = [];
+  const evenRows = [];
 
   // Separate odd and even elements
   for (let i = 0; i < response.length; i++) {
@@ -146,33 +152,33 @@ export const transformWidgetResponse = (response) => {
     }
   }
 
-  evenHeaders = evenHeaders.filter((obj) => obj != 'datetime');
+  evenHeaders = evenHeaders.filter((obj) => obj !== 'datetime');
 
-  let evenRowTransform = evenRows[0];
-  for(let i = 1; i < evenRows.length; i++) {
-    for(let j = 0; j < evenRowTransform.length; j++) {
-      evenRowTransform[j].push(evenRows[i][j][1])
+  const evenRowTransform = evenRows[0];
+  for (let i = 1; i < evenRows.length; i++) {
+    for (let j = 0; j < evenRowTransform.length; j++) {
+      evenRowTransform[j].push(evenRows[i][j][1]);
     }
   }
-  
+
   const formateData = {
-    result : [
+    result: [
       {
-        "cache_meta": originalData.cache_meta,
-        "headers": ['datetime', ...evenHeaders],
-        "meta": originalData.meta,
-        "query": originalData.query,
-        "rows": evenRowTransform,
+        cache_meta: originalData.cache_meta,
+        headers: ['datetime', ...evenHeaders],
+        meta: originalData.meta,
+        query: originalData.query,
+        rows: evenRowTransform
       },
       {
-        "cache_meta": originalData.cache_meta,
-        "headers": oddHeaders,
-        "meta": originalData.meta,
-        "query": originalData.query,
-        "rows": [oddRows.flat()],
+        cache_meta: originalData.cache_meta,
+        headers: oddHeaders,
+        meta: originalData.meta,
+        query: originalData.query,
+        rows: [oddRows.flat()]
       }
     ]
-  }
+  };
 
   return formateData;
 };

@@ -37,15 +37,6 @@ import {
   getCampaignConfigData
 } from 'Reducers/coreQuery/middleware';
 import {
-  formatApiData,
-  getQuery,
-  initialState,
-  getKPIQuery,
-  DefaultDateRangeFormat,
-  isComparisonEnabled,
-  getKPIStateFromRequestQuery
-} from '../../../CoreQuery/utils';
-import {
   getEventsData,
   getKPIData,
   updateQuery
@@ -70,10 +61,7 @@ import {
   QUERY_OPTIONS_DEFAULT_VALUE
 } from 'Utils/constants';
 import { QUERY_UPDATED, SHOW_ANALYTICS_RESULT } from 'Reducers/types';
-import ReportHeader from './ReportHeader';
-import {
-  INITIALIZE_GROUPBY
-} from 'Reducers/coreQuery/actions';
+import { INITIALIZE_GROUPBY } from 'Reducers/coreQuery/actions';
 import CoreQueryReducer from 'Views/CoreQuery/CoreQueryReducer';
 import {
   CORE_QUERY_INITIAL_STATE,
@@ -91,29 +79,38 @@ import {
   UPDATE_FUNNEL_TABLE_CONFIG,
   UPDATE_CORE_QUERY_REDUCER,
   SET_NAVIGATED_FROM_ANALYSE,
-  DEFAULT_ATTRIBUTION_TABLE_FILTERS,
+  DEFAULT_ATTRIBUTION_TABLE_FILTERS
 } from 'Views/CoreQuery/constants';
-import {
-  getValidGranularityOptions,
-} from 'Utils/dataFormatter';
-import {
-  getSavedPivotConfig
-} from 'Views/CoreQuery/coreQuery.helpers';
+import { getValidGranularityOptions } from 'Utils/dataFormatter';
+import { getSavedPivotConfig } from 'Views/CoreQuery/coreQuery.helpers';
 import { getChartChangedKey } from 'Views/CoreQuery/AnalysisResultsPage/analysisResultsPage.helpers';
 import _ from 'lodash';
 import { fetchKPIConfig } from 'Reducers/kpi';
 import { getQuickDashboardDateRange } from 'Views/Dashboard/utils';
 import { CoreQueryContext } from 'Context/CoreQueryContext';
-import ReportContent from './ReportContent';
-import { getQueryData } from 'Views/PreBuildDashboard/state/services';
-import { getPredefinedQuery, transformWidgetResponse } from 'Views/PreBuildDashboard/utils';
+import { getQueryData, setFilterPayloadAction, setReportFilterPayloadAction } from 'Views/PreBuildDashboard/state/services';
+import {
+  getPredefinedQuery,
+  transformWidgetResponse
+} from 'Views/PreBuildDashboard/utils';
 import { selectActivePreDashboard } from 'Reducers/dashboard/selectors';
+import ReportContent from './ReportContent';
+import ReportHeader from './ReportHeader';
+import {
+  formatApiData,
+  getQuery,
+  initialState,
+  getKPIQuery,
+  DefaultDateRangeFormat,
+  isComparisonEnabled,
+  getKPIStateFromRequestQuery
+} from '../../../CoreQuery/utils';
 
 function CoreQuery({
   activeProject,
- 
+
   KPI_config,
-  currentAgent,
+  currentAgent
 }) {
   // const { query_id, query_type } = useParams();
   const query_type = 'kpi';
@@ -122,7 +119,12 @@ function CoreQuery({
   const savedQueries = useSelector((state) =>
     get(state, 'queries.data', EMPTY_ARRAY)
   );
-  const activeDashboard = useSelector((state) => selectActivePreDashboard(state));
+  const activeDashboard = useSelector((state) =>
+    selectActivePreDashboard(state)
+  );
+  const filtersData = useSelector(
+    (state) => state.preBuildDashboardConfig.reportFilters
+  );
   const [coreQueryState, localDispatch] = useReducer(
     CoreQueryReducer,
     CORE_QUERY_INITIAL_STATE
@@ -178,12 +180,9 @@ function CoreQuery({
   ]);
 
   const dispatch = useDispatch();
-  const {
-    groupBy,
-    models,
-    window,
-    camp_dateRange,
-  } = useSelector((state) => state.coreQuery);
+  const { groupBy, models, window, camp_dateRange } = useSelector(
+    (state) => state.coreQuery
+  );
 
   const [activeTab, setActiveTab] = useState(1);
 
@@ -233,7 +232,6 @@ function CoreQuery({
       });
     }
   }, [dispatch, query_type]);
-
 
   const updateResultState = useCallback((newState) => {
     setResultState(newState);
@@ -339,7 +337,7 @@ function CoreQuery({
           'chart_setting.ty',
           apiChartAnnotations[CHART_TYPE_TABLE]
         );
-        
+
         // even though new queries wont have saved chart type as table but old queries can have saved chart type as table!
         if (savedChartType !== apiChartAnnotations[CHART_TYPE_TABLE]) {
           const changedKey = getChartChangedKey({
@@ -396,6 +394,7 @@ function CoreQuery({
     async (
       query,
       breakdown = {},
+      filter = [],
       durationObj = null,
       isGranularityChange = false,
       isCompareQuery = false
@@ -406,13 +405,18 @@ function CoreQuery({
         }
 
         setQuerySaved(query);
-        const kpiData = query.me.map(obj => {
+        const kpiData = query.me.map((obj) => {
           const { inter_e_type, ty, na, d_na, ...rest } = obj;
           return { ...rest, metric: na, label: d_na, metricType: ty };
-        })
+        });
         setAppliedQueries(kpiData);
 
-        const payload = getPredefinedQuery(query, durationObj,[], breakdown);
+        const payload = getPredefinedQuery(
+          query,
+          durationObj,
+          filter,
+          breakdown
+        );
 
         setDateFromTo({ from: payload?.q_g[0]?.fr, to: payload?.q_g[0]?.to });
 
@@ -426,31 +430,28 @@ function CoreQuery({
           updateLocalReducer(COMPARISON_DATA_LOADING);
         }
 
-
         const res = await getQueryData(
           activeProject.id,
           payload,
-          activeDashboard?.inter_id,
+          activeDashboard?.inter_id
         );
 
         if (query?.inter_id === 1) {
-          res.data = transformWidgetResponse(
-            res.data.result || res.data
-          );
+          res.data = transformWidgetResponse(res.data.result || res.data);
         }
-        
+
         if (isCompareQuery) {
           updateLocalReducer(
             COMPARISON_DATA_FETCHED,
             res.data.result || res.data
-            );
-          } else {
-            setLoading(false);
-            updateResultState({
-              ...initialState,
-              data: res.data.result || res.data
-            });
-          }
+          );
+        } else {
+          setLoading(false);
+          updateResultState({
+            ...initialState,
+            data: res.data.result || res.data
+          });
+        }
       } catch (err) {
         console.log(err);
         setLoading(false);
@@ -460,14 +461,27 @@ function CoreQuery({
         });
       }
     },
-    [activeDashboard?.inter_id, activeProject.id, configActionsOnRunningQuery, dateRange, resetComparisonData, updateLocalReducer, updateResultState]
+    [
+      activeDashboard?.inter_id,
+      activeProject.id,
+      configActionsOnRunningQuery,
+      dateRange,
+      resetComparisonData,
+      updateLocalReducer,
+      updateResultState
+    ]
   );
+
 
   useEffect(() => {
     if (location.state && location.state.web_analytics) {
-      runKPIQuery(location.state.query, location.state.query.g_by?.[0]);
+      runKPIQuery(
+        location.state.query,
+        location.state.query.g_by?.[0],
+        filtersData
+      );
       setAppliedBreakdown([location.state.query.g_by?.[0]]);
-      
+
       setNavigatedFromDashboard(location.state.navigatedFromDashboard);
       location.state = undefined;
       // window.history.replaceState(null, '');
@@ -479,7 +493,6 @@ function CoreQuery({
       dispatch({ type: SHOW_ANALYTICS_RESULT, payload: false });
     }
   }, []);
-
 
   const handleGranularityChange = useCallback(
     ({ key: frequency }) => {
@@ -494,10 +507,15 @@ function CoreQuery({
           date_range: appliedDateRange
         }));
         if (queryType === QUERY_TYPE_KPI) {
-          runKPIQuery(querySaved, appliedBreakdown?.[0], appliedDateRange, true);
+          runKPIQuery(
+            querySaved,
+            appliedBreakdown?.[0],
+            filtersData,
+            appliedDateRange,
+            true
+          );
         }
       }
-     
     },
     [
       queryOptions.date_range,
@@ -578,9 +596,23 @@ function CoreQuery({
         ...payload
       };
 
-        runKPIQuery(querySaved, appliedBreakdown?.[0], appliedDateRange, false, isCompareDate);
+      runKPIQuery(
+        querySaved,
+        appliedBreakdown?.[0],
+        filtersData,
+        appliedDateRange,
+        false,
+        isCompareDate
+      );
     },
-    [queryType, queryOptions.date_range, runKPIQuery, querySaved, appliedBreakdown]
+    [
+      queryType,
+      queryOptions.date_range,
+      runKPIQuery,
+      querySaved,
+      appliedBreakdown,
+      filtersData
+    ]
   );
 
   useEffect(
@@ -615,12 +647,10 @@ function CoreQuery({
         queryupdated.push(newEvent);
       }
       setQueries(
-        queryupdated.map((q) => {
-          return {
-            ...q,
-            key: q.key || generateRandomKey()
-          };
-        })
+        queryupdated.map((q) => ({
+          ...q,
+          key: q.key || generateRandomKey()
+        }))
       );
     },
     [queriesA, deleteGroupByForEvent]
@@ -673,30 +703,6 @@ function CoreQuery({
     }
   };
 
-  const findKPIitem = useCallback(
-    (groupName) => {
-      const KPIlist = KPI_config || [];
-      const selGroup = KPIlist.find(
-        (item) => item.display_category === groupName
-      );
-
-      const DDvalues = selGroup?.properties?.map((item) => {
-        if (item == null) return null;
-        const ddName = item.display_name ? item.display_name : item.name;
-        const ddtype =
-          selGroup?.category === 'channels' ||
-          selGroup?.category === 'custom_channels'
-            ? item.object_type
-            : item.entity
-            ? item.entity
-            : item.object_type;
-        return [ddName, item.name, item.data_type, ddtype];
-      });
-      return DDvalues;
-    },
-    [KPI_config]
-  );
-
   const getCurrentSorter = useCallback(() => {
     if (renderedCompRef.current && renderedCompRef.current.currentSorter) {
       return renderedCompRef.current.currentSorter;
@@ -704,10 +710,7 @@ function CoreQuery({
     return [];
   }, []);
 
-
   const { chartTypes } = coreQueryState;
-
-  const savedQueryId = querySaved ? querySaved?.inter_id : null;
 
   const handleChartTypeChange = useCallback(
     ({ key, callUpdateService = true }) => {
@@ -724,7 +727,6 @@ function CoreQuery({
           [changedKey]: key
         }
       });
-
     },
     [queryType, updateChartTypes, appliedBreakdown, chartTypes]
   );
@@ -745,9 +747,21 @@ function CoreQuery({
       // runKPIQuery,
       updateCoreQueryReducer
     }),
-    [coreQueryState, queryOptions, activeKey, showResult, resetComparisonData, handleCompareWithClick, updatePivotConfig, queryChange, setExtraOptions, setNavigatedFromDashboard, setNavigatedFromAnalyse, updateCoreQueryReducer]
+    [
+      coreQueryState,
+      queryOptions,
+      activeKey,
+      showResult,
+      resetComparisonData,
+      handleCompareWithClick,
+      updatePivotConfig,
+      queryChange,
+      setExtraOptions,
+      setNavigatedFromDashboard,
+      setNavigatedFromAnalyse,
+      updateCoreQueryReducer
+    ]
   );
-
 
   return (
     <ErrorBoundary
@@ -786,15 +800,14 @@ function CoreQuery({
             fallback={
               <FaErrorComp
                 size='medium'
-                title='Attribution Results Error'
-                subtitle='We are facing trouble loading Attribution results. Drop us a message on the in-app chat.'
+                title='Quick board Results Error'
+                subtitle='We are facing trouble loading Quick board results. Drop us a message on the in-app chat.'
               />
             }
             onError={FaErrorLog}
           >
             {Number(activeTab) === 1 && (
               <>
-                
                 {loading ? (
                   <div className='w-full h-full flex items-center justify-center'>
                     <div className='w-full h-64 flex items-center justify-center'>
