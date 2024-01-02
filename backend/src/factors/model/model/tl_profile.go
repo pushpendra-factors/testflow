@@ -11,15 +11,16 @@ import (
 )
 
 type Profile struct {
-	Identity     string                 `json:"identity"`
-	Properties   *postgres.Jsonb        `json:"-"`
-	Name         string                 `json:"name,omitempty"`
-	HostName     string                 `json:"host_name,omitempty"`
-	IsAnonymous  bool                   `json:"is_anonymous"`
-	LastActivity time.Time              `json:"last_activity"`
-	TableProps   map[string]interface{} `json:"table_props"`
-	Score        float64                `json:"score"`
-	Engagement   string                 `json:"engagement,omitempty"`
+	Identity       string                 `json:"identity"`
+	Properties     *postgres.Jsonb        `json:"-"`
+	Name           string                 `json:"name,omitempty"`
+	HostName       string                 `json:"host_name,omitempty"`
+	IsAnonymous    bool                   `json:"is_anonymous"`
+	LastActivity   time.Time              `json:"last_activity"`
+	TableProps     map[string]interface{} `json:"table_props"`
+	Score          float64                `json:"score"`
+	Engagement     string                 `json:"engagement,omitempty"`
+	TopEngagements map[string]float64     `json:"top_engagements,omitempty"`
 }
 
 type ListingTimeWindow struct {
