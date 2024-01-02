@@ -1,17 +1,17 @@
 import { SVG, Text } from 'Components/factorsComponents';
 import React from 'react';
 import ProgressBar from '../Progress';
-import { useHistory } from 'react-router-dom';
-import { PathUrls } from 'Routes/pathUrls';
+import usePlanUpgrade from 'hooks/usePlanUpgrade';
 
-const RangeNudge = ({
+function RangeNudge({
   title,
   amountUsed = 0,
   totalLimit = 0
-}: RangeNudgeProps) => {
-  const history = useHistory();
+}: RangeNudgeProps) {
+  const { handlePlanUpgradeClick } = usePlanUpgrade();
   const percentage = Number(((amountUsed / totalLimit) * 100).toFixed(2));
-  let backgroundColor, borderColor;
+  let backgroundColor;
+  let borderColor;
   if (percentage < 75) {
     backgroundColor = '#FAFAFA';
     borderColor = '#D9D9D9';
@@ -49,7 +49,9 @@ const RangeNudge = ({
       <div>
         <div
           className='flex items-center gap-2 cursor-pointer'
-          onClick={() => history.push(PathUrls.SettingsPricing)}
+          onClick={() =>
+            handlePlanUpgradeClick('ACCOUNT_LIMIT_ADDON_CLICK', 'addonClick')
+          }
         >
           <Text type={'paragraph'} mini color='brand-color'>
             Buy add on
@@ -59,7 +61,7 @@ const RangeNudge = ({
       </div>
     </div>
   );
-};
+}
 
 type RangeNudgeProps = {
   title: string;

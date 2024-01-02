@@ -1,0 +1,5 @@
+
+Website_aggregation_model:
+    -- testing to change to max(max_updated_at).
+    -- TODO only consider events of AT and session.
+    -- TODO export logs.

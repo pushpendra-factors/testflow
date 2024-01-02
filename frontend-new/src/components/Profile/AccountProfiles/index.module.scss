@@ -10,6 +10,17 @@
     }
   }
 }
+.account-profiles-table {
+  padding: 0;
+  & th {
+    padding: 0 !important;
+    height: 48px;
+
+    & > div {
+      padding: 0 16px;
+    }
+  }
+}
 
 .input {
   color: $fa-color--mono-5;

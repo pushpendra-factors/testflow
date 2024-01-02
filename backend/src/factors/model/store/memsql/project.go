@@ -789,6 +789,24 @@ func (store *MemSQL) GetTimezoneByIDWithCache(projectID int64) (U.TimeZoneString
 	return resTimezone, statusCode
 }
 
+func (store *MemSQL) GetIDAndTimezoneForAllProjects() ([]model.Project, int) {
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
+	db := C.GetServices().Db
+
+	var projects []model.Project
+	if err := db.Find(&projects).Error; err != nil {
+		log.WithError(err).Error("Getting all projects failed")
+		return nil, http.StatusInternalServerError
+	}
+
+	for index := range projects {
+		if projects[index].TimeZone == "" {
+			projects[index].TimeZone = string(U.TimeZoneStringIST)
+		}
+	}
+	return projects, http.StatusFound
+}
+
 // UpdateNextSessionStartTimestampForProject - Updates next session start timestamp
 // on project jobs metadata.
 func (store *MemSQL) UpdateNextSessionStartTimestampForProject(projectID int64, timestamp int64) int {

@@ -5,7 +5,7 @@ import {
 } from '@ant-design/icons';
 import { Button, Input } from 'antd';
 import styles from './index.module.scss';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { SVG, Text } from 'Components/factorsComponents';
 import { useDispatch, useSelector } from 'react-redux';
 import VirtualList from 'rc-virtual-list';
@@ -170,7 +170,7 @@ const Part1GlobalSearch = ({
                         key={eachIndex}
                         className={styles['reports-new-items-container']}
                         onClick={() => openSavedReports(eachItem)}
-                        onKeDown={(e) =>
+                        onKeyDown={(e) =>
                           e.key === 'Enter' ? openSavedReports(eachItem) : ''
                         }
                       >
@@ -282,6 +282,7 @@ const Part2GlobalSearch = ({
           <div className={styles['globalsearch-step2-title']}>
             <div>
               <Button
+                tabIndex={0}
                 size='large'
                 type='text'
                 icon={<ArrowLeftOutlined />}
@@ -498,7 +499,11 @@ const SearchResults = ({ searchString, openSavedReports }) => {
     let ans = '';
     for (let i = 0; i < n; i++) {
       if (arr[i].length > 0) {
-        ans += arr[i];
+        if (arr[i].length <= 3) {
+          ans += arr[i].toUpperCase();
+        } else {
+          ans += arr[i];
+        }
 
         if (i < n - 1) {
           ans += ' > ';
@@ -506,7 +511,6 @@ const SearchResults = ({ searchString, openSavedReports }) => {
         selectedPaths.push(arr[i]);
       }
     }
-
     return ans;
   };
   const moveToRoute = (path) => {
@@ -627,7 +631,7 @@ const SearchResults = ({ searchString, openSavedReports }) => {
                                     color='#0E2647'
                                   >
                                     {eachRoute !== '/'
-                                      ? renderRoute(eachRoute)?.toLowerCase()
+                                      ? renderRoute(eachRoute)
                                       : 'Dashboard'}
                                   </Text>
                                 </span>
@@ -800,16 +804,45 @@ const GlobalSearch = () => {
     setSearchType(value);
   };
 
-  useEffect(() => {
-    if (step === 2) {
-    } else {
-    }
-  }, [step]);
+  const globalSearchRef = useRef();
+  const OnKeyDownEvent = useCallback((e) => {
+    // Conditional PreventDefault()
+    // This prevents page from scrolling if shifted focus using up/down
+    // And Makes it possible to enter into search box
+    if (e.keyCode === 40 || e.keyCode === 38) e.preventDefault();
+    // Define focusable selectors
+    const focusableSelectors = '[tabindex]:not([tabindex="-1"])';
+    const focusableElements = Array.from(
+      globalSearchRef.current.querySelectorAll(focusableSelectors)
+    );
+    const activeElement = document.activeElement;
+    const currentIndex = focusableElements.indexOf(activeElement);
 
+    if (currentIndex === -1) return; // Active element is not in the focusable list
+
+    let newIndex;
+
+    // Right arrow key
+    if (e.keyCode === 40) {
+      newIndex = (currentIndex + 1) % focusableElements.length;
+    }
+    // Left arrow key
+    else if (e.keyCode === 38) {
+      newIndex =
+        (currentIndex - 1 + focusableElements.length) %
+        focusableElements.length;
+    } else {
+      return; // If the key is not left or right arrow, do nothing
+    }
+
+    focusableElements[newIndex].focus();
+  }, []);
   return (
     <div
+      ref={globalSearchRef}
       className={styles['globalsearch-container']}
       style={{ transitionDuration: '1s' }}
+      onKeyDown={(e) => OnKeyDownEvent(e)}
     >
       <div
         style={{
@@ -819,6 +852,7 @@ const GlobalSearch = () => {
         }}
       >
         <Input
+          tabIndex={0}
           onChange={onChangeInput}
           value={searchString}
           className={styles['input-globalSearch']}

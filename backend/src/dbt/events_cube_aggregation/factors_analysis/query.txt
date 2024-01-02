@@ -1,0 +1,43 @@
+
+sample analysis for query --------------
+select project_id, timestamp_at_day, landing_page_url, sum(count_of_records) from website_aggregation where project_id = 399 AND event_name = 'session'
+group by project_id, timestamp_at_day, landing_page_url
+order by sum(count_of_records) desc; -- 2 seconds.
+
+select timestamp_at_day, landing_page_url, sum(count_of_records) from website_aggregation where project_id = 399 AND event_name = 'session'
+group by timestamp_at_day, landing_page_url
+order by sum(count_of_records) desc; -- 2 seconds.
+
+
+select landing_page_url, sum(count_of_records) from website_aggregation where project_id = 399 AND event_name = 'session'
+group by landing_page_url
+order by sum(count_of_records) desc -- 1 second
+-- limit 25; 
+;
+
+
+select country, sum(count_of_records) from website_aggregation where project_id = 399 AND event_name = 'session'
+group by country
+order by sum(count_of_records) desc -- 1 second
+-- limit 25; 
+--------------------------------------------
+
+WITH step_0 AS (
+SELECT step_0_event_users_view.id as event_id, step_0_event_users_view.user_id as event_user_id , '0_$session' AS event_name,
+timestamp_at_day
+FROM (
+    SELECT events.project_id, events.id, events.event_name_id, events.user_id, events.timestamp , events.properties as event_properties, events.user_properties as event_user_properties,
+    date_trunc('day', CONVERT_TZ(FROM_UNIXTIME(timestamp), 'UTC', 'Asia/Kolkata')) as timestamp_at_day
+    FROM events WHERE events.project_id=399 AND timestamp>=1680460200 AND timestamp<=1683138599 AND ( events.event_name_id = '00000000-0000-0000-0000-000000785772' )  LIMIT 10000000000
+    )
+step_0_event_users_view WHERE ((JSON_EXTRACT_STRING(step_0_event_users_view.event_user_properties, '$os_version') = '10') )
+) , 
+each_events_union AS (SELECT step_0.event_name as event_name, step_0.event_id as event_id, step_0.event_user_id as event_user_id, timestamp_at_day FROM step_0) SELECT event_name, timestamp_at_day, COUNT(event_id) AS aggregate FROM each_events_union GROUP BY event_name, timestamp_at_day  ORDER BY aggregate DESC LIMIT 100000;
+-- 1.2 seconds. 
+;
+
+select project_id, timestamp_at_day, sum(count_of_records) from website_aggregation where project_id = 399 AND event_name = 'session'
+AND os_version = '10'
+AND date(timestamp_at_day) between '2023-04-03 00:00:00.000000' AND '2023-05-03 00:00:00.000000'
+group by project_id, timestamp_at_day
+order by sum(count_of_records) desc; -- 453 ms;

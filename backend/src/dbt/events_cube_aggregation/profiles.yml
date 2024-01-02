@@ -1,0 +1,12 @@
+events_cube_aggregation:
+  outputs:
+    dev:
+      database: factors
+      host: "{{ env_var('DBT_ENV_HOST') }}"
+      password: "{{ env_var('DBT_ENV_PASSWORD') }}"
+      port: 3306
+      schema: analytics
+      threads: 2
+      type: singlestore
+      user: "{{ env_var('DBT_ENV_USER') }}"
+  target: dev

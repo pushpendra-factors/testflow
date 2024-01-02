@@ -470,7 +470,8 @@ function AccountDetails({
       currentPage: location.state?.currentPage,
       currentPageSize: location.state?.currentPageSize,
       activeSorter: location.state?.activeSorter,
-      appliedFilters: location.state?.appliedFilters
+      appliedFilters: location.state?.appliedFilters,
+      accountsTableRow: location.state?.accountsTableRow
     });
   }, []);
 

@@ -106,16 +106,12 @@ func BuildAccScoringDaily(projectId int64, configs map[string]interface{}) (map[
 
 	// from prevusers pick groups which are avaialable
 	now := time.Now()
-	updatedGroupsWithAllDates, err := WriteUserCountsAndRangesToDB(projectId, now.Unix(), prevCountsOfUser, updatedUsers, updatedGroups, groupUserMap, *weights, salewindow)
+	_, err = WriteUserCountsAndRangesToDB(projectId, now.Unix(), prevCountsOfUser, updatedUsers, updatedGroups, groupUserMap, *weights, salewindow, lookback)
 	if err != nil {
 		logCtx.WithError(err).Errorf("error in updating user counts to DB")
 	}
 
 	logCtx.Infof("Number of updated groups:%d", len(updatedGroups))
-	err = ComputeAndWriteRangesToDB(projectId, now.Unix(), int64(lookback), updatedGroupsWithAllDates, weights)
-	if err != nil {
-		logCtx.WithError(err).Errorf("error in updating ranges DB")
-	}
 
 	timeDiff := time.Since(now).Milliseconds()
 	DurationMap["updateDB"] += timeDiff
@@ -427,7 +423,7 @@ func FilterAndUpdateAllEvents(userCounts map[string]*AggEventsOnUserAndGroup, st
 
 func WriteUserCountsAndRangesToDB(projectId int64, startTime int64, prevcountsofuser,
 	updatedUser, updatedGroups map[string]map[string]M.LatestScore, groupUserMap map[string]int,
-	weights M.AccWeights, salewindow int64) (map[string]map[string]M.LatestScore, error) {
+	weights M.AccWeights, salewindow int64, lookback int) (map[string]map[string]M.LatestScore, error) {
 
 	updatedGroupsCopy := make(map[string]map[string]M.LatestScore)
 	for id, count := range updatedGroups {
@@ -449,21 +445,44 @@ func WriteUserCountsAndRangesToDB(projectId int64, startTime int64, prevcountsof
 		e := fmt.Errorf("unable to update last event for groups")
 		return nil, e
 	}
+	now := time.Now()
+	buckets, err := ComputeAndWriteRangesToDB(projectId, now.Unix(), int64(lookback), updatedGroupsCopy, weights)
+	if err != nil {
+		log.WithError(err).Errorf("error in updating ranges DB")
+	}
 
 	// update users who have activity only
 	err = store.GetStore().UpdateUserEventsCountGO(projectId, updatedUser)
 	if err != nil {
 		return nil, err
 	}
+	maxBucket := getMaxBucket(buckets)
 
 	// groupsLastevent contains last event data on all users with and without activity
 	// updatedGroups contains groups of users with activity
-	err = store.GetStore().UpdateGroupEventsCountGO(projectId, updatedGroups, groupsLastEvent, groupAllEvents, weights)
+	err = store.GetStore().UpdateGroupEventsCountGO(projectId, updatedGroups, groupsLastEvent, groupAllEvents, weights, maxBucket)
 	if err != nil {
 		return nil, err
 	}
 
 	return updatedGroupsCopy, nil
+}
+
+func getMaxBucket(buckets []M.BucketRanges) M.BucketRanges {
+	var maxBucket M.BucketRanges
+	maxTS := int64(0)
+	for _, bucket := range buckets {
+		if bucket.Date != "" {
+			dateTs := U.GetDateFromString(bucket.Date)
+			if dateTs > maxTS {
+				maxBucket = bucket
+				maxTS = dateTs
+			}
+		} else {
+			log.WithField("buckets", buckets).Error("unable to decode bucket")
+		}
+	}
+	return maxBucket
 }
 
 func getChannelInfo(event *P.CounterEventFormat) string {
@@ -618,11 +637,11 @@ func extractGroupsFromPrevCounts(projectId int64, prevcountsofuser, updatedGroup
 }
 
 func ComputeAndWriteRangesToDB(projectId int64, currentTime int64, lookback int64,
-	data map[string]map[string]M.LatestScore, weights *M.AccWeights) error {
+	data map[string]map[string]M.LatestScore, weights M.AccWeights) ([]M.BucketRanges, error) {
 
 	buckets, _, err := ComputeScoreRanges(projectId, currentTime, lookback, data, weights)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	for _, br := range buckets {
 		log.WithField("bucket range : ", br).Info("Bucket range")
@@ -630,10 +649,10 @@ func ComputeAndWriteRangesToDB(projectId int64, currentTime int64, lookback int6
 
 	err = WriteRangestoDB(projectId, buckets)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return buckets, nil
 }
 
 func WriteRangestoDB(projectId int64, buckets []M.BucketRanges) error {
@@ -647,15 +666,19 @@ func WriteRangestoDB(projectId int64, buckets []M.BucketRanges) error {
 }
 
 func ComputeScoreRanges(projectId int64, currentTime int64, lookback int64,
-	data map[string]map[string]M.LatestScore, weights *M.AccWeights) ([]M.BucketRanges, map[string]float64, error) {
+	data map[string]map[string]M.LatestScore, weights M.AccWeights) ([]M.BucketRanges, map[string]float64, error) {
 
 	var buckets []M.BucketRanges = make([]M.BucketRanges, lookback)
 	var scoresMap map[string]float64 = make(map[string]float64)
 	currentDateString := U.GetDateOnlyFromTimestamp(currentTime)
 	saleWindow := weights.SaleWindow
 	dates := U.GenDateStringsForLastNdays(currentTime, lookback)
-
+	maxDate := int64(0)
 	for _, date := range dates {
+		tsDate := U.GetDateFromString(date)
+		if tsDate > maxDate {
+			maxDate = maxDate
+		}
 		ids := make(map[string]bool)
 		updatedUsers := make(map[string]map[string]M.LatestScore)
 		ts := U.GetDateFromString(date)
@@ -679,7 +702,7 @@ func ComputeScoreRanges(projectId int64, currentTime int64, lookback int64,
 				updatedUsers[id] = tmpdata
 			}
 		}
-		log.Info("date : %s number of updated users : %d", date, len(updatedUsers))
+		log.Infof("date : %s number of updated users : %d", date, len(updatedUsers))
 		lastEventScores, _, err := UpdateLastEventsDay(updatedUsers, ts, saleWindow)
 		if err != nil {
 			log.WithField("prjoectID", projectId).Error("Unable to compute last event scores")
@@ -702,12 +725,12 @@ func ComputeScoreRanges(projectId int64, currentTime int64, lookback int64,
 
 	return buckets, scoresMap, nil
 }
-func computeScore(projectId int64, weights *M.AccWeights, lastEvents map[string]M.LatestScore) ([]float64, map[string]float64, error) {
+func computeScore(projectId int64, weights M.AccWeights, lastEvents map[string]M.LatestScore) ([]float64, map[string]float64, error) {
 
 	scores := make([]float64, 0)
 	scoresMap := make(map[string]float64, 0)
 	for id, lastEvent := range lastEvents {
-		score, err := MS.ComputeAccountScoreOnLastEvent(projectId, *weights, lastEvent.EventsCount)
+		score, err := MS.ComputeAccountScoreOnLastEvent(projectId, weights, lastEvent.EventsCount)
 		if err != nil {
 			log.WithField("id", id).WithField("projectID", projectId).Error("Unable to compute last event scores")
 		}
@@ -768,15 +791,6 @@ func GetEngagementBuckets(projectId int64, scoresPerUser map[string]model.PerUse
 
 }
 
-func GetEngagement(percentile float64, buckets model.BucketRanges) string {
-	for _, bucket := range buckets.Ranges {
-		if bucket.Low <= percentile && percentile <= bucket.High {
-			return bucket.Name
-		}
-	}
-	return "Ice"
-}
-
 func GetEngagementLevelOnUser(projectId int64, event model.LatestScore, userId string, fscore float64) string {
 	scoresPerUser := make(map[string]model.PerUserScoreOnDay)
 
@@ -791,7 +805,7 @@ func GetEngagementLevelOnUser(projectId int64, event model.LatestScore, userId s
 		log.WithError(errGetBuckets).Error("Error retrieving account score buckets")
 
 	}
-	engagementLevel := GetEngagement(float64(fscore), buckets)
+	engagementLevel := model.GetEngagement(float64(fscore), buckets)
 	return engagementLevel
 }
 
