@@ -1171,7 +1171,7 @@ function AccountProfiles({
           onChange={handleTableChange}
           scroll={{
             x: displayTableProps?.length * 300,
-            y: 'calc(100vh - 200px)'
+            y: 'calc(100vh - 340px)'
           }}
         />
       </div>
