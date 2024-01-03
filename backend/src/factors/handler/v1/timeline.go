@@ -225,7 +225,7 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 	var errMsg string
 
 	startTime := time.Now().UnixMilli()
-	if getUserMarker {
+	if getUserMarker && C.UseSegmentMarker(projectId) {
 		profileAccountsList, errCode, errMsg = store.GetStore().GetMarkedDomainsListByProjectId(projectId, payload)
 	} else {
 		profileAccountsList, errCode, errMsg = store.GetStore().GetProfilesListByProjectId(projectId, payload, model.PROFILE_TYPE_ACCOUNT)

@@ -278,6 +278,7 @@ type Configuration struct {
 	BlockedIPList                                        []string
 	BlockedEmailDomainList                               []string
 	AllAccountsProjectId                                 string
+	UseMarkerByProjectID                                 string
 	EnableNewAllAccountsByProjectID                      string
 	DBMaxAllowedPacket                                   int64
 	AllowIdentificationOverwriteUsingSourceByProjectID   string
@@ -2300,6 +2301,15 @@ func IsIPBlockingFeatureEnabled(token string) bool {
 // IsDomainEnabled - Checks if $domain is enabled for given project_id in all accounts
 func IsDomainEnabled(projectID int64) bool {
 	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllAccountsProjectId, "")
+	if allProjects || projectIDsMap[projectID] {
+		return true
+	}
+	return false
+}
+
+// UseSegmentMarker - Checks if segment marker is enabled for given project_id in all accounts listing
+func UseSegmentMarker(projectID int64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().UseMarkerByProjectID, "")
 	if allProjects || projectIDsMap[projectID] {
 		return true
 	}
