@@ -47,11 +47,12 @@ const (
 	PLAN_BASIC        = "BASIC"
 	PLAN_PROFESSIONAL = "PROFESSIONAL"
 	PLAN_CUSTOM       = "CUSTOM"
+	PLAN_GROWTH       = "GROWTH"
 )
 const (
 	PLAN_ID_FREE         = 1
-	PLAN_ID_STARTUP      = 2
-	PLAN_ID_BASIC        = 3
+	PLAN_ID_BASIC        = 2
+	PLAN_ID_GROWTH       = 3
 	PLAN_ID_PROFESSIONAL = 4
 	PLAN_ID_CUSTOM       = 5
 )

@@ -436,8 +436,8 @@ func GetPlanIDFromString(planID string) (int, error) {
 	switch planID {
 	case model.PLAN_FREE:
 		return model.PLAN_ID_FREE, nil
-	case model.PLAN_STARTUP:
-		return model.PLAN_ID_STARTUP, nil
+	case model.PLAN_GROWTH:
+		return model.PLAN_ID_GROWTH, nil
 	case model.PLAN_BASIC:
 		return model.PLAN_ID_BASIC, nil
 	case model.PLAN_PROFESSIONAL:
@@ -457,15 +457,13 @@ func (store *MemSQL) PopulatePlanDetailsTable(planDetails model.PlanDetails) (in
 	logCtx := log.WithFields(logFields)
 	model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	if planDetails.Name == model.PLAN_FREE {
-		planDetails.ID = model.PLAN_ID_FREE
+	planID, err := GetPlanIDFromString(planDetails.Name)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to assign plan id")
 	}
-	if planDetails.Name == model.PLAN_CUSTOM {
-		planDetails.ID = model.PLAN_ID_CUSTOM
-	}
-
+	planDetails.ID = int64(planID)
 	db := C.GetServices().Db
-	err := db.Create(&planDetails).Error
+	err = db.Create(&planDetails).Error
 	if err != nil {
 		logCtx.WithError(err).Error("failed to insert data")
 		return http.StatusInternalServerError, err
