@@ -10,6 +10,22 @@
     }
   }
 }
+.account-profiles-table {
+  padding: 0;
+  & th {
+    padding: 0 !important;
+    height: 48px;
+
+    & > div {
+      padding: 0 16px;
+    }
+  }
+
+  & tr {
+    max-height: 64px !important;
+    height: 64px;
+  }
+}
 
 .input {
   color: $fa-color--mono-5;
@@ -56,9 +72,8 @@
 
 .add-filter-button {
   width: fit-content;
-  padding: 0;
   &:hover {
-    background: transparent !important;
+    background: transparent;
   }
 }
 
@@ -155,29 +170,33 @@
   }
 }
 
-.section-title-container {
-  border-bottom: 1px solid $fa-color-neutral-grey-3;
+.top_eng_names {
+  display: flex;
+  flex-wrap: wrap;
 }
+.tag-enagagementrule {
+  padding: 2px 6px;
+  margin: 1px;
+  width: fit-content;
+  font-size: 12px;
+  max-height: 24px;
+  display: flex;
 
-.event-timeline-picker {
-  padding: 0.25rem 0.75rem;
-  border: 1px solid $fa-color-neutral-grey-3;
-}
+  text-transform: capitalize;
 
-.more-actions-button {
-  background: transparent;
-  box-shadow: none;
-  border: none;
-  &:hover,
-  &:active,
-  &:focus {
-    background: $fa-color--mono-1;
-    border: none;
-    box-shadow: none;
+  & h4 {
+    font-size: 12px !important;
+    color: rgba(0, 0, 0, 0.65) !important;
   }
-  &:global(.ant-btn) {
-    &::after {
-      all: unset;
-    }
+  & > span {
+    text-transform: lowercase;
+    margin: 0 2px;
+  }
+  & > span:not(.tag-seperator) {
+    margin: 0 4px;
+  }
+  & > .tag-seperator {
+    color: $fa-color-neutral-grey-5;
+    margin: 0 2px;
   }
 }

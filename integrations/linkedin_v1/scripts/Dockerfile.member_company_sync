@@ -1,0 +1,15 @@
+FROM python:3.7-alpine
+
+ENV PYTHONPATH "${PYTHONPATH}:/usr/local/var/factors:/usr/local/var/factors/linkedin_v1/scripts/"
+
+RUN mkdir -p /usr/local/var/factors
+
+WORKDIR /usr/local/var/factors/linkedin_v1/scripts/
+COPY . ./
+RUN apk add --no-cache --virtual .build-deps gcc libc-dev libxslt-dev && \
+    apk add --no-cache libxslt && \
+    pip install --no-cache-dir lxml>=3.5.0 && \
+    apk del .build-deps && \
+    pip install -r requirements.txt
+
+ENTRYPOINT ["python", "member_company_sync.py"]

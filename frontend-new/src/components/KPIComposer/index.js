@@ -22,11 +22,13 @@ import { DefaultDateRangeFormat } from '../../Views/CoreQuery/utils';
 import GlobalFilterBlock from './GlobalFilterBlock';
 import GroupByBlock from './GroupByBlock';
 import { areKpisInSameGroup } from 'Utils/kpiQueryComposer.helpers';
-import _ from 'lodash';
+import _, { isEqual } from 'lodash';
 import { getKPIPropertyMappings } from 'Reducers/kpi';
+import { ReactSortable } from 'react-sortablejs';
 
 function KPIComposer({
   queries,
+  setQueries,
   eventChange,
   queryType,
   activeProject,
@@ -80,24 +82,6 @@ function KPIComposer({
         </div>
       );
     });
-
-    if (queries.length < 10) {
-      blockList.push(
-        <div key={'init'} className={styles.composer_body__query_block}>
-          <QueryBlock
-            queryType={queryType}
-            index={queries.length + 1}
-            queries={queries}
-            eventChange={handleEventChange}
-            groupBy={queryOptions.groupBy}
-            selectedMainCategory={selectedMainCategory}
-            setSelectedMainCategory={setSelectedMainCategory}
-            KPIConfigProps={KPIConfigProps}
-          />
-        </div>
-      );
-    }
-
     return blockList;
   };
 
@@ -190,7 +174,7 @@ function KPIComposer({
                 customPicker
                 presetRange
                 monthPicker
-                quarterPicker 
+                quarterPicker
                 yearPicker
                 placement={
                   areKpisInSameGroup({ kpis: queries })
@@ -279,7 +263,30 @@ function KPIComposer({
           onClick={() => setEventBlockOpen(!eventBlockOpen)}
           extraClass={'no-padding-l'}
         >
-          {queryList()}
+          <ReactSortable
+            list={queries}
+            setList={(newQueriesState) => {
+              if (!isEqual(queries, newQueriesState)) {
+                setQueries(newQueriesState);
+              }
+            }}
+          >
+            {queryList()}
+          </ReactSortable>
+          {queries.length < 10 && (
+            <div key={'init'} className={styles.composer_body__query_block}>
+              <QueryBlock
+                queryType={queryType}
+                index={queries.length + 1}
+                queries={queries}
+                eventChange={handleEventChange}
+                groupBy={queryOptions.groupBy}
+                selectedMainCategory={selectedMainCategory}
+                setSelectedMainCategory={setSelectedMainCategory}
+                KPIConfigProps={KPIConfigProps}
+              />
+            </div>
+          )}
         </ComposerBlock>
       );
     } catch (err) {

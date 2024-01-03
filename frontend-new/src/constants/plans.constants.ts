@@ -1,12 +1,12 @@
 export const FEATURES = {
-  //Features
-
+  // analyse section
   FEATURE_EVENTS: 'events',
   FEATURE_FUNNELS: 'funnels',
   FEATURE_KPIS: 'kpis',
   FEATURE_ATTRIBUTION: 'attribution',
   FEATURE_PROFILES: 'profiles',
   FEATURE_TEMPLATES: 'templates',
+
   FEATURE_HUBSPOT: 'hubspot',
   FEATURE_SALESFORCE: 'salesforce',
   FEATURE_LEADSQUARED: 'leadsqaured',
@@ -20,20 +20,20 @@ export const FEATURES = {
   FEATURE_CLEARBIT: 'clearbit',
   FEATURE_SIX_SIGNAL: 'six_signal',
   FEATURE_DASHBOARD: 'dashboard',
-  FEATURE_OFFLINE_TOUCHPOINTS: 'offline_touchpoints p',
+  FEATURE_OFFLINE_TOUCHPOINTS: 'offline_touchpoints',
   FEATURE_SAVED_QUERIES: 'saved_queries',
-  FEATURE_EXPLAIN: 'explain_feature',
+  FEATURE_EXPLAIN: 'explain_feature', // explain is a keyword in memsql.
   FEATURE_FILTERS: 'filters',
   FEATURE_SHAREABLE_URL: 'shareable_url',
   FEATURE_CUSTOM_METRICS: 'custom_metrics',
-  FEATURE_SMART_EVENTS: 'smart_events',
   FEATURE_SMART_PROPERTIES: 'smart_properties',
   FEATURE_CONTENT_GROUPS: 'content_groups',
   FEATURE_DISPLAY_NAMES: 'display_names',
   FEATURE_WEEKLY_INSIGHTS: 'weekly_insights',
   FEATURE_KPI_ALERTS: 'kpi_alerts',
   FEATURE_EVENT_BASED_ALERTS: 'event_based_alerts',
-  FEATURE_SlACK: 'slack',
+  FEATURE_REPORT_SHARING: 'report_sharing',
+  FEATURE_SLACK: 'slack',
   FEATURE_SEGMENT: 'segment',
   FEATURE_PATH_ANALYSIS: 'path_analysis',
   FEATURE_ARCHIVE_EVENTS: 'archive_events',
@@ -48,47 +48,12 @@ export const FEATURES = {
   FEATURE_WEBHOOK: 'webhook',
   FEATURE_ACCOUNT_PROFILES: 'account_profiles',
   FEATURE_PEOPLE_PROFILES: 'people_profiles',
-  FEATURE_REPORT_SHARING: 'report_sharing',
+  FEATURE_CLICKABLE_ELEMENTS: 'clickable_elements',
   FEATURE_WEB_ANALYTICS_DASHBOARD: 'web_analytics_dashboard',
-
-  //Integrations
-  INT_SHOPFIY: 'int_shopify',
-  INT_ADWORDS: 'int_adwords',
-  INT_GOOGLE_ORGANIC: 'int_google_organic',
-  INT_FACEBOOK: 'int_facebook',
-  INT_LINKEDIN: 'int_linkedin',
-  INT_SALESFORCE: 'int_salesforce',
-  INT_HUBSPOT: 'int_hubspot',
-  INT_DELETE: 'int_delete',
-  INT_SLACK: 'int_slack',
-  INT_TEAMS: 'int_teams',
-  INT_SEGMENT: 'int_segment',
-  INT_RUDDERSTACK: 'int_rudderstack',
-  INT_MARKETO: 'int_marketo',
-  INT_DRIFT: 'int_drift',
-  INT_BING_ADS: 'int_bing_ads',
-  INT_CLEARBIT: 'int_clear_bit',
-  INT_LEADSQUARED: 'int_leadsquared',
-  INT_SIX_SIGNAL: 'int_six_signal',
-  INT_FACTORS_DEANONYMISATION: 'int_factors_deanonymistaion',
-  INT_G2: 'intg2',
-
-  // DATA SERVICE
-  DS_ADWORDS: 'ds_adwords',
-  DS_GOOGLE_ORGANIC: 'ds_google_oraganic',
-  DS_HUBSPOT: 'ds_hubspot',
-  DS_FACEBOOK: 'ds_facebook',
-  DS_LINKEDIN: 'ds_linkedin',
-  DS_METRICS: 'ds_metrics',
-
-  // CONFIGURATIONS
-  CONF_ATTRUBUTION_SETTINGS: 'conf_attribution_settings',
-  CONF_CUSTOM_EVENTS: 'conf_custom_events',
+  FEATURE_G2: 'g2',
+  FEATURE_RUDDERSTACK: 'rudderstack',
   CONF_CUSTOM_PROPERTIES: 'conf_custom_properties',
-  CONF_CONTENT_GROUPS: 'conf_content_groups',
-  CONF_TOUCHPOINTS: 'conf_touchpoints',
-  CONF_CUSTOM_KPIPS: 'conf_custom_kpis',
-  CONF_ALERTS: 'conf_alerts'
+  CONF_CUSTOM_EVENTS: 'conf_custom_events'
 };
 
 export const PLANS = {
@@ -178,11 +143,11 @@ export const PLANS_COFIG: PLANS_COFIG_INTERFACE = {
 };
 
 export interface PLANS_COFIG_INTERFACE {
-  [key: typeof PLANS[keyof typeof PLANS]]: PLAN_COFIG;
+  [key: (typeof PLANS)[keyof typeof PLANS]]: PLAN_COFIG;
 }
 
 export interface PLAN_COFIG {
-  name: typeof PLANS[keyof typeof PLANS];
+  name: (typeof PLANS)[keyof typeof PLANS];
   description: string;
   uniqueFeatures: string[];
   isRecommendedPlan: boolean;

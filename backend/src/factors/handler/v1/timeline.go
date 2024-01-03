@@ -118,14 +118,14 @@ func getUniqueScores(input []float64) []float64 {
 
 func GetEngagementLevels(scores []float64, buckets model.BucketRanges) map[float64]string {
 	result := make(map[float64]string)
-	result[0] = getEngagement(0, buckets)
+	result[0] = model.GetEngagement(0, buckets)
 
 	nonZeroScores := removeZeros(scores)
 	uniqueScores := getUniqueScores(nonZeroScores)
 
 	for _, score := range uniqueScores {
 		// calculating percentile is not used in the current implementation
-		result[score] = getEngagement(score, buckets)
+		result[score] = model.GetEngagement(score, buckets)
 	}
 
 	return result
@@ -136,15 +136,6 @@ func calculatePercentile(data []float64, value float64) float64 {
 	index := sort.SearchFloat64s(data, value)                 // Find the index of the value
 	percentile := float64(index) / float64(len(data)-1) * 100 // Calculate the percentile based on the index
 	return percentile
-}
-
-func getEngagement(percentile float64, buckets model.BucketRanges) string {
-	for _, bucket := range buckets.Ranges {
-		if bucket.Low <= percentile && percentile <= bucket.High {
-			return bucket.Name
-		}
-	}
-	return "Ice"
 }
 
 func GetProfileUserDetailsHandler(c *gin.Context) (interface{}, int, string, string, bool) {

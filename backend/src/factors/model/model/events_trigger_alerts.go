@@ -46,6 +46,7 @@ type EventTriggerAlert struct {
 	CreatedBy                string          `gorm:"column:created_by" json:"created_by"`
 	SlackChannelAssociatedBy string          `gorm:"column:slack_channel_associated_by" json:"slack_channel_associated_by"`
 	TeamsChannelAssociatedBy string          `gorm:"column:teams_channel_associated_by" json:"teams_channel_associated_by"`
+	ParagonMetadata          *postgres.Jsonb `gorm:"column:paragon_metadata" json:"paragon_metadata"`
 	LastAlertAt              time.Time       `json:"last_alert_at"`
 	CreatedAt                time.Time       `gorm:"column:created_at; autoCreateTime" json:"created_at"`
 	UpdatedAt                time.Time       `gorm:"column:updated_at; autoUpdateTime" json:"updated_at"`

@@ -80,9 +80,8 @@ const EnrichCountries = ({
             style={{
               borderRadius: 6,
               width: 'fix-content',
-              minWidth: 215
+              minWidth: 250
             }}
-            className={style.countrySelectContainer}
             filterOption={(input, option) => {
               return (
                 option?.value

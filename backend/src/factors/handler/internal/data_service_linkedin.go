@@ -103,6 +103,21 @@ func DataServiceLinkedinGetCampaignGroupInfoHandler(c *gin.Context) {
 	linkedinDocuments, statusCode := store.GetStore().GetCampaignGroupInfoForGivenTimerange(campaignGroupInfoRequestPayload)
 	c.JSON(statusCode, linkedinDocuments)
 }
+func DataServiceLinkedinValidationHandler(c *gin.Context) {
+	r := c.Request
+
+	var validationRequestPayload model.LinkedinValidationRequestPayload
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&validationRequestPayload); err != nil {
+		log.WithError(err).Error("Failed to decode JSON request")
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "Failed to decode JSON request."})
+		return
+	}
+	isValid, statusCode := store.GetStore().GetValidationForGivenTimerangeAndJobType(validationRequestPayload)
+	c.JSON(statusCode, isValid)
+}
 
 // DataServiceLinkedinDeleteDocumentsHandler deletes the db insertions of one doc_type of given timestamp
 func DataServiceLinkedinDeleteDocumentsHandler(c *gin.Context) {
@@ -154,6 +169,11 @@ func DataServiceLinkedinUpdateAccessToken(c *gin.Context) {
 	c.JSON(errCode, gin.H{"message": "Successfully updated access token."})
 }
 
+/*
+it fetches last sync info for all doc types:
+ad account, campaign group (meta + insights), campaign (meta + insights), company engagements (insights + last_backfill for weekly data)
+*/
+
 func DataServiceLinkedinGetLastSyncInfoHandler(c *gin.Context) {
 	r := c.Request
 
@@ -168,5 +188,51 @@ func DataServiceLinkedinGetLastSyncInfoHandler(c *gin.Context) {
 	}
 	projectID, _ := strconv.ParseInt(payload.ProjectID, 10, 64)
 	lastSyncInfo, status := store.GetStore().GetLinkedinLastSyncInfo(projectID, payload.CustomerAdAccountID)
+	c.JSON(status, lastSyncInfo)
+}
+
+/*
+In V1 version we are separating out Ads and company enagagements
+the following fetches last sync info for:
+ad account, campaign group (meta + insights), campaign (meta + insights)
+*/
+func DataServiceLinkedinAdsGetLastSyncInfoV1Handler(c *gin.Context) {
+	r := c.Request
+
+	var payload model.LinkedinLastSyncInfoPayload
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&payload); err != nil {
+		log.WithError(err).Error("Failed to decode Json request on linkedin get last sync info handler.")
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "Invalid request json."})
+		return
+	}
+	projectID, _ := strconv.ParseInt(payload.ProjectID, 10, 64)
+	lastSyncInfo, status := store.GetStore().GetLinkedinAdsLastSyncInfoV1(projectID, payload.CustomerAdAccountID)
+	c.JSON(status, lastSyncInfo)
+}
+
+/*
+here we fetch 3 types of last sync infos:
+member company insights
+t8
+t22
+Details explaination present in memsql/linkedin_documents.go GetLinkedinCompanyLastSyncInfoV1
+*/
+func DataServiceLinkedinCompanyGetLastSyncInfoV1Handler(c *gin.Context) {
+	r := c.Request
+
+	var payload model.LinkedinLastSyncInfoPayload
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&payload); err != nil {
+		log.WithError(err).Error("Failed to decode Json request on linkedin get last sync info handler.")
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "Invalid request json."})
+		return
+	}
+	projectID, _ := strconv.ParseInt(payload.ProjectID, 10, 64)
+	lastSyncInfo, status := store.GetStore().GetLinkedinCompanyLastSyncInfoV1(projectID, payload.CustomerAdAccountID)
 	c.JSON(status, lastSyncInfo)
 }

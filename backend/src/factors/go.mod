@@ -53,14 +53,14 @@ require (
 	go.etcd.io/etcd v3.3.10+incompatible
 	go.mongodb.org/mongo-driver v1.5.1
 	go.opencensus.io v0.22.4
-	golang.org/x/crypto v0.9.0
+	golang.org/x/crypto v0.17.0
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	google.golang.org/api v0.15.1
 	google.golang.org/grpc v1.29.1 // Version downgraded from latest. See https://github.com/etcd-io/etcd/issues/11563#issuecomment-580196860.
 	gopkg.in/yaml.v2 v2.4.0
 )
 
-require github.com/chargebee/chargebee-go/v3 v3.9.1
+require github.com/chargebee/chargebee-go/v3 v3.12.0
 
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
@@ -96,6 +96,7 @@ require (
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/gofrs/uuid v3.3.0+incompatible // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/golang-jwt/jwt/v5 v5.2.0 // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/golang/protobuf v1.5.0 // indirect
 	github.com/golang/snappy v0.0.2-0.20190904063534-ff6b7dc882cf // indirect
@@ -152,8 +153,8 @@ require (
 	golang.org/x/mod v0.9.0 // indirect
 	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
-	golang.org/x/text v0.9.0 // indirect
+	golang.org/x/sys v0.15.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
 	golang.org/x/tools v0.7.0 // indirect
 	google.golang.org/appengine v1.6.6 // indirect

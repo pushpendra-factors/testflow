@@ -13,6 +13,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func (store *MemSQL) IsPredefWebAggDashboardExists(projectID int64, agentUUID string) bool {
+	return store.existsDashboardByInternalID(projectID, 1)
+}
+
 func (store *MemSQL) CreatePredefinedWebsiteAggregation(projectID int64, agentUUID string) int {
 
 	predefinedDashboard := model.PredefinedDashboards[0]

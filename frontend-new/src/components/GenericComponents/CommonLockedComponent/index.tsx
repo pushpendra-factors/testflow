@@ -2,19 +2,26 @@ import { Text } from 'Components/factorsComponents';
 import React from 'react';
 import LockedScreenImage from '../../../assets/images/LockedScreen.png';
 import { Button } from 'antd';
-import { Link, useHistory } from 'react-router-dom';
-import { PathUrls } from 'Routes/pathUrls';
+import { Link } from 'react-router-dom';
+import usePlanUpgrade from 'hooks/usePlanUpgrade';
 
-const CommonLockedComponent = ({
+function CommonLockedComponent({
   title,
   description,
-  learnMoreLink
-}: CommonLockedComponentPropType) => {
-  const history = useHistory();
+  learnMoreLink,
+  featureName
+}: CommonLockedComponentPropType) {
+  const { handlePlanUpgradeClick } = usePlanUpgrade();
   return (
     <div>
       <div>
-        <Text type={'title'} level={3} weight={'bold'} color='character-title' id={'fa-at-text--page-title'}>
+        <Text
+          type={'title'}
+          level={3}
+          weight={'bold'}
+          color='character-title'
+          id={'fa-at-text--page-title'}
+        >
           {title}
         </Text>
         {description && (
@@ -23,7 +30,7 @@ const CommonLockedComponent = ({
               type={'paragraph'}
               mini
               color='character-primary'
-              extraClass='inline-block' 
+              extraClass='inline-block'
             >
               {description}
               {learnMoreLink && (
@@ -77,7 +84,7 @@ const CommonLockedComponent = ({
         <Button
           type='primary'
           onClick={() => {
-            history.push(PathUrls.SettingsPricing);
+            handlePlanUpgradeClick(featureName);
           }}
         >
           Upgrade now
@@ -85,12 +92,13 @@ const CommonLockedComponent = ({
       </div>
     </div>
   );
-};
+}
 
 type CommonLockedComponentPropType = {
   title: string;
   description?: string;
   learnMoreLink?: string;
+  featureName: string;
 };
 
 export default CommonLockedComponent;

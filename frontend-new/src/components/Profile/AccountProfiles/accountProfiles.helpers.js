@@ -14,7 +14,8 @@ import MomentTz from 'Components/MomentTz';
 import isEqual from 'lodash/isEqual';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
-
+import { Popover, Tag } from 'antd';
+import styles from './index.module.scss';
 const placeholderIcon = '/assets/avatar/company-placeholder.png';
 
 export const defaultSegmentsList = [
@@ -72,7 +73,7 @@ const getTablePropColumn = ({ prop, groupPropNames, listProperties }) => {
         level={7}
         color='grey-2'
         weight='bold'
-        extraClass='m-0'
+        extraClass='m-0 truncate'
         truncate
         charLimit={25}
       >
@@ -81,7 +82,8 @@ const getTablePropColumn = ({ prop, groupPropNames, listProperties }) => {
     ),
     dataIndex: prop,
     key: prop,
-    width: 280,
+    width: 264,
+    showSorterTooltip: null,
     sorter: (a, b) =>
       propType === 'numerical'
         ? sortNumericalColumn(a[prop], b[prop])
@@ -102,20 +104,21 @@ export const getColumns = ({
   defaultSorterInfo
 }) => {
   const headerClassStr =
-    'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold';
+    'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold inline-flex';
   const columns = [
     {
       // Company Name Column
       title: <div className={headerClassStr}>Account Domain</div>,
       dataIndex: 'account',
       key: 'account',
-      width: 300,
+      width: 264,
+      type: 'string',
       fixed: 'left',
       ellipsis: true,
       sorter: (a, b) => sortStringColumn(a.account.name, b.account.name),
       render: (item) =>
         (
-          <div className='flex items-center'>
+          <div className='flex items-center' id={item.name}>
             <img
               src={`https://logo.clearbit.com/${getHost(item.host)}`}
               onError={(e) => {
@@ -128,7 +131,24 @@ export const getColumns = ({
               height='24'
               loading='lazy'
             />
-            <span className='ml-2'>{item.name}</span>
+            <span
+              style={{
+                textOverflow: 'ellipsis',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap'
+              }}
+              className='ml-2'
+            >
+              <Text
+                type={'title'}
+                level={7}
+                extraClass={'truncate'}
+                truncate={true}
+                charLimit={25}
+              >
+                {item.name}
+              </Text>
+            </span>
           </div>
         ) || '-'
     }
@@ -139,7 +159,8 @@ export const getColumns = ({
     columns.push(
       {
         title: <div className={headerClassStr}>Engagement</div>,
-        width: 150,
+        width: 152,
+        type: 'string',
         dataIndex: 'engagement',
         key: 'engagement',
         fixed: 'left',
@@ -165,7 +186,8 @@ export const getColumns = ({
       },
       {
         title: <div className={headerClassStr}>Score</div>,
-        width: 150,
+        width: 152,
+        type: 'number',
         dataIndex: 'score',
         key: 'score',
         defaultSortOrder: 'descend',
@@ -174,6 +196,88 @@ export const getColumns = ({
           <Text type='title' level={7} extraClass='m-0'>
             {value ? value.toFixed() : '-'}
           </Text>
+        )
+      },
+      {
+        title: <div className={headerClassStr}>Enagagement Signals</div>,
+        width: 264,
+        dataIndex: 'top_engagements',
+
+        key: 'top_engagements',
+
+        render: (value) => (
+          <div className={styles['top_eng_names']}>
+            {value &&
+              Object.keys(value)
+                .slice(0, 2)
+                .map((eachKey, eachIndex) => {
+                  return (
+                    <Tag
+                      color='default'
+                      className={styles['tag-enagagementrule']}
+                    >
+                      <Text
+                        type='title'
+                        level={7}
+                        color='grey-2'
+                        extraClass='m-0 truncate'
+                        truncate
+                        size='h2'
+                        charLimit={20}
+                      >
+                        {eachKey}
+                      </Text>{' '}
+                      <span className={styles['tag-seperator']}>|</span>{' '}
+                      {value[eachKey]}
+                    </Tag>
+                  );
+                })}
+            {value && Object.keys(value).length > 2 ? (
+              <Popover
+                content={
+                  <div
+                    className='flex flex-col'
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
+                  >
+                    <Text type='title' level={7} color='grey'>
+                      Engagement Signals
+                    </Text>
+                    {Object.keys(value)
+                      .slice(2)
+                      .map((eachKey, eachIndex) => {
+                        return (
+                          <Tag
+                            color='default'
+                            className={styles['tag-enagagementrule']}
+                          >
+                            <Text
+                              type='title'
+                              level={7}
+                              color='grey-2'
+                              extraClass='m-0 truncate'
+                              truncate
+                              size='h2'
+                              charLimit={20}
+                            >
+                              {eachKey}
+                            </Text>{' '}
+                            <span className={styles['tag-seperator']}>|</span>{' '}
+                            {value[eachKey]}
+                          </Tag>
+                        );
+                      })}
+                  </div>
+                }
+              >
+                <Tag color='default' className={styles['tag-enagagementrule']}>
+                  {' '}
+                  <span>and </span> +{Object.keys(value).length - 2}
+                </Tag>
+              </Popover>
+            ) : null}
+          </div>
         )
       }
     );
@@ -187,8 +291,9 @@ export const getColumns = ({
     title: <div className={headerClassStr}>Last Activity</div>,
     dataIndex: 'lastActivity',
     key: 'lastActivity',
-    width: 200,
-    align: 'right',
+    width: 224,
+    type: 'datetime',
+    align: 'left',
     sorter: (a, b) => sortStringColumn(a.lastActivity, b.lastActivity),
     render: (item) => MomentTz(item).fromNow()
   });

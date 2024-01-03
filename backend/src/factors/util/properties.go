@@ -177,6 +177,7 @@ const GROUP_EVENT_NAME_G2_REFERENCE = "$g2_reference"
 const GROUP_EVENT_NAME_G2_DEAL = "$g2_deal"
 
 const GROUP_EVENT_NAME_ENGAGEMENT_SCORE = "$engagement_score"
+const GROUP_EVENT_NAME_ENGAGEMENT_LEVEL = "$engagement_level"
 const GROUP_EVENT_NAME_TOTAL_ENGAGEMENT_SCORE = "$total_enagagement_score"
 
 // Integration shopify event names.

@@ -194,8 +194,10 @@ type Model interface {
 
 	// Predefined dashboards
 	ExecuteQueryGroupForPredefinedWebsiteAggregation(projectID int64, request model.PredefWebsiteAggregationQueryGroup) ([]model.QueryResult, int, string)
-
 	CreateWebsiteAggregation(websiteAggregation model.WebsiteAggregation) (model.WebsiteAggregation, string, int)
+	CreatePredefWebAggDashboardIfNotExists(projectID int64) int
+	TableOfWebsiteAggregationExists() (bool, int)
+	GetMaxTimestampOfDataPresenceFromWebsiteAggregation(projectID int64, timezone string) (time.Time, int)
 
 	// all dashboard runs for am unit
 	RunCustomQueryRangeCaching(dashboardUnit model.DashboardUnit, timezoneString U.TimeZoneString,
@@ -369,6 +371,8 @@ type Model interface {
 	GetLinkedinSQLQueryAndParametersForFilterValues(projectID int64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int)
 	ExecuteLinkedinChannelQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int)
 	GetLinkedinLastSyncInfo(projectID int64, CustomerAdAccountID string) ([]model.LinkedinLastSyncInfo, int)
+	GetLinkedinAdsLastSyncInfoV1(projectID int64, CustomerAdAccountID string) ([]model.LinkedinLastSyncInfo, int)
+	GetLinkedinCompanyLastSyncInfoV1(projectID int64, CustomerAdAccountID string) ([]model.LinkedinLastSyncInfo, int)
 	GetSQLQueryAndParametersForLinkedinQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string, fetchSource bool,
 		limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string, int)
 	GetDomainData(projectID string) ([]model.DomainDataResponse, int)
@@ -377,6 +381,7 @@ type Model interface {
 
 	UpdateLinkedinGroupUserCreationDetails(domainData model.DomainDataResponse) error
 	GetCampaignGroupInfoForGivenTimerange(campaignGroupInfoRequestPayload model.LinkedinCampaignGroupInfoRequestPayload) ([]model.LinkedinDocument, int)
+	GetValidationForGivenTimerangeAndJobType(validationRequestPayload model.LinkedinValidationRequestPayload) (bool, int)
 	//bingads document
 	GetBingadsFilterValuesSQLAndParams(projectID int64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int)
 
@@ -491,6 +496,9 @@ type Model interface {
 	AddSixsignalEmailList(projectId int64, emailIds string) int
 	GetSegmentMarkerLastRunTime(projectID int64) (time.Time, int)
 	UpdateSegmentMarkerLastRun(projectID int64, lastRunTime time.Time) int
+	GetParagonTokenFromProjectSetting(projectID int64) (string, int, error)
+	GetParagonEnabledProjectsCount(projectID int64) (int64, int, error)
+	AddParagonTokenAndEnablingAgentToProjectSetting(projectID int64, agentID, token string) (int, error)
 
 	// project
 	UpdateProject(projectID int64, project *model.Project) int
@@ -509,6 +517,7 @@ type Model interface {
 	GetProjectsToRunForIncludeExcludeString(projectIDs, excludeProjectIDs string) []int64
 	GetProjectsWithoutWebAnalyticsDashboard(onlyProjectsMap map[int64]bool) (projectIds []int64, errCode int)
 	GetTimezoneForProject(projectID int64) (U.TimeZoneString, int)
+	GetIDAndTimezoneForAllProjects() ([]model.Project, int)
 	GetProjectIDsWithSixSignalEnabled() []int64
 	GetProjectsToRunForVisitorIdentificationReport(projectIDs, excludeProjectIDs string) []int64
 
@@ -977,6 +986,7 @@ type Model interface {
 	GetEventTriggerAlertByID(id string) (*model.EventTriggerAlert, int)
 	UpdateInternalStatusAndGetAlertIDs(projectID int64) ([]string, int, error)
 	GetInternalStatusForEventTriggerAlert(projectID int64, id string) (string, int, error)
+	GetParagonMetadataForEventTriggerAlert(projectID int64, alertID string) (map[string]interface{}, int, error)
 
 	//ExplainV2
 	GetAllExplainV2EntityByProject(projectID int64) ([]model.ExplainV2EntityInfo, int)
@@ -1013,9 +1023,8 @@ type Model interface {
 	//account scoring
 	GetWeightsByProject(project_id int64) (*model.AccWeights, int)
 	UpdateUserEventsCount(projectId int64, ev map[string]map[string]model.LatestScore) error
-	UpdateGroupEventsCount(projectId int64, ev map[string]map[string]model.LatestScore, lastev map[string]model.LatestScore) error
 	UpdateUserEventsCountGO(projectId int64, ev map[string]map[string]model.LatestScore) error
-	UpdateGroupEventsCountGO(projectId int64, ev map[string]map[string]model.LatestScore, lastev map[string]model.LatestScore, allev map[string]model.LatestScore, weights model.AccWeights) error
+	UpdateGroupEventsCountGO(projectId int64, ev map[string]map[string]model.LatestScore, lastev map[string]model.LatestScore, allev map[string]model.LatestScore, weights model.AccWeights, buckets model.BucketRanges) error
 	GetAccountsScore(project_id int64, group_id int, ts string, debug bool) ([]model.PerAccountScore, *model.AccWeights, error)
 	GetUserScore(project_id int64, user_id string, ts string, debug bool, is_anonymus bool) (model.PerUserScoreOnDay, error)
 	GetUserScoreOnIds(projectId int64, usersAnonymous, usersNonAnonymous []string, debug bool) (map[string]model.PerUserScoreOnDay, error)

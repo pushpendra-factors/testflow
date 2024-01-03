@@ -16,18 +16,21 @@ import (
 )
 
 const (
-	FullAccessExpiry                     = math.MaxInt64 // expiry of features with full access
-	FullAccessLimit                      = math.MaxInt64 // limit of features with full access
-	NonFeatureExpiry                     = 0             // expiry of configurations or integrations
-	NonFeatureLimit                      = 0             // limit of configurations or integrations
-	FreeLimitOnMonthlyAccountsIdentified = 100           // free plan monthly limit on accounts identified
-	FreeLimitOnMTUs                      = 5000          // free plan limit on MTUs
-	FreePlanExpiry                       = math.MaxInt64 // Free plan never expires
-	Create                               = "create"
-	Update                               = "update"
-	Disable                              = "disable"
-	Enable                               = "enable"
-	UpdateCustom                         = "update_custom"
+	FullAccessExpiry                          = math.MaxInt64 // expiry of features with full access
+	FullAccessLimit                           = math.MaxInt64 // limit of features with full access
+	NonFeatureExpiry                          = 0             // expiry of configurations or integrations
+	NonFeatureLimit                           = 0             // limit of configurations or integrations
+	FreeLimitOnMonthlyAccountsIdentified      = 100           // free plan monthly limit on accounts identified
+	BasicPlanMonthlyAccountsIdentified        = 500
+	GrowthPlanMonthlyAccountsIdentified       = 5000
+	ProfessionalPlanMonthlyAccountsIdentified = 10000
+	FreeLimitOnMTUs                           = 5000          // free plan limit on MTUs
+	FreePlanExpiry                            = math.MaxInt64 // Free plan never expires
+	Create                                    = "create"
+	Update                                    = "update"
+	Disable                                   = "disable"
+	Enable                                    = "enable"
+	UpdateCustom                              = "update_custom"
 )
 
 // Add new features for the custom plan other than the features already in the free plan
@@ -58,7 +61,6 @@ var CustomFeatureList = []string{
 	M.FEATURE_FILTERS,
 	M.FEATURE_SHAREABLE_URL,
 	M.FEATURE_CUSTOM_METRICS,
-	M.FEATURE_SMART_EVENTS,
 	M.FEATURE_SMART_PROPERTIES,
 	M.FEATURE_CONTENT_GROUPS,
 	M.FEATURE_DISPLAY_NAMES,
@@ -77,50 +79,10 @@ var CustomFeatureList = []string{
 	M.FEATURE_TEAMS,
 	M.FEATURE_SIX_SIGNAL_REPORT,
 	M.FEATURE_ACCOUNT_SCORING,
-	M.FEATURE_ENGAGEMENT,
 	M.FEATURE_FACTORS_DEANONYMISATION,
 	M.FEATURE_WEBHOOK,
 	M.FEATURE_ACCOUNT_PROFILES,
 	M.FEATURE_PEOPLE_PROFILES,
-
-	// INTEGRATION
-	M.INT_SHOPFIY,
-	M.INT_ADWORDS,
-	M.INT_GOOGLE_ORGANIC,
-	M.INT_FACEBOOK,
-	M.INT_LINKEDIN,
-	M.INT_SALESFORCE,
-	M.INT_HUBSPOT,
-	M.INT_DELETE,
-	M.INT_SLACK,
-	M.INT_TEAMS,
-	M.INT_SEGMENT,
-	M.INT_RUDDERSTACK,
-	M.INT_MARKETO,
-	M.INT_DRIFT,
-	M.INT_BING_ADS,
-	M.INT_CLEARBIT,
-	M.INT_LEADSQUARED,
-	M.INT_SIX_SIGNAL,
-	M.INT_FACTORS_DEANONYMISATION,
-	M.INT_G2,
-
-	// DATA SERVICE
-	M.DS_ADWORDS,
-	M.DS_GOOGLE_ORGANIC,
-	M.DS_HUBSPOT,
-	M.DS_FACEBOOK,
-	M.DS_LINKEDIN,
-	M.DS_METRICS,
-
-	// CONFIGURATIONS
-	M.CONF_ATTRUBUTION_SETTINGS,
-	M.CONF_CUSTOM_EVENTS,
-	M.CONF_CUSTOM_PROPERTIES,
-	M.CONF_CONTENT_GROUPS,
-	M.CONF_TOUCHPOINTS,
-	M.CONF_CUSTOM_KPIS,
-	M.CONF_ALERTS,
 }
 
 var PlanFreeLimitMap = map[string]int64{
@@ -145,8 +107,15 @@ func GetPlanDetails(planType string) M.PlanDetails {
 	featureList = GetFeaturesDetailsList(planType)
 
 	for idx, feature := range featureList {
-		if feature.Name == M.FEATURE_FACTORS_DEANONYMISATION && planType == M.PLAN_FREE {
+		if feature.Name == M.FEATURE_FACTORS_DEANONYMISATION {
 			featureList[idx].Limit = FreeLimitOnMonthlyAccountsIdentified
+			if planType == model.PLAN_BASIC {
+				featureList[idx].Limit = BasicPlanMonthlyAccountsIdentified
+			} else if planType == model.PLAN_GROWTH {
+				featureList[idx].Limit = GrowthPlanMonthlyAccountsIdentified
+			} else if planType == model.PLAN_PROFESSIONAL {
+				featureList[idx].Limit = ProfessionalPlanMonthlyAccountsIdentified
+			}
 		}
 	}
 
@@ -186,8 +155,8 @@ func GetFeaturesForPlanType(PlanType string) []string {
 	case M.PLAN_FREE:
 		features = GetFreePlanFeatures()
 
-	case M.PLAN_STARTUP:
-		features = GetStartupPlanFeatures()
+	case M.PLAN_GROWTH:
+		features = GetGrowthPlanFeatures()
 
 	case M.PLAN_BASIC:
 		features = GetBasicPlanFeatures()
@@ -223,19 +192,15 @@ func GetFreePlanFeatures() []string {
 		// Alerts
 		M.FEATURE_KPI_ALERTS,
 		M.FEATURE_EVENT_BASED_ALERTS,
-		M.CONF_ALERTS,
 		M.FEATURE_REPORT_SHARING,
 
 		// Slack
 		M.FEATURE_SLACK,
-		M.INT_SLACK,
 
 		// Teams
 		M.FEATURE_TEAMS,
-		M.INT_TEAMS,
 
 		// Factors deanonymisation
-		M.INT_FACTORS_DEANONYMISATION,
 		M.FEATURE_FACTORS_DEANONYMISATION,
 
 		// Website Visitor Identification
@@ -243,233 +208,168 @@ func GetFreePlanFeatures() []string {
 		M.FEATURE_SIX_SIGNAL_REPORT,
 
 		// Adwords
-		M.INT_ADWORDS,
-		M.INT_GOOGLE_ORGANIC,
-		M.INT_FACEBOOK,
-		M.INT_LINKEDIN,
 
 		// Data service for ad words
-		M.DS_ADWORDS,
-		M.DS_GOOGLE_ORGANIC,
-		M.DS_FACEBOOK,
-		M.DS_LINKEDIN,
 	}
 }
 
-func GetStartupPlanFeatures() []string {
+func GetGrowthPlanFeatures() []string {
 	return []string{
-		// Dashboards
-		M.FEATURE_DASHBOARD,
-
-		// Analyse
 		M.FEATURE_EVENTS,
 		M.FEATURE_FUNNELS,
 		M.FEATURE_KPIS,
-		M.FEATURE_TEMPLATES,
 		M.FEATURE_PROFILES,
-
-		// Account Profile
-		M.FEATURE_ACCOUNT_PROFILES,
-
-		// People Profiles
-		M.FEATURE_PEOPLE_PROFILES,
-
-		// Custom Events
-		M.CONF_CUSTOM_EVENTS,
-
-		// Custom Properties
-		M.CONF_CUSTOM_PROPERTIES,
-
-		// Content Groups
-		M.CONF_CONTENT_GROUPS,
-
-		// Touch points
-		M.CONF_TOUCHPOINTS,
-
-		// Custom KPIs
-		M.CONF_CUSTOM_KPIS,
-
-		// Top Event and properties
-
-		// Alerts
+		M.FEATURE_TEMPLATES,
+		M.FEATURE_HUBSPOT,
+		M.FEATURE_SALESFORCE,
+		M.FEATURE_LEADSQUARED,
+		M.FEATURE_GOOGLE_ADS,
+		M.FEATURE_FACEBOOK,
+		M.FEATURE_LINKEDIN,
+		M.FEATURE_GOOGLE_ORGANIC,
+		M.FEATURE_BING_ADS,
+		M.FEATURE_MARKETO,
+		M.FEATURE_DRIFT,
+		M.FEATURE_CLEARBIT,
+		M.FEATURE_SIX_SIGNAL,
+		M.FEATURE_DASHBOARD,
+		M.FEATURE_OFFLINE_TOUCHPOINTS,
+		M.FEATURE_SAVED_QUERIES,
+		M.FEATURE_FILTERS,
+		M.FEATURE_SHAREABLE_URL,
+		M.FEATURE_CUSTOM_METRICS,
+		M.FEATURE_SMART_PROPERTIES,
+		M.FEATURE_CONTENT_GROUPS,
+		M.FEATURE_DISPLAY_NAMES,
+		M.FEATURE_WEEKLY_INSIGHTS,
 		M.FEATURE_KPI_ALERTS,
 		M.FEATURE_EVENT_BASED_ALERTS,
-		M.CONF_ALERTS,
-
-		// Slack
+		M.FEATURE_REPORT_SHARING,
 		M.FEATURE_SLACK,
-		M.INT_SLACK,
-
-		// Teams
+		M.FEATURE_SEGMENT,
+		M.FEATURE_ARCHIVE_EVENTS,
+		M.FEATURE_BIG_QUERY_UPLOAD,
+		M.FEATURE_IMPORT_ADS,
+		M.FEATURE_LEADGEN,
 		M.FEATURE_TEAMS,
-		M.INT_TEAMS,
-
-		// Google Ads
-		M.FEATURE_GOOGLE_ADS,
-		M.DS_ADWORDS,
-
-		// Facebook
-		M.FEATURE_FACEBOOK,
-		M.INT_FACEBOOK,
-		M.DS_FACEBOOK,
-
-		// LinkedIn
-		M.FEATURE_LINKEDIN,
-		M.INT_LINKEDIN,
-		M.DS_LINKEDIN,
-
-		// Drift
-		M.FEATURE_DRIFT,
-		M.INT_DRIFT,
-
-		// Google search Console
-		M.FEATURE_GOOGLE_ORGANIC,
-		M.INT_GOOGLE_ORGANIC,
-		M.DS_GOOGLE_ORGANIC,
-
-		// Bing Ads
-		M.FEATURE_BING_ADS,
-		M.INT_BING_ADS,
-
-		// Clearbit Reveal
-		M.FEATURE_CLEARBIT,
-		M.INT_CLEARBIT,
-
-		// Leadsquared
-		M.FEATURE_LEADSQUARED,
-		M.INT_LEADSQUARED,
-
-		// Factors deanonymisation
-		M.FEATURE_FACTORS_DEANONYMISATION,
-
-		// Website Visitor Identification
-		M.FEATURE_SIX_SIGNAL,
 		M.FEATURE_SIX_SIGNAL_REPORT,
-
-		// Six signal
-		M.INT_SIX_SIGNAL,
+		M.FEATURE_ACCOUNT_SCORING,
+		M.FEATURE_FACTORS_DEANONYMISATION,
+		M.FEATURE_WEBHOOK,
+		M.FEATURE_ACCOUNT_PROFILES,
+		M.FEATURE_PEOPLE_PROFILES,
+		M.FEATURE_CLICKABLE_ELEMENTS,
+		M.FEATURE_WEB_ANALYTICS_DASHBOARD,
+		M.FEATURE_G2,
+		M.FEATURE_RUDDERSTACK,
+		M.CONF_CUSTOM_PROPERTIES,
+		M.CONF_CUSTOM_EVENTS,
 	}
 }
 
 func GetBasicPlanFeatures() []string {
 	return []string{
-		M.FEATURE_DASHBOARD,
-
-		// Analyse
 		M.FEATURE_EVENTS,
 		M.FEATURE_FUNNELS,
 		M.FEATURE_KPIS,
-		M.FEATURE_TEMPLATES,
 		M.FEATURE_PROFILES,
-
-		// Account Profile
-		M.FEATURE_ACCOUNT_PROFILES,
-
-		// People Profiles
-		M.FEATURE_PEOPLE_PROFILES,
-
-		// Custom Events
-		M.CONF_CUSTOM_EVENTS,
-
-		// Custom Properties
-		M.CONF_CUSTOM_PROPERTIES,
-
-		// Content Groups
-		M.CONF_CONTENT_GROUPS,
-
-		// Touch points
-		M.CONF_TOUCHPOINTS,
-
-		// Custom KPIs
-		M.CONF_CUSTOM_KPIS,
-
-		// Top Event and properties
-
-		// Alerts
+		M.FEATURE_TEMPLATES,
+		M.FEATURE_GOOGLE_ADS,
+		M.FEATURE_FACEBOOK,
+		M.FEATURE_LINKEDIN,
+		M.FEATURE_GOOGLE_ORGANIC,
+		M.FEATURE_BING_ADS,
+		M.FEATURE_DRIFT,
+		M.FEATURE_CLEARBIT,
+		M.FEATURE_SIX_SIGNAL,
+		M.FEATURE_DASHBOARD,
+		M.FEATURE_OFFLINE_TOUCHPOINTS,
+		M.FEATURE_SAVED_QUERIES,
+		M.FEATURE_FILTERS,
+		M.FEATURE_SHAREABLE_URL,
+		M.FEATURE_CUSTOM_METRICS,
+		M.FEATURE_SMART_PROPERTIES,
+		M.FEATURE_CONTENT_GROUPS,
+		M.FEATURE_DISPLAY_NAMES,
+		M.FEATURE_WEEKLY_INSIGHTS,
 		M.FEATURE_KPI_ALERTS,
 		M.FEATURE_EVENT_BASED_ALERTS,
-		M.CONF_ALERTS,
-
-		// Segment
-		M.FEATURE_SEGMENT,
-		M.INT_SEGMENT,
-
-		// Rudderstack
-		M.INT_RUDDERSTACK,
-
-		// Marketo
-		M.INT_MARKETO,
-		M.FEATURE_MARKETO,
-
-		// Slack
+		M.FEATURE_REPORT_SHARING,
 		M.FEATURE_SLACK,
-		M.INT_SLACK,
-
-		// Teams
+		M.FEATURE_SEGMENT,
+		M.FEATURE_ARCHIVE_EVENTS,
+		M.FEATURE_BIG_QUERY_UPLOAD,
+		M.FEATURE_IMPORT_ADS,
+		M.FEATURE_LEADGEN,
 		M.FEATURE_TEAMS,
-		M.INT_TEAMS,
-
-		// Hubspot
-		M.FEATURE_HUBSPOT,
-		M.INT_HUBSPOT,
-		M.DS_HUBSPOT,
-
-		// Salesforce
-		M.INT_SALESFORCE,
-		M.FEATURE_SALESFORCE,
-
-		// Google Ads
-		M.FEATURE_GOOGLE_ADS,
-		M.DS_ADWORDS,
-
-		// Facebook
-		M.FEATURE_FACEBOOK,
-		M.INT_FACEBOOK,
-		M.DS_FACEBOOK,
-
-		// LinkedIn
-		M.FEATURE_LINKEDIN,
-		M.INT_LINKEDIN,
-		M.DS_LINKEDIN,
-
-		// Drift
-		M.FEATURE_DRIFT,
-		M.INT_DRIFT,
-
-		// Google search Console
-		M.FEATURE_GOOGLE_ORGANIC,
-		M.INT_GOOGLE_ORGANIC,
-		M.DS_GOOGLE_ORGANIC,
-
-		// Bing Ads
-		M.FEATURE_BING_ADS,
-		M.INT_BING_ADS,
-
-		// Clearbit Reveal
-		M.FEATURE_CLEARBIT,
-		M.INT_CLEARBIT,
-
-		// Leadsquared
-		M.FEATURE_LEADSQUARED,
-		M.INT_LEADSQUARED,
-
-		// Factors deanonymisation
-		M.FEATURE_FACTORS_DEANONYMISATION,
-
-		// Website Visitor Identification
-		M.FEATURE_SIX_SIGNAL,
 		M.FEATURE_SIX_SIGNAL_REPORT,
-
-		// Six signal
-		M.INT_SIX_SIGNAL,
-
-		// G2
-		M.INT_G2,
+		M.FEATURE_FACTORS_DEANONYMISATION,
+		M.FEATURE_WEBHOOK,
+		M.FEATURE_ACCOUNT_PROFILES,
+		M.FEATURE_PEOPLE_PROFILES,
+		M.FEATURE_CLICKABLE_ELEMENTS,
+		M.FEATURE_WEB_ANALYTICS_DASHBOARD,
+		M.FEATURE_RUDDERSTACK,
+		M.CONF_CUSTOM_PROPERTIES,
+		M.CONF_CUSTOM_EVENTS,
 	}
 }
 
 func GetProfessionalPlanFeatures() []string {
-	return []string{}
+	return []string{
+		M.FEATURE_EVENTS,
+		M.FEATURE_FUNNELS,
+		M.FEATURE_KPIS,
+		M.FEATURE_ATTRIBUTION,
+		M.FEATURE_PROFILES,
+		M.FEATURE_TEMPLATES,
+		M.FEATURE_HUBSPOT,
+		M.FEATURE_SALESFORCE,
+		M.FEATURE_LEADSQUARED,
+		M.FEATURE_GOOGLE_ADS,
+		M.FEATURE_FACEBOOK,
+		M.FEATURE_LINKEDIN,
+		M.FEATURE_GOOGLE_ORGANIC,
+		M.FEATURE_BING_ADS,
+		M.FEATURE_MARKETO,
+		M.FEATURE_DRIFT,
+		M.FEATURE_CLEARBIT,
+		M.FEATURE_SIX_SIGNAL,
+		M.FEATURE_DASHBOARD,
+		M.FEATURE_OFFLINE_TOUCHPOINTS,
+		M.FEATURE_SAVED_QUERIES,
+		M.FEATURE_EXPLAIN,
+		M.FEATURE_FILTERS,
+		M.FEATURE_SHAREABLE_URL,
+		M.FEATURE_CUSTOM_METRICS,
+		M.FEATURE_SMART_PROPERTIES,
+		M.FEATURE_CONTENT_GROUPS,
+		M.FEATURE_DISPLAY_NAMES,
+		M.FEATURE_WEEKLY_INSIGHTS,
+		M.FEATURE_KPI_ALERTS,
+		M.FEATURE_EVENT_BASED_ALERTS,
+		M.FEATURE_REPORT_SHARING,
+		M.FEATURE_SLACK,
+		M.FEATURE_SEGMENT,
+		M.FEATURE_PATH_ANALYSIS,
+		M.FEATURE_ARCHIVE_EVENTS,
+		M.FEATURE_BIG_QUERY_UPLOAD,
+		M.FEATURE_IMPORT_ADS,
+		M.FEATURE_LEADGEN,
+		M.FEATURE_TEAMS,
+		M.FEATURE_SIX_SIGNAL_REPORT,
+		M.FEATURE_ACCOUNT_SCORING,
+		M.FEATURE_FACTORS_DEANONYMISATION,
+		M.FEATURE_WEBHOOK,
+		M.FEATURE_ACCOUNT_PROFILES,
+		M.FEATURE_PEOPLE_PROFILES,
+		M.FEATURE_CLICKABLE_ELEMENTS,
+		M.FEATURE_WEB_ANALYTICS_DASHBOARD,
+		M.FEATURE_G2,
+		M.FEATURE_RUDDERSTACK,
+		M.CONF_CUSTOM_PROPERTIES,
+		M.CONF_CUSTOM_EVENTS,
+	}
 }
 
 func GetCustomPlanFeatures() []string {
@@ -498,7 +398,7 @@ func main() {
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 
 	action := flag.String("action", "", "Enter 'create' for creating new plan else enter 'update' to update new plan enable or disable for updating feautre status")
-	planType := flag.String("plan_type", "", "Enter comma separated values: 'free' for free plan; 'basic' for basic plan; 'pro' for professional plan; 'custom' for custom plan; 'startup' for startup plan")
+	planType := flag.String("plan_type", "", "Enter comma separated values: 'free' for free plan; 'basic' for basic plan; 'pro' for professional plan; 'custom' for custom plan; 'professional' for startup plan")
 
 	//update action
 	planID := flag.Int64("id", -1, "Enter plan id to be updated")

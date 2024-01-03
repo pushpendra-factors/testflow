@@ -16,6 +16,8 @@ backend/pkg/**
 backend/bin/**
 backend/src/factors/tests/*.log
 backend/src/default.etcd/
+backend/src/events_cube_aggregation_deploy
+backend/src/logs/dbt.log
 
 backend/src/github.com/**
 backend/src/golang.org/**
