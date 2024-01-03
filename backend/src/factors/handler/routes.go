@@ -412,6 +412,7 @@ func InitAppRoutes(r *gin.Engine) {
 
 	// billing
 	authRouteGroup.GET("/:project_id/billing/pricing", V1.GetPricingForPlansAndAddonsHandler)
+	authRouteGroup.GET("/:project_id/billing/differentialpricing", V1.GetDifferentialPricingForAddOns)
 	authRouteGroup.POST("/:project_id/billing/upgrade", V1.UpdateSubscriptionHandler)
 	authRouteGroup.GET("/:project_id/billing/subscription", V1.GetSubscriptionDetailsHander)
 	authRouteGroup.GET("/:project_id/billing/invoices", V1.ListAllInvoicesHandler)
