@@ -7,6 +7,7 @@ import (
 )
 
 type PlansAndAddOnsPrices []SubscriptionProductPrice
+type DifferentialPrices []DifferentialPrice
 
 const (
 	ADD_ON_ADDITIONAL_500_ACCOUNTS_MONTHLY          = "Additional-500-Accounts-USD-Monthly"
@@ -33,6 +34,13 @@ type SubscriptionProductPrice struct {
 	ID           string `json:"id"`
 	Price        int64  `json:"price"`
 	PeriodUnit   string `json:"period_unit"`
+}
+
+type DifferentialPrice struct {
+	ID           string `json:"id"`
+	ItemPriceID  string `json:"item_price_id"`
+	ParentItemID string `json:"parent_item_id"`
+	Price        int64  `json:"price"`
 }
 
 type Subscription struct {

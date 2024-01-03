@@ -16,4 +16,9 @@ const (
 	PaymentMethodTypePaypalExpressCheckout PaymentMethodType = "paypal_express_checkout"
 	PaymentMethodTypeDirectDebit           PaymentMethodType = "direct_debit"
 	PaymentMethodTypeBoleto                PaymentMethodType = "boleto"
+	PaymentMethodTypeVenmo                 PaymentMethodType = "venmo"
+	PaymentMethodTypeAmazonPayments        PaymentMethodType = "amazon_payments"
+	PaymentMethodTypePayTo                 PaymentMethodType = "pay_to"
+	PaymentMethodTypeFasterPayments        PaymentMethodType = "faster_payments"
+	PaymentMethodTypeSepaInstantTransfer   PaymentMethodType = "sepa_instant_transfer"
 )

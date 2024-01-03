@@ -45,6 +45,30 @@ func GetPricingForPlansAndAddonsHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, res)
 }
 
+func GetDifferentialPricingForAddOns(c *gin.Context) {
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		c.AbortWithError(http.StatusBadRequest, errors.New("INVALID PROJECT ID"))
+		return
+	}
+	diffPrices, err := billing.ListDifferentialPricingFromChargebee()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, model.DifferentialPrices{})
+		return
+
+	}
+	var res model.DifferentialPrices
+	for _, diffPrice := range diffPrices {
+		res = append(res, model.DifferentialPrice{
+			ID:           diffPrice.Id,
+			ItemPriceID:  diffPrice.Id,
+			ParentItemID: diffPrice.ParentItemId,
+			Price:        formatPrice(diffPrice.Price),
+		})
+	}
+	c.JSON(http.StatusOK, res)
+}
+
 func formatPrice(price int64) int64 {
 	return price / 100
 }
