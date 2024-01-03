@@ -55,7 +55,7 @@ services:
                 -  REDIS_HOST=172.30.0.4
                 -  PRI_DS=172.30.0.2
                 -  DB_HOST=172.30.0.2    
-            entrypoint: [ "sh","-c","/go/bin/app --redis_host_ps=$REDIS_HOST --dup_queue_redis_host=$REDIS_HOST --queue_redis_host=$REDIS_HOST  --memsql_is_psc_host=1 --api_domain=$API_DOMAIN --env=staging --memsql_host=$DB_HOST"]
+            entrypoint: [ "sh","-c","/go/bin/app --redis_host_ps=$REDIS_HOST --dup_queue_redis_host=$REDIS_HOST --queue_redis_host=$REDIS_HOST  --memsql_is_psc_host=1 --api_domain=$API_DOMAIN --env=staging --memsql_host=$DB_HOST --skip_event_name_step_by_project_id ='*' --skip_user_join_in_event_query_by_project_id='*' --allow_profiles_group_support='*' --allow_events_funnels_group_support='*' --enable_optimised_filter_on_profile_query=1 --enable_optimised_filter_on_event_user_query=1 --all_accounts_project_id='*' --enable_new_all_accounts_by_project_id='*' --allow_event_analytics_groups_by_project_id='*' --enable_event_filters_in_segments --enable_sync_reference_fields_by_project_id='*' "]
             image: testing/api:1.0
             deploy:
                 replicas: 1
