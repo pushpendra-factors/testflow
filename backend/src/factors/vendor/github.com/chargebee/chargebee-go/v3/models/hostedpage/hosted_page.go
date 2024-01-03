@@ -247,24 +247,26 @@ type CheckoutOneTimeForItemsRequestParams struct {
 	RedirectUrl       string                                           `json:"redirect_url,omitempty"`
 	CancelUrl         string                                           `json:"cancel_url,omitempty"`
 	PassThruContent   string                                           `json:"pass_thru_content,omitempty"`
+	Source            string                                           `json:"source,omitempty"`
 	BillingAddress    *CheckoutOneTimeForItemsBillingAddressParams     `json:"billing_address,omitempty"`
 	ShippingAddress   *CheckoutOneTimeForItemsShippingAddressParams    `json:"shipping_address,omitempty"`
 }
 type CheckoutOneTimeForItemsCustomerParams struct {
-	Id                       string          `json:"id,omitempty"`
-	Email                    string          `json:"email,omitempty"`
-	FirstName                string          `json:"first_name,omitempty"`
-	LastName                 string          `json:"last_name,omitempty"`
-	Company                  string          `json:"company,omitempty"`
-	Taxability               enum.Taxability `json:"taxability,omitempty"`
-	Locale                   string          `json:"locale,omitempty"`
-	Phone                    string          `json:"phone,omitempty"`
-	VatNumber                string          `json:"vat_number,omitempty"`
-	VatNumberPrefix          string          `json:"vat_number_prefix,omitempty"`
-	IsEinvoiceEnabled        *bool           `json:"is_einvoice_enabled,omitempty"`
-	EntityIdentifierScheme   string          `json:"entity_identifier_scheme,omitempty"`
-	EntityIdentifierStandard string          `json:"entity_identifier_standard,omitempty"`
-	ConsolidatedInvoicing    *bool           `json:"consolidated_invoicing,omitempty"`
+	Id                       string                `json:"id,omitempty"`
+	Email                    string                `json:"email,omitempty"`
+	FirstName                string                `json:"first_name,omitempty"`
+	LastName                 string                `json:"last_name,omitempty"`
+	Company                  string                `json:"company,omitempty"`
+	Taxability               enum.Taxability       `json:"taxability,omitempty"`
+	Locale                   string                `json:"locale,omitempty"`
+	Phone                    string                `json:"phone,omitempty"`
+	VatNumber                string                `json:"vat_number,omitempty"`
+	VatNumberPrefix          string                `json:"vat_number_prefix,omitempty"`
+	EinvoicingMethod         enum.EinvoicingMethod `json:"einvoicing_method,omitempty"`
+	IsEinvoiceEnabled        *bool                 `json:"is_einvoice_enabled,omitempty"`
+	EntityIdentifierScheme   string                `json:"entity_identifier_scheme,omitempty"`
+	EntityIdentifierStandard string                `json:"entity_identifier_standard,omitempty"`
+	ConsolidatedInvoicing    *bool                 `json:"consolidated_invoicing,omitempty"`
 }
 type CheckoutOneTimeForItemsItemPriceParams struct {
 	ItemPriceId        string `json:"item_price_id,omitempty"`
@@ -369,6 +371,7 @@ type CheckoutNewForItemsRequestParams struct {
 	RedirectUrl                string                                       `json:"redirect_url,omitempty"`
 	CancelUrl                  string                                       `json:"cancel_url,omitempty"`
 	PassThruContent            string                                       `json:"pass_thru_content,omitempty"`
+	Source                     string                                       `json:"source,omitempty"`
 	AllowOfflinePaymentMethods *bool                                        `json:"allow_offline_payment_methods,omitempty"`
 	BillingAddress             *CheckoutNewForItemsBillingAddressParams     `json:"billing_address,omitempty"`
 	ShippingAddress            *CheckoutNewForItemsShippingAddressParams    `json:"shipping_address,omitempty"`
@@ -387,19 +390,20 @@ type CheckoutNewForItemsSubscriptionParams struct {
 	AffiliateToken                    string                    `json:"affiliate_token,omitempty"`
 }
 type CheckoutNewForItemsCustomerParams struct {
-	Id                       string          `json:"id,omitempty"`
-	Email                    string          `json:"email,omitempty"`
-	FirstName                string          `json:"first_name,omitempty"`
-	LastName                 string          `json:"last_name,omitempty"`
-	Company                  string          `json:"company,omitempty"`
-	Taxability               enum.Taxability `json:"taxability,omitempty"`
-	Locale                   string          `json:"locale,omitempty"`
-	Phone                    string          `json:"phone,omitempty"`
-	VatNumber                string          `json:"vat_number,omitempty"`
-	VatNumberPrefix          string          `json:"vat_number_prefix,omitempty"`
-	IsEinvoiceEnabled        *bool           `json:"is_einvoice_enabled,omitempty"`
-	EntityIdentifierScheme   string          `json:"entity_identifier_scheme,omitempty"`
-	EntityIdentifierStandard string          `json:"entity_identifier_standard,omitempty"`
+	Id                       string                `json:"id,omitempty"`
+	Email                    string                `json:"email,omitempty"`
+	FirstName                string                `json:"first_name,omitempty"`
+	LastName                 string                `json:"last_name,omitempty"`
+	Company                  string                `json:"company,omitempty"`
+	Taxability               enum.Taxability       `json:"taxability,omitempty"`
+	Locale                   string                `json:"locale,omitempty"`
+	Phone                    string                `json:"phone,omitempty"`
+	VatNumber                string                `json:"vat_number,omitempty"`
+	VatNumberPrefix          string                `json:"vat_number_prefix,omitempty"`
+	IsEinvoiceEnabled        *bool                 `json:"is_einvoice_enabled,omitempty"`
+	EntityIdentifierScheme   string                `json:"entity_identifier_scheme,omitempty"`
+	EntityIdentifierStandard string                `json:"entity_identifier_standard,omitempty"`
+	EinvoicingMethod         enum.EinvoicingMethod `json:"einvoicing_method,omitempty"`
 }
 type CheckoutNewForItemsSubscriptionItemParams struct {
 	ItemPriceId        string              `json:"item_price_id"`
@@ -574,6 +578,7 @@ type CheckoutExistingForItemsRequestParams struct {
 	RedirectUrl                string                                            `json:"redirect_url,omitempty"`
 	CancelUrl                  string                                            `json:"cancel_url,omitempty"`
 	PassThruContent            string                                            `json:"pass_thru_content,omitempty"`
+	Source                     string                                            `json:"source,omitempty"`
 	AllowOfflinePaymentMethods *bool                                             `json:"allow_offline_payment_methods,omitempty"`
 	ContractTerm               *CheckoutExistingForItemsContractTermParams       `json:"contract_term,omitempty"`
 }
