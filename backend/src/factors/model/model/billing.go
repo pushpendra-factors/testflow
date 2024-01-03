@@ -28,19 +28,19 @@ func GetNumberOfAccountsForAddOnID(addOnID string) int {
 }
 
 type SubscriptionProductPrice struct {
-	Type         string `json:"type"`
-	Name         string `json:"name"`
-	ExternalName string `json:"external_name"`
-	ID           string `json:"id"`
-	Price        int64  `json:"price"`
-	PeriodUnit   string `json:"period_unit"`
+	Type         string  `json:"type"`
+	Name         string  `json:"name"`
+	ExternalName string  `json:"external_name"`
+	ID           string  `json:"id"`
+	Price        float64 `json:"price"`
+	PeriodUnit   string  `json:"period_unit"`
 }
 
 type DifferentialPrice struct {
-	ID           string `json:"id"`
-	ItemPriceID  string `json:"item_price_id"`
-	ParentItemID string `json:"parent_item_id"`
-	Price        int64  `json:"price"`
+	ID           string  `json:"id"`
+	ItemPriceID  string  `json:"item_price_id"`
+	ParentItemID string  `json:"parent_item_id"`
+	Price        float64 `json:"price"`
 }
 
 type Subscription struct {
@@ -51,10 +51,10 @@ type Subscription struct {
 }
 
 type SubscriptionDetail struct {
-	Type         string `json:"type"`
-	ID           string `json:"id"`
-	Amount       int64  `json:"amount"`
-	ExternalName string `json:"external_name"`
+	Type         string  `json:"type"`
+	ID           string  `json:"id"`
+	Amount       float64 `json:"amount"`
+	ExternalName string  `json:"external_name"`
 }
 
 type UpdateSubscriptionParams struct {
@@ -70,9 +70,9 @@ type AddOnsUpdate struct {
 type Invoice struct {
 	ID          string    `json:"id"`
 	BillingDate time.Time `json:"billing_date"`
-	Amount      int64     `json:"amount`
-	AmountPaid  int64     `json:"amount_paid"`
-	AmountDue   int64     `json:"amount_due`
+	Amount      float64   `json:"amount`
+	AmountPaid  float64   `json:"amount_paid"`
+	AmountDue   float64   `json:"amount_due`
 	Items       []string  `json:"items"`
 }
 
