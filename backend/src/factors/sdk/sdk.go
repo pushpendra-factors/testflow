@@ -2658,7 +2658,7 @@ func TrackGroupWithDomain(projectID int64, groupName, domainName string, propert
 	}
 
 	if C.IsAllowedDomainsGroupByProjectID(projectID) {
-		status = TrackDomainsGroup(projectID, groupUserID, groupName, domainName, nil, timestamp)
+		status = TrackDomainsGroup(projectID, groupUserID, groupName, domainName, timestamp)
 		if status != http.StatusOK {
 			logCtx.Error("Failed to TrackDomainsGroup.")
 			return "", http.StatusInternalServerError
@@ -2722,9 +2722,9 @@ func TrackUserAccountGroup(projectID int64, userID string, groupName string, gro
 }
 
 // TrackDomainsGroup track $domains/All accounts group. Either group user id or domain name is required
-func TrackDomainsGroup(projectID int64, groupUserID string, groupName string, domainName string, properties U.PropertiesMap, timestamp int64) int {
+func TrackDomainsGroup(projectID int64, groupUserID string, groupName string, domainName string, timestamp int64) int {
 	logFields := log.Fields{"project_id": projectID,
-		"domain_name": domainName, "domain_properties": properties, "timestamp": timestamp}
+		"domain_name": domainName, "timestamp": timestamp}
 	logCtx := log.WithFields(logFields)
 
 	if projectID == 0 || groupName == "" || timestamp == 0 {
@@ -2770,18 +2770,9 @@ func TrackDomainsGroup(projectID int64, groupUserID string, groupName string, do
 		return http.StatusInternalServerError
 	}
 
-	propertiesMap := map[string]interface{}(properties)
-	source := model.GetGroupUserSourceNameByGroupName(model.GROUP_NAME_DOMAINS)
-	_, err := store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, model.GROUP_NAME_DOMAINS, groupID, domainsGroupUserID,
-		&propertiesMap, U.TimeNowUnix(), U.TimeNowUnix(), source)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to create or update domains group.")
-		return http.StatusInternalServerError
-	}
-
 	_, status = store.GetStore().UpdateGroupUserDomainsGroup(projectID, groupUserID, domainsGroupUserID, groupID, true)
 	if status != http.StatusAccepted && status != http.StatusNotModified {
-		logCtx.WithError(err).Error("Failed to update group user association with domains group user.")
+		logCtx.WithFields(log.Fields{"status": status}).Error("Failed to update group user association with domains group user.")
 		return http.StatusInternalServerError
 	}
 

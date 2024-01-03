@@ -3323,7 +3323,7 @@ func syncGroupCompany(projectID int64, document *model.HubspotDocument, enProper
 		}
 
 		if domainName != "" {
-			status := sdk.TrackDomainsGroup(projectID, companyUserID, model.GROUP_NAME_HUBSPOT_COMPANY, domainName, nil, document.Timestamp)
+			status := sdk.TrackDomainsGroup(projectID, companyUserID, model.GROUP_NAME_HUBSPOT_COMPANY, domainName, document.Timestamp)
 			if status != http.StatusOK {
 				log.WithFields(log.Fields{"project_id": projectID, "document_id": document.ID, "timestamp": document.Timestamp}).
 					Error("Failed to TrackDomainsGroup in hubspot company enrichment.")
