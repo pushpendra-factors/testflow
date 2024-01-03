@@ -393,7 +393,8 @@ function ContactDetails({
       timelinePayload: location.state?.timelinePayload,
       currentPage: location.state?.currentPage,
       currentPageSize: location.state?.currentPageSize,
-      activeSorter: location.state?.activeSorter
+      activeSorter: location.state?.activeSorter,
+      appliedFilters: location.state?.appliedFilters
     });
   }, []);
 
@@ -455,21 +456,18 @@ function ContactDetails({
       </div>
     );
 
-  const renderAddNewProp = () =>
-    !currentProjectSettings?.timelines_config?.user_config?.table_props ||
-    currentProjectSettings?.timelines_config?.user_config?.table_props?.length <
-      8 ? (
-      <div>
-        <Button
-          type='link'
-          icon={<SVG name='plus' color='purple' />}
-          onClick={() => setPropSelectOpen(!propSelectOpen)}
-        >
-          Add property
-        </Button>
-        {selectProps()}
-      </div>
-    ) : null;
+  const renderAddNewProp = () => (
+    <>
+      <Button
+        type='link'
+        icon={<SVG name='plus' color='purple' />}
+        onClick={() => setPropSelectOpen(!propSelectOpen)}
+      >
+        Add property
+      </Button>
+      {selectProps()}
+    </>
+  );
 
   const renderLeftPane = () => (
     <div className='leftpane'>
@@ -524,7 +522,11 @@ function ContactDetails({
       <div className='props'>
         {listLeftPaneProps(userDetails.data.leftpane_props)}
       </div>
-      <div className='add-prop-btn'>{renderAddNewProp()}</div>
+      {!currentProjectSettings?.timelines_config?.user_config?.table_props ||
+      currentProjectSettings?.timelines_config?.user_config?.table_props
+        ?.length < 8 ? (
+        <div className='add-prop-btn'>{renderAddNewProp()}</div>
+      ) : null}
     </div>
   );
 

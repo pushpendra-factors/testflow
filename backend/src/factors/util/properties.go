@@ -764,6 +764,8 @@ var IDENTIFIED_USER_ID = "$identified_user_id"
 // SQL column as properties
 var CUSTOMER_USER_ID = "customer_user_id"
 
+var DP_DOMAIN_NAME = "$domain_name"
+
 var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,
 	EP_LOCATION_LATITUDE,

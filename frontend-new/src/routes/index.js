@@ -2,34 +2,34 @@ import React, { useEffect } from 'react';
 import { Route, Switch, Redirect } from 'react-router-dom';
 import lazyWithRetry from 'Utils/lazyWithRetry';
 import PrivateRoute from 'Components/PrivateRoute';
-import { APP_LAYOUT_ROUTES, APP_ROUTES } from './constants';
-import { AdminLock, featureLock } from './feature';
 import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import SetupAssist from 'Views/Settings/SetupAssist';
 import { useDispatch } from 'react-redux';
 import { UPDATE_ALL_ROUTES } from 'Reducers/types';
-import OnBoard from 'Views/Settings/SetupAssist/Welcome/OnboardFlow';
 import withFeatureLockHOC from 'HOC/withFeatureLock';
 import { FEATURES } from 'Constants/plans.constants';
 import LockedStateComponent from 'Components/GenericComponents/LockedStateVideoComponent';
-import { PathUrls } from './pathUrls';
 import ConfigurePlans from 'Views/Settings/ProjectSettings/ConfigurePlans';
+import { PathUrls } from './pathUrls';
+import { AdminLock, featureLock } from './feature';
+import { APP_LAYOUT_ROUTES, APP_ROUTES } from './constants';
 import LockedAttributionImage from '../assets/images/locked_attribution.png';
+import Checklist from '../features/Checklist';
 
 const Attribution = lazyWithRetry(() => import('../features/attribution/ui'));
 const FeatureLockedAttributionComponent = withFeatureLockHOC(Attribution, {
   featureName: FEATURES.FEATURE_ATTRIBUTION,
   LockedComponent: () => (
     <LockedStateComponent
-      title={'Attribution'}
+      title='Attribution'
       description='Attribute revenue and conversions to the right marketing channels, campaigns, and touchpoints to gain a clear understanding of what drives success. Identify the most effective marketing strategies, optimize your budget allocation, and make data-driven decisions to maximize ROI and achieve your business goals.'
       embeddedLink={LockedAttributionImage}
     />
   )
 });
 
-const renderRoutes = (routesObj) => {
-  return Object.keys(routesObj)
+const renderRoutes = (routesObj) =>
+  Object.keys(routesObj)
     .map((routeName) => {
       const route = routesObj[routeName];
 
@@ -54,37 +54,38 @@ const renderRoutes = (routesObj) => {
       );
     })
     .filter((route) => !!route);
-};
 
-export const AppRoutes = () => (
-  <Switch>
-    {renderRoutes(APP_ROUTES)}
+export function AppRoutes() {
+  return (
+    <Switch>
+      {renderRoutes(APP_ROUTES)}
 
-    {/* If no routes match */}
-    <Route>
-      <Redirect to='/' />
-    </Route>
-  </Switch>
-);
+      {/* If no routes match */}
+      <Route>
+        <Redirect to='/' />
+      </Route>
+    </Switch>
+  );
+}
 
-export const AppLayoutRoutes = ({
+export function AppLayoutRoutes({
   activeAgent,
   active_project,
   currentProjectSettings
-}) => {
+}) {
   const dispatch = useDispatch();
 
   useEffect(() => {
     if (featureLock(activeAgent)) {
-      let allRoutes = [];
+      const allRoutes = [];
       allRoutes.push(ATTRIBUTION_ROUTES.base);
 
       dispatch({ type: UPDATE_ALL_ROUTES, payload: allRoutes });
     }
   }, [activeAgent]);
   useEffect(() => {
-    let allRoutes = [];
-    for (let obj of Object.keys(APP_LAYOUT_ROUTES)) {
+    const allRoutes = [];
+    for (const obj of Object.keys(APP_LAYOUT_ROUTES)) {
       allRoutes.push(APP_LAYOUT_ROUTES[obj].path);
     }
 
@@ -110,6 +111,7 @@ export const AppLayoutRoutes = ({
       ) : null}
 
       <PrivateRoute path='/project-setup' component={SetupAssist} />
+      <PrivateRoute path={PathUrls.Checklist} component={Checklist} />
     </Switch>
   );
-};
+}

@@ -891,13 +891,28 @@ func (store *MemSQL) CreateOrGetDomainGroupUser(projectID int64, groupName strin
 	}
 
 	isGroupUser := true
-	userID, status := store.CreateGroupUser(&model.User{
+	groupUser := &model.User{
 		ID:            getDomainUserIDByDomainGroupIndexANDDomainName(group.ID, domainName),
 		ProjectId:     projectID,
 		IsGroupUser:   &isGroupUser,
 		JoinTimestamp: requestTimestamp,
 		Source:        &requestSource,
-	}, groupName, domainName)
+	}
+
+	if groupName == model.GROUP_NAME_DOMAINS {
+		domainGroupProperty := &map[string]interface{}{
+			U.DP_DOMAIN_NAME: domainName,
+		}
+
+		propertyJSONB, err := U.EncodeToPostgresJsonb(domainGroupProperty)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to encode domain property in domain group user.")
+		} else {
+			groupUser.Properties = *propertyJSONB
+		}
+	}
+
+	userID, status := store.CreateGroupUser(groupUser, groupName, domainName)
 	if status != http.StatusCreated && status != http.StatusConflict {
 		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to create domain group user.")
 		return "", http.StatusInternalServerError

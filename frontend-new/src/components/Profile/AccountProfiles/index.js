@@ -262,21 +262,34 @@ function AccountProfiles({
   }, [newSegmentMode]);
 
   useEffect(() => {
-    if (newSegmentMode === false) {
-      if (Boolean(activeSegment?.id) === true && activeSegment.query != null) {
-        const filters = getSelectedFiltersFromQuery({
-          query: activeSegment.query,
-          groupsList
-        });
-        setAppliedFilters(cloneDeep(filters));
-        setSelectedFilters(filters);
-        setFiltersExpanded(false);
-        setFiltersDirty(false);
-      } else {
-        const selectedGroup = groupsList.find(
-          (g) => g[1] === accountPayload.source
-        );
-        restoreFiltersDefaultState(selectedGroup);
+    if (
+      location.state?.fromDetails === true &&
+      location.state?.appliedFilters != null
+    ) {
+      setAppliedFilters(cloneDeep(location.state?.appliedFilters));
+      setSelectedFilters(location.state?.appliedFilters);
+      setFiltersExpanded(false);
+      setFiltersDirty(true);
+    } else {
+      if (newSegmentMode === false) {
+        if (
+          Boolean(activeSegment?.id) === true &&
+          activeSegment.query != null
+        ) {
+          const filters = getSelectedFiltersFromQuery({
+            query: activeSegment.query,
+            groupsList
+          });
+          setAppliedFilters(cloneDeep(filters));
+          setSelectedFilters(filters);
+          setFiltersExpanded(false);
+          setFiltersDirty(false);
+        } else {
+          const selectedGroup = groupsList.find(
+            (g) => g[1] === accountPayload.source
+          );
+          restoreFiltersDefaultState(selectedGroup);
+        }
       }
     }
   }, [accountPayload, activeSegment, groupsList, newSegmentMode]);
@@ -681,6 +694,15 @@ function AccountProfiles({
     });
   }, []);
 
+  const setSecondaryFiltersList = useCallback((secondaryFilters) => {
+    setSelectedFilters((curr) => {
+      return {
+        ...curr,
+        secondaryFilters
+      };
+    });
+  }, []);
+
   const setListEvents = useCallback((eventsList) => {
     setSelectedFilters((curr) => {
       return {
@@ -695,6 +717,15 @@ function AccountProfiles({
       return {
         ...curr,
         eventProp
+      };
+    });
+  }, []);
+
+  const setEventTimeline = useCallback((eventTimeline) => {
+    setSelectedFilters((curr) => {
+      return {
+        ...curr,
+        eventTimeline
       };
     });
   }, []);
@@ -759,11 +790,13 @@ function AccountProfiles({
         filters={accountPayload.filters}
         filtersExpanded={filtersExpanded}
         filtersList={selectedFilters.filters}
+        secondaryFiltersList={selectedFilters.secondaryFilters}
         appliedFilters={appliedFilters}
         selectedAccount={selectedAccount}
         listEvents={selectedFilters.eventsList}
         availableGroups={availableGroups}
         eventProp={selectedFilters.eventProp}
+        eventTimeline={selectedFilters.eventTimeline}
         areFiltersDirty={areFiltersDirty}
         disableDiscardButton={disableDiscardButton}
         isActiveSegment={Boolean(accountPayload.segment_id) === true}
@@ -771,8 +804,10 @@ function AccountProfiles({
         setFiltersExpanded={setFiltersExpanded}
         setSaveSegmentModal={handleSaveSegmentClick}
         setFiltersList={setFiltersList}
+        setSecondaryFiltersList={setSecondaryFiltersList}
         setListEvents={setListEvents}
         setEventProp={setEventProp}
+        setEventTimeline={setEventTimeline}
         resetSelectedFilters={resetSelectedFilters}
         onClearFilters={handleClearFilters}
         setSelectedAccount={setSelectedAccount}
@@ -873,7 +908,8 @@ function AccountProfiles({
       eventProp: selectedFilters.eventProp,
       eventsList: selectedFilters.eventsList,
       isActiveSegment: Boolean(accountPayload.segment_id),
-      areFiltersDirty
+      areFiltersDirty,
+      secondaryFiltersList: selectedFilters.secondaryFilters
     });
   }, [
     accountPayload.segment_id,
@@ -882,7 +918,8 @@ function AccountProfiles({
     newSegmentMode,
     selectedFilters.eventProp,
     selectedFilters.eventsList,
-    selectedFilters.filters
+    selectedFilters.filters,
+    selectedFilters.secondaryFilters
   ]);
 
   const renderSaveSegmentButton = () => {
@@ -930,18 +967,18 @@ function AccountProfiles({
                 width: '240px',
                 'border-radius': '5px'
               }}
-              prefix={<SVG name='search' size={16} color={'#8C8C8C'} />}
+              prefix={<SVG name='search' size={20} color={'#8C8C8C'} />}
               onClick={() => setSearchDDOpen(true)}
             />
           )}
           <Button type='text' onClick={onSearchClose}>
-            <SVG name={'close'} size={24} color={'grey'} />
+            <SVG name={'close'} size={20} color={'grey'} />
           </Button>
         </div>
       </ControlledComponent>
       <ControlledComponent controller={!searchBarOpen}>
         <Button type='text' onClick={onSearchOpen}>
-          <SVG name={'search'} size={24} color={'#8c8c8c'} />
+          <SVG name={'search'} size={20} color={'#8c8c8c'} />
         </Button>
       </ControlledComponent>
       {searchCompanies()}
@@ -951,7 +988,7 @@ function AccountProfiles({
   const renderDownloadSection = () => {
     return (
       <Button onClick={() => setShowDownloadCSVModal(true)} type='text'>
-        <SVG size={24} name={'download'} color={'#8c8c8c'} />
+        <SVG size={20} name={'download'} color={'#8c8c8c'} />
       </Button>
     );
   };
@@ -974,8 +1011,8 @@ function AccountProfiles({
           styles['more-actions-popover']
         )}
       >
-        <Button type='default'>
-          <SVG size={24} name={'more'} />
+        <Button className={styles['more-actions-button']} type='default'>
+          <SVG size={20} name={'more'} />
         </Button>
       </Popover>
     );
@@ -997,7 +1034,7 @@ function AccountProfiles({
         content={popoverContent}
       >
         <Button type='text'>
-          <SVG size={24} name={'tableColumns'} />
+          <SVG size={20} name={'tableColumns'} />
         </Button>
       </Popover>
     );
@@ -1115,6 +1152,7 @@ function AccountProfiles({
                   currentPage: currentPage,
                   currentPageSize: currentPageSize,
                   activeSorter: defaultSorterInfo,
+                  appliedFilters: areFiltersDirty ? appliedFilters : null,
                   accountsTableRow: account.name
                 }
               );
@@ -1133,7 +1171,7 @@ function AccountProfiles({
           onChange={handleTableChange}
           scroll={{
             x: displayTableProps?.length * 300,
-            y: 'calc(100vh - 200px)'
+            y: 'calc(100vh - 340px)'
           }}
         />
       </div>

@@ -126,14 +126,21 @@ export const getFiltersRequestPayload = ({
   table_props,
   caller = 'account_profiles'
 }) => {
-  const { eventsList, eventProp, filters, account } = selectedFilters;
+  const {
+    eventsList,
+    eventProp,
+    filters,
+    account,
+    eventTimeline,
+    secondaryFilters
+  } = selectedFilters;
 
   const queryOptions = {
     group_analysis: account[1],
     source: caller === 'account_profiles' ? account[1] : 'All',
     caller,
     table_props,
-    globalFilters: filters,
+    globalFilters: [...filters, ...secondaryFilters],
     date_range: {}
   };
 
@@ -321,31 +328,41 @@ export const getPropType = (propsList, searchProp) => {
 
 export const propValueFormat = (searchKey, value, type) => {
   if (!value) return '-';
+
   const isDate = searchKey?.toLowerCase()?.includes('date');
   const isNumDuration = searchKey?.toLowerCase()?.includes('time');
   const isCatDuration = searchKey?.endsWith('time');
   const isDurationMilliseconds = searchKey?.includes('durationmilliseconds');
   const isTimestamp = searchKey?.includes('timestamp');
 
+  const formatDatetime = (value) => {
+    const dateFormat = isDate ? 'DD MMM YYYY' : 'DD MMM YYYY, hh:mm A zz';
+    return MomentTz(value * 1000).format(dateFormat);
+  };
+
+  const formatNumerical = (value) =>
+    isNumDuration
+      ? formatDurationIntoString(parseFloat(value))
+      : isDurationMilliseconds
+        ? formatDurationIntoString(parseFloat(value / 1000))
+        : parseFloat(value).toFixed();
+
+  const formatCategorical = (value) =>
+    isTimestamp
+      ? MomentTz(value * 1000).format('DD MMM YYYY, hh:mm A zz')
+      : isCatDuration
+        ? formatDurationIntoString(parseFloat(value))
+        : value;
+
   switch (type) {
     case 'datetime':
-      return isDate
-        ? MomentTz(value * 1000).format('DD MMM YYYY')
-        : MomentTz(value * 1000).format('DD MMM YYYY, hh:mm A zz');
+      return !isNaN(parseInt(value)) ? formatDatetime(value) : value;
 
     case 'numerical':
-      return isNumDuration
-        ? formatDurationIntoString(parseInt(value))
-        : isDurationMilliseconds
-          ? formatDurationIntoString(parseInt(value / 1000))
-          : parseInt(value);
+      return !isNaN(parseInt(value)) ? formatNumerical(value) : value;
 
     case 'categorical':
-      return isTimestamp
-        ? MomentTz(value * 1000).format('DD MMM YYYY, hh:mm A zz')
-        : isCatDuration
-          ? formatDurationIntoString(parseInt(value))
-          : value;
+      return formatCategorical(value);
 
     default:
       return value;
@@ -615,10 +632,10 @@ export const transformWeightConfigForQuery = (config) => {
         Array.isArray(value) && value.length > 0
           ? value
           : value_type === 'categorical'
-            ? [value]
-            : value_type === 'numerical'
-              ? lower_bound
-              : value;
+          ? [value]
+          : value_type === 'numerical'
+          ? lower_bound
+          : value;
       const filter = {
         props: [property_type, key, value_type, property_type],
         operator: reverseOperatorMap[operator] || operator,
@@ -645,12 +662,20 @@ export const getSelectedFiltersFromQuery = ({
   const filters = getStateQueryFromRequestQuery(query);
   const result = {
     eventProp,
-    filters: filters.globalFilters,
+    filters:
+      caller === 'account_profiles'
+        ? filters.globalFilters.filter((elem) => elem.props[0] !== 'user')
+        : filters.globalFilters,
     eventsList: filters.events,
     account:
       caller === 'account_profiles'
         ? groupsList.find((g) => g[1] === grpa)
-        : INITIAL_USER_PROFILES_FILTERS_STATE.account
+        : INITIAL_USER_PROFILES_FILTERS_STATE.account,
+    eventTimeline: '7',
+    secondaryFilters:
+      caller === 'account_profiles'
+        ? filters.globalFilters.filter((elem) => elem.props[0] === 'user')
+        : []
   };
   return result;
 };

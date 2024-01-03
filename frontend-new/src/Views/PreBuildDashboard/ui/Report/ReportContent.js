@@ -24,6 +24,9 @@ import {
   shouldShowChartConfigOptions
 } from 'Views/CoreQuery/AnalysisResultsPage/analysisResultsPage.helpers';
 import { getKpiLabel } from 'Views/CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
+import Filter from './Filter';
+import { useSelector } from 'react-redux';
+
 const { TabPane } = Tabs;
 
 function ReportContent({
@@ -36,16 +39,13 @@ function ReportContent({
   runKPIQuery,
   queryOptions,
   handleDurationChange,
-  campaignState,
   arrayMapper,
-  attributionsState,
   breakdownType,
   queryTitle,
   eventPage,
   section,
   onReportClose,
   runAttrCmprQuery,
-  campaignsArrayMapper,
   handleGranularityChange,
   renderedCompRef,
   handleChartTypeChange,
@@ -67,11 +67,7 @@ function ReportContent({
         chartTypes,
         queryType
       }),
-    [
-      breakdown,
-      chartTypes,
-      queryType
-    ]
+    [breakdown, chartTypes, queryType]
   );
   // const chartType= CHART_TYPE_LINECHART;
 
@@ -79,34 +75,32 @@ function ReportContent({
   const [chartTypeMenuItems, setChartTypeMenuItems] = useState([]);
   const [secondAxisKpiIndices, setSecondAxisKpiIndices] = useState([]);
 
+  const filtersData = useSelector(
+    (state) => state.preBuildDashboardConfig.reportFilters
+  );
+
   useEffect(() => {
     if (queryType === QUERY_TYPE_EVENT && breakdownType !== EACH_USER_TYPE) {
       setChartTypeMenuItems([]);
       return;
     }
     setChartTypeMenuItems(
-      getChartTypeMenuItems(
-        queryType,
-        breakdown.length,
-        queries
-      )
+      getChartTypeMenuItems(queryType, breakdown.length, queries)
     );
-  }, [
-    queryType,
-    breakdown,
-    breakdownType,
-    queries
-  ]);
+  }, [queryType, breakdown, breakdownType, queries]);
 
-  if(breakdown?.[0] === undefined) {
+  if (breakdown?.[0] === undefined) {
     breakdown = [];
   }
-
 
   function handleBreakdownChange(key) {
     const result = querySaved?.g_by?.filter((item) => key === item.na);
     updateAppliedBreakdown(result);
-    runKPIQuery(querySaved, result[0]);
+    runKPIQuery(querySaved, result[0], filtersData);
+  }
+
+  function handleFilterChange(payload) {
+    runKPIQuery(querySaved, breakdown, payload);
   }
 
   if (resultState.loading) {
@@ -136,13 +130,10 @@ function ReportContent({
     );
   }
 
-  
-
   if (queryType === QUERY_TYPE_KPI) {
     durationObj = queryOptions.date_range;
     queryDetail = queryTitle;
   }
-
 
   if (queryType === QUERY_TYPE_KPI && breakdown.length && queries.length > 1) {
     metricsDropdown = (
@@ -187,13 +178,17 @@ function ReportContent({
         <KPIAnalysis
           resultState={resultState}
           kpis={queries}
-          breakdown={breakdown.length ? [
-            {
-              property: breakdown?.[0]?.na,
-              prop_type: 'categorical',
-              display_name: breakdown?.[0]?.d_na,
-            }
-          ]: []}
+          breakdown={
+            breakdown.length
+              ? [
+                  {
+                    property: breakdown?.[0]?.na,
+                    prop_type: 'categorical',
+                    display_name: breakdown?.[0]?.d_na
+                  }
+                ]
+              : []
+          }
           section={section}
           currMetricsValue={currMetricsValue}
           durationObj={durationObj}
@@ -203,12 +198,11 @@ function ReportContent({
         />
       );
     }
-
   }
 
   return (
     <>
-      <>
+      <div>
         {queryType === QUERY_TYPE_CAMPAIGN || queryType === QUERY_TYPE_WEB ? (
           <ReportTitle
             setDrawerVisible={setDrawerVisible}
@@ -220,18 +214,23 @@ function ReportContent({
             apiCallStatus={resultState.apiCallStatus}
           />
         ) : null}
-        {querySaved?.g_by?.length ?
+        <div className={`${querySaved?.g_by?.length ? 'mb-4' : ''}`}>
+          <Filter handleFilterChange={handleFilterChange} />
+        </div>
+        {querySaved?.g_by?.length ? (
           <div>
-            <Tabs onChange={handleBreakdownChange} activeKey={breakdown?.[0]?.na} type="card" tabBarGutter={4}>
-              {querySaved?.g_by?.map((item) => {
-                return (
-                  <TabPane tab={item.d_na} key={item.na}>
-                  </TabPane>
-                )
-              })}
+            <Tabs
+              onChange={handleBreakdownChange}
+              activeKey={breakdown?.[0]?.na}
+              type='card'
+              tabBarGutter={4}
+            >
+              {querySaved?.g_by?.map((item) => (
+                <TabPane tab={item.d_na} key={item.na} />
+              ))}
             </Tabs>
           </div>
-        : null}
+        ) : null}
         <div className='mt-6'>
           <CalendarRow
             queryType={queryType}
@@ -254,7 +253,7 @@ function ReportContent({
             kpis={queries}
           />
         </div>
-      </>
+      </div>
 
       <div className='mt-12'>{content}</div>
     </>

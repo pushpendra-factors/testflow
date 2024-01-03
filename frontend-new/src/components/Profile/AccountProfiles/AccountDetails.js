@@ -470,6 +470,7 @@ function AccountDetails({
       currentPage: location.state?.currentPage,
       currentPageSize: location.state?.currentPageSize,
       activeSorter: location.state?.activeSorter,
+      appliedFilters: location.state?.appliedFilters,
       accountsTableRow: location.state?.accountsTableRow
     });
   }, []);
@@ -559,21 +560,18 @@ function AccountDetails({
       </div>
     );
 
-  const renderAddNewProp = () =>
-    !currentProjectSettings?.timelines_config?.account_config?.table_props ||
-    currentProjectSettings?.timelines_config?.account_config?.table_props
-      ?.length < 8 ? (
-      <div>
-        <Button
-          type='link'
-          icon={<SVG name='plus' color='purple' />}
-          onClick={() => setPropSelectOpen(!propSelectOpen)}
-        >
-          Add property
-        </Button>
-        {selectProps()}
-      </div>
-    ) : null;
+  const renderAddNewProp = () => (
+    <>
+      <Button
+        type='link'
+        icon={<SVG name='plus' color='purple' />}
+        onClick={() => setPropSelectOpen(!propSelectOpen)}
+      >
+        Add property
+      </Button>
+      {selectProps()}
+    </>
+  );
 
   const renderLeftPane = () => (
     <div className='leftpane'>
@@ -618,7 +616,11 @@ function AccountDetails({
       <div className='props'>
         {listLeftPaneProps(accountDetails.data.leftpane_props)}
       </div>
-      <div className='add-prop-btn with-attr'>{renderAddNewProp()}</div>
+      {!currentProjectSettings?.timelines_config?.account_config?.table_props ||
+      currentProjectSettings?.timelines_config?.account_config?.table_props
+        ?.length < 8 ? (
+        <div className='add-prop-btn with-attr'>{renderAddNewProp()}</div>
+      ) : null}
       <div className='logo_attr'>
         <a
           className='font-size--small'

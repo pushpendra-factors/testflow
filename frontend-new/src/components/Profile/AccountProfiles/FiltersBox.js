@@ -1,24 +1,29 @@
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
-import cx from 'classnames';
-import styles from './index.module.scss';
-import { SVG, Text } from 'Components/factorsComponents';
-import { Button, Dropdown, Menu } from 'antd';
-import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
 import { useSelector } from 'react-redux';
+import cx from 'classnames';
+import { Button, Dropdown, Menu } from 'antd';
+import cloneDeep from 'lodash/cloneDeep';
 import map from 'lodash/map';
+import { SVG, Text } from 'Components/factorsComponents';
+import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
+import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
+import { selectGroupsList } from 'Reducers/groups/selectors';
+import { generateRandomKey } from 'Utils/global';
+import {
+  eventMenuList,
+  eventTimelineMenuList
+} from './accountProfiles.constants';
 import {
   checkFiltersEquality,
   computeFilterProperties
 } from './accountProfiles.helpers';
-import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
-import { eventMenuList } from './accountProfiles.constants';
 import EventsBlock from '../MyComponents/EventsBlock';
-import { selectGroupsList } from 'Reducers/groups/selectors';
-import { generateRandomKey } from 'Utils/global';
-import { cloneDeep } from 'lodash';
+import styles from './index.module.scss';
 
 const FiltersBox = ({
   filtersList,
+  secondaryFiltersList,
+  setSecondaryFiltersList,
   profileType = 'account',
   source,
   appliedFilters,
@@ -33,7 +38,9 @@ const FiltersBox = ({
   setEventProp,
   onClearFilters,
   disableDiscardButton,
-  isActiveSegment
+  isActiveSegment,
+  eventTimeline,
+  setEventTimeline
 }) => {
   const { newSegmentMode: accountsNewSegmentMode } = useSelector(
     (state) => state.accountProfilesView
@@ -45,8 +52,8 @@ const FiltersBox = ({
   const newSegmentMode = accountsNewSegmentMode || profilesNewSegmentMode;
   const groupsList = useSelector((state) => selectGroupsList(state));
   const activeProject = useSelector((state) => state.global.active_project);
-  const [filterProps, setFilterProperties] = useState({});
   const [filterDD, setFilterDD] = useState(false);
+  const [secondaryFilterDD, setSecondaryFilterDD] = useState(false);
   const [isEventsVisible, setEventsVisible] = useState(false);
   const userProperties = useSelector(
     (state) => state.coreQuery.userPropertiesV2
@@ -62,6 +69,13 @@ const FiltersBox = ({
       setEventProp(eventItem.key);
     },
     [setEventProp]
+  );
+
+  const handleEventTimelineChange = useCallback(
+    (item) => {
+      setEventTimeline(item.key);
+    },
+    [setEventTimeline]
   );
 
   const eventMenuItems = (
@@ -82,16 +96,43 @@ const FiltersBox = ({
     </Menu>
   );
 
-  useEffect(() => {
-    const props = computeFilterProperties({
+  const eventTimelineMenuItems = (
+    <Menu className={styles['dropdown-menu']}>
+      {map(eventTimelineMenuList, (item) => {
+        return (
+          <Menu.Item
+            className={styles['dropdown-menu-item']}
+            onClick={() => handleEventTimelineChange(item)}
+            key={item.key}
+          >
+            <Text type='title' extraClass='mb-0'>
+              {item.label}
+            </Text>
+          </Menu.Item>
+        );
+      })}
+    </Menu>
+  );
+
+  const mainFilterProps = useMemo(() => {
+    return computeFilterProperties({
       userProperties,
       groupProperties,
       availableGroups: availableGroups?.account_groups,
       profileType,
       source
     });
-    setFilterProperties(props);
   }, [userProperties, groupProperties, availableGroups, profileType, source]);
+
+  const userFilterProps = useMemo(() => {
+    return computeFilterProperties({
+      userProperties,
+      groupProperties,
+      availableGroups: availableGroups?.account_groups,
+      profileType: 'user',
+      source: 'users'
+    });
+  }, [userProperties, groupProperties, availableGroups]);
 
   const handleInsertFilter = useCallback(
     (filter, index) => {
@@ -119,12 +160,48 @@ const FiltersBox = ({
     [setFiltersList, filtersList]
   );
 
+  const handleInsertSecondaryFilter = useCallback(
+    (filter, index) => {
+      if (secondaryFiltersList.length === index) {
+        setSecondaryFiltersList([...secondaryFiltersList, filter]);
+      } else {
+        setSecondaryFiltersList([
+          ...secondaryFiltersList.slice(0, index),
+          filter,
+          ...secondaryFiltersList.slice(index + 1)
+        ]);
+      }
+    },
+    [secondaryFiltersList, setSecondaryFiltersList]
+  );
+
+  const handleDeleteSecondaryFilter = useCallback(
+    (filterIndex) => {
+      if (filterIndex === secondaryFiltersList.length) {
+        setSecondaryFilterDD(false);
+        return;
+      }
+      setSecondaryFiltersList(
+        secondaryFiltersList.filter((_, index) => index !== filterIndex)
+      );
+    },
+    [setSecondaryFiltersList, secondaryFiltersList]
+  );
+
   const showFilterDropdown = useCallback(() => {
     setFilterDD(true);
   }, []);
 
+  const showSecondaryFilterDropdown = useCallback(() => {
+    setSecondaryFilterDD(true);
+  }, []);
+
   const handleCloseFilter = useCallback(() => {
     setFilterDD(false);
+  }, []);
+
+  const handleCloseSecondaryFilter = useCallback(() => {
+    setSecondaryFilterDD(false);
   }, []);
 
   const showEventsDropdown = useCallback(() => {
@@ -167,7 +244,8 @@ const FiltersBox = ({
       eventsList: listEvents,
       eventProp,
       isActiveSegment,
-      areFiltersDirty
+      areFiltersDirty,
+      secondaryFiltersList
     });
   }, [
     appliedFilters,
@@ -176,7 +254,8 @@ const FiltersBox = ({
     listEvents,
     eventProp,
     isActiveSegment,
-    areFiltersDirty
+    areFiltersDirty,
+    secondaryFiltersList
   ]);
 
   const showClearAllButton = useMemo(() => {
@@ -186,157 +265,250 @@ const FiltersBox = ({
   }, [appliedFilters.eventsList.length, appliedFilters.filters.length]);
 
   return (
-    <div className={cx(styles['filters-box-container'], 'flex flex-col')}>
-      <div className='px-6 pt-4 pb-8 flex flex-col row-gap-3'>
-        <Text
-          type='title'
-          color='character-title'
-          extraClass='mb-0'
-          weight='medium'
-        >
-          With Properties
-        </Text>
-        {filtersList.map((filter, index) => {
-          return (
+    <div
+      className={cx(styles['filters-box-container'], 'flex flex-col row-gap-5')}
+    >
+      <div className='pt-4 col-gap-5 flex flex-col row-gap-2'>
+        <div className={cx('px-6 pb-1', styles['section-title-container'])}>
+          <Text
+            type='title'
+            color='character-secondary'
+            extraClass='mb-0'
+            weight='medium'
+          >
+            With account properties
+          </Text>
+        </div>
+        <div className='px-6'>
+          <ControlledComponent controller={filtersList.length > 0}>
+            {filtersList.map((filter, index) => {
+              return (
+                <FilterWrapper
+                  key={index}
+                  viewMode={false}
+                  projectID={activeProject?.id}
+                  filter={filter}
+                  index={index}
+                  filterProps={mainFilterProps}
+                  minEntriesPerGroup={3}
+                  insertFilter={handleInsertFilter}
+                  closeFilter={handleCloseFilter}
+                  deleteFilter={handleDeleteFilter}
+                />
+              );
+            })}
+          </ControlledComponent>
+
+          <ControlledComponent controller={filterDD === true}>
             <FilterWrapper
-              key={index}
               viewMode={false}
               projectID={activeProject?.id}
-              filter={filter}
-              index={index}
-              filterProps={filterProps}
+              index={filtersList.length}
+              filterProps={mainFilterProps}
               minEntriesPerGroup={3}
               insertFilter={handleInsertFilter}
               closeFilter={handleCloseFilter}
               deleteFilter={handleDeleteFilter}
-              showInList
             />
-          );
-        })}
-        {filterDD === true ? (
-          <FilterWrapper
-            viewMode={false}
-            projectID={activeProject?.id}
-            index={filtersList.length}
-            filterProps={filterProps}
-            minEntriesPerGroup={3}
-            insertFilter={handleInsertFilter}
-            closeFilter={handleCloseFilter}
-            deleteFilter={handleDeleteFilter}
-            showInList
-          />
-        ) : null}
-        <Button
-          className={cx('flex items-center', styles['add-filter-button'])}
-          type='text'
-          onClick={showFilterDropdown}
-        >
-          <SVG name='plus' color='#00000073' />
-          <Text
-            type='title'
-            color='character-primary'
-            extraClass='mb-0'
-            weight='medium'
+          </ControlledComponent>
+
+          <Button
+            className={cx(
+              'flex items-center col-gap-2',
+              styles['add-filter-button']
+            )}
+            type='text'
+            onClick={showFilterDropdown}
           >
-            Add filter
-          </Text>
-        </Button>
-      </div>
-      <ControlledComponent controller={true}>
-        <>
-          <div className={styles['and-tag']}>
-            <div className={cx(styles['and-tag-box'], 'inline')}>
-              <Text
-                type='title'
-                color='character-primary'
-                extraClass='mb-0 inline'
-              >
-                AND
-              </Text>
-            </div>
-          </div>
-          <div className='pt-4 px-6 pb-8 flex flex-col row-gap-3'>
+            <SVG name='plus' color='#00000073' />
             <Text
               type='title'
               color='character-title'
               extraClass='mb-0'
               weight='medium'
             >
-              Who Performed
+              Add filter
             </Text>
-            {listEvents.map((event, index) => {
-              return (
-                <div key={index}>
-                  <EventsBlock
-                    isEngagementConfig={false}
-                    availableGroups={groupsList}
-                    index={index + 1}
-                    event={event}
-                    queries={listEvents}
-                    groupAnalysis={source}
-                    eventChange={handleQueryChange}
-                    closeEvent={closeEvent}
-                    initialDDState={false}
-                    showInList
-                  />
-                </div>
-              );
-            })}
-            <ControlledComponent
-              controller={isEventsVisible === true && listEvents.length < 3}
-            >
-              <div key={listEvents.length}>
+          </Button>
+        </div>
+      </div>
+      <div className='flex flex-col row-gap-2'>
+        <div className={cx('px-6 pb-1', styles['section-title-container'])}>
+          <Text
+            type='title'
+            color='character-secondary'
+            extraClass='mb-0'
+            weight='medium'
+          >
+            Who Performed
+          </Text>
+        </div>
+        <div className='px-6 flex flex-col row-gap-2'>
+          {listEvents.map((event, index) => {
+            return (
+              <div key={index}>
                 <EventsBlock
                   isEngagementConfig={false}
                   availableGroups={groupsList}
-                  index={listEvents.length + 1}
+                  index={index + 1}
+                  event={event}
                   queries={listEvents}
                   groupAnalysis={source}
                   eventChange={handleQueryChange}
                   closeEvent={closeEvent}
-                  showInList
+                  initialDDState={false}
                 />
               </div>
-            </ControlledComponent>
-            <ControlledComponent controller={listEvents.length < 3}>
-              <Button
-                className={cx('flex items-center', styles['add-filter-button'])}
-                type='text'
-                onClick={showEventsDropdown}
+            );
+          })}
+          <ControlledComponent
+            controller={isEventsVisible === true && listEvents.length < 3}
+          >
+            <div key={listEvents.length}>
+              <EventsBlock
+                isEngagementConfig={false}
+                availableGroups={groupsList}
+                index={listEvents.length + 1}
+                queries={listEvents}
+                groupAnalysis={source}
+                eventChange={handleQueryChange}
+                closeEvent={closeEvent}
+              />
+            </div>
+          </ControlledComponent>
+          <ControlledComponent controller={listEvents.length < 3}>
+            <Button
+              className={cx('flex items-center', styles['add-filter-button'])}
+              type='text'
+              onClick={showEventsDropdown}
+            >
+              <SVG name='plus' color='#00000073' />
+              <Text
+                type='title'
+                color='character-title'
+                extraClass='mb-0'
+                weight='medium'
               >
-                <SVG name='plus' color='#00000073' />
-                <Text
-                  type='title'
-                  color='character-primary'
-                  extraClass='mb-0'
-                  weight='medium'
+                Add event
+              </Text>
+            </Button>
+          </ControlledComponent>
+          <ControlledComponent controller={false}>
+            <div className='flex col-gap-1 items-center'>
+              <Text
+                type='title'
+                extraClass='mb-0'
+                color='character-primary'
+                weight='medium'
+              >
+                Events performed in
+              </Text>
+              <Dropdown overlay={eventTimelineMenuItems}>
+                <div
+                  className={cx(
+                    'flex col-gap-1 cursor-pointer items-center',
+                    styles['event-timeline-picker']
+                  )}
                 >
-                  Add event
-                </Text>
-              </Button>
-            </ControlledComponent>
-            <ControlledComponent controller={listEvents.length > 1}>
-              <div className='flex col-gap-1 items-center'>
-                <Text
-                  type='title'
-                  extraClass='mb-0'
-                  color='character-primary'
-                  weight='medium'
-                >
-                  Consider users who performed
-                </Text>
-                <Dropdown overlay={eventMenuItems}>
-                  <div className='flex col-gap-1 cursor-pointer items-center'>
-                    <Text type='title' color='brand-color-6' extraClass='mb-0'>
-                      {eventMenuList[eventProp].label}
-                    </Text>
-                    <SVG name='caretDown' color='#1890ff' size={20} />
-                  </div>
-                </Dropdown>
-              </div>
-            </ControlledComponent>
+                  <Text
+                    type='title'
+                    color='character-primary'
+                    extraClass='mb-0'
+                    weight='medium'
+                  >
+                    {eventTimelineMenuList[eventTimeline].label}
+                  </Text>
+                </div>
+              </Dropdown>
+            </div>
+          </ControlledComponent>
+          <ControlledComponent controller={listEvents.length > 1}>
+            <div className='flex col-gap-1 items-center'>
+              <Text
+                type='title'
+                extraClass='mb-0'
+                color='character-primary'
+                weight='medium'
+              >
+                Accounts that performed
+              </Text>
+              <Dropdown overlay={eventMenuItems}>
+                <div className='flex col-gap-1 cursor-pointer items-center'>
+                  <Text type='title' color='brand-color-6' extraClass='mb-0'>
+                    {eventMenuList[eventProp].label}
+                  </Text>
+                  <SVG name='caretDown' color='#1890ff' size={20} />
+                </div>
+              </Dropdown>
+            </div>
+          </ControlledComponent>
+        </div>
+      </div>
+      <ControlledComponent controller={profileType === 'account'}>
+        <div className='flex flex-col row-gap-2 col-gap-5'>
+          <div className={cx('px-6 pb-1', styles['section-title-container'])}>
+            <Text
+              type='title'
+              color='character-secondary'
+              extraClass='mb-0'
+              weight='medium'
+            >
+              With at least 1 person that matches
+            </Text>
           </div>
-        </>
+          <div className='px-6'>
+            <ControlledComponent controller={secondaryFiltersList.length > 0}>
+              {secondaryFiltersList.map((filter, index) => {
+                return (
+                  <FilterWrapper
+                    key={index}
+                    viewMode={false}
+                    projectID={activeProject?.id}
+                    filter={filter}
+                    index={index}
+                    filterProps={userFilterProps}
+                    minEntriesPerGroup={3}
+                    insertFilter={handleInsertSecondaryFilter}
+                    closeFilter={handleCloseSecondaryFilter}
+                    deleteFilter={handleDeleteSecondaryFilter}
+                  />
+                );
+              })}
+            </ControlledComponent>
+
+            <ControlledComponent controller={secondaryFilterDD === true}>
+              <FilterWrapper
+                viewMode={false}
+                projectID={activeProject?.id}
+                index={secondaryFiltersList.length}
+                filterProps={userFilterProps}
+                minEntriesPerGroup={3}
+                insertFilter={handleInsertSecondaryFilter}
+                closeFilter={handleCloseSecondaryFilter}
+                deleteFilter={handleDeleteSecondaryFilter}
+              />
+            </ControlledComponent>
+
+            <Button
+              className={cx(
+                'flex items-center col-gap-2',
+                styles['add-filter-button']
+              )}
+              type='text'
+              onClick={showSecondaryFilterDropdown}
+            >
+              <SVG name='plus' color='#00000073' />
+              <Text
+                type='title'
+                color='character-title'
+                extraClass='mb-0'
+                weight='medium'
+              >
+                Add filter
+              </Text>
+            </Button>
+          </div>
+        </div>
       </ControlledComponent>
       <div
         className={cx(

@@ -230,6 +230,7 @@ function WidgetCard({
       pathname: '/quick-board/report',
       state: {
         query: unit,
+        filter: dashboardFilters,
         web_analytics: true,
         navigatedFromDashboard: unit
       }

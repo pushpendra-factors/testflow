@@ -14,7 +14,8 @@ import MomentTz from 'Components/MomentTz';
 import isEqual from 'lodash/isEqual';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
-
+import { Popover, Tag } from 'antd';
+import styles from './index.module.scss';
 const placeholderIcon = '/assets/avatar/company-placeholder.png';
 
 export const defaultSegmentsList = [
@@ -103,7 +104,7 @@ export const getColumns = ({
   defaultSorterInfo
 }) => {
   const headerClassStr =
-    'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold';
+    'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold inline-flex';
   const columns = [
     {
       // Company Name Column
@@ -196,6 +197,88 @@ export const getColumns = ({
             {value ? value.toFixed() : '-'}
           </Text>
         )
+      },
+      {
+        title: <div className={headerClassStr}>Enagagement Signals</div>,
+        width: 264,
+        dataIndex: 'top_engagements',
+
+        key: 'top_engagements',
+
+        render: (value) => (
+          <div className={styles['top_eng_names']}>
+            {value &&
+              Object.keys(value)
+                .slice(0, 2)
+                .map((eachKey, eachIndex) => {
+                  return (
+                    <Tag
+                      color='default'
+                      className={styles['tag-enagagementrule']}
+                    >
+                      <Text
+                        type='title'
+                        level={7}
+                        color='grey-2'
+                        extraClass='m-0 truncate'
+                        truncate
+                        size='h2'
+                        charLimit={20}
+                      >
+                        {eachKey}
+                      </Text>{' '}
+                      <span className={styles['tag-seperator']}>|</span>{' '}
+                      {value[eachKey]}
+                    </Tag>
+                  );
+                })}
+            {value && Object.keys(value).length > 2 ? (
+              <Popover
+                content={
+                  <div
+                    className='flex flex-col'
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
+                  >
+                    <Text type='title' level={7} color='grey'>
+                      Engagement Signals
+                    </Text>
+                    {Object.keys(value)
+                      .slice(2)
+                      .map((eachKey, eachIndex) => {
+                        return (
+                          <Tag
+                            color='default'
+                            className={styles['tag-enagagementrule']}
+                          >
+                            <Text
+                              type='title'
+                              level={7}
+                              color='grey-2'
+                              extraClass='m-0 truncate'
+                              truncate
+                              size='h2'
+                              charLimit={20}
+                            >
+                              {eachKey}
+                            </Text>{' '}
+                            <span className={styles['tag-seperator']}>|</span>{' '}
+                            {value[eachKey]}
+                          </Tag>
+                        );
+                      })}
+                  </div>
+                }
+              >
+                <Tag color='default' className={styles['tag-enagagementrule']}>
+                  {' '}
+                  <span>and </span> +{Object.keys(value).length - 2}
+                </Tag>
+              </Popover>
+            ) : null}
+          </div>
+        )
       }
     );
   }
@@ -243,7 +326,8 @@ export const checkFiltersEquality = ({
   eventsList,
   eventProp,
   areFiltersDirty,
-  isActiveSegment
+  isActiveSegment,
+  secondaryFiltersList
 }) => {
   if (newSegmentMode === true && filtersList.length > 0) {
     return {
@@ -252,9 +336,14 @@ export const checkFiltersEquality = ({
     };
   }
   const areFiltersEqual = isEqual(filtersList, appliedFilters.filters);
+  const areSecondaryFiltersEqual = isEqual(
+    secondaryFiltersList,
+    appliedFilters.secondaryFilters
+  );
   const areEventsEqual = isEqual(eventsList, appliedFilters.eventsList);
   const isEventPropEqual = eventProp === appliedFilters.eventProp;
   const applyButtonDisabled =
+    areSecondaryFiltersEqual &&
     areFiltersEqual === true &&
     areEventsEqual === true &&
     isEventPropEqual === true;
