@@ -55,6 +55,7 @@ type SubscriptionDetail struct {
 	ID           string  `json:"id"`
 	Amount       float64 `json:"amount"`
 	ExternalName string  `json:"external_name"`
+	Quantity     int32   `json:"quantity"`
 }
 
 type UpdateSubscriptionParams struct {
