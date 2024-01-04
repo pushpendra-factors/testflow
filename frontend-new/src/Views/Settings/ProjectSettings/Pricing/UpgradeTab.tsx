@@ -13,11 +13,12 @@ import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
 import PriceUpgradeModal from './PriceUpgradeModal';
 
-const UpgradeTab = () => {
+function UpgradeTab({ buyAddonLoading, handleBuyAddonClick }: UpgradeTabProps) {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isPlansViewCollapsed, setIsPlansViewCollapsed] = useState(true);
-  const [modalVariant, setModalVariant] =
-    useState<'plan' | 'only-addon'>('plan');
+  const [modalVariant, setModalVariant] = useState<'plan' | 'only-addon'>(
+    'plan'
+  );
   const [activePlan, setActivePlan] =
     useState<PlansDetailStateInterface | null>(null);
   const { active_project } = useSelector((state: any) => state.global);
@@ -30,6 +31,7 @@ const UpgradeTab = () => {
     (state: any) => state.plansConfig
   ) as PlansConfigState;
   const { plansDetail } = plansConfig;
+
   const handleBuyButtonClick = async (
     planName: string,
     isPlanActive: boolean
@@ -41,10 +43,11 @@ const UpgradeTab = () => {
         setIsModalVisible(true);
         setModalVariant('plan');
       } else {
-        const activePlan = plansDetail.find((plan) => plan.name === planName);
-        if (activePlan) setActivePlan(activePlan);
-        setIsModalVisible(true);
-        setModalVariant('only-addon');
+        // const activePlan = plansDetail.find((plan) => plan.name === planName);
+        // if (activePlan) setActivePlan(activePlan);
+        // setIsModalVisible(true);
+        // setModalVariant('only-addon');
+        handleBuyAddonClick();
       }
     } catch (error) {
       logger.error('Error in upgrading plan', error);
@@ -75,6 +78,7 @@ const UpgradeTab = () => {
           mtuLimit={PLANS_COFIG[GrowthPlan.name].mtuLimit}
           handleBuyButtonClick={handleBuyButtonClick}
           isUserBillingAdmin={isUserBillingAdmin}
+          isButtonLoading={buyAddonLoading}
         />
       )}
       {!isPlansViewCollapsed && (
@@ -127,6 +131,7 @@ const UpgradeTab = () => {
                     mtuLimit={localPlansConfig.mtuLimit}
                     handleBuyButtonClick={handleBuyButtonClick}
                     isUserBillingAdmin={isUserBillingAdmin}
+                    isButtonLoading={buyAddonLoading}
                   />
                 );
               })}
@@ -213,6 +218,11 @@ const UpgradeTab = () => {
       )}
     </div>
   );
-};
+}
+
+interface UpgradeTabProps {
+  handleBuyAddonClick: () => void;
+  buyAddonLoading: boolean;
+}
 
 export default UpgradeTab;

@@ -26,23 +26,24 @@ import { upgradePlan } from 'Reducers/plansConfig/services';
 import { useSelector } from 'react-redux';
 import { startCase, toLower } from 'lodash';
 
-const PriceUpgradeModal = ({
+function PriceUpgradeModal({
   visible,
   onCancel,
   plan,
   variant
-}: UpgradeModalProps) => {
+}: UpgradeModalProps) {
   const [loading, setIsLoading] = useState<boolean>(false);
   const [addonVisible, setAddonVisible] = useState<boolean>(false);
   const [addonCount, setAddonCount] = useState<number>(
     variant === 'only-addon' ? 1 : 0
   );
   const planConfig = PLANS_COFIG[plan?.name || ''] || {};
-  const [selectedPlanTerm, setSelectedPlanTerm] =
-    useState<PlanTerm | null>(null);
+  const [selectedPlanTerm, setSelectedPlanTerm] = useState<PlanTerm | null>(
+    null
+  );
 
   const { active_project } = useSelector((state: any) => state.global);
-  const { plansConfig } = useSelector(
+  const { plansConfig, differentialPricing } = useSelector(
     (state: any) => state.plansConfig
   ) as PlansConfigState;
   const additionalAccountsAddon =
@@ -140,9 +141,17 @@ const PriceUpgradeModal = ({
     }
   }, [plan]);
 
-  const addonAmount = additionalAccountsAddon
-    ? additionalAccountsAddon?.price
-    : 0;
+  const differentialPriceForPlan = differentialPricing?.data?.find(
+    (data) =>
+      data.parent_item_id === plan?.name &&
+      data.item_price_id === ADDITIONAL_ACCOUNTS_ADDON_ID
+  );
+
+  const addonAmount = differentialPriceForPlan
+    ? differentialPriceForPlan.price
+    : additionalAccountsAddon
+      ? additionalAccountsAddon?.price
+      : 0;
 
   const renderPlanVaraint = () => (
     <>
@@ -492,7 +501,7 @@ const PriceUpgradeModal = ({
       </AppModal>
     </div>
   );
-};
+}
 
 interface UpgradeModalProps {
   visible: boolean;
