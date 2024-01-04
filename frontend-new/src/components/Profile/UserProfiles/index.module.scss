@@ -1,3 +1,5 @@
+@import '../../../styles/abstracts/variables';
+
 .user_profiles {
   &__event_selector {
     position: relative;
@@ -12,5 +14,18 @@
 .more-actions-popover {
   :global(.ant-popover-inner-content) {
     padding: 0.5rem 0 !important;
+  }
+}
+
+.more-actions-button {
+  background: none;
+  border: none;
+  box-shadow: none;
+
+  &:hover,
+  &:active,
+  &:focus {
+    background-color: $fa-color--mono-1;
+    box-shadow: none;
   }
 }
