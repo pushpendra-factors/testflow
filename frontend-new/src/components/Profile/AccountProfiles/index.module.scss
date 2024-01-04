@@ -200,3 +200,16 @@
     margin: 0 2px;
   }
 }
+
+.more-actions-button {
+  background: none;
+  border: none;
+  box-shadow: none;
+
+  &:hover,
+  &:active,
+  &:focus {
+    background-color: $fa-color--mono-1;
+    box-shadow: none;
+  }
+}

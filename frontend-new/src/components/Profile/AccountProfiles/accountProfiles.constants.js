@@ -2,11 +2,11 @@ import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils'
 
 export const eventMenuList = {
   any: {
-    label: 'Any Event',
+    label: 'Any of these events',
     key: 'any'
   },
   all: {
-    label: 'All Events',
+    label: 'All of these events',
     key: 'all'
   }
 };
