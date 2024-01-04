@@ -1282,7 +1282,10 @@ func (store *MemSQL) GetParagonMetadataForEventTriggerAlert(projectID int64, ale
 		return nil, http.StatusInternalServerError, err
 	}
 
-	metadata, err := U.DecodePostgresJsonb(alert.ParagonMetadata)
+	if alert.ParagonMetadata == nil {
+		return nil, http.StatusNotFound, fmt.Errorf("no metadata available")
+	}
+	metadata, err:= U.DecodePostgresJsonb(alert.ParagonMetadata)
 	if err != nil {
 		logCtx.WithError(err).Error("failed to decode metadata json")
 		return nil, http.StatusInternalServerError, err
