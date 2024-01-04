@@ -32,7 +32,7 @@ const CardInsightWrapper = ({ data }) => {
             }
           >
             <CardInsight
-              title={data?.goal?.st_en ? data?.goal?.st_en?.label : 'All Visitors'}
+              title={data?.goal?.st_en?.label ? data?.goal?.st_en?.label : 'All Visitors'}
               count={data?.total_users_count}
               arrow={true}
               tagTitle={`A`}
