@@ -426,6 +426,9 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/paragon/workflow", V1.TriggerParagonWorkflow)
 	authRouteGroup.DELETE("/:project_id/paragon/workflow", V1.DisableParagonWorflowForUser)
 
+	// factors_deanon
+	authRouteGroup.POST("/:project_id/factors_deanon/provider/:name/enable", mid.FeatureMiddleware([]string{M.FEATURE_FACTORS_DEANONYMISATION}), UpdateFactorsDeanonProvider)
+
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {

@@ -502,6 +502,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS projects (
     billing_subscription_id text,
     billing_account_id text,
     billing_last_synced_at timestamp(6) DEFAULT '1000-01-01 00:00:00',
+    clearbit_domain text,
     KEY (updated_at),
     PRIMARY KEY (id),
     KEY (token),

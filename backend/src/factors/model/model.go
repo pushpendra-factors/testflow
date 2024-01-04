@@ -250,6 +250,8 @@ type Model interface {
 	//clearbit_provision_account
 	ProvisionClearbitAccount(projectId []int64, emailId []string, domainName []string) map[int64]interface{}
 	ProvisionClearbitAccountForSingleProject(projectId int64, emailId string, domainName string) error
+	IsClearbitAccountProvisioned(projectId int64) (bool, error)
+	ProvisionClearbitAccountByAdminEmailAndDomain(projectId int64) (int, string)
 
 	// event_name
 	CreateOrGetEventName(eventName *model.EventName) (*model.EventName, int)
@@ -444,6 +446,7 @@ type Model interface {
 	DoesAgentHaveProject(agentUUID string) int
 	DeleteProjectAgentMapping(projectID int64, agentUUIDToRemove string) int
 	EditProjectAgentMapping(projectID int64, agentUUIDToEdit string, role int64) int
+	GetProjectAgentLatestAdminEmailByProjectId(projectId int64) (string, int)
 
 	// project_setting
 	GetProjectSetting(projectID int64) (*model.ProjectSetting, int)
