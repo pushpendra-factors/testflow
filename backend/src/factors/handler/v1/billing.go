@@ -65,7 +65,7 @@ func GetDifferentialPricingForAddOns(c *gin.Context) {
 	for _, diffPrice := range diffPrices {
 		res = append(res, model.DifferentialPrice{
 			ID:           diffPrice.Id,
-			ItemPriceID:  diffPrice.Id,
+			ItemPriceID:  diffPrice.ItemPriceId,
 			ParentItemID: diffPrice.ParentItemId,
 			Price:        formatPrice(diffPrice.Price),
 		})
@@ -134,6 +134,7 @@ func GetSubscriptionDetailsHander(c *gin.Context) {
 			ID:           item.ItemPriceId,
 			Amount:       formatPrice(item.Amount),
 			ExternalName: getExternalNameFromPlanID(item.ItemPriceId),
+			Quantity:     item.Quantity,
 		})
 	}
 
