@@ -47,7 +47,7 @@ else
     echo "Failed to transfer Keys to VM"
 fi
 
-if [ "$RECOPY_DB_DATA" = true]; then
+if [ "$RECOPY_DB_DATA" = true ]; then
      # Create schema 
     mysql -h $VM_HOST --port 3306  -u root -pdbfactors123 < "1_create_schema.sql"
 

@@ -29,13 +29,13 @@ spec:
             - name: REDIS_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: config-redis
-                  key: REDIS_HOST
+                  name: config-persistent-redis
+                  key: PERSISTENT_REDIS_HOST
             - name: REDIS_PORT
               valueFrom:
                 configMapKeyRef:
-                  name: config-redis
-                  key: REDIS_PORT
+                  name: config-persistent-redis
+                  key: PERSISTENT_REDIS_PORT
             - name: DB_HOST
               valueFrom:
                 configMapKeyRef:
@@ -58,7 +58,9 @@ spec:
             - name: VM_REDIS_PORT
               value: "6379"
             - name: RECREATE
-              value: "false"       
+              value: "false"
+            - name: RECOPY_DB_DATA
+              value: "false"         
           restartPolicy: OnFailure
 
   
