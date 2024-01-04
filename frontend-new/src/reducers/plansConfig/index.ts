@@ -14,6 +14,11 @@ const defaultFeatureConfigState: PlansConfigState = {
   currentPlanDetail: {
     loading: false,
     error: false
+  },
+  differentialPricing: {
+    loading: false,
+    error: false,
+    data: []
   }
 };
 
@@ -65,6 +70,33 @@ export default function PlansConfigReducer(
         ...state,
         currentPlanDetail: {
           ...state.currentPlanDetail,
+          loading: true
+        }
+      };
+
+    case PlansConfigActionType.SET_DIFFERENTIAL_PRICING_DETAILS:
+      return {
+        ...state,
+        differentialPricing: {
+          loading: false,
+          error: false,
+          data: action.payload
+        }
+      };
+    case PlansConfigActionType.SET_DIFFERENTIAL_PRICING_ERROR:
+      return {
+        ...state,
+        differentialPricing: {
+          ...state.differentialPricing,
+          error: true
+        }
+      };
+
+    case PlansConfigActionType.SET_DIFFERENTIAL_PRICING_LOADING:
+      return {
+        ...state,
+        differentialPricing: {
+          ...state.differentialPricing,
           loading: true
         }
       };

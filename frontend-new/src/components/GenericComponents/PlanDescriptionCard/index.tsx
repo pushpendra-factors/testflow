@@ -4,7 +4,7 @@ import { Button, Divider, Tag, Tooltip } from 'antd';
 import { Number, SVG, Text } from 'Components/factorsComponents';
 import { PlansDetailStateInterface } from 'Reducers/plansConfig/types';
 
-const PlanDescriptionCard = ({
+function PlanDescriptionCard({
   plan,
   isPlanActive,
   isRecommendedPlan,
@@ -16,8 +16,9 @@ const PlanDescriptionCard = ({
   accountIdentifiedLimit,
   mtuLimit,
   isUserBillingAdmin,
+  isButtonLoading,
   handleBuyButtonClick
-}: PlanDescriptionCardProps) => {
+}: PlanDescriptionCardProps) {
   const monthlyPlan = plan.terms.find((p) => p.period === 'month');
   const yearlyPlan = plan.terms.find((p) => p.period === 'year');
 
@@ -151,6 +152,7 @@ const PlanDescriptionCard = ({
               }`}
               disabled={!isUserBillingAdmin}
               onClick={() => handleBuyButtonClick(planName, isPlanActive)}
+              loading={isPlanActive ? isButtonLoading : false}
             >
               <Text
                 type={'title'}
@@ -167,7 +169,7 @@ const PlanDescriptionCard = ({
       </div>
     </div>
   );
-};
+}
 
 interface PlanDescriptionCardProps {
   isPlanActive: boolean;
@@ -182,6 +184,7 @@ interface PlanDescriptionCardProps {
   plan: PlansDetailStateInterface;
   isUserBillingAdmin: boolean;
   handleBuyButtonClick: (planName: string, isPlanActive: boolean) => void;
+  isButtonLoading: boolean;
 }
 
 export default PlanDescriptionCard;
