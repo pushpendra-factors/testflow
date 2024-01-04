@@ -8,7 +8,6 @@ import (
 	M "factors/model/model"
 	U "factors/util"
 	"fmt"
-	"github.com/jinzhu/gorm/dialects/postgres"
 	"net/http"
 	"reflect"
 	"sort"
@@ -1748,10 +1747,10 @@ func (store *MemSQL) UpdateResultInDB(result interface{}, projectId int64, dashb
 		logCtx.WithError(err).Error("Failed to encode dashboardCacheResult - resMarshalled.")
 		return http.StatusInternalServerError, "Failed to encode dashboardCacheResult - resMarshalled."
 	}
-	resJson := &postgres.Jsonb{RawMessage: json.RawMessage(resMarshalled)}
+	//resJson := &postgres.Jsonb{RawMessage: json.RawMessage(resMarshalled)}
 	updateFields := make(map[string]interface{}, 0)
 	// update allowed fields.
-	updateFields["result"] = resJson
+	updateFields["result"] = resMarshalled
 	updateFields["computed_at"] = U.TimeNowIn(U.TimeZoneStringIST).Unix()
 
 	err = db.Model(&model.DashQueryResult{}).Where("project_id = ? AND dashboard_id = ? AND dashboard_unit_id = ? AND from_t = ? AND to_t = ? AND is_deleted = ?",
