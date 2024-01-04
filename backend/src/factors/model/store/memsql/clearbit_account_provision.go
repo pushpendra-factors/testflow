@@ -5,9 +5,12 @@ import (
 	"factors/config"
 	"factors/integration/clear_bit"
 	"factors/model/model"
+	"fmt"
 	"io"
+	"net/http"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
 )
 
 const API_URL = "https://clearbit.com/api/v1/partnerships/account"
@@ -27,9 +30,14 @@ func (store *MemSQL) ProvisionClearbitAccount(projectIdList []int64, emailList [
 
 func (store *MemSQL) ProvisionClearbitAccountForSingleProject(projectId int64, emailId string, domainName string) error {
 
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectId,
+	})
+
 	provisionAPIKey := config.GetClearbitProvisionAccountAPIKey()
 	result, err := clear_bit.GetClearbitProvisionAccountResponse(API_URL, emailId, domainName, provisionAPIKey)
 	if err != nil {
+		logCtx.Error(err)
 		return err
 	}
 	defer result.Body.Close()
@@ -37,18 +45,66 @@ func (store *MemSQL) ProvisionClearbitAccountForSingleProject(projectId int64, e
 	var response model.ClearbitProvisionAPIResponse
 	body, err := io.ReadAll(result.Body)
 	if err != nil {
+		logCtx.Error(err)
 		return err
 	}
 
 	err = json.Unmarshal(body, &response)
 	if err != nil {
+		logCtx.Error(err)
 		return err
 	}
 
 	responseJSON := postgres.Jsonb{RawMessage: body}
 
 	//Update Project Settings Table
-	store.UpdateProjectSettings(projectId, &model.ProjectSetting{FactorsClearbitKey: response.Keys.Secret, ClearbitProvisionAccResponse: &responseJSON})
+	_, errCode := store.UpdateProjectSettings(projectId, &model.ProjectSetting{FactorsClearbitKey: response.Keys.Secret, ClearbitProvisionAccResponse: &responseJSON})
+	if errCode != http.StatusAccepted {
+		logCtx.Error("Failed to UpdateProjectSettings with clearbit response: ", &responseJSON)
+		return fmt.Errorf("Failed to Update Project Settings")
+	}
 
 	return nil
+}
+
+func (store *MemSQL) IsClearbitAccountProvisioned(projectId int64) (bool, error) {
+
+	isProvisioned := false
+	settings, errCode := store.GetProjectSetting(projectId)
+	if errCode != http.StatusFound {
+		return isProvisioned, fmt.Errorf("Get Project Settings Failed")
+	}
+
+	if settings.FactorsClearbitKey != "" {
+		isProvisioned = true
+	}
+	return isProvisioned, nil
+}
+
+func (store *MemSQL) ProvisionClearbitAccountByAdminEmailAndDomain(projectId int64) (int, string) {
+
+	isProvisioned, err := store.IsClearbitAccountProvisioned(projectId)
+	if err != nil {
+		return http.StatusInternalServerError, "Failed checking if clearbit account is provisoned"
+	}
+
+	if !isProvisioned {
+
+		adminMail, errCode := store.GetProjectAgentLatestAdminEmailByProjectId(projectId)
+		if errCode != http.StatusFound {
+			return errCode, "Failed fetching admin mail"
+		}
+
+		project, errCode := store.GetProject(projectId)
+		if errCode != http.StatusFound {
+			return errCode, "Failed fetching projects"
+		}
+
+		err = store.ProvisionClearbitAccountForSingleProject(projectId, adminMail, project.ClearbitDomain)
+		if err != nil {
+			return http.StatusInternalServerError, "Failed provisioning clearbit account by admin mail"
+		}
+	}
+
+	return http.StatusOK, ""
 }
