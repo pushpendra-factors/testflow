@@ -865,6 +865,7 @@ func FillCompanyIdentificationUserProperties(projectId int64, clientIP string, p
 		customerSixSignal.Enrich(projectSettings, userProperties, userId, clientIP)
 	} else if enrichByFactorsDeanon, _ := factorsDeanon.IsEligible(projectSettings, isoCode, pageUrl); enrichByFactorsDeanon {
 		domain, status := factorsDeanon.Enrich(projectSettings, userProperties, userId, clientIP)
+		log.WithFields(log.Fields{"domain": domain, "status": status, "project_id": projectId}).Info("Debugging metering")
 		if status == 1 {
 			factorsDeanon.Meter(projectId, domain)
 		}
