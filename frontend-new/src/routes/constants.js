@@ -32,6 +32,9 @@ import Onboarding from '../features/onboarding/ui';
 //locked screen images
 import LockedExplainImage from '../assets/images/locked_explain.png';
 import LockedPathAnalysisImage from '../assets/images/locked_path_analysis.png';
+import { exact } from 'prop-types';
+import { Layout } from 'antd';
+import WorkflowParagon from 'Views/Pages/WorkflowParagon';
 
 const Login = lazyWithRetry(() => import('../Views/Pages/Login'));
 const ForgotPassword = lazyWithRetry(
@@ -166,7 +169,9 @@ const FeatureLockConfigurationAttribution = withFeatureLockHOC(
 
 const FeatureLockedReportSharing = withFeatureLockHOC(Sharing, {
   featureName: FEATURES.FEATURE_REPORT_SHARING,
-  LockedComponent: (props) => <CommonLockedComponent title='Sharing'  {...props}/>
+  LockedComponent: (props) => (
+    <CommonLockedComponent title='Sharing' {...props} />
+  )
 });
 
 const FeatureLockConfigurationAlerts = withFeatureLockHOC(Alerts, {
@@ -290,6 +295,13 @@ export const APP_ROUTES = {
 };
 
 export const APP_LAYOUT_ROUTES = {
+  Workflow: {
+    exact: true,
+    path: '/workflow',
+    Layout: AppLayout,
+    Private: true,
+    Component: WorkflowParagon
+  },
   //moved this to top for matching before /reports/:dashboard_id
   VisitorIdentificationReport: {
     exact: true,
