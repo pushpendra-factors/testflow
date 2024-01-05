@@ -147,6 +147,7 @@ func SendParagonEventRequest(url, token string, payload interface{}) (map[string
 	response := make(map[string]interface{})
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		response["status"] = "success"
+		response["body"] = string(bodyBytes)
 	} else {
 		log.WithField("request", request).Error("Failed to send webhook request")
 		response["status"] = "failure"
@@ -182,6 +183,7 @@ func GetParagonUserAPI(token, paragonProjectID string) (map[string]interface{}, 
 	response := make(map[string]interface{})
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		response["status"] = "success"
+		response["body"] = string(bodyBytes)
 	} else {
 		log.WithField("request", request).Error("Failed to send webhook request")
 		response["status"] = "failure"
@@ -218,6 +220,7 @@ func GetParagonIntegrationMetadataAPI(token, paragonProjectID string) (map[strin
 	response := make(map[string]interface{})
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		response["status"] = "success"
+		response["body"] = string(bodyBytes)
 	} else {
 		log.WithField("request", request).Error("Failed to send webhook request")
 		response["status"] = "failure"
@@ -254,6 +257,7 @@ func GetParagonUsersConnectCredentialsAPI(token, paragonProjectID string) (map[s
 	response := make(map[string]interface{})
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		response["status"] = "success"
+		response["body"] = string(bodyBytes)
 	} else {
 		log.WithField("request", request).Error("Failed to send webhook request")
 		response["status"] = "failure"
@@ -290,6 +294,7 @@ func GetParagonProjectIntegrationsAPI(token, paragonProjectID string) (map[strin
 	response := make(map[string]interface{})
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		response["status"] = "success"
+		response["body"] = string(bodyBytes)
 	} else {
 		log.WithField("request", request).Error("Failed to send webhook request")
 		response["status"] = "failure"
@@ -326,6 +331,7 @@ func DeleteParagonProjectIntegrationAPI(token, paragonProjectID, integrationID s
 	response := make(map[string]interface{})
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		response["status"] = "success"
+		response["body"] = string(bodyBytes)
 	} else {
 		log.WithField("request", request).Error("Failed to send webhook request")
 		response["status"] = "failure"
@@ -366,6 +372,7 @@ func TriggerParagonWorkflowAPI(token, paragonProjectID, workflowID string, paylo
 	response := make(map[string]interface{})
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		response["status"] = "success"
+		response["body"] = string(bodyBytes)
 	} else {
 		log.WithField("request", request).Error("Failed to send webhook request")
 		response["status"] = "failure"
@@ -402,6 +409,7 @@ func DisableParagonWorkflowForUserAPI(token, paragonProjectID, workflowID string
 	response := make(map[string]interface{})
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		response["status"] = "success"
+		response["body"] = string(bodyBytes)
 	} else {
 		log.WithField("request", request).Error("Failed to send webhook request")
 		response["status"] = "failure"
