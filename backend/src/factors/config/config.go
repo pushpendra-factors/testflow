@@ -341,7 +341,7 @@ type Configuration struct {
 	ClearbitProvisionAccountAPIKey                       string
 	SalesforceSkipLeadUpdatesProcessingByProjectID       string
 	SalesforceAllowOpportunityOverrideCreateCreatedEvent string
-	ParagonTokenSigningKey                               []byte
+	ParagonTokenSigningKey                               string
 	ParagonProjectID                                     string
 }
 
@@ -3118,7 +3118,7 @@ func SalesforceAllowOpportunityOverrideCreateCreatedEvent(projectID int64) bool 
 }
 
 func GetParagonTokenSigningKey() []byte {
-	return configuration.ParagonTokenSigningKey
+	return []byte(configuration.ParagonTokenSigningKey)
 }
 
 func GetParagonProjectID() string {
