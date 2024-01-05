@@ -27,33 +27,33 @@ func GetParagonAuthenticationTokenForProject(c *gin.Context) (interface{}, int, 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 
 	token, errCode, err := store.GetStore().GetParagonTokenFromProjectSetting(projectID)
-	if errCode != http.StatusFound && errCode != http.StatusNotFound {
-
-		if errCode == http.StatusNotFound {
-			count, errCode, err := store.GetStore().GetParagonEnabledProjectsCount(projectID)
-			if err != nil || errCode != http.StatusOK {
-				logCtx.WithError(err).Error("integration count can not be found")
-				return "", errCode, PROCESSING_FAILED, err.Error(), true
-			}
-
-			if count > ParagonIntegrationsCountLimit {
-				logCtx.WithError(err).Error("PARAGON SEATS EXHAUSTED")
-				return "", http.StatusUnauthorized, PROCESSING_FAILED, "", true
-			}
-
-			token, err = paragon.GenerateJWTTokenForProject(projectID)
-			if err != nil || token == "" {
-				logCtx.WithError(err).Error("failed to generate jwt token")
-				return "", http.StatusUnauthorized, PROCESSING_FAILED, err.Error(), true
-			}
-
-			errCode, err = store.GetStore().AddParagonTokenAndEnablingAgentToProjectSetting(projectID, agentID, token)
-			if err != nil || errCode != http.StatusAccepted {
-				logCtx.WithError(err).Error("jwt token update failed")
-				return "", http.StatusUnauthorized, PROCESSING_FAILED, err.Error(), true
-			}
+	if errCode == http.StatusNotFound {
+		count, errCode, err := store.GetStore().GetParagonEnabledProjectsCount(projectID)
+		if err != nil || errCode != http.StatusOK {
+			logCtx.WithError(err).Error("integration count can not be found")
+			return "", errCode, PROCESSING_FAILED, err.Error(), true
 		}
-		
+
+		if count > ParagonIntegrationsCountLimit {
+			logCtx.WithError(err).Error("PARAGON SEATS EXHAUSTED")
+			return "", http.StatusUnauthorized, PROCESSING_FAILED, "PARAGON SEATS EXHAUSTED", true
+		}
+
+		token, err = paragon.GenerateJWTTokenForProject(projectID)
+		if err != nil || token == "" {
+			logCtx.WithError(err).Error("failed to generate jwt token")
+			return "", http.StatusUnauthorized, PROCESSING_FAILED, err.Error(), true
+		}
+
+		errCode, err = store.GetStore().AddParagonTokenAndEnablingAgentToProjectSetting(projectID, agentID, token)
+		if err != nil || errCode != http.StatusAccepted {
+			logCtx.WithError(err).Error("jwt token update failed")
+			return "", http.StatusUnauthorized, PROCESSING_FAILED, err.Error(), true
+		}
+
+		return token, http.StatusOK, "", "", false
+	}
+	if errCode != http.StatusFound {
 		logCtx.Error("failed to get token for project")
 		return "", http.StatusInternalServerError, PROCESSING_FAILED, err.Error(), true
 	}
