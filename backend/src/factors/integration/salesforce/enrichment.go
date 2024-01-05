@@ -432,7 +432,7 @@ func enrichGroupAccount(projectID int64, document *model.SalesforceDocument, sal
 		accountWebsite := util.GetPropertyValueAsString((*enProperties)[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce,
 			model.SalesforceDocumentTypeNameAccount, "website")])
 		if accountWebsite != "" {
-			status := sdk.TrackDomainsGroup(projectID, groupAccountUserID, model.GROUP_NAME_SALESFORCE_ACCOUNT, accountWebsite, nil, lastModifiedTimestamp)
+			status := sdk.TrackDomainsGroup(projectID, groupAccountUserID, model.GROUP_NAME_SALESFORCE_ACCOUNT, accountWebsite, lastModifiedTimestamp)
 			if status != http.StatusOK {
 				logCtx.Error("Failed to TrackDomainsGroup in account enrichment.")
 			}

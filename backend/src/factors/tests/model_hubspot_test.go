@@ -4692,7 +4692,7 @@ func TestHubspotGroupUserFix(t *testing.T) {
 	// create group user with random groupID
 	groupID = U.RandomLowerAphaNumString(5)
 	groupUserID, status := store.GetStore().CreateGroupUser(&model.User{
-		ProjectId: project.ID, JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceHubspot),
+		ProjectId: project.ID, JoinTimestamp: timestamp / 1000, Source: model.GetRequestSourcePointer(model.UserSourceHubspot),
 	}, groupName, groupID)
 	assert.Equal(t, http.StatusCreated, status)
 	// update group_user_id in the account document, and mark it as synced

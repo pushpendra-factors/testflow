@@ -38,13 +38,13 @@ const L2Modal = ({ data, setModalL2, showModalL2, modalData, explainMatchEventNa
 
                         {!isAttribute ?
                             <CardInsight
-                                title={data?.goal?.st_en ? data?.goal?.st_en : "All Visitors"}
+                                title={data?.goal?.st_en?.label ? data?.goal?.st_en?.label : "All Visitors"}
                                 count={data?.total_users_count}
                                 arrow={true}
                                 tagTitle={isAttribute ? 'A' : ''}
                             /> :
                             <CardInsight
-                                title={`${data?.goal?.st_en ? data?.goal?.st_en : "All visitors"} with ${explainMatchEventName(modalData?.factors_insights_attribute[0]?.factors_attribute_key, true)} = ${modalData?.factors_insights_attribute[0]?.factors_attribute_value} `}
+                                title={`${data?.goal?.st_en?.label ? data?.goal?.st_en?.label : "All visitors"} with ${explainMatchEventName(modalData?.factors_insights_attribute[0]?.factors_attribute_key, true)} = ${modalData?.factors_insights_attribute[0]?.factors_attribute_value} `}
                                 count={modalData?.factors_insights_users_count}
                                 arrow={true}
                                 tagTitle={isAttribute ? 'A' : ''}
@@ -62,7 +62,7 @@ const L2Modal = ({ data, setModalL2, showModalL2, modalData, explainMatchEventNa
 
                         {/* third insight card for both */}
                         <CardInsight
-                            title={data?.goal?.en_en}
+                            title={data?.goal?.en_en?.label}
                             count={modalData?.factors_goal_users_count}
                             arrow={false}
                             conv={modalData?.factors_insights_percentage}
@@ -116,7 +116,7 @@ const L2Modal = ({ data, setModalL2, showModalL2, modalData, explainMatchEventNa
                                     />
 
                                     <CardInsight
-                                        title={data?.goal?.en_en}
+                                        title={data?.goal?.en_en?.label}
                                         count={item?.factors_goal_users_count}
                                         arrow={false}
                                         conv={item?.factors_insights_percentage}

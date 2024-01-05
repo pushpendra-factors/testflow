@@ -141,6 +141,13 @@ func GetGroupPropertiesHandler(c *gin.Context) {
 		}
 		c.JSON(http.StatusOK, response)
 		return
+	} else if groupName == model.GROUP_NAME_SIX_SIGNAL {
+		response := gin.H{
+			"properties":    model.GetSixSignalDefaultUserProperties(),
+			"display_names": model.GetSixSignalDefaultUserPropertiesDisplayNames(),
+		}
+		c.JSON(http.StatusOK, response)
+		return
 	} else {
 		propertiesFromCache, status = store.GetStore().GetPropertiesByGroup(projectId, groupName, 2500,
 			C.GetLookbackWindowForEventUserCache())
