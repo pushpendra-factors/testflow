@@ -62,7 +62,7 @@ func FillSixSignalUserProperties(projectId int64, apiKey string, userProperties 
 
 		go six_signal.ExecuteSixSignalEnrichV1(projectId, apiKey, userProperties, clientIP, resultChannel)
 		select {
-		case res := <-resultChannel:
+		case res = <-resultChannel:
 			if res.ExecuteStatus == 1 {
 				model.SetSixSignalCacheResult(projectId, UserId, clientIP)
 				logCtx.Info("ExecuteSixSignal suceeded in track call")
