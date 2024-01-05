@@ -143,6 +143,10 @@ spec:
           - memsql
           - --disable_mql_db_writes
           - --disable_mql_redis_writes
+          - --paragon_signing_key
+          - $(PARAGON_SIGNING_KEY)
+          - --paragon_project_id
+          - $(PARAGON_PROJECT_ID)
         env:
           - name: MY_POD_IP
             valueFrom:
@@ -178,6 +182,8 @@ spec:
             name: secret-sentry
         - secretRef:
             name: secret-salesforce
+        - secretRef:
+            name: secret-paragon
       initContainers:
       - name: fetch-geolocation-file
         image: google/cloud-sdk:229.0.0-alpine
