@@ -375,7 +375,7 @@ func main() {
 		EnableNewAllAccountsByProjectID:                *enableNewAllAccountsByProjectID,
 		ChargebeeApiKey:                                *chargebeeApiKey,
 		ChargebeeSiteName:                              *chargebeeSiteName,
-		ParagonTokenSigningKey:                         []byte(*paragonSigningKey),
+		ParagonTokenSigningKey:                         *paragonSigningKey,
 		ParagonProjectID:                               *paragonProjectID,
 	}
 	C.InitConf(config)
