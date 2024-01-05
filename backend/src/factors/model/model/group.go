@@ -6,6 +6,7 @@ import (
 	cacheRedis "factors/cache/redis"
 	U "factors/util"
 	"fmt"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -177,4 +178,34 @@ func IsAllowedGroupForDomainsGroup(name string) bool {
 
 func IsAllowedAccountGroupNames(name string) bool {
 	return AccountGroupNames[name]
+}
+
+func IsSixSignalProperty(userProperty string) bool {
+	return strings.HasPrefix(userProperty, "$6Signal_")
+}
+
+func GetSixSignalDefaultUserProperties() map[string][]string {
+	properties := make(map[string][]string)
+
+	for key := range U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES {
+		if IsSixSignalProperty(key) {
+			dataType := U.GetPropertyTypeByName(key)
+			if properties[dataType] == nil {
+				properties[dataType] = make([]string, 0)
+			}
+			properties[dataType] = append(properties[dataType], key)
+		}
+	}
+
+	return properties
+}
+
+func GetSixSignalDefaultUserPropertiesDisplayNames() map[string]string {
+	displayNames := make(map[string]string)
+	for property, displayName := range U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES {
+		if IsSixSignalProperty(property) {
+			displayNames[property] = displayName
+		}
+	}
+	return displayNames
 }
