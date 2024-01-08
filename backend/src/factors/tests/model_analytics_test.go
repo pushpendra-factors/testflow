@@ -9920,21 +9920,21 @@ func TestAnalyticsAllAccountsFilterBreadkdown(t *testing.T) {
 	hsCompany1UserID, err := store.GetStore().CreateOrUpdateGroupPropertiesBySource(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, "h1", "", &propertiesMap,
 		dateTimeUTC.Unix(), dateTimeUTC.Unix(), model.UserSourceHubspotString)
 	assert.Nil(t, err)
-	status = SDK.TrackDomainsGroup(project.ID, hsCompany1UserID, model.GROUP_NAME_HUBSPOT_COMPANY, "abc1.com", nil, dateTimeUTC.Unix())
+	status = SDK.TrackDomainsGroup(project.ID, hsCompany1UserID, model.GROUP_NAME_HUBSPOT_COMPANY, "abc1.com", dateTimeUTC.Unix())
 
 	propertiesMap = map[string]interface{}{"$hubspot_company_name": "abc1", "$hubspot_company_domain": "abc1.com", "$hubspot_company_region": "B",
 		"hs_company_no": "h2", "$hubspot_company_createddate": dateTimeUTC.Unix() + 10}
 	hsCompany2UserID, err := store.GetStore().CreateOrUpdateGroupPropertiesBySource(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, "h2", "", &propertiesMap,
 		dateTimeUTC.Unix(), dateTimeUTC.Unix(), model.UserSourceHubspotString)
 	assert.Nil(t, err)
-	status = SDK.TrackDomainsGroup(project.ID, hsCompany2UserID, model.GROUP_NAME_HUBSPOT_COMPANY, "abc1.com", nil, dateTimeUTC.Unix())
+	status = SDK.TrackDomainsGroup(project.ID, hsCompany2UserID, model.GROUP_NAME_HUBSPOT_COMPANY, "abc1.com", dateTimeUTC.Unix())
 
 	propertiesMap = map[string]interface{}{"$hubspot_company_name": "abc2", "$hubspot_company_domain": "abc2.com", "$hubspot_company_region": "D",
 		"hs_company_no": "h3", "$hubspot_company_createddate": dateTimeUTC.Unix()}
 	hsCompany3UserID, err := store.GetStore().CreateOrUpdateGroupPropertiesBySource(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, "h1", "", &propertiesMap,
 		dateTimeUTC.Unix(), dateTimeUTC.Unix(), model.UserSourceHubspotString)
 	assert.Nil(t, err)
-	status = SDK.TrackDomainsGroup(project.ID, hsCompany3UserID, model.GROUP_NAME_HUBSPOT_COMPANY, "abc2.com", nil, dateTimeUTC.Unix())
+	status = SDK.TrackDomainsGroup(project.ID, hsCompany3UserID, model.GROUP_NAME_HUBSPOT_COMPANY, "abc2.com", dateTimeUTC.Unix())
 
 	groupProperties := &U.PropertiesMap{U.SIX_SIGNAL_DOMAIN: "abc1.com", U.SIX_SIGNAL_REGION: "A"}
 	status = SDK.TrackUserAccountGroup(project.ID, userWeb1, model.GROUP_NAME_SIX_SIGNAL, groupProperties, util.TimeNowUnix())
@@ -9944,7 +9944,7 @@ func TestAnalyticsAllAccountsFilterBreadkdown(t *testing.T) {
 	sixSignalUser3, err := store.GetStore().CreateOrUpdateGroupPropertiesBySource(project.ID, model.GROUP_NAME_SIX_SIGNAL, "h1", "", &propertiesMap,
 		dateTimeUTC.Unix(), dateTimeUTC.Unix()-10000, model.UserSourceSixSignalString)
 	assert.Nil(t, err)
-	status = SDK.TrackDomainsGroup(project.ID, sixSignalUser3, model.GROUP_NAME_SIX_SIGNAL, "abc1.com", nil, dateTimeUTC.Unix())
+	status = SDK.TrackDomainsGroup(project.ID, sixSignalUser3, model.GROUP_NAME_SIX_SIGNAL, "abc1.com", dateTimeUTC.Unix())
 
 	groupProperties = &U.PropertiesMap{U.SIX_SIGNAL_DOMAIN: "abc2.com", U.SIX_SIGNAL_REGION: "B"}
 	status = SDK.TrackUserAccountGroup(project.ID, userWeb2, model.GROUP_NAME_SIX_SIGNAL, groupProperties, util.TimeNowUnix())

@@ -82,10 +82,16 @@ func (fd *FactorsDeanon) Enrich(projectSettings *model.ProjectSetting,
 // Meter method meters the count of unique domain enrichment for the calendar month
 // and successful domain enrichment count and total API calls count for each day.
 func (fd *FactorsDeanon) Meter(projectId int64, domain string) {
+
+	logCtx := log.WithField("project_id", projectId)
+
 	timeZone, statusCode := store.GetStore().GetTimezoneForProject(projectId)
 	if statusCode != http.StatusFound {
+		logCtx.Error("Fetching timezone for project failed.")
 		timeZone = U.TimeZoneStringIST
 	}
+
+	logCtx.WithFields(log.Fields{"domain": domain, "timezone": timeZone})
 
 	//Unique Domain metering for calendar month
 	err := model.SetSixSignalMonthlyUniqueEnrichmentCount(projectId, domain, timeZone)
@@ -139,6 +145,6 @@ func FillFactorsDeanonUserProperties(projectId int64, factorsDeanonConfig model.
 			(*userProperties)[U.ENRICHMENT_SOURCE] = FACTORS_6SIGNAL
 		}
 	}
-
+	logCtx.WithFields(log.Fields{"domain": domain, "status": status}).Info("Debugging metering")
 	return domain, status
 }

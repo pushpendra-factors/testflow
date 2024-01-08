@@ -1,18 +1,24 @@
 import React from 'react';
 import ProgressBar from 'Components/GenericComponents/Progress';
 import { SVG, Text } from 'Components/factorsComponents';
-import { PLANS, PLANS_V0 } from 'Constants/plans.constants';
+import {
+  ADDITIONAL_ACCOUNTS_ADDON_ID,
+  PLANS,
+  PLANS_V0
+} from 'Constants/plans.constants';
 import { FeatureConfigState } from 'Reducers/featureConfig/types';
 import { PathUrls } from 'Routes/pathUrls';
-import { Alert, Button, Divider, Tag, Tooltip } from 'antd';
+import { Alert, Button, Divider, Tag, Tooltip, notification } from 'antd';
 import useAgentInfo from 'hooks/useAgentInfo';
 import { useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import { PRICING_PAGE_TABS, showV2PricingVersion } from './utils';
 import { PlansConfigState } from 'Reducers/plansConfig/types';
 import moment from 'moment';
-const BillingTab = () => {
+
+function BillingTab({ buyAddonLoading, handleBuyAddonClick }: BillingTabProps) {
   const history = useHistory();
+
   const { email, isAdmin } = useAgentInfo();
   const { plan, sixSignalInfo } = useSelector(
     (state: any) => state.featureConfig
@@ -20,6 +26,10 @@ const BillingTab = () => {
   const { currentPlanDetail } = useSelector(
     (state: any) => state.plansConfig
   ) as PlansConfigState;
+  const purchasedAddons = currentPlanDetail?.addons;
+  const additionalAccountsAddon = purchasedAddons?.find(
+    (addon) => addon.id === ADDITIONAL_ACCOUNTS_ADDON_ID
+  );
   const { active_project } = useSelector((state) => state.global);
 
   const sixSignalLimit = sixSignalInfo?.limit || 0;
@@ -29,21 +39,22 @@ const BillingTab = () => {
     plan?.name === PLANS.PLAN_FREE || plan?.name === PLANS_V0?.PLAN_FREE;
   const showV2PricingVersionFlag = showV2PricingVersion(active_project);
 
-  const handleUpgradePlan = () => {
+  const handleUpgradePlan = (variant = 'upgrade') => {
     if (showV2PricingVersionFlag) {
-      history.push(
-        `${PathUrls.SettingsPricing}?activeTab=${PRICING_PAGE_TABS.UPGRADE}`
-      );
-    } else {
-      if (isSolutionsAdmin) {
-        history.push(PathUrls.ConfigurePlans);
-        return;
-      } else {
-        window.open(
-          `https://factors.schedulehero.io/meet/yogeshpai/sso`,
-          '_blank'
+      if (variant === 'upgrade') {
+        history.push(
+          `${PathUrls.SettingsPricing}?activeTab=${PRICING_PAGE_TABS.UPGRADE}`
         );
+      } else {
+        handleBuyAddonClick();
       }
+    } else if (isSolutionsAdmin) {
+      history.push(PathUrls.ConfigurePlans);
+    } else {
+      window.open(
+        `https://factors.schedulehero.io/meet/yogeshpai/sso`,
+        '_blank'
+      );
     }
   };
 
@@ -108,8 +119,8 @@ const BillingTab = () => {
                 showV2PricingVersionFlag
                   ? 'Upgrade Plan'
                   : isSolutionsAdmin
-                  ? 'Configure Plans'
-                  : 'Talk to our Sales team to upgrade'
+                    ? 'Configure Plans'
+                    : 'Talk to our Sales team to upgrade'
               }`}
             >
               <Button
@@ -119,7 +130,7 @@ const BillingTab = () => {
                     ? false
                     : !isSolutionsAdmin && !isAdmin
                 }
-                onClick={handleUpgradePlan}
+                onClick={() => handleUpgradePlan()}
               >
                 Upgrade Plan
               </Button>
@@ -165,7 +176,9 @@ const BillingTab = () => {
         <div>
           <div className='flex justify-between items-center'>
             <Text type={'paragraph'} mini>
-              Default Monthly Quota
+              {additionalAccountsAddon?.quantity
+                ? `Monthly Quota (Base plan + ${additionalAccountsAddon.quantity} add-ons) `
+                : 'Default Monthly Quota'}
             </Text>
             <Text type={'paragraph'} mini>
               {`${sixSignalUsage} / ${sixSignalLimit}`}
@@ -207,25 +220,33 @@ const BillingTab = () => {
               showV2PricingVersionFlag
                 ? 'Buy Add on'
                 : isSolutionsAdmin
-                ? 'Configure Plans'
-                : 'Talk to our Sales team to upgrade'
+                  ? 'Configure Plans'
+                  : 'Talk to our Sales team to upgrade'
             }`}
           >
             <Button
               type='link'
               style={{ marginTop: 20 }}
-              onClick={handleUpgradePlan}
+              onClick={() => handleUpgradePlan('addon')}
+              loading={showV2PricingVersionFlag ? buyAddonLoading : false}
               disabled={
                 showV2PricingVersionFlag ? false : !isSolutionsAdmin && !isAdmin
               }
             >
-              Buy Add on
+              {additionalAccountsAddon?.quantity
+                ? 'Edit Add-ons'
+                : 'Buy Add-ons'}
             </Button>
           </Tooltip>
         </div>
       </div>
     </div>
   );
-};
+}
+
+interface BillingTabProps {
+  handleBuyAddonClick: () => void;
+  buyAddonLoading: boolean;
+}
 
 export default BillingTab;

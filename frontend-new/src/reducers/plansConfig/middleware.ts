@@ -1,13 +1,19 @@
 import { Dispatch } from 'redux';
-import { getPlansDetails, getSubscriptionDetails } from './services';
+import {
+  getDifferentialPricing,
+  getPlansDetails,
+  getSubscriptionDetails
+} from './services';
 import {
   AddonsStateInterface,
+  DifferentialPricingAPIResponse,
   PlansConfigActionType,
   PlansDetailAPIResponse,
   PlansDetailStateInterface,
   SubscriptionDetailsAPIResponse
 } from './types';
 import logger from 'Utils/logger';
+import { ADDITIONAL_ACCOUNTS_ADDON_ID } from 'Constants/plans.constants';
 
 export const fetchPlansDetail = (projectId: string) => {
   return async (dispatch: Dispatch) => {
@@ -76,8 +82,8 @@ export const fetchPlansDetail = (projectId: string) => {
   };
 };
 
-export const fetchCurrentSubscriptionDetail = (projectId: string) => {
-  return async (dispatch: Dispatch) => {
+export const fetchCurrentSubscriptionDetail =
+  (projectId: string) => async (dispatch: Dispatch) => {
     try {
       dispatch({ type: PlansConfigActionType.SET_CURRENT_PLAN_LOADING });
 
@@ -103,13 +109,16 @@ export const fetchCurrentSubscriptionDetail = (projectId: string) => {
             id: firstPlan.id || '',
             amount: firstPlan.amount || '',
             name: firstPlan.id || '',
-            externalName: externalName
+            externalName: externalName,
+            quantity: firstPlan.quantity
           };
         }
         if (addons && addons?.length > 0) {
-          stateCurrentPlanConfig.addons = addons.map((addon) => {
-            return { id: addon?.id, amount: addon?.amount };
-          });
+          stateCurrentPlanConfig.addons = addons.map((addon) => ({
+            id: addon?.id,
+            amount: addon?.amount,
+            quantity: addon?.quantity
+          }));
         }
         dispatch({
           type: PlansConfigActionType.SET_CURRENT_PLAN_DETAILS,
@@ -121,4 +130,28 @@ export const fetchCurrentSubscriptionDetail = (projectId: string) => {
       dispatch({ type: PlansConfigActionType.SET_CURRENT_PLAN_ERROR });
     }
   };
-};
+
+export const fetchDifferentialPricing =
+  (projectId: string) => async (dispatch: Dispatch) => {
+    try {
+      dispatch({
+        type: PlansConfigActionType.SET_DIFFERENTIAL_PRICING_LOADING
+      });
+      const response = (await getDifferentialPricing(
+        projectId
+      )) as DifferentialPricingAPIResponse;
+      if (response?.data) {
+        const filteredData = response?.data.filter((data) => {
+          if (data?.item_price_id === ADDITIONAL_ACCOUNTS_ADDON_ID) return true;
+          return false;
+        });
+        dispatch({
+          type: PlansConfigActionType.SET_DIFFERENTIAL_PRICING_DETAILS,
+          payload: filteredData
+        });
+      }
+    } catch (error) {
+      logger.error('Error in fetching feature config', error);
+      dispatch({ type: PlansConfigActionType.SET_DIFFERENTIAL_PRICING_ERROR });
+    }
+  };

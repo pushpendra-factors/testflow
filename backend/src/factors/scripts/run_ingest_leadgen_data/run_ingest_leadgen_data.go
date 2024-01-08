@@ -226,7 +226,7 @@ func main() {
 						ErrMsg:    "",
 						Source:    model.SourceAliasMapping[leadgenSetting.Source],
 					}
-					syncStatusSuccesses = append(syncStatusFailures, syncStatusSuccess)
+					syncStatusSuccesses = append(syncStatusSuccesses, syncStatusSuccess)
 				}
 				errCode, err := store.GetStore().UpdateRowRead(leadgenSetting.ProjectID, leadgenSetting.Source, rowRead)
 				if errCode != http.StatusAccepted || err != nil {

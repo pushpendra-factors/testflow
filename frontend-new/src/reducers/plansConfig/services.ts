@@ -79,3 +79,16 @@ export const downloadInvoice = async (projectId: string, invoiceId: string) => {
     return null;
   }
 };
+
+export const getDifferentialPricing = async (projectId: string) => {
+  try {
+    if (!projectId) {
+      throw new Error('Invalid parameters passed');
+    }
+    const url = `${host}projects/${projectId}/billing/differentialpricing`;
+    return get(null, url);
+  } catch (error) {
+    logger.error(error);
+    return null;
+  }
+};

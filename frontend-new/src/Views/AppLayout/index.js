@@ -64,6 +64,7 @@ import { fetchProjectAgents, fetchAgentInfo } from 'Reducers/agentActions';
 import { fetchFeatureConfig } from 'Reducers/featureConfig/middleware';
 import {
   fetchCurrentSubscriptionDetail,
+  fetchDifferentialPricing,
   fetchPlansDetail
 } from 'Reducers/plansConfig/middleware';
 import { selectAreDraftsSelected } from 'Reducers/dashboard/selectors';
@@ -205,6 +206,7 @@ function AppLayout({
       if (active_project?.enable_billing) {
         dispatch(fetchCurrentSubscriptionDetail(active_project?.id));
         dispatch(fetchPlansDetail(active_project?.id));
+        dispatch(fetchDifferentialPricing(active_project?.id));
       }
     }
   }, [dispatch, active_project]);

@@ -18,7 +18,7 @@ upload-linkedin-sync-dup: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/linkedin-sync-job-dup:$(TAG)
 
 pack-linkedin-company-sync:
-	docker build -t us.gcr.io/factors-$(ENV)/linkedin-company-sync-job:$(TAG) -f Dockerfile.company_sync .
+	docker build -t us.gcr.io/factors-$(ENV)/linkedin-company-sync-job:$(TAG) -f Dockerfile.member_company_sync .
 
 upload-linkedin-company-sync: export IMAGE_NAME=linkedin-company-sync-job
 upload-linkedin-company-sync: notify-deployment

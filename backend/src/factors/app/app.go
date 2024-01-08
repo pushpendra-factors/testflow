@@ -212,6 +212,8 @@ func main() {
 	explainV3Query := flag.Bool("explain_v3_query", false, "whether to implement new query payload")
 	chargebeeApiKey := flag.String("chargebee_api_key", "dummy", "Chargebee api key")
 	chargebeeSiteName := flag.String("chargebee_site_name", "dummy", "Chargebee site name")
+	paragonSigningKey := flag.String("paragon_signing_key", "", "")
+	paragonProjectID := flag.String("paragon_project_id", "", "")
 
 	flag.Parse()
 
@@ -373,6 +375,8 @@ func main() {
 		EnableNewAllAccountsByProjectID:                *enableNewAllAccountsByProjectID,
 		ChargebeeApiKey:                                *chargebeeApiKey,
 		ChargebeeSiteName:                              *chargebeeSiteName,
+		ParagonTokenSigningKey:                         *paragonSigningKey,
+		ParagonProjectID:                               *paragonProjectID,
 	}
 	C.InitConf(config)
 

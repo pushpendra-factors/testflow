@@ -53,7 +53,12 @@ function PropertyFilter({
   }, [resetSelectedFilters, toggleFilters]);
 
   if (filtersExpanded === false && newSegmentMode === false) {
-    if (appliedFilters.filters.length + appliedFilters.eventsList.length > 0) {
+    if (
+      appliedFilters.filters.length +
+        appliedFilters.eventsList.length +
+        appliedFilters.secondaryFilters.length >
+      0
+    ) {
       return (
         <Button
           className={cx(

@@ -421,7 +421,7 @@ func (store *MemSQL) GetGlobalProjectAnalyticsEventDataByProjectId(projectID int
 		return nil, err
 	}
 
-	if queryStmntKey == "daily_login_count" {
+	if queryStmntKey == "daily_login_count" || queryStmntKey == "login_count" {
 		projectID = int64(2)
 	}
 
