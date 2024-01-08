@@ -6,6 +6,7 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -33,7 +34,7 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID int64, query *model.Attr
 	}
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiData, "groupUserIDToKpiID": groupUserIDToKpiID,
-			"kpiKeys": kpiKeys}).Info("KPI-Attribution kpiData reports after RunKPIGroupQuery")
+			"kpiKeys": kpiKeys}).Warn("KPI-Attribution kpiData reports after RunKPIGroupQuery")
 	}
 	err = store.FillKPIGroupUserData(projectID, query, &kpiData, &kpiKeys, &groupUserIDToKpiID, logCtx)
 	if err != nil {
@@ -42,7 +43,7 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID int64, query *model.Attr
 	if C.GetAttributionDebug() == 1 {
 		logCtx.Info("done pulling group user list ids for Deal or Opportunity")
 		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiData, "groupUserIDToKpiID": groupUserIDToKpiID,
-			"kpiKeys": kpiKeys}).Info("KPI-Attribution kpiData reports 1")
+			"kpiKeys": kpiKeys}).Warn("KPI-Attribution kpiData reports 1")
 	}
 	err = store.PullAllUsersByCustomerUserID(projectID, &kpiData, logCtx)
 	if err != nil {
@@ -50,7 +51,7 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID int64, query *model.Attr
 	}
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiData, "groupUserIDToKpiID": groupUserIDToKpiID,
-			"kpiKeys": kpiKeys}).Info("KPI-Attribution kpiData reports 2")
+			"kpiKeys": kpiKeys}).Warn("KPI-Attribution kpiData reports 2")
 	}
 	return kpiData, kpiHeaders, kpiAggFunctionType, nil
 }
@@ -61,6 +62,7 @@ func (store *MemSQL) ExecuteKPIForAttributionV1(projectID int64, query *model.At
 	enableOptimisedFilterOnEventUserQuery bool) (map[string]model.KPIInfo, []string, []string, error) {
 
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
+	kpiDebugKey := "0064Q00001ivClTQAU"
 
 	kpiData := make(map[string]model.KPIInfo)
 	var headers []string
@@ -74,25 +76,33 @@ func (store *MemSQL) ExecuteKPIForAttributionV1(projectID int64, query *model.At
 		return kpiData, headers, kpiAggFunctionType, err
 	}
 	if C.GetAttributionDebug() == 1 {
+		// The KPI data here is without user_ids hence, can be printed entirely
 		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiData, "groupUserIDToKpiID": groupUserIDToKpiID,
-			"kpiKeys": kpiKeys}).Info("KPI-Attribution kpiData reports after RunKPIGroupQuery")
+			"kpiKeys": kpiKeys}).Warn("KPI-Attribution kpiData reports after RunKPIGroupQuery")
 	}
 	err = store.FillKPIGroupUserDataV1(projectID, query, &kpiData, &kpiKeys, &groupUserIDToKpiID, logCtx)
 	if err != nil {
 		return kpiData, headers, kpiAggFunctionType, err
 	}
 	if C.GetAttributionDebug() == 1 {
-		logCtx.Info("done pulling group user list ids for Deal or Opportunity")
-		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiData, "groupUserIDToKpiID": groupUserIDToKpiID,
-			"kpiKeys": kpiKeys}).Info("KPI-Attribution kpiData reports 1")
+		for key, val := range kpiData {
+			if key == kpiDebugKey {
+				logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Key": key, "KeySession": val}).
+					Warn(fmt.Sprintf("KPI-Attribution kpiData reports 1"))
+			}
+		}
 	}
 	err = store.PullAllUsersByCustomerUserID(projectID, &kpiData, logCtx)
 	if err != nil {
 		return kpiData, headers, kpiAggFunctionType, err
 	}
 	if C.GetAttributionDebug() == 1 {
-		logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiData, "groupUserIDToKpiID": groupUserIDToKpiID,
-			"kpiKeys": kpiKeys}).Info("KPI-Attribution kpiData reports 2")
+		for key, val := range kpiData {
+			if key == kpiDebugKey {
+				logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Key": key, "KeySession": val}).
+					Warn(fmt.Sprintf("KPI-Attribution kpiData reports 2"))
+			}
+		}
 	}
 	return kpiData, headers, kpiAggFunctionType, nil
 }
@@ -168,7 +178,7 @@ func (store *MemSQL) GetDataFromKPIResult(projectID int64, kpiQueryResult model.
 		return nil, nil, nil
 	}
 	if C.GetAttributionDebug() == 1 {
-		logCtx.WithFields(log.Fields{"customMetrics": customMetrics}).Info("customMetrics for project in attribution query")
+		logCtx.WithFields(log.Fields{"customMetrics": customMetrics}).Warn("customMetrics for project in attribution query")
 	}
 
 	mapKpiAggFunctionType := make(map[string]string)
@@ -193,7 +203,7 @@ func (store *MemSQL) GetDataFromKPIResult(projectID int64, kpiQueryResult model.
 		return nil, nil, nil
 	}
 	if C.GetAttributionDebug() == 1 {
-		logCtx.WithFields(log.Fields{"kpiValueHeaders": kpiValueHeaders}).Info("KPI-Attribution headers set")
+		logCtx.WithFields(log.Fields{"kpiValueHeaders": kpiValueHeaders}).Warn("KPI-Attribution headers set")
 	}
 	kpiKeys := model.AddKPIKeyDataInMap(kpiQueryResult, logCtx, keyIdx, datetimeIdx, query.From, query.To, valIdx, kpiValueHeaders, kpiAggFunctionType, kpiData)
 
@@ -224,7 +234,7 @@ func (store *MemSQL) GetDataFromKPIResultV1(projectID int64, kpiQueryResult mode
 		return nil, nil, nil
 	}
 	if C.GetAttributionDebug() == 1 {
-		logCtx.WithFields(log.Fields{"customMetrics": customMetrics}).Info("customMetrics for project in attribution query")
+		logCtx.WithFields(log.Fields{"customMetrics": customMetrics}).Warn("customMetrics for project in attribution query")
 	}
 
 	mapKpiAggFunctionType := make(map[string]string)
@@ -249,7 +259,7 @@ func (store *MemSQL) GetDataFromKPIResultV1(projectID int64, kpiQueryResult mode
 		return nil, nil, nil
 	}
 	if C.GetAttributionDebug() == 1 {
-		logCtx.WithFields(log.Fields{"kpiValueHeaders": kpiValueHeaders}).Info("KPI-Attribution headers set")
+		logCtx.WithFields(log.Fields{"kpiValueHeaders": kpiValueHeaders}).Warn("KPI-Attribution headers set")
 	}
 	kpiKeys := model.AddKPIKeyDataInMap(kpiQueryResult, logCtx, keyIdx, datetimeIdx, from, to, valIdx, kpiValueHeaders, kpiAggFunctionType, kpiData)
 	return kpiKeys, kpiValueHeaders, kpiAggFunctionType
@@ -275,7 +285,7 @@ func (store *MemSQL) RunKPIGroupQuery(projectID int64, query *model.AttributionQ
 				"projectID":                             projectID,
 				"duplicatedRequest":                     duplicatedRequest,
 				"enableOptimisedFilterOnProfileQuery":   enableOptimisedFilterOnProfileQuery,
-				"enableOptimisedFilterOnEventUserQuery": enableOptimisedFilterOnEventUserQuery}).Info("Debug before ExecuteKPIQueryGroup")
+				"enableOptimisedFilterOnEventUserQuery": enableOptimisedFilterOnEventUserQuery}).Warn("Debug before ExecuteKPIQueryGroup")
 		}
 		resultGroup, statusCode := store.ExecuteKPIQueryGroup(projectID, debugQueryKey,
 			duplicatedRequest, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
@@ -333,7 +343,7 @@ func (store *MemSQL) RunKPIGroupQueryV1(projectID int64, query *model.Attributio
 				"projectID":                             projectID,
 				"duplicatedRequest":                     duplicatedRequest,
 				"enableOptimisedFilterOnProfileQuery":   enableOptimisedFilterOnProfileQuery,
-				"enableOptimisedFilterOnEventUserQuery": enableOptimisedFilterOnEventUserQuery}).Info("Debug before ExecuteKPIQueryGroup")
+				"enableOptimisedFilterOnEventUserQuery": enableOptimisedFilterOnEventUserQuery}).Warn("Debug before ExecuteKPIQueryGroup")
 		}
 		resultGroup, statusCode := store.ExecuteKPIQueryGroup(projectID, debugQueryKey,
 			duplicatedRequest, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
@@ -394,7 +404,8 @@ func (store *MemSQL) FillKPIGroupUserData(projectID int64, query *model.Attribut
 		return errors.New("no valid KPIs found for this query to run")
 	}
 	if C.GetAttributionDebug() == 1 {
-		logCtx.WithFields(log.Fields{"kpiKeyGroupUserIDList": kpiKeyGroupUserIDList}).Info("KPI-Attribution group set FillKPIGroupUserData")
+		logCtx.WithFields(log.Fields{"kpiKeyGroupUserIDList": kpiKeyGroupUserIDList}).
+			Warn("KPI-Attribution group set FillKPIGroupUserData")
 	}
 
 	if query.RunType == model.RunTypeHSDeals || query.RunType == model.RunTypeSFOpportunities {
@@ -408,7 +419,8 @@ func (store *MemSQL) FillKPIGroupUserData(projectID int64, query *model.Attribut
 		_groupIDKey, _groupIDUserKey = getGroupKeys(query.RunType, _groups)
 		accCompIds, err := store.FillCompanyAccountIDs(projectID, kpiKeyGroupUserIDList, kpiData, groupUserIDToKpiID, logCtx)
 		if C.GetAttributionDebug() == 1 {
-			logCtx.WithFields(log.Fields{"accCompIds": accCompIds}).Info("KPI-Attribution accCompIds set FillKPIGroupUserData")
+			logCtx.WithFields(log.Fields{"accCompIds": accCompIds}).
+				Warn("KPI-Attribution accCompIds set FillKPIGroupUserData")
 		}
 		if err != nil {
 			return err
@@ -427,7 +439,7 @@ func (store *MemSQL) FillKPIGroupUserDataV1(projectID int64, query *model.Attrib
 		logCtx.WithFields(log.Fields{"query": query,
 			"kpiData":            kpiData,
 			"kpiKeys":            kpiKeys,
-			"groupUserIDToKpiID": groupUserIDToKpiID}).Info("Values in FillKPIGroupUserDataV1")
+			"groupUserIDToKpiID": groupUserIDToKpiID}).Warn("Values in FillKPIGroupUserDataV1")
 	}
 
 	if len(*kpiKeys) == 0 {
@@ -454,7 +466,8 @@ func (store *MemSQL) FillKPIGroupUserDataV1(projectID int64, query *model.Attrib
 		return errors.New("no valid KPIs found for this query to run")
 	}
 	if C.GetAttributionDebug() == 1 {
-		logCtx.WithFields(log.Fields{"kpiKeyGroupUserIDList": kpiKeyGroupUserIDList}).Info("KPI-Attribution group set FillKPIGroupUserData")
+		logCtx.WithFields(log.Fields{"kpiKeyGroupUserIDList": kpiKeyGroupUserIDList}).
+			Warn("KPI-Attribution group set FillKPIGroupUserData")
 	}
 
 	if query.RunType == model.RunTypeHSDeals || query.RunType == model.RunTypeSFOpportunities {
@@ -468,7 +481,7 @@ func (store *MemSQL) FillKPIGroupUserDataV1(projectID int64, query *model.Attrib
 		_groupIDKey, _groupIDUserKey = getGroupKeys(query.RunType, _groups)
 		accCompIds, err := store.FillCompanyAccountIDs(projectID, kpiKeyGroupUserIDList, kpiData, groupUserIDToKpiID, logCtx)
 		if C.GetAttributionDebug() == 1 {
-			logCtx.WithFields(log.Fields{"accCompIds": accCompIds}).Info("KPI-Attribution accCompIds set FillKPIGroupUserData")
+			logCtx.WithFields(log.Fields{"accCompIds": accCompIds}).Warn("KPI-Attribution accCompIds set FillKPIGroupUserData")
 		}
 		if err != nil {
 			return err
@@ -476,7 +489,7 @@ func (store *MemSQL) FillKPIGroupUserDataV1(projectID int64, query *model.Attrib
 		err = store.FillNormalUsersForKPIAccCompUser(projectID, accCompIds, _groupIDUserKey, kpiData, logCtx)
 	}
 	if C.GetAttributionDebug() == 1 {
-		logCtx.WithFields(log.Fields{"kpiData": kpiData}).Info("Values after FillKPIGroupUserDataV1")
+		logCtx.WithFields(log.Fields{"kpiData": kpiData}).Warn("Values after FillKPIGroupUserDataV1")
 	}
 	return err
 }
@@ -677,7 +690,7 @@ func (store *MemSQL) FillNormalUsersForKPIAccCompUser(projectID int64, kpiKeyGro
 	}
 	if C.GetAttributionDebug() == 1 {
 		logFields := log.Fields{"_kpiAccCompData": _kpiAccCompData, "project_id": projectID}
-		logCtx.WithFields(logFields).Info("KPI-Attribution group set _kpiAccCompData FillNormalUsersForKPIAccCompUser")
+		logCtx.WithFields(logFields).Warn("KPI-Attribution group set _kpiAccCompData FillNormalUsersForKPIAccCompUser")
 	}
 
 	// Fill the pulled kpiAccCompData users into actual kpiData for Deals/Opportunities for acc/comp level attribution
@@ -695,7 +708,7 @@ func (store *MemSQL) FillNormalUsersForKPIAccCompUser(projectID int64, kpiKeyGro
 
 	if C.GetAttributionDebug() == 1 {
 		logFields := log.Fields{"kpiData": kpiData, "project_id": projectID}
-		logCtx.WithFields(logFields).Info("KPI-Attribution group set kpiData FillNormalUsersForKPIAccCompUser")
+		logCtx.WithFields(logFields).Warn("KPI-Attribution group set kpiData FillNormalUsersForKPIAccCompUser")
 	}
 	defer U.CloseReadQuery(gULRows, tx2)
 
@@ -757,7 +770,7 @@ func (store *MemSQL) FillNormalUsersForKPIDealOppUser(projectID int64, kpiKeyGro
 	}
 	logFields := log.Fields{"kpiData": kpiData, "project_id": projectID}
 	if C.GetAttributionDebug() == 1 {
-		logCtx.WithFields(logFields).Info("KPI-Attribution group set")
+		logCtx.WithFields(logFields).Warn("KPI-Attribution group set")
 	}
 	defer U.CloseReadQuery(gULRows, tx2)
 
@@ -817,7 +830,8 @@ func (store *MemSQL) AddUserIdInKPIDataWithoutCustomerUserId(kpiData *map[string
 		}
 	}
 	if C.GetAttributionDebug() == 1 {
-		logCtx.WithFields(log.Fields{"keysWithNoCustomerUserId": keysWithNoCustomerUserId}).Info("AddUserIdInKPIDataWithoutCustomerUserId")
+		logCtx.WithFields(log.Fields{"keysWithNoCustomerUserId": keysWithNoCustomerUserId}).
+			Warn("AddUserIdInKPIDataWithoutCustomerUserId")
 	}
 	return nil
 }
@@ -891,12 +905,14 @@ func (store *MemSQL) runAttributionKPI(
 	updateSessionWT(sessionWT, kpiData)
 
 	if C.GetAttributionDebug() == 1 {
-		logCtx.WithFields(log.Fields{"userConversionHit": userConversionHit}).Info("KPI-Attribution userConversionHit")
+		logCtx.WithFields(log.Fields{"userConversionHit": userConversionHit}).
+			Warn("KPI-Attribution userConversionHit")
 	}
 	attributionData := make(map[string]*model.AttributionData)
 	attributionData = model.AddUpConversionEventCount(userConversionHit, sessionWT)
 	if C.GetAttributionDebug() == 1 {
-		logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info("KPI-Attribution attributionData")
+		logCtx.WithFields(log.Fields{"attributionData": attributionData}).
+			Warn("KPI-Attribution attributionData")
 	}
 	return &attributionData, nil
 }
@@ -908,7 +924,7 @@ func (store *MemSQL) runAttributionKPIV1(
 	sessionWT map[string][]float64, logCtx log.Entry) (*map[string]*model.AttributionData, error) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
 
-	logCtx.WithFields(log.Fields{"sessionWT": sessionWT}).Info("KPI-Attribution sessionWT")
+	// logCtx.WithFields(log.Fields{"sessionWT": sessionWT}).Info("KPI-Attribution sessionWT")
 
 	// Apply attribution based on given attribution methodology
 	userConversionHit, err := model.ApplyAttributionKPI(
@@ -925,12 +941,14 @@ func (store *MemSQL) runAttributionKPIV1(
 	updateSessionWT(sessionWT, kpiData)
 
 	if C.GetAttributionDebug() == 1 {
-		logCtx.WithFields(log.Fields{"userConversionHit": userConversionHit}).Info("KPI-Attribution userConversionHit")
+		logCtx.WithFields(log.Fields{"userConversionHit": userConversionHit}).
+			Warn("KPI-Attribution userConversionHit")
 	}
 	attributionData := make(map[string]*model.AttributionData)
 	attributionData = model.AddUpConversionEventCount(userConversionHit, sessionWT)
 	if C.GetAttributionDebug() == 1 {
-		logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info("KPI-Attribution attributionData")
+		logCtx.WithFields(log.Fields{"attributionData": attributionData}).
+			Warn("KPI-Attribution attributionData")
 	}
 	return &attributionData, nil
 }
