@@ -28,6 +28,7 @@ const (
 	IntegrationClearbit            = "clearbit"
 	IntegrationLeadsquared         = "leadsquared"
 	Integration6Signal             = "6signal"
+	IntegrationG2                  = "g2"
 )
 
 type UnitInfo struct {
