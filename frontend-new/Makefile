@@ -19,5 +19,8 @@ deploy-prod: build-prod
 deploy-violet: build-staging
 	firebase use factors-staging; firebase deploy --only hosting:violet
 
+deploy-blue: build-staging
+	firebase use factors-staging; firebase deploy --only hosting:blue	
+
 notify-deployment:
 	$(FACTORS_REPO)/frontend-new/notify_deployment.sh

@@ -81,3 +81,25 @@ jobs:
           target: violet
           entrypoint: ./frontend-new
           firebaseToolsVersion: 11.30.0
+
+      - name: Firebase Deployement SDK
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: "${{ secrets.GITHUB_TOKEN }}"
+          firebaseServiceAccount: "${{ secrets.GKE_STAGING_SA_KEY }}"
+          projectId: factors-staging
+          channelId: live
+          target: blue
+          entrypoint: ./sdk/javascript
+          firebaseToolsVersion: 11.30.0
+
+      - name: Firebase Deployement APP
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: "${{ secrets.GITHUB_TOKEN }}"
+          firebaseServiceAccount: "${{ secrets.GKE_STAGING_SA_KEY }}"
+          projectId: factors-staging
+          channelId: live
+          target: blue
+          entrypoint: ./frontend-new
+          firebaseToolsVersion: 11.30.0         
