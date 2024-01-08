@@ -38,6 +38,7 @@ func GenerateJWTTokenForProject(projectID int64) (string, error) {
 	}
 
 	factorsSigningKey := config.GetParagonTokenSigningKey()
+	log.Info("$$$$$Look here - ", string(factorsSigningKey))
 	key, err := jwt.ParseRSAPrivateKeyFromPEM(factorsSigningKey)
 	if err != nil {
 		log.WithField("project_id", projectID).WithError(err).Error("private key could not be found")
