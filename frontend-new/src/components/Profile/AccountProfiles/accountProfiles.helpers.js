@@ -16,6 +16,7 @@ import { PropTextFormat } from 'Utils/dataFormatter';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 import { Popover, Tag } from 'antd';
 import styles from './index.module.scss';
+import { ACCOUNTS_TABLE_COLUMN_TYPES, COLUMN_TYPE_PROPS } from 'Utils/table';
 const placeholderIcon = '/assets/avatar/company-placeholder.png';
 
 export const defaultSegmentsList = [
@@ -90,7 +91,14 @@ const getTablePropColumn = ({ prop, groupPropNames, listProperties }) => {
         : sortStringColumn(a[prop], b[prop]),
     render: (value) => (
       <Text type='title' level={7} extraClass='m-0' truncate shouldTruncateURL>
-        {value ? propValueFormat(prop, value, propType) : '-'}
+        {value
+          ? propValueFormat(
+              prop,
+              value,
+              propType,
+              ACCOUNTS_TABLE_COLUMN_TYPES[prop]
+            )
+          : 'NULL'}
       </Text>
     )
   };
@@ -101,7 +109,8 @@ export const getColumns = ({
   displayTableProps,
   groupPropNames,
   listProperties,
-  defaultSorterInfo
+  defaultSorterInfo,
+  activeAgent
 }) => {
   const headerClassStr =
     'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold inline-flex';
@@ -111,7 +120,7 @@ export const getColumns = ({
       title: <div className={headerClassStr}>Account Domain</div>,
       dataIndex: 'account',
       key: 'account',
-      width: 264,
+      width: COLUMN_TYPE_PROPS['string'].max,
       type: 'string',
       fixed: 'left',
       ellipsis: true,
@@ -150,7 +159,7 @@ export const getColumns = ({
               </Text>
             </span>
           </div>
-        ) || '-'
+        ) || 'NULL'
     }
   ];
   // Engagement Column
@@ -159,8 +168,8 @@ export const getColumns = ({
     columns.push(
       {
         title: <div className={headerClassStr}>Engagement</div>,
-        width: 152,
-        type: 'string',
+        width: COLUMN_TYPE_PROPS['actions'].max,
+        type: 'actions',
         dataIndex: 'engagement',
         key: 'engagement',
         fixed: 'left',
@@ -181,12 +190,12 @@ export const getColumns = ({
               </Text>
             </div>
           ) : (
-            '-'
+            'NULL'
           )
       },
       {
         title: <div className={headerClassStr}>Score</div>,
-        width: 152,
+        width: COLUMN_TYPE_PROPS['number'].max,
         type: 'number',
         dataIndex: 'score',
         key: 'score',
@@ -194,15 +203,17 @@ export const getColumns = ({
         sorter: (a, b) => sortNumericalColumn(a.score, b.score),
         render: (value) => (
           <Text type='title' level={7} extraClass='m-0'>
-            {value ? value.toFixed() : '-'}
+            {value ? parseInt(value).toLocaleString() : 'NULL'}
           </Text>
         )
-      },
-      {
-        title: <div className={headerClassStr}>Enagagement Signals</div>,
-        width: 264,
+      }
+    );
+    if (activeAgent === 'solutions@factors.ai') {
+      columns.push({
+        title: <div className={headerClassStr}>Engagement Signals</div>,
+        width: COLUMN_TYPE_PROPS['actions'].max,
         dataIndex: 'top_engagements',
-
+        type: 'actions',
         key: 'top_engagements',
 
         render: (value) => (
@@ -279,8 +290,8 @@ export const getColumns = ({
             ) : null}
           </div>
         )
-      }
-    );
+      });
+    }
   }
   // Table Prop Columns
   displayTableProps?.forEach((prop) => {

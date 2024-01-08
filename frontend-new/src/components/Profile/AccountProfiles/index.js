@@ -1,7 +1,22 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef
+} from 'react';
 import isEqual from 'lodash/isEqual';
 import cx from 'classnames';
-import { Table, Button, Spin, Popover, Tabs, notification, Input } from 'antd';
+import {
+  Table,
+  Button,
+  Spin,
+  Popover,
+  Tabs,
+  notification,
+  Input,
+  Form
+} from 'antd';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { useHistory, useLocation, useParams } from 'react-router-dom';
@@ -75,7 +90,7 @@ import { isOnboarded } from 'Utils/global';
 import { cloneDeep } from 'lodash';
 import { getSegmentColorCode } from 'Views/AppSidebar/appSidebar.helpers';
 
-import { COLUMN_TYPE_PROPS } from 'Utils/table';
+import { ACCOUNTS_TABLE_COLUMN_TYPES, COLUMN_TYPE_PROPS } from 'Utils/table';
 import ResizableTitle from 'Components/Resizable';
 
 const groupToDomainMap = {
@@ -137,7 +152,7 @@ function AccountProfiles({
   const [currentPage, setCurrentPage] = useState(1);
   const [currentPageSize, setCurrentPageSize] = useState(25);
   const [searchBarOpen, setSearchBarOpen] = useState(false);
-  const [searchDDOpen, setSearchDDOpen] = useState(false);
+  // const [searchDDOpen, setSearchDDOpen] = useState(false);
   const [listSearchItems, setListSearchItems] = useState([]);
   const [listProperties, setListProperties] = useState([]);
   const [showPopOver, setShowPopOver] = useState(false);
@@ -242,7 +257,7 @@ function AccountProfiles({
     } else {
       const listValues = accountPayload?.search_filter || [];
       setListSearchItems(uniq(listValues));
-      setSearchBarOpen(true);
+      // setSearchBarOpen(true);
     }
   }, [accountPayload?.search_filter]);
 
@@ -854,51 +869,52 @@ function AccountProfiles({
 
   const onSearchClose = () => {
     setSearchBarOpen(false);
-    setSearchDDOpen(false);
-    if (accountPayload?.search_filter?.length !== 0) {
-      const updatedPayload = { ...accountPayload };
-      updatedPayload.search_filter = [];
-      setAccountPayload(updatedPayload);
-      setListSearchItems([]);
-      setActiveSegment(activeSegment);
-      getAccounts(updatedPayload);
-    }
+    handleAccountSearch({ accounts_search: '' });
+    // setSearchDDOpen(false);
+    // if (accountPayload?.search_filter?.length !== 0) {
+    //   const updatedPayload = { ...accountPayload };
+    //   updatedPayload.search_filter = [];
+    //   setAccountPayload(updatedPayload);
+    //   setListSearchItems([]);
+    //   setActiveSegment(activeSegment);
+    //   getAccounts(updatedPayload);
+    // }
   };
 
   const onSearchOpen = () => {
     setSearchBarOpen(true);
-    setSearchDDOpen(true);
+    // setSearchDDOpen(true);
   };
 
-  const searchCompanies = () => (
-    <div className='absolute top-0'>
-      {searchDDOpen ? (
-        <FaSelect
-          placeholder='Search Accounts'
-          multiSelect
-          options={
-            companyValueOpts?.[accountPayload?.source]
-              ? Object.keys(companyValueOpts[accountPayload?.source]).map(
-                  (value) => [value]
-                )
-              : []
-          }
-          displayNames={companyValueOpts?.[accountPayload?.source]}
-          applClick={(val) => onApplyClick(val)}
-          onClickOutside={() => setSearchDDOpen(false)}
-          selectedOpts={listSearchItems}
-          style={{
-            top: '-8px',
-            right: 0,
-            padding: '8px 8px 12px',
-            overflowX: 'hidden'
-          }}
-          allowSearch
-          posRight
-        />
-      ) : null}
-    </div>
-  );
+  // const searchCompanies = () => (
+  //   <div className='absolute top-0'>
+  //     {searchDDOpen ? (
+  //       <FaSelect
+  //         placeholder='Search Accounts'
+  //         multiSelect
+  //         options={
+  //           companyValueOpts?.[accountPayload?.source]
+  //             ? Object.keys(companyValueOpts[accountPayload?.source]).map(
+  //                 (value) => [value]
+  //               )
+  //             : []
+  //         }
+  //         displayNames={companyValueOpts?.[accountPayload?.source]}
+  //         applClick={(val) => onApplyClick(val)}
+  //         onClickOutside={() => setSearchDDOpen(false)}
+  //         selectedOpts={listSearchItems}
+  //         style={{
+  //           top: '-8px',
+  //           right: 0,
+  //           padding: '8px 8px 12px',
+  //           overflowX: 'hidden'
+  //         }}
+  //         allowSearch
+  //         posRight
+  //       />
+  //     ) : null}
+  //   </div>
+  // );
 
   const { saveButtonDisabled } = useMemo(() => {
     return checkFiltersEquality({
@@ -953,24 +969,55 @@ function AccountProfiles({
       </ControlledComponent>
     );
   };
+  const handleAccountSearch = (values) => {
+    if (
+      (listSearchItems.length >= 1 &&
+        listSearchItems[0] === values?.accounts_search) ||
+      (listSearchItems.length == 0 && !values?.accounts_search)
+    ) {
+      return;
+    }
 
+    if (values?.accounts_search) {
+      values = [JSON.stringify([values.accounts_search])];
+    } else {
+      values = [];
+    }
+
+    const updatedPayload = {
+      ...accountPayload,
+      search_filter: values.map((vl) => JSON.parse(vl)[0])
+    };
+    setListSearchItems(updatedPayload.search_filter);
+    setAccountPayload(updatedPayload);
+    setActiveSegment(activeSegment);
+    getAccounts(updatedPayload);
+  };
   const renderSearchSection = () => (
     <div className='relative'>
       <ControlledComponent controller={searchBarOpen}>
         <div className={'flex items-center justify-between'}>
-          {!searchDDOpen && (
-            <Input
-              size='large'
-              value={listSearchItems ? listSearchItems.join(', ') : null}
-              placeholder={'Search Accounts'}
-              style={{
-                width: '240px',
-                'border-radius': '5px'
-              }}
-              prefix={<SVG name='search' size={20} color={'#8C8C8C'} />}
-              onClick={() => setSearchDDOpen(true)}
-            />
-          )}
+          <Form
+            name='basic'
+            labelCol={{ span: 8 }}
+            wrapperCol={{ span: 16 }}
+            onFinish={handleAccountSearch}
+            autoComplete='off'
+          >
+            <Form.Item name='accounts_search'>
+              <Input
+                size='large'
+                value={listSearchItems ? listSearchItems.join(', ') : null}
+                placeholder={'Search Accounts'}
+                style={{
+                  width: '240px',
+                  'border-radius': '5px'
+                }}
+                prefix={<SVG name='search' size={20} color={'#8C8C8C'} />}
+              />
+            </Form.Item>
+          </Form>
+
           <Button type='text' onClick={onSearchClose}>
             <SVG name={'close'} size={20} color={'grey'} />
           </Button>
@@ -981,7 +1028,7 @@ function AccountProfiles({
           <SVG name={'search'} size={20} color={'#8c8c8c'} />
         </Button>
       </ControlledComponent>
-      {searchCompanies()}
+      {/* {searchCompanies()} */}
     </div>
   );
 
@@ -1057,7 +1104,8 @@ function AccountProfiles({
         displayTableProps,
         groupPropNames,
         listProperties,
-        defaultSorterInfo
+        defaultSorterInfo,
+        activeAgent
       })
     );
   }, [
@@ -1088,30 +1136,43 @@ function AccountProfiles({
   //   listProperties,
   //   defaultSorterInfo
   // ]);
-  useEffect(() => {
-    let from = location.state?.state?.accountsTableRow;
-    if (from && document.getElementById(from)) {
-      const element = document.getElementById(from);
-      const y = element?.getBoundingClientRect().top + window.scrollY - 100;
+  const tableRef = useRef();
 
-      window.scrollTo({ top: y, behavior: 'smooth' });
+  useEffect(() => {
+    // This is the name of Account which was opened recently
+    let from = location.state?.state?.accountsTableRow;
+    // Finding the tableElement because we have only one .ant-table-body inside tableRef Tree
+    // If in future we add table body inside it, need to change it later on
+    let tableElement = tableRef.current?.querySelector('.ant-table-body');
+
+    if (tableElement && from && document.getElementById(from)) {
+      const element = document.getElementById(from);
+      // Y is the relative position that we want to scroll by
+      // this is calculated by ORIGINALELEMENTY-TABLEELEMENT - 15 ( because of some padding or margin )
+      const y =
+        element?.getBoundingClientRect().y -
+        tableElement.getBoundingClientRect().y -
+        15;
+
+      tableElement.scrollTo({ top: y, behavior: 'smooth' });
 
       location.state.state.accountsTableRow = '';
-      // document.getElementById(location.hash.split('#')[1])?.scrollIntoView();
-      // window.scrollBy(0, -150);
     }
-  }, [newTableColumns]);
+  }, [newTableColumns, tableRef]);
   const renderTable = useCallback(() => {
     const handleResize =
       (index) =>
       (_, { size }) => {
-        const tmpColType = newTableColumns[index]?.type;
+        let tmpColType =
+          ACCOUNTS_TABLE_COLUMN_TYPES[newTableColumns[index]?.dataIndex]?.Type; //newTableColumns[index]?.type;
+        tmpColType = tmpColType ? tmpColType.toLowerCase() : 'string';
         const tmpColWidthRange =
           COLUMN_TYPE_PROPS[tmpColType ? tmpColType : 'string'];
         const newColumns = [...newTableColumns];
         newColumns[index] = {
           ...newColumns[index],
           width: (() => {
+            // console.log(newTableColumns, index);
             if (size.width < tmpColWidthRange.min) return tmpColWidthRange.min;
             else if (size.width > tmpColWidthRange.max)
               return tmpColWidthRange.max;
@@ -1132,6 +1193,7 @@ function AccountProfiles({
     return (
       <div>
         <Table
+          ref={tableRef}
           components={{
             header: {
               cell: ResizableTitle
