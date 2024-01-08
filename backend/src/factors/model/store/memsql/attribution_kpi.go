@@ -62,7 +62,7 @@ func (store *MemSQL) ExecuteKPIForAttributionV1(projectID int64, query *model.At
 	enableOptimisedFilterOnEventUserQuery bool) (map[string]model.KPIInfo, []string, []string, error) {
 
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
-	kpiDebugKey := "0064Q00001ivClTQAU"
+	kpiDebugKey := C.GetAttributionDebugKPI()
 
 	kpiData := make(map[string]model.KPIInfo)
 	var headers []string
