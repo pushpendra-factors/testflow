@@ -201,7 +201,14 @@ func (store *MemSQL) ExecuteAttributionQueryV1(projectID int64, queryOriginal *m
 	}
 
 	if C.GetAttributionDebug() == 1 {
-		log.WithFields(log.Fields{"attributionData": attributionData, "kpiData": kpiData, "userData": userData}).Info("log before ProcessAttributionDataToResultV1")
+
+		kpiDebugKey := "0064Q00001ivClTQAU"
+		for key, val := range kpiData {
+			if key == kpiDebugKey {
+				logCtx.WithFields(log.Fields{"AttributionDebug": "Debug", "kpiDebugKey": key, "KPIInfo": val}).Info(fmt.Sprintf("KPI-Attribution KpiDebugKey ProcessAttributionDataToResultV1"))
+			}
+		}
+
 	}
 
 	// Transform the attribution data in Result format (header and rows)
@@ -699,7 +706,20 @@ func (store *MemSQL) PullConvertedUsersV1(projectID int64, query *model.Attribut
 		kpiData[kpiId] = KpiInfo
 	}
 	if C.GetAttributionDebug() == 1 {
-		log.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiData}).Info("KPI Attribution kpiData with all the headers")
+		kpiDebugKey := "0064Q00001ivClTQAU"
+		for key, val := range kpiData {
+			if key == kpiDebugKey {
+				logCtx.WithFields(log.Fields{"KPIAttribution": "Debug", "Key": key, "KeySession": val}).
+					Info(fmt.Sprintf("KPI-Attribution kpiData kpiDebugKey UserPullData"))
+			}
+		}
+		log.WithFields(log.Fields{"KPIAttribution": "Debug", "coalUserIdConversionTimestamp": coalUserIdConversionTimestamp}).
+			Info("KPI Attribution coalUserIdConversionTimestamp with all the headers")
+		log.WithFields(log.Fields{"KPIAttribution": "Debug", "usersIDsToAttribute": usersIDsToAttribute}).
+			Info("KPI Attribution usersIDsToAttribute with all the headers")
+
+		// To print all data points - this might overflow the logging but works for smaller dataset
+		// log.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiData}).Info("KPI Attribution kpiData with all the headers")
 	}
 	return coalUserIdConversionTimestamp, usersToBeAttributed, kpiData, defaultHeader, KpiAggFunctionTypesList, usersIDsToAttribute, nil
 }
@@ -738,7 +758,7 @@ func (store *MemSQL) GetAttributionData(query *model.AttributionQuery, sessions 
 		}
 		queryStartTime = time.Now().UTC().Unix()
 		if C.GetAttributionDebug() == 1 {
-			logCtx.Info("Done FireAttribution")
+			logCtx.Warn("Done FireAttribution")
 		}
 		if err != nil {
 			return nil, false, err
@@ -754,7 +774,8 @@ func (store *MemSQL) GetAttributionData(query *model.AttributionQuery, sessions 
 		model.AddTheAddedKeysAndMetrics(attributionData, query, sessions, 1)
 
 		if C.GetAttributionDebug() == 1 {
-			logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info("Done AddTheAddedKeysAndMetrics. Attribution debug AnalyzeTypeUsers.")
+			logCtx.WithFields(log.Fields{"attributionData": attributionData}).
+				Warn("Done AddTheAddedKeysAndMetrics. Attribution debug AnalyzeTypeUsers.")
 		}
 		// Add the performance information no of conversion event = 1
 		model.AddPerformanceData(attributionData, query.AttributionKey, marketingReports, 1)
@@ -762,7 +783,8 @@ func (store *MemSQL) GetAttributionData(query *model.AttributionQuery, sessions 
 			(*attributionData)[key].ConvAggFunctionType = convAggFunctionType
 		}
 		if C.GetAttributionDebug() == 1 {
-			logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info("Done AddTheAddedKeysAndMetrics, AddPerformanceData")
+			logCtx.WithFields(log.Fields{"attributionData": attributionData}).
+				Warn("Done AddTheAddedKeysAndMetrics, AddPerformanceData")
 		}
 	} else {
 
@@ -776,7 +798,8 @@ func (store *MemSQL) GetAttributionData(query *model.AttributionQuery, sessions 
 			}
 			if kpiInfo.KpiCoalUserIds == nil || len(kpiInfo.KpiCoalUserIds) == 0 {
 				if C.GetAttributionDebug() == 1 {
-					logCtx.WithFields(log.Fields{"KpiInfo": kpiInfo, "KPI_ID": kpiID}).Info("no user found for the KPI group, ignoring")
+					logCtx.WithFields(log.Fields{"KpiInfo": kpiInfo, "KPI_ID": kpiID}).
+						Warn("no user found for the KPI group, ignoring")
 				}
 				//groupSessions[kpiID][noneKey] = model.UserSessionData{}
 				continue
@@ -785,7 +808,7 @@ func (store *MemSQL) GetAttributionData(query *model.AttributionQuery, sessions 
 				// check if user has session/otp
 				if _, exists := sessions[user]; !exists {
 					if C.GetAttributionDebug() == 1 {
-						logCtx.WithFields(log.Fields{"User": user, "KPI_ID": kpiID}).Info("user without session/otp")
+						logCtx.WithFields(log.Fields{"User": user, "KPI_ID": kpiID}).Warn("user without session/otp")
 					}
 					continue
 				}
@@ -813,7 +836,7 @@ func (store *MemSQL) GetAttributionData(query *model.AttributionQuery, sessions 
 				// check if user has session/otp
 				if _, exists := sessions[user]; !exists {
 					if C.GetAttributionDebug() == 1 {
-						logCtx.WithFields(log.Fields{"User": user, "KPI_ID": kpiID}).Info("user without session/otp")
+						logCtx.WithFields(log.Fields{"User": user, "KPI_ID": kpiID}).Warn("user without session/otp")
 					}
 					continue
 				}
@@ -837,7 +860,7 @@ func (store *MemSQL) GetAttributionData(query *model.AttributionQuery, sessions 
 			}
 		}
 		if C.GetAttributionDebug() == 1 || query.AnalyzeType == model.AnalyzeTypeUserKPI {
-			logCtx.WithFields(log.Fields{"KPIGroupSession": groupSessions}).Info("KPI-Attribution Group session 2")
+			logCtx.WithFields(log.Fields{"KPIGroupSession": groupSessions}).Warn("KPI-Attribution Group session 2")
 		}
 
 		// Build attribution weight
@@ -853,16 +876,16 @@ func (store *MemSQL) GetAttributionData(query *model.AttributionQuery, sessions 
 
 		if C.GetAttributionDebug() == 1 || query.AnalyzeType == model.AnalyzeTypeUserKPI {
 			uniqUsers := len(groupSessions)
-			logCtx.WithFields(log.Fields{"AttributionDebug": groupSessions}).Info(fmt.Sprintf("Total users with session: %d", uniqUsers))
+			logCtx.WithFields(log.Fields{"AttributionDebug": groupSessions}).Warn(fmt.Sprintf("Total users with session: %d", uniqUsers))
 		}
 		var err error
 		attributionData, isCompare, err = store.FireAttributionForKPI(query, groupSessions, kpiData, sessionWT, *logCtx)
 		if C.GetAttributionDebug() == 1 {
-			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("FireAttribution KPI took time")
+			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Warn("FireAttribution KPI took time")
 		}
 		queryStartTime = time.Now().UTC().Unix()
 		if C.GetAttributionDebug() == 1 || query.AnalyzeType == model.AnalyzeTypeUserKPI {
-			logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info("KPI-Attribution attributionData")
+			logCtx.WithFields(log.Fields{"attributionData": attributionData}).Warn("KPI-Attribution attributionData")
 		}
 
 		if err != nil {
@@ -887,47 +910,57 @@ func (store *MemSQL) GetAttributionData(query *model.AttributionQuery, sessions 
 		}
 
 		if C.GetAttributionDebug() == 1 || query.AnalyzeType == model.AnalyzeTypeUserKPI {
-			logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info("KPI-Attribution attributionData before merge")
+			logCtx.WithFields(log.Fields{"attributionData": attributionData}).Warn("KPI-Attribution attributionData before merge")
 		}
 
 		// Add the Added keys
 		model.AddTheAddedKeysAndMetrics(attributionData, query, groupSessions, noOfConversionEvents)
 
 		if C.GetAttributionDebug() == 1 || query.AnalyzeType == model.AnalyzeTypeUserKPI {
-			logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info("KPI-Attribution attributionData AddTheAddedKeysAndMetrics")
+			logCtx.WithFields(log.Fields{"attributionData": attributionData}).Warn("KPI-Attribution attributionData AddTheAddedKeysAndMetrics")
 		}
 
 		// Add the performance information
 		model.AddPerformanceData(attributionData, query.AttributionKey, marketingReports, noOfConversionEvents)
 
 		if C.GetAttributionDebug() == 1 || query.AnalyzeType == model.AnalyzeTypeUserKPI {
-			logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info("KPI-Attribution attributionData AddPerformanceData")
+			logCtx.WithFields(log.Fields{"attributionData": attributionData}).Warn("KPI-Attribution attributionData AddPerformanceData")
 		}
 
 	}
 	return attributionData, isCompare, nil
 }
 
-// GetAttributionDataV1 runs attribution on groupSessions
+// GetAttributionDataV1 runs attribution on groupSessions - this method also has KPI specific debugging enabled
 func (store *MemSQL) GetAttributionDataV1(projectID int64, query *model.AttributionQueryV1, sessions map[string]map[string]model.UserSessionData,
-	marketingReports *model.MarketingReports, kpiData map[string]model.KPIInfo, kpiHeaders []string, kpiAggFunctionType []string, logCtx *log.Entry) (*map[string]*model.AttributionData, bool, error) {
+	marketingReports *model.MarketingReports, kpiData map[string]model.KPIInfo, kpiHeaders []string, kpiAggFunctionType []string,
+	logCtx *log.Entry) (*map[string]*model.AttributionData, bool, error) {
 
 	queryStartTime := time.Now().UTC().Unix()
 
 	isCompare := false
 	var attributionData *map[string]*model.AttributionData
+	// this is a debug KPI id, need a deployment everytime we need to debug a key
+	kpiDebugKey := "0064Q00001ivClTQAU"
 
 	// creating group sessions by transforming sessions
 	groupSessions := make(map[string]map[string]model.UserSessionData)
 
 	for kpiID, kpiInfo := range kpiData {
 
+		if C.GetAttributionDebug() == 1 {
+			if kpiID == kpiDebugKey {
+				logCtx.WithFields(log.Fields{"KpiInfo": kpiInfo, "KPI_ID": kpiID}).Warn("executing the KPI ")
+			}
+		}
+
 		if _, exists := groupSessions[kpiID]; !exists {
 			groupSessions[kpiID] = make(map[string]model.UserSessionData)
 		}
 		if kpiInfo.KpiCoalUserIds == nil || len(kpiInfo.KpiCoalUserIds) == 0 {
 			if C.GetAttributionDebug() == 1 {
-				logCtx.WithFields(log.Fields{"KpiInfo": kpiInfo, "KPI_ID": kpiID}).Info("no user found for the KPI group, ignoring")
+				logCtx.WithFields(log.Fields{"KpiInfo": kpiInfo, "KPI_ID": kpiID}).
+					Warn("no user found for the KPI group, ignoring")
 			}
 			//groupSessions[kpiID][noneKey] = model.UserSessionData{}
 			continue
@@ -936,7 +969,7 @@ func (store *MemSQL) GetAttributionDataV1(projectID int64, query *model.Attribut
 			// check if user has session/otp
 			if _, exists := sessions[user]; !exists {
 				if C.GetAttributionDebug() == 1 {
-					logCtx.WithFields(log.Fields{"User": user, "KPI_ID": kpiID}).Info("user without session/otp")
+					logCtx.WithFields(log.Fields{"User": user, "KPI_ID": kpiID}).Warn("user without session/otp")
 				}
 				continue
 			}
@@ -964,7 +997,7 @@ func (store *MemSQL) GetAttributionDataV1(projectID int64, query *model.Attribut
 			// check if user has session/otp
 			if _, exists := sessions[user]; !exists {
 				if C.GetAttributionDebug() == 1 {
-					logCtx.WithFields(log.Fields{"User": user, "KPI_ID": kpiID}).Info("user without session/otp")
+					logCtx.WithFields(log.Fields{"User": user, "KPI_ID": kpiID}).Warn("user without session/otp")
 				}
 				continue
 			}
@@ -988,6 +1021,12 @@ func (store *MemSQL) GetAttributionDataV1(projectID int64, query *model.Attribut
 		}
 	}
 	if C.GetAttributionDebug() == 1 {
+		for key, val := range groupSessions {
+			if key == kpiDebugKey {
+				logCtx.WithFields(log.Fields{"AttributionDebug": "Debug", "Key": key, "KeySession": val}).
+					Warn(fmt.Sprintf("KPI-Attribution Group session 2"))
+			}
+		}
 		logCtx.WithFields(log.Fields{"KPIGroupSession": groupSessions}).Info("KPI-Attribution Group session 2")
 	}
 
@@ -1004,16 +1043,22 @@ func (store *MemSQL) GetAttributionDataV1(projectID int64, query *model.Attribut
 
 	if C.GetAttributionDebug() == 1 {
 		uniqUsers := len(groupSessions)
-		logCtx.WithFields(log.Fields{"AttributionDebug": groupSessions}).Info(fmt.Sprintf("Total users with session: %d", uniqUsers))
+		for key, val := range groupSessions {
+			if key == kpiDebugKey {
+				logCtx.WithFields(log.Fields{"AttributionDebug": "Debug", "Key": key, "KeySession": val}).
+					Warn(fmt.Sprintf("KPI Total users with session: %d", uniqUsers))
+			}
+		}
 	}
+
 	var err error
 	attributionData, isCompare, err = store.FireAttributionForKPIV1(projectID, query, groupSessions, kpiData, sessionWT, *logCtx)
 	if C.GetAttributionDebug() == 1 {
-		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("FireAttribution KPI took time")
+		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Warn("FireAttribution KPI took time")
 	}
 	queryStartTime = time.Now().UTC().Unix()
 	if C.GetAttributionDebug() == 1 {
-		logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info("KPI-Attribution attributionData")
+		logCtx.WithFields(log.Fields{"attributionData": attributionData}).Warn("KPI-Attribution attributionData")
 	}
 
 	if err != nil {
@@ -1022,7 +1067,7 @@ func (store *MemSQL) GetAttributionDataV1(projectID int64, query *model.Attribut
 
 	if C.GetAttributionDebug() == 1 {
 		uniqueKeys := len(*attributionData)
-		logCtx.WithFields(log.Fields{"AttributionDebug": "attributionData"}).Info(fmt.Sprintf("Total users with session: %d", uniqueKeys))
+		logCtx.WithFields(log.Fields{"AttributionDebug": "attributionData"}).Warn(fmt.Sprintf("Total users with session: %d", uniqueKeys))
 	}
 
 	for key := range *attributionData {
@@ -1030,21 +1075,21 @@ func (store *MemSQL) GetAttributionDataV1(projectID int64, query *model.Attribut
 	}
 
 	if C.GetAttributionDebug() == 1 {
-		logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info("KPI-Attribution attributionData before merge")
+		logCtx.WithFields(log.Fields{"attributionData": attributionData}).Warn("KPI-Attribution attributionData before merge")
 	}
 
 	// Add the Added keys
 	model.AddTheAddedKeysAndMetricsV1(attributionData, query, groupSessions, noOfConversionEvents)
 
 	if C.GetAttributionDebug() == 1 {
-		logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info("KPI-Attribution attributionData AddTheAddedKeysAndMetrics")
+		logCtx.WithFields(log.Fields{"attributionData": attributionData}).Warn("KPI-Attribution attributionData AddTheAddedKeysAndMetrics")
 	}
 
 	// Add the performance information
 	model.AddPerformanceData(attributionData, query.AttributionKey, marketingReports, noOfConversionEvents)
 
 	if C.GetAttributionDebug() == 1 {
-		logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info("KPI-Attribution attributionData AddPerformanceData")
+		logCtx.WithFields(log.Fields{"attributionData": attributionData}).Warn("KPI-Attribution attributionData AddPerformanceData")
 	}
 
 	return attributionData, isCompare, nil
@@ -1052,42 +1097,49 @@ func (store *MemSQL) GetAttributionDataV1(projectID int64, query *model.Attribut
 
 func ProcessAttributionDataToResult(projectID int64, query *model.AttributionQuery,
 	attributionData *map[string]*model.AttributionData, isCompare bool, queryStartTime int64,
-	marketingReports *model.MarketingReports, kpiData map[string]model.KPIInfo, kpiHeaders []string, kpiAggFunctionType []string, logCtx *log.Entry) *model.QueryResult {
+	marketingReports *model.MarketingReports, kpiData map[string]model.KPIInfo, kpiHeaders []string, kpiAggFunctionType []string,
+	logCtx *log.Entry) *model.QueryResult {
 
 	result := &model.QueryResult{}
 
 	if query.AttributionKey == model.AttributionKeyAllPageView {
 
-		if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities || query.AnalyzeType == model.AnalyzeTypeUserKPI {
+		if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities ||
+			query.AnalyzeType == model.AnalyzeTypeUserKPI {
 
 			result = model.ProcessQueryKPIPageUrl(query, attributionData, *logCtx, kpiData, kpiHeaders, kpiAggFunctionType, isCompare)
 			if C.GetAttributionDebug() == 1 {
-				logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")
+				logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).
+					Warn("Process Query Landing PageUrl took time")
 			}
 			queryStartTime = time.Now().UTC().Unix()
 
 		} else {
 			result = model.ProcessQueryPageUrl(query, attributionData, *logCtx, isCompare)
 			if C.GetAttributionDebug() == 1 {
-				logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")
+				logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).
+					Warn("Process Query Landing PageUrl took time")
 			}
 			queryStartTime = time.Now().UTC().Unix()
 		}
 
 	} else if query.AttributionKey == model.AttributionKeyLandingPage {
 
-		if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities || query.AnalyzeType == model.AnalyzeTypeUserKPI {
+		if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities ||
+			query.AnalyzeType == model.AnalyzeTypeUserKPI {
 
 			result = model.ProcessQueryKPILandingPageUrl(query, attributionData, *logCtx, kpiData, kpiHeaders, kpiAggFunctionType, isCompare)
 			if C.GetAttributionDebug() == 1 {
-				logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")
+				logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).
+					Warn("Process Query Landing PageUrl took time")
 			}
 			queryStartTime = time.Now().UTC().Unix()
 
 		} else {
 			result = model.ProcessQueryLandingPageUrl(query, attributionData, *logCtx, isCompare)
 			if C.GetAttributionDebug() == 1 {
-				logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")
+				logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).
+					Warn("Process Query Landing PageUrl took time")
 			}
 			queryStartTime = time.Now().UTC().Unix()
 		}
@@ -1097,7 +1149,8 @@ func ProcessAttributionDataToResult(projectID int64, query *model.AttributionQue
 		result = model.ProcessQueryKPI(query, attributionData, marketingReports, isCompare, kpiData, kpiHeaders, kpiAggFunctionType)
 		if C.GetAttributionDebug() == 1 || query.AnalyzeType == model.AnalyzeTypeUserKPI {
 			logCtx.WithFields(log.Fields{"result": result}).Info(fmt.Sprintf("KPI-Attribution result"))
-			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query KPI took time")
+			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).
+				Warn("Process Query KPI took time")
 		}
 		queryStartTime = time.Now().UTC().Unix()
 
@@ -1105,13 +1158,15 @@ func ProcessAttributionDataToResult(projectID int64, query *model.AttributionQue
 		result = model.ProcessQueryUserKPI(query, attributionData, marketingReports, isCompare, kpiData, kpiHeaders, kpiAggFunctionType)
 		if C.GetAttributionDebug() == 1 || query.AnalyzeType == model.AnalyzeTypeUserKPI {
 			logCtx.WithFields(log.Fields{"result": result}).Info(fmt.Sprintf("KPI-Attribution result"))
-			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query KPI took time")
+			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).
+				Warn("Process Query KPI took time")
 		}
 		queryStartTime = time.Now().UTC().Unix()
 	} else {
 		result = model.ProcessQuery(query, attributionData, marketingReports, isCompare, *logCtx)
 		if C.GetAttributionDebug() == 1 {
-			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Normal took time")
+			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).
+				Warn("Process Query Normal took time")
 		}
 		queryStartTime = time.Now().UTC().Unix()
 	}
@@ -1122,7 +1177,8 @@ func ProcessAttributionDataToResult(projectID int64, query *model.AttributionQue
 // ProcessAttributionDataToResultV1 converts attributionData to result for different types of attribution queries
 func (store *MemSQL) ProcessAttributionDataToResultV1(projectID int64, query *model.AttributionQueryV1,
 	attributionData *map[string]*model.AttributionData, isCompare bool, queryStartTime int64,
-	marketingReports *model.MarketingReports, kpiData map[string]model.KPIInfo, kpiHeaders []string, kpiAggFunctionType []string, logCtx *log.Entry) *model.QueryResult {
+	marketingReports *model.MarketingReports, kpiData map[string]model.KPIInfo, kpiHeaders []string, kpiAggFunctionType []string,
+	logCtx *log.Entry) *model.QueryResult {
 
 	result := &model.QueryResult{}
 
@@ -1130,7 +1186,8 @@ func (store *MemSQL) ProcessAttributionDataToResultV1(projectID int64, query *mo
 
 		result = model.ProcessQueryKPIPageUrlV1(query, attributionData, *logCtx, kpiData, kpiHeaders, kpiAggFunctionType, isCompare)
 		if C.GetAttributionDebug() == 1 {
-			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")
+			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).
+				Warn("Process Query Landing PageUrl took time")
 		}
 		queryStartTime = time.Now().UTC().Unix()
 
@@ -1138,7 +1195,8 @@ func (store *MemSQL) ProcessAttributionDataToResultV1(projectID int64, query *mo
 
 		result = model.ProcessQueryKPILandingPageUrlV1(query, attributionData, *logCtx, kpiData, kpiHeaders, kpiAggFunctionType, isCompare)
 		if C.GetAttributionDebug() == 1 {
-			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")
+			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).
+				Warn("Process Query Landing PageUrl took time")
 		}
 		queryStartTime = time.Now().UTC().Unix()
 
@@ -1147,7 +1205,8 @@ func (store *MemSQL) ProcessAttributionDataToResultV1(projectID int64, query *mo
 		result = model.ProcessQueryKPIV1(query, attributionData, marketingReports, isCompare, kpiData, kpiHeaders, kpiAggFunctionType, *logCtx)
 		if C.GetAttributionDebug() == 1 {
 			logCtx.WithFields(log.Fields{"result": result}).Info(fmt.Sprintf("KPI-Attribution result"))
-			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query KPI took time")
+			logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).
+				Warn("Process Query KPI took time")
 		}
 		queryStartTime = time.Now().UTC().Unix()
 
@@ -1195,7 +1254,8 @@ func (store *MemSQL) GetConvertedUsers(projectID,
 			EventName: goalEventName, Timestamp: val, EventType: 0})
 	}
 
-	err, linkedFunnelEventUsers := store.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo, query.LinkedEvents, eventNameToIDList, userIDToInfoConverted, logCtx)
+	err, linkedFunnelEventUsers := store.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo,
+		query.LinkedEvents, eventNameToIDList, userIDToInfoConverted, logCtx)
 	if err != nil {
 		return userIDToInfoConverted, usersToBeAttributed, coalUserIdConversionTimestamp, err
 	}
@@ -1218,7 +1278,8 @@ func (store *MemSQL) FireAttributionV1(query *model.AttributionQuery,
 	if query.AttributionMethodologyCompare != "" {
 		// Two AttributionMethodologies comparison
 		isCompare = true
-		attributionData, err = store.RunAttributionForMethodologyComparisonV1(query, usersToBeAttributed, coalUserIdConversionTimestamp, sessions, sessionWT, logCtx)
+		attributionData, err = store.RunAttributionForMethodologyComparisonV1(query, usersToBeAttributed,
+			coalUserIdConversionTimestamp, sessions, sessionWT, logCtx)
 
 	} else if query.ConversionEventCompare.Name != "" {
 		// Two events comparison
@@ -1326,7 +1387,8 @@ func (store *MemSQL) runAttributionV1(goalEvent model.QueryEventWithProperties,
 	goalEventName := goalEvent.Name
 
 	if C.GetAttributionDebug() == 1 {
-		log.WithFields(log.Fields{"goalEventName": goalEventName, "sessions": sessions, "usersToBeAttributed": usersToBeAttributed}).Info("log before ApplyAttribution")
+		log.WithFields(log.Fields{"goalEventName": goalEventName, "sessions": sessions, "usersToBeAttributed": usersToBeAttributed}).
+			Warn("log before ApplyAttribution")
 	}
 
 	// 4. Apply attribution based on given attribution methodology
@@ -1525,7 +1587,8 @@ func (store *MemSQL) getAllTheSessions(projectId int64, sessionEventNameId strin
 
 		queryUserSessionTimeRange = queryUserSessionTimeRange +
 			" sessions.timestamp FROM events AS sessions " +
-			" WHERE sessions.project_id=? AND sessions.event_name_id=? AND sessions.user_id IN (" + placeHolder + " ) AND sessions.timestamp BETWEEN ? AND ?"
+			" WHERE sessions.project_id=? AND sessions.event_name_id=? AND sessions.user_id IN (" +
+			placeHolder + " ) AND sessions.timestamp BETWEEN ? AND ?"
 
 		wParams = []interface{}{projectId, sessionEventNameId}
 		wParams = append(wParams, value...)
@@ -1746,7 +1809,8 @@ func (store *MemSQL) getAllTheSessionsAttributionKPI(projectId int64, sessionEve
 }
 
 // FetchAllUsersAndCustomerUserDataInBatches returns usersIds for given list of customer_user_id (i.e. coal_id) in batches
-func (store *MemSQL) FetchAllUsersAndCustomerUserDataInBatches(projectID int64, customerUserIdList []string, logCtx log.Entry) (map[string]string, map[string][]string, error) {
+func (store *MemSQL) FetchAllUsersAndCustomerUserDataInBatches(projectID int64, customerUserIdList []string,
+	logCtx log.Entry) (map[string]string, map[string][]string, error) {
 
 	if customerUserIdList == nil || len(customerUserIdList) == 0 {
 		logCtx.WithFields(log.Fields{"Method": "FetchAllUsersAndCustomerUserDataInBatches"}).Info("No customer UserId found")
@@ -1818,7 +1882,8 @@ func (store *MemSQL) FetchAllUsersAndCustomerUserDataInBatches(projectID int64, 
 
 // FetchAllUsersAndCustomerUserData returns usersIds for given list of customer_user_id (i.e. coal_id)
 // @Deprecated
-func (store *MemSQL) FetchAllUsersAndCustomerUserData(projectID int64, customerUserIdList []string, logCtx log.Entry) (map[string]string, map[string][]string, error) {
+func (store *MemSQL) FetchAllUsersAndCustomerUserData(projectID int64, customerUserIdList []string, logCtx log.Entry) (map[string]string,
+	map[string][]string, error) {
 
 	userIdToCoalIds := make(map[string]string)
 	custUserIdToUserIds := make(map[string][]string)
@@ -2004,7 +2069,8 @@ func (store *MemSQL) GetConvertedUsersWithFilterV1(projectID int64, goalEventNam
 		timestamp := userIdHitGoalEventTimestamp[userID]
 		coalUserID := userIDToCoalIDInfo[userID].CoalUserID
 
-		filteredCoalIDToUserIDInfo[coalUserID] = append(filteredCoalIDToUserIDInfo[coalUserID], model.UserIDPropID{UserID: userID, Timestamp: timestamp})
+		filteredCoalIDToUserIDInfo[coalUserID] = append(filteredCoalIDToUserIDInfo[coalUserID], model.UserIDPropID{UserID: userID,
+			Timestamp: timestamp})
 		filteredUserIdToUserIDInfo[userID] = model.UserInfo{CoalUserID: coalUserID, Timestamp: timestamp}
 
 		if _, ok := coalUserIdConversionTimestamp[coalUserID]; ok {
