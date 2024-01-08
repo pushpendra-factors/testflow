@@ -326,7 +326,7 @@ export const getPropType = (propsList, searchProp) => {
   return propType;
 };
 
-export const propValueFormat = (searchKey, value, type, colType) => {
+export const propValueFormat = (searchKey, value, type) => {
   if (!value) return '-';
 
   const isDate = searchKey?.toLowerCase()?.includes('date');
@@ -340,22 +340,12 @@ export const propValueFormat = (searchKey, value, type, colType) => {
     return MomentTz(value * 1000).format(dateFormat);
   };
 
-  const formatNumerical = (value) => {
-    let localeParam;
-    if (searchKey === '$6Signal_annual_revenue') {
-      localeParam = {
-        style: 'currency',
-        currency: 'USD',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-      };
-    }
-    return isNumDuration
+  const formatNumerical = (value) =>
+    isNumDuration
       ? formatDurationIntoString(parseFloat(value))
       : isDurationMilliseconds
         ? formatDurationIntoString(parseFloat(value / 1000))
-        : parseInt(value).toLocaleString('en-US', localeParam);
-  };
+        : parseFloat(value).toFixed();
 
   const formatCategorical = (value) =>
     isTimestamp
@@ -642,10 +632,10 @@ export const transformWeightConfigForQuery = (config) => {
         Array.isArray(value) && value.length > 0
           ? value
           : value_type === 'categorical'
-            ? [value]
-            : value_type === 'numerical'
-              ? lower_bound
-              : value;
+          ? [value]
+          : value_type === 'numerical'
+          ? lower_bound
+          : value;
       const filter = {
         props: [property_type, key, value_type, property_type],
         operator: reverseOperatorMap[operator] || operator,
