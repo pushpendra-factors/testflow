@@ -3302,6 +3302,9 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 		var src *int
 		if i > 10 {
 			src = model.GetRequestSourcePointer(model.UserSourceHubspot)
+			if i > 6 {
+				src = model.GetRequestSourcePointer(model.UserSourceWeb)
+			}
 			createdUserID, _ = store.GetStore().CreateUser(&model.User{
 				ProjectId:      project.ID,
 				Source:         src,
@@ -3550,7 +3553,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 					GroupName: "$domains",
 				},
 				{
-					Entity:    "user_group",
+					Entity:    "user_g",
 					Type:      "categorical",
 					Property:  "$visited_website",
 					Operator:  "equals",
