@@ -904,8 +904,8 @@ func buildAddJoinForEventAnalyticsGroupQuery(projectID int64, groupID, scopeGrou
 
 			if hasGlobalGroupPropertiesFilter {
 				var globalGroupIDColumns, globalGroupSource string
-				// do not include user_group source for timelines all accounts
-				transformedGlobalProps := transformGlobalFilters(globalUserProperties)
+				// do not include user_group entity filters for timelines all accounts
+				transformedGlobalProps := RemoveUserGroupFilters(globalUserProperties)
 				globalGroupIDColumns, globalGroupSource = model.GetDomainsAsscocaitedGroupSourceANDColumnIDs(transformedGlobalProps, nil)
 
 				if globalGroupIDColumns != "" && globalGroupSource != "" {
@@ -950,8 +950,8 @@ func buildAddJoinForEventAnalyticsGroupQuery(projectID int64, groupID, scopeGrou
 	return "", nil
 }
 
-func transformGlobalFilters(globalUserProperties []model.QueryProperty) []model.QueryProperty {
-	// convert in_properties and do not include visited_website in group properties
+func RemoveUserGroupFilters(globalUserProperties []model.QueryProperty) []model.QueryProperty {
+	// do not include user_group entity filters for timelines all accounts
 	transformedProps := make([]model.QueryProperty, 0)
 	for _, p := range globalUserProperties {
 		if p.Entity == model.PropertyEntityUserGroup {
@@ -1106,10 +1106,17 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 	searchFilterStmt, searchParams, globalPropsWithoutSearchFil := searchFilterStringForSegments(q.Caller, scopeGroupID, q.GlobalUserProperties)
 	q.GlobalUserProperties = globalPropsWithoutSearchFil
 
+	transformedGlobalProps := q.GlobalUserProperties
+
+	if model.IsAccountProfiles(q.Caller) {
+		// do not include user_group entity filters for timelines all accounts
+		transformedGlobalProps = RemoveUserGroupFilters(q.GlobalUserProperties)
+	}
+
 	var commonSelectArr []string
 	for i := range q.EventsWithProperties {
 		userSelect := GetUserSelectStmntForUserORGroup(q.Caller, scopeGroupID, groupIDS[i] != 0, isEventGroupQueryDomains,
-			len(q.GroupByProperties) > 0, len(model.FilterGlobalGroupPropertiesFilterForDomains(q.GlobalUserProperties)) > 0)
+			len(q.GroupByProperties) > 0, len(model.FilterGlobalGroupPropertiesFilterForDomains(transformedGlobalProps)) > 0)
 		stepCommonSelect := userSelect + commonSelect
 		commonSelectArr = append(commonSelectArr, stepCommonSelect)
 	}
@@ -1178,7 +1185,7 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 		// Default join statement for users.
 		addJoinStmnt := "JOIN users ON events.user_id=users.id AND users.project_id = ?"
 
-		negativeFilters, _ := model.GetPropertyGroupedNegativeAndPostiveFilter(q.GlobalUserProperties)
+		negativeFilters, _ := model.GetPropertyGroupedNegativeAndPostiveFilter(transformedGlobalProps)
 
 		// Join support for original users of group.
 		var groupJoinParams []interface{}
@@ -1191,7 +1198,7 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 					stepParams = append(stepParams, searchParams...)
 				}
 			} else if isEventGroupQuery {
-				addJoinStmnt, groupJoinParams = buildAddJoinForEventAnalyticsGroupQuery(projectID, groupIDS[i], scopeGroupID, q.GroupAnalysis, q.GlobalUserProperties, model.IsAccountProfiles(q.Caller), isEventGroupQueryDomains)
+				addJoinStmnt, groupJoinParams = buildAddJoinForEventAnalyticsGroupQuery(projectID, groupIDS[i], scopeGroupID, q.GroupAnalysis, transformedGlobalProps, model.IsAccountProfiles(q.Caller), isEventGroupQueryDomains)
 				stepParams = append(stepParams, groupJoinParams...)
 
 			} else {
@@ -1199,7 +1206,7 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 				stepParams = append(stepParams, projectID)
 			}
 		} else if isEventGroupQuery && groupIDS[i] == 0 {
-			addJoinStmnt, groupJoinParams = buildAddJoinForEventAnalyticsGroupQuery(projectID, groupIDS[i], scopeGroupID, q.GroupAnalysis, q.GlobalUserProperties, model.IsAccountProfiles(q.Caller), isEventGroupQueryDomains)
+			addJoinStmnt, groupJoinParams = buildAddJoinForEventAnalyticsGroupQuery(projectID, groupIDS[i], scopeGroupID, q.GroupAnalysis, transformedGlobalProps, model.IsAccountProfiles(q.Caller), isEventGroupQueryDomains)
 			stepParams = append(stepParams, groupJoinParams...)
 
 			if searchFilterStmt != "" {
@@ -1224,7 +1231,7 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 				qParams, q, refStepName, groupIDS[i], scopeGroupID, i)
 		} else {
 			addFilterFunc(projectID, qStmnt, qParams, ewp, q.From, q.To,
-				"", refStepName, stepSelect, stepParams, addJoinStmnt, stepGroupBy, stepOrderBy, q.GlobalUserProperties, isEventGroupQueryDomains, "", q.Caller)
+				"", refStepName, stepSelect, stepParams, addJoinStmnt, stepGroupBy, stepOrderBy, transformedGlobalProps, isEventGroupQueryDomains, "", q.Caller)
 		}
 
 		// adding source check for segments
@@ -1236,7 +1243,7 @@ func (store *MemSQL) addEventFilterStepsForUniqueUsersQuery(projectID int64, q *
 					addSourceStmt = strings.ReplaceAll(addSourceStmt, fmt.Sprintf("step_%d_event_users_view.", i-1), fmt.Sprintf("%s_event_users_view.", refStepName))
 
 				}
-				if len(q.GlobalUserProperties) == 0 && len(ewp.Properties) == 0 {
+				if len(transformedGlobalProps) == 0 && len(ewp.Properties) == 0 {
 					*qStmnt = strings.TrimSuffix(*qStmnt, ")") + " WHERE" + addSourceStmt + ")"
 				} else {
 					*qStmnt = strings.TrimSuffix(*qStmnt, ")") + " AND" + addSourceStmt + ")"
@@ -1847,8 +1854,19 @@ func (store *MemSQL) buildUniqueUsersWithEachGivenEventsQuery(projectID int64,
 
 	qStmnt = joinWithComma(qStmnt, as(stepUsersUnion, unionStmnt))
 
+	// add join for all accounts query for user props (only for all account timeline listing and segments)
+	userJoinStmt, userParams := addUserPropsJoinForAllAccounts(projectID, stepUsersUnion, scopeGroupID,
+		query.Caller, query.GlobalUserProperties)
+
+	stepselect := stepUsersUnion
+	if userJoinStmt != "" {
+		qStmnt = qStmnt + userJoinStmt
+		qParams = append(qParams, userParams...)
+		stepselect = "user_fltr"
+	}
+
 	// add join for all accounts query (only for all account timeline listing and segments)
-	joinStmt, params := addLatestActivityJoinForAllAccounts(projectID, stepUsersUnion, scopeGroupID, query.Caller)
+	joinStmt, params := addLatestActivityJoinForAllAccounts(projectID, stepselect, scopeGroupID, query.Caller)
 
 	if joinStmt != "" {
 		qStmnt = qStmnt + joinStmt
@@ -2081,8 +2099,19 @@ func (store *MemSQL) buildUniqueUsersWithAllGivenEventsQuery(projectID int64,
 	qStmnt = joinWithComma(qStmnt, as(stepEventsIntersect,
 		fmt.Sprintf("SELECT %s FROM %s %s", intersectSelect, steps[0], intersectJoin)))
 
+	// add join for all accounts query for user props (only for all account timeline listing and segments)
+	userJoinStmt, userParams := addUserPropsJoinForAllAccounts(projectID, stepEventsIntersect, scopeGroupID,
+		query.Caller, query.GlobalUserProperties)
+
+	stepselect := stepEventsIntersect
+	if userJoinStmt != "" {
+		qStmnt = qStmnt + userJoinStmt
+		qParams = append(qParams, userParams...)
+		stepselect = "user_fltr"
+	}
+
 	// add join for all accounts query (only for all account timeline listing and segments)
-	joinStmt, params := addLatestActivityJoinForAllAccounts(projectID, stepEventsIntersect, scopeGroupID, query.Caller)
+	joinStmt, params := addLatestActivityJoinForAllAccounts(projectID, stepselect, scopeGroupID, query.Caller)
 
 	if joinStmt != "" {
 		qStmnt = qStmnt + joinStmt
@@ -2124,6 +2153,53 @@ func addLatestActivityJoinForAllAccounts(projectID int64, stepselect string, sco
 	params = []interface{}{projectID, model.UserSourceDomains}
 
 	return addJoinStmt, params
+}
+
+// join for all accounts listing and segments with user props
+func addUserPropsJoinForAllAccounts(projectID int64, stepselect string, scopeGroupID int,
+	caller string, globalUserProperties []model.QueryProperty) (string, []interface{}) {
+	var params []interface{}
+	if !model.IsAccountProfiles(caller) || scopeGroupID <= 0 || stepselect == "" {
+		return "", params
+	}
+
+	userProps := UserPropsFromGlobalFilters(globalUserProperties)
+
+	if len(userProps) == 0 {
+		return "", params
+	}
+
+	whereFilters, whereParams, err := buildWhereFromProperties(projectID, userProps, 0)
+	if err != nil || whereFilters == "" {
+		log.WithField("project_id", projectID).Error("failed to build where condition for user properties")
+		return "", params
+	}
+
+	whereFilters = strings.ReplaceAll(whereFilters, "user_global_user_properties", "properties")
+
+	addJoinStmt := fmt.Sprintf(", user_fltr AS (SELECT %s.coal_group_user_id as coal_group_user_id, %s.host_name FROM %s "+
+		"JOIN (SELECT group_%d_user_id FROM users WHERE project_id = ? AND source = ? AND %s) AS users ON %s.coal_group_user_id = users.group_%d_user_id "+
+		"GROUP BY coal_group_user_id)", stepselect, stepselect, stepselect, scopeGroupID, whereFilters, stepselect, scopeGroupID)
+
+	params = []interface{}{projectID, model.UserSourceWeb}
+	if len(whereParams) > 0 {
+		params = append(params, whereParams...)
+	}
+
+	return addJoinStmt, params
+}
+
+func UserPropsFromGlobalFilters(globalUserProperties []model.QueryProperty) []model.QueryProperty {
+	// list of all user_props
+	userProps := make([]model.QueryProperty, 0)
+	for _, p := range globalUserProperties {
+		if p.Entity != model.PropertyEntityUserGroup {
+			continue
+		}
+		userProps = append(userProps, p)
+	}
+
+	return userProps
 }
 
 /*
@@ -2272,8 +2348,19 @@ func (store *MemSQL) buildUniqueUsersWithAnyGivenEventsQuery(projectID int64,
 	stepUsersUnion := "events_union"
 	qStmnt = joinWithComma(qStmnt, as(stepUsersUnion, unionStmnt))
 
+	// add join for all accounts query for user props (only for all account timeline listing and segments)
+	userJoinStmt, userParams := addUserPropsJoinForAllAccounts(projectID, stepUsersUnion, scopeGroupID,
+		query.Caller, query.GlobalUserProperties)
+
+	stepselect := stepUsersUnion
+	if userJoinStmt != "" {
+		qStmnt = qStmnt + userJoinStmt
+		qParams = append(qParams, userParams...)
+		stepselect = "user_fltr"
+	}
+
 	// add join for all accounts query (only for all account timeline listing and segments)
-	joinStmt, params := addLatestActivityJoinForAllAccounts(projectID, stepUsersUnion, scopeGroupID, query.Caller)
+	joinStmt, params := addLatestActivityJoinForAllAccounts(projectID, stepselect, scopeGroupID, query.Caller)
 
 	if joinStmt != "" {
 		qStmnt = qStmnt + joinStmt
@@ -2343,8 +2430,19 @@ func (store *MemSQL) buildUniqueUsersSingleEventQuery(projectID int64,
 		return qStmnt, qParams, err
 	}
 
+	// add join for all accounts query for user props (only for all account timeline listing and segments)
+	userJoinStmt, userParams := addUserPropsJoinForAllAccounts(projectID, steps[0], scopeGroupID,
+		query.Caller, query.GlobalUserProperties)
+
+	stepselect := steps[0]
+	if userJoinStmt != "" {
+		qStmnt = qStmnt + userJoinStmt
+		qParams = append(qParams, userParams...)
+		stepselect = "user_fltr"
+	}
+
 	// add join for all accounts query (only for all account timeline listing and segments)
-	joinStmt, params := addLatestActivityJoinForAllAccounts(projectID, steps[0], scopeGroupID, query.Caller)
+	joinStmt, params := addLatestActivityJoinForAllAccounts(projectID, stepselect, scopeGroupID, query.Caller)
 
 	if joinStmt != "" {
 		qStmnt = qStmnt + joinStmt
