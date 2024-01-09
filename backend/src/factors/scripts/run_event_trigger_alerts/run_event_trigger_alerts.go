@@ -513,13 +513,14 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		if isSlackIntergrated {
 			partialSlackSuccess, _, errMsg := sendSlackAlertForEventTriggerAlert(eta.ProjectID,
 				eta.SlackChannelAssociatedBy, alert, alertConfiguration.SlackChannels, alertConfiguration.SlackMentions, alertConfiguration.IsHyperlinkDisabled)
-			if !partialSlackSuccess {
 				log.WithFields(log.Fields{
 					"project_id": eta.ProjectID,
 					"alert_id": eta.ID, 
 					"mode": SLACK, 
 					"retry": retry,
-					}).Warn("ALERT TRACKER RECORDED FAILURE")
+					"status": partialSlackSuccess,
+					}).Info("ALERT TRACKER.")
+			if !partialSlackSuccess {
 				sendReport.SlackFail++
 				errMessage = append(errMessage, errMsg)
 				deliveryFailures = append(deliveryFailures, SLACK)
@@ -548,13 +549,14 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		if isTeamsIntergrated {
 			teamsSuccess, errMsg := sendTeamsAlertForEventTriggerAlert(eta.ProjectID,
 				eta.TeamsChannelAssociatedBy, alert.Message, alertConfiguration.TeamsChannelsConfig)
+			log.WithFields(log.Fields{
+				"project_id": eta.ProjectID,
+				"alert_id":   eta.ID,
+				"mode":       TEAMS,
+				"retry":      retry,
+				"status":     teamsSuccess,
+			}).Info("ALERT TRACKER")
 			if !teamsSuccess {
-				log.WithFields(log.Fields{
-					"project_id": eta.ProjectID,
-					"alert_id": eta.ID, 
-					"mode": TEAMS, 
-					"retry": retry,
-					}).Warn("ALERT TRACKER RECORDED FAILURE")
 				sendReport.TeamsFail++
 				errMessage = append(errMessage, errMsg)
 				deliveryFailures = append(deliveryFailures, TEAMS)
@@ -580,13 +582,22 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		}
 		logCtx.WithField("response", response).Info("Webhook dropped for alert.")
 		stat := response["status"]
+		//if atleast one property field is not null in payload the payload is considered not null
+		isPayloadNull := true
+		for _, val := range alert.Message.MessageProperty {
+			if val != nil {
+				isPayloadNull = false
+			}
+		}
+		log.WithFields(log.Fields{
+			"project_id": eta.ProjectID,
+			"alert_id": eta.ID, 
+			"mode": WEBHOOK, 
+			"retry": retry,
+			"status": stat == "success",
+			"is_payload_null": isPayloadNull,
+			}).Info("ALERT TRACKER")
 		if stat != "success" {
-			log.WithFields(log.Fields{
-				"project_id": eta.ProjectID,
-				"alert_id": eta.ID, 
-				"mode": WEBHOOK, 
-				"retry": retry,
-				}).Warn("ALERT TRACKER RECORDED FAILURE")
 			log.WithField("status", stat).WithField("response", response).Error("Web hook error details")
 			sendReport.WebhookFail++
 			errMessage = append(errMessage, fmt.Sprintf("Webhook host reported %v error", response["error"]))
@@ -1177,7 +1188,7 @@ func sendTeamsAlertForEventTriggerAlert(projectID int64, agentUUID string,
 		log.Error(errMsg)
 		return false, errMsg
 	}
-	
+
 	err := U.DecodePostgresJsonbToStructType(Tchannels, &teamsChannels)
 	if err != nil {
 		errMsg := err.Error()
