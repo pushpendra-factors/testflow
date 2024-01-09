@@ -80,7 +80,11 @@ func (store *MemSQL) CreateAgentWithDependencies(params *model.CreateAgentParams
 
 	resp := &model.CreateAgentResponse{}
 
-	invitedBy := *params.Agent.InvitedBy
+	var invitedBy string
+	
+	if params.Agent.InvitedBy != nil {
+		invitedBy = *params.Agent.InvitedBy
+	}
 
 	if strings.HasSuffix(params.Agent.Email, "factors.ai") && invitedBy == "" {
 
