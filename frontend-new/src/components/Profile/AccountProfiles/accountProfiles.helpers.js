@@ -17,6 +17,7 @@ import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils'
 import { Popover, Tag } from 'antd';
 import styles from './index.module.scss';
 import { COLUMN_TYPE_PROPS } from 'Utils/table';
+import { AdminLock } from 'Routes/feature';
 const placeholderIcon = '/assets/avatar/company-placeholder.png';
 
 export const defaultSegmentsList = [
@@ -201,7 +202,7 @@ export const getColumns = ({
         )
       }
     );
-    if (activeAgent === 'solutions@factors.ai') {
+    if (AdminLock(activeAgent)) {
       columns.push({
         title: <div className={headerClassStr}>Engagement Signals</div>,
         width: COLUMN_TYPE_PROPS['actions'].max,

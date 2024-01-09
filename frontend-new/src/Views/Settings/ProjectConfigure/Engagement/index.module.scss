@@ -1,0 +1,112 @@
+.signal_name_input {
+  background-color: #fafafa;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+  margin: 4px 0 4px 0;
+
+  &:hover {
+    border-color: #b6b6b6;
+  }
+  &:focus {
+    border-color: #b6b6b6;
+    box-shadow: 0 0 0 2px #b6b6b633;
+  }
+}
+
+.eventslist {
+  padding: 10px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  margin: 20px 0;
+  transition-duration: 200ms;
+  &:hover {
+    box-shadow: 0 0 0px 0.5px #eeeeee;
+  }
+}
+
+// This is used in index.js
+.engagement_popover_horizontalpills {
+  & div {
+    padding: 2px 5px;
+  }
+  & div:nth-child(1) {
+    border-bottom-left-radius: 2px;
+    border-top-left-radius: 2px;
+    background-color: rgba(230, 247, 255, 1) !important;
+  }
+
+  & div:nth-child(2) {
+    background-color: rgba(214, 228, 255, 1) !important;
+  }
+
+  & div:nth-child(3) {
+    background-color: rgba(255, 231, 186, 1) !important;
+  }
+
+  & div:nth-child(4) {
+    background-color: #fad6d4 !important;
+    border-bottom-right-radius: 2px;
+    border-top-right-radius: 2px;
+  }
+}
+
+.engagement_category_fill {
+  width: 100%;
+
+  .category-pill {
+    border-radius: 1000px;
+    padding: 4px 18px 4px 10px;
+    width: fit-content;
+    display: flex;
+    margin: 5px 0;
+    user-select: none;
+
+    & img {
+      width: 24px;
+      height: 24px;
+      margin: 0 4px;
+    }
+    & h4 {
+      margin: auto 0;
+    }
+    & div:nth-child(1) h4 {
+      padding: 0 0 0 10px;
+    }
+
+    & > div {
+      border-radius: 4px;
+    }
+  }
+
+  & thead {
+    & td {
+      padding-left: 10px;
+    }
+  }
+  & td:nth-child(1) {
+    width: 30%;
+  }
+  & td:nth-child(2) {
+    display: flex;
+    width: 10%;
+
+    & .input-cells::after {
+      margin: auto 0;
+      content: '-';
+    }
+    & span {
+      margin: auto 0;
+      padding: 0 10px;
+    }
+  }
+  & td:nth-child(3) {
+    width: 10%;
+    & span {
+      margin: auto 0;
+      padding: 0 10px;
+    }
+  }
+  & td:nth-child(4) {
+    width: 50% !important;
+  }
+}

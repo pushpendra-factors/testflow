@@ -591,14 +591,15 @@ export const sortStringColumn = (a = '', b = '') => {
 export const sortNumericalColumn = (a = 0, b = 0) => a - b;
 
 export const transformPayloadForWeightConfig = (payload) => {
-  const { key: wid, label: event_name, weight, vr, filters } = payload;
+  const { key: wid, label: event_name, weight, vr, filters, fname } = payload;
   const output = {
     wid,
     event_name,
     weight,
     is_deleted: false,
     rule: [],
-    vr: vr === 0 ? 0 : 1
+    vr: vr === 0 ? 0 : 1,
+    fname
   };
 
   if (filters?.length) {
@@ -623,13 +624,14 @@ export const transformPayloadForWeightConfig = (payload) => {
 };
 
 export const transformWeightConfigForQuery = (config) => {
-  const { wid: key, event_name: label, weight, vr, rule } = config;
+  const { wid: key, event_name: label, weight, vr, rule, fname } = config;
   const output = {
     key,
     label,
     weight,
     filters: [],
-    vr
+    vr,
+    fname
   };
 
   if (rule) {
