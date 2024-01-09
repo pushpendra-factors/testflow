@@ -1,20 +1,52 @@
-import { Button, Modal, Slider } from 'antd';
+import { Button, Input, Modal, Slider } from 'antd';
 import { Text } from 'Components/factorsComponents';
 import { getGroupList } from 'Components/Profile/AccountProfiles/accountProfiles.helpers';
 import EventsBlock from 'Components/Profile/MyComponents/EventsBlock';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useRef
+} from 'react';
 import { useSelector } from 'react-redux';
+import styles from './index.module.scss';
+import { PlusOutlined } from '@ant-design/icons';
 
 function EngagementModal({ visible, onOk, onCancel, event, editMode }) {
+  const sliderRef = useRef();
+  // This ModalVisible state helps to get animation and
+  // Unmount the Modal AntD, which completely destroys, its prev states.
+  // This method is used because {event} variable is changing its behaviour
+  const [modalVisible, setModalVisible] = useState(visible);
   const [listEvents, setListEvents] = useState([]);
+  // Below 2 states are to track the changes in the rulename, and slider value
+  const [ruleName, setRuleName] = useState('');
+  const [sliderState, setSliderState] = useState(0);
+
   const [isEventsDDVisible, setEventsDDVisible] = useState(false);
   const availableGroups = useSelector((state) => state.coreQuery.groups);
-
+  useEffect(() => {
+    if (visible === false) {
+      let handle = setTimeout(() => {
+        setModalVisible(false);
+        clearTimeout(handle); // Removing the handler after use
+      }, 200);
+      // This was added to remove the Filter pills on cancel of EngagementModal
+      // This ModalVisible is used to show & hide Modal Antd with some delay, which doesn't breaks the animation
+    } else {
+      setModalVisible(true);
+    }
+  }, [visible]);
   useEffect(() => {
     if (!event || event === undefined || Object.keys(event).length === 0)
       setListEvents([]);
     else setListEvents([event]);
   }, [event]);
+  useEffect(() => {
+    setRuleName(event.fname);
+    setSliderState(event.weight);
+  }, [event.fname, event.weight]);
 
   const groupsList = useMemo(() => {
     return getGroupList(availableGroups?.all_groups);
@@ -22,10 +54,15 @@ function EngagementModal({ visible, onOk, onCancel, event, editMode }) {
 
   const onCancelState = () => {
     onCancel();
+    // Below 2 are to reset the values to its actual values
+    // if it is not changed.
+    setSliderState(event.weight);
+    setRuleName(event.fname);
+    // setListEvents([event]); // this is not working, because values of [event] is getting changed even if we are not changing it.
   };
 
   const onSaveState = () => {
-    const payload = listEvents[0];
+    const payload = { ...listEvents[0], fname: ruleName, weight: sliderState };
     onOk(payload, editMode);
   };
 
@@ -112,8 +149,13 @@ function EngagementModal({ visible, onOk, onCancel, event, editMode }) {
     event.weight = value;
     setListEvents([event]);
   };
-
-  return (
+  const handleRuleNameChange = useCallback((e) => {
+    setRuleName(e.target.value);
+  }, []);
+  const handleSliderChange = (value) => {
+    setSliderState(value);
+  };
+  return modalVisible ? (
     <Modal
       title={null}
       width={750}
@@ -123,24 +165,36 @@ function EngagementModal({ visible, onOk, onCancel, event, editMode }) {
       closable={false}
       centered
     >
-      <div className='p-6'>
+      <div className='p-2'>
         <div className='pb-4'>
           <Text extraClass='m-0' type='title' level={4} weight='bold'>
-            {editMode ? 'Edit' : 'Add New'} Score
+            {editMode ? 'Edit' : 'Add New'} signal
           </Text>
           <Text extraClass='m-0' type='title' level={7} color='grey'>
             {editMode
-              ? 'Edit filters/rules for this event or assign new weights'
-              : 'Find and select an event, then assign it weights'}
+              ? 'Define the event conditions for the signal and assign it an appropriate weight.'
+              : 'Define the event conditions for the signal and assign it an appropriate weight.'}
           </Text>
         </div>
-        <div className='pb-4'>
+        <div>
+          <Text extraClass='m-0 font-normal' type='title' level={6}>
+            Signal Name
+          </Text>
+          <Input
+            onChange={handleRuleNameChange}
+            value={ruleName}
+            className={styles['signal_name_input']}
+            type='text'
+            placeholder='Eg: Pricing page visit'
+          />
+        </div>
+        <div className={`${styles['eventslist']}`}>
           {eventsList()}
           {!isEventsDDVisible && listEvents.length === 0 && (
             <div className='relative'>
               <Button
-                className='btn-total-round'
-                type='link'
+                icon={<PlusOutlined />}
+                type='dashed'
                 onClick={() => setEventsDDVisible(true)}
               >
                 Select Event
@@ -156,20 +210,29 @@ function EngagementModal({ visible, onOk, onCancel, event, editMode }) {
             weight='bold'
             color='grey'
           >
-            Assign weights
+            Assign weight
           </Text>
+          <div id='tooltip-container'></div>
           <Slider
             disabled={!listEvents.length}
-            onChange={setSliderValue}
-            value={listEvents?.[0]?.weight}
+            onChange={handleSliderChange}
+            value={sliderState}
             marks={marks}
             min={0}
+            step={5}
             max={100}
+            getTooltipPopupContainer={() =>
+              document.querySelector('#tooltip-container')
+            }
           />
         </div>
         <div className='flex flex-row-reverse justify-between'>
-          <div>
-            <Button className='mr-1' type='default' onClick={onCancelState}>
+          <div className='inline-flex'>
+            <Button
+              className='mr-1 dropdown-btn'
+              type='text'
+              onClick={onCancelState}
+            >
               Cancel
             </Button>
             <Button
@@ -178,7 +241,7 @@ function EngagementModal({ visible, onOk, onCancel, event, editMode }) {
               type='primary'
               onClick={onSaveState}
             >
-              Save
+              {!editMode ? 'Add Signal' : 'Save changes'}
             </Button>
           </div>
           {/* <Button
@@ -191,6 +254,8 @@ function EngagementModal({ visible, onOk, onCancel, event, editMode }) {
         </div>
       </div>
     </Modal>
+  ) : (
+    ''
   );
 }
 export default EngagementModal;
