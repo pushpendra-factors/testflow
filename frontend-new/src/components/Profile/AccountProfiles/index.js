@@ -1,7 +1,22 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef
+} from 'react';
 import isEqual from 'lodash/isEqual';
 import cx from 'classnames';
-import { Table, Button, Spin, Popover, Tabs, notification, Input } from 'antd';
+import {
+  Table,
+  Button,
+  Spin,
+  Popover,
+  Tabs,
+  notification,
+  Input,
+  Form
+} from 'antd';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { useHistory, useLocation, useParams } from 'react-router-dom';
@@ -1057,7 +1072,8 @@ function AccountProfiles({
         displayTableProps,
         groupPropNames,
         listProperties,
-        defaultSorterInfo
+        defaultSorterInfo,
+        activeAgent
       })
     );
   }, [
@@ -1088,55 +1104,41 @@ function AccountProfiles({
   //   listProperties,
   //   defaultSorterInfo
   // ]);
-  useEffect(() => {
-    let from = location.state?.state?.accountsTableRow;
-    if (from && document.getElementById(from)) {
-      const element = document.getElementById(from);
-      const y = element?.getBoundingClientRect().top + window.scrollY - 100;
+  const tableRef = useRef();
 
-      window.scrollTo({ top: y, behavior: 'smooth' });
+  useEffect(() => {
+    // This is the name of Account which was opened recently
+    let from = location.state?.state?.accountsTableRow;
+    // Finding the tableElement because we have only one .ant-table-body inside tableRef Tree
+    // If in future we add table body inside it, need to change it later on
+    let tableElement = tableRef.current?.querySelector('.ant-table-body');
+
+    if (tableElement && from && document.getElementById(from)) {
+      const element = document.getElementById(from);
+      // Y is the relative position that we want to scroll by
+      // this is calculated by ORIGINALELEMENTY-TABLEELEMENT - 15 ( because of some padding or margin )
+      const y =
+        element?.getBoundingClientRect().y -
+        tableElement.getBoundingClientRect().y -
+        15;
+
+      tableElement.scrollTo({ top: y, behavior: 'smooth' });
 
       location.state.state.accountsTableRow = '';
-      // document.getElementById(location.hash.split('#')[1])?.scrollIntoView();
-      // window.scrollBy(0, -150);
     }
-  }, [newTableColumns]);
+  }, [newTableColumns, tableRef]);
   const renderTable = useCallback(() => {
-    const handleResize =
-      (index) =>
-      (_, { size }) => {
-        const tmpColType = newTableColumns[index]?.type;
-        const tmpColWidthRange =
-          COLUMN_TYPE_PROPS[tmpColType ? tmpColType : 'string'];
-        const newColumns = [...newTableColumns];
-        newColumns[index] = {
-          ...newColumns[index],
-          width: (() => {
-            if (size.width < tmpColWidthRange.min) return tmpColWidthRange.min;
-            else if (size.width > tmpColWidthRange.max)
-              return tmpColWidthRange.max;
-            return size.width;
-          })()
-        };
-        setNewTableColumns(newColumns);
-      };
-
     const mergeColumns = newTableColumns.map((col, index) => ({
       ...col,
       onHeaderCell: (column) => ({
-        width: column.width,
-        onResize: handleResize(index)
+        width: column.width
       })
     }));
 
     return (
       <div>
         <Table
-          components={{
-            header: {
-              cell: ResizableTitle
-            }
-          }}
+          ref={tableRef}
           onRow={(account) => ({
             onClick: () => {
               history.push(
