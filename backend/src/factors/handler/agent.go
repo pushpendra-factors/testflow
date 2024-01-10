@@ -119,7 +119,6 @@ func Signin(c *gin.Context) {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, helpers.SecondsInOneMonth*time.Second)
 
 	domain := C.GetCookieDomian()
-
 	cookie := C.UseSecureCookie()
 	httpOnly := C.UseHTTPOnlyCookie()
 	if C.IsDevBox() {
@@ -128,6 +127,12 @@ func Signin(c *gin.Context) {
 		c.SetSameSite(http.SameSiteNoneMode)
 	}
 	c.SetCookie(C.GetFactorsCookieName(), cookieData, helpers.SecondsInOneMonth, "/", domain, cookie, httpOnly)
+	logCtx.WithField("cookie_data", cookieData).
+		WithField("domain", domain).
+		WithField("cookie_name", C.GetFactorsCookieName()).
+		WithField("http_only", httpOnly).
+		WithField("secure_cookie", cookie).
+		WithField("err", err).Error("Set Cookie data log.")
 	resp := map[string]string{
 		"status": "success",
 	}
@@ -210,7 +215,7 @@ func AgentInvite(c *gin.Context) {
 	if createDefaultDashBoard == "false" {
 		createDashboard = false
 	}
-	
+
 	project, errCode := store.GetStore().GetProject(projectId)
 	if errCode != http.StatusFound {
 		c.AbortWithStatus(http.StatusInternalServerError)
@@ -917,6 +922,7 @@ func MapProjectAgentMapping(mapping model.ProjectAgentMapping) model.ProjectAgen
 		UpdatedAt: mapping.UpdatedAt,
 	}
 }
+
 // func GetAgentBillingAccount(c *gin.Context) {
 // 	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
