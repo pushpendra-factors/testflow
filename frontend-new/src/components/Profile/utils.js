@@ -145,7 +145,7 @@ export const getFiltersRequestPayload = ({
   };
 
   return {
-    query: getSegmentQuery(eventsList, queryOptions, eventProp)
+    query: getSegmentQuery(eventsList, queryOptions, eventProp, caller)
   };
 };
 
@@ -170,7 +170,7 @@ export const formatReqPayload = (payload, segment = {}) => {
   return req;
 };
 
-export const getSegmentQuery = (queries, queryOptions, userType) => {
+export const getSegmentQuery = (queries, queryOptions, userType, caller) => {
   const query = {};
   query.grpa = queryOptions?.group_analysis;
   query.source = queryOptions?.source;
@@ -194,7 +194,7 @@ export const getSegmentQuery = (queries, queryOptions, userType) => {
   query.to = period.to;
 
   query.ewp = getEventsWithProperties(queries);
-  query.gup = formatFiltersForPayload(queryOptions?.globalFilters);
+  query.gup = formatFiltersForPayload(queryOptions?.globalFilters, caller);
 
   query.ec = EVENT_QUERY_USER_TYPE[userType];
   query.tz = localStorage.getItem('project_timeZone') || 'Asia/Kolkata';
@@ -202,7 +202,7 @@ export const getSegmentQuery = (queries, queryOptions, userType) => {
 };
 
 const getEntityName = (source, entity) => {
-  if (source === 'accounts') {
+  if (source === 'account_profiles') {
     return entity === 'user' ? 'user_group' : 'user_g';
   } else {
     return 'user_g';
