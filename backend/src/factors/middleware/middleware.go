@@ -466,6 +466,7 @@ func CustomCors() gin.HandlerFunc {
 					"https://flash-staging.factors.ai",
 					"https://sloth-staging.factors.ai",
 					"https://violet.factors.app",
+					"https://blue.factors.app",
 				}
 			} else {
 				corsConfig.AllowOrigins = []string{
@@ -478,6 +479,8 @@ func CustomCors() gin.HandlerFunc {
 					"https://flash.factors.ai",
 					"https://sloth.factors.ai",
 					"https://violet.factors.app",
+					"https://blue.factors.app",
+
 				}
 			}
 

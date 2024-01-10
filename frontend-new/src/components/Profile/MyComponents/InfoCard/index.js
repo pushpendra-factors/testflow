@@ -42,9 +42,7 @@ function InfoCard({
           charLimit={32}
           shouldTruncateURL
         >
-          {eventType === 'FE'
-            ? title
-            : propValueFormat(key, value, propType) || '-'}
+          {propValueFormat(key, value, propType) || '-'}
         </Text>
       </div>
     );
