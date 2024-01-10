@@ -72,6 +72,15 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
     const weightConf = [...weightsConfig];
     const newConfig = transformPayloadForWeightConfig(config);
 
+    if (
+      weightConf.find(
+        (existingConfig) => existingConfig.fname === newConfig.fname
+      )
+    ) {
+      showErrorMessage('Duplicate Rule Name found');
+      return;
+    }
+
     if (editMode) {
       const noChangesMade = weightConf.find(
         (existingConfig) =>
@@ -81,6 +90,7 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
           existingConfig.weight === newConfig.weight &&
           existingConfig.fname === newConfig.fname
       );
+
       if (noChangesMade) {
         showErrorMessage('No changes to save.');
         return;
@@ -299,7 +309,7 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
           <Row className='my-6'>
             <Col span={24}>
               <div className='flex items-center'>
-                <div className='mr-2'>Set enagagement window</div>
+                <div className='mr-2'>Set engagement window</div>
                 {Number(saleWindowValue) <= 0 ||
                 saleWindowValue == undefined ||
                 saleWindowValue == null ? (
