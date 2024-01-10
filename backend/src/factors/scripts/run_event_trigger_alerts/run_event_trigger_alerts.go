@@ -513,13 +513,14 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		if isSlackIntergrated {
 			partialSlackSuccess, _, errMsg := sendSlackAlertForEventTriggerAlert(eta.ProjectID,
 				eta.SlackChannelAssociatedBy, alert, alertConfiguration.SlackChannels, alertConfiguration.SlackMentions, alertConfiguration.IsHyperlinkDisabled)
-				log.WithFields(log.Fields{
-					"project_id": eta.ProjectID,
-					"alert_id": eta.ID, 
-					"mode": SLACK, 
-					"retry": retry,
-					"status": partialSlackSuccess,
-					}).Info("ALERT TRACKER.")
+			log.WithFields(log.Fields{
+				"project_id": eta.ProjectID,
+				"alert_id":   eta.ID,
+				"mode":       SLACK,
+				"retry":      retry,
+				"is_success": partialSlackSuccess,
+				"tag":        "alert_tracker",
+			}).Info("ALERT TRACKER.")
 			if !partialSlackSuccess {
 				sendReport.SlackFail++
 				errMessage = append(errMessage, errMsg)
@@ -554,7 +555,8 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 				"alert_id":   eta.ID,
 				"mode":       TEAMS,
 				"retry":      retry,
-				"status":     teamsSuccess,
+				"is_success": teamsSuccess,
+				"tag":        "alert_tracker",
 			}).Info("ALERT TRACKER")
 			if !teamsSuccess {
 				sendReport.TeamsFail++
@@ -590,13 +592,14 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 			}
 		}
 		log.WithFields(log.Fields{
-			"project_id": eta.ProjectID,
-			"alert_id": eta.ID, 
-			"mode": WEBHOOK, 
-			"retry": retry,
-			"status": stat == "success",
+			"project_id":      eta.ProjectID,
+			"alert_id":        eta.ID,
+			"mode":            WEBHOOK,
+			"retry":           retry,
+			"is_success":      stat == "success",
+			"tag":             "alert_tracker",
 			"is_payload_null": isPayloadNull,
-			}).Info("ALERT TRACKER")
+		}).Info("ALERT TRACKER")
 		if stat != "success" {
 			log.WithField("status", stat).WithField("response", response).Error("Web hook error details")
 			sendReport.WebhookFail++
