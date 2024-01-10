@@ -3117,8 +3117,8 @@ func SalesforceAllowOpportunityOverrideCreateCreatedEvent(projectID int64) bool 
 	return allowedProjectIDs[projectID]
 }
 
-func GetParagonTokenSigningKey() []byte {
-	return []byte(configuration.ParagonTokenSigningKey)
+func GetParagonTokenSigningKey() string {
+	return configuration.ParagonTokenSigningKey
 }
 
 func GetParagonProjectID() string {
