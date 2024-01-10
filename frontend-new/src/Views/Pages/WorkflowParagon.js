@@ -16,7 +16,7 @@ const WorkflowParagon = function () {
   const [state, setState] = useState({
     token: ''
   });
-  const { user } = useParagon(state.token);
+  const { user, error, isLoaded } = useParagon(state.token);
   const fetchToken = async () => {
     get(null, `${host}projects/${project_id}/paragon/auth`)
       .then((res) => {
@@ -47,11 +47,10 @@ const WorkflowParagon = function () {
         <Text type={'title'} level={3}>
           Integrations
         </Text>
-
         <List
           style={{ width: '100%' }}
           grid={{ gutter: 16, column: 6 }}
-          loading={!user?.integrations}
+          loading={!isLoaded}
           dataSource={paragon.getIntegrationMetadata()}
           renderItem={(integration, index) => {
             const integrationEnabled =

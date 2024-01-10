@@ -62,7 +62,7 @@ function SaleWindowModal({ saleWindowValue, visible, onOk, onCancel }) {
       <div className='p-6'>
         <div className='pb-4'>
           <Text extraClass='m-0' type='title' level={4} weight='bold'>
-            Set enagagement window
+            Set engagement window
           </Text>
           <Text extraClass='m-0' type='title' level={7} color='grey'>
             Engagement score is refreshed everyday for all accounts. So, if an

@@ -205,7 +205,7 @@ export const getColumns = ({
     if (AdminLock(activeAgent)) {
       columns.push({
         title: <div className={headerClassStr}>Engagement Signals</div>,
-        width: COLUMN_TYPE_PROPS['actions'].max,
+        width: COLUMN_TYPE_PROPS['string'].max,
         dataIndex: 'top_engagements',
         type: 'actions',
         key: 'top_engagements',

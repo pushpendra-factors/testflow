@@ -1,4 +1,4 @@
-import { Button, Input, Modal, Slider } from 'antd';
+import { Button, Form, Input, Modal, Slider } from 'antd';
 import { Text } from 'Components/factorsComponents';
 import { getGroupList } from 'Components/Profile/AccountProfiles/accountProfiles.helpers';
 import EventsBlock from 'Components/Profile/MyComponents/EventsBlock';
@@ -180,12 +180,15 @@ function EngagementModal({ visible, onOk, onCancel, event, editMode }) {
           <Text extraClass='m-0 font-normal' type='title' level={6}>
             Signal Name
           </Text>
+
           <Input
             onChange={handleRuleNameChange}
             value={ruleName}
             className={styles['signal_name_input']}
             type='text'
             placeholder='Eg: Pricing page visit'
+            maxLength={20}
+            showCount
           />
         </div>
         <div className={`${styles['eventslist']}`}>
@@ -236,7 +239,7 @@ function EngagementModal({ visible, onOk, onCancel, event, editMode }) {
               Cancel
             </Button>
             <Button
-              disabled={!listEvents.length}
+              disabled={!listEvents.length || !ruleName?.length > 0}
               className='ml-1'
               type='primary'
               onClick={onSaveState}
