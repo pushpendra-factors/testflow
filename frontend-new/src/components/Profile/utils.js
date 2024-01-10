@@ -340,12 +340,22 @@ export const propValueFormat = (searchKey, value, type) => {
     return MomentTz(value * 1000).format(dateFormat);
   };
 
-  const formatNumerical = (value) =>
-    isNumDuration
+  const formatNumerical = (value) => {
+    let localeParam;
+    if (searchKey === '$6Signal_annual_revenue') {
+      localeParam = {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      };
+    }
+    return isNumDuration
       ? formatDurationIntoString(parseFloat(value))
       : isDurationMilliseconds
         ? formatDurationIntoString(parseFloat(value / 1000))
-        : parseFloat(value).toFixed();
+        : parseInt(value).toLocaleString('en-US', localeParam);
+  };
 
   const formatCategorical = (value) =>
     isTimestamp
@@ -581,14 +591,15 @@ export const sortStringColumn = (a = '', b = '') => {
 export const sortNumericalColumn = (a = 0, b = 0) => a - b;
 
 export const transformPayloadForWeightConfig = (payload) => {
-  const { key: wid, label: event_name, weight, vr, filters } = payload;
+  const { key: wid, label: event_name, weight, vr, filters, fname } = payload;
   const output = {
     wid,
     event_name,
     weight,
     is_deleted: false,
     rule: [],
-    vr: vr === 0 ? 0 : 1
+    vr: vr === 0 ? 0 : 1,
+    fname
   };
 
   if (filters?.length) {
@@ -613,13 +624,14 @@ export const transformPayloadForWeightConfig = (payload) => {
 };
 
 export const transformWeightConfigForQuery = (config) => {
-  const { wid: key, event_name: label, weight, vr, rule } = config;
+  const { wid: key, event_name: label, weight, vr, rule, fname } = config;
   const output = {
     key,
     label,
     weight,
     filters: [],
-    vr
+    vr,
+    fname
   };
 
   if (rule) {
@@ -632,10 +644,10 @@ export const transformWeightConfigForQuery = (config) => {
         Array.isArray(value) && value.length > 0
           ? value
           : value_type === 'categorical'
-          ? [value]
-          : value_type === 'numerical'
-          ? lower_bound
-          : value;
+            ? [value]
+            : value_type === 'numerical'
+              ? lower_bound
+              : value;
       const filter = {
         props: [property_type, key, value_type, property_type],
         operator: reverseOperatorMap[operator] || operator,

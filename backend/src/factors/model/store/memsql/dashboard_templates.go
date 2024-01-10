@@ -32,7 +32,8 @@ var requiredIntegrations = []string{model.IntegrationWebsiteSDK,
 	model.IntegrationBing,
 	model.IntegrationClearbit,
 	model.IntegrationLeadsquared,
-	model.Integration6Signal}
+	model.Integration6Signal,
+	model.IntegrationG2}
 
 func (store *MemSQL) CreateTemplate(template *model.DashboardTemplate) (*model.DashboardTemplate, int, string) {
 	db := C.GetServices().Db

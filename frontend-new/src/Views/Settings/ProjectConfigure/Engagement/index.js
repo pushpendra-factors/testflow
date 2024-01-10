@@ -1,6 +1,16 @@
-import { Button, Col, Modal, notification, Row, Table } from 'antd';
+import {
+  Button,
+  Col,
+  Modal,
+  notification,
+  Popover,
+  Row,
+  Table,
+  Tooltip
+} from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
 import {
+  EngagementTag,
   findKeyByValue,
   transformPayloadForWeightConfig,
   transformWeightConfigForQuery
@@ -14,8 +24,11 @@ import { updateAccountScores } from 'Reducers/timelines';
 import { fetchProjectSettings } from 'Reducers/global';
 import SaleWindowModal from './SaleWindowModal';
 import { getGroups } from 'Reducers/coreQuery/middleware';
+import { InfoCircleFilled } from '@ant-design/icons';
+import styles from './index.module.scss';
 
 function EngagementConfig({ fetchProjectSettings, getGroups }) {
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [saleWindowValue, setSaleWindowValue] = useState();
   const [showSaleWindowModal, setShowSaleWindowModal] = useState(false);
@@ -28,16 +41,17 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
   useEffect(() => {
     getGroups(activeProject?.id);
   }, [activeProject?.id]);
-
+  const headerClassStr =
+    'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold';
   const columns = [
     {
-      title: 'Event',
+      title: <div className={headerClassStr}>Engagement Signals</div>,
       dataIndex: 'label',
       key: 'label',
       ellipsis: true
     },
     {
-      title: 'Engagement Score',
+      title: <div className={headerClassStr}>Weight assigned</div>,
       width: 250,
       dataIndex: 'weight',
       key: 'weight'
@@ -58,13 +72,23 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
     const weightConf = [...weightsConfig];
     const newConfig = transformPayloadForWeightConfig(config);
 
+    if (
+      weightConf.find(
+        (existingConfig) => existingConfig.fname === newConfig.fname
+      )
+    ) {
+      showErrorMessage('Duplicate Rule Name found');
+      return;
+    }
+
     if (editMode) {
       const noChangesMade = weightConf.find(
         (existingConfig) =>
           existingConfig.event_name === newConfig.event_name &&
           existingConfig.wid === newConfig.wid &&
           _.isEqual(newConfig.rule, existingConfig.rule) &&
-          existingConfig.weight === newConfig.weight
+          existingConfig.weight === newConfig.weight &&
+          existingConfig.fname === newConfig.fname
       );
 
       if (noChangesMade) {
@@ -128,7 +152,14 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
       });
     setShowModal(false);
   };
-
+  const handleCategoryModal = {
+    onCancel: () => {
+      setShowCategoryModal(false);
+    },
+    onOK: () => {
+      setShowCategoryModal(false);
+    }
+  };
   const handleSaleWindowOk = (value) => {
     setSaleWindowValue(value);
     setShowSaleWindowModal(false);
@@ -212,23 +243,25 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
         return {
           ...event,
           is_deleted: q.is_deleted,
-          label: eventNames[event.label]
-            ? eventNames[event.label]
-            : event.label,
+          label: event.fname,
           weight: (
             <div className='flex justify-between items-center'>
               <div>{event.weight}</div>
               <div className='flex justify-between items-center'>
-                <Button
-                  onClick={() => setEdit(event)}
-                  type='text'
-                  icon={<SVG name='edit' />}
-                />
-                <Button
-                  onClick={() => renderDeleteModal(event, index)}
-                  type='text'
-                  icon={<SVG name='delete' />}
-                />
+                <Tooltip title='Edit Signal'>
+                  <Button
+                    onClick={() => setEdit(event)}
+                    type='text'
+                    icon={<SVG name='edit' />}
+                  />
+                </Tooltip>
+                <Tooltip title='Delete Signal'>
+                  <Button
+                    onClick={() => renderDeleteModal(event, index)}
+                    type='text'
+                    icon={<SVG name='delete' />}
+                  />
+                </Tooltip>
               </div>
             </div>
           )
@@ -243,21 +276,26 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
         <Col span={18}>
           <Row>
             <Col span={18}>
-              <Text type='title' level={4} weight='bold' id={'fa-at-text--page-title'}>
+              <Text
+                type='title'
+                level={4}
+                weight='bold'
+                id={'fa-at-text--page-title'}
+              >
                 Engagement Scoring
               </Text>
             </Col>
           </Row>
           <Row>
-            <Col span={18}>
+            <Col span={12}>
               <Text type='title' level={7}>
-                Some events matter more than others, and are better indicators
-                of buying intent. Configure scores for them, tag them as intent
-                signals, and more.
+                Define signals of engagement that matter to your organisation
+                and assign them weights to accurately score the engagement level
+                of your accounts.
               </Text>
             </Col>
-            <Col span={6}>
-              <div className='flex justify-end'>
+            <Col span={12}>
+              <div className='flex justify-end' style={{ gap: '10px' }}>
                 <Button
                   type='primary'
                   icon={<SVG name='plus' color='white' />}
@@ -271,7 +309,7 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
           <Row className='my-6'>
             <Col span={24}>
               <div className='flex items-center'>
-                <div className='mr-2'>How long is your average sales cycle</div>
+                <div className='mr-2'>Set engagement window</div>
                 {Number(saleWindowValue) <= 0 ||
                 saleWindowValue == undefined ||
                 saleWindowValue == null ? (
@@ -313,7 +351,7 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
                     icon={<SVG name='plus' color='white' />}
                     onClick={setAddNewScore}
                   >
-                    Add a rule
+                    Add new signal
                   </Button>
                 </div>
               )}
@@ -321,6 +359,7 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
           </Row>
         </Col>
       </Row>
+
       <EngagementModal
         event={activeEvent}
         visible={showModal}
@@ -329,6 +368,7 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
         editMode={Object.entries(activeEvent).length}
       />
       <SaleWindowModal
+        saleWindowValue={saleWindowValue}
         visible={showSaleWindowModal}
         onOk={handleSaleWindowOk}
         onCancel={handleCancelSaleWindow}

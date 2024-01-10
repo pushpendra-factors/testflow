@@ -30,7 +30,7 @@ import {
 } from 'Views/Settings/ProjectSettings/SDKSettings/utils';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import StepsPdf from './StepsPdf';
-import { generateCopyText } from '../../../utils';
+import { OnboardingSupportLink, generateCopyText } from '../../../utils';
 import {
   CommonStepsProps,
   OnboardingStepsConfig,
@@ -125,8 +125,8 @@ function Step2({
 
       {sdkVerified && !verificationLoading[type] && (
         <div className='flex justify-between items-center'>
-          <div>
-            <SVG name={'CheckCircle'} extraClass={'inline'} />
+          <div className='flex  items-center'>
+            <SVG name={'CheckCircle'} extraClass={'inline'} color='#52C41A' />
             <Text
               type={'title'}
               level={6}
@@ -198,9 +198,7 @@ function Step2({
             type={'text'}
             size={'small'}
             style={{ color: '#1890FF', padding: 0, marginLeft: 4 }}
-            onClick={() =>
-              window.open('https://calendly.com/aravindhvetri', '_blank')
-            }
+            onClick={() => window.open(OnboardingSupportLink, '_blank')}
           >
             book a call
           </Button>

@@ -22,6 +22,9 @@ export const SDK_FLOW = {
     'SDK still says "Not verified"? Check these steps(https://help.factors.ai/en/articles/7260638-connecting-factors-to-your-website)'
 };
 
+export const OnboardingSupportLink =
+  'https://factors.schedulehero.io/meet/naveena/integration-call';
+
 export const CopyTitle = 'Connecting Factors to your website';
 export const CopySdkTitle = 'Factors SDK snippet';
 export const CopyNote =
@@ -59,7 +62,7 @@ export const generateCopyText = (script: string) => `
       
 
 
-  If you have any questions or issues, please reach out to our support team(https://calendly.com/aravindhvetri) for assistance. 
+  If you have any questions or issues, please reach out to our support team(${OnboardingSupportLink}) for assistance. 
 `;
 
 const isOnboardingStepCompleted = (config: any, steps: string[]) => {
