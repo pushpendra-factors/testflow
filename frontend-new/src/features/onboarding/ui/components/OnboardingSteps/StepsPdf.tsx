@@ -21,6 +21,7 @@ import {
   CopyOption2Desc,
   CopySdkTitle,
   CopyTitle,
+  OnboardingSupportLink,
   SDK_FLOW
 } from '../../../utils';
 
@@ -220,8 +221,8 @@ function StepsPdf({ scriptCode }: StepsPdfProps) {
           <View style={{ marginTop: 40 }}>
             <Text style={styles.normalText}>
               If you have any questions or issues, please reach out to our{' '}
-              <Link src='https://calendly.com/aravindhvetri'>support team</Link>{' '}
-              for assistance.
+              <Link src={OnboardingSupportLink}>support team</Link> for
+              assistance.
             </Text>
           </View>
         </View>
