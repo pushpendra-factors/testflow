@@ -88,7 +88,7 @@ import { isOnboarded } from 'Utils/global';
 import { PathUrls } from 'Routes/pathUrls';
 import styles from './index.module.scss';
 import { getSegmentColorCode } from 'Views/AppSidebar/appSidebar.helpers';
-import { AdminLock } from 'Routes/feature';
+import truncateURL from 'Utils/truncateURL';
 
 const userOptions = getUserOptions();
 
@@ -132,10 +132,7 @@ function UserProfiles({
   const { newSegmentMode, filtersDirty: areFiltersDirty } = useSelector(
     (state) => state.userProfilesView
   );
-
-  const agentState = useSelector((state) => state.agent);
-  const activeAgent = agentState?.agent_details?.email;
-
+  const { projectDomainsList } = useSelector((state) => state.global);
   const [listSearchItems, setListSearchItems] = useState([]);
   const [searchBarOpen, setSearchBarOpen] = useState(false);
   const [searchDDOpen, setSearchDDOpen] = useState(false);
@@ -528,17 +525,25 @@ function UserProfiles({
             propType === 'numerical'
               ? sortNumericalColumn(a[prop], b[prop])
               : sortStringColumn(a[prop], b[prop]),
-          render: (value) => (
-            <Text
-              type='title'
-              level={7}
-              extraClass='m-0'
-              truncate
-              shouldTruncateURL={AdminLock(activeAgent)}
-            >
-              {value ? propValueFormat(prop, value, propType) : '-'}
-            </Text>
-          )
+          render: (value) => {
+            const formattedValue =
+              propValueFormat(prop, value, propType) || '-';
+            const urlTruncatedValue = truncateURL(
+              formattedValue,
+              projectDomainsList
+            );
+            return (
+              <Text
+                type='title'
+                level={7}
+                extraClass='m-0'
+                truncate
+                toolTipTitle={formattedValue}
+              >
+                {urlTruncatedValue}
+              </Text>
+            );
+          }
         });
       });
 
@@ -579,7 +584,8 @@ function UserProfiles({
     currentProjectSettings,
     timelinePayload,
     activeSegment,
-    defaultSorterInfo
+    defaultSorterInfo,
+    projectDomainsList
   ]);
 
   const getTableData = (data) => {

@@ -26,6 +26,7 @@ function UserTimelineBirdview({
 }) {
   const [showAll, setShowAll] = useState([]);
   const { userPropNames } = useSelector((state) => state.coreQuery);
+  const { projectDomainsList } = useSelector((state) => state.global);
 
   const groupedActivities = _.groupBy(activities, groups[granularity]);
 
@@ -117,7 +118,7 @@ function UserTimelineBirdview({
                   !hoverConditionals && eventName.length >= 30 ? 'hover' : []
                 }
               >
-                {truncateURL(eventName)}
+                {truncateURL(eventName, projectDomainsList)}
               </Tooltip>
             </div>
             {hoverConditionals ? (

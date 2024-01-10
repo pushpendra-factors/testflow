@@ -45,7 +45,7 @@ import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import useKey from 'hooks/useKey';
 import { PathUrls } from 'Routes/pathUrls';
 import { ArrowLeftOutlined } from '@ant-design/icons';
-import { isValidURL } from 'Utils/truncateURL';
+import { isValidURL } from 'Utils/checkValidURL';
 
 function ContactDetails({
   userDetails,

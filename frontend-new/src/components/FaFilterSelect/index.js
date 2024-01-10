@@ -34,7 +34,7 @@ import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import { selectedOptionsMapper } from 'Components/GenericComponents/FaSelect/utils';
 import { processProperties } from 'Utils/dataFormatter';
 import { PropTextFormat } from 'Utils/dataFormatter';
-// import truncateURL from 'Utils/truncateURL';
+import truncateURL from 'Utils/truncateURL';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 const rangePicker = [OPERATORS['equalTo'], OPERATORS['notEqualTo']];
@@ -88,6 +88,7 @@ const FaFilterSelect = ({
     (state) => state.coreQuery
   );
   const activeProject = useSelector((state) => state.global.active_project);
+  const { projectDomainsList } = useSelector((state) => state.global);
 
   const valueDisplayNames = useMemo(() => {
     return valueOpts?.[propState?.name]
@@ -840,8 +841,10 @@ const FaFilterSelect = ({
                       ? valuesState
                           .map((vl) =>
                             valueDisplayNames[vl]
-                              ? // ? truncateURL(valueDisplayNames[vl])
-                                valueDisplayNames[vl]
+                              ? truncateURL(
+                                  valueDisplayNames[vl],
+                                  projectDomainsList
+                                )
                               : formatCsvUploadValue(vl)
                           )
                           .join(', ')
@@ -1027,8 +1030,10 @@ const FaFilterSelect = ({
                   ? valuesState
                       .map((vl) =>
                         valueDisplayNames[vl]
-                          ? // ? truncateURL(valueDisplayNames[vl])
-                            valueDisplayNames[vl]
+                          ? truncateURL(
+                              valueDisplayNames[vl],
+                              projectDomainsList
+                            )
                           : formatCsvUploadValue(vl)
                       )
                       .join(', ')

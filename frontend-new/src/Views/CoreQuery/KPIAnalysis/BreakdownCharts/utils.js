@@ -4,6 +4,7 @@ import has from 'lodash/has';
 import cx from 'classnames';
 import findIndex from 'lodash/findIndex';
 import MomentTz from 'Components/MomentTz';
+import { Tooltip } from 'antd';
 
 import {
   Number as NumFormat,
@@ -38,6 +39,7 @@ import { getKpiLabel, getFormattedKpiValue } from '../kpiAnalysis.helpers';
 import { BREAKDOWN_TYPES } from '../../constants';
 import { getDifferentDates } from '../../coreQuery.helpers';
 import { isNumeric } from 'Utils/global';
+import truncateURL from 'Utils/truncateURL';
 import { getCountryCode } from 'Utils/country';
 import { AVAILABLE_FLAGS } from 'Constants/country.list';
 
@@ -273,7 +275,8 @@ export const getTableColumns = (
   kpis,
   currentSorter,
   handleSorting,
-  comparisonApplied
+  comparisonApplied,
+  projectDomainsList
 ) => {
   const breakdownColumns = breakdown.map((e, index) => {
     const displayTitle = getBreakdownDisplayName({
@@ -299,7 +302,21 @@ export const getTableColumns = (
         }
         let country_isoCode = getCountryCode(d);
         const isFlagAvailable = AVAILABLE_FLAGS.includes(country_isoCode);
-        return <>{isFlagAvailable && <div className={`fflag fflag-${country_isoCode} ff-sm mr-1`} style={{marginTop:'-3px'}}></div>}{d}</>;
+        return (
+          <>
+            {isFlagAvailable && (
+              <div
+                className={`fflag fflag-${country_isoCode} ff-sm mr-1`}
+                style={{ marginTop: '-3px' }}
+              ></div>
+            )}
+            {
+              <Tooltip placement='top' title={d}>
+                {truncateURL(d, projectDomainsList)}
+              </Tooltip>
+            }
+          </>
+        );
       }
     };
   });
@@ -700,7 +717,8 @@ export const getDateBasedColumns = (
   handleSorting,
   frequency,
   comparisonApplied,
-  compareCategories
+  compareCategories,
+  projectDomainsList
 ) => {
   const breakdownColumns = breakdown.map((e, index) => {
     const displayTitle = getBreakdownDisplayName({
@@ -724,7 +742,11 @@ export const getDateBasedColumns = (
         ) {
           return <NumFormat number={d} />;
         }
-        return d;
+        return (
+          <Tooltip placement='top' title={d}>
+            {truncateURL(d, projectDomainsList)}
+          </Tooltip>
+        );
       }
     };
   });

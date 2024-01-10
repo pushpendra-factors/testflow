@@ -14,6 +14,7 @@ import MomentTz from 'Components/MomentTz';
 import isEqual from 'lodash/isEqual';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
+import truncateURL from 'Utils/truncateURL';
 import { Popover, Tag } from 'antd';
 import styles from './index.module.scss';
 import { COLUMN_TYPE_PROPS } from 'Utils/table';
@@ -63,7 +64,12 @@ export const generateSegmentsList = ({ segments }) => {
   return reorderDefaultSegmentsToTop(segmentsList);
 };
 
-const getTablePropColumn = ({ prop, groupPropNames, listProperties }) => {
+const getTablePropColumn = ({
+  prop,
+  groupPropNames,
+  listProperties,
+  projectDomainsList
+}) => {
   const propDisplayName = groupPropNames[prop]
     ? groupPropNames[prop]
     : PropTextFormat(prop);
@@ -90,11 +96,21 @@ const getTablePropColumn = ({ prop, groupPropNames, listProperties }) => {
       propType === 'numerical'
         ? sortNumericalColumn(a[prop], b[prop])
         : sortStringColumn(a[prop], b[prop]),
-    render: (value) => (
-      <Text type='title' level={7} extraClass='m-0' truncate shouldTruncateURL>
-        {value ? propValueFormat(prop, value, propType) : '-'}
-      </Text>
-    )
+    render: (value) => {
+      const formattedValue = propValueFormat(prop, value, propType) || '-';
+      const urlTruncatedValue = truncateURL(formattedValue, projectDomainsList);
+      return (
+        <Text
+          type='title'
+          level={7}
+          extraClass='m-0'
+          truncate
+          toolTipTitle={formattedValue}
+        >
+          {urlTruncatedValue}
+        </Text>
+      );
+    }
   };
 };
 
@@ -104,6 +120,7 @@ export const getColumns = ({
   groupPropNames,
   listProperties,
   defaultSorterInfo,
+  projectDomainsList,
   activeAgent
 }) => {
   const headerClassStr =
@@ -289,7 +306,14 @@ export const getColumns = ({
   }
   // Table Prop Columns
   displayTableProps?.forEach((prop) => {
-    columns.push(getTablePropColumn({ prop, groupPropNames, listProperties }));
+    columns.push(
+      getTablePropColumn({
+        prop,
+        groupPropNames,
+        listProperties,
+        projectDomainsList
+      })
+    );
   });
   // Last Activity Column
   columns.push({
