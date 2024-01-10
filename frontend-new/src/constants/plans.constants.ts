@@ -20,7 +20,7 @@ export const FEATURES = {
   FEATURE_CLEARBIT: 'clearbit',
   FEATURE_SIX_SIGNAL: 'six_signal',
   FEATURE_DASHBOARD: 'dashboard',
-  FEATURE_OFFLINE_TOUCHPOINTS: 'offline_touchpoints',
+  FEATURE_OFFLINE_TOUCHPOINTS: 'offline_touchpoints p',
   FEATURE_SAVED_QUERIES: 'saved_queries',
   FEATURE_EXPLAIN: 'explain_feature', // explain is a keyword in memsql.
   FEATURE_FILTERS: 'filters',
