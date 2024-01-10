@@ -119,6 +119,65 @@
       ]
     },
     {
+      "target": "blue",
+      "public": "dist/staging",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-store"
+              }
+          ]
+        }
+      ],
+      "headers" : [
+        {
+          "source" : "/assets/factors.js",
+          "headers" : [ 
+            {
+              "key" : "Cache-Control",
+              "value" : "public, max-age=3600, s-maxage=3600"
+            }
+          ]
+        },
+        {
+          "source" : "/assets/sha256.js",
+          "headers" : [ 
+            {
+              "key" : "Cache-Control",
+              "value" : "public, max-age=3600, s-maxage=3600"
+            }
+          ]
+        },
+        {
+          "source" : "/assets/sha256.min.js",
+          "headers" : [ 
+            {
+              "key" : "Cache-Control",
+              "value" : "public, max-age=3600, s-maxage=3600"
+            }
+          ]
+        },
+        {
+          "source": "**/!(factors.js)",
+          "headers": [
+            {
+              "key": "X-Frame-Options", 
+              "value": "SAMEORIGIN"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "target": "production",
       "public": "dist/production",
       "ignore": [

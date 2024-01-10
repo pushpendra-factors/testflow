@@ -135,6 +135,7 @@ func main() {
 	attributionDBCacheLookup := flag.String("attribution_db_cache_lookup", "", "For given projects, Lookup for cache results in DB for dashboard queries")
 	attributionCommonFlow := flag.String("attribution_common_flow", "", "For given projects, run attribution queries with common flow for "+
 		"dashboard and normal query. Both flow will check DB, cache based on week, months and so on..")
+	attributionDebugKPI := flag.String("attribution_debug_kpi", "ignore", "Attribution Debug KPI ID.")
 	enableMQLAPI := flag.Bool("enable_mql_api", false, "Enable MQL API routes.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 
@@ -311,6 +312,7 @@ func main() {
 		AttributionDebug:                        *attributionDebug,
 		AttributionCommonFlow:                   *attributionCommonFlow,
 		AttributionDBCacheLookup:                *attributionDBCacheLookup,
+		AttributionDebugKPI:                     *attributionDebugKPI,
 		DisableDashboardQueryDBExecution:        *disableDashboardQueryDBExecution,
 		EnableFilterOptimisation:                *enableFilterOptimisation,
 		FilterPropertiesStartTimestamp:          *filterPropertiesStartTimestamp,

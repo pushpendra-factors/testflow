@@ -20,6 +20,7 @@ func ApplyAttributionKPI(attributionType string,
 	kpiData map[string]KPIInfo,
 	lookbackDays int, campaignFrom, campaignTo int64,
 	attributionKey string) (map[string][]AttributionKeyWeight, error) {
+
 	usersAttribution := make(map[string][]AttributionKeyWeight)
 	lookbackPeriod := int64(lookbackDays) * SecsInADay
 
@@ -81,7 +82,8 @@ func ApplyAttributionKPI(attributionType string,
 				break
 			}
 			if C.GetAttributionDebug() == 1 {
-				log.WithFields(log.Fields{"KPI_ID": kpiID, "attributionKeys": attributionKeys}).Info(fmt.Sprintf("KPI-Attribution attributionKeys"))
+				log.WithFields(log.Fields{"KPI_ID": kpiID, "conversionTime": conversionTime, "attributionKeys": attributionKeys,
+					"userSessions": userSessions}).Info(fmt.Sprintf("KPI-Attribution attributionKeys"))
 			}
 
 			if len(attributionKeys) == 0 {
@@ -90,19 +92,24 @@ func ApplyAttributionKPI(attributionType string,
 			kpiInfo.KpiValuesList[idx].IsConverted = true
 			usersAttribution[kpiID] = attributionKeys
 		}
-		// In case a successful attribution could not happen, remove converted user.
 
+		// In case a successful attribution could not happen, remove converted user.
 		if len(usersAttribution[kpiID]) == 0 {
 			//delete(usersAttribution, kpiID)
 			delete(usersAttribution, kpiID)
 			continue
 		}
 	}
+
+	if C.GetAttributionDebug() == 1 {
+		log.WithFields(log.Fields{"UsersAttribution": usersAttribution}).Warn("KPI-Attribution attributionKeys UsersAttribution")
+	}
 	return usersAttribution, nil
 }
 func ApplyAttribution(attributionType string, method string, conversionEvent string, usersToBeAttributed []UserEventInfo,
 	sessions map[string]map[string]UserSessionData, coalUserIdConversionTimestamp map[string]int64,
-	lookbackDays int, campaignFrom, campaignTo int64, attributionKey string, logCtx log.Entry) (map[string][]AttributionKeyWeight, map[string]map[string][]AttributionKeyWeight, error) {
+	lookbackDays int, campaignFrom, campaignTo int64, attributionKey string, logCtx log.Entry) (map[string][]AttributionKeyWeight,
+	map[string]map[string][]AttributionKeyWeight, error) {
 
 	usersAttribution := make(map[string][]AttributionKeyWeight)
 	linkedEventUserCampaign := make(map[string]map[string][]AttributionKeyWeight)
@@ -181,7 +188,8 @@ func ApplyAttribution(attributionType string, method string, conversionEvent str
 			linkedEventUserCampaign[eventName][userId] = attributionKeys
 		} else {
 
-			logCtx.WithFields(log.Fields{"Event Name": eventName, "User": userId, "Attribution Keys": attributionKeys}).Warn("Event Type doesn't match with EventTypeGoalEvent or EventTypeLinkedFunnelEvent ")
+			logCtx.WithFields(log.Fields{"Event Name": eventName, "User": userId, "Attribution Keys": attributionKeys}).
+				Warn("Event Type doesn't match with EventTypeGoalEvent or EventTypeLinkedFunnelEvent ")
 		}
 
 	}

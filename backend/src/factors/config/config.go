@@ -209,6 +209,7 @@ type Configuration struct {
 	AttributionDebug                                     int
 	AttributionCommonFlow                                string
 	AttributionDBCacheLookup                             string
+	AttributionDebugKPI                                  string
 	DisableDashboardQueryDBExecution                     bool
 	AllowedHubspotGroupsByProjectIDs                     string
 	EnableFilterOptimisation                             bool
@@ -2126,6 +2127,10 @@ func IsAllowedAttributionCommonFlow(projectID int64) bool {
 	}
 
 	return false
+}
+
+func GetAttributionDebugKPI() string {
+	return configuration.AttributionDebugKPI
 }
 
 func IsAllowedAttributionDBCacheLookup(projectID int64) bool {
