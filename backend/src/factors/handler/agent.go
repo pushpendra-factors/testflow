@@ -127,12 +127,6 @@ func Signin(c *gin.Context) {
 		c.SetSameSite(http.SameSiteNoneMode)
 	}
 	c.SetCookie(C.GetFactorsCookieName(), cookieData, helpers.SecondsInOneMonth, "/", domain, cookie, httpOnly)
-	logCtx.WithField("cookie_data", cookieData).
-		WithField("domain", domain).
-		WithField("cookie_name", C.GetFactorsCookieName()).
-		WithField("http_only", httpOnly).
-		WithField("secure_cookie", cookie).
-		WithField("err", err).Error("Set Cookie data log.")
 	resp := map[string]string{
 		"status": "success",
 	}
