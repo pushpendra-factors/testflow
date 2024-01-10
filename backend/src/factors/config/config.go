@@ -769,6 +769,8 @@ func initAppServerServices(config *Configuration) error {
 		return err
 	}
 
+	initCookieInfo(configuration.Env)
+
 	InitRedis(config.RedisHost, config.RedisPort)
 	InitQueueRedis(config.QueueRedisHost, config.QueueRedisPort)
 
@@ -802,8 +804,6 @@ func initAppServerServices(config *Configuration) error {
 		watchPatternServers(psUpdateChannel)
 	}()
 
-	initCookieInfo(configuration.Env)
-
 	return nil
 }
 
@@ -823,6 +823,8 @@ func initCookieInfo(env string) {
 
 	configuration.Cookiename = cookieName
 	configuration.Auth0StateName = stateCookieName
+
+	log.Info("Initialised cookie info.")
 }
 
 func InitConf(c *Configuration) {
