@@ -61,6 +61,11 @@ function UserTimelineBirdview({
       >
         <img
           src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${eventIcon}.svg`}
+          onError={(e) => {
+            if (e.target.src !== `/assets/icons/${eventIcon}.svg`) {
+              e.target.src = `/assets/icons/${eventIcon}.svg`;
+            }
+          }}
           alt=''
           height={16}
           width={16}
@@ -74,8 +79,8 @@ function UserTimelineBirdview({
     const eventName = event.alias_name
       ? event.alias_name
       : event.display_name !== 'Page View'
-      ? PropTextFormat(event.display_name)
-      : event.event_name;
+        ? PropTextFormat(event.display_name)
+        : event.event_name;
     const hoverConditionals =
       hoverEvents.includes(event.event_name) ||
       event.display_name === 'Page View' ||
