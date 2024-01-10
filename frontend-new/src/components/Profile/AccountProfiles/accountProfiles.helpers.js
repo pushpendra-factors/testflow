@@ -16,7 +16,7 @@ import { PropTextFormat } from 'Utils/dataFormatter';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 import { Popover, Tag } from 'antd';
 import styles from './index.module.scss';
-import { COLUMN_TYPE_PROPS } from 'Utils/table';
+import { ACCOUNTS_TABLE_COLUMN_TYPES, COLUMN_TYPE_PROPS } from 'Utils/table';
 import { AdminLock } from 'Routes/feature';
 const placeholderIcon = '/assets/avatar/company-placeholder.png';
 
@@ -84,7 +84,9 @@ const getTablePropColumn = ({ prop, groupPropNames, listProperties }) => {
     ),
     dataIndex: prop,
     key: prop,
-    width: 264,
+    width:
+      COLUMN_TYPE_PROPS[ACCOUNTS_TABLE_COLUMN_TYPES[prop]?.Type || 'string']
+        .max || 264,
     showSorterTooltip: null,
     sorter: (a, b) =>
       propType === 'numerical'
