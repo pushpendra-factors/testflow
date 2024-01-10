@@ -241,11 +241,11 @@ function ProjectModal(props) {
               Help
             </a>
           </div>
-          <div className={styles.popover_content__additionalActions}>
+          {/* <div className={styles.popover_content__additionalActions}>
             <a onClick={() => window.open(PathUrls.Checklist, '_self')}>
               Setup Assist
             </a>
-          </div>
+          </div> */}
         </>
       )}
 
