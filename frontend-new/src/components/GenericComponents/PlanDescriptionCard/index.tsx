@@ -3,6 +3,7 @@ import styles from './index.module.scss';
 import { Button, Divider, Tag, Tooltip } from 'antd';
 import { Number, SVG, Text } from 'Components/factorsComponents';
 import { PlansDetailStateInterface } from 'Reducers/plansConfig/types';
+import { PLANS } from 'Constants/plans.constants';
 
 function PlanDescriptionCard({
   plan,
@@ -17,7 +18,8 @@ function PlanDescriptionCard({
   mtuLimit,
   isUserBillingAdmin,
   isButtonLoading,
-  handleBuyButtonClick
+  handleBuyButtonClick,
+  isAdditionalAccountsAddonPurchased
 }: PlanDescriptionCardProps) {
   const monthlyPlan = plan.terms.find((p) => p.period === 'month');
   const yearlyPlan = plan.terms.find((p) => p.period === 'year');
@@ -138,33 +140,39 @@ function PlanDescriptionCard({
             <Number number={mtuLimit} /> Monthly tracked users
           </Text>
 
-          <Tooltip
-            placement='top'
-            title={`${
-              isUserBillingAdmin
-                ? ''
-                : 'Please talk to your Billing Admin for upgrading plans'
-            }`}
-          >
-            <Button
-              className={`${
-                isUserBillingAdmin ? styles.outlineButton : 'mt-6'
+          {isPlanActive && plan.name === PLANS.PLAN_FREE ? null : (
+            <Tooltip
+              placement='top'
+              title={`${
+                isUserBillingAdmin
+                  ? ''
+                  : 'Please talk to your Billing Admin for upgrading plans'
               }`}
-              disabled={!isUserBillingAdmin}
-              onClick={() => handleBuyButtonClick(planName, isPlanActive)}
-              loading={isPlanActive ? isButtonLoading : false}
             >
-              <Text
-                type={'title'}
-                level={7}
-                color='character-primary'
-                weight={'bold'}
-                extraClass={'m-0'}
+              <Button
+                className={`${
+                  isUserBillingAdmin ? styles.outlineButton : 'mt-6'
+                }`}
+                disabled={!isUserBillingAdmin}
+                onClick={() => handleBuyButtonClick(planName, isPlanActive)}
+                loading={isPlanActive ? isButtonLoading : false}
               >
-                {isPlanActive ? 'Buy Add-On' : 'Buy this Plan'}
-              </Text>
-            </Button>
-          </Tooltip>
+                <Text
+                  type={'title'}
+                  level={7}
+                  color='character-primary'
+                  weight={'bold'}
+                  extraClass={'m-0'}
+                >
+                  {isPlanActive
+                    ? isAdditionalAccountsAddonPurchased
+                      ? 'Edit Add-ons'
+                      : 'Buy Add-ons'
+                    : 'Buy this Plan'}
+                </Text>
+              </Button>
+            </Tooltip>
+          )}
         </div>
       </div>
     </div>
@@ -185,6 +193,7 @@ interface PlanDescriptionCardProps {
   isUserBillingAdmin: boolean;
   handleBuyButtonClick: (planName: string, isPlanActive: boolean) => void;
   isButtonLoading: boolean;
+  isAdditionalAccountsAddonPurchased: boolean;
 }
 
 export default PlanDescriptionCard;

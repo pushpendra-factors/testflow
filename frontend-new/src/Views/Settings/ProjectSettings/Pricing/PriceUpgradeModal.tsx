@@ -14,7 +14,8 @@ import { MinusCircleOutlined } from '@ant-design/icons';
 import {
   ADDITIONAL_ACCOUNTS_ADDON_LIMIT,
   PLANS_COFIG,
-  ADDITIONAL_ACCOUNTS_ADDON_ID
+  ADDITIONAL_ACCOUNTS_ADDON_ID,
+  PLANS
 } from 'Constants/plans.constants';
 import {
   PlanTerm,
@@ -135,8 +136,8 @@ function PriceUpgradeModal({
 
   useEffect(() => {
     if (plan && plan.terms?.length > 0) {
-      const monthlyTerm = plan.terms.find((p) => p.period === 'month');
-      if (monthlyTerm) setSelectedPlanTerm(monthlyTerm);
+      const yearlyTerm = plan.terms.find((p) => p.period === 'year');
+      if (yearlyTerm) setSelectedPlanTerm(yearlyTerm);
       else setSelectedPlanTerm(plan.terms[0]);
     }
   }, [plan]);
@@ -243,7 +244,7 @@ function PriceUpgradeModal({
           </div>
         </div>
       </div>
-      {additionalAccountsAddon && (
+      {additionalAccountsAddon && plan?.name !== PLANS.PLAN_FREE && (
         <>
           <Divider />
 

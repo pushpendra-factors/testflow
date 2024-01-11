@@ -5,13 +5,14 @@ import CustomPlanConfigure from './CustomPlanConfigure';
 import { Text } from 'Components/factorsComponents';
 import { Switch, Modal, Spin, notification } from 'antd';
 import useAgentInfo from 'hooks/useAgentInfo';
-import { PLANS_V0 } from 'Constants/plans.constants';
+import { PLANS, PLANS_V0 } from 'Constants/plans.constants';
 import { changePlanType } from 'Reducers/featureConfig/services';
 import { fetchFeatureConfig } from 'Reducers/featureConfig/middleware';
 import logger from 'Utils/logger';
+import { showV2PricingVersion } from '../Pricing/utils';
 const { confirm } = Modal;
 
-const ConfigurePlans = () => {
+function ConfigurePlans() {
   const [switchValue, setSwitchValue] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -19,6 +20,8 @@ const ConfigurePlans = () => {
     (state) => state.featureConfig
   ) as FeatureConfigState;
   const { active_project } = useSelector((state) => state.global);
+  const showV2PricingVersionFlag = showV2PricingVersion(active_project);
+
   const dispatch = useDispatch();
   const { email } = useAgentInfo();
   const planName = plan?.name;
@@ -84,23 +87,35 @@ const ConfigurePlans = () => {
           Plan Configuration
         </Text>
       </div>
-      <div className='flex items-center gap-3 my-5'>
+      {showV2PricingVersionFlag && planName === PLANS.PLAN_CUSTOM && (
+        <CustomPlanConfigure />
+      )}
+      {showV2PricingVersionFlag && planName !== PLANS.PLAN_CUSTOM && (
         <Text type={'paragraph'} mini>
-          Switch Plan:
+          Plan configuration is only allowed for {PLANS.PLAN_CUSTOM} plan
         </Text>
+      )}
+      {!showV2PricingVersionFlag && (
+        <>
+          <div className='flex items-center gap-3 my-5'>
+            <Text type={'paragraph'} mini>
+              Switch Plan:
+            </Text>
 
-        <Switch
-          checked={switchValue}
-          checkedChildren={PLANS_V0.PLAN_CUSTOM}
-          unCheckedChildren={PLANS_V0.PLAN_FREE}
-          disabled={email !== 'solutions@factors.ai'}
-          onChange={handleSwitchChange}
-        />
-      </div>
+            <Switch
+              checked={switchValue}
+              checkedChildren={PLANS_V0.PLAN_CUSTOM}
+              unCheckedChildren={PLANS_V0.PLAN_FREE}
+              disabled={email !== 'solutions@factors.ai'}
+              onChange={handleSwitchChange}
+            />
+          </div>
 
-      {planName !== PLANS_V0.PLAN_FREE && <CustomPlanConfigure />}
+          {planName !== PLANS_V0.PLAN_FREE && <CustomPlanConfigure />}
+        </>
+      )}
     </div>
   );
-};
+}
 
 export default ConfigurePlans;

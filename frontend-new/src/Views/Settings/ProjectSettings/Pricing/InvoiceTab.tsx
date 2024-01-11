@@ -38,10 +38,10 @@ const InvoiceTab = () => {
       title: 'Invoice',
       dataIndex: 'id',
       key: 'id',
-      render: (text) => (
+      render: (_text, _record, index) => (
         <div className='flex items-center gap-2'>
           <SVG name='RoundedFile' size='25' />
-          {text}
+          {invoices?.length ? invoices.length - index : 0}
         </div>
       )
     },
