@@ -1781,6 +1781,23 @@ func FilterDisplayNameEmptyKeysAndValues(projectID int64, displayNames map[strin
 	return filteredDisplayNames
 }
 
+func SortRangePropertyValues(property string, values []string) []string {
+	isRangeProperty := property == SIX_SIGNAL_EMPLOYEE_RANGE || property == SIX_SIGNAL_REVENUE_RANGE
+	if len(values) == 0 || !isRangeProperty {
+		return values
+	}
+
+	// Order by first number in the tokens.
+	r, _ := regexp.Compile("([0-9]+)")
+	sort.Slice(values, func(i, j int) bool {
+		num1, _ := strconv.Atoi(r.FindString(values[i]))
+		num2, _ := strconv.Atoi(r.FindString(values[j]))
+		return num1 < num2
+	})
+
+	return values
+}
+
 func AddTwoNumbersInt64Float64(a, b interface{}) (int64, error) {
 
 	var sum int64
