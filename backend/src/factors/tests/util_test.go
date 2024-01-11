@@ -275,3 +275,10 @@ func TestIsAWeeklyRangeQuery(t *testing.T) {
 		})
 	}
 }
+
+func TestSortRangePropertyValues(t *testing.T) {
+	v := []string{"$10-$99", "$1-$9"}
+	U.SortRangePropertyValues(U.SIX_SIGNAL_REVENUE_RANGE, v)
+	assert.Equal(t, "$1-$9", v[0])
+	assert.Equal(t, "$10-$99", v[1])
+}
