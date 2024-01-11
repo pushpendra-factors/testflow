@@ -171,12 +171,12 @@ func BillingUpgradeCallbackHandler(c *gin.Context) {
 	projectIDString := c.Query("project_id")
 	projectID, err := strconv.ParseInt(projectIDString, 10, 64)
 	if err != nil {
-		c.Redirect(http.StatusPermanentRedirect, C.GetProtocol()+C.GetAPPDomain()+"/pricing?error=INVALID PROJECT")
+		c.Redirect(http.StatusPermanentRedirect, C.GetProtocol()+C.GetAPPDomain()+"/settings/pricing?error=INVALID PROJECT")
 	}
 
 	err = store.GetStore().TriggerSyncChargebeeToFactors(projectID)
 	if err != nil {
-		c.Redirect(http.StatusPermanentRedirect, C.GetProtocol()+C.GetAPPDomain()+"/pricing?error=SERVER_ERROR")
+		c.Redirect(http.StatusPermanentRedirect, C.GetProtocol()+C.GetAPPDomain()+"/settings/pricing?error=SERVER_ERROR")
 		return
 	}
 	c.Redirect(http.StatusPermanentRedirect, fmt.Sprintf(C.GetProtocol()+C.GetAPPDomain()+"/settings/pricing?state=%s", state))

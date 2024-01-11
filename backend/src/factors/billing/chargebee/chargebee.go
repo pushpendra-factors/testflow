@@ -180,7 +180,7 @@ func ListAllInvoicesForSubscription(subscriptionID string) ([]invoice.Invoice, e
 
 	var invoices []invoice.Invoice
 	res, err := invoiceAction.List(&invoice.ListRequestParams{
-		Limit: chargebee.Int32(10),
+		Limit: chargebee.Int32(100),
 		SubscriptionId: &filter.StringFilter{
 			Is: subscriptionID,
 		},
