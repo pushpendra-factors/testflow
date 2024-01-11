@@ -52,7 +52,7 @@ func TestCreateEventTriggerAlert(t *testing.T) {
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{RawMessage: breakdownProps}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
 				{Entity: "", Type: "categorical", Property: "campaign", Operator: "equals", LogicalOp: "AND"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotNil(t, alert)
 		assert.Empty(t, errMsg)
@@ -65,7 +65,7 @@ func TestCreateEventTriggerAlert(t *testing.T) {
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{RawMessage: breakdownProps}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
 				{Entity: "", Type: "categorical", Property: "campaign", Operator: "equals", LogicalOp: "AND"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotNil(t, alert)
 		assert.Empty(t, errMsg)
@@ -82,7 +82,7 @@ func TestCreateEventTriggerAlert(t *testing.T) {
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{RawMessage: breakdownProps}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
 				{Entity: "", Type: "categorical", Property: "campaign", Operator: "equals", LogicalOp: "AND"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotNil(t, alert)
 		assert.Empty(t, errMsg)
@@ -92,7 +92,7 @@ func TestCreateEventTriggerAlert(t *testing.T) {
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{RawMessage: breakdownProps}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
 				{Entity: "", Type: "categorical", Property: "campaign", Operator: "equals", LogicalOp: "AND"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusConflict, errCode)
 		assert.Nil(t, alert)
 		assert.NotEqual(t, "", errMsg)
@@ -105,7 +105,7 @@ func TestCreateEventTriggerAlert(t *testing.T) {
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
 				{Entity: "", Type: "categorical", Property: "campaign", Operator: "equals", LogicalOp: "AND"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusBadRequest, errCode)
 		assert.Nil(t, alert)
 		assert.NotEmpty(t, errMsg)
@@ -141,7 +141,7 @@ func TestDeleteEventTriggerAlert(t *testing.T) {
 		DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{RawMessage: breakdownProps}, AlertLimit: 5, SetAlertLimit: true,
 		Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
 			{Entity: "", Type: "categorical", Property: "campaign", Operator: "equals", LogicalOp: "AND"},
-		}}, agent.UUID, agent.UUID, false)
+		}}, agent.UUID, agent.UUID, false, nil)
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Empty(t, errMsg)
 	assert.NotNil(t, alert)
@@ -206,7 +206,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.Nil(t, err)
 
 		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
-		assert.NotNil(t, agent)
+		assert.NotNil(t, agent, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		//Test for successful CreateAlert
@@ -215,7 +215,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{RawMessage: breakdownProps}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "equals", LogicalOp: "AND", Value: "US"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, alert)
@@ -239,7 +239,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.Nil(t, err)
 
 		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
-		assert.NotNil(t, agent)
+		assert.NotNil(t, agent, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		//Test for successful CreateAlert
@@ -248,7 +248,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{RawMessage: breakdownProps}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "equals", LogicalOp: "AND", Value: "US"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, alert)
@@ -272,7 +272,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.Nil(t, err)
 
 		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
-		assert.NotNil(t, agent)
+		assert.NotNil(t, agent, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		//Test for successful CreateAlert
@@ -281,7 +281,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{RawMessage: breakdownProps}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "notEqual", LogicalOp: "AND", Value: "UK"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, alert)
@@ -305,7 +305,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.Nil(t, err)
 
 		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
-		assert.NotNil(t, agent)
+		assert.NotNil(t, agent, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		//Test for successful CreateAlert
@@ -314,7 +314,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{RawMessage: breakdownProps}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "notEqual", LogicalOp: "AND", Value: "US"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, alert)
@@ -338,7 +338,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.Nil(t, err)
 
 		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
-		assert.NotNil(t, agent)
+		assert.NotNil(t, agent, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		//Test for successful CreateAlert
@@ -347,7 +347,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{RawMessage: breakdownProps}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "contains", LogicalOp: "AND", Value: "US"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, alert)
@@ -371,7 +371,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.Nil(t, err)
 
 		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
-		assert.NotNil(t, agent)
+		assert.NotNil(t, agent, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		//Test for successful CreateAlert
@@ -380,7 +380,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{RawMessage: breakdownProps}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "contains", LogicalOp: "AND", Value: "UK"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, alert)
@@ -404,7 +404,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.Nil(t, err)
 
 		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
-		assert.NotNil(t, agent)
+		assert.NotNil(t, agent, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		//Test for successful CreateAlert
@@ -413,7 +413,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{RawMessage: breakdownProps}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "notContains", LogicalOp: "AND", Value: "US"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, alert)
@@ -437,7 +437,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.Nil(t, err)
 
 		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
-		assert.NotNil(t, agent)
+		assert.NotNil(t, agent, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		//Test for successful CreateAlert
@@ -446,7 +446,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{RawMessage: breakdownProps}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "notContains", LogicalOp: "AND", Value: "asu"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, alert)
@@ -470,7 +470,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.Nil(t, err)
 
 		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
-		assert.NotNil(t, agent)
+		assert.NotNil(t, agent, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		//Test for successful CreateAlert
@@ -481,7 +481,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "equals", LogicalOp: "AND", Value: "US"},
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "equals", LogicalOp: "OR", Value: "UK"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, alert)
@@ -514,7 +514,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.Nil(t, err)
 
 		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
-		assert.NotNil(t, agent)
+		assert.NotNil(t, agent, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		//Test for successful CreateAlert
@@ -525,7 +525,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "equals", LogicalOp: "AND", Value: "US"},
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "equals", LogicalOp: "OR", Value: "UK"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, alert)
@@ -549,7 +549,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.Nil(t, err)
 
 		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
-		assert.NotNil(t, agent)
+		assert.NotNil(t, agent, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		//Test for successful CreateAlert
@@ -560,7 +560,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "notEqual", LogicalOp: "AND", Value: "US"},
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "notEqual", LogicalOp: "OR", Value: "UK"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, alert)
@@ -593,7 +593,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.Nil(t, err)
 
 		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
-		assert.NotNil(t, agent)
+		assert.NotNil(t, agent, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		//Test for successful CreateAlert
@@ -604,7 +604,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "notEqual", LogicalOp: "AND", Value: "US"},
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "notEqual", LogicalOp: "AND", Value: "UK"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, alert)
@@ -630,7 +630,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.Nil(t, err)
 
 		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
-		assert.NotNil(t, agent)
+		assert.NotNil(t, agent, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		//Test for successful CreateAlert
@@ -641,7 +641,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "contains", LogicalOp: "AND", Value: "US"},
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "contains", LogicalOp: "OR", Value: "UK"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, alert)
@@ -676,7 +676,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.Nil(t, err)
 
 		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
-		assert.NotNil(t, agent)
+		assert.NotNil(t, agent, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		//Test for successful CreateAlert
@@ -687,7 +687,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "contains", LogicalOp: "AND", Value: "US"},
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "contains", LogicalOp: "OR", Value: "UK"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, alert)
@@ -711,7 +711,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.Nil(t, err)
 
 		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
-		assert.NotNil(t, agent)
+		assert.NotNil(t, agent, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		//Test for successful CreateAlert
@@ -722,7 +722,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "notContains", LogicalOp: "AND", Value: "US"},
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "notContains", LogicalOp: "AND", Value: "UK"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, alert)
@@ -768,7 +768,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.Nil(t, err)
 
 		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
-		assert.NotNil(t, agent)
+		assert.NotNil(t, agent, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		//Test for successful CreateAlert
@@ -779,7 +779,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "notContains", LogicalOp: "AND", Value: "US"},
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "notContains", LogicalOp: "OR", Value: "UK"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, alert)
@@ -795,7 +795,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.Nil(t, err)
 
 		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
-		assert.NotNil(t, agent)
+		assert.NotNil(t, agent, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		//Test for successful CreateAlert
@@ -805,7 +805,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
 			Filter: []model.QueryProperty{
 				{Entity: "event", Type: "numerical", Property: "$time_spent", Operator: "equals", LogicalOp: "AND", Value: "3000"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, alert)
@@ -838,7 +838,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.Nil(t, err)
 
 		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
-		assert.NotNil(t, agent)
+		assert.NotNil(t, agent, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		//Test for successful CreateAlert
@@ -848,7 +848,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
 			Filter: []model.QueryProperty{
 				{Entity: "event", Type: "numerical", Property: "$time_spent", Operator: "notEqual", LogicalOp: "AND", Value: "3000"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, alert)
@@ -881,7 +881,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.Nil(t, err)
 
 		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
-		assert.NotNil(t, agent)
+		assert.NotNil(t, agent, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		//Test for successful CreateAlert
@@ -891,7 +891,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
 			Filter: []model.QueryProperty{
 				{Entity: "event", Type: "numerical", Property: "$time_spent", Operator: "greaterThan", LogicalOp: "AND", Value: "3000"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, alert)
@@ -933,7 +933,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.Nil(t, err)
 
 		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
-		assert.NotNil(t, agent)
+		assert.NotNil(t, agent, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		//Test for successful CreateAlert
@@ -943,7 +943,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
 			Filter: []model.QueryProperty{
 				{Entity: "event", Type: "numerical", Property: "$time_spent", Operator: "lesserThan", LogicalOp: "AND", Value: "3000"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, alert)
@@ -985,7 +985,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.Nil(t, err)
 
 		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
-		assert.NotNil(t, agent)
+		assert.NotNil(t, agent, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		//Test for successful CreateAlert
@@ -995,7 +995,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
 			Filter: []model.QueryProperty{
 				{Entity: "event", Type: "numerical", Property: "$time_spent", Operator: "greaterThanOrEqual", LogicalOp: "AND", Value: "3000"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, alert)
@@ -1037,7 +1037,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.Nil(t, err)
 
 		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
-		assert.NotNil(t, agent)
+		assert.NotNil(t, agent, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		//Test for successful CreateAlert
@@ -1047,7 +1047,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson},
 			Filter: []model.QueryProperty{
 				{Entity: "event", Type: "numerical", Property: "$time_spent", Operator: "lesserThanOrEqual", LogicalOp: "AND", Value: "3000"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, alert)
@@ -1089,7 +1089,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.Nil(t, err)
 
 		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
-		assert.NotNil(t, agent)
+		assert.NotNil(t, agent, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		//Test for successful CreateAlert
@@ -1101,7 +1101,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 				{Entity: "user", Type: "categorical", Property: "$Salesforce_Industry", Operator: "contains", LogicalOp: "AND", Value: "tech"},
 				{Entity: "user", Type: "categorical", Property: "$country", Operator: "equals", LogicalOp: "AND", Value: "US"},
 				{Entity: "event", Type: "numerical", Property: "$time_spent", Operator: "greaterThanOrEqual", LogicalOp: "AND", Value: "3000"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, alert)
@@ -1133,7 +1133,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.Nil(t, err)
 
 		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
-		assert.NotNil(t, agent)
+		assert.NotNil(t, agent, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		//Test for successful CreateAlert
@@ -1145,7 +1145,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 				{Entity: "user", Type: "categorical", Property: "$Salesforce_Industry", Operator: "contains", LogicalOp: "AND", Value: "tech"},
 				{Entity: "user", Type: "categorical", Property: "$country", Operator: "equals", LogicalOp: "OR", Value: "US"},
 				{Entity: "event", Type: "numerical", Property: "$time_spent", Operator: "greaterThanOrEqual", LogicalOp: "AND", Value: "3000"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, alert)
@@ -1204,7 +1204,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.Nil(t, err)
 
 		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
-		assert.NotNil(t, agent)
+		assert.NotNil(t, agent, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		userSixSignal, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
@@ -1253,7 +1253,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 				{Entity: "user_g", GroupName: model.GROUP_NAME_SALESFORCE_ACCOUNT, Type: "categorical", Property: "$Salesforce_Industry", Operator: "contains", LogicalOp: "AND", Value: "tech"},
 				{Entity: "user", Type: "categorical", Property: "$country", Operator: "equals", LogicalOp: "AND", Value: "US"},
 				{Entity: "event", Type: "numerical", Property: "$time_spent", Operator: "greaterThanOrEqual", LogicalOp: "AND", Value: "3000"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, alert)
@@ -1307,7 +1307,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.Nil(t, err)
 
 		agent, errCode := SetupAgentReturnWithSlackIntegrationDAO(getRandomEmail(), "+1343545", project.ID)
-		assert.NotNil(t, agent)
+		assert.NotNil(t, agent, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		userSixSignal, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
@@ -1358,7 +1358,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 				{Entity: "user_g", GroupName: model.GROUP_NAME_DOMAINS, Type: "categorical", Property: "$Salesforce_Industry", Operator: "contains", LogicalOp: "AND", Value: "tech"},
 				{Entity: "user", Type: "categorical", Property: "$country", Operator: "equals", LogicalOp: "AND", Value: "US"},
 				{Entity: "event", Type: "numerical", Property: "$time_spent", Operator: "greaterThanOrEqual", LogicalOp: "AND", Value: "3000"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, alert)
@@ -1441,7 +1441,7 @@ func TestEditEventTriggerAlertHandler(t *testing.T) {
 			DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{RawMessage: breakdownProps}, AlertLimit: 5, SetAlertLimit: true,
 			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
 				{Entity: "event", Type: "categorical", Property: "$country", Operator: "equals", LogicalOp: "AND", Value: "US"},
-			}}, agent.UUID, agent.UUID, false)
+			}}, agent.UUID, agent.UUID, false, nil)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, alert)
