@@ -111,7 +111,7 @@ export function AppLayoutRoutes({
       ) : null}
 
       <PrivateRoute path='/project-setup' component={SetupAssist} />
-      <PrivateRoute path={PathUrls.Checklist} component={Checklist} />
+      {/* <PrivateRoute path={PathUrls.Checklist} component={Checklist} /> */}
     </Switch>
   );
 }

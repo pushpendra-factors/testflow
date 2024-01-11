@@ -483,7 +483,7 @@ function Step2({
         target='_blank'
         to={{
           pathname:
-            'https://help.factors.ai/en/collections/3953559‒getting‒started'
+            'https://help.factors.ai/en/articles/7260638-connecting-factors-to-your-website'
         }}
       >
         <SVG name='ArrowUpRightSquare' color='#40A9FF' />

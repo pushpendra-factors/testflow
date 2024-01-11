@@ -362,10 +362,10 @@ function FaHeader() {
           </div>
         </div>
       </div>
-      <div className='ml-4 w-1/3 flex justify-center'>
+      <div className='w-1/3 flex justify-center'>
         <SearchBar />
       </div>
-      <div>
+      {/* <div>
         <Button
           icon={<SVG name='Stars' />}
           type='link'
@@ -374,7 +374,7 @@ function FaHeader() {
         >
           Finish the setup
         </Button>
-      </div>
+      </div> */}
       <div className='flex w-1/3 items-center justify-end col-gap-6 text-white'>
         <Dropdown
           overlay={renderConfigureMenu(activeAgent)}
