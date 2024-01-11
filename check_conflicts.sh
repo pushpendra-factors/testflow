@@ -27,11 +27,12 @@ git checkout -q $curbranch
 total_commits=$(git rev-list --count HEAD ^$basebranch)
 
 # To check conflicts when number of commits more than 1 
-if [[ "$curbranch" != "$master" || "$curbranch" != "$release" || "$curbranch" != "$staging" ]] && [ "$total_commits" -gt 1 ]; then
-    printf "Automatic merge failed! Your $curbranch has more than 1 commit; please squash all commits.\n"
-    exit -1
+if [[ "$curbranch" != "$master" && "$curbranch" != "$release" && "$curbranch" != "$staging" ]]; then
+    if [[ "$total_commits" -gt 1 ]]; then
+        printf "Merge failed! Your $curbranch branch has more than 1 commit; please squash all commits.\n"
+        exit -1
+    fi
 fi
- 
 
 # checks for merge conflict
 CheckMergeConflict(){
