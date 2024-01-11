@@ -35,14 +35,11 @@ const InvoiceTab = () => {
 
   const columns: ColumnsType<Invoice> = [
     {
-      title: 'Invoice',
+      title: 'S. No.',
       dataIndex: 'id',
       key: 'id',
       render: (_text, _record, index) => (
-        <div className='flex items-center gap-2'>
-          <SVG name='RoundedFile' size='25' />
-          {invoices?.length ? invoices.length - index : 0}
-        </div>
+        <div className='flex items-center gap-2'>{index + 1}</div>
       )
     },
     {

@@ -213,7 +213,7 @@ function PriceUpgradeModal({
                 <span style={{ fontWeight: 600 }}>
                   <Number number={accountIdentifiedLimit} />{' '}
                 </span>
-                Accounts Identification
+                Accounts Identified/month
               </Text>
             </div>
             <div className='flex gap-2 items-center '>
@@ -239,7 +239,9 @@ function PriceUpgradeModal({
               extraClass={'m-0 '}
               weight={'bold'}
             >
-              ${planPrice}
+              {selectedPlanTerm?.period === 'month' && `$${planPrice}/Month`}
+              {selectedPlanTerm?.period === 'year' &&
+                `$${planPrice / 12}/Month`}
             </Text>
           </div>
         </div>

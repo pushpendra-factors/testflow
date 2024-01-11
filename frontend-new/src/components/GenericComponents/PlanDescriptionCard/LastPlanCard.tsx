@@ -2,10 +2,13 @@ import React from 'react';
 import { Button } from 'antd';
 import { Text } from 'Components/factorsComponents';
 import styles from './index.module.scss';
+import { PRICING_HELP_LINK } from 'Views/Settings/ProjectSettings/Pricing/utils';
 
-const LastPlanCard = () => {
+function LastPlanCard() {
   return (
-    <div className={`${styles.planDescriptionCard}  flex gap-10 items-center `}>
+    <div
+      className={`${styles.planDescriptionCard}  flex justify-between gap-10 items-center `}
+    >
       <div>
         <Text
           type={'title'}
@@ -14,7 +17,7 @@ const LastPlanCard = () => {
           color='character-primary'
           extraClass={'m-0 '}
         >
-          These plans didn't work out for you?
+          Not sure which plan is best for you?
         </Text>
         <Text
           type={'title'}
@@ -22,21 +25,15 @@ const LastPlanCard = () => {
           color='character-primary'
           extraClass={'m-0 mt-1'}
         >
-          Unlock the power of choice with our personalized pricing options. Find
-          the ideal plan that aligns with your specific requirements and budget.
-          Tailor-made solutions for your success await!
+          Get a customised product demo and identify the plan that best fits
+          your needs.
         </Text>
       </div>
       <div>
         <Button
-          className={`${styles.outlineButton} w-full`}
+          className={`${styles.outlineButton} m-0 w-full`}
           style={{ width: 290 }}
-          onClick={() =>
-            window.open(
-              `https://factors.schedulehero.io/meet/yogeshpai/sso`,
-              '_blank'
-            )
-          }
+          onClick={() => window.open(PRICING_HELP_LINK, '_blank')}
         >
           <Text
             type={'title'}
@@ -51,6 +48,6 @@ const LastPlanCard = () => {
       </div>
     </div>
   );
-};
+}
 
 export default LastPlanCard;
