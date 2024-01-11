@@ -20,6 +20,4 @@ member_company_cache = MemberCompany()
 metrics_aggregator_obj = MetricsAggregator()
 data_service_obj = DataService()
 linkedin_api_service = LinkedinApiService(metrics_aggregator_obj)
-client_id = ''
-client_secret = ''
 

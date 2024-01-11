@@ -7,6 +7,7 @@ import requests
 import logging as log
 from datetime import datetime
 from constants.constants import *
+from custom_exception.custom_exception import CustomException
 from _datetime import timedelta
 
 class Util:
@@ -173,8 +174,12 @@ class Util:
 
         if input_end_timestamp != None:
             timerange_end_date = (datetime.strptime(str(input_end_timestamp), '%Y%m%d')).date()
+            if timerange_end_date.isoweekday() != 7:
+                raise CustomException("Input end timestamp is not sunday", 0, MEMBER_COMPANY_INSIGHTS)
         if input_start_timestamp != None:
             timerange_start_date = (datetime.strptime(str(input_start_timestamp), '%Y%m%d')).date()
+            if timerange_start_date.isoweekday() != 1:
+                raise CustomException("Input start timestamp is not monday", 0, MEMBER_COMPANY_INSIGHTS)
         
         required_timerange = []
         num_of_days = (timerange_end_date-timerange_start_date).days + 1

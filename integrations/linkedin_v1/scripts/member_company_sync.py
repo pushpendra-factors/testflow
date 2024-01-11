@@ -41,12 +41,12 @@ def sync_company_data(options, linkedin_setting, sync_info_with_type, input_star
     
     if t8_job_req:
         WeeklyMemberCompanyJobRunner(sync_info_with_type[SYNC_INFO_KEY_T8], T8_END_BUFFER, 
-                SYNC_STATUS_T8, 't8', linkedin_setting, input_start_timestamp, input_start_timestamp).execute()
+                SYNC_STATUS_T8, 't8', linkedin_setting, input_start_timestamp, input_end_timestamp).execute()
         campaign_group_cache.reset_campaign_group_data()
         
     if t22_job_req:
         WeeklyMemberCompanyJobRunner(sync_info_with_type[SYNC_INFO_KEY_T22], T22_END_BUFFER, 
-                SYNC_STATUS_T22, 't22', linkedin_setting, input_start_timestamp, input_start_timestamp).execute()
+                SYNC_STATUS_T22, 't22', linkedin_setting, input_start_timestamp, input_end_timestamp).execute()
         campaign_group_cache.reset_campaign_group_data()
             
             
