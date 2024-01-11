@@ -176,7 +176,7 @@ func (store *MemSQL) DeleteEventTriggerAlert(projectID int64, id string) (int, s
 	return http.StatusAccepted, ""
 }
 
-func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int64, alertConfig *model.EventTriggerAlertConfig, slackTokenUser, teamTokenUser string, isPausedAlert bool) (*model.EventTriggerAlert, int, string) {
+func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int64, alertConfig *model.EventTriggerAlertConfig, slackTokenUser, teamTokenUser string, isPausedAlert bool, paragonMetadata *postgres.Jsonb) (*model.EventTriggerAlert, int, string) {
 	logFields := log.Fields{
 		"project_id":          projectID,
 		"event_trigger_alert": alertConfig,
@@ -264,6 +264,7 @@ func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int
 		SlackChannelAssociatedBy: slackTokenUser,
 		TeamsChannelAssociatedBy: teamTokenUser,
 		InternalStatus:           internalStatus,
+		ParagonMetadata:          paragonMetadata,
 	}
 
 	if err := db.Create(&alert).Error; err != nil {
@@ -1285,7 +1286,7 @@ func (store *MemSQL) GetParagonMetadataForEventTriggerAlert(projectID int64, ale
 	if alert.ParagonMetadata == nil {
 		return nil, http.StatusNotFound, fmt.Errorf("no metadata available")
 	}
-	metadata, err:= U.DecodePostgresJsonb(alert.ParagonMetadata)
+	metadata, err := U.DecodePostgresJsonb(alert.ParagonMetadata)
 	if err != nil {
 		logCtx.WithError(err).Error("failed to decode metadata json")
 		return nil, http.StatusInternalServerError, err
