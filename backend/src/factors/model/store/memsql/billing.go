@@ -51,10 +51,10 @@ func (store *MemSQL) TriggerSyncChargebeeToFactors(projectID int64) error { // C
 		if subscriptionItem.ItemType == "plan" {
 			planName := strings.Split(subscriptionItem.ItemPriceId, "-")
 			if len(planName) > 0 {
-				updatedPlanID, err := model.GetPlanIDFromPlanName(strings.Title(planName[0]))
+				updatedPlanID, err := model.GetPlanIDFromPlanName(strings.ToUpper(planName[0]))
 				if err != nil {
 					log.WithFields(logCtx).WithError(err).Error("Failed to update new plan id")
-					return errors.New("Failed to encode addons to Json")
+					return errors.New("Failed to update new plan id")
 				}
 				planMapping.PlanID = int64(updatedPlanID)
 			}
