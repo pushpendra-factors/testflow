@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/chargebee/chargebee-go/v3/models/event"
+	"github.com/chargebee/chargebee-go/v3/models/itemprice/enum"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
@@ -33,14 +34,16 @@ func GetPricingForPlansAndAddonsHandler(c *gin.Context) {
 	}
 	var res model.PlansAndAddOnsPrices
 	for _, itemPrice := range itemPrices {
-		res = append(res, model.SubscriptionProductPrice{
-			Type:         string(itemPrice.ItemType),
-			Name:         itemPrice.Name,
-			ExternalName: itemPrice.ExternalName,
-			ID:           itemPrice.Id,
-			Price:        formatPrice(itemPrice.Price),
-			PeriodUnit:   string(itemPrice.PeriodUnit),
-		})
+		if itemPrice.Status == enum.StatusActive {
+			res = append(res, model.SubscriptionProductPrice{
+				Type:         string(itemPrice.ItemType),
+				Name:         itemPrice.Name,
+				ExternalName: itemPrice.ExternalName,
+				ID:           itemPrice.Id,
+				Price:        formatPrice(itemPrice.Price),
+				PeriodUnit:   string(itemPrice.PeriodUnit),
+			})
+		}
 	}
 	c.JSON(http.StatusOK, res)
 }
@@ -63,12 +66,14 @@ func GetDifferentialPricingForAddOns(c *gin.Context) {
 	}
 	var res model.DifferentialPrices
 	for _, diffPrice := range diffPrices {
-		res = append(res, model.DifferentialPrice{
-			ID:           diffPrice.Id,
-			ItemPriceID:  diffPrice.ItemPriceId,
-			ParentItemID: diffPrice.ParentItemId,
-			Price:        formatPrice(diffPrice.Price),
-		})
+		if diffPrice.Status == "active" {
+			res = append(res, model.DifferentialPrice{
+				ID:           diffPrice.Id,
+				ItemPriceID:  diffPrice.ItemPriceId,
+				ParentItemID: diffPrice.ParentItemId,
+				Price:        formatPrice(diffPrice.Price),
+			})
+		}
 	}
 	c.JSON(http.StatusOK, res)
 }
@@ -92,7 +97,7 @@ func UpdateSubscriptionHandler(c *gin.Context) {
 		c.AbortWithError(http.StatusBadRequest, errors.New("INVALID REQUEST"))
 		return
 	}
-	// increase the addons quantity (current + new one)
+
 	hostedPage, _, err := billing.GetUpgradeChargebeeSubscriptionCheckoutURL(projectId, project.BillingSubscriptionID, updateSubscriptionParams)
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
