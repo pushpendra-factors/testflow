@@ -295,13 +295,11 @@ func (store *MemSQL) UpdateProjectPlanMapping(projectID int64, planMapping *mode
 	updateFields := make(map[string]interface{}, 0)
 	db := C.GetServices().Db
 	if planMapping.BillingPlanID != "" {
+		updateFields["plan_id"] = planMapping.PlanID
 		updateFields["billing_plan_id"] = planMapping.BillingPlanID
 		updateFields["billing_last_synced_at"] = planMapping.BillingLastSyncedAt
-
-	}
-
-	if planMapping.BillingAddons != nil {
 		updateFields["billing_add_ons"] = planMapping.BillingAddons
+
 	}
 
 	err := db.Model(&model.ProjectPlanMapping{}).Where("project_id = ?", projectID).Update(updateFields).Error
