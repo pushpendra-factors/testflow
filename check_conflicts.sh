@@ -23,6 +23,16 @@ git config --global user.email "actions@github.com"
 git fetch --unshallow -q
 git checkout -q $curbranch
 
+# Count number of commits on current branch
+total_commits=$(git rev-list --count HEAD ^$basebranch)
+
+# To check conflicts when number of commits more than 1 
+if [[ "$curbranch" != "$master" || "$curbranch" != "$release" || "$curbranch" != "$staging" ]] && [ "$total_commits" -gt 1 ]; then
+    printf "Automatic merge failed! Your $curbranch has more than 1 commit; please squash all commits.\n"
+    exit -1
+fi
+ 
+
 # checks for merge conflict
 CheckMergeConflict(){
  if git merge --no-commit --no-ff -q "$1" | grep -q "$merge_conflict_msg"; then
