@@ -5,9 +5,11 @@ import (
 	billing "factors/billing/chargebee"
 	"factors/model/model"
 	"net/http"
+	"strings"
 	"time"
 
 	U "factors/util"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -47,9 +49,19 @@ func (store *MemSQL) TriggerSyncChargebeeToFactors(projectID int64) error { // C
 
 	for _, subscriptionItem := range latestSubscription.SubscriptionItems {
 		if subscriptionItem.ItemType == "plan" {
+			planName := strings.Split(subscriptionItem.ItemPriceId, "-")
+			if len(planName) > 0 {
+				updatedPlanID, err := model.GetPlanIDFromPlanName(strings.Title(planName[0]))
+				if err != nil {
+					log.WithFields(logCtx).WithError(err).Error("Failed to update new plan id")
+					return errors.New("Failed to encode addons to Json")
+				}
+				planMapping.PlanID = int64(updatedPlanID)
+			}
 			planMapping.BillingPlanID = subscriptionItem.ItemPriceId
 			planMapping.BillingLastSyncedAt = time.Now()
 		} else if subscriptionItem.ItemType == "addon" {
+			log.Info("$$$$ updating billing addons")
 			addOn := model.BillingAddOn{
 				ItemPriceID: subscriptionItem.ItemPriceId,
 				Quantity:    int(subscriptionItem.Quantity),
