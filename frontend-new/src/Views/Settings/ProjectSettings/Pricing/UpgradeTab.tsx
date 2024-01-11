@@ -1,7 +1,11 @@
 import PlanDescriptionCard from 'Components/GenericComponents/PlanDescriptionCard';
 import LastPlanCard from 'Components/GenericComponents/PlanDescriptionCard/LastPlanCard';
 import { SVG, Text } from 'Components/factorsComponents';
-import { PLANS, PLANS_COFIG } from 'Constants/plans.constants';
+import {
+  ADDITIONAL_ACCOUNTS_ADDON_ID,
+  PLANS,
+  PLANS_COFIG
+} from 'Constants/plans.constants';
 import {
   PlansConfigState,
   PlansDetailStateInterface
@@ -27,11 +31,18 @@ function UpgradeTab({ buyAddonLoading, handleBuyAddonClick }: UpgradeTabProps) {
   );
   const isUserBillingAdmin =
     active_project?.billing_admin_agent_uuid === userId;
+
   const { plansConfig, currentPlanDetail } = useSelector(
     (state: any) => state.plansConfig
   ) as PlansConfigState;
   const { plansDetail } = plansConfig;
-
+  const purchasedAddons = currentPlanDetail?.addons;
+  const additionalAccountsAddon = purchasedAddons?.find(
+    (addon) => addon.id === ADDITIONAL_ACCOUNTS_ADDON_ID
+  );
+  const isAdditionalAccountsAddonPurchased = additionalAccountsAddon
+    ? additionalAccountsAddon?.quantity > 0
+    : false;
   const handleBuyButtonClick = async (
     planName: string,
     isPlanActive: boolean
@@ -79,6 +90,9 @@ function UpgradeTab({ buyAddonLoading, handleBuyAddonClick }: UpgradeTabProps) {
           handleBuyButtonClick={handleBuyButtonClick}
           isUserBillingAdmin={isUserBillingAdmin}
           isButtonLoading={buyAddonLoading}
+          isAdditionalAccountsAddonPurchased={
+            isAdditionalAccountsAddonPurchased
+          }
         />
       )}
       {!isPlansViewCollapsed && (
@@ -132,6 +146,9 @@ function UpgradeTab({ buyAddonLoading, handleBuyAddonClick }: UpgradeTabProps) {
                     handleBuyButtonClick={handleBuyButtonClick}
                     isUserBillingAdmin={isUserBillingAdmin}
                     isButtonLoading={buyAddonLoading}
+                    isAdditionalAccountsAddonPurchased={
+                      isAdditionalAccountsAddonPurchased
+                    }
                   />
                 );
               })}
