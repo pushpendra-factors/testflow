@@ -438,7 +438,7 @@ function AccountProfiles({
         setDefaultSorterInfo({ key: 'engagement', order: 'descend' });
         const formatPayload = { ...payload };
         formatPayload.filters =
-          formatFiltersForPayload(payload?.filters, 'accounts') || [];
+          formatFiltersForPayload(payload?.filters, 'account_profiles') || [];
         const reqPayload = formatReqPayload(formatPayload, activeSegment);
         getProfileAccounts(activeProject.id, reqPayload, activeAgent).then(
           (response) => {

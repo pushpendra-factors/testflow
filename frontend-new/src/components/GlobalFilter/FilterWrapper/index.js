@@ -141,10 +141,15 @@ function FilterWrapper({
       newFilterState.props;
     const propGrp = groupName || groupName !== '' ? groupName : entity;
 
-    if (profileType === 'predefined') {
+    const payload =
+      newFilterState?.props?.length === 3
+        ? newFilterState?.props[0]
+        : newFilterState?.props[1];
+
+    if (profileType === 'predefined' && payload) {
       getPredefinedPropertyValues(
         projectID,
-        newFilterState.props[0],
+        payload,
         activeDashboard?.inter_id
       );
     } else if (propertyType === 'categorical') {
@@ -173,10 +178,11 @@ function FilterWrapper({
   };
   const setValuesByProps = (props) => {
     const [groupName, propertyName, propertyType, entity] = props;
-    if (profileType === 'predefined') {
+    const payload = props?.length === 3 ? props[0] : props[1];
+    if (profileType === 'predefined' && payload) {
       getPredefinedPropertyValues(
         projectID,
-        props[1],
+        payload,
         activeDashboard?.inter_id
       );
     } else if (propertyType === 'categorical') {
