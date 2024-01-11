@@ -16,6 +16,7 @@ import React, { useState } from 'react';
 // import PriceUpgradeModal from './PriceUpgradeModal';
 import { useSelector } from 'react-redux';
 import PriceUpgradeModal from './PriceUpgradeModal';
+import { PRICING_HELP_LINK } from './utils';
 
 function UpgradeTab({ buyAddonLoading, handleBuyAddonClick }: UpgradeTabProps) {
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -209,7 +210,7 @@ function UpgradeTab({ buyAddonLoading, handleBuyAddonClick }: UpgradeTabProps) {
           extraClass={'m-0 mb-2'}
           color='character-primary'
         >
-          Upgrade to get the most out of Factors
+          Upgrade to get more out of Factors
         </Text>
         <Text
           type={'title'}
@@ -217,9 +218,12 @@ function UpgradeTab({ buyAddonLoading, handleBuyAddonClick }: UpgradeTabProps) {
           extraClass={'m-0'}
           color='character-secondary'
         >
-          Familairize yourself with the payment plans below. See for yourself
-          that the basic service for your business is not as expensive as it
-          might seem
+          Check out all our plans and their included features to find the one
+          that fits your needs. We are always available for a call if ever need
+          help finding the right one for your organisation.{' '}
+          <a href={PRICING_HELP_LINK} target='_blank' rel='noreferrer'>
+            Book a call
+          </a>{' '}
         </Text>
         <Divider />
       </div>

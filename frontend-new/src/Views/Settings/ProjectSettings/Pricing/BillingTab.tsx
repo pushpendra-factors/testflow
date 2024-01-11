@@ -221,7 +221,9 @@ function BillingTab({ buyAddonLoading, handleBuyAddonClick }: BillingTabProps) {
             <Tooltip
               title={`${
                 showV2PricingVersionFlag
-                  ? 'Buy Add on'
+                  ? additionalAccountsAddon?.quantity
+                    ? 'Edit Add-ons'
+                    : 'Buy Add-ons'
                   : isSolutionsAdmin
                     ? 'Configure Plans'
                     : 'Talk to our Sales team to upgrade'
