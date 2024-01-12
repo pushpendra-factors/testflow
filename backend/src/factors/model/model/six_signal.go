@@ -263,13 +263,11 @@ func GetSixSignalMonthlyUniqueEnrichmentKey(projectId int64, monthYear string) (
 func GetSixSignalMonthlyUniqueEnrichmentCount(projectId int64, monthYear string) (int64, error) {
 	key, err := GetSixSignalMonthlyUniqueEnrichmentKey(projectId, monthYear)
 	if err != nil {
-		log.Error("Failed fetching redis key for unique domain metering")
 		return -1, err
 	}
 
 	count, err := cacheRedis.PFCountPersistent(key)
 	if err != nil {
-		log.Error("Failed fetching count for unique domain metering")
 		return -1, err
 	}
 
@@ -284,14 +282,12 @@ func GetSixSignalMonthlyUniqueEnrichmentCount(projectId int64, monthYear string)
 func SetSixSignalMonthlyUniqueEnrichmentCount(projectId int64, value string, timeZone U.TimeZoneString) error {
 
 	monthYear := U.GetCurrentMonthYear(timeZone)
-	log.WithFields(log.Fields{"project_id": projectId, "monthYear": monthYear})
 	key, err := GetSixSignalMonthlyUniqueEnrichmentKey(projectId, monthYear)
 	if err != nil {
 		return err
 	}
 
-	isAdded, err := cacheRedis.PFAddPersistent(key, value, 0)
-	log.WithFields(log.Fields{"isAdded": isAdded, "error": err, "project_id": projectId}).Info("Debugging metering")
+	_, err = cacheRedis.PFAddPersistent(key, value, 0)
 	return err
 }
 
