@@ -383,7 +383,7 @@ upload-merge-user-properties: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/merge-user-properties-job:$(TAG)
 
 pack-dashboard-caching:
-	docker build -t us.gcr.io/factors-$(ENV)/dashboard-caching-job:$(TAG) -f Dockerfile.dashboard_caching_job .
+	docker buildx build --platform linux/amd64 -t us.gcr.io/factors-$(ENV)/dashboard-caching-job:$(TAG) -f Dockerfile.dashboard_caching_job .
 
 upload-dashboard-caching: export IMAGE_NAME=dashboard-caching-job
 upload-dashboard-caching: notify-deployment
