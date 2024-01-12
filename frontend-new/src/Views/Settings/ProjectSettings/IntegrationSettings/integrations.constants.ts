@@ -25,7 +25,7 @@ export const IntegrationProviderData: IntegrationConfig[] = [
     desc: 'Segment is a Customer Data Platform (CDP) that simplifies collecting and using data from the users of your digital properties and SaaS applications',
     icon: 'Segment_ads',
     kbLink: 'https://help.factors.ai/en/articles/7261994-segment-integration',
-    featureName: FEATURES.INT_SEGMENT,
+    featureName: FEATURES.FEATURE_SEGMENT,
     Component: Segment
   },
   {
@@ -34,14 +34,14 @@ export const IntegrationProviderData: IntegrationConfig[] = [
     icon: 'Rudderstack_ads',
     kbLink:
       'https://help.factors.ai/en/articles/7283693-rudderstack-integration',
-    featureName: FEATURES.INT_RUDDERSTACK,
+    featureName: FEATURES.FEATURE_RUDDERSTACK,
     Component: Rudderstack
   },
   {
     name: 'Marketo',
     desc: 'Marketo is a leader in marketing automation. Using our Marketo source, we will ingest your Program, Campaign, Person and List records into Factors',
     icon: 'Marketo',
-    featureName: FEATURES.INT_MARKETO,
+    featureName: FEATURES.FEATURE_MARKETO,
     Component: Marketo
   },
   {
@@ -49,7 +49,7 @@ export const IntegrationProviderData: IntegrationConfig[] = [
     desc: 'Does your team live on Slack? Set up alerts that track KPIs and marketing data. Nudge your team to take the right actions.',
     icon: 'Slack',
     kbLink: 'https://help.factors.ai/en/articles/7283808-slack-integration',
-    featureName: FEATURES.INT_SLACK,
+    featureName: FEATURES.FEATURE_SLACK,
     Component: Slack
   },
   {
@@ -58,7 +58,7 @@ export const IntegrationProviderData: IntegrationConfig[] = [
     icon: 'MSTeam',
     kbLink:
       'https://help.factors.ai/en/articles/7913152-microsoft-teams-integration',
-    featureName: FEATURES.INT_TEAMS,
+    featureName: FEATURES.FEATURE_TEAMS,
     Component: MSTeam
   },
   {
@@ -66,7 +66,7 @@ export const IntegrationProviderData: IntegrationConfig[] = [
     desc: 'Sync your Contact, Company and Deal objects with Factors on a daily basis',
     icon: 'Hubspot_ads',
     kbLink: 'https://help.factors.ai/en/articles/7261985-hubspot-integration',
-    featureName: FEATURES.INT_HUBSPOT,
+    featureName: FEATURES.FEATURE_HUBSPOT,
     Component: Hubspot
   },
   {
@@ -75,7 +75,7 @@ export const IntegrationProviderData: IntegrationConfig[] = [
     icon: 'Salesforce_ads',
     kbLink:
       'https://help.factors.ai/en/articles/7261989-salesforce-integration',
-    featureName: FEATURES.INT_SALESFORCE,
+    featureName: FEATURES.FEATURE_SALESFORCE,
     Component: Salesforce
   },
   {
@@ -84,7 +84,7 @@ export const IntegrationProviderData: IntegrationConfig[] = [
     icon: 'Google_ads',
     kbLink:
       'https://help.factors.ai/en/articles/7283695-google-ads-integration',
-    featureName: FEATURES.INT_ADWORDS,
+    featureName: FEATURES.FEATURE_GOOGLE_ADS,
     Component: GoogleAdWords
   },
   {
@@ -93,7 +93,7 @@ export const IntegrationProviderData: IntegrationConfig[] = [
     icon: 'Facebook_ads',
     kbLink:
       'https://help.factors.ai/en/articles/7283696-facebook-ads-integration',
-    featureName: FEATURES.INT_FACEBOOK,
+    featureName: FEATURES.FEATURE_FACEBOOK,
     Component: Facebook
   },
   {
@@ -102,21 +102,21 @@ export const IntegrationProviderData: IntegrationConfig[] = [
     icon: 'Linkedin_ads',
     kbLink:
       'https://help.factors.ai/en/articles/7283729-linkedin-ads-integration',
-    featureName: FEATURES.INT_LINKEDIN,
+    featureName: FEATURES.FEATURE_LINKEDIN,
     Component: LinkedIn
   },
   {
     name: 'G2',
     desc: 'Sync G2 intent data with Factors for a complete look at buyer intent',
     icon: 'g2crowd',
-    featureName: FEATURES.INT_G2,
+    featureName: FEATURES.FEATURE_G2,
     Component: G2
   },
   {
     name: 'Drift',
     desc: 'Track events and conversions from Drift’s chat solution on the website',
     icon: 'DriftLogo',
-    featureName: FEATURES.INT_DRIFT,
+    featureName: FEATURES.FEATURE_DRIFT,
     Component: Drift
   },
   {
@@ -125,7 +125,7 @@ export const IntegrationProviderData: IntegrationConfig[] = [
     icon: 'Google',
     kbLink:
       'https://help.factors.ai/en/articles/7283784-google-search-console-integration',
-    featureName: FEATURES.INT_GOOGLE_ORGANIC,
+    featureName: FEATURES.FEATURE_GOOGLE_ORGANIC,
     Component: GoogleSearchConsole
   },
   {
@@ -133,7 +133,7 @@ export const IntegrationProviderData: IntegrationConfig[] = [
     desc: 'Sync Bing ads reports with Factors for performance reporting',
     icon: 'Bing',
     kbLink: 'https://help.factors.ai/en/articles/7831204-bing-ads-integration',
-    featureName: FEATURES.INT_BING_ADS,
+    featureName: FEATURES.FEATURE_BING_ADS,
     Component: Bing
   },
   {
@@ -142,7 +142,7 @@ export const IntegrationProviderData: IntegrationConfig[] = [
     icon: 'ClearbitLogo',
     kbLink:
       'https://help.factors.ai/en/articles/7261981-clearbit-reveal-integration',
-    featureName: FEATURES.INT_CLEARBIT,
+    featureName: FEATURES.FEATURE_CLEARBIT,
     Component: Reveal
   },
   {
@@ -151,7 +151,7 @@ export const IntegrationProviderData: IntegrationConfig[] = [
     icon: 'LeadSquared',
     kbLink:
       'https://help.factors.ai/en/articles/7283684-leadsquared-integration',
-    featureName: FEATURES.INT_LEADSQUARED,
+    featureName: FEATURES.FEATURE_LEADSQUARED,
     Component: LeadSquared
   },
   {
@@ -160,14 +160,14 @@ export const IntegrationProviderData: IntegrationConfig[] = [
     icon: 'SixSignalLogo',
     kbLink:
       'https://help.factors.ai/en/articles/7261968-6signal-by-6sense-integration',
-    featureName: FEATURES.INT_SIX_SIGNAL,
+    featureName: FEATURES.FEATURE_SIX_SIGNAL,
     Component: SixSignal
   },
   {
     name: 'Factors Website De-anonymization',
     desc: 'Gain insight into who is visiting your website and where they are in the buying journey',
     icon: 'Brand',
-    featureName: FEATURES.INT_FACTORS_DEANONYMISATION,
+    featureName: FEATURES.FEATURE_FACTORS_DEANONYMISATION,
     Component: SixSignalFactors
   }
 ];

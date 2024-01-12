@@ -14,7 +14,8 @@ import { MinusCircleOutlined } from '@ant-design/icons';
 import {
   ADDITIONAL_ACCOUNTS_ADDON_LIMIT,
   PLANS_COFIG,
-  ADDITIONAL_ACCOUNTS_ADDON_ID
+  ADDITIONAL_ACCOUNTS_ADDON_ID,
+  PLANS
 } from 'Constants/plans.constants';
 import {
   PlanTerm,
@@ -26,23 +27,24 @@ import { upgradePlan } from 'Reducers/plansConfig/services';
 import { useSelector } from 'react-redux';
 import { startCase, toLower } from 'lodash';
 
-const PriceUpgradeModal = ({
+function PriceUpgradeModal({
   visible,
   onCancel,
   plan,
   variant
-}: UpgradeModalProps) => {
+}: UpgradeModalProps) {
   const [loading, setIsLoading] = useState<boolean>(false);
   const [addonVisible, setAddonVisible] = useState<boolean>(false);
   const [addonCount, setAddonCount] = useState<number>(
     variant === 'only-addon' ? 1 : 0
   );
   const planConfig = PLANS_COFIG[plan?.name || ''] || {};
-  const [selectedPlanTerm, setSelectedPlanTerm] =
-    useState<PlanTerm | null>(null);
+  const [selectedPlanTerm, setSelectedPlanTerm] = useState<PlanTerm | null>(
+    null
+  );
 
   const { active_project } = useSelector((state: any) => state.global);
-  const { plansConfig } = useSelector(
+  const { plansConfig, differentialPricing } = useSelector(
     (state: any) => state.plansConfig
   ) as PlansConfigState;
   const additionalAccountsAddon =
@@ -134,15 +136,23 @@ const PriceUpgradeModal = ({
 
   useEffect(() => {
     if (plan && plan.terms?.length > 0) {
-      const monthlyTerm = plan.terms.find((p) => p.period === 'month');
-      if (monthlyTerm) setSelectedPlanTerm(monthlyTerm);
+      const yearlyTerm = plan.terms.find((p) => p.period === 'year');
+      if (yearlyTerm) setSelectedPlanTerm(yearlyTerm);
       else setSelectedPlanTerm(plan.terms[0]);
     }
   }, [plan]);
 
-  const addonAmount = additionalAccountsAddon
-    ? additionalAccountsAddon?.price
-    : 0;
+  const differentialPriceForPlan = differentialPricing?.data?.find(
+    (data) =>
+      data.parent_item_id === plan?.name &&
+      data.item_price_id === ADDITIONAL_ACCOUNTS_ADDON_ID
+  );
+
+  const addonAmount = differentialPriceForPlan
+    ? differentialPriceForPlan.price
+    : additionalAccountsAddon
+      ? additionalAccountsAddon?.price
+      : 0;
 
   const renderPlanVaraint = () => (
     <>
@@ -203,7 +213,7 @@ const PriceUpgradeModal = ({
                 <span style={{ fontWeight: 600 }}>
                   <Number number={accountIdentifiedLimit} />{' '}
                 </span>
-                Accounts Identification
+                Accounts Identified/month
               </Text>
             </div>
             <div className='flex gap-2 items-center '>
@@ -229,12 +239,14 @@ const PriceUpgradeModal = ({
               extraClass={'m-0 '}
               weight={'bold'}
             >
-              ${planPrice}
+              {selectedPlanTerm?.period === 'month' && `$${planPrice}/Month`}
+              {selectedPlanTerm?.period === 'year' &&
+                `$${planPrice / 12}/Month`}
             </Text>
           </div>
         </div>
       </div>
-      {additionalAccountsAddon && (
+      {additionalAccountsAddon && plan?.name !== PLANS.PLAN_FREE && (
         <>
           <Divider />
 
@@ -492,7 +504,7 @@ const PriceUpgradeModal = ({
       </AppModal>
     </div>
   );
-};
+}
 
 interface UpgradeModalProps {
   visible: boolean;

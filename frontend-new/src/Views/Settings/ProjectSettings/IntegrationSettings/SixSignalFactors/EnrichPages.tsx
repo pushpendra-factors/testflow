@@ -65,13 +65,16 @@ const EnrichPages = ({
   const renderData = () => {
     const rData = data.map((d, index) => (
       <div
-        className={`flex w-100 items-center gap-2 ${index !== 0 ? 'mt-3' : ''}`}
+        className={`flex w-100 items-center gap-2 ${
+          index !== 0 ? 'mt-3' : ''
+        } `}
         key={index}
       >
         <Select
           style={{
-            width: 180,
-            borderRadius: 6
+            borderRadius: 6,
+            width: 'fix-content',
+            minWidth: 180
           }}
           value={d.type}
           onChange={(value) => updateDataAtIndex(value, index, 'type')}

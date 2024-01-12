@@ -272,26 +272,6 @@ function QueryComposer({
         </div>
       );
     });
-
-    if (
-      (queryType === QUERY_TYPE_FUNNEL && queries.length < 10) ||
-      (queryType === QUERY_TYPE_EVENT && queries.length < 6)
-    ) {
-      blockList.push(
-        <div key='init' className={styles.composer_body__query_block}>
-          <QueryBlock
-            availableGroups={getAvailableGroups}
-            queryType={queryType}
-            index={queries.length + 1}
-            queries={queries}
-            eventChange={eventChange}
-            groupBy={queryOptions.groupBy}
-            groupAnalysis={queryOptions.group_analysis}
-          />
-        </div>
-      );
-    }
-
     return blockList;
   };
 
@@ -513,6 +493,20 @@ function QueryComposer({
           >
             {queryList()}
           </ReactSortable>
+          {((queryType === QUERY_TYPE_FUNNEL && queries.length < 10) ||
+            (queryType === QUERY_TYPE_EVENT && queries.length < 6)) && (
+            <div key='init' className={styles.composer_body__query_block}>
+              <QueryBlock
+                availableGroups={getAvailableGroups}
+                queryType={queryType}
+                index={queries.length + 1}
+                queries={queries}
+                eventChange={eventChange}
+                groupBy={queryOptions.groupBy}
+                groupAnalysis={queryOptions.group_analysis}
+              />
+            </div>
+          )}
         </ComposerBlock>
       );
     } catch (err) {

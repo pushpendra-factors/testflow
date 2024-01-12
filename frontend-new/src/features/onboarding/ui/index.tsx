@@ -37,10 +37,10 @@ const getIllustrationImage = (currentStep: number): string => {
   }
 };
 
-const Onboarding = ({
+function Onboarding({
   setShowAnalyticsResult,
   getActiveProjectDetails
-}: OnboardingComponentProps) => {
+}: OnboardingComponentProps) {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const history = useHistory();
   const routerQuery = useQuery();
@@ -53,14 +53,13 @@ const Onboarding = ({
   );
   const { projects } = useSelector((state) => state.global);
 
-  const showCloseButton =
-    paramSetup === 'new' || (Array.isArray(projects) && projects.length > 1);
+  const showCloseButton = paramSetup === 'new' || currentStep === 5;
 
   const incrementStepCount = () => {
     if (currentStep < 5) setCurrentStep(currentStep + 1);
   };
 
-  const handleCloseClick = () => {    
+  const handleCloseClick = () => {
     if (paramSetup === 'new') {
       history.goBack();
       return;
@@ -190,7 +189,7 @@ const Onboarding = ({
       )}
     </OnboardingLayout>
   );
-};
+}
 
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(

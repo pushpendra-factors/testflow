@@ -15,6 +15,7 @@ import (
 	"time"
 
 	teams "factors/integration/ms_teams"
+	"factors/integration/paragon"
 	slack "factors/integration/slack"
 	webhook "factors/webhooks"
 
@@ -31,6 +32,7 @@ const (
 	SLACK                        = "Slack"
 	TEAMS                        = "Teams"
 	WEBHOOK                      = "WH"
+	ParagonUrlRune               = "zeus.useparagon.com"
 )
 
 type SendReportLogCount struct {
@@ -577,10 +579,20 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 	//		for alert is set for Webhook option
 	if (retry && strings.EqualFold(WEBHOOK, sendTo)) || (!retry && alertConfiguration.Webhook) {
 
-		response, err := webhook.DropWebhook(alertConfiguration.WebhookURL, alertConfiguration.Secret, alert.Message)
-		if err != nil {
-			logCtx.WithFields(log.Fields{"alert_id": alertID, "server_response": response}).
-				WithError(err).Error("Webhook failure")
+		var response = make(map[string]interface{})
+		if strings.Contains(alertConfiguration.WebhookURL, ParagonUrlRune) {
+			response, err = paragon.SendPayloadToParagonForTheAlert(eta.ProjectID, eta.ID, &alertConfiguration, alert)
+			if err != nil {
+				logCtx.WithFields(log.Fields{"alert_id": alertID, "server_response": response}).
+					WithError(err).Error("Paragon event failure")
+			}
+			logCtx.WithField("response", response).Info("paragon response")
+		} else {
+			response, err = webhook.DropWebhook(alertConfiguration.WebhookURL, alertConfiguration.Secret, alert.Message)
+			if err != nil {
+				logCtx.WithFields(log.Fields{"alert_id": alertID, "server_response": response}).
+					WithError(err).Error("Webhook failure")
+			}
 		}
 		logCtx.WithField("response", response).Info("Webhook dropped for alert.")
 		stat := response["status"]

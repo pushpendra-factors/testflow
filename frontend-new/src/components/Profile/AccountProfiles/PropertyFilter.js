@@ -15,6 +15,8 @@ function PropertyFilter({
   filtersExpanded,
   setFiltersExpanded,
   filtersList,
+  secondaryFiltersList,
+  setSecondaryFiltersList,
   listEvents,
   setListEvents,
   setFiltersList,
@@ -26,7 +28,9 @@ function PropertyFilter({
   areFiltersDirty,
   resetSelectedFilters,
   onClearFilters,
-  isActiveSegment
+  isActiveSegment,
+  eventTimeline,
+  setEventTimeline
 }) {
   const dispatch = useDispatch();
   const { newSegmentMode: accountsNewSegmentMode } = useSelector(
@@ -49,7 +53,12 @@ function PropertyFilter({
   }, [resetSelectedFilters, toggleFilters]);
 
   if (filtersExpanded === false && newSegmentMode === false) {
-    if (appliedFilters.filters.length + appliedFilters.eventsList.length > 0) {
+    if (
+      appliedFilters.filters.length +
+        appliedFilters.eventsList.length +
+        appliedFilters.secondaryFilters.length >
+      0
+    ) {
       return (
         <Button
           className={cx(
@@ -61,7 +70,9 @@ function PropertyFilter({
         >
           <Text type='title' extraClass='mb-0' weight='medium' color='grey-6'>
             View{' '}
-            {appliedFilters.filters.length + appliedFilters.eventsList.length}{' '}
+            {appliedFilters.filters.length +
+              appliedFilters.eventsList.length +
+              appliedFilters.secondaryFilters.length}{' '}
             filter(s)
           </Text>
           <SVG size={16} name='chevronDown' color='#8C8C8C' />
@@ -126,6 +137,10 @@ function PropertyFilter({
         onClearFilters={onClearFilters}
         disableDiscardButton={disableDiscardButton}
         isActiveSegment={isActiveSegment}
+        secondaryFiltersList={secondaryFiltersList}
+        setSecondaryFiltersList={setSecondaryFiltersList}
+        eventTimeline={eventTimeline}
+        setEventTimeline={setEventTimeline}
       />
     </div>
   );

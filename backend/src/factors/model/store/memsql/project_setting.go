@@ -20,6 +20,10 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
+const (
+	sqlNull string = "NULL"
+)
+
 func (store *MemSQL) satisfiesProjectSettingForeignConstraints(setting model.ProjectSetting) int {
 	logFields := log.Fields{
 		"setting": setting,
@@ -1735,4 +1739,96 @@ func (store *MemSQL) GetWeightsByProject(project_id int64) (*model.AccWeights, i
 	}
 
 	return &weights, http.StatusFound
+}
+
+func getNumberOfProjectsWithParagonEnabled() (int64, error) {
+	var count int64
+	db := C.GetServices().Db
+
+	err := db.Model(&model.ProjectSetting{}).Not("int_paragon_token = ?", sqlNull).Count(&count).Error
+	if err != nil {
+		log.WithError(err).Error("error getting paragon enabled projects count")
+		return count, err
+	}
+
+	return count, nil
+}
+
+func (store *MemSQL) GetParagonTokenFromProjectSetting(projectID int64) (string, int, error) {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 {
+		logCtx.Error("invalid parameter")
+		return "", http.StatusBadRequest, fmt.Errorf("invalid parameter")
+	}
+
+	setting, errCode := store.GetProjectSetting(projectID)
+	if errCode != http.StatusFound {
+		errMsg := "failed to fetch project settings"
+		logCtx.Error(errMsg)
+		return "", errCode, fmt.Errorf("failed to fetch project settings")
+	}
+
+	token := setting.IntParagonToken
+	if token == "" {
+		logCtx.Error("paragon not enabled yet")
+		return "", http.StatusNotFound, fmt.Errorf("paragon not enabled yet")
+	}
+
+	return token, http.StatusFound, nil
+}
+
+func (store *MemSQL) GetParagonEnabledProjectsCount(projectID int64) (int64, int, error) {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 {
+		logCtx.Error("invalid parameter")
+		return 0, http.StatusBadRequest, fmt.Errorf("invalid parameter")
+	}
+
+	var count int64
+	db := C.GetServices().Db
+	err := db.Model(&model.ProjectSetting{}).
+		Not("int_paragon_token = ?", "NULL").Not("int_paragon_token = ?", "").Count(&count).Error
+	if err != nil {
+		errMsg := "failed to fetch project settings"
+		logCtx.Error(errMsg)
+		return 0, http.StatusInternalServerError, fmt.Errorf("failed to fetch paragon token count from project settings")
+	}
+
+	return count, http.StatusOK, nil
+}
+
+func (store *MemSQL) AddParagonTokenAndEnablingAgentToProjectSetting(projectID int64, agentID, token string) (int, error) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"agent_id":   agentID,
+	}
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 {
+		logCtx.Error("invalid parameter")
+		return http.StatusBadRequest, fmt.Errorf("invalid parameter")
+	}
+
+	db := C.GetServices().Db
+	if err := db.Model(model.ProjectSetting{}).Where("project_id = ?", projectID).
+		Updates(map[string]interface{}{"int_paragon_token": token, "in_paragon_enabling_agent_id": agentID}).Error; err != nil {
+		logCtx.WithError(err).Error("failed to update project_settings for paragon settings")
+		return http.StatusInternalServerError, err
+	}
+
+	return http.StatusAccepted, nil
 }

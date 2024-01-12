@@ -295,13 +295,11 @@ func (store *MemSQL) UpdateProjectPlanMapping(projectID int64, planMapping *mode
 	updateFields := make(map[string]interface{}, 0)
 	db := C.GetServices().Db
 	if planMapping.BillingPlanID != "" {
+		updateFields["plan_id"] = planMapping.PlanID
 		updateFields["billing_plan_id"] = planMapping.BillingPlanID
 		updateFields["billing_last_synced_at"] = planMapping.BillingLastSyncedAt
-
-	}
-
-	if planMapping.BillingAddons != nil {
 		updateFields["billing_add_ons"] = planMapping.BillingAddons
+
 	}
 
 	err := db.Model(&model.ProjectPlanMapping{}).Where("project_id = ?", projectID).Update(updateFields).Error
@@ -436,8 +434,8 @@ func GetPlanIDFromString(planID string) (int, error) {
 	switch planID {
 	case model.PLAN_FREE:
 		return model.PLAN_ID_FREE, nil
-	case model.PLAN_STARTUP:
-		return model.PLAN_ID_STARTUP, nil
+	case model.PLAN_GROWTH:
+		return model.PLAN_ID_GROWTH, nil
 	case model.PLAN_BASIC:
 		return model.PLAN_ID_BASIC, nil
 	case model.PLAN_PROFESSIONAL:
@@ -457,15 +455,13 @@ func (store *MemSQL) PopulatePlanDetailsTable(planDetails model.PlanDetails) (in
 	logCtx := log.WithFields(logFields)
 	model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	if planDetails.Name == model.PLAN_FREE {
-		planDetails.ID = model.PLAN_ID_FREE
+	planID, err := GetPlanIDFromString(planDetails.Name)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to assign plan id")
 	}
-	if planDetails.Name == model.PLAN_CUSTOM {
-		planDetails.ID = model.PLAN_ID_CUSTOM
-	}
-
+	planDetails.ID = int64(planID)
 	db := C.GetServices().Db
-	err := db.Create(&planDetails).Error
+	err = db.Create(&planDetails).Error
 	if err != nil {
 		logCtx.WithError(err).Error("failed to insert data")
 		return http.StatusInternalServerError, err

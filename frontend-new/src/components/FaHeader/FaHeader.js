@@ -1,11 +1,9 @@
 import React from 'react';
 import cx from 'classnames';
-import { Layout, Dropdown, Menu } from 'antd';
+import { Layout, Dropdown, Menu, Button } from 'antd';
 import { Link, useLocation } from 'react-router-dom';
 import SearchBar from 'Components/SearchBar';
 import { SVG, Text } from 'Components/factorsComponents';
-import styles from './index.module.scss';
-import { PathUrls } from '../../routes/pathUrls';
 import ProjectModal from 'Components/ProjectModal';
 import {
   isAccountsUrl,
@@ -17,13 +15,15 @@ import {
 } from 'Views/AppSidebar/appSidebar.helpers';
 import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import { useSelector } from 'react-redux';
-import { featureLock } from '../../routes/feature';
 import { SolutionsAccountId } from 'Routes/constants';
 import useFeatureLock from 'hooks/useFeatureLock';
 import { FEATURES } from 'Constants/plans.constants';
+import { PathUrls } from '../../routes/pathUrls';
+import styles from './index.module.scss';
+import { featureLock } from '../../routes/feature';
 
 export const getConfigureMenuItems = (email) => {
-  let configureMenuItems = [
+  const configureMenuItems = [
     {
       label: 'Events',
       url: PathUrls.ConfigureEvents
@@ -162,7 +162,7 @@ const reportsMenu = (
   <Menu className={styles['dropdown-menu']}>
     <Menu.Item className={styles['dropdown-menu-item']}>
       <Link className='items-center col-gap-2' to={PathUrls.PreBuildDashboard}>
-        <SVG name='QuickBoard' color={'#36CFC9'} />
+        <SVG name='QuickBoard' color='#36CFC9' />
         <Text color='black' level={7} type='title' extraClass='mb-0'>
           Quick Boards
         </Text>
@@ -170,7 +170,7 @@ const reportsMenu = (
     </Menu.Item>
     <Menu.Item className={styles['dropdown-menu-item']}>
       <Link className='items-center col-gap-2' to={PathUrls.Dashboard}>
-        <SVG name='dashboard_Filled' color={'#40A9FF'} />
+        <SVG name='dashboard_Filled' color='#40A9FF' />
         <Text color='black' level={7} type='title' extraClass='mb-0'>
           Dashboards
         </Text>
@@ -186,17 +186,15 @@ const renderConfigureMenu = (email) => (
         Configure
       </Text>
     </Menu.Item>
-    {getConfigureMenuItems(email).map((item) => {
-      return (
-        <Menu.Item key={item.label} className={styles['dropdown-menu-item']}>
-          <Link to={item.url}>
-            <Text color='black' level={7} type='title' extraClass='mb-0'>
-              {item.label}
-            </Text>
-          </Link>
-        </Menu.Item>
-      );
-    })}
+    {getConfigureMenuItems(email).map((item) => (
+      <Menu.Item key={item.label} className={styles['dropdown-menu-item']}>
+        <Link to={item.url}>
+          <Text color='black' level={7} type='title' extraClass='mb-0'>
+            {item.label}
+          </Text>
+        </Link>
+      </Menu.Item>
+    ))}
   </Menu>
 );
 
@@ -243,11 +241,11 @@ function FaHeader() {
     <Header
       className={`px-6 fixed py-3 flex items-center w-full justify-between ${styles['fa-header']}`}
     >
-      <div className={'flex items-center w-1/3'}>
+      <div className='flex items-center w-1/3'>
         <div className='flex items-center col-gap-6'>
           <Link to={PathUrls.ProfileAccounts} id='fa-at-link--home'>
             <SVG
-              name={'brand'}
+              name='brand'
               background='transparent'
               showBorder={false}
               size={32}
@@ -367,6 +365,16 @@ function FaHeader() {
       <div className='w-1/3 flex justify-center'>
         <SearchBar />
       </div>
+      {/* <div>
+        <Button
+          icon={<SVG name='Stars' />}
+          type='link'
+          href={PathUrls.Checklist}
+          className={`${styles.checklistSetup}`}
+        >
+          Finish the setup
+        </Button>
+      </div> */}
       <div className='flex w-1/3 items-center justify-end col-gap-6 text-white'>
         <Dropdown
           overlay={renderConfigureMenu(activeAgent)}

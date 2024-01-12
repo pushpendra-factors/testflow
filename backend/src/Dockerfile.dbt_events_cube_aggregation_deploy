@@ -1,0 +1,32 @@
+FROM golang:1.20.3-alpine AS builder
+
+WORKDIR /go/src/factors
+ADD /factors .
+
+COPY ./dbt/go_script ./scripts
+RUN go build -o $GOPATH/bin/events_cube_aggregation_deploy $GOPATH/src/factors/scripts/events_cube_aggregation_deploy/events_cube_aggregation_deploy.go
+
+
+FROM python:3.7-alpine
+
+ENV PYTHONPATH "${PYTHONPATH}:/usr/local/var/factors"
+RUN /bin/sh -c 'mkdir -p {/usr/local/var/factors,/root/.dbt}'
+
+RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
+ADD https://github.com/golang/go/raw/master/lib/time/zoneinfo.zip /usr/local/go/lib/time/zoneinfo.zip
+COPY --from=builder /go/bin/events_cube_aggregation_deploy /usr/local/var/factors/events_cube_aggregation_deploy
+
+WORKDIR /usr/local/var/factors
+COPY /dbt/events_cube_aggregation ./ 
+COPY /dbt/events_cube_aggregation/profiles.yml /root/.dbt/profiles.yml
+
+RUN apk add --no-cache --virtual .build-deps gcc g++ libxslt-dev libffi-dev && \
+    apk add --no-cache libxslt libffi git && \
+    pip3 install dbt-core dbt-mysql && \
+    pip3 install git+https://github.com/Slashbit-Technologies/dbt-singlestore.git
+# pip install dbt-singlestore has been changed to our own repository since we made few changes.
+
+COPY debug_start.sh debug_start.sh
+
+RUN ["chmod", "+x", "./debug_start.sh"]
+ENTRYPOINT ["sh", "./debug_start.sh"]

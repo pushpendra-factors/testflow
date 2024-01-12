@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/chargebee/chargebee-go/v3/models/event"
+	"github.com/chargebee/chargebee-go/v3/models/itemprice/enum"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
@@ -33,20 +34,48 @@ func GetPricingForPlansAndAddonsHandler(c *gin.Context) {
 	}
 	var res model.PlansAndAddOnsPrices
 	for _, itemPrice := range itemPrices {
-		res = append(res, model.SubscriptionProductPrice{
-			Type:         string(itemPrice.ItemType),
-			Name:         itemPrice.Name,
-			ExternalName: itemPrice.ExternalName,
-			ID:           itemPrice.Id,
-			Price:        formatPrice(itemPrice.Price),
-			PeriodUnit:   string(itemPrice.PeriodUnit),
-		})
+		if itemPrice.Status == enum.StatusActive {
+			res = append(res, model.SubscriptionProductPrice{
+				Type:         string(itemPrice.ItemType),
+				Name:         itemPrice.Name,
+				ExternalName: itemPrice.ExternalName,
+				ID:           itemPrice.Id,
+				Price:        formatPrice(itemPrice.Price),
+				PeriodUnit:   string(itemPrice.PeriodUnit),
+			})
+		}
 	}
 	c.JSON(http.StatusOK, res)
 }
 
-func formatPrice(price int64) int64 {
-	return price / 100
+func formatPrice(price int64) float64 {
+	return float64(price) / 100
+}
+
+func GetDifferentialPricingForAddOns(c *gin.Context) {
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		c.AbortWithError(http.StatusBadRequest, errors.New("INVALID PROJECT ID"))
+		return
+	}
+	diffPrices, err := billing.ListDifferentialPricingFromChargebee()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, model.DifferentialPrices{})
+		return
+
+	}
+	var res model.DifferentialPrices
+	for _, diffPrice := range diffPrices {
+		if diffPrice.Status == "active" {
+			res = append(res, model.DifferentialPrice{
+				ID:           diffPrice.Id,
+				ItemPriceID:  diffPrice.ItemPriceId,
+				ParentItemID: diffPrice.ParentItemId,
+				Price:        formatPrice(diffPrice.Price),
+			})
+		}
+	}
+	c.JSON(http.StatusOK, res)
 }
 
 func UpdateSubscriptionHandler(c *gin.Context) {
@@ -68,6 +97,7 @@ func UpdateSubscriptionHandler(c *gin.Context) {
 		c.AbortWithError(http.StatusBadRequest, errors.New("INVALID REQUEST"))
 		return
 	}
+
 	hostedPage, _, err := billing.GetUpgradeChargebeeSubscriptionCheckoutURL(projectId, project.BillingSubscriptionID, updateSubscriptionParams)
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
@@ -107,8 +137,9 @@ func GetSubscriptionDetailsHander(c *gin.Context) {
 		subscriptionDetails = append(subscriptionDetails, model.SubscriptionDetail{
 			Type:         string(item.ItemType),
 			ID:           item.ItemPriceId,
-			Amount:       item.Amount,
+			Amount:       formatPrice(item.Amount),
 			ExternalName: getExternalNameFromPlanID(item.ItemPriceId),
+			Quantity:     item.Quantity,
 		})
 	}
 
@@ -140,15 +171,15 @@ func BillingUpgradeCallbackHandler(c *gin.Context) {
 	projectIDString := c.Query("project_id")
 	projectID, err := strconv.ParseInt(projectIDString, 10, 64)
 	if err != nil {
-		c.Redirect(http.StatusPermanentRedirect, C.GetProtocol()+C.GetAPPDomain()+"/pricing?error=INVALID PROJECT")
+		c.Redirect(http.StatusPermanentRedirect, C.GetProtocol()+C.GetAPPDomain()+"/settings/pricing?error=INVALID PROJECT")
 	}
 
 	err = store.GetStore().TriggerSyncChargebeeToFactors(projectID)
 	if err != nil {
-		c.Redirect(http.StatusPermanentRedirect, C.GetProtocol()+C.GetAPPDomain()+"/pricing?error=SERVER_ERROR")
+		c.Redirect(http.StatusPermanentRedirect, C.GetProtocol()+C.GetAPPDomain()+"/settings/pricing?error=SERVER_ERROR")
 		return
 	}
-	c.Redirect(http.StatusPermanentRedirect, fmt.Sprintf(C.GetProtocol()+C.GetAPPDomain()+"/pricing&state=%s", state))
+	c.Redirect(http.StatusPermanentRedirect, fmt.Sprintf(C.GetProtocol()+C.GetAPPDomain()+"/settings/pricing?state=%s", state))
 }
 
 func ListAllInvoicesHandler(c *gin.Context) {
@@ -175,9 +206,9 @@ func ListAllInvoicesHandler(c *gin.Context) {
 		inv := model.Invoice{
 			ID:          invoice.Id,
 			BillingDate: time.Unix(invoice.Date, 0),
-			Amount:      invoice.Total,
-			AmountPaid:  invoice.AmountPaid,
-			AmountDue:   invoice.AmountDue,
+			Amount:      formatPrice(invoice.Total),
+			AmountPaid:  formatPrice(invoice.AmountPaid),
+			AmountDue:   formatPrice(invoice.AmountDue),
 		}
 		var items []string
 		for _, item := range invoice.LineItems {

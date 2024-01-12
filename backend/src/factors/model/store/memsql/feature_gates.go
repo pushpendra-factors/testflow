@@ -2,6 +2,7 @@ package memsql
 
 import (
 	"errors"
+	billing "factors/billing/chargebee"
 	C "factors/config"
 	"factors/model/model"
 	"fmt"
@@ -131,17 +132,28 @@ func (store *MemSQL) GetFeatureLimitForProject(projectID int64, featureName stri
 	}
 
 	// billing add-ons for additional accounts
+	// only if billing is enabled
 
-	billlingAddOns, err := store.GetBillingAddonsForProject(projectID)
+	project, status := store.GetProject(projectID)
+	if status != http.StatusFound {
+		log.WithError(err).Error("Failed to get billing addons Project ID ", projectID)
+		return 0, err
+	}
+
+	if !project.EnableBilling {
+		return limit, nil
+	}
+
+	subItems, err := billing.GetCurrentSubscriptionDetails(projectID, project.BillingSubscriptionID)
 	if err != nil {
 		log.WithError(err).Error("Failed to get billing addons Project ID ", projectID)
 		return 0, err
 	}
 
-	if len(billlingAddOns) > 0 {
-		for _, addOn := range billlingAddOns {
-			if addOn.ItemPriceID == model.ADD_ON_ADDITIONAL_500_ACCOUNTS_MONTHLY || addOn.ItemPriceID == model.ADD_ON_ADDITIONAL_500_ACCOUNTS_YEARLY {
-				limit += int64(model.GetNumberOfAccountsForAddOnID(addOn.ItemPriceID))
+	for _, item := range subItems.SubscriptionItems {
+		if item.ItemType == "addon" {
+			if item.ItemPriceId == model.ADD_ON_ADDITIONAL_500_ACCOUNTS_MONTHLY || item.ItemPriceId == model.ADD_ON_ADDITIONAL_500_ACCOUNTS_YEARLY {
+				limit += int64(item.Quantity) * model.GetNumberOfAccountsForAddOnID(item.ItemPriceId)
 			}
 		}
 	}

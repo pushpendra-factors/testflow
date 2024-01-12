@@ -1017,3 +1017,9 @@ func TestProfilesHubspotDealsPropertyValueLabels(t *testing.T) {
 		assert.Equal(t, float64(1), results[0].Rows[i][1])
 	}
 }
+
+
+func TestGetMaxTimestampOfDataPresenceFromWebsiteAggreagtion(t *testing.T) {
+	v1, status := store.GetStore().GetMaxTimestampOfDataPresenceFromWebsiteAggregation(2, "Asia/Kolkata");
+	log.WithField("v1", v1).WithField("status", status).Warn("kark2");
+}

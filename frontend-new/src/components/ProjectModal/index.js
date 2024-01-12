@@ -9,8 +9,6 @@ import {
   notification,
   Tooltip
 } from 'antd';
-import { Text, SVG } from '../factorsComponents';
-import styles from './index.module.scss';
 import {
   updateAgentInfo,
   fetchAgentInfo,
@@ -18,17 +16,18 @@ import {
   signout
 } from 'Reducers/agentActions';
 import { USER_LOGOUT } from 'Reducers/types';
-import { getActiveProjectDetails } from 'Reducers/global';
-import UserSettings from '../../Views/Settings/UserSettings';
+import { getActiveProjectDetails, fetchProjectSettings } from 'Reducers/global';
 // import NewProject from '../../Views/Settings/SetupAssist/Modals/NewProject';
 import { connect, useDispatch } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import factorsai from 'factorsai';
-import { fetchProjectSettings } from 'Reducers/global';
-import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
 import useAutoFocus from 'hooks/useAutoFocus';
 import { PathUrls } from 'Routes/pathUrls';
 import logger from 'Utils/logger';
+import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
+import UserSettings from '../../Views/Settings/UserSettings';
+import styles from './index.module.scss';
+import { Text, SVG } from '../factorsComponents';
 
 function ProjectModal(props) {
   const [ShowPopOver, setShowPopOver] = useState(false);
@@ -39,6 +38,7 @@ function ProjectModal(props) {
   const [selectedProject, setselectedProject] = useState(null);
   const history = useHistory();
   const inputComponentRef = useAutoFocus(ShowPopOver);
+  const variant = props?.variant === 'onboarding' ? 'onboarding' : 'app';
 
   const dispatch = useDispatch();
 
@@ -79,8 +79,8 @@ function ProjectModal(props) {
 
   useEffect(() => {
     if (props?.currentAgent) {
-      //Factors identify users
-      let userAndProjectDetails = {
+      // Factors identify users
+      const userAndProjectDetails = {
         ...props?.currentAgent,
         project_name: props?.active_project?.name,
         project_id: props?.active_project?.id
@@ -99,13 +99,17 @@ function ProjectModal(props) {
   };
 
   const popoverContent = () => (
-    <div data-tour='step-9' className={'fa-popupcard'}>
+    <div data-tour='step-9' className='fa-popupcard'>
       <div className={`${styles.popover_content__header}`}>Signed in as</div>
       <div
-        className={`${styles.popover_content__settings}`}
+        className={`${styles.popover_content__settings} ${
+          variant === 'app' ? 'cursor-pointer' : ''
+        }`}
         onClick={() => {
-          setShowPopOver(false);
-          showUserSettingsModal();
+          if (variant === 'app') {
+            setShowPopOver(false);
+            showUserSettingsModal();
+          }
         }}
       >
         <div className='flex items-center'>
@@ -121,50 +125,54 @@ function ProjectModal(props) {
           )}${props.currentAgent?.last_name?.charAt(0)}`}</Avatar>
           <div className='flex flex-col ml-3'>
             <Text
-              type={'title'}
+              type='title'
               level={7}
-              weight={'bold'}
-              extraClass={'m-0'}
+              weight='bold'
+              extraClass='m-0'
             >{`${props.currentAgent?.first_name} ${props.currentAgent?.last_name}`}</Text>
-            <div className={`text-xs`}>{props.currentAgent?.email}</div>
+            <div className='text-xs'>{props.currentAgent?.email}</div>
           </div>
         </div>
-        <SVG name='settings' size={24} />
+        {variant === 'app' && <SVG name='settings' size={24} />}
       </div>
       <div className={'fa-popupcard-divider'} />
-      <div className={`${styles.popover_content__projectList}`}>
-        <Text
-          type={'title'}
-          level={7}
-          weight={'bold'}
-          extraClass={'m-0'}
-          color='grey-2'
-        >
-          Your Projects
-        </Text>
-        <Button
-          type={'text'}
-          className='fa-btn--custom'
-          onClick={() => {
-            setShowPopOver(false);
-            // setShowProjectModal(true);
-            history.push(`${PathUrls.Onboarding}?setup=new`);
-          }}
-        >
-          <SVG name='plus' />
-        </Button>
-      </div>
+      {props.projects?.length > 0 && (
+        <div className={`${styles.popover_content__projectList}`}>
+          <Text
+            type={'title'}
+            level={7}
+            weight={'bold'}
+            extraClass={'m-0'}
+            color='grey-2'
+          >
+            Your Projects
+          </Text>
+          {variant === 'app' && (
+            <Button
+              type={'text'}
+              className='fa-btn--custom'
+              onClick={() => {
+                setShowPopOver(false);
+                // setShowProjectModal(true);
+                history.push(`${PathUrls.Onboarding}?setup=new`);
+              }}
+            >
+              <SVG name='plus' />
+            </Button>
+          )}
+        </div>
+      )}
 
       {props.projects?.length > 6 ? (
         <input
           onChange={(e) => searchProject(e)}
           value={searchProjectName}
-          placeholder={'Search Project'}
-          className={'fa-project-list--search'}
+          placeholder='Search Project'
+          className='fa-project-list--search'
           ref={inputComponentRef}
         />
       ) : null}
-      <div className={'flex flex-col items-start fa-project-list--wrapper'}>
+      <div className='flex flex-col items-start fa-project-list--wrapper'>
         {props.projects
           .filter((project) =>
             project?.name
@@ -175,8 +183,8 @@ function ProjectModal(props) {
             props.active_project?.id === a?.id
               ? -1
               : props.active_project?.id === b?.id
-              ? 1
-              : 0
+                ? 1
+                : 0
           )
           .map((project, index) => (
             <div
@@ -224,17 +232,27 @@ function ProjectModal(props) {
             </div>
           ))}
       </div>
-      <div className={'fa-popupcard-divider'} />
-      <div className={styles.popover_content__additionalActions}>
-        <a href='https://help.factors.ai' target='_blank'>
-          Help
-        </a>
-      </div>
+      {props.projects?.length > 0 && <div className={'fa-popupcard-divider'} />}
 
-      <div style={{ borderTop: 'thin solid #e7e9ed' }}>
+      {variant === 'app' && (
+        <>
+          <div className={styles.popover_content__additionalActions}>
+            <a href='https://help.factors.ai' target='_blank'>
+              Help
+            </a>
+          </div>
+          {/* <div className={styles.popover_content__additionalActions}>
+            <a onClick={() => window.open(PathUrls.Checklist, '_self')}>
+              Setup Assist
+            </a>
+          </div> */}
+        </>
+      )}
+
+      <div style={{ borderTop: variant === 'app' ? 'thin solid #e7e9ed' : '' }}>
         <Button
-          size={'large'}
-          type={'text'}
+          size='large'
+          type='text'
           onClick={() => {
             setShowPopOver(false);
             userLogout();
@@ -253,7 +271,7 @@ function ProjectModal(props) {
     <>
       <Popover
         placement='bottomRight'
-        overlayClassName={'fa-popupcard--wrapper fa-at-popover--projects'}
+        overlayClassName='fa-popupcard--wrapper fa-at-popover--projects'
         title={false}
         content={popoverContent}
         visible={ShowPopOver}
@@ -267,7 +285,11 @@ function ProjectModal(props) {
         trigger='click'
       >
         <Tooltip
-          title='Access your projects, account settings, and more'
+          title={
+            variant === 'app'
+              ? 'Access your projects, account settings, and more'
+              : ''
+          }
           color={TOOLTIP_CONSTANTS.DARK}
         >
           <Button
@@ -281,30 +303,41 @@ function ProjectModal(props) {
               shape='square'
               style={{
                 background:
-                  props.active_project?.profile_picture?.length > 0
+                  props?.active_project?.profile_picture?.length > 0
                     ? '#FFFFFF'
                     : '#FF7875',
                 textTransform: 'uppercase',
                 fontWeight: '600',
                 borderRadius: '8px'
               }}
-              src={props.active_project?.profile_picture}
-            >{`${props.active_project?.name?.charAt(0)}`}</Avatar>
+              src={props?.active_project?.profile_picture}
+            >
+              {' '}
+              {props?.active_project?.name?.charAt(0)
+                ? `${props.active_project?.name?.charAt(0)}`
+                : props?.currentAgent?.first_name?.charAt(0)}
+            </Avatar>
 
             <div className='flex flex-col items-start ml-2'>
               <div className='flex items-center'>
                 <Text
-                  type={'title'}
+                  type='title'
                   level={7}
                   extraClass={'m-0'}
                   weight={'bold'}
-                  color='white'
+                  color={variant === 'app' ? 'white' : undefined}
                 >
-                  {`${props.active_project?.name}`}
+                  {props?.active_project?.name
+                    ? props.active_project.name
+                    : props?.currentAgent?.first_name}
                 </Text>
                 <SVG name='caretDown' size={20} color='#BFBFBF' />
               </div>
-              <div className={`text-xs text-white opacity-80`}>
+              <div
+                className={`text-xs ${
+                  variant === 'app' ? 'text-white' : ''
+                }  opacity-80`}
+              >
                 {props.currentAgent?.email}
               </div>
             </div>
@@ -327,30 +360,25 @@ function ProjectModal(props) {
           setchangeProjectModal(false);
           setselectedProject(null);
         }}
-        className={'fa-modal--regular fa-modal--slideInDown'}
-        okText={'Switch'}
+        className='fa-modal--regular fa-modal--slideInDown'
+        okText='Switch'
         onOk={() => {
           setShowPopOver(false);
           setchangeProjectModal(false);
           setselectedProject(null);
           switchProject();
         }}
-        centered={true}
+        centered
         transitionName=''
         maskTransitionName=''
       >
-        <div className={'p-4'}>
+        <div className='p-4'>
           <Row>
             <Col span={24}>
-              <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'}>
+              <Text type='title' level={4} weight='bold' extraClass='m-0'>
                 Do you want to switch the project?
               </Text>
-              <Text
-                type={'title'}
-                level={7}
-                color={'grey'}
-                extraClass={'m-0 mt-2'}
-              >
+              <Text type='title' level={7} color='grey' extraClass='m-0 mt-2'>
                 You can easily switch between projects. You will be redirected a
                 different dataset.
               </Text>
@@ -362,14 +390,12 @@ function ProjectModal(props) {
   );
 }
 
-const mapStateToProps = (state) => {
-  return {
-    projects: state.global.projects,
-    active_project: state.global.active_project,
-    currentAgent: state.agent.agent_details,
-    agents: state.agent.agents
-  };
-};
+const mapStateToProps = (state) => ({
+  projects: state.global.projects,
+  active_project: state.global.active_project,
+  currentAgent: state.agent.agent_details,
+  agents: state.agent.agents
+});
 export default connect(mapStateToProps, {
   fetchProjectAgents,
   getActiveProjectDetails,

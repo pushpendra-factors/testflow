@@ -5,11 +5,13 @@ import (
 
 	"github.com/chargebee/chargebee-go/v3"
 	customerAction "github.com/chargebee/chargebee-go/v3/actions/customer"
+	differentialPriceAction "github.com/chargebee/chargebee-go/v3/actions/differentialprice"
 	hostedPageAction "github.com/chargebee/chargebee-go/v3/actions/hostedpage"
 	invoiceAction "github.com/chargebee/chargebee-go/v3/actions/invoice"
 	itemAction "github.com/chargebee/chargebee-go/v3/actions/item"
 	itemPriceAction "github.com/chargebee/chargebee-go/v3/actions/itemprice"
 	subscriptionAction "github.com/chargebee/chargebee-go/v3/actions/subscription"
+	"github.com/chargebee/chargebee-go/v3/models/differentialprice"
 
 	"net/http"
 
@@ -80,12 +82,14 @@ func GetUpgradeChargebeeSubscriptionCheckoutURL(projectID int64, subscriptionID 
 			Quantity:    &addOn.Quantity,
 		})
 	}
+	replaceItems := true
 	res, err := hostedPageAction.CheckoutExistingForItems(&hostedpage.CheckoutExistingForItemsRequestParams{
 		Subscription: &hostedpage.CheckoutExistingForItemsSubscriptionParams{
 			Id: subscriptionID,
 		},
 		SubscriptionItems: subscriptionItems,
 		RedirectUrl:       GetRedirectUrl(projectID),
+		ReplaceItemsList:  &replaceItems,
 	}).Request()
 	if err != nil {
 		log.WithFields(logCtx).WithError(err).Error("Failed to get checkout url for upgrade subscription on chargebee")
@@ -128,6 +132,22 @@ func ListPlansAndAddOnsPricesFromChargebee() ([]itemprice.ItemPrice, error) {
 	return itemPrices, nil
 }
 
+func ListDifferentialPricingFromChargebee() ([]differentialprice.DifferentialPrice, error) {
+	differentialPrices := []differentialprice.DifferentialPrice{}
+	res, err := differentialPriceAction.List(&differentialprice.ListRequestParams{
+		Limit: chargebee.Int32(50),
+	}).ListRequest()
+	if err != nil {
+		log.WithError(err).Error("Failed to fetch differential items prices")
+		return differentialPrices, nil
+	} else {
+		for idx := 0; idx < len(res.List); idx++ {
+			differentialPrices = append(differentialPrices, *res.List[idx].DifferentialPrice)
+		}
+	}
+	return differentialPrices, nil
+}
+
 func GetCurrentSubscriptionDetails(projectID int64, subscriptionID string) (subscription.Subscription, error) {
 	logCtx := log.Fields{"subscription_ID": subscriptionID,
 		"project_id": projectID,
@@ -160,7 +180,7 @@ func ListAllInvoicesForSubscription(subscriptionID string) ([]invoice.Invoice, e
 
 	var invoices []invoice.Invoice
 	res, err := invoiceAction.List(&invoice.ListRequestParams{
-		Limit: chargebee.Int32(10),
+		Limit: chargebee.Int32(100),
 		SubscriptionId: &filter.StringFilter{
 			Is: subscriptionID,
 		},

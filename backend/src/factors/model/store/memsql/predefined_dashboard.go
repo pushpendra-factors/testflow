@@ -2,6 +2,8 @@ package memsql
 
 import (
 	"factors/model/model"
+	"net/http"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -16,4 +18,18 @@ var mapOfGroupByTimestampToDateTrunc = map[string]string {
 func (store *MemSQL) CreatePredefinedDashboards(projectID int64, agentUUID string) int {
 	statusCode := store.CreatePredefinedWebsiteAggregation(projectID, agentUUID)
 	return statusCode
+}
+
+// TODO check if agentUUID should be passed as param.
+func (store *MemSQL) CreatePredefWebAggDashboardIfNotExists(projectID int64) int {
+	if store.IsPredefWebAggDashboardExists(projectID, "") {
+		return http.StatusFound
+	}
+
+	agentUUID, statusCode := store.GetPrimaryAgentOfProject(projectID)
+	if statusCode != http.StatusFound {
+		log.WithField("projectID", projectID).Warn("Failed in getting primary agent")
+		return http.StatusInternalServerError
+	}
+	return store.CreatePredefinedWebsiteAggregation(projectID, agentUUID)
 }

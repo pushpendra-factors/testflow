@@ -135,3 +135,9 @@ export function getASCIISum(str) {
   }
   return sum;
 }
+
+export async function delay(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}

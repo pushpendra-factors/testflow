@@ -1,7 +1,11 @@
 import PlanDescriptionCard from 'Components/GenericComponents/PlanDescriptionCard';
 import LastPlanCard from 'Components/GenericComponents/PlanDescriptionCard/LastPlanCard';
 import { SVG, Text } from 'Components/factorsComponents';
-import { PLANS, PLANS_COFIG } from 'Constants/plans.constants';
+import {
+  ADDITIONAL_ACCOUNTS_ADDON_ID,
+  PLANS,
+  PLANS_COFIG
+} from 'Constants/plans.constants';
 import {
   PlansConfigState,
   PlansDetailStateInterface
@@ -12,12 +16,14 @@ import React, { useState } from 'react';
 // import PriceUpgradeModal from './PriceUpgradeModal';
 import { useSelector } from 'react-redux';
 import PriceUpgradeModal from './PriceUpgradeModal';
+import { PRICING_HELP_LINK } from './utils';
 
-const UpgradeTab = () => {
+function UpgradeTab({ buyAddonLoading, handleBuyAddonClick }: UpgradeTabProps) {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isPlansViewCollapsed, setIsPlansViewCollapsed] = useState(true);
-  const [modalVariant, setModalVariant] =
-    useState<'plan' | 'only-addon'>('plan');
+  const [modalVariant, setModalVariant] = useState<'plan' | 'only-addon'>(
+    'plan'
+  );
   const [activePlan, setActivePlan] =
     useState<PlansDetailStateInterface | null>(null);
   const { active_project } = useSelector((state: any) => state.global);
@@ -26,10 +32,18 @@ const UpgradeTab = () => {
   );
   const isUserBillingAdmin =
     active_project?.billing_admin_agent_uuid === userId;
+
   const { plansConfig, currentPlanDetail } = useSelector(
     (state: any) => state.plansConfig
   ) as PlansConfigState;
   const { plansDetail } = plansConfig;
+  const purchasedAddons = currentPlanDetail?.addons;
+  const additionalAccountsAddon = purchasedAddons?.find(
+    (addon) => addon.id === ADDITIONAL_ACCOUNTS_ADDON_ID
+  );
+  const isAdditionalAccountsAddonPurchased = additionalAccountsAddon
+    ? additionalAccountsAddon?.quantity > 0
+    : false;
   const handleBuyButtonClick = async (
     planName: string,
     isPlanActive: boolean
@@ -41,10 +55,11 @@ const UpgradeTab = () => {
         setIsModalVisible(true);
         setModalVariant('plan');
       } else {
-        const activePlan = plansDetail.find((plan) => plan.name === planName);
-        if (activePlan) setActivePlan(activePlan);
-        setIsModalVisible(true);
-        setModalVariant('only-addon');
+        // const activePlan = plansDetail.find((plan) => plan.name === planName);
+        // if (activePlan) setActivePlan(activePlan);
+        // setIsModalVisible(true);
+        // setModalVariant('only-addon');
+        handleBuyAddonClick();
       }
     } catch (error) {
       logger.error('Error in upgrading plan', error);
@@ -75,6 +90,10 @@ const UpgradeTab = () => {
           mtuLimit={PLANS_COFIG[GrowthPlan.name].mtuLimit}
           handleBuyButtonClick={handleBuyButtonClick}
           isUserBillingAdmin={isUserBillingAdmin}
+          isButtonLoading={buyAddonLoading}
+          isAdditionalAccountsAddonPurchased={
+            isAdditionalAccountsAddonPurchased
+          }
         />
       )}
       {!isPlansViewCollapsed && (
@@ -127,6 +146,10 @@ const UpgradeTab = () => {
                     mtuLimit={localPlansConfig.mtuLimit}
                     handleBuyButtonClick={handleBuyButtonClick}
                     isUserBillingAdmin={isUserBillingAdmin}
+                    isButtonLoading={buyAddonLoading}
+                    isAdditionalAccountsAddonPurchased={
+                      isAdditionalAccountsAddonPurchased
+                    }
                   />
                 );
               })}
@@ -187,7 +210,7 @@ const UpgradeTab = () => {
           extraClass={'m-0 mb-2'}
           color='character-primary'
         >
-          Upgrade to get the most out of Factors
+          Upgrade to get more out of Factors
         </Text>
         <Text
           type={'title'}
@@ -195,9 +218,12 @@ const UpgradeTab = () => {
           extraClass={'m-0'}
           color='character-secondary'
         >
-          Familairize yourself with the payment plans below. See for yourself
-          that the basic service for your business is not as expensive as it
-          might seem
+          Check out all our plans and their included features to find the one
+          that fits your needs. We are always available for a call if ever need
+          help finding the right one for your organisation.{' '}
+          <a href={PRICING_HELP_LINK} target='_blank' rel='noreferrer'>
+            Book a call
+          </a>{' '}
         </Text>
         <Divider />
       </div>
@@ -213,6 +239,11 @@ const UpgradeTab = () => {
       )}
     </div>
   );
-};
+}
+
+interface UpgradeTabProps {
+  handleBuyAddonClick: () => void;
+  buyAddonLoading: boolean;
+}
 
 export default UpgradeTab;

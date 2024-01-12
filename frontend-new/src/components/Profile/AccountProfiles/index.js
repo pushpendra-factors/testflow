@@ -1,7 +1,22 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef
+} from 'react';
 import isEqual from 'lodash/isEqual';
 import cx from 'classnames';
-import { Table, Button, Spin, Popover, Tabs, notification, Input } from 'antd';
+import {
+  Table,
+  Button,
+  Spin,
+  Popover,
+  Tabs,
+  notification,
+  Input,
+  Form
+} from 'antd';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { useHistory, useLocation, useParams } from 'react-router-dom';
@@ -74,6 +89,9 @@ import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constant
 import { isOnboarded } from 'Utils/global';
 import { cloneDeep } from 'lodash';
 import { getSegmentColorCode } from 'Views/AppSidebar/appSidebar.helpers';
+
+import { COLUMN_TYPE_PROPS } from 'Utils/table';
+import ResizableTitle from 'Components/Resizable';
 
 const groupToDomainMap = {
   $hubspot_company: '$hubspot_company_domain',
@@ -259,21 +277,34 @@ function AccountProfiles({
   }, [newSegmentMode]);
 
   useEffect(() => {
-    if (newSegmentMode === false) {
-      if (Boolean(activeSegment?.id) === true && activeSegment.query != null) {
-        const filters = getSelectedFiltersFromQuery({
-          query: activeSegment.query,
-          groupsList
-        });
-        setAppliedFilters(cloneDeep(filters));
-        setSelectedFilters(filters);
-        setFiltersExpanded(false);
-        setFiltersDirty(false);
-      } else {
-        const selectedGroup = groupsList.find(
-          (g) => g[1] === accountPayload.source
-        );
-        restoreFiltersDefaultState(selectedGroup);
+    if (
+      location.state?.fromDetails === true &&
+      location.state?.appliedFilters != null
+    ) {
+      setAppliedFilters(cloneDeep(location.state?.appliedFilters));
+      setSelectedFilters(location.state?.appliedFilters);
+      setFiltersExpanded(false);
+      setFiltersDirty(true);
+    } else {
+      if (newSegmentMode === false) {
+        if (
+          Boolean(activeSegment?.id) === true &&
+          activeSegment.query != null
+        ) {
+          const filters = getSelectedFiltersFromQuery({
+            query: activeSegment.query,
+            groupsList
+          });
+          setAppliedFilters(cloneDeep(filters));
+          setSelectedFilters(filters);
+          setFiltersExpanded(false);
+          setFiltersDirty(false);
+        } else {
+          const selectedGroup = groupsList.find(
+            (g) => g[1] === accountPayload.source
+          );
+          restoreFiltersDefaultState(selectedGroup);
+        }
       }
     }
   }, [accountPayload, activeSegment, groupsList, newSegmentMode]);
@@ -406,7 +437,7 @@ function AccountProfiles({
         setDefaultSorterInfo({ key: 'engagement', order: 'descend' });
         const formatPayload = { ...payload };
         formatPayload.filters =
-          formatFiltersForPayload(payload?.filters, 'accounts') || [];
+          formatFiltersForPayload(payload?.filters, 'account_profiles') || [];
         const reqPayload = formatReqPayload(formatPayload, activeSegment);
         getProfileAccounts(activeProject.id, reqPayload, activeAgent).then(
           (response) => {
@@ -435,7 +466,7 @@ function AccountProfiles({
         setCurrentPageSize(location.state.currentPageSize);
         setDefaultSorterInfo(location.state.activeSorter);
         const localeState = { ...history.location.state, fromDetails: false };
-        history.replace({ state: localeState });
+        history.replace('/' + location.hash, { state: localeState });
       }
     },
     [
@@ -678,6 +709,15 @@ function AccountProfiles({
     });
   }, []);
 
+  const setSecondaryFiltersList = useCallback((secondaryFilters) => {
+    setSelectedFilters((curr) => {
+      return {
+        ...curr,
+        secondaryFilters
+      };
+    });
+  }, []);
+
   const setListEvents = useCallback((eventsList) => {
     setSelectedFilters((curr) => {
       return {
@@ -692,6 +732,15 @@ function AccountProfiles({
       return {
         ...curr,
         eventProp
+      };
+    });
+  }, []);
+
+  const setEventTimeline = useCallback((eventTimeline) => {
+    setSelectedFilters((curr) => {
+      return {
+        ...curr,
+        eventTimeline
       };
     });
   }, []);
@@ -756,11 +805,13 @@ function AccountProfiles({
         filters={accountPayload.filters}
         filtersExpanded={filtersExpanded}
         filtersList={selectedFilters.filters}
+        secondaryFiltersList={selectedFilters.secondaryFilters}
         appliedFilters={appliedFilters}
         selectedAccount={selectedAccount}
         listEvents={selectedFilters.eventsList}
         availableGroups={availableGroups}
         eventProp={selectedFilters.eventProp}
+        eventTimeline={selectedFilters.eventTimeline}
         areFiltersDirty={areFiltersDirty}
         disableDiscardButton={disableDiscardButton}
         isActiveSegment={Boolean(accountPayload.segment_id) === true}
@@ -768,8 +819,10 @@ function AccountProfiles({
         setFiltersExpanded={setFiltersExpanded}
         setSaveSegmentModal={handleSaveSegmentClick}
         setFiltersList={setFiltersList}
+        setSecondaryFiltersList={setSecondaryFiltersList}
         setListEvents={setListEvents}
         setEventProp={setEventProp}
+        setEventTimeline={setEventTimeline}
         resetSelectedFilters={resetSelectedFilters}
         onClearFilters={handleClearFilters}
         setSelectedAccount={setSelectedAccount}
@@ -870,7 +923,8 @@ function AccountProfiles({
       eventProp: selectedFilters.eventProp,
       eventsList: selectedFilters.eventsList,
       isActiveSegment: Boolean(accountPayload.segment_id),
-      areFiltersDirty
+      areFiltersDirty,
+      secondaryFiltersList: selectedFilters.secondaryFilters
     });
   }, [
     accountPayload.segment_id,
@@ -879,7 +933,8 @@ function AccountProfiles({
     newSegmentMode,
     selectedFilters.eventProp,
     selectedFilters.eventsList,
-    selectedFilters.filters
+    selectedFilters.filters,
+    selectedFilters.secondaryFilters
   ]);
 
   const renderSaveSegmentButton = () => {
@@ -927,18 +982,18 @@ function AccountProfiles({
                 width: '240px',
                 'border-radius': '5px'
               }}
-              prefix={<SVG name='search' size={16} color={'#8C8C8C'} />}
+              prefix={<SVG name='search' size={20} color={'#8C8C8C'} />}
               onClick={() => setSearchDDOpen(true)}
             />
           )}
           <Button type='text' onClick={onSearchClose}>
-            <SVG name={'close'} size={24} color={'grey'} />
+            <SVG name={'close'} size={20} color={'grey'} />
           </Button>
         </div>
       </ControlledComponent>
       <ControlledComponent controller={!searchBarOpen}>
         <Button type='text' onClick={onSearchOpen}>
-          <SVG name={'search'} size={24} color={'#8c8c8c'} />
+          <SVG name={'search'} size={20} color={'#8c8c8c'} />
         </Button>
       </ControlledComponent>
       {searchCompanies()}
@@ -948,7 +1003,7 @@ function AccountProfiles({
   const renderDownloadSection = () => {
     return (
       <Button onClick={() => setShowDownloadCSVModal(true)} type='text'>
-        <SVG size={24} name={'download'} color={'#8c8c8c'} />
+        <SVG size={20} name={'download'} color={'#8c8c8c'} />
       </Button>
     );
   };
@@ -971,8 +1026,8 @@ function AccountProfiles({
           styles['more-actions-popover']
         )}
       >
-        <Button type='default'>
-          <SVG size={24} name={'more'} />
+        <Button className={styles['more-actions-button']} type='default'>
+          <SVG size={20} name={'more'} />
         </Button>
       </Popover>
     );
@@ -994,7 +1049,7 @@ function AccountProfiles({
         content={popoverContent}
       >
         <Button type='text'>
-          <SVG size={24} name={'tableColumns'} />
+          <SVG size={20} name={'tableColumns'} />
         </Button>
       </Popover>
     );
@@ -1005,17 +1060,22 @@ function AccountProfiles({
     setCurrentPageSize(pageParams.pageSize);
     setDefaultSorterInfo({ key: sorter.columnKey, order: sorter.order });
   };
+  const [newTableColumns, setNewTableColumns] = useState([]);
+  const [columnsType, setColumnTypes] = useState({});
 
-  const tableColumns = useMemo(() => {
-    return getColumns({
-      accounts,
-      source: accountPayload?.source,
-      isScoringLocked,
-      displayTableProps,
-      groupPropNames,
-      listProperties,
-      defaultSorterInfo
-    });
+  useEffect(() => {
+    setNewTableColumns(
+      getColumns({
+        accounts,
+        source: accountPayload?.source,
+        isScoringLocked,
+        displayTableProps,
+        groupPropNames,
+        listProperties,
+        defaultSorterInfo,
+        activeAgent
+      })
+    );
   }, [
     accounts,
     accountPayload?.source,
@@ -1025,11 +1085,60 @@ function AccountProfiles({
     listProperties,
     defaultSorterInfo
   ]);
+  // const tableColumns = useMemo(() => {
+  //   return getColumns({
+  //     accounts,
+  //     source: accountPayload?.source,
+  //     isScoringLocked,
+  //     displayTableProps,
+  //     groupPropNames,
+  //     listProperties,
+  //     defaultSorterInfo
+  //   });
+  // }, [
+  //   accounts,
+  //   accountPayload?.source,
+  //   displayTableProps,
+  //   groupPropNames,
+  //   isScoringLocked,
+  //   listProperties,
+  //   defaultSorterInfo
+  // ]);
+  const tableRef = useRef();
 
+  useEffect(() => {
+    // This is the name of Account which was opened recently
+    let from = location.state?.state?.accountsTableRow;
+    // Finding the tableElement because we have only one .ant-table-body inside tableRef Tree
+    // If in future we add table body inside it, need to change it later on
+    let tableElement = tableRef.current?.querySelector('.ant-table-body');
+
+    if (tableElement && from && document.getElementById(from)) {
+      const element = document.getElementById(from);
+      // Y is the relative position that we want to scroll by
+      // this is calculated by ORIGINALELEMENTY-TABLEELEMENT - 15 ( because of some padding or margin )
+      const y =
+        element?.getBoundingClientRect().y -
+        tableElement.getBoundingClientRect().y -
+        15;
+
+      tableElement.scrollTo({ top: y, behavior: 'smooth' });
+
+      location.state.state.accountsTableRow = '';
+    }
+  }, [newTableColumns, tableRef]);
   const renderTable = useCallback(() => {
+    const mergeColumns = newTableColumns.map((col, index) => ({
+      ...col,
+      onHeaderCell: (column) => ({
+        width: column.width
+      })
+    }));
+
     return (
       <div>
         <Table
+          ref={tableRef}
           onRow={(account) => ({
             onClick: () => {
               history.push(
@@ -1044,14 +1153,16 @@ function AccountProfiles({
                   fromDetails: true,
                   currentPage: currentPage,
                   currentPageSize: currentPageSize,
-                  activeSorter: defaultSorterInfo
+                  activeSorter: defaultSorterInfo,
+                  appliedFilters: areFiltersDirty ? appliedFilters : null,
+                  accountsTableRow: account.name
                 }
               );
             }
           })}
-          className='fa-table--userlist'
+          className={`fa-table--userlist ${styles['account-profiles-table']}`}
           dataSource={tableData}
-          columns={tableColumns}
+          columns={mergeColumns}
           rowClassName='cursor-pointer'
           pagination={{
             position: ['bottom', 'left'],
@@ -1061,12 +1172,13 @@ function AccountProfiles({
           }}
           onChange={handleTableChange}
           scroll={{
-            x: displayTableProps?.length * 300
+            x: displayTableProps?.length * 300,
+            y: 'calc(100vh - 340px)'
           }}
         />
       </div>
     );
-  }, [tableData, tableColumns]);
+  }, [tableData, newTableColumns]);
 
   const showRangeNudge = useMemo(() => {
     return showUpgradeNudge(

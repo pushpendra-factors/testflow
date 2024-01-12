@@ -1,5 +1,11 @@
 import { fetchProjectSettingsV1 } from 'Reducers/global';
 
+import Thumnail_BlogsConversionSummary from './../assets/images/thumbnails/Thumbnail_BlogsConversionSummary.svg';
+import Thumbnail_BlogsTrafficSummary from './../assets/images/thumbnails/Thumbnail_BlogsTrafficSummary.svg';
+import Thumbnail_G2Influence from './../assets/images/thumbnails/Thumbnail_G2Influence.svg';
+import Thumbnail_LinkedInInfluence from './../assets/images/thumbnails/Thumbnail_LinkedInInfluence.svg';
+import Thumbnail_PaidSearchTraffic from './../assets/images/thumbnails/Thumbnail_PaidSearchTraffic.svg';
+
 const TEMPLATES_HOSTCDN =
   'https://s3.amazonaws.com/www.factors.ai/assets/img/product/templates/';
 export const IntegrationKeyNames = {
@@ -41,6 +47,7 @@ export class Integration_Checks {
     this['6signal'] =
       integration?.int_client_six_signal_key ||
       integration?.int_factors_six_signal_key;
+    this.g2 = integration.int_g2;
     // Other Integrations
     this.segment = integration.int_segment;
   }
@@ -117,6 +124,38 @@ const ThumbnailAssetsWithName = [
   {
     name: 'websitevisitoridentification',
     image: TEMPLATES_HOSTCDN + 'Thumbnail_WebsiteVisitorIdentification.png'
+  },
+  {
+    name: 'blogsconversionsummary(withhubspot)',
+    image: Thumnail_BlogsConversionSummary
+  },
+  {
+    name: 'blogsconversionsummary(withsalesforce)',
+    image: Thumnail_BlogsConversionSummary
+  },
+  {
+    name: 'blogstrafficsummary',
+    image: Thumbnail_BlogsTrafficSummary
+  },
+  {
+    name: 'g2influence(withhubspot)',
+    image: Thumbnail_G2Influence
+  },
+  {
+    name: 'g2influence(withsalesforce)',
+    image: Thumbnail_G2Influence
+  },
+  {
+    name: 'linkedininfluence(withhubspot)',
+    image: Thumbnail_LinkedInInfluence
+  },
+  {
+    name: 'linkedininfluence(withsalesforce)',
+    image: Thumbnail_LinkedInInfluence
+  },
+  {
+    name: 'paidsearchtraffic',
+    image: Thumbnail_PaidSearchTraffic
   }
 ];
 

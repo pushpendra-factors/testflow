@@ -67,6 +67,14 @@ export default function SearchCheckList({
     setSearchTerm('');
   }, [mapArray]);
 
+  useEffect(() => {
+    setSortableList(
+      getListWithDisabledOptions(
+        getUniqueItemsByKeyAndSearchTerm(mapArray, searchTerm)
+      )
+    );
+  }, [mapArray, searchTerm]);
+
   const sortableOptions = {
     animation: 150,
     fallbackOnBody: true,

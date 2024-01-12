@@ -1,13 +1,17 @@
+import { PLANS } from 'Constants/plans.constants';
+
 interface PLAN_INFO {
   id: string;
   amount: number;
   name: string;
   externalName: string;
+  quantity: number;
 }
 
 interface ADDON_INFO {
   id: string;
   amount: number;
+  quantity: number;
 }
 
 export interface PlansConfigState {
@@ -26,6 +30,11 @@ export interface PlansConfigState {
     plan?: PLAN_INFO;
     addons?: ADDON_INFO[];
   };
+  differentialPricing: {
+    loading: boolean;
+    error: boolean;
+    data: DifferentialPricingResponse[];
+  };
 }
 
 export enum PlansConfigActionType {
@@ -34,7 +43,10 @@ export enum PlansConfigActionType {
   SET_PLANS_CONFIG_DETAILS = 'SET_PLANS_CONFIG_DETAILS',
   SET_CURRENT_PLAN_LOADING = 'SET_CURRENT_PLAN_LOADING',
   SET_CURRENT_PLAN_ERROR = 'SET_CURRENT_PLAN_ERROR',
-  SET_CURRENT_PLAN_DETAILS = 'SET_CURRENT_PLAN_DETAILS'
+  SET_CURRENT_PLAN_DETAILS = 'SET_CURRENT_PLAN_DETAILS',
+  SET_DIFFERENTIAL_PRICING_LOADING = 'SET_DIFFERENTIAL_PRICING_LOADING',
+  SET_DIFFERENTIAL_PRICING_ERROR = 'SET_DIFFERENTIAL_PRICING_ERROR',
+  SET_DIFFERENTIAL_PRICING_DETAILS = 'SET_DIFFERENTIAL_PRICING_DETAILS'
 }
 
 interface setPlansConfigLoading {
@@ -72,13 +84,29 @@ interface setCurrentPlanDetails {
   };
 }
 
+interface setDifferentialPricingLoading {
+  type: PlansConfigActionType.SET_DIFFERENTIAL_PRICING_LOADING;
+}
+
+interface setDifferentialPricingError {
+  type: PlansConfigActionType.SET_DIFFERENTIAL_PRICING_ERROR;
+}
+
+interface setDifferentialPricingDetails {
+  type: PlansConfigActionType.SET_DIFFERENTIAL_PRICING_DETAILS;
+  payload: DifferentialPricingResponse[];
+}
+
 export type PlansConfigActions =
   | setPlansConfigDetails
   | setPlansConfigLoading
   | setPlansConfigError
   | setCurrentPlanDetailError
   | setCurrentPlanDetailLoading
-  | setCurrentPlanDetails;
+  | setCurrentPlanDetails
+  | setDifferentialPricingLoading
+  | setDifferentialPricingError
+  | setDifferentialPricingDetails;
 
 interface ApiResponse {
   status: number;
@@ -92,6 +120,10 @@ export interface PlansDetailAPIResponse extends ApiResponse {
 
 export interface SubscriptionDetailsAPIResponse extends ApiResponse {
   data?: SubscriptionDeatilsResponse;
+}
+
+export interface DifferentialPricingAPIResponse extends ApiResponse {
+  data?: DifferentialPricingResponse[];
 }
 
 interface PlansDetailsResponse {
@@ -123,7 +155,15 @@ interface SubscriptionDeatilsResponse {
     id: string;
     amount: number;
     external_name: string;
+    quantity: number;
   }[];
+}
+
+interface DifferentialPricingResponse {
+  id: string;
+  item_price_id: string;
+  parent_item_id: (typeof PLANS)[keyof typeof PLANS];
+  price: number;
 }
 
 export interface PlansDetailStateInterface {

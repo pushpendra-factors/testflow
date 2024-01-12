@@ -10,6 +10,22 @@
     }
   }
 }
+.account-profiles-table {
+  padding: 0;
+  & th {
+    padding: 0 !important;
+    height: 48px;
+
+    & > div {
+      padding: 0 16px;
+    }
+  }
+
+  & tr {
+    max-height: 64px !important;
+    height: 64px;
+  }
+}
 
 .input {
   color: $fa-color--mono-5;
@@ -151,5 +167,49 @@
 .more-actions-popover {
   :global(.ant-popover-inner-content) {
     padding: 0.5rem 0 !important;
+  }
+}
+
+.top_eng_names {
+  display: flex;
+  flex-wrap: wrap;
+}
+.tag-enagagementrule {
+  padding: 2px 6px;
+  margin: 1px;
+  width: fit-content;
+  font-size: 12px;
+  max-height: 24px;
+  display: flex;
+
+  text-transform: capitalize;
+
+  & h4 {
+    font-size: 12px !important;
+    color: rgba(0, 0, 0, 0.65) !important;
+  }
+  & > span {
+    text-transform: lowercase;
+    margin: 0 2px;
+  }
+  & > span:not(.tag-seperator) {
+    margin: 0 4px;
+  }
+  & > .tag-seperator {
+    color: $fa-color-neutral-grey-5;
+    margin: 0 2px;
+  }
+}
+
+.more-actions-button {
+  background: none;
+  border: none;
+  box-shadow: none;
+
+  &:hover,
+  &:active,
+  &:focus {
+    background-color: $fa-color--mono-1;
+    box-shadow: none;
   }
 }

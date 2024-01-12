@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { SVG, Text } from 'factorsComponents';
-import FaFilterSelect from '../../FaFilterSelect';
 import { Button } from 'antd';
 import {
   getEventPropertyValues,
@@ -15,6 +14,7 @@ import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
 import getGroupIcon from 'Utils/getGroupIcon';
 import startCase from 'lodash/startCase';
 import { selectActivePreDashboard } from 'Reducers/dashboard/selectors';
+import FaFilterSelect from '../../FaFilterSelect';
 import { CustomGroupDisplayNames } from './utils';
 
 function FilterWrapper({
@@ -44,7 +44,7 @@ function FilterWrapper({
   minEntriesPerGroup,
   operatorsMap = DEFAULT_OPERATOR_PROPS,
   groups,
-  profileType = ""
+  profileType = ''
 }) {
   const [newFilterState, setNewFilterState] = useState({
     props: [],
@@ -52,10 +52,15 @@ function FilterWrapper({
     values: []
   });
   const [filterDropDownOptions, setFiltDD] = useState({});
-  const activeDashboard = useSelector((state) => selectActivePreDashboard(state));
+  const activeDashboard = useSelector((state) =>
+    selectActivePreDashboard(state)
+  );
 
   useEffect(() => {
-    if (filter && filter.props[2] === 'categorical') {
+    if (
+      filter &&
+      (filter.props[2] === 'categorical' || filter.props[1] === 'categorical')
+    ) {
       setValuesByProps(filter.props);
       setNewFilterState(filter);
     }
@@ -65,7 +70,9 @@ function FilterWrapper({
     const formattedFilterDDOptions = { ...filterDropDownOptions, props: [] };
 
     for (const propertyKey of Object.keys(filterProps || {})) {
-      let label, propertyType, icon;
+      let label;
+      let propertyType;
+      let icon;
       const values = filterProps[propertyKey];
 
       if (!Array.isArray(values)) {
@@ -87,14 +94,14 @@ function FilterWrapper({
         label = CustomGroupDisplayNames[propertyKey]
           ? CustomGroupDisplayNames[propertyKey]
           : groups?.all_groups?.[propertyKey]
-          ? groups?.all_groups?.[propertyKey]
-          : PropTextFormat(propertyKey);
+            ? groups?.all_groups?.[propertyKey]
+            : PropTextFormat(propertyKey);
 
         propertyType = ['user', 'event'].includes(propertyKey)
           ? propertyKey
           : ['button_click', 'page_view'].includes(propertyKey)
-          ? 'event'
-          : 'group';
+            ? 'event'
+            : 'group';
 
         icon = getGroupIcon(label);
         formattedFilterDDOptions.props.push({
@@ -111,49 +118,52 @@ function FilterWrapper({
     setFiltDD(formattedFilterDDOptions);
   }, [filterProps]);
 
-  const renderFilterContent = () => {
-    return (
-      <FaFilterSelect
-        viewMode={viewMode}
-        propOpts={filterDropDownOptions.props}
-        operatorOpts={filterDropDownOptions.operator}
-        valueOpts={propertyValuesMap.data}
-        applyFilter={applyFilter}
-        setValuesByProps={setValuesByProps}
-        filter={filter}
-        refValue={refValue}
-        caller={caller}
-        dropdownPlacement={dropdownPlacement}
-        dropdownMaxHeight={dropdownMaxHeight}
-        showInList={showInList}
-        valueOptsLoading={propertyValuesMap.loading}
-      />
-    );
-  };
+  const renderFilterContent = () => (
+    <FaFilterSelect
+      viewMode={viewMode}
+      propOpts={filterDropDownOptions.props}
+      operatorOpts={filterDropDownOptions.operator}
+      valueOpts={propertyValuesMap.data}
+      applyFilter={applyFilter}
+      setValuesByProps={setValuesByProps}
+      filter={filter}
+      refValue={refValue}
+      caller={caller}
+      dropdownPlacement={dropdownPlacement}
+      dropdownMaxHeight={dropdownMaxHeight}
+      showInList={showInList}
+      valueOptsLoading={propertyValuesMap.loading}
+    />
+  );
 
   useEffect(() => {
     const [groupName, propertyName, propertyType, entity] =
       newFilterState.props;
     const propGrp = groupName || groupName !== '' ? groupName : entity;
-  
-    if(profileType === 'predefined') {
-      getPredefinedPropertyValues(projectID, newFilterState.props[0], activeDashboard?.inter_id);
-    }
-    else{
-      if (propertyType === 'categorical') {
-        if (['user', 'user_g'].includes(propGrp)) {
-          getUserPropertyValues(projectID, propertyName);
-        } else if (['event', 'page_view', 'button_click'].includes(propGrp)) { 
-          getEventPropertyValues(projectID, event.label, propertyName);
-        } else if (
-          !['group', 'user', 'user_g'].includes(propGrp) &&
-          ['group', 'user', 'user_g'].includes(entity)
-        ) {
-          getGroupPropertyValues(projectID, groupName, propertyName);
-        }
-      } 
-    }
 
+    const payload =
+      newFilterState?.props?.length === 3
+        ? newFilterState?.props[0]
+        : newFilterState?.props[1];
+
+    if (profileType === 'predefined' && payload) {
+      getPredefinedPropertyValues(
+        projectID,
+        payload,
+        activeDashboard?.inter_id
+      );
+    } else if (propertyType === 'categorical') {
+      if (['user', 'user_g'].includes(propGrp)) {
+        getUserPropertyValues(projectID, propertyName);
+      } else if (['event', 'page_view', 'button_click'].includes(propGrp)) {
+        getEventPropertyValues(projectID, event.label, propertyName);
+      } else if (
+        !['group', 'user', 'user_g'].includes(propGrp) &&
+        ['group', 'user', 'user_g'].includes(entity)
+      ) {
+        getGroupPropertyValues(projectID, groupName, propertyName);
+      }
+    }
   }, [newFilterState?.props]);
 
   const delFilter = () => {
@@ -168,22 +178,24 @@ function FilterWrapper({
   };
   const setValuesByProps = (props) => {
     const [groupName, propertyName, propertyType, entity] = props;
-    if(profileType === 'predefined') {
-      getPredefinedPropertyValues(projectID, props[1], activeDashboard?.inter_id)
-    }
-    else{
-      if (propertyType === 'categorical') {
-        if (['user', 'user_g'].includes(groupName)) {
-          getUserPropertyValues(projectID, propertyName);
-        } else if (['event', 'page_view', 'button_click'].includes(groupName)) {
-          getEventPropertyValues(projectID, event.label, propertyName);
-        } else if (
-          !['group', 'user', 'user_g'].includes(groupName) &&
-          ['group', 'user', 'user_g'].includes(entity)
-        ) {
-          getGroupPropertyValues(projectID, groupName, propertyName);
-        }
-      } 
+    const payload = props?.length === 3 ? props[0] : props[1];
+    if (profileType === 'predefined' && payload) {
+      getPredefinedPropertyValues(
+        projectID,
+        payload,
+        activeDashboard?.inter_id
+      );
+    } else if (propertyType === 'categorical') {
+      if (['user', 'user_g'].includes(groupName)) {
+        getUserPropertyValues(projectID, propertyName);
+      } else if (['event', 'page_view', 'button_click'].includes(groupName)) {
+        getEventPropertyValues(projectID, event.label, propertyName);
+      } else if (
+        !['group', 'user', 'user_g'].includes(groupName) &&
+        ['group', 'user', 'user_g'].includes(entity)
+      ) {
+        getGroupPropertyValues(projectID, groupName, propertyName);
+      }
     }
   };
 
@@ -214,15 +226,15 @@ function FilterWrapper({
       {!showOr && hasPrefix && (
         <Text
           level={8}
-          type={'title'}
+          type='title'
           extraClass={`m-0 ${
             caller === 'profiles'
               ? 'mx-3'
               : index >= 1
-              ? 'mr-16 ml-10'
-              : 'mx-10'
+                ? 'mr-16 ml-10'
+                : 'mx-10'
           } ${filterPrefix?.split(' ')?.length ? 'whitespace-no-wrap' : ''}`}
-          weight={'thin'}
+          weight='thin'
         >
           {index >= 1 ? 'and' : filterPrefix}
         </Text>
@@ -230,22 +242,22 @@ function FilterWrapper({
       {showOr && (
         <Text
           level={8}
-          type={'title'}
+          type='title'
           extraClass={`m-0 ${caller === 'profiles' ? 'mx-3' : 'mx-2'}`}
-          weight={'thin'}
+          weight='thin'
         >
           or
         </Text>
       )}
-      <div className={`relative flex`}>
+      <div className='relative flex'>
         {filter ? renderFilterContent() : filterSelComp()}
       </div>
       {delFilter && !viewMode && (
         <Button
           type='text'
           onClick={delFilter}
-          size={'small'}
-          className={`fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button`}
+          size='small'
+          className='fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button'
         >
           <SVG name={delIcon} />
         </Button>
@@ -261,7 +273,12 @@ const mapStateToProps = (state) => ({
 
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
-    { getEventPropertyValues, getGroupPropertyValues, getUserPropertyValues, getPredefinedPropertyValues },
+    {
+      getEventPropertyValues,
+      getGroupPropertyValues,
+      getUserPropertyValues,
+      getPredefinedPropertyValues
+    },
     dispatch
   );
 

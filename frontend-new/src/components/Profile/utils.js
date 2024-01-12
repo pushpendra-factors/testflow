@@ -126,19 +126,26 @@ export const getFiltersRequestPayload = ({
   table_props,
   caller = 'account_profiles'
 }) => {
-  const { eventsList, eventProp, filters, account } = selectedFilters;
+  const {
+    eventsList,
+    eventProp,
+    filters,
+    account,
+    eventTimeline,
+    secondaryFilters
+  } = selectedFilters;
 
   const queryOptions = {
     group_analysis: account[1],
     source: caller === 'account_profiles' ? account[1] : 'All',
     caller,
     table_props,
-    globalFilters: filters,
+    globalFilters: [...filters, ...secondaryFilters],
     date_range: {}
   };
 
   return {
-    query: getSegmentQuery(eventsList, queryOptions, eventProp)
+    query: getSegmentQuery(eventsList, queryOptions, eventProp, caller)
   };
 };
 
@@ -163,7 +170,7 @@ export const formatReqPayload = (payload, segment = {}) => {
   return req;
 };
 
-export const getSegmentQuery = (queries, queryOptions, userType) => {
+export const getSegmentQuery = (queries, queryOptions, userType, caller) => {
   const query = {};
   query.grpa = queryOptions?.group_analysis;
   query.source = queryOptions?.source;
@@ -187,7 +194,7 @@ export const getSegmentQuery = (queries, queryOptions, userType) => {
   query.to = period.to;
 
   query.ewp = getEventsWithProperties(queries);
-  query.gup = formatFiltersForPayload(queryOptions?.globalFilters);
+  query.gup = formatFiltersForPayload(queryOptions?.globalFilters, caller);
 
   query.ec = EVENT_QUERY_USER_TYPE[userType];
   query.tz = localStorage.getItem('project_timeZone') || 'Asia/Kolkata';
@@ -195,7 +202,7 @@ export const getSegmentQuery = (queries, queryOptions, userType) => {
 };
 
 const getEntityName = (source, entity) => {
-  if (source === 'accounts') {
+  if (source === 'account_profiles') {
     return entity === 'user' ? 'user_group' : 'user_g';
   } else {
     return 'user_g';
@@ -333,12 +340,22 @@ export const propValueFormat = (searchKey, value, type) => {
     return MomentTz(value * 1000).format(dateFormat);
   };
 
-  const formatNumerical = (value) =>
-    isNumDuration
+  const formatNumerical = (value) => {
+    let localeParam;
+    if (searchKey === '$6Signal_annual_revenue') {
+      localeParam = {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      };
+    }
+    return isNumDuration
       ? formatDurationIntoString(parseFloat(value))
       : isDurationMilliseconds
         ? formatDurationIntoString(parseFloat(value / 1000))
-        : parseFloat(value).toFixed();
+        : parseInt(value).toLocaleString('en-US', localeParam);
+  };
 
   const formatCategorical = (value) =>
     isTimestamp
@@ -574,14 +591,15 @@ export const sortStringColumn = (a = '', b = '') => {
 export const sortNumericalColumn = (a = 0, b = 0) => a - b;
 
 export const transformPayloadForWeightConfig = (payload) => {
-  const { key: wid, label: event_name, weight, vr, filters } = payload;
+  const { key: wid, label: event_name, weight, vr, filters, fname } = payload;
   const output = {
     wid,
     event_name,
     weight,
     is_deleted: false,
     rule: [],
-    vr: vr === 0 ? 0 : 1
+    vr: vr === 0 ? 0 : 1,
+    fname
   };
 
   if (filters?.length) {
@@ -606,13 +624,14 @@ export const transformPayloadForWeightConfig = (payload) => {
 };
 
 export const transformWeightConfigForQuery = (config) => {
-  const { wid: key, event_name: label, weight, vr, rule } = config;
+  const { wid: key, event_name: label, weight, vr, rule, fname } = config;
   const output = {
     key,
     label,
     weight,
     filters: [],
-    vr
+    vr,
+    fname
   };
 
   if (rule) {
@@ -655,12 +674,20 @@ export const getSelectedFiltersFromQuery = ({
   const filters = getStateQueryFromRequestQuery(query);
   const result = {
     eventProp,
-    filters: filters.globalFilters,
+    filters:
+      caller === 'account_profiles'
+        ? filters.globalFilters.filter((elem) => elem.props[0] !== 'user')
+        : filters.globalFilters,
     eventsList: filters.events,
     account:
       caller === 'account_profiles'
         ? groupsList.find((g) => g[1] === grpa)
-        : INITIAL_USER_PROFILES_FILTERS_STATE.account
+        : INITIAL_USER_PROFILES_FILTERS_STATE.account,
+    eventTimeline: '7',
+    secondaryFilters:
+      caller === 'account_profiles'
+        ? filters.globalFilters.filter((elem) => elem.props[0] === 'user')
+        : []
   };
   return result;
 };

@@ -36,7 +36,7 @@ export const getBreakdownDisplayName = ({
 
   const displayTitle =
     propCategory === 'user'
-      ? get(userPropNames, property, property)
+      ? get(userPropNames, property, capitalizePropertyName(property))
       : sessionEventPropertiesDisplayNames[property] ||
         globalEventPropertiesDisplayNames[property] ||
         capitalizePropertyName(property);

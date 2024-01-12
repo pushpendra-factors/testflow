@@ -1,3 +1,85 @@
+### v3.12.0 (2023-11-30)
+* * *
+
+#### New Enum values:
+* swiss_reference has been added to PaymentReferenceNumber#TypeEnum.
+
+#### New Input parameters:
+* subscription[po_number] has been added to Quote#EditCreateSubForCustomerQuoteRequest in Quote resource. 
+* subscription[po_number] has been added to Quote#EditCreateSubCustomerQuoteForItemsRequest in Quote resource.
+
+* * *
+
+### v3.11.0 (2023-10-31)
+* * *
+
+#### New attributes:
+* statement_descriptor has been added to invoice resource.
+* source has been added to the Hosted_Pages resource.
+
+#### New Enum values:
+* pay_com has been added to Gateway.
+* pay_to, faster_payments, sepa_instant_transfer has been added to Customer#TypeEnum.
+* pay_to, faster_payments, sepa_instant_transfer has been added to PaymentMethodEnum.
+* pay_to, faster_payments, sepa_instant_transfer has been added to PaymentMethodTypeEnum.
+* pay_to, faster_payments, sepa_instant_transfer has been added to TypeEnum.
+* pay_to, faster_payments, sepa_instant_transfer, amazon_payments has been added to PaymentIntent#PaymentMethodTypeEnum.
+
+#### New Input parameters:
+* source has been added to HostedPage#CheckoutOneTimeForItemsRequest.
+* source has been added to HostedPage#CheckoutNewForItemsRequest.
+* source has been added to HostedPage#CheckoutExistingForItemsRequest.
+* statement_descriptor_descriptor has been added to Invoice#CreateRequest.
+* statement_descriptor_descriptor has been added to Invoice#CreateForChargeItemsAndChargesRequest.
+* statement_descriptor_descriptor has been added to Invoice#UpdateDetailsRequest.
+* statement_descriptor_additional_info has been added to Invoice#CreateRequest.
+* statement_descriptor_additional_info has been added to Invoice#CreateForChargeItemsAndChargesRequest.
+* statement_descriptor_additional_info has been added to Invoice#UpdateDetailsRequest.
+* statement_descriptor_descriptor has been added to Subscription#CreateRequest.
+* statement_descriptor_descriptor has been added to Subscription#CreateForCustomerRequest.
+* statement_descriptor_descriptor has been added to Subscription#CreateWithItemsRequest.
+* statement_descriptor_descriptor has been added to Subscription#UpdateRequest.
+* statement_descriptor_descriptor has been added to Subscription#UpdateForItemsRequest.
+* statement_descriptor_descriptor has been added to Subscription#ReactivateRequest.
+* statement_descriptor_additional_info has been added to Subscription#CreateRequest.
+* statement_descriptor_additional_info has been added to Subscription#CreateForCustomerRequest.
+* statement_descriptor_additional_info has been added to Subscription#CreateWithItemsRequest.
+* statement_descriptor_additional_info has been added to Subscription#UpdateRequest.
+* statement_descriptor_additional_info has been added to Subscription#UpdateForItemsRequest.
+* statement_descriptor_additional_info has been added to Subscription#ReactivateRequest.
+
+#### Updates to old parameters:
+* duration_type, discount_type in coupons has been made optional.
+* proration_type in addons is now supported.
+* csv_tax_rule has been removed.
+* Tax1JurisTypeEnum has been removed.
+* Tax2JurisTypeEnum has been removed.
+* Tax3JurisTypeEnum has been removed.
+* Tax4JurisTypeEnum has been removed.
+
+
+
+### v3.10.0 (2023-09-26)
+* * *
+
+#### New attributes:
+* venmo has been added to the PaymentSource resource.
+* proration_type has been added to the QuotedCharge, QuotedSubscription and Subscription resource.
+
+#### New Enum values:
+* ebanx has been added to Gateway.
+* venmo has been added to Customer#TypeEnum.
+* venmo has been added to PaymentMethodEnum.
+* venmo has been added to PaymentMethodTypeEnum.
+* venmo has been added to TypeEnum.
+* venmo has been added to PaymentIntent#PaymentMethodTypeEnum.
+
+#### New Input parameters:
+* einvoicing_method has been added to HostedPage#CheckoutOneTimeForItemsRequest.
+* einvoicing_method has been added to HostedPage#CheckoutNewForItemsRequest.
+* additional_information has been added to PaymentSource#CardAdditionalInformation.
+
+
 ### v3.9.1 (2023-09-15)
 * * *
 
@@ -247,6 +329,87 @@ See the [migration guide](https://github.com/chargebee/chargebee-go/wiki/Migrati
 🔴 **Attention**: The support for v2 will eventually be discontinued on **December 31st 2023** and will no longer receive any further updates. We strongly recommend [upgrading to v3](https://github.com/chargebee/chargebee-go/wiki/Migration-guide-for-v3) as soon as possible.
 
 * * *
+
+### v2.27.0 (2023-11-30)
+* * *
+
+#### New Enum values:
+* swiss_reference has been added to PaymentReferenceNumber#TypeEnum.
+
+#### New Input parameters:
+* subscription[po_number] has been added to Quote#EditCreateSubForCustomerQuoteRequest in Quote resource. 
+* subscription[po_number] has been added to Quote#EditCreateSubCustomerQuoteForItemsRequest in Quote resource.
+
+* * *
+
+### v2.26.0 (2023-10-31)
+* * *
+
+#### New attributes:
+* statement_descriptor has been added to invoice resource.
+* source has been added to the Hosted_Pages resource.
+
+#### New Enum values:
+* pay_com has been added to Gateway.
+* pay_to, faster_payments, sepa_instant_transfer has been added to Customer#TypeEnum.
+* pay_to, faster_payments, sepa_instant_transfer has been added to PaymentMethodEnum.
+* pay_to, faster_payments, sepa_instant_transfer has been added to PaymentMethodTypeEnum.
+* pay_to, faster_payments, sepa_instant_transfer has been added to TypeEnum.
+* pay_to, faster_payments, sepa_instant_transfer, amazon_payments has been added to PaymentIntent#PaymentMethodTypeEnum.
+
+#### New Input parameters:
+* source has been added to HostedPage#CheckoutOneTimeForItemsRequest.
+* source has been added to HostedPage#CheckoutNewForItemsRequest.
+* source has been added to HostedPage#CheckoutExistingForItemsRequest.
+* statement_descriptor_descriptor has been added to Invoice#CreateRequest.
+* statement_descriptor_descriptor has been added to Invoice#CreateForChargeItemsAndChargesRequest.
+* statement_descriptor_descriptor has been added to Invoice#UpdateDetailsRequest.
+* statement_descriptor_additional_info has been added to Invoice#CreateRequest.
+* statement_descriptor_additional_info has been added to Invoice#CreateForChargeItemsAndChargesRequest.
+* statement_descriptor_additional_info has been added to Invoice#UpdateDetailsRequest.
+* statement_descriptor_descriptor has been added to Subscription#CreateRequest.
+* statement_descriptor_descriptor has been added to Subscription#CreateForCustomerRequest.
+* statement_descriptor_descriptor has been added to Subscription#CreateWithItemsRequest.
+* statement_descriptor_descriptor has been added to Subscription#UpdateRequest.
+* statement_descriptor_descriptor has been added to Subscription#UpdateForItemsRequest.
+* statement_descriptor_descriptor has been added to Subscription#ReactivateRequest.
+* statement_descriptor_additional_info has been added to Subscription#CreateRequest.
+* statement_descriptor_additional_info has been added to Subscription#CreateForCustomerRequest.
+* statement_descriptor_additional_info has been added to Subscription#CreateWithItemsRequest.
+* statement_descriptor_additional_info has been added to Subscription#UpdateRequest.
+* statement_descriptor_additional_info has been added to Subscription#UpdateForItemsRequest.
+* statement_descriptor_additional_info has been added to Subscription#ReactivateRequest.
+
+#### Updates to old parameters:
+* duration_type, discount_type in coupons has been made optional.
+* proration_type in addons is now supported.
+* csv_tax_rule has been removed.
+* Tax1JurisTypeEnum has been removed.
+* Tax2JurisTypeEnum has been removed.
+* Tax3JurisTypeEnum has been removed.
+* Tax4JurisTypeEnum has been removed.
+
+
+### v2.25.0 (2023-09-26)
+* * *
+
+#### New attributes:
+* venmo has been added to the PaymentSource resource.
+* proration_type has been added to the QuotedCharge, QuotedSubscription and Subscription resource.
+
+#### New Enum values:
+* ebanx has been added to Gateway.
+* venmo has been added to Customer#TypeEnum.
+* venmo has been added to PaymentMethodEnum.
+* venmo has been added to PaymentMethodTypeEnum.
+* venmo has been added to TypeEnum.
+* venmo has been added to PaymentIntent#PaymentMethodTypeEnum.
+
+#### New Input parameters:
+* einvoicing_method has been added to HostedPage#CheckoutOneTimeForItemsRequest.
+* einvoicing_method has been added to HostedPage#CheckoutNewForItemsRequest.
+* additional_information has been added to PaymentSource#CardAdditionalInformation.
+
 
 ### v2.24.1 (2023-09-15)
 * * *

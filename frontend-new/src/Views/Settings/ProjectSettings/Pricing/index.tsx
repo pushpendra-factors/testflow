@@ -1,5 +1,5 @@
 import { SVG } from 'Components/factorsComponents';
-import { Breadcrumb, Tabs } from 'antd';
+import { Breadcrumb, Tabs, notification } from 'antd';
 import React, { useEffect, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import BillingTab from './BillingTab';
@@ -11,9 +11,13 @@ import UpgradeTab from './UpgradeTab';
 import InvoiceTab from './InvoiceTab';
 import { useSelector } from 'react-redux';
 import { startCase } from 'lodash';
+import { upgradePlan } from 'Reducers/plansConfig/services';
+import { ADDITIONAL_ACCOUNTS_ADDON_ID } from 'Constants/plans.constants';
+import logger from 'Utils/logger';
 
-const Pricing = () => {
+function Pricing() {
   const [activeKey, setActiveKey] = useState(PRICING_PAGE_TABS.BILLING);
+  const [loading, setIsLoading] = useState<boolean>(false);
   const history = useHistory();
   const routerQuery = useQuery();
   const { active_project } = useSelector((state) => state.global);
@@ -22,6 +26,36 @@ const Pricing = () => {
   const handleTabChange = (activeKey: string) => {
     setActiveKey(activeKey);
     history.replace(`${PathUrls.SettingsPricing}?activeTab=${activeKey}`);
+  };
+
+  const handleBuyAddonClick = async () => {
+    try {
+      setIsLoading(true);
+
+      const res = await upgradePlan(active_project?.id, '', [
+        { addon_id: ADDITIONAL_ACCOUNTS_ADDON_ID, quantity: 1 }
+      ]);
+      const paymentUrl = res?.data?.url;
+
+      if (!paymentUrl) {
+        notification.error({
+          message: 'Failed!',
+          description: 'Payment URL not found!',
+          duration: 3
+        });
+      } else {
+        window.open(paymentUrl, '_self');
+      }
+      setIsLoading(false);
+    } catch (error) {
+      logger.error('Error in upgrading plan', error);
+      notification.error({
+        message: 'Failed!',
+        description: 'Something went wrong!',
+        duration: 3
+      });
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -50,28 +84,35 @@ const Pricing = () => {
       <div className='mt-6'>
         <Tabs activeKey={activeKey} onChange={handleTabChange}>
           <Tabs.TabPane tab='Billing' key={PRICING_PAGE_TABS.BILLING}>
-            <BillingTab />
+            <BillingTab
+              handleBuyAddonClick={handleBuyAddonClick}
+              buyAddonLoading={loading}
+            />
           </Tabs.TabPane>
-          <Tabs.TabPane
-            tab='Enrichment Rules'
-            key={PRICING_PAGE_TABS.ENRICHMENT_RULES}
-          >
-            <EnrichmentRulesTab />
-          </Tabs.TabPane>
+
           {showV2PricingVersion(active_project) && (
             <>
               <Tabs.TabPane tab='Upgrade' key={PRICING_PAGE_TABS.UPGRADE}>
-                <UpgradeTab />
+                <UpgradeTab
+                  handleBuyAddonClick={handleBuyAddonClick}
+                  buyAddonLoading={loading}
+                />
               </Tabs.TabPane>
               <Tabs.TabPane tab='Invoices' key={PRICING_PAGE_TABS.INVOICES}>
                 <InvoiceTab />
               </Tabs.TabPane>
             </>
           )}
+          <Tabs.TabPane
+            tab='Enrichment Rules'
+            key={PRICING_PAGE_TABS.ENRICHMENT_RULES}
+          >
+            <EnrichmentRulesTab />
+          </Tabs.TabPane>
         </Tabs>
       </div>
     </div>
   );
-};
+}
 
 export default Pricing;

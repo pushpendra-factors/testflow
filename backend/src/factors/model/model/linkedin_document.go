@@ -19,6 +19,7 @@ type LinkedinDocument struct {
 	CreativeID          string          `json:"creative_id"`
 	Value               *postgres.Jsonb `json:"value"`
 	IsBackfilled        bool            `json:"is_backfilled"`
+	SyncStatus          int             `gorm:"default:0" json:"sync_status"`
 	IsGroupUserCreated  bool            `json:"is_group_user_created"`
 	CreatedAt           time.Time       `json:"created_at"`
 	UpdatedAt           time.Time       `json:"updated_at"`
@@ -35,6 +36,7 @@ type LinkedinLastSyncInfo struct {
 	DocumentTypeAlias     string `json:"type_alias"`
 	LastTimestamp         int64  `json:"last_timestamp"`
 	LastBackfillTimestamp int64  `json:"last_backfill_timestamp"`
+	SyncType              int    `json:"sync_type"`
 }
 
 type LinkedinDeleteDocumentsPayload struct {
@@ -49,6 +51,14 @@ type LinkedinCampaignGroupInfoRequestPayload struct {
 	CustomerAdAccountID string `json:"customer_ad_account_id"`
 	StartTimestamp      string `json:"start_timestamp"`
 	EndTimestamp        string `json:"end_timestamp"`
+}
+
+type LinkedinValidationRequestPayload struct {
+	ProjectID           int64  `json:"project_id"`
+	CustomerAdAccountID string `json:"customer_ad_account_id"`
+	StartTimestamp      string `json:"start_timestamp"`
+	EndTimestamp        string `json:"end_timestamp"`
+	SyncStatus          int    `json:"sync_status"`
 }
 type DomainDataResponse struct {
 	ProjectID           int64  `json:"project_id"`
@@ -82,6 +92,12 @@ var ObjectToDisplayCategoryForLinkedin = map[string]string{
 	AdwordsCampaign: "Campaign Group",
 	AdwordsAdGroup:  "Campaign",
 	LinkedinCompany: "Company",
+}
+
+var CompanySyncJobTypeMap = map[string]int{
+	"daily": 0,
+	"t8":    1,
+	"t22":   2,
 }
 
 var ObjectToValueInLinkedinJobsMapping = map[string]string{

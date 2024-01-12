@@ -3,8 +3,9 @@ import styles from './index.module.scss';
 import { Button, Divider, Tag, Tooltip } from 'antd';
 import { Number, SVG, Text } from 'Components/factorsComponents';
 import { PlansDetailStateInterface } from 'Reducers/plansConfig/types';
+import { PLANS } from 'Constants/plans.constants';
 
-const PlanDescriptionCard = ({
+function PlanDescriptionCard({
   plan,
   isPlanActive,
   isRecommendedPlan,
@@ -16,8 +17,10 @@ const PlanDescriptionCard = ({
   accountIdentifiedLimit,
   mtuLimit,
   isUserBillingAdmin,
-  handleBuyButtonClick
-}: PlanDescriptionCardProps) => {
+  isButtonLoading,
+  handleBuyButtonClick,
+  isAdditionalAccountsAddonPurchased
+}: PlanDescriptionCardProps) {
   const monthlyPlan = plan.terms.find((p) => p.period === 'month');
   const yearlyPlan = plan.terms.find((p) => p.period === 'year');
 
@@ -69,105 +72,143 @@ const PlanDescriptionCard = ({
       </div>
       <div className={`${styles.planAmountContainer} h-auto flex  gap-12`}>
         <Divider type='vertical' style={{ height: '100%' }} />
-        <div>
-          <Text
-            type={'title'}
-            level={5}
-            color='character-secondary'
-            extraClass='m-0'
-          >
-            Starts for
-          </Text>
-          {monthlyPlan?.id && (
+        <div className='flex flex-col justify-between'>
+          <div>
             <Text
               type={'title'}
-              level={3}
-              weight={'bold'}
-              color='character-primary'
-              extraClass={'m-0 '}
-            >
-              ${monthlyPlan.price}
-              {monthlyPlan.price !== 0 && '/mo'}
-            </Text>
-          )}
-
-          {monthlyPlan?.id && yearlyPlan?.id && (
-            <Text
-              type={'title'}
-              level={7}
+              level={5}
               color='character-secondary'
-              extraClass={'m-0 '}
+              extraClass='m-0'
             >
-              {monthlyPlan?.price === 0 && 'Can be upgraded'}
-
-              {monthlyPlan?.price !== 0 && (
-                <>
-                  billed at <s>${monthlyPlan?.price * 12}</s>{' '}
-                  <span style={{ fontWeight: 600 }}>
-                    ${yearlyPlan?.price}/yr
-                  </span>
-                </>
-              )}
+              Starts for
             </Text>
-          )}
-
-          <Text
-            type={'title'}
-            level={7}
-            color='character-primary'
-            extraClass={'m-0 mt-8'}
-            weight={'bold'}
-          >
-            Includes
-          </Text>
-          <Text
-            type={'title'}
-            level={7}
-            color='character-primary'
-            extraClass={'m-0 mt-1.5'}
-          >
-            <Number number={accountIdentifiedLimit} /> Accounts Identification
-          </Text>
-          <Text
-            type={'title'}
-            level={7}
-            color='character-primary'
-            extraClass={'m-0'}
-          >
-            <Number number={mtuLimit} /> Monthly tracked users
-          </Text>
-
-          <Tooltip
-            placement='top'
-            title={`${
-              isUserBillingAdmin
-                ? ''
-                : 'Please talk to your Billing Admin for upgrading plans'
-            }`}
-          >
-            <Button
-              className={`${
-                isUserBillingAdmin ? styles.outlineButton : 'mt-6'
-              }`}
-              disabled={!isUserBillingAdmin}
-              onClick={() => handleBuyButtonClick(planName, isPlanActive)}
-            >
+            {yearlyPlan?.id && plan.name !== PLANS.PLAN_FREE && (
+              <>
+                <Text
+                  type={'title'}
+                  level={3}
+                  weight={'bold'}
+                  color='character-primary'
+                  extraClass={'m-0 '}
+                >
+                  $
+                  <Number
+                    number={yearlyPlan?.price ? yearlyPlan.price / 12 : 0}
+                  />
+                  /Month
+                </Text>
+                <Text
+                  type={'title'}
+                  level={7}
+                  color='character-secondary'
+                  extraClass={'m-0 '}
+                >
+                  billed annually
+                </Text>
+              </>
+            )}
+            {monthlyPlan?.id && plan.name !== PLANS.PLAN_FREE && (
               <Text
                 type={'title'}
                 level={7}
-                color='character-primary'
                 weight={'bold'}
+                color='character-secondary'
                 extraClass={'m-0'}
               >
-                {isPlanActive ? 'Buy Add-On' : 'Buy this Plan'}
+                or ${monthlyPlan.price} monthly
               </Text>
-            </Button>
-          </Tooltip>
+            )}
+            {plan.name === PLANS.PLAN_FREE && (
+              <>
+                <Text
+                  type={'title'}
+                  level={3}
+                  weight={'bold'}
+                  color='character-primary'
+                  extraClass={'m-0 '}
+                >
+                  $0
+                </Text>
+                <Text
+                  type={'title'}
+                  level={7}
+                  weight={'bold'}
+                  color='character-secondary'
+                  extraClass={'m-0 '}
+                >
+                  Can be upgraded
+                </Text>
+              </>
+            )}
+
+            <Text
+              type={'title'}
+              level={7}
+              color='character-primary'
+              extraClass={'m-0 mt-6'}
+              weight={'bold'}
+            >
+              Includes
+            </Text>
+            <Text
+              type={'title'}
+              level={7}
+              color='character-primary'
+              extraClass={'m-0 mt-1.5'}
+            >
+              <Number number={accountIdentifiedLimit} /> Accounts
+              Identified/month
+            </Text>
+            <Text
+              type={'title'}
+              level={7}
+              color='character-primary'
+              extraClass={'m-0'}
+            >
+              <Number number={mtuLimit} /> Monthly tracked users
+            </Text>
+          </div>
+          <div>
+            {isPlanActive && plan.name === PLANS.PLAN_FREE ? null : (
+              <Tooltip
+                placement='top'
+                title={`${
+                  isUserBillingAdmin
+                    ? ''
+                    : 'Please talk to your Billing Admin for upgrading plans'
+                }`}
+              >
+                <Button
+                  className={`${
+                    isUserBillingAdmin ? styles.outlineButton : ''
+                  } mt-6`}
+                  style={{ width: 320 }}
+                  disabled={!isUserBillingAdmin}
+                  onClick={() => handleBuyButtonClick(planName, isPlanActive)}
+                  loading={isPlanActive ? isButtonLoading : false}
+                >
+                  <Text
+                    type={'title'}
+                    level={7}
+                    color='character-primary'
+                    weight={'bold'}
+                    extraClass={'m-0'}
+                  >
+                    {isPlanActive
+                      ? isAdditionalAccountsAddonPurchased
+                        ? 'Edit Add-ons'
+                        : 'Buy Add-ons'
+                      : 'Buy this Plan'}
+                  </Text>
+                </Button>
+              </Tooltip>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
-};
+}
 
 interface PlanDescriptionCardProps {
   isPlanActive: boolean;
@@ -182,6 +223,8 @@ interface PlanDescriptionCardProps {
   plan: PlansDetailStateInterface;
   isUserBillingAdmin: boolean;
   handleBuyButtonClick: (planName: string, isPlanActive: boolean) => void;
+  isButtonLoading: boolean;
+  isAdditionalAccountsAddonPurchased: boolean;
 }
 
 export default PlanDescriptionCard;

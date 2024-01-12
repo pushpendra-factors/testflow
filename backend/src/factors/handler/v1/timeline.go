@@ -85,6 +85,10 @@ func updateProfileUserScores(profileUsersList *[]model.Profile, scoresPerUser ma
 	for i := range *profileUsersList {
 		if prof, ok := scoresPerUser[(*profileUsersList)[i].Identity]; ok {
 			(*profileUsersList)[i].Engagement = engagementLevels[float64(prof.Score)]
+			(*profileUsersList)[i].TopEngagements = make(map[string]float64)
+			for engagementKey, engengagementval := range prof.TopEvents {
+				(*profileUsersList)[i].TopEngagements[engagementKey] += engengagementval
+			}
 		} else {
 			(*profileUsersList)[i].Engagement = ""
 		}
@@ -118,14 +122,14 @@ func getUniqueScores(input []float64) []float64 {
 
 func GetEngagementLevels(scores []float64, buckets model.BucketRanges) map[float64]string {
 	result := make(map[float64]string)
-	result[0] = getEngagement(0, buckets)
+	result[0] = model.GetEngagement(0, buckets)
 
 	nonZeroScores := removeZeros(scores)
 	uniqueScores := getUniqueScores(nonZeroScores)
 
 	for _, score := range uniqueScores {
 		// calculating percentile is not used in the current implementation
-		result[score] = getEngagement(score, buckets)
+		result[score] = model.GetEngagement(score, buckets)
 	}
 
 	return result
@@ -136,15 +140,6 @@ func calculatePercentile(data []float64, value float64) float64 {
 	index := sort.SearchFloat64s(data, value)                 // Find the index of the value
 	percentile := float64(index) / float64(len(data)-1) * 100 // Calculate the percentile based on the index
 	return percentile
-}
-
-func getEngagement(percentile float64, buckets model.BucketRanges) string {
-	for _, bucket := range buckets.Ranges {
-		if bucket.Low <= percentile && percentile <= bucket.High {
-			return bucket.Name
-		}
-	}
-	return "Ice"
 }
 
 func GetProfileUserDetailsHandler(c *gin.Context) (interface{}, int, string, string, bool) {
@@ -271,6 +266,7 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 			if err != nil {
 				logCtx.Error("Error while fetching account scoring bucket ranges.")
 			}
+
 			// Update account scores in the accounts list
 			updateProfileUserScores(&profileAccountsList, scoresPerAccount, buckets)
 		}

@@ -1,14 +1,13 @@
 import { SVG, Text } from 'Components/factorsComponents';
-import { PathUrls } from 'Routes/pathUrls';
+import usePlanUpgrade from 'hooks/usePlanUpgrade';
 import React from 'react';
-import { Link, useHistory } from 'react-router-dom';
 
-const UpgradeButton = ({ extraClass }: UpgradeButtonProps) => {
-  const history = useHistory();
+function UpgradeButton({ extraClass, featureName }: UpgradeButtonProps) {
+  const { handlePlanUpgradeClick } = usePlanUpgrade();
   return (
     <div
       className='flex items-center font-semibold gap-2 flex-nowrap whitespace-no-wrap cursor-pointer'
-      onClick={() => history.push(PathUrls.SettingsPricing)}
+      onClick={() => handlePlanUpgradeClick(featureName)}
     >
       <Text type='paragraph' mini weight={'bold'} color='brand-color-6'>
         Upgrade plan
@@ -16,10 +15,11 @@ const UpgradeButton = ({ extraClass }: UpgradeButtonProps) => {
       <SVG size={20} name='Lock' />
     </div>
   );
-};
+}
 
 type UpgradeButtonProps = {
   extraClass?: string;
+  featureName: string;
 };
 
 export default UpgradeButton;

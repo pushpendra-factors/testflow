@@ -1,0 +1,111 @@
+
+Analysis of data compression for last 30 days -----
+Steps of analysis of compression -----
+- Fetch the raw records.
+- Fetch the number of records present for website_aggregation.
+- Finding the high cardinal columns for few projects.
+- Remove Group by to check the aggregations count.
+
+Accounts under consideration ----
+    Heavy page views - 
+    Razorpay, chargebee
+
+    Moderate page views - 
+    spotdraft - 12384898978000004, locad - 2251799835000003
+
+    lower page views - 
+    ourly, tradelanes
+
+399, 2251799835000003, 2251799843000004, 12384898978000004 are having lesser compression ratio with all fields included.
+
+Taking 12384898978000004, 399 for consideration.
+
+Finding the high cardinal columns.
+12384898978000004 -- landing_page_url - 408, initial_referrer_url - 340, city - 1732
+399 - landing_page_url - 3827, initial_referrer_url - 6837, city - 10752
+
+
+
+
+Next analysis if required -
+lets analyse the queries compression on session and page view.
+------
+
+SQL queries 
+-- Fetch the raw records.
+
+    with page_view_event_name as (
+        select project_id, id from event_names where (type = 'AT' OR name = '$session') AND project_id IN (576, 399, 2251799835000003, 2, 12384898978000004, 2251799843000004, 1125899933000021)
+    )
+    select events.project_id, count(*) from events 
+    INNER JOIN page_view_event_name ON events.project_id = page_view_event_name.project_id AND events.event_name_id = page_view_event_name.id
+    AND (events.updated_at > now() - INTERVAL 30 day)
+    group by events.project_id;
+
+-- Fetch the number of unique/Distinct values in columns required. Or rather finding the high cardinal columns.
+    with session_event_name as (
+        select id, project_id, name from event_names where name = '$session' AND project_id = 12384898978000004
+    ),
+
+    session_data as (
+    SELECT
+        events.project_id as project_id,
+        name as event_name,
+        JSON_EXTRACT_STRING(events.properties, '$initial_page_url') as landing_page_url,
+        JSON_EXTRACT_STRING(events.properties, '$initial_referrer_url') as initial_referrer_url,
+        JSON_EXTRACT_STRING(events.properties, '$country') as country,
+        JSON_EXTRACT_STRING(events.properties, '$region') as region,
+        JSON_EXTRACT_STRING(events.properties, '$city') as city,
+        JSON_EXTRACT_STRING(events.properties, '$browser') as browser,
+        JSON_EXTRACT_STRING(events.properties, '$browser_version') as browser_version,
+        JSON_EXTRACT_STRING(events.properties, '$os') as os,
+        JSON_EXTRACT_STRING(events.properties, '$os_version') as os_version
+    FROM 
+        events INNER JOIN session_event_name ON events.project_id = session_event_name.project_id AND events.event_name_id = session_event_name.id
+        AND (events.updated_at > now() - INTERVAL 30 day)    
+    ),
+
+    page_event_name as (
+        select id, project_id, name from event_names where type = 'AT' AND project_id = 12384898978000004
+    ),
+
+    page_data as (
+    SELECT
+        events.project_id as project_id,
+        name as event_name,
+        JSON_EXTRACT_STRING(events.user_properties, '$initial_page_url') as landing_page_url,
+        JSON_EXTRACT_STRING(events.user_properties, '$initial_referrer_url') as initial_referrer_url,
+        JSON_EXTRACT_STRING(events.user_properties, '$country') as country,
+        JSON_EXTRACT_STRING(events.user_properties, '$region') as region,
+        JSON_EXTRACT_STRING(events.properties, '$city') as city,
+        JSON_EXTRACT_STRING(events.user_properties, '$browser') as browser,
+        JSON_EXTRACT_STRING(events.user_properties, '$browser_version') as browser_version,
+        JSON_EXTRACT_STRING(events.user_properties, '$os') as os,
+        JSON_EXTRACT_STRING(events.user_properties, '$os_version') as os_version
+    FROM 
+        events INNER JOIN session_event_name ON events.project_id = session_event_name.project_id AND events.event_name_id = session_event_name.id
+        AND (events.updated_at > now() - INTERVAL 30 day)    
+    ),
+    union_data as ( select * from session_data UNION select * from page_data )
+
+    select count(DISTINCT(initial_referrer_url)) from union_data;
+
+    Simple query also exists - 
+    select count(DISTINCT(landing_page_url)) from website_aggregation where project_id = 576;
+
+-- Remove Group by to check the aggregations count
+    select count(*) from
+    (select * from website_aggregation
+    where project_id = 12384898978000004
+    group by timestamp_at_day, 
+    landing_page_url, initial_referrer_url, city,
+    country, region, browser, browser_version, os, os_version);
+
+    select project_id, count(*) from
+    (select * from website_aggregation
+    where project_id IN (576, 399, 2251799835000003, 2, 12384898978000004, 2251799843000004, 1125899933000021)
+    group by project_id, timestamp_at_day, 
+    landing_page_url, initial_referrer_url, city,
+    country, region, browser, browser_version, os, os_version)
+    group by project_id
+    order by project_id desc;

@@ -1,9 +1,9 @@
 package model
 
 import (
-	"time"
-
+	"errors"
 	"github.com/jinzhu/gorm/dialects/postgres"
+	"time"
 )
 
 type PlanDetails struct {
@@ -47,16 +47,34 @@ const (
 	PLAN_BASIC        = "BASIC"
 	PLAN_PROFESSIONAL = "PROFESSIONAL"
 	PLAN_CUSTOM       = "CUSTOM"
+	PLAN_GROWTH       = "GROWTH"
 )
 const (
 	PLAN_ID_FREE         = 1
-	PLAN_ID_STARTUP      = 2
-	PLAN_ID_BASIC        = 3
+	PLAN_ID_BASIC        = 2
+	PLAN_ID_GROWTH       = 3
 	PLAN_ID_PROFESSIONAL = 4
 	PLAN_ID_CUSTOM       = 5
 )
 
 var planToFeatureMap map[string][]string
+
+func GetPlanIDFromPlanName(planName string) (int, error) {
+	switch planName {
+	case PLAN_FREE:
+		return PLAN_ID_FREE, nil
+	case PLAN_BASIC:
+		return PLAN_ID_BASIC, nil
+	case PLAN_GROWTH:
+		return PLAN_ID_GROWTH, nil
+	case PLAN_PROFESSIONAL:
+		return PLAN_ID_PROFESSIONAL, nil
+	case PLAN_CUSTOM:
+		return PLAN_ID_CUSTOM, nil
+	default:
+		return 0, errors.New("Invalid Plan Name")
+	}
+}
 
 // func initPlanToFeatureMapping() {
 // 	planToFeatureMap = make(map[string][]string)
