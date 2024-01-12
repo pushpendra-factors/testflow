@@ -29,6 +29,7 @@ function AccountTimelineBirdView({
   eventNamesMap
 }) {
   const { groupPropNames } = useSelector((state) => state.coreQuery);
+  const { projectDomainsList } = useSelector((state) => state.global);
   const [formattedData, setFormattedData] = useState({});
 
   useEffect(() => {
@@ -127,7 +128,8 @@ function AccountTimelineBirdView({
           <div className='inline-flex gap--4 items-center'>
             <div className='event-name--sm'>
               <TextWithOverflowTooltip
-                text={truncateURL(eventName)}
+                text={truncateURL(eventName, projectDomainsList)}
+                tooltipText={eventName}
                 disabled={isHoverable}
               />
             </div>

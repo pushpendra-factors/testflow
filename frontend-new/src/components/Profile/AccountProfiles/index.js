@@ -132,6 +132,7 @@ function AccountProfiles({
   const { segment_id } = useParams();
 
   const { groupPropNames } = useSelector((state) => state.coreQuery);
+  const { projectDomainsList } = useSelector((state) => state.global);
   const groupProperties = useSelector(
     (state) => state.coreQuery.groupProperties
   );
@@ -1073,6 +1074,7 @@ function AccountProfiles({
         groupPropNames,
         listProperties,
         defaultSorterInfo,
+        projectDomainsList,
         activeAgent
       })
     );
@@ -1083,7 +1085,8 @@ function AccountProfiles({
     groupPropNames,
     isScoringLocked,
     listProperties,
-    defaultSorterInfo
+    defaultSorterInfo,
+    projectDomainsList
   ]);
   // const tableColumns = useMemo(() => {
   //   return getColumns({

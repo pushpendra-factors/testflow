@@ -1,46 +1,26 @@
-import anchorme from 'anchorme';
+import { isString } from 'lodash';
 
-export const isValidURL = (str: string) => {
-  return anchorme.validate.url(str);
+const isValidDomain = (urlText: string, domains: string[]) => {
+  for (let i = 0; i < domains.length; i++) {
+    if (urlText.startsWith(domains[i])) {
+      const truncatedURL = urlText.slice(domains[i].length) || '';
+      return truncatedURL.length > 1 ? truncatedURL : urlText;
+    }
+  }
+  return false;
 };
 
-function addProtocolIfMissing(url: string) {
-  if (!/^https?:\/\//i.test(url)) {
-    return 'http://' + url;
+const truncateURL = (urlString: string = '', domainList: string[] = []) => {
+  if (isString(urlString)) {
+    let urlArray = urlString.split(',');
+    urlArray = urlArray.map((url) => {
+      const spaceTrimmedURL = url.trim();
+      const truncatedURL = isValidDomain(spaceTrimmedURL, domainList);
+      if (truncatedURL) return truncatedURL;
+      return spaceTrimmedURL;
+    });
+    return urlArray.join(', ');
   }
-  return url;
-}
-function urlHasBracketsOrBraces(inputString: string) {
-  const regex = /[\[\](){}]/;
-  return regex.test(inputString);
-}
-
-const truncateURL = (urlString: string) => { 
-  let urlArray = urlString.split(',');
-  urlArray = urlArray.map((urlText) => {
-    const url = urlText.trim();
-
-    //check URL is containing brakcets or braces. (not handled in anchorme npm package, hence added as spl conditional check)
-    if(urlHasBracketsOrBraces(url)){
-      return url
-    }    
-    //check URL is valid using anchorme npm package
-    if (!isValidURL(url)) {
-      return url;
-    }
-    const urlWithProtocol = addProtocolIfMissing(url);
-    const urlObject = new URL(urlWithProtocol);
-    const path = urlObject.pathname;
-
-    // Check if there's a subdirectory
-    const parts = path.split('/').filter(Boolean);
-
-    if (parts.length > 0) {
-      return `/${parts.slice(0).join('/')}`;
-    } else {
-      return url;
-    }
-  });
-  return urlArray.join(', ');
+  return urlString;
 };
 export default truncateURL;

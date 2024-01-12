@@ -4,10 +4,10 @@ import EventIcon from './EventIcon';
 import UsernameWithIcon from './UsernameWithIcon';
 import { TableRowProps } from './types';
 import { PropTextFormat } from 'Utils/dataFormatter';
-import truncateURL, { isValidURL } from 'Utils/truncateURL';
 import { useSelector } from 'react-redux';
 import { propValueFormat } from 'Components/Profile/utils';
 import TextWithOverflowTooltip from 'Components/GenericComponents/TextWithOverflowTooltip';
+import truncateURL from 'Utils/truncateURL';
 
 const TableRow: React.FC<TableRowProps> = ({
   event,
@@ -16,6 +16,7 @@ const TableRow: React.FC<TableRowProps> = ({
   onEventClick
 }) => {
   const { eventPropNames } = useSelector((state: any) => state.coreQuery);
+  const { projectDomainsList } = useSelector((state) => state.global);
 
   const timestamp = event?.timestamp
     ? MomentTz(event.timestamp * 1000).format('hh:mm A')
@@ -47,14 +48,10 @@ const TableRow: React.FC<TableRowProps> = ({
       Object.entries(properties || {})[0] || [];
     const value = display_name === 'Page View' ? event_name : propertyValue;
 
-    if (isValidURL(value)) {
-      return truncateURL(value);
-    }
-
     const propType = eventPropsType[propertyName];
     const formattedValue = propValueFormat(propertyName, value, propType);
 
-    return formattedValue;
+    return truncateURL(formattedValue, projectDomainsList) || formattedValue;
   };
 
   const renderPropValTooltip = () => {

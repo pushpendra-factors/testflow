@@ -24,6 +24,7 @@ const defaultState = {
   projectsError: null,
   currentProjectSettings: {},
   currentProjectSettingsLoading: false,
+  projectDomainsList: [],
   contentGroup: [],
   bingAds: {},
   marketo: {},
@@ -133,6 +134,18 @@ export default function (state = defaultState, action) {
         ...state,
         currentProjectSettingsLoading: false,
         projectSettingsError: action.payload.err
+      };
+    }
+    case 'FETCH_PROJECT_DOMAINS_LIST_FULLFILLED': {
+      return {
+        ...state,
+        projectDomainsList:action.payload.domains
+      };
+    }
+    case 'FETCH_PROJECT_DOMAINS_LIST_REJECTED': {
+      return {
+        ...state,
+        projectDomainsList: []
       };
     }
     case 'ENABLE_FACEBOOK_USER_ID': {
@@ -1499,4 +1512,27 @@ export async function triggerHubspotCustomFormFillEvent(
   } catch (error) {
     logger.error('Error in triggering HS custom form', error);
   }
+}
+
+export function fetchDomainList(projectID) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      get(
+        dispatch,
+        host + 'projects/' + projectID + `/event_names/auto_tracked_domains`
+      )
+        .then((response) => {
+          dispatch({
+            type: 'FETCH_PROJECT_DOMAINS_LIST_FULLFILLED',
+            payload: response.data
+          });
+          resolve(response);
+        })
+        .catch((error) => {
+          dispatch({ type: 'FETCH_PROJECT_DOMAINS_LIST_REJECTED' });
+          reject(error);
+          logger.error('Error in fetching Auto Tracked Domains', error);
+        });
+    });
+  };
 }

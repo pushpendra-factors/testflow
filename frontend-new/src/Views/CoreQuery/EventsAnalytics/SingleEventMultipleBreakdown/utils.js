@@ -28,6 +28,8 @@ import NonClickableTableHeader from '../../../../components/NonClickableTableHea
 import { EVENT_COUNT_KEY } from '../eventsAnalytics.constants';
 import { BREAKDOWN_TYPES } from '../../constants';
 import { isNumeric } from '../../../../utils/global';
+import { Tooltip } from 'antd';
+import truncateURL from 'Utils/truncateURL';
 
 export const defaultSortProp = ({ breakdown }) => {
   const dateTimeBreakdownIndex = findIndex(
@@ -126,6 +128,7 @@ export const getTableColumns = (
   eventNames,
   userPropNames,
   eventPropertiesDisplayNames,
+  projectDomainsList,
   eventGroup
 ) => {
   const breakdownColumns = breakdown.map((e, index) => {
@@ -152,7 +155,11 @@ export const getTableColumns = (
         ) {
           return <NumFormat number={d} />;
         }
-        return d;
+        return (
+          <Tooltip placement='top' title={d}>
+            {truncateURL(d, projectDomainsList)}
+          </Tooltip>
+        );
       }
     };
   });
@@ -192,7 +199,8 @@ export const getDateBasedColumns = (
   handleSorting,
   frequency,
   userPropNames,
-  eventPropertiesDisplayNames
+  eventPropertiesDisplayNames,
+  projectDomainsList
 ) => {
   const OverallColumn = {
     title: getClickableTitleSorter(
@@ -230,7 +238,11 @@ export const getDateBasedColumns = (
         ) {
           return <NumFormat number={d} />;
         }
-        return d;
+        return (
+          <Tooltip placement='top' title={d}>
+            {truncateURL(d, projectDomainsList)}
+          </Tooltip>
+        );
       }
     };
   });

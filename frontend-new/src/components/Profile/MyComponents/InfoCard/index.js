@@ -5,6 +5,7 @@ import { PropTextFormat } from 'Utils/dataFormatter';
 import { propValueFormat } from '../../utils';
 import { useSelector } from 'react-redux';
 import TextWithOverflowTooltip from 'Components/GenericComponents/TextWithOverflowTooltip';
+import truncateURL from 'Utils/truncateURL';
 
 function InfoCard({
   title,
@@ -18,10 +19,15 @@ function InfoCard({
   children
 }) {
   const { eventPropNames } = useSelector((state) => state.coreQuery);
+  const { projectDomainsList } = useSelector((state) => state.global);
+
   const renderPropRow = (key, value) => {
     const propType = propertiesType[key];
     if (key === '$is_page_view' && value === true) return null;
 
+    const propertyValue =
+      eventType === 'FE' ? title : propValueFormat(key, value, propType) || '-';
+    const urlTruncatedValue = truncateURL(propertyValue, projectDomainsList);
     return (
       <div className='flex justify-between py-2' key={key}>
         <Text
@@ -40,9 +46,9 @@ function InfoCard({
           extraClass='break-all text-right'
           truncate
           charLimit={32}
-          shouldTruncateURL
+          toolTipTitle={propertyValue}
         >
-          {propValueFormat(key, value, propType) || '-'}
+          {urlTruncatedValue}
         </Text>
       </div>
     );

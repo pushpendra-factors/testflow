@@ -2,8 +2,14 @@ import { Button } from 'antd';
 import React from 'react';
 import { Text, SVG } from '../../../factorsComponents';
 import { propValueFormat } from '../../utils';
+import { useSelector } from 'react-redux';
+import truncateURL from 'Utils/truncateURL';
 
 function LeftPanePropBlock({ property, type, displayName, value, onDelete }) {
+  const { projectDomainsList } = useSelector((state) => state.global);
+  const formattedValue = propValueFormat(property, value, type) || '-';
+  const urlTruncatedValue = truncateURL(formattedValue, projectDomainsList);
+
   return (
     <div className='leftpane-prop'>
       <div className='flex flex-col items-start truncate'>
@@ -23,9 +29,9 @@ function LeftPanePropBlock({ property, type, displayName, value, onDelete }) {
           truncate
           charLimit={25}
           extraClass='m-0'
-          shouldTruncateURL
+          toolTipTitle={formattedValue}
         >
-          {value ? propValueFormat(property, value, type) : '-'}
+          {urlTruncatedValue}
         </Text>
       </div>
 

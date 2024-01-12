@@ -4,9 +4,11 @@ import { eventIconsColorMap, propValueFormat } from 'Components/Profile/utils';
 import React from 'react';
 import { useSelector } from 'react-redux';
 import { PropTextFormat } from 'Utils/dataFormatter';
+import truncateURL from 'Utils/truncateURL';
 
 const EventInfoCard = ({ event, eventIcon, sourceIcon, propertiesType }) => {
   const { eventPropNames } = useSelector((state) => state.coreQuery);
+  const { projectDomainsList } = useSelector((state) => state.global);
   return (
     <div className='timeline-event__container'>
       <div className='timestamp'>
@@ -61,6 +63,11 @@ const EventInfoCard = ({ event, eventIcon, sourceIcon, propertiesType }) => {
         {Object.entries(event?.properties || {}).map(([key, value]) => {
           const propType = propertiesType[key];
           if (key === '$is_page_view' && value === true) return null;
+          const formattedValue = propValueFormat(key, value, propType) || '-';
+          const urlTruncatedValue = truncateURL(
+            formattedValue,
+            projectDomainsList
+          );
           return (
             <div className='flex justify-between py-2'>
               <Text
@@ -83,9 +90,9 @@ const EventInfoCard = ({ event, eventIcon, sourceIcon, propertiesType }) => {
                 }  text-right`}
                 truncate
                 charLimit={40}
-                shouldTruncateURL
+                toolTipTitle={formattedValue}
               >
-                {propValueFormat(key, value, propType) || '-'}
+                {urlTruncatedValue}
               </Text>
             </div>
           );

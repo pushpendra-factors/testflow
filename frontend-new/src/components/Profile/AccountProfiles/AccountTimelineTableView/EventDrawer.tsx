@@ -70,7 +70,6 @@ const EventDrawer: React.FC<EventDrawerProps> = ({
                     truncate
                     charLimit={44}
                     extraClass='m-0'
-                    shouldTruncateURL
                   >
                     {propValueFormat(key, value, propType) || '-'}
                   </Text>

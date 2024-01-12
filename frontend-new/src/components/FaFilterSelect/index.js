@@ -26,6 +26,7 @@ import { uploadList } from 'Reducers/global';
 import FaSelect from 'Components/GenericComponents/FaSelect';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import { selectedOptionsMapper } from 'Components/GenericComponents/FaSelect/utils';
+import truncateURL from 'Utils/truncateURL';
 import { processProperties, PropTextFormat } from 'Utils/dataFormatter';
 import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
 import { toCapitalCase } from '../../utils/global';
@@ -87,6 +88,7 @@ function FaFilterSelect({
     (state) => state.coreQuery
   );
   const activeProject = useSelector((state) => state.global.active_project);
+  const { projectDomainsList } = useSelector((state) => state.global);
 
   const valueDisplayNames = useMemo(
     () =>
@@ -824,8 +826,10 @@ function FaFilterSelect({
                     ? valuesState
                         .map((vl) =>
                           valueDisplayNames[vl]
-                            ? // ? truncateURL(valueDisplayNames[vl])
-                              valueDisplayNames[vl]
+                            ? truncateURL(
+                                valueDisplayNames[vl],
+                                projectDomainsList
+                              )
                             : formatCsvUploadValue(vl)
                         )
                         .join(', ')
@@ -1006,8 +1010,10 @@ function FaFilterSelect({
                   ? valuesState
                       .map((vl) =>
                         valueDisplayNames[vl]
-                          ? // ? truncateURL(valueDisplayNames[vl])
-                            valueDisplayNames[vl]
+                          ? truncateURL(
+                              valueDisplayNames[vl],
+                              projectDomainsList
+                            )
                           : formatCsvUploadValue(vl)
                       )
                       .join(', ')

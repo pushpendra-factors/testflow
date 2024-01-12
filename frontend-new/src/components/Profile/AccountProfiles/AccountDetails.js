@@ -53,7 +53,7 @@ import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils'
 import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import AccountTimelineTableView from './AccountTimelineTableView';
-import { isValidURL } from 'Utils/truncateURL';
+import { isValidURL } from 'Utils/checkValidURL';
 
 function AccountDetails({
   accounts,
