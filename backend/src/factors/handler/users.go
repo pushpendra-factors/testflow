@@ -312,6 +312,7 @@ func GetUserPropertyValuesHandler(c *gin.Context) {
 		return
 	}
 
+	propertyValues = U.SortRangePropertyValues(propertyName, propertyValues)
 	c.JSON(http.StatusOK, U.FilterEmptyArrayValues(propertyValues))
 }
 

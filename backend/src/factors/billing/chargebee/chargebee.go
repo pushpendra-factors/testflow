@@ -82,12 +82,14 @@ func GetUpgradeChargebeeSubscriptionCheckoutURL(projectID int64, subscriptionID 
 			Quantity:    &addOn.Quantity,
 		})
 	}
+	replaceItems := true
 	res, err := hostedPageAction.CheckoutExistingForItems(&hostedpage.CheckoutExistingForItemsRequestParams{
 		Subscription: &hostedpage.CheckoutExistingForItemsSubscriptionParams{
 			Id: subscriptionID,
 		},
 		SubscriptionItems: subscriptionItems,
 		RedirectUrl:       GetRedirectUrl(projectID),
+		ReplaceItemsList:  &replaceItems,
 	}).Request()
 	if err != nil {
 		log.WithFields(logCtx).WithError(err).Error("Failed to get checkout url for upgrade subscription on chargebee")
@@ -178,7 +180,7 @@ func ListAllInvoicesForSubscription(subscriptionID string) ([]invoice.Invoice, e
 
 	var invoices []invoice.Invoice
 	res, err := invoiceAction.List(&invoice.ListRequestParams{
-		Limit: chargebee.Int32(10),
+		Limit: chargebee.Int32(100),
 		SubscriptionId: &filter.StringFilter{
 			Is: subscriptionID,
 		},

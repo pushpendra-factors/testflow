@@ -64,6 +64,7 @@ func PerformETLForProject(projectSetting model.G2ProjectSettings) string {
 	for typeAlias, lastSync := range mapTypeAliasToLastSyncTimestamp {
 		data, err := extractData(lastSync, projectSetting.IntG2APIKey)
 		if err != nil {
+			log.WithFields(log.Fields{"project_id": projectSetting.ProjectID, "last_sync": lastSync, "type": "extraction"}).Error(err.Error())
 			return err.Error()
 		}
 		if len(data) == 0 {
@@ -71,10 +72,12 @@ func PerformETLForProject(projectSetting model.G2ProjectSettings) string {
 		}
 		transformedData, err := transformData(data)
 		if err != nil {
+			log.WithFields(log.Fields{"project_id": projectSetting.ProjectID, "last_sync": lastSync, "type": "transformation"}).Error(err.Error())
 			return err.Error()
 		}
 		err = buildDocumentAndInsertData(projectSetting.ProjectID, typeAlias, transformedData)
 		if err != nil {
+			log.WithFields(log.Fields{"project_id": projectSetting.ProjectID, "last_sync": lastSync, "type": "insertion"}).Error(err.Error())
 			return err.Error()
 		}
 	}

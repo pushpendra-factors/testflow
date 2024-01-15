@@ -76,13 +76,14 @@ export const PLANS_V0 = {
 export const PLANS_COFIG: PLANS_COFIG_INTERFACE = {
   [PLANS.PLAN_FREE]: {
     name: PLANS.PLAN_FREE,
-    description: 'Essential marketing tools to engage and convert leads',
+    description: 'Identify accounts and track their activity for free',
     uniqueFeatures: [
-      'Account identification',
+      'Website Intent',
       'Account enrichment',
-      'Core analytics & reporting',
-      'Account timelines',
-      'Real-time alerts'
+      'B2B Website Analytics',
+      'Account Journey Timelines',
+      'Custom Filters & Segments',
+      'Real-Time Intent Alerts'
     ],
     isRecommendedPlan: false,
     planIcon: 'Userplus',
@@ -93,14 +94,19 @@ export const PLANS_COFIG: PLANS_COFIG_INTERFACE = {
 
   [PLANS.PLAN_BASIC]: {
     name: PLANS.PLAN_BASIC,
-    description:
-      'Essential marketing tools with powerfull analytics and attribution',
+    description: 'Automate ABM workflows to co-ordinate better with sales',
     uniqueFeatures: [
       'Everything in Free +',
-      'Custom events & KPIs',
-      'Custom properties',
-      'Content groups',
-      'Onboarding support'
+      'Account Identification Exclusions',
+      'Lead Enrichment Automation',
+      'Outbound Email Automation',
+      'LinkedIn Intent Signals',
+      'Ad Performance Analytics',
+      'Content Analytics',
+      'Custom KPIs & Events',
+      'Onboarding support',
+      'Ads integration. (LinkedIn, Google, Facebook, Bing)',
+      'Webhooks (Zapier, Make etc)'
     ],
     isRecommendedPlan: false,
     planIcon: 'User_friends',
@@ -110,12 +116,18 @@ export const PLANS_COFIG: PLANS_COFIG_INTERFACE = {
   },
   [PLANS.PLAN_GROWTH]: {
     name: PLANS.PLAN_GROWTH,
-    description: 'Essential marketing tools to engage and convert leads',
+    description:
+      'Qualify leads and track engagement with custom scoring models',
     uniqueFeatures: [
       'Everything in Basic +',
-      'Account & lead scoring',
-      'Engaged channels (Coming Soon)',
-      'Priority CSM'
+      'G2 Intent Signals',
+      'Account + Lead Scoring',
+      'LinkedIn View Through Attribution',
+      'Basic Single Touch Funnel Attribution',
+      'Engaged Channels (Coming soon)',
+      'Priority CSM',
+      'CRM integration (HubSpot, Salesforce)',
+      'Marketing platforms integration (G2, Marketo)'
     ],
     isRecommendedPlan: true,
     planIcon: 'User',
@@ -126,7 +138,7 @@ export const PLANS_COFIG: PLANS_COFIG_INTERFACE = {
   [PLANS.PLAN_PROFESSIONAL]: {
     name: PLANS.PLAN_PROFESSIONAL,
     description:
-      'Essential marketing tools with powerfull analytics and attribution',
+      'Attribute success with Multi-Attribution, AI-Explain and more',
     uniqueFeatures: [
       'Everything in Growth +',
       'Multi-touch attribution',

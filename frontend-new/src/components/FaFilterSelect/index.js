@@ -638,7 +638,7 @@ function FaFilterSelect({
       const variant =
         operatorState === OPERATORS.notEqualTo ||
         operatorState === OPERATORS.doesNotContain
-          ? 'Multi'
+          ? 'Single'
           : operatorState === OPERATORS.contain
             ? 'Multi'
             : 'Multi';

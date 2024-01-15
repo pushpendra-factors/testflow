@@ -2411,6 +2411,8 @@ func (store *MemSQL) ExecQueryWithContext(stmnt string, params []interface{}) (*
 	rows, err := tx.QueryContext(*dbContext, stmnt, params...)
 	U.LogExecutionTimeWithQueryRequestID(startExecTime, reqID, &logFields)
 	if err != nil {
+		tx.Rollback()
+		if rows != nil { rows.Close() }
 		log.WithError(err).WithFields(logFields).Error("Failed to exec query with context.")
 	}
 

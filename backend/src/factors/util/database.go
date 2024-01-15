@@ -39,6 +39,7 @@ func DBReadRows(rows *sql.Rows, tx *sql.Tx, queryID string) ([]string, [][]inter
 
 	cols, err := rows.Columns()
 	if err != nil {
+		tx.Rollback()
 		return nil, nil, err
 	}
 
@@ -52,6 +53,7 @@ func DBReadRows(rows *sql.Rows, tx *sql.Tx, queryID string) ([]string, [][]inter
 		}
 
 		if err := rows.Scan(columnPointers...); err != nil {
+			tx.Rollback()
 			return cols, nil, err
 		}
 
@@ -64,6 +66,7 @@ func DBReadRows(rows *sql.Rows, tx *sql.Tx, queryID string) ([]string, [][]inter
 				if b, ok := (*val).([]uint8); ok {
 					resultRow = append(resultRow, string(b))
 				} else {
+					tx.Rollback()
 					return cols, nil, errors.New("failed reading row. invalid bytes")
 				}
 			case int, int32, int64, float32:

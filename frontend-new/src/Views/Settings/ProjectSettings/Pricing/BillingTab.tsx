@@ -214,30 +214,38 @@ function BillingTab({ buyAddonLoading, handleBuyAddonClick }: BillingTabProps) {
               />
             </>
           )} */}
-
-          <Tooltip
-            title={`${
-              showV2PricingVersionFlag
-                ? 'Buy Add on'
-                : isSolutionsAdmin
-                  ? 'Configure Plans'
-                  : 'Talk to our Sales team to upgrade'
-            }`}
-          >
-            <Button
-              type='link'
-              style={{ marginTop: 20 }}
-              onClick={() => handleUpgradePlan('addon')}
-              loading={showV2PricingVersionFlag ? buyAddonLoading : false}
-              disabled={
-                showV2PricingVersionFlag ? false : !isSolutionsAdmin && !isAdmin
-              }
+          {!(
+            showV2PricingVersionFlag &&
+            currentPlanDetail?.plan?.externalName === PLANS.PLAN_FREE
+          ) ? (
+            <Tooltip
+              title={`${
+                showV2PricingVersionFlag
+                  ? additionalAccountsAddon?.quantity
+                    ? 'Edit Add-ons'
+                    : 'Buy Add-ons'
+                  : isSolutionsAdmin
+                    ? 'Configure Plans'
+                    : 'Talk to our Sales team to upgrade'
+              }`}
             >
-              {additionalAccountsAddon?.quantity
-                ? 'Edit Add-ons'
-                : 'Buy Add-ons'}
-            </Button>
-          </Tooltip>
+              <Button
+                type='link'
+                style={{ marginTop: 20 }}
+                onClick={() => handleUpgradePlan('addon')}
+                loading={showV2PricingVersionFlag ? buyAddonLoading : false}
+                disabled={
+                  showV2PricingVersionFlag
+                    ? false
+                    : !isSolutionsAdmin && !isAdmin
+                }
+              >
+                {additionalAccountsAddon?.quantity
+                  ? 'Edit Add-ons'
+                  : 'Buy Add-ons'}
+              </Button>
+            </Tooltip>
+          ) : null}
         </div>
       </div>
     </div>

@@ -2,7 +2,7 @@ from constants.constants import *
 import requests
 import copy
 import time
-from global_objects.global_obj_creator import client_id, client_secret, data_service_obj
+from global_objects.global_obj_creator import data_service_obj
 
 class LinkedinSetting:
     project_id = ''
@@ -24,7 +24,7 @@ class LinkedinSetting:
             return True
         return False
     
-    def generate_access_token(self):
+    def generate_access_token(self, client_id, client_secret):
         url = TOKEN_GENERATION_URL.format(self.refresh_token, 
                             client_id, client_secret)
         response = requests.get(url)
@@ -76,12 +76,12 @@ class LinkedinSetting:
         
         return valid_linkedin_settings, invalid_linkedin_settings
     
-    def generate_and_update_access_token(self, linkedin_settings):
+    def generate_and_update_access_token(options, linkedin_settings):
         failures = []
         settings_with_updated_tokens = []
         is_any_token_updated = False
         for setting in linkedin_settings:
-            new_access_token, err_msg = setting.generate_access_token()
+            new_access_token, err_msg = setting.generate_access_token(options.client_id, options.client_secret)
             if err_msg != '':
                 failures.append({'status': 'failed', 'errMsg': err_msg,
                                     PROJECT_ID: setting.project_id, 
@@ -113,8 +113,8 @@ class LinkedinSetting:
         valid_linkedin_settings, invalid_linkedin_settings = LinkedinSetting.separate_valid_and_invalid_tokens(
             required_linkedin_settings)
         
-        settings_with_updated_tokens, token_failures = LinkedinSetting.generate_and_update_access_token(
-            options, invalid_linkedin_settings)
+        settings_with_updated_tokens, token_failures = LinkedinSetting.generate_and_update_access_token(options,
+            invalid_linkedin_settings)
 
         valid_linkedin_settings.extend(settings_with_updated_tokens)
         

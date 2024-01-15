@@ -89,12 +89,7 @@ function Pricing() {
               buyAddonLoading={loading}
             />
           </Tabs.TabPane>
-          <Tabs.TabPane
-            tab='Enrichment Rules'
-            key={PRICING_PAGE_TABS.ENRICHMENT_RULES}
-          >
-            <EnrichmentRulesTab />
-          </Tabs.TabPane>
+
           {showV2PricingVersion(active_project) && (
             <>
               <Tabs.TabPane tab='Upgrade' key={PRICING_PAGE_TABS.UPGRADE}>
@@ -108,6 +103,12 @@ function Pricing() {
               </Tabs.TabPane>
             </>
           )}
+          <Tabs.TabPane
+            tab='Enrichment Rules'
+            key={PRICING_PAGE_TABS.ENRICHMENT_RULES}
+          >
+            <EnrichmentRulesTab />
+          </Tabs.TabPane>
         </Tabs>
       </div>
     </div>

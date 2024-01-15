@@ -383,7 +383,7 @@ upload-merge-user-properties: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/merge-user-properties-job:$(TAG)
 
 pack-dashboard-caching:
-	docker build -t us.gcr.io/factors-$(ENV)/dashboard-caching-job:$(TAG) -f Dockerfile.dashboard_caching_job .
+	docker buildx build --platform linux/amd64 -t us.gcr.io/factors-$(ENV)/dashboard-caching-job:$(TAG) -f Dockerfile.dashboard_caching_job .
 
 upload-dashboard-caching: export IMAGE_NAME=dashboard-caching-job
 upload-dashboard-caching: notify-deployment
@@ -807,6 +807,13 @@ pack-saved-queries-migrate:
 upload-saved-queries-migrate: export IMAGE_NAME=saved-queries-migrate-job
 upload-saved-queries-migrate: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/saved-queries-migrate-job:$(TAG)
+
+pack-update-paragon-metadata:
+	docker build -t us.gcr.io/factors-$(ENV)/update-paragon-metadata-job:$(TAG) -f Dockerfile.update_paragon_metadata_job .
+
+upload-update-paragon-metadata: export IMAGE_NAME=update-paragon-metadata-job
+upload-update-paragon-metadata: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/update-paragon-metadata-job:$(TAG)
 
 pack-all: pack-api pack-ps pack-ds pack-sdk pack-build-seq pack-pull-events pack-project-events pack-pattern-mine pack-explain pack-acc-scoring pack-add-session pack-import-ads pack-delete-dangling-sessions pack-hubspot-enrich pack-otp-hubspot pack-marketo-enrich pack-marketo-sync pack-leadsquared-sync pack-leadsquared-pull pack-leadsquared-enrich pack-enrich-smart-properties pack-ingest-leadgen pack-salesforce-enrich pack-otp-salesforce pack-backfill-salesforce-datetime-job pack-backfill-users-domain pack-backfill-salesforce-smart-event-job pack-fix-salesforce-identify-campaign-with-contact-and-lead-association pack-remove-empty-smart-events pack-hubspot-smart-event-validator-job pack-sdk-request-worker pack-integration-request-worker pack-monitoring pack-analyze pack-archive-events pack-adhoc-archive-events pack-bigquery-upload pack-onboard-to-bigquery pack-merge-user-properties pack-dashboard-caching pack-dashboard-db-precompute pack-sixsignal-report pack-web-analytics-dashboard pack-journey-mining pack-yourstory-add-properties pack-instantiate-event-user-cache pack-migrate-model-metadata pack-cleanup-eventuser-cache pack-cleanup-sortedset-cache pack-dashboard-caching-queries-comparision pack-cleanup-dangling-keys pack-rollup-sortedset-cache pack-copy-user-properties-migration pack-pull-test-data pack-ingest-test-data pack-memsql-hubspot-sync-fields pack-weekly-insights pack-weekly-insights-mailer pack-form-fills pack-pathanalysis pack-bingads-integration pack-currency-upload pack-numerical-bucketing pack-cleanup-stale-project pack-replicate-properties pack-queries-id-text-patch pack-precompile-queries pack-k8-backup pack-compute-and-send-alerts pack-event-trigger-alerts pack-channels-to-kpi-migration pack-adhoc-db-query pack-delete-older-clickable-elements pack-predict-pull-events pack-adhoc-yellowai-identify-fix pack-adhoc-sensehq-count-touchpoints pack-delete-sessions-job pack-create-linkedin-group-user pack-g2-enrich-job
 

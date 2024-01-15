@@ -27,3 +27,6 @@ export const showV2PricingVersion = (activeProject: any) => {
   if (activeProject?.enable_billing) return true;
   return false;
 };
+
+export const PRICING_HELP_LINK =
+  'https://factors.schedulehero.io/meet/nagaraj/disco';

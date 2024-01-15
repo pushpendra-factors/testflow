@@ -16,7 +16,7 @@ const (
 	ADD_ON_ADDITIONAL_500_ACCOUNTS_YEARLY_ACCOUNTS  = 500
 )
 
-func GetNumberOfAccountsForAddOnID(addOnID string) int {
+func GetNumberOfAccountsForAddOnID(addOnID string) int64 {
 	switch addOnID {
 	case ADD_ON_ADDITIONAL_500_ACCOUNTS_MONTHLY:
 		return ADD_ON_ADDITIONAL_500_ACCOUNTS_MONTHLY_ACCOUNTS
