@@ -81,12 +81,12 @@ func (store *MemSQL) CreateAgentWithDependencies(params *model.CreateAgentParams
 	resp := &model.CreateAgentResponse{}
 
 	var invitedBy string
-	
+
 	if params.Agent.InvitedBy != nil {
 		invitedBy = *params.Agent.InvitedBy
 	}
 
-	if strings.HasSuffix(params.Agent.Email, "factors.ai") && invitedBy == "" {
+	if invitedBy == "" {
 
 		customer, status, err := billing.CreateChargebeeCustomer(*params.Agent)
 		if err != nil || status != http.StatusCreated {

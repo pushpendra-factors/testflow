@@ -768,10 +768,6 @@ func Track(projectId int64, request *TrackPayload,
 		}
 	}
 
-	if eventName.Name == U.EVENT_NAME_FORM_SUBMITTED {
-		logCtx.WithFields(log.Fields{"email": U.GetPropertyValueAsString((*eventProperties)[U.UP_EMAIL]), "project_id": projectId, "IP Address": clientIP}).Info("IP Address info for evaluation")
-	}
-
 	if existingUserProperties == nil {
 		existingUserProperties, errCode = store.GetStore().GetLatestUserPropertiesOfUserAsMap(projectId, request.UserId)
 		if errCode == http.StatusInternalServerError {
@@ -865,7 +861,6 @@ func FillCompanyIdentificationUserProperties(projectId int64, clientIP string, p
 		customerSixSignal.Enrich(projectSettings, userProperties, userId, clientIP)
 	} else if enrichByFactorsDeanon, _ := factorsDeanon.IsEligible(projectSettings, isoCode, pageUrl); enrichByFactorsDeanon {
 		domain, status := factorsDeanon.Enrich(projectSettings, userProperties, userId, clientIP)
-		log.WithFields(log.Fields{"domain": domain, "status": status, "project_id": projectId}).Info("Debugging metering")
 		if status == 1 {
 			factorsDeanon.Meter(projectId, domain)
 		}
