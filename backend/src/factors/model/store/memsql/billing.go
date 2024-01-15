@@ -69,7 +69,6 @@ func (store *MemSQL) TriggerSyncChargebeeToFactors(projectID int64) error { // C
 			addOns = append(addOns, addOn)
 		}
 	}
-
 	if len(addOns) != 0 {
 		addOnsJson, err := U.EncodeStructTypeToPostgresJsonb(addOns)
 		if err != nil {
@@ -86,6 +85,7 @@ func (store *MemSQL) TriggerSyncChargebeeToFactors(projectID int64) error { // C
 	}
 
 	var tempProject model.Project
+	tempProject.BillingSubscriptionID = latestSubscription.Id
 	tempProject.BillingLastSyncedAt = time.Now()
 
 	status = store.UpdateProject(projectID, &tempProject)
