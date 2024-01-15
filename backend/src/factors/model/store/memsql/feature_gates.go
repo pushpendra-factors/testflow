@@ -2,7 +2,6 @@ package memsql
 
 import (
 	"errors"
-	billing "factors/billing/chargebee"
 	C "factors/config"
 	"factors/model/model"
 	"fmt"
@@ -98,6 +97,8 @@ func (store *MemSQL) UpdateFeatureStatusForProject(projectID int64, feature mode
 }
 
 func (store *MemSQL) GetFeatureLimitForProject(projectID int64, featureName string) (int64, error) {
+	logCtx := log.WithField("project_id", projectID)
+
 	featureList, addOns, err := store.GetPlanDetailsAndAddonsForProject(projectID)
 	if err != nil {
 		log.WithError(err).Error("Failed to get feature limit for Project ID ", projectID)
@@ -136,7 +137,7 @@ func (store *MemSQL) GetFeatureLimitForProject(projectID int64, featureName stri
 
 	project, status := store.GetProject(projectID)
 	if status != http.StatusFound {
-		log.WithError(err).Error("Failed to get billing addons Project ID ", projectID)
+		logCtx.WithError(err).Error("Failed to get billing addons Project ID ", projectID)
 		return 0, err
 	}
 
@@ -144,17 +145,15 @@ func (store *MemSQL) GetFeatureLimitForProject(projectID int64, featureName stri
 		return limit, nil
 	}
 
-	subItems, err := billing.GetCurrentSubscriptionDetails(projectID, project.BillingSubscriptionID)
+	billlingAddOns, err := store.GetBillingAddonsForProject(projectID)
+
 	if err != nil {
-		log.WithError(err).Error("Failed to get billing addons Project ID ", projectID)
-		return 0, err
+		logCtx.WithError(err).Error("Failed to fetch billing Addons")
 	}
 
-	for _, item := range subItems.SubscriptionItems {
-		if item.ItemType == "addon" {
-			if item.ItemPriceId == model.ADD_ON_ADDITIONAL_500_ACCOUNTS_MONTHLY || item.ItemPriceId == model.ADD_ON_ADDITIONAL_500_ACCOUNTS_YEARLY {
-				limit += int64(item.Quantity) * model.GetNumberOfAccountsForAddOnID(item.ItemPriceId)
-			}
+	for _, addOn := range billlingAddOns {
+		if addOn.ItemPriceID == model.ADD_ON_ADDITIONAL_500_ACCOUNTS_MONTHLY || addOn.ItemPriceID == model.ADD_ON_ADDITIONAL_500_ACCOUNTS_YEARLY {
+			limit += int64(addOn.Quantity) * model.GetNumberOfAccountsForAddOnID(addOn.ItemPriceID)
 		}
 	}
 

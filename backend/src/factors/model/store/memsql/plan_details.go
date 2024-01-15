@@ -298,7 +298,7 @@ func (store *MemSQL) UpdateProjectPlanMapping(projectID int64, planMapping *mode
 		updateFields["plan_id"] = planMapping.PlanID
 		updateFields["billing_plan_id"] = planMapping.BillingPlanID
 		updateFields["billing_last_synced_at"] = planMapping.BillingLastSyncedAt
-		updateFields["billing_add_ons"] = planMapping.BillingAddons
+		updateFields["billing_addons"] = planMapping.BillingAddons
 
 	}
 
