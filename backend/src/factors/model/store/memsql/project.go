@@ -226,8 +226,8 @@ func (store *MemSQL) UpdateProject(projectId int64, project *model.Project) int 
 	if project.BillingSubscriptionID != "" {
 		updateFields["billing_subscription_id"] = project.BillingSubscriptionID
 		updateFields["billing_last_synced_at"] = project.BillingLastSyncedAt
-		updateFields["billing_account_id"] = project.BillingAccountID
 	}
+
 
 	err := db.Model(&model.Project{}).Where("id = ?", projectId).Update(updateFields).Error
 	if err != nil {
