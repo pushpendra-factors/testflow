@@ -76,6 +76,8 @@ func main() {
 	userPropertyUpdateOptProjects := flag.String("user_property_update_opt_projects", "", "")
 
 	companyEnrichmentV1ProjectIDs := flag.String("company_enrichment_v1__projectIds", "", "To enable clearbit enrichment in new properties")
+	chargebeeApiKey := flag.String("chargebee_api_key", "dummy", "Chargebee api key")
+	chargebeeSiteName := flag.String("chargebee_site_name", "dummy", "Chargebee site name")
 	flag.Parse()
 
 	workerName := defaultWorkerName
@@ -133,6 +135,8 @@ func main() {
 		EnableDeviceServiceByProjectID:                     *enableDeviceServiceByProjectID,
 		UserPropertyUpdateOptProjects:                      *userPropertyUpdateOptProjects,
 		CompanyEnrichmentV1ProjectIDs:                      *companyEnrichmentV1ProjectIDs,
+		ChargebeeApiKey:                                    *chargebeeApiKey,
+		ChargebeeSiteName:                                  *chargebeeSiteName,
 	}
 	C.InitConf(config)
 
@@ -141,6 +145,8 @@ func main() {
 		log.WithError(err).Fatal("Failed to initialize.")
 		return
 	}
+
+	C.InitChargebeeObject(config.ChargebeeApiKey, config.ChargebeeSiteName)
 	defer C.SafeFlushAllCollectors()
 
 	C.InitPropertiesTypeCache(*enablePropertyTypeFromDB, *propertiesTypeCacheSize,
