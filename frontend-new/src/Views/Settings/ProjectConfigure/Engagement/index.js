@@ -264,6 +264,7 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
   const setAddNewScore = () => {
     setActiveEvent({});
     setShowModal(true);
+    setRenderModal(true);
   };
   const tableData = useMemo(() => {
     return weightsConfig
