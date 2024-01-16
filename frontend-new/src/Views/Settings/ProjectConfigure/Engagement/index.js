@@ -27,13 +27,18 @@ import { getGroups } from 'Reducers/coreQuery/middleware';
 import { InfoCircleFilled } from '@ant-design/icons';
 import styles from './index.module.scss';
 const filterConfigRuleCheck = (existingConfig, newConfig) => {
-  return (
-    existingConfig?.value == newConfig?.value &&
-    existingConfig?.operator == newConfig?.value &&
-    existingConfig?.property_type == newConfig?.property_type &&
-    existingConfig?.value_type == newConfig?.value_type &&
-    existingConfig?.lower_bound == newConfig?.lower_bound
-  );
+  let result = false;
+  existingConfig?.forEach((eachrule, eachIndex) => {
+    result &&=
+      _.isEqual(eachExistingConfig?.value) ==
+        _.isEqual(newConfig[eachIndex]?.value) &&
+      eachExistingConfig?.operator == newConfig[eachIndex]?.operator &&
+      eachExistingConfig?.property_type ==
+        newConfig[eachIndex]?.property_type &&
+      eachExistingConfig?.value_type == newConfig[eachIndex]?.value_type &&
+      eachExistingConfig?.lower_bound == newConfig[eachIndex]?.lower_bound;
+  });
+  return result;
 };
 const duplicateRuleCheck = (weightConf, newConfig, newIndex, editMode) => {
   return weightConf.find(
@@ -94,7 +99,7 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
         (existingConfig) =>
           existingConfig.event_name === newConfig.event_name &&
           existingConfig.wid === newConfig.wid &&
-          filterConfigRuleCheck(existingConfig, newConfig) &&
+          filterConfigRuleCheck(existingConfig?.rule, newConfig?.rule) &&
           existingConfig.weight === newConfig.weight &&
           existingConfig.fname === newConfig.fname
       );
@@ -128,7 +133,7 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
       const configExistsIndex = weightConf.findIndex(
         (existingConfig) =>
           existingConfig.event_name === newConfig.event_name &&
-          filterConfigRuleCheck(existingConfig, newConfig)
+          filterConfigRuleCheck(existingConfig?.rule, newConfig?.rule)
       );
 
       if (configExistsIndex !== -1) {

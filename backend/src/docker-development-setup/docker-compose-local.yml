@@ -1,3 +1,5 @@
+# This file only for local development setup 
+
 version: '3.5'
 
 services:
@@ -46,11 +48,10 @@ services:
                 dockerfile: Dockerfile.appserver
             environment:
                 -  GOPATH=/go/src/factors
-                -  REDIS_HOST=$REDIS_HOST
-                -  PRI_DS=$DB_HOST
-                -  DB_HOST=$DB_HOST
-                -  ENV=$ENV    
-            entrypoint: [ "sh","-c","/go/bin/app --redis_host_ps=$REDIS_HOST --dup_queue_redis_host=$REDIS_HOST --queue_redis_host=$REDIS_HOST --api_domain=$API_DOMAIN --env=$ENV --memsql_host=$DB_HOST"]
+                -  REDIS_HOST=redis
+                -  PRI_DS=memsql
+                -  DB_HOST=memsql    
+            entrypoint: [ "sh","-c","/go/bin/app --redis_host_ps=$REDIS_HOST --dup_queue_redis_host=$REDIS_HOST --queue_redis_host=$REDIS_HOST --api_domain=$API_DOMAIN --env=development --memsql_host=$DB_HOST"]
             image: testing/api:1.0
             deploy:
                 replicas: 1
@@ -71,7 +72,7 @@ services:
                 -  GOPATH=/go/src/factors
                 -  REDIS_HOST=redis
                 -  DB_HOST=memsql  
-            entrypoint: [ "sh","-c","/go/bin/sdkserver --redis_host=$REDIS_HOST --redis_host_ps=$REDIS_HOST --dup_queue_redis_host=$REDIS_HOST --queue_redis_host=$REDIS_HOST --env=$ENV --memsql_host=$DB_HOST"]
+            entrypoint: [ "sh","-c","/go/bin/sdkserver --redis_host=$REDIS_HOST --redis_host_ps=$REDIS_HOST --dup_queue_redis_host=$REDIS_HOST --queue_redis_host=$REDIS_HOST --env=development --memsql_host=$DB_HOST"]
             image: testing/sdk:1.0
             deploy:
                 replicas: 0
@@ -114,9 +115,9 @@ services:
                 context: ../
                 dockerfile: docker-development-setup/Dockerfile.session.testing
             environment:
-                - REDIS_HOST=$REDIS_HOST
-                - DB_HOST=$DB_HOST
-                - PRI_DS=$DB_HOST  
+                - REDIS_HOST=redis
+                - DB_HOST=memsql
+                - PRI_DS=memsql  
             image: testing/session:1.0
             deploy:
                 replicas: 0
@@ -125,9 +126,9 @@ services:
                 context: ../
                 dockerfile: docker-development-setup/Dockerfile.rollup_cache.testing
             environment:
-                - REDIS_HOST=$REDIS_HOST
-                - DB_HOST=$DB_HOST
-                - PRI_DS=$DB_HOST  
+                - REDIS_HOST=redis
+                - DB_HOST=memsql
+                - PRI_DS=memsql  
             image: testing/rollupcache:1.0
             deploy:
                 replicas: 0
