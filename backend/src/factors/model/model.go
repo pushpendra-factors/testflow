@@ -908,7 +908,7 @@ type Model interface {
 	GetProfileAccountDetailsByID(projectID int64, id string, groupName string) (*model.AccountDetails, int, string)
 	GetAccountsAssociatedToDomain(projectID int64, id string, domainGroupId int) ([]model.User, int)
 	GetSourceStringForAccountsV2(projectID int64, source string, isAllUserProperties bool) (string, int, int)
-	AccountPropertiesForDomainsEnabledV2(projectID int64, id string, groupName string) (map[string]interface{}, bool, int)
+	AccountPropertiesForDomainsEnabledV2(projectID int64, id, groupName string, timelinesConfig model.TimelinesConfig) (model.AccountDetails, int)
 	AccountPropertiesForDomainsDisabledV1(projectID int64, id string) (string, map[string]interface{}, []interface{}, int)
 	AccountPropertiesForDomainsEnabled(projectID int64, profiles []model.Profile, groupedFilters map[string][]model.QueryProperty, tableProps []string) ([]model.Profile, int)
 	GetAccountOverview(projectID int64, id, groupName string) (model.Overview, int, string)
