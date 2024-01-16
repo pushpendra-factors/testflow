@@ -92,6 +92,7 @@ import { getSegmentColorCode } from 'Views/AppSidebar/appSidebar.helpers';
 
 import { COLUMN_TYPE_PROPS } from 'Utils/table';
 import ResizableTitle from 'Components/Resizable';
+import useAutoFocus from 'hooks/useAutoFocus';
 
 const groupToDomainMap = {
   $hubspot_company: '$hubspot_company_domain',
@@ -153,7 +154,6 @@ function AccountProfiles({
   const [currentPage, setCurrentPage] = useState(1);
   const [currentPageSize, setCurrentPageSize] = useState(25);
   const [searchBarOpen, setSearchBarOpen] = useState(false);
-  const [searchDDOpen, setSearchDDOpen] = useState(false);
   const [listSearchItems, setListSearchItems] = useState([]);
   const [listProperties, setListProperties] = useState([]);
   const [showPopOver, setShowPopOver] = useState(false);
@@ -173,6 +173,8 @@ function AccountProfiles({
   const [defaultSorterInfo, setDefaultSorterInfo] = useState({});
   const [showSegmentActions, setShowSegmentActions] = useState(false);
   const [errMsg, setErrMsg] = useState('');
+
+  const searchAccountsInputRef = useAutoFocus(searchBarOpen);
 
   const { isFeatureLocked: isScoringLocked } = useFeatureLock(
     FEATURES.FEATURE_ACCOUNT_SCORING
@@ -258,7 +260,7 @@ function AccountProfiles({
     } else {
       const listValues = accountPayload?.search_filter || [];
       setListSearchItems(uniq(listValues));
-      setSearchBarOpen(true);
+      // setSearchBarOpen(true);
     }
   }, [accountPayload?.search_filter]);
 
@@ -870,51 +872,12 @@ function AccountProfiles({
 
   const onSearchClose = () => {
     setSearchBarOpen(false);
-    setSearchDDOpen(false);
-    if (accountPayload?.search_filter?.length !== 0) {
-      const updatedPayload = { ...accountPayload };
-      updatedPayload.search_filter = [];
-      setAccountPayload(updatedPayload);
-      setListSearchItems([]);
-      setActiveSegment(activeSegment);
-      getAccounts(updatedPayload);
-    }
+    handleAccountSearch({ accounts_search: '' });
   };
 
   const onSearchOpen = () => {
     setSearchBarOpen(true);
-    setSearchDDOpen(true);
   };
-
-  const searchCompanies = () => (
-    <div className='absolute top-0'>
-      {searchDDOpen ? (
-        <FaSelect
-          placeholder='Search Accounts'
-          multiSelect
-          options={
-            companyValueOpts?.[accountPayload?.source]
-              ? Object.keys(companyValueOpts[accountPayload?.source]).map(
-                  (value) => [value]
-                )
-              : []
-          }
-          displayNames={companyValueOpts?.[accountPayload?.source]}
-          applClick={(val) => onApplyClick(val)}
-          onClickOutside={() => setSearchDDOpen(false)}
-          selectedOpts={listSearchItems}
-          style={{
-            top: '-8px',
-            right: 0,
-            padding: '8px 8px 12px',
-            overflowX: 'hidden'
-          }}
-          allowSearch
-          posRight
-        />
-      ) : null}
-    </div>
-  );
 
   const { saveButtonDisabled } = useMemo(() => {
     return checkFiltersEquality({
@@ -969,24 +932,53 @@ function AccountProfiles({
       </ControlledComponent>
     );
   };
-
+  const handleAccountSearch = (values) => {
+    if (
+      (listSearchItems.length >= 1 &&
+        listSearchItems[0] === values?.accounts_search) ||
+      (listSearchItems.length == 0 && !values?.accounts_search)
+    ) {
+      return;
+    }
+    if (values?.accounts_search) {
+      values = [JSON.stringify([values.accounts_search])];
+    } else {
+      values = [];
+    }
+    const updatedPayload = {
+      ...accountPayload,
+      search_filter: values.map((vl) => JSON.parse(vl)[0])
+    };
+    setListSearchItems(updatedPayload.search_filter);
+    setAccountPayload(updatedPayload);
+    setActiveSegment(activeSegment);
+    getAccounts(updatedPayload);
+  };
   const renderSearchSection = () => (
     <div className='relative'>
       <ControlledComponent controller={searchBarOpen}>
         <div className={'flex items-center justify-between'}>
-          {!searchDDOpen && (
-            <Input
-              size='large'
-              value={listSearchItems ? listSearchItems.join(', ') : null}
-              placeholder={'Search Accounts'}
-              style={{
-                width: '240px',
-                'border-radius': '5px'
-              }}
-              prefix={<SVG name='search' size={20} color={'#8C8C8C'} />}
-              onClick={() => setSearchDDOpen(true)}
-            />
-          )}
+          <Form
+            name='basic'
+            labelCol={{ span: 8 }}
+            wrapperCol={{ span: 16 }}
+            onFinish={handleAccountSearch}
+            autoComplete='off'
+          >
+            <Form.Item name='accounts_search'>
+              <Input
+                ref={searchAccountsInputRef}
+                size='large'
+                value={listSearchItems ? listSearchItems.join(', ') : null}
+                placeholder={'Search Accounts'}
+                style={{
+                  width: '240px',
+                  'border-radius': '5px'
+                }}
+                prefix={<SVG name='search' size={20} color={'#8C8C8C'} />}
+              />
+            </Form.Item>
+          </Form>
           <Button type='text' onClick={onSearchClose}>
             <SVG name={'close'} size={20} color={'grey'} />
           </Button>
@@ -997,7 +989,7 @@ function AccountProfiles({
           <SVG name={'search'} size={20} color={'#8c8c8c'} />
         </Button>
       </ControlledComponent>
-      {searchCompanies()}
+      {/* {searchCompanies()} */}
     </div>
   );
 
