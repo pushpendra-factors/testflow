@@ -158,27 +158,6 @@ const journeyMenu = (
   </Menu>
 );
 
-const reportsMenu = (
-  <Menu className={styles['dropdown-menu']}>
-    <Menu.Item className={styles['dropdown-menu-item']}>
-      <Link className='items-center col-gap-2' to={PathUrls.PreBuildDashboard}>
-        <SVG name='QuickBoard' color='#36CFC9' />
-        <Text color='black' level={7} type='title' extraClass='mb-0'>
-          Quick Boards
-        </Text>
-      </Link>
-    </Menu.Item>
-    <Menu.Item className={styles['dropdown-menu-item']}>
-      <Link className='items-center col-gap-2' to={PathUrls.Dashboard}>
-        <SVG name='dashboard_Filled' color='#40A9FF' />
-        <Text color='black' level={7} type='title' extraClass='mb-0'>
-          Dashboards
-        </Text>
-      </Link>
-    </Menu.Item>
-  </Menu>
-);
-
 const renderConfigureMenu = (email) => (
   <Menu className={styles['dropdown-menu']}>
     <Menu.Item disabled className={styles['dropdown-menu-item']}>
@@ -277,48 +256,23 @@ function FaHeader() {
                 <SVG color='#D9D9D9' size={16} name='chevronDown' />
               </div>
             </Dropdown>
-            {isWebAnalyticsLocked ? (
-              <Link
-                to={PathUrls.Dashboard}
-                className={cx('flex items-center pl-2 pr-1 py-1', {
-                  [styles['active-header-item']]: isReportsUrl(pathname)
-                })}
-                id='fa-at-link--reports'
+            <Link
+              to={PathUrls.Dashboard}
+              className={cx('flex items-center pl-2 pr-1 py-1', {
+                [styles['active-header-item']]: isReportsUrl(pathname)
+              })}
+              id='fa-at-link--reports'
+            >
+              <Text
+                type='title'
+                color='white'
+                level={7}
+                extraClass='mb-0'
+                weight='medium'
               >
-                <Text
-                  type='title'
-                  color='white'
-                  level={7}
-                  extraClass='mb-0'
-                  weight='medium'
-                >
-                  Reports
-                </Text>
-              </Link>
-            ) : (
-              <Dropdown overlay={reportsMenu}>
-                <div
-                  className={cx(
-                    'flex cursor-pointer items-center col-gap-1 pl-2 pr-1 py-1',
-                    {
-                      [styles['active-header-item']]: isReportsUrl(pathname)
-                    }
-                  )}
-                >
-                  <Text
-                    color='white'
-                    level={7}
-                    type='title'
-                    extraClass='mb-0'
-                    weight='medium'
-                  >
-                    Reports
-                  </Text>{' '}
-                  <SVG color='#D9D9D9' size={16} name='chevronDown' />
-                </div>
-              </Dropdown>
-            )}
-
+                Reports
+              </Text>
+            </Link>
             <Dropdown overlay={journeyMenu}>
               <div
                 className={cx(

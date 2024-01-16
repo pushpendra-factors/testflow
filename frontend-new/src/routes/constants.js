@@ -255,6 +255,17 @@ const PreBuildDashboardReport = lazyWithRetry(
   () => import('../Views/PreBuildDashboard/ui/Report')
 );
 
+const FeatureLockedPreBuildDashboard = withFeatureLockHOC(PreBuildDashboard, {
+  featureName: FEATURES.FEATURE_WEB_ANALYTICS_DASHBOARD,
+  LockedComponent: (props) => (
+    <CommonLockedComponent
+      title='Traffic Dashboard'
+      description='This dashboard tracks a few commonly accessed metrics. The widgets you see are either Event, Funnel, or Attribution reports. They were built by a user and saved into this space.'
+      {...props}
+    />
+  )
+});
+
 export const APP_ROUTES = {
   Signup: {
     path: '/signup',
@@ -310,26 +321,10 @@ export const APP_LAYOUT_ROUTES = {
     Private: false,
     Component: VisitorIdentificationReportComponent
   },
-  Dashboard: {
-    title: 'Dashboard',
-    path: PathUrls.Dashboard,
-    Component: Dashboard,
-    exact: true,
-    Private: true,
-    Layout: AppLayout
-  },
-  DashboardUrl: {
-    title: 'Dashboard',
-    path: PathUrls.DashboardURL,
-    Component: Dashboard,
-    exact: true,
-    Private: true,
-    Layout: AppLayout
-  },
   PreBuildDashboard: {
-    title: 'Quick Board',
+    title: 'Dashboard',
     path: PathUrls.PreBuildDashboard,
-    Component: PreBuildDashboard,
+    Component: FeatureLockedPreBuildDashboard,
     exact: true,
     Private: true,
     Layout: AppLayout
@@ -340,6 +335,20 @@ export const APP_LAYOUT_ROUTES = {
     Layout: AppLayout,
     Private: true,
     Component: PreBuildDashboardReport
+  },
+  Dashboard: {
+    title: 'Dashboard',
+    path: PathUrls.Dashboard,
+    Component: Dashboard,
+    Private: true,
+    Layout: AppLayout
+  },
+  DashboardUrl: {
+    title: 'Dashboard',
+    path: PathUrls.DashboardURL,
+    Component: Dashboard,
+    Private: true,
+    Layout: AppLayout
   },
   ComponentsLib: {
     title: 'Components Library',
