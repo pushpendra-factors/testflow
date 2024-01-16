@@ -1,8 +1,12 @@
 import json
 from itertools import product
+import os
 from tqdm import tqdm
 import pandas as pd
-DATA_CACHE_PATH = 'data_cached.csv'
+DATA_CACHE_FILE = 'data_cached.csv'
+directory_path = 'chat_factors/chatgpt_poc'
+
+
 
 def get_query_templates():
     query_templates = {
@@ -141,7 +145,7 @@ def abbreviate_data(df):
     df['completion'] = df['orig_completion'].apply(reduce_completion)
 
 
-def get_prepared_data(raw_data_path='data.json', abbreviate=True, cache_path=DATA_CACHE_PATH, force_prepare=False):
+def get_prepared_data(raw_data_path=os.path.join('chat_factors/chatgpt_poc', 'data.json'), abbreviate=True, cache_path=DATA_CACHE_FILE, force_prepare=False):
     try:
         if force_prepare:
             raise FileNotFoundError

@@ -11,11 +11,13 @@ class AppConfig:
     GSC_APP = None
     GSC_OAUTH = None
     SENTRY = None
+    CHAT_BUCKET = None
 
     @classmethod
     def build(cls, argv):
         cls.build_adwords(argv)
         cls.build_gsc(argv)
+        cls.CHAT_BUCKET = argv.chat_bucket_name
 
     @classmethod
     def build_adwords(cls, argv):
@@ -25,6 +27,7 @@ class AppConfig:
         cls.ADWORDS_APP = AdwordsAppConfig
         cls.ADWORDS_OAUTH = AdwordsOauthConfig
         cls.SENTRY = SentryConfig
+
     @classmethod
     def build_gsc(cls, argv):
         GSCAppConfig.build(argv)
