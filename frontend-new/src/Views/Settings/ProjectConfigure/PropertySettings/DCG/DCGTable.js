@@ -53,23 +53,55 @@ const DCGTable = ({
   const getBaseQueryFromResponse = (el) => {
     const filters = [];
     el.forEach((item, i) => {
-      if (item.logical_operator === 'AND') {
-        const conditionCamelCase = _.camelCase(item.condition);
+      const conditionCamelCase = _.camelCase(item.condition);
 
+      if (item.logical_operator === 'AND') {
         filters.push({
-          operator: reverseOperatorMap[conditionCamelCase],
-          props: ['event', item.property, 'categorical', 'event'],
+          operator: reverseOperatorMap[conditionCamelCase] || item.condition,
+          props: [
+            'event',
+            item.property,
+            item.condition == 'between' ? 'datetime' : 'categorical',
+            ,
+            'event'
+          ],
           values: [item.value],
-          ref: i
+          ref: filters.length
         });
       } else if (filters.length > 0) {
-        filters[filters.length - 1].values.push(item.value);
+        if (item.property == filters[filters.length - 1].props[1]) {
+          filters[filters.length - 1].values.push(item.value);
+        } else
+          filters.push({
+            operator: reverseOperatorMap[conditionCamelCase] || item.condition,
+            props: [
+              'event',
+              item.property,
+              item.condition == 'between' ? 'datetime' : 'categorical',
+              'event'
+            ],
+            values: [item.value],
+            ref: filters.length - 1
+          });
       }
     });
-
     return filters;
   };
+  const mapQueryByRefs = (queryMap) => {
+    // TmpType <Key, Array<EachQueryFilter>>
+    let tmp = {};
 
+    queryMap.forEach((eachQueryFilter) => {
+      if (eachQueryFilter.ref in tmp) {
+        // OR Filter
+        tmp[eachQueryFilter.ref].push(eachQueryFilter);
+      } else {
+        // ref doesn't exists so, its a new ADD Fitler
+        tmp[eachQueryFilter.ref] = [eachQueryFilter];
+      }
+    });
+    return tmp;
+  };
   const matchEventName = (item) => {
     let findItem = eventPropNames?.[item];
     return findItem ? findItem : item;
@@ -80,54 +112,74 @@ const DCGTable = ({
       return null; // Return early if data is falsy
     }
 
-    const queryMap = getBaseQueryFromResponse(data);
+    const queryMap = mapQueryByRefs(getBaseQueryFromResponse(data));
 
     return (
       <div className='w-full' style={{ maxWidth: '550px' }}>
-        {queryMap.map((item, index) => (
-          <div className='inline-flex items-center mb-2' key={index}>
-            {item.props.length > 0 ? (
-              <Button type='default'>
-                <Text
-                  type='title'
-                  weight='thin'
-                  color='grey'
-                  level={8}
-                  truncate
-                >
-                  {`${matchEventName(item.props[1])} ${item.operator} ${_.join(
-                    item.values.map((vl) =>
-                      DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl
-                    ),
-                    ', '
-                  )}`}
-                </Text>
-              </Button>
-            ) : (
-              <div className={styles.internal}>
-                <Text type='title' weight='thin' color='grey' level={8}>
-                  {`${item.operator} ${_.join(
-                    item.values.map((vl) =>
-                      DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl
-                    ),
-                    ', '
-                  )}`}
-                </Text>
-              </div>
-            )}
-
-            {queryMap.length !== index + 1 && (
-              <Text
-                type='title'
-                weight='thin'
-                color='grey'
-                level={8}
-                extraClass='m-0 mr-1'
-              >
-                AND
-              </Text>
-            )}
-          </div>
+        {Object.keys(queryMap).map((eachKey, index) => (
+          <>
+            {queryMap[eachKey].map((eachFilter, eachIndex) => {
+              return (
+                <div className='inline-flex items-center mb-2' key={eachIndex}>
+                  {eachFilter.props.length > 0 ? (
+                    <Button type='default'>
+                      <Text
+                        type='title'
+                        weight='thin'
+                        color='grey'
+                        level={8}
+                        truncate
+                      >
+                        {`${matchEventName(eachFilter.props[1])} ${
+                          eachFilter.operator
+                        } ${_.join(
+                          eachFilter.values.map((vl) =>
+                            DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl
+                          ),
+                          ', '
+                        )}`}
+                      </Text>
+                    </Button>
+                  ) : (
+                    <div className={styles.internal}>
+                      <Text type='title' weight='thin' color='grey' level={8}>
+                        {`${eachFilter.operator} ${_.join(
+                          eachFilter.values.map((vl) =>
+                            DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl
+                          ),
+                          ', '
+                        )}`}
+                      </Text>
+                    </div>
+                  )}
+                  {queryMap[eachKey].length > 1 &&
+                    eachIndex < queryMap[eachKey].length - 1 && (
+                      <Text
+                        type='title'
+                        weight='thin'
+                        color='grey'
+                        level={8}
+                        extraClass='m-0 mr-1 ml-1'
+                      >
+                        OR
+                      </Text>
+                    )}{' '}
+                  {index < Object.keys(queryMap).length - 1 &&
+                    eachIndex == queryMap[eachKey].length - 1 && (
+                      <Text
+                        type='title'
+                        weight='thin'
+                        color='grey'
+                        level={8}
+                        extraClass='m-0 mr-1 ml-1'
+                      >
+                        AND
+                      </Text>
+                    )}
+                </div>
+              );
+            })}
+          </>
         ))}
       </div>
     );

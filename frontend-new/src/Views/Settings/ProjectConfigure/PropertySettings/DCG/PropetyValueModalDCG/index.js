@@ -42,7 +42,6 @@ function PropertyValueModal({
   const onReset = () => {
     form.resetFields();
   };
-
   const onFinishValues = (data) => {
     seterrorInfo('');
     if (!_.isEmpty(globalFilters)) {
@@ -56,11 +55,10 @@ function PropertyValueModal({
       if (activeProject?.channel_group_rules) {
         ruleSet = activeProject?.channel_group_rules;
       }
-
       let FinalDataSet = [];
       if (editProperty) {
         let currentArr = ruleSet;
-        currentArr[editProperty?.index - 1] = dataSet;
+        currentArr[editProperty?.index] = dataSet;
         FinalDataSet = [...currentArr];
       } else {
         FinalDataSet = [...ruleSet, dataSet];
@@ -99,27 +97,79 @@ function PropertyValueModal({
 
   const getGlobalFilters = (globalFilters = []) => {
     const filterProps = [];
-    globalFilters.forEach((fil) => {
-      if (Array.isArray(fil.values)) {
-        fil.values.forEach((val, index) => {
-          filterProps.push({
-            logical_operator: !index ? 'AND' : 'OR',
-            condition: operatorMap[fil.operator],
-            property: fil.props[1],
-            // ty: fil.props[1],
-            value: val
-          });
-        });
+    let dict = {};
+
+    globalFilters.forEach((eachFilter) => {
+      if (eachFilter.ref in dict) {
+        Array.isArray(eachFilter.values)
+          ? eachFilter.values.forEach((eachValue) => {
+              dict[eachFilter.ref].push({
+                logical_operator: 'OR',
+                condition: operatorMap[eachFilter.operator],
+                property: eachFilter.props[1],
+                // ty: fil.props[1],
+                value: eachValue
+              });
+            })
+          : dict[eachFilter.ref].push({
+              logical_operator: 'OR',
+              condition: operatorMap[eachFilter.operator],
+              property: eachFilter.props[1],
+              // ty: fil.props[1],
+              value: eachFilter.values
+            });
       } else {
-        filterProps.push({
-          logical_operator: 'AND',
-          condition: operatorMap[fil.operator],
-          property: fil.props[1],
-          // ty: fil.props[1],
-          value: fil.values
-        });
+        dict[eachFilter.ref] = [
+          {
+            logical_operator: 'AND',
+            condition: operatorMap[eachFilter.operator],
+            property: eachFilter.props[1],
+            // ty: fil.props[1],
+            value: Array.isArray(eachFilter.values)
+              ? eachFilter.values[0]
+              : eachFilter.values
+          }
+        ];
+        Array.isArray(eachFilter.values) &&
+          eachFilter.values.splice(1).forEach((eachValue) => {
+            dict[eachFilter.ref].push({
+              logical_operator: 'OR',
+              condition: operatorMap[eachFilter.operator],
+              property: eachFilter.props[1],
+              // ty: fil.props[1],
+              value: eachValue
+            });
+          });
       }
     });
+    let tmp = [];
+    for (let i in dict) {
+      for (let j = 0; j < dict[i].length; j++) {
+        tmp.push(dict[i][j]);
+      }
+    }
+    return tmp;
+    // globalFilters.forEach((fil) => {
+    //   if (Array.isArray(fil.values)) {
+    //     fil.values.forEach((val, index) => {
+    //       filterProps.push({
+    //         logical_operator: !index ? 'AND' : 'OR',
+    //         condition: operatorMap[fil.operator],
+    //         property: fil.props[1],
+    //         // ty: fil.props[1],
+    //         value: val
+    //       });
+    //     });
+    //   } else {
+    //     filterProps.push({
+    //       logical_operator: 'AND',
+    //       condition: operatorMap[fil.operator],
+    //       property: fil.props[1],
+    //       // ty: fil.props[1],
+    //       value: fil.values
+    //     });
+    //   }
+    // });
 
     return filterProps;
   };
