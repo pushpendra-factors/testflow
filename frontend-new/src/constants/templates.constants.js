@@ -48,6 +48,9 @@ export class Integration_Checks {
       integration?.int_client_six_signal_key ||
       integration?.int_factors_six_signal_key;
     this.g2 = integration.int_g2;
+    this.salesforce =
+      integration?.int_salesforce_enabled_agent_uuid &&
+      integration?.int_salesforce_enabled_agent_uuid != '';
     // Other Integrations
     this.segment = integration.int_segment;
   }
@@ -62,7 +65,7 @@ export class Integration_Checks {
         if (result === undefined) {
           result = !!this[element];
         } else {
-          result = result && this[element];
+          result = result && (this[element] || false);
         }
         if (!this[element]) failed.push(element);
       });

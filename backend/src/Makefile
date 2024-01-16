@@ -291,6 +291,13 @@ upload-backfill-users-domain: export IMAGE_NAME=backfill-users-domain
 upload-backfill-users-domain: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/backfill-users-domain:$(TAG)
 
+pack-backfill-factors-deanon-metering:
+	docker build -t us.gcr.io/factors-$(ENV)/backfill-factors-deanon-metering:$(TAG) -f Dockerfile.backfill_factors_deanon_metering .
+
+upload-backfill-factors-deanon-metering: export IMAGE_NAME=backfill-factors-deanon-metering
+upload-backfill-factors-deanon-metering: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/backfill-factors-deanon-metering:$(TAG)
+
 pack-backfill-salesforce-smart-event-job:
 	docker build -t us.gcr.io/factors-$(ENV)/backfill-salesforce-smart-event-job:$(TAG) -f Dockerfile.backfill_salesforce_datetime_job .
 

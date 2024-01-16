@@ -26,6 +26,7 @@ const CATEGORIES_TAG_PREFIX = "categories/"
 var tagEnum = map[string]string{
 	"products.competitors":                        U.GROUP_EVENT_NAME_G2_ALTERNATIVE,
 	"ad.category_competitor.product_left_sidebar": U.GROUP_EVENT_NAME_G2_SPONSORED,
+	"ad.category_competitor.product_page_header":  U.GROUP_EVENT_NAME_G2_SPONSORED,
 	"comparisons.show":                            U.GROUP_EVENT_NAME_G2_COMPARISON,
 	"categories.show":                             U.GROUP_EVENT_NAME_G2_CATEGORY,
 	"categories.learn":                            U.GROUP_EVENT_NAME_G2_CATEGORY,
