@@ -223,7 +223,7 @@ func (store *MemSQL) FetchAssociatedSegmentsFromUsers(projectID int64) (int, []m
 	return http.StatusFound, users, associatedSegmentsList
 }
 
-func CheckPropertyOfGivenType(p model.QueryProperty, decodedProperties *map[string]interface{}) bool {
+func CheckPropertyOfGivenType(projectId int64, p model.QueryProperty, decodedProperties *map[string]interface{}) bool {
 	isValueFound := false
 	if p.Value != model.PropertyValueNone {
 		if p.Type == U.PropertyTypeDateTime {
@@ -231,7 +231,7 @@ func CheckPropertyOfGivenType(p model.QueryProperty, decodedProperties *map[stri
 		} else if p.Type == U.PropertyTypeNumerical {
 			isValueFound = checkNumericalTypeProperty(p, decodedProperties)
 		} else {
-			isValueFound = checkCategoricalTypeProperty(p, decodedProperties)
+			isValueFound = checkCategoricalTypeProperty(projectId, p, decodedProperties)
 		}
 	} else {
 		// where condition for $none value.
@@ -303,15 +303,18 @@ func checkNumericalTypeProperty(segmentRule model.QueryProperty, properties *map
 	return propertyExists
 }
 
-func checkCategoricalTypeProperty(segmentRule model.QueryProperty, properties *map[string]interface{}) bool {
+func checkCategoricalTypeProperty(projectId int64, segmentRule model.QueryProperty, properties *map[string]interface{}) bool {
+
 	if (segmentRule.Operator == model.NotContainsOpStr && segmentRule.Value != model.PropertyValueNone) ||
 		(segmentRule.Operator == model.ContainsOpStr && segmentRule.Value == model.PropertyValueNone) ||
 		(segmentRule.Operator == model.NotEqualOpStr && segmentRule.Value != model.PropertyValueNone) ||
-		(segmentRule.Operator == model.EqualsOpStr && segmentRule.Value == model.PropertyValueNone) {
+		(segmentRule.Operator == model.EqualsOpStr && segmentRule.Value == model.PropertyValueNone) ||
+		(segmentRule.Operator == model.NotInList && segmentRule.Value != model.PropertyValueNone) {
 		if _, exists := (*properties)[segmentRule.Property]; !exists {
 			return true
 		}
 	}
+
 	if _, exists := (*properties)[segmentRule.Property]; !exists {
 		return false
 	}
@@ -344,6 +347,28 @@ func checkCategoricalTypeProperty(segmentRule model.QueryProperty, properties *m
 		if propertyValue != checkValue {
 			propertyExists = true
 		}
+	case model.InList:
+
+		propertyExists = false
+		valueListString := GetValueListFromFile(projectId, segmentRule)
+		valueList := strings.Split(valueListString, ",")
+		for _, val := range valueList {
+			if U.TrimQuotes(strings.TrimSpace(val)) == propertyValue {
+				propertyExists = true
+			}
+		}
+
+	case model.NotInList:
+
+		propertyExists = true
+		valueListString := GetValueListFromFile(projectId, segmentRule)
+		valueList := strings.Split(valueListString, ",")
+		for _, val := range valueList {
+			if U.TrimQuotes(strings.TrimSpace(val)) == propertyValue {
+				propertyExists = false
+			}
+		}
+
 	default:
 		propertyExists = false
 	}

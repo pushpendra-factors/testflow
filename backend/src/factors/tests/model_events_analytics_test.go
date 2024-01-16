@@ -630,16 +630,13 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 		}
 	})
 
-	// ioutil.ReadFile("")
 	csvFilePath := "/Users/apple/repos/factors/backend/src/factors/tests/data"
 	csvFilename := "test_inlist.csv"
 
 	t.Run("TestInListOperatorForFilter", func(t *testing.T) {
 
 		csvFile, err := ioutil.ReadFile(csvFilePath + "/" + csvFilename)
-		if err != nil {
-			fmt.Println(err)
-		}
+		assert.Nil(t, err)
 		w := sendUploadListForFilters(r, project.ID, agent, csvFile, csvFilename)
 		assert.Equal(t, http.StatusOK, w.Code)
 		var res map[string]string
