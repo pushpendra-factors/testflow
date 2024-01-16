@@ -436,7 +436,7 @@ func GetSlackIdForCorrespondingHubspotOwnerIds(projectID int64, agentID string, 
 	}
 
 	// get slack users
-	slackUsersList, errCode, err := slack.GetSlackUsersList(projectID, agentID)
+	slackUsersList, errCode, err := store.GetStore().GetSlackUsersListFromDb(projectID, agentID)
 	if err != nil || errCode != http.StatusFound || slackUsersList == nil {
 		logCtx.WithError(err).Error("failed to fetch slack users")
 		return nil
@@ -781,7 +781,7 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
 		return false, channelSuccess, errMessage
 	}
 
-	slackMentions := make([]model.SlackMember, 0)
+	slackMentions := make([]model.SlackUser, 0)
 	if sMentions != nil {
 		if err := U.DecodePostgresJsonbToStructType(sMentions, &slackMentions); err != nil {
 			errMsg := "failed to decode slack mentions"
@@ -790,14 +790,18 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
 			return false, channelSuccess, errMessage
 		}
 	}
-	slackTags := GetSlackIdForCorrespondingHubspotOwnerIds(projectID, agentUUID, alert.FieldTags)
+
+	slackTags := make([]string, 0)
+	if alert.FieldTags != nil {
+		slackTags = GetSlackIdForCorrespondingHubspotOwnerIds(projectID, agentUUID, alert.FieldTags)
+	}
 
 	wetRun := true
 	if wetRun {
 		for _, channel := range slackChannels {
 			errMsg := "successfully sent"
 			var blockMessage, slackMentionStr string
-			if slackMentions != nil {
+			if slackMentions != nil || slackTags != nil {
 				slackMentionStr = getSlackMentionsStr(slackMentions, slackTags)
 			}
 			if !isHyperlinkDisabled {
@@ -974,7 +978,7 @@ func getPropsBlockV2(propMap U.PropertiesMap) string {
 	return propBlock
 }
 
-func getSlackMentionsStr(slackMentions []model.SlackMember, slackTags []string) string {
+func getSlackMentionsStr(slackMentions []model.SlackUser, slackTags []string) string {
 	result := ""
 	for _, member := range slackMentions {
 		result += fmt.Sprintf("<@%s> ", member.Id)

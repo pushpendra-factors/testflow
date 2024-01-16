@@ -1420,6 +1420,13 @@ CREATE TABLE IF NOT EXISTS account_scoring_ranges(
     PRIMARY KEY (project_id, date)
 );
 
+CREATE TABLE IF NOT EXISTS slack_users_list(
+    project_id BIGINT NOT NULL, 
+    agent_id TEXT NOT NULL,
+    users_list JSON,
+    last_sync_time TIMESTAMP(6)
+); 
+
 --  This is generated from DBT workload. Adding this for running test cases alone.
 CREATE TABLE `website_aggregation` (
   `project_id` bigint(20) DEFAULT NULL,
