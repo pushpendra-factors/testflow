@@ -17,6 +17,7 @@ import (
 
 	C "factors/config"
 	"fmt"
+
 	"github.com/chargebee/chargebee-go/v3/filter"
 	"github.com/chargebee/chargebee-go/v3/models/customer"
 	"github.com/chargebee/chargebee-go/v3/models/download"
@@ -29,6 +30,11 @@ import (
 )
 
 func CreateChargebeeCustomer(agent model.Agent) (customer.Customer, int, error) {
+	// mock for development.
+	if C.IsDevelopment() {
+		return customer.Customer{}, http.StatusCreated, nil
+	}
+
 	logCtx := log.Fields{"uuid": agent.UUID}
 	// TODO : set api key in secrets
 	res, err := customerAction.Create(&customer.CreateRequestParams{
@@ -46,6 +52,11 @@ func CreateChargebeeCustomer(agent model.Agent) (customer.Customer, int, error) 
 
 // only used to create free subscription which doesn't require a card
 func CreateChargebeeSubscriptionForCustomer(projectID int64, customerID string, planPriceID string) (subscription.Subscription, int, error) {
+	// mock for development.
+	if C.IsDevelopment() {
+		return subscription.Subscription{}, http.StatusCreated, nil
+	}
+
 	logCtx := log.Fields{"customer_id": customerID,
 		"project_id": projectID,
 	}
