@@ -28,7 +28,7 @@ import { InfoCircleFilled } from '@ant-design/icons';
 import styles from './index.module.scss';
 const filterConfigRuleCheck = (existingConfig, newConfig) => {
   let result = false;
-  existingConfig.forEach((eachrule, eachIndex) => {
+  existingConfig?.forEach((eachrule, eachIndex) => {
     result &&=
       _.isEqual(eachExistingConfig?.value) ==
         _.isEqual(newConfig[eachIndex]?.value) &&
