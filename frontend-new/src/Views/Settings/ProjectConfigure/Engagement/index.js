@@ -256,7 +256,7 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
         return {
           ...event,
           is_deleted: q.is_deleted,
-          label: event.fname,
+          label: event.fname || event.label,
           weight: (
             <div className='flex justify-between items-center'>
               <div>{event.weight}</div>
