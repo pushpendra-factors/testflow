@@ -26,8 +26,25 @@ import SaleWindowModal from './SaleWindowModal';
 import { getGroups } from 'Reducers/coreQuery/middleware';
 import { InfoCircleFilled } from '@ant-design/icons';
 import styles from './index.module.scss';
-
+const filterConfigRuleCheck = (existingConfig, newConfig) => {
+  return (
+    existingConfig?.value == newConfig?.value &&
+    existingConfig?.operator == newConfig?.value &&
+    existingConfig?.property_type == newConfig?.property_type &&
+    existingConfig?.value_type == newConfig?.value_type &&
+    existingConfig?.lower_bound == newConfig?.lower_bound
+  );
+};
+const duplicateRuleCheck = (weightConf, newConfig, newIndex, editMode) => {
+  return weightConf.find(
+    (existingConfig, eachIndex) =>
+      existingConfig.fname === newConfig.fname &&
+      !existingConfig.is_deleted &&
+      (editMode ? eachIndex != newIndex : true)
+  );
+};
 function EngagementConfig({ fetchProjectSettings, getGroups }) {
+  const [editIndex, setEditIndex] = useState(undefined);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [saleWindowValue, setSaleWindowValue] = useState();
@@ -72,21 +89,12 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
     const weightConf = [...weightsConfig];
     const newConfig = transformPayloadForWeightConfig(config);
 
-    if (
-      weightConf.find(
-        (existingConfig) => existingConfig.fname === newConfig.fname
-      )
-    ) {
-      showErrorMessage('Duplicate Rule Name found');
-      return;
-    }
-
     if (editMode) {
       const noChangesMade = weightConf.find(
         (existingConfig) =>
           existingConfig.event_name === newConfig.event_name &&
           existingConfig.wid === newConfig.wid &&
-          _.isEqual(newConfig.rule, existingConfig.rule) &&
+          filterConfigRuleCheck(existingConfig, newConfig) &&
           existingConfig.weight === newConfig.weight &&
           existingConfig.fname === newConfig.fname
       );
@@ -95,6 +103,10 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
         showErrorMessage('No changes to save.');
         return;
       } else {
+        if (duplicateRuleCheck(weightConf, newConfig, editIndex, editMode)) {
+          showErrorMessage('Duplicate Rule Name found');
+          return;
+        }
         const configExistsIndex = weightConf.findIndex(
           (existingConfig) =>
             existingConfig.event_name === newConfig.event_name &&
@@ -108,11 +120,15 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
         showErrorMessage('Please add a score for this rule.');
         return;
       }
+      if (duplicateRuleCheck(weightConf, newConfig, editIndex, editMode)) {
+        showErrorMessage('Duplicate Rule Name found');
+        return;
+      }
 
       const configExistsIndex = weightConf.findIndex(
         (existingConfig) =>
           existingConfig.event_name === newConfig.event_name &&
-          _.isEqual(newConfig.rule, existingConfig.rule)
+          filterConfigRuleCheck(existingConfig, newConfig)
       );
 
       if (configExistsIndex !== -1) {
@@ -219,15 +235,17 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
 
   const handleCancel = () => {
     setShowModal(false);
+    setEditIndex(undefined);
   };
 
   const handleCancelSaleWindow = () => {
     setShowSaleWindowModal(false);
   };
 
-  const setEdit = (event) => {
+  const setEdit = (event, index) => {
     setActiveEvent(event);
     setShowModal(true);
+    setEditIndex(index);
   };
 
   const setAddNewScore = () => {
@@ -243,14 +261,14 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
         return {
           ...event,
           is_deleted: q.is_deleted,
-          label: event.fname,
+          label: event.fname || event.label,
           weight: (
             <div className='flex justify-between items-center'>
               <div>{event.weight}</div>
               <div className='flex justify-between items-center'>
                 <Tooltip title='Edit Signal'>
                   <Button
-                    onClick={() => setEdit(event)}
+                    onClick={() => setEdit(event, index)}
                     type='text'
                     icon={<SVG name='edit' />}
                   />

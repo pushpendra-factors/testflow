@@ -617,6 +617,7 @@ func (store *MemSQL) GetPropertyValuesByEventProperty(projectID int64, eventName
 		"limit":         limit,
 		"last_N_days":   lastNDays,
 	}
+	logCtx := log.WithFields(logFields)
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	if projectID == 0 {
@@ -630,21 +631,42 @@ func (store *MemSQL) GetPropertyValuesByEventProperty(projectID int64, eventName
 	if propertyName == "" {
 		return []string{}, errors.New("invalid property_name on GetPropertyValuesByEventProperty")
 	}
-	currentDate := model.OverrideCacheDateRangeForProjects(projectID)
-	values := make([]U.CachePropertyValueWithTimestamp, 0)
-	for i := 0; i < lastNDays; i++ {
-		currentDateOnlyFormat := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
-		value, err := getPropertyValuesByEventPropertyFromCache(projectID, eventName, propertyName, currentDateOnlyFormat)
+
+	var valuesAggregated []U.NameCountTimestampCategory
+	if C.IsAggrEventPropertyValuesCacheEnabled(projectID) {
+		eventPropertyValuesAggCacheKey, _ := model.GetValuesByEventPropertyRollUpAggregateCacheKey(
+			projectID, eventName, propertyName)
+
+		var existingAggregate U.CacheEventPropertyValuesAggregate
+		existingAggCache, _, err := cacheRedis.GetIfExistsPersistent(eventPropertyValuesAggCacheKey)
 		if err != nil {
+			logCtx.WithError(err).Error("Failed to get cache aggregate on API.")
 			return []string{}, err
 		}
-		values = append(values, value)
+		err = json.Unmarshal([]byte(existingAggCache), &existingAggregate)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to unmarshal values cache aggregate on API.")
+			return []string{}, err
+		}
+
+		valuesAggregated = existingAggregate.NameCountTimestampCategoryList
+	} else {
+		currentDate := model.OverrideCacheDateRangeForProjects(projectID)
+		values := make([]U.CachePropertyValueWithTimestamp, 0)
+		for i := 0; i < lastNDays; i++ {
+			currentDateOnlyFormat := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
+			value, err := getPropertyValuesByEventPropertyFromCache(projectID, eventName, propertyName, currentDateOnlyFormat)
+			if err != nil {
+				return []string{}, err
+			}
+			values = append(values, value)
+		}
+
+		valuesAggregated = U.AggregatePropertyValuesAcrossDate(values)
 	}
 
 	valueStrings := make([]string, 0)
-	valuesAggregated := U.AggregatePropertyValuesAcrossDate(values)
 	valuesSorted := U.SortByTimestampAndCount(valuesAggregated)
-
 	for _, v := range valuesSorted {
 		valueStrings = append(valueStrings, v.Name)
 	}
@@ -895,7 +917,7 @@ func aggregateEventsAcrossDate(events []model.CacheEventNamesWithTimestamp) []U.
 	eventsAggregatedSlice := make([]U.NameCountTimestampCategory, 0)
 	for k, v := range eventsAggregated {
 		eventsAggregatedSlice = append(eventsAggregatedSlice, U.NameCountTimestampCategory{
-			k, v.Count, v.LastSeenTimestamp, v.Type, ""})
+			Name: k, Count: v.Count, Timestamp: v.LastSeenTimestamp, Category: v.Type, GroupName: ""})
 	}
 	return eventsAggregatedSlice
 }

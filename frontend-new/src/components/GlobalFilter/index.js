@@ -84,7 +84,7 @@ const GlobalFilter = ({
         if (filtersGr.length === 1) {
           const filt = filtersGr[0];
           filtrs.push(
-            <div className={'fa--query_block--filters flex flex-row'}>
+            <div className={'fa--query_block--filters flex flex-row flex-wrap'}>
               <div key={index} className={`mt-2`}>
                 <FilterWrapper
                   event={event}
@@ -122,7 +122,7 @@ const GlobalFilter = ({
           index += 1;
         } else {
           filtrs.push(
-            <div className={'fa--query_block--filters flex flex-row'}>
+            <div className={'fa--query_block--filters flex flex-row flex-wrap'}>
               <div key={index} className={`mt-2`}>
                 <FilterWrapper
                   event={event}

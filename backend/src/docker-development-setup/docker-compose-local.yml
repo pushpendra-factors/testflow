@@ -1,0 +1,133 @@
+version: '3.5'
+
+services:
+        memsql:
+            build:
+                context: .
+                dockerfile: Dockerfile.memsql.testing
+                args:
+                    - MEMSQL_VERSION=alma-8.1.31-d5850b922e-4.0.16-1.17.6
+            image: testing/memsql:1.0
+            deploy:
+                replicas: 1
+            restart: always
+            environment:
+                - LICENSE_KEY=$MEMSQL_LICENSE_KEY
+                - ROOT_PASSWORD=$ROOT_PASSWORD
+                - START_AFTER_INIT='Y'
+            ports:
+                - 3306:3306
+                - 8040:8080
+        redis:  
+            build:
+                context: ../
+                dockerfile: Dockerfile.redis
+            image: testing/redis:1.0
+            deploy:
+                replicas: 1
+            restart: always
+            ports:
+                - "6379:6379"                 
+        builddb:
+            build:
+                context: ../
+                dockerfile: docker-development-setup/Dockerfile.db_create.testing
+            environment:
+                - PRI_DS=memsql
+                - ROOT_PASSWORD=$ROOT_PASSWORD    
+            image: testing/builddb:1.0
+            deploy:
+                replicas: 0
+            depends_on:
+                - memsql
+        api:
+            build:
+                context: ../
+                dockerfile: Dockerfile.appserver
+            environment:
+                -  GOPATH=/go/src/factors
+                -  REDIS_HOST=$REDIS_HOST
+                -  PRI_DS=$DB_HOST
+                -  DB_HOST=$DB_HOST
+                -  ENV=$ENV    
+            entrypoint: [ "sh","-c","/go/bin/app --redis_host_ps=$REDIS_HOST --dup_queue_redis_host=$REDIS_HOST --queue_redis_host=$REDIS_HOST --api_domain=$API_DOMAIN --env=$ENV --memsql_host=$DB_HOST"]
+            image: testing/api:1.0
+            deploy:
+                replicas: 1
+            restart: always
+            ports:
+                - "8080:8080"      
+            volumes: 
+                - ../../../geolocation_data:/usr/local/var/factors/geolocation_data
+                - ../../../devicedetector_data:/usr/local/var/factors/devicedetector_data
+            depends_on:
+                - memsql
+                - redis
+        sdkserver:
+            build:
+                context: ../
+                dockerfile: docker-development-setup/Dockerfile.sdkserver.testing
+            environment:
+                -  GOPATH=/go/src/factors
+                -  REDIS_HOST=redis
+                -  DB_HOST=memsql  
+            entrypoint: [ "sh","-c","/go/bin/sdkserver --redis_host=$REDIS_HOST --redis_host_ps=$REDIS_HOST --dup_queue_redis_host=$REDIS_HOST --queue_redis_host=$REDIS_HOST --env=$ENV --memsql_host=$DB_HOST"]
+            image: testing/sdk:1.0
+            deploy:
+                replicas: 0
+            ports:
+                - "8085:8085"
+            restart: always
+            volumes: 
+                - ../../../geolocation_data:/usr/local/var/factors/geolocation_data
+                - ../../../devicedetector_data:/usr/local/var/factors/devicedetector_data
+            depends_on:
+                - memsql
+                - redis
+        # Frontend docker is not building. Run manually.
+        frontend:
+            build: 
+                context: ../../../frontend-new
+                dockerfile: Dockerfile.frontend.testing    
+            image: testing/frontend:1.0
+            deploy:
+                replicas: 0
+            ports: 
+                - "3000:3000"
+        datagen:
+            build:
+                context: ../../../misc/data_simulator/src/
+                dockerfile: Dockerfile.data_gen.testing
+            environment:
+                - CONFIG=acme_com
+                - AUTH_TOKEN=78ycpg9dsgok7o4dbk58jtl2rgt0tg0o
+                - SDK_HOST=sdkserver
+                - ENV=docker
+                - SEED_DATE=$SEED_DATE   
+            image: testing/datagen:1.0
+            deploy:
+                replicas: 0
+            depends_on:
+                - sdkserver
+        session:
+            build:
+                context: ../
+                dockerfile: docker-development-setup/Dockerfile.session.testing
+            environment:
+                - REDIS_HOST=$REDIS_HOST
+                - DB_HOST=$DB_HOST
+                - PRI_DS=$DB_HOST  
+            image: testing/session:1.0
+            deploy:
+                replicas: 0
+        rollupcache:
+            build:
+                context: ../
+                dockerfile: docker-development-setup/Dockerfile.rollup_cache.testing
+            environment:
+                - REDIS_HOST=$REDIS_HOST
+                - DB_HOST=$DB_HOST
+                - PRI_DS=$DB_HOST  
+            image: testing/rollupcache:1.0
+            deploy:
+                replicas: 0

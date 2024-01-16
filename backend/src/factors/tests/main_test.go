@@ -162,6 +162,7 @@ func TestMain(m *testing.M) {
 	C.InitFilemanager(path, *env, config)
 	C.InitQueueClient(config.RedisHost, config.RedisPort)
 	C.InitDuplicateQueueClient(config.RedisHost, config.RedisPort)
+	C.InitChargebeeObject(config.ChargebeeApiKey, config.ChargebeeSiteName)
 
 	C.InitPropertiesTypeCache(true, 10000, "*", "")
 	if C.GetConfig().Env != C.DEVELOPMENT {
