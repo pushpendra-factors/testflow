@@ -1041,6 +1041,8 @@ type Model interface {
 	SetAuthTokenforSlackIntegration(projectID int64, agentUUID string, authTokens model.SlackAccessTokens) error
 	GetSlackAuthToken(projectID int64, agentUUID string) (model.SlackAccessTokens, error)
 	DeleteSlackIntegration(projectID int64, agentUUID string) error
+	GetSlackUsersListFromDb(projectID int64, agentID string) ([]model.SlackUser, int, error)
+	UpdateSlackUsersListForProject(projectID int64, fields map[string]interface{}) (int, error)
 
 	// MS Teams
 	SetAuthTokenforTeamsIntegration(projectID int64, agentUUID string, authTokens model.TeamsAccessTokens) error
