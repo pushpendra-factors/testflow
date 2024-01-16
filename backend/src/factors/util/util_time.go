@@ -75,6 +75,24 @@ func GetDateFromTimestampAndTimezone(timestamp int64, timezone TimeZoneString) s
 	return time.Unix(timestamp, 0).In(in).Format("02 Jan")
 }
 
+func GetTimestampFromDateTimeAndTimezone(dateTime string, timezone TimeZoneString) (int64, error) {
+
+	// Parse the datetime string
+	t, err := time.Parse(DATETIME_FORMAT_DB, dateTime)
+	if err != nil {
+		return 0, err
+	}
+
+	// Set the timezone
+	loc := GetTimeLocationFor(timezone)
+	t = t.In(loc)
+
+	// Get the Unix timestamp
+	timestamp := t.Unix()
+
+	return timestamp, nil
+}
+
 // TimeNowZ Return current time in UTC. Should be used everywhere to avoid local timezone.
 func TimeNowZ() time.Time {
 	return time.Now().UTC()
