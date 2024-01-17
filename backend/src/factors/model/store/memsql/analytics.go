@@ -190,7 +190,7 @@ func buildWhereFromProperties(projectID int64, properties []model.QueryProperty,
 
 					pValue := p.Value
 					if isColumn {
-						valueListString := getValueListFromFile(projectID, p)
+						valueListString := GetValueListFromFile(projectID, p)
 						err := getSqlWhereStatementFromColumnsForPropertyTypeCategorical(p, propertyOp, valueListString, &pStmnt, hasNoneFilter, &rParams)
 						if err != nil {
 							return "", nil, err
@@ -221,12 +221,12 @@ func buildWhereFromProperties(projectID int64, properties []model.QueryProperty,
 							rParams = append(rParams, p.Property)
 							pStmnt = pStmnt1 + pStmnt2 + pStmnt3
 						} else if p.Operator == model.InList {
-							valueListString := getValueListFromFile(projectID, p)
+							valueListString := GetValueListFromFile(projectID, p)
 							pStmnt = fmt.Sprintf("JSON_EXTRACT_STRING(%s, ?) IN ( %s )", propertyEntity, valueListString)
 							rParams = append(rParams, p.Property)
 
 						} else if p.Operator == model.NotInList {
-							valueListString := getValueListFromFile(projectID, p)
+							valueListString := GetValueListFromFile(projectID, p)
 							pStmnt = fmt.Sprintf("JSON_EXTRACT_STRING(%s, ?) NOT IN ( %s )", propertyEntity, valueListString)
 							rParams = append(rParams, p.Property)
 						} else {
@@ -240,7 +240,7 @@ func buildWhereFromProperties(projectID int64, properties []model.QueryProperty,
 				// where condition for $none value.
 				// var pStmnt string
 				if isColumn {
-					valueListString := getValueListFromFile(projectID, p)
+					valueListString := GetValueListFromFile(projectID, p)
 					err := getSqlWhereStatementFromColumnsForPropertyTypeCategorical(p, propertyOp, valueListString, &pStmnt, hasNoneFilter, &rParams)
 					if err != nil {
 						return "", nil, err
@@ -330,7 +330,7 @@ func getSqlWhereStatementFromColumnsForPropertyTypeCategorical(property model.Qu
 	return nil
 }
 
-func getValueListFromFile(projectID int64, property model.QueryProperty) string {
+func GetValueListFromFile(projectID int64, property model.QueryProperty) string {
 
 	valueListString := ""
 	// Get the cloud file that is there for the reference value
