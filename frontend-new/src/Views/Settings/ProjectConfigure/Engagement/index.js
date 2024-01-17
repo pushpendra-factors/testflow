@@ -27,16 +27,21 @@ import { getGroups } from 'Reducers/coreQuery/middleware';
 import { InfoCircleFilled } from '@ant-design/icons';
 import styles from './index.module.scss';
 const filterConfigRuleCheck = (existingConfig, newConfig) => {
-  let result = true;
-  existingConfig?.forEach((eachrule, eachIndex) => {
-    result &&=
-      _.isEqual(eachrule?.value, newConfig[eachIndex]?.value) &&
-      eachrule?.operator == newConfig[eachIndex]?.operator &&
-      eachrule?.property_type == newConfig[eachIndex]?.property_type &&
-      eachrule?.value_type == newConfig[eachIndex]?.value_type &&
-      eachrule?.lower_bound == newConfig[eachIndex]?.lower_bound;
-  });
-  return result;
+  try {
+    let result = true;
+    if (Array.isArray(existingConfig) && Array.is)
+      existingConfig?.forEach((eachrule, eachIndex) => {
+        result &&=
+          _.isEqual(eachrule?.value, newConfig[eachIndex]?.value) &&
+          eachrule?.operator == newConfig[eachIndex]?.operator &&
+          eachrule?.property_type == newConfig[eachIndex]?.property_type &&
+          eachrule?.value_type == newConfig[eachIndex]?.value_type &&
+          eachrule?.lower_bound == newConfig[eachIndex]?.lower_bound;
+      });
+    return result;
+  } catch (err) {
+    return false;
+  }
 };
 const duplicateRuleCheck = (weightConf, newConfig, newIndex, editMode) => {
   return weightConf.find(
@@ -98,7 +103,6 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
         (existingConfig) =>
           existingConfig.event_name === newConfig.event_name &&
           existingConfig.wid === newConfig.wid &&
-          filterConfigRuleCheck(existingConfig?.rule, newConfig?.rule) &&
           existingConfig.weight === newConfig.weight &&
           existingConfig.fname === newConfig.fname
       );
@@ -107,10 +111,10 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
         showErrorMessage('No changes to save.');
         return;
       } else {
-        if (duplicateRuleCheck(weightConf, newConfig, editIndex, editMode)) {
-          showErrorMessage('Duplicate Rule Name found');
-          return;
-        }
+        // if (duplicateRuleCheck(weightConf, newConfig, editIndex, editMode)) {
+        //   showErrorMessage('Duplicate Rule Name found');
+        //   return;
+        // }
         const configExistsIndex = weightConf.findIndex(
           (existingConfig) =>
             existingConfig.event_name === newConfig.event_name &&
@@ -124,15 +128,13 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
         showErrorMessage('Please add a score for this rule.');
         return;
       }
-      if (duplicateRuleCheck(weightConf, newConfig, editIndex, editMode)) {
-        showErrorMessage('Duplicate Rule Name found');
-        return;
-      }
+      // if (duplicateRuleCheck(weightConf, newConfig, editIndex, editMode)) {
+      //   showErrorMessage('Duplicate Rule Name found');
+      //   return;
+      // }
 
       const configExistsIndex = weightConf.findIndex(
-        (existingConfig) =>
-          existingConfig.event_name === newConfig.event_name &&
-          filterConfigRuleCheck(existingConfig?.rule, newConfig?.rule)
+        (existingConfig) => existingConfig.event_name === newConfig.event_name
       );
 
       if (configExistsIndex !== -1) {
@@ -144,8 +146,8 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
           if (!newConfig.wid) delete newConfig.wid;
           weightConf.splice(configExistsIndex, 1, newConfig);
         } else {
-          showErrorMessage('Rule already exists.');
-          return;
+          // showErrorMessage('Rule already exists.');
+          // return;
         }
       } else {
         delete newConfig.wid;

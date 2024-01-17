@@ -118,6 +118,7 @@ function EngagementModal({ visible, onOk, onCancel, event, editMode }) {
             groupAnalysis={'events'}
             dropdownPlacement='bottom'
             propertiesScope={['event', 'user', 'group']}
+            viewMode={editMode}
           />
         </div>
       );
