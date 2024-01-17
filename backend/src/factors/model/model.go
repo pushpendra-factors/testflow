@@ -498,6 +498,8 @@ type Model interface {
 	GetFormFillEnabledProjectIDWithToken() (*map[int64]string, int)
 	GetTimelinesConfig(projectID int64) (model.TimelinesConfig, error)
 	UpdateAccScoreWeights(projectId int64, weights model.AccWeights) error
+	GetEngagementLevelsByProject(projectId int64) (*model.BucketRanges, int)
+	UpdateEngagementLevel(projectId int64, buckets model.BucketRanges) error
 	GetSixsignalEmailListFromProjectSetting(projectId int64) (string, int)
 	AddSixsignalEmailList(projectId int64, emailIds string) int
 	GetSegmentMarkerLastRunTime(projectID int64) (time.Time, int)
