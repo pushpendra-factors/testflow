@@ -47,7 +47,8 @@ const Slack = ({
     alertMessage,
     alertName,
     groupBy,
-    fetchSlackDetails
+    fetchSlackDetails,
+    matchEventName,
 }) => {
 
     const [form] = Form.useForm();
@@ -340,6 +341,7 @@ const Slack = ({
                                     alertName={alertName}
                                     groupBy={groupBy}
                                     selectedMentions={selectedMentions}
+                                    matchEventName={matchEventName}
                                     />
                                 </div>
                             </Col>

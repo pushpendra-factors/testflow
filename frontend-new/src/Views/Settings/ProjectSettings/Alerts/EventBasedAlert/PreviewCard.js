@@ -8,12 +8,14 @@ import React, {
   import { Text, SVG } from 'factorsComponents';
   import { Tag } from 'antd';
 import { getMsgPayloadMapping} from './../utils';
+import ReactJson from 'react-json-view'
 
 export const PreviewCardSlack = ({
     alertName,
     alertMessage,
     groupBy,
-    selectedMentions
+    selectedMentions,
+    matchEventName
 }) =>{ 
     let payloadProps = groupBy?.length>0 ? getMsgPayloadMapping(groupBy) : {};
     return (
@@ -59,7 +61,7 @@ export const PreviewCardSlack = ({
    { 
     payloadProps && Object?.entries(payloadProps).map(([key, value]) => { 
           return (<div className='px-2 py-2'>
-              <Text type='title' level={7} weight={'bold'} extraClass='m-0' >{key}</Text>
+              <Text type='title' level={7} weight={'bold'} extraClass='m-0' >{matchEventName(key)}</Text>
               <Text type='title' level={8} color={'grey'} extraClass='m-0' >{value}</Text>
           </div>)
         })
@@ -88,6 +90,7 @@ export const PreviewCardTeams = ({
     alertName,
     alertMessage,
     groupBy,
+    matchEventName
 }) =>{
 
     let payloadProps = groupBy?.length>0 ? getMsgPayloadMapping(groupBy) : {};
@@ -129,7 +132,7 @@ export const PreviewCardTeams = ({
    
    {payloadProps && Object?.entries(payloadProps).map(([key, value]) => { 
           return (<div className='flex items-center w-full justify-between'>
-              <Text type='title' level={7} color={'grey'}  extraClass='m-0' >{key}</Text>
+              <Text type='title' level={7} color={'grey'}  extraClass='m-0' >{matchEventName(key)}</Text>
               <Text type='title' level={7} extraClass='m-0' >{value}</Text>
           </div>)
         })
@@ -156,7 +159,7 @@ export const PreviewCardTeams = ({
 export const PreviewCardWebhook = ({
     alertName,
     alertMessage,
-    groupBy,
+    groupBy
 }) =>{
 
     let payloadProps = {};
@@ -168,20 +171,24 @@ export const PreviewCardWebhook = ({
         <div>
 
         {/* card starts here*/}
-        <div className='background-color--mono-color-1 border--thin-2 ' style={{'width': '400px', 'border-radius': '8px', 'minHeight': '300px'}}>
-        <pre>
-        <code className='fa-code-code-block'>
+        <div className='background-color--mono-color-1 border--thin-2 p-2' style={{'width': '400px', 'border-radius': '8px', 'minHeight': '300px'}}>
 
         { !groupBy?.length>0 ? 
         <div className='flex flex-col items-center justify-center' style={{'minHeight': '250px'}}>  
             <Text type='title' level={7} color={'grey'} weight={'thin'} extraClass='m-0' >Add properties to preview</Text>
         </div>
         
-        : JSON.stringify(payloadProps) }
+        : <ReactJson src={payloadProps}
+                className={'fa-custom--reactjson'}
+                style={{'minHeight':'300px'}}
+                // theme={'summerfruit:inverted'}
+                displayDataTypes={false}
+                displayObjectSize={false}
+                enableClipboard={false} 
+                quotesOnKeys={false}
 
-        </code>
-      </pre>
-         
+            /> } 
+
         </div> 
         {/*  card ends here*/}
             <Text type='title' level={8} color={'grey'} extraClass='m-0 mt-2' >This is a preview of your alert response</Text>

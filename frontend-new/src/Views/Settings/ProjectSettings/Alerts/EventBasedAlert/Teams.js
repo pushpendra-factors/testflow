@@ -46,7 +46,8 @@ const Teams = ({
     alertMessage,
     alertName,
     groupBy,
-    sendTestTeamsMessage
+    sendTestTeamsMessage,
+    matchEventName,
 }) => {
 
     const ErrorMsg = getErrorMsg(viewAlertDetails?.last_fail_details, MS_TEAMS);
@@ -221,6 +222,7 @@ const Teams = ({
                                     alertMessage={alertMessage}
                                     alertName={alertName}
                                     groupBy={groupBy}
+                                    matchEventName={matchEventName}
                                     />
                                 </div>
                             </Col>
