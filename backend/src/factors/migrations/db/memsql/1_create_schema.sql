@@ -453,6 +453,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS project_settings (
     project_currency varchar(10),
     is_path_analysis_enabled boolean,
     acc_score_weights json,
+    custom_engagement_buckets json,
     filter_ips JSON,
     is_deanonymization_requested boolean,
     is_onboarding_completed boolean,

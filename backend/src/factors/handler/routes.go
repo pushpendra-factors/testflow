@@ -320,6 +320,7 @@ func InitAppRoutes(r *gin.Engine) {
 
 	//acc scoring
 	authRouteGroup.PUT("/:project_id/v1/accscore/weights", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_SCORING}), responseWrapper(V1.UpdateAccScoreWeights))
+	authRouteGroup.PUT("/:project_id/v1/accscore/engagementbuckets", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_SCORING}), responseWrapper(V1.UpdateEngagementLevelWeights))
 	authRouteGroup.GET("/:project_id/v1/accscore/score/user", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_SCORING}), responseWrapper(V1.GetUserScore))
 	authRouteGroup.GET("/:project_id/v1/accscore/score/account", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_SCORING}), responseWrapper(V1.GetAccountScores))
 	authRouteGroup.GET("/:project_id/v1/accscore/score/paccount/", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_SCORING}), responseWrapper(V1.GetPerAccountScore))

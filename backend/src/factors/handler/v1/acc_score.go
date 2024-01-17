@@ -91,6 +91,37 @@ func UpdateAccScoreWeights(c *gin.Context) (interface{}, int, string, string, bo
 
 }
 
+// UpdateAccScoreWeights updates weights for a given project
+func UpdateEngagementLevelWeights(c *gin.Context) (interface{}, int, string, string, bool) {
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	reqID, _ := getReqIDAndProjectID(c)
+
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectId,
+		"RequestId": reqID,
+	})
+
+	var engagementBucketsRequest M.BucketRanges
+
+	engagementBucketsRequest.Ranges = make([]M.Bucket, 4)
+	r := c.Request
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&engagementBucketsRequest); err != nil {
+		errMsg := "Unable to decode weights Invalid JSON."
+		logCtx.WithError(err).Error(errMsg)
+		return nil, http.StatusBadRequest, errMsg, "", true
+	}
+	_, int, err := T.ValidateAndUpdateEngagementLevel(projectId, engagementBucketsRequest)
+	if err != nil {
+		errMsg := "Unable to validate and update engagementbuckets."
+		logCtx.WithError(err).Error(errMsg)
+		return nil, int, errMsg, "", true
+	}
+
+	return engagementBucketsRequest, int, "", "", false
+
+}
+
 // GetAccountScore returns account score for a given date and group_id
 func GetAccountScores(c *gin.Context) (interface{}, int, string, string, bool) {
 	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)

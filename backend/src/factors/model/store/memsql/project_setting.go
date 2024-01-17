@@ -1741,6 +1741,58 @@ func (store *MemSQL) GetWeightsByProject(project_id int64) (*model.AccWeights, i
 	return &weights, http.StatusFound
 }
 
+func (store *MemSQL) UpdateEngagementLevel(projectId int64, engagementBuckets model.BucketRanges) error {
+
+	bucketsjsonb, err := U.EncodeStructTypeToPostgresJsonb(engagementBuckets)
+	if err != nil {
+		log.WithError(err).Error("Error creating postgres jsonb in acc score")
+		return err
+	}
+
+	db := C.GetServices().Db
+	if err := db.Model(&model.ProjectSetting{}).
+		Where("project_id = ?", projectId).
+		Update("custom_engagement_buckets", bucketsjsonb).Error; err != nil {
+		log.WithError(err).Error("Updating is_explain_enabled config failed")
+		return err
+	}
+	return err
+}
+
+func (store *MemSQL) GetEngagementLevelsByProject(project_id int64) (*model.BucketRanges, int) {
+	logFields := log.Fields{
+		"project_id": project_id,
+	}
+	logCtx := log.WithFields(logFields)
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	db := C.GetServices().Db
+
+	var project_settings model.ProjectSetting
+	var buckets model.BucketRanges
+	if err := db.Table("project_settings").Limit(1).Where("project_id = ?", project_id).Find(&project_settings).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			logCtx.WithField("project_id", project_id).WithError(err).Error("Unable to fetch engagement buckets from DB")
+			return nil, http.StatusNotFound
+		}
+		logCtx.WithField("project_id", project_id).WithError(err).Error("Unable to fetch engagement buckets from DB")
+		return &model.BucketRanges{}, http.StatusInternalServerError
+	}
+
+	if project_settings.CustomEngagementBuckets == nil {
+		return nil, http.StatusBadRequest
+	} else {
+		err := U.DecodePostgresJsonbToStructType(project_settings.CustomEngagementBuckets, &buckets)
+		if err != nil {
+			logCtx.WithError(err).Error("Unable to decode engagement buckets")
+			return nil, http.StatusInternalServerError
+		}
+	}
+
+	return &buckets, http.StatusFound
+}
+
 func getNumberOfProjectsWithParagonEnabled() (int64, error) {
 	var count int64
 	db := C.GetServices().Db
