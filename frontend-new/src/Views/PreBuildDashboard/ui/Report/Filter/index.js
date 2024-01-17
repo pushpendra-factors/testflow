@@ -3,7 +3,7 @@ import { Button } from 'antd';
 import { SVG } from 'Components/factorsComponents';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import { setReportFilterPayloadAction } from 'Views/PreBuildDashboard/state/services';
-import GlobalFilter from 'Components/GlobalFilter';
+import PropertyFilter from 'Components/Profile/MyComponents/PropertyFilter';
 
 function Filter({ handleFilterChange }) {
   const dispatch = useDispatch();
@@ -29,10 +29,10 @@ function Filter({ handleFilterChange }) {
 
   const renderPropertyFilter = () => (
     <div key={0} className='max-w-3xl'>
-      <GlobalFilter
+      <PropertyFilter
         profileType='predefined'
         filters={filtersData}
-        setGlobalFilters={setFilters}
+        setFilters={setFilters}
       />
     </div>
   );

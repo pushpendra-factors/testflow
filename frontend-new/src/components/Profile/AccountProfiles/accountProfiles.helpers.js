@@ -301,15 +301,15 @@ export const getColumns = ({
     render: (item) => MomentTz(item).fromNow()
   };
 
+  const scoringColumns = [engagementColumn, scoreColumn];
+
+  if (AdminLock(activeAgent)) {
+    scoringColumns.push(topEngagementsColumn);
+  }
+
   const columns = [
     accountColumn,
-    ...(isScoringLocked
-      ? []
-      : [
-          engagementColumn,
-          scoreColumn,
-          AdminLock(activeAgent) && topEngagementsColumn
-        ]),
+    ...(isScoringLocked ? [] : scoringColumns),
     ...tablePropColumns,
     lastActivityColumn
   ];

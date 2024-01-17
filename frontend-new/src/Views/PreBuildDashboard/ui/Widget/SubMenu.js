@@ -1,13 +1,13 @@
-import React, { useCallback, useState } from 'react';
-import { Button, Tooltip } from 'antd';
-import { Text, SVG } from 'Components/factorsComponents';
+import React, { useCallback } from 'react';
+import { Button } from 'antd';
+import { SVG } from 'Components/factorsComponents';
 import FaDatepicker from 'Components/FaDatepicker';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import {
   setFilterPayloadAction,
   setReportFilterPayloadAction
 } from 'Views/PreBuildDashboard/state/services';
-import GlobalFilter from 'Components/GlobalFilter';
+import PropertyFilter from 'Components/Profile/MyComponents/PropertyFilter';
 
 function SubMenu({
   config,
@@ -38,10 +38,10 @@ function SubMenu({
 
   const renderPropertyFilter = () => (
     <div key={0} className='max-w-3xl'>
-      <GlobalFilter
+      <PropertyFilter
         profileType='predefined'
         filters={filtersData}
-        setGlobalFilters={setFilters}
+        setFilters={setFilters}
       />
     </div>
   );
