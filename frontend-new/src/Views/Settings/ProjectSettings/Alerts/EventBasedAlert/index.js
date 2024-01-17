@@ -1574,6 +1574,7 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
             alertName={alertName}
             groupBy={groupBy}
             fetchSlackDetails={fetchSlackDetails}
+            matchEventName={matchEventName}
           />
 
           {/* {showTeamInt && <Teams */}
@@ -1590,6 +1591,7 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
             alertName={alertName} 
             groupBy={groupBy}
             sendTestTeamsMessage={sendTestTeamsMessage}
+            matchEventName={matchEventName}
           />
 
 
@@ -1617,7 +1619,7 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
             confirmBtn={confirmBtn}
             hideTestMessageBtn={hideTestMessageBtn}
             alertMessage={alertMessage}
-            alertName={alertName} 
+            alertName={alertName}
           />
 
 {/* 

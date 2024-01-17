@@ -348,7 +348,7 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
                             <PreviewCardWebhook 
                                 alertMessage={alertMessage}
                                 alertName={alertName}
-                                groupBy={groupBy} 
+                                groupBy={groupBy}
                                 />
                         </div>
                     </Col>
