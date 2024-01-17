@@ -1056,7 +1056,7 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profile
 	}
 
 	// grouping tableProps by prefix
-	tablePropsMap := tablePropsMapGrouping(tableProps)
+	tablePropsMap := propsMapGroupingByName(tableProps)
 
 	// Fetching accounts associated to the domain
 	// SELECT group_6_user_id as identity, properties, source FROM `users`  WHERE (project_id='15000001' AND source!='9' AND
@@ -1642,7 +1642,6 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 
 	propertiesDecoded := make(map[string]interface{})
 	var status int
-	isUserDetails := false
 	var accountDetails model.AccountDetails
 
 	var group *model.Group
@@ -1657,21 +1656,29 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 	groupUserString := fmt.Sprintf("group_%d_user_id=? ", group.ID)
 	params := []interface{}{projectID, id}
 
-	if C.IsDomainEnabled(projectID) {
-		propertiesDecoded, isUserDetails, status = store.AccountPropertiesForDomainsEnabledV2(projectID, id, groupName)
-	} else {
-		groupUserString, propertiesDecoded, params, status = store.AccountPropertiesForDomainsDisabledV1(projectID, id)
+	timelinesConfig, err := store.GetTimelinesConfig(projectID)
+	if err != nil {
+		log.WithError(err).Error("Failed to fetch timelines_config from project_settings.")
 	}
 
-	if isUserDetails {
+	if C.IsDomainEnabled(projectID) {
+		accountDetails, status = store.AccountPropertiesForDomainsEnabledV2(projectID, id, groupName, timelinesConfig)
+	} else {
+		groupUserString, propertiesDecoded, params, status = store.AccountPropertiesForDomainsDisabledV1(projectID, id)
+		accountDetails = FormatAccountDetails(projectID, propertiesDecoded, groupName, accountDetails.HostName)
+		accountDetails.LeftPaneProps = GetLeftPanePropertiesFromConfig(timelinesConfig, model.PROFILE_TYPE_ACCOUNT, &propertiesDecoded)
+		accountDetails.Milestones = GetMilestonesFromConfig(timelinesConfig, model.PROFILE_TYPE_ACCOUNT, &propertiesDecoded)
+	}
+
+	if C.IsDomainEnabled(projectID) && status == http.StatusNotFound {
 		accountDetails, propertiesDecoded, status = store.GetUserDetailsAssociatedToDomain(projectID, id)
+		accountDetails = FormatAccountDetails(projectID, propertiesDecoded, groupName, accountDetails.HostName)
 	}
 
 	if status != http.StatusOK {
 		return nil, status, "Accounts Query Processing Failed"
 	}
 
-	accountDetails = FormatAccountDetails(projectID, propertiesDecoded, groupName, accountDetails.HostName)
 	if model.IsDomainGroup(groupName) {
 		hostName, err := model.ConvertDomainIdToHostName(id)
 		if err != nil || hostName == "" {
@@ -1682,14 +1689,6 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 		}
 
 	}
-
-	timelinesConfig, err := store.GetTimelinesConfig(projectID)
-	if err != nil {
-		log.WithError(err).Error("Failed to fetch timelines_config from project_settings.")
-	}
-
-	accountDetails.LeftPaneProps = GetLeftPanePropertiesFromConfig(timelinesConfig, model.PROFILE_TYPE_ACCOUNT, &propertiesDecoded)
-	accountDetails.Milestones = GetMilestonesFromConfig(timelinesConfig, model.PROFILE_TYPE_ACCOUNT, &propertiesDecoded)
 
 	additionalProp := timelinesConfig.AccountConfig.UserProp
 	selectStrAdditionalProp := ""
@@ -2024,57 +2023,135 @@ func (store *MemSQL) GetIntentTimeline(projectID int64, groupName string, id str
 	return intentTimeline, nil
 }
 
-func (store *MemSQL) AccountPropertiesForDomainsEnabledV2(projectID int64, id, groupName string) (map[string]interface{}, bool, int) {
-	propertiesDecoded := make(map[string]interface{}, 0)
-	isUserDetails := false
+func (store *MemSQL) AccountPropertiesForDomainsEnabledV2(projectID int64, id, groupName string, timelinesConfig model.TimelinesConfig) (model.AccountDetails, int) {
+	accountGroupDetails := make([]model.User, 0)
 	if model.IsDomainGroup(groupName) {
 		groupNameIDMap, status := store.GetGroupNameIDMap(projectID)
 		if status != http.StatusFound {
-			return propertiesDecoded, isUserDetails, status
+			return model.AccountDetails{}, status
 		}
 		// Fetching accounts associated to the domain
-		accountGroupDetails, status := store.GetAccountsAssociatedToDomain(projectID, id, groupNameIDMap[model.GROUP_NAME_DOMAINS])
+		accountGroupDetails, status = store.GetAccountsAssociatedToDomain(projectID, id, groupNameIDMap[model.GROUP_NAME_DOMAINS])
 		if status != http.StatusFound {
-			return propertiesDecoded, isUserDetails, status
+			return model.AccountDetails{}, status
 		}
 
+		// return not found if no associated accounts found
 		if len(accountGroupDetails) < 1 {
-			isUserDetails = true
-			return propertiesDecoded, isUserDetails, status
-		}
-
-		for index, accountGroupDetail := range accountGroupDetails {
-			props, err := U.DecodePostgresJsonb(&accountGroupDetail.Properties)
-			if err != nil {
-				log.Error("Unable to decode account properties.")
-				return propertiesDecoded, isUserDetails, status
-			}
-			// merging all account properties
-			if index == 0 {
-				propertiesDecoded = *props
-			} else {
-				propertiesDecoded = U.MergeJSONMaps(propertiesDecoded, *props)
-			}
+			return model.AccountDetails{}, http.StatusNotFound
 		}
 	} else {
 		if !model.IsAllowedGroupName(groupName) {
 			log.Error("Invalid group name.")
-			return propertiesDecoded, isUserDetails, http.StatusBadRequest
+			return model.AccountDetails{}, http.StatusBadRequest
 		}
 		// Filter Properties
 		properties, status := store.GetUserPropertiesByUserID(projectID, id)
 		if status != http.StatusFound {
 			log.Error("Failed to get account properties.")
-			return propertiesDecoded, isUserDetails, http.StatusInternalServerError
+			return model.AccountDetails{}, http.StatusInternalServerError
 		}
-		props, err := U.DecodePostgresJsonb(properties)
-		if err != nil {
-			log.WithError(err).Error("Failed to decode account properties.")
-			return propertiesDecoded, isUserDetails, http.StatusInternalServerError
+		if properties != nil {
+			var user model.User
+			user.Properties = *properties
+			src := model.GroupUserSource[groupName]
+			user.Source = &src
+			accountGroupDetails = append(accountGroupDetails, user)
 		}
-		propertiesDecoded = *props
 	}
-	return propertiesDecoded, isUserDetails, http.StatusOK
+	accountDetails, status := FetchAccountDetailsFromProps(projectID, groupName, timelinesConfig, accountGroupDetails)
+	if status != http.StatusOK {
+		return accountDetails, status
+	}
+	return accountDetails, http.StatusOK
+}
+
+func FetchAccountDetailsFromProps(projectID int64, groupName string, timelinesConfig model.TimelinesConfig,
+	accountGroupDetails []model.User) (model.AccountDetails, int) {
+
+	var accountDetails model.AccountDetails
+	milestonesMap := propsMapGroupingByName(timelinesConfig.AccountConfig.Milestones)
+	leftPaneMap := propsMapGroupingByName(timelinesConfig.AccountConfig.TableProps)
+
+	filteredProperties := make(map[string]interface{})
+	milestoneProperties := make(map[string]interface{})
+	for _, accountGroupDetail := range accountGroupDetails {
+		props, err := U.DecodePostgresJsonb(&accountGroupDetail.Properties)
+		if err != nil {
+			log.Error("Unable to decode account properties.")
+			return accountDetails, http.StatusInternalServerError
+		}
+
+		// add name and hostname
+		if accountDetails.HostName == "" && accountDetails.Name == "" {
+			accountDetails = FormatAccountDetails(projectID, *props, groupName, accountDetails.HostName)
+		}
+
+		// allow only source from groups: skip in case of eg source = 1
+		source := *accountGroupDetail.Source
+		if _, exist := model.SourceGroupUser[source]; !exist {
+			continue
+		}
+		accountSource := model.SourceGroupUser[source]
+
+		if milestoneProps, exist := milestonesMap[accountSource]; exist {
+			for _, prop := range milestoneProps {
+				if _, exists := (*props)[prop]; !exists {
+					continue
+				}
+				value := (*props)[prop]
+				maxValMilestone := computeMaxMilestone(milestoneProperties, value, prop)
+				milestoneProperties[prop] = maxValMilestone
+			}
+		}
+
+		// continue if all the leftpane props are found
+		if len(filteredProperties) == len(timelinesConfig.AccountConfig.TableProps) {
+			continue
+		}
+
+		if _, exist := leftPaneMap[accountSource]; !exist {
+			continue
+		}
+		leftPaneProps := leftPaneMap[accountSource]
+		for _, prop := range leftPaneProps {
+			if val, valueExists := filteredProperties[prop]; valueExists && val != "" {
+				continue
+			}
+			if value, exists := (*props)[prop]; exists && value != "" {
+				filteredProperties[prop] = value
+			}
+		}
+	}
+	accountDetails.Milestones = milestoneProperties
+	accountDetails.LeftPaneProps = filteredProperties
+	return accountDetails, http.StatusOK
+}
+
+func computeMaxMilestone(milestoneProperties map[string]interface{},
+	value interface{}, propName string) int64 {
+	var err error
+
+	var propertyValue int64
+	if intVal, ok := value.(int64); ok {
+		propertyValue = intVal
+	} else if stringVal, ok := value.(string); ok {
+		if stringVal != "" {
+			propertyValue, err = strconv.ParseInt(stringVal, 10, 64)
+			if err != nil {
+				log.WithError(err).Error("Failed to convert property value to int type")
+			}
+		}
+	} else if floatVal, ok := value.(float64); ok {
+		propertyValue = int64(floatVal)
+	}
+	maxValue := propertyValue
+	if existingVal, valueExists := milestoneProperties[propName]; valueExists && existingVal != "" {
+		if (propertyValue) < existingVal.(int64) {
+			maxValue = existingVal.(int64)
+		}
+	}
+	return maxValue
 }
 
 func (store *MemSQL) AccountPropertiesForDomainsDisabledV1(projectID int64, id string) (string, map[string]interface{}, []interface{}, int) {
@@ -2390,7 +2467,7 @@ func groupedFiltersByPropName(groupedFilters map[string][]model.QueryProperty) m
 	return groupedByName
 }
 
-func tablePropsMapGrouping(tableProps []string) map[string][]string {
+func propsMapGroupingByName(tableProps []string) map[string][]string {
 	tablePropsMap := make(map[string][]string)
 
 	for _, tableProp := range tableProps {

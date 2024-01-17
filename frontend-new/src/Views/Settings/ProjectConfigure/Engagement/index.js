@@ -27,16 +27,14 @@ import { getGroups } from 'Reducers/coreQuery/middleware';
 import { InfoCircleFilled } from '@ant-design/icons';
 import styles from './index.module.scss';
 const filterConfigRuleCheck = (existingConfig, newConfig) => {
-  let result = false;
+  let result = true;
   existingConfig?.forEach((eachrule, eachIndex) => {
     result &&=
-      _.isEqual(eachExistingConfig?.value) ==
-        _.isEqual(newConfig[eachIndex]?.value) &&
-      eachExistingConfig?.operator == newConfig[eachIndex]?.operator &&
-      eachExistingConfig?.property_type ==
-        newConfig[eachIndex]?.property_type &&
-      eachExistingConfig?.value_type == newConfig[eachIndex]?.value_type &&
-      eachExistingConfig?.lower_bound == newConfig[eachIndex]?.lower_bound;
+      _.isEqual(eachrule?.value, newConfig[eachIndex]?.value) &&
+      eachrule?.operator == newConfig[eachIndex]?.operator &&
+      eachrule?.property_type == newConfig[eachIndex]?.property_type &&
+      eachrule?.value_type == newConfig[eachIndex]?.value_type &&
+      eachrule?.lower_bound == newConfig[eachIndex]?.lower_bound;
   });
   return result;
 };
@@ -52,6 +50,7 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
   const [editIndex, setEditIndex] = useState(undefined);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [renderModal, setRenderModal] = useState(false);
   const [saleWindowValue, setSaleWindowValue] = useState();
   const [showSaleWindowModal, setShowSaleWindowModal] = useState(false);
   const [activeEvent, setActiveEvent] = useState({});
@@ -172,6 +171,10 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
         showErrorMessage(`Error ${editMode ? 'updating' : 'adding'} score.`);
       });
     setShowModal(false);
+    let timeoutHandle = setTimeout(() => {
+      setRenderModal(false);
+      clearTimeout(timeoutHandle);
+    }, 500);
   };
   const handleCategoryModal = {
     onCancel: () => {
@@ -241,6 +244,10 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
   const handleCancel = () => {
     setShowModal(false);
     setEditIndex(undefined);
+    let timeoutHandle = setTimeout(() => {
+      setRenderModal(false);
+      clearTimeout(timeoutHandle);
+    }, 500);
   };
 
   const handleCancelSaleWindow = () => {
@@ -250,14 +257,15 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
   const setEdit = (event, index) => {
     setActiveEvent(event);
     setShowModal(true);
+    setRenderModal(true);
     setEditIndex(index);
   };
 
   const setAddNewScore = () => {
     setActiveEvent({});
     setShowModal(true);
+    setRenderModal(true);
   };
-
   const tableData = useMemo(() => {
     return weightsConfig
       ?.map((q, index) => {
@@ -383,13 +391,15 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
         </Col>
       </Row>
 
-      <EngagementModal
-        event={activeEvent}
-        visible={showModal}
-        onOk={handleOk}
-        onCancel={handleCancel}
-        editMode={Object.entries(activeEvent).length}
-      />
+      {renderModal && (
+        <EngagementModal
+          event={activeEvent}
+          visible={showModal}
+          onOk={handleOk}
+          onCancel={handleCancel}
+          editMode={Object.entries(activeEvent).length}
+        />
+      )}
       <SaleWindowModal
         saleWindowValue={saleWindowValue}
         visible={showSaleWindowModal}
