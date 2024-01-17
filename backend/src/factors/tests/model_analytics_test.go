@@ -303,7 +303,7 @@ func TestAnalyticsFunnelGroupUserQuery(t *testing.T) {
 
 		// create group with groupName = "$hubspot_company"
 		groupName := model.GROUP_NAME_HUBSPOT_COMPANY
-		timestamp := time.Now().AddDate(0, 0, 0).Unix() * 1000
+		timestamp := time.Now().AddDate(0, 0, 0).Unix()
 		_, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, model.AllowedGroupNames)
 		assert.Equal(t, http.StatusCreated, status)
 
@@ -408,7 +408,7 @@ func TestAnalyticsUniqueUsersQueryWithGroupEvent(t *testing.T) {
 
 		// Create group with groupName = "$hubspot_company"
 		groupName := model.GROUP_NAME_HUBSPOT_COMPANY
-		timestamp := time.Now().AddDate(0, 0, 0).Unix() * 1000
+		timestamp := time.Now().AddDate(0, 0, 0).Unix()
 		_, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, model.AllowedGroupNames)
 		assert.Equal(t, http.StatusCreated, status)
 
@@ -10677,4 +10677,506 @@ func TestAnalyticsFunnelValueLabel(t *testing.T) {
 	assert.Equal(t, float64(1), result.Rows[2][3])
 	assert.Equal(t, "100.0", result.Rows[2][4])
 	assert.Equal(t, "100.0", result.Rows[2][5])
+}
+
+func TestAllAccountDomainProperties(t *testing.T) {
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	H.InitAppRoutes(r)
+	uri := "/sdk/event/track"
+
+	_, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.AllowedGroupNames)
+	assert.Equal(t, http.StatusCreated, status)
+	_, status = store.GetStore().CreateOrGetGroupByName(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, model.AllowedGroupNames)
+	assert.Equal(t, http.StatusCreated, status)
+
+	properties := postgres.Jsonb{[]byte(fmt.Sprintf(`{"user_no":"w1","%s":1}`, U.SP_PAGE_COUNT))}
+	userWeb1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: properties,
+		Source: model.GetRequestSourcePointer(model.UserSourceWeb), CustomerUserId: "cuid1"})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	properties = postgres.Jsonb{[]byte(`{"user_no":"w2"}`)}
+	userWeb2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: properties,
+		Source: model.GetRequestSourcePointer(model.UserSourceWeb), CustomerUserId: "cuid2"})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	dateTimeUTC := util.TimeNowZ()
+	propertiesMap := map[string]interface{}{"$hubspot_company_name": "abc1", "$hubspot_company_domain": "abc1.com", "$hubspot_company_region": "A",
+		"hs_company_no": "h1", "$hubspot_company_createddate": dateTimeUTC.Unix()}
+	hsCompany1UserID, err := store.GetStore().CreateOrUpdateGroupPropertiesBySource(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, "h1", "", &propertiesMap,
+		dateTimeUTC.Unix(), dateTimeUTC.Unix(), model.UserSourceHubspotString)
+	assert.Nil(t, err)
+	status = SDK.TrackDomainsGroup(project.ID, hsCompany1UserID, model.GROUP_NAME_HUBSPOT_COMPANY, "abc1.com", dateTimeUTC.Unix())
+
+	propertiesMap = map[string]interface{}{"$hubspot_company_name": "abc2", "$hubspot_company_domain": "abc2.com", "$hubspot_company_region": "D",
+		"hs_company_no": "h3", "$hubspot_company_createddate": dateTimeUTC.Unix()}
+	hsCompany3UserID, err := store.GetStore().CreateOrUpdateGroupPropertiesBySource(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, "h1", "", &propertiesMap,
+		dateTimeUTC.Unix(), dateTimeUTC.Unix(), model.UserSourceHubspotString)
+	assert.Nil(t, err)
+	status = SDK.TrackDomainsGroup(project.ID, hsCompany3UserID, model.GROUP_NAME_HUBSPOT_COMPANY, "abc2.com", dateTimeUTC.Unix())
+
+	groupProperties := &U.PropertiesMap{U.SIX_SIGNAL_DOMAIN: "abc1.com", U.SIX_SIGNAL_REGION: "A"}
+	status = SDK.TrackUserAccountGroup(project.ID, userWeb1, model.GROUP_NAME_SIX_SIGNAL, groupProperties, util.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+
+	groupProperties = &U.PropertiesMap{U.SIX_SIGNAL_DOMAIN: "abc2.com", U.SIX_SIGNAL_REGION: "B"}
+	status = SDK.TrackUserAccountGroup(project.ID, userWeb2, model.GROUP_NAME_SIX_SIGNAL, groupProperties, util.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+
+	payload := fmt.Sprintf(`{"event_name": "www.xyz.com", "user_id": "%s", "timestamp": %d,"event_properties":{"event_id":%d}}`,
+		userWeb1, U.TimeNowZ().Add(-10*time.Minute).Unix(), 1)
+	w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	payload = fmt.Sprintf(`{"event_name": "www.xyz2.com", "user_id": "%s", "timestamp": %d,"event_properties":{"event_id":%d}}`,
+		userWeb1, U.TimeNowZ().Add(-9*time.Minute).Unix(), 2)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	payload = fmt.Sprintf(`{"event_name": "www.xyz.com", "user_id": "%s", "timestamp": %d,"event_properties":{"event_id":%d}}`,
+		userWeb2, U.TimeNowZ().Add(-10*time.Minute).Unix(), 3)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	payload = fmt.Sprintf(`{"event_name": "www.xyz2.com", "user_id": "%s", "timestamp": %d,"event_properties":{"event_id":%d}}`,
+		userWeb2, U.TimeNowZ().Add(-9*time.Minute).Unix(), 4)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	domainUser, status := store.GetStore().CreateOrGetDomainGroupUser(project.ID, U.GROUP_NAME_DOMAINS, "abc1.com", 0, model.UserSourceDomains)
+	assert.Equal(t, http.StatusFound, status)
+	domainProperties := map[string]interface{}{
+		U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE: 1,
+	}
+	_, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(project.ID, U.GROUP_NAME_DOMAINS, "abc1.com", domainUser, &domainProperties,
+		U.TimeNowUnix(), U.TimeNowUnix(), model.UserSourceDomainsString)
+	assert.Nil(t, err)
+
+	domainUser, status = store.GetStore().CreateOrGetDomainGroupUser(project.ID, U.GROUP_NAME_DOMAINS, "abc2.com", 0, model.UserSourceDomains)
+	assert.Equal(t, http.StatusFound, status)
+	domainProperties = map[string]interface{}{
+		U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE: 3,
+	}
+	_, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(project.ID, U.GROUP_NAME_DOMAINS, "abc2.com", domainUser, &domainProperties,
+		U.TimeNowUnix(), U.TimeNowUnix(), model.UserSourceDomainsString)
+	assert.Nil(t, err)
+
+	query := model.Query{
+		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       "www.xyz.com",
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       "www.xyz2.com",
+				Properties: []model.QueryProperty{},
+			},
+		},
+
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_domain",
+				EventName: model.UserPropertyGroupByPresent,
+			},
+			{
+				Entity:         model.PropertyEntityUser,
+				EventNameIndex: 1,
+				Property:       "user_no",
+				EventName:      "www.xyz.com",
+			},
+		},
+		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+		Class:           model.QueryClassFunnel,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondAllGivenEvent,
+	}
+
+	w = sendAnalyticsQueryReq(r, model.QueryClassFunnel, project.ID, agent, 0, 0, "", &query, true, false)
+	assert.NotEmpty(t, w)
+	result := DecodeJSONResponseToAnalyticsResult(w.Body)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][1])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][1])
+		return p1 < p2
+	})
+	assert.Len(t, result.Rows, 3)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(2), result.Rows[0][2])
+	assert.Equal(t, float64(2), result.Rows[0][3])
+	assert.Equal(t, "abc1.com", result.Rows[1][0])
+	assert.Equal(t, "w1", result.Rows[1][1])
+	assert.Equal(t, "abc2.com", result.Rows[2][0])
+	assert.Equal(t, "w2", result.Rows[2][1])
+
+	query.GlobalUserProperties = []model.QueryProperty{
+		{
+			Entity:    model.PropertyEntityUserGlobal,
+			GroupName: model.GROUP_NAME_DOMAINS,
+			Property:  U.DP_DOMAIN_NAME,
+			Operator:  model.EqualsOpStr,
+			Value:     "abc1.com",
+			Type:      U.PropertyTypeCategorical,
+			LogicalOp: "AND",
+		},
+	}
+
+	w = sendAnalyticsQueryReq(r, model.QueryClassFunnel, project.ID, agent, 0, 0, "", &query, true, false)
+	assert.NotEmpty(t, w)
+	result = DecodeJSONResponseToAnalyticsResult(w.Body)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][1])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][1])
+		return p1 < p2
+	})
+	assert.Len(t, result.Rows, 2)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(1), result.Rows[0][2])
+	assert.Equal(t, float64(1), result.Rows[0][3])
+	assert.Equal(t, "abc1.com", result.Rows[1][0])
+	assert.Equal(t, "w1", result.Rows[1][1])
+
+	query.GlobalUserProperties = []model.QueryProperty{
+		{
+			Entity:    model.PropertyEntityDomainGroup,
+			GroupName: model.GROUP_NAME_DOMAINS,
+			Property:  U.DP_DOMAIN_NAME,
+			Operator:  model.EqualsOpStr,
+			Value:     "abc1.com",
+			Type:      U.PropertyTypeCategorical,
+			LogicalOp: "AND",
+		},
+	}
+
+	w = sendAnalyticsQueryReq(r, model.QueryClassFunnel, project.ID, agent, 0, 0, "", &query, true, false)
+	assert.NotEmpty(t, w)
+	result = DecodeJSONResponseToAnalyticsResult(w.Body)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][1])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][1])
+		return p1 < p2
+	})
+	assert.Len(t, result.Rows, 2)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(1), result.Rows[0][2])
+	assert.Equal(t, float64(1), result.Rows[0][3])
+	assert.Equal(t, "abc1.com", result.Rows[1][0])
+	assert.Equal(t, "w1", result.Rows[1][1])
+
+	query.GlobalUserProperties = []model.QueryProperty{
+		{
+			Entity:    model.PropertyEntityDomainGroup,
+			GroupName: model.GROUP_NAME_DOMAINS,
+			Property:  U.DP_DOMAIN_NAME,
+			Operator:  model.NotEqualOpStr,
+			Value:     "abc1.com",
+			Type:      U.PropertyTypeCategorical,
+			LogicalOp: "AND",
+		},
+	}
+
+	w = sendAnalyticsQueryReq(r, model.QueryClassFunnel, project.ID, agent, 0, 0, "", &query, true, false)
+	assert.NotEmpty(t, w)
+	result = DecodeJSONResponseToAnalyticsResult(w.Body)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][1])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][1])
+		return p1 < p2
+	})
+	assert.Len(t, result.Rows, 2)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(1), result.Rows[0][2])
+	assert.Equal(t, float64(1), result.Rows[0][3])
+	assert.Equal(t, "abc2.com", result.Rows[1][0])
+	assert.Equal(t, "w2", result.Rows[1][1])
+
+	query.GlobalUserProperties = []model.QueryProperty{
+		{
+			Entity:    model.PropertyEntityDomainGroup,
+			GroupName: model.GROUP_NAME_DOMAINS,
+			Property:  U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE,
+			Operator:  model.LesserThanOpStr,
+			Value:     "2",
+			Type:      U.PropertyTypeNumerical,
+			LogicalOp: "AND",
+		},
+	}
+
+	w = sendAnalyticsQueryReq(r, model.QueryClassFunnel, project.ID, agent, 0, 0, "", &query, true, false)
+	assert.NotEmpty(t, w)
+	result = DecodeJSONResponseToAnalyticsResult(w.Body)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][1])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][1])
+		return p1 < p2
+	})
+	assert.Len(t, result.Rows, 2)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(1), result.Rows[0][2])
+	assert.Equal(t, float64(1), result.Rows[0][3])
+	assert.Equal(t, "abc1.com", result.Rows[1][0])
+	assert.Equal(t, "w1", result.Rows[1][1])
+
+	query.GlobalUserProperties = []model.QueryProperty{
+		{
+			Entity:    model.PropertyEntityDomainGroup,
+			GroupName: model.GROUP_NAME_DOMAINS,
+			Property:  U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE,
+			Operator:  model.LesserThanOpStr,
+			Value:     "4",
+			Type:      U.PropertyTypeNumerical,
+			LogicalOp: "AND",
+		},
+	}
+
+	w = sendAnalyticsQueryReq(r, model.QueryClassFunnel, project.ID, agent, 0, 0, "", &query, true, false)
+	assert.NotEmpty(t, w)
+	result = DecodeJSONResponseToAnalyticsResult(w.Body)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][1])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][1])
+		return p1 < p2
+	})
+	assert.Len(t, result.Rows, 3)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(2), result.Rows[0][2])
+	assert.Equal(t, float64(2), result.Rows[0][3])
+	assert.Equal(t, "abc1.com", result.Rows[1][0])
+	assert.Equal(t, "w1", result.Rows[1][1])
+	assert.Equal(t, "abc2.com", result.Rows[2][0])
+	assert.Equal(t, "w2", result.Rows[2][1])
+
+	query.GlobalUserProperties = []model.QueryProperty{}
+	query.GroupByProperties = append(query.GroupByProperties, model.QueryGroupByProperty{
+		Entity:    model.PropertyEntityUser,
+		GroupName: U.GROUP_NAME_DOMAINS,
+		Property:  "$domain_name",
+		EventName: model.UserPropertyGroupByPresent,
+	})
+
+	w = sendAnalyticsQueryReq(r, model.QueryClassFunnel, project.ID, agent, 0, 0, "", &query, true, false)
+	assert.NotEmpty(t, w)
+	result = DecodeJSONResponseToAnalyticsResult(w.Body)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][1])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][1])
+		return p1 < p2
+	})
+	assert.Len(t, result.Rows, 3)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(2), result.Rows[0][3])
+	assert.Equal(t, float64(2), result.Rows[0][4])
+	assert.Equal(t, "abc1.com", result.Rows[1][0])
+	assert.Equal(t, "w1", result.Rows[1][1])
+	assert.Equal(t, "abc1.com", result.Rows[1][2])
+	assert.Equal(t, "abc2.com", result.Rows[2][0])
+	assert.Equal(t, "w2", result.Rows[2][1])
+	assert.Equal(t, "abc2.com", result.Rows[2][2])
+
+	query.GroupByProperties[2] = model.QueryGroupByProperty{
+		Entity:    model.PropertyEntityDomainGroup,
+		GroupName: U.GROUP_NAME_DOMAINS,
+		Property:  "$domain_name",
+		EventName: model.UserPropertyGroupByPresent,
+	}
+
+	w = sendAnalyticsQueryReq(r, model.QueryClassFunnel, project.ID, agent, 0, 0, "", &query, true, false)
+	assert.NotEmpty(t, w)
+	result = DecodeJSONResponseToAnalyticsResult(w.Body)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][1])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][1])
+		return p1 < p2
+	})
+	assert.Len(t, result.Rows, 3)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(2), result.Rows[0][3])
+	assert.Equal(t, float64(2), result.Rows[0][4])
+	assert.Equal(t, "abc1.com", result.Rows[1][0])
+	assert.Equal(t, "w1", result.Rows[1][1])
+	assert.Equal(t, "abc1.com", result.Rows[1][2])
+	assert.Equal(t, "abc2.com", result.Rows[2][0])
+	assert.Equal(t, "w2", result.Rows[2][1])
+	assert.Equal(t, "abc2.com", result.Rows[2][2])
+
+	query.GroupByProperties = append(query.GroupByProperties, model.QueryGroupByProperty{
+		Entity:    model.PropertyEntityUser,
+		GroupName: U.GROUP_NAME_DOMAINS,
+		Property:  U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE,
+		EventName: model.UserPropertyGroupByPresent,
+	})
+
+	w = sendAnalyticsQueryReq(r, model.QueryClassFunnel, project.ID, agent, 0, 0, "", &query, true, false)
+	assert.NotEmpty(t, w)
+	result = DecodeJSONResponseToAnalyticsResult(w.Body)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][1])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][1])
+		return p1 < p2
+	})
+	assert.Len(t, result.Rows, 3)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(2), result.Rows[0][4])
+	assert.Equal(t, float64(2), result.Rows[0][5])
+	assert.Equal(t, "abc1.com", result.Rows[1][0])
+	assert.Equal(t, "w1", result.Rows[1][1])
+	assert.Equal(t, "abc1.com", result.Rows[1][2])
+	assert.Equal(t, "1", result.Rows[1][3])
+	assert.Equal(t, "abc2.com", result.Rows[2][0])
+	assert.Equal(t, "w2", result.Rows[2][1])
+	assert.Equal(t, "abc2.com", result.Rows[2][2])
+	assert.Equal(t, "3", result.Rows[2][3])
+
+	query.GlobalUserProperties = []model.QueryProperty{
+		{
+			Entity:    model.PropertyEntityUserGlobal,
+			GroupName: model.GROUP_NAME_DOMAINS,
+			Property:  U.DP_DOMAIN_NAME,
+			Operator:  model.EqualsOpStr,
+			Value:     "abc1.com",
+			Type:      U.PropertyTypeCategorical,
+			LogicalOp: "AND",
+		},
+	}
+
+	w = sendAnalyticsQueryReq(r, model.QueryClassFunnel, project.ID, agent, 0, 0, "", &query, true, false)
+	assert.NotEmpty(t, w)
+	result = DecodeJSONResponseToAnalyticsResult(w.Body)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][1])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][1])
+		return p1 < p2
+	})
+	assert.Len(t, result.Rows, 2)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(1), result.Rows[0][4])
+	assert.Equal(t, float64(1), result.Rows[0][5])
+	assert.Equal(t, "abc1.com", result.Rows[1][0])
+	assert.Equal(t, "w1", result.Rows[1][1])
+	assert.Equal(t, "abc1.com", result.Rows[1][2])
+	assert.Equal(t, "1", result.Rows[1][3])
+
+	// event analytics
+
+	query = model.Query{
+		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       "www.xyz.com",
+				Properties: []model.QueryProperty{},
+			},
+		},
+
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_domain",
+				EventName: model.UserPropertyGroupByPresent,
+			},
+			{
+				Entity:         model.PropertyEntityUser,
+				EventNameIndex: 1,
+				Property:       "user_no",
+				EventName:      "www.xyz.com",
+			},
+		},
+		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+		Class:           model.QueryClassInsights,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondAllGivenEvent,
+	}
+	w = sendAnalyticsQueryReq(r, model.QueryClassInsights, project.ID, agent, 0, 0, "", &query, true, false)
+	assert.NotEmpty(t, w)
+	result = DecodeJSONResponseToAnalyticsResult(w.Body)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][1])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][1])
+		return p1 < p2
+	})
+	assert.Len(t, result.Rows, 2)
+	assert.Nil(t, err)
+	assert.Equal(t, "abc1.com", result.Rows[0][0])
+	assert.Equal(t, "w1", result.Rows[0][1])
+	assert.Equal(t, "abc2.com", result.Rows[1][0])
+	assert.Equal(t, "w2", result.Rows[1][1])
+
+	query.GlobalUserProperties = []model.QueryProperty{
+		{
+			Entity:    model.PropertyEntityDomainGroup,
+			GroupName: model.GROUP_NAME_DOMAINS,
+			Property:  U.DP_DOMAIN_NAME,
+			Operator:  model.EqualsOpStr,
+			Value:     "abc1.com",
+			Type:      U.PropertyTypeCategorical,
+			LogicalOp: "AND",
+		},
+	}
+
+	w = sendAnalyticsQueryReq(r, model.QueryClassInsights, project.ID, agent, 0, 0, "", &query, true, false)
+	assert.NotEmpty(t, w)
+	result = DecodeJSONResponseToAnalyticsResult(w.Body)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][1])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][1])
+		return p1 < p2
+	})
+	assert.Len(t, result.Rows, 1)
+	assert.Equal(t, "abc1.com", result.Rows[0][0])
+	assert.Equal(t, "w1", result.Rows[0][1])
+
+	query.GlobalUserProperties = []model.QueryProperty{
+		{
+			Entity:    model.PropertyEntityDomainGroup,
+			GroupName: model.GROUP_NAME_DOMAINS,
+			Property:  U.DP_DOMAIN_NAME,
+			Operator:  model.EqualsOpStr,
+			Value:     "abc1.com",
+			Type:      U.PropertyTypeCategorical,
+			LogicalOp: "AND",
+		},
+	}
+
+	query.EventsWithProperties = append(query.EventsWithProperties, model.QueryEventWithProperties{
+		Name:       "www.xyz2.com",
+		Properties: []model.QueryProperty{},
+	})
+	w = sendAnalyticsQueryReq(r, model.QueryClassInsights, project.ID, agent, 0, 0, "", &query, true, false)
+	assert.NotEmpty(t, w)
+	result = DecodeJSONResponseToAnalyticsResult(w.Body)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][1])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][1])
+		return p1 < p2
+	})
+	assert.Len(t, result.Rows, 1)
+	assert.Equal(t, "abc1.com", result.Rows[0][0])
+	assert.Equal(t, "w1", result.Rows[0][1])
+
+	query.GroupByProperties = append(query.GroupByProperties, model.QueryGroupByProperty{
+		Entity:    model.PropertyEntityDomainGroup,
+		GroupName: U.GROUP_NAME_DOMAINS,
+		Property:  U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE,
+		EventName: model.UserPropertyGroupByPresent,
+	})
+
+	w = sendAnalyticsQueryReq(r, model.QueryClassInsights, project.ID, agent, 0, 0, "", &query, true, false)
+	assert.NotEmpty(t, w)
+	result = DecodeJSONResponseToAnalyticsResult(w.Body)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][1])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][1])
+		return p1 < p2
+	})
+	assert.Len(t, result.Rows, 1)
+	assert.Equal(t, "abc1.com", result.Rows[0][0])
+	assert.Equal(t, "w1", result.Rows[0][1])
+	assert.Equal(t, "1", result.Rows[0][2])
+
 }
