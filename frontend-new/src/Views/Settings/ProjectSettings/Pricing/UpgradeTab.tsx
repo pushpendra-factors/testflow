@@ -12,7 +12,7 @@ import {
 } from 'Reducers/plansConfig/types';
 import logger from 'Utils/logger';
 import { Button, Divider, Spin } from 'antd';
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 // import PriceUpgradeModal from './PriceUpgradeModal';
 import { useSelector } from 'react-redux';
 import PriceUpgradeModal from './PriceUpgradeModal';
@@ -26,6 +26,7 @@ function UpgradeTab({ buyAddonLoading, handleBuyAddonClick }: UpgradeTabProps) {
   );
   const [activePlan, setActivePlan] =
     useState<PlansDetailStateInterface | null>(null);
+  const collapseButtonRef = useRef<HTMLButtonElement>(null);
   const { active_project } = useSelector((state: any) => state.global);
   const { uuid: userId } = useSelector(
     (state: any) => state.agent.agent_details
@@ -159,7 +160,11 @@ function UpgradeTab({ buyAddonLoading, handleBuyAddonClick }: UpgradeTabProps) {
       <Button
         className='mt-4'
         type='text'
-        onClick={() => setIsPlansViewCollapsed((value) => !value)}
+        ref={collapseButtonRef}
+        onClick={() => {
+          collapseButtonRef.current?.blur();
+          setIsPlansViewCollapsed((value) => !value);
+        }}
       >
         {isPlansViewCollapsed && (
           <div className='flex gap-2 items-center'>
@@ -219,8 +224,8 @@ function UpgradeTab({ buyAddonLoading, handleBuyAddonClick }: UpgradeTabProps) {
           color='character-secondary'
         >
           Check out all our plans and their included features to find the one
-          that fits your needs. We are always available for a call if ever need
-          help finding the right one for your organisation.{' '}
+          that fits your needs. We are always available for a call if you ever
+          need help finding the right one for your organisation.{' '}
           <a href={PRICING_HELP_LINK} target='_blank' rel='noreferrer'>
             Book a call
           </a>{' '}
