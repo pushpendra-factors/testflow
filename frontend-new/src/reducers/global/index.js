@@ -24,6 +24,7 @@ const defaultState = {
   projectsError: null,
   currentProjectSettings: {},
   currentProjectSettingsLoading: false,
+  projectDomainsList: [],
   contentGroup: [],
   bingAds: {},
   marketo: {},
@@ -135,6 +136,18 @@ export default function (state = defaultState, action) {
         projectSettingsError: action.payload.err
       };
     }
+    case 'FETCH_PROJECT_DOMAINS_LIST_FULLFILLED': {
+      return {
+        ...state,
+        projectDomainsList:action.payload.domains
+      };
+    }
+    case 'FETCH_PROJECT_DOMAINS_LIST_REJECTED': {
+      return {
+        ...state,
+        projectDomainsList: []
+      };
+    }
     case 'ENABLE_FACEBOOK_USER_ID': {
       let fbUserID = action.payload.int_facebook_user_id;
 
@@ -231,6 +244,9 @@ export default function (state = defaultState, action) {
     }
     case 'FETCH_TEAMS_FULFILLED': {
       return { ...state, teams: action.payload };
+    }
+    case 'SLACK_USERS_FULFILLED': {
+      return { ...state, slack_users: action.payload };
     }
     case 'FETCH_SLACK_REJECTED': {
       return { ...state, slack: action.payload };
@@ -1239,6 +1255,30 @@ export function fetchTeamsChannels(projectId, teamId) {
   };
 }
 
+export function fetchSlackUsers(projectId) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      get(
+        dispatch,
+        host + 'projects/' + projectId + '/slack/users'
+      )
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'SLACK_USERS_FULFILLED', payload: r.data });
+            resolve(r);
+          } else {
+            dispatch({ type: 'SLACK_USERS_REJECTED', payload: {} });
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          dispatch({ type: 'SLACK_USERS_REJECTED', payload: {} });
+          reject(err);
+        });
+    });
+  };
+}
+
 export function disableTeamsIntegration(projectId) {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
@@ -1443,6 +1483,24 @@ export function testWebhhookUrl(projectId, payload) {
   };
 }
 
+export function testSlackAlert(projectId, payload) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      put(
+        dispatch,
+        host + 'projects/' + projectId + '/v1/eventtriggeralert/test_slack',
+        payload
+      )
+        .then((r) => {
+          resolve(r);
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  };
+}
+
 export function updateEventAlertStatus(projectId, id, status) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
@@ -1499,4 +1557,27 @@ export async function triggerHubspotCustomFormFillEvent(
   } catch (error) {
     logger.error('Error in triggering HS custom form', error);
   }
+}
+
+export function fetchDomainList(projectID) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      get(
+        dispatch,
+        host + 'projects/' + projectID + `/event_names/auto_tracked_domains`
+      )
+        .then((response) => {
+          dispatch({
+            type: 'FETCH_PROJECT_DOMAINS_LIST_FULLFILLED',
+            payload: response.data
+          });
+          resolve(response);
+        })
+        .catch((error) => {
+          dispatch({ type: 'FETCH_PROJECT_DOMAINS_LIST_REJECTED' });
+          reject(error);
+          logger.error('Error in fetching Auto Tracked Domains', error);
+        });
+    });
+  };
 }

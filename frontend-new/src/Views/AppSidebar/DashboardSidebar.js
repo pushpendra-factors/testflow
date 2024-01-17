@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useState } from 'react';
+import React, { memo, useCallback, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import cx from 'classnames';
 import { Button } from 'antd';
@@ -15,6 +15,7 @@ import { NEW_DASHBOARD_TEMPLATES_MODAL_OPEN } from 'Reducers/types';
 import { makeDraftsActiveAction } from 'Reducers/dashboard/actions';
 import { useHistory } from 'react-router-dom';
 import { PathUrls } from 'Routes/pathUrls';
+import { changeActivePreDashboard } from 'Views/PreBuildDashboard/state/services';
 import SidebarMenuItem from './SidebarMenuItem';
 import SidebarSearch from './SidebarSearch';
 import styles from './index.module.scss';
@@ -30,12 +31,24 @@ function DashboardItem({ dashboard }) {
 
   const handleActiveDashboardChange = useCallback(() => {
     const selectedDashboard = dashboards.find((d) => d.id === dashboard.id);
-    history.replace(`${PathUrls.Dashboard}/${selectedDashboard.id}`);
+    if (selectedDashboard.class === 'predefined') {
+      history.replace(`${PathUrls.PreBuildDashboard}`);
+      dispatch(changeActivePreDashboard(selectedDashboard));
+    } else {
+      history.replace(`${PathUrls.Dashboard}/${selectedDashboard.id}`);
+    }
     dispatch(changeActiveDashboard(selectedDashboard));
   }, [dashboard, dashboards, dispatch]);
 
   const isActive =
     activeDashboard?.id === dashboard?.id && areDraftsSelected === false;
+
+  useEffect(() => {
+    if (!isActive && activeDashboard.class === 'predefined') {
+      dispatch(changeActivePreDashboard(dashboards?.[0]));
+      dispatch(changeActiveDashboard(dashboards?.[0]));
+    }
+  }, [dashboards, dispatch, isActive]);
 
   return (
     <SidebarMenuItem
@@ -57,8 +70,13 @@ function DashboardSidebar() {
   const filteredDashboardList = useSelector((state) =>
     selectDashboardListFilteredBySearchText(state, searchText)
   );
+  const activeDashboard = useSelector((state) => selectActiveDashboard(state));
+  const history = useHistory();
 
   const handleDraftsClick = () => {
+    if (activeDashboard?.class === 'predefined') {
+      history.replace(`${PathUrls.Dashboard}`);
+    }
     dispatch(makeDraftsActiveAction());
   };
 

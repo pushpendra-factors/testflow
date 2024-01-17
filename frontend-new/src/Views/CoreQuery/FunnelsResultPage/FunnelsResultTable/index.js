@@ -43,6 +43,7 @@ function FunnelsResultTable({
     userPropNames,
     eventPropertiesDisplayNames: eventPropertiesDisplayNamesState
   } = useSelector((state) => state.coreQuery);
+  const { projectDomainsList } = useSelector((state) => state.global);
 
   const { data: eventPropertiesDisplayNames } =
     eventPropertiesDisplayNamesState;
@@ -67,7 +68,8 @@ function FunnelsResultTable({
         resultData,
         userPropNames,
         eventPropertiesDisplayNames,
-        tableConfig
+        tableConfig,
+        projectDomainsList
       )
     );
   }, [
@@ -79,7 +81,8 @@ function FunnelsResultTable({
     resultData,
     userPropNames,
     eventPropertiesDisplayNames,
-    tableConfig
+    tableConfig,
+    projectDomainsList
   ]);
 
   // const columns = ;

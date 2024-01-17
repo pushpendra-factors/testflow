@@ -1,8 +1,8 @@
 export const PathUrls = {
   Dashboard: '/reports',
   DashboardURL: '/reports/:dashboard_id',
-  PreBuildDashboard: '/quick-board',
-  PreBuildDashboardReport: '/quick-board/report',
+  PreBuildDashboard: '/reports/quick-board',
+  PreBuildDashboardReport: '/report/quick-board',
   ComponentsLib: '/components',
   Analyse: '/analyse/:query_type/:query_id',
   Analyse1: '/analyse/:query_type',

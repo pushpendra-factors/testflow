@@ -1,32 +1,30 @@
 import React from 'react';
 import { Avatar } from 'antd';
 import { SVG } from 'Components/factorsComponents';
-import { ALPHANUMSTR, iconColors } from '../../utils';
-import { UsernameWithIconProps } from './types';
 import TextWithOverflowTooltip from 'Components/GenericComponents/TextWithOverflowTooltip';
+import { ALPHANUMSTR, iconColors } from 'Components/Profile/constants';
+import { UsernameWithIconProps } from 'Components/Profile/types';
 
-const UsernameWithIcon: React.FC<UsernameWithIconProps> = ({
+function UsernameWithIcon({
   title,
   userID,
-  isAnonymous
-}) => {
-  const getUsernameInitial = (title: string) => {
-    return title.charAt(0).toUpperCase();
-  };
+  isAnonymous = true
+}: UsernameWithIconProps): JSX.Element {
+  const getUsernameInitial = (user: string) => user.charAt(0).toUpperCase();
 
-  const getBackgroundColor = (title: string) => {
-    const index = ALPHANUMSTR.indexOf(getUsernameInitial(title)) % 8;
+  const getBackgroundColor = (user: string) => {
+    const index = ALPHANUMSTR.indexOf(getUsernameInitial(user)) % 8;
     return iconColors[index];
   };
 
-  const renderUsername = (title: string, isAnonymous: boolean) => {
-    if (title === 'group_user') {
+  const renderUsername = (user: string, isAnon: boolean) => {
+    if (user === 'group_user') {
       return 'Account Activity';
-    } else if (isAnonymous) {
-      return 'Anonymous User';
-    } else {
-      return title;
     }
+    if (isAnon) {
+      return 'Anonymous User';
+    }
+    return user;
   };
 
   return (
@@ -53,6 +51,6 @@ const UsernameWithIcon: React.FC<UsernameWithIconProps> = ({
       />
     </>
   );
-};
+}
 
 export default UsernameWithIcon;

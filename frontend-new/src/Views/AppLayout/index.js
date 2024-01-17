@@ -18,7 +18,8 @@ import {
   fetchProjectSettings,
   fetchProjectSettingsV1,
   triggerHubspotCustomFormFillEvent,
-  getActiveProjectDetails
+  getActiveProjectDetails,
+  fetchDomainList
 } from 'Reducers/global';
 import customizeHighCharts from 'Utils/customizeHighcharts';
 import {
@@ -187,6 +188,7 @@ function AppLayout({
       dispatch(fetchQueries(active_project?.id));
       dispatch(fetchKPIConfig(active_project?.id));
       dispatch(fetchPageUrls(active_project?.id));
+      dispatch(fetchDomainList(active_project?.id));
       // dispatch(deleteQueryTest())
       fetchEventNames(active_project?.id);
       getUserPropertiesV2(active_project?.id);

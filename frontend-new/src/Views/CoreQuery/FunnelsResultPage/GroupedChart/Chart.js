@@ -26,7 +26,8 @@ import {
 import LegendsCircle from '../../../../styles/components/LegendsCircle';
 import TopLegends from '../../../../components/GroupedBarChart/TopLegends';
 import styles from './styles.module.scss';
-// import truncateURL from 'Utils/truncateURL';
+import truncateURL from 'Utils/truncateURL';
+import { useSelector } from 'react-redux';
 
 function Chart({
   eventsData,
@@ -38,6 +39,8 @@ function Chart({
   cardSize = 1,
   durations
 }) {
+  const { projectDomainsList } = useSelector((state) => state.global);
+
   const chartRef = useRef(null);
   const tooltipRef = useRef(null);
   const renderedData = groups.slice(0, FUNNELS_COUNT[cardSize]);
@@ -442,8 +445,7 @@ function Chart({
           } else {
             label = d;
           }
-          // const urlTruncatedlabel = truncateURL(label);
-          const urlTruncatedlabel = label;
+          const urlTruncatedlabel = truncateURL(label, projectDomainsList);
           if (
             urlTruncatedlabel.length > BAR_CHART_XAXIS_TICK_LENGTH[cardSize]
           ) {

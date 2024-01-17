@@ -423,6 +423,7 @@ const (
 	HealthcheckAccScoringJobPingID                    = "3f93c58e-708c-413e-abc4-0e112ae07260"
 	HealthcheckEventCubeAggregationPingID             = "a9ebad9d-4d78-4ea3-9e92-002188102cdd"
 	HealthCheckClearbitAccountProvisioningJobPingID   = "a18e152a-7978-4d9f-aa4a-da5121823203"
+	HealthcheckSlackUsersSyncJobPingID                = ""
 
 	// Other services ping IDs. Only reported when alert conditions are met, not periodically.
 	// Once an alert is triggered, ping manually from Healthchecks UI after fixing.

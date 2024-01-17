@@ -127,7 +127,6 @@ function CoreQuery({
   location,
   getCampaignConfigData,
   KPI_config,
-
   fetchProjectSettingsV1,
   fetchProjectSettings,
   fetchMarketoIntegration,

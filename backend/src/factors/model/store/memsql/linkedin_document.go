@@ -584,7 +584,7 @@ func (store *MemSQL) GetCompanyDataFromLinkedinForTimestamp(projectID string, ti
 		"JSON_EXTRACT_STRING(value, 'impressions') as impressions, JSON_EXTRACT_STRING(value, 'clicks') as clicks " +
 		"FROM linkedin_documents WHERE " +
 		"project_id = ? and type = ? and is_group_user_created != TRUE and timestamp = ? " +
-		"group by project_id, id, timestamp, customer_ad_account_id, headquarters, domain, vanity_name, localized_name, preferred_country, impressions, clicks " +
+		"group by project_id, id, campaign_group_id, timestamp, customer_ad_account_id, headquarters, domain, vanity_name, localized_name, preferred_country, impressions, clicks " +
 		"order by timestamp ASC, project_id, id, customer_ad_account_id, campaign_group_id, headquarters, domain, vanity_name, localized_name, " +
 		"campaign_group_name, preferred_country limit 10000"
 

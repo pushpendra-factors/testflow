@@ -1061,7 +1061,8 @@ func GetPropertyGroupedNegativeAndPostiveFilter(properties []QueryProperty) ([]Q
 		if (filter.Operator == NotContainsOpStr && filter.Value != PropertyValueNone) ||
 			(filter.Operator == ContainsOpStr && filter.Value == PropertyValueNone) ||
 			(filter.Operator == NotEqualOpStr && filter.Value != PropertyValueNone) ||
-			(filter.Operator == EqualsOpStr && filter.Value == PropertyValueNone) {
+			(filter.Operator == EqualsOpStr && filter.Value == PropertyValueNone) ||
+			(filter.Operator == NotInList && filter.Value != PropertyValueNone) {
 			negativeFilters = append(negativeFilters, filter)
 			continue
 		}

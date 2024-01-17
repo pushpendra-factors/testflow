@@ -1,18 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Tooltip } from 'antd';
 import { connect } from 'react-redux';
-import { SVG, Text } from '../../factorsComponents';
-import styles from './index.module.scss';
-import FaSelect from '../../FaSelect';
-import {
-  PropTextFormat,
-  convertAndAddPropertiesToGroupSelectOptions,
-  processProperties
-} from 'Utils/dataFormatter';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
-import getGroupIcon from 'Utils/getGroupIcon';
-import { CustomGroupDisplayNames } from 'Components/GlobalFilter/FilterWrapper/utils';
-import {defaultPropertyList, alertsGroupPropertyList} from './utils';
+import FaSelect from '../../FaSelect';
+import styles from './index.module.scss';
+import { SVG, Text } from '../../factorsComponents';
+import { defaultPropertyList, alertsGroupPropertyList } from './utils';
 
 function EventGroupBlock({
   eventGroup,
@@ -32,30 +25,49 @@ function EventGroupBlock({
   closeDropDown,
   hideText = false, // added to hide the text from UI (Used in event based alerts)
   noMargin = false,
-  groupOpts,
+  groups,
   userPropertiesV2,
   groupAnalysis = false
 }) {
   const [filterOptions, setFilterOptions] = useState([]);
   const [propSelVis, setSelVis] = useState(false);
-  const [isGroupByDDVisible, setGroupByDDVisible] = useState(false); 
+  const [isGroupByDDVisible, setGroupByDDVisible] = useState(false);
 
   useEffect(() => {
-    let filterOptsObj = {}
-    //moved calculating options logic to uitls file 
-    if(groupAnalysis){
-      if(groupAnalysis == "users"){
-        filterOptsObj = defaultPropertyList(eventPropertiesV2, eventUserPropertiesV2, groupProperties, eventGroup, groupOpts, event);
+    let filterOptsObj = {};
+    // moved calculating options logic to uitls file
+    if (groupAnalysis) {
+      if (groupAnalysis == 'users') {
+        filterOptsObj = defaultPropertyList(
+          eventPropertiesV2,
+          eventUserPropertiesV2,
+          groupProperties,
+          eventGroup,
+          groups?.all_groups,
+          event
+        );
+      } else {
+        filterOptsObj = alertsGroupPropertyList(
+          eventPropertiesV2,
+          userPropertiesV2,
+          groupProperties,
+          eventGroup,
+          groups?.all_groups,
+          event
+        );
       }
-      else{
-        filterOptsObj = alertsGroupPropertyList(eventPropertiesV2, userPropertiesV2, groupProperties, eventGroup, groupOpts, event); 
-      }
+    } else {
+      filterOptsObj = defaultPropertyList(
+        eventPropertiesV2,
+        eventUserPropertiesV2,
+        groupProperties,
+        eventGroup,
+        groups?.all_groups,
+        event
+      );
     }
-    else{
-      filterOptsObj = defaultPropertyList(eventPropertiesV2, eventUserPropertiesV2, groupProperties, eventGroup, groupOpts, event);
-    } 
     setFilterOptions(Object.values(filterOptsObj));
-  }, [eventUserPropertiesV2, eventPropertiesV2, groupProperties]);
+  }, [eventUserPropertiesV2, eventPropertiesV2, groups, groupProperties]);
 
   const onChange = (option, group, ind) => {
     const newGroupByState = { ...groupByEvent };
@@ -65,8 +77,8 @@ function EventGroupBlock({
     newGroupByState.prop_type = option?.extraProps?.valueType;
     newGroupByState.eventIndex = eventIndex;
 
-    if(groupAnalysis){
-      newGroupByState.groupName = option?.extraProps?.groupName
+    if (groupAnalysis) {
+      newGroupByState.groupName = option?.extraProps?.groupName;
     }
     if (newGroupByState.prop_type === 'numerical') {
       newGroupByState.gbty = 'raw_values';
@@ -149,7 +161,7 @@ function EventGroupBlock({
     const { property, prop_category } = groupByEvent || {};
     if (!property) return null;
     const iconName = prop_category === 'group' ? 'user' : prop_category;
-    return <SVG name={iconName} size={16} color={'purple'} />;
+    return <SVG name={iconName} size={16} color='purple' />;
   };
 
   const renderGroupContent = () => {
@@ -186,12 +198,12 @@ function EventGroupBlock({
         <div className={`${styles.group_block__event_selector}`}>
           <GroupSelect
             options={filterOptions}
-            searchPlaceHolder={'Select Property'}
+            searchPlaceHolder='Select Property'
             optionClickCallback={(option, group) =>
               onChange(option, group, index)
             }
             onClickOutside={() => setGroupByDDVisible(false)}
-            allowSearch={true}
+            allowSearch
             allowSearchTextSelection={false}
             extraClass={`${styles.group_block__event_selector__select}`}
           />
@@ -223,7 +235,7 @@ function EventGroupBlock({
         searchPlaceHolder='Select Property'
         optionClickCallback={onChange}
         onClickOutside={() => closeDropDown()}
-        allowSearch={true}
+        allowSearch
         allowSearchTextSelection={false}
         extraClass={`${styles.group_block__event_selector__select}`}
       />
@@ -273,7 +285,7 @@ const mapStateToProps = (state) => ({
   userPropNames: state.coreQuery.userPropNames,
   eventPropNames: state.coreQuery.eventPropNames,
   groupPropNames: state.coreQuery.groupPropNames,
-  groupOpts: state.groups.data
+  groups: state.coreQuery.groups
 });
 
 export default connect(mapStateToProps)(EventGroupBlock);

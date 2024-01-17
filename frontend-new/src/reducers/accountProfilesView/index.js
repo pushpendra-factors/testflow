@@ -1,22 +1,21 @@
 import { SET_ACTIVE_PROJECT } from 'Reducers/types';
+import { SEGMENT_DELETED } from 'Reducers/timelines/types';
 import {
   SET_ACCOUNT_PAYLOAD,
   SET_ACCOUNT_SEGMENT_MODAL,
-  SET_ACTIVE_SEGMENT,
   UPDATE_ACCOUNT_PAYLOAD,
   ENABLE_NEW_SEGMENT_MODE,
   DISABLE_NEW_SEGMENT_MODE,
   SET_FILTERS_DIRTY
 } from './types';
-import { SEGMENT_DELETED } from 'Reducers/timelines/types';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 
-export const INITIAL_ACTIVE_SEGMENT = {};
-export const INITIAL_ACCOUNT_PAYLOAD = { source: '', filters: [], segment_id: '' };
+export const INITIAL_ACCOUNT_PAYLOAD = {
+  source: GROUP_NAME_DOMAINS
+};
 
 const initialState = {
   accountPayload: INITIAL_ACCOUNT_PAYLOAD,
-  activeSegment: INITIAL_ACTIVE_SEGMENT,
   showSegmentModal: false,
   newSegmentMode: false,
   filtersDirty: false
@@ -28,12 +27,6 @@ export default function (state = initialState, action) {
       return {
         ...state,
         accountPayload: action.payload,
-        newSegmentMode: false
-      };
-    case SET_ACTIVE_SEGMENT:
-      return {
-        ...state,
-        activeSegment: action.payload,
         newSegmentMode: false
       };
     case UPDATE_ACCOUNT_PAYLOAD:
@@ -70,10 +63,8 @@ export default function (state = initialState, action) {
     case SEGMENT_DELETED: {
       return {
         ...state,
-        activeSegment: INITIAL_ACTIVE_SEGMENT,
         accountPayload: {
-          ...INITIAL_ACCOUNT_PAYLOAD,
-          source: GROUP_NAME_DOMAINS
+          ...INITIAL_ACCOUNT_PAYLOAD
         }
       };
     }

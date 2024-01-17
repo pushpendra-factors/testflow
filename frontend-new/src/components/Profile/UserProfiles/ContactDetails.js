@@ -8,20 +8,23 @@ import {
   Tabs,
   notification
 } from 'antd';
-import styles from './index.module.scss';
-import { connect, useDispatch, useSelector } from 'react-redux';
+import { connect, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
+import {
+  PropTextFormat,
+  convertAndAddPropertiesToGroupSelectOptions,
+  convertGroupedPropertiesToUngrouped
+} from 'Utils/dataFormatter';
+import { useHistory, useLocation } from 'react-router-dom';
+import { getEventPropertiesV2 } from 'Reducers/coreQuery/middleware';
+import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import useKey from 'hooks/useKey';
+import { PathUrls } from 'Routes/pathUrls';
+import styles from './index.module.scss';
 import { SVG, Text } from '../../factorsComponents';
 import UserTimelineBirdview from './UserTimelineBirdview';
 import UserTimelineSingleview from './UserTimelineSingleview';
-import {
-  ALPHANUMSTR,
-  DEFAULT_TIMELINE_CONFIG,
-  getPropType,
-  granularityOptions,
-  hoverEvents,
-  iconColors
-} from '../utils';
+import { getPropType } from '../utils';
 import {
   udpateProjectSettings,
   fetchProjectSettings
@@ -34,17 +37,11 @@ import {
 import SearchCheckList from '../../SearchCheckList';
 import LeftPanePropBlock from '../MyComponents/LeftPanePropBlock';
 import {
-  PropTextFormat,
-  convertAndAddPropertiesToGroupSelectOptions,
-  convertGroupedPropertiesToUngrouped
-} from 'Utils/dataFormatter';
-import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
-import { useHistory, useLocation } from 'react-router-dom';
-import { getEventPropertiesV2 } from 'Reducers/coreQuery/middleware';
-import GroupSelect from 'Components/GenericComponents/GroupSelect';
-import useKey from 'hooks/useKey';
-import { PathUrls } from 'Routes/pathUrls';
-import { ArrowLeftOutlined } from '@ant-design/icons';
+  ALPHANUMSTR,
+  DEFAULT_TIMELINE_CONFIG,
+  GranularityOptions,
+  iconColors
+} from '../constants';
 
 function ContactDetails({
   userDetails,
@@ -54,11 +51,9 @@ function ContactDetails({
   udpateProjectSettings,
   getProfileUserDetails,
   userPropertiesV2,
-  eventNamesMap,
   eventPropertiesV2,
-  getEventPropertiesV2
+  eventNamesMap
 }) {
-  const dispatch = useDispatch();
   const history = useHistory();
   const location = useLocation();
   const [activities, setActivities] = useState([]);
@@ -79,13 +74,14 @@ function ContactDetails({
 
   const { userPropNames } = useSelector((state) => state.coreQuery);
 
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       setGranularity('Daily');
       setCollapse(true);
       setPropSelectOpen(false);
-    };
-  }, []);
+    },
+    []
+  );
 
   const uniqueEventNames = useMemo(() => {
     const userEvents = userDetails.data?.user_activities || [];
@@ -94,12 +90,12 @@ function ContactDetails({
       .filter(
         (event) =>
           Object.keys(event?.properties || {}).length &&
-          !event?.properties?.['$is_page_view']
+          !event?.properties?.$is_page_view
       )
       .map((event) => event.event_name);
 
     const pageViewEvent = userEvents.find(
-      (event) => event?.properties?.['$is_page_view']
+      (event) => event?.properties?.$is_page_view
     );
 
     if (pageViewEvent) {
@@ -109,33 +105,33 @@ function ContactDetails({
     return Array.from(new Set(eventsArray));
   }, [userDetails.data?.user_activities]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const promises = uniqueEventNames.map(async (eventName) => {
-        if (!requestedEvents[eventName]) {
-          setRequestedEvents((prevRequestedEvents) => ({
-            ...prevRequestedEvents,
-            [eventName]: true
-          }));
-          if (!eventPropertiesV2[eventName])
-            await getEventPropertiesV2(activeProject?.id, eventName);
-        }
-      });
+  const fetchEventPropertiesType = async () => {
+    const promises = uniqueEventNames.map(async (eventName) => {
+      if (!requestedEvents[eventName]) {
+        setRequestedEvents((prevRequestedEvents) => ({
+          ...prevRequestedEvents,
+          [eventName]: true
+        }));
+        if (!eventPropertiesV2[eventName])
+          getEventPropertiesV2(activeProject?.id, eventName);
+      }
+    });
 
-      await Promise.all(promises);
+    await Promise.allSettled(promises);
 
-      const typeMap = {};
-      Object.values(eventPropertiesV2).forEach((propertyGroup) => {
-        Object.values(propertyGroup || {}).forEach((arr) => {
-          arr.forEach((property) => {
-            typeMap[property[1]] = property[2];
-          });
+    const typeMap = {};
+    Object.values(eventPropertiesV2).forEach((propertyGroup) => {
+      Object.values(propertyGroup || {}).forEach((arr) => {
+        arr.forEach((property) => {
+          typeMap[property[1]] = property[2];
         });
       });
-      setEventPropertiesType(typeMap);
-    };
+    });
+    setEventPropertiesType(typeMap);
+  };
 
-    fetchData();
+  useEffect(() => {
+    fetchEventPropertiesType();
   }, [uniqueEventNames, requestedEvents, activeProject?.id, eventPropertiesV2]);
 
   const [userID, isAnonymous] = useMemo(() => {
@@ -177,7 +173,7 @@ function ContactDetails({
     if (currentProjectSettings?.timelines_config) {
       const timelinesConfig = {};
       timelinesConfig.disabled_events = [
-        ...currentProjectSettings?.timelines_config?.disabled_events
+        ...(currentProjectSettings?.timelines_config?.disabled_events || [])
       ];
       timelinesConfig.user_config = {
         ...DEFAULT_TIMELINE_CONFIG.user_config,
@@ -208,23 +204,6 @@ function ContactDetails({
   };
 
   useEffect(() => {
-    hoverEvents.forEach((event) => {
-      if (
-        !eventPropertiesV2[event] &&
-        userDetails?.data?.user_activities?.some(
-          (activity) => activity?.event_name === event
-        )
-      ) {
-        getEventPropertiesV2(activeProject?.id, event);
-      }
-    });
-  }, [
-    activeProject?.id,
-    eventPropertiesV2,
-    userDetails?.data?.user_activities
-  ]);
-
-  useEffect(() => {
     const listActivities = addEnabledFlagToActivities(
       userDetails?.data?.user_activities,
       currentProjectSettings.timelines_config?.disabled_events
@@ -234,7 +213,7 @@ function ContactDetails({
 
   const granularityMenu = (
     <Menu>
-      {granularityOptions.map((option) => (
+      {GranularityOptions.map((option) => (
         <Menu.Item key={option} onClick={(key) => setGranularity(key.key)}>
           <div className='flex items-center'>
             <span className='mr-3'>{option}</span>
@@ -331,35 +310,40 @@ function ContactDetails({
     </Tabs>
   );
 
-  const renderModalHeader = () => {
-    return (
-      <div className='fa-timeline--header'>
-        <div className='flex items-center'>
-          <div
-            className='flex items-center cursor-pointer'
-            onClick={handleOptionBackClick}
-          >
-            <Text
-              type='title'
-              level={6}
-              weight='bold'
-              extraClass='m-0 underline'
-            >
-              User Profiles
-            </Text>
-          </div>
-          {userDetails.data?.title && (
-            <Text type='title' level={6} weight='bold' extraClass='m-0'>
-              {'\u00A0/ ' + userDetails.data.title}
-            </Text>
-          )}
+  const handleOptionBackClick = useCallback(() => {
+    history.replace(PathUrls.ProfilePeople, {
+      activeSegment: location.state?.activeSegment,
+      fromDetails: true,
+      timelinePayload: location.state?.timelinePayload,
+      currentPage: location.state?.currentPage,
+      currentPageSize: location.state?.currentPageSize,
+      activeSorter: location.state?.activeSorter,
+      appliedFilters: location.state?.appliedFilters
+    });
+  }, []);
+
+  const renderModalHeader = () => (
+    <div className='fa-timeline--header'>
+      <div className='flex items-center'>
+        <div
+          className='flex items-center cursor-pointer'
+          onClick={handleOptionBackClick}
+        >
+          <Text type='title' level={6} weight='bold' extraClass='m-0 underline'>
+            User Profiles
+          </Text>
         </div>
-        <Button size='large' onClick={handleOptionBackClick}>
-          Close
-        </Button>
+        {userDetails.data?.title && (
+          <Text type='title' level={6} weight='bold' extraClass='m-0'>
+            {`\u00A0/ ${userDetails.data.title}`}
+          </Text>
+        )}
       </div>
-    );
-  };
+      <Button size='large' onClick={handleOptionBackClick}>
+        Close
+      </Button>
+    </div>
+  );
 
   const handleOptionClick = (option, group) => {
     const timelinesConfig = { ...tlConfig };
@@ -384,18 +368,6 @@ function ContactDetails({
     }
     setPropSelectOpen(false);
   };
-
-  const handleOptionBackClick = useCallback(() => {
-    history.replace(PathUrls.ProfilePeople, {
-      activeSegment: location.state?.activeSegment,
-      fromDetails: true,
-      timelinePayload: location.state?.timelinePayload,
-      currentPage: location.state?.currentPage,
-      currentPageSize: location.state?.currentPageSize,
-      activeSorter: location.state?.activeSorter,
-      appliedFilters: location.state?.appliedFilters
-    });
-  }, []);
 
   const onDelete = (option) => {
     const timelinesConfig = { ...tlConfig };
@@ -450,7 +422,7 @@ function ContactDetails({
           onClickOutside={() => setPropSelectOpen(false)}
           allowSearchTextSelection={false}
           extraClass={styles.user_profiles__event_selector__select}
-          allowSearch={true}
+          allowSearch
         />
       </div>
     );
@@ -600,31 +572,29 @@ function ContactDetails({
     </div>
   );
 
-  const renderTimelineView = () => {
-    return (
-      <div className='timeline-view'>
-        <Tabs
-          className='timeline-view--tabs'
-          defaultActiveKey='birdview'
-          size='small'
-          onChange={() => setGranularity(granularity)}
+  const renderTimelineView = () => (
+    <div className='timeline-view'>
+      <Tabs
+        className='timeline-view--tabs'
+        defaultActiveKey='birdview'
+        size='small'
+        onChange={() => setGranularity(granularity)}
+      >
+        <TabPane
+          tab={<span className='fa-activity-filter--tabname'>Timeline</span>}
+          key='timeline'
         >
-          <TabPane
-            tab={<span className='fa-activity-filter--tabname'>Timeline</span>}
-            key='timeline'
-          >
-            {renderSingleTimelineView()}
-          </TabPane>
-          <TabPane
-            tab={<span className='fa-activity-filter--tabname'>Birdview</span>}
-            key='birdview'
-          >
-            {renderBirdviewWithActions()}
-          </TabPane>
-        </Tabs>
-      </div>
-    );
-  };
+          {renderSingleTimelineView()}
+        </TabPane>
+        <TabPane
+          tab={<span className='fa-activity-filter--tabname'>Birdview</span>}
+          key='birdview'
+        >
+          {renderBirdviewWithActions()}
+        </TabPane>
+      </Tabs>
+    </div>
+  );
   useKey(['Escape'], handleOptionBackClick);
   return (
     <div>

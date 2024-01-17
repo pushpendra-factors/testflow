@@ -10,10 +10,35 @@ import {
   Popover,
   Tabs,
   Avatar,
-  Input
+  Input,
+  Form
 } from 'antd';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
+import _, { isEqual } from 'lodash';
+import SearchCheckList from 'Components/SearchCheckList';
+import { formatUserPropertiesToCheckList } from 'Reducers/timelines/utils';
+import {
+  PropTextFormat,
+  convertGroupedPropertiesToUngrouped
+} from 'Utils/dataFormatter';
+import { fetchUserPropertyValues } from 'Reducers/coreQuery/services';
+import { selectTimelinePayload } from 'Reducers/userProfilesView/selectors';
+import {
+  setTimelinePayloadAction,
+  setFiltersDirtyAction,
+  setNewSegmentModeAction
+} from 'Reducers/userProfilesView/actions';
+import { useHistory, useLocation } from 'react-router-dom';
+import RangeNudge from 'Components/GenericComponents/RangeNudge';
+import { showUpgradeNudge } from 'Views/Settings/ProjectSettings/Pricing/utils';
+import CommonBeforeIntegrationPage from 'Components/GenericComponents/CommonBeforeIntegrationPage';
+import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
+import { ProfilesSidebarIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
+import { isOnboarded } from 'Utils/global';
+import { PathUrls } from 'Routes/pathUrls';
+import { getSegmentColorCode } from 'Views/AppSidebar/appSidebar.helpers';
+import { AdminLock } from 'Routes/feature';
 import { Text, SVG } from '../../factorsComponents';
 import FaSelect from '../../FaSelect';
 import { getUserPropertiesV2 } from '../../../reducers/coreQuery/middleware';
@@ -28,11 +53,8 @@ import {
   udpateProjectSettings
 } from '../../../reducers/global';
 import {
-  ALPHANUMSTR,
-  DEFAULT_TIMELINE_CONFIG,
   formatFiltersForPayload,
   getPropType,
-  iconColors,
   propValueFormat,
   sortStringColumn,
   sortNumericalColumn,
@@ -48,47 +70,23 @@ import {
   updateSegmentForId,
   deleteSegment
 } from '../../../reducers/timelines/middleware';
-import _, { isEqual } from 'lodash';
-import SearchCheckList from 'Components/SearchCheckList';
-import { formatUserPropertiesToCheckList } from 'Reducers/timelines/utils';
-import {
-  PropTextFormat,
-  convertGroupedPropertiesToUngrouped
-} from 'Utils/dataFormatter';
-import { fetchUserPropertyValues } from 'Reducers/coreQuery/services';
 import ProfilesWrapper from '../ProfilesWrapper';
 import { getUserOptions } from './userProfiles.helpers';
-import {
-  selectActiveSegment,
-  selectTimelinePayload
-} from 'Reducers/userProfilesView/selectors';
-import {
-  setTimelinePayloadAction,
-  setActiveSegmentAction,
-  setFiltersDirtyAction,
-  setNewSegmentModeAction
-} from 'Reducers/userProfilesView/actions';
-import { useHistory, useLocation } from 'react-router-dom';
 import UpgradeModal from '../UpgradeModal';
-import RangeNudge from 'Components/GenericComponents/RangeNudge';
-import { showUpgradeNudge } from 'Views/Settings/ProjectSettings/Pricing/utils';
-import CommonBeforeIntegrationPage from 'Components/GenericComponents/CommonBeforeIntegrationPage';
-import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
 import {
   INITIAL_USER_PROFILES_FILTERS_STATE,
   moreActionsMode
 } from '../AccountProfiles/accountProfiles.constants';
-import { ProfilesSidebarIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
 import { checkFiltersEquality } from '../AccountProfiles/accountProfiles.helpers';
 import SaveSegmentModal from '../AccountProfiles/SaveSegmentModal';
 import DeleteSegmentModal from '../AccountProfiles/DeleteSegmentModal';
 import RenameSegmentModal from '../AccountProfiles/RenameSegmentModal';
 import UpdateSegmentModal from '../AccountProfiles/UpdateSegmentModal';
-import { isOnboarded } from 'Utils/global';
-import { PathUrls } from 'Routes/pathUrls';
 import styles from './index.module.scss';
-import { getSegmentColorCode } from 'Views/AppSidebar/appSidebar.helpers';
-import { AdminLock } from 'Routes/feature';
+import { ALPHANUMSTR, DEFAULT_TIMELINE_CONFIG, iconColors } from '../constants';
+import truncateURL from 'Utils/truncateURL';
+import { ACCOUNTS_TABLE_COLUMN_TYPES, COLUMN_TYPE_PROPS } from 'Utils/table';
+import ResizableTitle from 'Components/Resizable';
 
 const userOptions = getUserOptions();
 
@@ -122,23 +120,16 @@ function UserProfiles({
   );
   const { userPropNames } = useSelector((state) => state.coreQuery);
   const timelinePayload = useSelector((state) => selectTimelinePayload(state));
-  const activeSegment = useSelector((state) => selectActiveSegment(state));
-  // const showSegmentModal = useSelector((state) =>
-  //   selectSegmentModalState(state)
-  // );
+
   const { sixSignalInfo } = useSelector((state) => state.featureConfig);
 
-  //// segments 2.0 selectors
+  /// / segments 2.0 selectors
   const { newSegmentMode, filtersDirty: areFiltersDirty } = useSelector(
     (state) => state.userProfilesView
   );
-
-  const agentState = useSelector((state) => state.agent);
-  const activeAgent = agentState?.agent_details?.email;
-
+  const { projectDomainsList } = useSelector((state) => state.global);
   const [listSearchItems, setListSearchItems] = useState([]);
   const [searchBarOpen, setSearchBarOpen] = useState(false);
-  const [searchDDOpen, setSearchDDOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [checkListUserProps, setCheckListUserProps] = useState([]);
   const [showPopOver, setShowPopOver] = useState(false);
@@ -178,21 +169,14 @@ function UserProfiles({
     [dispatch]
   );
 
-  const setActiveSegment = useCallback(
-    (segmentPayload) => {
-      dispatch(setActiveSegmentAction(segmentPayload));
-    },
-    [dispatch]
-  );
-
   const displayTableProps = useMemo(() => {
-    const tableProps = timelinePayload.segment_id
-      ? activeSegment?.query?.table_props
+    const tableProps = timelinePayload?.segment?.id
+      ? timelinePayload?.segment?.query?.table_props
       : currentProjectSettings?.timelines_config?.user_config?.table_props;
     return (
       tableProps?.filter((entry) => entry !== '' && entry !== undefined) || []
     );
-  }, [currentProjectSettings, timelinePayload, activeSegment]);
+  }, [currentProjectSettings, timelinePayload]);
 
   const restoreFiltersDefaultState = useCallback(
     (selectedAccount = INITIAL_USER_PROFILES_FILTERS_STATE.account) => {
@@ -212,7 +196,7 @@ function UserProfiles({
     restoreFiltersDefaultState();
     const reqPayload = getFiltersRequestPayload({
       selectedFilters: INITIAL_USER_PROFILES_FILTERS_STATE,
-      table_props: displayTableProps
+      tableProps: displayTableProps
     });
     getProfileUsers(activeProject.id, reqPayload);
   }, [
@@ -260,7 +244,7 @@ function UserProfiles({
     (newSegmentName) => {
       const reqPayload = getFiltersRequestPayload({
         selectedFilters,
-        table_props: displayTableProps,
+        tableProps: displayTableProps,
         caller: 'user_profiles'
       });
       reqPayload.name = newSegmentName;
@@ -279,7 +263,7 @@ function UserProfiles({
   const handleDeleteActiveSegment = useCallback(() => {
     deleteSegment({
       projectId: activeProject.id,
-      segmentId: timelinePayload.segment_id
+      segmentId: timelinePayload?.segment?.id
     })
       .then(() => {
         setMoreActionsModalMode(null);
@@ -291,22 +275,19 @@ function UserProfiles({
       .finally(() => {
         dispatch(
           setTimelinePayloadAction({
-            source: 'All',
-            filters: [],
-            segment_id: ''
+            source: 'all',
+            segment: {}
           })
         );
-        dispatch(setActiveSegmentAction({}));
       });
-  }, [timelinePayload.segment_id, activeProject.id, deleteSegment]);
+  }, [timelinePayload.segment, activeProject.id, deleteSegment]);
 
   const handleRenameSegment = useCallback(
     (name) => {
-      updateSegmentForId(activeProject.id, timelinePayload.segment_id, {
+      updateSegmentForId(activeProject.id, timelinePayload.segment.id, {
         name
       }).then(() => {
         getSavedSegments(activeProject.id);
-        setActiveSegment({ ...activeSegment, name });
         setMoreActionsModalMode(null);
         notification.success({
           message: 'Segment renamed successfully',
@@ -314,18 +295,18 @@ function UserProfiles({
         });
       });
     },
-    [activeProject.id, timelinePayload.segment_id, activeSegment]
+    [activeProject.id, timelinePayload.segment]
   );
 
   const handleUpdateSegmentDefinition = useCallback(() => {
     const reqPayload = getFiltersRequestPayload({
       selectedFilters,
-      table_props: displayTableProps,
+      tableProps: displayTableProps,
       caller: 'user_profiles'
     });
     updateSegmentForId(
       activeProject.id,
-      timelinePayload.segment_id,
+      timelinePayload.segment.id,
       reqPayload
     ).then(() => {
       getSavedSegments(activeProject.id);
@@ -341,7 +322,7 @@ function UserProfiles({
     displayTableProps,
     updateSegmentForId,
     activeProject.id,
-    timelinePayload.segment_id,
+    timelinePayload.segment,
     getSavedSegments,
     setFiltersDirty
   ]);
@@ -360,7 +341,7 @@ function UserProfiles({
     if (currentProjectSettings?.timelines_config) {
       const timelinesConfig = {};
       timelinesConfig.disabled_events = [
-        ...currentProjectSettings?.timelines_config?.disabled_events
+        ...(currentProjectSettings?.timelines_config?.disabled_events || {})
       ];
       timelinesConfig.user_config = {
         ...DEFAULT_TIMELINE_CONFIG.user_config,
@@ -413,8 +394,8 @@ function UserProfiles({
     integration?.int_rudderstack;
 
   useEffect(() => {
-    const tableProps = timelinePayload?.segment_id
-      ? activeSegment?.query?.table_props
+    const tableProps = timelinePayload?.segment?.id
+      ? timelinePayload?.segment?.query?.table_props
       : currentProjectSettings.timelines_config?.user_config?.table_props || [];
     const userPropertiesModified = [];
     if (userPropertiesV2) {
@@ -430,12 +411,7 @@ function UserProfiles({
       )
     );
     setCheckListUserProps(userPropsWithEnableKey);
-  }, [
-    currentProjectSettings,
-    userPropertiesV2,
-    activeSegment,
-    timelinePayload
-  ]);
+  }, [currentProjectSettings, userPropertiesV2, timelinePayload]);
 
   useEffect(() => {
     getSavedSegments(activeProject.id);
@@ -448,7 +424,7 @@ function UserProfiles({
     const columns = [
       {
         title: <div className={headerClassStr}>Identity</div>,
-        width: 280,
+        width: COLUMN_TYPE_PROPS['string'].min,
         dataIndex: 'identity',
         key: 'identity',
         fixed: 'left',
@@ -486,8 +462,8 @@ function UserProfiles({
       }
     ];
 
-    const tableProps = timelinePayload?.segment_id
-      ? activeSegment?.query?.table_props
+    const tableProps = timelinePayload?.segment?.id
+      ? timelinePayload?.segment?.query?.table_props
       : currentProjectSettings?.timelines_config?.user_config?.table_props ||
         [];
 
@@ -514,7 +490,7 @@ function UserProfiles({
               level={7}
               color='grey-2'
               weight='bold'
-              extraClass='m-0'
+              extraClass='m-0 truncate'
               truncate
               charLimit={25}
             >
@@ -523,22 +499,34 @@ function UserProfiles({
           ),
           dataIndex: prop,
           key: prop,
-          width: 260,
+          width:
+            COLUMN_TYPE_PROPS[
+              ACCOUNTS_TABLE_COLUMN_TYPES[prop]?.Type || 'string'
+            ]?.min || 264,
+          showSorterTooltip: null,
           sorter: (a, b) =>
             propType === 'numerical'
               ? sortNumericalColumn(a[prop], b[prop])
               : sortStringColumn(a[prop], b[prop]),
-          render: (value) => (
-            <Text
-              type='title'
-              level={7}
-              extraClass='m-0'
-              truncate
-              shouldTruncateURL={AdminLock(activeAgent)}
-            >
-              {value ? propValueFormat(prop, value, propType) : '-'}
-            </Text>
-          )
+          render: (value) => {
+            const formattedValue =
+              propValueFormat(prop, value, propType) || '-';
+            const urlTruncatedValue = truncateURL(
+              formattedValue,
+              projectDomainsList
+            );
+            return (
+              <Text
+                type='title'
+                level={7}
+                extraClass='m-0'
+                truncate
+                toolTipTitle={formattedValue}
+              >
+                {urlTruncatedValue}
+              </Text>
+            );
+          }
         });
       });
 
@@ -546,8 +534,8 @@ function UserProfiles({
       title: <div className={headerClassStr}>Last Activity</div>,
       dataIndex: 'lastActivity',
       key: 'lastActivity',
-      width: 200,
-      align: 'right',
+      width: COLUMN_TYPE_PROPS['actions'].min,
+      align: 'left',
       sorter: {
         compare: (a, b) => sortStringColumn(a.lastActivity, b.lastActivity),
         multiple: 2
@@ -569,7 +557,6 @@ function UserProfiles({
       columns.forEach((column) => {
         if (['engagement', 'lastActivity'].includes(column.key)) {
           column.defaultSortOrder = 'descend';
-          return;
         }
       });
     }
@@ -578,8 +565,8 @@ function UserProfiles({
     contacts?.data,
     currentProjectSettings,
     timelinePayload,
-    activeSegment,
-    defaultSorterInfo
+    defaultSorterInfo,
+    projectDomainsList
   ]);
 
   const getTableData = (data) => {
@@ -600,7 +587,7 @@ function UserProfiles({
         setDefaultSorterInfo({ key: 'lastActivity', order: 'descend' });
         const formatPayload = { ...payload };
         formatPayload.filters = formatFiltersForPayload(payload?.filters) || [];
-        const reqPayload = formatReqPayload(formatPayload, activeSegment);
+        const reqPayload = formatReqPayload(formatPayload);
         getProfileUsers(activeProject.id, reqPayload).then((response) => {
           if (response.type === 'FETCH_PROFILE_USERS_FAILED') {
             if (response.error.status === 400) {
@@ -633,7 +620,6 @@ function UserProfiles({
       location.state?.fromDetails,
       location.state?.currentPage,
       location.state?.activeSorter,
-      activeSegment,
       activeProject.id,
       history
     ]
@@ -641,7 +627,7 @@ function UserProfiles({
 
   useEffect(() => {
     getUsers(timelinePayload);
-  }, [timelinePayload.source, timelinePayload.segment_id]);
+  }, [timelinePayload]);
 
   useEffect(() => {
     if (newSegmentMode === true) {
@@ -658,27 +644,25 @@ function UserProfiles({
       setSelectedFilters(location.state?.appliedFilters);
       setFiltersExpanded(false);
       setFiltersDirty(true);
-    } else {
-      if (newSegmentMode === false) {
-        if (
-          Boolean(activeSegment?.name) === true &&
-          activeSegment.query != null
-        ) {
-          const filters = getSelectedFiltersFromQuery({
-            query: activeSegment.query,
-            groupsList: [],
-            caller: 'user_profiles'
-          });
-          setAppliedFilters(filters);
-          setSelectedFilters(filters);
-          setFiltersExpanded(false);
-          setFiltersDirty(false);
-        } else {
-          restoreFiltersDefaultState();
-        }
+    } else if (newSegmentMode === false) {
+      if (
+        Boolean(timelinePayload?.segment?.name) === true &&
+        timelinePayload?.segment?.query != null
+      ) {
+        const filters = getSelectedFiltersFromQuery({
+          query: timelinePayload?.segment?.query,
+          groupsList: [],
+          caller: 'user_profiles'
+        });
+        setAppliedFilters(filters);
+        setSelectedFilters(filters);
+        setFiltersExpanded(false);
+        setFiltersDirty(false);
+      } else {
+        restoreFiltersDefaultState();
       }
     }
-  }, [activeSegment, newSegmentMode]);
+  }, [timelinePayload, newSegmentMode]);
 
   const handlePropChange = (option) => {
     if (
@@ -691,9 +675,7 @@ function UserProfiles({
           (obj) => obj.prop_name === option.prop_name
         );
         checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
-        checkListProps.sort((a, b) => {
-          return (b?.enabled || 0) - (a?.enabled || 0);
-        });
+        checkListProps.sort((a, b) => (b?.enabled || 0) - (a?.enabled || 0));
         return checkListProps;
       });
     } else {
@@ -706,8 +688,8 @@ function UserProfiles({
   };
 
   const applyTableProps = () => {
-    if (timelinePayload?.segment_id?.length) {
-      const updatedQuery = { ...activeSegment.query };
+    if (timelinePayload?.segment?.id?.length) {
+      const updatedQuery = { ...timelinePayload?.segment?.query };
       updatedQuery.table_props =
         checkListUserProps
           ?.filter((item) => item.enabled === true)
@@ -715,11 +697,10 @@ function UserProfiles({
           ?.filter(
             (entry) => entry !== '' && entry !== undefined && entry !== null
           ) || [];
-      updateSegmentForId(activeProject.id, timelinePayload.segment_id, {
+      updateSegmentForId(activeProject.id, timelinePayload.segment.id, {
         query: { ...updatedQuery }
       })
         .then(() => getSavedSegments(activeProject.id))
-        .then(() => setActiveSegment({ ...activeSegment, query: updatedQuery }))
         .finally(() => getUsers(timelinePayload));
     } else {
       const config = { ...tlConfig };
@@ -762,17 +743,16 @@ function UserProfiles({
     </Tabs>
   );
 
-  const selectedAccount = useMemo(() => {
-    return { account: selectedFilters.account };
-  }, [selectedFilters.account]);
+  const selectedAccount = useMemo(
+    () => ({ account: selectedFilters.account }),
+    [selectedFilters.account]
+  );
 
   const setFiltersList = useCallback((filters) => {
-    setSelectedFilters((curr) => {
-      return {
-        ...curr,
-        filters
-      };
-    });
+    setSelectedFilters((curr) => ({
+      ...curr,
+      filters
+    }));
   }, []);
 
   const resetSelectedFilters = useCallback(() => {
@@ -780,45 +760,38 @@ function UserProfiles({
   }, [appliedFilters]);
 
   const setSelectedAccount = useCallback((account) => {
-    setSelectedFilters((current) => {
-      return {
-        ...current,
-        account
-      };
-    });
+    setSelectedFilters((current) => ({
+      ...current,
+      account
+    }));
   }, []);
 
   const setListEvents = useCallback((eventsList) => {
-    setSelectedFilters((curr) => {
-      return {
-        ...curr,
-        eventsList
-      };
-    });
+    setSelectedFilters((curr) => ({
+      ...curr,
+      eventsList
+    }));
   }, []);
 
   const setEventProp = useCallback((eventProp) => {
-    setSelectedFilters((curr) => {
-      return {
-        ...curr,
-        eventProp
-      };
-    });
+    setSelectedFilters((curr) => ({
+      ...curr,
+      eventProp
+    }));
   }, []);
 
   const availableGroups = [];
 
-  const disableDiscardButton = useMemo(() => {
-    return isEqual(selectedFilters, appliedFilters);
-  }, [selectedFilters, appliedFilters]);
+  const disableDiscardButton = useMemo(
+    () => isEqual(selectedFilters, appliedFilters),
+    [selectedFilters, appliedFilters]
+  );
 
   const setSecondaryFiltersList = useCallback((secondaryFilters) => {
-    setSelectedFilters((curr) => {
-      return {
-        ...curr,
-        secondaryFilters
-      };
-    });
+    setSelectedFilters((curr) => ({
+      ...curr,
+      secondaryFilters
+    }));
   }, []);
 
   const applyFilters = useCallback(() => {
@@ -827,7 +800,7 @@ function UserProfiles({
     setFiltersDirty(true);
     const reqPayload = getFiltersRequestPayload({
       selectedFilters,
-      table_props: displayTableProps,
+      tableProps: displayTableProps,
       caller: 'user_profiles'
     });
     getProfileUsers(activeProject.id, reqPayload);
@@ -839,13 +812,22 @@ function UserProfiles({
     setFiltersDirty
   ]);
 
+  const handleSaveSegmentClick = useCallback(() => {
+    if (newSegmentMode === true) {
+      setSaveSegmentModal(true);
+      return;
+    }
+    if (Boolean(timelinePayload.segment.id) === true) {
+      setUpdateSegmentModal(true);
+    } else {
+      setSaveSegmentModal(true);
+    }
+  }, [timelinePayload.segment, newSegmentMode]);
   const setEventTimeline = useCallback((eventTimeline) => {
-    setSelectedFilters((curr) => {
-      return {
-        ...curr,
-        eventTimeline
-      };
-    });
+    setSelectedFilters((curr) => ({
+      ...curr,
+      eventTimeline
+    }));
   }, []);
 
   const renderPropertyFilter = () => (
@@ -864,7 +846,7 @@ function UserProfiles({
       eventTimeline={selectedFilters.eventTimeline}
       areFiltersDirty={areFiltersDirty}
       disableDiscardButton={disableDiscardButton}
-      isActiveSegment={Boolean(timelinePayload.segment_id) === true}
+      isActiveSegment={Boolean(timelinePayload?.segment?.id) === true}
       applyFilters={applyFilters}
       setFiltersExpanded={setFiltersExpanded}
       setSaveSegmentModal={handleSaveSegmentClick}
@@ -880,71 +862,59 @@ function UserProfiles({
     />
   );
 
-  const { saveButtonDisabled } = useMemo(() => {
-    return checkFiltersEquality({
+  const { saveButtonDisabled } = useMemo(
+    () =>
+      checkFiltersEquality({
+        appliedFilters,
+        newSegmentMode,
+        filtersList: selectedFilters.filters,
+        secondaryFiltersList: selectedFilters.secondaryFilters,
+        eventProp: selectedFilters.eventProp,
+        eventsList: selectedFilters.eventsList,
+        isActiveSegment: Boolean(timelinePayload.segment.id),
+        areFiltersDirty
+      }),
+    [
+      timelinePayload.segment,
       appliedFilters,
+      areFiltersDirty,
       newSegmentMode,
-      filtersList: selectedFilters.filters,
-      secondaryFiltersList: selectedFilters.secondaryFilters,
-      eventProp: selectedFilters.eventProp,
-      eventsList: selectedFilters.eventsList,
-      isActiveSegment: Boolean(timelinePayload.segment_id),
-      areFiltersDirty
-    });
-  }, [
-    timelinePayload.segment_id,
-    appliedFilters,
-    areFiltersDirty,
-    newSegmentMode,
-    selectedFilters.eventProp,
-    selectedFilters.eventsList,
-    selectedFilters.filters,
-    selectedFilters.secondaryFilters
-  ]);
+      selectedFilters.eventProp,
+      selectedFilters.eventsList,
+      selectedFilters.filters,
+      selectedFilters.secondaryFilters
+    ]
+  );
 
-  const handleSaveSegmentClick = useCallback(() => {
-    if (newSegmentMode === true) {
-      setSaveSegmentModal(true);
-      return;
-    }
-    if (Boolean(timelinePayload.segment_id) === true) {
-      setUpdateSegmentModal(true);
-    } else {
-      setSaveSegmentModal(true);
-    }
-  }, [timelinePayload.segment_id, newSegmentMode]);
-
-  const renderSaveSegmentButton = () => {
-    return (
-      <ControlledComponent
-        controller={
-          filtersExpanded === false &&
-          saveButtonDisabled === false &&
-          newSegmentMode === false
-        }
+  const renderSaveSegmentButton = () => (
+    <ControlledComponent
+      controller={
+        filtersExpanded === false &&
+        saveButtonDisabled === false &&
+        newSegmentMode === false
+      }
+    >
+      <Button
+        onClick={handleSaveSegmentClick}
+        type='default'
+        className='flex items-center col-gap-1'
+        disabled={saveButtonDisabled}
       >
-        <Button
-          onClick={handleSaveSegmentClick}
-          type='default'
-          className='flex items-center col-gap-1'
-          disabled={saveButtonDisabled}
+        <SVG
+          color={saveButtonDisabled ? '#BFBFBF' : '#1890ff'}
+          size={16}
+          name='pieChart'
+        />
+        <Text
+          type='title'
+          extraClass='mb-0'
+          color={saveButtonDisabled ? 'disabled' : 'brand-color-6'}
         >
-          <SVG
-            color={saveButtonDisabled ? '#BFBFBF' : '#1890ff'}
-            size={16}
-            name='pieChart'
-          />
-          <Text
-            type='title'
-            extraClass='mb-0'
-            color={saveButtonDisabled ? 'disabled' : 'brand-color-6'}
-          >
-            Save as Segment
-          </Text>
-        </Button>
-      </ControlledComponent>
-    );
-  };
+          Save as Segment
+        </Text>
+      </Button>
+    </ControlledComponent>
+  );
 
   useEffect(() => {
     fetchUserPropertyValues(activeProject.id, '$user_id')
@@ -964,56 +934,40 @@ function UserProfiles({
     };
     setListSearchItems(updatedPayload.search_filter);
     setTimelinePayload(updatedPayload);
-    setActiveSegment(activeSegment);
     getUsers(updatedPayload);
   };
 
-  const searchUsers = () => (
-    <div className='absolute top-0'>
-      {searchDDOpen ? (
-        <FaSelect
-          multiSelect
-          options={
-            userValueOpts
-              ? Object.keys(userValueOpts).map((value) => [value])
-              : []
-          }
-          displayNames={userValueOpts}
-          applClick={(val) => onApplyClick(val)}
-          onClickOutside={() => setSearchDDOpen(false)}
-          selectedOpts={listSearchItems}
-          allowSearch
-          placeholder='Search Users'
-          style={{
-            top: '-8px',
-            right: 0,
-            padding: '8px 8px 12px',
-            overflowX: 'hidden'
-          }}
-          posRight
-        />
-      ) : null}
-    </div>
-  );
-
   const onSearchClose = () => {
     setSearchBarOpen(false);
-    setSearchDDOpen(false);
-    if (timelinePayload?.search_filter?.length) {
-      const payload = { ...timelinePayload };
-      payload.search_filter = [];
-      setListSearchItems([]);
-      setTimelinePayload(payload);
-      setActiveSegment(activeSegment);
-      getUsers(payload);
-    }
+    handleUsersSearch({ users: '' });
   };
 
   const onSearchOpen = () => {
     setSearchBarOpen(true);
-    setSearchDDOpen(true);
   };
 
+  const handleUsersSearch = (values) => {
+    if (
+      (listSearchItems.length >= 1 && listSearchItems[0] === values?.users) ||
+      (listSearchItems.length == 0 && !values?.users)
+    ) {
+      return;
+    }
+    if (values?.users) {
+      values = [JSON.stringify([values.users])];
+    } else {
+      values = [];
+    }
+
+    const updatedPayload = {
+      ...timelinePayload,
+      search_filter: values.map((value) => JSON.parse(value)[0])
+    };
+    setListSearchItems(updatedPayload.search_filter);
+    setTimelinePayload(updatedPayload);
+    setActiveSegment(activeSegment);
+    getUsers(updatedPayload);
+  };
   const renderSearchSection = () => (
     <ControlledComponent
       controller={filtersExpanded === false && newSegmentMode === false}
@@ -1021,51 +975,55 @@ function UserProfiles({
       <div className='relative'>
         {searchBarOpen ? (
           <div className={'flex items-center justify-between'}>
-            {!searchDDOpen && (
-              <Input
-                size='large'
-                value={listSearchItems ? listSearchItems.join(', ') : null}
-                placeholder={'Search Users'}
-                style={{ width: '240px', 'border-radius': '5px' }}
-                prefix={<SVG name='search' size={20} color={'grey'} />}
-                onClick={() => setSearchDDOpen(true)}
-              />
-            )}
+            <Form
+              name='basic'
+              labelCol={{ span: 8 }}
+              wrapperCol={{ span: 16 }}
+              onFinish={handleUsersSearch}
+              autoComplete='off'
+            >
+              <Form.Item name='users'>
+                <Input
+                  size='large'
+                  value={listSearchItems ? listSearchItems.join(', ') : null}
+                  placeholder={'Search Users'}
+                  style={{ width: '240px', 'border-radius': '5px' }}
+                  prefix={<SVG name='search' size={20} color={'grey'} />}
+                />
+              </Form.Item>
+            </Form>
             <Button type='text' className='search-btn' onClick={onSearchClose}>
-              <SVG name={'close'} size={20} color={'grey'} />
+              <SVG name='close' size={20} color='grey' />
             </Button>
           </div>
         ) : (
           <Button type='text' className='search-btn' onClick={onSearchOpen}>
-            <SVG name={'search'} size={20} color={'grey'} />
+            <SVG name='search' size={20} color='grey' />
           </Button>
         )}
-        {searchUsers()}
       </div>
     </ControlledComponent>
   );
 
-  const renderTablePropsSelect = () => {
-    return (
-      <Popover
-        overlayClassName='fa-activity--filter'
-        placement='bottomLeft'
-        visible={showPopOver}
-        onVisibleChange={(visible) => {
-          setShowPopOver(visible);
-        }}
-        onClick={() => {
-          setShowPopOver(true);
-        }}
-        trigger='click'
-        content={popoverContent}
-      >
-        <Button type='text'>
-          <SVG size={20} name={'tableColumns'} />
-        </Button>
-      </Popover>
-    );
-  };
+  const renderTablePropsSelect = () => (
+    <Popover
+      overlayClassName='fa-activity--filter'
+      placement='bottomLeft'
+      visible={showPopOver}
+      onVisibleChange={(visible) => {
+        setShowPopOver(visible);
+      }}
+      onClick={() => {
+        setShowPopOver(true);
+      }}
+      trigger='click'
+      content={popoverContent}
+    >
+      <Button type='text'>
+        <SVG size={24} name='tableColumns' />
+      </Button>
+    </Popover>
+  );
 
   const navigateToAccountsEngagement = useCallback(() => {
     history.push(PathUrls.ConfigureEngagements);
@@ -1075,6 +1033,7 @@ function UserProfiles({
     const accountEngagement = (
       <div
         role='button'
+        tabIndex={0}
         onClick={navigateToAccountsEngagement}
         className='flex cursor-pointer col-gap-4 items-center py-2 px-4 hover:bg-gray-100'
       >
@@ -1085,7 +1044,7 @@ function UserProfiles({
       </div>
     );
 
-    if (Boolean(timelinePayload.segment_id) === false) {
+    if (Boolean(timelinePayload.segment.id) === false) {
       return accountEngagement;
     }
     return (
@@ -1093,6 +1052,7 @@ function UserProfiles({
         <div className='flex flex-col'>
           <div
             role='button'
+            tabIndex={-1}
             onClick={() => {
               setShowSegmentActions(false);
               setMoreActionsModalMode(moreActionsMode.RENAME);
@@ -1106,6 +1066,7 @@ function UserProfiles({
           </div>
           <div
             role='button'
+            tabIndex={-2}
             onClick={() => {
               setShowSegmentActions(false);
               setMoreActionsModalMode(moreActionsMode.DELETE);
@@ -1123,41 +1084,53 @@ function UserProfiles({
     );
   };
 
-  const renderMoreActions = () => {
-    return (
-      <Popover
-        placement='bottomLeft'
-        visible={showSegmentActions}
-        onVisibleChange={(visible) => {
-          setShowSegmentActions(visible);
-        }}
-        onClick={() => {
-          setShowSegmentActions(true);
-        }}
-        trigger='click'
-        content={moreActionsContent}
-        overlayClassName={cx(
-          'fa-activity--filter',
-          styles['more-actions-popover']
-        )}
-      >
-        <Button className={styles['more-actions-button']} type='default'>
-          <SVG size={20} name={'more'} />
-        </Button>
-      </Popover>
-    );
-  };
+  const renderMoreActions = () => (
+    <Popover
+      placement='bottomLeft'
+      visible={showSegmentActions}
+      onVisibleChange={(visible) => {
+        setShowSegmentActions(visible);
+      }}
+      onClick={() => {
+        setShowSegmentActions(true);
+      }}
+      trigger='click'
+      content={moreActionsContent}
+      overlayClassName={cx(
+        'fa-activity--filter',
+        styles['more-actions-popover']
+      )}
+    >
+      <Button className={styles['more-actions-button']} type='default'>
+        <SVG size={24} name='more' />
+      </Button>
+    </Popover>
+  );
 
   const handleTableChange = (pageParams, somedata, sorter) => {
     setCurrentPage(pageParams.current);
     setCurrentPageSize(pageParams.pageSize);
     setDefaultSorterInfo({ key: sorter.columnKey, order: sorter.order });
   };
+  const mergeColumns = useCallback(
+    tableColumns.map((col, index) => ({
+      ...col,
+      onHeaderCell: (column) => ({
+        width: column.width
+      })
+    })),
+    [tableColumns]
+  );
 
   const renderTable = () => (
     <div>
       <Table
         size='large'
+        components={{
+          header: {
+            cell: ResizableTitle
+          }
+        }}
         onRow={(user) => ({
           onClick: () => {
             history.push(
@@ -1165,20 +1138,19 @@ function UserProfiles({
                 user.identity.isAnonymous
               }`,
               {
-                timelinePayload: timelinePayload,
-                activeSegment: activeSegment,
+                timelinePayload,
                 fromDetails: true,
-                currentPage: currentPage,
-                currentPageSize: currentPageSize,
+                currentPage,
+                currentPageSize,
                 activeSorter: defaultSorterInfo,
                 appliedFilters: areFiltersDirty ? appliedFilters : null
               }
             );
           }
         })}
-        className='fa-table--userlist'
+        className={`fa-table--userlist  ${styles['user-profiles-table']}`}
         dataSource={getTableData(contacts.data)}
-        columns={tableColumns}
+        columns={mergeColumns}
         rowClassName='cursor-pointer'
         pagination={{
           position: ['bottom', 'left'],
@@ -1188,23 +1160,26 @@ function UserProfiles({
         }}
         onChange={handleTableChange}
         scroll={{
-          x: tableProperties?.length * 250
+          x: tableProperties?.length * 250,
+          y: 'calc(100vh - 340px)'
         }}
       />
-      <div className='flex flex-row-reverse mt-4'></div>
+      <div className='flex flex-row-reverse mt-4' />
     </div>
   );
 
-  const showRangeNudge = useMemo(() => {
-    return showUpgradeNudge(
-      sixSignalInfo?.usage || 0,
-      sixSignalInfo?.limit || 0,
-      currentProjectSettings
-    );
-  }, [sixSignalInfo?.usage, sixSignalInfo?.limit, currentProjectSettings]);
+  const showRangeNudge = useMemo(
+    () =>
+      showUpgradeNudge(
+        sixSignalInfo?.usage || 0,
+        sixSignalInfo?.limit || 0,
+        currentProjectSettings
+      ),
+    [sixSignalInfo?.usage, sixSignalInfo?.limit, currentProjectSettings]
+  );
 
   const titleIcon = useMemo(() => {
-    if (Boolean(timelinePayload.segment_id) === true) {
+    if (Boolean(timelinePayload.segment.id) === true) {
       return 'pieChart';
     }
     return ProfilesSidebarIconsMapping[timelinePayload.source] != null
@@ -1212,16 +1187,17 @@ function UserProfiles({
       : 'userGroup';
   }, [timelinePayload]);
 
-  const titleIconColor = useMemo(() => {
-    return getSegmentColorCode(activeSegment?.name ?? '');
-  }, [activeSegment?.name]);
+  const titleIconColor = useMemo(
+    () => getSegmentColorCode(timelinePayload?.segment?.name ?? ''),
+    [timelinePayload?.segment]
+  );
 
   const pageTitle = useMemo(() => {
     if (newSegmentMode === true) {
       return 'Untitled Segment 1';
     }
-    if (Boolean(timelinePayload.segment_id) === false) {
-      const source = timelinePayload.source;
+    if (Boolean(timelinePayload.segment.id) === false) {
+      const { source } = timelinePayload;
       const title = get(
         userOptions.find((elem) => elem[1] === source),
         0,
@@ -1229,8 +1205,8 @@ function UserProfiles({
       );
       return title;
     }
-    return activeSegment.name;
-  }, [timelinePayload, userOptions, activeSegment, newSegmentMode]);
+    return timelinePayload?.segment?.name;
+  }, [timelinePayload, userOptions, newSegmentMode]);
 
   if (loading) {
     return (
@@ -1263,7 +1239,7 @@ function UserProfiles({
               level={3}
               weight='bold'
               extraClass='mb-0'
-              id={'fa-at-text--page-title'}
+              id='fa-at-text--page-title'
             >
               {pageTitle}
             </Text>
@@ -1305,7 +1281,7 @@ function UserProfiles({
             (newSegmentMode === false || areFiltersDirty === true)
           }
         >
-          <NoDataWithMessage message={'No Profiles Found'} />
+          <NoDataWithMessage message='No Profiles Found' />
         </ControlledComponent>
 
         <UpgradeModal
@@ -1320,20 +1296,20 @@ function UserProfiles({
           isLoading={false}
         />
         <DeleteSegmentModal
-          segmentName={activeSegment?.name}
+          segmentName={timelinePayload?.segment?.name}
           visible={moreActionsModalMode === moreActionsMode.DELETE}
           onCancel={() => setMoreActionsModalMode(null)}
           onOk={handleDeleteActiveSegment}
         />
         <RenameSegmentModal
-          segmentName={activeSegment?.name}
+          segmentName={timelinePayload?.segment?.name}
           visible={moreActionsModalMode === moreActionsMode.RENAME}
           onCancel={() => setMoreActionsModalMode(null)}
           handleSubmit={handleRenameSegment}
         />
 
         <UpdateSegmentModal
-          segmentName={activeSegment?.name}
+          segmentName={timelinePayload?.segment?.name}
           visible={updateSegmentModal}
           onCancel={() => setUpdateSegmentModal(false)}
           onCreate={handleCreateSegment}
@@ -1350,7 +1326,7 @@ function UserProfiles({
   return isOnboarded(currentProjectSettings) ? (
     <CommonBeforeIntegrationPage />
   ) : (
-    <NoDataWithMessage message={'Onboarding Not Completed'} />
+    <NoDataWithMessage message='Onboarding Not Completed' />
   );
 }
 

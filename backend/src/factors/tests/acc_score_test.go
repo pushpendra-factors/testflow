@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"testing"
 	"time"
@@ -674,5 +675,85 @@ func TestUpdateTopKScoreContribution(t *testing.T) {
 
 	assert.Equal(t, topk, len(result))
 	assert.ElementsMatch(t, resExpected, res, "results are not matching")
+
+}
+
+func TestValidateEngagementLevel(t *testing.T) {
+
+	var engagementBucket M.BucketRanges
+	engagementBucket.Ranges = make([]M.Bucket, 4)
+
+	engagementBucket.Date = "01012024"
+
+	b1 := M.Bucket{Name: "Hot", High: 100, Low: 90}
+	b2 := M.Bucket{Name: "Warm", High: 90, Low: 70}
+	b3 := M.Bucket{Name: "Cold", High: 70, Low: 40}
+	b4 := M.Bucket{Name: "Ice", High: 40, Low: 0}
+	engagementBucket.Ranges = []M.Bucket{b1, b2, b3, b4}
+
+	status, err := T.ValidateEngagementLevel(int64(1), engagementBucket)
+	assert.Nil(t, err, "")
+	assert.Equal(t, true, status)
+
+	engagementBucket.Date = "01012024"
+
+	b1 = M.Bucket{Name: "Hot", High: 100, Low: 90}
+	b2 = M.Bucket{Name: "Warm", High: 90, Low: 70}
+	b3 = M.Bucket{Name: "Cold", High: 75, Low: 40}
+	b4 = M.Bucket{Name: "Ice", High: 40, Low: 0}
+	engagementBucket.Ranges = []M.Bucket{b1, b2, b3, b4}
+
+	status, err = T.ValidateEngagementLevel(int64(1), engagementBucket)
+	log.WithField("err", err).Debugf("")
+	assert.Equal(t, false, status, err)
+
+	b1 = M.Bucket{Name: "Hot", High: 100, Low: 90}
+	b2 = M.Bucket{Name: "Warm", High: 90, Low: 70}
+	b3 = M.Bucket{Name: "Warm", High: 70, Low: 40}
+	b4 = M.Bucket{Name: "Ice", High: 40, Low: 0}
+	engagementBucket.Ranges = []M.Bucket{b1, b2, b3, b4}
+
+	status, err = T.ValidateEngagementLevel(int64(1), engagementBucket)
+	log.WithField("err", err).Debugf("")
+	assert.Equal(t, false, status, err)
+
+}
+
+func TestValidateAndUpdateEngagementLevel(t *testing.T) {
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	projectId := project.ID
+
+	var engagementBucket M.BucketRanges
+	engagementBucket.Ranges = make([]M.Bucket, 4)
+
+	engagementBucket.Date = "01012024"
+
+	b1 := M.Bucket{Name: "Hot", High: 100, Low: 90}
+	b2 := M.Bucket{Name: "Warm", High: 90, Low: 70}
+	b3 := M.Bucket{Name: "Cold", High: 70, Low: 40}
+	b4 := M.Bucket{Name: "Ice", High: 40, Low: 0}
+	engagementBucket.Ranges = []M.Bucket{b1, b2, b3, b4}
+
+	status, statusCode, err := T.ValidateAndUpdateEngagementLevel(projectId, engagementBucket)
+	assert.Nil(t, err, "")
+	assert.Equal(t, true, status)
+	assert.Equal(t, http.StatusCreated, statusCode)
+
+	engagementBucket.Date = "01012024"
+
+	b1 = M.Bucket{Name: "Hot", High: 100, Low: 90}
+	b2 = M.Bucket{Name: "Warm", High: 90, Low: 70}
+	b3 = M.Bucket{Name: "Cold", High: 75, Low: 40}
+	b4 = M.Bucket{Name: "Ice", High: 40, Low: 0}
+	engagementBucket.Ranges = []M.Bucket{b1, b2, b3, b4}
+
+	bucketRanges, statusCode_ := store.GetStore().GetEngagementLevelsByProject(projectId)
+	assert.Equal(t, len(bucketRanges.Ranges), len(engagementBucket.Ranges))
+	log.WithField("buckets ", bucketRanges).Debugf("buckets")
+
+	assert.Equal(t, http.StatusFound, statusCode_)
 
 }

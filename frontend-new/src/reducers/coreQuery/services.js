@@ -39,7 +39,7 @@ export const getEventsData = (
   query_group,
   dashboard,
   isQuery = false,
-  query_id = null
+  query_id = ''
 ) => {
   let url;
   if (!dashboard) {

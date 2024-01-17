@@ -36,6 +36,7 @@ type Project struct {
 	HubspotTouchPoints    postgres.Jsonb  `json:"hubspot_touch_points"`
 	JobsMetadata          *postgres.Jsonb `json:"jobs_metadata"`
 	ChannelGroupRules     postgres.Jsonb  `json:"channel_group_rules"`
+	ClearbitDomain        string          `json:"clearbit_domain"`
 }
 
 type ProjectString struct {

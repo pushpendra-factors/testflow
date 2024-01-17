@@ -1,21 +1,27 @@
 import openai
 import json
 import pandas as pd
-from pprint import pprint
 from functools import reduce
 from collections import defaultdict
 import bert
 import torch
-import pdb
 import random
 import pickle
+import os
+from tornado.log import logging as log
 from datetime import datetime
-from data_preparer import get_prepared_data, expand_completion, reduce_completion
+from .data_preparer import get_prepared_data, reduce_completion, DATA_CACHE_FILE, prepare_data
+from .bert import embed_sentence
+from .bert import embed_sentences
 
-EMBEDDING_CACHE_PATH = 'prompt_emb_cache.pkl'
+directory_path = 'chat_factors/chatgpt_poc'
+EMBEDDING_CACHE_PATH = 'artifacts/prompt_emb_cache.pkl'
 
-# Set up the ChatGPT API credentials
-openai.api_key = json.load(open('key.json', 'r'))['key']
+key_file_path = os.path.join('chat_factors/chatgpt_poc', 'key.json')
+
+# Load the API key from the key.json file
+openai.api_key = json.load(open(key_file_path, 'r'))['key']
+
 
 def retrain_fine_tuned_model():
     df = get_prepared_data()
@@ -29,13 +35,14 @@ def retrain_fine_tuned_model():
         for entry in tr_data:
             json.dump(entry, output_file)
             output_file.write("\n")
-    
+
     upload_response = openai.File.create(
-    file=open(file_name, "rb"),
-    purpose='fine-tune'
+        file=open(file_name, "rb"),
+        purpose='fine-tune'
     )
     file_id = upload_response.id
-    ft_list = [(x['id'], x['fine_tuned_model'], datetime.fromtimestamp(x['created_at']).strftime('%Y-%m-%d %H:%M:%S')) for x in openai.FineTune.list()['data']]
+    ft_list = [(x['id'], x['fine_tuned_model'], datetime.fromtimestamp(x['created_at']).strftime('%Y-%m-%d %H:%M:%S'))
+               for x in openai.FineTune.list()['data']]
     model = [x for x in ft_list if x[0] == file_id][0][1]
     return model
 
@@ -168,12 +175,14 @@ def form_prelude_old(df):
             all_key_values[k].add(v)
     all_key_values
 
-    json_keys_str = "\n".join([f"K{i+1}. '{k}'" for i, k in enumerate(sorted(all_keys))])
+    json_keys_str = "\n".join([f"K{i + 1}. '{k}'" for i, k in enumerate(sorted(all_keys))])
     prelude = f'Allowed JSON keys are K1--K{len(all_keys)}, and range of values for key Ki are Vi.1--Vi.ni, where ni is the number of allowed values of key Ki. If you don\'t find any appropriate key or value, return the whole answer as NA (with reason included):'
 
-    json_kvs_str = '\n'.join([f"K{i+1}. '{k}'\n\t{', '.join(['V' + str(i+1) + '.' + str(j+1) + '. ' + v for j, v in enumerate(sorted(all_key_values[k[:-1] + 'i' if k.endswith('_1') or k.endswith('_2') else k]))])}" for i, k in enumerate(sorted(all_keys))])
+    json_kvs_str = '\n'.join([
+        f"K{i + 1}. '{k}'\n\t{', '.join(['V' + str(i + 1) + '.' + str(j + 1) + '. ' + v for j, v in enumerate(sorted(all_key_values[k[:-1] + 'i' if k.endswith('_1') or k.endswith('_2') else k]))])}"
+        for i, k in enumerate(sorted(all_keys))])
 
-    prelude += '\n'+json_kvs_str
+    prelude += '\n' + json_kvs_str
     return prelude
 
 
@@ -195,11 +204,11 @@ def ask_gpt(question=None, prepend_question=False):
 def ask_fine_tuned_model(prompt, fine_tuned_model, max_tokens=100, temperature=0, return_prompt=False):
     final_prompt = prompt + ' ->'
     answer = openai.Completion.create(
-                model=fine_tuned_model,
-                prompt=final_prompt,
-                max_tokens=max_tokens,
-                temperature=temperature
-                )
+        model=fine_tuned_model,
+        prompt=final_prompt,
+        max_tokens=max_tokens,
+        temperature=temperature
+    )
     returnables = {'answer': answer}
     if return_prompt:
         returnables['prompt'] = final_prompt
@@ -219,37 +228,39 @@ def embed_prompts(df, sample_size=None):
         indexed_prompts = all_prompts
     else:
         indexed_prompts = sorted(random.sample(all_prompts, sample_size))
-    indexed_prompt_embs = bert.embed_sentences(indexed_prompts, normalise=True)
+    indexed_prompt_embs = embed_sentences(indexed_prompts, normalise=True)
     return indexed_prompts, indexed_prompt_embs
 
 
-def get_indexed_prompt_embeddings(df, sample_size=None, cache_path=EMBEDDING_CACHE_PATH, silent=False, force_index=False):    
+def get_indexed_prompt_embeddings(df, sample_size=None, cache_path=os.path.join(directory_path, EMBEDDING_CACHE_PATH),
+                                  silent=False, force_index=False):
     try:
         if force_index:
             raise FileNotFoundError
         if not silent:
-            print('Attempting to read indexed prompt embeddings...', end='')
+            log.info('Attempting to read indexed prompt embeddings...')
         prompts, embs = pickle.load(open(cache_path, 'rb'))
         if not silent:
-            print('Done!')
+            log.info('Done!')
     except FileNotFoundError:
         if not silent:
-            print('\nCached embeddings not found or indexing forced. Generating from scratch...', end='')
+            log.info('\nCached embeddings not found or indexing forced. Generating from scratch...')
         prompts, embs = embed_prompts(df, sample_size)
         if not silent:
-            print('Done!')
-            print('Caching now...', end='')
+            log.info('Done!')
+            log.info('Caching now...')
         pickle.dump((prompts, embs), open(cache_path, 'wb'))
         if not silent:
-            print('Done!')
+            log.info('Done!')
     return prompts, embs
-    
+
 
 def get_matching_examples(query_prompt, df, silent=False, force_index=False):
     # TODO: Optimize matching
     # pdb.set_trace()
-    indexed_prompts, indexed_prompt_embs = get_indexed_prompt_embeddings(df, sample_size=100, silent=silent, force_index=force_index)
-    prompt_emb = bert.embed_sentence(query_prompt, normalise=True)
+    indexed_prompts, indexed_prompt_embs = get_indexed_prompt_embeddings(df, sample_size=100, silent=silent,
+                                                                         force_index=force_index)
+    prompt_emb = embed_sentence(query_prompt, normalise=True)
     sim_pe_all = torch.mm(prompt_emb, indexed_prompt_embs.transpose(0, 1))
     top_k_i = sim_pe_all.topk(10).indices.reshape(-1).numpy()
     matching_prompts = [indexed_prompts[i] for i in top_k_i]
@@ -258,8 +269,40 @@ def get_matching_examples(query_prompt, df, silent=False, force_index=False):
     return matching_examples
 
 
-def ask_ir_based_model(prompt, matching_examples, gpt_params=None, return_prompt=False):
-    gpt_params = gpt_params or {'engine': 'text-davinci-003',
+def get_matching_examples_from_scratch(query_prompt):
+    # pdb.set_trace()
+    df = prepare_data(os.path.join('chat_factors/chatgpt_poc', 'data.json'), abbreviate=True)
+    df.to_csv(os.path.join('chat_factors/chatgpt_poc', 'data_cached.csv'))
+
+    indexed_prompts, indexed_prompt_embs = embed_prompts(df)
+
+    log.info('Done! ')
+    log.info('Caching now...debug')
+    pickle.dump((indexed_prompts, indexed_prompt_embs), open(os.path.join(directory_path, EMBEDDING_CACHE_PATH), 'wb'))
+    prompt_emb = embed_sentence(query_prompt, normalise=True)
+    sim_pe_all = torch.mm(prompt_emb, indexed_prompt_embs.transpose(0, 1))
+    top_k_i = sim_pe_all.topk(10).indices.reshape(-1).numpy()
+    matching_prompts = [indexed_prompts[i] for i in top_k_i]
+    matching_df = df[df['prompt'].isin(matching_prompts)]
+    matching_examples = "\n".join(matching_df.apply(lambda x: f"{x['prompt']}-> {x['completion']}", axis=1))
+    return matching_examples
+
+
+def get_matching_examples_from_file(query_prompt, df, prompt_vector_data):
+    log.info('Attempting to read indexed prompt embeddings...')
+    indexed_prompts, indexed_prompt_embs = prompt_vector_data
+    log.info('Done getting indexed prompt embeddings!')
+    prompt_emb = embed_sentence(query_prompt, normalise=True)
+    sim_pe_all = torch.mm(prompt_emb, indexed_prompt_embs.transpose(0, 1))
+    top_k_i = sim_pe_all.topk(10).indices.reshape(-1).numpy()
+    matching_prompts = [indexed_prompts[i] for i in top_k_i]
+    matching_df = df[df['prompt'].isin(matching_prompts)]
+    matching_examples = "\n".join(matching_df.apply(lambda x: f"{x['prompt']}-> {x['completion']}", axis=1))
+    return matching_examples
+
+
+def ask_ir_based_model(prompt, matching_examples, gpt_params=None):
+    gpt_params = gpt_params or {'engine': 'gpt-3.5-turbo-instruct',
                                 'max_tokens': 100,
                                 'temperature': 0}
     final_prompt = f'{matching_examples}\n{prompt}->'
@@ -271,8 +314,6 @@ def ask_ir_based_model(prompt, matching_examples, gpt_params=None, return_prompt
         stop=None,
         temperature=gpt_params['temperature'])
     returnables = {'answer': answer}
-    if return_prompt:
-        returnables['prompt'] = final_prompt
     return returnables
 
 
@@ -280,7 +321,7 @@ def chat_loop_mode():
     ft_model = json.load(open('ft_model.json', 'r'))['fine_tuned_model']
     continue_flag = True
     while continue_flag:
-        print('\nKeep asking questions. Enter `q` or Press Ctrl+C to exit.')
+        log.info('\nKeep asking questions. Enter `q` or Press Ctrl+C to exit.')
         question = input('Q: ')
         if question == 'q' or question == 'quit':
             break
@@ -295,15 +336,14 @@ def chat_loop_mode():
                 # answer = ask_gpt(examples=examples, question=question, prelude=prelude, postface=postface, verbosity=1)
                 answer = ask_fine_tuned_model(prompt=question, fine_tuned_model=ft_model)
             answer = answer['choices'][0]['text'].split('\n')[0].strip(' .')
-        print('A: ', end='')
-        try:
-            pprint(json.loads(answer))
-        except:
-            print(answer)
+        log.info('A: %s', answer)
 
 
 def get_ft_model(retrain=False):
-    ft = json.load(open('ft_model.json', 'r'))
+    file_path = os.path.join('chat_factors/chatgpt_poc', 'ft_model.json')
+
+    # Load the model from the ft_model.json file
+    ft = json.load(open(file_path, 'r'))
     if retrain:
         rt_model = retrain_fine_tuned_model()
         ft['latest'] = rt_model
@@ -313,7 +353,10 @@ def get_ft_model(retrain=False):
     return model
 
 
-def chat_once_mode(question, model_type='ft', parser=None, scratch=False, silent=False, return_answer=False, return_prompt=False, reduce=True):
+def chat_once_mode(question, model_type='ft', parser=None, scratch=False, silent=False, return_answer=True,
+                   return_prompt=False, reduce=True):
+    answer = None
+    returned_prompt = None
     if len(question) < 5:
         if parser is not None:
             parser.print_help()
@@ -322,11 +365,11 @@ def chat_once_mode(question, model_type='ft', parser=None, scratch=False, silent
     try:
         if model_type == 'ft':
             if not silent:
-                print('\nSTEP 1 of 2: Fetching fine-tuned model...', end='')
+                log.info('\nSTEP 1 of 2: Fetching fine-tuned model...')
             ft_model = get_ft_model(scratch)
             if not silent:
-                print('Done!\n')
-                print('\nSTEP 2 of 2: Seeking answer from the fine-tuned model...', end='')
+                log.info('Done!\n')
+                log.info('\nSTEP 2 of 2: Seeking answer from the fine-tuned model...')
             ft_response = ask_fine_tuned_model(prompt=question, fine_tuned_model=ft_model, return_prompt=return_prompt)
             answer = ft_response['answer']
             if 'prompt' in ft_response:
@@ -335,26 +378,28 @@ def chat_once_mode(question, model_type='ft', parser=None, scratch=False, silent
             if reduce:
                 answer = reduce_completion(answer)
             if not silent:
-                print('Done!\n')
+                log.info('Done!\n')
         elif model_type == 'ir':
             if not silent:
-                print('\nSTEP 1 of 3: Getting prepared data (raw text prompt-responses)...', end='')
+                log.info('\nSTEP 1 of 3: Getting prepared data (raw text prompt-responses)...')
             df = get_prepared_data(force_prepare=scratch)
             if not silent:
-                print('Done!\n')
-                print('\nSTEP 2 of 3: Retrieving matches using BERT embeddings...', end='')
+                log.info('Done!\n')
+                log.info('\nSTEP 2 of 3: Retrieving matches using BERT embeddings...')
             matching_examples = get_matching_examples(question, df, silent, force_index=scratch)
+            log.info("matching_examples :\n%s", matching_examples)
             if not silent:
-                print('Done!\n')
-                print('\nSTEP 3 of 3: Seeking answer from GPT...', end='')
+                log.info('Done!\n')
+                log.info('\nSTEP 3 of 3: Seeking answer from GPT...')
             ir_response = ask_ir_based_model(question, matching_examples, return_prompt=return_prompt)
             answer = ir_response['answer']
+            log.info('answer:\n%s', answer)
             if 'prompt' in ir_response:
                 returned_prompt = ir_response['prompt']
             answer = answer['choices'][0]['text'].split('\n')[0].strip(' .')
             # answer = expand_completion(answer)
             if not silent:
-                print('\nDone!\n')
+                log.info('\nDone!\n')
     except openai.error.AuthenticationError:
         parser.print_help()
         raise Exception('OpenAI API Key Error. Specify the right one via the key.json file.')
@@ -365,7 +410,51 @@ def chat_once_mode(question, model_type='ft', parser=None, scratch=False, silent
         if return_prompt:
             returnables['prompt'] = returned_prompt
         return returnables
+    log.info(answer)
+
+
+def get_answer_from_ir_model(question, prompt_response_data, prompt_vector_data):
     try:
-        pprint(json.loads(answer))
-    except:
-        print(answer)
+        if len(question) < 5:
+            raise Exception('Your question should be at least 5 characters long.')
+        prompt_response_data.seek(0)
+        df = pd.read_csv(prompt_response_data)
+
+        log.info('\n Getting matches using BERT embeddings...')
+        matching_examples = get_matching_examples_from_file(question, df, prompt_vector_data)
+        log.info("matching_examples :\n%s", matching_examples)
+        log.info('\nSeeking answer from GPT..')
+        ir_response = ask_ir_based_model(question, matching_examples)
+        answer = ir_response['answer']
+        answer = answer['choices'][0]['text'].split('\n')[0].strip(' .')
+
+    except openai.error.AuthenticationError:
+        raise Exception('OpenAI API Key Error. Specify the right one via the key.json file.')
+
+    returnables = {'answer': answer}
+    log.info(answer)
+    return returnables
+
+
+def get_answer_from_ir_model_scratch(question, prompt_response_data):
+    try:
+        if len(question) < 5:
+            raise Exception('Your question should be at least 5 characters long.')
+        log.info('\nSTEP 1 of 3: Getting prepared data (raw text prompt-responses)...')
+
+        matching_examples = get_matching_examples_from_scratch(question)
+        log.info("matching_examples :\n%s", matching_examples)
+        log.info('Done!\n')
+
+        log.info('\nSTEP 3 of 3: Seeking answer from GPT...')
+        ir_response = ask_ir_based_model(question, matching_examples)
+        answer = ir_response['answer']
+        log.info('answer:\n%s', answer)
+        answer = answer['choices'][0]['text'].split('\n')[0].strip(' .')
+
+    except openai.error.AuthenticationError:
+        raise Exception('OpenAI API Key Error. Specify the right one via the key.json file.')
+
+    returnables = {'answer': answer}
+    log.info(answer)
+    return returnables

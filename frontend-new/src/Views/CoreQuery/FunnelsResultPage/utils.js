@@ -1,6 +1,7 @@
 import React from 'react';
 import moment from 'moment';
 import _ from 'lodash';
+import { Tooltip } from 'antd';
 import {
   calculatePercentage,
   formatDuration,
@@ -27,6 +28,8 @@ import {
 import NonClickableTableHeader from '../../../components/NonClickableTableHeader';
 import ControlledComponent from 'Components/ControlledComponent';
 import { getCompareGroupsByName } from './GroupedChart/groupedChart.helpers';
+
+import truncateURL from 'Utils/truncateURL';
 
 const windowSize = {
   w: window.outerWidth,
@@ -278,7 +281,8 @@ export const getTableColumns = (
   resultData,
   userPropNames,
   eventPropertiesDisplayNames,
-  tableConfig = {}
+  tableConfig = {},
+  projectDomainsList
 ) => {
   const showOnlyCount =
     !tableConfig.showDuration && !tableConfig.showPercentage;
@@ -304,7 +308,15 @@ export const getTableColumns = (
     ),
     dataIndex: `${e.pr} - ${e.eni}`,
     width: 200,
-    fixed: !index ? 'left' : ''
+    fixed: !index ? 'left' : '',
+    render: (d) => {
+      const truncatedURL = truncateURL(d, projectDomainsList);
+      return (
+        <Tooltip placement='top' title={d}>
+          {truncatedURL}
+        </Tooltip>
+      );
+    }
   });
 
   const eventBreakdownColumns = isBreakdownApplied

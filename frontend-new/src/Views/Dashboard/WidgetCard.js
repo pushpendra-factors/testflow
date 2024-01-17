@@ -449,14 +449,22 @@ function WidgetCard({
       }
     }
 
+    let analyseQueryParamsPath = '/analyse';
+    if(unit?.query?.query?.query_group[0]?.cl === 'events' && false) {
+      analyseQueryParamsPath =  analyseQueryParamsPath + '/events/' + unit.query.id_text;
+    } else if(unit?.query?.query?.cl === 'funnel' && false) {
+      analyseQueryParamsPath =  analyseQueryParamsPath + '/funnel/' + unit.query.id_text;
+    }
+
     history.push({
-      pathname: '/analyse',
+      pathname: analyseQueryParamsPath,
       state: {
         query: { ...unit.query, settings: unit.query.settings },
         global_search: true,
         navigatedFromDashboard: unit
       }
     });
+    
   }, [
     history,
     unit,

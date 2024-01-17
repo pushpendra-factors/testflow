@@ -132,9 +132,10 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
 	H.InitSDKServiceRoutes(r)
+	H.InitAppRoutes(r)
 	uri := "/sdk/event/track"
 
-	project, err := SetupProjectReturnDAO()
+	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
 	stepTimestamp := startTimestamp
@@ -629,6 +630,96 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 		}
 	})
 
+	csvFilePath := "/Users/apple/repos/factors/backend/src/factors/tests/data"
+	csvFilename := "test_inlist.csv"
+
+	t.Run("TestInListOperatorForFilter", func(t *testing.T) {
+
+		csvFile, err := ioutil.ReadFile(csvFilePath + "/" + csvFilename)
+		assert.Nil(t, err)
+		w := sendUploadListForFilters(r, project.ID, agent, csvFile, csvFilename)
+		assert.Equal(t, http.StatusOK, w.Code)
+		var res map[string]string
+		decoder := json.NewDecoder(w.Body)
+		if err := decoder.Decode(&res); err != nil {
+			assert.NotNil(t, nil, err)
+		}
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 40,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s0",
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityUser,
+							Property:  "$initial_source",
+							Operator:  model.InList,
+							Type:      "categorial",
+							LogicalOp: "AND",
+							Value:     res["file_reference"],
+						},
+					},
+				},
+			},
+			Class: model.QueryClassEvents,
+
+			Type:            model.QueryTypeEventsOccurrence,
+			EventsCondition: model.EventCondAllGivenEvent,
+		}
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.Equal(t, "aggregate", result.Headers[0])
+		assert.Equal(t, len(result.Rows), 1)
+		assert.Equal(t, result.Rows[0][0], float64(4))
+	})
+
+	csvFilename = "test_notinlist.csv"
+	t.Run("TestNotInListOperatorForFilter", func(t *testing.T) {
+
+		csvFile, err := ioutil.ReadFile(csvFilePath + "/" + csvFilename)
+		if err != nil {
+			fmt.Println(err)
+		}
+		w := sendUploadListForFilters(r, project.ID, agent, csvFile, csvFilename)
+		assert.Equal(t, http.StatusOK, w.Code)
+		var res map[string]string
+		decoder := json.NewDecoder(w.Body)
+		if err := decoder.Decode(&res); err != nil {
+			assert.NotNil(t, nil, err)
+		}
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 40,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s0",
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityUser,
+							Property:  "$initial_source",
+							Operator:  model.NotInList,
+							Type:      "categorial",
+							LogicalOp: "AND",
+							Value:     res["file_reference"],
+						},
+					},
+				},
+			},
+			Class: model.QueryClassEvents,
+
+			Type:            model.QueryTypeEventsOccurrence,
+			EventsCondition: model.EventCondAllGivenEvent,
+		}
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery())
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.Equal(t, "aggregate", result.Headers[0])
+		assert.Equal(t, len(result.Rows), 1)
+		assert.Equal(t, result.Rows[0][0], float64(4))
+	})
+
 }
 
 func TestEventAnalyticsQueryWithNumericalBucketing(t *testing.T) {
@@ -956,6 +1047,33 @@ func sendEventsQueryHandler(r *gin.Engine, projectId int64, agent *model.Agent, 
 	}
 
 	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func sendUploadListForFilters(r *gin.Engine, projectId int64, agent *model.Agent, payload []byte, fileName string) *httptest.ResponseRecorder {
+
+	payloadMap := map[string]interface{}{
+		"file_name": fileName,
+		"payload":   payload,
+	}
+
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error Creating cookieData")
+	}
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/uploadlist", projectId)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		}).WithPostParams(payloadMap)
+
+	w := httptest.NewRecorder()
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error Creating getProjectSetting Req")
+	}
 	r.ServeHTTP(w, req)
 	return w
 }

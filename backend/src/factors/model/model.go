@@ -250,6 +250,8 @@ type Model interface {
 	//clearbit_provision_account
 	ProvisionClearbitAccount(projectId []int64, emailId []string, domainName []string) map[int64]interface{}
 	ProvisionClearbitAccountForSingleProject(projectId int64, emailId string, domainName string) error
+	IsClearbitAccountProvisioned(projectId int64) (bool, error)
+	ProvisionClearbitAccountByAdminEmailAndDomain(projectId int64) (int, string)
 
 	// event_name
 	CreateOrGetEventName(eventName *model.EventName) (*model.EventName, int)
@@ -348,6 +350,9 @@ type Model interface {
 	GetLinkedinEventFieldsBasedOnTimestamp(projectID int64, timestamp int64,
 		imprEventNameID string, clicksEventNameID string) (map[int64]map[string]map[string]bool,
 		map[int64]map[string]map[string]bool, error)
+	GetLinkedinEventFieldsBasedOnTimestampV1(projectID int64, timestamp int64,
+		imprEventNameID string, clicksEventNameID string) (map[int64]map[string]map[string]string,
+		map[int64]map[string]map[string]string, error)
 
 	// clickable_elements
 	UpsertCountAndCheckEnabledClickableElement(projectID int64, payload *model.CaptureClickPayload) (isEnabled bool, status int, err error)
@@ -444,6 +449,7 @@ type Model interface {
 	DoesAgentHaveProject(agentUUID string) int
 	DeleteProjectAgentMapping(projectID int64, agentUUIDToRemove string) int
 	EditProjectAgentMapping(projectID int64, agentUUIDToEdit string, role int64) int
+	GetProjectAgentLatestAdminEmailByProjectId(projectId int64) (string, int)
 
 	// project_setting
 	GetProjectSetting(projectID int64) (*model.ProjectSetting, int)
@@ -492,6 +498,8 @@ type Model interface {
 	GetFormFillEnabledProjectIDWithToken() (*map[int64]string, int)
 	GetTimelinesConfig(projectID int64) (model.TimelinesConfig, error)
 	UpdateAccScoreWeights(projectId int64, weights model.AccWeights) error
+	GetEngagementLevelsByProject(projectId int64) (*model.BucketRanges, int)
+	UpdateEngagementLevel(projectId int64, buckets model.BucketRanges) error
 	GetSixsignalEmailListFromProjectSetting(projectId int64) (string, int)
 	AddSixsignalEmailList(projectId int64, emailIds string) int
 	GetSegmentMarkerLastRunTime(projectID int64) (time.Time, int)
@@ -1038,6 +1046,8 @@ type Model interface {
 	SetAuthTokenforSlackIntegration(projectID int64, agentUUID string, authTokens model.SlackAccessTokens) error
 	GetSlackAuthToken(projectID int64, agentUUID string) (model.SlackAccessTokens, error)
 	DeleteSlackIntegration(projectID int64, agentUUID string) error
+	GetSlackUsersListFromDb(projectID int64, agentID string) ([]model.SlackUser, int, error)
+	UpdateSlackUsersListForProject(projectID int64, fields map[string]interface{}) (int, error)
 
 	// MS Teams
 	SetAuthTokenforTeamsIntegration(projectID int64, agentUUID string, authTokens model.TeamsAccessTokens) error

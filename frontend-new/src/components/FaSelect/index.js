@@ -78,7 +78,7 @@ function FaSelect({
   const renderOptions = () => {
     let rendOpts = [];
     let isSelected = false;
-    if (!options.length) {
+    if (!options?.length) {
       rendOpts.push(
         <div className='flex justify-center items-center my-2'>
           <Spin size='small' />

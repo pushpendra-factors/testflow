@@ -6,14 +6,11 @@ import {
   FaErrorLog,
   Text
 } from 'Components/factorsComponents';
-import { Button, Dropdown, Menu, Spin } from 'antd';
-import SortableCards from './Widget/SortableCards';
-import SubMenu from './Widget/SubMenu';
+import { Button, Dropdown, Menu, Spin, Tooltip } from 'antd';
 import { useHistory } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { getQuickDashboardDateRange } from 'Views/Dashboard/utils';
 import { selectActivePreDashboard } from 'Reducers/dashboard/selectors';
-import { fetchActiveDashboardConfig } from '../state/services';
 import { get } from 'lodash';
 import { setItemToLocalStorage } from 'Utils/localStorage.helpers';
 import { DASHBOARD_KEYS } from 'Constants/localStorage.constants';
@@ -21,6 +18,11 @@ import NoDataChart from 'Components/NoDataChart';
 import useFeatureLock from 'hooks/useFeatureLock';
 import { FEATURES } from 'Constants/plans.constants';
 import { PathUrls } from 'Routes/pathUrls';
+import { TOOLTIP_CONSTANTS } from 'Constants/tooltips.constans';
+import { InfoCircleOutlined } from '@ant-design/icons';
+import { fetchActiveDashboardConfig } from '../state/services';
+import SubMenu from './Widget/SubMenu';
+import SortableCards from './Widget/SortableCards';
 
 const dashboardRefreshInitialState = {
   inProgress: false,
@@ -29,27 +31,31 @@ const dashboardRefreshInitialState = {
   widgetIdsAlreadyFetched: []
 };
 
-
-
-const PreBuildDashboard = ({}) => {
+function PreBuildDashboard({}) {
   const history = useHistory();
   const dispatch = useDispatch();
-  const [deleteWidgetModal, showDeleteWidgetModal] = useState(false);
-  const [deleteApiCalled, setDeleteApiCalled] = useState(false);
   const [durationObj, setDurationObj] = useState(getQuickDashboardDateRange());
   const [oldestRefreshTime, setOldestRefreshTime] = useState(null);
 
-
-  const activeDashboard = useSelector((state) => selectActivePreDashboard(state));
+  const activeDashboard = useSelector((state) =>
+    selectActivePreDashboard(state)
+  );
   const { active_project } = useSelector((state) => state.global);
-  const config = useSelector((state) => state.preBuildDashboardConfig.config.data.result);
+  const config = useSelector(
+    (state) => state.preBuildDashboardConfig.config.data.result
+  );
   const widget = useSelector((state) => state.preBuildDashboardConfig.widget);
-  const predefinedConfigData = useSelector((state) => state.preBuildDashboardConfig.config);
+  const predefinedConfigData = useSelector(
+    (state) => state.preBuildDashboardConfig.config
+  );
 
   const fetchConfig = useCallback(() => {
     if (active_project.id && activeDashboard?.inter_id) {
       dispatch(
-        fetchActiveDashboardConfig(active_project?.id, activeDashboard?.inter_id)
+        fetchActiveDashboardConfig(
+          active_project?.id,
+          activeDashboard?.inter_id
+        )
       );
     }
   }, [active_project.id, activeDashboard?.inter_id, dispatch]);
@@ -59,14 +65,14 @@ const PreBuildDashboard = ({}) => {
   );
 
   useEffect(() => {
-    if(isWebAnalyticsLocked) {
-      history.push(PathUrls.Dashboard)
+    if (isWebAnalyticsLocked) {
+      history.push(PathUrls.Dashboard);
     }
-  }, [isWebAnalyticsLocked])
+  }, [isWebAnalyticsLocked]);
 
   useEffect(() => {
     fetchConfig();
-  }, [fetchConfig]);
+  }, [fetchConfig, activeDashboard?.id]);
 
   const [dashboardRefreshState, setDashboardRefreshState] = useState(
     dashboardRefreshInitialState
@@ -127,7 +133,7 @@ const PreBuildDashboard = ({}) => {
       return dashboardRefreshInitialState;
     });
   }, []);
-  
+
   if (predefinedConfigData?.loading) {
     return (
       <div className='flex justify-center items-center w-full h-64'>
@@ -144,26 +150,6 @@ const PreBuildDashboard = ({}) => {
     );
   }
 
-  const menu = (
-    <Menu
-      // onClick={HandleMenuItemClick}
-      // style={{ borderRadius: '5px', paddingTop: '8px' }}
-    >
-      
-        <Menu.Item
-        >
-          <div>{'label1'}</div>
-        </Menu.Item>
-        <Menu.Item
-        >
-          <div>{'label2'}</div>
-        </Menu.Item>
-        <Menu.Item
-        >
-          <div>{'label3'}</div>
-        </Menu.Item>
-    </Menu>
-  );
   return (
     <ErrorBoundary
       fallback={
@@ -178,41 +164,48 @@ const PreBuildDashboard = ({}) => {
       <div className='flex items-start justify-between'>
         <div className='flex flex-col items-start'>
           <div>
-            <Text level={4} type='title' weight='medium'>
-              {activeDashboard?.name}
-            </Text>
+            <div className='flex justify-center'>
+              <Text level={4} type='title' weight='medium'>
+                {activeDashboard?.name}
+              </Text>
+              <Tooltip
+                className='mt-2 ml-1'
+                title='This is a pre-made dashboard and can not be edited.'
+                placement='bottom'
+                color={TOOLTIP_CONSTANTS.DARK}
+              >
+                <InfoCircleOutlined
+                  style={{ fontSize: '18px', color: '#8C8C8C' }}
+                />
+              </Tooltip>
+            </div>
             <div className='w-3/4'>
               <Text level={7} type='title' weight='medium' color='grey'>
-               {activeDashboard?.description}
+                {activeDashboard?.description}
               </Text>
             </div>
           </div>
         </div>
-        {/* <div>
-          <Dropdown overlay={menu} placement='bottomRight'>
-            <Button type='text' icon={<SVG name={'threedot'} size={25} />} />
-          </Dropdown>
-        </div> */}
       </div>
       <div className='my-6 flex-1'>
-          <SubMenu
+        <SubMenu
           config={config}
           durationObj={durationObj}
           handleDurationChange={handleDurationChange}
           activeDashboard={activeDashboard}
-          />
-          <SortableCards
+        />
+        <SortableCards
           widget={widget}
           durationObj={durationObj}
           handleDurationChange={handleDurationChange}
           setOldestRefreshTime={setOldestRefreshTime}
           dashboardRefreshState={dashboardRefreshState}
           onDataLoadSuccess={onDataLoadSuccess}
-          />
+        />
       </div>
     </ErrorBoundary>
   );
-};
+}
 
 PreBuildDashboard.propTypes = {};
 
