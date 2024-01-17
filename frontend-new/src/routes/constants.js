@@ -36,6 +36,8 @@ import { exact } from 'prop-types';
 import { Layout } from 'antd';
 import WorkflowParagon from 'Views/Pages/WorkflowParagon';
 
+const CoreQueryNew = lazyWithRetry(() => import('../features/analyse'));
+
 const Login = lazyWithRetry(() => import('../Views/Pages/Login'));
 const ForgotPassword = lazyWithRetry(
   () => import('../Views/Pages/ForgotPassword')
@@ -360,7 +362,7 @@ export const APP_LAYOUT_ROUTES = {
   Analyse: {
     path: PathUrls.Analyse,
     title: 'Home',
-    Component: CoreQuery,
+    Component: CoreQueryNew,
     Private: true,
     Layout: AppLayout
   },
