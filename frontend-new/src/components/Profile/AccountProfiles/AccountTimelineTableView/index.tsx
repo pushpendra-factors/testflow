@@ -1,20 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { Spin } from 'antd';
+import NoDataWithMessage from 'Components/Profile/MyComponents/NoDataWithMessage';
+import {
+  AccountTimelineTableViewProps,
+  TimelineEvent
+} from 'Components/Profile/types';
 import { eventsGroupedByGranularity } from '../../utils';
-import { AccountTimelineTableViewProps } from './types';
 import EventDrawer from './EventDrawer';
 import TableRow from './TableRow';
-import NoDataWithMessage from 'Components/Profile/MyComponents/NoDataWithMessage';
 
-const AccountTimelineTableView: React.FC<AccountTimelineTableViewProps> = ({
+function AccountTimelineTableView({
   timelineEvents = [],
   timelineUsers = [],
   eventPropsType,
   loading
-}) => {
-  const [formattedData, setFormattedData] = useState<{ [key: string]: any }>(
-    {}
-  );
+}: AccountTimelineTableViewProps) {
+  const [formattedData, setFormattedData] = useState<{
+    [key: string]: TimelineEvent[];
+  }>({});
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
 
@@ -27,7 +30,7 @@ const AccountTimelineTableView: React.FC<AccountTimelineTableViewProps> = ({
     document.title = 'Accounts - FactorsAI';
   }, [timelineEvents]);
 
-  const handleEventClick = (event: any) => {
+  const handleEventClick = (event: TimelineEvent) => {
     setSelectedEvent(event);
     setModalVisible(true);
   };
@@ -35,20 +38,20 @@ const AccountTimelineTableView: React.FC<AccountTimelineTableViewProps> = ({
   return loading ? (
     <Spin size='large' className='fa-page-loader' />
   ) : timelineUsers.length === 0 ? (
-    <NoDataWithMessage message={'No Associated Users'} />
+    <NoDataWithMessage message='No Associated Users' />
   ) : timelineEvents.length === 0 ? (
-    <NoDataWithMessage message={'No Events Enabled to Show'} />
+    <NoDataWithMessage message='No Events Enabled to Show' />
   ) : (
     <>
       <div className='account-timeline-table-container'>
         <table>
           <tbody>
             {Object.entries(formattedData || {}).map(([timestamp, events]) => (
-              <React.Fragment>
+              <React.Fragment key={timestamp}>
                 <tr className='timestamp-row'>
                   <td>{timestamp}</td>
                 </tr>
-                {events.map((event: any) => {
+                {events.map((event) => {
                   const currentUser = timelineUsers.find(
                     (obj) => obj.userId === event.user
                   );
@@ -76,6 +79,6 @@ const AccountTimelineTableView: React.FC<AccountTimelineTableViewProps> = ({
       />
     </>
   );
-};
+}
 
 export default AccountTimelineTableView;

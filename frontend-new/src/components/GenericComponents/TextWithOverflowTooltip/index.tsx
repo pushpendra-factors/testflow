@@ -2,12 +2,12 @@ import { Tooltip } from 'antd';
 import React, { useEffect, useRef, useState } from 'react';
 import { TextWithTooltipProps } from './types';
 
-const TextWithOverflowTooltip: React.FC<TextWithTooltipProps> = ({
+function TextWithOverflowTooltip({
   text,
   tooltipText,
   extraClass,
   disabled = false
-}) => {
+}: TextWithTooltipProps) {
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
 
@@ -23,14 +23,11 @@ const TextWithOverflowTooltip: React.FC<TextWithTooltipProps> = ({
       title={tooltipText || text}
       trigger={isOverflowing && !disabled ? 'hover' : []}
     >
-      <div
-        ref={tooltipRef}
-        className={`text-with-tooltip ${extraClass ? extraClass : ''}`}
-      >
+      <div ref={tooltipRef} className={`text-with-tooltip ${extraClass || ''}`}>
         {text}
       </div>
     </Tooltip>
   );
-};
+}
 
 export default TextWithOverflowTooltip;

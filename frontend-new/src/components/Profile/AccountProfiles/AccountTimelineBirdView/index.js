@@ -1,22 +1,24 @@
 import { Avatar, Spin, Tooltip } from 'antd';
 import React, { useState, useEffect, useMemo } from 'react';
 import { CaretRightOutlined, CaretUpOutlined } from '@ant-design/icons';
-import InfoCard from '../../MyComponents/InfoCard';
-import {
-  ALPHANUMSTR,
-  eventIconsColorMap,
-  eventsFormattedForGranularity,
-  getEventCategory,
-  getIconForCategory,
-  iconColors,
-  toggleCellCollapse
-} from '../../utils';
-import { SVG, Text } from '../../../factorsComponents';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import NoDataWithMessage from 'Components/Profile/MyComponents/NoDataWithMessage';
 import { useSelector } from 'react-redux';
 import truncateURL from 'Utils/truncateURL';
+import {
+  ALPHANUMSTR,
+  eventIconsColorMap,
+  iconColors
+} from 'Components/Profile/constants';
 import TextWithOverflowTooltip from 'Components/GenericComponents/TextWithOverflowTooltip';
+import { SVG, Text } from '../../../factorsComponents';
+import {
+  eventsFormattedForGranularity,
+  getEventCategory,
+  getIconForCategory,
+  toggleCellCollapse
+} from '../../utils';
+import InfoCard from '../../MyComponents/InfoCard';
 
 function AccountTimelineBirdView({
   timelineEvents = [],
@@ -236,69 +238,66 @@ function AccountTimelineBirdView({
           </tr>
         </thead>
         <tbody>
-          {Object.entries(formattedData).map(
-            ([timestamp, allEvents], index) => {
-              const milestones = allEvents?.milestone;
-              return (
-                <tr>
-                  <td className={`pb-${milestones?.events?.length * 8}`}>
-                    <div className='timestamp top-64'>{timestamp}</div>
-                    {milestones && renderMilestoneStrip(milestones, true)}
-                  </td>
-                  {timelineUsers.map((user) => {
-                    if (!allEvents[user.userId])
-                      return (
-                        <td className='bg-gradient--44px'>
-                          {milestones &&
-                            renderMilestoneStrip(milestones, false)}
-                        </td>
-                      );
-                    const eventsList = allEvents[user.userId].collapsed
-                      ? allEvents[user.userId].events.slice(0, 1)
-                      : allEvents[user.userId].events;
+          {Object.entries(formattedData).map(([timestamp, allEvents]) => {
+            const milestones = allEvents?.milestone;
+            return (
+              <tr>
+                <td className={`pb-${(milestones?.events?.length || 0) * 8}`}>
+                  <div className='timestamp top-64'>{timestamp}</div>
+                  {milestones && renderMilestoneStrip(milestones, true)}
+                </td>
+                {timelineUsers.map((user) => {
+                  if (!allEvents[user.userId])
                     return (
-                      <td
-                        className={`bg-gradient--44px pb-${
-                          milestones?.events?.length * 10
-                        }`}
-                      >
-                        <div
-                          className={`timeline-events account-pad ${
-                            allEvents[user.userId].collapsed
-                              ? 'timeline-events--collapsed'
-                              : 'timeline-events--expanded'
-                          }`}
-                        >
-                          {eventsList?.map((event) => (
-                            <div className='timeline-events__event'>
-                              {renderIcon(event)}
-                              {renderInfoCard(event)}
-                            </div>
-                          ))}
-                          {renderAdditionalDiv(
-                            allEvents[user.userId].events.length,
-                            allEvents[user.userId].collapsed,
-                            () => {
-                              setFormattedData(
-                                toggleCellCollapse(
-                                  formattedData,
-                                  timestamp,
-                                  user.userId,
-                                  !allEvents[user.userId].collapsed
-                                )
-                              );
-                              setCollapseAll(undefined);
-                            }
-                          )}
-                        </div>
+                      <td className='bg-gradient--44px'>
                         {milestones && renderMilestoneStrip(milestones, false)}
                       </td>
                     );
-                  })}
-                </tr>
-              );
-            }
-          )}
+                  const eventsList = allEvents[user.userId].collapsed
+                    ? allEvents[user.userId].events.slice(0, 1)
+                    : allEvents[user.userId].events;
+                  return (
+                    <td
+                      className={`bg-gradient--44px pb-${
+                        (milestones?.events?.length || 0) * 10
+                      }`}
+                    >
+                      <div
+                        className={`timeline-events account-pad ${
+                          allEvents[user.userId].collapsed
+                            ? 'timeline-events--collapsed'
+                            : 'timeline-events--expanded'
+                        }`}
+                      >
+                        {eventsList?.map((event) => (
+                          <div className='timeline-events__event'>
+                            {renderIcon(event)}
+                            {renderInfoCard(event)}
+                          </div>
+                        ))}
+                        {renderAdditionalDiv(
+                          allEvents[user.userId].events.length,
+                          allEvents[user.userId].collapsed,
+                          () => {
+                            setFormattedData(
+                              toggleCellCollapse(
+                                formattedData,
+                                timestamp,
+                                user.userId,
+                                !allEvents[user.userId].collapsed
+                              )
+                            );
+                            setCollapseAll(undefined);
+                          }
+                        )}
+                      </div>
+                      {milestones && renderMilestoneStrip(milestones, false)}
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -307,9 +306,9 @@ function AccountTimelineBirdView({
   return loading ? (
     <Spin size='large' className='fa-page-loader' />
   ) : timelineUsers.length === 0 ? (
-    <NoDataWithMessage message={'No Associated Users'} />
+    <NoDataWithMessage message='No Associated Users' />
   ) : timelineEvents.length === 0 ? (
-    <NoDataWithMessage message={'No Events Enabled to Show'} />
+    <NoDataWithMessage message='No Events Enabled to Show' />
   ) : (
     renderTimeline()
   );

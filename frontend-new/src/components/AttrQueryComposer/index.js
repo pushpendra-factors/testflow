@@ -453,8 +453,7 @@ const mapStateToProps = (state) => ({
   models: state.coreQuery.models,
   window: state.coreQuery.window,
   linkedEvents: state.coreQuery.linkedEvents,
-  dateRange: state.coreQuery.attr_dateRange,
-  groupOpts: state.groups.data
+  dateRange: state.coreQuery.attr_dateRange
 });
 
 const mapDispatchToProps = (dispatch) =>

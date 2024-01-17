@@ -1,14 +1,4 @@
 import React from 'react';
-import {
-  EngagementTag,
-  formatSegmentsObjToGroupSelectObj,
-  getHost,
-  getPropType,
-  IsDomainGroup,
-  propValueFormat,
-  sortNumericalColumn,
-  sortStringColumn
-} from '../utils';
 import { Text } from 'Components/factorsComponents';
 import MomentTz from 'Components/MomentTz';
 import isEqual from 'lodash/isEqual';
@@ -16,9 +6,18 @@ import { PropTextFormat } from 'Utils/dataFormatter';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 import truncateURL from 'Utils/truncateURL';
 import { Popover, Tag } from 'antd';
-import styles from './index.module.scss';
 import { ACCOUNTS_TABLE_COLUMN_TYPES, COLUMN_TYPE_PROPS } from 'Utils/table';
 import { AdminLock } from 'Routes/feature';
+import { EngagementTag } from '../constants';
+import {
+  getHost,
+  getPropType,
+  propValueFormat,
+  sortNumericalColumn,
+  sortStringColumn
+} from '../utils';
+import styles from './index.module.scss';
+
 const placeholderIcon = '/assets/avatar/company-placeholder.png';
 
 export const defaultSegmentsList = [
@@ -29,14 +28,15 @@ export const defaultSegmentsList = [
   'Visited G2'
 ];
 
-const reorderDefaultSegmentsToTop = (segments) => {
-  segments?.[0]?.values.sort((a, b) => {
-    const aIsMatch = defaultSegmentsList.includes(a?.[0]);
-    const bIsMatch = defaultSegmentsList.includes(b?.[0]);
+export const reorderDefaultDomainSegmentsToTop = (segments = []) => {
+  segments?.sort((a, b) => {
+    const aIsMatch = defaultSegmentsList.includes(a?.name);
+    const bIsMatch = defaultSegmentsList.includes(b?.name);
 
     if (aIsMatch && !bIsMatch) {
       return -1;
-    } else if (!aIsMatch && bIsMatch) {
+    }
+    if (!aIsMatch && bIsMatch) {
       return 1;
     }
 
@@ -48,20 +48,10 @@ const reorderDefaultSegmentsToTop = (segments) => {
 
 export const getGroupList = (groupOptions) => {
   const groups = Object.entries(groupOptions || {}).map(
-    ([group_name, display_name]) => [display_name, group_name]
+    ([groupName, displayName]) => [displayName, groupName]
   );
   groups.unshift(['All Accounts', GROUP_NAME_DOMAINS]);
   return groups;
-};
-
-export const generateSegmentsList = ({ segments }) => {
-  const segmentsList = [];
-
-  Object.entries(segments)
-    .filter((segment) => segment[0] === GROUP_NAME_DOMAINS)
-    .map(([group, vals]) => formatSegmentsObjToGroupSelectObj(group, vals))
-    .forEach((obj) => segmentsList.push(obj));
-  return reorderDefaultSegmentsToTop(segmentsList);
 };
 
 const getTablePropColumn = ({
@@ -126,116 +116,140 @@ export const getColumns = ({
   activeAgent
 }) => {
   const headerClassStr =
-    'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold inline-flex';
-  const columns = [
-    {
-      // Company Name Column
-      title: <div className={headerClassStr}>Account Domain</div>,
-      dataIndex: 'account',
-      key: 'account',
-      width: COLUMN_TYPE_PROPS['string'].max,
-      type: 'string',
-      fixed: 'left',
-      ellipsis: true,
-      sorter: (a, b) => sortStringColumn(a.account.name, b.account.name),
-      render: (item) =>
-        (
-          <div className='flex items-center' id={item.name}>
-            <img
-              src={`https://logo.clearbit.com/${getHost(item.host)}`}
-              onError={(e) => {
-                if (e.target.src !== placeholderIcon) {
-                  e.target.src = placeholderIcon;
-                }
-              }}
-              alt=''
-              width='24'
-              height='24'
-              loading='lazy'
-            />
-            <span
-              style={{
-                textOverflow: 'ellipsis',
-                overflow: 'hidden',
-                whiteSpace: 'nowrap'
-              }}
-              className='ml-2'
-            >
-              <Text
-                type={'title'}
-                level={7}
-                extraClass={'truncate'}
-                truncate={true}
-                charLimit={25}
-              >
-                {item.name}
-              </Text>
-            </span>
-          </div>
-        ) || '-'
-    }
-  ];
-  // Engagement Column
+    'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold';
 
-  if (!isScoringLocked) {
-    columns.push(
-      {
-        title: <div className={headerClassStr}>Engagement</div>,
-        width: 128,
-        type: 'actions',
-        dataIndex: 'engagement',
-        key: 'engagement',
-        fixed: 'left',
-        defaultSortOrder: 'descend',
-        sorter: (a, b) => sortNumericalColumn(a.score, b.score),
-        render: (status) =>
-          status ? (
-            <div
-              className='engagement-tag'
-              style={{ '--bg-color': EngagementTag[status]?.bgColor }}
+  const accountColumn = {
+    title: <div className={headerClassStr}>Account Domain</div>,
+    dataIndex: 'account',
+    key: 'account',
+    width: 264,
+    type: 'string',
+    fixed: 'left',
+    ellipsis: true,
+    sorter: (a, b) => sortStringColumn(a.account.name, b.account.name),
+    render: (item) =>
+      (
+        <div className='flex items-center' id={item.name}>
+          <img
+            src={`https://logo.clearbit.com/${getHost(item.host)}`}
+            onError={(e) => {
+              if (e.target.src !== placeholderIcon) {
+                e.target.src = placeholderIcon;
+              }
+            }}
+            alt=''
+            width='24'
+            height='24'
+            loading='lazy'
+          />
+          <span
+            style={{
+              textOverflow: 'ellipsis',
+              overflow: 'hidden',
+              whiteSpace: 'nowrap'
+            }}
+            className='ml-2'
+          >
+            <Text
+              type='title'
+              level={7}
+              extraClass='truncate'
+              truncate
+              charLimit={25}
             >
-              <img
-                src={`../../../assets/icons/${EngagementTag[status]?.icon}.svg`}
-                alt=''
-              />
-              <Text type='title' level={7} extraClass='m-0'>
-                {status}
-              </Text>
-            </div>
-          ) : (
-            '-'
-          )
-      },
-      {
-        title: <div className={headerClassStr}>Score</div>,
-        width: 128,
-        type: 'number',
-        dataIndex: 'score',
-        key: 'score',
-        defaultSortOrder: 'descend',
-        sorter: (a, b) => sortNumericalColumn(a.score, b.score),
-        render: (value) => (
+              {item.name}
+            </Text>
+          </span>
+        </div>
+      ) || '-'
+  };
+
+  const engagementColumn = {
+    title: <div className={headerClassStr}>Engagement</div>,
+    width: 152,
+    type: 'string',
+    dataIndex: 'engagement',
+    key: 'engagement',
+    fixed: 'left',
+    defaultSortOrder: 'descend',
+    sorter: (a, b) => sortNumericalColumn(a.score, b.score),
+    render: (status) =>
+      status ? (
+        <div
+          className='engagement-tag'
+          style={{ '--bg-color': EngagementTag[status]?.bgColor }}
+        >
+          <img
+            src={`../../../assets/icons/${EngagementTag[status]?.icon}.svg`}
+            alt=''
+          />
           <Text type='title' level={7} extraClass='m-0'>
-            {value ? parseInt(value).toLocaleString() : '-'}
+            {status}
           </Text>
-        )
-      }
-    );
-    if (AdminLock(activeAgent)) {
-      columns.push({
-        title: <div className={headerClassStr}>Engagement Signals</div>,
-        width: COLUMN_TYPE_PROPS['string'].max,
-        dataIndex: 'top_engagements',
-        type: 'actions',
-        key: 'top_engagements',
+        </div>
+      ) : (
+        '-'
+      )
+  };
 
-        render: (value) => (
-          <div className={styles['top_eng_names']}>
-            {value &&
-              Object.keys(value)
-                .slice(0, 2)
-                .map((eachKey, eachIndex) => {
-                  return (
+  const scoreColumn = {
+    title: <div className={headerClassStr}>Score</div>,
+    width: 152,
+    type: 'number',
+    dataIndex: 'score',
+    key: 'score',
+    defaultSortOrder: 'descend',
+    sorter: (a, b) => sortNumericalColumn(a.score, b.score),
+    render: (value) => (
+      <Text type='title' level={7} extraClass='m-0'>
+        {value ? value.toFixed() : '-'}
+      </Text>
+    )
+  };
+
+  const topEngagementsColumn = {
+    title: <div className={headerClassStr}>Engagement Signals</div>,
+    width: COLUMN_TYPE_PROPS.string.max,
+    dataIndex: 'top_engagements',
+    type: 'actions',
+    key: 'top_engagements',
+    render: (value) => (
+      <div className={styles.top_eng_names}>
+        {value &&
+          Object.keys(value)
+            .slice(0, 2)
+            .map((eachKey, eachIndex) => (
+              <Tag color='default' className={styles['tag-enagagementrule']}>
+                <Text
+                  type='title'
+                  level={7}
+                  color='grey-2'
+                  extraClass='m-0 truncate'
+                  truncate
+                  size='h2'
+                  charLimit={20}
+                >
+                  {eachKey}
+                </Text>
+                <span className={styles['tag-seperator']}>|</span>
+                {value[eachKey]}
+              </Tag>
+            ))}
+        {value && Object.keys(value).length > 2 ? (
+          <Popover
+            content={
+              <div
+                className='flex flex-col'
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+              >
+                <Text type='title' level={7} color='grey'>
+                  Engagement Signals
+                </Text>
+                {Object.keys(value)
+                  .slice(2)
+                  .map((eachKey, eachIndex) => (
                     <Tag
                       color='default'
                       className={styles['tag-enagagementrule']}
@@ -250,75 +264,33 @@ export const getColumns = ({
                         charLimit={20}
                       >
                         {eachKey}
-                      </Text>{' '}
-                      <span className={styles['tag-seperator']}>|</span>{' '}
+                      </Text>
+                      <span className={styles['tag-seperator']}>|</span>
                       {value[eachKey]}
                     </Tag>
-                  );
-                })}
-            {value && Object.keys(value).length > 2 ? (
-              <Popover
-                content={
-                  <div
-                    className='flex flex-col'
-                    onClick={(e) => {
-                      e.stopPropagation();
-                    }}
-                  >
-                    <Text type='title' level={7} color='grey'>
-                      Engagement Signals
-                    </Text>
-                    {Object.keys(value)
-                      .slice(2)
-                      .map((eachKey, eachIndex) => {
-                        return (
-                          <Tag
-                            color='default'
-                            className={styles['tag-enagagementrule']}
-                          >
-                            <Text
-                              type='title'
-                              level={7}
-                              color='grey-2'
-                              extraClass='m-0 truncate'
-                              truncate
-                              size='h2'
-                              charLimit={20}
-                            >
-                              {eachKey}
-                            </Text>{' '}
-                            <span className={styles['tag-seperator']}>|</span>{' '}
-                            {value[eachKey]}
-                          </Tag>
-                        );
-                      })}
-                  </div>
-                }
-              >
-                <Tag color='default' className={styles['tag-enagagementrule']}>
-                  {' '}
-                  <span>and </span> +{Object.keys(value).length - 2}
-                </Tag>
-              </Popover>
-            ) : null}
-          </div>
-        )
-      });
-    }
-  }
-  // Table Prop Columns
-  displayTableProps?.forEach((prop) => {
-    columns.push(
-      getTablePropColumn({
-        prop,
-        groupPropNames,
-        listProperties,
-        projectDomainsList
-      })
-    );
-  });
-  // Last Activity Column
-  columns.push({
+                  ))}
+              </div>
+            }
+          >
+            <Tag color='default' className={styles['tag-enagagementrule']}>
+              <span>and </span> +{Object.keys(value).length - 2}
+            </Tag>
+          </Popover>
+        ) : null}
+      </div>
+    )
+  };
+
+  const tablePropColumns = displayTableProps?.map((prop) =>
+    getTablePropColumn({
+      prop,
+      groupPropNames,
+      listProperties,
+      projectDomainsList
+    })
+  );
+
+  const lastActivityColumn = {
     title: <div className={headerClassStr}>Last Activity</div>,
     dataIndex: 'lastActivity',
     key: 'lastActivity',
@@ -327,7 +299,16 @@ export const getColumns = ({
     align: 'left',
     sorter: (a, b) => sortStringColumn(a.lastActivity, b.lastActivity),
     render: (item) => MomentTz(item).fromNow()
-  });
+  };
+
+  const columns = [
+    accountColumn,
+    ...(isScoringLocked
+      ? []
+      : [engagementColumn, scoreColumn, topEngagementsColumn]),
+    ...tablePropColumns,
+    lastActivityColumn
+  ];
 
   columns.forEach((column) => {
     if (column.key === defaultSorterInfo?.key) {
@@ -336,17 +317,19 @@ export const getColumns = ({
       delete column.sortOrder;
     }
   });
-  const hasSorter = columns.find((item) =>
+
+  const hasSorter = columns.some((item) =>
     ['ascend', 'descend'].includes(item.sortOrder)
   );
+
   if (!hasSorter) {
     columns.forEach((column) => {
       if (['engagement', 'lastActivity'].includes(column.key)) {
         column.defaultSortOrder = 'descend';
-        return;
       }
     });
   }
+
   return columns;
 };
 
@@ -380,10 +363,14 @@ export const checkFiltersEquality = ({
     isEventPropEqual === true;
   const saveButtonDisabled =
     isActiveSegment === true
-      ? (filtersList.length === 0 && eventsList.length === 0 && secondaryFiltersList.length === 0) ||
+      ? (filtersList.length === 0 &&
+          eventsList.length === 0 &&
+          secondaryFiltersList.length === 0) ||
         areFiltersDirty === false
       : applyButtonDisabled === false ||
-        (filtersList.length === 0 && eventsList.length === 0 && secondaryFiltersList.length === 0);
+        (filtersList.length === 0 &&
+          eventsList.length === 0 &&
+          secondaryFiltersList.length === 0);
   return { saveButtonDisabled, applyButtonDisabled };
 };
 
@@ -391,18 +378,14 @@ export const computeFilterProperties = ({
   userProperties,
   groupProperties,
   availableGroups,
-  profileType,
-  source
+  profileType
 }) => {
   const props = {};
   if (profileType === 'account') {
-    if (IsDomainGroup(source)) {
-      props[GROUP_NAME_DOMAINS] = groupProperties[GROUP_NAME_DOMAINS];
-      Object.keys(availableGroups || {}).forEach((group) => {
-        props[group] = groupProperties[group];
-      });
-    } else props[source] = groupProperties[source];
-    // props.user = userProperties;
+    props[GROUP_NAME_DOMAINS] = groupProperties[GROUP_NAME_DOMAINS];
+    Object.keys(availableGroups || {}).forEach((group) => {
+      props[group] = groupProperties[group];
+    });
   } else if (profileType === 'user') {
     props.user = userProperties;
   }

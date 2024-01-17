@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { memo, useCallback, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import cx from 'classnames';
 import { Button, Dropdown, Menu } from 'antd';
@@ -20,7 +20,7 @@ import {
 import EventsBlock from '../MyComponents/EventsBlock';
 import styles from './index.module.scss';
 
-const FiltersBox = ({
+function FiltersBox({
   filtersList,
   secondaryFiltersList,
   setSecondaryFiltersList,
@@ -41,7 +41,7 @@ const FiltersBox = ({
   isActiveSegment,
   eventTimeline,
   setEventTimeline
-}) => {
+}) {
   const { newSegmentMode: accountsNewSegmentMode } = useSelector(
     (state) => state.accountProfilesView
   );
@@ -80,59 +80,58 @@ const FiltersBox = ({
 
   const eventMenuItems = (
     <Menu className={styles['dropdown-menu']}>
-      {map(eventMenuList, (item) => {
-        return (
-          <Menu.Item
-            className={styles['dropdown-menu-item']}
-            onClick={() => handleEventChange(item)}
-            key={item.key}
-          >
-            <Text type='title' extraClass='mb-0'>
-              {item.label}
-            </Text>
-          </Menu.Item>
-        );
-      })}
+      {map(eventMenuList, (item) => (
+        <Menu.Item
+          className={styles['dropdown-menu-item']}
+          onClick={() => handleEventChange(item)}
+          key={item.key}
+        >
+          <Text type='title' extraClass='mb-0'>
+            {item.label}
+          </Text>
+        </Menu.Item>
+      ))}
     </Menu>
   );
 
   const eventTimelineMenuItems = (
     <Menu className={styles['dropdown-menu']}>
-      {map(eventTimelineMenuList, (item) => {
-        return (
-          <Menu.Item
-            className={styles['dropdown-menu-item']}
-            onClick={() => handleEventTimelineChange(item)}
-            key={item.key}
-          >
-            <Text type='title' extraClass='mb-0'>
-              {item.label}
-            </Text>
-          </Menu.Item>
-        );
-      })}
+      {map(eventTimelineMenuList, (item) => (
+        <Menu.Item
+          className={styles['dropdown-menu-item']}
+          onClick={() => handleEventTimelineChange(item)}
+          key={item.key}
+        >
+          <Text type='title' extraClass='mb-0'>
+            {item.label}
+          </Text>
+        </Menu.Item>
+      ))}
     </Menu>
   );
 
-  const mainFilterProps = useMemo(() => {
-    return computeFilterProperties({
-      userProperties,
-      groupProperties,
-      availableGroups: availableGroups?.account_groups,
-      profileType,
-      source
-    });
-  }, [userProperties, groupProperties, availableGroups, profileType, source]);
+  const mainFilterProps = useMemo(
+    () =>
+      computeFilterProperties({
+        userProperties,
+        groupProperties,
+        availableGroups: availableGroups?.account_groups,
+        profileType
+      }),
+    [userProperties, groupProperties, availableGroups, profileType]
+  );
 
-  const userFilterProps = useMemo(() => {
-    return computeFilterProperties({
-      userProperties,
-      groupProperties,
-      availableGroups: availableGroups?.account_groups,
-      profileType: 'user',
-      source: 'users'
-    });
-  }, [userProperties, groupProperties, availableGroups]);
+  const userFilterProps = useMemo(
+    () =>
+      computeFilterProperties({
+        userProperties,
+        groupProperties,
+        availableGroups: availableGroups?.account_groups,
+        profileType: 'user',
+        source: 'users'
+      }),
+    [userProperties, groupProperties, availableGroups]
+  );
 
   const handleInsertFilter = useCallback(
     (filter, index) => {
@@ -225,44 +224,44 @@ const FiltersBox = ({
         updatedQuery.push(newEvent);
       }
       setListEvents(
-        updatedQuery.map((q) => {
-          return {
-            ...q,
-            key: q.key || generateRandomKey()
-          };
-        })
+        updatedQuery.map((q) => ({
+          ...q,
+          key: q.key || generateRandomKey()
+        }))
       );
     },
     [listEvents, setListEvents]
   );
 
-  const { applyButtonDisabled, saveButtonDisabled } = useMemo(() => {
-    return checkFiltersEquality({
+  const { applyButtonDisabled, saveButtonDisabled } = useMemo(
+    () =>
+      checkFiltersEquality({
+        appliedFilters,
+        filtersList,
+        newSegmentMode,
+        eventsList: listEvents,
+        eventProp,
+        isActiveSegment,
+        areFiltersDirty,
+        secondaryFiltersList
+      }),
+    [
       appliedFilters,
       filtersList,
       newSegmentMode,
-      eventsList: listEvents,
+      listEvents,
       eventProp,
       isActiveSegment,
       areFiltersDirty,
       secondaryFiltersList
-    });
-  }, [
-    appliedFilters,
-    filtersList,
-    newSegmentMode,
-    listEvents,
-    eventProp,
-    isActiveSegment,
-    areFiltersDirty,
-    secondaryFiltersList
-  ]);
+    ]
+  );
 
-  const showClearAllButton = useMemo(() => {
-    return (
-      appliedFilters.filters.length > 0 || appliedFilters.eventsList.length > 0
-    );
-  }, [appliedFilters.eventsList.length, appliedFilters.filters.length]);
+  const showClearAllButton = useMemo(
+    () =>
+      appliedFilters.filters.length > 0 || appliedFilters.eventsList.length > 0,
+    [appliedFilters.eventsList.length, appliedFilters.filters.length]
+  );
 
   return (
     <div
@@ -281,22 +280,20 @@ const FiltersBox = ({
         </div>
         <div className='px-6'>
           <ControlledComponent controller={filtersList.length > 0}>
-            {filtersList.map((filter, index) => {
-              return (
-                <FilterWrapper
-                  key={index}
-                  viewMode={false}
-                  projectID={activeProject?.id}
-                  filter={filter}
-                  index={index}
-                  filterProps={mainFilterProps}
-                  minEntriesPerGroup={3}
-                  insertFilter={handleInsertFilter}
-                  closeFilter={handleCloseFilter}
-                  deleteFilter={handleDeleteFilter}
-                />
-              );
-            })}
+            {filtersList.map((filter, index) => (
+              <FilterWrapper
+                key={index}
+                viewMode={false}
+                projectID={activeProject?.id}
+                filter={filter}
+                index={index}
+                filterProps={mainFilterProps}
+                minEntriesPerGroup={3}
+                insertFilter={handleInsertFilter}
+                closeFilter={handleCloseFilter}
+                deleteFilter={handleDeleteFilter}
+              />
+            ))}
           </ControlledComponent>
 
           <ControlledComponent controller={filterDD === true}>
@@ -344,23 +341,21 @@ const FiltersBox = ({
           </Text>
         </div>
         <div className='px-6 flex flex-col row-gap-2'>
-          {listEvents.map((event, index) => {
-            return (
-              <div key={index}>
-                <EventsBlock
-                  isEngagementConfig={false}
-                  availableGroups={groupsList}
-                  index={index + 1}
-                  event={event}
-                  queries={listEvents}
-                  groupAnalysis={source}
-                  eventChange={handleQueryChange}
-                  closeEvent={closeEvent}
-                  initialDDState={false}
-                />
-              </div>
-            );
-          })}
+          {listEvents.map((event, index) => (
+            <div key={index}>
+              <EventsBlock
+                isEngagementConfig={false}
+                availableGroups={groupsList}
+                index={index + 1}
+                event={event}
+                queries={listEvents}
+                groupAnalysis={source}
+                eventChange={handleQueryChange}
+                closeEvent={closeEvent}
+                initialDDState={false}
+              />
+            </div>
+          ))}
           <ControlledComponent
             controller={isEventsVisible === true && listEvents.length < 3}
           >
@@ -458,22 +453,20 @@ const FiltersBox = ({
           </div>
           <div className='px-6'>
             <ControlledComponent controller={secondaryFiltersList.length > 0}>
-              {secondaryFiltersList.map((filter, index) => {
-                return (
-                  <FilterWrapper
-                    key={index}
-                    viewMode={false}
-                    projectID={activeProject?.id}
-                    filter={filter}
-                    index={index}
-                    filterProps={userFilterProps}
-                    minEntriesPerGroup={3}
-                    insertFilter={handleInsertSecondaryFilter}
-                    closeFilter={handleCloseSecondaryFilter}
-                    deleteFilter={handleDeleteSecondaryFilter}
-                  />
-                );
-              })}
+              {secondaryFiltersList.map((filter, index) => (
+                <FilterWrapper
+                  key={index}
+                  viewMode={false}
+                  projectID={activeProject?.id}
+                  filter={filter}
+                  index={index}
+                  filterProps={userFilterProps}
+                  minEntriesPerGroup={3}
+                  insertFilter={handleInsertSecondaryFilter}
+                  closeFilter={handleCloseSecondaryFilter}
+                  deleteFilter={handleDeleteSecondaryFilter}
+                />
+              ))}
             </ControlledComponent>
 
             <ControlledComponent controller={secondaryFilterDD === true}>
@@ -540,7 +533,7 @@ const FiltersBox = ({
             className='flex items-center col-gap-1'
             onClick={onClearFilters}
           >
-            <Text type='title' extraClass='mb-0' color={'character-title'}>
+            <Text type='title' extraClass='mb-0' color='character-title'>
               Clear all filters
             </Text>
           </Button>
@@ -569,6 +562,6 @@ const FiltersBox = ({
       </div>
     </div>
   );
-};
+}
 
 export default memo(FiltersBox);

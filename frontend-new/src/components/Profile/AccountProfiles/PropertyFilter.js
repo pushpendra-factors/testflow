@@ -2,11 +2,11 @@ import React, { useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import cx from 'classnames';
 import { Button } from 'antd';
-import FiltersBox from './FiltersBox';
-import styles from './index.module.scss';
 import { Text, SVG } from 'Components/factorsComponents';
 import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
 import { setNewSegmentModeAction } from 'Reducers/accountProfilesView/actions';
+import styles from './index.module.scss';
+import FiltersBox from './FiltersBox';
 
 function PropertyFilter({
   profileType,
@@ -15,16 +15,16 @@ function PropertyFilter({
   filtersExpanded,
   setFiltersExpanded,
   filtersList,
+  setFiltersList,
   secondaryFiltersList,
   setSecondaryFiltersList,
   listEvents,
   setListEvents,
-  setFiltersList,
   appliedFilters,
   eventProp,
+  setEventProp,
   setSaveSegmentModal,
   selectedAccount,
-  setEventProp,
   areFiltersDirty,
   resetSelectedFilters,
   onClearFilters,

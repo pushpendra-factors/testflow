@@ -2,9 +2,9 @@ import React from 'react';
 import { Popover } from 'antd';
 import { Text } from 'Components/factorsComponents';
 import { PropTextFormat } from 'Utils/dataFormatter';
-import { propValueFormat } from '../../utils';
 import { useSelector } from 'react-redux';
 import TextWithOverflowTooltip from 'Components/GenericComponents/TextWithOverflowTooltip';
+import { propValueFormat } from '../../utils';
 import truncateURL from 'Utils/truncateURL';
 
 function InfoCard({

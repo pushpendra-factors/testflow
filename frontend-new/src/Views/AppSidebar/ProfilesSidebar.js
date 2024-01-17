@@ -10,28 +10,21 @@ import {
   selectTimelinePayload
 } from 'Reducers/userProfilesView/selectors';
 import {
-  setActiveSegmentAction,
   setNewSegmentModeAction,
   setTimelinePayloadAction
 } from 'Reducers/userProfilesView/actions';
+import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
 import styles from './index.module.scss';
 import SidebarMenuItem from './SidebarMenuItem';
 import SidebarSearch from './SidebarSearch';
 import { ProfilesSidebarIconsMapping } from './appSidebar.constants';
-import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
 import { getSegmentColorCode } from './appSidebar.helpers';
 
-const NewSegmentItem = () => {
-  return (
-    <SidebarMenuItem
-      text={'Untitled Segment 1'}
-      isActive={true}
-      onClick={noop}
-    />
-  );
-};
+function NewSegmentItem() {
+  return <SidebarMenuItem text='Untitled Segment 1' isActive onClick={noop} />;
+}
 
-const GroupItem = ({ group }) => {
+function GroupItem({ group }) {
   const dispatch = useDispatch();
   const timelinePayload = useSelector((state) => selectTimelinePayload(state));
   const { newSegmentMode } = useSelector((state) => state.userProfilesView);
@@ -41,17 +34,15 @@ const GroupItem = ({ group }) => {
       dispatch(
         setTimelinePayloadAction({
           source: group[1],
-          filters: [],
-          segment_id: ''
+          segment: {}
         })
       );
-      dispatch(setActiveSegmentAction({}));
     }
   };
 
   const isActive =
     timelinePayload.source === group[1] &&
-    !timelinePayload.segment_id &&
+    !timelinePayload.segment.id &&
     newSegmentMode === false;
 
   return (
@@ -62,47 +53,50 @@ const GroupItem = ({ group }) => {
       icon={ProfilesSidebarIconsMapping[group[1]]}
     />
   );
-};
+}
 
-const SegmentItem = ({ segment }) => {
+function SegmentItem({ segment }) {
   const dispatch = useDispatch();
   const timelinePayload = useSelector((state) => selectTimelinePayload(state));
+  const activeSegment = timelinePayload?.segment;
   const { newSegmentMode } = useSelector((state) => state.userProfilesView);
 
+  const changeActiveSegment = () => {
+    const opts = { ...timelinePayload };
+    opts.source = segment?.type;
+    opts.segment = segment;
+    delete opts.search_filter;
+    dispatch(setTimelinePayloadAction(opts));
+  };
+
   const setActiveSegment = () => {
-    if (timelinePayload.segment_id !== segment[1] || newSegmentMode === true) {
-      const opts = { ...timelinePayload };
-      opts.source = segment[2].type;
-      opts.segment_id = segment[1];
-      opts.filters = [];
-      delete opts.search_filter;
-      dispatch(setActiveSegmentAction(segment[2]));
-      dispatch(setTimelinePayloadAction(opts));
+    if (activeSegment?.id !== segment?.id) {
+      changeActiveSegment();
     }
   };
 
   const isActive =
-    timelinePayload.segment_id === segment[1] && newSegmentMode === false;
-  const iconColor = getSegmentColorCode(segment[0]);
+    activeSegment?.id === segment?.id && newSegmentMode === false;
+  const iconColor = getSegmentColorCode(segment?.name);
 
   return (
     <SidebarMenuItem
-      text={segment[0]}
+      text={segment?.name}
       isActive={isActive}
       onClick={setActiveSegment}
-      icon={'pieChart'}
+      icon='pieChart'
       iconColor={iconColor}
     />
   );
-};
+}
 
-const ProfilesSidebar = () => {
+function ProfilesSidebar() {
   const [searchText, setSearchText] = useState('');
   const dispatch = useDispatch();
   const userOptions = getUserOptionsForDropdown();
   const { newSegmentMode } = useSelector((state) => state.userProfilesView);
 
-  const segmentsList = useSelector((state) => selectSegmentsList(state));
+  const userSegmentsList = useSelector((state) => selectSegmentsList(state));
 
   return (
     <div className='flex flex-col row-gap-5'>
@@ -125,29 +119,25 @@ const ProfilesSidebar = () => {
             <SidebarSearch
               searchText={searchText}
               setSearchText={setSearchText}
-              placeholder={'Search segment'}
+              placeholder='Search segment'
             />
             <ControlledComponent controller={newSegmentMode === true}>
               <NewSegmentItem />
             </ControlledComponent>
-            {userOptions.slice(1).map((option) => {
-              return <GroupItem key={option[0]} group={option} />;
-            })}
-            {segmentsList.map((segment) => {
-              if (segment.values != null) {
-                const filteredSegments = segment.values.filter((value) =>
-                  value[0].toLowerCase().includes(searchText.toLowerCase())
-                );
-                return (
-                  <Fragment key={segment.label}>
-                    {filteredSegments.map((value) => {
-                      return <SegmentItem key={value[1]} segment={value} />;
-                    })}
-                  </Fragment>
-                );
-              }
-              return null;
-            })}
+            {userOptions.slice(1).map((option) => (
+              <GroupItem key={option[0]} group={option} />
+            ))}
+            <Fragment key='users'>
+              {userSegmentsList
+                ?.filter((segment) =>
+                  segment?.name
+                    ?.toLowerCase()
+                    .includes(searchText.toLowerCase())
+                )
+                ?.map((value) => (
+                  <SegmentItem key={value.id} segment={value} />
+                ))}
+            </Fragment>
           </div>
         </div>
       </div>
@@ -178,6 +168,6 @@ const ProfilesSidebar = () => {
       </div>
     </div>
   );
-};
+}
 
 export default ProfilesSidebar;

@@ -1,19 +1,19 @@
 import { Spin } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { Text } from 'Components/factorsComponents';
+import { EngagementTag } from 'Components/Profile/constants';
+import {
+  AccountOverviewProps,
+  CustomStyles,
+  TopPage,
+  TopUser
+} from 'Components/Profile/types';
 import React from 'react';
 import { formatDuration } from 'Utils/dataFormatter';
 import TableWithHeading from './TableWithHeading';
 import TrendsChart from './TrendsChart';
-import {
-  AccountOverviewProps,
-  CustomStyles,
-  TopPages,
-  TopUsers
-} from './types';
-import { EngagementTag } from './utils';
 
-const topPageColumns: ColumnsType<TopPages> = [
+const topPageColumns: ColumnsType<TopPage> = [
   {
     title: 'Page URL',
     dataIndex: 'page_url',
@@ -21,7 +21,7 @@ const topPageColumns: ColumnsType<TopPages> = [
     ellipsis: true,
     width: 224,
     render: (text: string) => (
-      <a href={'https://' + text} target='_blank' rel='noopener noreferrer'>
+      <a href={`https://${text}`} target='_blank' rel='noopener noreferrer'>
         {text}
       </a>
     )
@@ -58,7 +58,7 @@ const topPageColumns: ColumnsType<TopPages> = [
   }
 ];
 
-const topUserColumns: ColumnsType<TopUsers> = [
+const topUserColumns: ColumnsType<TopUser> = [
   {
     title: 'Name',
     dataIndex: 'name',
@@ -89,10 +89,10 @@ const topUserColumns: ColumnsType<TopUsers> = [
   }
 ];
 
-const AccountOverview: React.FC<AccountOverviewProps> = ({
+function AccountOverview({
   overview,
   loading
-}) => {
+}: AccountOverviewProps): JSX.Element {
   const styles: CustomStyles = {
     '--bg-color': EngagementTag[overview?.engagement]?.bgColor || '#FFF1F0'
   };
@@ -213,6 +213,6 @@ const AccountOverview: React.FC<AccountOverviewProps> = ({
       </div>
     </div>
   );
-};
+}
 
 export default AccountOverview;

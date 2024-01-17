@@ -15,7 +15,7 @@ import {
   QUERY_TYPE_ATTRIBUTION,
   QUERY_TYPE_CAMPAIGN,
   DASHBOARD_WIDGET_SECTION,
-  reverse_user_types,
+  REVERSE_USER_TYPES,
   presentationObj,
   QUERY_TYPE_PROFILE,
   QUERY_TYPE_KPI,
@@ -78,7 +78,7 @@ function CardContent({ unit, resultState, durationObj }) {
   const { queryType } = equivalentQuery;
   const breakdownType = useMemo(() => {
     if (queryType === QUERY_TYPE_EVENT) {
-      return reverse_user_types[unit.query.query.query_group[0].ec];
+      return REVERSE_USER_TYPES[unit.query.query.query_group[0].ec];
     }
   }, [queryType, unit.query.query]);
 

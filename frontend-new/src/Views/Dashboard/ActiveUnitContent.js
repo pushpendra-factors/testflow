@@ -13,7 +13,7 @@ import {
   EACH_USER_TYPE,
   TOTAL_EVENTS_CRITERIA,
   DASHBOARD_MODAL,
-  reverse_user_types,
+  REVERSE_USER_TYPES,
   ATTRIBUTION_METRICS,
 } from '../../utils/constants';
 import ReportContent from '../CoreQuery/AnalysisResultsPage/ReportContent';
@@ -95,7 +95,7 @@ function ActiveUnitContent({
     if (unit.query.query.query_group.length > 1) {
       breakdownType = EACH_USER_TYPE;
     } else {
-      breakdownType = reverse_user_types[unit.query.query.query_group[0].ec];
+      breakdownType = REVERSE_USER_TYPES[unit.query.query.query_group[0].ec];
     }
   }
 
