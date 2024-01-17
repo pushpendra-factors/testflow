@@ -235,10 +235,9 @@ const Alerts = ({
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => (
-        <div className='flex items-center'>
-          {' '}
-          {status === 'paused' || status === 'disabled' ? (
+      render: (item) => (
+        <div className='flex items-center'> 
+          {item?.status === 'paused' || item?.status === 'disabled' ? (
             <Badge
               className={'fa-custom-badge fa-custom-badge--orange'}
               status='processing'
@@ -251,6 +250,9 @@ const Alerts = ({
               text={'Active'}
             />
           )}
+          {
+            item?.error && <SVG name={'InfoCircle'} extraClass={'ml-2'} size={18} color='red' />
+          }
         </div>
       )
     },
@@ -308,7 +310,7 @@ const Alerts = ({
             alert_name: item,
             type: item?.type == "kpi_alert" ? "Weekly alerts" : "Real-time",
             dop: item?.delivery_options,
-            status: item?.status,
+            status: {status: item?.status, error: item?.last_fail_details},
             actions: item
           });
         });

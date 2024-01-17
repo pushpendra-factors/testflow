@@ -245,6 +245,9 @@ export default function (state = defaultState, action) {
     case 'FETCH_TEAMS_FULFILLED': {
       return { ...state, teams: action.payload };
     }
+    case 'SLACK_USERS_FULFILLED': {
+      return { ...state, slack_users: action.payload };
+    }
     case 'FETCH_SLACK_REJECTED': {
       return { ...state, slack: action.payload };
     }
@@ -1252,6 +1255,30 @@ export function fetchTeamsChannels(projectId, teamId) {
   };
 }
 
+export function fetchSlackUsers(projectId) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      get(
+        dispatch,
+        host + 'projects/' + projectId + '/slack/users'
+      )
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'SLACK_USERS_FULFILLED', payload: r.data });
+            resolve(r);
+          } else {
+            dispatch({ type: 'SLACK_USERS_REJECTED', payload: {} });
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          dispatch({ type: 'SLACK_USERS_REJECTED', payload: {} });
+          reject(err);
+        });
+    });
+  };
+}
+
 export function disableTeamsIntegration(projectId) {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
@@ -1444,6 +1471,24 @@ export function testWebhhookUrl(projectId, payload) {
       put(
         dispatch,
         host + 'projects/' + projectId + '/v1/eventtriggeralert/test_wh',
+        payload
+      )
+        .then((r) => {
+          resolve(r);
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  };
+}
+
+export function testSlackAlert(projectId, payload) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      put(
+        dispatch,
+        host + 'projects/' + projectId + '/v1/eventtriggeralert/test_slack',
         payload
       )
         .then((r) => {
