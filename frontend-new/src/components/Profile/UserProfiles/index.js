@@ -10,7 +10,8 @@ import {
   Popover,
   Tabs,
   Avatar,
-  Input
+  Input,
+  Form
 } from 'antd';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
@@ -84,6 +85,8 @@ import UpdateSegmentModal from '../AccountProfiles/UpdateSegmentModal';
 import styles from './index.module.scss';
 import { ALPHANUMSTR, DEFAULT_TIMELINE_CONFIG, iconColors } from '../constants';
 import truncateURL from 'Utils/truncateURL';
+import { ACCOUNTS_TABLE_COLUMN_TYPES, COLUMN_TYPE_PROPS } from 'Utils/table';
+import ResizableTitle from 'Components/Resizable';
 
 const userOptions = getUserOptions();
 
@@ -127,7 +130,6 @@ function UserProfiles({
   const { projectDomainsList } = useSelector((state) => state.global);
   const [listSearchItems, setListSearchItems] = useState([]);
   const [searchBarOpen, setSearchBarOpen] = useState(false);
-  const [searchDDOpen, setSearchDDOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [checkListUserProps, setCheckListUserProps] = useState([]);
   const [showPopOver, setShowPopOver] = useState(false);
@@ -422,7 +424,7 @@ function UserProfiles({
     const columns = [
       {
         title: <div className={headerClassStr}>Identity</div>,
-        width: 280,
+        width: COLUMN_TYPE_PROPS['string'].min,
         dataIndex: 'identity',
         key: 'identity',
         fixed: 'left',
@@ -488,7 +490,7 @@ function UserProfiles({
               level={7}
               color='grey-2'
               weight='bold'
-              extraClass='m-0'
+              extraClass='m-0 truncate'
               truncate
               charLimit={25}
             >
@@ -497,7 +499,11 @@ function UserProfiles({
           ),
           dataIndex: prop,
           key: prop,
-          width: 260,
+          width:
+            COLUMN_TYPE_PROPS[
+              ACCOUNTS_TABLE_COLUMN_TYPES[prop]?.Type || 'string'
+            ]?.min || 264,
+          showSorterTooltip: null,
           sorter: (a, b) =>
             propType === 'numerical'
               ? sortNumericalColumn(a[prop], b[prop])
@@ -528,8 +534,8 @@ function UserProfiles({
       title: <div className={headerClassStr}>Last Activity</div>,
       dataIndex: 'lastActivity',
       key: 'lastActivity',
-      width: 200,
-      align: 'right',
+      width: COLUMN_TYPE_PROPS['actions'].min,
+      align: 'left',
       sorter: {
         compare: (a, b) => sortStringColumn(a.lastActivity, b.lastActivity),
         multiple: 2
@@ -931,68 +937,61 @@ function UserProfiles({
     getUsers(updatedPayload);
   };
 
-  const searchUsers = () => (
-    <div className='absolute top-0'>
-      {searchDDOpen ? (
-        <FaSelect
-          multiSelect
-          options={
-            userValueOpts
-              ? Object.keys(userValueOpts).map((value) => [value])
-              : []
-          }
-          displayNames={userValueOpts}
-          applClick={(val) => onApplyClick(val)}
-          onClickOutside={() => setSearchDDOpen(false)}
-          selectedOpts={listSearchItems}
-          allowSearch
-          placeholder='Search Users'
-          style={{
-            top: '-8px',
-            right: 0,
-            padding: '8px 8px 12px',
-            overflowX: 'hidden'
-          }}
-          posRight
-        />
-      ) : null}
-    </div>
-  );
-
   const onSearchClose = () => {
     setSearchBarOpen(false);
-    setSearchDDOpen(false);
-    if (timelinePayload?.search_filter?.length) {
-      const payload = { ...timelinePayload };
-      payload.search_filter = [];
-      setListSearchItems([]);
-      setTimelinePayload(payload);
-      getUsers(payload);
-    }
+    handleUsersSearch({ users: '' });
   };
 
   const onSearchOpen = () => {
     setSearchBarOpen(true);
-    setSearchDDOpen(true);
   };
 
+  const handleUsersSearch = (values) => {
+    if (
+      (listSearchItems.length >= 1 && listSearchItems[0] === values?.users) ||
+      (listSearchItems.length == 0 && !values?.users)
+    ) {
+      return;
+    }
+    if (values?.users) {
+      values = [JSON.stringify([values.users])];
+    } else {
+      values = [];
+    }
+
+    const updatedPayload = {
+      ...timelinePayload,
+      search_filter: values.map((value) => JSON.parse(value)[0])
+    };
+    setListSearchItems(updatedPayload.search_filter);
+    setTimelinePayload(updatedPayload);
+    setActiveSegment(activeSegment);
+    getUsers(updatedPayload);
+  };
   const renderSearchSection = () => (
     <ControlledComponent
       controller={filtersExpanded === false && newSegmentMode === false}
     >
       <div className='relative'>
         {searchBarOpen ? (
-          <div className='flex items-center justify-between'>
-            {!searchDDOpen && (
-              <Input
-                size='large'
-                value={listSearchItems ? listSearchItems.join(', ') : null}
-                placeholder='Search Users'
-                style={{ width: '240px', 'border-radius': '5px' }}
-                prefix={<SVG name='search' size={16} color='grey' />}
-                onClick={() => setSearchDDOpen(true)}
-              />
-            )}
+          <div className={'flex items-center justify-between'}>
+            <Form
+              name='basic'
+              labelCol={{ span: 8 }}
+              wrapperCol={{ span: 16 }}
+              onFinish={handleUsersSearch}
+              autoComplete='off'
+            >
+              <Form.Item name='users'>
+                <Input
+                  size='large'
+                  value={listSearchItems ? listSearchItems.join(', ') : null}
+                  placeholder={'Search Users'}
+                  style={{ width: '240px', 'border-radius': '5px' }}
+                  prefix={<SVG name='search' size={20} color={'grey'} />}
+                />
+              </Form.Item>
+            </Form>
             <Button type='text' className='search-btn' onClick={onSearchClose}>
               <SVG name='close' size={20} color='grey' />
             </Button>
@@ -1002,7 +1001,6 @@ function UserProfiles({
             <SVG name='search' size={20} color='grey' />
           </Button>
         )}
-        {searchUsers()}
       </div>
     </ControlledComponent>
   );
@@ -1114,11 +1112,25 @@ function UserProfiles({
     setCurrentPageSize(pageParams.pageSize);
     setDefaultSorterInfo({ key: sorter.columnKey, order: sorter.order });
   };
+  const mergeColumns = useCallback(
+    tableColumns.map((col, index) => ({
+      ...col,
+      onHeaderCell: (column) => ({
+        width: column.width
+      })
+    })),
+    [tableColumns]
+  );
 
   const renderTable = () => (
     <div>
       <Table
         size='large'
+        components={{
+          header: {
+            cell: ResizableTitle
+          }
+        }}
         onRow={(user) => ({
           onClick: () => {
             history.push(
@@ -1136,9 +1148,9 @@ function UserProfiles({
             );
           }
         })}
-        className='fa-table--userlist'
+        className={`fa-table--userlist  ${styles['user-profiles-table']}`}
         dataSource={getTableData(contacts.data)}
-        columns={tableColumns}
+        columns={mergeColumns}
         rowClassName='cursor-pointer'
         pagination={{
           position: ['bottom', 'left'],
@@ -1148,7 +1160,8 @@ function UserProfiles({
         }}
         onChange={handleTableChange}
         scroll={{
-          x: (tableProperties?.length || 0) * 250
+          x: tableProperties?.length * 250,
+          y: 'calc(100vh - 340px)'
         }}
       />
       <div className='flex flex-row-reverse mt-4' />

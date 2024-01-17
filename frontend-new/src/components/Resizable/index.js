@@ -26,7 +26,7 @@ const ResizableTitle = (props) => {
       onResize={(e, { size }) => {
         e.stopPropagation();
         e.preventDefault();
-        onResize(e, { size });
+        onResize && onResize(e, { size });
       }}
       draggableOpts={{
         enableUserSelectHack: false
