@@ -309,8 +309,8 @@ function SaveQuery({
                 queryType,
                 chartTypes,
                 breakdown,
-                attributionModels: attributionsState.models,
-                campaignGroupBy: campaignState.group_by
+                attributionModels: attributionsState?.models,
+                campaignGroupBy: campaignState?.group_by
               })
             ]
         };
@@ -451,7 +451,7 @@ function SaveQuery({
         });
       }
     },
-    [updateLocalReducer, queryType, requestQuery, user_type, getCurrentSorter, chartTypes, breakdown, attributionsState.models, campaignState.group_by, activeAction, setQuerySaved, savedQueryId, active_project.id, active_project.name, dispatch, pivotConfig, attributionMetrics, attributionTableFilters, setNavigatedFromAnalyse, savedQueries]
+    [updateLocalReducer, queryType, requestQuery, user_type, getCurrentSorter, chartTypes, breakdown, attributionsState? attributionsState.models: null, campaignState? campaignState.group_by : null, activeAction, setQuerySaved, savedQueryId, active_project.id, active_project.name, dispatch, pivotConfig, attributionMetrics, attributionTableFilters, setNavigatedFromAnalyse, savedQueries]
   );
 
   const handleUpdateClick = useCallback(async () => {
@@ -473,8 +473,8 @@ function SaveQuery({
               queryType,
               chartTypes,
               breakdown,
-              attributionModels: attributionsState.models,
-              campaignGroupBy: campaignState.group_by
+              attributionModels: attributionsState?.models,
+              campaignGroupBy: campaignState?.group_by
             })
           ]
       };
@@ -541,7 +541,8 @@ function SaveQuery({
         duration: 5
       });
     }
-  }, [navigatedFromDashboard, navigatedFromAnalyse, queryType, requestQuery, user_type, getCurrentSorter, chartTypes, breakdown, attributionsState.models, campaignState.group_by, savedQueries, active_project.id, dispatch, setQuerySaved, pivotConfig, attributionMetrics, attributionTableFilters]);
+  }, [navigatedFromDashboard, navigatedFromAnalyse, queryType, requestQuery, user_type, getCurrentSorter, chartTypes, breakdown, attributionsState? attributionsState.models : null
+    , campaignState? campaignState.group_by : null, savedQueries, active_project.id, dispatch, setQuerySaved, pivotConfig, attributionMetrics, attributionTableFilters]);
 
   const onConnectSlack = () => {
     enableSlackIntegration(active_project.id)
@@ -735,7 +736,7 @@ function SaveQuery({
         toggleAddToDashboardModal={toggleAddToDashModal}
         setShowShareToEmailModal={setShowShareToEmailModal}
         setShowShareToSlackModal={setShowShareToSlackModal}
-        attributionModels={attributionsState.models}
+        attributionModels={attributionsState?.models}
       />
 
       <SaveQueryModal
