@@ -1,34 +1,9 @@
-export const EngagementTag: {
-  [key: string]: {
-    bgColor: string;
-    icon: string;
-  };
-} = {
-  Hot: {
-    bgColor: '#FFF1F0',
-    icon: 'fire'
-  },
-  Warm: {
-    bgColor: '#FFF7E6',
-    icon: 'sun'
-  },
-  Cool: {
-    bgColor: '#F0F5FF',
-    icon: 'snowflake'
-  },
-  Ice: {
-    bgColor: '#E6F7FF',
-    icon: 'icecube'
-  }
-};
-
 export function nearestGreater100(number: number): number {
   const remainder: number = number % 100;
   if (remainder === 0) {
     return number;
-  } else {
-    return number + (100 - remainder);
   }
+  return number + (100 - remainder);
 }
 
 export function transformDate(yyyymmdd: string): string {

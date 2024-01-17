@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Button, Tooltip } from 'antd';
 import { connect } from 'react-redux';
 import { SVG, Text } from 'factorsComponents';
-import styles from './index.module.scss';
-import GroupSelect2 from '../GroupSelect2';
 import FaSelect from 'Components/FaSelect';
 import {
   convertAndAddPropertiesToGroupSelectOptions,
@@ -11,6 +9,8 @@ import {
 } from 'Utils/dataFormatter';
 import getGroupIcon from 'Utils/getGroupIcon';
 import { CustomGroupDisplayNames } from 'Components/GlobalFilter/FilterWrapper/utils';
+import GroupSelect2 from '../GroupSelect2';
+import styles from './index.module.scss';
 
 function EventGroupBlock({
   eventGroup,
@@ -28,7 +28,7 @@ function EventGroupBlock({
   setGroupState,
   delGroupState,
   closeDropDown,
-  groupOpts
+  groups
 }) {
   const [filterOptions, setFilterOptions] = useState();
 
@@ -46,20 +46,18 @@ function EventGroupBlock({
     if (eventGroup) {
       const groupLabel = CustomGroupDisplayNames[eventGroup]
         ? CustomGroupDisplayNames[eventGroup]
-        : groupOpts[eventGroup]
-        ? groupOpts[eventGroup]
-        : PropTextFormat(eventGroup);
+        : groups?.all_groups?.[eventGroup]
+          ? groups?.all_groups?.[eventGroup]
+          : PropTextFormat(eventGroup);
       const groupValues =
-        groupProperties[eventGroup]?.map((op) => {
-          return {
-            value: op?.[1],
-            label: op?.[0],
-            extraProps: {
-              valueType: op?.[2],
-              propertyType: 'group'
-            }
-          };
-        }) || [];
+        groupProperties[eventGroup]?.map((op) => ({
+          value: op?.[1],
+          label: op?.[0],
+          extraProps: {
+            valueType: op?.[2],
+            propertyType: 'group'
+          }
+        })) || [];
       const groupPropIconName = getGroupIcon(groupLabel);
       if (!filterOptsObj[groupLabel]) {
         filterOptsObj[groupLabel] = {
@@ -71,14 +69,12 @@ function EventGroupBlock({
       } else {
         filterOptsObj[groupLabel].values.push(...groupValues);
       }
-    } else {
-      if (eventUserPropertiesV2) {
-        convertAndAddPropertiesToGroupSelectOptions(
-          eventUserPropertiesV2,
-          filterOptsObj,
-          'user'
-        );
-      }
+    } else if (eventUserPropertiesV2) {
+      convertAndAddPropertiesToGroupSelectOptions(
+        eventUserPropertiesV2,
+        filterOptsObj,
+        'user'
+      );
     }
     setFilterOptions(Object.values(filterOptsObj));
   }, [eventUserPropertiesV2, eventPropertiesV2, groupProperties]);
@@ -281,7 +277,7 @@ const mapStateToProps = (state) => ({
   userPropNames: state.coreQuery.userPropNames,
   eventPropNames: state.coreQuery.eventPropNames,
   groupPropNames: state.coreQuery.groupPropNames,
-  groupOpts: state.groups.data
+  groups: state.coreQuery.groups
 });
 
 export default connect(mapStateToProps)(EventGroupBlock);

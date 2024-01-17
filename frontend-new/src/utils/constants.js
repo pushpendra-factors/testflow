@@ -102,7 +102,7 @@ export const EVENT_QUERY_USER_TYPE = {
   [ALL_USER_TYPE]: 'all_given_event'
 };
 
-export const reverse_user_types = {
+export const REVERSE_USER_TYPES = {
   each_given_event: EACH_USER_TYPE,
   any_given_event: ANY_USER_TYPE,
   all_given_event: ALL_USER_TYPE

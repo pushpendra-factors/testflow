@@ -1,22 +1,22 @@
 import React from 'react';
 import MomentTz from 'Components/MomentTz';
-import EventIcon from './EventIcon';
-import UsernameWithIcon from './UsernameWithIcon';
-import { TableRowProps } from './types';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import { useSelector } from 'react-redux';
 import { propValueFormat } from 'Components/Profile/utils';
 import TextWithOverflowTooltip from 'Components/GenericComponents/TextWithOverflowTooltip';
 import truncateURL from 'Utils/truncateURL';
+import { TableRowProps } from 'Components/Profile/types';
+import UsernameWithIcon from './UsernameWithIcon';
+import EventIcon from './EventIcon';
 
-const TableRow: React.FC<TableRowProps> = ({
+function TableRow({
   event,
   eventPropsType = {},
   user,
   onEventClick
-}) => {
+}: TableRowProps) {
   const { eventPropNames } = useSelector((state: any) => state.coreQuery);
-  const { projectDomainsList } = useSelector((state) => state.global);
+  const { projectDomainsList } = useSelector((state: any) => state.global);
 
   const timestamp = event?.timestamp
     ? MomentTz(event.timestamp * 1000).format('hh:mm A')
@@ -38,7 +38,6 @@ const TableRow: React.FC<TableRowProps> = ({
 
   const renderPropertyValue = () => {
     const { properties, display_name, event_name } = event || {};
-    const isEventClickable = Object.keys(properties || {}).length > 0;
 
     if (!isEventClickable) {
       return null;
@@ -54,11 +53,10 @@ const TableRow: React.FC<TableRowProps> = ({
     return truncateURL(formattedValue, projectDomainsList) || formattedValue;
   };
 
-  const renderPropValTooltip = () => {
-    return event?.display_name === 'Page View'
+  const renderPropValTooltip = () =>
+    event?.display_name === 'Page View'
       ? event?.event_name
       : Object.entries(event?.properties || {})?.[0]?.[1];
-  };
 
   return (
     <tr
@@ -92,6 +90,6 @@ const TableRow: React.FC<TableRowProps> = ({
       </td>
     </tr>
   );
-};
+}
 
 export default TableRow;

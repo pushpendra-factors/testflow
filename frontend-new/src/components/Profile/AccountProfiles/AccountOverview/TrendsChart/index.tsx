@@ -3,14 +3,10 @@ import Highcharts from 'highcharts';
 import { Text } from 'Components/factorsComponents';
 import cx from 'classnames';
 import ReactDOMServer from 'react-dom/server';
-import { nearestGreater100, transformDate } from '../utils';
-import { DataMap } from '../types';
+import { ChartProps } from 'Components/Profile/types';
+import { transformDate } from '../utils';
 
-interface ChartProps {
-  data: DataMap;
-}
-
-const TrendsChart: React.FC<ChartProps> = ({ data }) => {
+function TrendsChart({ data }: ChartProps): JSX.Element {
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstanceRef = useRef<Highcharts.Chart | null>(null);
 
@@ -136,6 +132,6 @@ const TrendsChart: React.FC<ChartProps> = ({ data }) => {
   }, [data]);
 
   return <div ref={chartRef} />;
-};
+}
 
 export default TrendsChart;

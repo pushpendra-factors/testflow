@@ -1,12 +1,12 @@
 // EventIcon.tsx
+import { eventIconsColorMap } from 'Components/Profile/constants';
+import { CustomStyles, EventIconProps } from 'Components/Profile/types';
 import React from 'react';
-import { eventIconsColorMap } from '../../utils';
-import { CustomStyles, EventIconProps } from './types';
 
-const EventIcon: React.FC<EventIconProps> = ({ icon, size = 24 }) => {
-  if (!icon) return null;
+function EventIcon({ icon, size = 16 }: EventIconProps): JSX.Element {
+  if (!icon) return <></>;
 
-  //exception
+  // exception
   const showIcon = icon === 'globe' ? 'globepointer' : icon;
 
   const styles: CustomStyles = {
@@ -34,6 +34,6 @@ const EventIcon: React.FC<EventIconProps> = ({ icon, size = 24 }) => {
       />
     </div>
   );
-};
+}
 
 export default EventIcon;
