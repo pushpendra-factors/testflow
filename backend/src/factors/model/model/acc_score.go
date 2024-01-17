@@ -1,11 +1,16 @@
 package model
 
 import (
+	"encoding/json"
 	U "factors/util"
+	"fmt"
+	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
 )
 
 const DEFAULT_EVENT string = "all_events"
@@ -14,6 +19,8 @@ const NUM_TREND_DAYS int = 30
 
 var BUCKETRANGES []float64 = []float64{100, 90, 70, 30, 0}
 var BUCKETNAMES []string = []string{"Hot", "Warm", "Cool", "Ice"}
+
+const HASHKEYLENGTH = 12
 
 type AccScoreResult struct {
 	ProjectId int64                  `json:"projectid"`
@@ -176,6 +183,11 @@ type AccountScoreRanges struct {
 	UpdatedAt time.Time       `gorm:"column:updated_at; autoUpdateTime" json:"updated_at"`
 }
 
+type Weightfilter struct {
+	Ename string                `json:"en"`
+	Rule  []WeightKeyValueTuple `json:"rule"`
+}
+
 func GetDateFromString(ts string) int64 {
 	year := ts[0:4]
 	month := ts[4:6]
@@ -188,6 +200,8 @@ func GetDateFromString(ts string) int64 {
 }
 
 func GetDefaultAccScoringWeights() AccWeights {
+	log.Info("adding default account scoring weights")
+
 	var weights AccWeights
 	var event_a AccEventWeight
 	var event_b AccEventWeight
@@ -195,6 +209,7 @@ func GetDefaultAccScoringWeights() AccWeights {
 
 	weights.WeightConfig = make([]AccEventWeight, 0)
 	weights.SaleWindow = 10
+	default_version := 0
 
 	event_a = AccEventWeight{EventName: "$session", Weight_value: 10, Is_deleted: false,
 		Version: 1}
@@ -208,10 +223,28 @@ func GetDefaultAccScoringWeights() AccWeights {
 	event_c = AccEventWeight{EventName: "$form_submitted", Weight_value: 40, Is_deleted: false,
 		Version: 1}
 
+	keyvals = []string{"true"}
+	filterPRoperties = WeightKeyValueTuple{Key: "$is_page_view",
+		Value:      keyvals,
+		Operator:   EqualsOpStr,
+		LowerBound: 0, UpperBound: 0,
+		Type:      "event",
+		ValueType: "categorical"}
+	event_d := AccEventWeight{EventName: "all_events", Weight_value: 2, Is_deleted: false,
+		Rule: []WeightKeyValueTuple{filterPRoperties}, Version: default_version}
+
+	event_e := AccEventWeight{EventName: "$linkedin_clicked_ad", Weight_value: 2, Is_deleted: false, Version: default_version}
+	event_f := AccEventWeight{EventName: "$linkedin_viewed_ad", Weight_value: 1, Is_deleted: false, Version: default_version}
+	event_g := AccEventWeight{EventName: "$form_fill", Weight_value: 20, Is_deleted: false, Version: default_version}
+
 	weights.WeightConfig = append(weights.WeightConfig, event_a)
 	weights.WeightConfig = append(weights.WeightConfig, event_b)
 	weights.WeightConfig = append(weights.WeightConfig, event_c)
-
+	weights.WeightConfig = append(weights.WeightConfig, event_d)
+	weights.WeightConfig = append(weights.WeightConfig, event_e)
+	weights.WeightConfig = append(weights.WeightConfig, event_f)
+	weights.WeightConfig = append(weights.WeightConfig, event_g)
+	log.WithField("weight", weights).Debugf("weights")
 	return weights
 }
 
@@ -243,4 +276,116 @@ func GetEngagement(percentile float64, buckets BucketRanges) string {
 		}
 	}
 	return "Ice"
+}
+
+func DeduplicateWeights(weights AccWeights) (AccWeights, error) {
+
+	var updatedWeights AccWeights
+	var weightrulelist []AccEventWeight = make([]AccEventWeight, 0)
+	weightIdMap := make(map[string]AccEventWeight)
+	wt := weights.WeightConfig
+	var err error
+	for _, wid := range wt {
+		var w_id_hash string
+		// if event name is empty, set it to all_events
+		// filter will be applied to all events
+		if wid.EventName == "" {
+			wid.EventName = DEFAULT_EVENT
+		}
+		w_val := Weightfilter{wid.EventName, wid.Rule}
+		w_id_hash = wid.WeightId
+		if w_id_hash == "" {
+			w_id_hash, err = GenerateHashFromStruct(w_val)
+			if err != nil {
+				return AccWeights{}, err
+			}
+			log.Debugf("generated hash :%s", w_id_hash)
+		}
+
+		if _, ok := weightIdMap[w_id_hash]; !ok {
+			wid.WeightId = w_id_hash
+			weightIdMap[w_id_hash] = wid
+			weightrulelist = append(weightrulelist, wid)
+		} else {
+			p := weightIdMap[w_id_hash]
+			p.Is_deleted = wid.Is_deleted
+			log.Debugf("Duplicate detected, not adding to list:%s", w_id_hash)
+		}
+	}
+
+	updatedWeights.WeightConfig = weightrulelist
+	updatedWeights.SaleWindow = weights.SaleWindow
+	return updatedWeights, nil
+}
+
+func GenerateHashFromStruct(w Weightfilter) (string, error) {
+	queryCacheBytes, err := json.Marshal(w)
+	if err != nil {
+		return "", err
+	}
+
+	hstringLowerCase := strings.ToLower(string(queryCacheBytes))
+	hstring, err := GenerateHash(hstringLowerCase)
+	if err != nil {
+		return "", err
+	}
+	return hstring, err
+
+}
+func GenerateHash(bytes string) (string, error) {
+	uuid := U.HashKeyUsingSha256Checksum(string(bytes))[:HASHKEYLENGTH]
+	return uuid, nil
+}
+
+func UpdateWeights(projectId int64, weightsRequest AccWeights, requestID string) (AccWeights, int, error) {
+	log.Info("updating  weights in DB")
+
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectId,
+		"RequestId": requestID,
+	})
+
+	var weights AccWeights
+	weights.WeightConfig = make([]AccEventWeight, 0)
+	filterNamesMap := make(map[string]int)
+	weights.SaleWindow = weightsRequest.SaleWindow
+
+	// check for duplicate rule names first , in case of empty rule name
+	// fill it with the event names
+	for _, wtVal := range weightsRequest.WeightConfig {
+		if len(wtVal.FilterName) > 0 {
+			if _, wtOk := filterNamesMap[wtVal.FilterName]; wtOk {
+				errMsg := fmt.Errorf("duplicate rule name detected")
+				logCtx.WithField("duplicate name : ", wtVal.FilterName).Error(errMsg)
+				return AccWeights{}, http.StatusBadRequest, errMsg
+			} else {
+				filterNamesMap[wtVal.FilterName] = 1
+			}
+		}
+	}
+
+	// convert incoming request to AccWeights.
+	for _, wtVal := range weightsRequest.WeightConfig {
+		var r AccEventWeight
+
+		r.EventName = wtVal.EventName
+		r.Is_deleted = wtVal.Is_deleted
+		r.Rule = wtVal.Rule
+		r.WeightId = wtVal.WeightId
+		r.Weight_value = wtVal.Weight_value
+		r.FilterName = wtVal.FilterName
+		if len(r.FilterName) == 0 && len(r.EventName) > 0 {
+			r.FilterName = r.EventName
+		}
+		weights.WeightConfig = append(weights.WeightConfig, r)
+	}
+
+	dedupweights, err := DeduplicateWeights(weights)
+	if err != nil {
+		errMsg := fmt.Errorf("Unable to dedup weights.")
+		logCtx.WithError(err).Error(errMsg)
+		return AccWeights{}, http.StatusBadRequest, errMsg
+	}
+	logCtx.Info("Done deduplicating weights ")
+	return dedupweights, http.StatusAccepted, nil
 }
