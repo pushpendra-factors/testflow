@@ -19,6 +19,7 @@ import (
 	slack "factors/integration/slack"
 	webhook "factors/webhooks"
 
+	"encoding/base64"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
@@ -500,6 +501,15 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		rejectedQueue = true
 	}
 
+	var accountUrl string
+	if alertConfiguration.EventLevel == model.EventLevelAccount {
+		if _, exists := alert.Message.MessageProperty[model.ETA_DOMAIN_GROUP_USER_ID]; exists {
+			groupDomainUserID := alert.Message.MessageProperty[model.ETA_DOMAIN_GROUP_USER_ID].(string)
+			accountUrl = BuildAccountURL(groupDomainUserID)
+			delete(alert.Message.MessageProperty, model.ETA_DOMAIN_GROUP_USER_ID)
+		}
+	}
+
 	// If retry is true and sendTo var is set for Slack option
 	// OR
 	// If the retry is off, meaning the alert is from the first try or rejected queue and configuration
@@ -514,7 +524,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		}
 		if isSlackIntergrated {
 			partialSlackSuccess, _, errMsg := sendSlackAlertForEventTriggerAlert(eta.ProjectID,
-				eta.SlackChannelAssociatedBy, alert, alertConfiguration.SlackChannels, alertConfiguration.SlackMentions, alertConfiguration.IsHyperlinkDisabled)
+				eta.SlackChannelAssociatedBy, alert, alertConfiguration.SlackChannels, alertConfiguration.SlackMentions, alertConfiguration.IsHyperlinkDisabled, accountUrl)
 			log.WithFields(log.Fields{
 				"project_id": eta.ProjectID,
 				"alert_id":   eta.ID,
@@ -757,7 +767,7 @@ func AddKeyToSortedSet(key *cacheRedis.Key, projectID int64, failPoint string, r
 }
 
 func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
-	alert *model.CachedEventTriggerAlert, Schannels, sMentions *postgres.Jsonb, isHyperlinkDisabled bool) (partialSuccess bool, channelSuccess []bool, errMessage string) {
+	alert *model.CachedEventTriggerAlert, Schannels, sMentions *postgres.Jsonb, isHyperlinkDisabled bool, accountUrl string) (partialSuccess bool, channelSuccess []bool, errMessage string) {
 	logCtx := log.WithFields(log.Fields{
 		"project_id":  projectID,
 		"agent_uuid":  agentUUID,
@@ -805,7 +815,7 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
 				slackMentionStr = getSlackMentionsStr(slackMentions, slackTags)
 			}
 			if !isHyperlinkDisabled {
-				blockMessage = getSlackMsgBlock(alert.Message, slackMentionStr)
+				blockMessage = getSlackMsgBlock(alert.Message, slackMentionStr, accountUrl)
 			} else {
 				blockMessage = getSlackMsgBlockWithoutHyperlinks(alert.Message, slackMentionStr)
 			}
@@ -989,9 +999,12 @@ func getSlackMentionsStr(slackMentions []model.SlackUser, slackTags []string) st
 	return result
 }
 
-func getSlackMsgBlock(msg model.EventTriggerAlertMessage, slackMentions string) string {
+func getSlackMsgBlock(msg model.EventTriggerAlertMessage, slackMentions string, overRideUrl string) string {
 
 	propBlock := getPropsBlockV2(msg.MessageProperty)
+	if overRideUrl == "" {
+		overRideUrl = "https://app.factors.ai/profiles/people"
+	}
 
 	// added next two lines to support double quotes(") and backslash(\) in slack templates
 	title := strings.ReplaceAll(strings.ReplaceAll(msg.Title, "\\", "\\\\"), "\"", "\\\"")
@@ -1010,10 +1023,10 @@ func getSlackMsgBlock(msg model.EventTriggerAlertMessage, slackMentions string) 
 			"type": "section",
 						"text": {
 							"type": "mrkdwn",
-							"text": "*<https://app.factors.ai/profiles/people|Know More>*"
+							"text": "*<%s|Visit Account>*"
 						}
 		}
-	]`, title, message, slackMentions, propBlock)
+	]`, title, message, slackMentions, propBlock, overRideUrl)
 
 	return mainBlock
 }
@@ -1635,4 +1648,13 @@ func RemoveContinuouslyFailingRejectedKeys(keys map[string]string, ssKey *cacheR
 		}
 
 	}
+}
+
+func BuildAccountURL(groupDomainID string) string {
+	if groupDomainID == "" {
+		return ""
+	}
+	gdIdBytes := []byte(groupDomainID)
+	urlHash := base64.StdEncoding.EncodeToString(gdIdBytes)
+	return fmt.Sprintf(C.GetProtocol()+C.GetAPPDomain()+"/profiles/accounts/%s?group=domains&view=overview", urlHash)
 }

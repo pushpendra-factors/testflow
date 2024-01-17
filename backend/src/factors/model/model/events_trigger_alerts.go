@@ -27,6 +27,7 @@ const (
 	Paused              = "paused"   //Internal status if the difference between failure is greater than success of the alert by 72 hours
 	Active              = "active"   //Default internal status
 	Disabled            = "disabled" //Internal status if the failures from the poison queue are not resolved for 72 more hours
+	ETA_DOMAIN_GROUP_USER_ID = "ignore_eta_d_g_uid" // additonal property which needs to be cached for account urls
 
 	// cachekey structure = ETA:pid:<project_id>:<alert_id>:<UnixTime>
 	// cacheCounterKey structure = ETA:Counter:pid:<project_id>:<alert_id>:<YYYYMMDD>

@@ -13,9 +13,7 @@ import (
 	"sort"
 	"strings"
 	"time"
-
 	"encoding/json"
-
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -543,7 +541,7 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 		}
 
 		if config.EventLevel == model.EventLevelAccount && isGroupPropertyRequired {
-			groupProps = store.GetGroupProperties(projectId, userID)
+			groupProps, _ = store.GetGroupPropertiesAndDomainGroupUserID(projectId, userID)
 			if groupProps != nil {
 				updateUserPropMapWithGroupProperties(userPropMap, groupProps, log.WithFields(logFields))
 			}
@@ -572,7 +570,7 @@ func updateUserPropMapWithGroupProperties(userPropMap, groupProps *map[string]in
 	}
 }
 
-func (store *MemSQL) GetGroupProperties(projectID int64, userID string) *map[string]interface{} {
+func (store *MemSQL) GetGroupPropertiesAndDomainGroupUserID(projectID int64, userID string) (*map[string]interface{}, string) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -582,25 +580,25 @@ func (store *MemSQL) GetGroupProperties(projectID int64, userID string) *map[str
 	user, errCode := store.GetUser(projectID, userID)
 	if errCode != http.StatusFound {
 		logCtx.Error("user not found")
-		return nil
+		return nil, ""
 	}
 
 	domainsGroup, errCode := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
 	if errCode != http.StatusFound || domainsGroup == nil {
 		logCtx.Error("no domains group found for project")
-		return nil
+		return nil, ""
 	}
 
 	domainsGroupUserID, err := model.GetUserGroupUserID(user, domainsGroup.ID)
 	if err != nil || domainsGroupUserID == "" {
 		logCtx.Error("no domains group found for project")
-		return nil
+		return nil, ""
 	}
 
 	groupUsers, errCode := store.GetAllGroupUsersByDomainsGroupUserID(projectID, domainsGroup.ID, domainsGroupUserID)
 	if errCode != http.StatusFound || len(groupUsers) == 0 {
 		logCtx.WithError(err).Error("no group user found")
-		return nil
+		return nil, ""
 	}
 
 	groupPropsMap := make(map[string]interface{})
@@ -614,12 +612,12 @@ func (store *MemSQL) GetGroupProperties(projectID int64, userID string) *map[str
 	domainsUser, errCode := store.GetUser(projectID, domainsGroupUserID)
 	if errCode != http.StatusFound {
 		logCtx.Error("failed to get domains user")
-		return &groupPropsMap
+		return &groupPropsMap, ""
 	}
 	// Get user properties from $domains user and add them to groupPropsMap
 	getUserPropertiesFromGroupUser(domainsUser, &groupPropsMap, logCtx)
 
-	return &groupPropsMap
+	return &groupPropsMap, domainsGroupUserID
 }
 
 func getUserPropertiesFromGroupUser(user *model.User, groupPropMap *map[string]interface{}, logCtx *log.Entry) {
@@ -805,9 +803,9 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesAndFieldsTagMap(event *mode
 	if alert.EventLevel == model.EventLevelAccount && alert.SlackFieldsTag != nil {
 		isFieldsTagPresent = true
 	}
-
+	var groupDomainUserID string
 	if isGroupPropertyRequired || isFieldsTagPresent {
-		groupPropMap = store.GetGroupProperties(event.ProjectId, event.UserId)
+		groupPropMap, groupDomainUserID = store.GetGroupPropertiesAndDomainGroupUserID(event.ProjectId, event.UserId)
 		if groupPropMap != nil {
 			updateUserPropMapWithGroupProperties(userPropMap, groupPropMap, log.WithFields(logFields))
 		}
@@ -863,6 +861,10 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesAndFieldsTagMap(event *mode
 		} else {
 			log.Warn("can not find the message property in user and event prop sets")
 		}
+	}
+
+	if alert.EventLevel == model.EventLevelAccount {
+		msgPropMap[model.ETA_DOMAIN_GROUP_USER_ID] = groupDomainUserID
 	}
 
 	breakdownPropMap := make(map[string]interface{}, 0)
@@ -1294,3 +1296,6 @@ func (store *MemSQL) GetParagonMetadataForEventTriggerAlert(projectID int64, ale
 
 	return *metadata, http.StatusFound, nil
 }
+
+
+
