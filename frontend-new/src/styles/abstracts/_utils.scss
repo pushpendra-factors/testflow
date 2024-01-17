@@ -59,3 +59,9 @@
 {
     border-radius: 4px;
 }
+
+.border-left--blue-color-thick{
+    border-left-color: $fa-color--blue-2;
+    border-left-width: 3px;
+    border-left-style: solid;
+}

@@ -22,7 +22,8 @@ import {
   Avatar,
   Switch,
   Menu,
-  Dropdown
+  Dropdown,
+  Alert
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import {
@@ -30,7 +31,8 @@ import {
   deleteEventAlert,
   editEventAlert,
   testWebhhookUrl,
-  fetchAllAlerts
+  fetchAllAlerts,
+  testSlackAlert
 } from 'Reducers/global';
 import ConfirmationModal from 'Components/ConfirmationModal';
 import QueryBlock from './QueryBlock';
@@ -50,7 +52,8 @@ import {
   enableTeamsIntegration,
   fetchTeamsWorkspace,
   fetchTeamsChannels,
-  updateEventAlertStatus
+  updateEventAlertStatus,
+  fetchSlackUsers
 } from 'Reducers/global';
 import SelectChannels from '../SelectChannels';
 import {
@@ -75,7 +78,6 @@ import _ from 'lodash';
 import { getGroups } from 'Reducers/coreQuery/middleware';
 import useFeatureLock from 'hooks/useFeatureLock';
 import { FEATURES } from 'Constants/plans.constants';
-import UpgradeButton from 'Components/GenericComponents/UpgradeButton';
 import { setShowCriteria } from 'Reducers/analyticsQuery';
 import {
   INITIALIZE_GROUPBY,
@@ -84,6 +86,10 @@ import {
 import { ExclamationCircleOutlined, MoreOutlined } from '@ant-design/icons';
 import { useHistory } from 'react-router-dom';
 import { ScrollToTop } from 'Routes/feature';
+import Slack from './Slack';
+import Webhook from './Webhook';
+import Teams from './Teams';
+import {getMsgPayloadMapping} from './../utils';
 
 const { Option } = Select;
 
@@ -124,7 +130,10 @@ const EventBasedAlert = ({
   teams,
   updateEventAlertStatus,
   setShowCriteria,
-  fetchAllAlerts
+  fetchAllAlerts,
+  fetchSlackUsers,
+  slack_users,
+  testSlackAlert
 }) => {
   const [errorInfo, seterrorInfo] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -161,10 +170,6 @@ const EventBasedAlert = ({
   const [isAlertEnabled, setisAlertEnabled] = useState(false);
   const [enableWidgetModal, showEnableWidgetModal] = useState(false);
 
-  // Webhook support
-  const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
-    FEATURES.FEATURE_WEBHOOK
-  );
   const [webhookUrl, setWebhookUrl] = useState('');
   const [finalWebhookUrl, setFinalWebhookUrl] = useState('');
   const [confirmBtn, setConfirmBtn] = useState(true);
@@ -175,6 +180,11 @@ const EventBasedAlert = ({
   const [disbleWebhookInput, setDisbleWebhookInput] = useState(false);
   const [hideTestMessageBtn, setHideTestMessageBtn] = useState(true);
   const [showAdvSettings, setShowAdvSettings] = useState(false);
+  const [selectedMentions, setSelectedMentions] = useState([]);
+
+  const [showSlackInt, setShowSlackInt] = useState(false);
+  const [showTeamInt, setShowTeamInt] = useState(false);
+  const [showWHInt, setShowWHInt] = useState(false); 
 
   const webhookRef = useRef();
   const [form] = Form.useForm();
@@ -191,6 +201,12 @@ const EventBasedAlert = ({
   });
 
   const [activeGrpBtn, setActiveGrpBtn] = useState(QUERY_TYPE_EVENT);
+
+
+// Webhook support
+const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
+  FEATURES.FEATURE_WEBHOOK
+);
 
   const history = useHistory();
   const routeChange = (url) => {
@@ -224,30 +240,30 @@ const EventBasedAlert = ({
   const setGroupAnalysis = (group) => {
     setActiveGrpBtn(group);
 
-        if (!['users', 'events'].includes(group)) {
-          getGroupProperties(activeProject.id, group);
-        }
-    
-        const criteria =
-          group === 'events' ? TOTAL_EVENTS_CRITERIA : TOTAL_USERS_CRITERIA;
-        setShowCriteria(criteria);
-    
-        const opts = {
-          ...queryOptions,
-          group_analysis: group,
-          globalFilters: []
-        };
-    
-        dispatch({
-          type: INITIALIZE_GROUPBY,
-          payload: {
-            global: [],
-            event: []
-          }
-        });
-    
-        setQueries([]);
-        setQueryOptions(opts);
+    if (!['users', 'events'].includes(group)) {
+      getGroupProperties(activeProject.id, group);
+    }
+
+    const criteria =
+      group === 'events' ? TOTAL_EVENTS_CRITERIA : TOTAL_USERS_CRITERIA;
+    setShowCriteria(criteria);
+
+    const opts = {
+      ...queryOptions,
+      group_analysis: group,
+      globalFilters: []
+    };
+
+    dispatch({
+      type: INITIALIZE_GROUPBY,
+      payload: {
+        global: [],
+        event: []
+      }
+    });
+
+    setQueries([]);
+    setQueryOptions(opts);
   };
 
   const confirmGroupSwitch = (group) => {
@@ -374,6 +390,8 @@ const EventBasedAlert = ({
         viewAlertDetails?.alert?.event_level == 'account' ? 'events' : 'users'
       );
       setQueries(queryData);
+      setAlertName(viewAlertDetails?.alert?.title);
+      setAlertMessage(viewAlertDetails?.alert?.message);
       setAlertLimit(viewAlertDetails?.alert?.alert_limit);
       setCoolDownTime(viewAlertDetails?.alert?.cool_down_time / 3600);
       setNotRepeat(viewAlertDetails?.alert?.repeat_alerts);
@@ -387,6 +405,11 @@ const EventBasedAlert = ({
       //open advanced settings by default
       if (viewAlertDetails?.alert?.repeat_alerts || !viewAlertDetails?.alert?.is_hyperlink_disabled) {
         setShowAdvSettings(true)
+      }
+
+      if(viewAlertDetails?.alert?.slack_mentions){
+        let selectedUser = viewAlertDetails?.alert?.slack_mentions?.map((item)=> item?.name)
+        setSelectedMentions(selectedUser);
       }
 
       // webhook settings
@@ -701,6 +724,37 @@ const EventBasedAlert = ({
     });
   };
 
+  const getSlackProfileDetails = (users) =>{ 
+    let slackUserList = users?.map((user)=>{
+      return slack_users?.find((item)=> item?.name==user)
+    }) 
+    return slackUserList
+  }
+
+
+  const sendTestSlackMessage = () =>{
+    let payload = {
+      title: alertName,
+      event_level: activeGrpBtn == 'events' ? 'account' : 'user',
+      event: queries[0]?.label,
+      message: alertMessage,
+      message_property: getMsgPayloadMapping(groupBy),
+      slack: slackEnabled,
+      slack_channels: saveSelectedChannel,
+      slack_mentions: getSlackProfileDetails(selectedMentions),
+      is_hyperlink_disabled: !isHyperLinkEnabled,
+    };
+    console.log('sendTestSlackMessage-->', payload)
+    testSlackAlert(activeProject?.id, payload).then((res) => {
+      setLoading(false);
+    })
+    .catch((err) => {
+      setLoading(false);
+      console.log("testSlackAlert failed! -->", err)
+  })
+
+}
+
   const onFinish = (data) => {
     setLoading(true);
 
@@ -771,7 +825,8 @@ const EventBasedAlert = ({
           team_id: selectedWorkspace?.id,
           team_name: selectedWorkspace?.name,
           team_channel_list: teamsSaveSelectedChannel
-        }
+        },
+        slack_mentions: getSlackProfileDetails(selectedMentions)  
       };
 
       if (alertState?.state === 'edit') {
@@ -919,6 +974,7 @@ const EventBasedAlert = ({
     fetchProjectSettingsV1(activeProject.id);
     if (projectSettings?.int_slack) {
       fetchSlackChannels(activeProject.id);
+      fetchSlackUsers(activeProject.id);
     }
   }, [activeProject, projectSettings?.int_slack, slackEnabled]);
 
@@ -1149,6 +1205,16 @@ const EventBasedAlert = ({
           <Row>
             {alertState.state == 'edit' ? (
               <>
+                {(viewAlertDetails?.last_fail_details && !viewAlertDetails?.last_fail_details?.IsPausedAutomatically) &&
+                  <Col span={24} className='mb-4'>
+                    <Alert message={"We are unable to send this alert to the destinations you selected. Please check the destination settings below to continue receiving alerts"} type="error" showIcon />
+                  </Col>
+                }
+                {(viewAlertDetails?.last_fail_details && viewAlertDetails?.last_fail_details?.IsPausedAutomatically) &&
+                  <Col span={24} className='mb-4'>
+                    <Alert message={"Alert paused due to unresolved issues with selected destinations. Please check the errors in the destinations to resume getting alerts."} type="info" showIcon />
+                  </Col>
+                }
                 <Col span={18}>
                   <div className='flex items-center'>
                     <div className='flex items-baseline'>
@@ -1172,7 +1238,7 @@ const EventBasedAlert = ({
                         size='large'
                         loading={loading}
                       />
-                    </div>                   
+                    </div>
                   </div>
                 </Col>
                 <Col span={6}>
@@ -1458,574 +1524,84 @@ const EventBasedAlert = ({
               </Text>
             </Col>
           </Row>
+ 
+          {/* {showSlackInt && <Slack */}
+          <Slack
+            viewAlertDetails={viewAlertDetails}
+            slackEnabled={slackEnabled}
+            setSlackEnabled={setSlackEnabled}
+            projectSettings={projectSettings}
+            onConnectSlack={onConnectSlack}
+            saveSelectedChannel={saveSelectedChannel}
+            setSaveSelectedChannel={setSaveSelectedChannel}
+            setShowSelectChannelsModal={setShowSelectChannelsModal}
+            selectedMentions={selectedMentions}
+            setSelectedMentions={setSelectedMentions}
+            slack_users={slack_users}
+            sendTestSlackMessage={sendTestSlackMessage}
+            alertMessage={alertMessage}
+            alertName={alertName}
+            groupBy={groupBy}
+          />
 
-          <div className='border rounded mt-4'>
-            <div style={{ backgroundColor: '#fafafa' }}>
-              <Row className={'ml-2 mr-2'}>
-                <Col span={20}>
-                  <div className='flex justify-between p-3'>
-                    <div className='flex'>
-                      <Avatar
-                        size={40}
-                        shape='square'
-                        icon={<SVG name={'slack'} size={40} color='purple' />}
-                        style={{ backgroundColor: '#F5F6F8' }}
-                      />
-                    </div>
-                    <div className='flex flex-col justify-start items-start ml-2 w-full'>
-                      <div className='flex flex-row items-center justify-start'>
-                        <Text
-                          type='title'
-                          level={7}
-                          weight='medium'
-                          extraClass='m-0'
-                        >
-                          Slack
-                        </Text>
-                      </div>
-                      <Text
-                        type='paragraph'
-                        mini
-                        extraClass='m-0'
-                        color='grey'
-                        lineHeight='medium'
-                      >
-                        Get your alerts inside your Slack channel. You can also choose to send the alert to multiple channels.
-                      </Text>
-                    </div>
-                  </div>
-                </Col>
-                <Col span={4} className={'m-0 mt-4 flex justify-end'}>
-                  <Form.Item name='slack_enabled' className={'m-0'}>
-                    <div className={'flex flex-end items-center'}>
-                      <Text
-                        type={'title'}
-                        level={7}
-                        weight='medium'
-                        extraClass={'m-0 mr-2'}
-                      >
-                        Enable
-                      </Text>
-                      <span style={{ width: '50px' }}>
-                        <Switch
-                          checkedChildren='On'
-                          unCheckedChildren='OFF'
-                          onChange={(checked) => setSlackEnabled(checked)}
-                          checked={slackEnabled}
-                        />
-                      </span>{' '}
-                    </div>
-                  </Form.Item>
-                </Col>
-              </Row>
-            </div>
-            {slackEnabled && !projectSettings?.int_slack && (
-              <div className='p-4'>
-                <Row className={'mt-2 ml-2'}>
-                  <Col span={10} className={'m-0'}>
-                    <Text
-                      type={'title'}
-                      level={6}
-                      color={'grey'}
-                      extraClass={'m-0'}
-                    >
-                      Slack is not integrated, Do you want to integrate with
-                      your slack account now?
-                    </Text>
-                  </Col>
-                </Row>
-                <Row className={'mt-2 ml-2'}>
-                  <Col span={10} className={'m-0'}>
-                    <Button onClick={onConnectSlack}>
-                      <SVG name={'Slack'} />
-                      Connect to slack
-                    </Button>
-                  </Col>
-                </Row>
-              </div>
-            )}
-            {slackEnabled && projectSettings?.int_slack && (
-              <div className='p-4'>
-                {saveSelectedChannel.length > 0 && (
-                  <div>
-                    <Row>
-                      <Col>
-                        <Text
-                          type={'title'}
-                          level={7}
-                          weight={'regular'}
-                          extraClass={'m-0 mt-2 ml-2'}
-                        >
-                          {saveSelectedChannel.length > 1
-                            ? 'Selected Channels'
-                            : 'Selected Channel'}
-                        </Text>
-                      </Col>
-                    </Row>
-                    <Row
-                      className={'rounded border border-gray-200 ml-2 w-2/6'}
-                    >
-                      <Col className={'m-0'}>
-                        {saveSelectedChannel.map((channel, index) => (
-                          <div key={index}>
-                            <Text
-                              type={'title'}
-                              level={7}
-                              color={'grey'}
-                              extraClass={'m-0 ml-4 my-2'}
-                            >
-                              {'#' + channel.name}
-                            </Text>
-                          </div>
-                        ))}
-                      </Col>
-                    </Row>
-                  </div>
-                )}
-                {!saveSelectedChannel.length > 0 ? (
-                  <Row className={'mt-2 ml-2'}>
-                    <Col span={10} className={'m-0'}>
-                      <Button
-                        type={'link'}
-                        onClick={() => setShowSelectChannelsModal(true)}
-                      >
-                        Select Channel
-                      </Button>
-                    </Col>
-                  </Row>
-                ) : (
-                  <Row className={'mt-2 ml-2'}>
-                    <Col span={10} className={'m-0'}>
-                      <Button
-                        type={'link'}
-                        onClick={() => setShowSelectChannelsModal(true)}
-                      >
-                        {saveSelectedChannel.length > 1
-                          ? 'Manage Channels'
-                          : 'Manage Channel'}
-                      </Button>
-                    </Col>
-                  </Row>
-                )}
-              </div>
-            )}
-          </div>
+          {/* {showTeamInt && <Teams */}
+          <Teams
+            viewAlertDetails={viewAlertDetails}
+            setTeamsEnabled={setTeamsEnabled}
+            teamsEnabled={teamsEnabled}
+            projectSettings={projectSettings}
+            onConnectMSTeams={onConnectMSTeams}
+            teamsSaveSelectedChannel={teamsSaveSelectedChannel}
+            selectedWorkspace={selectedWorkspace}
+            setTeamsShowSelectChannelsModal={setTeamsShowSelectChannelsModal}
+          />
 
-          <div className='border rounded mt-4'>
-            <div style={{ backgroundColor: '#fafafa' }}>
-              <Row className={'ml-2 mr-2'}>
-                <Col span={20}>
-                  <div className='flex justify-between p-3'>
-                    <div className='flex'>
-                      <Avatar
-                        size={40}
-                        shape='square'
-                        icon={<SVG name={'Webhook'} size={40} color='purple' />}
-                        style={{ backgroundColor: '#F5F6F8' }}
-                      />
-                    </div>
-                    <div className='flex flex-col justify-start items-start ml-2 w-full'>
-                      <div className='flex flex-row items-center justify-start'>
-                        <Text
-                          type='title'
-                          level={7}
-                          weight='medium'
-                          extraClass='m-0'
-                        >
-                          Webhook
-                        </Text>
-                      </div>
-                      <Text
-                        type='paragraph'
-                        mini
-                        extraClass='m-0'
-                        color='grey'
-                        lineHeight='medium'
-                      >
-                        Create a webhook with this event trigger and send the selected properties to other tools for automation.
-                      </Text>
-                      {/* <Text
-                        type='paragraph'
-                        mini
-                        extraClass='m-0'
-                        color='grey'
-                        lineHeight='medium'
-                      >
-                        <span className='font-bold'>Note:</span> Please add
-                        payload to enable this option.
-                      </Text> */}
-                    </div>
 
-                  </div>
-                </Col>
-                <Col span={4} className={'m-0 mt-4 flex justify-end'}>
+          {/* {showWHInt && <Webhook */}
+          <Webhook
+            viewAlertDetails={viewAlertDetails}
+            groupBy={groupBy}
+            webhookEnabled={webhookEnabled}
+            setWebhookEnabled={setWebhookEnabled}
+            disbleWebhookInput={disbleWebhookInput}
+            webhookRef={webhookRef}
+            webhookUrl={webhookUrl}
+            setWebhookUrl={setWebhookUrl}
+            setConfirmBtn={setConfirmBtn}
+            setTestMessageBtn={setTestMessageBtn}
+            showEditBtn={showEditBtn}
+            finalWebhookUrl={finalWebhookUrl}
+            setHideTestMessageBtn={setHideTestMessageBtn}
+            setDisbleWebhookInput={setDisbleWebhookInput}
+            confirmedMessageBtn={confirmedMessageBtn}
+            handleClickConfirmBtn={handleClickConfirmBtn}
+            testMessageResponse={testMessageResponse}
+            testMessageBtn={testMessageBtn}
+            handleTestWebhook={handleTestWebhook}
+            confirmBtn={confirmBtn}
+            hideTestMessageBtn={hideTestMessageBtn}
+            alertMessage={alertMessage}
+            alertName={alertName} 
+          />
 
-                  {isWebHookFeatureLocked ? (
-                    <div className='p-2'>
-                      <UpgradeButton featureName={FEATURES.FEATURE_WEBHOOK} />
-                    </div>
-                  ) : <Form.Item name='webhook_enabled' className={'m-0'}>
-                      <div className={'flex flex-end items-center'}>
-                        <Text
-                          type={'title'}
-                          level={7}
-                          weight='medium'
-                          extraClass={'m-0 mr-2'}
-                        >
-                          Enable
-                        </Text>
-                        <span style={{ width: '50px' }}>
-                          <Switch
-                            checkedChildren='On'
-                            unCheckedChildren='OFF'
-                            disabled={
-                              !(
-                                groupBy &&
-                                groupBy.length &&
-                                groupBy[0] &&
-                                groupBy[0].property
-                              ) || isWebHookFeatureLocked
-                            }
-                            onChange={(checked) => setWebhookEnabled(checked)}
-                            checked={webhookEnabled}
-                          />
-                        </span>{' '}
-                      </div>
-                    </Form.Item>
-                  }
-                </Col>
-              </Row>
-            </div>
-            {webhookEnabled && (
-              <div className='p-4'>
-                <Row className={'mt-2 ml-2'}>
-                  <Col span={12} className={'m-0'}>
-                    <Text
-                      type={'title'}
-                      level={7}
-                      weight='medium'
-                      extraClass={'m-0'}
-                    >
-                      Paste your webhook URL here
-                    </Text>
-                  </Col>
-                </Row>
-                <Row className={'mt-1 ml-2'}>
-                  <Col span={10}>
-                    <Input
-                      className='fa-input'
-                      size='large'
-                      placeholder='Webhook URL'
-                      disabled={disbleWebhookInput}
-                      ref={webhookRef}
-                      value={webhookUrl}
-                      onChange={(e) => {
-                        setWebhookUrl(e.target.value);
-                        setConfirmBtn(false);
-                        setTestMessageBtn(false);
-                      }}
-                      onBlur={() => {
-                        if (webhookUrl === '') {
-                          setTestMessageBtn(true);
-                          setConfirmBtn(true);
-                        }
-                        if (showEditBtn && webhookUrl === finalWebhookUrl) {
-                          setHideTestMessageBtn(true);
-                          setConfirmBtn(false);
-                          setDisbleWebhookInput(true);
-                        }
-                      }}
-                    ></Input>
-                  </Col>
-                  <Col span={6} className={'m-0 ml-2'}>
-                    {!confirmedMessageBtn && !showEditBtn ? (
-                      <Button
-                        type='link'
-                        disabled={confirmBtn}
-                        onClick={() => handleClickConfirmBtn()}
-                        size='large'
-                      >
-                        Confirm
-                      </Button>
-                    ) : confirmedMessageBtn && !showEditBtn ? (
-                      <Button
-                        type='link'
-                        disabled
-                        onClick={() => handleClickConfirmBtn()}
-                        size='large'
-                        icon={
-                          <SVG
-                            name={'Checkmark'}
-                            size={16}
-                            color={'#52C41A'}
-                            extraClass={'m-0'}
-                          />
-                        }
-                      >
-                        Confirmed
-                      </Button>
-                    ) : (
-                      <Button
-                        type='link'
-                        disabled={confirmBtn}
-                        onClick={() => {
-                          setDisbleWebhookInput(false);
-                          setConfirmBtn(true);
-                          setHideTestMessageBtn(true);
-                          setTimeout(() => {
-                            webhookRef.current.focus();
-                          }, 200);
-                        }}
-                        size='large'
-                      >
-                        Edit
-                      </Button>
-                    )}
-                  </Col>
-                </Row>
-                {hideTestMessageBtn && (
-                  <Row className={'mt-2 ml-2'}>
-                    <Col span={24} className={'m-0'}>
-                      {testMessageResponse ? (
-                        <div>
-                          <div className='inline'>
-                            <SVG
-                              name={'CheckCircle'}
-                              size={16}
-                              extraClass={'m-0 inline'}
-                            />
-                            <Text
-                              type={'title'}
-                              level={7}
-                              extraClass={'m-0 ml-1 inline'}
-                            >
-                              We've sent a sample message to this endpoint.
-                              Check and hit 'Confirm' if everything is alright!
-                            </Text>
-                          </div>
-                          <div className='inline'>
-                            <Button
-                              type='link'
-                              style={{
-                                backgroundColor: 'white',
-                                borderStyle: 'none'
-                              }}
-                              size='small'
-                              disabled={testMessageBtn}
-                              onClick={() => handleTestWebhook()}
-                              icon={
-                                <SVG
-                                  name={'PaperPlane'}
-                                  size={18}
-                                  color={
-                                    testMessageBtn ? '#00000040' : '#1e89ff'
-                                  }
-                                  extraClass={'-mt-1'}
-                                />
-                              }
-                            >
-                              Try Again
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <Button
-                          type='link'
-                          disabled={testMessageBtn}
-                          style={{
-                            backgroundColor: 'white',
-                            borderStyle: 'none'
-                          }}
-                          size='small'
-                          onClick={() => handleTestWebhook()}
-                          icon={
-                            <SVG
-                              name={'PaperPlane'}
-                              size={18}
-                              color={testMessageBtn ? '#00000040' : '#1e89ff'}
-                              extraClass={'-mt-1'}
-                            />
-                          }
-                        >
-                          Test this with a sample message
-                        </Button>
-                      )}
-                    </Col>
-                  </Row>
-                )}
-                <Row className='mt-3 ml-2'>
-                  <Col>
-                    <Text
-                      type='paragraph'
-                      mini
-                      extraClass='m-0'
-                      color='grey'
-                      lineHeight='medium'
-                    >
-                      Note that if you edit this alert or its payload in the
-                      future, you must reconfigure the flows to support these
-                      changes
-                    </Text>
-                  </Col>
-                </Row>
-              </div>
-            )}
-          </div>
+{/* 
+          <div className='mt-4 mb-2'>
+            <Button disabled={showSlackInt} className='ml-2' onClick={() => { setShowSlackInt(true); setSlackEnabled(true) }}><SVG name={'slack'} size={18} color='purple' />Add Slack</Button>
+            <Button disabled={showTeamInt} className='ml-2' onClick={() => { setShowTeamInt(true); setTeamsEnabled(true) }}><SVG name={'MSTeam'} size={18} color='purple' />Add Teams</Button>
+            <Button disabled={
+              !(
+                groupBy &&
+                groupBy.length &&
+                groupBy[0] &&
+                groupBy[0].property
+              ) || isWebHookFeatureLocked
+            } className='ml-2' onClick={() => { setShowWHInt(true); setWebhookEnabled(true) }}><SVG name={'Webhook'} size={18} color='purple' />Setup Webhook</Button>
+          </div> */}
 
-          <div className='border rounded mt-4'>
-            <div style={{ backgroundColor: '#fafafa' }}>
-              <Row className={'ml-2 mr-2'}>
-                <Col span={20}>
-                  <div className='flex justify-between p-3'>
-                    <div className='flex'>
-                      <Avatar
-                        size={40}
-                        shape='square'
-                        icon={<SVG name={'MSTeam'} size={40} color='purple' />}
-                        style={{ backgroundColor: '#F5F6F8' }}
-                      />
-                    </div>
-                    <div className='flex flex-col justify-start items-start ml-2 w-full'>
-                      <div className='flex flex-row items-center justify-start'>
-                        <Text
-                          type='title'
-                          level={7}
-                          weight='medium'
-                          extraClass='m-0'
-                        >
-                          Teams
-                        </Text>
-                      </div>
-                      <Text
-                        type='paragraph'
-                        mini
-                        extraClass='m-0'
-                        color='grey'
-                        lineHeight='medium'
-                      >
-                        Get your alerts inside Microsoft Teams. You can also choose to send the alert to multiple channels.
-                      </Text>
-                    </div>
-                  </div>
-                </Col>
-                <Col span={4} className={'m-0 mt-4 flex justify-end'}>
-                  <Form.Item name='teams_enabled' className={'m-0'}>
-                    <div className={'flex flex-end items-center'}>
-                      <Text
-                        type={'title'}
-                        level={7}
-                        weight='medium'
-                        extraClass={'m-0 mr-2'}
-                      >
-                        Enable
-                      </Text>
-                      <span style={{ width: '50px' }}>
-                        <Switch
-                          checkedChildren='On'
-                          unCheckedChildren='OFF'
-                          onChange={(checked) => setTeamsEnabled(checked)}
-                          checked={teamsEnabled}
-                        />
-                      </span>{' '}
-                    </div>
-                  </Form.Item>
-                </Col>
-              </Row>
-            </div>
-            {teamsEnabled && !projectSettings?.int_teams && (
-              <div className='p-4'>
-                <Row className={'mt-2 ml-2'}>
-                  <Col span={10} className={'m-0'}>
-                    <Text
-                      type={'title'}
-                      level={6}
-                      color={'grey'}
-                      extraClass={'m-0'}
-                    >
-                      Teams is not integrated, Do you want to integrate with
-                      your Microsoft Teams account now?
-                    </Text>
-                  </Col>
-                </Row>
-                <Row className={'mt-2 ml-2'}>
-                  <Col span={10} className={'m-0'}>
-                    <Button onClick={onConnectMSTeams}>
-                      <SVG name={'MSTeam'} size={20} />
-                      Connect to Teams
-                    </Button>
-                  </Col>
-                </Row>
-              </div>
-            )}
-            {teamsEnabled && projectSettings?.int_teams && (
-              <div className='p-4'>
-                {teamsSaveSelectedChannel.length > 0 && (
-                  <div>
-                    <Row>
-                      <Col>
-                        <Text
-                          type={'title'}
-                          level={7}
-                          weight={'regular'}
-                          extraClass={'m-0 mt-2 ml-2'}
-                        >
-                          {teamsSaveSelectedChannel.length > 1
-                            ? `Selected channels from the "${selectedWorkspace?.name}"`
-                            : `Selected channels from the "${selectedWorkspace?.name}"`}
-                        </Text>
-                      </Col>
-                    </Row>
-                    <Row
-                      className={'rounded border border-gray-200 ml-2 w-2/6'}
-                    >
-                      <Col className={'m-0'}>
-                        {teamsSaveSelectedChannel.map((channel, index) => (
-                          <div key={index}>
-                            <Text
-                              type={'title'}
-                              level={7}
-                              color={'grey'}
-                              extraClass={'m-0 ml-4 my-2'}
-                            >
-                              {'#' + channel.name}
-                            </Text>
-                          </div>
-                        ))}
-                      </Col>
-                    </Row>
-                  </div>
-                )}
-                {!teamsSaveSelectedChannel.length > 0 ? (
-                  <Row className={'mt-2 ml-2'}>
-                    <Col span={10} className={'m-0'}>
-                      <Button
-                        type={'link'}
-                        onClick={() => setTeamsShowSelectChannelsModal(true)}
-                      >
-                        Select Channel
-                      </Button>
-                    </Col>
-                  </Row>
-                ) : (
-                  <Row className={'mt-2 ml-2'}>
-                    <Col span={10} className={'m-0'}>
-                      <Button
-                        type={'link'}
-                        onClick={() => setTeamsShowSelectChannelsModal(true)}
-                      >
-                        {teamsSaveSelectedChannel.length > 1
-                          ? 'Manage Channels'
-                          : 'Manage Channel'}
-                      </Button>
-                    </Col>
-                  </Row>
-                )}
-              </div>
-            )}
-          </div>
-
-          <Row className={'border-top--thin-2 mt-6 pt-6'}>
-            <Col span={18}>
+          <Row className={'border-top--thin-2 mt-6 pt-6'}> 
+            {showAdvSettings && (
+              <>
+               <Col span={24}>
               <Text
                 type={'title'}
                 level={7}
@@ -2037,9 +1613,6 @@ const EventBasedAlert = ({
                 Advanced settings
               </Text>
             </Col>
-
-            {showAdvSettings && (
-              <>
                 <Col span={16} className={'m-0 mt-4'}>
                   <Form.Item name='repeat_alerts' className={'m-0'}>
                     <Checkbox
@@ -2400,7 +1973,8 @@ const mapStateToProps = (state) => ({
   eventUserPropertiesV2: state.coreQuery.eventUserPropertiesV2,
   userPropNames: state.coreQuery.userPropNames,
   eventNames: state.coreQuery.eventNames,
-  groups: state.coreQuery.groups
+  groups: state.coreQuery.groups,
+  slack_users: state.global.slack_users
 });
 
 export default connect(mapStateToProps, {
@@ -2424,5 +1998,7 @@ export default connect(mapStateToProps, {
   updateEventAlertStatus,
   setShowCriteria,
   deleteEventAlert,
-  fetchAllAlerts
+  fetchAllAlerts,
+  fetchSlackUsers,
+  testSlackAlert
 })(EventBasedAlert);
