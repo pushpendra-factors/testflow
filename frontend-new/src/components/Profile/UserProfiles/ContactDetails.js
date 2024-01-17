@@ -45,7 +45,6 @@ import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import useKey from 'hooks/useKey';
 import { PathUrls } from 'Routes/pathUrls';
 import { ArrowLeftOutlined } from '@ant-design/icons';
-import { isValidURL } from 'Utils/truncateURL';
 
 function ContactDetails({
   userDetails,
@@ -94,8 +93,8 @@ function ContactDetails({
     const eventsArray = userEvents
       .filter(
         (event) =>
-          !isValidURL(event.event_name) &&
-          Object.keys(event?.properties || {}).length
+          Object.keys(event?.properties || {}).length &&
+          !event?.properties?.['$is_page_view']
       )
       .map((event) => event.event_name);
 
