@@ -28,6 +28,8 @@ import DashboardAfterIntegration from './EmptyDashboard/DashboardAfterIntegratio
 import ProjectDropdown from './ProjectDropdown';
 import { DASHBOARD_KEYS } from '../../constants/localStorage.constants';
 import Drafts from './Drafts';
+import { useHistory } from 'react-router-dom';
+import { PathUrls } from 'Routes/pathUrls';
 
 const dashboardRefreshInitialState = {
   inProgress: false,
@@ -52,7 +54,7 @@ function Dashboard({
     dashboardRefreshInitialState
   );
 
-  const { activeDashboardUnits } = useSelector((state) => state.dashboard);
+  const { activeDashboardUnits, activeDashboard } = useSelector((state) => state.dashboard);
   const dashboards = useSelector((state) => selectDashboardList(state));
 
   const areDraftsSelected = useSelector((state) =>
@@ -67,6 +69,7 @@ function Dashboard({
   const activeProject = useSelector((state) => state.global.active_project);
   const { bingAds, marketo } = useSelector((state) => state.global);
   const dispatch = useDispatch();
+  const history = useHistory();
 
   useEffect(() => {
     fetchProjectSettingsV1(activeProject?.id)
@@ -82,6 +85,10 @@ function Dashboard({
     if (isEmpty(dashboards)) {
       fetchBingAdsIntegration(activeProject?.id);
       fetchMarketoIntegration(activeProject?.id);
+    }
+
+    if (activeDashboard?.class === 'predefined') {
+      history.replace(`${PathUrls.PreBuildDashboard}`);
     }
   }, [activeProject, sdkCheck]);
 
