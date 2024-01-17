@@ -345,6 +345,12 @@ func (store *MemSQL) createProjectDependencies(projectID int64, agentUUID string
 		log.WithError(err).Error("Failed to create default segment - \"Visited Website\".")
 	}
 
+	err = store.OnboardingAccScoring(projectID)
+	if err != nil {
+		log.WithError(err).WithField("projectId", projectID).Error("Unable to add default weights")
+
+	}
+
 	// statusCode := store.CreatePredefinedDashboards(projectID, agentUUID)
 	return http.StatusCreated
 }
@@ -1080,4 +1086,22 @@ func delProjectTimezoneCacheForID(ID int64) int64 {
 func getProjectTimezoneCacheKey(ID int64) (*cacheRedis.Key, error) {
 	prefix := "project_tz"
 	return cacheRedis.NewKeyWithProjectUID(string(ID), prefix, "")
+}
+
+func (store *MemSQL) OnboardingAccScoring(projectId int64) error {
+
+	logCtx := log.WithField("project id", projectId)
+	// update project with default account score weights
+	weights := model.GetDefaultAccScoringWeights()
+	dedupWeights, _, err := model.UpdateWeights(projectId, weights, "adding acount scoring - Onboarding project")
+	if err != nil {
+		logCtx.WithError(err).Errorf("Unable to add default weights - onboarding")
+	} else {
+		err = store.UpdateAccScoreWeights(projectId, dedupWeights)
+		if err != nil {
+			logCtx.WithField("project id", projectId).WithError(err).Errorf("Unable to add default weights -onboarding")
+		}
+	}
+
+	return nil
 }
