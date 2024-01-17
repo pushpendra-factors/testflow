@@ -533,7 +533,7 @@ function AccountProfiles({
         selectedFilters: appliedFilters,
         tableProps: enabledProps
       });
-
+      queryForFetch['search_filter'] = listSearchItems;
       await udpateProjectSettings(activeProject.id, {
         timelines_config: updatedConfig
       });
@@ -993,6 +993,11 @@ function AccountProfiles({
       <div>
         <Table
           ref={tableRef}
+          components={{
+            header: {
+              cell: ResizableTitle
+            }
+          }}
           onRow={(account) => ({
             onClick: () => {
               history.push(

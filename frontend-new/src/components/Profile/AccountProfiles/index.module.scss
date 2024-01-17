@@ -21,6 +21,13 @@
     }
   }
 
+  & td[class] {
+    padding: 6px 12px !important;
+  }
+  & tr:hover td {
+    background-color: #fafafa !important;
+  }
+
   & tr {
     max-height: 64px !important;
     height: 64px;

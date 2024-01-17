@@ -82,7 +82,7 @@ const getTablePropColumn = ({
     key: prop,
     width:
       COLUMN_TYPE_PROPS[ACCOUNTS_TABLE_COLUMN_TYPES[prop]?.Type || 'string']
-        .max || 264,
+        ?.max || 264,
     showSorterTooltip: null,
     sorter: (a, b) =>
       propType === 'numerical'
@@ -305,7 +305,11 @@ export const getColumns = ({
     accountColumn,
     ...(isScoringLocked
       ? []
-      : [engagementColumn, scoreColumn, topEngagementsColumn]),
+      : [
+          engagementColumn,
+          scoreColumn,
+          AdminLock(activeAgent) && topEngagementsColumn
+        ]),
     ...tablePropColumns,
     lastActivityColumn
   ];
