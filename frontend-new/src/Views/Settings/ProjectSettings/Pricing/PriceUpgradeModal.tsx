@@ -239,9 +239,18 @@ function PriceUpgradeModal({
               extraClass={'m-0 '}
               weight={'bold'}
             >
-              {selectedPlanTerm?.period === 'month' && `$${planPrice}/Month`}
-              {selectedPlanTerm?.period === 'year' &&
-                `$${planPrice / 12}/Month`}
+              {selectedPlanTerm?.period === 'month' && (
+                <>
+                  $<Number number={planPrice} />
+                  /Month
+                </>
+              )}
+              {selectedPlanTerm?.period === 'year' && (
+                <>
+                  $<Number number={planPrice / 12} />
+                  /Month
+                </>
+              )}
             </Text>
           </div>
         </div>
@@ -296,7 +305,7 @@ function PriceUpgradeModal({
                 extraClass={style.amountText}
               >
                 {' '}
-                ${planPrice + addonCount * addonAmount}
+                $<Number number={planPrice + addonCount * addonAmount} />
               </Text>
             </div>
           </div>
@@ -345,7 +354,7 @@ function PriceUpgradeModal({
             extraClass={'m-0'}
             color='character-secondary'
           >
-            You will get extra 500 account identification for one month based on
+            You will get extra 500 account identification every month based on
             your plan. ${addonAmount}/{ADDITIONAL_ACCOUNTS_ADDON_LIMIT} Accounts
           </Text>
         </div>

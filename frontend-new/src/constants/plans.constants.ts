@@ -43,7 +43,6 @@ export const FEATURES = {
   FEATURE_TEAMS: 'teams',
   FEATURE_SIX_SIGNAL_REPORT: 'six_signal_report',
   FEATURE_ACCOUNT_SCORING: 'account_scoring',
-  FEATURE_ENGAGEMENT: 'engagements',
   FEATURE_FACTORS_DEANONYMISATION: 'factors_deanonymisation',
   FEATURE_WEBHOOK: 'webhook',
   FEATURE_ACCOUNT_PROFILES: 'account_profiles',
@@ -112,7 +111,7 @@ export const PLANS_COFIG: PLANS_COFIG_INTERFACE = {
     planIcon: 'User_friends',
     planIconColor: '#73D13D',
     mtuLimit: 10000,
-    accountIdentifiedLimit: 350
+    accountIdentifiedLimit: 500
   },
   [PLANS.PLAN_GROWTH]: {
     name: PLANS.PLAN_GROWTH,
