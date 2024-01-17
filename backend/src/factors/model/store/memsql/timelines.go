@@ -1673,6 +1673,9 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 	if C.IsDomainEnabled(projectID) && status == http.StatusNotFound {
 		accountDetails, propertiesDecoded, status = store.GetUserDetailsAssociatedToDomain(projectID, id)
 		accountDetails = FormatAccountDetails(projectID, propertiesDecoded, groupName, accountDetails.HostName)
+		accountDetails.LeftPaneProps = make(map[string]interface{})
+		accountDetails.Milestones = make(map[string]interface{})
+
 	}
 
 	if status != http.StatusOK {
@@ -2101,6 +2104,10 @@ func FetchAccountDetailsFromProps(projectID int64, groupName string, timelinesCo
 				}
 				value := (*props)[prop]
 				maxValMilestone := computeMaxMilestone(milestoneProperties, value, prop)
+
+				if maxValMilestone <= 0 {
+					continue
+				}
 				milestoneProperties[prop] = maxValMilestone
 			}
 		}
