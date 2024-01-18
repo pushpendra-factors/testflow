@@ -389,3 +389,21 @@ func UpdateWeights(projectId int64, weightsRequest AccWeights, requestID string)
 	logCtx.Info("Done deduplicating weights ")
 	return dedupweights, http.StatusAccepted, nil
 }
+
+func DefaultEngagementBuckets() BucketRanges {
+	var defaultBucket BucketRanges
+	defaultBucket.Ranges = make([]Bucket, 4)
+
+	hotBucket := Bucket{Name: "Hot", High: 100, Low: 90}
+	warmBucket := Bucket{Name: "Warm", High: 90, Low: 70}
+	coldBucket := Bucket{Name: "Cold", High: 70, Low: 30}
+	iceBucket := Bucket{Name: "Ice", High: 30, Low: 0}
+
+	timeNow := time.Now().Unix()
+	dateToday := U.GetDateOnlyFromTimestamp(timeNow)
+	defaultBucket.Date = dateToday
+	defaultBucket.Ranges = []Bucket{hotBucket, warmBucket, coldBucket, iceBucket}
+
+	return defaultBucket
+
+}
