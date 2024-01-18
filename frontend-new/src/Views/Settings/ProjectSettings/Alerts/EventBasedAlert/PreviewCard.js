@@ -21,15 +21,7 @@ export const PreviewCardSlack = ({
     return (
         <div>
         {/* slack card starts here*/}
-        <div className='background-color--mono-color-1 border--thin-2 p-4' style={{'width': '400px', 'border-radius': '8px', 'minHeight': '300px'}}>  
-        
-
-        { !groupBy?.length>0 ? 
-        <div className='flex flex-col items-center justify-center' style={{'minHeight': '250px'}}>  
-            <Text type='title' level={7} color={'grey'} weight={'thin'} extraClass='m-0' >Add properties to preview</Text>
-        </div>
-        
-        :
+        <div className='background-color--mono-color-1 border--thin-2 p-4' style={{'width': '400px', 'border-radius': '8px', 'height': '320px', 'overflowY':'auto'}}>
 
         <div className='flex flex-col justify-start items-start'> 
 
@@ -40,17 +32,18 @@ export const PreviewCardSlack = ({
         <Text type='title' level={8} weight={'thin'} extraClass='m-0' >3:00 PM</Text>
         </div>
 
-        <div className='ml-10'>
+        <div className='pl-10 w-full'>
 
 
         <div className='flex flex-col items-start mt-2'>
-        <Text type='title' level={7} weight={'bold'} extraClass='m-0' >{alertName}</Text>
-        <Text type='title' level={8} extraClass='m-0' >{alertMessage}</Text>
+        <Text type='title' level={7} weight={'bold'} extraClass='m-0' >{alertName ? alertName : 'Alert name'}</Text>
+        <Text type='title' level={8} extraClass='m-0' >{alertMessage ? alertMessage : 'Alert message to be displayed'}</Text>
         <Text type='title' level={8}  color={'blue'} extraClass='m-0' >
             {selectedMentions?.map((item)=>{
                 return `@${item} `
             })}
             </Text>
+        <Text type='title' level={8} weight={'bold'} color={'blue'} extraClass='m-0 mt-2' >{'See activity in Factors app'}</Text>
         </div>
 
         <div className='mt-4 mb-2 border-top--thin-2'>
@@ -58,13 +51,18 @@ export const PreviewCardSlack = ({
          
 
  
-   { 
-    payloadProps && Object?.entries(payloadProps).map(([key, value]) => { 
-          return (<div className='px-2 py-2'>
+   {groupBy?.length>0 ? payloadProps && Object?.entries(payloadProps).map(([key, value]) => { 
+          return (<div className='px-2 py-2 w-1/2'>
               <Text type='title' level={7} weight={'bold'} extraClass='m-0' >{matchEventName(key)}</Text>
               <Text type='title' level={8} color={'grey'} extraClass='m-0' >{value}</Text>
           </div>)
-        })
+        }) :
+        [1,2,3,4].map((item) => { 
+            return (<div className='px-2 py-2 w-1/2'>
+                <Text type='title' level={7} weight={'bold'} extraClass='m-0' >{`Property ${item}`}</Text>
+                <Text type='title' level={8} color={'grey'} extraClass='m-0' >{`{Value}`}</Text>
+            </div>)
+          })
     }
 
 
@@ -73,9 +71,8 @@ export const PreviewCardSlack = ({
 
         </div>
 
-        </div>
-}
-        
+        </div> 
+
         </div> 
         {/* slack card ends here*/}
         <Text type='title' level={8} color={'grey'} extraClass='m-0 mt-2' >This is a preview of how your alert will look in Slack</Text>
@@ -98,17 +95,9 @@ export const PreviewCardTeams = ({
         <div>
 
         {/* teams card starts here*/}
-        <div className='background-color--mono-color-1 border--thin-2 ' style={{'width': '400px', 'border-radius': '8px', 'minHeight': '300px'}}>
+        <div className='background-color--mono-color-1 border--thin-2 ' style={{'width': '400px', 'border-radius': '8px', 'height': '320px', 'overflowY':'auto'}}>
 
-
-
-        { !groupBy?.length>0 ? 
-        <div className='flex flex-col items-center justify-center' style={{'minHeight': '250px'}}>  
-            <Text type='title' level={7} color={'grey'} weight={'thin'} extraClass='m-0' >Add properties to preview</Text>
-        </div>
-        
-        :
-        <>
+ 
         <div className='flex items-center justify-between border-bottom--thin-2 py-2 px-4'>
             <div className='flex items-center'>
             <SVG name={'brand'} background='transparent' showBorder={false} size={32} />
@@ -123,19 +112,25 @@ export const PreviewCardTeams = ({
 
 
         <div className='flex flex-col items-start mt-2'>
-        <Text type='title' level={7} weight={'bold'} extraClass='m-0' >{alertName}</Text>
-        <Text type='title' level={7} extraClass='m-0' >{alertMessage}</Text>
+        <Text type='title' level={7} weight={'bold'} extraClass='m-0' >{alertName ? alertName : 'Alert name'}</Text>
+        <Text type='title' level={7} extraClass='m-0' >{alertMessage ? alertMessage : 'Alert message to be displayed'}</Text>
         </div>
 
         <div className='mt-4 mb-2'>
         <div className='flex flex-col flex-wrap mt-4 mb-2'>
    
-   {payloadProps && Object?.entries(payloadProps).map(([key, value]) => { 
-          return (<div className='flex items-center w-full justify-between'>
+   {groupBy?.length>0 ? payloadProps && Object?.entries(payloadProps).map(([key, value]) => { 
+          return (<div className='flex items-center w-full justify-between flex-wrap mt-2'>
               <Text type='title' level={7} color={'grey'}  extraClass='m-0' >{matchEventName(key)}</Text>
               <Text type='title' level={7} extraClass='m-0' >{value}</Text>
           </div>)
-        })
+        }) :
+        [1,2,3,4].map((item) => { 
+            return (<div className='flex items-center w-full justify-between'>
+              <Text type='title' level={7} color={'grey'}  extraClass='m-0 mt-1' >{`Property ${item}`}</Text>
+              <Text type='title' level={7} extraClass='m-0' >{`{Value}`}</Text>
+          </div>)
+          })
     }
 
         </div>
@@ -143,10 +138,8 @@ export const PreviewCardTeams = ({
 
         </div>
 
-        </div>
-        </>
-}
-        
+        </div> 
+
         </div> 
         {/* teams card ends here*/}
             <Text type='title' level={8} color={'grey'} extraClass='m-0 mt-2' >This is a preview of how your alert will look in Teams</Text>
@@ -164,14 +157,14 @@ export const PreviewCardWebhook = ({
 
     let payloadProps = {};
     payloadProps = groupBy?.length>0 ? getMsgPayloadMapping(groupBy) : {};
-    payloadProps['title']= alertName;
-    payloadProps['message']= alertMessage;
+    payloadProps['title']= alertName ? alertName : 'Alert name';
+    payloadProps['message']= alertMessage ? alertMessage : 'Alert message to be displayed';
 
     return (
         <div>
 
         {/* card starts here*/}
-        <div className='background-color--mono-color-1 border--thin-2 p-2' style={{'width': '400px', 'border-radius': '8px', 'minHeight': '300px'}}>
+        <div className='background-color--mono-color-1 border--thin-2 p-2' style={{'width': '400px', 'border-radius': '8px', 'height': '320px', 'overflowY':'auto'}}>
 
         { !groupBy?.length>0 ? 
         <div className='flex flex-col items-center justify-center' style={{'minHeight': '250px'}}>  
