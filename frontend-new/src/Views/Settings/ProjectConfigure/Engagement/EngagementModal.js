@@ -97,7 +97,7 @@ function EngagementModal({ visible, onOk, onCancel, event, editMode }) {
             queries={listEvents}
             eventChange={queryChange}
             closeEvent={closeEvent}
-            groupAnalysis={'events'}
+            groupAnalysis='events'
             dropdownPlacement='bottom'
             propertiesScope={['event', 'user', 'group']}
           />
@@ -108,14 +108,13 @@ function EngagementModal({ visible, onOk, onCancel, event, editMode }) {
         <div key={0}>
           <EventsBlock
             isEngagementConfig
-            disableEventEdit={editMode}
             availableGroups={groupsList}
             index={1}
             event={listEvents[0]}
             closeEvent={closeEvent}
             queries={listEvents}
             eventChange={queryChange}
-            groupAnalysis={'events'}
+            groupAnalysis='events'
             dropdownPlacement='bottom'
             propertiesScope={['event', 'user', 'group']}
             viewMode={editMode}
