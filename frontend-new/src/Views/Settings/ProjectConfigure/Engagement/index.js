@@ -1,4 +1,13 @@
-import { Button, Col, Modal, notification, Row, Table, Tooltip } from 'antd';
+import {
+  Button,
+  Col,
+  Modal,
+  notification,
+  Popover,
+  Row,
+  Table,
+  Tooltip
+} from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
 import {
   findKeyByValue,
@@ -12,8 +21,55 @@ import { bindActionCreators } from 'redux';
 import { updateAccountScores } from 'Reducers/timelines';
 import { fetchProjectSettings } from 'Reducers/global';
 import { getGroups } from 'Reducers/coreQuery/middleware';
+import { EngagementTag } from 'Components/Profile/constants.ts';
 import SaleWindowModal from './SaleWindowModal';
 import EngagementModal from './EngagementModal';
+
+import EngagementCategoryModal from './EngagementCategoryModal';
+import styles from './index.module.scss';
+
+const PopoverCategoryOrder = ['Ice', 'Cool', 'Warm', 'Hot'];
+const EngagementCategoryPopoverContent = (
+  <div className='inline-flex justify-between' style={{ width: 'max-content' }}>
+    <div
+      className='engagement-tag'
+      style={{
+        '--bg-color': EngagementTag.Hot?.bgColor,
+        marginRight: '10px'
+      }}
+    >
+      <img
+        src={`../../../assets/icons/${EngagementTag.Hot?.icon}.svg`}
+        alt=''
+      />
+      <Text type='title' level={7} extraClass='m-0'>
+        Hot
+      </Text>
+    </div>
+
+    <div
+      className={`inline-flex ${styles.engagement_popover_horizontalpills}`}
+      style={{ marginLeft: '10px' }}
+    >
+      {PopoverCategoryOrder.map((eachType) => (
+        <div
+          key={`popover-${eachType}`}
+          style={{
+            width: '45px',
+            background: EngagementTag[eachType].bgColor
+          }}
+        >
+          <img
+            src={`../../../assets/icons/${EngagementTag[eachType]?.icon}.svg`}
+            alt=''
+            width={eachType === 'Ice' && 16}
+            height={eachType !== 'Ice' && 16}
+          />
+        </div>
+      ))}
+    </div>
+  </div>
+);
 
 const filterConfigRuleCheck = (existingConfig, newConfig) => {
   try {
@@ -41,6 +97,7 @@ const filterConfigRuleCheck = (existingConfig, newConfig) => {
 function EngagementConfig({ fetchProjectSettings, getGroups }) {
   const [editIndex, setEditIndex] = useState(undefined);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [renderCategoryModal, setRenderCategoryModal] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [renderModal, setRenderModal] = useState(false);
   const [saleWindowValue, setSaleWindowValue] = useState();
@@ -165,7 +222,7 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
         showErrorMessage(`Error ${editMode ? 'updating' : 'adding'} score.`);
       });
     setShowModal(false);
-    let timeoutHandle = setTimeout(() => {
+    const timeoutHandle = setTimeout(() => {
       setRenderModal(false);
       clearTimeout(timeoutHandle);
     }, 500);
@@ -173,9 +230,17 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
   const handleCategoryModal = {
     onCancel: () => {
       setShowCategoryModal(false);
+      const timeoutHandle = setTimeout(() => {
+        setRenderCategoryModal(false);
+        clearTimeout(timeoutHandle);
+      }, 500);
     },
-    onOK: () => {
+    onOk: () => {
       setShowCategoryModal(false);
+      const timeoutHandle = setTimeout(() => {
+        setRenderCategoryModal(false);
+        clearTimeout(timeoutHandle);
+      }, 500);
     }
   };
   const handleSaleWindowOk = (value) => {
@@ -221,7 +286,7 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
   const handleCancel = () => {
     setShowModal(false);
     setEditIndex(undefined);
-    let timeoutHandle = setTimeout(() => {
+    const timeoutHandle = setTimeout(() => {
       setRenderModal(false);
       clearTimeout(timeoutHandle);
     }, 500);
@@ -307,12 +372,29 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
             </Col>
             <Col span={12}>
               <div className='flex justify-end' style={{ gap: '10px' }}>
+                <Popover
+                  placement='bottom'
+                  trigger='hover'
+                  overlayInnerStyle={{ borderRadius: '8px' }}
+                  content={EngagementCategoryPopoverContent}
+                >
+                  <Button
+                    type='text'
+                    className='dropdown-btn'
+                    onClick={() => {
+                      setShowCategoryModal(true);
+                      setRenderCategoryModal(true);
+                    }}
+                  >
+                    Engagement Category
+                  </Button>
+                </Popover>
                 <Button
                   type='primary'
                   icon={<SVG name='plus' color='white' />}
                   onClick={setAddNewScore}
                 >
-                  Add a rule
+                  Add signal
                 </Button>
               </div>
             </Col>
@@ -352,7 +434,7 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
                 <div className='grid h-full place-items-center'>
                   <img src='../../../../assets/icons/empty_file.svg' alt='' />
                   <Text type='title' level={6} weight='bold' extraClass='m-4'>
-                    Looks like there aren't any rules here yet
+                    Looks like there aren&apos;t any rules here yet
                   </Text>
                   <Button
                     type='primary'
@@ -368,6 +450,12 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
         </Col>
       </Row>
 
+      {renderCategoryModal && (
+        <EngagementCategoryModal
+          visible={showCategoryModal}
+          {...handleCategoryModal}
+        />
+      )}
       {renderModal && (
         <EngagementModal
           event={activeEvent}

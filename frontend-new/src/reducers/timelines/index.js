@@ -180,3 +180,13 @@ export const fetchAccountOverview = (projectID, groupName, accID) => {
   const url = `${host}projects/${projectID}/v1/profiles/accounts/overview/${groupName}/${accID}`;
   return get(null, url);
 };
+
+export const updateEngagementCategoryRanges = (projectID, payload) => {
+  const url = `${host}projects/${projectID}/v1/accscore/engagementbuckets`;
+  return put(null, url, payload);
+};
+
+export const getEngagementCategoryRanges = (projectID) => {
+  const url = `${host}projects/${projectID}/v1/accscore/engagementbuckets`;
+  return get(null, url);
+};
