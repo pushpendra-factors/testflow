@@ -280,7 +280,7 @@ function WidgetCard({
               setResultState({
                 ...initialState,
                 data: activeUsersData,
-                status:res.status
+                status: res.status
               });
             } else if (unit.query.query.query_group.length === 4) {
               const eventsData = formatApiData(resultGroup[0], resultGroup[1]);
@@ -293,13 +293,13 @@ function WidgetCard({
               setResultState({
                 ...initialState,
                 data: frequencyData,
-                status:res.status
+                status: res.status
               });
             } else {
               setResultState({
                 ...initialState,
                 data: formatApiData(resultGroup[0], resultGroup[1]),
-                status:res.status
+                status: res.status
               });
             }
           }
@@ -325,7 +325,7 @@ function WidgetCard({
         setResultState({
           ...initialState,
           error: true,
-          status:err.status
+          status: err.status
         });
       }
     },
@@ -450,9 +450,9 @@ function WidgetCard({
     }
 
     let analyseQueryParamsPath = '/analyse';
-    if(unit?.query?.query?.query_group[0]?.cl === 'events' && false) {
+    if(unit?.query?.query?.query_group[0]?.cl === 'events') {
       analyseQueryParamsPath =  analyseQueryParamsPath + '/events/' + unit.query.id_text;
-    } else if(unit?.query?.query?.cl === 'funnel' && false) {
+    } else if(unit?.query?.query?.cl === 'funnel') {
       analyseQueryParamsPath =  analyseQueryParamsPath + '/funnel/' + unit.query.id_text;
     }
 
