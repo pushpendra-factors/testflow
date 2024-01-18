@@ -1,15 +1,14 @@
 name: Validate Commit Count
 
 on:
-  workflow_run:
-    workflows: ["Validate Pull Request"]
-    types:
-      - completed
+  push:
+    branches: [master, staging, release]
+  pull_request:
+    branches: [master, staging, release]
 
 jobs:
   commit-count:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - uses: actions/checkout@v3
