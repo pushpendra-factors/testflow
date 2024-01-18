@@ -1636,6 +1636,7 @@ var ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	VISITED_WEBSITE:                   "Visited Website",
 	IN_SALESFORCE:                     "In Salesforce",
 	GROUP_EVENT_NAME_ENGAGEMENT_SCORE: "Engagement Score",
+	DP_DOMAIN_NAME:                    "Domain Name",
 }
 
 var USER_PROPERTIES_WITH_COLUMN = []string{

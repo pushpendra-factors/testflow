@@ -1869,6 +1869,7 @@ func TestHubspotPropertyDetails(t *testing.T) {
 
 	configs := make(map[string]interface{})
 	configs["rollupLookback"] = 1
+	configs["deleteRollupAfterAddingToAggregate"] = 1
 	event_user_cache.DoRollUpSortedSet(configs)
 	properties, err := store.GetStore().GetPropertiesByEvent(project.ID, eventNameCreated, 2500, 1)
 	assert.Nil(t, err)
@@ -5306,6 +5307,7 @@ func TestHubspotDisableGroupUserPropertiesFromUserPropertiesCache(t *testing.T) 
 	// execute DoRollUpSortedSet
 	configs := make(map[string]interface{})
 	configs["rollupLookback"] = 1
+	configs["deleteRollupAfterAddingToAggregate"] = 1
 	event_user_cache.DoRollUpSortedSet(configs)
 
 	w = sendGetUserProperties(project.ID, agent, r)
@@ -7819,6 +7821,7 @@ func TestHubspotPropertyValueLabels(t *testing.T) {
 
 	configs = make(map[string]interface{})
 	configs["rollupLookback"] = 10
+	configs["deleteRollupAfterAddingToAggregate"] = 1
 	event_user_cache.DoRollUpSortedSet(configs)
 
 	C.GetConfig().LookbackWindowForEventUserCache = 10
@@ -8004,6 +8007,7 @@ func TestHubspotEnableEventLevelProperties(t *testing.T) {
 	// execute DoRollUpSortedSet
 	configs := make(map[string]interface{})
 	configs["rollupLookback"] = 1
+	configs["deleteRollupAfterAddingToAggregate"] = 1
 	event_user_cache.DoRollUpSortedSet(configs)
 	eventEncoded := b64.StdEncoding.EncodeToString([]byte(b64.StdEncoding.EncodeToString([]byte(eventNameCreated))))
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
@@ -8121,6 +8125,7 @@ func TestHubspotEnableEventLevelProperties(t *testing.T) {
 	// execute DoRollUpSortedSet
 	configs = make(map[string]interface{})
 	configs["rollupLookback"] = 1
+	configs["deleteRollupAfterAddingToAggregate"] = 1
 	event_user_cache.DoRollUpSortedSet(configs)
 	eventEncoded = b64.StdEncoding.EncodeToString([]byte(b64.StdEncoding.EncodeToString([]byte(eventNameCreated))))
 	cookieData, err = helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)

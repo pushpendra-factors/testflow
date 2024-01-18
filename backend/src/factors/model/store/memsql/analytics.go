@@ -77,6 +77,8 @@ func getPropertyEntityField(projectID int64, groupProp model.QueryGroupByPropert
 		return "events.properties"
 	} else if groupProp.Entity == model.PropertyEntityGroup {
 		return "group_users.properties"
+	} else if groupProp.Entity == model.PropertyEntityDomainGroup {
+		return "domain_users.properties"
 	}
 
 	return ""
@@ -442,33 +444,27 @@ func getFilterSQLStmtForScopeDomainsLatestGroupProperties(projectID int64,
 
 	var filteredProperty []model.QueryProperty
 	for _, p := range properties {
-		if p.Entity == model.PropertyEntityUserGlobal || p.Entity == model.PropertyEntityUserGroup {
+		if p.Entity == model.PropertyEntityUserGlobal || p.Entity == model.PropertyEntityUserGroup || p.Entity == model.PropertyEntityDomainGroup {
 			filteredProperty = append(filteredProperty, p)
 		}
 	}
 
 	groupedPoperties, isOnlyOR, isOnlyAND := model.GetPropertiesGroupedByGroupName(filteredProperty)
-	if isOnlyOR {
-		// no need to break into groups
-		wStmt, wParams, err := buildWhereFromProperties(projectID, filteredProperty, fromTimestamp)
-		if err != nil {
-			return "", nil, nil, nil, err
-		}
-		return wStmt, wParams, nil, nil, nil
-	}
-
-	propertyFilterGroupIDs := []int{}
-	for _, filterProperties := range groupedPoperties {
-		propertyFilterGroupIDs = append(propertyFilterGroupIDs, filterProperties[0].GroupNameID)
-	}
 
 	groupGroupedProperties := make([][]model.QueryProperty, 0)
 	userGroupedProperties := make([]model.QueryProperty, 0)
+	domainGroupedProperties := make([]model.QueryProperty, 0)
 	for i := range groupedPoperties {
+		if model.CheckIfHasDomainFilter(groupedPoperties[i]) {
+			domainGroupedProperties = append(domainGroupedProperties, groupedPoperties[i]...)
+			continue
+		}
+
 		if model.IsFilterGlobalUserPropertiesByDefaultQueryMap(groupedPoperties[i][0].Entity) {
 			userGroupedProperties = append(userGroupedProperties, groupedPoperties[i]...)
 			continue
 		}
+
 		groupGroupedProperties = append(groupGroupedProperties, groupedPoperties[i])
 	}
 
@@ -481,6 +477,52 @@ func getFilterSQLStmtForScopeDomainsLatestGroupProperties(projectID int64,
 		}
 		userGroupedStmnt = groupWStmt
 		userGroupedParams = groupWParams
+	}
+
+	domainGroupStmnt := ""
+	domainGroupParams := []interface{}{}
+	if len(domainGroupedProperties) > 0 {
+		groupWStmt, groupWParams, err := buildWhereFromProperties(projectID, domainGroupedProperties, fromTimestamp)
+		if err != nil {
+			return "", nil, nil, nil, err
+		}
+
+		domainGroupStmnt = groupWStmt
+		domainGroupParams = groupWParams
+	}
+
+	if isOnlyOR {
+		// no need to break into groups
+		wStmt, wParams, err := buildWhereFromProperties(projectID, filteredProperty, fromTimestamp)
+		if err != nil {
+			return "", nil, nil, nil, err
+		}
+
+		if userGroupedStmnt != "" {
+			if wStmt == "" {
+				wStmt = userGroupedStmnt
+			} else {
+				wStmt = fmt.Sprintf("( %s ) AND ( %s )", wStmt, userGroupedStmnt)
+			}
+			wParams = append(wParams, userGroupedParams...)
+		}
+
+		if domainGroupStmnt != "" {
+			if wStmt == "" {
+				wStmt = domainGroupStmnt
+			} else {
+				wStmt = wStmt + " AND " + domainGroupStmnt
+
+			}
+			wParams = append(wParams, domainGroupParams...)
+		}
+
+		return wStmt, wParams, nil, nil, nil
+	}
+
+	propertyFilterGroupIDs := []int{}
+	for _, filterProperties := range groupedPoperties {
+		propertyFilterGroupIDs = append(propertyFilterGroupIDs, filterProperties[0].GroupNameID)
 	}
 
 	/*
@@ -532,6 +574,15 @@ func getFilterSQLStmtForScopeDomainsLatestGroupProperties(projectID int64,
 			wStmt = " ( " + wStmt + " OR " + fmt.Sprintf(" ( %s ) ", nonFilterGroupsStmnt) + " ) "
 		}
 
+		if domainGroupStmnt != "" {
+			if wStmt == "" {
+				wStmt = domainGroupStmnt
+			} else {
+				wStmt = wStmt + " AND " + domainGroupStmnt
+
+			}
+			wParams = append(wParams, domainGroupParams...)
+		}
 		return wStmt, wParams, selectColumns, havingColumnConditions, nil
 	}
 
@@ -582,6 +633,16 @@ func getFilterSQLStmtForScopeDomainsLatestGroupProperties(projectID int64,
 		wStmt = " ( " + wStmt + " OR " + fmt.Sprintf(" ( %s ) ", nonFilterGroupsStmnt) + " ) "
 	}
 
+	if domainGroupStmnt != "" {
+		if wStmt == "" {
+			wStmt = domainGroupStmnt
+		} else {
+			wStmt = wStmt + " AND " + domainGroupStmnt
+
+		}
+		wParams = append(wParams, domainGroupParams...)
+	}
+
 	return wStmt, wParams, selectColumns, havingColumnConditions, nil
 }
 
@@ -620,6 +681,8 @@ func GetPropertyEntityFieldForFilter(entityName string, fromTimestamp int64) str
 		return model.GetPropertyEntityFieldForFilter(entityName)
 
 	case model.PropertyEntityUserGroup:
+		return model.GetPropertyEntityFieldForFilter(entityName)
+	case model.PropertyEntityDomainGroup:
 		return model.GetPropertyEntityFieldForFilter(entityName)
 	}
 
@@ -712,9 +775,9 @@ func getNoneHandledGroupBySelectForDomains(projectID int64, groupProp model.Quer
 
 	if groupProp.Type != U.PropertyTypeDateTime {
 		groupSelect = fmt.Sprintf("SUBSTRING(max(case when JSON_EXTRACT_STRING(%s, ?) is null then '%s' when JSON_EXTRACT_STRING(%s, ?) = '' "+
-			"then '%s' else CONCAT( join_timestamp, ':', JSON_EXTRACT_STRING(%s, ?) ) end), LOCATE(':', max( case when "+
+			"then '%s' else CONCAT( group_users.join_timestamp, ':', JSON_EXTRACT_STRING(%s, ?) ) end), LOCATE(':', max( case when "+
 			"JSON_EXTRACT_STRING(%s, ?) is null then '%s' when JSON_EXTRACT_STRING(%s, ?) = '' then '%s' "+
-			"else CONCAT( join_timestamp, ':', JSON_EXTRACT_STRING(%s, ?) ) end ))+1) AS %s",
+			"else CONCAT( group_users.join_timestamp, ':', JSON_EXTRACT_STRING(%s, ?) ) end ))+1) AS %s",
 			entityField, model.PropertyValueNone, entityField, model.PropertyValueNone, entityField, entityField, model.PropertyValueNone, entityField,
 			model.PropertyValueNone, entityField, groupKey)
 		return groupSelect, []interface{}{groupProp.Property, groupProp.Property, groupProp.Property, groupProp.Property, groupProp.Property, groupProp.Property}
@@ -723,9 +786,9 @@ func getNoneHandledGroupBySelectForDomains(projectID int64, groupProp model.Quer
 	propertyName := "JSON_EXTRACT_STRING(" + entityField + ", ?)"
 	timestampStr := getSelectTimestampByTypeAndPropertyName(groupProp.Granularity, propertyName, timezoneString)
 	groupSelect = fmt.Sprintf("SUBSTRING(max(case when JSON_EXTRACT_STRING(%s, ?) is null then '%s' when JSON_EXTRACT_STRING(%s, ?) = '' "+
-		"then '%s' else CONCAT( join_timestamp, ':', %s ) end), LOCATE(':', max( case when "+
+		"then '%s' else CONCAT( group_users.join_timestamp, ':', %s ) end), LOCATE(':', max( case when "+
 		"JSON_EXTRACT_STRING(%s, ?) is null then '%s' when JSON_EXTRACT_STRING(%s, ?) = '' then '%s' "+
-		"else CONCAT( join_timestamp, ':', %s ) end ))+1) AS %s",
+		"else CONCAT( group_users.join_timestamp, ':', %s ) end ))+1) AS %s",
 		entityField, model.PropertyValueNone, entityField, model.PropertyValueNone, timestampStr, entityField, model.PropertyValueNone, entityField,
 		model.PropertyValueNone, timestampStr, groupKey)
 	return groupSelect, []interface{}{groupProp.Property, groupProp.Property, groupProp.Property, groupProp.Property, groupProp.Property, groupProp.Property}
@@ -826,7 +889,10 @@ func buildGroupKeysForDomains(projectID int64, groupProps []model.QueryGroupByPr
 	for i, groupProp := range groupProps {
 		// Order of group is preserved as received.
 		gKey := groupKeyByIndex(groupProp.Index)
-		groupProp.Entity = model.PropertyEntityGroup
+
+		if groupProp.GroupName != model.GROUP_NAME_DOMAINS {
+			groupProp.Entity = model.PropertyEntityGroup
+		}
 
 		noneHandledSelect, noneHandledSelectParams := getNoneHandledGroupBySelectForDomains(projectID, groupProp, gKey, timezoneString, refStep)
 
@@ -1413,7 +1479,7 @@ func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[
 	usersUserGroupColumn := ""
 	eventsWrapSelect = joinWithComma(eventsWrapSelect, "events.properties as event_properties, events.user_properties as event_user_properties")
 	if addJoinStmnt != "" {
-		if !strings.Contains(addJoinStmnt, "user_groups") && !strings.Contains(addJoinStmnt, "group_users") {
+		if !strings.Contains(addJoinStmnt, "user_groups") && !strings.Contains(addJoinStmnt, "group_users") && !strings.Contains(addJoinStmnt, "domain_users") {
 			eventsWrapSelect = joinWithComma(eventsWrapSelect, "users.customer_user_id, users.properties as global_user_properties")
 			// For the special case of groups join, where events.user_id
 			// cannot be used as replacement of users.id.
@@ -1437,6 +1503,10 @@ func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[
 
 			if strings.Contains(addSelecStmnt, "group_users_user_id") {
 				eventsWrapSelect = joinWithComma(eventsWrapSelect, "group_users.id as group_users_user_id")
+			}
+
+			if strings.Contains(addJoinStmnt, "domain_users") {
+				eventsWrapSelect = joinWithComma(eventsWrapSelect, "domain_users.properties as domain_properties")
 			}
 		}
 	}

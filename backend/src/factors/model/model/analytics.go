@@ -61,13 +61,14 @@ const (
 )
 
 const (
-	PropertyEntityUser       = "user"
-	PropertyEntityEvent      = "event"
-	PropertyEntityUserGlobal = "user_g"
-	PropertyEntityGroup      = "group"
-	PropertyEntityUserGroup  = "user_group"
-	MaxEventsLimitInSQL      = 25000
-	EventsLimit              = 2500
+	PropertyEntityUser        = "user"
+	PropertyEntityEvent       = "event"
+	PropertyEntityUserGlobal  = "user_g"
+	PropertyEntityGroup       = "group"
+	PropertyEntityUserGroup   = "user_group"
+	PropertyEntityDomainGroup = "domain_group"
+	MaxEventsLimitInSQL       = 25000
+	EventsLimit               = 2500
 )
 
 const PropertyValueNone = "$none"
@@ -1233,6 +1234,33 @@ func CheckIfHasGlobalUserFilter(properties []QueryProperty) bool {
 	return false
 }
 
+// CheckIfHasDomainFilter Returns if set of filters entity has domain filter
+func CheckIfHasDomainFilter(properties []QueryProperty) bool {
+
+	for _, p := range properties {
+		if isDomainFilter(p.Entity, p.GroupName) {
+			return true
+		}
+	}
+	return false
+}
+
+func isDomainFilter(entity, groupName string) bool {
+	return entity == PropertyEntityDomainGroup && groupName == GROUP_NAME_DOMAINS
+}
+
+// CheckIfHasDomainGroupBy Returns checks if has domain breakdown
+func CheckIfHasDomainGroupBy(properties []QueryGroupByProperty) bool {
+
+	for _, p := range properties {
+		if isDomainFilter(p.Entity, p.GroupName) {
+			return true
+		}
+	}
+
+	return false
+}
+
 // getGroupIDsFromGlobalUserFilter returns group names for the global properties
 func getGroupIDsFromGlobalUserGroupByANDFilters(queryProperties []QueryProperty, groupByProperties []QueryGroupByProperty) map[string]int {
 	groupNameIDs := make(map[string]int)
@@ -1276,6 +1304,8 @@ func GetPropertyEntityFieldForFilter(entityName string) string {
 		return "users.properties"
 	case PropertyEntityUserGroup:
 		return "user_global_user_properties"
+	case PropertyEntityDomainGroup:
+		return "domain_properties"
 	}
 
 	return ""
@@ -1475,7 +1505,36 @@ func FilterGlobalGroupPropertiesFilterForDomains(filters []QueryProperty) []Quer
 		if IsFilterGlobalUserPropertiesByDefaultQueryMap(filters[i].Entity) {
 			continue
 		}
+
+		if isDomainFilter(filters[i].Entity, filters[i].GroupName) {
+			continue
+		}
+
 		filteredGlobalGroupProperties = append(filteredGlobalGroupProperties, filters[i])
 	}
 	return filteredGlobalGroupProperties
+}
+
+func RemoveDomainGroupByProperties(groupByProps []QueryGroupByProperty) []QueryGroupByProperty {
+	groupBys := make([]QueryGroupByProperty, 0)
+	for i := range groupByProps {
+		if isDomainFilter(groupByProps[i].Entity, groupByProps[i].GroupName) {
+			continue
+		}
+		groupBys = append(groupBys, groupByProps[i])
+	}
+
+	return groupBys
+}
+
+func GetFilteredDomainGroupProperties(groupByProps []QueryProperty) []QueryProperty {
+	groupBys := make([]QueryProperty, 0)
+	for i := range groupByProps {
+		if isDomainFilter(groupByProps[i].Entity, groupByProps[i].GroupName) {
+			continue
+		}
+		groupBys = append(groupBys, groupByProps[i])
+	}
+
+	return groupBys
 }
