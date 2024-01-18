@@ -29,28 +29,26 @@ import styles from './index.module.scss';
 const filterConfigRuleCheck = (existingConfig, newConfig) => {
   try {
     let result = true;
-    if (Array.isArray(existingConfig) && Array.is)
+    if (Array.isArray(existingConfig) && Array.isArray(newConfig)) {
       existingConfig?.forEach((eachrule, eachIndex) => {
         result &&=
           _.isEqual(eachrule?.value, newConfig[eachIndex]?.value) &&
-          eachrule?.operator == newConfig[eachIndex]?.operator &&
-          eachrule?.property_type == newConfig[eachIndex]?.property_type &&
-          eachrule?.value_type == newConfig[eachIndex]?.value_type &&
-          eachrule?.lower_bound == newConfig[eachIndex]?.lower_bound;
+          eachrule?.operator === newConfig[eachIndex]?.operator &&
+          eachrule?.property_type === newConfig[eachIndex]?.property_type &&
+          eachrule?.value_type === newConfig[eachIndex]?.value_type &&
+          eachrule?.lower_bound === newConfig[eachIndex]?.lower_bound;
       });
+    } else if (existingConfig === null && newConfig === null) {
+      result &&= true;
+    } else {
+      result = false;
+    }
     return result;
   } catch (err) {
     return false;
   }
 };
-const duplicateRuleCheck = (weightConf, newConfig, newIndex, editMode) => {
-  return weightConf.find(
-    (existingConfig, eachIndex) =>
-      existingConfig.fname === newConfig.fname &&
-      !existingConfig.is_deleted &&
-      (editMode ? eachIndex != newIndex : true)
-  );
-};
+
 function EngagementConfig({ fetchProjectSettings, getGroups }) {
   const [editIndex, setEditIndex] = useState(undefined);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -101,8 +99,6 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
     if (editMode) {
       const noChangesMade = weightConf.find(
         (existingConfig) =>
-          existingConfig.event_name === newConfig.event_name &&
-          existingConfig.wid === newConfig.wid &&
           existingConfig.weight === newConfig.weight &&
           existingConfig.fname === newConfig.fname
       );
@@ -110,33 +106,24 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
       if (noChangesMade) {
         showErrorMessage('No changes to save.');
         return;
-      } else {
-        // if (duplicateRuleCheck(weightConf, newConfig, editIndex, editMode)) {
-        //   showErrorMessage('Duplicate Rule Name found');
-        //   return;
-        // }
-        const configExistsIndex = weightConf.findIndex(
-          (existingConfig) =>
-            existingConfig.event_name === newConfig.event_name &&
-            existingConfig.wid === newConfig.wid
-        );
-
-        weightConf.splice(configExistsIndex, 1, newConfig);
       }
+      const configExistsIndex = weightConf.findIndex(
+        (existingConfig) =>
+          existingConfig.event_name === newConfig.event_name &&
+          existingConfig.wid === newConfig.wid
+      );
+
+      weightConf.splice(configExistsIndex, 1, newConfig);
     } else {
       if (!config.weight || config.weight === '' || config.weight === 0) {
         showErrorMessage('Please add a score for this rule.');
         return;
       }
-      // if (duplicateRuleCheck(weightConf, newConfig, editIndex, editMode)) {
-      //   showErrorMessage('Duplicate Rule Name found');
-      //   return;
-      // }
-
       const configExistsIndex = weightConf.findIndex(
-        (existingConfig) => existingConfig.event_name === newConfig.event_name
+        (existingConfig) =>
+          existingConfig.event_name === newConfig.event_name &&
+          filterConfigRuleCheck(existingConfig?.rule, newConfig?.rule)
       );
-
       if (configExistsIndex !== -1) {
         const configExists = weightConf[configExistsIndex];
 
@@ -146,15 +133,14 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
           if (!newConfig.wid) delete newConfig.wid;
           weightConf.splice(configExistsIndex, 1, newConfig);
         } else {
-          // showErrorMessage('Rule already exists.');
-          // return;
+          showErrorMessage('Rule already exists.');
+          return;
         }
       } else {
         delete newConfig.wid;
         weightConf.push(newConfig);
       }
     }
-
     updateAccountScores(activeProject.id, {
       WeightConfig: weightConf,
       salewindow: parseInt(saleWindowValue)
@@ -162,8 +148,8 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
       .then(() => fetchProjectSettings(activeProject.id))
       .then(() =>
         showSuccessMessage(
-          `Score ${editMode ? 'updated' : 'added'} successfully`,
-          `The ${editMode ? '' : 'new'} score has been ${
+          `Rule ${editMode ? 'Updated' : 'Added'} successfully`,
+          `The ${editMode ? '' : 'new'} rule has been ${
             editMode ? 'updated' : 'added'
           }. This will start reflecting in Accounts shortly.`
         )
