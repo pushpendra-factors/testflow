@@ -212,6 +212,18 @@ func (store *MemSQL) RunInsightsQuery(projectId int64, query model.Query, enable
 		}
 	}
 
+	for i := range query.GlobalUserProperties {
+		if query.GlobalUserProperties[i].GroupName == model.GROUP_NAME_DOMAINS {
+			query.GlobalUserProperties[i].Entity = model.PropertyEntityDomainGroup
+		}
+	}
+
+	for i := range query.GroupByProperties {
+		if query.GroupByProperties[i].GroupName == model.GROUP_NAME_DOMAINS {
+			query.GroupByProperties[i].Entity = model.PropertyEntityDomainGroup
+		}
+	}
+
 	groupIds := make([]int, 0)
 	for i := range query.EventsWithProperties {
 		groupName, status := store.IsGroupEventNameByQueryEventWithProperties(projectId, query.EventsWithProperties[i])
@@ -887,10 +899,12 @@ func GetAllTimestampsAndOffsetBetweenByType(from, to int64, typ, timezone string
 func buildAddJoinForEventAnalyticsGroupQuery(projectID int64, groupID, scopeGroupID int, source string, globalUserProperties []model.QueryProperty, isAccountSegment, isScopeDomains bool) (string, []interface{}) {
 
 	hasGlobalGroupPropertiesFilter := model.CheckIfHasGlobalUserFilter(globalUserProperties)
-
 	isGroupEvent := groupID > 0
 
 	if isScopeDomains {
+		filteredGlobalGroupProperties := model.GetFilteredDomainGroupProperties(globalUserProperties)
+		hasDomainPropertiesFilter := model.CheckIfHasDomainFilter(globalUserProperties)
+
 		jointStmnt := " LEFT JOIN users as user_groups on events.user_id = user_groups.id AND user_groups.project_id = ? "
 		params := []interface{}{projectID}
 
@@ -905,7 +919,7 @@ func buildAddJoinForEventAnalyticsGroupQuery(projectID int64, groupID, scopeGrou
 			if hasGlobalGroupPropertiesFilter {
 				var globalGroupIDColumns, globalGroupSource string
 				// do not include user_group entity filters for timelines all accounts
-				transformedGlobalProps := RemoveUserGroupFilters(globalUserProperties)
+				transformedGlobalProps := RemoveUserGroupFilters(filteredGlobalGroupProperties)
 				globalGroupIDColumns, globalGroupSource = model.GetDomainsAsscocaitedGroupSourceANDColumnIDs(transformedGlobalProps, nil)
 
 				if globalGroupIDColumns != "" && globalGroupSource != "" {
@@ -919,6 +933,11 @@ func buildAddJoinForEventAnalyticsGroupQuery(projectID int64, groupID, scopeGrou
 
 				params = append(params, projectID, model.UserSourceDomains)
 			}
+		}
+
+		if hasDomainPropertiesFilter {
+			jointStmnt = jointStmnt + fmt.Sprintf(" LEFT JOIN users as domain_users on user_groups.group_%d_user_id  = domain_users.id AND domain_users.project_id = ? AND domain_users.source = 9", scopeGroupID)
+			params = append(params, projectID)
 		}
 
 		return jointStmnt, params
@@ -1450,12 +1469,14 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 	userGroupProps := model.FilterGroupPropsByType(otherGroupBys, model.PropertyEntityUser)
 	ugSelect, ugSelectParams := "", []interface{}{}
 	if isScopeDomains {
+		userGroupProps = append(userGroupProps, model.FilterGroupPropsByType(otherGroupBys, model.PropertyEntityDomainGroup)...)
 		ugSelect, ugSelectParams, _ = buildGroupKeysForDomains(projectID, userGroupProps, query.Timezone, refStep)
 	} else {
 		ugSelect, ugSelectParams, _ = buildGroupKeys(projectID, userGroupProps, query.Timezone, scopeGroupID > 0, true)
 	}
 
 	*qParams = append(*qParams, ugSelectParams...)
+
 	// order of group keys changes here if users and event
 	// group by used together, but translated correctly.
 	termSelect := ""

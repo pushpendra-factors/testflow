@@ -211,7 +211,7 @@ func getDefaultAllAccountProperties(projectId int64) map[string][]string {
 			allAccountPropertiesCategorical = append(allAccountPropertiesCategorical, prop)
 		}
 	}
-	allAccountPropertiesCategorical = append(allAccountPropertiesCategorical, U.VISITED_WEBSITE)
+	allAccountPropertiesCategorical = append(allAccountPropertiesCategorical, U.VISITED_WEBSITE, U.DP_DOMAIN_NAME)
 
 	scoringAvailable, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_ACCOUNT_SCORING, false)
 	if err != nil {
