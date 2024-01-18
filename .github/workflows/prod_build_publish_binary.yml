@@ -85,7 +85,10 @@ jobs:
         run: |
           binary="${{ github.event.inputs.binary}}"
           path="./"
-          if [[ "$binary" == "linkedin-sync" || "$binary" == "adwords-sync" || "$binary" == "hubspot-sync" || "$binary" == "facebook-sync" ]]; then
+          if [[ "$binary" == "linkedin-sync-dup" || "$binary" == "linkedin-company-sync" ]]; then
+              path="./integrations/linkedin_v1/scripts"
+          
+          elif [[ "$binary" == "linkedin-sync" || "$binary" == "adwords-sync" || "$binary" == "hubspot-sync" || "$binary" == "facebook-sync" ]]; then
               substring="${binary%-*}"
               path="./integrations/$substring/scripts"
 

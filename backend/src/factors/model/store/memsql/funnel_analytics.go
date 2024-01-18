@@ -52,6 +52,18 @@ func (store *MemSQL) RunFunnelQuery(projectId int64, query model.Query, enableFi
 		}
 	}
 
+	for i := range query.GlobalUserProperties {
+		if query.GlobalUserProperties[i].GroupName == model.GROUP_NAME_DOMAINS {
+			query.GlobalUserProperties[i].Entity = model.PropertyEntityDomainGroup
+		}
+	}
+
+	for i := range query.GroupByProperties {
+		if query.GroupByProperties[i].GroupName == model.GROUP_NAME_DOMAINS {
+			query.GroupByProperties[i].Entity = model.PropertyEntityDomainGroup
+		}
+	}
+
 	groupIds := make([]int, 0)
 	for i := range query.EventsWithProperties {
 		groupName, status := store.IsGroupEventNameByQueryEventWithProperties(projectId, query.EventsWithProperties[i])
@@ -709,7 +721,8 @@ func buildAddSelectForFunnelGroup(stepName string, stepIndex int, groupID, scope
 
 // join for funnel step with refStep for group user id
 func buildAddJoinForFunnelAllAccountsFunnelStep(projectID int64, queryGroupByProperty []model.QueryGroupByProperty, scopeGroupID int, refStep string) (string, []interface{}) {
-	userGroupProps := model.GetGlobalGroupByUserProperties(queryGroupByProperty)
+	filteredGroupByProperties := model.RemoveDomainGroupByProperties(queryGroupByProperty)
+	userGroupProps := model.GetGlobalGroupByUserProperties(filteredGroupByProperties)
 	hasGlobalGroupByProperties := len(userGroupProps) > 0
 	if !hasGlobalGroupByProperties || refStep == "" {
 		return "", nil
@@ -719,6 +732,12 @@ func buildAddJoinForFunnelAllAccountsFunnelStep(projectID int64, queryGroupByPro
 	joinStmnt := fmt.Sprintf(" LEFT JOIN users AS group_users on %s.coal_group_user_id = group_users.group_%d_user_id "+
 		"AND group_users.project_id = ? AND  group_users.is_group_user = true AND group_users.source IN ( %s ) AND ( %s )",
 		refStep, scopeGroupID, globalGroupSource, globalGroupIDColumns)
+
+	if model.CheckIfHasDomainGroupBy(queryGroupByProperty) {
+		joinStmnt = joinStmnt + fmt.Sprintf(" LEFT JOIN users as domain_users on %s.coal_group_user_id = domain_users.id "+
+			"AND domain_users.project_id = ? AND domain_users.source = 9", refStep)
+		return joinStmnt, []interface{}{projectID, projectID}
+	}
 
 	return joinStmnt, []interface{}{projectID}
 }
@@ -734,17 +753,32 @@ func buildAddJoinForFunnelGroup(projectID int64, groupID, scopeGroupID int, isSc
 
 	if isScopeDomains {
 
+		filteredGlobalGroupPropertiesFilter := model.GetFilteredDomainGroupProperties(globalUserProperties)
+		hasGlobalGroupPropertiesFilter = model.CheckIfHasGlobalUserFilter(filteredGlobalGroupPropertiesFilter)
+		hasDomainsFilter := model.CheckIfHasDomainFilter(globalUserProperties)
+
 		if hasGlobalGroupPropertiesFilter {
-			globalGroupIDColumns, globalGroupSource := model.GetDomainsAsscocaitedGroupSourceANDColumnIDs(globalUserProperties, nil)
+			globalGroupIDColumns, globalGroupSource := model.GetDomainsAsscocaitedGroupSourceANDColumnIDs(filteredGlobalGroupPropertiesFilter, nil)
 			jointStmnt := fmt.Sprintf(" LEFT JOIN users as user_groups on events.user_id = user_groups.id AND user_groups.project_id = ? LEFT JOIN "+
 				"users as group_users ON user_groups.group_%d_user_id = group_users.group_%d_user_id AND group_users.project_id = ? "+
 				"AND group_users.is_group_user = true AND group_users.source IN ( %s ) AND ( %s )", scopeGroupID, scopeGroupID, globalGroupSource,
 				globalGroupIDColumns)
-			return jointStmnt, []interface{}{projectID, projectID}
+
+			if !hasDomainsFilter {
+				return jointStmnt, []interface{}{projectID, projectID}
+			}
+
+			jointStmnt = jointStmnt + fmt.Sprintf(" LEFT JOIN users as domain_users on user_groups.group_%d_user_id = domain_users.id AND domain_users.project_id = ? AND domain_users.source = 9", scopeGroupID)
+			return jointStmnt, []interface{}{projectID, projectID, projectID}
 		}
 
 		jointStmnt := " LEFT JOIN users as user_groups on events.user_id = user_groups.id AND user_groups.project_id = ? "
-		return jointStmnt, []interface{}{projectID}
+		if !hasDomainsFilter {
+			return jointStmnt, []interface{}{projectID}
+		}
+
+		jointStmnt = jointStmnt + fmt.Sprintf(" LEFT JOIN users as domain_users on user_groups.group_%d_user_id = domain_users.id AND domain_users.project_id = ? AND domain_users.source = 9", scopeGroupID)
+		return jointStmnt, []interface{}{projectID, projectID}
 	}
 
 	if !isGroupEventUser {
@@ -1701,6 +1735,7 @@ func buildUniqueUsersFunnelQueryV3(projectId int64, q model.Query, groupIds []in
 	if !isFunnelGroupQuery {
 		ugSelect, ugParams, _ = buildGroupKeys(projectId, userGroupProps, q.Timezone, false, false)
 	} else if isFunnelGroupQueryDomains {
+		userGroupProps = append(userGroupProps, model.FilterGroupPropsByType(q.GroupByProperties, model.PropertyEntityDomainGroup)...)
 		ugGroupSelect, ugSelectParams, _ := buildGroupKeysForDomains(projectId, userGroupProps, q.Timezone, funnelSteps[0])
 
 		if len(ugSelectParams) > 0 {
@@ -1877,8 +1912,8 @@ func getGlobalBreakdownreakdownWhereConditionForDomains(globalUserPropertiesFile
 			groupUserJoinNegativeConditiod = groupUserJoinNegativeConditiod + " AND "
 		}
 
-		groupUserWithFilterJointConditon = groupUserWithFilterJointConditon + fmt.Sprintf("group_%d_id is not null", groupID)
-		groupUserJoinNegativeConditiod = groupUserJoinNegativeConditiod + fmt.Sprintf("group_%d_id is null", groupID)
+		groupUserWithFilterJointConditon = groupUserWithFilterJointConditon + fmt.Sprintf("group_users.group_%d_id is not null", groupID)
+		groupUserJoinNegativeConditiod = groupUserJoinNegativeConditiod + fmt.Sprintf("group_users.group_%d_id is null", groupID)
 		groupIDVisited[groupID] = true
 	}
 	funnelWhereStmnt := fmt.Sprintf("( (( %s ) AND LOCATE( group_users.id,%s.group_users_user_ids)>0 ) OR ( %s ))", groupUserWithFilterJointConditon, refStep, groupUserJoinNegativeConditiod)

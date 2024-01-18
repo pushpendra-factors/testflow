@@ -1343,6 +1343,7 @@ func TestSalesforcePropertyDetails(t *testing.T) {
 
 	configs := make(map[string]interface{})
 	configs["rollupLookback"] = 1
+	configs["deleteRollupAfterAddingToAggregate"] = 1
 	event_user_cache.DoRollUpSortedSet(configs)
 	properties, err := store.GetStore().GetPropertiesByEvent(project.ID, eventNameCreated, 2500, 1)
 	assert.Nil(t, err)
@@ -1683,6 +1684,7 @@ func TestSalesforceSmartEventPropertyDetails(t *testing.T) {
 
 	configs := make(map[string]interface{})
 	configs["rollupLookback"] = 1
+	configs["deleteRollupAfterAddingToAggregate"] = 1
 	event_user_cache.DoRollUpSortedSet(configs)
 
 	properties, err := store.GetStore().GetPropertiesByEvent(project.ID, U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED, 2500, 1)
@@ -1815,6 +1817,7 @@ func TestSalesforceSmartEventOpportunity(t *testing.T) {
 
 	configs := make(map[string]interface{})
 	configs["rollupLookback"] = 1
+	configs["deleteRollupAfterAddingToAggregate"] = 1
 	event_user_cache.DoRollUpSortedSet(configs)
 
 	query := model.Query{
@@ -5018,6 +5021,7 @@ func TestSalesforceDisableGroupUserPropertiesFromUserPropertiesCache(t *testing.
 	createdDate := time.Now()
 	configs := make(map[string]interface{})
 	configs["rollupLookback"] = 1
+	configs["deleteRollupAfterAddingToAggregate"] = 1
 
 	/*
 		Opportunities
