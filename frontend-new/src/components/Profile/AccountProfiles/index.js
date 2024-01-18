@@ -15,7 +15,8 @@ import {
   Tabs,
   notification,
   Input,
-  Form
+  Form,
+  Tooltip
 } from 'antd';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
@@ -841,27 +842,35 @@ function AccountProfiles({
                   width: '240px',
                   'border-radius': '5px'
                 }}
-                prefix={<SVG name='search' size={20} color='#8C8C8C' />}
+                prefix={<SVG name='search' size={24} color={'#8c8c8c'} />}
               />
             </Form.Item>
           </Form>
-          <Button type='text' onClick={onSearchClose}>
-            <SVG name='close' size={24} color='grey' />
+          <Button type='text' className='search-btn' onClick={onSearchClose}>
+            <SVG name='close' size={24} color='#8c8c8c' />
           </Button>
         </div>
       </ControlledComponent>
       <ControlledComponent controller={!searchBarOpen}>
-        <Button type='text' onClick={onSearchOpen}>
-          <SVG name='search' size={24} color='#8c8c8c' />
-        </Button>
+        <Tooltip title='Search'>
+          <Button type='text' className='search-btn' onClick={onSearchOpen}>
+            <SVG name='search' size={24} color='#8c8c8c' />
+          </Button>
+        </Tooltip>
       </ControlledComponent>
     </div>
   );
 
   const renderDownloadSection = () => (
-    <Button onClick={() => setShowDownloadCSVModal(true)} type='text'>
-      <SVG size={20} name='download' color='#8c8c8c' />
-    </Button>
+    <Tooltip title='Download CSV'>
+      <Button
+        className='search-btn'
+        onClick={() => setShowDownloadCSVModal(true)}
+        type='text'
+      >
+        <SVG size={24} name='download' color='#8c8c8c' />
+      </Button>
+    </Tooltip>
   );
 
   const renderMoreActions = () => (
@@ -881,8 +890,8 @@ function AccountProfiles({
         styles['more-actions-popover']
       )}
     >
-      <Button className={styles['more-actions-button']} type='default'>
-        <SVG size={20} name='more' />
+      <Button className='search-btn' type='text'>
+        <SVG color='#8c8c8c' size={24} name='more' />
       </Button>
     </Popover>
   );
@@ -901,9 +910,11 @@ function AccountProfiles({
       trigger='click'
       content={popoverContent}
     >
-      <Button type='text'>
-        <SVG size={20} name='tableColumns' />
-      </Button>
+      <Tooltip title='Edit columns'>
+        <Button className='search-btn' type='text'>
+          <SVG size={24} color='#8c8c8c' name='tableColumns' />
+        </Button>
+      </Tooltip>
     </Popover>
   );
 

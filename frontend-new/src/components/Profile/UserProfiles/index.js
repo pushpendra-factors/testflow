@@ -11,7 +11,8 @@ import {
   Tabs,
   Avatar,
   Input,
-  Form
+  Form,
+  Tooltip
 } from 'antd';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
@@ -973,7 +974,7 @@ function UserProfiles({
       controller={filtersExpanded === false && newSegmentMode === false}
     >
       <div className='relative'>
-        {searchBarOpen ? (
+        <ControlledComponent controller={searchBarOpen}>
           <div className={'flex items-center justify-between'}>
             <Form
               name='basic'
@@ -988,19 +989,22 @@ function UserProfiles({
                   value={listSearchItems ? listSearchItems.join(', ') : null}
                   placeholder={'Search Users'}
                   style={{ width: '240px', 'border-radius': '5px' }}
-                  prefix={<SVG name='search' size={20} color={'grey'} />}
+                  prefix={<SVG name='search' size={24} color={'#8c8c8c'} />}
                 />
               </Form.Item>
             </Form>
             <Button type='text' className='search-btn' onClick={onSearchClose}>
-              <SVG name='close' size={20} color='grey' />
+              <SVG name='close' size={24} color='#8c8c8c' />
             </Button>
           </div>
-        ) : (
-          <Button type='text' className='search-btn' onClick={onSearchOpen}>
-            <SVG name='search' size={20} color='grey' />
-          </Button>
-        )}
+        </ControlledComponent>
+        <ControlledComponent controller={!searchBarOpen}>
+          <Tooltip title='Search'>
+            <Button type='text' className='search-btn' onClick={onSearchOpen}>
+              <SVG name='search' size={24} color='#8c8c8c' />
+            </Button>
+          </Tooltip>
+        </ControlledComponent>
       </div>
     </ControlledComponent>
   );
@@ -1019,9 +1023,11 @@ function UserProfiles({
       trigger='click'
       content={popoverContent}
     >
-      <Button type='text'>
-        <SVG size={24} name='tableColumns' />
-      </Button>
+      <Tooltip title='Edit columns'>
+        <Button className='search-btn' type='text'>
+          <SVG size={24} color='#8c8c8c' name='tableColumns' />
+        </Button>
+      </Tooltip>
     </Popover>
   );
 
@@ -1101,8 +1107,8 @@ function UserProfiles({
         styles['more-actions-popover']
       )}
     >
-      <Button className={styles['more-actions-button']} type='default'>
-        <SVG size={24} name='more' />
+      <Button className='search-btn' type='text'>
+        <SVG size={24} color='#8c8c8c' name='more' />
       </Button>
     </Popover>
   );
@@ -1257,7 +1263,11 @@ function UserProfiles({
             >
               {renderSearchSection()}
               {renderTablePropsSelect()}
-              {renderMoreActions()}
+              <ControlledComponent
+                controller={Boolean(timelinePayload.segment.id)}
+              >
+                {renderMoreActions()}
+              </ControlledComponent>
             </ControlledComponent>
           </div>
         </div>

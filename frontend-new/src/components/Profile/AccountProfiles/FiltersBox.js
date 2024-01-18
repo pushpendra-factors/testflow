@@ -275,7 +275,9 @@ function FiltersBox({
             extraClass='mb-0'
             weight='medium'
           >
-            With account properties
+            {profileType === 'account'
+              ? 'With account properties'
+              : 'With properties'}
           </Text>
         </div>
         <div className='px-6'>
@@ -373,7 +375,7 @@ function FiltersBox({
           </ControlledComponent>
           <ControlledComponent controller={listEvents.length < 3}>
             <Button
-              className={cx('flex items-center', styles['add-filter-button'])}
+              className={cx('flex items-center col-gap-2', styles['add-filter-button'])}
               type='text'
               onClick={showEventsDropdown}
             >
@@ -425,7 +427,9 @@ function FiltersBox({
                 color='character-primary'
                 weight='medium'
               >
-                Accounts that performed
+                {profileType === 'account'
+                  ? 'Accounts that performed'
+                  : 'People who performed'}
               </Text>
               <Dropdown overlay={eventMenuItems}>
                 <div className='flex col-gap-1 cursor-pointer items-center'>
