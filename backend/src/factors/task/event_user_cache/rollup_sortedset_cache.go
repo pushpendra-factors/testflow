@@ -3,7 +3,6 @@ package event_user_cache
 import (
 	"encoding/json"
 	cacheRedis "factors/cache/redis"
-	"factors/config"
 	"factors/model/model"
 	U "factors/util"
 	"strconv"
@@ -20,17 +19,14 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 	// delete the sorted set
 
 	rollupLookback := configs["rollupLookback"].(int)
-	deleteRollupAfterAddingToAggregate := configs["deleteRollupAfterAddingToAggregate"].(int)
 
 	logCtx := log.WithField("config", configs)
 	logCtx.Info("Starting rollup sorted set job.")
 
 	var isCurrentDay bool
 	currentDate := U.TimeNowZ()
-
-	var allProjects map[string]string
-
 	for i := 0; i <= rollupLookback; i++ {
+		isCurrentDay = i == 0
 		currentTimeDatePart := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
 		uniqueUsersCountKey, err := model.UserCountAnalyticsCacheKey(
 			currentTimeDatePart)
@@ -47,22 +43,10 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 			log.WithError(err).Error("Failed to get projects")
 			return nil, false
 		}
-	}
-
-	for id, _ := range allProjects {
-		projId, _ := strconv.Atoi(id)
-		projectID := int64(projId)
-
-		// eventNameAndPropertyKeysCacheByDate contains []U.CachePropertyValueWithTimestamp of multiple dates per event_name+property_key.
-		// U.CachePropertyValueWithTimestamp contains map of multiple values of a specific day.
-		eventNameAndPropertyKeysCacheByDate := make(map[string]map[string][]U.CachePropertyValueWithTimestamp)
-
-		rollupsAddedToAggregate := make([]*cacheRedis.Key, 0)
-		for i := 0; i <= rollupLookback; i++ {
-			isCurrentDay = i == 0
-			currentTimeDatePart := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
-
-			log.WithField("project_id", projectID).Info("Starting RollUp")
+		for id, _ := range allProjects {
+			projId, _ := strconv.Atoi(id)
+			projectID := int64(projId)
+			log.WithField("ProjectId", projectID).Info("Starting RollUp")
 			eventNamesSmartKeySortedSet, err := model.GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
 				currentTimeDatePart)
 			if err != nil {
@@ -199,10 +183,6 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 				}
 				eventPropertyValuesToCache := make(map[*cacheRedis.Key]string)
 				for eventName, propertyValue := range propertyValues {
-					if _, isExists := eventNameAndPropertyKeysCacheByDate[eventName]; config.IsAggrEventPropertyValuesCacheEnabled(projectID) && !isExists {
-						eventNameAndPropertyKeysCacheByDate[eventName] = make(map[string][]U.CachePropertyValueWithTimestamp)
-					}
-
 					for property, values := range propertyValue {
 						if len(values) > 0 {
 							eventPropertyValuesKey, _ := model.GetValuesByEventPropertyRollUpCacheKey(projectID, eventName, property, currentTimeDatePart)
@@ -213,18 +193,6 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 								continue
 							}
 							eventPropertyValuesToCache[eventPropertyValuesKey] = string(enEventPropertyValuesCache)
-
-							// Adding to aggregate will work till prev day.
-							if config.IsAggrEventPropertyValuesCacheEnabled(projectID) && !isCurrentDay {
-								if _, isExsits := eventNameAndPropertyKeysCacheByDate[eventName][property]; !isExsits {
-									eventNameAndPropertyKeysCacheByDate[eventName][property] = make([]U.CachePropertyValueWithTimestamp, 0)
-								}
-								eventNameAndPropertyKeysCacheByDate[eventName][property] = append(
-									eventNameAndPropertyKeysCacheByDate[eventName][property],
-									cacheEventPropertyValueObject,
-								)
-								rollupsAddedToAggregate = append(rollupsAddedToAggregate, eventPropertyValuesKey)
-							}
 						}
 					}
 				}
@@ -392,110 +360,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 				}
 			}
 		}
-
-		if !config.IsAggrEventPropertyValuesCacheEnabled(projectID) {
-			return nil, true
-		}
-
-		// Run through event property values rollups of all recent dates and
-		// add to aggregated cache excluding the current date.
-		eventPropertyValuesAggregateCache := make(map[*cacheRedis.Key]string)
-		for eventName, propertyWithValuesByDate := range eventNameAndPropertyKeysCacheByDate {
-			for property, valuesByDate := range propertyWithValuesByDate {
-				eventPropertyValuesAggCacheKey, _ := model.GetValuesByEventPropertyRollUpAggregateCacheKey(
-					projectID, eventName, property)
-
-				// Transform aggregate to tuple to allow aggregation with new rollups.
-				existingAggCache, aggCacheExists, err := cacheRedis.GetIfExistsPersistent(eventPropertyValuesAggCacheKey)
-				if err != nil {
-					log.WithError(err).Error("Failed to get existing values cache aggregate.")
-				}
-
-				var existingAggregate U.CacheEventPropertyValuesAggregate
-				if aggCacheExists {
-					err = json.Unmarshal([]byte(existingAggCache), &existingAggregate)
-					if err != nil {
-						log.WithError(err).Error("Failed to unmarshal values cache aggregate.")
-					}
-				}
-
-				var removeEarliestAggregateCount bool
-				if len(existingAggregate.EarliestCount.PropertyValue) > 0 {
-					var earliestTimestampInSecs int64
-					for k := range existingAggregate.EarliestCount.PropertyValue {
-						earliestTimestampInSecs = existingAggregate.EarliestCount.PropertyValue[k].LastSeenTimestamp
-						break
-					}
-					// Earliest timestamp is greater than the rollup days.
-					if (U.TimeNowUnix() - earliestTimestampInSecs) > int64(rollupLookback*86400) {
-						removeEarliestAggregateCount = true
-					}
-				}
-
-				valuesListFromAggMap := make(map[string]U.CountTimestampTuple)
-				for i := range existingAggregate.NameCountTimestampCategoryList {
-					exa := existingAggregate.NameCountTimestampCategoryList[i]
-					valuesListFromAggMap[exa.Name] = U.CountTimestampTuple{LastSeenTimestamp: exa.Timestamp, Count: exa.Count}
-				}
-
-				// Subtracting the older than 15 days (based on rollup lookback) count from the aggregate.
-				// This helps maintaining only last 15 days of count.
-				if removeEarliestAggregateCount {
-					for k := range existingAggregate.EarliestCount.PropertyValue {
-						if valuesListFromAggMap[k].Count > 0 {
-							tuple := valuesListFromAggMap[k]
-							tuple.Count = tuple.Count - existingAggregate.EarliestCount.PropertyValue[k].Count
-							valuesListFromAggMap[k] = tuple
-						}
-					}
-
-					// Reset earliest count to avoid multiple removal from aggregate.
-					existingAggregate.EarliestCount = U.CachePropertyValueWithTimestamp{}
-				}
-
-				// Add existing aggregate to next compute.
-				valuesListFromAgg := U.CachePropertyValueWithTimestamp{PropertyValue: valuesListFromAggMap}
-				valuesList := make([]U.CachePropertyValueWithTimestamp, 0)
-				valuesList = append(valuesList, valuesByDate...)
-				valuesList = append(valuesList, valuesListFromAgg)
-
-				// Assigning the current earliest date added to aggregates.
-				if removeEarliestAggregateCount && len(valuesByDate) > 0 {
-					existingAggregate.EarliestCount = valuesByDate[len(valuesByDate)-1]
-				}
-
-				aggregatedValues := U.AggregatePropertyValuesAcrossDate(valuesList)
-				aggregatedValuesCache := U.CacheEventPropertyValuesAggregate{
-					NameCountTimestampCategoryList: aggregatedValues,
-				}
-
-				eventPropertyValuesAggCache, err := json.Marshal(aggregatedValuesCache)
-				if err != nil {
-					log.WithError(err).Error("Failed to marshal aggregate values cache for event property values.")
-					continue
-				}
-				eventPropertyValuesAggregateCache[eventPropertyValuesAggCacheKey] = string(eventPropertyValuesAggCache)
-			}
-		}
-
-		if len(eventPropertyValuesAggregateCache) > 0 {
-			err := cacheRedis.SetPersistentBatch(eventPropertyValuesAggregateCache, 0)
-			if err != nil {
-				log.WithError(err).Error("Failed to set aggregate cache for event properties.")
-			}
-		}
-
-		// Delete rollups only if enabled for backward compatibility on rollback.
-		if deleteRollupAfterAddingToAggregate == 1 {
-			err := cacheRedis.DelPersistent(
-				rollupsAddedToAggregate...,
-			)
-			if err != nil {
-				log.WithError(err).Error("Failed to delete the rollup after added to aggregate.")
-			}
-		}
 	}
-
 	return nil, true
 }
 
