@@ -1,5 +1,6 @@
 import logging as log
 import traceback
+import signal
 from typing import List
 
 import scripts
@@ -18,7 +19,15 @@ class JobSchedulerAndRunner:
     TASKS_WITH_INC_EXECUTION_ORDER = [AD, AD_SET, CAMPAIGN, CAMPAIGN_INSIGHTS, AD_SET_INSIGHTS, AD_INSIGHTS]
 
     @classmethod
+    def handle(cls, signum, frame):
+        raise Exception("Function timeout after 5 mins")
+    
+    @classmethod
     def sync(cls, facebook_int_setting: dict, sync_info_with_type: dict):
+        # timeout this function after 5 mins
+        signal.signal(signal.SIGALRM, cls.handle)
+        signal.alarm(300)
+        #
         facebook_config = scripts.facebook.CONFIG.FACEBOOK_APP
         ordered_last_sync_infos = JobSchedulerAndRunner.get_ordered_last_sync_infos(
             facebook_int_setting.get(PROJECT_ID),
