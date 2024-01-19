@@ -1781,7 +1781,7 @@ func (store *MemSQL) GetEngagementLevelsByProject(project_id int64) (*model.Buck
 	}
 
 	if project_settings.CustomEngagementBuckets == nil {
-		return nil, http.StatusBadRequest
+		return nil, http.StatusNotFound
 	} else {
 		err := U.DecodePostgresJsonbToStructType(project_settings.CustomEngagementBuckets, &buckets)
 		if err != nil {

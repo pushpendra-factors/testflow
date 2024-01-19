@@ -99,3 +99,10 @@ export const getCurrentStep = (onboardingConfig: OnboardingStepsConfig) => {
   if (isOnboardingStepCompleted(onboardingConfig, [PROJECT_CREATED])) return 2;
   return 1;
 };
+
+export const getCompanyDomainFromEmail = (email: string) => {
+  if (!email) return '';
+  const domain = email?.split('@')[1];
+  if (!domain) return '';
+  return domain;
+};

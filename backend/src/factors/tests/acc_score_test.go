@@ -757,3 +757,37 @@ func TestValidateAndUpdateEngagementLevel(t *testing.T) {
 	assert.Equal(t, http.StatusFound, statusCode_)
 
 }
+
+func TestUpdateDefaultWeights(t *testing.T) {
+	var idsExp map[string]float32 = make(map[string]float32)
+
+	idsExp["5c59f02665d9"] = 10
+	idsExp["eed854406ae8"] = 20
+	idsExp["3f5514b921e3"] = 40
+	idsExp["88e8720dcbf5"] = 2
+	idsExp["6e6276738020"] = 2
+	idsExp["bd75946f938c"] = 1
+	idsExp["fadbc74f960d"] = 20
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	projectId := project.ID
+	log.WithField("project ", projectId).Debug("updating weights for project")
+	weights, status := store.GetStore().GetWeightsByProject(projectId)
+	assert.Equal(t, http.StatusFound, status, "unable to fetch weights from DB")
+	log.WithField("weights ", weights).Debug("updated weights for project")
+
+	assert.Greater(t, weights.SaleWindow, int64(0))
+	assert.Equal(t, len(weights.WeightConfig), 7)
+	for _, w := range weights.WeightConfig {
+		if val, ok := idsExp[w.WeightId]; !ok {
+			err := fmt.Errorf("rule with id not found : %s ", w.WeightId)
+			assert.Nil(t, err)
+		} else {
+			if val != w.Weight_value {
+				err := fmt.Errorf("rule weights are not matching id with : %s ", w.WeightId)
+				assert.Nil(t, err)
+			}
+		}
+	}
+
+}

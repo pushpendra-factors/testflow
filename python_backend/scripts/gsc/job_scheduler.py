@@ -1,6 +1,7 @@
 import logging as log
 import sys
 import traceback
+import signal
 
 import scripts
 from scripts.gsc.jobs.google_organic_sync_job import GetSearchConsoleDataJob
@@ -56,6 +57,9 @@ class JobScheduler:
                        "url_prefix": self.url_prefix, "doc_type": self.doc_type, "status": "success"}
         self.permission_error_key = str(self.url_prefix) + ":" + str(self.refresh_token)
 
+    def handle(self, signum, frame):
+        raise Exception("Function timeout after 5 mins")
+    
     def sync(self, env, dry):
         project_id = self.next_info.get("project_id")
         url_prefix = self.next_info.get("url_prefix")
@@ -63,6 +67,10 @@ class JobScheduler:
         doc_type = self.next_info.get("type")
         metrics_controller = scripts.gsc.CONFIG.GSC_APP.metrics_controller
         try:
+            # timeout this function after 5 mins
+            signal.signal(signal.SIGALRM, self.handle)
+            signal.alarm(300)
+            #
             if doc_type == COMBINED_LEVEL:
                 GetSearchConsoleDataJob(self.next_info).start()
             elif doc_type == PAGE_LEVEL:

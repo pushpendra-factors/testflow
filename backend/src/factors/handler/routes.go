@@ -98,7 +98,7 @@ func InitAppRoutes(r *gin.Engine) {
 		V1.GetProjectsListHandler)
 
 	r.POST("/billing/hooks/subscription/hbeqjomjhxjvx2z", V1.BillingSubscriptionChangedWebhookListner) // random string as a part of security measure
-	r.POST("/billing/hooks/invoice/ksh4jcjw245", V1.BillingInvoiceGeneratedWebhookListner)            // random string as a part of security measure
+	r.POST("/billing/hooks/invoice/ksh4jcjw245", V1.BillingInvoiceGeneratedWebhookListner)             // random string as a part of security measure
 	r.GET("/billing/upgrade/callback", V1.BillingUpgradeCallbackHandler)
 	// Feature Gates Auth Group
 	// authRouteGroup := r.Group(routePrefix + ROUTE_PROJECTS_ROOT)
@@ -321,6 +321,7 @@ func InitAppRoutes(r *gin.Engine) {
 	//acc scoring
 	authRouteGroup.PUT("/:project_id/v1/accscore/weights", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_SCORING}), responseWrapper(V1.UpdateAccScoreWeights))
 	authRouteGroup.PUT("/:project_id/v1/accscore/engagementbuckets", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_SCORING}), responseWrapper(V1.UpdateEngagementLevelWeights))
+	authRouteGroup.GET("/:project_id/v1/accscore/engagementbuckets", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_SCORING}), responseWrapper(V1.GetEngagementLevelBucketConfig))
 	authRouteGroup.GET("/:project_id/v1/accscore/score/user", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_SCORING}), responseWrapper(V1.GetUserScore))
 	authRouteGroup.GET("/:project_id/v1/accscore/score/account", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_SCORING}), responseWrapper(V1.GetAccountScores))
 	authRouteGroup.GET("/:project_id/v1/accscore/score/paccount/", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_SCORING}), responseWrapper(V1.GetPerAccountScore))

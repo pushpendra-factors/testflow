@@ -163,9 +163,9 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
                 </Row>
             </div>
             {webhookEnabled && (
-                <div className='p-4'>
+                <div>
 
-                    <Row>
+                    <Row className='p-6'>
                         <Col span={12} className={'m-0'}>
 
 
@@ -348,12 +348,16 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
                             <PreviewCardWebhook 
                                 alertMessage={alertMessage}
                                 alertName={alertName}
-                                groupBy={groupBy} 
+                                groupBy={groupBy}
                                 />
                         </div>
                     </Col>
 
                 </Row>
+
+                <div className='border-top--thin-2 mt-4 p-4'>
+                            <Button disabled={!webhookUrl.length > 0} icon={<SVG name={'PaperPlane'} size={16} color='grey' />} ghost onClick={()=>handleTestWebhook()}>Send test message</Button>  
+                        </div> 
                 </div>
             )}
         </div>

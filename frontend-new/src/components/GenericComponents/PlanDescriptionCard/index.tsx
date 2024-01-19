@@ -57,26 +57,28 @@ function PlanDescriptionCard({
         >
           {planDescription}
         </Text>
-        <div className='mt-6 flex-col gap-1.5'>
-          {planFeatures?.map((feature, i) => {
-            return (
-              <div key={i} className='flex gap-2 items-center'>
-                <SVG name={'CheckCircleOutline'} size='18' color={'#52C41A'} />
-                <Text type={'title'} level={7} extraClass={'m-0'}>
-                  {feature}
-                </Text>
-              </div>
-            );
-          })}
+        <div className='mt-4 flex-col'>
+          {planFeatures?.map((feature, i) => (
+            <div
+              key={i}
+              className='flex gap-2 items-center '
+              style={{ marginTop: i === 0 ? 0 : 6 }}
+            >
+              <SVG name={'CheckCircleOutline'} size='18' color={'#52C41A'} />
+              <Text type={'title'} level={7} extraClass={'m-0'}>
+                {feature}
+              </Text>
+            </div>
+          ))}
         </div>
       </div>
       <div className={`${styles.planAmountContainer} h-auto flex  gap-12`}>
         <Divider type='vertical' style={{ height: '100%' }} />
-        <div className='flex flex-col justify-between'>
+        <div className='flex flex-col justify-between w-full'>
           <div>
             <Text
               type={'title'}
-              level={5}
+              level={6}
               color='character-secondary'
               extraClass='m-0'
             >
@@ -115,7 +117,8 @@ function PlanDescriptionCard({
                 color='character-secondary'
                 extraClass={'m-0'}
               >
-                or ${monthlyPlan.price} monthly
+                or $
+                <Number number={monthlyPlan?.price || 0} /> monthly
               </Text>
             )}
             {plan.name === PLANS.PLAN_FREE && (
@@ -180,26 +183,21 @@ function PlanDescriptionCard({
               >
                 <Button
                   className={`${
-                    isUserBillingAdmin ? styles.outlineButton : ''
+                    isUserBillingAdmin && !isRecommendedPlan
+                      ? styles.outlineButton
+                      : ''
                   } mt-6`}
-                  style={{ width: 320 }}
                   disabled={!isUserBillingAdmin}
                   onClick={() => handleBuyButtonClick(planName, isPlanActive)}
                   loading={isPlanActive ? isButtonLoading : false}
+                  type={isRecommendedPlan ? 'primary' : 'default'}
+                  block
                 >
-                  <Text
-                    type={'title'}
-                    level={7}
-                    color='character-primary'
-                    weight={'bold'}
-                    extraClass={'m-0'}
-                  >
-                    {isPlanActive
-                      ? isAdditionalAccountsAddonPurchased
-                        ? 'Edit Add-ons'
-                        : 'Buy Add-ons'
-                      : 'Buy this Plan'}
-                  </Text>
+                  {isPlanActive
+                    ? isAdditionalAccountsAddonPurchased
+                      ? 'Edit Add-ons'
+                      : 'Buy Add-ons'
+                    : 'Buy this Plan'}
                 </Button>
               </Tooltip>
             )}

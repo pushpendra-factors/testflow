@@ -46,7 +46,9 @@ const Slack = ({
     sendTestSlackMessage,
     alertMessage,
     alertName,
-    groupBy
+    groupBy,
+    fetchSlackDetails,
+    matchEventName,
 }) => {
 
     const [form] = Form.useForm();
@@ -177,15 +179,25 @@ const Slack = ({
                             >
                                 Slack is not integrated, Do you want to integrate with
                                 your slack account now?
-                            </Text>
-                        </Col>
-                    </Row>
-                    <Row className={'mt-2 ml-2'}>
-                        <Col span={10} className={'m-0'}>
-                            <Button onClick={onConnectSlack}>
-                                <SVG name={'Slack'} />
+                            </Text> 
+
+                            <Button onClick={onConnectSlack} className='mt-2' icon={<SVG name={'slack'} size={16} />} >
                                 Connect to slack
                             </Button>
+
+                            <div className='flex items-center mt-4'>
+                                    <Text
+                                        type={'title'}
+                                        level={7}
+                                        weight={'regular'}
+                                        extraClass={'m-0'}
+                                    >
+                                        Have you conneted with slack
+                                    </Text>
+                                    <Button ghost onClick={()=>fetchSlackDetails()} icon={<SVG name={'ArrowRotateRight'} size={16} />} className='ml-2'>
+                                        Refresh to check
+                                    </Button>
+                            </div>
                         </Col>
                     </Row>
                 </div>
@@ -207,7 +219,7 @@ const Slack = ({
                                 </Text>
                                 {saveSelectedChannel.length > 0 && (
                                     <div
-                                        className={'rounded border border-gray-200 ml-2 mt-2'}
+                                        className={'rounded border border-gray-200 ml-2'}
                                         style={{'width':'375px'}}
                                     >
                                         <div className={'m-0'}>
@@ -237,7 +249,7 @@ const Slack = ({
                                         </Button>
                                     </div>
                                 ) : (
-                                    <div className={'mt-4 ml-2'}>
+                                    <div className={'mt-2 ml-2'}>
                                         <Button
                                             type={'link'}
                                             onClick={() => setShowSelectChannelsModal(true)}
@@ -249,6 +261,7 @@ const Slack = ({
                                     </div>
                                 )}
 
+{slackUsers?.length>0 ? <>
                                 <div className={'mt-6 ml-2'}>
                                     <Text
                                         type={'title'}
@@ -258,7 +271,7 @@ const Slack = ({
                                     >
                                         Mentions
                                     </Text>
-                                    <div className='mr-4 mt-2'>
+                                    <div className='mr-4'>
                                         <Select
                                             mode="multiple"
                                             showArrow
@@ -286,6 +299,37 @@ const Slack = ({
 
 
                                 </div>
+                                </> : <>
+                                
+                                <div className={'mt-6 ml-2'}>
+                                    <Text
+                                        type={'title'}
+                                        level={7}
+                                        weight={'regular'}
+                                        extraClass={'m-0 mt-2 ml-2'}
+                                    >
+                                        Your current Slack integration doesn’t have mentions. Simply reintegrate Slack with Factors to mention users in alerts.
+                                    </Text>
+                                    <Button className='mt-2' onClick={onConnectSlack} icon={<SVG name={'slack'} size={16} />}>Reintegrate now</Button>
+
+                                    <div className='flex items-center mt-4'>
+                                    <Text
+                                        type={'title'}
+                                        level={7}
+                                        weight={'regular'}
+                                        extraClass={'m-0'}
+                                    >
+                                        Have you reintegrated?
+                                    </Text>
+                                    <Button ghost onClick={()=>fetchSlackDetails()} icon={<SVG name={'ArrowRotateRight'} size={16} />} className='ml-2'>
+                                        Refresh to check
+                                    </Button>
+                            </div>
+                                </div>
+                                </>
+                                
+                                }
+                                
 
                             </Col>
 
@@ -297,6 +341,7 @@ const Slack = ({
                                     alertName={alertName}
                                     groupBy={groupBy}
                                     selectedMentions={selectedMentions}
+                                    matchEventName={matchEventName}
                                     />
                                 </div>
                             </Col>
@@ -307,7 +352,7 @@ const Slack = ({
                         </Row>
 
                     <div className='border-top--thin-2 mt-4 p-4'>
-                            <Button icon={<SVG name={'PaperPlane'} size={16} color='grey' />} ghost onClick={()=>sendTestSlackMessage()}>Send test message</Button>  
+                            <Button disabled={!saveSelectedChannel.length > 0} icon={<SVG name={'PaperPlane'} size={16} color='grey' />} ghost onClick={()=>sendTestSlackMessage()}>Send test message</Button>  
                         </div> 
 
                 </div>

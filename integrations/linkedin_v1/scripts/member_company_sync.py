@@ -2,6 +2,7 @@ from optparse import OptionParser
 import logging as log
 import sys
 import traceback
+import signal
 from constants.constants import *
 from custom_exception.custom_exception import CustomException
 from util.util import Util as U
@@ -50,7 +51,8 @@ def sync_company_data(options, linkedin_setting, sync_info_with_type, input_star
         campaign_group_cache.reset_campaign_group_data()
             
             
-
+def handle(signum, frame):
+    raise Exception("Function timeout after 10 mins")
 
 if __name__ == '__main__':
     (options, args) = parser.parse_args()
@@ -81,6 +83,10 @@ if __name__ == '__main__':
     
     for linkedin_setting in split_linkedin_settings:
         try:
+            # timeout this function after 10 mins
+            signal.signal(signal.SIGALRM, handle)
+            signal.alarm(600)
+            # 
             sync_info_with_type = data_service_obj.get_last_sync_info_for_company_data(
                                                     linkedin_setting, input_start_timestamp, 
                                                                         input_end_timestamp)
@@ -92,7 +98,7 @@ if __name__ == '__main__':
         except Exception as e:
             traceback.print_tb(e.__traceback__)
             metrics_aggregator_obj.update_stats(linkedin_setting.project_id, linkedin_setting.ad_account, 
-                                                            0, 0, 'failed', e.message)
+                                                            0, 0, 'failed', str(e))
         
         metrics_aggregator_obj.reset_request_counter()
     

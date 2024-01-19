@@ -806,11 +806,6 @@ func GetValuesByEventPropertyRollUpCacheKey(projectId int64, event_name string, 
 	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s:%s", prefix, event_name, property_name), date)
 }
 
-func GetValuesByEventPropertyRollUpAggregateCacheKey(projectId int64, event_name string, property_name string) (*cacheRedis.Key, error) {
-	prefix := "RollUp:Agg:EN:PV"
-	return cacheRedis.NewKey(projectId, prefix, fmt.Sprintf("%s:%s", event_name, property_name))
-}
-
 // Today's keys count per project used for clean up
 func GetPropertiesByEventCategoryCountCacheKey(projectId int64, dateKey string) (*cacheRedis.Key, error) {
 	prefix := "C:EN:PC"

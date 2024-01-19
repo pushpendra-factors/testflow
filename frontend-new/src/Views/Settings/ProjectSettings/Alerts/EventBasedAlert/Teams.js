@@ -32,6 +32,7 @@ import { ConsoleSqlOutlined } from '@ant-design/icons';
 import { getErrorMsg, MS_TEAMS } from './../utils';
 import useFeatureLock from 'hooks/useFeatureLock';
 import { FEATURES } from 'Constants/plans.constants';
+import {PreviewCardTeams} from './PreviewCard';
 
 const Teams = ({
     viewAlertDetails,
@@ -42,6 +43,11 @@ const Teams = ({
     teamsSaveSelectedChannel,
     selectedWorkspace,
     setTeamsShowSelectChannelsModal,
+    alertMessage,
+    alertName,
+    groupBy,
+    sendTestTeamsMessage,
+    matchEventName,
 }) => {
 
     const ErrorMsg = getErrorMsg(viewAlertDetails?.last_fail_details, MS_TEAMS);
@@ -142,7 +148,10 @@ const Teams = ({
                 </div>
             )}
             {teamsEnabled && projectSettings?.int_teams && (
-                <div className='p-4'>
+            <div>
+            <Row className='p-6'>
+               <Col span={12} className={'m-0 pr-4'}>
+
                     {teamsSaveSelectedChannel.length > 0 && (
                         <div>
                             <Row>
@@ -160,7 +169,8 @@ const Teams = ({
                                 </Col>
                             </Row>
                             <Row
-                                className={'rounded border border-gray-200 ml-2 w-2/6'}
+                                className={'rounded border border-gray-200 ml-2'}
+                                style={{'width':'375px'}}
                             >
                                 <Col className={'m-0'}>
                                     {teamsSaveSelectedChannel.map((channel, index) => (
@@ -204,7 +214,25 @@ const Teams = ({
                             </Col>
                         </Row>
                     )}
-                </div>
+
+                </Col>
+                <Col span={12} className={'m-0 pl-4'}>
+                                <div className='flex w-full justify-end'>
+                                <PreviewCardTeams
+                                    alertMessage={alertMessage}
+                                    alertName={alertName}
+                                    groupBy={groupBy}
+                                    matchEventName={matchEventName}
+                                    />
+                                </div>
+                            </Col>
+
+
+            </Row>
+                <div className='border-top--thin-2 mt-4 p-4'>
+                            <Button disabled={!teamsSaveSelectedChannel.length > 0} icon={<SVG name={'PaperPlane'} size={16} color='grey' />} ghost onClick={()=>sendTestTeamsMessage()}>Send test message</Button>  
+                        </div> 
+            </div>
             )}
         </div>
 

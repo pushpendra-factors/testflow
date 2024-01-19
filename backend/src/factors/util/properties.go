@@ -1636,6 +1636,7 @@ var ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	VISITED_WEBSITE:                   "Visited Website",
 	IN_SALESFORCE:                     "In Salesforce",
 	GROUP_EVENT_NAME_ENGAGEMENT_SCORE: "Engagement Score",
+	DP_DOMAIN_NAME:                    "Domain Name",
 }
 
 var USER_PROPERTIES_WITH_COLUMN = []string{
@@ -4332,19 +4333,12 @@ type CachePropertyValueWithTimestamp struct {
 	PropertyValue map[string]CountTimestampTuple `json:"pv"`
 }
 
-type CacheEventPropertyValuesAggregate struct {
-	NameCountTimestampCategoryList []NameCountTimestampCategory `json: nl`
-
-	// EarliestCount - Used subratracting count to maintain rolling aggregate.
-	EarliestCount CachePropertyValueWithTimestamp `json: ec`
-}
-
 type NameCountTimestampCategory struct {
-	Name      string `json:"na"`
-	Count     int64  `json:"co"`
-	Timestamp int64  `json:"ti"`
-	Category  string `json:"ca"`
-	GroupName string `json:"gn"`
+	Name      string
+	Count     int64
+	Timestamp int64
+	Category  string
+	GroupName string
 }
 
 // isElementPresent checks if an element is present in a slice
@@ -4424,7 +4418,7 @@ func AggregatePropertyValuesAcrossDate(values []CachePropertyValueWithTimestamp)
 	propertyValueAggregatedSlice := make([]NameCountTimestampCategory, 0)
 	for k, v := range valuesAggregated {
 		propertyValueAggregatedSlice = append(propertyValueAggregatedSlice, NameCountTimestampCategory{
-			Name: k, Count: v.Count, Timestamp: v.LastSeenTimestamp, Category: "", GroupName: ""})
+			k, v.Count, v.LastSeenTimestamp, "", ""})
 	}
 	return propertyValueAggregatedSlice
 }

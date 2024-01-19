@@ -32,7 +32,8 @@ import {
   editEventAlert,
   testWebhhookUrl,
   fetchAllAlerts,
-  testSlackAlert
+  testSlackAlert,
+  testTeamsAlert
 } from 'Reducers/global';
 import ConfirmationModal from 'Components/ConfirmationModal';
 import QueryBlock from './QueryBlock';
@@ -133,7 +134,8 @@ const EventBasedAlert = ({
   fetchAllAlerts,
   fetchSlackUsers,
   slack_users,
-  testSlackAlert
+  testSlackAlert,
+  testTeamsAlert
 }) => {
   const [errorInfo, seterrorInfo] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -744,13 +746,36 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
       slack_mentions: getSlackProfileDetails(selectedMentions),
       is_hyperlink_disabled: !isHyperLinkEnabled,
     };
-    console.log('sendTestSlackMessage-->', payload)
     testSlackAlert(activeProject?.id, payload).then((res) => {
       setLoading(false);
     })
     .catch((err) => {
       setLoading(false);
       console.log("testSlackAlert failed! -->", err)
+  })
+
+}
+  const sendTestTeamsMessage = () =>{
+    let payload = {
+      title: alertName,
+      event_level: activeGrpBtn == 'events' ? 'account' : 'user',
+      event: queries[0]?.label,
+      message: alertMessage,
+      message_property: getMsgPayloadMapping(groupBy),
+      teams: teamsEnabled,
+      teams: teamsEnabled,
+      teams_channels_config: {
+        team_id: selectedWorkspace?.id,
+        team_name: selectedWorkspace?.name,
+        team_channel_list: teamsSaveSelectedChannel
+      },
+    };
+    testTeamsAlert(activeProject?.id, payload).then((res) => {
+      setLoading(false);
+    })
+    .catch((err) => {
+      setLoading(false);
+      console.log("testTeamsAlert failed! -->", err)
   })
 
 }
@@ -970,13 +995,19 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
     setNotRepeat(true);
   };
 
-  useEffect(() => {
-    fetchProjectSettingsV1(activeProject.id);
+  const fetchSlackDetails = () => {
     if (projectSettings?.int_slack) {
       fetchSlackChannels(activeProject.id);
       fetchSlackUsers(activeProject.id);
     }
+  }
+
+  useEffect(() => {
+    fetchProjectSettingsV1(activeProject.id);
+    fetchSlackDetails();
   }, [activeProject, projectSettings?.int_slack, slackEnabled]);
+
+ 
 
   useEffect(() => {
     queries.forEach((ev) => {
@@ -1542,6 +1573,8 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
             alertMessage={alertMessage}
             alertName={alertName}
             groupBy={groupBy}
+            fetchSlackDetails={fetchSlackDetails}
+            matchEventName={matchEventName}
           />
 
           {/* {showTeamInt && <Teams */}
@@ -1554,6 +1587,11 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
             teamsSaveSelectedChannel={teamsSaveSelectedChannel}
             selectedWorkspace={selectedWorkspace}
             setTeamsShowSelectChannelsModal={setTeamsShowSelectChannelsModal}
+            alertMessage={alertMessage}
+            alertName={alertName} 
+            groupBy={groupBy}
+            sendTestTeamsMessage={sendTestTeamsMessage}
+            matchEventName={matchEventName}
           />
 
 
@@ -1581,7 +1619,7 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
             confirmBtn={confirmBtn}
             hideTestMessageBtn={hideTestMessageBtn}
             alertMessage={alertMessage}
-            alertName={alertName} 
+            alertName={alertName}
           />
 
 {/* 
@@ -2000,5 +2038,6 @@ export default connect(mapStateToProps, {
   deleteEventAlert,
   fetchAllAlerts,
   fetchSlackUsers,
-  testSlackAlert
+  testSlackAlert,
+  testTeamsAlert
 })(EventBasedAlert);
