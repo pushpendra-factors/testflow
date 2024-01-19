@@ -294,6 +294,7 @@ function FiltersBox({
                 insertFilter={handleInsertFilter}
                 closeFilter={handleCloseFilter}
                 deleteFilter={handleDeleteFilter}
+                showInList
               />
             ))}
           </ControlledComponent>
@@ -308,6 +309,7 @@ function FiltersBox({
               insertFilter={handleInsertFilter}
               closeFilter={handleCloseFilter}
               deleteFilter={handleDeleteFilter}
+              showInList
             />
           </ControlledComponent>
 
@@ -355,6 +357,7 @@ function FiltersBox({
                 eventChange={handleQueryChange}
                 closeEvent={closeEvent}
                 initialDDState={false}
+                showInList
               />
             </div>
           ))}
@@ -370,12 +373,16 @@ function FiltersBox({
                 groupAnalysis={source}
                 eventChange={handleQueryChange}
                 closeEvent={closeEvent}
+                showInList
               />
             </div>
           </ControlledComponent>
           <ControlledComponent controller={listEvents.length < 3}>
             <Button
-              className={cx('flex items-center col-gap-2', styles['add-filter-button'])}
+              className={cx(
+                'flex items-center col-gap-2',
+                styles['add-filter-button']
+              )}
               type='text'
               onClick={showEventsDropdown}
             >
@@ -469,6 +476,7 @@ function FiltersBox({
                   insertFilter={handleInsertSecondaryFilter}
                   closeFilter={handleCloseSecondaryFilter}
                   deleteFilter={handleDeleteSecondaryFilter}
+                  showInList
                 />
               ))}
             </ControlledComponent>
@@ -483,6 +491,7 @@ function FiltersBox({
                 insertFilter={handleInsertSecondaryFilter}
                 closeFilter={handleCloseSecondaryFilter}
                 deleteFilter={handleDeleteSecondaryFilter}
+                showInList
               />
             </ControlledComponent>
 
