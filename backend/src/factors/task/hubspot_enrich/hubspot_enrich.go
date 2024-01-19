@@ -5,6 +5,7 @@ import (
 	IntHubspot "factors/integration/hubspot"
 	"factors/model/model"
 	"factors/model/store"
+	"factors/util"
 	U "factors/util"
 	"fmt"
 	"net/http"
@@ -191,6 +192,20 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 	if errCode != http.StatusFound {
 		log.Panic("No projects enabled hubspot integration.")
 	}
+
+	featureProjectIDs, err := store.GetStore().GetAllProjectsWithFeatureEnabled(model.FEATURE_HUBSPOT, false)
+	if err != nil {
+		log.WithError(err).Error("Failed to get hubspot feature enabled projects.")
+		return nil, false
+	}
+
+	featureEnabledProjectSettings := []model.HubspotProjectSettings{}
+	for i := range hubspotEnabledProjectSettings {
+		if util.ContainsInt64InArray(featureProjectIDs, hubspotEnabledProjectSettings[i].ProjectId) {
+			featureEnabledProjectSettings = append(featureEnabledProjectSettings, hubspotEnabledProjectSettings[i])
+		}
+	}
+	hubspotEnabledProjectSettings = featureEnabledProjectSettings
 
 	var propertyDetailSyncStatus []IntHubspot.Status
 	anyFailure := false
