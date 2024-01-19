@@ -268,7 +268,7 @@ func (store *MemSQL) GetSourceStmtWithParams(projectID int64, profileType, sourc
 	} else if model.IsUserProfiles(profileType) {
 		if model.UserSourceMap[source] == model.UserSourceWeb {
 			sourceStmt = "AND (source=1 OR source IS NULL)"
-		} else if model.IsDomainGroup(source) {
+		} else if source == "All" {
 			sourceStmt = ""
 		} else {
 			sourceStmt = "AND source=?"
