@@ -223,12 +223,21 @@ func (store *MemSQL) UpdateProject(projectId int64, project *model.Project) int 
 		updateFields["channel_group_rules"] = project.ChannelGroupRules
 	}
 
-	if project.BillingSubscriptionID != "" {
-		updateFields["billing_subscription_id"] = project.BillingSubscriptionID
-		updateFields["billing_last_synced_at"] = project.BillingLastSyncedAt
+	if project.EnableBilling {
+		updateFields["enable_billing"] = true
+
+	}
+	if project.BillingAccountID != "" {
+		updateFields["billing_account_id"] = project.BillingAccountID
 	}
 
+	if project.BillingSubscriptionID != "" {
+		updateFields["billing_subscription_id"] = project.BillingSubscriptionID
+	}
 
+	if !project.BillingLastSyncedAt.IsZero() {
+		updateFields["billing_last_synced_at"] = project.BillingLastSyncedAt
+	}
 	err := db.Model(&model.Project{}).Where("id = ?", projectId).Update(updateFields).Error
 	if err != nil {
 		logCtx.WithError(err).Error(
