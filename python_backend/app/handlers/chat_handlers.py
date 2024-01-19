@@ -40,9 +40,9 @@ class ChatHandler(BaseHandler):
             prompt = self.get_argument("prompt")
             log.info('prompt: %s', prompt)
             if app.CONFIG.ADWORDS_APP.env == "development":
-                ChatHandler.initialize_variable("")
                 result = get_answer_from_ir_model_local(prompt)
             elif app.CONFIG.ADWORDS_APP.env == "staging" or app.CONFIG.ADWORDS_APP.env == "production":
+                 ChatHandler.initialize_variable("")
                  result = get_answer_from_ir_model(prompt, self.prompt_response_data, self.prompt_vector_data)
 
             result_json = json.dumps(result, indent=2)
