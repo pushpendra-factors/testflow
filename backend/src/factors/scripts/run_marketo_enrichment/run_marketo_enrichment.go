@@ -5,6 +5,7 @@ import (
 	enrichment "factors/crm_enrichment"
 	"factors/model/model"
 	"factors/model/store"
+	"factors/util"
 	U "factors/util"
 	"flag"
 	"fmt"
@@ -164,6 +165,20 @@ func main() {
 		log.WithError(err).Error("Failed to get marketo projects for enrichment.")
 		anyFailure = true
 	}
+
+	featureProjectIDs, err := store.GetStore().GetAllProjectsWithFeatureEnabled(model.FEATURE_MARKETO, false)
+	if err != nil {
+		log.WithError(err).Error("Failed to get marketo feature enabled projects.")
+		return
+	}
+
+	featureEnabledIntegrations := []model.FivetranMappings{}
+	for i := range fivetranIntegrations {
+		if util.ContainsInt64InArray(featureProjectIDs, fivetranIntegrations[i].ProjectID) {
+			featureEnabledIntegrations = append(featureEnabledIntegrations, fivetranIntegrations[i])
+		}
+	}
+	fivetranIntegrations = featureEnabledIntegrations
 
 	propertySyncStatus := make(map[int64][]enrichment.EnrichStatus)
 	for i := range fivetranIntegrations {

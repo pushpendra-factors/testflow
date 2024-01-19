@@ -4,7 +4,9 @@ import (
 	"flag"
 
 	C "factors/config"
+	"factors/model/model"
 	"factors/model/store"
+	"factors/util"
 
 	T "factors/task"
 
@@ -61,6 +63,22 @@ func main() {
 	if err != nil {
 		C.PingHealthcheckForFailure(healthcheckPingID, "Failed to get LeadSquared Projects")
 	}
+
+	featureProjectIDs, err := store.GetStore().GetAllProjectsWithFeatureEnabled(model.FEATURE_LEADSQUARED, false)
+	if err != nil {
+		log.WithError(err).Error("Failed to get leadsquared feature enabled projects.")
+		return
+	}
+
+	featureEnabledIntegrations := map[int64]model.LeadSquaredConfig{}
+	for pid := range mappings {
+		if util.ContainsInt64InArray(featureProjectIDs, pid) {
+			featureEnabledIntegrations[pid] = mappings[pid]
+		}
+	}
+
+	mappings = featureEnabledIntegrations
+
 	for id, _ := range mappings {
 		projectIdsArray = append(projectIdsArray, id)
 	}

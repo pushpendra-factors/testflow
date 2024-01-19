@@ -6,6 +6,7 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	"factors/model/store"
+	"factors/util"
 
 	T "factors/task"
 
@@ -59,6 +60,21 @@ func main() {
 
 	projectIdsArray := make([]int64, 0)
 	mappings, err := store.GetStore().GetAllActiveFiveTranMappingByIntegration(model.MarketoIntegration)
+
+	featureProjectIDs, err := store.GetStore().GetAllProjectsWithFeatureEnabled(model.FEATURE_MARKETO, false)
+	if err != nil {
+		log.WithError(err).Error("Failed to get marketo feature enabled projects.")
+		return
+	}
+
+	featureEnabledIntegrations := []model.FivetranMappings{}
+	for i := range mappings {
+		if util.ContainsInt64InArray(featureProjectIDs, mappings[i].ProjectID) {
+			featureEnabledIntegrations = append(featureEnabledIntegrations, mappings[i])
+		}
+	}
+	mappings = featureEnabledIntegrations
+
 	for _, mapping := range mappings {
 		projectIdsArray = append(projectIdsArray, mapping.ProjectID)
 	}
