@@ -5,6 +5,7 @@ import json
 from .base_handler import BaseHandler
 from tornado.log import logging as log
 from chatgpt_poc.chat import get_answer_from_ir_model
+from chatgpt_poc.chat import get_answer_from_ir_model_local
 from google.cloud import storage
 import io
 import pickle
@@ -38,8 +39,12 @@ class ChatHandler(BaseHandler):
         try:
             prompt = self.get_argument("prompt")
             log.info('prompt: %s', prompt)
-            ChatHandler.initialize_variable("")
-            result = get_answer_from_ir_model(prompt, self.prompt_response_data, self.prompt_vector_data)
+            if app.CONFIG.ADWORDS_APP.env == "development":
+                ChatHandler.initialize_variable("")
+                result = get_answer_from_ir_model_local(prompt)
+            elif app.CONFIG.ADWORDS_APP.env == "staging" or app.CONFIG.ADWORDS_APP.env == "production":
+                 result = get_answer_from_ir_model(prompt, self.prompt_response_data, self.prompt_vector_data)
+
             result_json = json.dumps(result, indent=2)
             log.info('Result_1:', result)
             self.write(result_json)
