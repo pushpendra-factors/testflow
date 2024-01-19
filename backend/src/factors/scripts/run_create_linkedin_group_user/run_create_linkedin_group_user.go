@@ -23,7 +23,7 @@ type Status struct {
 
 func main() {
 	env := flag.String("env", "development", "")
-	dryRun := flag.Bool("dry_run", false, "Dry run mode")
+	dryRun := flag.Bool("dry_run_1", false, "Dry run mode")
 	projectIDs := flag.String("project_ids", "", "Projects for which the events and group user are to be populated")
 
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
