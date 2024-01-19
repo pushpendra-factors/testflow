@@ -302,12 +302,31 @@ func (store *MemSQL) UpdateProjectPlanMapping(projectID int64, planMapping *mode
 
 	}
 
-	err := db.Model(&model.ProjectPlanMapping{}).Where("project_id = ?", projectID).Update(updateFields).Error
+	ppMapping, err := store.GetProjectPlanMappingforProject(projectID)
+	if err != nil {
+		log.WithError(err).Error(
+			"Failed to get project plan mappings ")
+		return http.StatusInternalServerError
+	}
+
+	err = db.Model(&model.ProjectPlanMapping{}).Where("project_id = ?", projectID).Update(updateFields).Error
 	if err != nil {
 		log.WithError(err).Error(
 			"Failed to execute query of update project plan mappings ")
 		return http.StatusInternalServerError
 	}
+
+	if ppMapping.PlanID != model.PLAN_ID_CUSTOM {
+		if planMapping.PlanID == model.PLAN_ID_CUSTOM {
+			err = store.CreateAddonsForCustomPlanForProject(projectID)
+			if err != nil {
+				log.WithError(err).Error(
+					"Failed to create default addons for custom project ")
+				return http.StatusInternalServerError
+			}
+		}
+	}
+
 	return http.StatusOK
 }
 func (store *MemSQL) UpdateFeaturesForCustomPlan(projectID int64, AccountLimit int64, MtuLimit int64, AvailableFeatuers []string) (int, error) {
@@ -419,7 +438,7 @@ func (store *MemSQL) CreateAddonsForCustomPlanForProject(projectID int64) error 
 		}
 		if featureName == model.FEATURE_FACTORS_DEANONYMISATION {
 			// TODO : change this to const
-			feature.Limit = 100
+			feature.Limit = 500
 		}
 		addOns = append(addOns, feature)
 	}

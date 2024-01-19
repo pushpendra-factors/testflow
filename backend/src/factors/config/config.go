@@ -342,7 +342,6 @@ type Configuration struct {
 	ClearbitProvisionAccountAPIKey                       string
 	SalesforceSkipLeadUpdatesProcessingByProjectID       string
 	SalesforceAllowOpportunityOverrideCreateCreatedEvent string
-	AggrEventPropertyValuesCacheByProjectID              string
 	ParagonTokenSigningKey                               string
 	ParagonProjectID                                     string
 }
@@ -3123,15 +3122,6 @@ func SalesforceSkipLeadUpdatesProcessingByProjectID(projectID int64) bool {
 
 func SalesforceAllowOpportunityOverrideCreateCreatedEvent(projectID int64) bool {
 	_, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().SalesforceAllowOpportunityOverrideCreateCreatedEvent, "")
-	return allowedProjectIDs[projectID]
-}
-
-func IsAggrEventPropertyValuesCacheEnabled(projectID int64) bool {
-	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AggrEventPropertyValuesCacheByProjectID, "")
-	if allProjects {
-		return true
-	}
-
 	return allowedProjectIDs[projectID]
 }
 

@@ -87,14 +87,15 @@ function ConfigurePlans() {
           Plan Configuration
         </Text>
       </div>
-      {showV2PricingVersionFlag && planName === PLANS.PLAN_CUSTOM && (
+      {showV2PricingVersionFlag &&
+      (planName === PLANS.PLAN_CUSTOM || planName === PLANS_V0.PLAN_CUSTOM) ? (
         <CustomPlanConfigure />
-      )}
-      {showV2PricingVersionFlag && planName !== PLANS.PLAN_CUSTOM && (
+      ) : (
         <Text type={'paragraph'} mini>
           Plan configuration is only allowed for {PLANS.PLAN_CUSTOM} plan
         </Text>
       )}
+
       {!showV2PricingVersionFlag && (
         <>
           <div className='flex items-center gap-3 my-5'>
