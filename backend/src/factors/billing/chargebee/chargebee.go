@@ -2,7 +2,6 @@ package billing_plan_id
 
 import (
 	"factors/model/model"
-
 	"github.com/chargebee/chargebee-go/v3"
 	customerAction "github.com/chargebee/chargebee-go/v3/actions/customer"
 	differentialPriceAction "github.com/chargebee/chargebee-go/v3/actions/differentialprice"
@@ -61,12 +60,16 @@ func CreateChargebeeSubscriptionForCustomer(projectID int64, customerID string, 
 		"project_id": projectID,
 	}
 
+	metadata := make(map[string]interface{})
+	metadata["projectID"] = projectID
+
 	res, err := subscriptionAction.CreateWithItems(customerID, &subscription.CreateWithItemsRequestParams{
 		SubscriptionItems: []*subscription.CreateWithItemsSubscriptionItemParams{
 			{
 				ItemPriceId: planPriceID,
 			},
 		},
+		MetaData: metadata,
 	}).Request()
 	if err != nil {
 		log.WithFields(logCtx).WithError(err).Error("Failed to create subscription on chargebee")

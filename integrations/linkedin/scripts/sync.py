@@ -10,6 +10,7 @@ from data_fetch import DataFetch
 from util import Util as U
 from data_fetch import DataFetch
 from weekly_data_fetch import WeeklyDataFetch
+import signal
 
 parser = OptionParser()
 parser.add_option('--env', dest='env', default='development')
@@ -57,6 +58,8 @@ def ping_notification_services(successes, failures, token_failures, is_weekly_jo
             
             U.build_message_and_ping_slack(options.env, SLACK_URL, token_failures)
 
+def handle(signum, frame):
+    raise Exception("Function timeout after 10 mins")
 
 def get_collections(options, linkedin_setting, sync_info_with_type, input_end_timestamp):
     response = {'status': 'success'}
@@ -75,6 +78,10 @@ def get_collections(options, linkedin_setting, sync_info_with_type, input_end_ti
     run_new_change = (linkedin_setting.project_id in new_change_project_ids_list) or options.new_change_project_ids == '*'
 
     try:
+        # timeout this function after 10 mins
+        signal.signal(signal.SIGALRM, handle)
+        signal.alarm(600)
+        # 
         # if it's a weekly job the other jobs are not to be run even if flag set to true
         if is_weekly_job and MEMBER_COMPANY_INSIGHTS in sync_info_with_type and run_new_change:
             res = WeeklyDataFetch.weekly_job_etl_and_backfill_company_data_with_campaign_group(

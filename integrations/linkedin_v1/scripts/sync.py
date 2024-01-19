@@ -2,6 +2,7 @@ from optparse import OptionParser
 import logging as log
 import sys
 import traceback
+import signal
 from constants.constants import *
 from custom_exception.custom_exception import CustomException
 from linkedin_setting.linkedin_setting import LinkedinSetting
@@ -44,7 +45,8 @@ def sync_ads_data(linkedin_setting, sync_info_with_type, input_start_timestamp, 
     clear_cache()
     metrics_aggregator_obj.update_stats(linkedin_setting.project_id, linkedin_setting.ad_account)
         
-    
+def handle(signum, frame):
+    raise Exception("Function timeout after 10 mins")
 
 if __name__ == '__main__':
     (options, args) = parser.parse_args()
@@ -75,6 +77,10 @@ if __name__ == '__main__':
     
     for linkedin_setting in split_linkedin_settings:
         try:
+            # timeout this function after 10 mins
+            signal.signal(signal.SIGALRM, handle)
+            signal.alarm(600)
+            # 
             sync_info_with_type = data_service_obj.get_last_sync_info(linkedin_setting, input_start_timestamp, 
                                                                                         input_end_timestamp)
             sync_ads_data(linkedin_setting, sync_info_with_type, input_start_timestamp, input_end_timestamp)
@@ -85,13 +91,13 @@ if __name__ == '__main__':
                                                             e.doc_type, e.request_count, 'failed', e.message)
         except Exception as e:
             traceback.print_tb(e.__traceback__)
-            if AD_ACCOUNT_FAILURE in e.message:
-                metrics_aggregator_obj.etl_stats['token_failures'].append({'status': 'failed', 'errMsg': e.message, 
+            if AD_ACCOUNT_FAILURE in str(e):
+                metrics_aggregator_obj.etl_stats['token_failures'].append({'status': 'failed', 'errMsg': str(e), 
                                                                         PROJECT_ID: linkedin_setting.project_id, 
                                                                         AD_ACCOUNT: linkedin_setting.ad_account})
             else:
                 metrics_aggregator_obj.update_stats(linkedin_setting.project_id, linkedin_setting.ad_account, 
-                                                            0, 0, 'failed', e.message)
+                                                            0, 0, 'failed', str(e))
         metrics_aggregator_obj.reset_request_counter()
     
     metrics_aggregator_obj.ping_notification_services(options.env)

@@ -12,6 +12,7 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"strings"
 	"time"
 
 	jwt "github.com/golang-jwt/jwt/v5"
@@ -28,6 +29,8 @@ const (
 	triggerParagonWorkflowUrl           string = "https://api.useparagon.com/projects/%s/sdk/triggers/%s"
 	deleteParagonProjectIntegrationUrl  string = "https://api.useparagon.com/projects/%s/sdk/integrations/%s"
 	disableParagonWorkflowForUserUrl    string = "https://api.useparagon.com/projects/%s/sdk/workflows/%s"
+	LinkedInAudienceId                  string = "LinkedIn Audience ID"
+	ParagonLinkedInSuffix               string = "PLI"
 )
 
 func GenerateJWTTokenForProject(projectID int64) (string, error) {
@@ -83,6 +86,14 @@ func SendPayloadToParagonForTheAlert(projectID int64, alertID string, alert *mod
 	if err != nil || errCode != http.StatusFound {
 		logCtx.WithError(err).Error("no metadata found")
 		return nil, err
+	}
+
+	if strings.HasSuffix(alert.Title, ParagonLinkedInSuffix) {
+		size := len(payload.Message.MessageProperty)
+		payload.Message.MessageProperty[fmt.Sprintf("%d", size)] = model.MessagePropMapStruct{
+			DisplayName: LinkedInAudienceId,
+			PropValue:   metadata[LinkedInAudienceId],
+		}
 	}
 
 	nameOfParagonEvent := U.GetPropertyValueAsString(metadata[nameOfEvent])

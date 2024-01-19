@@ -980,6 +980,7 @@
 }
 
 .fa-overview--top-table {
+
   // table head
   .ant-table-thead {
     .ant-table-cell {
@@ -1034,20 +1035,20 @@
     .timestamp-row {
       position: sticky;
       top: 0;
-      background: #f5f6f8;
+      background: #F5F6F8;
       height: 40px;
       z-index: 1;
 
       td {
         font-weight: 600;
-        color: #000000a6;
+        color: #000000A6;
       }
     }
 
     .table-row {
       display: flex;
-      border-top: 1px solid #e7e9ed;
-      height: 60px;
+      border-top: 1px solid #E7E9ED;
+      height: 56px;
 
       .timestamp-cell {
         width: 10%;
@@ -1066,9 +1067,9 @@
           width: fit-content;
           max-width: 80% !important;
           font-weight: 500;
-          font-size: 16px;
-          line-height: 24px;
-          color: #000000a6;
+          font-size: 14px;
+          line-height: 20px;
+          color: #000000A6;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -1096,9 +1097,9 @@
 
         .propvalue {
           font-family: Inter;
-          font-size: 16px;
+          font-size: 14px;
           font-weight: 400;
-          line-height: 24px;
+          line-height: 20px;
           letter-spacing: 0em;
           text-align: left;
           width: 100%;
@@ -1111,10 +1112,96 @@
 
     .clickable {
       &:hover {
-        background-color: #f0f0f0;
+        background-color: #F0F0F0;
+      }
+
+    }
+  }
+
+  .timestamp-row {
+    position: sticky;
+    top: 0;
+    background: #f5f6f8;
+    height: 40px;
+    z-index: 1;
+
+    td {
+      font-weight: 600;
+      color: #000000a6;
+    }
+  }
+
+  .table-row {
+    display: flex;
+    border-top: 1px solid #e7e9ed;
+    height: 60px;
+
+    .timestamp-cell {
+      width: 10%;
+      overflow: hidden;
+      color: #00000073;
+    }
+
+    .event-cell,
+    .user-cell {
+      width: 25%;
+      display: flex;
+      align-items: flex-start;
+      overflow: hidden;
+
+      div {
+        width: fit-content;
+        max-width: 80% !important;
+        font-weight: 500;
+        font-size: 16px;
+        line-height: 24px;
+        color: #000000a6;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+
+    .properties-cell {
+      padding: 8px 12px;
+      width: 40%;
+      display: flex;
+      flex-direction: column;
+
+      .propkey {
+        font-family: Inter;
+        font-size: 12px;
+        font-weight: 400;
+        line-height: 18px;
+        letter-spacing: 0.01em;
+        text-align: left;
+        width: 100%;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .propvalue {
+        font-family: Inter;
+        font-size: 16px;
+        font-weight: 400;
+        line-height: 24px;
+        letter-spacing: 0em;
+        text-align: left;
+        width: 100%;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
     }
   }
+
+  .clickable {
+    &:hover {
+      background-color: #f0f0f0;
+    }
+  }
+
 }
 
 .event-icon {

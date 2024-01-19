@@ -30,12 +30,10 @@ func main() {
 	RedisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 	// This is in days
 	rollupLookback := flag.Int("rollup_lookback", 1, "")
-	deleteRollupAfterAddingToAggregate := flag.Int("del_rollup_after_aggregate", 0, "")
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
 	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
-	aggrEventPropertyValuesCacheByProjectID := flag.String("aggr_event_property_values_project_ids", "", "")
 
 	flag.Parse()
 	if *env != "development" &&
@@ -67,8 +65,7 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     taskID,
 		},
-		PrimaryDatastore:                        *primaryDatastore,
-		AggrEventPropertyValuesCacheByProjectID: *aggrEventPropertyValuesCacheByProjectID,
+		PrimaryDatastore: *primaryDatastore,
 	}
 
 	C.InitConf(config)
@@ -87,7 +84,6 @@ func main() {
 
 	configs := make(map[string]interface{})
 	configs["rollupLookback"] = *rollupLookback
-	configs["deleteRollupAfterAddingToAggregate"] = *deleteRollupAfterAddingToAggregate
 
 	status := taskWrapper.TaskFunc("RollUpSortedSet", 1, cleanup.DoRollUpSortedSet, configs)
 

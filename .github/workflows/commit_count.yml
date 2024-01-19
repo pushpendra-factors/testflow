@@ -1,0 +1,19 @@
+name: Validate Commit Count
+
+on:
+  push:
+    branches: [master, staging, release]
+  pull_request:
+    branches: [master, staging, release]
+
+jobs:
+  commit-count:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: check commit count
+        working-directory: ./
+        run: bash check_commits.sh
+

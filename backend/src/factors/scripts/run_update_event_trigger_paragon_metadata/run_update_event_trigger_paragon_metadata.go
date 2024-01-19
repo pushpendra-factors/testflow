@@ -2,6 +2,7 @@ package main
 
 import (
 	C "factors/config"
+	"factors/integration/paragon"
 	"factors/model/store"
 	U "factors/util"
 	"flag"
@@ -35,6 +36,7 @@ func main() {
 	projectID := flag.Int64("project_id", 0, "project_id for which the alerts are to be updated")
 	alertId := flag.String("alert_id", "", "All alert_id for which the table needs to be updated")
 	eventName := flag.String("event_name", "", "Event Name to be sent in the paragon payload")
+	linkedInAudienceId := flag.String("li_audience_id", "", "LinkedIn audience ID for the alert")
 
 	flag.Parse()
 
@@ -81,7 +83,8 @@ func main() {
 
 	for _, alert := range alerts {
 		metadata := map[string]interface{}{
-			"EventName": *eventName,
+			"EventName":                *eventName,
+			paragon.LinkedInAudienceId: *linkedInAudienceId,
 		}
 
 		//encode the metadata map to jsonb
