@@ -16,7 +16,7 @@ import {
 } from 'Utils/dataFormatter';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
-import { GroupDisplayNames, IsDomainGroup } from 'Components/Profile/utils';
+import { IsDomainGroup } from 'Components/Profile/utils';
 import {
   CustomGroupDisplayNames,
   GROUP_NAME_DOMAINS
@@ -41,49 +41,52 @@ function GroupBlock({
   useEffect(() => {
     const filterOptsObj = {};
 
-    if (groupName === 'users' || groupName === 'events') {
-      if (userPropertiesV2) {
-        convertAndAddPropertiesToGroupSelectOptions(
-          userPropertiesV2,
-          filterOptsObj,
-          'user'
-        );
-      }
-    } else if (!IsDomainGroup(groupName)) {
-      const groupLabel = CustomGroupDisplayNames[groupName]
-        ? CustomGroupDisplayNames[groupName]
-        : groups?.all_groups?.[groupName]
-          ? groups?.all_groups?.[groupName]
-          : PropTextFormat(groupName);
-      const groupValues = processProperties(
-        groupProperties[groupName],
-        'group',
-        groupName
-      );
+    const populateFilterOpts = (group, properties) => {
+      const groupLabel =
+        CustomGroupDisplayNames[group] ||
+        groups?.all_groups?.[group] ||
+        PropTextFormat(group);
+
+      const groupValues = processProperties(properties, 'group', group);
       const groupPropIconName = getGroupIcon(groupLabel);
+
       filterOptsObj[groupLabel] = {
         iconName: groupPropIconName === 'NoImage' ? 'group' : groupPropIconName,
         label: groupLabel,
         values: groupValues
       };
+    };
+
+    if ((groupName === 'users' || groupName === 'events') && userPropertiesV2) {
+      convertAndAddPropertiesToGroupSelectOptions(
+        userPropertiesV2,
+        filterOptsObj,
+        'user'
+      );
+    } else if (!IsDomainGroup(groupName)) {
+      const [group, properties] = [groupName, groupProperties[groupName]];
+      populateFilterOpts(group, properties);
     } else {
-      for (const [group, properties] of Object.entries(groupProperties || {})) {
-        if (Object.keys(groups?.all_groups || {}).includes(group)) {
-          const groupLabel = CustomGroupDisplayNames[group]
-            ? CustomGroupDisplayNames[group]
-            : groups?.all_groups?.[group]
-              ? groups?.all_groups?.[group]
-              : PropTextFormat(group);
-          const groupValues = processProperties(properties, 'group', group);
-          const groupPropIconName = getGroupIcon(groupLabel);
-          filterOptsObj[groupLabel] = {
-            iconName:
-              groupPropIconName === 'NoImage' ? 'group' : groupPropIconName,
-            label: groupLabel,
-            values: groupValues
-          };
+      Object.entries(groupProperties || {}).forEach(([group, properties]) => {
+        if (
+          Object.keys(groups?.all_groups || {})
+            .concat([GROUP_NAME_DOMAINS])
+            .includes(group)
+        ) {
+          let filteredProperties = properties;
+          if (group === GROUP_NAME_DOMAINS) {
+            const allowedProperties = [
+              '$domain_name',
+              '$engagement_score',
+              '$total_enagagement_score'
+            ];
+            filteredProperties = properties.filter((item) =>
+              allowedProperties.includes(item[1])
+            );
+          }
+          populateFilterOpts(group, filteredProperties);
         }
-      }
+      });
     }
 
     setFilterOptions(Object.values(filterOptsObj));
