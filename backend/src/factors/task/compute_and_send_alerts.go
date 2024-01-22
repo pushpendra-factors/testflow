@@ -12,14 +12,15 @@ import (
 	qc "factors/quickchart"
 	U "factors/util"
 	"fmt"
-	"github.com/jinzhu/gorm/dialects/postgres"
-	"github.com/jinzhu/now"
-	log "github.com/sirupsen/logrus"
 	"math"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/jinzhu/now"
+	log "github.com/sirupsen/logrus"
 )
 
 type Message struct {
@@ -530,10 +531,11 @@ func sendSlackAlert(projectID int64, agentUUID string, msg Message, dateRange da
 	}
 	for _, channels := range slackChannels {
 		for _, channel := range channels {
-			status, err := slack.SendSlackAlert(projectID, slackMsg, agentUUID, channel)
+			response, status, err := slack.SendSlackAlert(projectID, slackMsg, agentUUID, channel)
 			if err != nil || !status {
 				fail++
-				logCtx.WithError(err).Error("failed to send slack alert ", slackMsg)
+				logCtx.WithField("slack_message", slackMsg).WithError(fmt.Errorf("%v", response)).
+					Error("failed to send slack alert")
 				continue
 			}
 			success++
@@ -673,10 +675,10 @@ func sendTeamsAlert(projectID int64, agentUUID string, msg Message, dateRange da
 	}
 	for _, channel := range msteams.TeamsChannelList {
 		log.Info(channel)
-		err := teams.SendTeamsMessage(projectID, agentUUID, msteams.TeamsId, channel.ChannelId, teamsMsg)
+		response, err := teams.SendTeamsMessage(projectID, agentUUID, msteams.TeamsId, channel.ChannelId, teamsMsg)
 		if err != nil {
 			fail++
-			logCtx.WithError(err).Error("failed to send teams alert ", teamsMsg)
+			logCtx.WithField("respnonse", response).WithError(err).Error("failed to send teams alert ", teamsMsg)
 			continue
 		}
 		success++
@@ -1262,10 +1264,11 @@ func sendSlackAlertForSavedQueries(alert model.Alert, dateRange, queryClass, rep
 	}
 	for _, channels := range slackChannels {
 		for _, channel := range channels {
-			status, err := slack.SendSlackAlert(alert.ProjectID, slackMsg, alert.CreatedBy, channel)
+			response, status, err := slack.SendSlackAlert(alert.ProjectID, slackMsg, alert.CreatedBy, channel)
 			if err != nil || !status {
 				fail++
-				logCtx.WithError(err).Error("failed to send slack alert ", slackMsg)
+				logCtx.WithField("slack_message", slackMsg).WithError(fmt.Errorf("%v", response)).
+					Error("failed to send slack alert")
 				continue
 			}
 			success++

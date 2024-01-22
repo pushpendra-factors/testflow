@@ -48,7 +48,7 @@ type Channel struct {
 	Name string `json:"displayName"`
 }
 
-func SendTeamsMessage(projectID int64, agentUUID, teamID, channelID, message string) error {
+func SendTeamsMessage(projectID int64, agentUUID, teamID, channelID, message string) (map[string]interface{}, error) {
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectID,
 		"agent_uuid": agentUUID,
@@ -58,7 +58,7 @@ func SendTeamsMessage(projectID int64, agentUUID, teamID, channelID, message str
 
 	tokens, err := store.GetStore().GetTeamsAuthTokens(projectID, agentUUID)
 	if err != nil {
-		return errors.New("Failed to get access tokens for teams")
+		return nil, errors.New("Failed to get access tokens for teams")
 	}
 	teamsMessage := TeamsMessage{Body: struct {
 		ContentType string "json:\"contentType\""
@@ -68,13 +68,13 @@ func SendTeamsMessage(projectID int64, agentUUID, teamID, channelID, message str
 
 	jsonMessage, err := json.Marshal(teamsMessage)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	url := fmt.Sprintf("https://graph.microsoft.com/v1.0/teams/%s/channels/%s/messages", teamID, channelID)
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonMessage))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -83,12 +83,13 @@ func SendTeamsMessage(projectID int64, agentUUID, teamID, channelID, message str
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return err
+		logCtx.WithError(err).Error("Failed to send request")
+		return nil, err
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to read response body")
-		return err
+		return nil, err
 	}
 
 	defer resp.Body.Close()
@@ -99,19 +100,19 @@ func SendTeamsMessage(projectID int64, agentUUID, teamID, channelID, message str
 		if ok && errorCode == "InvalidAuthenticationToken" {
 			token, err := RefreshAndGetTeamsAccessToken(projectID, agentUUID)
 			if err != nil {
-				return err
+				return errorResponse, err
 			}
 			req.Header.Set("Authorization", "Bearer "+token)
 
 			client := &http.Client{}
 			resp, err = client.Do(req)
 			if err != nil {
-				return err
+				return errorResponse, err
 			}
 			body, err = ioutil.ReadAll(resp.Body)
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to read response body")
-				return err
+				return errorResponse, err
 			}
 
 			defer resp.Body.Close()
@@ -119,16 +120,16 @@ func SendTeamsMessage(projectID int64, agentUUID, teamID, channelID, message str
 		} else {
 			logCtx.Error("Error in making request to teams " + errorCode)
 			// add healthcheck/sentry notifcation to re integrate
-			return errors.New("Error in making request to teams " + errorCode)
+			return errorResponse, errors.New("Error in making request to teams " + errorCode)
 		}
 	}
 	if resp.StatusCode != http.StatusCreated {
 		var errorResponse map[string]interface{}
 		json.Unmarshal(body, &errorResponse)
-		return fmt.Errorf("teams failure: Status - %v; Response - %v", resp.Status, errorResponse)
+		return errorResponse, fmt.Errorf("teams failure: Status - %v", resp.Status)
 	}
 
-	return nil
+	return nil, nil
 }
 
 // func to get list of teams

@@ -20,6 +20,7 @@ import (
 	webhook "factors/webhooks"
 
 	"encoding/base64"
+
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
@@ -791,7 +792,7 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
 		return false, channelSuccess, errMessage
 	}
 
-	slackMentions := make([]model.SlackUser, 0)
+	slackMentions := make([]model.SlackMember, 0)
 	if sMentions != nil {
 		if err := U.DecodePostgresJsonbToStructType(sMentions, &slackMentions); err != nil {
 			errMsg := "failed to decode slack mentions"
@@ -819,17 +820,21 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
 			} else {
 				blockMessage = getSlackMsgBlockWithoutHyperlinks(alert.Message, slackMentionStr)
 			}
-			status, err := slack.SendSlackAlert(projectID, blockMessage, agentUUID, channel)
+			response, status, err := slack.SendSlackAlert(projectID, blockMessage, agentUUID, channel)
 			partialSuccess = partialSuccess || status
 			if err != nil || !status {
-				errMsg = err.Error()
+				if response["error"] != nil {
+					errMsg = response["error"].(string)
+				}
 				slackErr, exists := model.SlackErrorStates[errMsg]
 				if !exists {
-					slackErr = fmt.Sprintf("Slack reported %s", errMsg)
+					errMessage += fmt.Sprintf("Slack reported %s for %s channel; ", errMsg, channel.Name)
+				} else {
+					errMessage += fmt.Sprintf("%s for %s channel; ", slackErr, channel.Name)
 				}
 				channelSuccess = append(channelSuccess, false)
-				errMessage += "; " + fmt.Sprintf("%v: %s", channel, slackErr)
-				logCtx.WithField("channel", channel).WithError(err).Error("failed to send slack alert")
+				logCtx.WithField("channel", channel).WithError(fmt.Errorf("%v", response)).
+					Error("failed to send slack alert")
 				continue
 			}
 			channelSuccess = append(channelSuccess, true)
@@ -988,7 +993,7 @@ func getPropsBlockV2(propMap U.PropertiesMap) string {
 	return propBlock
 }
 
-func getSlackMentionsStr(slackMentions []model.SlackUser, slackTags []string) string {
+func getSlackMentionsStr(slackMentions []model.SlackMember, slackTags []string) string {
 	result := ""
 	for _, member := range slackMentions {
 		result += fmt.Sprintf("<@%s> ", member.Id)
@@ -1233,15 +1238,16 @@ func sendTeamsAlertForEventTriggerAlert(projectID int64, agentUUID string,
 
 		for _, channel := range teamsChannels.TeamsChannelList {
 			message := getTeamsMsgBlock(msg)
-			err := teams.SendTeamsMessage(projectID, agentUUID, teamsChannels.TeamsId,
+			response, err := teams.SendTeamsMessage(projectID, agentUUID, teamsChannels.TeamsId,
 				channel.ChannelId, message)
 			if err != nil {
 				errMsg := err.Error()
-				teamsErr, exists := model.TeamsErrorStates[errMsg]
-				if !exists {
+				errorCode, ok := response["error"].(map[string]interface{})["code"].(string)
+				teamsErr, exists := model.TeamsErrorStates[errorCode]
+				if !ok || !exists {
 					teamsErr = fmt.Sprintf("Teams reported %s error.", errMsg)
 				}
-				logCtx.WithError(err).Error("failed to send teams message")
+				logCtx.WithField("errorCode", teamsErr).WithError(err).Error("failed to send teams message")
 				return false, teamsErr
 			}
 

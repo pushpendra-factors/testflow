@@ -117,7 +117,7 @@ func (store *MemSQL) DeleteSlackIntegration(projectID int64, agentUUID string) e
 	return nil
 }
 
-func (store *MemSQL) GetSlackUsersListFromDb(projectID int64, agentID string) ([]model.SlackUser, int, error) {
+func (store *MemSQL) GetSlackUsersListFromDb(projectID int64, agentID string) ([]model.SlackMember, int, error) {
 	if projectID == 0 || agentID == "" {
 		return nil, http.StatusBadRequest, fmt.Errorf("invalid parameters")
 	}
@@ -141,7 +141,7 @@ func (store *MemSQL) GetSlackUsersListFromDb(projectID int64, agentID string) ([
 		return nil, http.StatusInternalServerError, err
 	}
 
-	slackUsers := make([]model.SlackUser, 0)
+	slackUsers := make([]model.SlackMember, 0)
 	if err = U.DecodePostgresJsonbToStructType(usersList.UsersList, &slackUsers); err != nil {
 		logCtx.WithError(err).Error("failed to decode slack users list")
 		return nil, http.StatusInternalServerError, err
