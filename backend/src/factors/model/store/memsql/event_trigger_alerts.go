@@ -1243,8 +1243,17 @@ func (store *MemSQL) UpdateInternalStatusAndGetAlertIDs(projectID int64) ([]stri
 			alert.InternalStatus = model.Paused
 		}
 		if tt.Hours() >= DisableTime && alert.InternalStatus != model.Disabled {
+			//update the is_paused_automatically fields to true in last_fail_details
+			lastFail.IsPausedAutomatically = true
+			lastFailJson, err := U.EncodeStructTypeToPostgresJsonb(lastFail)
+			if err != nil {
+				log.WithFields(log.Fields{"project_id": projectID, "alert_id": alert.ID}).WithError(err).
+					Error("unable to decode lastFailDetails json")
+			}
+
 			updateInternalStatus := map[string]interface{}{
 				"internal_status": model.Disabled,
+				"last_fail_details": lastFailJson,
 			}
 			errCode, err := store.UpdateEventTriggerAlertField(projectID, alert.ID, updateInternalStatus)
 			if errCode != http.StatusAccepted || err != nil {

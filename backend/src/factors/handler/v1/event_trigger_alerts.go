@@ -2,6 +2,8 @@ package v1
 
 import (
 	"encoding/json"
+	teams "factors/integration/ms_teams"
+	slack "factors/integration/slack"
 	mid "factors/middleware"
 	"factors/model/model"
 	"factors/model/store"
@@ -47,7 +49,7 @@ func GetAllAlertsInOneHandler(c *gin.Context) (interface{}, int, string, string,
 	alerts = append(alerts, triggers...)
 	alerts = append(alerts, kpis...)
 
-	sort.Slice(alerts, func (p, q int) bool {
+	sort.Slice(alerts, func(p, q int) bool {
 		return alerts[p].CreatedAt.After(alerts[q].CreatedAt)
 	})
 
@@ -339,7 +341,7 @@ func GetInternalStatusForEventTriggerAlertHandler(c *gin.Context) (interface{}, 
 	return status, http.StatusOK, "", "", false
 }
 
-func UpdateEventTriggerAlertInternalStatusHandler(c *gin.Context) (interface{}, int, string, string, bool)  {
+func UpdateEventTriggerAlertInternalStatusHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 
 	if projectID == 0 {
@@ -388,5 +390,187 @@ func UpdateEventTriggerAlertInternalStatusHandler(c *gin.Context) (interface{}, 
 		return nil, http.StatusInternalServerError, PROCESSING_FAILED, errMsg, true
 	}
 
+	return nil, http.StatusAccepted, "", "", false
+}
+
+func SlackTestforEventTriggerAlerts(c *gin.Context) (interface{}, int, string, string, bool) {
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	agentID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+
+	if projectID == 0 {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Invalid project id."})
+		return nil, http.StatusForbidden, INVALID_PROJECT, ErrorMessages[INVALID_PROJECT], true
+	}
+
+	if agentID == "" {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Invalid agent id."})
+		return nil, http.StatusForbidden, "INVALID_AGENT", ErrorMessages["INVALID_AGENT"], true
+	}
+
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectID,
+		"agent_id":   agentID,
+	})
+
+	var alert model.ETAConfigForSlackTest
+	r := c.Request
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&alert); err != nil {
+		errMsg := "Test TriggerAlert failed. Invalid JSON."
+		logCtx.WithError(err).Error(errMsg)
+		return nil, http.StatusBadRequest, INVALID_INPUT, errMsg, true
+	}
+
+	messageProperties := make(U.PropertiesMap)
+	if alert.MessageProperty != nil {
+		err := U.DecodePostgresJsonbToStructType(alert.MessageProperty, &messageProperties)
+		if err != nil {
+			errMsg := "Jsonb decoding to struct failure"
+			logCtx.WithError(err).Error(errMsg)
+			return nil, http.StatusBadRequest, INVALID_INPUT, errMsg, true
+		}
+	}
+
+	slackChannels := make([]model.SlackChannel, 0)
+	if alert.SlackChannels == nil {
+		return nil, http.StatusBadRequest, INVALID_INPUT, "No slack channels found", true
+	}
+	err := U.DecodePostgresJsonbToStructType(alert.SlackChannels, &slackChannels)
+	if err != nil {
+		logCtx.WithError(err).Error("slack channels could not be decoded")
+		return nil, http.StatusInternalServerError, PROCESSING_FAILED, "slack channels could not be decoded", true
+	}
+
+	slackMentions := make([]model.SlackMember, 0)
+	if alert.SlackMentions != nil {
+		logCtx.WithError(err).Error("failed to decode slack mentions")
+		if err := U.DecodePostgresJsonbToStructType(alert.SlackMentions, &slackMentions); err != nil {
+			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "failed to decode slack mentions", true
+		}
+	}
+
+	slackPayload := model.EventTriggerAlertMessage{
+		Title:           alert.Title,
+		Event:           alert.Event,
+		MessageProperty: messageProperties,
+		Message:         alert.Message,
+	}
+
+	var blockMessage, slackMentionStr string
+	if slackMentions != nil {
+		slackMentionStr = model.GetSlackMentionsStr(slackMentions, alert.SlackFieldsTag)
+	}
+	if !alert.IsHyperlinkDisabled {
+		blockMessage = model.GetSlackMsgBlock(slackPayload, slackMentionStr)
+	} else {
+		blockMessage = model.GetSlackMsgBlockWithoutHyperlinks(slackPayload, slackMentionStr)
+	}
+
+	alertErrMessage := ""
+	slackSuccess := true
+	for _, channel := range slackChannels {
+		errMsg := ""
+		response, status, err := slack.SendSlackAlert(projectID, blockMessage, agentID, channel)
+		if err != nil || !status {
+			slackSuccess = false
+			if response["error"] != nil {
+				errMsg = response["error"].(string)
+			}
+			slackErr, exists := model.SlackErrorStates[errMsg]
+			if !exists {
+				alertErrMessage += fmt.Sprintf("Slack reported %s for %s channel", errMsg, channel.Name)
+			} else {
+				alertErrMessage += "; " + fmt.Sprintf("%s for %s channel", slackErr, channel.Name)
+			}
+			logCtx.WithField("channel", channel).WithError(err).Error("failed to send slack alert")
+			continue
+		}
+	}
+
+	if !slackSuccess {
+		return nil, http.StatusNotAcceptable, "", alertErrMessage, true
+	}
+	return nil, http.StatusAccepted, "", "", false
+}
+
+func TeamsTestforEventTriggerAlerts(c *gin.Context) (interface{}, int, string, string, bool) {
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	agentID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+
+	if projectID == 0 {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Invalid project id."})
+		return nil, http.StatusForbidden, INVALID_PROJECT, ErrorMessages[INVALID_PROJECT], true
+	}
+
+	if agentID == "" {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Invalid agent id."})
+		return nil, http.StatusForbidden, "INVALID_AGENT", ErrorMessages["INVALID_AGENT"], true
+	}
+
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectID,
+		"agent_id":   agentID,
+	})
+
+	var alert model.ETAConfigForTeamsTest
+	r := c.Request
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&alert); err != nil {
+		errMsg := "Test TriggerAlert failed. Invalid JSON."
+		logCtx.WithError(err).Error(errMsg)
+		return nil, http.StatusBadRequest, INVALID_INPUT, errMsg, true
+	}
+
+	messageProperties := make(U.PropertiesMap)
+	if alert.MessageProperty != nil {
+		err := U.DecodePostgresJsonbToStructType(alert.MessageProperty, &messageProperties)
+		if err != nil {
+			errMsg := "Jsonb decoding to struct failure"
+			logCtx.WithError(err).Error(errMsg)
+			return nil, http.StatusBadRequest, INVALID_INPUT, errMsg, true
+		}
+	}
+
+	var teamsChannels model.Team
+	if alert.TeamsChannelsConfig == nil {
+		return nil, http.StatusBadRequest, INVALID_INPUT, "No teams channels found", true
+	}
+	err := U.DecodePostgresJsonbToStructType(alert.TeamsChannelsConfig, &teamsChannels)
+	if err != nil {
+		logCtx.WithError(err).Error("teams channels could not be decoded")
+		return nil, http.StatusInternalServerError, PROCESSING_FAILED, "teams channels could not be decoded", true
+	}
+
+	teamsPayload := model.EventTriggerAlertMessage{
+		Title:           alert.Title,
+		Event:           alert.Event,
+		MessageProperty: messageProperties,
+		Message:         alert.Message,
+	}
+
+	message := model.GetTeamsMsgBlock(teamsPayload)
+	alertErrMessage := ""
+	teamsSuccess := true
+	for _, channel := range teamsChannels.TeamsChannelList {
+		errMsg := ""
+		repsonse, err := teams.SendTeamsMessage(projectID, agentID, teamsChannels.TeamsId, channel.ChannelId, message)
+		if err != nil {
+			errorCode, ok := repsonse["error"].(map[string]interface{})["code"].(string)
+			teamsErr, exists := model.TeamsErrorStates[errMsg]
+			if !ok || !exists {
+				alertErrMessage += fmt.Sprintf("Teams reported %s for %s channel", errorCode, channel.ChannelName)
+			} else {
+				alertErrMessage += "; " + fmt.Sprintf("%s for %s channel", teamsErr, channel.ChannelName)
+			}
+			logCtx.WithField("channel", channel).WithError(err).Error("failed to send slack alert")
+			continue
+		}
+	}
+
+	if !teamsSuccess {
+		return nil, http.StatusNotAcceptable, "", alertErrMessage, true
+	}
 	return nil, http.StatusAccepted, "", "", false
 }

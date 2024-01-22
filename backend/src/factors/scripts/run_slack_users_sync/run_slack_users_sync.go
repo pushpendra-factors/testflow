@@ -65,7 +65,6 @@ func main() {
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)
 	C.InitConf(config)
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
-	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 
 	err := C.InitDB(*config)
 	if err != nil {

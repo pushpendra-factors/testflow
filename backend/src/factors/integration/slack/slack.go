@@ -49,12 +49,12 @@ func GetSlackChannels(accessTokens model.SlackAccessTokens, nextCursor string) (
 	return jsonResponse, http.StatusOK, nil
 }
 
-func SendSlackAlert(projectID int64, message, agentUUID string, channel model.SlackChannel) (bool, error) {
+func SendSlackAlert(projectID int64, message, agentUUID string, channel model.SlackChannel) (map[string]interface{}, bool, error) {
 	// get the auth token for the agent uuid and then call the POST method to send the message
 	accessTokens, err := store.GetStore().GetSlackAuthToken(projectID, agentUUID)
 	if err != nil {
 		log.Error("Failed to get access token for slack")
-		return false, err
+		return nil, false, err
 	}
 	url := fmt.Sprintf("https://slack.com/api/chat.postMessage")
 	// create new http post request
@@ -66,7 +66,7 @@ func SendSlackAlert(projectID int64, message, agentUUID string, channel model.Sl
 	jsonBody, err := json.Marshal(reqBody)
 	if err != nil {
 		log.Error("Failed to marshal request body for slack")
-		return false, err
+		return nil, false, err
 	}
 	request, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
 	request.Header.Set("Content-Type", "application/json; charset=utf-8")
@@ -79,20 +79,20 @@ func SendSlackAlert(projectID int64, message, agentUUID string, channel model.Sl
 	resp, err := client.Do(request)
 	if err != nil {
 		log.Error("Failed to make request to slack for sending alert")
-		return false, err
+		return nil, false, err
 	}
 	var response map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	if err != nil {
 		log.Error("Failed to decode response from slack")
-		return false, err
+		return nil, false, err
 	}
 	if response["ok"] == true {
-		return true, nil
+		return response, true, nil
 	}
 	log.Error("failed to send slack alert ", message, response)
 	defer resp.Body.Close()
-	return false, fmt.Errorf("failure response: %v", response)
+	return response, false, fmt.Errorf("failed to send slack alert")
 }
 
 func GetSlackUsersList(projectID int64, agentID string) ([]model.SlackMember, int, error) {
@@ -194,7 +194,7 @@ func getSlackUsers(projectID int64, agentID string, nextCursor string) (response
 	return &jsonResponse, http.StatusOK, nil
 }
 
-func UpdateSlackUsersListTable(projectID int64, agentID string) ([]model.SlackUser, int, error) {
+func UpdateSlackUsersListTable(projectID int64, agentID string) ([]model.SlackMember, int, error) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "agent_uuid": agentID})
 	if projectID == 0 || agentID == "" {
 		logCtx.Error("invalid parameters")
@@ -226,20 +226,5 @@ func UpdateSlackUsersListTable(projectID int64, agentID string) ([]model.SlackUs
 		return nil, errCode, err
 	}
 
-	users := transfromSlackMembersToSlackUsers(members)
-
-	return users, http.StatusOK, nil
-}
-
-func transfromSlackMembersToSlackUsers(usersList []model.SlackMember) []model.SlackUser {
-	users := make([]model.SlackUser, 0)
-	for _, member := range usersList {
-		users = append(users, model.SlackUser{
-			Id:      member.Id,
-			Deleted: member.Deleted,
-			Profile: member.Profile,
-		})
-	}
-
-	return users
+	return members, http.StatusOK, nil
 }
