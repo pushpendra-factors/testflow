@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from 'react';
 import cx from 'classnames';
 import get from 'lodash/get';
 import cloneDeep from 'lodash/cloneDeep';
@@ -155,6 +161,9 @@ function UserProfiles({
   );
   const [showSegmentActions, setShowSegmentActions] = useState(false);
   const [moreActionsModalMode, setMoreActionsModalMode] = useState(null); // DELETE | RENAME
+
+  // for Scrolling Back to row
+  const [peopleRow, setPeopleRow] = useState(null);
 
   const setFiltersDirty = useCallback(
     (value) => {
@@ -432,7 +441,7 @@ function UserProfiles({
         ellipsis: true,
         sorter: (a, b) => sortStringColumn(a.identity.id, b.identity.id),
         render: (identity) => (
-          <div className='flex items-center'>
+          <div className='flex items-center' id={identity.id}>
             {identity.isAnonymous ? (
               <SVG
                 name={`TrackedUser${identity.id?.match(/\d/)?.[0] || 0}`}
@@ -1118,62 +1127,82 @@ function UserProfiles({
     setCurrentPageSize(pageParams.pageSize);
     setDefaultSorterInfo({ key: sorter.columnKey, order: sorter.order });
   };
-  const mergeColumns = useCallback(
-    tableColumns.map((col, index) => ({
+
+  useEffect(() => {
+    // This is the name of Account which was opened recently
+    const from = location.state?.peoplesTableRow;
+    const tableElement = peopleRow?.querySelector('.ant-table-body');
+
+    if (tableElement && from && document.getElementById(from)) {
+      const element = document.getElementById(from);
+      const y =
+        element.getBoundingClientRect().y -
+        tableElement.getBoundingClientRect().y -
+        15;
+
+      tableElement.scrollTo({ top: y, behavior: 'smooth' });
+
+      location.state.peoplesTableRow = '';
+    }
+  }, [contacts, tableColumns, location.state, peopleRow]);
+
+  const renderTable = () => {
+    const mergeColumns = tableColumns.map((col, index) => ({
       ...col,
       onHeaderCell: (column) => ({
         width: column.width
       })
-    })),
-    [tableColumns]
-  );
-
-  const renderTable = () => (
-    <div>
-      <Table
-        size='large'
-        components={{
-          header: {
-            cell: ResizableTitle
-          }
-        }}
-        onRow={(user) => ({
-          onClick: () => {
-            history.push(
-              `/profiles/people/${btoa(user.identity.id)}?is_anonymous=${
-                user.identity.isAnonymous
-              }`,
-              {
-                timelinePayload,
-                fromDetails: true,
-                currentPage,
-                currentPageSize,
-                activeSorter: defaultSorterInfo,
-                appliedFilters: areFiltersDirty ? appliedFilters : null
-              }
-            );
-          }
-        })}
-        className={`fa-table--userlist  ${styles['user-profiles-table']}`}
-        dataSource={getTableData(contacts.data)}
-        columns={mergeColumns}
-        rowClassName='cursor-pointer'
-        pagination={{
-          position: ['bottom', 'left'],
-          defaultPageSize: '25',
-          current: currentPage,
-          pageSize: currentPageSize
-        }}
-        onChange={handleTableChange}
-        scroll={{
-          x: tableProperties?.length * 250,
-          y: 'calc(100vh - 340px)'
-        }}
-      />
-      <div className='flex flex-row-reverse mt-4' />
-    </div>
-  );
-
+    }));
+    return (
+      <div>
+        <Table
+          ref={(e) => {
+            if (e) setPeopleRow(e);
+          }}
+          size='large'
+          components={{
+            header: {
+              cell: ResizableTitle
+            }
+          }}
+          onRow={(user) => ({
+            onClick: () => {
+              history.push(
+                `/profiles/people/${btoa(user.identity.id)}?is_anonymous=${
+                  user.identity.isAnonymous
+                }`,
+                {
+                  timelinePayload,
+                  fromDetails: true,
+                  currentPage,
+                  currentPageSize,
+                  activeSorter: defaultSorterInfo,
+                  appliedFilters: areFiltersDirty ? appliedFilters : null,
+                  peoplesTableRow: user.identity.id
+                }
+              );
+            }
+          })}
+          className={`fa-table--userlist  ${styles['user-profiles-table']}`}
+          dataSource={getTableData(contacts.data)}
+          columns={mergeColumns}
+          rowClassName='cursor-pointer'
+          pagination={{
+            position: ['bottom', 'left'],
+            defaultPageSize: '25',
+            current: currentPage,
+            pageSize: currentPageSize
+          }}
+          onChange={handleTableChange}
+          scroll={{
+            x: tableProperties?.length * 250,
+            y: 'calc(100vh - 340px)'
+          }}
+        />
+        <div className='flex flex-row-reverse mt-4' />
+      </div>
+    );
+  };
   const showRangeNudge = useMemo(
     () =>
       showUpgradeNudge(

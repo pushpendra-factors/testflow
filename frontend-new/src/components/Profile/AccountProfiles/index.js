@@ -955,7 +955,7 @@ function AccountProfiles({
 
   useEffect(() => {
     // This is the name of Account which was opened recently
-    const from = location.state?.state?.accountsTableRow;
+    const from = location.state?.accountsTableRow;
     // Finding the tableElement because we have only one .ant-table-body inside tableRef Tree
     // If in future we add table body inside it, need to change it later on
     const tableElement = tableRef.current?.querySelector('.ant-table-body');
@@ -965,41 +965,23 @@ function AccountProfiles({
       // Y is the relative position that we want to scroll by
       // this is calculated by ORIGINALELEMENTY-TABLEELEMENT - 15 ( because of some padding or margin )
       const y =
-        element?.getBoundingClientRect().y -
+        element.getBoundingClientRect().y -
         tableElement.getBoundingClientRect().y -
         15;
 
       tableElement.scrollTo({ top: y, behavior: 'smooth' });
 
-      location.state.state.accountsTableRow = '';
+      location.state.accountsTableRow = '';
     }
-  }, [newTableColumns]);
+  }, [newTableColumns, location.state, componentLoading]);
 
   const renderTable = useCallback(() => {
-    const handleResize =
-      (index) =>
-      (_, { size }) => {
-        const tmpColType = newTableColumns[index]?.type;
-        const tmpColWidthRange = COLUMN_TYPE_PROPS[tmpColType || 'string'];
-        const newColumns = [...newTableColumns];
-        newColumns[index] = {
-          ...newColumns[index],
-          width: (() => {
-            if (size.width < tmpColWidthRange.min) return tmpColWidthRange.min;
-            if (size.width > tmpColWidthRange.max) return tmpColWidthRange.max;
-            return size.width;
-          })()
-        };
-        setNewTableColumns(newColumns);
-      };
-
     const mergeColumns = newTableColumns.map((col, index) => ({
       ...col,
       onHeaderCell: (column) => ({
         width: column.width
       })
     }));
-
     return (
       <div>
         <Table
