@@ -394,6 +394,10 @@ func IsDomainGroup(group string) bool {
 	return group == U.GROUP_NAME_DOMAINS
 }
 
+func IsSourceAllUsers(source string) bool {
+	return source == "All"
+}
+
 func IsAnyProfiles(caller string) bool {
 	return (caller == PROFILE_TYPE_USER || caller == PROFILE_TYPE_ACCOUNT)
 }
