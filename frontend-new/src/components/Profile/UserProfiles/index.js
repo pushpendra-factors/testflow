@@ -1036,23 +1036,6 @@ function UserProfiles({
   }, []);
 
   const moreActionsContent = () => {
-    const accountEngagement = (
-      <div
-        role='button'
-        tabIndex={0}
-        onClick={navigateToAccountsEngagement}
-        className='flex cursor-pointer col-gap-4 items-center py-2 px-4 hover:bg-gray-100'
-      >
-        <SVG size={20} name='fireFlameCurved' color='#8c8c8c' />
-        <Text type='title' color='character-primary' extraClass='mb-0'>
-          Account engagement rules
-        </Text>
-      </div>
-    );
-
-    if (Boolean(timelinePayload.segment.id) === false) {
-      return accountEngagement;
-    }
     return (
       <div className='flex flex-col'>
         <div className='flex flex-col'>
@@ -1077,7 +1060,7 @@ function UserProfiles({
               setShowSegmentActions(false);
               setMoreActionsModalMode(moreActionsMode.DELETE);
             }}
-            className='flex cursor-pointer hover:bg-gray-100 col-gap-4 border-b items-center py-2 px-4'
+            className='flex cursor-pointer hover:bg-gray-100 col-gap-4 items-center py-2 px-4'
           >
             <SVG size={20} name='trash' color='#8c8c8c' />
             <Text type='title' color='character-primary' extraClass='mb-0'>
@@ -1085,7 +1068,6 @@ function UserProfiles({
             </Text>
           </div>
         </div>
-        {accountEngagement}
       </div>
     );
   };
