@@ -279,12 +279,13 @@ func (store *MemSQL) GetProjectAgentLatestAdminEmailByProjectId(projectId int64)
 	}
 
 	var projectAgentAdmin model.ProjectAgentMapping
+
 	isSolution, errCode := store.IsSolutionAgent(pam[0].AgentUUID)
 	if errCode != http.StatusOK {
 		return "", errCode
 	}
 
-	if isSolution {
+	if isSolution && len(pam) > 1 {
 		projectAgentAdmin = pam[1]
 	} else {
 		projectAgentAdmin = pam[0]
