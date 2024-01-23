@@ -245,13 +245,15 @@ func GetSlackUsersListHandler(c *gin.Context) {
 
 	users, errCode, err := store.GetStore().GetSlackUsersListFromDb(projectID, loggedInAgentUUID)
 	if err != nil || errCode != http.StatusFound {
-		if errCode != http.StatusNotFound {
+		if errCode == http.StatusNotFound {
 			users, errCode, err = slack.UpdateSlackUsersListTable(projectID, loggedInAgentUUID)
 			if err != nil || errCode != http.StatusOK || users == nil {
 				logCtx.WithError(err).Error("failed to fetch slack users list")
 				c.AbortWithStatusJSON(errCode, gin.H{"error": "failed to fetch slack users list"})
 				return
 			}
+			c.JSON(http.StatusOK, users)
+			return
 		}
 		logCtx.WithError(err).Error("failed to fetch slack users list from db")
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "failed to fetch slack users list from db"})
