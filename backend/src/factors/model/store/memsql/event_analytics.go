@@ -1413,7 +1413,7 @@ func (store *MemSQL) addSourceFilterForSegments(projectID int64,
 	addSourceStmt = " " + fmt.Sprintf("(%s.is_group_user=0 OR %s.is_group_user IS NULL) AND %s.last_event_at IS NOT NULL", selectVal, selectVal, selectVal)
 	if model.UserSourceMap[source] == model.UserSourceWeb {
 		addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND (%s.source="+strconv.Itoa(model.UserSourceMap[source])+" OR %s.source IS NULL)", selectVal, selectVal)
-	} else if model.IsDomainGroup(source) {
+	} else if model.IsSourceAllUsers(source) {
 		addSourceStmt = addSourceStmt + ""
 	} else {
 		addSourceStmt = addSourceStmt + " " + fmt.Sprintf("AND %s.source=", selectVal) + strconv.Itoa(model.UserSourceMap[source])

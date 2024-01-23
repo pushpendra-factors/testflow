@@ -823,6 +823,10 @@ func getNoneHandledGroupBySelectForDomains(projectID int64, groupProp model.Quer
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
+	if groupProp.Entity == model.PropertyEntityDomainGroup {
+		return getNoneHandledGroupBySelect(projectID, groupProp, groupKey, timezoneString)
+	}
+
 	entityField := getPropertyEntityField(projectID, groupProp)
 	var groupSelect string
 
@@ -2482,7 +2486,9 @@ func (store *MemSQL) ExecQueryWithContext(stmnt string, params []interface{}) (*
 	U.LogExecutionTimeWithQueryRequestID(startExecTime, reqID, &logFields)
 	if err != nil {
 		tx.Rollback()
-		if rows != nil { rows.Close() }
+		if rows != nil {
+			rows.Close()
+		}
 		log.WithError(err).WithFields(logFields).Error("Failed to exec query with context.")
 	}
 
