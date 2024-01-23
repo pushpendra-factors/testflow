@@ -267,6 +267,25 @@ func DeleteCustomMetrics(c *gin.Context) (interface{}, int, string, string, bool
 		derivedKPINames = store.GetStore().GetDerivedKPIsHavingNameInInternalQueries(projectID, customMetric.Name)
 	}
 
+	if C.GetAttributionDebug() == 1 {
+		dashboardUnitNames1, statusCode1 := store.GetStore().GetAttributionDashboardUnitNamesImpactedByCustomKPI(projectID, customMetric.Name)
+		log.WithFields(log.Fields{"dashboardUnitNames": dashboardUnitNames1, "statusCode": statusCode1}).Warn("Attribution Dashboards impacted")
+
+		dashboardUnitNames = append(dashboardUnitNames, dashboardUnitNames1...)
+		if len(dashboardUnitNames) == 0 && len(alertNames) == 0 && len(derivedKPINames) == 0 {
+			statusCode = store.GetStore().DeleteCustomMetricByID(projectID, customMetricsID)
+			if statusCode != http.StatusAccepted {
+				return nil, http.StatusInternalServerError, PROCESSING_FAILED, "", true
+			} else {
+				return nil, http.StatusOK, "", "", false
+			}
+		} else {
+			log.WithFields(log.Fields{"dashboardUnitNames": dashboardUnitNames1, "alertNames": alertNames, "derivedKPINames": derivedKPINames}).Warn("All alerts including Dashboards impacted")
+			errorMessage := BuildDependentsErrorMessage("Custom KPI", [][]string{dashboardUnitNames, alertNames, derivedKPINames}, []string{"dashboard unit", "alert", "derived KPI"})
+			return nil, http.StatusBadRequest, DEPENDENT_RECORD_PRESENT, errorMessage, true
+		}
+	}
+
 	if len(dashboardUnitNames) == 0 && len(alertNames) == 0 && len(derivedKPINames) == 0 {
 		statusCode = store.GetStore().DeleteCustomMetricByID(projectID, customMetricsID)
 		if statusCode != http.StatusAccepted {
