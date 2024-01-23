@@ -362,7 +362,7 @@ const FiltersBox = ({
             );
           })}
           <ControlledComponent
-            controller={isEventsVisible === true && listEvents.length < 3}
+            controller={isEventsVisible === true && listEvents.length < 10}
           >
             <div key={listEvents.length}>
               <EventsBlock
@@ -376,7 +376,7 @@ const FiltersBox = ({
               />
             </div>
           </ControlledComponent>
-          <ControlledComponent controller={listEvents.length < 3}>
+          <ControlledComponent controller={listEvents.length < 10}>
             <Button
               className={cx('flex items-center', styles['add-filter-button'])}
               type='text'
