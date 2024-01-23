@@ -842,7 +842,7 @@ function AccountProfiles({
                   width: '240px',
                   'border-radius': '5px'
                 }}
-                prefix={<SVG name='search' size={24} color={'#8c8c8c'} />}
+                prefix={<SVG name='search' size={24} color='#8c8c8c' />}
               />
             </Form.Item>
           </Form>
@@ -924,7 +924,6 @@ function AccountProfiles({
     setDefaultSorterInfo({ key: sorter.columnKey, order: sorter.order });
   };
   const [newTableColumns, setNewTableColumns] = useState([]);
-  const [columnsType, setColumnTypes] = useState({});
 
   useEffect(() => {
     setNewTableColumns(
@@ -1122,7 +1121,6 @@ function AccountProfiles({
       try {
         setCSVDataLoading(true);
         const reqPayload = getFiltersRequestPayload({
-          source: selectedAccount.account[1],
           selectedFilters: appliedFilters,
           tableProps: selectedOptions
         });

@@ -29,7 +29,6 @@ import {
   PropTextFormat,
   convertGroupedPropertiesToUngrouped
 } from 'Utils/dataFormatter';
-import { fetchUserPropertyValues } from 'Reducers/coreQuery/services';
 import { selectTimelinePayload } from 'Reducers/userProfilesView/selectors';
 import {
   setTimelinePayloadAction,
@@ -43,11 +42,11 @@ import CommonBeforeIntegrationPage from 'Components/GenericComponents/CommonBefo
 import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
 import { ProfilesSidebarIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
 import { isOnboarded } from 'Utils/global';
-import { PathUrls } from 'Routes/pathUrls';
 import { getSegmentColorCode } from 'Views/AppSidebar/appSidebar.helpers';
-import { AdminLock } from 'Routes/feature';
+import truncateURL from 'Utils/truncateURL';
+import { ACCOUNTS_TABLE_COLUMN_TYPES, COLUMN_TYPE_PROPS } from 'Utils/table';
+import ResizableTitle from 'Components/Resizable';
 import { Text, SVG } from '../../factorsComponents';
-import FaSelect from '../../FaSelect';
 import { getUserPropertiesV2 } from '../../../reducers/coreQuery/middleware';
 import PropertyFilter from '../AccountProfiles/PropertyFilter';
 import MomentTz from '../../MomentTz';
@@ -91,9 +90,7 @@ import RenameSegmentModal from '../AccountProfiles/RenameSegmentModal';
 import UpdateSegmentModal from '../AccountProfiles/UpdateSegmentModal';
 import styles from './index.module.scss';
 import { ALPHANUMSTR, DEFAULT_TIMELINE_CONFIG, iconColors } from '../constants';
-import truncateURL from 'Utils/truncateURL';
-import { ACCOUNTS_TABLE_COLUMN_TYPES, COLUMN_TYPE_PROPS } from 'Utils/table';
-import ResizableTitle from 'Components/Resizable';
+import logger from 'Utils/logger';
 
 const userOptions = getUserOptions();
 
@@ -113,6 +110,32 @@ function UserProfiles({
   updateSegmentForId,
   deleteSegment
 }) {
+  const [listSearchItems, setListSearchItems] = useState([]);
+  const [searchBarOpen, setSearchBarOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [checkListUserProps, setCheckListUserProps] = useState([]);
+  const [showPopOver, setShowPopOver] = useState(false);
+  const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
+  const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
+  const [errMsg, setErrMsg] = useState('');
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPageSize, setCurrentPageSize] = useState(25);
+  const [defaultSorterInfo, setDefaultSorterInfo] = useState({});
+
+  // segments 2.0 state
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
+  const [saveSegmentModal, setSaveSegmentModal] = useState(false);
+  const [updateSegmentModal, setUpdateSegmentModal] = useState(false);
+  const [selectedFilters, setSelectedFilters] = useState(
+    INITIAL_USER_PROFILES_FILTERS_STATE
+  );
+  const [appliedFilters, setAppliedFilters] = useState(
+    INITIAL_USER_PROFILES_FILTERS_STATE
+  );
+  const [showSegmentActions, setShowSegmentActions] = useState(false);
+  const [moreActionsModalMode, setMoreActionsModalMode] = useState(null); // DELETE | RENAME
+
   const dispatch = useDispatch();
   const history = useHistory();
   const location = useLocation();
@@ -135,32 +158,6 @@ function UserProfiles({
     (state) => state.userProfilesView
   );
   const { projectDomainsList } = useSelector((state) => state.global);
-  const [listSearchItems, setListSearchItems] = useState([]);
-  const [searchBarOpen, setSearchBarOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [checkListUserProps, setCheckListUserProps] = useState([]);
-  const [showPopOver, setShowPopOver] = useState(false);
-  const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
-  const [userValueOpts, setUserValueOpts] = useState({});
-  const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
-  const [errMsg, setErrMsg] = useState('');
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const [currentPageSize, setCurrentPageSize] = useState(25);
-  const [defaultSorterInfo, setDefaultSorterInfo] = useState({});
-
-  // segments 2.0 state
-  const [filtersExpanded, setFiltersExpanded] = useState(false);
-  const [saveSegmentModal, setSaveSegmentModal] = useState(false);
-  const [updateSegmentModal, setUpdateSegmentModal] = useState(false);
-  const [selectedFilters, setSelectedFilters] = useState(
-    INITIAL_USER_PROFILES_FILTERS_STATE
-  );
-  const [appliedFilters, setAppliedFilters] = useState(
-    INITIAL_USER_PROFILES_FILTERS_STATE
-  );
-  const [showSegmentActions, setShowSegmentActions] = useState(false);
-  const [moreActionsModalMode, setMoreActionsModalMode] = useState(null); // DELETE | RENAME
 
   // for Scrolling Back to row
   const [peopleRow, setPeopleRow] = useState(null);
@@ -285,7 +282,7 @@ function UserProfiles({
       .finally(() => {
         dispatch(
           setTimelinePayloadAction({
-            source: 'all',
+            source: 'All',
             segment: {}
           })
         );
@@ -293,17 +290,29 @@ function UserProfiles({
   }, [timelinePayload.segment, activeProject.id, deleteSegment]);
 
   const handleRenameSegment = useCallback(
-    (name) => {
-      updateSegmentForId(activeProject.id, timelinePayload.segment.id, {
-        name
-      }).then(() => {
+    async (name) => {
+      if (!timelinePayload.segment) return;
+
+      try {
+        const segmentId = timelinePayload.segment.id;
+
+        await updateSegmentForId(activeProject.id, segmentId, { name });
         getSavedSegments(activeProject.id);
+
         setMoreActionsModalMode(null);
         notification.success({
           message: 'Segment renamed successfully',
           duration: 5
         });
-      });
+
+        const updatedPayload = {
+          ...timelinePayload,
+          segment: { ...timelinePayload.segment, name }
+        };
+        setTimelinePayload(updatedPayload);
+      } catch (error) {
+        logger(error);
+      }
     },
     [activeProject.id, timelinePayload.segment]
   );
@@ -434,7 +443,7 @@ function UserProfiles({
     const columns = [
       {
         title: <div className={headerClassStr}>Identity</div>,
-        width: COLUMN_TYPE_PROPS['string'].min,
+        width: COLUMN_TYPE_PROPS.string.min,
         dataIndex: 'identity',
         key: 'identity',
         fixed: 'left',
@@ -544,7 +553,7 @@ function UserProfiles({
       title: <div className={headerClassStr}>Last Activity</div>,
       dataIndex: 'lastActivity',
       key: 'lastActivity',
-      width: COLUMN_TYPE_PROPS['actions'].min,
+      width: COLUMN_TYPE_PROPS.actions.min,
       align: 'left',
       sorter: {
         compare: (a, b) => sortStringColumn(a.lastActivity, b.lastActivity),
@@ -926,18 +935,19 @@ function UserProfiles({
     </ControlledComponent>
   );
 
-  useEffect(() => {
-    fetchUserPropertyValues(activeProject.id, '$user_id')
-      .then((res) => {
-        setUserValueOpts({ ...res.data });
-      })
-      .catch((err) => {
-        console.log(err);
-        setUserValueOpts({});
-      });
-  }, [activeProject.id]);
+  const handleUsersSearch = (values) => {
+    if (
+      (listSearchItems.length >= 1 && listSearchItems[0] === values?.users) ||
+      (listSearchItems.length === 0 && !values?.users)
+    ) {
+      return;
+    }
+    if (values?.users) {
+      values = [JSON.stringify([values.users])];
+    } else {
+      values = [];
+    }
 
-  const onApplyClick = (values) => {
     const updatedPayload = {
       ...timelinePayload,
       search_filter: values.map((value) => JSON.parse(value)[0])
@@ -956,35 +966,13 @@ function UserProfiles({
     setSearchBarOpen(true);
   };
 
-  const handleUsersSearch = (values) => {
-    if (
-      (listSearchItems.length >= 1 && listSearchItems[0] === values?.users) ||
-      (listSearchItems.length == 0 && !values?.users)
-    ) {
-      return;
-    }
-    if (values?.users) {
-      values = [JSON.stringify([values.users])];
-    } else {
-      values = [];
-    }
-
-    const updatedPayload = {
-      ...timelinePayload,
-      search_filter: values.map((value) => JSON.parse(value)[0])
-    };
-    setListSearchItems(updatedPayload.search_filter);
-    setTimelinePayload(updatedPayload);
-    setActiveSegment(activeSegment);
-    getUsers(updatedPayload);
-  };
   const renderSearchSection = () => (
     <ControlledComponent
       controller={filtersExpanded === false && newSegmentMode === false}
     >
       <div className='relative'>
         <ControlledComponent controller={searchBarOpen}>
-          <div className={'flex items-center justify-between'}>
+          <div className='flex items-center justify-between'>
             <Form
               name='basic'
               labelCol={{ span: 8 }}
@@ -996,9 +984,9 @@ function UserProfiles({
                 <Input
                   size='large'
                   value={listSearchItems ? listSearchItems.join(', ') : null}
-                  placeholder={'Search Users'}
+                  placeholder='Search Users'
                   style={{ width: '240px', 'border-radius': '5px' }}
-                  prefix={<SVG name='search' size={24} color={'#8c8c8c'} />}
+                  prefix={<SVG name='search' size={24} color='#8c8c8c' />}
                 />
               </Form.Item>
             </Form>
@@ -1040,46 +1028,40 @@ function UserProfiles({
     </Popover>
   );
 
-  const navigateToAccountsEngagement = useCallback(() => {
-    history.push(PathUrls.ConfigureEngagements);
-  }, []);
-
-  const moreActionsContent = () => {
-    return (
+  const moreActionsContent = () => (
+    <div className='flex flex-col'>
       <div className='flex flex-col'>
-        <div className='flex flex-col'>
-          <div
-            role='button'
-            tabIndex={-1}
-            onClick={() => {
-              setShowSegmentActions(false);
-              setMoreActionsModalMode(moreActionsMode.RENAME);
-            }}
-            className='flex cursor-pointer hover:bg-gray-100 col-gap-4 items-center py-2 px-4'
-          >
-            <SVG size={20} name='edit_query' color='#8c8c8c' />
-            <Text type='title' color='character-primary' extraClass='mb-0'>
-              Rename Segment
-            </Text>
-          </div>
-          <div
-            role='button'
-            tabIndex={-2}
-            onClick={() => {
-              setShowSegmentActions(false);
-              setMoreActionsModalMode(moreActionsMode.DELETE);
-            }}
-            className='flex cursor-pointer hover:bg-gray-100 col-gap-4 items-center py-2 px-4'
-          >
-            <SVG size={20} name='trash' color='#8c8c8c' />
-            <Text type='title' color='character-primary' extraClass='mb-0'>
-              Delete Segment
-            </Text>
-          </div>
+        <div
+          role='button'
+          tabIndex={-1}
+          onClick={() => {
+            setShowSegmentActions(false);
+            setMoreActionsModalMode(moreActionsMode.RENAME);
+          }}
+          className='flex cursor-pointer hover:bg-gray-100 col-gap-4 items-center py-2 px-4'
+        >
+          <SVG size={20} name='edit_query' color='#8c8c8c' />
+          <Text type='title' color='character-primary' extraClass='mb-0'>
+            Rename Segment
+          </Text>
+        </div>
+        <div
+          role='button'
+          tabIndex={-2}
+          onClick={() => {
+            setShowSegmentActions(false);
+            setMoreActionsModalMode(moreActionsMode.DELETE);
+          }}
+          className='flex cursor-pointer hover:bg-gray-100 col-gap-4 items-center py-2 px-4'
+        >
+          <SVG size={20} name='trash' color='#8c8c8c' />
+          <Text type='title' color='character-primary' extraClass='mb-0'>
+            Delete Segment
+          </Text>
         </div>
       </div>
-    );
-  };
+    </div>
+  );
 
   const renderMoreActions = () => (
     <Popover
@@ -1177,7 +1159,7 @@ function UserProfiles({
           }}
           onChange={handleTableChange}
           scroll={{
-            x: tableProperties?.length * 250,
+            x: (tableProperties?.length || 0) * 250,
             y: 'calc(100vh - 340px)'
           }}
         />

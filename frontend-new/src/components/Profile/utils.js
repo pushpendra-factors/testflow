@@ -132,7 +132,7 @@ export const getFiltersRequestPayload = ({
   };
 
   return {
-    query: getSegmentQuery(eventsList, queryOptions, eventProp)
+    query: getSegmentQuery(eventsList, queryOptions, eventProp, caller)
   };
 };
 
