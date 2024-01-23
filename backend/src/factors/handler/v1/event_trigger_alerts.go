@@ -432,6 +432,16 @@ func SlackTestforEventTriggerAlerts(c *gin.Context) (interface{}, int, string, s
 		}
 	}
 
+	payload := make(U.PropertiesMap)
+	i := 0
+	for prop, value := range messageProperties {
+		payload[fmt.Sprintf("%d", i)] = model.MessagePropMapStruct{
+			DisplayName: prop,
+			PropValue: value,
+		}
+		i++
+	}
+
 	slackChannels := make([]model.SlackChannel, 0)
 	if alert.SlackChannels == nil {
 		return nil, http.StatusBadRequest, INVALID_INPUT, "No slack channels found", true
@@ -453,7 +463,7 @@ func SlackTestforEventTriggerAlerts(c *gin.Context) (interface{}, int, string, s
 	slackPayload := model.EventTriggerAlertMessage{
 		Title:           alert.Title,
 		Event:           alert.Event,
-		MessageProperty: messageProperties,
+		MessageProperty: payload,
 		Message:         alert.Message,
 	}
 
@@ -533,6 +543,16 @@ func TeamsTestforEventTriggerAlerts(c *gin.Context) (interface{}, int, string, s
 		}
 	}
 
+	payload := make(U.PropertiesMap)
+	i := 0
+	for prop, value := range messageProperties {
+		payload[fmt.Sprintf("%d", i)] = model.MessagePropMapStruct{
+			DisplayName: prop,
+			PropValue: value,
+		}
+		i++
+	}
+
 	var teamsChannels model.Team
 	if alert.TeamsChannelsConfig == nil {
 		return nil, http.StatusBadRequest, INVALID_INPUT, "No teams channels found", true
@@ -546,7 +566,7 @@ func TeamsTestforEventTriggerAlerts(c *gin.Context) (interface{}, int, string, s
 	teamsPayload := model.EventTriggerAlertMessage{
 		Title:           alert.Title,
 		Event:           alert.Event,
-		MessageProperty: messageProperties,
+		MessageProperty: payload,
 		Message:         alert.Message,
 	}
 
@@ -564,7 +584,7 @@ func TeamsTestforEventTriggerAlerts(c *gin.Context) (interface{}, int, string, s
 			} else {
 				alertErrMessage += "; " + fmt.Sprintf("%s for %s channel", teamsErr, channel.ChannelName)
 			}
-			logCtx.WithField("channel", channel).WithError(err).Error("failed to send slack alert")
+			logCtx.WithField("channel", channel).WithError(err).Error("failed to send teams alert")
 			continue
 		}
 	}

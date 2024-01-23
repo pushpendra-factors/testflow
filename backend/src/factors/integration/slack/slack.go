@@ -204,7 +204,6 @@ func UpdateSlackUsersListTable(projectID int64, agentID string) ([]model.SlackMe
 	members, errCode, err := GetSlackUsersList(projectID, agentID)
 	if err != nil || errCode != http.StatusFound {
 		if errCode == http.StatusNotFound {
-			logCtx.WithError(err).Error("no users found")
 			return nil, errCode, err
 		}
 		logCtx.WithError(err).Error("failed to fetch slack users list")
