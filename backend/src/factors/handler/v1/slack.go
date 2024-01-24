@@ -253,7 +253,15 @@ func GetSlackUsersListHandler(c *gin.Context) {
 				c.AbortWithStatusJSON(errCode, gin.H{"error": "failed to fetch slack users list"})
 				return
 			}
-			c.JSON(http.StatusOK, users)
+			//Sending only human users to the UI
+			humanUsers := make([]model.SlackMember, 0)
+			for _, user := range users {
+				if !user.IsBot && !strings.Contains(user.Name, "slackbot") {
+					humanUsers = append(humanUsers, user)
+				}
+			}
+
+			c.JSON(http.StatusOK, humanUsers)
 			return
 		}
 		logCtx.WithError(err).Error("failed to fetch slack users list from db")
