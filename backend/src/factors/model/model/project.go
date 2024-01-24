@@ -60,6 +60,7 @@ type ProjectString struct {
 	ChannelGroupRules     postgres.Jsonb  `json:"channel_group_rules"`
 	EnableBilling         bool            `json:"enable_billing"`
 	BillingAdminAgentUUID string          `json:"billing_admin_agent_uuid"`
+	ClearbitDomain        string          `json:"clearbit_domain"`
 }
 
 type ProjectInfo struct {
