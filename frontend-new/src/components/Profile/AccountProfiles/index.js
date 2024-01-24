@@ -1053,6 +1053,7 @@ function AccountProfiles({
           setFiltersDirty(false);
         }
         await getSavedSegments(activeProject.id);
+        disableNewSegmentMode();
       } catch (err) {
         notification.error({
           message: 'Error',
@@ -1077,7 +1078,6 @@ function AccountProfiles({
       };
 
       handleSaveSegment(reqPayload);
-      disableNewSegmentMode();
     },
     [
       selectedFilters,

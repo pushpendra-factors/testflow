@@ -213,6 +213,10 @@ function UserProfiles({
     restoreFiltersDefaultState
   ]);
 
+  const disableNewSegmentMode = useCallback(() => {
+    dispatch(setNewSegmentModeAction(false));
+  }, [dispatch]);
+
   const handleSaveSegment = useCallback(
     async (segmentPayload) => {
       try {
@@ -231,6 +235,7 @@ function UserProfiles({
           setFiltersDirty(false);
         }
         await getSavedSegments(activeProject.id);
+        disableNewSegmentMode();
       } catch (err) {
         notification.error({
           message: 'Error',
@@ -243,10 +248,6 @@ function UserProfiles({
     [activeProject.id, createNewSegment, getSavedSegments, setFiltersDirty]
   );
 
-  const disableNewSegmentMode = useCallback(() => {
-    dispatch(setNewSegmentModeAction(false));
-  }, [dispatch]);
-
   const handleCreateSegment = useCallback(
     (newSegmentName) => {
       const reqPayload = getFiltersRequestPayload({
@@ -257,7 +258,6 @@ function UserProfiles({
       reqPayload.name = newSegmentName;
       reqPayload.type = 'All';
       handleSaveSegment(reqPayload);
-      disableNewSegmentMode();
     },
     [
       selectedFilters,
