@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -260,5 +261,13 @@ func GetSlackUsersListHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, users)
+	//Sending only human users to the UI
+	humanUsers := make([]model.SlackMember, 0)
+	for _, user := range users {
+		if !user.IsBot || !strings.Contains(user.Name, "slackbot") {
+			humanUsers = append(humanUsers, user)
+		}
+	}
+
+	c.JSON(http.StatusOK, humanUsers)
 }

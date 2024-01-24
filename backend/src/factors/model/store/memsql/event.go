@@ -470,13 +470,13 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 		&model.CacheEvent{ID: event.ID, Timestamp: event.Timestamp})
 
 	t1 := time.Now()
-	alerts, eventName, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, event.UserId, &event.Properties, event.UserProperties, nil, false)
+	alerts, eventName, updatedUserProps, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, event.UserId, &event.Properties, event.UserProperties, nil, false)
 	if ErrCode == http.StatusFound && alerts != nil {
 		// log.WithFields(log.Fields{"project_id": event.ProjectId,
 		// 	"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
 
 		for _, alert := range *alerts {
-			success := store.CacheEventTriggerAlert(&alert, event, eventName)
+			success := store.CacheEventTriggerAlert(&alert, event, eventName, updatedUserProps)
 			if !success {
 				log.WithFields(log.Fields{"project_id": event.ProjectId,
 					"event_trigger_alert": alert}).Error("Caching alert failure")
@@ -866,7 +866,7 @@ func (store *MemSQL) updateEventPropertiesWithTransaction(projectId int64, id, u
 	}
 
 	//log.Info("EventTriggerAlerts match function trigger point.")
-	alerts, eventName, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, event.UserId, updatedPostgresJsonb, event.UserProperties, updatedPropertiesOnlyJsonBlob, true)
+	alerts, eventName, updatedUserProps, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, event.UserId, updatedPostgresJsonb, event.UserProperties, updatedPropertiesOnlyJsonBlob, true)
 	if ErrCode == http.StatusFound && alerts != nil {
 		// log.WithFields(log.Fields{"project_id": event.ProjectId,
 		// 	"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
@@ -875,7 +875,7 @@ func (store *MemSQL) updateEventPropertiesWithTransaction(projectId int64, id, u
 		updatedEvent = *event
 		updatedEvent.Properties = *updatedPostgresJsonb
 		for _, alert := range *alerts {
-			success := store.CacheEventTriggerAlert(&alert, &updatedEvent, eventName)
+			success := store.CacheEventTriggerAlert(&alert, &updatedEvent, eventName, updatedUserProps)
 			if !success {
 				log.WithFields(log.Fields{"project_id": event.ProjectId,
 					"event_trigger_alert": alert}).Error("Caching alert failure")
