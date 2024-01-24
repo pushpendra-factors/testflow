@@ -14,7 +14,7 @@ import { fetchQueries, getEventsData } from 'Reducers/coreQuery/services';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from 'Utils/global';
 import AnalysisHeader from 'Views/CoreQuery/AnalysisResultsPage/AnalysisHeader';
 import {
-    ACTIVE_USERS_CRITERIA,
+  ACTIVE_USERS_CRITERIA,
   EACH_USER_TYPE,
   FREQUENCY_CRITERIA,
   QUERY_TYPE_EVENT,
@@ -51,7 +51,10 @@ import logger from 'Utils/logger';
 import ReportContent from 'Views/CoreQuery/AnalysisResultsPage/ReportContent';
 import { getDashboardDateRange } from 'Views/Dashboard/utils';
 import moment from 'moment';
-import { SET_PERFORMANCE_CRITERIA, SET_SHOW_CRITERIA } from 'Reducers/analyticsQuery';
+import {
+  SET_PERFORMANCE_CRITERIA,
+  SET_SHOW_CRITERIA
+} from 'Reducers/analyticsQuery';
 
 const CoreQuery = () => {
   // Query params
@@ -61,9 +64,8 @@ const CoreQuery = () => {
 
   // Redux States
   const { active_project } = useSelector((state: any) => state.global);
-  const { show_criteria: result_criteria, performance_criteria: user_type } = useSelector(
-    (state: any) => state.analyticsQuery
-  );
+  const { show_criteria: result_criteria, performance_criteria: user_type } =
+    useSelector((state: any) => state.analyticsQuery);
   const { models, eventNames } = useSelector((state: any) => state.coreQuery);
   const savedQueries = useSelector((state: any) =>
     get(state, 'queries.data', EMPTY_ARRAY)
@@ -120,27 +122,27 @@ const CoreQuery = () => {
         type: INITIALIZE_GROUPBY,
         payload: equivalentQuery.breakdown
       });
-    //   setQueryOptions((currData) => {
-    //     let queryDateRange = {};
-    //     if (navigatedFromDashboard) {
-    //       queryDateRange = { date_range: dashboardDateRange };
-    //     } else queryDateRange = { date_range: savedDateRange };
+      //   setQueryOptions((currData) => {
+      //     let queryDateRange = {};
+      //     if (navigatedFromDashboard) {
+      //       queryDateRange = { date_range: dashboardDateRange };
+      //     } else queryDateRange = { date_range: savedDateRange };
 
-    //     let queryOpts = {};
-    //     queryOpts = {
-    //       ...currData,
-    //       session_analytics_seq: equivalentQuery.session_analytics_seq,
-    //       groupBy: [
-    //         ...equivalentQuery.breakdown.global,
-    //         ...equivalentQuery.breakdown.event
-    //       ],
-    //       globalFilters: equivalentQuery.globalFilters,
-    //       group_analysis: equivalentQuery.groupAnalysis,
-    //       ...queryDateRange,
-    //       events_condition: equivalentQuery.eventsCondition
-    //     };
-    //     return queryOpts;
-    //   });
+      //     let queryOpts = {};
+      //     queryOpts = {
+      //       ...currData,
+      //       session_analytics_seq: equivalentQuery.session_analytics_seq,
+      //       groupBy: [
+      //         ...equivalentQuery.breakdown.global,
+      //         ...equivalentQuery.breakdown.event
+      //       ],
+      //       globalFilters: equivalentQuery.globalFilters,
+      //       group_analysis: equivalentQuery.groupAnalysis,
+      //       ...queryDateRange,
+      //       events_condition: equivalentQuery.eventsCondition
+      //     };
+      //     return queryOpts;
+      //   });
     },
     [dispatch]
   );
@@ -189,7 +191,7 @@ const CoreQuery = () => {
                 dispatch({
                   type: SET_SHOW_CRITERIA,
                   payload:
-                  queryState.requestQuery[0].ty === TYPE_EVENTS_OCCURRENCE
+                    queryState.requestQuery[0].ty === TYPE_EVENTS_OCCURRENCE
                       ? TOTAL_EVENTS_CRITERIA
                       : TOTAL_USERS_CRITERIA
                 });
@@ -377,7 +379,7 @@ const CoreQuery = () => {
                       onReportClose={() => {}}
                       handleGranularityChange={() => {}}
                       setDrawerVisible={() => {}}
-                      queries={coreQueryState.queries}
+                      queries={coreQueryState.appliedQueries}
                     />
                   )}
                 </>
@@ -386,9 +388,8 @@ const CoreQuery = () => {
           </div>
         </>
       );
-    } else {
-      return null;
     }
+    return null;
   };
 
   return renderMain();
