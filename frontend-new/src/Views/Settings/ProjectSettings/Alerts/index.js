@@ -29,6 +29,8 @@ import KPIBasedAlert from './KPIBasedAlert';
 import EventBasedAlert from './EventBasedAlert';
 import styles from './index.module.scss';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
+import { getGroups } from 'Reducers/coreQuery/middleware';
+
 const { TabPane } = Tabs;
 
 const Alerts = ({
@@ -40,7 +42,9 @@ const Alerts = ({
   currentAgent,
   createEventAlert,
   fetchAllAlerts,
-  createAlert
+  createAlert,
+  groups,
+  getGroups
 }) => {
   const [tableData, setTableData] = useState([]);
   const [tableLoading, setTableLoading] = useState(false);
@@ -51,6 +55,12 @@ const Alerts = ({
     index: 0
   });
   const { confirm } = Modal;
+
+  useEffect(() => {
+    if (!groups || Object.keys(groups).length === 0) {
+      getGroups(activeProject?.id);
+    }
+  }, [activeProject?.id, groups]);
 
   const confirmDeleteAlert = (item) => {
     confirm({
@@ -482,7 +492,8 @@ const mapStateToProps = (state) => ({
   agent_details: state.agent.agent_details,
   slack: state.global.slack,
   projectSettings: state.global.projectSettingsV1,
-  currentAgent: state.agent.agent_details
+  currentAgent: state.agent.agent_details,
+  groups: state.coreQuery.groups,
 });
 
 export default connect(mapStateToProps, {
@@ -491,5 +502,6 @@ export default connect(mapStateToProps, {
   deleteEventAlert,
   createEventAlert,
   fetchAllAlerts,
-  createAlert
+  createAlert,
+  getGroups
 })(Alerts);

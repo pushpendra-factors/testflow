@@ -48,7 +48,22 @@ const Teams = ({
     groupBy,
     sendTestTeamsMessage,
     matchEventName,
+    teamsTestMsgLoading,
+    teamsTestMsgTxt,
+    fetchTeamsDetails
 }) => {
+
+
+    const [loading, setLoading] = useState(false);
+
+    const refreshTeamsDetails = () => {
+        setLoading(true);
+        fetchTeamsDetails();
+        setTimeout(() => {
+            setLoading(false); 
+        }, 5000);
+    }
+
 
     const ErrorMsg = getErrorMsg(viewAlertDetails?.last_fail_details, MS_TEAMS);
     return (
@@ -122,10 +137,16 @@ const Teams = ({
                     </Col>
                 </Row>
             </div>
-            {teamsEnabled && !projectSettings?.int_teams && (
-                <div className='p-4'>
-                    <Row className={'mt-2 ml-2'}>
-                        <Col span={10} className={'m-0'}>
+            
+            <div>
+            <Row>
+
+               <Col span={12} className={'m-0'}>
+
+               {teamsEnabled && !projectSettings?.int_teams && (
+                <div className='pr-4 p-6'>
+                    <Row className={'m-0'}>
+                        <Col  className={'m-0'}>
                             <Text
                                 type={'title'}
                                 level={6}
@@ -137,23 +158,37 @@ const Teams = ({
                             </Text>
                         </Col>
                     </Row>
-                    <Row className={'mt-2 ml-2'}>
-                        <Col span={10} className={'m-0'}>
+                    <Row className={'mt-2'}>
+                        <Col className={'m-0'}>
                             <Button onClick={onConnectMSTeams}>
                                 <SVG name={'MSTeam'} size={20} />
                                 Connect to Teams
                             </Button>
+
+                            <div className='flex items-center mt-4'>
+                                    <Text
+                                        type={'title'}
+                                        level={7}
+                                        weight={'regular'}
+                                        extraClass={'m-0'}
+                                    >
+                                        Have you conneted with Teams
+                                    </Text>
+                                    <Button ghost type={'link'} loading={loading} onClick={()=>refreshTeamsDetails()} icon={<SVG name={'ArrowRotateRight'} size={16} />} className='fa-button-ghost ml-2'>
+                                        Refresh to check
+                                    </Button>
+                            </div>
+
                         </Col>
                     </Row>
                 </div>
             )}
-            {teamsEnabled && projectSettings?.int_teams && (
-            <div>
-            <Row className='p-6'>
-               <Col span={12} className={'m-0 pr-4'}>
 
+            {teamsEnabled && projectSettings?.int_teams && (<>
+
+                <div className='pr-4 p-6'>
                     {teamsSaveSelectedChannel.length > 0 && (
-                        <div>
+                        <>
                             <Row>
                                 <Col>
                                     <Text
@@ -187,7 +222,8 @@ const Teams = ({
                                     ))}
                                 </Col>
                             </Row>
-                        </div>
+                            </>
+                        
                     )}
                     {!teamsSaveSelectedChannel.length > 0 ? (
                         <Row className={'mt-2 ml-2'}>
@@ -214,10 +250,13 @@ const Teams = ({
                             </Col>
                         </Row>
                     )}
-
+                    </div>
+</>
+)}
                 </Col>
-                <Col span={12} className={'m-0 pl-4'}>
-                                <div className='flex w-full justify-end'>
+                {teamsEnabled && 
+                <Col span={12} className={'m-0'}>
+                                <div className='pl-4 flex w-full justify-end p-6'>
                                 <PreviewCardTeams
                                     alertMessage={alertMessage}
                                     alertName={alertName}
@@ -226,14 +265,19 @@ const Teams = ({
                                     />
                                 </div>
                             </Col>
+                }
 
 
             </Row>
+
+            {(teamsEnabled && projectSettings?.int_teams) && <>
                 <div className='border-top--thin-2 mt-4 p-4'>
-                            <Button disabled={!teamsSaveSelectedChannel.length > 0} icon={<SVG name={'PaperPlane'} size={16} color='grey' />} ghost onClick={()=>sendTestTeamsMessage()}>Send test message</Button>  
+                            <Button disabled={!teamsSaveSelectedChannel.length > 0} loading={teamsTestMsgLoading} icon={teamsTestMsgTxt ? <SVG name='Checkmark' size={16}  color='grey' /> : <SVG name={'PaperPlane'} size={16} color='grey' />} ghost onClick={()=>sendTestTeamsMessage()}>{ teamsTestMsgLoading ? 'Sending...' : teamsTestMsgTxt ? 'Message sent!' : 'Send test message'}</Button>
                         </div> 
+            </>}
+
             </div>
-            )}
+            
         </div>
 
     )

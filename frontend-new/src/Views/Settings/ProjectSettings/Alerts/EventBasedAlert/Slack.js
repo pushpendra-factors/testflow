@@ -49,10 +49,13 @@ const Slack = ({
     groupBy,
     fetchSlackDetails,
     matchEventName,
+    slackTestMsgLoading,
+    slackTestMsgTxt
 }) => {
 
     const [form] = Form.useForm();
     const [slackUsers, setSlackUsers] = useState([]);
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         if (slack_users) {
@@ -95,6 +98,14 @@ const Slack = ({
     const onMentionChange = (value) => {
         setSelectedMentions(value);
     }; 
+
+    const refreshSlackDetails = () => {
+        setLoading(true);
+        fetchSlackDetails();
+        setTimeout(() => {
+            setLoading(false); 
+        }, 5000);
+    }
 
     const ErrorMsg = getErrorMsg(viewAlertDetails?.last_fail_details, SLACK);
     return (
@@ -167,10 +178,15 @@ const Slack = ({
                     </Col>
                 </Row>
             </div>
-            {slackEnabled && !projectSettings?.int_slack && (
-                <div className='p-4'>
-                    <Row className={'mt-2 ml-2'}>
-                        <Col span={10} className={'m-0'}>
+            
+                <div>
+                        <Row className='p-6'>
+                            <Col span={12} className='pr-4'>
+
+                            {slackEnabled && !projectSettings?.int_slack && (
+                <>
+                    <Row className={'m-0'}>
+                        <Col  className={'m-0'}>
                             <Text
                                 type={'title'}
                                 level={6}
@@ -192,20 +208,19 @@ const Slack = ({
                                         weight={'regular'}
                                         extraClass={'m-0'}
                                     >
-                                        Have you conneted with slack
+                                        Have you conneted with Slack
                                     </Text>
-                                    <Button ghost onClick={()=>fetchSlackDetails()} icon={<SVG name={'ArrowRotateRight'} size={16} />} className='ml-2'>
+                                    <Button ghost type={'link'} loading={loading} onClick={()=>refreshSlackDetails()} icon={<SVG name={'ArrowRotateRight'} size={16} />} className='fa-button-ghost ml-2'>
                                         Refresh to check
                                     </Button>
                             </div>
                         </Col>
                     </Row>
-                </div>
+                </>
             )}
-            {slackEnabled && projectSettings?.int_slack && (
-                <div>
-                        <Row className='p-6'>
-                            <Col span={12} className='pr-4'>
+
+                        {slackEnabled && projectSettings?.int_slack && (
+                <>
 
                                 <Text
                                     type={'title'}
@@ -261,7 +276,7 @@ const Slack = ({
                                     </div>
                                 )}
 
-{slackUsers?.length>0 ? <>
+                        {slackUsers?.length>0 ? <>
                                 <div className={'mt-6 ml-2'}>
                                     <Text
                                         type={'title'}
@@ -321,7 +336,7 @@ const Slack = ({
                                     >
                                         Have you reintegrated?
                                     </Text>
-                                    <Button ghost onClick={()=>fetchSlackDetails()} icon={<SVG name={'ArrowRotateRight'} size={16} />} className='ml-2'>
+                                    <Button ghost type={'link'} loading={loading} onClick={()=>refreshSlackDetails()} icon={<SVG name={'ArrowRotateRight'} size={16} />} className='fa-button-ghost ml-2'>
                                         Refresh to check
                                     </Button>
                             </div>
@@ -330,9 +345,11 @@ const Slack = ({
                                 
                                 }
                                 
-
+</>
+                                )}
                             </Col>
 
+                            {slackEnabled && (
                             <Col span={12} className={'m-0 pl-4'}>
                                 <div className='flex w-full justify-end'>
 
@@ -344,19 +361,20 @@ const Slack = ({
                                     matchEventName={matchEventName}
                                     />
                                 </div>
-                            </Col>
+                            </Col>)}
 
                             
 
 
                         </Row>
 
+                        {(slackEnabled && projectSettings?.int_slack) &&
                     <div className='border-top--thin-2 mt-4 p-4'>
-                            <Button disabled={!saveSelectedChannel.length > 0} icon={<SVG name={'PaperPlane'} size={16} color='grey' />} ghost onClick={()=>sendTestSlackMessage()}>Send test message</Button>  
-                        </div> 
+                            <Button disabled={!saveSelectedChannel.length > 0} loading={slackTestMsgLoading} icon={slackTestMsgTxt ?  <SVG name='Checkmark' size={16}  color='grey' /> : <SVG name={'PaperPlane'} size={16} color='grey' />} ghost onClick={()=>sendTestSlackMessage()}>{ slackTestMsgLoading ? 'Sending...' : slackTestMsgTxt ? 'Message sent!' : 'Send test message'}</Button>  
+                        </div> }
 
                 </div>
-            )}
+            
         </div>
     )
 }

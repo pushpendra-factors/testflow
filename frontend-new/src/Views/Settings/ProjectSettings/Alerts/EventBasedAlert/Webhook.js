@@ -59,6 +59,8 @@ const Webhook = ({
     hideTestMessageBtn,
     alertMessage,
     alertName,
+    WHTestMsgTxt,
+    WHTestMsgLoading
 }) => {
 
 // Webhook support
@@ -169,7 +171,7 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
                         <Col span={12} className={'m-0'}>
 
 
-                    <Row className={'mt-2 ml-2'}>
+                    <Row>
                         <Col span={12} className={'m-0'}>
                             <Text
                                 type={'title'}
@@ -181,7 +183,7 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
                             </Text>
                         </Col>
                     </Row>
-                    <Row className={'mt-1 ml-2'}>
+                    <Row className={'mt-1'}>
                         <Col span={16}>
                             <Input
                                 className='fa-input'
@@ -208,7 +210,7 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
                                 }}
                             ></Input>
                         </Col>
-                        <Col span={6} className={'m-0 ml-2'}>
+                        <Col span={6} className={'m-0'}>
                             {!confirmedMessageBtn && !showEditBtn ? (
                                 <Button
                                     type='link'
@@ -255,7 +257,7 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
                         </Col>
                     </Row>
                     {hideTestMessageBtn && (
-                        <Row className={'mt-2 ml-2'}>
+                        <Row className={'mt-2'}>
                             <Col span={24} className={'m-0'}>
                                 {testMessageResponse ? (
                                     <div>
@@ -324,7 +326,7 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
                             </Col>
                         </Row>
                     )}
-                    <Row className='mt-3 ml-2'>
+                    <Row className='mt-3'>
                         <Col>
                             <Text
                                 type='paragraph'
@@ -355,8 +357,8 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
 
                 </Row>
 
-                <div className='border-top--thin-2 mt-4 p-4'>
-                            <Button disabled={!webhookUrl.length > 0} icon={<SVG name={'PaperPlane'} size={16} color='grey' />} ghost onClick={()=>handleTestWebhook()}>Send test message</Button>  
+                <div className='border-top--thin-2 mt-4 p-4'> 
+                            <Button disabled={!webhookUrl.length > 0} loading={WHTestMsgLoading} icon={WHTestMsgTxt ?  <SVG name='Checkmark' size={16}  color='grey' /> : <SVG name={'PaperPlane'} size={16} color='grey' />} ghost onClick={()=>handleTestWebhook()}>{ WHTestMsgLoading ? 'Sending...' : WHTestMsgTxt ? 'Message sent!' : 'Send test message'}</Button>  
                         </div> 
                 </div>
             )}
