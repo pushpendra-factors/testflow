@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -163,11 +164,26 @@ func (store *MemSQL) UpdateSlackUsersListForProject(projectID int64, fields map[
 	if fields["agent_id"] == nil || fields["users_list"] == nil {
 		return http.StatusBadRequest, fmt.Errorf("invalid fields provided for updation")
 	}
-	fields["last_sync_time"] = time.Now().Unix()
+	currTime := time.Now()
+	fields["last_sync_time"] = currTime
 
 	db := C.GetServices().Db
 	err := db.Model(&model.SlackUsersList{}).Where("project_id = ?", projectID).Updates(fields).Error
 	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			obj := model.SlackUsersList{
+				ProjectID:    projectID,
+				AgentID:      fields["agent_id"].(string),
+				UsersList:    fields["users_list"].(*postgres.Jsonb),
+				LastSyncTime: currTime,
+			}
+			err := db.Create(&obj).Error
+			if err != nil {
+				log.WithFields(logFields).WithError(err).Error("failed to create slack users list entity in table")
+				return http.StatusInternalServerError, err
+			}
+			return http.StatusOK, nil
+		}
 		log.WithFields(logFields).WithError(err).Error("failed to update slack users list table")
 		return http.StatusInternalServerError, err
 	}
