@@ -264,7 +264,7 @@ func GetSlackUsersListHandler(c *gin.Context) {
 	//Sending only human users to the UI
 	humanUsers := make([]model.SlackMember, 0)
 	for _, user := range users {
-		if !user.IsBot || !strings.Contains(user.Name, "slackbot") {
+		if !user.IsBot && !strings.Contains(user.Name, "slackbot") {
 			humanUsers = append(humanUsers, user)
 		}
 	}
