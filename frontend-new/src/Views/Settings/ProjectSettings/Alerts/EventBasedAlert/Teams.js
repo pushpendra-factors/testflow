@@ -187,24 +187,26 @@ const Teams = ({
             {teamsEnabled && projectSettings?.int_teams && (<>
 
                 <div className='pr-4 p-6'>
-                    {teamsSaveSelectedChannel.length > 0 && (
-                        <>
+                    
                             <Row>
                                 <Col>
                                     <Text
                                         type={'title'}
                                         level={7}
                                         weight={'regular'}
-                                        extraClass={'m-0 mt-2 ml-2'}
+                                        extraClass={'m-0 mt-2'}
                                     >
-                                        {teamsSaveSelectedChannel.length > 1
-                                            ? `Selected channels from the "${selectedWorkspace?.name}"`
-                                            : `Selected channels from the "${selectedWorkspace?.name}"`}
+                                        {teamsSaveSelectedChannel?.length > 1
+                                            ? `Selected channels from "${selectedWorkspace?.name}"`
+                                            : teamsSaveSelectedChannel?.length == 0 ? `Select Channel` : `Selected channel from "${selectedWorkspace?.name}"`}
+                                    
                                     </Text>
                                 </Col>
                             </Row>
+
+                        {teamsSaveSelectedChannel.length > 0 && (
                             <Row
-                                className={'rounded border border-gray-200 ml-2'}
+                                className={'rounded border border-gray-200'}
                                 style={{'width':'375px'}}
                             >
                                 <Col className={'m-0'}>
@@ -222,14 +224,15 @@ const Teams = ({
                                     ))}
                                 </Col>
                             </Row>
-                            </>
                         
-                    )}
+                        )}
                     {!teamsSaveSelectedChannel.length > 0 ? (
-                        <Row className={'mt-2 ml-2'}>
+                        <Row className={'mt-2'}>
                             <Col span={10} className={'m-0'}>
                                 <Button
                                     type={'link'}
+                                    ghost
+                                    className='fa-button-ghost'
                                     onClick={() => setTeamsShowSelectChannelsModal(true)}
                                 >
                                     Select Channel
@@ -237,10 +240,12 @@ const Teams = ({
                             </Col>
                         </Row>
                     ) : (
-                        <Row className={'mt-2 ml-2'}>
+                        <Row className={'mt-2'}>
                             <Col span={10} className={'m-0'}>
                                 <Button
                                     type={'link'}
+                                    ghost
+                                    className='fa-button-ghost'
                                     onClick={() => setTeamsShowSelectChannelsModal(true)}
                                 >
                                     {teamsSaveSelectedChannel.length > 1

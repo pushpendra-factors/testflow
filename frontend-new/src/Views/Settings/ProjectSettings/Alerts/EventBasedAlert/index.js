@@ -741,6 +741,18 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
     }) 
     return slackUserList
   }
+
+  const updatepayloadDisplayNames = (payload) =>{
+    if(payload){
+      let newObj = {}
+      Object?.keys(payload)?.map((item)=>{
+        let newKey = matchEventName(item);
+        newObj[newKey] = payload[item]
+      })
+    return newObj 
+    }
+    else return {}
+  }
  
   const sendTestSlackMessage = () =>{
     let payload = {
@@ -748,7 +760,7 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
       event_level: activeGrpBtn == 'events' ? 'account' : 'user',
       event: queries[0]?.label,
       message: alertMessage,
-      message_property: getMsgPayloadMapping(groupBy),
+      message_property: updatepayloadDisplayNames(getMsgPayloadMapping(groupBy)),
       slack: slackEnabled,
       slack_channels: saveSelectedChannel,
       slack_mentions: getSlackProfileDetails(selectedMentions),
@@ -774,7 +786,7 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
       event_level: activeGrpBtn == 'events' ? 'account' : 'user',
       event: queries[0]?.label,
       message: alertMessage,
-      message_property: getMsgPayloadMapping(groupBy),
+      message_property: updatepayloadDisplayNames(getMsgPayloadMapping(groupBy)),
       teams: teamsEnabled,
       teams: teamsEnabled,
       teams_channels_config: {
@@ -1981,7 +1993,7 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
         cancelButtonProps={{ size: 'large' }}
       >
         <div>
-          <Row gutter={[24, 24]} justify='center'>
+          <Row>
             <Col span={22}>
               <Text
                 type={'title'}

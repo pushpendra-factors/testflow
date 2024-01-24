@@ -12,7 +12,7 @@ export const getMsgPayloadMapping = (groupBy) => {
     if (groupBy && groupBy.length && groupBy[0] && groupBy[0].property){
         var obj = {}
         groupBy.map((item)=>{
-             obj[item.property] = `{{$${item.property}}}`
+             obj[item.property] = `{${item.property}}`
         })
         return obj
     }

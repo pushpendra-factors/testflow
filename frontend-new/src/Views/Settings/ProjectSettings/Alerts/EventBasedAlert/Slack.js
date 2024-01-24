@@ -180,13 +180,13 @@ const Slack = ({
             </div>
             
                 <div>
-                        <Row className='p-6'>
-                            <Col span={12} className='pr-4'>
+                        <Row>
+                            <Col span={12}>
 
                             {slackEnabled && !projectSettings?.int_slack && (
                 <>
-                    <Row className={'m-0'}>
-                        <Col  className={'m-0'}>
+                    <Row className={'m-0 p-6'}>
+                        <Col  className='pr-4'>
                             <Text
                                 type={'title'}
                                 level={6}
@@ -220,13 +220,13 @@ const Slack = ({
             )}
 
                         {slackEnabled && projectSettings?.int_slack && (
-                <>
+                <div className={'m-0 p-6'}>
 
                                 <Text
                                     type={'title'}
                                     level={7}
                                     weight={'regular'}
-                                    extraClass={'m-0 mt-2 ml-2'}
+                                    extraClass={'m-0 mt-2'}
                                 >
                                     {saveSelectedChannel.length > 1
                                         ? 'Selected Channels'
@@ -234,7 +234,7 @@ const Slack = ({
                                 </Text>
                                 {saveSelectedChannel.length > 0 && (
                                     <div
-                                        className={'rounded border border-gray-200 ml-2'}
+                                        className={'rounded border border-gray-200'}
                                         style={{'width':'375px'}}
                                     >
                                         <div className={'m-0'}>
@@ -255,18 +255,22 @@ const Slack = ({
                                 )}
 
                                 {!saveSelectedChannel.length > 0 ? (
-                                    <div className={'mt-2 ml-2'}>
+                                    <div className={'mt-2'}>
                                         <Button
                                             type={'link'}
+                                            ghost
+                                            className='fa-button-ghost'
                                             onClick={() => setShowSelectChannelsModal(true)}
                                         >
                                             Select Channel
                                         </Button>
                                     </div>
                                 ) : (
-                                    <div className={'mt-2 ml-2'}>
+                                    <div className={'mt-2'}>
                                         <Button
                                             type={'link'}
+                                            ghost
+                                            className='fa-button-ghost'
                                             onClick={() => setShowSelectChannelsModal(true)}
                                         >
                                             {saveSelectedChannel.length > 1
@@ -277,12 +281,12 @@ const Slack = ({
                                 )}
 
                         {slackUsers?.length>0 ? <>
-                                <div className={'mt-6 ml-2'}>
+                                <div className={'mt-6'}>
                                     <Text
                                         type={'title'}
                                         level={7}
                                         weight={'regular'}
-                                        extraClass={'m-0 mt-2 ml-2'}
+                                        extraClass={'m-0 mt-2'}
                                     >
                                         Mentions
                                     </Text>
@@ -308,7 +312,7 @@ const Slack = ({
                                             weight={'regular'}
                                             extraClass={'m-0 ml-1'}
                                         >
-                                            Adding mentions for users will send them a notification for every alert. Tag responsibly :)
+                                            The mentioned user will be tagged in all alerts that are sent with these settings.
                                         </Text>
                                     </div>
 
@@ -316,12 +320,12 @@ const Slack = ({
                                 </div>
                                 </> : <>
                                 
-                                <div className={'mt-6 ml-2'}>
+                                <div className={'mt-6'}>
                                     <Text
                                         type={'title'}
                                         level={7}
                                         weight={'regular'}
-                                        extraClass={'m-0 mt-2 ml-2'}
+                                        extraClass={'m-0 mt-2'}
                                     >
                                         Your current Slack integration doesn’t have mentions. Simply reintegrate Slack with Factors to mention users in alerts.
                                     </Text>
@@ -345,12 +349,12 @@ const Slack = ({
                                 
                                 }
                                 
-</>
+                </div>
                                 )}
                             </Col>
 
                             {slackEnabled && (
-                            <Col span={12} className={'m-0 pl-4'}>
+                            <Col span={12} className={'m-0 pl-4 p-6'}>
                                 <div className='flex w-full justify-end'>
 
                                 <PreviewCardSlack 
