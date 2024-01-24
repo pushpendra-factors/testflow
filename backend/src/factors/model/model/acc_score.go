@@ -211,18 +211,18 @@ func GetDefaultAccScoringWeights() AccWeights {
 	weights.SaleWindow = 10
 	default_version := 0
 
-	event_a = AccEventWeight{EventName: "$session", Weight_value: 10, Is_deleted: false,
+	event_a = AccEventWeight{FilterName: "Website Session 1", EventName: "$session", Weight_value: 10, Is_deleted: false,
 		Version: 1}
 
 	keyvals := []string{"Paid search"}
 	filterPRoperties := WeightKeyValueTuple{Key: "$channel", Value: keyvals, Operator: EqualsOpStr,
 		LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}
-	event_b = AccEventWeight{EventName: "$session", Weight_value: 20, Is_deleted: false,
+
+	event_b = AccEventWeight{FilterName: "Website Session 2", EventName: "$session", Weight_value: 20, Is_deleted: false,
 		Rule: []WeightKeyValueTuple{filterPRoperties}, Version: 1}
 
-	event_c = AccEventWeight{EventName: "$form_submitted", Weight_value: 40, Is_deleted: false,
+	event_c = AccEventWeight{FilterName: "Form Submitted", EventName: "$form_submitted", Weight_value: 40, Is_deleted: false,
 		Version: 1}
-
 	keyvals = []string{"true"}
 	filterPRoperties = WeightKeyValueTuple{Key: "$is_page_view",
 		Value:      keyvals,
@@ -230,12 +230,13 @@ func GetDefaultAccScoringWeights() AccWeights {
 		LowerBound: 0, UpperBound: 0,
 		Type:      "event",
 		ValueType: "categorical"}
-	event_d := AccEventWeight{EventName: "all_events", Weight_value: 2, Is_deleted: false,
+
+	event_d := AccEventWeight{FilterName: "All events", EventName: "all_events", Weight_value: 2, Is_deleted: false,
 		Rule: []WeightKeyValueTuple{filterPRoperties}, Version: default_version}
 
-	event_e := AccEventWeight{EventName: "$linkedin_clicked_ad", Weight_value: 2, Is_deleted: false, Version: default_version}
-	event_f := AccEventWeight{EventName: "$linkedin_viewed_ad", Weight_value: 1, Is_deleted: false, Version: default_version}
-	event_g := AccEventWeight{EventName: "$form_fill", Weight_value: 20, Is_deleted: false, Version: default_version}
+	event_e := AccEventWeight{FilterName: "Linkedin ad clicked", EventName: "$linkedin_clicked_ad", Weight_value: 2, Is_deleted: false, Version: default_version}
+	event_f := AccEventWeight{FilterName: "Linkedin ad viewed", EventName: "$linkedin_viewed_ad", Weight_value: 1, Is_deleted: false, Version: default_version}
+	event_g := AccEventWeight{FilterName: "Form fill", EventName: "$form_fill", Weight_value: 20, Is_deleted: false, Version: default_version}
 
 	weights.WeightConfig = append(weights.WeightConfig, event_a)
 	weights.WeightConfig = append(weights.WeightConfig, event_b)
