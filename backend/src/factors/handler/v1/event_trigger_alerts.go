@@ -437,7 +437,7 @@ func SlackTestforEventTriggerAlerts(c *gin.Context) (interface{}, int, string, s
 	for prop, value := range messageProperties {
 		payload[fmt.Sprintf("%d", i)] = model.MessagePropMapStruct{
 			DisplayName: prop,
-			PropValue: value,
+			PropValue:   value,
 		}
 		i++
 	}
@@ -468,7 +468,7 @@ func SlackTestforEventTriggerAlerts(c *gin.Context) (interface{}, int, string, s
 	}
 
 	var blockMessage, slackMentionStr string
-	if slackMentions != nil {
+	if slackMentions != nil || alert.SlackFieldsTag != nil {
 		slackMentionStr = model.GetSlackMentionsStr(slackMentions, alert.SlackFieldsTag)
 	}
 	if !alert.IsHyperlinkDisabled {
@@ -548,7 +548,7 @@ func TeamsTestforEventTriggerAlerts(c *gin.Context) (interface{}, int, string, s
 	for prop, value := range messageProperties {
 		payload[fmt.Sprintf("%d", i)] = model.MessagePropMapStruct{
 			DisplayName: prop,
-			PropValue: value,
+			PropValue:   value,
 		}
 		i++
 	}
