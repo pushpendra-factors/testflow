@@ -479,16 +479,12 @@ func getPropBlocksForTeams(propMap U.PropertiesMap) string {
 			i++
 			var mp1 MessagePropMapStruct
 			if pp1 != nil {
-				trans, ok := pp1.(map[string]interface{})
+				trans, ok := pp1.(MessagePropMapStruct)
 				if !ok {
 					log.Warn("cannot convert interface to map[string]interface{} type")
 					continue
 				}
-				err := U.DecodeInterfaceMapToStructType(trans, &mp1)
-				if err != nil {
-					log.Warn("cannot convert interface map to struct type")
-					continue
-				}
+				mp1 = trans
 			}
 			key1 = mp1.DisplayName
 			prop1 = mp1.PropValue
@@ -501,16 +497,12 @@ func getPropBlocksForTeams(propMap U.PropertiesMap) string {
 			i++
 			var mp2 MessagePropMapStruct
 			if pp2 != nil {
-				trans, ok := pp2.(map[string]interface{})
+				trans, ok := pp2.(MessagePropMapStruct)
 				if !ok {
 					log.Warn("cannot convert interface to map[string]interface{} type")
 					continue
 				}
-				err := U.DecodeInterfaceMapToStructType(trans, &mp2)
-				if err != nil {
-					log.Warn("cannot convert interface map to struct type")
-					continue
-				}
+				mp2 = trans
 			}
 			key2 = mp2.DisplayName
 			prop2 = mp2.PropValue
