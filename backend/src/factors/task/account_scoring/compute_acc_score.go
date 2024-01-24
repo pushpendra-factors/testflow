@@ -440,7 +440,7 @@ func WriteUserCountsAndRangesToDB(projectId int64, startTime int64, prevcountsof
 	}
 
 	// get all groups last event
-	groupsLastEvent, groupAllEvents, err := UpdateLastEventsDay(updatedGroupsCopy, startTime, salewindow)
+	groupsLastEvent, groupAllEvents, err := UpdateLastEventsDay(updatedGroupsCopy, startTime, weights, salewindow)
 	if err != nil {
 		e := fmt.Errorf("unable to update last event for groups")
 		return nil, e
@@ -514,7 +514,7 @@ func updateEventChannel(user *AggEventsOnUserAndGroup, event *P.CounterEventForm
 }
 
 func UpdateLastEventsDay(prevCountsOfUser map[string]map[string]M.LatestScore,
-	currentTS int64, saleWindow int64) (map[string]M.LatestScore, map[string]M.LatestScore, error) {
+	currentTS int64, weigths M.AccWeights, saleWindow int64) (map[string]M.LatestScore, map[string]M.LatestScore, error) {
 
 	updatedLastScore := make(map[string]M.LatestScore, 0)
 	updatedAllEventsScore := make(map[string]M.LatestScore, 0)
@@ -583,7 +583,7 @@ func UpdateLastEventsDay(prevCountsOfUser map[string]map[string]M.LatestScore,
 
 		//take top k events contribution to score
 		// using undecayed counts
-		topEventsOnScore := GetTopkEventsOnCounts(eventsCountWithoutDecay, TAKETOPK)
+		topEventsOnScore := GetTopkEventsOnCounts(eventsCountWithoutDecay, weigths, TAKETOPK)
 
 		currentDateTS := U.GetDateFromString(currentDate)
 		lastevent.Date = currentDateTS
@@ -703,7 +703,7 @@ func ComputeScoreRanges(projectId int64, currentTime int64, lookback int64,
 			}
 		}
 		log.Infof("date : %s number of updated users : %d", date, len(updatedUsers))
-		lastEventScores, _, err := UpdateLastEventsDay(updatedUsers, ts, saleWindow)
+		lastEventScores, _, err := UpdateLastEventsDay(updatedUsers, ts, weights, saleWindow)
 		if err != nil {
 			log.WithField("prjoectID", projectId).Error("Unable to compute last event scores")
 		}
@@ -809,7 +809,20 @@ func GetEngagementLevelOnUser(projectId int64, event model.LatestScore, userId s
 	return engagementLevel
 }
 
-func GetTopkEventsOnCounts(events map[string]float64, topK int) map[string]float64 {
+func GetTopkEventsOnCounts(events map[string]float64, weigths M.AccWeights, topK int) map[string]float64 {
+
+	var eventsDeleted map[string]bool = make(map[string]bool)
+	for _, w := range weigths.WeightConfig {
+		if w.Is_deleted {
+			eventsDeleted[w.WeightId] = true
+		}
+	}
+	for evKey, _ := range events {
+		if _, ok := eventsDeleted[evKey]; ok {
+			delete(events, evKey)
+		}
+	}
+
 	// if num events less than topk return events
 	if len(events) <= topK {
 		return events
