@@ -38,7 +38,8 @@ type Model interface {
 	UpdateAgentPassword(uuid, plainTextPassword string, passUpdatedAt time.Time) int
 	UpdateAgentLastLoginInfo(agentUUID string, ts time.Time) int
 	UpdateAgentInformation(agentUUID, firstName, lastName, phone string, isOnboardingFlowSeen *bool, isFormFilled *bool) int
-	UpdateAgentVerificationDetails(agentUUID, password, firstName, lastName string, verified bool, passUpdatedAt time.Time) int
+	UpdateAgentVerificationDetails(agentUUID, password, firstName,
+		lastName string, phone string, verified bool, passUpdatedAt time.Time) int
 	UpdateAgentVerificationDetailsFromAuth0(agentUUID, firstName, lastName string, verified bool, value *postgres.Jsonb) int
 	UpdateAgentEmailVerificationDetails(agentUUID string, isVerfied bool) int
 	GetPrimaryAgentOfProject(projectId int64) (uuid string, errCode int)
