@@ -708,7 +708,7 @@ func AgentActivate(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid character"})
 		return
 	}
-	errCode := store.GetStore().UpdateAgentVerificationDetails(agentUUID, params.Password, params.FirstName, params.LastName, true, ts)
+	errCode := store.GetStore().UpdateAgentVerificationDetails(agentUUID, params.Password, params.FirstName, params.LastName, params.Phone, true, ts)
 	if errCode == http.StatusInternalServerError {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return

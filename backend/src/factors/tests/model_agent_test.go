@@ -192,8 +192,9 @@ func TestDBAgentUpdateAgentVerificationDetails(t *testing.T) {
 		firstName := U.RandomLowerAphaNumString(8)
 		lastName := U.RandomLowerAphaNumString(8)
 		password := U.RandomLowerAphaNumString(8)
+		phone := "+918822664422"
 		ts := time.Now().UTC()
-		errCode := store.GetStore().UpdateAgentVerificationDetails(agentUUID, password, firstName, lastName, true, ts)
+		errCode := store.GetStore().UpdateAgentVerificationDetails(agentUUID, password, firstName, lastName, phone, true, ts)
 		assert.Equal(t, http.StatusNoContent, errCode)
 	})
 	t.Run("Success", func(t *testing.T) {
@@ -207,8 +208,9 @@ func TestDBAgentUpdateAgentVerificationDetails(t *testing.T) {
 		firstName := U.RandomLowerAphaNumString(8)
 		lastName := U.RandomLowerAphaNumString(8)
 		password := U.RandomLowerAphaNumString(8)
+		phone := "+918866442200"
 		ts := time.Now().UTC()
-		errCode = store.GetStore().UpdateAgentVerificationDetails(agent.UUID, password, firstName, lastName, true, ts)
+		errCode = store.GetStore().UpdateAgentVerificationDetails(agent.UUID, password, firstName, lastName,phone, true, ts)
 		assert.Equal(t, http.StatusAccepted, errCode)
 
 		updatedAgent, errCode := store.GetStore().GetAgentByEmail(email)
