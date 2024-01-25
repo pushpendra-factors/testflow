@@ -186,16 +186,13 @@
       border-color: $fa-color--brand-color !important;
     }
   }
+}
 
   //Icon Alignment correction
   .anticon {
-    vertical-align: 0;
+    vertical-align: 0 !important;
+    
   }
-  // &.ant-btn-icon-only{
-  //     height: auto;
-  //     width: auto;
-  // }
-}
 
 //commenting this because it breaks entire antd-large buttons.
 // please use specific button-class if truncation is needed ++ Akhil

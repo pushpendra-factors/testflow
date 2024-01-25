@@ -24,6 +24,7 @@ import {
     Menu,
     Dropdown,
     Tag,
+    Skeleton
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import {PreviewCardSlack} from './PreviewCard';
@@ -50,7 +51,8 @@ const Slack = ({
     fetchSlackDetails,
     matchEventName,
     slackTestMsgLoading,
-    slackTestMsgTxt
+    slackTestMsgTxt,
+    slackMentionLoading
 }) => {
 
     const [form] = Form.useForm();
@@ -105,6 +107,16 @@ const Slack = ({
         setTimeout(() => {
             setLoading(false); 
         }, 5000);
+    }
+
+    const MentionsLoader = () =>{
+        return (
+            <>
+             <div className={'mt-8'}>
+                <Skeleton active paragraph={{ rows: 4 }}  />
+             </div>
+            </>
+        )
     }
 
     const ErrorMsg = getErrorMsg(viewAlertDetails?.last_fail_details, SLACK);
@@ -279,7 +291,7 @@ const Slack = ({
                                         </Button>
                                     </div>
                                 )}
-
+                    { !slackMentionLoading ? <>
                         {slackUsers?.length>0 ? <>
                                 <div className={'mt-6'}>
                                     <Text
@@ -305,12 +317,13 @@ const Slack = ({
                                         />
 
                                     </div>
-                                    <div className='mt-10 flex' style={{'width':'375px'}}>
+                                    <div className='mt-2 flex' style={{'width':'375px'}}>
                                         <SVG name={'InfoCircle'} size={24} color={'grey'} /> 
                                         <Text
                                             type={'title'}
                                             level={7}
-                                            weight={'regular'}
+                                            weight={'thin'}
+                                            color={'grey'}
                                             extraClass={'m-0 ml-1'}
                                         >
                                             The mentioned user will be tagged in all alerts that are sent with these settings.
@@ -349,6 +362,7 @@ const Slack = ({
                                 </>
                                 
                                 }
+                                </> : <MentionsLoader />}
                                 
                 </div>
                                 )}
