@@ -256,8 +256,12 @@ function AppLayout({
                 value: agentInfo?.lastName || ''
               },
               {
-                name: 'invited_user_',
+                name: 'invited_user',
                 value: agentInfo?.isAgentInvited ? true : false
+              },
+              {
+                name: 'phone',
+                value: agentInfo?.phone
               }
             ]
           );
