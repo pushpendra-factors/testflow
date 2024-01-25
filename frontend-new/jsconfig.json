@@ -16,7 +16,8 @@
       "Constants/*": ["./src/constants/*"],
       "Routes/*": ["./src/routes/*"],
       "HOC/*": ["./src/HOC/*"],
-      "Onboarding": ["./src/features/onboarding/*"]
+      "Onboarding": ["./src/features/onboarding/*"],
+      "Types": ["./src/types/*"]
     }
   },
   "exclude": ["node_modules", "dist"]

@@ -783,8 +783,18 @@ const GlobalSearch = () => {
 
   const openSavedReports = (query) => {
     dispatch({ type: TOGGLE_GLOBAL_SEARCH });
+
+    let analyseQueryParamsPath = '/analyse';
+    if (query?.query?.query_group?.[0]?.cl === 'events') {
+      analyseQueryParamsPath =
+        analyseQueryParamsPath + '/events/' + query.id_text;
+    } else if (query?.query?.cl === 'funnel') {
+      analyseQueryParamsPath =
+        analyseQueryParamsPath + '/funnel/' + query.id_text;
+    }
+
     history.push({
-      pathname: '/analyse',
+      pathname: analyseQueryParamsPath,
       state: { query, global_search: true, navigatedFromDashboard: query }
     });
   };
