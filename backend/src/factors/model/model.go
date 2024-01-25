@@ -348,6 +348,7 @@ type Model interface {
 	GetLinkedinEventFieldsBasedOnTimestamp(projectID int64, timestamp int64,
 		imprEventNameID string, clicksEventNameID string) (map[int64]map[string]map[string]bool,
 		map[int64]map[string]map[string]bool, error)
+	AddEventDetailsToCacheWithTime(projectID int64, event *model.Event, isUpdateEventProperty bool, currentTime time.Time)
 
 	// clickable_elements
 	UpsertCountAndCheckEnabledClickableElement(projectID int64, payload *model.CaptureClickPayload) (isEnabled bool, status int, err error)

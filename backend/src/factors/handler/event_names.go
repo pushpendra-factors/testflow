@@ -204,10 +204,7 @@ func GetEventNamesHandler(c *gin.Context) {
 		eventNameStrings = append(eventNameStrings, fNames...)
 	}
 
-	// TODO: Janani Removing the IsExact property from output since its anyway backward compat with UI
-	// Will remove exact/approx logic in UI as well
 	c.JSON(http.StatusOK, gin.H{"event_names": eventNameStrings})
-
 }
 
 type EventNamesByUserResponsePayload struct {
