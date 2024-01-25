@@ -292,8 +292,8 @@ const Slack = ({
                                     </Text>
                                     <div className='mr-4'>
                                         <Select
+                                            allowClear
                                             mode="multiple"
-                                            showArrow
                                             tagRender={tagRender}
                                             onChange={onMentionChange}
                                             size='large'
@@ -301,11 +301,12 @@ const Slack = ({
                                             className={'fa-select'}
                                             value={selectedMentions}
                                             style={{'width':'375px'}}
+                                            optionFilterProp="label"
                                         />
 
                                     </div>
                                     <div className='mt-10 flex' style={{'width':'375px'}}>
-                                        <SVG name={'InfoCircle'} size={24} color='#FAAD14' /> 
+                                        <SVG name={'InfoCircle'} size={24} color={'grey'} /> 
                                         <Text
                                             type={'title'}
                                             level={7}
