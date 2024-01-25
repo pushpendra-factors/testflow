@@ -90,7 +90,7 @@ import { ScrollToTop } from 'Routes/feature';
 import Slack from './Slack';
 import Webhook from './Webhook';
 import Teams from './Teams';
-import {getMsgPayloadMapping} from './../utils';
+import {getMsgPayloadMapping, dummyPayloadValue} from './../utils';
 
 const { Option } = Select;
 
@@ -190,6 +190,7 @@ const EventBasedAlert = ({
   
   const [slackTestMsgLoading, setSlackTestMsgLoading] = useState(false); 
   const [slackTestMsgTxt, setSlackTestMsgTxt] = useState(false); 
+  const [slackMentionLoading, setSlackMentionLoading] = useState(false); 
 
   const [teamsTestMsgLoading, setTeamsTestMsgLoading] = useState(false); 
   const [teamsTestMsgTxt, setTeamsTestMsgTxt] = useState(false);
@@ -224,19 +225,41 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
     history.push(url);
   };
 
-  useEffect(() => {
-    if (!groups || Object.keys(groups).length === 0) {
-      getGroups(activeProject?.id);
+  const fetchGroupProperties = async () => {
+    const missingGroups = Object.keys(groups?.account_groups || {}).filter(
+      (group) => !groupProperties[group]
+    ); 
+    if (missingGroups?.length > 0) {
+      await Promise.allSettled(
+        missingGroups?.forEach((group) =>
+          getGroupProperties(activeProject?.id, group)
+        )
+      );
     }
-  }, [activeProject?.id, groups]);
+  };
 
   useEffect(() => {
-    if (groups && Object.keys(groups).length != 0) {
-      Object.keys(groups?.all_groups).forEach((item) => {
-        getGroupProperties(activeProject.id, item)
-      });
+    fetchGroupProperties();
+  }, [activeProject?.id, groups, groupProperties]);
+
+  
+  const fetchGroups = async () => {
+    if (!groups || Object.keys(groups).length === 0) {
+      await getGroups(activeProject?.id);
     }
-  }, [activeProject.id, groups]);
+  };
+
+  useEffect(() => {
+    fetchGroups();
+  }, [activeProject?.id, groups]);
+
+  // useEffect(() => {
+  //   if (groups && Object.keys(groups).length != 0) {
+  //     Object.keys(groups?.all_groups).forEach((item) => {
+  //       getGroupProperties(activeProject.id, item)
+  //     });
+  //   }
+  // }, [activeProject.id, groups]);
 
   const groupsList = useMemo(() => {
     let listGroups = [];
@@ -747,7 +770,8 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
       let newObj = {}
       Object?.keys(payload)?.map((item)=>{
         let newKey = matchEventName(item);
-        newObj[newKey] = payload[item]
+        let val = dummyPayloadValue[item] || payload[item]
+        newObj[newKey] = val
       })
     return newObj 
     }
@@ -1030,8 +1054,13 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
   const fetchSlackDetails = () => { 
     fetchProjectSettingsV1(activeProject.id);
     if (slackEnabled) {
+      setSlackMentionLoading(true);
       fetchSlackChannels(activeProject.id);
-      fetchSlackUsers(activeProject.id);
+      fetchSlackUsers(activeProject.id).then(()=>{
+        setSlackMentionLoading(false)
+      }).catch(()=>{
+        setSlackMentionLoading(false);
+      });
     }
   }
 
@@ -1626,6 +1655,7 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
             matchEventName={matchEventName}
             slackTestMsgLoading={slackTestMsgLoading}
             slackTestMsgTxt={slackTestMsgTxt}
+            slackMentionLoading={slackMentionLoading}
           />
 
           {/* {showTeamInt && <Teams */}

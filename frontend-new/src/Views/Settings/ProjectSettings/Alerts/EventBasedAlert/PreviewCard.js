@@ -7,7 +7,7 @@ import React, {
   } from 'react';
   import { Text, SVG } from 'factorsComponents';
   import { Tag } from 'antd';
-import { getMsgPayloadMapping} from './../utils';
+import { getMsgPayloadMapping, dummyPayloadValue} from './../utils';
 import ReactJson from 'react-json-view'
 
 export const PreviewCardSlack = ({
@@ -54,13 +54,13 @@ export const PreviewCardSlack = ({
    {groupBy?.length>0 ? payloadProps && Object?.entries(payloadProps).map(([key, value]) => { 
           return (<div className='px-2 py-2 w-1/2'>
               <Text type='title' level={7} weight={'bold'} extraClass='m-0' >{matchEventName(key)}</Text>
-              <Text type='title' level={8} color={'grey'} extraClass='m-0' >{value}</Text>
+              <Text type='title' level={8} color={'grey'} extraClass='m-0' >{dummyPayloadValue[key] ? dummyPayloadValue[key] : value}</Text>
           </div>)
         }) :
         [1,2,3,4].map((item) => { 
             return (<div className='px-2 py-2 w-1/2'>
                 <Text type='title' level={7} weight={'bold'} extraClass='m-0' >{`Property ${item}`}</Text>
-                <Text type='title' level={8} color={'grey'} extraClass='m-0' >{`{Value}`}</Text>
+                <Text type='title' level={8} color={'grey'} extraClass='m-0' >{'${Property Value}'}</Text>
             </div>)
           })
     }
@@ -75,7 +75,7 @@ export const PreviewCardSlack = ({
 
         </div> 
         {/* slack card ends here*/}
-        <Text type='title' level={8} color={'grey'} extraClass='m-0 mt-2' >This is a preview of how your alert will look in Slack</Text>
+        <Text type='title' level={8} color={'grey'} extraClass='m-0 mt-2' >This is a preview of how your alert will look in Slack, using dummy data.</Text>
         </div>
 
     )
@@ -122,13 +122,13 @@ export const PreviewCardTeams = ({
    {groupBy?.length>0 ? payloadProps && Object?.entries(payloadProps).map(([key, value]) => { 
           return (<div className='flex items-center w-full justify-between flex-wrap mt-2'>
               <Text type='title' level={7} color={'grey'}  extraClass='m-0' >{matchEventName(key)}</Text>
-              <Text type='title' level={7} extraClass='m-0' >{value}</Text>
+              <Text type='title' level={7} extraClass='m-0' >{dummyPayloadValue[key] ? dummyPayloadValue[key] : value}</Text>
           </div>)
         }) :
         [1,2,3,4].map((item) => { 
             return (<div className='flex items-center w-full justify-between'>
               <Text type='title' level={7} color={'grey'}  extraClass='m-0 mt-1' >{`Property ${item}`}</Text>
-              <Text type='title' level={7} extraClass='m-0' >{`{Value}`}</Text>
+              <Text type='title' level={7} extraClass='m-0' >{'${Property Value}'}</Text>
           </div>)
           })
     }
@@ -142,7 +142,7 @@ export const PreviewCardTeams = ({
 
         </div> 
         {/* teams card ends here*/}
-            <Text type='title' level={8} color={'grey'} extraClass='m-0 mt-2' >This is a preview of how your alert will look in Teams</Text>
+            <Text type='title' level={8} color={'grey'} extraClass='m-0 mt-2' >This is a preview of how your alert will look in Teams, using dummy data.</Text>
         </div>
     )
 }
