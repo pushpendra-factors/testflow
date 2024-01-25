@@ -80,6 +80,7 @@ func main() {
 	teamsAppClientSecret := flag.String("teams_app_client_secret", "", "")
 	teamsApplicationID := flag.String("teams_application_id", "", "")
 	enableFeatureGatesV2 := flag.Bool("enable_feature_gates_v2", false, "")
+	appDomain := flag.String("app_domain", "factors-dev.com:3000", "")
 	// blacklistedAlerts := flag.String("blacklisted_alerts", "", "")
 
 	flag.Parse()
@@ -116,6 +117,7 @@ func main() {
 		TeamsAppClientSecret: *teamsAppClientSecret,
 		TeamsApplicationID:   *teamsApplicationID,
 		EnableFeatureGatesV2: *enableFeatureGatesV2,
+		APPDomain:            *appDomain,
 	}
 	defaultHealthcheckPingID := C.HealthcheckEventTriggerAlertPingID
 	highPriorityHealthCheckPingID := C.HealthcheckEventTriggerAlertForHighPriorityPingID
