@@ -211,14 +211,14 @@ func getDefaultAllAccountProperties(projectId int64) map[string][]string {
 			allAccountPropertiesCategorical = append(allAccountPropertiesCategorical, prop)
 		}
 	}
-	allAccountPropertiesCategorical = append(allAccountPropertiesCategorical, U.VISITED_WEBSITE, U.DP_DOMAIN_NAME)
+	allAccountPropertiesCategorical = append(allAccountPropertiesCategorical, U.VISITED_WEBSITE, U.DP_DOMAIN_NAME, U.GROUP_EVENT_NAME_ENGAGEMENT_LEVEL)
 
 	scoringAvailable, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_ACCOUNT_SCORING, false)
 	if err != nil {
 		log.WithField("err_code", errCode).WithField("project_id", projectId).Error("Error fetching scoring availability status for the project")
 	}
 	if scoringAvailable {
-		allAccountPropertiesNumerical = append(allAccountPropertiesNumerical, U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE)
+		allAccountPropertiesNumerical = append(allAccountPropertiesNumerical, U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE, U.GROUP_EVENT_NAME_TOTAL_ENGAGEMENT_SCORE)
 	}
 
 	allAccountProperties := map[string][]string{
@@ -301,6 +301,11 @@ func GetGroupPropertyValuesHandler(c *gin.Context) {
 			return
 		}
 
+		if strings.EqualFold(U.GROUP_EVENT_NAME_ENGAGEMENT_LEVEL, propertyName) {
+			propertyValues := []string{"Hot", "Warm", "Cold", "Ice"}
+			c.JSON(http.StatusOK, U.FilterEmptyArrayValues(propertyValues))
+			return
+		}
 	}
 	propertyValues, err := store.GetStore().GetPropertyValuesByGroupProperty(projectId, groupName,
 		propertyName, 2500, C.GetLookbackWindowForEventUserCache())
