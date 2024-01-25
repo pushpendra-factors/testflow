@@ -1,0 +1,1 @@
+ALTER TABLE project_agent_mappings ADD COLUMN checklist_dismissed bool;

@@ -382,6 +382,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS project_agent_mappings (
     project_id bigint,
     agent_uuid text,
     role bigint,
+    checklist_dismissed bool,
     invited_by text,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
