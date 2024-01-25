@@ -450,11 +450,11 @@ function WidgetCard({
     }
 
     let analyseQueryParamsPath = '/analyse';
-    if (unit?.query?.query?.query_group?.[0]?.cl === 'events') {
-      analyseQueryParamsPath =  analyseQueryParamsPath + '/events/' + unit.query.id_text;
-    } else if(unit?.query?.query?.cl === 'funnel') {
-      analyseQueryParamsPath =  analyseQueryParamsPath + '/funnel/' + unit.query.id_text;
-    }
+    // if (unit?.query?.query?.query_group?.[0]?.cl === 'events') {
+    //   analyseQueryParamsPath =  analyseQueryParamsPath + '/events/' + unit.query.id_text;
+    // } else if(unit?.query?.query?.cl === 'funnel') {
+    //   analyseQueryParamsPath =  analyseQueryParamsPath + '/funnel/' + unit.query.id_text;
+    // }
 
     history.push({
       pathname: analyseQueryParamsPath,

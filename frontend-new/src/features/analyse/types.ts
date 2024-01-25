@@ -1,4 +1,5 @@
 import { QUERY_TYPE_EVENT } from "Utils/constants";
+import { BaseStateClass } from "Types/BaseStateClass";
 
 export interface QueryParams {
     query_id: string,
@@ -28,7 +29,7 @@ export class ResultState {
 
 export class QueryOptions {
     group_analysis: string = 'users'
-    groupBy: GroupBy = {}
+    groupBy: GroupBy | any[] = {}
     globalFilters: Array<any> = []
     event_analysis_seq: string = ''
     session_analytics_seq: {} = {}
@@ -36,7 +37,7 @@ export class QueryOptions {
     events_condition: string = 'any_given_event'
   };
 
-export class CoreQueryState {
+export class CoreQueryState extends BaseStateClass {
     queryType: string = QUERY_TYPE_EVENT;
     querySaved: any = false;
     requestQuery: any = null;
@@ -49,9 +50,5 @@ export class CoreQueryState {
     resultState: ResultState = new ResultState();
     activeTab: number = 1;
 
-    constructor(){}
-
-    setItem = (key: keyof this, val: any) => {
-        this[key] = val;
-    }
+    constructor(){super()}
 }
