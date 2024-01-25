@@ -1027,23 +1027,17 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
     setNotRepeat(true);
   };
 
-  const fetchSlackDetails = () => {
-    // if (projectSettings?.int_slack) {
-    //   fetchSlackChannels(activeProject.id);
-    //   fetchSlackUsers(activeProject.id);
-    // }
+  const fetchSlackDetails = () => { 
+    fetchProjectSettingsV1(activeProject.id);
     if (slackEnabled) {
       fetchSlackChannels(activeProject.id);
       fetchSlackUsers(activeProject.id);
     }
   }
 
-  useEffect(() => {
-    fetchProjectSettingsV1(activeProject.id);
+  useEffect(() => { 
     fetchSlackDetails();
   }, [activeProject, projectSettings?.int_slack, slackEnabled]);
-
- 
 
   useEffect(() => {
     queries.forEach((ev) => {
@@ -1087,6 +1081,10 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
   ]);
 
   const fetchTeamsDetails = () => {
+    fetchProjectSettingsV1(activeProject.id);
+    if (teamsEnabled) {
+      fetchTeamsWorkspace(activeProject.id);
+    }
     if (projectSettings?.int_teams && selectedWorkspace) {
       fetchTeamsChannels(activeProject.id, selectedWorkspace?.id);
     }

@@ -61,6 +61,17 @@
       outline: transparent !important;
       box-shadow: none !important;
     }
+
+    &:disabled {
+      background: transparent !important;
+      border-color: transparent !important;
+      outline: transparent !important;
+      box-shadow: none !important;
+      svg { 
+        opacity: 0.5 !important;
+      }
+
+    }
   }
 
   &.ant-btn-background-ghost{
@@ -236,5 +247,13 @@
         color: $fa-color--brand-color;
       }
     }
+  }
+}
+
+
+.ant-btn[disabled], .ant-btn[disabled]:hover, .ant-btn[disabled]:focus, .ant-btn[disabled]:active{
+  border-color: transparent !important;
+  svg{
+    opacity: 0.5;
   }
 }
