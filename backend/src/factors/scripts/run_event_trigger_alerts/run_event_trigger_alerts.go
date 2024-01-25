@@ -625,6 +625,10 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 			"tag":             "alert_tracker",
 			"is_payload_null": isPayloadNull,
 		}).Info("ALERT TRACKER")
+		
+		if response["error"] == "<nil>" {
+			response["error"] = "an"
+		}
 		if stat != "success" {
 			log.WithField("status", stat).WithField("response", response).Error("Web hook error details")
 			sendReport.WebhookFail++
@@ -830,9 +834,9 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
 				}
 				slackErr, exists := model.SlackErrorStates[errMsg]
 				if !exists {
-					errMessage += fmt.Sprintf("Slack reported %s for %s channel; ", errMsg, channel.Name)
+					errMessage += fmt.Sprintf("Slack reported %s for %s channel\n\n", errMsg, channel.Name)
 				} else {
-					errMessage += fmt.Sprintf("%s for %s channel; ", slackErr, channel.Name)
+					errMessage += fmt.Sprintf("%s Error for %s channel\n\n", slackErr, channel.Name)
 				}
 				channelSuccess = append(channelSuccess, false)
 				logCtx.WithField("channel", channel).WithError(fmt.Errorf("%v", response)).
@@ -1215,7 +1219,7 @@ func getPropBlocksForTeams(propMap U.PropertiesMap) string {
 }
 
 func sendTeamsAlertForEventTriggerAlert(projectID int64, agentUUID string,
-	msg model.EventTriggerAlertMessage, Tchannels *postgres.Jsonb) (bool, string) {
+	msg model.EventTriggerAlertMessage, Tchannels *postgres.Jsonb) (success bool, errMessage string) {
 	logCtx := log.WithFields(log.Fields{
 		"project_id":  projectID,
 		"agent_uuid":  agentUUID,
@@ -1247,10 +1251,12 @@ func sendTeamsAlertForEventTriggerAlert(projectID int64, agentUUID string,
 				errorCode, ok := response["error"].(map[string]interface{})["code"].(string)
 				teamsErr, exists := model.TeamsErrorStates[errorCode]
 				if !ok || !exists {
-					teamsErr = fmt.Sprintf("Teams reported %s error.", errMsg)
+					errMessage = fmt.Sprintf("Teams reported %s error.", errMsg)
+				} else {
+					errMessage += fmt.Sprintf("%s Error for %s channel\n\n", teamsErr, channel.ChannelName)
 				}
 				logCtx.WithField("errorCode", teamsErr).WithError(err).Error("failed to send teams message")
-				return false, teamsErr
+				return false, errMessage
 			}
 
 			logCtx.Info("teams alert sent: ", channel, message)
