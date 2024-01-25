@@ -450,6 +450,7 @@ type Model interface {
 	DeleteProjectAgentMapping(projectID int64, agentUUIDToRemove string) int
 	EditProjectAgentMapping(projectID int64, agentUUIDToEdit string, role int64) int
 	GetProjectAgentLatestAdminEmailByProjectId(projectId int64) (string, int)
+	UpdateChecklistDismissalStatus(projectId int64, agentUUID string, status bool) int
 
 	// project_setting
 	GetProjectSetting(projectID int64) (*model.ProjectSetting, int)

@@ -121,7 +121,29 @@ func (store *MemSQL) GetProjectAgentMapping(projectId int64, agentUUID string) (
 
 	return pam, http.StatusFound
 }
+func (store *MemSQL) UpdateChecklistDismissalStatus(projectId int64, agentUUID string, status bool) int {
+	logFields := log.Fields{
+		"project_id": projectId,
+		"agent_uuid": agentUUID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
+	if projectId == 0 || agentUUID == "" {
+		return http.StatusBadRequest
+	}
+	db := C.GetServices().Db
+	updateFields := make(map[string]interface{}, 0)
+	updateFields["checklist_dismissed"] = status
+
+	err := db.Model(&model.ProjectAgentMapping{}).Where("project_id = ? AND agent_uuid = ?", projectId, agentUUID).Update(updateFields).Error
+
+	if err != nil {
+		log.WithFields(log.Fields{"projectId": projectId, "agentUUID": agentUUID}).WithError(err).Error(
+			"updaing model.ProjectAgentMapping checklist status failed.")
+		return http.StatusInternalServerError
+	}
+	return 0
+}
 func (store *MemSQL) GetProjectAgentMappingsByProjectId(projectId int64) ([]model.ProjectAgentMapping, int) {
 	logFields := log.Fields{
 		"project_id": projectId,

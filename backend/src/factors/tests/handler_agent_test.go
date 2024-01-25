@@ -373,6 +373,29 @@ func sendProjectAgentEditRequest(r *gin.Engine, projectId int64, agentToRemoveUU
 	return w
 }
 
+func sendProjectAgentChecklistDismissedRequest(r *gin.Engine, projectId int64, agent *model.Agent, checklistDismissed string) *httptest.ResponseRecorder {
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error Creating cookieData")
+	}
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPut, fmt.Sprintf("/projects/%d/checklist/update", projectId)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		}).WithQueryParams(map[string]string{
+		"checklist_dismissed": checklistDismissed,
+	})
+
+	w := httptest.NewRecorder()
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error Creating getAgentBillingAccount Req")
+	}
+	r.ServeHTTP(w, req)
+	return w
+}
+
 func TestAPIRemoveAgentFromProject(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
@@ -538,6 +561,27 @@ func TestAPIUpdateAgentInProject(t *testing.T) {
 		w := sendProjectAgentEditRequest(r, project.ID, testData.Agent.UUID, 1, agentToEdit)
 		assert.Equal(t, http.StatusForbidden, w.Code)
 	})
+}
+
+func TestAgentChecklistDismissed(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+	
+	testData, errCode := SetupTestData()
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	project := testData.Project
+	agentToEdit, errCode := SetupAgentReturnDAO(getRandomEmail(), "+3423647568")
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	_, errCode = store.GetStore().CreateProjectAgentMappingWithDependencies(&model.ProjectAgentMapping{
+		ProjectID: project.ID,
+		AgentUUID: agentToEdit.UUID,
+		Role:      model.ADMIN,
+	})
+	assert.Equal(t, http.StatusCreated, errCode)
+	w := sendProjectAgentChecklistDismissedRequest(r,project.ID,agentToEdit,"true")
+	assert.Equal(t, http.StatusCreated, w.Code)
 }
 func sendAgentVerifyRequest(r *gin.Engine, authData, password, firstName, lastName string) *httptest.ResponseRecorder {
 
