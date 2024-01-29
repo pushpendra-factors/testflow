@@ -23,7 +23,7 @@ func SegmentMarker(projectID int64) int {
 	domainGroup, status := store.GetStore().GetGroup(projectID, model.GROUP_NAME_DOMAINS)
 
 	// domain group does not exist and ProcessOnlyAllAccountsSegments set to true, so aborting
-	if (status != http.StatusFound && domainGroup != nil) && C.ProcessOnlyAllAccountsSegments() {
+	if (domainGroup == nil || status != http.StatusFound) && C.ProcessOnlyAllAccountsSegments() {
 		return http.StatusOK
 	}
 
