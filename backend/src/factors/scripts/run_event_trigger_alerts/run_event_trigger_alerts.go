@@ -1375,5 +1375,5 @@ func BuildAccountURL(groupDomainID string) string {
 	}
 	gdIdBytes := []byte(groupDomainID)
 	urlHash := base64.StdEncoding.EncodeToString(gdIdBytes)
-	return fmt.Sprintf(C.GetProtocol()+C.GetAPPDomain()+"/profiles/accounts/%s?group=domains&view=overview", urlHash)
+	return fmt.Sprintf(C.GetProtocol()+C.GetAPPDomain()+"/profiles/accounts/%s?group=$domains&view=birdview", urlHash)
 }
