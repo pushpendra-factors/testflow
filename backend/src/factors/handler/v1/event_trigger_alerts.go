@@ -435,10 +435,10 @@ func SlackTestforEventTriggerAlerts(c *gin.Context) (interface{}, int, string, s
 	payload := make(U.PropertiesMap)
 	i := 0
 	for prop, value := range messageProperties {
-		payload[fmt.Sprintf("%d", i)] = model.MessagePropMapStruct{
+		payload[fmt.Sprintf("%d", i)], _ = U.EncodeStructTypeToMap(model.MessagePropMapStruct{
 			DisplayName: prop,
 			PropValue:   value,
-		}
+		})
 		i++
 	}
 
@@ -471,8 +471,10 @@ func SlackTestforEventTriggerAlerts(c *gin.Context) (interface{}, int, string, s
 	if slackMentions != nil || alert.SlackFieldsTag != nil {
 		slackMentionStr = model.GetSlackMentionsStr(slackMentions, alert.SlackFieldsTag)
 	}
+
+	isAccountAlert := alert.EventLevel == model.EventLevelAccount
 	if !alert.IsHyperlinkDisabled {
-		blockMessage = model.GetSlackMsgBlock(slackPayload, slackMentionStr)
+		blockMessage = model.GetSlackMsgBlock(slackPayload, slackMentionStr, isAccountAlert, "")
 	} else {
 		blockMessage = model.GetSlackMsgBlockWithoutHyperlinks(slackPayload, slackMentionStr)
 	}
@@ -546,12 +548,13 @@ func TeamsTestforEventTriggerAlerts(c *gin.Context) (interface{}, int, string, s
 	payload := make(U.PropertiesMap)
 	i := 0
 	for prop, value := range messageProperties {
-		payload[fmt.Sprintf("%d", i)] = model.MessagePropMapStruct{
+		payload[fmt.Sprintf("%d", i)], _ = U.EncodeStructTypeToMap(model.MessagePropMapStruct{
 			DisplayName: prop,
 			PropValue:   value,
-		}
+		})
 		i++
 	}
+	
 
 	var teamsChannels model.Team
 	if alert.TeamsChannelsConfig == nil {
@@ -570,7 +573,8 @@ func TeamsTestforEventTriggerAlerts(c *gin.Context) (interface{}, int, string, s
 		Message:         alert.Message,
 	}
 
-	message := model.GetTeamsMsgBlock(teamsPayload)
+	isAccountAlert := alert.EventLevel == model.EventLevelAccount
+	message := model.GetTeamsMsgBlock(teamsPayload, isAccountAlert, "")
 	alertErrMessage := ""
 	teamsSuccess := true
 	for _, channel := range teamsChannels.TeamsChannelList {
