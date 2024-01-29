@@ -5,13 +5,14 @@ import { useHistory } from 'react-router-dom';
 import queryString from 'query-string';
 import { activate } from 'Reducers/agentActions';
 import { connect } from 'react-redux';
-import styles from './index.module.scss';
-import { SSO_ACTIVATE_URL } from '../../utils/sso';
 import LoggedOutScreenHeader from 'Components/GenericComponents/LoggedOutScreenHeader';
-import LoginIllustration from '../../assets/images/login_Illustration.png';
 import PasswordChecks from 'Components/GenericComponents/PasswordChecks';
 import sanitizeInputString from 'Utils/sanitizeInputString';
 import useScript from 'hooks/useScript';
+import CountryPhoneInput from 'Components/GenericComponents/CountryPhoneInput';
+import LoginIllustration from '../../assets/images/login_Illustration.png';
+import { SSO_ACTIVATE_URL } from '../../utils/sso';
+import styles from './index.module.scss';
 
 function Activate(props) {
   const [form] = Form.useForm();
@@ -36,8 +37,8 @@ function Activate(props) {
     const url = new URL(window.location.href);
     const error = url.searchParams.get('error');
     if (error) {
-      let str = error.replace('_', ' ');
-      let finalmsg = str.toLocaleLowerCase();
+      const str = error.replace('_', ' ');
+      const finalmsg = str.toLocaleLowerCase();
       message.error(finalmsg);
     }
   };
@@ -55,13 +56,17 @@ function Activate(props) {
       .then((values) => {
         setDataLoading(true);
         setTimeout(() => {
-          let sanitizedValues = {
+          const sanitizedValues = {
             first_name: sanitizeInputString(values?.first_name),
             last_name: values?.last_name
               ? sanitizeInputString(values.last_name)
               : '',
             password: values?.password
           };
+
+          if (values?.phone?.phone && values?.phone?.code) {
+            sanitizedValues.phone = `${values.phone.code}-${values.phone.phone}`;
+          }
 
           props
             .activate(sanitizedValues, tokenFromUrl)
@@ -93,20 +98,20 @@ function Activate(props) {
 
   return (
     <>
-      <div className={'fa-container h-screen relative'}>
+      <div className='fa-container h-screen relative'>
         <LoggedOutScreenHeader />
         <div className='text-center'>
           <Text
             color='character-primary'
-            type={'title'}
+            type='title'
             level={2}
-            weight={'bold'}
+            weight='bold'
             extraClass='m-0 text-center'
           >
             You’re almost there !
           </Text>
         </div>
-        <Row justify={'center'} className={`${styles.start} pb-4`}>
+        <Row justify='center' className={`${styles.start} pb-4`}>
           <Col span={24}>
             <div className='w-full flex items-center justify-center mt-4'>
               <div
@@ -121,57 +126,79 @@ function Activate(props) {
                 <Form
                   form={form}
                   onFinish={ResetPassword}
-                  className={'w-full'}
+                  className='w-full'
                   onValuesChange={onChange}
                   initialValues={{ first_name: '' }}
                 >
-                  <div className={'flex justify-center items-center'}>
+                  <div className='flex justify-center items-center'>
                     <Text
-                      type={'title'}
+                      type='title'
                       level={5}
-                      extraClass={'m-0'}
-                      weight={'bold'}
+                      extraClass='m-0'
+                      weight='bold'
                       color='character-primary'
                     >
                       Activate your account{' '}
                     </Text>
                   </div>
-                  <div className={'flex flex-col mt-8'}>
+                  <div className='flex flex-col mt-8'>
                     <Form.Item
                       label={null}
                       name='first_name'
                       rules={[
                         { required: true, message: 'Please enter first name' }
                       ]}
-                      className={'w-full'}
+                      className='w-full'
                     >
                       <Input
-                        className={'fa-input w-full'}
+                        className='fa-input w-full'
                         disabled={dataLoading}
-                        size={'large'}
+                        size='large'
                         placeholder='First Name'
                       />
                     </Form.Item>
                   </div>
-                  <div className={'flex flex-col mt-4'}>
-                    <Form.Item
-                      label={null}
-                      name='last_name'
-                      className={'w-full'}
-                    >
+                  <div className='flex flex-col mt-4'>
+                    <Form.Item label={null} name='last_name' className='w-full'>
                       <Input
-                        className={'fa-input w-full'}
+                        className='fa-input w-full'
                         disabled={dataLoading}
-                        size={'large'}
+                        size='large'
                         placeholder='Last Name'
                       />
                     </Form.Item>
                   </div>
-                  <div
-                    className={
-                      'flex flex-col justify-center items-center mt-4 w-full'
-                    }
-                  >
+                  <div className='mt-4'>
+                    <Form.Item
+                      label={null}
+                      name='phone'
+                      rules={[
+                        ({ getFieldValue }) => ({
+                          validator(rule, value) {
+                            if (
+                              !value ||
+                              !value?.phone ||
+                              value?.phone?.match(/^[0-9\b]+$/)
+                            ) {
+                              return Promise.resolve();
+                            }
+                            return Promise.reject(
+                              new Error('Please enter valid phone number.')
+                            );
+                          }
+                        })
+                      ]}
+                    >
+                      <CountryPhoneInput
+                        className='fa-input w-full'
+                        size='large'
+                        placeholder='Phone Number (optional)'
+                        type='tel'
+                        allowClear
+                      />
+                    </Form.Item>
+                  </div>
+                  <div className='flex flex-col justify-center items-center mt-4 w-full'>
                     <Form.Item
                       name='password'
                       rules={[
@@ -201,7 +228,7 @@ function Activate(props) {
                       <Input.Password
                         disabled={dataLoading}
                         size='large'
-                        className={'fa-input w-full'}
+                        className='fa-input w-full'
                         placeholder='Enter New Password'
                         onBlur={() =>
                           setValidationMode({
@@ -212,11 +239,7 @@ function Activate(props) {
                       />
                     </Form.Item>
                   </div>
-                  <div
-                    className={
-                      'flex flex-col justify-center items-center mt-4 w-full'
-                    }
-                  >
+                  <div className='flex flex-col justify-center items-center mt-4 w-full'>
                     <Form.Item
                       name='confirm_password'
                       dependencies={['password']}
@@ -244,7 +267,7 @@ function Activate(props) {
                       <Input.Password
                         disabled={dataLoading}
                         size='large'
-                        className={'fa-input w-full'}
+                        className='fa-input w-full'
                         placeholder='Confirm New Password'
                         onBlur={() =>
                           setValidationMode({
@@ -257,18 +280,14 @@ function Activate(props) {
                   </div>
 
                   <PasswordChecks password={firstPassword} />
-                  <div
-                    className={
-                      'flex flex-col justify-center items-center mt-5 w-full'
-                    }
-                  >
-                    <Form.Item className={'m-0 w-full'} loading={dataLoading}>
+                  <div className='flex flex-col justify-center items-center mt-5 w-full'>
+                    <Form.Item className='m-0 w-full' loading={dataLoading}>
                       <Button
                         htmlType='submit'
                         loading={dataLoading}
-                        type={'primary'}
-                        size={'large'}
-                        className={'w-full'}
+                        type='primary'
+                        size='large'
+                        className='w-full'
                       >
                         Let's get started
                       </Button>
@@ -277,16 +296,12 @@ function Activate(props) {
                   <Row>
                     {errorInfo && (
                       <Col span={24}>
-                        <div
-                          className={
-                            'flex flex-col justify-center items-center mt-1'
-                          }
-                        >
+                        <div className='flex flex-col justify-center items-center mt-1'>
                           <Text
-                            type={'title'}
-                            color={'red'}
-                            size={'7'}
-                            className={'m-0'}
+                            type='title'
+                            color='red'
+                            size='7'
+                            className='m-0'
                           >
                             {errorInfo}
                           </Text>
@@ -295,33 +310,24 @@ function Activate(props) {
                     )}
                   </Row>
                   <Divider className='my-6'>
-                    <Text
-                      type={'title'}
-                      level={7}
-                      extraClass={'m-0'}
-                      color={'grey'}
-                    >
+                    <Text type='title' level={7} extraClass='m-0' color='grey'>
                       OR
                     </Text>
                   </Divider>
-                  <div
-                    className={
-                      'flex flex-col justify-center items-center mt-5 w-full'
-                    }
-                  >
-                    <Form.Item className={'m-0 w-full'} loading={dataLoading}>
+                  <div className='flex flex-col justify-center items-center mt-5 w-full'>
+                    <Form.Item className='m-0 w-full' loading={dataLoading}>
                       <a href={SSO_ACTIVATE_URL}>
                         <Button
                           loading={dataLoading}
-                          type={'default'}
-                          size={'large'}
+                          type='default'
+                          size='large'
                           style={{
                             background: '#fff',
                             boxShadow: '0px 0px 2px rgba(0, 0, 0, 0.3)'
                           }}
-                          className={'w-full'}
+                          className='w-full'
                         >
-                          <SVG name={'Google'} size={24} />
+                          <SVG name='Google' size={24} />
                           Continue with Google
                         </Button>
                       </a>

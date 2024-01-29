@@ -1,0 +1,35 @@
+.countryPhoneInput {
+  :global(.ant-select) {
+    min-width: 80px;
+  }
+
+  :global(.ant-input-affix-wrapper) {
+    border: none;
+    padding: 4px 2px;
+  }
+
+  :global(.ant-input-affix-wrapper:focus) {
+    border: none;
+    box-shadow: none !important;
+  }
+
+  :global(.ant-input-affix-wrapper-focused) {
+    border: none;
+    box-shadow: none !important;
+  }
+
+  :global(.ant-input-group-addon) {
+    background-color: inherit;
+    padding: 0px 11px !important;
+    text-align: left;
+    border: none;
+  }
+
+  :global(.ant-input-group-addon.ant-select-focused.ant-select-selector) {
+    color: inherit;
+  }
+
+  :global(.ant-input-group-addon.ant-select-selection-item) {
+    color: inherit;
+  }
+}
