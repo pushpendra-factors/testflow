@@ -68,6 +68,7 @@ func mapAgentInfoWithProjectMapping(pam model.ProjectAgentMapping, agent *model.
 	agentWithProject.LastLoggedIn = agent.LastLoggedIn
 	agentWithProject.Phone = agent.Phone
 	agentWithProject.ProjectID = fmt.Sprintf("%v", pam.ProjectID)
+	agentWithProject.ChecklistDismissed = pam.ChecklistDismissed
 	agentWithProject.Role = pam.Role
 	agentWithProject.InvitedBy = pam.InvitedBy
 	agentWithProject.CreatedAt = pam.CreatedAt
@@ -76,16 +77,17 @@ func mapAgentInfoWithProjectMapping(pam model.ProjectAgentMapping, agent *model.
 }
 
 type AgentInfoWithProjectMapping struct {
-	UUID            string     `json:"uuid"`
-	Email           string     `json:"email"`
-	FirstName       string     `json:"first_name"`
-	LastName        string     `json:"last_name"`
-	IsEmailVerified bool       `json:"is_email_verified"`
-	LastLoggedIn    *time.Time `json:"last_logged_in"`
-	Phone           string     `json:"phone"`
-	ProjectID       string     `json:"project_id"`
-	Role            uint64     `json:"role"`
-	InvitedBy       *string    `json:"invited_by"`
-	CreatedAt       time.Time  `json:"created_at"`
-	UpdatedAt       time.Time  `json:"updated_at"`
+	UUID               string     `json:"uuid"`
+	Email              string     `json:"email"`
+	FirstName          string     `json:"first_name"`
+	LastName           string     `json:"last_name"`
+	IsEmailVerified    bool       `json:"is_email_verified"`
+	LastLoggedIn       *time.Time `json:"last_logged_in"`
+	Phone              string     `json:"phone"`
+	ProjectID          string     `json:"project_id"`
+	ChecklistDismissed bool       `json:"checklist_dismissed"`
+	Role               uint64     `json:"role"`
+	InvitedBy          *string    `json:"invited_by"`
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
 }
