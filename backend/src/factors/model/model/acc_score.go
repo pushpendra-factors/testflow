@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	U "factors/util"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -271,10 +272,30 @@ func ComputeDecayValueGivenStartEndTS(start int64, end int64, SaleWindow int64) 
 }
 
 func GetEngagement(percentile float64, buckets BucketRanges) string {
+
+	var maxHigh float64
+	var maxLow float64
+	maxHigh = float64(0)
+	maxLow = math.MaxFloat64
+
 	for _, bucket := range buckets.Ranges {
+
+		if bucket.High > maxHigh {
+			maxHigh = bucket.High
+		}
+		if bucket.Low < maxLow {
+			maxLow = bucket.Low
+		}
+
 		if bucket.Low <= percentile && percentile <= bucket.High {
 			return bucket.Name
 		}
+	}
+
+	if percentile > maxHigh {
+		return "Hot"
+	} else if percentile < maxLow {
+		return "Ice"
 	}
 	return "Ice"
 }
