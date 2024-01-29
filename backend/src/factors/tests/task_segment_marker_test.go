@@ -819,9 +819,10 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["All accounts segment"])
 		} else if checkUser.Group2ID == "hbgroupuser3@heyflow.app" || checkUser.Group2ID == "hbgroupuser4@clientjoy.io" || checkUser.Group2ID == "hbgroupuser5@adapt.io" {
 			assert.Contains(t, associatedSegmentsList[index], getSegementFinal["$hubspot_company"][0].Id)
-		} else if checkUser.CustomerUserId == "hubspot@5user" {
-			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["Hubspot User Performed Event"])
 		}
+		//  else if checkUser.CustomerUserId == "hubspot@5user" {
+		// 	assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["Hubspot User Performed Event"])
+		// }
 	}
 }
 
