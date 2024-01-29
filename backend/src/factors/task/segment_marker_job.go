@@ -23,7 +23,7 @@ func SegmentMarker(projectID int64) int {
 	domainGroup, status := store.GetStore().GetGroup(projectID, model.GROUP_NAME_DOMAINS)
 
 	// domain group does not exist and ProcessOnlyAllAccountsSegments set to true, so aborting
-	if status != http.StatusFound && C.ProcessOnlyAllAccountsSegments() {
+	if (status != http.StatusFound && domainGroup != nil) && C.ProcessOnlyAllAccountsSegments() {
 		return http.StatusOK
 	}
 
@@ -134,10 +134,10 @@ func SegmentMarker(projectID int64) int {
 		}
 	}
 
-	if !C.ProcessOnlyAllAccountsSegments() {
-		// process user based segments
-		userProfileSegmentsProcessing(projectID, users, allSegmentsMap, decodedSegmentRulesMap, eventNameIDsMap)
-	}
+	// if !C.ProcessOnlyAllAccountsSegments() {
+	// process user based segments
+	// 	userProfileSegmentsProcessing(projectID, users, allSegmentsMap, decodedSegmentRulesMap, eventNameIDsMap)
+	// }
 
 	var errCode int
 	// check if there is no $domains type segment in the project
@@ -405,7 +405,7 @@ func userProcessingWithErrcode(projectID int64, user model.User, allSegmentsMap 
 		if model.IsDomainGroup(groupName) {
 			continue
 		}
-		if model.GroupUserSource[groupName] == *user.Source || model.UserSourceMap[groupName] == *user.Source {
+		if user.Source != nil && (model.GroupUserSource[groupName] == *user.Source || model.UserSourceMap[groupName] == *user.Source) {
 			for index, segment := range segmentArray {
 				segmentQuery := decodedSegmentRulesMap[groupName][index]
 
