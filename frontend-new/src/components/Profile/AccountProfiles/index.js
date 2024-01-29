@@ -316,7 +316,7 @@ function AccountProfiles({
         setFiltersDirty(false);
       } else {
         const selectedGroup = groupsList.find(
-          (g) => g[1] === accountPayload.source
+          (g) => g[1] === accountPayload?.source
         );
         restoreFiltersDefaultState(selectedGroup);
       }
@@ -435,10 +435,14 @@ function AccountProfiles({
   useEffect(() => {
     const shouldCache = location?.state?.fromDetails;
     if (shouldCache) {
-      setCurrentPage(location.state.currentPage);
-      setCurrentPageSize(location.state.currentPageSize);
-      setDefaultSorterInfo(location.state.activeSorter);
-      setAccountPayload(location.state.accountPayload);
+      if (!location.state.accountPayload) {
+        setAccountPayload({ source: GROUP_NAME_DOMAINS });
+      } else {
+        setCurrentPage(location.state.currentPage);
+        setCurrentPageSize(location.state.currentPageSize);
+        setDefaultSorterInfo(location.state.activeSorter);
+        setAccountPayload(location.state.accountPayload);
+      }
       const updatedLocationState = { ...location.state, fromDetails: false };
       history.replace(location.pathname, { ...updatedLocationState });
     } else if (
@@ -711,7 +715,7 @@ function AccountProfiles({
   const renderPropertyFilter = () => (
     <PropertyFilter
       profileType='account'
-      source={accountPayload.source}
+      source={accountPayload?.source}
       filtersExpanded={filtersExpanded}
       filtersList={selectedFilters.filters}
       secondaryFiltersList={selectedFilters.secondaryFilters}
