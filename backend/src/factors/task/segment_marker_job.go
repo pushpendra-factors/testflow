@@ -22,48 +22,51 @@ func SegmentMarker(projectID int64) int {
 
 	domainGroup, status := store.GetStore().GetGroup(projectID, model.GROUP_NAME_DOMAINS)
 
-	var lookBack time.Time
-
-	if !C.UseLookbackForSegmentMarker() {
-		lookBack, _ = store.GetStore().GetSegmentMarkerLastRunTime(projectID)
-	}
-
-	if lookBack.IsZero() || C.UseLookbackForSegmentMarker() {
-		hour := C.LookbackForSegmentMarker()
-		lookBack = U.TimeNowZ().Add(time.Duration(-hour) * time.Hour)
+	// domain group does not exist and ProcessOnlyAllAccountsSegments set to true, so aborting
+	if status != http.StatusFound && C.ProcessOnlyAllAccountsSegments() {
+		return http.StatusOK
 	}
 
 	var users []model.User
-	var statusCode int
+
+	var endTime, timeTaken int64
 	startTime := time.Now().Unix()
 
-	if status != http.StatusFound {
-		// domains not enabled, so fetching list of all the users with last updated_at in last x hour
-		if !C.ProcessOnlyAllAccountsSegments() {
-			users, statusCode = store.GetStore().GetNonGroupUsersUpdatedAtGivenHour(projectID, lookBack)
+	domainsList, allUsersRun, status, lookBack := GetDomainsToRunMarkerFor(projectID, domainGroup, status)
+
+	// fetching list of all the users with last updated_at in last x hour
+	if !C.ProcessOnlyAllAccountsSegments() {
+		users, status = store.GetStore().GetNonGroupUsersUpdatedAtGivenHour(projectID, lookBack)
+		endTime = time.Now().Unix()
+		timeTaken = endTime - startTime
+		log.WithFields(log.Fields{"project_id": projectID, "no_of_users": len(users)}).
+			Info("Total no.of users pulled time(sec) ", timeTaken)
+	}
+
+	if (len(domainsList) <= 0 && len(users) <= 0) || status != http.StatusOK {
+		if status == http.StatusNotFound {
+			// because the job run should still be successful even if data is not found
+			return http.StatusOK
 		}
-	} else {
-		// list of domains and their associated users with last updated_at in last x hour
-		users, statusCode = store.GetStore().GetUsersUpdatedAtGivenHour(projectID, lookBack, domainGroup.ID)
+		return status
 	}
-	if statusCode == http.StatusInternalServerError {
-		log.WithFields(log.Fields{"project_id": projectID, "look_back": lookBack, "status_code": statusCode}).
-			Error("Server error, couldn't find updated records")
-		return statusCode
-	} else if statusCode == http.StatusNotFound {
-		log.WithFields(log.Fields{"project_id": projectID, "look_back": lookBack, "status_code": statusCode}).
-			Warn("Couldn't find updated records in last given hours for this project ")
-		return http.StatusOK
-	}
-	endTime := time.Now().Unix()
-	timeTaken := endTime - startTime
+
+	endTime = time.Now().Unix()
+	timeTaken = endTime - startTime
 
 	// Total no.of records pulled.
 	// Time taken to pull.
-	log.WithFields(log.Fields{"project_id": projectID, "no_of_records": len(users)}).Info("Total no.of records pulled time(sec) ", timeTaken)
+
+	log.WithFields(log.Fields{"project_id": projectID, "no_of_domains": len(domainsList)}).Info("Total no.of domains pulled time(sec) ", timeTaken)
 
 	if len(users) >= 250000 {
 		log.WithFields(log.Fields{"project_id": projectID}).Warn("Total records exceeded 250k")
+	}
+
+	if len(domainsList) == 2000000 {
+		log.WithFields(log.Fields{"project_id": projectID}).Error("No.of domains hitting max limit.")
+	} else if len(domainsList) >= 1000000 {
+		log.WithFields(log.Fields{"project_id": projectID}).Error("Total domains exceeded 1M")
 	}
 
 	// list of all segments
@@ -108,7 +111,7 @@ func SegmentMarker(projectID int64) int {
 				segmentQuery.GroupAnalysis = segment.Type
 			}
 			segmentQuery.GlobalUserProperties = transformPayloadForInProperties(segmentQuery.GlobalUserProperties)
-			segmentQuery.From = U.TimeNowZ().AddDate(0, 0, -28).Unix()
+			segmentQuery.From = U.TimeNowZ().AddDate(0, 0, -90).Unix()
 			segmentQuery.To = U.TimeNowZ().Unix()
 			for _, eventProp := range segmentQuery.EventsWithProperties {
 				if eventProp.Name != "" {
@@ -136,11 +139,17 @@ func SegmentMarker(projectID int64) int {
 		userProfileSegmentsProcessing(projectID, users, allSegmentsMap, decodedSegmentRulesMap, eventNameIDsMap)
 	}
 
-	// check if there is no All type segment in the project
+	var errCode int
+	// check if there is no $domains type segment in the project
 	if _, exists := allSegmentsMap[model.GROUP_NAME_DOMAINS]; !exists {
-		errCode := store.GetStore().UpdateSegmentMarkerLastRun(projectID, U.TimeNowZ())
+		if allUsersRun {
+			// updating marker_last_run_all_accounts in project settings after completing the job
+			errCode = store.GetStore().UpdateSegmentMarkerLastRunForAllAccounts(projectID, U.TimeNowZ())
+		} else {
+			errCode = store.GetStore().UpdateSegmentMarkerLastRun(projectID, U.TimeNowZ())
+		}
 		if errCode != http.StatusAccepted {
-			log.WithField("project_id", projectID).Error("Unable to update segment_marker_last_run in project_settings.")
+			log.WithField("project_id", projectID).Error("Unable to update last_run in project_settings.")
 			return errCode
 		}
 
@@ -149,22 +158,155 @@ func SegmentMarker(projectID int64) int {
 
 	allAccountsDecodedSegmentRule, ruleExists := decodedSegmentRulesMap[model.GROUP_NAME_DOMAINS]
 	if ruleExists && (domainGroup != nil && domainGroup.ID > 0) {
-		status, err := allAccountsSegmentMarkup(projectID, users, allSegmentsMap[model.GROUP_NAME_DOMAINS], allAccountsDecodedSegmentRule, domainGroup.ID, eventNameIDsMap)
+
+		// process the domains list
+		status, err := processDomainsInBatches(projectID, domainsList, allSegmentsMap[model.GROUP_NAME_DOMAINS], allAccountsDecodedSegmentRule, domainGroup.ID, eventNameIDsMap)
+
 		if status != http.StatusOK || err != nil {
 			log.WithField("project_id", projectID).Error("Unable to update associated_segments to the domain user.")
 			return status
 		}
 	}
 
-	// updating segment_marker_last_run in project settings after completing the job
-	errCode := store.GetStore().UpdateSegmentMarkerLastRun(projectID, U.TimeNowZ())
+	if allUsersRun {
+		// updating marker_last_run_all_accounts in project settings after completing the job
+		errCode = store.GetStore().UpdateSegmentMarkerLastRunForAllAccounts(projectID, U.TimeNowZ())
+	} else {
+		// updating segment_marker_last_run in project settings after completing the job
+		errCode = store.GetStore().UpdateSegmentMarkerLastRun(projectID, U.TimeNowZ())
+	}
 
 	if errCode != http.StatusAccepted {
-		log.WithField("project_id", projectID).Error("Unable to update segment_marker_last_run in project_settings.")
+		log.WithField("project_id", projectID).Error("Unable to update last_run in project_settings.")
 		return errCode
 	}
 
 	return http.StatusOK
+}
+
+func GetDomainsToRunMarkerFor(projectID int64, domainGroup *model.Group, domainGroupStatus int) ([]string, bool, int, time.Time) {
+
+	allUsersRun := false
+	allDomainsRunHours := C.TimeRangeForAllDomains()
+
+	// fetch lastRunTime
+	lastRunTime, lastRunStatusCode := store.GetStore().GetMarkerLastForAllAccounts(projectID)
+	if lastRunStatusCode == http.StatusFound && C.AllAccountsRuntMarker(projectID) {
+		timeNow := time.Now().UTC()
+		timeDifference := timeNow.Sub(lastRunTime)
+		if timeDifference >= time.Duration(allDomainsRunHours)*time.Hour && domainGroupStatus == http.StatusFound {
+
+			domainIDList, status := store.GetStore().GetAllDomainsByProjectID(projectID, domainGroup.ID)
+
+			if len(domainIDList) > 0 {
+				allUsersRun = true
+				return domainIDList, allUsersRun, http.StatusOK, time.Time{}
+			}
+
+			if status != http.StatusFound {
+				return domainIDList, allUsersRun, status, time.Time{}
+			}
+		}
+	}
+
+	var lookBack time.Time
+
+	if !C.UseLookbackForSegmentMarker() {
+		lookBack, _ = store.GetStore().GetSegmentMarkerLastRunTime(projectID)
+	}
+
+	if lookBack.IsZero() || C.UseLookbackForSegmentMarker() {
+		hour := C.LookbackForSegmentMarker()
+		lookBack = U.TimeNowZ().Add(time.Duration(-hour) * time.Hour)
+	}
+
+	// list of domains and their associated users with last updated_at in last x hour
+	domainIDList, statusCode := store.GetStore().GetLatestUpatedDomainsByProjectID(projectID, domainGroup.ID, lookBack)
+
+	if statusCode == http.StatusInternalServerError {
+		log.WithFields(log.Fields{"project_id": projectID, "look_back": lookBack, "status_code": statusCode}).
+			Error("Server error, couldn't find updated records")
+		return []string{}, allUsersRun, statusCode, lookBack
+	} else if statusCode == http.StatusNotFound || len(domainIDList) == 0 {
+		log.WithFields(log.Fields{"project_id": projectID, "look_back": lookBack, "status_code": statusCode}).
+			Warn("Couldn't find updated records in last given hours for this project ")
+		return []string{}, allUsersRun, http.StatusOK, lookBack
+	}
+
+	return domainIDList, allUsersRun, http.StatusOK, time.Time{}
+}
+
+func processDomainsInBatches(projectID int64, domainIDList []string, segments []model.Segment, segmentsRulesArr []model.Query,
+	domainGroupId int, eventNameIDsMap map[string]string) (int, error) {
+	// Batch size
+	batchSize := 100
+
+	statusArr := make([]bool, 0)
+
+	startTime := time.Now().Unix()
+	userCount := new(int64)
+
+	domainIDChunks := U.GetStringListAsBatch(domainIDList, batchSize)
+
+	for ci := range domainIDChunks {
+		var wg sync.WaitGroup
+
+		wg.Add(len(domainIDChunks[ci]))
+		for _, domID := range domainIDChunks[ci] {
+			go fetchAndProcessFromDomainList(projectID, domID, segments, segmentsRulesArr, domainGroupId,
+				eventNameIDsMap, &wg, &statusArr, userCount)
+		}
+		wg.Wait()
+	}
+
+	endTime := time.Now().Unix()
+	timeTaken := endTime - startTime
+
+	// Time taken to process domains.
+	log.WithFields(log.Fields{"project_id": projectID, "no_of_domains": len(domainIDList), "user_count": userCount}).Info("Processing Time for domains in sec ", timeTaken)
+
+	if len(statusArr) > 0 {
+		log.WithField("project_id", projectID).Error("failures while running segment_markup for following number of batches of domain ", len(statusArr))
+	}
+
+	return http.StatusOK, nil
+}
+
+func fetchAndProcessFromDomainList(projectID int64, domainID string, segments []model.Segment, segmentsRulesArr []model.Query,
+	domainGroupId int, eventNameIDsMap map[string]string, waitGroup *sync.WaitGroup, statusArr *[]bool, userCount *int64) {
+
+	logFields := log.Fields{
+		"project_id":      projectID,
+		"domain_group_id": domainGroupId,
+		"domain_id":       domainID,
+		"segments":        segments,
+		"wait_group":      waitGroup,
+	}
+
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer waitGroup.Done()
+
+	users, status := store.GetStore().GetUsersAssociatedToDomainList(projectID, domainGroupId, domainID)
+
+	if len(users) == 0 || status != http.StatusFound {
+		log.WithField("project_id", projectID).Error("Unable to find users for domain ", domainID)
+		*statusArr = append(*statusArr, false)
+		return
+	}
+
+	*userCount = *userCount + int64(len(users))
+
+	status, err := domainUsersProcessingWithErrcode(projectID, domainID, users, segments,
+		segmentsRulesArr, eventNameIDsMap)
+
+	if status != http.StatusOK || err != nil {
+		log.WithField("project_id", projectID).Error("Unable to update associated_segments to the domain user.")
+	}
+
+	if status != http.StatusOK || err != nil {
+		*statusArr = append(*statusArr, false)
+	}
 }
 
 func transformPayloadForInProperties(globalUserProperties []model.QueryProperty) []model.QueryProperty {
