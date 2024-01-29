@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -117,7 +118,7 @@ func (store *MemSQL) DeleteSlackIntegration(projectID int64, agentUUID string) e
 	return nil
 }
 
-func (store *MemSQL) GetSlackUsersListFromDb(projectID int64, agentID string) ([]model.SlackUser, int, error) {
+func (store *MemSQL) GetSlackUsersListFromDb(projectID int64, agentID string) ([]model.SlackMember, int, error) {
 	if projectID == 0 || agentID == "" {
 		return nil, http.StatusBadRequest, fmt.Errorf("invalid parameters")
 	}
@@ -141,7 +142,7 @@ func (store *MemSQL) GetSlackUsersListFromDb(projectID int64, agentID string) ([
 		return nil, http.StatusInternalServerError, err
 	}
 
-	slackUsers := make([]model.SlackUser, 0)
+	slackUsers := make([]model.SlackMember, 0)
 	if err = U.DecodePostgresJsonbToStructType(usersList.UsersList, &slackUsers); err != nil {
 		logCtx.WithError(err).Error("failed to decode slack users list")
 		return nil, http.StatusInternalServerError, err
@@ -163,11 +164,26 @@ func (store *MemSQL) UpdateSlackUsersListForProject(projectID int64, fields map[
 	if fields["agent_id"] == nil || fields["users_list"] == nil {
 		return http.StatusBadRequest, fmt.Errorf("invalid fields provided for updation")
 	}
-	fields["last_sync_time"] = time.Now().Unix()
+	currTime := time.Now()
+	fields["last_sync_time"] = currTime
 
 	db := C.GetServices().Db
 	err := db.Model(&model.SlackUsersList{}).Where("project_id = ?", projectID).Updates(fields).Error
 	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			obj := model.SlackUsersList{
+				ProjectID:    projectID,
+				AgentID:      fields["agent_id"].(string),
+				UsersList:    fields["users_list"].(*postgres.Jsonb),
+				LastSyncTime: currTime,
+			}
+			err := db.Create(&obj).Error
+			if err != nil {
+				log.WithFields(logFields).WithError(err).Error("failed to create slack users list entity in table")
+				return http.StatusInternalServerError, err
+			}
+			return http.StatusOK, nil
+		}
 		log.WithFields(logFields).WithError(err).Error("failed to update slack users list table")
 		return http.StatusInternalServerError, err
 	}

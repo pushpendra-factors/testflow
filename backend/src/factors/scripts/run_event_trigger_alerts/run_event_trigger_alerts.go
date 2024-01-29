@@ -20,6 +20,7 @@ import (
 	webhook "factors/webhooks"
 
 	"encoding/base64"
+
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
@@ -79,6 +80,7 @@ func main() {
 	teamsAppClientSecret := flag.String("teams_app_client_secret", "", "")
 	teamsApplicationID := flag.String("teams_application_id", "", "")
 	enableFeatureGatesV2 := flag.Bool("enable_feature_gates_v2", false, "")
+	appDomain := flag.String("app_domain", "factors-dev.com:3000", "")
 	// blacklistedAlerts := flag.String("blacklisted_alerts", "", "")
 
 	flag.Parse()
@@ -115,6 +117,7 @@ func main() {
 		TeamsAppClientSecret: *teamsAppClientSecret,
 		TeamsApplicationID:   *teamsApplicationID,
 		EnableFeatureGatesV2: *enableFeatureGatesV2,
+		APPDomain:            *appDomain,
 	}
 	defaultHealthcheckPingID := C.HealthcheckEventTriggerAlertPingID
 	highPriorityHealthCheckPingID := C.HealthcheckEventTriggerAlertForHighPriorityPingID
@@ -502,7 +505,8 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 	}
 
 	var accountUrl string
-	if alertConfiguration.EventLevel == model.EventLevelAccount {
+	isAccounAlert := alertConfiguration.EventLevel == model.EventLevelAccount
+	if  isAccounAlert {
 		if _, exists := alert.Message.MessageProperty[model.ETA_DOMAIN_GROUP_USER_ID]; exists {
 			groupDomainUserID := alert.Message.MessageProperty[model.ETA_DOMAIN_GROUP_USER_ID].(string)
 			accountUrl = BuildAccountURL(groupDomainUserID)
@@ -524,7 +528,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		}
 		if isSlackIntergrated {
 			partialSlackSuccess, _, errMsg := sendSlackAlertForEventTriggerAlert(eta.ProjectID,
-				eta.SlackChannelAssociatedBy, alert, alertConfiguration.SlackChannels, alertConfiguration.SlackMentions, alertConfiguration.IsHyperlinkDisabled, accountUrl)
+				eta.SlackChannelAssociatedBy, alert, alertConfiguration.SlackChannels, alertConfiguration.SlackMentions, alertConfiguration.IsHyperlinkDisabled, isAccounAlert, accountUrl)
 			log.WithFields(log.Fields{
 				"project_id": eta.ProjectID,
 				"alert_id":   eta.ID,
@@ -561,7 +565,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		}
 		if isTeamsIntergrated {
 			teamsSuccess, errMsg := sendTeamsAlertForEventTriggerAlert(eta.ProjectID,
-				eta.TeamsChannelAssociatedBy, alert.Message, alertConfiguration.TeamsChannelsConfig)
+				eta.TeamsChannelAssociatedBy, alert.Message, alertConfiguration.TeamsChannelsConfig, isAccounAlert, accountUrl)
 			log.WithFields(log.Fields{
 				"project_id": eta.ProjectID,
 				"alert_id":   eta.ID,
@@ -622,6 +626,10 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 			"tag":             "alert_tracker",
 			"is_payload_null": isPayloadNull,
 		}).Info("ALERT TRACKER")
+
+		if response["error"] == "<nil>" {
+			response["error"] = "an"
+		}
 		if stat != "success" {
 			log.WithField("status", stat).WithField("response", response).Error("Web hook error details")
 			sendReport.WebhookFail++
@@ -767,7 +775,7 @@ func AddKeyToSortedSet(key *cacheRedis.Key, projectID int64, failPoint string, r
 }
 
 func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
-	alert *model.CachedEventTriggerAlert, Schannels, sMentions *postgres.Jsonb, isHyperlinkDisabled bool, accountUrl string) (partialSuccess bool, channelSuccess []bool, errMessage string) {
+	alert *model.CachedEventTriggerAlert, Schannels, sMentions *postgres.Jsonb, isHyperlinkDisabled, isAccountAlert bool, accountUrl string) (partialSuccess bool, channelSuccess []bool, errMessage string) {
 	logCtx := log.WithFields(log.Fields{
 		"project_id":  projectID,
 		"agent_uuid":  agentUUID,
@@ -791,7 +799,7 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
 		return false, channelSuccess, errMessage
 	}
 
-	slackMentions := make([]model.SlackUser, 0)
+	slackMentions := make([]model.SlackMember, 0)
 	if sMentions != nil {
 		if err := U.DecodePostgresJsonbToStructType(sMentions, &slackMentions); err != nil {
 			errMsg := "failed to decode slack mentions"
@@ -812,24 +820,28 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
 			errMsg := "successfully sent"
 			var blockMessage, slackMentionStr string
 			if slackMentions != nil || slackTags != nil {
-				slackMentionStr = getSlackMentionsStr(slackMentions, slackTags)
+				slackMentionStr = model.GetSlackMentionsStr(slackMentions, slackTags)
 			}
 			if !isHyperlinkDisabled {
-				blockMessage = getSlackMsgBlock(alert.Message, slackMentionStr, accountUrl)
+				blockMessage = model.GetSlackMsgBlock(alert.Message, slackMentionStr, isAccountAlert ,accountUrl)
 			} else {
-				blockMessage = getSlackMsgBlockWithoutHyperlinks(alert.Message, slackMentionStr)
+				blockMessage = model.GetSlackMsgBlockWithoutHyperlinks(alert.Message, slackMentionStr)
 			}
-			status, err := slack.SendSlackAlert(projectID, blockMessage, agentUUID, channel)
+			response, status, err := slack.SendSlackAlert(projectID, blockMessage, agentUUID, channel)
 			partialSuccess = partialSuccess || status
 			if err != nil || !status {
-				errMsg = err.Error()
+				if response["error"] != nil {
+					errMsg = response["error"].(string)
+				}
 				slackErr, exists := model.SlackErrorStates[errMsg]
 				if !exists {
-					slackErr = fmt.Sprintf("Slack reported %s", errMsg)
+					errMessage += fmt.Sprintf("Slack reported %s for %s channel\n\n", errMsg, channel.Name)
+				} else {
+					errMessage += fmt.Sprintf("%s Error for %s channel\n\n", slackErr, channel.Name)
 				}
 				channelSuccess = append(channelSuccess, false)
-				errMessage += "; " + fmt.Sprintf("%v: %s", channel, slackErr)
-				logCtx.WithField("channel", channel).WithError(err).Error("failed to send slack alert")
+				logCtx.WithField("channel", channel).WithError(fmt.Errorf("%v", response)).
+					Error("failed to send slack alert")
 				continue
 			}
 			channelSuccess = append(channelSuccess, true)
@@ -909,306 +921,10 @@ func getPropsBlock(propMap U.PropertiesMap) string {
 }
 */
 
-func getPropsBlockV2(propMap U.PropertiesMap) string {
 
-	var propBlock string
-	length := len(propMap)
-	i := 0
-	for i < length {
-		var key1, key2 string
-		var prop1, prop2 interface{}
-		prop1 = ""
-		prop2 = ""
-		if i < length {
-			pp1 := propMap[fmt.Sprintf("%d", i)]
-			i++
-			var mp1 model.MessagePropMapStruct
-			if pp1 != nil {
-				trans, ok := pp1.(map[string]interface{})
-				if !ok {
-					log.Warn("cannot convert interface to map[string]interface{} type")
-					continue
-				}
-				err := U.DecodeInterfaceMapToStructType(trans, &mp1)
-				if err != nil {
-					log.Warn("cannot convert interface map to struct type")
-					continue
-				}
-			}
-			key1 = mp1.DisplayName
-			prop1 = mp1.PropValue
-			if prop1 == "" {
-				prop1 = "<nil>"
-			}
-		}
-		if i < length {
-			pp2 := propMap[fmt.Sprintf("%d", i)]
-			i++
-			var mp2 model.MessagePropMapStruct
-			if pp2 != nil {
-				trans, ok := pp2.(map[string]interface{})
-				if !ok {
-					log.Warn("cannot convert interface to map[string]interface{} type")
-					continue
-				}
-				err := U.DecodeInterfaceMapToStructType(trans, &mp2)
-				if err != nil {
-					log.Warn("cannot convert interface map to struct type")
-					continue
-				}
-			}
-			key2 = mp2.DisplayName
-			prop2 = mp2.PropValue
-			if prop2 == "" {
-				prop2 = "<nil>"
-			}
-		}
-
-		// as slack template support only 2 columns hence adding check for count 2
-
-		propBlock += fmt.Sprintf(
-			`{
-					"type": "section",
-					"fields": [
-						{
-							"type": "mrkdwn",
-							"text": "%s \n %v"
-						},
-						{
-							"type": "mrkdwn",
-							"text": "%s \n %v",
-						}
-					]
-				},
-				{
-					"type": "divider"
-				},`, key1, strings.Replace(fmt.Sprintf("%v", prop1), "\"", "", -1), key2,
-			strings.Replace(fmt.Sprintf("%v", prop2), "\"", "", -1))
-	}
-	return propBlock
-}
-
-func getSlackMentionsStr(slackMentions []model.SlackUser, slackTags []string) string {
-	result := ""
-	for _, member := range slackMentions {
-		result += fmt.Sprintf("<@%s> ", member.Id)
-	}
-	for _, tag := range slackTags {
-		result += fmt.Sprintf("<@%s> ", tag)
-	}
-	return result
-}
-
-func getSlackMsgBlock(msg model.EventTriggerAlertMessage, slackMentions string, overRideUrl string) string {
-
-	propBlock := getPropsBlockV2(msg.MessageProperty)
-	if overRideUrl == "" {
-		overRideUrl = "https://app.factors.ai/profiles/people"
-	}
-
-	// added next two lines to support double quotes(") and backslash(\) in slack templates
-	title := strings.ReplaceAll(strings.ReplaceAll(msg.Title, "\\", "\\\\"), "\"", "\\\"")
-	message := strings.ReplaceAll(strings.ReplaceAll(msg.Message, "\\", "\\\\"), "\"", "\\\"")
-
-	mainBlock := fmt.Sprintf(`[
-		{
-			"type": "section",
-			"text": {
-				"type": "mrkdwn",
-				"text": "%s\n*%s*\n %s\n"
-			}
-		},
-		%s
-		{
-			"type": "section",
-						"text": {
-							"type": "mrkdwn",
-							"text": "*<%s|Visit Account>*"
-						}
-		}
-	]`, title, message, slackMentions, propBlock, overRideUrl)
-
-	return mainBlock
-}
-
-func getPropsBlockV2WithoutHyperlinks(propMap U.PropertiesMap) string {
-
-	var propBlock string
-	length := len(propMap)
-	i := 0
-	for i < length {
-		var key1, key2 string
-		var prop1, prop2 interface{}
-		prop1 = ""
-		prop2 = ""
-		if i < length {
-			pp1 := propMap[fmt.Sprintf("%d", i)]
-			i++
-			var mp1 model.MessagePropMapStruct
-			if pp1 != nil {
-				trans, ok := pp1.(map[string]interface{})
-				if !ok {
-					log.Warn("cannot convert interface to map[string]interface{} type")
-					continue
-				}
-				err := U.DecodeInterfaceMapToStructType(trans, &mp1)
-				if err != nil {
-					log.Warn("cannot convert interface map to struct type")
-					continue
-				}
-			}
-			key1 = mp1.DisplayName
-			prop1 = mp1.PropValue
-			if prop1 == "" {
-				prop1 = "<nil>"
-			}
-		}
-		if i < length {
-			pp2 := propMap[fmt.Sprintf("%d", i)]
-			i++
-			var mp2 model.MessagePropMapStruct
-			if pp2 != nil {
-				trans, ok := pp2.(map[string]interface{})
-				if !ok {
-					log.Warn("cannot convert interface to map[string]interface{} type")
-					continue
-				}
-				err := U.DecodeInterfaceMapToStructType(trans, &mp2)
-				if err != nil {
-					log.Warn("cannot convert interface map to struct type")
-					continue
-				}
-			}
-			key2 = mp2.DisplayName
-			prop2 = mp2.PropValue
-			if prop2 == "" {
-				prop2 = "<nil>"
-			}
-		}
-
-		// as slack template support only 2 columns hence adding check for count 2
-
-		propBlock += fmt.Sprintf(
-			`{
-					"type": "section",
-					"fields": [
-						{
-							"type": "plain_text",
-							"text": "%s \n %v"
-						},
-						{
-							"type": "plain_text",
-							"text": "%s \n %v",
-						}
-					]
-				},
-				{
-					"type": "divider"
-				},`, key1, strings.Replace(fmt.Sprintf("%v", prop1), "\"", "", -1), key2,
-			strings.Replace(fmt.Sprintf("%v", prop2), "\"", "", -1))
-	}
-	return propBlock
-}
-
-func getSlackMsgBlockWithoutHyperlinks(msg model.EventTriggerAlertMessage, slackMentions string) string {
-
-	propBlock := getPropsBlockV2WithoutHyperlinks(msg.MessageProperty)
-
-	// added next two lines to support double quotes(") and backslash(\) in slack templates
-	title := strings.ReplaceAll(strings.ReplaceAll(msg.Title, "\\", "\\\\"), "\"", "\\\"")
-	message := strings.ReplaceAll(strings.ReplaceAll(msg.Message, "\\", "\\\\"), "\"", "\\\"")
-
-	mainBlock := fmt.Sprintf(`[
-		{
-			"type": "section",
-			"text": {
-				"type": "mrkdwn",
-				"text": "%s\n*%s*%s\n"
-			}
-		},
-		%s
-		{
-			"type": "section",
-						"text": {
-							"type": "mrkdwn",
-							"text": "*<https://app.factors.ai/profiles/people|Know More>*"
-						}
-		}
-	]`, title, message, slackMentions, propBlock)
-
-	return mainBlock
-}
-
-func getTeamsMsgBlock(msg model.EventTriggerAlertMessage) string {
-	propBlock := getPropBlocksForTeams(msg.MessageProperty)
-	mainBlock := fmt.Sprintf(`<h3>%s</h3><h3>%s</h3><table>%s</table><a href=https://app.factors.ai>Know More </a>`, strings.Replace(msg.Title, "\"", "", -1), strings.Replace(msg.Message, "\"", "", -1), propBlock)
-	return mainBlock
-}
-
-func getPropBlocksForTeams(propMap U.PropertiesMap) string {
-	var propBlock string
-	length := len(propMap)
-	i := 0
-	for i < length {
-		var key1, key2 string
-		var prop1, prop2 interface{}
-		prop1 = ""
-		prop2 = ""
-		if i < length {
-			pp1 := propMap[fmt.Sprintf("%d", i)]
-			i++
-			var mp1 model.MessagePropMapStruct
-			if pp1 != nil {
-				trans, ok := pp1.(map[string]interface{})
-				if !ok {
-					log.Warn("cannot convert interface to map[string]interface{} type")
-					continue
-				}
-				err := U.DecodeInterfaceMapToStructType(trans, &mp1)
-				if err != nil {
-					log.Warn("cannot convert interface map to struct type")
-					continue
-				}
-			}
-			key1 = mp1.DisplayName
-			prop1 = mp1.PropValue
-			if prop1 == "" {
-				prop1 = "<nil>"
-			}
-		}
-		if i < length {
-			pp2 := propMap[fmt.Sprintf("%d", i)]
-			i++
-			var mp2 model.MessagePropMapStruct
-			if pp2 != nil {
-				trans, ok := pp2.(map[string]interface{})
-				if !ok {
-					log.Warn("cannot convert interface to map[string]interface{} type")
-					continue
-				}
-				err := U.DecodeInterfaceMapToStructType(trans, &mp2)
-				if err != nil {
-					log.Warn("cannot convert interface map to struct type")
-					continue
-				}
-			}
-			key2 = mp2.DisplayName
-			prop2 = mp2.PropValue
-			if prop2 == "" {
-				prop2 = "<nil>"
-			}
-		}
-
-		// as slack template support only 2 columns hence adding check for count 2
-
-		propBlock += fmt.Sprintf(
-			`<tr><td>%s&nbsp&nbsp</td><td>%s</td></tr><tr><td>%s&nbsp&nbsp</td><td>%s</td></tr>`, key1, strings.Replace(fmt.Sprintf("%v", prop1), "\"", "", -1), key2, strings.Replace(fmt.Sprintf("%v", prop2), "\"", "", -1))
-	}
-	return propBlock
-}
 
 func sendTeamsAlertForEventTriggerAlert(projectID int64, agentUUID string,
-	msg model.EventTriggerAlertMessage, Tchannels *postgres.Jsonb) (bool, string) {
+	msg model.EventTriggerAlertMessage, Tchannels *postgres.Jsonb, isAccountAlert bool, accountUrl string) (success bool, errMessage string) {
 	logCtx := log.WithFields(log.Fields{
 		"project_id":  projectID,
 		"agent_uuid":  agentUUID,
@@ -1232,17 +948,20 @@ func sendTeamsAlertForEventTriggerAlert(projectID int64, agentUUID string,
 	if wetRun {
 
 		for _, channel := range teamsChannels.TeamsChannelList {
-			message := getTeamsMsgBlock(msg)
-			err := teams.SendTeamsMessage(projectID, agentUUID, teamsChannels.TeamsId,
+			message := model.GetTeamsMsgBlock(msg, isAccountAlert, accountUrl)
+			response, err := teams.SendTeamsMessage(projectID, agentUUID, teamsChannels.TeamsId,
 				channel.ChannelId, message)
 			if err != nil {
 				errMsg := err.Error()
-				teamsErr, exists := model.TeamsErrorStates[errMsg]
-				if !exists {
-					teamsErr = fmt.Sprintf("Teams reported %s error.", errMsg)
+				errorCode, ok := response["error"].(map[string]interface{})["code"].(string)
+				teamsErr, exists := model.TeamsErrorStates[errorCode]
+				if !ok || !exists {
+					errMessage = fmt.Sprintf("Teams reported %s error.", errMsg)
+				} else {
+					errMessage += fmt.Sprintf("%s Error for %s channel\n\n", teamsErr, channel.ChannelName)
 				}
-				logCtx.WithError(err).Error("failed to send teams message")
-				return false, teamsErr
+				logCtx.WithField("errorCode", teamsErr).WithError(err).Error("failed to send teams message")
+				return false, errMessage
 			}
 
 			logCtx.Info("teams alert sent: ", channel, message)
@@ -1656,5 +1375,5 @@ func BuildAccountURL(groupDomainID string) string {
 	}
 	gdIdBytes := []byte(groupDomainID)
 	urlHash := base64.StdEncoding.EncodeToString(gdIdBytes)
-	return fmt.Sprintf(C.GetProtocol()+C.GetAPPDomain()+"/profiles/accounts/%s?group=domains&view=overview", urlHash)
+	return fmt.Sprintf(C.GetProtocol()+C.GetAPPDomain()+"/profiles/accounts/%s?group=$domains&view=birdview", urlHash)
 }

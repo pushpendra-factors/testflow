@@ -65,7 +65,6 @@ func main() {
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)
 	C.InitConf(config)
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
-	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 
 	err := C.InitDB(*config)
 	if err != nil {
@@ -122,11 +121,11 @@ func SlackUserListSync(projectID int64) error {
 		//slack api to get slack users
 		slackUsers, errCode, err := slack.GetSlackUsersList(projectID, agent.AgentUUID)
 		if err != nil || errCode != http.StatusFound {
-			if errCode == http.StatusExpectationFailed {
-				//if the agent has not re-integrated their slack, we will get this error so trying for a different agent
+			if errCode == http.StatusExpectationFailed || err.Error() == "failed to get slack auth token" {
+				//if the agent has not integrated their slack, we will get this error so trying for a different agent
 				continue
 			}
-			log.WithFields(log.Fields{"project_id": projectID, "agent_id": agent.AgentUUID}).
+			log.WithFields(log.Fields{"project_id": projectID, "agent_id": agent.AgentUUID}).WithError(err).
 				Error("can not get slack users for the project-agent combination")
 			continue
 		}
@@ -139,7 +138,7 @@ func SlackUserListSync(projectID int64) error {
 		slackUsersSuccess = true
 		jsonSlackUsers, err := U.EncodeStructTypeToPostgresJsonb(slackUsers)
 		if err != nil {
-			log.WithFields(log.Fields{"project_id": projectID, "agent_id": agent.AgentUUID}).
+			log.WithFields(log.Fields{"project_id": projectID, "agent_id": agent.AgentUUID}).WithError(err).
 				Error("unable to encode slackMember struct to json")
 			return err
 		}
@@ -150,7 +149,7 @@ func SlackUserListSync(projectID int64) error {
 		fields["users_list"] = jsonSlackUsers
 		errCode, err = store.GetStore().UpdateSlackUsersListForProject(projectID, fields)
 		if err != nil || errCode != http.StatusOK {
-			log.WithFields(log.Fields{"project_id": projectID, "agent_id": agent.AgentUUID}).
+			log.WithFields(log.Fields{"project_id": projectID, "agent_id": agent.AgentUUID}).WithError(err).
 				Error("failed to update in db")
 			return err
 		}

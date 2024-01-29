@@ -24,7 +24,8 @@ const useAgentInfo = () => {
     isAdmin,
     firstName: agent_details?.first_name,
     lastName: agent_details?.last_name,
-    isAgentInvited
+    isAgentInvited,
+    phone: agent_details?.phone
   };
 };
 

@@ -521,6 +521,29 @@ func AgentUpdate(c *gin.Context) {
 	c.JSON(http.StatusCreated, agentMappingDetails)
 	return
 }
+func UpdateCheckListStatus(c *gin.Context) {
+	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	logCtx := log.WithFields(log.Fields{
+		"reqId":         U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+		"loggedInAgent": loggedInAgentUUID,
+		"projectId":     projectId,
+	})
+
+	var checklistDismissed bool
+	status := c.Query("checklist_dismissed")
+
+	if status == "true" {
+		checklistDismissed = true
+	}
+	errCode := store.GetStore().UpdateChecklistDismissalStatus(projectId, loggedInAgentUUID, checklistDismissed)
+	if errCode != 0 {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		logCtx.Errorln("Failed to update checklist status")
+	}
+	c.JSON(http.StatusCreated, gin.H{"status": "success"})
+	return
+}
 
 type removeProjectAgentParams struct {
 	AgentUUID string `json:"agent_uuid" binding:"required"`
@@ -616,6 +639,7 @@ type agentVerifyParams struct {
 	FirstName string `json:"first_name" binding:"required"`
 	LastName  string `json:"last_name"`
 	Password  string `json:"password" binding:"required"`
+	Phone     string `json:"phone"`
 }
 
 func getAgentVerifyParams(c *gin.Context) (*agentVerifyParams, error) {
@@ -684,7 +708,7 @@ func AgentActivate(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid character"})
 		return
 	}
-	errCode := store.GetStore().UpdateAgentVerificationDetails(agentUUID, params.Password, params.FirstName, params.LastName, true, ts)
+	errCode := store.GetStore().UpdateAgentVerificationDetails(agentUUID, params.Password, params.FirstName, params.LastName, params.Phone, true, ts)
 	if errCode == http.StatusInternalServerError {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
@@ -908,12 +932,13 @@ func GetProjectAgentsHandler(c *gin.Context) {
 
 func MapProjectAgentMapping(mapping model.ProjectAgentMapping) model.ProjectAgentMappingString {
 	return model.ProjectAgentMappingString{
-		AgentUUID: mapping.AgentUUID,
-		ProjectID: fmt.Sprintf("%v", mapping.ProjectID),
-		Role:      mapping.Role,
-		InvitedBy: mapping.InvitedBy,
-		CreatedAt: mapping.CreatedAt,
-		UpdatedAt: mapping.UpdatedAt,
+		AgentUUID:          mapping.AgentUUID,
+		ProjectID:          fmt.Sprintf("%v", mapping.ProjectID),
+		Role:               mapping.Role,
+		ChecklistDismissed: mapping.ChecklistDismissed,
+		InvitedBy:          mapping.InvitedBy,
+		CreatedAt:          mapping.CreatedAt,
+		UpdatedAt:          mapping.UpdatedAt,
 	}
 }
 

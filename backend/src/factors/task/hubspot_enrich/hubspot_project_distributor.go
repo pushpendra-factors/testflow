@@ -5,6 +5,7 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	"factors/model/store"
+	"factors/util"
 	"net/http"
 	"time"
 
@@ -64,9 +65,24 @@ func RunHubspotProjectDistributer(configs map[string]interface{}) (map[string]in
 		return nil, false
 	}
 
+	featureProjectIDs, err := store.GetStore().GetAllProjectsWithFeatureEnabled(model.FEATURE_HUBSPOT, false)
+	if err != nil {
+		log.WithError(err).Error("Failed to get hubspot feature enabled projects.")
+		return nil, false
+	}
+
+	featureEnabledProjectSettings := []model.HubspotProjectSettings{}
+	for i := range hubspotEnabledProjectSettings {
+		if util.ContainsInt64InArray(featureProjectIDs, hubspotEnabledProjectSettings[i].ProjectId) {
+			featureEnabledProjectSettings = append(featureEnabledProjectSettings, hubspotEnabledProjectSettings[i])
+		}
+	}
+	hubspotEnabledProjectSettings = featureEnabledProjectSettings
+
 	projectIDs := make([]int64, 0)
 	for i := range hubspotEnabledProjectSettings {
 		projectIDs = append(projectIDs, hubspotEnabledProjectSettings[i].ProjectId)
+
 	}
 
 	projectdocumentCount, status := store.GetStore().GetHubspotDocumentCountForSync(projectIDs, IntHubspot.GetHubspotObjectTypeForSync(), time.Now().Unix())

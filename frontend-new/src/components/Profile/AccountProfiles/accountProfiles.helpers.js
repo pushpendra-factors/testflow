@@ -82,7 +82,7 @@ const getTablePropColumn = ({
     key: prop,
     width:
       COLUMN_TYPE_PROPS[ACCOUNTS_TABLE_COLUMN_TYPES[prop]?.Type || 'string']
-        ?.max || 264,
+        ?.min || 264,
     showSorterTooltip: null,
     sorter: (a, b) =>
       propType === 'numerical'

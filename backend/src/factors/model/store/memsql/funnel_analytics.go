@@ -724,14 +724,17 @@ func buildAddJoinForFunnelAllAccountsFunnelStep(projectID int64, queryGroupByPro
 	filteredGroupByProperties := model.RemoveDomainGroupByProperties(queryGroupByProperty)
 	userGroupProps := model.GetGlobalGroupByUserProperties(filteredGroupByProperties)
 	hasGlobalGroupByProperties := len(userGroupProps) > 0
-	if !hasGlobalGroupByProperties || refStep == "" {
+	if (!hasGlobalGroupByProperties && !model.CheckIfHasDomainGroupBy(queryGroupByProperty)) || refStep == "" {
 		return "", nil
 	}
 
-	globalGroupIDColumns, globalGroupSource := model.GetDomainsAsscocaitedGroupSourceANDColumnIDs(nil, userGroupProps)
-	joinStmnt := fmt.Sprintf(" LEFT JOIN users AS group_users on %s.coal_group_user_id = group_users.group_%d_user_id "+
-		"AND group_users.project_id = ? AND  group_users.is_group_user = true AND group_users.source IN ( %s ) AND ( %s )",
-		refStep, scopeGroupID, globalGroupSource, globalGroupIDColumns)
+	joinStmnt := ""
+	if hasGlobalGroupByProperties {
+		globalGroupIDColumns, globalGroupSource := model.GetDomainsAsscocaitedGroupSourceANDColumnIDs(nil, userGroupProps)
+		joinStmnt = fmt.Sprintf(" LEFT JOIN users AS group_users on %s.coal_group_user_id = group_users.group_%d_user_id "+
+			"AND group_users.project_id = ? AND  group_users.is_group_user = true AND group_users.source IN ( %s ) AND ( %s )",
+			refStep, scopeGroupID, globalGroupSource, globalGroupIDColumns)
+	}
 
 	if model.CheckIfHasDomainGroupBy(queryGroupByProperty) {
 		joinStmnt = joinStmnt + fmt.Sprintf(" LEFT JOIN users as domain_users on %s.coal_group_user_id = domain_users.id "+

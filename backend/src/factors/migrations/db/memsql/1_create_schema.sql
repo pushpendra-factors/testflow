@@ -382,6 +382,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS project_agent_mappings (
     project_id bigint,
     agent_uuid text,
     role bigint,
+    checklist_dismissed bool,
     invited_by text,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
@@ -1220,11 +1221,11 @@ CREATE ROWSTORE TABLE IF NOT EXISTS event_trigger_alerts(
     teams_channel_associated_by text,
     paragon_metadata json,
     event_trigger_alert json,
-    last_alert_at timestamp(6),
+    last_alert_at timestamp(6) NOT NULL DEFAULT '1970-01-01 00:00:00',
     last_fail_details json,
     internal_status text,
-    created_at timestamp(6) NOT NULL,
-    updated_at timestamp(6) NOT NULL,
+    created_at timestamp(6) NOT NULL DEFAULT '1970-01-01 00:00:00',
+    updated_at timestamp(6) NOT NULL DEFAULT '1970-01-01 00:00:00',
     is_deleted boolean NOT NULL DEFAULT FALSE
 );
 
@@ -1425,7 +1426,7 @@ CREATE TABLE IF NOT EXISTS slack_users_list(
     project_id BIGINT NOT NULL, 
     agent_id TEXT NOT NULL,
     users_list JSON,
-    last_sync_time TIMESTAMP(6)
+    last_sync_time TIMESTAMP(6) NOT NULL DEFAULT '1970-01-01 00:00:00'
 ); 
 
 --  This is generated from DBT workload. Adding this for running test cases alone.

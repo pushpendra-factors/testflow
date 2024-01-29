@@ -391,7 +391,11 @@ func FormatTimeToString(time time.Time) string {
 }
 
 func IsDomainGroup(group string) bool {
-	return group == "All" || group == U.GROUP_NAME_DOMAINS
+	return group == U.GROUP_NAME_DOMAINS
+}
+
+func IsSourceAllUsers(source string) bool {
+	return source == "All"
 }
 
 func IsAnyProfiles(caller string) bool {

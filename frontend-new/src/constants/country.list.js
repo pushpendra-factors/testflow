@@ -1,211 +1,70 @@
 export const COUNTRY_LIST = [
-  {
-    name: ['afghanistan'],
-    iso_code: 'AF'
-  },
-  {
-    name: ['åland islands'],
-    iso_code: 'AX'
-  },
-  {
-    name: ['albania'],
-    iso_code: 'AL'
-  },
-  {
-    name: ['algeria'],
-    iso_code: 'DZ'
-  },
-  {
-    name: ['american samoa'],
-    iso_code: 'AS'
-  },
-  {
-    name: ['andorra'],
-    iso_code: 'AD'
-  },
-  {
-    name: ['angola'],
-    iso_code: 'AO'
-  },
-  {
-    name: ['anguilla'],
-    iso_code: 'AI'
-  },
-  {
-    name: ['antarctica'],
-    iso_code: 'AQ'
-  },
-  {
-    name: ['antigua and barbuda'],
-    iso_code: 'AG'
-  },
-  {
-    name: ['argentina'],
-    iso_code: 'AR'
-  },
-  {
-    name: ['armenia'],
-    iso_code: 'AM'
-  },
-  {
-    name: ['aruba'],
-    iso_code: 'AW'
-  },
-  {
-    name: ['australia'],
-    iso_code: 'AU'
-  },
-  {
-    name: ['austria'],
-    iso_code: 'AT'
-  },
-  {
-    name: ['azerbaijan'],
-    iso_code: 'AZ'
-  },
-  {
-    name: ['bahamas'],
-    iso_code: 'BS'
-  },
-  {
-    name: ['bahrain'],
-    iso_code: 'BH'
-  },
-  {
-    name: ['bangladesh'],
-    iso_code: 'BD'
-  },
-  {
-    name: ['barbados'],
-    iso_code: 'BB'
-  },
-  {
-    name: ['belarus'],
-    iso_code: 'BY'
-  },
-  {
-    name: ['belgium'],
-    iso_code: 'BE'
-  },
-  {
-    name: ['belize'],
-    iso_code: 'BZ'
-  },
-  {
-    name: ['benin'],
-    iso_code: 'BJ'
-  },
-  {
-    name: ['bermuda'],
-    iso_code: 'BM'
-  },
-  {
-    name: ['bhutan'],
-    iso_code: 'BT'
-  },
+  { name: ['afghanistan'], iso_code: 'AF', dial_code: '+93' },
+  { name: ['åland islands'], iso_code: 'AX', dial_code: '+358' },
+  { name: ['albania'], iso_code: 'AL', dial_code: '+355' },
+  { name: ['algeria'], iso_code: 'DZ', dial_code: '+213' },
+  { name: ['american samoa'], iso_code: 'AS', dial_code: '+1684' },
+  { name: ['andorra'], iso_code: 'AD', dial_code: '+376' },
+  { name: ['angola'], iso_code: 'AO', dial_code: '+244' },
+  { name: ['anguilla'], iso_code: 'AI', dial_code: '+1264' },
+  { name: ['antarctica'], iso_code: 'AQ', dial_code: '+672' },
+  { name: ['antigua and barbuda'], iso_code: 'AG', dial_code: '+1268' },
+  { name: ['argentina'], iso_code: 'AR', dial_code: '+54' },
+  { name: ['armenia'], iso_code: 'AM', dial_code: '+374' },
+  { name: ['aruba'], iso_code: 'AW', dial_code: '+297' },
+  { name: ['australia'], iso_code: 'AU', dial_code: '+61' },
+  { name: ['austria'], iso_code: 'AT', dial_code: '+43' },
+  { name: ['azerbaijan'], iso_code: 'AZ', dial_code: '+994' },
+  { name: ['bahamas'], iso_code: 'BS', dial_code: '+1242' },
+  { name: ['bahrain'], iso_code: 'BH', dial_code: '+973' },
+  { name: ['bangladesh'], iso_code: 'BD', dial_code: '+880' },
+  { name: ['barbados'], iso_code: 'BB', dial_code: '+1246' },
+  { name: ['belarus'], iso_code: 'BY', dial_code: '+375' },
+  { name: ['belgium'], iso_code: 'BE', dial_code: '+32' },
+  { name: ['belize'], iso_code: 'BZ', dial_code: '+501' },
+  { name: ['benin'], iso_code: 'BJ', dial_code: '+229' },
+  { name: ['bermuda'], iso_code: 'BM', dial_code: '+1441' },
+  { name: ['bhutan'], iso_code: 'BT', dial_code: '+975' },
   {
     name: ['bolivia', 'bolivia (plurinational state of)'],
-    iso_code: 'BO'
+    iso_code: 'BO',
+    dial_code: '+591'
   },
   {
     name: [
       'bonaire, sint eustatius and saba',
       'bonaire, sint eustatius, and saba'
     ],
-    iso_code: 'BQ'
+    iso_code: 'BQ',
+    dial_code: ''
   },
-  {
-    name: ['bosnia and herzegovina'],
-    iso_code: 'BA'
-  },
-  {
-    name: ['botswana'],
-    iso_code: 'BW'
-  },
-  {
-    name: ['bouvet island'],
-    iso_code: 'BV'
-  },
-  {
-    name: ['brazil'],
-    iso_code: 'BR'
-  },
+  { name: ['bosnia and herzegovina'], iso_code: 'BA', dial_code: '+387' },
+  { name: ['botswana'], iso_code: 'BW', dial_code: '+267' },
+  { name: ['bouvet island'], iso_code: 'BV', dial_code: '' },
+  { name: ['brazil'], iso_code: 'BR', dial_code: '+55' },
   {
     name: ['british virgin islands', 'british indian ocean territory'],
-    iso_code: 'IO'
+    iso_code: 'IO',
+    dial_code: '+246'
   },
-  {
-    name: ['brunei', 'brunei darussalam'],
-    iso_code: 'BN'
-  },
-  {
-    name: ['bulgaria'],
-    iso_code: 'BG'
-  },
-  {
-    name: ['burkina faso'],
-    iso_code: 'BF'
-  },
-  {
-    name: ['burundi'],
-    iso_code: 'BI'
-  },
-  {
-    name: ['cabo verde'],
-    iso_code: 'CV'
-  },
-  {
-    name: ['cambodia'],
-    iso_code: 'KH'
-  },
-  {
-    name: ['cameroon'],
-    iso_code: 'CM'
-  },
-  {
-    name: ['canada'],
-    iso_code: 'CA'
-  },
-  {
-    name: ['cayman islands'],
-    iso_code: 'KY'
-  },
-  {
-    name: ['central african republic'],
-    iso_code: 'CF'
-  },
-  {
-    name: ['chad'],
-    iso_code: 'TD'
-  },
-  {
-    name: ['chile'],
-    iso_code: 'CL'
-  },
-  {
-    name: ['china'],
-    iso_code: 'CN'
-  },
-  {
-    name: ['christmas island'],
-    iso_code: 'CX'
-  },
-  {
-    name: ['cocos (keeling) islands'],
-    iso_code: 'CC'
-  },
-  {
-    name: ['colombia'],
-    iso_code: 'CO'
-  },
-  {
-    name: ['comoros'],
-    iso_code: 'KM'
-  },
-  {
-    name: ['congo'],
-    iso_code: 'CG'
-  },
+  { name: ['brunei', 'brunei darussalam'], iso_code: 'BN', dial_code: '+673' },
+  { name: ['bulgaria'], iso_code: 'BG', dial_code: '+359' },
+  { name: ['burkina faso'], iso_code: 'BF', dial_code: '+226' },
+  { name: ['burundi'], iso_code: 'BI', dial_code: '+257' },
+  { name: ['cabo verde'], iso_code: 'CV', dial_code: '+238' },
+  { name: ['cambodia'], iso_code: 'KH', dial_code: '+855' },
+  { name: ['cameroon'], iso_code: 'CM', dial_code: '+237' },
+  { name: ['canada'], iso_code: 'CA', dial_code: '+1' },
+  { name: ['cayman islands'], iso_code: 'KY', dial_code: '+ 345' },
+  { name: ['central african republic'], iso_code: 'CF', dial_code: '+236' },
+  { name: ['chad'], iso_code: 'TD', dial_code: '+235' },
+  { name: ['chile'], iso_code: 'CL', dial_code: '+56' },
+  { name: ['china'], iso_code: 'CN', dial_code: '+86' },
+  { name: ['christmas island'], iso_code: 'CX', dial_code: '+61' },
+  { name: ['cocos (keeling) islands'], iso_code: 'CC', dial_code: '+61' },
+  { name: ['colombia'], iso_code: 'CO', dial_code: '+57' },
+  { name: ['comoros'], iso_code: 'KM', dial_code: '+269' },
+  { name: ['congo'], iso_code: 'CG', dial_code: '+242' },
   {
     name: [
       'congo republic',
@@ -213,813 +72,332 @@ export const COUNTRY_LIST = [
       'dr congo',
       'republic of the congo'
     ],
-    iso_code: 'CD'
+    iso_code: 'CD',
+    dial_code: '+243'
   },
-  {
-    name: ['cook islands'],
-    iso_code: 'CK'
-  },
-  {
-    name: ['costa rica'],
-    iso_code: 'CR'
-  },
-  {
-    name: ['ivory coast', "côte d'ivoire"],
-    iso_code: 'CI'
-  },
-  {
-    name: ['croatia'],
-    iso_code: 'HR'
-  },
-  {
-    name: ['cuba'],
-    iso_code: 'CU'
-  },
-  {
-    name: ['curaao', 'curaçao'],
-    iso_code: 'CW'
-  },
-  {
-    name: ['cyprus'],
-    iso_code: 'CY'
-  },
-  {
-    name: ['czechia'],
-    iso_code: 'CZ'
-  },
-  {
-    name: ['denmark'],
-    iso_code: 'DK'
-  },
-  {
-    name: ['djibouti'],
-    iso_code: 'DJ'
-  },
-  {
-    name: ['dominica'],
-    iso_code: 'DM'
-  },
-  {
-    name: ['dominican republic'],
-    iso_code: 'DO'
-  },
-  {
-    name: ['ecuador'],
-    iso_code: 'EC'
-  },
-  {
-    name: ['egypt'],
-    iso_code: 'EG'
-  },
-  {
-    name: ['el salvador'],
-    iso_code: 'SV'
-  },
-  {
-    name: ['equatorial guinea'],
-    iso_code: 'GQ'
-  },
-  {
-    name: ['eritrea'],
-    iso_code: 'ER'
-  },
-  {
-    name: ['estonia'],
-    iso_code: 'EE'
-  },
-  {
-    name: ['eswatini'],
-    iso_code: 'SZ'
-  },
-  {
-    name: ['ethiopia'],
-    iso_code: 'ET'
-  },
+  { name: ['cook islands'], iso_code: 'CK', dial_code: '+682' },
+  { name: ['costa rica'], iso_code: 'CR', dial_code: '+506' },
+  { name: ['ivory coast', "côte d'ivoire"], iso_code: 'CI', dial_code: '+225' },
+  { name: ['croatia'], iso_code: 'HR', dial_code: '+385' },
+  { name: ['cuba'], iso_code: 'CU', dial_code: '+53' },
+  { name: ['curaao', 'curaçao'], iso_code: 'CW', dial_code: '' },
+  { name: ['cyprus'], iso_code: 'CY', dial_code: '+357' },
+  { name: ['czechia'], iso_code: 'CZ', dial_code: '+420' },
+  { name: ['denmark'], iso_code: 'DK', dial_code: '+45' },
+  { name: ['djibouti'], iso_code: 'DJ', dial_code: '+253' },
+  { name: ['dominica'], iso_code: 'DM', dial_code: '+1767' },
+  { name: ['dominican republic'], iso_code: 'DO', dial_code: '+1849' },
+  { name: ['ecuador'], iso_code: 'EC', dial_code: '+593' },
+  { name: ['egypt'], iso_code: 'EG', dial_code: '+20' },
+  { name: ['el salvador'], iso_code: 'SV', dial_code: '+503' },
+  { name: ['equatorial guinea'], iso_code: 'GQ', dial_code: '+240' },
+  { name: ['eritrea'], iso_code: 'ER', dial_code: '+291' },
+  { name: ['estonia'], iso_code: 'EE', dial_code: '+372' },
+  { name: ['eswatini'], iso_code: 'SZ', dial_code: '+268' },
+  { name: ['ethiopia'], iso_code: 'ET', dial_code: '+251' },
   {
     name: ['falkland islands', 'falkland islands (malvinas)'],
-    iso_code: 'FK'
+    iso_code: 'FK',
+    dial_code: '+500'
   },
-  {
-    name: ['faroe islands'],
-    iso_code: 'FO'
-  },
-  {
-    name: ['fiji'],
-    iso_code: 'FJ'
-  },
-  {
-    name: ['finland'],
-    iso_code: 'FI'
-  },
-  {
-    name: ['france'],
-    iso_code: 'FR'
-  },
-  {
-    name: ['french guiana'],
-    iso_code: 'GF'
-  },
-  {
-    name: ['french polynesia'],
-    iso_code: 'PF'
-  },
-  {
-    name: ['french southern territories'],
-    iso_code: 'TF'
-  },
-  {
-    name: ['gabon'],
-    iso_code: 'GA'
-  },
-  {
-    name: ['gambia'],
-    iso_code: 'GM'
-  },
-  {
-    name: ['georgia'],
-    iso_code: 'GE'
-  },
-  {
-    name: ['germany'],
-    iso_code: 'DE'
-  },
-  {
-    name: ['ghana'],
-    iso_code: 'GH'
-  },
-  {
-    name: ['gibraltar'],
-    iso_code: 'GI'
-  },
-  {
-    name: ['greece'],
-    iso_code: 'GR'
-  },
-  {
-    name: ['greenland'],
-    iso_code: 'GL'
-  },
-  {
-    name: ['grenada'],
-    iso_code: 'GD'
-  },
-  {
-    name: ['guadeloupe'],
-    iso_code: 'GP'
-  },
-  {
-    name: ['guam'],
-    iso_code: 'GU'
-  },
-  {
-    name: ['guatemala'],
-    iso_code: 'GT'
-  },
-  {
-    name: ['guernsey'],
-    iso_code: 'GG'
-  },
-  {
-    name: ['guinea'],
-    iso_code: 'GN'
-  },
-  {
-    name: ['guinea-bissau'],
-    iso_code: 'GW'
-  },
-  {
-    name: ['guyana'],
-    iso_code: 'GY'
-  },
-  {
-    name: ['haiti'],
-    iso_code: 'HT'
-  },
+  { name: ['faroe islands'], iso_code: 'FO', dial_code: '+298' },
+  { name: ['fiji'], iso_code: 'FJ', dial_code: '+679' },
+  { name: ['finland'], iso_code: 'FI', dial_code: '+358' },
+  { name: ['france'], iso_code: 'FR', dial_code: '+33' },
+  { name: ['french guiana'], iso_code: 'GF', dial_code: '+594' },
+  { name: ['french polynesia'], iso_code: 'PF', dial_code: '+689' },
+  { name: ['french southern territories'], iso_code: 'TF', dial_code: '' },
+  { name: ['gabon'], iso_code: 'GA', dial_code: '+241' },
+  { name: ['gambia'], iso_code: 'GM', dial_code: '+220' },
+  { name: ['georgia'], iso_code: 'GE', dial_code: '+995' },
+  { name: ['germany'], iso_code: 'DE', dial_code: '+49' },
+  { name: ['ghana'], iso_code: 'GH', dial_code: '+233' },
+  { name: ['gibraltar'], iso_code: 'GI', dial_code: '+350' },
+  { name: ['greece'], iso_code: 'GR', dial_code: '+30' },
+  { name: ['greenland'], iso_code: 'GL', dial_code: '+299' },
+  { name: ['grenada'], iso_code: 'GD', dial_code: '+1473' },
+  { name: ['guadeloupe'], iso_code: 'GP', dial_code: '+590' },
+  { name: ['guam'], iso_code: 'GU', dial_code: '+1671' },
+  { name: ['guatemala'], iso_code: 'GT', dial_code: '+502' },
+  { name: ['guernsey'], iso_code: 'GG', dial_code: '+44' },
+  { name: ['guinea'], iso_code: 'GN', dial_code: '+224' },
+  { name: ['guinea-bissau'], iso_code: 'GW', dial_code: '+245' },
+  { name: ['guyana'], iso_code: 'GY', dial_code: '+595' },
+  { name: ['haiti'], iso_code: 'HT', dial_code: '+509' },
   {
     name: ['heard island and mcdonald islands'],
-    iso_code: 'HM'
+    iso_code: 'HM',
+    dial_code: ''
   },
-  {
-    name: ['vatican city', 'holy see'],
-    iso_code: 'VA'
-  },
-  {
-    name: ['honduras'],
-    iso_code: 'HN'
-  },
-  {
-    name: ['hong kong'],
-    iso_code: 'HK'
-  },
-  {
-    name: ['hungary'],
-    iso_code: 'HU'
-  },
-  {
-    name: ['iceland'],
-    iso_code: 'IS'
-  },
-  {
-    name: ['india'],
-    iso_code: 'IN'
-  },
-  {
-    name: ['indonesia'],
-    iso_code: 'ID'
-  },
+  { name: ['vatican city', 'holy see'], iso_code: 'VA', dial_code: '+379' },
+  { name: ['honduras'], iso_code: 'HN', dial_code: '+504' },
+  { name: ['hong kong'], iso_code: 'HK', dial_code: '+852' },
+  { name: ['hungary'], iso_code: 'HU', dial_code: '+36' },
+  { name: ['iceland'], iso_code: 'IS', dial_code: '+354' },
+  { name: ['india'], iso_code: 'IN', dial_code: '+91' },
+  { name: ['indonesia'], iso_code: 'ID', dial_code: '+62' },
   {
     name: ['iran', 'iran (islamic republic of)'],
-    iso_code: 'IR'
+    iso_code: 'IR',
+    dial_code: '+98'
   },
-  {
-    name: ['iraq'],
-    iso_code: 'IQ'
-  },
-  {
-    name: ['ireland'],
-    iso_code: 'IE'
-  },
-  {
-    name: ['isle of man'],
-    iso_code: 'IM'
-  },
-  {
-    name: ['israel'],
-    iso_code: 'IL'
-  },
-  {
-    name: ['italy'],
-    iso_code: 'IT'
-  },
-  {
-    name: ['jamaica'],
-    iso_code: 'JM'
-  },
-  {
-    name: ['japan'],
-    iso_code: 'JP'
-  },
-  {
-    name: ['jersey'],
-    iso_code: 'JE'
-  },
+  { name: ['iraq'], iso_code: 'IQ', dial_code: '+964' },
+  { name: ['ireland'], iso_code: 'IE', dial_code: '+353' },
+  { name: ['isle of man'], iso_code: 'IM', dial_code: '+44' },
+  { name: ['israel'], iso_code: 'IL', dial_code: '+972' },
+  { name: ['italy'], iso_code: 'IT', dial_code: '+39' },
+  { name: ['jamaica'], iso_code: 'JM', dial_code: '+1876' },
+  { name: ['japan'], iso_code: 'JP', dial_code: '+81' },
+  { name: ['jersey'], iso_code: 'JE', dial_code: '+44' },
   {
     name: ['jordan', 'hashemite kingdom of jordan'],
-    iso_code: 'JO'
+    iso_code: 'JO',
+    dial_code: '+962'
   },
-  {
-    name: ['kazakhstan'],
-    iso_code: 'KZ'
-  },
-  {
-    name: ['kenya'],
-    iso_code: 'KE'
-  },
-  {
-    name: ['kiribati'],
-    iso_code: 'KI'
-  },
+  { name: ['kazakhstan'], iso_code: 'KZ', dial_code: '+77' },
+  { name: ['kenya'], iso_code: 'KE', dial_code: '+254' },
+  { name: ['kiribati'], iso_code: 'KI', dial_code: '+686' },
   {
     name: ["korea (democratic people's republic of)"],
-    iso_code: 'KP'
+    iso_code: 'KP',
+    dial_code: '+850'
   },
   {
     name: ['south korea', 'korea, republic of', 'republic of korea'],
-    iso_code: 'KR'
+    iso_code: 'KR',
+    dial_code: '+82'
   },
-  {
-    name: ['kuwait'],
-    iso_code: 'KW'
-  },
-  {
-    name: ['kyrgyzstan'],
-    iso_code: 'KG'
-  },
+  { name: ['kuwait'], iso_code: 'KW', dial_code: '+965' },
+  { name: ['kyrgyzstan'], iso_code: 'KG', dial_code: '+996' },
   {
     name: ['laos', "lao people's democratic republic"],
-    iso_code: 'LA'
+    iso_code: 'LA',
+    dial_code: '+856'
   },
-  {
-    name: ['latvia'],
-    iso_code: 'LV'
-  },
-  {
-    name: ['lebanon'],
-    iso_code: 'LB'
-  },
-  {
-    name: ['lesotho'],
-    iso_code: 'LS'
-  },
-  {
-    name: ['liberia'],
-    iso_code: 'LR'
-  },
-  {
-    name: ['libya'],
-    iso_code: 'LY'
-  },
-  {
-    name: ['liechtenstein'],
-    iso_code: 'LI'
-  },
+  { name: ['latvia'], iso_code: 'LV', dial_code: '+371' },
+  { name: ['lebanon'], iso_code: 'LB', dial_code: '+961' },
+  { name: ['lesotho'], iso_code: 'LS', dial_code: '+266' },
+  { name: ['liberia'], iso_code: 'LR', dial_code: '+231' },
+  { name: ['libya'], iso_code: 'LY', dial_code: '+218' },
+  { name: ['liechtenstein'], iso_code: 'LI', dial_code: '+423' },
   {
     name: ['lithuania', 'republic of lithuania'],
-    iso_code: 'LT'
+    iso_code: 'LT',
+    dial_code: '+370'
   },
-  {
-    name: ['luxembourg'],
-    iso_code: 'LU'
-  },
-  {
-    name: ['macao'],
-    iso_code: 'MO'
-  },
-  {
-    name: ['madagascar'],
-    iso_code: 'MG'
-  },
-  {
-    name: ['malawi'],
-    iso_code: 'MW'
-  },
-  {
-    name: ['malaysia'],
-    iso_code: 'MY'
-  },
-  {
-    name: ['maldives'],
-    iso_code: 'MV'
-  },
-  {
-    name: ['mali'],
-    iso_code: 'ML'
-  },
-  {
-    name: ['malta'],
-    iso_code: 'MT'
-  },
-  {
-    name: ['marshall islands'],
-    iso_code: 'MH'
-  },
-  {
-    name: ['martinique'],
-    iso_code: 'MQ'
-  },
-  {
-    name: ['mauritania'],
-    iso_code: 'MR'
-  },
-  {
-    name: ['mauritius'],
-    iso_code: 'MU'
-  },
-  {
-    name: ['mayotte'],
-    iso_code: 'YT'
-  },
-  {
-    name: ['mexico'],
-    iso_code: 'MX'
-  },
+  { name: ['luxembourg'], iso_code: 'LU', dial_code: '+352' },
+  { name: ['macao'], iso_code: 'MO', dial_code: '+853' },
+  { name: ['madagascar'], iso_code: 'MG', dial_code: '+261' },
+  { name: ['malawi'], iso_code: 'MW', dial_code: '+265' },
+  { name: ['malaysia'], iso_code: 'MY', dial_code: '+60' },
+  { name: ['maldives'], iso_code: 'MV', dial_code: '+960' },
+  { name: ['mali'], iso_code: 'ML', dial_code: '+223' },
+  { name: ['malta'], iso_code: 'MT', dial_code: '+356' },
+  { name: ['marshall islands'], iso_code: 'MH', dial_code: '+692' },
+  { name: ['martinique'], iso_code: 'MQ', dial_code: '+596' },
+  { name: ['mauritania'], iso_code: 'MR', dial_code: '+222' },
+  { name: ['mauritius'], iso_code: 'MU', dial_code: '+230' },
+  { name: ['mayotte'], iso_code: 'YT', dial_code: '+262' },
+  { name: ['mexico'], iso_code: 'MX', dial_code: '+52' },
   {
     name: [
       'micronesia (federated states of)',
       'federated states of micronesia'
     ],
-    iso_code: 'FM'
+    iso_code: 'FM',
+    dial_code: '+691'
   },
   {
     name: ['moldova', 'moldova, republic of', 'republic of moldova'],
-    iso_code: 'MD'
+    iso_code: 'MD',
+    dial_code: '+373'
   },
   {
     name: ['monaco', 'principality of monaco'],
-    iso_code: 'MC'
+    iso_code: 'MC',
+    dial_code: '+377'
   },
-  {
-    name: ['mongolia'],
-    iso_code: 'MN'
-  },
-  {
-    name: ['montenegro'],
-    iso_code: 'ME'
-  },
-  {
-    name: ['montserrat'],
-    iso_code: 'MS'
-  },
-  {
-    name: ['morocco'],
-    iso_code: 'MA'
-  },
-  {
-    name: ['mozambique'],
-    iso_code: 'MZ'
-  },
-  {
-    name: ['myanmar'],
-    iso_code: 'MM'
-  },
-  {
-    name: ['namibia'],
-    iso_code: 'NA'
-  },
-  {
-    name: ['nauru'],
-    iso_code: 'NR'
-  },
-  {
-    name: ['nepal'],
-    iso_code: 'NP'
-  },
-  {
-    name: ['netherlands'],
-    iso_code: 'NL'
-  },
-  {
-    name: ['new caledonia'],
-    iso_code: 'NC'
-  },
-  {
-    name: ['new zealand'],
-    iso_code: 'NZ'
-  },
-  {
-    name: ['nicaragua'],
-    iso_code: 'NI'
-  },
-  {
-    name: ['niger'],
-    iso_code: 'NE'
-  },
-  {
-    name: ['nigeria'],
-    iso_code: 'NG'
-  },
-  {
-    name: ['niue'],
-    iso_code: 'NU'
-  },
-  {
-    name: ['norfolk island'],
-    iso_code: 'NF'
-  },
-  {
-    name: ['macedonia', 'north macedonia'],
-    iso_code: 'MK'
-  },
-  {
-    name: ['northern mariana islands'],
-    iso_code: 'MP'
-  },
-  {
-    name: ['norway'],
-    iso_code: 'NO'
-  },
-  {
-    name: ['oman'],
-    iso_code: 'OM'
-  },
-  {
-    name: ['pakistan'],
-    iso_code: 'PK'
-  },
-  {
-    name: ['palau'],
-    iso_code: 'PW'
-  },
+  { name: ['mongolia'], iso_code: 'MN', dial_code: '+976' },
+  { name: ['montenegro'], iso_code: 'ME', dial_code: '+382' },
+  { name: ['montserrat'], iso_code: 'MS', dial_code: '+1664' },
+  { name: ['morocco'], iso_code: 'MA', dial_code: '+212' },
+  { name: ['mozambique'], iso_code: 'MZ', dial_code: '+258' },
+  { name: ['myanmar'], iso_code: 'MM', dial_code: '+95' },
+  { name: ['namibia'], iso_code: 'NA', dial_code: '+264' },
+  { name: ['nauru'], iso_code: 'NR', dial_code: '+674' },
+  { name: ['nepal'], iso_code: 'NP', dial_code: '+977' },
+  { name: ['netherlands'], iso_code: 'NL', dial_code: '+31' },
+  { name: ['new caledonia'], iso_code: 'NC', dial_code: '+687' },
+  { name: ['new zealand'], iso_code: 'NZ', dial_code: '+64' },
+  { name: ['nicaragua'], iso_code: 'NI', dial_code: '+505' },
+  { name: ['niger'], iso_code: 'NE', dial_code: '+227' },
+  { name: ['nigeria'], iso_code: 'NG', dial_code: '+234' },
+  { name: ['niue'], iso_code: 'NU', dial_code: '+683' },
+  { name: ['norfolk island'], iso_code: 'NF', dial_code: '+672' },
+  { name: ['macedonia', 'north macedonia'], iso_code: 'MK', dial_code: '+389' },
+  { name: ['northern mariana islands'], iso_code: 'MP', dial_code: '+1670' },
+  { name: ['norway'], iso_code: 'NO', dial_code: '+47' },
+  { name: ['oman'], iso_code: 'OM', dial_code: '+968' },
+  { name: ['pakistan'], iso_code: 'PK', dial_code: '+92' },
+  { name: ['palau'], iso_code: 'PW', dial_code: '+680' },
   {
     name: ['palestine', 'palestine, state of'],
-    iso_code: 'PS'
+    iso_code: 'PS',
+    dial_code: '+970'
   },
-  {
-    name: ['panama'],
-    iso_code: 'PA'
-  },
-  {
-    name: ['papua new guinea'],
-    iso_code: 'PG'
-  },
-  {
-    name: ['paraguay'],
-    iso_code: 'PY'
-  },
-  {
-    name: ['peru'],
-    iso_code: 'PE'
-  },
-  {
-    name: ['philippines'],
-    iso_code: 'PH'
-  },
-  {
-    name: ['pitcairn'],
-    iso_code: 'PN'
-  },
-  {
-    name: ['poland'],
-    iso_code: 'PL'
-  },
-  {
-    name: ['portugal'],
-    iso_code: 'PT'
-  },
-  {
-    name: ['puerto rico'],
-    iso_code: 'PR'
-  },
-  {
-    name: ['qatar'],
-    iso_code: 'QA'
-  },
-  {
-    name: ['runion', 'réunion'],
-    iso_code: 'RE'
-  },
-  {
-    name: ['romania'],
-    iso_code: 'RO'
-  },
-  {
-    name: ['russia', 'russian federation'],
-    iso_code: 'RU'
-  },
-  {
-    name: ['rwanda'],
-    iso_code: 'RW'
-  },
+  { name: ['panama'], iso_code: 'PA', dial_code: '+507' },
+  { name: ['papua new guinea'], iso_code: 'PG', dial_code: '+675' },
+  { name: ['paraguay'], iso_code: 'PY', dial_code: '+595' },
+  { name: ['peru'], iso_code: 'PE', dial_code: '+51' },
+  { name: ['philippines'], iso_code: 'PH', dial_code: '+63' },
+  { name: ['pitcairn'], iso_code: 'PN', dial_code: '+872' },
+  { name: ['poland'], iso_code: 'PL', dial_code: '+48' },
+  { name: ['portugal'], iso_code: 'PT', dial_code: '+351' },
+  { name: ['puerto rico'], iso_code: 'PR', dial_code: '+1939' },
+  { name: ['qatar'], iso_code: 'QA', dial_code: '+974' },
+  { name: ['runion', 'réunion'], iso_code: 'RE', dial_code: '+262' },
+  { name: ['romania'], iso_code: 'RO', dial_code: '+40' },
+  { name: ['russia', 'russian federation'], iso_code: 'RU', dial_code: '+7' },
+  { name: ['rwanda'], iso_code: 'RW', dial_code: '+250' },
   {
     name: ['saint barthlemy', 'saint barthélemy'],
-    iso_code: 'BL'
+    iso_code: 'BL',
+    dial_code: '+590'
   },
   {
     name: ['saint helena, ascension and tristan da cunha'],
-    iso_code: 'SH'
+    iso_code: 'SH',
+    dial_code: '+290'
   },
   {
     name: ['saint kitts and nevis', 'st kitts and nevis'],
-    iso_code: 'KN'
+    iso_code: 'KN',
+    dial_code: '+1869'
   },
-  {
-    name: ['saint lucia'],
-    iso_code: 'LC'
-  },
-  {
-    name: ['saint martin (french part)'],
-    iso_code: 'MF'
-  },
-  {
-    name: ['saint pierre and miquelon'],
-    iso_code: 'PM'
-  },
+  { name: ['saint lucia'], iso_code: 'LC', dial_code: '+1758' },
+  { name: ['saint martin (french part)'], iso_code: 'MF', dial_code: '+590' },
+  { name: ['saint pierre and miquelon'], iso_code: 'PM', dial_code: '+508' },
   {
     name: ['saint vincent and the grenadines', 'st vincent and grenadines'],
-    iso_code: 'VC'
+    iso_code: 'VC',
+    dial_code: '+1784'
   },
-  {
-    name: ['samoa'],
-    iso_code: 'WS'
-  },
-  {
-    name: ['san marino'],
-    iso_code: 'SM'
-  },
+  { name: ['samoa'], iso_code: 'WS', dial_code: '+685' },
+  { name: ['san marino'], iso_code: 'SM', dial_code: '+378' },
   {
     name: [
       'sao tome and principe',
       'são tomé and príncipe',
       'so tom and prncipe'
     ],
-    iso_code: 'ST'
+    iso_code: 'ST',
+    dial_code: '+239'
   },
-  {
-    name: ['saudi arabia'],
-    iso_code: 'SA'
-  },
-  {
-    name: ['senegal'],
-    iso_code: 'SN'
-  },
-  {
-    name: ['serbia'],
-    iso_code: 'RS'
-  },
-  {
-    name: ['seychelles'],
-    iso_code: 'SC'
-  },
-  {
-    name: ['sierra leone'],
-    iso_code: 'SL'
-  },
-  {
-    name: ['singapore'],
-    iso_code: 'SG'
-  },
+  { name: ['saudi arabia'], iso_code: 'SA', dial_code: '+966' },
+  { name: ['senegal'], iso_code: 'SN', dial_code: '+221' },
+  { name: ['serbia'], iso_code: 'RS', dial_code: '+381' },
+  { name: ['seychelles'], iso_code: 'SC', dial_code: '+248' },
+  { name: ['sierra leone'], iso_code: 'SL', dial_code: '+232' },
+  { name: ['singapore'], iso_code: 'SG', dial_code: '+65' },
   {
     name: ['saint martin', 'sint maarten (dutch part)', 'sint maarten'],
-    iso_code: 'SX'
+    iso_code: 'SX',
+    dial_code: ''
   },
-  {
-    name: ['slovakia'],
-    iso_code: 'SK'
-  },
-  {
-    name: ['slovenia'],
-    iso_code: 'SI'
-  },
-  {
-    name: ['solomon islands'],
-    iso_code: 'SB'
-  },
-  {
-    name: ['somalia'],
-    iso_code: 'SO'
-  },
-  {
-    name: ['south africa'],
-    iso_code: 'ZA'
-  },
+  { name: ['slovakia'], iso_code: 'SK', dial_code: '+421' },
+  { name: ['slovenia'], iso_code: 'SI', dial_code: '+386' },
+  { name: ['solomon islands'], iso_code: 'SB', dial_code: '+677' },
+  { name: ['somalia'], iso_code: 'SO', dial_code: '+252' },
+  { name: ['south africa'], iso_code: 'ZA', dial_code: '+27' },
   {
     name: ['south georgia and the south sandwich islands'],
-    iso_code: 'GS'
+    iso_code: 'GS',
+    dial_code: '+500'
   },
-  {
-    name: ['south sudan'],
-    iso_code: 'SS'
-  },
-  {
-    name: ['spain'],
-    iso_code: 'ES'
-  },
-  {
-    name: ['sri lanka'],
-    iso_code: 'LK'
-  },
-  {
-    name: ['sudan'],
-    iso_code: 'SD'
-  },
-  {
-    name: ['suriname'],
-    iso_code: 'SR'
-  },
-  {
-    name: ['svalbard and jan mayen'],
-    iso_code: 'SJ'
-  },
-  {
-    name: ['sweden'],
-    iso_code: 'SE'
-  },
-  {
-    name: ['switzerland'],
-    iso_code: 'CH'
-  },
+  { name: ['south sudan'], iso_code: 'SS', dial_code: '+211' },
+  { name: ['spain'], iso_code: 'ES', dial_code: '+34' },
+  { name: ['sri lanka'], iso_code: 'LK', dial_code: '+94' },
+  { name: ['sudan'], iso_code: 'SD', dial_code: '+249' },
+  { name: ['suriname'], iso_code: 'SR', dial_code: '+597' },
+  { name: ['svalbard and jan mayen'], iso_code: 'SJ', dial_code: '+47' },
+  { name: ['sweden'], iso_code: 'SE', dial_code: '+46' },
+  { name: ['switzerland'], iso_code: 'CH', dial_code: '+41' },
   {
     name: ['syria', 'syrian arab republic'],
-    iso_code: 'SY'
+    iso_code: 'SY',
+    dial_code: '+963'
   },
   {
     name: ['taiwan', 'taiwan, province of china'],
-    iso_code: 'TW'
+    iso_code: 'TW',
+    dial_code: '+886'
   },
-  {
-    name: ['tajikistan'],
-    iso_code: 'TJ'
-  },
+  { name: ['tajikistan'], iso_code: 'TJ', dial_code: '+992' },
   {
     name: ['tanzania', 'tanzania, united republic of'],
-    iso_code: 'TZ'
+    iso_code: 'TZ',
+    dial_code: '+255'
   },
-  {
-    name: ['thailand'],
-    iso_code: 'TH'
-  },
+  { name: ['thailand'], iso_code: 'TH', dial_code: '+66' },
   {
     name: ['timor-leste', 'democratic republic of timor-leste', 'east timor'],
-    iso_code: 'TL'
+    iso_code: 'TL',
+    dial_code: '+670'
   },
-  {
-    name: ['togo'],
-    iso_code: 'TG'
-  },
-  {
-    name: ['tokelau'],
-    iso_code: 'TK'
-  },
-  {
-    name: ['tonga'],
-    iso_code: 'TO'
-  },
-  {
-    name: ['trinidad and tobago'],
-    iso_code: 'TT'
-  },
-  {
-    name: ['tunisia'],
-    iso_code: 'TN'
-  },
-  {
-    name: ['turkey'],
-    iso_code: 'TR'
-  },
-  {
-    name: ['turkmenistan'],
-    iso_code: 'TM'
-  },
-  {
-    name: ['turks and caicos islands'],
-    iso_code: 'TC'
-  },
-  {
-    name: ['tuvalu'],
-    iso_code: 'TV'
-  },
-  {
-    name: ['uganda'],
-    iso_code: 'UG'
-  },
-  {
-    name: ['ukraine'],
-    iso_code: 'UA'
-  },
-  {
-    name: ['united arab emirates'],
-    iso_code: 'AE'
-  },
+  { name: ['togo'], iso_code: 'TG', dial_code: '+228' },
+  { name: ['tokelau'], iso_code: 'TK', dial_code: '+690' },
+  { name: ['tonga'], iso_code: 'TO', dial_code: '+676' },
+  { name: ['trinidad and tobago'], iso_code: 'TT', dial_code: '+1868' },
+  { name: ['tunisia'], iso_code: 'TN', dial_code: '+216' },
+  { name: ['turkey'], iso_code: 'TR', dial_code: '+90' },
+  { name: ['turkmenistan'], iso_code: 'TM', dial_code: '+993' },
+  { name: ['turks and caicos islands'], iso_code: 'TC', dial_code: '+1649' },
+  { name: ['tuvalu'], iso_code: 'TV', dial_code: '+688' },
+  { name: ['uganda'], iso_code: 'UG', dial_code: '+256' },
+  { name: ['ukraine'], iso_code: 'UA', dial_code: '+380' },
+  { name: ['united arab emirates'], iso_code: 'AE', dial_code: '+971' },
   {
     name: [
       'united kingdom',
       'united kingdom of great britain and northern ireland'
     ],
-    iso_code: 'GB'
+    iso_code: 'GB',
+    dial_code: '+44'
   },
   {
     name: ['united states of america', 'united states'],
-    iso_code: 'US'
+    iso_code: 'US',
+    dial_code: '+1'
   },
   {
     name: [
       'united states minor outlying islands',
       'u.s. minor outlying islands'
     ],
-    iso_code: 'UM'
+    iso_code: 'UM',
+    dial_code: ''
   },
-  {
-    name: ['uruguay'],
-    iso_code: 'UY'
-  },
-  {
-    name: ['uzbekistan'],
-    iso_code: 'UZ'
-  },
-  {
-    name: ['vanuatu'],
-    iso_code: 'VU'
-  },
+  { name: ['uruguay'], iso_code: 'UY', dial_code: '+598' },
+  { name: ['uzbekistan'], iso_code: 'UZ', dial_code: '+998' },
+  { name: ['vanuatu'], iso_code: 'VU', dial_code: '+678' },
   {
     name: ['venezuela', 'venezuela (bolivarian republic of)'],
-    iso_code: 'VE'
+    iso_code: 'VE',
+    dial_code: '+58'
   },
-  {
-    name: ['vietnam', 'viet nam'],
-    iso_code: 'VN'
-  },
-  {
-    name: ['virgin islands (british)'],
-    iso_code: 'VG'
-  },
+  { name: ['vietnam', 'viet nam'], iso_code: 'VN', dial_code: '+84' },
+  { name: ['virgin islands (british)'], iso_code: 'VG', dial_code: '+1284' },
   {
     name: ['virgin islands (u.s.)', 'u.s. virgin islands'],
-    iso_code: 'VI'
+    iso_code: 'VI',
+    dial_code: '+1340'
   },
-  {
-    name: ['wallis and futuna'],
-    iso_code: 'WF'
-  },
-  {
-    name: ['western sahara'],
-    iso_code: 'EH'
-  },
-  {
-    name: ['yemen'],
-    iso_code: 'YE'
-  },
-  {
-    name: ['zambia'],
-    iso_code: 'ZM'
-  },
-  {
-    name: ['zimbabwe'],
-    iso_code: 'ZW'
-  },
-  {
-    name: ['kosovo'],
-    iso_code: 'XK'
-  }
+  { name: ['wallis and futuna'], iso_code: 'WF', dial_code: '+681' },
+  { name: ['western sahara'], iso_code: 'EH', dial_code: '' },
+  { name: ['yemen'], iso_code: 'YE', dial_code: '+967' },
+  { name: ['zambia'], iso_code: 'ZM', dial_code: '+260' },
+  { name: ['zimbabwe'], iso_code: 'ZW', dial_code: '+263' },
+  { name: ['kosovo'], iso_code: 'XK', dial_code: '' }
 ];
 
 export const AVAILABLE_FLAGS = [

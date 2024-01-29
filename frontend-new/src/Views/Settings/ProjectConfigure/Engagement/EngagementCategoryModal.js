@@ -119,7 +119,7 @@ function EngagementCategoryModal({
 
   const handleApply = () => {
     const payload = {
-      date: String(new Date().getTime()),
+      date: String(new Date().getTime() / 1000),
       bck: categoryRange.map((eachCategoryRange, eachIndex) => ({
         nm:
           eachIndex === 0
@@ -227,9 +227,25 @@ function EngagementCategoryModal({
                           disabled={eachIndex === 3 || status.isFormLoading}
                           controls={false}
                           //   min={categoryRange[1][1] + 1}
-                          max={99}
                           value={categoryRange[eachIndex][0]}
-                          onChange={(e) => onInputChange(e, [eachIndex, 0])}
+                          onKeyDown={(e) => {
+                            if (e.key === 'ArrowDown') {
+                              const value = Number(e.currentTarget.value);
+                              onInputChange(value - 1, [eachIndex, 0]);
+                            }
+                            if (e.key === 'ArrowUp') {
+                              const value = Number(e.currentTarget.value);
+                              onInputChange(value + 1, [eachIndex, 0]);
+                            }
+                            if (e.key === 'Enter') {
+                              const value = Number(e.currentTarget.value);
+                              onInputChange(value, [eachIndex, 0]);
+                            }
+                          }}
+                          onBlur={(e) => {
+                            const value = Number(e.currentTarget.value);
+                            onInputChange(value, [eachIndex, 0]);
+                          }}
                           style={{ width: '50px' }}
                         />
                       )}

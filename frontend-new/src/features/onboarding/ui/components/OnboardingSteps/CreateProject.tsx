@@ -76,7 +76,11 @@ function Step1({
     try {
       setLoading(true);
       if (isFormSubmitted) {
-        if (checkbox && !isSolutionsEmailInvited) {
+        if (
+          !AdminLock(agent_details?.email) &&
+          checkbox &&
+          !isSolutionsEmailInvited
+        ) {
           await inviteUser(active_project?.id, 'solutions@factors.ai');
           await fetchProjectAgents(active_project?.id);
         }
@@ -87,18 +91,17 @@ function Step1({
         return;
       }
       const projectName = sanitizeInputString(values?.projectName);
-      const domainName = sanitizeInputString(values?.domainName);
       const projectData = {
         name: projectName,
         time_zone: values?.time_zone,
-        clearbit_domain: domainName
+        clearbit_domain: values?.domainName
       };
 
       // Factors CREATE_PROJECT_TIMEZONE tracking
       factorsai.track('CREATE_PROJECT_TIMEZONE', {
         ProjectName: projectData?.name,
         time_zone: projectData?.time_zone,
-        clearbit_domain: domainName
+        clearbit_domain: values?.domainName
       });
       let prevProjectId = '';
       if (isNewSetup) {
@@ -106,7 +109,7 @@ function Step1({
       }
       const createProjectRes = await createProjectWithTimeZone(projectData);
       const projectId = createProjectRes?.data?.id;
-      if (checkbox) {
+      if (checkbox && !AdminLock(agent_details?.email)) {
         await inviteUser(projectId, 'solutions@factors.ai');
         await fetchProjectAgents(projectId);
       }

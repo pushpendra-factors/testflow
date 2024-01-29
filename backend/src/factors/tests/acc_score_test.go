@@ -448,7 +448,7 @@ func TestAccScoreUpdateLastEventsDay(t *testing.T) {
 	prevCountsOfUser["1"][w3_date_string] = M.LatestScore{Date: w3_date_unix.Unix(), EventsCount: w3, Properties: p1u2}
 	prevCountsOfUser["1"][w2_date_string] = M.LatestScore{Date: w2_date_unix.Unix(), EventsCount: w2, Properties: p1u3}
 
-	dbup, _, err := T.UpdateLastEventsDay(prevCountsOfUser, currentTS, finalWeights.SaleWindow)
+	dbup, _, err := T.UpdateLastEventsDay(prevCountsOfUser, currentTS, finalWeights, finalWeights.SaleWindow)
 	assert.Nil(t, err)
 	log.Debugf("result:%v", dbup)
 	assert.Equal(t, dbup["1"].EventsCount["a"], 2.5)
@@ -652,6 +652,10 @@ func TestWriteRangestoDB(t *testing.T) {
 }
 
 func TestUpdateTopKScoreContribution(t *testing.T) {
+	var weights M.AccWeights
+	weights.SaleWindow = 1
+	weights.WeightConfig = make([]M.AccEventWeight, 0)
+
 	topk := 4
 	testMap := make(map[string]float64)
 	resExpected := make([]string, 0)
@@ -666,7 +670,7 @@ func TestUpdateTopKScoreContribution(t *testing.T) {
 
 	resExpected = []string{"i", "h", "f", "g"}
 
-	result := T.GetTopkEventsOnCounts(testMap, topk)
+	result := T.GetTopkEventsOnCounts(testMap, weights, topk)
 	log.Debugf("result - %v", result)
 	res := make([]string, 0)
 	for k, _ := range result {
@@ -755,6 +759,36 @@ func TestValidateAndUpdateEngagementLevel(t *testing.T) {
 	log.WithField("buckets ", bucketRanges).Debugf("buckets")
 
 	assert.Equal(t, http.StatusFound, statusCode_)
+
+}
+
+func TestGetEngagement(t *testing.T) {
+
+	var engagementBucket M.BucketRanges
+	engagementBucket.Ranges = make([]M.Bucket, 4)
+
+	engagementBucket.Date = "01012024"
+
+	b1 := M.Bucket{Name: "Hot", High: 95, Low: 80}
+	b2 := M.Bucket{Name: "Warm", High: 80, Low: 70}
+	b3 := M.Bucket{Name: "Cold", High: 70, Low: 40}
+	b4 := M.Bucket{Name: "Ice", High: 40, Low: 10}
+	engagementBucket.Ranges = []M.Bucket{b1, b2, b3, b4}
+
+	string1 := M.GetEngagement(98, engagementBucket)
+	string2 := M.GetEngagement(93, engagementBucket)
+	string3 := M.GetEngagement(75, engagementBucket)
+	string4 := M.GetEngagement(5, engagementBucket)
+
+	log.WithField("bucket 1 ", string1).Debugf("buckets")
+	log.WithField("bucket 2 ", string2).Debugf("buckets")
+	log.WithField("bucket 3 ", string3).Debugf("buckets")
+	log.WithField("bucket 4 ", string4).Debugf("buckets")
+
+	assert.Equal(t, "Hot", string1, "above given ranges - not working")
+	assert.Equal(t, "Hot", string2, "within given ranges - not working")
+	assert.Equal(t, "Warm", string3, "within given ranges - not working")
+	assert.Equal(t, "Ice", string4, "below given ranges - not working")
 
 }
 

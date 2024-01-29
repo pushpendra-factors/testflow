@@ -316,7 +316,7 @@ function AccountProfiles({
         setFiltersDirty(false);
       } else {
         const selectedGroup = groupsList.find(
-          (g) => g[1] === accountPayload.source
+          (g) => g[1] === accountPayload?.source
         );
         restoreFiltersDefaultState(selectedGroup);
       }
@@ -435,10 +435,14 @@ function AccountProfiles({
   useEffect(() => {
     const shouldCache = location?.state?.fromDetails;
     if (shouldCache) {
-      setCurrentPage(location.state.currentPage);
-      setCurrentPageSize(location.state.currentPageSize);
-      setDefaultSorterInfo(location.state.activeSorter);
-      setAccountPayload(location.state.accountPayload);
+      if (!location.state.accountPayload) {
+        setAccountPayload({ source: GROUP_NAME_DOMAINS });
+      } else {
+        setCurrentPage(location.state.currentPage);
+        setCurrentPageSize(location.state.currentPageSize);
+        setDefaultSorterInfo(location.state.activeSorter);
+        setAccountPayload(location.state.accountPayload);
+      }
       const updatedLocationState = { ...location.state, fromDetails: false };
       history.replace(location.pathname, { ...updatedLocationState });
     } else if (
@@ -711,7 +715,7 @@ function AccountProfiles({
   const renderPropertyFilter = () => (
     <PropertyFilter
       profileType='account'
-      source={accountPayload.source}
+      source={accountPayload?.source}
       filtersExpanded={filtersExpanded}
       filtersList={selectedFilters.filters}
       secondaryFiltersList={selectedFilters.secondaryFilters}
@@ -842,7 +846,7 @@ function AccountProfiles({
                   width: '240px',
                   'border-radius': '5px'
                 }}
-                prefix={<SVG name='search' size={24} color={'#8c8c8c'} />}
+                prefix={<SVG name='search' size={24} color='#8c8c8c' />}
               />
             </Form.Item>
           </Form>
@@ -924,7 +928,6 @@ function AccountProfiles({
     setDefaultSorterInfo({ key: sorter.columnKey, order: sorter.order });
   };
   const [newTableColumns, setNewTableColumns] = useState([]);
-  const [columnsType, setColumnTypes] = useState({});
 
   useEffect(() => {
     setNewTableColumns(
@@ -955,7 +958,7 @@ function AccountProfiles({
 
   useEffect(() => {
     // This is the name of Account which was opened recently
-    const from = location.state?.state?.accountsTableRow;
+    const from = location.state?.accountsTableRow;
     // Finding the tableElement because we have only one .ant-table-body inside tableRef Tree
     // If in future we add table body inside it, need to change it later on
     const tableElement = tableRef.current?.querySelector('.ant-table-body');
@@ -965,41 +968,23 @@ function AccountProfiles({
       // Y is the relative position that we want to scroll by
       // this is calculated by ORIGINALELEMENTY-TABLEELEMENT - 15 ( because of some padding or margin )
       const y =
-        element?.getBoundingClientRect().y -
+        element.getBoundingClientRect().y -
         tableElement.getBoundingClientRect().y -
         15;
 
       tableElement.scrollTo({ top: y, behavior: 'smooth' });
 
-      location.state.state.accountsTableRow = '';
+      location.state.accountsTableRow = '';
     }
-  }, [newTableColumns]);
+  }, [newTableColumns, location.state, componentLoading]);
 
   const renderTable = useCallback(() => {
-    const handleResize =
-      (index) =>
-      (_, { size }) => {
-        const tmpColType = newTableColumns[index]?.type;
-        const tmpColWidthRange = COLUMN_TYPE_PROPS[tmpColType || 'string'];
-        const newColumns = [...newTableColumns];
-        newColumns[index] = {
-          ...newColumns[index],
-          width: (() => {
-            if (size.width < tmpColWidthRange.min) return tmpColWidthRange.min;
-            if (size.width > tmpColWidthRange.max) return tmpColWidthRange.max;
-            return size.width;
-          })()
-        };
-        setNewTableColumns(newColumns);
-      };
-
     const mergeColumns = newTableColumns.map((col, index) => ({
       ...col,
       onHeaderCell: (column) => ({
         width: column.width
       })
     }));
-
     return (
       <div>
         <Table
@@ -1072,6 +1057,7 @@ function AccountProfiles({
           setFiltersDirty(false);
         }
         await getSavedSegments(activeProject.id);
+        disableNewSegmentMode();
       } catch (err) {
         notification.error({
           message: 'Error',
@@ -1096,7 +1082,6 @@ function AccountProfiles({
       };
 
       handleSaveSegment(reqPayload);
-      disableNewSegmentMode();
     },
     [
       selectedFilters,
@@ -1140,7 +1125,6 @@ function AccountProfiles({
       try {
         setCSVDataLoading(true);
         const reqPayload = getFiltersRequestPayload({
-          source: selectedAccount.account[1],
           selectedFilters: appliedFilters,
           tableProps: selectedOptions
         });

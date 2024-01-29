@@ -5,7 +5,9 @@ import (
 	"time"
 
 	C "factors/config"
+	"factors/model/model"
 	"factors/model/store"
+	"factors/util"
 
 	leadSquaredEnrich "factors/task/lead_squared_enrich"
 	taskWrapper "factors/task/task_wrapper"
@@ -122,6 +124,21 @@ func main() {
 		C.PingHealthcheckForFailure(healthcheckPingID, "Failed to get LeadSquared Projects")
 		return
 	}
+
+	featureProjectIDs, err := store.GetStore().GetAllProjectsWithFeatureEnabled(model.FEATURE_LEADSQUARED, false)
+	if err != nil {
+		log.WithError(err).Error("Failed to get leadsquared feature enabled projects.")
+		return
+	}
+
+	featureEnabledIntegrations := map[int64]model.LeadSquaredConfig{}
+	for pid := range mappings {
+		if util.ContainsInt64InArray(featureProjectIDs, pid) {
+			featureEnabledIntegrations[pid] = mappings[pid]
+		}
+	}
+
+	mappings = featureEnabledIntegrations
 
 	allProjects, allowedProjects, disabledProjects := C.GetProjectsFromListWithAllProjectSupport(
 		*projectIDList, *disabledProjectIDList)

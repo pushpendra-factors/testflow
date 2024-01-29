@@ -294,6 +294,7 @@ function FiltersBox({
                 insertFilter={handleInsertFilter}
                 closeFilter={handleCloseFilter}
                 deleteFilter={handleDeleteFilter}
+                showInList
               />
             ))}
           </ControlledComponent>
@@ -308,6 +309,7 @@ function FiltersBox({
               insertFilter={handleInsertFilter}
               closeFilter={handleCloseFilter}
               deleteFilter={handleDeleteFilter}
+              showInList
             />
           </ControlledComponent>
 
@@ -355,11 +357,12 @@ function FiltersBox({
                 eventChange={handleQueryChange}
                 closeEvent={closeEvent}
                 initialDDState={false}
+                showInList
               />
             </div>
           ))}
           <ControlledComponent
-            controller={isEventsVisible === true && listEvents.length < 3}
+            controller={isEventsVisible === true && listEvents.length < 10}
           >
             <div key={listEvents.length}>
               <EventsBlock
@@ -370,12 +373,16 @@ function FiltersBox({
                 groupAnalysis={source}
                 eventChange={handleQueryChange}
                 closeEvent={closeEvent}
+                showInList
               />
             </div>
           </ControlledComponent>
-          <ControlledComponent controller={listEvents.length < 3}>
+          <ControlledComponent controller={listEvents.length < 10}>
             <Button
-              className={cx('flex items-center col-gap-2', styles['add-filter-button'])}
+              className={cx(
+                'flex items-center col-gap-2',
+                styles['add-filter-button']
+              )}
               type='text'
               onClick={showEventsDropdown}
             >
@@ -469,6 +476,7 @@ function FiltersBox({
                   insertFilter={handleInsertSecondaryFilter}
                   closeFilter={handleCloseSecondaryFilter}
                   deleteFilter={handleDeleteSecondaryFilter}
+                  showInList
                 />
               ))}
             </ControlledComponent>
@@ -483,6 +491,7 @@ function FiltersBox({
                 insertFilter={handleInsertSecondaryFilter}
                 closeFilter={handleCloseSecondaryFilter}
                 deleteFilter={handleDeleteSecondaryFilter}
+                showInList
               />
             </ControlledComponent>
 

@@ -43,3 +43,6 @@
 .ant-select-selector {
   outline: unset !important;
 }
+.ant-select-multiple .ant-select-selector::after{
+  content: none !important;
+}

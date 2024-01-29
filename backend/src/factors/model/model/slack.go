@@ -46,12 +46,6 @@ type MemberProfile struct {
 	Team        string `json:"team"`
 }
 
-type SlackUser struct {
-	Id      string        `json:"id"`
-	Deleted bool          `json:"deleted"`
-	Profile MemberProfile `json:"profile"`
-}
-
 type SlackUsersList struct {
 	ProjectID    int64           `gorm:"column:project_id; primary_key:true" json:"project_id"`
 	AgentID      string          `gorm:"column:agent_id" json:"agent_id"`

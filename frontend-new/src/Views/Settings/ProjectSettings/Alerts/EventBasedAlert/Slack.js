@@ -24,6 +24,7 @@ import {
     Menu,
     Dropdown,
     Tag,
+    Skeleton
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import {PreviewCardSlack} from './PreviewCard';
@@ -49,10 +50,14 @@ const Slack = ({
     groupBy,
     fetchSlackDetails,
     matchEventName,
+    slackTestMsgLoading,
+    slackTestMsgTxt,
+    slackMentionLoading
 }) => {
 
     const [form] = Form.useForm();
     const [slackUsers, setSlackUsers] = useState([]);
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         if (slack_users) {
@@ -95,6 +100,24 @@ const Slack = ({
     const onMentionChange = (value) => {
         setSelectedMentions(value);
     }; 
+
+    const refreshSlackDetails = () => {
+        setLoading(true);
+        fetchSlackDetails();
+        setTimeout(() => {
+            setLoading(false); 
+        }, 5000);
+    }
+
+    const MentionsLoader = () =>{
+        return (
+            <>
+             <div className={'mt-8'}>
+                <Skeleton active paragraph={{ rows: 4 }}  />
+             </div>
+            </>
+        )
+    }
 
     const ErrorMsg = getErrorMsg(viewAlertDetails?.last_fail_details, SLACK);
     return (
@@ -167,10 +190,15 @@ const Slack = ({
                     </Col>
                 </Row>
             </div>
-            {slackEnabled && !projectSettings?.int_slack && (
-                <div className='p-4'>
-                    <Row className={'mt-2 ml-2'}>
-                        <Col span={10} className={'m-0'}>
+            
+                <div>
+                        <Row>
+                            <Col span={12}>
+
+                            {slackEnabled && !projectSettings?.int_slack && (
+                <>
+                    <Row className={'m-0 p-6'}>
+                        <Col  className='pr-4'>
                             <Text
                                 type={'title'}
                                 level={6}
@@ -192,26 +220,25 @@ const Slack = ({
                                         weight={'regular'}
                                         extraClass={'m-0'}
                                     >
-                                        Have you conneted with slack
+                                        Have you conneted with Slack
                                     </Text>
-                                    <Button ghost onClick={()=>fetchSlackDetails()} icon={<SVG name={'ArrowRotateRight'} size={16} />} className='ml-2'>
+                                    <Button ghost type={'link'} loading={loading} onClick={()=>refreshSlackDetails()} icon={<SVG name={'ArrowRotateRight'} size={16} />} className='fa-button-ghost ml-2'>
                                         Refresh to check
                                     </Button>
                             </div>
                         </Col>
                     </Row>
-                </div>
+                </>
             )}
-            {slackEnabled && projectSettings?.int_slack && (
-                <div>
-                        <Row className='p-6'>
-                            <Col span={12} className='pr-4'>
+
+                        {slackEnabled && projectSettings?.int_slack && (
+                <div className={'m-0 p-6'}>
 
                                 <Text
                                     type={'title'}
                                     level={7}
                                     weight={'regular'}
-                                    extraClass={'m-0 mt-2 ml-2'}
+                                    extraClass={'m-0 mt-2'}
                                 >
                                     {saveSelectedChannel.length > 1
                                         ? 'Selected Channels'
@@ -219,7 +246,7 @@ const Slack = ({
                                 </Text>
                                 {saveSelectedChannel.length > 0 && (
                                     <div
-                                        className={'rounded border border-gray-200 ml-2'}
+                                        className={'rounded border border-gray-200'}
                                         style={{'width':'375px'}}
                                     >
                                         <div className={'m-0'}>
@@ -240,18 +267,22 @@ const Slack = ({
                                 )}
 
                                 {!saveSelectedChannel.length > 0 ? (
-                                    <div className={'mt-2 ml-2'}>
+                                    <div className={'mt-2'}>
                                         <Button
                                             type={'link'}
+                                            ghost
+                                            className='fa-button-ghost'
                                             onClick={() => setShowSelectChannelsModal(true)}
                                         >
                                             Select Channel
                                         </Button>
                                     </div>
                                 ) : (
-                                    <div className={'mt-2 ml-2'}>
+                                    <div className={'mt-2'}>
                                         <Button
                                             type={'link'}
+                                            ghost
+                                            className='fa-button-ghost'
                                             onClick={() => setShowSelectChannelsModal(true)}
                                         >
                                             {saveSelectedChannel.length > 1
@@ -260,21 +291,21 @@ const Slack = ({
                                         </Button>
                                     </div>
                                 )}
-
-{slackUsers?.length>0 ? <>
-                                <div className={'mt-6 ml-2'}>
+                    { !slackMentionLoading ? <>
+                        {slackUsers?.length>0 ? <>
+                                <div className={'mt-6'}>
                                     <Text
                                         type={'title'}
                                         level={7}
                                         weight={'regular'}
-                                        extraClass={'m-0 mt-2 ml-2'}
+                                        extraClass={'m-0 mt-2'}
                                     >
                                         Mentions
                                     </Text>
                                     <div className='mr-4'>
                                         <Select
+                                            allowClear
                                             mode="multiple"
-                                            showArrow
                                             tagRender={tagRender}
                                             onChange={onMentionChange}
                                             size='large'
@@ -282,18 +313,20 @@ const Slack = ({
                                             className={'fa-select'}
                                             value={selectedMentions}
                                             style={{'width':'375px'}}
+                                            optionFilterProp="label"
                                         />
 
                                     </div>
-                                    <div className='mt-10 flex' style={{'width':'375px'}}>
-                                        <SVG name={'InfoCircle'} size={24} color='#FAAD14' /> 
+                                    <div className='mt-2 flex' style={{'width':'375px'}}>
+                                        <SVG name={'InfoCircle'} size={24} color={'grey'} /> 
                                         <Text
                                             type={'title'}
                                             level={7}
-                                            weight={'regular'}
+                                            weight={'thin'}
+                                            color={'grey'}
                                             extraClass={'m-0 ml-1'}
                                         >
-                                            Adding mentions for users will send them a notification for every alert. Tag responsibly :)
+                                            The mentioned user will be tagged in all alerts that are sent with these settings.
                                         </Text>
                                     </div>
 
@@ -301,12 +334,12 @@ const Slack = ({
                                 </div>
                                 </> : <>
                                 
-                                <div className={'mt-6 ml-2'}>
+                                <div className={'mt-6'}>
                                     <Text
                                         type={'title'}
                                         level={7}
                                         weight={'regular'}
-                                        extraClass={'m-0 mt-2 ml-2'}
+                                        extraClass={'m-0 mt-2'}
                                     >
                                         Your current Slack integration doesn’t have mentions. Simply reintegrate Slack with Factors to mention users in alerts.
                                     </Text>
@@ -321,7 +354,7 @@ const Slack = ({
                                     >
                                         Have you reintegrated?
                                     </Text>
-                                    <Button ghost onClick={()=>fetchSlackDetails()} icon={<SVG name={'ArrowRotateRight'} size={16} />} className='ml-2'>
+                                    <Button ghost type={'link'} loading={loading} onClick={()=>refreshSlackDetails()} icon={<SVG name={'ArrowRotateRight'} size={16} />} className='fa-button-ghost ml-2'>
                                         Refresh to check
                                     </Button>
                             </div>
@@ -329,11 +362,14 @@ const Slack = ({
                                 </>
                                 
                                 }
+                                </> : <MentionsLoader />}
                                 
-
+                </div>
+                                )}
                             </Col>
 
-                            <Col span={12} className={'m-0 pl-4'}>
+                            {slackEnabled && (
+                            <Col span={12} className={'m-0 pl-4 p-6'}>
                                 <div className='flex w-full justify-end'>
 
                                 <PreviewCardSlack 
@@ -344,19 +380,20 @@ const Slack = ({
                                     matchEventName={matchEventName}
                                     />
                                 </div>
-                            </Col>
+                            </Col>)}
 
                             
 
 
                         </Row>
 
+                        {(slackEnabled && projectSettings?.int_slack) &&
                     <div className='border-top--thin-2 mt-4 p-4'>
-                            <Button disabled={!saveSelectedChannel.length > 0} icon={<SVG name={'PaperPlane'} size={16} color='grey' />} ghost onClick={()=>sendTestSlackMessage()}>Send test message</Button>  
-                        </div> 
+                            <Button disabled={!saveSelectedChannel.length > 0} loading={slackTestMsgLoading} icon={slackTestMsgTxt ?  <SVG name='Checkmark' size={16}  color='grey' /> : <SVG name={'PaperPlane'} size={16} color='grey' />} ghost onClick={()=>sendTestSlackMessage()}>{ slackTestMsgLoading ? 'Sending...' : slackTestMsgTxt ? 'Message sent!' : 'Send test message'}</Button>  
+                        </div> }
 
                 </div>
-            )}
+            
         </div>
     )
 }

@@ -1486,7 +1486,7 @@ export function testWebhhookUrl(projectId, payload) {
 export function testSlackAlert(projectId, payload) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      put(
+      post(
         dispatch,
         host + 'projects/' + projectId + '/v1/eventtriggeralert/test_slack',
         payload
@@ -1504,7 +1504,7 @@ export function testSlackAlert(projectId, payload) {
 export function testTeamsAlert(projectId, payload) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      put(
+      post(
         dispatch,
         host + 'projects/' + projectId + '/v1/eventtriggeralert/test_teams',
         payload

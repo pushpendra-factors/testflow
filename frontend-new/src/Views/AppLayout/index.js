@@ -21,6 +21,7 @@ import {
   getActiveProjectDetails,
   fetchDomainList
 } from 'Reducers/global';
+
 import customizeHighCharts from 'Utils/customizeHighcharts';
 import {
   fetchEventDisplayNames,
@@ -256,8 +257,12 @@ function AppLayout({
                 value: agentInfo?.lastName || ''
               },
               {
-                name: 'invited_user_',
+                name: 'invited_user',
                 value: agentInfo?.isAgentInvited ? true : false
+              },
+              {
+                name: 'phone',
+                value: agentInfo?.phone
               }
             ]
           );

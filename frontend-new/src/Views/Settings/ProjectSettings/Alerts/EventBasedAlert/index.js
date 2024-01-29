@@ -90,7 +90,7 @@ import { ScrollToTop } from 'Routes/feature';
 import Slack from './Slack';
 import Webhook from './Webhook';
 import Teams from './Teams';
-import {getMsgPayloadMapping} from './../utils';
+import {getMsgPayloadMapping, dummyPayloadValue} from './../utils';
 
 const { Option } = Select;
 
@@ -187,6 +187,16 @@ const EventBasedAlert = ({
   const [showSlackInt, setShowSlackInt] = useState(false);
   const [showTeamInt, setShowTeamInt] = useState(false);
   const [showWHInt, setShowWHInt] = useState(false); 
+  
+  const [slackTestMsgLoading, setSlackTestMsgLoading] = useState(false); 
+  const [slackTestMsgTxt, setSlackTestMsgTxt] = useState(false); 
+  const [slackMentionLoading, setSlackMentionLoading] = useState(false); 
+
+  const [teamsTestMsgLoading, setTeamsTestMsgLoading] = useState(false); 
+  const [teamsTestMsgTxt, setTeamsTestMsgTxt] = useState(false);
+
+  const [WHTestMsgLoading, setWHTestMsgLoading] = useState(false); 
+  const [WHTestMsgTxt, setWHTestMsgTxt] = useState(false);
 
   const webhookRef = useRef();
   const [form] = Form.useForm();
@@ -215,19 +225,41 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
     history.push(url);
   };
 
-  useEffect(() => {
-    if (!groups || Object.keys(groups).length === 0) {
-      getGroups(activeProject?.id);
+  const fetchGroupProperties = async () => {
+    const missingGroups = Object.keys(groups?.account_groups || {}).filter(
+      (group) => !groupProperties[group]
+    );
+    if (missingGroups && missingGroups?.length > 0) {
+      await Promise.allSettled(
+        missingGroups?.map((group) =>
+          getGroupProperties(activeProject?.id, group)
+        )
+      );
     }
-  }, [activeProject?.id, groups]);
+  };
 
   useEffect(() => {
-    if (groups && Object.keys(groups).length != 0) {
-      Object.keys(groups?.all_groups).forEach((item) => {
-        getGroupProperties(activeProject.id, item)
-      });
+    fetchGroupProperties();
+  }, [activeProject?.id, groups, groupProperties]);
+
+  
+  const fetchGroups = async () => {
+    if (!groups || Object.keys(groups).length === 0) {
+      await getGroups(activeProject?.id);
     }
-  }, [activeProject.id, groups]);
+  };
+
+  useEffect(() => {
+    fetchGroups();
+  }, [activeProject?.id, groups]);
+
+  // useEffect(() => {
+  //   if (groups && Object.keys(groups).length != 0) {
+  //     Object.keys(groups?.all_groups).forEach((item) => {
+  //       getGroupProperties(activeProject.id, item)
+  //     });
+  //   }
+  // }, [activeProject.id, groups]);
 
   const groupsList = useMemo(() => {
     let listGroups = [];
@@ -733,25 +765,42 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
     return slackUserList
   }
 
-
+  const updatepayloadDisplayNames = (payload) =>{
+    if(payload){
+      let newObj = {}
+      Object?.keys(payload)?.map((item)=>{
+        let newKey = matchEventName(item);
+        let val = dummyPayloadValue[item] || payload[item]
+        newObj[newKey] = val
+      })
+    return newObj 
+    }
+    else return {}
+  }
+ 
   const sendTestSlackMessage = () =>{
     let payload = {
       title: alertName,
       event_level: activeGrpBtn == 'events' ? 'account' : 'user',
       event: queries[0]?.label,
       message: alertMessage,
-      message_property: getMsgPayloadMapping(groupBy),
+      message_property: updatepayloadDisplayNames(getMsgPayloadMapping(groupBy)),
       slack: slackEnabled,
       slack_channels: saveSelectedChannel,
       slack_mentions: getSlackProfileDetails(selectedMentions),
       is_hyperlink_disabled: !isHyperLinkEnabled,
-    };
-    testSlackAlert(activeProject?.id, payload).then((res) => {
-      setLoading(false);
+    }; 
+    setSlackTestMsgLoading(true);
+    testSlackAlert(activeProject?.id, payload).then((res) => { 
+      setSlackTestMsgLoading(false);
+      setSlackTestMsgTxt(true); 
+      setTimeout(() => {
+        setSlackTestMsgTxt(false);
+      }, 5000); 
     })
-    .catch((err) => {
-      setLoading(false);
+    .catch((err) => { 
       console.log("testSlackAlert failed! -->", err)
+      setSlackTestMsgLoading(false);
   })
 
 }
@@ -761,7 +810,7 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
       event_level: activeGrpBtn == 'events' ? 'account' : 'user',
       event: queries[0]?.label,
       message: alertMessage,
-      message_property: getMsgPayloadMapping(groupBy),
+      message_property: updatepayloadDisplayNames(getMsgPayloadMapping(groupBy)),
       teams: teamsEnabled,
       teams: teamsEnabled,
       teams_channels_config: {
@@ -770,11 +819,18 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
         team_channel_list: teamsSaveSelectedChannel
       },
     };
+
+    setTeamsTestMsgLoading(true);
     testTeamsAlert(activeProject?.id, payload).then((res) => {
-      setLoading(false);
+      
+      setTeamsTestMsgLoading(false);
+      setTeamsTestMsgTxt(true); 
+      setTimeout(() => {
+        setTeamsTestMsgTxt(false);
+      }, 5000); 
     })
     .catch((err) => {
-      setLoading(false);
+      setTeamsTestMsgLoading(false);
       console.log("testTeamsAlert failed! -->", err)
   })
 
@@ -995,19 +1051,22 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
     setNotRepeat(true);
   };
 
-  const fetchSlackDetails = () => {
-    if (projectSettings?.int_slack) {
+  const fetchSlackDetails = () => { 
+    fetchProjectSettingsV1(activeProject.id);
+    if (slackEnabled) {
+      setSlackMentionLoading(true);
       fetchSlackChannels(activeProject.id);
-      fetchSlackUsers(activeProject.id);
+      fetchSlackUsers(activeProject.id).then(()=>{
+        setSlackMentionLoading(false)
+      }).catch(()=>{
+        setSlackMentionLoading(false);
+      });
     }
   }
 
-  useEffect(() => {
-    fetchProjectSettingsV1(activeProject.id);
+  useEffect(() => { 
     fetchSlackDetails();
   }, [activeProject, projectSettings?.int_slack, slackEnabled]);
-
- 
 
   useEffect(() => {
     queries.forEach((ev) => {
@@ -1049,6 +1108,16 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
     teamsEnabled,
     selectedWorkspace
   ]);
+
+  const fetchTeamsDetails = () => {
+    fetchProjectSettingsV1(activeProject.id);
+    if (teamsEnabled) {
+      fetchTeamsWorkspace(activeProject.id);
+    }
+    if (projectSettings?.int_teams && selectedWorkspace) {
+      fetchTeamsChannels(activeProject.id, selectedWorkspace?.id);
+    }
+  }
 
   useEffect(() => {
     if (slack?.length > 0) {
@@ -1119,11 +1188,20 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
       url: webhookUrl,
       secret: ''
     };
+    setWHTestMsgLoading(true);
     testWebhhookUrl(activeProject?.id, payload)
       .then((res) => {
-        setTestMassageResponse(res?.data);
+        setTestMassageResponse(res?.data); 
+        setWHTestMsgLoading(false);
+        setWHTestMsgTxt(true); 
+        setTimeout(() => {
+          setWHTestMsgTxt(false);
+        }, 5000); 
+
+
       })
       .catch((err) => {
+        setWHTestMsgLoading(false);
         message.error(err?.data?.error);
       });
   };
@@ -1575,6 +1653,9 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
             groupBy={groupBy}
             fetchSlackDetails={fetchSlackDetails}
             matchEventName={matchEventName}
+            slackTestMsgLoading={slackTestMsgLoading}
+            slackTestMsgTxt={slackTestMsgTxt}
+            slackMentionLoading={slackMentionLoading}
           />
 
           {/* {showTeamInt && <Teams */}
@@ -1592,6 +1673,9 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
             groupBy={groupBy}
             sendTestTeamsMessage={sendTestTeamsMessage}
             matchEventName={matchEventName}
+            teamsTestMsgTxt={teamsTestMsgTxt}
+            teamsTestMsgLoading={teamsTestMsgLoading}
+            fetchTeamsDetails={fetchTeamsDetails}
           />
 
 
@@ -1620,6 +1704,8 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
             hideTestMessageBtn={hideTestMessageBtn}
             alertMessage={alertMessage}
             alertName={alertName}
+            WHTestMsgTxt={WHTestMsgTxt}
+            WHTestMsgLoading={WHTestMsgLoading}
           />
 
 {/* 
@@ -1935,7 +2021,7 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
         cancelButtonProps={{ size: 'large' }}
       >
         <div>
-          <Row gutter={[24, 24]} justify='center'>
+          <Row>
             <Col span={22}>
               <Text
                 type={'title'}

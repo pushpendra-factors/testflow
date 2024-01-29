@@ -38,7 +38,8 @@ type Model interface {
 	UpdateAgentPassword(uuid, plainTextPassword string, passUpdatedAt time.Time) int
 	UpdateAgentLastLoginInfo(agentUUID string, ts time.Time) int
 	UpdateAgentInformation(agentUUID, firstName, lastName, phone string, isOnboardingFlowSeen *bool, isFormFilled *bool) int
-	UpdateAgentVerificationDetails(agentUUID, password, firstName, lastName string, verified bool, passUpdatedAt time.Time) int
+	UpdateAgentVerificationDetails(agentUUID, password, firstName,
+		lastName string, phone string, verified bool, passUpdatedAt time.Time) int
 	UpdateAgentVerificationDetailsFromAuth0(agentUUID, firstName, lastName string, verified bool, value *postgres.Jsonb) int
 	UpdateAgentEmailVerificationDetails(agentUUID string, isVerfied bool) int
 	GetPrimaryAgentOfProject(projectId int64) (uuid string, errCode int)
@@ -450,6 +451,7 @@ type Model interface {
 	DeleteProjectAgentMapping(projectID int64, agentUUIDToRemove string) int
 	EditProjectAgentMapping(projectID int64, agentUUIDToEdit string, role int64) int
 	GetProjectAgentLatestAdminEmailByProjectId(projectId int64) (string, int)
+	UpdateChecklistDismissalStatus(projectId int64, agentUUID string, status bool) int
 
 	// project_setting
 	GetProjectSetting(projectID int64) (*model.ProjectSetting, int)
@@ -550,9 +552,11 @@ type Model interface {
 	GetStandardUserPropertiesBasedOnIntegration(projectID int64) map[string]string
 
 	// attribution v1 queries
+	GetAttributionV1Dashboard(projectId int64) (*model.Dashboard, int)
 	GetOrCreateAttributionV1Dashboard(projectId int64, agentUUID string) (*model.Dashboard, int)
 	CreateQueryAndSaveToDashboard(projectID int64, queryInfo *model.CreateQueryAndSaveToDashboardInfo) (*model.QueryAndDashboardUnit, int, string)
 	DeleteAttributionDashboardUnitAndQuery(projectID int64, queryID int64, agentUUID string, dashboardId int64, unitId int64) (int, string)
+	GetAttributionDashboardUnitNamesImpactedByCustomKPI(projectID int64, customMetricName string) ([]string, int)
 
 	// dashboard_templates
 	CreateTemplate(template *model.DashboardTemplate) (*model.DashboardTemplate, int, string)
@@ -989,7 +993,7 @@ type Model interface {
 	GetAllEventTriggerAlertsByProject(projectID int64) ([]model.AlertInfo, int)
 	CreateEventTriggerAlert(userID, oldID string, projectID int64, alertConfig *model.EventTriggerAlertConfig, slackTokenUser, teamTokenUser string, isPausedAlert bool, paragonMetadata *postgres.Jsonb) (*model.EventTriggerAlert, int, string)
 	DeleteEventTriggerAlert(projectID int64, id string) (int, string)
-	MatchEventTriggerAlertWithTrackPayload(projectId int64, name, userID string, eventProps, userProps *postgres.Jsonb, UpdatedEventProps *postgres.Jsonb, isUpdate bool) (*[]model.EventTriggerAlert, *model.EventName, int)
+	MatchEventTriggerAlertWithTrackPayload(projectId int64, name, userID string, eventProps, userProps *postgres.Jsonb, UpdatedEventProps *postgres.Jsonb, isUpdate bool) (*[]model.EventTriggerAlert, *model.EventName, *map[string]interface{}, int)
 	UpdateEventTriggerAlertField(projectID int64, id string, field map[string]interface{}) (int, error)
 	GetEventTriggerAlertByID(id string) (*model.EventTriggerAlert, int)
 	UpdateInternalStatusAndGetAlertIDs(projectID int64) ([]string, int, error)
@@ -1046,7 +1050,7 @@ type Model interface {
 	SetAuthTokenforSlackIntegration(projectID int64, agentUUID string, authTokens model.SlackAccessTokens) error
 	GetSlackAuthToken(projectID int64, agentUUID string) (model.SlackAccessTokens, error)
 	DeleteSlackIntegration(projectID int64, agentUUID string) error
-	GetSlackUsersListFromDb(projectID int64, agentID string) ([]model.SlackUser, int, error)
+	GetSlackUsersListFromDb(projectID int64, agentID string) ([]model.SlackMember, int, error)
 	UpdateSlackUsersListForProject(projectID int64, fields map[string]interface{}) (int, error)
 
 	// MS Teams

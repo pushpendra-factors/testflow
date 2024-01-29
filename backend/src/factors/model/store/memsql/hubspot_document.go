@@ -1002,6 +1002,20 @@ func (store *MemSQL) GetHubspotFirstSyncProjectsInfo() (*model.HubspotSyncInfo, 
 		return nil, http.StatusInternalServerError
 	}
 
+	featureProjectIDs, err := store.GetAllProjectsWithFeatureEnabled(model.FEATURE_HUBSPOT, false)
+	if err != nil {
+		log.WithError(err).Error("Failed to get hubspot feature enabled projects.")
+		return nil, http.StatusInternalServerError
+	}
+
+	featureProjectSettings := []model.HubspotProjectSettings{}
+	for i := range projectSettings {
+		if util.ContainsInt64InArray(featureProjectIDs, projectSettings[i].ProjectId) {
+			featureProjectSettings = append(featureProjectSettings, projectSettings[i])
+		}
+	}
+	projectSettings = featureProjectSettings
+
 	settingsByProject := make(map[int64]*model.HubspotProjectSettings, 0)
 	for i, ps := range projectSettings {
 		if ps.IsFirstTimeSynced {
@@ -1073,6 +1087,20 @@ func (store *MemSQL) GetHubspotSyncInfo() (*model.HubspotSyncInfo, int) {
 	if errCode != http.StatusFound {
 		return nil, http.StatusInternalServerError
 	}
+
+	featureProjectIDs, err := store.GetAllProjectsWithFeatureEnabled(model.FEATURE_HUBSPOT, false)
+	if err != nil {
+		log.WithError(err).Error("Failed to get hubspot feature enabled projects.")
+		return nil, http.StatusInternalServerError
+	}
+
+	featureProjectSettings := []model.HubspotProjectSettings{}
+	for i := range projectSettings {
+		if util.ContainsInt64InArray(featureProjectIDs, projectSettings[i].ProjectId) {
+			featureProjectSettings = append(featureProjectSettings, projectSettings[i])
+		}
+	}
+	projectSettings = featureProjectSettings
 
 	settingsByProject := make(map[int64]*model.HubspotProjectSettings, 0)
 	for i, ps := range projectSettings {
@@ -1950,10 +1978,10 @@ func (store *MemSQL) CreateOrUpdateGroupPropertiesBySource(projectID int64, grou
 	return userID, nil
 }
 
-func(store *MemSQL) GetHubspotOwnerEmailFromOwnerId(projectID int64, ownerID string) (string, int, error) {
+func (store *MemSQL) GetHubspotOwnerEmailFromOwnerId(projectID int64, ownerID string) (string, int, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"owner_id": ownerID,
+		"owner_id":   ownerID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
@@ -1961,14 +1989,14 @@ func(store *MemSQL) GetHubspotOwnerEmailFromOwnerId(projectID int64, ownerID str
 
 	if projectID == 0 || ownerID == "" {
 		logCtx.Error("invalid parameters")
-		return "", http.StatusBadRequest,fmt.Errorf("invalid parameters")
+		return "", http.StatusBadRequest, fmt.Errorf("invalid parameters")
 	}
 
-	var ownerDocument model.HubspotDocument 
+	var ownerDocument model.HubspotDocument
 	db := C.GetServices().Db
 	err := db.Where("project_id = ?", projectID).
-	Where("type = ?", model.HubspotDocumentTypeOwner).
-	Where("id = ?", ownerID).Find(&ownerDocument).Error
+		Where("type = ?", model.HubspotDocumentTypeOwner).
+		Where("id = ?", ownerID).Find(&ownerDocument).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return "", http.StatusNotFound, err
@@ -1982,7 +2010,7 @@ func(store *MemSQL) GetHubspotOwnerEmailFromOwnerId(projectID int64, ownerID str
 		logCtx.WithError(err).Error("failed to decode value field of hubspot_document to map")
 		return "", http.StatusInternalServerError, err
 	}
-	
+
 	email := U.GetPropertyValueAsString((*doc)["email"])
 
 	return email, http.StatusFound, nil

@@ -334,6 +334,8 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.PUT("/:project_id/v1/eventtriggeralert/test_wh", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), responseWrapper(V1.TestWebhookforEventTriggerAlerts))
 	authRouteGroup.GET("/:project_id/v1/eventtriggeralert/:id", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), responseWrapper(V1.GetInternalStatusForEventTriggerAlertHandler))
 	authRouteGroup.PUT("/:project_id/v1/eventtriggeralert/:id/status", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), responseWrapper(V1.UpdateEventTriggerAlertInternalStatusHandler))
+	authRouteGroup.POST("/:project_id/v1/eventtriggeralert/test_slack", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), responseWrapper(V1.SlackTestforEventTriggerAlerts))
+	authRouteGroup.POST("/:project_id/v1/eventtriggeralert/test_teams", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), responseWrapper(V1.TeamsTestforEventTriggerAlerts))
 
 	// teams
 	authRouteGroup.POST("/:project_id/teams/auth", mid.FeatureMiddleware([]string{M.FEATURE_TEAMS}), V1.TeamsAuthRedirectHandler)
@@ -348,6 +350,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/agents/batchinvite", AgentInviteBatch)
 	authRouteGroup.PUT("/:project_id/agents/remove", RemoveProjectAgent)
 	authRouteGroup.PUT("/:project_id/agents/update", AgentUpdate)
+	authRouteGroup.PUT("/:project_id/checklist/update", UpdateCheckListStatus)
 	authRouteGroup.GET("/:project_id/settings", GetProjectSettingHandler)
 	authRouteGroup.GET("/:project_id/v1/settings", V1.GetProjectSettingHandler)
 	authRouteGroup.PUT("/:project_id/settings", UpdateProjectSettingsHandler)

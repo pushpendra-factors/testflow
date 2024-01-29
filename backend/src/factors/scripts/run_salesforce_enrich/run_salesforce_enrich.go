@@ -6,6 +6,7 @@ import (
 	IntSalesforce "factors/integration/salesforce"
 	"factors/model/model"
 	"factors/model/store"
+	"factors/util"
 	U "factors/util"
 	"flag"
 	"fmt"
@@ -279,6 +280,12 @@ func main() {
 		log.Panicf("Failed to get salesforce syncinfo: %d", status)
 	}
 
+	featureProjectIDs, err := store.GetStore().GetAllProjectsWithFeatureEnabled(model.FEATURE_SALESFORCE, false)
+	if err != nil {
+		log.WithError(err).Error("Failed to get salesforce feature enabled projects.")
+		return
+	}
+
 	allProjects, allowedProjects, disabledProjects := C.GetProjectsFromListWithAllProjectSupport(
 		*projectIDList, *disabledProjectIDList)
 	if !allProjects {
@@ -291,6 +298,10 @@ func main() {
 
 	if !*enrichOnly {
 		for pid, projectSettings := range syncInfo.ProjectSettings {
+			if !util.ContainsInt64InArray(featureProjectIDs, pid) {
+				continue
+			}
+
 			if !allowProjectByProjectIDList(pid, allProjects, allowedProjects, disabledProjects) {
 				continue
 			}
@@ -361,6 +372,14 @@ func main() {
 		if status != http.StatusFound {
 			log.Panic("No projects enabled salesforce integration.")
 		}
+
+		featureEnabledProjectSettings := []model.SalesforceProjectSettings{}
+		for i := range salesforceEnabledProjects {
+			if util.ContainsInt64InArray(featureProjectIDs, salesforceEnabledProjects[i].ProjectID) {
+				featureEnabledProjectSettings = append(featureEnabledProjectSettings, salesforceEnabledProjects[i])
+			}
+		}
+		salesforceEnabledProjects = featureEnabledProjectSettings
 
 		allowedProjectIDs := make([]int64, 0)
 		allowedSalesforceProjectSettings := make(map[int64]*model.SalesforceProjectSettings)

@@ -11179,4 +11179,40 @@ func TestAllAccountDomainProperties(t *testing.T) {
 	assert.Equal(t, "w1", result.Rows[0][1])
 	assert.Equal(t, "1", result.Rows[0][2])
 
+	query = model.Query{
+		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       "www.xyz.com",
+				Properties: []model.QueryProperty{},
+			},
+		},
+
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: U.GROUP_NAME_DOMAINS,
+				Property:  U.DP_DOMAIN_NAME,
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+		Class:           model.QueryClassInsights,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondAllGivenEvent,
+	}
+	w = sendAnalyticsQueryReq(r, model.QueryClassInsights, project.ID, agent, 0, 0, "", &query, true, false)
+	assert.NotEmpty(t, w)
+	result = DecodeJSONResponseToAnalyticsResult(w.Body)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][1])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][1])
+		return p1 < p2
+	})
+	assert.Len(t, result.Rows, 2)
+	assert.Equal(t, "abc1.com", result.Rows[0][0])
+	assert.Equal(t, float64(1), result.Rows[0][1])
+	assert.Equal(t, "abc2.com", result.Rows[1][0])
+	assert.Equal(t, float64(1), result.Rows[1][1])
 }
