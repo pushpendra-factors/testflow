@@ -364,13 +364,13 @@ function SaveQuery({
           setNavigatedFromAnalyse(res?.data);
           setQuerySaved({ name: title, id: res.data.id });
 
-          if (queryType === QUERY_TYPE_EVENT && res?.data?.id_text) {
-            history.replace('/analyse/event/' + res.data.id_text);
-          }
+          // if (queryType === QUERY_TYPE_EVENT && res?.data?.id_text) {
+          //   history.replace('/analyse/event/' + res.data.id_text);
+          // }
 
-          if (queryType === QUERY_TYPE_FUNNEL && res?.data?.id_text) {
-            history.replace('/analyse/funnel/' + res.data.id_text);
-          }
+          // if (queryType === QUERY_TYPE_FUNNEL && res?.data?.id_text) {
+          //   history.replace('/analyse/funnel/' + res.data.id_text);
+          // }
         } else {
           const queryGettingUpdated = savedQueries.find(
             (elem) => elem.id === savedQueryId

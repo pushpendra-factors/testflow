@@ -29,6 +29,7 @@ import {
   CORE_QUERY_INITIAL_STATE,
   DEFAULT_PIVOT_CONFIG,
   INITIAL_STATE as INITIAL_RESULT_STATE,
+  SET_COMPARE_DURATION,
   SET_COMPARISON_SUPPORTED,
   SET_SAVED_QUERY_SETTINGS,
   UPDATE_PIVOT_CONFIG
@@ -56,6 +57,8 @@ import {
   SET_PERFORMANCE_CRITERIA,
   SET_SHOW_CRITERIA
 } from 'Reducers/analyticsQuery';
+import { getValidGranularityOptions } from 'Utils/dataFormatter';
+import MomentTz from 'Components/MomentTz';
 
 const CoreQuery = () => {
   // Query params
@@ -335,13 +338,15 @@ const CoreQuery = () => {
       }
     };
 
-  const runQuery = async () => {
+  const runQuery = async (dateRange: any = undefined) => {
     try {
       let durationObj;
       const qState = { ...coreQueryState };
       
-      if (!durationObj) {
+      if (!dateRange) {
         durationObj = coreQueryState.queryOptions.date_range;
+      } else {
+        durationObj = dateRange;
       }
       const query = getQuery(
         coreQueryState.queryOptions.groupBy,
@@ -381,6 +386,8 @@ const CoreQuery = () => {
 
       const data = res.data.result || res.data;
       let resultantData = null;
+      
+      
       if (result_criteria === TOTAL_EVENTS_CRITERIA) {
         resultantData = formatApiData(
           data.result_group[0],
@@ -395,6 +402,10 @@ const CoreQuery = () => {
         } else {
           resultantData = data.result_group[0];
         }
+      }
+
+      if(dateRange){
+        coreQueryState.queryOptions.date_range = dateRange;
       }
       
       qState.loading = false;
@@ -426,6 +437,79 @@ const CoreQuery = () => {
       setCoreQueryState(qState);
     }
   };
+
+  const handleDurationChange = 
+    (dates: any, isCompareDate: boolean = false) => {
+      let from;
+      let to;
+      let frequency;
+      const { dateType, selectedOption } = dates;
+
+      if (Array.isArray(dates.startDate)) {
+        from = dates.startDate[0];
+        to = dates.startDate[1];
+      } else {
+        from = dates.startDate;
+        to = dates.endDate;
+      }
+
+      
+      frequency = getValidGranularityOptions({ from, to })[0];
+
+      const startDate = moment(from).startOf('day').utc().unix() * 1000;
+      const endDate = moment(to).endOf('day').utc().unix() * 1000 + 1000;
+      const daysDiff = moment(endDate).diff(startDate, 'days');
+      if (daysDiff > 1) {
+        frequency =
+          coreQueryState.queryOptions.date_range.frequency === 'hour' || frequency === 'hour'
+            ? 'date'
+            : coreQueryState.queryOptions.date_range.frequency;
+      } else frequency = 'hour';
+
+      const payload = {
+        from: MomentTz(from).startOf('day'),
+        to: MomentTz(to).endOf('day'),
+        frequency,
+        dateType
+      };
+
+      const qState = coreQueryState.getCopy();
+
+      if (!isCompareDate) {
+        qState.queryOptions = {
+          ...qState.queryOptions,
+          date_range: {
+            ...qState.queryOptions.date_range,
+            ...payload
+          }
+        }
+      }
+
+      if (isCompareDate) {
+        localDispatch({
+          type: SET_COMPARE_DURATION,
+          payload: {
+            from,
+            to,
+            frequency,
+            dateType,
+            selectedOption
+          }
+        });
+      }
+
+      const appliedDateRange = {
+        ...qState.queryOptions.date_range,
+        ...payload
+      };
+
+      setCoreQueryState(qState);
+
+      if (qState.queryType === QUERY_TYPE_EVENT) {
+        runQuery(qState.queryOptions.date_range);
+      }
+      
+    };
 
   const handleRunQuery = () => {
     switch (coreQueryState.queryType) {
@@ -524,8 +608,8 @@ const CoreQuery = () => {
             }
             breakdown={coreQueryState.appliedBreakdown}
             dateFromTo={{
-              from: coreQueryState.requestQuery.fr,
-              to: coreQueryState.requestQuery.to
+              from: coreQueryState.queryOptions.date_range.from || coreQueryState.requestQuery.fr,
+              to: coreQueryState.queryOptions.date_range.to || coreQueryState.requestQuery.to
             }}
           />
           <div className='mt-24 px-8'>
@@ -559,9 +643,7 @@ const CoreQuery = () => {
                       queryTitle={coreQueryState.querySaved.name}
                       section={REPORT_SECTION}
                       eventPage={result_criteria}
-                      handleDurationChange={() => {
-                        console.log('Duration change');
-                      }}
+                      handleDurationChange={handleDurationChange}
                       onReportClose={() => {
                         console.log('Close report');
                       }}

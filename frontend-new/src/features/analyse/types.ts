@@ -33,7 +33,7 @@ export class QueryOptions {
     globalFilters: Array<any> = []
     event_analysis_seq: string = ''
     session_analytics_seq: {} = {}
-    date_range: {} = {}
+    date_range: {} | any = {}
     events_condition: string = 'any_given_event'
   };
 

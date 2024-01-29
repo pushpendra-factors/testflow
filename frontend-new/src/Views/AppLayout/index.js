@@ -21,6 +21,7 @@ import {
   getActiveProjectDetails,
   fetchDomainList
 } from 'Reducers/global';
+
 import customizeHighCharts from 'Utils/customizeHighcharts';
 import {
   fetchEventDisplayNames,
