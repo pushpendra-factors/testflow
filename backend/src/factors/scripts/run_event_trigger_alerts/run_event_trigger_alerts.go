@@ -625,7 +625,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 			"tag":             "alert_tracker",
 			"is_payload_null": isPayloadNull,
 		}).Info("ALERT TRACKER")
-		
+
 		if response["error"] == "<nil>" {
 			response["error"] = "an"
 		}
@@ -1029,15 +1029,22 @@ func getSlackMsgBlock(msg model.EventTriggerAlertMessage, slackMentions string, 
 				"text": "%s\n*%s*\n %s\n"
 			}
 		},
-		%s
 		{
 			"type": "section",
 						"text": {
 							"type": "mrkdwn",
-							"text": "*<%s|Visit Account>*"
+							"text": "*<%s|See activity in Factors app>*"
 						}
+		},
+		{
+			"type": "divider"
+		},
+		%s
+		{
+			"type": "divider"
 		}
-	]`, title, message, slackMentions, propBlock, overRideUrl)
+		
+	]`, title, message, overRideUrl, slackMentions, propBlock)
 
 	return mainBlock
 }
