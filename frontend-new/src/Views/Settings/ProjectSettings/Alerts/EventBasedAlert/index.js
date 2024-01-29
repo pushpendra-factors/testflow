@@ -228,10 +228,10 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
   const fetchGroupProperties = async () => {
     const missingGroups = Object.keys(groups?.account_groups || {}).filter(
       (group) => !groupProperties[group]
-    ); 
-    if (missingGroups?.length > 0) {
+    );
+    if (missingGroups && missingGroups?.length > 0) {
       await Promise.allSettled(
-        missingGroups?.forEach((group) =>
+        missingGroups?.map((group) =>
           getGroupProperties(activeProject?.id, group)
         )
       );

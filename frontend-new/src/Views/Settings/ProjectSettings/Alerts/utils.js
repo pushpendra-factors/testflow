@@ -9,10 +9,10 @@ export const WEBHOOK = "WH";
 export const MS_TEAMS = "Teams";
 
 export const getMsgPayloadMapping = (groupBy) => {
-    if (groupBy && groupBy.length && groupBy[0] && groupBy[0].property){
+    if (groupBy && groupBy.length && groupBy[0] && groupBy[0].property) {
         var obj = {}
-        groupBy.map((item)=>{
-             obj[item.property] = "${Property Value}"
+        groupBy.map((item) => {
+            obj[item.property] = "${Property Value}"
         })
         return obj
     }
@@ -147,5 +147,24 @@ export const dummyPayloadValue = {
     "$latest_page_raw_url": "https://acme.com/pricing?utm_source=google",
     "$latest_page_load_time": "3 sec",
     "$latest_page_scroll_percent": "78",
-    "$latest_page_spent_time": "29 sec"
-  }
+    "$latest_page_spent_time": "29 sec",
+    "$domain_name": "acme.com",
+    "page_url": "www.acme.com/pricing",
+    "$li_domain": "https://acme.com",
+    "$li_localized_name": "Acme Inc",
+    "$li_org_id": "14534978",
+    "$li_preferred_country": "US",
+    "$li_vanity_name": "acme-inc",
+    "$g2_product_ids": "factorsai",
+    "$g2_tag": "products.reviews",
+    "$g2_visitor_city": "Boston",
+    "$g2_visitor_country": "United States",
+    "$g2_visitor_state": "Massachusetts",
+    "$g2_company_id": "28191",
+    "$g2_country": "United States",
+    "$g2_domain:": "acme.com",
+    "$g2_employees": "415",
+    "$g2_employees_range": "251 - 500",
+    "$g2_legal_name": "Acme Inc",
+    "$g2_name": "Acme",
+}
