@@ -1,0 +1,1 @@
+ALTER TABLE project_settings ADD COLUMN marker_last_run_all_accounts timestamp(6) DEFAULT '1000-01-01 00:00:00';

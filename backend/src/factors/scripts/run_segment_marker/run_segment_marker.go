@@ -37,6 +37,9 @@ func main() {
 	lookbackSegmentMarker := flag.Int("lookback_segment_marker", 0, "Optional: Fetch users from last x hours")
 	allowedGoRoutines := flag.Int("allowed_go_routines", 1, "Number of allowed to routines")
 	processOnlyAccountSegments := flag.Bool("process_only_account_segments", false, "This flag allows only processing of all accounts type segments")
+	runAllAccountsMarkerProjectIDs := flag.String("run_all_accounts_marker_project_ids", "",
+		"Project Id to run all accounts marker for. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
+	runForAllAccountsInHours := flag.Int("run_for_all_accounts_in_hours", 24, "Run domains where marker_last_run_all_accounts is greater than given hours")
 	flag.Parse()
 
 	if *env != "development" &&
@@ -65,12 +68,14 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		PrimaryDatastore:           *primaryDatastore,
-		SentryDSN:                  *sentryDSN,
-		UseLookbackSegmentMarker:   *useLookbackSegmentMarker,
-		LookbackSegmentMarker:      *lookbackSegmentMarker,
-		AllowedGoRoutines:          *allowedGoRoutines,
-		ProcessOnlyAccountSegments: *processOnlyAccountSegments,
+		PrimaryDatastore:               *primaryDatastore,
+		SentryDSN:                      *sentryDSN,
+		UseLookbackSegmentMarker:       *useLookbackSegmentMarker,
+		LookbackSegmentMarker:          *lookbackSegmentMarker,
+		AllowedGoRoutines:              *allowedGoRoutines,
+		ProcessOnlyAccountSegments:     *processOnlyAccountSegments,
+		RunAllAccountsMarkerProjectIDs: *runAllAccountsMarkerProjectIDs,
+		RunForAllAccountsInHours:       *runForAllAccountsInHours,
 	}
 
 	C.InitConf(config)
