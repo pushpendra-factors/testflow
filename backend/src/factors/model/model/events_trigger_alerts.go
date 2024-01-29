@@ -243,17 +243,16 @@ func getPropsBlockV2(propMap U.PropertiesMap) string {
 			i++
 			var mp1 MessagePropMapStruct
 			if pp1 != nil {
-				trans, ok := pp1.(MessagePropMapStruct)
+				trans, ok := pp1.(map[string]interface{})
 				if !ok {
-					log.Warn("cannot convert interface to map[string]interface{} 3 type")
+					log.Warn("cannot convert interface to map[string]interface{} type")
 					continue
 				}
-				// err := U.DecodeInterfaceMapToStructType(trans, &mp1)
-				// if err != nil {
-				// 	log.Warn("cannot convert interface map to struct type")
-				// 	continue
-				// }
-				mp1 = trans
+				err := U.DecodeInterfaceMapToStructType(trans, &mp1)
+				if err != nil {
+					log.Warn("cannot convert interface map to struct type")
+					continue
+				}
 			}
 			key1 = mp1.DisplayName
 			prop1 = mp1.PropValue
@@ -266,17 +265,16 @@ func getPropsBlockV2(propMap U.PropertiesMap) string {
 			i++
 			var mp2 MessagePropMapStruct
 			if pp2 != nil {
-				trans, ok := pp2.(MessagePropMapStruct)
+				trans, ok := pp2.(map[string]interface{})
 				if !ok {
-					log.Warn("cannot convert interface to map[string]interface{} 3 type")
+					log.Warn("cannot convert interface to map[string]interface{} type")
 					continue
 				}
-				// err := U.DecodeInterfaceMapToStructType(trans, &mp2)
-				// if err != nil {
-				// 	log.Warn("cannot convert interface map to struct type")
-				// 	continue
-				// }
-				mp2 = trans
+				err := U.DecodeInterfaceMapToStructType(trans, &mp2)
+				if err != nil {
+					log.Warn("cannot convert interface map to struct type")
+					continue
+				}
 			}
 			key2 = mp2.DisplayName
 			prop2 = mp2.PropValue
@@ -320,9 +318,14 @@ func GetSlackMentionsStr(slackMentions []SlackMember, slackTags []string) string
 	return result
 }
 
-func GetSlackMsgBlock(msg EventTriggerAlertMessage, slackMentions string) string {
+func GetSlackMsgBlock(msg EventTriggerAlertMessage, slackMentions string, isAccountAlert bool, overRideUrl string) string {
 
 	propBlock := getPropsBlockV2(msg.MessageProperty)
+	if !isAccountAlert {
+		overRideUrl =  "https://app.factors.ai/profiles/people"
+	} else if isAccountAlert && overRideUrl == "" {
+		overRideUrl = "https://app.factors.ai"
+	}
 
 	// added next two lines to support double quotes(") and backslash(\) in slack templates
 	title := strings.ReplaceAll(strings.ReplaceAll(msg.Title, "\\", "\\\\"), "\"", "\\\"")
@@ -333,18 +336,39 @@ func GetSlackMsgBlock(msg EventTriggerAlertMessage, slackMentions string) string
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": "%s\n*%s*\n %s\n"
+				"text": "*%s*\n"
 			}
 		},
-		%s
+		{
+			"type": "context",
+			"elements": [
+				{
+					"type": "plain_text",
+					"text": "%s",
+					"emoji": true
+				}
+			]
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "%s\n"
+			}
+		},
 		{
 			"type": "section",
 						"text": {
 							"type": "mrkdwn",
-							"text": "*<https://app.factors.ai/profiles/people|Know More>*"
+							"text": "*<%s|See activity in Factors app>*"
 						}
-		}
-	]`, title, message, slackMentions, propBlock)
+		},
+		{
+			"type": "divider"
+		},
+		%s
+		
+	]`, title, message, slackMentions, overRideUrl, propBlock)
 
 	return mainBlock
 }
@@ -364,17 +388,16 @@ func getPropsBlockV2WithoutHyperlinks(propMap U.PropertiesMap) string {
 			i++
 			var mp1 MessagePropMapStruct
 			if pp1 != nil {
-				trans, ok := pp1.(MessagePropMapStruct)
+				trans, ok := pp1.(map[string]interface{})
 				if !ok {
-					log.Warn("cannot convert interface to map[string]interface{} 2 type")
+					log.Warn("cannot convert interface to map[string]interface{} type")
 					continue
 				}
-				// err := U.DecodeInterfaceMapToStructType(trans, &mp1)
-				// if err != nil {
-				// 	log.Warn("cannot convert interface map to struct type")
-				// 	continue
-				// }
-				mp1 = trans
+				err := U.DecodeInterfaceMapToStructType(trans, &mp1)
+				if err != nil {
+					log.Warn("cannot convert interface map to struct type")
+					continue
+				}
 			}
 			key1 = mp1.DisplayName
 			prop1 = mp1.PropValue
@@ -387,17 +410,16 @@ func getPropsBlockV2WithoutHyperlinks(propMap U.PropertiesMap) string {
 			i++
 			var mp2 MessagePropMapStruct
 			if pp2 != nil {
-				trans, ok := pp2.(MessagePropMapStruct)
+				trans, ok := pp2.(map[string]interface{})
 				if !ok {
 					log.Warn("cannot convert interface to map[string]interface{} type")
 					continue
 				}
-				// err := U.DecodeInterfaceMapToStructType(trans, &mp2)
-				// if err != nil {
-				// 	log.Warn("cannot convert interface map to struct type")
-				// 	continue
-				// }
-				mp2 = trans
+				err := U.DecodeInterfaceMapToStructType(trans, &mp2)
+				if err != nil {
+					log.Warn("cannot convert interface map to struct type")
+					continue
+				}
 			}
 			key2 = mp2.DisplayName
 			prop2 = mp2.PropValue
@@ -443,25 +465,52 @@ func GetSlackMsgBlockWithoutHyperlinks(msg EventTriggerAlertMessage, slackMentio
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": "%s\n*%s*%s\n"
+				"text": "*%s*\n"
 			}
 		},
-		%s
+		{
+			"type": "context",
+			"elements": [
+				{
+					"type": "plain_text",
+					"text": "%s",
+					"emoji": true
+				}
+			]
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "%s\n"
+			}
+		},
 		{
 			"type": "section",
 						"text": {
 							"type": "mrkdwn",
-							"text": "*<https://app.factors.ai/profiles/people|Know More>*"
+							"text": "*See activity in Factors app*"
 						}
-		}
+		},
+		{
+			"type": "divider"
+		},
+		%s
+		
 	]`, title, message, slackMentions, propBlock)
 
 	return mainBlock
 }
 
-func GetTeamsMsgBlock(msg EventTriggerAlertMessage) string {
+func GetTeamsMsgBlock(msg EventTriggerAlertMessage, isAccountAlert bool, overrideUrl string) string {
 	propBlock := getPropBlocksForTeams(msg.MessageProperty)
-	mainBlock := fmt.Sprintf(`<h3>%s</h3><h3>%s</h3><table>%s</table><a href=https://app.factors.ai>Know More </a>`, strings.Replace(msg.Title, "\"", "", -1), strings.Replace(msg.Message, "\"", "", -1), propBlock)
+	if !isAccountAlert {
+		overrideUrl = "https://app.factors.ai/profiles/people"
+	} else if isAccountAlert && overrideUrl == "" {
+		overrideUrl = "https://app.factors.ai"
+	}
+
+	mainBlock := fmt.Sprintf(`<h3>%s</h3><h3>%s</h3><table>%s</table><a href=%s>Know More </a>`, strings.Replace(msg.Title, "\"", "", -1), strings.Replace(msg.Message, "\"", "", -1), propBlock, overrideUrl)
 	return mainBlock
 }
 
@@ -479,12 +528,16 @@ func getPropBlocksForTeams(propMap U.PropertiesMap) string {
 			i++
 			var mp1 MessagePropMapStruct
 			if pp1 != nil {
-				trans, ok := pp1.(MessagePropMapStruct)
+				trans, ok := pp1.(map[string]interface{})
 				if !ok {
 					log.Warn("cannot convert interface to map[string]interface{} type")
 					continue
 				}
-				mp1 = trans
+				err := U.DecodeInterfaceMapToStructType(trans, &mp1)
+				if err != nil {
+					log.Warn("cannot convert interface map to struct type")
+					continue
+				}
 			}
 			key1 = mp1.DisplayName
 			prop1 = mp1.PropValue
@@ -497,12 +550,16 @@ func getPropBlocksForTeams(propMap U.PropertiesMap) string {
 			i++
 			var mp2 MessagePropMapStruct
 			if pp2 != nil {
-				trans, ok := pp2.(MessagePropMapStruct)
+				trans, ok := pp2.(map[string]interface{})
 				if !ok {
 					log.Warn("cannot convert interface to map[string]interface{} type")
 					continue
 				}
-				mp2 = trans
+				err := U.DecodeInterfaceMapToStructType(trans, &mp2)
+				if err != nil {
+					log.Warn("cannot convert interface map to struct type")
+					continue
+				}
 			}
 			key2 = mp2.DisplayName
 			prop2 = mp2.PropValue
