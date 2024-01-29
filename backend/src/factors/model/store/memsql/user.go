@@ -57,6 +57,67 @@ func (store *MemSQL) createUserWithError(user *model.User) (*model.User, error) 
 		return nil, errors.New("user source missing")
 	}
 
+	properties := user.Properties
+	// Discourage direct properties update. Update always through
+	// UpdateUserProperties method. Setting empty JSON intentionally,
+	// to keep the assumption of not null of properties after create.
+	user, err := store.createUserWithoutProperties(user)
+	if err != nil {
+		return nil, err
+	}
+
+	user.Properties = properties
+	// adds join timestamp to user properties.
+	newUserProperties := map[string]interface{}{
+		U.UP_JOIN_TIME: user.JoinTimestamp,
+	}
+
+	if user.CustomerUserId != "" {
+		identityProperties, err := model.GetIdentifiedUserProperties(user.CustomerUserId)
+		if err != nil {
+			return nil, errors.New("failed to get identity properties")
+		}
+
+		// add identity properties to new properties.
+		for k, v := range identityProperties {
+			newUserProperties[k] = v
+		}
+	}
+
+	// removing U.UP_SESSION_COUNT, from user properties.
+	delete(newUserProperties, U.UP_SESSION_COUNT)
+
+	newUserPropertiesJsonb, err := U.AddToPostgresJsonb(&user.Properties, newUserProperties, true)
+	if err != nil {
+		return nil, err
+	}
+
+	updatedProperties, errCode := store.UpdateUserProperties(user.ProjectId, user.ID, newUserPropertiesJsonb, user.JoinTimestamp)
+	if errCode == http.StatusInternalServerError {
+		return nil, errors.New("failed to update user properties")
+	}
+
+	if updatedProperties != nil {
+		user.Properties = *updatedProperties
+	}
+
+	return user, nil
+}
+
+func (store *MemSQL) createUserWithoutProperties(user *model.User) (*model.User, error) {
+	logFields := log.Fields{
+		"user": user,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	if user.ProjectId == 0 {
+		return nil, errors.New("invalid project_id")
+	}
+
+	if user.Source == nil {
+		return nil, errors.New("user source missing")
+	}
+
 	allProjects, projectIDsMap, _ := C.GetProjectsFromListWithAllProjectSupport(C.GetConfig().CaptureSourceInUsersTable, "")
 	if !allProjects && !projectIDsMap[user.ProjectId] {
 		user.Source = nil
@@ -87,34 +148,12 @@ func (store *MemSQL) createUserWithError(user *model.User) (*model.User, error) 
 		user.LastEventAt = nil
 	}
 
-	// adds join timestamp to user properties.
-	newUserProperties := map[string]interface{}{
-		U.UP_JOIN_TIME: user.JoinTimestamp,
-	}
-
 	// Add identification properties, if available.
 	// Prioritize identity properties if customer_user_id is provided
 	if user.CustomerUserId != "" {
-		identityProperties, err := model.GetIdentifiedUserProperties(user.CustomerUserId)
-		if err != nil {
-			return nil, errors.New("failed to get identity properties")
-		}
-
-		// add identity properties to new properties.
-		for k, v := range identityProperties {
-			newUserProperties[k] = v
-		}
 		if C.AllowIdentificationOverwriteUsingSource(user.ProjectId) {
 			user.CustomerUserIdSource = user.Source
 		}
-	}
-
-	// removing U.UP_SESSION_COUNT, from user properties.
-	delete(newUserProperties, U.UP_SESSION_COUNT)
-
-	newUserPropertiesJsonb, err := U.AddToPostgresJsonb(&user.Properties, newUserProperties, true)
-	if err != nil {
-		return nil, err
 	}
 
 	// Discourage direct properties update. Update always through
@@ -126,16 +165,45 @@ func (store *MemSQL) createUserWithError(user *model.User) (*model.User, error) 
 		return nil, err
 	}
 
-	properties, errCode := store.UpdateUserProperties(user.ProjectId, user.ID, newUserPropertiesJsonb, user.JoinTimestamp)
-	if errCode == http.StatusInternalServerError {
-		return nil, errors.New("failed to update user properties")
-	}
-
-	if properties != nil {
-		user.Properties = *properties
-	}
-
 	return user, nil
+}
+
+func (store *MemSQL) createDomainUserWithError(domainName string, user *model.User) (*model.User, error) {
+
+	logFields := log.Fields{
+		"user": user,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+
+	if user.ProjectId == 0 {
+		logCtx.Error("Failed to create domain user. ProjectId not provided.")
+		return nil, errors.New("invalid project_id")
+	}
+
+	if user.Source == nil {
+		logCtx.Error("Failed to create domain user. User source not provided.")
+		return nil, errors.New("user source missing")
+	}
+
+	properties, err := U.DecodePostgresJsonb(&user.Properties)
+	if err != nil {
+		return nil, err
+	}
+
+	user, err = store.createUserWithoutProperties(user)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = store.CreateOrUpdateGroupPropertiesBySource(user.ProjectId, model.GROUP_NAME_DOMAINS, domainName, user.ID,
+		properties, user.JoinTimestamp, user.PropertiesUpdatedTimestamp, model.UserSourceDomainsString)
+	if err != nil {
+		return nil, err
+	}
+
+	return user, err
 }
 
 func (store *MemSQL) CreateUser(user *model.User) (string, int) {
@@ -180,6 +248,39 @@ func (store *MemSQL) createUserWithConflicts(user *model.User, ignoreConflicts b
 
 	logCtx.WithError(err).Error("Failed to create user.")
 	return "", http.StatusInternalServerError
+}
+
+func (store *MemSQL) createDomainUserWithConflicts(domainName string, user *model.User, ignoreConflicts bool) (string, int) {
+	logFields := log.Fields{
+		"user": user,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	newUser, err := store.createDomainUserWithError(domainName, user)
+	if err == nil {
+		return newUser.ID, http.StatusCreated
+	}
+
+	if IsDuplicateRecordError(err) {
+		if user.ID != "" {
+			// Multiple requests trying to create user at the
+			// same time should not lead failure permanently,
+			// so get the user and return.
+			if ignoreConflicts {
+				return user.ID, http.StatusCreated
+			} else {
+				return user.ID, http.StatusConflict
+			}
+		}
+
+		logCtx.WithError(err).Error("Failed to create domain user. Integrity violation.")
+		return "", http.StatusNotAcceptable
+	}
+
+	logCtx.WithError(err).Error("Failed to create domain user.")
+	return "", http.StatusInternalServerError
+
 }
 
 // UpdateUser updates user fields by Id.
@@ -2872,6 +2973,10 @@ func (store *MemSQL) createGroupUserWithConflicts(user *model.User, groupName, g
 		}
 	} else {
 		logCtx.Warning("Skip associating group_id")
+	}
+
+	if groupName == model.GROUP_NAME_DOMAINS {
+		return store.createDomainUserWithConflicts(groupID, groupUser, ignoreConflicts)
 	}
 
 	return store.createUserWithConflicts(groupUser, ignoreConflicts)
