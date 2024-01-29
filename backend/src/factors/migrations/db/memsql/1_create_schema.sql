@@ -461,6 +461,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS project_settings (
     six_signal_config JSON,
     onboarding_steps JSON,
     segment_marker_last_run timestamp(6) DEFAULT '1000-01-01 00:00:00',
+    marker_last_run_all_accounts timestamp(6) DEFAULT '1000-01-01 00:00:00',
     int_g2 boolean default false,
     factors_deanon_config JSON,
     factors_clearbit_key text,
