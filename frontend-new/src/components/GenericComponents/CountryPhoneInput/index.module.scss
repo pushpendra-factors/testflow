@@ -1,6 +1,11 @@
 .countryPhoneInput {
+  padding: 2.5px 0px;
+
   :global(.ant-select) {
     min-width: 80px;
+  }
+  :global(.ant-select-arrow) {
+    line-height: 0 !important;
   }
 
   :global(.ant-input-affix-wrapper) {
