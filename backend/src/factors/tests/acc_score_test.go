@@ -448,7 +448,7 @@ func TestAccScoreUpdateLastEventsDay(t *testing.T) {
 	prevCountsOfUser["1"][w3_date_string] = M.LatestScore{Date: w3_date_unix.Unix(), EventsCount: w3, Properties: p1u2}
 	prevCountsOfUser["1"][w2_date_string] = M.LatestScore{Date: w2_date_unix.Unix(), EventsCount: w2, Properties: p1u3}
 
-	dbup, _, err := T.UpdateLastEventsDay(prevCountsOfUser, currentTS, finalWeights.SaleWindow)
+	dbup, _, err := T.UpdateLastEventsDay(prevCountsOfUser, currentTS, finalWeights, finalWeights.SaleWindow)
 	assert.Nil(t, err)
 	log.Debugf("result:%v", dbup)
 	assert.Equal(t, dbup["1"].EventsCount["a"], 2.5)
@@ -652,6 +652,10 @@ func TestWriteRangestoDB(t *testing.T) {
 }
 
 func TestUpdateTopKScoreContribution(t *testing.T) {
+	var weights M.AccWeights
+	weights.SaleWindow = 1
+	weights.WeightConfig = make([]M.AccEventWeight, 0)
+
 	topk := 4
 	testMap := make(map[string]float64)
 	resExpected := make([]string, 0)
@@ -666,7 +670,7 @@ func TestUpdateTopKScoreContribution(t *testing.T) {
 
 	resExpected = []string{"i", "h", "f", "g"}
 
-	result := T.GetTopkEventsOnCounts(testMap, topk)
+	result := T.GetTopkEventsOnCounts(testMap, weights, topk)
 	log.Debugf("result - %v", result)
 	res := make([]string, 0)
 	for k, _ := range result {

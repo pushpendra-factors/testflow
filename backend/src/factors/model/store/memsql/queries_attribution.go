@@ -5,7 +5,9 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -115,6 +117,122 @@ func (store *MemSQL) GetOrCreateAttributionV1Dashboard(projectId int64, agentUUI
 		log.WithFields(log.Fields{"method": "GetOrCreateAttributionV1Dashboard", "dashboard": *dashboard}).Info("Attribution v1 dashboard debug.")
 	}
 	return dashboard, http.StatusFound
+}
+
+// GetAttributionV1Dashboard gets  attribution v1 dashboard if exists else returns nil
+func (store *MemSQL) GetAttributionV1Dashboard(projectId int64) (*model.Dashboard, int) {
+	logFields := log.Fields{
+		"project_id": projectId,
+	}
+	logCtx := log.WithFields(logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	var errCode int
+	if projectId == 0 {
+		log.Error("Failed to get dashboard. Invalid project_id or agent_id")
+		return nil, http.StatusBadRequest
+	}
+
+	dashboard, errCode := store.GetAttributionV1DashboardByDashboardName(projectId, model.AttributionV1Name)
+
+	if errCode == http.StatusInternalServerError {
+		log.WithField("err_code", errCode).Error("Failed to find attribution dashboard")
+		return nil, http.StatusInternalServerError
+	}
+
+	if errCode != http.StatusFound {
+		return nil, errCode
+	}
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"method": "GetOrCreateAttributionV1Dashboard", "dashboard": *dashboard}).Info("Attribution v1 dashboard debug.")
+	}
+	return dashboard, http.StatusFound
+}
+
+// GetAttributionDashboardUnitNamesImpactedByCustomKPI returns list of dashboards unit names (query title) which is dependant on custom KPI
+func (store *MemSQL) GetAttributionDashboardUnitNamesImpactedByCustomKPI(projectID int64, customMetricName string) ([]string, int) {
+
+	logFields := log.Fields{
+		"project_id":         projectID,
+		"custom_metric_name": customMetricName,
+	}
+	logCtx := log.WithFields(logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	impactedDashboardUnitNames := make([]string, 0)
+
+	customMetricNameInAttributionQuery := "\"me\":[\"" + customMetricName + "\"],"
+
+	// get the dashboard
+	dashboard, errCode := store.GetAttributionV1Dashboard(projectID)
+
+	if C.GetAttributionDebug() == 1 {
+		log.WithFields(log.Fields{"dashboard": dashboard, "errCode": errCode, "customMetricName": customMetricName}).Warn("1 GetAttributionDashboardUnitNamesImpactedByCustomKPI")
+	}
+
+	if dashboard == nil || errCode != http.StatusFound {
+		return impactedDashboardUnitNames, http.StatusNotFound
+	}
+
+	// get the dashboard units
+	dashboardUnits, errCode := store.GetDashboardUnitByDashboardID(projectID, dashboard.ID)
+	if C.GetAttributionDebug() == 1 {
+		log.WithFields(log.Fields{"dashboardUnits": dashboardUnits, "errCode": errCode}).Warn("2 GetAttributionDashboardUnitNamesImpactedByCustomKPI")
+	}
+	if errCode != http.StatusFound || len(dashboardUnits) == 0 {
+		logCtx.WithFields(log.Fields{"method": "GetAttributionV1DashboardByDashboardName", "dashboard": dashboard}).Info("Failed to get dashboard units for Attribution V1 dashboard")
+		return impactedDashboardUnitNames, http.StatusNotFound
+	}
+
+	for _, unit := range dashboardUnits {
+
+		// get the query
+		queryInfo, errC := store.GetQueryWithQueryId(unit.ProjectID, unit.QueryId)
+
+		if C.GetAttributionDebug() == 1 {
+			log.WithFields(log.Fields{"queryInfo": queryInfo, "errC": errC}).Warn("3 GetAttributionDashboardUnitNamesImpactedByCustomKPI")
+		}
+		if errC != http.StatusFound {
+			logCtx.WithField("err_code", errC).Errorf("Failed to fetch query from query_id %d", unit.QueryId)
+			continue
+		}
+
+		// Create a new baseQuery instance every time to avoid overwriting from, to values in routines.
+		queryClass := model.QueryClassAttributionV1
+		baseQuery, err := model.DecodeQueryForClass(queryInfo.Query, queryClass)
+		if err != nil {
+			errMsg := fmt.Sprintf("Error decoding query, query_id %d", unit.QueryId)
+			C.PingHealthcheckForFailure(C.HealthcheckDashboardDBAttributionPingID, errMsg)
+			continue
+		}
+
+		attributionQuery := baseQuery.(*model.AttributionQueryUnitV1)
+		var queryOriginal *model.AttributionQueryV1
+		queryOriginal = attributionQuery.Query
+
+		jsonString, err1 := json.Marshal(queryOriginal.KPIQueries)
+		if C.GetAttributionDebug() == 1 {
+			log.WithFields(log.Fields{"jsonString": jsonString, "string(jsonString)": string(jsonString), "err": err1}).
+				Warn("4 GetAttributionDashboardUnitNamesImpactedByCustomKPI")
+		}
+		if err1 != nil {
+			continue
+		}
+
+		// match the queries names
+		if strings.Contains(string(jsonString), customMetricNameInAttributionQuery) {
+			if C.GetAttributionDebug() == 1 {
+				log.WithFields(log.Fields{"jsonString": string(jsonString), "string(jsonString)": string(jsonString),
+					"customMetricNameInAttributionQuery": customMetricNameInAttributionQuery,
+					"customMetricName":                   customMetricName,
+				}).
+					Warn("5 GetAttributionDashboardUnitNamesImpactedByCustomKPI")
+			}
+			impactedDashboardUnitNames = append(impactedDashboardUnitNames, queryInfo.Title)
+		}
+	}
+
+	return impactedDashboardUnitNames, http.StatusFound
 }
 
 // DeleteAttributionDashboardUnitAndQuery deletes query and corresponding dashboard unit for given project id

@@ -9,9 +9,11 @@ import (
 	"factors/model/store"
 	"factors/sdk"
 	SDK "factors/sdk"
+	"factors/task/event_user_cache"
 	"factors/util"
 	U "factors/util"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"net/http"
 	"sync"
@@ -1938,9 +1940,17 @@ func TestUserGetUsersForDomainUserAssociationUpdate(t *testing.T) {
 }
 
 func TestUserDomainsProperty(t *testing.T) {
-	project, err := SetupProjectReturnDAO()
+	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
+	r := gin.Default()
+	H.InitAppRoutes(r)
 	assert.NotNil(t, project)
+
+	customerUserId := getRandomEmail()
+	properties1 := postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{"country": "india", "age": 30, "paid": true}`))}
+	_, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerUserId,
+		Properties: properties1, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
 
 	_, status := store.GetStore().CreateOrGetDomainsGroup(project.ID)
 	assert.Equal(t, http.StatusCreated, status)
@@ -1950,4 +1960,27 @@ func TestUserDomainsProperty(t *testing.T) {
 	assert.Equal(t, http.StatusFound, status)
 	properties, err := U.DecodePostgresJsonb(&user.Properties)
 	assert.Equal(t, "abc.com", (*properties)[U.DP_DOMAIN_NAME])
+	userID, status = store.GetStore().CreateOrGetDomainGroupUser(project.ID, model.GROUP_NAME_DOMAINS, "abc2.com", U.TimeNowZ().Unix(), model.UserSourceDomains)
+	assert.Equal(t, http.StatusCreated, status)
+	user, status = store.GetStore().GetUser(project.ID, userID)
+	assert.Equal(t, http.StatusFound, status)
+	properties, err = U.DecodePostgresJsonb(&user.Properties)
+	assert.Equal(t, "abc2.com", (*properties)[U.DP_DOMAIN_NAME])
+	configs := make(map[string]interface{})
+	configs["rollupLookback"] = 1
+	configs["deleteRollupAfterAddingToAggregate"] = 1
+	event_user_cache.DoRollUpSortedSet(configs)
+
+	// Returns []string when label not set
+	w := sendGetGroupPropertyValues(project.ID, U.GROUP_NAME_DOMAINS, U.DP_DOMAIN_NAME, false, agent, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var propertyValues []string
+	jsonResponse, err := ioutil.ReadAll(w.Body)
+	assert.Nil(t, err)
+	json.Unmarshal(jsonResponse, &propertyValues)
+	assert.Len(t, propertyValues, 2)
+	assert.Contains(t, propertyValues, "abc.com")
+	assert.Contains(t, propertyValues, "abc2.com")
+
 }
