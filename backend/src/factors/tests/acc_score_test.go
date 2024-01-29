@@ -758,6 +758,36 @@ func TestValidateAndUpdateEngagementLevel(t *testing.T) {
 
 }
 
+func TestGetEngagement(t *testing.T) {
+
+	var engagementBucket M.BucketRanges
+	engagementBucket.Ranges = make([]M.Bucket, 4)
+
+	engagementBucket.Date = "01012024"
+
+	b1 := M.Bucket{Name: "Hot", High: 95, Low: 80}
+	b2 := M.Bucket{Name: "Warm", High: 80, Low: 70}
+	b3 := M.Bucket{Name: "Cold", High: 70, Low: 40}
+	b4 := M.Bucket{Name: "Ice", High: 40, Low: 10}
+	engagementBucket.Ranges = []M.Bucket{b1, b2, b3, b4}
+
+	string1 := M.GetEngagement(98, engagementBucket)
+	string2 := M.GetEngagement(93, engagementBucket)
+	string3 := M.GetEngagement(75, engagementBucket)
+	string4 := M.GetEngagement(5, engagementBucket)
+
+	log.WithField("bucket 1 ", string1).Debugf("buckets")
+	log.WithField("bucket 2 ", string2).Debugf("buckets")
+	log.WithField("bucket 3 ", string3).Debugf("buckets")
+	log.WithField("bucket 4 ", string4).Debugf("buckets")
+
+	assert.Equal(t, "Hot", string1, "above given ranges - not working")
+	assert.Equal(t, "Hot", string2, "within given ranges - not working")
+	assert.Equal(t, "Warm", string3, "within given ranges - not working")
+	assert.Equal(t, "Ice", string4, "below given ranges - not working")
+
+}
+
 func TestUpdateDefaultWeights(t *testing.T) {
 	var idsExp map[string]float32 = make(map[string]float32)
 
