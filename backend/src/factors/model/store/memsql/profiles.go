@@ -339,9 +339,18 @@ func buildAllUsersQueryV2(projectID int64, query model.ProfileQuery) (string, []
 func getSelectKeysForProfile(query model.ProfileQuery, tableViewName string) (string, string) {
 	if query.AggregateProperty == "1" || query.AggregateProperty == "" || query.AggregateFunction == model.UniqueAggregateFunction { // Generally count is only used againt them.
 		return "users.customer_user_id, users.id, users.properties", fmt.Sprintf("COUNT(DISTINCT(COALESCE(%s.customer_user_id, %s.id))) as %s", tableViewName, tableViewName, model.AliasAggr)
-	} else {
+	} else if query.AggregateProperty != "" &&  query.AggregateProperty2 == "" {
 		return "users.properties", fmt.Sprintf("%s(CASE WHEN JSON_EXTRACT_STRING(%s.properties, '%s') IS NULL THEN 0 ELSE JSON_EXTRACT_STRING(%s.properties, '%s') END ) as %s", query.AggregateFunction,
 			tableViewName, query.AggregateProperty, tableViewName, query.AggregateProperty, model.AliasAggr)
+	} else {
+		// Following case for when difference of metric is considered.
+		aggPropertySql1 := fmt.Sprintf("CASE WHEN JSON_EXTRACT_STRING(%s.properties, '%s') IS NULL THEN 0 ELSE JSON_EXTRACT_STRING(%s.properties, '%s') END", 
+		tableViewName, query.AggregateProperty, tableViewName, query.AggregateProperty)
+		aggPropertySql2 := fmt.Sprintf("CASE WHEN JSON_EXTRACT_STRING(%s.properties, '%s') IS NULL THEN 0 ELSE JSON_EXTRACT_STRING(%s.properties, '%s') END", 
+		tableViewName, query.AggregateProperty2, tableViewName, query.AggregateProperty2)
+		operator, _ := model.MapOfCustomMetricTypeToOp[query.MetricType]
+		return "users.properties", 
+			fmt.Sprintf("%s(%s %s %s) as %s", query.AggregateFunction, aggPropertySql1, operator, aggPropertySql2, model.AliasAggr)
 	}
 }
 

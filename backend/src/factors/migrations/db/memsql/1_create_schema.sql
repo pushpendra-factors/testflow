@@ -861,6 +861,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS custom_metrics(
     description text,
     type_of_query int,  -- represents if kpi-profiles
     object_type text, -- represents if hubspot_contact ...
+    metric_type text, -- represents a time difference based kpi ...
     transformations json,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
