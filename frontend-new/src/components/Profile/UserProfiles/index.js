@@ -852,7 +852,7 @@ function UserProfiles({
   const renderPropertyFilter = () => (
     <PropertyFilter
       profileType='user'
-      source={timelinePayload.source}
+      source={timelinePayload?.source}
       filters={timelinePayload.filters}
       secondaryFiltersList={selectedFilters.secondaryFilters}
       filtersExpanded={filtersExpanded}
