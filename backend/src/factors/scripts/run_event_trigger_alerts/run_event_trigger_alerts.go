@@ -1026,7 +1026,24 @@ func getSlackMsgBlock(msg model.EventTriggerAlertMessage, slackMentions string, 
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": "%s\n*%s*\n %s\n"
+				"text": "*%s*\n"
+			}
+		},
+		{
+			"type": "context",
+			"elements": [
+				{
+					"type": "plain_text",
+					"text": "%s",
+					"emoji": true
+				}
+			]
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "%s\n"
 			}
 		},
 		{
@@ -1040,11 +1057,8 @@ func getSlackMsgBlock(msg model.EventTriggerAlertMessage, slackMentions string, 
 			"type": "divider"
 		},
 		%s
-		{
-			"type": "divider"
-		}
 		
-	]`, title, message, overRideUrl, slackMentions, propBlock)
+	]`, title, message, slackMentions, overRideUrl, propBlock)
 
 	return mainBlock
 }
