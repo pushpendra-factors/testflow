@@ -1,14 +1,20 @@
 import { useLocation } from 'react-router-dom';
 import { PathUrls } from '../../../routes/pathUrls';
-import { checkMatchPath, isConfigurationUrl, isSettingsUrl } from '../appSidebar.helpers';
-
+import {
+  checkMatchPath,
+  isConfigurationUrl,
+  isSettingsUrl
+} from '../appSidebar.helpers';
 
 const useSidebarTitleConfig = () => {
   const location = useLocation();
   const { pathname } = location;
 
-  if (checkMatchPath(pathname, PathUrls.Dashboard) 
-    || checkMatchPath(pathname, PathUrls.DashboardURL)) {
+  if (
+    checkMatchPath(pathname, PathUrls.Dashboard) ||
+    checkMatchPath(pathname, PathUrls.DashboardURL) ||
+    checkMatchPath(pathname, PathUrls.PreBuildDashboard)
+  ) {
     return {
       title: 'Dashboards',
       icon: 'dashboard_Filled',
@@ -16,13 +22,6 @@ const useSidebarTitleConfig = () => {
     };
   }
 
-  if (pathname === PathUrls.PreBuildDashboard) {
-    return {
-      title: 'Quick boards',
-      icon: 'QuickBoard',
-      iconColor: '#36CFC9',
-    };
-  }
   if (pathname === PathUrls.Analyse2) {
     return {
       title: 'Analyse',
@@ -30,8 +29,10 @@ const useSidebarTitleConfig = () => {
       iconColor: '#9254DE'
     };
   }
-  if (checkMatchPath(pathname, PathUrls.ProfileAccounts) 
-    || checkMatchPath(pathname, PathUrls.ProfileAccountsSegmentsURL)) {
+  if (
+    checkMatchPath(pathname, PathUrls.ProfileAccounts) ||
+    checkMatchPath(pathname, PathUrls.ProfileAccountsSegmentsURL)
+  ) {
     return {
       title: 'Accounts',
       icon: 'accounts',

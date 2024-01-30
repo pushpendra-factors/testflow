@@ -5,7 +5,12 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
+	"fmt"
 	"net/http"
+	"time"
+
+	"github.com/jinzhu/gorm"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -111,4 +116,77 @@ func (store *MemSQL) DeleteSlackIntegration(projectID int64, agentUUID string) e
 		return err
 	}
 	return nil
+}
+
+func (store *MemSQL) GetSlackUsersListFromDb(projectID int64, agentID string) ([]model.SlackMember, int, error) {
+	if projectID == 0 || agentID == "" {
+		return nil, http.StatusBadRequest, fmt.Errorf("invalid parameters")
+	}
+
+	logFields := log.Fields{
+		"project_id": projectID,
+		"agent_id":   agentID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	db := C.GetServices().Db
+
+	var usersList model.SlackUsersList
+	err := db.Where("project_id = ?", projectID).Find(&usersList).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound, err
+		}
+		logCtx.WithError(err).Error("failed to find slack users list")
+		return nil, http.StatusInternalServerError, err
+	}
+
+	slackUsers := make([]model.SlackMember, 0)
+	if err = U.DecodePostgresJsonbToStructType(usersList.UsersList, &slackUsers); err != nil {
+		logCtx.WithError(err).Error("failed to decode slack users list")
+		return nil, http.StatusInternalServerError, err
+	}
+
+	return slackUsers, http.StatusFound, nil
+}
+
+func (store *MemSQL) UpdateSlackUsersListForProject(projectID int64, fields map[string]interface{}) (int, error) {
+	if projectID == 0 {
+		return http.StatusBadRequest, fmt.Errorf("invalid parameters")
+	}
+
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	if fields["agent_id"] == nil || fields["users_list"] == nil {
+		return http.StatusBadRequest, fmt.Errorf("invalid fields provided for updation")
+	}
+	currTime := time.Now()
+	fields["last_sync_time"] = currTime
+
+	db := C.GetServices().Db
+	err := db.Model(&model.SlackUsersList{}).Where("project_id = ?", projectID).Updates(fields).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			obj := model.SlackUsersList{
+				ProjectID:    projectID,
+				AgentID:      fields["agent_id"].(string),
+				UsersList:    fields["users_list"].(*postgres.Jsonb),
+				LastSyncTime: currTime,
+			}
+			err := db.Create(&obj).Error
+			if err != nil {
+				log.WithFields(logFields).WithError(err).Error("failed to create slack users list entity in table")
+				return http.StatusInternalServerError, err
+			}
+			return http.StatusOK, nil
+		}
+		log.WithFields(logFields).WithError(err).Error("failed to update slack users list table")
+		return http.StatusInternalServerError, err
+	}
+
+	return http.StatusOK, nil
 }

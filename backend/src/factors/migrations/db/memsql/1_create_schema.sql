@@ -382,6 +382,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS project_agent_mappings (
     project_id bigint,
     agent_uuid text,
     role bigint,
+    checklist_dismissed bool,
     invited_by text,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
@@ -453,6 +454,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS project_settings (
     project_currency varchar(10),
     is_path_analysis_enabled boolean,
     acc_score_weights json,
+    custom_engagement_buckets json,
     filter_ips JSON,
     is_deanonymization_requested boolean,
     is_onboarding_completed boolean,
@@ -503,6 +505,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS projects (
     billing_subscription_id text,
     billing_account_id text,
     billing_last_synced_at timestamp(6) DEFAULT '1000-01-01 00:00:00',
+    clearbit_domain text,
     KEY (updated_at),
     PRIMARY KEY (id),
     KEY (token),
@@ -1219,11 +1222,11 @@ CREATE ROWSTORE TABLE IF NOT EXISTS event_trigger_alerts(
     teams_channel_associated_by text,
     paragon_metadata json,
     event_trigger_alert json,
-    last_alert_at timestamp(6),
+    last_alert_at timestamp(6) NOT NULL DEFAULT '1970-01-01 00:00:00',
     last_fail_details json,
     internal_status text,
-    created_at timestamp(6) NOT NULL,
-    updated_at timestamp(6) NOT NULL,
+    created_at timestamp(6) NOT NULL DEFAULT '1970-01-01 00:00:00',
+    updated_at timestamp(6) NOT NULL DEFAULT '1970-01-01 00:00:00',
     is_deleted boolean NOT NULL DEFAULT FALSE
 );
 
@@ -1419,6 +1422,13 @@ CREATE TABLE IF NOT EXISTS account_scoring_ranges(
     KEY (project_id, date) USING CLUSTERED COLUMNSTORE,
     PRIMARY KEY (project_id, date)
 );
+
+CREATE TABLE IF NOT EXISTS slack_users_list(
+    project_id BIGINT NOT NULL, 
+    agent_id TEXT NOT NULL,
+    users_list JSON,
+    last_sync_time TIMESTAMP(6) NOT NULL DEFAULT '1970-01-01 00:00:00'
+); 
 
 --  This is generated from DBT workload. Adding this for running test cases alone.
 CREATE TABLE `website_aggregation` (

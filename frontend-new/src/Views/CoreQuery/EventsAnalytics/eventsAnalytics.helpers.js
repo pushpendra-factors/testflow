@@ -39,6 +39,7 @@ export const getBreakdownDisplayName = ({
       ? get(userPropNames, property, capitalizePropertyName(property))
       : sessionEventPropertiesDisplayNames[property] ||
         globalEventPropertiesDisplayNames[property] ||
+        userPropNames[property] ||
         capitalizePropertyName(property);
 
   if (breakdown.eventIndex && !multipleEvents) {

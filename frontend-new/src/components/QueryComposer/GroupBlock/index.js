@@ -1,14 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { connect } from 'react-redux';
-import styles from './index.module.scss';
 import { SVG } from 'Components/factorsComponents';
 import { bindActionCreators } from 'redux';
 
 import { Button, Tooltip } from 'antd';
 
-import { setGroupBy, delGroupBy } from '../../../reducers/coreQuery/middleware';
-import FaSelect from '../../FaSelect';
-import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 import {
   PropTextFormat,
   convertAndAddPropertiesToGroupSelectOptions,
@@ -21,6 +17,10 @@ import {
   CustomGroupDisplayNames,
   GROUP_NAME_DOMAINS
 } from 'Components/GlobalFilter/FilterWrapper/utils';
+import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
+import FaSelect from '../../FaSelect';
+import { setGroupBy, delGroupBy } from '../../../reducers/coreQuery/middleware';
+import styles from './index.module.scss';
 
 function GroupBlock({
   groupByState,
@@ -97,7 +97,7 @@ function GroupBlock({
   };
 
   const onGrpPropChange = (val, index) => {
-    const newGroupByState = Object.assign({}, groupByState.global[index]);
+    const newGroupByState = { ...groupByState.global[index] };
     if (newGroupByState.prop_type === 'numerical') {
       newGroupByState.gbty = val;
     }
@@ -138,42 +138,38 @@ function GroupBlock({
     setDDVisible(ddVis);
   };
 
-  const renderInitGroupSelect = (index) => {
-    return (
-      <div key={0} className={`m-0 mt-2`}>
-        <div className={`flex relative`}>
-          {
-            <Button
-              className={`fa-button--truncate`}
-              type='text'
-              onClick={() => triggerDropDown(index)}
-              icon={<SVG name='plus' />}
-            >
-              Add new
-            </Button>
-          }
-          {isDDVisible[index] ? (
-            <div className={`${styles.group_block__event_selector}`}>
-              <GroupSelect
-                options={filterOptions}
-                searchPlaceHolder='Select Property'
-                optionClickCallback={(option, group) =>
-                  onChange(option, group, index)
-                }
-                onClickOutside={() => triggerDropDown(index, true)}
-                allowSearch={true}
-                extraClass={styles.group_block__event_selector__select}
-                allowSearchTextSelection={false}
-              />
-            </div>
-          ) : null}
-        </div>
+  const renderInitGroupSelect = (index) => (
+    <div key={0} className='m-0 mt-2'>
+      <div className='flex relative'>
+        <Button
+          className='fa-button--truncate'
+          type='text'
+          onClick={() => triggerDropDown(index)}
+          icon={<SVG name='plus' />}
+        >
+          Add new
+        </Button>
+        {isDDVisible[index] ? (
+          <div className={`${styles.group_block__event_selector}`}>
+            <GroupSelect
+              options={filterOptions}
+              searchPlaceHolder='Select Property'
+              optionClickCallback={(option, group) =>
+                onChange(option, group, index)
+              }
+              onClickOutside={() => triggerDropDown(index, true)}
+              allowSearch
+              extraClass={styles.group_block__event_selector__select}
+              allowSearchTextSelection={false}
+            />
+          </div>
+        ) : null}
       </div>
-    );
-  };
+    </div>
+  );
 
   const renderGroupPropertyOptions = (opt, index) => {
-    if (!opt || opt.prop_type === 'categorical') return;
+    if (!opt || opt.prop_type === 'categorical') return null;
 
     const propOpts = {
       numerical: [
@@ -190,11 +186,11 @@ function GroupBlock({
 
     const getProp = (opt) => {
       if (opt.prop_type === 'numerical') {
-        const propSel = propOpts['numerical'].filter((v) => v[2] === opt.gbty);
+        const propSel = propOpts.numerical.filter((v) => v[2] === opt.gbty);
         return propSel[0] ? propSel[0][0] : 'Select options';
       }
       if (opt.prop_type === 'datetime') {
-        const propSel = propOpts['datetime'].filter((v) => v[2] === opt.grn);
+        const propSel = propOpts.datetime.filter((v) => v[2] === opt.grn);
         return propSel[0] ? propSel[0][0] : 'Select options';
       }
     };
@@ -211,7 +207,7 @@ function GroupBlock({
     };
 
     return (
-      <div className={`flex items-center m-0 mx-2`}>
+      <div className='flex items-center m-0 mx-2'>
         show as
         <div
           className={`flex relative m-0 mx-2 ${styles.grpProps__select__opt}`}
@@ -223,7 +219,7 @@ function GroupBlock({
               options={propOpts[opt.prop_type]}
               optionClick={setProp}
               onClickOutside={() => selectVisToggle()}
-            ></FaSelect>
+            />
           )}
         </div>
       </div>
@@ -248,12 +244,12 @@ function GroupBlock({
     return (
       <Tooltip title={propertyName} color={TOOLTIP_CONSTANTS.DARK}>
         <Button
-          icon={<SVG name={opt.prop_category} size={16} color={'purple'} />}
-          className={`fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin`}
+          icon={<SVG name={opt.prop_category} size={16} color='purple' />}
+          className='fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin'
           type='link'
           onClick={() => triggerDropDown(index)}
         >
-          {!opt.property && <SVG name='plus' extraClass={`mr-2`} />}
+          {!opt.property && <SVG name='plus' extraClass='mr-2' />}
           {propertyName}
         </Button>
       </Tooltip>
@@ -261,47 +257,43 @@ function GroupBlock({
   };
 
   const renderExistingBreakdowns = () => {
-    if (groupByState.global.length < 1) return;
+    if (groupByState.global.length < 1) return null;
     return groupByState.global.map((opt, index) => (
-      <div key={index} className={`flex relative items-center mt-2`}>
-        {
-          <>
-            <div className={`flex relative`}>
-              {renderGroupDisplayName(opt, index)}
-              {isDDVisible[index] ? (
-                <div className={`${styles.group_block__event_selector}`}>
-                  <GroupSelect
-                    options={filterOptions}
-                    searchPlaceHolder='Select Property'
-                    optionClickCallback={(option, group) =>
-                      onChange(option, group, index)
-                    }
-                    onClickOutside={() => triggerDropDown(index, true)}
-                    allowSearch={true}
-                    extraClass={styles.group_block__event_selector__select}
-                    allowSearchTextSelection={false}
-                  />
-                </div>
-              ) : null}
+      <div key={index} className='flex relative items-center mt-2'>
+        <div className='flex relative'>
+          {renderGroupDisplayName(opt, index)}
+          {isDDVisible[index] ? (
+            <div className={`${styles.group_block__event_selector}`}>
+              <GroupSelect
+                options={filterOptions}
+                searchPlaceHolder='Select Property'
+                optionClickCallback={(option, group) =>
+                  onChange(option, group, index)
+                }
+                onClickOutside={() => triggerDropDown(index, true)}
+                allowSearch
+                extraClass={styles.group_block__event_selector__select}
+                allowSearchTextSelection={false}
+              />
             </div>
-            {renderGroupPropertyOptions(opt, index)}
+          ) : null}
+        </div>
+        {renderGroupPropertyOptions(opt, index)}
 
-            <Button
-              type='text'
-              onClick={() => delOption(index)}
-              size={'small'}
-              className={`fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button`}
-            >
-              <SVG name={'remove'} />
-            </Button>
-          </>
-        }
+        <Button
+          type='text'
+          onClick={() => delOption(index)}
+          size='small'
+          className='fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button'
+        >
+          <SVG name='remove' />
+        </Button>
       </div>
     ));
   };
 
   return (
-    <div className={'flex flex-col justify-start'}>
+    <div className='flex flex-col justify-start'>
       {renderExistingBreakdowns()}
       {renderInitGroupSelect(groupByState.global.length)}
     </div>

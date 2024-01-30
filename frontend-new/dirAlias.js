@@ -18,7 +18,8 @@ module.exports = {
     Constants: path.resolve(__dirname, './src/constants'),
     Routes: path.resolve(__dirname, './src/routes'),
     HOC: path.resolve(__dirname, './src/HOC'),
-    Onboarding: path.resolve(__dirname, './src/features/onboarding')
+    Onboarding: path.resolve(__dirname, './src/features/onboarding'),
+    Types: path.resolve(__dirname, './src/types')
   },
   eslintDirAlias: {
     map: [
@@ -35,7 +36,8 @@ module.exports = {
       ['Constants', './src/constants'],
       ['Routes', './src/routes'],
       ['HOC', './src/HOC'],
-      ['Onboarding', './src/features/onboarding']
+      ['Onboarding', './src/features/onboarding'],
+      ['Types', './src/types']
     ],
     extensions: ['.ts', '.tsx', '.js', '.jsx', '.json']
   },

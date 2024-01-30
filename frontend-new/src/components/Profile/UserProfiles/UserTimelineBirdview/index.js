@@ -2,18 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Spin, Tooltip } from 'antd';
 import _ from 'lodash';
 import { CaretUpOutlined, CaretRightOutlined } from '@ant-design/icons';
-import InfoCard from '../../MyComponents/InfoCard';
-import {
-  eventIconsColorMap,
-  getEventCategory,
-  getIconForCategory,
-  groups,
-  hoverEvents
-} from '../../utils';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import { useSelector } from 'react-redux';
 import NoDataWithMessage from 'Components/Profile/MyComponents/NoDataWithMessage';
 import truncateURL from 'Utils/truncateURL';
+import { getEventCategory, getIconForCategory, groups } from '../../utils';
+import InfoCard from '../../MyComponents/InfoCard';
+import { eventIconsColorMap } from 'Components/Profile/constants';
 
 function UserTimelineBirdview({
   activities = [],
@@ -26,6 +21,7 @@ function UserTimelineBirdview({
 }) {
   const [showAll, setShowAll] = useState([]);
   const { userPropNames } = useSelector((state) => state.coreQuery);
+  const { projectDomainsList } = useSelector((state) => state.global);
 
   const groupedActivities = _.groupBy(activities, groups[granularity]);
 
@@ -82,7 +78,7 @@ function UserTimelineBirdview({
         ? PropTextFormat(event.display_name)
         : event.event_name;
     const hoverConditionals =
-      hoverEvents.includes(event.event_name) ||
+      Object.keys(event?.properties || {})?.length ||
       event.display_name === 'Page View' ||
       event.event_type === 'CH' ||
       event.event_type === 'CS';
@@ -117,7 +113,7 @@ function UserTimelineBirdview({
                   !hoverConditionals && eventName.length >= 30 ? 'hover' : []
                 }
               >
-                {truncateURL(eventName)}
+                {truncateURL(eventName, projectDomainsList)}
               </Tooltip>
             </div>
             {hoverConditionals ? (
@@ -146,7 +142,7 @@ function UserTimelineBirdview({
 
   const renderTimeline = (data) =>
     !Object.entries(data).length ? (
-      <NoDataWithMessage message={'No Activity'} />
+      <NoDataWithMessage message='No Activity' />
     ) : (
       <div className='table-scroll'>
         <table>
@@ -169,7 +165,7 @@ function UserTimelineBirdview({
               );
               return (
                 <tr>
-                  <td className={`pb-${milestones?.length * 8}`}>
+                  <td className={`pb-${(milestones?.length || 0) * 8}`}>
                     <div className='timestamp top-40'>{timestamp}</div>
                     {milestones.length ? (
                       <div className='milestone-section'>
@@ -212,7 +208,7 @@ function UserTimelineBirdview({
                     {milestones.length ? (
                       <div className='milestone-section'>
                         {milestones.map((milestone) => (
-                          <div className={`green-stripe opaque`} />
+                          <div className='green-stripe opaque' />
                         ))}
                       </div>
                     ) : null}

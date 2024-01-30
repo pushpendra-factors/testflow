@@ -121,7 +121,29 @@ func (store *MemSQL) GetProjectAgentMapping(projectId int64, agentUUID string) (
 
 	return pam, http.StatusFound
 }
+func (store *MemSQL) UpdateChecklistDismissalStatus(projectId int64, agentUUID string, status bool) int {
+	logFields := log.Fields{
+		"project_id": projectId,
+		"agent_uuid": agentUUID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
+	if projectId == 0 || agentUUID == "" {
+		return http.StatusBadRequest
+	}
+	db := C.GetServices().Db
+	updateFields := make(map[string]interface{}, 0)
+	updateFields["checklist_dismissed"] = status
+
+	err := db.Model(&model.ProjectAgentMapping{}).Where("project_id = ? AND agent_uuid = ?", projectId, agentUUID).Update(updateFields).Error
+
+	if err != nil {
+		log.WithFields(log.Fields{"projectId": projectId, "agentUUID": agentUUID}).WithError(err).Error(
+			"updaing model.ProjectAgentMapping checklist status failed.")
+		return http.StatusInternalServerError
+	}
+	return 0
+}
 func (store *MemSQL) GetProjectAgentMappingsByProjectId(projectId int64) ([]model.ProjectAgentMapping, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
@@ -260,4 +282,56 @@ func (store *MemSQL) EditProjectAgentMapping(projectId int64, agentUUIDToEdit st
 		return http.StatusInternalServerError
 	}
 	return 0
+}
+
+// GetProjectAgentLatestAdminEmailByProjectId fetches the non-solution latest admin (most recent admin) email id.
+func (store *MemSQL) GetProjectAgentLatestAdminEmailByProjectId(projectId int64) (string, int) {
+	logFields := log.Fields{
+		"project_id": projectId,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	if projectId == 0 {
+		return "", http.StatusBadRequest
+	}
+	db := C.GetServices().Db
+
+	var pam []model.ProjectAgentMapping
+	if err := db.Order("created_at DESC").Limit(model.MAX_AGENTS_PER_PROJECT).Where("project_id = ? AND role = ?", projectId, model.ADMIN).Find(&pam).Error; err != nil {
+		return "", http.StatusInternalServerError
+	}
+
+	var projectAgentAdmin model.ProjectAgentMapping
+
+	isSolution, errCode := store.IsSolutionAgent(pam[0].AgentUUID)
+	if errCode != http.StatusOK {
+		return "", errCode
+	}
+
+	if isSolution && len(pam) > 1 {
+		projectAgentAdmin = pam[1]
+	} else {
+		projectAgentAdmin = pam[0]
+	}
+
+	adminAgentInfo, err := store.GetAgentInfo(projectAgentAdmin.AgentUUID)
+	if err != http.StatusOK {
+		return "", err
+	}
+
+	return adminAgentInfo.Email, http.StatusFound
+}
+
+func (store *MemSQL) IsSolutionAgent(agentUUID string) (bool, int) {
+
+	solutionAgent, err := store.GetAgentByEmail("solutions@factors.ai")
+	if err != http.StatusFound {
+		return false, http.StatusInternalServerError
+	}
+
+	if solutionAgent.UUID == agentUUID {
+		return true, http.StatusOK
+	}
+
+	return false, http.StatusOK
+
 }

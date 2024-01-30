@@ -26,27 +26,29 @@ import { bindActionCreators } from 'redux';
 import { TimeZoneOffsetValueArr } from 'Utils/constants';
 import { projectAgentInvite, fetchProjectAgents } from 'Reducers/agentActions';
 import useMobileView from 'hooks/useMobileView';
+import logger from 'Utils/logger';
+import useQuery from 'hooks/useQuery';
+import { useHistory } from 'react-router-dom';
+import { PathUrls } from 'Routes/pathUrls';
+import { AdminLock } from 'Routes/feature';
+import style from './index.module.scss';
 import {
   CommonStepsProps,
   OnboardingStepsConfig,
   PROJECT_CREATED
 } from '../../types';
-import logger from 'Utils/logger';
-import useQuery from 'hooks/useQuery';
-import { useHistory } from 'react-router-dom';
-import { PathUrls } from 'Routes/pathUrls';
-import style from './index.module.scss';
-import { AdminLock } from 'Routes/feature';
+import { getCompanyDomainFromEmail } from '../../../utils';
+
 const { Option } = Select;
 
-const Step1 = ({
+function Step1({
   createProjectWithTimeZone,
   udpateProjectDetails,
   projectAgentInvite,
   udpateProjectSettings,
   incrementStepCount,
   fetchProjectAgents
-}: OnboardingStep1Props) => {
+}: OnboardingStep1Props) {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
@@ -58,7 +60,7 @@ const Step1 = ({
   const { active_project, currentProjectSettings } = useSelector(
     (state: any) => state.global
   );
-  const { agents } = useSelector((state) => state.agent);
+  const { agents, agent_details } = useSelector((state) => state.agent);
   const isSolutionsEmailInvited = agents?.find((agent) =>
     AdminLock(agent?.email)
   );
@@ -74,7 +76,11 @@ const Step1 = ({
     try {
       setLoading(true);
       if (isFormSubmitted) {
-        if (checkbox && !isSolutionsEmailInvited) {
+        if (
+          !AdminLock(agent_details?.email) &&
+          checkbox &&
+          !isSolutionsEmailInvited
+        ) {
           await inviteUser(active_project?.id, 'solutions@factors.ai');
           await fetchProjectAgents(active_project?.id);
         }
@@ -84,16 +90,18 @@ const Step1 = ({
         incrementStepCount();
         return;
       }
-      let projectName = sanitizeInputString(values?.projectName);
-      let projectData = {
+      const projectName = sanitizeInputString(values?.projectName);
+      const projectData = {
         name: projectName,
-        time_zone: values?.time_zone
+        time_zone: values?.time_zone,
+        clearbit_domain: values?.domainName
       };
 
-      //Factors CREATE_PROJECT_TIMEZONE tracking
+      // Factors CREATE_PROJECT_TIMEZONE tracking
       factorsai.track('CREATE_PROJECT_TIMEZONE', {
         ProjectName: projectData?.name,
-        time_zone: projectData?.time_zone
+        time_zone: projectData?.time_zone,
+        clearbit_domain: values?.domainName
       });
       let prevProjectId = '';
       if (isNewSetup) {
@@ -101,7 +109,7 @@ const Step1 = ({
       }
       const createProjectRes = await createProjectWithTimeZone(projectData);
       const projectId = createProjectRes?.data?.id;
-      if (checkbox) {
+      if (checkbox && !AdminLock(agent_details?.email)) {
         await inviteUser(projectId, 'solutions@factors.ai');
         await fetchProjectAgents(projectId);
       }
@@ -178,21 +186,23 @@ const Step1 = ({
   };
 
   const handleFormValuesChange = (_changedValues, allValues) => {
-    setProjectName(allValues?.['projectName'] || '');
+    setProjectName(allValues?.projectName || '');
   };
 
   const getInitialFormValues = useCallback(() => {
     if (isFormSubmitted) {
       return {
         time_zone: active_project?.time_zone || '',
-        projectName: active_project?.name || ''
+        projectName: active_project?.name || '',
+        domainName: active_project?.clearbit_domain || ''
       };
     }
     return {
       time_zone: `${TimeZoneOffsetValueArr[0]?.name} (UTC ${TimeZoneOffsetValueArr[0]?.offset})`,
-      projectName: ''
+      projectName: '',
+      domainName: getCompanyDomainFromEmail(agent_details?.email)
     };
-  }, [isFormSubmitted, active_project]);
+  }, [isFormSubmitted, active_project, agent_details?.email]);
 
   useEffect(() => {
     if (isNewSetup) {
@@ -209,7 +219,7 @@ const Step1 = ({
 
   useEffect(() => {
     if (isFormSubmitted) {
-      //check if solutions was invited before
+      // check if solutions was invited before
       if (isSolutionsEmailInvited) {
         setcheckbox(true);
       } else {
@@ -228,18 +238,18 @@ const Step1 = ({
           className={`${isMobileView ? 'text-center' : ''}`}
         >
           <Text
-            type={'title'}
+            type='title'
             level={3}
-            color={'character-primary'}
-            extraClass={'m-0'}
-            weight={'bold'}
+            color='character-primary'
+            extraClass='m-0'
+            weight='bold'
           >
             Create a New Project
           </Text>
           <Text
-            type={'title'}
+            type='title'
             level={6}
-            extraClass={'m-0 mt-1'}
+            extraClass='m-0 mt-1'
             color='character-secondary'
           >
             Let's get started by creating a project for your organisation
@@ -256,10 +266,10 @@ const Step1 = ({
             <Col xs={24} sm={24} md={12}>
               <div>
                 <Text
-                  type={'title'}
+                  type='title'
                   size={10}
-                  color={'character-primary'}
-                  extraClass={'m-0 ml-1 mb-1'}
+                  color='character-primary'
+                  extraClass='m-0 ml-1 mb-1'
                 >
                   Project Name
                 </Text>
@@ -274,9 +284,9 @@ const Step1 = ({
                   ]}
                 >
                   <Input
-                    className={'fa-input'}
-                    size={'large'}
-                    placeholder={'eg. My Company Name'}
+                    className='fa-input'
+                    size='large'
+                    placeholder='eg. My Company Name'
                     disabled={isFormSubmitted}
                     autoFocus
                   />
@@ -284,16 +294,43 @@ const Step1 = ({
               </div>
               <div className='mt-6'>
                 <Text
-                  type={'title'}
+                  type='title'
                   size={10}
-                  color={'character-primary'}
-                  extraClass={'m-0 ml-1 mb-1'}
+                  color='character-primary'
+                  extraClass='m-0 ml-1 mb-1'
+                >
+                  Company domain
+                </Text>
+                <Form.Item
+                  label={null}
+                  name='domainName'
+                  rules={[
+                    {
+                      required: true,
+                      message: 'Please input your Domain Name!'
+                    }
+                  ]}
+                >
+                  <Input
+                    className='fa-input'
+                    size='large'
+                    placeholder={"Company's domain name"}
+                    disabled={isFormSubmitted}
+                  />
+                </Form.Item>
+              </div>
+              <div className='mt-6'>
+                <Text
+                  type='title'
+                  size={10}
+                  color='character-primary'
+                  extraClass='m-0 ml-1 mb-1'
                 >
                   Select timezone
                 </Text>
                 <Form.Item
                   name='time_zone'
-                  className={'m-0'}
+                  className='m-0'
                   rules={[
                     {
                       required: true,
@@ -302,32 +339,30 @@ const Step1 = ({
                   ]}
                 >
                   <Select
-                    className={'fa-select'}
-                    placeholder={'Time Zone'}
-                    size={'large'}
+                    className='fa-select'
+                    placeholder='Time Zone'
+                    size='large'
                     disabled={isFormSubmitted}
                   >
-                    {TimeZoneOffsetValueArr?.map((item) => {
-                      return (
-                        <Option
-                          value={item?.city}
-                        >{`${item?.name} (UTC ${item?.offset})`}</Option>
-                      );
-                    })}
+                    {TimeZoneOffsetValueArr?.map((item) => (
+                      <Option
+                        value={item?.city}
+                      >{`${item?.name} (UTC ${item?.offset})`}</Option>
+                    ))}
                   </Select>
                 </Form.Item>
                 <Text
-                  type={'title'}
+                  type='title'
                   size={8}
-                  color={'disabled-color'}
-                  extraClass={'inline m-0 mt-4 ml-1 mb-2'}
+                  color='disabled-color'
+                  extraClass='inline m-0 mt-4 ml-1 mb-2'
                 >
                   Set it to what is there in your CRM
                 </Text>
                 <Popconfirm
                   placement='rightTop'
                   title={
-                    <Text type={'title'} size={10} extraClass={'max-w-sm'}>
+                    <Text type='title' size={10} extraClass='max-w-sm'>
                       This must reflect the same timezone as used in your CRM.
                       Once selected, this action cannot be edited.
                     </Text>
@@ -343,11 +378,11 @@ const Step1 = ({
                   }}
                 >
                   <Button
-                    type={'text'}
-                    className={'m-0'}
+                    type='text'
+                    className='m-0'
                     style={{ backgroundColor: 'white' }}
                   >
-                    <SVG name={'infoCircle'} size={18} color='gray' />
+                    <SVG name='infoCircle' size={18} color='gray' />
                   </Button>
                 </Popconfirm>
               </div>
@@ -358,14 +393,14 @@ const Step1 = ({
               md={12}
               className={`${isMobileView ? 'mt-6' : ''}`}
             >
-              <div className={'animate__animated animate__fadeIn'}>
+              <div className='animate__animated animate__fadeIn'>
                 <div className='flex justify-center items-center h-full w-full'>
                   <div style={{ width: !isMobileView ? 145 : '100%' }}>
                     <Row>
                       <Col xs={12} sm={12} md={24}>
                         <Upload
                           name='avatar'
-                          accept={''}
+                          accept=''
                           showUploadList={false}
                           listType='picture'
                           beforeUpload={beforeUpload}
@@ -406,7 +441,7 @@ const Step1 = ({
                       </Col>
                       <Col xs={12} sm={12} md={24}>
                         <Text
-                          type={'title'}
+                          type='title'
                           level={8}
                           extraClass={`m-0 ${isMobileView ? 'mt-10' : 'mt-4'}`}
                           color='character-secondary'
@@ -419,24 +454,24 @@ const Step1 = ({
                 </div>
               </div>
             </Col>
-            <Col xs={24} sm={24} className={'mt-6'}>
+            <Col xs={24} sm={24} className='mt-6'>
               <Form.Item label={null} name='invite_support'>
                 <div className='flex items-center'>
                   <Checkbox
                     checked={checkbox}
                     disabled={isFormSubmitted && isSolutionsEmailInvited}
                     onChange={(e) => setcheckbox(e.target.checked)}
-                    className={'mt-1'}
-                  ></Checkbox>
+                    className='mt-1'
+                  />
                   <Text
-                    type={'title'}
+                    type='title'
                     size={10}
-                    color={'grey'}
-                    extraClass={' m-0 ml-3'}
+                    color='grey'
+                    extraClass=' m-0 ml-3'
                   >
                     Invite{' '}
-                    <span className={'font-bold'}>solutions@factors.ai</span>{' '}
-                    into this project for ongoing support
+                    <span className='font-bold'>solutions@factors.ai</span> into
+                    this project for ongoing support
                   </Text>
                 </div>
               </Form.Item>
@@ -450,12 +485,12 @@ const Step1 = ({
                   isMobileView ? 'justify-center mt-6' : 'justify-end'
                 }`}
               >
-                <Form.Item className={'m-0'}>
+                <Form.Item className='m-0'>
                   <Button
                     type='primary'
                     loading={loading}
                     style={{ height: '36px' }}
-                    className={'m-0'}
+                    className='m-0'
                     htmlType='submit'
                     disabled={projectName === ''}
                   >
@@ -469,7 +504,7 @@ const Step1 = ({
       </Row>
     </div>
   );
-};
+}
 
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(

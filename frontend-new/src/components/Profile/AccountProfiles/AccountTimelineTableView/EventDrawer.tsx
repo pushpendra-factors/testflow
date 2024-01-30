@@ -1,20 +1,22 @@
 import React from 'react';
 import { useSelector } from 'react-redux';
-import { EventDrawerProps } from './types';
 import { Button, Drawer } from 'antd';
 import { Text } from 'Components/factorsComponents';
-import { eventIconsColorMap, propValueFormat } from 'Components/Profile/utils';
+import { eventIconsColorMap } from 'Components/Profile/constants';
 import { PropTextFormat } from 'Utils/dataFormatter';
-import EventIcon from './EventIcon';
+import { propValueFormat } from 'Components/Profile/utils';
 import TextWithOverflowTooltip from 'Components/GenericComponents/TextWithOverflowTooltip';
+import { EventDrawerProps } from 'Components/Profile/types';
+import EventIcon from './EventIcon';
 
-const EventDrawer: React.FC<EventDrawerProps> = ({
+function EventDrawer({
   visible,
   onClose,
   event,
   eventPropsType
-}) => {
+}: EventDrawerProps): JSX.Element {
   const { eventPropNames } = useSelector((state: any) => state.coreQuery);
+
   const renderEventDetails = () => {
     if (!event) return null;
 
@@ -70,7 +72,6 @@ const EventDrawer: React.FC<EventDrawerProps> = ({
                     truncate
                     charLimit={44}
                     extraClass='m-0'
-                    shouldTruncateURL
                   >
                     {propValueFormat(key, value, propType) || '-'}
                   </Text>
@@ -95,15 +96,15 @@ const EventDrawer: React.FC<EventDrawerProps> = ({
       }
       placement='right'
       closable={false}
-      mask={true}
-      maskClosable={true}
+      mask
+      maskClosable
       visible={visible}
-      className={'fa-drawer--right'}
+      className='fa-drawer--right'
       onClose={onClose}
     >
       {renderEventDetails()}
     </Drawer>
   );
-};
+}
 
 export default EventDrawer;

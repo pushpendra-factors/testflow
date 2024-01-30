@@ -5,7 +5,5 @@ export const selectGroupOptions = (state) => state.coreQuery.groups;
 
 export const selectGroupsList = createSelector(
   selectGroupOptions,
-  (groupOptions) => {
-    return getGroupList(groupOptions?.account_groups);
-  }
+  (groupOptions) => getGroupList(groupOptions?.account_groups)
 );

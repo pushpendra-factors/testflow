@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { SVG, Text } from 'factorsComponents';
 import { Button } from 'antd';
 import {
   getEventPropertyValues,
@@ -12,8 +11,8 @@ import { connect, useSelector } from 'react-redux';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
 import getGroupIcon from 'Utils/getGroupIcon';
-import startCase from 'lodash/startCase';
 import { selectActivePreDashboard } from 'Reducers/dashboard/selectors';
+import { SVG, Text } from 'Components/factorsComponents';
 import FaFilterSelect from '../../FaFilterSelect';
 import { CustomGroupDisplayNames } from './utils';
 
@@ -67,74 +66,58 @@ function FilterWrapper({
   }, [filter]);
 
   useEffect(() => {
-    const formattedFilterDDOptions = { ...filterDropDownOptions, props: [] };
-
-    for (const propertyKey of Object.keys(filterProps || {})) {
-      let label;
-      let propertyType;
-      let icon;
-      const values = filterProps[propertyKey];
-
+    const formatFilterOptions = (key, values) => {
       if (!Array.isArray(values)) {
-        const propertyGroups = values;
-        if (propertyGroups) {
-          for (const groupKey of Object.keys(propertyGroups)) {
-            label = PropTextFormat(groupKey);
-            icon = getGroupIcon(groupKey);
-            formattedFilterDDOptions.props.push({
-              key: propertyKey,
-              label,
-              icon,
-              propertyType: propertyKey,
-              values: propertyGroups[groupKey]
-            });
-          }
-        }
-      } else {
-        label = CustomGroupDisplayNames[propertyKey]
-          ? CustomGroupDisplayNames[propertyKey]
-          : groups?.all_groups?.[propertyKey]
-            ? groups?.all_groups?.[propertyKey]
-            : PropTextFormat(propertyKey);
+        const categorisedProperties = values;
+        return Object.keys(categorisedProperties).map((category) => {
+          const label = PropTextFormat(category);
+          const icon = getGroupIcon(category);
 
-        propertyType = ['user', 'event'].includes(propertyKey)
-          ? propertyKey
-          : ['button_click', 'page_view'].includes(propertyKey)
-            ? 'event'
-            : 'group';
+          return {
+            key,
+            label,
+            icon,
+            propertyType: key,
+            values: categorisedProperties[category]
+          };
+        });
+      }
+      const label =
+        CustomGroupDisplayNames[key] ||
+        (groups?.all_groups?.[key]
+          ? groups.all_groups[key]
+          : PropTextFormat(key));
 
-        icon = getGroupIcon(label);
-        formattedFilterDDOptions.props.push({
-          key: propertyKey,
+      const propertyType = ['user', 'event'].includes(key)
+        ? key
+        : ['button_click', 'page_view'].includes(key)
+          ? 'event'
+          : 'group';
+
+      const icon = getGroupIcon(label);
+
+      return [
+        {
+          key,
           label,
           icon,
           propertyType,
           values
-        });
-      }
-    }
+        }
+      ];
+    };
+
+    const formattedFilterDDOptions = { ...filterDropDownOptions, props: [] };
+
+    Object.keys(filterProps || {}).forEach((propertyKey) => {
+      formattedFilterDDOptions.props.push(
+        ...formatFilterOptions(propertyKey, filterProps[propertyKey])
+      );
+    });
 
     formattedFilterDDOptions.operator = operatorsMap;
     setFiltDD(formattedFilterDDOptions);
   }, [filterProps]);
-
-  const renderFilterContent = () => (
-    <FaFilterSelect
-      viewMode={viewMode}
-      propOpts={filterDropDownOptions.props}
-      operatorOpts={filterDropDownOptions.operator}
-      valueOpts={propertyValuesMap.data}
-      applyFilter={applyFilter}
-      setValuesByProps={setValuesByProps}
-      filter={filter}
-      refValue={refValue}
-      caller={caller}
-      dropdownPlacement={dropdownPlacement}
-      dropdownMaxHeight={dropdownMaxHeight}
-      showInList={showInList}
-      valueOptsLoading={propertyValuesMap.loading}
-    />
-  );
 
   useEffect(() => {
     const [groupName, propertyName, propertyType, entity] =
@@ -176,6 +159,7 @@ function FilterWrapper({
       closeFilter();
     }
   };
+
   const setValuesByProps = (props) => {
     const [groupName, propertyName, propertyType, entity] = props;
     const payload = props?.length === 3 ? props[0] : props[1];
@@ -198,6 +182,24 @@ function FilterWrapper({
       }
     }
   };
+
+  const renderFilterContent = () => (
+    <FaFilterSelect
+      viewMode={viewMode}
+      propOpts={filterDropDownOptions.props}
+      operatorOpts={filterDropDownOptions.operator}
+      valueOpts={propertyValuesMap.data}
+      applyFilter={applyFilter}
+      refValue={refValue}
+      setValuesByProps={setValuesByProps}
+      filter={filter}
+      caller={caller}
+      dropdownPlacement={dropdownPlacement}
+      dropdownMaxHeight={dropdownMaxHeight}
+      showInList={showInList}
+      valueOptsLoading={propertyValuesMap.loading}
+    />
+  );
 
   const filterSelComp = () => (
     <FaFilterSelect

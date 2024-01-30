@@ -470,13 +470,13 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 		&model.CacheEvent{ID: event.ID, Timestamp: event.Timestamp})
 
 	t1 := time.Now()
-	alerts, eventName, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, event.UserId, &event.Properties, event.UserProperties, nil, false)
+	alerts, eventName, updatedUserProps, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, event.UserId, &event.Properties, event.UserProperties, nil, false)
 	if ErrCode == http.StatusFound && alerts != nil {
 		// log.WithFields(log.Fields{"project_id": event.ProjectId,
 		// 	"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
 
 		for _, alert := range *alerts {
-			success := store.CacheEventTriggerAlert(&alert, event, eventName)
+			success := store.CacheEventTriggerAlert(&alert, event, eventName, updatedUserProps)
 			if !success {
 				log.WithFields(log.Fields{"project_id": event.ProjectId,
 					"event_trigger_alert": alert}).Error("Caching alert failure")
@@ -866,7 +866,7 @@ func (store *MemSQL) updateEventPropertiesWithTransaction(projectId int64, id, u
 	}
 
 	//log.Info("EventTriggerAlerts match function trigger point.")
-	alerts, eventName, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, event.UserId, updatedPostgresJsonb, event.UserProperties, updatedPropertiesOnlyJsonBlob, true)
+	alerts, eventName, updatedUserProps, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, event.UserId, updatedPostgresJsonb, event.UserProperties, updatedPropertiesOnlyJsonBlob, true)
 	if ErrCode == http.StatusFound && alerts != nil {
 		// log.WithFields(log.Fields{"project_id": event.ProjectId,
 		// 	"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
@@ -875,7 +875,7 @@ func (store *MemSQL) updateEventPropertiesWithTransaction(projectId int64, id, u
 		updatedEvent = *event
 		updatedEvent.Properties = *updatedPostgresJsonb
 		for _, alert := range *alerts {
-			success := store.CacheEventTriggerAlert(&alert, &updatedEvent, eventName)
+			success := store.CacheEventTriggerAlert(&alert, &updatedEvent, eventName, updatedUserProps)
 			if !success {
 				log.WithFields(log.Fields{"project_id": event.ProjectId,
 					"event_trigger_alert": alert}).Error("Caching alert failure")
@@ -2734,7 +2734,7 @@ func (store *MemSQL) GetLinkedinEventFieldsBasedOnTimestamp(projectID int64, tim
 	imprEventNameID string, clicksEventNameID string) (map[int64]map[string]map[string]bool,
 	map[int64]map[string]map[string]bool, error) {
 	if projectID == 0 || timestamp == 0 {
-		return nil, nil, errors.New("ivalid project ID or timestamp")
+		return nil, nil, errors.New("invalid project ID or timestamp")
 	}
 	imprLinkedinFieldsWithCampaignArr := make([]LinkedinEventFields, 0)
 	db := C.GetServices().Db
@@ -2781,6 +2781,69 @@ func buildMapOfTimestampDomainCampaignGroupID(linkedinArr []LinkedinEventFields)
 		}
 		if _, exists := resultantMap[timestamp][domain][campaignGroupID]; !exists {
 			resultantMap[timestamp][domain][campaignGroupID] = true
+		}
+	}
+	return resultantMap
+}
+
+type LinkedinEventFieldsV1 struct {
+	Timestamp       int64  `json:"timestamp"`
+	CampaignGroupID string `json:"campaign_group_id"`
+	Domain          string `json:"domain"`
+	ID              string `json:"id"`
+}
+
+func (store *MemSQL) GetLinkedinEventFieldsBasedOnTimestampV1(projectID int64, timestamp int64,
+	imprEventNameID string, clicksEventNameID string) (map[int64]map[string]map[string]string,
+	map[int64]map[string]map[string]string, error) {
+	if projectID == 0 || timestamp == 0 {
+		return nil, nil, errors.New("invalid project ID or timestamp")
+	}
+	imprLinkedinFieldsWithCampaignArr := make([]LinkedinEventFieldsV1, 0)
+	db := C.GetServices().Db
+	rows, _ := db.Raw("Select id, JSON_EXTRACT_STRING(properties, '$campaign_id') as campaign_group_id, "+
+		"JSON_EXTRACT_STRING(user_properties, '$li_domain') as domain, timestamp from events where project_id = ? "+
+		"and timestamp >= ? and timestamp < ? and event_name_id = ? "+
+		"and JSON_EXTRACT_STRING(properties, '$campaign_id') is not null ", projectID, timestamp, timestamp+86400, imprEventNameID).Rows()
+	for rows.Next() {
+		imprLinkedinFields := LinkedinEventFieldsV1{}
+		if err := db.ScanRows(rows, &imprLinkedinFields); err != nil {
+			return nil, nil, err
+		}
+		imprLinkedinFieldsWithCampaignArr = append(imprLinkedinFieldsWithCampaignArr, imprLinkedinFields)
+	}
+
+	clicksLinkedinFieldsWithCampaignArr := make([]LinkedinEventFieldsV1, 0)
+	rows, _ = db.Raw("Select id, JSON_EXTRACT_STRING(properties, '$campaign_id') as campaign_group_id, "+
+		"JSON_EXTRACT_STRING(user_properties, '$li_domain') as domain, timestamp from events where project_id = ? "+
+		"and timestamp >= ? and timestamp < ? and event_name_id = ?"+
+		"and JSON_EXTRACT_STRING(properties, '$campaign_id') is not null ", projectID, timestamp, timestamp+86400, clicksEventNameID).Rows()
+	for rows.Next() {
+		clicksLinkedinFields := LinkedinEventFieldsV1{}
+		if err := db.ScanRows(rows, &clicksLinkedinFields); err != nil {
+			return nil, nil, err
+		}
+		clicksLinkedinFieldsWithCampaignArr = append(clicksLinkedinFieldsWithCampaignArr, clicksLinkedinFields)
+	}
+	log.WithFields(log.Fields{"countImpr": len(imprLinkedinFieldsWithCampaignArr), "countClicks": len(clicksLinkedinFieldsWithCampaignArr), "timestamp": timestamp}).Info("DebugMetric log 2")
+
+	imprEventsWithCampaignMap := buildMapOfTimestampDomainCampaignGroupIDV1(imprLinkedinFieldsWithCampaignArr)
+	clicksEventsWithCampaignMap := buildMapOfTimestampDomainCampaignGroupIDV1(clicksLinkedinFieldsWithCampaignArr)
+	return imprEventsWithCampaignMap, clicksEventsWithCampaignMap, nil
+}
+
+func buildMapOfTimestampDomainCampaignGroupIDV1(linkedinArr []LinkedinEventFieldsV1) map[int64]map[string]map[string]string {
+	resultantMap := make(map[int64]map[string]map[string]string)
+	for _, linkedinFields := range linkedinArr {
+		campaignGroupID, domain, timestamp := linkedinFields.CampaignGroupID, linkedinFields.Domain, linkedinFields.Timestamp
+		if _, exists := resultantMap[timestamp]; !exists {
+			resultantMap[timestamp] = make(map[string]map[string]string)
+		}
+		if _, exists := resultantMap[timestamp][domain]; !exists {
+			resultantMap[timestamp][domain] = make(map[string]string)
+		}
+		if _, exists := resultantMap[timestamp][domain][campaignGroupID]; !exists {
+			resultantMap[timestamp][domain][campaignGroupID] = linkedinFields.ID
 		}
 	}
 	return resultantMap

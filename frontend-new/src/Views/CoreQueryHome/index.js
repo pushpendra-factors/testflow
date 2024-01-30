@@ -43,7 +43,7 @@ import {
   TOTAL_USERS_CRITERIA,
   ACTIVE_USERS_CRITERIA,
   FREQUENCY_CRITERIA,
-  reverse_user_types,
+  REVERSE_USER_TYPES,
   EACH_USER_TYPE,
   QUERY_TYPE_WEB,
   DefaultChartTypes,
@@ -527,7 +527,7 @@ function CoreQuery({
           if (record.query.query_group.length === 1) {
             dispatch({
               type: SET_PERFORMANCE_CRITERIA,
-              payload: reverse_user_types[record.query.query_group[0].ec]
+              payload: REVERSE_USER_TYPES[record.query.query_group[0].ec]
             });
             dispatch({
               type: SET_SHOW_CRITERIA,

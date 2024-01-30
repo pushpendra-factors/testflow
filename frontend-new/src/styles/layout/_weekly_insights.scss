@@ -77,3 +77,13 @@ background-color: rgba(#EA6262,0.2) !important;
 .fa-tag--highlight{
     color: $fa-color--brand-color;
 }
+
+.fa-tag--small-grey{ 
+        background-color: #D9D9D9;
+        font-size: 10px;
+        color: #777777;
+        border-radius: 2px;
+        padding: 0px 8px;
+        margin: 0;
+        line-height: 12px;
+}

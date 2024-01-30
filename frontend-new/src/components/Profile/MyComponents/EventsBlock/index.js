@@ -3,7 +3,6 @@ import { Button, Tooltip } from 'antd';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { SVG } from 'Components/factorsComponents';
-import styles from './index.module.scss';
 import {
   getEventPropertiesV2,
   getGroupProperties,
@@ -18,12 +17,13 @@ import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
 import { processProperties } from 'Utils/dataFormatter';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
+import styles from './index.module.scss';
 
 const ENGAGEMENT_SUPPORTED_OPERATORS = [
-  OPERATORS['equalTo'],
-  OPERATORS['notEqualTo'],
-  OPERATORS['contain'],
-  OPERATORS['doesNotContain']
+  OPERATORS.equalTo,
+  OPERATORS.notEqualTo,
+  OPERATORS.contain,
+  OPERATORS.doesNotContain
 ];
 
 function EventsBlock({
@@ -54,8 +54,7 @@ function EventsBlock({
 
   const eventGroup = useMemo(() => {
     if (availableGroups && event) {
-      const group =
-        availableGroups.find((group) => group[0] === event.group) || [];
+      const group = availableGroups.find((grp) => grp[0] === event.group) || [];
       return group[1];
     }
     return null;
@@ -112,13 +111,11 @@ function EventsBlock({
       );
       showOpts = groupOpts.concat(userOpts);
     }
-    showOpts = showOpts?.map((opt) => {
-      return {
-        iconName: getGroupIcon(opt?.icon),
-        label: opt?.label,
-        values: processProperties(opt?.values)
-      };
-    });
+    showOpts = showOpts?.map((opt) => ({
+      iconName: getGroupIcon(opt?.icon),
+      label: opt?.label,
+      values: processProperties(opt?.values)
+    }));
     // Moving MostRecent as first Option.
     const mostRecentGroupindex = showOpts
       ?.map((opt) => opt.label)
@@ -159,13 +156,14 @@ function EventsBlock({
 
     const filterEngagementProperties = (properties) => {
       const filteredProps = {};
-      for (const key in properties) {
-        if (properties.hasOwnProperty(key)) {
+
+      Object.keys(properties || {}).forEach((key) => {
+        if (properties[key]) {
           filteredProps[key] = properties[key].filter((item) =>
             ['categorical', 'numerical'].includes(item?.[2])
           );
         }
-      }
+      });
       return filteredProps;
     };
 
@@ -215,7 +213,7 @@ function EventsBlock({
           options={showGroups}
           searchPlaceHolder='Select Event'
           optionClickCallback={onChange}
-          allowSearch={true}
+          allowSearch
           placement={dropdownPlacement}
           onClickOutside={() => {
             setDDVisible(false);
@@ -281,32 +279,30 @@ function EventsBlock({
     />
   );
 
-  const additionalActions = () => {
-    return (
-      <div className='fa--query_block--actions-cols flex'>
-        <Tooltip title={`Filter this event`} color='#0B1E39'>
+  const additionalActions = () => (
+    <div className='fa--query_block--actions-cols flex'>
+      <Tooltip title='Filter this event' color='#0B1E39'>
+        <Button
+          type='text'
+          onClick={addFilter}
+          className='fa-btn--custom mr-1 btn-total-round'
+        >
+          <SVG name='filter' />
+        </Button>
+      </Tooltip>
+      {!disableEventEdit && (
+        <Tooltip title='Delete this event' color='#0B1E39'>
           <Button
             type='text'
-            onClick={addFilter}
-            className='fa-btn--custom mr-1 btn-total-round'
+            onClick={deleteItem}
+            className='fa-btn--custom btn-total-round'
           >
-            <SVG name='filter' />
+            <SVG name='trash' />
           </Button>
         </Tooltip>
-        {!disableEventEdit && (
-          <Tooltip title={`Delete this event`} color='#0B1E39'>
-            <Button
-              type='text'
-              onClick={deleteItem}
-              className='fa-btn--custom btn-total-round'
-            >
-              <SVG name='trash' />
-            </Button>
-          </Tooltip>
-        )}
-      </div>
-    );
-  };
+      )}
+    </div>
+  );
 
   const eventFilters = () => {
     const filters = [];
@@ -439,7 +435,7 @@ function EventsBlock({
         className={`${styles.query_block__event} block_section items-center`}
       >
         <div className='flex items-center'>
-          <div className={`flex items-center`}>
+          <div className='flex items-center'>
             <div className='relative'>
               <Tooltip
                 zIndex={99999}

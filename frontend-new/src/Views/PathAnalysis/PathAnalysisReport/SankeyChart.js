@@ -7,6 +7,7 @@ import _ from 'lodash';
 import { SVG, Text, Number } from 'factorsComponents';
 import { useHistory } from 'react-router-dom';
 import truncateURL from 'Utils/truncateURL';
+import { useSelector } from 'react-redux';
 
 const StepArraowGenerator = (activeQuery) => {
   let eventName = activeQuery?.query?.event?.label;
@@ -120,7 +121,7 @@ const CustomTooltip = ({ data }) => {
 function Sankey({ sankeyData, activeQuery }) {
   const [chartData, setChartData] = useState(false);
   const [reverseChart, setReverseChart] = useState(true);
-
+  const { projectDomainsList } = useSelector((state) => state.global);
   useEffect(() => {
     let isReverse =
       activeQuery?.query?.event_type == 'startswith' ? false : true;
@@ -241,7 +242,7 @@ function Sankey({ sankeyData, activeQuery }) {
           useHTML: true,
           nodeFormatter() {
             let url = StripUrl(this.key);
-            let truncatedURL = truncateURL(url);
+            let truncatedURL = truncateURL(url, projectDomainsList);
             let finalUrl = truncateString(truncatedURL, 25);
             // console.log('point details-->>', url, truncatedURL);
             // let checkIfNode1 = this.point.column == 0 ? TotalCount : this.point.sum;

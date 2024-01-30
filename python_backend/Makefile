@@ -24,6 +24,13 @@ upload-adwords-etl: export IMAGE_NAME=adwords-etl
 upload-adwords-etl: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/adwords-etl:$(TAG)
 
+pack-chat-data:
+	docker build -t us.gcr.io/factors-$(ENV)/chat-data:$(TAG) -f Dockerfile.chat_data_job .
+
+upload-chat-data: export IMAGE_NAME=chat-data
+upload-chat-data: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/chat-data:$(TAG)
+
 notify-deployment:
 	$(GOPATH)/src/factors/scripts/notify_deployment.sh
 

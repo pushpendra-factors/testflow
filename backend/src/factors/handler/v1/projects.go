@@ -149,6 +149,7 @@ func MapProjectToString(project model.Project) model.ProjectString {
 		ChannelGroupRules:     project.ChannelGroupRules,
 		EnableBilling:         project.EnableBilling,
 		BillingAdminAgentUUID: GetBillingAgentUUIDForProject(project.BillingAccountID),
+		ClearbitDomain:        project.ClearbitDomain,
 	}
 }
 

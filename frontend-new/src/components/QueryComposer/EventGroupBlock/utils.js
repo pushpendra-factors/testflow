@@ -5,7 +5,6 @@ import {
 } from 'Utils/dataFormatter';
 import { CustomGroupDisplayNames } from 'Components/GlobalFilter/FilterWrapper/utils';
 import getGroupIcon from 'Utils/getGroupIcon';
-import { GroupDisplayNames, IsDomainGroup } from 'Components/Profile/utils';
 import _ from 'lodash';
 
 export const defaultPropertyList = (
@@ -13,7 +12,7 @@ export const defaultPropertyList = (
   eventUserPropertiesV2,
   groupProperties,
   eventGroup,
-  groupOpts,
+  groups,
   event
 ) => {
   const filterOptsObj = {};
@@ -26,8 +25,8 @@ export const defaultPropertyList = (
   if (eventGroup) {
     const groupLabel = CustomGroupDisplayNames[eventGroup]
       ? CustomGroupDisplayNames[eventGroup]
-      : groupOpts[eventGroup]
-        ? groupOpts[eventGroup]
+      : groups[eventGroup]
+        ? groups[eventGroup]
         : PropTextFormat(eventGroup);
     const groupValues =
       processProperties(groupProperties[eventGroup], 'user', eventGroup) || [];
@@ -41,14 +40,12 @@ export const defaultPropertyList = (
     } else {
       filterOptsObj[groupLabel].values.push(...groupValues);
     }
-  } else {
-    if (eventUserPropertiesV2) {
-      convertAndAddPropertiesToGroupSelectOptions(
-        eventUserPropertiesV2,
-        filterOptsObj,
-        'user'
-      );
-    }
+  } else if (eventUserPropertiesV2) {
+    convertAndAddPropertiesToGroupSelectOptions(
+      eventUserPropertiesV2,
+      filterOptsObj,
+      'user'
+    );
   }
 
   return filterOptsObj;
@@ -56,20 +53,21 @@ export const defaultPropertyList = (
 
 function removeDuplicateAndEmptyKeys(obj) {
   const uniqueKeys = {};
-  //blacklisted groups
-  let removeGroupList = ['Company identification'];
-  for (const key in obj) {
-    //remove duplicate keys
-    if (!uniqueKeys.hasOwnProperty(key)) {
-      //remove blacklisted keys
+  // blacklisted groups
+  const removeGroupList = ['Company identification'];
+  Object.entries(obj).forEach(([key, value]) => {
+    // remove duplicate keys
+    if (!(key in uniqueKeys)) {
+      // remove blacklisted keys
       if (!key.includes(removeGroupList)) {
-        //remove empty keys
-        if (!_.isEmpty(obj[key]?.values)) {
-          uniqueKeys[key] = obj[key];
+        // remove empty keys
+        if (!_.isEmpty(value?.values)) {
+          uniqueKeys[key] = value;
         }
       }
     }
-  }
+  });
+
   return uniqueKeys;
 }
 
@@ -78,7 +76,7 @@ export const alertsGroupPropertyList = (
   userPropertiesV2,
   groupProperties,
   eventGroup = '',
-  groupOpts,
+  groups,
   event
 ) => {
   const filterOptsObj = {};
@@ -91,15 +89,15 @@ export const alertsGroupPropertyList = (
   );
 
   if (groupProperties) {
-    for (const [group, properties] of Object.entries(groupProperties || {})) {
-      if (Object.keys(GroupDisplayNames).includes(group)) {
-        const groupLabel = CustomGroupDisplayNames[group]
-          ? CustomGroupDisplayNames[group]
-          : groupOpts[group]
-            ? groupOpts[group]
-            : PropTextFormat(group);
+    Object.entries(groupProperties || {}).forEach(([group, properties]) => {
+      if (Object.keys(groups).includes(group)) {
+        const groupLabel =
+          CustomGroupDisplayNames[group] ||
+          (groups[group] ? groups[group] : PropTextFormat(group));
+
         const groupValues = processProperties(properties, 'user', group);
         const groupPropIconName = getGroupIcon(groupLabel);
+
         filterOptsObj[groupLabel] = {
           iconName:
             groupPropIconName === 'NoImage' ? 'group' : groupPropIconName,
@@ -107,7 +105,7 @@ export const alertsGroupPropertyList = (
           values: groupValues
         };
       }
-    }
+    });
   }
   if (!eventGroup) {
     if (userPropertiesV2) {
@@ -120,8 +118,8 @@ export const alertsGroupPropertyList = (
 
     const groupLabel = CustomGroupDisplayNames[eventGroup]
       ? CustomGroupDisplayNames[eventGroup]
-      : groupOpts[eventGroup]
-        ? groupOpts[eventGroup]
+      : groups[eventGroup]
+        ? groups[eventGroup]
         : PropTextFormat(eventGroup);
     const groupValues =
       processProperties(groupProperties[eventGroup], 'user', eventGroup) || [];
@@ -138,7 +136,7 @@ export const alertsGroupPropertyList = (
   }
 
   // remove duplicate, blacklisted and empty keys/group
-  let finalOptsObj = removeDuplicateAndEmptyKeys(filterOptsObj);
+  const finalOptsObj = removeDuplicateAndEmptyKeys(filterOptsObj);
 
   return finalOptsObj;
 };

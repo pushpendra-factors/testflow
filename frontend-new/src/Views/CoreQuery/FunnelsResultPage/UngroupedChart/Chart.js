@@ -20,7 +20,8 @@ import {
   Number as NumFormat
 } from '../../../../components/factorsComponents';
 import LegendsCircle from '../../../../styles/components/LegendsCircle';
-// import truncateURL from 'Utils/truncateURL';
+import truncateURL from 'Utils/truncateURL';
+import { useSelector } from 'react-redux';
 
 function Chart({
   chartData,
@@ -35,6 +36,8 @@ function Chart({
   margin = FUNNEL_CHART_MARGIN,
   showStripes = false
 }) {
+  const { projectDomainsList } = useSelector((state) => state.global);
+
   const chartRef = useRef(null);
   const tooltipRef = useRef(null);
 
@@ -238,8 +241,7 @@ function Chart({
             const label = arrayMapper.find(
               (elem) => elem.mapper === d
             ).displayName;
-            // const urlTruncatedlabel = truncateURL(label);
-            const urlTruncatedlabel = label;
+            const urlTruncatedlabel = truncateURL(label, projectDomainsList);
             if (
               urlTruncatedlabel.length > BAR_CHART_XAXIS_TICK_LENGTH[cardSize]
             ) {

@@ -36,6 +36,7 @@ type Project struct {
 	HubspotTouchPoints    postgres.Jsonb  `json:"hubspot_touch_points"`
 	JobsMetadata          *postgres.Jsonb `json:"jobs_metadata"`
 	ChannelGroupRules     postgres.Jsonb  `json:"channel_group_rules"`
+	ClearbitDomain        string          `json:"clearbit_domain"`
 }
 
 type ProjectString struct {
@@ -59,6 +60,7 @@ type ProjectString struct {
 	ChannelGroupRules     postgres.Jsonb  `json:"channel_group_rules"`
 	EnableBilling         bool            `json:"enable_billing"`
 	BillingAdminAgentUUID string          `json:"billing_admin_agent_uuid"`
+	ClearbitDomain        string          `json:"clearbit_domain"`
 }
 
 type ProjectInfo struct {

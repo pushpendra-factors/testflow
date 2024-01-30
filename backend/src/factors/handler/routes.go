@@ -98,7 +98,7 @@ func InitAppRoutes(r *gin.Engine) {
 		V1.GetProjectsListHandler)
 
 	r.POST("/billing/hooks/subscription/hbeqjomjhxjvx2z", V1.BillingSubscriptionChangedWebhookListner) // random string as a part of security measure
-	r.POST("/billing/hooks/invoice/ksh4jcjw245", V1.BillingInvoiceGeneratedWebhookListner)            // random string as a part of security measure
+	r.POST("/billing/hooks/invoice/ksh4jcjw245", V1.BillingInvoiceGeneratedWebhookListner)             // random string as a part of security measure
 	r.GET("/billing/upgrade/callback", V1.BillingUpgradeCallbackHandler)
 	// Feature Gates Auth Group
 	// authRouteGroup := r.Group(routePrefix + ROUTE_PROJECTS_ROOT)
@@ -320,6 +320,8 @@ func InitAppRoutes(r *gin.Engine) {
 
 	//acc scoring
 	authRouteGroup.PUT("/:project_id/v1/accscore/weights", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_SCORING}), responseWrapper(V1.UpdateAccScoreWeights))
+	authRouteGroup.PUT("/:project_id/v1/accscore/engagementbuckets", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_SCORING}), responseWrapper(V1.UpdateEngagementLevelWeights))
+	authRouteGroup.GET("/:project_id/v1/accscore/engagementbuckets", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_SCORING}), responseWrapper(V1.GetEngagementLevelBucketConfig))
 	authRouteGroup.GET("/:project_id/v1/accscore/score/user", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_SCORING}), responseWrapper(V1.GetUserScore))
 	authRouteGroup.GET("/:project_id/v1/accscore/score/account", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_SCORING}), responseWrapper(V1.GetAccountScores))
 	authRouteGroup.GET("/:project_id/v1/accscore/score/paccount/", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_SCORING}), responseWrapper(V1.GetPerAccountScore))
@@ -332,6 +334,8 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.PUT("/:project_id/v1/eventtriggeralert/test_wh", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), responseWrapper(V1.TestWebhookforEventTriggerAlerts))
 	authRouteGroup.GET("/:project_id/v1/eventtriggeralert/:id", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), responseWrapper(V1.GetInternalStatusForEventTriggerAlertHandler))
 	authRouteGroup.PUT("/:project_id/v1/eventtriggeralert/:id/status", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), responseWrapper(V1.UpdateEventTriggerAlertInternalStatusHandler))
+	authRouteGroup.POST("/:project_id/v1/eventtriggeralert/test_slack", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), responseWrapper(V1.SlackTestforEventTriggerAlerts))
+	authRouteGroup.POST("/:project_id/v1/eventtriggeralert/test_teams", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), responseWrapper(V1.TeamsTestforEventTriggerAlerts))
 
 	// teams
 	authRouteGroup.POST("/:project_id/teams/auth", mid.FeatureMiddleware([]string{M.FEATURE_TEAMS}), V1.TeamsAuthRedirectHandler)
@@ -346,6 +350,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/agents/batchinvite", AgentInviteBatch)
 	authRouteGroup.PUT("/:project_id/agents/remove", RemoveProjectAgent)
 	authRouteGroup.PUT("/:project_id/agents/update", AgentUpdate)
+	authRouteGroup.PUT("/:project_id/checklist/update", UpdateCheckListStatus)
 	authRouteGroup.GET("/:project_id/settings", GetProjectSettingHandler)
 	authRouteGroup.GET("/:project_id/v1/settings", V1.GetProjectSettingHandler)
 	authRouteGroup.PUT("/:project_id/settings", UpdateProjectSettingsHandler)
@@ -426,6 +431,9 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.DELETE("/:project_id/paragon/integration", V1.DeleteParagonProjectIntegrations)
 	authRouteGroup.POST("/:project_id/paragon/workflow", V1.TriggerParagonWorkflow)
 	authRouteGroup.DELETE("/:project_id/paragon/workflow", V1.DisableParagonWorflowForUser)
+
+	// factors_deanon
+	authRouteGroup.POST("/:project_id/factors_deanon/provider/:name/enable", mid.FeatureMiddleware([]string{M.FEATURE_FACTORS_DEANONYMISATION}), UpdateFactorsDeanonProvider)
 
 }
 

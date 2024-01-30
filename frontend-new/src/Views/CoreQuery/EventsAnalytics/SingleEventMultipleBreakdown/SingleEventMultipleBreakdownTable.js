@@ -47,6 +47,8 @@ function SingleEventMultipleBreakdownTable({
     userPropNames,
     eventPropertiesDisplayNames: eventPropertiesDisplayNamesState
   } = useSelector((state) => state.coreQuery);
+  const { projectDomainsList } = useSelector((state) => state.global);
+
   const { data: eventPropertiesDisplayNames } =
     eventPropertiesDisplayNamesState;
   const [columns, setColumns] = useState([]);
@@ -64,6 +66,7 @@ function SingleEventMultipleBreakdownTable({
         eventNames,
         userPropNames,
         eventPropertiesDisplayNames,
+        projectDomainsList,
         eventGroup
       )
     );
@@ -75,6 +78,7 @@ function SingleEventMultipleBreakdownTable({
     eventNames,
     userPropNames,
     eventPropertiesDisplayNames,
+    projectDomainsList,
     eventGroup
   ]);
 
@@ -91,7 +95,8 @@ function SingleEventMultipleBreakdownTable({
         handleDateSorting,
         durationObj.frequency,
         userPropNames,
-        eventPropertiesDisplayNames
+        eventPropertiesDisplayNames,
+        projectDomainsList
       )
     );
   }, [
@@ -101,7 +106,8 @@ function SingleEventMultipleBreakdownTable({
     durationObj.frequency,
     handleDateSorting,
     userPropNames,
-    eventPropertiesDisplayNames
+    eventPropertiesDisplayNames,
+    projectDomainsList
   ]);
 
   useEffect(() => {

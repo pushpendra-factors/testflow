@@ -35,15 +35,7 @@ function LastPlanCard() {
           style={{ width: 290 }}
           onClick={() => window.open(PRICING_HELP_LINK, '_blank')}
         >
-          <Text
-            type={'title'}
-            level={7}
-            color='character-primary'
-            weight={'bold'}
-            extraClass={'m-0'}
-          >
-            Talk to us
-          </Text>
+          Talk to us
         </Button>
       </div>
     </div>

@@ -1,5 +1,11 @@
 package model
 
+import (
+	"time"
+
+	"github.com/jinzhu/gorm/dialects/postgres"
+)
+
 type SlackChannelsAndUserGroups struct {
 	SlackChannelsAndUserGroups map[string][]SlackChannel `json:"slack_channels_and_user_groups"`
 }
@@ -38,4 +44,11 @@ type MemberProfile struct {
 	RealName    string `json:"real_name"`
 	Email       string `json:"email"`
 	Team        string `json:"team"`
+}
+
+type SlackUsersList struct {
+	ProjectID    int64           `gorm:"column:project_id; primary_key:true" json:"project_id"`
+	AgentID      string          `gorm:"column:agent_id" json:"agent_id"`
+	UsersList    *postgres.Jsonb `gorm:"column:users_list" json:"users_list"`
+	LastSyncTime time.Time       `gorm:"column:last_sync_time" json:"last_sync_time"`
 }

@@ -1,16 +1,19 @@
 import { Text } from 'Components/factorsComponents';
 import MomentTz from 'Components/MomentTz';
-import { eventIconsColorMap, propValueFormat } from 'Components/Profile/utils';
+import { eventIconsColorMap } from 'Components/Profile/constants';
+import { propValueFormat } from 'Components/Profile/utils';
 import React from 'react';
-import { useSelector } from 'react-redux';
 import { PropTextFormat } from 'Utils/dataFormatter';
+import { useSelector } from 'react-redux';
+import truncateURL from 'Utils/truncateURL';
 
-const EventInfoCard = ({ event, eventIcon, sourceIcon, propertiesType }) => {
+function EventInfoCard({ event, eventIcon, sourceIcon, propertiesType }) {
   const { eventPropNames } = useSelector((state) => state.coreQuery);
+  const { projectDomainsList } = useSelector((state) => state.global);
   return (
     <div className='timeline-event__container'>
       <div className='timestamp'>
-        {MomentTz(event?.timestamp * 1000).format('hh:mm A')}
+        {MomentTz((event?.timestamp || 0) * 1000).format('hh:mm A')}
       </div>
       <div
         className='event-icon'
@@ -61,6 +64,11 @@ const EventInfoCard = ({ event, eventIcon, sourceIcon, propertiesType }) => {
         {Object.entries(event?.properties || {}).map(([key, value]) => {
           const propType = propertiesType[key];
           if (key === '$is_page_view' && value === true) return null;
+          const formattedValue = propValueFormat(key, value, propType) || '-';
+          const urlTruncatedValue = truncateURL(
+            formattedValue,
+            projectDomainsList
+          );
           return (
             <div className='flex justify-between py-2'>
               <Text
@@ -83,9 +91,9 @@ const EventInfoCard = ({ event, eventIcon, sourceIcon, propertiesType }) => {
                 }  text-right`}
                 truncate
                 charLimit={40}
-                shouldTruncateURL
+                toolTipTitle={formattedValue}
               >
-                {propValueFormat(key, value, propType) || '-'}
+                {urlTruncatedValue}
               </Text>
             </div>
           );
@@ -93,6 +101,6 @@ const EventInfoCard = ({ event, eventIcon, sourceIcon, propertiesType }) => {
       </div>
     </div>
   );
-};
+}
 
 export default EventInfoCard;

@@ -573,7 +573,7 @@ func isRuleMatchedAllAccounts(projectID int64, segment model.Query, decodedPrope
 		// validity for each group like (a or b ) AND (c or d)
 		groupedPropsMatched := false
 		for _, p := range currentGroupedProperties {
-			isValueFound := checkPropertyInAllUsers(segment.GroupAnalysis, p, decodedProperties, userArr)
+			isValueFound := checkPropertyInAllUsers(projectID, segment.GroupAnalysis, p, decodedProperties, userArr)
 			if isValueFound {
 				groupedPropsMatched = true
 				break
@@ -619,7 +619,7 @@ func isRuleMatched(projectID int64, segment model.Segment, decodedProperties *ma
 			if p.Entity != model.PropertyEntityUserGlobal {
 				continue
 			}
-			isValueFound := memsql.CheckPropertyOfGivenType(p, decodedProperties)
+			isValueFound := memsql.CheckPropertyOfGivenType(projectID, p, decodedProperties)
 			if idx == 0 {
 				groupedPropsMatched = isValueFound
 			} else {
@@ -641,20 +641,21 @@ func isRuleMatched(projectID int64, segment model.Segment, decodedProperties *ma
 	return isMatched
 }
 
-func checkPropertyInAllUsers(grpa string, p model.QueryProperty, decodedProperties []map[string]interface{}, userArr []model.User) bool {
+func checkPropertyInAllUsers(projectId int64, grpa string, p model.QueryProperty, decodedProperties []map[string]interface{}, userArr []model.User) bool {
 	isValueFound := false
 	for index, user := range userArr {
 		// skip for group user if entity is user_group
 		if p.Entity == model.PropertyEntityUserGroup && (user.IsGroupUser != nil && *user.IsGroupUser) {
 			continue
 		}
-		isValueFound = memsql.CheckPropertyOfGivenType(p, &decodedProperties[index])
+		isValueFound = memsql.CheckPropertyOfGivenType(projectId, p, &decodedProperties[index])
 
 		// check for negative filters
 		if (p.Operator == model.NotContainsOpStr && p.Value != model.PropertyValueNone) ||
 			(p.Operator == model.ContainsOpStr && p.Value == model.PropertyValueNone) ||
 			(p.Operator == model.NotEqualOpStr && p.Value != model.PropertyValueNone) ||
-			(p.Operator == model.EqualsOpStr && p.Value == model.PropertyValueNone) {
+			(p.Operator == model.EqualsOpStr && p.Value == model.PropertyValueNone) ||
+			(p.Operator == model.NotInList && p.Value != model.PropertyValueNone) {
 			if !isValueFound {
 				return isValueFound
 			}

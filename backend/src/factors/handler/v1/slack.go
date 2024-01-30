@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -243,17 +244,38 @@ func GetSlackUsersListHandler(c *gin.Context) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "agent_id": loggedInAgentUUID})
 
-	members, errCode, err := slack.GetSlackUsersList(projectID, loggedInAgentUUID)
+	users, errCode, err := store.GetStore().GetSlackUsersListFromDb(projectID, loggedInAgentUUID)
 	if err != nil || errCode != http.StatusFound {
 		if errCode == http.StatusNotFound {
-			logCtx.WithError(err).Error("no users found")
-			c.AbortWithStatusJSON(errCode, gin.H{"error": "no users found"})
+			users, errCode, err = slack.UpdateSlackUsersListTable(projectID, loggedInAgentUUID)
+			if err != nil || errCode != http.StatusOK || users == nil {
+				logCtx.WithError(err).Error("failed to fetch slack users list")
+				c.AbortWithStatusJSON(errCode, gin.H{"error": "failed to fetch slack users list"})
+				return
+			}
+			//Sending only human users to the UI
+			humanUsers := make([]model.SlackMember, 0)
+			for _, user := range users {
+				if !user.IsBot && !strings.Contains(user.Name, "slackbot") {
+					humanUsers = append(humanUsers, user)
+				}
+			}
+
+			c.JSON(http.StatusOK, humanUsers)
 			return
 		}
-		logCtx.WithError(err).Error("failed to fetch slack users list")
-		c.AbortWithStatusJSON(errCode, gin.H{"error": err.Error()})
+		logCtx.WithError(err).Error("failed to fetch slack users list from db")
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "failed to fetch slack users list from db"})
 		return
 	}
 
-	c.JSON(http.StatusOK, members)
+	//Sending only human users to the UI
+	humanUsers := make([]model.SlackMember, 0)
+	for _, user := range users {
+		if !user.IsBot && !strings.Contains(user.Name, "slackbot") {
+			humanUsers = append(humanUsers, user)
+		}
+	}
+
+	c.JSON(http.StatusOK, humanUsers)
 }

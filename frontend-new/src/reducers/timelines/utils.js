@@ -99,13 +99,10 @@ const addEnabledFlagToActivity = (activity, disabledEvents = []) => {
   return { ...activity, enabled };
 };
 
-export const addEnabledFlagToActivities = (activities, disabledEvents) => {
-  return (
-    activities
-      ?.map((activity) => addEnabledFlagToActivity(activity, disabledEvents))
-      ?.sort((a, b) => b.enabled - a.enabled) || []
-  );
-};
+export const addEnabledFlagToActivities = (activities, disabledEvents) =>
+  activities
+    ?.map((activity) => addEnabledFlagToActivity(activity, disabledEvents))
+    ?.sort((a, b) => b.enabled - a.enabled) || [];
 
 export const formatUsersTimeline = (data, config) => {
   const returnData = {
@@ -116,9 +113,11 @@ export const formatUsersTimeline = (data, config) => {
     user_activities: []
   };
   const arrayMilestones = [
-    ...Object.entries(data?.milestones || {}).map(([key, value]) => {
-      return { event_name: key, timestamp: value, event_type: 'milestone' };
-    })
+    ...Object.entries(data?.milestones || {}).map(([key, value]) => ({
+      event_name: key,
+      timestamp: value,
+      event_type: 'milestone'
+    }))
   ];
   returnData.user_activities = addEnabledFlagToActivities(
     data.user_activities,
@@ -139,7 +138,7 @@ export const formatUserPropertiesToCheckList = (
         return {
           display_name: displayName,
           prop_name: propName,
-          type: type,
+          type,
           enabled: activeProps ? activeProps.includes(propName) : false
         };
       })

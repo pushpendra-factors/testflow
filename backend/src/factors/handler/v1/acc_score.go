@@ -3,6 +3,7 @@ package v1
 import (
 	"encoding/json"
 	mid "factors/middleware"
+	"factors/model/model"
 	M "factors/model/model"
 	"factors/model/store"
 	T "factors/task/account_scoring"
@@ -88,6 +89,61 @@ func UpdateAccScoreWeights(c *gin.Context) (interface{}, int, string, string, bo
 	}
 	// if project score exist
 	return dedupweights, http.StatusOK, "", "", false
+
+}
+
+// UpdateAccScoreWeights updates weights for a given project
+func UpdateEngagementLevelWeights(c *gin.Context) (interface{}, int, string, string, bool) {
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	reqID, _ := getReqIDAndProjectID(c)
+
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectId,
+		"RequestId": reqID,
+	})
+
+	var engagementBucketsRequest M.BucketRanges
+
+	engagementBucketsRequest.Ranges = make([]M.Bucket, 4)
+	r := c.Request
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&engagementBucketsRequest); err != nil {
+		errMsg := "Unable to decode weights Invalid JSON."
+		logCtx.WithError(err).Error(errMsg)
+		return nil, http.StatusBadRequest, errMsg, "", true
+	}
+	_, statusCode, err := T.ValidateAndUpdateEngagementLevel(projectId, engagementBucketsRequest)
+	if err != nil {
+		errMsg := "Unable to validate and update engagementbuckets."
+		logCtx.WithError(err).Error(errMsg)
+		return nil, http.StatusInternalServerError, errMsg, "", true
+	}
+
+	return engagementBucketsRequest, statusCode, "", "", false
+
+}
+
+func GetEngagementLevelBucketConfig(c *gin.Context) (interface{}, int, string, string, bool) {
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	reqID, _ := getReqIDAndProjectID(c)
+
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectId,
+		"RequestId": reqID,
+	})
+
+	var engagementBucketsRequest M.BucketRanges
+	engagementBucketsRequest.Ranges = make([]M.Bucket, 4)
+
+	buckets, statusCode := store.GetStore().GetEngagementLevelsByProject(projectId)
+	if statusCode == http.StatusNotFound && buckets == nil {
+		logCtx.Info("Getting default engagement buckets")
+		engagementBucketsRequest = model.DefaultEngagementBuckets()
+	} else {
+		engagementBucketsRequest = *buckets
+	}
+
+	return engagementBucketsRequest, http.StatusFound, "", "", false
 
 }
 

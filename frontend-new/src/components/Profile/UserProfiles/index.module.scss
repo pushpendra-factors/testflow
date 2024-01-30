@@ -17,15 +17,27 @@
   }
 }
 
-.more-actions-button {
-  background: none;
-  border: none;
-  box-shadow: none;
+.user-profiles-table {
+  padding: 0;
+  & th {
+    padding: 0 !important;
+    height: 48px;
 
-  &:hover,
-  &:active,
-  &:focus {
-    background-color: $fa-color--mono-1;
-    box-shadow: none;
+    & > div {
+      padding: 0 16px;
+    }
+  }
+
+  & td[class] {
+    padding: 6px 12px !important;
+  }
+
+  & tr:hover td {
+    background-color: #fafafa !important;
+  }
+
+  & tr {
+    max-height: 48px !important;
+    height: 48px;
   }
 }

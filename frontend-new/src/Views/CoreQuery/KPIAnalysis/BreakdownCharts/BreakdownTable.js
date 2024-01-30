@@ -16,6 +16,7 @@ import {
 import { isSeriesChart } from '../../../../utils/dataFormatter';
 import { getFormattedKpiValue } from '../kpiAnalysis.helpers';
 import { getBreakdownDisplayName } from '../../EventsAnalytics/eventsAnalytics.helpers';
+import { useSelector } from 'react-redux';
 
 const BreakdownTable = ({
   data,
@@ -42,12 +43,27 @@ const BreakdownTable = ({
   const [dateBasedColumns, setDateBasedColumns] = useState([]);
   const [tableData, setTableData] = useState([]);
   const [dateBasedTableData, setDateBasedTableData] = useState([]);
+  const { projectDomainsList } = useSelector((state) => state.global);
 
   useEffect(() => {
     setColumns(
-      getTableColumns(breakdown, kpis, sorter, handleSorting, comparisonApplied)
+      getTableColumns(
+        breakdown,
+        kpis,
+        sorter,
+        handleSorting,
+        comparisonApplied,
+        projectDomainsList
+      )
     );
-  }, [breakdown, sorter, handleSorting, kpis, comparisonApplied]);
+  }, [
+    breakdown,
+    sorter,
+    handleSorting,
+    kpis,
+    comparisonApplied,
+    projectDomainsList
+  ]);
 
   useEffect(() => {
     setTableData(getDataInTableFormat(data, searchText, sorter));
@@ -63,7 +79,8 @@ const BreakdownTable = ({
         handleDateSorting,
         frequency,
         comparisonApplied,
-        compareCategories
+        compareCategories,
+        projectDomainsList
       )
     );
   }, [
@@ -74,7 +91,8 @@ const BreakdownTable = ({
     handleDateSorting,
     frequency,
     comparisonApplied,
-    compareCategories
+    compareCategories,
+    projectDomainsList
   ]);
 
   useEffect(() => {

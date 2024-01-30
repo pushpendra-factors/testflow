@@ -39,7 +39,7 @@
 }
 
 .outlineButton {
-  border: 1px solid #d9d9d9 !important;
+  border: 1px solid $fa-color-neutral-grey-5 !important;
   background: #fff;
 }
 
@@ -60,4 +60,42 @@
   position: absolute;
   bottom: -11px;
   right: -11px;
+}
+
+.providerCard {
+  display: flex;
+  padding: 16px;
+  gap: 16px;
+  border-radius: 8px;
+  border: 1px solid $fa-color-neutral-grey-5;
+  background: #fff;
+  width: 350px;
+  cursor: pointer;
+}
+
+.selectedProvider {
+  border: 1px solid $fa-color--brand-color-6;
+}
+
+.providerCheckContainer {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+}
+
+.allAccountInfoContainer {
+  padding: 1px 24px;
+  border: 1px solid $fa-color-neutral-grey-5;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.customRulesContainer {
+  padding: 24px;
+  border: 1px solid $fa-color-neutral-grey-5;
+  border-radius: 12px;
 }

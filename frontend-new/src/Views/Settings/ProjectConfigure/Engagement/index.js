@@ -10,22 +10,67 @@ import {
 } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
 import {
-  EngagementTag,
   findKeyByValue,
   transformPayloadForWeightConfig,
   transformWeightConfigForQuery
 } from 'Components/Profile/utils';
 import React, { useMemo, useState, useEffect } from 'react';
 import { connect, useSelector } from 'react-redux';
-import EngagementModal from './EngagementModal';
 import _ from 'lodash';
 import { bindActionCreators } from 'redux';
 import { updateAccountScores } from 'Reducers/timelines';
 import { fetchProjectSettings } from 'Reducers/global';
-import SaleWindowModal from './SaleWindowModal';
 import { getGroups } from 'Reducers/coreQuery/middleware';
-import { InfoCircleFilled } from '@ant-design/icons';
+import { EngagementTag } from 'Components/Profile/constants.ts';
+import SaleWindowModal from './SaleWindowModal';
+import EngagementModal from './EngagementModal';
+
+import EngagementCategoryModal from './EngagementCategoryModal';
 import styles from './index.module.scss';
+
+const PopoverCategoryOrder = ['Ice', 'Cool', 'Warm', 'Hot'];
+const EngagementCategoryPopoverContent = (
+  <div className='inline-flex justify-between' style={{ width: 'max-content' }}>
+    <div
+      className='engagement-tag'
+      style={{
+        '--bg-color': EngagementTag.Hot?.bgColor,
+        marginRight: '10px'
+      }}
+    >
+      <img
+        src={`../../../assets/icons/${EngagementTag.Hot?.icon}.svg`}
+        alt=''
+      />
+      <Text type='title' level={7} extraClass='m-0'>
+        Hot
+      </Text>
+    </div>
+
+    <div
+      className={`inline-flex ${styles.engagement_popover_horizontalpills}`}
+      style={{ marginLeft: '10px' }}
+    >
+      {PopoverCategoryOrder.map((eachType) => (
+        <div
+          key={`popover-${eachType}`}
+          style={{
+            width: '45px',
+            background: EngagementTag[eachType].bgColor
+          }}
+        >
+          <img
+            src={`../../../assets/icons/${EngagementTag[eachType]?.icon}.svg`}
+            alt=''
+            width={eachType === 'Ice' && 16}
+            height={eachType !== 'Ice' && 16}
+          />
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
 const filterConfigRuleCheck = (existingConfig, newConfig) => {
   try {
     let result = true;
@@ -52,6 +97,7 @@ const filterConfigRuleCheck = (existingConfig, newConfig) => {
 function EngagementConfig({ fetchProjectSettings, getGroups }) {
   const [editIndex, setEditIndex] = useState(undefined);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [renderCategoryModal, setRenderCategoryModal] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [renderModal, setRenderModal] = useState(false);
   const [saleWindowValue, setSaleWindowValue] = useState();
@@ -88,9 +134,26 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
     setSaleWindowValue(initialSaleWindow);
   }, [currentProjectSettings?.acc_score_weights?.salewindow]);
 
-  const weightsConfig = useMemo(() => {
-    return currentProjectSettings?.acc_score_weights?.WeightConfig || [];
-  }, [currentProjectSettings]);
+  const weightsConfig = useMemo(
+    () => currentProjectSettings?.acc_score_weights?.WeightConfig || [],
+    [currentProjectSettings]
+  );
+
+  const showSuccessMessage = (message, description) => {
+    notification.success({
+      message,
+      description,
+      duration: 3
+    });
+  };
+
+  const showErrorMessage = (description) => {
+    notification.error({
+      message: 'Error',
+      description,
+      duration: 3
+    });
+  };
 
   const handleOk = (config, editMode) => {
     const weightConf = [...weightsConfig];
@@ -159,7 +222,7 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
         showErrorMessage(`Error ${editMode ? 'updating' : 'adding'} score.`);
       });
     setShowModal(false);
-    let timeoutHandle = setTimeout(() => {
+    const timeoutHandle = setTimeout(() => {
       setRenderModal(false);
       clearTimeout(timeoutHandle);
     }, 500);
@@ -167,9 +230,17 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
   const handleCategoryModal = {
     onCancel: () => {
       setShowCategoryModal(false);
+      const timeoutHandle = setTimeout(() => {
+        setRenderCategoryModal(false);
+        clearTimeout(timeoutHandle);
+      }, 500);
     },
-    onOK: () => {
+    onOk: () => {
       setShowCategoryModal(false);
+      const timeoutHandle = setTimeout(() => {
+        setRenderCategoryModal(false);
+        clearTimeout(timeoutHandle);
+      }, 500);
     }
   };
   const handleSaleWindowOk = (value) => {
@@ -179,37 +250,6 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
       WeightConfig: [...weightsConfig],
       salewindow: parseInt(value)
     }).then(() => fetchProjectSettings(activeProject.id));
-    return;
-  };
-
-  const showErrorMessage = (description) => {
-    notification.error({
-      message: 'Error',
-      description: description,
-      duration: 3
-    });
-  };
-
-  const showSuccessMessage = (message, description) => {
-    notification.success({
-      message: message,
-      description: description,
-      duration: 3
-    });
-  };
-
-  const renderDeleteModal = (event, index) => {
-    Modal.confirm({
-      title: 'Do you want to remove this score?',
-      okText: 'Yes',
-      cancelText: 'Cancel',
-      closable: true,
-      centered: true,
-      onOk: () => {
-        onDelete(event, index);
-      },
-      onCancel: () => {}
-    });
   };
 
   const onDelete = (event, index) => {
@@ -229,10 +269,24 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
       });
   };
 
+  const renderDeleteModal = (event, index) => {
+    Modal.confirm({
+      title: 'Do you want to remove this score?',
+      okText: 'Yes',
+      cancelText: 'Cancel',
+      closable: true,
+      centered: true,
+      onOk: () => {
+        onDelete(event, index);
+      },
+      onCancel: () => {}
+    });
+  };
+
   const handleCancel = () => {
     setShowModal(false);
     setEditIndex(undefined);
-    let timeoutHandle = setTimeout(() => {
+    const timeoutHandle = setTimeout(() => {
       setRenderModal(false);
       clearTimeout(timeoutHandle);
     }, 500);
@@ -254,40 +308,43 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
     setShowModal(true);
     setRenderModal(true);
   };
-  const tableData = useMemo(() => {
-    return weightsConfig
-      ?.map((q, index) => {
-        const event = transformWeightConfigForQuery(q);
-        event.group = findKeyByValue(eventNamesMap, event.label);
-        return {
-          ...event,
-          is_deleted: q.is_deleted,
-          label: event.fname || event.label,
-          weight: (
-            <div className='flex justify-between items-center'>
-              <div>{event.weight}</div>
+
+  const tableData = useMemo(
+    () =>
+      weightsConfig
+        ?.map((q, index) => {
+          const event = transformWeightConfigForQuery(q);
+          event.group = findKeyByValue(eventNamesMap, event.label);
+          return {
+            ...event,
+            is_deleted: q.is_deleted,
+            label: event.fname || event.label,
+            weight: (
               <div className='flex justify-between items-center'>
-                <Tooltip title='Edit Signal'>
-                  <Button
-                    onClick={() => setEdit(event, index)}
-                    type='text'
-                    icon={<SVG name='edit' />}
-                  />
-                </Tooltip>
-                <Tooltip title='Delete Signal'>
-                  <Button
-                    onClick={() => renderDeleteModal(event, index)}
-                    type='text'
-                    icon={<SVG name='delete' />}
-                  />
-                </Tooltip>
+                <div>{event.weight}</div>
+                <div className='flex justify-between items-center'>
+                  <Tooltip title='Edit Signal'>
+                    <Button
+                      onClick={() => setEdit(event, index)}
+                      type='text'
+                      icon={<SVG name='edit' />}
+                    />
+                  </Tooltip>
+                  <Tooltip title='Delete Signal'>
+                    <Button
+                      onClick={() => renderDeleteModal(event, index)}
+                      type='text'
+                      icon={<SVG name='delete' />}
+                    />
+                  </Tooltip>
+                </div>
               </div>
-            </div>
-          )
-        };
-      })
-      .filter((item) => item.is_deleted === false);
-  }, [eventNames, weightsConfig]);
+            )
+          };
+        })
+        .filter((item) => item.is_deleted === false),
+    [eventNames, weightsConfig]
+  );
 
   return (
     <div className='fa-container'>
@@ -299,7 +356,7 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
                 type='title'
                 level={4}
                 weight='bold'
-                id={'fa-at-text--page-title'}
+                id='fa-at-text--page-title'
               >
                 Engagement Scoring
               </Text>
@@ -315,12 +372,29 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
             </Col>
             <Col span={12}>
               <div className='flex justify-end' style={{ gap: '10px' }}>
+                <Popover
+                  placement='bottom'
+                  trigger='hover'
+                  overlayInnerStyle={{ borderRadius: '8px' }}
+                  content={EngagementCategoryPopoverContent}
+                >
+                  <Button
+                    type='text'
+                    className='dropdown-btn'
+                    onClick={() => {
+                      setShowCategoryModal(true);
+                      setRenderCategoryModal(true);
+                    }}
+                  >
+                    Engagement Category
+                  </Button>
+                </Popover>
                 <Button
                   type='primary'
                   icon={<SVG name='plus' color='white' />}
                   onClick={setAddNewScore}
                 >
-                  Add a rule
+                  Add signal
                 </Button>
               </div>
             </Col>
@@ -330,10 +404,10 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
               <div className='flex items-center'>
                 <div className='mr-2'>Set engagement window</div>
                 {Number(saleWindowValue) <= 0 ||
-                saleWindowValue == undefined ||
-                saleWindowValue == null ? (
+                saleWindowValue === undefined ||
+                saleWindowValue === null ? (
                   <Button
-                    className={`fa-button--truncate filter-buttons-radius filter-buttons-margin mx-1`}
+                    className='fa-button--truncate filter-buttons-radius filter-buttons-margin mx-1'
                     type='link'
                     onClick={() => setShowSaleWindowModal(true)}
                   >
@@ -341,12 +415,12 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
                   </Button>
                 ) : (
                   <Button
-                    className={`dropdown-btn`}
+                    className='dropdown-btn'
                     type='text'
                     onClick={() => setShowSaleWindowModal(true)}
                   >
                     {saleWindowValue} Days
-                    <SVG size={16} name='edit' color={'black'} />
+                    <SVG size={16} name='edit' color='black' />
                   </Button>
                 )}
               </div>
@@ -358,12 +432,9 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
                 <Table columns={columns} dataSource={tableData} />
               ) : (
                 <div className='grid h-full place-items-center'>
-                  <img
-                    src='../../../../assets/icons/empty_file.svg'
-                    alt=''
-                  ></img>
+                  <img src='../../../../assets/icons/empty_file.svg' alt='' />
                   <Text type='title' level={6} weight='bold' extraClass='m-4'>
-                    Looks like there aren't any rules here yet
+                    Looks like there aren&apos;t any rules here yet
                   </Text>
                   <Button
                     type='primary'
@@ -379,6 +450,12 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
         </Col>
       </Row>
 
+      {renderCategoryModal && (
+        <EngagementCategoryModal
+          visible={showCategoryModal}
+          {...handleCategoryModal}
+        />
+      )}
       {renderModal && (
         <EngagementModal
           event={activeEvent}

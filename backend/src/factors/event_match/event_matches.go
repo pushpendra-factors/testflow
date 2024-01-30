@@ -438,7 +438,7 @@ func MapFilterProperties(qp []M.QueryProperty) []EventFilterCriterion {
 			Key: prop.Property,
 		}
 		filterProp.Type = prop.Type
-		if prop.Entity == "user" || prop.Entity == "user_g" {
+		if prop.Entity == "user" || prop.Entity == "user_g" || prop.Entity == "user_group" {
 			filterProp.PropertiesMode = "user"
 		} else if prop.Entity == "event" {
 			filterProp.PropertiesMode = "event"

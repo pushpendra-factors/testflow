@@ -32,6 +32,8 @@ import {
   getDifferentDates
 } from '../../coreQuery.helpers';
 import { isNumeric } from '../../../../utils/global';
+import truncateURL from 'Utils/truncateURL';
+import { Tooltip } from 'antd';
 
 export const defaultSortProp = ({ breakdown }) => {
   const dateTimeBreakdownIndex = findIndex(
@@ -104,6 +106,7 @@ export const getTableColumns = (
   eventNames,
   userPropNames,
   eventPropertiesDisplayNames,
+  projectDomainsList,
   eventGroup
 ) => {
   const breakdownColumns = breakdown.map((e) => {
@@ -129,7 +132,11 @@ export const getTableColumns = (
         ) {
           return <NumFormat number={d} />;
         }
-        return d;
+        return (
+          <Tooltip placement='top' title={d}>
+            {truncateURL(d, projectDomainsList)}
+          </Tooltip>
+        );
       }
     };
   });
@@ -267,7 +274,8 @@ export const getDateBasedColumns = (
   userPropNames,
   eventPropertiesDisplayNames,
   comparisonApplied,
-  compareCategories
+  compareCategories,
+  projectDomainsList
 ) => {
   const OverallColumn = {
     title: getClickableTitleSorter(
@@ -305,7 +313,12 @@ export const getDateBasedColumns = (
         ) {
           return <NumFormat number={d} />;
         }
-        return d;
+
+        return (
+          <Tooltip placement='top' title={d}>
+            {truncateURL(d, projectDomainsList)}
+          </Tooltip>
+        );
       }
     };
   });

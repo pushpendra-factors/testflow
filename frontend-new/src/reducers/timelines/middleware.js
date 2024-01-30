@@ -29,7 +29,7 @@ export const getProfileAccounts =
             dispatch({
               type: 'FETCH_PROFILE_ACCOUNTS_FULFILLED',
               payload: data,
-              status:response.status
+              status: response.status
             })
           );
         })
@@ -39,7 +39,7 @@ export const getProfileAccounts =
             dispatch({
               type: 'FETCH_PROFILE_ACCOUNTS_FAILED',
               payload: [],
-              error:err
+              error: err
             })
           );
         });
@@ -77,7 +77,7 @@ export const getAccountOverview = (projectId, source, id) => (dispatch) => {
   return new Promise((resolve) => {
     fetchAccountOverview(projectId, source, id)
       .then((response) => {
-        const data = { ...response.data, id: id };
+        const data = { ...response.data, id };
         resolve(
           dispatch({
             type: 'FETCH_PROFILE_ACCOUNT_OVERVIEW_FULFILLED',
@@ -112,7 +112,7 @@ export const getProfileUsers = (projectId, payload) => (dispatch) => {
           dispatch({
             type: 'FETCH_PROFILE_USERS_FULFILLED',
             payload: data,
-            status:response.status
+            status: response.status
           })
         );
       })
@@ -122,7 +122,7 @@ export const getProfileUsers = (projectId, payload) => (dispatch) => {
           dispatch({
             type: 'FETCH_PROFILE_USERS_FAILED',
             payload: [],
-            error:err
+            error: err
           })
         );
       });
@@ -155,8 +155,8 @@ export const getProfileUserDetails =
     });
   };
 
-export const createNewSegment = (projectId, payload) => (dispatch) => {
-  return new Promise((resolve, reject) => {
+export const createNewSegment = (projectId, payload) => (dispatch) =>
+  new Promise((resolve, reject) => {
     createSegment(projectId, payload)
       .then((response) => {
         resolve(
@@ -171,10 +171,9 @@ export const createNewSegment = (projectId, payload) => (dispatch) => {
         reject(err);
       });
   });
-};
 
-export const getSavedSegments = (projectId) => (dispatch) => {
-  return new Promise((resolve, reject) => {
+export const getSavedSegments = (projectId) => (dispatch) =>
+  new Promise((resolve, reject) => {
     fetchSegments(projectId)
       .then((response) => {
         resolve(
@@ -189,10 +188,9 @@ export const getSavedSegments = (projectId) => (dispatch) => {
         reject(err);
       });
   });
-};
 
-export const updateSegmentForId = (projectId, id, payload) => (dispatch) => {
-  return new Promise((resolve, reject) => {
+export const updateSegmentForId = (projectId, id, payload) => (dispatch) =>
+  new Promise((resolve, reject) => {
     updateSegment(projectId, id, payload)
       .then((response) => {
         resolve(
@@ -207,13 +205,13 @@ export const updateSegmentForId = (projectId, id, payload) => (dispatch) => {
         reject(err);
       });
   });
-};
 
-export const deleteSegment = ({ projectId, segmentId }) => {
-  return function (dispatch) {
-    return new Promise((resolve, reject) => {
+export const deleteSegment =
+  ({ projectId, segmentId }) =>
+  (dispatch) =>
+    new Promise((resolve, reject) => {
       deleteSegmentByID({ projectId, segmentId })
-        .then((response) => {
+        .then(() => {
           dispatch(deleteSegmentAction({ segmentId }));
           resolve();
         })
@@ -221,5 +219,3 @@ export const deleteSegment = ({ projectId, segmentId }) => {
           reject(err);
         });
     });
-  };
-};

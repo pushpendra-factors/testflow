@@ -3,27 +3,23 @@ import { useHistory, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import cx from 'classnames';
 import { Layout } from 'antd';
-import useSidebarTitleConfig from './hooks/useSidebarTitleConfig';
 import { SVG, Text } from 'Components/factorsComponents';
 import { selectSidebarCollapsedState } from 'Reducers/global/selectors';
 import { toggleSidebarCollapsedStateAction } from 'Reducers/global/actions';
 import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
 import { PathUrls } from 'Routes/pathUrls';
-import SidebarContent from './SidebarContent';
-import styles from './index.module.scss';
-import SidebarMenuItem from './SidebarMenuItem';
 import { selectAccountPayload } from 'Reducers/accountProfilesView/selectors';
-import {
-  setAccountPayloadAction,
-  setActiveSegmentAction
-} from 'Reducers/accountProfilesView/actions';
-import { checkMatchPath } from './appSidebar.helpers';
-import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
-import { IsDomainGroup } from 'Components/Profile/utils';
+import { setAccountPayloadAction } from 'Reducers/accountProfilesView/actions';
 import { selectTimelinePayload } from 'Reducers/userProfilesView/selectors';
 import { setTimelinePayloadAction } from 'Reducers/userProfilesView/actions';
+import { INITIAL_ACCOUNT_PAYLOAD } from 'Reducers/accountProfilesView';
+import { checkMatchPath } from './appSidebar.helpers';
+import SidebarMenuItem from './SidebarMenuItem';
+import styles from './index.module.scss';
+import SidebarContent from './SidebarContent';
+import useSidebarTitleConfig from './hooks/useSidebarTitleConfig';
 
-const AppSidebar = () => {
+function AppSidebar() {
   const { Sider } = Layout;
   const dispatch = useDispatch();
   const history = useHistory();
@@ -34,12 +30,10 @@ const AppSidebar = () => {
   );
   const timelinePayload = useSelector((state) => selectTimelinePayload(state));
 
-  const { newSegmentMode, activeSegment } = useSelector(
-    (state) => state.accountProfilesView
-  );
-  const isAllAccountsSelected =
-    IsDomainGroup(activeAccountPayload.source) &&
-    Boolean(activeSegment?.id) === false;
+  const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
+  const activeSegment = activeAccountPayload?.segment;
+
+  const isAllAccountsSelected = Boolean(activeSegment?.id) === false;
 
   const {
     newSegmentMode: profileNewSegmentMode,
@@ -64,14 +58,7 @@ const AppSidebar = () => {
   };
 
   const changeAccountPayload = () => {
-    dispatch(
-      setAccountPayloadAction({
-        source: GROUP_NAME_DOMAINS,
-        filters: [],
-        segment_id: ''
-      })
-    );
-    dispatch(setActiveSegmentAction({}));
+    dispatch(setAccountPayloadAction(INITIAL_ACCOUNT_PAYLOAD));
     history.replace(PathUrls.ProfileAccounts);
   };
 
@@ -86,8 +73,7 @@ const AppSidebar = () => {
       dispatch(
         setTimelinePayloadAction({
           source: 'All',
-          filters: [],
-          segment_id: ''
+          segment: {}
         })
       );
     }
@@ -96,7 +82,7 @@ const AppSidebar = () => {
   return (
     <Sider
       className={cx(styles['app-sidebar'], 'fixed h-full', {
-        [styles['collapsed']]: isSidebarCollapsed
+        [styles.collapsed]: isSidebarCollapsed
       })}
       onClick={isSidebarCollapsed ? handleExpand : null}
     >
@@ -161,10 +147,10 @@ const AppSidebar = () => {
                     isActive={
                       isAllAccountsSelected === true && newSegmentMode === false
                     }
-                    text={'All Accounts'}
+                    text='All Accounts'
                     onClick={selectAllAccounts}
                     icon='regularBuilding'
-                    iconColor={'#F5222D'}
+                    iconColor='#F5222D'
                     iconSize={20}
                   />
                 </div>
@@ -178,10 +164,10 @@ const AppSidebar = () => {
                       isAllUsersSelected === true &&
                       profileNewSegmentMode === false
                     }
-                    text={'All People'}
+                    text='All People'
                     onClick={selectAllUsers}
                     icon='userGroup'
-                    iconColor={'#FA541C'}
+                    iconColor='#FA541C'
                     iconSize={20}
                   />
                 </div>
@@ -189,6 +175,7 @@ const AppSidebar = () => {
             </ControlledComponent>
             <div
               role='button'
+              tabIndex='0'
               onClick={handleCollapse}
               className={cx(
                 'flex justify-center items-center w-8 h-8 rounded-full',
@@ -205,6 +192,7 @@ const AppSidebar = () => {
         <div className='flex mt-5 justify-end'>
           <div
             role='button'
+            tabIndex='-2'
             onClick={handleExpand}
             className={cx(
               'flex justify-center items-center w-8 h-8 rounded-full',
@@ -217,6 +205,6 @@ const AppSidebar = () => {
       </ControlledComponent>
     </Sider>
   );
-};
+}
 
 export default AppSidebar;

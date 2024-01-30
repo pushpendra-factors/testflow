@@ -8,8 +8,8 @@
   &:active,
   &:focus {
     .ant-select-selector {
-      border-color: $fa-color--brand-6 !important;
-      box-shadow: 0 0 0 2px rgba($fa-color--brand-6, 0.2) !important;
+      border-color: $fa-color--mono-3 !important;
+      box-shadow: none !important;
     }
   }
   &.ant-input-disabled {

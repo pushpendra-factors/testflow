@@ -9,6 +9,7 @@ import (
 	SDK "factors/sdk"
 	U "factors/util"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -60,18 +61,18 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 
 	// Properties Map
 	accountPropertiesMap := []map[string]interface{}{
-		{"$salesforce_account_name": "AdPushup", "$salesforce_account_billingcountry": "India", "$salesforce_account_website": "adpushup.com", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Target"},
-		{"$salesforce_account_name": "Mad Street Den", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "madstreetden.com", "$salesforce_account_sales_play": "Shape", "$salesforce_account_status": "Unknown"},
+		{"$salesforce_account_name": "AdPushup", "$salesforce_account_billingcountry": "India", "$salesforce_account_website": "adpushup.com", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Target", "$csv_properties": "A"},
+		{"$salesforce_account_name": "Mad Street Den", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "madstreetden.com", "$salesforce_account_sales_play": "Shape", "$salesforce_account_status": "Unknown", "$csv_properties": "X"},
 		{"$salesforce_account_name": "Heyflow", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "heyflow.app", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Unknown"},
 		{"$salesforce_account_name": "Clientjoy Ads", "$salesforce_account_billingcountry": "New Zealand", "$salesforce_account_website": "clientjoy.io", "$salesforce_account_sales_play": "Win", "$salesforce_account_status": "Vendor", "$salesforce_city": "New Delhi"},
 		{"$salesforce_account_name": "Adapt.IO", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "adapt.io", "$salesforce_account_sales_play": "Shape", "$salesforce_account_status": "Customer"},
-		{"$hubspot_company_name": "AdPushup", "$hubspot_company_country": "US", "$hubspot_company_domain": "adpushup.com", "$hubspot_company_num_associated_contacts": 50, "$hubspot_company_industry": "Technology, Information and Internet"},
-		{"$hubspot_company_name": "Mad Street Den", "$hubspot_company_country": "US", "$hubspot_company_domain": "madstreetden.com", "$hubspot_company_num_associated_contacts": 100, "$hubspot_company_industry": "Software Development"},
-		{"$hubspot_company_name": "Heyflow", "$hubspot_company_country": "Germany", "$hubspot_company_domain": "heyflow.app", "$hubspot_company_num_associated_contacts": 20, "$hubspot_company_industry": "Software Development"},
-		{"$hubspot_company_name": "Clientjoy Ads", "$hubspot_company_country": "India", "$hubspot_company_domain": "clientjoy.io", "$hubspot_company_num_associated_contacts": 20, "$hubspot_company_industry": "IT Services"},
+		{"$hubspot_company_name": "AdPushup", "$hubspot_company_country": "US", "$hubspot_company_domain": "adpushup.com", "$hubspot_company_num_associated_contacts": 50, "$hubspot_company_industry": "Technology, Information and Internet", "$csv_properties": "A"},
+		{"$hubspot_company_name": "Mad Street Den", "$hubspot_company_country": "US", "$hubspot_company_domain": "madstreetden.com", "$hubspot_company_num_associated_contacts": 100, "$hubspot_company_industry": "Software Development", "$csv_properties": "X"},
+		{"$hubspot_company_name": "Heyflow", "$hubspot_company_country": "Germany", "$hubspot_company_domain": "heyflow.app", "$hubspot_company_num_associated_contacts": 20, "$hubspot_company_industry": "Software Development", "$csv_properties": "A"},
+		{"$hubspot_company_name": "Clientjoy Ads", "$hubspot_company_country": "India", "$hubspot_company_domain": "clientjoy.io", "$hubspot_company_num_associated_contacts": 20, "$hubspot_company_industry": "IT Services", "$csv_properties": "X"},
 		{"$hubspot_company_name": "Adapt.IO", "$hubspot_company_country": "India", "$hubspot_company_domain": "adapt.io", "$hubspot_company_num_associated_contacts": 50, "$hubspot_company_industry": "IT Services"},
-		{U.SIX_SIGNAL_NAME: "AdPushup", U.SIX_SIGNAL_COUNTRY: "US", U.SIX_SIGNAL_DOMAIN: "adpushup.com"},
-		{U.SIX_SIGNAL_NAME: "Mad Street Den", U.SIX_SIGNAL_COUNTRY: "US", U.SIX_SIGNAL_DOMAIN: "madstreetden.com"},
+		{U.SIX_SIGNAL_NAME: "AdPushup", U.SIX_SIGNAL_COUNTRY: "US", U.SIX_SIGNAL_DOMAIN: "adpushup.com", "$csv_properties": "A"},
+		{U.SIX_SIGNAL_NAME: "Mad Street Den", U.SIX_SIGNAL_COUNTRY: "US", U.SIX_SIGNAL_DOMAIN: "madstreetden.com", "$csv_properties": "X"},
 		{U.SIX_SIGNAL_NAME: "Heyflow", U.SIX_SIGNAL_COUNTRY: "Germany", U.SIX_SIGNAL_DOMAIN: "heyflow.app"},
 		{U.SIX_SIGNAL_NAME: "Clientjoy Ads", U.SIX_SIGNAL_COUNTRY: "India", U.SIX_SIGNAL_DOMAIN: "clientjoy.io"},
 		{U.SIX_SIGNAL_NAME: "Adapt.IO", U.SIX_SIGNAL_COUNTRY: "India", U.SIX_SIGNAL_DOMAIN: "adapt.io"},
@@ -766,25 +767,125 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 	w = createSegmentPostReq(r, *segment8, project.ID, agent)
 	assert.Equal(t, http.StatusCreated, w.Code)
 
-	// Process all user
-	errCode = T.SegmentMarker(project.ID)
-	assert.Equal(t, errCode, http.StatusOK)
-
-	status, updatedUsers, associatedSegmentsList := store.GetStore().FetchAssociatedSegmentsFromUsers(project.ID)
-	assert.Equal(t, http.StatusFound, status)
-
 	// To check whether segemnent created
-	getSegementFinal, status := store.GetStore().GetAllSegments(project.ID)
+	getSegement7, status := store.GetStore().GetAllSegments(project.ID)
 	assert.Equal(t, http.StatusFound, status)
 	nameFound5 := false
 
-	for _, segment := range getSegementFinal["$domains"] {
+	for _, segment := range getSegement7["$domains"] {
 		if segment8.Name == segment.Name {
 			nameFound5 = true
 			break
 		}
 	}
 	assert.True(t, nameFound5)
+
+	//uploading file
+	csvFilePath := "/Users/apple/repos/factors/backend/src/factors/tests/data"
+	csvFilename := "test_inlist.csv"
+
+	csvFile, err := ioutil.ReadFile(csvFilePath + "/" + csvFilename)
+	if err != nil {
+		fmt.Println(err)
+	}
+	w = sendUploadListForFilters(r, project.ID, agent, csvFile, csvFilename)
+	assert.Equal(t, http.StatusOK, w.Code)
+	var res map[string]string
+	decoder := json.NewDecoder(w.Body)
+	if err := decoder.Decode(&res); err != nil {
+		assert.NotNil(t, nil, err)
+	}
+
+	// 9. All accounts segment With inList Support
+	segment9 := &model.SegmentPayload{
+		Name: "All accounts segment With inList Support",
+		Query: model.Query{
+			GlobalUserProperties: []model.QueryProperty{
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$csv_properties",
+					Operator:  model.InList,
+					Value:     res["file_reference"],
+					LogicalOp: "AND",
+				},
+			},
+			Source: "$domains",
+		},
+		Type: "$domains",
+	}
+
+	w = createSegmentPostReq(r, *segment9, project.ID, agent)
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	// To check whether segemnent created
+	getSegement8, status := store.GetStore().GetAllSegments(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+	nameFound6 := false
+
+	for _, segment := range getSegement8["$domains"] {
+		if segment9.Name == segment.Name {
+			nameFound6 = true
+			break
+		}
+	}
+	assert.True(t, nameFound6)
+
+	//uploading file
+	csvFilename = "test_notinlist.csv"
+
+	csvFile, err = ioutil.ReadFile(csvFilePath + "/" + csvFilename)
+	if err != nil {
+		fmt.Println(err)
+	}
+	w = sendUploadListForFilters(r, project.ID, agent, csvFile, csvFilename)
+	assert.Equal(t, http.StatusOK, w.Code)
+	decoder = json.NewDecoder(w.Body)
+	if err := decoder.Decode(&res); err != nil {
+		assert.NotNil(t, nil, err)
+	}
+
+	// 10. All accounts segment With NotinList Support
+	segment10 := &model.SegmentPayload{
+		Name: "All accounts segment With notInList Support",
+		Query: model.Query{
+			GlobalUserProperties: []model.QueryProperty{
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$csv_properties",
+					Operator:  model.NotInList,
+					Value:     res["file_reference"],
+					LogicalOp: "AND",
+				},
+			},
+			Source: "$domains",
+		},
+		Type: "$domains",
+	}
+
+	w = createSegmentPostReq(r, *segment10, project.ID, agent)
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	// To check whether segemnent created
+	getSegementFinal, status := store.GetStore().GetAllSegments(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+	nameFound7 := false
+
+	for _, segment := range getSegementFinal["$domains"] {
+		if segment10.Name == segment.Name {
+			nameFound7 = true
+			break
+		}
+	}
+	assert.True(t, nameFound7)
+
+	// Process all user
+	errCode = T.SegmentMarker(project.ID)
+	assert.Equal(t, errCode, http.StatusOK)
+
+	status, updatedUsers, associatedSegmentsList := store.GetStore().FetchAssociatedSegmentsFromUsers(project.ID)
+	assert.Equal(t, http.StatusFound, status)
 
 	allAccountsSegmentNameIDs := make(map[string]string)
 	for _, segmentList := range getSegementFinal {
@@ -802,12 +903,16 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 	// segment7 -> domain1id.com, domain0id.com
 	// segment6 -> domain1id.com
 	// segment8 -> hubspot@5user
+	// segment9 -> domain0id.com, domain2id.com
+	// segment10 -> domain0id.com, domain2id.com, domain4id.com
 
 	for index, checkUser := range updatedUsers {
 		if checkUser.Group4ID == "domain0id.com" {
 			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["User Group props"])
 			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["Group AND User Group props"])
 			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["Hubspot Group Performed Event"])
+			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["All accounts segment With inList Support"])
+			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["All accounts segment With notInList Support"])
 		} else if checkUser.Group4ID == "domain1id.com" {
 			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["User Group props"])
 			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["Group AND User Group props"])
@@ -817,6 +922,10 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 		} else if checkUser.Group4ID == "domain2id.com" {
 			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["User Group props"])
 			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["All accounts segment"])
+			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["All accounts segment With inList Support"])
+			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["All accounts segment With notInList Support"])
+		} else if checkUser.Group4ID == "domain4id.com" {
+			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["All accounts segment With notInList Support"])
 		} else if checkUser.Group2ID == "hbgroupuser3@heyflow.app" || checkUser.Group2ID == "hbgroupuser4@clientjoy.io" || checkUser.Group2ID == "hbgroupuser5@adapt.io" {
 			assert.Contains(t, associatedSegmentsList[index], getSegementFinal["$hubspot_company"][0].Id)
 		}

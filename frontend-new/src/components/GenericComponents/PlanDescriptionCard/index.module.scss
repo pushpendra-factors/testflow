@@ -13,10 +13,13 @@
 .outlineButton {
   border: 1px solid #d9d9d9 !important;
   background: #fff;
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  
+}
+
+.outlineButton:hover{
+  border: 1px solid $fa-color--brand-color-6 !important;
+  color: #fff;
+  background-color: $fa-color--brand-color-6;
 }
 
 .reccommendationTag {
