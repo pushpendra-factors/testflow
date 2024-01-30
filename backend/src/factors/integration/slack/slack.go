@@ -90,7 +90,10 @@ func SendSlackAlert(projectID int64, message, agentUUID string, channel model.Sl
 	if response["ok"] == true {
 		return response, true, nil
 	}
-	log.Error("failed to send slack alert ", message, response)
+	log.WithFields(log.Fields{
+		"message": message,
+		"response": response,
+		}).Error("failed to send slack alert")
 	defer resp.Body.Close()
 	return response, false, fmt.Errorf("failed to send slack alert")
 }
