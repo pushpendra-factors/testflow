@@ -239,7 +239,7 @@ func GetDomainsToRunMarkerFor(projectID int64, domainGroup *model.Group, domainG
 func processDomainsInBatches(projectID int64, domainIDList []string, segments []model.Segment, segmentsRulesArr []model.Query,
 	domainGroupId int, eventNameIDsMap map[string]string) (int, error) {
 	// Batch size
-	batchSize := 100
+	batchSize := C.BatchSizeSegmentMarker()
 
 	statusArr := make([]bool, 0)
 
