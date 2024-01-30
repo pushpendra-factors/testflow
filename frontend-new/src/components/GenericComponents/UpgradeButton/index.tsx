@@ -7,7 +7,10 @@ function UpgradeButton({ extraClass, featureName }: UpgradeButtonProps) {
   return (
     <div
       className='flex items-center font-semibold gap-2 flex-nowrap whitespace-no-wrap cursor-pointer'
-      onClick={() => handlePlanUpgradeClick(featureName)}
+      onClick={(e: React.MouseEvent<HTMLDivElement>) => {
+        e.stopPropagation();
+        handlePlanUpgradeClick(featureName);
+      }}
     >
       <Text type='paragraph' mini weight={'bold'} color='brand-color-6'>
         Upgrade plan
