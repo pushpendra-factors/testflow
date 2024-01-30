@@ -4,39 +4,26 @@ import { Button, Col, Row } from 'antd';
 import styles from './index.module.scss';
 
 interface cardProps {
-  bgColor: string;
   title: string;
   description: string;
   learnMoreUrl: string;
   imgUrl: string;
-  category: number;
 }
 
-function Card({
-  bgColor,
-  title,
-  description,
-  learnMoreUrl,
-  imgUrl,
-  category
-}: cardProps) {
+function Card({ title, description, learnMoreUrl, imgUrl }: cardProps) {
   return (
-    <div className={`${styles.card}`} style={{ background: `${bgColor}` }}>
+    <div className={`${styles.card}`}>
       <Row gutter={[24, 24]}>
         <Col span={20}>
           <div className='flex justify-between items-center'>
             <div className='flex flex-col'>
-              <Row
-                justify='center'
-                className={`ml-2 ${category === 1 ? 'mt-6' : 'mt-4'}`}
-              >
-                <Col span={imgUrl ? 20 : 24}>
+              <Row justify='center' className='pl-6 p-4'>
+                <Col span={19}>
                   <Text
                     type='title'
                     level={6}
-                    // weight='bold'
-                    extraClass='m-0'
-                    id='fa-at-text--page-title'
+                    style={{ color: '#000000A6' }}
+                    extraClass={`${styles.cardTitle}`}
                   >
                     {title}
                   </Text>
@@ -50,25 +37,23 @@ function Card({
                   </Text>
                   <Button
                     type='link'
-                    // size='small'
-                    icon={<SVG name='ArrowUpRightSquare' color='blue' />}
+                    icon={
+                      <SVG
+                        name='ArrowUpRightSquare'
+                        extraClass='-mt-1'
+                        size={18}
+                        color='blue'
+                      />
+                    }
                     className={`${styles.learnMoreBtn}`}
                     onClick={() => window.open(learnMoreUrl, '_blank')}
                   >
                     Learn more
                   </Button>
                 </Col>
-                {imgUrl && (
-                  <Col span={4}>
-                    <img
-                      src={imgUrl}
-                      className={`${
-                        category === 1 ? styles.catOneImage : styles.image
-                      }`}
-                      alt=''
-                    />
-                  </Col>
-                )}
+                <Col span={5}>
+                  <img src={imgUrl} className={`${styles.image}`} alt='' />
+                </Col>
               </Row>
             </div>
           </div>
