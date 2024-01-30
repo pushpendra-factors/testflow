@@ -55,11 +55,17 @@ func TestKpiAnalytics(t *testing.T) {
 	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
 	stepTimestamp := startTimestamp
 
-	payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s0", createdUserID1, stepTimestamp, "A", 1234)
+	payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s", "$latest_medium": "abc"}, "event_properties":{"$campaign_id":%d}}`, "s0", createdUserID1, stepTimestamp, "A", 1234)
 	w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	response := DecodeJSONResponseToMap(w.Body)
 	assert.NotNil(t, response["event_id"])
+
+	payload1 := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s", "$city": "abc1"}, "event_properties":{"$campaign_id":%d}}`, "s1", createdUserID1, stepTimestamp+2, "A", 1234)
+	ServePostRequestWithHeaders(r, uri, []byte(payload1), map[string]string{"Authorization": project.Token})
+
+	payload2 := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s", "$city": "def1"}, "event_properties":{"$campaign_id":%d,"$page_url": "abc.com/def1"}}`, "s1", createdUserID1, stepTimestamp+10, "A", 1234)
+	ServePostRequestWithHeaders(r, uri, []byte(payload2), map[string]string{"Authorization": project.Token})
 
 	timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
 	eventName := U.RandomLowerAphaNumString(10)
@@ -457,6 +463,58 @@ func TestKpiAnalytics(t *testing.T) {
 		assert.Equal(t, len(result[1].Rows), 1)
 		assert.Equal(t, result[0].Rows[0][1], float64(1))
 	})
+
+	t.Run("Query with verifying user properties being used are global", func(t *testing.T) {
+		query := model.KPIQuery{
+			Category:        "events",
+			DisplayCategory: "page_views",
+			PageUrl:         "s1",
+			Metrics:          []string{"page_views"},
+			Filters:          []model.KPIFilter{},
+			From:             startTimestamp,
+			To:               startTimestamp + 40,
+			GroupByTimestamp: "date",
+		}
+		query1 := model.KPIQuery{}
+		U.DeepCopy(&query, &query1)
+		query1.GroupByTimestamp = ""
+
+		kpiQueryGroup := model.KPIQueryGroup{
+			Class:         "kpi",
+			Queries:       []model.KPIQuery{query, query1},
+			GlobalFilters: []model.KPIFilter{
+				{
+					Entity: "user",
+					PropertyName: "$latest_page_url",
+					PropertyDataType: "categorical",
+					Condition: "equals",
+					Value: "abc.com/def1",
+					LogicalOp: "AND",
+					IsPropertyMapping: false,
+				},
+			},
+			GlobalGroupBy: []model.KPIGroupBy{ 
+				{
+					ObjectType:       "s1",
+					PropertyName:     "$latest_page_url",
+					PropertyDataType: "categorical",
+					GroupByType:      "",
+					Granularity:      "",
+					Entity:           "user",
+				},
+			},
+		}
+
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
+			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		log.WithField("result", result).Warn("kark2")
+		assert.Equal(t, http.StatusOK, statusCode)
+		assert.Equal(t, result[1].Headers, []string{"$latest_page_url", "page_views"})
+		assert.Equal(t, len(result[1].Rows), 1)
+		// TODO change
+		assert.Equal(t, result[1].Rows[0][0], "abc.com/def1")
+		assert.Equal(t, result[1].Rows[0][1], float64(2))
+	})	
 }
 
 func TestKpiAnalyticsForProfile(t *testing.T) {
