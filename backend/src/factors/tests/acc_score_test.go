@@ -617,6 +617,35 @@ func TestCalculationOfPercentile(t *testing.T) {
 	}
 }
 
+func TestCustomEngagementBuckets(t *testing.T) {
+
+	var engagementBucket M.BucketRanges
+	var scores []float64 = make([]float64, 0)
+
+	for idx := 0; idx < 1000; idx++ {
+		scores = append(scores, float64(idx))
+	}
+
+	engagementBucket.Ranges = make([]M.Bucket, 4)
+	engagementBucket.Date = "01012024"
+	b1 := M.Bucket{Name: "Hot", High: 100, Low: 98}
+	b2 := M.Bucket{Name: "Warm", High: 98, Low: 70}
+	b3 := M.Bucket{Name: "Cold", High: 70, Low: 40}
+	b4 := M.Bucket{Name: "Ice", High: 40, Low: 0}
+	engagementBucket.Ranges = []M.Bucket{b1, b2, b3, b4}
+
+	levels := M.GetEngagementLevels(scores, engagementBucket)
+	hot_count := 0
+	for idx := 0; idx < 1000; idx++ {
+		if levels[float64(idx)] == "Hot" {
+			hot_count += 1
+		}
+	}
+
+	assert.Equal(t, 20, hot_count)
+
+}
+
 func TestWriteRangestoDB(t *testing.T) {
 	var bucket M.BucketRanges
 	var buckets []M.BucketRanges

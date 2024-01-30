@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -269,6 +270,53 @@ func ComputeDecayValueGivenStartEndTS(start int64, end int64, SaleWindow int64) 
 	decay = 1 - float64(float64(int64(dayDiff))/float64(SaleWindow))
 
 	return decay
+}
+
+func removeZeros(input []float64) []float64 {
+	var result []float64
+
+	for _, value := range input {
+		if value != 0 {
+			result = append(result, value)
+		}
+	}
+	return result
+}
+
+func getUniqueScores(input []float64) []float64 {
+	uniqueMap := make(map[float64]bool)
+	result := []float64{}
+
+	for _, item := range input {
+		if _, found := uniqueMap[item]; !found {
+			uniqueMap[item] = true
+			result = append(result, item)
+		}
+	}
+
+	return result
+}
+
+func GetEngagementLevels(scores []float64, buckets BucketRanges) map[float64]string {
+	result := make(map[float64]string)
+	result[0] = GetEngagement(0, buckets)
+
+	nonZeroScores := removeZeros(scores)
+	uniqueScores := getUniqueScores(nonZeroScores)
+
+	for _, score := range uniqueScores {
+		// calculating percentile is not used in the current implementation
+		percentile := calculatePercentile(uniqueScores, score)
+		result[score] = GetEngagement(percentile, buckets)
+	}
+	return result
+}
+
+func calculatePercentile(data []float64, value float64) float64 {
+	sort.Float64s(data)                                       // Sort the data in ascending order
+	index := sort.SearchFloat64s(data, value)                 // Find the index of the value
+	percentile := float64(index) / float64(len(data)-1) * 100 // Calculate the percentile based on the index
+	return percentile
 }
 
 func GetEngagement(percentile float64, buckets BucketRanges) string {
