@@ -128,34 +128,3 @@ func removeZeros(input []float64) []float64 {
 	}
 	return result
 }
-
-func GetEngagementLevels(scores []float64) map[float64]string {
-	result := make(map[float64]string)
-	result[0] = getEngagement(0)
-
-	nonZeroScores := removeZeros(scores)
-
-	for _, score := range nonZeroScores {
-		percentile := calculatePercentile(nonZeroScores, score)
-		result[score] = getEngagement(percentile)
-	}
-
-	return result
-}
-
-func calculatePercentile(data []float64, value float64) float64 {
-	sort.Float64s(data)                                       // Sort the data in ascending order
-	index := sort.SearchFloat64s(data, value)                 // Find the index of the value
-	percentile := float64(index) / float64(len(data)-1) * 100 // Calculate the percentile based on the index
-	return percentile
-}
-
-func getEngagement(percentile float64) string {
-	if percentile > 90 {
-		return "Hot"
-	} else if percentile > 70 {
-		return "Warm"
-	} else {
-		return "Cool"
-	}
-}

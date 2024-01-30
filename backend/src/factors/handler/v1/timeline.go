@@ -80,7 +80,7 @@ func updateProfileUserScores(profileUsersList *[]model.Profile, scoresPerUser ma
 		}
 	}
 
-	engagementLevels := GetEngagementLevels(scores, buckets)
+	engagementLevels := model.GetEngagementLevels(scores, buckets)
 
 	for i := range *profileUsersList {
 		if prof, ok := scoresPerUser[(*profileUsersList)[i].Identity]; ok {
@@ -93,46 +93,6 @@ func updateProfileUserScores(profileUsersList *[]model.Profile, scoresPerUser ma
 			(*profileUsersList)[i].Engagement = ""
 		}
 	}
-}
-
-func removeZeros(input []float64) []float64 {
-	var result []float64
-
-	for _, value := range input {
-		if value != 0 {
-			result = append(result, value)
-		}
-	}
-	return result
-}
-
-func getUniqueScores(input []float64) []float64 {
-	uniqueMap := make(map[float64]bool)
-	result := []float64{}
-
-	for _, item := range input {
-		if _, found := uniqueMap[item]; !found {
-			uniqueMap[item] = true
-			result = append(result, item)
-		}
-	}
-
-	return result
-}
-
-func GetEngagementLevels(scores []float64, buckets model.BucketRanges) map[float64]string {
-	result := make(map[float64]string)
-	result[0] = model.GetEngagement(0, buckets)
-
-	nonZeroScores := removeZeros(scores)
-	uniqueScores := getUniqueScores(nonZeroScores)
-
-	for _, score := range uniqueScores {
-		// calculating percentile is not used in the current implementation
-		result[score] = model.GetEngagement(score, buckets)
-	}
-
-	return result
 }
 
 func calculatePercentile(data []float64, value float64) float64 {
