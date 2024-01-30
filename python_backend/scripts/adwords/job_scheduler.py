@@ -62,7 +62,7 @@ class JobScheduler:
         self.permission_error_key = str(self.customer_acc_id) + ":" + str(self.refresh_token)
 
     def handle(self, signum, frame):
-        raise Exception("Function timeout after 5 mins")
+        raise Exception("Function timeout after 15 mins")
     
     def sync(self, env, dry):
         doc_type = self.doc_type
@@ -71,9 +71,9 @@ class JobScheduler:
         refresh_token = self.next_info.get("refresh_token")
         metrics_controller = scripts.adwords.CONFIG.ADWORDS_APP.metrics_controller
         try:
-            # timeout this function after 5 mins
+            # timeout this function after 15 mins
             signal.signal(signal.SIGALRM, self.handle)
-            signal.alarm(300)
+            signal.alarm(900)
             # 
             if doc_type == CUSTOMER_ACCOUNT_PROPERTIES:
                 NewGetCustomerAccountPropertiesJob(self.next_info).start()
