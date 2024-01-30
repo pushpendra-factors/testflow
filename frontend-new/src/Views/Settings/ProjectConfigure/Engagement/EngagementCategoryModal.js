@@ -104,7 +104,7 @@ function EngagementCategoryModal({
           setCategoryRange(tmpCategory);
         } catch (err) {
           handleResetButton();
-          message.error('Failed to Load Category Ranges, Reset to Default');
+          // message.error('Failed to Load Category Ranges, Reset to Default');
         }
       })
       .catch((err) => {
