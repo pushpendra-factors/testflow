@@ -60,7 +60,8 @@ const Webhook = ({
     alertMessage,
     alertName,
     WHTestMsgTxt,
-    WHTestMsgLoading
+    WHTestMsgLoading,
+    selectedEvent
 }) => {
 
 // Webhook support
@@ -351,6 +352,7 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
                                 alertMessage={alertMessage}
                                 alertName={alertName}
                                 groupBy={groupBy}
+                                selectedEvent={selectedEvent}
                                 />
                         </div>
                     </Col>

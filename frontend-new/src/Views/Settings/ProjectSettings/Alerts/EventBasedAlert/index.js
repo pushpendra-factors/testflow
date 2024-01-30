@@ -368,7 +368,7 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
 
   const matchEventName = (item) => {
     let findItem =
-      eventPropNames?.[item] || userPropNames?.[item] || groupPropNames?.[item];
+      eventPropNames?.[item] || userPropNames?.[item] || groupPropNames?.[item] || eventNames?.[item];
     return findItem ? findItem : item;
   };
 
@@ -1314,12 +1314,12 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
           <Row>
             {alertState.state == 'edit' ? (
               <>
-                {(viewAlertDetails?.last_fail_details && !viewAlertDetails?.last_fail_details?.IsPausedAutomatically) &&
+                {(viewAlertDetails?.last_fail_details && !viewAlertDetails?.last_fail_details?.is_paused_automatically) &&
                   <Col span={24} className='mb-4'>
                     <Alert message={"We are unable to send this alert to the destinations you selected. Please check the destination settings below to continue receiving alerts"} type="error" showIcon />
                   </Col>
                 }
-                {(viewAlertDetails?.last_fail_details && viewAlertDetails?.last_fail_details?.IsPausedAutomatically) &&
+                {(viewAlertDetails?.last_fail_details && viewAlertDetails?.last_fail_details?.is_paused_automatically) &&
                   <Col span={24} className='mb-4'>
                     <Alert message={"Alert paused due to unresolved issues with selected destinations. Please check the errors in the destinations to resume getting alerts."} type="info" showIcon />
                   </Col>
@@ -1706,6 +1706,7 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
             alertName={alertName}
             WHTestMsgTxt={WHTestMsgTxt}
             WHTestMsgLoading={WHTestMsgLoading}
+            selectedEvent={queries?.length ? matchEventName(queries[0]?.label) : ''}
           />
 
 {/* 
