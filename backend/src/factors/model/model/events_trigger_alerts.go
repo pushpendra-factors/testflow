@@ -331,6 +331,10 @@ func GetSlackMsgBlock(msg EventTriggerAlertMessage, slackMentions string, isAcco
 	title := strings.ReplaceAll(strings.ReplaceAll(msg.Title, "\\", "\\\\"), "\"", "\\\"")
 	message := strings.ReplaceAll(strings.ReplaceAll(msg.Message, "\\", "\\\\"), "\"", "\\\"")
 
+	if message == "" {
+		message = "Alert message"
+	}
+
 	mainBlock := fmt.Sprintf(`[
 		{
 			"type": "section",
@@ -344,7 +348,7 @@ func GetSlackMsgBlock(msg EventTriggerAlertMessage, slackMentions string, isAcco
 			"elements": [
 				{
 					"type": "plain_text",
-					"text": "%s",
+					"text": "%s\n",
 					"emoji": true
 				}
 			]
@@ -360,7 +364,7 @@ func GetSlackMsgBlock(msg EventTriggerAlertMessage, slackMentions string, isAcco
 			"type": "section",
 						"text": {
 							"type": "mrkdwn",
-							"text": "*<%s|See activity in Factors app>*"
+							"text": "*<%s | See activity in Factors app>*"
 						}
 		},
 		{
