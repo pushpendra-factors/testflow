@@ -7,7 +7,7 @@ import React, {
   } from 'react';
   import { Text, SVG } from 'factorsComponents';
   import { Tag } from 'antd';
-import { getMsgPayloadMapping, dummyPayloadValue} from './../utils';
+import { getMsgPayloadMapping, dummyPayloadValue, getMsgPayloadMappingWebhook} from './../utils';
 import ReactJson from 'react-json-view'
 
 export const PreviewCardSlack = ({
@@ -152,13 +152,15 @@ export const PreviewCardTeams = ({
 export const PreviewCardWebhook = ({
     alertName,
     alertMessage,
-    groupBy
+    groupBy,
+    selectedEvent
 }) =>{
 
     let payloadProps = {};
-    payloadProps = groupBy?.length>0 ? getMsgPayloadMapping(groupBy) : {};
-    payloadProps['title']= alertName ? alertName : 'Alert name';
-    payloadProps['message']= alertMessage ? alertMessage : 'Alert message to be displayed';
+    payloadProps['Title']= alertName ? alertName : 'Alert name';
+    payloadProps['Message']= alertMessage ? alertMessage : 'Alert message to be displayed';
+    payloadProps['Event']= selectedEvent ? selectedEvent : '';
+    payloadProps['MessageProperty'] = groupBy?.length>0 ? getMsgPayloadMappingWebhook(groupBy) : {};
 
     return (
         <div>
