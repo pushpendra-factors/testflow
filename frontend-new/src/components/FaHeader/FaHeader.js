@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import cx from 'classnames';
 import { Layout, Dropdown, Menu, Button } from 'antd';
 import { Link, useLocation } from 'react-router-dom';
@@ -16,11 +16,8 @@ import {
 import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import { useSelector } from 'react-redux';
 import { SolutionsAccountId } from 'Routes/constants';
-import useFeatureLock from 'hooks/useFeatureLock';
-import { FEATURES } from 'Constants/plans.constants';
 import { PathUrls } from '../../routes/pathUrls';
 import styles from './index.module.scss';
-import { featureLock } from '../../routes/feature';
 
 export const getConfigureMenuItems = (email) => {
   const configureMenuItems = [
@@ -211,10 +208,14 @@ function FaHeader() {
 
   const agentState = useSelector((state) => state.agent);
   const activeAgent = agentState?.agent_details?.email;
+  const activeAgentUUID = agentState?.agent_details?.uuid;
 
-  const { isFeatureLocked: isWebAnalyticsLocked } = useFeatureLock(
-    FEATURES.FEATURE_WEB_ANALYTICS_DASHBOARD
-  );
+  const isChecklistEnabled = useMemo(() => {
+    const agent = agentState.agents.filter(
+      (data) => data.uuid === activeAgentUUID
+    );
+    return agent[0]?.checklist_dismissed;
+  }, [agentState, agentState?.agents]);
 
   return (
     <Header
@@ -316,20 +317,23 @@ function FaHeader() {
           </div>
         </div>
       </div>
-      <div className='w-1/3 flex justify-center'>
-        <SearchBar />
-      </div>
-      {/* <div>
-        <Button
-          icon={<SVG name='Stars' />}
-          type='link'
-          href={PathUrls.Checklist}
-          className={`${styles.checklistSetup}`}
-        >
-          Finish the setup
-        </Button>
-      </div> */}
       <div className='flex w-1/3 items-center justify-end col-gap-6 text-white'>
+        {!isChecklistEnabled && (
+          <div className='w-1/8 flex justify-center'>
+            <Button
+              icon={<SVG name='Stars' size={20} extraClass='-mt-1' />}
+              type='link'
+              size='middle'
+              href={PathUrls.Checklist}
+              className={`${styles.checklistSetup}`}
+            >
+              Finish setup
+            </Button>
+          </div>
+        )}
+        <div className='w-1/2 flex justify-center'>
+          <SearchBar placeholder='Search ⌘K' type={2} />
+        </div>
         <Dropdown
           overlay={renderConfigureMenu(activeAgent)}
           placement='bottomRight'
