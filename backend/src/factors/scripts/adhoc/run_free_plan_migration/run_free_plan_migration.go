@@ -143,6 +143,7 @@ func main() {
 			if *dryRun {
 				log.Info("dry run enabled")
 				log.Info("skipping project subscription creation - ", projectID," - ", agent.UUID," - ", agent.Email)
+				break
 			} else {
 				subscription, _, err := billing.CreateChargebeeSubscriptionForCustomer(projectID, agent.BillingCustomerID, M.DEFAULT_PLAN_ITEM_PRICE_ID)
 				if err != nil {
@@ -171,6 +172,7 @@ func main() {
 
 				log.Info("Project ", projectID, " mapped with agent ", agent.Email, "with billing account ", bA.ID)
 			}
+			break
 		}
 	}
 
