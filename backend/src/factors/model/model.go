@@ -505,7 +505,9 @@ type Model interface {
 	GetSixsignalEmailListFromProjectSetting(projectId int64) (string, int)
 	AddSixsignalEmailList(projectId int64, emailIds string) int
 	GetSegmentMarkerLastRunTime(projectID int64) (time.Time, int)
+	GetMarkerLastForAllAccounts(projectID int64) (time.Time, int)
 	UpdateSegmentMarkerLastRun(projectID int64, lastRunTime time.Time) int
+	UpdateSegmentMarkerLastRunForAllAccounts(projectID int64, lastRunTime time.Time) int
 	GetParagonTokenFromProjectSetting(projectID int64) (string, int, error)
 	GetParagonEnabledProjectsCount(projectID int64) (int64, int, error)
 	AddParagonTokenAndEnablingAgentToProjectSetting(projectID int64, agentID, token string) (int, error)
@@ -670,7 +672,9 @@ type Model interface {
 	GetCustomerUserIdFromUserId(projectID int64, id string) (string, int)
 	AssociateUserDomainsGroup(projectID int64, requestUserID string, requestGroupName, requestGroupUserID string) int
 	GetAssociatedDomainForUser(projectID int64, userID string, isAnonymous bool) (string, error)
-	GetUsersUpdatedAtGivenHour(projectID int64, fromTime time.Time, domainID int) ([]model.User, int)
+	GetUsersAssociatedToDomainList(projectID int64, domainGroupID int, domainID string) ([]model.User, int)
+	GetAllDomainsByProjectID(projectID int64, domainID int) ([]string, int)
+	GetLatestUpatedDomainsByProjectID(projectID int64, domainGroupID int, fromTime time.Time) ([]string, int)
 	UpdateAssociatedSegments(projectID int64, id string, associatedSegments map[string]model.AssociatedSegments) (int, error)
 	GetNonGroupUsersUpdatedAtGivenHour(projectID int64, fromTime time.Time) ([]model.User, int)
 

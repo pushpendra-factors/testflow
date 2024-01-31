@@ -1,5 +1,5 @@
 google
-google-ads
+google-ads~=23.0.0
 googleads
 google-cloud-storage
 google-auth-oauthlib

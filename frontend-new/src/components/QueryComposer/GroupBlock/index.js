@@ -47,7 +47,7 @@ function GroupBlock({
         groups?.all_groups?.[group] ||
         PropTextFormat(group);
 
-      const groupValues = processProperties(properties, 'group', group);
+      const groupValues = processProperties(properties, 'user', group);
       const groupPropIconName = getGroupIcon(groupLabel);
 
       filterOptsObj[groupLabel] = {

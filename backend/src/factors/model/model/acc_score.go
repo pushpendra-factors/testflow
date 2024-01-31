@@ -271,6 +271,48 @@ func ComputeDecayValueGivenStartEndTS(start int64, end int64, SaleWindow int64) 
 	return decay
 }
 
+func removeZeros(input []float64) []float64 {
+	var result []float64
+
+	for _, value := range input {
+		if value != 0 {
+			result = append(result, value)
+		}
+	}
+	return result
+}
+
+func getUniqueScores(input []float64) []float64 {
+	uniqueMap := make(map[float64]bool)
+	result := []float64{}
+
+	for _, item := range input {
+		if _, found := uniqueMap[item]; !found {
+			uniqueMap[item] = true
+			result = append(result, item)
+		}
+	}
+
+	return result
+}
+
+func GetEngagementLevels(scores []float64, buckets BucketRanges) map[float64]string {
+	result := make(map[float64]string)
+	result[0] = GetEngagement(0, buckets)
+
+	nonZeroScores := removeZeros(scores)
+	uniqueScores := getUniqueScores(nonZeroScores)
+
+	for _, score := range uniqueScores {
+		// calculating percentile is not used in the current implementation
+		// based on the config and the percentile ranges , in the account scoring job
+		// we calculate the boundaries and store it in account_scoring_ranges table.
+		// the accounts listing page will use these to show the engagement level.
+		result[score] = GetEngagement(score, buckets)
+	}
+	return result
+}
+
 func GetEngagement(percentile float64, buckets BucketRanges) string {
 
 	var maxHigh float64

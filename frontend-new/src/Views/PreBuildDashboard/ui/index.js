@@ -164,7 +164,7 @@ function PreBuildDashboard({}) {
       <div className='flex items-start justify-between'>
         <div className='flex flex-col items-start'>
           <div>
-            <div className='flex justify-center'>
+            <div className='flex justify-start'>
               <Text level={4} type='title' weight='medium'>
                 {activeDashboard?.name}
               </Text>

@@ -141,11 +141,11 @@ func (store *MemSQL) createUserWithoutProperties(user *model.User) (*model.User,
 		user.PropertiesUpdatedTimestamp = user.JoinTimestamp
 	}
 
-	if user.IsGroupUser != nil && *user.IsGroupUser {
+	// update last_event_at only for group_users
+	if user.IsGroupUser != nil && *user.IsGroupUser &&
+		user.Source != nil && *user.Source != model.UserSourceDomains {
 		lastEventAt := time.Unix(user.PropertiesUpdatedTimestamp, 0)
 		user.LastEventAt = &lastEventAt
-	} else {
-		user.LastEventAt = nil
 	}
 
 	// Add identification properties, if available.
@@ -441,17 +441,15 @@ func (store *MemSQL) GetUsers(projectId int64, offset uint64, limit uint64) ([]m
 	return users, http.StatusFound
 }
 
-// get all users where updated in last x hours
-func (store *MemSQL) GetUsersUpdatedAtGivenHour(projectID int64, fromTime time.Time, domainID int) ([]model.User, int) {
+// get all users assocuated to given domains
+func (store *MemSQL) GetUsersAssociatedToDomainList(projectID int64, domainGroupID int, domID string) ([]model.User, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"from_time":  fromTime,
+		"dom_id":     domID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	var users []model.User
-	fromTimeString := model.FormatTimeToString(fromTime)
-	queryParams := []interface{}{projectID, model.UserSourceDomains, projectID, model.UserSourceDomains, fromTimeString}
 
 	query := fmt.Sprintf(`SELECT 
 	id, 
@@ -459,56 +457,124 @@ func (store *MemSQL) GetUsersUpdatedAtGivenHour(projectID int64, fromTime time.T
 	properties, 
 	is_group_user, 
 	source, 
-	updated_at,
-	last_event_at 
+	updated_at, 
+	last_event_at
   FROM 
-	(
-	  SELECT 
-		id, 
-		group_%d_user_id, 
-		properties, 
-		is_group_user, 
-		source, 
-		updated_at, 
-		last_event_at,
-		ROW_NUMBER() OVER (
-		  PARTITION BY group_%d_user_id 
-		  ORDER BY 
-			updated_at DESC
-		) AS row_num 
-	  FROM 
-		users 
-	  WHERE 
-		project_id = ? 
-		AND source != ? 
-		AND group_%d_user_id IN (
-		  SELECT 
-			DISTINCT(group_%d_user_id) 
-		  FROM 
-			users 
-		  WHERE 
-			project_id = ? 
-			AND source != ? 
-			AND last_event_at IS NOT NULL
-			AND last_event_at >= ? 
-			AND group_%d_user_id IS NOT NULL 
-		  LIMIT 
-			100000
-		)
-		LIMIT 250000
-	) 
+	users 
   WHERE 
-	row_num <= 100;`, domainID, domainID, domainID, domainID, domainID, domainID)
+	project_id = ? 
+	AND source != ? 
+	AND last_event_at is not null 
+	AND group_%d_user_id = ?
+	LIMIT 100;`, domainGroupID, domainGroupID)
 
 	db := C.GetServices().Db
-	err := db.Raw(query, queryParams...).Scan(&users).Error
+	err := db.Raw(query, projectID, model.UserSourceDomains, domID).Scan(&users).Error
 	if err != nil {
 		return []model.User{}, http.StatusInternalServerError
 	}
 	if len(users) == 0 {
 		return []model.User{}, http.StatusNotFound
 	}
+
+	if len(users) == 100 {
+		log.WithFields(logFields).Warn("No.of users at max threshold.")
+	}
+
 	return users, http.StatusFound
+}
+
+// get all domains to run marker for
+func (store *MemSQL) GetAllDomainsByProjectID(projectID int64, domainGroupID int) ([]string, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"domain_id":  domainGroupID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	var domainIDs []string
+	queryParams := []interface{}{projectID, model.UserSourceDomains}
+
+	query := fmt.Sprintf(`SELECT 
+	id 
+  FROM 
+	users 
+  WHERE 
+	project_id = ? 
+	AND source = ? 
+	AND is_group_user = 1 
+	AND group_%d_id IS NOT NULL
+  LIMIT 
+	2000000;`, domainGroupID)
+
+	db := C.GetServices().Db
+	rows, err := db.Raw(query, queryParams...).Rows()
+	if err != nil {
+		return []string{}, http.StatusInternalServerError
+	}
+
+	for rows.Next() {
+		var id string
+		err = rows.Scan(&id)
+		if err != nil {
+			return []string{}, http.StatusInternalServerError
+		}
+		domainIDs = append(domainIDs, id)
+	}
+
+	if len(domainIDs) == 0 {
+		return []string{}, http.StatusNotFound
+	}
+
+	return domainIDs, http.StatusFound
+}
+
+// get all domains to run marker for in time range
+func (store *MemSQL) GetLatestUpatedDomainsByProjectID(projectID int64, domainGroupID int, fromTime time.Time) ([]string, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"domain_id":  domainGroupID,
+		"from_time":  fromTime,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	domainIDs := make([]string, 0)
+	fromTimeString := model.FormatTimeToString(fromTime)
+	queryParams := []interface{}{projectID, model.UserSourceDomains, fromTimeString}
+
+	query := fmt.Sprintf(`SELECT 
+	group_%d_user_id
+  FROM 
+	users 
+  WHERE 
+	project_id = ? 
+	AND source != ? 
+	AND last_event_at > ?
+	AND group_%d_user_id IS NOT NULL
+  GROUP BY group_%d_user_id
+  LIMIT 
+	2000000;`, domainGroupID, domainGroupID, domainGroupID)
+
+	db := C.GetServices().Db
+	rows, err := db.Raw(query, queryParams...).Rows()
+	if err != nil {
+		return []string{}, http.StatusInternalServerError
+	}
+
+	for rows.Next() {
+		var id string
+		err = rows.Scan(&id)
+		if err != nil {
+			return []string{}, http.StatusInternalServerError
+		}
+		domainIDs = append(domainIDs, id)
+	}
+
+	if len(domainIDs) == 0 {
+		return []string{}, http.StatusNotFound
+	}
+
+	return domainIDs, http.StatusFound
 }
 
 // get all non group users where updated in last x hours
@@ -550,7 +616,7 @@ func (store *MemSQL) GetNonGroupUsersUpdatedAtGivenHour(projectID int64, fromTim
 	if len(users) == 0 {
 		return []model.User{}, http.StatusNotFound
 	}
-	return users, http.StatusFound
+	return users, http.StatusOK
 }
 
 // GetUsersByCustomerUserID Gets all the users dentified by given customer_user_id with a limit.

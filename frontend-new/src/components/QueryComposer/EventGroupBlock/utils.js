@@ -29,7 +29,7 @@ export const defaultPropertyList = (
         ? groups[eventGroup]
         : PropTextFormat(eventGroup);
     const groupValues =
-      processProperties(groupProperties[eventGroup], 'group', eventGroup) || [];
+      processProperties(groupProperties[eventGroup], 'user', eventGroup) || [];
     const groupPropIconName = getGroupIcon(groupLabel);
     if (!filterOptsObj[groupLabel]) {
       filterOptsObj[groupLabel] = {
@@ -95,7 +95,7 @@ export const alertsGroupPropertyList = (
           CustomGroupDisplayNames[group] ||
           (groups[group] ? groups[group] : PropTextFormat(group));
 
-        const groupValues = processProperties(properties, 'group', group);
+        const groupValues = processProperties(properties, 'user', group);
         const groupPropIconName = getGroupIcon(groupLabel);
 
         filterOptsObj[groupLabel] = {
@@ -122,7 +122,7 @@ export const alertsGroupPropertyList = (
         ? groups[eventGroup]
         : PropTextFormat(eventGroup);
     const groupValues =
-      processProperties(groupProperties[eventGroup], 'group', eventGroup) || [];
+      processProperties(groupProperties[eventGroup], 'user', eventGroup) || [];
     const groupPropIconName = getGroupIcon(groupLabel);
     if (!filterOptsObj[groupLabel]) {
       filterOptsObj[groupLabel] = {
