@@ -36,10 +36,16 @@ func main() {
 	useLookbackSegmentMarker := flag.Bool("use_lookback_segment_marker", false, "Whether to compute look_back time to fetch users in last x hours.")
 	lookbackSegmentMarker := flag.Int("lookback_segment_marker", 0, "Optional: Fetch users from last x hours")
 	allowedGoRoutines := flag.Int("allowed_go_routines", 1, "Number of allowed to routines")
+	batchSizeDomains := flag.Int("batch_size_domains", 100, "batch size for number of domains to be processed in a go")
 	processOnlyAccountSegments := flag.Bool("process_only_account_segments", false, "This flag allows only processing of all accounts type segments")
 	runAllAccountsMarkerProjectIDs := flag.String("run_all_accounts_marker_project_ids", "",
 		"Project Id to run all accounts marker for. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
 	runForAllAccountsInHours := flag.Int("run_for_all_accounts_in_hours", 24, "Run domains where marker_last_run_all_accounts is greater than given hours")
+
+	memSQLUseExactConnectionsConfig := flag.Bool("memsql_use_exact_connection_config", false, "Use exact connection for open and idle as given.")
+	memSQLDBMaxOpenConnections := flag.Int("memsql_max_open_connections", 100, "Max no.of open connections allowed on connection pool of memsql")
+	memSQLDBMaxIdleConnections := flag.Int("memsql_max_idle_connections", 50, "Max no.of idle connections allowed on connection pool of memsql")
+
 	flag.Parse()
 
 	if *env != "development" &&
@@ -67,6 +73,10 @@ func main() {
 			Password:    *memSQLPass,
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
+
+			MaxOpenConnections:     *memSQLDBMaxOpenConnections,
+			MaxIdleConnections:     *memSQLDBMaxIdleConnections,
+			UseExactConnFromConfig: *memSQLUseExactConnectionsConfig,
 		},
 		PrimaryDatastore:               *primaryDatastore,
 		SentryDSN:                      *sentryDSN,
@@ -76,6 +86,7 @@ func main() {
 		ProcessOnlyAccountSegments:     *processOnlyAccountSegments,
 		RunAllAccountsMarkerProjectIDs: *runAllAccountsMarkerProjectIDs,
 		RunForAllAccountsInHours:       *runForAllAccountsInHours,
+		BatchSizeDomains:               *batchSizeDomains,
 	}
 
 	C.InitConf(config)

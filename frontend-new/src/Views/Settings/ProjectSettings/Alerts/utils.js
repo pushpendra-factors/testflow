@@ -8,13 +8,28 @@ export const SLACK = "Slack";
 export const WEBHOOK = "WH";
 export const MS_TEAMS = "Teams";
 
-export const getMsgPayloadMapping = (groupBy) => {
+export const getMsgPayloadMapping = (groupBy) => { 
     if (groupBy && groupBy.length && groupBy[0] && groupBy[0].property) {
         var obj = {}
         groupBy.map((item) => {
             obj[item.property] = "${Property Value}"
         })
         return obj
+    }
+    else return null
+}
+
+export const getMsgPayloadMappingWebhook = (groupBy) => { 
+    if (groupBy && groupBy.length && groupBy[0] && groupBy[0].property) {
+        var arr = []
+        groupBy.map((item) => {
+            let obj =  {
+                'DisplayName':  item?.groupName,
+                'PropValue': '${Property Value}'
+            }
+            arr.push(obj)
+        })
+        return arr
     }
     else return null
 }

@@ -8,7 +8,7 @@ ADWORDS_CLIENT_USER_AGENT = "FactorsAI (https://www.factors.ai)"
 class FetchService:
 
     # New Version
-    NEW_VERSION = "v13"
+    NEW_VERSION = "v15"
 
     # Old Version
     VERSION = "v201809"

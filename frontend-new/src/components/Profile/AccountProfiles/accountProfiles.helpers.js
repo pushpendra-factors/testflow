@@ -301,11 +301,7 @@ export const getColumns = ({
     render: (item) => MomentTz(item).fromNow()
   };
 
-  const scoringColumns = [engagementColumn, scoreColumn];
-
-  if (AdminLock(activeAgent)) {
-    scoringColumns.push(topEngagementsColumn);
-  }
+  const scoringColumns = [engagementColumn, scoreColumn, topEngagementsColumn];
 
   const columns = [
     accountColumn,

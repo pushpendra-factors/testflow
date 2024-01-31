@@ -144,6 +144,7 @@ func TestMain(m *testing.M) {
 		ProcessOnlyAccountSegments:                          false,
 		ChargebeeApiKey:                                     *chargebeeApiKey,
 		ChargebeeSiteName:                                   *chargebeeSiteName,
+		BatchSizeDomains:                                    100,
 	}
 	C.InitConf(config)
 
