@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math"
 	"net/http"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -306,17 +305,12 @@ func GetEngagementLevels(scores []float64, buckets BucketRanges) map[float64]str
 
 	for _, score := range uniqueScores {
 		// calculating percentile is not used in the current implementation
-		percentile := calculatePercentile(uniqueScores, score)
-		result[score] = GetEngagement(percentile, buckets)
+		// based on the config and the percentile ranges , in the account scoring job
+		// we calculate the boundaries and store it in account_scoring_ranges table.
+		// the accounts listing page will use these to show the engagement level.
+		result[score] = GetEngagement(score, buckets)
 	}
 	return result
-}
-
-func calculatePercentile(data []float64, value float64) float64 {
-	sort.Float64s(data)                                       // Sort the data in ascending order
-	index := sort.SearchFloat64s(data, value)                 // Find the index of the value
-	percentile := float64(index) / float64(len(data)-1) * 100 // Calculate the percentile based on the index
-	return percentile
 }
 
 func GetEngagement(percentile float64, buckets BucketRanges) string {
