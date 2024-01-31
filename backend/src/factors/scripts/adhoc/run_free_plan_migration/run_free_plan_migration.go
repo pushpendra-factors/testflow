@@ -137,10 +137,12 @@ func main() {
 						log.WithError(db.Error).Error("UpdateAgent Failed No Rows affected", agent.UUID)
 					}
 				}
+			}else{
+				log.Info("Customer already exists for agent ", agent.Email)
 			}
 			if *dryRun {
 				log.Info("dry run enabled")
-				log.Info("skipping project subscription creation", projectID, agent.UUID, agent.Email)
+				log.Info("skipping project subscription creation - ", projectID," - ", agent.UUID," - ", agent.Email)
 			} else {
 				subscription, _, err := billing.CreateChargebeeSubscriptionForCustomer(projectID, agent.BillingCustomerID, M.DEFAULT_PLAN_ITEM_PRICE_ID)
 				if err != nil {
