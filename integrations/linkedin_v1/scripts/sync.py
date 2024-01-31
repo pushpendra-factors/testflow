@@ -46,7 +46,7 @@ def sync_ads_data(linkedin_setting, sync_info_with_type, input_start_timestamp, 
     metrics_aggregator_obj.update_stats(linkedin_setting.project_id, linkedin_setting.ad_account)
         
 def handle(signum, frame):
-    raise Exception("Function timeout after 10 mins")
+    raise Exception("Function timeout after 20 mins")
 
 if __name__ == '__main__':
     (options, args) = parser.parse_args()
@@ -77,9 +77,9 @@ if __name__ == '__main__':
     
     for linkedin_setting in split_linkedin_settings:
         try:
-            # timeout this function after 10 mins
+            # timeout this function after 20 mins
             signal.signal(signal.SIGALRM, handle)
-            signal.alarm(600)
+            signal.alarm(1200)
             # 
             sync_info_with_type = data_service_obj.get_last_sync_info(linkedin_setting, input_start_timestamp, 
                                                                                         input_end_timestamp)
