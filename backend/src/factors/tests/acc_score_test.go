@@ -825,3 +825,18 @@ func TestUpdateDefaultWeights(t *testing.T) {
 	}
 
 }
+
+func TestComputeBucketRanges(t *testing.T) {
+
+	var scores []float64 = make([]float64, 0)
+	projectId := int64(1)
+	date := "20240101"
+	for idx := 0; idx < 1000; idx++ {
+		scores = append(scores, float64(idx))
+	}
+
+	bucketranges, err := T.ComputeBucketRanges(projectId, scores, date)
+	log.WithField("buckets", bucketranges).Debug("updated weights for project")
+
+	assert.Nil(t, err)
+}
