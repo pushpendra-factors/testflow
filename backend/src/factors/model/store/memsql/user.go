@@ -141,11 +141,11 @@ func (store *MemSQL) createUserWithoutProperties(user *model.User) (*model.User,
 		user.PropertiesUpdatedTimestamp = user.JoinTimestamp
 	}
 
-	if user.IsGroupUser != nil && *user.IsGroupUser {
+	// update last_event_at only for group_users
+	if user.IsGroupUser != nil && *user.IsGroupUser &&
+		user.Source != nil && *user.Source != model.UserSourceDomains {
 		lastEventAt := time.Unix(user.PropertiesUpdatedTimestamp, 0)
 		user.LastEventAt = &lastEventAt
-	} else {
-		user.LastEventAt = nil
 	}
 
 	// Add identification properties, if available.
