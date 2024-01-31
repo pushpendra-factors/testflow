@@ -1,0 +1,33 @@
+@import '../../../../../styles/abstracts/variables';
+
+.filters-box-container {
+    border-radius: 0.5rem;
+    border: 1px solid $fa-color-neutral-grey-5;
+    background: $fa-color--white;
+  }
+  
+  .add-filter-button {
+    width: fit-content;
+    &:hover {
+      background: transparent;
+    }
+  }
+  
+  .buttons-container {
+    border-top: 1px solid $fa-color-neutral-grey-5;
+  }
+  
+  .collapse-button {
+    padding: 0;
+    width: max-content;
+  
+    &:hover {
+      background-color: transparent !important;
+    }
+  }
+  
+  .filter-button {
+    background: none;
+    border: 1px solid $fa-color-neutral-grey-5;
+    box-shadow: none;
+  }

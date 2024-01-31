@@ -3,6 +3,8 @@ import get from 'lodash/get';
 import has from 'lodash/has';
 import findIndex from 'lodash/findIndex';
 import moment from 'moment';
+import { Tooltip } from 'antd';
+import truncateURL from 'Utils/truncateURL';
 import {
   getClickableTitleSorter,
   SortResults,
@@ -28,8 +30,6 @@ import NonClickableTableHeader from '../../../../components/NonClickableTableHea
 import { EVENT_COUNT_KEY } from '../eventsAnalytics.constants';
 import { BREAKDOWN_TYPES } from '../../constants';
 import { isNumeric } from '../../../../utils/global';
-import { Tooltip } from 'antd';
-import truncateURL from 'Utils/truncateURL';
 
 export const defaultSortProp = ({ breakdown }) => {
   const dateTimeBreakdownIndex = findIndex(
@@ -390,9 +390,10 @@ export const renderHorizontalBarChart = (
     return elem[key];
   });
 
-  if (isDashboardWidget) {
-    series[0].data = series[0].data.slice(0, 3);
-  }
+  // Commenting this to show all rows in bar chart widget
+  // if (isDashboardWidget) {
+  //   series[0].data = series[0].data.slice(0, 3);
+  // }
 
   return (
     <HorizontalBarChartCell

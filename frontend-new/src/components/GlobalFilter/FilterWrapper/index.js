@@ -51,9 +51,29 @@ function FilterWrapper({
     values: []
   });
   const [filterDropDownOptions, setFiltDD] = useState({});
+  const [extraProps, setExtraProps] = useState({});
   const activeDashboard = useSelector((state) =>
     selectActivePreDashboard(state)
   );
+
+  function transformProperty(data) {
+    const result = {};
+    data.forEach((item) => {
+      const [displayName, name] = item;
+      result[name] = displayName;
+    });
+    return result;
+  }
+
+  useEffect(() => {
+    if (profileType === 'predefined') {
+      const output = transformProperty(filterProps?.user);
+      const extraProp = {
+        displayNames: output
+      };
+      setExtraProps(extraProp);
+    }
+  }, [filterProps, profileType]);
 
   useEffect(() => {
     if (
@@ -198,6 +218,7 @@ function FilterWrapper({
       dropdownMaxHeight={dropdownMaxHeight}
       showInList={showInList}
       valueOptsLoading={propertyValuesMap.loading}
+      extraProps={extraProps}
     />
   );
 
@@ -216,6 +237,7 @@ function FilterWrapper({
       showInList={showInList}
       minEntriesPerGroup={minEntriesPerGroup}
       valueOptsLoading={propertyValuesMap.loading}
+      extraProps={extraProps}
     />
   );
 
