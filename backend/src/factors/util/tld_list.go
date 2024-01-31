@@ -3399,7 +3399,11 @@ func GetTLDFromDomainName(domainName string) string {
 	return ""
 }
 
+// for domains *.edu.*
 var domainSubdomainsRegexEdu = regexp.MustCompile(`\.?([^\./]+\.edu\.?[^\.]+)$`)
+
+// for domains *.*.gov and *.gov
+var domainSubdomainsRegexGov = regexp.MustCompile(`((?:[^\. /@]+(?:\.?){1}){1,2}gov)$`)
 
 func getSubDomainIfDomainEdu(domainName string) string {
 	if domainName == "" {
@@ -3411,6 +3415,19 @@ func getSubDomainIfDomainEdu(domainName string) string {
 	}
 
 	subDomains := domainSubdomainsRegexEdu.FindSubmatch([]byte(domainName))
+	if len(subDomains) == 2 && string(subDomains[1]) != "" {
+		return string(subDomains[1])
+	}
+
+	return ""
+}
+
+func getSubDomainIfDomainGov(domainName string) string {
+	if domainName == "" || !strings.HasSuffix(domainName, ".gov") {
+		return ""
+	}
+
+	subDomains := domainSubdomainsRegexGov.FindSubmatch([]byte(domainName))
 	if len(subDomains) == 2 && string(subDomains[1]) != "" {
 		return string(subDomains[1])
 	}
@@ -3442,6 +3459,10 @@ func GetDomainGroupDomainName(projectID int64, domainName string) string {
 	domainName = paths[0]
 
 	if subDomain := getSubDomainIfDomainEdu(domainName); subDomain != "" {
+		return subDomain
+	}
+
+	if subDomain := getSubDomainIfDomainGov(domainName); subDomain != "" {
 		return subDomain
 	}
 
