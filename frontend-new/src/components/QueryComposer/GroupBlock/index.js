@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { connect } from 'react-redux';
+import { connect, useDispatch } from 'react-redux';
 import { SVG } from 'Components/factorsComponents';
 import { bindActionCreators } from 'redux';
 
@@ -21,6 +21,8 @@ import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 import FaSelect from '../../FaSelect';
 import { setGroupBy, delGroupBy } from '../../../reducers/coreQuery/middleware';
 import styles from './index.module.scss';
+import { ReactSortable } from 'react-sortablejs';
+import { setGroupByActionList } from 'Reducers/coreQuery/actions';
 
 function GroupBlock({
   groupByState,
@@ -33,6 +35,7 @@ function GroupBlock({
   groupName,
   groups
 }) {
+  const dispatch = useDispatch();
   const [isDDVisible, setDDVisible] = useState([false]);
   const [isValueDDVisible, setValueDDVisible] = useState([false]);
   const [propSelVis, setSelVis] = useState([false]);
@@ -258,38 +261,56 @@ function GroupBlock({
 
   const renderExistingBreakdowns = () => {
     if (groupByState.global.length < 1) return null;
-    return groupByState.global.map((opt, index) => (
-      <div key={index} className='flex relative items-center mt-2'>
-        <div className='flex relative'>
-          {renderGroupDisplayName(opt, index)}
-          {isDDVisible[index] ? (
-            <div className={`${styles.group_block__event_selector}`}>
-              <GroupSelect
-                options={filterOptions}
-                searchPlaceHolder='Select Property'
-                optionClickCallback={(option, group) =>
-                  onChange(option, group, index)
-                }
-                onClickOutside={() => triggerDropDown(index, true)}
-                allowSearch
-                extraClass={styles.group_block__event_selector__select}
-                allowSearchTextSelection={false}
-              />
+    return (
+      <ReactSortable
+        list={groupByState.global}
+        setList={(listItems) => {
+          dispatch(setGroupByActionList(listItems));
+        }}
+      >
+        {groupByState.global.map((opt, index) => (
+          <div
+            key={index}
+            className={`flex relative items-center mt-2 ${styles['draghandleparent']}`}
+          >
+            <div className='flex relative'>
+              <div
+                style={{ cursor: 'pointer', margin: 'auto 2px' }}
+                className={styles['draghandle']}
+              >
+                <SVG name='drag'></SVG>
+              </div>
+              {renderGroupDisplayName(opt, index)}
+              {isDDVisible[index] ? (
+                <div className={`${styles.group_block__event_selector}`}>
+                  <GroupSelect
+                    options={filterOptions}
+                    searchPlaceHolder='Select Property'
+                    optionClickCallback={(option, group) =>
+                      onChange(option, group, index)
+                    }
+                    onClickOutside={() => triggerDropDown(index, true)}
+                    allowSearch
+                    extraClass={styles.group_block__event_selector__select}
+                    allowSearchTextSelection={false}
+                  />
+                </div>
+              ) : null}
             </div>
-          ) : null}
-        </div>
-        {renderGroupPropertyOptions(opt, index)}
+            {renderGroupPropertyOptions(opt, index)}
 
-        <Button
-          type='text'
-          onClick={() => delOption(index)}
-          size='small'
-          className='fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button'
-        >
-          <SVG name='remove' />
-        </Button>
-      </div>
-    ));
+            <Button
+              type='text'
+              onClick={() => delOption(index)}
+              size='small'
+              className='fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button'
+            >
+              <SVG name='remove' />
+            </Button>
+          </div>
+        ))}
+      </ReactSortable>
+    );
   };
 
   return (

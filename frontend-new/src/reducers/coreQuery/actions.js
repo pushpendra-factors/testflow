@@ -17,6 +17,8 @@ export const SET_BUTTONCLICK_PROP_NAME = 'SET_BUTTONCLICK_PROP_NAME';
 export const SET_PAGEVIEW_PROP_NAME = 'SET_PAGEVIEW_PROP_NAME';
 export const INITIALIZE_GROUPBY = 'INITIALIZE_GROUPBY';
 export const SET_GROUPBY = 'SET_GROUPBY';
+export const SET_GROUPBY_EVENT_LIST = 'SET_GROUPBY_EVENT_LIST';
+export const SET_GROUPBY_LIST = 'SET_GROUPBY_LIST';
 export const RESET_GROUPBY = 'RESET_GROUPBY';
 export const DEL_GROUPBY = 'DEL_GROUPBY';
 export const DEL_GROUPBY_EVENT = 'DEL_GROUPBY_EVENT';
@@ -112,6 +114,18 @@ export const deleteGroupByEventAction = (ev, index) => {
 
 export const setGroupByAction = (groupByType, groupBy, index) => {
   return { type: SET_GROUPBY, payload: groupBy, index: index, groupByType };
+};
+export const setGroupByEventActionList = (evenBreakdowns) => {
+  return {
+    type: SET_GROUPBY_EVENT_LIST,
+    payload: evenBreakdowns
+  };
+};
+export const setGroupByActionList = (evenBreakdowns) => {
+  return {
+    type: SET_GROUPBY_LIST,
+    payload: evenBreakdowns
+  };
 };
 export const resetGroupByAction = () => {
   return { type: RESET_GROUPBY };

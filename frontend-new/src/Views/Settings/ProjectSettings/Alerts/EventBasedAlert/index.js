@@ -82,7 +82,9 @@ import { FEATURES } from 'Constants/plans.constants';
 import { setShowCriteria } from 'Reducers/analyticsQuery';
 import {
   INITIALIZE_GROUPBY,
-  setEventGroupBy
+  setEventGroupBy,
+  setGroupByActionList,
+  setGroupByEventActionList
 } from 'Reducers/coreQuery/actions';
 import { ExclamationCircleOutlined, MoreOutlined } from '@ant-design/icons';
 import { useHistory } from 'react-router-dom';
@@ -90,7 +92,8 @@ import { ScrollToTop } from 'Routes/feature';
 import Slack from './Slack';
 import Webhook from './Webhook';
 import Teams from './Teams';
-import {getMsgPayloadMapping, dummyPayloadValue} from './../utils';
+import { getMsgPayloadMapping, dummyPayloadValue } from './../utils';
+import { ReactSortable } from 'react-sortablejs';
 
 const { Option } = Select;
 
@@ -186,16 +189,16 @@ const EventBasedAlert = ({
 
   const [showSlackInt, setShowSlackInt] = useState(false);
   const [showTeamInt, setShowTeamInt] = useState(false);
-  const [showWHInt, setShowWHInt] = useState(false); 
-  
-  const [slackTestMsgLoading, setSlackTestMsgLoading] = useState(false); 
-  const [slackTestMsgTxt, setSlackTestMsgTxt] = useState(false); 
-  const [slackMentionLoading, setSlackMentionLoading] = useState(false); 
+  const [showWHInt, setShowWHInt] = useState(false);
 
-  const [teamsTestMsgLoading, setTeamsTestMsgLoading] = useState(false); 
+  const [slackTestMsgLoading, setSlackTestMsgLoading] = useState(false);
+  const [slackTestMsgTxt, setSlackTestMsgTxt] = useState(false);
+  const [slackMentionLoading, setSlackMentionLoading] = useState(false);
+
+  const [teamsTestMsgLoading, setTeamsTestMsgLoading] = useState(false);
   const [teamsTestMsgTxt, setTeamsTestMsgTxt] = useState(false);
 
-  const [WHTestMsgLoading, setWHTestMsgLoading] = useState(false); 
+  const [WHTestMsgLoading, setWHTestMsgLoading] = useState(false);
   const [WHTestMsgTxt, setWHTestMsgTxt] = useState(false);
 
   const webhookRef = useRef();
@@ -214,11 +217,10 @@ const EventBasedAlert = ({
 
   const [activeGrpBtn, setActiveGrpBtn] = useState(QUERY_TYPE_EVENT);
 
-
-// Webhook support
-const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
-  FEATURES.FEATURE_WEBHOOK
-);
+  // Webhook support
+  const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
+    FEATURES.FEATURE_WEBHOOK
+  );
 
   const history = useHistory();
   const routeChange = (url) => {
@@ -242,7 +244,6 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
     fetchGroupProperties();
   }, [activeProject?.id, groups, groupProperties]);
 
-  
   const fetchGroups = async () => {
     if (!groups || Object.keys(groups).length === 0) {
       await getGroups(activeProject?.id);
@@ -301,7 +302,6 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
   };
 
   const confirmGroupSwitch = (group) => {
-
     if (queries.length > 0) {
       Modal.confirm({
         title: 'Are you sure?',
@@ -310,15 +310,13 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
         okText: 'Yes, proceed',
         cancelText: 'No, go back',
         onOk: () => {
-          setGroupAnalysis(group)
+          setGroupAnalysis(group);
         }
       });
+    } else {
+      setGroupAnalysis(group);
     }
-    else {
-      setGroupAnalysis(group)
-    }
-
-  }
+  };
 
   const [isGroupByDDVisible, setGroupByDDVisible] = useState(false);
 
@@ -368,7 +366,10 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
 
   const matchEventName = (item) => {
     let findItem =
-      eventPropNames?.[item] || userPropNames?.[item] || groupPropNames?.[item] || eventNames?.[item];
+      eventPropNames?.[item] ||
+      userPropNames?.[item] ||
+      groupPropNames?.[item] ||
+      eventNames?.[item];
     return findItem ? findItem : item;
   };
 
@@ -437,12 +438,17 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
       messageProperty.forEach((property) => pushGroupBy(property));
 
       //open advanced settings by default
-      if (viewAlertDetails?.alert?.repeat_alerts || !viewAlertDetails?.alert?.is_hyperlink_disabled) {
-        setShowAdvSettings(true)
+      if (
+        viewAlertDetails?.alert?.repeat_alerts ||
+        !viewAlertDetails?.alert?.is_hyperlink_disabled
+      ) {
+        setShowAdvSettings(true);
       }
 
-      if(viewAlertDetails?.alert?.slack_mentions){
-        let selectedUser = viewAlertDetails?.alert?.slack_mentions?.map((item)=> item?.name)
+      if (viewAlertDetails?.alert?.slack_mentions) {
+        let selectedUser = viewAlertDetails?.alert?.slack_mentions?.map(
+          (item) => item?.name
+        );
         setSelectedMentions(selectedUser);
       }
 
@@ -474,9 +480,8 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
     return () => {
       //reset form values on unmount
       onReset();
-    }
+    };
   }, [viewAlertDetails, alertState]);
-
 
   const menu = () => {
     return (
@@ -486,40 +491,29 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
           onClick={() => createDuplicateAlert(viewAlertDetails)}
         >
           <div className='flex items-center'>
-
-            <SVG
-              name='Pluscopy'
-              size={16}
-              color={'grey'}
-              extraClass={'mr-1'}
-            />
+            <SVG name='Pluscopy' size={16} color={'grey'} extraClass={'mr-1'} />
             <Text
               type={'title'}
               level={7}
               color={'grey-2'}
               extraClass={'m-0 ml-1'}
-            >Create copy</Text>
+            >
+              Create copy
+            </Text>
           </div>
         </Menu.Item>
         <Menu.Divider />
-        <Menu.Item
-          key='2'
-          onClick={() => confirmDeleteAlert(viewAlertDetails)}
-        >
+        <Menu.Item key='2' onClick={() => confirmDeleteAlert(viewAlertDetails)}>
           <div className='flex items-center'>
-
-            <SVG
-              name='Delete1'
-              size={16}
-              color={'red'}
-              extraClass={'mr-1'}
-            />
+            <SVG name='Delete1' size={16} color={'red'} extraClass={'mr-1'} />
             <Text
               type={'title'}
               level={7}
               color={'red'}
               extraClass={'m-0 ml-1'}
-            >Delete</Text>
+            >
+              Delete
+            </Text>
           </div>
         </Menu.Item>
       </Menu>
@@ -633,38 +627,48 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
 
   const groupByItems = () => {
     const groupByEvents = [];
-
+    let results;
     if (groupBy && groupBy.length && groupBy[0] && groupBy[0].property) {
-      groupBy
+      const sortableList = groupBy
         .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
         .filter(
           (gbp) => gbp.eventName === queries?.[0].label && gbp.eventIndex === 1
-        )
-        .forEach((gbp, gbpIndex) => {
-          const { groupByIndex, ...orgGbp } = gbp;
-          groupByEvents.push(
-            <div key={gbpIndex} className='fa--query_block--filters'>
-              <EventGroupBlock
-                index={gbp.groupByIndex}
-                grpIndex={gbpIndex}
-                eventIndex={1}
-                groupByEvent={orgGbp}
-                event={queries?.[0]}
-                delGroupState={(ev) => deleteGroupBy(ev, gbpIndex)}
-                setGroupState={pushGroupBy}
-                closeDropDown={() => setGroupByDDVisible(false)}
-                hideText={true}
-                noMargin={true}
-                eventGroup={
-                  groupsList?.filter(
-                    (item) => item?.[0] == queries?.[0]?.group
-                  )?.[0]?.[1]
-                }
-                groupAnalysis={activeGrpBtn}
-              />
-            </div>
-          );
-        });
+        );
+
+      results = (
+        <ReactSortable
+          list={sortableList}
+          setList={(listItems) => {
+            dispatch(setGroupByEventActionList(listItems));
+          }}
+        >
+          {sortableList.map((gbp, gbpIndex) => {
+            const { groupByIndex, ...orgGbp } = gbp;
+            return (
+              <div key={gbpIndex} className='fa--query_block--filters'>
+                <EventGroupBlock
+                  index={gbp.groupByIndex}
+                  grpIndex={gbpIndex}
+                  eventIndex={1}
+                  groupByEvent={orgGbp}
+                  event={queries?.[0]}
+                  delGroupState={(ev) => deleteGroupBy(ev, gbpIndex)}
+                  setGroupState={pushGroupBy}
+                  closeDropDown={() => setGroupByDDVisible(false)}
+                  hideText={true}
+                  noMargin={true}
+                  eventGroup={
+                    groupsList?.filter(
+                      (item) => item?.[0] == queries?.[0]?.group
+                    )?.[0]?.[1]
+                  }
+                  groupAnalysis={activeGrpBtn}
+                />
+              </div>
+            );
+          })}
+        </ReactSortable>
+      );
     }
 
     if (isGroupByDDVisible) {
@@ -675,7 +679,12 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
       );
     }
 
-    return groupByEvents;
+    results = (
+      <>
+        {results} {groupByEvents}
+      </>
+    );
+    return results;
   };
 
   const viewGroupByItems = (groupBy) => {
@@ -758,83 +767,85 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
     });
   };
 
-  const getSlackProfileDetails = (users) =>{ 
-    let slackUserList = users?.map((user)=>{
-      return slack_users?.find((item)=> item?.name==user)
-    }) 
-    return slackUserList
-  }
+  const getSlackProfileDetails = (users) => {
+    let slackUserList = users?.map((user) => {
+      return slack_users?.find((item) => item?.name == user);
+    });
+    return slackUserList;
+  };
 
-  const updatepayloadDisplayNames = (payload) =>{
-    if(payload){
-      let newObj = {}
-      Object?.keys(payload)?.map((item)=>{
+  const updatepayloadDisplayNames = (payload) => {
+    if (payload) {
+      let newObj = {};
+      Object?.keys(payload)?.map((item) => {
         let newKey = matchEventName(item);
-        let val = dummyPayloadValue[item] || payload[item]
-        newObj[newKey] = val
-      })
-    return newObj 
-    }
-    else return {}
-  }
- 
-  const sendTestSlackMessage = () =>{
+        let val = dummyPayloadValue[item] || payload[item];
+        newObj[newKey] = val;
+      });
+      return newObj;
+    } else return {};
+  };
+
+  const sendTestSlackMessage = () => {
     let payload = {
       title: alertName,
       event_level: activeGrpBtn == 'events' ? 'account' : 'user',
       event: queries[0]?.label,
       message: alertMessage,
-      message_property: updatepayloadDisplayNames(getMsgPayloadMapping(groupBy)),
+      message_property: updatepayloadDisplayNames(
+        getMsgPayloadMapping(groupBy)
+      ),
       slack: slackEnabled,
       slack_channels: saveSelectedChannel,
       slack_mentions: getSlackProfileDetails(selectedMentions),
-      is_hyperlink_disabled: !isHyperLinkEnabled,
-    }; 
+      is_hyperlink_disabled: !isHyperLinkEnabled
+    };
     setSlackTestMsgLoading(true);
-    testSlackAlert(activeProject?.id, payload).then((res) => { 
-      setSlackTestMsgLoading(false);
-      setSlackTestMsgTxt(true); 
-      setTimeout(() => {
-        setSlackTestMsgTxt(false);
-      }, 5000); 
-    })
-    .catch((err) => { 
-      console.log("testSlackAlert failed! -->", err)
-      setSlackTestMsgLoading(false);
-  })
-
-}
-  const sendTestTeamsMessage = () =>{
+    testSlackAlert(activeProject?.id, payload)
+      .then((res) => {
+        setSlackTestMsgLoading(false);
+        setSlackTestMsgTxt(true);
+        setTimeout(() => {
+          setSlackTestMsgTxt(false);
+        }, 5000);
+      })
+      .catch((err) => {
+        console.log('testSlackAlert failed! -->', err);
+        setSlackTestMsgLoading(false);
+      });
+  };
+  const sendTestTeamsMessage = () => {
     let payload = {
       title: alertName,
       event_level: activeGrpBtn == 'events' ? 'account' : 'user',
       event: queries[0]?.label,
       message: alertMessage,
-      message_property: updatepayloadDisplayNames(getMsgPayloadMapping(groupBy)),
+      message_property: updatepayloadDisplayNames(
+        getMsgPayloadMapping(groupBy)
+      ),
       teams: teamsEnabled,
       teams: teamsEnabled,
       teams_channels_config: {
         team_id: selectedWorkspace?.id,
         team_name: selectedWorkspace?.name,
         team_channel_list: teamsSaveSelectedChannel
-      },
+      }
     };
 
     setTeamsTestMsgLoading(true);
-    testTeamsAlert(activeProject?.id, payload).then((res) => {
-      
-      setTeamsTestMsgLoading(false);
-      setTeamsTestMsgTxt(true); 
-      setTimeout(() => {
-        setTeamsTestMsgTxt(false);
-      }, 5000); 
-    })
-    .catch((err) => {
-      setTeamsTestMsgLoading(false);
-      console.log("testTeamsAlert failed! -->", err)
-  })
-
-}
+    testTeamsAlert(activeProject?.id, payload)
+      .then((res) => {
+        setTeamsTestMsgLoading(false);
+        setTeamsTestMsgTxt(true);
+        setTimeout(() => {
+          setTeamsTestMsgTxt(false);
+        }, 5000);
+      })
+      .catch((err) => {
+        setTeamsTestMsgLoading(false);
+        console.log('testTeamsAlert failed! -->', err);
+      });
+  };
 
   const onFinish = (data) => {
     setLoading(true);
@@ -884,14 +895,14 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
         message_property:
           groupBy && groupBy.length && groupBy[0] && groupBy[0].property
             ? formatBreakdownsForQuery(
-              groupBy
-                .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
-                .filter(
-                  (gbp) =>
-                    gbp.eventName === queries[0]?.label &&
-                    gbp.eventIndex === 1
-                )
-            )
+                groupBy
+                  .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
+                  .filter(
+                    (gbp) =>
+                      gbp.eventName === queries[0]?.label &&
+                      gbp.eventIndex === 1
+                  )
+              )
             : [],
         alert_limit: alertLimit,
         repeat_alerts: notRepeat,
@@ -907,7 +918,7 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
           team_name: selectedWorkspace?.name,
           team_channel_list: teamsSaveSelectedChannel
         },
-        slack_mentions: getSlackProfileDetails(selectedMentions)  
+        slack_mentions: getSlackProfileDetails(selectedMentions)
       };
 
       if (alertState?.state === 'edit') {
@@ -1051,20 +1062,22 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
     setNotRepeat(true);
   };
 
-  const fetchSlackDetails = () => { 
+  const fetchSlackDetails = () => {
     fetchProjectSettingsV1(activeProject.id);
     if (slackEnabled) {
       setSlackMentionLoading(true);
       fetchSlackChannels(activeProject.id);
-      fetchSlackUsers(activeProject.id).then(()=>{
-        setSlackMentionLoading(false)
-      }).catch(()=>{
-        setSlackMentionLoading(false);
-      });
+      fetchSlackUsers(activeProject.id)
+        .then(() => {
+          setSlackMentionLoading(false);
+        })
+        .catch(() => {
+          setSlackMentionLoading(false);
+        });
     }
-  }
+  };
 
-  useEffect(() => { 
+  useEffect(() => {
     fetchSlackDetails();
   }, [activeProject, projectSettings?.int_slack, slackEnabled]);
 
@@ -1117,7 +1130,7 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
     if (projectSettings?.int_teams && selectedWorkspace) {
       fetchTeamsChannels(activeProject.id, selectedWorkspace?.id);
     }
-  }
+  };
 
   useEffect(() => {
     if (slack?.length > 0) {
@@ -1176,13 +1189,13 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
       message_property:
         groupBy && groupBy.length && groupBy[0] && groupBy[0].property
           ? formatBreakdownsForQuery(
-            groupBy
-              .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
-              .filter(
-                (gbp) =>
-                  gbp.eventName === queries[0]?.label && gbp.eventIndex === 1
-              )
-          )
+              groupBy
+                .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
+                .filter(
+                  (gbp) =>
+                    gbp.eventName === queries[0]?.label && gbp.eventIndex === 1
+                )
+            )
           : [],
       message: alertMessage,
       url: webhookUrl,
@@ -1191,14 +1204,12 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
     setWHTestMsgLoading(true);
     testWebhhookUrl(activeProject?.id, payload)
       .then((res) => {
-        setTestMassageResponse(res?.data); 
+        setTestMassageResponse(res?.data);
         setWHTestMsgLoading(false);
-        setWHTestMsgTxt(true); 
+        setWHTestMsgTxt(true);
         setTimeout(() => {
           setWHTestMsgTxt(false);
-        }, 5000); 
-
-
+        }, 5000);
       })
       .catch((err) => {
         setWHTestMsgLoading(false);
@@ -1314,16 +1325,32 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
           <Row>
             {alertState.state == 'edit' ? (
               <>
-                {(viewAlertDetails?.last_fail_details && !viewAlertDetails?.last_fail_details?.is_paused_automatically) &&
-                  <Col span={24} className='mb-4'>
-                    <Alert message={"We are unable to send this alert to the destinations you selected. Please check the destination settings below to continue receiving alerts"} type="error" showIcon />
-                  </Col>
-                }
-                {(viewAlertDetails?.last_fail_details && viewAlertDetails?.last_fail_details?.is_paused_automatically) &&
-                  <Col span={24} className='mb-4'>
-                    <Alert message={"Alert paused due to unresolved issues with selected destinations. Please check the errors in the destinations to resume getting alerts."} type="info" showIcon />
-                  </Col>
-                }
+                {viewAlertDetails?.last_fail_details &&
+                  !viewAlertDetails?.last_fail_details
+                    ?.is_paused_automatically && (
+                    <Col span={24} className='mb-4'>
+                      <Alert
+                        message={
+                          'We are unable to send this alert to the destinations you selected. Please check the destination settings below to continue receiving alerts'
+                        }
+                        type='error'
+                        showIcon
+                      />
+                    </Col>
+                  )}
+                {viewAlertDetails?.last_fail_details &&
+                  viewAlertDetails?.last_fail_details
+                    ?.is_paused_automatically && (
+                    <Col span={24} className='mb-4'>
+                      <Alert
+                        message={
+                          'Alert paused due to unresolved issues with selected destinations. Please check the errors in the destinations to resume getting alerts.'
+                        }
+                        type='info'
+                        showIcon
+                      />
+                    </Col>
+                  )}
                 <Col span={18}>
                   <div className='flex items-center'>
                     <div className='flex items-baseline'>
@@ -1352,7 +1379,12 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
                 </Col>
                 <Col span={6}>
                   <div className={'flex justify-end items-center'}>
-                    <Dropdown trigger={["click"]} overlay={menu} placement='bottomRight' className='mr-2'>
+                    <Dropdown
+                      trigger={['click']}
+                      overlay={menu}
+                      placement='bottomRight'
+                      className='mr-2'
+                    >
                       <Button
                         type='text'
                         icon={
@@ -1427,12 +1459,7 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
 
           <Row className={'mt-6 border-top--thin-2 pt-6'}>
             <Col span={18}>
-              <Text
-                type={'title'}
-                level={7}
-                weight={'bold'}
-                extraClass={'m-0'}
-              >
+              <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>
                 When to trigger alert
               </Text>
               <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>
@@ -1453,16 +1480,18 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
               <div className='flex items-center justify-start btn-custom--radio-container'>
                 <Button
                   type='default'
-                  className={`${activeGrpBtn == 'events' ? 'active' : 'no-border'
-                    }`}
+                  className={`${
+                    activeGrpBtn == 'events' ? 'active' : 'no-border'
+                  }`}
                   onClick={() => confirmGroupSwitch('events')}
                 >
                   Accounts
                 </Button>
                 <Button
                   type='default'
-                  className={`${activeGrpBtn == 'users' ? 'active' : 'no-border'
-                    }`}
+                  className={`${
+                    activeGrpBtn == 'users' ? 'active' : 'no-border'
+                  }`}
                   onClick={() => confirmGroupSwitch('users')}
                 >
                   People
@@ -1515,7 +1544,7 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
                   className={'fa-input'}
                   placeholder={'Enter name'}
                   onChange={(e) => setAlertName(e.target.value)}
-                // ref={inputComponentRef}
+                  // ref={inputComponentRef}
                 />
               </Form.Item>
             </Col>
@@ -1609,7 +1638,7 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
                 </div>
                 <Button
                   type='text'
-                  style={{ color: '#8692A3' }}
+                  style={{ color: '#8692A3', margin: '2px auto' }}
                   icon={<SVG name='plus' color='#8692A3' />}
                   onClick={() => addGroupBy()}
                 >
@@ -1633,7 +1662,7 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
               </Text>
             </Col>
           </Row>
- 
+
           {/* {showSlackInt && <Slack */}
           <Slack
             viewAlertDetails={viewAlertDetails}
@@ -1669,7 +1698,7 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
             selectedWorkspace={selectedWorkspace}
             setTeamsShowSelectChannelsModal={setTeamsShowSelectChannelsModal}
             alertMessage={alertMessage}
-            alertName={alertName} 
+            alertName={alertName}
             groupBy={groupBy}
             sendTestTeamsMessage={sendTestTeamsMessage}
             matchEventName={matchEventName}
@@ -1677,7 +1706,6 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
             teamsTestMsgLoading={teamsTestMsgLoading}
             fetchTeamsDetails={fetchTeamsDetails}
           />
-
 
           {/* {showWHInt && <Webhook */}
           <Webhook
@@ -1706,10 +1734,12 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
             alertName={alertName}
             WHTestMsgTxt={WHTestMsgTxt}
             WHTestMsgLoading={WHTestMsgLoading}
-            selectedEvent={queries?.length ? matchEventName(queries[0]?.label) : ''}
+            selectedEvent={
+              queries?.length ? matchEventName(queries[0]?.label) : ''
+            }
           />
 
-{/* 
+          {/* 
           <div className='mt-4 mb-2'>
             <Button disabled={showSlackInt} className='ml-2' onClick={() => { setShowSlackInt(true); setSlackEnabled(true) }}><SVG name={'slack'} size={18} color='purple' />Add Slack</Button>
             <Button disabled={showTeamInt} className='ml-2' onClick={() => { setShowTeamInt(true); setTeamsEnabled(true) }}><SVG name={'MSTeam'} size={18} color='purple' />Add Teams</Button>
@@ -1723,21 +1753,21 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
             } className='ml-2' onClick={() => { setShowWHInt(true); setWebhookEnabled(true) }}><SVG name={'Webhook'} size={18} color='purple' />Setup Webhook</Button>
           </div> */}
 
-          <Row className={'border-top--thin-2 mt-6 pt-6'}> 
+          <Row className={'border-top--thin-2 mt-6 pt-6'}>
             {showAdvSettings && (
               <>
-               <Col span={24}>
-              <Text
-                type={'title'}
-                level={7}
-                weight={'bold'}
-                color={'grey-2'}
-                extraClass={'m-0'}
-              >
-                {' '}
-                Advanced settings
-              </Text>
-            </Col>
+                <Col span={24}>
+                  <Text
+                    type={'title'}
+                    level={7}
+                    weight={'bold'}
+                    color={'grey-2'}
+                    extraClass={'m-0'}
+                  >
+                    {' '}
+                    Advanced settings
+                  </Text>
+                </Col>
                 <Col span={16} className={'m-0 mt-4'}>
                   <Form.Item name='repeat_alerts' className={'m-0'}>
                     <Checkbox
@@ -1746,7 +1776,6 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
                     >
                       Limit alerts
                     </Checkbox>
-
                   </Form.Item>
                 </Col>
                 <Col span={20}>
@@ -1842,10 +1871,11 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
               <a
                 type={'link'}
                 onClick={() => setShowAdvSettings(!showAdvSettings)}
-              >{`${showAdvSettings
-                ? 'Hide advanced options'
-                : 'Show advanced options'
-                }`}</a>
+              >{`${
+                showAdvSettings
+                  ? 'Hide advanced options'
+                  : 'Show advanced options'
+              }`}</a>
             </Col>
           </Row>
 
@@ -2054,9 +2084,9 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
                 value={
                   selectedWorkspace
                     ? {
-                      label: selectedWorkspace?.name,
-                      value: selectedWorkspace?.id
-                    }
+                        label: selectedWorkspace?.name,
+                        value: selectedWorkspace?.id
+                      }
                     : null
                 }
                 onChange={(value, op) => {
