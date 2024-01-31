@@ -109,6 +109,7 @@ class JobScheduler:
                                                                                     status, message)
 
         except Exception as e:
+            # Note: Have to revisit the errors: 31-01-2024
             traceback.print_tb(e.__traceback__)
             str_exception = str(e)
             message = str_exception
