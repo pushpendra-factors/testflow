@@ -337,6 +337,7 @@ type Configuration struct {
 	ChargebeeSiteName                                    string
 	UserPropertyUpdateOptProjects                        string
 	CompanyEnrichmentV1ProjectIDs                        string
+	AccountLimitEmailAlertProjectIDs                     string
 	AssociateDealToDomainByProjectID                     string
 	EnableSyncTriesFlag                                  bool
 	ClearbitProvisionAccountAPIKey                       string
@@ -344,6 +345,7 @@ type Configuration struct {
 	SalesforceAllowOpportunityOverrideCreateCreatedEvent string
 	ParagonTokenSigningKey                               string
 	ParagonProjectID                                     string
+	MailModoTriggerCampaignAPIKey                        string
 }
 
 type Services struct {
@@ -1904,6 +1906,10 @@ func GetClearbitProvisionAccountAPIKey() string {
 	return configuration.ClearbitProvisionAccountAPIKey
 }
 
+func GetMailmodoTriggerCampaignAPIResponse() string {
+	return configuration.MailModoTriggerCampaignAPIKey
+}
+
 func GetAPPDomain() string {
 	return configuration.APPDomain
 }
@@ -2473,6 +2479,28 @@ func IsCompanyEnrichmentV1Enabled(projectId int64) bool {
 
 	projectIDstr := fmt.Sprintf("%d", projectId)
 	projectIDs := strings.Split(configuration.CompanyEnrichmentV1ProjectIDs, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
+
+}
+
+func IsAccountLimitEmailAlertEnabled(projectId int64) bool {
+
+	if configuration.AccountLimitEmailAlertProjectIDs == "" {
+		return false
+	}
+
+	if configuration.AccountLimitEmailAlertProjectIDs == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectId)
+	projectIDs := strings.Split(configuration.AccountLimitEmailAlertProjectIDs, ",")
 	for i := range projectIDs {
 		if projectIDs[i] == projectIDstr {
 			return true
