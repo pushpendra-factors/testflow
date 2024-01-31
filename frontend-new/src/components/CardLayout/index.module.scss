@@ -1,0 +1,14 @@
+@import '../../styles/abstracts/variables';
+
+
+$fa-color--mono-2: #e7e9ed;
+$dropdownbtn-mono-1: #f5f6f8;
+
+.filters-box-container {
+  border-radius: 0.5rem;
+  border: 1px solid $fa-color-neutral-grey-5;
+  background: $fa-color--white;
+}
+.buttons-container {
+    border-top: 1px solid $fa-color-neutral-grey-5;
+  }
