@@ -109,7 +109,7 @@ func main() {
 				break
 			}
 
-			if agent.BillingCustomerID != "" {
+			if agent.BillingCustomerID == "" {
 				if *dryRun {
 					log.Info("dry run")
 					log.Info("agent skipping customer creation", agent.Email, agent.UUID)
