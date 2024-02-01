@@ -284,12 +284,16 @@ class Util:
         response = {}
         while count<= 3:
             count += 1
-            response = requests.get(url, headers=headers)
-            if response.ok:
-                break
-            elif "Max retries exceeded" in response.text:
-                time.sleep(300)
-            else:
+            try:
+                response = requests.get(url, headers=headers)
+                if response.ok:
+                    break
+                elif "Max retries exceeded" in response.text:
+                    time.sleep(300)
+                else:
+                    time.sleep(30)
+            except Exception as e:
+                log.warning("Failed with exception %s", str(e))
                 time.sleep(30)
 
         return response, count

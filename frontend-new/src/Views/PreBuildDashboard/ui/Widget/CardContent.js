@@ -5,7 +5,7 @@ import {
   QUERY_TYPE_EVENT,
   QUERY_TYPE_CAMPAIGN,
   DASHBOARD_WIDGET_SECTION,
-  reverse_user_types,
+  REVERSE_USER_TYPES,
   presentationObj,
   QUERY_TYPE_KPI,
   apiChartAnnotations,

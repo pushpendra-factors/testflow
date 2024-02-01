@@ -6,9 +6,11 @@ import (
 	"errors"
 	"factors/model/model"
 	"factors/model/store"
+	U "factors/util"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"net/http"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type oauthState struct {
@@ -16,7 +18,6 @@ type oauthState struct {
 	AgentUUID *string `json:"agent_uuid"`
 	Source    int     `json:"source"`
 }
-
 
 func GetSlackChannels(accessTokens model.SlackAccessTokens, nextCursor string) (response map[string]interface{}, status int, err error) {
 	request, err := http.NewRequest("GET", fmt.Sprintf("https://slack.com/api/conversations.list"), nil)
@@ -48,12 +49,12 @@ func GetSlackChannels(accessTokens model.SlackAccessTokens, nextCursor string) (
 	return jsonResponse, http.StatusOK, nil
 }
 
-func SendSlackAlert(projectID int64, message, agentUUID string, channel model.SlackChannel) (bool, error) {
+func SendSlackAlert(projectID int64, message, agentUUID string, channel model.SlackChannel) (map[string]interface{}, bool, error) {
 	// get the auth token for the agent uuid and then call the POST method to send the message
 	accessTokens, err := store.GetStore().GetSlackAuthToken(projectID, agentUUID)
 	if err != nil {
 		log.Error("Failed to get access token for slack")
-		return false, err
+		return nil, false, err
 	}
 	url := fmt.Sprintf("https://slack.com/api/chat.postMessage")
 	// create new http post request
@@ -65,7 +66,7 @@ func SendSlackAlert(projectID int64, message, agentUUID string, channel model.Sl
 	jsonBody, err := json.Marshal(reqBody)
 	if err != nil {
 		log.Error("Failed to marshal request body for slack")
-		return false, err
+		return nil, false, err
 	}
 	request, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
 	request.Header.Set("Content-Type", "application/json; charset=utf-8")
@@ -78,23 +79,26 @@ func SendSlackAlert(projectID int64, message, agentUUID string, channel model.Sl
 	resp, err := client.Do(request)
 	if err != nil {
 		log.Error("Failed to make request to slack for sending alert")
-		return false, err
+		return nil, false, err
 	}
 	var response map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	if err != nil {
 		log.Error("Failed to decode response from slack")
-		return false, err
+		return nil, false, err
 	}
 	if response["ok"] == true {
-		return true, nil
+		return response, true, nil
 	}
-	log.Error("failed to send slack alert ", message, response)
+	log.WithFields(log.Fields{
+		"message": message,
+		"response": response,
+		}).Error("failed to send slack alert")
 	defer resp.Body.Close()
-	return false, fmt.Errorf("failure response: %v", response)
+	return response, false, fmt.Errorf("failed to send slack alert")
 }
 
-func GetSlackUsersList(projectID int64, agentID string) ([]model.SlackMember, int, error){
+func GetSlackUsersList(projectID int64, agentID string) ([]model.SlackMember, int, error) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "agent_uuid": agentID})
 	if projectID == 0 || agentID == "" {
 		logCtx.Error("invalid parameters")
@@ -110,6 +114,7 @@ func GetSlackUsersList(projectID int64, agentID string) ([]model.SlackMember, in
 		err := jsonResponse.Error
 		if err == "missing_scope" {
 			logCtx.WithError(fmt.Errorf("%v", err)).Error("permission not granted for reading users, please reintegrate")
+			return nil, http.StatusExpectationFailed, fmt.Errorf("permission not granted for reading users, please reintegrate")
 		}
 		logCtx.WithError(fmt.Errorf("%v", err)).Error("error received from slack server")
 		return nil, http.StatusInternalServerError, fmt.Errorf("error received from slack server")
@@ -124,7 +129,7 @@ func GetSlackUsersList(projectID int64, agentID string) ([]model.SlackMember, in
 	jsonMetadata := jsonResponse.ResponseMetadata
 	if jsonMetadata == nil {
 		logCtx.Error("no metadata from json response error")
-		return nil, http.StatusInternalServerError, fmt.Errorf("no metadata from json response error")	
+		return nil, http.StatusInternalServerError, fmt.Errorf("no metadata from json response error")
 	}
 
 	nextCursor := jsonMetadata["next_cursor"].(string)
@@ -145,7 +150,7 @@ func GetSlackUsersList(projectID int64, agentID string) ([]model.SlackMember, in
 			break
 		}
 	}
-	
+
 	return members, http.StatusFound, nil
 }
 
@@ -157,19 +162,19 @@ func getSlackUsers(projectID int64, agentID string, nextCursor string) (response
 		log.WithFields(log.Fields{"project_id": projectID, "agent_id": agentID}).Error("failed to get slack auth token")
 		return nil, http.StatusBadRequest, err
 	}
-	
+
 	request, err := http.NewRequest("GET", "https://slack.com/api/users.list", nil)
 	if err != nil {
 		log.Error("failed at request creation for users list")
 		return nil, http.StatusInternalServerError, fmt.Errorf("failed at request creation for users list")
 	}
-	
+
 	q := request.URL.Query()
 	q.Add("limit", "200")
 	if nextCursor != "" {
 		q.Add("cursor", nextCursor)
 	}
-	
+
 	request.URL.RawQuery = q.Encode()
 	request.Header.Set("Content-Type", "application/json; charset=utf-8")
 	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessTokens.UserAccessToken))
@@ -188,6 +193,40 @@ func getSlackUsers(projectID int64, agentID string, nextCursor string) (response
 		log.WithError(err).Error("failed to decode json response")
 		return &jsonResponse, http.StatusInternalServerError, fmt.Errorf("failed to decode json response")
 	}
-	
+
 	return &jsonResponse, http.StatusOK, nil
+}
+
+func UpdateSlackUsersListTable(projectID int64, agentID string) ([]model.SlackMember, int, error) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "agent_uuid": agentID})
+	if projectID == 0 || agentID == "" {
+		logCtx.Error("invalid parameters")
+		return nil, http.StatusBadRequest, fmt.Errorf("invalid parameters")
+	}
+
+	members, errCode, err := GetSlackUsersList(projectID, agentID)
+	if err != nil || errCode != http.StatusFound {
+		if errCode == http.StatusNotFound {
+			return nil, errCode, err
+		}
+		logCtx.WithError(err).Error("failed to fetch slack users list")
+		return nil, errCode, err
+	}
+
+	memberJson, err := U.EncodeStructTypeToPostgresJsonb(members)
+	if err != nil {
+		logCtx.WithError(err).Error("failed to encode slack users list")
+		return nil, http.StatusInternalServerError, err
+	}
+
+	fields := make(map[string]interface{})
+	fields["agent_id"] = agentID
+	fields["users_list"] = memberJson
+
+	errCode, err = store.GetStore().UpdateSlackUsersListForProject(projectID, fields)
+	if err != nil || errCode != http.StatusOK {
+		return nil, errCode, err
+	}
+
+	return members, http.StatusOK, nil
 }

@@ -190,10 +190,13 @@ type Configuration struct {
 	SkippedOtpProjectIDs                   string
 	PrimaryDatastore                       string
 	// Segment Marker lookback
-	UseLookbackSegmentMarker   bool
-	LookbackSegmentMarker      int
-	AllowedGoRoutines          int
-	ProcessOnlyAccountSegments bool
+	UseLookbackSegmentMarker       bool
+	LookbackSegmentMarker          int
+	AllowedGoRoutines              int
+	ProcessOnlyAccountSegments     bool
+	RunAllAccountsMarkerProjectIDs string
+	RunForAllAccountsInHours       int
+	BatchSizeDomains               int
 	// Flag for enabling only the /mql routes for secondary env testing.
 	EnableMQLAPI bool
 	// Flags to disable DB and Redis writes when enabled.
@@ -423,6 +426,7 @@ const (
 	HealthcheckAccScoringJobPingID                    = "3f93c58e-708c-413e-abc4-0e112ae07260"
 	HealthcheckEventCubeAggregationPingID             = "a9ebad9d-4d78-4ea3-9e92-002188102cdd"
 	HealthCheckClearbitAccountProvisioningJobPingID   = "a18e152a-7978-4d9f-aa4a-da5121823203"
+	HealthcheckSlackUsersSyncJobPingID                = ""
 
 	// Other services ping IDs. Only reported when alert conditions are met, not periodically.
 	// Once an alert is triggered, ping manually from Healthchecks UI after fixing.
@@ -663,6 +667,14 @@ func UseLookbackForSegmentMarker() bool {
 
 func LookbackForSegmentMarker() int {
 	return configuration.LookbackSegmentMarker
+}
+
+// Run marker for all accounts if marker_last_run_all_accounts is greater than given hours
+func TimeRangeForAllDomains() int {
+	return configuration.RunForAllAccountsInHours
+}
+func BatchSizeSegmentMarker() int {
+	return configuration.BatchSizeDomains
 }
 func ProcessOnlyAllAccountsSegments() bool {
 	return configuration.ProcessOnlyAccountSegments
@@ -2319,6 +2331,15 @@ func IsDomainEnabled(projectID int64) bool {
 // UseSegmentMarker - Checks if segment marker is enabled for given project_id in all accounts listing
 func UseSegmentMarker(projectID int64) bool {
 	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().UseMarkerByProjectID, "")
+	if allProjects || projectIDsMap[projectID] {
+		return true
+	}
+	return false
+}
+
+// AllAccountsRuntMarker - Checks if segment marker is to be run for all $domains for given project
+func AllAccountsRuntMarker(projectID int64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().RunAllAccountsMarkerProjectIDs, "")
 	if allProjects || projectIDsMap[projectID] {
 		return true
 	}

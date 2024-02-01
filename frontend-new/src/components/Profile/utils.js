@@ -1,31 +1,20 @@
-import MomentTz from '../MomentTz';
 import { formatDurationIntoString, PropTextFormat } from 'Utils/dataFormatter';
 import {
   ANY_USER_TYPE,
   EVENT_QUERY_USER_TYPE,
   PREDEFINED_DATES,
   QUERY_TYPE_EVENT,
-  reverse_user_types,
-  ReverseProfileMapper,
+  REVERSE_USER_TYPES,
   TYPE_UNIQUE_USERS
 } from 'Utils/constants';
+import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
+import { operatorMap, reverseOperatorMap } from 'Utils/operatorMapping';
 import {
   getEventsWithProperties,
   getStateQueryFromRequestQuery
 } from '../../Views/CoreQuery/utils';
-import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
-import { operatorMap, reverseOperatorMap } from 'Utils/operatorMapping';
+import MomentTz from '../MomentTz';
 import { INITIAL_USER_PROFILES_FILTERS_STATE } from './AccountProfiles/accountProfiles.constants';
-
-export const granularityOptions = [
-  'Timestamp',
-  'Hourly',
-  'Daily',
-  'Weekly',
-  'Monthly'
-];
-
-export const TIMELINE_VIEW_OPTIONS = ['timeline', 'birdview', 'overview'];
 
 export const groups = {
   Timestamp: (item) =>
@@ -59,115 +48,36 @@ export const groups = {
       .format(' DD MMM YYYY ddd')
 };
 
-export const hoverEvents = [
-  '$session',
-  '$form_submitted',
-  '$offline_touch_point',
-  '$sf_campaign_member_created',
-  '$sf_campaign_member_updated',
-  '$hubspot_form_submission',
-  '$hubspot_engagement_email',
-  '$hubspot_engagement_meeting_created',
-  '$hubspot_engagement_call_created',
-  'sf_task_created',
-  '$sf_event_created',
-  '$g2_sponsored',
-  '$g2_product_profile',
-  '$g2_alternative',
-  '$g2_pricing',
-  '$g2_category',
-  '$g2_comparison',
-  '$g2_report',
-  '$g2_reference',
-  '$g2_deal'
-];
-
-export const hoverEventsColumnProp = {
-  $hubspot_contact_list: '$hubspot_contact_list_list_name',
-  $hubspot_contact_created: '$hubspot_contact_email',
-  $session: '$channel',
-  $form_submitted: '$page_title',
-  $offline_touch_point: '$channel',
-  $sf_campaign_member_created: '$salesforce_campaign_name',
-  $sf_campaign_member_updated: '$salesforce_campaign_name',
-  $hubspot_form_submission: '$hubspot_form_submission_title',
-  $hubspot_engagement_email: '$hubspot_engagement_subject',
-  $hubspot_engagement_meeting_created: '$hubspot_engagement_title',
-  $hubspot_engagement_call_created: '',
-  sf_task_created: '$salesforce_task_subject',
-  $sf_event_created: '$salesforce_event_subject',
-  $g2_sponsored: '$page_title',
-  $g2_product_profile: '$page_title',
-  $g2_alternative: '$page_title',
-  $g2_pricing: '$page_title',
-  $g2_category: '$page_title',
-  $g2_comparison: '$page_title',
-  $g2_report: '$page_title',
-  $g2_reference: '$page_title',
-  $g2_deal: '$page_title'
+const getEntityName = (caller, grpn) => {
+  if (caller === 'account_profiles') {
+    return grpn === 'user' ? 'user_group' : 'user_g';
+  }
+  return 'user_g';
 };
 
-export const GroupDisplayNames = {
-  $domains: 'All Accounts',
-  $hubspot_company: 'Hubspot Companies',
-  $hubspot_deal: 'Hubspot Deals',
-  $salesforce_account: 'Salesforce Accounts',
-  $salesforce_opportunity: 'Salesforce Opportunities',
-  $6signal: 'Identified Companies',
-  $linkedin_company: 'Linkedin Company Engagements',
-  $g2: 'G2 Engagements'
-};
+export const formatFiltersForPayload = (
+  filters = [],
+  caller = 'user_profiles'
+) => {
+  const filterProps = [];
+  filters.forEach((filter) => {
+    const { values, props, operator } = filter;
+    const vals = Array.isArray(values) ? filter.values : [filter.values];
 
-export const IsDomainGroup = (source) =>
-  source === GROUP_NAME_DOMAINS || source === 'All';
+    vals.forEach((val, index) => {
+      filterProps.push({
+        en: getEntityName(caller, props[0]),
+        lop: index === 0 ? 'AND' : 'OR',
+        op: operatorMap[operator],
+        grpn: props[0],
+        pr: props[1],
+        ty: props[2],
+        va: val
+      });
+    });
+  });
 
-export const getFiltersRequestPayload = ({
-  selectedFilters,
-  table_props,
-  caller = 'account_profiles'
-}) => {
-  const {
-    eventsList,
-    eventProp,
-    filters,
-    account,
-    eventTimeline,
-    secondaryFilters
-  } = selectedFilters;
-
-  const queryOptions = {
-    group_analysis: account[1],
-    source: caller === 'account_profiles' ? account[1] : 'All',
-    caller,
-    table_props,
-    globalFilters: [...filters, ...secondaryFilters],
-    date_range: {}
-  };
-
-  return {
-    query: getSegmentQuery(eventsList, queryOptions, eventProp, caller)
-  };
-};
-
-export const formatReqPayload = (payload, segment = {}) => {
-  const req = {
-    query: {
-      grpa: segment.query ? segment.query.grpa : '',
-      source: payload.source,
-      ty: segment.query ? segment.query.ty : '',
-      ec: segment.query ? segment.query.ec : '',
-      ewp: segment.query ? segment.query.ewp || [] : [],
-      gup: [
-        ...payload.filters,
-        ...(segment.query ? segment.query.gup || [] : [])
-      ],
-      table_props: segment.query ? segment.query.table_props || [] : []
-    },
-    segment_id: segment?.id || '',
-    search_filter: [...(payload.search_filter || [])]
-  };
-
-  return req;
+  return filterProps;
 };
 
 export const getSegmentQuery = (queries, queryOptions, userType, caller) => {
@@ -201,34 +111,52 @@ export const getSegmentQuery = (queries, queryOptions, userType, caller) => {
   return query;
 };
 
-const getEntityName = (source, entity) => {
-  if (source === 'account_profiles') {
-    return entity === 'user' ? 'user_group' : 'user_g';
-  } else {
-    return 'user_g';
-  }
+export const IsDomainGroup = (source) =>
+  source === GROUP_NAME_DOMAINS || source === 'All';
+
+export const getFiltersRequestPayload = ({
+  selectedFilters,
+  tableProps,
+  caller = 'account_profiles'
+}) => {
+  const { eventsList, eventProp, filters, account, secondaryFilters } =
+    selectedFilters;
+
+  const queryOptions = {
+    group_analysis: account[1],
+    source: caller === 'account_profiles' ? account[1] : 'All',
+    caller,
+    table_props: tableProps,
+    globalFilters: [...filters, ...secondaryFilters],
+    date_range: {}
+  };
+
+  return {
+    query: getSegmentQuery(eventsList, queryOptions, eventProp, caller)
+  };
 };
 
-export const formatFiltersForPayload = (filters = [], source = 'users') => {
-  const filterProps = [];
-  filters.forEach((filter) => {
-    const { values, props, operator } = filter;
-    const vals = Array.isArray(values) ? filter.values : [filter.values];
+export const formatReqPayload = (payload) => {
+  let req = { query: { source: payload.source } };
 
-    vals.forEach((val, index) => {
-      filterProps.push({
-        en: getEntityName(source, props[3]),
-        lop: index === 0 ? 'AND' : 'OR',
-        op: operatorMap[operator],
-        grpn: props[0],
-        pr: props[1],
-        ty: props[2],
-        va: val
-      });
-    });
-  });
+  if (payload.segment) {
+    const { query = {} } = payload.segment;
+    req.query = {
+      grpa: query.grpa || '',
+      source: payload.source,
+      ty: query.ty || '',
+      ec: query.ec || '',
+      ewp: query.ewp || [],
+      gup: query.gup || [],
+      table_props: query.table_props || []
+    };
+  }
 
-  return filterProps;
+  if (payload?.search_filter?.length) {
+    req = { ...req, search_filter: [...payload.search_filter] };
+  }
+
+  return req;
 };
 
 export const eventsFormattedForGranularity = (
@@ -379,31 +307,11 @@ export const propValueFormat = (searchKey, value, type) => {
   }
 };
 
-export const formatSegmentsObjToGroupSelectObj = (group, vals) => {
-  const label =
-    ReverseProfileMapper[group]?.users ||
-    GroupDisplayNames[group] ||
-    PropTextFormat(group) ||
-    'Others';
-  const values = vals?.map(({ name, id, description, type, query }) => [
-    name,
-    id,
-    { name, description, type, query }
-  ]);
-
-  return {
-    label,
-    icon: '',
-    values: values || []
-  };
-};
-
 export const getEventCategory = (event, eventNamesMap) => {
   let category = 'others';
   Object.entries(eventNamesMap).forEach(([groupName, events]) => {
     if (events.includes(event.event_name)) {
       category = groupName;
-      return;
     }
   });
   if (event.display_name === 'Page View') {
@@ -432,98 +340,6 @@ export const getIconForCategory = (category) => {
   }
   return 'events_blue';
 };
-
-export const DEFAULT_TIMELINE_CONFIG = {
-  disabled_events: [],
-  user_config: {
-    table_props: [],
-    milestones: []
-  },
-  account_config: {
-    table_props: [],
-    milestones: [],
-    user_prop: ''
-  }
-};
-
-export const eventIconsColorMap = {
-  envelope: {
-    iconColor: '#FF7875',
-    bgColor: '#FFF4F4',
-    borderColor: '#FFDEDE'
-  },
-  handshake: {
-    iconColor: '#85A5FF',
-    bgColor: '#EFF3FF',
-    borderColor: '#D3DEFF'
-  },
-  phone: {
-    iconColor: '#95DE64',
-    bgColor: '#F0FFE7',
-    borderColor: '#D5F4C1'
-  },
-  listcheck: {
-    iconColor: '#5CDBD3',
-    bgColor: '#EBFFFE',
-    borderColor: '#C6F6F4'
-  },
-  'hand-pointer': {
-    iconColor: '#FAAD14',
-    bgColor: '#FFF3DB',
-    borderColor: '#FBE5BA'
-  },
-  hubspot: {
-    iconColor: '#FF7A59',
-    bgColor: '#FFE8E2',
-    borderColor: '#FED0C5'
-  },
-  salesforce: {
-    iconColor: '#00A1E0',
-    bgColor: '#E8F8FF',
-    borderColor: '#CDF0FF'
-  },
-  linkedin: {
-    iconColor: '#0A66C2',
-    bgColor: '#E6F7FF',
-    borderColor: '#91D5FF'
-  },
-  g2crowd: {
-    iconColor: '#FF7A59',
-    bgColor: '#FFE8E2',
-    borderColor: '#FED0C5'
-  },
-  window: {
-    iconColor: '#FF85C0',
-    bgColor: '#FFF0F7',
-    borderColor: '#FFD9EB'
-  },
-  'calendar-star': {
-    iconColor: '#B37FEB',
-    bgColor: '#F6EDFF',
-    borderColor: '#E9D4FF'
-  },
-  globepointer: {
-    bgColor: '#E6F7FF',
-    borderColor: '#BAE7FF'
-  },
-  clipboard: {
-    bgColor: '#E6FFFB',
-    borderColor: '#B5F5EC'
-  }
-};
-
-export const iconColors = [
-  '#85A5FF',
-  '#B37FEB',
-  '#5CDBD3',
-  '#FF9C6E',
-  '#FF85C0',
-  '#FFC069',
-  '#A0D911',
-  '#FAAD14'
-];
-
-export const ALPHANUMSTR = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
 export const DefaultDateRangeForSegments = {
   from: MomentTz().subtract(28, 'days').startOf('day'),
@@ -561,25 +377,6 @@ export const timestampToString = {
     MomentTz(item * 1000)
       .startOf('month')
       .format('MMM YYYY')
-};
-
-export const EngagementTag = {
-  Hot: {
-    bgColor: '#FFF1F0',
-    icon: 'fire'
-  },
-  Warm: {
-    bgColor: '#FFF7E6',
-    icon: 'sun'
-  },
-  Cool: {
-    bgColor: '#F0F5FF',
-    icon: 'snowflake'
-  },
-  Ice: {
-    bgColor: '#E6F7FF',
-    icon: 'icecube'
-  }
 };
 
 export const sortStringColumn = (a = '', b = '') => {
@@ -667,8 +464,8 @@ export const getSelectedFiltersFromQuery = ({
   caller = 'account_profiles'
 }) => {
   const eventProp =
-    reverse_user_types[query.ec] != null
-      ? reverse_user_types[query.ec]
+    REVERSE_USER_TYPES[query.ec] != null
+      ? REVERSE_USER_TYPES[query.ec]
       : ANY_USER_TYPE;
   const grpa = Boolean(query.grpa) === true ? query.grpa : GROUP_NAME_DOMAINS;
   const filters = getStateQueryFromRequestQuery(query);
@@ -693,10 +490,13 @@ export const getSelectedFiltersFromQuery = ({
 };
 
 export const findKeyByValue = (data, targetValue) => {
-  for (const key in data) {
-    if (data[key].includes(targetValue)) {
-      return key;
+  let foundKey = null;
+
+  Object.entries(data).forEach(([key, values]) => {
+    if (values.includes(targetValue)) {
+      foundKey = key;
     }
-  }
-  return null;
+  });
+
+  return foundKey;
 };

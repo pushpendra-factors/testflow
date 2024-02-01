@@ -14,7 +14,11 @@ import { isStringLengthValid } from 'Utils/global';
 import { QUERY_CREATED, QUERY_UPDATED } from 'Reducers/types';
 import { saveQueryToDashboard } from 'Reducers/dashboard/services';
 import { fetchWeeklyIngishtsMetaData } from 'Reducers/insights';
-import { QUERY_TYPE_ATTRIBUTION } from 'Utils/constants';
+import {
+  QUERY_TYPE_ATTRIBUTION,
+  QUERY_TYPE_EVENT,
+  QUERY_TYPE_FUNNEL
+} from 'Utils/constants';
 import { EMPTY_ARRAY } from 'Utils/global';
 import { CoreQueryContext } from '../../contexts/CoreQueryContext';
 import SaveQueryModal from './saveQueryModal';
@@ -191,7 +195,15 @@ function SaveQuery({
         duration: 5
       });
     }
-  }, [updateLocalReducer, active_project.id, savedQueryId, toggleDeleteModal, setQuerySaved, dispatch, history]);
+  }, [
+    updateLocalReducer,
+    active_project.id,
+    savedQueryId,
+    toggleDeleteModal,
+    setQuerySaved,
+    dispatch,
+    history
+  ]);
 
   const handleAddToDashboard = useCallback(
     async ({ selectedDashboards, dashboardPresentation, onSuccess }) => {
@@ -268,7 +280,14 @@ function SaveQuery({
         });
       }
     },
-    [updateLocalReducer, savedQueries, queryTitle, active_project.id, savedQueryId, dispatch]
+    [
+      updateLocalReducer,
+      savedQueries,
+      queryTitle,
+      active_project.id,
+      savedQueryId,
+      dispatch
+    ]
   );
 
   const handleSave = useCallback(
@@ -309,8 +328,8 @@ function SaveQuery({
                 queryType,
                 chartTypes,
                 breakdown,
-                attributionModels: attributionsState.models,
-                campaignGroupBy: campaignState.group_by
+                attributionModels: attributionsState?.models,
+                campaignGroupBy: campaignState?.group_by
               })
             ]
         };
@@ -343,13 +362,13 @@ function SaveQuery({
 
           dispatch({ type: QUERY_CREATED, payload: res.data });
           setNavigatedFromAnalyse(res?.data);
-          // setQuerySaved({ name: title, id: res.data.id });
+          setQuerySaved({ name: title, id: res.data.id });
 
-          // if(queryType === QUERY_TYPE_EVENT && res?.data?.id_text) {
+          // if (queryType === QUERY_TYPE_EVENT && res?.data?.id_text) {
           //   history.replace('/analyse/event/' + res.data.id_text);
           // }
 
-          // if(queryType === QUERY_TYPE_FUNNEL && res?.data?.id_text) {
+          // if (queryType === QUERY_TYPE_FUNNEL && res?.data?.id_text) {
           //   history.replace('/analyse/funnel/' + res.data.id_text);
           // }
         } else {
@@ -451,7 +470,28 @@ function SaveQuery({
         });
       }
     },
-    [updateLocalReducer, queryType, requestQuery, user_type, getCurrentSorter, chartTypes, breakdown, attributionsState.models, campaignState.group_by, activeAction, setQuerySaved, savedQueryId, active_project.id, active_project.name, dispatch, pivotConfig, attributionMetrics, attributionTableFilters, setNavigatedFromAnalyse, savedQueries]
+    [
+      updateLocalReducer,
+      queryType,
+      requestQuery,
+      user_type,
+      getCurrentSorter,
+      chartTypes,
+      breakdown,
+      attributionsState ? attributionsState.models : null,
+      campaignState ? campaignState.group_by : null,
+      activeAction,
+      setQuerySaved,
+      savedQueryId,
+      active_project.id,
+      active_project.name,
+      dispatch,
+      pivotConfig,
+      attributionMetrics,
+      attributionTableFilters,
+      setNavigatedFromAnalyse,
+      savedQueries
+    ]
   );
 
   const handleUpdateClick = useCallback(async () => {
@@ -473,8 +513,8 @@ function SaveQuery({
               queryType,
               chartTypes,
               breakdown,
-              attributionModels: attributionsState.models,
-              campaignGroupBy: campaignState.group_by
+              attributionModels: attributionsState?.models,
+              campaignGroupBy: campaignState?.group_by
             })
           ]
       };
@@ -541,7 +581,25 @@ function SaveQuery({
         duration: 5
       });
     }
-  }, [navigatedFromDashboard, navigatedFromAnalyse, queryType, requestQuery, user_type, getCurrentSorter, chartTypes, breakdown, attributionsState.models, campaignState.group_by, savedQueries, active_project.id, dispatch, setQuerySaved, pivotConfig, attributionMetrics, attributionTableFilters]);
+  }, [
+    navigatedFromDashboard,
+    navigatedFromAnalyse,
+    queryType,
+    requestQuery,
+    user_type,
+    getCurrentSorter,
+    chartTypes,
+    breakdown,
+    attributionsState ? attributionsState.models : null,
+    campaignState ? campaignState.group_by : null,
+    savedQueries,
+    active_project.id,
+    dispatch,
+    setQuerySaved,
+    pivotConfig,
+    attributionMetrics,
+    attributionTableFilters
+  ]);
 
   const onConnectSlack = () => {
     enableSlackIntegration(active_project.id)
@@ -564,7 +622,13 @@ function SaveQuery({
     if (projectSettingsV1?.int_slack) {
       fetchSlackChannels(active_project.id);
     }
-  }, [active_project, fetchProjectSettingsV1, fetchSlackChannels, projectSettingsV1?.int_slack, showShareToSlackModal]);
+  }, [
+    active_project,
+    fetchProjectSettingsV1,
+    fetchSlackChannels,
+    projectSettingsV1?.int_slack,
+    showShareToSlackModal
+  ]);
 
   useEffect(() => {
     if (slack?.length > 0) {
@@ -735,7 +799,7 @@ function SaveQuery({
         toggleAddToDashboardModal={toggleAddToDashModal}
         setShowShareToEmailModal={setShowShareToEmailModal}
         setShowShareToSlackModal={setShowShareToSlackModal}
-        attributionModels={attributionsState.models}
+        attributionModels={attributionsState?.models}
       />
 
       <SaveQueryModal

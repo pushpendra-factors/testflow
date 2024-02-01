@@ -49,6 +49,7 @@ function SingleEventSingleBreakdownTable({
   } = useSelector((state) => state.coreQuery);
   const { data: eventPropertiesDisplayNames } =
     eventPropertiesDisplayNamesState;
+  const { projectDomainsList } = useSelector((state) => state.global);
   const [columns, setColumns] = useState([]);
   const [dateBasedColumns, setDateBasedColumns] = useState([]);
   const [tableData, setTableData] = useState([]);
@@ -101,6 +102,7 @@ function SingleEventSingleBreakdownTable({
         eventNames,
         userPropNames,
         eventPropertiesDisplayNames,
+        projectDomainsList,
         eventGroup
       )
     );
@@ -112,6 +114,7 @@ function SingleEventSingleBreakdownTable({
     eventNames,
     userPropNames,
     eventPropertiesDisplayNames,
+    projectDomainsList,
     eventGroup
   ]);
 
@@ -130,7 +133,8 @@ function SingleEventSingleBreakdownTable({
         userPropNames,
         eventPropertiesDisplayNames,
         comparisonApplied,
-        compareCategories
+        compareCategories,
+        projectDomainsList
       )
     );
   }, [
@@ -142,7 +146,8 @@ function SingleEventSingleBreakdownTable({
     userPropNames,
     eventPropertiesDisplayNames,
     comparisonApplied,
-    compareCategories
+    compareCategories,
+    projectDomainsList
   ]);
 
   useEffect(() => {

@@ -445,6 +445,7 @@ func WriteUserCountsAndRangesToDB(projectId int64, startTime int64, prevcountsof
 		e := fmt.Errorf("unable to update last event for groups")
 		return nil, e
 	}
+
 	now := time.Now()
 	buckets, err := ComputeAndWriteRangesToDB(projectId, now.Unix(), int64(lookback), updatedGroupsCopy, weights)
 	if err != nil {
@@ -716,7 +717,7 @@ func ComputeScoreRanges(projectId int64, currentTime int64, lookback int64,
 		if err != nil {
 			return nil, nil, err
 		}
-		bucket, err := ComputeBucketRanges(scores, date)
+		bucket, err := ComputeBucketRanges(projectId, scores, date)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -742,23 +743,41 @@ func computeScore(projectId int64, weights M.AccWeights, lastEvents map[string]M
 
 }
 
-func ComputeBucketRanges(scores []float64, date string) (M.BucketRanges, error) {
+func ComputeBucketRanges(projectId int64, scores []float64, date string) (M.BucketRanges, error) {
+
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectId,
+	})
 
 	var bucket M.BucketRanges
+	var projectbucketRanges M.BucketRanges
+	var statusCode int
+	projectbucketRanges.Ranges = make([]M.Bucket, 0)
+
 	bucket.Date = date
 	scoresWithoutZeros := removeZeros(scores)
 	if len(scores) == 0 {
 		return M.BucketRanges{}, fmt.Errorf("not enough scores")
 	}
 
-	for idx := 1; idx < len(M.BUCKETRANGES); idx++ {
+	projectbucketRanges.Ranges = make([]M.Bucket, 4)
+	buckets, statusCode := store.GetStore().GetEngagementLevelsByProject(projectId)
+	if statusCode != http.StatusFound {
+		logCtx.Info("Getting default engagement buckets")
+		projectbucketRanges = model.DefaultEngagementBuckets()
+		projectbucketRanges.Date = date
+	} else {
+		projectbucketRanges = buckets
+	}
+
+	for idx := 0; idx < len(projectbucketRanges.Ranges); idx++ {
 		var b M.Bucket
-		b.Name = M.BUCKETNAMES[idx-1]
-		high, err := PercentileNearestRank(scoresWithoutZeros, M.BUCKETRANGES[idx-1])
+		b.Name = projectbucketRanges.Ranges[idx].Name
+		high, err := PercentileNearestRank(scoresWithoutZeros, projectbucketRanges.Ranges[idx].High)
 		if err != nil {
 			log.Errorf("unable to compute bucket ranges")
 		}
-		low, err := PercentileNearestRank(scoresWithoutZeros, M.BUCKETRANGES[idx])
+		low, err := PercentileNearestRank(scoresWithoutZeros, projectbucketRanges.Ranges[idx].Low)
 		if err != nil {
 			log.Errorf("unable to compute bucket ranges")
 		}
@@ -769,9 +788,8 @@ func ComputeBucketRanges(scores []float64, date string) (M.BucketRanges, error) 
 		}
 
 		bucket.Ranges = append(bucket.Ranges, b)
-		de := fmt.Sprintf(" data to compute buckets lenght :%d , brh:%f, brl:%f, h:%f,l:%f", len(scoresWithoutZeros), M.BUCKETRANGES[idx-1], M.BUCKETRANGES[idx], high, low)
-		log.Info(de)
 	}
+	logCtx.WithField("bucket", bucket).Info("buckets")
 	return bucket, nil
 }
 

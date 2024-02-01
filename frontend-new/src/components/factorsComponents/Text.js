@@ -2,7 +2,6 @@ import React from 'react';
 import classnames from 'classnames';
 import _ from 'lodash';
 import { Typography, Tooltip } from 'antd';
-import truncateURL, { isValidURL } from 'Utils/truncateURL';
 
 const { Title, Paragraph } = Typography;
 
@@ -26,7 +25,7 @@ class Text extends React.Component {
       isUppercase,
       extraClass,
       truncate = false,
-      shouldTruncateURL = false,
+      toolTipTitle,
       charLimit = 30,
       ...otherProps
     } = this.props;
@@ -64,29 +63,23 @@ class Text extends React.Component {
 
     //checks if text truncation and is child is string. ignores if its array.
     const isTextTruncatePossible = truncate && !_.isArray(children);
-    //checks if text is a URL.
-    const isValidURLCheck =
-      shouldTruncateURL && !_.isArray(children) && isValidURL(children);
 
-    const truncatedURLText = isValidURLCheck ? truncateURL(children) : '';
-    const isOverFlow = isValidURLCheck
-      ? truncatedURLText?.length > charLimit
-      : children?.length > charLimit;
+    const isOverFlow = children?.length > charLimit;
 
-    let truncatedText = children || '';
-    if (isValidURLCheck) {
-      truncatedText = truncatedURLText;
-    }
+    let truncatedText = children;
 
     if (isTextTruncatePossible && isOverFlow) {
-      truncatedText = `${truncatedText.slice(0, charLimit)}${'...'}`;
+      truncatedText = `${children.slice(0, charLimit)}${'...'}`;
     }
 
     if (type === textType.title) {
       const sizeValue = isSizeDefined > 4 ? 4 : isSizeDefined;
-      if ((isTextTruncatePossible && isOverFlow) || isValidURLCheck) {
+      if ((isTextTruncatePossible && isOverFlow) || toolTipTitle) {
         return (
-          <Tooltip placement={'top'} title={children}>
+          <Tooltip
+            placement={'top'}
+            title={toolTipTitle ? toolTipTitle : children}
+          >
             <Title
               level={sizeValue}
               {...otherProps}

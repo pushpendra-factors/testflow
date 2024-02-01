@@ -38,7 +38,8 @@ type Model interface {
 	UpdateAgentPassword(uuid, plainTextPassword string, passUpdatedAt time.Time) int
 	UpdateAgentLastLoginInfo(agentUUID string, ts time.Time) int
 	UpdateAgentInformation(agentUUID, firstName, lastName, phone string, isOnboardingFlowSeen *bool, isFormFilled *bool) int
-	UpdateAgentVerificationDetails(agentUUID, password, firstName, lastName string, verified bool, passUpdatedAt time.Time) int
+	UpdateAgentVerificationDetails(agentUUID, password, firstName,
+		lastName string, phone string, verified bool, passUpdatedAt time.Time) int
 	UpdateAgentVerificationDetailsFromAuth0(agentUUID, firstName, lastName string, verified bool, value *postgres.Jsonb) int
 	UpdateAgentEmailVerificationDetails(agentUUID string, isVerfied bool) int
 	GetPrimaryAgentOfProject(projectId int64) (uuid string, errCode int)
@@ -250,6 +251,8 @@ type Model interface {
 	//clearbit_provision_account
 	ProvisionClearbitAccount(projectId []int64, emailId []string, domainName []string) map[int64]interface{}
 	ProvisionClearbitAccountForSingleProject(projectId int64, emailId string, domainName string) error
+	IsClearbitAccountProvisioned(projectId int64) (bool, error)
+	ProvisionClearbitAccountByAdminEmailAndDomain(projectId int64) (int, string)
 
 	// event_name
 	CreateOrGetEventName(eventName *model.EventName) (*model.EventName, int)
@@ -349,6 +352,9 @@ type Model interface {
 		imprEventNameID string, clicksEventNameID string) (map[int64]map[string]map[string]bool,
 		map[int64]map[string]map[string]bool, error)
 	AddEventDetailsToCacheWithTime(projectID int64, event *model.Event, isUpdateEventProperty bool, currentTime time.Time)
+	GetLinkedinEventFieldsBasedOnTimestampV1(projectID int64, timestamp int64,
+		imprEventNameID string, clicksEventNameID string) (map[int64]map[string]map[string]string,
+		map[int64]map[string]map[string]string, error)
 
 	// clickable_elements
 	UpsertCountAndCheckEnabledClickableElement(projectID int64, payload *model.CaptureClickPayload) (isEnabled bool, status int, err error)
@@ -445,6 +451,8 @@ type Model interface {
 	DoesAgentHaveProject(agentUUID string) int
 	DeleteProjectAgentMapping(projectID int64, agentUUIDToRemove string) int
 	EditProjectAgentMapping(projectID int64, agentUUIDToEdit string, role int64) int
+	GetProjectAgentLatestAdminEmailByProjectId(projectId int64) (string, int)
+	UpdateChecklistDismissalStatus(projectId int64, agentUUID string, status bool) int
 
 	// project_setting
 	GetProjectSetting(projectID int64) (*model.ProjectSetting, int)
@@ -493,10 +501,14 @@ type Model interface {
 	GetFormFillEnabledProjectIDWithToken() (*map[int64]string, int)
 	GetTimelinesConfig(projectID int64) (model.TimelinesConfig, error)
 	UpdateAccScoreWeights(projectId int64, weights model.AccWeights) error
+	GetEngagementLevelsByProject(projectId int64) (model.BucketRanges, int)
+	UpdateEngagementLevel(projectId int64, buckets model.BucketRanges) error
 	GetSixsignalEmailListFromProjectSetting(projectId int64) (string, int)
 	AddSixsignalEmailList(projectId int64, emailIds string) int
 	GetSegmentMarkerLastRunTime(projectID int64) (time.Time, int)
+	GetMarkerLastForAllAccounts(projectID int64) (time.Time, int)
 	UpdateSegmentMarkerLastRun(projectID int64, lastRunTime time.Time) int
+	UpdateSegmentMarkerLastRunForAllAccounts(projectID int64, lastRunTime time.Time) int
 	GetParagonTokenFromProjectSetting(projectID int64) (string, int, error)
 	GetParagonEnabledProjectsCount(projectID int64) (int64, int, error)
 	AddParagonTokenAndEnablingAgentToProjectSetting(projectID int64, agentID, token string) (int, error)
@@ -661,7 +673,9 @@ type Model interface {
 	GetCustomerUserIdFromUserId(projectID int64, id string) (string, int)
 	AssociateUserDomainsGroup(projectID int64, requestUserID string, requestGroupName, requestGroupUserID string) int
 	GetAssociatedDomainForUser(projectID int64, userID string, isAnonymous bool) (string, error)
-	GetUsersUpdatedAtGivenHour(projectID int64, fromTime time.Time, domainID int) ([]model.User, int)
+	GetUsersAssociatedToDomainList(projectID int64, domainGroupID int, domainID string) ([]model.User, int)
+	GetAllDomainsByProjectID(projectID int64, domainID int) ([]string, int)
+	GetLatestUpatedDomainsByProjectID(projectID int64, domainGroupID int, fromTime time.Time) ([]string, int)
 	UpdateAssociatedSegments(projectID int64, id string, associatedSegments map[string]model.AssociatedSegments) (int, error)
 	GetNonGroupUsersUpdatedAtGivenHour(projectID int64, fromTime time.Time) ([]model.User, int)
 
@@ -984,7 +998,7 @@ type Model interface {
 	GetAllEventTriggerAlertsByProject(projectID int64) ([]model.AlertInfo, int)
 	CreateEventTriggerAlert(userID, oldID string, projectID int64, alertConfig *model.EventTriggerAlertConfig, slackTokenUser, teamTokenUser string, isPausedAlert bool, paragonMetadata *postgres.Jsonb) (*model.EventTriggerAlert, int, string)
 	DeleteEventTriggerAlert(projectID int64, id string) (int, string)
-	MatchEventTriggerAlertWithTrackPayload(projectId int64, name, userID string, eventProps, userProps *postgres.Jsonb, UpdatedEventProps *postgres.Jsonb, isUpdate bool) (*[]model.EventTriggerAlert, *model.EventName, int)
+	MatchEventTriggerAlertWithTrackPayload(projectId int64, name, userID string, eventProps, userProps *postgres.Jsonb, UpdatedEventProps *postgres.Jsonb, isUpdate bool) (*[]model.EventTriggerAlert, *model.EventName, *map[string]interface{}, int)
 	UpdateEventTriggerAlertField(projectID int64, id string, field map[string]interface{}) (int, error)
 	GetEventTriggerAlertByID(id string) (*model.EventTriggerAlert, int)
 	UpdateInternalStatusAndGetAlertIDs(projectID int64) ([]string, int, error)
@@ -1041,6 +1055,8 @@ type Model interface {
 	SetAuthTokenforSlackIntegration(projectID int64, agentUUID string, authTokens model.SlackAccessTokens) error
 	GetSlackAuthToken(projectID int64, agentUUID string) (model.SlackAccessTokens, error)
 	DeleteSlackIntegration(projectID int64, agentUUID string) error
+	GetSlackUsersListFromDb(projectID int64, agentID string) ([]model.SlackMember, int, error)
+	UpdateSlackUsersListForProject(projectID int64, fields map[string]interface{}) (int, error)
 
 	// MS Teams
 	SetAuthTokenforTeamsIntegration(projectID int64, agentUUID string, authTokens model.TeamsAccessTokens) error

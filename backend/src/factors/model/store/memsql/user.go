@@ -57,6 +57,67 @@ func (store *MemSQL) createUserWithError(user *model.User) (*model.User, error) 
 		return nil, errors.New("user source missing")
 	}
 
+	properties := user.Properties
+	// Discourage direct properties update. Update always through
+	// UpdateUserProperties method. Setting empty JSON intentionally,
+	// to keep the assumption of not null of properties after create.
+	user, err := store.createUserWithoutProperties(user)
+	if err != nil {
+		return nil, err
+	}
+
+	user.Properties = properties
+	// adds join timestamp to user properties.
+	newUserProperties := map[string]interface{}{
+		U.UP_JOIN_TIME: user.JoinTimestamp,
+	}
+
+	if user.CustomerUserId != "" {
+		identityProperties, err := model.GetIdentifiedUserProperties(user.CustomerUserId)
+		if err != nil {
+			return nil, errors.New("failed to get identity properties")
+		}
+
+		// add identity properties to new properties.
+		for k, v := range identityProperties {
+			newUserProperties[k] = v
+		}
+	}
+
+	// removing U.UP_SESSION_COUNT, from user properties.
+	delete(newUserProperties, U.UP_SESSION_COUNT)
+
+	newUserPropertiesJsonb, err := U.AddToPostgresJsonb(&user.Properties, newUserProperties, true)
+	if err != nil {
+		return nil, err
+	}
+
+	updatedProperties, errCode := store.UpdateUserProperties(user.ProjectId, user.ID, newUserPropertiesJsonb, user.JoinTimestamp)
+	if errCode == http.StatusInternalServerError {
+		return nil, errors.New("failed to update user properties")
+	}
+
+	if updatedProperties != nil {
+		user.Properties = *updatedProperties
+	}
+
+	return user, nil
+}
+
+func (store *MemSQL) createUserWithoutProperties(user *model.User) (*model.User, error) {
+	logFields := log.Fields{
+		"user": user,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	if user.ProjectId == 0 {
+		return nil, errors.New("invalid project_id")
+	}
+
+	if user.Source == nil {
+		return nil, errors.New("user source missing")
+	}
+
 	allProjects, projectIDsMap, _ := C.GetProjectsFromListWithAllProjectSupport(C.GetConfig().CaptureSourceInUsersTable, "")
 	if !allProjects && !projectIDsMap[user.ProjectId] {
 		user.Source = nil
@@ -80,41 +141,19 @@ func (store *MemSQL) createUserWithError(user *model.User) (*model.User, error) 
 		user.PropertiesUpdatedTimestamp = user.JoinTimestamp
 	}
 
-	if user.IsGroupUser != nil && *user.IsGroupUser {
+	// update last_event_at only for group_users
+	if user.IsGroupUser != nil && *user.IsGroupUser &&
+		user.Source != nil && *user.Source != model.UserSourceDomains {
 		lastEventAt := time.Unix(user.PropertiesUpdatedTimestamp, 0)
 		user.LastEventAt = &lastEventAt
-	} else {
-		user.LastEventAt = nil
-	}
-
-	// adds join timestamp to user properties.
-	newUserProperties := map[string]interface{}{
-		U.UP_JOIN_TIME: user.JoinTimestamp,
 	}
 
 	// Add identification properties, if available.
 	// Prioritize identity properties if customer_user_id is provided
 	if user.CustomerUserId != "" {
-		identityProperties, err := model.GetIdentifiedUserProperties(user.CustomerUserId)
-		if err != nil {
-			return nil, errors.New("failed to get identity properties")
-		}
-
-		// add identity properties to new properties.
-		for k, v := range identityProperties {
-			newUserProperties[k] = v
-		}
 		if C.AllowIdentificationOverwriteUsingSource(user.ProjectId) {
 			user.CustomerUserIdSource = user.Source
 		}
-	}
-
-	// removing U.UP_SESSION_COUNT, from user properties.
-	delete(newUserProperties, U.UP_SESSION_COUNT)
-
-	newUserPropertiesJsonb, err := U.AddToPostgresJsonb(&user.Properties, newUserProperties, true)
-	if err != nil {
-		return nil, err
 	}
 
 	// Discourage direct properties update. Update always through
@@ -126,16 +165,45 @@ func (store *MemSQL) createUserWithError(user *model.User) (*model.User, error) 
 		return nil, err
 	}
 
-	properties, errCode := store.UpdateUserProperties(user.ProjectId, user.ID, newUserPropertiesJsonb, user.JoinTimestamp)
-	if errCode == http.StatusInternalServerError {
-		return nil, errors.New("failed to update user properties")
-	}
-
-	if properties != nil {
-		user.Properties = *properties
-	}
-
 	return user, nil
+}
+
+func (store *MemSQL) createDomainUserWithError(domainName string, user *model.User) (*model.User, error) {
+
+	logFields := log.Fields{
+		"user": user,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+
+	if user.ProjectId == 0 {
+		logCtx.Error("Failed to create domain user. ProjectId not provided.")
+		return nil, errors.New("invalid project_id")
+	}
+
+	if user.Source == nil {
+		logCtx.Error("Failed to create domain user. User source not provided.")
+		return nil, errors.New("user source missing")
+	}
+
+	properties, err := U.DecodePostgresJsonb(&user.Properties)
+	if err != nil {
+		return nil, err
+	}
+
+	user, err = store.createUserWithoutProperties(user)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = store.CreateOrUpdateGroupPropertiesBySource(user.ProjectId, model.GROUP_NAME_DOMAINS, domainName, user.ID,
+		properties, user.JoinTimestamp, user.PropertiesUpdatedTimestamp, model.UserSourceDomainsString)
+	if err != nil {
+		return nil, err
+	}
+
+	return user, err
 }
 
 func (store *MemSQL) CreateUser(user *model.User) (string, int) {
@@ -180,6 +248,39 @@ func (store *MemSQL) createUserWithConflicts(user *model.User, ignoreConflicts b
 
 	logCtx.WithError(err).Error("Failed to create user.")
 	return "", http.StatusInternalServerError
+}
+
+func (store *MemSQL) createDomainUserWithConflicts(domainName string, user *model.User, ignoreConflicts bool) (string, int) {
+	logFields := log.Fields{
+		"user": user,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	newUser, err := store.createDomainUserWithError(domainName, user)
+	if err == nil {
+		return newUser.ID, http.StatusCreated
+	}
+
+	if IsDuplicateRecordError(err) {
+		if user.ID != "" {
+			// Multiple requests trying to create user at the
+			// same time should not lead failure permanently,
+			// so get the user and return.
+			if ignoreConflicts {
+				return user.ID, http.StatusCreated
+			} else {
+				return user.ID, http.StatusConflict
+			}
+		}
+
+		logCtx.WithError(err).Error("Failed to create domain user. Integrity violation.")
+		return "", http.StatusNotAcceptable
+	}
+
+	logCtx.WithError(err).Error("Failed to create domain user.")
+	return "", http.StatusInternalServerError
+
 }
 
 // UpdateUser updates user fields by Id.
@@ -340,17 +441,15 @@ func (store *MemSQL) GetUsers(projectId int64, offset uint64, limit uint64) ([]m
 	return users, http.StatusFound
 }
 
-// get all users where updated in last x hours
-func (store *MemSQL) GetUsersUpdatedAtGivenHour(projectID int64, fromTime time.Time, domainID int) ([]model.User, int) {
+// get all users assocuated to given domains
+func (store *MemSQL) GetUsersAssociatedToDomainList(projectID int64, domainGroupID int, domID string) ([]model.User, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"from_time":  fromTime,
+		"dom_id":     domID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	var users []model.User
-	fromTimeString := model.FormatTimeToString(fromTime)
-	queryParams := []interface{}{projectID, model.UserSourceDomains, projectID, model.UserSourceDomains, fromTimeString}
 
 	query := fmt.Sprintf(`SELECT 
 	id, 
@@ -358,56 +457,124 @@ func (store *MemSQL) GetUsersUpdatedAtGivenHour(projectID int64, fromTime time.T
 	properties, 
 	is_group_user, 
 	source, 
-	updated_at,
-	last_event_at 
+	updated_at, 
+	last_event_at
   FROM 
-	(
-	  SELECT 
-		id, 
-		group_%d_user_id, 
-		properties, 
-		is_group_user, 
-		source, 
-		updated_at, 
-		last_event_at,
-		ROW_NUMBER() OVER (
-		  PARTITION BY group_%d_user_id 
-		  ORDER BY 
-			updated_at DESC
-		) AS row_num 
-	  FROM 
-		users 
-	  WHERE 
-		project_id = ? 
-		AND source != ? 
-		AND group_%d_user_id IN (
-		  SELECT 
-			DISTINCT(group_%d_user_id) 
-		  FROM 
-			users 
-		  WHERE 
-			project_id = ? 
-			AND source != ? 
-			AND last_event_at IS NOT NULL
-			AND last_event_at >= ? 
-			AND group_%d_user_id IS NOT NULL 
-		  LIMIT 
-			100000
-		)
-		LIMIT 250000
-	) 
+	users 
   WHERE 
-	row_num <= 100;`, domainID, domainID, domainID, domainID, domainID, domainID)
+	project_id = ? 
+	AND source != ? 
+	AND last_event_at is not null 
+	AND group_%d_user_id = ?
+	LIMIT 100;`, domainGroupID, domainGroupID)
 
 	db := C.GetServices().Db
-	err := db.Raw(query, queryParams...).Scan(&users).Error
+	err := db.Raw(query, projectID, model.UserSourceDomains, domID).Scan(&users).Error
 	if err != nil {
 		return []model.User{}, http.StatusInternalServerError
 	}
 	if len(users) == 0 {
 		return []model.User{}, http.StatusNotFound
 	}
+
+	if len(users) == 100 {
+		log.WithFields(logFields).Warn("No.of users at max threshold.")
+	}
+
 	return users, http.StatusFound
+}
+
+// get all domains to run marker for
+func (store *MemSQL) GetAllDomainsByProjectID(projectID int64, domainGroupID int) ([]string, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"domain_id":  domainGroupID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	var domainIDs []string
+	queryParams := []interface{}{projectID, model.UserSourceDomains}
+
+	query := fmt.Sprintf(`SELECT 
+	id 
+  FROM 
+	users 
+  WHERE 
+	project_id = ? 
+	AND source = ? 
+	AND is_group_user = 1 
+	AND group_%d_id IS NOT NULL
+  LIMIT 
+	2000000;`, domainGroupID)
+
+	db := C.GetServices().Db
+	rows, err := db.Raw(query, queryParams...).Rows()
+	if err != nil {
+		return []string{}, http.StatusInternalServerError
+	}
+
+	for rows.Next() {
+		var id string
+		err = rows.Scan(&id)
+		if err != nil {
+			return []string{}, http.StatusInternalServerError
+		}
+		domainIDs = append(domainIDs, id)
+	}
+
+	if len(domainIDs) == 0 {
+		return []string{}, http.StatusNotFound
+	}
+
+	return domainIDs, http.StatusFound
+}
+
+// get all domains to run marker for in time range
+func (store *MemSQL) GetLatestUpatedDomainsByProjectID(projectID int64, domainGroupID int, fromTime time.Time) ([]string, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"domain_id":  domainGroupID,
+		"from_time":  fromTime,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	domainIDs := make([]string, 0)
+	fromTimeString := model.FormatTimeToString(fromTime)
+	queryParams := []interface{}{projectID, model.UserSourceDomains, fromTimeString}
+
+	query := fmt.Sprintf(`SELECT 
+	group_%d_user_id
+  FROM 
+	users 
+  WHERE 
+	project_id = ? 
+	AND source != ? 
+	AND last_event_at > ?
+	AND group_%d_user_id IS NOT NULL
+  GROUP BY group_%d_user_id
+  LIMIT 
+	2000000;`, domainGroupID, domainGroupID, domainGroupID)
+
+	db := C.GetServices().Db
+	rows, err := db.Raw(query, queryParams...).Rows()
+	if err != nil {
+		return []string{}, http.StatusInternalServerError
+	}
+
+	for rows.Next() {
+		var id string
+		err = rows.Scan(&id)
+		if err != nil {
+			return []string{}, http.StatusInternalServerError
+		}
+		domainIDs = append(domainIDs, id)
+	}
+
+	if len(domainIDs) == 0 {
+		return []string{}, http.StatusNotFound
+	}
+
+	return domainIDs, http.StatusFound
 }
 
 // get all non group users where updated in last x hours
@@ -449,7 +616,7 @@ func (store *MemSQL) GetNonGroupUsersUpdatedAtGivenHour(projectID int64, fromTim
 	if len(users) == 0 {
 		return []model.User{}, http.StatusNotFound
 	}
-	return users, http.StatusFound
+	return users, http.StatusOK
 }
 
 // GetUsersByCustomerUserID Gets all the users dentified by given customer_user_id with a limit.
@@ -2872,6 +3039,10 @@ func (store *MemSQL) createGroupUserWithConflicts(user *model.User, groupName, g
 		}
 	} else {
 		logCtx.Warning("Skip associating group_id")
+	}
+
+	if groupName == model.GROUP_NAME_DOMAINS {
+		return store.createDomainUserWithConflicts(groupID, groupUser, ignoreConflicts)
 	}
 
 	return store.createUserWithConflicts(groupUser, ignoreConflicts)

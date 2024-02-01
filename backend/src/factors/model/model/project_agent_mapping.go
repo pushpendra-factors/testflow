@@ -12,8 +12,8 @@ type ProjectAgentMapping struct {
 	// agent_uuid -> agents(uuid)
 	// invited_by -> agents(uuid)
 
-	Role uint64 `json:"role"`
-
+	Role               uint64 `json:"role"`
+	ChecklistDismissed bool   `json:"checklist_dismissed"`
 	// Created as pointer to allow storing NULL in db
 	InvitedBy *string `gorm:"type:varchar(255)" json:"invited_by"`
 
@@ -31,7 +31,8 @@ type ProjectAgentMappingString struct {
 	// agent_uuid -> agents(uuid)
 	// invited_by -> agents(uuid)
 
-	Role uint64 `json:"role"`
+	Role               uint64 `json:"role"`
+	ChecklistDismissed bool   `json:"checklist_dismissed"`
 
 	// Created as pointer to allow storing NULL in db
 	InvitedBy *string `gorm:"type:varchar(255)" json:"invited_by"`

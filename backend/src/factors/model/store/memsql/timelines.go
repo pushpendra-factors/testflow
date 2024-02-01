@@ -629,6 +629,8 @@ func BuildSpecialFilter(projectID int64, negativeFilters []model.QueryProperty, 
 			filter.Operator = model.NotEqualOpStr
 		} else if filter.Operator == model.ContainsOpStr && filter.Value == model.PropertyValueNone {
 			filter.Operator = model.NotContainsOpStr
+		} else if filter.Operator == model.NotInList && filter.Value != model.PropertyValueNone {
+			filter.Operator = model.InList
 		}
 		filter.LogicalOp = "OR"
 		negatedFilters = append(negatedFilters, filter)
@@ -1107,7 +1109,7 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profile
 			if groupFilterExists && filterExists {
 				// check for property
 				for _, filter := range filterArr {
-					isFound := CheckPropertyOfGivenType(filter, propertiesDecoded)
+					isFound := CheckPropertyOfGivenType(projectID, filter, propertiesDecoded)
 					if isFound {
 						domainsIDPropsMap[userDetail.ID][tablePropName] = (*propertiesDecoded)[tablePropName]
 						break

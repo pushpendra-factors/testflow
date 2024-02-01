@@ -18,7 +18,7 @@ import FaSelect from 'Components/GenericComponents/FaSelect';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import { selectedOptionsMapper } from 'Components/GenericComponents/FaSelect/utils';
 import { processProperties } from 'Utils/dataFormatter';
-// import truncateURL from 'Utils/truncateURL';
+import truncateURL from 'Utils/truncateURL';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
@@ -74,6 +74,8 @@ const FAFilterSelect = ({
   const { userPropNames, eventPropNames, groupPropNames } = useSelector(
     (state) => state.coreQuery
   );
+  const { projectDomainsList } = useSelector((state) => state.global);
+
   useEffect(() => {
     if (filter) {
       const prop =
@@ -687,10 +689,10 @@ const FAFilterSelect = ({
                 {valuesState && valuesState.length
                   ? valuesState
                       .map((vl) =>
-                        // truncateURL(
-                        //   valueDisplayNames[vl] ? valueDisplayNames[vl] : vl
-                        // )
-                        valueDisplayNames[vl] ? valueDisplayNames[vl] : vl
+                        truncateURL(
+                          valueDisplayNames[vl] ? valueDisplayNames[vl] : vl,
+                          projectDomainsList
+                        )
                       )
                       .join(', ')
                   : 'Select Values'}

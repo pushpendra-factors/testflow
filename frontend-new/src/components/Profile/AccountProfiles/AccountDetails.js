@@ -1,80 +1,73 @@
 import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import { Button, Dropdown, Menu, notification, Popover, Tabs } from 'antd';
-import styles from './index.module.scss';
 import { bindActionCreators } from 'redux';
-import { connect, useDispatch, useSelector } from 'react-redux';
-import { Text, SVG } from '../../factorsComponents';
-import AccountTimelineBirdView from './AccountTimelineBirdView';
+import { connect, useSelector } from 'react-redux';
 import useKey from 'hooks/useKey';
-import {
-  DEFAULT_TIMELINE_CONFIG,
-  getHost,
-  getPropType,
-  granularityOptions,
-  hoverEvents,
-  TIMELINE_VIEW_OPTIONS
-} from '../utils';
 import { insertUrlParam } from 'Utils/global';
-import {
-  udpateProjectSettings,
-  fetchProjectSettings
-} from '../../../reducers/global';
-import {
-  getAccountOverview,
-  getProfileAccountDetails
-} from '../../../reducers/timelines/middleware';
-import {
-  addEnabledFlagToActivities,
-  formatUserPropertiesToCheckList
-} from '../../../reducers/timelines/utils';
-import SearchCheckList from '../../SearchCheckList';
-import LeftPanePropBlock from '../MyComponents/LeftPanePropBlock';
 import {
   PropTextFormat,
   convertGroupedPropertiesToUngrouped,
   processProperties
 } from 'Utils/dataFormatter';
-import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
 import { useHistory, useLocation } from 'react-router-dom';
-import { PathUrls } from '../../../routes/pathUrls';
-import UpgradeModal from '../UpgradeModal';
 import { FEATURES, PLANS, PLANS_V0 } from 'Constants/plans.constants';
 import {
   getGroupProperties,
-  getEventPropertiesV2
+  getEventPropertiesV2,
+  getGroups
 } from 'Reducers/coreQuery/middleware';
-import AccountOverview from './AccountOverview';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
-import { featureLock } from '../../../routes/feature';
 import getGroupIcon from 'Utils/getGroupIcon';
 import useFeatureLock from 'hooks/useFeatureLock';
-import { getGroups } from 'Reducers/coreQuery/middleware';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
-import { ArrowLeftOutlined } from '@ant-design/icons';
+import logger from 'Utils/logger';
+import { isValidURL } from 'Utils/checkValidURL';
+import { featureLock } from '../../../routes/feature';
+import AccountOverview from './AccountOverview';
+import UpgradeModal from '../UpgradeModal';
+import { PathUrls } from '../../../routes/pathUrls';
+import LeftPanePropBlock from '../MyComponents/LeftPanePropBlock';
+import SearchCheckList from '../../SearchCheckList';
+import {
+  addEnabledFlagToActivities,
+  formatUserPropertiesToCheckList
+} from '../../../reducers/timelines/utils';
+import {
+  getAccountOverview,
+  getProfileAccountDetails
+} from '../../../reducers/timelines/middleware';
+import { udpateProjectSettings } from '../../../reducers/global';
+import { getHost, getPropType } from '../utils';
+import AccountTimelineBirdView from './AccountTimelineBirdView';
+import { Text, SVG } from '../../factorsComponents';
+import styles from './index.module.scss';
 import AccountTimelineTableView from './AccountTimelineTableView';
-import { isValidURL } from 'Utils/truncateURL';
+import {
+  DEFAULT_TIMELINE_CONFIG,
+  GranularityOptions,
+  TIMELINE_VIEW_OPTIONS
+} from '../constants';
 
 function AccountDetails({
-  accounts,
   accountDetails,
   accountOverview,
   activeProject,
-  getGroups,
   groups,
+  getGroups,
+  groupProperties,
   getGroupProperties,
   currentProjectSettings,
-  fetchProjectSettings,
   udpateProjectSettings,
   getProfileAccountDetails,
   getAccountOverview,
   userPropertiesV2,
-  groupProperties,
-  eventNamesMap,
   eventPropertiesV2,
-  getEventPropertiesV2
+  getEventPropertiesV2,
+  eventNamesMap
 }) {
-  const dispatch = useDispatch();
+  const { TabPane } = Tabs;
+
   const history = useHistory();
   const location = useLocation();
   const [granularity, setGranularity] = useState('Daily');
@@ -86,7 +79,6 @@ function AccountDetails({
   const [filterProperties, setFilterProperties] = useState([]);
   const [propSelectOpen, setPropSelectOpen] = useState(false);
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
-  const { TabPane } = Tabs;
   const [timelineViewMode, setTimelineViewMode] = useState('birdview');
   const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
   const [openPopover, setOpenPopover] = useState(false);
@@ -108,12 +100,6 @@ function AccountDetails({
   const agentState = useSelector((state) => state.agent);
   const activeAgent = agentState?.agent_details?.email;
 
-  useEffect(() => {
-    if (featureLock(activeAgent)) {
-      setTimelineViewMode('overview');
-    }
-  }, [activeAgent]);
-
   const uniqueEventNames = useMemo(() => {
     const accountEvents = accountDetails.data?.account_events || [];
 
@@ -126,7 +112,7 @@ function AccountDetails({
       .map((event) => event.event_name);
 
     const pageViewEvent = accountEvents.find(
-      (event) => event?.properties?.['$is_page_view']
+      (event) => event?.properties?.$is_page_view
     );
 
     if (pageViewEvent) {
@@ -136,118 +122,146 @@ function AccountDetails({
     return Array.from(new Set(eventsArray));
   }, [accountDetails.data?.account_events]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const promises = uniqueEventNames.map(async (eventName) => {
-        if (!requestedEvents[eventName]) {
-          setRequestedEvents((prevRequestedEvents) => ({
-            ...prevRequestedEvents,
-            [eventName]: true
-          }));
-          if (!eventPropertiesV2[eventName])
-            await getEventPropertiesV2(activeProject?.id, eventName);
-        }
-      });
+  const fetchEventPropertiesWithType = async () => {
+    const promises = uniqueEventNames.map(async (eventName) => {
+      if (!requestedEvents[eventName]) {
+        setRequestedEvents((prevRequestedEvents) => ({
+          ...prevRequestedEvents,
+          [eventName]: true
+        }));
+        if (!eventPropertiesV2[eventName])
+          await getEventPropertiesV2(activeProject?.id, eventName);
+      }
+    });
 
-      await Promise.all(promises);
+    await Promise.allSettled(promises);
 
-      const typeMap = {};
-      Object.values(eventPropertiesV2).forEach((propertyGroup) => {
-        Object.values(propertyGroup || {}).forEach((arr) => {
-          arr.forEach((property) => {
-            typeMap[property[1]] = property[2];
-          });
+    const typeMap = {};
+    Object.values(eventPropertiesV2).forEach((propertyGroup) => {
+      Object.values(propertyGroup || {}).forEach((arr) => {
+        arr.forEach((property) => {
+          const [_, propName, category] = property;
+          typeMap[propName] = category;
         });
       });
-      setEventPropertiesType(typeMap);
-    };
+    });
+    setEventPropertiesType(typeMap);
+  };
 
-    fetchData();
+  useEffect(() => {
+    fetchEventPropertiesWithType();
   }, [uniqueEventNames, requestedEvents, activeProject?.id, eventPropertiesV2]);
 
   const titleIcon = useMemo(() => {
-    if (Boolean(location?.state?.activeSegment?.id)) {
-      return defaultSegmentIconsMapping[location?.state?.activeSegment?.name]
-        ? defaultSegmentIconsMapping[location?.state?.activeSegment?.name]
+    if (location?.state?.accountPayload?.segment?.id) {
+      return defaultSegmentIconsMapping[
+        location?.state?.accountPayload?.segment?.name
+      ]
+        ? defaultSegmentIconsMapping[
+            location?.state?.accountPayload?.segment?.name
+          ]
         : 'pieChart';
     }
     return 'buildings';
   }, [location]);
 
   const pageTitle = useMemo(() => {
-    if (location?.state?.activeSegment?.name) {
-      return location?.state?.activeSegment?.name;
+    if (location?.state?.accountPayload?.segment?.name) {
+      return location?.state?.accountPayload?.segment?.name;
     }
     return 'All Accounts';
   }, [location]);
 
-  useEffect(() => {
-    if (!groups || Object.keys(groups).length === 0) {
-      getGroups(activeProject?.id);
-    }
-  }, [activeProject?.id, groups]);
-
-  useEffect(() => {
-    return () => {
-      setGranularity('Daily');
-      setCollapseAll(true);
-      setPropSelectOpen(false);
-    };
-  }, []);
-
-  const [activeId, activeGroup, activeView] = useMemo(() => {
+  const [activeId, activeView] = useMemo(() => {
     const urlSearchParams = new URLSearchParams(location.search);
     const params = Object.fromEntries(urlSearchParams.entries());
     const id = atob(location.pathname.split('/').pop());
-    const group = params.group ? params.group : GROUP_NAME_DOMAINS;
-    const view = params.view ? params.view : timelineViewMode;
+    const view = params.view || timelineViewMode;
     document.title = 'Accounts - FactorsAI';
-    return [id, group, view];
+    return [id, view];
   }, [location, timelineViewMode]);
 
+  useEffect(
+    () => () => {
+      setGranularity('Daily');
+      setCollapseAll(true);
+      setPropSelectOpen(false);
+    },
+    []
+  );
+
   useEffect(() => {
-    if (activeId && activeId !== '')
-      getProfileAccountDetails(
-        activeProject.id,
-        activeId,
-        activeGroup,
-        currentProjectSettings?.timelines_config
-      );
-    if (activeView && TIMELINE_VIEW_OPTIONS.includes(activeView)) {
-      setTimelineViewMode(activeView);
+    if (featureLock(activeAgent)) {
+      setTimelineViewMode('overview');
     }
+  }, [activeAgent]);
+
+  const fetchGroups = async () => {
+    if (!groups || Object.keys(groups).length === 0) {
+      await getGroups(activeProject?.id);
+    }
+  };
+
+  useEffect(() => {
+    fetchGroups();
+  }, [activeProject?.id, groups]);
+
+  const getAccountDetails = async () => {
+    await getProfileAccountDetails(
+      activeProject.id,
+      activeId,
+      GROUP_NAME_DOMAINS,
+      currentProjectSettings.timelines_config
+    );
+  };
+
+  useEffect(() => {
+    const shouldGetDetails =
+      activeProject?.id &&
+      activeId &&
+      activeId !== '' &&
+      currentProjectSettings?.timelines_config;
+
+    const updateTimelineViewMode = () => {
+      if (activeView && TIMELINE_VIEW_OPTIONS.includes(activeView)) {
+        setTimelineViewMode(activeView);
+      }
+    };
+
+    if (shouldGetDetails) {
+      getAccountDetails();
+    }
+    updateTimelineViewMode();
   }, [
     activeProject.id,
     activeId,
-    activeGroup,
     activeView,
     currentProjectSettings?.timelines_config
   ]);
 
   useEffect(() => {
-    const listDatetimeProperties = listProperties.filter(
-      (item) => item[2] === 'datetime'
-    );
-    const propsWithEnableKey = formatUserPropertiesToCheckList(
-      listDatetimeProperties,
-      currentProjectSettings.timelines_config?.account_config?.milestones
-    );
-    setCheckListMilestones(propsWithEnableKey);
-  }, [currentProjectSettings, listProperties]);
+    if (
+      timelineViewMode === 'overview' &&
+      activeId !== accountOverview?.data?.id
+    ) {
+      getAccountOverview(activeProject.id, GROUP_NAME_DOMAINS, activeId);
+    }
+  }, [timelineViewMode, activeId]);
 
   useEffect(() => {
     if (currentProjectSettings?.timelines_config) {
-      const timelinesConfig = {};
-      timelinesConfig.disabled_events = [
-        ...currentProjectSettings?.timelines_config?.disabled_events
-      ];
-      timelinesConfig.user_config = {
-        ...DEFAULT_TIMELINE_CONFIG.user_config,
-        ...currentProjectSettings?.timelines_config?.user_config
-      };
-      timelinesConfig.account_config = {
-        ...DEFAULT_TIMELINE_CONFIG.account_config,
-        ...currentProjectSettings?.timelines_config?.account_config
+      const {
+        disabled_events = [],
+        user_config = {},
+        account_config = {}
+      } = currentProjectSettings.timelines_config;
+      const timelinesConfig = {
+        disabled_events: [...disabled_events],
+        user_config: { ...DEFAULT_TIMELINE_CONFIG.user_config, ...user_config },
+        account_config: {
+          ...DEFAULT_TIMELINE_CONFIG.account_config,
+          ...account_config
+        }
       };
       setTLConfig(timelinesConfig);
     }
@@ -261,23 +275,33 @@ function AccountDetails({
     setActivities(listActivities);
   }, [currentProjectSettings, accountDetails]);
 
+  const fetchGroupProperties = async () => {
+    const missingGroups = Object.keys(groups?.account_groups || {}).filter(
+      (group) => !groupProperties[group]
+    );
+
+    if (missingGroups.length > 0) {
+      await Promise.allSettled(
+        missingGroups.forEach((group) =>
+          getGroupProperties(activeProject?.id, group)
+        )
+      );
+    }
+  };
+
   useEffect(() => {
-    Object.keys(groups?.account_groups || {}).forEach((group) => {
-      if (!groupProperties[group]) {
-        getGroupProperties(activeProject?.id, group);
-      }
-    });
-  }, [activeProject.id, groups]);
+    fetchGroupProperties();
+  }, [activeProject?.id, groups, groupProperties]);
 
   useEffect(() => {
     const mergedProps = [];
     const filterProps = {};
 
-    for (const group of Object.keys(groups?.account_groups || {})) {
+    Object.keys(groups?.account_groups || {}).forEach((group) => {
       const values = groupProperties?.[group] || [];
       mergedProps.push(...values);
       filterProps[group] = values;
-    }
+    });
 
     const groupProps = Object.entries(filterProps)
       .map(([group, values]) => ({
@@ -296,6 +320,17 @@ function AccountDetails({
   }, [groupProperties, groups]);
 
   useEffect(() => {
+    const listDatetimeProperties = listProperties.filter(
+      (item) => item[2] === 'datetime'
+    );
+    const propsWithEnableKey = formatUserPropertiesToCheckList(
+      listDatetimeProperties,
+      currentProjectSettings.timelines_config?.account_config?.milestones
+    );
+    setCheckListMilestones(propsWithEnableKey);
+  }, [currentProjectSettings, listProperties]);
+
+  useEffect(() => {
     const userPropertiesModified = [];
     if (userPropertiesV2) {
       convertGroupedPropertiesToUngrouped(
@@ -310,41 +345,63 @@ function AccountDetails({
     setCheckListUserProps(userPropsWithEnableKey);
   }, [currentProjectSettings, userPropertiesV2]);
 
-  const handlePropChange = (option) => {
-    if (
-      option.prop_name !==
-      currentProjectSettings.timelines_config.account_config.user_prop
-    ) {
-      const timelinesConfig = { ...currentProjectSettings.timelines_config };
-      timelinesConfig.account_config.user_prop = option.prop_name;
-      udpateProjectSettings(activeProject.id, {
-        timelines_config: { ...timelinesConfig }
-      }).then(() =>
-        getProfileAccountDetails(
-          activeProject.id,
-          activeId,
-          activeGroup,
-          currentProjectSettings?.timelines_config
-        )
-      );
+  const handleOptionBackClick = useCallback(() => {
+    history.replace(PathUrls.ProfileAccounts, {
+      fromDetails: true,
+      accountPayload: location.state?.accountPayload,
+      currentPage: location.state?.currentPage,
+      currentPageSize: location.state?.currentPageSize,
+      activeSorter: location.state?.activeSorter,
+      appliedFilters: location.state?.appliedFilters,
+      accountsTableRow: location.state?.accountsTableRow
+    });
+  }, []);
+
+  const handleEventsChange = async (option) => {
+    const { timelines_config } = currentProjectSettings;
+    const { display_name, enabled } = option;
+    const disabledEvents = [...timelines_config.disabled_events];
+
+    if (enabled) {
+      disabledEvents.push(display_name);
+    } else {
+      const indexToRemove = disabledEvents.indexOf(display_name);
+      if (indexToRemove !== -1) {
+        disabledEvents.splice(indexToRemove, 1);
+      }
     }
-    handleOpenPopoverChange(false);
+
+    const updatedTimelinesConfig = {
+      ...timelines_config,
+      disabled_events: disabledEvents
+    };
+    setOpenPopover(false);
+    await udpateProjectSettings(activeProject.id, {
+      timelines_config: updatedTimelinesConfig
+    });
   };
 
-  const handleEventsChange = (option) => {
-    const timelinesConfig = { ...currentProjectSettings.timelines_config };
-    if (option.enabled) {
-      timelinesConfig.disabled_events.push(option.display_name);
-    } else if (!option.enabled) {
-      timelinesConfig.disabled_events.splice(
-        timelinesConfig.disabled_events.indexOf(option.display_name),
-        1
-      );
+  const handlePropChange = async (option) => {
+    const { timelines_config } = currentProjectSettings;
+
+    if (option.prop_name !== timelines_config.account_config.user_prop) {
+      const updatedTimelinesConfig = {
+        ...timelines_config,
+        account_config: {
+          ...timelines_config.account_config,
+          user_prop: option.prop_name
+        }
+      };
+
+      try {
+        setOpenPopover(false);
+        await udpateProjectSettings(activeProject.id, {
+          timelines_config: updatedTimelinesConfig
+        });
+      } catch (error) {
+        logger(error);
+      }
     }
-    udpateProjectSettings(activeProject.id, {
-      timelines_config: { ...timelinesConfig }
-    });
-    handleOpenPopoverChange(false);
   };
 
   const handleMilestonesChange = (option) => {
@@ -367,25 +424,30 @@ function AccountDetails({
     }
   };
 
-  const applyMilestones = () => {
-    const timelinesConfig = { ...tlConfig };
-    timelinesConfig.account_config.milestones = checkListMilestones
+  const applyMilestones = async () => {
+    const { account_config } = tlConfig;
+    const selectedMilestones = checkListMilestones
       .filter((item) => item.enabled === true)
       .map((item) => item?.prop_name);
-    udpateProjectSettings(activeProject.id, {
-      timelines_config: { ...timelinesConfig }
-    }).then(() =>
-      getProfileAccountDetails(
-        activeProject.id,
-        activeId,
-        activeGroup,
-        currentProjectSettings?.timelines_config
-      )
-    );
-    handleOpenPopoverChange(false);
+
+    const updatedTimelinesConfig = {
+      ...tlConfig,
+      account_config: {
+        ...account_config,
+        milestones: selectedMilestones
+      }
+    };
+    try {
+      setOpenPopover(false);
+      await udpateProjectSettings(activeProject.id, {
+        timelines_config: updatedTimelinesConfig
+      });
+    } catch (error) {
+      logger(error);
+    }
   };
 
-  const controlsPopover = () => (
+  const controlsPopoverContent = (
     <Tabs defaultActiveKey='events' size='small'>
       <TabPane
         tab={<span className='fa-activity-filter--tabname'>Events</span>}
@@ -430,7 +492,7 @@ function AccountDetails({
 
   const granularityMenu = (
     <Menu>
-      {granularityOptions.map((option) => (
+      {GranularityOptions.map((option) => (
         <Menu.Item key={option} onClick={(key) => setGranularity(key.key)}>
           <div className='flex items-center'>
             <span className='mr-3'>{option}</span>
@@ -439,52 +501,6 @@ function AccountDetails({
       ))}
     </Menu>
   );
-
-  const handleOptionClick = (option, group) => {
-    const timelinesConfig = { ...tlConfig };
-    if (!timelinesConfig.account_config.table_props) {
-      timelinesConfig.account_config.table_props = [];
-    }
-
-    if (!timelinesConfig.account_config.table_props.includes(option?.value)) {
-      timelinesConfig.account_config.table_props.push(option?.value);
-      udpateProjectSettings(activeProject.id, {
-        timelines_config: { ...timelinesConfig }
-      }).then(() =>
-        getProfileAccountDetails(
-          activeProject.id,
-          activeId,
-          activeGroup,
-          currentProjectSettings?.timelines_config
-        )
-      );
-    }
-    setPropSelectOpen(false);
-  };
-
-  const handleOptionBackClick = useCallback(() => {
-    history.replace(PathUrls.ProfileAccounts, {
-      activeSegment: location.state?.activeSegment,
-      fromDetails: true,
-      accountPayload: location.state?.accountPayload,
-      currentPage: location.state?.currentPage,
-      currentPageSize: location.state?.currentPageSize,
-      activeSorter: location.state?.activeSorter,
-      appliedFilters: location.state?.appliedFilters,
-      accountsTableRow: location.state?.accountsTableRow
-    });
-  }, []);
-
-  const onDelete = (option) => {
-    const timelinesConfig = { ...tlConfig };
-    timelinesConfig.account_config.table_props.splice(
-      timelinesConfig.account_config.table_props.indexOf(option),
-      1
-    );
-    udpateProjectSettings(activeProject.id, {
-      timelines_config: { ...timelinesConfig }
-    });
-  };
 
   const renderModalHeader = () => {
     const accountName = accountDetails?.data?.name;
@@ -509,7 +525,7 @@ function AccountDetails({
           </div>
           {accountName && (
             <Text type='title' level={6} weight='bold' extraClass='m-0'>
-              {'\u00A0/ ' + accountName}
+              {`\u00A0/ ${accountName}`}
             </Text>
           )}
         </div>
@@ -520,13 +536,45 @@ function AccountDetails({
     );
   };
 
+  const onLeftpanePropSelect = async (option, group) => {
+    const { account_config } = tlConfig;
+
+    if (!account_config.table_props) {
+      account_config.table_props = [];
+    }
+
+    if (!account_config.table_props.includes(option?.value)) {
+      account_config.table_props.push(option?.value);
+
+      try {
+        setPropSelectOpen(false);
+        await udpateProjectSettings(activeProject.id, {
+          timelines_config: { ...tlConfig }
+        });
+      } catch (error) {
+        logger(error);
+      }
+    }
+  };
+
+  const onLeftpanePropDelete = async (option) => {
+    const timelinesConfig = { ...tlConfig };
+    timelinesConfig.account_config.table_props.splice(
+      timelinesConfig.account_config.table_props.indexOf(option),
+      1
+    );
+    await udpateProjectSettings(activeProject.id, {
+      timelines_config: { ...timelinesConfig }
+    });
+  };
+
   const listLeftPaneProps = (props = {}) => {
     const propsList = [];
     const showProps =
       currentProjectSettings?.timelines_config?.account_config?.table_props?.filter(
         (entry) => entry !== '' && entry !== undefined && entry !== null
       ) || [];
-    showProps.forEach((prop, index) => {
+    showProps.forEach((prop) => {
       const propType = getPropType(listProperties, prop);
       const propDisplayName = groupPropNames[prop]
         ? groupPropNames[prop]
@@ -538,7 +586,7 @@ function AccountDetails({
           type={propType}
           displayName={propDisplayName}
           value={value}
-          onDelete={onDelete}
+          onDelete={onLeftpanePropDelete}
         />
       );
     });
@@ -551,11 +599,11 @@ function AccountDetails({
         <GroupSelect
           options={filterProperties}
           searchPlaceHolder='Select Property'
-          optionClickCallback={handleOptionClick}
+          optionClickCallback={onLeftpanePropSelect}
           onClickOutside={() => setPropSelectOpen(false)}
           allowSearchTextSelection={false}
           extraClass={styles.account_profiles__event_selector__select}
-          allowSearch={true}
+          allowSearch
         />
       </div>
     );
@@ -634,6 +682,23 @@ function AccountDetails({
     </div>
   );
 
+  const getTimelineUsers = () => {
+    const timelineUsers = accountDetails.data?.account_users || [];
+    if (isFreePlan) {
+      return timelineUsers.filter(
+        (userConfig) => userConfig?.title !== 'group_user'
+      );
+    }
+    return timelineUsers;
+  };
+
+  const getFilteredEvents = (events) => {
+    if (isFreePlan) {
+      return events.filter((activity) => !activity.isGroupEvent);
+    }
+    return events;
+  };
+
   const renderOverview = () => (
     <AccountOverview
       overview={accountOverview?.data || {}}
@@ -654,23 +719,6 @@ function AccountDetails({
     />
   );
 
-  const getFilteredEvents = (events) => {
-    if (isFreePlan) {
-      return events.filter((activity) => !activity.isGroupEvent);
-    }
-    return events;
-  };
-
-  const getTimelineUsers = () => {
-    const timelineUsers = accountDetails.data?.account_users || [];
-    if (isFreePlan) {
-      return timelineUsers.filter(
-        (userConfig) => userConfig?.title !== 'group_user'
-      );
-    }
-    return timelineUsers;
-  };
-
   const renderBirdviewWithActions = () => (
     <div className='flex flex-col'>
       <div
@@ -681,7 +729,7 @@ function AccountDetails({
         {isFreePlan && (
           <div className='flex items-baseline flex-wrap'>
             <Text
-              type={'paragraph'}
+              type='paragraph'
               mini
               color='character-primary'
               extraClass='inline-block'
@@ -692,7 +740,7 @@ function AccountDetails({
                 className='inline-block cursor-pointer ml-1'
                 onClick={() => setIsUpgradeModalVisible(true)}
               >
-                <Text type={'paragraph'} mini color='brand-color-6'>
+                <Text type='paragraph' mini color='brand-color-6'>
                   {'  '} Upgrade plan
                 </Text>
               </span>
@@ -720,7 +768,7 @@ function AccountDetails({
             overlayClassName='fa-activity--filter'
             placement='bottomLeft'
             trigger='click'
-            content={controlsPopover}
+            content={controlsPopoverContent}
             open={openPopover}
             onOpenChange={handleOpenPopoverChange}
           >
@@ -759,15 +807,6 @@ function AccountDetails({
     </div>
   );
 
-  useEffect(() => {
-    if (
-      timelineViewMode === 'overview' &&
-      activeId !== accountOverview?.data?.id
-    ) {
-      getAccountOverview(activeProject.id, activeGroup, activeId);
-    }
-  }, [timelineViewMode, activeId]);
-
   const handleTabChange = (val) => {
     insertUrlParam(window.history, 'view', val);
     setTimelineViewMode(val);
@@ -783,36 +822,34 @@ function AccountDetails({
     </TabPane>
   );
 
-  const renderTimelineView = () => {
-    return (
-      <div className='timeline-view'>
-        <Tabs
-          className='timeline-view--tabs'
-          defaultActiveKey='birdview'
-          size='small'
-          activeKey={timelineViewMode}
-          onChange={handleTabChange}
-        >
-          {!isScoringLocked &&
-            renderTabPane({
-              key: 'overview',
-              tabName: 'Overview',
-              content: renderOverview()
-            })}
-          {renderTabPane({
-            key: 'timeline',
-            tabName: 'Timeline',
-            content: renderSingleTimelineView()
+  const renderTimelineView = () => (
+    <div className='timeline-view'>
+      <Tabs
+        className='timeline-view--tabs'
+        defaultActiveKey='birdview'
+        size='small'
+        activeKey={timelineViewMode}
+        onChange={handleTabChange}
+      >
+        {!isScoringLocked &&
+          renderTabPane({
+            key: 'overview',
+            tabName: 'Overview',
+            content: renderOverview()
           })}
-          {renderTabPane({
-            key: 'birdview',
-            tabName: 'Birdview',
-            content: renderBirdviewWithActions()
-          })}
-        </Tabs>
-      </div>
-    );
-  };
+        {renderTabPane({
+          key: 'timeline',
+          tabName: 'Timeline',
+          content: renderSingleTimelineView()
+        })}
+        {renderTabPane({
+          key: 'birdview',
+          tabName: 'Birdview',
+          content: renderBirdviewWithActions()
+        })}
+      </Tabs>
+    </div>
+  );
 
   useKey(['Escape'], handleOptionBackClick);
 
@@ -853,7 +890,6 @@ const mapDispatchToProps = (dispatch) =>
       getAccountOverview,
       getEventPropertiesV2,
       getProfileAccountDetails,
-      fetchProjectSettings,
       udpateProjectSettings
     },
     dispatch

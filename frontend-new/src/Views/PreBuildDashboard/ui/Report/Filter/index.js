@@ -2,8 +2,8 @@ import React, { useCallback } from 'react';
 import { Button } from 'antd';
 import { SVG } from 'Components/factorsComponents';
 import { connect, useDispatch, useSelector } from 'react-redux';
-import PropertyFilter from 'Components/Profile/MyComponents/PropertyFilter';
 import { setReportFilterPayloadAction } from 'Views/PreBuildDashboard/state/services';
+import PropertyFilter from 'Components/Profile/MyComponents/PropertyFilter';
 
 function Filter({ handleFilterChange }) {
   const dispatch = useDispatch();

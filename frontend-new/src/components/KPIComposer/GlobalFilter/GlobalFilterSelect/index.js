@@ -20,7 +20,7 @@ import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import FaSelect from 'Components/GenericComponents/FaSelect';
 import { selectedOptionsMapper } from 'Components/GenericComponents/FaSelect/utils';
 import { processProperties } from 'Utils/dataFormatter';
-// import truncateURL from 'Utils/truncateURL';
+import truncateURL from 'Utils/truncateURL';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
@@ -77,6 +77,8 @@ const GlobalFilterSelect = ({
   const { userPropNames, eventPropNames } = useSelector(
     (state) => state.coreQuery
   );
+  const { projectDomainsList } = useSelector((state) => state.global);
+
   const [dateOptionSelectOpen, setDateOptionSelectOpen] = useState(false);
 
   useEffect(() => {
@@ -738,10 +740,12 @@ const GlobalFilterSelect = ({
               {valuesState && valuesState.length
                 ? valuesState
                     .map((vl) =>
-                      DISPLAY_PROP[vl]
-                        ? // ? truncateURL(DISPLAY_PROP[vl])
-                          DISPLAY_PROP[vl]
-                        : formatCsvUploadValue(vl)
+                      truncateURL(
+                        DISPLAY_PROP[vl]
+                          ? DISPLAY_PROP[vl]
+                          : formatCsvUploadValue(vl),
+                        projectDomainsList
+                      )
                     )
                     .join(', ')
                 : 'Select Values'}

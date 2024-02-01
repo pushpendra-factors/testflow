@@ -376,6 +376,23 @@ func (store *MemSQL) UpdateSegmentMarkerLastRun(projectID int64, lastRunTime tim
 
 	return http.StatusAccepted
 }
+func (store *MemSQL) UpdateSegmentMarkerLastRunForAllAccounts(projectID int64, lastRunTime time.Time) int {
+	logFields := log.Fields{
+		"project_id":    projectID,
+		"last_run_time": lastRunTime,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+	logCtx := log.WithFields(logFields)
+
+	if err := db.Model(model.ProjectSetting{}).Where("project_id = ?", projectID).
+		Update("marker_last_run_all_accounts", lastRunTime).Error; err != nil {
+		logCtx.WithError(err).Error("Failed to update project_settings for marker_last_run_all_accounts")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
+}
 
 // getProjectSettingByKey - Get project settings by a column on projects.
 func getProjectSettingByKey(key, value string) (*model.ProjectSetting, int) {
@@ -1635,7 +1652,20 @@ func (store *MemSQL) GetSegmentMarkerLastRunTime(projectID int64) (time.Time, in
 	return projectSettings.SegmentMarkerLastRun, http.StatusFound
 }
 
-// define a db method to fetch all the rows
+// fetch marker_last_run_all_accounts for given project_id
+func (store *MemSQL) GetMarkerLastForAllAccounts(projectID int64) (time.Time, int) {
+	db := C.GetServices().Db
+	var projectSettings model.ProjectSetting
+	err := db.Table("project_settings").Select("marker_last_run_all_accounts").Where("project_id=?", projectID).Find(&projectSettings).Error
+	if err != nil {
+		log.WithField("project_id", projectID).WithError(err).Warn("Failed to fetch marker_last_run_all_accounts from project_settings.")
+		return time.Time{}, http.StatusInternalServerError
+	}
+
+	return projectSettings.MarkerLastRunAllAccounts, http.StatusFound
+}
+
+// define a db method to fetch all the rowsp
 func (store *MemSQL) GetFormFillEnabledProjectIDWithToken() (*map[int64]string, int) {
 	type idWithToken struct {
 		ProjectID int64
@@ -1739,6 +1769,58 @@ func (store *MemSQL) GetWeightsByProject(project_id int64) (*model.AccWeights, i
 	}
 
 	return &weights, http.StatusFound
+}
+
+func (store *MemSQL) UpdateEngagementLevel(projectId int64, engagementBuckets model.BucketRanges) error {
+
+	bucketsjsonb, err := U.EncodeStructTypeToPostgresJsonb(engagementBuckets)
+	if err != nil {
+		log.WithError(err).Error("Error creating postgres jsonb in acc score")
+		return err
+	}
+
+	db := C.GetServices().Db
+	if err := db.Model(&model.ProjectSetting{}).
+		Where("project_id = ?", projectId).
+		Update("custom_engagement_buckets", bucketsjsonb).Error; err != nil {
+		log.WithError(err).Error("Updating is_explain_enabled config failed")
+		return err
+	}
+	return err
+}
+
+func (store *MemSQL) GetEngagementLevelsByProject(project_id int64) (model.BucketRanges, int) {
+	logFields := log.Fields{
+		"project_id": project_id,
+	}
+	logCtx := log.WithFields(logFields)
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	db := C.GetServices().Db
+
+	var project_settings model.ProjectSetting
+	var buckets model.BucketRanges
+	if err := db.Table("project_settings").Limit(1).Where("project_id = ?", project_id).Find(&project_settings).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			logCtx.WithField("project_id", project_id).WithError(err).Error("Unable to fetch engagement buckets from DB")
+			return model.BucketRanges{}, http.StatusNotFound
+		}
+		logCtx.WithField("project_id", project_id).WithError(err).Error("Unable to fetch engagement buckets from DB")
+		return model.BucketRanges{}, http.StatusInternalServerError
+	}
+
+	if project_settings.CustomEngagementBuckets == nil {
+		return model.BucketRanges{}, http.StatusNotFound
+	} else {
+		err := U.DecodePostgresJsonbToStructType(project_settings.CustomEngagementBuckets, &buckets)
+		if err != nil {
+			logCtx.WithError(err).Error("Unable to decode engagement buckets")
+			return model.BucketRanges{}, http.StatusInternalServerError
+		}
+	}
+
+	return buckets, http.StatusFound
 }
 
 func getNumberOfProjectsWithParagonEnabled() (int64, error) {

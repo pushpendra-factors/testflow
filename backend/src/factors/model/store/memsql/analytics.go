@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -188,13 +189,16 @@ func buildWhereFromProperties(projectID int64, properties []model.QueryProperty,
 					rParams = append(rParams, p.Property, p.Property, p.Value)
 				} else {
 					// categorical property type.
+
 					pValue := p.Value
 					if isColumn {
-						err := getSqlWhereStatementFromColumnsForPropertyTypeCategorical(p, propertyOp, &pStmnt, hasNoneFilter, &rParams)
+						valueListString := GetValueListFromFile(projectID, p)
+						err := getSqlWhereStatementFromColumnsForPropertyTypeCategorical(p, propertyOp, valueListString, &pStmnt, hasNoneFilter, &rParams)
 						if err != nil {
 							return "", nil, err
 						}
 					} else {
+
 						if p.Operator == model.ContainsOpStr {
 							pValue = strings.Replace(pValue, "?", "\\?", -1)
 							pStmnt = fmt.Sprintf("JSON_EXTRACT_STRING(%s, ?) %s ?", propertyEntity, propertyOp)
@@ -218,18 +222,28 @@ func buildWhereFromProperties(projectID int64, properties []model.QueryProperty,
 							pStmnt3 := fmt.Sprintf(" OR JSON_EXTRACT_STRING(%s, ?) IS NULL ) ", propertyEntity)
 							rParams = append(rParams, p.Property)
 							pStmnt = pStmnt1 + pStmnt2 + pStmnt3
+						} else if p.Operator == model.InList {
+							valueListString := GetValueListFromFile(projectID, p)
+							pStmnt = fmt.Sprintf("JSON_EXTRACT_STRING(%s, ?) IN ( %s )", propertyEntity, valueListString)
+							rParams = append(rParams, p.Property)
+
+						} else if p.Operator == model.NotInList {
+							valueListString := GetValueListFromFile(projectID, p)
+							pStmnt = fmt.Sprintf("JSON_EXTRACT_STRING(%s, ?) NOT IN ( %s )", propertyEntity, valueListString)
+							rParams = append(rParams, p.Property)
 						} else {
 							pStmnt = fmt.Sprintf("JSON_EXTRACT_STRING(%s, ?) %s ?", propertyEntity, propertyOp)
 							rParams = append(rParams, p.Property, pValue)
 						}
 					}
-
 				}
+
 			} else {
 				// where condition for $none value.
 				// var pStmnt string
 				if isColumn {
-					err := getSqlWhereStatementFromColumnsForPropertyTypeCategorical(p, propertyOp, &pStmnt, hasNoneFilter, &rParams)
+					valueListString := GetValueListFromFile(projectID, p)
+					err := getSqlWhereStatementFromColumnsForPropertyTypeCategorical(p, propertyOp, valueListString, &pStmnt, hasNoneFilter, &rParams)
 					if err != nil {
 						return "", nil, err
 					}
@@ -265,7 +279,7 @@ func buildWhereFromProperties(projectID int64, properties []model.QueryProperty,
 	return rStmnt, rParams, nil
 }
 
-func getSqlWhereStatementFromColumnsForPropertyTypeCategorical(property model.QueryProperty, propertyOp string, pStmnt *string, hasNoneFilter bool, rParams *[]interface{}) (err error) {
+func getSqlWhereStatementFromColumnsForPropertyTypeCategorical(property model.QueryProperty, propertyOp, valueListString string, pStmnt *string, hasNoneFilter bool, rParams *[]interface{}) (err error) {
 
 	if property.Value != model.PropertyValueNone {
 		if property.Type == U.PropertyTypeCategorical {
@@ -291,6 +305,12 @@ func getSqlWhereStatementFromColumnsForPropertyTypeCategorical(property model.Qu
 
 				pStmnt3 := fmt.Sprintf(" OR %s IS NULL ) ", property.Property)
 				*pStmnt = pStmnt1 + pStmnt2 + pStmnt3
+			} else if property.Operator == model.InList {
+				*pStmnt = fmt.Sprintf("%s IN ( %s )", property.Property, valueListString)
+
+			} else if property.Operator == model.NotInList {
+				*pStmnt = fmt.Sprintf("%s NOT IN ( %s )", property.Property, valueListString)
+
 			} else {
 				*pStmnt = fmt.Sprintf("%s %s ?", property.Property, propertyOp)
 				*rParams = append(*rParams, pValue)
@@ -310,6 +330,39 @@ func getSqlWhereStatementFromColumnsForPropertyTypeCategorical(property model.Qu
 		}
 	}
 	return nil
+}
+
+func GetValueListFromFile(projectID int64, property model.QueryProperty) string {
+
+	valueListString := ""
+	// Get the cloud file that is there for the reference value
+	path, file := C.GetCloudManager().GetListReferenceFileNameAndPathFromCloud(projectID, property.Value)
+	reader, err := C.GetCloudManager().Get(path, file)
+	if err != nil {
+		log.WithError(err).Error("List File Missing")
+		return ""
+	}
+	valuesInFile := make([]string, 0)
+	data, err := ioutil.ReadAll(reader)
+	if err != nil {
+		log.WithError(err).Error("File reader failed")
+		return ""
+	}
+	err = json.Unmarshal(data, &valuesInFile)
+	if err != nil {
+		log.WithError(err).Error("list data unmarshall failed")
+		return ""
+	}
+
+	for _, value := range valuesInFile {
+		if valueListString == "" {
+			valueListString = fmt.Sprintf(`"%s"`, value)
+		} else {
+			valueListString = valueListString + " , " + fmt.Sprintf(`"%s"`, value)
+		}
+
+	}
+	return valueListString
 }
 
 // from = t1, to = t2

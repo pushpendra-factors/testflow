@@ -16,3 +16,7 @@ export interface OnboardingStepsConfig {
   [MORE_INFO_FORM]: boolean;
   [SETUP_COMPLETED]: boolean;
 }
+
+export type FactorsDeAnonymisationProvider =
+  | 'factors_clearbit'
+  | 'factors_6Signal';

@@ -311,7 +311,7 @@ func (store *MemSQL) UpdateLastLoggedOut(agentUUID string, timestamp int64) int 
 }
 
 func (store *MemSQL) UpdateAgentVerificationDetails(agentUUID, password, firstName,
-	lastName string, verified bool, passUpdatedAt time.Time) int {
+	lastName string, phone string, verified bool, passUpdatedAt time.Time) int {
 	logFields := log.Fields{
 		"agent_uuid":      agentUUID,
 		"password":        password,
@@ -339,6 +339,10 @@ func (store *MemSQL) UpdateAgentVerificationDetails(agentUUID, password, firstNa
 	if lastName != "" {
 		options = append(options, model.Lastname(lastName))
 	}
+	if phone != "" {
+		options = append(options, model.Phone(phone))
+	}
+
 	options = append(options, model.IsEmailVerified(verified))
 	options = append(options, model.PasswordAndPasswordCreatedAt(hashedPassword, passUpdatedAt))
 	return updateAgent(agentUUID, options...)

@@ -939,7 +939,7 @@ export const SignoutSVG = ({ size = 20, extraClass, color }) => {
   );
 };
 
-export const Check_circleSVG = ({ size = 24, extraClass, color }) => {
+export const Check_circleSVG = ({ size = 24, extraClass, color='#1890FF' }) => {
   return (
     <svg
       width={size}
@@ -951,7 +951,7 @@ export const Check_circleSVG = ({ size = 24, extraClass, color }) => {
     >
       <path
         d='M21 12C21 7.06452 16.9355 3 12 3C7.02823 3 3 7.06452 3 12C3 16.9718 7.02823 21 12 21C16.9355 21 21 16.9718 21 12ZM10.9476 16.7903C10.7298 17.0081 10.3306 17.0081 10.1129 16.7903L6.33871 13.0161C6.12097 12.7984 6.12097 12.3992 6.33871 12.1815L7.17339 11.3831C7.39113 11.129 7.75403 11.129 7.97177 11.3831L10.5484 13.9234L15.9919 8.47984C16.2097 8.22581 16.5726 8.22581 16.7903 8.47984L17.625 9.27823C17.8427 9.49597 17.8427 9.89516 17.625 10.1129L10.9476 16.7903Z'
-        fill='#1890FF'
+        fill={color}
       />
     </svg>
   );

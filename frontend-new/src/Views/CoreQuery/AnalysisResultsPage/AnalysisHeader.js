@@ -9,7 +9,7 @@ import cx from 'classnames';
 import moment from 'moment';
 import { isEmpty } from 'lodash';
 import { Button, Dropdown, Menu, Modal, Tabs } from 'antd';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useHistory, useLocation } from 'react-router-dom';
 import { SVG, Text } from 'factorsComponents';
 import {
@@ -26,6 +26,7 @@ import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
 import styles from './index.module.scss';
 import AppModal from '../../../components/AppModal';
 import { PathUrls } from 'Routes/pathUrls';
+import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
 
 const { TabPane } = Tabs;
 
@@ -47,6 +48,8 @@ function AnalysisHeader({
   // const savedQueries = useSelector((state) =>
   //   get(state, 'queries.data', EMPTY_ARRAY)
   // );
+
+  const dispatch = useDispatch();
 
   let location = useLocation();
   useEffect(() => {
@@ -116,10 +119,16 @@ function AnalysisHeader({
   const conditionalRouteBackCheck = useCallback(() => {
     let navigatedFromDashboardExistingReports =
       location.state?.navigatedFromDashboardExistingReports;
+
+    const navigatedFromDashboardWithId = location.state?.navigatedFromDashboard;
     if (navigatedFromDashboardExistingReports) {
       // Just moving back to / route
       history.push(PathUrls.Dashboard);
+    } else if (navigatedFromDashboardWithId) {
+      dispatch({ type: SHOW_ANALYTICS_RESULT, payload: false });
+      history.push(PathUrls.Dashboard);
     } else {
+      dispatch({ type: SHOW_ANALYTICS_RESULT, payload: false });
       // Going Back to specefic Widget Where we came from
       history.push({
         pathname: PathUrls.Dashboard,
@@ -200,22 +209,6 @@ function AnalysisHeader({
 
   const renderSaveQueryComp = () => {
     if (!requestQuery) {
-      // if (
-      //   queryType === QUERY_TYPE_ATTRIBUTION ||
-      //   queryType === QUERY_TYPE_FUNNEL ||
-      //   queryType === QUERY_TYPE_KPI
-      // ) {
-      //   let flowID = '';
-      //   if (queryType === QUERY_TYPE_ATTRIBUTION) {
-      //     flowID = USERFLOW_CONFIG_ID?.AttributionQueryBuilder;
-      //   }
-      //   if (queryType === QUERY_TYPE_FUNNEL) {
-      //     flowID = USERFLOW_CONFIG_ID?.FunnelSQueryBuilder;
-      //   }
-      //   if (queryType === QUERY_TYPE_KPI) {
-      //     flowID = USERFLOW_CONFIG_ID?.KPIQueryBuilder;
-      //   }
-
       //   return (
       //     <Button
       //       size='large'

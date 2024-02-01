@@ -15,23 +15,62 @@ import {
   Tabs,
   notification,
   Input,
-  Form
+  Form,
+  Tooltip
 } from 'antd';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { useHistory, useLocation, useParams } from 'react-router-dom';
-import { Text, SVG } from '../../factorsComponents';
-import PropertyFilter from './PropertyFilter';
-import { getGroupProperties } from '../../../reducers/coreQuery/middleware';
-import FaSelect from '../../FaSelect';
+import SearchCheckList from 'Components/SearchCheckList';
+import { formatUserPropertiesToCheckList } from 'Reducers/timelines/utils';
+import { selectAccountPayload } from 'Reducers/accountProfilesView/selectors';
 import {
-  DEFAULT_TIMELINE_CONFIG,
-  formatFiltersForPayload,
-  formatReqPayload,
-  getFiltersRequestPayload,
-  getSelectedFiltersFromQuery,
-  IsDomainGroup
-} from '../utils';
+  setAccountPayloadAction,
+  setFiltersDirtyAction,
+  setNewSegmentModeAction
+} from 'Reducers/accountProfilesView/actions';
+import useFeatureLock from 'hooks/useFeatureLock';
+import { FEATURES } from 'Constants/plans.constants';
+import RangeNudge from 'Components/GenericComponents/RangeNudge';
+import uniq from 'lodash/uniq';
+import { showUpgradeNudge } from 'Views/Settings/ProjectSettings/Pricing/utils';
+import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
+import { selectGroupsList } from 'Reducers/groups/selectors';
+import { fetchProfileAccounts, fetchSegmentById } from 'Reducers/timelines';
+import { downloadCSV } from 'Utils/csv';
+import { formatCount } from 'Utils/dataFormatter';
+import { PathUrls } from 'Routes/pathUrls';
+import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
+import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
+import { isOnboarded } from 'Utils/global';
+import { cloneDeep } from 'lodash';
+import { getSegmentColorCode } from 'Views/AppSidebar/appSidebar.helpers';
+import ResizableTitle from 'Components/Resizable';
+import { COLUMN_TYPE_PROPS } from 'Utils/table';
+import logger from 'Utils/logger';
+import useAutoFocus from 'hooks/useAutoFocus';
+import styles from './index.module.scss';
+import {
+  getGroups,
+  getGroupProperties
+} from '../../../reducers/coreQuery/middleware';
+import DownloadCSVModal from './DownloadCSVModal';
+import UpdateSegmentModal from './UpdateSegmentModal';
+import {
+  INITIAL_FILTERS_STATE,
+  moreActionsMode
+} from './accountProfiles.constants';
+import RenameSegmentModal from './RenameSegmentModal';
+import DeleteSegmentModal from './DeleteSegmentModal';
+import SaveSegmentModal from './SaveSegmentModal';
+import UpgradeModal from '../UpgradeModal';
+import { checkFiltersEquality, getColumns } from './accountProfiles.helpers';
+import ProfilesWrapper from '../ProfilesWrapper';
+import NoDataWithMessage from '../MyComponents/NoDataWithMessage';
+import {
+  fetchProjectSettings,
+  udpateProjectSettings
+} from '../../../reducers/global';
 import {
   getProfileAccounts,
   createNewSegment,
@@ -40,125 +79,39 @@ import {
   deleteSegment
 } from '../../../reducers/timelines/middleware';
 import {
-  fetchProjectSettings,
-  udpateProjectSettings
-} from '../../../reducers/global';
-import SearchCheckList from 'Components/SearchCheckList';
-import { formatUserPropertiesToCheckList } from 'Reducers/timelines/utils';
-import { fetchGroupPropertyValues } from 'Reducers/coreQuery/services';
-import NoDataWithMessage from '../MyComponents/NoDataWithMessage';
-import ProfilesWrapper from '../ProfilesWrapper';
-import { checkFiltersEquality, getColumns } from './accountProfiles.helpers';
-import {
-  selectAccountPayload,
-  selectActiveSegment
-} from 'Reducers/accountProfilesView/selectors';
-import {
-  setAccountPayloadAction,
-  setActiveSegmentAction,
-  setFiltersDirtyAction,
-  setNewSegmentModeAction,
-  updateAccountPayloadAction
-} from 'Reducers/accountProfilesView/actions';
-import useFeatureLock from 'hooks/useFeatureLock';
-import { FEATURES } from 'Constants/plans.constants';
-import UpgradeModal from '../UpgradeModal';
-import RangeNudge from 'Components/GenericComponents/RangeNudge';
-import get from 'lodash/get';
-import uniq from 'lodash/uniq';
-import { showUpgradeNudge } from 'Views/Settings/ProjectSettings/Pricing/utils';
-import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
-import SaveSegmentModal from './SaveSegmentModal';
-import DeleteSegmentModal from './DeleteSegmentModal';
-import RenameSegmentModal from './RenameSegmentModal';
-import {
-  INITIAL_FILTERS_STATE,
-  moreActionsMode
-} from './accountProfiles.constants';
-import { selectGroupsList } from 'Reducers/groups/selectors';
-import UpdateSegmentModal from './UpdateSegmentModal';
-import DownloadCSVModal from './DownloadCSVModal';
-import { fetchProfileAccounts } from 'Reducers/timelines';
-import { downloadCSV } from 'Utils/csv';
-import { formatCount } from 'Utils/dataFormatter';
-import { PathUrls } from 'Routes/pathUrls';
-import { getGroups } from '../../../reducers/coreQuery/middleware';
-import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
-import styles from './index.module.scss';
-import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
-import { isOnboarded } from 'Utils/global';
-import { cloneDeep } from 'lodash';
-import { getSegmentColorCode } from 'Views/AppSidebar/appSidebar.helpers';
-
-import { COLUMN_TYPE_PROPS } from 'Utils/table';
-import ResizableTitle from 'Components/Resizable';
-
-const groupToDomainMap = {
-  $hubspot_company: '$hubspot_company_domain',
-  $salesforce_account: '$salesforce_account_website',
-  $6signal: '$6Signal_domain',
-  $linkedin_company: '$li_domain',
-  $g2: '$g2_domain'
-};
-
-const filterPropsMap = {
-  $hubspot_company: 'hubspot',
-  $salesforce_account: 'salesforce',
-  $6signal: '6Signal',
-  $linkedin_company: '$li_',
-  $g2: '$g2',
-  $domains: ''
-};
+  formatReqPayload,
+  getFiltersRequestPayload,
+  getSelectedFiltersFromQuery
+} from '../utils';
+import PropertyFilter from './PropertyFilter';
+import { Text, SVG } from '../../factorsComponents';
+import { DEFAULT_TIMELINE_CONFIG } from '../constants';
 
 function AccountProfiles({
   activeProject,
-  groups,
   accounts,
+  segments,
+  currentProjectSettings,
   createNewSegment,
   getSavedSegments,
   fetchProjectSettings,
   getGroups,
   udpateProjectSettings,
-  currentProjectSettings,
   getProfileAccounts,
   getGroupProperties,
   updateSegmentForId,
-  deleteSegment,
-  segments
+  deleteSegment
 }) {
-  const dispatch = useDispatch();
-  const history = useHistory();
-  const location = useLocation();
-  const { segment_id } = useParams();
-
-  const { groupPropNames } = useSelector((state) => state.coreQuery);
-  const groupProperties = useSelector(
-    (state) => state.coreQuery.groupProperties
-  );
-  const accountPayload = useSelector((state) => {
-    return selectAccountPayload(state);
-  });
-
-  const activeSegment = useSelector((state) => {
-    return selectActiveSegment(state);
-  });
-  const { sixSignalInfo } = useSelector((state) => state.featureConfig);
-  const { newSegmentMode, filtersDirty: areFiltersDirty } = useSelector(
-    (state) => state.accountProfilesView
-  );
-  const groupsList = useSelector((state) => selectGroupsList(state));
-  const agentState = useSelector((state) => state.agent);
+  const [componentLoading, setComponentLoading] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [currentPageSize, setCurrentPageSize] = useState(25);
   const [searchBarOpen, setSearchBarOpen] = useState(false);
-  const [searchDDOpen, setSearchDDOpen] = useState(false);
   const [listSearchItems, setListSearchItems] = useState([]);
   const [listProperties, setListProperties] = useState([]);
   const [showPopOver, setShowPopOver] = useState(false);
   const [checkListAccountProps, setCheckListAccountProps] = useState([]);
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
-  const [companyValueOpts, setCompanyValueOpts] = useState({ All: {} });
   const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
 
   const [filtersExpanded, setFiltersExpanded] = useState(false);
@@ -173,43 +126,92 @@ function AccountProfiles({
   const [showSegmentActions, setShowSegmentActions] = useState(false);
   const [errMsg, setErrMsg] = useState('');
 
+  const dispatch = useDispatch();
+  const history = useHistory();
+  const location = useLocation();
+  const { segment_id: segmentID } = useParams();
+
+  const { projectDomainsList } = useSelector((state) => state.global);
+  const { groups, groupProperties, groupPropNames } = useSelector(
+    (state) => state.coreQuery
+  );
+
+  const { sixSignalInfo } = useSelector((state) => state.featureConfig);
+  const { newSegmentMode, filtersDirty: areFiltersDirty } = useSelector(
+    (state) => state.accountProfilesView
+  );
+  const groupsList = useSelector((state) => selectGroupsList(state));
+  const agentState = useSelector((state) => state.agent);
+  const activeAgent = agentState?.agent_details?.email;
+
+  const accountPayload = useSelector((state) => selectAccountPayload(state));
+
   const { isFeatureLocked: isScoringLocked } = useFeatureLock(
     FEATURES.FEATURE_ACCOUNT_SCORING
   );
 
-  const activeAgent = agentState?.agent_details?.email;
+  const searchAccountsInputRef = useAutoFocus(searchBarOpen);
 
-  useEffect(() => {
-    if (segment_id && segments['$domains']) {
-      if (segment_id !== activeSegment.id) {
-        const selectedSegment = segments['$domains']?.find(
-          (seg) => seg.id === segment_id
-        );
-        setActiveSegment(selectedSegment);
+  const setAccountPayload = useCallback(
+    (payload) => {
+      dispatch(setAccountPayloadAction(payload));
+    },
+    [dispatch]
+  );
+
+  const getAccountPayload = async () => {
+    if (segmentID) {
+      const response = await fetchSegmentById(activeProject.id, segmentID);
+      if (segmentID === accountPayload?.segment?.id) {
+        return { ...accountPayload, segment: response.data };
       }
+      return { source: GROUP_NAME_DOMAINS, segment: response.data };
     }
-  }, [segment_id, segments]);
+    return accountPayload;
+  };
+
+  const runInit = async () => {
+    try {
+      setComponentLoading(true);
+
+      if (activeProject?.id) {
+        await Promise.allSettled([
+          fetchProjectSettings(activeProject.id),
+          getGroups(activeProject.id)
+        ]);
+
+        if (!Object.keys(segments).length) {
+          await getSavedSegments(activeProject.id);
+        }
+        if (Object.keys(segments).length) {
+          setAccountPayload(await getAccountPayload());
+        }
+      }
+    } catch (err) {
+      logger(err);
+    } finally {
+      setComponentLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let listProps = [];
-    if (IsDomainGroup(accountPayload?.source)) {
-      listProps = Object.keys(groups?.account_groups || {}).reduce(
-        (properties, group) => {
-          return groupProperties[group]
-            ? properties.concat(groupProperties[group])
-            : properties;
-        },
-        []
-      );
-    } else {
-      listProps = groupProperties?.[accountPayload?.source] || [];
-    }
+    runInit();
+  }, [activeProject?.id, segmentID, segments]);
+
+  useEffect(() => {
+    const listProps = Object.keys(groups?.account_groups || {}).reduce(
+      (properties, group) =>
+        groupProperties[group]
+          ? properties.concat(groupProperties[group])
+          : properties,
+      []
+    );
     setListProperties(listProps);
-  }, [groupProperties, accountPayload?.source, groups]);
+  }, [groupProperties, groups]);
 
   useEffect(() => {
-    const tableProps = accountPayload?.segment_id
-      ? activeSegment?.query?.table_props
+    const tableProps = accountPayload?.segment?.id
+      ? accountPayload?.segment?.query?.table_props
       : currentProjectSettings.timelines_config?.account_config?.table_props ||
         [];
     const accountPropsWithEnableKey = formatUserPropertiesToCheckList(
@@ -219,7 +221,16 @@ function AccountProfiles({
       )
     );
     setCheckListAccountProps(accountPropsWithEnableKey);
-  }, [currentProjectSettings, listProperties, activeSegment, accountPayload]);
+  }, [currentProjectSettings, listProperties, accountPayload]);
+
+  const getGroupPropsFromAPI = useCallback(
+    async (groupId) => {
+      if (!groupProperties[groupId]) {
+        await getGroupProperties(activeProject.id, groupId);
+      }
+    },
+    [activeProject.id, groupProperties]
+  );
 
   useEffect(() => {
     getGroupPropsFromAPI(GROUP_NAME_DOMAINS);
@@ -227,13 +238,6 @@ function AccountProfiles({
       getGroupPropsFromAPI(group);
     });
   }, [activeProject.id, groups]);
-
-  useEffect(() => {
-    if (!accountPayload.source) {
-      const source = GROUP_NAME_DOMAINS;
-      updateAccountPayload({ source });
-    }
-  }, [accountPayload.source, activeProject.id]);
 
   useEffect(() => {
     if (!currentProjectSettings?.timelines_config) return;
@@ -248,6 +252,7 @@ function AccountProfiles({
         ...account_config
       }
     };
+
     setTLConfig(timelinesConfig);
   }, [currentProjectSettings?.timelines_config]);
 
@@ -257,18 +262,29 @@ function AccountProfiles({
     } else {
       const listValues = accountPayload?.search_filter || [];
       setListSearchItems(uniq(listValues));
-      setSearchBarOpen(true);
+      // setSearchBarOpen(true);
     }
   }, [accountPayload?.search_filter]);
 
-  useEffect(() => {
-    fetchProjectSettings(activeProject?.id).then(() => {
-      if (!groups || Object.keys(groups).length === 0) {
-        getGroups(activeProject?.id);
-      }
-      getSavedSegments(activeProject?.id);
-    });
-  }, [activeProject?.id, groups]);
+  const setFiltersDirty = useCallback(
+    (value) => {
+      dispatch(setFiltersDirtyAction(value));
+    },
+    [dispatch]
+  );
+
+  const restoreFiltersDefaultState = (
+    selectedAccount = INITIAL_FILTERS_STATE.account
+  ) => {
+    const initialFiltersStateWithSelectedAccount = {
+      ...INITIAL_FILTERS_STATE,
+      account: selectedAccount
+    };
+    setSelectedFilters(initialFiltersStateWithSelectedAccount);
+    setAppliedFilters(cloneDeep(initialFiltersStateWithSelectedAccount));
+    setFiltersExpanded(false);
+    setFiltersDirty(false);
+  };
 
   useEffect(() => {
     if (newSegmentMode === true) {
@@ -285,44 +301,27 @@ function AccountProfiles({
       setSelectedFilters(location.state?.appliedFilters);
       setFiltersExpanded(false);
       setFiltersDirty(true);
-    } else {
-      if (newSegmentMode === false) {
-        if (
-          Boolean(activeSegment?.id) === true &&
-          activeSegment.query != null
-        ) {
-          const filters = getSelectedFiltersFromQuery({
-            query: activeSegment.query,
-            groupsList
-          });
-          setAppliedFilters(cloneDeep(filters));
-          setSelectedFilters(filters);
-          setFiltersExpanded(false);
-          setFiltersDirty(false);
-        } else {
-          const selectedGroup = groupsList.find(
-            (g) => g[1] === accountPayload.source
-          );
-          restoreFiltersDefaultState(selectedGroup);
-        }
+    } else if (newSegmentMode === false) {
+      if (
+        Boolean(accountPayload?.segment?.id) === true &&
+        accountPayload?.segment?.query != null
+      ) {
+        const filters = getSelectedFiltersFromQuery({
+          query: accountPayload?.segment?.query,
+          groupsList
+        });
+        setAppliedFilters(cloneDeep(filters));
+        setSelectedFilters(filters);
+        setFiltersExpanded(false);
+        setFiltersDirty(false);
+      } else {
+        const selectedGroup = groupsList.find(
+          (g) => g[1] === accountPayload?.source
+        );
+        restoreFiltersDefaultState(selectedGroup);
       }
     }
-  }, [accountPayload, activeSegment, groupsList, newSegmentMode]);
-
-  const setActiveSegment = useCallback(
-    (segmentPayload) => {
-      // history.replace(PathUrls.ProfileAccountsSegmentsURL + '/' + segmentPayload.id);
-      dispatch(setActiveSegmentAction(segmentPayload));
-    },
-    [dispatch]
-  );
-
-  const setFiltersDirty = useCallback(
-    (value) => {
-      dispatch(setFiltersDirtyAction(value));
-    },
-    [dispatch]
-  );
+  }, [accountPayload, newSegmentMode]);
 
   const disableNewSegmentMode = useCallback(() => {
     dispatch(setNewSegmentModeAction(false));
@@ -331,7 +330,7 @@ function AccountProfiles({
   const handleDeleteActiveSegment = useCallback(() => {
     deleteSegment({
       projectId: activeProject.id,
-      segmentId: accountPayload.segment_id
+      segmentId: accountPayload?.segment?.id
     })
       .then(() => {
         setMoreActionsModalMode(null);
@@ -341,34 +340,31 @@ function AccountProfiles({
         });
       })
       .finally(() => history.replace(PathUrls.ProfileAccounts));
-  }, [accountPayload.segment_id, activeProject.id, deleteSegment]);
+  }, [accountPayload?.segment, activeProject.id, deleteSegment]);
 
   const displayTableProps = useMemo(() => {
     const filterNullEntries = (entry) =>
       entry !== '' && entry !== undefined && entry !== null;
 
-    const getFilteredTableProps = (tableProps) => {
-      return tableProps?.filter(filterNullEntries) || [];
-    };
+    const getFilteredTableProps = (tableProps) =>
+      tableProps?.filter(filterNullEntries) || [];
 
-    const segmentTableProps = activeSegment?.query?.table_props;
+    const segmentTableProps = accountPayload?.segment?.query?.table_props;
     const projectTableProps =
       currentProjectSettings?.timelines_config?.account_config?.table_props;
-
-    const tableProps = accountPayload.segment_id
+    const tableProps = accountPayload?.segment?.id
       ? getFilteredTableProps(segmentTableProps)
       : getFilteredTableProps(projectTableProps);
 
     return tableProps;
-  }, [currentProjectSettings, accountPayload, activeSegment]);
+  }, [currentProjectSettings, accountPayload?.segment]);
 
   const handleRenameSegment = useCallback(
     (name) => {
-      updateSegmentForId(activeProject.id, accountPayload.segment_id, {
+      updateSegmentForId(activeProject.id, accountPayload?.segment?.id, {
         name
       }).then(() => {
         getSavedSegments(activeProject.id);
-        setActiveSegment({ ...activeSegment, name });
         setMoreActionsModalMode(null);
         notification.success({
           message: 'Segment renamed successfully',
@@ -376,17 +372,17 @@ function AccountProfiles({
         });
       });
     },
-    [activeProject.id, accountPayload.segment_id, activeSegment]
+    [activeProject.id, accountPayload?.segment]
   );
 
   const handleUpdateSegmentDefinition = useCallback(() => {
     const reqPayload = getFiltersRequestPayload({
       selectedFilters,
-      table_props: displayTableProps
+      tableProps: displayTableProps
     });
     updateSegmentForId(
       activeProject.id,
-      accountPayload.segment_id,
+      accountPayload?.segment?.id,
       reqPayload
     ).then(() => {
       getSavedSegments(activeProject.id);
@@ -402,83 +398,60 @@ function AccountProfiles({
     displayTableProps,
     updateSegmentForId,
     activeProject.id,
-    accountPayload.segment_id,
-    getSavedSegments,
-    setFiltersDirty
+    accountPayload?.segment
   ]);
 
-  const setAccountPayload = useCallback(
-    (payload) => {
-      dispatch(setAccountPayloadAction(payload));
-    },
-    [dispatch]
-  );
-
-  const updateAccountPayload = useCallback(
-    (payload) => {
-      dispatch(updateAccountPayloadAction(payload));
-    },
-    [dispatch]
-  );
-
-  const getGroupPropsFromAPI = useCallback(
-    async (groupId) => {
-      if (!groupProperties[groupId]) {
-        await getGroupProperties(activeProject.id, groupId);
-      }
-    },
-    [activeProject.id, groupProperties]
-  );
-
   const getAccounts = useCallback(
-    (payload) => {
-      const shouldCache = location.state?.fromDetails;
-      if (payload.source && payload.source !== '' && !shouldCache) {
+    async (payload) => {
+      try {
         setDefaultSorterInfo({ key: 'engagement', order: 'descend' });
-        const formatPayload = { ...payload };
-        formatPayload.filters =
-          formatFiltersForPayload(payload?.filters, 'account_profiles') || [];
-        const reqPayload = formatReqPayload(formatPayload, activeSegment);
-        getProfileAccounts(activeProject.id, reqPayload, activeAgent).then(
-          (response) => {
-            if (response.type === 'FETCH_PROFILE_ACCOUNTS_FAILED') {
-              if (response.error.status === 400) {
-                setErrMsg('400 Bad Request');
-              } else if (response.error.status === 500) {
-                setErrMsg(
-                  'The server encountered an internal error and could not complete your request'
-                );
-              }
-            }
-
-            if (response.type === 'FETCH_PROFILE_ACCOUNTS_FULFILLED') {
-              if (response.status === 200) {
-                if (response.payload.length === 0) {
-                  setErrMsg('No accounts Found');
-                }
-              }
-            }
-          }
+        const reqPayload = formatReqPayload(payload);
+        const response = await getProfileAccounts(
+          activeProject.id,
+          reqPayload,
+          activeAgent
         );
+
+        if (response.type === 'FETCH_PROFILE_ACCOUNTS_FAILED') {
+          if (response.error.status === 400) {
+            setErrMsg('400 Bad Request');
+          } else if (response.error.status === 500) {
+            setErrMsg(
+              'The server encountered an internal error and could not complete your request'
+            );
+          }
+        } else if (response.type === 'FETCH_PROFILE_ACCOUNTS_FULFILLED') {
+          if (response.status === 200 && response.payload.length === 0) {
+            setErrMsg('No accounts found');
+          }
+        }
+      } catch (err) {
+        logger(err);
       }
-      if (shouldCache) {
+    },
+    [accountPayload, activeProject.id, activeAgent]
+  );
+
+  useEffect(() => {
+    const shouldCache = location?.state?.fromDetails;
+    if (shouldCache) {
+      if (!location.state.accountPayload) {
+        setAccountPayload({ source: GROUP_NAME_DOMAINS });
+      } else {
         setCurrentPage(location.state.currentPage);
         setCurrentPageSize(location.state.currentPageSize);
         setDefaultSorterInfo(location.state.activeSorter);
-        const localeState = { ...history.location.state, fromDetails: false };
-        history.replace('/' + location.hash, { state: localeState });
+        setAccountPayload(location.state.accountPayload);
       }
-    },
-    [
-      location.state?.fromDetails,
-      location.state?.currentPage,
-      location.state?.activeSorter,
-      activeSegment,
-      activeProject.id,
-      activeAgent,
-      history
-    ]
-  );
+      const updatedLocationState = { ...location.state, fromDetails: false };
+      history.replace(location.pathname, { ...updatedLocationState });
+    } else if (
+      !segmentID ||
+      (segmentID && segmentID === accountPayload?.segment?.id)
+    ) {
+      getAccounts(accountPayload);
+    }
+  }, [segmentID, accountPayload]);
 
   const tableData = useMemo(() => {
     const sortedData = accounts?.data?.sort(
@@ -496,13 +469,12 @@ function AccountProfiles({
     setFiltersDirty(true);
     const reqPayload = getFiltersRequestPayload({
       selectedFilters,
-      table_props: displayTableProps
+      tableProps: displayTableProps
     });
     getProfileAccounts(activeProject.id, reqPayload, activeAgent);
   }, [
     selectedFilters,
     displayTableProps,
-    getProfileAccounts,
     activeProject.id,
     activeAgent,
     setFiltersDirty
@@ -520,9 +492,7 @@ function AccountProfiles({
         );
         checkListProps[optIndex].enabled = !checkListProps[optIndex].enabled;
         // Sorting to bubble up the selected elements onClick
-        checkListProps.sort((a, b) => {
-          return (b?.enabled || 0) - (a?.enabled || 0);
-        });
+        checkListProps.sort((a, b) => (b?.enabled || 0) - (a?.enabled || 0));
         return checkListProps;
       });
     } else {
@@ -534,8 +504,8 @@ function AccountProfiles({
     }
   };
 
-  const applyTableProps = () => {
-    if (accountPayload?.segment_id?.length) {
+  const applyTableProps = async () => {
+    if (accountPayload?.segment?.id?.length) {
       const newTableProps =
         checkListAccountProps
           ?.filter(({ enabled }) => enabled)
@@ -543,36 +513,15 @@ function AccountProfiles({
           ?.filter((entry) => entry !== '' && entry !== undefined) || [];
 
       const updatedQuery = {
-        ...activeSegment.query,
+        ...accountPayload.segment.query,
         table_props: newTableProps
       };
 
-      const queryForFetch = getFiltersRequestPayload({
-        selectedFilters: appliedFilters,
-        table_props: newTableProps
-      });
-
-      updateSegmentForId(activeProject.id, accountPayload.segment_id, {
+      await updateSegmentForId(activeProject.id, accountPayload.segment.id, {
         query: updatedQuery
-      })
-        .then(() => getSavedSegments(activeProject.id))
-        .then(() => setActiveSegment({ ...activeSegment, query: updatedQuery }))
-        .finally(() =>
-          getProfileAccounts(activeProject.id, queryForFetch, activeAgent)
-        );
+      });
+      await getSavedSegments(activeProject.id);
     } else {
-      const filteredProps = !IsDomainGroup(accountPayload.source)
-        ? tlConfig.account_config.table_props
-            ?.filter(
-              (entry) => entry !== '' && entry !== undefined && entry !== null
-            )
-            .filter(
-              (item) =>
-                !checkListAccountProps.some(
-                  ({ prop_name }) => prop_name === item
-                )
-            )
-        : [];
       const enabledProps = checkListAccountProps
         .filter(({ enabled }) => enabled)
         .map(({ prop_name }) => prop_name);
@@ -581,20 +530,19 @@ function AccountProfiles({
         ...tlConfig,
         account_config: {
           ...tlConfig.account_config,
-          table_props: [...filteredProps, ...enabledProps]
+          table_props: enabledProps
         }
       };
 
       const queryForFetch = getFiltersRequestPayload({
         selectedFilters: appliedFilters,
-        table_props: [...filteredProps, ...enabledProps]
+        tableProps: enabledProps
       });
-
-      udpateProjectSettings(activeProject.id, {
+      queryForFetch['search_filter'] = listSearchItems;
+      await udpateProjectSettings(activeProject.id, {
         timelines_config: updatedConfig
-      }).then(() =>
-        getProfileAccounts(activeProject.id, queryForFetch, activeAgent)
-      );
+      });
+      await getProfileAccounts(activeProject.id, queryForFetch, activeAgent);
     }
     setShowPopOver(false);
   };
@@ -638,6 +586,7 @@ function AccountProfiles({
     const accountEngagement = (
       <div
         role='button'
+        tabIndex='0'
         onClick={navigateToAccountsEngagement}
         className='flex cursor-pointer col-gap-4 items-center py-2 px-4 hover:bg-gray-100'
       >
@@ -648,7 +597,7 @@ function AccountProfiles({
       </div>
     );
 
-    if (Boolean(accountPayload.segment_id) === false) {
+    if (Boolean(accountPayload?.segment?.id) === false) {
       return accountEngagement;
     }
     return (
@@ -656,6 +605,7 @@ function AccountProfiles({
         <div className='flex flex-col'>
           <div
             role='button'
+            tabIndex='0'
             onClick={() => {
               setShowSegmentActions(false);
               setMoreActionsModalMode(moreActionsMode.RENAME);
@@ -669,6 +619,7 @@ function AccountProfiles({
           </div>
           <div
             role='button'
+            tabIndex='0'
             onClick={() => {
               setShowSegmentActions(false);
               setMoreActionsModalMode(moreActionsMode.DELETE);
@@ -686,63 +637,39 @@ function AccountProfiles({
     );
   };
 
-  const restoreFiltersDefaultState = useCallback(
-    (selectedAccount = INITIAL_FILTERS_STATE.account) => {
-      const initialFiltersStateWithSelectedAccount = {
-        ...INITIAL_FILTERS_STATE,
-        account: selectedAccount
-      };
-      setSelectedFilters(initialFiltersStateWithSelectedAccount);
-      setAppliedFilters(cloneDeep(initialFiltersStateWithSelectedAccount));
-      setFiltersExpanded(false);
-      setFiltersDirty(false);
-    },
-    [setFiltersDirty]
-  );
-
   const setFiltersList = useCallback((filters) => {
-    setSelectedFilters((curr) => {
-      return {
-        ...curr,
-        filters
-      };
-    });
+    setSelectedFilters((curr) => ({
+      ...curr,
+      filters
+    }));
   }, []);
 
   const setSecondaryFiltersList = useCallback((secondaryFilters) => {
-    setSelectedFilters((curr) => {
-      return {
-        ...curr,
-        secondaryFilters
-      };
-    });
+    setSelectedFilters((curr) => ({
+      ...curr,
+      secondaryFilters
+    }));
   }, []);
 
   const setListEvents = useCallback((eventsList) => {
-    setSelectedFilters((curr) => {
-      return {
-        ...curr,
-        eventsList
-      };
-    });
+    setSelectedFilters((curr) => ({
+      ...curr,
+      eventsList
+    }));
   }, []);
 
   const setEventProp = useCallback((eventProp) => {
-    setSelectedFilters((curr) => {
-      return {
-        ...curr,
-        eventProp
-      };
-    });
+    setSelectedFilters((curr) => ({
+      ...curr,
+      eventProp
+    }));
   }, []);
 
   const setEventTimeline = useCallback((eventTimeline) => {
-    setSelectedFilters((curr) => {
-      return {
-        ...curr,
-        eventTimeline
-      };
-    });
+    setSelectedFilters((curr) => ({
+      ...curr,
+      eventTimeline
+    }));
   }, []);
 
   const handleSaveSegmentClick = useCallback(() => {
@@ -750,12 +677,12 @@ function AccountProfiles({
       setSaveSegmentModal(true);
       return;
     }
-    if (Boolean(accountPayload.segment_id) === true) {
+    if (Boolean(accountPayload?.segment?.id) === true) {
       setUpdateSegmentModal(true);
     } else {
       setSaveSegmentModal(true);
     }
-  }, [accountPayload.segment_id, newSegmentMode]);
+  }, [accountPayload?.segment?.id, newSegmentMode]);
 
   const resetSelectedFilters = useCallback(() => {
     setSelectedFilters(appliedFilters);
@@ -765,295 +692,235 @@ function AccountProfiles({
     restoreFiltersDefaultState();
     const reqPayload = getFiltersRequestPayload({
       selectedFilters: INITIAL_FILTERS_STATE,
-      table_props: displayTableProps
+      tableProps: displayTableProps
     });
     getProfileAccounts(activeProject.id, reqPayload, activeAgent);
   }, [
     activeAgent,
     activeProject.id,
     displayTableProps,
-    getProfileAccounts,
     restoreFiltersDefaultState
   ]);
 
-  const setSelectedAccount = useCallback((account) => {
-    setSelectedFilters((current) => {
-      return {
-        ...current,
-        account
-      };
-    });
-  }, []);
+  const selectedAccount = useMemo(
+    () => ({ account: selectedFilters.account }),
+    [selectedFilters.account]
+  );
 
-  const selectedAccount = useMemo(() => {
-    return { account: selectedFilters.account };
-  }, [selectedFilters.account]);
+  const disableDiscardButton = useMemo(
+    () => isEqual(selectedFilters, appliedFilters),
+    [selectedFilters, appliedFilters]
+  );
 
-  const availableGroups = useMemo(() => {
-    return Object.keys(groups?.account_groups || {});
-  }, [groups]);
+  const renderPropertyFilter = () => (
+    <PropertyFilter
+      profileType='account'
+      source={accountPayload?.source}
+      filtersExpanded={filtersExpanded}
+      filtersList={selectedFilters.filters}
+      secondaryFiltersList={selectedFilters.secondaryFilters}
+      appliedFilters={appliedFilters}
+      selectedAccount={selectedAccount}
+      listEvents={selectedFilters.eventsList}
+      eventProp={selectedFilters.eventProp}
+      eventTimeline={selectedFilters.eventTimeline}
+      areFiltersDirty={areFiltersDirty}
+      disableDiscardButton={disableDiscardButton}
+      isActiveSegment={Boolean(accountPayload?.segment?.id) === true}
+      applyFilters={applyFilters}
+      setFiltersExpanded={setFiltersExpanded}
+      setSaveSegmentModal={handleSaveSegmentClick}
+      setFiltersList={setFiltersList}
+      setSecondaryFiltersList={setSecondaryFiltersList}
+      setListEvents={setListEvents}
+      setEventProp={setEventProp}
+      setEventTimeline={setEventTimeline}
+      resetSelectedFilters={resetSelectedFilters}
+      onClearFilters={handleClearFilters}
+    />
+  );
 
-  const disableDiscardButton = useMemo(() => {
-    return isEqual(selectedFilters, appliedFilters);
-  }, [selectedFilters, appliedFilters]);
+  const { saveButtonDisabled } = useMemo(
+    () =>
+      checkFiltersEquality({
+        appliedFilters,
+        newSegmentMode,
+        filtersList: selectedFilters.filters,
+        eventProp: selectedFilters.eventProp,
+        eventsList: selectedFilters.eventsList,
+        isActiveSegment: Boolean(accountPayload?.segment?.id),
+        areFiltersDirty,
+        secondaryFiltersList: selectedFilters.secondaryFilters
+      }),
+    [
+      accountPayload?.segment?.id,
+      appliedFilters,
+      areFiltersDirty,
+      newSegmentMode,
+      selectedFilters.eventProp,
+      selectedFilters.eventsList,
+      selectedFilters.filters,
+      selectedFilters.secondaryFilters
+    ]
+  );
 
-  const renderPropertyFilter = () => {
-    return (
-      <PropertyFilter
-        profileType='account'
-        source={accountPayload.source}
-        filters={accountPayload.filters}
-        filtersExpanded={filtersExpanded}
-        filtersList={selectedFilters.filters}
-        secondaryFiltersList={selectedFilters.secondaryFilters}
-        appliedFilters={appliedFilters}
-        selectedAccount={selectedAccount}
-        listEvents={selectedFilters.eventsList}
-        availableGroups={availableGroups}
-        eventProp={selectedFilters.eventProp}
-        eventTimeline={selectedFilters.eventTimeline}
-        areFiltersDirty={areFiltersDirty}
-        disableDiscardButton={disableDiscardButton}
-        isActiveSegment={Boolean(accountPayload.segment_id) === true}
-        applyFilters={applyFilters}
-        setFiltersExpanded={setFiltersExpanded}
-        setSaveSegmentModal={handleSaveSegmentClick}
-        setFiltersList={setFiltersList}
-        setSecondaryFiltersList={setSecondaryFiltersList}
-        setListEvents={setListEvents}
-        setEventProp={setEventProp}
-        setEventTimeline={setEventTimeline}
-        resetSelectedFilters={resetSelectedFilters}
-        onClearFilters={handleClearFilters}
-        setSelectedAccount={setSelectedAccount}
-      />
-    );
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, [activeProject.id, groups]);
-
-  const fetchData = async () => {
-    const newCompanyValues = { $domains: {} };
-    for (const [group, prop] of Object.entries(groupToDomainMap)) {
-      if (groups && groups?.account_groups && groups?.account_groups[group]) {
-        try {
-          const res = await fetchGroupPropertyValues(
-            activeProject.id,
-            group,
-            prop
-          );
-          newCompanyValues[GROUP_NAME_DOMAINS] = {
-            ...newCompanyValues[GROUP_NAME_DOMAINS],
-            ...res.data
-          };
-        } catch (err) {
-          console.log(err);
-        }
+  const renderSaveSegmentButton = () => (
+    <ControlledComponent
+      controller={
+        filtersExpanded === false &&
+        saveButtonDisabled === false &&
+        newSegmentMode === false
       }
-    }
-    setCompanyValueOpts(newCompanyValues);
-  };
+    >
+      <Button
+        onClick={handleSaveSegmentClick}
+        type='default'
+        className='flex items-center col-gap-1'
+        disabled={saveButtonDisabled}
+      >
+        <SVG
+          color={saveButtonDisabled ? '#BFBFBF' : '#1890ff'}
+          size={16}
+          name='pieChart'
+        />
+        <Text
+          type='title'
+          extraClass='mb-0'
+          color={saveButtonDisabled ? 'disabled' : 'brand-color-6'}
+        >
+          Save as Segment
+        </Text>
+      </Button>
+    </ControlledComponent>
+  );
 
-  const onApplyClick = (values) => {
+  const handleAccountSearch = (values) => {
+    let valString;
+    if (
+      (listSearchItems.length >= 1 &&
+        listSearchItems[0] === values?.accounts_search) ||
+      (listSearchItems.length === 0 && !values?.accounts_search)
+    ) {
+      return;
+    }
+    if (values?.accounts_search) {
+      valString = [JSON.stringify([values.accounts_search])];
+    } else {
+      valString = [];
+    }
     const updatedPayload = {
       ...accountPayload,
-      search_filter: values.map((vl) => JSON.parse(vl)[0])
+      search_filter: valString.map((vl) => JSON.parse(vl)[0])
     };
     setListSearchItems(updatedPayload.search_filter);
     setAccountPayload(updatedPayload);
-    setActiveSegment(activeSegment);
-    getAccounts(updatedPayload);
   };
 
   const onSearchClose = () => {
     setSearchBarOpen(false);
-    setSearchDDOpen(false);
-    if (accountPayload?.search_filter?.length !== 0) {
-      const updatedPayload = { ...accountPayload };
-      updatedPayload.search_filter = [];
-      setAccountPayload(updatedPayload);
-      setListSearchItems([]);
-      setActiveSegment(activeSegment);
-      getAccounts(updatedPayload);
-    }
+    handleAccountSearch({ accounts_search: '' });
   };
 
   const onSearchOpen = () => {
     setSearchBarOpen(true);
-    setSearchDDOpen(true);
-  };
-
-  const searchCompanies = () => (
-    <div className='absolute top-0'>
-      {searchDDOpen ? (
-        <FaSelect
-          placeholder='Search Accounts'
-          multiSelect
-          options={
-            companyValueOpts?.[accountPayload?.source]
-              ? Object.keys(companyValueOpts[accountPayload?.source]).map(
-                  (value) => [value]
-                )
-              : []
-          }
-          displayNames={companyValueOpts?.[accountPayload?.source]}
-          applClick={(val) => onApplyClick(val)}
-          onClickOutside={() => setSearchDDOpen(false)}
-          selectedOpts={listSearchItems}
-          style={{
-            top: '-8px',
-            right: 0,
-            padding: '8px 8px 12px',
-            overflowX: 'hidden'
-          }}
-          allowSearch
-          posRight
-        />
-      ) : null}
-    </div>
-  );
-
-  const { saveButtonDisabled } = useMemo(() => {
-    return checkFiltersEquality({
-      appliedFilters,
-      newSegmentMode,
-      filtersList: selectedFilters.filters,
-      eventProp: selectedFilters.eventProp,
-      eventsList: selectedFilters.eventsList,
-      isActiveSegment: Boolean(accountPayload.segment_id),
-      areFiltersDirty,
-      secondaryFiltersList: selectedFilters.secondaryFilters
-    });
-  }, [
-    accountPayload.segment_id,
-    appliedFilters,
-    areFiltersDirty,
-    newSegmentMode,
-    selectedFilters.eventProp,
-    selectedFilters.eventsList,
-    selectedFilters.filters,
-    selectedFilters.secondaryFilters
-  ]);
-
-  const renderSaveSegmentButton = () => {
-    return (
-      <ControlledComponent
-        controller={
-          filtersExpanded === false &&
-          saveButtonDisabled === false &&
-          newSegmentMode === false
-        }
-      >
-        <Button
-          onClick={handleSaveSegmentClick}
-          type='default'
-          className='flex items-center col-gap-1'
-          disabled={saveButtonDisabled}
-        >
-          <SVG
-            color={saveButtonDisabled ? '#BFBFBF' : '#1890ff'}
-            size={16}
-            name='pieChart'
-          />
-          <Text
-            type='title'
-            extraClass='mb-0'
-            color={saveButtonDisabled ? 'disabled' : 'brand-color-6'}
-          >
-            Save as Segment
-          </Text>
-        </Button>
-      </ControlledComponent>
-    );
   };
 
   const renderSearchSection = () => (
     <div className='relative'>
       <ControlledComponent controller={searchBarOpen}>
-        <div className={'flex items-center justify-between'}>
-          {!searchDDOpen && (
-            <Input
-              size='large'
-              value={listSearchItems ? listSearchItems.join(', ') : null}
-              placeholder={'Search Accounts'}
-              style={{
-                width: '240px',
-                'border-radius': '5px'
-              }}
-              prefix={<SVG name='search' size={20} color={'#8C8C8C'} />}
-              onClick={() => setSearchDDOpen(true)}
-            />
-          )}
-          <Button type='text' onClick={onSearchClose}>
-            <SVG name={'close'} size={20} color={'grey'} />
+        <div className='flex items-center justify-between'>
+          <Form
+            name='basic'
+            labelCol={{ span: 8 }}
+            wrapperCol={{ span: 16 }}
+            onFinish={handleAccountSearch}
+            autoComplete='off'
+          >
+            <Form.Item name='accounts_search'>
+              <Input
+                ref={searchAccountsInputRef}
+                size='large'
+                value={listSearchItems ? listSearchItems.join(', ') : null}
+                placeholder='Search Accounts'
+                style={{
+                  width: '240px',
+                  'border-radius': '5px'
+                }}
+                prefix={<SVG name='search' size={24} color='#8c8c8c' />}
+              />
+            </Form.Item>
+          </Form>
+          <Button type='text' className='search-btn' onClick={onSearchClose}>
+            <SVG name='close' size={24} color='#8c8c8c' />
           </Button>
         </div>
       </ControlledComponent>
       <ControlledComponent controller={!searchBarOpen}>
-        <Button type='text' onClick={onSearchOpen}>
-          <SVG name={'search'} size={20} color={'#8c8c8c'} />
-        </Button>
+        <Tooltip title='Search'>
+          <Button type='text' className='search-btn' onClick={onSearchOpen}>
+            <SVG name='search' size={24} color='#8c8c8c' />
+          </Button>
+        </Tooltip>
       </ControlledComponent>
-      {searchCompanies()}
     </div>
   );
 
-  const renderDownloadSection = () => {
-    return (
-      <Button onClick={() => setShowDownloadCSVModal(true)} type='text'>
-        <SVG size={20} name={'download'} color={'#8c8c8c'} />
+  const renderDownloadSection = () => (
+    <Tooltip title='Download CSV'>
+      <Button
+        className='search-btn'
+        onClick={() => setShowDownloadCSVModal(true)}
+        type='text'
+      >
+        <SVG size={24} name='download' color='#8c8c8c' />
       </Button>
-    );
-  };
+    </Tooltip>
+  );
 
-  const renderMoreActions = () => {
-    return (
-      <Popover
-        placement='bottomLeft'
-        visible={showSegmentActions}
-        onVisibleChange={(visible) => {
-          setShowSegmentActions(visible);
-        }}
-        onClick={() => {
-          setShowSegmentActions(true);
-        }}
-        trigger='click'
-        content={moreActionsContent}
-        overlayClassName={cx(
-          'fa-activity--filter',
-          styles['more-actions-popover']
-        )}
-      >
-        <Button className={styles['more-actions-button']} type='default'>
-          <SVG size={20} name={'more'} />
-        </Button>
-      </Popover>
-    );
-  };
+  const renderMoreActions = () => (
+    <Popover
+      placement='bottomLeft'
+      visible={showSegmentActions}
+      onVisibleChange={(visible) => {
+        setShowSegmentActions(visible);
+      }}
+      onClick={() => {
+        setShowSegmentActions(true);
+      }}
+      trigger='click'
+      content={moreActionsContent}
+      overlayClassName={cx(
+        'fa-activity--filter',
+        styles['more-actions-popover']
+      )}
+    >
+      <Button className='search-btn' type='text'>
+        <SVG color='#8c8c8c' size={24} name='more' />
+      </Button>
+    </Popover>
+  );
 
-  const renderTablePropsSelect = () => {
-    return (
-      <Popover
-        overlayClassName='fa-activity--filter'
-        placement='bottomLeft'
-        visible={showPopOver}
-        onVisibleChange={(visible) => {
-          setShowPopOver(visible);
-        }}
-        onClick={() => {
-          setShowPopOver(true);
-        }}
-        trigger='click'
-        content={popoverContent}
-      >
-        <Button type='text'>
-          <SVG size={20} name={'tableColumns'} />
+  const renderTablePropsSelect = () => (
+    <Popover
+      overlayClassName='fa-activity--filter'
+      placement='bottomLeft'
+      visible={showPopOver}
+      onVisibleChange={(visible) => {
+        setShowPopOver(visible);
+      }}
+      onClick={() => {
+        setShowPopOver(true);
+      }}
+      trigger='click'
+      content={popoverContent}
+    >
+      <Tooltip title='Edit columns'>
+        <Button className='search-btn' type='text'>
+          <SVG size={24} color='#8c8c8c' name='tableColumns' />
         </Button>
-      </Popover>
-    );
-  };
+      </Tooltip>
+    </Popover>
+  );
 
   const handleTableChange = (pageParams, somedata, sorter) => {
     setCurrentPage(pageParams.current);
@@ -1061,7 +928,6 @@ function AccountProfiles({
     setDefaultSorterInfo({ key: sorter.columnKey, order: sorter.order });
   };
   const [newTableColumns, setNewTableColumns] = useState([]);
-  const [columnsType, setColumnTypes] = useState({});
 
   useEffect(() => {
     setNewTableColumns(
@@ -1073,6 +939,7 @@ function AccountProfiles({
         groupPropNames,
         listProperties,
         defaultSorterInfo,
+        projectDomainsList,
         activeAgent
       })
     );
@@ -1083,50 +950,34 @@ function AccountProfiles({
     groupPropNames,
     isScoringLocked,
     listProperties,
-    defaultSorterInfo
+    defaultSorterInfo,
+    projectDomainsList
   ]);
-  // const tableColumns = useMemo(() => {
-  //   return getColumns({
-  //     accounts,
-  //     source: accountPayload?.source,
-  //     isScoringLocked,
-  //     displayTableProps,
-  //     groupPropNames,
-  //     listProperties,
-  //     defaultSorterInfo
-  //   });
-  // }, [
-  //   accounts,
-  //   accountPayload?.source,
-  //   displayTableProps,
-  //   groupPropNames,
-  //   isScoringLocked,
-  //   listProperties,
-  //   defaultSorterInfo
-  // ]);
+
   const tableRef = useRef();
 
   useEffect(() => {
     // This is the name of Account which was opened recently
-    let from = location.state?.state?.accountsTableRow;
+    const from = location.state?.accountsTableRow;
     // Finding the tableElement because we have only one .ant-table-body inside tableRef Tree
     // If in future we add table body inside it, need to change it later on
-    let tableElement = tableRef.current?.querySelector('.ant-table-body');
+    const tableElement = tableRef.current?.querySelector('.ant-table-body');
 
     if (tableElement && from && document.getElementById(from)) {
       const element = document.getElementById(from);
       // Y is the relative position that we want to scroll by
       // this is calculated by ORIGINALELEMENTY-TABLEELEMENT - 15 ( because of some padding or margin )
       const y =
-        element?.getBoundingClientRect().y -
+        element.getBoundingClientRect().y -
         tableElement.getBoundingClientRect().y -
         15;
 
       tableElement.scrollTo({ top: y, behavior: 'smooth' });
 
-      location.state.state.accountsTableRow = '';
+      location.state.accountsTableRow = '';
     }
-  }, [newTableColumns, tableRef]);
+  }, [newTableColumns, location.state, componentLoading]);
+
   const renderTable = useCallback(() => {
     const mergeColumns = newTableColumns.map((col, index) => ({
       ...col,
@@ -1134,25 +985,23 @@ function AccountProfiles({
         width: column.width
       })
     }));
-
     return (
       <div>
         <Table
           ref={tableRef}
+          components={{
+            header: {
+              cell: ResizableTitle
+            }
+          }}
           onRow={(account) => ({
             onClick: () => {
               history.push(
-                `/profiles/accounts/${btoa(account.identity)}?group=${
-                  activeSegment?.type
-                    ? activeSegment.type
-                    : accountPayload.source
-                }&view=birdview`,
+                `/profiles/accounts/${btoa(account.identity)}?view=birdview`,
                 {
-                  accountPayload: accountPayload,
-                  activeSegment: activeSegment,
-                  fromDetails: true,
-                  currentPage: currentPage,
-                  currentPageSize: currentPageSize,
+                  accountPayload,
+                  currentPage,
+                  currentPageSize,
                   activeSorter: defaultSorterInfo,
                   appliedFilters: areFiltersDirty ? appliedFilters : null,
                   accountsTableRow: account.name
@@ -1172,7 +1021,7 @@ function AccountProfiles({
           }}
           onChange={handleTableChange}
           scroll={{
-            x: displayTableProps?.length * 300,
+            x: (displayTableProps?.length || 0) * 300,
             y: 'calc(100vh - 340px)'
           }}
         />
@@ -1180,13 +1029,15 @@ function AccountProfiles({
     );
   }, [tableData, newTableColumns]);
 
-  const showRangeNudge = useMemo(() => {
-    return showUpgradeNudge(
-      sixSignalInfo?.usage || 0,
-      sixSignalInfo?.limit || 0,
-      currentProjectSettings
-    );
-  }, [currentProjectSettings, sixSignalInfo?.limit, sixSignalInfo?.usage]);
+  const showRangeNudge = useMemo(
+    () =>
+      showUpgradeNudge(
+        sixSignalInfo?.usage || 0,
+        sixSignalInfo?.limit || 0,
+        currentProjectSettings
+      ),
+    [currentProjectSettings, sixSignalInfo?.limit, sixSignalInfo?.usage]
+  );
 
   const handleSaveSegment = useCallback(
     async (segmentPayload) => {
@@ -1206,6 +1057,7 @@ function AccountProfiles({
           setFiltersDirty(false);
         }
         await getSavedSegments(activeProject.id);
+        disableNewSegmentMode();
       } catch (err) {
         notification.error({
           message: 'Error',
@@ -1215,19 +1067,21 @@ function AccountProfiles({
         });
       }
     },
-    [activeProject.id, createNewSegment, getSavedSegments, setFiltersDirty]
+    [activeProject.id]
   );
 
   const handleCreateSegment = useCallback(
     (newSegmentName) => {
-      const reqPayload = getFiltersRequestPayload({
-        selectedFilters,
-        table_props: displayTableProps
-      });
-      reqPayload.name = newSegmentName;
-      reqPayload.type = selectedFilters.account[1];
+      const reqPayload = {
+        ...getFiltersRequestPayload({
+          selectedFilters,
+          tableProps: displayTableProps
+        }),
+        name: newSegmentName,
+        type: selectedFilters.account[1]
+      };
+
       handleSaveSegment(reqPayload);
-      disableNewSegmentMode();
     },
     [
       selectedFilters,
@@ -1242,17 +1096,17 @@ function AccountProfiles({
       const csvRows = [];
 
       const headers = selectedOptions.map(
-        (prop_name) =>
-          checkListAccountProps.find((elem) => elem.prop_name === prop_name)
+        (propName) =>
+          checkListAccountProps.find((elem) => elem.prop_name === propName)
             .display_name
       );
       headers.unshift('Name', 'Engagement category', 'Engagement score');
       csvRows.push(headers.join(','));
 
       data.forEach((d) => {
-        const values = selectedOptions.map((elem) => {
-          return d.table_props[elem] != null ? `"${d.table_props[elem]}"` : '-';
-        });
+        const values = selectedOptions.map((elem) =>
+          d.table_props[elem] != null ? `"${d.table_props[elem]}"` : '-'
+        );
         values.unshift(
           d.name,
           d.engagement != null ? d.engagement : '-',
@@ -1271,9 +1125,8 @@ function AccountProfiles({
       try {
         setCSVDataLoading(true);
         const reqPayload = getFiltersRequestPayload({
-          source: selectedAccount.account[1],
           selectedFilters: appliedFilters,
-          table_props: selectedOptions
+          tableProps: selectedOptions
         });
         const resultAccounts = await fetchProfileAccounts(
           activeProject.id,
@@ -1285,7 +1138,7 @@ function AccountProfiles({
         setCSVDataLoading(false);
         setShowDownloadCSVModal(false);
       } catch (err) {
-        console.log(err);
+        logger(err);
         setCSVDataLoading(false);
         notification.error({
           message: 'Error',
@@ -1307,40 +1160,29 @@ function AccountProfiles({
     setShowDownloadCSVModal(false);
   }, []);
 
-  const pageTitle = useMemo(() => {
-    if (newSegmentMode === true) {
-      return 'Untitled Segment 1';
-    }
-    if (Boolean(activeSegment?.id) === false) {
-      const source = accountPayload.source;
-      const title = get(
-        groupsList.find((elem) => elem[1] === source),
-        0,
-        'All Accounts'
-      );
-      return title;
-    }
-    return activeSegment.name;
-  }, [accountPayload, groupsList, activeSegment, newSegmentMode]);
-
-  useEffect(() => {
-    if (newSegmentMode === false) {
-      getAccounts(accountPayload);
-    }
-  }, [newSegmentMode, accountPayload, activeSegment]);
+  const pageTitle = useMemo(
+    () =>
+      newSegmentMode
+        ? 'Untitled Segment 1'
+        : accountPayload?.segment?.id
+          ? accountPayload?.segment?.name
+          : 'All Accounts',
+    [accountPayload, newSegmentMode]
+  );
 
   const titleIcon = useMemo(() => {
-    if (Boolean(activeSegment?.id) === true) {
-      return defaultSegmentIconsMapping[activeSegment?.name]
-        ? defaultSegmentIconsMapping[activeSegment?.name]
+    if (Boolean(accountPayload?.segment?.id) === true) {
+      return defaultSegmentIconsMapping[accountPayload?.segment?.name]
+        ? defaultSegmentIconsMapping[accountPayload?.segment?.name]
         : 'pieChart';
     }
     return 'buildings';
-  }, [activeSegment]);
+  }, [accountPayload?.segment]);
 
-  const titleIconColor = useMemo(() => {
-    return getSegmentColorCode(activeSegment?.name ?? '');
-  }, [activeSegment?.name]);
+  const titleIconColor = useMemo(
+    () => getSegmentColorCode(accountPayload?.segment?.name || ''),
+    [accountPayload?.segment?.name]
+  );
 
   return (
     <ProfilesWrapper>
@@ -1364,7 +1206,7 @@ function AccountProfiles({
             level={3}
             weight='bold'
             extraClass='mb-0'
-            id={'fa-at-text--page-title'}
+            id='fa-at-text--page-title'
           >
             {pageTitle}
           </Text>
@@ -1387,12 +1229,13 @@ function AccountProfiles({
           </ControlledComponent>
         </div>
       </div>
-      <ControlledComponent controller={accounts.isLoading === true}>
+      <ControlledComponent controller={componentLoading || accounts.isLoading}>
         <Spin size='large' className='fa-page-loader' />
       </ControlledComponent>
       <ControlledComponent
         controller={
           accounts.isLoading === false &&
+          componentLoading === false &&
           accounts.data?.length > 0 &&
           (newSegmentMode === false || areFiltersDirty === true)
         }
@@ -1414,6 +1257,7 @@ function AccountProfiles({
       <ControlledComponent
         controller={
           accounts.isLoading === false &&
+          componentLoading === false &&
           accounts.data.length === 0 &&
           (newSegmentMode === false || areFiltersDirty === true)
         }
@@ -1440,20 +1284,20 @@ function AccountProfiles({
         isLoading={false}
       />
       <DeleteSegmentModal
-        segmentName={activeSegment?.name}
+        segmentName={accountPayload?.segment?.name}
         visible={moreActionsModalMode === moreActionsMode.DELETE}
         onCancel={() => setMoreActionsModalMode(null)}
         onOk={handleDeleteActiveSegment}
       />
       <RenameSegmentModal
-        segmentName={activeSegment?.name}
+        segmentName={accountPayload?.segment?.name}
         visible={moreActionsModalMode === moreActionsMode.RENAME}
         onCancel={() => setMoreActionsModalMode(null)}
         handleSubmit={handleRenameSegment}
       />
 
       <UpdateSegmentModal
-        segmentName={activeSegment?.name}
+        segmentName={accountPayload?.segment?.name}
         visible={updateSegmentModal}
         onCancel={() => setUpdateSegmentModal(false)}
         onCreate={handleCreateSegment}
@@ -1473,7 +1317,6 @@ function AccountProfiles({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  groups: state.coreQuery.groups,
   accounts: state.timelines.accounts,
   segments: state.timelines.segments,
   currentProjectSettings: state.global.currentProjectSettings

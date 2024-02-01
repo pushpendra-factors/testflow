@@ -145,6 +145,7 @@ func TestMain(m *testing.M) {
 		ChargebeeApiKey:                                     *chargebeeApiKey,
 		ChargebeeSiteName:                                   *chargebeeSiteName,
 		AggrEventPropertyValuesCacheByProjectID:             "*",
+		BatchSizeDomains:                                    100,
 	}
 	C.InitConf(config)
 

@@ -1,0 +1,821 @@
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState
+} from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useHistory, useParams } from 'react-router-dom';
+import get from 'lodash/get';
+
+import { fetchQueries, getEventsData } from 'Reducers/coreQuery/services';
+import { EMPTY_ARRAY, EMPTY_OBJECT, generateRandomKey } from 'Utils/global';
+import AnalysisHeader from 'Views/CoreQuery/AnalysisResultsPage/AnalysisHeader';
+import {
+  ACTIVE_USERS_CRITERIA,
+  EACH_USER_TYPE,
+  FREQUENCY_CRITERIA,
+  QUERY_TYPE_EVENT,
+  QUERY_TYPE_FUNNEL,
+  REPORT_SECTION,
+  REVERSE_USER_TYPES,
+  TOTAL_EVENTS_CRITERIA,
+  TOTAL_USERS_CRITERIA,
+  TYPE_EVENTS_OCCURRENCE
+} from 'Utils/constants';
+import {
+  CORE_QUERY_INITIAL_STATE,
+  DEFAULT_PIVOT_CONFIG,
+  INITIAL_STATE as INITIAL_RESULT_STATE,
+  SET_COMPARE_DURATION,
+  SET_COMPARISON_SUPPORTED,
+  SET_SAVED_QUERY_SETTINGS,
+  UPDATE_PIVOT_CONFIG
+} from 'Views/CoreQuery/constants';
+import {
+  formatApiData,
+  getQuery,
+  getStateQueryFromRequestQuery,
+  isComparisonEnabled
+} from 'Views/CoreQuery/utils';
+import { getQueryOptionsFromEquivalentQuery } from './utils';
+import { CoreQueryState, QueryParams } from './types';
+import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
+import CoreQueryReducer from 'Views/CoreQuery/CoreQueryReducer';
+import {
+  deleteGroupByEventAction,
+  INITIALIZE_GROUPBY
+} from 'Reducers/coreQuery/actions';
+import { ErrorBoundary } from 'react-error-boundary';
+import {
+  FaErrorComp,
+  FaErrorLog,
+  SVG,
+  Text
+} from 'Components/factorsComponents';
+import QueryComposer from 'Components/QueryComposer';
+import { Button, Spin } from 'antd';
+import logger from 'Utils/logger';
+import ReportContent from 'Views/CoreQuery/AnalysisResultsPage/ReportContent';
+import { getDashboardDateRange } from 'Views/Dashboard/utils';
+import moment from 'moment';
+import {
+  SET_PERFORMANCE_CRITERIA,
+  SET_SHOW_CRITERIA
+} from 'Reducers/analyticsQuery';
+import { getValidGranularityOptions } from 'Utils/dataFormatter';
+import MomentTz from 'Components/MomentTz';
+import PageSuspenseLoader from 'Components/SuspenseLoaders/PageSuspenseLoader';
+import SaveQuery from 'Components/SaveQuery';
+
+const CoreQuery = () => {
+  // Query params
+  const { query_id, query_type } = useParams<QueryParams>();
+
+  const [activeTab, setActiveTab] = useState(1);
+
+  // Redux States
+  const { active_project } = useSelector((state: any) => state.global);
+  const { show_criteria: result_criteria, performance_criteria: user_type } =
+    useSelector((state: any) => state.analyticsQuery);
+  const { models, eventNames } = useSelector((state: any) => state.coreQuery);
+  const savedQueries = useSelector((state: any) =>
+    get(state, 'queries.data', EMPTY_ARRAY)
+  );
+
+  // Local states
+  const [coreQueryState, setCoreQueryState] = useState<CoreQueryState>(
+    new CoreQueryState()
+  );
+  const [queryOpen, setQueryOpen] = useState(false);
+
+  const history = useHistory();
+  const dispatch = useDispatch();
+  const [coreQueryReducerState, localDispatch] = useReducer(
+    CoreQueryReducer,
+    CORE_QUERY_INITIAL_STATE
+  );
+  const renderedCompRef = useRef<any>(null);
+
+  const getCurrentSorter = useCallback(() => {
+    if (renderedCompRef.current && renderedCompRef.current.currentSorter) {
+      return renderedCompRef.current.currentSorter;
+    }
+    return [];
+  }, []);
+
+  // Use Effects
+  useEffect(() => {
+    if (!savedQueries || !savedQueries.length) {
+      fetchQueries(active_project.id);
+    }
+  }, [savedQueries]);
+
+  useEffect(() => {
+    if (query_id && query_id != '' && query_type && savedQueries?.length) {
+      runEventsQueryFromUrl();
+    }
+  }, [query_id, query_type, savedQueries]);
+
+  const getQueryFromHashId = () =>
+    savedQueries?.find((quer: any) => quer.id_text === query_id);
+
+  const updateEventFunnelsState = useCallback(
+    (equivalentQuery, navigatedFromDashboard, qState: CoreQueryState) => {
+      const savedDateRange = { ...equivalentQuery.dateRange };
+      const newDateRange = getDashboardDateRange();
+      const dashboardDateRange = {
+        ...newDateRange,
+        frequency:
+          moment(newDateRange.to).diff(newDateRange.from, 'days') <= 1
+            ? 'hour'
+            : equivalentQuery.dateRange.frequency
+      };
+      dispatch({
+        type: INITIALIZE_GROUPBY,
+        payload: equivalentQuery.breakdown
+      });
+
+      const queryDateRange = { date_range: dashboardDateRange };
+      const queryOpts = {
+        ...coreQueryState.queryOptions,
+        session_analytics_seq: equivalentQuery.session_analytics_seq,
+        groupBy: {
+          global: [...equivalentQuery.breakdown.global],
+          event: [...equivalentQuery.breakdown.event]
+        },
+        globalFilters: equivalentQuery.globalFilters,
+        group_analysis: equivalentQuery.groupAnalysis,
+        ...queryDateRange,
+        events_condition: equivalentQuery.eventsCondition
+      };
+
+      qState.setItem('queryOptions', queryOpts);
+
+      // setCoreQueryState(coreQueryState);
+      //   setQueryOptions((currData) => {
+      //     let queryDateRange = {};
+      //     if (navigatedFromDashboard) {
+      //       queryDateRange = { date_range: dashboardDateRange };
+      //     } else queryDateRange = { date_range: savedDateRange };
+
+      //     let queryOpts = {};
+      //     queryOpts = {
+      //       ...currData,
+      //       session_analytics_seq: equivalentQuery.session_analytics_seq,
+      //       groupBy: [
+      //         ...equivalentQuery.breakdown.global,
+      //         ...equivalentQuery.breakdown.event
+      //       ],
+      //       globalFilters: equivalentQuery.globalFilters,
+      //       group_analysis: equivalentQuery.groupAnalysis,
+      //       ...queryDateRange,
+      //       events_condition: equivalentQuery.eventsCondition
+      //     };
+      //     return queryOpts;
+      //   });
+    },
+    [dispatch]
+  );
+
+  const updateResultFromSavedQuery = (res: any, qState: CoreQueryState) => {
+    const data = res.data.result || res.data;
+    let resultSt;
+    if (result_criteria === TOTAL_EVENTS_CRITERIA) {
+      resultSt = {
+        ...INITIAL_RESULT_STATE,
+        data: formatApiData(data.result_group[0], data.result_group[1]),
+        apiCallStatus: res.status
+      };
+    } else if (result_criteria === TOTAL_USERS_CRITERIA) {
+      if (user_type === EACH_USER_TYPE) {
+        resultSt = {
+          ...INITIAL_RESULT_STATE,
+          data: formatApiData(data.result_group[0], data.result_group[1]),
+          apiCallStatus: res.status
+        };
+      } else {
+        resultSt = {
+          ...INITIAL_RESULT_STATE,
+          data: data.result_group[0],
+          apiCallStatus: res.status
+        };
+      }
+    }
+    qState.setItem('resultState', resultSt);
+  };
+
+  const runEventsQueryFromUrl = () => {
+    const queryToAdd = getQueryFromHashId();
+    if (queryToAdd) {
+      // updateResultState({ ...initialState, loading: true });
+      getEventsData(active_project.id, null, null, false, query_id).then(
+        (res) => {
+          const equivalentQuery = getStateQueryFromRequestQuery(
+            queryToAdd?.query?.query_group[0]
+          );
+          const queryState = new CoreQueryState();
+          queryState.queryType = QUERY_TYPE_EVENT;
+          queryState.querySaved = { name: queryToAdd.title, id: queryToAdd.id };
+          queryState.requestQuery = queryToAdd?.query?.query_group;
+          queryState.showResult = true;
+          queryState.loading = false;
+          queryState.queries = equivalentQuery.events;
+          queryState.appliedQueries = equivalentQuery.events.map((elem: any) =>
+            elem.alias ? elem.alias : elem.label
+          );
+          queryState.queryOptions = getQueryOptionsFromEquivalentQuery(
+            queryState.queryOptions,
+            equivalentQuery
+          );
+
+          if (queryState.requestQuery) {
+            updateEventFunnelsState(equivalentQuery, true, queryState);
+            if (queryState.requestQuery.length === 1) {
+              dispatch({
+                type: SET_PERFORMANCE_CRITERIA,
+                payload: REVERSE_USER_TYPES[queryState.requestQuery[0].ec]
+              });
+              dispatch({
+                type: SET_SHOW_CRITERIA,
+                payload: TOTAL_USERS_CRITERIA
+              });
+            } else {
+              dispatch({
+                type: SET_PERFORMANCE_CRITERIA,
+                payload: EACH_USER_TYPE
+              });
+              if (queryState.requestQuery.length === 2) {
+                dispatch({
+                  type: SET_SHOW_CRITERIA,
+                  payload:
+                    queryState.requestQuery[0].ty === TYPE_EVENTS_OCCURRENCE
+                      ? TOTAL_EVENTS_CRITERIA
+                      : TOTAL_USERS_CRITERIA
+                });
+              } else if (queryState.requestQuery.query.length === 3) {
+                dispatch({
+                  type: SET_SHOW_CRITERIA,
+                  payload: ACTIVE_USERS_CRITERIA
+                });
+              } else {
+                dispatch({
+                  type: SET_SHOW_CRITERIA,
+                  payload: FREQUENCY_CRITERIA
+                });
+              }
+            }
+          }
+
+          dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
+          dispatch({
+            type: SET_COMPARISON_SUPPORTED,
+            payload: isComparisonEnabled(
+              queryState.queryType,
+              equivalentQuery.events,
+              equivalentQuery.breakdown,
+              models
+            )
+          });
+
+          const newAppliedBreakdown = [
+            ...equivalentQuery.breakdown.event,
+            ...equivalentQuery.breakdown.global
+          ];
+          queryState.appliedBreakdown = newAppliedBreakdown;
+
+          // updateAppliedBreakdown();
+          dispatch({
+            type: UPDATE_PIVOT_CONFIG,
+            payload: { ...DEFAULT_PIVOT_CONFIG }
+          });
+          dispatch({ type: SET_SAVED_QUERY_SETTINGS, payload: EMPTY_OBJECT });
+
+          updateResultFromSavedQuery(res, queryState);
+          setCoreQueryState(queryState);
+        },
+        (err) => {
+          logger.error(err);
+        }
+      );
+    }
+  };
+
+  const arrayMapper = coreQueryState.appliedQueries.map((q, index) => ({
+    eventName: q,
+    index,
+    mapper: `event${index + 1}`,
+    displayName: eventNames[q] ? eventNames[q] : q
+  }));
+
+  const renderQueryComposerNew = () => (
+    <div
+      className={`query_card_cont ${
+        queryOpen ? `query_card_open` : `query_card_close`
+      }`}
+      onClick={() => !queryOpen && setQueryOpen(true)}
+    >
+      <div className='query_composer'>{renderComposer()}</div>
+      <Button size='large' className='query_card_expand'>
+        <SVG name='expand' size={20} />
+        Expand
+      </Button>
+    </div>
+  );
+
+  const updateLocalReducer = useCallback((type, payload) => {
+    localDispatch({ type, payload });
+  }, []);
+
+  const configActionsOnRunningQuery = (
+    isQuerySaved = false,
+    qState: CoreQueryState
+  ) => {
+    setQueryOpen(false);
+    dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
+    // setQuerySaved(isQuerySaved);
+    if (!isQuerySaved) {
+      // reset pivot config
+      updateLocalReducer(UPDATE_PIVOT_CONFIG, { ...DEFAULT_PIVOT_CONFIG });
+      updateLocalReducer(SET_SAVED_QUERY_SETTINGS, EMPTY_OBJECT);
+    }
+
+    updateLocalReducer(
+      SET_COMPARISON_SUPPORTED,
+      isComparisonEnabled(
+        coreQueryState.queryType,
+        coreQueryState.queries,
+        coreQueryState.queryOptions.groupBy,
+        models
+      )
+    );
+
+    if (
+      coreQueryState.queryType === QUERY_TYPE_FUNNEL ||
+      coreQueryState.queryType === QUERY_TYPE_EVENT
+    ) {
+      qState.appliedQueries = coreQueryState.queries.map((elem) =>
+        elem.alias ? elem.alias : elem.label
+      );
+    }
+  };
+
+  const runQuery = async (dateRange: any = undefined) => {
+    try {
+      let durationObj;
+      const qState = { ...coreQueryState };
+
+      if (!dateRange) {
+        durationObj = coreQueryState.queryOptions.date_range;
+      } else {
+        durationObj = dateRange;
+      }
+      const query = getQuery(
+        coreQueryState.queryOptions.groupBy,
+        coreQueryState.queries,
+        result_criteria,
+        user_type,
+        durationObj,
+        coreQueryState.queryOptions.globalFilters,
+        coreQueryState.queryOptions.group_analysis
+      );
+
+      // if (!isQuerySaved) {
+      //   // Factors RUN_QUERY tracking
+      //   factorsai.track('RUN-QUERY', {
+      //     email_id: currentAgent?.email,
+      //     query_type: QUERY_TYPE_EVENT,
+      //     project_id: activeProject?.id,
+      //     project_name: activeProject?.name
+      //   });
+      // }
+
+      //if (!isCompareQuery) {
+      qState.showResult = true;
+      qState.loading = true;
+      configActionsOnRunningQuery(false, qState);
+      qState.requestQuery = query;
+      qState.resultState = { ...qState.resultState, loading: true };
+      setCoreQueryState(qState);
+      // resetComparisonData();
+      //}
+
+      const res: any = await getEventsData(
+        active_project.id,
+        query,
+        null, // we need to call fresh query when granularity is changed
+        true
+      );
+
+      const data = res.data.result || res.data;
+      let resultantData = null;
+
+      if (result_criteria === TOTAL_EVENTS_CRITERIA) {
+        resultantData = formatApiData(
+          data.result_group[0],
+          data.result_group[1]
+        );
+      } else if (result_criteria === TOTAL_USERS_CRITERIA) {
+        if (user_type === EACH_USER_TYPE) {
+          resultantData = formatApiData(
+            data.result_group[0],
+            data.result_group[1]
+          );
+        } else {
+          resultantData = data.result_group[0];
+        }
+      }
+
+      if (dateRange) {
+        coreQueryState.queryOptions.date_range = dateRange;
+      }
+
+      qState.loading = false;
+      qState.resultState = {
+        ...qState.resultState,
+        data: resultantData,
+        loading: false,
+        apiCallStatus: res.status
+      };
+      setCoreQueryState(qState);
+      // if (isCompareQuery) {
+      //   updateLocalReducer(COMPARISON_DATA_FETCHED, resultantData);
+      // } else {
+      //   setLoading(false);
+      //   updateResultState({
+      //     ...initialState,
+      //     data: resultantData,
+      //     status: res.status
+      //   });
+      // }
+    } catch (err) {
+      logger.error(err);
+      const qState = { ...coreQueryState };
+      qState.loading = false;
+      qState.resultState = {
+        ...qState.resultState,
+        loading: false,
+        error: true
+      };
+      setCoreQueryState(qState);
+    }
+  };
+
+  const handleDurationChange = (dates: any, isCompareDate: boolean = false) => {
+    let from;
+    let to;
+    let frequency;
+    const { dateType, selectedOption } = dates;
+
+    if (Array.isArray(dates.startDate)) {
+      from = dates.startDate[0];
+      to = dates.startDate[1];
+    } else {
+      from = dates.startDate;
+      to = dates.endDate;
+    }
+
+    frequency = getValidGranularityOptions({ from, to })[0];
+
+    const startDate = moment(from).startOf('day').utc().unix() * 1000;
+    const endDate = moment(to).endOf('day').utc().unix() * 1000 + 1000;
+    const daysDiff = moment(endDate).diff(startDate, 'days');
+    if (daysDiff > 1) {
+      frequency =
+        coreQueryState.queryOptions.date_range.frequency === 'hour' ||
+        frequency === 'hour'
+          ? 'date'
+          : coreQueryState.queryOptions.date_range.frequency;
+    } else frequency = 'hour';
+
+    const payload = {
+      from: MomentTz(from).startOf('day'),
+      to: MomentTz(to).endOf('day'),
+      frequency,
+      dateType
+    };
+
+    const qState = coreQueryState.getCopy();
+
+    if (!isCompareDate) {
+      qState.queryOptions = {
+        ...qState.queryOptions,
+        date_range: {
+          ...qState.queryOptions.date_range,
+          ...payload
+        }
+      };
+    }
+
+    if (isCompareDate) {
+      localDispatch({
+        type: SET_COMPARE_DURATION,
+        payload: {
+          from,
+          to,
+          frequency,
+          dateType,
+          selectedOption
+        }
+      });
+    }
+
+    const appliedDateRange = {
+      ...qState.queryOptions.date_range,
+      ...payload
+    };
+
+    setCoreQueryState(qState);
+
+    if (qState.queryType === QUERY_TYPE_EVENT) {
+      runQuery(qState.queryOptions.date_range);
+    }
+  };
+
+  const handleRunQuery = () => {
+    switch (coreQueryState.queryType) {
+      case QUERY_TYPE_EVENT: {
+        runQuery();
+        break;
+      }
+      default: {
+        return false;
+      }
+    }
+  };
+
+  const queryChange = (
+    newEvent: any,
+    index: number,
+    changeType: string = 'add',
+    flag = null
+  ) => {
+    const queryupdated = [...coreQueryState.queries];
+    if (queryupdated[index]) {
+      if (changeType === 'add') {
+        if (JSON.stringify(queryupdated[index]) !== JSON.stringify(newEvent)) {
+          deleteGroupByEventAction(newEvent, index);
+        }
+        queryupdated[index] = newEvent;
+      } else if (changeType === 'filters_updated') {
+        // dont remove group by if filter is changed
+        queryupdated[index] = newEvent;
+      } else {
+        deleteGroupByEventAction(newEvent, index);
+        queryupdated.splice(index, 1);
+      }
+    } else {
+      if (flag) {
+        Object.assign(newEvent, { pageViewVal: flag });
+      }
+      queryupdated.push(newEvent);
+    }
+    setQueries(
+      queryupdated.map((q) => {
+        return {
+          ...q,
+          key: q.key || generateRandomKey()
+        };
+      })
+    );
+  };
+
+  const setQueries = (q: any[]) => {
+    const qState = coreQueryState.getCopy();
+    qState.queries = q;
+    setCoreQueryState(qState);
+  };
+
+  const renderComposer = () => {
+    if (
+      coreQueryState.queryType === QUERY_TYPE_FUNNEL ||
+      coreQueryState.queryType === QUERY_TYPE_EVENT
+    ) {
+      return (
+        <QueryComposer
+          queries={coreQueryState.queries}
+          setQueries={setQueries}
+          runQuery={handleRunQuery}
+          eventChange={queryChange}
+          queryType={coreQueryState.queryType}
+          queryOptions={coreQueryState.queryOptions}
+          setQueryOptions={() => {}}
+          runFunnelQuery={() => {}}
+          collapse={coreQueryState.showResult}
+          setCollapse={() => setQueryOpen(false)}
+        />
+      );
+    }
+  };
+
+  const renderSpinner = () => {
+    return (
+      <div className='w-full h-64 flex items-center justify-center'>
+        <Spin size='large' />
+      </div>
+    );
+  };
+
+  const renderSaveQueryComp = () => (
+    <SaveQuery
+      queryType={coreQueryState.queryType}
+      requestQuery={coreQueryState.requestQuery}
+      queryTitle={
+        coreQueryState.querySaved ? coreQueryState.querySaved.name : null
+      }
+      setQuerySaved={(v: any) => coreQueryState.setItem('querySaved', v)}
+      getCurrentSorter={getCurrentSorter}
+      savedQueryId={
+        coreQueryState.querySaved ? coreQueryState.querySaved.id : null
+      }
+      breakdown={coreQueryState.appliedBreakdown}
+      dateFromTo={{
+        from:
+          coreQueryState.queryOptions.date_range.from ||
+          coreQueryState.requestQuery?.fr,
+        to:
+          coreQueryState.queryOptions.date_range.to ||
+          coreQueryState.requestQuery?.to
+      }}
+      attributionsState={undefined}
+      campaignState={undefined}
+      showSaveQueryModal={undefined}
+      setShowSaveQueryModal={undefined}
+      showUpdateQuery={undefined}
+    />
+  );
+
+  const handleCloseDashboardQuery = () => {
+    history.push({
+      pathname: '/',
+      state: {
+        dashboardWidgetId: coreQueryReducerState.navigatedFromDashboard.id
+      }
+    });
+    // handleBreadCrumbClick();
+  };
+
+  const renderEmptyHeader = () => {
+    return (
+      <div className='items-center flex justify-between w-full pt-3 pb-3'>
+        <div
+          role='button'
+          tabIndex={0}
+          className='flex items-center cursor-pointer'
+        >
+          <Button
+            size='large'
+            type='text'
+            onClick={() => {
+              history.push('/');
+            }}
+            icon={<SVG size={32} name='Brand' />}
+          />
+          <Text
+            type='title'
+            level={5}
+            weight='bold'
+            extraClass='m-0 mt-1'
+            lineHeight='small'
+          >
+            {coreQueryState.querySaved
+              ? `Reports / ${coreQueryState.queryType} / ${coreQueryState.querySaved.name}`
+              : `Reports / ${coreQueryState.queryType} / Untitled Analysis${' '}
+            ${moment().format('DD/MM/YYYY')}`}
+          </Text>
+        </div>
+
+        <div className='flex items-center gap-x-2'>
+          <div className='pr-2 border-r'>{renderSaveQueryComp()}</div>
+          <Button
+            size='large'
+            type='default'
+            onClick={handleCloseDashboardQuery}
+          >
+            Close
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderAnalysisHeader = () => (
+    <AnalysisHeader
+      isFromAnalysisPage={false}
+      requestQuery={coreQueryState.requestQuery}
+      onBreadCrumbClick={() => {
+        console.log('breadcrumb click');
+      }}
+      queryType={coreQueryState.queryType}
+      queryTitle={
+        coreQueryState.querySaved ? coreQueryState.querySaved?.name : null
+      }
+      setQuerySaved={(v: any) => coreQueryState.setItem('querySaved', v)}
+      breakdownType={EACH_USER_TYPE}
+      changeTab={(v: any) => coreQueryState.setItem('activeTab', v)}
+      activeTab={coreQueryState.activeTab}
+      getCurrentSorter={getCurrentSorter}
+      savedQueryId={
+        coreQueryState.querySaved ? coreQueryState.querySaved.id : null
+      }
+      breakdown={coreQueryState.appliedBreakdown}
+      dateFromTo={{
+        from:
+          coreQueryState.queryOptions.date_range.from ||
+          coreQueryState.requestQuery?.fr,
+        to:
+          coreQueryState.queryOptions.date_range.to ||
+          coreQueryState.requestQuery?.to
+      }}
+    />
+  );
+
+  const renderMain = () => {
+    if (coreQueryState.loading) {
+      return (
+        <>
+          <div className='flex justify-center flex-col items-center w-full'>
+            <div className='w-full flex center'>
+              <div
+                id='app-header'
+                className='bg-white z-50 flex-col  px-8 w-full'
+              >
+                {renderEmptyHeader()}
+                {renderQueryComposerNew()}
+              </div>
+            </div>
+            <div className='mt-24 px-8'>{renderSpinner()}</div>
+          </div>
+        </>
+      );
+    }
+    if (coreQueryState.showResult && !coreQueryState.loading) {
+      return (
+        <>
+          {renderAnalysisHeader()}
+          <div className='mt-24 px-8'>
+            <ErrorBoundary
+              fallback={
+                <FaErrorComp
+                  size='medium'
+                  title='Analyse Results Error'
+                  subtitle='We are facing trouble loading Analyse results. Drop us a message on the in-app chat.'
+                  className={undefined}
+                  type={undefined}
+                />
+              }
+              onError={FaErrorLog}
+            >
+              {Number(coreQueryState.activeTab) === 1 && (
+                <>
+                  {renderQueryComposerNew()}
+                  {coreQueryState.requestQuery && (
+                    <ReportContent
+                      breakdownType={EACH_USER_TYPE}
+                      queryType={coreQueryState.queryType}
+                      renderedCompRef={renderedCompRef}
+                      breakdown={coreQueryState.appliedBreakdown}
+                      handleChartTypeChange={() => {
+                        console.log('Chart type change');
+                      }}
+                      queryOptions={coreQueryState.queryOptions}
+                      arrayMapper={arrayMapper}
+                      resultState={coreQueryState.resultState}
+                      queryTitle={coreQueryState.querySaved.name}
+                      section={REPORT_SECTION}
+                      eventPage={result_criteria}
+                      handleDurationChange={handleDurationChange}
+                      onReportClose={() => {
+                        console.log('Close report');
+                      }}
+                      handleGranularityChange={() => {
+                        console.log('Granularity change');
+                      }}
+                      setDrawerVisible={() => {
+                        console.log('Drawer visible');
+                      }}
+                      queries={coreQueryState.appliedQueries}
+                    />
+                  )}
+                </>
+              )}
+            </ErrorBoundary>
+          </div>
+        </>
+      );
+    } else if (
+      !coreQueryState.showResult &&
+      coreQueryState.resultState.loading
+    ) {
+      return <PageSuspenseLoader />;
+    } else {
+      return null;
+    }
+  };
+
+  return renderMain();
+};
+
+export default CoreQuery;

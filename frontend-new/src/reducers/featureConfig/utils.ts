@@ -2,7 +2,7 @@ import { FEATURES } from 'Constants/plans.constants';
 import { FeatureConfig } from './types';
 
 export const getFeatureStatusInfo = (
-  featureName: typeof FEATURES[keyof typeof FEATURES],
+  featureName: (typeof FEATURES)[keyof typeof FEATURES],
   planFeatures?: FeatureConfig[],
   addons?: FeatureConfig[]
 ): { isFeatureLocked: boolean } => {

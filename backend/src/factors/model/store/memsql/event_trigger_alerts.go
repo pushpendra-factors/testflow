@@ -1,6 +1,7 @@
 package memsql
 
 import (
+	"encoding/json"
 	"errors"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
@@ -13,8 +14,6 @@ import (
 	"sort"
 	"strings"
 	"time"
-
-	"encoding/json"
 
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -457,7 +456,7 @@ func (store *MemSQL) GetEventTriggerAlertsByEvent(projectId int64, id string) ([
 	return eventAlerts, eventName, http.StatusFound
 }
 
-func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eventNameId, userID string, eventProps, userProps *postgres.Jsonb, UpdatedEventProps *postgres.Jsonb, isUpdate bool) (*[]model.EventTriggerAlert, *model.EventName, int) {
+func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eventNameId, userID string, eventProps, userProps *postgres.Jsonb, UpdatedEventProps *postgres.Jsonb, isUpdate bool) (*[]model.EventTriggerAlert, *model.EventName, *map[string]interface{}, int) {
 	logFields := log.Fields{
 		"project_id":       projectId,
 		"event_name":       eventNameId,
@@ -469,7 +468,7 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 	alerts, eventName, errCode := store.GetEventTriggerAlertsByEvent(projectId, eventNameId)
 	if errCode != http.StatusFound || alerts == nil {
 		//log.WithFields(logFields).Error("GetEventTriggerAlertsByEvent failure inside Match function.")
-		return nil, nil, errCode
+		return nil, nil, nil, errCode
 	}
 
 	var userPropMap, eventPropMap, updatedEventProps *map[string]interface{}
@@ -489,14 +488,14 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 		err := U.DecodePostgresJsonbToStructType(alert.EventTriggerAlert, &config)
 		if err != nil {
 			log.WithError(err).Error("Jsonb decoding to struct failure")
-			return nil, nil, http.StatusInternalServerError
+			return nil, nil, nil, http.StatusInternalServerError
 		}
 		messageProperties := make([]model.QueryGroupByProperty, 0)
 		if config.MessageProperty != nil {
 			err := U.DecodePostgresJsonbToStructType(config.MessageProperty, &messageProperties)
 			if err != nil {
 				log.WithError(err).Error("Jsonb decoding to struct failure")
-				return nil, nil, http.StatusInternalServerError
+				return nil, nil, nil, http.StatusInternalServerError
 			}
 		}
 		if !isUpdate {
@@ -543,9 +542,27 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 		}
 
 		if config.EventLevel == model.EventLevelAccount && isGroupPropertyRequired {
-			groupProps = store.GetGroupProperties(projectId, userID)
+			groupProps, _ = store.GetGroupPropertiesAndDomainGroupUserID(projectId, userID)
 			if groupProps != nil {
 				updateUserPropMapWithGroupProperties(userPropMap, groupProps, log.WithFields(logFields))
+			}
+		}
+
+		//IN_PROPERTIES_DEFAULT_QUERY_MAP selected properties check
+		for i, filter := range config.Filter {
+			_logicalOp := filter.LogicalOp
+			if q, exists := model.IN_PROPERTIES_DEFAULT_QUERY_MAP[filter.Property]; exists {
+				if filter.Value == "true" {
+					config.Filter[i] = q
+				} else if filter.Value == "false" || filter.Value == "$none" {
+					config.Filter[i] = q
+					config.Filter[i].Operator = model.EqualsOpStr
+				}
+			}
+
+			config.Filter[i].LogicalOp = _logicalOp
+			if config.Filter[i].LogicalOp == "" {
+				config.Filter[i].LogicalOp = "AND"
 			}
 		}
 
@@ -556,9 +573,9 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 	}
 	if len(matchedAlerts) == 0 {
 		log.WithFields(logFields).Info("Match function did not find anything in event_trigger_alerts")
-		return nil, nil, http.StatusNotFound
+		return nil, nil, nil, http.StatusNotFound
 	}
-	return &matchedAlerts, &eventName, http.StatusFound
+	return &matchedAlerts, &eventName, userPropMap, http.StatusFound
 }
 
 func updateUserPropMapWithGroupProperties(userPropMap, groupProps *map[string]interface{}, logCtx *log.Entry) {
@@ -568,11 +585,13 @@ func updateUserPropMapWithGroupProperties(userPropMap, groupProps *map[string]in
 	}
 
 	for key, value := range *groupProps {
-		(*userPropMap)[key] = value
+		if value != nil {
+			(*userPropMap)[key] = value
+		}
 	}
 }
 
-func (store *MemSQL) GetGroupProperties(projectID int64, userID string) *map[string]interface{} {
+func (store *MemSQL) GetGroupPropertiesAndDomainGroupUserID(projectID int64, userID string) (*map[string]interface{}, string) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -582,25 +601,25 @@ func (store *MemSQL) GetGroupProperties(projectID int64, userID string) *map[str
 	user, errCode := store.GetUser(projectID, userID)
 	if errCode != http.StatusFound {
 		logCtx.Error("user not found")
-		return nil
+		return nil, ""
 	}
 
 	domainsGroup, errCode := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
 	if errCode != http.StatusFound || domainsGroup == nil {
 		logCtx.Error("no domains group found for project")
-		return nil
+		return nil, ""
 	}
 
 	domainsGroupUserID, err := model.GetUserGroupUserID(user, domainsGroup.ID)
 	if err != nil || domainsGroupUserID == "" {
 		logCtx.Error("no domains group found for project")
-		return nil
+		return nil, ""
 	}
 
 	groupUsers, errCode := store.GetAllGroupUsersByDomainsGroupUserID(projectID, domainsGroup.ID, domainsGroupUserID)
 	if errCode != http.StatusFound || len(groupUsers) == 0 {
 		logCtx.WithError(err).Error("no group user found")
-		return nil
+		return nil, ""
 	}
 
 	groupPropsMap := make(map[string]interface{})
@@ -614,12 +633,12 @@ func (store *MemSQL) GetGroupProperties(projectID int64, userID string) *map[str
 	domainsUser, errCode := store.GetUser(projectID, domainsGroupUserID)
 	if errCode != http.StatusFound {
 		logCtx.Error("failed to get domains user")
-		return &groupPropsMap
+		return &groupPropsMap, ""
 	}
 	// Get user properties from $domains user and add them to groupPropsMap
 	getUserPropertiesFromGroupUser(domainsUser, &groupPropsMap, logCtx)
 
-	return &groupPropsMap
+	return &groupPropsMap, domainsGroupUserID
 }
 
 func getUserPropertiesFromGroupUser(user *model.User, groupPropMap *map[string]interface{}, logCtx *log.Entry) {
@@ -760,7 +779,35 @@ func getDisplayLikePropValue(typ string, exi bool, value interface{}) interface{
 	return res
 }
 
-func (store *MemSQL) GetMessageAndBreakdownPropertiesAndFieldsTagMap(event *model.Event, alert *model.EventTriggerAlertConfig, eventName *model.EventName) (U.PropertiesMap, map[string]interface{}, map[string]string, error) {
+func satisfiesInternalProperty(filterVal string, propVal interface{}, op string) bool {
+	if op == model.NotEqualOpStr && filterVal == "$none" {
+		propVal = U.GetPropertyValueAsString(propVal)
+		if propVal != filterVal && propVal != "" {
+			return true
+		}
+	} else if op == model.EqualsOpStr && filterVal == "$none" {
+		propVal = U.GetPropertyValueAsString(propVal)
+		if propVal == filterVal || propVal == "" {
+			return true
+		}
+	} else if op == model.GreaterThanOpStr && filterVal == "0" {
+		intfilterVal, err := U.GetPropertyValueAsInt64(filterVal)
+		if err != nil {
+			log.Error("can get property value as int64")
+			return false
+		}
+		intPropVal, err := U.GetPropertyValueAsInt64(propVal)
+		if err != nil {
+			log.Error("can get property value as int64")
+			return false
+		}
+		return intPropVal > intfilterVal
+	}
+
+	return false
+}
+
+func (store *MemSQL) GetMessageAndBreakdownPropertiesAndFieldsTagMap(event *model.Event, alert *model.EventTriggerAlertConfig, eventName *model.EventName, updatedUserProps *map[string]interface{}) (U.PropertiesMap, map[string]interface{}, map[string]string, error) {
 	logFields := log.Fields{
 		"event_trigger_alert": *alert,
 		"event":               *event,
@@ -776,15 +823,8 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesAndFieldsTagMap(event *mode
 		}
 	}
 
-	var userPropMap, eventPropMap, groupPropMap *map[string]interface{}
+	var eventPropMap *map[string]interface{}
 	var err error
-	if event.UserProperties != nil {
-		userPropMap, err = U.DecodePostgresJsonb(event.UserProperties)
-		if err != nil {
-			log.WithError(err).Error("Jsonb decoding to propMap failure")
-			return nil, nil, nil, err
-		}
-	}
 	if &event.Properties != nil && len(event.Properties.RawMessage) != 0 {
 		eventPropMap, err = U.DecodePostgresJsonb(&event.Properties)
 		if err != nil {
@@ -805,12 +845,9 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesAndFieldsTagMap(event *mode
 	if alert.EventLevel == model.EventLevelAccount && alert.SlackFieldsTag != nil {
 		isFieldsTagPresent = true
 	}
-
+	var groupDomainUserID string
 	if isGroupPropertyRequired || isFieldsTagPresent {
-		groupPropMap = store.GetGroupProperties(event.ProjectId, event.UserId)
-		if groupPropMap != nil {
-			updateUserPropMapWithGroupProperties(userPropMap, groupPropMap, log.WithFields(logFields))
-		}
+		_, groupDomainUserID = store.GetGroupPropertiesAndDomainGroupUserID(event.ProjectId, event.UserId)
 	}
 
 	displayNamesEP := store.getDisplayNamesForEP(event.ProjectId, eventName.Name)
@@ -829,8 +866,15 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesAndFieldsTagMap(event *mode
 				displayName = U.CreateVirtualDisplayName(p)
 			}
 
-			propVal, exi := (*userPropMap)[p]
+			propVal, exi := (*updatedUserProps)[p]
 
+			//Serve values for properties which need to be modified internally
+			if filter, exists := model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p]; !exi && exists {
+				if satisfiesInternalProperty(filter.Value, (*updatedUserProps)[filter.Property], filter.Operator) {
+					propVal = true
+					exi = true
+				}
+			}
 			// check and get for display name labels for crm property keys
 			if value := U.GetPropertyValueAsString(propVal); U.IsAllowedCRMPropertyPrefix(p) && exi && value != "" {
 				propertyLabel, exist := store.getDisplayNameLabelForThisProperty(event.ProjectId, p, value)
@@ -865,6 +909,10 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesAndFieldsTagMap(event *mode
 		}
 	}
 
+	if alert.EventLevel == model.EventLevelAccount {
+		msgPropMap[model.ETA_DOMAIN_GROUP_USER_ID] = groupDomainUserID
+	}
+
 	breakdownPropMap := make(map[string]interface{}, 0)
 	var breakdownProperties []model.QueryGroupByProperty
 	if alert.BreakdownProperties != nil {
@@ -878,7 +926,7 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesAndFieldsTagMap(event *mode
 	for _, breakdownProperty := range breakdownProperties {
 		prop := breakdownProperty.Property
 		var value interface{}
-		uval, uexists := (*userPropMap)[prop]
+		uval, uexists := (*updatedUserProps)[prop]
 		eval, eexists := (*eventPropMap)[prop]
 
 		if breakdownProperty.Entity == "user" && uexists {
@@ -894,7 +942,7 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesAndFieldsTagMap(event *mode
 	fieldTagsMap := make(map[string]string)
 	for _, tag := range alert.SlackFieldsTag {
 		if ownerField := model.ValidAlertTagsForHubspotOwners[tag]; ownerField != "" {
-			ownerId := U.GetPropertyValueAsString((*userPropMap)[ownerField])
+			ownerId := U.GetPropertyValueAsString((*updatedUserProps)[ownerField])
 			if ownerId != "" {
 				log.Warn("Unable to find owner id for the field tag")
 			}
@@ -1077,7 +1125,7 @@ func isCoolDownTimeExhausted(key *cacheRedis.Key, coolDownTime, unixtime int64, 
 	return true, nil
 }
 
-func (store *MemSQL) CacheEventTriggerAlert(alert *model.EventTriggerAlert, event *model.Event, eventName *model.EventName) bool {
+func (store *MemSQL) CacheEventTriggerAlert(alert *model.EventTriggerAlert, event *model.Event, eventName *model.EventName, updatedUserProps *map[string]interface{}) bool {
 
 	// Adding alert to cache
 	// Check for cooldown against the breakdown properties
@@ -1106,7 +1154,7 @@ func (store *MemSQL) CacheEventTriggerAlert(alert *model.EventTriggerAlert, even
 	timestamp := tt.UnixNano()
 	date := tt.UTC().Format(U.DATETIME_FORMAT_YYYYMMDD)
 
-	messageProps, breakdownProps, fieldsTagMap, err := store.GetMessageAndBreakdownPropertiesAndFieldsTagMap(event, &eta, eventName)
+	messageProps, breakdownProps, fieldsTagMap, err := store.GetMessageAndBreakdownPropertiesAndFieldsTagMap(event, &eta, eventName, updatedUserProps)
 	if err != nil {
 		log.WithError(err).Error("key and sortedTuple fetching error")
 		return false
@@ -1241,8 +1289,17 @@ func (store *MemSQL) UpdateInternalStatusAndGetAlertIDs(projectID int64) ([]stri
 			alert.InternalStatus = model.Paused
 		}
 		if tt.Hours() >= DisableTime && alert.InternalStatus != model.Disabled {
+			//update the is_paused_automatically fields to true in last_fail_details
+			lastFail.IsPausedAutomatically = true
+			lastFailJson, err := U.EncodeStructTypeToPostgresJsonb(lastFail)
+			if err != nil {
+				log.WithFields(log.Fields{"project_id": projectID, "alert_id": alert.ID}).WithError(err).
+					Error("unable to decode lastFailDetails json")
+			}
+
 			updateInternalStatus := map[string]interface{}{
-				"internal_status": model.Disabled,
+				"internal_status":   model.Disabled,
+				"last_fail_details": lastFailJson,
 			}
 			errCode, err := store.UpdateEventTriggerAlertField(projectID, alert.ID, updateInternalStatus)
 			if errCode != http.StatusAccepted || err != nil {

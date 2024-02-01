@@ -7,6 +7,9 @@ import (
 	"factors/model/store"
 	P "factors/pattern"
 	U "factors/util"
+	"fmt"
+	"net/http"
+	"sort"
 
 	log "github.com/sirupsen/logrus"
 
@@ -263,4 +266,53 @@ func OnOnboardingAccScoring(projectId int64) error {
 		return err
 	}
 	return nil
+}
+
+func ValidateAndUpdateEngagementLevel(projectId int64, buckets M.BucketRanges) (bool, int, error) {
+
+	status, err := ValidateEngagementLevel(projectId, buckets)
+	if err != nil {
+		return false, http.StatusBadRequest, err
+	}
+
+	if status {
+		err = store.GetStore().UpdateEngagementLevel(projectId, buckets)
+		if err != nil {
+			return false, http.StatusInternalServerError, err
+		}
+	}
+
+	return true, http.StatusCreated, nil
+}
+
+func ValidateEngagementLevel(projectId int64, engagementLevel M.BucketRanges) (bool, error) {
+	//check of string are repeated
+	//check if ranges are overlapping
+
+	engagementStringMap := make(map[string]int)
+
+	for _, bucket := range engagementLevel.Ranges {
+		if _, ok := engagementStringMap[bucket.Name]; !ok {
+			engagementStringMap[bucket.Name] += 1
+		} else {
+			err := fmt.Errorf("engagementlevel name - %s  is  repeated", bucket.Name)
+			return false, err
+		}
+	}
+
+	sort.Slice(engagementLevel.Ranges, func(i, j int) bool {
+		return engagementLevel.Ranges[i].Low < engagementLevel.Ranges[j].Low
+	})
+
+	for idx := 1; idx < len(engagementLevel.Ranges); idx++ {
+		lv1 := engagementLevel.Ranges[idx-1].Name
+		lv2 := engagementLevel.Ranges[idx].Name
+		if engagementLevel.Ranges[idx-1].High > engagementLevel.Ranges[idx].Low {
+			err := fmt.Errorf("ranges of %s and %s are overlapping", lv1, lv2)
+			return false, err
+		}
+	}
+
+	return true, nil
+
 }

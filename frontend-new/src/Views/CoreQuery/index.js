@@ -127,7 +127,6 @@ function CoreQuery({
   location,
   getCampaignConfigData,
   KPI_config,
-
   fetchProjectSettingsV1,
   fetchProjectSettings,
   fetchMarketoIntegration,
@@ -458,7 +457,7 @@ function CoreQuery({
         updateResultState({
           ...initialState,
           data: res.data.result || res.data,
-          status:res.status
+          status: res.status
         });
       },
       (err) => {
@@ -672,20 +671,20 @@ function CoreQuery({
       updateResultState({
         ...initialState,
         data: formatApiData(data.result_group[0], data.result_group[1]),
-        status:res.status
+        status: res.status
       });
     } else if (result_criteria === TOTAL_USERS_CRITERIA) {
       if (user_type === EACH_USER_TYPE) {
         updateResultState({
           ...initialState,
           data: formatApiData(data.result_group[0], data.result_group[1]),
-          status:res.status
+          status: res.status
         });
       } else {
         updateResultState({
           ...initialState,
           data: data.result_group[0],
-          status:res.status
+          status: res.status
         });
       }
     }
@@ -764,13 +763,18 @@ function CoreQuery({
           updateResultState({
             ...initialState,
             data: resultantData,
-            status:res.status
+            status: res.status
           });
         }
       } catch (err) {
         console.log(err);
         setLoading(false);
-        updateResultState({ ...initialState, loading: false, error: true ,status:err.status});
+        updateResultState({
+          ...initialState,
+          loading: false,
+          error: true,
+          status: err.status
+        });
       }
     },
     [
@@ -845,13 +849,13 @@ function CoreQuery({
           updateResultState({
             ...initialState,
             data: res.data.result || res.data,
-            status:res.status
+            status: res.status
           });
         }
       } catch (err) {
         console.log(err);
         setLoading(false);
-        updateResultState({ ...initialState, error: true ,status:err.status});
+        updateResultState({ ...initialState, error: true, status: err.status });
       }
     },
     [
@@ -986,7 +990,7 @@ function CoreQuery({
             updateResultState({
               ...initialState,
               data: res.data.result || res.data,
-              status:res.status,
+              status: res.status,
               apiCallStatus
             });
           } else {
@@ -1017,7 +1021,7 @@ function CoreQuery({
         updateResultState({
           ...initialState,
           error: true,
-          status:err.status
+          status: err.status
         });
       }
     },
@@ -1104,7 +1108,7 @@ function CoreQuery({
           updateResultState({
             ...initialState,
             data: res.data.result || res.data,
-            status:res.status
+            status: res.status
           });
         }
       } catch (err) {
@@ -1113,7 +1117,7 @@ function CoreQuery({
         updateResultState({
           ...initialState,
           error: true,
-          status:err.status
+          status: err.status
         });
       }
     },
@@ -1171,12 +1175,12 @@ function CoreQuery({
         updateResultState({
           ...initialState,
           data: res.data.result || res.data,
-          status:res.status
+          status: res.status
         });
       } catch (err) {
         setLoading(false);
         console.log(err);
-        updateResultState({ ...initialState, error: true,status:err.status });
+        updateResultState({ ...initialState, error: true, status: err.status });
       }
     },
     [
@@ -1697,8 +1701,8 @@ function CoreQuery({
           selGroup?.category === 'custom_channels'
             ? item.object_type
             : item.entity
-            ? item.entity
-            : item.object_type;
+              ? item.entity
+              : item.object_type;
         return [ddName, item.name, item.data_type, ddtype, item.category];
       });
       return DDvalues;

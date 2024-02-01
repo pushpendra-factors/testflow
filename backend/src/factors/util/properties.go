@@ -1630,13 +1630,15 @@ var GROUP_TO_DEFAULT_SEGMENT_MAP = map[string]string{
 }
 
 var ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES = map[string]string{
-	IN_LINKEDIN:                       "Engaged on LinkedIn",
-	IN_HUBSPOT:                        "In Hubspot",
-	IN_G2:                             "Visited G2",
-	VISITED_WEBSITE:                   "Visited Website",
-	IN_SALESFORCE:                     "In Salesforce",
-	GROUP_EVENT_NAME_ENGAGEMENT_SCORE: "Engagement Score",
-	DP_DOMAIN_NAME:                    "Domain Name",
+	IN_LINKEDIN:                             "Engaged on LinkedIn",
+	IN_HUBSPOT:                              "In Hubspot",
+	IN_G2:                                   "Visited G2",
+	VISITED_WEBSITE:                         "Visited Website",
+	IN_SALESFORCE:                           "In Salesforce",
+	GROUP_EVENT_NAME_ENGAGEMENT_SCORE:       "Engagement Score",
+	GROUP_EVENT_NAME_ENGAGEMENT_LEVEL:       "Engagement Level",
+	GROUP_EVENT_NAME_TOTAL_ENGAGEMENT_SCORE: "Total Engagement Score",
+	DP_DOMAIN_NAME:                          "Domain Name",
 }
 
 var USER_PROPERTIES_WITH_COLUMN = []string{

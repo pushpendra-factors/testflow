@@ -1,7 +1,7 @@
+import React, { useEffect, useState } from 'react';
 import { SVG, Text } from 'Components/factorsComponents';
 import logger from 'Utils/logger';
 import EnrichFeature from 'Views/Settings/ProjectSettings/IntegrationSettings/SixSignalFactors/EnrichFeature';
-import { SixSignalConfigType } from 'Views/Settings/ProjectSettings/IntegrationSettings/SixSignalFactors/types';
 import {
   Button,
   Col,
@@ -9,34 +9,40 @@ import {
   Radio,
   RadioChangeEvent,
   Row,
+  Tooltip,
   notification
 } from 'antd';
 import confirm from 'antd/lib/modal/confirm';
 import useMobileView from 'hooks/useMobileView';
 import { isEmpty } from 'lodash';
-import React, { useEffect, useState } from 'react';
 import { ConnectedProps, connect, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { udpateProjectSettings } from 'Reducers/global';
 import {
   CommonStepsProps,
+  FactorsDeAnonymisationProvider,
   OnboardingStepsConfig,
   VISITOR_IDENTIFICATION_SETUP
 } from '../../types';
+import styles from './index.module.scss';
+import CheckListIllustration from '../../../../../assets/images/checklist_Illustration.png';
+import { setFactorsDeAnonymisationProvider } from '../../../utils/service';
 
-const Step3 = ({
+function Step3({
   udpateProjectSettings,
   incrementStepCount,
   decrementStepCount
-}: Step3PropsType) => {
+}: Step3PropsType) {
   const isMobileView = useMobileView();
   const [enrichmentType, setEnrichmentType] = useState<boolean | null>(null);
+  const [provider, setProvider] =
+    useState<FactorsDeAnonymisationProvider>('factors_clearbit');
   const [loading, setLoading] = useState(false);
   const { active_project, currentProjectSettings } = useSelector(
     (state) => state?.global
   );
-  const six_signal_config: SixSignalConfigType =
-    currentProjectSettings.six_signal_config;
+
+  const { six_signal_config } = currentProjectSettings;
   const onboarding_steps: OnboardingStepsConfig =
     currentProjectSettings?.onboarding_steps;
 
@@ -71,6 +77,7 @@ const Step3 = ({
     try {
       setLoading(true);
 
+      await setFactorsDeAnonymisationProvider(active_project.id, provider);
       if (onboarding_steps?.[VISITOR_IDENTIFICATION_SETUP]) {
         incrementStepCount();
         setLoading(false);
@@ -103,9 +110,13 @@ const Step3 = ({
     }
   };
 
-  const checkContinueButtonDisablity = () => {
-    return enrichmentType === null;
+  const handleProviderChange = (_provider: FactorsDeAnonymisationProvider) => {
+    if (provider !== _provider) {
+      setProvider(_provider);
+    }
   };
+
+  const checkContinueButtonDisablity = () => enrichmentType === null;
 
   useEffect(() => {
     if (!six_signal_config || isEmpty(six_signal_config)) {
@@ -114,6 +125,20 @@ const Step3 = ({
       setEnrichmentType(true);
     }
   }, [six_signal_config]);
+
+  useEffect(() => {
+    if (
+      currentProjectSettings?.factors_deanon_config?.clearbit
+        ?.traffic_fraction === 1
+    ) {
+      setProvider('factors_clearbit');
+    } else if (
+      currentProjectSettings?.factors_deanon_config?.['6signal']
+        ?.traffic_fraction === 1
+    ) {
+      setProvider('factors_6Signal');
+    }
+  }, [currentProjectSettings]);
 
   return (
     <div>
@@ -125,46 +150,136 @@ const Step3 = ({
           className={`${isMobileView ? 'text-center' : ''}`}
         >
           <Text
-            type={'title'}
+            type='title'
             level={3}
-            color={'character-primary'}
-            extraClass={'m-0'}
-            weight={'bold'}
+            color='character-primary'
+            extraClass='m-0'
+            weight='bold'
           >
             Activate Deanonymisation
           </Text>
           <Text
-            type={'title'}
+            type='title'
             level={6}
-            extraClass={'m-0 mt-1'}
+            extraClass='m-0 mt-1'
+            color='character-secondary'
+          >
+            Identify accounts that visit your website and track their activity
+            with one of these providers
+          </Text>
+          <div className='mt-6 flex gap-4'>
+            <div
+              className={`${styles.providerCard} ${
+                provider === 'factors_clearbit' ? styles.selectedProvider : ''
+              }`}
+              onClick={() => handleProviderChange('factors_clearbit')}
+            >
+              <SVG name='ClearbitLogo' size={48} color='purple' />
+              <div>
+                <Text
+                  type='title'
+                  level={6}
+                  weight='bold'
+                  extraClass='m-0'
+                  color='character-primary'
+                >
+                  Clearbit Reveal
+                </Text>
+                <Text
+                  type='title'
+                  level={8}
+                  extraClass='m-0'
+                  color='character-secondary'
+                >
+                  Use Clearbit Reveal to identify accounts
+                </Text>
+              </div>
+              <div className={styles.providerCheckContainer}>
+                {provider === 'factors_clearbit' && (
+                  <SVG name='Check_circle' size={24} />
+                )}
+              </div>
+            </div>
+            <div
+              className={`${styles.providerCard} ${
+                provider === 'factors_6Signal' ? styles.selectedProvider : ''
+              }`}
+              onClick={() => handleProviderChange('factors_6Signal')}
+            >
+              <SVG name='SixSignalLogo' size={48} color='purple' />
+              <div>
+                <Text
+                  type='title'
+                  level={6}
+                  weight='bold'
+                  extraClass='m-0'
+                  color='character-primary'
+                >
+                  6Signal by 6Sense
+                </Text>
+                <Text
+                  type='title'
+                  level={8}
+                  extraClass='m-0'
+                  color='character-secondary'
+                >
+                  Use 6Signal by 6Sense to identify accounts
+                </Text>
+              </div>
+              <div className={styles.providerCheckContainer}>
+                {provider === 'factors_6Signal' && (
+                  <SVG name='Check_circle' size={24} />
+                )}
+              </div>
+            </div>
+          </div>
+          <Text
+            type='title'
+            level={6}
+            extraClass='m-0 mt-10'
             color='character-secondary'
           >
             You can choose to identify all accounts that visit your website or
-            set custom rules to identify some of them.
-          </Text>
-          <Text
-            type={'title'}
-            level={6}
-            extraClass='m-0 mt-1 '
-            color='character-secondary'
-          >
-            (This affects your quota of monthly accounts identified)
+            set custom rules to identify some of them. This affects your monthly
+            quota of accounts identified.
           </Text>
         </Col>
         <Col span={24}>
-          <div className='my-8'>
+          <div className='my-8 flex justify-between items-center'>
             <Radio.Group
               onChange={handleEnrichmentChange}
               value={enrichmentType}
             >
               <Radio value={false}>Identify all accounts</Radio>
-              <Radio value={true}>Set custom rules</Radio>
+              <Radio value>Set custom rules</Radio>
             </Radio.Group>
+            <Tooltip
+              title='You can also change this later in 
+the pricing page inside the product.'
+            >
+              <div className='flex items-center  gap-1'>
+                <SVG name='InfoCircle' size='16' />
+
+                <Text
+                  type='title'
+                  level={7}
+                  color='character-title'
+                  extraClass='m-0'
+                >
+                  Learn more
+                </Text>
+              </div>
+            </Tooltip>
           </div>
           {enrichmentType === false && (
-            <>
+            <div className={styles.allAccountInfoContainer}>
+              <img
+                style={{ width: 100, height: 100 }}
+                src={CheckListIllustration}
+                alt='illustration'
+              />
               <Text
-                type={'title'}
+                type='title'
                 level={6}
                 extraClass='m-0'
                 color='character-secondary'
@@ -172,11 +287,11 @@ const Step3 = ({
                 Identify all accounts that visit your website. This ensures that
                 you don’t miss out on any account.
               </Text>
-            </>
+            </div>
           )}
           {enrichmentType && (
-            <>
-              <div className='mt-4'>
+            <div className={styles.customRulesContainer}>
+              <div>
                 <EnrichFeature
                   type='page'
                   title='Identify accounts who visited specific pages'
@@ -192,20 +307,8 @@ const Step3 = ({
                   actionButtonText='Select Countries '
                 />
               </div>
-            </>
+            </div>
           )}
-          <div className='flex items-center my-6 gap-1'>
-            <SVG name='InfoCircle' size='16' />
-            <Text
-              type={'title'}
-              level={7}
-              color='character-secondary'
-              extraClass='m-0'
-            >
-              You can also do this later in the pricing screen inside the
-              product.
-            </Text>
-          </div>
         </Col>
         {!isMobileView && <Divider className='mt-10 mb-6' />}
         <Col span={24}>
@@ -226,7 +329,7 @@ const Step3 = ({
             </Button>
             <Button
               type='primary'
-              className={'m-0'}
+              className='m-0'
               onClick={handleSubmission}
               loading={loading}
               disabled={checkContinueButtonDisablity()}
@@ -238,7 +341,7 @@ const Step3 = ({
       </Row>
     </div>
   );
-};
+}
 
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators({ udpateProjectSettings }, dispatch);

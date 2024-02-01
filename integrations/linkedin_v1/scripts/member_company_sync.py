@@ -52,7 +52,7 @@ def sync_company_data(options, linkedin_setting, sync_info_with_type, input_star
             
             
 def handle(signum, frame):
-    raise Exception("Function timeout after 10 mins")
+    raise Exception("Function timeout after 20 mins")
 
 if __name__ == '__main__':
     (options, args) = parser.parse_args()
@@ -83,9 +83,9 @@ if __name__ == '__main__':
     
     for linkedin_setting in split_linkedin_settings:
         try:
-            # timeout this function after 10 mins
+            # timeout this function after 20 mins
             signal.signal(signal.SIGALRM, handle)
-            signal.alarm(600)
+            signal.alarm(1200)
             # 
             sync_info_with_type = data_service_obj.get_last_sync_info_for_company_data(
                                                     linkedin_setting, input_start_timestamp, 

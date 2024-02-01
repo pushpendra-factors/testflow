@@ -1,4 +1,4 @@
-from app.handlers import adwords_handlers, v1_adwords_handlers, v1_gsc_handlers
+from app.handlers import adwords_handlers, v1_adwords_handlers, v1_gsc_handlers, chat_handlers
 
 ROUTES = [
     (r"/", adwords_handlers.DefaultHandler),
@@ -13,4 +13,7 @@ ROUTES = [
     (r"/google_organic/v1/auth/redirect", v1_gsc_handlers.OAuthRedirectV1Handler),
     (r"/google_organic/v1/auth/callback", v1_gsc_handlers.OAuthCallbackV1Handler),
     (r"/google_organic/v1/get_google_organic_urls", v1_gsc_handlers.GetGSCURLsV1Handler),
+
+    (r"/chat", chat_handlers.ChatHandler),
+
 ]

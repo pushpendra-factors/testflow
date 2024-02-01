@@ -6,7 +6,7 @@ services:
                 context: .
                 dockerfile: Dockerfile.memsql.testing
                 args:
-                    - MEMSQL_VERSION=alma-8.1.31-d5850b922e-4.0.16-1.17.6
+                    - MEMSQL_VERSION=alma-8.5.3-d171c88701-4.0.16-1.17.7
             image: testing/memsql:1.0
             deploy:
                 replicas: 1

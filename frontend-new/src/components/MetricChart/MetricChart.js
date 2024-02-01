@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import PropTypes from 'prop-types';
 import cx from 'classnames';
 import { Tooltip } from 'antd';
@@ -9,7 +9,8 @@ import LegendsCircle from '../../styles/components/LegendsCircle';
 import styles from './index.module.scss';
 import { CHART_COLOR_1 } from '../../constants/color.constants';
 import ControlledComponent from '../ControlledComponent';
-// import truncateURL from 'Utils/truncateURL';
+import truncateURL from 'Utils/truncateURL';
+import { useSelector } from 'react-redux';
 
 function MetricChart({
   value,
@@ -22,6 +23,7 @@ function MetricChart({
   const percentChange = showComparison
     ? ((value - compareValue) / compareValue) * 100
     : 0;
+  const { projectDomainsList } = useSelector((state) => state.global);
 
   const changeIcon = showComparison ? (
     <SVG
@@ -30,6 +32,11 @@ function MetricChart({
       size={16}
     />
   ) : null;
+
+  const truncatedHeaderTitle = useMemo(
+    () => truncateURL(headerTitle, projectDomainsList),
+    [headerTitle, projectDomainsList]
+  );
 
   return (
     <div
@@ -46,15 +53,10 @@ function MetricChart({
             level={7}
             extraClass={'text-with-no-margin'}
           >
-            {/* {truncateURL(headerTitle).length > METRIC_CHART_TITLE_CHAR_COUNT
-              ? truncateURL(headerTitle).slice(
-                  0,
-                  METRIC_CHART_TITLE_CHAR_COUNT
-                ) + '...'
-              : truncateURL(headerTitle)} */}
-            {headerTitle.length > METRIC_CHART_TITLE_CHAR_COUNT
-              ? headerTitle.slice(0, METRIC_CHART_TITLE_CHAR_COUNT) + '...'
-              : headerTitle}
+            {truncatedHeaderTitle.length > METRIC_CHART_TITLE_CHAR_COUNT
+              ? truncatedHeaderTitle.slice(0, METRIC_CHART_TITLE_CHAR_COUNT) +
+                '...'
+              : truncatedHeaderTitle}
           </Text>
         </div>
       </Tooltip>

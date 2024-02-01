@@ -29,6 +29,8 @@ import KPIBasedAlert from './KPIBasedAlert';
 import EventBasedAlert from './EventBasedAlert';
 import styles from './index.module.scss';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
+import { getGroups } from 'Reducers/coreQuery/middleware';
+
 const { TabPane } = Tabs;
 
 const Alerts = ({
@@ -40,7 +42,9 @@ const Alerts = ({
   currentAgent,
   createEventAlert,
   fetchAllAlerts,
-  createAlert
+  createAlert,
+  groups,
+  getGroups
 }) => {
   const [tableData, setTableData] = useState([]);
   const [tableLoading, setTableLoading] = useState(false);
@@ -51,6 +55,12 @@ const Alerts = ({
     index: 0
   });
   const { confirm } = Modal;
+
+  useEffect(() => {
+    if (!groups || Object.keys(groups).length === 0) {
+      getGroups(activeProject?.id);
+    }
+  }, [activeProject?.id, groups]);
 
   const confirmDeleteAlert = (item) => {
     confirm({
@@ -235,10 +245,9 @@ const Alerts = ({
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => (
-        <div className='flex items-center'>
-          {' '}
-          {status === 'paused' || status === 'disabled' ? (
+      render: (item) => (
+        <div className='flex items-center'> 
+          {item?.status === 'paused' || item?.status === 'disabled' ? (
             <Badge
               className={'fa-custom-badge fa-custom-badge--orange'}
               status='processing'
@@ -251,6 +260,9 @@ const Alerts = ({
               text={'Active'}
             />
           )}
+          {
+            item?.error && <SVG name={'InfoCircle'} extraClass={'ml-2'} size={18} color='red' />
+          }
         </div>
       )
     },
@@ -308,7 +320,7 @@ const Alerts = ({
             alert_name: item,
             type: item?.type == "kpi_alert" ? "Weekly alerts" : "Real-time",
             dop: item?.delivery_options,
-            status: item?.status,
+            status: {status: item?.status, error: item?.last_fail_details},
             actions: item
           });
         });
@@ -480,7 +492,8 @@ const mapStateToProps = (state) => ({
   agent_details: state.agent.agent_details,
   slack: state.global.slack,
   projectSettings: state.global.projectSettingsV1,
-  currentAgent: state.agent.agent_details
+  currentAgent: state.agent.agent_details,
+  groups: state.coreQuery.groups,
 });
 
 export default connect(mapStateToProps, {
@@ -489,5 +502,6 @@ export default connect(mapStateToProps, {
   deleteEventAlert,
   createEventAlert,
   fetchAllAlerts,
-  createAlert
+  createAlert,
+  getGroups
 })(Alerts);

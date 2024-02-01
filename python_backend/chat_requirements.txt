@@ -1,0 +1,9 @@
+pandas==1.2.4
+openai==0.28.1
+flask==2.0.0
+transformers==4.34.0
+scikit-learn
+tensorflow
+lxml>=3.5.0
+torch==2.0.1
+bert==2.2.0

@@ -227,7 +227,7 @@ function WidgetCard({
 
   const handleEditQuery = useCallback(() => {
     history.push({
-      pathname: '/quick-board/report',
+      pathname: '/report/quick-board',
       state: {
         query: unit,
         filter: dashboardFilters,

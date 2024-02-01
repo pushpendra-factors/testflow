@@ -1,0 +1,47 @@
+export const COLUMN_TYPE_PROPS = {
+  string: { min: 264, max: 296, padding: 16 },
+  number: { min: 224, max: 256, padding: 16 },
+  date: { min: 216, max: 248, padding: 16 },
+  datetime: { min: 224, max: 256, padding: 16 },
+  actions: { min: 208, max: 240, padding: 16 },
+  range: { min: 224, max: 256, padding: 16 },
+  currency: { min: 224, max: 256, padding: 16 },
+  special: { min: 128, max: 160, padding: 16 } // This is for engagement and score columns
+};
+export const ACCOUNTS_TABLE_COLUMN_TYPES = {
+  account: { Type: 'string', Align: 'Left' },
+  engagement: { Type: 'special', Align: 'Left' },
+  score: { Type: 'special', Align: 'Left' },
+  $6Signal_employee_count: { Type: 'numeric', Align: 'Right' },
+  $6Signal_naics: { Type: 'numeric', Align: 'Right' },
+  $6Signal_sic: { Type: 'numeric', Align: 'Right' },
+  $6Signal_zip: { Type: 'numeric', Align: 'Right' },
+  $postal_code: { Type: 'numeric', Align: 'Right' },
+  $screen_width: { Type: 'numeric', Align: 'Right' },
+  $screen_height: { Type: 'numeric', Align: 'Right' },
+  $screen_density: { Type: 'numeric', Align: 'Right' },
+  $latest_adgroup_id: { Type: 'numeric', Align: 'Right' },
+  $latest_campaign_id: { Type: 'numeric', Align: 'Right' },
+  $initial_adgroup_id: { Type: 'numeric', Align: 'Right' },
+  $initial_campaign_id: { Type: 'numeric', Align: 'Right' },
+  $adgroup_id: { Type: 'numeric', Align: 'Right' },
+  $campaign_id: { Type: 'numeric', Align: 'Right' },
+  $browser_version: { Type: 'numeric', Align: 'Right' },
+  $os_version: { Type: 'numeric', Align: 'Right' },
+  $page_count: { Type: 'numeric', Align: 'Right' },
+  $session_count: { Type: 'numeric', Align: 'Right' },
+  $6Signal_revenue_range: { Type: 'range', Align: 'Centre' },
+  $6Signal_employee_range: { Type: 'range', Align: 'Centre' },
+  $6Signal_annual_revenue: {
+    Type: 'currency',
+    Align: 'Right',
+    CurrencyType: '$'
+  },
+  $initial_page_load_time: { Type: 'time', Align: 'Right' },
+  $initial_page_spent_time: { Type: 'time', Align: 'Right' },
+  $session_spent_time: { Type: 'time', Align: 'Right' },
+  $page_load_time: { Type: 'time', Align: 'Right' },
+  $latest_page_load_time: { Type: 'time', Align: 'Right' },
+  $latest_page_spent_time: { Type: 'time', Align: 'Right' },
+  $joinTime: { Type: 'date', Align: 'Left' }
+};

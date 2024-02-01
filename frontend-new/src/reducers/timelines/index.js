@@ -101,13 +101,12 @@ const getURLWithQueryParams = (projectId, profileType, agentId) => {
   if (window.SCORE_DEBUG) {
     queryParams.push('debug=true');
   }
-  
+
   if (window.NOT_USE_MARKER) {
     queryParams.push('user_marker=false');
   } else {
-	queryParams.push('user_marker=true');
+    queryParams.push('user_marker=true');
   }
-  
 
   const queryString = queryParams.join('&');
 
@@ -169,15 +168,25 @@ export const deleteSegmentByID = ({ projectId, segmentId }) => {
 };
 
 function getUpdatedSegmentsAfterDeleting({ segments, segmentId }) {
-  const updatedSegments = { ...segments };
-  for (const key in updatedSegments) {
-    const list = updatedSegments[key];
-    updatedSegments[key] = list.filter((segment) => segment.id !== segmentId);
-  }
-  return updatedSegments;
+  return Object.fromEntries(
+    Object.entries(segments).map(([key, list]) => [
+      key,
+      list.filter((segment) => segment.id !== segmentId)
+    ])
+  );
 }
 
 export const fetchAccountOverview = (projectID, groupName, accID) => {
   const url = `${host}projects/${projectID}/v1/profiles/accounts/overview/${groupName}/${accID}`;
+  return get(null, url);
+};
+
+export const updateEngagementCategoryRanges = (projectID, payload) => {
+  const url = `${host}projects/${projectID}/v1/accscore/engagementbuckets`;
+  return put(null, url, payload);
+};
+
+export const getEngagementCategoryRanges = (projectID) => {
+  const url = `${host}projects/${projectID}/v1/accscore/engagementbuckets`;
   return get(null, url);
 };

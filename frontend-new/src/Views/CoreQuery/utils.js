@@ -1154,7 +1154,7 @@ export const processFiltersFromQuery = (prArray) => {
   let ref = -1;
   let lastProp = '';
   let lastOp = '';
-  prArray.forEach((pr) => {
+  prArray?.forEach((pr) => {
     if (pr.lop === 'AND') {
       ref += 1;
       filtersArray.push(createFilterStruct(pr, ref));

@@ -49,6 +49,7 @@ type ProjectSetting struct {
 	CreatedAt                 time.Time       `json:"created_at"`
 	UpdatedAt                 time.Time       `json:"updated_at"`
 	SegmentMarkerLastRun      time.Time       `gorm:"default:"1000-01-01 00:00:00" json:"segment_marker_last_run"`
+	MarkerLastRunAllAccounts  time.Time       `json:"marker_last_run_all_accounts"`
 	FilterIps                 *postgres.Jsonb `json:"filter_ips,omitempty"`
 	//Facebook settings
 	IntFacebookEmail       string  `json:"int_facebook_email,omitempty"`
@@ -84,10 +85,12 @@ type ProjectSetting struct {
 	IsExplainEnabled              bool            `json:"is_explain_enabled"`
 	IntegrationBits               string          `json: "-"`
 	// Rudderstack integration settings.
-	IntRudderstack        *bool           `gorm:"not null;default:false" json:"int_rudderstack,omitempty"`
-	ProjectCurrency       string          `json:"currency"`
-	IsPathAnalysisEnabled bool            `json:"is_path_analysis_enabled"`
-	Acc_score_weights     *postgres.Jsonb `json:"acc_score_weights"`
+	IntRudderstack          *bool           `gorm:"not null;default:false" json:"int_rudderstack,omitempty"`
+	ProjectCurrency         string          `json:"currency"`
+	IsPathAnalysisEnabled   bool            `json:"is_path_analysis_enabled"`
+	Acc_score_weights       *postgres.Jsonb `json:"acc_score_weights"`
+	CustomEngagementBuckets *postgres.Jsonb `json:"custom_engagement_buckets"`
+
 	// onboarding flow steps
 	IsDeanonymizationRequested   bool            `json:"is_deanonymization_requested"`
 	IsOnboardingCompleted        bool            `json:"is_onboarding_completed"`

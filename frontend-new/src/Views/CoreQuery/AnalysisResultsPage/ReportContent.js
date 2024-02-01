@@ -87,15 +87,15 @@ function ReportContent({
         breakdown,
         chartTypes,
         queryType,
-        campaignGroupBy: campaignState.group_by,
-        attributionModels: attributionsState.models
+        campaignGroupBy: campaignState?.group_by,
+        attributionModels: attributionsState?.models
       }),
     [
       breakdown,
-      campaignState.group_by,
+      campaignState?.group_by,
       chartTypes,
       queryType,
-      attributionsState.models
+      attributionsState?.models
     ]
   );
 
@@ -207,15 +207,15 @@ function ReportContent({
   }
 
   if (queryType === QUERY_TYPE_CAMPAIGN) {
-    queryDetail = campaignState.select_metrics.join(', ');
-    durationObj = campaignState.date_range;
+    queryDetail = campaignState?.select_metrics.join(', ');
+    durationObj = campaignState?.date_range;
     if (
-      campaignState.select_metrics.length > 1 &&
-      campaignState.group_by.length
+      campaignState?.select_metrics.length > 1 &&
+      campaignState?.group_by.length
     ) {
       metricsDropdown = (
         <CampaignMetricsDropdown
-          metrics={campaignState.select_metrics}
+          metrics={campaignState?.select_metrics}
           currValue={currMetricsValue}
           onChange={setCurrMetricsValue}
         />
