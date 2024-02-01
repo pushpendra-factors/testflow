@@ -146,6 +146,7 @@ export default function MultiSelect({
     // Adding Select Option Based On SearchTerm
     rendOpts.push(
       <div
+        tabIndex={0}
         key={'search' + searchOption.value}
         className={`${
           allowSearch ? 'fa-select-group-select--options' : 'fa-select--options'
@@ -153,11 +154,14 @@ export default function MultiSelect({
           searchOption?.isSelected
             ? `${styles.fa_selected}`
             : maxAllowedSelection !== 0 &&
-              localSelectedOptionCount >= maxAllowedSelection
-            ? `${styles.dropdown__disabled_opt}`
-            : ''
+                localSelectedOptionCount >= maxAllowedSelection
+              ? `${styles.dropdown__disabled_opt}`
+              : ''
         } `}
         onClick={() => handleMultipleOptionClick(searchOption)}
+        onKeyDown={(e) => {
+          e.key === 'Enter' && handleMultipleOptionClick(searchOption);
+        }}
       >
         <Text level={7} type={'title'} extraClass={'m-0'} weight={'thin'}>
           Select:
@@ -179,6 +183,10 @@ export default function MultiSelect({
     .forEach((option) => {
       rendOpts.push(
         <div
+          onKeyDown={(e) => {
+            e.key === 'Enter' && handleMultipleOptionClick(option);
+          }}
+          tabIndex={0}
           key={option.value}
           title={option.label}
           onClick={() => {
@@ -192,8 +200,8 @@ export default function MultiSelect({
             option?.isSelected
               ? `${styles.fa_selected}`
               : option?.isDisabled
-              ? `${styles.dropdown__disabled_opt}`
-              : ''
+                ? `${styles.dropdown__disabled_opt}`
+                : ''
           } `}
         >
           <div className='w-11/12'>
@@ -229,6 +237,7 @@ export default function MultiSelect({
     <div className={`${styles.dropdown__apply_opt}`} key={'actions'}>
       <div key={'apply_opt'} className={`fa-select--buttons `}>
         <Button
+          tabIndex={0}
           disabled={
             localSelectedOptionCount === 0 && propsOptionsSelectedCount === 0
           }
