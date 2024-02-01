@@ -317,9 +317,9 @@ function FaHeader() {
           </div>
         </div>
       </div>
-      <div className='flex w-1/3 items-center justify-end col-gap-6 text-white'>
+      <div className='flex w-1/2 items-center justify-center col-gap-6 text-white'>
         {!isChecklistEnabled && (
-          <div className='w-1/8 flex justify-center'>
+          <div className='w-1/8 flex justify-end'>
             <Button
               icon={<SVG name='Stars' size={20} extraClass='-mt-1' />}
               type='link'
@@ -331,7 +331,11 @@ function FaHeader() {
             </Button>
           </div>
         )}
-        <div className='w-1/2 flex justify-center'>
+        <div
+          className={`${
+            !isChecklistEnabled ? 'w-1/3' : 'w-1/2'
+          } flex justify-end`}
+        >
           <SearchBar placeholder='Search ⌘K' type={2} />
         </div>
         <Dropdown
