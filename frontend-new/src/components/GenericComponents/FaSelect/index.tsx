@@ -1,4 +1,10 @@
-import React, { ReactNode, useRef, useState } from 'react';
+import React, {
+  ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState
+} from 'react';
 import styles from './index.module.scss';
 import { Input, Spin } from 'antd';
 import { SVG, Text } from '../../factorsComponents';
@@ -14,6 +20,7 @@ import {
 import SingleSelect from './SingleSelect';
 import MultiSelect from './MultiSelect';
 import useDynamicPosition from 'hooks/useDynamicPosition';
+import useKeyboardNavigation from 'hooks/useKeyboardNavigation';
 interface FaSelectProps {
   options: OptionType[];
   optionClickCallback?: SingleSelectOptionClickCallbackType;
@@ -46,19 +53,32 @@ export default function FaSelect({
   allowSearchTextSelection = true
 }: FaSelectProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const inputComponentRef = useAutoFocus(allowSearch);
-
+  const [autoFocus, setAutofocus] = useState(false);
+  const inputComponentRef = useAutoFocus(autoFocus);
   const dropdownRef = useRef(null);
   const relativeRef = useRef(null);
 
   const position = useDynamicPosition(relativeRef, dropdownRef, placement, 250);
 
+  useEffect(() => {
+    setAutofocus(true);
+
+    return () => {
+      setAutofocus(false);
+    };
+  }, []);
+  const OnKeyDownEvent = useCallback(
+    (e) => useKeyboardNavigation(dropdownRef, e),
+    []
+  );
   const renderSearchInput = () => {
     return (
       <div
         className={`${styles.selectInput} fa-filter-select fa-search-select`}
+        onKeyDown={OnKeyDownEvent}
       >
         <Input
+          tabIndex={0}
           style={{ overflow: 'hidden' }}
           prefix={<SVG name={'search'} />}
           size='large'
@@ -149,18 +169,19 @@ export default function FaSelect({
              ? `fa-select--group-select-sm`
              : `fa-select--group-select-mini`
          } ${
-            position === 'Top' ||
-            position === 'TopLeft' ||
-            position === 'TopRight'
-              ? styles.dropdown__select_placement_top
-              : styles.dropdown__select_placement_bottom
-          }`}
+           position === 'Top' ||
+           position === 'TopLeft' ||
+           position === 'TopRight'
+             ? styles.dropdown__select_placement_top
+             : styles.dropdown__select_placement_bottom
+         }`}
           ref={dropdownRef}
         >
           {allowSearch && renderSearchInput()}
 
           <div
             className={`fa-select-dropdown ${styles.dropdown__select__content}`}
+            onKeyDown={OnKeyDownEvent}
           >
             {children || renderOptions()}
           </div>

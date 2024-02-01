@@ -291,6 +291,7 @@ function ProjectModal(props) {
         trigger='click'
       >
         <Tooltip
+          mouseEnterDelay={1}
           title={
             variant === 'app'
               ? 'Access your projects, account settings, and more'
