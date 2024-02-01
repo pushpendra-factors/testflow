@@ -315,7 +315,7 @@ func (store *MemSQL) GetProjectAgentLatestAdminEmailByProjectId(projectId int64)
 	}
 
 	adminAgentInfo, err := store.GetAgentInfo(projectAgentAdmin.AgentUUID)
-	if err != http.StatusOK {
+	if err != http.StatusFound {
 		return "", err
 	}
 
