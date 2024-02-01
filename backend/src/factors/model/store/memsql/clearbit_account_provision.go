@@ -35,6 +35,8 @@ func (store *MemSQL) ProvisionClearbitAccountForSingleProject(projectId int64, e
 	})
 
 	provisionAPIKey := config.GetClearbitProvisionAccountAPIKey()
+	logCtx.Info("cb acc provison api: ", provisionAPIKey)
+
 	result, err := clear_bit.GetClearbitProvisionAccountResponse(API_URL, emailId, domainName, provisionAPIKey)
 	if err != nil {
 		logCtx.Error(err)
@@ -60,7 +62,7 @@ func (store *MemSQL) ProvisionClearbitAccountForSingleProject(projectId int64, e
 	//Update Project Settings Table
 	_, errCode := store.UpdateProjectSettings(projectId, &model.ProjectSetting{FactorsClearbitKey: response.Keys.Secret, ClearbitProvisionAccResponse: &responseJSON})
 	if errCode != http.StatusAccepted {
-		logCtx.Error("Failed to UpdateProjectSettings with clearbit response: ", &responseJSON)
+		logCtx.Error("failed to UpdateProjectSettings with clearbit response: ", &responseJSON)
 		return fmt.Errorf("Failed to Update Project Settings")
 	}
 
@@ -83,8 +85,10 @@ func (store *MemSQL) IsClearbitAccountProvisioned(projectId int64) (bool, error)
 
 func (store *MemSQL) ProvisionClearbitAccountByAdminEmailAndDomain(projectId int64) (int, string) {
 
+	logCtx := log.WithField("project_id", projectId)
 	isProvisioned, err := store.IsClearbitAccountProvisioned(projectId)
 	if err != nil {
+		logCtx.Error("Failed checking if clearbit account is provisoned")
 		return http.StatusInternalServerError, "Failed checking if clearbit account is provisoned"
 	}
 
@@ -92,13 +96,17 @@ func (store *MemSQL) ProvisionClearbitAccountByAdminEmailAndDomain(projectId int
 
 		adminMail, errCode := store.GetProjectAgentLatestAdminEmailByProjectId(projectId)
 		if errCode != http.StatusFound {
+			logCtx.Error("Failed fetching admin mail")
 			return errCode, "Failed fetching admin mail"
 		}
 
 		project, errCode := store.GetProject(projectId)
 		if errCode != http.StatusFound {
+			logCtx.Error("Failed fetching projects")
 			return errCode, "Failed fetching projects"
 		}
+
+		logCtx.Info("Provision acc details : ", adminMail, project.ClearbitDomain)
 
 		err = store.ProvisionClearbitAccountForSingleProject(projectId, adminMail, project.ClearbitDomain)
 		if err != nil {
