@@ -368,7 +368,16 @@ func TestGetDomainGroupDomainName(t *testing.T) {
 		"www.a.edu.pk":                  "a.edu.pk",
 		"http://a.edu.pk":               "a.edu.pk",
 		"http://abc.a.edu.pk":           "a.edu.pk",
+		"tabc.texas.gov":                "tabc.texas.gov",
+		"tabc.Alaska.gov":               "tabc.alaska.gov",
+		".tabc.texas.gov":               "tabc.texas.gov",
+		"tsbpa.texas.gov":               "tsbpa.texas.gov",
+		"hhs.texas.gov":                 "hhs.texas.gov",
+		"@hhs.texas.gov":                "hhs.texas.gov",
+		"texas.gov":                     "texas.gov",
+		".texas.gov":                    "texas.gov",
 	}
+
 	for rawDomain := range expectedDomainNames {
 		assert.Equal(t, expectedDomainNames[rawDomain], U.GetDomainGroupDomainName(project.ID, rawDomain), fmt.Sprintf("Input %s", rawDomain))
 	}
