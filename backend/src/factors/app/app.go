@@ -216,6 +216,7 @@ func main() {
 	aggrEventPropertyValuesCacheByProjectID := flag.String("aggr_event_property_values_project_ids", "", "")
 	paragonSigningKey := flag.String("paragon_signing_key", "", "")
 	paragonProjectID := flag.String("paragon_project_id", "", "")
+	clearbitAccProvisionKey := flag.String("cb_acc_provision_key", "dummy", "")
 
 	flag.Parse()
 
@@ -381,6 +382,7 @@ func main() {
 		AggrEventPropertyValuesCacheByProjectID:        *aggrEventPropertyValuesCacheByProjectID,
 		ParagonTokenSigningKey:                         *paragonSigningKey,
 		ParagonProjectID:                               *paragonProjectID,
+		ClearbitProvisionAccountAPIKey:                 *clearbitAccProvisionKey,
 	}
 	C.InitConf(config)
 
