@@ -7821,7 +7821,7 @@ func TestHubspotPropertyValueLabels(t *testing.T) {
 
 	configs = make(map[string]interface{})
 	configs["rollupLookback"] = 10
-	configs["deleteRollupAfterAddingToAggregate"] = 1
+	configs["deleteRollupAfterAddingToAggregate"] = 0
 	event_user_cache.DoRollUpSortedSet(configs)
 
 	C.GetConfig().LookbackWindowForEventUserCache = 10

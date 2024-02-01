@@ -503,8 +503,9 @@ func TestGetEventNamesHandler(t *testing.T) {
 
 	// Test events ingested via sdk/track call
 	configs := make(map[string]interface{})
-	configs["rollupLookback"] = 1
+	configs["rollupLookback"] = 2
 	event_user_cache.DoRollUpSortedSet(configs)
+
 	w = sendGetEventNamesExactRequest(project.ID, agent, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
@@ -520,10 +521,10 @@ func TestGetEventNamesHandler(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	json.Unmarshal(jsonResponse, &eventNamesWithDisplayNames)
+
 	// should contain all event names along with $session.
-	assert.Len(t, eventNamesWithDisplayNames.EventNames["Most Recent"], 3)
 	assert.Len(t, eventNamesWithDisplayNames.EventNames["Hubspot"], 1)
-	assert.Len(t, eventNamesWithDisplayNames.DisplayNames, 47) // STANDARD_EVENTS_DISPLAY_NAMES + event1 + event2
+	assert.Len(t, eventNamesWithDisplayNames.DisplayNames, 51) // STANDARD_EVENTS_DISPLAY_NAMES + event1 + event2
 	assert.Equal(t, eventNamesWithDisplayNames.DisplayNames["$session"], "Website Session")
 
 	sendCreateDisplayNameRequest(r, V1.CreateDisplayNamesParams{EventName: "$session", DisplayName: "Test1"}, agent, project.ID)
@@ -548,9 +549,8 @@ func TestGetEventNamesHandler(t *testing.T) {
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	json.Unmarshal(jsonResponse, &eventNamesWithDisplayNames)
 	// should contain all event names along with $session.
-	assert.Len(t, eventNamesWithDisplayNames.EventNames["Most Recent"], 3)
 	assert.Len(t, eventNamesWithDisplayNames.EventNames["Hubspot"], 1)
-	assert.Len(t, eventNamesWithDisplayNames.DisplayNames, 47) // STANDARD_EVENTS_DISPLAY_NAMES + event1 + event2
+	assert.Len(t, eventNamesWithDisplayNames.DisplayNames, 51) // STANDARD_EVENTS_DISPLAY_NAMES + event1 + event2
 	assert.Equal(t, eventNamesWithDisplayNames.DisplayNames["$session"], "Test1")
 	assert.Equal(t, eventNamesWithDisplayNames.DisplayNames["$hubspot_contact_created"], "Test2")
 

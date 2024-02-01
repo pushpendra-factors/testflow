@@ -170,6 +170,10 @@ func (store *MemSQL) GetEventCountOfUsersByEventName(projectID int64, userIDs []
 }
 
 func (store *MemSQL) addEventDetailsToCache(projectID int64, event *model.Event, isUpdateEventProperty bool) {
+	store.AddEventDetailsToCacheWithTime(projectID, event, isUpdateEventProperty, U.TimeNowZ())
+}
+
+func (store *MemSQL) AddEventDetailsToCacheWithTime(projectID int64, event *model.Event, isUpdateEventProperty bool, currentTime time.Time) {
 	logFields := log.Fields{
 		"project_id":               projectID,
 		"event":                    event,
@@ -200,7 +204,6 @@ func (store *MemSQL) addEventDetailsToCache(projectID int64, event *model.Event,
 	}
 	eventProperties := *propertyMap
 
-	currentTime := U.TimeNowZ()
 	currentTimeDatePart := currentTime.Format(U.DATETIME_FORMAT_YYYYMMDD)
 
 	var eventNamesKeySortedSet *cacheRedis.Key
