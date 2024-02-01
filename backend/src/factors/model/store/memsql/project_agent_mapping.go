@@ -309,6 +309,7 @@ func (store *MemSQL) GetProjectAgentLatestAdminEmailByProjectId(projectId int64)
 
 	if isSolution && len(pam) > 1 {
 		projectAgentAdmin = pam[1]
+
 	} else {
 		projectAgentAdmin = pam[0]
 	}
@@ -318,6 +319,7 @@ func (store *MemSQL) GetProjectAgentLatestAdminEmailByProjectId(projectId int64)
 		return "", err
 	}
 
+	log.WithFields(logFields).Info("Admin agent email", adminAgentInfo.Email)
 	return adminAgentInfo.Email, http.StatusFound
 }
 
