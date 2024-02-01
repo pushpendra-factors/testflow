@@ -24,11 +24,12 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 		deleteRollupAfterAddingToAggregate = configs["deleteRollupAfterAddingToAggregate"].(int)
 	}
 
-	logCtx := log.WithField("config", configs)
-	logCtx.Info("Starting rollup sorted set job.")
+	log.WithField("config", configs).Info("Starting rollup sorted set job.")
 
 	var isCurrentDay bool
 	currentDate := U.TimeNowZ()
+
+	logCtx := log.WithField("rollup_lookback", rollupLookback)
 
 	allProjects := map[string]bool{}
 	for i := 0; i <= rollupLookback; i++ {
@@ -42,7 +43,6 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 		}
 
 		projects, err := cacheRedis.ZrangeWithScoresPersistent(true, uniqueUsersCountKey)
-		logCtx.WithField("projects", allProjects).Info("Got all projects.")
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to get projects")
 			return nil, false
@@ -53,11 +53,15 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 		}
 	}
 
+	logCtx.WithField("projects", allProjects).Info("Got all projects.")
+
 	for id := range allProjects {
 		projId, _ := strconv.Atoi(id)
 		projectID := int64(projId)
 
 		logCtx := logCtx.WithField("project_id", projectID).WithField("tag", "rollup")
+
+		logCtx.Info("Starting rollup for project.")
 
 		// eventNameAndPropertyKeysCacheByDate contains []U.CachePropertyValueWithTimestamp of multiple dates per event_name+property_key.
 		// U.CachePropertyValueWithTimestamp contains map of multiple values of a specific day.
@@ -68,7 +72,8 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 			isCurrentDay = i == 0
 			currentTimeDatePart := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
 
-			logCtx.WithField("project_id", projectID).Info("Starting RollUp")
+			logCtx.Info("Starting rollup for a project and rollback.")
+
 			eventNamesSmartKeySortedSet, err := model.GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
 				currentTimeDatePart)
 			if err != nil {
