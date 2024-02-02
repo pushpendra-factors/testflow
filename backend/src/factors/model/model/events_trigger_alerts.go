@@ -58,27 +58,28 @@ type EventTriggerAlert struct {
 }
 
 type EventTriggerAlertConfig struct {
-	Title               string          `json:"title"`
-	EventLevel          string          `json:"event_level"`
-	Event               string          `json:"event"`
-	Filter              []QueryProperty `json:"filter"`
-	Message             string          `json:"message"`
-	MessageProperty     *postgres.Jsonb `json:"message_property"`
-	DontRepeatAlerts    bool            `json:"repeat_alerts"`
-	CoolDownTime        int64           `json:"cool_down_time"`
-	BreakdownProperties *postgres.Jsonb `json:"breakdown_properties"`
-	SetAlertLimit       bool            `json:"notifications"`
-	AlertLimit          int64           `json:"alert_limit"`
-	Slack               bool            `json:"slack"`
-	SlackChannels       *postgres.Jsonb `json:"slack_channels"`
-	SlackMentions       *postgres.Jsonb `json:"slack_mentions"`
-	SlackFieldsTag      []string        `json:"slack_fields_tag"`
-	IsHyperlinkDisabled bool            `json:"is_hyperlink_disabled"`
-	Webhook             bool            `json:"webhook"`
-	Secret              string          `json:"secret"`
-	WebhookURL          string          `json:"url"`
-	Teams               bool            `json:"teams"`
-	TeamsChannelsConfig *postgres.Jsonb `json:"teams_channels_config"`
+	Title                 string          `json:"title"`
+	EventLevel            string          `json:"event_level"`
+	Event                 string          `json:"event"`
+	Filter                []QueryProperty `json:"filter"`
+	Message               string          `json:"message"`
+	MessageProperty       *postgres.Jsonb `json:"message_property"`
+	DontRepeatAlerts      bool            `json:"repeat_alerts"`
+	CoolDownTime          int64           `json:"cool_down_time"`
+	BreakdownProperties   *postgres.Jsonb `json:"breakdown_properties"`
+	SetAlertLimit         bool            `json:"notifications"`
+	AlertLimit            int64           `json:"alert_limit"`
+	Slack                 bool            `json:"slack"`
+	SlackChannels         *postgres.Jsonb `json:"slack_channels"`
+	SlackMentions         *postgres.Jsonb `json:"slack_mentions"`
+	SlackFieldsTag        []string        `json:"slack_fields_tag"`
+	IsHyperlinkDisabled   bool            `json:"is_hyperlink_disabled"`
+	Webhook               bool            `json:"webhook"`
+	Secret                string          `json:"secret"`
+	WebhookURL            string          `json:"url"`
+	IsFactorsUrlInPayload bool            `json:"is_factors_url_in_payload"`
+	Teams                 bool            `json:"teams"`
+	TeamsChannelsConfig   *postgres.Jsonb `json:"teams_channels_config"`
 }
 
 type AlertInfo struct {
@@ -105,12 +106,14 @@ type EventTriggerAlertMessage struct {
 }
 
 type EventTriggerWebhook struct {
-	Title           string          `json:"title"`
-	Event           string          `json:"event"`
-	MessageProperty *postgres.Jsonb `json:"message_property"`
-	Message         string          `json:"message"`
-	Url             string          `json:"url"`
-	Secret          string          `json:"secret"`
+	Title                 string          `json:"title"`
+	EventLevel            string          `json:"event_level"`
+	Event                 string          `json:"event"`
+	MessageProperty       *postgres.Jsonb `json:"message_property"`
+	Message               string          `json:"message"`
+	Url                   string          `json:"url"`
+	Secret                string          `json:"secret"`
+	IsFactorsUrlInPayload bool            `json:"is_factors_url_in_payload"`
 }
 
 type MessagePropMapStruct struct {
@@ -322,7 +325,7 @@ func GetSlackMsgBlock(msg EventTriggerAlertMessage, slackMentions string, isAcco
 
 	propBlock := getPropsBlockV2(msg.MessageProperty)
 	if !isAccountAlert {
-		overRideUrl =  "https://app.factors.ai/profiles/people"
+		overRideUrl = "https://app.factors.ai/profiles/people"
 	} else if isAccountAlert && overRideUrl == "" {
 		overRideUrl = "https://app.factors.ai"
 	}
