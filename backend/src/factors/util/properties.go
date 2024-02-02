@@ -540,6 +540,7 @@ var EP_G2_PRODUCT_IDS string = "$g2_product_ids"
 var EP_G2_CITY string = "$g2_visitor_city"
 var EP_G2_STATE string = "$g2_visitor_state"
 var EP_G2_COUNTRY string = "$g2_visitor_country"
+var EP_COMPANY_ENRICHED string = "$company_enriched"
 
 // Event Form meta attributes properties
 var EP_FORM_ID string = "$form_id"
@@ -805,6 +806,7 @@ var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_FBCLID,
 	EP_COST,
 	EP_REVENUE,
+	EP_COMPANY_ENRICHED,
 
 	// event properties part of offline touch points
 	EP_CHANNEL,
