@@ -560,6 +560,7 @@ type Model interface {
 	CreateQueryAndSaveToDashboard(projectID int64, queryInfo *model.CreateQueryAndSaveToDashboardInfo) (*model.QueryAndDashboardUnit, int, string)
 	DeleteAttributionDashboardUnitAndQuery(projectID int64, queryID int64, agentUUID string, dashboardId int64, unitId int64) (int, string)
 	GetAttributionDashboardUnitNamesImpactedByCustomKPI(projectID int64, customMetricName string) ([]string, int)
+	GetAttributionSettingsKPIListForCustomKPI(projectID int64, customMetricName string) ([]string, int)
 
 	// dashboard_templates
 	CreateTemplate(template *model.DashboardTemplate) (*model.DashboardTemplate, int, string)
