@@ -35,20 +35,24 @@ Factors Deanonymisation enrichment and metering flow:
 func (fd *FactorsDeanon) IsEligible(projectSettings *model.ProjectSetting, isoCode, pageURL string) (bool, error) {
 
 	projectId := projectSettings.ProjectId
+	logCtx := log.WithField("project_id", projectId)
+
 	featureFlag, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_FACTORS_DEANONYMISATION, false)
 	if err != nil {
-		log.Error("Failed to fetch feature flag")
+		logCtx.Error("Failed to fetch feature flag")
 		return false, err
 	}
 
 	isDeanonQuotaAvailable, err := CheckingFactorsDeanonQuotaLimit(projectId)
 	if err != nil {
+		logCtx.Error("Error in checking deanon quota exhausted.")
 		return false, err
 	}
 
 	factorDeanonRulesJson := projectSettings.SixSignalConfig
-	isFactorsDeanonRulesValid, err := ApplyFactorsDeanonRules(factorDeanonRulesJson, isoCode, pageURL)
+	isFactorsDeanonRulesValid, err := ApplyFactorsDeanonRules(factorDeanonRulesJson, isoCode, pageURL, projectId)
 	if err != nil {
+		logCtx.Error("Error in checking deanon enrichment rules")
 		return false, err
 	}
 
