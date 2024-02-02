@@ -304,6 +304,21 @@ func TestWebhookforEventTriggerAlerts(c *gin.Context) (interface{}, int, string,
 			PropValue:   val,
 		}
 	}
+
+	factorsUrl := ""
+	if webhook.IsFactorsUrlInPayload {
+		if webhook.EventLevel == model.EventLevelAccount {
+			factorsUrl = "https://app.factors.ai"
+		} else {
+			factorsUrl = "https://app.factors.ai/profiles/people"
+		}
+
+		msgPropMap[fmt.Sprintf("%d", len(messageProperties))] = model.MessagePropMapStruct{
+			DisplayName: "Factors URL",
+			PropValue:   factorsUrl,
+		}
+	}
+
 	payload := model.EventTriggerAlertMessage{
 		Title:           webhook.Title,
 		Event:           webhook.Event,
@@ -554,7 +569,6 @@ func TeamsTestforEventTriggerAlerts(c *gin.Context) (interface{}, int, string, s
 		})
 		i++
 	}
-	
 
 	var teamsChannels model.Team
 	if alert.TeamsChannelsConfig == nil {
