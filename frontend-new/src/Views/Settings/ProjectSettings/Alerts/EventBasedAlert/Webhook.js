@@ -33,7 +33,7 @@ import { getErrorMsg, WEBHOOK } from './../utils';
 import useFeatureLock from 'hooks/useFeatureLock';
 import { FEATURES } from 'Constants/plans.constants';
 import UpgradeButton from 'Components/GenericComponents/UpgradeButton';
-import {PreviewCardWebhook} from './PreviewCard';
+import { PreviewCardWebhook } from './PreviewCard';
 
 const Webhook = ({
     viewAlertDetails,
@@ -61,13 +61,17 @@ const Webhook = ({
     alertName,
     WHTestMsgTxt,
     WHTestMsgLoading,
-    selectedEvent
+    selectedEvent,
+    matchEventName,
+    setFactorsURLinWebhook,
+    factorsURLinWebhook,
+    activeGrpBtn
 }) => {
 
-// Webhook support
-const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
-    FEATURES.FEATURE_WEBHOOK
-);
+    // Webhook support
+    const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
+        FEATURES.FEATURE_WEBHOOK
+    );
 
     const ErrorMsg = getErrorMsg(viewAlertDetails?.last_fail_details, WEBHOOK);
     return (
@@ -172,196 +176,209 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
                         <Col span={12} className={'m-0'}>
 
 
-                    <Row>
-                        <Col span={12} className={'m-0'}>
-                            <Text
-                                type={'title'}
-                                level={7}
-                                weight='medium'
-                                extraClass={'m-0'}
-                            >
-                                Paste your webhook URL here
-                            </Text>
-                        </Col>
-                    </Row>
-                    <Row className={'mt-1'}>
-                        <Col span={16}>
-                            <Input
-                                className='fa-input'
-                                size='large'
-                                placeholder='Webhook URL'
-                                disabled={disbleWebhookInput}
-                                ref={webhookRef}
-                                value={webhookUrl}
-                                onChange={(e) => {
-                                    setWebhookUrl(e.target.value);
-                                    setConfirmBtn(false);
-                                    setTestMessageBtn(false);
-                                }}
-                                onBlur={() => {
-                                    if (webhookUrl === '') {
-                                        setTestMessageBtn(true);
-                                        setConfirmBtn(true);
-                                    }
-                                    if (showEditBtn && webhookUrl === finalWebhookUrl) {
-                                        setHideTestMessageBtn(true);
-                                        setConfirmBtn(false);
-                                        setDisbleWebhookInput(true);
-                                    }
-                                }}
-                            ></Input>
-                        </Col>
-                        <Col span={6} className={'m-0'}>
-                            {!confirmedMessageBtn && !showEditBtn ? (
-                                <Button
-                                    type='link'
-                                    disabled={confirmBtn}
-                                    onClick={() => handleClickConfirmBtn()}
-                                    size='large'
-                                >
-                                    Confirm
-                                </Button>
-                            ) : confirmedMessageBtn && !showEditBtn ? (
-                                <Button
-                                    type='link'
-                                    disabled
-                                    onClick={() => handleClickConfirmBtn()}
-                                    size='large'
-                                    icon={
-                                        <SVG
-                                            name={'Checkmark'}
-                                            size={16}
-                                            color={'#52C41A'}
-                                            extraClass={'m-0'}
-                                        />
-                                    }
-                                >
-                                    Confirmed
-                                </Button>
-                            ) : (
-                                <Button
-                                    type='link'
-                                    disabled={confirmBtn}
-                                    onClick={() => {
-                                        setDisbleWebhookInput(false);
-                                        setConfirmBtn(true);
-                                        setHideTestMessageBtn(true);
-                                        setTimeout(() => {
-                                            webhookRef.current.focus();
-                                        }, 200);
-                                    }}
-                                    size='large'
-                                >
-                                    Edit
-                                </Button>
-                            )}
-                        </Col>
-                    </Row>
-                    {hideTestMessageBtn && (
-                        <Row className={'mt-2'}>
-                            <Col span={24} className={'m-0'}>
-                                {testMessageResponse ? (
-                                    <div>
-                                        <div className='inline'>
-                                            <SVG
-                                                name={'CheckCircle'}
-                                                size={16}
-                                                extraClass={'m-0 inline'}
-                                            />
-                                            <Text
-                                                type={'title'}
-                                                level={7}
-                                                extraClass={'m-0 ml-1 inline'}
-                                            >
-                                                We've sent a sample message to this endpoint.
-                                                Check and hit 'Confirm' if everything is alright!
-                                            </Text>
-                                        </div>
-                                        <div className='inline'>
+                            <Row>
+                                <Col span={12} className={'m-0'}>
+                                    <Text
+                                        type={'title'}
+                                        level={7}
+                                        weight='medium'
+                                        extraClass={'m-0'}
+                                    >
+                                        Paste your webhook URL here
+                                    </Text>
+                                </Col>
+                            </Row>
+                            <Row className={'mt-1'}>
+                                <Col span={16}>
+                                    <Input
+                                        className='fa-input'
+                                        size='large'
+                                        placeholder='Webhook URL'
+                                        disabled={disbleWebhookInput}
+                                        ref={webhookRef}
+                                        value={webhookUrl}
+                                        onChange={(e) => {
+                                            setWebhookUrl(e.target.value);
+                                            setConfirmBtn(false);
+                                            setTestMessageBtn(false);
+                                        }}
+                                        onBlur={() => {
+                                            if (webhookUrl === '') {
+                                                setTestMessageBtn(true);
+                                                setConfirmBtn(true);
+                                            }
+                                            if (showEditBtn && webhookUrl === finalWebhookUrl) {
+                                                setHideTestMessageBtn(true);
+                                                setConfirmBtn(false);
+                                                setDisbleWebhookInput(true);
+                                            }
+                                        }}
+                                    ></Input>
+                                </Col>
+                                <Col span={6} className={'m-0'}>
+                                    {!confirmedMessageBtn && !showEditBtn ? (
+                                        <Button
+                                            type='link'
+                                            disabled={confirmBtn}
+                                            onClick={() => handleClickConfirmBtn()}
+                                            size='large'
+                                        >
+                                            Confirm
+                                        </Button>
+                                    ) : confirmedMessageBtn && !showEditBtn ? (
+                                        <Button
+                                            type='link'
+                                            disabled
+                                            onClick={() => handleClickConfirmBtn()}
+                                            size='large'
+                                            icon={
+                                                <SVG
+                                                    name={'Checkmark'}
+                                                    size={16}
+                                                    color={'#52C41A'}
+                                                    extraClass={'m-0'}
+                                                />
+                                            }
+                                        >
+                                            Confirmed
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            type='link'
+                                            disabled={confirmBtn}
+                                            onClick={() => {
+                                                setDisbleWebhookInput(false);
+                                                setConfirmBtn(true);
+                                                setHideTestMessageBtn(true);
+                                                setTimeout(() => {
+                                                    webhookRef.current.focus();
+                                                }, 200);
+                                            }}
+                                            size='large'
+                                        >
+                                            Edit
+                                        </Button>
+                                    )}
+                                </Col>
+                            </Row>
+                            {hideTestMessageBtn && (
+                                <Row className={'mt-2'}>
+                                    <Col span={24} className={'m-0'}>
+                                        {testMessageResponse ? (
+                                            <div>
+                                                <div className='inline'>
+                                                    <SVG
+                                                        name={'CheckCircle'}
+                                                        size={16}
+                                                        extraClass={'m-0 inline'}
+                                                    />
+                                                    <Text
+                                                        type={'title'}
+                                                        level={7}
+                                                        extraClass={'m-0 ml-1 inline'}
+                                                    >
+                                                        We've sent a sample message to this endpoint.
+                                                        Check and hit 'Confirm' if everything is alright!
+                                                    </Text>
+                                                </div>
+                                                <div className='inline'>
+                                                    <Button
+                                                        type='link'
+                                                        style={{
+                                                            backgroundColor: 'white',
+                                                            borderStyle: 'none'
+                                                        }}
+                                                        size='small'
+                                                        disabled={testMessageBtn}
+                                                        onClick={() => handleTestWebhook()}
+                                                        icon={
+                                                            <SVG
+                                                                name={'PaperPlane'}
+                                                                size={18}
+                                                                color={
+                                                                    testMessageBtn ? '#00000040' : '#1e89ff'
+                                                                }
+                                                                extraClass={'-mt-1'}
+                                                            />
+                                                        }
+                                                    >
+                                                        Try Again
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ) : (
                                             <Button
                                                 type='link'
+                                                disabled={testMessageBtn}
                                                 style={{
                                                     backgroundColor: 'white',
                                                     borderStyle: 'none'
                                                 }}
                                                 size='small'
-                                                disabled={testMessageBtn}
                                                 onClick={() => handleTestWebhook()}
                                                 icon={
                                                     <SVG
                                                         name={'PaperPlane'}
                                                         size={18}
-                                                        color={
-                                                            testMessageBtn ? '#00000040' : '#1e89ff'
-                                                        }
+                                                        color={testMessageBtn ? '#00000040' : '#1e89ff'}
                                                         extraClass={'-mt-1'}
                                                     />
                                                 }
                                             >
-                                                Try Again
+                                                Test this with a sample message
                                             </Button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <Button
-                                        type='link'
-                                        disabled={testMessageBtn}
-                                        style={{
-                                            backgroundColor: 'white',
-                                            borderStyle: 'none'
-                                        }}
-                                        size='small'
-                                        onClick={() => handleTestWebhook()}
-                                        icon={
-                                            <SVG
-                                                name={'PaperPlane'}
-                                                size={18}
-                                                color={testMessageBtn ? '#00000040' : '#1e89ff'}
-                                                extraClass={'-mt-1'}
-                                            />
-                                        }
+                                        )}
+                                    </Col>
+                                </Row>
+                            )}
+                            <Row className='mt-3'>
+                                <Col>
+                                    <Text
+                                        type='paragraph'
+                                        mini
+                                        extraClass='m-0'
+                                        color='grey'
+                                        lineHeight='medium'
                                     >
-                                        Test this with a sample message
-                                    </Button>
-                                )}
-                            </Col>
-                        </Row>
-                    )}
-                    <Row className='mt-3'>
-                        <Col>
-                            <Text
-                                type='paragraph'
-                                mini
-                                extraClass='m-0'
-                                color='grey'
-                                lineHeight='medium'
-                            >
-                                Note that if you edit this alert or its payload in the
-                                future, you must reconfigure the flows to support these
-                                changes
-                            </Text>
+                                        Note that if you edit this alert or its payload in the
+                                        future, you must reconfigure the flows to support these
+                                        changes
+                                    </Text>
+                                </Col>
+                                <Col>
+                                    <div className='mt-6'>
+                                        <Checkbox
+                                            checked={factorsURLinWebhook}
+                                            onChange={(e) => setFactorsURLinWebhook(e.target.checked)}
+                                        >
+                                            Send Factors Activity URL in webhook payload
+                                        </Checkbox>
+                                    </div>
+                                </Col>
+                            </Row>
+
+
                         </Col>
+
+                        <Col span={12} className={'m-0'}>
+                            <div className='flex w-full justify-end'>
+                                <PreviewCardWebhook
+                                    alertMessage={alertMessage}
+                                    alertName={alertName}
+                                    groupBy={groupBy}
+                                    selectedEvent={selectedEvent}
+                                    matchEventName={matchEventName}
+                                    factorsURLinWebhook={factorsURLinWebhook}
+                                    activeGrpBtn={activeGrpBtn}
+                                />
+                            </div>
+                        </Col>
+
                     </Row>
 
-
-                    </Col>
-
-                    <Col span={12} className={'m-0'}>
-                        <div className='flex w-full justify-end'>
-                            <PreviewCardWebhook 
-                                alertMessage={alertMessage}
-                                alertName={alertName}
-                                groupBy={groupBy}
-                                selectedEvent={selectedEvent}
-                                />
-                        </div>
-                    </Col>
-
-                </Row>
-
-                <div className='border-top--thin-2 mt-4 p-4'> 
-                            <Button disabled={!webhookUrl.length > 0} loading={WHTestMsgLoading} icon={WHTestMsgTxt ?  <SVG name='Checkmark' size={16}  color='grey' /> : <SVG name={'PaperPlane'} size={16} color='grey' />} ghost onClick={()=>handleTestWebhook()}>{ WHTestMsgLoading ? 'Sending...' : WHTestMsgTxt ? 'Message sent!' : 'Send test message'}</Button>  
-                        </div> 
+                    <div className='border-top--thin-2 mt-4 p-4'>
+                        <Button disabled={!webhookUrl.length > 0} loading={WHTestMsgLoading} icon={WHTestMsgTxt ? <SVG name='Checkmark' size={16} color='grey' /> : <SVG name={'PaperPlane'} size={16} color='grey' />} ghost onClick={() => handleTestWebhook()}>{WHTestMsgLoading ? 'Sending...' : WHTestMsgTxt ? 'Message sent!' : 'Send test message'}</Button>
+                    </div>
                 </div>
             )}
         </div>
