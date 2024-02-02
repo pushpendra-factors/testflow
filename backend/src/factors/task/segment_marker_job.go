@@ -245,7 +245,6 @@ func processDomainsInBatches(projectID int64, domainIDList []string, segments []
 
 	startTime := time.Now().Unix()
 	userCount := new(int64)
-	domainUpdateCount := new(int64)
 
 	domainIDChunks := U.GetStringListAsBatch(domainIDList, batchSize)
 
@@ -255,7 +254,7 @@ func processDomainsInBatches(projectID int64, domainIDList []string, segments []
 		wg.Add(len(domainIDChunks[ci]))
 		for _, domID := range domainIDChunks[ci] {
 			go fetchAndProcessFromDomainList(projectID, domID, segments, segmentsRulesArr, domainGroupId,
-				eventNameIDsMap, &wg, &statusArr, userCount, domainUpdateCount)
+				eventNameIDsMap, &wg, &statusArr, userCount)
 		}
 		wg.Wait()
 	}
@@ -264,8 +263,7 @@ func processDomainsInBatches(projectID int64, domainIDList []string, segments []
 	timeTaken := endTime - startTime
 
 	// Time taken to process domains.
-	log.WithFields(log.Fields{"project_id": projectID, "no_of_domains": len(domainIDList), "user_count": userCount,
-		"no_of_updates": *domainUpdateCount}).Info("Processing Time for domains in sec ", timeTaken)
+	log.WithFields(log.Fields{"project_id": projectID, "no_of_domains": len(domainIDList), "user_count": userCount}).Info("Processing Time for domains in sec ", timeTaken)
 
 	if len(statusArr) > 0 {
 		log.WithField("project_id", projectID).Error("failures while running segment_markup for following number of batches of domain ", len(statusArr))
@@ -275,7 +273,7 @@ func processDomainsInBatches(projectID int64, domainIDList []string, segments []
 }
 
 func fetchAndProcessFromDomainList(projectID int64, domainID string, segments []model.Segment, segmentsRulesArr []model.Query,
-	domainGroupId int, eventNameIDsMap map[string]string, waitGroup *sync.WaitGroup, statusArr *[]bool, userCount *int64, domainUpdateCount *int64) {
+	domainGroupId int, eventNameIDsMap map[string]string, waitGroup *sync.WaitGroup, statusArr *[]bool, userCount *int64) {
 
 	logFields := log.Fields{
 		"project_id":      projectID,
@@ -300,10 +298,13 @@ func fetchAndProcessFromDomainList(projectID int64, domainID string, segments []
 	*userCount = *userCount + int64(len(users))
 
 	status, err := domainUsersProcessingWithErrcode(projectID, domainID, users, segments,
-		segmentsRulesArr, eventNameIDsMap, domainUpdateCount)
+		segmentsRulesArr, eventNameIDsMap)
 
 	if status != http.StatusOK || err != nil {
 		log.WithField("project_id", projectID).Error("Unable to update associated_segments to the domain user.")
+	}
+
+	if status != http.StatusOK || err != nil {
 		*statusArr = append(*statusArr, false)
 	}
 }
@@ -448,7 +449,6 @@ func allAccountsSegmentMarkup(projectID int64, users []model.User, segments []mo
 	}
 
 	statusMap := make(map[string]int, 0)
-	domainUpdateCount := new(int64)
 
 	startTime := time.Now().Unix()
 	var waitGroup sync.WaitGroup
@@ -457,7 +457,7 @@ func allAccountsSegmentMarkup(projectID int64, users []model.User, segments []mo
 	count := 0
 	for domId, usersArray := range domainUsersMap {
 		count++
-		go domainusersProcessing(projectID, domId, usersArray, segments, segmentsRulesArr, eventNameIDsMap, &waitGroup, &statusMap, domainUpdateCount)
+		go domainusersProcessing(projectID, domId, usersArray, segments, segmentsRulesArr, eventNameIDsMap, &waitGroup, &statusMap)
 		if count%actualRoutineLimit == 0 {
 			waitGroup.Wait()
 			waitGroup.Add(U.MinInt(len(domainUsersMap)-count, actualRoutineLimit))
@@ -470,7 +470,7 @@ func allAccountsSegmentMarkup(projectID int64, users []model.User, segments []mo
 	timeTaken := endTime - startTime
 
 	// Time taken to process domains.
-	log.WithFields(log.Fields{"project_id": projectID, "no_of_domains": len(domainUsersMap), "no_of_updates": *domainUpdateCount}).Info("Processing Time for domains in sec ", timeTaken)
+	log.WithFields(log.Fields{"project_id": projectID, "no_of_domains": len(domainUsersMap)}).Info("Processing Time for domains in sec ", timeTaken)
 
 	if len(statusMap) > 0 {
 		log.WithField("project_id", projectID).Error("failures while running segment_markup for following domains ", statusMap)
@@ -480,7 +480,7 @@ func allAccountsSegmentMarkup(projectID int64, users []model.User, segments []mo
 }
 
 func domainusersProcessing(projectID int64, domId string, users []model.User, segments []model.Segment, segmentsRulesArr []model.Query,
-	eventNameIDsMap map[string]string, waitGroup *sync.WaitGroup, statusMap *map[string]int, domainUpdateCount *int64) {
+	eventNameIDsMap map[string]string, waitGroup *sync.WaitGroup, statusMap *map[string]int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"domain_id":  domId,
@@ -493,7 +493,7 @@ func domainusersProcessing(projectID int64, domId string, users []model.User, se
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer waitGroup.Done()
 
-	status, err := domainUsersProcessingWithErrcode(projectID, domId, users, segments, segmentsRulesArr, eventNameIDsMap, domainUpdateCount)
+	status, err := domainUsersProcessingWithErrcode(projectID, domId, users, segments, segmentsRulesArr, eventNameIDsMap)
 
 	if status != http.StatusOK || err != nil {
 		(*statusMap)[domId] = status
@@ -502,7 +502,7 @@ func domainusersProcessing(projectID int64, domId string, users []model.User, se
 }
 
 func domainUsersProcessingWithErrcode(projectID int64, domId string, usersArray []model.User,
-	segments []model.Segment, segmentsRulesArr []model.Query, eventNameIDsMap map[string]string, domainUpdateCount *int64) (int, error) {
+	segments []model.Segment, segmentsRulesArr []model.Query, eventNameIDsMap map[string]string) (int, error) {
 	associatedSegments := make(map[string]model.AssociatedSegments)
 	decodedPropsArr := make([]map[string]interface{}, 0)
 	for _, user := range usersArray {
@@ -524,54 +524,15 @@ func domainUsersProcessingWithErrcode(projectID int64, domId string, usersArray 
 			associatedSegments, segments[index].Id)
 	}
 
-	// check whether associated_segments need to be updated
-	existingAssociatedSegment, status := store.GetStore().GetAssociatedSegmentForUser(projectID, domId)
-
-	if status != http.StatusFound {
-		if len(associatedSegments) == 0 {
-			return http.StatusOK, nil
-		}
-	}
-
-	updateAssociatedSegment := IsMapsNotMatching(associatedSegments, existingAssociatedSegment)
-
-	if !updateAssociatedSegment {
-		return http.StatusOK, nil
-	}
-
 	// update associated_segments in db
 	status, err := store.GetStore().UpdateAssociatedSegments(projectID, domId,
 		associatedSegments)
-	*domainUpdateCount++
 	if status != http.StatusOK {
 		log.WithFields(log.Fields{"project_id": projectID, "domain_id": domId}).Error("Unable to update associated_segments to the user")
 		return status, err
 	}
 
 	return http.StatusOK, nil
-}
-
-func IsMapsNotMatching(associatedSegments map[string]model.AssociatedSegments, oldAssociatedSegments map[string]model.AssociatedSegments) bool {
-	// length check
-	if len(associatedSegments) != len(oldAssociatedSegments) {
-		return true
-	}
-
-	// checking new map, if previously computed segment does not exist
-	for segID := range associatedSegments {
-		if _, exists := oldAssociatedSegments[segID]; !exists {
-			return true
-		}
-	}
-
-	// checking old map, if newly computed segment does not exist
-	for segID := range oldAssociatedSegments {
-		if _, exists := associatedSegments[segID]; !exists {
-			return true
-		}
-	}
-
-	return false
 }
 
 func findUserGroupByID(u model.User, id int) (string, error) {
