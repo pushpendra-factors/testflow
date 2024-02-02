@@ -577,6 +577,48 @@ func (store *MemSQL) GetLatestUpatedDomainsByProjectID(projectID int64, domainGr
 	return domainIDs, http.StatusFound
 }
 
+// get associated_segments col for given project_id and user_id
+func (store *MemSQL) GetAssociatedSegmentForUser(projectID int64, domID string) (map[string]model.AssociatedSegments, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"domain_id":  domID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	db := C.GetServices().Db
+	associatedSegmentsMap := make(map[string]model.AssociatedSegments)
+
+	query := `SELECT associated_segments FROM users WHERE project_id=? AND id=? LIMIT 1;`
+	queryParams := []interface{}{projectID, domID}
+
+	rows, err := db.Raw(query, queryParams...).Rows()
+	if err != nil {
+		return associatedSegmentsMap, http.StatusInternalServerError
+	}
+
+	for rows.Next() {
+		var associated_segments sql.NullString
+
+		if err = rows.Scan(&associated_segments); err != nil {
+			log.WithFields(log.Fields(logFields)).Error("SQL Parse failed.")
+			return associatedSegmentsMap, http.StatusInternalServerError
+		}
+
+		if associated_segments.Valid {
+			// Unmarshal JSON into the map
+			err := json.Unmarshal([]byte(associated_segments.String), &associatedSegmentsMap)
+			if err != nil {
+				return associatedSegmentsMap, http.StatusInternalServerError
+			}
+		} else {
+			// Handle NULL value (if needed)
+			return associatedSegmentsMap, http.StatusFound
+		}
+	}
+
+	return associatedSegmentsMap, http.StatusFound
+}
+
 // get all non group users where updated in last x hours
 func (store *MemSQL) GetNonGroupUsersUpdatedAtGivenHour(projectID int64, fromTime time.Time) ([]model.User, int) {
 	logFields := log.Fields{

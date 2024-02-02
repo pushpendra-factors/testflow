@@ -501,7 +501,8 @@ func domainusersProcessing(projectID int64, domId string, users []model.User, se
 
 }
 
-func domainUsersProcessingWithErrcode(projectID int64, domId string, usersArray []model.User, segments []model.Segment, segmentsRulesArr []model.Query, eventNameIDsMap map[string]string) (int, error) {
+func domainUsersProcessingWithErrcode(projectID int64, domId string, usersArray []model.User,
+	segments []model.Segment, segmentsRulesArr []model.Query, eventNameIDsMap map[string]string) (int, error) {
 	associatedSegments := make(map[string]model.AssociatedSegments)
 	decodedPropsArr := make([]map[string]interface{}, 0)
 	for _, user := range usersArray {
@@ -523,6 +524,21 @@ func domainUsersProcessingWithErrcode(projectID int64, domId string, usersArray 
 			associatedSegments, segments[index].Id)
 	}
 
+	// check whether associated_segments need to be updated
+	existingAssociatedSegment, status := store.GetStore().GetAssociatedSegmentForUser(projectID, domId)
+
+	if status != http.StatusFound {
+		if len(associatedSegments) == 0 {
+			return http.StatusOK, nil
+		}
+	}
+
+	updateAssociatedSegment := IsMapsNotMatching(associatedSegments, existingAssociatedSegment)
+
+	if !updateAssociatedSegment {
+		return http.StatusOK, nil
+	}
+
 	// update associated_segments in db
 	status, err := store.GetStore().UpdateAssociatedSegments(projectID, domId,
 		associatedSegments)
@@ -532,6 +548,29 @@ func domainUsersProcessingWithErrcode(projectID int64, domId string, usersArray 
 	}
 
 	return http.StatusOK, nil
+}
+
+func IsMapsNotMatching(associatedSegments map[string]model.AssociatedSegments, oldAssociatedSegments map[string]model.AssociatedSegments) bool {
+	// length check
+	if len(associatedSegments) != len(oldAssociatedSegments) {
+		return true
+	}
+
+	// checking new map, if previously computed segment does not exist
+	for segID := range associatedSegments {
+		if _, exists := oldAssociatedSegments[segID]; !exists {
+			return true
+		}
+	}
+
+	// checking old map, if newly computed segment does not exist
+	for segID := range oldAssociatedSegments {
+		if _, exists := associatedSegments[segID]; !exists {
+			return true
+		}
+	}
+
+	return false
 }
 
 func findUserGroupByID(u model.User, id int) (string, error) {
@@ -689,19 +728,16 @@ func updateAllAccountsSegmentMap(matched bool, userArr []model.User, userPartOfS
 	segmentMap := userPartOfSegments
 	var updatedMap model.AssociatedSegments
 	if matched {
-		maxUpadtedAt := userArr[0].UpdatedAt
+		associatedSegUpdatedAt := time.Now().UTC()
 		maxLastEventAt := time.Time{}
 		for _, user := range userArr {
-			if (user.UpdatedAt).After(maxUpadtedAt) {
-				maxUpadtedAt = user.UpdatedAt
-			}
 			if user.LastEventAt != nil {
 				if (*user.LastEventAt).After(maxLastEventAt) {
 					maxLastEventAt = *user.LastEventAt
 				}
 			}
 		}
-		updatedMap.UpdatedAt = model.FormatTimeToString(maxUpadtedAt)
+		updatedMap.UpdatedAt = model.FormatTimeToString(associatedSegUpdatedAt)
 		if (maxLastEventAt.Compare(time.Time{})) != 0 {
 			updatedMap.LastEventAt = model.FormatTimeToString(maxLastEventAt)
 		}
