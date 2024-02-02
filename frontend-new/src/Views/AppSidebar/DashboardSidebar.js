@@ -45,8 +45,9 @@ function DashboardItem({ dashboard }) {
 
   useEffect(() => {
     if (!isActive && activeDashboard.class === 'predefined') {
-      dispatch(changeActivePreDashboard(dashboards?.[0]));
-      dispatch(changeActiveDashboard(dashboards?.[0]));
+      const preDashboard = dashboards.filter((db) => db.class === 'predefined');
+      dispatch(changeActivePreDashboard(preDashboard[0]));
+      dispatch(changeActiveDashboard(preDashboard[0]));
     }
   }, [dashboards, dispatch, isActive]);
 
