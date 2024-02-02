@@ -539,8 +539,8 @@ func (store *MemSQL) GetLatestUpatedDomainsByProjectID(projectID int64, domainGr
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	domainIDs := make([]string, 0)
-	fromTimeString := model.FormatTimeToString(fromTime)
-	queryParams := []interface{}{projectID, model.UserSourceDomains, fromTimeString}
+	fromTimeUnix := fromTime.Unix()
+	queryParams := []interface{}{projectID, model.UserSourceDomains, fromTimeUnix}
 
 	query := fmt.Sprintf(`SELECT 
 	group_%d_user_id
@@ -549,7 +549,7 @@ func (store *MemSQL) GetLatestUpatedDomainsByProjectID(projectID int64, domainGr
   WHERE 
 	project_id = ? 
 	AND source != ? 
-	AND last_event_at > ?
+	AND properties_updated_timestamp > ?
 	AND group_%d_user_id IS NOT NULL
   GROUP BY group_%d_user_id
   LIMIT 
@@ -593,6 +593,7 @@ func (store *MemSQL) GetAssociatedSegmentForUser(projectID int64, domID string) 
 
 	rows, err := db.Raw(query, queryParams...).Rows()
 	if err != nil {
+		log.WithFields(log.Fields(logFields)).Error("SQL Query failed.")
 		return associatedSegmentsMap, http.StatusInternalServerError
 	}
 
@@ -608,6 +609,7 @@ func (store *MemSQL) GetAssociatedSegmentForUser(projectID int64, domID string) 
 			// Unmarshal JSON into the map
 			err := json.Unmarshal([]byte(associated_segments.String), &associatedSegmentsMap)
 			if err != nil {
+				log.WithFields(log.Fields(logFields)).Error("Unmarshalling failed.")
 				return associatedSegmentsMap, http.StatusInternalServerError
 			}
 		} else {
