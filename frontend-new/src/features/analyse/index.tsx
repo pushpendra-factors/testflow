@@ -123,7 +123,11 @@ const CoreQuery = () => {
     savedQueries?.find((quer: any) => quer.id_text === query_id);
 
   const updateEventFunnelsState = useCallback(
-    (equivalentQuery, navigatedFromDashboard, qState: CoreQueryState) => {
+    (
+      equivalentQuery,
+      navigatedFromDashboard = false,
+      qState: CoreQueryState
+    ) => {
       const savedDateRange = { ...equivalentQuery.dateRange };
       const newDateRange = getDashboardDateRange();
       const dashboardDateRange = {
@@ -137,8 +141,11 @@ const CoreQuery = () => {
         type: INITIALIZE_GROUPBY,
         payload: equivalentQuery.breakdown
       });
+      let queryDateRange;
+      if (navigatedFromDashboard) {
+        queryDateRange = { date_range: dashboardDateRange };
+      } else queryDateRange = { date_range: savedDateRange };
 
-      const queryDateRange = { date_range: dashboardDateRange };
       const queryOpts = {
         ...coreQueryState.queryOptions,
         session_analytics_seq: equivalentQuery.session_analytics_seq,
@@ -157,9 +164,6 @@ const CoreQuery = () => {
       // setCoreQueryState(coreQueryState);
       //   setQueryOptions((currData) => {
       //     let queryDateRange = {};
-      //     if (navigatedFromDashboard) {
-      //       queryDateRange = { date_range: dashboardDateRange };
-      //     } else queryDateRange = { date_range: savedDateRange };
 
       //     let queryOpts = {};
       //     queryOpts = {
@@ -232,7 +236,7 @@ const CoreQuery = () => {
           );
 
           if (queryState.requestQuery) {
-            updateEventFunnelsState(equivalentQuery, true, queryState);
+            updateEventFunnelsState(equivalentQuery, false, queryState);
             if (queryState.requestQuery.length === 1) {
               dispatch({
                 type: SET_PERFORMANCE_CRITERIA,
