@@ -1,4 +1,4 @@
-FROM python:3.8-slim
+FROM python:3.8-slim as base
 
 ENV PYTHONPATH "${PYTHONPATH}:/usr/local/var/factors:/usr/local/var/factors/chat_factors:/usr/local/var/factors/chat_factors/chatgpt_poc:/usr/local/var/factors/chat_factors/chatgpt_poc/chat_jobs/"
 
@@ -6,6 +6,18 @@ RUN mkdir -p /usr/local/var/factors
 
 WORKDIR /usr/local/var/factors
 COPY . ./
+
+RUN pip install -r adwords_requirements.txt && pip install -r chat_requirements.txt
+
+FROM python:3.8-slim
+
+ENV PYTHONPATH "${PYTHONPATH}:/usr/local/var/factors:/usr/local/var/factors/chat_factors:/usr/local/var/factors/chat_factors/chatgpt_poc:/usr/local/var/factors/chat_factors/chatgpt_poc/chat_jobs/"
+
+WORKDIR /usr/local/var/factors
+
+COPY . ./
+
+COPY --from=base /usr/local/lib/python3.8/site-packages/ /usr/local/lib/python3.8/site-packages/
 
 # Install necessary dependencies
 RUN apt-get update && \
@@ -17,10 +29,7 @@ RUN apt-get update && \
     libatlas-base-dev \
     libffi-dev \
     libssl-dev \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* 
 
-
-RUN  pip install -r chat_requirements.txt
-RUN pip install -r adwords_requirements.txt
 ENTRYPOINT ["python", "app.py"]
 EXPOSE 8091
