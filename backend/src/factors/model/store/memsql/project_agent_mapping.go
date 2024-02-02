@@ -319,7 +319,6 @@ func (store *MemSQL) GetProjectAgentLatestAdminEmailByProjectId(projectId int64)
 		return "", err
 	}
 
-	log.WithFields(logFields).Info("Admin agent email", adminAgentInfo.Email)
 	return adminAgentInfo.Email, http.StatusFound
 }
 

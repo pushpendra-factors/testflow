@@ -35,7 +35,6 @@ func (store *MemSQL) ProvisionClearbitAccountForSingleProject(projectId int64, e
 	})
 
 	provisionAPIKey := config.GetClearbitProvisionAccountAPIKey()
-	logCtx.Info("cb acc provison api: ", provisionAPIKey)
 
 	result, err := clear_bit.GetClearbitProvisionAccountResponse(API_URL, emailId, domainName, provisionAPIKey)
 	if err != nil {
@@ -59,11 +58,16 @@ func (store *MemSQL) ProvisionClearbitAccountForSingleProject(projectId int64, e
 
 	responseJSON := postgres.Jsonb{RawMessage: body}
 
+	if result.StatusCode != http.StatusOK {
+		logCtx.Error("failed provision clearbit account with response: ", &responseJSON)
+		return fmt.Errorf("failed provision clearbit account")
+	}
+
 	//Update Project Settings Table
 	_, errCode := store.UpdateProjectSettings(projectId, &model.ProjectSetting{FactorsClearbitKey: response.Keys.Secret, ClearbitProvisionAccResponse: &responseJSON})
 	if errCode != http.StatusAccepted {
 		logCtx.Error("failed to UpdateProjectSettings with clearbit response: ", &responseJSON)
-		return fmt.Errorf("Failed to Update Project Settings")
+		return fmt.Errorf("failed to update project settings")
 	}
 
 	return nil
@@ -106,10 +110,9 @@ func (store *MemSQL) ProvisionClearbitAccountByAdminEmailAndDomain(projectId int
 			return errCode, "Failed fetching projects"
 		}
 
-		logCtx.Info("Provision acc details : ", adminMail, project.ClearbitDomain)
-
 		err = store.ProvisionClearbitAccountForSingleProject(projectId, adminMail, project.ClearbitDomain)
 		if err != nil {
+			logCtx.Error("Failed provisioning clearbit account by admin mail.")
 			return http.StatusInternalServerError, "Failed provisioning clearbit account by admin mail"
 		}
 	}
