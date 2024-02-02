@@ -78,19 +78,19 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 				currentTimeDatePart)
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to get cache key - smart events")
-				return nil, false
+				continue
 			}
 			eventNamesPageViewSortedSet, err := model.GetPageViewEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
 				currentTimeDatePart)
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to get cache key - pageView events")
-				return nil, false
+				continue
 			}
 			eventNamesKeySortedSet, err := model.GetEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
 				currentTimeDatePart)
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to get cache key - events")
-				return nil, false
+				continue
 			}
 			propertyCategoryKeySortedSet, err := model.GetPropertiesByEventCategoryCacheKeySortedSet(projectID, currentTimeDatePart)
 			if err != nil {
@@ -100,18 +100,18 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 			valueKeySortedSet, err := model.GetValuesByEventPropertyCacheKeySortedSet(projectID, currentTimeDatePart)
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to get cache key - values")
-				return nil, false
+				continue
 			}
 
 			userPropertyCategoryKeySortedSet, err := model.GetUserPropertiesCategoryByProjectCacheKeySortedSet(projectID, currentTimeDatePart)
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to get cache key - property category")
-				return nil, false
+				continue
 			}
 			userValueKeySortedSet, err := model.GetValuesByUserPropertyCacheKeySortedSet(projectID, currentTimeDatePart)
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to get cache key - values")
-				return nil, false
+				continue
 			}
 
 			smartEvents, err := cacheRedis.ZrangeWithScoresPersistent(false, eventNamesSmartKeySortedSet)
@@ -421,7 +421,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 		}
 
 		if !config.IsAggrEventPropertyValuesCacheEnabled(projectID) {
-			return nil, true
+			continue
 		}
 
 		logCtx = logCtx.WithField("tag", "aggregate_cache")
@@ -441,6 +441,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 				existingAggCache, aggCacheExists, err := cacheRedis.GetIfExistsPersistent(eventPropertyValuesAggCacheKey)
 				if err != nil {
 					logCtx.WithError(err).Error("Failed to get existing values cache aggregate.")
+					continue
 				}
 
 				var existingAggregate U.CacheEventPropertyValuesAggregate
@@ -448,6 +449,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 					err = json.Unmarshal([]byte(existingAggCache), &existingAggregate)
 					if err != nil {
 						logCtx.WithError(err).Error("Failed to unmarshal values cache aggregate.")
+						continue
 					}
 				}
 
@@ -515,6 +517,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 			err := cacheRedis.SetPersistentBatch(eventPropertyValuesAggregateCache, 0)
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to set aggregate cache for event properties.")
+				continue
 			}
 		}
 
@@ -525,6 +528,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 			)
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to delete the rollup after added to aggregate.")
+				continue
 			}
 		}
 	}
