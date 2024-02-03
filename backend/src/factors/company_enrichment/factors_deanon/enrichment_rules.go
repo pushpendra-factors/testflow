@@ -11,7 +11,9 @@ import (
 )
 
 // ApplyFactorsDeanonRules fetches the sixsignal config and checks the country filter on basis of isoCode and pageURL filter.
-func ApplyFactorsDeanonRules(factorsDeanonRulesJson *postgres.Jsonb, isoCode, pageURL string) (bool, error) {
+func ApplyFactorsDeanonRules(factorsDeanonRulesJson *postgres.Jsonb, isoCode, pageURL string, projectId int64) (bool, error) {
+
+	logCtx := log.WithField("project_id", projectId)
 
 	var factorsDeanonRules model.SixSignalConfig
 	if factorsDeanonRulesJson != nil {
@@ -33,6 +35,10 @@ func ApplyFactorsDeanonRules(factorsDeanonRulesJson *postgres.Jsonb, isoCode, pa
 	countryFilterPassed := IsCountryRulesPassed(factorsDeanonRules, isoCode)
 	if !countryFilterPassed {
 		return false, nil
+	}
+
+	if projectId == 580 && isoCode != "US" && countryFilterPassed {
+		logCtx.WithFields(log.Fields{"isoCode": isoCode}).Info("debug log for Fyle selective filtering.")
 	}
 
 	pageFilterPassed, _ := IsPageUrlRulesPassed(factorsDeanonRules, pageURL)
