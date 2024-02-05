@@ -109,7 +109,7 @@ func getSalesforceMappedDataTypeValue(projectID int64, eventName, enKey string, 
 }
 
 // GetSalesforceDocumentProperties return map of enriched properties
-func GetSalesforceDocumentProperties(projectID int64, document *model.SalesforceDocument) (*map[string]interface{}, *map[string]interface{}, error) {
+func GetSalesforceDocumentProperties(projectID int64, document *model.SalesforceDocument, organizationURL string) (*map[string]interface{}, *map[string]interface{}, error) {
 
 	var enProperties map[string]interface{}
 	err := json.Unmarshal(document.Value.RawMessage, &enProperties)
@@ -145,7 +145,24 @@ func GetSalesforceDocumentProperties(projectID int64, document *model.Salesforce
 		}
 	}
 
+	if C.AddCRMObjectURLPropertyByProjectID(projectID) && document.Type == model.SalesforceDocumentTypeAccount {
+		objectURL := getSalesforceObjectURL(projectID, organizationURL, model.SalesforceDocumentTypeNameAccount, document.ID)
+		if objectURL != "" {
+			enrichedProperties[model.GetCRMObjectURLKey(projectID, sdk.SourceSalesforce, model.SalesforceDocumentTypeNameAccount)] = objectURL
+		}
+	}
+
 	return &enrichedProperties, &properties, nil
+}
+
+func getSalesforceObjectURL(projecID int64, organizationURL string, objectType string, recordID string) string {
+	if projecID == 0 || organizationURL == "" || objectType == "" || recordID == "" {
+		log.WithFields(log.Fields{"project_id": projecID, "organization_url": organizationURL, "type": objectType, "record_id": recordID}).
+			Error("Failed to get salesforce object url.")
+		return ""
+	}
+
+	return fmt.Sprintf("https://%s/lightning/r/%s/%s/view", organizationURL, objectType, recordID)
 }
 
 func filterPropertyFieldsByProjectID(projectID int64, properties *map[string]interface{}, docType int) {
@@ -389,7 +406,7 @@ func getAccountGroupID(enProperties *map[string]interface{}, document *model.Sal
 	return accountID
 }
 
-func enrichGroupAccount(projectID int64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) (int, string) {
+func enrichGroupAccount(projectID int64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName, organizationURL string) (int, string) {
 	logCtx := log.WithField("project_id", projectID).
 		WithFields(log.Fields{"doc_id": document.ID, "doc_action": document.Action, "doc_timestamp": document.Timestamp})
 
@@ -403,7 +420,7 @@ func enrichGroupAccount(projectID int64, document *model.SalesforceDocument, sal
 		return http.StatusInternalServerError, ""
 	}
 
-	enProperties, properties, err := GetSalesforceDocumentProperties(projectID, document)
+	enProperties, properties, err := GetSalesforceDocumentProperties(projectID, document, organizationURL)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
 		return http.StatusInternalServerError, ""
@@ -411,7 +428,7 @@ func enrichGroupAccount(projectID int64, document *model.SalesforceDocument, sal
 
 	accountID := getAccountGroupID(enProperties, document)
 
-	groupAccountUserID, status, eventID := CreateOrUpdateSalesforceGroupsProperties(projectID, document, model.GROUP_NAME_SALESFORCE_ACCOUNT, accountID, false)
+	groupAccountUserID, status, eventID := CreateOrUpdateSalesforceGroupsProperties(projectID, document, model.GROUP_NAME_SALESFORCE_ACCOUNT, accountID, false, organizationURL)
 	if status != http.StatusOK {
 		logCtx.Error("Failed to create or update salesforce groups properties.")
 		return status, ""
@@ -425,7 +442,7 @@ func enrichGroupAccount(projectID int64, document *model.SalesforceDocument, sal
 	var prevProperties *map[string]interface{}
 	for _, smartEventName := range salesforceSmartEventNames {
 		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, document.ID, groupAccountUserID, document.Type,
-			properties, prevProperties, lastModifiedTimestamp, false)
+			properties, prevProperties, lastModifiedTimestamp, false, organizationURL)
 	}
 
 	if C.IsAllowedDomainsGroupByProjectID(projectID) {
@@ -477,7 +494,7 @@ func getTimestampFromField(propertyName string, properties *map[string]interface
 	return 0, errors.New("field missing")
 }
 
-func enrichContact(projectID int64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName, pendingOpportunityAssociatedRecords map[string]string) int {
+func enrichContact(projectID int64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName, pendingOpportunityAssociatedRecords map[string]string, organizationURL string) int {
 	if projectID == 0 || document == nil {
 		return http.StatusBadRequest
 	}
@@ -487,7 +504,7 @@ func enrichContact(projectID int64, document *model.SalesforceDocument, salesfor
 	}
 
 	logCtx := log.WithField("project_id", projectID).WithField("document_id", document.ID)
-	enProperties, properties, err := GetSalesforceDocumentProperties(projectID, document)
+	enProperties, properties, err := GetSalesforceDocumentProperties(projectID, document, organizationURL)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
 		return http.StatusInternalServerError
@@ -517,7 +534,7 @@ func enrichContact(projectID int64, document *model.SalesforceDocument, salesfor
 	var prevProperties *map[string]interface{}
 	for _, smartEventName := range salesforceSmartEventNames {
 		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, document.ID, userID, document.Type,
-			properties, prevProperties, lastModifiedTimestamp, false)
+			properties, prevProperties, lastModifiedTimestamp, false, organizationURL)
 	}
 
 	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, eventID, userID, "", true)
@@ -530,7 +547,7 @@ func enrichContact(projectID int64, document *model.SalesforceDocument, salesfor
 		accountID := util.GetPropertyValueAsString((*enProperties)[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce,
 			model.GetSalesforceAliasByDocType(document.Type), "accountid")])
 		if accountID != "" {
-			status := updateSalesforceUserAccountGroups(projectID, accountID, userID)
+			status := updateSalesforceUserAccountGroups(projectID, accountID, userID, organizationURL)
 			if status != http.StatusOK {
 				logCtx.Error("Failed to update salesforce contact group details.")
 			}
@@ -554,7 +571,7 @@ will require userID or customerUserID and doctType
 WITH PREVIOUS PROPERTY := userID, customerUserID and doctType won't be used
 */
 func GetSalesforceSmartEventPayload(projectID int64, eventName, documentID, userID string, docType int,
-	currentProperties, prevProperties *map[string]interface{}, filter *model.SmartCRMEventFilter) (*model.CRMSmartEvent, *map[string]interface{}, bool) {
+	currentProperties, prevProperties *map[string]interface{}, filter *model.SmartCRMEventFilter, organizationURL string) (*model.CRMSmartEvent, *map[string]interface{}, bool) {
 
 	var crmSmartEvent model.CRMSmartEvent
 	var validProperty bool
@@ -593,7 +610,7 @@ func GetSalesforceSmartEventPayload(projectID int64, eventName, documentID, user
 		if status == http.StatusNotFound {
 			prevProperties = &map[string]interface{}{}
 		} else {
-			_, prevProperties, err = GetSalesforceDocumentProperties(projectID, &prevDocs[len(prevDocs)-1])
+			_, prevProperties, err = GetSalesforceDocumentProperties(projectID, &prevDocs[len(prevDocs)-1], organizationURL)
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to GetSalesforceDocumentProperties")
 				return nil, prevProperties, false
@@ -615,7 +632,7 @@ func GetSalesforceSmartEventPayload(projectID int64, eventName, documentID, user
 
 // TrackSalesforceSmartEvent valids current properties with CRM smart filter and creates a event
 func TrackSalesforceSmartEvent(projectID int64, salesforceSmartEventName *SalesforceSmartEventName, eventID, documentID, userID string, docType int,
-	currentProperties, prevProperties *map[string]interface{}, lastModifiedTimestamp int64, isPast bool) *map[string]interface{} {
+	currentProperties, prevProperties *map[string]interface{}, lastModifiedTimestamp int64, isPast bool, organizationURL string) *map[string]interface{} {
 	var valid bool
 	var smartEventPayload *model.CRMSmartEvent
 
@@ -632,7 +649,7 @@ func TrackSalesforceSmartEvent(projectID int64, salesforceSmartEventName *Salesf
 	}
 
 	smartEventPayload, prevProperties, valid = GetSalesforceSmartEventPayload(projectID, salesforceSmartEventName.EventName, documentID,
-		userID, docType, currentProperties, prevProperties, salesforceSmartEventName.Filter)
+		userID, docType, currentProperties, prevProperties, salesforceSmartEventName.Filter, organizationURL)
 	if !valid {
 		return prevProperties
 	}
@@ -867,7 +884,7 @@ func isValidGroupName(documentType int, groupName string) bool {
 	return false
 }
 
-func CreateOrUpdateSalesforceGroupsProperties(projectID int64, document *model.SalesforceDocument, groupName, groupID string, createCreatedEvent bool) (string, int, string) {
+func CreateOrUpdateSalesforceGroupsProperties(projectID int64, document *model.SalesforceDocument, groupName, groupID string, createCreatedEvent bool, organizationURL string) (string, int, string) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": document.Type, "document": document, "group_name": groupName,
 		"group_id": groupID})
 
@@ -881,7 +898,7 @@ func CreateOrUpdateSalesforceGroupsProperties(projectID int64, document *model.S
 		return "", http.StatusBadRequest, ""
 	}
 
-	enProperties, _, err := GetSalesforceDocumentProperties(projectID, document)
+	enProperties, _, err := GetSalesforceDocumentProperties(projectID, document, organizationURL)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
 		return "", http.StatusInternalServerError, ""
@@ -1020,7 +1037,7 @@ func CreateOrUpdateSalesforceGroupsProperties(projectID int64, document *model.S
 	return groupUserID, http.StatusOK, eventID
 }
 
-func enrichGroupOpportunity(projectID int64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) (map[string]map[string]string, int) {
+func enrichGroupOpportunity(projectID int64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName, organizationURL string) (map[string]map[string]string, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "document": document})
 	if projectID == 0 || document == nil {
 		logCtx.Error("Invalid project_id or document_id")
@@ -1082,13 +1099,13 @@ func enrichGroupOpportunity(projectID int64, document *model.SalesforceDocument,
 		return nil, http.StatusNotModified
 	}
 
-	groupUserID, status, eventID := CreateOrUpdateSalesforceGroupsProperties(projectID, document, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, document.ID, createCreatedEvent)
+	groupUserID, status, eventID := CreateOrUpdateSalesforceGroupsProperties(projectID, document, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, document.ID, createCreatedEvent, organizationURL)
 	if status != http.StatusOK {
 		logCtx.Error("Failed to create or update salesforce groups properties.")
 		return nil, status
 	}
 
-	enProperties, properties, err := GetSalesforceDocumentProperties(projectID, document)
+	enProperties, properties, err := GetSalesforceDocumentProperties(projectID, document, organizationURL)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
 		return nil, http.StatusInternalServerError
@@ -1108,7 +1125,7 @@ func enrichGroupOpportunity(projectID int64, document *model.SalesforceDocument,
 	}
 
 	if C.AssociateDealToDomainByProjectID(projectID) {
-		status = AssociateOpportunityToDomains(projectID, groupUserID, accountID)
+		status = AssociateOpportunityToDomains(projectID, groupUserID, accountID, organizationURL)
 		if status != http.StatusOK {
 			logCtx.Error("Failed to associate opportunity to domain.")
 		}
@@ -1124,7 +1141,7 @@ func enrichGroupOpportunity(projectID int64, document *model.SalesforceDocument,
 	var prevProperties *map[string]interface{}
 	for _, smartEventName := range salesforceSmartEventNames {
 		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, document.ID, groupUserID,
-			document.Type, properties, prevProperties, lastModifiedTimestamp, false)
+			document.Type, properties, prevProperties, lastModifiedTimestamp, false, organizationURL)
 	}
 
 	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, eventID, "", groupUserID, true)
@@ -1171,7 +1188,7 @@ func CreateSalesforceGroupRelationship(projectID int64, leftGroupName, leftgroup
 	return nil
 }
 
-func AssociateOpportunityToDomains(projectID int64, opportunityGroupUserID string, accountID string) int {
+func AssociateOpportunityToDomains(projectID int64, opportunityGroupUserID string, accountID string, organizationURL string) int {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "opportunity_group_user_id": opportunityGroupUserID, "account_id": accountID})
 	if projectID == 0 || opportunityGroupUserID == "" || accountID == "" {
 		logCtx.Error("Missing required fields.")
@@ -1186,7 +1203,7 @@ func AssociateOpportunityToDomains(projectID int64, opportunityGroupUserID strin
 
 	groupUserID := document.GroupUserID
 	if document.GroupUserID == "" {
-		status, userID := enrichGroupAccount(projectID, document, nil)
+		status, userID := enrichGroupAccount(projectID, document, nil, organizationURL)
 		if status != http.StatusOK {
 			logCtx.Error("Failed to enrich account document in associateOpportunityToDomains.")
 			return status
@@ -1308,7 +1325,7 @@ func enrichOpportunityContactRoles(projectID int64, document *model.SalesforceDo
 	return http.StatusOK
 }
 
-func updateSalesforceUserAccountGroups(projectID int64, accountID, userID string) int {
+func updateSalesforceUserAccountGroups(projectID int64, accountID, userID string, organizationURL string) int {
 	documents, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{accountID},
 		model.SalesforceDocumentTypeAccount, true)
 	if status != http.StatusFound {
@@ -1321,7 +1338,7 @@ func updateSalesforceUserAccountGroups(projectID int64, accountID, userID string
 	groupUserID := documents[0].GroupUserID
 	if groupUserID == "" {
 		// update old record group status
-		status, _ := enrichGroupAccount(projectID, &documents[0], nil)
+		status, _ := enrichGroupAccount(projectID, &documents[0], nil, organizationURL)
 		if status != http.StatusOK || documents[0].GroupUserID == "" {
 			log.WithFields(log.Fields{"project_id": projectID, "account_id": accountID}).
 				Error("Failed to create group user on existing sync record.")
@@ -1368,7 +1385,7 @@ func updateSalesforceUserAccountGroups(projectID int64, accountID, userID string
 	return http.StatusOK
 }
 
-func enrichLeads(projectID int64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName, pendingOpportunityAssociatedRecords map[string]string) int {
+func enrichLeads(projectID int64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName, pendingOpportunityAssociatedRecords map[string]string, organizationURL string) int {
 	if projectID == 0 || document == nil {
 		return http.StatusBadRequest
 	}
@@ -1378,7 +1395,7 @@ func enrichLeads(projectID int64, document *model.SalesforceDocument, salesforce
 	}
 
 	logCtx := log.WithField("project_id", projectID).WithField("document_id", document.ID)
-	enProperties, properties, err := GetSalesforceDocumentProperties(projectID, document)
+	enProperties, properties, err := GetSalesforceDocumentProperties(projectID, document, organizationURL)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
 		return http.StatusInternalServerError
@@ -1408,7 +1425,7 @@ func enrichLeads(projectID int64, document *model.SalesforceDocument, salesforce
 	var prevProperties *map[string]interface{}
 	for _, smartEventName := range salesforceSmartEventNames {
 		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, document.ID, userID, document.Type,
-			properties, prevProperties, lastModifiedTimestamp, false)
+			properties, prevProperties, lastModifiedTimestamp, false, organizationURL)
 	}
 
 	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, eventID, userID, "", true)
@@ -1421,7 +1438,7 @@ func enrichLeads(projectID int64, document *model.SalesforceDocument, salesforce
 		accountID := util.GetPropertyValueAsString((*enProperties)[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce,
 			model.GetSalesforceAliasByDocType(document.Type), "convertedaccountid")])
 		if accountID != "" {
-			status := updateSalesforceUserAccountGroups(projectID, accountID, userID)
+			status := updateSalesforceUserAccountGroups(projectID, accountID, userID, organizationURL)
 			if status != http.StatusOK {
 				logCtx.Error("Failed to update salesforce lead group details.")
 			}
@@ -1456,13 +1473,13 @@ func getCampaignMemberIDsFromCampaign(document *model.SalesforceDocument) ([]str
 	return campaignMemberIDs, nil
 }
 
-func enrichCampaignToAllCampaignMembers(project *model.Project, otpRules *[]model.OTPRule, document *model.SalesforceDocument, endTimestamp int64) int {
+func enrichCampaignToAllCampaignMembers(project *model.Project, otpRules *[]model.OTPRule, document *model.SalesforceDocument, endTimestamp int64, organizationURL string) int {
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "document_id": document.ID, "end_timestamp": endTimestamp})
 	if document.Type != model.SalesforceDocumentTypeCampaign {
 		return http.StatusBadRequest
 	}
 
-	enProperties, _, err := GetSalesforceDocumentProperties(project.ID, document)
+	enProperties, _, err := GetSalesforceDocumentProperties(project.ID, document, organizationURL)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties for campaign.")
 		return http.StatusInternalServerError
@@ -1506,7 +1523,7 @@ func enrichCampaignToAllCampaignMembers(project *model.Project, otpRules *[]mode
 	}
 
 	for i := range memberDocuments {
-		enMemberProperties, _, err := GetSalesforceDocumentProperties(project.ID, &memberDocuments[i])
+		enMemberProperties, _, err := GetSalesforceDocumentProperties(project.ID, &memberDocuments[i], organizationURL)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to get campaign member properties.")
 			return http.StatusInternalServerError
@@ -1550,7 +1567,7 @@ func enrichCampaignToAllCampaignMembers(project *model.Project, otpRules *[]mode
 
 		if memberDocuments[i].Synced == false {
 			if !C.IsProjectIDSkippedForOtp(project.ID) {
-				err = ApplySFOfflineTouchPointRule(project, otpRules, &finalTrackPayload, &memberDocuments[i], endTimestamp)
+				err = ApplySFOfflineTouchPointRule(project, otpRules, &finalTrackPayload, &memberDocuments[i], endTimestamp, organizationURL)
 				if err != nil {
 					// log and continue
 					logCtx.WithField("EventID", eventID).WithField("userID", eventID).WithField("userID", eventID).Warn("failed creating SF offline touch point")
@@ -1620,13 +1637,13 @@ func getExistingCampaignMemberUserIDFromProperties(projectID int64, properties *
 	return ""
 }
 
-func enrichCampaignMemberResponded(project *model.Project, document *model.SalesforceDocument, userID string, campaignMemberProperties map[string]interface{}) int {
+func enrichCampaignMemberResponded(project *model.Project, document *model.SalesforceDocument, userID string, campaignMemberProperties map[string]interface{}, organizationURL string) int {
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "document_id": document.ID})
 	if document.Type != model.SalesforceDocumentTypeCampaignMember {
 		return http.StatusBadRequest
 	}
 
-	currentCampaignMemberDocumentProperties, _, err := GetSalesforceDocumentProperties(project.ID, document)
+	currentCampaignMemberDocumentProperties, _, err := GetSalesforceDocumentProperties(project.ID, document, organizationURL)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties for current campaign member.")
 		return http.StatusInternalServerError
@@ -1654,7 +1671,7 @@ func enrichCampaignMemberResponded(project *model.Project, document *model.Sales
 	var previousCampaignMemberDocumentProperties *map[string]interface{}
 	if previousCampaignMemberDocuments != nil {
 		previousCampaignMemberDocumentProperties, _, err = GetSalesforceDocumentProperties(document.ProjectID,
-			&previousCampaignMemberDocuments[len(previousCampaignMemberDocuments)-1])
+			&previousCampaignMemberDocuments[len(previousCampaignMemberDocuments)-1], organizationURL)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to get properties for previous campaign member.")
 			return http.StatusInternalServerError
@@ -1697,13 +1714,13 @@ func enrichCampaignMemberResponded(project *model.Project, document *model.Sales
 	return http.StatusOK
 }
 
-func enrichCampaignMember(project *model.Project, otpRules *[]model.OTPRule, document *model.SalesforceDocument, endTimestamp int64) int {
+func enrichCampaignMember(project *model.Project, otpRules *[]model.OTPRule, document *model.SalesforceDocument, endTimestamp int64, organizationURL string) int {
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "document_id": document.ID})
 	if document.Type != model.SalesforceDocumentTypeCampaignMember {
 		return http.StatusBadRequest
 	}
 
-	enCampaignMemberProperties, _, err := GetSalesforceDocumentProperties(project.ID, document)
+	enCampaignMemberProperties, _, err := GetSalesforceDocumentProperties(project.ID, document, organizationURL)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties for campaign member.")
 		return http.StatusInternalServerError
@@ -1739,7 +1756,7 @@ func enrichCampaignMember(project *model.Project, otpRules *[]model.OTPRule, doc
 		associateCampaignUpdate = &campaignDocuments[0]
 	}
 
-	enCampaignProperties, _, err := GetSalesforceDocumentProperties(project.ID, associateCampaignUpdate)
+	enCampaignProperties, _, err := GetSalesforceDocumentProperties(project.ID, associateCampaignUpdate, organizationURL)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties for campaign member.")
 		return http.StatusInternalServerError
@@ -1772,13 +1789,13 @@ func enrichCampaignMember(project *model.Project, otpRules *[]model.OTPRule, doc
 	}
 
 	if !C.IsProjectIDSkippedForOtp(project.ID) {
-		err = ApplySFOfflineTouchPointRule(project, otpRules, &finalTrackPayload, document, endTimestamp)
+		err = ApplySFOfflineTouchPointRule(project, otpRules, &finalTrackPayload, document, endTimestamp, organizationURL)
 		if err != nil {
 			// log and continue
 			logCtx.WithField("EventID", eventID).WithField("userID", userID).WithField("error", err).Warn("Create SF offline touch point")
 		}
 	}
-	errCode := enrichCampaignMemberResponded(project, document, userID, *enCampaignMemberProperties)
+	errCode := enrichCampaignMemberResponded(project, document, userID, *enCampaignMemberProperties, organizationURL)
 	if errCode != http.StatusOK {
 		logCtx.Error("Failed to enrich Responded to Campaign event.")
 	}
@@ -1882,7 +1899,7 @@ func canProcessSalesforceActivity(document *model.SalesforceDocument) (bool, err
 	return true, nil
 }
 
-func enrichTask(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, document *model.SalesforceDocument) int {
+func enrichTask(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, document *model.SalesforceDocument, organizationURL string) int {
 	logCtx := log.WithField("project_id", project.ID).WithField("document_id", document.ID)
 
 	if project.ID == 0 || document == nil {
@@ -1907,7 +1924,7 @@ func enrichTask(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEven
 		}
 	}
 
-	enProperties, _, err := GetSalesforceDocumentProperties(project.ID, document)
+	enProperties, _, err := GetSalesforceDocumentProperties(project.ID, document, organizationURL)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
 		return http.StatusInternalServerError
@@ -1957,7 +1974,7 @@ func enrichTask(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEven
 	return http.StatusOK
 }
 
-func enrichEvent(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, document *model.SalesforceDocument) int {
+func enrichEvent(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, document *model.SalesforceDocument, organizationURL string) int {
 	logCtx := log.WithField("project_id", project.ID).WithField("document_id", document.ID)
 
 	if project.ID == 0 || document == nil {
@@ -1982,7 +1999,7 @@ func enrichEvent(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEve
 		}
 	}
 
-	enProperties, _, err := GetSalesforceDocumentProperties(project.ID, document)
+	enProperties, _, err := GetSalesforceDocumentProperties(project.ID, document, organizationURL)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
 		return http.StatusInternalServerError
@@ -2121,7 +2138,7 @@ func ApplySFOfflineTouchPointRuleForEvents(project *model.Project, otpRules *[]m
 }
 
 // Check if the condition are satisfied for creating OTP events for each rule for SF Campaign.
-func ApplySFOfflineTouchPointRule(project *model.Project, otpRules *[]model.OTPRule, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, endTimestamp int64) error {
+func ApplySFOfflineTouchPointRule(project *model.Project, otpRules *[]model.OTPRule, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, endTimestamp int64, organizationURL string) error {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplySFOfflineTouchPointRule",
 		"document_id": document.ID, "document_action": document.Action, "document": document})
@@ -2149,7 +2166,7 @@ func ApplySFOfflineTouchPointRule(project *model.Project, otpRules *[]model.OTPR
 				Info("Found existing campaign member document")
 
 			// len(campaignMemberDocuments) > 0 && timestamp sorted desc
-			enCampaignMemberProperties, _, err := GetSalesforceDocumentProperties(project.ID, &campaignMemberDocuments[len(campaignMemberDocuments)-1])
+			enCampaignMemberProperties, _, err := GetSalesforceDocumentProperties(project.ID, &campaignMemberDocuments[len(campaignMemberDocuments)-1], organizationURL)
 
 			if err == nil {
 				// ignore to create a new touch point if last updated doc has EP_SFCampaignMemberResponded=true
@@ -2457,20 +2474,20 @@ func filterCheck(rule model.OTPRule, trackPayload *SDK.TrackPayload, logCtx *log
 		ContactID:
 	}
 */
-func enrichCampaign(project *model.Project, otpRules *[]model.OTPRule, document *model.SalesforceDocument, endTimestamp int64) int {
+func enrichCampaign(project *model.Project, otpRules *[]model.OTPRule, document *model.SalesforceDocument, endTimestamp int64, organizationURL string) int {
 	if project.ID == 0 || document == nil {
 		return http.StatusBadRequest
 	}
 
 	if document.Type == model.SalesforceDocumentTypeCampaignMember {
-		return enrichCampaignMember(project, otpRules, document, endTimestamp)
+		return enrichCampaignMember(project, otpRules, document, endTimestamp, organizationURL)
 	}
 
 	return http.StatusBadRequest
 }
 
 func enrichAll(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, documents []model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName,
-	pendingOpportunityGroupAssociations map[string]map[string]string, endTimestamp int64) (int, int) {
+	pendingOpportunityGroupAssociations map[string]map[string]string, endTimestamp int64, organizationURL string) (int, int) {
 	if project.ID == 0 {
 		return http.StatusBadRequest, 0
 	}
@@ -2489,17 +2506,17 @@ func enrichAll(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEvent
 		startTime := time.Now().Unix()
 		switch documents[i].Type {
 		case model.SalesforceDocumentTypeContact:
-			errCode = enrichContact(project.ID, &documents[i], salesforceSmartEventNames, pendingOpportunityGroupAssociations[model.SalesforceDocumentTypeNameContact])
+			errCode = enrichContact(project.ID, &documents[i], salesforceSmartEventNames, pendingOpportunityGroupAssociations[model.SalesforceDocumentTypeNameContact], organizationURL)
 		case model.SalesforceDocumentTypeLead:
-			errCode = enrichLeads(project.ID, &documents[i], salesforceSmartEventNames, pendingOpportunityGroupAssociations[model.SalesforceDocumentTypeNameLead])
+			errCode = enrichLeads(project.ID, &documents[i], salesforceSmartEventNames, pendingOpportunityGroupAssociations[model.SalesforceDocumentTypeNameLead], organizationURL)
 		case model.SalesforceDocumentTypeCampaign, model.SalesforceDocumentTypeCampaignMember:
-			errCode = enrichCampaign(project, otpRules, &documents[i], endTimestamp)
+			errCode = enrichCampaign(project, otpRules, &documents[i], endTimestamp, organizationURL)
 		case model.SalesforceDocumentTypeOpportunityContactRole:
 			errCode = enrichOpportunityContactRoles(project.ID, &documents[i])
 		case model.SalesforceDocumentTypeTask:
-			errCode = enrichTask(project, otpRules, uniqueOTPEventKeys, &documents[i])
+			errCode = enrichTask(project, otpRules, uniqueOTPEventKeys, &documents[i], organizationURL)
 		case model.SalesforceDocumentTypeEvent:
-			errCode = enrichEvent(project, otpRules, uniqueOTPEventKeys, &documents[i])
+			errCode = enrichEvent(project, otpRules, uniqueOTPEventKeys, &documents[i], organizationURL)
 		default:
 			log.Errorf("invalid salesforce document type found %d", documents[i].Type)
 			continue
@@ -2608,7 +2625,7 @@ func updateGroupWorkerStatus(errCode int, pendingSyncRecords map[string]map[stri
 	}
 }
 
-func enrichAllGroup(projectID int64, wg *sync.WaitGroup, docType int, smartEventNames []SalesforceSmartEventName, documents []model.SalesforceDocument, status *enrichGroupWorkerStatus) {
+func enrichAllGroup(projectID int64, wg *sync.WaitGroup, docType int, smartEventNames []SalesforceSmartEventName, documents []model.SalesforceDocument, status *enrichGroupWorkerStatus, organizationURL string) {
 	defer wg.Done()
 	for i := range documents {
 		startTime := time.Now().Unix()
@@ -2623,9 +2640,9 @@ func enrichAllGroup(projectID int64, wg *sync.WaitGroup, docType int, smartEvent
 
 		switch documents[i].Type {
 		case model.SalesforceDocumentTypeAccount, model.SalesforceDocumentTypeGroupAccount:
-			errCode, _ = enrichGroupAccount(projectID, &documents[i], smartEventNames)
+			errCode, _ = enrichGroupAccount(projectID, &documents[i], smartEventNames, organizationURL)
 		case model.SalesforceDocumentTypeOpportunity:
-			pendingSyncRecords, errCode = enrichGroupOpportunity(projectID, &documents[i], smartEventNames)
+			pendingSyncRecords, errCode = enrichGroupOpportunity(projectID, &documents[i], smartEventNames, organizationURL)
 		}
 
 		updateGroupWorkerStatus(errCode, pendingSyncRecords, status)
@@ -2699,7 +2716,7 @@ func (dp *DocumentPaginator) GetNextBatch() ([]model.SalesforceDocument, int, bo
 }
 
 func getAndProcessUnSyncedGroupDocuments(projectID int64, docType int, workerPerProject int, salesforceSmartEventNames *map[string][]SalesforceSmartEventName,
-	timeZoneStr U.TimeZoneString, dataPropertiesByType map[int]*map[string]bool, pullLimit int, recordProcessLimit int, startTime int64, endTime int64) (bool, map[string]map[string]string, int, bool) {
+	timeZoneStr U.TimeZoneString, dataPropertiesByType map[int]*map[string]bool, pullLimit int, recordProcessLimit int, startTime int64, endTime int64, organizationURL string) (bool, map[string]map[string]string, int, bool) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": docType, "worker_per_project": workerPerProject, "salesforce_smart_event_names": salesforceSmartEventNames})
 
 	docTypeFailure := false
@@ -2734,7 +2751,7 @@ func getAndProcessUnSyncedGroupDocuments(projectID int64, docType int, workerPer
 			for docID := range batch {
 				logCtx.WithFields(log.Fields{"worker": workerIndex, "doc_id": docID, "type": docTypeAlias, "is_group": true}).Info("Processing Batch by doc_id")
 				wg.Add(1)
-				go enrichAllGroup(projectID, &wg, docType, (*salesforceSmartEventNames)[docTypeAlias], batch[docID], &status)
+				go enrichAllGroup(projectID, &wg, docType, (*salesforceSmartEventNames)[docTypeAlias], batch[docID], &status, organizationURL)
 				workerIndex++
 			}
 			wg.Wait()
@@ -2765,7 +2782,7 @@ func getAndProcessUnSyncedGroupDocuments(projectID int64, docType int, workerPer
 }
 
 func enrichGroup(projectID int64, workerPerProject int, orderedType []string, docMinTimestamp map[int]int64, salesforceSmartEventNames *map[string][]SalesforceSmartEventName, timeZoneStr U.TimeZoneString,
-	dataPropertiesByType map[int]*map[string]bool, pullLimit int, recordProcessLimit int, startTime, endTime int64) (map[string]bool, map[string]map[string]string, int, int, bool) {
+	dataPropertiesByType map[int]*map[string]bool, pullLimit int, recordProcessLimit int, startTime, endTime int64, organizationURL string) (map[string]bool, map[string]map[string]string, int, int, bool) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 
 	if projectID == 0 {
@@ -2788,7 +2805,7 @@ func enrichGroup(projectID int64, workerPerProject int, orderedType []string, do
 		recordsProcessed := 0
 		limitExceeded := false
 		overAllSyncStatus[docTypeAlias], overAllPendingSyncRecords, recordsProcessed, limitExceeded = getAndProcessUnSyncedGroupDocuments(projectID, docType, workerPerProject, salesforceSmartEventNames, timeZoneStr,
-			dataPropertiesByType, pullLimit, recordProcessLimit-totalRecordsProcessed, startTime, endTime)
+			dataPropertiesByType, pullLimit, recordProcessLimit-totalRecordsProcessed, startTime, endTime, organizationURL)
 		totalRecordsProcessed += recordsProcessed
 		if limitExceeded {
 			return overAllSyncStatus, overAllPendingSyncRecords, http.StatusOK, totalRecordsProcessed, true
@@ -2879,9 +2896,9 @@ type enrichWorkerStatus struct {
 
 func enrichAllWorker(project *model.Project, wg *sync.WaitGroup, enrichStatus *enrichWorkerStatus, otpRules *[]model.OTPRule,
 	uniqueOTPEventKeys *[]string, documents []model.SalesforceDocument, smartEventNames []SalesforceSmartEventName,
-	pendingOpportunityGroupAssociations map[string]map[string]string, timeRange int64) {
+	pendingOpportunityGroupAssociations map[string]map[string]string, timeRange int64, organizationURL string) {
 	defer wg.Done()
-	errCode, totalProcessed := enrichAll(project, otpRules, uniqueOTPEventKeys, documents, smartEventNames, pendingOpportunityGroupAssociations, timeRange)
+	errCode, totalProcessed := enrichAll(project, otpRules, uniqueOTPEventKeys, documents, smartEventNames, pendingOpportunityGroupAssociations, timeRange, organizationURL)
 
 	enrichStatus.Lock.Lock()
 	defer enrichStatus.Lock.Unlock()
@@ -2905,7 +2922,7 @@ func fillTimeZoneAndDateProperty(documents []model.SalesforceDocument, TimeZoneS
 
 func getAndProcessUnSyncedDocuments(project *model.Project, docType int, workerPerProject int, otpRules []model.OTPRule, uniqueOTPEventKeys []string,
 	salesforceSmartEventNames *map[string][]SalesforceSmartEventName, pendingOpportunityGroupAssociations map[string]map[string]string, timeZoneStr U.TimeZoneString,
-	dataPropertiesByType map[int]*map[string]bool, startTime, endTime int64, limit int, recordProcessLimit int) (bool, bool, int) {
+	dataPropertiesByType map[int]*map[string]bool, startTime, endTime int64, limit int, recordProcessLimit int, organizationURL string) (bool, bool, int) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "doc_type": docType, "start_time": startTime, "end_time": endTime, "limit": limit})
 	docTypFailure := false
@@ -2938,7 +2955,7 @@ func getAndProcessUnSyncedDocuments(project *model.Project, docType int, workerP
 			for docID := range batch {
 				logCtx.WithFields(log.Fields{"worker": workerIndex, "doc_id": docID, "type": docTypeAlias}).Info("Processing Batch by doc_id")
 				wg.Add(1)
-				go enrichAllWorker(project, &wg, &enrichStatus, &otpRules, &uniqueOTPEventKeys, batch[docID], (*salesforceSmartEventNames)[docTypeAlias], pendingOpportunityGroupAssociations, endTime)
+				go enrichAllWorker(project, &wg, &enrichStatus, &otpRules, &uniqueOTPEventKeys, batch[docID], (*salesforceSmartEventNames)[docTypeAlias], pendingOpportunityGroupAssociations, endTime, organizationURL)
 				workerIndex++
 			}
 			wg.Wait()
@@ -2958,7 +2975,7 @@ func getAndProcessUnSyncedDocuments(project *model.Project, docType int, workerP
 
 func enrichWithOrderedTimeSeries(project *model.Project, orderedTimeSeries [][]int64, enrichOrderByType []int, docMinTimestamp map[int]int64,
 	recordProcessLimit int, workerPerProject int, otpRules []model.OTPRule, uniqueOTPEventKeys []string, salesforceSmartEventNames *map[string][]SalesforceSmartEventName,
-	pendingOpportunityGroupAssociations map[string]map[string]string, timeZoneStr U.TimeZoneString, dataPropertiesByType map[int]*map[string]bool, pullLimit int) (map[string]bool, bool, int) {
+	pendingOpportunityGroupAssociations map[string]map[string]string, timeZoneStr U.TimeZoneString, dataPropertiesByType map[int]*map[string]bool, pullLimit int, organizationURL string) (map[string]bool, bool, int) {
 
 	allowedDocTypes := model.GetSalesforceDocumentTypeAlias(project.ID)
 	totalRecordsProcessed := 0
@@ -2973,7 +2990,7 @@ func enrichWithOrderedTimeSeries(project *model.Project, orderedTimeSeries [][]i
 			if docMinTimestamp[model.SalesforceDocumentTypeAccount] > 0 &&
 				timeRange[1] >= docMinTimestamp[model.SalesforceDocumentTypeAccount] {
 				syncStatus, _, status, recordProcessed, limitExceeded := enrichGroup(project.ID, workerPerProject, []string{model.SalesforceDocumentTypeNameAccount}, docMinTimestamp,
-					salesforceSmartEventNames, timeZoneStr, dataPropertiesByType, pullLimit, newRecordProcessLimit, timeRange[0], timeRange[1])
+					salesforceSmartEventNames, timeZoneStr, dataPropertiesByType, pullLimit, newRecordProcessLimit, timeRange[0], timeRange[1], organizationURL)
 				if status != http.StatusOK {
 					overAllSyncStatus["groups"] = true
 				}
@@ -3004,7 +3021,7 @@ func enrichWithOrderedTimeSeries(project *model.Project, orderedTimeSeries [][]i
 
 			newRecordProcessLimit = recordProcessLimit - totalRecordsProcessed
 			failure, limitExceeded, recordsProcessed := getAndProcessUnSyncedDocuments(project, docType, workerPerProject, otpRules, uniqueOTPEventKeys, salesforceSmartEventNames,
-				pendingOpportunityGroupAssociations, timeZoneStr, dataPropertiesByType, timeRange[0], timeRange[1], pullLimit, newRecordProcessLimit)
+				pendingOpportunityGroupAssociations, timeZoneStr, dataPropertiesByType, timeRange[0], timeRange[1], pullLimit, newRecordProcessLimit, organizationURL)
 
 			totalRecordsProcessed += recordsProcessed
 
@@ -3031,7 +3048,7 @@ func enrichWithOrderedTimeSeries(project *model.Project, orderedTimeSeries [][]i
 				timeRange[1] >= docMinTimestamp[model.SalesforceDocumentTypeOpportunity] {
 				var syncStatus map[string]bool
 				syncStatus, _, status, recordsProcessed, limitExceeded := enrichGroup(project.ID, workerPerProject, []string{model.SalesforceDocumentTypeNameOpportunity}, docMinTimestamp,
-					salesforceSmartEventNames, timeZoneStr, dataPropertiesByType, pullLimit, newRecordProcessLimit, timeRange[0], timeRange[1])
+					salesforceSmartEventNames, timeZoneStr, dataPropertiesByType, pullLimit, newRecordProcessLimit, timeRange[0], timeRange[1], organizationURL)
 				if status != http.StatusOK {
 					overAllSyncStatus["groups"] = true
 				}
@@ -3053,7 +3070,7 @@ func enrichWithOrderedTimeSeries(project *model.Project, orderedTimeSeries [][]i
 }
 
 func enrichWithLimit(project *model.Project, workerPerProject int, timeZoneStr U.TimeZoneString, enrichOrderByType []int,
-	dataPropertiesByType map[int]*map[string]bool, pullLimit int, recordProcessLimit int, uniqueOTPEventKeys []string, otpRules []model.OTPRule, documentLookbackDays int) (error, map[string]bool, int, bool) {
+	dataPropertiesByType map[int]*map[string]bool, pullLimit int, recordProcessLimit int, uniqueOTPEventKeys []string, otpRules []model.OTPRule, documentLookbackDays int, organizationURL string) (error, map[string]bool, int, bool) {
 
 	docMinTimestamp, minTimestamp, errCode := store.GetStore().GetSalesforceDocumentBeginingTimestampByDocumentTypeForSync(project.ID, util.TimeNowZ().AddDate(0, 0, -1*documentLookbackDays).Unix())
 	if errCode != http.StatusFound {
@@ -3071,7 +3088,7 @@ func enrichWithLimit(project *model.Project, workerPerProject int, timeZoneStr U
 	overAllSyncStatus := make(map[string]bool)
 
 	syncStatus, limitExceeded, recordsProcessed := enrichWithOrderedTimeSeries(project, orderedTimeSeries, enrichOrderByType, docMinTimestamp, recordProcessLimit-totalRecordsProcessed, workerPerProject,
-		otpRules, uniqueOTPEventKeys, salesforceSmartEventNames, nil, timeZoneStr, dataPropertiesByType, pullLimit)
+		otpRules, uniqueOTPEventKeys, salesforceSmartEventNames, nil, timeZoneStr, dataPropertiesByType, pullLimit, organizationURL)
 	for docType := range syncStatus {
 		overAllSyncStatus[docType] = syncStatus[docType]
 	}
@@ -3084,7 +3101,7 @@ func enrichWithLimit(project *model.Project, workerPerProject int, timeZoneStr U
 }
 
 // Enrich sync salesforce documents to events
-func Enrich(projectID int64, workerPerProject int, dataPropertiesByType map[int]*map[string]bool, pullLimit int, recordProcessLimit int, documentLookbackDays int) ([]Status, bool) {
+func Enrich(projectID int64, workerPerProject int, dataPropertiesByType map[int]*map[string]bool, pullLimit int, recordProcessLimit int, documentLookbackDays int, organizationURL string) ([]Status, bool) {
 
 	logCtx := log.WithField("project_id", projectID)
 
@@ -3146,7 +3163,7 @@ func Enrich(projectID int64, workerPerProject int, dataPropertiesByType map[int]
 		return statusByProjectAndType, true
 	}
 
-	err, syncStatus, recordsProcessed, limitExceeded := enrichWithLimit(project, workerPerProject, timeZoneStr, enrichOrderByType, dataPropertiesByType, pullLimit, recordProcessLimit, uniqueOTPEventKeys, otpRules, documentLookbackDays)
+	err, syncStatus, recordsProcessed, limitExceeded := enrichWithLimit(project, workerPerProject, timeZoneStr, enrichOrderByType, dataPropertiesByType, pullLimit, recordProcessLimit, uniqueOTPEventKeys, otpRules, documentLookbackDays, organizationURL)
 
 	anyFailure := false
 	for docTypeAlias, failure := range syncStatus {

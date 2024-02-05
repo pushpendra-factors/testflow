@@ -5158,7 +5158,7 @@ func TestHubspotDateTimezone(t *testing.T) {
 		},
 	}
 
-	enrichStatus, _ := IntHubspot.Sync(project.ID, 2, time.Now().UTC().Unix(), dateProperties, "America/Vancouver", 50, 3)
+	enrichStatus, _ := IntHubspot.Sync(project.ID, 2, time.Now().UTC().Unix(), dateProperties, "America/Vancouver", 50, 3, "123")
 	for i := range enrichStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
 	}
@@ -7814,7 +7814,7 @@ func TestHubspotPropertyValueLabels(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 
 	// execute sync job
-	allStatus, _ := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50, 3)
+	allStatus, _ := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50, 3, "123")
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
 	}
@@ -7999,7 +7999,7 @@ func TestHubspotEnableEventLevelProperties(t *testing.T) {
 	assert.Equal(t, createdDate*1000, hubspotDocument.Timestamp)
 
 	// execute sync job
-	allStatus, _ := IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3)
+	allStatus, _ := IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3, "123")
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
 	}
@@ -8117,7 +8117,7 @@ func TestHubspotEnableEventLevelProperties(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 
 	// execute sync job
-	allStatus, _ = IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3)
+	allStatus, _ = IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3, "123")
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
 	}
@@ -8347,7 +8347,7 @@ func TestHubspotDealDomains(t *testing.T) {
 	assert.Equal(t, status, http.StatusCreated)
 
 	// execute sync job
-	allStatus, _ := IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3)
+	allStatus, _ := IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3, "123")
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
 	}
@@ -8432,7 +8432,7 @@ func TestHubspotDealDomains(t *testing.T) {
 	assert.Equal(t, status, http.StatusCreated)
 
 	// execute sync job
-	allStatus, anyFailure := IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3)
+	allStatus, anyFailure := IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3, "123")
 	assert.Equal(t, false, anyFailure)
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -8495,7 +8495,7 @@ func TestHubspotUpdateGroupUserColumn(t *testing.T) {
 		"123", "", &map[string]interface{}{"name": "deal_1"}, companyCreatedDate.Unix(), companyCreatedDate.Unix(), model.UserSourceHubspotString)
 	assert.Nil(t, err)
 
-	status = IntHubspot.AssociateDealToDomain(project.ID, dealGroupUserID, "1")
+	status = IntHubspot.AssociateDealToDomain(project.ID, dealGroupUserID, "1", "")
 	assert.Equal(t, http.StatusOK, status)
 
 	company.Properties["hs_lastmodifieddate"] = companyUpdatedDate.Add(10 * time.Minute).Format(model.HubspotDateTimeLayout)
@@ -8510,7 +8510,7 @@ func TestHubspotUpdateGroupUserColumn(t *testing.T) {
 	assert.Equal(t, status, http.StatusCreated)
 
 	// execute sync job
-	allStatus, anyFailure := IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3)
+	allStatus, anyFailure := IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3, "123")
 	assert.Equal(t, false, anyFailure)
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -8551,7 +8551,7 @@ func TestHubspotDocumentsSyncTries(t *testing.T) {
 	assert.Equal(t, status, http.StatusCreated)
 
 	// execute sync job
-	allStatus, anyFailure := IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3)
+	allStatus, anyFailure := IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3, "123")
 	assert.Equal(t, false, anyFailure)
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -8564,7 +8564,7 @@ func TestHubspotDocumentsSyncTries(t *testing.T) {
 	}
 
 	// execute sync job second time
-	allStatus, anyFailure = IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3)
+	allStatus, anyFailure = IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3, "123")
 	assert.Equal(t, false, anyFailure)
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -8666,4 +8666,84 @@ func TestGetHubspotOwnerEmailFromOwnerId(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotEmpty(t, email)
 	assert.Equal(t, "blogapitest@hubspot.com", email)
+}
+
+func TestHubspotCompanyObjectURL(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	companyCreatedDate := U.TimeNowZ().AddDate(0, 0, -1)
+	companyUpdatedDate := companyCreatedDate
+
+	company := IntHubspot.CompanyV3{
+		CompanyId:  "1",
+		ContactIds: []int64{1},
+		Properties: map[string]string{
+			"createdate":             companyCreatedDate.Format(model.HubspotDateTimeLayout),
+			"hs_lastmodifieddate":    companyUpdatedDate.Format(model.HubspotDateTimeLayout),
+			"hs_object_id":           "1",
+			"company_lifecyclestage": "lead",
+			"demo_booked_on":         companyCreatedDate.Format(model.HubspotDateLayout),
+			"name":                   "testcompanyV3",
+			"website":                "abc.com",
+			"domain":                 "abc.com",
+		},
+	}
+
+	enJSON, err := json.Marshal(company)
+	assert.Nil(t, err)
+	pJSON := postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameCompany,
+		Value:     &pJSON,
+	}
+	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, status, http.StatusCreated)
+
+	company = IntHubspot.CompanyV3{
+		CompanyId:  "2",
+		ContactIds: []int64{2},
+		Properties: map[string]string{
+			"createdate":             companyCreatedDate.Format(model.HubspotDateTimeLayout),
+			"hs_lastmodifieddate":    companyUpdatedDate.Format(model.HubspotDateTimeLayout),
+			"hs_object_id":           "2",
+			"company_lifecyclestage": "lead",
+			"demo_booked_on":         companyCreatedDate.Format(model.HubspotDateLayout),
+			"name":                   "testcompanyV3",
+			"website":                "abc.com",
+			"domain":                 "abc.com",
+		},
+	}
+
+	enJSON, err = json.Marshal(company)
+	assert.Nil(t, err)
+	pJSON = postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameCompany,
+		Value:     &pJSON,
+	}
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, status, http.StatusCreated)
+	// execute sync job
+	allStatus, anyFailure := IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3, "123123")
+	assert.Equal(t, false, anyFailure)
+	for i := range allStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
+	}
+
+	groupUser, status := store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, "1")
+	assert.Equal(t, http.StatusFound, status)
+
+	properties := map[string]interface{}{}
+	err = json.Unmarshal(groupUser.Properties.RawMessage, &properties)
+	assert.Nil(t, err)
+	assert.Equal(t, "https://app.hubspot.com/contacts/123/company/1", properties["$hubspot_company_$object_url"])
+
+	groupUser, status = store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, "2")
+	assert.Equal(t, http.StatusFound, status)
+
+	properties = map[string]interface{}{}
+	err = json.Unmarshal(groupUser.Properties.RawMessage, &properties)
+	assert.Nil(t, err)
+	assert.Equal(t, "https://app.hubspot.com/contacts/123/company/2", properties["$hubspot_company_$object_url"])
 }

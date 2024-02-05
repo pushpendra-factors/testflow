@@ -800,7 +800,7 @@ func TestProfilesUsersPropertyValueLabels(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 
 	// execute sync job
-	allStatus, _ := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50, 3)
+	allStatus, _ := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50, 3, "abc.com")
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
 	}
@@ -937,7 +937,7 @@ func TestProfilesHubspotDealsPropertyValueLabels(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 
 	// execute sync job
-	allStatus, _ := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50, 3)
+	allStatus, _ := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50, 3, "abc.com")
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
 	}
@@ -1018,8 +1018,7 @@ func TestProfilesHubspotDealsPropertyValueLabels(t *testing.T) {
 	}
 }
 
-
 func TestGetMaxTimestampOfDataPresenceFromWebsiteAggreagtion(t *testing.T) {
-	v1, status := store.GetStore().GetMaxTimestampOfDataPresenceFromWebsiteAggregation(2, "Asia/Kolkata");
-	log.WithField("v1", v1).WithField("status", status).Warn("kark2");
+	v1, status := store.GetStore().GetMaxTimestampOfDataPresenceFromWebsiteAggregation(2, "Asia/Kolkata")
+	log.WithField("v1", v1).WithField("status", status).Warn("kark2")
 }
