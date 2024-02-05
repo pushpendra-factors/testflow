@@ -626,10 +626,10 @@ func TestWriteRangestoDB(t *testing.T) {
 	var b3 M.Bucket
 	var b4 M.Bucket
 
-	b1.Name = "Hot"
-	b2.Name = "Warm"
-	b3.Name = "Cold"
-	b4.Name = "Ice"
+	b1.Name = M.ENGAGEMENT_LEVEL_HOT
+	b2.Name = M.ENGAGEMENT_LEVEL_WARM
+	b3.Name = M.ENGAGEMENT_LEVEL_COOL
+	b4.Name = M.ENGAGEMENT_LEVEL_ICE
 
 	b1.High = 120
 	b2.High = 90
@@ -689,10 +689,10 @@ func TestValidateEngagementLevel(t *testing.T) {
 
 	engagementBucket.Date = "01012024"
 
-	b1 := M.Bucket{Name: "Hot", High: 100, Low: 90}
-	b2 := M.Bucket{Name: "Warm", High: 90, Low: 70}
-	b3 := M.Bucket{Name: "Cold", High: 70, Low: 40}
-	b4 := M.Bucket{Name: "Ice", High: 40, Low: 0}
+	b1 := M.Bucket{Name: M.ENGAGEMENT_LEVEL_HOT, High: 100, Low: 90}
+	b2 := M.Bucket{Name: M.ENGAGEMENT_LEVEL_WARM, High: 90, Low: 70}
+	b3 := M.Bucket{Name: M.ENGAGEMENT_LEVEL_COOL, High: 70, Low: 40}
+	b4 := M.Bucket{Name: M.ENGAGEMENT_LEVEL_ICE, High: 40, Low: 0}
 	engagementBucket.Ranges = []M.Bucket{b1, b2, b3, b4}
 
 	status, err := T.ValidateEngagementLevel(int64(1), engagementBucket)
@@ -701,20 +701,20 @@ func TestValidateEngagementLevel(t *testing.T) {
 
 	engagementBucket.Date = "01012024"
 
-	b1 = M.Bucket{Name: "Hot", High: 100, Low: 90}
-	b2 = M.Bucket{Name: "Warm", High: 90, Low: 70}
-	b3 = M.Bucket{Name: "Cold", High: 75, Low: 40}
-	b4 = M.Bucket{Name: "Ice", High: 40, Low: 0}
+	b1 = M.Bucket{Name: M.ENGAGEMENT_LEVEL_HOT, High: 100, Low: 90}
+	b2 = M.Bucket{Name: M.ENGAGEMENT_LEVEL_WARM, High: 90, Low: 70}
+	b3 = M.Bucket{Name: M.ENGAGEMENT_LEVEL_COOL, High: 75, Low: 40}
+	b4 = M.Bucket{Name: M.ENGAGEMENT_LEVEL_ICE, High: 40, Low: 0}
 	engagementBucket.Ranges = []M.Bucket{b1, b2, b3, b4}
 
 	status, err = T.ValidateEngagementLevel(int64(1), engagementBucket)
 	log.WithField("err", err).Debugf("")
 	assert.Equal(t, false, status, err)
 
-	b1 = M.Bucket{Name: "Hot", High: 100, Low: 90}
-	b2 = M.Bucket{Name: "Warm", High: 90, Low: 70}
-	b3 = M.Bucket{Name: "Warm", High: 70, Low: 40}
-	b4 = M.Bucket{Name: "Ice", High: 40, Low: 0}
+	b1 = M.Bucket{Name: M.ENGAGEMENT_LEVEL_HOT, High: 100, Low: 90}
+	b2 = M.Bucket{Name: M.ENGAGEMENT_LEVEL_WARM, High: 90, Low: 70}
+	b3 = M.Bucket{Name: M.ENGAGEMENT_LEVEL_WARM, High: 70, Low: 40}
+	b4 = M.Bucket{Name: M.ENGAGEMENT_LEVEL_ICE, High: 40, Low: 0}
 	engagementBucket.Ranges = []M.Bucket{b1, b2, b3, b4}
 
 	status, err = T.ValidateEngagementLevel(int64(1), engagementBucket)
@@ -735,10 +735,10 @@ func TestValidateAndUpdateEngagementLevel(t *testing.T) {
 
 	engagementBucket.Date = "01012024"
 
-	b1 := M.Bucket{Name: "Hot", High: 100, Low: 90}
-	b2 := M.Bucket{Name: "Warm", High: 90, Low: 70}
-	b3 := M.Bucket{Name: "Cold", High: 70, Low: 40}
-	b4 := M.Bucket{Name: "Ice", High: 40, Low: 0}
+	b1 := M.Bucket{Name: M.ENGAGEMENT_LEVEL_HOT, High: 100, Low: 90}
+	b2 := M.Bucket{Name: M.ENGAGEMENT_LEVEL_WARM, High: 90, Low: 70}
+	b3 := M.Bucket{Name: M.ENGAGEMENT_LEVEL_COOL, High: 70, Low: 40}
+	b4 := M.Bucket{Name: M.ENGAGEMENT_LEVEL_ICE, High: 40, Low: 0}
 	engagementBucket.Ranges = []M.Bucket{b1, b2, b3, b4}
 
 	status, statusCode, err := T.ValidateAndUpdateEngagementLevel(projectId, engagementBucket)
@@ -748,10 +748,10 @@ func TestValidateAndUpdateEngagementLevel(t *testing.T) {
 
 	engagementBucket.Date = "01012024"
 
-	b1 = M.Bucket{Name: "Hot", High: 100, Low: 90}
-	b2 = M.Bucket{Name: "Warm", High: 90, Low: 70}
-	b3 = M.Bucket{Name: "Cold", High: 75, Low: 40}
-	b4 = M.Bucket{Name: "Ice", High: 40, Low: 0}
+	b1 = M.Bucket{Name: M.ENGAGEMENT_LEVEL_HOT, High: 100, Low: 90}
+	b2 = M.Bucket{Name: M.ENGAGEMENT_LEVEL_WARM, High: 90, Low: 70}
+	b3 = M.Bucket{Name: M.ENGAGEMENT_LEVEL_COOL, High: 75, Low: 40}
+	b4 = M.Bucket{Name: M.ENGAGEMENT_LEVEL_ICE, High: 40, Low: 0}
 	engagementBucket.Ranges = []M.Bucket{b1, b2, b3, b4}
 
 	bucketRanges, statusCode_ := store.GetStore().GetEngagementLevelsByProject(projectId)
@@ -769,10 +769,10 @@ func TestGetEngagement(t *testing.T) {
 
 	engagementBucket.Date = "01012024"
 
-	b1 := M.Bucket{Name: "Hot", High: 95, Low: 80}
-	b2 := M.Bucket{Name: "Warm", High: 80, Low: 70}
-	b3 := M.Bucket{Name: "Cold", High: 70, Low: 40}
-	b4 := M.Bucket{Name: "Ice", High: 40, Low: 10}
+	b1 := M.Bucket{Name: M.ENGAGEMENT_LEVEL_HOT, High: 95, Low: 80}
+	b2 := M.Bucket{Name: M.ENGAGEMENT_LEVEL_WARM, High: 80, Low: 70}
+	b3 := M.Bucket{Name: M.ENGAGEMENT_LEVEL_COOL, High: 70, Low: 40}
+	b4 := M.Bucket{Name: M.ENGAGEMENT_LEVEL_ICE, High: 40, Low: 10}
 	engagementBucket.Ranges = []M.Bucket{b1, b2, b3, b4}
 
 	string1 := M.GetEngagement(98, engagementBucket)
@@ -785,10 +785,10 @@ func TestGetEngagement(t *testing.T) {
 	log.WithField("bucket 3 ", string3).Debugf("buckets")
 	log.WithField("bucket 4 ", string4).Debugf("buckets")
 
-	assert.Equal(t, "Hot", string1, "above given ranges - not working")
-	assert.Equal(t, "Hot", string2, "within given ranges - not working")
-	assert.Equal(t, "Warm", string3, "within given ranges - not working")
-	assert.Equal(t, "Ice", string4, "below given ranges - not working")
+	assert.Equal(t, M.ENGAGEMENT_LEVEL_HOT, string1, "above given ranges - not working")
+	assert.Equal(t, M.ENGAGEMENT_LEVEL_HOT, string2, "within given ranges - not working")
+	assert.Equal(t, M.ENGAGEMENT_LEVEL_WARM, string3, "within given ranges - not working")
+	assert.Equal(t, M.ENGAGEMENT_LEVEL_ICE, string4, "below given ranges - not working")
 
 }
 
