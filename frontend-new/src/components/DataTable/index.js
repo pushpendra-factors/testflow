@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Table } from 'antd';
 import cx from 'classnames';
+import { useHistory } from 'react-router-dom';
+import { PathUrls } from 'Routes/pathUrls';
 import SearchBar from './SearchBar';
 import styles from './index.module.scss';
-import { useHistory } from 'react-router-dom';
 import useToggle from '../../hooks/useToggle';
 import ControlledComponent from '../ControlledComponent/ControlledComponent';
-import { APP_LAYOUT_ROUTES } from 'Routes/constants';
 
 function DataTable({
   tableData,
@@ -37,10 +37,7 @@ function DataTable({
   const [searchBar, toggleSearchBar] = useToggle(false);
   const history = useHistory();
   let isDashboardWidget = !isWidgetModal;
-  if (
-    history.location.pathname ===
-    APP_LAYOUT_ROUTES.VisitorIdentificationReport.path
-  ) {
+  if (history.location.pathname === PathUrls.VisitorIdentificationReport) {
     isDashboardWidget = false;
   } else if (history.location.pathname.includes('/reports')) {
     isDashboardWidget = true;
@@ -112,7 +109,7 @@ function DataTable({
               }
             : false
         }
-        bordered={true}
+        bordered
         rowKey='index'
         rowSelection={!isDashboardWidget ? rowSelection : null}
         columns={columns}
@@ -122,7 +119,7 @@ function DataTable({
         })}
         scroll={scroll}
         // size={isDashboardWidget ? 'middle' : ''}
-        size={'middle'}
+        size='middle'
         {...(tableLayout && { tableLayout })}
       />
     </div>
