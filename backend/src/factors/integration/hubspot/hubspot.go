@@ -1376,7 +1376,7 @@ func SyncHubspotEngagementCallDispositions(projectID int64, apiKey, refreshToken
 	return failures
 }
 
-func syncContact(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, document *model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) int {
+func syncContact(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, document *model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName, portalID string) int {
 	logCtx := log.WithField("project_id", project.ID).WithField("document_id", document.ID)
 
 	if document.Type != model.HubspotDocumentTypeContact {
@@ -1735,7 +1735,7 @@ func syncContact(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEve
 	}
 
 	if C.MoveHubspotCompanyAssocationFlowToContactByPojectID(project.ID) && associatedCompanyID != "" {
-		status = associateContactToCompany(project.ID, userID, associatedCompanyID)
+		status = associateContactToCompany(project.ID, userID, associatedCompanyID, portalID)
 		if status != http.StatusOK {
 			logCtx.Error("Failed to associateContactToCompany.")
 		}
@@ -1751,7 +1751,7 @@ func syncContact(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEve
 	return http.StatusOK
 }
 
-func associateContactToCompany(projectID int64, contactUserID string, companyID string) int {
+func associateContactToCompany(projectID int64, contactUserID string, companyID string, portalID string) int {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "contact_user_id": contactUserID, "company_id": companyID})
 	if projectID == 0 || contactUserID == "" || companyID == "" {
 		logCtx.Error("Invalid parameters in associateContactToCompany.")
@@ -1772,7 +1772,7 @@ func associateContactToCompany(projectID int64, contactUserID string, companyID 
 
 	companyUserID := documents[0].GroupUserId
 	if companyUserID == "" {
-		groupUseID, status := syncCompany(projectID, &documents[0])
+		groupUseID, status := syncCompany(projectID, &documents[0], portalID)
 		if status != http.StatusOK {
 			logCtx.Error("Failed to sync company in associateContactToCompany.")
 			return http.StatusInternalServerError
@@ -2629,7 +2629,7 @@ func getCompanyGroupID(document *model.HubspotDocument, companyName, domainName 
 	return domainName
 }
 
-func getCompanyProperties(projectID int64, document *model.HubspotDocument) (map[string]interface{}, error) {
+func getCompanyProperties(projectID int64, document *model.HubspotDocument, portalID string) (map[string]interface{}, error) {
 	if projectID < 1 || document == nil {
 		return nil, errors.New("invalid parameters")
 	}
@@ -2644,7 +2644,7 @@ func getCompanyProperties(projectID int64, document *model.HubspotDocument) (map
 	}
 
 	if isCompanyV3 {
-		return getCompanyPropertiesV3(projectID, document)
+		return getCompanyPropertiesV3(projectID, document, portalID)
 	}
 
 	var company Company
@@ -2674,10 +2674,18 @@ func getCompanyProperties(projectID int64, document *model.HubspotDocument) (map
 		userProperties[propertyKey] = value
 	}
 
+	if C.AddCRMObjectURLPropertyByProjectID(projectID) {
+		objectURL := getHubspotObjectURl(projectID, model.HubspotDocumentTypeNameCompany, portalID, document.ID)
+		if objectURL != "" {
+			userProperties[model.GetCRMObjectURLKey(projectID, model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameCompany)] = objectURL
+		}
+
+	}
+
 	return userProperties, nil
 }
 
-func syncCompany(projectID int64, document *model.HubspotDocument) (string, int) {
+func syncCompany(projectID int64, document *model.HubspotDocument, portalID string) (string, int) {
 	var value interface{}
 	err := U.DecodePostgresJsonbToStructType(document.Value, &value)
 	if err != nil {
@@ -2691,13 +2699,13 @@ func syncCompany(projectID int64, document *model.HubspotDocument) (string, int)
 	}
 
 	if isCompanyV3 {
-		return syncCompanyV3(projectID, document)
+		return syncCompanyV3(projectID, document, portalID)
 	}
 
-	return syncCompanyV2(projectID, document)
+	return syncCompanyV2(projectID, document, portalID)
 }
 
-func syncCompanyV2(projectID int64, document *model.HubspotDocument) (string, int) {
+func syncCompanyV2(projectID int64, document *model.HubspotDocument, portalID string) (string, int) {
 	if document.Type != model.HubspotDocumentTypeCompany {
 		return "", http.StatusInternalServerError
 	}
@@ -2718,7 +2726,7 @@ func syncCompanyV2(projectID int64, document *model.HubspotDocument) (string, in
 			strconv.FormatInt(company.ContactIds[i], 10))
 	}
 
-	userProperties, err := getCompanyProperties(projectID, document)
+	userProperties, err := getCompanyProperties(projectID, document, portalID)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get company properties")
 		return "", http.StatusInternalServerError
@@ -2807,7 +2815,7 @@ func syncCompanyV2(projectID int64, document *model.HubspotDocument) (string, in
 	return companyUserID, http.StatusOK
 }
 
-func getCompanyPropertiesV3(projectID int64, document *model.HubspotDocument) (map[string]interface{}, error) {
+func getCompanyPropertiesV3(projectID int64, document *model.HubspotDocument, portalID string) (map[string]interface{}, error) {
 	if projectID < 1 || document == nil {
 		return nil, errors.New("invalid parameters")
 	}
@@ -2843,10 +2851,26 @@ func getCompanyPropertiesV3(projectID int64, document *model.HubspotDocument) (m
 		userProperties[propertyKey] = value
 	}
 
+	if C.AddCRMObjectURLPropertyByProjectID(projectID) {
+		objectURL := getHubspotObjectURl(projectID, model.HubspotDocumentTypeNameCompany, portalID, document.ID)
+		if objectURL != "" {
+			userProperties[model.GetCRMObjectURLKey(projectID, model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameCompany)] = objectURL
+		}
+	}
+
 	return userProperties, nil
 }
 
-func syncCompanyV3(projectID int64, document *model.HubspotDocument) (string, int) {
+func getHubspotObjectURl(projectID int64, objectTyp, portalID, recordID string) string {
+	if objectTyp == "" || portalID == "" || recordID == "" {
+		log.WithFields(log.Fields{"project_id": projectID, "object_type": objectTyp, "portal_id": portalID, "record_id": recordID}).Error("Failed to create hubspot object url.")
+		return ""
+	}
+
+	return fmt.Sprintf("https://app.hubspot.com/contacts/%s/%s/%s", portalID, objectTyp, recordID)
+}
+
+func syncCompanyV3(projectID int64, document *model.HubspotDocument, portalID string) (string, int) {
 	if document.Type != model.HubspotDocumentTypeCompany {
 		return "", http.StatusInternalServerError
 	}
@@ -2866,7 +2890,7 @@ func syncCompanyV3(projectID int64, document *model.HubspotDocument) (string, in
 		contactIds = append(contactIds, strconv.FormatInt(company.ContactIds[i], 10))
 	}
 
-	userProperties, err := getCompanyPropertiesV3(projectID, document)
+	userProperties, err := getCompanyPropertiesV3(projectID, document, portalID)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get company properties")
 		return "", http.StatusInternalServerError
@@ -3334,7 +3358,7 @@ func syncGroupCompany(projectID int64, document *model.HubspotDocument, enProper
 	return companyUserID, companyGroupID, nil
 }
 
-func syncGroupDeal(projectID int64, enProperties *map[string]interface{}, document *model.HubspotDocument) (string, string, int) {
+func syncGroupDeal(projectID int64, enProperties *map[string]interface{}, document *model.HubspotDocument, portalID string) (string, string, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "document_id": document.ID, "doc_type": document.Type})
 	if document.Type != model.HubspotDocumentTypeDeal {
 		logCtx.Error("Invalid document type on syncGroupDeal.")
@@ -3397,7 +3421,7 @@ func syncGroupDeal(projectID int64, enProperties *map[string]interface{}, docume
 		for i := range documents {
 			groupUserID := getGroupUserID(&documents[i])
 			if groupUserID == "" {
-				userProperties, err := getCompanyProperties(projectID, &documents[i])
+				userProperties, err := getCompanyProperties(projectID, &documents[i], portalID)
 				if err != nil {
 					logCtx.WithFields(log.Fields{"document": documents[i]}).Error("Failed to get company properties in sync deal groups.")
 					continue
@@ -3443,7 +3467,7 @@ func syncGroupDeal(projectID int64, enProperties *map[string]interface{}, docume
 	}
 
 	if C.AssociateDealToDomainByProjectID(projectID) && companyID != "" {
-		status = AssociateDealToDomain(projectID, dealGroupUserID, companyID)
+		status = AssociateDealToDomain(projectID, dealGroupUserID, companyID, portalID)
 		if status != http.StatusOK {
 			logCtx.Error("Failed to associateDealToDomain.")
 		}
@@ -3452,7 +3476,7 @@ func syncGroupDeal(projectID int64, enProperties *map[string]interface{}, docume
 	return dealGroupUserID, eventId, http.StatusOK
 }
 
-func AssociateDealToDomain(projectID int64, dealGroupUserID string, companyID string) int {
+func AssociateDealToDomain(projectID int64, dealGroupUserID string, companyID string, portalID string) int {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "deal_group_user_id": dealGroupUserID, "company_id": companyID})
 	if projectID == 0 || dealGroupUserID == "" || companyID == "" {
 		logCtx.Error("Missing required fields.")
@@ -3469,7 +3493,7 @@ func AssociateDealToDomain(projectID int64, dealGroupUserID string, companyID st
 	document := documents[0]
 	groupUserID := document.GroupUserId
 	if groupUserID == "" {
-		enProperties, err := getCompanyProperties(projectID, &document)
+		enProperties, err := getCompanyProperties(projectID, &document, portalID)
 		if err != nil {
 			logCtx.WithFields(log.Fields{"document_id": document.ID}).Error("Failed to get company properties in associate deal to domains.")
 			return http.StatusInternalServerError
@@ -3491,7 +3515,7 @@ func AssociateDealToDomain(projectID int64, dealGroupUserID string, companyID st
 	return http.StatusOK
 }
 
-func syncDeal(projectID int64, document *model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) int {
+func syncDeal(projectID int64, document *model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName, portalID string) int {
 	isDealV3, err := model.CheckIfDealV3(document)
 	if err != nil {
 		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error("failed to check type of deal record")
@@ -3499,13 +3523,13 @@ func syncDeal(projectID int64, document *model.HubspotDocument, hubspotSmartEven
 	}
 
 	if isDealV3 {
-		return syncDealV3(projectID, document, hubspotSmartEventNames)
+		return syncDealV3(projectID, document, hubspotSmartEventNames, portalID)
 	}
 
-	return syncDealV2(projectID, document, hubspotSmartEventNames)
+	return syncDealV2(projectID, document, hubspotSmartEventNames, portalID)
 }
 
-func syncDealV2(projectID int64, document *model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) int {
+func syncDealV2(projectID int64, document *model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName, portalID string) int {
 	if document.Type != model.HubspotDocumentTypeDeal {
 		return http.StatusInternalServerError
 	}
@@ -3530,7 +3554,7 @@ func syncDealV2(projectID int64, document *model.HubspotDocument, hubspotSmartEv
 	var status int
 	var eventId string
 	if C.IsAllowedHubspotGroupsByProjectID(projectID) {
-		groupUserID, eventId, status = syncGroupDeal(projectID, enProperties, document)
+		groupUserID, eventId, status = syncGroupDeal(projectID, enProperties, document, portalID)
 		if status != http.StatusOK {
 			logCtx.Error("Failed to syncGroupDeal.")
 			return http.StatusInternalServerError
@@ -3592,7 +3616,7 @@ func GetDealPropertiesV3(projectID int64, document *model.HubspotDocument) (*map
 	return &enProperties, &properties, nil
 }
 
-func syncDealV3(projectID int64, document *model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) int {
+func syncDealV3(projectID int64, document *model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName, portalID string) int {
 	if document.Type != model.HubspotDocumentTypeDeal {
 		return http.StatusInternalServerError
 	}
@@ -3616,7 +3640,7 @@ func syncDealV3(projectID int64, document *model.HubspotDocument, hubspotSmartEv
 	var status int
 	var eventId string
 	if C.IsAllowedHubspotGroupsByProjectID(projectID) {
-		groupUserID, eventId, status = syncGroupDeal(projectID, enProperties, document)
+		groupUserID, eventId, status = syncGroupDeal(projectID, enProperties, document, portalID)
 		if status != http.StatusOK {
 			logCtx.Error("Failed to syncGroupDeal.")
 			return http.StatusInternalServerError
@@ -4559,7 +4583,7 @@ func syncContactListV2(project *model.Project, otpRules *[]model.OTPRule, unique
 	return http.StatusOK
 }
 
-func syncAll(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, documents []model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName, minTimestamp int64) int {
+func syncAll(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, documents []model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName, minTimestamp int64, portalID string) int {
 	logCtx := log.WithField("project_id", project.ID)
 	var seenFailures bool
 	for i := range documents {
@@ -4574,17 +4598,17 @@ func syncAll(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKe
 		switch documents[i].Type {
 
 		case model.HubspotDocumentTypeContact:
-			errCode := syncContact(project, otpRules, uniqueOTPEventKeys, &documents[i], hubspotSmartEventNames)
+			errCode := syncContact(project, otpRules, uniqueOTPEventKeys, &documents[i], hubspotSmartEventNames, portalID)
 			if errCode != http.StatusOK {
 				seenFailures = true
 			}
 		case model.HubspotDocumentTypeCompany:
-			_, errCode := syncCompany(project.ID, &documents[i])
+			_, errCode := syncCompany(project.ID, &documents[i], portalID)
 			if errCode != http.StatusOK {
 				seenFailures = true
 			}
 		case model.HubspotDocumentTypeDeal:
-			errCode := syncDeal(project.ID, &documents[i], hubspotSmartEventNames)
+			errCode := syncDeal(project.ID, &documents[i], hubspotSmartEventNames, portalID)
 			if errCode != http.StatusOK {
 				seenFailures = true
 			}
@@ -4688,7 +4712,7 @@ func (dp *DocumentPaginator) GetNextBatch() ([]model.HubspotDocument, int, bool)
 
 func getAndProcessUnSyncedDocumentsByDocType(project *model.Project, docType int, from, to int64, pullLimit int, totalRecordsToProcess int, firstSyncTimestamp int64, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string,
 	workersPerProject int, recordsMaxCreatedAtSec int64, datePropertiesByObjectType map[int]*map[string]bool,
-	timeZone U.TimeZoneString, recordsProcessLimit int, hubspotSmartEventNames *map[string][]HubspotSmartEventName) (bool, bool, int) {
+	timeZone U.TimeZoneString, recordsProcessLimit int, hubspotSmartEventNames *map[string][]HubspotSmartEventName, hubspotPoralID string) (bool, bool, int) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "doc_type": docType, "start_time": from, "end_time": to,
 		"pull_limit": pullLimit, "total_records_to_process": totalRecordsToProcess, "first_sync_timestamp": firstSyncTimestamp,
@@ -4718,6 +4742,7 @@ func getAndProcessUnSyncedDocumentsByDocType(project *model.Project, docType int
 		}
 
 		fillDatePropertiesAndTimeZone(documents, datePropertiesByObjectType[docType], timeZone)
+
 		docTypeAlias := model.GetHubspotTypeAliasByType(docType)
 
 		batches := GetBatchedOrderedDocumentsByID(documents, workersPerProject)
@@ -4732,7 +4757,7 @@ func getAndProcessUnSyncedDocumentsByDocType(project *model.Project, docType int
 				logCtx.WithFields(log.Fields{"worker": workerIndex, "doc_id": docID, "type": docType}).Info("Processing Batch by doc_id.")
 				workerIndex++
 				wg.Add(1)
-				go syncAllWorker(project, &wg, &syncStatus, otpRules, uniqueOTPEventKeys, batch[docID], (*hubspotSmartEventNames)[docTypeAlias], firstSyncTimestamp)
+				go syncAllWorker(project, &wg, &syncStatus, otpRules, uniqueOTPEventKeys, batch[docID], (*hubspotSmartEventNames)[docTypeAlias], firstSyncTimestamp, hubspotPoralID)
 			}
 			wg.Wait()
 
@@ -4750,10 +4775,10 @@ func getAndProcessUnSyncedDocumentsByDocType(project *model.Project, docType int
 }
 
 // syncAllWorker is a wrapper over syncAll function for providing concurrency
-func syncAllWorker(project *model.Project, wg *sync.WaitGroup, syncStatus *syncWorkerStatus, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, documents []model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName, minTimestamp int64) {
+func syncAllWorker(project *model.Project, wg *sync.WaitGroup, syncStatus *syncWorkerStatus, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, documents []model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName, minTimestamp int64, portalID string) {
 	defer wg.Done()
 
-	errCode := syncAll(project, otpRules, uniqueOTPEventKeys, documents, hubspotSmartEventNames, minTimestamp)
+	errCode := syncAll(project, otpRules, uniqueOTPEventKeys, documents, hubspotSmartEventNames, minTimestamp, portalID)
 
 	syncStatus.Lock.Lock()
 	defer syncStatus.Lock.Unlock()
@@ -4763,7 +4788,7 @@ func syncAllWorker(project *model.Project, wg *sync.WaitGroup, syncStatus *syncW
 }
 
 func syncByOrderedTimeSeries(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEventKeys *[]string, orderedTimeSeries [][]int64, workersPerProject int, recordsMaxCreatedAtSec int64, datePropertiesByObjectType map[int]*map[string]bool, timeZone U.TimeZoneString, recordsProcessLimit int,
-	hubspotSmartEventNames *map[string][]HubspotSmartEventName, pullLimit int) (map[string]bool, map[string]int64, map[string]int, bool) {
+	hubspotSmartEventNames *map[string][]HubspotSmartEventName, pullLimit int, portalID string) (map[string]bool, map[string]int64, map[string]int, bool) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "worker_per_project": workersPerProject,
 		"record_max_created_at": recordsMaxCreatedAtSec, "record_process_limit": recordsProcessLimit})
@@ -4810,7 +4835,7 @@ func syncByOrderedTimeSeries(project *model.Project, otpRules *[]model.OTPRule, 
 			pendingRecordsProcessCount := recordsProcessLimit - totalRecordsProcessed + 1
 
 			docTypeFailure, processLimitExceeded, recordsProcessed := getAndProcessUnSyncedDocumentsByDocType(project, docType, timeRange[0], timeRange[1], pullLimit, pendingRecordsProcessCount, firstSyncTimestamp[docType], otpRules, uniqueOTPEventKeys,
-				workersPerProject, recordsMaxCreatedAtSec, datePropertiesByObjectType, timeZone, recordsProcessLimit, hubspotSmartEventNames)
+				workersPerProject, recordsMaxCreatedAtSec, datePropertiesByObjectType, timeZone, recordsProcessLimit, hubspotSmartEventNames, portalID)
 
 			overallExecutionTime[docTypeAlias] += time.Since(startTime).Milliseconds()
 			overallProcessedCount[docTypeAlias] += recordsProcessed
@@ -4835,7 +4860,7 @@ func syncByOrderedTimeSeries(project *model.Project, otpRules *[]model.OTPRule, 
 
 // Sync - Syncs hubspot documents in an order of type.
 func Sync(projectID int64, workersPerProject int, recordsMaxCreatedAtSec int64, datePropertiesByObjectType map[int]*map[string]bool, timeZone U.TimeZoneString,
-	recordsProcessLimit int, pullLimit int) ([]Status, bool) {
+	recordsProcessLimit int, pullLimit int, hubspotPortalID string) ([]Status, bool) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "workers_per_project": workersPerProject, "record_max_created_at": recordsMaxCreatedAtSec})
 	logCtx.Info("Running sync for project.")
 
@@ -4901,7 +4926,7 @@ func Sync(projectID int64, workersPerProject int, recordsMaxCreatedAtSec int64, 
 
 	anyFailure := false
 	overAllSyncStatus, overallExecutionTime, overallProcessedCount, isProcessLimitExceeded := syncByOrderedTimeSeries(project, &otpRules, &uniqueOTPEventKeys,
-		orderedTimeSeries, workersPerProject, recordsMaxCreatedAtSec, datePropertiesByObjectType, timeZone, recordsProcessLimit, hubspotSmartEventNames, pullLimit)
+		orderedTimeSeries, workersPerProject, recordsMaxCreatedAtSec, datePropertiesByObjectType, timeZone, recordsProcessLimit, hubspotSmartEventNames, pullLimit, hubspotPortalID)
 
 	for docTypeAlias, failure := range overAllSyncStatus {
 		status := Status{ProjectId: projectID,

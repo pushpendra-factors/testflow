@@ -35,7 +35,6 @@ import {
   testSlackAlert,
   testTeamsAlert
 } from 'Reducers/global';
-import ConfirmationModal from 'Components/ConfirmationModal';
 import QueryBlock from './QueryBlock';
 import {
   deleteGroupByForEvent,
@@ -197,6 +196,7 @@ const EventBasedAlert = ({
 
   const [WHTestMsgLoading, setWHTestMsgLoading] = useState(false); 
   const [WHTestMsgTxt, setWHTestMsgTxt] = useState(false);
+  const [factorsURLinWebhook, setFactorsURLinWebhook] = useState(false);
 
   const webhookRef = useRef();
   const [form] = Form.useForm();
@@ -431,6 +431,10 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
       setNotRepeat(viewAlertDetails?.alert?.repeat_alerts);
       setNotifications(viewAlertDetails?.alert?.notifications);
       setIsHyperLinkEnabled(!viewAlertDetails?.alert?.is_hyperlink_disabled);
+
+      let isWebHookFactorsUrlEnabled = viewAlertDetails?.alert?.is_factors_url_in_payload ? viewAlertDetails?.alert?.is_factors_url_in_payload : false;
+      setFactorsURLinWebhook(isWebHookFactorsUrlEnabled);
+
       const messageProperty = processBreakdownsFromQuery(
         viewAlertDetails?.alert?.message_property
       );
@@ -907,7 +911,8 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
           team_name: selectedWorkspace?.name,
           team_channel_list: teamsSaveSelectedChannel
         },
-        slack_mentions: getSlackProfileDetails(selectedMentions)  
+        slack_mentions: getSlackProfileDetails(selectedMentions),
+        is_factors_url_in_payload: factorsURLinWebhook
       };
 
       if (alertState?.state === 'edit') {
@@ -1186,7 +1191,9 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
           : [],
       message: alertMessage,
       url: webhookUrl,
-      secret: ''
+      secret: '',
+      event_level: activeGrpBtn == 'events' ? 'account' : 'user',
+      is_factors_url_in_payload: factorsURLinWebhook,
     };
     setWHTestMsgLoading(true);
     testWebhhookUrl(activeProject?.id, payload)
@@ -1707,6 +1714,10 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
             WHTestMsgTxt={WHTestMsgTxt}
             WHTestMsgLoading={WHTestMsgLoading}
             selectedEvent={queries?.length ? matchEventName(queries[0]?.label) : ''}
+            matchEventName={matchEventName}
+            factorsURLinWebhook={factorsURLinWebhook}
+            setFactorsURLinWebhook={setFactorsURLinWebhook}
+            activeGrpBtn={activeGrpBtn}
           />
 
 {/* 
