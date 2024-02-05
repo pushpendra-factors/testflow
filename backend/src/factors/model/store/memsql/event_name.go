@@ -635,8 +635,11 @@ func (store *MemSQL) GetPropertyValuesByEventProperty(projectID int64, eventName
 	isAggregateCacheUnavailable := false
 	var valuesAggregated []U.NameCountTimestampCategory
 	if C.IsAggrEventPropertyValuesCacheEnabled(projectID) {
-		eventPropertyValuesAggCacheKey, _ := model.GetValuesByEventPropertyRollUpAggregateCacheKey(
+		eventPropertyValuesAggCacheKey, err := model.GetValuesByEventPropertyRollUpAggregateCacheKey(
 			projectID, eventName, propertyName)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to get event property rollup agg cache key.")
+		}
 
 		var existingAggregate U.CacheEventPropertyValuesAggregate
 		existingAggCache, isExists, err := cacheRedis.GetIfExistsPersistent(eventPropertyValuesAggCacheKey)
@@ -644,6 +647,11 @@ func (store *MemSQL) GetPropertyValuesByEventProperty(projectID int64, eventName
 			logCtx.WithError(err).Error("Failed to get cache aggregate on API.")
 			return []string{}, err
 		}
+
+		logCtx.
+			WithField("is_exist", !isAggregateCacheUnavailable).
+			WithField("key", eventPropertyValuesAggCacheKey).
+			Info("Values are from aggregate cache.")
 
 		if isExists {
 			err = json.Unmarshal([]byte(existingAggCache), &existingAggregate)
@@ -653,8 +661,6 @@ func (store *MemSQL) GetPropertyValuesByEventProperty(projectID int64, eventName
 			}
 
 			valuesAggregated = existingAggregate.NameCountTimestampCategoryList
-
-			logCtx.WithField("len_values_agg", len(valuesAggregated)).Info("Values are from aggregate cache.")
 		} else {
 			isAggregateCacheUnavailable = true
 		}
@@ -673,7 +679,6 @@ func (store *MemSQL) GetPropertyValuesByEventProperty(projectID int64, eventName
 		}
 
 		valuesAggregated = U.AggregatePropertyValuesAcrossDate(values)
-		logCtx.WithField("len_values_agg", len(valuesAggregated)).Info("Values are from rollup cache.")
 	}
 
 	valueStrings := make([]string, 0)

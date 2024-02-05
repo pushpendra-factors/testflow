@@ -495,7 +495,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 
 				// Assigning the current earliest date added to aggregates.
 				if len(valuesByDate) > 0 {
-					existingAggregate.EarliestCount = valuesByDate[len(valuesByDate)-1]
+					existingAggregate.EarliestCount = valuesByDate[0]
 				}
 
 				aggregatedValues := U.AggregatePropertyValuesAcrossDate(valuesList)
