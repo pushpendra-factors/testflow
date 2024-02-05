@@ -86,7 +86,8 @@ func StartEnrichmentByProjectIdWorker(projectSettingsChannel chan model.HubspotP
 				syncStatusChannel <- workerStatus
 				continue
 			}
-			timeZone, err := model.GetHubspotAccountTimezone(projectSettings.ProjectId, projectSettings.APIKey, projectSettings.RefreshToken, C.GetHubspotAppID(), C.GetHubspotAppSecret())
+
+			timeZone, portalID, err := model.GetHubspotAccountTimezoneAndPortalID(projectSettings.ProjectId, projectSettings.APIKey, projectSettings.RefreshToken, C.GetHubspotAppID(), C.GetHubspotAppSecret())
 			if err != nil {
 				log.WithFields(log.Fields{"project_id": projectSettings.ProjectId}).WithError(err).Error("Failed to get timezone for enrichment.")
 				workerStatus.Status = []IntHubspot.Status{{ProjectId: projectSettings.ProjectId, Message: err.Error(), Status: U.CRM_SYNC_STATUS_FAILURES}}
@@ -95,13 +96,13 @@ func StartEnrichmentByProjectIdWorker(projectSettingsChannel chan model.HubspotP
 				syncStatusChannel <- workerStatus
 				continue
 			}
-			status, hasFailure := IntHubspot.Sync(projectSettings.ProjectId, numDocRoutines, recordsMaxCreatedAt, datePropertiesByObjectType, timeZone, recordsProcessLimit, pullLimit)
+			status, hasFailure := IntHubspot.Sync(projectSettings.ProjectId, numDocRoutines, recordsMaxCreatedAt, datePropertiesByObjectType, timeZone, recordsProcessLimit, pullLimit, portalID)
 			workerStatus.Status = status
 			workerStatus.HasFailure = hasFailure
 			workerStatus.ProjectId = projectSettings.ProjectId
 			syncStatusChannel <- workerStatus
 		} else {
-			status, hasFailure := IntHubspot.Sync(projectSettings.ProjectId, numDocRoutines, recordsMaxCreatedAt, nil, "", recordsProcessLimit, pullLimit)
+			status, hasFailure := IntHubspot.Sync(projectSettings.ProjectId, numDocRoutines, recordsMaxCreatedAt, nil, "", recordsProcessLimit, pullLimit, "")
 			workerStatus.Status = status
 			workerStatus.HasFailure = hasFailure
 			workerStatus.ProjectId = projectSettings.ProjectId

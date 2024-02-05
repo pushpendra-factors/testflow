@@ -146,6 +146,7 @@ func TestMain(m *testing.M) {
 		ChargebeeSiteName:                                   *chargebeeSiteName,
 		AggrEventPropertyValuesCacheByProjectID:             "*",
 		BatchSizeDomains:                                    100,
+		AddCRMObjectURLPropertyByProjectID:                  "*",
 	}
 	C.InitConf(config)
 

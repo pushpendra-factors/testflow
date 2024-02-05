@@ -348,6 +348,7 @@ type Configuration struct {
 	AggrEventPropertyValuesCacheByProjectID              string
 	ParagonTokenSigningKey                               string
 	ParagonProjectID                                     string
+	AddCRMObjectURLPropertyByProjectID                   string
 }
 
 type Services struct {
@@ -3162,4 +3163,13 @@ func GetParagonTokenSigningKey() string {
 
 func GetParagonProjectID() string {
 	return configuration.ParagonProjectID
+}
+
+func AddCRMObjectURLPropertyByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AddCRMObjectURLPropertyByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
 }

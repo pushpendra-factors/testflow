@@ -26,10 +26,11 @@ type SalesforceDocument struct {
 	GroupUserID string           `gorm:"default:null" json:"group_user_id"`
 	CreatedAt   time.Time        `json:"created_at"`
 	UpdatedAt   time.Time        `json:"updated_at"`
+	SyncTries   int              `gorm:"default:0" json:"sync_tries"`
+
 	// fields for internal use
 	dateTimeZone   util.TimeZoneString `gorm:"-" json:"-"`
 	dateProperties *map[string]bool    `gorm:"-" json:"-"`
-	SyncTries      int                 `gorm:"default:0" json:"sync_tries"`
 }
 
 type SalesforceAction int

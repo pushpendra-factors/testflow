@@ -852,7 +852,7 @@ func TestSmartCRMFilterCreation(t *testing.T) {
 		intFilterIndex = 0
 	}
 
-	smartEvent, rPrevProperties, ok := IntSalesforce.GetSalesforceSmartEventPayload(project.ID, smartCRMEvents[stringFilterIndex].EventName, "", "", 0, &currentProperties, &prevProperties, &(smartCRMEvents[stringFilterIndex].FilterExpr))
+	smartEvent, rPrevProperties, ok := IntSalesforce.GetSalesforceSmartEventPayload(project.ID, smartCRMEvents[stringFilterIndex].EventName, "", "", 0, &currentProperties, &prevProperties, &(smartCRMEvents[stringFilterIndex].FilterExpr), "")
 	assert.Equal(t, true, ok)
 	assert.Equal(t, prevProperties, *rPrevProperties)
 	assert.NotNil(t, smartEvent)
@@ -868,7 +868,7 @@ func TestSmartCRMFilterCreation(t *testing.T) {
 	// int compare
 	currentProperties["count"] = 6
 	prevProperties["count"] = 3
-	smartEvent, rPrevProperties, ok = IntSalesforce.GetSalesforceSmartEventPayload(project.ID, smartCRMEvents[intFilterIndex].EventName, "", "", 0, &currentProperties, &prevProperties, &(smartCRMEvents[intFilterIndex].FilterExpr))
+	smartEvent, rPrevProperties, ok = IntSalesforce.GetSalesforceSmartEventPayload(project.ID, smartCRMEvents[intFilterIndex].EventName, "", "", 0, &currentProperties, &prevProperties, &(smartCRMEvents[intFilterIndex].FilterExpr), "")
 	assert.Equal(t, true, ok)
 	assert.Equal(t, prevProperties, *rPrevProperties)
 	assert.Contains(t, smartEvent.Properties, "$prev_salesforce_contact_count", "$curr_salesforce_contact_count")
@@ -1007,7 +1007,7 @@ func TestSmartCRMFilterBoolCompare(t *testing.T) {
 	currentProperties["bool_compare"] = true
 	prevProperties["bool_compare"] = "false"
 
-	_, rPrevProperties, ok := IntSalesforce.GetSalesforceSmartEventPayload(project.ID, "smartEventBool", "", "", 0, &currentProperties, &prevProperties, filter)
+	_, rPrevProperties, ok := IntSalesforce.GetSalesforceSmartEventPayload(project.ID, "smartEventBool", "", "", 0, &currentProperties, &prevProperties, filter, "")
 	assert.Equal(t, true, ok)
 	assert.Equal(t, prevProperties, *rPrevProperties)
 
@@ -1072,7 +1072,7 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 	prevProperties["email"] = "test@gmail.com"
 	currentProperties["company"] = "example2"
 	prevProperties["company"] = "example1"
-	_, rPrevProperties, ok := IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	_, rPrevProperties, ok := IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter, "")
 	assert.Equal(t, true, ok)
 	assert.Equal(t, prevProperties, *rPrevProperties)
 
@@ -1126,7 +1126,7 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 	prevProperties["email"] = "fail@gmail.com" // failed value
 	currentProperties["company"] = "example2"
 	prevProperties["company"] = "example1"
-	_, rPrevProperties, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	_, rPrevProperties, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter, "")
 	assert.Equal(t, true, ok)
 	assert.Equal(t, prevProperties, *rPrevProperties)
 
@@ -1189,7 +1189,7 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 	prevProperties["email"] = "fail@gmail.com" // failed value
 	currentProperties["company"] = "example2"
 	prevProperties["company"] = "example1"
-	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter, "")
 	assert.Equal(t, true, ok)
 
 	// individual test
@@ -1253,7 +1253,7 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 	prevProperties["email"] = "test@gmail.com"
 	currentProperties["company"] = "example1" // failed value
 	prevProperties["company"] = "example1"
-	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter, "")
 	assert.Equal(t, false, ok)
 
 	// individual test
@@ -1313,7 +1313,7 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 	prevProperties["email"] = "failed2@gmail.com"   //failed value
 	currentProperties["company"] = "failed"         // failed value
 	prevProperties["company"] = "failed"            //failed value
-	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter, "")
 	assert.Equal(t, false, ok)
 
 	// individual test
@@ -1373,7 +1373,7 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 	prevProperties["email"] = "failed2@gmail.com"   //failed value
 	currentProperties["company"] = "failed"         // failed value
 	prevProperties["company"] = "failed"            //failed value
-	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter, "")
 	assert.Equal(t, false, ok)
 
 	// individual test
@@ -1418,7 +1418,7 @@ func TestSmartCRMFilterContains(t *testing.T) {
 	prevProperties := make(map[string]interface{})
 	currentProperties["description"] = "greetings from example.com"
 	prevProperties["description"] = "will be providing greetings"
-	_, _, ok := IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	_, _, ok := IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter, "")
 	assert.Equal(t, true, ok)
 
 	/* (current $description  not contains "greetings" and prev $$description not contains "greetings" ) */
@@ -1449,7 +1449,7 @@ func TestSmartCRMFilterContains(t *testing.T) {
 		TimestampReferenceField: "time",
 	}
 
-	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter, "")
 	assert.Equal(t, false, ok)
 }
 
@@ -1486,7 +1486,7 @@ func TestSmartCRMFilterInteger(t *testing.T) {
 	prevProperties := make(map[string]interface{})
 	currentProperties["page_spent_time"] = 7
 	prevProperties["page_spent_time"] = 2
-	_, _, ok := IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	_, _, ok := IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter, "")
 	assert.Equal(t, true, ok)
 
 	// individual test
@@ -1499,7 +1499,7 @@ func TestSmartCRMFilterInteger(t *testing.T) {
 	// Fail test
 	currentProperties["page_spent_time"] = 3
 	prevProperties["page_spent_time"] = 2
-	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter, "")
 	assert.Equal(t, false, ok)
 
 	/* (current page_spent_time  == 5 and prev page_spent_time == 3 )
@@ -1552,7 +1552,7 @@ func TestSmartCRMFilterInteger(t *testing.T) {
 	prevProperties["page_spent_time"] = 3
 	currentProperties["page_spent_count"] = 10
 	prevProperties["page_spent_count"] = 7
-	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter, "")
 	assert.Equal(t, true, ok)
 
 	// individual test
@@ -1612,7 +1612,7 @@ func TestSmartCRMFilterInteger(t *testing.T) {
 	prevProperties["page_spent_time"] = 2
 	currentProperties["page_spent_count"] = 6
 	prevProperties["page_spent_count"] = 8
-	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter, "")
 	assert.Equal(t, true, ok)
 
 	// individual test
@@ -1646,13 +1646,13 @@ func TestSmartCRMFilterAnyChange(t *testing.T) {
 	currentProperties["page_spent_time"] = ""
 	prevProperties["page_spent_time"] = nil
 
-	smartEvent, rPrevProperties, ok := IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	smartEvent, rPrevProperties, ok := IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter, "")
 	assert.Equal(t, false, ok)
 
 	currentProperties["page_spent_time"] = 7
 	prevProperties["page_spent_time"] = 2
 
-	smartEvent, rPrevProperties, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	smartEvent, rPrevProperties, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter, "")
 	assert.Equal(t, true, ok)
 	assert.Equal(t, prevProperties, *rPrevProperties)
 	assert.Contains(t, smartEvent.Properties, "$curr_salesforce_contact_page_spent_time")
@@ -1662,7 +1662,7 @@ func TestSmartCRMFilterAnyChange(t *testing.T) {
 	assert.Equal(t, true, ok)
 	// same value
 	prevProperties["page_spent_time"] = 7
-	_, rPrevProperties, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	_, rPrevProperties, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter, "")
 	assert.Equal(t, false, ok)
 	assert.Equal(t, prevProperties, *rPrevProperties)
 
@@ -1692,7 +1692,7 @@ func TestSmartCRMFilterAnyChange(t *testing.T) {
 	prevProperties["page_spent_time"] = 10
 	currentProperties["count"] = 2
 	prevProperties["count"] = 2
-	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter, "")
 	assert.Equal(t, true, ok)
 
 	// fail on no change
@@ -1700,7 +1700,7 @@ func TestSmartCRMFilterAnyChange(t *testing.T) {
 	prevProperties["page_spent_time"] = 2
 	currentProperties["count"] = 2
 	prevProperties["count"] = 2
-	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter, "")
 	assert.Equal(t, false, ok)
 
 	/*
@@ -1734,13 +1734,13 @@ func TestSmartCRMFilterAnyChange(t *testing.T) {
 
 	currentProperties["page_spent_time"] = 10
 	prevProperties["page_spent_time"] = 2
-	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter, "")
 	assert.Equal(t, true, ok)
 
 	// fail on same value
 	currentProperties["page_spent_time"] = 10
 	prevProperties["page_spent_time"] = 10
-	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter, "")
 	assert.Equal(t, false, ok)
 
 	/*
@@ -1774,13 +1774,13 @@ func TestSmartCRMFilterAnyChange(t *testing.T) {
 
 	currentProperties["page_spent_time"] = 2
 	prevProperties["page_spent_time"] = 10
-	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter, "")
 	assert.Equal(t, true, ok)
 
 	// fail on same value
 	currentProperties["page_spent_time"] = 10
 	prevProperties["page_spent_time"] = 10
-	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter, "")
 	assert.Equal(t, false, ok)
 
 }
