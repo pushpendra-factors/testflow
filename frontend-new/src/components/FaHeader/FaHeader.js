@@ -238,7 +238,8 @@ function FaHeader() {
             >
               <div
                 className={cx(
-                  'flex cursor-pointer items-center col-gap-1 pl-2 pr-1 py-1',
+                  'flex cursor-pointer items-center col-gap-1 pl-2 pr-1 py-1 ' +
+                    styles['header-item'],
                   {
                     [styles['active-header-item']]: isAccountsUrl(pathname)
                   }
@@ -259,9 +260,12 @@ function FaHeader() {
             </Dropdown>
             <Link
               to={PathUrls.Dashboard}
-              className={cx('flex items-center pl-2 pr-1 py-1', {
-                [styles['active-header-item']]: isReportsUrl(pathname)
-              })}
+              className={cx(
+                'flex items-center pl-2 pr-1 py-1 ' + styles['header-item'],
+                {
+                  [styles['active-header-item']]: isReportsUrl(pathname)
+                }
+              )}
               id='fa-at-link--reports'
             >
               <Text
@@ -277,7 +281,8 @@ function FaHeader() {
             <Dropdown overlay={journeyMenu}>
               <div
                 className={cx(
-                  'flex cursor-pointer items-center col-gap-1 pl-2 pr-1 py-1',
+                  'flex cursor-pointer items-center col-gap-1 pl-2 pr-1 py-1 ' +
+                    styles['header-item'],
                   {
                     [styles['active-header-item']]: isJourneyUrl(pathname)
                   }
@@ -299,9 +304,12 @@ function FaHeader() {
 
             <Link
               to={ATTRIBUTION_ROUTES.base}
-              className={cx('flex items-center pl-2 pr-1 py-1', {
-                [styles['active-header-item']]: isAttributionsUrl(pathname)
-              })}
+              className={cx(
+                'flex items-center pl-2 pr-1 py-1 ' + styles['header-item'],
+                {
+                  [styles['active-header-item']]: isAttributionsUrl(pathname)
+                }
+              )}
               id='fa-at-link--attribution'
             >
               <Text
@@ -344,11 +352,14 @@ function FaHeader() {
           overlayClassName='fa-at-overlay--config'
         >
           <div
-            className={cx('cursor-pointer', {
-              [styles['active-header-item']]: isConfigurationUrl(pathname),
-              [styles['active-header-item-circle']]:
-                isConfigurationUrl(pathname)
-            })}
+            className={cx(
+              `cursor-pointer ${styles['header-item']} ${styles['header-item-circle']}`,
+              {
+                [styles['active-header-item']]: isConfigurationUrl(pathname),
+                [styles['active-header-item-circle']]:
+                  isConfigurationUrl(pathname)
+              }
+            )}
             id='fa-at-dropdown--config'
           >
             <SVG color='#F0F0F0' size={16} name='config' />
@@ -360,10 +371,13 @@ function FaHeader() {
           overlay={SettingsMenu}
         >
           <div
-            className={cx('cursor-pointer', {
-              [styles['active-header-item']]: isSettingsUrl(pathname),
-              [styles['active-header-item-circle']]: isSettingsUrl(pathname)
-            })}
+            className={cx(
+              `cursor-pointer ${styles['header-item']} ${styles['header-item-circle']}`,
+              {
+                [styles['active-header-item']]: isSettingsUrl(pathname),
+                [styles['active-header-item-circle']]: isSettingsUrl(pathname)
+              }
+            )}
             id='fa-at-dropdown--settings'
           >
             <SVG color='#F0F0F0' size={20} name='settings' />
