@@ -644,6 +644,7 @@ type Model interface {
 	IsUserExistByID(projectID int64, id string) int
 	GetUsers(projectID int64, offset uint64, limit uint64) ([]model.User, int)
 	GetUsersByCustomerUserID(projectID int64, customerUserID string) ([]model.User, int)
+	GetAssociatedSegmentForUser(projectID int64, domID string) (map[string]interface{}, int)
 	GetUserLatestByCustomerUserId(projectID int64, customerUserId string, requestSource int) (*model.User, int)
 	GetExistingUserByCustomerUserID(projectID int64, arrayCustomerUserID []string, source ...int) (map[string]string, int)
 	GetUserWithoutJSONColumns(projectID int64, id string) (*model.User, int)
