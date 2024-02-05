@@ -280,8 +280,18 @@ function EventsBlock({
   );
 
   const additionalActions = () => (
-    <div className='fa--query_block--actions-cols flex'>
-      <Tooltip title='Filter this event' color='#0B1E39'>
+    <div
+      className='fa--query_block--actions-cols flex'
+      id='additional_actions_events_block'
+    >
+      <Tooltip
+        overlayInnerStyle={{ width: 'max-content' }}
+        getPopupContainer={() =>
+          document.getElementById('additional_actions_events_block')
+        }
+        title='Filter this event'
+        color='#0B1E39'
+      >
         <Button
           type='text'
           onClick={addFilter}
@@ -291,7 +301,14 @@ function EventsBlock({
         </Button>
       </Tooltip>
       {!disableEventEdit && (
-        <Tooltip title='Delete this event' color='#0B1E39'>
+        <Tooltip
+          overlayInnerStyle={{ width: 'max-content' }}
+          getPopupContainer={() =>
+            document.getElementById('additional_actions_events_block')
+          }
+          title='Delete this event'
+          color='#0B1E39'
+        >
           <Button
             type='text'
             onClick={deleteItem}

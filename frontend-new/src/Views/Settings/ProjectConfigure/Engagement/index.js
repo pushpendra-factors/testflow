@@ -28,49 +28,6 @@ import EngagementModal from './EngagementModal';
 import EngagementCategoryModal from './EngagementCategoryModal';
 import styles from './index.module.scss';
 
-const PopoverCategoryOrder = ['Ice', 'Cool', 'Warm', 'Hot'];
-const EngagementCategoryPopoverContent = (
-  <div className='inline-flex justify-between' style={{ width: 'max-content' }}>
-    <div
-      className='engagement-tag'
-      style={{
-        '--bg-color': EngagementTag.Hot?.bgColor,
-        marginRight: '10px'
-      }}
-    >
-      <img
-        src={`../../../assets/icons/${EngagementTag.Hot?.icon}.svg`}
-        alt=''
-      />
-      <Text type='title' level={7} extraClass='m-0'>
-        Hot
-      </Text>
-    </div>
-
-    <div
-      className={`inline-flex ${styles.engagement_popover_horizontalpills}`}
-      style={{ marginLeft: '10px' }}
-    >
-      {PopoverCategoryOrder.map((eachType) => (
-        <div
-          key={`popover-${eachType}`}
-          style={{
-            width: '45px',
-            background: EngagementTag[eachType].bgColor
-          }}
-        >
-          <img
-            src={`../../../assets/icons/${EngagementTag[eachType]?.icon}.svg`}
-            alt=''
-            width={eachType === 'Ice' && 16}
-            height={eachType !== 'Ice' && 16}
-          />
-        </div>
-      ))}
-    </div>
-  </div>
-);
-
 const filterConfigRuleCheck = (existingConfig, newConfig) => {
   try {
     let result = true;
@@ -374,9 +331,15 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
               <div className='flex justify-end' style={{ gap: '10px' }}>
                 <Popover
                   placement='bottom'
+                  overlayClassName={styles['engagementpopover']}
                   trigger='hover'
-                  overlayInnerStyle={{ borderRadius: '8px' }}
-                  content={EngagementCategoryPopoverContent}
+                  style={{ margin: 0 }}
+                  overlayInnerStyle={{
+                    borderRadius: '8px',
+                    margin: 0,
+                    padding: 0
+                  }}
+                  content={<SVG name={'EngagementCategoryPillsPopover'} />}
                 >
                   <Button
                     type='text'
