@@ -1579,7 +1579,15 @@ func (store *MemSQL) GetUserActivities(projectID int64, identity string, userId 
 			}
 
 			// Filtered Properties
-			userActivity.Properties = GetFilteredProperties(userActivity.EventName, userActivity.EventType, properties)
+			timelinesConfig, err := store.GetTimelinesConfig(projectID)
+			if err != nil {
+				log.WithError(err).Error("Failed to fetch timelines_config from project_settings.")
+			}
+			eventConfigProps := timelinesConfig.EventsConfig[userActivity.EventName]
+			if (*properties)[U.EP_IS_PAGE_VIEW] == true {
+				eventConfigProps = timelinesConfig.EventsConfig["PageView"]
+			}
+			userActivity.Properties = GetFilteredEventProperties(userActivity.EventName, userActivity.EventType, properties, eventConfigProps)
 		}
 		userActivities = append(userActivities, userActivity)
 	}
@@ -1587,18 +1595,11 @@ func (store *MemSQL) GetUserActivities(projectID int64, identity string, userId 
 	return userActivities, nil
 }
 
-func GetFilteredProperties(eventName string, eventType string, properties *map[string]interface{}) *postgres.Jsonb {
+func GetFilteredEventProperties(eventName string, eventType string, properties *map[string]interface{}, eventConfigProps []string) *postgres.Jsonb {
 	var returnProperties *postgres.Jsonb
 	filteredProperties := make(map[string]interface{})
-	filterProps, eventExistsInMap := model.HOVER_EVENTS_NAME_PROPERTY_MAP[eventName]
-	if (*properties)[U.EP_IS_PAGE_VIEW] == true {
-		for _, prop := range model.PAGEVIEW_EVENTPROPS {
-			if value, propExists := (*properties)[prop]; propExists {
-				filteredProperties[prop] = value
-			}
-		}
-	} else if eventExistsInMap {
-		for _, prop := range filterProps {
+	if len(eventConfigProps) > 0 {
+		for _, prop := range eventConfigProps {
 			if value, propExists := (*properties)[prop]; propExists {
 				filteredProperties[prop] = value
 			}
@@ -2517,4 +2518,49 @@ func hasPrefixFromList(s string, prefixes []string) bool {
 		}
 	}
 	return false
+}
+
+func (store *MemSQL) UpdateConfigForEvent(projectID int64, eventName string, updatedConfig []string) (error, int) {
+	logFields := log.Fields{
+		"projectID": projectID,
+		"eventName": eventName,
+	}
+	logCtx := log.WithFields(logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	if projectID == 0 || eventName == "" {
+		logCtx.Error("Failed to update event config. Invalid parameters.")
+		return nil, http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+
+	timelinesConfig, err := store.GetTimelinesConfig(projectID)
+	if err != nil {
+		return err, http.StatusBadRequest
+	}
+
+	timelinesConfig.EventsConfig[eventName] = updatedConfig
+
+	tlConfigEncoded, err := U.EncodeStructTypeToPostgresJsonb(timelinesConfig)
+	if err != nil {
+		logCtx.WithError(err).Error("Default Timelines Config Encode Failed.")
+	}
+
+	updateFields := map[string]interface{}{
+		"timelines_config": tlConfigEncoded,
+	}
+
+	err = db.Model(&model.ProjectSetting{}).Where("project_id = ?", projectID).Update(updateFields).Error
+	if err != nil {
+		switch {
+		case gorm.IsRecordNotFoundError(err):
+			return err, http.StatusNotFound
+		default:
+			logCtx.WithError(err).Error("Failed while updating segment on UpdateSegmentById.")
+			return err, http.StatusInternalServerError
+		}
+	}
+
+	return nil, http.StatusOK
 }

@@ -62,3 +62,12 @@
     }
   }
 }
+.draghandleparent {
+  .draghandle {
+    visibility: hidden;
+  }
+  &:hover .draghandle {
+    visibility: visible;
+    cursor: pointer;
+  }
+}

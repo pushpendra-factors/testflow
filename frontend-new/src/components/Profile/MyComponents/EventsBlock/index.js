@@ -212,11 +212,49 @@ function EventsBlock({
     eventChange(event, index - 1, 'delete');
   };
 
+  const showEngagementGroups = useMemo(() => {
+    if (!isEngagementConfig) {
+      return showGroups;
+    }
+
+    const customEvent = {
+      label: 'All Events',
+      value: 'all_events',
+      extraProps: {
+        groupName: undefined,
+        propertyType: undefined,
+        queryType: undefined,
+        valueType: undefined
+      }
+    };
+
+    let listGroups = [...showGroups];
+    let othersIndex = listGroups.findIndex((group) => group.label === 'Others');
+
+    if (othersIndex === -1) {
+      listGroups.push({
+        label: 'Others',
+        iconName: 'Others',
+        values: [customEvent]
+      });
+    } else {
+      let allEventsIndex = listGroups[othersIndex].values.findIndex(
+        (event) => event.value === customEvent.value
+      );
+
+      if (allEventsIndex === -1) {
+        listGroups[othersIndex].values?.push(customEvent);
+      }
+    }
+
+    return listGroups;
+  }, [showGroups]);
+
   const selectEvents = () =>
     isDDVisible && !disableEventEdit ? (
       <div className={styles.query_block__event_selector}>
         <GroupSelect
-          options={showGroups}
+          options={isEngagementConfig ? showEngagementGroups : showGroups}
           searchPlaceHolder='Select Event'
           optionClickCallback={onChange}
           allowSearch
