@@ -162,7 +162,7 @@ func getSalesforceObjectURL(projecID int64, organizationURL string, objectType s
 		return ""
 	}
 
-	return fmt.Sprintf("https://%s/lightning/r/%s/%s/view", organizationURL, objectType, recordID)
+	return fmt.Sprintf("%s/lightning/r/%s/%s/view", organizationURL, objectType, recordID)
 }
 
 func filterPropertyFieldsByProjectID(projectID int64, properties *map[string]interface{}, docType int) {

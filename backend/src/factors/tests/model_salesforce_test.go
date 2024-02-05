@@ -6400,7 +6400,7 @@ func TestSalesforceAccountObjectURL(t *testing.T) {
 	err = store.GetStore().BuildAndUpsertDocumentInBatch(project.ID, model.SalesforceDocumentTypeNameOpportunity, records)
 	assert.Nil(t, err)
 
-	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2, nil, 1, 0, 45, "abc.com")
+	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2, nil, 1, 0, 45, "https://abc.my.salesforce.com")
 	assert.Len(t, enrichStatus, 1)
 
 	document, status = store.GetStore().GetSalesforceDocumentByTypeAndAction(project.ID, "1",
