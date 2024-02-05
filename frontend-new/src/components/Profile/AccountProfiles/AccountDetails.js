@@ -22,7 +22,6 @@ import useFeatureLock from 'hooks/useFeatureLock';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
 import logger from 'Utils/logger';
-import { isValidURL } from 'Utils/checkValidURL';
 import { featureLock } from '../../../routes/feature';
 import AccountOverview from './AccountOverview';
 import UpgradeModal from '../UpgradeModal';
@@ -35,7 +34,8 @@ import {
 } from '../../../reducers/timelines/utils';
 import {
   getAccountOverview,
-  getProfileAccountDetails
+  getProfileAccountDetails,
+  setActivePageviewEvent
 } from '../../../reducers/timelines/middleware';
 import { udpateProjectSettings } from '../../../reducers/global';
 import { getHost, getPropType } from '../utils';
@@ -64,7 +64,8 @@ function AccountDetails({
   userPropertiesV2,
   eventPropertiesV2,
   getEventPropertiesV2,
-  eventNamesMap
+  eventNamesMap,
+  setActivePageviewEvent
 }) {
   const { TabPane } = Tabs;
 
@@ -117,6 +118,7 @@ function AccountDetails({
 
     if (pageViewEvent) {
       eventsArray.push(pageViewEvent.event_name);
+      setActivePageviewEvent(pageViewEvent.event_name);
     }
 
     return Array.from(new Set(eventsArray));
@@ -890,7 +892,8 @@ const mapDispatchToProps = (dispatch) =>
       getAccountOverview,
       getEventPropertiesV2,
       getProfileAccountDetails,
-      udpateProjectSettings
+      udpateProjectSettings,
+      setActivePageviewEvent
     },
     dispatch
   );
