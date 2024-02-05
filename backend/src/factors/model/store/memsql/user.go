@@ -539,8 +539,8 @@ func (store *MemSQL) GetLatestUpatedDomainsByProjectID(projectID int64, domainGr
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	domainIDs := make([]string, 0)
-	fromTimeString := model.FormatTimeToString(fromTime)
-	queryParams := []interface{}{projectID, model.UserSourceDomains, fromTimeString}
+	fromTimeUnix := fromTime.Unix()
+	queryParams := []interface{}{projectID, model.UserSourceDomains, fromTimeUnix}
 
 	query := fmt.Sprintf(`SELECT 
 	group_%d_user_id
@@ -549,7 +549,7 @@ func (store *MemSQL) GetLatestUpatedDomainsByProjectID(projectID int64, domainGr
   WHERE 
 	project_id = ? 
 	AND source != ? 
-	AND last_event_at > ?
+	AND properties_updated_timestamp > ?
 	AND group_%d_user_id IS NOT NULL
   GROUP BY group_%d_user_id
   LIMIT 
@@ -575,6 +575,78 @@ func (store *MemSQL) GetLatestUpatedDomainsByProjectID(projectID int64, domainGr
 	}
 
 	return domainIDs, http.StatusFound
+}
+
+// get associated_segments col for given project_id and user_id
+func (store *MemSQL) GetAssociatedSegmentForUser(projectID int64, domID string) (map[string]interface{}, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"domain_id":  domID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	db := C.GetServices().Db
+	associatedSegments := make(map[string]interface{})
+
+	query := `SELECT associated_segments FROM users WHERE project_id=? AND id=? LIMIT 1;`
+	queryParams := []interface{}{projectID, domID}
+
+	rows, err := db.Raw(query, queryParams...).Rows()
+
+	if rows != nil {
+		defer rows.Close()
+	}
+
+	if err != nil {
+		log.WithFields(log.Fields(logFields)).Error("SQL Query failed.")
+		return associatedSegments, http.StatusInternalServerError
+	}
+
+	// for col like {"seg_id":{"last_event_at":"","updated_at":"","v":0}}
+	associatedSegmentsV1 := make(map[string]model.AssociatedSegments)
+	for rows.Next() {
+		var associated_segments sql.NullString
+
+		if err = rows.Scan(&associated_segments); err != nil {
+			log.WithFields(log.Fields(logFields)).Error("SQL Parse failed.")
+			return associatedSegments, http.StatusInternalServerError
+		}
+
+		if associated_segments.Valid {
+			// Unmarshal JSON into the map
+			errUnmarshal := json.Unmarshal([]byte(associated_segments.String), &associatedSegmentsV1)
+			if errUnmarshal != nil {
+				// for col like {"seg_id":"val"}
+				errUnmarshal = json.Unmarshal([]byte(associated_segments.String), &associatedSegments)
+			}
+			if errUnmarshal != nil {
+				log.WithFields(log.Fields(logFields)).Error("Unmarshalling failed.")
+				return associatedSegments, http.StatusInternalServerError
+			}
+		} else {
+			// Handle NULL value (if needed)
+			return associatedSegments, http.StatusFound
+		}
+	}
+
+	err = rows.Err()
+	if err != nil {
+		// Error from DB is captured eg: timeout error
+		log.WithFields(log.Fields(logFields)).Error("Error in executing query to get associated_segments")
+		return associatedSegments, http.StatusInternalServerError
+	}
+
+	// checking if encountered col like {"seg_id":"val"} and value filled
+	if len(associatedSegments) > 0 {
+		return associatedSegments, http.StatusFound
+	}
+
+	// convert {"seg_id":{"last_event_at":"","updated_at":"","v":0}} version to {"seg_id":"val"} version
+	for segID := range associatedSegmentsV1 {
+		associatedSegments[segID] = true
+	}
+
+	return associatedSegments, http.StatusFound
 }
 
 // get all non group users where updated in last x hours
