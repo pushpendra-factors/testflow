@@ -58,7 +58,7 @@ class JobScheduler:
         self.permission_error_key = str(self.url_prefix) + ":" + str(self.refresh_token)
 
     def handle(self, signum, frame):
-        raise Exception("Function timeout after 5 mins")
+        raise Exception("Function timeout after 20 mins")
     
     def sync(self, env, dry):
         project_id = self.next_info.get("project_id")
@@ -67,9 +67,9 @@ class JobScheduler:
         doc_type = self.next_info.get("type")
         metrics_controller = scripts.gsc.CONFIG.GSC_APP.metrics_controller
         try:
-            # timeout this function after 5 mins
+            # timeout this function after 20 mins
             signal.signal(signal.SIGALRM, self.handle)
-            signal.alarm(300)
+            signal.alarm(1200)
             #
             if doc_type == COMBINED_LEVEL:
                 GetSearchConsoleDataJob(self.next_info).start()

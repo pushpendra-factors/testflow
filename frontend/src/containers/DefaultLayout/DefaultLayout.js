@@ -105,19 +105,20 @@ class DefaultLayout extends Component {
         });
       });
 
-    this.props.fetchAgentInfo()
+    this.props
+      .fetchAgentInfo()
       .then((r) => {
         this.setState({
           agent: {
-            loaded: true
-          }
+            loaded: true,
+          },
         });
 
         factorsai.identify(r.data.email);
         factorsai.addUserProperties({
-          "email": r.data.email,
-          "firstName": r.data.first_name,
-          "lastName": r.data.last_name,
+          email: r.data.email,
+          firstName: r.data.first_name,
+          lastName: r.data.last_name,
         });
 
         if (window.fcWidget) {
@@ -125,13 +126,17 @@ class DefaultLayout extends Component {
           window.fcWidget.user.setEmail(r.data.email);
           window.fcWidget.user.setFirstName(r.data.first_name);
         }
+
+        if (window.gr && typeof window.gr === 'function') {
+          window.gr('track', 'conversion', { email: r.data.email });
+        }
       })
       .catch((r) => {
-        this.setState({ 
-          agent: { 
+        this.setState({
+          agent: {
             loaded: true,
-            error: 'Failed to get agent information'
-          } 
+            error: 'Failed to get agent information',
+          },
         });
       });
 

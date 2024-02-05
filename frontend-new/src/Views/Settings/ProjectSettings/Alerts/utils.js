@@ -19,13 +19,13 @@ export const getMsgPayloadMapping = (groupBy) => {
     else return null
 }
 
-export const getMsgPayloadMappingWebhook = (groupBy) => { 
+export  const getMsgPayloadMappingWebhook = (groupBy, matchEventName, dummyPayloadValue) => { 
     if (groupBy && groupBy.length && groupBy[0] && groupBy[0].property) {
         var arr = []
-        groupBy.map((item) => {
+        groupBy.map((item) => { 
             let obj =  {
-                'DisplayName':  item?.groupName,
-                'PropValue': '${Property Value}'
+                'DisplayName':  matchEventName(item?.property),
+                'PropValue': dummyPayloadValue[item?.property] ? dummyPayloadValue[item?.property] : '${Property Value}'
             }
             arr.push(obj)
         })

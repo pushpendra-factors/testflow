@@ -750,25 +750,24 @@ func ComputeBucketRanges(projectId int64, scores []float64, date string) (M.Buck
 	})
 
 	var bucket M.BucketRanges
-	var projectbucketRanges *M.BucketRanges
+	var projectbucketRanges M.BucketRanges
+	var statusCode int
+	projectbucketRanges.Ranges = make([]M.Bucket, 0)
 
 	bucket.Date = date
-	projectbucketRanges.Date = date
 	scoresWithoutZeros := removeZeros(scores)
 	if len(scores) == 0 {
 		return M.BucketRanges{}, fmt.Errorf("not enough scores")
 	}
 
-	projectbucketRanges, statusCode := store.GetStore().GetEngagementLevelsByProject(projectId)
+	projectbucketRanges.Ranges = make([]M.Bucket, 4)
+	buckets, statusCode := store.GetStore().GetEngagementLevelsByProject(projectId)
 	if statusCode != http.StatusFound {
-		logCtx.Error("Unable to fetch engagement levels for project")
-
-		for idx := 1; idx < len(M.BUCKETRANGES); idx++ {
-			projectbucketRanges.Ranges[idx].Name = M.BUCKETNAMES[idx-1]
-			projectbucketRanges.Ranges[idx].High = M.BUCKETRANGES[idx-1]
-			projectbucketRanges.Ranges[idx].Low = M.BUCKETRANGES[idx]
-		}
-
+		logCtx.Info("Getting default engagement buckets")
+		projectbucketRanges = model.DefaultEngagementBuckets()
+		projectbucketRanges.Date = date
+	} else {
+		projectbucketRanges = buckets
 	}
 
 	for idx := 0; idx < len(projectbucketRanges.Ranges); idx++ {
@@ -789,9 +788,8 @@ func ComputeBucketRanges(projectId int64, scores []float64, date string) (M.Buck
 		}
 
 		bucket.Ranges = append(bucket.Ranges, b)
-		de := fmt.Sprintf(" data to compute buckets lenght :%d , brh:%f, brl:%f, h:%f,l:%f", len(scoresWithoutZeros), M.BUCKETRANGES[idx-1], M.BUCKETRANGES[idx], high, low)
-		log.Info(de)
 	}
+	logCtx.WithField("bucket", bucket).Info("buckets")
 	return bucket, nil
 }
 

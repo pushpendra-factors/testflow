@@ -579,7 +579,14 @@ func GetAdsDataScanner(projectId int64, chunkNo int, report string, cloudManager
 	diskManager *serviceDisk.DiskDriver) (*bufio.Scanner, error) {
 	var err error
 	adsTmpPath, adsTmpName := diskManager.GetAdsDataFilePathAndName(projectId, report, chunkNo)
-	adsFilePath := adsTmpPath + adsTmpName
+	adsFilePath := "" 
+	
+	if !strings.HasSuffix(adsTmpPath, "/") {
+		adsFilePath = adsTmpPath + "/" + adsTmpName
+	} else {
+		adsFilePath = adsTmpPath + adsTmpName
+	}
+	
 	adsCloudPath, adsCloudName := (*cloudManager).GetAdsDataFilePathAndName(projectId, report, chunkNo)
 	log.WithFields(log.Fields{"adsFileCloudPath": adsCloudPath,
 		"adsFileCloudName": adsCloudName}).Info("Downloading ads file from cloud.")

@@ -1789,7 +1789,7 @@ func (store *MemSQL) UpdateEngagementLevel(projectId int64, engagementBuckets mo
 	return err
 }
 
-func (store *MemSQL) GetEngagementLevelsByProject(project_id int64) (*model.BucketRanges, int) {
+func (store *MemSQL) GetEngagementLevelsByProject(project_id int64) (model.BucketRanges, int) {
 	logFields := log.Fields{
 		"project_id": project_id,
 	}
@@ -1804,23 +1804,23 @@ func (store *MemSQL) GetEngagementLevelsByProject(project_id int64) (*model.Buck
 	if err := db.Table("project_settings").Limit(1).Where("project_id = ?", project_id).Find(&project_settings).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			logCtx.WithField("project_id", project_id).WithError(err).Error("Unable to fetch engagement buckets from DB")
-			return nil, http.StatusNotFound
+			return model.BucketRanges{}, http.StatusNotFound
 		}
 		logCtx.WithField("project_id", project_id).WithError(err).Error("Unable to fetch engagement buckets from DB")
-		return &model.BucketRanges{}, http.StatusInternalServerError
+		return model.BucketRanges{}, http.StatusInternalServerError
 	}
 
 	if project_settings.CustomEngagementBuckets == nil {
-		return nil, http.StatusNotFound
+		return model.BucketRanges{}, http.StatusNotFound
 	} else {
 		err := U.DecodePostgresJsonbToStructType(project_settings.CustomEngagementBuckets, &buckets)
 		if err != nil {
 			logCtx.WithError(err).Error("Unable to decode engagement buckets")
-			return nil, http.StatusInternalServerError
+			return model.BucketRanges{}, http.StatusInternalServerError
 		}
 	}
 
-	return &buckets, http.StatusFound
+	return buckets, http.StatusFound
 }
 
 func getNumberOfProjectsWithParagonEnabled() (int64, error) {

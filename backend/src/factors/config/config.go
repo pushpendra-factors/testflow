@@ -345,8 +345,10 @@ type Configuration struct {
 	ClearbitProvisionAccountAPIKey                       string
 	SalesforceSkipLeadUpdatesProcessingByProjectID       string
 	SalesforceAllowOpportunityOverrideCreateCreatedEvent string
+	AggrEventPropertyValuesCacheByProjectID              string
 	ParagonTokenSigningKey                               string
 	ParagonProjectID                                     string
+	AddCRMObjectURLPropertyByProjectID                   string
 }
 
 type Services struct {
@@ -787,12 +789,6 @@ func initAppServerServices(config *Configuration) error {
 	InitRedis(config.RedisHost, config.RedisPort)
 	InitQueueRedis(config.QueueRedisHost, config.QueueRedisPort)
 
-	err = InitEtcd(config.EtcdEndpoints)
-	if err != nil {
-		log.WithError(err).Error("Failed to intialise etcd. Skipping.")
-		return nil
-	}
-
 	InitMailClient(config.AWSKey, config.AWSSecret, config.AWSRegion)
 	InitSentryLogging(config.SentryDSN, config.AppName)
 	InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
@@ -802,20 +798,27 @@ func initAppServerServices(config *Configuration) error {
 
 	InitChargebeeObject(config.ChargebeeApiKey, config.ChargebeeSiteName)
 
-	regPatternServers, err := GetServices().Etcd.DiscoverPatternServers()
-	if err != nil && err != serviceEtcd.NotFound {
-		log.WithError(err).Errorln("Falied to initialize discover pattern servers")
-		return err
-	}
+	// Etcd is now an optional service.
+	// Any failure should still continue instead of crashing.
+	err = InitEtcd(config.EtcdEndpoints)
+	if err == nil {
+		regPatternServers, err := GetServices().Etcd.DiscoverPatternServers()
+		if err != nil && err != serviceEtcd.NotFound {
+			log.WithError(err).Errorln("Falied to initialize discover pattern servers")
+			return err
+		}
 
-	for _, ps := range regPatternServers {
-		services.addPatternServer(ps.Key, ps.Value)
-	}
+		for _, ps := range regPatternServers {
+			services.addPatternServer(ps.Key, ps.Value)
+		}
 
-	go func() {
-		psUpdateChannel := GetServices().Etcd.Watch(serviceEtcd.PatternServerPrefix, clientv3.WithPrefix())
-		watchPatternServers(psUpdateChannel)
-	}()
+		go func() {
+			psUpdateChannel := GetServices().Etcd.Watch(serviceEtcd.PatternServerPrefix, clientv3.WithPrefix())
+			watchPatternServers(psUpdateChannel)
+		}()
+	} else {
+		log.WithError(err).Error("Failed to intialise etcd. Skipping.")
+	}
 
 	return nil
 }
@@ -3145,10 +3148,28 @@ func SalesforceAllowOpportunityOverrideCreateCreatedEvent(projectID int64) bool 
 	return allowedProjectIDs[projectID]
 }
 
+func IsAggrEventPropertyValuesCacheEnabled(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AggrEventPropertyValuesCacheByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
+}
+
 func GetParagonTokenSigningKey() string {
 	return configuration.ParagonTokenSigningKey
 }
 
 func GetParagonProjectID() string {
 	return configuration.ParagonProjectID
+}
+
+func AddCRMObjectURLPropertyByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AddCRMObjectURLPropertyByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
 }

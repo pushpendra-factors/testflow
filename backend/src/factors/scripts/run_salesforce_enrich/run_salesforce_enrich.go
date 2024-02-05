@@ -68,7 +68,7 @@ func syncWorker(projectID int64, wg *sync.WaitGroup, workerIndex, workerPerProje
 		return
 	}
 
-	status, hasFailure := IntSalesforce.Enrich(projectID, workerPerProject, dataPropertyByType, enrichPullLimit, enrichRecordProcessLimit, documentLookbackDays)
+	status, hasFailure := IntSalesforce.Enrich(projectID, workerPerProject, dataPropertyByType, enrichPullLimit, enrichRecordProcessLimit, documentLookbackDays, instanceURL)
 	enrichStatus.AddEnrichStatus(status, hasFailure)
 	logCtx.Info("Processing completed for given project.")
 }
@@ -169,6 +169,7 @@ func main() {
 	salesforceSkipLeadUpdatesProcessingByProjectID := flag.String("salesforce_skip_lead_update_processing_by_project_id", "", "Skip lead updates processing")
 	documentLookbackDays := flag.Int("document_lookback_days", 45, "")
 	salesforceAllowOpportunityOverrideCreateCreatedEvent := flag.String("salesforce_allow_opportunity_override_create_created_event_by_project_id", "", "Allow creating created event when latest update processed first.")
+	addCRMObjectURLByProjectID := flag.String("add_crm_object_url_by_project_id", "", "")
 
 	flag.Parse()
 
@@ -252,6 +253,7 @@ func main() {
 		EnableSyncTriesFlag:                                  *enableSyncTries,
 		SalesforceSkipLeadUpdatesProcessingByProjectID:       *salesforceSkipLeadUpdatesProcessingByProjectID,
 		SalesforceAllowOpportunityOverrideCreateCreatedEvent: *salesforceAllowOpportunityOverrideCreateCreatedEvent,
+		AddCRMObjectURLPropertyByProjectID:                   *addCRMObjectURLByProjectID,
 	}
 
 	C.InitConf(config)

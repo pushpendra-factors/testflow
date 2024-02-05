@@ -4,18 +4,24 @@ import (
 	"database/sql"
 	"encoding/json"
 	C "factors/config"
+	H "factors/handler"
 	"factors/model/model"
 	"factors/model/store"
+	"factors/task/event_user_cache"
 	U "factors/util"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"net/http"
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/stretchr/testify/assert"
+
+	cacheRedis "factors/cache/redis"
 )
 
 func TestPullEventRowsV2(t *testing.T) {
@@ -891,4 +897,145 @@ func TestGetDomainNamesByProjectID(t *testing.T) {
 	assert.True(t, U.ContainsStringInArray(domains, "app.factors.ai"))
 	assert.True(t, U.ContainsStringInArray(domains, "app.xyz.ai"))
 	assert.Equal(t, http.StatusFound, errCode)
+}
+
+func TestEventPropertyValuesAggregate(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	// Initialize a project, user and  the event.
+	project, user, eventName, err := SetupProjectUserEventNameReturnDAO()
+	assert.Nil(t, err)
+	agent, errCode := SetupAgentReturnDAO(getRandomEmail(), "+1343545")
+	assert.Equal(t, http.StatusCreated, errCode)
+	_, errCode = store.GetStore().CreateProjectAgentMappingWithDependencies(&model.ProjectAgentMapping{
+		ProjectID: project.ID, AgentUUID: agent.UUID})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	configs := make(map[string]interface{})
+	configs["rollupLookback"] = 3
+
+	start := time.Now()
+
+	newEvent := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
+		UserId: user.ID, Timestamp: start.Unix(),
+		CreatedAt:  time.Now().AddDate(0, 0, -3),
+		Properties: postgres.Jsonb{RawMessage: []byte(`{"value": "value1"}`)}}
+	store.GetStore().AddEventDetailsToCacheWithTime(project.ID, newEvent, false, time.Now().AddDate(0, 0, -3))
+
+	// Run rollup.
+	event_user_cache.DoRollUpSortedSet(configs)
+
+	eventPropertyValuesAggCacheKey, err := model.GetValuesByEventPropertyRollUpAggregateCacheKey(project.ID, eventName.Name, "value")
+	assert.Nil(t, err)
+	existingAggCache, aggCacheExists, err := cacheRedis.GetIfExistsPersistent(eventPropertyValuesAggCacheKey)
+	assert.Nil(t, err)
+	assert.True(t, aggCacheExists)
+	var existingAggregate U.CacheEventPropertyValuesAggregate
+	err = json.Unmarshal([]byte(existingAggCache), &existingAggregate)
+	assert.Nil(t, err)
+	assert.Equal(t, "value1", existingAggregate.NameCountTimestampCategoryList[0].Name)
+	assert.Equal(t, int64(1), existingAggregate.NameCountTimestampCategoryList[0].Count)
+
+	newEvent = &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
+		UserId: user.ID, Timestamp: start.Unix(),
+		CreatedAt:  time.Now().AddDate(0, 0, -2),
+		Properties: postgres.Jsonb{RawMessage: []byte(`{"value": "value1"}`)}}
+	store.GetStore().AddEventDetailsToCacheWithTime(project.ID, newEvent, false, time.Now().AddDate(0, 0, -2))
+
+	event_user_cache.DoRollUpSortedSet(configs)
+
+	eventPropertyValuesAggCacheKey, err = model.GetValuesByEventPropertyRollUpAggregateCacheKey(project.ID, eventName.Name, "value")
+	assert.Nil(t, err)
+	existingAggCache, aggCacheExists, err = cacheRedis.GetIfExistsPersistent(eventPropertyValuesAggCacheKey)
+	assert.Nil(t, err)
+	assert.True(t, aggCacheExists)
+	err = json.Unmarshal([]byte(existingAggCache), &existingAggregate)
+	assert.Nil(t, err)
+	assert.Equal(t, "value1", existingAggregate.NameCountTimestampCategoryList[0].Name)
+	assert.Equal(t, int64(1), existingAggregate.NameCountTimestampCategoryList[0].Count)
+
+	newEvent = &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
+		UserId: user.ID, Timestamp: start.Unix(),
+		CreatedAt:  time.Now().AddDate(0, 0, -1),
+		Properties: postgres.Jsonb{RawMessage: []byte(`{"value": "value1"}`)}}
+	store.GetStore().AddEventDetailsToCacheWithTime(project.ID, newEvent, false, time.Now().AddDate(0, 0, -1))
+
+	event_user_cache.DoRollUpSortedSet(configs)
+
+	eventPropertyValuesAggCacheKey, err = model.GetValuesByEventPropertyRollUpAggregateCacheKey(project.ID, eventName.Name, "value")
+	assert.Nil(t, err)
+	existingAggCache, aggCacheExists, err = cacheRedis.GetIfExistsPersistent(eventPropertyValuesAggCacheKey)
+	assert.Nil(t, err)
+	assert.True(t, aggCacheExists)
+	err = json.Unmarshal([]byte(existingAggCache), &existingAggregate)
+	assert.Nil(t, err)
+	assert.Equal(t, "value1", existingAggregate.NameCountTimestampCategoryList[0].Name)
+	assert.Equal(t, int64(2), existingAggregate.NameCountTimestampCategoryList[0].Count)
+
+	// Current day event.
+	newEvent = &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
+		UserId: user.ID, Timestamp: start.Unix(),
+		CreatedAt:  time.Now(),
+		Properties: postgres.Jsonb{RawMessage: []byte(`{"value": "value1"}`)}}
+	store.GetStore().AddEventDetailsToCacheWithTime(project.ID, newEvent, false, time.Now())
+
+	event_user_cache.DoRollUpSortedSet(configs)
+
+	eventPropertyValuesAggCacheKey, err = model.GetValuesByEventPropertyRollUpAggregateCacheKey(project.ID, eventName.Name, "value")
+	assert.Nil(t, err)
+	existingAggCache, aggCacheExists, err = cacheRedis.GetIfExistsPersistent(eventPropertyValuesAggCacheKey)
+	assert.Nil(t, err)
+	assert.True(t, aggCacheExists)
+	err = json.Unmarshal([]byte(existingAggCache), &existingAggregate)
+	assert.Nil(t, err)
+	assert.Equal(t, "value1", existingAggregate.NameCountTimestampCategoryList[0].Name)
+	assert.Equal(t, int64(2), existingAggregate.NameCountTimestampCategoryList[0].Count)
+
+	// Validate even name property values through api.
+	w := sendGetEventPropertyValues(project.ID, "login", "value", false, agent, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+	var propertyValues []string
+	jsonResponse, err := ioutil.ReadAll(w.Body)
+	assert.Nil(t, err)
+	json.Unmarshal(jsonResponse, &propertyValues)
+	assert.Equal(t, "value1", propertyValues[0])
+}
+
+func TestServingFromEventPropertyValueRollupsOnTheSameDay(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	// Initialize a project, user and  the event.
+	project, user, eventName, err := SetupProjectUserEventNameReturnDAO()
+	assert.Nil(t, err)
+	agent, errCode := SetupAgentReturnDAO(getRandomEmail(), "+1343545")
+	assert.Equal(t, http.StatusCreated, errCode)
+	_, errCode = store.GetStore().CreateProjectAgentMappingWithDependencies(&model.ProjectAgentMapping{
+		ProjectID: project.ID, AgentUUID: agent.UUID})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	configs := make(map[string]interface{})
+	configs["rollupLookback"] = 3
+
+	start := time.Now()
+
+	newEvent := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
+		UserId: user.ID, Timestamp: start.Unix(),
+		CreatedAt:  time.Now(),
+		Properties: postgres.Jsonb{RawMessage: []byte(`{"value": "value1"}`)}}
+	event, errCode := store.GetStore().CreateEvent(newEvent)
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotNil(t, event)
+
+	event_user_cache.DoRollUpSortedSet(configs)
+
+	// Validate even name property values through api.
+	w := sendGetEventPropertyValues(project.ID, "login", "value", false, agent, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+	var propertyValues []string
+	jsonResponse, err := ioutil.ReadAll(w.Body)
+	assert.Nil(t, err)
+	json.Unmarshal(jsonResponse, &propertyValues)
+	assert.Equal(t, "value1", propertyValues[0])
 }

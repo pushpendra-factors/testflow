@@ -351,6 +351,7 @@ type Model interface {
 	GetLinkedinEventFieldsBasedOnTimestamp(projectID int64, timestamp int64,
 		imprEventNameID string, clicksEventNameID string) (map[int64]map[string]map[string]bool,
 		map[int64]map[string]map[string]bool, error)
+	AddEventDetailsToCacheWithTime(projectID int64, event *model.Event, isUpdateEventProperty bool, currentTime time.Time)
 	GetLinkedinEventFieldsBasedOnTimestampV1(projectID int64, timestamp int64,
 		imprEventNameID string, clicksEventNameID string) (map[int64]map[string]map[string]string,
 		map[int64]map[string]map[string]string, error)
@@ -500,7 +501,7 @@ type Model interface {
 	GetFormFillEnabledProjectIDWithToken() (*map[int64]string, int)
 	GetTimelinesConfig(projectID int64) (model.TimelinesConfig, error)
 	UpdateAccScoreWeights(projectId int64, weights model.AccWeights) error
-	GetEngagementLevelsByProject(projectId int64) (*model.BucketRanges, int)
+	GetEngagementLevelsByProject(projectId int64) (model.BucketRanges, int)
 	UpdateEngagementLevel(projectId int64, buckets model.BucketRanges) error
 	GetSixsignalEmailListFromProjectSetting(projectId int64) (string, int)
 	AddSixsignalEmailList(projectId int64, emailIds string) int
@@ -559,6 +560,7 @@ type Model interface {
 	CreateQueryAndSaveToDashboard(projectID int64, queryInfo *model.CreateQueryAndSaveToDashboardInfo) (*model.QueryAndDashboardUnit, int, string)
 	DeleteAttributionDashboardUnitAndQuery(projectID int64, queryID int64, agentUUID string, dashboardId int64, unitId int64) (int, string)
 	GetAttributionDashboardUnitNamesImpactedByCustomKPI(projectID int64, customMetricName string) ([]string, int)
+	GetAttributionSettingsKPIListForCustomKPI(projectID int64, customMetricName string) ([]string, int)
 
 	// dashboard_templates
 	CreateTemplate(template *model.DashboardTemplate) (*model.DashboardTemplate, int, string)
@@ -642,6 +644,7 @@ type Model interface {
 	IsUserExistByID(projectID int64, id string) int
 	GetUsers(projectID int64, offset uint64, limit uint64) ([]model.User, int)
 	GetUsersByCustomerUserID(projectID int64, customerUserID string) ([]model.User, int)
+	GetAssociatedSegmentForUser(projectID int64, domID string) (map[string]interface{}, int)
 	GetUserLatestByCustomerUserId(projectID int64, customerUserId string, requestSource int) (*model.User, int)
 	GetExistingUserByCustomerUserID(projectID int64, arrayCustomerUserID []string, source ...int) (map[string]string, int)
 	GetUserWithoutJSONColumns(projectID int64, id string) (*model.User, int)

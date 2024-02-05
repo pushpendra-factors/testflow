@@ -186,7 +186,7 @@ func backfillSalesforceSmartEventForSameID(projectID int64, documents []model.Sa
 				return
 			}
 
-			_, properties, err := IntSalesforce.GetSalesforceDocumentProperties(projectID, &prevDocuments[len(prevDocuments)-1])
+			_, properties, err := IntSalesforce.GetSalesforceDocumentProperties(projectID, &prevDocuments[len(prevDocuments)-1], "")
 			if err != nil {
 				logDocCtx.Error("Failed to get previous document properties.")
 				return
@@ -195,7 +195,7 @@ func backfillSalesforceSmartEventForSameID(projectID int64, documents []model.Sa
 			previousDocumentProperties = *properties
 		}
 
-		_, currentDocumentProperties, err := IntSalesforce.GetSalesforceDocumentProperties(projectID, &documents[i])
+		_, currentDocumentProperties, err := IntSalesforce.GetSalesforceDocumentProperties(projectID, &documents[i], "")
 		if err != nil {
 			logDocCtx.WithError(err).Error("Failed to get document properties.")
 			previousDocumentProperties = *currentDocumentProperties
@@ -211,7 +211,7 @@ func backfillSalesforceSmartEventForSameID(projectID int64, documents []model.Sa
 
 		for j := range filteredEventNames {
 			IntSalesforce.TrackSalesforceSmartEvent(projectID, &filteredEventNames[j], documents[i].SyncID, documents[i].ID, documents[i].UserID,
-				documents[i].Type, currentDocumentProperties, &previousDocumentProperties, lastModifiedTimestamp, true)
+				documents[i].Type, currentDocumentProperties, &previousDocumentProperties, lastModifiedTimestamp, true, "")
 		}
 
 		previousDocumentProperties = *currentDocumentProperties

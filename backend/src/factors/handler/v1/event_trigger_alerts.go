@@ -314,7 +314,7 @@ func TestWebhookforEventTriggerAlerts(c *gin.Context) (interface{}, int, string,
 		}
 
 		msgPropMap[fmt.Sprintf("%d", len(messageProperties))] = model.MessagePropMapStruct{
-			DisplayName: "Factors URL",
+			DisplayName: "Factors Activity URL",
 			PropValue:   factorsUrl,
 		}
 	}

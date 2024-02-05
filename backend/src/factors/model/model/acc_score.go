@@ -18,8 +18,15 @@ const DEFAULT_EVENT string = "all_events"
 const LAST_EVENT string = "LAST_EVENT"
 const NUM_TREND_DAYS int = 30
 
+const (
+	ENGAGEMENT_LEVEL_HOT  = "Hot"
+	ENGAGEMENT_LEVEL_WARM = "Warm"
+	ENGAGEMENT_LEVEL_COOL = "Cool"
+	ENGAGEMENT_LEVEL_ICE  = "Ice"
+)
+
 var BUCKETRANGES []float64 = []float64{100, 90, 70, 30, 0}
-var BUCKETNAMES []string = []string{"Hot", "Warm", "Cool", "Ice"}
+var BUCKETNAMES []string = []string{ENGAGEMENT_LEVEL_HOT, ENGAGEMENT_LEVEL_WARM, ENGAGEMENT_LEVEL_COOL, ENGAGEMENT_LEVEL_ICE}
 
 const HASHKEYLENGTH = 12
 
@@ -330,6 +337,10 @@ func GetEngagement(percentile float64, buckets BucketRanges) string {
 		}
 
 		if bucket.Low <= percentile && percentile <= bucket.High {
+
+			if strings.Compare(bucket.Name, ENGAGEMENT_LEVEL_COOL) == 0 || strings.Compare(bucket.Name, "Cold") == 0 {
+				return ENGAGEMENT_LEVEL_COOL
+			}
 			return bucket.Name
 		}
 	}
@@ -458,10 +469,10 @@ func DefaultEngagementBuckets() BucketRanges {
 	var defaultBucket BucketRanges
 	defaultBucket.Ranges = make([]Bucket, 4)
 
-	hotBucket := Bucket{Name: "Hot", High: 100, Low: 90}
-	warmBucket := Bucket{Name: "Warm", High: 90, Low: 70}
-	coldBucket := Bucket{Name: "Cold", High: 70, Low: 30}
-	iceBucket := Bucket{Name: "Ice", High: 30, Low: 0}
+	hotBucket := Bucket{Name: ENGAGEMENT_LEVEL_HOT, High: 100, Low: 90}
+	warmBucket := Bucket{Name: ENGAGEMENT_LEVEL_WARM, High: 90, Low: 70}
+	coldBucket := Bucket{Name: ENGAGEMENT_LEVEL_COOL, High: 70, Low: 30}
+	iceBucket := Bucket{Name: ENGAGEMENT_LEVEL_ICE, High: 30, Low: 0}
 
 	timeNow := time.Now().Unix()
 	dateToday := U.GetDateOnlyFromTimestamp(timeNow)

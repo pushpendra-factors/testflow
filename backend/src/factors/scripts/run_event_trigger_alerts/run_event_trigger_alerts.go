@@ -605,7 +605,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		if alertConfiguration.IsFactorsUrlInPayload {
 			idx := len(alert.Message.MessageProperty)
 			alert.Message.MessageProperty[fmt.Sprintf("%d", idx)] = model.MessagePropMapStruct{
-				DisplayName: "Factors URL",
+				DisplayName: "Factors Activity URL",
 				PropValue:   accountUrl,
 			}
 		}

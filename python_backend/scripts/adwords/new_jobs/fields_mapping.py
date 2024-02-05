@@ -55,7 +55,7 @@ class FieldsMapping:
         '8': "Bumper",
         '9': "In-stream",
         '10': "Video discovery",
-        '11': "Standard",
+        '11': "Video non-skippable in stream",
         '12': "Outstream",
         '13': "Search Dynamic Ads",
         '14': "Shopping - Comparison-listing",
@@ -63,6 +63,7 @@ class FieldsMapping:
         '16': "Video Responsive",
         '17': "Video Efficient Reach",
         '18': "Smart Campaign",
+        '19': "Travel",
     }
 
     CAMPAIGN_TRIAL_TYPE_MAPPING = {
@@ -87,6 +88,7 @@ class FieldsMapping:
         '10' : "Performance Max",
         '11' : "Local Services",
         '12' : "Discovery",
+        '13': "Travel",
     }
 
     ADVERTISING_CHANNEL_SUB_TYPE_MAPPING = {
@@ -109,6 +111,8 @@ class FieldsMapping:
         '16': "Smart Campaign",
         '17': "Video Sequence",
         '18': "App Campaign for Pre Registration",
+        '19': "Video reach target frequency",
+        '20': "Travel Activities",
     }   
 
     INTERACTION_TYPES_MAPPING = {
@@ -129,6 +133,8 @@ class FieldsMapping:
         '5' : "YouTube Search",
         '6' : "YouTube Videos",
         '7' : "Cross-network",
+        '8': "Youtube",
+        '9': "Google TV",
     }
 
     CLICK_TYPE_MAPPING = {
@@ -187,6 +193,7 @@ class FieldsMapping:
         '54' : "Price Extension",
         '55' : "Hotel Book-on-Google room selectio",
         '56' : "Shopping Comparision Listing",
+        '57': "Cross-network"
     }
 
     DEVICE_MAPPING = {
@@ -353,6 +360,7 @@ class FieldsMapping:
         '35': "DISCOVERY_MULTI_ASSET_AD",
         '36': "DISCOVERY_CAROUSEL_AD",
         '37': "TRAVEL_ADS",
+        '38': "DISCOVERY_VIDEO_RESPONSIVE_AD"
     }
 
     @staticmethod
