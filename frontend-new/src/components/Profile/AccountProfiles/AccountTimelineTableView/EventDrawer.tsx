@@ -1,13 +1,14 @@
-import React from 'react';
-import { useSelector } from 'react-redux';
-import { Button, Drawer } from 'antd';
-import { Text } from 'Components/factorsComponents';
-import { eventIconsColorMap } from 'Components/Profile/constants';
-import { PropTextFormat } from 'Utils/dataFormatter';
-import { propValueFormat } from 'Components/Profile/utils';
-import TextWithOverflowTooltip from 'Components/GenericComponents/TextWithOverflowTooltip';
+import React, { useEffect, useState } from 'react';
+import { Drawer, Button, message } from 'antd';
+import { SVG, Text } from 'Components/factorsComponents';
 import { EventDrawerProps } from 'Components/Profile/types';
-import EventIcon from './EventIcon';
+import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import { useSelector } from 'react-redux';
+import { processProperties, PropTextFormat } from 'Utils/dataFormatter';
+import getGroupIcon from 'Utils/getGroupIcon';
+import { updateEventPropertiesConfig } from 'Reducers/timelines';
+import styles from '../index.module.scss';
+import EventDetails from './EventDetails';
 
 function EventDrawer({
   visible,
@@ -15,74 +16,90 @@ function EventDrawer({
   event,
   eventPropsType
 }: EventDrawerProps): JSX.Element {
-  const { eventPropNames } = useSelector((state: any) => state.coreQuery);
+  const { active_project: activeProject } = useSelector(
+    (state: any) => state.global
+  );
+  const { eventPropertiesV2 } = useSelector((state: any) => state.coreQuery);
+  const { activePageView } = useSelector((state: any) => state.timelines);
 
-  const renderEventDetails = () => {
-    if (!event) return null;
+  const [filterProperties, setFilterProperties] = useState([]);
+  const [propSelectOpen, setPropSelectOpen] = useState(false);
 
-    const eventIcon = eventIconsColorMap[event.icon]
-      ? event.icon
-      : 'calendar-star';
+  const handleUpdateEventProps = (newList: string[]) => {
+    updateEventPropertiesConfig(
+      activeProject?.id,
+      event?.properties?.$is_page_view ? 'PageView' : event.event_name,
+      newList
+    )
+      .then(() => {
+        message.success('Updated Event Properties Configuration');
+      })
+      .catch((err) => {
+        message.error('Error Updating Event Properties Configuration');
+      });
+  };
 
-    const renderAliasName = () => (
-      <TextWithOverflowTooltip
-        text={event.event_type === 'FE' ? event.event_name : event.alias_name}
-        extraClass='main'
-      />
-    );
+  const addNewProp = (option: any, group: any) => {
+    handleUpdateEventProps([
+      ...Object.keys(event.properties || {}),
+      option.value
+    ]);
+  };
 
-    return (
-      <div className='py-4'>
-        <div className='top-section mb-4'>
-          <div className='flex items-center w-full'>
-            <EventIcon icon={eventIcon} size={28} />
-            {event.alias_name ? (
-              <div className='heading-with-sub ml-2'>
-                <div className='sub'>{PropTextFormat(event.display_name)}</div>
-                {renderAliasName()}
-              </div>
-            ) : (
-              <TextWithOverflowTooltip
-                text={PropTextFormat(event.display_name)}
-                extraClass='heading ml-2'
-              />
-            )}
-          </div>
-        </div>
-        <div>
-          {Object.entries(event.properties || {}).map(([key, value]) => {
-            const propType = eventPropsType[key];
-            if (key === '$is_page_view' && value === true) return null;
-            return (
-              <div className='leftpane-prop' key={key}>
-                <div className='flex flex-col items-start truncate'>
-                  <Text
-                    type='title'
-                    level={8}
-                    color='grey'
-                    truncate
-                    charLimit={44}
-                    extraClass='m-0'
-                  >
-                    {eventPropNames[key] || PropTextFormat(key)}
-                  </Text>
-                  <Text
-                    type='title'
-                    level={7}
-                    truncate
-                    charLimit={44}
-                    extraClass='m-0'
-                  >
-                    {propValueFormat(key, value, propType) || '-'}
-                  </Text>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+  const mapEventProperties = (properties) =>
+    Object.entries(properties)
+      ?.map(([group, values]) => ({
+        label: PropTextFormat(group),
+        iconName: group,
+        values: processProperties(values)
+      }))
+      ?.map((opt) => ({
+        iconName: getGroupIcon(opt.iconName),
+        label: opt.label,
+        values: opt.values
+      }));
+
+  useEffect(() => {
+    let eventProps;
+
+    if (event && !event?.properties?.$is_page_view) {
+      eventProps = mapEventProperties(
+        eventPropertiesV2[event.event_name] || {}
+      );
+    } else {
+      eventProps = mapEventProperties(eventPropertiesV2[activePageView] || {});
+    }
+
+    setFilterProperties(eventProps);
+  }, [event, eventPropertiesV2]);
+
+  const selectProps = () =>
+    propSelectOpen && (
+      <div className={styles.account_profiles__event_selector}>
+        <GroupSelect
+          options={filterProperties}
+          searchPlaceHolder='Select Property'
+          optionClickCallback={addNewProp}
+          onClickOutside={() => setPropSelectOpen(false)}
+          allowSearchTextSelection={false}
+          extraClass={styles.account_profiles__event_selector__select}
+          allowSearch
+        />
       </div>
     );
-  };
+
+  const renderAddNewProp = () => (
+    <div className='ml-2'>
+      <Button
+        type='link'
+        icon={<SVG name='plus' color='purple' />}
+        onClick={() => setPropSelectOpen(!propSelectOpen)}
+      >
+        Add property
+      </Button>
+      {selectProps()}
+    </div>
+  );
 
   return (
     <Drawer
@@ -102,7 +119,12 @@ function EventDrawer({
       className='fa-drawer--right'
       onClose={onClose}
     >
-      {renderEventDetails()}
+      <EventDetails
+        event={event}
+        eventPropsType={eventPropsType}
+        onUpdate={handleUpdateEventProps}
+      />
+      {renderAddNewProp()}
     </Drawer>
   );
 }
