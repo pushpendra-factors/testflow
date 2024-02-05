@@ -15,23 +15,9 @@ function EventIcon({ icon, size = 16 }: EventIconProps): JSX.Element {
     '--icon-size': `${size}px`
   };
 
-  const handleImageError = (
-    e: React.SyntheticEvent<HTMLImageElement, Event>
-  ) => {
-    const defaultSrc = `/assets/icons/${showIcon}.svg`;
-    if (e.currentTarget.src !== defaultSrc) {
-      e.currentTarget.src = defaultSrc;
-    }
-  };
-
   return (
     <div className='event-icon' style={styles as React.CSSProperties}>
-      <img
-        src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${showIcon}.svg`}
-        onError={handleImageError}
-        alt=''
-        loading='lazy'
-      />
+      <img src={`/assets/icons/${showIcon}.svg`} alt='' loading='lazy' />
     </div>
   );
 }

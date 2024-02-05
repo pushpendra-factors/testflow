@@ -74,12 +74,7 @@ function AccountTimelineBirdView({
       <SVG name={`TrackedUser${event.id.match(/\d/g)?.[0] || 0}`} size={20} />
     ) : (
       <img
-        src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${eventIcon}.svg`}
-        onError={(e) => {
-          if (e.target.src !== `../../../../assets/icons/${eventIcon}.svg`) {
-            e.target.src = `../../../../assets/icons/${eventIcon}.svg`;
-          }
-        }}
+        src={`/assets/icons/${eventIcon}.svg`}
         alt=''
         height={16}
         width={16}
@@ -119,7 +114,7 @@ function AccountTimelineBirdView({
           trigger={isHoverable ? 'hover' : []}
           icon={
             <img
-              src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${icon}.svg`}
+              src={`/assets/icons/${icon}.svg`}
               alt=''
               height={24}
               width={24}
