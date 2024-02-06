@@ -13,8 +13,7 @@ const initialState = {
   accountOverview: { isLoading: false, data: {} },
   segmentCreateStatus: '',
   segmentUpdateStatus: '',
-  segments: {},
-  activePageView: ''
+  segments: {}
 };
 
 export default function (state = initialState, action) {
@@ -75,8 +74,6 @@ export default function (state = initialState, action) {
       return { ...state, segmentUpdateStatus: action.payload };
     case 'UPDATE_SEGMENT_REJECTED':
       return { ...state, segmentUpdateStatus: action.payload };
-    case 'SET_PAGEVIEW':
-      return { ...state, activePageView: action.payload };
     case SET_ACTIVE_PROJECT:
       return {
         ...initialState
@@ -192,9 +189,4 @@ export const updateEngagementCategoryRanges = (projectID, payload) => {
 export const getEngagementCategoryRanges = (projectID) => {
   const url = `${host}projects/${projectID}/v1/accscore/engagementbuckets`;
   return get(null, url);
-};
-
-export const updateEventPropertiesConfig = (projectID, eventName, payload) => {
-  const url = `${host}projects/${projectID}/v1/profiles/events_config/${eventName}`;
-  return put(null, url, payload);
 };

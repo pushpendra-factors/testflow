@@ -16,7 +16,7 @@ import CRMS from './CRMS';
 import OtherIntegrations from './OtherIntegrations';
 import setupAssistData from '../../../assets/lottie/Final Jan 3 Setupassist.json';
 import styles from './index.module.scss';
-import { meetLink } from '../../../utils/meetLink';
+import { meetLink } from '../../../utils/hubspot';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 
 function SetupAssist({
@@ -295,7 +295,7 @@ function SetupAssist({
                   Setup a call with our rep. We are always happy to assist to
                   you
                 </Text>
-                <a href={meetLink()} target='_blank' rel='noreferrer'>
+                <a href={meetLink(ownerID)} target='_blank' rel='noreferrer'>
                   <Button
                     type='text'
                     style={{ color: '#1890FF' }}

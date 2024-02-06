@@ -455,30 +455,23 @@ func getFilterEventsForEventAnalytics(filters []KPIFilter, objectType string) ([
 		return []QueryEventWithProperties{filterForEventEventAnalytics}, filterForUserPropertiesEventAnalytics
 	}
 
-	filterForEventEventAnalytics.Properties, filterForUserPropertiesEventAnalytics = transformKPIFilterToQueryProperty(filters)
+	filterForEventEventAnalytics.Properties = transformKPIFilterToQueryProperty(filters)
 	return []QueryEventWithProperties{filterForEventEventAnalytics}, filterForUserPropertiesEventAnalytics
 }
 
-func transformKPIFilterToQueryProperty(filters []KPIFilter) ([]QueryProperty, []QueryProperty) {
-	var eventQueryProperties, userQueryProperties []QueryProperty
-	var currentFilter QueryProperty
+func transformKPIFilterToQueryProperty(filters []KPIFilter) []QueryProperty {
+	var queryProperties []QueryProperty
+	var currentFilterProperties QueryProperty
 	for _, filter := range filters {
-		currentFilter.Type = filter.PropertyDataType
-		currentFilter.Property = filter.PropertyName
-		currentFilter.Operator = filter.Condition
-		currentFilter.Value = filter.Value
-		currentFilter.LogicalOp = filter.LogicalOp
-		if filter.Entity == PropertyEntityEvent {
-			currentFilter.Entity = filter.Entity
-			currentFilter.GroupName = PropertyEntityEvent
-			eventQueryProperties = append(eventQueryProperties, currentFilter)
-		} else {
-			currentFilter.Entity = PropertyEntityUserGlobal
-			currentFilter.GroupName = PropertyEntityUser
-			userQueryProperties = append(userQueryProperties, currentFilter)
-		}
+		currentFilterProperties.Entity = filter.Entity
+		currentFilterProperties.Type = filter.PropertyDataType
+		currentFilterProperties.Property = filter.PropertyName
+		currentFilterProperties.Operator = filter.Condition
+		currentFilterProperties.Value = filter.Value
+		currentFilterProperties.LogicalOp = filter.LogicalOp
+		queryProperties = append(queryProperties, currentFilterProperties)
 	}
-	return eventQueryProperties, userQueryProperties
+	return queryProperties
 }
 
 func getGroupByEventsForEventsAnalytics(groupBys []KPIGroupBy, objectType string) []QueryGroupByProperty {
@@ -492,7 +485,7 @@ func getGroupByEventsForEventsAnalytics(groupBys []KPIGroupBy, objectType string
 		currentGroupByProperty.GroupByType = kpiGroupBy.GroupByType //Raw or bucketed
 		// currentGroupByProperty.Index = index
 
-		if kpiGroupBy.Entity == PropertyEntityUser {
+		if kpiGroupBy.PropertyName == U.UP_USER_ID {
 			currentGroupByProperty.EventName = UserPropertyGroupByPresent
 			currentGroupByProperty.EventNameIndex = 0
 		} else {
@@ -547,7 +540,7 @@ func prependEventFiltersBasedOnInternalTransformation(filters []QueryProperty, e
 }
 
 func prependUserFiltersBasedOnInternalTransformation(filters []QueryProperty, userProperties []QueryProperty, kpiQuery KPIQuery, metric string) []QueryProperty {
-	return userProperties
+	return make([]QueryProperty, 0)
 }
 
 // Functions supporting transforming eventResults to KPIresults

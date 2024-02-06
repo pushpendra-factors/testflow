@@ -120,8 +120,6 @@ type ProfileQuery struct {
 	// For specific case of KPI - single eventType
 	AggregateFunction     string `json:"agFn"`
 	AggregateProperty     string `json:"agPr"`
-	AggregateProperty2    string `json:"agPr2"`
-	MetricType			  string `json:"me_ty"`
 	AggregatePropertyType string `json:"agPrTy"`
 
 	// We convert the exposed expression to internal ones.

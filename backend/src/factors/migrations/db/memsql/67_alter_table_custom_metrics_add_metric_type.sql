@@ -1,1 +1,0 @@
-ALTER TABLE custom_metrics ADD COLUMN metric_type text;

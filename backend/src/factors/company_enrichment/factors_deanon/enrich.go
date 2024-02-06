@@ -2,7 +2,6 @@ package factors_deanon
 
 import (
 	"encoding/json"
-	"errors"
 	"factors/company_enrichment/clearbit"
 	"factors/company_enrichment/sixsignal"
 	C "factors/config"
@@ -107,84 +106,6 @@ func (fd *FactorsDeanon) Meter(projectId int64, domain string) {
 	// Total successful API calls for a day
 	model.SetSixSignalAPITotalHitCountCacheResult(projectId, U.TimeZoneStringIST)
 
-}
-
-/*
-HandleAccountLimitAlert handles the email alerts for account limit if it exceeds 75% or 100% to notify the client.
-
-	Returns :
-		- http.StatusOK, nil : Successful Match and Execute.
-		- http.BadRequest, error : Successful Match but Execute Failed.
-		- http.StatusForbidden, error : Match Failed.
-		- http.StatusInternalServerError, error: error in getting or setting internal data.
-*/
-func (fd *FactorsDeanon) HandleAccountLimitAlert(projectId int64, client HTTPClient) (int, error) {
-
-	logCtx := log.WithField("project_id", projectId)
-
-	project, status := store.GetStore().GetProject(projectId)
-	if status != http.StatusFound {
-		logCtx.Error("failed to get project.")
-		return http.StatusInternalServerError, errors.New("failed to get project")
-	}
-
-	percentageExhausted, limit, err := GetAccountLimitAndPercentageExhausted(projectId)
-	if err != nil {
-		return http.StatusInternalServerError, err
-	}
-
-	partialLimitExceeded := PartialAccountLimitExceeded{
-		Client: client,
-	}
-	fullLimitExceeded := FullAccountLimitExceeded{
-		Client: client,
-	}
-
-	email, errCode := store.GetStore().GetProjectAgentLatestAdminEmailByProjectId(projectId)
-	if errCode != http.StatusFound {
-		return http.StatusInternalServerError, errors.New("failed fetching admin email by projectId")
-	}
-
-	payloadJSON, err := json.Marshal(model.MailmodoTriggerCampaignRequestPayload{ReceiverEmail: email, Data: map[string]interface{}{"Project Name": project.Name}})
-	if err != nil {
-		return http.StatusInternalServerError, err
-	}
-
-	if partialLimitMatch, _ := partialLimitExceeded.Match(projectId, percentageExhausted, limit, U.TimeZoneString(project.TimeZone)); partialLimitMatch {
-
-		err := partialLimitExceeded.Execute(projectId, payloadJSON)
-		if err != nil {
-			logCtx.Error(err)
-			return http.StatusBadRequest, err
-		}
-
-		err = SetAccountLimitEmailAlertCacheKey(projectId, limit, ACCOUNT_LIMIT_PARTIAL_EXCEEDED, U.TimeZoneString(project.TimeZone))
-		if err != nil {
-			return http.StatusInternalServerError, err
-		}
-
-		return http.StatusOK, nil
-
-	}
-
-	if fullLimitMatch, _ := fullLimitExceeded.Match(projectId, percentageExhausted, limit, U.TimeZoneString(project.TimeZone)); fullLimitMatch {
-
-		err := fullLimitExceeded.Execute(projectId, payloadJSON)
-		if err != nil {
-			logCtx.Error(err)
-			return http.StatusBadRequest, err
-		}
-
-		err = SetAccountLimitEmailAlertCacheKey(projectId, limit, ACCOUNT_LIMIT_FULLY_EXCEEDED, U.TimeZoneString(project.TimeZone))
-		if err != nil {
-			return http.StatusInternalServerError, err
-		}
-
-		return http.StatusOK, nil
-	}
-
-	logCtx.Info("No account limit alerts sent.")
-	return http.StatusForbidden, nil
 }
 
 // FillFactorsDeanonUserProperties calls the respective method for clearbit and sixsignal enrichment

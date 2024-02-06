@@ -208,12 +208,10 @@
 .leftpane-prop {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   height: 52px;
   padding: 8px;
-
-  &.pl-8{
-    padding-left: 32px;
-  }
+  padding-left: 32px;
 
   .del-button {
     visibility: hidden;

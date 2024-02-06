@@ -24,7 +24,12 @@ function EventInfoCard({ event, eventIcon, sourceIcon, propertiesType }) {
         }}
       >
         <img
-          src={`/assets/icons/${eventIcon}.svg`}
+          src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${eventIcon}.svg`}
+          onError={(e) => {
+            if (e.target.src !== `../../../../assets/icons/${eventIcon}.svg`) {
+              e.target.src = `../../../../assets/icons/${eventIcon}.svg`;
+            }
+          }}
           alt=''
           height={20}
           width={20}
@@ -47,7 +52,7 @@ function EventInfoCard({ event, eventIcon, sourceIcon, propertiesType }) {
           )}
           <div className='source-icon'>
             <img
-              src={`/assets/icons/${sourceIcon}.svg`}
+              src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${sourceIcon}.svg`}
               alt=''
               height={24}
               width={24}

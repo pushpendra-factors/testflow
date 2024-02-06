@@ -15,8 +15,7 @@ from .bert import embed_sentence
 from .bert import embed_sentences
 
 directory_path = 'chat_factors/chatgpt_poc'
-cache_data_path = os.path.join(directory_path, "data_cached.csv")
-EMBEDDING_CACHE_PATH = os.path.join(directory_path, 'artifacts/prompt_emb_cache.pkl')
+EMBEDDING_CACHE_PATH = 'artifacts/prompt_emb_cache.pkl'
 
 key_file_path = os.path.join('chat_factors/chatgpt_poc', 'key.json')
 
@@ -416,7 +415,6 @@ def chat_once_mode(question, model_type='ft', parser=None, scratch=False, silent
 
 def get_answer_from_ir_model(question, prompt_response_data, prompt_vector_data):
     try:
-        log.info('running get_answer_from_ir_model')
         if len(question) < 5:
             raise Exception('Your question should be at least 5 characters long.')
         prompt_response_data.seek(0)
@@ -426,35 +424,6 @@ def get_answer_from_ir_model(question, prompt_response_data, prompt_vector_data)
         matching_examples = get_matching_examples_from_file(question, df, prompt_vector_data)
         log.info("matching_examples :\n%s", matching_examples)
         log.info('\nSeeking answer from GPT..')
-        ir_response = ask_ir_based_model(question, matching_examples)
-        answer = ir_response['answer']
-        answer = answer['choices'][0]['text'].split('\n')[0].strip(' .')
-
-    except openai.error.AuthenticationError:
-        raise Exception('OpenAI API Key Error. Specify the right one via the key.json file.')
-
-    returnables = {'answer': answer}
-    log.info(answer)
-    return returnables
-
-def get_answer_from_ir_model_local(question):
-    try:
-        log.info('running get_answer_from_ir_model_local')
-        if len(question) < 5:
-            raise Exception('Your question should be at least 5 characters long.')
-        df = pd.read_csv(cache_data_path)
-        indexed_prompts, indexed_prompt_embs = pickle.load(open(EMBEDDING_CACHE_PATH, 'rb'))
-        log.info('done step 1')
-        prompt_emb = embed_sentence(question, normalise=True)
-        log.info('done step 2')
-        sim_pe_all = torch.mm(prompt_emb, indexed_prompt_embs.transpose(0, 1))
-        top_k_i = sim_pe_all.topk(10).indices.reshape(-1).numpy()
-        matching_prompts = [indexed_prompts[i] for i in top_k_i]
-        matching_df = df[df['prompt'].isin(matching_prompts)]
-        matching_examples = "\n".join(matching_df.apply(lambda x: f"{x['prompt']}-> {x['completion']}", axis=1))
-        log.info("matching_examples :\n%s", matching_examples)
-        log.info('\nSeeking answer from GPT..')
-        log.info('done step 3')
         ir_response = ask_ir_based_model(question, matching_examples)
         answer = ir_response['answer']
         answer = answer['choices'][0]['text'].split('\n')[0].strip(' .')
