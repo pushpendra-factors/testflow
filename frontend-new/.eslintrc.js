@@ -12,11 +12,12 @@ module.exports = {
     'airbnb',
     'prettier'
   ],
+  parser: '@babel/eslint-parser',
   parserOptions: {
     ecmaVersion: 'latest',
     sourceType: 'module'
   },
-  plugins: ['react', 'prettier', 'jest'],
+  plugins: ['react', 'prettier', 'jest', 'import'],
   rules: {
     'react/prop-types': 0,
     'react/jsx-props-no-spreading': 'off',
@@ -27,7 +28,20 @@ module.exports = {
     'import/prefer-default-export': 'off',
     'no-nested-ternary': 'off',
     'no-plusplus': 'off',
-    'prettier/prettier': ['error']
+    'prettier/prettier': ['error'],
+    'import/extensions': [1, { json: 'ignorePackages' }],
+    camelcase: 'off',
+    'react/function-component-definition': [
+      2,
+      {
+        namedComponents: [
+          'function-declaration',
+          'function-expression',
+          'arrow-function'
+        ],
+        unnamedComponents: ['function-expression', 'arrow-function']
+      }
+    ]
   },
   settings: {
     'import/resolver': {

@@ -296,6 +296,9 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/v1/profiles/accounts", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_PROFILES}), responseWrapper(V1.GetProfileAccountsHandler))
 	authRouteGroup.GET("/:project_id/v1/profiles/accounts/:group/:id", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_PROFILES}), responseWrapper(V1.GetProfileAccountDetailsHandler))
 	authRouteGroup.GET("/:project_id/v1/profiles/accounts/overview/:group/:id", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_PROFILES}), responseWrapper(V1.GetProfileAccountOverviewHandler))
+	authRouteGroup.PUT("/:project_id/v1/profiles/events_config/:event_name", mid.FeatureMiddleware([]string{M.FEATURE_PEOPLE_PROFILES, M.FEATURE_ACCOUNT_PROFILES}), V1.UpdateEventConfigHandler)
+
+	// Segments
 	authRouteGroup.POST("/:project_id/segments", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), CreateSegmentHandler)
 	authRouteGroup.GET("/:project_id/segments", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(GetSegmentsHandler))
 	authRouteGroup.GET("/:project_id/segments/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(GetSegmentByIdHandler))

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import cx from 'classnames';
 import { Button, Dropdown, Menu, Tooltip } from 'antd';
-import { connect } from 'react-redux';
+import { connect, useDispatch } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import FaSelect from '../../FaSelect';
 import { SVG, Text } from '../../factorsComponents';
@@ -22,6 +22,8 @@ import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
 import { processProperties } from 'Utils/dataFormatter';
 import { IsDomainGroup } from 'Components/Profile/utils';
+import { ReactSortable } from 'react-sortablejs';
+import { setGroupByEventActionList } from 'Reducers/coreQuery/actions';
 
 function QueryBlock({
   availableGroups,
@@ -42,6 +44,7 @@ function QueryBlock({
   getGroupProperties,
   groupAnalysis
 }) {
+  const dispatch = useDispatch();
   const alphabetIndex = 'ABCDEF';
   const [isDDVisible, setDDVisible] = useState(false);
   const [isFilterDDVisible, setFilterDDVisible] = useState(false);
@@ -454,30 +457,43 @@ function QueryBlock({
 
   const groupByItems = () => {
     const groupByEvents = [];
+    let results;
+    const sortableList = groupBy
+      .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
+      .filter(
+        (gbp) => gbp.eventName === event.label && gbp.eventIndex === index
+      );
     if (groupBy && groupBy.length && groupBy[0] && groupBy[0].property) {
-      groupBy
-        .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
-        .filter(
-          (gbp) => gbp.eventName === event.label && gbp.eventIndex === index
-        )
-        .forEach((gbp, gbpIndex) => {
-          const { groupByIndex, ...orgGbp } = gbp;
-          groupByEvents.push(
-            <div key={gbpIndex} className='fa--query_block--filters'>
-              <EventGroupBlock
-                eventGroup={eventGroup}
-                index={gbp.groupByIndex}
-                grpIndex={gbpIndex}
-                eventIndex={index}
-                groupByEvent={orgGbp}
-                event={event}
-                delGroupState={(ev) => deleteGroupBy(ev, gbpIndex)}
-                setGroupState={pushGroupBy}
-                closeDropDown={() => setGroupByDDVisible(false)}
-              />
-            </div>
-          );
-        });
+      results = (
+        <ReactSortable
+          list={sortableList}
+          setList={(listItems) => {
+            dispatch(setGroupByEventActionList(listItems));
+          }}
+        >
+          {sortableList.map((gbp, gbpIndex) => {
+            const { groupByIndex, ...orgGbp } = gbp;
+            return (
+              <div
+                key={gbpIndex}
+                className='fa--query_block--filters flex ml-2'
+              >
+                <EventGroupBlock
+                  eventGroup={eventGroup}
+                  index={gbp.groupByIndex}
+                  grpIndex={gbpIndex}
+                  eventIndex={index}
+                  groupByEvent={orgGbp}
+                  event={event}
+                  delGroupState={(ev) => deleteGroupBy(ev, gbpIndex)}
+                  setGroupState={pushGroupBy}
+                  closeDropDown={() => setGroupByDDVisible(false)}
+                />
+              </div>
+            );
+          })}
+        </ReactSortable>
+      );
     }
 
     if (isGroupByDDVisible) {
@@ -487,8 +503,13 @@ function QueryBlock({
         </div>
       );
     }
-
-    return groupByEvents;
+    results = (
+      <>
+        {results}
+        {groupByEvents}
+      </>
+    );
+    return results;
   };
 
   const ifQueries = queries.length > 0;
@@ -530,17 +551,16 @@ function QueryBlock({
         } block_section items-center`}
       >
         <div className='flex items-center'>
-          <Tooltip title='Drag to move'>
-            <div
-              className={cx(
-                styles.query_block__additional_actions,
-                'mr-2',
-                styles['drag-icon']
-              )}
-            >
-              <SVG name='drag' />
-            </div>
-          </Tooltip>
+          <div
+            className={cx(
+              styles.query_block__additional_actions,
+              'mr-2',
+              styles['drag-icon']
+            )}
+          >
+            <SVG name='drag' />
+          </div>
+
           <div className='fa--query_block--add-event active flex justify-center items-center mr-2'>
             <Text
               type='title'

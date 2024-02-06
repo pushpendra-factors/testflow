@@ -21,6 +21,7 @@ import {
 } from 'Utils/constants';
 import useAutoFocus from 'hooks/useAutoFocus';
 import { PathUrls } from 'Routes/pathUrls';
+import useKeyboardNavigation from 'hooks/useKeyboardNavigation';
 
 const itemHeight = 47;
 const ContainerHeight = 443;
@@ -816,38 +817,10 @@ const GlobalSearch = () => {
   };
 
   const globalSearchRef = useRef();
-  const OnKeyDownEvent = useCallback((e) => {
-    // Conditional PreventDefault()
-    // This prevents page from scrolling if shifted focus using up/down
-    // And Makes it possible to enter into search box
-    if (e.keyCode === 40 || e.keyCode === 38) e.preventDefault();
-    // Define focusable selectors
-    const focusableSelectors = '[tabindex]:not([tabindex="-1"])';
-    const focusableElements = Array.from(
-      globalSearchRef.current.querySelectorAll(focusableSelectors)
-    );
-    const activeElement = document.activeElement;
-    const currentIndex = focusableElements.indexOf(activeElement);
-
-    if (currentIndex === -1) return; // Active element is not in the focusable list
-
-    let newIndex;
-
-    // Right arrow key
-    if (e.keyCode === 40) {
-      newIndex = (currentIndex + 1) % focusableElements.length;
-    }
-    // Left arrow key
-    else if (e.keyCode === 38) {
-      newIndex =
-        (currentIndex - 1 + focusableElements.length) %
-        focusableElements.length;
-    } else {
-      return; // If the key is not left or right arrow, do nothing
-    }
-
-    focusableElements[newIndex].focus();
-  }, []);
+  const OnKeyDownEvent = useCallback(
+    (e) => useKeyboardNavigation(globalSearchRef, e),
+    []
+  );
   return (
     <div
       ref={globalSearchRef}

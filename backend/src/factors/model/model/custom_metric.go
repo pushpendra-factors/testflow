@@ -20,6 +20,7 @@ type CustomMetricConfigV1 struct {
 	AggregateFunctions     []string            `json:"agFn"`
 	Properties             []map[string]string `json:"properties"`
 	TypeOfQueryDisplayName string              `json:"type_of_query_display_name"`
+	MetricTypes			   []string			   `json:"me_ty"`
 }
 
 const (
@@ -33,13 +34,17 @@ const (
 	ProfileQueryTypeDisplayName    = "Profile Based"
 	DerivedQueryTypeDisplayName    = "Derived"
 	EventBasedQueryTypeDisplayName = "Event Based"
+	DateTypeDiffMetricType		   = "date_type_diff_metric"
 )
 
 var (
+	// Shouldnt have unique in dateTypeDiff. How do I present that.
 	CustomMetricProfilesAggregateFunctions   = []string{SumAggregateFunction, UniqueAggregateFunction, AverageAggregateFunction}
 	CustomEventsAggregateFunctions           = []string{SumAggregateFunction, UniqueAggregateFunction, AverageAggregateFunction, CountAggregateFunction}
 	CustomKPIProfileSectionDisplayCategories = []string{HubspotContactsDisplayCategory, HubspotCompaniesDisplayCategory, HubspotDealsDisplayCategory,
 		SalesforceUsersDisplayCategory, SalesforceAccountsDisplayCategory, SalesforceOpportunitiesDisplayCategory, MarketoLeadsDisplayCategory, LeadSquaredLeadsDisplayCategory}
+	CustomKPIProfilesMetricTypes 			 = []string{DateTypeDiffMetricType}
+	MapOfCustomMetricTypeToOp				 = map[string]string {DateTypeDiffMetricType: "-"}
 	ProfileQueryType    = 1
 	DerivedQueryType    = 2
 	EventBasedQueryType = 3
@@ -58,6 +63,7 @@ type CustomMetric struct {
 	Name                   string          `json:"name"`
 	Description            string          `json:"description"`
 	TypeOfQuery            int             `json:"type_of_query"`
+	MetricType			   string		   `json:"metric_type"` // represents a time difference based kpi ...
 	Transformations        *postgres.Jsonb `json:"transformations"`
 	ObjectType             string          `json:"obj_ty"`                             // Previously used as KPI Display Category for the metric
 	SectionDisplayCategory string          `gorm:"-"  json:"section_display_category"` // To be used as KPI Display Category for the metric
@@ -76,19 +82,10 @@ func (customMetric *CustomMetric) GetKPIConfig() map[string]string {
 	currentMetric["name"] = customMetric.Name
 	currentMetric["display_name"] = customMetric.Name
 	currentMetric["type"] = ""
-	if customMetric.TypeOfQuery == DerivedQueryType {
+	if customMetric.TypeOfQuery == ProfileQueryType || customMetric.TypeOfQuery == DerivedQueryType {
 		currentMetric["type"] = customMetric.DisplayResultAs
 	}
 	return currentMetric
-}
-
-func GetKPIConfig(customMetrics []CustomMetric) []map[string]string {
-	rCustomMetrics := make([]map[string]string, 0)
-
-	for _, customMetric := range customMetrics {
-		rCustomMetrics = append(rCustomMetrics, customMetric.GetKPIConfig())
-	}
-	return rCustomMetrics
 }
 
 // This is used to fetch event name from transformation only. This is applicable for custom KPI - events.
@@ -115,9 +112,10 @@ func (customMetric *CustomMetric) IsValid() (bool, string) {
 		if err != nil {
 			return false, "Error during decode of custom metrics transformations - custom_metrics handler."
 		}
-		if !customMetricTransformation.IsValid(customMetric.TypeOfQuery) {
+		if !customMetricTransformation.IsValid(customMetric.TypeOfQuery, customMetric.MetricType) {
 			return false, "Error with values passed in transformations - custom_metrics handler."
 		}
+	
 		return true, ""
 
 	} else if customMetric.TypeOfQuery == DerivedQueryType {
@@ -162,14 +160,36 @@ func (customMetric *CustomMetric) SetDefaultGroupIfRequired() {
 	}
 }
 
+func (customMetric *CustomMetric) SetDisplayResultAsIfRequired() {
+	if customMetric.TypeOfQuery == ProfileQueryType {
+		var customMetricTransformation CustomMetricTransformation
+		U.DecodePostgresJsonbToStructType(customMetric.Transformations, &customMetricTransformation)
+
+		if customMetric.MetricType == DateTypeDiffMetricType {
+			customMetric.DisplayResultAs = MetricsDateType
+		}
+	}
+}
+
+func GetKPIConfig(customMetrics []CustomMetric) []map[string]string {
+	rCustomMetrics := make([]map[string]string, 0)
+
+	for _, customMetric := range customMetrics {
+		rCustomMetrics = append(rCustomMetrics, customMetric.GetKPIConfig())
+	}
+	return rCustomMetrics
+}
+
 type CustomMetricTransformation struct {
-	AggregateFunction     string      `json:"agFn"`
-	AggregateProperty     string      `json:"agPr"`
-	AggregatePropertyType string      `json:"agPrTy"`
-	Filters               []KPIFilter `json:"fil"`
-	DateField             string      `json:"daFie"`
-	EventName             string      `json:"evNm"`
-	Entity                string      `json:"en"`
+	AggregateFunction     	string      `json:"agFn"`
+	AggregateProperty     	string      `json:"agPr"`
+	AggregateProperty2    	string      `json:"agPr2"` // Currently used in dateType based metrics.
+	AggregatePropertyType 	string      `json:"agPrTy"`
+	AggregatePropertyType2 	string      `json:"agPrTy2"`
+	Filters               	[]KPIFilter `json:"fil"`
+	DateField             	string      `json:"daFie"`
+	EventName             	string      `json:"evNm"`
+	Entity                	string      `json:"en"`
 }
 
 func (c *CustomMetricTransformation) ContainsNameInInternalTransformation(input string) bool {
@@ -180,24 +200,50 @@ func (transformation *CustomMetricTransformation) ValidateFilterAndGroupBy() boo
 	return true
 }
 
+
 // Check if filter is being passed with objectType in create Custom metric.
-func (transformation *CustomMetricTransformation) IsValid(queryType int) bool {
+func (transform *CustomMetricTransformation) IsValid(queryType int, metricType string) bool {
+	if strings.Contains(transform.AggregateProperty, " ") { return false }
 
 	if queryType == ProfileQueryType {
-		if !U.ContainsStringInArray(CustomMetricProfilesAggregateFunctions, transformation.AggregateFunction) || strings.Contains(transformation.AggregateProperty, " ") {
+		if metricType == "" {
+			if !U.ContainsStringInArray(CustomMetricProfilesAggregateFunctions, transform.AggregateFunction) {
+				return false
+			}
+	
+			if U.ContainsStringInArray([]string{ SumAggregateFunction, AverageAggregateFunction }, transform.AggregateFunction) {
+				if transform.AggregateProperty == "" { return false }
+				if transform.AggregatePropertyType == "" { return false }
+				if transform.AggregatePropertyType != U.PropertyTypeNumerical { return false }
+			}
+		} else if U.ContainsStringInArray(CustomKPIProfilesMetricTypes, metricType) {
+			if !U.ContainsStringInArray([]string{ SumAggregateFunction, AverageAggregateFunction }, transform.AggregateFunction) {
+				return false
+			}
+	
+			if (transform.AggregateProperty == "" || transform.AggregateProperty2 == "" ||
+				transform.AggregatePropertyType == "" || transform.AggregatePropertyType2 == "") { 
+				return false
+			}
+			if metricType == DateTypeDiffMetricType {
+				if (transform.AggregatePropertyType != U.PropertyTypeDateTime && 
+				transform.AggregatePropertyType2 != U.PropertyTypeDateTime) {
+					return false
+				}
+			}
+		} else {
 			return false
 		}
+
 	} else if queryType == EventBasedQueryType {
-		if !U.ContainsStringInArray(CustomEventsAggregateFunctions, transformation.AggregateFunction) || strings.Contains(transformation.AggregateProperty, " ") ||
-			transformation.EventName == "" || ((transformation.AggregateFunction == SumAggregateFunction || transformation.AggregateFunction == AverageAggregateFunction) && transformation.Entity == "") {
+		if !U.ContainsStringInArray(CustomEventsAggregateFunctions, transform.AggregateFunction) || transform.EventName == "" || 
+			((transform.AggregateFunction == SumAggregateFunction || 
+			transform.AggregateFunction == AverageAggregateFunction) && transform.Entity == "") {
 			return false
 		}
-	} else {
-		// invalid query type
-		return false
 	}
 
-	for _, filter := range transformation.Filters {
+	for _, filter := range transform.Filters {
 		if !filter.IsValid() {
 			return false
 		}
