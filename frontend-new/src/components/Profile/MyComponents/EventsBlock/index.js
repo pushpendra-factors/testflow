@@ -189,7 +189,7 @@ function EventsBlock({
             : eventUserPropertiesV2 || {};
         }
       }
-      if (scope === 'group' && eventGroup) {
+      if (scope === 'group' && eventGroup && groupProperties[eventGroup]) {
         assignFilterProps[eventGroup] = isEngagementConfig
           ? groupProperties[eventGroup]?.filter((item) =>
               ['categorical', 'numerical'].includes(item?.[2])
@@ -200,7 +200,13 @@ function EventsBlock({
     });
 
     setFilterProperties(assignFilterProps);
-  }, [eventPropertiesV2, eventUserPropertiesV2, event?.label, eventGroup]);
+  }, [
+    eventPropertiesV2,
+    eventUserPropertiesV2,
+    event?.label,
+    eventGroup,
+    groupProperties
+  ]);
 
   const deleteItem = () => {
     eventChange(event, index - 1, 'delete');

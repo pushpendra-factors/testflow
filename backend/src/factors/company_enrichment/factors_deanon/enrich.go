@@ -36,20 +36,24 @@ Factors Deanonymisation enrichment and metering flow:
 func (fd *FactorsDeanon) IsEligible(projectSettings *model.ProjectSetting, isoCode, pageURL string) (bool, error) {
 
 	projectId := projectSettings.ProjectId
+	logCtx := log.WithField("project_id", projectId)
+
 	featureFlag, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_FACTORS_DEANONYMISATION, false)
 	if err != nil {
-		log.Error("Failed to fetch feature flag")
+		logCtx.Error("Failed to fetch feature flag")
 		return false, err
 	}
 
 	isDeanonQuotaAvailable, err := CheckingFactorsDeanonQuotaLimit(projectId)
 	if err != nil {
+		logCtx.Error("Error in checking deanon quota exhausted.")
 		return false, err
 	}
 
 	factorDeanonRulesJson := projectSettings.SixSignalConfig
-	isFactorsDeanonRulesValid, err := ApplyFactorsDeanonRules(factorDeanonRulesJson, isoCode, pageURL)
+	isFactorsDeanonRulesValid, err := ApplyFactorsDeanonRules(factorDeanonRulesJson, isoCode, pageURL, projectId)
 	if err != nil {
+		logCtx.Error("Error in checking deanon enrichment rules")
 		return false, err
 	}
 
@@ -63,7 +67,7 @@ func (fd *FactorsDeanon) IsEligible(projectSettings *model.ProjectSetting, isoCo
 // Enrich method fetches the factors deanon config and calls the method
 // to enrich the company identification props on basis of the config.
 func (fd *FactorsDeanon) Enrich(projectSettings *model.ProjectSetting,
-	userProperties *U.PropertiesMap, userId, clientIP string) (string, int) {
+	userProperties *U.PropertiesMap, eventProperties *U.PropertiesMap, userId, clientIP string) (string, int) {
 
 	projectId := projectSettings.ProjectId
 	var factorsDeanonConfig model.FactorsDeanonConfig
@@ -76,7 +80,7 @@ func (fd *FactorsDeanon) Enrich(projectSettings *model.ProjectSetting,
 		factorsDeanonConfig = defaultFactorsDeanonConfig
 	}
 
-	domain, status := FillFactorsDeanonUserProperties(projectId, factorsDeanonConfig, projectSettings, userProperties, userId, clientIP)
+	domain, status := FillFactorsDeanonUserProperties(projectId, factorsDeanonConfig, projectSettings, userProperties, eventProperties, userId, clientIP)
 	return domain, status
 }
 
@@ -186,7 +190,7 @@ func (fd *FactorsDeanon) HandleAccountLimitAlert(projectId int64, client HTTPCli
 // FillFactorsDeanonUserProperties calls the respective method for clearbit and sixsignal enrichment
 // on basis of factors deanon config.
 func FillFactorsDeanonUserProperties(projectId int64, factorsDeanonConfig model.FactorsDeanonConfig,
-	projectSettings *model.ProjectSetting, userProperties *U.PropertiesMap, userId, clientIP string) (string, int) {
+	projectSettings *model.ProjectSetting, userProperties *U.PropertiesMap, eventProperties *U.PropertiesMap, userId, clientIP string) (string, int) {
 
 	logCtx := log.WithField("project_id", projectId)
 
@@ -207,16 +211,27 @@ func FillFactorsDeanonUserProperties(projectId int64, factorsDeanonConfig model.
 		factors6SignalKey := C.GetFactorsSixSignalAPIKey()
 		domain, status = sixsignal.FillSixSignalUserProperties(projectId, factors6SignalKey, userProperties, userId, clientIP)
 		(*userProperties)[U.ENRICHMENT_SOURCE] = FACTORS_6SIGNAL
+		if status == 1 {
+			(*eventProperties)[U.EP_COMPANY_ENRICHED] = FACTORS_6SIGNAL
+		}
+
 	} else {
 		if count < int64(float64(limit)*factorsDeanonConfig.Clearbit.TrafficFraction) {
 
 			domain, status = clearbit.FillClearbitUserProperties(projectId, projectSettings.FactorsClearbitKey, userProperties, userId, clientIP)
 			(*userProperties)[U.ENRICHMENT_SOURCE] = FACTORS_CLEARBIT
+			if status == 1 {
+				(*eventProperties)[U.EP_COMPANY_ENRICHED] = FACTORS_CLEARBIT
+			}
 
 		} else {
 			factors6SignalKey := C.GetFactorsSixSignalAPIKey()
 			domain, status = sixsignal.FillSixSignalUserProperties(projectId, factors6SignalKey, userProperties, userId, clientIP)
 			(*userProperties)[U.ENRICHMENT_SOURCE] = FACTORS_6SIGNAL
+			if status == 1 {
+				(*eventProperties)[U.EP_COMPANY_ENRICHED] = FACTORS_6SIGNAL
+			}
+
 		}
 	}
 	return domain, status

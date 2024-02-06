@@ -30,10 +30,11 @@ type HubspotDocument struct {
 	GroupUserId string          `gorm:"default:null" json:"group_user_id"`
 	CreatedAt   time.Time       `json:"created_at"`
 	UpdatedAt   time.Time       `json:"updated_at"`
+	SyncTries   int             `gorm:"default:0" json:"sync_tries"`
+
 	// for internal use only
 	timeZone       U.TimeZoneString `gorm:"-" json:"-"`
 	dateProperties *map[string]bool `gorm:"-" json:"-"`
-	SyncTries      int              `gorm:"default:0" json:"sync_tries"`
 }
 
 // HubspotLastSyncInfo doc type last sync info
@@ -820,21 +821,21 @@ func GetHubspotIntegrationAccount(projectID int64, apiKey, refreshToken, appID, 
 	return &hubspotIntegrationAccount, nil
 }
 
-func GetHubspotAccountTimezone(projectID int64, apiKey, refreshToken, appID, appSecret string) (U.TimeZoneString, error) {
+func GetHubspotAccountTimezoneAndPortalID(projectID int64, apiKey, refreshToken, appID, appSecret string) (U.TimeZoneString, string, error) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 	account, err := GetHubspotIntegrationAccount(projectID, apiKey, refreshToken, appID, appSecret)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get hubspot account info for timezone.")
-		return "", err
+		return "", "", err
 	}
 
 	_, err = time.LoadLocation(string(account.TimeZone))
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to load timezone from account.")
-		return "", err
+		return "", "", err
 	}
 
-	return account.TimeZone, nil
+	return account.TimeZone, U.GetPropertyValueAsString(account.PortalID), nil
 }
 
 // GetHubspotDecodedSyncInfo decode sync info from project settings to map
@@ -1084,4 +1085,8 @@ func CheckIfCompanyV3(document *HubspotDocument) (bool, error) {
 	}
 
 	return false, errors.New("invalid company document")
+}
+
+func GetCRMObjectURLKey(projectID int64, source, objectTyp string) string {
+	return GetCRMEnrichPropertyKeyByType(source, objectTyp, "$object_url")
 }

@@ -265,8 +265,7 @@ func (store *MemSQL) UpdateAgentSalesforceInstanceURL(uuid, instanceUrl string) 
 func (store *MemSQL) UpdateAgentPassword(uuid, plainTextPassword string, passUpdatedAt time.Time) int {
 	logFields := log.Fields{
 		"uuid":                uuid,
-		"plain_text_password": plainTextPassword,
-		"pass_updated_at":     passUpdatedAt,
+		"password_updated_at": passUpdatedAt,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 

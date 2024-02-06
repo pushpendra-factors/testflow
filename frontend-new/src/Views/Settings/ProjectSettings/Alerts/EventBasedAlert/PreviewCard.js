@@ -153,15 +153,34 @@ export const PreviewCardWebhook = ({
     alertName,
     alertMessage,
     groupBy,
-    selectedEvent
+    selectedEvent,
+    matchEventName,
+    factorsURLinWebhook,
+    activeGrpBtn
 }) =>{
 
     let payloadProps = {};
     payloadProps['Title']= alertName ? alertName : 'Alert name';
     payloadProps['Message']= alertMessage ? alertMessage : 'Alert message to be displayed';
-    payloadProps['Event']= selectedEvent ? selectedEvent : '';
-    payloadProps['MessageProperty'] = groupBy?.length>0 ? getMsgPayloadMappingWebhook(groupBy) : {};
+    payloadProps['Event']= selectedEvent ? selectedEvent : ''; 
 
+    payloadProps['MessageProperty'] = groupBy?.length>0 ? getMsgPayloadMappingWebhook(groupBy, matchEventName, dummyPayloadValue) : {};
+
+    if(factorsURLinWebhook){
+        let url = ""
+        if(activeGrpBtn == 'events' || activeGrpBtn == 'account'){
+            url = "https://app.factors.ai/profiles/accounts/{account-id}";
+        }
+        else{
+            url = "https://app.factors.ai/profiles/people";
+        }
+        let obj = {
+            "DisplayName": "Factors Activity URL",
+            "PropValue": url
+        }
+        payloadProps['MessageProperty'].push(obj);
+    }
+    
     return (
         <div>
 

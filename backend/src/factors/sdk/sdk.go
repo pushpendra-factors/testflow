@@ -676,7 +676,7 @@ func Track(projectId int64, request *TrackPayload,
 	pageURLProp := U.GetPropertyValueAsString((*eventProperties)[U.EP_PAGE_URL])
 
 	if C.IsCompanyEnrichmentV1Enabled(projectId) {
-		FillCompanyIdentificationUserProperties(projectId, clientIP, projectSettings, userProperties, request.UserId, isoCode, pageURL)
+		FillCompanyIdentificationUserProperties(projectId, clientIP, projectSettings, userProperties, eventProperties, request.UserId, isoCode, pageURLProp)
 	} else {
 		//Fetching feature flags to check of feature is enabled on the plan.
 		factorsDeanonymisationEnabled, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_FACTORS_DEANONYMISATION, false)
@@ -849,7 +849,7 @@ func Track(projectId int64, request *TrackPayload,
 	return http.StatusOK, response
 }
 
-func FillCompanyIdentificationUserProperties(projectId int64, clientIP string, projectSettings *model.ProjectSetting, userProperties *U.PropertiesMap, userId string, isoCode string, pageUrl string) {
+func FillCompanyIdentificationUserProperties(projectId int64, clientIP string, projectSettings *model.ProjectSetting, userProperties *U.PropertiesMap, eventProperties *U.PropertiesMap, userId string, isoCode string, pageUrl string) {
 
 	var customerClearbit clearbit.CustomerClearbit
 	var customerSixSignal sixsignal.CustomerSixSignal
@@ -860,7 +860,7 @@ func FillCompanyIdentificationUserProperties(projectId int64, clientIP string, p
 	} else if enrichByCustomerSixSignal, _ := customerSixSignal.IsEligible(projectSettings); enrichByCustomerSixSignal {
 		customerSixSignal.Enrich(projectSettings, userProperties, userId, clientIP)
 	} else if enrichByFactorsDeanon, _ := factorsDeanon.IsEligible(projectSettings, isoCode, pageUrl); enrichByFactorsDeanon {
-		domain, status := factorsDeanon.Enrich(projectSettings, userProperties, userId, clientIP)
+		domain, status := factorsDeanon.Enrich(projectSettings, userProperties, eventProperties, userId, clientIP)
 		if status == 1 {
 			factorsDeanon.Meter(projectId, domain)
 		}

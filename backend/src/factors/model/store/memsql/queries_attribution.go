@@ -149,7 +149,7 @@ func (store *MemSQL) GetAttributionV1Dashboard(projectId int64) (*model.Dashboar
 	return dashboard, http.StatusFound
 }
 
-// GetAttributionDashboardUnitNamesImpactedByCustomKPI returns list of dashboards unit names (query title) which is dependant on custom KPI
+// GetAttributionDashboardUnitNamesImpactedByCustomKPI returns list of dashboards unit names (query title) which is dependent on custom KPI
 func (store *MemSQL) GetAttributionDashboardUnitNamesImpactedByCustomKPI(projectID int64, customMetricName string) ([]string, int) {
 
 	logFields := log.Fields{
@@ -235,6 +235,56 @@ func (store *MemSQL) GetAttributionDashboardUnitNamesImpactedByCustomKPI(project
 	return impactedDashboardUnitNames, http.StatusFound
 }
 
+// GetAttributionSettingsKPIListForCustomKPI returns the custom KPI metric name if exists in the attribution's settings page.
+func (store *MemSQL) GetAttributionSettingsKPIListForCustomKPI(projectID int64, customMetricName string) ([]string, int) {
+
+	logFields := log.Fields{
+		"project_id":         projectID,
+		"custom_metric_name": customMetricName,
+	}
+	logCtx := log.WithFields(logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	impactedKPIAttributionConfigs := make([]string, 0)
+
+	// "value": "Pipeline"}
+	customMetricNameInAttributionKPIConfig := "\"value\":\"" + customMetricName + "\"}"
+
+	// pulling project setting to build attribution query
+	settings, errCode := store.GetProjectSetting(projectID)
+	if errCode != http.StatusFound {
+		return impactedKPIAttributionConfigs, http.StatusNotFound
+	}
+
+	attributionConfig, err1 := decodeAttributionConfig(settings.AttributionConfig)
+	if err1 != nil {
+		return impactedKPIAttributionConfigs, http.StatusNotFound
+	}
+
+	jsonString, err1 := json.Marshal(attributionConfig.KpisToAttribute)
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"jsonString": jsonString, "string(jsonString)": string(jsonString), "err": err1}).
+			Warn("04 GetAttributionSettingsKPIListForCustomKPI")
+	}
+	if err1 != nil {
+		return impactedKPIAttributionConfigs, http.StatusNotFound
+	}
+
+	// match the config name with custom kpi name
+	if strings.Contains(string(jsonString), customMetricNameInAttributionKPIConfig) {
+		if C.GetAttributionDebug() == 1 {
+			logCtx.WithFields(log.Fields{"jsonString": string(jsonString), "string(jsonString)": string(jsonString),
+				"customMetricNameInAttributionKPIConfig": customMetricNameInAttributionKPIConfig,
+				"customMetricName":                       customMetricName,
+			}).
+				Warn("05 GetAttributionSettingsKPIListForCustomKPI")
+		}
+		impactedKPIAttributionConfigs = append(impactedKPIAttributionConfigs, customMetricName)
+	}
+	return impactedKPIAttributionConfigs, http.StatusFound
+
+}
+
 // DeleteAttributionDashboardUnitAndQuery deletes query and corresponding dashboard unit for given project id
 func (store *MemSQL) DeleteAttributionDashboardUnitAndQuery(projectID int64, queryID int64, agentUUID string, dashboardId int64, unitId int64) (int, string) {
 
@@ -260,4 +310,19 @@ func (store *MemSQL) DeleteAttributionDashboardUnitAndQuery(projectID int64, que
 	}
 
 	return http.StatusAccepted, "Successfully deleted."
+}
+
+// decodeAttributionConfig decode attribution config from project settings to map
+func decodeAttributionConfig(config *postgres.Jsonb) (model.AttributionConfig, error) {
+	attributionConfig := model.AttributionConfig{}
+	if config == nil {
+		return attributionConfig, nil
+	}
+
+	err := json.Unmarshal(config.RawMessage, &attributionConfig)
+	if err != nil {
+		return attributionConfig, err
+	}
+
+	return attributionConfig, nil
 }

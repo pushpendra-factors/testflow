@@ -136,11 +136,11 @@ func GetEngagementLevelBucketConfig(c *gin.Context) (interface{}, int, string, s
 	engagementBucketsRequest.Ranges = make([]M.Bucket, 4)
 
 	buckets, statusCode := store.GetStore().GetEngagementLevelsByProject(projectId)
-	if statusCode == http.StatusNotFound && buckets == nil {
+	if statusCode != http.StatusFound {
 		logCtx.Info("Getting default engagement buckets")
 		engagementBucketsRequest = model.DefaultEngagementBuckets()
 	} else {
-		engagementBucketsRequest = *buckets
+		engagementBucketsRequest = buckets
 	}
 
 	return engagementBucketsRequest, http.StatusFound, "", "", false

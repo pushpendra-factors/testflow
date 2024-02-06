@@ -119,7 +119,7 @@ function AnalysisHeader({
   const conditionalRouteBackCheck = useCallback(() => {
     let navigatedFromDashboardExistingReports =
       location.state?.navigatedFromDashboardExistingReports;
-    
+
     const navigatedFromDashboardWithId = location.state?.navigatedFromDashboard;
     if (navigatedFromDashboardExistingReports) {
       // Just moving back to / route
@@ -209,22 +209,6 @@ function AnalysisHeader({
 
   const renderSaveQueryComp = () => {
     if (!requestQuery) {
-      // if (
-      //   queryType === QUERY_TYPE_ATTRIBUTION ||
-      //   queryType === QUERY_TYPE_FUNNEL ||
-      //   queryType === QUERY_TYPE_KPI
-      // ) {
-      //   let flowID = '';
-      //   if (queryType === QUERY_TYPE_ATTRIBUTION) {
-      //     flowID = USERFLOW_CONFIG_ID?.AttributionQueryBuilder;
-      //   }
-      //   if (queryType === QUERY_TYPE_FUNNEL) {
-      //     flowID = USERFLOW_CONFIG_ID?.FunnelSQueryBuilder;
-      //   }
-      //   if (queryType === QUERY_TYPE_KPI) {
-      //     flowID = USERFLOW_CONFIG_ID?.KPIQueryBuilder;
-      //   }
-
       //   return (
       //     <Button
       //       size='large'

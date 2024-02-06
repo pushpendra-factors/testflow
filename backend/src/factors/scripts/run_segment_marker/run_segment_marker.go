@@ -45,6 +45,7 @@ func main() {
 	memSQLUseExactConnectionsConfig := flag.Bool("memsql_use_exact_connection_config", false, "Use exact connection for open and idle as given.")
 	memSQLDBMaxOpenConnections := flag.Int("memsql_max_open_connections", 100, "Max no.of open connections allowed on connection pool of memsql")
 	memSQLDBMaxIdleConnections := flag.Int("memsql_max_idle_connections", 50, "Max no.of idle connections allowed on connection pool of memsql")
+	bucketName := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "")
 
 	flag.Parse()
 
@@ -91,6 +92,7 @@ func main() {
 
 	C.InitConf(config)
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
+	C.InitFilemanager(*bucketName, *env, config)
 
 	err := C.InitDB(*config)
 	if err != nil {

@@ -3,6 +3,7 @@ package event_user_cache
 import (
 	"encoding/json"
 	cacheRedis "factors/cache/redis"
+	"factors/config"
 	"factors/model/model"
 	U "factors/util"
 	"strconv"
@@ -13,94 +14,124 @@ import (
 )
 
 func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, bool) {
-	// Get all projects sorted set
-	// Zrange for all the keys
-	// Rollup data
-	// delete the sorted set
+	rollupLookback := 0
+	if _, exists := configs["rollupLookback"]; exists {
+		rollupLookback = configs["rollupLookback"].(int)
+	}
 
-	rollupLookback := configs["rollupLookback"].(int)
+	deleteRollupAfterAddingToAggregate := 0
+	if _, exists := configs["deleteRollupAfterAddingToAggregate"]; exists {
+		deleteRollupAfterAddingToAggregate = configs["deleteRollupAfterAddingToAggregate"].(int)
+	}
 
-	logCtx := log.WithField("config", configs)
-	logCtx.Info("Starting rollup sorted set job.")
+	log.WithField("config", configs).Info("Starting rollup sorted set job.")
 
 	var isCurrentDay bool
 	currentDate := U.TimeNowZ()
+
+	logCtx := log.WithField("rollup_lookback", rollupLookback)
+
+	allProjects := map[string]bool{}
 	for i := 0; i <= rollupLookback; i++ {
-		isCurrentDay = i == 0
 		currentTimeDatePart := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
 		uniqueUsersCountKey, err := model.UserCountAnalyticsCacheKey(
 			currentTimeDatePart)
-		logCtx = logCtx.WithField("unique_users_count_key", uniqueUsersCountKey)
 		logCtx.WithError(err).Info("Got unique users count key.")
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to get cache key - uniqueEventsCountKey")
 			return nil, false
 		}
 
-		allProjects, err := cacheRedis.ZrangeWithScoresPersistent(true, uniqueUsersCountKey)
-		log.WithField("projects", allProjects).Info("AllProjects")
+		projects, err := cacheRedis.ZrangeWithScoresPersistent(true, uniqueUsersCountKey)
 		if err != nil {
-			log.WithError(err).Error("Failed to get projects")
+			logCtx.WithError(err).Error("Failed to get projects")
 			return nil, false
 		}
-		for id, _ := range allProjects {
-			projId, _ := strconv.Atoi(id)
-			projectID := int64(projId)
-			log.WithField("ProjectId", projectID).Info("Starting RollUp")
+
+		for k := range projects {
+			allProjects[k] = true
+		}
+	}
+
+	logCtx.WithField("projects", allProjects).Info("Got all projects.")
+
+	for id := range allProjects {
+		projId, _ := strconv.Atoi(id)
+		projectID := int64(projId)
+
+		logCtx := logCtx.WithField("project_id", projectID).WithField("tag", "rollup")
+
+		logCtx.Info("Starting rollup for project.")
+
+		// eventNameAndPropertyKeysCacheByDate contains []U.CachePropertyValueWithTimestamp of multiple dates per event_name+property_key.
+		// U.CachePropertyValueWithTimestamp contains map of multiple values of a specific day.
+		eventNameAndPropertyKeysCacheByDate := make(map[string]map[string][]U.CachePropertyValueWithTimestamp)
+
+		rollupsAddedToAggregate := make([]*cacheRedis.Key, 0)
+		for i := 0; i <= rollupLookback; i++ {
+			isCurrentDay = i == 0
+			currentTimeDatePart := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
+
+			logCtx.Info("Starting rollup for a project and rollback.")
+
 			eventNamesSmartKeySortedSet, err := model.GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
 				currentTimeDatePart)
 			if err != nil {
-				log.WithError(err).Error("Failed to get cache key - smart events")
-				return nil, false
+				logCtx.WithError(err).Error("Failed to get cache key - smart events")
+				continue
 			}
 			eventNamesPageViewSortedSet, err := model.GetPageViewEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
 				currentTimeDatePart)
 			if err != nil {
-				log.WithError(err).Error("Failed to get cache key - pageView events")
-				return nil, false
+				logCtx.WithError(err).Error("Failed to get cache key - pageView events")
+				continue
 			}
 			eventNamesKeySortedSet, err := model.GetEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
 				currentTimeDatePart)
 			if err != nil {
-				log.WithError(err).Error("Failed to get cache key - events")
-				return nil, false
+				logCtx.WithError(err).Error("Failed to get cache key - events")
+				continue
 			}
 			propertyCategoryKeySortedSet, err := model.GetPropertiesByEventCategoryCacheKeySortedSet(projectID, currentTimeDatePart)
 			if err != nil {
-				log.WithError(err).Error("Failed to get cache key - properties")
+				logCtx.WithError(err).Error("Failed to get cache key - properties")
 				return nil, false
 			}
 			valueKeySortedSet, err := model.GetValuesByEventPropertyCacheKeySortedSet(projectID, currentTimeDatePart)
 			if err != nil {
-				log.WithError(err).Error("Failed to get cache key - values")
-				return nil, false
+				logCtx.WithError(err).Error("Failed to get cache key - values")
+				continue
 			}
 
 			userPropertyCategoryKeySortedSet, err := model.GetUserPropertiesCategoryByProjectCacheKeySortedSet(projectID, currentTimeDatePart)
 			if err != nil {
-				log.WithError(err).Error("Failed to get cache key - property category")
-				return nil, false
+				logCtx.WithError(err).Error("Failed to get cache key - property category")
+				continue
 			}
 			userValueKeySortedSet, err := model.GetValuesByUserPropertyCacheKeySortedSet(projectID, currentTimeDatePart)
 			if err != nil {
-				log.WithError(err).Error("Failed to get cache key - values")
-				return nil, false
+				logCtx.WithError(err).Error("Failed to get cache key - values")
+				continue
 			}
 
 			smartEvents, err := cacheRedis.ZrangeWithScoresPersistent(false, eventNamesSmartKeySortedSet)
-			log.WithField("Count", len(smartEvents)).Info("SmartEventCount")
+			logCtx.WithField("Count", len(smartEvents)).Info("Got SmartEventCount")
 			pageViewEvents, err := cacheRedis.ZrangeWithScoresPersistent(false, eventNamesPageViewSortedSet)
-			log.WithField("Count", len(pageViewEvents)).Info("PageViewEventsCount")
+			logCtx.WithField("Count", len(pageViewEvents)).Info("Got PageViewEventsCount")
+
 			events, err := cacheRedis.ZrangeWithScoresPersistent(false, eventNamesKeySortedSet)
-			log.WithField("Count", len(events)).Info("EventsCount")
+			logCtx.WithField("Count", len(events)).Info("Got EventsCount")
 			properties, err := cacheRedis.ZrangeWithScoresPersistent(false, propertyCategoryKeySortedSet)
-			log.WithField("Count", len(properties)).Info("PropertiesCount")
+			logCtx.WithField("Count", len(properties)).Info("Got PropertiesCount")
 			values, err := cacheRedis.ZrangeWithScoresPersistent(false, valueKeySortedSet)
-			log.WithField("Count", len(values)).Info("ValuesCount")
+			logCtx.WithField("Count", len(values)).Info("Got ValuesCount")
+
 			userProperties, err := cacheRedis.ZrangeWithScoresPersistent(false, userPropertyCategoryKeySortedSet)
-			log.WithField("Count", len(userProperties)).Info("UserPropertiesCount")
+			logCtx.WithField("Count", len(userProperties)).Info("Got UserPropertiesCount")
 			userValues, err := cacheRedis.ZrangeWithScoresPersistent(false, userValueKeySortedSet)
-			log.WithField("Count", len(userValues)).Info("UserValuesCount")
+			logCtx.WithField("Count", len(userValues)).Info("Got UserValuesCount")
+
+			logCtx.Info("Received all range counts.")
 
 			if len(events) > 0 {
 				// Events
@@ -111,13 +142,15 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 				eventNamesKey, err := model.GetEventNamesOrderByOccurrenceAndRecencyRollUpCacheKey(projectID, currentTimeDatePart)
 				enEventCache, err := json.Marshal(eventNamesRollupObj)
 				if err != nil {
-					log.WithError(err).Error("Failed to marshall event names")
+					logCtx.WithError(err).Error("Failed to marshall event names")
 					continue
 				}
 				err = cacheRedis.SetPersistent(eventNamesKey, string(enEventCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
 				if err != nil {
-					log.WithError(err).Error("Failed to set cache")
+					logCtx.WithError(err).Error("Failed to set events rollup cache")
 				}
+
+				logCtx.Info("Cached events rollup.")
 
 				// event properties
 				propertiesMap := make(map[string]map[string]string)
@@ -137,7 +170,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 						cacheEventPropertyObject := GetCachePropertyObject(properties, currentTimeDatePart)
 						enEventPropertiesCache, err := json.Marshal(cacheEventPropertyObject)
 						if err != nil {
-							log.WithError(err).Error("Failed to marshall - event properties")
+							logCtx.WithError(err).Error("Failed to marshall - event properties")
 							continue
 						}
 						eventPropertiesToCache[eventPropertiesKey] = string(enEventPropertiesCache)
@@ -146,8 +179,10 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 				if len(eventPropertiesToCache) > 0 {
 					err = cacheRedis.SetPersistentBatch(eventPropertiesToCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
 					if err != nil {
-						log.WithError(err).Error("Failed to set cache")
+						logCtx.WithError(err).Error("Failed to set cache")
 					}
+
+					logCtx.Info("Cached event_properties rollup.")
 				}
 
 				// user properties
@@ -156,13 +191,15 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 					userPropertiesKey, err := model.GetUserPropertiesCategoryByProjectRollUpCacheKey(projectID, currentTimeDatePart)
 					usPropertyCache, err := json.Marshal(userPropertiesRollupObj)
 					if err != nil {
-						log.WithError(err).Error("Failed to marshall user properties")
+						logCtx.WithError(err).Error("Failed to marshall user properties")
 						continue
 					}
 					err = cacheRedis.SetPersistent(userPropertiesKey, string(usPropertyCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
 					if err != nil {
-						log.WithError(err).Error("Failed to set cache")
+						logCtx.WithError(err).Error("Failed to set cache user properties rollup.")
 					}
+
+					logCtx.Info("Cached user_properties rollup.")
 				}
 
 				// event property values
@@ -183,25 +220,43 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 				}
 				eventPropertyValuesToCache := make(map[*cacheRedis.Key]string)
 				for eventName, propertyValue := range propertyValues {
+					if _, isExists := eventNameAndPropertyKeysCacheByDate[eventName]; config.IsAggrEventPropertyValuesCacheEnabled(projectID) && !isExists {
+						eventNameAndPropertyKeysCacheByDate[eventName] = make(map[string][]U.CachePropertyValueWithTimestamp)
+					}
+
 					for property, values := range propertyValue {
 						if len(values) > 0 {
 							eventPropertyValuesKey, _ := model.GetValuesByEventPropertyRollUpCacheKey(projectID, eventName, property, currentTimeDatePart)
 							cacheEventPropertyValueObject := GetCachePropertyValueObject(values, currentTimeDatePart)
 							enEventPropertyValuesCache, err := json.Marshal(cacheEventPropertyValueObject)
 							if err != nil {
-								log.WithError(err).Error("Failed to marshall - property values")
+								logCtx.WithError(err).Error("Failed to marshall - property values")
 								continue
 							}
 							eventPropertyValuesToCache[eventPropertyValuesKey] = string(enEventPropertyValuesCache)
+
+							// Adding to aggregate will work till prev day.
+							if config.IsAggrEventPropertyValuesCacheEnabled(projectID) && !isCurrentDay {
+								if _, isExsits := eventNameAndPropertyKeysCacheByDate[eventName][property]; !isExsits {
+									eventNameAndPropertyKeysCacheByDate[eventName][property] = make([]U.CachePropertyValueWithTimestamp, 0)
+								}
+								eventNameAndPropertyKeysCacheByDate[eventName][property] = append(
+									eventNameAndPropertyKeysCacheByDate[eventName][property],
+									cacheEventPropertyValueObject,
+								)
+								rollupsAddedToAggregate = append(rollupsAddedToAggregate, eventPropertyValuesKey)
+							}
 						}
 					}
 				}
 				if len(eventPropertyValuesToCache) > 0 {
 					err = cacheRedis.SetPersistentBatch(eventPropertyValuesToCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
 					if err != nil {
-						log.WithError(err).Error("Failed to set cache")
+						logCtx.WithError(err).Error("Failed to set cache event property values rollup")
 					}
 				}
+
+				logCtx.Info("Cached event property values rollup.")
 
 				// user property values
 				userPropertyValues := make(map[string]map[string]string)
@@ -222,7 +277,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 						cacheUserPropertyValueObject := GetCachePropertyValueObject(values, currentTimeDatePart)
 						usEventPropertyValuesCache, err := json.Marshal(cacheUserPropertyValueObject)
 						if err != nil {
-							log.WithError(err).Error("Failed to marshall - user property values")
+							logCtx.WithError(err).Error("Failed to marshall - user property values")
 							continue
 						}
 						userPropertyValuesToCache[userPropertyValuesKey] = string(usEventPropertyValuesCache)
@@ -231,7 +286,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 				if len(userPropertyValuesToCache) > 0 {
 					err = cacheRedis.SetPersistentBatch(userPropertyValuesToCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
 					if err != nil {
-						log.WithError(err).Error("Failed to set cache")
+						logCtx.WithError(err).Error("Failed to set cache user property values.")
 					}
 				}
 
@@ -246,7 +301,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 						userValueKeySortedSet,
 					)
 					if err != nil {
-						log.WithError(err).Error("Failed to del cache keys")
+						logCtx.WithError(err).Error("Failed to del cache keys")
 						return nil, false
 					}
 				}
@@ -254,28 +309,28 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 
 			groupPropertyCategoryKeySortedSet, err := model.GetPropertiesByGroupCategoryCacheKeySortedSet(projectID, currentTimeDatePart)
 			if err != nil {
-				log.WithError(err).Error("Failed to get cache key - group property category")
+				logCtx.WithError(err).Error("Failed to get cache key - group property category")
 				return nil, false
 			}
 
 			groupProperties, err := cacheRedis.ZrangeWithScoresPersistent(false, groupPropertyCategoryKeySortedSet)
-			log.WithField("Count", len(groupProperties)).Info("GroupPropertiesCount")
+			logCtx.WithField("Count", len(groupProperties)).Info("GroupPropertiesCount")
 			if err != nil {
-				log.WithError(err).Error("Failed to get cache redis key - group property category")
+				logCtx.WithError(err).Error("Failed to get cache redis key - group property category")
 				return nil, false
 			}
 
 			if len(groupProperties) > 0 {
 				groupValueKeySortedSet, err := model.GetValuesByGroupPropertyCacheKeySortedSet(projectID, currentTimeDatePart)
 				if err != nil {
-					log.WithError(err).Error("Failed to get cache key - group values")
+					logCtx.WithError(err).Error("Failed to get cache key - group values")
 					return nil, false
 				}
 
 				groupValues, err := cacheRedis.ZrangeWithScoresPersistent(false, groupValueKeySortedSet)
-				log.WithField("Count", len(groupValues)).Info("GroupValuesCount")
+				logCtx.WithField("Count", len(groupValues)).Info("GroupValuesCount")
 				if err != nil {
-					log.WithError(err).Error("Failed to get cache redis key - group values")
+					logCtx.WithError(err).Error("Failed to get cache redis key - group values")
 					return nil, false
 				}
 
@@ -297,7 +352,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 						cacheGroupPropertyObject := GetCachePropertyObject(properties, currentTimeDatePart)
 						enGroupPropertiesCache, err := json.Marshal(cacheGroupPropertyObject)
 						if err != nil {
-							log.WithError(err).Error("Failed to marshall - group properties")
+							logCtx.WithError(err).Error("Failed to marshall - group properties")
 							continue
 						}
 						groupPropertiesToCache[groupPropertiesKey] = string(enGroupPropertiesCache)
@@ -306,9 +361,11 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 				if len(groupPropertiesToCache) > 0 {
 					err = cacheRedis.SetPersistentBatch(groupPropertiesToCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
 					if err != nil {
-						log.WithError(err).Error("Failed to set cache")
+						logCtx.WithError(err).Error("Failed to set cache group properties rollup in batch.")
 					}
 				}
+
+				logCtx.Info("Cached group properties rollup.")
 
 				// group property values
 				groupPropertyValues := make(map[string]map[string]map[string]string)
@@ -334,7 +391,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 							cacheGroupPropertyValueObject := GetCachePropertyValueObject(values, currentTimeDatePart)
 							enGroupPropertyValuesCache, err := json.Marshal(cacheGroupPropertyValueObject)
 							if err != nil {
-								log.WithError(err).Error("Failed to marshall - group property values")
+								logCtx.WithError(err).Error("Failed to marshall - group property values")
 								continue
 							}
 							groupPropertyValuesToCache[groupPropertyValuesKey] = string(enGroupPropertyValuesCache)
@@ -344,9 +401,11 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 				if len(groupPropertyValuesToCache) > 0 {
 					err = cacheRedis.SetPersistentBatch(groupPropertyValuesToCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
 					if err != nil {
-						log.WithError(err).Error("Failed to set cache")
+						logCtx.WithError(err).Error("Failed to set cache group property values rollup in batch.")
 					}
 				}
+
+				logCtx.Info("Cached group property values rollup.")
 
 				if isCurrentDay == false {
 					err = cacheRedis.DelPersistent(
@@ -354,13 +413,126 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 						groupValueKeySortedSet,
 					)
 					if err != nil {
-						log.WithError(err).Error("Failed to del cache keys")
+						logCtx.WithError(err).Error("Failed to del cache keys")
 						return nil, false
 					}
 				}
 			}
 		}
+
+		if !config.IsAggrEventPropertyValuesCacheEnabled(projectID) {
+			continue
+		}
+
+		logCtx = logCtx.WithField("tag", "aggregate_cache")
+		logCtx.Info("Starting aggregate event property values.")
+
+		// Run through event property values rollups of all recent dates and
+		// add to aggregated cache excluding the current date.
+		eventPropertyValuesAggregateCache := make(map[*cacheRedis.Key]string)
+		for eventName, propertyWithValuesByDate := range eventNameAndPropertyKeysCacheByDate {
+			for property, valuesByDate := range propertyWithValuesByDate {
+				logCtx = logCtx.WithField("property", property).WithField("event_name", eventName)
+
+				eventPropertyValuesAggCacheKey, _ := model.GetValuesByEventPropertyRollUpAggregateCacheKey(
+					projectID, eventName, property)
+
+				// Transform aggregate to tuple to allow aggregation with new rollups.
+				existingAggCache, aggCacheExists, err := cacheRedis.GetIfExistsPersistent(eventPropertyValuesAggCacheKey)
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to get existing values cache aggregate.")
+					continue
+				}
+
+				var existingAggregate U.CacheEventPropertyValuesAggregate
+				if aggCacheExists {
+					err = json.Unmarshal([]byte(existingAggCache), &existingAggregate)
+					if err != nil {
+						logCtx.WithError(err).Error("Failed to unmarshal values cache aggregate.")
+						continue
+					}
+				}
+
+				var removeEarliestAggregateCount bool
+				if len(existingAggregate.EarliestCount.PropertyValue) > 0 {
+					var earliestTimestampInSecs int64
+					for k := range existingAggregate.EarliestCount.PropertyValue {
+						earliestTimestampInSecs = existingAggregate.EarliestCount.PropertyValue[k].LastSeenTimestamp
+						break
+					}
+					// Earliest timestamp is greater than the rollup days.
+					if (U.TimeNowUnix() - earliestTimestampInSecs) > int64(rollupLookback*86400) {
+						removeEarliestAggregateCount = true
+					}
+				}
+
+				valuesListFromAggMap := make(map[string]U.CountTimestampTuple)
+				for i := range existingAggregate.NameCountTimestampCategoryList {
+					exa := existingAggregate.NameCountTimestampCategoryList[i]
+					valuesListFromAggMap[exa.Name] = U.CountTimestampTuple{LastSeenTimestamp: exa.Timestamp, Count: exa.Count}
+				}
+
+				// Subtracting the older than 15 days (based on rollup lookback) count from the aggregate.
+				// This helps maintaining only last 15 days of count.
+				if removeEarliestAggregateCount {
+					for k := range existingAggregate.EarliestCount.PropertyValue {
+						if valuesListFromAggMap[k].Count > 0 {
+							tuple := valuesListFromAggMap[k]
+							tuple.Count = tuple.Count - existingAggregate.EarliestCount.PropertyValue[k].Count
+							valuesListFromAggMap[k] = tuple
+						}
+					}
+
+					// Reset earliest count to avoid multiple removal from aggregate.
+					existingAggregate.EarliestCount = U.CachePropertyValueWithTimestamp{}
+				}
+
+				// Add existing aggregate to next compute.
+				valuesListFromAgg := U.CachePropertyValueWithTimestamp{PropertyValue: valuesListFromAggMap}
+				valuesList := make([]U.CachePropertyValueWithTimestamp, 0)
+				valuesList = append(valuesList, valuesByDate...)
+				valuesList = append(valuesList, valuesListFromAgg)
+
+				// Assigning the current earliest date added to aggregates.
+				if len(valuesByDate) > 0 {
+					existingAggregate.EarliestCount = valuesByDate[0]
+				}
+
+				aggregatedValues := U.AggregatePropertyValuesAcrossDate(valuesList)
+				aggregatedValuesCache := U.CacheEventPropertyValuesAggregate{
+					NameCountTimestampCategoryList: aggregatedValues,
+					EarliestCount:                  existingAggregate.EarliestCount,
+				}
+
+				eventPropertyValuesAggCache, err := json.Marshal(aggregatedValuesCache)
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to marshal aggregate values cache for event property values.")
+					continue
+				}
+				eventPropertyValuesAggregateCache[eventPropertyValuesAggCacheKey] = string(eventPropertyValuesAggCache)
+			}
+		}
+
+		if len(eventPropertyValuesAggregateCache) > 0 {
+			err := cacheRedis.SetPersistentBatch(eventPropertyValuesAggregateCache, 0)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to set aggregate cache for event properties.")
+				continue
+			}
+		}
+
+		// Delete rollups only if enabled for backward compatibility on rollback.
+		if deleteRollupAfterAddingToAggregate == 1 {
+			err := cacheRedis.DelPersistent(
+				rollupsAddedToAggregate...,
+			)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to delete the rollup after added to aggregate.")
+				continue
+			}
+		}
 	}
+
 	return nil, true
 }
 

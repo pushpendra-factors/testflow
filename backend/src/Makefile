@@ -179,7 +179,7 @@ upload-add-session: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/add-session-job:$(TAG)
 
 pack-import-ads:
-	docker build -t us.gcr.io/factors-$(ENV)/import-ads-job:$(TAG) -f Dockerfile.import_ads_job .
+	docker buildx build --platform linux/amd64 -t us.gcr.io/factors-$(ENV)/import-ads-job:$(TAG) -f Dockerfile.import_ads_job .
 
 upload-import-ads: export IMAGE_NAME=import-ads-job
 upload-import-ads: notify-deployment

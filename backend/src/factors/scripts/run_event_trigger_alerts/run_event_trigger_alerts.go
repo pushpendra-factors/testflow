@@ -594,6 +594,22 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 	if (retry && strings.EqualFold(WEBHOOK, sendTo)) || (!retry && alertConfiguration.Webhook) {
 
 		var response = make(map[string]interface{})
+
+		//Adding factors account URL to webhook payload
+		if !isAccounAlert {
+			accountUrl = "https://app.factors.ai/profiles/people"
+		} else if isAccounAlert && accountUrl == "" {
+			accountUrl = "https://app.factors.ai"
+		}
+		
+		if alertConfiguration.IsFactorsUrlInPayload {
+			idx := len(alert.Message.MessageProperty)
+			alert.Message.MessageProperty[fmt.Sprintf("%d", idx)] = model.MessagePropMapStruct{
+				DisplayName: "Factors Activity URL",
+				PropValue:   accountUrl,
+			}
+		}
+
 		if strings.Contains(alertConfiguration.WebhookURL, ParagonUrlRune) {
 			response, err = paragon.SendPayloadToParagonForTheAlert(eta.ProjectID, eta.ID, &alertConfiguration, alert)
 			if err != nil {

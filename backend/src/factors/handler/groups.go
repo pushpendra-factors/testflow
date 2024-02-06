@@ -302,7 +302,7 @@ func GetGroupPropertyValuesHandler(c *gin.Context) {
 		}
 
 		if strings.EqualFold(U.GROUP_EVENT_NAME_ENGAGEMENT_LEVEL, propertyName) {
-			propertyValues := []string{"Hot", "Warm", "Cold", "Ice"}
+			propertyValues := []string{model.ENGAGEMENT_LEVEL_HOT, model.ENGAGEMENT_LEVEL_WARM, model.ENGAGEMENT_LEVEL_COOL, model.ENGAGEMENT_LEVEL_ICE}
 			c.JSON(http.StatusOK, U.FilterEmptyArrayValues(propertyValues))
 			return
 		}
