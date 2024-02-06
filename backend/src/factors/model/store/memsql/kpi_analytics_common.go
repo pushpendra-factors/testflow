@@ -104,6 +104,7 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQuer
 	if finalStatusCode != http.StatusOK {
 		return []model.QueryResult{{}, {}}, finalStatusCode
 	}
+
 	finalResultantResults, finalStatusCode = model.GetFinalResultantResultsForKPI(reqID, kpiQueryGroup, mapOfNonGBTDerivedKPIToInternalKPIToResults, mapOfGBTDerivedKPIToInternalKPIToResults,
 		mapOfNonGBTKPINormalQueryToResults, mapOfGBTKPINormalQueryToResults, externalGBTQueryToInternalQueries, externalNonGBTQueryToInternalQueries)
 	if finalStatusCode == 2 {

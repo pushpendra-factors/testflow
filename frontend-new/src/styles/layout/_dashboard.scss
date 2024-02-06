@@ -151,11 +151,11 @@
 }
 
 .fa-global-search--input {
-  background-color: $fa-color-neutral-grey-9;
+  background-color: $fa-color-neutral-grey-10;
   border: none;
   border-radius: 6px;
   width: 340px;
-  height: 36px;
+  height: 40px;
   box-shadow: none;
   transition: all 0.2s;
   &:hover {
@@ -184,19 +184,6 @@
     }
   }
 }
-
-.fa-global-search--input-placeholder-lg {
-  &.ant-input-affix-wrapper-lg {
-    padding: 3px 30px 3px 40px;
-  }
-}
-
-.fa-global-search--input-placeholder-sm {
-  &.ant-input-affix-wrapper-lg {
-    padding: 3px 40px 3px 60px;
-  }
-}
-
 .fa-global-search--input-fw {
   width: 100%;
   &:hover {

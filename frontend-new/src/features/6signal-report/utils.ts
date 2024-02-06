@@ -1,17 +1,6 @@
 import React from 'react';
 import MomentTz from 'Components/MomentTz';
 import { getClickableTitleSorter, SortResults } from 'Utils/dataFormatter';
-import momentTz from 'moment-timezone';
-import { intersection } from 'lodash';
-import {
-  DATE_RANGE_TODAY_LABEL,
-  DATE_RANGE_YESTERDAY_LABEL,
-  DATE_RANGE_LABEL_LAST_7_DAYS,
-  getRangeByLabel
-} from 'Components/FaDatepicker/utils';
-import { PathUrls } from 'Routes/pathUrls';
-import TableCell from './ui/components/ReportTable/TableCell';
-import { ResultGroup, StringObject, WeekStartEnd, ShareApiData } from './types';
 import {
   SESSION_SPENT_TIME,
   KEY_LABELS,
@@ -26,12 +15,26 @@ import {
   INDUSTRY_KEY,
   ALL_CHANNEL
 } from './const';
+import { ResultGroup, StringObject, WeekStartEnd, ShareApiData } from './types';
+import momentTz from 'moment-timezone';
+import { intersection } from 'lodash';
+import TableCell from './ui/components/ReportTable/TableCell';
+import { APP_LAYOUT_ROUTES } from 'Routes/constants';
+import {
+  DATE_RANGE_TODAY_LABEL,
+  DATE_RANGE_YESTERDAY_LABEL,
+  DATE_RANGE_LABEL_LAST_7_DAYS,
+  getRangeByLabel
+} from 'Components/FaDatepicker/utils';
+import momentTimezone from 'moment-timezone';
 
-export const generateFirstAndLastDayOfLastWeeks = (n = 5): WeekStartEnd[] => {
+export const generateFirstAndLastDayOfLastWeeks = (
+  n: number = 5
+): WeekStartEnd[] => {
   const lastWeek = MomentTz().subtract(7, 'd');
-  const dateArray: WeekStartEnd[] = [...generateUnsavedReportDateRanges()];
+  let dateArray: WeekStartEnd[] = [...generateUnsavedReportDateRanges()];
 
-  // generating saved report dates
+  //generating saved report dates
   for (let i = 0; i < n; i++) {
     const day = MomentTz(lastWeek).subtract(7 * i, 'd');
     const weekStart = day.clone().startOf('week');
@@ -55,7 +58,7 @@ export const generateFirstAndLastDayOfLastWeeks = (n = 5): WeekStartEnd[] => {
 };
 
 export const generateUnsavedReportDateRanges = (): WeekStartEnd[] => {
-  const dateArray: WeekStartEnd[] = [];
+  let dateArray: WeekStartEnd[] = [];
   const dateValues = [
     DATE_RANGE_TODAY_LABEL,
     DATE_RANGE_YESTERDAY_LABEL,
@@ -82,15 +85,15 @@ export const generateUnsavedReportDateRanges = (): WeekStartEnd[] => {
 
 export const parseSavedReportDates = (dates: string[]): WeekStartEnd[] => {
   if (!dates || !dates?.length) return [];
-  const dateArray: WeekStartEnd[] = [];
+  let dateArray: WeekStartEnd[] = [];
   dates.forEach((dateValue: string) => {
     if (typeof dateValue !== 'string') return;
     const dateValueArray = dateValue?.trim()?.split('-');
     if (dateValueArray.length < 2) return;
     const fromEpoch = Number(dateValueArray[0]);
-    const fromDate = momentTz.unix(fromEpoch);
+    const fromDate = momentTimezone.unix(fromEpoch);
     const toEpoch = Number(dateValueArray[1]);
-    const toDate = momentTz.unix(toEpoch);
+    const toDate = momentTimezone.unix(toEpoch);
 
     const formattedRangeOption = `${fromDate.format(
       'MMM Do'
@@ -112,7 +115,7 @@ export const parseSavedReportDates = (dates: string[]): WeekStartEnd[] => {
 export const getFormattedRange = (
   from: number,
   to: number,
-  timezone = 'Asia/Kolkata'
+  timezone: string = 'Asia/Kolkata'
 ) => {
   const fromDay = momentTz.unix(from).tz(timezone);
   const toDay = momentTz.unix(to).tz(timezone);
@@ -141,8 +144,8 @@ export const parseResultGroupResponse = ({
   );
   const channelKeyIndex = headers.findIndex((header) => header === CHANNEL_KEY);
   if (!rows || !rows.length) return returnValue;
-  const uniqueCampains = new Set<string>();
-  const uniqueChannels = new Set<string>();
+  let uniqueCampains = new Set<string>();
+  let uniqueChannels = new Set<string>();
   rows.forEach((row) => {
     if (row) {
       if (row?.[campaignKeyIndex]) uniqueCampains.add(row[campaignKeyIndex]);
@@ -160,8 +163,7 @@ export const parseResultGroupResponse = ({
 export const getSortType = (header: string) => {
   if (header === SESSION_SPENT_TIME || header === PAGE_COUNT_KEY) {
     return 'numerical';
-  }
-  if (header === EMP_RANGE_KEY || header === REVENUE_RANGE_KEY) {
+  } else if (header === EMP_RANGE_KEY || header === REVENUE_RANGE_KEY) {
     return 'rangeNumeric';
   }
   return 'categorical';
@@ -178,10 +180,11 @@ const getColumnWidth = (header: string) => {
       return {
         width: 260
       };
+    } else {
+      return {
+        width: 350
+      };
     }
-    return {
-      width: 350
-    };
   }
   return {};
 };
@@ -194,7 +197,7 @@ export const getTableColumuns = (
   const { headers } = data;
   const tColumns = intersection(DEFAULT_COLUMNS, headers)
     .map((header: string, i: number) => {
-      const returnObj = {
+      let returnObj = {
         key: i,
         dataIndex: header,
         title: getClickableTitleSorter(
@@ -214,9 +217,9 @@ export const getTableColumuns = (
         render: (text: string, record: StringObject) =>
           // @ts-ignore
           React.createElement(TableCell, {
-            text,
-            record,
-            header
+            text: text,
+            record: record,
+            header: header
           }),
         ...getColumnWidth(header)
       };
@@ -237,7 +240,7 @@ export const getTableData = (
 ) => {
   const { rows, headers } = data;
   let dataSource: StringObject[] = rows?.map((row, i) => {
-    const rowObj: StringObject = {
+    let rowObj: StringObject = {
       key: String(i)
     };
     headers.forEach((header, j) => {
@@ -246,13 +249,13 @@ export const getTableData = (
 
     return rowObj;
   });
-  // filtering table data with selected Channel filter
+  //filtering table data with selected Channel filter
   if (selectedChannel && selectedChannel !== ALL_CHANNEL) {
-    dataSource = dataSource?.filter(
-      (data: StringObject) => data?.[CHANNEL_KEY] === selectedChannel
+    dataSource = dataSource?.filter((data: StringObject) =>
+      data?.[CHANNEL_KEY] === selectedChannel ? true : false
     );
   }
-  // filtering using selected campaigns
+  //filtering using selected campaigns
   if (
     selectedCampaigns &&
     Array.isArray(selectedCampaigns) &&
@@ -262,50 +265,58 @@ export const getTableData = (
       selectedCampaigns.includes(data?.[CAMPAIGN_KEY])
     );
   }
-  // filtering using search key
+  //filtering using search key
   if (searchText) {
-    dataSource = dataSource?.filter(
-      (data: StringObject) =>
-        data?.[COMPANY_KEY]?.toLowerCase()?.includes(searchText.toLowerCase())
+    dataSource = dataSource?.filter((data: StringObject) =>
+      data?.[COMPANY_KEY]?.toLowerCase()?.includes(searchText.toLowerCase())
     );
   }
   return SortResults(dataSource, sorter);
 };
 
-export const getDefaultTableColumns = () =>
-  DEFAULT_COLUMNS.map((key, index) => ({
-    index,
-    dataIndex: key,
-    title: getClickableTitleSorter(
-      // @ts-ignore
-      KEY_LABELS?.[key] || key,
-      { key, type: 'categorical', subtype: null },
-      {},
-      () => {
-        console.log('handle sorting');
-      },
-      'left',
-      'center',
-      'px-6 py-3'
-    )
-  }));
+export const getDefaultTableColumns = () => {
+  return DEFAULT_COLUMNS.map((key, index) => {
+    return {
+      index,
+      dataIndex: key,
+      title: getClickableTitleSorter(
+        // @ts-ignore
+        KEY_LABELS?.[key] || key,
+        { key: key, type: 'categorical', subtype: null },
+        {},
+        () => {
+          console.log('handle sorting');
+        },
+        'left',
+        'center',
+        'px-6 py-3'
+      )
+    };
+  });
+};
 
 export const checkStringEquality = (
   str1: string,
   str2: string,
-  caseSensitive = false
+  caseSensitive: boolean = false
 ): boolean => {
   if (caseSensitive) return str1 === str2;
   return str1?.toLowerCase() === str2?.toLowerCase();
 };
 
-export const getPublicUrl = (obj: ShareApiData, project_id: string): string =>
-  `${window.location.protocol}//${window.location.host}${PathUrls.VisitorIdentificationReport}?${SHARE_QUERY_PARAMS.queryId}=${obj.query_id}&${SHARE_QUERY_PARAMS.projectId}=${project_id}&${SHARE_QUERY_PARAMS.routeVersion}=${obj.route_version}`;
+export const getPublicUrl = (obj: ShareApiData, project_id: string): string => {
+  return (
+    window.location.protocol +
+    '//' +
+    window.location.host +
+    `${APP_LAYOUT_ROUTES.VisitorIdentificationReport.path}?${SHARE_QUERY_PARAMS.queryId}=${obj.query_id}&${SHARE_QUERY_PARAMS.projectId}=${project_id}&${SHARE_QUERY_PARAMS.routeVersion}=${obj.route_version}`
+  );
+};
 
 export const generateEllipsisOption = (values: string[], charLimit = 35) => {
   let text = '';
   values.every((value, i) => {
-    text += `${value}${i < values.length - 1 ? ', ' : ''}`;
+    text += value + `${i < values.length - 1 ? ', ' : ''}`;
     if (text.length > charLimit) {
       text = createEllipsis(text, charLimit, values.length - (i + 1));
       return false;
@@ -317,8 +328,9 @@ export const generateEllipsisOption = (values: string[], charLimit = 35) => {
 
 const createEllipsis = (text: string, charLimit: number, countLeft = 0) => {
   if (text.length < charLimit) return text;
-  if (text.length > charLimit && countLeft) {
+  else if (text.length > charLimit && countLeft) {
     return `${text.slice(0, charLimit)}...${countLeft}more`;
+  } else {
+    return `${text.slice(0, charLimit)}...`;
   }
-  return `${text.slice(0, charLimit)}...`;
 };

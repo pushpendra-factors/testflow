@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { connect, useDispatch } from 'react-redux';
+import { connect } from 'react-redux';
 import styles from './index.module.scss';
 import { SVG } from 'factorsComponents';
 import { bindActionCreators } from 'redux';
@@ -16,8 +16,6 @@ import {
   groupKPIPropertiesOnCategory,
   processProperties
 } from 'Utils/dataFormatter';
-import { ReactSortable } from 'react-sortablejs';
-import { setGroupByActionList } from 'Reducers/coreQuery/actions';
 
 function GroupBlock({
   groupByState,
@@ -35,7 +33,7 @@ function GroupBlock({
   const [isValueDDVisible, setValueDDVisible] = useState([false]);
   const [propSelVis, setSelVis] = useState([false]);
   const [filterOptions, setFilterOptions] = useState([]);
-  const dispatch = useDispatch();
+
   useEffect(() => {
     let commonProperties = [];
     if (propertyMaps) {
@@ -53,8 +51,8 @@ function GroupBlock({
     const kpiProperties = !isSameKPIGrp
       ? commonProperties
       : KPIConfigProps
-        ? KPIConfigProps
-        : [];
+      ? KPIConfigProps
+      : [];
     const kpiItemsgroupedByCategoryProperty = groupKPIPropertiesOnCategory(
       kpiProperties,
       'user',
@@ -241,64 +239,42 @@ function GroupBlock({
 
   const renderExistingBreakdowns = () => {
     if (groupByState.global.length < 1) return;
-    return (
-      <>
-        <ReactSortable
-          list={groupByState.global}
-          setList={(listItems) => {
-            dispatch(setGroupByActionList(listItems));
-          }}
-        >
-          {groupByState.global.map((opt, index) => (
-            <div
-              key={index}
-              className={`flex relative items-center mt-2 ${styles['draghandleparent']}`}
-            >
-              {
-                <>
-                  <div className={`flex relative`}>
-                    <div
-                      className={styles['draghandle']}
-                      style={{ cursor: 'pointer', margin: 'auto 2px' }}
-                    >
-                      <SVG name='drag'></SVG>
-                    </div>
-                    {renderGroupDisplayName(opt, index)}
-                    {isDDVisible[index] ? (
-                      <div className={`${styles.group_block__event_selector}`}>
-                        <GroupSelect
-                          options={filterOptions}
-                          searchPlaceHolder='Select Property'
-                          optionClickCallback={(option, group) =>
-                            onChange(option, group, index)
-                          }
-                          onClickOutside={() => triggerDropDown(index, true)}
-                          allowSearch={true}
-                          extraClass={
-                            styles.group_block__event_selector__select
-                          }
-                          allowSearchTextSelection={false}
-                        />
-                      </div>
-                    ) : null}
-                  </div>
-                  {renderGroupPropertyOptions(opt, index)}
-
-                  <Button
-                    type='text'
-                    onClick={() => delOption(index)}
-                    size={'small'}
-                    className={`fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button`}
-                  >
-                    <SVG name={'remove'} />
-                  </Button>
-                </>
-              }
+    return groupByState.global.map((opt, index) => (
+      <div key={index} className={`flex relative items-center mt-2`}>
+        {
+          <>
+            <div className={`flex relative`}>
+              {renderGroupDisplayName(opt, index)}
+              {isDDVisible[index] ? (
+                <div className={`${styles.group_block__event_selector}`}>
+                  <GroupSelect
+                    options={filterOptions}
+                    searchPlaceHolder='Select Property'
+                    optionClickCallback={(option, group) =>
+                      onChange(option, group, index)
+                    }
+                    onClickOutside={() => triggerDropDown(index, true)}
+                    allowSearch={true}
+                    extraClass={styles.group_block__event_selector__select}
+                    allowSearchTextSelection={false}
+                  />
+                </div>
+              ) : null}
             </div>
-          ))}
-        </ReactSortable>
-      </>
-    );
+            {renderGroupPropertyOptions(opt, index)}
+
+            <Button
+              type='text'
+              onClick={() => delOption(index)}
+              size={'small'}
+              className={`fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button`}
+            >
+              <SVG name={'remove'} />
+            </Button>
+          </>
+        }
+      </div>
+    ));
   };
 
   return (

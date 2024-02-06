@@ -241,17 +241,9 @@ function EventGroupBlock({
       />
     </div>
   );
+
   return (
-    <div
-      className={`flex items-center relative ${styles['draghandleparent']} ${
-        noMargin ? '' : 'ml-6'
-      }`}
-    >
-      <div className={`p-1 flex ${styles['draghandle']}`}>
-        <div style={{ margin: 'auto 0', cursor: 'pointer' }}>
-          <SVG name='drag' />
-        </div>
-      </div>
+    <div className={`flex items-center relative ${noMargin ? '' : 'ml-10'}`}>
       {!hideText &&
         (grpIndex >= 1 ? (
           <Text level={8} type='title' extraClass='m-0 mr-16' weight='thin'>

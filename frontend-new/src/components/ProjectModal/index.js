@@ -28,7 +28,6 @@ import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
 import UserSettings from '../../Views/Settings/UserSettings';
 import styles from './index.module.scss';
 import { Text, SVG } from '../factorsComponents';
-import { meetLink } from 'Utils/meetLink';
 
 function ProjectModal(props) {
   const [ShowPopOver, setShowPopOver] = useState(false);
@@ -136,21 +135,21 @@ function ProjectModal(props) {
         </div>
         {variant === 'app' && <SVG name='settings' size={24} />}
       </div>
-      <div className='fa-popupcard-divider' />
+      <div className={'fa-popupcard-divider'} />
       {props.projects?.length > 0 && (
         <div className={`${styles.popover_content__projectList}`}>
           <Text
-            type='title'
+            type={'title'}
             level={7}
-            weight='bold'
-            extraClass='m-0'
+            weight={'bold'}
+            extraClass={'m-0'}
             color='grey-2'
           >
             Your Projects
           </Text>
           {variant === 'app' && (
             <Button
-              type='text'
+              type={'text'}
               className='fa-btn--custom'
               onClick={() => {
                 setShowPopOver(false);
@@ -233,25 +232,20 @@ function ProjectModal(props) {
             </div>
           ))}
       </div>
-      {props.projects?.length > 0 && <div className='fa-popupcard-divider' />}
+      {props.projects?.length > 0 && <div className={'fa-popupcard-divider'} />}
 
       {variant === 'app' && (
         <>
-          <div className={` ${styles.popover_content__additionalActions}`}>
-            <a href='https://help.factors.ai' target='_blank' rel='noreferrer'>
-              Help guides
+          <div className={styles.popover_content__additionalActions}>
+            <a href='https://help.factors.ai' target='_blank'>
+              Help
             </a>
           </div>
-          <div className={styles.popover_content__additionalActions}>
+          {/* <div className={styles.popover_content__additionalActions}>
             <a onClick={() => window.open(PathUrls.Checklist, '_self')}>
               Setup Assist
             </a>
-          </div>
-          <div className={styles.popover_content__additionalActions}>
-            <a onClick={() => window.open(meetLink(), '_blank')}>
-              Schedule a call
-            </a>
-          </div>
+          </div> */}
         </>
       )}
 
@@ -291,7 +285,6 @@ function ProjectModal(props) {
         trigger='click'
       >
         <Tooltip
-          mouseEnterDelay={1}
           title={
             variant === 'app'
               ? 'Access your projects, account settings, and more'
@@ -330,8 +323,8 @@ function ProjectModal(props) {
                 <Text
                   type='title'
                   level={7}
-                  extraClass='m-0'
-                  weight='bold'
+                  extraClass={'m-0'}
+                  weight={'bold'}
                   color={variant === 'app' ? 'white' : undefined}
                 >
                   {props?.active_project?.name

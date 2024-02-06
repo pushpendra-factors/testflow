@@ -6,24 +6,48 @@ import React, {
   useMemo
 } from 'react';
 import _ from 'lodash';
-import { connect, useSelector } from 'react-redux';
+import { connect, useDispatch, useSelector } from 'react-redux';
+import { Button, Dropdown, Menu, Select, Tooltip } from 'antd';
+import { RightOutlined, LeftOutlined } from '@ant-design/icons';
 import { useHistory, useLocation } from 'react-router-dom';
 import { Text, SVG } from 'Components/factorsComponents';
-import { QUERY_TYPE_KPI } from 'Utils/constants';
+import CardContent from './CardContent';
+import {
+  initialState,
+  formatApiData,
+  calculateActiveUsersData,
+  calculateFrequencyData,
+  getStateQueryFromRequestQuery
+} from '../../../CoreQuery/utils';
+import { cardClassNames } from 'Reducers/dashboard/utils';
+import {
+  getDataFromServer,
+  getSavedAttributionMetrics,
+  getValidGranularityForSavedQueryWithSavedGranularity
+} from '../../../Dashboard/utils';
+import {
+  QUERY_TYPE_EVENT,
+  QUERY_TYPE_FUNNEL,
+  QUERY_TYPE_ATTRIBUTION,
+  QUERY_TYPE_CAMPAIGN,
+  QUERY_TYPE_WEB,
+  ATTRIBUTION_METRICS,
+  QUERY_TYPE_PROFILE,
+  QUERY_TYPE_KPI
+} from 'Utils/constants';
+import { DashboardContext } from '../../../../contexts/DashboardContext';
+import { shouldDataFetch } from 'Utils/dataFormatter';
+// import { fetchWeeklyIngishts as fetchWeeklyInsightsAction } from 'Reducers/insights';
+import styles from './index.module.scss';
+import FaSelect from 'Components/FaSelect';
 import { getQueryData } from 'Views/PreBuildDashboard/state/services';
 import {
   getPredefinedQuery,
   transformWidgetResponse
 } from 'Views/PreBuildDashboard/utils';
 import { selectActivePreDashboard } from 'Reducers/dashboard/selectors';
-import { Select, Tooltip } from 'antd';
 import CampaignMetricsDropdown from './CampaignMetricsDropdown';
-import styles from './index.module.scss';
-import { DashboardContext } from '../../../../contexts/DashboardContext';
-import { getValidGranularityForSavedQueryWithSavedGranularity } from '../../../Dashboard/utils';
-import { initialState } from '../../../CoreQuery/utils';
-import CardContent from './CardContent';
-
+import { getKpiLabel } from 'Views/CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
 const { Option } = Select;
 
 function WidgetCard({
@@ -52,9 +76,9 @@ function WidgetCard({
   );
 
   const durationWithSavedFrequency = useMemo(() => {
-    const savedFrequency = null;
-    const queryType = 'kpi';
-    if (queryType === QUERY_TYPE_KPI) {
+    let savedFrequency = null;
+    let queryType = 'kpi';
+    if (queryType == QUERY_TYPE_KPI) {
       const frequency = getValidGranularityForSavedQueryWithSavedGranularity({
         durationObj,
         savedFrequency
@@ -91,8 +115,8 @@ function WidgetCard({
           loading: true
         });
 
-        const queryType = QUERY_TYPE_KPI;
-        const apiCallStatus = {
+        let queryType = QUERY_TYPE_KPI;
+        let apiCallStatus = {
           required: true,
           message: null
         };
@@ -106,14 +130,16 @@ function WidgetCard({
             appliedBreakdown?.[0]
           );
 
-          const res = await getQueryData(
+          let res = await getQueryData(
             activeProject.id,
             payload,
             activeDashboard?.inter_id
           );
 
           if (unit?.inter_id === 1) {
-            res.data = transformWidgetResponse(res.data.result || res.data);
+            res.data = transformWidgetResponse(
+              res.data.result || res.data
+            );
           }
 
           if (!hasComponentUnmounted.current) {
@@ -227,10 +253,10 @@ function WidgetCard({
 
   const [currMetricsValue, setCurrMetricsValue] = useState(0);
 
-  const kpiData = unit?.me?.map((obj) => {
+  const kpiData = unit?.me?.map(obj => {
     const { inter_e_type, ty, na, d_na, ...rest } = obj;
     return { ...rest, metric: na, label: d_na, metricType: ty };
-  });
+  })
 
   return (
     <div
@@ -280,7 +306,7 @@ function WidgetCard({
                     style={{ minWidth: 120 }}
                     className='fa-select'
                     suffixIcon={
-                      <SVG name='caretDown' size={16} extraClass='-mt-1' />
+                      <SVG name='caretDown' size={16} extraClass={'-mt-1'} />
                     }
                   >
                     {unit?.g_by?.map((val) => (
@@ -340,7 +366,7 @@ function WidgetCard({
         id={`resize-${unit.inter_id}`}
         className='fa-widget-card--resize-container'
       >
-        <span style={{ padding: '5px 8px' }} />
+        <span style={{ padding: '5px 8px' }}></span>
       </div>
     </div>
   );

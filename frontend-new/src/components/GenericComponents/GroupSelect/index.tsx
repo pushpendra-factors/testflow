@@ -54,7 +54,6 @@ export default function GroupSelect({
     return (
       <div className={`fa-filter-select fa-search-select pb-0`}>
         <Input
-          tabIndex={0}
           style={{ overflow: 'hidden' }}
           prefix={<SVG name={'search'} />}
           size='large'
@@ -325,12 +324,12 @@ export default function GroupSelect({
              ? `fa-select--group-select-sm`
              : `fa-select--group-select-mini`
          } ${
-           position === 'Top' ||
-           position === 'TopLeft' ||
-           position === 'TopRight'
-             ? styles.dropdown__select_placement_top
-             : styles.dropdown__select_placement_bottom
-         }`}
+            position === 'Top' ||
+            position === 'TopLeft' ||
+            position === 'TopRight'
+              ? styles.dropdown__select_placement_top
+              : styles.dropdown__select_placement_bottom
+          }`}
           ref={dropdownRef}
         >
           {!groupSelectorOpen && options.length > 1 && (

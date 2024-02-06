@@ -46,10 +46,10 @@ function AccountTimelineTableView({
       <div className='account-timeline-table-container'>
         <table>
           <tbody>
-            {Object.entries(formattedData || {}).map(([date, events]) => (
-              <>
+            {Object.entries(formattedData || {}).map(([timestamp, events]) => (
+              <React.Fragment key={timestamp}>
                 <tr className='timestamp-row'>
-                  <td>{date}</td>
+                  <td>{timestamp}</td>
                 </tr>
                 {events.map((event) => {
                   const currentUser = timelineUsers.find(
@@ -66,7 +66,7 @@ function AccountTimelineTableView({
                     )
                   );
                 })}
-              </>
+              </React.Fragment>
             ))}
           </tbody>
         </table>

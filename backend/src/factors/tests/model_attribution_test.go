@@ -1568,28 +1568,28 @@ func TestAttributionKPI(t *testing.T) {
 	//create metrics "Deals"
 	metrics := "Deals"
 	description := U.RandomString(8)
-	transformations := &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "numerical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
+	transformations := &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
 	w = sendCreateCustomMetric(a, project.ID, agent, transformations, metrics, description, "hubspot_deals", 1)
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	//create metrics "Companies"
 	metrics = "Companies"
 	description = U.RandomString(8)
-	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "numerical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
+	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
 	w = sendCreateCustomMetric(a, project.ID, agent, transformations, metrics, description, "hubspot_companies", 1)
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	//create metrics "Opportunities"
 	metrics = "Opportunities"
 	description = U.RandomString(8)
-	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "numerical", "fil": [], "daFie": "$hubspot_datefield2"}`)}
+	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield2"}`)}
 	w = sendCreateCustomMetric(a, project.ID, agent, transformations, metrics, description, "salesforce_opportunities", 1)
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	//create metrics "Accounts"
 	metrics = "Accounts"
 	description = U.RandomString(8)
-	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "numerical", "fil": [], "daFie": "$hubspot_datefield2"}`)}
+	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield2"}`)}
 	w = sendCreateCustomMetric(a, project.ID, agent, transformations, metrics, description, "salesforce_opportunities", 1)
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -2147,28 +2147,28 @@ func TestAttributionKPIV1(t *testing.T) {
 	//create metrics "Deals"
 	metrics := "Deals"
 	description := U.RandomString(8)
-	transformations := &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "numerical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
+	transformations := &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
 	w = sendCreateCustomMetric(a, project.ID, agent, transformations, metrics, description, "hubspot_deals", 1)
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	//create metrics "Companies"
 	metrics = "Companies"
 	description = U.RandomString(8)
-	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "numerical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
+	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
 	w = sendCreateCustomMetric(a, project.ID, agent, transformations, metrics, description, "hubspot_companies", 1)
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	//create metrics "Opportunities"
 	metrics = "Opportunities"
 	description = U.RandomString(8)
-	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "numerical", "fil": [], "daFie": "$hubspot_datefield2"}`)}
+	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield2"}`)}
 	w = sendCreateCustomMetric(a, project.ID, agent, transformations, metrics, description, "salesforce_opportunities", 1)
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	//create metrics "Accounts"
 	metrics = "Accounts"
 	description = U.RandomString(8)
-	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "numerical", "fil": [], "daFie": "$hubspot_datefield2"}`)}
+	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield2"}`)}
 	w = sendCreateCustomMetric(a, project.ID, agent, transformations, metrics, description, "salesforce_opportunities", 1)
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -2422,28 +2422,28 @@ func TestAttributionKPINoData(t *testing.T) {
 	//create metrics "Deals"
 	metrics := "Deals"
 	description := U.RandomString(8)
-	transformations := &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "numerical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
+	transformations := &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
 	w = sendCreateCustomMetric(a, project.ID, agent, transformations, metrics, description, "hubspot_deals", 1)
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	//create metrics "Companies"
 	metrics = "Companies"
 	description = U.RandomString(8)
-	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "numerical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
+	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
 	w = sendCreateCustomMetric(a, project.ID, agent, transformations, metrics, description, "hubspot_companies", 1)
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	//create metrics "Opportunities"
 	metrics = "Opportunities"
 	description = U.RandomString(8)
-	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "numerical", "fil": [], "daFie": "$hubspot_datefield2"}`)}
+	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield2"}`)}
 	w = sendCreateCustomMetric(a, project.ID, agent, transformations, metrics, description, "salesforce_opportunities", 1)
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	//create metrics "Accounts"
 	metrics = "Accounts"
 	description = U.RandomString(8)
-	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "numerical", "fil": [], "daFie": "$hubspot_datefield2"}`)}
+	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield2"}`)}
 	w = sendCreateCustomMetric(a, project.ID, agent, transformations, metrics, description, "salesforce_opportunities", 1)
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -2610,28 +2610,28 @@ func TestAttributionKPIV1NoData(t *testing.T) {
 	//create metrics "Deals"
 	metrics := "Deals"
 	description := U.RandomString(8)
-	transformations := &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "numerical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
+	transformations := &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
 	w = sendCreateCustomMetric(a, project.ID, agent, transformations, metrics, description, "hubspot_deals", 1)
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	//create metrics "Companies"
 	metrics = "Companies"
 	description = U.RandomString(8)
-	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "numerical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
+	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
 	w = sendCreateCustomMetric(a, project.ID, agent, transformations, metrics, description, "hubspot_companies", 1)
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	//create metrics "Opportunities"
 	metrics = "Opportunities"
 	description = U.RandomString(8)
-	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "numerical", "fil": [], "daFie": "$hubspot_datefield2"}`)}
+	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield2"}`)}
 	w = sendCreateCustomMetric(a, project.ID, agent, transformations, metrics, description, "salesforce_opportunities", 1)
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	//create metrics "Accounts"
 	metrics = "Accounts"
 	description = U.RandomString(8)
-	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "numerical", "fil": [], "daFie": "$hubspot_datefield2"}`)}
+	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield2"}`)}
 	w = sendCreateCustomMetric(a, project.ID, agent, transformations, metrics, description, "salesforce_opportunities", 1)
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -4740,7 +4740,7 @@ func TestKpiAttributionWithMultipleRows(t *testing.T) {
 
 	metrics := "m1"
 	description := U.RandomString(8)
-	transformations := &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "numerical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
+	transformations := &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
 	w := sendCreateCustomMetric(a, project.ID, agent, transformations, metrics, description, "hubspot_deals", 1)
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -4752,13 +4752,13 @@ func TestKpiAttributionWithMultipleRows(t *testing.T) {
 
 	metrics = "m3"
 	description = U.RandomString(8)
-	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "numerical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
+	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
 	w = sendCreateCustomMetric(a, project.ID, agent, transformations, metrics, description, "hubspot_deals", 1)
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	metrics = "m4"
 	description = U.RandomString(8)
-	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "numerical", "fil": [], "daFie": "$hubspot_datefield2"}`)}
+	transformations = &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield2"}`)}
 	w = sendCreateCustomMetric(a, project.ID, agent, transformations, metrics, description, "hubspot_deals", 1)
 	assert.Equal(t, http.StatusOK, w.Code)
 

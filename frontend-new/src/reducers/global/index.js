@@ -1,6 +1,3 @@
-import toArray from 'lodash/toArray';
-import logger from 'Utils/logger';
-import { getCookieValue } from 'Utils/global';
 import { TOGGLE_SIDEBAR_COLLAPSED_STATE } from './types';
 import {
   SET_PROJECTS,
@@ -10,9 +7,12 @@ import {
   TEST_TOGGLE_SDK_VERIFICATION
 } from '../types';
 import { get, getHostUrl, post, put, del } from '../../utils/request';
+import toArray from 'lodash/toArray';
+import logger from 'Utils/logger';
+import { getCookieValue } from 'Utils/global';
 
-let host = getHostUrl();
-host = host[host.length - 1] === '/' ? host : `${host}/`;
+var host = getHostUrl();
+host = host[host.length - 1] === '/' ? host : host + '/';
 
 const defaultState = {
   is_funnel_results_visible: false,
@@ -54,7 +54,7 @@ export default function (state = defaultState, action) {
       };
     }
     case CREATE_PROJECT_FULFILLED: {
-      const _state = { ...state };
+      let _state = { ...state };
       _state.projects = [..._state.projects, action.payload];
       // Set currentProjectId to this newly created project
       _state.active_project = action.payload;
@@ -68,11 +68,11 @@ export default function (state = defaultState, action) {
       };
     }
     case 'CREATE_PROJECT_TIMEZONE_FULFILLED': {
-      const _state = { ...state };
+      let _state = { ...state };
       _state.projects = [..._state.projects, action.payload];
       // Set currentProjectId to this newly created project
       _state.active_project = action.payload;
-      // Update timezone
+      //Update timezone
       if (_state.currentProjectSettings)
         _state.currentProjectSettings = {
           ..._state.currentProjectSettings,
@@ -81,7 +81,7 @@ export default function (state = defaultState, action) {
       return _state;
     }
     case 'UPDATE_PROJECT_SETTINGS_FULFILLED': {
-      const _state = { ...state };
+      let _state = { ...state };
       if (_state.currentProjectSettings)
         _state.currentProjectSettings = {
           ..._state.currentProjectSettings,
@@ -96,7 +96,7 @@ export default function (state = defaultState, action) {
       };
     }
     case 'UPDATE_PROJECT_DETAILS_FULFILLED': {
-      const _state = { ...state };
+      let _state = { ...state };
       if (_state.active_project)
         _state.active_project = {
           ..._state.active_project,
@@ -149,9 +149,9 @@ export default function (state = defaultState, action) {
       };
     }
     case 'ENABLE_FACEBOOK_USER_ID': {
-      const fbUserID = action.payload.int_facebook_user_id;
+      let fbUserID = action.payload.int_facebook_user_id;
 
-      const _state = { ...state };
+      let _state = { ...state };
       _state.currentProjectSettings = {
         ...state.currentProjectSettings,
         int_facebook_user_id: fbUserID
@@ -159,10 +159,10 @@ export default function (state = defaultState, action) {
       return _state;
     }
     case 'ENABLE_SALESFORCE_FULFILLED': {
-      const enabledAgentUUID = action.payload.int_salesforce_enabled_agent_uuid;
+      let enabledAgentUUID = action.payload.int_salesforce_enabled_agent_uuid;
       if (!enabledAgentUUID || enabledAgentUUID === '') return state;
 
-      const _state = { ...state };
+      let _state = { ...state };
       _state.currentProjectSettings = {
         ...state.currentProjectSettings,
         int_salesforce_enabled_agent_uuid: enabledAgentUUID
@@ -180,7 +180,7 @@ export default function (state = defaultState, action) {
       // Indexed project objects by projectId. Kept projectId on value also intentionally
       // for array of projects from Object.values().
 
-      const projectsWithRoles = [];
+      let projectsWithRoles = [];
       toArray(action.payload).forEach((project, index) => {
         project.forEach((projectDetails) => {
           projectDetails.role = index + 1;
@@ -202,8 +202,9 @@ export default function (state = defaultState, action) {
         ...state.contentGroup.map((prop, i) => {
           if (prop.id === action.payload.id) {
             return action.payload;
+          } else {
+            return prop;
           }
-          return prop;
         })
       ];
       return { ...state, contentGroup: propsToUpdate };
@@ -282,7 +283,7 @@ export default function (state = defaultState, action) {
 export function fetchProjectsList() {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      get(dispatch, `${host}v1/projects/list`)
+      get(dispatch, host + 'v1/projects/list')
         .then((response) => {
           dispatch({
             type: 'FETCH_PROJECTS_FULFILLED',
@@ -304,7 +305,7 @@ export function getActiveProjectDetails(projectID) {
       type: 'SET_ACTIVE_PROJECT_LOADING'
     });
     return new Promise((resolve, reject) => {
-      get(dispatch, `${host}projects/${projectID}`)
+      get(dispatch, host + `projects/${projectID}`)
         .then((response) => {
           dispatch({
             type: SET_ACTIVE_PROJECT,
@@ -323,7 +324,7 @@ export function getActiveProjectDetails(projectID) {
 export function createProject(projectName) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      post(dispatch, `${host}projects?create_dashboard=false`, {
+      post(dispatch, host + 'projects?create_dashboard=false', {
         name: projectName
       })
         .then((r) => {
@@ -349,7 +350,7 @@ export function createProject(projectName) {
 export function createProjectWithTimeZone(data) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      post(dispatch, `${host}projects?create_dashboard=false`, data)
+      post(dispatch, host + 'projects?create_dashboard=false', data)
         .then((r) => {
           if (r.ok) {
             dispatch({
@@ -377,7 +378,7 @@ export function fetchProjectSettings(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
       dispatch({ type: 'FETCH_PROJECT_SETTINGS_LOADING' });
-      get(dispatch, `${host}projects/${projectId}/settings`)
+      get(dispatch, host + 'projects/' + projectId + '/settings')
         .then((r) => {
           if (r.ok) {
             dispatch({
@@ -408,7 +409,7 @@ export function fetchProjectSettings(projectId) {
             payload: {
               currentProjectId: projectId,
               settings: {},
-              err
+              err: err
             }
           });
 
@@ -421,7 +422,7 @@ export function fetchProjectSettings(projectId) {
 export function fetchProjectSettingsV1(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      get(dispatch, `${host}projects/${projectId}/v1/settings`)
+      get(dispatch, host + 'projects/' + projectId + '/v1/settings')
         .then((r) => {
           if (r.ok) {
             dispatch({
@@ -452,7 +453,7 @@ export function fetchProjectSettingsV1(projectId) {
             payload: {
               currentProjectId: projectId,
               settings: {},
-              err
+              err: err
             }
           });
 
@@ -465,7 +466,7 @@ export function fetchProjectSettingsV1(projectId) {
 export function udpateProjectSettings(projectId, payload) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      put(dispatch, `${host}projects/${projectId}/settings`, payload)
+      put(dispatch, host + 'projects/' + projectId + '/settings', payload)
         .then((response) => {
           dispatch({
             type: 'UPDATE_PROJECT_SETTINGS_FULFILLED',
@@ -480,7 +481,7 @@ export function udpateProjectSettings(projectId, payload) {
             type: 'UPDATE_PROJECT_SETTINGS_REJECTED',
             payload: {
               updatedSettings: {},
-              err
+              err: err
             }
           });
           reject(err);
@@ -492,7 +493,7 @@ export function udpateProjectSettings(projectId, payload) {
 export function udpateProjectDetails(projectId, payload) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      put(dispatch, `${host}projects/${projectId}`, payload)
+      put(dispatch, host + 'projects/' + projectId, payload)
         .then((response) => {
           dispatch({
             type: 'UPDATE_PROJECT_DETAILS_FULFILLED',
@@ -507,7 +508,7 @@ export function udpateProjectDetails(projectId, payload) {
             type: 'UPDATE_PROJECT_DETAILS_REJECTED',
             payload: {
               updatedDetails: {},
-              err
+              err: err
             }
           });
           reject(err);
@@ -519,7 +520,7 @@ export function udpateProjectDetails(projectId, payload) {
 export function addFacebookAccessToken(data) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      post(dispatch, `${host}integrations/facebook/add_access_token`, data)
+      post(dispatch, host + 'integrations/facebook/add_access_token', data)
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'ENABLE_FACEBOOK_USER_ID', payload: data });
@@ -538,7 +539,7 @@ export function addFacebookAccessToken(data) {
 export function addLinkedinAccessToken(data) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      post(dispatch, `${host}integrations/linkedin/add_access_token`, data)
+      post(dispatch, host + 'integrations/linkedin/add_access_token', data)
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'ENABLE_LINKEDIN_AD_ACCOUNT', payload: data });
@@ -557,8 +558,8 @@ export function addLinkedinAccessToken(data) {
 export function enableSalesforceIntegration(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      const payload = { project_id: projectId };
-      post(dispatch, `${host}integrations/salesforce/enable`, payload)
+      let payload = { project_id: projectId };
+      post(dispatch, host + 'integrations/salesforce/enable', payload)
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'ENABLE_SALESFORCE_FULFILLED', payload: r.data });
@@ -579,9 +580,9 @@ export function enableSalesforceIntegration(projectId) {
 export function fetchSalesforceRedirectURL(projectId, agentUUID) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      const payload = { project_id: projectId };
+      let payload = { project_id: projectId };
 
-      post(dispatch, `${host}integrations/salesforce/auth`, payload)
+      post(dispatch, host + 'integrations/salesforce/auth', payload)
         .then((r) => {
           if (r.ok) {
             dispatch({
@@ -608,8 +609,8 @@ export function fetchSalesforceRedirectURL(projectId, agentUUID) {
 export function enableAdwordsIntegration(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      const payload = { project_id: projectId.toString() };
-      post(dispatch, `${host}integrations/adwords/enable`, payload)
+      let payload = { project_id: projectId.toString() };
+      post(dispatch, host + 'integrations/adwords/enable', payload)
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'ENABLE_ADWORDS_FULFILLED', payload: r.data });
@@ -629,8 +630,8 @@ export function enableAdwordsIntegration(projectId) {
 export function enableSearchConsoleIntegration(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      const payload = { project_id: projectId.toString() };
-      post(dispatch, `${host}integrations/google_organic/enable`, payload)
+      let payload = { project_id: projectId.toString() };
+      post(dispatch, host + 'integrations/google_organic/enable', payload)
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'ENABLE_ADWORDS_FULFILLED', payload: r.data });
@@ -651,7 +652,7 @@ export function enableSearchConsoleIntegration(projectId) {
 export function fetchAdwordsCustomerAccounts(payload) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      post(dispatch, `${host}adwords/v1/get_customer_accounts`, payload)
+      post(dispatch, host + 'adwords/v1/get_customer_accounts', payload)
         .then((r) => {
           if (r.ok) {
             dispatch({
@@ -679,7 +680,7 @@ export function fetchSearchConsoleCustomerAccounts(payload) {
     return new Promise((resolve, reject) => {
       post(
         dispatch,
-        `${host}google_organic/v1/get_google_organic_urls`,
+        host + 'google_organic/v1/get_google_organic_urls',
         payload
       )
         .then((r) => {
@@ -699,7 +700,7 @@ export function fetchSearchConsoleCustomerAccounts(payload) {
 export function createBingAdsIntegration(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      post(dispatch, `${host}projects/${projectId}/v1/bingads`)
+      post(dispatch, host + 'projects/' + projectId + '/v1/bingads')
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'CREATE_BINGADS_FULFILLED', payload: r.data });
@@ -720,7 +721,7 @@ export function createBingAdsIntegration(projectId) {
 export function enableBingAdsIntegration(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      put(dispatch, `${host}projects/${projectId}/v1/bingads/enable`)
+      put(dispatch, host + 'projects/' + projectId + '/v1/bingads/enable')
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'ENABLE_BINGADS_FULFILLED', payload: r.data });
@@ -739,9 +740,9 @@ export function enableBingAdsIntegration(projectId) {
 }
 
 export function disableBingAdsIntegration(projectId) {
-  return (dispatch) =>
-    new Promise((resolve, reject) => {
-      del(dispatch, `${host}projects/${projectId}/v1/bingads/disable`, {})
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      del(dispatch, host + 'projects/' + projectId + '/v1/bingads/disable', {})
         .then((res) => {
           if (res.ok) {
             dispatch({ type: 'DISABLE_BINGADS_FULFILLED', payload: res.data });
@@ -754,12 +755,13 @@ export function disableBingAdsIntegration(projectId) {
           reject(err);
         });
     });
+  };
 }
 
 export function fetchBingAdsIntegration(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      get(dispatch, `${host}projects/${projectId}/v1/bingads`, {})
+      get(dispatch, host + 'projects/' + projectId + '/v1/bingads', {})
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'FETCH_BINGADS_FULFILLED', payload: r.data });
@@ -780,7 +782,7 @@ export function fetchBingAdsIntegration(projectId) {
 export function createMarketoIntegration(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      post(dispatch, `${host}projects/${projectId}/v1/marketo`)
+      post(dispatch, host + 'projects/' + projectId + '/v1/marketo')
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'CREATE_MARKETO_FULFILLED', payload: r.data });
@@ -801,7 +803,7 @@ export function createMarketoIntegration(projectId) {
 export function enableMarketoIntegration(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      put(dispatch, `${host}projects/${projectId}/v1/marketo/enable`)
+      put(dispatch, host + 'projects/' + projectId + '/v1/marketo/enable')
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'ENABLE_MARKETO_FULFILLED', payload: r.data });
@@ -820,9 +822,9 @@ export function enableMarketoIntegration(projectId) {
 }
 
 export function disableMarketoIntegration(projectId) {
-  return (dispatch) =>
-    new Promise((resolve, reject) => {
-      del(dispatch, `${host}projects/${projectId}/v1/marketo/disable`, {})
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      del(dispatch, host + 'projects/' + projectId + '/v1/marketo/disable', {})
         .then((res) => {
           if (res.ok) {
             dispatch({ type: 'DISABLE_MARKETO_FULFILLED', payload: res.data });
@@ -835,12 +837,13 @@ export function disableMarketoIntegration(projectId) {
           reject(err);
         });
     });
+  };
 }
 
 export function fetchMarketoIntegration(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      get(dispatch, `${host}projects/${projectId}/v1/marketo`, {})
+      get(dispatch, host + 'projects/' + projectId + '/v1/marketo', {})
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'FETCH_MARKETO_FULFILLED', payload: r.data });
@@ -859,9 +862,9 @@ export function fetchMarketoIntegration(projectId) {
 }
 
 export function deleteIntegration(projectId, name) {
-  return (dispatch) =>
-    new Promise((resolve, reject) => {
-      del(dispatch, `${host}integrations/${projectId}/${name}`)
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      del(dispatch, host + 'integrations/' + projectId + '/' + name)
         .then((res) => {
           resolve(res);
         })
@@ -869,12 +872,17 @@ export function deleteIntegration(projectId, name) {
           reject(err);
         });
     });
+  };
 }
 
 export function addContentGroup(projectId, payload) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      post(dispatch, `${host}projects/${projectId}/v1/contentgroup`, payload)
+      post(
+        dispatch,
+        host + 'projects/' + projectId + '/v1/contentgroup',
+        payload
+      )
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'CREATE_CONTENT_GROUP', payload: r.data });
@@ -895,7 +903,7 @@ export function updateContentGroup(projectId, payload) {
     return new Promise((resolve, reject) => {
       put(
         dispatch,
-        `${host}projects/${projectId}/v1/contentgroup/${payload.id}`,
+        host + 'projects/' + projectId + '/v1/contentgroup/' + payload.id,
         payload
       )
         .then((r) => {
@@ -916,7 +924,7 @@ export function updateContentGroup(projectId, payload) {
 export function fetchContentGroup(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      get(dispatch, `${host}projects/${projectId}/v1/contentgroup`, {})
+      get(dispatch, host + 'projects/' + projectId + '/v1/contentgroup', {})
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'FETCH_CONTENT_GROUP', payload: r.data });
@@ -933,9 +941,9 @@ export function fetchContentGroup(projectId) {
 }
 
 export function deleteContentGroup(projectId, id) {
-  return (dispatch) =>
-    new Promise((resolve, reject) => {
-      del(dispatch, `${host}projects/${projectId}/v1/contentgroup/${id}`)
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      del(dispatch, host + 'projects/' + projectId + '/v1/contentgroup/' + id)
         .then((res) => {
           resolve(res);
         })
@@ -943,12 +951,13 @@ export function deleteContentGroup(projectId, id) {
           reject(err);
         });
     });
+  };
 }
 
 export function getHubspotContact(email) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      get(dispatch, `${host}hubspot/getcontact?email=${email}`, {})
+      get(dispatch, host + 'hubspot/getcontact?email=' + email, {})
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'FETCH_HUBSPOT_CONTACT', payload: r.data });
@@ -969,7 +978,7 @@ export function createAlert(projectId, payload, query_id) {
     return new Promise((resolve, reject) => {
       post(
         dispatch,
-        `${host}projects/${projectId}/v1/alerts?query_id=${query_id}`,
+        host + 'projects/' + projectId + '/v1/alerts?query_id=' + query_id,
         payload
       )
         .then((r) => {
@@ -994,7 +1003,17 @@ export function sendAlertNow(
     return new Promise((resolve, reject) => {
       post(
         dispatch,
-        `${host}projects/${projectId}/v1/alerts/send_now?query_id=${query_id}&override_date_range=${overrideDate}&from_time=${dateFromTo.from}&to_time=${dateFromTo.to}`,
+        host +
+          'projects/' +
+          projectId +
+          '/v1/alerts/send_now?query_id=' +
+          query_id +
+          '&override_date_range=' +
+          overrideDate +
+          '&from_time=' +
+          dateFromTo.from +
+          '&to_time=' +
+          dateFromTo.to,
         payload
       )
         .then((r) => {
@@ -1015,7 +1034,7 @@ export function sendAlertNow(
 export function fetchAlerts(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      get(dispatch, `${host}projects/${projectId}/v1/alerts`, {})
+      get(dispatch, host + 'projects/' + projectId + '/v1/alerts', {})
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'FETCH_ALERTS', payload: r.data });
@@ -1034,7 +1053,7 @@ export function fetchAlerts(projectId) {
 export function fetchAllAlerts(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      get(dispatch, `${host}projects/${projectId}/v1/all_alerts`, {})
+      get(dispatch, host + 'projects/' + projectId + '/v1/all_alerts', {})
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'FETCH_ALERTS', payload: r.data });
@@ -1055,7 +1074,7 @@ export function fetchSharedAlerts(projectId) {
     return new Promise((resolve, reject) => {
       get(
         dispatch,
-        `${host}projects/${projectId}/v1/alerts?saved_queries=true`,
+        host + 'projects/' + projectId + '/v1/alerts?saved_queries=true',
         {}
       )
         .then((r) => {
@@ -1074,9 +1093,9 @@ export function fetchSharedAlerts(projectId) {
 }
 
 export function deleteAlert(projectId, id) {
-  return (dispatch) =>
-    new Promise((resolve, reject) => {
-      del(dispatch, `${host}projects/${projectId}/v1/alerts/${id}`)
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      del(dispatch, host + 'projects/' + projectId + '/v1/alerts/' + id)
         .then((res) => {
           resolve(res);
         })
@@ -1084,12 +1103,17 @@ export function deleteAlert(projectId, id) {
           reject(err);
         });
     });
+  };
 }
 
 export function editAlert(projectId, payload, id) {
-  return (dispatch) =>
-    new Promise((resolve, reject) => {
-      put(dispatch, `${host}projects/${projectId}/v1/alerts/${id}`, payload)
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      put(
+        dispatch,
+        host + 'projects/' + projectId + '/v1/alerts/' + id,
+        payload
+      )
         .then((res) => {
           resolve(res);
         })
@@ -1097,6 +1121,7 @@ export function editAlert(projectId, payload, id) {
           reject(err);
         });
     });
+  };
 }
 
 export function enableSlackIntegration(projectId, redirect_url = '') {
@@ -1104,9 +1129,11 @@ export function enableSlackIntegration(projectId, redirect_url = '') {
     return new Promise((resolve, reject) => {
       post(
         dispatch,
-        `${host}projects/${projectId}/slack/auth${
-          redirect_url.length > 0 ? '?source=2' : ''
-        }`
+        host +
+          'projects/' +
+          projectId +
+          '/slack/auth' +
+          (redirect_url.length > 0 ? '?source=2' : '')
       )
         .then((r) => {
           if (r.ok) {
@@ -1128,7 +1155,7 @@ export function enableSlackIntegration(projectId, redirect_url = '') {
 export function fetchSlackChannels(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      get(dispatch, `${host}projects/${projectId}/slack/channels`)
+      get(dispatch, host + 'projects/' + projectId + '/slack/channels')
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'FETCH_SLACK_FULFILLED', payload: r.data });
@@ -1147,9 +1174,9 @@ export function fetchSlackChannels(projectId) {
 }
 
 export function disableSlackIntegration(projectId) {
-  return (dispatch) =>
-    new Promise((resolve, reject) => {
-      del(dispatch, `${host}projects/${projectId}/slack/delete`, {})
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      del(dispatch, host + 'projects/' + projectId + '/slack/delete', {})
         .then((res) => {
           if (res.ok) {
             dispatch({ type: 'DISABLE_SLACK_FULFILLED', payload: res.data });
@@ -1162,12 +1189,13 @@ export function disableSlackIntegration(projectId) {
           reject(err);
         });
     });
+  };
 }
 
 export function enableTeamsIntegration(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      post(dispatch, `${host}projects/${projectId}/teams/auth`)
+      post(dispatch, host + 'projects/' + projectId + '/teams/auth')
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'ENABLE_TEAMS_FULFILLED', payload: r.data });
@@ -1188,7 +1216,7 @@ export function enableTeamsIntegration(projectId) {
 export function fetchTeamsWorkspace(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      get(dispatch, `${host}projects/${projectId}/teams/get_teams`)
+      get(dispatch, host + 'projects/' + projectId + '/teams/get_teams')
         .then((r) => {
           if (r.ok) {
             resolve(r);
@@ -1208,7 +1236,7 @@ export function fetchTeamsChannels(projectId, teamId) {
     return new Promise((resolve, reject) => {
       get(
         dispatch,
-        `${host}projects/${projectId}/teams/channels?team_id=${teamId}`
+        host + 'projects/' + projectId + '/teams/channels?team_id=' + teamId
       )
         .then((r) => {
           if (r.ok) {
@@ -1252,9 +1280,9 @@ export function fetchSlackUsers(projectId) {
 }
 
 export function disableTeamsIntegration(projectId) {
-  return (dispatch) =>
-    new Promise((resolve, reject) => {
-      del(dispatch, `${host}projects/${projectId}/teams/delete`, {})
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      del(dispatch, host + 'projects/' + projectId + '/teams/delete', {})
         .then((res) => {
           if (res.ok) {
             dispatch({ type: 'DISABLE_TEAMS_FULFILLED', payload: res.data });
@@ -1267,13 +1295,14 @@ export function disableTeamsIntegration(projectId) {
           reject(err);
         });
     });
+  };
 }
 
 export function enableHubspotIntegration(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      const payload = { project_id: projectId.toString() };
-      post(dispatch, `${host}integrations/hubspot/auth`, payload)
+      let payload = { project_id: projectId.toString() };
+      post(dispatch, host + 'integrations/hubspot/auth', payload)
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'ENABLE_HUBSPOT_FULFILLED', payload: r.data });
@@ -1294,7 +1323,11 @@ export function enableHubspotIntegration(projectId) {
 export function enableLeadSquaredIntegration(projectId, payload) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      put(dispatch, `${host}projects/${projectId}/leadsquaredsettings`, payload)
+      put(
+        dispatch,
+        host + 'projects/' + projectId + '/leadsquaredsettings',
+        payload
+      )
         .then((r) => {
           if (r.ok) {
             dispatch({
@@ -1315,11 +1348,11 @@ export function enableLeadSquaredIntegration(projectId, payload) {
 }
 
 export function disableLeadSquaredIntegration(projectId) {
-  return (dispatch) =>
-    new Promise((resolve, reject) => {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
       del(
         dispatch,
-        `${host}projects/${projectId}/leadsquaredsettings/remove`,
+        host + 'projects/' + projectId + '/leadsquaredsettings/remove',
         {}
       )
         .then((res) => {
@@ -1337,6 +1370,7 @@ export function disableLeadSquaredIntegration(projectId) {
           reject(err);
         });
     });
+  };
 }
 
 export function createEventAlert(projectId, payload) {
@@ -1344,7 +1378,7 @@ export function createEventAlert(projectId, payload) {
     return new Promise((resolve, reject) => {
       post(
         dispatch,
-        `${host}projects/${projectId}/v1/eventtriggeralert`,
+        host + 'projects/' + projectId + '/v1/eventtriggeralert',
         payload
       )
         .then((r) => {
@@ -1361,7 +1395,11 @@ export function createEventAlert(projectId, payload) {
 export function fetchEventAlerts(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      get(dispatch, `${host}projects/${projectId}/v1/eventtriggeralert`, {})
+      get(
+        dispatch,
+        host + 'projects/' + projectId + '/v1/eventtriggeralert',
+        {}
+      )
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'FETCH_EVENT_ALERTS', payload: r.data });
@@ -1378,9 +1416,12 @@ export function fetchEventAlerts(projectId) {
 }
 
 export function deleteEventAlert(projectId, id) {
-  return (dispatch) =>
-    new Promise((resolve, reject) => {
-      del(dispatch, `${host}projects/${projectId}/v1/eventtriggeralert/${id}`)
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      del(
+        dispatch,
+        host + 'projects/' + projectId + '/v1/eventtriggeralert/' + id
+      )
         .then((res) => {
           resolve(res);
         })
@@ -1388,6 +1429,7 @@ export function deleteEventAlert(projectId, id) {
           reject(err);
         });
     });
+  };
 }
 
 export function editEventAlert(projectId, payload, id) {
@@ -1395,7 +1437,7 @@ export function editEventAlert(projectId, payload, id) {
     return new Promise((resolve, reject) => {
       put(
         dispatch,
-        `${host}projects/${projectId}/v1/eventtriggeralert/${id}`,
+        host + 'projects/' + projectId + '/v1/eventtriggeralert/' + id,
         payload
       )
         .then((r) => {
@@ -1412,7 +1454,7 @@ export function editEventAlert(projectId, payload, id) {
 export function uploadList(projectId, payload) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      post(dispatch, `${host}projects/${projectId}/uploadlist`, payload)
+      post(dispatch, host + 'projects/' + projectId + '/uploadlist', payload)
         .then((r) => {
           resolve(r);
         })
@@ -1428,7 +1470,7 @@ export function testWebhhookUrl(projectId, payload) {
     return new Promise((resolve, reject) => {
       put(
         dispatch,
-        `${host}projects/${projectId}/v1/eventtriggeralert/test_wh`,
+        host + 'projects/' + projectId + '/v1/eventtriggeralert/test_wh',
         payload
       )
         .then((r) => {
@@ -1482,8 +1524,13 @@ export function updateEventAlertStatus(projectId, id, status) {
     return new Promise((resolve, reject) => {
       put(
         dispatch,
-        `${host}projects/${projectId}/v1/eventtriggeralert/${id}/status`,
-        { status }
+        host +
+          'projects/' +
+          projectId +
+          '/v1/eventtriggeralert/' +
+          id +
+          '/status',
+        { status: status }
       )
         .then((r) => {
           resolve(r);
@@ -1495,22 +1542,6 @@ export function updateEventAlertStatus(projectId, id, status) {
   };
 }
 
-export function updateChecklistStatus(projectId, status) {
-  return (dispatch) =>
-    new Promise((resolve, reject) => {
-      put(
-        dispatch,
-        `${host}projects/${projectId}/checklist/update?checklist_dismissed=${status}`
-      )
-        .then((res) => {
-          resolve(res);
-        })
-        .catch((err) => {
-          reject(err);
-        });
-    });
-}
-
 export async function triggerHubspotCustomFormFillEvent(
   portalId,
   formId,
@@ -1520,11 +1551,11 @@ export async function triggerHubspotCustomFormFillEvent(
     logger.error('Missing required parameters');
     return;
   }
-  // triggering only for prod env
+  //triggering only for prod env
   if (window.location.href.indexOf('https://app.factors.ai/') === -1) return;
   try {
     const url = `https://api.hsforms.com/submissions/v3/integration/submit/${portalId}/${formId}`;
-    const reqBody = {};
+    let reqBody = {};
     const HSCookie = getCookieValue('hubspotutk');
     if (HSCookie) {
       reqBody.hutk = HSCookie;

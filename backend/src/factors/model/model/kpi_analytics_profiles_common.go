@@ -89,17 +89,17 @@ func AddCustomMetricsTransformationsToProfileQuery(profileQueryGroup ProfileQuer
 	resultantProfileQueries := make([]ProfileQuery, 0)
 
 	if transformation.AggregateFunction == AverageAggregateFunction {
-		currentProfileQuery1 := GetProfileQueriesOnCustomMetric(profileQueryGroup, customMetric.MetricType, transformation, SumAggregateFunction, transformation.AggregateProperty, transformation.AggregatePropertyType, kpiQuery, "Division")
-		currentProfileQuery2 := GetProfileQueriesOnCustomMetric(profileQueryGroup, "", transformation, Count, "1", "categorical", kpiQuery, "")
+		currentProfileQuery1 := GetProfileQueriesOnCustomMetric(profileQueryGroup, transformation, SumAggregateFunction, transformation.AggregateProperty, transformation.AggregatePropertyType, kpiQuery, "Division")
+		currentProfileQuery2 := GetProfileQueriesOnCustomMetric(profileQueryGroup, transformation, Count, "1", "categorical", kpiQuery, "")
 		resultantProfileQueries = append([]ProfileQuery{currentProfileQuery1}, currentProfileQuery2)
 	} else {
-		currentProfileQuery := GetProfileQueriesOnCustomMetric(profileQueryGroup, customMetric.MetricType, transformation, transformation.AggregateFunction, transformation.AggregateProperty, transformation.AggregatePropertyType, kpiQuery, "")
+		currentProfileQuery := GetProfileQueriesOnCustomMetric(profileQueryGroup, transformation, transformation.AggregateFunction, transformation.AggregateProperty, transformation.AggregatePropertyType, kpiQuery, "")
 		resultantProfileQueries = append(resultantProfileQueries, currentProfileQuery)
 	}
 	return resultantProfileQueries
 }
 
-func GetProfileQueriesOnCustomMetric(profileQueryGroup ProfileQueryGroup, metricType string, transformation CustomMetricTransformation,
+func GetProfileQueriesOnCustomMetric(profileQueryGroup ProfileQueryGroup, transformation CustomMetricTransformation,
 	aggregateFunction string, AggregateProperty string, AggregatePropertyType string, kpiQuery KPIQuery, Operator string) ProfileQuery {
 	profileQuery := ProfileQuery{}
 
@@ -109,8 +109,6 @@ func GetProfileQueriesOnCustomMetric(profileQueryGroup ProfileQueryGroup, metric
 	}
 	profileQuery.AggregateFunction = aggregateFunction
 	profileQuery.AggregateProperty = transformation.AggregateProperty
-	profileQuery.AggregateProperty2 = transformation.AggregateProperty2
-	profileQuery.MetricType = metricType
 	profileQuery.AggregatePropertyType = transformation.AggregatePropertyType
 	profileQuery.Operator = Operator
 	profileQuery.From = profileQueryGroup.From

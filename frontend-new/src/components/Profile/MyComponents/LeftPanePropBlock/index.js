@@ -1,9 +1,9 @@
 import { Button } from 'antd';
 import React from 'react';
-import { useSelector } from 'react-redux';
-import truncateURL from 'Utils/truncateURL';
 import { Text, SVG } from '../../../factorsComponents';
 import { propValueFormat } from '../../utils';
+import { useSelector } from 'react-redux';
+import truncateURL from 'Utils/truncateURL';
 
 function LeftPanePropBlock({ property, type, displayName, value, onDelete }) {
   const { projectDomainsList } = useSelector((state) => state.global);
@@ -11,7 +11,7 @@ function LeftPanePropBlock({ property, type, displayName, value, onDelete }) {
   const urlTruncatedValue = truncateURL(formattedValue, projectDomainsList);
 
   return (
-    <div className='leftpane-prop justify-between pl-8'>
+    <div className='leftpane-prop'>
       <div className='flex flex-col items-start truncate'>
         <Text
           type='title'

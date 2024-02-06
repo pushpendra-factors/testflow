@@ -48,16 +48,3 @@ func GetFactorsDeanonCountAndLimit(projectId int64) (int64, int64, error) {
 	}
 	return count, limit, nil
 }
-
-func GetAccountLimitAndPercentageExhausted(projectId int64) (float64, int64, error) {
-
-	count, limit, err := GetFactorsDeanonCountAndLimit(projectId)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	percentageExhausted := float64(count) / float64(limit) * 100.0
-
-	return percentageExhausted, limit, nil
-
-}

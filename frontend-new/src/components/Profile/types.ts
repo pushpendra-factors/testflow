@@ -93,11 +93,6 @@ export interface AccountTimelineTableViewProps {
   loading: boolean;
   eventPropsType: { [key: string]: string };
 }
-export interface EventDetailsProps {
-  event: TimelineEvent;
-  eventPropsType: { [key: string]: string };
-  onUpdate: (newOrder: string[]) => void;
-}
 
 export type TimelineConfig = {
   disabled_events: string[];

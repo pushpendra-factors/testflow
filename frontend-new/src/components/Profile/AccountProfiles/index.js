@@ -113,7 +113,7 @@ function AccountProfiles({
   const [checkListAccountProps, setCheckListAccountProps] = useState([]);
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
   const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
-  const [downloadCSVOptions, setDownloadCSVOptions] = useState([]);
+
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [saveSegmentModal, setSaveSegmentModal] = useState(false);
   const [updateSegmentModal, setUpdateSegmentModal] = useState(false);
@@ -220,13 +220,6 @@ function AccountProfiles({
         (entry) => entry !== '' && entry !== undefined && entry !== null
       )
     );
-    const csvPropsWithEnableKey = formatUserPropertiesToCheckList(
-      [...listProperties, ['Last Activity', 'last_activity', 'datetime']],
-      tableProps?.filter(
-        (entry) => entry !== '' && entry !== undefined && entry !== null
-      )
-    );
-    setDownloadCSVOptions(csvPropsWithEnableKey);
     setCheckListAccountProps(accountPropsWithEnableKey);
   }, [currentProjectSettings, listProperties, accountPayload]);
 
@@ -1101,27 +1094,24 @@ function AccountProfiles({
   const generateCSVData = useCallback(
     (data, selectedOptions) => {
       const csvRows = [];
+
       const headers = selectedOptions.map(
         (propName) =>
-          downloadCSVOptions.find((elem) => elem.prop_name === propName)
-            ?.display_name
+          checkListAccountProps.find((elem) => elem.prop_name === propName)
+            .display_name
       );
       headers.unshift('Name', 'Engagement category', 'Engagement score');
       csvRows.push(headers.join(','));
 
       data.forEach((d) => {
-        const values = selectedOptions
-          .filter((elem) => elem !== 'last_activity')
-          .map((elem) =>
-            d.table_props[elem] != null ? `"${d.table_props[elem]}"` : '-'
-          );
+        const values = selectedOptions.map((elem) =>
+          d.table_props[elem] != null ? `"${d.table_props[elem]}"` : '-'
+        );
         values.unshift(
           d.name,
           d.engagement != null ? d.engagement : '-',
           d.score != null ? formatCount(d.score) : '-'
         );
-        if (headers.find((item) => item === 'Last Activity'))
-          values.push(d.last_activity?.replace('T', ' ').replace('Z', ''));
         csvRows.push(values);
       });
 
@@ -1316,7 +1306,7 @@ function AccountProfiles({
       <DownloadCSVModal
         visible={showDownloadCSVModal}
         onCancel={closeDownloadCSVModal}
-        options={downloadCSVOptions}
+        options={checkListAccountProps}
         displayTableProps={displayTableProps}
         onSubmit={handleDownloadCSV}
         isLoading={csvDataLoading}
