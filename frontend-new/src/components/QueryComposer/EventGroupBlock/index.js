@@ -183,6 +183,12 @@ function EventGroupBlock({
         ? groupPropNames[groupByEvent.property]
         : groupByEvent.property;
     }
+   
+    if (groupByEvent.property && groupByEvent.groupName === '$domains') {
+      propName = groupPropNames[groupByEvent.property]
+        ? groupPropNames[groupByEvent.property]
+        : groupByEvent.property;
+    }
 
     return isGroupByDDVisible ? (
       <div className='relative'>
