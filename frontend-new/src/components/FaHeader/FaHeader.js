@@ -7,9 +7,10 @@ import { SVG, Text } from 'Components/factorsComponents';
 import ProjectModal from 'Components/ProjectModal';
 import {
   isAccountsUrl,
+  isAlertsUrl,
   isAttributionsUrl,
   isConfigurationUrl,
-  isJourneyUrl,
+  isReportsMainUrl,
   isReportsUrl,
   isSettingsUrl
 } from 'Views/AppSidebar/appSidebar.helpers';
@@ -44,10 +45,6 @@ export const getConfigureMenuItems = (email) => {
     {
       label: 'Top Events and Properties',
       url: PathUrls.ConfigureDataPoints
-    },
-    {
-      label: 'Alerts',
-      url: PathUrls.ConfigureAlerts
     },
     {
       label: 'Engagements',
@@ -134,7 +131,7 @@ const accountsMenu = (
   </Menu>
 );
 
-const journeyMenu = (
+const reportsMainMenu = (
   <Menu className={styles['dropdown-menu']}>
     <Menu.Item className={styles['dropdown-menu-item']}>
       <Link className='items-center col-gap-2' to={PathUrls.PathAnalysis}>
@@ -149,6 +146,22 @@ const journeyMenu = (
         <SVG name='explain_Filled' color='#FFC53D' />
         <Text color='black' level={7} type='title' extraClass='mb-0'>
           Explain
+        </Text>
+      </Link>
+    </Menu.Item>
+    <Menu.Item className={styles['dropdown-menu-item']}>
+      <Link className='items-center col-gap-2' to={PathUrls.Dashboard}>
+        <SVG name='dashboard' color='#73D13D' />
+        <Text color='black' level={7} type='title' extraClass='mb-0'>
+          Dashboards
+        </Text>
+      </Link>
+    </Menu.Item>
+    <Menu.Item className={styles['dropdown-menu-item']}>
+      <Link className='items-center col-gap-2' to={ATTRIBUTION_ROUTES.base}>
+        <SVG name='attribution' color='#FFC53D' />
+        <Text color='black' level={7} type='title' extraClass='mb-0'>
+          Attribution
         </Text>
       </Link>
     </Menu.Item>
@@ -258,7 +271,7 @@ function FaHeader() {
                 <SVG color='#D9D9D9' size={16} name='chevronDown' />
               </div>
             </Dropdown>
-            <Link
+            {/* <Link
               to={PathUrls.Dashboard}
               className={cx(
                 'flex items-center pl-2 pr-1 py-1 ' + styles['header-item'],
@@ -277,14 +290,14 @@ function FaHeader() {
               >
                 Reports
               </Text>
-            </Link>
-            <Dropdown overlay={journeyMenu}>
+            </Link> */}
+            <Dropdown overlay={reportsMainMenu}>
               <div
                 className={cx(
                   'flex cursor-pointer items-center col-gap-1 pl-2 pr-1 py-1 ' +
                     styles['header-item'],
                   {
-                    [styles['active-header-item']]: isJourneyUrl(pathname)
+                    [styles['active-header-item']]: isReportsMainUrl(pathname)
                   }
                 )}
                 id='fa-at-link--journeys'
@@ -296,13 +309,13 @@ function FaHeader() {
                   extraClass='mb-0'
                   weight='medium'
                 >
-                  Journeys
+                  Reports
                 </Text>{' '}
                 <SVG color='#D9D9D9' size={16} name='chevronDown' />
               </div>
             </Dropdown>
 
-            <Link
+            {/* <Link
               to={ATTRIBUTION_ROUTES.base}
               className={cx(
                 'flex items-center pl-2 pr-1 py-1 ' + styles['header-item'],
@@ -320,6 +333,27 @@ function FaHeader() {
                 weight='medium'
               >
                 Attribution
+              </Text>
+            </Link> */}
+
+            <Link
+              to={PathUrls.Alerts}
+              className={cx(
+                'flex items-center pl-2 pr-1 py-1 ' + styles['header-item'],
+                {
+                  [styles['active-header-item']]: isAlertsUrl(pathname)
+                }
+              )}
+              id='fa-at-link--attribution'
+            >
+              <Text
+                type='title'
+                color='white'
+                level={7}
+                extraClass='mb-0'
+                weight='medium'
+              >
+                Alerts
               </Text>
             </Link>
           </div>
