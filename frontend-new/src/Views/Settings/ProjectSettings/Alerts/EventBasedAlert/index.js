@@ -240,7 +240,7 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
      // separate call for $domain = All account group.
     getGroupPropsFromAPI(GROUP_NAME_DOMAINS);
 
-    const missingGroups = Object.keys(groups?.account_groups || {}).filter(
+    const missingGroups = Object.keys(groups?.all_groups || {}).filter(
       (group) => !groupProperties[group]
     );
     if (missingGroups && missingGroups?.length > 0) {
