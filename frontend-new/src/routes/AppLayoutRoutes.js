@@ -439,9 +439,9 @@ export const APP_LAYOUT_ROUTES = {
     Component: FeatureLockedConfigureExplainDataPoints,
     Private: true
   },
-  ConfigureAlerts: {
+  Alerts: {
     exact: true,
-    path: PathUrls.ConfigureAlerts,
+    path: PathUrls.Alerts,
     Component: FeatureLockConfigurationAlerts,
     Private: true
   },

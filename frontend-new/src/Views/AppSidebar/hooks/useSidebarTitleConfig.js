@@ -2,6 +2,7 @@ import { useLocation } from 'react-router-dom';
 import { PathUrls } from '../../../routes/pathUrls';
 import {
   checkMatchPath,
+  isAlertsUrl,
   isConfigurationUrl,
   isSettingsUrl
 } from '../appSidebar.helpers';
@@ -45,7 +46,7 @@ const useSidebarTitleConfig = () => {
       icon: 'coloredProfile'
     };
   }
-  if (isSettingsUrl(pathname)) {
+  if (isSettingsUrl(pathname) || isAlertsUrl(pathname)) {
     return {
       title: 'Settings',
       icon: 'settings_Filled',
