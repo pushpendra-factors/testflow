@@ -139,6 +139,24 @@ services:
             image: testing/rollupcache:1.0
             deploy:
                 replicas: 0
+        pythonappserver:
+            build:
+                context: ../../../python_backend
+                dockerfile: Dockerfile
+            environment:
+                - OAUTH_TOKEN=$OAUTH_TOKEN
+                - DEVELOPER_TOKEN=$DEVELOPER_TOKEN
+            entrypoint: ["python","app.py","--env=staging", "--oauth_secret=$OAUTH_TOKEN", "--developer_token=$DEVELOPER_TOKEN"]    
+            image: testing/python-server:1.0
+            deploy:
+                replicas: 1
+            ports:
+                - "8091:8091"
+            networks:
+                network:
+                    ipv4_address: 172.30.0.6      
+            restart: always    
+                    
 networks:
   network:
     driver: bridge
