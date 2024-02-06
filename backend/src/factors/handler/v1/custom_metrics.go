@@ -44,11 +44,14 @@ func CreateCustomMetric(c *gin.Context) (interface{}, int, string, string, bool)
 
 	isValid, errMsg := request.IsValid()
 	if isValid == false {
+		log.WithField("message finder", "Error during custom metric validation").Warn(errMsg)
 		return nil, http.StatusBadRequest, INVALID_INPUT, errMsg, true
 	}
 
 	request.SetDefaultGroupIfRequired()
+	request.SetDisplayResultAsIfRequired()
 	request.ProjectID = projectID
+
 	customMetric, errMsg, statusCode := store.GetStore().CreateCustomMetric(request)
 	if statusCode != http.StatusCreated {
 		logCtx.WithField("message finder", "Error during custom metric creation").Warn(errMsg)
@@ -125,6 +128,7 @@ func GetCustomMetricsConfigV1(c *gin.Context) {
 		currentConfigV1.ObjectType = currentConfigV1.SectionDisplayCategory
 		currentConfigV1.TypeOfQuery = model.ProfileQueryType
 		currentConfigV1.TypeOfQueryDisplayName = model.ProfileQueryTypeDisplayName
+		currentConfigV1.MetricTypes = []string { "",  model.DateTypeDiffMetricType}
 		currentConfigV1.AggregateFunctions = model.CustomMetricProfilesAggregateFunctions
 		currentConfigV1.Properties = getPropertiesFunctionBasedOnSectionDisplayCategory(sectionDisplayCategory)(projectID, reqID)
 

@@ -6,7 +6,7 @@ import { useHistory } from 'react-router-dom';
 import { PlusOutlined } from '@ant-design/icons';
 import PropTypes from 'prop-types';
 import AppModal from '../AppModal';
-import { meetLink } from 'Utils/hubspot';
+import { meetLink } from 'Utils/meetLink';
 import sanitizeInputString from 'Utils/sanitizeInputString';
 
 const ShareToEmailModal = ({

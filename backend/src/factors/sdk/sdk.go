@@ -864,6 +864,12 @@ func FillCompanyIdentificationUserProperties(projectId int64, clientIP string, p
 		if status == 1 {
 			factorsDeanon.Meter(projectId, domain)
 		}
+		if C.IsAccountLimitEmailAlertEnabled(projectId) {
+			errCode, err := factorsDeanon.HandleAccountLimitAlert(projectId, &http.Client{})
+			if errCode != http.StatusOK {
+				log.Error(err, errCode)
+			}
+		}
 
 	}
 

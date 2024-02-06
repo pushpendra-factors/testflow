@@ -323,3 +323,56 @@ func GetProfileAccountOverviewHandler(c *gin.Context) (interface{}, int, string,
 
 	return accountOverview, http.StatusOK, "", "", false
 }
+
+func getNewEventConfig(c *gin.Context) (*[]string, error) {
+	payload := []string{}
+	err := c.BindJSON(&payload)
+	if err != nil {
+		return nil, err
+	}
+	return &payload, nil
+}
+
+func UpdateEventConfigHandler(c *gin.Context) {
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectID == 0 {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectID,
+	})
+
+	eventName := c.Params.ByName("event_name")
+
+	logCtx = log.WithFields(log.Fields{
+		"projectId": projectID,
+		"eventName": eventName,
+	})
+
+	if eventName == "" {
+		logCtx.Error("Invalid event to update")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	payload, err := getNewEventConfig(c)
+	if err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	err, errCode := store.GetStore().UpdateConfigForEvent(projectID, eventName, *payload)
+	if errCode != http.StatusOK {
+		logCtx.Errorln("Updating Segment failed")
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"status":     "success",
+		"event_name": eventName,
+	}
+	c.JSON(http.StatusOK, response)
+}

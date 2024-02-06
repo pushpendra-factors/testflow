@@ -214,9 +214,6 @@ function ReportContent({
             apiCallStatus={resultState.apiCallStatus}
           />
         ) : null}
-        <div className={`${querySaved?.g_by?.length ? 'mb-4' : ''}`}>
-          <Filter handleFilterChange={handleFilterChange} />
-        </div>
         {querySaved?.g_by?.length ? (
           <div>
             <Tabs
@@ -231,6 +228,9 @@ function ReportContent({
             </Tabs>
           </div>
         ) : null}
+        <div className={`${querySaved?.g_by?.length ? 'mb-4' : ''}`}>
+          <Filter handleFilterChange={handleFilterChange} />
+        </div>
         <div className='mt-6'>
           <CalendarRow
             queryType={queryType}

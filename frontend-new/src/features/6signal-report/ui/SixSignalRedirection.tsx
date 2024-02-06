@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
-import { APP_LAYOUT_ROUTES } from 'Routes/constants';
+import { PathUrls } from 'Routes/pathUrls';
 
 const SixSignalRedirection = () => {
   const history = useHistory();
@@ -8,7 +8,7 @@ const SixSignalRedirection = () => {
   const searchParams = new URLSearchParams(location.search);
   useEffect(() => {
     history.replace({
-      pathname: APP_LAYOUT_ROUTES.VisitorIdentificationReport.path,
+      pathname: PathUrls.VisitorIdentificationReport,
       search: `?${searchParams.toString()}`
     });
   }, []);

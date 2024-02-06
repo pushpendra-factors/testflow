@@ -1,6 +1,7 @@
 .productFruits {
-  width: 730px;
-  height: 512px;
+  width: 310%;
+  height: 400px;
+  overflow: auto;
   padding: 40px, 32px, 40px, 32px;
   border-radius: 8px;
   gap: 16px;
@@ -9,39 +10,37 @@
 }
 
 .container {
-    -ms-overflow-style: none;
-    /* Internet Explorer 10+ */
-    scrollbar-width: none;
+  overflow-x: visible !important;
+  scroll-behavior: smooth;
+  -ms-overflow-style: none;
+  /* Internet Explorer 10+ */
+  scrollbar-width: none;
 
-    &::-webkit-scrollbar {
-        display: none;
-    }
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .card {
-  width: 400px;
-  height: 150px;
-  padding: 0px 8px 0px 8px;
-  border-radius: 4px;
-  margin-top: 10px;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  background: rgba(250, 250, 250, 1);
+}
+
+.cardTitle {
+  margin: 0px;
+  font-weight: 500 !important;
 }
 
 .image {
-    margin-top: -20px;
-    margin-left: 10px;
-    max-width: 180% !important;
-    width: 180%;
-    height: 130%;
-}
-
-.catOneImage {
-    margin-top: -70px;
-    margin-left: -50px;
-    max-width: 350% !important;
-    width: 350%;
-    height: 230%;
+  margin-top: -20px;
+  margin-left: 10px;
+  max-width: 180% !important;
+  width: 180%;
+  height: 130%;
 }
 
 .learnMoreBtn {
-    background: none !important;
+  background: none !important;
 }

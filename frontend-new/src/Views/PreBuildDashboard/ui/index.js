@@ -189,7 +189,6 @@ function PreBuildDashboard({}) {
       </div>
       <div className='my-6 flex-1'>
         <SubMenu
-          config={config}
           durationObj={durationObj}
           handleDurationChange={handleDurationChange}
           activeDashboard={activeDashboard}

@@ -7,7 +7,7 @@ import { connect } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import AppModal from '../AppModal';
-import { meetLink } from 'Utils/hubspot';
+import { meetLink } from 'Utils/meetLink';
 const { Option } = Select;
 
 const ShareToSlackModal = ({visible, onSubmit, isLoading, channelOpts, setShowShareToSlackModal, queryTitle}) => {

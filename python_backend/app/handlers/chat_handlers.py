@@ -1,10 +1,15 @@
 import sys
+import re
+
 sys.path.append('/Users/satyamishra/repos/factors/python_backend/chat_factors/')
 import os
 import json
+import re
 from .base_handler import BaseHandler
 from tornado.log import logging as log
 from chatgpt_poc.chat import get_answer_from_ir_model
+from chatgpt_poc.chat import get_answer_from_ir_model_local
+from chat.final_query import get_url_and_query_payload_from_gpt_response
 from google.cloud import storage
 import io
 import pickle
@@ -36,12 +41,26 @@ class ChatHandler(BaseHandler):
 
     def post(self):
         try:
+            result = None
             prompt = self.get_argument("prompt")
+            pid = self.get_argument("pid")
             log.info('prompt: %s', prompt)
-            ChatHandler.initialize_variable("")
-            result = get_answer_from_ir_model(prompt, self.prompt_response_data, self.prompt_vector_data)
-            result_json = json.dumps(result, indent=2)
-            log.info('Result_1:', result)
+            if app.CONFIG.ADWORDS_APP.env == "development":
+                result = get_answer_from_ir_model_local(prompt)
+            elif app.CONFIG.ADWORDS_APP.env == "staging" or app.CONFIG.ADWORDS_APP.env == "production":
+                ChatHandler.initialize_variable("")
+                result = get_answer_from_ir_model(prompt, self.prompt_response_data, self.prompt_vector_data)
+            log.info(result["answer"])
+            json_string_with_quotes = re.sub(r'(\w+)', r'"\1"', result["answer"])
+            json_string_valid = json_string_with_quotes.replace('("', '"').replace('")', '"').replace('(-)', '""')
+            log.info(json_string_valid)
+            result_dict = json.loads(json_string_valid)
+
+            query_payload = get_url_and_query_payload_from_gpt_response(result_dict, pid)
+
+            log.info(query_payload)
+            result_json = json.dumps(query_payload, indent=2)
+
             self.write(result_json)
         except Exception as e:
             log.error("Error processing request: %s", str(e))

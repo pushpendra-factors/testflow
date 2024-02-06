@@ -9,6 +9,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// NOTE: We are not supporting group analytics as a part of event analysis.
+// Group analysis of events is not yet added to KPI.
 // We convert kpi Query to eventQueries by applying transformation.
 func (store *MemSQL) ExecuteKPIQueryForEvents(projectID int64, reqID string,
 	kpiQuery model.KPIQuery, enableFilterOpt bool) ([]model.QueryResult, int) {

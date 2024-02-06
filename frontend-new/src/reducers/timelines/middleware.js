@@ -219,3 +219,8 @@ export const deleteSegment =
           reject(err);
         });
     });
+
+export const setActivePageviewEvent = (eventName) => ({
+  type: 'SET_PAGEVIEW',
+  payload: eventName
+});
