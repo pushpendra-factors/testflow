@@ -287,10 +287,9 @@ func GetGroupPropertyValuesHandler(c *gin.Context) {
 	}
 	logCtx = logCtx.WithField("property_name", propertyName)
 	if model.IsDomainGroup(groupName) {
-
+		label := c.Query("label")
 		if U.ContainsStringInArray(U.ALL_ACCOUNT_DEFAULT_PROPERTIES, propertyName) {
 
-			label := c.Query("label")
 			if label == "true" {
 				propertyValueLabel := map[string]string{"false": "False", "true": "True"}
 				c.JSON(http.StatusOK, U.FilterDisplayNameEmptyKeysAndValues(projectId, propertyValueLabel))
@@ -302,6 +301,11 @@ func GetGroupPropertyValuesHandler(c *gin.Context) {
 		}
 
 		if strings.EqualFold(U.GROUP_EVENT_NAME_ENGAGEMENT_LEVEL, propertyName) {
+			if label == "true" {
+				propertyValueLabel := map[string]string{model.ENGAGEMENT_LEVEL_HOT: model.ENGAGEMENT_LEVEL_HOT, model.ENGAGEMENT_LEVEL_WARM: model.ENGAGEMENT_LEVEL_WARM, model.ENGAGEMENT_LEVEL_COOL: model.ENGAGEMENT_LEVEL_COOL, model.ENGAGEMENT_LEVEL_ICE: model.ENGAGEMENT_LEVEL_ICE}
+				c.JSON(http.StatusOK, U.FilterDisplayNameEmptyKeysAndValues(projectId, propertyValueLabel))
+				return
+			}
 			propertyValues := []string{model.ENGAGEMENT_LEVEL_HOT, model.ENGAGEMENT_LEVEL_WARM, model.ENGAGEMENT_LEVEL_COOL, model.ENGAGEMENT_LEVEL_ICE}
 			c.JSON(http.StatusOK, U.FilterEmptyArrayValues(propertyValues))
 			return

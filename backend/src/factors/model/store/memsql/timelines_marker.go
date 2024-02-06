@@ -59,7 +59,7 @@ func (store *MemSQL) GetMarkedDomainsListByProjectId(projectID int64, payload mo
 	timezoneString, statusCode := store.GetTimezoneForProject(projectID)
 	if statusCode != http.StatusFound {
 		logCtx.Error("Query failed. Failed to get Timezone.")
-		return []model.Profile{}, http.StatusBadRequest, "Failed to fetch project timezone."
+		return []model.Profile{}, statusCode, "Failed to fetch project timezone."
 	}
 	payload.Query.Timezone = string(timezoneString)
 
@@ -105,7 +105,7 @@ func (store *MemSQL) GetMarkedDomainsListByProjectId(projectID int64, payload mo
 	db := C.GetServices().Db
 	rows, err := db.Raw(query, params...).Rows()
 	if err != nil {
-		return []model.Profile{}, http.StatusInternalServerError, ""
+		return []model.Profile{}, http.StatusInternalServerError, "Error in fetching rows in search filter for all accounts"
 	}
 
 	defer rows.Close()
@@ -149,7 +149,7 @@ func (store *MemSQL) GetMarkedDomainsListByProjectId(projectID int64, payload mo
 	if err != nil {
 		// Error from DB is captured eg: timeout error
 		logCtx.WithFields(log.Fields{"err": err}).Error("Error in executing timelines query for segment")
-		return []model.Profile{}, http.StatusInternalServerError, ""
+		return []model.Profile{}, http.StatusInternalServerError, "Error in executing timelines query for segment"
 	}
 
 	// Redirect to old flow if no profiles found
