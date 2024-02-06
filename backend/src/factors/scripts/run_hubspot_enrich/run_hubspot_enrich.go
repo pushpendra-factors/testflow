@@ -90,6 +90,7 @@ func main() {
 	userPropertyUpdateOptProjects := flag.String("user_property_update_opt_projects", "", "")
 	associateDealToDomainByProjectID := flag.String("associate_deal_to_domain_by_project_id", "", "")
 	enableSyncTries := flag.Bool("enable_sync_tries", false, "Filter using un-sync document using sync-tries")
+	addCRMObjectURLByProjectID := flag.String("add_crm_object_url_by_project_id", "", "")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -157,6 +158,7 @@ func main() {
 		UserPropertyUpdateOptProjects:                       *userPropertyUpdateOptProjects,
 		AssociateDealToDomainByProjectID:                    *associateDealToDomainByProjectID,
 		EnableSyncTriesFlag:                                 *enableSyncTries,
+		AddCRMObjectURLPropertyByProjectID:                  *addCRMObjectURLByProjectID,
 	}
 
 	C.InitConf(config)

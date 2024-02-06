@@ -144,7 +144,9 @@ func TestMain(m *testing.M) {
 		ProcessOnlyAccountSegments:                          false,
 		ChargebeeApiKey:                                     *chargebeeApiKey,
 		ChargebeeSiteName:                                   *chargebeeSiteName,
+		AggrEventPropertyValuesCacheByProjectID:             "*",
 		BatchSizeDomains:                                    100,
+		AddCRMObjectURLPropertyByProjectID:                  "*",
 	}
 	C.InitConf(config)
 

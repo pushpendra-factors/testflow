@@ -195,7 +195,7 @@ function EngagementCategoryModal({
       <div className='p-2'>
         <div className='pb-4'>
           <Text extraClass='m-0' type='title' level={4} weight='bold'>
-            Engagment Category
+            Engagement Category
           </Text>
           <Text extraClass='m-0' type='title' level={7} color='grey'>
             Fine tune how to grade the engagement of accounts based on their

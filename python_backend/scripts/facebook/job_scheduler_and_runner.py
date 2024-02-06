@@ -20,13 +20,13 @@ class JobSchedulerAndRunner:
 
     @classmethod
     def handle(cls, signum, frame):
-        raise Exception("Function timeout after 5 mins")
+        raise Exception("Function timeout after 20 mins")
     
     @classmethod
     def sync(cls, facebook_int_setting: dict, sync_info_with_type: dict):
-        # timeout this function after 5 mins
+        # timeout this function after 20 mins
         signal.signal(signal.SIGALRM, cls.handle)
-        signal.alarm(300)
+        signal.alarm(1200)
         #
         facebook_config = scripts.facebook.CONFIG.FACEBOOK_APP
         ordered_last_sync_infos = JobSchedulerAndRunner.get_ordered_last_sync_infos(
