@@ -134,8 +134,16 @@ const accountsMenu = (
 const reportsMainMenu = (
   <Menu className={styles['dropdown-menu']}>
     <Menu.Item className={styles['dropdown-menu-item']}>
+      <Link className='items-center col-gap-2' to={PathUrls.Dashboard}>
+        <SVG name='dashboard_Filled' color='#40A9FF' />
+        <Text color='black' level={7} type='title' extraClass='mb-0'>
+          Dashboards
+        </Text>
+      </Link>
+    </Menu.Item>
+    <Menu.Item className={styles['dropdown-menu-item']}>
       <Link className='items-center col-gap-2' to={PathUrls.PathAnalysis}>
-        <SVG name='pathAnalysis_Filled' color='#73D13D' />
+        <SVG name='pathAnalysis_Filled' color='#5CDBD3' />
         <Text color='black' level={7} type='title' extraClass='mb-0'>
           Path Analysis
         </Text>
@@ -143,23 +151,15 @@ const reportsMainMenu = (
     </Menu.Item>
     <Menu.Item className={styles['dropdown-menu-item']}>
       <Link className='items-center col-gap-2' to={PathUrls.Explain}>
-        <SVG name='explain_Filled' color='#FFC53D' />
+        <SVG name='explain_Filled' color='#D3ADF7' />
         <Text color='black' level={7} type='title' extraClass='mb-0'>
           Explain
         </Text>
       </Link>
     </Menu.Item>
     <Menu.Item className={styles['dropdown-menu-item']}>
-      <Link className='items-center col-gap-2' to={PathUrls.Dashboard}>
-        <SVG name='dashboard' color='#73D13D' />
-        <Text color='black' level={7} type='title' extraClass='mb-0'>
-          Dashboards
-        </Text>
-      </Link>
-    </Menu.Item>
-    <Menu.Item className={styles['dropdown-menu-item']}>
       <Link className='items-center col-gap-2' to={ATTRIBUTION_ROUTES.base}>
-        <SVG name='attribution' color='#FFC53D' />
+        <SVG name='attribution_Filled' color='#FFADD2' />
         <Text color='black' level={7} type='title' extraClass='mb-0'>
           Attribution
         </Text>
