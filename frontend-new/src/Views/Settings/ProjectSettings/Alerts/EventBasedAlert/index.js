@@ -90,6 +90,7 @@ import Slack from './Slack';
 import Webhook from './Webhook';
 import Teams from './Teams';
 import {getMsgPayloadMapping, dummyPayloadValue} from './../utils';
+import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 
 const { Option } = Select;
 
@@ -196,7 +197,7 @@ const EventBasedAlert = ({
 
   const [WHTestMsgLoading, setWHTestMsgLoading] = useState(false); 
   const [WHTestMsgTxt, setWHTestMsgTxt] = useState(false);
-  const [factorsURLinWebhook, setFactorsURLinWebhook] = useState(false);
+  const [factorsURLinWebhook, setFactorsURLinWebhook] = useState(true);
 
   const webhookRef = useRef();
   const [form] = Form.useForm();
@@ -225,7 +226,20 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
     history.push(url);
   };
 
+  const getGroupPropsFromAPI = useCallback(
+    async (group) => {
+      if (!groupProperties[group]) {
+        await getGroupProperties(activeProject.id, group);
+      }
+    },
+    [activeProject.id, groupProperties]
+  );
+
   const fetchGroupProperties = async () => {
+    
+     // separate call for $domain = All account group.
+    getGroupPropsFromAPI(GROUP_NAME_DOMAINS);
+
     const missingGroups = Object.keys(groups?.account_groups || {}).filter(
       (group) => !groupProperties[group]
     );
@@ -236,6 +250,7 @@ const { isFeatureLocked: isWebHookFeatureLocked } = useFeatureLock(
         )
       );
     }
+    
   };
 
   useEffect(() => {

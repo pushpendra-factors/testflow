@@ -182,4 +182,10 @@ export const dummyPayloadValue = {
     "$g2_employees_range": "251 - 500",
     "$g2_legal_name": "Acme Inc",
     "$g2_name": "Acme",
+    "Session referrer domain" : "google.com",
+    "Session browser version" : "12.51",
+    "Company" : "Acme Inc",
+    "Company region" : "Northern America",
+    "Company annual revenue" : "5,744,000",
+
 }
