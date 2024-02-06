@@ -2,9 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { connect } from 'react-redux';
 import { SVG } from 'Components/factorsComponents';
 import { bindActionCreators } from 'redux';
-
 import { Button, Tooltip } from 'antd';
-
 import {
   PropTextFormat,
   convertAndAddPropertiesToGroupSelectOptions,
@@ -17,6 +15,7 @@ import {
   CustomGroupDisplayNames,
   GROUP_NAME_DOMAINS
 } from 'Components/GlobalFilter/FilterWrapper/utils';
+import { invalidBreakdownPropertiesList } from 'Constants/general.constants';
 import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 import FaSelect from '../../FaSelect';
 import { setGroupBy, delGroupBy } from '../../../reducers/coreQuery/middleware';
@@ -75,13 +74,8 @@ function GroupBlock({
         ) {
           let filteredProperties = properties;
           if (group === GROUP_NAME_DOMAINS) {
-            const allowedProperties = [
-              '$domain_name',
-              '$engagement_score',
-              '$total_enagagement_score'
-            ];
-            filteredProperties = properties.filter((item) =>
-              allowedProperties.includes(item[1])
+            filteredProperties = properties.filter(
+              (item) => !invalidBreakdownPropertiesList.includes(item[1])
             );
           }
           populateFilterOpts(group, filteredProperties);
