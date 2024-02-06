@@ -216,7 +216,7 @@ func GetDefaultAccScoringWeights() AccWeights {
 	var event_c AccEventWeight
 
 	weights.WeightConfig = make([]AccEventWeight, 0)
-	weights.SaleWindow = 10
+	weights.SaleWindow = 30
 	default_version := 0
 
 	event_a = AccEventWeight{FilterName: "Website Session 1", EventName: "$session", Weight_value: 10, Is_deleted: false,

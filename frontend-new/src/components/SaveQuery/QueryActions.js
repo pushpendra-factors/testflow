@@ -34,17 +34,6 @@ const QueryActionsComponent = ({
   const [hideIntercomState, setHideIntercomState] = useState(true);
   const [isPopoverVisible, setIsPopoverVisible] = useState(false);
 
-  useEffect(() => {
-    if (window.Intercom) {
-      window.Intercom('update', { hide_default_launcher: true });
-    }
-    return () => {
-      if (window.Intercom) {
-        window.Intercom('update', { hide_default_launcher: false });
-      }
-    };
-  }, []);
-
   const {
     coreQueryState: { navigatedFromDashboard, navigatedFromAnalyse }
   } = useContext(CoreQueryContext);
