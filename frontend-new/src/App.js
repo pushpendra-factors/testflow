@@ -132,6 +132,13 @@ function App({
           });
         }
 
+        if (window.trackdesk && typeof window.trackdesk == 'function') {
+          window.trackdesk('factorsai', 'externalCid', {
+            externalCid: agent_details?.email,
+            revenueOriginId: 'revenueOriginId'
+          });
+        }
+
         //intercom init and passing logged-in user-data
         var APP_ID = 'rvffkuu7';
         window.intercomSettings = {
