@@ -32,7 +32,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	timezoneString, statusCode := store.GetTimezoneForProject(projectID)
 	if statusCode != http.StatusFound {
 		log.WithFields(logFields).Error("Query failed. Failed to get Timezone.")
-		return []model.Profile{}, http.StatusBadRequest, "Failed to fetch project timezone."
+		return []model.Profile{}, statusCode, "Failed to fetch project timezone."
 	}
 	payload.Query.Timezone = string(timezoneString)
 

@@ -80,7 +80,9 @@ const CoreQuery = () => {
   const { active_project } = useSelector((state: any) => state.global);
   const { show_criteria: result_criteria, performance_criteria: user_type } =
     useSelector((state: any) => state.analyticsQuery);
-  const { models, eventNames } = useSelector((state: any) => state.coreQuery);
+  const { models, eventNames, groupBy } = useSelector(
+    (state: any) => state.coreQuery
+  );
   const savedQueries = useSelector((state: any) =>
     get(state, 'queries.data', EMPTY_ARRAY)
   );
@@ -118,6 +120,16 @@ const CoreQuery = () => {
       runEventsQueryFromUrl();
     }
   }, [query_id, query_type, savedQueries]);
+
+  useEffect(() => {
+    const qState = coreQueryState.getCopy();
+    qState.queryOptions = {
+      ...qState.queryOptions,
+      groupBy
+    };
+    // setAppliedBreakdowns(groupBy, qState);
+    setCoreQueryState(qState);
+  }, [groupBy]);
 
   const getQueryFromHashId = () =>
     savedQueries?.find((quer: any) => quer.id_text === query_id);
@@ -211,6 +223,11 @@ const CoreQuery = () => {
     qState.setItem('resultState', resultSt);
   };
 
+  const setAppliedBreakdowns = (breakdown: any, qState: CoreQueryState) => {
+    const newAppliedBreakdown = [...breakdown.event, ...breakdown.global];
+    qState.appliedBreakdown = newAppliedBreakdown;
+  };
+
   const runEventsQueryFromUrl = () => {
     const queryToAdd = getQueryFromHashId();
     if (queryToAdd) {
@@ -284,11 +301,7 @@ const CoreQuery = () => {
             )
           });
 
-          const newAppliedBreakdown = [
-            ...equivalentQuery.breakdown.event,
-            ...equivalentQuery.breakdown.global
-          ];
-          queryState.appliedBreakdown = newAppliedBreakdown;
+          setAppliedBreakdowns(equivalentQuery.breakdown, queryState);
 
           // updateAppliedBreakdown();
           dispatch({
@@ -397,6 +410,8 @@ const CoreQuery = () => {
       // }
 
       //if (!isCompareQuery) {
+
+      setAppliedBreakdowns(coreQueryState.queryOptions?.groupBy, qState);
       qState.showResult = true;
       qState.loading = true;
       configActionsOnRunningQuery(false, qState);

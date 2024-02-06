@@ -38,17 +38,6 @@ function AttributionHeader({
   const routerQuery = useQuery();
   const paramQueryId = routerQuery.get('queryId');
 
-  useEffect(() => {
-    if (window.Intercom) {
-      window.Intercom('update', { hide_default_launcher: true });
-    }
-    return () => {
-      if (window.Intercom) {
-        window.Intercom('update', { hide_default_launcher: false });
-      }
-    };
-  }, []);
-
   const history = useHistory();
   const dispatch = useDispatch();
 
