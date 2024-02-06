@@ -1171,6 +1171,9 @@ func InitFilemanager(bucketName string, env string, config *Configuration) {
 	if env == "development" {
 		config.CloudManager = serviceDisk.New(bucketName)
 	} else {
+
+		log.WithField("bucket_name", bucketName).Info("Initialised file manager.")
+
 		var err error
 		config.CloudManager, err = serviceGCS.New(bucketName)
 		if err != nil {
