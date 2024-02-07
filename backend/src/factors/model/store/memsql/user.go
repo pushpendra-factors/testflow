@@ -485,7 +485,7 @@ func (store *MemSQL) GetUsersAssociatedToDomainList(projectID int64, domainGroup
 }
 
 // get all domains to run marker for
-func (store *MemSQL) GetAllDomainsByProjectID(projectID int64, domainGroupID int) ([]string, int) {
+func (store *MemSQL) GetAllDomainsByProjectID(projectID int64, domainGroupID int, limitVal int) ([]string, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"domain_id":  domainGroupID,
@@ -496,16 +496,19 @@ func (store *MemSQL) GetAllDomainsByProjectID(projectID int64, domainGroupID int
 	queryParams := []interface{}{projectID, model.UserSourceDomains}
 
 	query := fmt.Sprintf(`SELECT 
-	id 
+	group_%d_user_id 
   FROM 
 	users 
   WHERE 
 	project_id = ? 
-	AND source = ? 
-	AND is_group_user = 1 
-	AND group_%d_id IS NOT NULL
+	AND group_%d_user_id IS NOT NULL
+	AND source != ? 
+  GROUP BY 
+	group_%d_user_id 
+  ORDER BY 
+	properties_updated_timestamp DESC 
   LIMIT 
-	2000000;`, domainGroupID)
+	%d;`, domainGroupID, domainGroupID, domainGroupID, limitVal)
 
 	db := C.GetServices().Db
 	rows, err := db.Raw(query, queryParams...).Rows()
@@ -530,7 +533,8 @@ func (store *MemSQL) GetAllDomainsByProjectID(projectID int64, domainGroupID int
 }
 
 // get all domains to run marker for in time range
-func (store *MemSQL) GetLatestUpatedDomainsByProjectID(projectID int64, domainGroupID int, fromTime time.Time) ([]string, int) {
+func (store *MemSQL) GetLatestUpatedDomainsByProjectID(projectID int64, domainGroupID int, fromTime time.Time,
+	limitVal int) ([]string, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"domain_id":  domainGroupID,
@@ -553,7 +557,7 @@ func (store *MemSQL) GetLatestUpatedDomainsByProjectID(projectID int64, domainGr
 	AND group_%d_user_id IS NOT NULL
   GROUP BY group_%d_user_id
   LIMIT 
-	2000000;`, domainGroupID, domainGroupID, domainGroupID)
+	%d;`, domainGroupID, domainGroupID, domainGroupID, limitVal)
 
 	db := C.GetServices().Db
 	rows, err := db.Raw(query, queryParams...).Rows()
