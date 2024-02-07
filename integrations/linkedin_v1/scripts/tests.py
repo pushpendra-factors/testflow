@@ -1,7 +1,9 @@
 from util.util import Util
-from transform.transformations import DataTransformation
+from util.data_transformation import DataTransformation
 from datetime import datetime
 from _datetime import timedelta
+from linkedin_setting.linkedin_setting import LinkedinSetting
+from constants.constants import *
 import unittest
 
 class Tests(unittest.TestCase):
@@ -11,17 +13,18 @@ class Tests(unittest.TestCase):
             doc_type: "2023-05-31"
         }
         end_timestamp = "20230610"
+
+        li_setting = LinkedinSetting({PROJECT_ID: 1, ACCESS_TOKEN: "asdsvs", LINKEDIN_AD_ACCOUNT: "1221413", REFRESH_TOKEN: "fwfqwfca"})
+
         # case when end timestamp given
-        timestamps, errMsg = Util.get_timestamp_range(doc_type, sync_info_with_type, None, end_timestamp)
-        self.assertEqual(errMsg, "")
+        timestamps = Util.get_timestamp_range(li_setting, doc_type, sync_info_with_type, None, end_timestamp)
         self.assertEqual(len(timestamps), 10)
         self.assertEqual(timestamps[0], "20230601")
         self.assertEqual(timestamps[len(timestamps)-1], "20230610")
 
         # case when range exceeding MAX_LOOKBACK and number of timestamps sliced to MAX_LOOKBACK
         end_timestamp = "20230810"
-        timestamps, errMsg = Util.get_timestamp_range(doc_type, sync_info_with_type, None, end_timestamp)
-        self.assertNotEqual(errMsg , "")
+        timestamps = Util.get_timestamp_range(li_setting, doc_type, sync_info_with_type, None, end_timestamp)
         self.assertEqual(len(timestamps), 30)
         self.assertEqual(timestamps[0], "20230712")
         self.assertEqual(timestamps[len(timestamps)-1], "20230810")
@@ -29,12 +32,11 @@ class Tests(unittest.TestCase):
         # case when end timestamp not given
         last_sync_timestamp = (datetime.now() - timedelta(days=5)).date()
         sync_info_with_type[doc_type] = str(last_sync_timestamp)
-        timestamps, errMsg = Util.get_timestamp_range(doc_type, sync_info_with_type, None, None)
-        self.assertEqual(errMsg, "")
+        timestamps = Util.get_timestamp_range(li_setting, doc_type, sync_info_with_type, None, None)
         self.assertEqual(len(timestamps), 4)
 
     def test_get_timestamp_chunks_to_be_backfilled(self):
-        last_timestamp = (datetime.now() - timedelta(days=30)).date().strftime("%Y%m%d")
+        last_timestamp = (datetime.now() - timedelta(days=30)).date().strftime("%Y-%m-%d")
         timestamp_chunks = Util.get_timestamp_chunks_to_be_backfilled(0, last_timestamp)
         self.assertEqual(len(timestamp_chunks), 2)
         
@@ -49,7 +51,7 @@ class Tests(unittest.TestCase):
                 end_day_of_week = end_datetime.isoweekday()
                 self.assertEqual(end_day_of_week, 7) # 7 denotes sunday here)
         
-        timestamp_chunks = Util.get_timestamp_chunks_to_be_backfilled(15, last_timestamp)
+        timestamp_chunks = Util.get_timestamp_chunks_to_be_backfilled(2, last_timestamp)
         
         self.assertEqual(len(timestamp_chunks), 2)
         
