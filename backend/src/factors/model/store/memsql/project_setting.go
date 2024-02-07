@@ -1,6 +1,7 @@
 package memsql
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	cacheRedis "factors/cache/redis"
@@ -1913,4 +1914,97 @@ func (store *MemSQL) AddParagonTokenAndEnablingAgentToProjectSetting(projectID i
 	}
 
 	return http.StatusAccepted, nil
+}
+
+func (store *MemSQL) GetIntegrationState(projectID int64, docType string, isCRMTypeDoc bool) (model.IntegrationStatus, int) {
+	logFields := log.Fields{
+		"project_id":    projectID,
+		"document_type": docType,
+	}
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 {
+		logCtx.Error("invalid parameter")
+		return model.IntegrationStatus{}, http.StatusBadRequest
+	}
+	db := C.GetServices().Db
+	var stmt string
+	var params []interface{}
+	if isCRMTypeDoc {
+		if docType == model.LEADSQUARED || docType == model.MARKETO {
+
+			stmt = fmt.Sprintf(`with 
+			step_1 as (select synced, MAX(created_at) created_at  from crm_users where project_id = ? and source = %d group by synced),
+			step_2 as (select synced,MAX(created_at) created_at  from crm_activities where project_id = ? and source = %d group by synced),
+			step_3 as (select synced,MAX(created_at) created_at from crm_groups where project_id = ? and source = %d group by synced),
+			step_4 as (select * from step_1
+			union all
+			select * from step_2
+			union all
+			select * from step_3)
+			select synced,MAX(created_at) last_at from step_4 group by synced`, U.SourceCRM[docType], U.SourceCRM[docType], U.SourceCRM[docType])
+			params = append(params, projectID, projectID, projectID)
+		} else {
+			stmt = fmt.Sprintf("SELECT synced, MAX(created_at) last_at from %s_documents where project_id= ? group by synced", docType)
+			params = append(params, projectID)
+		}
+	} else {
+		stmt = fmt.Sprintf("SELECT MAX(created_at) last_at from %s_documents where project_id= ? ", docType)
+		params = append(params, projectID)
+	}
+	rows, err := db.Raw(stmt, params...).Rows()
+	if err != nil {
+		return model.IntegrationStatus{}, http.StatusInternalServerError
+	}
+	defer rows.Close()
+
+	var lastSyncedAt, lastPulledAt int64
+
+	for rows.Next() {
+		var lastAtNull sql.NullTime
+		var synced int
+
+		var err error
+		if isCRMTypeDoc {
+			err = rows.Scan(&synced, &lastAtNull)
+		} else {
+			err = rows.Scan(&lastAtNull)
+			synced = 1
+		}
+
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to get status for document type")
+		}
+
+		if lastAtNull.Valid {
+			if synced == 1 {
+				lastPulledAt = lastAtNull.Time.Unix()
+			} else {
+				lastSyncedAt = lastAtNull.Time.Unix()
+			}
+		}
+
+	}
+
+	result := model.IntegrationStatus{}
+
+	a := U.TimeNowUnix()
+	if (a-lastSyncedAt < 2*U.SECONDS_IN_A_DAY) && isCRMTypeDoc {
+		result.State = model.SYNC_PENDING
+	} else if a-lastPulledAt < 2*U.SECONDS_IN_A_DAY {
+		result.State = model.PULL_DELAYED
+	} else {
+		result.State = model.SYNCED
+	}
+
+	if isCRMTypeDoc {
+		result.LastSyncedAt = lastSyncedAt
+	} else {
+		result.LastSyncedAt = lastPulledAt
+	}
+
+	return result, http.StatusOK
+
 }

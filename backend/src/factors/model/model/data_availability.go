@@ -34,6 +34,7 @@ const (
 	LINKEDIN       = "linkedin"
 	FACEBOOK       = "facebook"
 	BINGADS        = "bingads"
+	LEADSQUARED    = "leadsquared"
 	SESSION        = "session"
 )
 

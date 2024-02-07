@@ -6,15 +6,18 @@ import (
 	H "factors/handler"
 	"factors/handler/helpers"
 	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/gorm/dialects/postgres"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -294,4 +297,172 @@ func TestUpdateHubspotProjectSettings(t *testing.T) {
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	json.Unmarshal(jsonResponse, &jsonResponseMap)
 	assert.Equal(t, float64(1234), jsonResponseMap["int_hubspot_portal_id"])
+}
+
+func sendIntegrationsStatusReq(r *gin.Engine, projectId int64, agent *model.Agent) *httptest.ResponseRecorder {
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error Creating cookieData")
+	}
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/integrations_status", projectId)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	w := httptest.NewRecorder()
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error Creating UpdateProjectSetting Req")
+	}
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func TestIntegrationsStatusHandler(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	secondDocumentID := rand.Intn(100) + 200
+	cuid := getRandomEmail()
+	leadguid := U.RandomString(5)
+	lastmodifieddate := time.Now().UTC().Unix() * 1000
+	createdDate := time.Now().AddDate(0, 0, -1).Unix() * 1000
+	// Hubspot Campaign performance report
+	jsonContactModel := `{
+		"vid": %d,
+		"addedAt": %d,
+		"properties": {
+		  "createdate": { "value": "%d" },
+		  "lastmodifieddate": { "value": "%d" },
+		  "lifecyclestage": { "value": "%s" }
+		},
+		"identity-profiles": [
+		  {
+			"vid": 1,
+			"identities": [
+			  {
+				"type": "EMAIL",
+				"value": "%s"
+			  },
+			  {
+				"type": "LEAD_GUID",
+				"value": "%s"
+			  }
+			]
+		  }
+		]
+	  }`
+
+	jsonContact := fmt.Sprintf(jsonContactModel, secondDocumentID, createdDate, createdDate, lastmodifieddate, "lead", cuid, leadguid)
+	contactPJson := postgres.Jsonb{json.RawMessage(jsonContact)}
+
+	hubspotDocument := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Action:    model.HubspotDocumentActionCreated,
+		Value:     &contactPJson,
+	}
+
+	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+
+	adwordsCustomerAccountId := U.RandomLowerAphaNumString(5)
+	fbCustomerAccountId := U.RandomLowerAphaNumString(5)
+
+	assert.Nil(t, err)
+
+	// Facebook Campaign performance report
+	value := []byte(`{"spend": "1","clicks": "1","campaign_id":"1000","impressions": "1", "campaign_name": "Campaign_Facebook_1000", "platform":"facebook"}`)
+	documentFB := &model.FacebookDocument{
+		ProjectID:           project.ID,
+		ID:                  "1000",
+		CustomerAdAccountID: fbCustomerAccountId,
+		TypeAlias:           "campaign_insights",
+		Timestamp:           20200510,
+		Value:               &postgres.Jsonb{RawMessage: value},
+		CampaignID:          "1000",
+		Platform:            "facebook",
+	}
+	status = store.GetStore().CreateFacebookDocument(project.ID, documentFB)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// Adwords Campaign performance report
+	value = []byte(`{"cost": "1","clicks": "1","campaign_id":"100","impressions": "1", "campaign_name": "Campaign_Adwords_100"}`)
+	document := &model.AdwordsDocument{
+		ProjectID:         project.ID,
+		ID:                "100",
+		CustomerAccountID: adwordsCustomerAccountId,
+		TypeAlias:         model.CampaignPerformanceReport,
+		Timestamp:         20200510,
+		Value:             &postgres.Jsonb{RawMessage: value},
+		CampaignID:        100,
+	}
+	status = store.GetStore().CreateAdwordsDocument(document)
+	assert.Equal(t, http.StatusCreated, status)
+
+	user1Properties := postgres.Jsonb{json.RawMessage(`{"name":"abc","city":"xyz"}`)}
+
+	user1 := &model.CRMUser{
+		ProjectID:  project.ID,
+		Source:     U.CRM_SOURCE_LEADSQUARED,
+		Type:       1,
+		ID:         "123",
+		Properties: &user1Properties,
+		Timestamp:  time.Now().Unix(),
+	}
+	status, err = store.GetStore().CreateCRMUser(user1)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, user1.Action, model.CRMActionCreated)
+
+	user2Properties := postgres.Jsonb{json.RawMessage(`{"name":"abcd","city":"wxyz"}`)}
+
+	user2 := &model.CRMUser{
+		ProjectID:  project.ID,
+		Source:     U.CRM_SOURCE_MARKETO,
+		Type:       1,
+		ID:         "1234",
+		Properties: &user2Properties,
+		Timestamp:  time.Now().Unix(),
+		CreatedAt:  time.Now().AddDate(0, 0, -3),
+	}
+	status, err = store.GetStore().CreateCRMUser(user2)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, user1.Action, model.CRMActionCreated)
+
+	w := sendIntegrationsStatusReq(r, project.ID, agent)
+	assert.Equal(t, http.StatusOK, w.Code)
+	var jsonResponseMap map[string]model.IntegrationStatus
+	jsonResponse, _ := ioutil.ReadAll(w.Body)
+	json.Unmarshal(jsonResponse, &jsonResponseMap)
+
+	assert.Equal(t, jsonResponseMap["adwords"].State, model.PULL_DELAYED)
+	assert.NotEqual(t, jsonResponseMap["adwords"].LastSyncedAt, int64(0))
+
+	assert.Equal(t, jsonResponseMap["google_organic"].State, model.SYNCED)
+	assert.Equal(t, jsonResponseMap["google_organic"].LastSyncedAt, int64(0))
+
+	assert.Equal(t, jsonResponseMap["facebook"].State, model.PULL_DELAYED)
+	assert.NotEqual(t, jsonResponseMap["facebook"].LastSyncedAt, int64(0))
+
+	assert.Equal(t, jsonResponseMap["linkedin"].State, model.SYNCED)
+	assert.Equal(t, jsonResponseMap["linkedin"].LastSyncedAt, int64(0))
+
+	assert.Equal(t, jsonResponseMap["salesforce"].State, model.SYNCED)
+	assert.Equal(t, jsonResponseMap["salesforce"].LastSyncedAt, int64(0))
+
+	assert.Equal(t, jsonResponseMap["hubspot"].State, model.SYNC_PENDING)
+	assert.NotEqual(t, jsonResponseMap["hubspot"].LastSyncedAt, int64(0))
+
+	assert.Equal(t, jsonResponseMap["leadsquared"].State, model.SYNC_PENDING)
+	assert.NotEqual(t, jsonResponseMap["leadsquared"].LastSyncedAt, int64(0))
+
+	assert.Equal(t, jsonResponseMap["marketo"].State, model.SYNCED)
+	assert.NotEqual(t, jsonResponseMap["marketo"].LastSyncedAt, int64(0))
 }

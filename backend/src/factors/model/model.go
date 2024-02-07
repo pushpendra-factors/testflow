@@ -512,6 +512,7 @@ type Model interface {
 	GetParagonTokenFromProjectSetting(projectID int64) (string, int, error)
 	GetParagonEnabledProjectsCount(projectID int64) (int64, int, error)
 	AddParagonTokenAndEnablingAgentToProjectSetting(projectID int64, agentID, token string) (int, error)
+	GetIntegrationState(projectID int64, DocumentType string, isCRMTypeDoc bool) (model.IntegrationStatus, int)
 
 	// project
 	UpdateProject(projectID int64, project *model.Project) int
