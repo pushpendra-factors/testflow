@@ -42,11 +42,17 @@ func (fd *FactorsDeanon) IsEligible(projectSettings *model.ProjectSetting, isoCo
 		logCtx.Error("Failed to fetch feature flag")
 		return false, err
 	}
+	if !featureFlag {
+		return false, nil
+	}
 
 	isDeanonQuotaAvailable, err := CheckingFactorsDeanonQuotaLimit(projectId)
 	if err != nil {
 		logCtx.Error("Error in checking deanon quota exhausted.")
 		return false, err
+	}
+	if !isDeanonQuotaAvailable {
+		return false, nil
 	}
 
 	factorDeanonRulesJson := projectSettings.SixSignalConfig
@@ -54,6 +60,9 @@ func (fd *FactorsDeanon) IsEligible(projectSettings *model.ProjectSetting, isoCo
 	if err != nil {
 		logCtx.Error("Error in checking deanon enrichment rules")
 		return false, err
+	}
+	if !isFactorsDeanonRulesValid {
+		return false, nil
 	}
 
 	intFactorsDeanon := projectSettings.IntFactorsSixSignalKey
