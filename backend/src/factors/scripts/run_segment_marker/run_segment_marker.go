@@ -36,7 +36,8 @@ func main() {
 	useLookbackSegmentMarker := flag.Bool("use_lookback_segment_marker", false, "Whether to compute look_back time to fetch users in last x hours.")
 	lookbackSegmentMarker := flag.Int("lookback_segment_marker", 0, "Optional: Fetch users from last x hours")
 	allowedGoRoutines := flag.Int("allowed_go_routines", 1, "Number of allowed to routines")
-	batchSizeDomains := flag.Int("batch_size_domains", 100, "batch size for number of domains to be processed in a go")
+	batchSizeDomains := flag.Int("batch_size_domains", 50, "batch size for number of domains to be processed in a go")
+	domainsLimitAllRun := flag.Int("domains_limit_all_run", 250000, "limit for domains to be processed for all run")
 	processOnlyAccountSegments := flag.Bool("process_only_account_segments", false, "This flag allows only processing of all accounts type segments")
 	runAllAccountsMarkerProjectIDs := flag.String("run_all_accounts_marker_project_ids", "",
 		"Project Id to run all accounts marker for. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
@@ -88,6 +89,7 @@ func main() {
 		RunAllAccountsMarkerProjectIDs: *runAllAccountsMarkerProjectIDs,
 		RunForAllAccountsInHours:       *runForAllAccountsInHours,
 		BatchSizeDomains:               *batchSizeDomains,
+		DomainsLimitAllRun:             *domainsLimitAllRun,
 	}
 
 	C.InitConf(config)
