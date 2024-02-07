@@ -92,7 +92,7 @@ import Slack from './Slack';
 import Webhook from './Webhook';
 import Teams from './Teams';
 import { getMsgPayloadMapping, dummyPayloadValue } from './../utils';
-import { ReactSortable } from 'react-sortablejs'; 
+import { ReactSortable } from 'react-sortablejs';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 
 const { Option } = Select;
@@ -238,8 +238,7 @@ const EventBasedAlert = ({
   );
 
   const fetchGroupProperties = async () => {
-    
-     // separate call for $domain = All account group.
+    // separate call for $domain = All account group.
     getGroupPropsFromAPI(GROUP_NAME_DOMAINS);
 
     const missingGroups = Object.keys(groups?.all_groups || {}).filter(
@@ -252,7 +251,6 @@ const EventBasedAlert = ({
         )
       );
     }
-    
   };
 
   useEffect(() => {
@@ -448,7 +446,10 @@ const EventBasedAlert = ({
       setNotifications(viewAlertDetails?.alert?.notifications);
       setIsHyperLinkEnabled(!viewAlertDetails?.alert?.is_hyperlink_disabled);
 
-      let isWebHookFactorsUrlEnabled = viewAlertDetails?.alert?.is_factors_url_in_payload ? viewAlertDetails?.alert?.is_factors_url_in_payload : false;
+      let isWebHookFactorsUrlEnabled = viewAlertDetails?.alert
+        ?.is_factors_url_in_payload
+        ? viewAlertDetails?.alert?.is_factors_url_in_payload
+        : false;
       setFactorsURLinWebhook(isWebHookFactorsUrlEnabled);
 
       const messageProperty = processBreakdownsFromQuery(
@@ -761,7 +762,7 @@ const EventBasedAlert = ({
     setSelectedChannel([]);
     setSaveSelectedChannel([]);
     form.resetFields();
-    setAlertState({ state: 'list', index: 0 });
+    setAlertState({ ...alertState, state: 'list', index: 0 });
     resetGroupBy();
     setEventPropertyDetails({});
     setBreakdownOptions([]);
@@ -776,7 +777,7 @@ const EventBasedAlert = ({
         deleteEventAlert(activeProject?.id, item?.id)
           .then(() => {
             message.success('Deleted Alert successfully!');
-            setAlertState({ state: 'list', index: 0 });
+            setAlertState({ ...alertState, state: 'list', index: 0 });
             fetchAllAlerts(activeProject.id);
           })
           .catch((err) => {
@@ -1220,7 +1221,7 @@ const EventBasedAlert = ({
       url: webhookUrl,
       secret: '',
       event_level: activeGrpBtn == 'events' ? 'account' : 'user',
-      is_factors_url_in_payload: factorsURLinWebhook,
+      is_factors_url_in_payload: factorsURLinWebhook
     };
     setWHTestMsgLoading(true);
     testWebhhookUrl(activeProject?.id, payload)

@@ -97,7 +97,7 @@ const KPIBasedAlert = ({
   const inputComponentRef = useAutoFocus();
   const [form] = Form.useForm();
 
-  const alertDetails = viewAlertDetails?.alert
+  const alertDetails = viewAlertDetails?.alert;
 
   // KPI SELECTION
   const [queryType, setQueryType] = useState('kpi');
@@ -145,7 +145,7 @@ const KPIBasedAlert = ({
       await confirmRemove(deleteWidgetModal);
       setDeleteApiCalled(false);
       showDeleteWidgetModal(false);
-      setAlertState({ state: 'list', index: 0 });
+      setAlertState({ ...alertState, state: 'list', index: 0 });
     } catch (err) {
       console.log(err);
       console.log(err.response);
@@ -185,8 +185,7 @@ const KPIBasedAlert = ({
     }
 
     if (
-      alertDetails?.alert_configuration?.teams_channel_config
-        ?.team_channel_list
+      alertDetails?.alert_configuration?.teams_channel_config?.team_channel_list
     ) {
       setTeamsViewSelectedChannels(
         alertDetails?.alert_configuration?.teams_channel_config
@@ -204,8 +203,7 @@ const KPIBasedAlert = ({
         setSelectedWorkspace({
           name: alertDetails?.alert_configuration?.teams_channel_config
             ?.team_name,
-          id: alertDetails?.alert_configuration?.teams_channel_config
-            ?.team_id
+          id: alertDetails?.alert_configuration?.teams_channel_config?.team_id
         });
       }
     }
@@ -216,7 +214,9 @@ const KPIBasedAlert = ({
         alias: '',
         label: _.startCase(alertDetails?.alert_description?.name),
         filters: getStateFromKPIFilters(
-          alertDetails?.alert_description?.query?.fil ? alertDetails?.alert_description?.query?.fil : []
+          alertDetails?.alert_description?.query?.fil
+            ? alertDetails?.alert_description?.query?.fil
+            : []
         ),
         group: alertDetails?.alert_description?.query?.dc,
         metric: alertDetails?.alert_description?.name,
@@ -315,7 +315,7 @@ const KPIBasedAlert = ({
     setSelectedChannel([]);
     setSaveSelectedChannel([]);
     form.resetFields();
-    setAlertState({ state: 'list', index: 0 });
+    setAlertState({ ...alertState, state: 'list', index: 0 });
   };
 
   const onFinish = (data) => {
@@ -669,12 +669,7 @@ const KPIBasedAlert = ({
         >
           <Row>
             <Col span={12}>
-              <Text
-                type={'title'}
-                level={3}
-                weight={'bold'}
-                extraClass={'m-0'}
-              >
+              <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>
                 Create new alert
               </Text>
             </Col>
@@ -1770,8 +1765,9 @@ const KPIBasedAlert = ({
                                 <Form.Item
                                   label={null}
                                   initialValue={
-                                    alertDetails?.alert_configuration
-                                      ?.emails[field.name]
+                                    alertDetails?.alert_configuration?.emails[
+                                      field.name
+                                    ]
                                   }
                                   {...field}
                                   name={[field.name, 'email']}
@@ -2009,7 +2005,7 @@ const KPIBasedAlert = ({
                 size={'large'}
                 disabled={loading}
                 onClick={() => {
-                  setAlertState({ state: 'list', index: 0 });
+                  setAlertState({ ...alertState, state: 'list', index: 0 });
                 }}
               >
                 Back
@@ -2138,9 +2134,7 @@ const KPIBasedAlert = ({
             <Input
               disabled={true}
               className={'fa-input w-full'}
-              value={_.startCase(
-                alertDetails?.alert_description?.date_range
-              )}
+              value={_.startCase(alertDetails?.alert_description?.date_range)}
             />
           </Col>
           {alertDetails?.alert_description?.compared_to && (
@@ -2528,7 +2522,7 @@ const KPIBasedAlert = ({
         cancelButtonProps={{ size: 'large' }}
       >
         <div>
-        <Row gutter={[24, 24]} justify='center'>
+          <Row gutter={[24, 24]} justify='center'>
             <Col span={22}>
               <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'}>
                 Select slack channels
@@ -2593,7 +2587,7 @@ const KPIBasedAlert = ({
                 options={teamsWorkspaceOpts}
                 placeholder='Select Workspace'
                 showSearch
-                style={{minWidth: '250px'}}
+                style={{ minWidth: '250px' }}
                 value={
                   selectedWorkspace
                     ? {
