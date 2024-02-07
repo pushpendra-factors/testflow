@@ -1,7 +1,6 @@
 package factors_deanon
 
 import (
-	"errors"
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
@@ -21,7 +20,7 @@ func CheckingFactorsDeanonQuotaLimit(projectId int64) (bool, error) {
 	}
 	if count >= limit {
 		logCtx.Warn("Factors Deanonymisation Limit Exhausted")
-		return false, errors.New("factors deanonymisation limit exhausted")
+		return false, nil
 	}
 	return true, nil
 }

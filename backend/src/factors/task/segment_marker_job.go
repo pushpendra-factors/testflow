@@ -189,6 +189,12 @@ func GetDomainsToRunMarkerFor(projectID int64, domainGroup *model.Group, domainG
 	allUsersRun := false
 	allDomainsRunHours := C.TimeRangeForAllDomains()
 
+	limitVal := C.MarkerDomainLimitForAllRun()
+
+	if limitVal <= 0 {
+		limitVal = 250000
+	}
+
 	// fetch lastRunTime
 	lastRunTime, lastRunStatusCode := store.GetStore().GetMarkerLastForAllAccounts(projectID)
 	if lastRunStatusCode == http.StatusFound && C.AllAccountsRuntMarker(projectID) {
@@ -196,7 +202,7 @@ func GetDomainsToRunMarkerFor(projectID int64, domainGroup *model.Group, domainG
 		timeDifference := timeNow.Sub(lastRunTime)
 		if timeDifference >= time.Duration(allDomainsRunHours)*time.Hour && domainGroupStatus == http.StatusFound {
 
-			domainIDList, status := store.GetStore().GetAllDomainsByProjectID(projectID, domainGroup.ID)
+			domainIDList, status := store.GetStore().GetAllDomainsByProjectID(projectID, domainGroup.ID, limitVal)
 
 			if len(domainIDList) > 0 {
 				allUsersRun = true
@@ -221,7 +227,7 @@ func GetDomainsToRunMarkerFor(projectID int64, domainGroup *model.Group, domainG
 	}
 
 	// list of domains and their associated users with last updated_at in last x hour
-	domainIDList, statusCode := store.GetStore().GetLatestUpatedDomainsByProjectID(projectID, domainGroup.ID, lookBack)
+	domainIDList, statusCode := store.GetStore().GetLatestUpatedDomainsByProjectID(projectID, domainGroup.ID, lookBack, limitVal)
 
 	if statusCode == http.StatusInternalServerError {
 		log.WithFields(log.Fields{"project_id": projectID, "look_back": lookBack, "status_code": statusCode}).
