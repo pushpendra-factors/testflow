@@ -131,16 +131,17 @@ func (fd *FactorsDeanon) HandleAccountLimitAlert(projectId int64, client HTTPCli
 
 	logCtx := log.WithField("project_id", projectId)
 
-	project, status := store.GetStore().GetProject(projectId)
-	if status != http.StatusFound {
-		logCtx.Error("failed to get project.")
-		return http.StatusInternalServerError, errors.New("failed to get project")
+	timeZone, errCode := store.GetStore().GetTimezoneForProject(projectId)
+	if errCode != http.StatusFound {
+		return errCode, errors.New("failed to get project timezone")
 	}
 
-	percentageExhausted, limit, err := GetAccountLimitAndPercentageExhausted(projectId)
+	count, limit, err := GetFactorsDeanonCountAndLimit(projectId)
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
+
+	percentageExhausted := float64(count) / float64(limit) * 100.0
 
 	partialLimitExceeded := PartialAccountLimitExceeded{
 		Client: client,
@@ -154,12 +155,12 @@ func (fd *FactorsDeanon) HandleAccountLimitAlert(projectId int64, client HTTPCli
 		return http.StatusInternalServerError, errors.New("failed fetching admin email by projectId")
 	}
 
-	payloadJSON, err := json.Marshal(model.MailmodoTriggerCampaignRequestPayload{ReceiverEmail: email, Data: map[string]interface{}{"Project Name": project.Name}})
+	payloadJSON, err := json.Marshal(model.MailmodoTriggerCampaignRequestPayload{ReceiverEmail: email, Data: map[string]interface{}{"limit_consumed": count}})
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
 
-	if partialLimitMatch, _ := partialLimitExceeded.Match(projectId, percentageExhausted, limit, U.TimeZoneString(project.TimeZone)); partialLimitMatch {
+	if partialLimitMatch, _ := partialLimitExceeded.Match(projectId, percentageExhausted, limit, timeZone); partialLimitMatch {
 
 		err := partialLimitExceeded.Execute(projectId, payloadJSON)
 		if err != nil {
@@ -167,7 +168,7 @@ func (fd *FactorsDeanon) HandleAccountLimitAlert(projectId int64, client HTTPCli
 			return http.StatusBadRequest, err
 		}
 
-		err = SetAccountLimitEmailAlertCacheKey(projectId, limit, ACCOUNT_LIMIT_PARTIAL_EXCEEDED, U.TimeZoneString(project.TimeZone))
+		err = SetAccountLimitEmailAlertCacheKey(projectId, limit, ACCOUNT_LIMIT_PARTIAL_EXCEEDED, timeZone)
 		if err != nil {
 			return http.StatusInternalServerError, err
 		}
@@ -176,7 +177,7 @@ func (fd *FactorsDeanon) HandleAccountLimitAlert(projectId int64, client HTTPCli
 
 	}
 
-	if fullLimitMatch, _ := fullLimitExceeded.Match(projectId, percentageExhausted, limit, U.TimeZoneString(project.TimeZone)); fullLimitMatch {
+	if fullLimitMatch, _ := fullLimitExceeded.Match(projectId, percentageExhausted, limit, timeZone); fullLimitMatch {
 
 		err := fullLimitExceeded.Execute(projectId, payloadJSON)
 		if err != nil {
@@ -184,7 +185,7 @@ func (fd *FactorsDeanon) HandleAccountLimitAlert(projectId int64, client HTTPCli
 			return http.StatusBadRequest, err
 		}
 
-		err = SetAccountLimitEmailAlertCacheKey(projectId, limit, ACCOUNT_LIMIT_FULLY_EXCEEDED, U.TimeZoneString(project.TimeZone))
+		err = SetAccountLimitEmailAlertCacheKey(projectId, limit, ACCOUNT_LIMIT_FULLY_EXCEEDED, timeZone)
 		if err != nil {
 			return http.StatusInternalServerError, err
 		}
