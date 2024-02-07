@@ -141,6 +141,7 @@ func backfillHubspot(projectIDList string, workers int) error {
 			continue
 		}
 
+		log.WithField("project_id", featureEnabledProjectSettings[i].ProjectId).Info("Running for project")
 		err := backfillHubspotProject(&featureEnabledProjectSettings[i], workers)
 		if err != nil {
 			log.WithField("project_id", featureEnabledProjectSettings[i].ProjectId).WithError(err).Error("Failed to backfillHubspotProject.")
@@ -190,6 +191,8 @@ func backfillHubspotProject(hubspotProjectSettings *model.HubspotProjectSettings
 }
 
 func backfillSalesforce(projectIDList string, worker int) error {
+	allProjects, projectIDs, _ := C.GetProjectsFromListWithAllProjectSupport(projectIDList, "")
+
 	salesforceEnabledProjects, status := store.GetStore().GetAllSalesforceProjectSettings()
 	if status != http.StatusFound {
 		log.Error("Failed to get enabled salesforce integration.")
@@ -210,6 +213,11 @@ func backfillSalesforce(projectIDList string, worker int) error {
 	}
 
 	for i := range featureEnabledProjectSettings {
+		if !allProjects && !projectIDs[featureEnabledProjectSettings[i].ProjectID] {
+			continue
+		}
+
+		log.WithField("project_id", featureEnabledProjectSettings[i].ProjectID).Info("Running for project")
 		err := backfillSalesforceProject(featureEnabledProjectSettings[i], worker)
 		if err != nil {
 			log.WithField("project_id", featureEnabledProjectSettings[i].ProjectID).WithError(err).Error("Failed to backfillSalesforceProject.")
