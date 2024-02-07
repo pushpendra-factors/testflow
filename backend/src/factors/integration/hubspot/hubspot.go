@@ -2675,7 +2675,7 @@ func getCompanyProperties(projectID int64, document *model.HubspotDocument, port
 	}
 
 	if C.AddCRMObjectURLPropertyByProjectID(projectID) {
-		objectURL := getHubspotObjectURl(projectID, model.HubspotDocumentTypeNameCompany, portalID, document.ID)
+		objectURL := GetHubspotObjectURl(projectID, model.HubspotDocumentTypeNameCompany, portalID, document.ID)
 		if objectURL != "" {
 			userProperties[model.GetCRMObjectURLKey(projectID, model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameCompany)] = objectURL
 		}
@@ -2852,7 +2852,7 @@ func getCompanyPropertiesV3(projectID int64, document *model.HubspotDocument, po
 	}
 
 	if C.AddCRMObjectURLPropertyByProjectID(projectID) {
-		objectURL := getHubspotObjectURl(projectID, model.HubspotDocumentTypeNameCompany, portalID, document.ID)
+		objectURL := GetHubspotObjectURl(projectID, model.HubspotDocumentTypeNameCompany, portalID, document.ID)
 		if objectURL != "" {
 			userProperties[model.GetCRMObjectURLKey(projectID, model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameCompany)] = objectURL
 		}
@@ -2861,7 +2861,7 @@ func getCompanyPropertiesV3(projectID int64, document *model.HubspotDocument, po
 	return userProperties, nil
 }
 
-func getHubspotObjectURl(projectID int64, objectTyp, portalID, recordID string) string {
+func GetHubspotObjectURl(projectID int64, objectTyp, portalID, recordID string) string {
 	if objectTyp == "" || portalID == "" || recordID == "" {
 		log.WithFields(log.Fields{"project_id": projectID, "object_type": objectTyp, "portal_id": portalID, "record_id": recordID}).Error("Failed to create hubspot object url.")
 		return ""
