@@ -3,31 +3,45 @@ import { connect, ConnectedProps } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { Text } from 'Components/factorsComponents';
 import {
+  Button,
+  Divider,
+  Input,
+  notification,
+  Radio,
+  Select,
+  Tooltip
+} from 'antd';
+import {
+  MinusCircleOutlined,
+  PlusOutlined,
+  UploadOutlined
+} from '@ant-design/icons';
+import { udpateProjectSettings } from 'Reducers/global';
+import CSVUploadModal from 'Components/CSVUploadModal';
+import {
   EnrichPageData,
   EnrichTypes,
   FeatureModes,
   SixSignalConfigType
 } from './types';
-import { Button, Input, notification, Radio, Select, Tooltip } from 'antd';
-import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
-import { udpateProjectSettings } from 'Reducers/global';
 import style from './index.module.scss';
 
 const defaultPageData: EnrichPageData = {
   type: 'equals',
   value: ''
 };
-const EnrichPages = ({
+function EnrichPages({
   mode,
   setMode,
   sixSignalConfig,
   projectId,
   udpateProjectSettings
-}: EnrichPagesProps) => {
+}: EnrichPagesProps) {
   const [enrichType, setEnrichType] = useState<EnrichTypes | null>('include');
   const [data, setData] = useState<EnrichPageData[]>([defaultPageData]);
   const [errors, setErrors] = useState<number[] | null>(null);
   const [errorType, setErrorType] = useState<string>('');
+  const [uploadModalOpen, setUploadModalOpen] = useState<boolean>(false);
 
   const updateDataAtIndex = (
     value: string,
@@ -65,7 +79,7 @@ const EnrichPages = ({
   const renderData = () => {
     const rData = data.map((d, index) => (
       <div
-        className={`flex w-100 items-center gap-2 ${
+        className={`flex w-3/4 items-center gap-2 ${
           index !== 0 ? 'mt-3' : ''
         } `}
         key={index}
@@ -76,6 +90,7 @@ const EnrichPages = ({
             width: 'fix-content',
             minWidth: 180
           }}
+          className={`${style.selectArrow}`}
           value={d.type}
           onChange={(value) => updateDataAtIndex(value, index, 'type')}
           options={[
@@ -115,7 +130,7 @@ const EnrichPages = ({
       // verify data
       if (!projectId) return;
 
-      let errorIndexes = [];
+      const errorIndexes = [];
       const urlRegex =
         /^(?:(?:http|https):\/\/)?(?:www\.)?[a-zA-Z0-9-]+(?:\.[a-zA-Z]{2,})+(?:\/[^\s]*)?$/;
       let errorMessage = '';
@@ -166,6 +181,18 @@ const EnrichPages = ({
     }
   };
 
+  const handleOkClick = (CSVData: string[]) => {
+    const convertedArray: EnrichPageData[] = CSVData.map((value: string) => ({
+      type: 'equals',
+      value
+    }));
+    if (data[0].value === '') {
+      setData(convertedArray);
+    } else {
+      setData([...data, ...convertedArray]);
+    }
+  };
+
   useEffect(() => {
     let data = null;
     if (
@@ -191,7 +218,9 @@ const EnrichPages = ({
       {/* for edit mode */}
       {mode === 'edit' && (
         <>
-          <div className={`mt-3 ${style.customRadioGroup}`}>
+          <div
+            className={`flex justify-between mt-3 ${style.customRadioGroup}`}
+          >
             <Radio.Group
               value={enrichType}
               onChange={(e) => setEnrichType(e.target.value)}
@@ -202,8 +231,8 @@ const EnrichPages = ({
                 color='#0B1E39'
               >
                 <Radio.Button
-                  value={'include'}
-                  key={'include'}
+                  value='include'
+                  key='include'
                   disabled={enrichType === 'exclude' && data.length > 1}
                 >
                   Include
@@ -215,15 +244,31 @@ const EnrichPages = ({
                 color='#0B1E39'
               >
                 <Radio.Button
-                  value={'exclude'}
-                  key={'exclude'}
+                  value='exclude'
+                  key='exclude'
                   disabled={enrichType === 'include' && data.length > 1}
                 >
                   Exclude
                 </Radio.Button>
               </Tooltip>
             </Radio.Group>
+            <div>
+              <Button
+                className='mr-6'
+                onClick={() => setUploadModalOpen(!uploadModalOpen)}
+                icon={<UploadOutlined />}
+              >
+                Upload List
+              </Button>
+            </div>
           </div>
+          {uploadModalOpen && (
+            <CSVUploadModal
+              uploadModalOpen={uploadModalOpen}
+              setUploadModalOpen={setUploadModalOpen}
+              handleOkClick={handleOkClick}
+            />
+          )}
           <div className={`mt-5 ${style.customSelect}`}>
             {data && data?.length > 0 && renderData()}
           </div>
@@ -241,13 +286,13 @@ const EnrichPages = ({
 
           {errorType && (
             <div className={style.errorMessage}>
-              <Text type={'paragraph'} mini>
+              <Text type='paragraph' mini>
                 {errorType}
               </Text>
             </div>
           )}
 
-          <div className=' flex items-center gap-2 mt-6'>
+          <div className=' flex items-center justify-end mr-6 gap-2 mt-6'>
             <Button onClick={handleCancel}>Cancel</Button>
             <Button
               type='primary'
@@ -263,7 +308,7 @@ const EnrichPages = ({
       {mode === 'view' && (
         <>
           <div className='mt-3'>
-            <Text type={'paragraph'} mini color='grey'>
+            <Text type='paragraph' mini color='grey'>
               {enrichType === 'exclude' ? 'Exclude' : 'Include'}
             </Text>
           </div>
@@ -277,14 +322,14 @@ const EnrichPages = ({
                   }`}
                 >
                   <div style={{ width: 125 }}>
-                    <Text type={'paragraph'} mini color='grey-2'>
+                    <Text type='paragraph' mini color='grey-2'>
                       {d.type === 'equals'
                         ? 'If the url equals'
                         : 'If the url contains'}
                     </Text>
                   </div>
 
-                  <Text type={'paragraph'} mini weight={'bold'}>
+                  <Text type='paragraph' mini weight='bold'>
                     {d.value}
                   </Text>
                 </div>
@@ -295,7 +340,7 @@ const EnrichPages = ({
       )}
     </div>
   );
-};
+}
 
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
