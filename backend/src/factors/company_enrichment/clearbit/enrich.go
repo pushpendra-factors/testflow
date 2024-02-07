@@ -31,6 +31,9 @@ func (cb *CustomerClearbit) IsEligible(projectSettings *model.ProjectSetting) (b
 		log.Error("Failed to fetch feature flag")
 		return false, err
 	}
+	if !featureFlag {
+		return false, nil
+	}
 	customerClearbitKey := projectSettings.ClearbitKey
 	intCustomerClearbit := projectSettings.IntClearBit
 
