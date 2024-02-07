@@ -840,3 +840,30 @@ func TestComputeBucketRanges(t *testing.T) {
 
 	assert.Nil(t, err)
 }
+
+func TestRemoveDeletedEvents(t *testing.T) {
+
+	fileWeights, err := os.Open("./data/events_score_weights2.txt")
+	assert.Nil(t, err)
+
+	scannerW := bufio.NewScanner(fileWeights)
+	var weightsRequest M.AccWeights
+	var weights M.AccWeights
+
+	for scannerW.Scan() {
+		line := scannerW.Text()
+		if err := json.Unmarshal([]byte(line), &weightsRequest); err != nil {
+			log.WithFields(log.Fields{"line": line, "err": err}).Fatal("Read failed.")
+			return
+		}
+	}
+	weights.SaleWindow = weightsRequest.SaleWindow
+	weights.WeightConfig = make([]M.AccEventWeight, 0)
+	weights.WeightConfig = weightsRequest.WeightConfig
+	r := T.RemoveDeletedWeights(&weights)
+
+	for _, w := range r.WeightConfig {
+		log.WithFields(log.Fields{"name": w.EventName, "id": w.WeightId, "deleted": w.Is_deleted}).Debug("event")
+	}
+	assert.LessOrEqual(t, len(r.WeightConfig), len(weights.WeightConfig))
+}

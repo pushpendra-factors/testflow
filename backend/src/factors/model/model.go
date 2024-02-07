@@ -512,6 +512,7 @@ type Model interface {
 	GetParagonTokenFromProjectSetting(projectID int64) (string, int, error)
 	GetParagonEnabledProjectsCount(projectID int64) (int64, int, error)
 	AddParagonTokenAndEnablingAgentToProjectSetting(projectID int64, agentID, token string) (int, error)
+	GetIntegrationState(projectID int64, DocumentType string, isCRMTypeDoc bool) (model.IntegrationStatus, int)
 
 	// project
 	UpdateProject(projectID int64, project *model.Project) int
@@ -808,6 +809,7 @@ type Model interface {
 	CreateOrGetDomainsGroup(projectID int64) (*model.Group, int)
 	GetGroup(projectID int64, groupName string) (*model.Group, int)
 	GetGroupUserByGroupID(projectID int64, groupName string, groupID string) (*model.User, int)
+	GetGroupUsersGroupIdsByGroupName(projectID int64, groupName string) ([]model.User, int)
 	CreateOrUpdateGroupPropertiesBySource(projectID int64, groupName string, groupID, groupUserID string,
 		enProperties *map[string]interface{}, createdTimestamp, updatedTimestamp int64, source string) (string, error)
 	GetGroups(projectID int64) ([]model.Group, int)

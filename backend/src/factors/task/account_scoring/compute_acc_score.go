@@ -91,7 +91,7 @@ func BuildAccScoringDaily(projectId int64, configs map[string]interface{}) (map[
 		delete(userEventMap, model.LAST_EVENT)
 	}
 
-	mweights, _ := CreateweightMap(weights)
+	mweights, _ := CreateweightMap(&weights)
 	for tm.Unix() <= start_time.Unix() {
 		dateString := U.GetDateOnlyFromTimestamp(tm.Unix())
 		logCtx.Infof("Pulling daily events for :%s", dateString)
@@ -106,7 +106,7 @@ func BuildAccScoringDaily(projectId int64, configs map[string]interface{}) (map[
 
 	// from prevusers pick groups which are avaialable
 	now := time.Now()
-	_, err = WriteUserCountsAndRangesToDB(projectId, now.Unix(), prevCountsOfUser, updatedUsers, updatedGroups, groupUserMap, *weights, salewindow, lookback)
+	_, err = WriteUserCountsAndRangesToDB(projectId, now.Unix(), prevCountsOfUser, updatedUsers, updatedGroups, groupUserMap, weights, salewindow, lookback)
 	if err != nil {
 		logCtx.WithError(err).Errorf("error in updating user counts to DB")
 	}
@@ -119,16 +119,21 @@ func BuildAccScoringDaily(projectId int64, configs map[string]interface{}) (map[
 	return status, true
 }
 
-func GetWeightfromDB(projectId int64) (*M.AccWeights, error) {
+func GetWeightfromDB(projectId int64) (M.AccWeights, error) {
+
+	var mweights M.AccWeights
+	mweights.WeightConfig = make([]M.AccEventWeight, 0)
 
 	// get weights from DB
 	weights, errStatus := store.GetStore().GetWeightsByProject(projectId)
 	if errStatus != http.StatusFound {
 		errorString := fmt.Sprintf("unable to get weights : %d", projectId)
 		log.WithField("err code", errStatus).Errorf(errorString)
-		return nil, fmt.Errorf("%s", errorString)
+		return M.AccWeights{}, fmt.Errorf("%s", errorString)
 	}
-	return weights, nil
+
+	mweights = RemoveDeletedWeights(weights)
+	return mweights, nil
 }
 
 // CreateweightMap creates a map of event name to list of rules for easy lookup
@@ -137,11 +142,13 @@ func CreateweightMap(w *M.AccWeights) (map[string][]M.AccEventWeight, int64) {
 	// create map of event name to rules for easy lookup
 	wt := w.WeightConfig
 	for _, e := range wt {
-		weightkey := e.EventName
-		if _, ok := mwt[weightkey]; !ok {
-			mwt[weightkey] = make([]M.AccEventWeight, 0)
+		if e.Is_deleted == false {
+			weightkey := e.EventName
+			if _, ok := mwt[weightkey]; !ok {
+				mwt[weightkey] = make([]M.AccEventWeight, 0)
+			}
+			mwt[weightkey] = append(mwt[weightkey], e)
 		}
-		mwt[weightkey] = append(mwt[weightkey], e)
 	}
 	return mwt, w.SaleWindow
 }
@@ -829,14 +836,14 @@ func GetEngagementLevelOnUser(projectId int64, event model.LatestScore, userId s
 
 func GetTopkEventsOnCounts(events map[string]float64, weigths M.AccWeights, topK int) map[string]float64 {
 
-	var eventsDeleted map[string]bool = make(map[string]bool)
+	var eventsRetained map[string]bool = make(map[string]bool)
 	for _, w := range weigths.WeightConfig {
-		if w.Is_deleted {
-			eventsDeleted[w.WeightId] = true
+		if !w.Is_deleted {
+			eventsRetained[w.WeightId] = true
 		}
 	}
 	for evKey, _ := range events {
-		if _, ok := eventsDeleted[evKey]; ok {
+		if _, ok := eventsRetained[evKey]; !ok {
 			delete(events, evKey)
 		}
 	}
@@ -847,4 +854,23 @@ func GetTopkEventsOnCounts(events map[string]float64, weigths M.AccWeights, topK
 	}
 	result := U.TakeTopKOnSortedmap(events, topK)
 	return result
+}
+
+func RemoveDeletedWeights(weights *M.AccWeights) M.AccWeights {
+	log.Info("indide remove deleted weights")
+	var mweights M.AccWeights
+
+	mweights.SaleWindow = weights.SaleWindow
+	mweights.WeightConfig = make([]M.AccEventWeight, 0)
+
+	for _, w := range weights.WeightConfig {
+		if !w.Is_deleted {
+			mweights.WeightConfig = append(mweights.WeightConfig, w)
+		} else {
+			log.Infof("deleted name : %s", w.EventName)
+
+		}
+	}
+
+	return mweights
 }
