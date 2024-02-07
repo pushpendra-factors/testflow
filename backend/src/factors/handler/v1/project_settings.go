@@ -71,3 +71,36 @@ func GetProjectSettingHandler(c *gin.Context) {
 		c.JSON(http.StatusOK, projectSettings)
 	}
 }
+
+func IntegrationsStatusHandler(c *gin.Context) {
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		logCtx.Error("Get project_settings failed. Failed to get project_id.")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	result := map[string]model.IntegrationStatus{}
+	for _, docType := range model.CRMDocTypeList {
+		state, errCode := store.GetStore().GetIntegrationState(projectId, docType, true)
+		if errCode != http.StatusOK {
+			logCtx.Error("Failed to Integration state")
+		}
+		result[docType] = state
+	}
+
+	for _, docType := range model.DocTypeList {
+		state, errCode := store.GetStore().GetIntegrationState(projectId, docType, false)
+		if errCode != http.StatusOK {
+			logCtx.Error("Failed to Integration state")
+		}
+		result[docType] = state
+	}
+
+	c.JSON(http.StatusOK, result)
+
+}
