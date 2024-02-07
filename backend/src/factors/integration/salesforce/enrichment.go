@@ -146,7 +146,7 @@ func GetSalesforceDocumentProperties(projectID int64, document *model.Salesforce
 	}
 
 	if C.AddCRMObjectURLPropertyByProjectID(projectID) && document.Type == model.SalesforceDocumentTypeAccount {
-		objectURL := getSalesforceObjectURL(projectID, organizationURL, model.SalesforceDocumentTypeNameAccount, document.ID)
+		objectURL := GetSalesforceObjectURL(projectID, organizationURL, model.SalesforceDocumentTypeNameAccount, document.ID)
 		if objectURL != "" {
 			enrichedProperties[model.GetCRMObjectURLKey(projectID, sdk.SourceSalesforce, model.SalesforceDocumentTypeNameAccount)] = objectURL
 		}
@@ -155,7 +155,7 @@ func GetSalesforceDocumentProperties(projectID int64, document *model.Salesforce
 	return &enrichedProperties, &properties, nil
 }
 
-func getSalesforceObjectURL(projecID int64, organizationURL string, objectType string, recordID string) string {
+func GetSalesforceObjectURL(projecID int64, organizationURL string, objectType string, recordID string) string {
 	if projecID == 0 || organizationURL == "" || objectType == "" || recordID == "" {
 		log.WithFields(log.Fields{"project_id": projecID, "organization_url": organizationURL, "type": objectType, "record_id": recordID}).
 			Error("Failed to get salesforce object url.")

@@ -3855,3 +3855,39 @@ func (store *MemSQL) UpdateGroupUserDomainAssociationUsingAccountUserID(projectI
 
 	return http.StatusOK
 }
+
+func (store *MemSQL) GetGroupUsersGroupIdsByGroupName(projectID int64, groupName string) ([]model.User, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"group_name": groupName,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	group, status := store.GetGroup(projectID, groupName)
+	if status != http.StatusFound {
+		logCtx.Error("Failed to get group in GetGroupUsersByGroupName.")
+		return nil, http.StatusInternalServerError
+	}
+
+	groupIDFilter := fmt.Sprintf("group_%d_id IS NOT NULL", group.ID)
+	filterStmnt := " project_id = ? AND is_group_user = true" + " AND " + groupIDFilter
+
+	var users []model.User
+	db := C.GetServices().Db
+	if err := db.Order("created_at").
+		Where(filterStmnt, projectID).
+		Select(excludeColumns(db, []string{"associated_segments", "event_aggregate", "properties", "group_1_user_id",
+			"group_2_user_id", "group_3_user_id", "group_4_user_id", "group_5_user_id", "group_6_user_id", "group_7_user_id", "group_8_user_id",
+			"created_at", "updated_at", "amp_user_id", "customer_user_id", "customer_user_id_source",
+			"join_timestamp", "last_event_at", "properties_id", "segment_anonymous_id", "source"})).
+		Find(&users).Error; err != nil {
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(users) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	return users, http.StatusFound
+}
