@@ -47,6 +47,7 @@ type Model interface {
 	IsSlackIntegratedForProject(projectID int64, agentUUID string) (bool, int)
 	IsTeamsIntegratedForProject(projectID int64, agentUUID string) (bool, int)
 	UpdateLastLoggedOut(agentUUID string, timestamp int64) int
+	UpdateAgentBillingCustomerID(agentUUID, id string) int
 
 	// analytics
 	ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error, string)

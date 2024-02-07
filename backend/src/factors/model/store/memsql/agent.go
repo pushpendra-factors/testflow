@@ -414,6 +414,12 @@ func (store *MemSQL) UpdateAgentInformation(agentUUID, firstName, lastName, phon
 	return updateAgent(agentUUID, updateParams...)
 }
 
+func (store *MemSQL) UpdateAgentBillingCustomerID(agentUUID, id string) int {
+	options := make([]model.Option, 0)
+	options = append(options, model.BillingCustomerID(id))
+	return updateAgent(agentUUID, options...)
+}
+
 func updateAgent(agentUUID string, options ...model.Option) int {
 	logFields := log.Fields{
 		"agent_uuid": agentUUID,
