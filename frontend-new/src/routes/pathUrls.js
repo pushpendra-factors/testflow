@@ -7,7 +7,7 @@ export const PathUrls = {
   Analyse: '/analyse/:query_type/:query_id',
   Analyse1: '/analyse/:query_type',
   Analyse2: '/analyse',
-  Explain: '/explain',
+  Explain: '/explain?type=:type',
   Alerts: '/alerts',
   ExplainInsightsV2: '/explainV2/insights',
   ProfilePeople: '/profiles/people',

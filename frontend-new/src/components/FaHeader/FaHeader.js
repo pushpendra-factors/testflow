@@ -353,7 +353,7 @@ function FaHeader() {
                 extraClass='mb-0'
                 weight='medium'
               >
-                Alerts
+                Automations
               </Text>
             </Link>
           </div>

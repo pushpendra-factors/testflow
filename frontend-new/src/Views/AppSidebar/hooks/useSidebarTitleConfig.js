@@ -48,8 +48,8 @@ const useSidebarTitleConfig = () => {
   }
   if (isSettingsUrl(pathname) || isAlertsUrl(pathname)) {
     return {
-      title: 'Settings',
-      icon: 'settings_Filled',
+      title: 'Automations',
+      icon: 'radar',
       iconColor: '#8C8C8C'
     };
   }
