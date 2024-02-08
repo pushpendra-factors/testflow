@@ -939,11 +939,6 @@ function CoreQuery({
           </ErrorBoundary>
         </div>
       </CoreQueryContext.Provider>
-      {/* create project modal */}
-      {/* <NewProject
-          visible={showProjectModal}
-          handleCancel={() => setShowProjectModal(false)}
-        /> */}
     </ErrorBoundary>
   );
 }

@@ -31,7 +31,6 @@ import WorkflowParagon from 'Views/Pages/WorkflowParagon';
 import { Switch } from 'react-router-dom';
 import PrivateRoute from 'Components/PrivateRoute';
 import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
-import SetupAssist from 'Views/Settings/SetupAssist';
 import { useDispatch } from 'react-redux';
 import { UPDATE_ALL_ROUTES } from 'Reducers/types';
 import ConfigurePlans from 'Views/Settings/ProjectSettings/ConfigurePlans';
@@ -558,7 +557,6 @@ export function AppLayoutRoutes({
         />
       ) : null}
 
-      <PrivateRoute path='/project-setup' component={SetupAssist} />
       <PrivateRoute path={PathUrls.Checklist} component={Checklist} />
     </Switch>
   );

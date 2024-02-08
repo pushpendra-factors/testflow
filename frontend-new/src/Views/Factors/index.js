@@ -28,7 +28,6 @@ import {
   fetchMarketoIntegration,
   fetchBingAdsIntegration
 } from '../../reducers/global';
-import NewProject from '../Settings/SetupAssist/Modals/NewProject';
 import CommonBeforeIntegrationPage from 'Components/GenericComponents/CommonBeforeIntegrationPage';
 
 // const whiteListedAccounts = [
@@ -86,7 +85,6 @@ const Factors = ({
   const [loading, setLoading] = useState(true);
 
   const [tabID, setTabID] = useState(1);
-  const [showProjectModal, setShowProjectModal] = useState(false);
   const integration = useSelector(
     (state) => state.global.currentProjectSettings
   );
@@ -333,12 +331,6 @@ const Factors = ({
               </div>
             </>
           )}
-
-          {/* create project modal */}
-          <NewProject
-            visible={showProjectModal}
-            handleCancel={() => setShowProjectModal(false)}
-          />
         </ErrorBoundary>
       </>
     );
