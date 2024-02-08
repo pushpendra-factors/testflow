@@ -47,16 +47,19 @@ function EventDrawer({
   };
 
   const addNewProp = (option: any, group: any) => {
-    const updatedList = new Set([
-      ...(currentProjectSettings?.timelines_config?.events_config?.[
+    const currentList =
+      currentProjectSettings?.timelines_config?.events_config?.[
         event?.event_name
-      ] || []),
-      option.value
-    ]);
-    handleUpdateEventProps([...updatedList]);
+      ] || [];
+
+    if (currentList.includes(option.value)) {
+      message.error('Property Already Exists');
+      return;
+    }
+    handleUpdateEventProps([...currentList, option.value]);
   };
 
-  const mapEventProperties = (properties) =>
+  const mapEventProperties = (properties: object) =>
     Object.entries(properties)
       ?.map(([group, values]) => ({
         label: PropTextFormat(group),
