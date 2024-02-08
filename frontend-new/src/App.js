@@ -135,7 +135,7 @@ function App({
         if (window.trackdesk && typeof window.trackdesk == 'function') {
           window.trackdesk('factorsai', 'externalCid', {
             externalCid: agent_details?.email,
-            revenueOriginId: 'revenueOriginId'
+            revenueOriginId: 'fc51bc33-de16-4d8f-9270-320a311eb873'
           });
         }
 
