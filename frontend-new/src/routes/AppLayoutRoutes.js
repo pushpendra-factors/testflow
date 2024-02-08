@@ -13,7 +13,6 @@ import PropertySettings from 'Views/Settings/ProjectConfigure/PropertySettings';
 import ContentGroups from 'Views/Settings/ProjectConfigure/ContentGroups';
 import CustomKPI from 'Views/Settings/ProjectConfigure/CustomKPI';
 import Alerts from 'Views/Settings/ProjectSettings/Alerts';
-import ExplainDataPoints from 'Views/Settings/ProjectConfigure/ExplainDataPoints';
 import UserProfiles from 'Components/Profile/UserProfiles';
 import AccountProfiles from 'Components/Profile/AccountProfiles';
 import Touchpoints from 'Views/Settings/ProjectConfigure/Touchpoints';
@@ -28,7 +27,7 @@ import CommonLockedComponent from 'Components/GenericComponents/CommonLockedComp
 
 import WorkflowParagon from 'Views/Pages/WorkflowParagon';
 
-import { Switch } from 'react-router-dom';
+import { Switch, Redirect, Route } from 'react-router-dom';
 import PrivateRoute from 'Components/PrivateRoute';
 import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import SetupAssist from 'Views/Settings/SetupAssist';
@@ -147,21 +146,6 @@ const FeatureLockedConfigureEvents = withFeatureLockHOC(Events, {
     />
   )
 });
-
-const FeatureLockedConfigureExplainDataPoints = withFeatureLockHOC(
-  ExplainDataPoints,
-  {
-    featureName: FEATURES.FEATURE_EXPLAIN,
-    LockedComponent: (props) => (
-      <CommonLockedComponent
-        title='Top Events and Properties'
-        description='Elevate the importance of key events and properties in your project with our Top Events and Properties feature. By designating specific events and properties as top priorities, you can ensure they are closely monitored and tracked. These vital metrics will be prominently displayed in the Explain section of Factors, providing you with instant visibility and easy access to the most critical data points.'
-        learnMoreLink='https://help.factors.ai/en/articles/6294993-top-events-and-properties'
-        {...props}
-      />
-    )
-  }
-);
 
 const FeatureLockConfigurationAttribution = withFeatureLockHOC(
   AttributionSettings,
@@ -433,12 +417,6 @@ export const APP_LAYOUT_ROUTES = {
     Component: FeatureLockedConfigureCustomKPI,
     Private: true
   },
-  ConfigureDataPoints: {
-    exact: true,
-    path: PathUrls.ConfigureDataPoints,
-    Component: FeatureLockedConfigureExplainDataPoints,
-    Private: true
-  },
   Alerts: {
     exact: true,
     path: PathUrls.Alerts,
@@ -560,6 +538,9 @@ export function AppLayoutRoutes({
 
       <PrivateRoute path='/project-setup' component={SetupAssist} />
       <PrivateRoute path={PathUrls.Checklist} component={Checklist} />
+
+      {/* if no route match, redirect to home-screen */}
+      <Route render={() => (<Redirect to="/" />)}/>
     </Switch>
   );
 }
