@@ -191,10 +191,6 @@ func GetDomainsToRunMarkerFor(projectID int64, domainGroup *model.Group, domainG
 
 	limitVal := C.MarkerDomainLimitForAllRun()
 
-	if limitVal <= 0 {
-		limitVal = 250000
-	}
-
 	// fetch lastRunTime
 	lastRunTime, lastRunStatusCode := store.GetStore().GetMarkerLastForAllAccounts(projectID)
 	if lastRunStatusCode == http.StatusFound && C.AllAccountsRuntMarker(projectID) {

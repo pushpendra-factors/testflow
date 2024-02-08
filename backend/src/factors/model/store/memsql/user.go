@@ -489,6 +489,7 @@ func (store *MemSQL) GetAllDomainsByProjectID(projectID int64, domainGroupID int
 	logFields := log.Fields{
 		"project_id": projectID,
 		"domain_id":  domainGroupID,
+		"limit":      limitVal,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
@@ -513,6 +514,7 @@ func (store *MemSQL) GetAllDomainsByProjectID(projectID int64, domainGroupID int
 	db := C.GetServices().Db
 	rows, err := db.Raw(query, queryParams...).Rows()
 	if err != nil {
+		log.WithFields(logFields).WithError(err).Error("Error fetching records")
 		return []string{}, http.StatusInternalServerError
 	}
 
@@ -520,12 +522,14 @@ func (store *MemSQL) GetAllDomainsByProjectID(projectID int64, domainGroupID int
 		var id string
 		err = rows.Scan(&id)
 		if err != nil {
+			log.WithFields(logFields).WithError(err).Error("Error fetching rows")
 			return []string{}, http.StatusInternalServerError
 		}
 		domainIDs = append(domainIDs, id)
 	}
 
 	if len(domainIDs) == 0 {
+		log.WithFields(logFields).Error("No domains founds")
 		return []string{}, http.StatusNotFound
 	}
 
