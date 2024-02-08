@@ -106,36 +106,34 @@ func main() {
 	defer db.Close()
 
 	startTime := time.Now().Unix()
-	isSuccess := RunSegmentMarkerForProjects(projectIdFlag)
+	RunSegmentMarkerForProjects(projectIdFlag)
 	endTime := time.Now().Unix()
 	timeTaken := endTime - startTime
 	log.Info("Time taken for job to run in sec: ", timeTaken)
-	if !isSuccess {
-		C.PingHealthcheckForFailure(healthcheckPingID, "segment_markup run failed.")
-		return
-	}
 	C.PingHealthcheckForSuccess(healthcheckPingID, "segment_markup run success.")
 }
 
-func RunSegmentMarkerForProjects(projectIdFlag *string) bool {
+func RunSegmentMarkerForProjects(projectIdFlag *string) {
 	projectIdList := *projectIdFlag
-	isHealthcheckSuccess := true
 
 	allProjects, projectIDsMap, _ := C.GetProjectsFromListWithAllProjectSupport(projectIdList, "")
+	failureCount := 0
+	successCount := 0
 
 	if allProjects {
 		projectIDs, errCode := store.GetStore().GetAllProjectIDs()
 		if errCode != http.StatusFound {
 			err := fmt.Errorf("failed to get all projects ids to run segment markup")
 			log.WithField("err_code", err).Error(err)
-			isHealthcheckSuccess = false
-			return isHealthcheckSuccess
+			return
 		}
 		for _, projectId := range projectIDs {
 			status := T.SegmentMarker(projectId)
 			if status != http.StatusOK {
 				log.WithField("project_id", projectId).Error("failed to run segment markup for project ID ")
-				isHealthcheckSuccess = false
+				failureCount++
+			} else {
+				successCount++
 			}
 		}
 	} else {
@@ -143,9 +141,13 @@ func RunSegmentMarkerForProjects(projectIdFlag *string) bool {
 			status := T.SegmentMarker(projectId)
 			if status != http.StatusOK {
 				log.WithField("project_id", projectId).Error("failed to run segment markup for project ID ")
-				isHealthcheckSuccess = false
+				failureCount++
+			} else {
+				successCount++
 			}
 		}
 	}
-	return isHealthcheckSuccess
+
+	log.Info(fmt.Sprintf("Succesfully ran markup job for %d projects. Failures for %d projects",
+		successCount, failureCount))
 }
