@@ -54,9 +54,9 @@ const Alerts = ({
   const [tabNo, setTabNo] = useState('2');
   const [alertState, setAlertState] = useState({
     state: 'list',
-    index: 0,
-    type: 'realtime'
+    index: 0
   });
+  const [alertType, setAlertType] = useState('realtime');
   const { confirm } = Modal;
 
   const routeQuery = useQuery();
@@ -70,7 +70,8 @@ const Alerts = ({
   useEffect(() => {
     const type = routeQuery.get('type');
     if (type && ['realtime', 'weekly'].includes(type)) {
-      setAlertState({ ...alertState, type: type });
+      setAlertState({ state: 'list', index: 0 });
+      setAlertType(type);
     }
   }, [routeQuery]);
 
@@ -89,7 +90,7 @@ const Alerts = ({
                 description: 'Deleted Alert successfully ',
                 duration: 5
               });
-              setAlertState({ ...alertState, state: 'list', index: 0 });
+              setAlertState({ state: 'list', index: 0 });
             },
             (err) => {
               notification.error({
@@ -108,7 +109,7 @@ const Alerts = ({
                 description: 'Deleted Alert successfully ',
                 duration: 5
               });
-              setAlertState({ ...alertState, state: 'list', index: 0 });
+              setAlertState({ state: 'list', index: 0 });
             },
             (err) => {
               notification.error({
@@ -177,7 +178,7 @@ const Alerts = ({
           key='0'
           onClick={() => {
             setTabNo(item?.type == 'kpi_alert' ? '1' : '2');
-            setAlertState({ ...alertState, state: 'edit', index: item });
+            setAlertState({ state: 'edit', index: item });
             setAlertDetails(item);
           }}
         >
@@ -220,7 +221,7 @@ const Alerts = ({
           extraClass={`cursor-pointer m-0`}
           onClick={() => {
             setTabNo(item?.type == 'kpi_alert' ? '1' : '2');
-            setAlertState({ ...alertState, state: 'edit', index: item });
+            setAlertState({ state: 'edit', index: item });
             setAlertDetails(item);
           }}
         >
@@ -323,7 +324,7 @@ const Alerts = ({
       });
     } else {
       savedAlerts?.forEach((item, index) => {
-        if (alertState.type === 'weekly') {
+        if (alertType === 'weekly') {
           item.type === 'kpi_alert' &&
             savedArr.push({
               key: index,
@@ -333,7 +334,7 @@ const Alerts = ({
               status: { status: item?.status, error: item?.last_fail_details },
               actions: item
             });
-        } else if (alertState.type === 'realtime') {
+        } else if (alertType === 'realtime') {
           item.type === 'event_based_alert' &&
             savedArr.push({
               key: index,
@@ -347,7 +348,7 @@ const Alerts = ({
       });
     }
     setTableData(savedArr);
-  }, [savedAlerts, tabNo, alertState.type]);
+  }, [savedAlerts, tabNo, alertType]);
 
   function callback(key) {
     setTabNo(key);
@@ -356,7 +357,7 @@ const Alerts = ({
   const renderTitle = () => {
     let title = null;
     let titleText;
-    switch (alertState.type) {
+    switch (alertType) {
       case 'realtime': {
         titleText = 'Real time alerts';
         break;
@@ -392,7 +393,7 @@ const Alerts = ({
           key='0'
           onClick={() => {
             setTabNo('2');
-            setAlertState({ ...alertState, state: 'add', index: 0 });
+            setAlertState({ state: 'add', index: 0 });
             setAlertDetails(false);
           }}
         >
@@ -417,7 +418,7 @@ const Alerts = ({
           key='0'
           onClick={() => {
             setTabNo('1');
-            setAlertState({ ...alertState, state: 'add', index: 0 });
+            setAlertState({ state: 'add', index: 0 });
             setAlertDetails(false);
           }}
         >
@@ -444,12 +445,12 @@ const Alerts = ({
 
   const switchToAddAlertState = (tabNo = '2') => {
     setTabNo(tabNo);
-    setAlertState({ ...alertState, state: 'add', index: 0 });
+    setAlertState({ state: 'add', index: 0 });
     setAlertDetails(false);
   };
 
   const newAlertAction = () => {
-    switch (alertState.type) {
+    switch (alertType) {
       case 'realtime': {
         switchToAddAlertState('2');
         break;
@@ -517,13 +518,13 @@ const Alerts = ({
                 <div className={'flex justify-end'}>{renderTitleActions()}</div>
               </Col>
             </Row>
-            <Row className={'mt-4'}>
+            <Row>
               <Col span={24}>
                 <Text
                   type={'title'}
                   level={7}
                   color={'grey-2'}
-                  extraClass={'m-0 mt-2'}
+                  extraClass={'m-0'}
                 >
                   Set up alerts to never miss out on any prospect activity or
                   changes in metrics you care about. &nbsp;

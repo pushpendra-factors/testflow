@@ -337,7 +337,7 @@ function FaHeader() {
             </Link> */}
 
             <Link
-              to={PathUrls.Alerts}
+              to={PathUrls.Alerts + '?type=realtime'}
               className={cx(
                 'flex items-center pl-2 pr-1 py-1 ' + styles['header-item'],
                 {
