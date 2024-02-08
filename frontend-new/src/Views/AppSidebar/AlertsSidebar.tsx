@@ -38,9 +38,12 @@ const AlertsSidebar = () => {
         <div className={cx('flex col-gap-1 items-center w-full')}>
           {/* <SVG name='settings' /> */}
           <Text
-            color='character-primary'
+            color={
+              alertType === 'realtime' ? 'brand-color-6' : 'character-primary'
+            }
             type='title'
             level={7}
+            weight={alertType === 'realtime' && 'bold'}
             extraClass='mb-0'
           >
             Real time alerts
@@ -63,9 +66,12 @@ const AlertsSidebar = () => {
         <div className={cx('flex col-gap-1 items-center w-full')}>
           {/* <SVG name='settings' /> */}
           <Text
-            color='character-primary'
+            color={
+              alertType === 'weekly' ? 'brand-color-6' : 'character-primary'
+            }
             type='title'
             level={7}
+            weight={alertType === 'weekly' && 'bold'}
             extraClass='mb-0'
           >
             Weekly updates
