@@ -137,14 +137,16 @@ func (store *MemSQL) convertEventTriggerAlertToEventTriggerAlertInfo(list []mode
 			internalStatus = model.Paused
 		}
 
-		// not showing any errors in UI if there is a subsequent success	
+		// not showing any errors in UI if there is a subsequent success
 		var lastFailJson *postgres.Jsonb
 		var lastFail model.LastFailDetails
-		err = U.DecodePostgresJsonbToStructType(obj.LastFailDetails, &lastFail) 
-		if err != nil {
-			log.WithError(err).Error("error deserializing last fail details query")
+		if obj.LastFailDetails != nil {
+			err = U.DecodePostgresJsonbToStructType(obj.LastFailDetails, &lastFail)
+			if err != nil {
+				log.WithError(err).Error("error deserializing last fail details query")
+			}
 		}
-		
+
 		if !lastFail.IsPausedAutomatically && obj.LastAlertAt.Compare(lastFail.FailTime) <= 0 {
 			lastFailJson = obj.LastFailDetails
 		} else {
