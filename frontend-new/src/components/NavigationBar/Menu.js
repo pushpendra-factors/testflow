@@ -34,7 +34,6 @@ const MenuItems = {
   Touchpoints: 'Touchpoints',
   Attribution: 'Attributions',
   CustomKPI: 'Custom KPIs',
-  ExplainDP: 'Top Events and Properties',
   TargetGoals: 'Target/Goals',
   People: 'People',
   Accounts: 'Accounts',

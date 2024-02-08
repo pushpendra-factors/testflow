@@ -43,10 +43,6 @@ export const getConfigureMenuItems = (email) => {
       url: PathUrls.ConfigureCustomKpi
     },
     {
-      label: 'Top Events and Properties',
-      url: PathUrls.ConfigureDataPoints
-    },
-    {
       label: 'Engagements',
       url: PathUrls.ConfigureEngagements
     },
