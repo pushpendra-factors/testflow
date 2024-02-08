@@ -3,10 +3,13 @@ import { Drawer, Button, message } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
 import { EventDrawerProps } from 'Components/Profile/types';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
-import { useSelector } from 'react-redux';
+import { connect, ConnectedProps, useSelector } from 'react-redux';
 import { processProperties, PropTextFormat } from 'Utils/dataFormatter';
 import getGroupIcon from 'Utils/getGroupIcon';
 import { updateEventPropertiesConfig } from 'Reducers/timelines';
+import { fetchProjectSettings } from 'Reducers/global';
+import { bindActionCreators } from 'redux';
+import logger from 'Utils/logger';
 import styles from '../index.module.scss';
 import EventDetails from './EventDetails';
 
@@ -14,12 +17,14 @@ function EventDrawer({
   visible,
   onClose,
   event,
-  eventPropsType
-}: EventDrawerProps): JSX.Element {
+  eventPropsType,
+  fetchProjectSettings
+}: ComponentProps): JSX.Element {
   const { active_project: activeProject } = useSelector(
     (state: any) => state.global
   );
   const { eventPropertiesV2 } = useSelector((state: any) => state.coreQuery);
+  const { currentProjectSettings } = useSelector((state: any) => state.global);
   const { activePageView } = useSelector((state: any) => state.timelines);
 
   const [filterProperties, setFilterProperties] = useState([]);
@@ -28,22 +33,27 @@ function EventDrawer({
   const handleUpdateEventProps = (newList: string[]) => {
     updateEventPropertiesConfig(
       activeProject?.id,
-      event?.properties?.$is_page_view ? 'PageView' : event.event_name,
+      event?.display_name === 'Page View' ? 'PageView' : event.event_name,
       newList
     )
       .then(() => {
+        fetchProjectSettings(activeProject?.id);
         message.success('Updated Event Properties Configuration');
       })
       .catch((err) => {
+        logger.error(err);
         message.error('Error Updating Event Properties Configuration');
       });
   };
 
   const addNewProp = (option: any, group: any) => {
-    handleUpdateEventProps([
-      ...Object.keys(event.properties || {}),
+    const updatedList = new Set([
+      ...(currentProjectSettings?.timelines_config?.events_config?.[
+        event?.event_name
+      ] || []),
       option.value
     ]);
+    handleUpdateEventProps([...updatedList]);
   };
 
   const mapEventProperties = (properties) =>
@@ -62,7 +72,7 @@ function EventDrawer({
   useEffect(() => {
     let eventProps;
 
-    if (event && !event?.properties?.$is_page_view) {
+    if (event && event?.display_name !== 'Page View') {
       eventProps = mapEventProperties(
         eventPropertiesV2[event.event_name] || {}
       );
@@ -129,4 +139,16 @@ function EventDrawer({
   );
 }
 
-export default EventDrawer;
+const mapDispatchToProps = (dispatch: any) =>
+  bindActionCreators(
+    {
+      fetchProjectSettings
+    },
+    dispatch
+  );
+
+const connector = connect(null, mapDispatchToProps);
+type ReduxProps = ConnectedProps<typeof connector>;
+type ComponentProps = ReduxProps & EventDrawerProps;
+
+export default connector(EventDrawer);
