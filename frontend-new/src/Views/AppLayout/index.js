@@ -283,7 +283,7 @@ function AppLayout({
     }
   }, [activeAgent, agentState]);
 
-  if (dataLoading || activeProjectLoading || isChecklistEnabled === undefined) {
+  if (dataLoading || activeProjectLoading) {
     return <Spin size='large' className='fa-page-loader' />;
   }
 
