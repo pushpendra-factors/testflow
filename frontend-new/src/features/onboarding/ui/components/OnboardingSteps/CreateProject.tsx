@@ -198,7 +198,7 @@ function Step1({
       };
     }
     return {
-      time_zone: `${TimeZoneOffsetValueArr[0]?.name} (UTC ${TimeZoneOffsetValueArr[0]?.offset})`,
+      time_zone: `${TimeZoneOffsetValueArr[0]?.text}`,
       projectName: '',
       domainName: getCompanyDomainFromEmail(agent_details?.email)
     };
@@ -344,11 +344,15 @@ function Step1({
                     size='large'
                     disabled={isFormSubmitted}
                   >
-                    {TimeZoneOffsetValueArr?.map((item) => (
-                      <Option
-                        value={item?.city}
-                      >{`${item?.name} (UTC ${item?.offset})`}</Option>
-                    ))}
+                    {TimeZoneOffsetValueArr?.map((item) => {
+                      if(item?.city != 'Europe/Berlin'){
+                        return (
+                          <Option
+                            value={item?.city}
+                          >{`${item?.text}`}</Option>
+                        ); 
+                      }
+                    })}
                   </Select>
                 </Form.Item>
                 <Text

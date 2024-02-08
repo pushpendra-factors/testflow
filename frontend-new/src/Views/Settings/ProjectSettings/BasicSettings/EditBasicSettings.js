@@ -237,82 +237,7 @@ function EditBasicSettings({
               </Form.Item>
             </Col>
           </Row>
-
-          {/* <Row className={'mt-6'}>
-            <Col span={24}>
-              <Text type={'title'} level={7} extraClass={'m-0'}>
-                Date Format
-              </Text>
-              <Form.Item
-                name='date_format'
-                className={'m-0'}
-                rules={[{ required: true, message: 'Please choose an option' }]}
-              >
-                <Select
-                  className={'fa-select w-full'}
-                  placeholder={'Date Format'}
-                  size={'large'}
-                >
-                  <Option value='DD-MM-YYYY'>DD-MM-YYYY</Option>
-                  <Option value='YYYY-MM-DD'>YYYY-MM-DD</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row className={'mt-6'}>
-            <Col span={24}>
-              <Text type={'title'} level={7} extraClass={'m-0'}>
-                Time Format
-              </Text>
-              <Form.Item
-                name='time_format'
-                className={'m-0'}
-                rules={[{ required: true, message: 'Please choose an option' }]}
-              >
-                <Select
-                  className={'fa-select w-full'}
-                  placeholder={'Time Format'}
-                  size={'large'}
-                >
-                  <Option value='12 Hours'>12 Hours</Option>
-                  <Option value='24 Hours'>24 Hours</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row> */}
-
-          {agent?.email == 'solutions@factors.ai' ||
-          agent?.email == 'baliga@factors.ai' ? (
-            <Row className={'mt-6'}>
-              <Col span={24}>
-                <Text type={'title'} level={7} extraClass={'m-0'}>
-                  Time Zone
-                </Text>
-                <Form.Item
-                  name='time_zone'
-                  className={'m-0'}
-                  rules={[
-                    { required: true, message: 'Please choose an option' }
-                  ]}
-                >
-                  <Select
-                    className={'fa-select w-full'}
-                    placeholder={'Time Zone'}
-                    size={'large'}
-                    disabled={true} //disabling timezone dropdown
-                  >
-                    {TimeZoneOffsetValueArr?.map((item) => {
-                      return (
-                        <Option
-                          value={item?.city}
-                        >{`${item?.name} (UTC ${item?.offset})`}</Option>
-                      );
-                    })}
-                  </Select>
-                </Form.Item>
-              </Col>
-            </Row>
-          ) : (
+ 
             <Row className={'mt-6'}>
               <Col span={24}>
                 <Text type={'title'} level={7} extraClass={'m-0'}>
@@ -325,17 +250,12 @@ function EditBasicSettings({
                   weight={'bold'}
                 >
                   {!_.isEmpty(activeProject?.time_zone)
-                    ? `${
-                        getTimeZoneNameFromCity(activeProject?.time_zone)?.name
-                      } (UTC ${
-                        getTimeZoneNameFromCity(activeProject?.time_zone)
-                          ?.offset
-                      })`
+                    ? `${ getTimeZoneNameFromCity(activeProject?.time_zone)?.text}`
                     : '---'}
                 </Text>
               </Col>
-            </Row>
-          )}
+            </Row> 
+            
         </Form>
 
         <Row className={'mt-6 mb-10'}>
