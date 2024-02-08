@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import cx from 'classnames';
 import { Layout, Dropdown, Menu, Button } from 'antd';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useHistory, useLocation } from 'react-router-dom';
 import SearchBar from 'Components/SearchBar';
 import { SVG, Text } from 'Components/factorsComponents';
 import ProjectModal from 'Components/ProjectModal';
@@ -214,6 +214,7 @@ function FaHeader() {
   const { Header } = Layout;
   const location = useLocation();
   const { pathname } = location;
+  const history = useHistory();
 
   const agentState = useSelector((state) => state.agent);
   const activeAgent = agentState?.agent_details?.email;
@@ -356,25 +357,23 @@ function FaHeader() {
         </div>
       </div>
       <div className='flex w-1/2 items-center justify-center col-gap-6 text-white'>
-        {!isChecklistEnabled && (
+        {!isChecklistEnabled ? (
           <div className='w-1/8 flex justify-end'>
             <Button
               icon={<SVG name='Stars' size={20} extraClass='-mt-1' />}
               type='link'
               size='middle'
-              href={PathUrls.Checklist}
+              onClick={() => history.push(PathUrls.Checklist)}
               className={`${styles.checklistSetup}`}
             >
               Finish setup
             </Button>
           </div>
+        ) : (
+          <div className='flex w-1/2 col-gap-6'></div>
         )}
-        <div
-          className={`${
-            !isChecklistEnabled ? 'w-1/3' : 'w-1/2'
-          } flex justify-end`}
-        >
-          <SearchBar placeholder='Search ⌘K' type={2} />
+        <div className={'w-1/3 flex justify-end'}>
+          <SearchBar placeholder={'Search ⌘+K'} />
         </div>
         <Dropdown
           overlay={renderConfigureMenu(activeAgent)}

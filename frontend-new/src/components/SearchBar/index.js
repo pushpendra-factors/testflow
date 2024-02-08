@@ -4,7 +4,7 @@ import { useDispatch } from 'react-redux';
 import { TOGGLE_GLOBAL_SEARCH } from 'Reducers/types';
 import { SVG } from '../factorsComponents';
 
-function SearchBar({ placeholder, type }) {
+function SearchBar({ placeholder }) {
   const inputRef = useRef(null);
   const dispatch = useDispatch();
   const handleFocus = useCallback(() => {
@@ -18,11 +18,7 @@ function SearchBar({ placeholder, type }) {
       size='large'
       placeholder={placeholder}
       prefix={<SVG name='search' size={16} color='#BFBFBF' />}
-      className={`fa-global-search--input ${
-        type === 1
-          ? 'fa-global-search--input-placeholder-lg'
-          : 'fa-global-search--input-placeholder-sm'
-      }`}
+      className={`fa-global-search--input`}
       onFocus={handleFocus}
     />
   );
