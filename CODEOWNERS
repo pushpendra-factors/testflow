@@ -56,13 +56,15 @@
 /frontend-new/src/Views/AppLayout/ akhil@factors.ai baliga@factors.ai
 /frontend-new/src/Views/CoreQuery/ akhil@factors.ai baliga@factors.ai
 /frontend-new/src/Views/CoreQueryHome/ akhil@factors.ai baliga@factors.ai
+/frontend-new/src/Views/componentsLib/ baliga@factors.ai
 /frontend-new/src/Views/Dashboard/ akhil@factors.ai baliga@factors.ai jitesh@factors.ai
 /frontend-new/src/Views/DashboardTemplates/ akhil@factors.ai
 /frontend-new/src/Views/Factors/ baliga@factors.ai
-/frontend-new/src/Views/Pages/ baliga@factors.ai
+/frontend-new/src/Views/Pages/ baliga@factors.ai deepak@factors.ai
 /frontend-new/src/Views/PathAnalysis/ baliga@factors.ai
 /frontend-new/src/Views/Settings/ baliga@factors.ai
-/frontend-new/src/Views/componentsLib/ baliga@factors.ai
+/frontend-new/src/Views/Settings/ProjectSettings/ConfigurePlans/ deepak@factors.ai
+/frontend-new/src/Views/Settings/ProjectSettings/IntegrationSettings/SixSignalFactors/ deepak@factors.ai
 /frontend-new/src/components/AdBlockerDetector/ baliga@factors.ai
 /frontend-new/src/components/AppModal/ baliga@factors.ai
 /frontend-new/src/components/AttrQueryComposer/ akhil@factors.ai
@@ -118,6 +120,10 @@
 /frontend-new/src/components/StackedBarChart/ akhil@factors.ai baliga@factors.ai jitesh@factors.ai
 /frontend-new/src/components/SuspenseLoaders/ akhil@factors.ai baliga@factors.ai jitesh@factors.ai
 /frontend-new/src/components/factorsComponents/ baliga@factors.ai
+/frontend-new/src/features/onboarding/ deepak@factors.ai
+/frontend-new/src/features/6signal-report/ deepak@factors.ai
+
+
 
 /integrations/ kartheek+1@factors.ai ashhar@factors.ai
 
