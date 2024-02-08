@@ -145,7 +145,7 @@ const KPIBasedAlert = ({
       await confirmRemove(deleteWidgetModal);
       setDeleteApiCalled(false);
       showDeleteWidgetModal(false);
-      setAlertState({ ...alertState, state: 'list', index: 0 });
+      setAlertState({ state: 'list', index: 0 });
     } catch (err) {
       console.log(err);
       console.log(err.response);
@@ -315,7 +315,7 @@ const KPIBasedAlert = ({
     setSelectedChannel([]);
     setSaveSelectedChannel([]);
     form.resetFields();
-    setAlertState({ ...alertState, state: 'list', index: 0 });
+    setAlertState({ state: 'list', index: 0 });
   };
 
   const onFinish = (data) => {
@@ -2005,7 +2005,7 @@ const KPIBasedAlert = ({
                 size={'large'}
                 disabled={loading}
                 onClick={() => {
-                  setAlertState({ ...alertState, state: 'list', index: 0 });
+                  setAlertState({ state: 'list', index: 0 });
                 }}
               >
                 Back

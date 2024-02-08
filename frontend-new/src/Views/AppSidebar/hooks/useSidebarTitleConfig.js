@@ -46,14 +46,20 @@ const useSidebarTitleConfig = () => {
       icon: 'coloredProfile'
     };
   }
-  if (isSettingsUrl(pathname) || isAlertsUrl(pathname)) {
+  if (isSettingsUrl(pathname)) {
+    return {
+      title: 'Settings',
+      icon: 'settings_Filled',
+      iconColor: '#8C8C8C'
+    };
+  }
+  if (isAlertsUrl(pathname)) {
     return {
       title: 'Automations',
       icon: 'radar',
       iconColor: '#8C8C8C'
     };
   }
-
   if (isConfigurationUrl(pathname)) {
     return {
       title: 'Configure',
