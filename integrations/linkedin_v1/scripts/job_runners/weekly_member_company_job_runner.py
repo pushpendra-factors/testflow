@@ -25,9 +25,9 @@ class WeeklyMemberCompanyJobRunner:
         try:
             timestamp_range_chunks = U.get_timestamp_chunks_to_be_backfilled(self.weeks_for_buffer, self.last_timestamp, 
                                                                     self.input_start_timestamp, self.input_end_timestamp)
-            if len(timestamp_range_chunks) == 0:
-                return
-            for timestamp_range in timestamp_range_chunks:
+            valid_timestamp_range_chunks = U.exclude_timerange_inclusive_of_day3(timestamp_range_chunks)
+            
+            for timestamp_range in valid_timestamp_range_chunks:
                 is_valid = data_service_obj.validate_company_data_pull(self.linkedin_setting.project_id, 
                                                         self.linkedin_setting.ad_account, timestamp_range[0], 
                                                         timestamp_range[len(timestamp_range)-1], self.sync_status)
