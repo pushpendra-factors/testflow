@@ -87,15 +87,11 @@ function ContactDetails({
     const userEvents = userDetails.data?.user_activities || [];
 
     const eventsArray = userEvents
-      .filter(
-        (event) =>
-          Object.keys(event?.properties || {}).length &&
-          !event?.properties?.$is_page_view
-      )
+      .filter((event) => event?.display_name === 'Page View')
       .map((event) => event.event_name);
 
     const pageViewEvent = userEvents.find(
-      (event) => event?.properties?.$is_page_view
+      (event) => event?.display_name === 'Page View'
     );
 
     if (pageViewEvent) {

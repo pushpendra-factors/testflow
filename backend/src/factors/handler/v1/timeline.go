@@ -363,9 +363,9 @@ func UpdateEventConfigHandler(c *gin.Context) {
 		return
 	}
 
-	err, errCode := store.GetStore().UpdateConfigForEvent(projectID, eventName, *payload)
+	errCode, err := store.GetStore().UpdateConfigForEvent(projectID, eventName, *payload)
 	if errCode != http.StatusOK {
-		logCtx.Errorln("Updating Segment failed")
+		logCtx.Errorln(err)
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}

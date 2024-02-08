@@ -2520,7 +2520,7 @@ func hasPrefixFromList(s string, prefixes []string) bool {
 	return false
 }
 
-func (store *MemSQL) UpdateConfigForEvent(projectID int64, eventName string, updatedConfig []string) (error, int) {
+func (store *MemSQL) UpdateConfigForEvent(projectID int64, eventName string, updatedConfig []string) (int, error) {
 	logFields := log.Fields{
 		"projectID": projectID,
 		"eventName": eventName,
@@ -2528,16 +2528,16 @@ func (store *MemSQL) UpdateConfigForEvent(projectID int64, eventName string, upd
 	logCtx := log.WithFields(logFields)
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	if projectID == 0 || eventName == "" {
+	if projectID == 0 || eventName == "" || len(updatedConfig) == 0 {
 		logCtx.Error("Failed to update event config. Invalid parameters.")
-		return nil, http.StatusBadRequest
+		return http.StatusBadRequest, fmt.Errorf("invalid parameters")
 	}
 
 	db := C.GetServices().Db
 
 	timelinesConfig, err := store.GetTimelinesConfig(projectID)
 	if err != nil {
-		return err, http.StatusBadRequest
+		return http.StatusInternalServerError, err
 	}
 
 	timelinesConfig.EventsConfig[eventName] = updatedConfig
@@ -2545,6 +2545,7 @@ func (store *MemSQL) UpdateConfigForEvent(projectID int64, eventName string, upd
 	tlConfigEncoded, err := U.EncodeStructTypeToPostgresJsonb(timelinesConfig)
 	if err != nil {
 		logCtx.WithError(err).Error("Default Timelines Config Encode Failed.")
+		return http.StatusInternalServerError, err
 	}
 
 	updateFields := map[string]interface{}{
@@ -2555,12 +2556,12 @@ func (store *MemSQL) UpdateConfigForEvent(projectID int64, eventName string, upd
 	if err != nil {
 		switch {
 		case gorm.IsRecordNotFoundError(err):
-			return err, http.StatusNotFound
+			return http.StatusNotFound, err
 		default:
 			logCtx.WithError(err).Error("Failed while updating segment on UpdateSegmentById.")
-			return err, http.StatusInternalServerError
+			return http.StatusInternalServerError, err
 		}
 	}
 
-	return nil, http.StatusOK
+	return http.StatusOK, nil
 }

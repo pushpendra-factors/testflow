@@ -311,7 +311,7 @@ function UserProfiles({
         };
         setTimelinePayload(updatedPayload);
       } catch (error) {
-        logger(error);
+        logger.error(error);
       }
     },
     [activeProject.id, timelinePayload.segment]
