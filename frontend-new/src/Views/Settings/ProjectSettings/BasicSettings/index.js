@@ -25,7 +25,7 @@ function BasicSettings({
   return (
     <div className={'fa-container'}>
       <Row gutter={[24, 24]} justify='center'>
-        <Col span={18}>
+        <Col span={22}>
           {editMode ? (
             <EditBasicSettings setEditMode={setEditMode} />
           ) : (

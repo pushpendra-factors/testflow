@@ -68,8 +68,8 @@ function IntegrationSettings({
     >
       <div className='fa-container'>
         <Row gutter={[24, 24]} justify='center'>
-          <Col span={18}>
-            <div className='mb-10 pl-4'>
+          <Col span={22}>
+            <div className='mb-10'>
               <Row>
                 <Col span={12}>
                   <Text type='title' level={3} weight='bold' extraClass='m-0' id={'fa-at-text--page-title'}>
