@@ -30,6 +30,8 @@ import EventBasedAlert from './EventBasedAlert';
 import styles from './index.module.scss';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import { getGroups } from 'Reducers/coreQuery/middleware';
+import { useParams } from 'react-router-dom';
+import useQuery from 'hooks/useQuery';
 
 const { TabPane } = Tabs;
 
@@ -54,7 +56,10 @@ const Alerts = ({
     state: 'list',
     index: 0
   });
+  const [alertType, setAlertType] = useState('realtime');
   const { confirm } = Modal;
+
+  const routeQuery = useQuery();
 
   useEffect(() => {
     if (!groups || Object.keys(groups).length === 0) {
@@ -62,13 +67,21 @@ const Alerts = ({
     }
   }, [activeProject?.id, groups]);
 
+  useEffect(() => {
+    const type = routeQuery.get('type');
+    if (type && ['realtime', 'weekly'].includes(type)) {
+      setAlertState({ state: 'list', index: 0 });
+      setAlertType(type);
+    }
+  }, [routeQuery]);
+
   const confirmDeleteAlert = (item) => {
     confirm({
       title: 'Do you really want to remove this alert?',
       icon: <ExclamationCircleOutlined />,
       content: 'Please confirm to proceed',
       onOk() {
-        if (item?.type == "kpi_alert") {
+        if (item?.type == 'kpi_alert') {
           return deleteAlert(activeProject?.id, item?.id).then(
             (res) => {
               fetchAllAlerts(activeProject?.id);
@@ -111,35 +124,33 @@ const Alerts = ({
     });
   };
 
-
   const createDuplicateAlert = (item) => {
-    if(item?.type == "kpi_alert"){
+    if (item?.type == 'kpi_alert') {
       let payload = {
         ...item?.alert,
         alert_name: `Copy of ${item?.alert?.alert_name}`
-      }
+      };
       createAlert(activeProject?.id, payload, 0)
-      .then((res) => {
-        setTableLoading(false);
-        fetchAllAlerts(activeProject?.id);
-        notification.success({
-          message: 'Alert Created',
-          description: 'Copy of alert is created and saved successfully.'
+        .then((res) => {
+          setTableLoading(false);
+          fetchAllAlerts(activeProject?.id);
+          notification.success({
+            message: 'Alert Created',
+            description: 'Copy of alert is created and saved successfully.'
+          });
+        })
+        .catch((err) => {
+          setTableLoading(false);
+          notification.error({
+            message: 'Error',
+            description: err?.data?.error
+          });
         });
-      })
-      .catch((err) => {
-        setTableLoading(false);
-        notification.error({
-          message: 'Error',
-          description: err?.data?.error
-        });
-      }); 
-    }
-    else{
+    } else {
       let payload = {
         ...item?.alert,
         title: `Copy of ${item?.alert?.title}`
-      }
+      };
 
       createEventAlert(activeProject?.id, payload)
         .then((res) => {
@@ -156,9 +167,9 @@ const Alerts = ({
             message: 'Error',
             description: err?.data?.error
           });
-        }); 
+        });
     }
-  }
+  };
 
   const menu = (item) => {
     return (
@@ -166,21 +177,21 @@ const Alerts = ({
         <Menu.Item
           key='0'
           onClick={() => {
-            setTabNo(item?.type == "kpi_alert" ? "1" : "2")
+            setTabNo(item?.type == 'kpi_alert' ? '1' : '2');
             setAlertState({ state: 'edit', index: item });
-            setAlertDetails(item); 
+            setAlertDetails(item);
           }}
         >
           <a>Edit alert</a>
-        </Menu.Item> 
-          <Menu.Item
-            key='1'
-            onClick={(e) => {
-              createDuplicateAlert(item); 
-            }}
-          >
-            <a>Create copy</a>
-          </Menu.Item> 
+        </Menu.Item>
+        <Menu.Item
+          key='1'
+          onClick={(e) => {
+            createDuplicateAlert(item);
+          }}
+        >
+          <a>Create copy</a>
+        </Menu.Item>
         <Menu.Divider />
         <Menu.Item
           key='2'
@@ -208,8 +219,8 @@ const Alerts = ({
           level={7}
           truncate={true}
           extraClass={`cursor-pointer m-0`}
-          onClick={() => { 
-            setTabNo(item?.type == "kpi_alert" ? "1" : "2")
+          onClick={() => {
+            setTabNo(item?.type == 'kpi_alert' ? '1' : '2');
             setAlertState({ state: 'edit', index: item });
             setAlertDetails(item);
           }}
@@ -218,17 +229,6 @@ const Alerts = ({
         </Text>
       )
       // width: 100,
-    },
-    {
-      title: 'Type',
-      dataIndex: 'type',
-      key: 'type',
-      render: (text) => (
-        <Text type={'title'} level={7} truncate={true} charLimit={25}>
-          {text}
-        </Text>
-      )
-      // width: 200,
     },
     {
       title: 'Delivery Options',
@@ -246,7 +246,7 @@ const Alerts = ({
       dataIndex: 'status',
       key: 'status',
       render: (item) => (
-        <div className='flex items-center'> 
+        <div className='flex items-center'>
           {item?.status === 'paused' || item?.status === 'disabled' ? (
             <Badge
               className={'fa-custom-badge fa-custom-badge--orange'}
@@ -260,9 +260,14 @@ const Alerts = ({
               text={'Active'}
             />
           )}
-          {
-            item?.error && <SVG name={'InfoCircle'} extraClass={'ml-2'} size={18} color='red' />
-          }
+          {item?.error && (
+            <SVG
+              name={'InfoCircle'}
+              extraClass={'ml-2'}
+              size={18}
+              color='red'
+            />
+          )}
         </div>
       )
     },
@@ -273,7 +278,11 @@ const Alerts = ({
       align: 'right',
       width: 75,
       render: (obj) => (
-        <Dropdown trigger={["click"]} overlay={menu(obj)} placement='bottomRight'>
+        <Dropdown
+          trigger={['click']}
+          overlay={menu(obj)}
+          placement='bottomRight'
+        >
           <Button
             type='text'
             icon={
@@ -292,41 +301,54 @@ const Alerts = ({
     setTableLoading(true);
     fetchAllAlerts(activeProject?.id).then(() => {
       setTableLoading(false);
-    }); 
+    });
   }, [activeProject]);
 
-  useEffect(() => { 
+  useEffect(() => {
     let savedArr = [];
-      if (savedAlerts && savedAlerts?.type == "kpi_alert") {
-        savedAlerts?.map((item, index) => {
-          savedArr.push({
-            key: index,
-            alert_name: item,
-            type: item?.type == "kpi_alert" ? "Weekly alerts" : "Real-time",
-            dop:
-              (item.alert_configuration.email_enabled ? 'Email' : '') +
-              ' ' +
-              (item.alert_configuration.slack_enabled ? 'Slack' : '') +
-              ' ' +
-              (item.alert_configuration.teams_enabled ? 'Teams' : ''),
-            status: item?.status,
-            actions: item
-          });
-        }); 
-      }  else {  
-        savedAlerts?.map((item, index) => {
-          savedArr.push({
-            key: index,
-            alert_name: item,
-            type: item?.type == "kpi_alert" ? "Weekly alerts" : "Real-time",
-            dop: item?.delivery_options,
-            status: {status: item?.status, error: item?.last_fail_details},
-            actions: item
-          });
+    if (savedAlerts && savedAlerts?.type == 'kpi_alert') {
+      savedAlerts?.map((item, index) => {
+        savedArr.push({
+          key: index,
+          alert_name: item,
+          type: item?.type == 'kpi_alert' ? 'Weekly alerts' : 'Real-time',
+          dop:
+            (item.alert_configuration.email_enabled ? 'Email' : '') +
+            ' ' +
+            (item.alert_configuration.slack_enabled ? 'Slack' : '') +
+            ' ' +
+            (item.alert_configuration.teams_enabled ? 'Teams' : ''),
+          status: item?.status,
+          actions: item
         });
-      }
-      setTableData(savedArr); 
-  }, [savedAlerts, tabNo]);
+      });
+    } else {
+      savedAlerts?.forEach((item, index) => {
+        if (alertType === 'weekly') {
+          item.type === 'kpi_alert' &&
+            savedArr.push({
+              key: index,
+              alert_name: item,
+              type: item?.type == 'kpi_alert' ? 'Weekly alerts' : 'Real-time',
+              dop: item?.delivery_options,
+              status: { status: item?.status, error: item?.last_fail_details },
+              actions: item
+            });
+        } else if (alertType === 'realtime') {
+          item.type === 'event_based_alert' &&
+            savedArr.push({
+              key: index,
+              alert_name: item,
+              type: item?.type == 'kpi_alert' ? 'Weekly alerts' : 'Real-time',
+              dop: item?.delivery_options,
+              status: { status: item?.status, error: item?.last_fail_details },
+              actions: item
+            });
+        }
+      });
+    }
+    setTableData(savedArr);
+  }, [savedAlerts, tabNo, alertType]);
 
   function callback(key) {
     setTabNo(key);
@@ -334,16 +356,35 @@ const Alerts = ({
 
   const renderTitle = () => {
     let title = null;
+    let titleText;
+    switch (alertType) {
+      case 'realtime': {
+        titleText = 'Real time alerts';
+        break;
+      }
+      case 'weekly': {
+        titleText = 'Weekly updates';
+        break;
+      }
+      default: {
+        titleText = 'Alerts';
+      }
+    }
     if (alertState.state === 'list') {
       title = (
-        <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}  id={'fa-at-text--page-title'}>
-          Alerts
+        <Text
+          type={'title'}
+          level={3}
+          weight={'bold'}
+          extraClass={'m-0'}
+          id={'fa-at-text--page-title'}
+        >
+          {titleText}
         </Text>
       );
     }
     return title;
   };
-
 
   const addMenu = (item) => {
     return (
@@ -351,54 +392,89 @@ const Alerts = ({
         <Menu.Item
           key='0'
           onClick={() => {
-            setTabNo("2")
+            setTabNo('2');
             setAlertState({ state: 'add', index: 0 });
-            setAlertDetails(false)
+            setAlertDetails(false);
           }}
         >
-            <div className='flex items-center'>
-              <SVG name={'Event'} size={20} color='blue' />
-              <div className='pl-2'> 
-                <Text type={'title'} level={7} color={'grey-2'} extraClass={'m-0'} >Real-time alerts</Text>
-                <Text type={'title'} level={8} color={'grey'} extraClass={'m-0'} >Track and chart events</Text>
-              </div>
+          <div className='flex items-center'>
+            <SVG name={'Event'} size={20} color='blue' />
+            <div className='pl-2'>
+              <Text
+                type={'title'}
+                level={7}
+                color={'grey-2'}
+                extraClass={'m-0'}
+              >
+                Real-time alerts
+              </Text>
+              <Text type={'title'} level={8} color={'grey'} extraClass={'m-0'}>
+                Track and chart events
+              </Text>
+            </div>
           </div>
-        </Menu.Item> 
+        </Menu.Item>
         <Menu.Item
           key='0'
           onClick={() => {
-            setTabNo("1")
+            setTabNo('1');
             setAlertState({ state: 'add', index: 0 });
-            setAlertDetails(false)
+            setAlertDetails(false);
           }}
         >
-            <div className='flex items-center'>
-              <SVG name={'Linechart'} size={20} color='blue' />
-              <div className='pl-2'> 
-            <Text type={'title'} level={7} color={'grey-2'} extraClass={'m-0'} >Weekly alerts</Text>
-            <Text type={'title'} level={8} color={'grey'} extraClass={'m-0'} >Measure performance over time</Text>
-            </div>  
+          <div className='flex items-center'>
+            <SVG name={'Linechart'} size={20} color='blue' />
+            <div className='pl-2'>
+              <Text
+                type={'title'}
+                level={7}
+                color={'grey-2'}
+                extraClass={'m-0'}
+              >
+                Weekly alerts
+              </Text>
+              <Text type={'title'} level={8} color={'grey'} extraClass={'m-0'}>
+                Measure performance over time
+              </Text>
+            </div>
           </div>
-        </Menu.Item> 
-        </Menu>
-    )
-  }
+        </Menu.Item>
+      </Menu>
+    );
+  };
+
+  const switchToAddAlertState = (tabNo = '2') => {
+    setTabNo(tabNo);
+    setAlertState({ state: 'add', index: 0 });
+    setAlertDetails(false);
+  };
+
+  const newAlertAction = () => {
+    switch (alertType) {
+      case 'realtime': {
+        switchToAddAlertState('2');
+        break;
+      }
+      case 'weekly': {
+        switchToAddAlertState('1');
+        break;
+      }
+      default: {
+        switchToAddAlertState('2');
+      }
+    }
+  };
 
   const renderTitleActions = () => {
     let titleAction = null;
     if (alertState.state === 'list') {
-      titleAction = ( 
-
-        <Dropdown overlay={addMenu} placement='bottomRight' trigger={'click'}>
-        <Button type='primary'>
-        <Space>
-          <SVG name={'plus'} size={16} color='white' />
-          New Alert
-        </Space>
+      titleAction = (
+        <Button type='primary' onClick={newAlertAction}>
+          <Space>
+            <SVG name={'plus'} size={16} color='white' />
+            New Alert
+          </Space>
         </Button>
-        </Dropdown>
-
-
       );
     }
 
@@ -408,24 +484,24 @@ const Alerts = ({
   const renderAlertContent = () => {
     let alertContent = null;
     if (alertState.state === 'list') {
-      alertContent = ( 
-          <Table
-            className='fa-table--basic mt-8'
-            loading={tableLoading}
-            columns={columns}
-            dataSource={tableData}
-            pagination={false}
-            // onRow={(data,id)=>{
-            //   return {
-            //     onClick: (e) => { 
-            //       setTabNo(data.actions?.type == "kpi_alert" ? "1" : "2")
-            //       setAlertState({ state: 'edit', index: data.actions});
-            //       setAlertDetails(data.actions);
-            //       e.stopPropagation();
-            //     }
-            //   }
-            // }}
-          />
+      alertContent = (
+        <Table
+          className='fa-table--basic mt-8'
+          loading={tableLoading}
+          columns={columns}
+          dataSource={tableData}
+          pagination={false}
+          // onRow={(data,id)=>{
+          //   return {
+          //     onClick: (e) => {
+          //       setTabNo(data.actions?.type == "kpi_alert" ? "1" : "2")
+          //       setAlertState({ state: 'edit', index: data.actions});
+          //       setAlertDetails(data.actions);
+          //       e.stopPropagation();
+          //     }
+          //   }
+          // }}
+        />
       );
     }
     return alertContent;
@@ -442,16 +518,20 @@ const Alerts = ({
                 <div className={'flex justify-end'}>{renderTitleActions()}</div>
               </Col>
             </Row>
-            <Row className={'mt-4'}>
-              <Col span={24}> 
+            <Row>
+              <Col span={24}>
                 <Text
                   type={'title'}
                   level={7}
                   color={'grey-2'}
-                  extraClass={'m-0 mt-2'}
+                  extraClass={'m-0'}
                 >
-                  Set up alerts to never miss out on any prospect activity or changes in metrics you care about.
-                  &nbsp;<a href='https://help.factors.ai/en/articles/7284705-alerts' target='_blank'>
+                  Set up alerts to never miss out on any prospect activity or
+                  changes in metrics you care about. &nbsp;
+                  <a
+                    href='https://help.factors.ai/en/articles/7284705-alerts'
+                    target='_blank'
+                  >
                     Learn more
                   </a>
                 </Text>
@@ -493,7 +573,7 @@ const mapStateToProps = (state) => ({
   slack: state.global.slack,
   projectSettings: state.global.projectSettingsV1,
   currentAgent: state.agent.agent_details,
-  groups: state.coreQuery.groups,
+  groups: state.coreQuery.groups
 });
 
 export default connect(mapStateToProps, {

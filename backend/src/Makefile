@@ -284,6 +284,13 @@ upload-backfill-crm-deals-domain: export IMAGE_NAME=backfill-crm-deals-domain
 upload-backfill-crm-deals-domain: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/backfill-crm-deals-domain:$(TAG)
 
+pack-backfill-crm-object-url:
+	docker build -t us.gcr.io/factors-$(ENV)/backfill-crm-object-url:$(TAG) -f Dockerfile.backfill_crm_object_url .
+
+upload-backfill-crm-object-url: export IMAGE_NAME=backfill-crm-object-url
+upload-backfill-crm-object-url: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/backfill-crm-object-url:$(TAG)
+
 pack-backfill-users-domain:
 	docker build -t us.gcr.io/factors-$(ENV)/backfill-users-domain:$(TAG) -f Dockerfile.backfill_users_domain .
 

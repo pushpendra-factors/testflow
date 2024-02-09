@@ -209,6 +209,9 @@ func (store *MemSQL) AddPropertyValueLabelToQueryResults(projectID int64, oldRes
 		if err != nil {
 			return oldResults, fmt.Errorf("Failed to encode map to query_result on AddPropertyValueLabelToQueryResults")
 		}
+
+		// update meta info result value labels for showing funnel conversion time
+		updatedMetaStepTimeInfoHeaders(&newResult)
 		newResults = append(newResults, newResult)
 	}
 	return newResults, nil

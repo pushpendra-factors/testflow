@@ -544,6 +544,7 @@ function QueryBlock({
   return (
     <div
       className={`${styles.query_block} fa--query_block_section borderless no-padding mt-2 bg-white`}
+      style={{ marginLeft: '-20px' }}
     >
       <div
         className={`${!event?.alias?.length ? 'flex justify-start' : ''} ${

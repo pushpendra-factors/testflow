@@ -196,6 +196,7 @@ type Configuration struct {
 	ProcessOnlyAccountSegments     bool
 	RunAllAccountsMarkerProjectIDs string
 	RunForAllAccountsInHours       int
+	DomainsLimitAllRun             int
 	BatchSizeDomains               int
 	// Flag for enabling only the /mql routes for secondary env testing.
 	EnableMQLAPI bool
@@ -675,6 +676,9 @@ func LookbackForSegmentMarker() int {
 // Run marker for all accounts if marker_last_run_all_accounts is greater than given hours
 func TimeRangeForAllDomains() int {
 	return configuration.RunForAllAccountsInHours
+}
+func MarkerDomainLimitForAllRun() int {
+	return configuration.DomainsLimitAllRun
 }
 func BatchSizeSegmentMarker() int {
 	return configuration.BatchSizeDomains
@@ -1173,6 +1177,9 @@ func InitFilemanager(bucketName string, env string, config *Configuration) {
 	if env == "development" {
 		config.CloudManager = serviceDisk.New(bucketName)
 	} else {
+
+		log.WithField("bucket_name", bucketName).Info("Initialised file manager.")
+
 		var err error
 		config.CloudManager, err = serviceGCS.New(bucketName)
 		if err != nil {

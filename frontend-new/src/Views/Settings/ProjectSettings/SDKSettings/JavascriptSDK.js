@@ -1010,7 +1010,7 @@ function JavascriptSDK({
   const confirmLoading = () => {};
   return (
     <>
-      <div className={'mb-4 pl-4'}>
+      <div className={'mb-4'}>
         <Row style={{ width: '100%', justifyContent: 'space-between' }}>
           <Col span={12}>
             <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} id={'fa-at-text--page-title'}>

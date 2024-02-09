@@ -128,8 +128,8 @@ function Events({
   return (
     <div className={'fa-container'}>
       <Row gutter={[24, 24]} justify='center'>
-        <Col span={18}>
-          <div className={'mb-10 pl-4'}>
+        <Col span={22}>
+          <div className={'mb-10'}>
             {!showSmartEventForm && (
               <>
                 <Row>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { keys } from 'lodash';
 import { Button } from 'antd';
 import {
   getEventPropertyValues,
@@ -89,7 +90,7 @@ function FilterWrapper({
     const formatFilterOptions = (key, values) => {
       if (!Array.isArray(values)) {
         const categorisedProperties = values;
-        return Object.keys(categorisedProperties).map((category) => {
+        return keys(categorisedProperties).map((category) => {
           const label = PropTextFormat(category);
           const icon = getGroupIcon(category);
 

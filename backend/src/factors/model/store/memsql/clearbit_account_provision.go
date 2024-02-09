@@ -5,6 +5,7 @@ import (
 	"factors/config"
 	"factors/integration/clear_bit"
 	"factors/model/model"
+	"factors/util"
 	"fmt"
 	"io"
 	"net/http"
@@ -110,7 +111,24 @@ func (store *MemSQL) ProvisionClearbitAccountByAdminEmailAndDomain(projectId int
 			return errCode, "Failed fetching projects"
 		}
 
-		err = store.ProvisionClearbitAccountForSingleProject(projectId, adminMail, project.ClearbitDomain)
+		var domain string
+		if project.ClearbitDomain == "" {
+			logCtx.Info("Getting domain from admin email")
+			domain = util.GetEmailDomain(adminMail)
+
+			var projectEditDetails model.Project
+			projectEditDetails.ClearbitDomain = domain
+			errCode = store.UpdateProject(project.ID, &projectEditDetails)
+			if errCode == http.StatusInternalServerError {
+				logCtx.Error("Failed to update clearbit domain in projects")
+				return errCode, "Failed to update clearbit domain in projects"
+			}
+
+		} else {
+			domain = project.ClearbitDomain
+		}
+
+		err = store.ProvisionClearbitAccountForSingleProject(projectId, adminMail, domain)
 		if err != nil {
 			logCtx.Error("Failed provisioning clearbit account by admin mail.")
 			return http.StatusInternalServerError, "Failed provisioning clearbit account by admin mail"

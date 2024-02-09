@@ -21,7 +21,7 @@ import {
   CHART_TYPE_STACKED_BAR,
   CHART_TYPE_PIVOT_CHART,
   CHART_TYPE_TABLE,
-  DASHBOARD_WIDGET_BAR_CHART_HEIGHT,
+  DASHBOARD_WIDGET_COLUMN_CHART_HEIGHT,
   DASHBOARD_WIDGET_AREA_CHART_HEIGHT,
   CHART_TYPE_METRIC_CHART,
   MAX_ALLOWED_VISIBLE_PROPERTIES
@@ -160,7 +160,7 @@ const BreakdownCharts = ({
       <ColumnChart
         categories={columnCategories}
         multiColored
-        height={DASHBOARD_WIDGET_BAR_CHART_HEIGHT}
+        height={DASHBOARD_WIDGET_COLUMN_CHART_HEIGHT}
         cardSize={unit.cardSize}
         chartId={`kpi${unitId}`}
         series={columnSeries}

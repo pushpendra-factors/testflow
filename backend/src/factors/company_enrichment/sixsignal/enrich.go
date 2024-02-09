@@ -31,6 +31,9 @@ func (ss *CustomerSixSignal) IsEligible(projectSettings *model.ProjectSetting) (
 		log.Error("Failed to fetch feature flag")
 		return false, err
 	}
+	if !featureFlag {
+		return false, nil
+	}
 	customerSixSignalKey := projectSettings.Client6SignalKey
 	intCustomerSixSignal := projectSettings.IntClientSixSignalKey
 

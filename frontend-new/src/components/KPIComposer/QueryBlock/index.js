@@ -541,6 +541,7 @@ function QueryBlock({
         className={`${!event?.alias?.length ? 'flex justify-start' : ''} ${
           styles.query_block__event
         } block_section items-center`}
+        style={{ marginLeft: '-20px' }}
       >
         <div className={'flex items-center'}>
           <div

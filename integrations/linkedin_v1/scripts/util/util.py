@@ -204,6 +204,8 @@ class Util:
         current_time = datetime.now()
         current_week_day = current_time.isoweekday() # returns 1 for mon, 7 for sunday
         sunday_near_today = current_time - timedelta(days=(current_week_day%7))
+        if current_week_day == 7:
+            sunday_near_today = current_time - timedelta(days=7)
         sunday_near_buffer = sunday_near_today - timedelta(days=(weeks_for_buffer*7))
         return sunday_near_buffer
     
@@ -369,3 +371,16 @@ class Util:
         len_chunks = len(timerange_chunks)
         end_timestamp = timerange_chunks[len_chunks-1][6]
         return start_timestamp, end_timestamp
+    
+    # the following function primarily validates what the valid timeranges are for weekly pulls
+    # currently, it's primarily used to check for t8 job, where we check last week pull shouldn't be done on before thursday
+    # we achieve this by checking t-3 not in given weekly range (mon-sun).
+    @staticmethod
+    def exclude_timerange_inclusive_of_day3(timeranges):
+        new_timeranges = []
+        date_3_days_ago = (datetime.now() - timedelta(days=3)).date().strftime("%Y%m%d")
+        for timerange in timeranges:
+            if date_3_days_ago not in timerange:
+                new_timeranges.append(timerange)
+        
+        return new_timeranges

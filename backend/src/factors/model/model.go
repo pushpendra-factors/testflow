@@ -47,6 +47,7 @@ type Model interface {
 	IsSlackIntegratedForProject(projectID int64, agentUUID string) (bool, int)
 	IsTeamsIntegratedForProject(projectID int64, agentUUID string) (bool, int)
 	UpdateLastLoggedOut(agentUUID string, timestamp int64) int
+	UpdateAgentBillingCustomerID(agentUUID, id string) int
 
 	// analytics
 	ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error, string)
@@ -512,6 +513,7 @@ type Model interface {
 	GetParagonTokenFromProjectSetting(projectID int64) (string, int, error)
 	GetParagonEnabledProjectsCount(projectID int64) (int64, int, error)
 	AddParagonTokenAndEnablingAgentToProjectSetting(projectID int64, agentID, token string) (int, error)
+	GetIntegrationState(projectID int64, DocumentType string, isCRMTypeDoc bool) (model.IntegrationStatus, int)
 
 	// project
 	UpdateProject(projectID int64, project *model.Project) int
@@ -676,8 +678,8 @@ type Model interface {
 	AssociateUserDomainsGroup(projectID int64, requestUserID string, requestGroupName, requestGroupUserID string) int
 	GetAssociatedDomainForUser(projectID int64, userID string, isAnonymous bool) (string, error)
 	GetUsersAssociatedToDomainList(projectID int64, domainGroupID int, domainID string) ([]model.User, int)
-	GetAllDomainsByProjectID(projectID int64, domainID int) ([]string, int)
-	GetLatestUpatedDomainsByProjectID(projectID int64, domainGroupID int, fromTime time.Time) ([]string, int)
+	GetAllDomainsByProjectID(projectID int64, domainID int, limitVal int) ([]string, int)
+	GetLatestUpatedDomainsByProjectID(projectID int64, domainGroupID int, fromTime time.Time, limitVal int) ([]string, int)
 	UpdateAssociatedSegments(projectID int64, id string, associatedSegments map[string]model.AssociatedSegments) (int, error)
 	GetNonGroupUsersUpdatedAtGivenHour(projectID int64, fromTime time.Time) ([]model.User, int)
 
@@ -808,6 +810,7 @@ type Model interface {
 	CreateOrGetDomainsGroup(projectID int64) (*model.Group, int)
 	GetGroup(projectID int64, groupName string) (*model.Group, int)
 	GetGroupUserByGroupID(projectID int64, groupName string, groupID string) (*model.User, int)
+	GetGroupUsersGroupIdsByGroupName(projectID int64, groupName string) ([]model.User, int)
 	CreateOrUpdateGroupPropertiesBySource(projectID int64, groupName string, groupID, groupUserID string,
 		enProperties *map[string]interface{}, createdTimestamp, updatedTimestamp int64, source string) (string, error)
 	GetGroups(projectID int64) ([]model.Group, int)
@@ -938,7 +941,7 @@ type Model interface {
 	GetUsersAssociatedToDomain(projectID int64, minMax *model.ListingTimeWindow, groupedFilters map[string][]model.QueryProperty) ([]model.Profile, int)
 	GenerateAllAccountsQueryString(projectID int64, source string, hasUserProperty bool, isAllUserProperties bool, minMax model.ListingTimeWindow, groupedFilters map[string][]model.QueryProperty, searchFilter []string) (string, []interface{}, error)
 	GetGroupNameIDMap(projectID int64) (map[string]int, int)
-	UpdateConfigForEvent(projectID int64, eventName string, updatedConfig []string) (error, int)
+	UpdateConfigForEvent(projectID int64, eventName string, updatedConfig []string) (int, error)
 
 	// Timeline consuming segment_marker
 	GetMarkedDomainsListByProjectId(projectID int64, payload model.TimelinePayload) ([]model.Profile, int, string)
