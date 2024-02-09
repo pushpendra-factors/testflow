@@ -22,6 +22,7 @@ import { updateAccountScores } from 'Reducers/timelines';
 import { fetchProjectSettings } from 'Reducers/global';
 import { getGroups } from 'Reducers/coreQuery/middleware';
 import { EngagementTag } from 'Components/Profile/constants.ts';
+import { InfoCircleFilled, InfoCircleOutlined } from '@ant-design/icons';
 import SaleWindowModal from './SaleWindowModal';
 import EngagementModal from './EngagementModal';
 
@@ -331,7 +332,7 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
               <div className='flex justify-end' style={{ gap: '10px' }}>
                 <Popover
                   placement='bottom'
-                  overlayClassName={styles['engagementpopover']}
+                  overlayClassName={styles.engagementpopover}
                   trigger='hover'
                   style={{ margin: 0 }}
                   overlayInnerStyle={{
@@ -339,7 +340,7 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
                     margin: 0,
                     padding: 0
                   }}
-                  content={<SVG name={'EngagementCategoryPillsPopover'} />}
+                  content={<SVG name='EngagementCategoryPillsPopover' />}
                 >
                   <Button
                     type='text'
@@ -386,6 +387,9 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
                     <SVG size={16} name='edit' color='black' />
                   </Button>
                 )}
+                <Tooltip title='This helps keep engagement levels up to date for all your accounts.'>
+                  <InfoCircleFilled className='ml-2' />
+                </Tooltip>
               </div>
             </Col>
           </Row>
