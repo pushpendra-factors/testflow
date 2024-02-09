@@ -1,5 +1,5 @@
 import PlanDescriptionCard from 'Components/GenericComponents/PlanDescriptionCard';
-import LastPlanCard from 'Components/GenericComponents/PlanDescriptionCard/LastPlanCard';
+// import LastPlanCard from 'Components/GenericComponents/PlanDescriptionCard/LastPlanCard';
 import { SVG, Text } from 'Components/factorsComponents';
 import {
   ADDITIONAL_ACCOUNTS_ADDON_ID,
@@ -95,6 +95,8 @@ function UpgradeTab({ buyAddonLoading, handleBuyAddonClick }: UpgradeTabProps) {
           isAdditionalAccountsAddonPurchased={
             isAdditionalAccountsAddonPurchased
           }
+          seats={PLANS_COFIG[GrowthPlan.name].seats}
+          icons={PLANS_COFIG[GrowthPlan.name]?.icons}
         />
       )}
       {!isPlansViewCollapsed && (
@@ -151,10 +153,12 @@ function UpgradeTab({ buyAddonLoading, handleBuyAddonClick }: UpgradeTabProps) {
                     isAdditionalAccountsAddonPurchased={
                       isAdditionalAccountsAddonPurchased
                     }
+                    seats={localPlansConfig?.seats}
+                    icons={localPlansConfig?.icons}
                   />
                 );
               })}
-          <LastPlanCard />
+          {/* <LastPlanCard /> */}
         </div>
       )}
       <Button
@@ -168,28 +172,18 @@ function UpgradeTab({ buyAddonLoading, handleBuyAddonClick }: UpgradeTabProps) {
       >
         {isPlansViewCollapsed && (
           <div className='flex gap-2 items-center'>
-            <Text
-              type={'title'}
-              level={6}
-              extraClass='m-0'
-              color='brand-color-6'
-            >
+            <Text type='title' level={6} extraClass='m-0' color='brand-color-6'>
               Show All Plans
             </Text>
-            <SVG name={'CaretDown'} size={20} color='#1890FF' />
+            <SVG name='CaretDown' size={20} color='#1890FF' />
           </div>
         )}
         {!isPlansViewCollapsed && (
           <div className='flex gap-2 items-center'>
-            <Text
-              type={'title'}
-              level={6}
-              extraClass='m-0'
-              color='brand-color-6'
-            >
+            <Text type='title' level={6} extraClass='m-0' color='brand-color-6'>
               Hide All Plans
             </Text>
-            <SVG name={'CaretUp'} size={20} color={'#1890FF'} />
+            <SVG name='CaretUp' size={20} color='#1890FF' />
           </div>
         )}
       </Button>
@@ -209,18 +203,18 @@ function UpgradeTab({ buyAddonLoading, handleBuyAddonClick }: UpgradeTabProps) {
     <div className='py-4'>
       <div className='mb-6'>
         <Text
-          type={'title'}
+          type='title'
           level={4}
-          weight={'bold'}
-          extraClass={'m-0 mb-2'}
+          weight='bold'
+          extraClass='m-0 mb-2'
           color='character-primary'
         >
           Upgrade to get more out of Factors
         </Text>
         <Text
-          type={'title'}
+          type='title'
           level={7}
-          extraClass={'m-0'}
+          extraClass='m-0'
           color='character-secondary'
         >
           Check out all our plans and their included features to find the one

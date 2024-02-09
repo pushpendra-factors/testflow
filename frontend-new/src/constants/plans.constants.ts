@@ -63,7 +63,7 @@ export const PLANS = {
   PLAN_CUSTOM: 'Custom'
 };
 
-//adding for backward compatibility will be removed once we fully move to chargebee
+// adding for backward compatibility will be removed once we fully move to chargebee
 export const PLANS_V0 = {
   PLAN_FREE: 'FREE',
   PLAN_STARTUP: 'STARTUP',
@@ -77,18 +77,21 @@ export const PLANS_COFIG: PLANS_COFIG_INTERFACE = {
     name: PLANS.PLAN_FREE,
     description: 'Identify accounts and track their activity for free',
     uniqueFeatures: [
-      'Website Intent',
+      'Company Identification',
       'Account enrichment',
-      'B2B Website Analytics',
-      'Account Journey Timelines',
-      'Custom Filters & Segments',
-      'Real-Time Intent Alerts'
+      'Customer Journey Timelines',
+      'Starter GTM Dashboards',
+      'Custom Reports & Segments',
+      'Up to 2 Real-time Slack/MS Teams Alerts',
+      'Integrations (Website, Slack, MS Teams)'
     ],
     isRecommendedPlan: false,
     planIcon: 'Userplus',
     planIconColor: '#40A9FF',
     mtuLimit: 5000,
-    accountIdentifiedLimit: 100
+    accountIdentifiedLimit: 200,
+    seats: '2',
+    icons: ['Globe', 'Slack', 'MSTeam']
   },
 
   [PLANS.PLAN_BASIC]: {
@@ -96,22 +99,31 @@ export const PLANS_COFIG: PLANS_COFIG_INTERFACE = {
     description: 'Automate ABM workflows to co-ordinate better with sales',
     uniqueFeatures: [
       'Everything in Free +',
-      'Account Identification Exclusions',
-      'Lead Enrichment Automation',
-      'Outbound Email Automation',
-      'LinkedIn Intent Signals',
-      'Ad Performance Analytics',
-      'Content Analytics',
-      'Custom KPIs & Events',
-      'Onboarding support',
-      'Ads integration. (LinkedIn, Google, Facebook, Bing)',
-      'Webhooks (Zapier, Make etc)'
+      'Contact Enrichment',
+      'Sales Automations (Automated email and LinkedIn outreach)',
+      'LinkedIn Intent Signals (Reveal companies viewing your LinkedIn ads)',
+      'CSV Exports',
+      'Advanced GTM Dashboards',
+      'Advanced Website Analytics',
+      'Global Exclusions Rules',
+      'Customer Support (+support for 5x automations)',
+      'Unlimited Real-time Slack/MS Teams Alerts',
+      'Integrations (Google, LinkedIn, Facebook, Bing, Google Search Console, Webhooks)'
     ],
     isRecommendedPlan: false,
     planIcon: 'User_friends',
     planIconColor: '#73D13D',
     mtuLimit: 10000,
-    accountIdentifiedLimit: 500
+    accountIdentifiedLimit: 1000,
+    seats: '5',
+    icons: [
+      'Google_ads',
+      'Linkedin_ads',
+      'Facebook_ads',
+      'Bing',
+      'Google',
+      'Webhook'
+    ]
   },
   [PLANS.PLAN_GROWTH]: {
     name: PLANS.PLAN_GROWTH,
@@ -119,37 +131,47 @@ export const PLANS_COFIG: PLANS_COFIG_INTERFACE = {
       'Qualify leads and track engagement with custom scoring models',
     uniqueFeatures: [
       'Everything in Basic +',
-      'G2 Intent Signals',
+      'ABM Analytics',
       'Account + Lead Scoring',
-      'LinkedIn View Through Attribution',
-      'Basic Single Touch Funnel Attribution',
-      'Engaged Channels (Coming soon)',
-      'Priority CSM',
-      'CRM integration (HubSpot, Salesforce)',
-      'Marketing platforms integration (G2, Marketo)'
+      'LinkedIn Attribution',
+      'G2 Intent Signals (Reveal companies viewing your G2 pages)',
+      'G2 Attribution ',
+      'Custom Prospecting Workflows',
+      'Custom Audiences & Syncs',
+      'Dedicated Customer Success Manager (+support for unlimited automations)',
+      'Integrations (HubSpot, SalesForce, Marketo, G2, Drift)'
     ],
     isRecommendedPlan: true,
     planIcon: 'User',
     planIconColor: '#36CFC9',
     mtuLimit: 50000,
-    accountIdentifiedLimit: 5000
+    accountIdentifiedLimit: 8000,
+    seats: '',
+    icons: ['Hubspot_ads', 'Salesforce_ads', 'Marketo', 'G2crowd', 'DriftLogo']
   },
-  [PLANS.PLAN_PROFESSIONAL]: {
-    name: PLANS.PLAN_PROFESSIONAL,
+  [PLANS.PLAN_CUSTOM]: {
+    name: PLANS.PLAN_CUSTOM,
     description:
       'Attribute success with Multi-Attribution, AI-Explain and more',
     uniqueFeatures: [
       'Everything in Growth +',
-      'Multi-touch attribution',
+      'Multi-touch Attribution (Campaigns, Content Offline Events & more)',
+      'Cohort Analysis',
       'Path analysis',
-      'AI-fuelled Explain',
-      'Dedicated CSM'
+      'Buyer Journey Analysis with AI-Fuelled Explain',
+      'Custom Metrics & KPIs',
+      'White Glove Onboarding Support',
+      'Enterprise Single Sign-On (Coming Soon)',
+      'LinkedIn Campaign Management(Coming Soon)',
+      'Integrations (RudderStack, Segment, Custom Integrations)'
     ],
     isRecommendedPlan: false,
     planIcon: 'Buildings',
     planIconColor: '#FF7A45',
     mtuLimit: 100000,
-    accountIdentifiedLimit: 10000
+    accountIdentifiedLimit: 10000,
+    seats: '',
+    icons: ['Rudderstack_ads', 'Segment_ads']
   }
 };
 
@@ -166,6 +188,8 @@ export interface PLAN_COFIG {
   planIconColor: string;
   mtuLimit: number;
   accountIdentifiedLimit: number;
+  seats: string;
+  icons?: string[];
 }
 
 export const ADDITIONAL_ACCOUNTS_ADDON_ID =
