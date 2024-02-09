@@ -1655,7 +1655,10 @@ const EventBasedAlert = ({
                     </div>
                   </Popover>
                 </div>
-                <div className='fa--query_block_section borderless no-padding mt-0'>
+                <div
+                  className='fa--query_block_section borderless no-padding mt-0'
+                  style={{ marginLeft: '-20px' }}
+                >
                   {groupByItems()}
                 </div>
                 <Button
