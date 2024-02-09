@@ -32,7 +32,8 @@ export const DEFAULT_TIMELINE_CONFIG: TimelineConfig = {
     table_props: [],
     milestones: [],
     user_prop: ''
-  }
+  },
+  events_config: {}
 };
 
 export const eventIconsColorMap: Record<
