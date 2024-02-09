@@ -1873,7 +1873,7 @@ func (store *MemSQL) GetTopPages(projectID int64, id string, groupID int) ([]mod
         JOIN events 
         ON users.id=events.user_id AND users.project_id=events.project_id
         WHERE users.project_id=?
-          AND users.is_group_user = 0
+          AND (users.is_group_user = 0 OR users.is_group_user IS NULL)
           AND (%s)
           AND JSON_EXTRACT_STRING(events.properties,  '%s') = 'true'
         GROUP BY page_url
@@ -1930,7 +1930,7 @@ func (store *MemSQL) GetTopKnownUsers(queryParams []interface{}, groupUserStmt s
     JOIN events
     ON users.id=events.user_id AND users.project_id=events.project_id
     WHERE users.project_id=?
-      AND users.is_group_user = 0
+      AND (users.is_group_user = 0 OR users.is_group_user IS NULL)
       AND (%s)
       AND users.customer_user_id IS NOT NULL
       AND JSON_EXTRACT_STRING(events.properties, '%s') = 'true'
@@ -1962,7 +1962,7 @@ func (store *MemSQL) GetTopAnonymousUsers(queryParams []interface{}, groupUserSt
     JOIN events
     ON users.id=events.user_id AND users.project_id=events.project_id
     WHERE users.project_id=?
-      AND users.is_group_user = 0
+      AND (users.is_group_user = 0 OR users.is_group_user IS NULL)
       AND (%s)
       AND users.customer_user_id IS NULL
       AND JSON_EXTRACT_STRING(events.properties, '%s') = 'true'
