@@ -356,9 +356,9 @@ func GetValueListFromFile(projectID int64, property model.QueryProperty) string 
 
 	for _, value := range valuesInFile {
 		if valueListString == "" {
-			valueListString = fmt.Sprintf(`"%s"`, value)
+			valueListString = fmt.Sprintf(`'%s'`, value)
 		} else {
-			valueListString = valueListString + " , " + fmt.Sprintf(`"%s"`, value)
+			valueListString = valueListString + " , " + fmt.Sprintf(`'%s'`, value)
 		}
 
 	}
