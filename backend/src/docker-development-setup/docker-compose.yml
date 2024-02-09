@@ -55,7 +55,7 @@ services:
                 -  REDIS_HOST=172.30.0.4
                 -  PRI_DS=172.30.0.2
                 -  DB_HOST=172.30.0.2    
-            entrypoint: [ "sh","-c","/go/bin/app --redis_host_ps=$REDIS_HOST --dup_queue_redis_host=$REDIS_HOST --queue_redis_host=$REDIS_HOST  --memsql_is_psc_host=1 --api_domain=$API_DOMAIN --env=staging --memsql_host=$DB_HOST --skip_event_name_step_by_project_id ='*' --skip_user_join_in_event_query_by_project_id='*' --allow_profiles_group_support='*' --allow_events_funnels_group_support='*' --enable_optimised_filter_on_profile_query=1 --enable_optimised_filter_on_event_user_query=1 --all_accounts_project_id='*' --enable_new_all_accounts_by_project_id='*' --allow_event_analytics_groups_by_project_id='*' --enable_event_filters_in_segments --enable_sync_reference_fields_by_project_id='*' "]
+            entrypoint: [ "sh","-c","/go/bin/app --redis_host_ps=$REDIS_HOST --dup_queue_redis_host=$REDIS_HOST --queue_redis_host=$REDIS_HOST  --memsql_is_psc_host=1 --api_domain=$API_DOMAIN --env=staging --memsql_host=$DB_HOST --skip_event_name_step_by_project_id ='*' --project_analytics_whitelisted_uuids='0689afac-8363-4ad8-ae1d-3aced22981f3,8b629994-e660-4365-9154-1367653ecdef,765a333b-73c0-49a5-8d14-5afc4d1dd7eb,32fd4bfa-052e-4013-a38d-705405e2e664,c647cb76-321f-4466-93e1-1aa417177f9d,d9f7d69d-8f20-427e-9dc4-6cc9c37eb7af,df813a9c-dc95-4211-b99e-ba2c6121dc2b,a2d600fc-75b4-4384-9bda-7a039f6e64c9' --skip_user_join_in_event_query_by_project_id='*' --allow_profiles_group_support='*' --allow_events_funnels_group_support='*' --enable_optimised_filter_on_profile_query=1 --enable_optimised_filter_on_event_user_query=1 --all_accounts_project_id='*' --enable_new_all_accounts_by_project_id='*' --allow_event_analytics_groups_by_project_id='*' --enable_event_filters_in_segments --enable_sync_reference_fields_by_project_id='*' "]
             image: testing/api:1.0
             deploy:
                 replicas: 1
@@ -79,12 +79,15 @@ services:
                 -  GOPATH=/go/src/factors
                 -  REDIS_HOST=172.30.0.4
                 -  DB_HOST=172.30.0.2  
-            entrypoint: [ "sh","-c","/go/bin/sdkserver --redis_host=$REDIS_HOST --redis_host_ps=$REDIS_HOST --dup_queue_redis_host=$REDIS_HOST --queue_redis_host=$REDIS_HOST --env=staging --memsql_host=$DB_HOST"]
+            entrypoint: [ "sh","-c","/go/bin/sdkserver --redis_host=$REDIS_HOST --redis_host_ps=$REDIS_HOST --dup_queue_redis_host=$REDIS_HOST --queue_redis_host=$REDIS_HOST --env=staging --memsql_host=$DB_HOST --allow_support_for_user_properties_in_identify_call='*' --memsql_is_psc_host=1"]
             image: testing/sdk:1.0
             deploy:
                 replicas: 0
             ports:
                 - "8085:8085"
+            networks:
+                network:
+                    ipv4_address: 172.30.0.5  
             restart: always
             volumes: 
                 - ../../../geolocation_data:/usr/local/var/factors/geolocation_data
