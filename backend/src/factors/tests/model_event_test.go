@@ -953,7 +953,7 @@ func TestEventPropertyValuesAggregate(t *testing.T) {
 	err = json.Unmarshal([]byte(existingAggCache), &existingAggregate)
 	assert.Nil(t, err)
 	assert.Equal(t, "value1", existingAggregate.NameCountTimestampCategoryList[0].Name)
-	assert.Equal(t, int64(1), existingAggregate.NameCountTimestampCategoryList[0].Count)
+	assert.Equal(t, int64(2), existingAggregate.NameCountTimestampCategoryList[0].Count)
 
 	newEvent = &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
 		UserId: user.ID, Timestamp: start.Unix(),
@@ -971,7 +971,7 @@ func TestEventPropertyValuesAggregate(t *testing.T) {
 	err = json.Unmarshal([]byte(existingAggCache), &existingAggregate)
 	assert.Nil(t, err)
 	assert.Equal(t, "value1", existingAggregate.NameCountTimestampCategoryList[0].Name)
-	assert.Equal(t, int64(2), existingAggregate.NameCountTimestampCategoryList[0].Count)
+	assert.Equal(t, int64(3), existingAggregate.NameCountTimestampCategoryList[0].Count)
 
 	// Current day event.
 	newEvent = &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
@@ -990,7 +990,7 @@ func TestEventPropertyValuesAggregate(t *testing.T) {
 	err = json.Unmarshal([]byte(existingAggCache), &existingAggregate)
 	assert.Nil(t, err)
 	assert.Equal(t, "value1", existingAggregate.NameCountTimestampCategoryList[0].Name)
-	assert.Equal(t, int64(2), existingAggregate.NameCountTimestampCategoryList[0].Count)
+	assert.Equal(t, int64(3), existingAggregate.NameCountTimestampCategoryList[0].Count)
 
 	// Validate even name property values through api.
 	w := sendGetEventPropertyValues(project.ID, "login", "value", false, agent, r)

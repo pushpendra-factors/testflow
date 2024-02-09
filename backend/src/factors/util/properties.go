@@ -4350,9 +4350,6 @@ type CachePropertyValueWithTimestamp struct {
 
 type CacheEventPropertyValuesAggregate struct {
 	NameCountTimestampCategoryList []NameCountTimestampCategory `json: nl`
-
-	// EarliestCount - Used subratracting count to maintain rolling aggregate.
-	EarliestCount CachePropertyValueWithTimestamp `json:"ec"`
 }
 
 type NameCountTimestampCategory struct {
