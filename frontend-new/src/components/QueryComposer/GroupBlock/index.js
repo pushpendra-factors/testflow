@@ -261,6 +261,7 @@ function GroupBlock({
         setList={(listItems) => {
           dispatch(setGroupByActionList(listItems));
         }}
+        style={{ marginLeft: '-20px' }}
       >
         {groupByState.global.map((opt, index) => (
           <div
