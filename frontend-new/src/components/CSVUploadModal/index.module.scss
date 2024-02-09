@@ -1,0 +1,22 @@
+.dot {
+  height: 5px;
+  width: 5px;
+  background-color: #00000073;
+  border-radius: 50%;
+  display: inline-block;
+  vertical-align: 2px;
+  margin-right: 6px;
+}
+
+.container {
+  :global(.ant-modal-content) {
+    border-radius: 12px;
+  }
+  :global(.ant-modal-body) {
+    padding: 36px;
+  }
+  :global(.ant-modal-close-x) {
+    margin-top: 15px;
+    margin-right: 15px;
+  }
+}

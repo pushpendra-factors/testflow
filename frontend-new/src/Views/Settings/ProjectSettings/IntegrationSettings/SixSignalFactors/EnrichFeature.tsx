@@ -1,20 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React, { ReactNode, useEffect, useState } from 'react';
 import { Button, Modal, notification } from 'antd';
 import { connect, ConnectedProps, useSelector } from 'react-redux';
 import { Text, SVG } from 'Components/factorsComponents';
+import { udpateProjectSettings } from 'Reducers/global';
+import { bindActionCreators } from 'redux';
 import EnrichPages from './EnrichPages';
 import EnrichCountries from './EnrichCountries';
 import { FeatureModes, SixSignalConfigType } from './types';
-import { udpateProjectSettings } from 'Reducers/global';
-import { bindActionCreators } from 'redux';
 
-const EnrichFeature = ({
+function EnrichFeature({
   title,
   type,
   subtitle,
   udpateProjectSettings,
   actionButtonText = 'Configure rules'
-}: EnrichFeatureProps) => {
+}: EnrichFeatureProps) {
   const [mode, setMode] = useState<FeatureModes>('configure');
   //   @ts-ignore
   const six_signal_config: SixSignalConfigType = useSelector(
@@ -33,7 +33,7 @@ const EnrichFeature = ({
       onOk: async () => {
         try {
           if (!active_project?.id) return '';
-          let updatedSixSignalConfig: SixSignalConfigType = {
+          const updatedSixSignalConfig: SixSignalConfigType = {
             ...six_signal_config
           };
           if (type === 'country') {
@@ -61,7 +61,7 @@ const EnrichFeature = ({
   };
 
   useEffect(() => {
-    //checking for country type
+    // checking for country type
     if (type === 'country') {
       if (
         (six_signal_config?.country_exclude &&
@@ -79,7 +79,7 @@ const EnrichFeature = ({
   ]);
 
   useEffect(() => {
-    //checking for page type
+    // checking for page type
     if (type === 'page') {
       if (
         (six_signal_config?.pages_exclude &&
@@ -96,7 +96,7 @@ const EnrichFeature = ({
     six_signal_config?.pages_include
   ]);
   return (
-    <div className={`flex flex-col py-4`}>
+    <div className='flex flex-col py-4 mb-8'>
       <div
         className={`flex items-center ${
           mode === 'view' ? 'justify-between' : 'justify-start'
@@ -127,13 +127,13 @@ const EnrichFeature = ({
             <Button
               size='middle'
               onClick={() => setMode('edit')}
-              icon={<SVG name={'Edit'} size={18} color='#8692A3' />}
+              icon={<SVG name='Edit' size={18} color='#8692A3' />}
               type='text'
             />
             <Button
               size='middle'
               onClick={handleDelete}
-              icon={<SVG name={'Delete'} size={18} color='#8692A3' />}
+              icon={<SVG name='Delete' size={18} color='#8692A3' />}
               type='text'
             />
           </div>
@@ -165,7 +165,7 @@ const EnrichFeature = ({
       )}
     </div>
   );
-};
+}
 
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
@@ -179,7 +179,7 @@ type ReduxProps = ConnectedProps<typeof connector>;
 type EnrichFeatureType = {
   type: 'country' | 'page';
   title: string;
-  subtitle?: string;
+  subtitle?: ReactNode;
   actionButtonText?: string;
 };
 

@@ -19,12 +19,11 @@ import dashboard_templates_modal_Reducer from './dashboard_templates_modal';
 import attributionReducer from '../features/attribution/state/reducer';
 import globalSearch from './globalSearch';
 import allRoutes from './allRoutes';
-import onBoardFlow from './onBoardFlow';
 import accountProfilesViewReducer from './accountProfilesView';
 import userProfilesViewReducer from './userProfilesView';
 import FeatureConfigReducer from './featureConfig';
 import { USER_LOGOUT } from './types';
-import preBuildDashboardConfig from '../Views/PreBuildDashboard/state/reducer'
+import preBuildDashboardConfig from '../Views/PreBuildDashboard/state/reducer';
 import PlansConfigReducer from './plansConfig';
 
 const appReducer = combineReducers({
@@ -33,7 +32,7 @@ const appReducer = combineReducers({
   coreQuery: CoreQueryReducer,
   analyticsQuery: AnalyticsReducer,
   dashboard: DashboardReducer,
-  preBuildDashboardConfig: preBuildDashboardConfig,
+  preBuildDashboardConfig,
   queries: QueriesReducer,
   settings: settingsReducer,
   factors,
@@ -47,9 +46,8 @@ const appReducer = combineReducers({
   dashboard_templates_Reducer: dashboard_templates_modal_Reducer,
   pathAnalysis,
   attributionDashboard: attributionReducer,
-  globalSearch: globalSearch,
-  allRoutes: allRoutes,
-  onBoardFlow: onBoardFlow,
+  globalSearch,
+  allRoutes,
   accountProfilesView: accountProfilesViewReducer,
   userProfilesView: userProfilesViewReducer,
   featureConfig: FeatureConfigReducer,

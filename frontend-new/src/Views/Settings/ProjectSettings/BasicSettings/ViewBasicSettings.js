@@ -175,11 +175,7 @@ function ViewBasicSettings({
             ) : (
               <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>
                 {!_.isEmpty(activeProject?.time_zone)
-                  ? `${
-                      getTimeZoneNameFromCity(activeProject?.time_zone)?.name
-                    } (UTC ${
-                      getTimeZoneNameFromCity(activeProject?.time_zone)?.offset
-                    })`
+                  ? `${ getTimeZoneNameFromCity(activeProject?.time_zone)?.text }`
                   : '---'}
               </Text>
             )}

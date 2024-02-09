@@ -17,7 +17,6 @@ import {
 } from 'Reducers/agentActions';
 import { USER_LOGOUT } from 'Reducers/types';
 import { getActiveProjectDetails, fetchProjectSettings } from 'Reducers/global';
-// import NewProject from '../../Views/Settings/SetupAssist/Modals/NewProject';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import factorsai from 'factorsai';
@@ -34,7 +33,6 @@ import { PLANS, PLANS_V0 } from 'Constants/plans.constants';
 function ProjectModal(props) {
   const [ShowPopOver, setShowPopOver] = useState(false);
   const [searchProjectName, setsearchProjectName] = useState('');
-  // const [showProjectModal, setShowProjectModal] = useState(false);
   const [ShowUserSettings, setShowUserSettings] = useState(false);
   const [changeProjectModal, setchangeProjectModal] = useState(false);
   const [selectedProject, setselectedProject] = useState(null);
@@ -161,7 +159,6 @@ function ProjectModal(props) {
               className='fa-btn--custom'
               onClick={() => {
                 setShowPopOver(false);
-                // setShowProjectModal(true);
                 history.push(`${PathUrls.Onboarding}?setup=new`);
               }}
             >
@@ -361,10 +358,7 @@ function ProjectModal(props) {
         visible={ShowUserSettings}
         handleCancel={closeUserSettingsModal}
       />
-      {/* <NewProject
-        visible={showProjectModal}
-        handleCancel={() => setShowProjectModal(false)}
-      /> */}
+
       <Modal
         visible={changeProjectModal}
         zIndex={1020}
