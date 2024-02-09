@@ -141,12 +141,14 @@ func TestMain(m *testing.M) {
 		MoveHubspotCompanyAssocationFlowToContactByPojectID: "*",
 		AllowedGoRoutines:                                   4,
 		AssociateDealToDomainByProjectID:                    "*",
-		ProcessOnlyAccountSegments:                          false,
+		ProcessOnlyAccountSegments:                          true,
 		ChargebeeApiKey:                                     *chargebeeApiKey,
 		ChargebeeSiteName:                                   *chargebeeSiteName,
 		AggrEventPropertyValuesCacheByProjectID:             "*",
 		BatchSizeDomains:                                    100,
 		AddCRMObjectURLPropertyByProjectID:                  "*",
+		LookbackSegmentMarker:                               24,
+		DomainsLimitAllRun:                                  300000,
 	}
 	C.InitConf(config)
 
