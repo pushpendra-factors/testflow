@@ -122,27 +122,19 @@ func main() {
 					}
 					// update agent
 					agent.BillingCustomerID = customer.Id
-					fields := make(map[string]interface{})
 
-					fields["billing_customer_id"] = customer.Id
-					fields["updated_at"] = time.Now()
-
-					db = db.Model(&M.Agent{}).Where("uuid = ?", agent.UUID).Updates(fields)
-
-					if db.Error != nil {
-						log.WithError(db.Error).Error("UpdateAgent Failed", agent.UUID)
+					status := store.GetStore().UpdateAgentBillingCustomerID(agent.UUID, agent.BillingCustomerID)
+					if status != http.StatusAccepted {
+						log.Error("Failed to update agent billing customer id ", agent.UUID, agent.Email)
 						break
 					}
-					if db.RowsAffected == 0 {
-						log.WithError(db.Error).Error("UpdateAgent Failed No Rows affected", agent.UUID)
-					}
 				}
-			}else{
+			} else {
 				log.Info("Customer already exists for agent ", agent.Email)
 			}
 			if *dryRun {
 				log.Info("dry run enabled")
-				log.Info("skipping project subscription creation - ", projectID," - ", agent.UUID," - ", agent.Email)
+				log.Info("skipping project subscription creation - ", projectID, " - ", agent.UUID, " - ", agent.Email)
 				break
 			} else {
 				subscription, _, err := billing.CreateChargebeeSubscriptionForCustomer(projectID, agent.BillingCustomerID, M.DEFAULT_PLAN_ITEM_PRICE_ID)

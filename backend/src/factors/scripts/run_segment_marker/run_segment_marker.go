@@ -36,7 +36,8 @@ func main() {
 	useLookbackSegmentMarker := flag.Bool("use_lookback_segment_marker", false, "Whether to compute look_back time to fetch users in last x hours.")
 	lookbackSegmentMarker := flag.Int("lookback_segment_marker", 0, "Optional: Fetch users from last x hours")
 	allowedGoRoutines := flag.Int("allowed_go_routines", 1, "Number of allowed to routines")
-	batchSizeDomains := flag.Int("batch_size_domains", 100, "batch size for number of domains to be processed in a go")
+	batchSizeDomains := flag.Int("batch_size_domains", 50, "batch size for number of domains to be processed in a go")
+	domainsLimitAllRun := flag.Int("domains_limit_all_run", 250000, "limit for domains to be processed for all run")
 	processOnlyAccountSegments := flag.Bool("process_only_account_segments", false, "This flag allows only processing of all accounts type segments")
 	runAllAccountsMarkerProjectIDs := flag.String("run_all_accounts_marker_project_ids", "",
 		"Project Id to run all accounts marker for. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
@@ -88,6 +89,7 @@ func main() {
 		RunAllAccountsMarkerProjectIDs: *runAllAccountsMarkerProjectIDs,
 		RunForAllAccountsInHours:       *runForAllAccountsInHours,
 		BatchSizeDomains:               *batchSizeDomains,
+		DomainsLimitAllRun:             *domainsLimitAllRun,
 	}
 
 	C.InitConf(config)
@@ -104,36 +106,34 @@ func main() {
 	defer db.Close()
 
 	startTime := time.Now().Unix()
-	isSuccess := RunSegmentMarkerForProjects(projectIdFlag)
+	RunSegmentMarkerForProjects(projectIdFlag)
 	endTime := time.Now().Unix()
 	timeTaken := endTime - startTime
 	log.Info("Time taken for job to run in sec: ", timeTaken)
-	if !isSuccess {
-		C.PingHealthcheckForFailure(healthcheckPingID, "segment_markup run failed.")
-		return
-	}
 	C.PingHealthcheckForSuccess(healthcheckPingID, "segment_markup run success.")
 }
 
-func RunSegmentMarkerForProjects(projectIdFlag *string) bool {
+func RunSegmentMarkerForProjects(projectIdFlag *string) {
 	projectIdList := *projectIdFlag
-	isHealthcheckSuccess := true
 
 	allProjects, projectIDsMap, _ := C.GetProjectsFromListWithAllProjectSupport(projectIdList, "")
+	failureCount := 0
+	successCount := 0
 
 	if allProjects {
 		projectIDs, errCode := store.GetStore().GetAllProjectIDs()
 		if errCode != http.StatusFound {
 			err := fmt.Errorf("failed to get all projects ids to run segment markup")
 			log.WithField("err_code", err).Error(err)
-			isHealthcheckSuccess = false
-			return isHealthcheckSuccess
+			return
 		}
 		for _, projectId := range projectIDs {
 			status := T.SegmentMarker(projectId)
 			if status != http.StatusOK {
 				log.WithField("project_id", projectId).Error("failed to run segment markup for project ID ")
-				isHealthcheckSuccess = false
+				failureCount++
+			} else {
+				successCount++
 			}
 		}
 	} else {
@@ -141,9 +141,13 @@ func RunSegmentMarkerForProjects(projectIdFlag *string) bool {
 			status := T.SegmentMarker(projectId)
 			if status != http.StatusOK {
 				log.WithField("project_id", projectId).Error("failed to run segment markup for project ID ")
-				isHealthcheckSuccess = false
+				failureCount++
+			} else {
+				successCount++
 			}
 		}
 	}
-	return isHealthcheckSuccess
+
+	log.Info(fmt.Sprintf("Succesfully ran markup job for %d projects. Failures for %d projects",
+		successCount, failureCount))
 }

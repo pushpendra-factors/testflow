@@ -221,6 +221,12 @@ func Auth0Value(value *postgres.Jsonb) Option {
 	}
 }
 
+func BillingCustomerID(id string) Option {
+	return func(fields FieldsToUpdate) {
+		fields["billing_customer_id"] = id
+	}
+}
+
 func AgentFailedLoginAttemptCacheKey(agentUUID string) (*cacheRedis.Key, error) {
 	prefix := "LOGIN:FAIL"
 	return cacheRedis.NewKeyWithAgentUID(prefix, agentUUID, "")

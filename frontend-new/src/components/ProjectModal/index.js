@@ -17,7 +17,7 @@ import {
 } from 'Reducers/agentActions';
 import { USER_LOGOUT } from 'Reducers/types';
 import { getActiveProjectDetails, fetchProjectSettings } from 'Reducers/global';
-import { connect, useDispatch } from 'react-redux';
+import { connect, useDispatch, useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import factorsai from 'factorsai';
 import useAutoFocus from 'hooks/useAutoFocus';
@@ -28,6 +28,7 @@ import UserSettings from '../../Views/Settings/UserSettings';
 import styles from './index.module.scss';
 import { Text, SVG } from '../factorsComponents';
 import { meetLink } from 'Utils/meetLink';
+import { PLANS, PLANS_V0 } from 'Constants/plans.constants';
 
 function ProjectModal(props) {
   const [ShowPopOver, setShowPopOver] = useState(false);
@@ -39,6 +40,12 @@ function ProjectModal(props) {
   const inputComponentRef = useAutoFocus(ShowPopOver);
   const variant = props?.variant === 'onboarding' ? 'onboarding' : 'app';
 
+  const { plan } = useSelector((state) => state.featureConfig);
+  let isFreePlan = true;
+  if (plan) {
+    isFreePlan =
+      plan?.name === PLANS.PLAN_FREE || plan?.name === PLANS_V0?.PLAN_FREE;
+  }
   const dispatch = useDispatch();
 
   const searchProject = (e) => {
@@ -240,12 +247,10 @@ function ProjectModal(props) {
             </a>
           </div>
           <div className={styles.popover_content__additionalActions}>
-            <a onClick={() => window.open(PathUrls.Checklist, '_self')}>
-              Setup Assist
-            </a>
+            <a onClick={() => history.push(PathUrls.Checklist)}>Setup Assist</a>
           </div>
           <div className={styles.popover_content__additionalActions}>
-            <a onClick={() => window.open(meetLink(), '_blank')}>
+            <a onClick={() => window.open(meetLink(isFreePlan), '_blank')}>
               Schedule a call
             </a>
           </div>

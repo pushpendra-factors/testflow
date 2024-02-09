@@ -16,6 +16,8 @@ import { bindActionCreators } from 'redux';
 import logger from 'Utils/logger';
 import { fetchProjectAgents } from 'Reducers/agentActions';
 import { meetLink } from 'Utils/meetLink';
+import { FeatureConfigState } from 'Reducers/featureConfig/types';
+import { PLANS, PLANS_V0 } from 'Constants/plans.constants';
 import Card from './Card';
 import styles from './index.module.scss';
 
@@ -24,6 +26,16 @@ function Checklist({
   fetchProjectAgents
 }: ChecklistComponentProps): JSX.Element {
   const { active_project } = useSelector((state) => state.global);
+  const { plan } = useSelector(
+    (state: any) => state.featureConfig
+  ) as FeatureConfigState;
+
+  let isFreePlan = true;
+  if (plan) {
+    isFreePlan =
+      plan?.name === PLANS.PLAN_FREE || plan?.name === PLANS_V0?.PLAN_FREE;
+  }
+
   const history = useHistory();
   const productFruitRef = useRef<HTMLDivElement>(null);
   const checklistId = 2288;
@@ -99,7 +111,7 @@ function Checklist({
                       consultation call on how to utilise Factors data with your
                       team.
                       <a
-                        href={meetLink()}
+                        href={meetLink(isFreePlan)}
                         target='_blank'
                         className='ml-1'
                         rel='noreferrer'

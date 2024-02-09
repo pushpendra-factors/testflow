@@ -306,7 +306,7 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
   return (
     <div className='fa-container'>
       <Row gutter={[24, 24]} justify='center'>
-        <Col span={18}>
+        <Col span={22}>
           <Row>
             <Col span={18}>
               <Text

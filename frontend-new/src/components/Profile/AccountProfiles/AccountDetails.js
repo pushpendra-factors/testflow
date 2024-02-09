@@ -103,17 +103,12 @@ function AccountDetails({
 
   const uniqueEventNames = useMemo(() => {
     const accountEvents = accountDetails.data?.account_events || [];
-
     const eventsArray = accountEvents
-      .filter(
-        (event) =>
-          Object.keys(event?.properties || {}).length &&
-          !event?.properties?.['$is_page_view']
-      )
+      .filter((event) => event.display_name !== 'Page View')
       .map((event) => event.event_name);
 
     const pageViewEvent = accountEvents.find(
-      (event) => event?.properties?.$is_page_view
+      (event) => event.display_name === 'Page View'
     );
 
     if (pageViewEvent) {
@@ -401,7 +396,7 @@ function AccountDetails({
           timelines_config: updatedTimelinesConfig
         });
       } catch (error) {
-        logger(error);
+        logger.error(error);
       }
     }
   };
@@ -445,7 +440,7 @@ function AccountDetails({
         timelines_config: updatedTimelinesConfig
       });
     } catch (error) {
-      logger(error);
+      logger.error(error);
     }
   };
 
@@ -554,7 +549,7 @@ function AccountDetails({
           timelines_config: { ...tlConfig }
         });
       } catch (error) {
-        logger(error);
+        logger.error(error);
       }
     }
   };

@@ -22,7 +22,6 @@ const MenuTabs = {
   MarketingInteractions: 'Marketing Touchpoints',
   Attributions: 'Attributions',
   CustomKPI: 'Custom KPIs',
-  ExplainDP: 'Top Events and Properties',
   Alerts: 'Alerts',
   Sharing: 'Sharing',
 };

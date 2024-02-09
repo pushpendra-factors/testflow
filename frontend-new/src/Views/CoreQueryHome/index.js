@@ -164,8 +164,8 @@ const columns = [
               created_by_user.email.split('@')[1] === 'factors.ai'
                 ? 'https://s3.amazonaws.com/www.factors.ai/assets/img/product/factors-icon.svg'
                 : !!created_by_user?.image
-                ? created_by_user?.image
-                : 'assets/avatar/avatar.png'
+                  ? created_by_user?.image
+                  : 'assets/avatar/avatar.png'
             }
             size={24}
             className={'mr-2'}
@@ -315,11 +315,6 @@ function CoreQuery({
       actions: ''
     };
   };
-
-  // when user navigates back to analysis home page, all the chart types should get reset
-  useEffect(() => {
-    updateChartTypes(DefaultChartTypes);
-  }, [updateChartTypes]);
 
   const confirmDelete = useCallback(() => {
     let queryDetails = {
@@ -731,6 +726,7 @@ function CoreQuery({
       window.history.replaceState(null, '');
     } else {
       dispatch({ type: SHOW_ANALYTICS_RESULT, payload: false });
+      history.push('/reports');
     }
   }, [
     dispatch,

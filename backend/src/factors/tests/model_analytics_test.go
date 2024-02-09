@@ -10677,6 +10677,12 @@ func TestAnalyticsFunnelValueLabel(t *testing.T) {
 	assert.Equal(t, float64(1), result.Rows[2][3])
 	assert.Equal(t, "100.0", result.Rows[2][4])
 	assert.Equal(t, "100.0", result.Rows[2][5])
+	assert.Equal(t, "o1", result.Meta.MetaMetrics[0].Rows[1][0])
+	assert.Equal(t, "w1", result.Meta.MetaMetrics[0].Rows[1][1])
+	assert.Equal(t, float64(60), result.Meta.MetaMetrics[0].Rows[1][2])
+	assert.Equal(t, "o2", result.Meta.MetaMetrics[0].Rows[2][0])
+	assert.Equal(t, "w2", result.Meta.MetaMetrics[0].Rows[2][1])
+	assert.Equal(t, float64(60), result.Meta.MetaMetrics[0].Rows[2][2])
 }
 
 func TestAllAccountDomainProperties(t *testing.T) {

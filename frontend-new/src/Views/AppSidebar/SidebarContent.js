@@ -5,8 +5,10 @@ import DashboardSidebar from './DashboardSidebar';
 import AccountsSidebar from './AccountsSidebar';
 import ProfilesSidebar from './ProfilesSidebar';
 import SettingsSidebar from './SettingsSidebar';
+import AlertsSidebar from './AlertsSidebar';
 import {
   checkMatchPath,
+  isAlertsUrl,
   isConfigurationUrl,
   isSettingsUrl
 } from './appSidebar.helpers';
@@ -33,6 +35,9 @@ function SidebarContent() {
   }
   if (isSettingsUrl(pathname) || isConfigurationUrl(pathname)) {
     return <SettingsSidebar />;
+  }
+  if (isAlertsUrl(pathname)) {
+    return <AlertsSidebar />;
   }
   return null;
 }

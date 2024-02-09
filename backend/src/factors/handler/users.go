@@ -168,6 +168,10 @@ func GetUserPropertiesHandler(c *gin.Context) {
 			return
 		}
 	}
+
+	//removing all account properties from user_properties
+	properties = removeAllAccountPropertiesFromUserProperties(&properties)
+
 	properties = U.ClassifyDateTimePropertyKeys(&properties)
 	U.FillMandatoryDefaultUserProperties(&properties)
 	_, overrides := store.GetStore().GetPropertyOverridesByType(projectId, U.PROPERTY_OVERRIDE_BLACKLIST, model.GetEntity(true))
@@ -223,6 +227,29 @@ func appendCustomColumnProperties(properties *map[string][]string) {
 		(*properties)["categorical"] = append((*properties)["categorical"], U.USER_PROPERTIES_WITH_COLUMN...)
 	}
 
+}
+
+func removeAllAccountPropertiesFromUserProperties(properties *map[string][]string) map[string][]string {
+	newProperties := make(map[string][]string)
+
+	//make map of all account properties
+	accountPropMap := make(map[string]bool)
+	for _, accountProp := range U.ALL_ACCOUNTS_PROPERTIES {
+		accountPropMap[accountProp] = true
+	}
+	for _, accountProp := range U.ALL_ACCOUNT_DEFAULT_PROPERTIES {
+		accountPropMap[accountProp] = true
+	}
+
+	for key, props := range *properties {
+		for _, p := range props {
+			if !accountPropMap[p] {
+				newProperties[key] = append(newProperties[key], p)
+			}
+		}
+	}
+
+	return newProperties
 }
 
 // GetUserPropertyValuesHandler curl -i -X GET http://localhost:8080/projects/1/user_properties/$country

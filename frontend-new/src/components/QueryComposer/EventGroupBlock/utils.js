@@ -3,7 +3,7 @@ import {
   convertAndAddPropertiesToGroupSelectOptions,
   processProperties
 } from 'Utils/dataFormatter';
-import { CustomGroupDisplayNames } from 'Components/GlobalFilter/FilterWrapper/utils';
+import { CustomGroupDisplayNames, GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 import getGroupIcon from 'Utils/getGroupIcon';
 import _ from 'lodash';
 
@@ -89,11 +89,15 @@ export const alertsGroupPropertyList = (
   );
 
   if (groupProperties) {
+    let groupsList = groups
+    if(groupProperties?.hasOwnProperty(GROUP_NAME_DOMAINS)){
+      groupsList['$domains'] = 'All Accounts';
+    } 
     Object.entries(groupProperties || {}).forEach(([group, properties]) => {
-      if (Object.keys(groups).includes(group)) {
+      if (Object.keys(groupsList).includes(group)) {
         const groupLabel =
           CustomGroupDisplayNames[group] ||
-          (groups[group] ? groups[group] : PropTextFormat(group));
+          (groupsList[group] ? groupsList[group] : PropTextFormat(group));
 
         const groupValues = processProperties(properties, 'user', group);
         const groupPropIconName = getGroupIcon(groupLabel);

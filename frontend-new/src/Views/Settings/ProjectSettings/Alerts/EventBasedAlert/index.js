@@ -93,6 +93,7 @@ import Webhook from './Webhook';
 import Teams from './Teams';
 import { getMsgPayloadMapping, dummyPayloadValue } from './../utils';
 import { ReactSortable } from 'react-sortablejs';
+import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 
 const { Option } = Select;
 
@@ -199,7 +200,7 @@ const EventBasedAlert = ({
 
   const [WHTestMsgLoading, setWHTestMsgLoading] = useState(false);
   const [WHTestMsgTxt, setWHTestMsgTxt] = useState(false);
-  const [factorsURLinWebhook, setFactorsURLinWebhook] = useState(false);
+  const [factorsURLinWebhook, setFactorsURLinWebhook] = useState(true);
 
   const webhookRef = useRef();
   const [form] = Form.useForm();
@@ -227,8 +228,20 @@ const EventBasedAlert = ({
     history.push(url);
   };
 
+  const getGroupPropsFromAPI = useCallback(
+    async (group) => {
+      if (!groupProperties[group]) {
+        await getGroupProperties(activeProject.id, group);
+      }
+    },
+    [activeProject.id, groupProperties]
+  );
+
   const fetchGroupProperties = async () => {
-    const missingGroups = Object.keys(groups?.account_groups || {}).filter(
+    // separate call for $domain = All account group.
+    getGroupPropsFromAPI(GROUP_NAME_DOMAINS);
+
+    const missingGroups = Object.keys(groups?.all_groups || {}).filter(
       (group) => !groupProperties[group]
     );
     if (missingGroups && missingGroups?.length > 0) {
@@ -433,7 +446,10 @@ const EventBasedAlert = ({
       setNotifications(viewAlertDetails?.alert?.notifications);
       setIsHyperLinkEnabled(!viewAlertDetails?.alert?.is_hyperlink_disabled);
 
-      let isWebHookFactorsUrlEnabled = viewAlertDetails?.alert?.is_factors_url_in_payload ? viewAlertDetails?.alert?.is_factors_url_in_payload : false;
+      let isWebHookFactorsUrlEnabled = viewAlertDetails?.alert
+        ?.is_factors_url_in_payload
+        ? viewAlertDetails?.alert?.is_factors_url_in_payload
+        : false;
       setFactorsURLinWebhook(isWebHookFactorsUrlEnabled);
 
       const messageProperty = processBreakdownsFromQuery(
@@ -746,7 +762,7 @@ const EventBasedAlert = ({
     setSelectedChannel([]);
     setSaveSelectedChannel([]);
     form.resetFields();
-    setAlertState({ state: 'list', index: 0 });
+    setAlertState({ ...alertState, state: 'list', index: 0 });
     resetGroupBy();
     setEventPropertyDetails({});
     setBreakdownOptions([]);
@@ -761,7 +777,7 @@ const EventBasedAlert = ({
         deleteEventAlert(activeProject?.id, item?.id)
           .then(() => {
             message.success('Deleted Alert successfully!');
-            setAlertState({ state: 'list', index: 0 });
+            setAlertState({ ...alertState, state: 'list', index: 0 });
             fetchAllAlerts(activeProject.id);
           })
           .catch((err) => {
@@ -1205,7 +1221,7 @@ const EventBasedAlert = ({
       url: webhookUrl,
       secret: '',
       event_level: activeGrpBtn == 'events' ? 'account' : 'user',
-      is_factors_url_in_payload: factorsURLinWebhook,
+      is_factors_url_in_payload: factorsURLinWebhook
     };
     setWHTestMsgLoading(true);
     testWebhhookUrl(activeProject?.id, payload)
@@ -1639,7 +1655,10 @@ const EventBasedAlert = ({
                     </div>
                   </Popover>
                 </div>
-                <div className='fa--query_block_section borderless no-padding mt-0'>
+                <div
+                  className='fa--query_block_section borderless no-padding mt-0'
+                  style={{ marginLeft: '-20px' }}
+                >
                   {groupByItems()}
                 </div>
                 <Button
@@ -1743,6 +1762,10 @@ const EventBasedAlert = ({
             selectedEvent={
               queries?.length ? matchEventName(queries[0]?.label) : ''
             }
+            matchEventName={matchEventName}
+            factorsURLinWebhook={factorsURLinWebhook}
+            setFactorsURLinWebhook={setFactorsURLinWebhook}
+            activeGrpBtn={activeGrpBtn}
           />
 
           {/* 

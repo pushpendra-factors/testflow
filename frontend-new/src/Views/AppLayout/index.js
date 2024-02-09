@@ -3,7 +3,8 @@ import React, {
   useState,
   useCallback,
   Suspense,
-  useRef
+  useRef,
+  useMemo
 } from 'react';
 import cx from 'classnames';
 import { Layout, Spin } from 'antd';
@@ -115,6 +116,15 @@ function AppLayout({
   const { pathname } = location;
 
   const activeAgent = agentState?.agent_details?.email;
+
+  const activeAgentUUID = agentState?.agent_details?.uuid;
+
+  const isChecklistEnabled = useMemo(() => {
+    const agent = agentState.agents.filter(
+      (data) => data.uuid === activeAgentUUID
+    );
+    return agent[0]?.checklist_dismissed;
+  }, [agentState, agentState?.agents]);
 
   const fetchProjectsOnLoad = useCallback(async () => {
     try {
