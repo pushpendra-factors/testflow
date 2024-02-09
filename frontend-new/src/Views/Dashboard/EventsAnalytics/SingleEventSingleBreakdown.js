@@ -13,7 +13,7 @@ import StackedAreaChart from '../../../components/StackedAreaChart';
 import { getNewSorterState, isSeriesChart } from '../../../utils/dataFormatter';
 import {
   CHART_TYPE_TABLE,
-  DASHBOARD_WIDGET_BAR_CHART_HEIGHT,
+  DASHBOARD_WIDGET_COLUMN_CHART_HEIGHT,
   CHART_TYPE_BARCHART,
   CHART_TYPE_STACKED_AREA,
   DASHBOARD_WIDGET_AREA_CHART_HEIGHT,
@@ -111,7 +111,7 @@ function SingleEventSingleBreakdown({
       <ColumnChart
         categories={columnCategories}
         multiColored
-        height={DASHBOARD_WIDGET_BAR_CHART_HEIGHT}
+        height={DASHBOARD_WIDGET_COLUMN_CHART_HEIGHT}
         cardSize={unit.cardSize}
         chartId={`events${unit.id}`}
         series={columnSeries}

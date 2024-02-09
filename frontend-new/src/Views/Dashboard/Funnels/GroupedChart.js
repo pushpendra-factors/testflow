@@ -14,6 +14,7 @@ import {
   CHART_TYPE_FUNNEL_CHART,
   METRIC_TYPES,
   DASHBOARD_WIDGET_BAR_CHART_HEIGHT,
+  DASHBOARD_WIDGET_COLUMN_CHART_HEIGHT,
   CHART_TYPE_HORIZONTAL_BAR_CHART
 } from '../../../utils/constants';
 import NoDataChart from '../../../components/NoDataChart';
@@ -102,7 +103,7 @@ function GroupedChart({
         categories={columnChartCategories}
         multiColored
         valueMetricType={METRIC_TYPES.percentType}
-        height={DASHBOARD_WIDGET_BAR_CHART_HEIGHT}
+        height={DASHBOARD_WIDGET_COLUMN_CHART_HEIGHT}
         cardSize={unit.cardSize}
         chartId={`funnel${unit.id}`}
         series={columnChartSeries}

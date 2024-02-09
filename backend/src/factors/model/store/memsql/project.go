@@ -238,6 +238,11 @@ func (store *MemSQL) UpdateProject(projectId int64, project *model.Project) int 
 	if !project.BillingLastSyncedAt.IsZero() {
 		updateFields["billing_last_synced_at"] = project.BillingLastSyncedAt
 	}
+
+	if project.ClearbitDomain != "" {
+		updateFields["clearbit_domain"] = project.ClearbitDomain
+	}
+
 	err := db.Model(&model.Project{}).Where("id = ?", projectId).Update(updateFields).Error
 	if err != nil {
 		logCtx.WithError(err).Error(

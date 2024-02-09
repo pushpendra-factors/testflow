@@ -19,7 +19,7 @@ import {
   CHART_TYPE_TABLE,
   DASHBOARD_WIDGET_AREA_CHART_HEIGHT,
   CHART_TYPE_BARCHART,
-  DASHBOARD_WIDGET_BAR_CHART_HEIGHT,
+  DASHBOARD_WIDGET_COLUMN_CHART_HEIGHT,
   CHART_TYPE_METRIC_CHART,
   MAX_ALLOWED_VISIBLE_PROPERTIES
 } from '../../../utils/constants';
@@ -254,7 +254,7 @@ function NoBreakdownCharts({
         xAxisType='date-time'
         series={columnChartSeries}
         frequency={durationObj.frequency}
-        height={DASHBOARD_WIDGET_BAR_CHART_HEIGHT}
+        height={DASHBOARD_WIDGET_COLUMN_CHART_HEIGHT}
         chartId={`kpi${unit.id}`}
         cardSize={unit.cardSize}
       />
