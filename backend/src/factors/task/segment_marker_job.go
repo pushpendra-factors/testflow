@@ -686,8 +686,9 @@ func isRuleMatched(projectID int64, segment model.Segment, decodedProperties *ma
 func checkPropertyInAllUsers(projectId int64, grpa string, p model.QueryProperty, decodedProperties []map[string]interface{}, userArr []model.User) bool {
 	isValueFound := false
 	for index, user := range userArr {
-		// skip for group user if entity is user_group
-		if p.Entity == model.PropertyEntityUserGroup && (user.IsGroupUser != nil && *user.IsGroupUser) {
+		// skip for group user if entity is user_group or entity is user_g and is not a group user
+		if (p.Entity == model.PropertyEntityUserGroup && (user.IsGroupUser != nil && *user.IsGroupUser)) ||
+			(p.Entity == model.PropertyEntityUserGlobal && (user.IsGroupUser == nil || !*user.IsGroupUser)) {
 			continue
 		}
 		isValueFound = memsql.CheckPropertyOfGivenType(projectId, p, &decodedProperties[index])
