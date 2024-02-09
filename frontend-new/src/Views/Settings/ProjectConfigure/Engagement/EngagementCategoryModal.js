@@ -8,12 +8,15 @@ import {
   updateEngagementCategoryRanges
 } from 'Reducers/timelines';
 import { useSelector } from 'react-redux';
-import styles from './index.module.scss';
 import _ from 'lodash';
+import styles from './index.module.scss';
 
 function EngagementPill({ type }) {
   return (
-    <div className={`${styles['category-pill']} flex items-center`}>
+    <div
+      className={`${styles['category-pill']} flex items-center`}
+      style={{ backgroundColor: EngagementTag[type]?.bgColor }}
+    >
       <img
         src={`../../../assets/icons/${EngagementTag[type]?.icon}.svg`}
         alt=''
@@ -75,7 +78,7 @@ function EngagementCategoryModal({
     });
   };
   const handleResetButton = () => {
-    let tmp = [
+    const tmp = [
       [90, 100],
       [70, 90],
       [30, 70],
