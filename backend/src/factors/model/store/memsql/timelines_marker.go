@@ -1,7 +1,6 @@
 package memsql
 
 import (
-	"database/sql"
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
@@ -71,85 +70,61 @@ func (store *MemSQL) GetMarkedDomainsListByProjectId(projectID int64, payload mo
 	// check for search filter
 	whereForSearchFilters, searchFiltersParams := SearchFilterForAllAccounts(payload.SearchFilter, domainGroup.ID)
 
-	query := fmt.Sprintf(`SELECT 
-	identity, 
-	host_name, 
-	last_activity 
-    FROM 
-	( SELECT 
-		id as identity, 
-		group_%d_id as host_name, 
-		JSON_EXTRACT_STRING(associated_segments, ?) as segment_details, 
-		CASE WHEN segment_details::$last_event_at != '' THEN segment_details::$last_event_at 
-		WHEN segment_details::$updated_at != '' THEN segment_details::$updated_at 
-		ELSE segment_details END as last_activity 
+	query := fmt.Sprintf(`WITH step_0 as (
+		SELECT 
+		  id as identity, 
+		  group_%d_id as host_name 
+		FROM 
+		  users 
+		WHERE 
+		  project_id = ? 
+		  AND JSON_EXTRACT_STRING(
+			associated_segments, ?
+		  ) IS NOT NULL 
+		  AND is_group_user = 1 
+		  AND source = ? 
+		  AND group_%d_id IS NOT NULL %s
+		LIMIT 
+		  100000
+	  ) 
+	  SELECT 
+		identity, 
+		host_name, 
+		MAX(users.last_event_at) as last_activity 
 	  FROM 
-		users 
-	  WHERE 
-		project_id = ? 
-		AND is_group_user = 1 
-		AND source = ? 
-		AND segment_details IS NOT NULL %s 
+		step_0 
+		JOIN (
+		  SELECT 
+			last_event_at, 
+			group_%d_user_id 
+		  FROM 
+			users 
+		  WHERE 
+			users.project_id = ? 
+			AND users.source != ? 
+			AND last_event_at IS NOT NULL
+		) AS users ON step_0.identity = users.group_%d_user_id 
+	  GROUP BY 
+		identity 
 	  ORDER BY 
 		last_activity DESC 
 	  LIMIT 
-		1000);`, domainGroup.ID, whereForSearchFilters)
+		1000;`, domainGroup.ID, domainGroup.ID, whereForSearchFilters,
+		domainGroup.ID, domainGroup.ID)
 
-	params := []interface{}{payload.SegmentId, projectID, model.UserSourceDomains}
+	params := []interface{}{projectID, payload.SegmentId, model.UserSourceDomains}
 
 	if whereForSearchFilters != "" {
 		params = append(params, searchFiltersParams...)
 	}
 
+	params = append(params, projectID, model.UserSourceDomains)
+
 	var profiles []model.Profile
 	db := C.GetServices().Db
-	rows, err := db.Raw(query, params...).Rows()
+	err = db.Raw(query, params...).Scan(&profiles).Error
 	if err != nil {
-		return []model.Profile{}, http.StatusInternalServerError, "Error in fetching rows in search filter for all accounts"
-	}
-
-	defer rows.Close()
-
-	for rows.Next() {
-		var id string
-		var host_name_null sql.NullString
-		var last_activity_null sql.NullString
-
-		if err = rows.Scan(&id,
-			&host_name_null, &last_activity_null); err != nil {
-			logCtx.WithFields(log.Fields{"err": err, "project_id": projectID}).Error("SQL Parse failed.")
-			return []model.Profile{}, http.StatusInternalServerError, ""
-		}
-
-		host_name := U.IfThenElse(host_name_null.Valid, host_name_null.String, false).(string)
-		last_activity_str := U.IfThenElse(last_activity_null.Valid, last_activity_null.String, "").(string)
-
-		location, err := time.LoadLocation(payload.Query.Timezone)
-		if err != nil {
-			logCtx.WithFields(log.Fields{"err": err}).Error("Loading location failed.")
-			return []model.Profile{}, http.StatusInternalServerError, ""
-		}
-		layout := "2006-01-02 15:04:05.000000"
-		timeValue, err := time.ParseInLocation(layout, last_activity_str, location)
-		if err != nil {
-			logCtx.WithFields(log.Fields{"err": err}).Error("Parsing location failed.")
-			return []model.Profile{}, http.StatusInternalServerError, ""
-		}
-
-		profile := model.Profile{
-			Identity:     id,
-			HostName:     host_name,
-			LastActivity: timeValue,
-		}
-
-		profiles = append(profiles, profile)
-	}
-
-	err = rows.Err()
-	if err != nil {
-		// Error from DB is captured eg: timeout error
-		logCtx.WithFields(log.Fields{"err": err}).Error("Error in executing timelines query for segment")
-		return []model.Profile{}, http.StatusInternalServerError, "Error in executing timelines query for segment"
+		return []model.Profile{}, http.StatusInternalServerError, "Error in fetching rows for all accounts"
 	}
 
 	// Redirect to old flow if no profiles found
