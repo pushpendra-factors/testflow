@@ -75,6 +75,10 @@ func main() {
 
 		project, status := store.GetStore().GetProject(projectID)
 
+		if project.ID == 51 {
+			log.Info("$$$$ billing status ", project.EnableBilling)
+		}
+
 		if project.EnableBilling {
 			log.Info("Billing already enabled for project ", project)
 			continue
