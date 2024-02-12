@@ -60,13 +60,37 @@ func makeUserUpdateString(user map[string]model.LatestScore, score float64) (str
 	return finalString, nil
 }
 
-func makeAccountUpdateString(user map[string]model.LatestScore, score, allEventsSCore float64, engagement_level string) (string, error) {
+func GetEngagementSignalString(weights model.AccWeights, signals map[string]float64) string {
+
+	var weightIdMap map[string]string = make(map[string]string)
+	var topkString []string = make([]string, 0)
+
+	for _, w := range weights.WeightConfig {
+		if !w.Is_deleted {
+			weightIdMap[w.WeightId] = w.FilterName
+		}
+	}
+	for filterId, filterCounts := range signals {
+
+		if filterName, ok := weightIdMap[filterId]; ok {
+			s := fmt.Sprintf("%s %.2f", filterName, filterCounts)
+			topkString = append(topkString, s)
+		}
+	}
+
+	finalString := strings.Join(topkString, " , ")
+	return finalString
+
+}
+
+func makeAccountUpdateString(user map[string]model.LatestScore, score, allEventsSCore float64, engagement_level string, weigths model.AccWeights) (string, error) {
 
 	updateString := make([]string, 0)
 	finalString := ""
 	engagement_string := U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE
 	total_engagement_string := U.GROUP_EVENT_NAME_TOTAL_ENGAGEMENT_SCORE
 	engagement_level_string := U.GROUP_EVENT_NAME_ENGAGEMENT_LEVEL
+	top_engagement_property_string := U.GROUP_EVENT_NAME_ENGAGEMENT_SIGNALS
 
 	for evKey, evCount := range user {
 		eventsCountjson, err := json.Marshal(evCount)
@@ -92,9 +116,17 @@ func makeAccountUpdateString(user map[string]model.LatestScore, score, allEvents
 	}
 
 	if countTotal != 0.0 {
+		top_engagement_string := GetEngagementSignalString(weigths, user[model.LAST_EVENT].TopEvents)
+
 		engagementLevelStringModified := strings.Join([]string{"$", engagement_level_string}, "")
 		ct := fmt.Sprintf("properties::%s='%s'", engagementLevelStringModified, engagement_level)
+
+		topEngagementStringModified := strings.Join([]string{"$", top_engagement_property_string}, "")
+		top_engagement_signal_string := fmt.Sprintf("properties::%s='%s'", topEngagementStringModified, top_engagement_string)
+
 		updateString = append(updateString, ct)
+		updateString = append(updateString, top_engagement_signal_string)
+
 		finalString = strings.Join(updateString, ",")
 	}
 
@@ -236,7 +268,7 @@ func UpdatePerAccount(projectId int64, evdata map[string]map[string]model.Latest
 		}
 		engagementLevel := model.GetEngagement(allEventscore, bucket)
 
-		updateString, nil := makeAccountUpdateString(updateCounts, score, allEventscore, engagementLevel)
+		updateString, nil := makeAccountUpdateString(updateCounts, score, allEventscore, engagementLevel, weights)
 		if updateString != "" {
 			stmt := fmt.Sprintf("UPDATE users SET event_aggregate = case when event_aggregate is NULL THEN '{}' ELSE  event_aggregate END, %s where id= ? and project_id= ?", updateString)
 			err := db.Exec(stmt, userId, projectId).Error
