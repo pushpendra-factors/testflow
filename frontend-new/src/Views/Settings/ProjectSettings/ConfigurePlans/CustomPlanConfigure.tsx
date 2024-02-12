@@ -12,7 +12,7 @@ import style from './index.module.scss';
 
 interface CustomplanConfigureProps {
   projectId: string;
-  activeFeatures?: FeatureConfig[];
+  activeFeatures?: FeatureConfig[] | null;
   addOns?: FeatureConfig[];
   sixSignalInfo?: SixSignalInfo;
   featureLoading: boolean;

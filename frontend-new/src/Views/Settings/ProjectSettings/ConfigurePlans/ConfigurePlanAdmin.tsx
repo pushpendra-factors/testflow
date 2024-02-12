@@ -163,7 +163,6 @@ function ConfigurePlanAdmin() {
       {projectInfoLoading && renderLoader()}
       {!projectInfoLoading &&
       selectedProject &&
-      projectConfig?.activeFeatures &&
       String(selectedProject) === String(projectConfig?.projectId) ? (
         projectConfig?.planName === PLANS.PLAN_CUSTOM ||
         projectConfig?.planName === PLANS_V0.PLAN_CUSTOM ? (
