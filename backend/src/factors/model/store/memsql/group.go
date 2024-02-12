@@ -312,7 +312,7 @@ func (store *MemSQL) GetPropertyValuesByGroupProperty(projectID int64, groupName
 	}
 
 	valueStrings := make([]string, 0)
-	valuesAggregated := U.AggregatePropertyValuesAcrossDate(values)
+	valuesAggregated := U.AggregatePropertyValuesAcrossDate(values, false, 0)
 	valuesSorted := U.SortByTimestampAndCount(valuesAggregated)
 
 	for _, v := range valuesSorted {

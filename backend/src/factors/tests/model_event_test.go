@@ -913,7 +913,8 @@ func TestEventPropertyValuesAggregate(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	configs := make(map[string]interface{})
-	configs["rollupLookback"] = 3
+	configs["rollupLookback"] = 4
+	configs["deleteRollupAfterAddingToAggregate"] = 1
 
 	start := time.Now()
 

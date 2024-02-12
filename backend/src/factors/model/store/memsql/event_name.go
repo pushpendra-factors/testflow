@@ -678,7 +678,7 @@ func (store *MemSQL) GetPropertyValuesByEventProperty(projectID int64, eventName
 			values = append(values, value)
 		}
 
-		valuesAggregated = U.AggregatePropertyValuesAcrossDate(values)
+		valuesAggregated = U.AggregatePropertyValuesAcrossDate(values, false, 0)
 	}
 
 	valueStrings := make([]string, 0)

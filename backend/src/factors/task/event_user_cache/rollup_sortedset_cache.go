@@ -29,7 +29,12 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 	var isCurrentDay bool
 	currentDate := U.TimeNowZ()
 
-	logCtx := log.WithField("rollup_lookback", rollupLookback)
+	var rollupMinTimestamp int64
+	if rollupLookback > 0 {
+		rollupMinTimestamp = currentDate.AddDate(0, 0, -rollupLookback).UTC().Unix()
+	}
+
+	logCtx := log.WithField("rollup_lookback", rollupLookback).WithField("rollup_min_timestamp", rollupMinTimestamp)
 
 	allProjects := map[string]bool{}
 	for i := 0; i <= rollupLookback; i++ {
@@ -465,7 +470,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 				valuesList = append(valuesList, valuesByDate...)
 				valuesList = append(valuesList, valuesListFromAgg)
 
-				aggregatedValues := U.AggregatePropertyValuesAcrossDate(valuesList)
+				aggregatedValues := U.AggregatePropertyValuesAcrossDate(valuesList, true, rollupMinTimestamp)
 				aggregatedValuesCache := U.CacheEventPropertyValuesAggregate{
 					NameCountTimestampCategoryList: aggregatedValues,
 				}
