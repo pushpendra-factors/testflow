@@ -386,11 +386,17 @@ func (store *MemSQL) GetGlobalProjectAnalyticsDataByProjectId(projectID int64, m
 
 		startTimestamp := time.Now().AddDate(0, 0, -90)
 
-		for key, _ := range model.ProjectAnalyticsEventSingleQueryStmnt {
+		for key := range model.ProjectAnalyticsEventSingleQueryStmnt {
+
+			if key == "unique_user_kpi" {
+				startTimestamp = time.Now().AddDate(0, 0, -30)
+			}
+
 			eventData, err := store.GetGlobalProjectAnalyticsEventDataByProjectId(projectID, key, timeZoneString, startTimestamp.Unix(), time.Now().Unix())
 			if len(eventData) == 0 {
 				eventData = make([]map[string]interface{}, 2)
 			}
+
 			if err != nil {
 				return nil, errors.New("failed to event base metrics data")
 			}
@@ -400,6 +406,15 @@ func (store *MemSQL) GetGlobalProjectAnalyticsDataByProjectId(projectID int64, m
 
 		}
 
+		sixSignalLimit, err := store.GetFeatureLimitForProject(projectID, FEATURE_FACTORS_DEANONYMISATION)
+		if err != nil {
+			log.Error("Failed fetching sixsignal quota limit with error ", err)
+			sixSignalLimit = 1
+		}
+		if sixSignalLimit == 0 {
+			sixSignalLimit = 1
+		}
+		data["account_potential"] = (U.SafeConvertToFloat64(data["unique_user_kpi"]) * 0.4) / float64(sixSignalLimit)
 		result = append(result, data)
 
 	}
