@@ -25,6 +25,7 @@ export const PathUrls = {
   ConfigureEngagements: '/configure/engagements',
   ConfigureAttribution: '/configure/attribution',
   ConfigurePlans: '/configure/plans',
+  ConfigurePlansAdmin: '/configure/plans/admin',
   SettingsGeneral: '/settings/general',
   SettingsUser: '/settings/user',
   SettingsSdk: '/settings/sdk',
