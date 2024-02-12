@@ -57,9 +57,6 @@ func (store *MemSQL) TriggerSyncChargebeeToFactors(projectID int64) error { // C
 					return errors.New("Failed to update new plan id")
 				}
 				planMapping.PlanID = int64(updatedPlanID)
-				if updatedPlanID != model.PLAN_ID_CUSTOM {
-					planMapping.OverWrite = nil
-				}
 			}
 			planMapping.BillingPlanID = subscriptionItem.ItemPriceId
 			planMapping.BillingLastSyncedAt = time.Now()

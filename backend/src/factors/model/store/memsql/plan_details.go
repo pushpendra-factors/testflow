@@ -302,6 +302,11 @@ func (store *MemSQL) UpdateProjectPlanMapping(projectID int64, planMapping *mode
 
 	}
 
+	if planMapping.PlanID != model.PLAN_ID_CUSTOM {
+		planMapping.OverWrite = nil
+		updateFields["over_write"] = planMapping.OverWrite
+	}
+
 	ppMapping, err := store.GetProjectPlanMappingforProject(projectID)
 	if err != nil {
 		log.WithError(err).Error(
