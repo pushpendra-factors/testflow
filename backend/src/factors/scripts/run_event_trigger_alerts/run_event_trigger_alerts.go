@@ -968,15 +968,15 @@ func sendTeamsAlertForEventTriggerAlert(projectID int64, agentUUID string,
 			response, err := teams.SendTeamsMessage(projectID, agentUUID, teamsChannels.TeamsId,
 				channel.ChannelId, message)
 			if err != nil {
-				errMsg := err.Error()
+				// errMsg := err.Error()
 				errorCode, ok := response["error"].(map[string]interface{})["code"].(string)
 				teamsErr, exists := model.TeamsErrorStates[errorCode]
 				if !ok || !exists {
-					errMessage = fmt.Sprintf("Teams reported %s error.", errMsg)
+					errMessage = "Teams reported an error."
 				} else {
 					errMessage += fmt.Sprintf("%s Error for %s channel\n\n", teamsErr, channel.ChannelName)
 				}
-				logCtx.WithField("errorCode", teamsErr).WithError(err).Error("failed to send teams message")
+				logCtx.WithField("errorCode", errorCode).WithError(err).Error("failed to send teams message")
 				return false, errMessage
 			}
 
