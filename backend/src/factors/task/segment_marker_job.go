@@ -291,12 +291,29 @@ func fetchAndProcessFromDomainList(projectID int64, domainID string, segments []
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer waitGroup.Done()
 
-	users, status := store.GetStore().GetUsersAssociatedToDomainList(projectID, domainGroupId, domainID)
+	userStmnt := "AND (is_group_user IS NULL OR is_group_user=0) ORDER BY properties_updated_timestamp DESC LIMIT 100"
+	grpUserStmnt := "AND is_group_user=1 ORDER BY properties_updated_timestamp DESC LIMIT 50"
 
-	if len(users) == 0 || status != http.StatusFound {
+	// fetching top 100 non group users
+	users, status := store.GetStore().GetUsersAssociatedToDomainList(projectID, domainGroupId, domainID, userStmnt)
+
+	if status == http.StatusInternalServerError {
 		log.WithField("project_id", projectID).Error("Unable to find users for domain ", domainID)
 		*statusArr = append(*statusArr, false)
 		return
+	}
+
+	// fetching top 50 group users
+	grpUsers, status := store.GetStore().GetUsersAssociatedToDomainList(projectID, domainGroupId, domainID, grpUserStmnt)
+
+	if status == http.StatusInternalServerError || (len(users) == 0 && len(grpUsers) == 0) {
+		log.WithField("project_id", projectID).Error("Unable to find users for domain ", domainID)
+		*statusArr = append(*statusArr, false)
+		return
+	}
+
+	if len(grpUsers) > 0 {
+		users = append(users, grpUsers...)
 	}
 
 	*userCount = *userCount + int64(len(users))
