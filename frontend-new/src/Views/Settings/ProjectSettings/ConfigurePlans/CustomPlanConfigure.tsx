@@ -2,38 +2,43 @@ import React, { useEffect, useState } from 'react';
 import { Form, Input, Button, Spin, notification } from 'antd';
 import FaSelect from 'Components/GenericComponents/FaSelect';
 import { FEATURES } from 'Constants/plans.constants';
-import { useDispatch, useSelector } from 'react-redux';
-import { FeatureConfigState } from 'Reducers/featureConfig/types';
+import { FeatureConfig, SixSignalInfo } from 'Reducers/featureConfig/types';
 import { SVG, Text } from 'Components/factorsComponents';
-import style from './index.module.scss';
 import { OptionType } from 'Components/GenericComponents/FaSelect/types';
 import logger from 'Utils/logger';
 import { updatePlanConfig } from 'Reducers/featureConfig/services';
-import { fetchFeatureConfig } from 'Reducers/featureConfig/middleware';
 import { getAllActiveFeatures } from 'Reducers/featureConfig/utils';
+import style from './index.module.scss';
 
-const CustomPlanConfigure = () => {
+interface CustomplanConfigureProps {
+  projectId: string;
+  activeFeatures?: FeatureConfig[];
+  addOns?: FeatureConfig[];
+  sixSignalInfo?: SixSignalInfo;
+  featureLoading: boolean;
+  successCallback: () => void;
+}
+
+function CustomPlanConfigure({
+  activeFeatures,
+  addOns,
+  sixSignalInfo,
+  featureLoading,
+  projectId,
+  successCallback
+}: CustomplanConfigureProps) {
   const [selectedFeatures, setSelectedFeature] = useState<string[]>([]);
   const [showFeatureSelection, setShowFeatureSelection] = useState(false);
   const [loading, setLoading] = useState(false);
-  const dispatch = useDispatch();
-  const { active_project } = useSelector((state: any) => state.global);
-  const {
-    activeFeatures,
-    addOns,
-    loading: featureLoading,
-    sixSignalInfo
-  } = useSelector((state) => state.featureConfig) as FeatureConfigState;
 
   const sixSignalLimit = sixSignalInfo?.limit || 0;
 
-  const getFeatureOptions = () => {
-    return Object.entries(FEATURES).map(([key, value]) => ({
-      value: value,
+  const getFeatureOptions = () =>
+    Object.entries(FEATURES).map(([key, value]) => ({
+      value,
       label: key,
       isSelected: selectedFeatures.includes(value)
     }));
-  };
 
   const handleApplyClick = (
     _options: OptionType[],
@@ -51,12 +56,12 @@ const CustomPlanConfigure = () => {
         logger.error('Invalid account or mtu limit');
       }
       await updatePlanConfig(
-        active_project.id,
+        projectId,
         Number(accountLimit),
         Number(mtuLimit),
         selectedFeatures
       );
-      dispatch(fetchFeatureConfig(active_project?.id));
+      successCallback();
       notification.success({
         message: 'Success!',
         description: 'Successfully Updated Plan configuration',
@@ -69,6 +74,7 @@ const CustomPlanConfigure = () => {
       notification.error({
         message: 'Error',
         description:
+          error?.data?.err?.display_message ||
           'Something went wrong. Could not update plan configuration',
         duration: 2
       });
@@ -78,8 +84,10 @@ const CustomPlanConfigure = () => {
   useEffect(() => {
     if (!activeFeatures && !addOns) return;
     const allActiveFeatures = getAllActiveFeatures(activeFeatures, addOns);
-    const selectedFeatures = allActiveFeatures.map((feature) => feature.name);
-    setSelectedFeature(selectedFeatures);
+    const selectedFeaturesState = allActiveFeatures.map(
+      (feature) => feature.name
+    );
+    setSelectedFeature(selectedFeaturesState);
   }, [activeFeatures, addOns]);
 
   if (loading || featureLoading) {
@@ -98,7 +106,7 @@ const CustomPlanConfigure = () => {
         <Form.Item
           name='accountLimit'
           label={
-            <Text type={'paragraph'} mini>
+            <Text type='paragraph' mini>
               Accounts Identified Limit
             </Text>
           }
@@ -132,7 +140,7 @@ const CustomPlanConfigure = () => {
           name='features'
           labelAlign='left'
           label={
-            <Text type={'paragraph'} mini>
+            <Text type='paragraph' mini>
               Features
             </Text>
           }
@@ -153,11 +161,11 @@ const CustomPlanConfigure = () => {
                   options={getFeatureOptions()}
                   onClickOutside={() => setShowFeatureSelection(false)}
                   applyClickCallback={handleApplyClick}
-                  allowSearch={true}
+                  allowSearch
                   variant='Multi'
                   loadingState={featureLoading}
                   allowSearchTextSelection={false}
-                ></FaSelect>
+                />
               )}
             </div>
           </div>
@@ -171,6 +179,6 @@ const CustomPlanConfigure = () => {
       </Form>
     </div>
   );
-};
+}
 
 export default CustomPlanConfigure;

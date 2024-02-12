@@ -43,6 +43,13 @@ import LockedAttributionImage from '../assets/images/locked_attribution.png';
 import Checklist from '../features/Checklist';
 import { renderRoutes } from './utils';
 
+const ConfigurePlanAdmin = lazyWithRetry(
+  () =>
+    import(
+      '../Views/Settings/ProjectSettings/ConfigurePlans/ConfigurePlanAdmin'
+    )
+);
+
 const CoreQueryNew = lazyWithRetry(() => import('../features/analyse'));
 
 const FactorsInsightsNew = lazyWithRetry(
@@ -483,6 +490,12 @@ export const APP_LAYOUT_ROUTES = {
     Private: true,
     Component: Onboarding
   },
+  ConfigurePlanAdmin: {
+    exact: true,
+    path: PathUrls.ConfigurePlansAdmin,
+    Private: true,
+    Component: ConfigurePlanAdmin
+  },
   // For backward compatibility for old url sent over mail
   SixSignalReportRedirection: {
     exact: true,
@@ -540,7 +553,7 @@ export function AppLayoutRoutes({
       <PrivateRoute path={PathUrls.Checklist} component={Checklist} />
 
       {/* if no route match, redirect to home-screen */}
-      <Route render={() => (<Redirect to="/" />)}/>
+      <Route render={() => <Redirect to='/' />} />
     </Switch>
   );
 }
