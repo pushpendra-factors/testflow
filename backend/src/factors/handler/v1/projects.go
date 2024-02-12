@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -116,6 +117,29 @@ func GetProjectsListHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, resp)
 	return
+}
+
+func GetCustomPlanProjectsHandler(c *gin.Context) {
+	projectIDs, _, _, err := store.GetStore().GetAllProjectIdsUsingPlanId(model.PLAN_ID_CUSTOM)
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, errors.New("Failed to get custom plan projects"))
+		return
+	}
+	projects, status := store.GetStore().GetProjectsByIDs(projectIDs)
+	if status != http.StatusFound {
+		c.AbortWithError(http.StatusInternalServerError, errors.New("Failed to get projects from project ids "))
+		return
+	}
+	var res []model.ProjectIDName
+	for _, project := range projects {
+		res = append(res, model.ProjectIDName{
+			ID:   fmt.Sprintf("%v", project.ID),
+			Name: project.Name,
+		})
+	}
+
+	c.JSON(http.StatusOK, res)
+
 }
 
 func MapProjectInfoToString(project model.ProjectInfo) model.ProjectInfoString {
