@@ -82,6 +82,11 @@ type ProjectInfoString struct {
 	UpdatedAt      time.Time `json:"updated_at"`
 }
 
+type ProjectIDName struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
 const (
 	JobsMetadataKeyNextSessionStartTimestamp = "next_session_start_timestamp"
 	JobsMetadataColumnName                   = "jobs_metadata"
