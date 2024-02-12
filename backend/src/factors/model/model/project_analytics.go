@@ -44,6 +44,7 @@ var GlobalDataProjectAnalyticsColumnsName = []string{
 	"SDK Integration Completed",
 	"Identified Count",
 	"Login Count",
+	"Account Potential",
 }
 
 var GlobalDataIntegrationListColumnsName = []string{
@@ -69,6 +70,7 @@ var GlobalDataProjectAnalyticsColumnsNameToJsonKeys = map[string]string{
 	"Identified Count":          "identified_count",
 	"Integration Connected":     "integration_connected",
 	"Integration Disconnected":  "integration_disconnected",
+	"Account Potential":         "account_potential",
 }
 
 var AllProjectAnalyticsColumnsName = []string{
@@ -121,55 +123,64 @@ var CrmStatusColumnsNameToJsonKeys = map[string]string{
 }
 
 var LoginCountQueryStmnt = `
-        {
-            "cl": "events",
-            "ty": "unique_users",
-            "grpa": "users",
-            "ewp": [
-                {
-                    "an": "",
-                    "na": "app.factors.ai",
-                    "grpa": "Page Views",
-                    "pr": [
-                        {
-                            "en": "user",
-                            "grpn": "user",
-                            "lop": "AND",
-                            "op": "notEqual",
-                            "pr": "email",
-                            "ty": "categorical",
-                            "va": "$none"
-                        }
-                    ]
-                }
-            ],
-            "gup": [
-				{
-				  "en": "user_g",
-				  "grpn": "user",
-				  "lop": "AND",
-				  "op": "equals",
-				  "pr": "project_id",
-				  "ty": "categorical",
-				  "va": "%v"
-				}
-			  ],
-            "gbt": "",
-            "gbp": [
-                {
-                    "pr": "project_id",
-                    "en": "user",
-                    "pty": "categorical",
-                    "grpn": "OTHERS",
-                    "ena": "$present"
-                }
-            ],
-            "ec": "each_given_event",
-            "tz": "%v",
-            "fr": %v,
-            "to": %v
-        }
-    `
+{
+	"cl": "events",
+	"ty": "events_occurrence",
+	"grpa": "$domains",
+	"ewp": [
+	  {
+		"an": "",
+		"na": "$session",
+		"grpa": "Others",
+		"pr": [
+		  {
+			"en": "event",
+			"grpn": "event",
+			"lop": "AND",
+			"op": "equals",
+			"pr": "$initial_page_url",
+			"ty": "categorical",
+			"va": "app.factors.ai"
+		  },
+		  {
+			"en": "user",
+			"grpn": "user",
+			"lop": "AND",
+			"op": "notEqual",
+			"pr": "$email",
+			"ty": "categorical",
+			"va": "$none"
+		  },
+		  {
+			"en": "user",
+			"grpn": "user",
+			"lop": "AND",
+			"op": "notContains",
+			"pr": "$email",
+			"ty": "categorical",
+			"va": "factors.ai"
+		  },
+		  {
+			"en": "user",
+			"grpn": "user",
+			"lop": "AND",
+			"op": "equals",
+			"pr": "project_id",
+			"ty": "categorical",
+			"va": "%v"
+		  }
+		]
+	  }
+	],
+	"gup": [],
+	"gbt": "",
+	"gbp": [],
+	"ec": "each_given_event",
+	"tz": "%v",
+	"fr": %v,
+	"to": %v
+  }
+`
 
 var DailyLoginCountQueryStmnt = `
 	{
@@ -222,7 +233,30 @@ var DailyLoginCountQueryStmnt = `
 	}
 `
 
+var UniqueUsersKPIEventQueryStmnt = `
+{
+	"cl": "events",
+	"ty": "unique_users",
+	"ec": "each_given_event",
+	"sse": 0,
+	"see": 0,
+	"ewp": [
+		{
+			"na": "$session",
+		}
+	],
+	"agFn": "count",
+	"agEn": "user",
+	"agPr": "1",
+	"agTy": "categorical",
+	"tz": "%v",
+	"fr": %v,
+	"to": %v
+}
+`
+
 var ProjectAnalyticsEventSingleQueryStmnt = map[string]string{
 	"login_count":       LoginCountQueryStmnt,
 	"daily_login_count": DailyLoginCountQueryStmnt,
+	"unique_user_kpi":   UniqueUsersKPIEventQueryStmnt,
 }
