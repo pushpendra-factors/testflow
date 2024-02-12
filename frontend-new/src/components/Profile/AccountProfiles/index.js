@@ -46,7 +46,6 @@ import { isOnboarded } from 'Utils/global';
 import { cloneDeep } from 'lodash';
 import { getSegmentColorCode } from 'Views/AppSidebar/appSidebar.helpers';
 import ResizableTitle from 'Components/Resizable';
-import { COLUMN_TYPE_PROPS } from 'Utils/table';
 import logger from 'Utils/logger';
 import useAutoFocus from 'hooks/useAutoFocus';
 import styles from './index.module.scss';
@@ -64,7 +63,7 @@ import RenameSegmentModal from './RenameSegmentModal';
 import DeleteSegmentModal from './DeleteSegmentModal';
 import SaveSegmentModal from './SaveSegmentModal';
 import UpgradeModal from '../UpgradeModal';
-import { checkFiltersEquality, getColumns } from './accountProfiles.helpers';
+import { getColumns } from './accountProfiles.helpers';
 import ProfilesWrapper from '../ProfilesWrapper';
 import NoDataWithMessage from '../MyComponents/NoDataWithMessage';
 import {
@@ -316,7 +315,7 @@ function AccountProfiles({
         setFiltersDirty(false);
       } else {
         const selectedGroup = groupsList.find(
-          (g) => g[1] === accountPayload?.source
+          (g) => g[1] === GROUP_NAME_DOMAINS
         );
         restoreFiltersDefaultState(selectedGroup);
       }
@@ -442,11 +441,16 @@ function AccountProfiles({
         setCurrentPageSize(location.state.currentPageSize);
         setDefaultSorterInfo(location.state.activeSorter);
         setAccountPayload(location.state.accountPayload);
+        if (location.state.accountPayload?.search_filter?.length) {
+          setListSearchItems(location.state.accountPayload?.search_filter);
+          setSearchBarOpen(true);
+        }
       }
       const updatedLocationState = { ...location.state, fromDetails: false };
       history.replace(location.pathname, { ...updatedLocationState });
     } else if (
       !segmentID ||
+      accountPayload?.segment?.id ||
       (segmentID && segmentID === accountPayload?.segment?.id)
     ) {
       getAccounts(accountPayload);
@@ -471,14 +475,14 @@ function AccountProfiles({
       selectedFilters,
       tableProps: displayTableProps
     });
-    getProfileAccounts(activeProject.id, reqPayload, activeAgent);
-  }, [
-    selectedFilters,
-    displayTableProps,
-    activeProject.id,
-    activeAgent,
-    setFiltersDirty
-  ]);
+    const newPayload = {
+      source: GROUP_NAME_DOMAINS,
+      segment: { ...accountPayload.segment, ...reqPayload },
+      search_filter: listSearchItems,
+      isUnsaved: true
+    };
+    setAccountPayload(newPayload);
+  }, [selectedFilters, displayTableProps, activeProject.id, activeAgent]);
 
   const handlePropChange = (option) => {
     if (
@@ -538,11 +542,16 @@ function AccountProfiles({
         selectedFilters: appliedFilters,
         tableProps: enabledProps
       });
-      queryForFetch['search_filter'] = listSearchItems;
+
       await udpateProjectSettings(activeProject.id, {
         timelines_config: updatedConfig
       });
-      await getProfileAccounts(activeProject.id, queryForFetch, activeAgent);
+      const newPayload = {
+        source: GROUP_NAME_DOMAINS,
+        segment: { ...accountPayload.segment, ...queryForFetch },
+        search_filter: listSearchItems
+      };
+      setAccountPayload(newPayload);
     }
     setShowPopOver(false);
   };
@@ -690,11 +699,13 @@ function AccountProfiles({
 
   const handleClearFilters = useCallback(() => {
     restoreFiltersDefaultState();
-    const reqPayload = getFiltersRequestPayload({
-      selectedFilters: INITIAL_FILTERS_STATE,
-      tableProps: displayTableProps
-    });
-    getProfileAccounts(activeProject.id, reqPayload, activeAgent);
+    const newPayload = {
+      source: GROUP_NAME_DOMAINS,
+      segment: {},
+      search_filter: listSearchItems
+    };
+    setAccountPayload(newPayload);
+    history.replace({ pathname: PathUrls.ProfileAccounts });
   }, [
     activeAgent,
     activeProject.id,
@@ -715,7 +726,7 @@ function AccountProfiles({
   const renderPropertyFilter = () => (
     <PropertyFilter
       profileType='account'
-      source={accountPayload?.source}
+      source={GROUP_NAME_DOMAINS}
       filtersExpanded={filtersExpanded}
       filtersList={selectedFilters.filters}
       secondaryFiltersList={selectedFilters.secondaryFilters}
@@ -740,28 +751,9 @@ function AccountProfiles({
     />
   );
 
-  const { saveButtonDisabled } = useMemo(
-    () =>
-      checkFiltersEquality({
-        appliedFilters,
-        newSegmentMode,
-        filtersList: selectedFilters.filters,
-        eventProp: selectedFilters.eventProp,
-        eventsList: selectedFilters.eventsList,
-        isActiveSegment: Boolean(accountPayload?.segment?.id),
-        areFiltersDirty,
-        secondaryFiltersList: selectedFilters.secondaryFilters
-      }),
-    [
-      accountPayload?.segment?.id,
-      appliedFilters,
-      areFiltersDirty,
-      newSegmentMode,
-      selectedFilters.eventProp,
-      selectedFilters.eventsList,
-      selectedFilters.filters,
-      selectedFilters.secondaryFilters
-    ]
+  const saveButtonDisabled = useMemo(
+    () => !accountPayload?.isUnsaved,
+    [accountPayload?.isUnsaved]
   );
 
   const renderSaveSegmentButton = () => (
@@ -841,6 +833,9 @@ function AccountProfiles({
                 ref={searchAccountsInputRef}
                 size='large'
                 value={listSearchItems ? listSearchItems.join(', ') : null}
+                defaultValue={
+                  listSearchItems ? listSearchItems.join(', ') : null
+                }
                 placeholder='Search Accounts'
                 style={{
                   width: '240px',
@@ -933,7 +928,7 @@ function AccountProfiles({
     setNewTableColumns(
       getColumns({
         accounts,
-        source: accountPayload?.source,
+        source: GROUP_NAME_DOMAINS,
         isScoringLocked,
         displayTableProps,
         groupPropNames,
@@ -945,7 +940,6 @@ function AccountProfiles({
     );
   }, [
     accounts,
-    accountPayload?.source,
     displayTableProps,
     groupPropNames,
     isScoringLocked,
@@ -1162,11 +1156,18 @@ function AccountProfiles({
 
   const pageTitle = useMemo(
     () =>
-      newSegmentMode
-        ? 'Untitled Segment 1'
-        : accountPayload?.segment?.id
-          ? accountPayload?.segment?.name
-          : 'All Accounts',
+      newSegmentMode ? (
+        'Untitled Segment 1'
+      ) : accountPayload?.segment?.id ? (
+        <span>
+          {accountPayload?.segment?.name}
+          {accountPayload?.isUnsaved ? (
+            <span style={{ color: 'lightgray' }}>*</span>
+          ) : null}
+        </span>
+      ) : (
+        'All Accounts'
+      ),
     [accountPayload, newSegmentMode]
   );
 
