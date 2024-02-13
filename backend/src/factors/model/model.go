@@ -299,6 +299,7 @@ type Model interface {
 	IsEventExistsWithType(projectId int64, eventType string) (bool, int)
 	GetDomainNamesByProjectID(projectId int64) ([]string, int)
 	GetEventNameIdsWithGivenNames(projectID int64, eventNameIDsMap map[string]bool) (map[string]string, int)
+	GetEventNameByID(projectID int64, id string) (*model.EventName, int, error)
 
 	// form_fill
 	CreateFormFillEventById(projectId int64, formFill *model.SDKFormFillPayload) (int, error)
