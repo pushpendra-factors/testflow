@@ -318,6 +318,15 @@ func fetchAndProcessFromDomainList(projectID int64, domainID string, segments []
 
 	*userCount = *userCount + int64(len(users))
 
+	// appending domain details to process domain based filters
+	domDetails, status := store.GetStore().GetDomainDetailsByID(projectID, domainID)
+
+	if status == http.StatusFound {
+		users = append(users, domDetails)
+	} else {
+		log.WithField("project_id", projectID).Error("Unable to find details for domain %s", domainID)
+	}
+
 	status, err := domainUsersProcessingWithErrcode(projectID, domainID, users, segments,
 		segmentsRulesArr, eventNameIDsMap, domainUpdateCount)
 

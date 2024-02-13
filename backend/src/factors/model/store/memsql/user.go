@@ -453,11 +453,9 @@ func (store *MemSQL) GetUsersAssociatedToDomainList(projectID int64, domainGroup
 
 	query := fmt.Sprintf(`SELECT 
 	id, 
-	group_%d_user_id, 
 	properties, 
 	is_group_user, 
 	source, 
-	updated_at, 
 	last_event_at
   FROM 
 	users 
@@ -466,7 +464,7 @@ func (store *MemSQL) GetUsersAssociatedToDomainList(projectID int64, domainGroup
 	AND source != ? 
 	AND last_event_at is not null 
 	AND group_%d_user_id = ?
-	%s;`, domainGroupID, domainGroupID, userStmnt)
+	%s;`, domainGroupID, userStmnt)
 
 	db := C.GetServices().Db
 	err := db.Raw(query, projectID, model.UserSourceDomains, domID).Scan(&users).Error
@@ -485,6 +483,30 @@ func (store *MemSQL) GetUsersAssociatedToDomainList(projectID int64, domainGroup
 	}
 
 	return users, http.StatusFound
+}
+
+// get domain details
+func (store *MemSQL) GetDomainDetailsByID(projectID int64, id string) (model.User, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"dom_id":     id,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	var user model.User
+
+	query := `SELECT id, properties, is_group_user, source, last_event_at FROM users WHERE project_id = ? AND id = ? AND source = ? LIMIT 1;`
+
+	db := C.GetServices().Db
+	err := db.Raw(query, projectID, id, model.UserSourceDomains).Scan(&user).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return model.User{}, http.StatusNotFound
+		}
+		return model.User{}, http.StatusInternalServerError
+	}
+
+	return user, http.StatusFound
 }
 
 // get all domains to run marker for
@@ -532,7 +554,6 @@ func (store *MemSQL) GetAllDomainsByProjectID(projectID int64, domainGroupID int
 	}
 
 	if len(domainIDs) == 0 {
-		log.WithFields(logFields).Error("No domains founds")
 		return []string{}, http.StatusNotFound
 	}
 
