@@ -464,7 +464,6 @@ func (store *MemSQL) GetUsersAssociatedToDomainList(projectID int64, domainGroup
   WHERE 
 	project_id = ? 
 	AND source != ? 
-	AND last_event_at is not null 
 	AND group_%d_user_id = ?
 	%s;`, domainGroupID, domainGroupID, userStmnt)
 
