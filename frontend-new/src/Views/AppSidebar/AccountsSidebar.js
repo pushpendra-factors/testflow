@@ -122,7 +122,7 @@ function AccountsSidebar() {
           }}
         >
           <SVG
-            name='plus'
+            name={'plus'}
             size={16}
             extraClass={styles.sidebar_action_button__content}
             isFill={false}
