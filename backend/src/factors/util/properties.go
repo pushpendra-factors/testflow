@@ -22,6 +22,8 @@ type PropertiesMap map[string]interface{}
 const SEN_ALL_ACTIVE_USERS = "$AllActiveUsers"
 const SEN_ALL_ACTIVE_USERS_DISPLAY_STRING = "All Active Users"
 
+// special events having standard page view properties
+const EVENT_NAME_PAGE_VIEW = "$page_view"
 const SEN_ALL_EVENTS = "$AllEvents"
 const SEN_ALL_EVENTS_DISPLAY_STRING = "All Events"
 
@@ -192,6 +194,7 @@ const EVENT_NAME_SHOPIFY_CART_UPDATED = "$shopify_cart_updated"
 
 var ALLOWED_INTERNAL_EVENT_NAMES = [...]string{
 	EVENT_NAME_SESSION,
+	EVENT_NAME_PAGE_VIEW,
 	EVENT_NAME_FORM_FILL,
 	EVENT_NAME_FORM_SUBMITTED,
 	EVENT_NAME_HUBSPOT_CONTACT_CREATED,
@@ -1595,6 +1598,8 @@ var STANDARD_EVENTS_DISPLAY_NAMES = map[string]string{
 	"$offline_touch_point":               "Offline Touchpoint",
 	"$leadsquared_lead_created":          "Lead Created",
 	"$leadsquared_lead_updated":          "Lead Updated",
+	EVENT_NAME_PAGE_VIEW:                 "Page View",
+	SEN_ALL_EVENTS:                       SEN_ALL_EVENTS_DISPLAY_STRING,
 	EVENT_NAME_FORM_FILL:                 "Form Fills",
 	EVENT_NAME_SALESFORCE_TASK_CREATED:   "Salesforce Task Created",
 	EVENT_NAME_SALESFORCE_EVENT_CREATED:  "Salesforce Event Created",

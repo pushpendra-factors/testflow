@@ -90,6 +90,7 @@ func CreateEventTriggerAlertHandler(c *gin.Context) (interface{}, int, string, s
 		return nil, http.StatusBadRequest, errMsg, "", true
 	}
 	oldID := ""
+
 	obj, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(userID, oldID, projectID, &alert, userID, userID, false, nil)
 	if errCode != http.StatusCreated {
 		log.WithFields(log.Fields{"document": alert, "err-message": errMsg}).Error("Failed to create alert in handler.")
