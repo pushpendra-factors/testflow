@@ -851,6 +851,8 @@ func Track(projectId int64, request *TrackPayload,
 
 func FillCompanyIdentificationUserProperties(projectId int64, clientIP string, projectSettings *model.ProjectSetting, userProperties *U.PropertiesMap, eventProperties *U.PropertiesMap, userId string, isoCode string, pageUrl string) {
 
+	logCtx := log.WithField("project_id", projectId)
+
 	var customerClearbit clearbit.CustomerClearbit
 	var customerSixSignal sixsignal.CustomerSixSignal
 	var factorsDeanon factors_deanon.FactorsDeanon
@@ -861,7 +863,9 @@ func FillCompanyIdentificationUserProperties(projectId int64, clientIP string, p
 		customerSixSignal.Enrich(projectSettings, userProperties, userId, clientIP)
 	} else if enrichByFactorsDeanon, _ := factorsDeanon.IsEligible(projectSettings, isoCode, pageUrl); enrichByFactorsDeanon {
 		domain, status := factorsDeanon.Enrich(projectSettings, userProperties, eventProperties, userId, clientIP)
+		logCtx.WithFields(log.Fields{"domain": domain, "status": status}).Info("Debugging in sdk.")
 		if status == 1 {
+			logCtx.Info("Metering the enrichment.")
 			factorsDeanon.Meter(projectId, domain)
 		}
 
