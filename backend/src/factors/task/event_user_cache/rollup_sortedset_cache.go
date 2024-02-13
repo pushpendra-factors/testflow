@@ -24,17 +24,24 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 		deleteRollupAfterAddingToAggregate = configs["deleteRollupAfterAddingToAggregate"].(int)
 	}
 
+	lookbackWindowForEventUserCache := 0
+	if _, exists := configs["lookbackWindowForEventUserCache"]; exists {
+		lookbackWindowForEventUserCache = configs["lookbackWindowForEventUserCache"].(int)
+	}
+
 	log.WithField("config", configs).Info("Starting rollup sorted set job.")
 
 	var isCurrentDay bool
 	currentDate := U.TimeNowZ()
 
-	var rollupMinTimestamp int64
-	if rollupLookback > 0 {
-		rollupMinTimestamp = currentDate.AddDate(0, 0, -rollupLookback).UTC().Unix()
+	var loobackWindowMinTimestamp int64
+	if lookbackWindowForEventUserCache > 0 {
+		loobackWindowMinTimestamp = currentDate.AddDate(0, 0, -lookbackWindowForEventUserCache).UTC().Unix()
 	}
 
-	logCtx := log.WithField("rollup_lookback", rollupLookback).WithField("rollup_min_timestamp", rollupMinTimestamp)
+	logCtx := log.WithField("rollup_lookback", rollupLookback).
+		WithField("rollup_min_timestamp", loobackWindowMinTimestamp).
+		WithField("looback_window", lookbackWindowForEventUserCache)
 
 	allProjects := map[string]bool{}
 	for i := 0; i <= rollupLookback; i++ {
@@ -470,7 +477,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 				valuesList = append(valuesList, valuesByDate...)
 				valuesList = append(valuesList, valuesListFromAgg)
 
-				aggregatedValues := U.AggregatePropertyValuesAcrossDate(valuesList, true, rollupMinTimestamp)
+				aggregatedValues := U.AggregatePropertyValuesAcrossDate(valuesList, true, loobackWindowMinTimestamp)
 				aggregatedValuesCache := U.CacheEventPropertyValuesAggregate{
 					NameCountTimestampCategoryList: aggregatedValues,
 				}
