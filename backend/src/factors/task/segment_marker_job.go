@@ -291,15 +291,41 @@ func fetchAndProcessFromDomainList(projectID int64, domainID string, segments []
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer waitGroup.Done()
 
-	users, status := store.GetStore().GetUsersAssociatedToDomainList(projectID, domainGroupId, domainID)
+	userStmnt := "AND (is_group_user IS NULL OR is_group_user=0) ORDER BY properties_updated_timestamp DESC LIMIT 100"
+	grpUserStmnt := "AND is_group_user=1 ORDER BY properties_updated_timestamp DESC LIMIT 50"
 
-	if len(users) == 0 || status != http.StatusFound {
+	// fetching top 100 non group users
+	users, status := store.GetStore().GetUsersAssociatedToDomainList(projectID, domainGroupId, domainID, userStmnt)
+
+	if status == http.StatusInternalServerError {
 		log.WithField("project_id", projectID).Error("Unable to find users for domain ", domainID)
 		*statusArr = append(*statusArr, false)
 		return
 	}
 
+	// fetching top 50 group users
+	grpUsers, status := store.GetStore().GetUsersAssociatedToDomainList(projectID, domainGroupId, domainID, grpUserStmnt)
+
+	if status == http.StatusInternalServerError || (len(users) == 0 && len(grpUsers) == 0) {
+		log.WithField("project_id", projectID).Error("Unable to find users for domain ", domainID)
+		*statusArr = append(*statusArr, false)
+		return
+	}
+
+	if len(grpUsers) > 0 {
+		users = append(users, grpUsers...)
+	}
+
 	*userCount = *userCount + int64(len(users))
+
+	// appending domain details to process domain based filters
+	domDetails, status := store.GetStore().GetDomainDetailsByID(projectID, domainID)
+
+	if status == http.StatusFound {
+		users = append(users, domDetails)
+	} else {
+		log.WithField("project_id", projectID).Error("Unable to find details for domain %s", domainID)
+	}
 
 	status, err := domainUsersProcessingWithErrcode(projectID, domainID, users, segments,
 		segmentsRulesArr, eventNameIDsMap, domainUpdateCount)
@@ -686,8 +712,9 @@ func isRuleMatched(projectID int64, segment model.Segment, decodedProperties *ma
 func checkPropertyInAllUsers(projectId int64, grpa string, p model.QueryProperty, decodedProperties []map[string]interface{}, userArr []model.User) bool {
 	isValueFound := false
 	for index, user := range userArr {
-		// skip for group user if entity is user_group
-		if p.Entity == model.PropertyEntityUserGroup && (user.IsGroupUser != nil && *user.IsGroupUser) {
+		// skip for group user if entity is user_group or entity is user_g and is not a group user
+		if (p.Entity == model.PropertyEntityUserGroup && (user.IsGroupUser != nil && *user.IsGroupUser)) ||
+			(p.Entity == model.PropertyEntityUserGlobal && (user.IsGroupUser == nil || !*user.IsGroupUser)) {
 			continue
 		}
 		isValueFound = memsql.CheckPropertyOfGivenType(projectId, p, &decodedProperties[index])

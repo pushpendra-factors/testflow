@@ -832,7 +832,7 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
 
 	wetRun := true
 	if wetRun {
-		for _, channel := range slackChannels {
+		for i, channel := range slackChannels {
 			errMsg := "successfully sent"
 			var blockMessage, slackMentionStr string
 			if slackMentions != nil || slackTags != nil {
@@ -844,6 +844,19 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
 				blockMessage = model.GetSlackMsgBlockWithoutHyperlinks(alert.Message, slackMentionStr)
 			}
 			response, status, err := slack.SendSlackAlert(projectID, blockMessage, agentUUID, channel)
+			if projectID == 12384898983000003 {
+				log.WithFields(log.Fields{
+					"tag": "debug-drivetrain",
+					"project_id": projectID,
+					"alert_title": alert.Message.Title,
+					"channel": fmt.Sprintf("%+v", channel),
+					"agent_id": agentUUID,
+					"is_success": status,
+					"response": fmt.Sprintf("%+v", response),
+					"slack_channels": len(slackChannels),
+					"idx": i,
+				}).Info("Check for private channels.")
+			}
 			partialSuccess = partialSuccess || status
 			if err != nil || !status {
 				if response["error"] != nil {

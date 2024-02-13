@@ -677,7 +677,8 @@ type Model interface {
 	GetCustomerUserIdFromUserId(projectID int64, id string) (string, int)
 	AssociateUserDomainsGroup(projectID int64, requestUserID string, requestGroupName, requestGroupUserID string) int
 	GetAssociatedDomainForUser(projectID int64, userID string, isAnonymous bool) (string, error)
-	GetUsersAssociatedToDomainList(projectID int64, domainGroupID int, domainID string) ([]model.User, int)
+	GetUsersAssociatedToDomainList(projectID int64, domainGroupID int, domainID string, userStmnt string) ([]model.User, int)
+	GetDomainDetailsByID(projectID int64, id string) (model.User, int)
 	GetAllDomainsByProjectID(projectID int64, domainID int, limitVal int) ([]string, int)
 	GetLatestUpatedDomainsByProjectID(projectID int64, domainGroupID int, fromTime time.Time, limitVal int) ([]string, int)
 	UpdateAssociatedSegments(projectID int64, id string, associatedSegments map[string]model.AssociatedSegments) (int, error)

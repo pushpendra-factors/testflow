@@ -30,6 +30,10 @@ func main() {
 	RedisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 	// This is in days
 	rollupLookback := flag.Int("rollup_lookback", 1, "")
+
+	// same from app-server
+	lookbackWindowForEventUserCache := flag.Int("lookback_window_event_user_cache",
+		20, "look back window in cache for event/user cache")
 	deleteRollupAfterAddingToAggregate := flag.Int("del_rollup_after_aggregate", 0, "")
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
@@ -69,6 +73,7 @@ func main() {
 		},
 		PrimaryDatastore:                        *primaryDatastore,
 		AggrEventPropertyValuesCacheByProjectID: *aggrEventPropertyValuesCacheByProjectID,
+		LookbackWindowForEventUserCache:         *lookbackWindowForEventUserCache,
 	}
 
 	C.InitConf(config)
@@ -87,6 +92,8 @@ func main() {
 
 	configs := make(map[string]interface{})
 	configs["rollupLookback"] = *rollupLookback
+
+	configs["lookbackWindowForEventUserCache"] = *lookbackWindowForEventUserCache
 	configs["deleteRollupAfterAddingToAggregate"] = *deleteRollupAfterAddingToAggregate
 
 	status := taskWrapper.TaskFunc("RollUpSortedSet", 1, cleanup.DoRollUpSortedSet, configs)

@@ -24,12 +24,24 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 		deleteRollupAfterAddingToAggregate = configs["deleteRollupAfterAddingToAggregate"].(int)
 	}
 
+	lookbackWindowForEventUserCache := 0
+	if _, exists := configs["lookbackWindowForEventUserCache"]; exists {
+		lookbackWindowForEventUserCache = configs["lookbackWindowForEventUserCache"].(int)
+	}
+
 	log.WithField("config", configs).Info("Starting rollup sorted set job.")
 
 	var isCurrentDay bool
 	currentDate := U.TimeNowZ()
 
-	logCtx := log.WithField("rollup_lookback", rollupLookback)
+	var loobackWindowMinTimestamp int64
+	if lookbackWindowForEventUserCache > 0 {
+		loobackWindowMinTimestamp = currentDate.AddDate(0, 0, -lookbackWindowForEventUserCache).UTC().Unix()
+	}
+
+	logCtx := log.WithField("rollup_lookback", rollupLookback).
+		WithField("rollup_min_timestamp", loobackWindowMinTimestamp).
+		WithField("looback_window", lookbackWindowForEventUserCache)
 
 	allProjects := map[string]bool{}
 	for i := 0; i <= rollupLookback; i++ {
@@ -453,38 +465,10 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 					}
 				}
 
-				var removeEarliestAggregateCount bool
-				if len(existingAggregate.EarliestCount.PropertyValue) > 0 {
-					var earliestTimestampInSecs int64
-					for k := range existingAggregate.EarliestCount.PropertyValue {
-						earliestTimestampInSecs = existingAggregate.EarliestCount.PropertyValue[k].LastSeenTimestamp
-						break
-					}
-					// Earliest timestamp is greater than the rollup days.
-					if (U.TimeNowUnix() - earliestTimestampInSecs) > int64(rollupLookback*86400) {
-						removeEarliestAggregateCount = true
-					}
-				}
-
 				valuesListFromAggMap := make(map[string]U.CountTimestampTuple)
 				for i := range existingAggregate.NameCountTimestampCategoryList {
 					exa := existingAggregate.NameCountTimestampCategoryList[i]
 					valuesListFromAggMap[exa.Name] = U.CountTimestampTuple{LastSeenTimestamp: exa.Timestamp, Count: exa.Count}
-				}
-
-				// Subtracting the older than 15 days (based on rollup lookback) count from the aggregate.
-				// This helps maintaining only last 15 days of count.
-				if removeEarliestAggregateCount {
-					for k := range existingAggregate.EarliestCount.PropertyValue {
-						if valuesListFromAggMap[k].Count > 0 {
-							tuple := valuesListFromAggMap[k]
-							tuple.Count = tuple.Count - existingAggregate.EarliestCount.PropertyValue[k].Count
-							valuesListFromAggMap[k] = tuple
-						}
-					}
-
-					// Reset earliest count to avoid multiple removal from aggregate.
-					existingAggregate.EarliestCount = U.CachePropertyValueWithTimestamp{}
 				}
 
 				// Add existing aggregate to next compute.
@@ -493,15 +477,9 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 				valuesList = append(valuesList, valuesByDate...)
 				valuesList = append(valuesList, valuesListFromAgg)
 
-				// Assigning the current earliest date added to aggregates.
-				if len(valuesByDate) > 0 {
-					existingAggregate.EarliestCount = valuesByDate[0]
-				}
-
-				aggregatedValues := U.AggregatePropertyValuesAcrossDate(valuesList)
+				aggregatedValues := U.AggregatePropertyValuesAcrossDate(valuesList, true, loobackWindowMinTimestamp)
 				aggregatedValuesCache := U.CacheEventPropertyValuesAggregate{
 					NameCountTimestampCategoryList: aggregatedValues,
-					EarliestCount:                  existingAggregate.EarliestCount,
 				}
 
 				eventPropertyValuesAggCache, err := json.Marshal(aggregatedValuesCache)
