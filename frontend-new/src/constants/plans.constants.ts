@@ -75,7 +75,7 @@ export const PLANS_V0 = {
 export const PLANS_COFIG: PLANS_COFIG_INTERFACE = {
   [PLANS.PLAN_FREE]: {
     name: PLANS.PLAN_FREE,
-    description: 'Identify accounts and track their activity for free',
+    description: 'Reveal anonymous companies visiting your website',
     uniqueFeatures: [
       'Company Identification',
       'Account enrichment',
@@ -96,15 +96,17 @@ export const PLANS_COFIG: PLANS_COFIG_INTERFACE = {
 
   [PLANS.PLAN_BASIC]: {
     name: PLANS.PLAN_BASIC,
-    description: 'Automate ABM workflows to co-ordinate better with sales',
+    description:
+      'Automate outbound to identified companies and generate pipeline',
     uniqueFeatures: [
       'Everything in Free +',
-      'Contact Enrichment',
-      'Sales Automations (Automated email and LinkedIn outreach)',
+      'Contact Enrichment*',
+      'Sales Automations (Automated email and LinkedIn outreach)*',
       'LinkedIn Intent Signals (Reveal companies viewing your LinkedIn ads)',
-      'CSV Exports',
+      'CSV Imports & Exports',
       'Advanced GTM Dashboards',
       'Advanced Website Analytics',
+      'Custom Metrics & KPIs',
       'Global Exclusions Rules',
       'Customer Support (+support for 5x automations)',
       'Unlimited Real-time Slack/MS Teams Alerts',
@@ -114,7 +116,7 @@ export const PLANS_COFIG: PLANS_COFIG_INTERFACE = {
     planIcon: 'User_friends',
     planIconColor: '#73D13D',
     mtuLimit: 10000,
-    accountIdentifiedLimit: 1000,
+    accountIdentifiedLimit: 1500,
     seats: '5',
     icons: [
       'Google_ads',
@@ -128,16 +130,16 @@ export const PLANS_COFIG: PLANS_COFIG_INTERFACE = {
   [PLANS.PLAN_GROWTH]: {
     name: PLANS.PLAN_GROWTH,
     description:
-      'Qualify leads and track engagement with custom scoring models',
+      'Track & prioritise your target accounts with custom scoring models',
     uniqueFeatures: [
       'Everything in Basic +',
       'ABM Analytics',
-      'Account + Lead Scoring',
+      'Account Scoring',
       'LinkedIn Attribution',
       'G2 Intent Signals (Reveal companies viewing your G2 pages)',
       'G2 Attribution ',
-      'Custom Prospecting Workflows',
-      'Custom Audiences & Syncs',
+      'Custom Prospecting Workflows*',
+      'Custom Audiences & Syncs*',
       'Dedicated Customer Success Manager (+support for unlimited automations)',
       'Integrations (HubSpot, SalesForce, Marketo, G2, Drift)'
     ],
@@ -152,11 +154,10 @@ export const PLANS_COFIG: PLANS_COFIG_INTERFACE = {
   [PLANS.PLAN_CUSTOM]: {
     name: PLANS.PLAN_CUSTOM,
     description:
-      'Attribute success with Multi-Attribution, AI-Explain and more',
+      'Bespoke plans for agencies or bigger teams looking to scale go-to-market',
     uniqueFeatures: [
       'Everything in Growth +',
       'Multi-touch Attribution (Campaigns, Content Offline Events & more)',
-      'Cohort Analysis',
       'Path analysis',
       'Buyer Journey Analysis with AI-Fuelled Explain',
       'Custom Metrics & KPIs',
