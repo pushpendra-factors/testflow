@@ -150,14 +150,13 @@ export const formatReqPayload = (payload) => {
       gup: query.gup || [],
       table_props: query.table_props || []
     };
-    if (!payload.isUnsaved) {
-      req.segment_id = payload.segment.id;
-    }
+    req.segment_id = payload.segment.id;
   }
 
   if (payload?.search_filter?.length) {
     req = { ...req, search_filter: [...payload.search_filter] };
   }
+
   return req;
 };
 
