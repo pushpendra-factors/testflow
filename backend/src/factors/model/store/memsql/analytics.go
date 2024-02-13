@@ -33,6 +33,8 @@ var queryOps = map[string]string{
 	model.LesserThanOrEqualOpStr:  "<=",
 	model.ContainsOpStr:           "RLIKE",
 	model.NotContainsOpStr:        "NOT RLIKE",
+	model.NotInList:               "NOT IN LIST",
+	model.InList:                  "IN LIST",
 }
 
 func with(stmnt string) string {
