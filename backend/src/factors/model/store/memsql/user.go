@@ -442,7 +442,7 @@ func (store *MemSQL) GetUsers(projectId int64, offset uint64, limit uint64) ([]m
 }
 
 // get all users assocuated to given domains
-func (store *MemSQL) GetUsersAssociatedToDomainList(projectID int64, domainGroupID int, domID string) ([]model.User, int) {
+func (store *MemSQL) GetUsersAssociatedToDomainList(projectID int64, domainGroupID int, domID string, userStmnt string) ([]model.User, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"dom_id":     domID,
@@ -466,11 +466,14 @@ func (store *MemSQL) GetUsersAssociatedToDomainList(projectID int64, domainGroup
 	AND source != ? 
 	AND last_event_at is not null 
 	AND group_%d_user_id = ?
-	LIMIT 100;`, domainGroupID, domainGroupID)
+	%s;`, domainGroupID, domainGroupID, userStmnt)
 
 	db := C.GetServices().Db
 	err := db.Raw(query, projectID, model.UserSourceDomains, domID).Scan(&users).Error
 	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return []model.User{}, http.StatusNotFound
+		}
 		return []model.User{}, http.StatusInternalServerError
 	}
 	if len(users) == 0 {
