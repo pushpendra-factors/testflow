@@ -242,7 +242,7 @@ var UniqueUsersKPIEventQueryStmnt = `
 	"see": 0,
 	"ewp": [
 		{
-			"na": "$session",
+			"na": "$session"
 		}
 	],
 	"agFn": "count",
