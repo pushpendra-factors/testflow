@@ -63,7 +63,7 @@ function Checklist({
     updateChecklistStatus(active_project?.id, true)
       .then((res: any) => {
         fetchProjectAgents(active_project?.id);
-        history.push(PathUrls.Dashboard);
+        history.push(PathUrls.ProfileAccounts);
       })
       .catch((err: any) => {
         logger.error(err);
@@ -93,9 +93,7 @@ function Checklist({
                     <Row className='flex'>
                       <div
                         className='cursor-pointer mt-3 mr-3'
-                        onClick={() =>
-                          window.open(PathUrls.ProfileAccounts, '_self')
-                        }
+                        onClick={() => history.push(PathUrls.ProfileAccounts)}
                       >
                         <SVG name='ArrowLeft' />
                       </div>
