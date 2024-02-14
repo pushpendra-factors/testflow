@@ -431,6 +431,7 @@ func createOrUpdateEventFromDomainDataV1(projectID int64, userID string, eventNa
 		}
 	} else if eventID != "" {
 		errCode := store.GetStore().UpdateEventProperties(projectID, eventID, userID, &eventPropertiesMap, timestamp, nil)
+		log.WithFields(log.Fields{"projectID": projectID, "eventID": eventID, "userID": userID, "timestamp": timestamp, "props": eventPropertiesMap}).Error("Failed in updating event")
 		if errCode != http.StatusAccepted {
 			return "Failed in updating event", errCode
 		}
