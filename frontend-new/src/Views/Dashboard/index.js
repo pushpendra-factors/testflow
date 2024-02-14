@@ -54,7 +54,9 @@ function Dashboard({
     dashboardRefreshInitialState
   );
 
-  const { activeDashboardUnits, activeDashboard } = useSelector((state) => state.dashboard);
+  const { activeDashboardUnits, activeDashboard } = useSelector(
+    (state) => state.dashboard
+  );
   const dashboards = useSelector((state) => selectDashboardList(state));
 
   const areDraftsSelected = useSelector((state) =>
@@ -86,11 +88,13 @@ function Dashboard({
       fetchBingAdsIntegration(activeProject?.id);
       fetchMarketoIntegration(activeProject?.id);
     }
+  }, [activeProject, sdkCheck]);
 
+  useEffect(() => {
     if (activeDashboard?.class === 'predefined') {
       history.replace(`${PathUrls.PreBuildDashboard}`);
     }
-  }, [activeProject, sdkCheck]);
+  }, [activeDashboard, activeProject]);
 
   const checkIntegration =
     integration?.int_segment ||

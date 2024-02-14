@@ -1,176 +1,164 @@
-.fa-aside
-{  
-    height: 100%;
-    width: 64px;
-    background-color: #f5f6f8;
-    overflow: auto;
-    height: calc(100vh - 56px);
-    position: fixed;
-    top: 56px;
-    left: 0;
-    // z-index: 1001;
+.fa-aside {
+  height: 100%;
+  width: 64px;
+  background-color: #f5f6f8;
+  overflow: auto;
+  height: calc(100vh - 56px);
+  position: fixed;
+  top: 56px;
+  left: 0;
+  // z-index: 1001;
 
-    //hiding scrollbar
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
-    &::-webkit-scrollbar {
-        display: none;
-    }
-    .ant-row
-    {
-        position: relative;
-    }
-    .fa-aside--divider
-    {
-        width: 40px;
-        margin: 0 auto;
-        height: 1px;
-        background-color: $fa-color--mono-4;
-        opacity: 0.5;
-    }
+  //hiding scrollbar
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  .ant-row {
+    position: relative;
+  }
+  .fa-aside--divider {
+    width: 40px;
+    margin: 0 auto;
+    height: 1px;
+    background-color: $fa-color--mono-4;
+    opacity: 0.5;
+  }
 
-    a{
-        height: 40px;
-        width: 40px;
-        border-radius: 8px;
-        opacity: 0.58;
+  a {
+    height: 40px;
+    width: 40px;
+    border-radius: 8px;
+    opacity: 0.58;
+    background-color: transparent;
+    -webkit-transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+    transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    &.active {
+      -webkit-transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+      transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+      opacity: 1;
+      &:hover {
         background-color: transparent;
-        -webkit-transition: all .3s cubic-bezier(.645,.045,.355,1);
-        transition: all .3s cubic-bezier(.645,.045,.355,1); 
-        display: flex;
-        justify-content: center;
-        align-items: center; 
-        &.active{
-            -webkit-transition: all .3s cubic-bezier(.645,.045,.355,1);
-            transition: all .3s cubic-bezier(.645,.045,.355,1); 
-            opacity: 1;
-            &:hover{
-                background-color: transparent;
-            }
-            &:before{
-                content: '';
-                position: absolute;
-                width: 3px;
-                height: 24px;
-                left: 0px;
-                top: 16px;
-                background-color: $fa-color--white;
-                border-top-right-radius: 8px;
-                border-bottom-right-radius: 8px;
-            }
-        }
-        &:hover{
-            background-color: $fa-color--mono-3;
-        }
-
-        &.fa-brand-logo{
-            &:hover{
-                background-color: transparent;
-            }
-            &.active{
-                &:before{
-                    display: none;
-                }
-            }
-        }
+      }
+      &:before {
+        content: '';
+        position: absolute;
+        width: 3px;
+        height: 24px;
+        left: 0px;
+        top: 16px;
+        background-color: $fa-color--white;
+        border-top-right-radius: 8px;
+        border-bottom-right-radius: 8px;
+      }
+    }
+    &:hover {
+      background-color: $fa-color--mono-3;
     }
 
-    .fa-aside--avatar
-    {
-        background-color: $fa-color--mono-5;
-        cursor: pointer;
+    &.fa-brand-logo {
+      &:hover {
+        background-color: transparent;
+      }
+      &.active {
+        &:before {
+          display: none;
+        }
+      }
     }
+  }
+
+  .fa-aside--avatar {
+    background-color: $fa-color--mono-5;
+    cursor: pointer;
+  }
 }
 
-.fa-popupcard--wrapper
-{
-    position: fixed;
-    top: 48px !important;
+.fa-popupcard--wrapper {
+  position: fixed;
+  top: 48px !important;
 
-    .ant-popover-inner
-    {
-        width: 356px;
-        max-height: 640px; 
-        border: 1px solid #f7f5f8;
-        border-radius: 12px;
-    }
-    .ant-popover-inner-content
-    { 
-        padding: 0;
-    }
-    .ant-popover-arrow
-    {
-        display: none;
-    }
+  .ant-popover-inner {
+    width: 356px;
+    max-height: 640px;
+    border: 1px solid #f7f5f8;
+    border-radius: 12px;
+  }
+  .ant-popover-inner-content {
+    padding: 0;
+  }
+  .ant-popover-arrow {
+    display: none;
+  }
 
-    .fa-popupcard
-    {
-        box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.2);
-        border-radius: 8px;
-        a {
-            color: #0B1E39;
-        }
-        .fa-popupcard-divider{
-            width: 100%;
-            margin: 8px 0;
-            border-bottom: thin solid $fa-color--mono-2;
-        }
-        .project-item{
-            border: 2px solid transparent;
-            cursor: pointer;
-            border-radius: 8px;
-            width: 100%;
-            padding: 6px 16px;
-            margin: 2px 0;
-            transition: all 0.3s;
-            &:hover{
-                background-color: $fa-color--mono-1;
-            }
-            &.active
-            {
-                // border: 2px solid $fa-color--brand-color;
-                // background-color: $fa-color--mono-1;
-                color: #1890FF;
-            }
-            
-        }
+  .fa-popupcard {
+    box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    a {
+      color: #0b1e39;
     }
-
-    .fa-project-list--wrapper
-    {
-        max-height: 275px;
-        overflow-x:hidden;
-        overflow-y:auto;
+    .fa-popupcard-divider {
+      width: 100%;
+      margin: 8px 0;
+      border-bottom: thin solid $fa-color--mono-2;
     }
-    input.fa-project-list--search{
-        width: 332px;
+    .project-item {
+      border: 2px solid transparent;
+      cursor: pointer;
+      border-radius: 8px;
+      width: 100%;
+      padding: 6px 16px;
+      margin: 2px 0;
+      transition: all 0.3s;
+      &:hover {
         background-color: $fa-color--mono-1;
-        font-size: 14px;
-        color: $fa-color--mono-5;
-        border-radius: 8px;
-        height: 38px;
-        display: block;
-        margin:10px;
-        padding:0 10px;
-        &:active,&:hover,&:focus{
-            outline: none;
-            box-shadow: none;
-        }
+      }
+      &.active {
+        // border: 2px solid $fa-color--brand-color;
+        // background-color: $fa-color--mono-1;
+        color: #1890ff;
+      }
     }
+  }
+
+  .fa-project-list--wrapper {
+    max-height: 215px;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+  input.fa-project-list--search {
+    width: 332px;
+    background-color: $fa-color--mono-1;
+    font-size: 14px;
+    color: $fa-color--mono-5;
+    border-radius: 8px;
+    height: 38px;
+    display: block;
+    margin: 10px;
+    padding: 0 10px;
+    &:active,
+    &:hover,
+    &:focus {
+      outline: none;
+      box-shadow: none;
+    }
+  }
 }
 
 .fa-popupcard--wrapper--info {
-    width: 320px; 
+  width: 320px;
 }
 
-.fa-tag--beta
-{
-    border-radius: 4px;
-    font-weight: 600;
-    margin: 8px 0 0; 
-    font-size: 9px;
-    line-height: 1.2;
-    border-color: $fa-color--orange;
-    color: $fa-color--orange;
-
+.fa-tag--beta {
+  border-radius: 4px;
+  font-weight: 600;
+  margin: 8px 0 0;
+  font-size: 9px;
+  line-height: 1.2;
+  border-color: $fa-color--orange;
+  color: $fa-color--orange;
 }
