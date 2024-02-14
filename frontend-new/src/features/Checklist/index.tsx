@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import {
   FaErrorComp,
@@ -36,13 +36,23 @@ function Checklist({
       plan?.name === PLANS.PLAN_FREE || plan?.name === PLANS_V0?.PLAN_FREE;
   }
 
+  const agentState = useSelector((state) => state.agent);
+  const activeAgentUUID = agentState?.agent_details?.uuid;
+
+  const isChecklistEnabled = useMemo(() => {
+    const agent = agentState.agents.filter(
+      (data) => data.uuid === activeAgentUUID
+    );
+    return agent[0]?.checklist_dismissed;
+  }, [agentState, agentState?.agents]);
+
   const history = useHistory();
   const productFruitRef = useRef<HTMLDivElement>(null);
   const checklistId = 2288;
 
   useProductFruitsApi(
     (api) => {
-      if (productFruitRef) {
+      if (productFruitRef.current) {
         api.checklists.injectToElement(checklistId, productFruitRef.current);
       }
     },
@@ -224,27 +234,29 @@ function Checklist({
                   </Col>
                 </Row>
                 <Divider />
-                <Row>
-                  <div>
-                    <Text
-                      type='title'
-                      level={6}
-                      extraClass='m-0 mb-1'
-                      color='grey'
-                    >
-                      Want to remove{' '}
-                      <span className='italic'>Finish Setup</span> button from
-                      the top bar? You can still access this screen using the
-                      project menu.
-                    </Text>
-                    <Button
-                      type='default'
-                      onClick={() => handleRemoveForever()}
-                    >
-                      Remove Forever
-                    </Button>
-                  </div>
-                </Row>
+                {!isChecklistEnabled && (
+                  <Row>
+                    <div>
+                      <Text
+                        type='title'
+                        level={6}
+                        extraClass='m-0 mb-1'
+                        color='grey'
+                      >
+                        Want to remove{' '}
+                        <span className='italic'>Finish Setup</span> button from
+                        the top bar? You can still access this screen using the
+                        project menu.
+                      </Text>
+                      <Button
+                        type='default'
+                        onClick={() => handleRemoveForever()}
+                      >
+                        Remove Forever
+                      </Button>
+                    </div>
+                  </Row>
+                )}
               </Col>
             </Row>
           </Col>

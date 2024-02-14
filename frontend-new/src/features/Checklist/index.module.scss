@@ -1,5 +1,5 @@
 .productFruits {
-  width: 310%;
+  width: 183%;
   height: 400px;
   overflow: auto;
   padding: 40px, 32px, 40px, 32px;
@@ -7,6 +7,11 @@
   gap: 16px;
 
   box-shadow: 0px 13px 20px 0px rgba(0, 0, 0, 0.03);
+
+  div {
+    font-family: 'Inter', 'Work Sans', sans-serif, 'Helvetica Neue', Arial,
+      'Noto Sans' !important;
+  }
 }
 
 .container {
