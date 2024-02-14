@@ -794,6 +794,7 @@ func (store *MemSQL) updateEventPropertiesWithTransaction(projectId int64, id, u
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	if projectId == 0 || id == "" {
+		log.WithFields(logFields).Error("Missing project_id or event_id")
 		return http.StatusBadRequest
 	}
 
