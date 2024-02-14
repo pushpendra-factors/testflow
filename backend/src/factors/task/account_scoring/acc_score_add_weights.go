@@ -85,14 +85,8 @@ func FilterEvents(event *P.CounterEventFormat, mweights map[string][]M.AccEventW
 
 	}
 
-	if rules, ok := mweights[M.DEFAULT_EVENT]; ok {
-		for _, individual_rule := range rules {
-			ruleId, match := ProcessSingleFilterOnEvent(event, individual_rule)
-			if match {
-				ids = append(ids, ruleId)
-			}
-		}
-	}
+	ids_special_filters := SpecialFilters(mweights, event)
+	ids = append(ids, ids_special_filters...)
 
 	return ids
 }
@@ -314,5 +308,33 @@ func ValidateEngagementLevel(projectId int64, engagementLevel M.BucketRanges) (b
 	}
 
 	return true, nil
+
+}
+
+func SpecialFilters(mweights map[string][]M.AccEventWeight, event *P.CounterEventFormat) []string {
+
+	var ids []string = make([]string, 0)
+
+	if rules, ok := mweights[M.DEFAULT_EVENT]; ok {
+		for _, individual_rule := range rules {
+			ruleId, match := ProcessSingleFilterOnEvent(event, individual_rule)
+			if match {
+				ids = append(ids, ruleId)
+			}
+		}
+	}
+
+	if rules, ok := mweights[U.EVENT_NAME_PAGE_VIEW]; ok {
+		if event.EventProperties[U.EP_IS_PAGE_VIEW] == true {
+			for _, individual_rule := range rules {
+				ruleId, match := ProcessSingleFilterOnEvent(event, individual_rule)
+				if match {
+					ids = append(ids, ruleId)
+				}
+			}
+		}
+	}
+
+	return ids
 
 }
