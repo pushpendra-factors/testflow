@@ -299,13 +299,13 @@ func EventTriggerAlertsSender(projectID int64, configs map[string]interface{},
 	blockedAlertList := NewBlockedAlertList()
 	ssKey, err := getSortedSetCacheKey(SortedSetKeyPrefix, projectID)
 	if err != nil {
-		log.WithError(err).Error("Failed to fetch cacheKey for sortedSet")
+		logCtx.WithError(err).Error("Failed to fetch cacheKey for sortedSet")
 		return sendReportForProject, blockedAlertList, false
 	}
 
 	allKeys, err := cacheRedis.ZrangeWithScoresPersistent(true, ssKey)
 	if err != nil {
-		log.WithError(err).Error("Failed to get all alert keys for project: ", projectID)
+		logCtx.WithError(err).Error("Failed to get all alert keys for project.")
 		return sendReportForProject, blockedAlertList, false
 	}
 
@@ -345,13 +345,13 @@ func EventTriggerAlertsSender(projectID int64, configs map[string]interface{},
 		if totalSuccess {
 			err = cacheRedis.DelPersistent(cacheKey)
 			if err != nil {
-				logCtx.WithField("alert_key", key).WithError(err).Error("Cannot remove alert from cache")
+				logCtx.WithField("alert_key", key).WithError(err).Error("failed to remove alert from cache")
 			}
 			ok++
 		}
 		cc, err := cacheRedis.ZRemPersistent(ssKey, true, key)
 		if err != nil || cc != 1 {
-			logCtx.WithField("alert_key", key).WithError(err).Error("Cannot remove alert by zrem")
+			logCtx.WithField("alert_key", key).WithError(err).Error("failed to remove alert from sorted set")
 		}
 
 		sendReportForProject.addToSendReport(sendReport)
@@ -439,11 +439,16 @@ func GetSlackIdForCorrespondingHubspotOwnerIds(projectID int64, agentID string, 
 		fieldTagsWithEmailId[tag] = email
 	}
 
+	slackUsersList := make([]model.SlackMember, 0)
+	var err error
+	var errCode int
 	// get slack users
-	slackUsersList, errCode, err := store.GetStore().GetSlackUsersListFromDb(projectID, agentID)
-	if err != nil || errCode != http.StatusFound || slackUsersList == nil {
-		logCtx.WithError(err).Error("failed to fetch slack users")
-		return nil
+	if fieldTagsMap != nil {
+		slackUsersList, errCode, err = store.GetStore().GetSlackUsersListFromDb(projectID, agentID)
+		if err != nil || errCode != http.StatusFound || slackUsersList == nil {
+			logCtx.WithError(err).Error("failed to fetch slack users")
+			return nil
+		}
 	}
 
 	slackIdsToBeTagged := make([]string, 0)
@@ -488,7 +493,11 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 	rejectedQueue := false
 
 	eta, errCode := store.GetStore().GetEventTriggerAlertByID(alertID)
-	if errCode != http.StatusFound || eta == nil {
+	if errCode != http.StatusFound {
+		if errCode == http.StatusNotFound {
+			logCtx.Info("Alert definition not found.")
+			return true, true, sendReport
+		}
 		logCtx.WithField("err_code", errCode).Error("Failed to fetch alert from db.")
 		return false, false, sendReport
 	}
@@ -506,7 +515,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 
 	var accountUrl string
 	isAccounAlert := alertConfiguration.EventLevel == model.EventLevelAccount
-	if  isAccounAlert {
+	if isAccounAlert {
 		if _, exists := alert.Message.MessageProperty[model.ETA_DOMAIN_GROUP_USER_ID]; exists {
 			groupDomainUserID := alert.Message.MessageProperty[model.ETA_DOMAIN_GROUP_USER_ID].(string)
 			accountUrl = BuildAccountURL(groupDomainUserID)
@@ -573,7 +582,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 				"retry":      retry,
 				"is_success": teamsSuccess,
 				"tag":        "alert_tracker",
-			}).Info("ALERT TRACKER")
+			}).Info("ALERT TRACKER.")
 			if !teamsSuccess {
 				sendReport.TeamsFail++
 				errMessage = append(errMessage, errMsg)
@@ -601,7 +610,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		} else if isAccounAlert && accountUrl == "" {
 			accountUrl = "https://app.factors.ai"
 		}
-		
+
 		if alertConfiguration.IsFactorsUrlInPayload {
 			idx := len(alert.Message.MessageProperty)
 			alert.Message.MessageProperty[fmt.Sprintf("%d", idx)] = model.MessagePropMapStruct{
@@ -641,7 +650,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 			"is_success":      stat == "success",
 			"tag":             "alert_tracker",
 			"is_payload_null": isPayloadNull,
-		}).Info("ALERT TRACKER")
+		}).Info("ALERT TRACKER.")
 
 		if response["error"] == "<nil>" {
 			response["error"] = "an"
@@ -839,22 +848,22 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
 				slackMentionStr = model.GetSlackMentionsStr(slackMentions, slackTags)
 			}
 			if !isHyperlinkDisabled {
-				blockMessage = model.GetSlackMsgBlock(alert.Message, slackMentionStr, isAccountAlert ,accountUrl)
+				blockMessage = model.GetSlackMsgBlock(alert.Message, slackMentionStr, isAccountAlert, accountUrl)
 			} else {
 				blockMessage = model.GetSlackMsgBlockWithoutHyperlinks(alert.Message, slackMentionStr)
 			}
 			response, status, err := slack.SendSlackAlert(projectID, blockMessage, agentUUID, channel)
 			if projectID == 12384898983000003 {
 				log.WithFields(log.Fields{
-					"tag": "debug-drivetrain",
-					"project_id": projectID,
-					"alert_title": alert.Message.Title,
-					"channel": fmt.Sprintf("%+v", channel),
-					"agent_id": agentUUID,
-					"is_success": status,
-					"response": fmt.Sprintf("%+v", response),
+					"tag":            "debug-drivetrain",
+					"project_id":     projectID,
+					"alert_title":    alert.Message.Title,
+					"channel":        fmt.Sprintf("%+v", channel),
+					"agent_id":       agentUUID,
+					"is_success":     status,
+					"response":       fmt.Sprintf("%+v", response),
 					"slack_channels": len(slackChannels),
-					"idx": i,
+					"idx":            i,
 				}).Info("Check for private channels.")
 			}
 			partialSuccess = partialSuccess || status
@@ -962,14 +971,14 @@ func sendTeamsAlertForEventTriggerAlert(projectID int64, agentUUID string,
 	var teamsChannels model.Team
 	if Tchannels == nil {
 		errMsg := "no teams channels found"
-		log.Error(errMsg)
+		logCtx.Error(errMsg)
 		return false, errMsg
 	}
 
 	err := U.DecodePostgresJsonbToStructType(Tchannels, &teamsChannels)
 	if err != nil {
 		errMsg := err.Error()
-		log.WithError(err).Error(errMsg)
+		logCtx.WithError(err).Error(errMsg)
 		return false, errMsg
 	}
 
