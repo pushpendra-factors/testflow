@@ -91,6 +91,7 @@ func main() {
 	associateDealToDomainByProjectID := flag.String("associate_deal_to_domain_by_project_id", "", "")
 	enableSyncTries := flag.Bool("enable_sync_tries", false, "Filter using un-sync document using sync-tries")
 	addCRMObjectURLByProjectID := flag.String("add_crm_object_url_by_project_id", "", "")
+	firstTimeEnrich := flag.Bool("first_time_enrich", false, "")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -98,6 +99,10 @@ func main() {
 	}
 	defaultAppName := "hubspot_enrich_job"
 	defaultHealthcheckPingID := C.HealthcheckHubspotEnrichPingID
+	if *firstTimeEnrich {
+		defaultHealthcheckPingID = C.HealthcheckHubspotFirstTimeEnrichPingID
+	}
+
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)
 	appName := C.GetAppName(defaultAppName, *overrideAppName)
 
@@ -191,6 +196,7 @@ func main() {
 	configsEnrich["enrich_heavy"] = *enrichHeavy
 	configsEnrich["record_process_limit_per_project"] = *recordProcessLimit
 	configsEnrich["enrich_pull_limit"] = *enrichPullLimit
+	configsEnrich["first_time_enrich"] = *firstTimeEnrich
 
 	configsDistributer := make(map[string]interface{})
 	configsDistributer["health_check_ping_id"] = ""
@@ -199,7 +205,7 @@ func main() {
 	configsDistributer["light_projects_count_threshold"] = *lightProjectsCountThreshold
 
 	// distributer should only run on light job
-	if !(*enrichHeavy) {
+	if !(*enrichHeavy) && !*firstTimeEnrich {
 		taskWrapper.TaskFunc(*projectDistributerAppName, *taskManagementLookback, T.RunHubspotProjectDistributer, configsDistributer)
 	}
 

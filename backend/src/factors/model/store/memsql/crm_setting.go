@@ -103,7 +103,7 @@ func (store *MemSQL) CreateCRMSetting(projectID int64, crmSetting *model.CRMSett
 	return http.StatusCreated
 }
 
-func (store *MemSQL) CreateOrUpdateCRMSettingHubspotEnrich(projectID int64, isHeavy bool, maxCreatedAtSec *int64) int {
+func (store *MemSQL) CreateOrUpdateCRMSettingHubspotEnrich(projectID int64, isHeavy bool, maxCreatedAtSec *int64, isFirstTimeEnrich bool) int {
 	logFields := log.Fields{"project_id": projectID}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -115,8 +115,17 @@ func (store *MemSQL) CreateOrUpdateCRMSettingHubspotEnrich(projectID int64, isHe
 			return status
 		}
 
+		if isFirstTimeEnrich {
+			return store.CreateCRMSetting(projectID, &model.CRMSetting{HubspotEnrichHeavy: false,
+				HubspotEnrichHeavyMaxCreatedAt: nil, HubspotFirstTimeEnrich: true})
+		}
+
 		return store.CreateCRMSetting(projectID, &model.CRMSetting{HubspotEnrichHeavy: isHeavy,
-			HubspotEnrichHeavyMaxCreatedAt: maxCreatedAtSec})
+			HubspotEnrichHeavyMaxCreatedAt: maxCreatedAtSec, HubspotFirstTimeEnrich: false})
+	}
+
+	if isFirstTimeEnrich {
+		return store.UpdateCRMSetting(projectID, model.HubspotFirstTimeEnrich(true))
 	}
 
 	return store.UpdateCRMSetting(projectID, model.HubspotEnrichHeavy(isHeavy, maxCreatedAtSec))

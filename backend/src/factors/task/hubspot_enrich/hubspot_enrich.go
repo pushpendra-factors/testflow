@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -137,6 +138,11 @@ func StartEnrichment(numProjectRoutines int, projectsMaxCreatedAt map[int64]int6
 			if errCode != http.StatusAccepted {
 				log.WithFields(log.Fields{"project_id": workerStatus.ProjectId}).Error("Failed to mark hubspot project for crm settings")
 			}
+
+			errCode = store.GetStore().UpdateCRMSetting(workerStatus.ProjectId, model.HubspotFirstTimeEnrich(false))
+			if errCode != http.StatusAccepted {
+				log.WithFields(log.Fields{"project_id": workerStatus.ProjectId}).Error("Failed to remove hubspot project from first time enrich")
+			}
 		}
 	}
 
@@ -152,6 +158,10 @@ func isEnrichHeavyProject(projectID int64, settings map[int64]model.CRMSetting) 
 	return settings[projectID].HubspotEnrichHeavy
 }
 
+func isFirsTimeProject(projectID int64, settings map[int64]model.CRMSetting) bool {
+	return settings[projectID].HubspotFirstTimeEnrich
+}
+
 /*
 getProjectMaxCreatedAt returns the maximum created_at timestamp for a records in a project to be processed in the current job
 Max created at should be limited so as to avoid future partial updates to get processed which can cause inconsistency is user properties state
@@ -159,10 +169,22 @@ For light projects maximum created_at will be the job start time, since they pro
 
 For heavy projects maximum created_at is decided by project distributer and set to project distributer start time, since all records till that time has led it to heavy project.
 Heavy job will process all records till created_at in multiple runs and then exit from heavy job.
+
+For first time enrich minimun created_at + 1 will used as limit
 */
 func getProjectMaxCreatedAt(projectID int64, jobMaxCreatedAt int64, settings map[int64]model.CRMSetting) int64 {
-	if !isEnrichHeavyProject(projectID, settings) {
+	if !isEnrichHeavyProject(projectID, settings) && !isFirsTimeProject(projectID, settings) {
 		return jobMaxCreatedAt
+	}
+
+	if isFirsTimeProject(projectID, settings) {
+		projectMinCreatedAt, status := store.GetStore().GetHubspotHubspotDocumentMinCreatedAt(projectID)
+		if status != http.StatusFound && status != http.StatusNotFound {
+			log.WithFields(log.Fields{"project_id": projectID}).
+				Error("Failed to get min created_at for first time enrich.")
+			return 0
+		}
+		return time.Unix(projectMinCreatedAt, 0).AddDate(0, 0, 1).Unix()
 	}
 
 	if settings[projectID].HubspotEnrichHeavyMaxCreatedAt == nil {
@@ -185,6 +207,7 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 	numProjectRoutines := configs["num_project_routines"].(int)
 	hubspotMaxCreatedAt := configs["max_record_created_at"].(int64)
 	enrichHeavy := configs["enrich_heavy"].(bool)
+	firstTimeEnrich := configs["first_time_enrich"].(bool)
 	recordsProcessLimit := configs["record_process_limit_per_project"].(int)
 	enrichPullLimit := configs["enrich_pull_limit"].(int)
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, overrideHealthcheckPingID)
@@ -236,7 +259,6 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 		return nil, false
 	}
 
-	projectIDs := make([]int64, 0, 0)
 	projectsMaxCreatedAt := make(map[int64]int64)
 	hubspotProjectSettingsMap := make(map[int64]*model.HubspotProjectSettings, 0)
 	for i, settings := range hubspotEnabledProjectSettings {
@@ -251,7 +273,9 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 		}
 
 		if (enrichHeavy && !isEnrichHeavyProject(settings.ProjectId, crmSettingsMap)) ||
-			(!enrichHeavy && isEnrichHeavyProject(settings.ProjectId, crmSettingsMap)) {
+			(!enrichHeavy && isEnrichHeavyProject(settings.ProjectId, crmSettingsMap)) ||
+			(firstTimeEnrich && !isFirsTimeProject(settings.ProjectId, crmSettingsMap)) ||
+			(!firstTimeEnrich && isFirsTimeProject(settings.ProjectId, crmSettingsMap)) {
 			continue
 		}
 
@@ -281,7 +305,6 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 			log.Info(fmt.Sprintf("Synced reference fields for project %d", settings.ProjectId))
 		}
 
-		projectIDs = append(projectIDs, settings.ProjectId)
 		hubspotProjectSettingsMap[settings.ProjectId] = &hubspotEnabledProjectSettings[i]
 	}
 
