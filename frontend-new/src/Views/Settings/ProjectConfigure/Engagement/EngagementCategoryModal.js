@@ -1,5 +1,13 @@
 import { Text } from 'Components/factorsComponents';
-import { Button, InputNumber, Modal, Skeleton, Tooltip, message } from 'antd';
+import {
+  Button,
+  InputNumber,
+  Modal,
+  Skeleton,
+  Tooltip,
+  message,
+  notification
+} from 'antd';
 import React, { useEffect, useState } from 'react';
 import { InfoCircleFilled } from '@ant-design/icons';
 import { EngagementTag } from 'Components/Profile/constants.ts';
@@ -141,7 +149,11 @@ function EngagementCategoryModal({
     setStatus((prev) => ({ ...prev, isFormSubmitting: true }));
     updateEngagementCategoryRanges(activeProject.id, payload)
       .then(() => {
-        message.success('Updated Category Ranges');
+        notification.success({
+          message: 'Engagement category re-assignment has begun.',
+          description:
+            'All accounts will get updated with new categories within 1 day.'
+        });
       })
       .catch((err) => {
         console.error(err);
