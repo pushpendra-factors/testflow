@@ -1,5 +1,13 @@
 import React, { useCallback, useState, useEffect, useMemo } from 'react';
-import { Button, Dropdown, Menu, message, notification, Popover, Tabs } from 'antd';
+import {
+  Button,
+  Dropdown,
+  Menu,
+  message,
+  notification,
+  Popover,
+  Tabs
+} from 'antd';
 import { bindActionCreators } from 'redux';
 import { connect, useSelector } from 'react-redux';
 import useKey from 'hooks/useKey';
@@ -22,7 +30,7 @@ import useFeatureLock from 'hooks/useFeatureLock';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
 import logger from 'Utils/logger';
-import { featureLock } from '../../../routes/feature';
+import { AdminLock } from '../../../routes/feature';
 import AccountOverview from './AccountOverview';
 import UpgradeModal from '../UpgradeModal';
 import { PathUrls } from '../../../routes/pathUrls';
@@ -80,7 +88,7 @@ function AccountDetails({
   const [filterProperties, setFilterProperties] = useState([]);
   const [propSelectOpen, setPropSelectOpen] = useState(false);
   const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
-  const [timelineViewMode, setTimelineViewMode] = useState('');
+  const [timelineViewMode, setTimelineViewMode] = useState('birdview');
   const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
   const [openPopover, setOpenPopover] = useState(false);
   const [requestedEvents, setRequestedEvents] = useState({});
@@ -173,7 +181,7 @@ function AccountDetails({
     const urlSearchParams = new URLSearchParams(location.search);
     const params = Object.fromEntries(urlSearchParams.entries());
     const id = atob(location.pathname.split('/').pop());
-    const view = params.view || timelineViewMode;
+    const view = timelineViewMode || params.view;
     document.title = 'Accounts - FactorsAI';
     return [id, view];
   }, [location, timelineViewMode]);
@@ -188,10 +196,16 @@ function AccountDetails({
   );
 
   useEffect(() => {
-    if (featureLock(activeAgent)) {
+    if (AdminLock(activeAgent)) {
       setTimelineViewMode('overview');
     }
   }, [activeAgent]);
+
+  useEffect(() => {
+    if (Boolean(timelineViewMode)) {
+      insertUrlParam(window.history, 'view', timelineViewMode);
+    }
+  }, [timelineViewMode]);
 
   const fetchGroups = async () => {
     if (!groups || Object.keys(groups).length === 0) {
@@ -219,22 +233,10 @@ function AccountDetails({
       activeId !== '' &&
       currentProjectSettings?.timelines_config;
 
-    const updateTimelineViewMode = () => {
-      if (activeView && TIMELINE_VIEW_OPTIONS.includes(activeView)) {
-        setTimelineViewMode(activeView);
-      }
-    };
-
     if (shouldGetDetails) {
       getAccountDetails();
     }
-    updateTimelineViewMode();
-  }, [
-    activeProject.id,
-    activeId,
-    activeView,
-    currentProjectSettings?.timelines_config
-  ]);
+  }, [activeProject.id, activeId, currentProjectSettings?.timelines_config]);
 
   useEffect(() => {
     if (
@@ -812,9 +814,7 @@ function AccountDetails({
   );
 
   const handleTabChange = (val) => {
-    insertUrlParam(window.history, 'view', val);
     setTimelineViewMode(val);
-    setGranularity(granularity);
   };
 
   const renderTabPane = ({ key, tabName, content }) => (
@@ -830,7 +830,7 @@ function AccountDetails({
     <div className='timeline-view'>
       <Tabs
         className='timeline-view--tabs'
-        defaultActiveKey='birdview'
+        defaultActiveKey={timelineViewMode}
         size='small'
         activeKey={timelineViewMode}
         onChange={handleTabChange}
