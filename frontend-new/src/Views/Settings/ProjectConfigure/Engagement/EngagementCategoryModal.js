@@ -85,7 +85,6 @@ function EngagementCategoryModal({
       [0, 30]
     ];
     setCategoryRange(tmp);
-    setSavedRanges(tmp);
   };
   const fetchCategories = () => {
     setStatus((prev) => ({ ...prev, isFormLoading: true }));
