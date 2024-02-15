@@ -25,8 +25,9 @@ function TableRow({
     : '';
 
   const isEventClickable =
-    currentProjectSettings?.timelines_config?.events_config?.[event.event_name]
-      ?.length > 0;
+    currentProjectSettings?.timelines_config?.events_config?.[
+      event?.display_name === 'Page View' ? 'PageView' : event?.event_name
+    ]?.length > 0;
   const propertyName =
     currentProjectSettings?.timelines_config?.events_config?.[
       event?.display_name === 'Page View' ? 'PageView' : event?.event_name
