@@ -50,6 +50,29 @@ func getAllProjectsDocumentCount(allHubspotProjects []model.HubspotProjectSettin
 	return append(projectdocumentCount, emptyProjectsDocumentCount...)
 }
 
+func getFirstTimeProjects(projectDocumentCount []model.HubspotDocumentCount, projectSyncedDocumentCount []model.HubspotDocumentCount) map[int64]bool {
+	projectIDs := map[int64]bool{}
+	for i := range projectDocumentCount {
+		projectID := projectDocumentCount[i].ProjectID
+		if projectDocumentCount[i].Count == 0 {
+			continue
+		}
+
+		synced := false
+		for j := range projectSyncedDocumentCount {
+			if projectSyncedDocumentCount[j].ProjectID == projectID {
+				synced = true
+			}
+		}
+
+		if !synced {
+			projectIDs[projectID] = true
+		}
+	}
+
+	return projectIDs
+}
+
 // RunHubspotProjectDistributer to be used only with light job
 func RunHubspotProjectDistributer(configs map[string]interface{}) (map[string]interface{}, bool) {
 
@@ -82,7 +105,6 @@ func RunHubspotProjectDistributer(configs map[string]interface{}) (map[string]in
 	projectIDs := make([]int64, 0)
 	for i := range hubspotEnabledProjectSettings {
 		projectIDs = append(projectIDs, hubspotEnabledProjectSettings[i].ProjectId)
-
 	}
 
 	projectdocumentCount, status := store.GetStore().GetHubspotDocumentCountForSync(projectIDs, IntHubspot.GetHubspotObjectTypeForSync(), time.Now().Unix())
@@ -93,6 +115,14 @@ func RunHubspotProjectDistributer(configs map[string]interface{}) (map[string]in
 
 	projectdocumentCount = getAllProjectsDocumentCount(hubspotEnabledProjectSettings, projectdocumentCount)
 
+	projectDocumentSyncedCount, status := store.GetStore().GetHubspotDocumentsSyncedCount(projectIDs)
+	if status != http.StatusFound {
+		log.Error("Failed to get hubspot document synced counts for projects.")
+		return nil, false
+	}
+
+	firsTimeProjectsMap := getFirstTimeProjects(projectdocumentCount, projectDocumentSyncedCount)
+
 	crmSettingsMap, err := getAllCRMSettingsAsMap()
 	if err != nil {
 		log.WithError(err).Error("Failed to get all crm settings for hubspot project distributer.")
@@ -100,12 +130,23 @@ func RunHubspotProjectDistributer(configs map[string]interface{}) (map[string]in
 	}
 
 	newHeavyProjects := make([]int64, 0)
+	newFirstTimeEnrichProjects := make([]int64, 0)
 	newLightProjects := make([]int64, 0)
 	for i := range projectdocumentCount {
 		projectID := projectdocumentCount[i].ProjectID
 		count := projectdocumentCount[i].Count
 		// ignore projects which are already under heavy processing. These project will be marked as false once it gets completed under enrich heavy
 		if isEnrichHeavyProject(projectID, crmSettingsMap) {
+			continue
+		}
+
+		// ignore projects which are already in first time enrich
+		if isFirsTimeProject(projectID, crmSettingsMap) {
+			continue
+		}
+
+		if firsTimeProjectsMap[projectID] {
+			newFirstTimeEnrichProjects = append(newFirstTimeEnrichProjects, projectID)
 			continue
 		}
 
@@ -120,7 +161,7 @@ func RunHubspotProjectDistributer(configs map[string]interface{}) (map[string]in
 	for heavy, projects := range map[bool][]int64{true: newHeavyProjects, false: newLightProjects} {
 		for i := range projects {
 			if heavy {
-				status := store.GetStore().CreateOrUpdateCRMSettingHubspotEnrich(projects[i], true, &hubspotMaxCreatedAt)
+				status := store.GetStore().CreateOrUpdateCRMSettingHubspotEnrich(projects[i], true, &hubspotMaxCreatedAt, false)
 				if status != http.StatusAccepted && status != http.StatusCreated {
 					log.WithFields(log.Fields{"project_id": projects[i]}).Error("Failed to update crm settings for hubspot project distributer.")
 					anyFailure = true
@@ -128,7 +169,7 @@ func RunHubspotProjectDistributer(configs map[string]interface{}) (map[string]in
 				continue
 			}
 
-			status := store.GetStore().CreateOrUpdateCRMSettingHubspotEnrich(projects[i], false, nil)
+			status := store.GetStore().CreateOrUpdateCRMSettingHubspotEnrich(projects[i], false, nil, false)
 			if status != http.StatusAccepted && status != http.StatusCreated {
 				log.WithFields(log.Fields{"project_id": projects[i]}).Error("Failed to update crm settings for hubspot project distributer.")
 				anyFailure = true
@@ -136,9 +177,17 @@ func RunHubspotProjectDistributer(configs map[string]interface{}) (map[string]in
 		}
 	}
 
+	for _, projectID := range newFirstTimeEnrichProjects {
+		status := store.GetStore().CreateOrUpdateCRMSettingHubspotEnrich(projectID, false, &hubspotMaxCreatedAt, true)
+		if status != http.StatusAccepted && status != http.StatusCreated {
+			log.WithFields(log.Fields{"project_id": projectID}).Error("Failed to update crm settings for hubspot first time enrich.")
+		}
+	}
+
 	newDestribution := map[string]interface{}{
-		"heavy_projects": newHeavyProjects,
-		"light_projects": newLightProjects,
+		"heavy_projects":    newHeavyProjects,
+		"light_projects":    newLightProjects,
+		"first_time_enrich": newFirstTimeEnrichProjects,
 	}
 
 	if anyFailure {

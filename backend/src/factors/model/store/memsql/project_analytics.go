@@ -429,15 +429,22 @@ func (store *MemSQL) GetGlobalProjectAnalyticsEventDataByProjectId(projectID int
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	var query model.Query
-
-	jsonString := fmt.Sprintf(model.ProjectAnalyticsEventSingleQueryStmnt[queryStmntKey], projectID, timeZoneString, startTimestmap, endTimestamp)
-	err := json.Unmarshal([]byte(jsonString), &query)
-	if err != nil {
-		return nil, err
-	}
+	var jsonString string
+	var err error
 
 	if queryStmntKey == "daily_login_count" || queryStmntKey == "login_count" {
+		jsonString = fmt.Sprintf(model.ProjectAnalyticsEventSingleQueryStmnt[queryStmntKey], projectID, timeZoneString, startTimestmap, endTimestamp)
+		err = json.Unmarshal([]byte(jsonString), &query)
+		if err != nil {
+			return nil, err
+		}
 		projectID = int64(2)
+	} else {
+		jsonString = fmt.Sprintf(model.ProjectAnalyticsEventSingleQueryStmnt[queryStmntKey], timeZoneString, startTimestmap, endTimestamp)
+		err = json.Unmarshal([]byte(jsonString), &query)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	singleResult, errCode, _ := store.ExecuteEventsQuery(projectID, query, true)

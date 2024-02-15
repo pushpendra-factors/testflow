@@ -1375,6 +1375,39 @@ func (store *MemSQL) GetHubspotDocumentCountForSync(projectIDs []int64, docTypes
 	return projectRecordCount, http.StatusFound
 }
 
+func (store *MemSQL) GetHubspotDocumentsSyncedCount(projectIDs []int64) ([]model.HubspotDocumentCount, int) {
+	logFields := log.Fields{"project_ids": projectIDs}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+
+	if len(projectIDs) == 0 {
+		logCtx.Error("Invalid parameters.")
+		return nil, http.StatusBadRequest
+	}
+
+	var projectRecordCount []model.HubspotDocumentCount
+
+	db := C.GetServices().Db
+
+	wheStmnt := "project_id IN (?) AND synced=true"
+	whereParams := []interface{}{projectIDs}
+
+	err := db.Model(model.HubspotDocument{}).Select("project_id, count(*) as count").
+		Where(wheStmnt, whereParams...).
+		Group("project_id").Scan(&projectRecordCount).Error
+	if err != nil {
+		log.WithError(err).Error("Failed to get hubspot synced doc count.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(projectRecordCount) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	return projectRecordCount, http.StatusFound
+}
+
 // GetHubspotDocumentsByTypeANDRangeForSync return list of documents unsynced for given time range
 func (store *MemSQL) GetHubspotDocumentsByTypeANDRangeForSync(projectID int64,
 	docType int, from, to, maxCreatedAtSec int64, limit, offset int) ([]model.HubspotDocument, int) {
@@ -2014,4 +2047,34 @@ func (store *MemSQL) GetHubspotOwnerEmailFromOwnerId(projectID int64, ownerID st
 	email := U.GetPropertyValueAsString((*doc)["email"])
 
 	return email, http.StatusFound, nil
+}
+
+func (store *MemSQL) GetHubspotHubspotDocumentMinCreatedAt(projectID int64) (int64, int) {
+	logFields := log.Fields{"project_id": projectID}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 {
+		logCtx.Error("Invalid parameters.")
+		return 0, http.StatusInternalServerError
+	}
+
+	var docTypeMinCreateDate struct {
+		MinCreatedAt *time.Time
+	}
+
+	db := C.GetServices().Db
+	err := db.Model(model.HubspotDocument{}).Select("DATE(min(created_at)) as min_created_at").
+		Where("project_id = ? AND synced = false", projectID).Scan(&docTypeMinCreateDate).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get hubspot min created at by doc type.")
+		return 0, http.StatusInternalServerError
+	}
+
+	if docTypeMinCreateDate.MinCreatedAt == nil {
+		return 0, http.StatusNotFound
+	}
+
+	return docTypeMinCreateDate.MinCreatedAt.Unix(), http.StatusFound
+
 }

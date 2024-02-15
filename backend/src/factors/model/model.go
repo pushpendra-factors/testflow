@@ -437,6 +437,8 @@ type Model interface {
 	GetHubspotDocumentsByTypeAndAction(projectID int64, docType int, action int, fromMs,
 		toMs int64) ([]model.HubspotDocument, int)
 	GetHubspotOwnerEmailFromOwnerId(projectID int64, ownerID string) (string, int, error)
+	GetHubspotDocumentsSyncedCount(projectIDs []int64) ([]model.HubspotDocumentCount, int)
+	GetHubspotHubspotDocumentMinCreatedAt(projectID int64) (int64, int)
 
 	// plan
 	GetPlanByID(planID uint64) (*model.Plan, int)
@@ -907,7 +909,7 @@ type Model interface {
 	GetCRMSetting(projectID int64) (*model.CRMSetting, int)
 	GetAllCRMSetting() ([]model.CRMSetting, int)
 	UpdateCRMSetting(projectID int64, option model.CRMSettingOption) int
-	CreateOrUpdateCRMSettingHubspotEnrich(projectID int64, isHeavy bool, maxCreatedAtSec *int64) int
+	CreateOrUpdateCRMSettingHubspotEnrich(projectID int64, isHeavy bool, maxCreatedAtSec *int64, isFirstTimeEnrich bool) int
 
 	// data availability checks
 	GetLatestDataStatus(integrations []string, project_id int64, hardRefresh bool) (map[string]model.DataAvailabilityStatus, error)
