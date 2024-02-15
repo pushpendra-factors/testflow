@@ -1,5 +1,13 @@
 import React, { useCallback, useState, useEffect, useMemo } from 'react';
-import { Button, Dropdown, Menu, notification, Popover, Tabs } from 'antd';
+import {
+  Button,
+  Dropdown,
+  Menu,
+  message,
+  notification,
+  Popover,
+  Tabs
+} from 'antd';
 import { bindActionCreators } from 'redux';
 import { connect, useSelector } from 'react-redux';
 import useKey from 'hooks/useKey';
@@ -22,7 +30,7 @@ import useFeatureLock from 'hooks/useFeatureLock';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
 import logger from 'Utils/logger';
-import { featureLock } from '../../../routes/feature';
+import { AdminLock } from '../../../routes/feature';
 import AccountOverview from './AccountOverview';
 import UpgradeModal from '../UpgradeModal';
 import { PathUrls } from '../../../routes/pathUrls';
@@ -173,7 +181,7 @@ function AccountDetails({
     const urlSearchParams = new URLSearchParams(location.search);
     const params = Object.fromEntries(urlSearchParams.entries());
     const id = atob(location.pathname.split('/').pop());
-    const view = params.view || timelineViewMode;
+    const view = timelineViewMode || params.view;
     document.title = 'Accounts - FactorsAI';
     return [id, view];
   }, [location, timelineViewMode]);
@@ -188,10 +196,16 @@ function AccountDetails({
   );
 
   useEffect(() => {
-    if (featureLock(activeAgent)) {
+    if (AdminLock(activeAgent)) {
       setTimelineViewMode('overview');
     }
   }, [activeAgent]);
+
+  useEffect(() => {
+    if (Boolean(timelineViewMode)) {
+      insertUrlParam(window.history, 'view', timelineViewMode);
+    }
+  }, [timelineViewMode]);
 
   const fetchGroups = async () => {
     if (!groups || Object.keys(groups).length === 0) {
@@ -219,22 +233,10 @@ function AccountDetails({
       activeId !== '' &&
       currentProjectSettings?.timelines_config;
 
-    const updateTimelineViewMode = () => {
-      if (activeView && TIMELINE_VIEW_OPTIONS.includes(activeView)) {
-        setTimelineViewMode(activeView);
-      }
-    };
-
     if (shouldGetDetails) {
       getAccountDetails();
     }
-    updateTimelineViewMode();
-  }, [
-    activeProject.id,
-    activeId,
-    activeView,
-    currentProjectSettings?.timelines_config
-  ]);
+  }, [activeProject.id, activeId, currentProjectSettings?.timelines_config]);
 
   useEffect(() => {
     if (
@@ -250,7 +252,8 @@ function AccountDetails({
       const {
         disabled_events = [],
         user_config = {},
-        account_config = {}
+        account_config = {},
+        events_config = {}
       } = currentProjectSettings.timelines_config;
       const timelinesConfig = {
         disabled_events: [...disabled_events],
@@ -258,6 +261,10 @@ function AccountDetails({
         account_config: {
           ...DEFAULT_TIMELINE_CONFIG.account_config,
           ...account_config
+        },
+        events_config: {
+          ...DEFAULT_TIMELINE_CONFIG.events_config,
+          ...events_config
         }
       };
       setTLConfig(timelinesConfig);
@@ -534,23 +541,25 @@ function AccountDetails({
   };
 
   const onLeftpanePropSelect = async (option, group) => {
-    const { account_config } = tlConfig;
-
-    if (!account_config.table_props) {
-      account_config.table_props = [];
+    const updatedTimelinesConfig = { ...tlConfig };
+    if (!updatedTimelinesConfig.account_config.table_props) {
+      tlConfig.account_config.table_props = [];
     }
 
-    if (!account_config.table_props.includes(option?.value)) {
-      account_config.table_props.push(option?.value);
-
+    if (
+      !updatedTimelinesConfig.account_config.table_props.includes(option?.value)
+    ) {
+      updatedTimelinesConfig.account_config.table_props.push(option?.value);
       try {
         setPropSelectOpen(false);
         await udpateProjectSettings(activeProject.id, {
-          timelines_config: { ...tlConfig }
+          timelines_config: { ...updatedTimelinesConfig }
         });
       } catch (error) {
         logger.error(error);
       }
+    } else {
+      message.error('Property Already Exists');
     }
   };
 
@@ -738,7 +747,7 @@ function AccountDetails({
                 onClick={() => setIsUpgradeModalVisible(true)}
               >
                 <Text type='paragraph' mini color='brand-color-6'>
-                  {'  '} Upgrade plan
+                  Upgrade plan
                 </Text>
               </span>
             </Text>
@@ -805,9 +814,7 @@ function AccountDetails({
   );
 
   const handleTabChange = (val) => {
-    insertUrlParam(window.history, 'view', val);
     setTimelineViewMode(val);
-    setGranularity(granularity);
   };
 
   const renderTabPane = ({ key, tabName, content }) => (
@@ -823,7 +830,7 @@ function AccountDetails({
     <div className='timeline-view'>
       <Tabs
         className='timeline-view--tabs'
-        defaultActiveKey='birdview'
+        defaultActiveKey={timelineViewMode}
         size='small'
         activeKey={timelineViewMode}
         onChange={handleTabChange}

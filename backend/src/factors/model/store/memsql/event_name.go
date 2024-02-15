@@ -632,6 +632,8 @@ func (store *MemSQL) GetPropertyValuesByEventProperty(projectID int64, eventName
 		return []string{}, errors.New("invalid property_name on GetPropertyValuesByEventProperty")
 	}
 
+	currentDate := model.OverrideCacheDateRangeForProjects(projectID)
+
 	isAggregateCacheUnavailable := false
 	var valuesAggregated []U.NameCountTimestampCategory
 	if C.IsAggrEventPropertyValuesCacheEnabled(projectID) {
@@ -648,26 +650,42 @@ func (store *MemSQL) GetPropertyValuesByEventProperty(projectID int64, eventName
 			return []string{}, err
 		}
 
-		logCtx.
-			WithField("is_exist", !isAggregateCacheUnavailable).
-			WithField("key", eventPropertyValuesAggCacheKey).
-			Info("Values are from aggregate cache.")
-
 		if isExists {
+			// Merge aggregated rollup,  current date rollup and create new aggregate.
 			err = json.Unmarshal([]byte(existingAggCache), &existingAggregate)
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to unmarshal values cache aggregate on API.")
 				return []string{}, err
 			}
 
-			valuesAggregated = existingAggregate.NameCountTimestampCategoryList
+			logCtx.
+				WithField("len_agg_keys", len(existingAggregate.NameCountTimestampCategoryList)).
+				Info("Values are from aggregate cache.")
+
+			currentDateOnlyFormat := U.TimeNowZ().Format(U.DATETIME_FORMAT_YYYYMMDD)
+			currentDateValues, err := getPropertyValuesByEventPropertyFromCache(projectID, eventName, propertyName, currentDateOnlyFormat)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to current date rollup values to add to aggregate.")
+			}
+
+			valuesListFromAggMap := make(map[string]U.CountTimestampTuple)
+			for i := range existingAggregate.NameCountTimestampCategoryList {
+				exa := existingAggregate.NameCountTimestampCategoryList[i]
+				valuesListFromAggMap[exa.Name] = U.CountTimestampTuple{LastSeenTimestamp: exa.Timestamp, Count: exa.Count}
+			}
+
+			valuesListFromAgg := U.CachePropertyValueWithTimestamp{PropertyValue: valuesListFromAggMap}
+			valuesList := make([]U.CachePropertyValueWithTimestamp, 0)
+			valuesList = append(valuesList, currentDateValues)
+			valuesList = append(valuesList, valuesListFromAgg)
+
+			valuesAggregated = U.AggregatePropertyValuesAcrossDate(valuesList, false, 0)
 		} else {
 			isAggregateCacheUnavailable = true
 		}
 	}
 
 	if isAggregateCacheUnavailable || !C.IsAggrEventPropertyValuesCacheEnabled(projectID) {
-		currentDate := model.OverrideCacheDateRangeForProjects(projectID)
 		values := make([]U.CachePropertyValueWithTimestamp, 0)
 		for i := 0; i < lastNDays; i++ {
 			currentDateOnlyFormat := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
@@ -678,7 +696,7 @@ func (store *MemSQL) GetPropertyValuesByEventProperty(projectID int64, eventName
 			values = append(values, value)
 		}
 
-		valuesAggregated = U.AggregatePropertyValuesAcrossDate(values)
+		valuesAggregated = U.AggregatePropertyValuesAcrossDate(values, false, 0)
 	}
 
 	valueStrings := make([]string, 0)

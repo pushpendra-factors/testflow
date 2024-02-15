@@ -150,6 +150,7 @@ export const formatReqPayload = (payload) => {
       gup: query.gup || [],
       table_props: query.table_props || []
     };
+    req.segment_id = payload.segment.id;
   }
 
   if (payload?.search_filter?.length) {

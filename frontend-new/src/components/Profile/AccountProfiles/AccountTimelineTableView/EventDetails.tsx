@@ -118,12 +118,14 @@ function EventDetails({ event, eventPropsType, onUpdate }: EventDetailsProps) {
                     </div>
                   </div>
 
-                  <Button
-                    type='text'
-                    className='del-button'
-                    onClick={() => handleDelete(index)}
-                    icon={<SVG name='delete' />}
-                  />
+                  {sortableItems.length > 1 && (
+                    <Button
+                      type='text'
+                      className='del-button'
+                      onClick={() => handleDelete(index)}
+                      icon={<SVG name='delete' />}
+                    />
+                  )}
                 </div>
               );
             })}

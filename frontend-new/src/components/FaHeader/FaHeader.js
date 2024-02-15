@@ -357,7 +357,7 @@ function FaHeader() {
         </div>
       </div>
       <div className='flex w-1/2 items-center justify-center col-gap-6 text-white'>
-        {!isChecklistEnabled ? (
+        {isChecklistEnabled != undefined && !isChecklistEnabled ? (
           <div className='w-1/8 flex justify-end'>
             <Button
               icon={<SVG name='Stars' size={20} extraClass='-mt-1' />}

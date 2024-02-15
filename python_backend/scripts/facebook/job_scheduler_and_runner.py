@@ -24,10 +24,6 @@ class JobSchedulerAndRunner:
     
     @classmethod
     def sync(cls, facebook_int_setting: dict, sync_info_with_type: dict):
-        # timeout this function after 20 mins
-        signal.signal(signal.SIGALRM, cls.handle)
-        signal.alarm(1200)
-        #
         facebook_config = scripts.facebook.CONFIG.FACEBOOK_APP
         ordered_last_sync_infos = JobSchedulerAndRunner.get_ordered_last_sync_infos(
             facebook_int_setting.get(PROJECT_ID),
@@ -37,6 +33,10 @@ class JobSchedulerAndRunner:
         for task_name in WORKFLOW_TO_TASKS[facebook_config.type_of_run]:
             for last_sync_info in ordered_last_sync_infos:
                 try:
+                    # timeout this function after 20 mins
+                    signal.signal(signal.SIGALRM, cls.handle)
+                    signal.alarm(1200)
+                    #
                     task_context_setter = TaskContextSetter(last_sync_info, facebook_int_setting,
                                                             facebook_config.env, facebook_config.dry,
                                                             facebook_config.type_of_run, task_name,

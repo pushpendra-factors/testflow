@@ -302,6 +302,11 @@ func (store *MemSQL) UpdateProjectPlanMapping(projectID int64, planMapping *mode
 
 	}
 
+	if planMapping.PlanID != model.PLAN_ID_CUSTOM {
+		planMapping.OverWrite = nil
+		updateFields["over_write"] = planMapping.OverWrite
+	}
+
 	ppMapping, err := store.GetProjectPlanMappingforProject(projectID)
 	if err != nil {
 		log.WithError(err).Error(
@@ -407,7 +412,7 @@ func (store *MemSQL) CreateAddonsForCustomPlanForProject(projectID int64) error 
 	logCtx := log.WithFields(logFields)
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	// enable free plan features
-	freePlanDetails, errCode, errMsg, err := store.GetPlanDetailsFromPlanId(model.PLAN_ID_FREE)
+	freePlanDetails, errCode, errMsg, err := store.GetPlanDetailsFromPlanId(model.PLAN_ID_BASIC)
 	if err != nil || errCode != http.StatusFound {
 		logCtx.WithError(err).Error(errMsg)
 		return err

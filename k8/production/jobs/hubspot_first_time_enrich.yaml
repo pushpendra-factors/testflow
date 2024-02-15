@@ -1,0 +1,144 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  labels:
+    nodePool: shared-persistent-pool
+  name: hubspot-enrich-job
+spec:
+  schedule: "0 21 * * *" # In UTC
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+            nodePool: shared-persistent-pool
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: shared-persistent-pool
+          containers:
+          - name: hubspot-enrich-heavy-job
+            image: us.gcr.io/factors-production/hubspot-enrich-job:v0.1
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --memsql_host
+            - $(MEMSQL_PSC_DML_HOST)
+            - --memsql_is_psc_host
+            - "1"
+            - --memsql_port
+            - $(MEMSQL_PORT)
+            - --memsql_name
+            - $(MEMSQL_DB)
+            - --memsql_user
+            - $(MEMSQL_OLTP_USER)
+            - --memsql_pass
+            - $(MEMSQL_PASSWORD)
+            - --memsql_cert
+            - $(MEMSQL_CERTIFICATE)
+            - --redis_host
+            - $(REDIS_HOST)
+            - --redis_port
+            - $(REDIS_PORT)
+            - --sentry_dsn
+            - $(SENTRY_DSN)
+            - --redis_host_ps
+            - $(PERSISTENT_REDIS_HOST)
+            - --redis_port_ps
+            - $(PERSISTENT_REDIS_PORT)
+            - --gcp_project_id
+            - $(GCP_PROJECT_ID)
+            - --gcp_project_location
+            - $(GCP_PROJECT_LOCATION)
+            - --enable_property_type_from_db
+            - --property_details_cache_size
+            - "8000"
+            - --num_project_routines
+            - "1"
+            - --whitelisted_project_ids_property_type_check_from_db
+            - '*'
+            - --cache_with_sorted_set
+            - --num_unique_doc_routines
+            - "25"
+            - --task_management_lookback
+            - "3"
+            - --app_name
+            - "hubspot_enrich_heavy"
+            - --enrich_heavy
+            - --enable_hubspot_groups_by_project_id
+            - "*"
+            - --use_source_property_overwrite_by_project_id
+            - "*"
+            - --capture_source_in_users_table
+            - "*"
+            - --enable_hubspot_form_events_by_project_id
+            - "*"
+            - --restrict_reusing_users_by_customer_user_id
+            - "*"
+            - --skipped_otp_project_ids
+            - "559"
+            - --hubspot_app_id
+            - $(HUBSPOT_APP_ID)
+            - --hubspot_app_secret
+            - $(HUBSPOT_APP_SECRET)
+            - --disable_non_marketing_contact_by_project_id
+            - $(HUBSPOT_MARKETING_CONTACT_PROJECTS)
+            - --allow_identification_overwrite_using_source_by_project_id
+            - '*'
+            - --allow_hubspot_past_events_enrichment_by_project_id
+            - 2,1125899918000024,559,399
+            - --ingestion_timezone_enabled_projects
+            - '*'
+            - --enable_sync_reference_fields_by_project_id
+            - '*'
+            - --enable_domains_group_by_project_id
+            - '*'
+            - --enable_user_domains_group_by_project_id
+            - '*'
+            - --use_hubspot_companies_v3_by_project_id
+            - '*'
+            - --use_hubspot_engagements_v3_by_project_id
+            - '*'
+            - --allow_email_domain_by_project_id
+            - '*'
+            - --use_hubspot_deals_v3_by_project_id
+            - '*'
+            - --remove_disabled_event_user_properties
+            - '*'
+            - --factors_sixsignal_api_key
+            - $(FACTORS_SIXSIGNAL_API_KEY)
+            - --use_hash_id_for_crm_group_user_by_project_id
+            - '*'
+            - --move_hubspot_company_association_flow_to_contact_by_project_id
+            - '*'
+            - --enrich_pull_limit
+            - "20000"
+            - --user_property_update_opt_projects
+            - "0"
+            - --record_process_limit
+            - "100000"
+            - --associate_deal_to_domain_by_project_id
+            - '*'
+            - --add_crm_object_url_by_project_id
+            - '*'
+            - --first_time_enrich
+            envFrom:
+            - configMapRef:
+                name: config-env
+            - configMapRef:
+                name: config-memsql
+            - secretRef:
+                name: secret-memsql
+            - secretRef:
+                name: secret-sentry
+            - configMapRef:
+                name: config-redis
+            - configMapRef:
+                name: config-persistent-redis
+            - secretRef:
+                name: secret-hubspot
+          restartPolicy: OnFailure

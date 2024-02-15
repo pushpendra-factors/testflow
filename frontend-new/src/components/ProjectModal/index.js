@@ -242,15 +242,32 @@ function ProjectModal(props) {
       {variant === 'app' && (
         <>
           <div className={` ${styles.popover_content__additionalActions}`}>
-            <a href='https://help.factors.ai' target='_blank' rel='noreferrer'>
+            <a
+              href='https://help.factors.ai'
+              onClick={() => setShowPopOver(false)}
+              target='_blank'
+              rel='noreferrer'
+            >
               Help guides
             </a>
           </div>
           <div className={styles.popover_content__additionalActions}>
-            <a onClick={() => history.push(PathUrls.Checklist)}>Setup Assist</a>
+            <a
+              onClick={() => {
+                history.push(PathUrls.Checklist);
+                setShowPopOver(false);
+              }}
+            >
+              Setup Assist
+            </a>
           </div>
           <div className={styles.popover_content__additionalActions}>
-            <a onClick={() => window.open(meetLink(isFreePlan), '_blank')}>
+            <a
+              onClick={() => {
+                window.open(meetLink(isFreePlan), '_blank');
+                setShowPopOver(false);
+              }}
+            >
               Schedule a call
             </a>
           </div>

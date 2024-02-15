@@ -101,11 +101,19 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 	domainAccounts := make([]string, 0)
 
 	for i := 0; i < 5; i++ {
+		var props postgres.Jsonb
+		if i == 1 || i == 2 {
+			props = postgres.Jsonb{RawMessage: json.RawMessage(fmt.Sprintf(`{"$domain_name":"%s",
+			"$engagement_level":"Hot","$engagement_score":125.300000,"$joinTime":1681211371,
+			"$total_enagagement_score":196.000000}`, accountPropertiesMap[i]["$salesforce_account_website"]))}
+		} else {
+			props = domProperties
+		}
 		domID, _ := store.GetStore().CreateUser(&model.User{
 			ProjectId:   project.ID,
 			Source:      source,
 			Group4ID:    fmt.Sprintf("domain%did.com", i),
-			Properties:  domProperties,
+			Properties:  props,
 			IsGroupUser: &groupUser,
 		})
 		_, errCode := store.GetStore().GetUser(project.ID, domID)
@@ -378,6 +386,24 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 			To:              time.Now().Unix(),
 			Timezone:        "Asia/Kolkata",
 			GlobalUserProperties: []model.QueryProperty{
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$domain_name",
+					Operator:  "equals",
+					Value:     "madstreetden.com",
+					LogicalOp: "AND",
+					GroupName: "$domains",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$domain_name",
+					Operator:  "equals",
+					Value:     "heyflow.app",
+					LogicalOp: "OR",
+					GroupName: "$domains",
+				},
 				{
 					Entity:    "user_g",
 					Type:      "categorical",
@@ -867,6 +893,38 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 	w = createSegmentPostReq(r, *segment10, project.ID, agent)
 	assert.Equal(t, http.StatusCreated, w.Code)
 
+	// 11. Domain level filters
+	segment11 := &model.SegmentPayload{
+		Name: "Domain Level Support",
+		Query: model.Query{
+			GlobalUserProperties: []model.QueryProperty{
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$domain_name",
+					Operator:  "equals",
+					Value:     "madstreetden.com",
+					LogicalOp: "AND",
+					GroupName: "$domains",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$domain_name",
+					Operator:  "equals",
+					Value:     "heyflow.app",
+					LogicalOp: "OR",
+					GroupName: "$domains",
+				},
+			},
+			Source: "$domains",
+		},
+		Type: "$domains",
+	}
+
+	w = createSegmentPostReq(r, *segment11, project.ID, agent)
+	assert.Equal(t, http.StatusCreated, w.Code)
+
 	// To check whether segemnent created
 	getSegementFinal, status := store.GetStore().GetAllSegments(project.ID)
 	assert.Equal(t, http.StatusFound, status)
@@ -905,6 +963,7 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 	// segment8 -> hubspot@5user
 	// segment9 -> domain0id.com, domain2id.com
 	// segment10 -> domain0id.com, domain2id.com, domain4id.com
+	// segment11 -> domain1id.com, domain2id.com
 
 	for index, checkUser := range updatedUsers {
 		if checkUser.Group4ID == "domain0id.com" {
@@ -919,11 +978,13 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["All accounts segment"])
 			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["All Group Performed Event"])
 			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["Hubspot Group Performed Event"])
+			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["Domain Level Support"])
 		} else if checkUser.Group4ID == "domain2id.com" {
 			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["User Group props"])
 			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["All accounts segment"])
 			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["All accounts segment With inList Support"])
 			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["All accounts segment With notInList Support"])
+			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["Domain Level Support"])
 		} else if checkUser.Group4ID == "domain4id.com" {
 			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["All accounts segment With notInList Support"])
 		} else if checkUser.Group2ID == "hbgroupuser3@heyflow.app" || checkUser.Group2ID == "hbgroupuser4@clientjoy.io" || checkUser.Group2ID == "hbgroupuser5@adapt.io" {

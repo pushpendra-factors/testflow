@@ -18,7 +18,7 @@ function SearchBar({ placeholder }) {
       size='large'
       placeholder={placeholder}
       prefix={<SVG name='search' size={16} color='#BFBFBF' />}
-      className={`fa-global-search--input`}
+      className={'fa-global-search--input'}
       onFocus={handleFocus}
     />
   );

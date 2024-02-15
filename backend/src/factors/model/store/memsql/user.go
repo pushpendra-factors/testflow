@@ -442,7 +442,7 @@ func (store *MemSQL) GetUsers(projectId int64, offset uint64, limit uint64) ([]m
 }
 
 // get all users assocuated to given domains
-func (store *MemSQL) GetUsersAssociatedToDomainList(projectID int64, domainGroupID int, domID string) ([]model.User, int) {
+func (store *MemSQL) GetUsersAssociatedToDomainList(projectID int64, domainGroupID int, domID string, userStmnt string) ([]model.User, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"dom_id":     domID,
@@ -453,24 +453,24 @@ func (store *MemSQL) GetUsersAssociatedToDomainList(projectID int64, domainGroup
 
 	query := fmt.Sprintf(`SELECT 
 	id, 
-	group_%d_user_id, 
 	properties, 
 	is_group_user, 
 	source, 
-	updated_at, 
 	last_event_at
   FROM 
 	users 
   WHERE 
 	project_id = ? 
 	AND source != ? 
-	AND last_event_at is not null 
 	AND group_%d_user_id = ?
-	LIMIT 100;`, domainGroupID, domainGroupID)
+	%s;`, domainGroupID, userStmnt)
 
 	db := C.GetServices().Db
 	err := db.Raw(query, projectID, model.UserSourceDomains, domID).Scan(&users).Error
 	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return []model.User{}, http.StatusNotFound
+		}
 		return []model.User{}, http.StatusInternalServerError
 	}
 	if len(users) == 0 {
@@ -482,6 +482,30 @@ func (store *MemSQL) GetUsersAssociatedToDomainList(projectID int64, domainGroup
 	}
 
 	return users, http.StatusFound
+}
+
+// get domain details
+func (store *MemSQL) GetDomainDetailsByID(projectID int64, id string) (model.User, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"dom_id":     id,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	var user model.User
+
+	query := `SELECT id, properties, is_group_user, source, last_event_at FROM users WHERE project_id = ? AND id = ? AND source = ? LIMIT 1;`
+
+	db := C.GetServices().Db
+	err := db.Raw(query, projectID, id, model.UserSourceDomains).Scan(&user).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return model.User{}, http.StatusNotFound
+		}
+		return model.User{}, http.StatusInternalServerError
+	}
+
+	return user, http.StatusFound
 }
 
 // get all domains to run marker for
@@ -529,7 +553,6 @@ func (store *MemSQL) GetAllDomainsByProjectID(projectID int64, domainGroupID int
 	}
 
 	if len(domainIDs) == 0 {
-		log.WithFields(logFields).Error("No domains founds")
 		return []string{}, http.StatusNotFound
 	}
 
@@ -1597,7 +1620,7 @@ func (store *MemSQL) GetPropertyValuesByUserProperty(projectID int64,
 	}
 
 	valueStrings := make([]string, 0)
-	valuesAggregated := U.AggregatePropertyValuesAcrossDate(values)
+	valuesAggregated := U.AggregatePropertyValuesAcrossDate(values, false, 0)
 	valuesSorted := U.SortByTimestampAndCount(valuesAggregated)
 
 	for _, v := range valuesSorted {

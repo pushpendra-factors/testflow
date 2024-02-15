@@ -391,6 +391,7 @@ const (
 	HealthcheckDashboardDBAttributionPingID           = "5dfce175-273d-4096-ad70-578270621e8c"
 	HealthcheckDashboardDBAttributionHourlyPingID     = "8f4dd14f-642f-4eed-b4aa-2f971c3bbbc0"
 	HealthcheckHubspotEnrichPingID                    = "6f522e60-6bf8-4aea-99fe-f5a1c68a00e7"
+	HealthcheckHubspotFirstTimeEnrichPingID           = "6636c652-cd5c-47ab-b996-0d2fb5aed0c6"
 	HealthcheckOTPHubspotPingID                       = "c937adf4-a54d-4ee8-8ec9-3e5ed8a83e42"
 	HealthcheckOTPSalesforcePingID                    = "4ffe2119-64bc-41d4-bc5a-64bea0f121b7"
 	HealthcheckMonitoringJobPingID                    = "18db44be-c193-4f11-84e5-5ff144e272e9"

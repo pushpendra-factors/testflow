@@ -1084,6 +1084,10 @@ func GetNegativeFilterNegated(negativeFilters []QueryProperty) []QueryProperty {
 			filter.Operator = NotContainsOpStr
 		} else if filter.Operator == EqualsOpStr {
 			filter.Operator = NotEqualOpStr
+		} else if filter.Operator == NotInList {
+			filter.Operator = InList
+		} else if filter.Operator == InList {
+			filter.Operator = NotInList
 		}
 
 		filter.LogicalOp = "OR"

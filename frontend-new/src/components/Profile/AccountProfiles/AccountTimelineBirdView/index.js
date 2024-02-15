@@ -19,6 +19,7 @@ import {
   toggleCellCollapse
 } from '../../utils';
 import InfoCard from '../../MyComponents/InfoCard';
+import logger from 'Utils/logger';
 
 function AccountTimelineBirdView({
   timelineEvents = [],
@@ -45,6 +46,11 @@ function AccountTimelineBirdView({
     document.title = 'Accounts - FactorsAI';
     setFormattedData(data);
   }, [timelineEvents, granularity]);
+
+  // temp
+  useEffect(() => {
+    logger.log(formattedData);
+  }, [formattedData]);
 
   useEffect(() => {
     const data = Object.keys(formattedData).reduce((acc, key) => {

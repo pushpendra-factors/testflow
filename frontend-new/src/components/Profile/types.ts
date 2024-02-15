@@ -110,4 +110,5 @@ export type TimelineConfig = {
     milestones: string[];
     user_prop: string;
   };
+  events_config: object;
 };

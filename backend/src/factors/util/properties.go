@@ -1639,6 +1639,7 @@ var ALL_ACCOUNTS_PROPERTIES = []string{
 	GROUP_EVENT_NAME_ENGAGEMENT_LEVEL,
 	GROUP_EVENT_NAME_ENGAGEMENT_SCORE,
 	GROUP_EVENT_NAME_TOTAL_ENGAGEMENT_SCORE,
+	DP_DOMAIN_NAME,
 }
 
 var GROUP_TO_DEFAULT_SEGMENT_MAP = map[string]string{
@@ -4357,10 +4358,7 @@ type CachePropertyValueWithTimestamp struct {
 }
 
 type CacheEventPropertyValuesAggregate struct {
-	NameCountTimestampCategoryList []NameCountTimestampCategory `json: nl`
-
-	// EarliestCount - Used subratracting count to maintain rolling aggregate.
-	EarliestCount CachePropertyValueWithTimestamp `json:"ec"`
+	NameCountTimestampCategoryList []NameCountTimestampCategory `json:"nl"`
 }
 
 type NameCountTimestampCategory struct {
@@ -4432,7 +4430,7 @@ func SortByTimestampAndCount(data []NameCountTimestampCategory) []NameCountTimes
 
 // AggregatePropertyValuesAcrossDate values are stored by date and this method aggregates the count and last seen value and returns
 // no filtering is done
-func AggregatePropertyValuesAcrossDate(values []CachePropertyValueWithTimestamp) []NameCountTimestampCategory {
+func AggregatePropertyValuesAcrossDate(values []CachePropertyValueWithTimestamp, isRemovedEnabled bool, minTimestamp int64) []NameCountTimestampCategory {
 	valuesAggregated := make(map[string]CountTimestampTuple)
 	// Sort Event Properties by timestamp, count and return top n
 	for _, valueList := range values {
@@ -4447,9 +4445,20 @@ func AggregatePropertyValuesAcrossDate(values []CachePropertyValueWithTimestamp)
 	}
 	propertyValueAggregatedSlice := make([]NameCountTimestampCategory, 0)
 	for k, v := range valuesAggregated {
+		// Used for rollup aggregated caching.
+		if isRemovedEnabled && minTimestamp > 0 {
+			// Add only count which is greater than 0 and last appeared within the min_timestamp (rollup lookback period).
+			if v.Count > 0 && v.LastSeenTimestamp > minTimestamp {
+				propertyValueAggregatedSlice = append(propertyValueAggregatedSlice, NameCountTimestampCategory{
+					Name: k, Count: v.Count, Timestamp: v.LastSeenTimestamp, Category: "", GroupName: ""})
+			}
+			continue
+		}
+
 		propertyValueAggregatedSlice = append(propertyValueAggregatedSlice, NameCountTimestampCategory{
 			Name: k, Count: v.Count, Timestamp: v.LastSeenTimestamp, Category: "", GroupName: ""})
 	}
+
 	return propertyValueAggregatedSlice
 }
 

@@ -16,7 +16,7 @@ export interface FeatureConfig {
   limit: number;
   is_connected?: boolean;
   is_enabled_feature: boolean;
-  name: typeof FEATURES[keyof typeof FEATURES];
+  name: (typeof FEATURES)[keyof typeof FEATURES];
 }
 
 export enum FeatureConfigActionType {
@@ -76,7 +76,7 @@ interface ResponseData {
   display_name?: string;
 }
 
-interface SixSignalInfo {
+export interface SixSignalInfo {
   is_enabled: boolean;
   usage: number;
   limit: number;

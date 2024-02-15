@@ -75,6 +75,10 @@ func main() {
 
 		project, status := store.GetStore().GetProject(projectID)
 
+		if project.ID == 33000003 {
+			log.Info("$$$$ billing status ", project.EnableBilling)
+		}
+
 		if project.EnableBilling {
 			log.Info("Billing already enabled for project ", project)
 			continue
@@ -95,7 +99,10 @@ func main() {
 			if pam.AgentUUID == *solutionsAgentUUID {
 				continue
 			}
-
+			if project.ID == 33000003 {
+				log.Info("$$$$ agent uuid ", pam.AgentUUID)
+			}
+	
 			agent, status := store.GetStore().GetAgentByUUID(pam.AgentUUID)
 
 			if status != http.StatusFound {
@@ -132,6 +139,10 @@ func main() {
 			} else {
 				log.Info("Customer already exists for agent ", agent.Email)
 			}
+			if project.ID == 33000003 {
+				log.Info("$$$$ creating subscription  ",project.ID, pam.AgentUUID)
+			}
+	
 			if *dryRun {
 				log.Info("dry run enabled")
 				log.Info("skipping project subscription creation - ", projectID, " - ", agent.UUID, " - ", agent.Email)

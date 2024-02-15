@@ -1,5 +1,13 @@
 import { Text } from 'Components/factorsComponents';
-import { Button, InputNumber, Modal, Skeleton, Tooltip, message } from 'antd';
+import {
+  Button,
+  InputNumber,
+  Modal,
+  Skeleton,
+  Tooltip,
+  message,
+  notification
+} from 'antd';
 import React, { useEffect, useState } from 'react';
 import { InfoCircleFilled } from '@ant-design/icons';
 import { EngagementTag } from 'Components/Profile/constants.ts';
@@ -8,12 +16,15 @@ import {
   updateEngagementCategoryRanges
 } from 'Reducers/timelines';
 import { useSelector } from 'react-redux';
-import styles from './index.module.scss';
 import _ from 'lodash';
+import styles from './index.module.scss';
 
 function EngagementPill({ type }) {
   return (
-    <div className={`${styles['category-pill']} flex items-center`}>
+    <div
+      className={`${styles['category-pill']} flex items-center`}
+      style={{ backgroundColor: EngagementTag[type]?.bgColor }}
+    >
       <img
         src={`../../../assets/icons/${EngagementTag[type]?.icon}.svg`}
         alt=''
@@ -75,14 +86,13 @@ function EngagementCategoryModal({
     });
   };
   const handleResetButton = () => {
-    let tmp = [
+    const tmp = [
       [90, 100],
       [70, 90],
       [30, 70],
       [0, 30]
     ];
     setCategoryRange(tmp);
-    setSavedRanges(tmp);
   };
   const fetchCategories = () => {
     setStatus((prev) => ({ ...prev, isFormLoading: true }));
@@ -139,7 +149,11 @@ function EngagementCategoryModal({
     setStatus((prev) => ({ ...prev, isFormSubmitting: true }));
     updateEngagementCategoryRanges(activeProject.id, payload)
       .then(() => {
-        message.success('Updated Category Ranges');
+        notification.success({
+          message: 'Engagement category re-assignment has begun.',
+          description:
+            'All accounts will get updated with new categories within 1 day.'
+        });
       })
       .catch((err) => {
         console.error(err);

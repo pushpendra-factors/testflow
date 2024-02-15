@@ -1,6 +1,20 @@
 import { FEATURES } from 'Constants/plans.constants';
 import { FeatureConfig } from './types';
 
+export const getAllActiveFeatures = (
+  planFeatures?: FeatureConfig[] | null,
+  addons?: FeatureConfig[]
+) => {
+  let activeFeatures: FeatureConfig[] = [];
+  if (Array.isArray(planFeatures)) {
+    activeFeatures = [...planFeatures];
+  }
+  if (Array.isArray(addons)) {
+    activeFeatures = [...activeFeatures, ...addons];
+  }
+  return activeFeatures;
+};
+
 export const getFeatureStatusInfo = (
   featureName: (typeof FEATURES)[keyof typeof FEATURES],
   planFeatures?: FeatureConfig[],
@@ -16,20 +30,6 @@ export const getFeatureStatusInfo = (
     };
   }
   return {
-    isFeatureLocked: feature?.is_enabled_feature ? false : true
+    isFeatureLocked: !feature?.is_enabled_feature
   };
-};
-
-export const getAllActiveFeatures = (
-  planFeatures?: FeatureConfig[],
-  addons?: FeatureConfig[]
-) => {
-  let activeFeatures: FeatureConfig[] = [];
-  if (Array.isArray(planFeatures)) {
-    activeFeatures = [...planFeatures];
-  }
-  if (Array.isArray(addons)) {
-    activeFeatures = [...activeFeatures, ...addons];
-  }
-  return activeFeatures;
 };

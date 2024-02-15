@@ -79,17 +79,19 @@ func (fd *FactorsDeanon) Enrich(projectSettings *model.ProjectSetting,
 	userProperties *U.PropertiesMap, eventProperties *U.PropertiesMap, userId, clientIP string) (string, int) {
 
 	projectId := projectSettings.ProjectId
+	logCtx := log.WithField("project_id", projectId)
 	var factorsDeanonConfig model.FactorsDeanonConfig
 	if projectSettings.FactorsDeanonConfig != nil {
 		err := json.Unmarshal(projectSettings.FactorsDeanonConfig.RawMessage, &factorsDeanonConfig)
 		if err != nil {
-			log.WithField("deanon_enrich_config", projectSettings.FactorsDeanonConfig).WithError(err).Error("Failed to decode deanon enrich config")
+			logCtx.WithField("deanon_enrich_config", projectSettings.FactorsDeanonConfig).WithError(err).Error("Failed to decode deanon enrich config")
 		}
 	} else {
 		factorsDeanonConfig = defaultFactorsDeanonConfig
 	}
 
 	domain, status := FillFactorsDeanonUserProperties(projectId, factorsDeanonConfig, projectSettings, userProperties, eventProperties, userId, clientIP)
+	logCtx.WithFields(log.Fields{"domain": domain, "status": status}).Info("Debugging in Enrich.")
 	return domain, status
 }
 
@@ -97,8 +99,10 @@ func (fd *FactorsDeanon) Enrich(projectSettings *model.ProjectSetting,
 // and successful domain enrichment count and total API calls count for each day.
 func (fd *FactorsDeanon) Meter(projectId int64, domain string) {
 
+	logCtx := log.WithField("project_id", projectId)
 	timeZone, statusCode := store.GetStore().GetTimezoneForProject(projectId)
 	if statusCode != http.StatusFound {
+		logCtx.Warn("Failed fetching timezone. Using IST.")
 		timeZone = U.TimeZoneStringIST
 	}
 
@@ -221,7 +225,9 @@ func FillFactorsDeanonUserProperties(projectId int64, factorsDeanonConfig model.
 		factors6SignalKey := C.GetFactorsSixSignalAPIKey()
 		domain, status = sixsignal.FillSixSignalUserProperties(projectId, factors6SignalKey, userProperties, userId, clientIP)
 		(*userProperties)[U.ENRICHMENT_SOURCE] = FACTORS_6SIGNAL
+		logCtx.WithFields(log.Fields{"domain": domain, "status": status}).Info("Debugging in FillFactorsDeanonUserProperties")
 		if status == 1 {
+			logCtx.Info("Adding enriched event property.")
 			(*eventProperties)[U.EP_COMPANY_ENRICHED] = FACTORS_6SIGNAL
 		}
 

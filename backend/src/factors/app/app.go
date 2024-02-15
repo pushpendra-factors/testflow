@@ -108,7 +108,7 @@ func main() {
 
 	skipTrackProjectIds := flag.String("skip_track_project_ids", "", "List or projects to skip track")
 	lookbackWindowForEventUserCache := flag.Int("lookback_window_event_user_cache",
-		30, "look back window in cache for event/user cache")
+		20, "look back window in cache for event/user cache")
 	facebookAppId := flag.String("facebook_app_id", "", "")
 	facebookAppSecret := flag.String("facebook_app_secret", "", "")
 	linkedinClientID := flag.String("linkedin_client_id", "", "")

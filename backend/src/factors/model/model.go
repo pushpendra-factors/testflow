@@ -438,6 +438,8 @@ type Model interface {
 	GetHubspotDocumentsByTypeAndAction(projectID int64, docType int, action int, fromMs,
 		toMs int64) ([]model.HubspotDocument, int)
 	GetHubspotOwnerEmailFromOwnerId(projectID int64, ownerID string) (string, int, error)
+	GetHubspotDocumentsSyncedCount(projectIDs []int64) ([]model.HubspotDocumentCount, int)
+	GetHubspotHubspotDocumentMinCreatedAt(projectID int64) (int64, int)
 
 	// plan
 	GetPlanByID(planID uint64) (*model.Plan, int)
@@ -678,7 +680,8 @@ type Model interface {
 	GetCustomerUserIdFromUserId(projectID int64, id string) (string, int)
 	AssociateUserDomainsGroup(projectID int64, requestUserID string, requestGroupName, requestGroupUserID string) int
 	GetAssociatedDomainForUser(projectID int64, userID string, isAnonymous bool) (string, error)
-	GetUsersAssociatedToDomainList(projectID int64, domainGroupID int, domainID string) ([]model.User, int)
+	GetUsersAssociatedToDomainList(projectID int64, domainGroupID int, domainID string, userStmnt string) ([]model.User, int)
+	GetDomainDetailsByID(projectID int64, id string) (model.User, int)
 	GetAllDomainsByProjectID(projectID int64, domainID int, limitVal int) ([]string, int)
 	GetLatestUpatedDomainsByProjectID(projectID int64, domainGroupID int, fromTime time.Time, limitVal int) ([]string, int)
 	UpdateAssociatedSegments(projectID int64, id string, associatedSegments map[string]model.AssociatedSegments) (int, error)
@@ -907,7 +910,7 @@ type Model interface {
 	GetCRMSetting(projectID int64) (*model.CRMSetting, int)
 	GetAllCRMSetting() ([]model.CRMSetting, int)
 	UpdateCRMSetting(projectID int64, option model.CRMSettingOption) int
-	CreateOrUpdateCRMSettingHubspotEnrich(projectID int64, isHeavy bool, maxCreatedAtSec *int64) int
+	CreateOrUpdateCRMSettingHubspotEnrich(projectID int64, isHeavy bool, maxCreatedAtSec *int64, isFirstTimeEnrich bool) int
 
 	// data availability checks
 	GetLatestDataStatus(integrations []string, project_id int64, hardRefresh bool) (map[string]model.DataAvailabilityStatus, error)

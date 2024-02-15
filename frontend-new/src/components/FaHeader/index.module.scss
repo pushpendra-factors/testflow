@@ -28,8 +28,8 @@
   background-color: #161616;
 
   &.active-header-item-circle {
-    width: 2rem;
-    height: 2rem;
+    min-width: 2rem;
+    min-height: 2rem;
     border-radius: 1rem;
     display: flex;
     align-items: center;
@@ -72,8 +72,8 @@
 }
 .header-item-circle {
   border-radius: 100px;
-  width: 2rem;
-  height: 2rem;
+  min-width: 2rem;
+  min-height: 2rem;
   border-radius: 1rem;
   display: flex;
   align-items: center;
