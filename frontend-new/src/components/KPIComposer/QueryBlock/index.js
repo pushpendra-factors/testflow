@@ -541,19 +541,19 @@ function QueryBlock({
         className={`${!event?.alias?.length ? 'flex justify-start' : ''} ${
           styles.query_block__event
         } block_section items-center`}
+        style={{ marginLeft: '-20px' }}
       >
         <div className={'flex items-center'}>
-          <Tooltip title='Drag to move'>
-            <div
-              className={cx(
-                styles.query_block__additional_actions,
-                'mr-2',
-                styles['drag-icon']
-              )}
-            >
-              <SVG name='drag' />
-            </div>
-          </Tooltip>
+          <div
+            className={cx(
+              styles.query_block__additional_actions,
+              'mr-2',
+              styles['drag-icon']
+            )}
+          >
+            <SVG name='drag' />
+          </div>
+
           <div
             className={
               'fa--query_block--add-event active flex justify-center items-center mr-2'

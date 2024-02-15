@@ -60,7 +60,8 @@ function FaFilterSelect({
   uploadList,
   showInList = false,
   minEntriesPerGroup,
-  maxAllowedSelection
+  maxAllowedSelection,
+  extraProps = {}
 }) {
   const [propState, setPropState] = useState({
     groupName: '',
@@ -305,7 +306,8 @@ function FaFilterSelect({
     const mergedPropNames = {
       ...groupPropNames,
       ...userPropNames,
-      ...eventPropNames
+      ...eventPropNames,
+      ...extraProps?.displayNames
     };
     let propertyName = propState?.name;
     propertyName = mergedPropNames[propState?.name]

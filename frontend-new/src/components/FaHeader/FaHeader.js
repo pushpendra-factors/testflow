@@ -1,26 +1,24 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import cx from 'classnames';
 import { Layout, Dropdown, Menu, Button } from 'antd';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useHistory, useLocation } from 'react-router-dom';
 import SearchBar from 'Components/SearchBar';
 import { SVG, Text } from 'Components/factorsComponents';
 import ProjectModal from 'Components/ProjectModal';
 import {
   isAccountsUrl,
+  isAlertsUrl,
   isAttributionsUrl,
   isConfigurationUrl,
-  isJourneyUrl,
+  isReportsMainUrl,
   isReportsUrl,
   isSettingsUrl
 } from 'Views/AppSidebar/appSidebar.helpers';
 import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import { useSelector } from 'react-redux';
 import { SolutionsAccountId } from 'Routes/constants';
-import useFeatureLock from 'hooks/useFeatureLock';
-import { FEATURES } from 'Constants/plans.constants';
 import { PathUrls } from '../../routes/pathUrls';
 import styles from './index.module.scss';
-import { featureLock } from '../../routes/feature';
 
 export const getConfigureMenuItems = (email) => {
   const configureMenuItems = [
@@ -43,14 +41,6 @@ export const getConfigureMenuItems = (email) => {
     {
       label: 'Custom KPIs',
       url: PathUrls.ConfigureCustomKpi
-    },
-    {
-      label: 'Top Events and Properties',
-      url: PathUrls.ConfigureDataPoints
-    },
-    {
-      label: 'Alerts',
-      url: PathUrls.ConfigureAlerts
     },
     {
       label: 'Engagements',
@@ -137,11 +127,19 @@ const accountsMenu = (
   </Menu>
 );
 
-const journeyMenu = (
+const reportsMainMenu = (
   <Menu className={styles['dropdown-menu']}>
     <Menu.Item className={styles['dropdown-menu-item']}>
+      <Link className='items-center col-gap-2' to={PathUrls.Dashboard}>
+        <SVG name='dashboard_Filled' color='#40A9FF' />
+        <Text color='black' level={7} type='title' extraClass='mb-0'>
+          Dashboards
+        </Text>
+      </Link>
+    </Menu.Item>
+    <Menu.Item className={styles['dropdown-menu-item']}>
       <Link className='items-center col-gap-2' to={PathUrls.PathAnalysis}>
-        <SVG name='pathAnalysis_Filled' color='#73D13D' />
+        <SVG name='pathAnalysis_Filled' color='#5CDBD3' />
         <Text color='black' level={7} type='title' extraClass='mb-0'>
           Path Analysis
         </Text>
@@ -149,9 +147,17 @@ const journeyMenu = (
     </Menu.Item>
     <Menu.Item className={styles['dropdown-menu-item']}>
       <Link className='items-center col-gap-2' to={PathUrls.Explain}>
-        <SVG name='explain_Filled' color='#FFC53D' />
+        <SVG name='explain_Filled' color='#D3ADF7' />
         <Text color='black' level={7} type='title' extraClass='mb-0'>
           Explain
+        </Text>
+      </Link>
+    </Menu.Item>
+    <Menu.Item className={styles['dropdown-menu-item']}>
+      <Link className='items-center col-gap-2' to={ATTRIBUTION_ROUTES.base}>
+        <SVG name='attribution_Filled' color='#FFADD2' />
+        <Text color='black' level={7} type='title' extraClass='mb-0'>
+          Attribution
         </Text>
       </Link>
     </Menu.Item>
@@ -208,13 +214,18 @@ function FaHeader() {
   const { Header } = Layout;
   const location = useLocation();
   const { pathname } = location;
+  const history = useHistory();
 
   const agentState = useSelector((state) => state.agent);
   const activeAgent = agentState?.agent_details?.email;
+  const activeAgentUUID = agentState?.agent_details?.uuid;
 
-  const { isFeatureLocked: isWebAnalyticsLocked } = useFeatureLock(
-    FEATURES.FEATURE_WEB_ANALYTICS_DASHBOARD
-  );
+  const isChecklistEnabled = useMemo(() => {
+    const agent = agentState.agents.filter(
+      (data) => data.uuid === activeAgentUUID
+    );
+    return agent[0]?.checklist_dismissed;
+  }, [agentState, agentState?.agents]);
 
   return (
     <Header
@@ -237,7 +248,8 @@ function FaHeader() {
             >
               <div
                 className={cx(
-                  'flex cursor-pointer items-center col-gap-1 pl-2 pr-1 py-1',
+                  'flex cursor-pointer items-center col-gap-1 pl-2 pr-1 py-1 ' +
+                    styles['header-item'],
                   {
                     [styles['active-header-item']]: isAccountsUrl(pathname)
                   }
@@ -256,11 +268,14 @@ function FaHeader() {
                 <SVG color='#D9D9D9' size={16} name='chevronDown' />
               </div>
             </Dropdown>
-            <Link
+            {/* <Link
               to={PathUrls.Dashboard}
-              className={cx('flex items-center pl-2 pr-1 py-1', {
-                [styles['active-header-item']]: isReportsUrl(pathname)
-              })}
+              className={cx(
+                'flex items-center pl-2 pr-1 py-1 ' + styles['header-item'],
+                {
+                  [styles['active-header-item']]: isReportsUrl(pathname)
+                }
+              )}
               id='fa-at-link--reports'
             >
               <Text
@@ -272,13 +287,14 @@ function FaHeader() {
               >
                 Reports
               </Text>
-            </Link>
-            <Dropdown overlay={journeyMenu}>
+            </Link> */}
+            <Dropdown overlay={reportsMainMenu}>
               <div
                 className={cx(
-                  'flex cursor-pointer items-center col-gap-1 pl-2 pr-1 py-1',
+                  'flex cursor-pointer items-center col-gap-1 pl-2 pr-1 py-1 ' +
+                    styles['header-item'],
                   {
-                    [styles['active-header-item']]: isJourneyUrl(pathname)
+                    [styles['active-header-item']]: isReportsMainUrl(pathname)
                   }
                 )}
                 id='fa-at-link--journeys'
@@ -290,17 +306,20 @@ function FaHeader() {
                   extraClass='mb-0'
                   weight='medium'
                 >
-                  Journeys
+                  Reports
                 </Text>{' '}
                 <SVG color='#D9D9D9' size={16} name='chevronDown' />
               </div>
             </Dropdown>
 
-            <Link
+            {/* <Link
               to={ATTRIBUTION_ROUTES.base}
-              className={cx('flex items-center pl-2 pr-1 py-1', {
-                [styles['active-header-item']]: isAttributionsUrl(pathname)
-              })}
+              className={cx(
+                'flex items-center pl-2 pr-1 py-1 ' + styles['header-item'],
+                {
+                  [styles['active-header-item']]: isAttributionsUrl(pathname)
+                }
+              )}
               id='fa-at-link--attribution'
             >
               <Text
@@ -312,35 +331,64 @@ function FaHeader() {
               >
                 Attribution
               </Text>
+            </Link> */}
+
+            <Link
+              to={PathUrls.Alerts + '?type=realtime'}
+              className={cx(
+                'flex items-center pl-2 pr-1 py-1 ' + styles['header-item'],
+                {
+                  [styles['active-header-item']]: isAlertsUrl(pathname)
+                }
+              )}
+              id='fa-at-link--attribution'
+            >
+              <Text
+                type='title'
+                color='white'
+                level={7}
+                extraClass='mb-0'
+                weight='medium'
+              >
+                Automations
+              </Text>
             </Link>
           </div>
         </div>
       </div>
-      <div className='w-1/3 flex justify-center'>
-        <SearchBar />
-      </div>
-      {/* <div>
-        <Button
-          icon={<SVG name='Stars' />}
-          type='link'
-          href={PathUrls.Checklist}
-          className={`${styles.checklistSetup}`}
-        >
-          Finish the setup
-        </Button>
-      </div> */}
-      <div className='flex w-1/3 items-center justify-end col-gap-6 text-white'>
+      <div className='flex w-1/2 items-center justify-center col-gap-6 text-white'>
+        {isChecklistEnabled != undefined && !isChecklistEnabled ? (
+          <div className='w-1/8 flex justify-end'>
+            <Button
+              icon={<SVG name='Stars' size={20} extraClass='-mt-1' />}
+              type='link'
+              size='middle'
+              onClick={() => history.push(PathUrls.Checklist)}
+              className={`${styles.checklistSetup}`}
+            >
+              Finish setup
+            </Button>
+          </div>
+        ) : (
+          <div className='flex w-1/2 col-gap-6'></div>
+        )}
+        <div className={'w-1/3 flex justify-end'}>
+          <SearchBar placeholder={'Search ⌘+K'} />
+        </div>
         <Dropdown
           overlay={renderConfigureMenu(activeAgent)}
           placement='bottomRight'
           overlayClassName='fa-at-overlay--config'
         >
           <div
-            className={cx('cursor-pointer', {
-              [styles['active-header-item']]: isConfigurationUrl(pathname),
-              [styles['active-header-item-circle']]:
-                isConfigurationUrl(pathname)
-            })}
+            className={cx(
+              `cursor-pointer ${styles['header-item']} ${styles['header-item-circle']}`,
+              {
+                [styles['active-header-item']]: isConfigurationUrl(pathname),
+                [styles['active-header-item-circle']]:
+                  isConfigurationUrl(pathname)
+              }
+            )}
             id='fa-at-dropdown--config'
           >
             <SVG color='#F0F0F0' size={16} name='config' />
@@ -352,10 +400,13 @@ function FaHeader() {
           overlay={SettingsMenu}
         >
           <div
-            className={cx('cursor-pointer', {
-              [styles['active-header-item']]: isSettingsUrl(pathname),
-              [styles['active-header-item-circle']]: isSettingsUrl(pathname)
-            })}
+            className={cx(
+              `cursor-pointer ${styles['header-item']} ${styles['header-item-circle']}`,
+              {
+                [styles['active-header-item']]: isSettingsUrl(pathname),
+                [styles['active-header-item-circle']]: isSettingsUrl(pathname)
+              }
+            )}
             id='fa-at-dropdown--settings'
           >
             <SVG color='#F0F0F0' size={20} name='settings' />

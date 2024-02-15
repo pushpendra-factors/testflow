@@ -16,39 +16,39 @@ function TableRow({
   onEventClick
 }: TableRowProps) {
   const { eventPropNames } = useSelector((state: any) => state.coreQuery);
-  const { projectDomainsList } = useSelector((state: any) => state.global);
+  const { projectDomainsList, currentProjectSettings } = useSelector(
+    (state: any) => state.global
+  );
 
   const timestamp = event?.timestamp
     ? MomentTz(event.timestamp * 1000).format('hh:mm A')
     : '';
 
-  const isEventClickable = Object.keys(event?.properties || {}).length > 0;
+  const isEventClickable =
+    currentProjectSettings?.timelines_config?.events_config?.[event.event_name]
+      ?.length > 0;
+  const propertyName =
+    currentProjectSettings?.timelines_config?.events_config?.[
+      event?.display_name === 'Page View' ? 'PageView' : event?.event_name
+    ]?.[0];
 
-  const renderPropertyName = () => {
-    if (event?.display_name === 'Page View') {
-      return 'Page URL:';
-    }
-    return isEventClickable
-      ? `${
-          eventPropNames[Object.keys(event?.properties || {})[0]] ||
-          PropTextFormat(Object.keys(event?.properties || {})[0])
-        }:`
+  const renderPropertyName = () =>
+    isEventClickable
+      ? `${eventPropNames[propertyName] || PropTextFormat(propertyName)}:`
       : null;
-  };
 
   const renderPropertyValue = () => {
-    const { properties, display_name, event_name } = event || {};
-
     if (!isEventClickable) {
       return null;
     }
 
-    const [propertyName, propertyValue] =
-      Object.entries(properties || {})[0] || [];
-    const value = display_name === 'Page View' ? event_name : propertyValue;
-
+    const propertyValue = event?.properties?.[propertyName];
     const propType = eventPropsType[propertyName];
-    const formattedValue = propValueFormat(propertyName, value, propType);
+    const formattedValue = propValueFormat(
+      propertyName,
+      propertyValue,
+      propType
+    );
 
     return truncateURL(formattedValue, projectDomainsList) || formattedValue;
   };

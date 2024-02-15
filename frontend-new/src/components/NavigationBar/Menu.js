@@ -1,16 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { Menu, Icon, Popover, Button } from 'antd';
-import { SVG } from '../factorsComponents';
+import { Menu, Popover } from 'antd';
 import { useLocation, NavLink } from 'react-router-dom';
-import styles from './index.module.scss';
 import { fetchSmartEvents } from 'Reducers/events';
 import { connect } from 'react-redux';
 import { fetchProjectAgents, fetchAgentInfo } from 'Reducers/agentActions';
 import { fetchProjects } from 'Reducers/global';
-import { getActiveDomain } from '@sentry/hub';
 import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
-import { APP_LAYOUT_ROUTES } from 'Routes/constants';
 import { PathUrls } from 'Routes/pathUrls';
+import styles from './index.module.scss';
+import { SVG } from '../factorsComponents';
 
 const { SubMenu } = Menu;
 
@@ -36,7 +34,6 @@ const MenuItems = {
   Touchpoints: 'Touchpoints',
   Attribution: 'Attributions',
   CustomKPI: 'Custom KPIs',
-  ExplainDP: 'Top Events and Properties',
   TargetGoals: 'Target/Goals',
   People: 'People',
   Accounts: 'Accounts',
@@ -104,21 +101,20 @@ function SiderMenu({
       ];
       return (
         <div className={styles.popover_content}>
-          {items.map((item) => {
-            return (
-              <NavLink
-                activeStyle={{ color: '#1890ff' }}
-                exact
-                to={`/configure/${item.toLowerCase()}`}
-                onClick={() => setShowPopOverConfigure(false)}
-              >
-                {MenuItems[item]}
-              </NavLink>
-            );
-          })}
+          {items.map((item) => (
+            <NavLink
+              activeStyle={{ color: '#1890ff' }}
+              exact
+              to={`/configure/${item.toLowerCase()}`}
+              onClick={() => setShowPopOverConfigure(false)}
+            >
+              {MenuItems[item]}
+            </NavLink>
+          ))}
         </div>
       );
-    } else if (title === 'settings') {
+    }
+    if (title === 'settings') {
       const items = [
         'general',
         'User',
@@ -150,27 +146,26 @@ function SiderMenu({
           })}
         </div>
       );
-    } else if (title === 'profile') {
+    }
+    if (title === 'profile') {
       const items = ['People', 'Accounts', 'visitorIdentification'];
 
       return (
         <div className={styles.popover_content}>
-          {items.map((item) => {
-            return (
-              <NavLink
-                activeStyle={{ color: '#1890ff' }}
-                exact
-                to={
-                  item !== 'visitorIdentification'
-                    ? `/profiles/${item.toLowerCase()}`
-                    : PathUrls.VisitorIdentificationReport
-                }
-                onClick={() => setShowPopOverSettings(false)}
-              >
-                {MenuItems[item]}
-              </NavLink>
-            );
-          })}
+          {items.map((item) => (
+            <NavLink
+              activeStyle={{ color: '#1890ff' }}
+              exact
+              to={
+                item !== 'visitorIdentification'
+                  ? `/profiles/${item.toLowerCase()}`
+                  : PathUrls.VisitorIdentificationReport
+              }
+              onClick={() => setShowPopOverSettings(false)}
+            >
+              {MenuItems[item]}
+            </NavLink>
+          ))}
         </div>
       );
     }
@@ -215,7 +210,7 @@ function SiderMenu({
     }
     if (
       name === 'profile' &&
-      location.pathname === APP_LAYOUT_ROUTES.VisitorIdentificationReport.path
+      location.pathname === PathUrls.VisitorIdentificationReport
     ) {
       color = 'purple';
     }
@@ -257,7 +252,7 @@ function SiderMenu({
           title={false}
           visible={ShowPopOverProfiles}
           content={renderSubmenu('profile')}
-          placement={'rightTop'}
+          placement='rightTop'
           onVisibleChange={(visible) => {
             setShowPopOverProfiles(visible);
           }}
@@ -267,7 +262,7 @@ function SiderMenu({
             className={styles.menuitems}
             key='sub3'
             icon={setIcon('profile')}
-          ></Menu.Item>
+          />
         </Popover>
       ) : (
         <SubMenu key='sub1' icon={setIcon('profile')} title={<b>Profiles</b>}>
@@ -301,26 +296,22 @@ function SiderMenu({
       </Menu.Item>
 
       {currentProjectSettings?.is_path_analysis_enabled && (
-        <>
-          <Menu.Item
-            className={styles.menuitems}
-            key='/path-analysis'
-            icon={setIcon('PathAnalysis')}
-          >
-            <b>Path Analysis</b>
-          </Menu.Item>
-        </>
+        <Menu.Item
+          className={styles.menuitems}
+          key='/path-analysis'
+          icon={setIcon('PathAnalysis')}
+        >
+          <b>Path Analysis</b>
+        </Menu.Item>
       )}
       {whiteListedAccounts.includes(activeAgent) && (
-        <>
-          <Menu.Item
-            className={styles.menuitems}
-            key='/attribution'
-            icon={setIcon('AttributionV1')}
-          >
-            <b>Attribution</b>
-          </Menu.Item>
-        </>
+        <Menu.Item
+          className={styles.menuitems}
+          key='/attribution'
+          icon={setIcon('AttributionV1')}
+        >
+          <b>Attribution</b>
+        </Menu.Item>
       )}
 
       {collapsed ? (
@@ -329,7 +320,7 @@ function SiderMenu({
           title={false}
           visible={ShowPopOverConfigure}
           content={renderSubmenu('configure')}
-          placement={'rightTop'}
+          placement='rightTop'
           onVisibleChange={(visible) => {
             setShowPopOverConfigure(visible);
           }}
@@ -339,7 +330,7 @@ function SiderMenu({
             className={styles.menuitems}
             key='sub2'
             icon={setIcon('configure')}
-          ></Menu.Item>
+          />
         </Popover>
       ) : (
         <SubMenu
@@ -347,40 +338,40 @@ function SiderMenu({
           icon={setIcon('configure')}
           title={<b>Configure</b>}
         >
-          <Menu.Item className={styles.menuitems_sub} key={`/configure/events`}>
+          <Menu.Item className={styles.menuitems_sub} key='/configure/events'>
             {MenuItems.Events}
           </Menu.Item>
           <Menu.Item
             className={styles.menuitems_sub}
-            key={`/configure/properties`}
+            key='/configure/properties'
           >
             {MenuItems.Properties}
           </Menu.Item>
           <Menu.Item
             className={styles.menuitems_sub}
-            key={`/configure/contentgroups`}
+            key='/configure/contentgroups'
           >
             {MenuItems.ContentGroups}
           </Menu.Item>
           <Menu.Item
             className={styles.menuitems_sub}
-            key={`/configure/touchpoints`}
+            key='/configure/touchpoints'
           >
             {MenuItems.Touchpoints}
           </Menu.Item>
           <Menu.Item
             className={styles.menuitems_sub}
-            key={`/configure/customkpi`}
+            key='/configure/customkpi'
           >
             {MenuItems.CustomKPI}
           </Menu.Item>
           <Menu.Item
             className={styles.menuitems_sub}
-            key={`/configure/explaindp`}
+            key='/configure/explaindp'
           >
             {MenuItems.ExplainDP}
           </Menu.Item>
-          <Menu.Item className={styles.menuitems_sub} key={`/configure/alerts`}>
+          <Menu.Item className={styles.menuitems_sub} key='/configure/alerts'>
             {MenuItems.Alerts}
           </Menu.Item>
         </SubMenu>
@@ -391,7 +382,7 @@ function SiderMenu({
           title={false}
           visible={ShowPopOverSettings}
           content={renderSubmenu('settings')}
-          placement={'rightTop'}
+          placement='rightTop'
           onVisibleChange={(visible) => {
             setShowPopOverSettings(visible);
           }}
@@ -401,14 +392,14 @@ function SiderMenu({
             className={styles.menuitems}
             key='sub3'
             icon={setIcon('settings')}
-          ></Menu.Item>
+          />
         </Popover>
       ) : (
         <SubMenu key='sub3' icon={setIcon('settings')} title={<b>Settings</b>}>
-          <Menu.Item className={styles.menuitems_sub} key={`/settings/general`}>
+          <Menu.Item className={styles.menuitems_sub} key='/settings/general'>
             {MenuItems.general}
           </Menu.Item>
-          <Menu.Item className={styles.menuitems_sub} key={`/settings/user`}>
+          <Menu.Item className={styles.menuitems_sub} key='/settings/user'>
             {MenuItems.User}
           </Menu.Item>
           <Menu.Item
@@ -417,16 +408,16 @@ function SiderMenu({
           >
             {MenuItems.Attribution}
           </Menu.Item>
-          <Menu.Item className={styles.menuitems_sub} key={`/settings/sdk`}>
+          <Menu.Item className={styles.menuitems_sub} key='/settings/sdk'>
             {MenuItems.SDK}
           </Menu.Item>
           <Menu.Item
             className={styles.menuitems_sub}
-            key={`/settings/integration`}
+            key='/settings/integration'
           >
             {MenuItems.Integration}
           </Menu.Item>
-          <Menu.Item className={styles.menuitems_sub} key={`/settings/sharing`}>
+          <Menu.Item className={styles.menuitems_sub} key='/settings/sharing'>
             {MenuItems.Sharing}
           </Menu.Item>
         </SubMenu>
@@ -445,7 +436,7 @@ function SiderMenu({
       >
         <b>{collapsed ? 'Expand' : 'Collapse'}</b>
       </Menu.Item>
-      <div style={{ height: '120px' }}></div>
+      <div style={{ height: '120px' }} />
     </Menu>
   );
 }

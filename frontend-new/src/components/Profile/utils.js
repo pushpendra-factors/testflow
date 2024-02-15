@@ -339,7 +339,7 @@ export const getIconForCategory = (category) => {
   if (source === 'website') {
     return 'globe';
   }
-  return 'events_blue';
+  return 'mouseclick';
 };
 
 export const DefaultDateRangeForSegments = {

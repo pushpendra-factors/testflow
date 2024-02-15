@@ -35,7 +35,9 @@ import {
   FETCH_PROPERTY_VALUES_LOADED,
   FETCH_USER_PROPERTIES_V2,
   FETCH_EVENT_USER_PROPERTIES_V2,
-  FETCH_EVENT_PROPERTIES_V2
+  FETCH_EVENT_PROPERTIES_V2,
+  SET_GROUPBY_LIST,
+  SET_GROUPBY_EVENT_LIST
 } from './actions';
 import {
   SHOW_ANALYTICS_RESULT,
@@ -59,7 +61,7 @@ const defaultState = {
   eventPropertiesV2: {},
   userPropertiesV2: {},
   eventUserPropertiesV2: {},
-  groups:{},
+  groups: {},
   groupProperties: {},
   propertyValuesMap: {
     loading: false,
@@ -227,6 +229,58 @@ export default function (state = defaultState, action) {
         });
       }
       return { ...state, groupBy: groupByState };
+    }
+    case SET_GROUPBY_LIST: {
+      try {
+        let objectToBeReplaced = action.payload.map(
+          (eachBreakdown, eachBreakdownIndex) => {
+            return { ...eachBreakdown, overAllIndex: eachBreakdownIndex };
+          }
+        );
+        return {
+          ...state,
+          groupBy: { ...state.groupBy, global: objectToBeReplaced }
+        };
+      } catch (error) {
+        console.error(error);
+        return state;
+      }
+    }
+    case SET_GROUPBY_EVENT_LIST: {
+      try {
+        let whichEventIndex = 0; // we will always get this value from paylod
+        let objectToBeReplaced = action.payload.map(
+          (eachBreakdown, eachBreakdownIndex) => {
+            const {
+              prop_category,
+              eventName,
+              property,
+              prop_type,
+              eventIndex,
+              overAllIndex
+            } = eachBreakdown;
+            whichEventIndex = eventIndex;
+            return {
+              prop_category,
+              eventName,
+              property,
+              prop_type,
+              eventIndex,
+              overAllIndex: eachBreakdownIndex
+            };
+          }
+        );
+        let arr = [...state.groupBy.event];
+        arr = [
+          ...arr.filter((eachItem) => {
+            return eachItem.eventIndex !== whichEventIndex;
+          }),
+          ...objectToBeReplaced
+        ];
+        return { ...state, groupBy: { ...state.groupBy, event: arr } };
+      } catch (err) {
+        return state;
+      }
     }
     case RESET_GROUPBY: {
       return {

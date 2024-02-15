@@ -57,7 +57,9 @@
     display: inline-flex;
     margin-bottom: 4px;
 
-    &:hover {
+    &:hover,
+    &:focus-visible {
+      outline: none;
       background-color: rgba($fa-color--brand-1, 1);
     }
 
@@ -78,6 +80,11 @@
     cursor: pointer;
     display: inline-flex;
     margin-bottom: 4px;
+
+    &:focus,
+    &:focus-visible {
+      background-color: rgba($fa-color--brand-1, 1);
+    }
 
     &:hover {
       background-color: rgba($fa-color--brand-1, 1);

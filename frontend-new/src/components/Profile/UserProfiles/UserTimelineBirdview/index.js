@@ -56,12 +56,7 @@ function UserTimelineBirdview({
         }}
       >
         <img
-          src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${eventIcon}.svg`}
-          onError={(e) => {
-            if (e.target.src !== `/assets/icons/${eventIcon}.svg`) {
-              e.target.src = `/assets/icons/${eventIcon}.svg`;
-            }
-          }}
+          src={`/assets/icons/${eventIcon}.svg`}
           alt=''
           height={16}
           width={16}
@@ -97,7 +92,7 @@ function UserTimelineBirdview({
           trigger={hoverConditionals ? 'hover' : []}
           icon={
             <img
-              src={`https://s3.amazonaws.com/www.factors.ai/assets/img/product/Timeline/${icon}.svg`}
+              src={`/assets/icons/${icon}.svg`}
               alt=''
               height={24}
               width={24}

@@ -55,11 +55,17 @@ func TestKpiAnalytics(t *testing.T) {
 	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
 	stepTimestamp := startTimestamp
 
-	payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s0", createdUserID1, stepTimestamp, "A", 1234)
+	payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s", "$latest_medium": "abc"}, "event_properties":{"$campaign_id":%d}}`, "s0", createdUserID1, stepTimestamp, "A", 1234)
 	w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	response := DecodeJSONResponseToMap(w.Body)
 	assert.NotNil(t, response["event_id"])
+
+	payload1 := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s", "$city": "abc1"}, "event_properties":{"$campaign_id":%d}}`, "s1", createdUserID1, stepTimestamp+2, "A", 1234)
+	ServePostRequestWithHeaders(r, uri, []byte(payload1), map[string]string{"Authorization": project.Token})
+
+	payload2 := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s", "$city": "def1"}, "event_properties":{"$campaign_id":%d,"$page_url": "abc.com/def1"}}`, "s1", createdUserID1, stepTimestamp+10, "A", 1234)
+	ServePostRequestWithHeaders(r, uri, []byte(payload2), map[string]string{"Authorization": project.Token})
 
 	timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
 	eventName := U.RandomLowerAphaNumString(10)
@@ -457,6 +463,58 @@ func TestKpiAnalytics(t *testing.T) {
 		assert.Equal(t, len(result[1].Rows), 1)
 		assert.Equal(t, result[0].Rows[0][1], float64(1))
 	})
+
+	t.Run("Query with verifying user properties being used are global", func(t *testing.T) {
+		query := model.KPIQuery{
+			Category:        "events",
+			DisplayCategory: "page_views",
+			PageUrl:         "s1",
+			Metrics:          []string{"page_views"},
+			Filters:          []model.KPIFilter{},
+			From:             startTimestamp,
+			To:               startTimestamp + 40,
+			GroupByTimestamp: "date",
+		}
+		query1 := model.KPIQuery{}
+		U.DeepCopy(&query, &query1)
+		query1.GroupByTimestamp = ""
+
+		kpiQueryGroup := model.KPIQueryGroup{
+			Class:         "kpi",
+			Queries:       []model.KPIQuery{query, query1},
+			GlobalFilters: []model.KPIFilter{
+				{
+					Entity: "user",
+					PropertyName: "$latest_page_url",
+					PropertyDataType: "categorical",
+					Condition: "equals",
+					Value: "abc.com/def1",
+					LogicalOp: "AND",
+					IsPropertyMapping: false,
+				},
+			},
+			GlobalGroupBy: []model.KPIGroupBy{ 
+				{
+					ObjectType:       "s1",
+					PropertyName:     "$latest_page_url",
+					PropertyDataType: "categorical",
+					GroupByType:      "",
+					Granularity:      "",
+					Entity:           "user",
+				},
+			},
+		}
+
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
+			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		log.WithField("result", result).Warn("kark2")
+		assert.Equal(t, http.StatusOK, statusCode)
+		assert.Equal(t, result[1].Headers, []string{"$latest_page_url", "page_views"})
+		assert.Equal(t, len(result[1].Rows), 1)
+		// TODO change
+		assert.Equal(t, result[1].Rows[0][0], "abc.com/def1")
+		assert.Equal(t, result[1].Rows[0][1], float64(2))
+	})	
 }
 
 func TestKpiAnalyticsForProfile(t *testing.T) {
@@ -467,7 +525,7 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 	rCustomerUserId := U.RandomLowerAphaNumString(15)
 	properties1 := postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{"country": "india", "age": 30, "$hubspot_amount": 300, "$hubspot_datefield1": 1640975325,  "paid": true}`))}
 	properties2 := postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{"country": "us", "age": 20, "$hubspot_amount": 200, "$hubspot_datefield1": 1640975525, "paid": true}`))}
-	// properties2 := postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{"country": "us", "age": 20, "$hubspot_amount": 300, "$hubspot_datefield1": 1640975425, "paid": true}`))}
+	properties3 := postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{"country": "us", "age": 20, "$hubspot_amount": 200, "$hubspot_datefield1": 1620975525, "$hubspot_datefield2": 1620975520, "paid": true}`))}
 
 	joinTime := int64(1640975425 - 100)
 
@@ -480,22 +538,34 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, nextUserErrCode)
 	assert.NotEqual(t, "", createUserID2)
 
+	user3JoinTime := joinTime + 200
+	createUserID3, nextUserErrCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: properties3, JoinTimestamp: user3JoinTime, Source: model.GetRequestSourcePointer(model.UserSourceHubspot)})
+	assert.Equal(t, http.StatusCreated, nextUserErrCode)
+	assert.NotEqual(t, "", createUserID3)
+
 	name1 := U.RandomString(8)
 	description1 := U.RandomString(8)
-	transformations1 := &postgres.Jsonb{json.RawMessage(`{"agFn": "sum", "agPr": "$hubspot_amount", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
+	transformations1 := &postgres.Jsonb{json.RawMessage(`{"agFn": "sum", "agPr": "$hubspot_amount", "agPrTy": "numerical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
 	w := sendCreateCustomMetric(a, project.ID, agent, transformations1, name1, description1, "hubspot_contacts", 1)
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	name2 := U.RandomString(8)
 	description2 := U.RandomString(8)
-	transformations2 := &postgres.Jsonb{json.RawMessage(`{"agFn": "sum", "agPr": "$hubspot_amount", "agPrTy": "categorical", "fil": [{"objTy": "", "prNa": "country", "prDaTy": "categorical", "en": "user", "co": "equals", "va": "india", "lOp": "AND"}], "daFie": "$hubspot_datefield1"}`)}
+	transformations2 := &postgres.Jsonb{json.RawMessage(`{"agFn": "sum", "agPr": "$hubspot_amount", "agPrTy": "numerical", "fil": [{"objTy": "", "prNa": "country", "prDaTy": "categorical", "en": "user", "co": "equals", "va": "india", "lOp": "AND"}], "daFie": "$hubspot_datefield1"}`)}
 	w = sendCreateCustomMetric(a, project.ID, agent, transformations2, name2, description2, "hubspot_contacts", 1)
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	name3 := U.RandomString(8)
 	description3 := U.RandomString(8)
-	transformations3 := &postgres.Jsonb{json.RawMessage(`{"agFn": "average", "agPr": "$hubspot_amount", "agPrTy": "categorical", "fil": [{"objTy": "", "prNa": "country", "prDaTy": "categorical", "en": "user", "co": "equals", "va": "india", "lOp": "AND"}], "daFie": "$hubspot_datefield1"}`)}
+	transformations3 := &postgres.Jsonb{json.RawMessage(`{"agFn": "average", "agPr": "$hubspot_amount", "agPrTy": "numerical", "fil": [{"objTy": "", "prNa": "country", "prDaTy": "categorical", "en": "user", "co": "equals", "va": "india", "lOp": "AND"}], "daFie": "$hubspot_datefield1"}`)}
 	w = sendCreateCustomMetric(a, project.ID, agent, transformations3, name3, description3, "hubspot_contacts", 1)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	name4 := U.RandomString(8)
+	description4 := U.RandomString(8)
+	transformations4 := &postgres.Jsonb{json.RawMessage(`{"agFn": "sum", "agPr": "$hubspot_datefield1", "agPr2": "$hubspot_datefield2", "agPrTy": "datetime", "agPrTy2": "datetime", "fil": [], "daFie": "$hubspot_datefield1"}`)}
+
+	w = sendCreateCustomMetricWithOtherProperties(a, project.ID, agent, transformations4, name4, description4, "hubspot_contacts", 1, "", model.DateTypeDiffMetricType)
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	t.Run("test hubspot contacts with no filters and no group by", func(t *testing.T) {
@@ -522,6 +592,7 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 		}
 		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
 			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		log.WithField("result", result).Warn("kark2")
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, result[0].Headers, []string{"datetime", name1})
 		assert.Equal(t, len(result[0].Rows), 1)
@@ -830,6 +901,41 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 		assert.Equal(t, result[1].Rows[0][1], float64(300))
 
 	})
+
+	t.Run("test profiles with time difference", func(t *testing.T) {
+		query1 := model.KPIQuery{
+			Category:         model.ProfileCategory,
+			DisplayCategory:  "hubspot_contacts",
+			PageUrl:          "",
+			Metrics:          []string{name4},
+			GroupBy:          []M.KPIGroupBy{},
+			From:             1620975525 - 200,
+			To:               1620975525 + 200,
+			GroupByTimestamp: "date",
+		}
+
+		query2 := model.KPIQuery{}
+		U.DeepCopy(&query1, &query2)
+		query2.GroupByTimestamp = ""
+
+		kpiQueryGroup := model.KPIQueryGroup{
+			Class:         "kpi",
+			Queries:       []model.KPIQuery{query1, query2},
+			GlobalFilters: []model.KPIFilter{},
+			GlobalGroupBy: []model.KPIGroupBy{},
+		}
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
+			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		log.WithField("result", result).Warn("kark2")
+		assert.Equal(t, http.StatusOK, statusCode)
+		assert.Equal(t, result[0].Headers, []string{"datetime", name4})
+		assert.Equal(t, len(result[0].Rows), 1)
+		assert.Equal(t, result[0].Rows[0][1], float64(5))
+
+		assert.Equal(t, result[1].Headers, []string{name4})
+		assert.Equal(t, len(result[1].Rows), 1)
+		assert.Equal(t, result[1].Rows[0][0], float64(5))
+	})
 }
 
 func TestKPIProfilesForGroups(t *testing.T) {
@@ -854,7 +960,7 @@ func TestKPIProfilesForGroups(t *testing.T) {
 		assert.NotNil(t, group)
 
 		properties := postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
-			`{"country": "us", "age": 20, "$hubspot_amount": 200, "$hubspot_datefield1": %d, "paid": true}`, initialTimestamp+10)))}
+			`{"country": "us", "age": 20, "$hubspot_amount": 200, "$hubspot_datefield1": %d, "$hubspot_datefield2": %d, "paid": true}`, initialTimestamp+10, initialTimestamp+20)))}
 		// create 10 group users, source = hubspot and group_name = $hubspot_company
 		for i := 0; i < 10; i++ {
 			createdUserID, errCode := store.GetStore().CreateGroupUser(&model.User{ProjectId: project.ID,
@@ -877,10 +983,17 @@ func TestKPIProfilesForGroups(t *testing.T) {
 
 		name2 := U.RandomString(8)
 		description2 := U.RandomString(8)
-		transformations2 := &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
+		transformations2 := &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "numerical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
 		w := sendCreateCustomMetric(a, project.ID, agent, transformations2, name2, description2, "hubspot_companies", 1)
 		assert.Equal(t, http.StatusOK, w.Code)
 
+		name4 := U.RandomString(8)
+		description4 := U.RandomString(8)
+		transformations4 := &postgres.Jsonb{json.RawMessage(`{"agFn": "sum", "agPr": "$hubspot_datefield1", "agPr2": "$hubspot_datefield2", "agPrTy": "datetime", "agPrTy2": "datetime", "fil": [], "daFie": "$hubspot_datefield1"}`)}
+	
+		w = sendCreateCustomMetricWithOtherProperties(a, project.ID, agent, transformations4, name4, description4, "hubspot_companies", 1, "", model.DateTypeDiffMetricType)
+		assert.Equal(t, http.StatusOK, w.Code)
+	
 		query1 := model.KPIQuery{
 			Category:         model.ProfileCategory,
 			DisplayCategory:  "hubspot_companies",
@@ -908,6 +1021,35 @@ func TestKPIProfilesForGroups(t *testing.T) {
 
 		assert.Equal(t, float64(10), result[0].Rows[0][1])
 		assert.Equal(t, float64(10), result[1].Rows[0][0])
+
+		query3 := model.KPIQuery{
+			Category:         model.ProfileCategory,
+			DisplayCategory:  "hubspot_companies",
+			PageUrl:          "",
+			Metrics:          []string{name4},
+			GroupBy:          []M.KPIGroupBy{},
+			From:             initialTimestamp,
+			To:               finalTimestamp,
+			GroupByTimestamp: "date",
+		}
+
+		query4 := model.KPIQuery{}
+		U.DeepCopy(&query3, &query4)
+		query4.GroupByTimestamp = ""
+
+		kpiQueryGroup3 := model.KPIQueryGroup{
+			Class:         "kpi",
+			Queries:       []model.KPIQuery{query3, query4},
+			GlobalFilters: []model.KPIFilter{},
+			GlobalGroupBy: []model.KPIGroupBy{},
+		}
+		result2, statusCode2 := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup3,
+			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
+		log.WithField("result", result2).Warn("kark2")
+		assert.Equal(t, http.StatusOK, statusCode2)
+
+		assert.Equal(t, float64(-100), result2[0].Rows[0][1])
+		assert.Equal(t, float64(-100), result2[1].Rows[0][0])
 	})
 }
 
@@ -980,7 +1122,7 @@ func TestKpiAnalyticsForCustomEvents(t *testing.T) {
 		// Custom Metric Create with name name
 		name := U.RandomLowerAphaNumString(10)
 		description := U.RandomString(8)
-		transformationRaw := fmt.Sprintf(`{"agFn": "count", "agPr": "1", "agPrTy": "categorical", "fil": [], "daFie": "%d", "evNm": "%s", "en": "%s"}`, timestamp, "s0", model.QueryTypeEventsOccurrence)
+		transformationRaw := fmt.Sprintf(`{"agFn": "count", "agPr": "1", "agPrTy": "numerical", "fil": [], "daFie": "%d", "evNm": "%s", "en": "%s"}`, timestamp, "s0", model.QueryTypeEventsOccurrence)
 		transformations := &postgres.Jsonb{RawMessage: json.RawMessage(transformationRaw)}
 		w2 := sendCreateCustomMetric(a, project.ID, agent, transformations, name, description, model.EventsBasedDisplayCategory, 3)
 		assert.Equal(t, http.StatusOK, w2.Code)
@@ -1021,7 +1163,7 @@ func TestKpiAnalyticsForCustomEvents(t *testing.T) {
 
 		name1 := U.RandomLowerAphaNumString(10)
 		description := U.RandomString(8)
-		transformationRaw := fmt.Sprintf(`{"agFn": "count", "agPr": "1", "agPrTy": "categorical", "fil": [], "daFie": "%d", "evNm": "%s", "en": "%s"}`, timestamp, "s0", model.QueryTypeEventsOccurrence)
+		transformationRaw := fmt.Sprintf(`{"agFn": "count", "agPr": "1", "agPrTy": "numerical", "fil": [], "daFie": "%d", "evNm": "%s", "en": "%s"}`, timestamp, "s0", model.QueryTypeEventsOccurrence)
 		transformations := &postgres.Jsonb{RawMessage: json.RawMessage(transformationRaw)}
 		w2 := sendCreateCustomMetric(a, project.ID, agent, transformations, name1, description, model.EventsBasedDisplayCategory, 3)
 		assert.Equal(t, http.StatusOK, w2.Code)
@@ -1044,7 +1186,7 @@ func TestKpiAnalyticsForCustomEvents(t *testing.T) {
 
 		name2 := U.RandomLowerAphaNumString(10)
 		description = U.RandomString(8)
-		transformationRaw = fmt.Sprintf(`{"agFn": "count", "agPr": "1", "agPrTy": "categorical", "fil": [], "daFie": "%d", "evNm": "%s", "en": "%s"}`, timestamp, "s0", model.QueryTypeEventsOccurrence)
+		transformationRaw = fmt.Sprintf(`{"agFn": "count", "agPr": "1", "agPrTy": "numerical", "fil": [], "daFie": "%d", "evNm": "%s", "en": "%s"}`, timestamp, "s0", model.QueryTypeEventsOccurrence)
 		transformations = &postgres.Jsonb{RawMessage: json.RawMessage(transformationRaw)}
 		w2 = sendCreateCustomMetric(a, project.ID, agent, transformations, name2, description, model.EventsBasedDisplayCategory, 3)
 		assert.Equal(t, http.StatusOK, w2.Code)
@@ -1199,7 +1341,7 @@ func TestKpiAnalyticsForCustomEvents(t *testing.T) {
 		// Custom Metric Create with name name
 		name := U.RandomLowerAphaNumString(10)
 		description := U.RandomString(8)
-		transformationRaw := fmt.Sprintf(`{"agFn": "unique", "agPr": "1", "agPrTy": "categorical", "fil": [], "daFie": "%d", "evNm": "%s", "en": "%s"}`, timestamp, "s0", "")
+		transformationRaw := fmt.Sprintf(`{"agFn": "unique", "agPr": "1", "agPrTy": "numerical", "fil": [], "daFie": "%d", "evNm": "%s", "en": "%s"}`, timestamp, "s0", "")
 		transformations := &postgres.Jsonb{RawMessage: json.RawMessage(transformationRaw)}
 		w2 := sendCreateCustomMetric(a, project.ID, agent, transformations, name, description, model.EventsBasedDisplayCategory, 3)
 		assert.Equal(t, http.StatusOK, w2.Code)
@@ -1274,7 +1416,7 @@ func TestKpiAnalyticsForCustomEvents(t *testing.T) {
 	t.Run("Query with filter in custom metric transformation.", func(t *testing.T) {
 		name := U.RandomLowerAphaNumString(10)
 		description := U.RandomString(8)
-		transformationRaw := fmt.Sprintf(`{"agFn": "count", "agPr": "1", "agPrTy": "categorical", "fil": [{"objTy": "", "prNa": "$referrer", "prDaTy": "categorical", "en": "event", "co": "equals", "va": "https://example.com/abc?ref=2", "lOp": "AND"}], "daFie": "%d", "evNm": "%s", "en": "%s"}`, timestamp, eventName, model.QueryTypeEventsOccurrence)
+		transformationRaw := fmt.Sprintf(`{"agFn": "count", "agPr": "1", "agPrTy": "numerical", "fil": [{"objTy": "", "prNa": "$referrer", "prDaTy": "categorical", "en": "event", "co": "equals", "va": "https://example.com/abc?ref=2", "lOp": "AND"}], "daFie": "%d", "evNm": "%s", "en": "%s"}`, timestamp, eventName, model.QueryTypeEventsOccurrence)
 		transformations := &postgres.Jsonb{RawMessage: json.RawMessage(transformationRaw)}
 		w2 := sendCreateCustomMetric(a, project.ID, agent, transformations, name, description, model.EventsBasedDisplayCategory, 3)
 		assert.Equal(t, http.StatusOK, w2.Code)
@@ -1743,7 +1885,7 @@ func TestDerivedKPIForCustomKPI(t *testing.T) {
 
 		name1 := "name1"
 		description1 := U.RandomString(8)
-		transformations1 := &postgres.Jsonb{json.RawMessage(`{"agFn": "sum", "agPr": "$hubspot_amount", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
+		transformations1 := &postgres.Jsonb{json.RawMessage(`{"agFn": "sum", "agPr": "$hubspot_amount", "agPrTy": "numerical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
 		w = sendCreateCustomMetric(a, project.ID, agent, transformations1, name1, description1, "hubspot_contacts", 1)
 		assert.Equal(t, http.StatusOK, w.Code)
 

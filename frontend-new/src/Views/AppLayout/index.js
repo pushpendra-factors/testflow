@@ -3,7 +3,8 @@ import React, {
   useState,
   useCallback,
   Suspense,
-  useRef
+  useRef,
+  useMemo
 } from 'react';
 import cx from 'classnames';
 import { Layout, Spin } from 'antd';
@@ -24,10 +25,6 @@ import {
 
 import customizeHighCharts from 'Utils/customizeHighcharts';
 import {
-  fetchEventDisplayNames,
-  fetchQueries
-} from '../../reducers/coreQuery/services';
-import {
   fetchAttrContentGroups,
   fetchSmartPropertyRules,
   fetchAttributionQueries
@@ -47,20 +44,12 @@ import { fetchKPIConfig, fetchPageUrls } from '../../reducers/kpi';
 import FaHeader from '../../components/FaHeader';
 
 import { fetchTemplates } from '../../reducers/dashboard_templates/services';
-import { AppLayoutRoutes } from 'Routes/index';
+import { AppLayoutRoutes } from 'Routes/AppLayoutRoutes';
 import { TOGGLE_GLOBAL_SEARCH } from 'Reducers/types';
 import './index.css';
 import _, { isEmpty } from 'lodash';
 import logger from 'Utils/logger';
 import { matchPath, useLocation } from 'react-router-dom';
-import GlobalSearchModal from './GlobalSearchModal';
-import AppSidebar from '../AppSidebar';
-import styles from './index.module.scss';
-import {
-  SIGNUP_HS_FORM_ID,
-  SIGNUP_HS_PORTAL_ID,
-  routesWithSidebar
-} from './appLayout.constants';
 import { selectSidebarCollapsedState } from 'Reducers/global/selectors';
 import { fetchProjectAgents, fetchAgentInfo } from 'Reducers/agentActions';
 import { fetchFeatureConfig } from 'Reducers/featureConfig/middleware';
@@ -70,10 +59,22 @@ import {
   fetchPlansDetail
 } from 'Reducers/plansConfig/middleware';
 import { selectAreDraftsSelected } from 'Reducers/dashboard/selectors';
-import { PathUrls } from '../../routes/pathUrls';
 import OnboardingRouting from 'Onboarding/ui/OnboardingRouting';
 import moment from 'moment';
 import useAgentInfo from 'hooks/useAgentInfo';
+import { PathUrls } from '../../routes/pathUrls';
+import {
+  SIGNUP_HS_FORM_ID,
+  SIGNUP_HS_PORTAL_ID,
+  routesWithSidebar
+} from './appLayout.constants';
+import styles from './index.module.scss';
+import AppSidebar from '../AppSidebar';
+import GlobalSearchModal from './GlobalSearchModal';
+import {
+  fetchEventDisplayNames,
+  fetchQueries
+} from '../../reducers/coreQuery/services';
 
 // customizing highcharts for project requirements
 customizeHighCharts(Highcharts);
@@ -116,11 +117,20 @@ function AppLayout({
 
   const activeAgent = agentState?.agent_details?.email;
 
+  const activeAgentUUID = agentState?.agent_details?.uuid;
+
+  const isChecklistEnabled = useMemo(() => {
+    const agent = agentState.agents.filter(
+      (data) => data.uuid === activeAgentUUID
+    );
+    return agent[0]?.checklist_dismissed;
+  }, [agentState, agentState?.agents]);
+
   const fetchProjectsOnLoad = useCallback(async () => {
     try {
       if (isAgentLoggedIn) {
         const res = await fetchProjectsList();
-        //handling when no project is present
+        // handling when no project is present
         if (isEmpty(res?.status === 200)) {
           setDataLoading(false);
         }
@@ -205,7 +215,7 @@ function AppLayout({
       dispatch(fetchProjectAgents(active_project.id));
       dispatch(fetchFeatureConfig(active_project?.id));
 
-      //calling V2 pricing API's only if flag is enabled.
+      // calling V2 pricing API's only if flag is enabled.
       if (active_project?.enable_billing) {
         dispatch(fetchCurrentSubscriptionDetail(active_project?.id));
         dispatch(fetchPlansDetail(active_project?.id));
@@ -214,15 +224,15 @@ function AppLayout({
     }
   }, [dispatch, active_project]);
 
-  //fetching agent info -> not dependent on active project
+  // fetching agent info -> not dependent on active project
   useEffect(() => {
     if (isAgentLoggedIn) fetchAgentInfo();
   }, [isAgentLoggedIn, fetchAgentInfo]);
 
-  //for handling signup event for the first time logged in user
+  // for handling signup event for the first time logged in user
   useEffect(() => {
     const login_count = agentState?.agent_details?.login_count;
-    //using last login time so that for existing logged in users with login count 1 we dont trigger the signup event
+    // using last login time so that for existing logged in users with login count 1 we dont trigger the signup event
     const lastLoggeInTime =
       moment(agentState?.agent_details?.last_logged_in) || moment();
     const currentTime = moment();
@@ -233,7 +243,7 @@ function AppLayout({
         signupEventlocalStoragekey
       );
       if (login_count === 1 && !isSignUpEventSent && timeDifference < 24) {
-        //triggering inside settimeout to prevent triggering event before sdk is initialised
+        // triggering inside settimeout to prevent triggering event before sdk is initialised
         setTimeout(() => {
           factorsai.track('SIGNUP', {
             first_name: agentInfo?.firstName || '',
@@ -258,7 +268,7 @@ function AppLayout({
               },
               {
                 name: 'invited_user',
-                value: agentInfo?.isAgentInvited ? true : false
+                value: !!agentInfo?.isAgentInvited
               },
               {
                 name: 'phone',
@@ -274,7 +284,7 @@ function AppLayout({
   }, [activeAgent, agentState]);
 
   if (dataLoading || activeProjectLoading) {
-    return <Spin size={'large'} className={'fa-page-loader'} />;
+    return <Spin size='large' className='fa-page-loader' />;
   }
 
   const hasSidebar = routesWithSidebar.find((route) => {
@@ -298,8 +308,8 @@ function AppLayout({
       <ErrorBoundary
         fallback={
           <FaErrorComp
-            size={'medium'}
-            title={'Bundle Error:01'}
+            size='medium'
+            title='Bundle Error:01'
             subtitle='We are facing trouble loading App Bundles. Drop us a message on the in-app chat.'
           />
         }

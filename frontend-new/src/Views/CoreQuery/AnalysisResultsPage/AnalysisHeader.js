@@ -52,16 +52,6 @@ function AnalysisHeader({
   const dispatch = useDispatch();
 
   let location = useLocation();
-  useEffect(() => {
-    if (window.Intercom) {
-      window.Intercom('update', { hide_default_launcher: true });
-    }
-    return () => {
-      if (window.Intercom) {
-        window.Intercom('update', { hide_default_launcher: false });
-      }
-    };
-  }, []);
 
   const history = useHistory();
   const {

@@ -10,7 +10,10 @@ import { Button, Dropdown, Menu, Spin, Tooltip } from 'antd';
 import { useHistory } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { getQuickDashboardDateRange } from 'Views/Dashboard/utils';
-import { selectActivePreDashboard } from 'Reducers/dashboard/selectors';
+import {
+  selectActivePreDashboard,
+  selectAreDraftsSelected
+} from 'Reducers/dashboard/selectors';
 import { get } from 'lodash';
 import { setItemToLocalStorage } from 'Utils/localStorage.helpers';
 import { DASHBOARD_KEYS } from 'Constants/localStorage.constants';
@@ -23,6 +26,8 @@ import { InfoCircleOutlined } from '@ant-design/icons';
 import { fetchActiveDashboardConfig } from '../state/services';
 import SubMenu from './Widget/SubMenu';
 import SortableCards from './Widget/SortableCards';
+import AddDashboard from 'Views/Dashboard/AddDashboard';
+import { ADD_DASHBOARD_MODAL_OPEN, DASHBOARD_UNMOUNTED } from 'Reducers/types';
 
 const dashboardRefreshInitialState = {
   inProgress: false,
@@ -34,6 +39,8 @@ const dashboardRefreshInitialState = {
 function PreBuildDashboard({}) {
   const history = useHistory();
   const dispatch = useDispatch();
+  const [addDashboardModal, setaddDashboardModal] = useState(false);
+  const [editDashboard, setEditDashboard] = useState(null);
   const [durationObj, setDurationObj] = useState(getQuickDashboardDateRange());
   const [oldestRefreshTime, setOldestRefreshTime] = useState(null);
 
@@ -134,6 +141,13 @@ function PreBuildDashboard({}) {
     });
   }, []);
 
+  useEffect(
+    () => () => {
+      dispatch({ type: DASHBOARD_UNMOUNTED });
+    },
+    [dispatch]
+  );
+
   if (predefinedConfigData?.loading) {
     return (
       <div className='flex justify-center items-center w-full h-64'>
@@ -189,7 +203,6 @@ function PreBuildDashboard({}) {
       </div>
       <div className='my-6 flex-1'>
         <SubMenu
-          config={config}
           durationObj={durationObj}
           handleDurationChange={handleDurationChange}
           activeDashboard={activeDashboard}
@@ -203,6 +216,12 @@ function PreBuildDashboard({}) {
           onDataLoadSuccess={onDataLoadSuccess}
         />
       </div>
+      <AddDashboard
+        setEditDashboard={setEditDashboard}
+        editDashboard={editDashboard}
+        addDashboardModal={addDashboardModal}
+        setaddDashboardModal={setaddDashboardModal}
+      />
     </ErrorBoundary>
   );
 }

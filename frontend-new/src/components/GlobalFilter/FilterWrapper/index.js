@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { keys } from 'lodash';
-import { Button } from 'antd';
+import { Button, Tooltip } from 'antd';
 import {
   getEventPropertyValues,
   getGroupPropertyValues,
@@ -46,15 +46,36 @@ function FilterWrapper({
   groups,
   profileType = ''
 }) {
+  const baseRef = useRef();
   const [newFilterState, setNewFilterState] = useState({
     props: [],
     operator: '',
     values: []
   });
   const [filterDropDownOptions, setFiltDD] = useState({});
+  const [extraProps, setExtraProps] = useState({});
   const activeDashboard = useSelector((state) =>
     selectActivePreDashboard(state)
   );
+
+  function transformProperty(data) {
+    const result = {};
+    data.forEach((item) => {
+      const [displayName, name] = item;
+      result[name] = displayName;
+    });
+    return result;
+  }
+
+  useEffect(() => {
+    if (profileType === 'predefined') {
+      const output = transformProperty(filterProps?.user);
+      const extraProp = {
+        displayNames: output
+      };
+      setExtraProps(extraProp);
+    }
+  }, [filterProps, profileType]);
 
   useEffect(() => {
     if (
@@ -199,6 +220,7 @@ function FilterWrapper({
       dropdownMaxHeight={dropdownMaxHeight}
       showInList={showInList}
       valueOptsLoading={propertyValuesMap.loading}
+      extraProps={extraProps}
     />
   );
 
@@ -217,6 +239,7 @@ function FilterWrapper({
       showInList={showInList}
       minEntriesPerGroup={minEntriesPerGroup}
       valueOptsLoading={propertyValuesMap.loading}
+      extraProps={extraProps}
     />
   );
 
@@ -225,6 +248,7 @@ function FilterWrapper({
       className={`flex items-center relative ${
         caller === 'profiles' ? 'mb-2' : 'mb-2'
       }`}
+      ref={baseRef}
     >
       {!showOr && hasPrefix && (
         <Text
@@ -256,14 +280,22 @@ function FilterWrapper({
         {filter ? renderFilterContent() : filterSelComp()}
       </div>
       {delFilter && !viewMode && (
-        <Button
-          type='text'
-          onClick={delFilter}
-          size='small'
-          className='fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button'
+        <Tooltip
+          className='inline-flex'
+          title='Clear filter'
+          getPopupContainer={() => baseRef.current}
+          color='#0B1E39'
+          overlayInnerStyle={{ width: 'max-content' }}
         >
-          <SVG name={delIcon} />
-        </Button>
+          <Button
+            type='text'
+            onClick={delFilter}
+            size='small'
+            className='fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button'
+          >
+            <SVG name={delIcon} />
+          </Button>
+        </Tooltip>
       )}
     </div>
   );

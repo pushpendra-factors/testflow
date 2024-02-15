@@ -22,54 +22,12 @@ import { updateAccountScores } from 'Reducers/timelines';
 import { fetchProjectSettings } from 'Reducers/global';
 import { getGroups } from 'Reducers/coreQuery/middleware';
 import { EngagementTag } from 'Components/Profile/constants.ts';
+import { InfoCircleFilled, InfoCircleOutlined } from '@ant-design/icons';
 import SaleWindowModal from './SaleWindowModal';
 import EngagementModal from './EngagementModal';
 
 import EngagementCategoryModal from './EngagementCategoryModal';
 import styles from './index.module.scss';
-
-const PopoverCategoryOrder = ['Ice', 'Cool', 'Warm', 'Hot'];
-const EngagementCategoryPopoverContent = (
-  <div className='inline-flex justify-between' style={{ width: 'max-content' }}>
-    <div
-      className='engagement-tag'
-      style={{
-        '--bg-color': EngagementTag.Hot?.bgColor,
-        marginRight: '10px'
-      }}
-    >
-      <img
-        src={`../../../assets/icons/${EngagementTag.Hot?.icon}.svg`}
-        alt=''
-      />
-      <Text type='title' level={7} extraClass='m-0'>
-        Hot
-      </Text>
-    </div>
-
-    <div
-      className={`inline-flex ${styles.engagement_popover_horizontalpills}`}
-      style={{ marginLeft: '10px' }}
-    >
-      {PopoverCategoryOrder.map((eachType) => (
-        <div
-          key={`popover-${eachType}`}
-          style={{
-            width: '45px',
-            background: EngagementTag[eachType].bgColor
-          }}
-        >
-          <img
-            src={`../../../assets/icons/${EngagementTag[eachType]?.icon}.svg`}
-            alt=''
-            width={eachType === 'Ice' && 16}
-            height={eachType !== 'Ice' && 16}
-          />
-        </div>
-      ))}
-    </div>
-  </div>
-);
 
 const filterConfigRuleCheck = (existingConfig, newConfig) => {
   try {
@@ -349,7 +307,7 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
   return (
     <div className='fa-container'>
       <Row gutter={[24, 24]} justify='center'>
-        <Col span={18}>
+        <Col span={22}>
           <Row>
             <Col span={18}>
               <Text
@@ -374,9 +332,15 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
               <div className='flex justify-end' style={{ gap: '10px' }}>
                 <Popover
                   placement='bottom'
+                  overlayClassName={styles.engagementpopover}
                   trigger='hover'
-                  overlayInnerStyle={{ borderRadius: '8px' }}
-                  content={EngagementCategoryPopoverContent}
+                  style={{ margin: 0 }}
+                  overlayInnerStyle={{
+                    borderRadius: '8px',
+                    margin: 0,
+                    padding: 0
+                  }}
+                  content={<SVG name='EngagementCategoryPillsPopover' />}
                 >
                   <Button
                     type='text'
@@ -423,6 +387,9 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
                     <SVG size={16} name='edit' color='black' />
                   </Button>
                 )}
+                <Tooltip title='This helps keep engagement levels up to date for all your accounts.'>
+                  <InfoCircleFilled className='ml-2' />
+                </Tooltip>
               </div>
             </Col>
           </Row>

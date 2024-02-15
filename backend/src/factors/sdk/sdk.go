@@ -868,6 +868,12 @@ func FillCompanyIdentificationUserProperties(projectId int64, clientIP string, p
 			logCtx.Info("Metering the enrichment.")
 			factorsDeanon.Meter(projectId, domain)
 		}
+		if C.IsAccountLimitEmailAlertEnabled(projectId) {
+			errCode, err := factorsDeanon.HandleAccountLimitAlert(projectId, &http.Client{})
+			if errCode != http.StatusOK {
+				log.Error(err, errCode)
+			}
+		}
 
 	}
 

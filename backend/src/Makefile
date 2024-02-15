@@ -790,6 +790,13 @@ upload-plan-population: export IMAGE_NAME=plan-population-job
 upload-plan-population: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/plan-population-job:$(TAG)
 
+pack-free-plan-migration:
+	docker build -t us.gcr.io/factors-$(ENV)/free-plan-migration-job:$(TAG) -f Dockerfile.free_plan_migration_job .
+
+upload-free-plan-migration: export IMAGE_NAME=free-plan-migration-job
+upload-free-plan-migration: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/free-plan-migration-job:$(TAG)
+
 pack-send-internal-alerts:
 	docker build -t us.gcr.io/factors-$(ENV)/send-internal-alerts-job:$(TAG) -f Dockerfile.send_internal_alerts_job .
 

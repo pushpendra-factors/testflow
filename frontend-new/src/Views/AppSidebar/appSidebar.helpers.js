@@ -20,7 +20,6 @@ export const isSettingsUrl = (pathname) =>
   pathname === PathUrls.SettingsPricing;
 
 export const isConfigurationUrl = (pathname) =>
-  pathname === PathUrls.ConfigureAlerts ||
   pathname === PathUrls.ConfigureContentGroups ||
   pathname === PathUrls.ConfigureCustomKpi ||
   pathname === PathUrls.ConfigureDataPoints ||
@@ -41,8 +40,14 @@ export const isReportsUrl = (pathname) =>
   pathname === PathUrls.Analyse2 ||
   pathname === PathUrls.PreBuildDashboard;
 
-export const isJourneyUrl = (pathname) =>
-  pathname === PathUrls.Explain || pathname === PathUrls.PathAnalysis;
+export const isReportsMainUrl = (pathname) =>
+  pathname === PathUrls.Explain ||
+  pathname === PathUrls.PathAnalysis ||
+  isReportsUrl(pathname) ||
+  isAttributionsUrl(pathname);
+
+export const isAlertsUrl = (pathname) =>
+  checkMatchPath(pathname, PathUrls.Alerts);
 
 export const isAttributionsUrl = (pathname) =>
   pathname === ATTRIBUTION_ROUTES.base ||

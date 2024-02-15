@@ -893,7 +893,7 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		for _, activity := range resp.UserActivity {
 			assert.NotNil(t, activity.EventName)
 			assert.NotNil(t, activity.DisplayName)
-			eventFromMap, eventExistsInMap := model.HOVER_EVENTS_NAME_PROPERTY_MAP[activity.EventName]
+			eventFromMap, eventExistsInMap := model.TIMELINE_EVENT_PROPERTIES_CONFIG[activity.EventName]
 			if activity.EventName == randomURL {
 				assert.Equal(t, activity.DisplayName, "Page View")
 				assert.Equal(t, activity.AliasName, "")
@@ -927,7 +927,7 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 			if activity.DisplayName == "Page View" || eventExistsInMap {
 				var lookInProps []string
 				if activity.DisplayName == "Page View" {
-					lookInProps = model.PAGEVIEW_EVENTPROPS
+					lookInProps = model.TIMELINE_EVENT_PROPERTIES_CONFIG["PageView"]
 				} else if eventExistsInMap {
 					lookInProps = eventFromMap
 				}
@@ -2202,7 +2202,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 				assert.NotNil(t, activity.Timestamp)
 				assert.True(t, activity.Timestamp <= uint64(time.Now().UTC().Unix()))
 
-				eventFromMap, eventExistsInMap := model.HOVER_EVENTS_NAME_PROPERTY_MAP[activity.EventName]
+				eventFromMap, eventExistsInMap := model.TIMELINE_EVENT_PROPERTIES_CONFIG[activity.EventName]
 				if activity.EventName == randomURL {
 					assert.Equal(t, activity.DisplayName, "Page View")
 					assert.Equal(t, activity.AliasName, "")
@@ -2232,7 +2232,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 				if activity.DisplayName == "Page View" || eventExistsInMap {
 					var lookInProps []string
 					if activity.DisplayName == "Page View" {
-						lookInProps = model.PAGEVIEW_EVENTPROPS
+						lookInProps = model.TIMELINE_EVENT_PROPERTIES_CONFIG["PageView"]
 					} else if eventExistsInMap {
 						lookInProps = eventFromMap
 					}
@@ -4917,4 +4917,45 @@ func TestAccountsConsumingMarker(t *testing.T) {
 	w = sendGetProfileAccountRequestConsumingMarker(r, project.ID, agent, payload)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 
+}
+
+func sendUpdateEventConfigRequest(r *gin.Engine, projectId int64, agent *model.Agent, eventName string, payload []string) *httptest.ResponseRecorder {
+
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error Creating cookieData")
+	}
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPut, fmt.Sprintf("/projects/%d/v1/profiles/events_config/%s", projectId, eventName)).
+		WithPostParams(payload).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	w := httptest.NewRecorder()
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error Creating getProjectSetting Req")
+	}
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func TestUpdateEventsConfig(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	newSessionEventProperties := []string{
+		U.EP_CHANNEL,
+		U.EP_PAGE_URL,
+		U.EP_REFERRER_URL,
+		U.EP_PAGE_COUNT,
+		U.SP_SPENT_TIME,
+		U.EP_SOURCE,
+	}
+	w := sendUpdateEventConfigRequest(r, project.ID, agent, U.EVENT_NAME_SESSION, newSessionEventProperties)
+	assert.Equal(t, http.StatusOK, w.Code)
 }

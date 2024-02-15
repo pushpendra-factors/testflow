@@ -2,6 +2,7 @@ import { useLocation } from 'react-router-dom';
 import { PathUrls } from '../../../routes/pathUrls';
 import {
   checkMatchPath,
+  isAlertsUrl,
   isConfigurationUrl,
   isSettingsUrl
 } from '../appSidebar.helpers';
@@ -52,7 +53,13 @@ const useSidebarTitleConfig = () => {
       iconColor: '#8C8C8C'
     };
   }
-
+  if (isAlertsUrl(pathname)) {
+    return {
+      title: 'Automations',
+      icon: 'radar',
+      iconColor: '#8C8C8C'
+    };
+  }
   if (isConfigurationUrl(pathname)) {
     return {
       title: 'Configure',

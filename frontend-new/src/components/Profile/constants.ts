@@ -32,7 +32,8 @@ export const DEFAULT_TIMELINE_CONFIG: TimelineConfig = {
     table_props: [],
     milestones: [],
     user_prop: ''
-  }
+  },
+  events_config: {}
 };
 
 export const eventIconsColorMap: Record<
@@ -98,6 +99,11 @@ export const eventIconsColorMap: Record<
     iconColor: '#B37FEB',
     bgColor: '#F6EDFF',
     borderColor: '#E9D4FF'
+  },
+  globepointer: {
+    iconColor: '#40A9FF',
+    bgColor: '#E6F7FF',
+    borderColor: '#BAE7FF'
   }
 };
 

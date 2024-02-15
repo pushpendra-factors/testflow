@@ -24,20 +24,59 @@
 .active-header-item {
   // background-color: $fa-color--black;
   border-radius: 0.25rem;
+  padding-right: 8px;
+  background-color: #161616;
 
   &.active-header-item-circle {
-    width: 2rem;
-    height: 2rem;
+    min-width: 2rem;
+    min-height: 2rem;
     border-radius: 1rem;
     display: flex;
     align-items: center;
     justify-content: center;
+    background-color: #161616;
     padding: 0;
   }
 }
 
 .checklistSetup {
   background: #1f1f1f !important;
-  border: 1px solid white !important;
+  border: 1px solid rgba(140, 140, 140, 1) !important;
   color: white !important;
+  font-weight: 400;
+  font-size: 14px;
+  height: 36px !important;
+  line-height: 34px !important;
+  padding: 0px 12px !important;
+  border-radius: 6px;
+
+  @layer {
+    &:focus,
+    &:hover,
+    &:active {
+      opacity: 1 !important;
+      background-color: #434343 !important;
+      border: 1px solid rgba(140, 140, 140, 1) !important;
+      border-color: rgb(140, 140, 140) !important;
+    }
+  }
+}
+
+.header-item {
+  transition-duration: 400ms;
+  border-radius: 0.25rem;
+  padding-right: 8px;
+  &:hover {
+    background-color: #161616;
+  }
+}
+.header-item-circle {
+  border-radius: 100px;
+  min-width: 2rem;
+  min-height: 2rem;
+  border-radius: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }

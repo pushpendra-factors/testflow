@@ -1,6 +1,5 @@
 import React, { useEffect, Suspense, useState } from 'react';
 import { connect, useDispatch } from 'react-redux';
-import PageSuspenseLoader from './components/SuspenseLoaders/PageSuspenseLoader';
 import * as Sentry from '@sentry/react';
 import LogRocket from 'logrocket';
 import { FaErrorComp, FaErrorLog } from 'factorsComponents';
@@ -10,13 +9,14 @@ import {
   enableBingAdsIntegration,
   enableMarketoIntegration
 } from 'Reducers/global';
-import { SSO_LOGIN_FULFILLED } from './reducers/types';
-import { sendSlackNotification } from './utils/slack';
-import AdBlockerDetector from './components/AdBlockerDetector';
-import { AppRoutes } from 'Routes';
+import { AppRoutes } from 'Routes/AppRoutes';
 import { ProductFruits } from 'react-product-fruits';
 import { PRODUCTION_WORKSPACE_CODE } from 'Utils/productFruitsConfig';
 import { ScrollToTop } from 'Routes/feature';
+import AdBlockerDetector from './components/AdBlockerDetector';
+import { sendSlackNotification } from './utils/slack';
+import { SSO_LOGIN_FULFILLED } from './reducers/types';
+import PageSuspenseLoader from './components/SuspenseLoaders/PageSuspenseLoader';
 
 function App({
   agent_details,
@@ -30,10 +30,10 @@ function App({
 
   const ssoLogin = () => {
     if (window.location.href.indexOf('?error=') > -1) {
-      let searchParams = new URLSearchParams(window.location.search);
+      const searchParams = new URLSearchParams(window.location.search);
       if (searchParams) {
-        let mode = searchParams.get('mode');
-        let err = searchParams.get('error');
+        const mode = searchParams.get('mode');
+        const err = searchParams.get('error');
         if (mode == 'auth0' && err == '') {
           dispatch({ type: SSO_LOGIN_FULFILLED });
         }
@@ -51,8 +51,8 @@ function App({
     if (window.location.href.indexOf('?code=') > -1) {
       var searchParams = new URLSearchParams(window.location.search);
       if (searchParams) {
-        let code = searchParams.get('code');
-        let state = searchParams.get('state');
+        const code = searchParams.get('code');
+        const state = searchParams.get('state');
         localStorage.setItem('Linkedin_code', code);
         localStorage.setItem('Linkedin_state', state);
       }
@@ -62,9 +62,9 @@ function App({
     if (window.location.href.indexOf('?bingadsint=') > -1) {
       var searchParams = new URLSearchParams(window.location.search);
       if (searchParams) {
-        let projectID = searchParams.get('bingadsint');
-        let email = searchParams.get('email');
-        let projectname = searchParams.get('projectname');
+        const projectID = searchParams.get('bingadsint');
+        const email = searchParams.get('email');
+        const projectname = searchParams.get('projectname');
         enableBingAdsIntegration(projectID)
           .then(() => {
             sendSlackNotification(email, projectname, 'Bing Ads');
@@ -79,9 +79,9 @@ function App({
     if (window.location.href.indexOf('?marketoInt=') > -1) {
       var searchParams = new URLSearchParams(window.location.search);
       if (searchParams) {
-        let projectID = searchParams.get('marketoInt');
-        let email = searchParams.get('email');
-        let projectname = searchParams.get('projectname');
+        const projectID = searchParams.get('marketoInt');
+        const email = searchParams.get('email');
+        const projectname = searchParams.get('projectname');
         enableMarketoIntegration(projectID)
           .then(() => {
             sendSlackNotification(email, projectname, 'Marketo');
@@ -116,9 +116,9 @@ function App({
     } else {
       // PROD ENV
 
-      //Checking if it is PROD and not STAG
+      // Checking if it is PROD and not STAG
       if (window.location.href.indexOf('https://app.factors.ai/') != -1) {
-        //LogRocket
+        // LogRocket
         if (LogRocket) {
           LogRocket.init('anylrg/tufte-prod');
           LogRocket.identify(agent_details?.uuid, {
@@ -155,13 +155,13 @@ function App({
         };
 
         (function () {
-          var w = window;
-          var ic = w.Intercom;
+          const w = window;
+          const ic = w.Intercom;
           if (typeof ic === 'function') {
             ic('reattach_activator');
             ic('update', w.intercomSettings);
           } else {
-            var d = document;
+            const d = document;
             var i = function () {
               i.c(arguments);
             };
@@ -170,12 +170,12 @@ function App({
               i.q.push(args);
             };
             w.Intercom = i;
-            var l = function () {
-              var s = d.createElement('script');
+            const l = function () {
+              const s = d.createElement('script');
               s.type = 'text/javascript';
               s.async = true;
-              s.src = 'https://widget.intercom.io/widget/' + APP_ID;
-              var x = d.getElementsByTagName('script')[0];
+              s.src = `https://widget.intercom.io/widget/${APP_ID}`;
+              const x = d.getElementsByTagName('script')[0];
               x.parentNode.insertBefore(s, x);
             };
             if (document.readyState === 'complete') {
@@ -247,11 +247,9 @@ function App({
         <ErrorBoundary
           fallback={
             <FaErrorComp
-              size={'medium'}
-              title={'Bundle Error'}
-              subtitle={
-                'We are facing trouble loading App Bundles. Drop us a message on the in-app chat.'
-              }
+              size='medium'
+              title='Bundle Error'
+              subtitle='We are facing trouble loading App Bundles. Drop us a message on the in-app chat.'
             />
           }
           onError={FaErrorLog}
@@ -262,7 +260,7 @@ function App({
                 workspaceCode={PRODUCTION_WORKSPACE_CODE}
                 language='en'
                 user={userInfo}
-                lifeCycle={'unmount'}
+                lifeCycle='unmount'
               />
             )}
             <ScrollToTop />

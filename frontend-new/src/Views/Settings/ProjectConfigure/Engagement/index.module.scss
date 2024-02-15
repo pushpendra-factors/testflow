@@ -62,8 +62,8 @@
     user-select: none;
 
     & img {
-      width: 24px;
-      height: 24px;
+      width: 18px;
+      height: 18px;
       margin: 0 4px;
     }
     & h4 {
@@ -108,5 +108,11 @@
   }
   & td:nth-child(4) {
     width: 50% !important;
+  }
+}
+
+.engagementpopover {
+  & div {
+    padding: 0 !important;
   }
 }

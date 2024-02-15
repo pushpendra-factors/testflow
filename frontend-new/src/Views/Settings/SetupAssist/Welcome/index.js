@@ -10,7 +10,7 @@ import {
 } from 'Reducers/global';
 import styles from './index.module.scss';
 import Video from './Video';
-import { meetLink } from '../../../../utils/hubspot';
+import { meetLink } from '../../../../utils/meetLink';
 import FaHeader from '../../../../components/FaHeader';
 import OnBoard from './OnboardFlow';
 import { TOGGLE_WEBSITE_VISITOR_IDENTIFICATION_MODAL } from 'Reducers/types';

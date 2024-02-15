@@ -23,6 +23,7 @@ function SaleWindowModal({ saleWindowValue, visible, onOk, onCancel }) {
   };
 
   const menu = useCallback(() => {
+    let arr = new Array(12).fill(0).map((e, i) => (i + 1) * 15);
     return (
       <Menu
         onClick={(info) => {
@@ -31,18 +32,13 @@ function SaleWindowModal({ saleWindowValue, visible, onOk, onCancel }) {
         }}
         style={{ overflow: 'scroll', maxHeight: '185px' }}
       >
-        <Menu.Item key={1}>15 Days</Menu.Item>
-        <Menu.Item key={2}>30 Days</Menu.Item>
-        <Menu.Item key={3}>45 Days</Menu.Item>
-        <Menu.Item key={4}>60 Days</Menu.Item>
-        <Menu.Item key={5}>75 Days</Menu.Item>
-        <Menu.Item key={6}>90 Days</Menu.Item>
-        <Menu.Item key={7}>105 Days</Menu.Item>
-        <Menu.Item key={8}>120 Days</Menu.Item>
-        <Menu.Item key={9}>135 Days</Menu.Item>
-        <Menu.Item key={10}>150 Days</Menu.Item>
-        <Menu.Item key={11}>165 Days</Menu.Item>
-        <Menu.Item key={12}>180 Days</Menu.Item>
+        {arr.map((eachValue, eachIndex) => {
+          return (
+            <Menu.Item style={{ padding: '10px' }} key={eachIndex + 1}>
+              {eachValue} Days
+            </Menu.Item>
+          );
+        })}
       </Menu>
     );
   }, []);
@@ -72,7 +68,11 @@ function SaleWindowModal({ saleWindowValue, visible, onOk, onCancel }) {
         </div>
         <div className='mb-2'>
           <Dropdown overlay={menu} overlayStyle={{ zIndex: 10001 }}>
-            <Button className='dropdown-btn' type='text'>
+            <Button
+              className='dropdown-btn flex justify-between'
+              type='text'
+              style={{ width: '142px' }}
+            >
               {valuesState ? `${valuesState} Days` : `Select`}
 
               <DownOutlined />

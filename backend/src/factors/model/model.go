@@ -47,6 +47,7 @@ type Model interface {
 	IsSlackIntegratedForProject(projectID int64, agentUUID string) (bool, int)
 	IsTeamsIntegratedForProject(projectID int64, agentUUID string) (bool, int)
 	UpdateLastLoggedOut(agentUUID string, timestamp int64) int
+	UpdateAgentBillingCustomerID(agentUUID, id string) int
 
 	// analytics
 	ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error, string)
@@ -943,6 +944,7 @@ type Model interface {
 	GetUsersAssociatedToDomain(projectID int64, minMax *model.ListingTimeWindow, groupedFilters map[string][]model.QueryProperty) ([]model.Profile, int)
 	GenerateAllAccountsQueryString(projectID int64, source string, hasUserProperty bool, isAllUserProperties bool, minMax model.ListingTimeWindow, groupedFilters map[string][]model.QueryProperty, searchFilter []string) (string, []interface{}, error)
 	GetGroupNameIDMap(projectID int64) (map[string]int, int)
+	UpdateConfigForEvent(projectID int64, eventName string, updatedConfig []string) (int, error)
 
 	// Timeline consuming segment_marker
 	GetMarkedDomainsListByProjectId(projectID int64, payload model.TimelinePayload) ([]model.Profile, int, string)

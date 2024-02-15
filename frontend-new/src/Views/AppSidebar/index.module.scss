@@ -101,6 +101,12 @@
 .item-active {
   background-color: $fa-color-brand-1;
 }
+
+.item-active-override {
+  font-weight: 500 !important;
+  color: #1890ff !important;
+}
+
 .draft-title {
   &:hover {
     background-color: $fa-color-neutral-grey-3;

@@ -1,5 +1,13 @@
 import { Text } from 'Components/factorsComponents';
-import { Button, InputNumber, Modal, Skeleton, Tooltip, message } from 'antd';
+import {
+  Button,
+  InputNumber,
+  Modal,
+  Skeleton,
+  Tooltip,
+  message,
+  notification
+} from 'antd';
 import React, { useEffect, useState } from 'react';
 import { InfoCircleFilled } from '@ant-design/icons';
 import { EngagementTag } from 'Components/Profile/constants.ts';
@@ -8,15 +16,14 @@ import {
   updateEngagementCategoryRanges
 } from 'Reducers/timelines';
 import { useSelector } from 'react-redux';
+import _ from 'lodash';
 import styles from './index.module.scss';
 
 function EngagementPill({ type }) {
   return (
     <div
-      className={styles['category-pill']}
-      style={{
-        background: EngagementTag[type]?.bgColor
-      }}
+      className={`${styles['category-pill']} flex items-center`}
+      style={{ backgroundColor: EngagementTag[type]?.bgColor }}
     >
       <img
         src={`../../../assets/icons/${EngagementTag[type]?.icon}.svg`}
@@ -41,6 +48,7 @@ function EngagementCategoryModal({
     isFormLoading: false,
     isFormSubmitting: false
   });
+  const [savedRanges, setSavedRanges] = useState([]);
   const activeProject = useSelector((state) => state.global.active_project);
   const [categoryRange, setCategoryRange] = useState([
     [90, 100],
@@ -78,12 +86,13 @@ function EngagementCategoryModal({
     });
   };
   const handleResetButton = () => {
-    setCategoryRange([
+    const tmp = [
       [90, 100],
       [70, 90],
       [30, 70],
       [0, 30]
-    ]);
+    ];
+    setCategoryRange(tmp);
   };
   const fetchCategories = () => {
     setStatus((prev) => ({ ...prev, isFormLoading: true }));
@@ -102,12 +111,14 @@ function EngagementCategoryModal({
           tmpCategory.push([CoolRng.low, CoolRng.high]);
           tmpCategory.push([IceRng.low, IceRng.high]);
           setCategoryRange(tmpCategory);
+          setSavedRanges(tmpCategory);
         } catch (err) {
           handleResetButton();
           // message.error('Failed to Load Category Ranges, Reset to Default');
         }
       })
       .catch((err) => {
+        handleResetButton();
         // eslint-disable-next-line no-console
         console.error(err);
         message.error('Failed to Load Category Ranges');
@@ -138,7 +149,11 @@ function EngagementCategoryModal({
     setStatus((prev) => ({ ...prev, isFormSubmitting: true }));
     updateEngagementCategoryRanges(activeProject.id, payload)
       .then(() => {
-        message.success('Updated Category Ranges');
+        notification.success({
+          message: 'Engagement category re-assignment has begun.',
+          description:
+            'All accounts will get updated with new categories within 1 day.'
+        });
       })
       .catch((err) => {
         console.error(err);
@@ -180,6 +195,10 @@ function EngagementCategoryModal({
               loading={status.isFormSubmitting}
               type='primary'
               onClick={handleApply}
+              disabled={
+                _.isEqual(savedRanges, categoryRange) ||
+                savedRanges.length === 0
+              }
             >
               Apply Changes
             </Button>
@@ -280,14 +299,14 @@ function EngagementCategoryModal({
 
           <div id='engagement-modal-tooltip' style={{ width: 'fit-content' }}>
             <Tooltip
-              title='Percentile Based'
+              title='Categories are assigned based on relative scores of accounts.'
               getTooltipContainer={() =>
                 document.querySelector('#engagement-modal-tooltip')
               }
             >
-              <div style={{ margin: 'auto 0' }}>
+              <div className='flex items-center gap-2 mx-auto my-0'>
                 {' '}
-                <InfoCircleFilled /> Percentile Based
+                <InfoCircleFilled /> <div>Percentile Based</div>
               </div>
             </Tooltip>
           </div>

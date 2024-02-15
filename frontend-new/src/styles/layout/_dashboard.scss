@@ -151,15 +151,16 @@
 }
 
 .fa-global-search--input {
-  background-color: $fa-color-neutral-grey-10;
+  background-color: $fa-color-neutral-grey-9;
   border: none;
   border-radius: 6px;
-  width: 340px;
-  height: 40px;
+  width: 232px;
+  height: 36px;
   box-shadow: none;
   transition: all 0.2s;
+  padding: 6.5px 11px;
   &:hover {
-    width: 350px;
+    padding: 3px 22px 3px 18px;
     border: none;
     cursor: pointer;
   }
@@ -184,6 +185,7 @@
     }
   }
 }
+
 .fa-global-search--input-fw {
   width: 100%;
   &:hover {
