@@ -19,7 +19,7 @@ parser.add_option('--env', dest='env', default='development')
 parser.add_option('--dry', dest='dry', help='', default='False')
 parser.add_option('--skip_today', dest='skip_today', help='', default='False') 
 parser.add_option('--is_dry_run', dest='is_dry_run', help='', default= 'False', type= str)
-parser.add_option('--project_ids', dest='project_ids', help='', default="1", type=str)
+parser.add_option('--project_ids', dest='project_ids', help='', default="", type=str)
 parser.add_option('--exclude_project_ids', dest='exclude_project_ids', help='', default='', type=str)
 parser.add_option('--client_id', dest='client_id', help='',default=None, type=str)
 parser.add_option('--client_secret', dest='client_secret', help='',default=None, type=str)
@@ -56,10 +56,11 @@ if __name__ == '__main__':
 
     data_service_obj.data_service_host = options.data_service_host
     is_project_id_flag_given = (options.project_ids != None and options.project_ids != '')
+    allProjects = options.project_ids == "*"
     
     linkedin_int_settings =[]
     err_get_settings = ''
-    if is_project_id_flag_given:
+    if is_project_id_flag_given and not allProjects:
         linkedin_int_settings, err_get_settings = data_service_obj.get_linkedin_int_settings_for_projects(
                                                                                     options.project_ids)
     else:
