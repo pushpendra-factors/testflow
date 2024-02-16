@@ -56,7 +56,7 @@ class ChatHandler(BaseHandler):
             log.info(json_string_valid)
             result_dict = json.loads(json_string_valid)
 
-            query_payload = get_url_and_query_payload_from_gpt_response(result_dict, pid)
+            query_payload = get_url_and_query_payload_from_gpt_response(result_dict, pid, kpi_config)
 
             log.info(query_payload)
             result_json = json.dumps(query_payload, indent=2)
