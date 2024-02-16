@@ -1,6 +1,8 @@
 package model
 
 import (
+	"time"
+
 	"github.com/jinzhu/gorm/dialects/postgres"
 )
 
@@ -23,6 +25,7 @@ type Segment struct {
 	Description string          `json:"description"`
 	Query       *postgres.Jsonb `json:"query"`
 	Type        string          `json:"type"`
+	UpdatedAt   time.Time       `json:"updated_at"`
 }
 
 type AssociatedSegments struct {
