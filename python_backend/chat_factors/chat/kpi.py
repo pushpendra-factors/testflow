@@ -9,47 +9,72 @@ DEFAULT_CATEGORY = "events"
 DEFAULT_DISPLAY_CATEGORY = "website_session"
 
 
-def get_transformed_kpi_query(gpt_response, raw_data_path=os.path.join('chat_factors/chatgpt_poc', 'data.json')):
+def get_transformed_kpi_query(gpt_response, kpi_config,
+                              raw_data_path=os.path.join('chat_factors/chatgpt_poc', 'data.json')):
     try:
         data = json.load(open(raw_data_path, 'r'))
     except Exception as e:
         log.error("Error processing request: %s", str(e))
     from_time_stamp, to_time_stamp = get_start_end_timestamps(DEFAULT_TIMEZONE, gpt_response["time"])
-    query_payload = {
-        "cl": gpt_response["qt"],
-        "qG": [
-            {
-                "ca": DEFAULT_CATEGORY,
-                "pgUrl": "",
-                "dc": DEFAULT_DISPLAY_CATEGORY,
-                "me": [gpt_response["qe"]],
-                "fil": [],
-                "gBy": [],
-                "fr": from_time_stamp,
-                "to": to_time_stamp,
-                "tz": DEFAULT_TIMEZONE,
-                "qt": "static",
-                "an": ""
-            },
-            {
-                "ca": DEFAULT_CATEGORY,
-                "pgUrl": "",
-                "dc": DEFAULT_DISPLAY_CATEGORY,
-                "me": [gpt_response["qe"]],
-                "fil": [],
-                "gBy": [],
-                "gbt": "date",
-                "fr": from_time_stamp,
-                "to": to_time_stamp,
-                "tz": DEFAULT_TIMEZONE,
-                "qt": "static",
-                "an": ""
-            }
-        ],
-        "gGBy": [],
-        "gFil": []
-    }
+    kpi_to_search = gpt_response["qe"]
+    kpi_info = get_kpi_info(kpi_to_search, kpi_config)
+    if kpi_info:
+        category = kpi_info['category']
+        display_category = kpi_info['display_category']
+        query_type = kpi_info['kpi_query_type']
+        log.info(kpi_info)
+        query_payload = {
+            "cl": gpt_response["qt"],
+            "qG": [
+                {
+                    "ca": category,
+                    "pgUrl": "",
+                    "dc": display_category,
+                    "me": [gpt_response["qe"]],
+                    "fil": [],
+                    "gBy": [],
+                    "fr": from_time_stamp,
+                    "to": to_time_stamp,
+                    "tz": DEFAULT_TIMEZONE,
+                    "qt": query_type,
+                    "an": ""
+                },
+                {
+                    "ca": category,
+                    "pgUrl": "",
+                    "dc": display_category,
+                    "me": [gpt_response["qe"]],
+                    "fil": [],
+                    "gBy": [],
+                    "gbt": "date",
+                    "fr": from_time_stamp,
+                    "to": to_time_stamp,
+                    "tz": DEFAULT_TIMEZONE,
+                    "qt": query_type,
+                    "an": ""
+                }
+            ],
+            "gGBy": [],
+            "gFil": []
+        }
+    else:
+        log.info(f"No information found for kpi: {kpi_to_search}")
+        query_payload = {}
+
     return query_payload
+
+
+def get_kpi_info(name, kpi_config):
+    for category_config in kpi_config:
+        for metric in category_config.get("metrics", []):
+            if metric.get("name") == name:
+                return {
+                    "category": category_config.get("category"),
+                    "display_category": category_config.get("display_category"),
+                    "kpi_query_type": metric.get("kpi_query_type"),
+                }
+
+    return None
 
 
 def get_start_end_timestamps(timezone, duration):
