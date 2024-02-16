@@ -42,8 +42,8 @@ class ChatHandler(BaseHandler):
     def post(self):
         try:
             result = None
-            prompt = self.get_argument("prompt")
-            pid = self.get_argument("pid")
+            prompt = json.loads(self.request.body)["prompt"]
+            pid = json.loads(self.request.body)["pid"]
             log.info('prompt: %s', prompt)
             if app.CONFIG.ADWORDS_APP.env == "development":
                 result = get_answer_from_ir_model_local(prompt)
