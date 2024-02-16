@@ -44,6 +44,7 @@ class ChatHandler(BaseHandler):
             result = None
             prompt = json.loads(self.request.body)["prompt"]
             pid = json.loads(self.request.body)["pid"]
+            kpi_config = json.loads(self.request.body)["kpi_config"]
             log.info('prompt: %s', prompt)
             if app.CONFIG.ADWORDS_APP.env == "development":
                 result = get_answer_from_ir_model_local(prompt)
@@ -51,10 +52,17 @@ class ChatHandler(BaseHandler):
                 ChatHandler.initialize_variable("")
                 result = get_answer_from_ir_model(prompt, self.prompt_response_data, self.prompt_vector_data)
             log.info(result["answer"])
-            json_string_with_quotes = re.sub(r'(\w+)', r'"\1"', result["answer"])
-            json_string_valid = json_string_with_quotes.replace('("', '"').replace('")', '"').replace('(-)', '""')
+
+            # removing chars : '(' & ')' & '-'
+            json_string_valid = result["answer"].replace('(', '').replace(')', '').replace('-', '')
             log.info(json_string_valid)
-            result_dict = json.loads(json_string_valid)
+
+            # adding double quotes around keys and values
+            json_string_with_quotes = re.sub(r'(\w+):(-?\w*)', r'"\1":"\2"', json_string_valid)
+            log.info(json_string_with_quotes)
+
+            result_dict = json.loads(json_string_with_quotes)
+            log.info(result_dict)
 
             query_payload = get_url_and_query_payload_from_gpt_response(result_dict, pid, kpi_config)
 
