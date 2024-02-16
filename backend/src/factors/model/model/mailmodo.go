@@ -31,7 +31,7 @@ func FormMailmodoTriggerCampaignRequest(campaignId string, reqPayload []byte) (*
 	}
 
 	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("Authorization", "Bearer "+apiKey)
+	request.Header.Add("mmApiKey", apiKey)
 
 	return request, nil
 
