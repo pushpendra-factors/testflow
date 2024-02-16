@@ -1,0 +1,1 @@
+ALTER TABLE segments ADD COLUMN updated_at timestamp(6) DEFAULT '2024-01-01 00:00:00';

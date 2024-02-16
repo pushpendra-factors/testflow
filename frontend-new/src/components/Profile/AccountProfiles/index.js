@@ -248,19 +248,7 @@ function AccountProfiles({
 
   useEffect(() => {
     if (!currentProjectSettings?.timelines_config) return;
-
-    const { disabled_events, user_config, account_config } =
-      currentProjectSettings.timelines_config;
-    const timelinesConfig = {
-      disabled_events: [...disabled_events],
-      user_config: { ...DEFAULT_TIMELINE_CONFIG.user_config, ...user_config },
-      account_config: {
-        ...DEFAULT_TIMELINE_CONFIG.account_config,
-        ...account_config
-      }
-    };
-
-    setTLConfig(timelinesConfig);
+    setTLConfig(currentProjectSettings.timelines_config);
   }, [currentProjectSettings?.timelines_config]);
 
   useEffect(() => {

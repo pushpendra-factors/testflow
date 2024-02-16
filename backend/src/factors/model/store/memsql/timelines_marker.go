@@ -41,6 +41,15 @@ func (store *MemSQL) GetMarkedDomainsListByProjectId(projectID int64, payload mo
 		logCtx.Error("Segment not found.")
 		return []model.Profile{}, statusCode, "Failed to get segment"
 	}
+
+	lastRunTime, lastRunStatusCode := store.GetMarkerLastForAllAccounts(projectID)
+
+	// for case - segment is updated but all_run for the day is yet to run
+	if lastRunStatusCode != http.StatusFound || segment.UpdatedAt.After(lastRunTime) {
+		return store.GetProfilesListByProjectId(projectID, payload, model.PROFILE_TYPE_ACCOUNT)
+	}
+
+	// if segment.UpdatedAt
 	segmentQuery := model.Query{}
 	err := U.DecodePostgresJsonbToStructType(segment.Query, &segmentQuery)
 	if err != nil {
