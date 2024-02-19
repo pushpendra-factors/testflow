@@ -16,6 +16,7 @@ import SidebarMenuItem from './SidebarMenuItem';
 import SidebarSearch from './SidebarSearch';
 import { defaultSegmentIconsMapping } from './appSidebar.constants';
 import { getSegmentColorCode } from './appSidebar.helpers';
+import { PathUrls } from 'Routes/pathUrls';
 
 function NewSegmentItem() {
   return <SidebarMenuItem text='Untitled Segment 1' isActive onClick={noop} />;
@@ -35,7 +36,7 @@ function SegmentItem({ segment }) {
   const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
 
   const changeActiveSegment = () => {
-    history.replace({ pathname: `/accounts/segments/${segment?.id}` });
+    history.replace({ pathname: `/accounts/segments/${segment.id}` });
   };
 
   const setActiveSegment = () => {
@@ -60,6 +61,7 @@ function SegmentItem({ segment }) {
 }
 
 function AccountsSidebar() {
+  const history = useHistory();
   const [searchText, setSearchText] = useState('');
   const dispatch = useDispatch();
   const segments = useSelector((state) => selectSegments(state));
@@ -118,11 +120,12 @@ function AccountsSidebar() {
             styles.sidebar_action_button
           )}
           onClick={() => {
+            history.replace(PathUrls.ProfileAccounts);
             dispatch(setNewSegmentModeAction(true));
           }}
         >
           <SVG
-            name={'plus'}
+            name='plus'
             size={16}
             extraClass={styles.sidebar_action_button__content}
             isFill={false}

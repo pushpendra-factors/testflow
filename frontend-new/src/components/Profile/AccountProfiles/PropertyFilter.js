@@ -101,7 +101,7 @@ function PropertyFilter({
     );
   }
 
-  if (selectedAccount.account == null) return null;
+  if (!selectedAccount.length) return null;
 
   return (
     <div className='flex flex-col row-gap-4 w-full'>
@@ -121,7 +121,7 @@ function PropertyFilter({
         </Button>
       </ControlledComponent>
       <FiltersBox
-        source={selectedAccount.account[1]}
+        source={selectedAccount?.[1]}
         filtersList={filtersList}
         profileType={profileType}
         setFiltersList={setFiltersList}
