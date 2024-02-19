@@ -274,23 +274,7 @@ function CustomKPI({
   const handleEventChange = (...props) => {
     queryChange(...props);
   };
-  const userPropertiesModified = useMemo(() => {
-    const filterOptsObj = {};
-    if (userPropertiesV2) {
-      const tmpPropertiesV2 = {};
-      Object.keys(userPropertiesV2 || {}).forEach((e) => {
-        tmpPropertiesV2[e] = userPropertiesV2[e].filter(
-          (ee) => ee[2] === 'datetime'
-        );
-      });
-      convertAndAddPropertiesToGroupSelectOptions(
-        tmpPropertiesV2,
-        filterOptsObj,
-        'user'
-      );
-    }
-    return Object.values(filterOptsObj);
-  }, [userPropertiesV2]);
+
   const periodQueryList = () => {
     const tmpRes = customKPIConfig.result?.filter(
       (e) => e.obj_ty === selKPICategory
@@ -554,7 +538,7 @@ function CustomKPI({
           agPr: timePeriodRangeProperties[0].value,
           agPr2: timePeriodRangeProperties[1].value,
           agPrTy: 'datetime',
-          agPr2Ty: 'datetime',
+          agPrTy2: 'datetime',
           fil: EventfilterValues?.globalFilters
             ? getEventsWithPropertiesCustomKPI(
                 EventfilterValues?.globalFilters,
@@ -588,8 +572,10 @@ function CustomKPI({
   };
 
   const deleteKPI = (item) => {
+    setTableLoading(true);
     removeCustomKPI(activeProject.id, item?.id)
       .then(() => {
+        setTableLoading(false);
         fetchSavedCustomKPI(activeProject.id);
         notification.success({
           message: 'KPI Removed',
@@ -597,6 +583,7 @@ function CustomKPI({
         });
       })
       .catch((err) => {
+        setTableLoading(false);
         notification.error({
           message: 'Error',
           description: err?.data?.error
@@ -671,14 +658,16 @@ function CustomKPI({
   useEffect(() => {
     if (savedCustomKPI) {
       const savedArr = [];
-      savedCustomKPI?.map((item, index) => {
+      savedCustomKPI?.forEach((item, index) => {
         savedArr.push({
           key: index,
           name: item,
           desc: item.description,
           type:
             item.type_of_query === 1
-              ? 'Default'
+              ? item.metric_type === 'date_type_diff_metric'
+                ? 'Time Period Based'
+                : 'Default'
               : item.type_of_query === 2
                 ? 'Derived'
                 : 'Event Based',
@@ -1548,11 +1537,14 @@ function CustomKPI({
                             >
                               {customKPIConfig?.result?.map((item) => {
                                 if (item.obj_ty === selKPICategory) {
-                                  return item?.agFn.map((it) => (
-                                    <Option key={it} value={it}>
-                                      {_.startCase(it)}
-                                    </Option>
-                                  ));
+                                  return item?.agFn.map(
+                                    (it) =>
+                                      it !== 'unique' && (
+                                        <Option key={it} value={it}>
+                                          {_.startCase(it)}
+                                        </Option>
+                                      )
+                                  );
                                 }
                               })}
                             </Select>
