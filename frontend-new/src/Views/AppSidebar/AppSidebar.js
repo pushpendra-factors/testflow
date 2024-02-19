@@ -9,7 +9,10 @@ import { toggleSidebarCollapsedStateAction } from 'Reducers/global/actions';
 import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
 import { PathUrls } from 'Routes/pathUrls';
 import { selectAccountPayload } from 'Reducers/accountProfilesView/selectors';
-import { setAccountPayloadAction } from 'Reducers/accountProfilesView/actions';
+import {
+  setAccountPayloadAction,
+  setNewSegmentModeAction
+} from 'Reducers/accountProfilesView/actions';
 import { selectTimelinePayload } from 'Reducers/userProfilesView/selectors';
 import { setTimelinePayloadAction } from 'Reducers/userProfilesView/actions';
 import { INITIAL_ACCOUNT_PAYLOAD } from 'Reducers/accountProfilesView';
@@ -33,7 +36,7 @@ function AppSidebar() {
   const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
   const activeSegment = activeAccountPayload?.segment;
 
-  const isAllAccountsSelected = Boolean(activeSegment?.id) === false;
+  const isAllAccountsSelected = Boolean(activeSegment) === false;
 
   const {
     newSegmentMode: profileNewSegmentMode,
@@ -59,6 +62,7 @@ function AppSidebar() {
 
   const changeAccountPayload = () => {
     dispatch(setAccountPayloadAction(INITIAL_ACCOUNT_PAYLOAD));
+    dispatch(setNewSegmentModeAction(false));
     history.replace(PathUrls.ProfileAccounts);
   };
 
