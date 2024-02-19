@@ -31,6 +31,31 @@ const (
 	IntegrationG2                  = "g2"
 )
 
+// Please avoid changing these constants. May cause impact across project.
+// Helps in fetching id of templates on FE.
+const (
+	ALL_PAID_MARKETING                 = "ALL_PAID_MARKETING"
+	HUBSPOT_CONTACT_ATTRIBUTION        = "HUBSPOT_CONTACT_ATTRIBUTION"
+	GOOGLE_ADWORDS                     = "GOOGLE_ADWORDS"
+	PAID_SEARCH_MARKETING              = "PAID_SEARCH_MARKETING"
+	PAID_SEARCH_TRAFFIC                = "PAID_SEARCH_TRAFFIC"
+	PAID_SOCIAL_MARKETING              = "PAID_SOCIAL_MARKETING"
+	ORGANIC_PERFORMANCE                = "ORGANIC_PERFORMANCE"
+	OVERALL_REPORTING                  = "OVERALL_REPORTING"
+	WEBSITE_VISITOR_IDENTIFICATION     = "WEBSITE_VISITOR_IDENTIFICATION"
+	WEB_ANALYTICS                      = "WEB_ANALYTICS"
+	WEB_KPIS_AND_OVERVIEW              = "WEB_KPIS_AND_OVERVIEW"
+	HUBSPOT_INSIGHTS                   = "HUBSPOT_INSIGHTS"
+	GOOGLE_SEARCH_CONSOLE              = "GOOGLE_SEARCH_CONSOLE"
+	G2_INFLLUENCE_SALESFORCE           = "G2_INFLLUENCE_SALESFORCE"
+	G2_INFLUENCE_HUBSPOT               = "G2_INFLUENCE_HUBSPOT"
+	LINKEDIN_INFLUENCE_SALESFORCE      = "LINKEDIN_INFLUENCE_SALESFORCE"
+	LINKEDIN_INFLUENCE_HUBSPOT         = "LINKEDIN_INFLUENCE_HUBSPOT"
+	BLOG_CONVERSION_SUMMARY_SALESFORCE = "BLOG_CONVERSION_SUMMARY_SALESFORCE"
+	BLOG_CONVERSION_SUMMARY_HUBSPOT    = "BLOG_CONVERSION_SUMMARY_HUBSPOT"
+	BLOGS_TRAFFIC_SUMMARY              = "BLOGS_TRAFFIC_SUMMARY"
+)
+
 type UnitInfo struct {
 	ID           int    `json:"id"`
 	Title        string `json:"title"`
@@ -55,6 +80,7 @@ type DashboardTemplate struct {
 	Tags                 *postgres.Jsonb `json:"tags"`
 	Categories           *postgres.Jsonb `json:"categories"`
 	RequiredIntegrations *postgres.Jsonb `json:"required_integrations"`
+	Type                 string          `gorm:"not null" json:"type"`
 	IsDeleted            bool            `gorm:"not null;default:false" json:"is_deleted"`
 	CreatedAt            time.Time       `json:"created_at"`
 	UpdatedAt            time.Time       `json:"updated_at"`

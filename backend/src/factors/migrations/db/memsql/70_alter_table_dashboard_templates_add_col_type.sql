@@ -1,0 +1,1 @@
+ALTER TABLE dashboard_templates ADD COLUMN type text NOT NULL;
