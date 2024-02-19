@@ -561,7 +561,7 @@ func domainUsersProcessingWithErrcode(projectID int64, domId string, usersArray 
 		}
 	}
 
-	updateAssociatedSegment := IsMapsNotMatching(associatedSegments, existingAssociatedSegment)
+	updateAssociatedSegment := IsMapsNotMatching(projectID, domId, associatedSegments, existingAssociatedSegment)
 
 	if !updateAssociatedSegment {
 		return http.StatusOK, nil
@@ -579,27 +579,34 @@ func domainUsersProcessingWithErrcode(projectID int64, domId string, usersArray 
 	return http.StatusOK, nil
 }
 
-func IsMapsNotMatching(associatedSegments map[string]model.AssociatedSegments, oldAssociatedSegments map[string]interface{}) bool {
+func IsMapsNotMatching(projectID int64, domId string, associatedSegments map[string]model.AssociatedSegments, oldAssociatedSegments map[string]interface{},
+) bool {
+	isDifferent := false
+
 	// length check
 	if len(associatedSegments) != len(oldAssociatedSegments) {
-		return true
+		isDifferent = true
 	}
 
 	// checking new map, if previously computed segment does not exist
 	for segID := range associatedSegments {
 		if _, exists := oldAssociatedSegments[segID]; !exists {
-			return true
+			log.WithFields(log.Fields{"project_id": projectID, "domain_id": domId, "segment_id": segID}).
+				Info("Entering the segment")
+			isDifferent = true
 		}
 	}
 
 	// checking old map, if newly computed segment does not exist
 	for segID := range oldAssociatedSegments {
 		if _, exists := associatedSegments[segID]; !exists {
-			return true
+			log.WithFields(log.Fields{"project_id": projectID, "domain_id": domId, "segment_id": segID}).
+				Info("Leaving the segment")
+			isDifferent = true
 		}
 	}
 
-	return false
+	return isDifferent
 }
 
 func findUserGroupByID(u model.User, id int) (string, error) {
