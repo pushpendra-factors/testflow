@@ -39,13 +39,15 @@ func UpdateAccScoreWeights(c *gin.Context) (interface{}, int, string, string, bo
 	weights.SaleWindow = weightsRequest.SaleWindow
 
 	if weights.SaleWindow == 0 {
-		logCtx.Error("trying to set salewindow to 0 ")
-		tmp_weights, errStatus := store.GetStore().GetWeightsByProject(projectId)
-		if errStatus != http.StatusFound {
-			logCtx.Errorf("Unable to retrieve last sale window")
-		} else {
-			weights.SaleWindow = tmp_weights.SaleWindow
-		}
+		errMsg := "trying to set salewindow to 0 "
+		logCtx.Error(errMsg)
+		return nil, http.StatusBadRequest, errMsg, "", true
+	}
+
+	if len(weights.WeightConfig) == 0 {
+		errMsg := "trying to set weight config (filters) to 0 "
+		logCtx.Error(errMsg)
+		return nil, http.StatusBadRequest, errMsg, "", true
 	}
 
 	// convert incoming request to AccWeights.
