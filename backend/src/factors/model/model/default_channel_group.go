@@ -7031,6 +7031,12 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 				LogicalOp: LOGICAL_OP_AND,
 			},
 			{
+				Property:  U.EP_LICLID,
+				Condition: EqualsOpStr,
+				Value:     "$none",
+				LogicalOp: LOGICAL_OP_AND,
+			},
+			{
 				Property:  U.EP_SOURCE,
 				Condition: EqualsOpStr,
 				Value:     "$none",
@@ -7662,6 +7668,12 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 			},
 			{
 				Property:  U.EP_FBCLID,
+				Condition: EqualsOpStr,
+				Value:     "$none",
+				LogicalOp: LOGICAL_OP_AND,
+			},
+			{
+				Property:  U.EP_LICLID,
 				Condition: EqualsOpStr,
 				Value:     "$none",
 				LogicalOp: LOGICAL_OP_AND,
