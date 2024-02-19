@@ -21,6 +21,7 @@ const DCGTable = ({
   setShowModalVisible,
   setEditProperty,
   eventPropNames,
+  userPropNames,
   enableEdit
 }) => {
   const [DCGData, setDCGData] = useState([]);
@@ -103,7 +104,7 @@ const DCGTable = ({
     return tmp;
   };
   const matchEventName = (item) => {
-    let findItem = eventPropNames?.[item];
+    let findItem = eventPropNames?.[item] || userPropNames?.[item];
     return findItem ? findItem : item;
   };
 
@@ -391,7 +392,8 @@ const DCGTable = ({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  eventPropNames: state.coreQuery.eventPropNames
+  eventPropNames: state.coreQuery.eventPropNames,
+  userPropNames: state.coreQuery.userPropNames
 });
 
 export default connect(mapStateToProps, { udpateProjectDetails })(DCGTable);
