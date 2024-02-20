@@ -1,8 +1,6 @@
 name: Validate Commit Count
 
 on:
-  push:
-    branches: [master, staging, release]
   pull_request:
     branches: [master, staging, release]
 
