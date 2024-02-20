@@ -232,6 +232,17 @@ type Model interface {
 	HasAccessToDashboard(projectID int64, agentUUID string, id int64) (bool, *model.Dashboard)
 	UpdateDashboard(projectID int64, agentUUID string, id int64, dashboard *model.UpdatableDashboard) int
 	DeleteDashboard(projectID int64, agentUUID string, dashboardID int64) int
+	GetDashboardsByFolderId(projectId int64, folderId string) ([]model.Dashboard, int)
+	UpdateFolderIdForMultipleDashboards(projectId int64, dashboards []model.Dashboard, folderId string) int
+
+	// dashboard folders
+	CreateDashboardFolder(projectId int64, folder *model.DashboardFolders) (*model.DashboardFolders, int)
+	UpdateDashboardFolder(projectId int64, folderId string, folder *model.UpdatableDashboardFolder) int
+	GetDashboardFolders(projectId int64) ([]model.DashboardFolders, int)
+	DeleteDashboardFolder(projectId int64, folderId string) int
+	CreateAllBoardsDashboardFolder(projectId int64) (*model.DashboardFolders, int)
+	IsFolderNameAlreadyExists(projectId int64, name string) int
+	GetAllBoardsDashboardFolder(projectId int64) (model.DashboardFolders, int)
 
 	// event_analytics
 	RunEventsGroupQuery(queriesOriginal []model.Query, projectId int64, enableFilterOpt bool) (model.ResultGroup, int)

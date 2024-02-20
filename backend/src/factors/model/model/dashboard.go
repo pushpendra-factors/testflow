@@ -30,8 +30,9 @@ type Dashboard struct {
 	Type          string          `gorm:"type:varchar(5);not null" json:"type"`
 	Settings      postgres.Jsonb  `json:"settings"`
 	Class         string          `json:"class"`
+	InternalID    int64           `json:"inter_id"` // Used only for predefined dashboard.
+	FolderID      string          `json:"folder_id"`
 	TemplateType  string          `json:"template_type"`
-	InternalID    int64           `json:"inter_id"`       // Used only for predefined dashboard.
 	UnitsPosition *postgres.Jsonb `json:"units_position"` // map[string]map[uint64]int -> map[unit_type]unit_id:unit_position
 	IsDeleted     bool            `gorm:"not null;default:false" json:"is_deleted"`
 	CreatedAt     time.Time       `json:"created_at"`
@@ -49,7 +50,8 @@ type DashboardString struct {
 	Type          string          `gorm:"type:varchar(5);not null" json:"type"`
 	Settings      postgres.Jsonb  `json:"settings"`
 	Class         string          `json:"class"`
-	InternalID    int64           `json:"inter_id"`       // Used only for predefined dashboard.
+	InternalID    int64           `json:"inter_id"` // Used only for predefined dashboard.
+	FolderID      string          `json:"folder_id"`
 	UnitsPosition *postgres.Jsonb `json:"units_position"` // map[string]map[uint64]int -> map[unit_type]unit_id:unit_position
 	IsDeleted     bool            `gorm:"not null;default:false" json:"is_deleted"`
 	CreatedAt     time.Time       `json:"created_at"`
@@ -62,6 +64,7 @@ type UpdatableDashboard struct {
 	Description   string                    `json:"description"`
 	UnitsPosition *map[string]map[int64]int `json:"units_position"`
 	Settings      *postgres.Jsonb           `json:"settings"`
+	FolderID      string                    `json:"folder_id"`
 }
 
 type DashboardCacheResult struct {
