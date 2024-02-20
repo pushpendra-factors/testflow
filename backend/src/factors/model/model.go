@@ -945,6 +945,7 @@ type Model interface {
 	GenerateAllAccountsQueryString(projectID int64, source string, hasUserProperty bool, isAllUserProperties bool, minMax model.ListingTimeWindow, groupedFilters map[string][]model.QueryProperty, searchFilter []string) (string, []interface{}, error)
 	GetGroupNameIDMap(projectID int64) (map[string]int, int)
 	UpdateConfigForEvent(projectID int64, eventName string, updatedConfig []string) (int, error)
+	GetDomainPropertiesByID(projectID int64, domainIDs []string) ([]model.User, int)
 
 	// Timeline consuming segment_marker
 	GetMarkedDomainsListByProjectId(projectID int64, payload model.TimelinePayload) ([]model.Profile, int, string)

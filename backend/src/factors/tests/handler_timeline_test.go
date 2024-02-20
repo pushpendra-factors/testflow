@@ -4422,7 +4422,16 @@ func TestAllAccounts(t *testing.T) {
 	domains := []string{"adpushup.com", "madstreetden.com", "heyflow.app", "clientjoy.io", "adapt.io"}
 	domainUsers := make([]model.User, 0)
 	for i := 0; i < numDomains; i++ {
-		domProperties := postgres.Jsonb{RawMessage: json.RawMessage(`{}`)}
+		var domProperties postgres.Jsonb
+		if i > 1 {
+			domProperties = postgres.Jsonb{RawMessage: json.RawMessage(fmt.Sprintf(`{"$domain_name":"%s",
+		"$engagement_level":"Hot","$engagement_score":125.300000,"$joinTime":1681211371,
+		"$total_enagagement_score":196.000000}`, domains[i]))}
+		} else {
+			domProperties = postgres.Jsonb{RawMessage: json.RawMessage(fmt.Sprintf(`{"$domain_name":"%s",
+		"$engagement_level":"Cold","$engagement_score":5.300000,"$joinTime":1681211371,
+		"$total_enagagement_score":120.000000}`, domains[i]))}
+		}
 		source := model.GetRequestSourcePointer(model.UserSourceDomains)
 		groupUser := true
 		domID, _ := store.GetStore().CreateUser(&model.User{
@@ -4579,6 +4588,8 @@ func TestAllAccounts(t *testing.T) {
 	payload = model.TimelinePayload{
 		Query: model.Query{
 			Source: "$domains",
+			TableProps: []string{"$hubspot_company_name", U.SIX_SIGNAL_NAME, "$salesforce_account_name",
+				"$domain_name", "$engagement_level", "$engagement_score", "$total_enagagement_score"},
 		},
 		SearchFilter: []string{"maruti", "hey", "adapt"},
 	}
@@ -4594,10 +4605,17 @@ func TestAllAccounts(t *testing.T) {
 	assert.Contains(t, searchNames, resp[1].HostName)
 	assert.Contains(t, searchNames, resp[0].Name)
 	assert.Contains(t, searchNames, resp[1].Name)
+	for i := range resp {
+		assert.Equal(t, "Hot", resp[i].TableProps["$engagement_level"])
+		assert.Equal(t, 125.3, resp[i].TableProps["$engagement_score"])
+		assert.Equal(t, float64(196), resp[i].TableProps["$total_enagagement_score"])
+	}
 
 	payload = model.TimelinePayload{
 		Query: model.Query{
 			Source: "$domains",
+			TableProps: []string{"$hubspot_company_name", U.SIX_SIGNAL_NAME, "$salesforce_account_name",
+				"$domain_name", "$engagement_level", "$engagement_score", "$total_enagagement_score"},
 		},
 	}
 	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
@@ -4607,18 +4625,23 @@ func TestAllAccounts(t *testing.T) {
 	err = json.Unmarshal(jsonResponse, &resp)
 	assert.Nil(t, err)
 	assert.Equal(t, len(resp), 5)
+	for i := range resp {
+		assert.NotEmpty(t, resp[i].TableProps["$engagement_level"])
+		assert.NotEmpty(t, resp[i].TableProps["$engagement_score"])
+		assert.NotEmpty(t, resp[i].TableProps["$total_enagagement_score"])
+	}
 
 	payload = model.TimelinePayload{
 		Query: model.Query{
 			GlobalUserProperties: []model.QueryProperty{
 				{
-					Entity:    "user_group",
+					Entity:    "user_g",
 					Type:      "categorical",
-					Property:  "$city",
-					Operator:  "equals",
-					Value:     "London",
+					Property:  "$hubspot_company_domain",
+					Operator:  "notEqual",
+					Value:     "$none",
 					LogicalOp: "AND",
-					GroupName: "user",
+					GroupName: U.GROUP_NAME_HUBSPOT_COMPANY,
 				}, {
 					Entity:    "user_g",
 					Type:      "categorical",
@@ -4716,6 +4739,39 @@ func TestAllAccounts(t *testing.T) {
 	err = json.Unmarshal(jsonResponse, &resp)
 	assert.Nil(t, err)
 	assert.Equal(t, len(resp), 0)
+
+	payload = model.TimelinePayload{
+		Query: model.Query{
+			GlobalUserProperties: []model.QueryProperty{
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$engagement_level",
+					Operator:  "equals",
+					Value:     "Cold",
+					LogicalOp: "AND",
+					GroupName: U.GROUP_NAME_DOMAINS,
+				},
+			}, Source: "$domains",
+			TableProps: []string{"$hubspot_company_name", U.SIX_SIGNAL_NAME, "$salesforce_account_name",
+				"$domain_name", "$engagement_level", "$engagement_score", "$total_enagagement_score"}},
+	}
+	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = io.ReadAll(w.Body)
+	resp = make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 2)
+	for i := range resp {
+		assert.Greater(t, resp[i].LastActivity, U.TimeNowZ().AddDate(0, 0, -1))
+		assert.NotEmpty(t, resp[i].TableProps[U.SIX_SIGNAL_NAME])
+		assert.NotEmpty(t, resp[i].TableProps["$hubspot_company_name"])
+		assert.NotEmpty(t, resp[i].TableProps["$salesforce_account_name"])
+		assert.Equal(t, "Cold", resp[i].TableProps["$engagement_level"])
+		assert.Equal(t, 5.3, resp[i].TableProps["$engagement_score"])
+		assert.Equal(t, float64(120), resp[i].TableProps["$total_enagagement_score"])
+	}
 }
 
 func sendGetProfileAccountRequestConsumingMarker(r *gin.Engine, projectId int64, agent *model.Agent, payload model.TimelinePayload) *httptest.ResponseRecorder {
