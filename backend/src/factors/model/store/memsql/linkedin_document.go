@@ -536,7 +536,7 @@ func (store *MemSQL) GetDomainData(projectID string) ([]model.DomainDataResponse
 	return domainDatas, http.StatusOK
 }
 
-func (store *MemSQL) GetDistinctTimestampsForEventCreation(projectID string) ([]int64, int) {
+func (store *MemSQL) GetDistinctTimestampsForEventCreationFromLinkedinDocs(projectID string) ([]int64, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -568,7 +568,7 @@ func (store *MemSQL) GetDistinctTimestampsForEventCreation(projectID string) ([]
 	}
 	return arrOfTimestamps, http.StatusOK
 }
-func (store *MemSQL) GetCompanyDataFromLinkedinForTimestamp(projectID string, timestamp int64) ([]model.DomainDataResponse, int) {
+func (store *MemSQL) GetCompanyDataFromLinkedinDocsForTimestamp(projectID string, timestamp int64) ([]model.DomainDataResponse, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -576,6 +576,7 @@ func (store *MemSQL) GetCompanyDataFromLinkedinForTimestamp(projectID string, ti
 	db := C.GetServices().Db
 
 	domainDataSet := make([]model.DomainDataResponse, 0)
+	projectIDInt, _ := strconv.ParseInt(projectID, 10, 64)
 
 	fetchDomainDataFieldsQueryStr := "SELECT project_id, id, timestamp, customer_ad_account_id, campaign_group_id, JSON_EXTRACT_STRING(value, 'companyHeadquarters') as headquarters, " +
 		"JSON_EXTRACT_STRING(value, 'localizedWebsite') as domain, JSON_EXTRACT_STRING(value, 'vanityName') as vanity_name, " +
@@ -600,6 +601,7 @@ func (store *MemSQL) GetCompanyDataFromLinkedinForTimestamp(projectID string, ti
 			log.WithError(err).Error("Failed to scan domain data for given timestamp.")
 			return make([]model.DomainDataResponse, 0), http.StatusInternalServerError
 		}
+		domainData.Domain = U.GetDomainGroupDomainName(projectIDInt, domainData.Domain)
 		domainDataSet = append(domainDataSet, domainData)
 	}
 	return domainDataSet, http.StatusOK
@@ -883,7 +885,7 @@ func (store *MemSQL) IsLinkedInIntegrationAvailable(projectID int64) bool {
 	return true
 }
 
-func (store *MemSQL) UpdateLinkedinGroupUserCreationDetails(domainData model.DomainDataResponse) error {
+func (store *MemSQL) UpdateSyncStatusLinkedinDocs(domainData model.DomainDataResponse) error {
 	db := C.GetServices().Db
 	var err error
 	if domainData.CampaignGroupID == "" {

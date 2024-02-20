@@ -45,7 +45,7 @@ func main() {
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 	runNewChange := flag.String("run_new_change", "", "Runs new changes with campaign group data")
-	batchSize := flag.Int("batch_size", 10, "Num of parallel go routine processes")
+	batchSize := flag.Int("batch_size", 5, "Num of parallel go routine processes")
 
 	flag.Parse()
 	if *env != "development" &&
@@ -109,15 +109,14 @@ func main() {
 	if errCode != http.StatusOK {
 		log.Fatal("Failed to get linkedin settings")
 	}
-
+	allProjects, allowedProjectIDs, _ := C.GetProjectsFromListWithAllProjectSupport(*runNewChange, "")
 	for _, setting := range linkedinProjectSettings {
 		errMsg, errCode := "", 0
-		allProjects, allowedProjectIDs, _ := C.GetProjectsFromListWithAllProjectSupport(*runNewChange, "")
 		projectID, _ := strconv.ParseInt(setting.ProjectId, 10, 64)
 		if allProjects || allowedProjectIDs[projectID] {
-			errMsg, errCode = task.CreateGroupUserAndEventsV1(setting, *batchSize)
+			errMsg, errCode = task.CreateGroupUserAndEventsV2(setting, *batchSize)
 		} else {
-			errMsg, errCode = task.CreateGroupUserAndEvents(setting)
+			errMsg, errCode = task.CreateGroupUserAndEventsV1(setting, *batchSize)
 		}
 		if errMsg != "" || errCode != http.StatusOK {
 			syncStatusFailure := Status{
