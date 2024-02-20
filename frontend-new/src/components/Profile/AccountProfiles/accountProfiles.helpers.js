@@ -60,49 +60,86 @@ const getTablePropColumn = ({
   listProperties,
   projectDomainsList
 }) => {
+  const getTitleText = (text) => (
+    <Text
+      type='title'
+      level={7}
+      color='grey-2'
+      weight='bold'
+      extraClass='m-0 truncate'
+      truncate
+      charLimit={25}
+    >
+      {text}
+    </Text>
+  );
+
+  const renderValue = (value, propType) => {
+    const formattedValue = propValueFormat(prop, value, propType) || '-';
+    const urlTruncatedValue = truncateURL(formattedValue, projectDomainsList);
+    return (
+      <Text
+        type='title'
+        level={7}
+        extraClass='m-0'
+        truncate
+        toolTipTitle={formattedValue}
+      >
+        {urlTruncatedValue}
+      </Text>
+    );
+  };
+
   const propDisplayName = groupPropNames[prop]
     ? groupPropNames[prop]
     : PropTextFormat(prop);
   const propType = getPropType(listProperties, prop);
+
+  if (prop === '$engagement_level') {
+    return {
+      title: getTitleText(propDisplayName),
+      width:
+        COLUMN_TYPE_PROPS[ACCOUNTS_TABLE_COLUMN_TYPES[prop]?.Type || 'string']
+          ?.min || 264,
+      dataIndex: prop,
+      key: prop,
+      showSorterTooltip: null,
+      defaultSortOrder: 'descend',
+      sorter: (a, b) => sortNumericalColumn(a.score, b.score),
+      render: (status) =>
+        status ? (
+          <div
+            className='engagement-tag'
+            style={{ '--bg-color': EngagementTag[status]?.bgColor }}
+          >
+            <img
+              src={`../../../assets/icons/${EngagementTag[status]?.icon}.svg`}
+              alt=''
+            />
+            <Text type='title' level={7} extraClass='m-0'>
+              {status}
+            </Text>
+          </div>
+        ) : (
+          '-'
+        )
+    };
+  }
+
   return {
-    title: (
-      <Text
-        type='title'
-        level={7}
-        color='grey-2'
-        weight='bold'
-        extraClass='m-0 truncate'
-        truncate
-        charLimit={25}
-      >
-        {propDisplayName}
-      </Text>
-    ),
+    title: getTitleText(propDisplayName),
     dataIndex: prop,
     key: prop,
     width:
       COLUMN_TYPE_PROPS[ACCOUNTS_TABLE_COLUMN_TYPES[prop]?.Type || 'string']
         ?.min || 264,
+    align: ACCOUNTS_TABLE_COLUMN_TYPES[prop]?.Align || 'left',
     showSorterTooltip: null,
     sorter: (a, b) =>
       propType === 'numerical'
         ? sortNumericalColumn(a[prop], b[prop])
         : sortStringColumn(a[prop], b[prop]),
-    render: (value) => {
-      const formattedValue = propValueFormat(prop, value, propType) || '-';
-      const urlTruncatedValue = truncateURL(formattedValue, projectDomainsList);
-      return (
-        <Text
-          type='title'
-          level={7}
-          extraClass='m-0'
-          truncate
-          toolTipTitle={formattedValue}
-        >
-          {urlTruncatedValue}
-        </Text>
-      );
-    }
+    render: (value) => renderValue(value, propType)
   };
 };
 
@@ -162,49 +199,6 @@ export const getColumns = ({
           </span>
         </div>
       ) || '-'
-  };
-
-  const engagementColumn = {
-    title: <div className={headerClassStr}>Engagement</div>,
-    width: 152,
-    type: 'string',
-    dataIndex: 'engagement',
-    key: 'engagement',
-    fixed: 'left',
-    defaultSortOrder: 'descend',
-    sorter: (a, b) => sortNumericalColumn(a.score, b.score),
-    render: (status) =>
-      status ? (
-        <div
-          className='engagement-tag'
-          style={{ '--bg-color': EngagementTag[status]?.bgColor }}
-        >
-          <img
-            src={`../../../assets/icons/${EngagementTag[status]?.icon}.svg`}
-            alt=''
-          />
-          <Text type='title' level={7} extraClass='m-0'>
-            {status}
-          </Text>
-        </div>
-      ) : (
-        '-'
-      )
-  };
-
-  const scoreColumn = {
-    title: <div className={headerClassStr}>Score</div>,
-    width: 152,
-    type: 'number',
-    dataIndex: 'score',
-    key: 'score',
-    defaultSortOrder: 'descend',
-    sorter: (a, b) => sortNumericalColumn(a.score, b.score),
-    render: (value) => (
-      <Text type='title' level={7} extraClass='m-0'>
-        {value ? value.toFixed() : '-'}
-      </Text>
-    )
   };
 
   const topEngagementsColumn = {
@@ -301,7 +295,7 @@ export const getColumns = ({
     render: (item) => MomentTz(item).fromNow()
   };
 
-  const scoringColumns = [engagementColumn, scoreColumn, topEngagementsColumn];
+  const scoringColumns = [topEngagementsColumn];
 
   const columns = [
     accountColumn,
