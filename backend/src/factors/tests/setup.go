@@ -32,6 +32,11 @@ func SetupProjectReturnDAO() (*model.Project, error) {
 		return nil, fmt.Errorf("Project Creation failed.")
 	}
 
+	_, errCode = store.GetStore().CreateAllBoardsDashboardFolder(project.ID)
+	if errCode != http.StatusCreated {
+		return nil, fmt.Errorf("Project Creation failed, all boards folder creation error.")
+	}
+
 	// Updates the next session start timestamp of project with older timestamp
 	// to make the add_session to consider events with older timestamp as next
 	// session start timestamp is initialized with project creation timestamp.
@@ -263,7 +268,7 @@ func SetupAgentReturnWithSlackIntegrationDAO(email, phone string, projectID int6
 		email = getRandomEmail()
 	}
 	slack := model.SlackAccessTokens{
-		BotAccessToken: "random",
+		BotAccessToken:  "random",
 		UserAccessToken: "random",
 	}
 	slackAuth := model.SlackAuthTokens{
@@ -274,7 +279,7 @@ func SetupAgentReturnWithSlackIntegrationDAO(email, phone string, projectID int6
 		return nil, http.StatusInternalServerError
 	}
 	createAgentParams := &model.CreateAgentParams{Agent: &model.Agent{FirstName: getRandomName(),
-		LastName: getRandomName(), Email: email, Phone: phone, 
+		LastName: getRandomName(), Email: email, Phone: phone,
 		SlackAccessTokens: slackJson}, PlanCode: model.FreePlanCode}
 	resp, errCode := store.GetStore().CreateAgentWithDependencies(createAgentParams)
 	if errCode != http.StatusCreated {

@@ -70,6 +70,13 @@ func (store *MemSQL) CreateDashboard(projectId int64, agentUUID string, dashboar
 		dashboard.Class = model.DashboardClassUserCreated
 	}
 
+	allBoardFolder, errCode := store.GetAllBoardsDashboardFolder(projectId)
+	if errCode != http.StatusFound {
+		log.WithFields(log.Fields{"dashboard": dashboard, "project_id": projectId}).Error("Failed to create dashboard. All Boards error.")
+		return nil, http.StatusInternalServerError
+	}
+
+	dashboard.FolderID = allBoardFolder.Id
 	dashboard.ProjectId = projectId
 	dashboard.AgentUUID = agentUUID
 	if errCode := store.satisfiesDashboardForeignConstraints(*dashboard); errCode != http.StatusOK {
@@ -398,6 +405,7 @@ func isValidUnitsPosition(positions *map[string]map[int64]int) (bool, error) {
 	return true, nil
 }
 
+// UpdateDashboard updates name,description,type,settings, folderId. The update also impacts the updated_at column value with each update.
 func (store *MemSQL) UpdateDashboard(projectId int64, agentUUID string, id int64, dashboard *model.UpdatableDashboard) int {
 	logFields := log.Fields{
 		"id":         id,
@@ -451,6 +459,10 @@ func (store *MemSQL) UpdateDashboard(projectId int64, agentUUID string, id int64
 	}
 	if dashboard.Type != "" {
 		updateFields["type"] = dashboard.Type
+	}
+
+	if dashboard.FolderID != "" {
+		updateFields["folder_id"] = dashboard.FolderID
 	}
 
 	// nothing to update.
@@ -526,4 +538,48 @@ func (store *MemSQL) createDefaultDashboardsForProject(projectId int64, agentUUI
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	return store.CreateWebAnalyticsDefaultDashboardWithUnits(projectId, agentUUID)
+}
+
+func (store *MemSQL) GetDashboardsByFolderId(projectId int64, folderId string) ([]model.Dashboard, int) {
+
+	logCtx := log.WithFields(log.Fields{"folder_id": folderId, "project_id": projectId})
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
+	db := C.GetServices().Db
+	var dashboards []model.Dashboard
+
+	err := db.Order("created_at ASC").Where("project_id = ? AND folder_id= ? AND is_deleted = ?", projectId, folderId, false).Find(&dashboards).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return dashboards, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Failed to get dashboards.")
+		return dashboards, http.StatusInternalServerError
+	}
+
+	return dashboards, http.StatusFound
+
+}
+
+func (store *MemSQL) UpdateFolderIdForMultipleDashboards(projectId int64, dashboards []model.Dashboard, folderId string) int {
+
+	logCtx := log.WithFields(log.Fields{"dashboards": dashboards, "project_id": projectId, "folder_id": folderId})
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
+	db := C.GetServices().Db
+
+	updateFields := make(map[string]interface{}, 0)
+	updateFields["folder_id"] = folderId
+	var dashboardIds []int64
+	for _, dashboard := range dashboards {
+		dashboardIds = append(dashboardIds, dashboard.ID)
+	}
+
+	err := db.Model(&model.Dashboard{}).Where("project_id = ? AND id IN (?) AND is_deleted = ?", projectId, dashboardIds, false).Update(updateFields).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to update folder id for multiple dashboard.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
+
 }

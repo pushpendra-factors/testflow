@@ -67,6 +67,14 @@ func CreateProjectHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Creating project failed."})
 		return
 	}
+
+	_, errCode = store.GetStore().CreateAllBoardsDashboardFolder(project.ID)
+	if errCode != http.StatusCreated {
+		logCtx.WithField("err_code", errCode).Error("CreateProject Failed, All Boards creation failed.")
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "Creating project failed."})
+		return
+	}
+
 	c.JSON(http.StatusCreated, V1.MapProjectToString(*updatedProject))
 	return
 }

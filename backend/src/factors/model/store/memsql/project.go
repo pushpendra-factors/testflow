@@ -1119,3 +1119,17 @@ func (store *MemSQL) OnboardingAccScoring(projectId int64) error {
 
 	return nil
 }
+
+func (store *MemSQL) CreateAllBoardsDashboardFolder(projectId int64) (*model.DashboardFolders, int) {
+
+	logCtx := log.WithField("project id", projectId)
+	folder := &model.DashboardFolders{Name: model.ALL_BOARDS_FOLDER, IsDefaultFolder: true}
+
+	folder, errCode := store.CreateDashboardFolder(projectId, folder)
+	if errCode != http.StatusCreated {
+		logCtx.Error("Failed creating All Boards folder.")
+		return nil, errCode
+	}
+	return folder, http.StatusCreated
+
+}
