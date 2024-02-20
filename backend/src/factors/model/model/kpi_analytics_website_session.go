@@ -29,6 +29,7 @@ var KPIPropertiesForWebsiteSessions = []map[string]string{
 	MapOfKPIPropertyNameToDataWithCategory(U.SP_SPENT_TIME, EventEntity, true),
 	MapOfKPIPropertyNameToDataWithCategory(U.SP_INITIAL_PAGE_LOAD_TIME, EventEntity, true),
 	MapOfKPIPropertyNameToDataWithCategory(U.SP_INITIAL_PAGE_SCROLL_PERCENT, EventEntity, true),
+	MapOfKPIPropertyNameToDataWithCategory(U.EP_TERM, EventEntity, true),
 }
 
 var KPIConfigForWebsiteSessions = map[string]interface{}{
