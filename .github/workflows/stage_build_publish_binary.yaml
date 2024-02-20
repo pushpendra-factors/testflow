@@ -67,7 +67,7 @@ jobs:
               substring="${binary%-*}"
               path="./integrations/$substring/scripts"
 
-          elif [[ "$binary" == "python-server" || "$binary" == "adwords-etl" || "$binary" == "adwords-etl-debug" || "$binary" == "facebook-etl" || "$binary" == "google-search-console-etl" ]]; then
+          elif [[ "$binary" == "python-server" || "$binary" == "adwords-etl" || "$binary" == "chat-data" || "$binary" == "adwords-etl-debug" || "$binary" == "facebook-etl" || "$binary" == "google-search-console-etl" ]]; then
               path="./python_backend"
 
           elif [[ "$binary" == "device-server" ]]; then
@@ -100,7 +100,7 @@ jobs:
               substring="${binary%-*}"
               path="./integrations/$substring/scripts"
 
-          elif [[ "$binary" == "python-server" || "$binary" == "adwords-etl" || "$binary" == "adwords-etl-debug" || "$binary" == "facebook-etl" || "$binary" == "google-search-console-etl" ]]; then
+          elif [[ "$binary" == "python-server" || "$binary" == "adwords-etl" || "$binary" == "chat-data" || "$binary" == "adwords-etl-debug" || "$binary" == "facebook-etl" || "$binary" == "google-search-console-etl" ]]; then
               path="./python_backend"
 
           elif [[ "$binary" == "device-server" ]]; then
