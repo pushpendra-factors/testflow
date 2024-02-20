@@ -476,6 +476,9 @@ function AccountProfiles({
       });
     } else {
       const newPayload = { ...accountPayload };
+      if (!Boolean(newPayload.segment)) {
+        newPayload.segment = {};
+      }
       newPayload.segment.query = reqPayload.query;
       newPayload.isUnsaved = true;
       setAccountPayload(newPayload);
