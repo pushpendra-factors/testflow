@@ -4441,8 +4441,9 @@ func AggregatePropertyValuesAcrossDate(values []CachePropertyValueWithTimestamp,
 	for k, v := range valuesAggregated {
 		// Used for rollup aggregated caching.
 		if isRemovedEnabled && minTimestamp > 0 {
-			// Add only count which is greater than 0 and last appeared within the min_timestamp (rollup lookback period).
-			if v.Count > 0 && v.LastSeenTimestamp > minTimestamp {
+			// Add only count which is greater than 2 (Removes unique values like raw urls occurrence once or twice.)
+			// and last appeared within the min_timestamp (rollup lookback period).
+			if v.Count > 2 && v.LastSeenTimestamp > minTimestamp {
 				propertyValueAggregatedSlice = append(propertyValueAggregatedSlice, NameCountTimestampCategory{
 					Name: k, Count: v.Count, Timestamp: v.LastSeenTimestamp, Category: "", GroupName: ""})
 			}

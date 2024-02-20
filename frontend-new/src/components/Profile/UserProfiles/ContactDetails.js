@@ -263,16 +263,14 @@ function ContactDetails({
       .map((item) => item?.prop_name);
     udpateProjectSettings(activeProject.id, {
       timelines_config: { ...timelinesConfig }
-    })
-      .then(() => fetchProjectSettings(activeProject.id))
-      .then(() =>
-        getProfileUserDetails(
-          activeProject?.id,
-          userID,
-          isAnonymous,
-          currentProjectSettings?.timelines_config
-        )
-      );
+    }).then(() =>
+      getProfileUserDetails(
+        activeProject?.id,
+        userID,
+        isAnonymous,
+        currentProjectSettings?.timelines_config
+      )
+    );
   };
 
   const controlsPopover = () => (
@@ -352,16 +350,14 @@ function ContactDetails({
       timelinesConfig.user_config.table_props.push(option?.value);
       udpateProjectSettings(activeProject.id, {
         timelines_config: { ...timelinesConfig }
-      })
-        .then(() => fetchProjectSettings(activeProject.id))
-        .then(() =>
-          getProfileUserDetails(
-            activeProject?.id,
-            userID,
-            isAnonymous,
-            currentProjectSettings?.timelines_config
-          )
-        );
+      }).then(() =>
+        getProfileUserDetails(
+          activeProject?.id,
+          userID,
+          isAnonymous,
+          currentProjectSettings?.timelines_config
+        )
+      );
     }
     setPropSelectOpen(false);
   };

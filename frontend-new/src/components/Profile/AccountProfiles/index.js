@@ -43,10 +43,9 @@ import { PathUrls } from 'Routes/pathUrls';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
 import { isOnboarded } from 'Utils/global';
-import { cloneDeep } from 'lodash';
+import _, { cloneDeep } from 'lodash';
 import { getSegmentColorCode } from 'Views/AppSidebar/appSidebar.helpers';
 import ResizableTitle from 'Components/Resizable';
-import { COLUMN_TYPE_PROPS } from 'Utils/table';
 import logger from 'Utils/logger';
 import useAutoFocus from 'hooks/useAutoFocus';
 import styles from './index.module.scss';
@@ -64,7 +63,11 @@ import RenameSegmentModal from './RenameSegmentModal';
 import DeleteSegmentModal from './DeleteSegmentModal';
 import SaveSegmentModal from './SaveSegmentModal';
 import UpgradeModal from '../UpgradeModal';
-import { checkFiltersEquality, getColumns } from './accountProfiles.helpers';
+import {
+  checkFiltersEquality,
+  defaultSegmentsList,
+  getColumns
+} from './accountProfiles.helpers';
 import ProfilesWrapper from '../ProfilesWrapper';
 import NoDataWithMessage from '../MyComponents/NoDataWithMessage';
 import {
@@ -111,7 +114,7 @@ function AccountProfiles({
   const [listProperties, setListProperties] = useState([]);
   const [showPopOver, setShowPopOver] = useState(false);
   const [checkListAccountProps, setCheckListAccountProps] = useState([]);
-  const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
+  const [tlConfig, setTLConfig] = useState({});
   const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
   const [downloadCSVOptions, setDownloadCSVOptions] = useState([]);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
@@ -155,12 +158,15 @@ function AccountProfiles({
   const setAccountPayload = useCallback(
     (payload) => {
       dispatch(setAccountPayloadAction(payload));
+      if (payload.segment?.id) {
+        dispatch(setNewSegmentModeAction(false));
+      }
     },
     [dispatch]
   );
 
   const getAccountPayload = async () => {
-    if (segmentID) {
+    if (segmentID && !accountPayload.isUnsaved) {
       const response = await fetchSegmentById(activeProject.id, segmentID);
       if (segmentID === accountPayload?.segment?.id) {
         return { ...accountPayload, segment: response.data };
@@ -184,11 +190,12 @@ function AccountProfiles({
           await getSavedSegments(activeProject.id);
         }
         if (Object.keys(segments).length) {
-          setAccountPayload(await getAccountPayload());
+          const payload = await getAccountPayload();
+          if (!_.isEqual(payload, accountPayload)) setAccountPayload(payload);
         }
       }
     } catch (err) {
-      logger(err);
+      logger.error(err);
     } finally {
       setComponentLoading(false);
     }
@@ -196,7 +203,7 @@ function AccountProfiles({
 
   useEffect(() => {
     runInit();
-  }, [activeProject?.id, segmentID, segments]);
+  }, [activeProject?.id, segmentID, accountPayload, segments]);
 
   useEffect(() => {
     const listProps = Object.keys(groups?.account_groups || {}).reduce(
@@ -252,12 +259,13 @@ function AccountProfiles({
   }, [currentProjectSettings?.timelines_config]);
 
   useEffect(() => {
-    if (!accountPayload.search_filter) {
+    if (!accountPayload.search_filter?.length) {
       setListSearchItems([]);
+      setSearchBarOpen(false);
     } else {
-      const listValues = accountPayload?.search_filter || [];
+      const listValues = accountPayload.search_filter || [];
       setListSearchItems(uniq(listValues));
-      // setSearchBarOpen(true);
+      setSearchBarOpen(true);
     }
   }, [accountPayload?.search_filter]);
 
@@ -282,60 +290,27 @@ function AccountProfiles({
   };
 
   useEffect(() => {
-    if (newSegmentMode === true) {
+    if (newSegmentMode) {
       restoreFiltersDefaultState();
     }
   }, [newSegmentMode]);
 
   useEffect(() => {
-    if (
-      location.state?.fromDetails === true &&
-      location.state?.appliedFilters != null
-    ) {
-      setAppliedFilters(cloneDeep(location.state?.appliedFilters));
-      setSelectedFilters(location.state?.appliedFilters);
-      setFiltersExpanded(false);
-      setFiltersDirty(true);
-    } else if (newSegmentMode === false) {
-      if (
-        Boolean(accountPayload?.segment?.id) === true &&
-        accountPayload?.segment?.query != null
-      ) {
+    if (!newSegmentMode) {
+      if (accountPayload?.segment?.query != null) {
         const filters = getSelectedFiltersFromQuery({
           query: accountPayload?.segment?.query,
           groupsList
         });
         setAppliedFilters(cloneDeep(filters));
         setSelectedFilters(filters);
-        setFiltersExpanded(false);
         setFiltersDirty(false);
+        if (Boolean(accountPayload?.segment?.id)) setFiltersExpanded(false);
       } else {
-        const selectedGroup = groupsList.find(
-          (g) => g[1] === accountPayload?.source
-        );
-        restoreFiltersDefaultState(selectedGroup);
+        restoreFiltersDefaultState();
       }
     }
   }, [accountPayload, newSegmentMode]);
-
-  const disableNewSegmentMode = useCallback(() => {
-    dispatch(setNewSegmentModeAction(false));
-  }, [dispatch]);
-
-  const handleDeleteActiveSegment = useCallback(() => {
-    deleteSegment({
-      projectId: activeProject.id,
-      segmentId: accountPayload?.segment?.id
-    })
-      .then(() => {
-        setMoreActionsModalMode(null);
-        notification.success({
-          message: 'Segment deleted successfully',
-          duration: 5
-        });
-      })
-      .finally(() => history.replace(PathUrls.ProfileAccounts));
-  }, [accountPayload?.segment, activeProject.id, deleteSegment]);
 
   const displayTableProps = useMemo(() => {
     const filterNullEntries = (entry) =>
@@ -347,12 +322,13 @@ function AccountProfiles({
     const segmentTableProps = accountPayload?.segment?.query?.table_props;
     const projectTableProps =
       currentProjectSettings?.timelines_config?.account_config?.table_props;
+
     const tableProps = accountPayload?.segment?.id
       ? getFilteredTableProps(segmentTableProps)
       : getFilteredTableProps(projectTableProps);
 
     return tableProps;
-  }, [currentProjectSettings, accountPayload?.segment]);
+  }, [currentProjectSettings, accountPayload?.segment?.id]);
 
   const handleRenameSegment = useCallback(
     (name) => {
@@ -396,6 +372,28 @@ function AccountProfiles({
     accountPayload?.segment
   ]);
 
+  const handleDeleteActiveSegment = useCallback(() => {
+    const segmentId = accountPayload?.segment?.id;
+    if (!segmentId) {
+      return;
+    }
+
+    deleteSegment({
+      projectId: activeProject.id,
+      segmentId: segmentId
+    })
+      .then(() => {
+        setMoreActionsModalMode(null);
+        notification.success({
+          message: 'Segment deleted successfully',
+          duration: 5
+        });
+      })
+      .finally(() => {
+        history.replace(PathUrls.ProfileAccounts);
+      });
+  }, [accountPayload?.segment, activeProject.id]);
+
   const getAccounts = useCallback(
     async (payload) => {
       try {
@@ -421,7 +419,7 @@ function AccountProfiles({
           }
         }
       } catch (err) {
-        logger(err);
+        logger.error(err);
       }
     },
     [accountPayload, activeProject.id, activeAgent]
@@ -437,12 +435,14 @@ function AccountProfiles({
         setCurrentPageSize(location.state.currentPageSize);
         setDefaultSorterInfo(location.state.activeSorter);
         setAccountPayload(location.state.accountPayload);
+        dispatch(setNewSegmentModeAction(false));
       }
       const updatedLocationState = { ...location.state, fromDetails: false };
       history.replace(location.pathname, { ...updatedLocationState });
     } else if (
+      (segmentID && segmentID === accountPayload?.segment?.id) ||
       !segmentID ||
-      (segmentID && segmentID === accountPayload?.segment?.id)
+      (accountPayload.segment && !accountPayload.segment?.id)
     ) {
       getAccounts(accountPayload);
     }
@@ -459,26 +459,36 @@ function AccountProfiles({
   }, [accounts]);
 
   const applyFilters = useCallback(() => {
-    setAppliedFilters(cloneDeep(selectedFilters));
-    setFiltersExpanded(false);
+    const updatedFilters = cloneDeep(selectedFilters);
+    setAppliedFilters(updatedFilters);
     setFiltersDirty(true);
+
     const reqPayload = getFiltersRequestPayload({
       selectedFilters,
       tableProps: displayTableProps
     });
-    getProfileAccounts(activeProject.id, reqPayload, activeAgent);
-  }, [
-    selectedFilters,
-    displayTableProps,
-    activeProject.id,
-    activeAgent,
-    setFiltersDirty
-  ]);
+
+    if (newSegmentMode) {
+      setAccountPayload({
+        source: GROUP_NAME_DOMAINS,
+        segment: { ...reqPayload },
+        isUnsaved: true
+      });
+    } else {
+      const newPayload = { ...accountPayload };
+      if (!Boolean(newPayload.segment)) {
+        newPayload.segment = {};
+      }
+      newPayload.segment.query = reqPayload.query;
+      newPayload.isUnsaved = true;
+      setAccountPayload(newPayload);
+    }
+  }, [selectedFilters, newSegmentMode]);
 
   const handlePropChange = (option) => {
     if (
       option.enabled ||
-      checkListAccountProps.filter((item) => item.enabled === true).length < 8
+      checkListAccountProps.filter((item) => item.enabled).length < 8
     ) {
       setCheckListAccountProps((prev) => {
         const checkListProps = [...prev];
@@ -529,15 +539,10 @@ function AccountProfiles({
         }
       };
 
-      const queryForFetch = getFiltersRequestPayload({
-        selectedFilters: appliedFilters,
-        tableProps: enabledProps
-      });
-      queryForFetch['search_filter'] = listSearchItems;
       await udpateProjectSettings(activeProject.id, {
         timelines_config: updatedConfig
       });
-      await getProfileAccounts(activeProject.id, queryForFetch, activeAgent);
+      setAccountPayload({ ...accountPayload });
     }
     setShowPopOver(false);
   };
@@ -592,7 +597,10 @@ function AccountProfiles({
       </div>
     );
 
-    if (Boolean(accountPayload?.segment?.id) === false) {
+    if (
+      !Boolean(accountPayload?.segment?.id) ||
+      defaultSegmentsList.includes(accountPayload?.segment?.name)
+    ) {
       return accountEngagement;
     }
     return (
@@ -668,11 +676,11 @@ function AccountProfiles({
   }, []);
 
   const handleSaveSegmentClick = useCallback(() => {
-    if (newSegmentMode === true) {
+    if (newSegmentMode) {
       setSaveSegmentModal(true);
       return;
     }
-    if (Boolean(accountPayload?.segment?.id) === true) {
+    if (Boolean(accountPayload?.segment?.id)) {
       setUpdateSegmentModal(true);
     } else {
       setSaveSegmentModal(true);
@@ -683,23 +691,15 @@ function AccountProfiles({
     setSelectedFilters(appliedFilters);
   }, [appliedFilters]);
 
-  const handleClearFilters = useCallback(() => {
+  const handleClearFilters = () => {
     restoreFiltersDefaultState();
-    const reqPayload = getFiltersRequestPayload({
-      selectedFilters: INITIAL_FILTERS_STATE,
-      tableProps: displayTableProps
-    });
-    getProfileAccounts(activeProject.id, reqPayload, activeAgent);
-  }, [
-    activeAgent,
-    activeProject.id,
-    displayTableProps,
-    restoreFiltersDefaultState
-  ]);
+    setAccountPayload({ source: GROUP_NAME_DOMAINS });
+    history.replace(PathUrls.ProfileAccounts);
+  };
 
-  const selectedAccount = useMemo(
-    () => ({ account: selectedFilters.account }),
-    [selectedFilters.account]
+  const saveButtonDisabled = useMemo(
+    () => !accountPayload?.isUnsaved,
+    [accountPayload?.isUnsaved]
   );
 
   const disableDiscardButton = useMemo(
@@ -710,24 +710,24 @@ function AccountProfiles({
   const renderPropertyFilter = () => (
     <PropertyFilter
       profileType='account'
-      source={accountPayload?.source}
+      source={GROUP_NAME_DOMAINS}
       filtersExpanded={filtersExpanded}
+      setFiltersExpanded={setFiltersExpanded}
       filtersList={selectedFilters.filters}
+      setFiltersList={setFiltersList}
       secondaryFiltersList={selectedFilters.secondaryFilters}
-      appliedFilters={appliedFilters}
-      selectedAccount={selectedAccount}
+      setSecondaryFiltersList={setSecondaryFiltersList}
       listEvents={selectedFilters.eventsList}
+      setListEvents={setListEvents}
+      appliedFilters={appliedFilters}
+      selectedAccount={selectedFilters.account}
       eventProp={selectedFilters.eventProp}
       eventTimeline={selectedFilters.eventTimeline}
       areFiltersDirty={areFiltersDirty}
       disableDiscardButton={disableDiscardButton}
-      isActiveSegment={Boolean(accountPayload?.segment?.id) === true}
+      isActiveSegment={Boolean(accountPayload?.segment?.id)}
       applyFilters={applyFilters}
-      setFiltersExpanded={setFiltersExpanded}
       setSaveSegmentModal={handleSaveSegmentClick}
-      setFiltersList={setFiltersList}
-      setSecondaryFiltersList={setSecondaryFiltersList}
-      setListEvents={setListEvents}
       setEventProp={setEventProp}
       setEventTimeline={setEventTimeline}
       resetSelectedFilters={resetSelectedFilters}
@@ -735,37 +735,9 @@ function AccountProfiles({
     />
   );
 
-  const { saveButtonDisabled } = useMemo(
-    () =>
-      checkFiltersEquality({
-        appliedFilters,
-        newSegmentMode,
-        filtersList: selectedFilters.filters,
-        eventProp: selectedFilters.eventProp,
-        eventsList: selectedFilters.eventsList,
-        isActiveSegment: Boolean(accountPayload?.segment?.id),
-        areFiltersDirty,
-        secondaryFiltersList: selectedFilters.secondaryFilters
-      }),
-    [
-      accountPayload?.segment?.id,
-      appliedFilters,
-      areFiltersDirty,
-      newSegmentMode,
-      selectedFilters.eventProp,
-      selectedFilters.eventsList,
-      selectedFilters.filters,
-      selectedFilters.secondaryFilters
-    ]
-  );
-
   const renderSaveSegmentButton = () => (
     <ControlledComponent
-      controller={
-        filtersExpanded === false &&
-        saveButtonDisabled === false &&
-        newSegmentMode === false
-      }
+      controller={!filtersExpanded && !saveButtonDisabled && !newSegmentMode}
     >
       <Button
         onClick={handleSaveSegmentClick}
@@ -807,7 +779,6 @@ function AccountProfiles({
       ...accountPayload,
       search_filter: valString.map((vl) => JSON.parse(vl)[0])
     };
-    setListSearchItems(updatedPayload.search_filter);
     setAccountPayload(updatedPayload);
   };
 
@@ -835,7 +806,12 @@ function AccountProfiles({
               <Input
                 ref={searchAccountsInputRef}
                 size='large'
-                value={listSearchItems ? listSearchItems.join(', ') : null}
+                value={
+                  listSearchItems.length ? listSearchItems.join(', ') : null
+                }
+                defaultValue={
+                  listSearchItems.length ? listSearchItems.join(', ') : null
+                }
                 placeholder='Search Accounts'
                 style={{
                   width: '240px',
@@ -928,7 +904,7 @@ function AccountProfiles({
     setNewTableColumns(
       getColumns({
         accounts,
-        source: accountPayload?.source,
+        source: GROUP_NAME_DOMAINS,
         isScoringLocked,
         displayTableProps,
         groupPropNames,
@@ -940,7 +916,6 @@ function AccountProfiles({
     );
   }, [
     accounts,
-    accountPayload?.source,
     displayTableProps,
     groupPropNames,
     isScoringLocked,
@@ -1050,9 +1025,10 @@ function AccountProfiles({
           setSaveSegmentModal(false);
           setUpdateSegmentModal(false);
           setFiltersDirty(false);
+          await getSavedSegments(activeProject.id);
         }
-        await getSavedSegments(activeProject.id);
-        disableNewSegmentMode();
+        dispatch(setNewSegmentModeAction(false));
+        handleClearFilters();
       } catch (err) {
         notification.error({
           message: 'Error',
@@ -1078,12 +1054,7 @@ function AccountProfiles({
 
       handleSaveSegment(reqPayload);
     },
-    [
-      selectedFilters,
-      displayTableProps,
-      handleSaveSegment,
-      disableNewSegmentMode
-    ]
+    [selectedFilters, displayTableProps]
   );
 
   const generateCSVData = useCallback(
@@ -1126,9 +1097,10 @@ function AccountProfiles({
           selectedFilters: appliedFilters,
           tableProps: selectedOptions
         });
+        const updatedPayload = { ...reqPayload, segment_id: segmentID };
         const resultAccounts = await fetchProfileAccounts(
           activeProject.id,
-          reqPayload,
+          updatedPayload,
           activeAgent
         );
         const csvData = generateCSVData(resultAccounts.data, selectedOptions);
@@ -1136,7 +1108,7 @@ function AccountProfiles({
         setCSVDataLoading(false);
         setShowDownloadCSVModal(false);
       } catch (err) {
-        logger(err);
+        logger.error(err);
         setCSVDataLoading(false);
         notification.error({
           message: 'Error',
@@ -1145,13 +1117,7 @@ function AccountProfiles({
         });
       }
     },
-    [
-      activeAgent,
-      activeProject.id,
-      appliedFilters,
-      generateCSVData,
-      selectedAccount.account
-    ]
+    [activeAgent, activeProject.id, appliedFilters]
   );
 
   const closeDownloadCSVModal = useCallback(() => {
@@ -1169,7 +1135,7 @@ function AccountProfiles({
   );
 
   const titleIcon = useMemo(() => {
-    if (Boolean(accountPayload?.segment?.id) === true) {
+    if (Boolean(accountPayload?.segment?.id)) {
       return defaultSegmentIconsMapping[accountPayload?.segment?.name]
         ? defaultSegmentIconsMapping[accountPayload?.segment?.name]
         : 'pieChart';
@@ -1217,9 +1183,7 @@ function AccountProfiles({
           {renderSaveSegmentButton()}
         </div>
         <div className='inline-flex col-gap-2'>
-          <ControlledComponent
-            controller={filtersExpanded === false && newSegmentMode === false}
-          >
+          <ControlledComponent controller={!filtersExpanded && !newSegmentMode}>
             {renderSearchSection()}
             {renderDownloadSection()}
             {renderTablePropsSelect()}
@@ -1232,10 +1196,10 @@ function AccountProfiles({
       </ControlledComponent>
       <ControlledComponent
         controller={
-          accounts.isLoading === false &&
-          componentLoading === false &&
+          !accounts.isLoading &&
+          !componentLoading &&
           accounts.data?.length > 0 &&
-          (newSegmentMode === false || areFiltersDirty === true)
+          (!newSegmentMode || areFiltersDirty)
         }
       >
         <>
@@ -1254,10 +1218,10 @@ function AccountProfiles({
       </ControlledComponent>
       <ControlledComponent
         controller={
-          accounts.isLoading === false &&
-          componentLoading === false &&
+          !accounts.isLoading &&
+          !componentLoading &&
           accounts.data.length === 0 &&
-          (newSegmentMode === false || areFiltersDirty === true)
+          (!newSegmentMode || areFiltersDirty)
         }
       >
         <NoDataWithMessage

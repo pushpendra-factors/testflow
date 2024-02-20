@@ -762,11 +762,6 @@ function UserProfiles({
     </Tabs>
   );
 
-  const selectedAccount = useMemo(
-    () => ({ account: selectedFilters.account }),
-    [selectedFilters.account]
-  );
-
   const setFiltersList = useCallback((filters) => {
     setSelectedFilters((curr) => ({
       ...curr,
@@ -858,7 +853,7 @@ function UserProfiles({
       filtersExpanded={filtersExpanded}
       filtersList={selectedFilters.filters}
       appliedFilters={appliedFilters}
-      selectedAccount={selectedAccount}
+      selectedAccount={selectedFilters.account}
       listEvents={selectedFilters.eventsList}
       availableGroups={availableGroups}
       eventProp={selectedFilters.eventProp}
