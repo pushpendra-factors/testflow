@@ -1,6 +1,6 @@
 import sys
 import re
-
+from tornado import gen
 sys.path.append('/Users/satyamishra/repos/factors/python_backend/chat_factors/')
 import os
 import json
@@ -39,6 +39,7 @@ class ChatHandler(BaseHandler):
         else:
             log.info("Variable already initialized. Skipping.")
 
+    @gen.coroutine
     def post(self):
         try:
             result = None
@@ -74,3 +75,8 @@ class ChatHandler(BaseHandler):
             log.error("Error processing request: %s", str(e))
             self.set_status(500)  # Internal Server Error
             self.write(json.dumps({'error': {'code': 500, 'message': "Internal Server Error"}}))
+
+    @gen.coroutine
+    def options(self):
+        self.set_status(200)
+        self.finish()
