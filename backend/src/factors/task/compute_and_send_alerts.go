@@ -226,7 +226,7 @@ func executeAlertsKPIQuery(projectID int64, alertType int, date_range dateRanges
 	results, statusCode := store.GetStore().ExecuteKPIQueryGroup(projectID, "",
 		kpiQueryGroup, C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
 	//("query response first", results, statusCode)
-	if len(results) != 1 {
+	if len(results) < 1 {
 		log.Error("empty or invalid result for ", kpiQuery)
 		return statusCode, actualValue, comparedValue, errors.New("empty or invalid result")
 	}
