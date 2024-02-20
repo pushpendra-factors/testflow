@@ -23,7 +23,7 @@ import (
 const (
 	ETA                                  = "event_based_alert"
 	ListLimit                            = 1000
-	AlertCreationLimit                   = 100
+	AlertCreationLimit                   = 200
 	SortedSetCacheKey                    = "ETA:pid"
 	CoolDownPrefix                       = "ETA:CoolDown"
 	oneDayInSeconds                      = 24 * 60 * 60
