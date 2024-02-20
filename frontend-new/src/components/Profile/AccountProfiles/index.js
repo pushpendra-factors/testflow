@@ -1094,9 +1094,10 @@ function AccountProfiles({
           selectedFilters: appliedFilters,
           tableProps: selectedOptions
         });
+        const updatedPayload = { ...reqPayload, segment_id: segmentID };
         const resultAccounts = await fetchProfileAccounts(
           activeProject.id,
-          reqPayload,
+          updatedPayload,
           activeAgent
         );
         const csvData = generateCSVData(resultAccounts.data, selectedOptions);
