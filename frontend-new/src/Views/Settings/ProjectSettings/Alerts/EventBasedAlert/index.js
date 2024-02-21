@@ -938,7 +938,8 @@ const EventBasedAlert = ({
           team_name: selectedWorkspace?.name,
           team_channel_list: teamsSaveSelectedChannel
         },
-        slack_mentions: getSlackProfileDetails(selectedMentions)
+        slack_mentions: getSlackProfileDetails(selectedMentions),
+        is_factors_url_in_payload: factorsURLinWebhook
       };
 
       if (alertState?.state === 'edit') {

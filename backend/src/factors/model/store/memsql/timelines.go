@@ -1073,6 +1073,13 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profile
 		return nil, http.StatusInternalServerError
 	}
 
+	// fetch all domain properties
+	domainDetails, status := store.GetDomainPropertiesByID(projectID, domainIDs)
+
+	if status == http.StatusFound && len(domainDetails) > 0 {
+		userDetails = append(userDetails, domainDetails...)
+	}
+
 	// map of domain ids and their decoded merged properties
 	domainsIDPropsMap := make(map[string]map[string]interface{})
 	for _, userDetail := range userDetails {
@@ -1131,6 +1138,25 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profile
 		profiles[index].Properties = propsEncoded
 	}
 	return profiles, http.StatusOK
+}
+
+// select id, properties, source from users where project_id=2 and source = 9
+// and id in ('dom-id');
+func (store *MemSQL) GetDomainPropertiesByID(projectID int64, domainIDs []string) ([]model.User, int) {
+	var domainsDetail []model.User
+	db := C.GetServices().Db
+	err := db.Table("users").Select("id, properties, source").
+		Where("project_id=? AND source=? AND id IN (?)",
+			projectID, model.UserSourceDomains, domainIDs).Find(&domainsDetail).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return []model.User{}, http.StatusNotFound
+		}
+		log.WithError(err).Error("Failed to get domain properties")
+		return []model.User{}, http.StatusInternalServerError
+	}
+
+	return domainsDetail, http.StatusFound
 }
 
 func (store *MemSQL) GetSourceStringForAccountsV2(projectID int64, source string, isAllUserProperties bool) (string, int, int) {
@@ -2486,6 +2512,8 @@ func propsMapGroupingByName(tableProps []string) map[string][]string {
 			if strings.Contains(strings.ToLower(tableProp), prefix) {
 				groupName = prefix
 				break
+			} else if domainPropertyExist(tableProp) {
+				groupName = model.GROUP_NAME_DOMAINS
 			}
 		}
 
@@ -2499,6 +2527,15 @@ func propsMapGroupingByName(tableProps []string) map[string][]string {
 	}
 
 	return tablePropsMap
+}
+
+func domainPropertyExist(property string) bool {
+	for _, prop := range model.DomainProperties {
+		if property == prop {
+			return true
+		}
+	}
+	return false
 }
 
 func tablePropsHasUserProperty(props []string) bool {

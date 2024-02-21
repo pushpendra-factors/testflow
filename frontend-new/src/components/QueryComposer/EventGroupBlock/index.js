@@ -27,7 +27,8 @@ function EventGroupBlock({
   noMargin = false,
   groups,
   userPropertiesV2,
-  groupAnalysis = false
+  groupAnalysis = false,
+  eventNames
 }) {
   const [filterOptions, setFilterOptions] = useState([]);
   const [propSelVis, setSelVis] = useState(false);
@@ -165,30 +166,41 @@ function EventGroupBlock({
   };
 
   const renderGroupContent = () => {
-    let propName = '';
-    if (groupByEvent.property && groupByEvent.prop_category === 'user') {
-      propName = userPropNames[groupByEvent.property]
-        ? userPropNames[groupByEvent.property]
-        : groupByEvent.property;
-    }
+    
+    let item = groupByEvent?.property;
 
-    if (groupByEvent.property && groupByEvent.prop_category === 'event') {
-      propName = eventPropNames[groupByEvent.property]
-        ? eventPropNames[groupByEvent.property]
-        : groupByEvent.property;
-    }
+    let findItem =
+    eventPropNames?.[item] ||
+    userPropNames?.[item] ||
+    groupPropNames?.[item] ||
+    eventNames?.[item];
+    
+    let propName = findItem ? findItem : item;
 
-    if (groupByEvent.property && groupByEvent.prop_category === 'group') {
-      propName = groupPropNames[groupByEvent.property]
-        ? groupPropNames[groupByEvent.property]
-        : groupByEvent.property;
-    }
-   
-    if (groupByEvent.property && groupByEvent.groupName === '$domains') {
-      propName = groupPropNames[groupByEvent.property]
-        ? groupPropNames[groupByEvent.property]
-        : groupByEvent.property;
-    }
+    // let propName = '';
+    // if (groupByEvent.property && groupByEvent.prop_category === 'user') {
+    //   propName = userPropNames[groupByEvent.property]
+    //     ? userPropNames[groupByEvent.property]
+    //     : groupByEvent.property;
+    // }
+
+    // if (groupByEvent.property && groupByEvent.prop_category === 'event') {
+    //   propName = eventPropNames[groupByEvent.property]
+    //     ? eventPropNames[groupByEvent.property]
+    //     : groupByEvent.property;
+    // }
+
+    // if (groupByEvent.property && groupByEvent.prop_category === 'group') {
+    //   propName = groupPropNames[groupByEvent.property]
+    //     ? groupPropNames[groupByEvent.property]
+    //     : groupByEvent.property;
+    // }
+
+    // if (groupByEvent.property && groupByEvent.groupName === '$domains') {
+    //   propName = groupPropNames[groupByEvent.property]
+    //     ? groupPropNames[groupByEvent.property]
+    //     : groupByEvent.property;
+    // }
 
     return isGroupByDDVisible ? (
       <div className='relative'>
@@ -299,6 +311,7 @@ const mapStateToProps = (state) => ({
   userPropNames: state.coreQuery.userPropNames,
   eventPropNames: state.coreQuery.eventPropNames,
   groupPropNames: state.coreQuery.groupPropNames,
+  eventNames: state.coreQuery.eventNames,
   groups: state.coreQuery.groups
 });
 

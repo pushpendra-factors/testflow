@@ -62,10 +62,11 @@ if __name__ == '__main__':
 
     data_service_obj.data_service_host = options.data_service_host
     is_project_id_flag_given = (options.project_ids != None and options.project_ids != '')
+    allProjects = options.project_ids == "*"
     
     linkedin_int_settings =[]
     err_get_settings = ''
-    if is_project_id_flag_given:
+    if is_project_id_flag_given and not allProjects:
         linkedin_int_settings, err_get_settings = data_service_obj.get_linkedin_int_settings_for_projects(
                                                                                     options.project_ids)
     else:

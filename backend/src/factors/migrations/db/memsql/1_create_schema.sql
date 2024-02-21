@@ -1258,6 +1258,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS segments(
     description text, 
     query json,
     type text,
+    updated_at timestamp(6) DEFAULT '2024-01-01 00:00:00';,
     PRIMARY KEY (project_id, id),
     SHARD KEY (project_id, id)
 );

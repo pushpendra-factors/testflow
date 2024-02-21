@@ -1,6 +1,6 @@
 import sys
 import re
-
+from tornado import gen
 sys.path.append('/Users/satyamishra/repos/factors/python_backend/chat_factors/')
 import os
 import json
@@ -39,11 +39,13 @@ class ChatHandler(BaseHandler):
         else:
             log.info("Variable already initialized. Skipping.")
 
+    @gen.coroutine
     def post(self):
         try:
             result = None
-            prompt = self.get_argument("prompt")
-            pid = self.get_argument("pid")
+            prompt = json.loads(self.request.body)["prompt"]
+            pid = json.loads(self.request.body)["pid"]
+            kpi_config = json.loads(self.request.body)["kpi_config"]
             log.info('prompt: %s', prompt)
             if app.CONFIG.ADWORDS_APP.env == "development":
                 result = get_answer_from_ir_model_local(prompt)
@@ -51,12 +53,19 @@ class ChatHandler(BaseHandler):
                 ChatHandler.initialize_variable("")
                 result = get_answer_from_ir_model(prompt, self.prompt_response_data, self.prompt_vector_data)
             log.info(result["answer"])
-            json_string_with_quotes = re.sub(r'(\w+)', r'"\1"', result["answer"])
-            json_string_valid = json_string_with_quotes.replace('("', '"').replace('")', '"').replace('(-)', '""')
-            log.info(json_string_valid)
-            result_dict = json.loads(json_string_valid)
 
-            query_payload = get_url_and_query_payload_from_gpt_response(result_dict, pid)
+            # removing chars : '(' & ')' & '-'
+            json_string_valid = result["answer"].replace('(', '').replace(')', '').replace('-', '')
+            log.info(json_string_valid)
+
+            # adding double quotes around keys and values
+            json_string_with_quotes = re.sub(r'(\w+):(-?\w*)', r'"\1":"\2"', json_string_valid)
+            log.info(json_string_with_quotes)
+
+            result_dict = json.loads(json_string_with_quotes)
+            log.info(result_dict)
+
+            query_payload = get_url_and_query_payload_from_gpt_response(result_dict, pid, kpi_config)
 
             log.info(query_payload)
             result_json = json.dumps(query_payload, indent=2)
@@ -66,3 +75,8 @@ class ChatHandler(BaseHandler):
             log.error("Error processing request: %s", str(e))
             self.set_status(500)  # Internal Server Error
             self.write(json.dumps({'error': {'code': 500, 'message': "Internal Server Error"}}))
+
+    @gen.coroutine
+    def options(self):
+        self.set_status(200)
+        self.finish()

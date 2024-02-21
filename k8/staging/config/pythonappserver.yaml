@@ -8,3 +8,4 @@ metadata:
 data:
   ADWORDS_SERVER_PORT: "8091"
   ADWORDS_SERVER_PATH: "/usr/local/var/factors"
+  CHAT_DATA_BUCKET: "factors-staging-misc"

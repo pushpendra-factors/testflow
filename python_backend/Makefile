@@ -1,4 +1,4 @@
-.PHONY: pack-python-server upload-python-server pack-adwords-etl upload-adwords-etl pack-adwords-etl-debug upload-adwords-etl-debug pack-facebook-etl upload-facebook-etl
+.PHONY: pack-python-server upload-python-server pack-adwords-etl upload-adwords-etl pack-chat-data upload-chat-data pack-adwords-etl-debug upload-adwords-etl-debug pack-facebook-etl upload-facebook-etl
 
 TAG?=
 export TAG

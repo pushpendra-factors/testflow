@@ -86,6 +86,7 @@ var MapOfKPIPropertyNameToData = map[string]map[string]map[string]string{
 	U.SP_INITIAL_PAGE_LOAD_TIME:      {EventEntity: {"name": U.SP_INITIAL_PAGE_LOAD_TIME, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.SP_INITIAL_PAGE_LOAD_TIME], "data_type": U.PropertyTypeNumerical, "entity": EventEntity}},
 	U.SP_INITIAL_PAGE_SCROLL_PERCENT: {EventEntity: {"name": U.SP_INITIAL_PAGE_SCROLL_PERCENT, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.SP_INITIAL_PAGE_SCROLL_PERCENT], "data_type": U.PropertyTypeNumerical, "entity": EventEntity}},
 	U.UP_INITIAL_REFERRER_URL:        {EventEntity: {"name": U.UP_INITIAL_REFERRER_URL, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.EP_REFERRER_URL], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
+	U.EP_TERM:						  {EventEntity: {"name": U.EP_TERM, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.EP_TERM], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},	
 
 	// Session and Generic Event - Event Properties
 	U.EP_TIMESTAMP: {EventEntity: {"name": U.EP_TIMESTAMP, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.EP_TIMESTAMP], "data_type": U.PropertyTypeDateTime, "entity": EventEntity}},

@@ -49,7 +49,7 @@ function EventDrawer({
   const addNewProp = (option: any, group: any) => {
     const currentList =
       currentProjectSettings?.timelines_config?.events_config?.[
-        event?.event_name
+        event?.display_name === 'Page View' ? 'PageView' : event.event_name
       ] || [];
 
     if (currentList.includes(option.value)) {
