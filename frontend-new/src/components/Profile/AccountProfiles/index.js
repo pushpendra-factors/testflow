@@ -89,6 +89,7 @@ import {
 import PropertyFilter from './PropertyFilter';
 import { Text, SVG } from '../../factorsComponents';
 import { DEFAULT_TIMELINE_CONFIG } from '../constants';
+import { invalidBreakdownPropertiesList } from 'Constants/general.constants';
 
 function AccountProfiles({
   activeProject,
@@ -206,14 +207,19 @@ function AccountProfiles({
   }, [activeProject?.id, segmentID, accountPayload, segments]);
 
   useEffect(() => {
-    const listProps = Object.keys(groups?.account_groups || {}).reduce(
+    const filteredDomainProps = (
+      groupProperties[GROUP_NAME_DOMAINS] || []
+    ).filter((item) => !invalidBreakdownPropertiesList.includes(item[1]));
+
+    const groupProps = Object.keys(groups?.account_groups || {}).reduce(
       (properties, group) =>
         groupProperties[group]
           ? properties.concat(groupProperties[group])
           : properties,
       []
     );
-    setListProperties(listProps);
+
+    setListProperties([...filteredDomainProps, ...groupProps]);
   }, [groupProperties, groups]);
 
   useEffect(() => {
