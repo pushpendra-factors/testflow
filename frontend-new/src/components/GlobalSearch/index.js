@@ -24,7 +24,7 @@ import useKeyboardNavigation from 'hooks/useKeyboardNavigation';
 import { AdminLock } from 'Routes/feature';
 import useAgentInfo from 'hooks/useAgentInfo';
 import styles from './index.module.scss';
-import AIPrompt from './AiPrompt';
+import AIPrompt from './AIPrompt';
 
 const itemHeight = 47;
 const ContainerHeight = 443;
