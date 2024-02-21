@@ -38,18 +38,6 @@ func UpdateAccScoreWeights(c *gin.Context) (interface{}, int, string, string, bo
 	}
 	weights.SaleWindow = weightsRequest.SaleWindow
 
-	if weights.SaleWindow == 0 {
-		errMsg := "trying to set salewindow to 0 "
-		logCtx.Error(errMsg)
-		return nil, http.StatusBadRequest, errMsg, "", true
-	}
-
-	if len(weights.WeightConfig) == 0 {
-		errMsg := "trying to set weight config (filters) to 0 "
-		logCtx.Error(errMsg)
-		return nil, http.StatusBadRequest, errMsg, "", true
-	}
-
 	// convert incoming request to AccWeights.
 	for _, wtVal := range weightsRequest.WeightConfig {
 		var r M.AccEventWeight
@@ -74,6 +62,18 @@ func UpdateAccScoreWeights(c *gin.Context) (interface{}, int, string, string, bo
 	}
 
 	logCtx.WithField("weights", weights).Infof("Updating weights for project")
+
+	if dedupweights.SaleWindow == 0 {
+		errMsg := "trying to set salewindow to 0 "
+		logCtx.Error(errMsg)
+		return nil, http.StatusBadRequest, errMsg, "", true
+	}
+
+	if len(dedupweights.WeightConfig) == 0 {
+		errMsg := "trying to set weight config (filters) to 0 "
+		logCtx.Error(errMsg)
+		return nil, http.StatusBadRequest, errMsg, "", true
+	}
 
 	// check if project score exist
 	// else create new
