@@ -1,10 +1,4 @@
 import React, { useCallback, useState, useEffect } from 'react';
-import {
-  Text,
-  SVG,
-  FaErrorComp,
-  FaErrorLog
-} from '../../components/factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import {
   Row,
@@ -19,9 +13,28 @@ import {
   message
 } from 'antd';
 import { MoreOutlined } from '@ant-design/icons';
-// import SearchBar from '../../components/SearchBar';
 import { connect, useSelector, useDispatch } from 'react-redux';
 import MomentTz from 'Components/MomentTz';
+import _ from 'lodash';
+import { fetchAgentInfo } from 'Reducers/agentActions';
+import factorsai from 'factorsai';
+import {
+  createAlert,
+  sendAlertNow,
+  fetchSlackChannels,
+  fetchProjectSettingsV1,
+  enableSlackIntegration
+} from 'Reducers/global';
+import useAutoFocus from 'hooks/useAutoFocus';
+import { useHistory } from 'react-router-dom';
+import moment from 'moment';
+import {
+  Text,
+  SVG,
+  FaErrorComp,
+  FaErrorLog
+} from '../../components/factorsComponents';
+// import SearchBar from '../../components/SearchBar';
 import {
   getStateQueryFromRequestQuery,
   getAttributionStateFromRequestQuery,
@@ -64,23 +77,10 @@ import {
 } from '../Dashboard/utils';
 import TemplatesModal from '../CoreQuery/Templates';
 import { fetchWeeklyIngishts } from '../../reducers/insights';
-import _ from 'lodash';
 import { getQueryType } from '../../utils/dataFormatter';
-import { fetchAgentInfo } from 'Reducers/agentActions';
-import factorsai from 'factorsai';
 import ShareToEmailModal from '../../components/ShareToEmailModal';
 import ShareToSlackModal from '../../components/ShareToSlackModal';
-import {
-  createAlert,
-  sendAlertNow,
-  fetchSlackChannels,
-  fetchProjectSettingsV1,
-  enableSlackIntegration
-} from 'Reducers/global';
 import AppModal from '../../components/AppModal';
-import useAutoFocus from 'hooks/useAutoFocus';
-import { useHistory } from 'react-router-dom';
-import moment from 'moment';
 import styles from './index.module.scss';
 
 // const whiteListedAccounts_KPI = [
@@ -144,7 +144,7 @@ const columns = [
     dataIndex: 'title',
     key: 'title',
     render: (text) => (
-      <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>
+      <Text type='title' level={7} weight='bold' extraClass='m-0'>
         {text}
       </Text>
     )
@@ -154,26 +154,24 @@ const columns = [
     dataIndex: 'author',
     width: 240,
     key: 'author',
-    render: (created_by_user) => {
-      return (
-        <div className='flex items-center'>
-          <Avatar
-            src={
-              typeof created_by_user?.email === 'string' &&
-              created_by_user?.email?.length !== 0 &&
-              created_by_user.email.split('@')[1] === 'factors.ai'
-                ? 'https://s3.amazonaws.com/www.factors.ai/assets/img/product/factors-icon.svg'
-                : !!created_by_user?.image
-                  ? created_by_user?.image
-                  : 'assets/avatar/avatar.png'
-            }
-            size={24}
-            className={'mr-2'}
-          />
-          &nbsp; {created_by_user?.text}
-        </div>
-      );
-    }
+    render: (created_by_user) => (
+      <div className='flex items-center'>
+        <Avatar
+          src={
+            typeof created_by_user?.email === 'string' &&
+            created_by_user?.email?.length !== 0 &&
+            created_by_user.email.split('@')[1] === 'factors.ai'
+              ? 'https://s3.amazonaws.com/www.factors.ai/assets/img/product/factors-icon.svg'
+              : created_by_user?.image
+                ? created_by_user?.image
+                : 'assets/avatar/avatar.png'
+          }
+          size={24}
+          className='mr-2'
+        />
+        &nbsp; {created_by_user?.text}
+      </div>
+    )
   },
   {
     title: 'Date',
@@ -207,7 +205,7 @@ function CoreQuery({
   dateFromTo,
   updateCoreQueryReducer
 }) {
-  let activeProjectProfilePicture = useSelector(
+  const activeProjectProfilePicture = useSelector(
     (state) => state.global.active_project.profile_picture
   );
 
@@ -293,7 +291,7 @@ function CoreQuery({
     return {
       key: q.id,
       id_text: q.id_text,
-      type: <SVG name={svgName} size={24} color={'blue'} />,
+      type: <SVG name={svgName} size={24} color='blue' />,
       title: q.title,
       author: {
         image: activeProjectProfilePicture,
@@ -317,7 +315,7 @@ function CoreQuery({
   };
 
   const confirmDelete = useCallback(() => {
-    let queryDetails = {
+    const queryDetails = {
       ...activeRow,
       project_id: activeProject?.id
     };
@@ -588,12 +586,10 @@ function CoreQuery({
           }
           delete usefulQuery.queryType;
           dispatch({ type: INITIALIZE_MTA_STATE, payload: usefulQuery });
-          setQueryOptions((currData) => {
-            return {
-              ...currData,
-              group_analysis: record.query.query.analyze_type
-            };
-          });
+          setQueryOptions((currData) => ({
+            ...currData,
+            group_analysis: record.query.query.analyze_type
+          }));
         } else if (record.query.cl && record.query.cl === QUERY_TYPE_PROFILE) {
           equivalentQuery = getProfileQueryFromRequestQuery(record.query);
           updateProfileQueryState(equivalentQuery);
@@ -649,67 +645,55 @@ function CoreQuery({
     ]
   );
 
-  const getMenu = (row) => {
-    return (
-      <Menu className={`${styles.antdActionMenu}`}>
-        <Menu.Item key='0'>
-          <a onClick={handleViewResult.bind(this, row)} href='#!'>
+  const getMenu = (row) => (
+    <Menu className={`${styles.antdActionMenu}`}>
+      <Menu.Item key='0'>
+        <a onClick={handleViewResult.bind(this, row)} href='#!'>
+          <SVG name='eye' size={18} color='grey' extraClass='inline mr-2' />
+          View Report
+        </a>
+      </Menu.Item>
+      {getQueryType(row.query) === QUERY_TYPE_KPI ||
+      getQueryType(row.query) === QUERY_TYPE_EVENT ? (
+        <Menu.Item key='1'>
+          <a onClick={showEmailModal.bind(this, row)} href='#!'>
             <SVG
-              name={'eye'}
+              name='envelope'
               size={18}
-              color={'grey'}
-              extraClass={'inline mr-2'}
+              color='grey'
+              extraClass='inline mr-2'
             />
-            View Report
+            Email this report
           </a>
         </Menu.Item>
-        {getQueryType(row.query) === QUERY_TYPE_KPI ||
-        getQueryType(row.query) === QUERY_TYPE_EVENT ? (
-          <Menu.Item key='1'>
-            <a onClick={showEmailModal.bind(this, row)} href='#!'>
-              <SVG
-                name={'envelope'}
-                size={18}
-                color={'grey'}
-                extraClass={'inline mr-2'}
-              />
-              Email this report
-            </a>
-          </Menu.Item>
-        ) : null}
-        {getQueryType(row.query) === QUERY_TYPE_KPI ||
-        getQueryType(row.query) === QUERY_TYPE_EVENT ? (
-          <Menu.Item key='2'>
-            <a onClick={showSlackModal.bind(this, row)} href='#!'>
-              <SVG
-                name={'SlackStroke'}
-                size={18}
-                color={'grey'}
-                extraClass={'inline mr-2'}
-              />
-              Share to slack
-            </a>
-          </Menu.Item>
-        ) : null}
-        <Menu.Item key='3'>
-          {/* <a onClick={(e) => e.stopPropagation()} href="#!">
+      ) : null}
+      {getQueryType(row.query) === QUERY_TYPE_KPI ||
+      getQueryType(row.query) === QUERY_TYPE_EVENT ? (
+        <Menu.Item key='2'>
+          <a onClick={showSlackModal.bind(this, row)} href='#!'>
+            <SVG
+              name='SlackStroke'
+              size={18}
+              color='grey'
+              extraClass='inline mr-2'
+            />
+            Share to slack
+          </a>
+        </Menu.Item>
+      ) : null}
+      <Menu.Item key='3'>
+        {/* <a onClick={(e) => e.stopPropagation()} href="#!">
             Copy Link
           </a>
         </Menu.Item>
         <Menu.Item key="2"> */}
-          <a onClick={handleDelete.bind(this, row)} href='#!'>
-            <SVG
-              name={'trash'}
-              size={18}
-              color={'grey'}
-              extraClass={'inline mr-2'}
-            />
-            Delete Report
-          </a>
-        </Menu.Item>
-      </Menu>
-    );
-  };
+        <a onClick={handleDelete.bind(this, row)} href='#!'>
+          <SVG name='trash' size={18} color='grey' extraClass='inline mr-2' />
+          Delete Report
+        </a>
+      </Menu.Item>
+    </Menu>
+  );
 
   useEffect(() => {
     if (location.state && location.state.global_search) {
@@ -724,6 +708,8 @@ function CoreQuery({
       setNavigatedFromAnalyse(location.state.navigatedFromAnalyse);
       location.state = undefined;
       window.history.replaceState(null, '');
+    } else if (location.state && location.state.navigatedFromAIChartPrompt) {
+      setQueryToState(location.state.query, false);
     } else {
       dispatch({ type: SHOW_ANALYTICS_RESULT, payload: false });
       history.push('/reports');
@@ -738,9 +724,7 @@ function CoreQuery({
 
   const data = queriesState.data
     .filter((q) => !(q.query && q.query.cl === QUERY_TYPE_WEB))
-    .map((q) => {
-      return getFormattedRow(q);
-    });
+    .map((q) => getFormattedRow(q));
 
   const setQueryTypeTab = (item) => {
     if (item.title === 'Templates') {
@@ -753,14 +737,12 @@ function CoreQuery({
     if (item.title === 'Funnels') {
       setQueryType(QUERY_TYPE_FUNNEL);
       setQueries([]);
-      setQueryOptions((currData) => {
-        return {
-          ...currData,
-          globalFilters: [],
-          group_analysis: 'users',
-          date_range: { ...DefaultDateRangeFormat }
-        };
-      });
+      setQueryOptions((currData) => ({
+        ...currData,
+        globalFilters: [],
+        group_analysis: 'users',
+        date_range: { ...DefaultDateRangeFormat }
+      }));
       dispatch({
         type: INITIALIZE_GROUPBY,
         payload: {
@@ -773,14 +755,12 @@ function CoreQuery({
     if (item.title === 'Events') {
       setQueryType(QUERY_TYPE_EVENT);
       setQueries([]);
-      setQueryOptions((currData) => {
-        return {
-          ...currData,
-          globalFilters: [],
-          group_analysis: 'users',
-          date_range: { ...DefaultDateRangeFormat }
-        };
-      });
+      setQueryOptions((currData) => ({
+        ...currData,
+        globalFilters: [],
+        group_analysis: 'users',
+        date_range: { ...DefaultDateRangeFormat }
+      }));
       dispatch({
         type: INITIALIZE_GROUPBY,
         payload: {
@@ -797,13 +777,11 @@ function CoreQuery({
     if (item.title === 'KPIs') {
       setQueryType(QUERY_TYPE_KPI);
       setQueries([]);
-      setQueryOptions((currData) => {
-        return {
-          ...currData,
-          globalFilters: [],
-          date_range: { ...DefaultDateRangeFormat }
-        };
-      });
+      setQueryOptions((currData) => ({
+        ...currData,
+        globalFilters: [],
+        date_range: { ...DefaultDateRangeFormat }
+      }));
       dispatch({
         type: INITIALIZE_GROUPBY,
         payload: {
@@ -820,14 +798,12 @@ function CoreQuery({
     if (item.title === 'Profiles') {
       setQueryType(QUERY_TYPE_PROFILE);
       setProfileQueries([]);
-      setQueryOptions((currData) => {
-        return {
-          ...currData,
-          globalFilters: [],
-          group_analysis: 'users',
-          date_range: { ...DefaultDateRangeFormat }
-        };
-      });
+      setQueryOptions((currData) => ({
+        ...currData,
+        globalFilters: [],
+        group_analysis: 'users',
+        date_range: { ...DefaultDateRangeFormat }
+      }));
       dispatch({
         type: INITIALIZE_GROUPBY,
         payload: {
@@ -839,10 +815,10 @@ function CoreQuery({
   };
 
   const searchReport = (e) => {
-    let term = e.target.value;
-    let searchResults = data.filter((item) => {
-      return item?.title?.toLowerCase().includes(searchTerm.toLowerCase());
-    });
+    const term = e.target.value;
+    const searchResults = data.filter((item) =>
+      item?.title?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
     setSearchTerm(term);
     setTableData(searchResults);
   };
@@ -878,10 +854,10 @@ function CoreQuery({
 
   useEffect(() => {
     if (slack?.length > 0) {
-      let tempArr = [];
-      let allArr = [];
+      const tempArr = [];
+      const allArr = [];
       for (let i = 0; i < slack.length; i++) {
-        tempArr.push({ label: '#' + slack[i].name, value: slack[i].id });
+        tempArr.push({ label: `#${slack[i].name}`, value: slack[i].id });
         allArr.push({
           name: slack[i].name,
           id: slack[i].id,
@@ -898,15 +874,13 @@ function CoreQuery({
 
     let emails = [];
     if (data?.emails) {
-      emails = data.emails.map((item) => {
-        return item.email;
-      });
+      emails = data.emails.map((item) => item.email);
     }
     if (data.email) {
       emails.push(data.email);
     }
 
-    let payload = {
+    const payload = {
       alert_name: selectedRow?.title || data?.subject,
       alert_type: 3,
       // "query_id": selectedRow?.key || selectedRow?.id,
@@ -918,7 +892,7 @@ function CoreQuery({
       alert_configuration: {
         email_enabled: true,
         slack_enabled: false,
-        emails: emails,
+        emails,
         slack_channels_and_user_groups: {}
       }
     };
@@ -973,7 +947,7 @@ function CoreQuery({
       slackChannels = { ...slackChannels, [key]: value };
     }
 
-    let payload = {
+    const payload = {
       alert_name: selectedRow?.title || data?.subject,
       alert_type: 3,
       // "query_id": selectedRow?.key || selectedRow?.id,
@@ -1030,64 +1004,61 @@ function CoreQuery({
   };
 
   return (
-    <>
-      <ErrorBoundary
-        fallback={
-          <FaErrorComp
-            size={'medium'}
-            title={'Analyse LP Error'}
-            subtitle={
-              'We are facing trouble loading Analyse landing page. Drop us a message on the in-app chat.'
-            }
-          />
-        }
-        onError={FaErrorLog}
-      >
-        <ConfirmationModal
-          visible={deleteModal}
-          confirmationText='Are you sure you want to delete this report?'
-          onOk={confirmDelete}
-          onCancel={showDeleteModal.bind(this, false)}
-          title='Delete Report'
-          okText='Confirm'
-          cancelText='Cancel'
+    <ErrorBoundary
+      fallback={
+        <FaErrorComp
+          size='medium'
+          title='Analyse LP Error'
+          subtitle='We are facing trouble loading Analyse landing page. Drop us a message on the in-app chat.'
         />
-        <TemplatesModal
-          templatesModalVisible={templatesModalVisible}
-          setTemplatesModalVisible={setTemplatesModalVisible}
-        />
-        {/* <FaHeader>
+      }
+      onError={FaErrorLog}
+    >
+      <ConfirmationModal
+        visible={deleteModal}
+        confirmationText='Are you sure you want to delete this report?'
+        onOk={confirmDelete}
+        onCancel={showDeleteModal.bind(this, false)}
+        title='Delete Report'
+        okText='Confirm'
+        cancelText='Cancel'
+      />
+      <TemplatesModal
+        templatesModalVisible={templatesModalVisible}
+        setTemplatesModalVisible={setTemplatesModalVisible}
+      />
+      {/* <FaHeader>
           <SearchBar setQueryToState={setQueryToState} />
         </FaHeader> */}
-        <div>
-          <div className={'fa-container'}>
-            <Row gutter={[24, 24]} justify='center'>
-              <Col span={20}>
-                <Row gutter={[24, 24]}>
-                  <Col span={24}>
-                    <div className='flex space-between w-full items-center'>
-                      <div className='flex flex-col w-full'>
-                        <Text
-                          type={'title'}
-                          level={3}
-                          weight={'bold'}
-                          extraClass={'m-0'}
-                        >
-                          Analyse
-                        </Text>
-                        <Text
-                          type={'title'}
-                          level={6}
-                          weight={'regular'}
-                          color={'grey'}
-                          extraClass={'m-0'}
-                        >
-                          Here's where all the action happens. Use these modules
-                          to get a deeper understanding of your marketing and
-                          revenue activities. <a href='#!'>Learn more</a>
-                        </Text>
-                      </div>
-                      {/* <div className='flex justify-end'>
+      <div>
+        <div className='fa-container'>
+          <Row gutter={[24, 24]} justify='center'>
+            <Col span={20}>
+              <Row gutter={[24, 24]}>
+                <Col span={24}>
+                  <div className='flex space-between w-full items-center'>
+                    <div className='flex flex-col w-full'>
+                      <Text
+                        type='title'
+                        level={3}
+                        weight='bold'
+                        extraClass='m-0'
+                      >
+                        Analyse
+                      </Text>
+                      <Text
+                        type='title'
+                        level={6}
+                        weight='regular'
+                        color='grey'
+                        extraClass='m-0'
+                      >
+                        Here's where all the action happens. Use these modules
+                        to get a deeper understanding of your marketing and
+                        revenue activities. <a href='#!'>Learn more</a>
+                      </Text>
+                    </div>
+                    {/* <div className='flex justify-end'>
                         <Button
                           type='link'
                           icon={
@@ -1104,29 +1075,24 @@ function CoreQuery({
                           Walk me through
                         </Button>
                       </div> */}
-                    </div>
-                  </Col>
-                  <Col span={24}>
-                    <div className={'flex justify-between mt-4'}>
-                      {coreQueryoptions.map((item, index) => {
-                        // if (
-                        //   item.title === 'KPIs' &&
-                        //   !whiteListedAccounts_KPI.includes(activeAccount)
-                        // ) {
-                        //   return null;
-                        // }
-                        return (
-                          <div
-                            key={index}
-                            onClick={() => setQueryTypeTab(item)}
-                            className={'fai--custom-card-new flex flex-col'}
-                          >
-                            <div
-                              className={
-                                'fai--custom-card-new--top-section flex justify-center items-center'
-                              }
-                            >
-                              {/* {item.title == 'KPIs' && (
+                  </div>
+                </Col>
+                <Col span={24}>
+                  <div className='flex justify-between mt-4'>
+                    {coreQueryoptions.map((item, index) => (
+                      // if (
+                      //   item.title === 'KPIs' &&
+                      //   !whiteListedAccounts_KPI.includes(activeAccount)
+                      // ) {
+                      //   return null;
+                      // }
+                      <div
+                        key={index}
+                        onClick={() => setQueryTypeTab(item)}
+                        className='fai--custom-card-new flex flex-col'
+                      >
+                        <div className='fai--custom-card-new--top-section flex justify-center items-center'>
+                          {/* {item.title == 'KPIs' && (
                           <Tag
                             color='orange'
                             className={'fai--custom-card--badge'}
@@ -1134,195 +1100,183 @@ function CoreQuery({
                             BETA
                           </Tag>
                         )} */}
-                              <SVG name={item.icon} size={40} color={'blue'} />
-                            </div>
+                          <SVG name={item.icon} size={40} color='blue' />
+                        </div>
 
-                            <div className='fai--custom-card-new--bottom-section'>
-                              <Text
-                                type={'title'}
-                                level={7}
-                                weight={'bold'}
-                                extraClass={'m-0'}
-                              >
-                                {item.title}
-                              </Text>
-                              <Text
-                                type={'title'}
-                                level={7}
-                                color={'grey'}
-                                extraClass={
-                                  'm-0 mt-1 fai--custom-card-new--desc'
-                                }
-                              >
-                                {item.desc}
-                              </Text>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </Col>
-                </Row>
-                <Row>
-                  <Col span={24}>
-                    <div className='flex items-center space-between w-full  mt-8 mb-2'>
-                      <div className='flex items-center w-full'>
-                        <Text
-                          type={'title'}
-                          level={6}
-                          weight={'bold'}
-                          extraClass={'m-0'}
-                        >
-                          Saved Reports
-                        </Text>
+                        <div className='fai--custom-card-new--bottom-section'>
+                          <Text
+                            type='title'
+                            level={7}
+                            weight='bold'
+                            extraClass='m-0'
+                          >
+                            {item.title}
+                          </Text>
+                          <Text
+                            type='title'
+                            level={7}
+                            color='grey'
+                            extraClass='m-0 mt-1 fai--custom-card-new--desc'
+                          >
+                            {item.desc}
+                          </Text>
+                        </div>
                       </div>
+                    ))}
+                  </div>
+                </Col>
+              </Row>
+              <Row>
+                <Col span={24}>
+                  <div className='flex items-center space-between w-full  mt-8 mb-2'>
+                    <div className='flex items-center w-full'>
+                      <Text
+                        type='title'
+                        level={6}
+                        weight='bold'
+                        extraClass='m-0'
+                      >
+                        Saved Reports
+                      </Text>
+                    </div>
 
-                      <div className={'flex items-center justify-between'}>
-                        {showSearch ? (
-                          <Input
-                            onChange={searchReport}
-                            className={''}
-                            placeholder={'Search reports'}
-                            style={{ width: '220px', 'border-radius': '5px' }}
-                            prefix={
-                              <SVG name='search' size={16} color={'grey'} />
-                            }
-                            ref={inputComponentRef}
-                          />
-                        ) : null}
-                        <Button
-                          type='text'
-                          ghost={true}
-                          className={'p-2 bg-white'}
-                          onClick={() => {
-                            setShowSearch(!showSearch);
-                            if (showSearch) {
-                              setSearchTerm('');
-                            }
-                          }}
-                        >
-                          <SVG
-                            name={!showSearch ? 'search' : 'close'}
-                            size={20}
-                            color={'grey'}
-                          />
-                        </Button>
-                      </div>
-                    </div>
-                  </Col>
-                </Row>
-                <Row className={'mt-2 mb-20'}>
-                  <Col span={24}>
-                    <Table
-                      onRow={(record) => {
-                        return {
-                          onClick: () => {
-                            getWeeklyIngishts(record);
-                            setQueryToState(record);
-                            pushDataToLocation(record);
+                    <div className='flex items-center justify-between'>
+                      {showSearch ? (
+                        <Input
+                          onChange={searchReport}
+                          className=''
+                          placeholder='Search reports'
+                          style={{ width: '220px', 'border-radius': '5px' }}
+                          prefix={<SVG name='search' size={16} color='grey' />}
+                          ref={inputComponentRef}
+                        />
+                      ) : null}
+                      <Button
+                        type='text'
+                        ghost
+                        className='p-2 bg-white'
+                        onClick={() => {
+                          setShowSearch(!showSearch);
+                          if (showSearch) {
+                            setSearchTerm('');
                           }
-                        };
-                      }}
-                      loading={queriesState.loading}
-                      className='fa-table--basic'
-                      columns={columns}
-                      dataSource={searchTerm ? tableData : data}
-                      pagination={true}
-                      rowClassName='cursor-pointer'
-                    />
-                  </Col>
-                </Row>
-              </Col>
-            </Row>
-          </div>
+                        }}
+                      >
+                        <SVG
+                          name={!showSearch ? 'search' : 'close'}
+                          size={20}
+                          color='grey'
+                        />
+                      </Button>
+                    </div>
+                  </div>
+                </Col>
+              </Row>
+              <Row className='mt-2 mb-20'>
+                <Col span={24}>
+                  <Table
+                    onRow={(record) => ({
+                      onClick: () => {
+                        getWeeklyIngishts(record);
+                        setQueryToState(record);
+                        pushDataToLocation(record);
+                      }
+                    })}
+                    loading={queriesState.loading}
+                    className='fa-table--basic'
+                    columns={columns}
+                    dataSource={searchTerm ? tableData : data}
+                    pagination
+                    rowClassName='cursor-pointer'
+                  />
+                </Col>
+              </Row>
+            </Col>
+          </Row>
         </div>
+      </div>
 
-        <ShareToEmailModal
-          visible={showShareToEmailModal}
-          onSubmit={handleEmailClick}
+      <ShareToEmailModal
+        visible={showShareToEmailModal}
+        onSubmit={handleEmailClick}
+        isLoading={loading}
+        setShowShareToEmailModal={setShowShareToEmailModal}
+        queryTitle={selectedRow?.title}
+      />
+
+      {projectSettingsV1?.int_slack ? (
+        <ShareToSlackModal
+          visible={showShareToSlackModal}
+          onSubmit={handleSlackClick}
+          channelOpts={channelOpts}
           isLoading={loading}
-          setShowShareToEmailModal={setShowShareToEmailModal}
+          setShowShareToSlackModal={setShowShareToSlackModal}
           queryTitle={selectedRow?.title}
         />
-
-        {projectSettingsV1?.int_slack ? (
-          <ShareToSlackModal
-            visible={showShareToSlackModal}
-            onSubmit={handleSlackClick}
-            channelOpts={channelOpts}
-            isLoading={loading}
-            setShowShareToSlackModal={setShowShareToSlackModal}
-            queryTitle={selectedRow?.title}
-          />
-        ) : (
-          <AppModal
-            title={null}
-            visible={showShareToSlackModal}
-            footer={null}
-            centered={true}
-            mask={true}
-            maskClosable={false}
-            maskStyle={{ backgroundColor: 'rgb(0 0 0 / 70%)' }}
-            closable={true}
-            isLoading={loading}
-            onCancel={() => setShowShareToSlackModal(false)}
-            className={`fa-modal--regular`}
-            width={'470px'}
-          >
-            <div className={'m-0 mb-2'}>
-              <Row className={'m-0'}>
-                <Col>
-                  <SVG
-                    name={'Slack'}
-                    size={25}
-                    extraClass={'inline mr-2 -mt-2'}
-                  />
-                  <Text
-                    type={'title'}
-                    level={5}
-                    weight={'bold'}
-                    extraClass={'inline m-0'}
-                  >
-                    Slack Integration
-                  </Text>
-                </Col>
-              </Row>
-              <Row className={'m-0 mt-4'}>
-                <Col>
-                  <Text
-                    type={'title'}
-                    level={6}
-                    color={'grey-2'}
-                    weight={'regular'}
-                    extraClass={'m-0'}
-                  >
-                    Slack is not integrated, Do you want to integrate with your
-                    slack account now?
-                  </Text>
-                </Col>
-              </Row>
+      ) : (
+        <AppModal
+          title={null}
+          visible={showShareToSlackModal}
+          footer={null}
+          centered
+          mask
+          maskClosable={false}
+          maskStyle={{ backgroundColor: 'rgb(0 0 0 / 70%)' }}
+          closable
+          isLoading={loading}
+          onCancel={() => setShowShareToSlackModal(false)}
+          className='fa-modal--regular'
+          width='470px'
+        >
+          <div className='m-0 mb-2'>
+            <Row className='m-0'>
               <Col>
-                <Row justify='end' className={'w-full mb-1 mt-4'}>
-                  <Col className={'mr-2'}>
-                    <Button
-                      type={'default'}
-                      onClick={() => setShowShareToSlackModal(false)}
-                    >
-                      Cancel
-                    </Button>
-                  </Col>
-                  <Col className={'mr-2'}>
-                    <Button type={'primary'} onClick={onConnectSlack}>
-                      Connect to slack
-                    </Button>
-                  </Col>
-                </Row>
+                <SVG name='Slack' size={25} extraClass='inline mr-2 -mt-2' />
+                <Text
+                  type='title'
+                  level={5}
+                  weight='bold'
+                  extraClass='inline m-0'
+                >
+                  Slack Integration
+                </Text>
               </Col>
-            </div>
-          </AppModal>
-        )}
-      </ErrorBoundary>
-    </>
+            </Row>
+            <Row className='m-0 mt-4'>
+              <Col>
+                <Text
+                  type='title'
+                  level={6}
+                  color='grey-2'
+                  weight='regular'
+                  extraClass='m-0'
+                >
+                  Slack is not integrated, Do you want to integrate with your
+                  slack account now?
+                </Text>
+              </Col>
+            </Row>
+            <Col>
+              <Row justify='end' className='w-full mb-1 mt-4'>
+                <Col className='mr-2'>
+                  <Button
+                    type='default'
+                    onClick={() => setShowShareToSlackModal(false)}
+                  >
+                    Cancel
+                  </Button>
+                </Col>
+                <Col className='mr-2'>
+                  <Button type='primary' onClick={onConnectSlack}>
+                    Connect to slack
+                  </Button>
+                </Col>
+              </Row>
+            </Col>
+          </div>
+        </AppModal>
+      )}
+    </ErrorBoundary>
   );
 }
 const mapStateToProps = (state) => ({
