@@ -196,14 +196,6 @@ function AccountDetails({
   );
 
   useEffect(() => {
-    if (AdminLock(activeAgent) && !isScoringLocked) {
-      setTimelineViewMode('overview');
-    } else {
-      setTimelineViewMode('birdview');
-    }
-  }, [activeAgent, isScoringLocked]);
-
-  useEffect(() => {
     if (Boolean(timelineViewMode)) {
       insertUrlParam(window.history, 'view', timelineViewMode);
     }
