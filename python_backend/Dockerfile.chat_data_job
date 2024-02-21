@@ -1,6 +1,6 @@
 FROM python:3.8-slim
 
-ENV PYTHONPATH "${PYTHONPATH}:/usr/local/var/factors/:/usr/local/var/factors/python_backend/chat_factors/:/usr/local/var/factors/python_backend/chat_factors/chatgpt_poc/:/usr/local/var/factors/python_backend/chat_factors/chatgpt_poc/chat_jobs/"
+ENV PYTHONPATH "${PYTHONPATH}:/usr/local/var/factors/:/usr/local/var/factors/chat_factors/:/usr/local/var/factors/chat_factors/chatgpt_poc/:/usr/local/var/factors/chat_factors/chatgpt_poc/chat_jobs/"
 
 RUN mkdir -p /usr/local/var/factors
 WORKDIR /usr/local/var/factors
