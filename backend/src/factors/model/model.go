@@ -368,6 +368,9 @@ type Model interface {
 	GetLinkedinEventFieldsBasedOnTimestampV1(projectID int64, timestamp int64,
 		imprEventNameID string, clicksEventNameID string) (map[int64]map[string]map[string]string,
 		map[int64]map[string]map[string]string, error)
+	GetLinkedinEventFieldsBasedOnTimestampV2(projectID int64, timestamp int64,
+		imprEventNameID string, clicksEventNameID string) (map[int64]map[string]map[string]map[string]interface{},
+		map[int64]map[string]map[string]map[string]interface{}, error)
 
 	// clickable_elements
 	UpsertCountAndCheckEnabledClickableElement(projectID int64, payload *model.CaptureClickPayload) (isEnabled bool, status int, err error)
@@ -396,10 +399,10 @@ type Model interface {
 	GetSQLQueryAndParametersForLinkedinQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string, fetchSource bool,
 		limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string, int)
 	GetDomainData(projectID string) ([]model.DomainDataResponse, int)
-	GetDistinctTimestampsForEventCreation(projectID string) ([]int64, int)
-	GetCompanyDataFromLinkedinForTimestamp(projectID string, timestamp int64) ([]model.DomainDataResponse, int)
+	GetDistinctTimestampsForEventCreationFromLinkedinDocs(projectID string) ([]int64, int)
+	GetCompanyDataFromLinkedinDocsForTimestamp(projectID string, timestamp int64) ([]model.DomainDataResponse, int)
 
-	UpdateLinkedinGroupUserCreationDetails(domainData model.DomainDataResponse) error
+	UpdateSyncStatusLinkedinDocs(domainData model.DomainDataResponse) error
 	GetCampaignGroupInfoForGivenTimerange(campaignGroupInfoRequestPayload model.LinkedinCampaignGroupInfoRequestPayload) ([]model.LinkedinDocument, int)
 	GetValidationForGivenTimerangeAndJobType(validationRequestPayload model.LinkedinValidationRequestPayload) (bool, int)
 	//bingads document
