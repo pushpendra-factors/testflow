@@ -959,8 +959,6 @@ func getPropsBlock(propMap U.PropertiesMap) string {
 }
 */
 
-
-
 func sendTeamsAlertForEventTriggerAlert(projectID int64, agentUUID string,
 	msg model.EventTriggerAlertMessage, Tchannels *postgres.Jsonb, isAccountAlert bool, accountUrl string) (success bool, errMessage string) {
 	logCtx := log.WithFields(log.Fields{

@@ -334,6 +334,29 @@ func GormCleanupCallback(scope *gorm.Scope) {
 	}
 }
 
+func GormDefault(scope *gorm.Scope) {
+	for _, field := range scope.Fields() {
+		if field.IsIgnored {
+			continue
+		}
+
+		switch field.Field.Type().String() {
+		case "time.Time":
+			fieldValue := field.Field.Interface().(time.Time)
+			if !fieldValue.IsZero() {
+				continue
+			}
+
+			err := field.Set(time.Date(1971, 1, 1, 0, 0, 0, 0, time.UTC))
+			if err != nil {
+				log.WithError(err).Error("Failed to set default datetime field.")
+				return
+			}
+
+		}
+	}
+}
+
 func CleanupUnsupportedCharOnStringBytes(stringBytes []byte) []byte {
 	nullRemovedBytes := RemoveNullCharacterBytes(stringBytes)
 	return []byte(SanitizeStringValueForUnicode(string(nullRemovedBytes)))
