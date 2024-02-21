@@ -3,7 +3,7 @@ import { Resizable } from 'react-resizable';
 import styles from './index.module.scss';
 
 const ResizableTitle = (props) => {
-  const { onResize, width, ...restProps } = props;
+  const { onResize, width, className, ...restProps } = props;
   if (!width) {
     return <th {...restProps} />;
   }
@@ -20,7 +20,7 @@ const ResizableTitle = (props) => {
         >
           <div
             style={{ height: '28px', width: 0, border: '0.5px solid #dedede' }}
-          ></div>
+          />
         </span>
       }
       onResize={(e, { size }) => {
@@ -32,7 +32,10 @@ const ResizableTitle = (props) => {
         enableUserSelectHack: false
       }}
     >
-      <th {...restProps} />
+      <th
+        {...restProps}
+        className={`${className} ${styles['table-custom-th']}`}
+      />
     </Resizable>
   );
 };
