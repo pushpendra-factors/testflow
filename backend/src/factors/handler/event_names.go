@@ -224,6 +224,8 @@ func GetEventNamesByUserHandler(c *gin.Context) {
 		"projectId": projectId,
 	})
 
+	showSpecialEvents := c.Query("special_events_enabled")
+
 	// RedisGet is the only call. In case of Cache crash, job will be manually triggered to repopulate cache
 	// No fallback for now.
 	eventNames, err := store.GetStore().GetEventNamesOrderedByOccurenceAndRecency(projectId, 2500, C.GetLookbackWindowForEventUserCache())
@@ -249,6 +251,11 @@ func GetEventNamesByUserHandler(c *gin.Context) {
 	}
 	eventNames = tempEventNames
 	eventNames = RemoveLabeledEventNamesFromOtherUserEventNames(eventNames)
+
+	// Adding $page_view event_name by force
+	if showSpecialEvents == "true" {
+		eventNames[U.FrequentlySeen] = append(eventNames[U.FrequentlySeen], U.EVENT_NAME_PAGE_VIEW)
+	}
 
 	_, displayNames := store.GetStore().GetDisplayNamesForAllEvents(projectId)
 
@@ -424,7 +431,10 @@ func GetEventPropertiesHandler(c *gin.Context) {
 
 	logCtx.WithField("decodedEventName", eventName).Debug("Decoded event name on properties request.")
 
-	if isExplain != "true" {
+	if eventName == U.EVENT_NAME_PAGE_VIEW || eventName == U.SEN_ALL_EVENTS {
+		properties["categorical"] = U.PAGE_VIEWS_STANDARD_PROPERTIES_CATEGORICAL
+		properties["numerical"] = U.PAGE_VIEWS_STANDARD_PROPERTIES_NUMERICAL
+	} else if isExplain != "true" {
 		var statusCode int
 		properties, statusCode = store.GetStore().GetEventPropertiesAndModifyResultsForNonExplain(projectId, eventName)
 		if statusCode != http.StatusOK {

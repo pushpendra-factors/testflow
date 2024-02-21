@@ -92,7 +92,7 @@ services:
                 dockerfile: Dockerfile.frontend.testing    
             image: testing/frontend:1.0
             deploy:
-                replicas: 0
+                replicas: 1
             ports: 
                 - "3000:3000"
         datagen:

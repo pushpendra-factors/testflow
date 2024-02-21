@@ -168,10 +168,11 @@ func (store *MemSQL) GenerateDashboardFromTemplate(projectID int64, agentUUID st
 		return nil, http.StatusBadRequest, errors.New("template has bad dashboard data. Exiting")
 	}
 	dashboardRequest := &model.Dashboard{
-		Name:        _dashboardDetails.Name,
-		Description: _dashboardDetails.Description,
-		Type:        _dashboardDetails.Type,
-		Settings:    _dashboardDetails.Settings,
+		Name:         _dashboardDetails.Name,
+		Description:  _dashboardDetails.Description,
+		Type:         _dashboardDetails.Type,
+		Settings:     _dashboardDetails.Settings,
+		TemplateType: dashboardTemplate.Type,
 	}
 
 	dashboard, errCode := store.CreateDashboard(projectID, agentUUID, dashboardRequest)

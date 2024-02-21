@@ -6,19 +6,63 @@ import { fetchProjectSettings, fetchProjectSettingsV1 } from 'Reducers/global';
 
 import { ErrorBoundary } from 'react-error-boundary';
 
-import { ADWORDS_INTERNAL_REDIRECT_URI } from './util';
-import { featureLock } from '../../../../routes/feature';
+import logger from 'Utils/logger';
+import {
+  ADWORDS_INTERNAL_REDIRECT_URI,
+  createDashboardsFromTemplatesForRequiredIntegration
+} from './util';
 import { IntegrationProviderData } from './integrations.constants';
 import IntegrationCard from './IntegrationCard';
 
 function IntegrationSettings({
-  currentProjectSettings,
   activeProject,
+  currentProjectSettings,
+  currentProjectSettingsLoading,
   fetchProjectSettings,
-  currentAgent,
-  fetchProjectSettingsV1
+  fetchProjectSettingsV1,
+  dashboards,
+  dashboardTemplates,
+  sdkCheck,
+  bingAds,
+  marketo
 }) {
   const [dataLoading, setDataLoading] = useState(true);
+
+  // effect for creating dashboards from templates based on the integrations
+  useEffect(() => {
+    // setting up a timer so the latest values can be used
+    const timeout = setTimeout(async () => {
+      // returning for unavailable values or loading states
+      if (dashboards?.loading || !dashboards?.data) return;
+      if (dashboardTemplates?.loading || !dashboardTemplates?.data) return;
+      if (!activeProject?.id) return;
+      if (currentProjectSettingsLoading) return;
+      try {
+        await createDashboardsFromTemplatesForRequiredIntegration(
+          activeProject.id,
+          dashboards.data,
+          dashboardTemplates,
+          sdkCheck,
+          currentProjectSettings,
+          bingAds,
+          marketo
+        );
+      } catch (error) {
+        logger.error('Error in creating dashboard from template', error);
+      }
+    }, 3000);
+
+    return () => clearTimeout(timeout);
+  }, [
+    dashboards,
+    activeProject,
+    dashboardTemplates,
+    sdkCheck,
+    currentProjectSettings,
+    bingAds,
+    marketo,
+    currentProjectSettingsLoading
+  ]);
 
   useEffect(() => {
     fetchProjectSettings(activeProject.id).then(() => {
@@ -72,7 +116,13 @@ function IntegrationSettings({
             <div className='mb-10'>
               <Row>
                 <Col span={12}>
-                  <Text type='title' level={3} weight='bold' extraClass='m-0' id={'fa-at-text--page-title'}>
+                  <Text
+                    type='title'
+                    level={3}
+                    weight='bold'
+                    extraClass='m-0'
+                    id='fa-at-text--page-title'
+                  >
                     Integrations
                   </Text>
                 </Col>
@@ -115,7 +165,13 @@ function IntegrationSettings({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   currentProjectSettings: state.global.currentProjectSettings,
-  currentAgent: state.agent.agent_details
+  currentProjectSettingsLoading: state.global.currentProjectSettingsLoading,
+  currentAgent: state.agent.agent_details,
+  dashboards: state.dashboard.dashboards,
+  dashboardTemplates: state.dashboardTemplates.templates,
+  sdkCheck: state?.global?.projectSettingsV1?.int_completed,
+  bingAds: state?.global?.bingAds,
+  marketo: state?.global?.marketo
 });
 
 export default connect(mapStateToProps, {

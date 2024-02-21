@@ -158,6 +158,7 @@ func sendGetEventNamesByUserRequest(projectId int64, agent *model.Agent, r *gin.
 
 func buildEventNamesByUserRequest(projectId int64, cookieData string) (*http.Request, error) {
 	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/user/event_names", projectId)).
+		WithQueryParams(map[string]string{"special_events_enabled": "true"}).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
@@ -431,6 +432,22 @@ func TestGetEventNameByUserHandler(t *testing.T) {
 		}
 	})
 
+	t.Run("TestGetEventNameByUserHandler:PageViewEventCheck", func(t *testing.T) {
+		configs := make(map[string]interface{})
+		configs["rollupLookback"] = 1
+		event_user_cache.DoRollUpSortedSet(configs)
+		w := sendGetEventNamesByUserRequest(project.ID, agent, r)
+		assert.Equal(t, http.StatusOK, w.Code)
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		json.Unmarshal(jsonResponse, &eventNames)
+		assert.NotNil(t, eventNames.EventNames)
+		assert.True(t, len(eventNames.EventNames) > 0)
+
+		// Check for $page_view event
+		assert.Contains(t, eventNames.EventNames[U.FrequentlySeen], U.EVENT_NAME_PAGE_VIEW)
+		assert.Equal(t, eventNames.DisplayNames[U.EVENT_NAME_PAGE_VIEW], U.STANDARD_EVENTS_DISPLAY_NAMES[U.EVENT_NAME_PAGE_VIEW])
+	})
+
 }
 
 func TestGetEventNamesHandler(t *testing.T) {
@@ -524,7 +541,7 @@ func TestGetEventNamesHandler(t *testing.T) {
 
 	// should contain all event names along with $session.
 	assert.Len(t, eventNamesWithDisplayNames.EventNames["Hubspot"], 1)
-	assert.Len(t, eventNamesWithDisplayNames.DisplayNames, 51) // STANDARD_EVENTS_DISPLAY_NAMES + event1 + event2
+	assert.Len(t, eventNamesWithDisplayNames.DisplayNames, 52) // STANDARD_EVENTS_DISPLAY_NAMES + event1 + event2
 	assert.Equal(t, eventNamesWithDisplayNames.DisplayNames["$session"], "Website Session")
 
 	sendCreateDisplayNameRequest(r, V1.CreateDisplayNamesParams{EventName: "$session", DisplayName: "Test1"}, agent, project.ID)
@@ -550,7 +567,7 @@ func TestGetEventNamesHandler(t *testing.T) {
 	json.Unmarshal(jsonResponse, &eventNamesWithDisplayNames)
 	// should contain all event names along with $session.
 	assert.Len(t, eventNamesWithDisplayNames.EventNames["Hubspot"], 1)
-	assert.Len(t, eventNamesWithDisplayNames.DisplayNames, 51) // STANDARD_EVENTS_DISPLAY_NAMES + event1 + event2
+	assert.Len(t, eventNamesWithDisplayNames.DisplayNames, 52) // STANDARD_EVENTS_DISPLAY_NAMES + event1 + event2
 	assert.Equal(t, eventNamesWithDisplayNames.DisplayNames["$session"], "Test1")
 	assert.Equal(t, eventNamesWithDisplayNames.DisplayNames["$hubspot_contact_created"], "Test2")
 

@@ -51,8 +51,8 @@ type ProjectSetting struct {
 	IntHubspotSyncInfo        *postgres.Jsonb `json:"int_hubspot_sync_info,omitempty" `
 	CreatedAt                 time.Time       `json:"created_at"`
 	UpdatedAt                 time.Time       `json:"updated_at"`
-	SegmentMarkerLastRun      time.Time       `gorm:"default:"1000-01-01 00:00:00" json:"segment_marker_last_run"`
-	MarkerLastRunAllAccounts  time.Time       `json:"marker_last_run_all_accounts"`
+	SegmentMarkerLastRun      time.Time       `gorm:"default:"1970-01-01 05:30:01" json:"segment_marker_last_run"`
+	MarkerLastRunAllAccounts  time.Time       `gorm:"default:"1970-01-01 05:30:01" json:"marker_last_run_all_accounts"`
 	FilterIps                 *postgres.Jsonb `json:"filter_ips,omitempty"`
 	//Facebook settings
 	IntFacebookEmail       string  `json:"int_facebook_email,omitempty"`

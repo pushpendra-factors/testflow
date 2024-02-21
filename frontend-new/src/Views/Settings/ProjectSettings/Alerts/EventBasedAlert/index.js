@@ -1880,6 +1880,11 @@ const EventBasedAlert = ({
                         <Option value={8}>8 hours</Option>
                         <Option value={12}>12 hours</Option>
                         <Option value={24}>24 hours</Option>
+                        {/* convert days into hours */}
+                        <Option value={7*24}>7 days</Option>
+                        <Option value={14*24}>14 days</Option>
+                        <Option value={21*24}>21 days</Option>
+                        <Option value={28*24}>28 days</Option>
                       </Select>
                     </div>
                   </Form.Item>

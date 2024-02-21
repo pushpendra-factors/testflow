@@ -1,13 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { connect, ConnectedProps } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import {
-  FeatureModes,
-  EnrichTypes,
-  SixSignalConfigType,
-  EnrichCountryData,
-  CountryLabel
-} from './types';
 
 import { Button, notification, Radio, Select, Tooltip } from 'antd';
 import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
@@ -17,16 +10,23 @@ import {
 } from 'Utils/country';
 import { Text } from 'Components/factorsComponents';
 import { udpateProjectSettings } from 'Reducers/global';
-import style from './index.module.scss';
 import { AVAILABLE_FLAGS } from 'Constants/country.list';
+import style from './index.module.scss';
+import {
+  FeatureModes,
+  EnrichTypes,
+  SixSignalConfigType,
+  EnrichCountryData,
+  CountryLabel
+} from './types';
 
-const EnrichCountries = ({
+function EnrichCountries({
   mode,
   setMode,
   sixSignalConfig,
   projectId,
   udpateProjectSettings
-}: EnrichCountriesProps) => {
+}: EnrichCountriesProps) {
   const [enrichType, setEnrichType] = useState<EnrichTypes | null>('include');
   const [countryOptions, setCountryOptions] = useState<CountryLabel[]>([]);
   const [data, setData] = useState<CountryLabel[]>([]);
@@ -55,10 +55,10 @@ const EnrichCountries = ({
     return (
       <div className='flex items-center gap-2 justify-start mt-1'>
         {isFlagAvailable && (
-          <div className={`fflag fflag-${country_isoCode} ff-md`}></div>
+          <div className={`fflag fflag-${country_isoCode} ff-md`} />
         )}
         <div className='flex-1 whitespace-nowrap overflow-hidden text-ellipsis'>
-          <Text type={'paragraph'} mini ellipsis>
+          <Text type='paragraph' mini ellipsis>
             {' '}
             {getCountryNameFromIsoCode(country_isoCode)}
           </Text>
@@ -67,47 +67,41 @@ const EnrichCountries = ({
     );
   };
 
-  const renderData = () => {
-    return data.map((country, index) => {
-      return (
-        <div
-          className={`flex w-100 items-center gap-2 ${
-            index !== 0 ? 'mt-3' : ''
-          }`}
-          key={index}
-        >
-          <Select
-            style={{
-              borderRadius: 6,
-              width: 'fix-content',
-              minWidth: 250
-            }}
-            filterOption={(input, option) => {
-              return (
-                option?.value
-                  ? getCountryNameFromIsoCode(option?.value).toLowerCase()
-                  : ''
-              ).includes(input.toLowerCase());
-            }}
-            labelInValue
-            value={country}
-            showSearch
-            onSelect={(labelInValue: CountryLabel) =>
-              handleSelectChange(labelInValue, index)
-            }
-            options={countryOptions}
-          ></Select>
-          <Button
-            size='middle'
-            shape='circle'
-            type='text'
-            onClick={() => handleDeleteClick(index)}
-            icon={<MinusCircleOutlined style={{ color: '#8692A3' }} />}
-          />
-        </div>
-      );
-    });
-  };
+  const renderData = () =>
+    data.map((country, index) => (
+      <div
+        className={`flex w-100 items-center gap-2 ${index !== 0 ? 'mt-3' : ''}`}
+        key={index}
+      >
+        <Select
+          style={{
+            borderRadius: 6,
+            width: 'fix-content',
+            minWidth: 250
+          }}
+          filterOption={(input, option) =>
+            (option?.value
+              ? getCountryNameFromIsoCode(option?.value).toLowerCase()
+              : ''
+            ).includes(input.toLowerCase())
+          }
+          labelInValue
+          value={country}
+          showSearch
+          onSelect={(labelInValue: CountryLabel) =>
+            handleSelectChange(labelInValue, index)
+          }
+          options={countryOptions}
+        />
+        <Button
+          size='middle'
+          shape='circle'
+          type='text'
+          onClick={() => handleDeleteClick(index)}
+          icon={<MinusCircleOutlined style={{ color: '#8692A3' }} />}
+        />
+      </div>
+    ));
 
   const handleCancel = () => {
     if (sixSignalConfig?.country_exclude || sixSignalConfig?.country_include) {
@@ -123,12 +117,10 @@ const EnrichCountries = ({
       // update local state
       let state: SixSignalConfigType = {};
       if (sixSignalConfig) state = { ...sixSignalConfig };
-      const updatedData: EnrichCountryData[] = data.map((d) => {
-        return {
-          value: d.value,
-          type: 'equals'
-        };
-      });
+      const updatedData: EnrichCountryData[] = data.map((d) => ({
+        value: d.value,
+        type: 'equals'
+      }));
       if (
         new Set(updatedData?.map((d) => d.value)).size !== updatedData.length
       ) {
@@ -177,12 +169,10 @@ const EnrichCountries = ({
       _data = sixSignalConfig?.country_include;
     }
     if (_data) {
-      const selectedValues = _data.map((d) => {
-        return {
-          value: d?.value,
-          label: renderOption(d?.value)
-        };
-      });
+      const selectedValues = _data.map((d) => ({
+        value: d?.value,
+        label: renderOption(d?.value)
+      }));
       setData(selectedValues);
       countriesSet.current = true;
     }
@@ -216,7 +206,7 @@ const EnrichCountries = ({
                 title='Enrich only for specific countries selected'
                 color='#0B1E39'
               >
-                <Radio.Button value={'include'} key={'include'}>
+                <Radio.Button value='include' key='include'>
                   Include
                 </Radio.Button>
               </Tooltip>
@@ -225,7 +215,7 @@ const EnrichCountries = ({
                 title='Enrich for all countries except the selected countries'
                 color='#0B1E39'
               >
-                <Radio.Button value={'exclude'} key={'exclude'}>
+                <Radio.Button value='exclude' key='exclude'>
                   Exclude
                 </Radio.Button>
               </Tooltip>
@@ -244,7 +234,7 @@ const EnrichCountries = ({
             </div>
           )}
 
-          <div className=' flex items-center gap-2 mt-6'>
+          <div className=' flex items-center justify-end mr-6 gap-2 mt-6'>
             <Button onClick={handleCancel}>Cancel</Button>
             <Button
               type='primary'
@@ -261,7 +251,7 @@ const EnrichCountries = ({
       {mode === 'view' && (
         <>
           <div className='mt-3'>
-            <Text type={'paragraph'} mini color='grey'>
+            <Text type='paragraph' mini color='grey'>
               {enrichType === 'exclude' ? 'Exclude' : 'Include'}
             </Text>
           </div>
@@ -283,7 +273,7 @@ const EnrichCountries = ({
       )}
     </div>
   );
-};
+}
 
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(

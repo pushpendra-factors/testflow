@@ -1925,3 +1925,26 @@ func (store *MemSQL) IsGroupEventName(projectID int64, eventName, eventNameID st
 
 	return groupName, http.StatusFound
 }
+
+func (store *MemSQL) GetEventNameByID(projectID int64, id string) (*model.EventName, int, error) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"prefix":     id,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	var eventName model.EventName
+
+	db := C.GetServices().Db
+
+	if err := db.Where("project_id = ? AND id = ?", projectID, id).
+		Find(&eventName).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound, err
+		}
+		log.WithFields(logFields).WithError(err).Error("event_name not found")
+		return nil, http.StatusInternalServerError, err
+	}
+
+	return &eventName, http.StatusFound, nil
+}

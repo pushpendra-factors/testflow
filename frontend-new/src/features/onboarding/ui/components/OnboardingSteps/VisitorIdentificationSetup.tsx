@@ -295,7 +295,19 @@ the pricing page inside the product.'
                 <EnrichFeature
                   type='page'
                   title='Identify accounts who visited specific pages'
-                  subtitle='Include or exclude pages to only identify accounts that visit the pages you care about'
+                  subtitle={
+                    <Text
+                      type='title'
+                      level={8}
+                      color='character-secondary'
+                      extraClass='m-0 mb-3'
+                    >
+                      Include or exclude pages to only identify accounts that
+                      visit the pages you care about.{' '}
+                      <span className='font-bold'>Note-</span> Do not include{' '}
+                      <span className='font-bold'>https://</span> in the URL
+                    </Text>
+                  }
                   actionButtonText='Select pages'
                 />
               </div>
@@ -303,7 +315,17 @@ the pricing page inside the product.'
                 <EnrichFeature
                   type='country'
                   title='Identify accounts only from selected countries/region'
-                  subtitle='Include or exclude countries to only identify accounts from the geography you care about'
+                  subtitle={
+                    <Text
+                      type='title'
+                      level={8}
+                      color='character-secondary'
+                      extraClass='m-0 mb-3'
+                    >
+                      Include or exclude countries to only identify accounts
+                      from the geography you care about
+                    </Text>
+                  }
                   actionButtonText='Select Countries '
                 />
               </div>

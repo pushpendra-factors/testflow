@@ -115,7 +115,6 @@ import {
   getSavedPivotConfig
 } from './coreQuery.helpers';
 import { getChartChangedKey } from './AnalysisResultsPage/analysisResultsPage.helpers';
-import NewProject from '../Settings/SetupAssist/Modals/NewProject';
 import SaveQuery from 'Components/SaveQuery';
 import _ from 'lodash';
 import { fetchKPIConfig } from 'Reducers/kpi';
@@ -167,7 +166,6 @@ function CoreQuery({
   const [KPIConfigProps, setKPIConfigProps] = useState([]);
   const [loading, setLoading] = useState(true);
   const renderedCompRef = useRef(null);
-  const [showProjectModal, setShowProjectModal] = useState(false);
 
   const history = useHistory();
 
@@ -1994,11 +1992,6 @@ function CoreQuery({
             />
           </CoreQueryContext.Provider>
         ) : null}
-        {/* create project modal */}
-        <NewProject
-          visible={showProjectModal}
-          handleCancel={() => setShowProjectModal(false)}
-        />
       </ErrorBoundary>
     );
   }
