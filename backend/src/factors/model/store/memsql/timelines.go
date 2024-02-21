@@ -1818,6 +1818,8 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 		params = append(params, id)
 	}
 
+	db := C.GetServices().Db
+
 	var errGetCount error
 	if errGetGroup != http.StatusFound {
 		errGetCount = fmt.Errorf("error retrieving parameters")
@@ -1847,7 +1849,6 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 		queryParams = append(queryParams, params...)      // append groupUserString params
 		queryParams = append(queryParams, queryParams...) // double the queryParams
 
-		db := C.GetServices().Db
 		errGetCount = db.Raw(overviewQuery, queryParams...).Scan(&overview).Error
 		if errGetCount != nil {
 			log.WithFields(logFields).WithError(errGetCount).Error("Error retrieving users count and active time")
@@ -1855,13 +1856,40 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 	}
 
 	// Get Account Engagement Score and Trends
-	accountScore, _, engagementLevel, errGetScore := store.GetPerAccountScore(projectID, time.Now().Format("20060102"), id, model.NUM_TREND_DAYS, false)
+	accountScore, _, _, errGetScore := store.GetPerAccountScore(projectID, time.Now().Format("20060102"), id, model.NUM_TREND_DAYS, false)
 	if errGetScore != nil {
 		log.WithFields(logFields).WithError(errGetScore).Error("Error retrieving account score")
 	} else {
-		overview.Temperature = accountScore.Score
 		overview.ScoresList = accountScore.Trend
-		overview.Engagement = engagementLevel
+	}
+
+	// To Get Engagement Level And Score from Domain Properties Column
+	var domainUser model.User
+	if err := db.Model(&model.User{}).
+		Where("project_id = ? AND id = ? AND source=?", projectID, id, model.UserSourceDomains).
+		Select("properties").
+		Limit(1).
+		Find(&domainUser).
+		Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			log.WithFields(logFields).WithError(errGetScore).Error("no record found for given domain")
+		}
+		log.WithFields(logFields).WithError(err).Error("Failed to get properties of given domain.")
+	}
+
+	if U.IsEmptyPostgresJsonb(&domainUser.Properties) {
+		log.WithFields(logFields).WithField("properties", domainUser.Properties).Error("Empty or nil properties for user.")
+	}
+	propertiesDecoded, err := U.DecodePostgresJsonb(&domainUser.Properties)
+	if err != nil {
+		log.WithFields(logFields).WithError(err).Error("Failed decoding user properties.")
+	}
+
+	if score, exists := (*propertiesDecoded)[U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE]; exists {
+		overview.Temperature = score.(float32)
+	}
+	if level, exists := (*propertiesDecoded)[U.GROUP_EVENT_NAME_ENGAGEMENT_LEVEL]; exists {
+		overview.Engagement = level.(string)
 	}
 
 	// Get Top Pages and Top Users
