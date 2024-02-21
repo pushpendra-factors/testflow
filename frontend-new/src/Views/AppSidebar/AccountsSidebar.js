@@ -4,7 +4,10 @@ import cx from 'classnames';
 import { Button } from 'antd';
 import noop from 'lodash/noop';
 import { SVG, Text } from 'Components/factorsComponents';
-import { setNewSegmentModeAction } from 'Reducers/accountProfilesView/actions';
+import {
+  setAccountPayloadAction,
+  setNewSegmentModeAction
+} from 'Reducers/accountProfilesView/actions';
 import { selectAccountPayload } from 'Reducers/accountProfilesView/selectors';
 import { selectSegments } from 'Reducers/timelines/selectors';
 import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
@@ -22,20 +25,18 @@ function NewSegmentItem() {
   return <SidebarMenuItem text='Untitled Segment 1' isActive onClick={noop} />;
 }
 
-const SegmentIcon = (name) =>
-  defaultSegmentIconsMapping[name]
-    ? defaultSegmentIconsMapping[name]
-    : 'pieChart';
+const SegmentIcon = (name) => defaultSegmentIconsMapping[name] || 'pieChart';
 
 function SegmentItem({ segment }) {
   const history = useHistory();
-  const activeAccountPayload = useSelector((state) =>
-    selectAccountPayload(state)
-  );
+  const dispatch = useDispatch();
+  const activeAccountPayload = useSelector(selectAccountPayload);
   const activeSegment = activeAccountPayload?.segment;
   const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
 
   const changeActiveSegment = () => {
+    dispatch(setNewSegmentModeAction(false));
+    dispatch(setAccountPayloadAction({ source: GROUP_NAME_DOMAINS, segment }));
     history.replace({ pathname: `/accounts/segments/${segment.id}` });
   };
 
@@ -45,8 +46,7 @@ function SegmentItem({ segment }) {
     }
   };
 
-  const isActive =
-    activeSegment?.id === segment?.id && newSegmentMode === false;
+  const isActive = activeSegment?.id === segment?.id && !newSegmentMode;
   const iconColor = getSegmentColorCode(segment?.name);
 
   return (
@@ -64,8 +64,7 @@ function AccountsSidebar() {
   const history = useHistory();
   const [searchText, setSearchText] = useState('');
   const dispatch = useDispatch();
-  const segments = useSelector((state) => selectSegments(state));
-
+  const segments = useSelector(selectSegments);
   const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
 
   const segmentsList = useMemo(
@@ -96,7 +95,7 @@ function AccountsSidebar() {
               setSearchText={setSearchText}
               placeholder='Search segment'
             />
-            <ControlledComponent controller={newSegmentMode === true}>
+            <ControlledComponent controller={newSegmentMode}>
               <NewSegmentItem />
             </ControlledComponent>
             <Fragment key='domains'>
@@ -122,6 +121,7 @@ function AccountsSidebar() {
           onClick={() => {
             history.replace(PathUrls.ProfileAccounts);
             dispatch(setNewSegmentModeAction(true));
+            dispatch(setAccountPayloadAction({}));
           }}
         >
           <SVG
