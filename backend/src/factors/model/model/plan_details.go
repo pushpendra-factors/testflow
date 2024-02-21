@@ -16,6 +16,13 @@ type PlanDetails struct {
 }
 
 type FeatureDetails struct {
+	Limit            int64  `json:"limit"`
+	Granularity      string `json:"granularity"`
+	Expiry           int64  `json:"expiry"`
+	IsEnabledFeature bool   `json:"is_enabled_feature"` //is feature an addition to the plan or deletion from it
+}
+
+type FeatureDetailsTemp struct { // only used for overwrites until migration to transform existing data is run
 	Name             string `json:"name"`
 	Limit            int64  `json:"limit"`
 	Granularity      string `json:"granularity"`
@@ -23,9 +30,9 @@ type FeatureDetails struct {
 	IsEnabledFeature bool   `json:"is_enabled_feature"` //is feature an addition to the plan or deletion from it
 }
 
-type FeatureList []FeatureDetails
+type FeatureList map[string]FeatureDetails
 
-type OverWrite []FeatureDetails
+type OverWrite []FeatureDetailsTemp
 
 type DisplayPlanDetails struct {
 	ProjectID     int64         `json:"project_id"`
@@ -74,6 +81,23 @@ func GetPlanIDFromPlanName(planName string) (int, error) {
 	default:
 		return 0, errors.New("Invalid Plan Name")
 	}
+}
+
+func TransformFeatureListMaptoFeatureListArray(featureListMap FeatureList) []FeatureDetailsTemp {
+	var res []FeatureDetailsTemp
+
+	for featureName := range featureListMap {
+		feature := featureListMap[featureName]
+		res = append(res, FeatureDetailsTemp{
+			Name:             featureName,
+			Limit:            feature.Limit,
+			Granularity:      feature.Granularity,
+			Expiry:           feature.Expiry,
+			IsEnabledFeature: feature.IsEnabledFeature,
+		})
+	}
+
+	return res
 }
 
 // func initPlanToFeatureMapping() {
