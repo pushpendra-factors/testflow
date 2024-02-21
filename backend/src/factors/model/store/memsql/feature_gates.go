@@ -77,25 +77,6 @@ func (store *MemSQL) GetFeatureStatusForProjectV2(projectID int64, featureName s
 	return featureStatus, nil
 }
 
-func (store *MemSQL) UpdateFeatureStatusForProject(projectID int64, feature model.FeatureDetails) (string, error) {
-	_, addOns, err := store.GetPlanDetailsAndAddonsForProject(projectID)
-	if err != nil {
-		log.WithError(err).Error("Failed to update feature status for Project ID ", projectID)
-		return "Failed to get Plan Details ", err
-	}
-	for idx, addOn := range addOns {
-		if addOn.Name == feature.Name {
-			addOns[idx] = feature
-		}
-	}
-	errMsg, err := store.UpdateAddonsForProject(projectID, addOns)
-	if err != nil {
-		log.WithError(err).Error("Failed to update feature status for Project ID ", projectID)
-		return errMsg, err
-	}
-	return "", nil
-}
-
 func (store *MemSQL) GetFeatureLimitForProject(projectID int64, featureName string) (int64, error) {
 	logCtx := log.WithField("project_id", projectID)
 
@@ -107,11 +88,10 @@ func (store *MemSQL) GetFeatureLimitForProject(projectID int64, featureName stri
 
 	var limit int64
 	isEnabled := false
-	for _, feature := range featureList {
-		if featureName == feature.Name {
-			isEnabled = true
-			limit += feature.Limit
-		}
+
+	if _, exists := featureList[featureName]; exists {
+		isEnabled = true
+		limit += featureList[featureName].Limit
 	}
 
 	for _, feature := range addOns {
@@ -161,10 +141,8 @@ func (store *MemSQL) GetFeatureLimitForProject(projectID int64, featureName stri
 
 }
 func isFeatureAvailableForProject(featureList model.FeatureList, addOns model.OverWrite, featureName string) bool {
-	for _, feature := range featureList {
-		if featureName == feature.Name {
-			return feature.IsEnabledFeature
-		}
+	if _, exists := featureList[featureName]; exists {
+		return featureList[featureName].IsEnabledFeature
 	}
 
 	for _, feature := range addOns {

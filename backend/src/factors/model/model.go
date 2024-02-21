@@ -1034,7 +1034,6 @@ type Model interface {
 	GetFeatureStatusForProjectV2(projectID int64, featureName string, includeProjectSettings bool) (bool, error)
 	GetPlanDetailsAndAddonsForProject(projectID int64) (model.FeatureList, model.OverWrite, error)
 	GetFeatureLimitForProject(projectID int64, featureName string) (int64, error)
-	UpdateFeatureStatusForProject(projectID int64, feature model.FeatureDetails) (string, error)
 	GetProjectsArrayWithFeatureEnabledFromProjectIdFlag(stringProjectsIDs, featureName string) ([]int64, error)
 	UpdateProjectPlanMapping(projectID int64, planMapping *model.ProjectPlanMapping) int
 
@@ -1088,7 +1087,6 @@ type Model interface {
 	PopulatePlanDetailsTable(planDetails model.PlanDetails) (int, error)
 	GetFeatureListForProject(projectID int64) (*model.DisplayPlanDetails, int,
 		string, error)
-	UpdatePlanDetailsTable(id int64, features []string, add bool) (int, error)
 	GetDisplayablePlanDetails(ppMap model.ProjectPlanMapping, planDetails model.PlanDetails) (
 		*model.DisplayPlanDetails, int, string, error)
 	UpdateFeaturesForCustomPlan(projectID int64, AccountLimit int64, MtuLimit int64, AvailableFeatuers []string) (int, error)
