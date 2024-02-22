@@ -318,7 +318,7 @@ export const getColumns = ({
 
   if (!hasSorter) {
     columns.forEach((column) => {
-      if (['engagement', 'lastActivity'].includes(column.key)) {
+      if (['$engagement_level', 'lastActivity'].includes(column.key)) {
         column.defaultSortOrder = 'descend';
       }
     });
