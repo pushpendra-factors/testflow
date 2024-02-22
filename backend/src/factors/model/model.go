@@ -942,7 +942,7 @@ type Model interface {
 	IsG2IntegrationAvailable(projectID int64) bool
 
 	// Timeline
-	GetProfilesListByProjectId(projectID int64, payload model.TimelinePayload, profileType string) ([]model.Profile, int, string)
+	GetProfilesListByProjectId(projectID int64, payload model.TimelinePayload, profileType string, downloadLimitGiven bool) ([]model.Profile, int, string)
 	GetProfileUserDetailsByID(projectID int64, identity string, isAnonymous string) (*model.ContactDetails, int, string)
 	GetUserActivities(projectID int64, identity string, userId string) ([]model.UserActivity, error)
 	GetProfileAccountDetailsByID(projectID int64, id string, groupName string) (*model.AccountDetails, int, string)
@@ -957,13 +957,13 @@ type Model interface {
 	GetUserDetailsAssociatedToDomain(projectID int64, id string) (model.AccountDetails, map[string]interface{}, int)
 	GetUserPropertiesForAccounts(projectID int64, source string) (string, interface{}, string)
 	GetUsersAssociatedToDomain(projectID int64, minMax *model.ListingTimeWindow, groupedFilters map[string][]model.QueryProperty) ([]model.Profile, int)
-	GenerateAllAccountsQueryString(projectID int64, source string, hasUserProperty bool, isAllUserProperties bool, minMax model.ListingTimeWindow, groupedFilters map[string][]model.QueryProperty, searchFilter []string) (string, []interface{}, error)
+	GenerateAllAccountsQueryString(projectID int64, source string, hasUserProperty bool, isAllUserProperties bool, minMax model.ListingTimeWindow, groupedFilters map[string][]model.QueryProperty, searchFilter []string, downloadLimitGiven bool) (string, []interface{}, error)
 	GetGroupNameIDMap(projectID int64) (map[string]int, int)
 	UpdateConfigForEvent(projectID int64, eventName string, updatedConfig []string) (int, error)
 	GetDomainPropertiesByID(projectID int64, domainIDs []string) ([]model.User, int)
 
 	// Timeline consuming segment_marker
-	GetMarkedDomainsListByProjectId(projectID int64, payload model.TimelinePayload) ([]model.Profile, int, string)
+	GetMarkedDomainsListByProjectId(projectID int64, payload model.TimelinePayload, downloadLimitGiven bool) ([]model.Profile, int, string)
 
 	// segment
 	CreateSegment(projectId int64, segment *model.SegmentPayload) (int, error)

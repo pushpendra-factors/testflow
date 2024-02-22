@@ -12,7 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) GetMarkedDomainsListByProjectId(projectID int64, payload model.TimelinePayload) ([]model.Profile, int, string) {
+func (store *MemSQL) GetMarkedDomainsListByProjectId(projectID int64, payload model.TimelinePayload, downloadLimitGiven bool) ([]model.Profile, int, string) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"payload":    payload,
@@ -32,7 +32,7 @@ func (store *MemSQL) GetMarkedDomainsListByProjectId(projectID int64, payload mo
 
 	// Redirect to old flow if segment_id is empty
 	if payload.SegmentId == "" {
-		return store.GetProfilesListByProjectId(projectID, payload, model.PROFILE_TYPE_ACCOUNT)
+		return store.GetProfilesListByProjectId(projectID, payload, model.PROFILE_TYPE_ACCOUNT, downloadLimitGiven)
 	}
 
 	// Redirect to old flow if additional filters exist
@@ -46,7 +46,7 @@ func (store *MemSQL) GetMarkedDomainsListByProjectId(projectID int64, payload mo
 
 	// for case - segment is updated but all_run for the day is yet to run
 	if lastRunStatusCode != http.StatusFound || segment.UpdatedAt.After(lastRunTime) {
-		return store.GetProfilesListByProjectId(projectID, payload, model.PROFILE_TYPE_ACCOUNT)
+		return store.GetProfilesListByProjectId(projectID, payload, model.PROFILE_TYPE_ACCOUNT, downloadLimitGiven)
 	}
 
 	// if segment.UpdatedAt
@@ -60,7 +60,7 @@ func (store *MemSQL) GetMarkedDomainsListByProjectId(projectID int64, payload mo
 	additionalFiltersExist := CompareFilters(segmentQuery, payload.Query)
 
 	if additionalFiltersExist {
-		return store.GetProfilesListByProjectId(projectID, payload, model.PROFILE_TYPE_ACCOUNT)
+		return store.GetProfilesListByProjectId(projectID, payload, model.PROFILE_TYPE_ACCOUNT, downloadLimitGiven)
 	}
 
 	// set Query Timezone
@@ -78,6 +78,13 @@ func (store *MemSQL) GetMarkedDomainsListByProjectId(projectID int64, payload mo
 
 	// check for search filter
 	whereForSearchFilters, searchFiltersParams := SearchFilterForAllAccounts(payload.SearchFilter, domainGroup.ID)
+
+	var domLimit int
+	if downloadLimitGiven {
+		domLimit = 10000
+	} else {
+		domLimit = 1000
+	}
 
 	query := fmt.Sprintf(`WITH step_0 as (
 		SELECT 
@@ -118,8 +125,8 @@ func (store *MemSQL) GetMarkedDomainsListByProjectId(projectID int64, payload mo
 	  ORDER BY 
 		last_activity DESC 
 	  LIMIT 
-		1000;`, domainGroup.ID, domainGroup.ID, whereForSearchFilters,
-		domainGroup.ID, domainGroup.ID)
+		%d;`, domainGroup.ID, domainGroup.ID, whereForSearchFilters,
+		domainGroup.ID, domainGroup.ID, domLimit)
 
 	params := []interface{}{projectID, payload.SegmentId, model.UserSourceDomains}
 
@@ -138,7 +145,7 @@ func (store *MemSQL) GetMarkedDomainsListByProjectId(projectID int64, payload mo
 
 	// Redirect to old flow if no profiles found
 	if len(profiles) == 0 {
-		return store.GetProfilesListByProjectId(projectID, payload, model.PROFILE_TYPE_ACCOUNT)
+		return store.GetProfilesListByProjectId(projectID, payload, model.PROFILE_TYPE_ACCOUNT, downloadLimitGiven)
 	}
 
 	// datetime conversion

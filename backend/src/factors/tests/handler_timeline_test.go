@@ -1546,7 +1546,7 @@ func sendGetProfileAccountRequest(r *gin.Engine, projectId int64, agent *model.A
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
 	}
-	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/v1/profiles/accounts?score=true&debug=true", projectId)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/v1/profiles/accounts?score=true&debug=true&download=true", projectId)).
 		WithPostParams(payload).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
