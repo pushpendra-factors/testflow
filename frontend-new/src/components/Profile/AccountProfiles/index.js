@@ -403,7 +403,7 @@ function AccountProfiles({
   const getAccounts = useCallback(
     async (payload) => {
       try {
-        setDefaultSorterInfo({ key: 'engagement', order: 'descend' });
+        setDefaultSorterInfo({ key: '$engagement_level', order: 'descend' });
         const reqPayload = formatReqPayload(payload);
         const response = await getProfileAccounts(
           activeProject.id,
