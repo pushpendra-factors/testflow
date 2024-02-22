@@ -354,16 +354,13 @@ func (store *MemSQL) UpdateFeaturesForCustomPlan(projectID int64, AccountLimit i
 	for _, feature := range AvailableFeatuers {
 		featureMap[feature] = true
 	}
-	_, addOns, err := store.GetPlanDetailsAndAddonsForProject(projectID)
-	if err != nil {
-		logCtx.Error("Failed to update features for custom plan")
-		return http.StatusInternalServerError, err
-	}
+	allFeatures := model.GetAllAvailableFeatures()
 	var updatedFeatureList model.OverWrite
-	for _, feature := range addOns {
-		if _, exists := featureMap[feature.Name]; !exists {
+	for _, featureName := range allFeatures {
+		var feature model.FeatureDetailsTemp
+		feature.Name = featureName
+		if _, exists := featureMap[featureName]; !exists {
 			feature.IsEnabledFeature = false
-
 		} else {
 			feature.IsEnabledFeature = true
 		}
@@ -372,7 +369,6 @@ func (store *MemSQL) UpdateFeaturesForCustomPlan(projectID int64, AccountLimit i
 	// TODO : update MTU limit after roshan's changes
 	for idx, feature := range updatedFeatureList {
 		if feature.Name == model.FEATURE_FACTORS_DEANONYMISATION {
-
 			updatedFeatureList[idx].Limit = AccountLimit
 		}
 	}
