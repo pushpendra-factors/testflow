@@ -432,6 +432,9 @@ def get_answer_from_ir_model(question, prompt_response_data, prompt_vector_data)
 
     except openai.error.AuthenticationError:
         raise Exception('OpenAI API Key Error. Specify the right one via the key.json file.')
+    except Exception as e:
+        # Handle other exceptions
+        log.error("Error processing request in : get_answer_from_ir_model")
 
     returnables = {'answer': answer}
     log.info("done step 2  \n response from gpt :%s", answer)
@@ -458,6 +461,9 @@ def get_answer_from_ir_model_local(question):
 
     except openai.error.AuthenticationError:
         raise Exception('OpenAI API Key Error. Specify the right one via the key.json file.')
+    except Exception as e:
+        # Handle other exceptions
+        log.error("Error processing request in : get_answer_from_ir_model_local")
 
     returnables = {'answer': answer}
     log.info("done step 2 \n response from gpt :%s", answer)

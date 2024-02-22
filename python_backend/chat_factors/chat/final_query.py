@@ -1,5 +1,6 @@
-from .kpi import get_transformed_kpi_query
+from .kpi import get_transformed_kpi_query, KpiNotFoundError
 from tornado.log import logging as log
+from tornado.web import HTTPError
 
 
 def get_url_and_query_payload_from_gpt_response(gpt_response, pid, kpi_config):
@@ -8,7 +9,7 @@ def get_url_and_query_payload_from_gpt_response(gpt_response, pid, kpi_config):
     query_payload = transform_query(gpt_response, query_class, kpi_config)
     query_url = get_url_from_response(query_class, pid)
     result = {
-        "payload":query_payload,
+        "payload": query_payload,
         "url": query_url
     }
     return result

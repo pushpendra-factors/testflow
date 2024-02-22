@@ -74,7 +74,12 @@ def get_kpi_info(name, kpi_config):
                     "kpi_query_type": metric.get("kpi_query_type"),
                 }
 
-    return None
+    log.error("kpi not found in the kpi_config")
+    raise KpiNotFoundError(f"KPI with name '{name}' not found in the kpi_config")
+
+
+class KpiNotFoundError(Exception):
+    pass
 
 
 # returns default time range as "this_week"
