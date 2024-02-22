@@ -1862,6 +1862,7 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 			log.WithFields(logFields).WithError(errGetCount).Error("Error retrieving users count and active time")
 		}
 	}
+	log.Warn("Passes User Count Query-", overview)
 
 	// Get Account Engagement Score and Trends
 	accountScore, _, _, errGetScore := store.GetPerAccountScore(projectID, time.Now().Format("20060102"), id, model.NUM_TREND_DAYS, false)
@@ -1870,6 +1871,7 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 	} else {
 		overview.ScoresList = accountScore.Trend
 	}
+	log.Warn("Passes Account Trend-", overview)
 
 	// To Get Engagement Level And Score from Domain Properties Column
 	var domainUser model.User
@@ -1884,6 +1886,7 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 		}
 		log.WithFields(logFields).WithError(err).Error("Failed to get properties of given domain.")
 	}
+	log.Warn("Passes Domain Properties Fetch Call")
 
 	if U.IsEmptyPostgresJsonb(&domainUser.Properties) {
 		log.WithFields(logFields).WithField("properties", domainUser.Properties).Error("Empty or nil properties for user.")
@@ -1892,6 +1895,7 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 	if err != nil {
 		log.WithFields(logFields).WithError(err).Error("Failed decoding user properties.")
 	}
+	log.Warn("Properties Decoded-", propertiesDecoded)
 
 	if score, exists := (*propertiesDecoded)[U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE]; exists {
 		overview.Temperature = score.(float32)
@@ -1899,6 +1903,7 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 	if level, exists := (*propertiesDecoded)[U.GROUP_EVENT_NAME_ENGAGEMENT_LEVEL]; exists {
 		overview.Engagement = level.(string)
 	}
+	log.Warn("Score and Level Assigned-", overview)
 
 	// Get Top Pages and Top Users
 	topPages, errGetTopPages := store.GetTopPages(projectID, id, group.ID)
@@ -1907,6 +1912,7 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 	} else {
 		overview.TopPages = topPages
 	}
+	log.Warn("Top Pages Query Passed-", overview)
 
 	topUsers, errGetTopUsers := store.GetTopUsers(projectID, id, group.ID)
 	if errGetTopUsers != nil {
@@ -1914,10 +1920,13 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 	} else {
 		overview.TopUsers = topUsers
 	}
+	log.Warn("Top Users Query Passed-", overview)
 
 	if errGetScore != nil && errGetCount != nil && errGetTopUsers != nil && errGetTopPages != nil {
+		log.Warn("Goes to Error State-", errGetScore, errGetCount, errGetTopUsers, errGetTopPages)
 		return overview, http.StatusInternalServerError, "error getting overview"
 	}
+	log.Warn("Final Response-", overview)
 
 	return overview, http.StatusOK, ""
 }
