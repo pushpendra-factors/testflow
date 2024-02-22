@@ -103,6 +103,6 @@ if __name__ == '__main__':
         
         metrics_aggregator_obj.reset_request_counter()
     
-    metrics_aggregator_obj.ping_notification_services(options.env)
+    metrics_aggregator_obj.ping_notification_services(options.env, HEALTHCHECK_COMPANY_SYNC_JOB)
     log.warning('Successfully synced. End of Linkedin sync job.')
     sys.exit(0)

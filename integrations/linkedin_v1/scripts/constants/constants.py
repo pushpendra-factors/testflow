@@ -56,7 +56,7 @@ ACCESS_TOKEN_CHECK_URL = 'https://api.linkedin.com/v2/me?oauth2_access_token={}'
 TOKEN_GENERATION_URL = 'https://www.linkedin.com/oauth/v2/accessToken?grant_type=refresh_token&refresh_token={}&client_id={}&client_secret={}'
 METRIC_TYPE_INCR = 'incr'
 HEALTHCHECK_PING_ID = '837dce09-92ec-4930-80b3-831b295d1a34'
-HEALTHCHECK_WEEKLY_JOB = 'da24fcd4-6f09-4f29-9326-72ab73c9affb'
+HEALTHCHECK_COMPANY_SYNC_JOB = 'da24fcd4-6f09-4f29-9326-72ab73c9affb'
 HEALTHCHECK_TOKEN_FAILURE_PING_ID = 'b231cf93-ce7e-4df6-9416-1797c5065c22'
 URL_ENDPOINT_CAMPAIGN_GROUP_META = 'adCampaignGroups'
 URL_ENDPOINT_CAMPAIGN_META = 'adCampaigns'
@@ -68,3 +68,4 @@ BACKFILL_NOT_REQUIRED = "Backfill not required for %s for project %s for ad acco
 AD_ACCOUNT_FAILURE = 'Failed to get ad account metadata from linkedin'
 ORG_DATA_FETCH_ERROR = "Failed getting organisation data with error {}"
 SLACK_URL ='https://hooks.slack.com/services/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'
+NO_CAMPAIGN_ERR = 'No campaign_data found'
