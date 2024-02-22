@@ -23,12 +23,13 @@ import factorsai from 'factorsai';
 import useAutoFocus from 'hooks/useAutoFocus';
 import { PathUrls } from 'Routes/pathUrls';
 import logger from 'Utils/logger';
+import { meetLink } from 'Utils/meetLink';
+import { PLANS, PLANS_V0 } from 'Constants/plans.constants';
+import VirtualList from 'rc-virtual-list';
 import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
 import UserSettings from '../../Views/Settings/UserSettings';
 import styles from './index.module.scss';
 import { Text, SVG } from '../factorsComponents';
-import { meetLink } from 'Utils/meetLink';
-import { PLANS, PLANS_V0 } from 'Constants/plans.constants';
 
 function ProjectModal(props) {
   const [ShowPopOver, setShowPopOver] = useState(false);
@@ -178,25 +179,33 @@ function ProjectModal(props) {
         />
       ) : null}
       <div className='flex flex-col items-start fa-project-list--wrapper'>
-        {props.projects
-          .filter((project) =>
-            project?.name
-              .toLowerCase()
-              .includes(searchProjectName.toLowerCase())
-          )
-          .sort((a, b) =>
-            props.active_project?.id === a?.id
-              ? -1
-              : props.active_project?.id === b?.id
-                ? 1
-                : 0
-          )
-          .map((project, index) => (
+        <VirtualList
+          data={props.projects
+            .filter((project) =>
+              project?.name
+                .toLowerCase()
+                .includes(searchProjectName.toLowerCase())
+            )
+            .sort((a, b) =>
+              props.active_project?.id === a?.id
+                ? -1
+                : props.active_project?.id === b?.id
+                  ? 1
+                  : 0
+            )}
+          height={220}
+          style={{ width: '100%' }}
+          itemHeight={44}
+          itemKey='id'
+          fullHeight
+        >
+          {(project, index) => (
             <div
               key={index}
               className={`flex justify-between items-center project-item mx-2 ${
                 props.active_project?.id === project?.id ? 'active' : null
               }`}
+              style={{ margin: 0 }}
               onClick={() => {
                 if (props.active_project?.id !== project?.id) {
                   setShowPopOver(false);
@@ -235,7 +244,8 @@ function ProjectModal(props) {
                 <SVG name='check_circle' />
               ) : null}
             </div>
-          ))}
+          )}
+        </VirtualList>
       </div>
       {props.projects?.length > 0 && <div className='fa-popupcard-divider' />}
 
