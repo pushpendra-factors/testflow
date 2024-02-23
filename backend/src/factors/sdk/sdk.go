@@ -870,7 +870,7 @@ func FillCompanyIdentificationUserProperties(projectId int64, clientIP string, p
 		}
 		if C.IsAccountLimitEmailAlertEnabled(projectId) {
 			errCode, err := factorsDeanon.HandleAccountLimitAlert(projectId, &http.Client{})
-			if errCode != http.StatusOK {
+			if errCode != http.StatusOK && errCode != http.StatusForbidden {
 				log.Error(err, errCode)
 			}
 		}
