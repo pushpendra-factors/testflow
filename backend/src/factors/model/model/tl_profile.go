@@ -71,7 +71,7 @@ type AccountDetails struct {
 }
 
 type Overview struct {
-	Temperature float32            `json:"temperature"` // Normalised Score for base 100
+	Temperature float64            `json:"temperature"` // Normalised Score for base 100
 	Engagement  string             `json:"engagement"`  // Hot, Warm, Cold
 	UsersCount  int64              `json:"users_count"` // Number of Associated Users
 	TimeActive  float64            `json:"time_active"` // in seconds
