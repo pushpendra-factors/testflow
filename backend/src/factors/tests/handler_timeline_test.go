@@ -1572,7 +1572,8 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 
 	var timelinesConfig model.TimelinesConfig
 
-	timelinesConfig.AccountConfig.LeftpaneProps = []string{"$hubspot_company_industry", "$hubspot_company_country"}
+	timelinesConfig.AccountConfig.TableProps = []string{U.GP_HUBSPOT_COMPANY_INDUSTRY, U.GP_HUBSPOT_COMPANY_COUNTRY,
+		U.GROUP_EVENT_NAME_ENGAGEMENT_LEVEL, U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE, U.GROUP_EVENT_NAME_TOTAL_ENGAGEMENT_SCORE, U.DP_DOMAIN_NAME}
 	timelinesConfig.AccountConfig.UserProp = "$hubspot_contact_jobtitle"
 	timelinesConfig.UserConfig.Milestones = []string{"$milesone_1", "$milesone_2", "$milesone_3"}
 
@@ -1601,6 +1602,13 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		"$milesone_4":                             U.UnixTimeBeforeDuration(4 * time.Hour),
 		"$milesone_5":                             U.UnixTimeBeforeDuration(5 * time.Hour),
 	}
+
+	domProps := []map[string]interface{}{
+		{"$domain_name": "freshworks.com", "$engagement_level": "Hot", "$engagement_score": 125.300000,
+			"$joinTime": 1681211371, "$total_enagagement_score": 196.000000},
+		{"$domain_name": "chargebee.com", "$engagement_level": "Cold", "$engagement_score": 50.300000,
+			"$total_enagagement_score": 96.000000},
+	}
 	propertiesJSON, err := json.Marshal(props)
 	if err != nil {
 		log.WithError(err).Fatal("Marshal error.")
@@ -1611,13 +1619,17 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 	customerEmail := "abc@example.com"
 
 	// create a domain
+
+	dom1PropertiesJSON, err := json.Marshal(domProps[0])
+	if err != nil {
+		log.WithError(err).Fatal("Marshal error.")
+	}
 	createdDomainUserID, _ := store.GetStore().CreateUser(&model.User{
 		ProjectId:   project.ID,
 		Source:      model.GetRequestSourcePointer(model.UserSourceDomains),
 		Group1ID:    "1",
 		IsGroupUser: &isGroupUser,
-		Properties: postgres.Jsonb{
-			RawMessage: json.RawMessage(`{}`)},
+		Properties:  postgres.Jsonb{RawMessage: dom1PropertiesJSON},
 	})
 	domainUser, errCode := store.GetStore().GetUser(project.ID, createdDomainUserID)
 	assert.Equal(t, createdDomainUserID, domainUser.ID)
@@ -1646,13 +1658,16 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 	assert.NotNil(t, group2)
 
 	// create another domain account
+	dom2PropertiesJSON, err := json.Marshal(domProps[1])
+	if err != nil {
+		log.WithError(err).Fatal("Marshal error.")
+	}
 	createdDomainUserID2, _ := store.GetStore().CreateUser(&model.User{
 		ProjectId:   project.ID,
 		Source:      model.GetRequestSourcePointer(model.UserSourceDomains),
 		Group1ID:    "chargebee.com",
 		IsGroupUser: &isGroupUser,
-		Properties: postgres.Jsonb{
-			RawMessage: json.RawMessage(`{}`)},
+		Properties:  postgres.Jsonb{RawMessage: dom2PropertiesJSON},
 	})
 	domainUser2, errCode := store.GetStore().GetUser(project.ID, createdDomainUserID2)
 	assert.Equal(t, createdDomainUserID2, domainUser2.ID)
@@ -2082,8 +2097,8 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 	}
 	assert.Equal(t, len(users), 10)
 
-	t.Run("Success", func(t *testing.T) {
-		w := sendGetProfileAccountDetailsRequest(r, projectID, agent, domainUser.ID, "All")
+	t.Run("FreshworkDetails", func(t *testing.T) {
+		w := sendGetProfileAccountDetailsRequest(r, projectID, agent, domainUser.ID, U.GROUP_NAME_DOMAINS)
 		assert.Equal(t, http.StatusOK, w.Code)
 		jsonResponse, _ := io.ReadAll(w.Body)
 		resp := &model.AccountDetails{}
@@ -2094,8 +2109,14 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		assert.Equal(t, len(resp.AccountTimeline) > 0, true)
 		assert.Equal(t, len(resp.AccountTimeline), 10)
 		assert.NotNil(t, resp.LeftPaneProps)
+		leftPaneProps := map[string]interface{}{U.GP_HUBSPOT_COMPANY_COUNTRY: "India",
+			U.GP_HUBSPOT_COMPANY_INDUSTRY: "Freshworks-HS",
+		}
+		for key, value := range domProps[0] {
+			leftPaneProps[key] = value
+		}
 		for i, property := range resp.LeftPaneProps {
-			assert.Equal(t, props[i], property)
+			assert.Equal(t, leftPaneProps[i], property)
 		}
 		for i, property := range resp.Milestones {
 			assert.Equal(t, props[i], property)
@@ -2142,8 +2163,8 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		assert.Equal(t, float64(0), resp.TopPages[0].AvgScrollPercent)
 	})
 
-	t.Run("Success2", func(t *testing.T) {
-		w := sendGetProfileAccountDetailsRequest(r, projectID, agent, domainUser2.ID, "All")
+	t.Run("ChargeBeeDetails", func(t *testing.T) {
+		w := sendGetProfileAccountDetailsRequest(r, projectID, agent, domainUser2.ID, U.GROUP_NAME_DOMAINS)
 		assert.Equal(t, http.StatusOK, w.Code)
 		jsonResponse, _ := io.ReadAll(w.Body)
 		resp := &model.AccountDetails{}
@@ -2153,11 +2174,16 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		assert.Equal(t, resp.HostName, "chargebee.com")
 		assert.Equal(t, len(resp.AccountTimeline) > 0, true)
 		assert.Equal(t, len(resp.AccountTimeline), 4)
+		assert.Equal(t, len(domProps[1]), len(resp.LeftPaneProps))
 		for _, userTimeline := range resp.AccountTimeline {
 			if userTimeline.UserName != model.GROUP_ACTIVITY_USERNAME {
 				assert.Equal(t, userTimeline.IsAnonymous, false)
 				assert.Equal(t, len(userTimeline.UserActivities), 13)
 			}
+		}
+
+		for i, property := range resp.LeftPaneProps {
+			assert.Equal(t, domProps[1][i], property)
 		}
 	})
 
