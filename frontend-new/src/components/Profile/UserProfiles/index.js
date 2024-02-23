@@ -89,7 +89,7 @@ import DeleteSegmentModal from '../AccountProfiles/DeleteSegmentModal';
 import RenameSegmentModal from '../AccountProfiles/RenameSegmentModal';
 import UpdateSegmentModal from '../AccountProfiles/UpdateSegmentModal';
 import styles from './index.module.scss';
-import { ALPHANUMSTR, DEFAULT_TIMELINE_CONFIG, iconColors } from '../constants';
+import { ALPHANUMSTR, iconColors } from '../constants';
 import logger from 'Utils/logger';
 
 const userOptions = getUserOptions();
@@ -115,7 +115,7 @@ function UserProfiles({
   const [loading, setLoading] = useState(true);
   const [checkListUserProps, setCheckListUserProps] = useState([]);
   const [showPopOver, setShowPopOver] = useState(false);
-  const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
+  const [tlConfig, setTLConfig] = useState({});
   const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
   const [errMsg, setErrMsg] = useState('');
 
@@ -357,21 +357,8 @@ function UserProfiles({
   }, [timelinePayload?.search_filter]);
 
   useEffect(() => {
-    if (currentProjectSettings?.timelines_config) {
-      const timelinesConfig = {};
-      timelinesConfig.disabled_events = [
-        ...(currentProjectSettings?.timelines_config?.disabled_events || {})
-      ];
-      timelinesConfig.user_config = {
-        ...DEFAULT_TIMELINE_CONFIG.user_config,
-        ...currentProjectSettings?.timelines_config?.user_config
-      };
-      timelinesConfig.account_config = {
-        ...DEFAULT_TIMELINE_CONFIG.account_config,
-        ...currentProjectSettings?.timelines_config?.account_config
-      };
-      setTLConfig(timelinesConfig);
-    }
+    if (!currentProjectSettings?.timelines_config) return;
+    setTLConfig(currentProjectSettings.timelines_config);
   }, [currentProjectSettings?.timelines_config]);
 
   useEffect(() => {
@@ -686,7 +673,7 @@ function UserProfiles({
   const handlePropChange = (option) => {
     if (
       option.enabled ||
-      checkListUserProps.filter((item) => item.enabled === true).length < 8
+      checkListUserProps.filter((item) => item.enabled === true).length < 12
     ) {
       setCheckListUserProps((prev) => {
         const checkListProps = [...prev];

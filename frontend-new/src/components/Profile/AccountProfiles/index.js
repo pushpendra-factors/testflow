@@ -88,7 +88,6 @@ import {
 } from '../utils';
 import PropertyFilter from './PropertyFilter';
 import { Text, SVG } from '../../factorsComponents';
-import { DEFAULT_TIMELINE_CONFIG } from '../constants';
 import { invalidBreakdownPropertiesList } from 'Constants/general.constants';
 
 function AccountProfiles({
@@ -177,24 +176,19 @@ function AccountProfiles({
     return accountPayload;
   };
 
+  useEffect(() => {
+    if (activeProject?.id) {
+      fetchProjectSettings(activeProject.id);
+      getGroups(activeProject.id);
+      getSavedSegments(activeProject.id);
+    }
+  }, [activeProject?.id]);
+
   const runInit = async () => {
     try {
       setComponentLoading(true);
-
-      if (activeProject?.id) {
-        await Promise.allSettled([
-          fetchProjectSettings(activeProject.id),
-          getGroups(activeProject.id)
-        ]);
-
-        if (!Object.keys(segments).length) {
-          await getSavedSegments(activeProject.id);
-        }
-        if (Object.keys(segments).length) {
-          const payload = await getAccountPayload();
-          if (!_.isEqual(payload, accountPayload)) setAccountPayload(payload);
-        }
-      }
+      const payload = await getAccountPayload();
+      if (!_.isEqual(payload, accountPayload)) setAccountPayload(payload);
     } catch (err) {
       logger.error(err);
     } finally {
@@ -204,7 +198,7 @@ function AccountProfiles({
 
   useEffect(() => {
     runInit();
-  }, [activeProject?.id, segmentID, accountPayload, segments]);
+  }, [segmentID, accountPayload]);
 
   useEffect(() => {
     const filteredDomainProps = (
@@ -494,7 +488,7 @@ function AccountProfiles({
   const handlePropChange = (option) => {
     if (
       option.enabled ||
-      checkListAccountProps.filter((item) => item.enabled).length < 8
+      checkListAccountProps.filter((item) => item.enabled).length < 12
     ) {
       setCheckListAccountProps((prev) => {
         const checkListProps = [...prev];

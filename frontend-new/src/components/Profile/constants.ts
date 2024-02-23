@@ -22,20 +22,6 @@ export const TIMELINE_VIEW_OPTIONS: string[] = [
   'overview'
 ];
 
-export const DEFAULT_TIMELINE_CONFIG: TimelineConfig = {
-  disabled_events: [],
-  user_config: {
-    table_props: [],
-    milestones: []
-  },
-  account_config: {
-    table_props: [],
-    milestones: [],
-    user_prop: ''
-  },
-  events_config: {}
-};
-
 export const eventIconsColorMap: Record<
   string,
   { iconColor: string; bgColor: string; borderColor: string }
