@@ -307,8 +307,6 @@ func GetProfileAccountOverviewHandler(c *gin.Context) (interface{}, int, string,
 		return nil, http.StatusBadRequest, INVALID_INPUT, "invalid group name", true
 	}
 
-	log.Warn("Parameters Passed")
-
 	scoringAvailable, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_ACCOUNT_SCORING, false)
 	if err != nil {
 		logCtx.Error("Error fetching scoring availability status for project ID.")
@@ -322,10 +320,7 @@ func GetProfileAccountOverviewHandler(c *gin.Context) (interface{}, int, string,
 		return nil, http.StatusBadRequest, PROCESSING_FAILED, "Scoring Unavailable for this project", true
 	}
 
-	log.Warn("Feature Flags Passed")
-
 	accountOverview, errCode, errMsg := store.GetStore().GetAccountOverview(projectId, id, group)
-	log.Warn("Returns from Method Call-", errCode, errMsg)
 	if errCode != http.StatusOK {
 		logCtx.Error("Account details not found. " + errMsg)
 		return nil, errCode, PROCESSING_FAILED, errMsg, true
