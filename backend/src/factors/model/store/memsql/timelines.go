@@ -1886,7 +1886,7 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 	}
 
 	if score, exists := (*propertiesDecoded)[U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE]; exists {
-		overview.Temperature = score.(float32)
+		overview.Temperature = score.(float64)
 	}
 	if level, exists := (*propertiesDecoded)[U.GROUP_EVENT_NAME_ENGAGEMENT_LEVEL]; exists {
 		overview.Engagement = level.(string)
