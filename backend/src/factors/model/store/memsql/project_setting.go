@@ -1666,6 +1666,74 @@ func (store *MemSQL) GetMarkerLastForAllAccounts(projectID int64) (time.Time, in
 	return projectSettings.MarkerLastRunAllAccounts, http.StatusFound
 }
 
+// fetch marker_last_run_all_accounts for given project_id
+func (store *MemSQL) ProjectCountToRunAllMarkerFor() (int, int) {
+	db := C.GetServices().Db
+	var totalProjects int
+
+	allDomainsRunHours := C.TimeRangeForAllDomains()
+	defaultTime := U.DefaultTime()
+	createTime := U.TimeNowZ().Add(time.Duration(-allDomainsRunHours) * time.Hour)
+
+	// count of greater than default time to 24 hours
+	err := db.Model(&model.ProjectSetting{}).Where("marker_last_run_all_accounts > ?", defaultTime).
+		Or("created_at >= ?", createTime).Count(&totalProjects).Error
+
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return totalProjects, http.StatusNotFound
+		}
+		log.WithError(err).Error("Error fetching total number of projects present")
+		return totalProjects, http.StatusInternalServerError
+	}
+
+	return totalProjects, http.StatusFound
+}
+
+// fetch project_ids to run all marker for
+func (store *MemSQL) GetProjectIDsListForMarker(limit int) ([]int64, int) {
+	db := C.GetServices().Db
+
+	// greater than default time to 24 hours
+	query := fmt.Sprintf(`SELECT project_id FROM project_settings 
+	WHERE (marker_last_run_all_accounts > ? OR created_at >= ?)
+	AND marker_last_run_all_accounts <= ?
+	ORDER BY marker_last_run_all_accounts ASC
+	LIMIT %d;`, limit)
+
+	defaultTime := U.DefaultTime()
+	allDomainsRunHours := C.TimeRangeForAllDomains()
+	createTime := U.TimeNowZ().Add(time.Duration(-allDomainsRunHours) * time.Hour)
+
+	queryParams := []interface{}{defaultTime, createTime, createTime}
+
+	rows, err := db.Raw(query, queryParams...).Rows()
+
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return []int64{}, http.StatusNotFound
+		}
+		log.WithError(err).Error("Error fetching top %d least updated projects", limit)
+		return []int64{}, http.StatusInternalServerError
+	}
+
+	defer rows.Close()
+
+	var projectIDs []int64
+
+	for rows.Next() {
+		var project_id int64
+		err = rows.Scan(&project_id)
+		if err != nil {
+			log.WithError(err).Error("Error fetching rows")
+			return []int64{}, http.StatusInternalServerError
+		}
+		projectIDs = append(projectIDs, project_id)
+	}
+
+	return projectIDs, http.StatusFound
+}
+
 // define a db method to fetch all the rowsp
 func (store *MemSQL) GetFormFillEnabledProjectIDWithToken() (*map[int64]string, int) {
 	type idWithToken struct {

@@ -18,7 +18,7 @@ import (
 	U "factors/util"
 )
 
-func SegmentMarker(projectID int64) int {
+func SegmentMarker(projectID int64, projectIdListAllRun []int64) int {
 
 	domainGroup, status := store.GetStore().GetGroup(projectID, model.GROUP_NAME_DOMAINS)
 
@@ -32,7 +32,7 @@ func SegmentMarker(projectID int64) int {
 	var endTime, timeTaken int64
 	startTime := time.Now().Unix()
 
-	domainsList, allUsersRun, status, lookBack := GetDomainsToRunMarkerFor(projectID, domainGroup, status)
+	domainsList, allUsersRun, status, lookBack := GetDomainsToRunMarkerFor(projectID, domainGroup, status, projectIdListAllRun)
 
 	// fetching list of all the users with last updated_at in last x hour
 	if !C.ProcessOnlyAllAccountsSegments() {
@@ -184,19 +184,16 @@ func SegmentMarker(projectID int64) int {
 	return http.StatusOK
 }
 
-func GetDomainsToRunMarkerFor(projectID int64, domainGroup *model.Group, domainGroupStatus int) ([]string, bool, int, time.Time) {
+func GetDomainsToRunMarkerFor(projectID int64, domainGroup *model.Group, domainGroupStatus int,
+	projectIdListAllRun []int64) ([]string, bool, int, time.Time) {
 
 	allUsersRun := false
-	allDomainsRunHours := C.TimeRangeForAllDomains()
 
 	limitVal := C.MarkerDomainLimitForAllRun()
 
-	// fetch lastRunTime
-	lastRunTime, lastRunStatusCode := store.GetStore().GetMarkerLastForAllAccounts(projectID)
-	if lastRunStatusCode == http.StatusFound && C.AllAccountsRuntMarker(projectID) {
-		timeNow := time.Now().UTC()
-		timeDifference := timeNow.Sub(lastRunTime)
-		if timeDifference >= time.Duration(allDomainsRunHours)*time.Hour && domainGroupStatus == http.StatusFound {
+	if C.AllAccountsRuntMarker(projectID) {
+
+		if domainGroupStatus == http.StatusFound && isRunAllMarkerForProjectID(projectIdListAllRun, projectID) {
 
 			domainIDList, status := store.GetStore().GetAllDomainsByProjectID(projectID, domainGroup.ID, limitVal)
 
@@ -796,4 +793,16 @@ func performedEventsCheck(projectID int64, segmentID string, eventNameIDsMap map
 	isPerformedEvent = memsql.EventsPerformedCheck(projectID, segmentID, eventNameIDsMap, segmentQuery, userID, isAllAccounts, userArr)
 
 	return isPerformedEvent
+}
+
+func isRunAllMarkerForProjectID(projectIdListAllRun []int64, projectID int64) bool {
+	allRun := false
+
+	for _, pID := range projectIdListAllRun {
+		if projectID == pID {
+			allRun = true
+			break
+		}
+	}
+	return allRun
 }
