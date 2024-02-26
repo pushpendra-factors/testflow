@@ -148,6 +148,7 @@ func TestMain(m *testing.M) {
 		BatchSizeDomains:                                    100,
 		AddCRMObjectURLPropertyByProjectID:                  "*",
 		LookbackSegmentMarker:                               24,
+		RunForAllAccountsInHours:                            24,
 		DomainsLimitAllRun:                                  300000,
 	}
 	C.InitConf(config)

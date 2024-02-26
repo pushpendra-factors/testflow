@@ -523,14 +523,18 @@ type Model interface {
 	UpdateEngagementLevel(projectId int64, buckets model.BucketRanges) error
 	GetSixsignalEmailListFromProjectSetting(projectId int64) (string, int)
 	AddSixsignalEmailList(projectId int64, emailIds string) int
-	GetSegmentMarkerLastRunTime(projectID int64) (time.Time, int)
-	GetMarkerLastForAllAccounts(projectID int64) (time.Time, int)
-	UpdateSegmentMarkerLastRun(projectID int64, lastRunTime time.Time) int
-	UpdateSegmentMarkerLastRunForAllAccounts(projectID int64, lastRunTime time.Time) int
 	GetParagonTokenFromProjectSetting(projectID int64) (string, int, error)
 	GetParagonEnabledProjectsCount(projectID int64) (int64, int, error)
 	AddParagonTokenAndEnablingAgentToProjectSetting(projectID int64, agentID, token string) (int, error)
 	GetIntegrationState(projectID int64, DocumentType string, isCRMTypeDoc bool) (model.IntegrationStatus, int)
+
+	// project_settings for segment marker
+	GetSegmentMarkerLastRunTime(projectID int64) (time.Time, int)
+	GetMarkerLastForAllAccounts(projectID int64) (time.Time, int)
+	UpdateSegmentMarkerLastRun(projectID int64, lastRunTime time.Time) int
+	UpdateSegmentMarkerLastRunForAllAccounts(projectID int64, lastRunTime time.Time) int
+	GetProjectIDsListForMarker(limit int) ([]int64, int)
+	ProjectCountToRunAllMarkerFor() (int, int)
 
 	// project
 	UpdateProject(projectID int64, project *model.Project) int

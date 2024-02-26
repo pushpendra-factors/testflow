@@ -939,7 +939,8 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 	assert.True(t, nameFound7)
 
 	// Process all user
-	errCode = T.SegmentMarker(project.ID)
+	pIDList := []int64{project.ID}
+	errCode = T.SegmentMarker(project.ID, pIDList)
 	assert.Equal(t, errCode, http.StatusOK)
 
 	status, updatedUsers, associatedSegmentsList := store.GetStore().FetchAssociatedSegmentsFromUsers(project.ID)
@@ -1019,4 +1020,65 @@ func createSegmentPostReq(r *gin.Engine, request model.SegmentPayload, projectId
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 	return w
+}
+
+func TestProjectIDsListForMarker(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	// creating 5 projects with
+	// 2 projects with created_at 2 days ago, and last_run as 2 days ago (should be a part of list)
+	// 2 projects with created_at 2 days ago, and default last_run (should not be a part of list)
+	// 1 project with recent created_at and last_run as default (should be a part of list)
+
+	projectIDList := make(map[int64]bool)
+	notInProjectIDList := make(map[int64]bool)
+	// create 5 projects
+	for i := 0; i < 5; i++ {
+		project, err := SetupProjectReturnDAO()
+		assert.Nil(t, err)
+
+		if i == 4 {
+			projectIDList[project.ID] = true
+		}
+
+		if i > 3 {
+			continue
+		}
+
+		// updating created_at of 4 projects to 2 days ago
+		_, status := store.GetStore().UpdateProjectSettings(project.ID,
+			&model.ProjectSetting{CreatedAt: U.TimeNowZ().AddDate(0, 0, -2)})
+		assert.Equal(t, http.StatusAccepted, status)
+		if i >= 2 {
+			notInProjectIDList[project.ID] = true
+			continue
+		}
+		// updating last_run of 2 projects to 2 days ago
+		status = store.GetStore().UpdateSegmentMarkerLastRunForAllAccounts(project.ID, U.TimeNowZ().AddDate(0, 0, -2))
+		assert.Equal(t, http.StatusAccepted, status)
+
+		projectIDList[project.ID] = true
+	}
+
+	projectIDListRes, status := store.GetStore().GetProjectIDsListForMarker(1000)
+
+	assert.Equal(t, http.StatusFound, status)
+
+	totalProjects := 0
+	for _, pID := range projectIDListRes {
+		if projectIDList[pID] {
+			totalProjects++
+		}
+	}
+
+	notCount := 0
+	for _, pID := range projectIDListRes {
+		if notInProjectIDList[pID] {
+			notCount++
+		}
+	}
+
+	assert.Equal(t, 0, notCount)
+
 }

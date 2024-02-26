@@ -118,6 +118,25 @@ func main() {
 func RunSegmentMarkerForProjects(projectIdFlag *string) {
 	projectIdList := *projectIdFlag
 
+	projectCount, status := store.GetStore().ProjectCountToRunAllMarkerFor()
+
+	if status != http.StatusFound {
+		err := fmt.Errorf("failed to get number of projects for segment markup all run")
+		log.WithField("err_code", status).Error(err)
+		return
+	}
+
+	numberOfRunsPerDay := 40
+
+	limit := int(projectCount / numberOfRunsPerDay)
+
+	projectIdListAllRun, status := store.GetStore().GetProjectIDsListForMarker(limit)
+
+	if status != http.StatusFound {
+		err := fmt.Errorf("failed to get list of project_ids to run all marker for")
+		log.WithField("err_code", status).Error(err)
+	}
+
 	allProjects, projectIDsMap, _ := C.GetProjectsFromListWithAllProjectSupport(projectIdList, "")
 	failureCount := 0
 	successCount := 0
@@ -130,7 +149,7 @@ func RunSegmentMarkerForProjects(projectIdFlag *string) {
 			return
 		}
 		for _, projectId := range projectIDs {
-			status := T.SegmentMarker(projectId)
+			status := T.SegmentMarker(projectId, projectIdListAllRun)
 			if status != http.StatusOK {
 				log.WithField("project_id", projectId).Error("failed to run segment markup for project ID ")
 				failureCount++
@@ -140,7 +159,7 @@ func RunSegmentMarkerForProjects(projectIdFlag *string) {
 		}
 	} else {
 		for projectId, _ := range projectIDsMap {
-			status := T.SegmentMarker(projectId)
+			status := T.SegmentMarker(projectId, projectIdListAllRun)
 			if status != http.StatusOK {
 				log.WithField("project_id", projectId).Error("failed to run segment markup for project ID ")
 				failureCount++
