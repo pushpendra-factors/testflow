@@ -124,7 +124,7 @@ func (store *MemSQL) GetDisplayablePlanDetails(ppMap model.ProjectPlanMapping, p
 			return nil, http.StatusInternalServerError, "Failed to get six signal info", err
 		}
 	}
-	log.Info("$$$$ debug feature list new", planDetails.FeatureList)
+
 	var featureList model.FeatureList
 	if planDetails.FeatureList != nil {
 		err = U.DecodePostgresJsonbToStructType(planDetails.FeatureList, &featureList)
@@ -136,29 +136,6 @@ func (store *MemSQL) GetDisplayablePlanDetails(ppMap model.ProjectPlanMapping, p
 
 	// transform plan details to array to support backward compatibility
 	transFormedFeatureList := model.TransformFeatureListMaptoFeatureListArray(featureList)
-	log.Info("$$$$ debug feature list transformed", transFormedFeatureList)
-	// encode to json
-	transformedFeatureListJson, err := U.EncodeStructTypeToPostgresJsonb(transFormedFeatureList)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to encode transformed feature list to json")
-		return nil, http.StatusInternalServerError, "Failed to encode transformed feature list to json", err
-	}
-
-	log.Info("$$$$ debug feature list transformed json ", transformedFeatureListJson)
-
-	planDetails.FeatureList = transformedFeatureListJson
-
-	var featureList model.FeatureList
-	if planDetails.FeatureList != nil {
-		err = U.DecodePostgresJsonbToStructType(planDetails.FeatureList, &featureList)
-		if err != nil && err.Error() != "Empty jsonb object" {
-			log.WithError(err).Error("Failed to decode plan details.")
-			return nil, http.StatusInternalServerError, "Failed to decode feature list json", err
-		}
-	}
-	// transform plan details to array to support backward compatibility
-	transFormedFeatureList := model.TransformFeatureListMaptoFeatureListArray(featureList)
-
 	// encode to json
 	transformedFeatureListJson, err := U.EncodeStructTypeToPostgresJsonb(transFormedFeatureList)
 	if err != nil {
