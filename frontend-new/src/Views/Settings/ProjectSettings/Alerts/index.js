@@ -29,7 +29,7 @@ import KPIBasedAlert from './KPIBasedAlert';
 import EventBasedAlert from './EventBasedAlert';
 import styles from './index.module.scss';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
-import { getGroups } from 'Reducers/coreQuery/middleware';
+import { fetchEventNames, getGroups } from 'Reducers/coreQuery/middleware';
 import { useParams } from 'react-router-dom';
 import useQuery from 'hooks/useQuery';
 import TableSearchAndRefresh from 'Components/TableSearchAndRefresh';
@@ -47,7 +47,8 @@ const Alerts = ({
   fetchAllAlerts,
   createAlert,
   groups,
-  getGroups
+  getGroups,
+  fetchEventNames
 }) => {
   const [tableData, setTableData] = useState([]);
   const [tableLoading, setTableLoading] = useState(false);
@@ -70,6 +71,10 @@ const Alerts = ({
       getGroups(activeProject?.id);
     }
   }, [activeProject?.id, groups]);
+
+  useEffect(() => {
+    fetchEventNames(activeProject?.id, true);
+  }, [activeProject]);
 
   useEffect(() => {
     const type = routeQuery.get('type');
@@ -311,41 +316,59 @@ const Alerts = ({
     });
   }, [activeProject]);
 
-  const IntegrationIcons = ({slack, teams, webhook, email}) =>{
+  const IntegrationIcons = ({ slack, teams, webhook, email }) => {
     let iconSize = 22;
-    return <div className='flex items-center'>
-      {slack && <SVG name={'slack'} size={iconSize} extraClass={'mr-4'} />}
-      {teams && <SVG name={'MSTeam'} size={iconSize+4} extraClass={'mr-4'} />}
-      {webhook && <SVG name={'Webhook'} size={iconSize} extraClass={'mr-4'} />}
-      {email && <SVG name={'Email'} size={iconSize} extraClass={'mr-4'} />}
-    </div>
-  }
+    return (
+      <div className='flex items-center'>
+        {slack && <SVG name={'slack'} size={iconSize} extraClass={'mr-4'} />}
+        {teams && (
+          <SVG name={'MSTeam'} size={iconSize + 4} extraClass={'mr-4'} />
+        )}
+        {webhook && (
+          <SVG name={'Webhook'} size={iconSize} extraClass={'mr-4'} />
+        )}
+        {email && <SVG name={'Email'} size={iconSize} extraClass={'mr-4'} />}
+      </div>
+    );
+  };
 
   useEffect(() => {
     let savedArr = [];
-      savedAlerts?.forEach((item, index) => {
-        if (alertType === 'weekly') {
-          item.type === 'kpi_alert' &&
-            savedArr.push({
-              key: index,
-              alert_name: item,
-              type: item?.type == 'kpi_alert' ? 'Weekly alerts' : 'Real-time',
-              dop: <IntegrationIcons slack={item?.alert?.alert_configuration?.slack_enabled} teams={item?.alert?.alert_configuration?.teams_enabled} email={item?.alert?.alert_configuration?.email_enabled} />,
-              status: { status: item?.status, error: item?.last_fail_details },
-              actions: item
-            });
-        } else if (alertType === 'realtime') {
-          item.type === 'event_based_alert' &&
-            savedArr.push({
-              key: index,
-              alert_name: item,
-              type: item?.type == 'kpi_alert' ? 'Weekly alerts' : 'Real-time',
-              dop: <IntegrationIcons slack={item?.alert?.slack} teams={item?.alert?.teams} webhook={item?.alert?.webhook} />,
-              status: { status: item?.status, error: item?.last_fail_details },
-              actions: item
-            });
-        }
-      }); 
+    savedAlerts?.forEach((item, index) => {
+      if (alertType === 'weekly') {
+        item.type === 'kpi_alert' &&
+          savedArr.push({
+            key: index,
+            alert_name: item,
+            type: item?.type == 'kpi_alert' ? 'Weekly alerts' : 'Real-time',
+            dop: (
+              <IntegrationIcons
+                slack={item?.alert?.alert_configuration?.slack_enabled}
+                teams={item?.alert?.alert_configuration?.teams_enabled}
+                email={item?.alert?.alert_configuration?.email_enabled}
+              />
+            ),
+            status: { status: item?.status, error: item?.last_fail_details },
+            actions: item
+          });
+      } else if (alertType === 'realtime') {
+        item.type === 'event_based_alert' &&
+          savedArr.push({
+            key: index,
+            alert_name: item,
+            type: item?.type == 'kpi_alert' ? 'Weekly alerts' : 'Real-time',
+            dop: (
+              <IntegrationIcons
+                slack={item?.alert?.slack}
+                teams={item?.alert?.teams}
+                webhook={item?.alert?.webhook}
+              />
+            ),
+            status: { status: item?.status, error: item?.last_fail_details },
+            actions: item
+          });
+      }
+    });
     setTableData(savedArr);
   }, [savedAlerts, tabNo, alertType]);
 
@@ -484,17 +507,19 @@ const Alerts = ({
     let term = e.target.value;
     setSearchTerm(term);
     let searchResults = tableData?.filter((item) => {
-      return item?.alert_name?.title?.toLowerCase().includes(term.toLowerCase());
+      return item?.alert_name?.title
+        ?.toLowerCase()
+        .includes(term.toLowerCase());
     });
-    setSearchTableData(searchResults); 
+    setSearchTableData(searchResults);
   };
 
-  const onRefresh = () =>{
+  const onRefresh = () => {
     setTableLoading(true);
     fetchAllAlerts(activeProject?.id).then(() => {
       setTableLoading(false);
     });
-  }
+  };
 
   const renderAlertContent = () => {
     let alertContent = null;
@@ -502,19 +527,19 @@ const Alerts = ({
       alertContent = (
         <div className='mt-8'>
           <TableSearchAndRefresh
-             showSearch={showSearch}
-             setShowSearch={setShowSearch}
-             searchTerm={searchTerm}
-             setSearchTerm={setSearchTerm}
-             onSearch={onSearch}
-             onRefresh={onRefresh}
-             tableLoading={tableLoading}
+            showSearch={showSearch}
+            setShowSearch={setShowSearch}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            onSearch={onSearch}
+            onRefresh={onRefresh}
+            tableLoading={tableLoading}
           />
           <Table
             className='fa-table--basic mt-2'
             loading={tableLoading}
             columns={columns}
-            dataSource={searchTerm ? searchTableData :tableData}
+            dataSource={searchTerm ? searchTableData : tableData}
             pagination={true}
           />
         </div>
@@ -550,7 +575,7 @@ const Alerts = ({
                   >
                     Learn more
                   </a>
-                </Text> 
+                </Text>
 
                 <div className={'mt-6'}>{renderAlertContent()}</div>
               </Col>
@@ -600,5 +625,6 @@ export default connect(mapStateToProps, {
   createEventAlert,
   fetchAllAlerts,
   createAlert,
-  getGroups
+  getGroups,
+  fetchEventNames
 })(Alerts);

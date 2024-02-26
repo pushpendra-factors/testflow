@@ -27,10 +27,10 @@ export const fetchGroups = (projectID) => {
   return get(null, url);
 };
 
-export const getEventNames = (dispatch, projectId) =>
+export const getEventNames = (dispatch, projectId, isSpecialEvent) =>
   get(
     dispatch,
-    `${host}projects/${projectId}/user/event_names?is_display_name_enabled=true`,
+    `${host}projects/${projectId}/user/event_names?is_display_name_enabled=true&special_events_enabled=${isSpecialEvent}`,
     {}
   );
 
@@ -99,9 +99,13 @@ export function fetchUserPropertyValues(projectId, propertyName) {
   return get(null, url);
 }
 
-export function fetchPredefinedPropertyValues(projectId, propertyName, internalID) {
+export function fetchPredefinedPropertyValues(
+  projectId,
+  propertyName,
+  internalID
+) {
   const url = `${host}projects/${projectId}/v1/predefined_dashboards/${internalID}/filter_values`;
-  return post(null, url, {"pr_na": propertyName});
+  return post(null, url, { pr_na: propertyName });
 }
 
 export const getFunnelData = (
