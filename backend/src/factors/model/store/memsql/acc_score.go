@@ -8,6 +8,7 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
+	"math"
 	"sync"
 
 	"net/http"
@@ -79,10 +80,13 @@ func makeAccountUpdateString(user map[string]model.LatestScore, score, allEvents
 			ct := fmt.Sprintf("event_aggregate::`%s`='%s'", evKey, string(eventsCountjson))
 			updateString = append(updateString, ct)
 		} else {
-			ct := fmt.Sprintf("event_aggregate::`%s`='%s',properties::`%s`=%f,properties::`%s`=%f ", evKey, string(eventsCountjson), engagement_string, score, total_engagement_string, allEventsSCore)
+			ct := fmt.Sprintf("event_aggregate::`%s`='%s'", evKey, string(eventsCountjson))
 			updateString = append(updateString, ct)
 		}
 	}
+
+	ct := fmt.Sprintf("properties::`%s`=%f,properties::`%s`=%f ", engagement_string, score, total_engagement_string, allEventsSCore)
+	updateString = append(updateString, ct)
 
 	countTotal := 0.0
 	if evCounts, cok := user[model.LAST_EVENT]; cok {
@@ -91,12 +95,10 @@ func makeAccountUpdateString(user map[string]model.LatestScore, score, allEvents
 		}
 	}
 
-	if countTotal != 0.0 {
-		engagementLevelStringModified := strings.Join([]string{"$", engagement_level_string}, "")
-		ct := fmt.Sprintf("properties::%s='%s'", engagementLevelStringModified, engagement_level)
-		updateString = append(updateString, ct)
-		finalString = strings.Join(updateString, ",")
-	}
+	engagementLevelStringModified := strings.Join([]string{"$", engagement_level_string}, "")
+	ct = fmt.Sprintf("properties::%s='%s'", engagementLevelStringModified, engagement_level)
+	updateString = append(updateString, ct)
+	finalString = strings.Join(updateString, ",")
 
 	return finalString, nil
 }
@@ -232,9 +234,12 @@ func UpdatePerAccount(projectId int64, evdata map[string]map[string]model.Latest
 		}
 		allEventscore, err := ComputeAccountScoreOnLastEvent(projectId, weights, allEvent.EventsCount)
 		if err != nil {
-			logCtx.WithField("last event ", lastevent).Error("unable to compute final score ")
+			logCtx.WithField("last event ", lastevent).Error("unable to compute last event -final score ")
 		}
-		engagementLevel := model.GetEngagement(allEventscore, bucket)
+
+		score = math.Ceil(score)
+		allEventscore = math.Ceil(allEventscore)
+		engagementLevel := model.GetEngagement(score, bucket)
 
 		updateString, nil := makeAccountUpdateString(updateCounts, score, allEventscore, engagementLevel)
 		if updateString != "" {
@@ -245,7 +250,6 @@ func UpdatePerAccount(projectId int64, evdata map[string]map[string]model.Latest
 				return err
 			}
 		}
-
 	}
 
 	return nil
@@ -276,7 +280,7 @@ func (store *MemSQL) UpdateGroupEventsCountGO(projectId int64, evdata map[string
 		usersIdsList = append(usersIdsList, uid)
 	}
 	userIDChunks := U.GetStringListAsBatch(usersIdsList, numUserRoutines)
-	logCtx.WithField("counts :", len(userIDs)).Info("Updating groups in DB")
+	logCtx.WithFields(log.Fields{"counts ": len(userIDs), "buckets": bucket}).Info("Updating groups in DB")
 
 	for _, userIDList := range userIDChunks {
 		var wg sync.WaitGroup
