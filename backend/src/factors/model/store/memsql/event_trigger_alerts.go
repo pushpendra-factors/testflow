@@ -218,7 +218,7 @@ func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int
 	}
 
 	if isDuplicateAlertTitle(projectID, alertConfig.Title, oldID) {
-		logCtx.Error("alert already exist")
+		logCtx.Error("An alert with the same name already exists. Please choose a different name before saving.")
 		return nil, http.StatusConflict, "alert already exist"
 	}
 
@@ -304,27 +304,27 @@ func (store *MemSQL) isValidEventTriggerAlertBody(projectID int64, agentID strin
 	})
 
 	if alert.Title == "" {
-		errMsg := "title can not be empty"
+		errMsg := "Please provide a name for the alert before saving."
 		logCtx.WithError(fmt.Errorf(errMsg)).Error("alert body validation failure")
 		return false, http.StatusBadRequest, errMsg
 	}
 	if alert.Event == "" {
-		errMsg := "event can not be empty"
+		errMsg := "Please select an event to trigger the alert."
 		logCtx.WithError(fmt.Errorf(errMsg)).Error("alert body validation failure")
 		return false, http.StatusBadRequest, errMsg
 	}
 	if alert.DontRepeatAlerts && (alert.BreakdownProperties == nil || isEmptyPostgresJsonb(alert.BreakdownProperties)) {
-		errMsg := "breakdown property not selected"
+		errMsg := "Please specify a property to limit alerts under advanced settings."
 		logCtx.WithError(fmt.Errorf(errMsg)).Error("alert body validation failure")
 		return false, http.StatusBadRequest, errMsg
 	}
 	if !alert.Slack && !alert.Webhook && !alert.Teams {
-		errMsg := "choose atleast one delivery option"
+		errMsg := "Please choose at least 1 destination to receive the alerts in before saving."
 		logCtx.WithError(fmt.Errorf(errMsg)).Error("alert body validation failure")
 		return false, http.StatusBadRequest, errMsg
 	}
 	if alert.Slack && (alert.SlackChannels == nil || U.IsEmptyPostgresJsonb(alert.SlackChannels)) {
-		errMsg := "slack channel not selected"
+		errMsg := "Please select the Slack channel where you want to receive the alert."
 		logCtx.WithError(fmt.Errorf(errMsg)).Error("alert body validation failure")
 		return false, http.StatusBadRequest, errMsg
 	}
@@ -349,12 +349,12 @@ func (store *MemSQL) isValidEventTriggerAlertBody(projectID int64, agentID strin
 		return false, http.StatusBadRequest, errMsg
 	}
 	if alert.Webhook && alert.WebhookURL == "" {
-		errMsg := "webhook url must not be empty"
+		errMsg := "Please enter the Webhook URL to send data through webhook."
 		logCtx.WithError(fmt.Errorf(errMsg)).Error("alert body validation failure")
 		return false, http.StatusBadRequest, errMsg
 	}
 	if duplicateMessagePropertiesPresent(alert.MessageProperty) {
-		errMsg := "duplicate properties found in message property"
+		errMsg := "Duplicate properties are selected in the alert configuration. Please remove them before saving."
 		logCtx.WithError(fmt.Errorf(errMsg)).Error("alert body validation failure")
 		return false, http.StatusBadRequest, errMsg
 	}
