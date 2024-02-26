@@ -290,7 +290,7 @@ const LinkedInIntegration = ({
                   <Row className={'mt-2'}>
                     <Col span={24}>
                       <div className={'flex justify-end'}>
-                        <Button className='ant-btn-primary' htmlType='submit'>
+                        <Button className='ant-btn-primary' disabled={!SelectedAdAccount} htmlType='submit'>
                           Select
                         </Button>
                       </div>
@@ -298,21 +298,7 @@ const LinkedInIntegration = ({
                   </Row>
                 </form>
               </div>
-            </Modal>
-
-            {/* <div className="p-2">
-            <form onSubmit={e => this.handleSubmit(e)}>
-              <div className="w-50 pb-2">
-                <h5>Choose your ad account:</h5>
-                <Select
-                value={SelectedAdAccount}
-                onChange={this.handleChange}
-                options={createSelectOpts(this.getAdAccountsOptSrc())}
-                />
-              </div>
-              <input className="btn btn-primary shadow-none" type="submit" value="Submit"/>
-            </form>
-          </div> */}
+            </Modal> 
           </>
         );
       }

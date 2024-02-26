@@ -37,12 +37,11 @@ func ApplyFactorsDeanonRules(factorsDeanonRulesJson *postgres.Jsonb, isoCode, pa
 		return false, nil
 	}
 
-	if projectId == 580 && isoCode != "US" && countryFilterPassed {
-		logCtx.WithFields(log.Fields{"isoCode": isoCode}).Info("debug log for Fyle selective filtering.")
-	}
-
 	pageFilterPassed, _ := IsPageUrlRulesPassed(factorsDeanonRules, pageURL)
 	if !pageFilterPassed {
+		if projectId == 2000261 && strings.Contains(pageURL, "www.skillnetinc.com/resources/events/web-cx-assessment") {
+			logCtx.WithFields(log.Fields{"pageUrl": pageURL, "isoCode": isoCode}).Info("debug log for Fyle selective filtering.")
+		}
 		return false, nil
 	}
 

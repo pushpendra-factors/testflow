@@ -155,6 +155,7 @@ var NameProps = []string{
 	U.G2_NAME,
 }
 var HostNameProps = []string{
+	U.DP_DOMAIN_NAME,
 	U.GP_HUBSPOT_COMPANY_DOMAIN,
 	U.GP_SALESFORCE_ACCOUNT_WEBSITE,
 	U.SIX_SIGNAL_DOMAIN,

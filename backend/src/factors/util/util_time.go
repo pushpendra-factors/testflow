@@ -98,6 +98,12 @@ func TimeNowZ() time.Time {
 	return time.Now().UTC()
 }
 
+// Returns Default time '1971-01-01 00:00:00.000000'
+func DefaultTime() time.Time {
+	defaultTime := time.Date(1971, 1, 1, 0, 0, 0, 0, time.UTC)
+	return defaultTime
+}
+
 // TimeNowIn Return's current time in given Timezone.
 func TimeNowIn(timezone TimeZoneString) time.Time {
 	timezoneLocation, _ := time.LoadLocation(string(timezone))
