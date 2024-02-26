@@ -2092,12 +2092,17 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabledV2(projectID int64, id, g
 		}
 		// Fetching accounts associated to the domain
 		accountGroupDetails, status = store.GetAccountsAssociatedToDomain(projectID, id, groupNameIDMap[model.GROUP_NAME_DOMAINS])
-		if status != http.StatusFound {
-			return model.AccountDetails{}, status
+
+		// fetch all domain properties
+		domain, domStatus := store.GetDomainPropertiesByID(projectID, []string{id})
+		if domStatus != http.StatusFound {
+			log.Error("Failed to get account properties.")
+			return model.AccountDetails{}, http.StatusInternalServerError
 		}
+		accountGroupDetails = append(accountGroupDetails, domain...)
 
 		// return not found if no associated accounts found
-		if len(accountGroupDetails) < 1 {
+		if status != http.StatusFound && len(accountGroupDetails) < 1 {
 			return model.AccountDetails{}, http.StatusNotFound
 		}
 	} else {
@@ -2317,7 +2322,7 @@ func (store *MemSQL) GetAccountsAssociatedToDomain(projectID int64, id string, d
 		Where("project_id=? AND source!=? AND is_group_user=1 AND "+fmt.Sprintf("group_%d_user_id", domainGroupId)+"=?", projectID, model.UserSourceDomains, id).Find(&accountGroupDetails).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get groups.")
-		return nil, http.StatusInternalServerError
+		return []model.User{}, http.StatusInternalServerError
 	}
 	return accountGroupDetails, http.StatusFound
 }
@@ -2327,7 +2332,7 @@ func FormatAccountDetails(projectID int64, propertiesDecoded map[string]interfac
 	var companyNameProps, hostNameProps []string
 	var accountDetails model.AccountDetails
 
-	if C.IsDomainEnabled(projectID) && groupName != "All" {
+	if C.IsDomainEnabled(projectID) && groupName != U.GROUP_NAME_DOMAINS {
 		if model.IsAllowedGroupName(groupName) {
 			hostNameProps = []string{model.HostNameGroup[groupName]}
 			companyNameProps = []string{model.AccountNames[groupName], U.UP_COMPANY}
