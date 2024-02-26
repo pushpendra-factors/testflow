@@ -5,12 +5,10 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/jinzhu/gorm/dialects/postgres"
-	log "github.com/sirupsen/logrus"
 )
 
 // temp
@@ -126,6 +124,26 @@ func (store *MemSQL) GetDisplayablePlanDetails(ppMap model.ProjectPlanMapping, p
 			return nil, http.StatusInternalServerError, "Failed to get six signal info", err
 		}
 	}
+
+	var featureList model.FeatureList
+	if planDetails.FeatureList != nil {
+		err = U.DecodePostgresJsonbToStructType(planDetails.FeatureList, &featureList)
+		if err != nil && err.Error() != "Empty jsonb object" {
+			log.WithError(err).Error("Failed to decode plan details.")
+			return nil, http.StatusInternalServerError, "Failed to decode feature list json", err
+		}
+	}
+	// transform plan details to array to support backward compatibility
+	transFormedFeatureList := model.TransformFeatureListMaptoFeatureListArray(featureList)
+
+	// encode to json
+	transformedFeatureListJson, err := U.EncodeStructTypeToPostgresJsonb(transFormedFeatureList)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to encode transformed feature list to json")
+		return nil, http.StatusInternalServerError, "Failed to encode transformed feature list to json", err
+	}
+
+	planDetails.FeatureList = transformedFeatureListJson
 
 	obj := model.DisplayPlanDetails{
 		ProjectID:     ppMap.ProjectID,
@@ -412,42 +430,28 @@ func (store *MemSQL) CreateAddonsForCustomPlanForProject(projectID int64) error 
 	logCtx := log.WithFields(logFields)
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	// enable free plan features
-	freePlanDetails, errCode, errMsg, err := store.GetPlanDetailsFromPlanId(model.PLAN_ID_BASIC)
+	basicPlanDetails, errCode, errMsg, err := store.GetPlanDetailsFromPlanId(model.PLAN_ID_BASIC)
 	if err != nil || errCode != http.StatusFound {
 		logCtx.WithError(err).Error(errMsg)
 		return err
 	}
-	var freeFeatureList model.FeatureList
-	if freePlanDetails.FeatureList != nil {
-		err = U.DecodePostgresJsonbToStructType(freePlanDetails.FeatureList, &freeFeatureList)
+	var basicFeatureList model.FeatureList
+	if basicPlanDetails.FeatureList != nil {
+		err = U.DecodePostgresJsonbToStructType(basicPlanDetails.FeatureList, &basicFeatureList)
 		if err != nil && err.Error() != "Empty jsonb object" {
 			logCtx.WithError(err).Error("Failed to decode plan details.")
 			return err
 		}
 	}
 
-	// free plan features map
-	freePlanFeaturesMap := make(map[string]bool)
-
-	for _, feature := range freeFeatureList {
-		freePlanFeaturesMap[feature.Name] = true
-	}
-
-	var addOns model.OverWrite
-	featureNames := model.GetAllAvailableFeatures()
-	for _, featureName := range featureNames {
-		var feature model.FeatureDetails
-		feature.Name = featureName
-		if _, exists := freePlanFeaturesMap[featureName]; exists {
-			feature.IsEnabledFeature = true
-		}
-		if featureName == model.FEATURE_FACTORS_DEANONYMISATION {
+	overWrites := model.TransformFeatureListMaptoFeatureListArray(basicFeatureList)
+	for idx, overwrite := range overWrites {
+		if overwrite.Name == model.FEATURE_FACTORS_DEANONYMISATION {
 			// TODO : change this to const
-			feature.Limit = 500
+			overWrites[idx].Limit = 500
 		}
-		addOns = append(addOns, feature)
 	}
-	_, err = store.UpdateAddonsForProject(projectID, addOns)
+	_, err = store.UpdateAddonsForProject(projectID, overWrites)
 	if err != nil {
 		log.WithError(err).Error("Failed to create custom plan addons")
 		return err
@@ -492,80 +496,4 @@ func (store *MemSQL) PopulatePlanDetailsTable(planDetails model.PlanDetails) (in
 	}
 
 	return http.StatusCreated, nil
-}
-
-func (store *MemSQL) UpdatePlanDetailsTable(id int64, features []string, add bool) (int, error) {
-	logFields := log.Fields{
-		"plan_id": id,
-	}
-	logCtx := log.WithFields(logFields)
-	model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	allFeatures := model.GetAllAvailableFeatures()
-	featureMap := make(map[string]bool)
-	//Check if the feature to be updated is available or not
-	for _, newF := range features {
-		featureMap[newF] = true
-		found := false
-		for _, f := range allFeatures {
-			if newF == f {
-				found = true
-				break
-			}
-		}
-		if !found {
-			logCtx.Error("update failure - unknown feature given")
-			return http.StatusBadRequest, errors.New("update failure - unknown feature given")
-		}
-	}
-
-	planDetails, errCode, errMsg, err := store.GetPlanDetailsFromPlanId(id)
-	if err != nil || errCode != http.StatusFound {
-		logCtx.WithError(err).Error(errMsg)
-		return http.StatusNotFound, err
-	}
-
-	var oldFeatureList []model.FeatureDetails
-	err = U.DecodePostgresJsonbToStructType(planDetails.FeatureList, &oldFeatureList)
-	if err != nil {
-		logCtx.WithError(err).Error("unable to decode jsonb for the desired plan")
-		return http.StatusInternalServerError, err
-	}
-	var featureListJson *postgres.Jsonb
-	var newFeatureList []model.FeatureDetails
-	if add {
-		for _, feature := range oldFeatureList {
-			if _, exists := featureMap[feature.Name]; exists {
-				delete(featureMap, feature.Name)
-			}
-		}
-		newFeatureList = append(newFeatureList, oldFeatureList...)
-		for key := range featureMap {
-			newFeatureList = append(newFeatureList, model.FeatureDetails{
-				Name:             key,
-				IsEnabledFeature: true,
-			})
-		}
-	} else {
-		for _, feature := range oldFeatureList {
-			if _, exists := featureMap[feature.Name]; !exists {
-				newFeatureList = append(newFeatureList, feature)
-			}
-		}
-	}
-	featureListJson, err = U.EncodeStructTypeToPostgresJsonb(newFeatureList)
-	if err != nil {
-		logCtx.WithError(err).Error("unable to encode to jsonb for the desired plan")
-		return http.StatusInternalServerError, err
-	}
-
-	db := C.GetServices().Db
-
-	var planDets model.PlanDetails
-	err = db.Model(&planDets).Updates(map[string]interface{}{"feature_list": featureListJson}).Where("id = ?", id).Error
-	if err != nil {
-		logCtx.WithError(err).Error("failed to insert data")
-		return http.StatusInternalServerError, err
-	}
-
-	return http.StatusAccepted, nil
 }
