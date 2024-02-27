@@ -1770,9 +1770,9 @@ func buildUniqueUsersFunnelQueryV3(projectId int64, q model.Query, groupIds []in
 	stepFunnelName := "funnel"
 
 	funnelWhereStmnt := ""
-	if isFunnelGroupQueryDomains && len(model.FilterGlobalGroupPropertiesFilterForDomains(q.GlobalUserProperties)) > 0 &&
-		len(model.GetGlobalGroupByUserProperties(q.GroupByProperties)) > 0 {
-		funnelWhereStmnt = getGlobalBreakdownreakdownWhereConditionForDomains(model.FilterGlobalGroupPropertiesFilterForDomains(q.GlobalUserProperties),
+	if globalGroupPropertiesFilter := model.FilterGlobalGroupPropertiesFilterForDomains(q.GlobalUserProperties); isFunnelGroupQueryDomains && len(globalGroupPropertiesFilter) > 0 &&
+		len(model.GetGlobalGroupByUserProperties(q.GroupByProperties)) > 0 && len(model.GetPropertyToHasPositiveFilter(globalGroupPropertiesFilter)) > 0 {
+		funnelWhereStmnt = getGlobalBreakdownreakdownWhereConditionForDomains(globalGroupPropertiesFilter,
 			funnelSteps[0])
 	}
 
@@ -1904,7 +1904,8 @@ func getGlobalBreakdownreakdownWhereConditionForDomains(globalUserPropertiesFile
 	groupIDVisited := map[int]bool{}
 	groupUserWithFilterJointConditon := ""
 	groupUserJoinNegativeConditiod := ""
-	for i, filter := range globalUserPropertiesFilers {
+	globalUserPropertiesPositiveFilters := model.GetPropertyToHasPositiveFilter(globalUserPropertiesFilers)
+	for i, filter := range globalUserPropertiesPositiveFilters {
 		groupID := filter.GroupNameID
 		if _, visited := groupIDVisited[groupID]; visited {
 			continue
