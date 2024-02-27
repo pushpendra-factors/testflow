@@ -124,26 +124,41 @@ function CustomKPI({
     const findItem = eventPropNames?.[item] || userPropNames?.[item];
     return findItem || item;
   };
+
+  const handleViewCustomKPI = (item) => {
+    setPageMode('View');
+    setKPIDetails(item);
+    if (item.metric_type === 'date_type_diff_metric') {
+      setKPIType('time_period_based');
+      setKPICategory(item.obj_ty);
+      setKPIFn(item?.transformations?.agFn);
+      setEventFilterValues(item?.transformations?.fil);
+    } else {
+      setKPIType(item.type_of_query === 1 ? 'default' : 'derived_kpi');
+    }
+  };
+  const handleCopyCustomKPI = (item) => {
+    setPageMode('Edit');
+    setKPIDetails(item);
+    onEdit(item);
+    if (item.metric_type === 'date_type_diff_metric') {
+      setKPIType('time_period_based');
+      setKPICategory(item.obj_ty);
+      setKPIFn(item?.transformations?.agFn);
+      setEventFilterValues({
+        globalFilters: getStateFromKPIFilters(item?.transformations?.fil)
+      });
+    } else {
+      setKPIType(item.type_of_query === 1 ? 'default' : 'derived_kpi');
+    }
+  };
   const menu = (item) => (
     <Menu className={`${styles.antdActionMenu}`}>
-      <Menu.Item
-        key='0'
-        onClick={() => {
-          setPageMode('View');
-          setKPIDetails(item);
-        }}
-      >
+      <Menu.Item key='0' onClick={() => handleViewCustomKPI(item)}>
         <SVG name='Eye' size={18} extraClass='mr-2 inline' />
         <span>View KPI</span>
       </Menu.Item>
-      <Menu.Item
-        key='1'
-        onClick={() => {
-          setPageMode('Edit');
-          setKPIDetails(item);
-          onEdit(item);
-        }}
-      >
+      <Menu.Item key='1' onClick={() => handleCopyCustomKPI(item)}>
         <SVG name='Copy1' size={18} extraClass='mr-2 inline' />
         <span>Create copy</span>
       </Menu.Item>
@@ -173,10 +188,7 @@ function CustomKPI({
           level={7}
           truncate
           charLimit={25}
-          onClick={() => {
-            setPageMode('View');
-            setKPIDetails(item);
-          }}
+          onClick={() => handleViewCustomKPI(item)}
           extraClass='cursor-pointer'
         >
           {item?.name}
@@ -314,22 +326,25 @@ function CustomKPI({
             onClick={() => {
               setTimePeriodRangeDDVisible([true, eachIndex]);
             }}
+            disabled={pageMode === 'View'}
           >
             {eachProperty.label}
           </Button>
-          <Button
-            size='large'
-            type='text'
-            // onClick={deleteItem}
-            className='fa-btn--custom ml-2'
-            onClick={() => {
-              setTimePeriosRangeProperties((prev) =>
-                prev.filter((e, i) => i !== eachIndex)
-              );
-            }}
-          >
-            <SVG name='trash' />
-          </Button>
+          {pageMode !== 'View' && (
+            <Button
+              size='large'
+              type='text'
+              // onClick={deleteItem}
+              className='fa-btn--custom ml-2'
+              onClick={() => {
+                setTimePeriosRangeProperties((prev) =>
+                  prev.filter((e, i) => i !== eachIndex)
+                );
+              }}
+            >
+              <SVG name='trash' />
+            </Button>
+          )}
         </div>
       );
     });
@@ -348,7 +363,7 @@ function CustomKPI({
         </div>
       );
     }
-    if (timePeriodRangeDDVisible[0])
+    if (timePeriodRangeDDVisible[0] && pageMode !== 'View')
       tmpList.push(
         <FaSelect
           key='init'
@@ -570,7 +585,6 @@ function CustomKPI({
         console.log('addNewCustomKPI error->', err);
       });
   };
-
   const deleteKPI = (item) => {
     setTableLoading(true);
     removeCustomKPI(activeProject.id, item?.id)
@@ -620,7 +634,26 @@ function CustomKPI({
 
     setFilterDDValues(DDvalues);
     setTimePeriosRangeProperties([]);
-  }, [selKPICategory, customKPIConfig]);
+    // Below logic is added to pick the Time period based Properties
+    // whenever user opens or creates a copy of it
+    const pr1 = viewKPIDetails?.transformations?.agPr;
+    const pr2 = viewKPIDetails?.transformations?.agPr2;
+    if (pr1 && pr2) {
+      const tmpRes = customKPIConfig.result?.filter(
+        (e) => e.obj_ty === selKPICategory
+      );
+      if (tmpRes.length === 1) {
+        const l = tmpRes[0]?.properties?.find((e) => e.name === pr1);
+        const l2 = tmpRes[0]?.properties?.find((e) => e.name === pr2);
+        if (l && l2) {
+          setTimePeriosRangeProperties([
+            { label: l.display_name, value: pr1 },
+            { label: l2.display_name, value: pr2 }
+          ]);
+        }
+      }
+    }
+  }, [selKPICategory, customKPIConfig, viewKPIDetails]);
 
   useEffect(() => {
     let DDCategory = {};
@@ -678,6 +711,199 @@ function CustomKPI({
     }
   }, [savedCustomKPI]);
 
+  // eslint-disable-next-line react/no-unstable-nested-components
+  const TimePeriodBasedForm = (mode) => (
+    <div>
+      <Row className='m-0 mt-2'>
+        <Col span={18}>
+          <Text type='title' level={7} extraClass='m-0'>
+            Category
+          </Text>
+          <Form.Item
+            name='kpi_category'
+            className='m-0'
+            rules={[
+              {
+                required: true,
+                message: 'Please select KPI Category'
+              }
+            ]}
+            initialValue={selKPICategory}
+          >
+            <Select
+              className='fa-select w-full'
+              size='large'
+              onChange={(value) => onKPICategoryChange(value)}
+              placeholder='KPI Category'
+              showSearch
+              filterOption={(input, option) =>
+                option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+              }
+              defaultValue={selKPICategory}
+              disabled={mode}
+            >
+              {customKPIConfig?.result?.map((item) => {
+                if (item.type_of_query === 1) {
+                  return (
+                    <Option key={item.obj_ty} value={item.obj_ty}>
+                      {_.startCase(item.obj_ty)}
+                    </Option>
+                  );
+                }
+              })}
+            </Select>
+          </Form.Item>
+        </Col>
+      </Row>
+      {selKPICategory && (
+        <Row className='mt-8'>
+          <Col span={18}>
+            <Text type='title' level={7} extraClass='m-0'>
+              Select Functions
+            </Text>
+            <Form.Item
+              name='kpi_function'
+              className='m-0'
+              rules={[
+                {
+                  required: true,
+                  message: 'Please select a Function'
+                }
+              ]}
+              initialValue={KPIFn}
+            >
+              <Select
+                className='fa-select w-full'
+                size='large'
+                placeholder='Function'
+                onChange={(value) => {
+                  setKPIPropertyDetails({});
+                  setKPIFn(value);
+                }}
+                showSearch
+                filterOption={(input, option) =>
+                  option.children.toLowerCase().indexOf(input.toLowerCase()) >=
+                  0
+                }
+                defaultValue={KPIFn}
+                disabled={mode}
+              >
+                {customKPIConfig?.result?.map((item) => {
+                  if (item.obj_ty === selKPICategory) {
+                    return item?.agFn.map(
+                      (it) =>
+                        it !== 'unique' && (
+                          <Option key={it} value={it}>
+                            {_.startCase(it)}
+                          </Option>
+                        )
+                    );
+                  }
+                })}
+              </Select>
+            </Form.Item>
+          </Col>
+        </Row>
+      )}
+      {EventfilterDDValues && (
+        <Row className='my-8'>
+          <Col span={18}>
+            <div className='border-top--thin-2 border-bottom--thin-2 pt-5 pb-5'>
+              <Text type='title' level={7} weight='bold' extraClass='m-0'>
+                FILTER BY
+              </Text>
+
+              {mode === true ? (
+                <GLobalFilter
+                  filters={getStateFromKPIFilters(
+                    viewKPIDetails?.transformations?.fil
+                  )}
+                  setGlobalFilters={setGlobalFiltersOption}
+                  delFilter={false}
+                  viewMode={pageMode === 'View'}
+                />
+              ) : (
+                <EventFilter
+                  filters={EventfilterValues?.globalFilters}
+                  setGlobalFilters={setEventGlobalFiltersOption}
+                  event={{ label: selEventName }}
+                />
+              )}
+            </div>
+          </Col>
+        </Row>
+      )}
+      <div>
+        <Text type='title' level={7} extraClass='m-0'>
+          Time period between
+        </Text>
+        <div>
+          <div className='my-2 border rounded-lg select-none'>
+            <Row className='m-0 ml-4 my-2 mb-4'>
+              <Col span={18}>
+                <Form.Item name='query_type' className='m-0'>
+                  {periodQueryList()}
+                </Form.Item>
+              </Col>
+            </Row>
+          </div>
+        </div>
+      </div>
+      <Row className='mt-8'>
+        <Col span={18}>
+          <Text type='title' level={7} extraClass='m-0'>
+            Set time to
+          </Text>
+          <Form.Item
+            name='kpi_dateField'
+            className='m-0'
+            rules={[
+              {
+                required: true,
+                message: 'Please select a date field'
+              }
+            ]}
+            initialValue={
+              pageMode === 'Edit'
+                ? matchEventName(viewKPIDetails?.transformations?.daFie)
+                : undefined
+            }
+          >
+            <Select
+              className='fa-select w-full'
+              size='large'
+              disabled={!selKPICategory || mode}
+              placeholder='Date field'
+              showSearch
+              filterOption={(input, option) =>
+                option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+              }
+              defaultValue={viewKPIDetails?.transformations?.daFie}
+            >
+              {customKPIConfig?.result?.map((category) => {
+                if (category.obj_ty === selKPICategory) {
+                  return category?.properties?.map((item) => {
+                    if (item.data_type === 'datetime')
+                      return (
+                        <Option
+                          key={item.name}
+                          value={item.name}
+                          name={item.name}
+                          data_type={item.data_type}
+                          entity={item.entity}
+                        >
+                          {_.startCase(item.display_name)}
+                        </Option>
+                      );
+                  });
+                }
+              })}
+            </Select>
+          </Form.Item>
+        </Col>
+      </Row>
+    </div>
+  );
   const excludeEventsFromList = [
     'Contact Created',
     'Contact Updated',
@@ -1095,24 +1321,18 @@ function CustomKPI({
                     </Form.Item>
                   </Col>
                 </Row>
-
                 <Row className='mt-8'>
                   <Col span={18}>
                     <Text type='title' level={7} extraClass='m-0'>
                       KPI Type
                     </Text>
-                    <Form.Item
-                      name='kpi_type'
-                      className='m-0'
-                      initialValue={
-                        pageMode === 'Edit' ? selKPIType : 'default'
-                      }
-                    >
+                    <Form.Item name='kpi_type' className='m-0'>
                       <Select
                         className='fa-select w-full'
                         size='large'
                         onChange={(value) => onKPITypeChange(value)}
                         placeholder='KPI Type'
+                        defaultValue={selKPIType}
                       >
                         <Option value='default'>Default</Option>
                         <Option value='derived_kpi'>Derived KPI</Option>
@@ -1456,196 +1676,7 @@ function CustomKPI({
                     </div>
                   </>
                 ) : selKPIType === 'time_period_based' ? (
-                  <div>
-                    <Row className='m-0 mt-2'>
-                      <Col span={18}>
-                        <Text type='title' level={7} extraClass='m-0'>
-                          Category
-                        </Text>
-                        <Form.Item
-                          name='kpi_category'
-                          className='m-0'
-                          rules={[
-                            {
-                              required: true,
-                              message: 'Please select KPI Category'
-                            }
-                          ]}
-                          initialValue={
-                            pageMode === 'Edit' ? selKPICategory : undefined
-                          }
-                        >
-                          <Select
-                            className='fa-select w-full'
-                            size='large'
-                            onChange={(value) => onKPICategoryChange(value)}
-                            placeholder='KPI Category'
-                            showSearch
-                            filterOption={(input, option) =>
-                              option.children
-                                .toLowerCase()
-                                .indexOf(input.toLowerCase()) >= 0
-                            }
-                          >
-                            {customKPIConfig?.result?.map((item) => {
-                              if (item.type_of_query === 1) {
-                                return (
-                                  <Option key={item.obj_ty} value={item.obj_ty}>
-                                    {_.startCase(item.obj_ty)}
-                                  </Option>
-                                );
-                              }
-                            })}
-                          </Select>
-                        </Form.Item>
-                      </Col>
-                    </Row>
-
-                    {selKPICategory && (
-                      <Row className='mt-8'>
-                        <Col span={18}>
-                          <Text type='title' level={7} extraClass='m-0'>
-                            Select Function
-                          </Text>
-                          <Form.Item
-                            name='kpi_function'
-                            className='m-0'
-                            rules={[
-                              {
-                                required: true,
-                                message: 'Please select a Function'
-                              }
-                            ]}
-                            initialValue={
-                              pageMode === 'Edit' ? KPIFn : undefined
-                            }
-                          >
-                            <Select
-                              className='fa-select w-full'
-                              size='large'
-                              placeholder='Function'
-                              onChange={(value) => {
-                                setKPIPropertyDetails({});
-                                setKPIFn(value);
-                              }}
-                              showSearch
-                              filterOption={(input, option) =>
-                                option.children
-                                  .toLowerCase()
-                                  .indexOf(input.toLowerCase()) >= 0
-                              }
-                            >
-                              {customKPIConfig?.result?.map((item) => {
-                                if (item.obj_ty === selKPICategory) {
-                                  return item?.agFn.map(
-                                    (it) =>
-                                      it !== 'unique' && (
-                                        <Option key={it} value={it}>
-                                          {_.startCase(it)}
-                                        </Option>
-                                      )
-                                  );
-                                }
-                              })}
-                            </Select>
-                          </Form.Item>
-                        </Col>
-                      </Row>
-                    )}
-                    {EventfilterDDValues && (
-                      <Row className='my-8'>
-                        <Col span={18}>
-                          <div className='border-top--thin-2 border-bottom--thin-2 pt-5 pb-5'>
-                            <Text
-                              type='title'
-                              level={7}
-                              weight='bold'
-                              extraClass='m-0'
-                            >
-                              FILTER BY
-                            </Text>
-                            <EventFilter
-                              filters={EventfilterValues?.globalFilters}
-                              setGlobalFilters={setEventGlobalFiltersOption}
-                              event={{ label: selEventName }}
-                            />
-                          </div>
-                        </Col>
-                      </Row>
-                    )}
-                    <div>
-                      <Text type='title' level={7} extraClass='m-0'>
-                        Time period between
-                      </Text>
-                      <div>
-                        <div className='my-2 border rounded-lg select-none'>
-                          <Row className='m-0 ml-4 my-2 mb-4'>
-                            <Col span={18}>
-                              <Form.Item name='query_type' className='m-0'>
-                                {periodQueryList()}
-                              </Form.Item>
-                            </Col>
-                          </Row>
-                        </div>
-                      </div>
-                    </div>
-                    <Row className='mt-8'>
-                      <Col span={18}>
-                        <Text type='title' level={7} extraClass='m-0'>
-                          Set time to
-                        </Text>
-                        <Form.Item
-                          name='kpi_dateField'
-                          className='m-0'
-                          rules={[
-                            {
-                              required: true,
-                              message: 'Please select a date field'
-                            }
-                          ]}
-                          initialValue={
-                            pageMode === 'Edit'
-                              ? matchEventName(
-                                  viewKPIDetails?.transformations?.daFie
-                                )
-                              : undefined
-                          }
-                        >
-                          <Select
-                            className='fa-select w-full'
-                            size='large'
-                            disabled={!selKPICategory}
-                            placeholder='Date field'
-                            showSearch
-                            filterOption={(input, option) =>
-                              option.children
-                                .toLowerCase()
-                                .indexOf(input.toLowerCase()) >= 0
-                            }
-                          >
-                            {customKPIConfig?.result?.map((category) => {
-                              if (category.obj_ty === selKPICategory) {
-                                return category?.properties?.map((item) => {
-                                  if (item.data_type === 'datetime')
-                                    return (
-                                      <Option
-                                        key={item.name}
-                                        value={item.name}
-                                        name={item.name}
-                                        data_type={item.data_type}
-                                        entity={item.entity}
-                                      >
-                                        {_.startCase(item.display_name)}
-                                      </Option>
-                                    );
-                                });
-                              }
-                            })}
-                          </Select>
-                        </Form.Item>
-                      </Col>
-                    </Row>
-                  </div>
+                  TimePeriodBasedForm(false)
                 ) : (
                   [renderEventBasedKPIForm()]
                 )}
@@ -1711,18 +1742,22 @@ function CustomKPI({
                       disabled
                       size='large'
                       value={
-                        viewKPIDetails?.type_of_query === 1
-                          ? 'Default'
-                          : viewKPIDetails?.type_of_query === 2
-                            ? 'Derived'
-                            : 'Event Based'
+                        viewKPIDetails?.metric_type === 'date_type_diff_metric'
+                          ? 'Time Period Based'
+                          : viewKPIDetails?.type_of_query === 1
+                            ? 'Default'
+                            : viewKPIDetails?.type_of_query === 2
+                              ? 'Derived'
+                              : 'Event Based'
                       }
                       className='fa-input w-full'
                       placeholder='Display Name'
                     />
                   </Col>
                 </Row>
-                {viewKPIDetails?.type_of_query === 1 ? (
+                {viewKPIDetails?.metric_type === 'date_type_diff_metric' ? (
+                  <div>{TimePeriodBasedForm(true)}</div>
+                ) : viewKPIDetails?.type_of_query === 1 ? (
                   <div>
                     <Row>
                       <Col span={18}>
@@ -1933,7 +1968,7 @@ function CustomKPI({
                       color='blue'
                       onClick={() => {
                         setPageMode('Edit');
-                        onEdit(viewKPIDetails);
+                        handleCopyCustomKPI(viewKPIDetails);
                       }}
                     >
                       <div className='flex items-center'>
