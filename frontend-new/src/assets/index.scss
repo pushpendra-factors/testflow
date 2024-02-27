@@ -122,3 +122,8 @@ code {
   display: block;
   text-overflow: ellipsis;
 }
+.ant-notification {
+  // generally all modal have z-index of approx 10000
+  // so setting notification z-index to very high
+  z-index: 99999 !important;
+}
