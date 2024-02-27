@@ -483,6 +483,7 @@ function AccountProfiles({
       newPayload.segment.query = reqPayload.query;
       newPayload.isUnsaved = true;
       setAccountPayload(newPayload);
+      setFiltersExpanded(false);
     }
   }, [selectedFilters, newSegmentMode]);
 
