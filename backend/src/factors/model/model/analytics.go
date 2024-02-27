@@ -1055,6 +1055,12 @@ func GetPropertyToHasNegativeFilter(properties []QueryProperty) []QueryProperty 
 	return negativeFilters
 }
 
+func GetPropertyToHasPositiveFilter(properties []QueryProperty) []QueryProperty {
+
+	_, positiveFilters := GetPropertyGroupedNegativeAndPostiveFilter(properties)
+	return positiveFilters
+}
+
 func GetPropertyGroupedNegativeAndPostiveFilter(properties []QueryProperty) ([]QueryProperty, []QueryProperty) {
 	negativeFilters := make([]QueryProperty, 0)
 	positiveFilters := make([]QueryProperty, 0)
