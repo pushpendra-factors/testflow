@@ -1538,9 +1538,10 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 	}
 
 	if isScopeDomains {
-		if len(model.FilterGlobalGroupPropertiesFilterForDomains(query.GlobalUserProperties)) > 0 &&
-			len(model.GetGlobalGroupByUserProperties(query.GroupByProperties)) > 0 {
-			termStmnt = termStmnt + " WHERE " + getGlobalBreakdownreakdownWhereConditionForDomains(model.FilterGlobalGroupPropertiesFilterForDomains(query.GlobalUserProperties),
+		globalGroupPropertiesFilter := model.FilterGlobalGroupPropertiesFilterForDomains(query.GlobalUserProperties)
+		if len(globalGroupPropertiesFilter) > 0 &&
+			len(model.GetGlobalGroupByUserProperties(query.GroupByProperties)) > 0 && len(model.GetPropertyToHasPositiveFilter(globalGroupPropertiesFilter)) > 0 {
+			termStmnt = termStmnt + " WHERE " + getGlobalBreakdownreakdownWhereConditionForDomains(globalGroupPropertiesFilter,
 				refStep)
 		}
 
