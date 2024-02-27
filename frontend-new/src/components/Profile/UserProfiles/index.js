@@ -186,26 +186,29 @@ function UserProfiles({
   }, [currentProjectSettings, timelinePayload]);
 
   const restoreFiltersDefaultState = useCallback(
-    (selectedAccount = INITIAL_USER_PROFILES_FILTERS_STATE.account) => {
+    (
+      isClearFilter = false,
+      selectedAccount = INITIAL_USER_PROFILES_FILTERS_STATE.account
+    ) => {
       const initialFiltersStateWithSelectedAccount = {
         ...INITIAL_USER_PROFILES_FILTERS_STATE,
         account: selectedAccount
       };
       setSelectedFilters(initialFiltersStateWithSelectedAccount);
       setAppliedFilters(initialFiltersStateWithSelectedAccount);
-      setFiltersExpanded(false);
+      if (!isClearFilter) setFiltersExpanded(false);
       setFiltersDirty(false);
     },
     [setFiltersDirty]
   );
 
   const handleClearFilters = useCallback(() => {
-    restoreFiltersDefaultState();
-    const reqPayload = getFiltersRequestPayload({
-      selectedFilters: INITIAL_USER_PROFILES_FILTERS_STATE,
-      tableProps: displayTableProps
-    });
-    getProfileUsers(activeProject.id, reqPayload);
+    restoreFiltersDefaultState(true);
+    // const reqPayload = getFiltersRequestPayload({
+    //   selectedFilters: INITIAL_USER_PROFILES_FILTERS_STATE,
+    //   tableProps: displayTableProps
+    // });
+    // getProfileUsers(activeProject.id, reqPayload);
   }, [
     activeProject.id,
     displayTableProps,

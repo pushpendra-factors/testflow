@@ -277,6 +277,7 @@ function AccountProfiles({
   );
 
   const restoreFiltersDefaultState = (
+    isClearFilter = false,
     selectedAccount = INITIAL_FILTERS_STATE.account
   ) => {
     const initialFiltersStateWithSelectedAccount = {
@@ -285,7 +286,7 @@ function AccountProfiles({
     };
     setSelectedFilters(initialFiltersStateWithSelectedAccount);
     setAppliedFilters(cloneDeep(initialFiltersStateWithSelectedAccount));
-    setFiltersExpanded(false);
+    if (!isClearFilter) setFiltersExpanded(false);
     setFiltersDirty(false);
   };
 
@@ -692,11 +693,10 @@ function AccountProfiles({
   }, [appliedFilters]);
 
   const handleClearFilters = () => {
-    restoreFiltersDefaultState();
-    setAccountPayload({ source: GROUP_NAME_DOMAINS });
-    history.replace(PathUrls.ProfileAccounts);
+    restoreFiltersDefaultState(true);
+    // setAccountPayload({ source: GROUP_NAME_DOMAINS });
+    // history.replace(PathUrls.ProfileAccounts);
   };
-
   const saveButtonDisabled = useMemo(
     () => !accountPayload?.isUnsaved,
     [accountPayload?.isUnsaved]

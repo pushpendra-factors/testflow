@@ -163,6 +163,7 @@ export const getColumns = ({
     type: 'string',
     fixed: 'left',
     ellipsis: true,
+    showSorterTooltip: null,
     sorter: (a, b) => sortStringColumn(a.account.name, b.account.name),
     render: (item) =>
       (

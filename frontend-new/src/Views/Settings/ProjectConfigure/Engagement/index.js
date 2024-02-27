@@ -109,7 +109,10 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
     notification.error({
       message: 'Error',
       description,
-      duration: 3
+      duration: 3,
+      style: {
+        zIndex: 6000
+      }
     });
   };
 
