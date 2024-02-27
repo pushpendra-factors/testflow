@@ -326,7 +326,6 @@ func GetEngagement(percentile float64, buckets BucketRanges) string {
 	var maxLow float64
 	maxHigh = float64(0)
 	maxLow = math.MaxFloat64
-
 	for _, bucket := range buckets.Ranges {
 
 		if bucket.High > maxHigh {
@@ -345,12 +344,16 @@ func GetEngagement(percentile float64, buckets BucketRanges) string {
 		}
 	}
 
+	if percentile == 0 {
+		return ""
+	}
+
 	if percentile > maxHigh {
 		return "Hot"
-	} else if percentile < maxLow {
+	} else if percentile < maxLow && percentile > 0 {
 		return "Ice"
 	}
-	return "Ice"
+	return ""
 }
 
 func DeduplicateWeights(weights AccWeights) (AccWeights, error) {
