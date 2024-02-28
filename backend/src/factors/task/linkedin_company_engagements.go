@@ -631,12 +631,14 @@ func createGroupUserAndEventsForDomainDataV2(projectID int64, eventNameViewedAD 
 	// creating/updating impr event
 	errMsg, errCode := createOrUpdateEventFromDomainDataV2(projectID, userID, eventNameViewedAD.ID, domainData, U.LI_AD_VIEW_COUNT, domainData.Impressions, unixTimestamp, imprEventsMapWithCampaign)
 	if errMsg != "" {
+		errMsg += " - impression event"
 		logCtx.Error(errMsg)
 		return errMsg, errCode
 	}
 	// creating/updating click event
 	errMsg, errCode = createOrUpdateEventFromDomainDataV2(projectID, userID, eventNameClickedAD.ID, domainData, U.LI_AD_CLICK_COUNT, domainData.Clicks, unixTimestamp+1, clicksEventsMapWithCampaign)
 	if errMsg != "" {
+		errMsg += " - click event"
 		logCtx.Error(errMsg)
 		return errMsg, errCode
 	}
@@ -654,8 +656,8 @@ func createGroupUserAndEventsForDomainDataV2(projectID int64, eventNameViewedAD 
 
 	err = store.GetStore().UpdateSyncStatusLinkedinDocs(domainData)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed in updating user creation details")
-		return "Failed in updating user creation details", http.StatusInternalServerError
+		logCtx.WithError(err).Error("Failed in updating user creation details after event and user update")
+		return "Failed in updating user creation details after event and user update", http.StatusInternalServerError
 	}
 	return "", http.StatusOK
 }

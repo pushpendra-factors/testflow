@@ -1,0 +1,13 @@
+FROM golang:1.20.3-alpine AS builder
+
+WORKDIR /go/src/factors
+ADD /factors .
+RUN go build -o $GOPATH/bin/liaccountlevelproperties $GOPATH/src/factors/migrations/scripts/run_li_account_level_properties/run_li_account_level_properties.go
+
+# Create stripped down version without go and source code
+FROM alpine:3.7
+ENV GOLANG_PROTOBUF_REGISTRATION_CONFLICT=ignore
+RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
+ADD https://github.com/golang/go/raw/master/lib/time/zoneinfo.zip /usr/local/go/lib/time/zoneinfo.zip
+COPY --from=builder /go/bin/liaccountlevelproperties /go/bin/liaccountlevelproperties
+ENTRYPOINT ["/go/bin/liaccountlevelproperties"]
