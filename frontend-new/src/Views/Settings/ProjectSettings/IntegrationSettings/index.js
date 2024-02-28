@@ -7,6 +7,8 @@ import { fetchProjectSettings, fetchProjectSettingsV1 } from 'Reducers/global';
 import { ErrorBoundary } from 'react-error-boundary';
 
 import logger from 'Utils/logger';
+import { fetchDashboards } from 'Reducers/dashboard/services';
+import { fetchQueries } from 'Reducers/coreQuery/services';
 import {
   ADWORDS_INTERNAL_REDIRECT_URI,
   createDashboardsFromTemplatesForRequiredIntegration
@@ -20,6 +22,8 @@ function IntegrationSettings({
   currentProjectSettingsLoading,
   fetchProjectSettings,
   fetchProjectSettingsV1,
+  fetchDashboards,
+  fetchQueries,
   dashboards,
   dashboardTemplates,
   sdkCheck,
@@ -38,19 +42,23 @@ function IntegrationSettings({
       if (!activeProject?.id) return;
       if (currentProjectSettingsLoading) return;
       try {
-        await createDashboardsFromTemplatesForRequiredIntegration(
+        const res = await createDashboardsFromTemplatesForRequiredIntegration(
           activeProject.id,
           dashboards.data,
-          dashboardTemplates,
+          dashboardTemplates.data,
           sdkCheck,
           currentProjectSettings,
           bingAds,
           marketo
         );
+        if (res) {
+          await fetchDashboards(activeProject.id);
+          await fetchQueries(activeProject.id);
+        }
       } catch (error) {
         logger.error('Error in creating dashboard from template', error);
       }
-    }, 3000);
+    }, 1000);
 
     return () => clearTimeout(timeout);
   }, [
@@ -176,5 +184,7 @@ const mapStateToProps = (state) => ({
 
 export default connect(mapStateToProps, {
   fetchProjectSettings,
-  fetchProjectSettingsV1
+  fetchProjectSettingsV1,
+  fetchDashboards,
+  fetchQueries
 })(IntegrationSettings);

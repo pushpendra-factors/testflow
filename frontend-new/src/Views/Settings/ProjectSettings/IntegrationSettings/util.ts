@@ -102,6 +102,8 @@ export const createDashboardsFromTemplatesForRequiredIntegration = async (
       marketo
     );
 
+    let dashboardAddedFlag = false;
+
     // looping through each possible template
     possibleTemplates.forEach(async (templateConstant: string) => {
       // checking if the dashboard is already created
@@ -113,18 +115,22 @@ export const createDashboardsFromTemplatesForRequiredIntegration = async (
         templateConstant
       );
       if (!template || !template?.id) return;
+
       if (
         IntegrationChecks.checkRequirements(template?.required_integrations)
           ?.result
       ) {
         try {
+          dashboardAddedFlag = true;
           await createDashboardFromTemplate(projectId, template.id);
         } catch (error) {
           logger.error('Error in template', error);
         }
       }
     });
+    return dashboardAddedFlag;
   } catch (error) {
     logger.error('Error in creating dashboard', error);
+    return false;
   }
 };
