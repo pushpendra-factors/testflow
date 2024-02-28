@@ -205,26 +205,28 @@ func getDefaultAllAccountProperties(projectId int64) map[string][]string {
 		return map[string][]string{}
 	}
 
-	var allAccountPropertiesCategorical, allAccountPropertiesNumerical []string
+	allAccountProperties := map[string][]string{
+		U.PropertyTypeCategorical: {U.VISITED_WEBSITE},
+	}
 	for _, group := range groups {
 		if prop, exists := U.GROUP_TO_DEFAULT_SEGMENT_MAP[group.Name]; exists {
-			allAccountPropertiesCategorical = append(allAccountPropertiesCategorical, prop)
+			allAccountProperties[U.PropertyTypeCategorical] = append(allAccountProperties[U.PropertyTypeCategorical], prop)
 		}
 	}
-	allAccountPropertiesCategorical = append(allAccountPropertiesCategorical, U.VISITED_WEBSITE, U.DP_DOMAIN_NAME, U.GROUP_EVENT_NAME_ENGAGEMENT_LEVEL)
 
 	scoringAvailable, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_ACCOUNT_SCORING, false)
 	if err != nil {
 		log.WithField("err_code", errCode).WithField("project_id", projectId).Error("Error fetching scoring availability status for the project")
 	}
 	if scoringAvailable {
-		allAccountPropertiesNumerical = append(allAccountPropertiesNumerical, U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE, U.GROUP_EVENT_NAME_TOTAL_ENGAGEMENT_SCORE)
+		for property, propType := range U.ALL_ACCOUNTS_PROPERTY_AND_TYPE {
+			if _, exists := allAccountProperties[propType]; !exists {
+				allAccountProperties[propType] = []string{}
+			}
+			allAccountProperties[propType] = append(allAccountProperties[propType], property)
+		}
 	}
 
-	allAccountProperties := map[string][]string{
-		"categorical": allAccountPropertiesCategorical,
-		"numerical":   allAccountPropertiesNumerical,
-	}
 	return allAccountProperties
 }
 
@@ -300,7 +302,7 @@ func GetGroupPropertyValuesHandler(c *gin.Context) {
 			return
 		}
 
-		if strings.EqualFold(U.GROUP_EVENT_NAME_ENGAGEMENT_LEVEL, propertyName) {
+		if strings.EqualFold(U.DP_ENGAGEMENT_LEVEL, propertyName) {
 			if label == "true" {
 				propertyValueLabel := map[string]string{model.ENGAGEMENT_LEVEL_HOT: model.ENGAGEMENT_LEVEL_HOT, model.ENGAGEMENT_LEVEL_WARM: model.ENGAGEMENT_LEVEL_WARM, model.ENGAGEMENT_LEVEL_COOL: model.ENGAGEMENT_LEVEL_COOL, model.ENGAGEMENT_LEVEL_ICE: model.ENGAGEMENT_LEVEL_ICE}
 				c.JSON(http.StatusOK, U.FilterDisplayNameEmptyKeysAndValues(projectId, propertyValueLabel))

@@ -1573,7 +1573,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 	var timelinesConfig model.TimelinesConfig
 
 	timelinesConfig.AccountConfig.TableProps = []string{U.GP_HUBSPOT_COMPANY_INDUSTRY, U.GP_HUBSPOT_COMPANY_COUNTRY,
-		U.GROUP_EVENT_NAME_ENGAGEMENT_LEVEL, U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE, U.GROUP_EVENT_NAME_TOTAL_ENGAGEMENT_SCORE, U.DP_DOMAIN_NAME}
+		U.DP_ENGAGEMENT_LEVEL, U.DP_ENGAGEMENT_SCORE, U.DP_TOTAL_ENGAGEMENT_SCORE, U.DP_DOMAIN_NAME}
 	timelinesConfig.AccountConfig.UserProp = "$hubspot_contact_jobtitle"
 	timelinesConfig.UserConfig.Milestones = []string{"$milesone_1", "$milesone_2", "$milesone_3"}
 

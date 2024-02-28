@@ -28,7 +28,7 @@ func makeUserUpdateString(user map[string]model.LatestScore, score float64) (str
 
 	updateString := make([]string, 0)
 	finalString := ""
-	engagement_string := U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE
+	engagement_string := U.DP_ENGAGEMENT_SCORE
 	for evKey, evCount := range user {
 		eventsCountjson, err := json.Marshal(evCount)
 		if err != nil {
@@ -88,10 +88,10 @@ func makeAccountUpdateString(user map[string]model.LatestScore, score, allEvents
 
 	updateString := make([]string, 0)
 	finalString := ""
-	engagement_string := U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE
-	total_engagement_string := U.GROUP_EVENT_NAME_TOTAL_ENGAGEMENT_SCORE
-	engagement_level_string := U.GROUP_EVENT_NAME_ENGAGEMENT_LEVEL
-	top_engagement_property_string := U.GROUP_EVENT_NAME_ENGAGEMENT_SIGNALS
+	engagement_string := U.DP_ENGAGEMENT_SCORE
+	total_engagement_string := U.DP_TOTAL_ENGAGEMENT_SCORE
+	engagement_level_string := U.DP_ENGAGEMENT_LEVEL
+	top_engagement_property_string := U.DP_ENGAGEMENT_SIGNALS
 
 	for evKey, evCount := range user {
 		eventsCountjson, err := json.Marshal(evCount)
