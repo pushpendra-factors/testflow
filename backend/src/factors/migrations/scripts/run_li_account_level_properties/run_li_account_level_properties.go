@@ -24,10 +24,11 @@ type Status struct {
 
 func main() {
 	env := flag.String("env", C.DEVELOPMENT, "")
-	projectIDs := flag.String("project_ids", "1", "Comma separated project ids to run for. * to run for all")
+	projectIDs := flag.String("project_ids", "", "Comma separated project ids to run for. * to run for all")
 	excludeProjectIDs := flag.String("exclude_project_ids", "", "Comma separated project ids to exclude the run for. * to exclude for all")
 
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
+	isPSCHost := flag.Int("memsql_is_psc_host", C.MemSQLDefaultDBParams.IsPSCHost, "")
 	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
 	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
@@ -62,11 +63,13 @@ func main() {
 		Env: *env,
 		MemSQLInfo: C.DBConf{
 			Host:        *memSQLHost,
+			IsPSCHost:   *isPSCHost,
 			Port:        *memSQLPort,
 			User:        *memSQLUser,
 			Name:        *memSQLName,
 			Password:    *memSQLPass,
 			Certificate: *memSQLCertificate,
+			AppName:     taskID,
 		},
 		PrimaryDatastore:              *primaryDatastore,
 		EnableDomainsGroupByProjectID: "*",
@@ -168,9 +171,10 @@ func updateGroupUserWithAccountLevelProperties(projectID int64) (string, int) {
 	for hasMore {
 		var users []model.User
 		err := db.Select(fmt.Sprintf("id, group_%d_id, is_group_user", group.ID)).
-			Where("project_id = ? and source = ? and JSON_EXTRACT_STRING(properties, ?) is null limit 10000", projectID, source, U.LI_TOTAL_AD_VIEW_COUNT).
-			Find(&users).Error
+			Where("project_id = ? and source = ? and JSON_EXTRACT_STRING(properties, ?) is null", projectID, source, U.LI_TOTAL_AD_VIEW_COUNT).
+			Limit("10000").Find(&users).Error
 		if err != nil {
+			log.WithError(err).Error("Failed to get group users")
 			return "Failed to find group users", http.StatusInternalServerError
 		}
 		if len(users) == 0 {
@@ -180,10 +184,12 @@ func updateGroupUserWithAccountLevelProperties(projectID int64) (string, int) {
 
 		imprEventName, err := store.GetStore().GetEventNameIDFromEventName(U.GROUP_EVENT_NAME_LINKEDIN_VIEWED_AD, projectID)
 		if err != nil {
+			log.WithError(err).Error("Failed to get impr event name")
 			return "Failed to get impression eventname", http.StatusInternalServerError
 		}
 		clickEventName, err := store.GetStore().GetEventNameIDFromEventName(U.GROUP_EVENT_NAME_LINKEDIN_CLICKED_AD, projectID)
 		if err != nil {
+			log.WithError(err).Error("Failed to get clicks event name")
 			return "Failed to get click eventname", http.StatusInternalServerError
 		}
 		for _, user := range users {
@@ -212,10 +218,11 @@ func precheckExitingUsersWithoutAccountLevelProperty(projectID int64) (bool, int
 
 	source := model.GetGroupUserSourceByGroupName(U.GROUP_NAME_LINKEDIN_COMPANY)
 	var userCountWithProperty UserCount
-	err := db.Select("count(*) as user_count").
+	err := db.Table("users").Select("count(*) as user_count").
 		Where("project_id = ? and source = ? and JSON_EXTRACT_STRING(properties, ?) is not null", projectID, source, U.LI_TOTAL_AD_VIEW_COUNT).
 		Find(&userCountWithProperty).Error
 	if err != nil {
+		log.WithError(err).Error("Failed running precheck query")
 		return false, http.StatusInternalServerError
 	}
 	if userCountWithProperty.UserCount > 0 {
@@ -280,10 +287,11 @@ func postcheckExitingUsersWithoutAccountLevelProperty(projectID int64) (bool, in
 
 	source := model.GetGroupUserSourceByGroupName(U.GROUP_NAME_LINKEDIN_COMPANY)
 	var userCountWithoutProperty UserCount
-	err := db.Select("count(*) as user_count").
+	err := db.Table("users").Select("count(*) as user_count").
 		Where("project_id = ? and source = ? and JSON_EXTRACT_STRING(properties, ?) is null", projectID, source, U.LI_TOTAL_AD_VIEW_COUNT).
 		Find(&userCountWithoutProperty).Error
 	if err != nil {
+		log.WithError(err).Error("Failed running postcheck query")
 		return false, http.StatusInternalServerError
 	}
 	if userCountWithoutProperty.UserCount > 0 {
