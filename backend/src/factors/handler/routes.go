@@ -859,6 +859,8 @@ func ConvertDashboard(data M.Dashboard) M.DashboardString {
 		Class:         data.Class,
 		UnitsPosition: data.UnitsPosition,
 		InternalID:    data.InternalID,
+		TemplateType:  data.TemplateType,
+		FolderID:      data.FolderID,
 		IsDeleted:     data.IsDeleted,
 		CreatedAt:     data.CreatedAt,
 		UpdatedAt:     data.UpdatedAt,
