@@ -1118,7 +1118,7 @@ function AccountProfiles({
         });
       }
     },
-    [activeAgent, activeProject.id, appliedFilters]
+    [activeAgent, activeProject.id, appliedFilters, downloadCSVOptions]
   );
 
   const closeDownloadCSVModal = useCallback(() => {
