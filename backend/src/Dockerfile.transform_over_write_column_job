@@ -2,7 +2,7 @@ FROM golang:1.20.3-alpine AS builder
 
 WORKDIR /go/src/factors
 ADD /factors .
-RUN go build -o $GOPATH/bin/transform_over_write_column_job $GOPATH/src/factors/scripts/adhoc/run_transform_over_write_column/run_transform_over_write_column.go
+RUN go build -o $GOPATH/bin/transform_over_write_column $GOPATH/src/factors/scripts/adhoc/run_transform_over_write_column/run_transform_over_write_column.go
 
 # Create stripped down version without go and source code
 FROM alpine:3.7
