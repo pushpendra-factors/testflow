@@ -99,7 +99,7 @@ func (store *MemSQL) GetFeatureLimitForProject(projectID int64, featureName stri
 			return 0, errors.New("Feature is disabled for this project")
 		}
 		isEnabled = true
-		limit += featureList[featureName].Limit
+		limit += addOns[featureName].Limit
 	}
 
 	if !isEnabled {
