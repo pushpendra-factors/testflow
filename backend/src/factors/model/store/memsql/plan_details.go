@@ -105,7 +105,7 @@ func (store *MemSQL) GetDisplayablePlanDetails(ppMap model.ProjectPlanMapping, p
 			return nil, http.StatusBadRequest, errMsg, err
 		}
 	}
-	enabledAddOns :=make(map[string]model.FeatureDetails)
+	enabledAddOns := make(map[string]model.FeatureDetails)
 
 	for featureName, feature := range addOns {
 		enabledAddOns[featureName] = feature
@@ -451,6 +451,11 @@ func (store *MemSQL) CreateAddonsForCustomPlanForProject(projectID int64) error 
 	overWrite := make(map[string]model.FeatureDetails)
 	for fname := range basicFeatureList {
 		overWrite[fname] = basicFeatureList[fname]
+		if fname == model.FEATURE_FACTORS_DEANONYMISATION {
+			updatedFeature := overWrite[fname]
+			updatedFeature.Limit = 500
+			overWrite[fname] = updatedFeature
+		}
 	}
 
 	_, err = store.UpdateAddonsForProject(projectID, overWrite)
