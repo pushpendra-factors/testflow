@@ -142,7 +142,7 @@ func isFeatureAvailableForProject(featureList model.FeatureList, addOns model.Ov
 		return featureList[featureName].IsEnabledFeature
 	}
 	if _, exists := addOns[featureName]; exists {
-		return featureList[featureName].IsEnabledFeature
+		return addOns[featureName].IsEnabledFeature
 	}
 
 	return false
