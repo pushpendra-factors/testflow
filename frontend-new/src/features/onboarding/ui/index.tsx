@@ -1,8 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import OnboardingLayout from './components/OnboardingLayout';
 import { bindActionCreators } from 'redux';
 import { ConnectedProps, connect, useSelector } from 'react-redux';
 import { setShowAnalyticsResult } from 'Reducers/coreQuery/actions';
+import useQuery from 'hooks/useQuery';
+import { useProductFruitsApi } from 'react-product-fruits';
+import { useHistory } from 'react-router-dom';
+import { fetchProjectSettings, getActiveProjectDetails } from 'Reducers/global';
+import { isEmpty } from 'lodash';
+import { PathUrls } from 'Routes/pathUrls';
+import OnboardingLayout from './components/OnboardingLayout';
 import onboardingStep1Image from '../../../assets/images/onboarding_step1.png';
 import onboardingStep2Image from '../../../assets/images/onboarding_step2.png';
 import onboardingStep3Image from '../../../assets/images/onboarding_step3.png';
@@ -13,14 +19,8 @@ import Step2 from './components/OnboardingSteps/SetupSdk';
 import Step4 from './components/OnboardingSteps/TypformDetails';
 import Step3 from './components/OnboardingSteps/VisitorIdentificationSetup';
 import Step5 from './components/OnboardingSteps/AfterSetupScreen';
-import useQuery from 'hooks/useQuery';
 import { OnboardingStepsConfig } from './types';
 import { getCurrentStep } from '../utils';
-import { useProductFruitsApi } from 'react-product-fruits';
-import { useHistory } from 'react-router-dom';
-import { fetchProjectSettings, getActiveProjectDetails } from 'Reducers/global';
-import { isEmpty } from 'lodash';
-import { PathUrls } from 'Routes/pathUrls';
 
 const getIllustrationImage = (currentStep: number): string => {
   switch (currentStep) {
@@ -70,13 +70,13 @@ function Onboarding({
     }
     // going back to previous project
     if (projects.length) {
-      let activeItem = projects?.filter(
+      const activeItem = projects?.filter(
         (item) => item.id === localStorage.getItem('prevActiveProject')
       );
 
-      //handling project redirection
+      // handling project redirection
       let projectDetails = isEmpty(activeItem) ? projects[0] : activeItem[0];
-      //if previous projectId and current projectId are same then changing the project
+      // if previous projectId and current projectId are same then changing the project
       if (projectDetails?.id === active_project?.id) {
         if (projects[0]?.id !== active_project?.id) {
           projectDetails = projects[0];
@@ -102,7 +102,7 @@ function Onboarding({
     if (currentStep > 0) setCurrentStep(currentStep - 1);
   };
 
-  //Effect for hiding the side panel and menu
+  // Effect for hiding the side panel and menu
   useEffect(() => {
     setShowAnalyticsResult(true);
 
@@ -111,7 +111,7 @@ function Onboarding({
     };
   }, [setShowAnalyticsResult]);
 
-  //hiding product fruits help center button
+  // hiding product fruits help center button
   useProductFruitsApi((api) => {
     api.button.hide();
     return () => {
@@ -125,7 +125,7 @@ function Onboarding({
       setCurrentStep(1);
       return;
     }
-    let step = getCurrentStep(onboarding_steps);
+    const step = getCurrentStep(onboarding_steps);
     setCurrentStep(step);
   }, [onboarding_steps, paramSetup]);
 

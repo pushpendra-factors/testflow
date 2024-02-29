@@ -15,7 +15,6 @@ import {
 } from 'antd';
 import useMobileView from 'hooks/useMobileView';
 import React, { useEffect, useState } from 'react';
-import style from './index.module.scss';
 import CodeBlockV2 from 'Components/CodeBlock/CodeBlockV2';
 import { ConnectedProps, connect, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
@@ -29,17 +28,22 @@ import {
   generateSdkScriptCodeForPdf
 } from 'Views/Settings/ProjectSettings/SDKSettings/utils';
 import { PDFDownloadLink } from '@react-pdf/renderer';
+import GTMSteps from 'Views/Settings/ProjectSettings/SDKSettings/GTMSteps';
+import { LoadingOutlined } from '@ant-design/icons';
+import { delay } from 'Utils/global';
 import StepsPdf from './StepsPdf';
-import { OnboardingSupportLink, generateCopyText } from '../../../utils';
+import {
+  OnboardingSupportLink,
+  SDKDocumentation,
+  generateCopyText
+} from '../../../utils';
 import {
   CommonStepsProps,
   OnboardingStepsConfig,
   SDK_SETUP
 } from '../../types';
-import GTMSteps from 'Views/Settings/ProjectSettings/SDKSettings/GTMSteps';
-import { LoadingOutlined } from '@ant-design/icons';
 
-import { delay } from 'Utils/global';
+import style from './index.module.scss';
 
 const { Panel } = Collapse;
 const LoadingIcon = <LoadingOutlined style={{ fontSize: 20 }} spin />;
@@ -75,7 +79,7 @@ function Step2({
   const int_completed = projectSettingsV1?.int_completed;
   const onboarding_steps: OnboardingStepsConfig =
     currentProjectSettings?.onboarding_steps;
-  const [sdkVerified, setSdkVerified] = useState(int_completed ? true : false);
+  const [sdkVerified, setSdkVerified] = useState(!!int_completed);
 
   const projectToken = active_project.token;
   const assetURL = currentProjectSettings.sdk_asset_url;
@@ -113,10 +117,10 @@ function Step2({
           </div>
 
           <Text
-            type={'title'}
+            type='title'
             level={6}
-            color={'character-primary'}
-            extraClass={'m-0 '}
+            color='character-primary'
+            extraClass='m-0 '
           >
             Checking for website data. It may take some time
           </Text>
@@ -126,12 +130,12 @@ function Step2({
       {sdkVerified && !verificationLoading[type] && (
         <div className='flex justify-between items-center'>
           <div className='flex  items-center'>
-            <SVG name={'CheckCircle'} extraClass={'inline'} color='#52C41A' />
+            <SVG name='CheckCircle' extraClass='inline' color='#52C41A' />
             <Text
-              type={'title'}
+              type='title'
               level={6}
-              color={'character-primary'}
-              extraClass={'m-0 ml-2 inline'}
+              color='character-primary'
+              extraClass='m-0 ml-2 inline'
             >
               {type === 'cdp'
                 ? 'Events recieved successfully. 🎉'
@@ -139,8 +143,8 @@ function Step2({
             </Text>
           </div>
           <Button
-            type={'text'}
-            size={'small'}
+            type='text'
+            size='small'
             style={{ color: '#1890FF' }}
             onClick={() => handleSdkVerification(type)}
             loading={verificationLoading[type]}
@@ -166,20 +170,20 @@ function Step2({
       )}
       {errorState[type] && !verificationLoading[type] && (
         <div className='flex items-center'>
-          <SVG name={'CloseCircle'} extraClass={'inline'} color='#F5222D' />
+          <SVG name='CloseCircle' extraClass='inline' color='#F5222D' />
           <Text
-            type={'title'}
+            type='title'
             level={6}
-            color={'character-primary'}
-            extraClass={'m-0 ml-2 inline'}
+            color='character-primary'
+            extraClass='m-0 ml-2 inline'
           >
             {type === 'cdp'
               ? 'No events received so far.'
               : 'Couldn’t detect SDK.'}
           </Text>
           <Button
-            type={'text'}
-            size={'small'}
+            type='text'
+            size='small'
             style={{ color: '#1890FF', padding: 0 }}
             onClick={() => handleSdkVerification(type)}
             loading={verificationLoading[type]}
@@ -187,16 +191,16 @@ function Step2({
             Verify again
           </Button>
           <Text
-            type={'title'}
+            type='title'
             level={6}
-            color={'character-primary'}
-            extraClass={'m-0 ml-1 inline'}
+            color='character-primary'
+            extraClass='m-0 ml-1 inline'
           >
             or
           </Text>
           <Button
-            type={'text'}
-            size={'small'}
+            type='text'
+            size='small'
             style={{ color: '#1890FF', padding: 0, marginLeft: 4 }}
             onClick={() => window.open(OnboardingSupportLink, '_blank')}
           >
@@ -220,7 +224,7 @@ function Step2({
 
   const renderManualSetupContent = () => (
     <div className='flex flex-col gap-1.5 px-4'>
-      <Text type='paragraph' color='mono-6' extraClass={'m-0'}>
+      <Text type='paragraph' color='mono-6' extraClass='m-0'>
         Add the below javascript code on every page between the &lt;head&gt; and
         &lt;/head&gt; tags.
       </Text>
@@ -237,9 +241,9 @@ function Step2({
     <div className='w-full'>
       <div className='flex gap-2'>
         <Text
-          type={'title'}
+          type='title'
           level={5}
-          weight={'bold'}
+          weight='bold'
           color='character-primary'
           extraClass='m-0'
         >
@@ -252,12 +256,7 @@ function Step2({
         )}
       </div>
 
-      <Text
-        type={'title'}
-        level={6}
-        color='character-secondary'
-        extraClass='m-0'
-      >
+      <Text type='title' level={6} color='character-secondary' extraClass='m-0'>
         {subtitle}
       </Text>
     </div>
@@ -268,8 +267,8 @@ function Step2({
       <Text
         type='paragraph'
         color='character-secondary'
-        weight={'bold'}
-        extraClass={'m-0 mb-4 -ml-4'}
+        weight='bold'
+        extraClass='m-0 mb-4 -ml-4'
       >
         Select your CDP
       </Text>
@@ -311,7 +310,7 @@ function Step2({
         {cdpType && (
           <>
             <div className='mt-6 flex flex-col gap-4'>
-              <Text type={'title'} level={6} color='mono-6' extraClass='m-0'>
+              <Text type='title' level={6} color='mono-6' extraClass='m-0'>
                 1. Take your API key and configure Factors as a destination in
                 your {_.camelCase(cdpType)} Workspace.
               </Text>
@@ -335,7 +334,7 @@ function Step2({
                   </Tooltip>
                 </Input.Group>
               </div>
-              <Text type={'title'} level={6} color='mono-6' extraClass='m-0'>
+              <Text type='title' level={6} color='mono-6' extraClass='m-0'>
                 2. Once done, enable all the data sources inside{' '}
                 {_.camelCase(cdpType)} that you would like to send to factors
               </Text>
@@ -382,7 +381,7 @@ function Step2({
         >
           <Text
             color='character-primary'
-            type={'title'}
+            type='title'
             level={7}
             extraClass='m-0 inline'
           >
@@ -482,12 +481,11 @@ function Step2({
         className='flex items-center font-semibold gap-2'
         target='_blank'
         to={{
-          pathname:
-            'https://help.factors.ai/en/articles/7260638-connecting-factors-to-your-website'
+          pathname: SDKDocumentation
         }}
       >
         <SVG name='ArrowUpRightSquare' color='#40A9FF' />
-        <Text type={'title'} level={6} color='brand-color' extraClass='m-0'>
+        <Text type='title' level={6} color='brand-color' extraClass='m-0'>
           Documentation
         </Text>
       </Link>
@@ -625,17 +623,17 @@ function Step2({
           >
             <div className='w-full'>
               <Text
-                type={'title'}
+                type='title'
                 level={3}
-                color={'character-primary'}
-                extraClass={'m-0'}
-                weight={'bold'}
+                color='character-primary'
+                extraClass='m-0'
+                weight='bold'
               >
                 Connect with your website
               </Text>
               <div className='flex flex-wrap gap-1 mt-1 w-full'>
                 <Text
-                  type={'title'}
+                  type='title'
                   level={6}
                   extraClass={`m-0 ${isMobileView ? 'w-full' : ''}`}
                   color='character-secondary'
@@ -658,11 +656,11 @@ function Step2({
         )}
         <Col className='mt-8' span={24}>
           <Text
-            type={'title'}
+            type='title'
             level={6}
             color='character-primary'
             extraClass='m-0 mb-4'
-            weight={'bold'}
+            weight='bold'
           >
             Use Factors SDK
           </Text>
@@ -672,7 +670,7 @@ function Step2({
             className={style.collapse}
           >
             <Panel
-              key={'gtm'}
+              key='gtm'
               header={generateCollapseHeader(
                 'Setup using GTM',
                 'Add Factors SDK quickly using Google Tag Manager without any engineering effort',
@@ -689,7 +687,7 @@ function Step2({
               className={style.collapse}
             >
               <Panel
-                key={'manual'}
+                key='manual'
                 header={generateCollapseHeader(
                   'Manual Setup',
                   'Add Factors SDK manually in the head section for all pages you wish to get data for'
@@ -702,11 +700,11 @@ function Step2({
         </Col>
         <Col className='mt-10' span={24}>
           <Text
-            type={'title'}
+            type='title'
             level={6}
             color='character-primary'
             extraClass='m-0 mb-4'
-            weight={'bold'}
+            weight='bold'
           >
             Use a third party data source
           </Text>
@@ -716,7 +714,7 @@ function Step2({
             className={style.collapse}
           >
             <Panel
-              key={'gtm'}
+              key='gtm'
               header={generateCollapseHeader(
                 'Use a Customer Data Platform',
                 'Use an existing Customer Data Platform to bring in website data and events'
@@ -746,7 +744,7 @@ function Step2({
             <Button
               type='primary'
               loading={loading}
-              className={'m-0'}
+              className='m-0'
               onClick={handleSDkSubmission}
               disabled={!sdkVerified}
             >

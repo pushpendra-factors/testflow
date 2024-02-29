@@ -51,7 +51,7 @@ const CONFIG = {
       websitevisitoridentification: 'bf721a15-a5c4-4db9-9435-924f4c544850',
       allpaidmarketing: '39562070-e824-455d-b112-62b16b496d6f'
     },
-    typeformId: 'FLAEamGj'
+    typeformId: 'V77wqsJ6'
   }
 };
 
