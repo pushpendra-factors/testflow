@@ -48,6 +48,7 @@ import { getSegmentColorCode } from 'Views/AppSidebar/appSidebar.helpers';
 import ResizableTitle from 'Components/Resizable';
 import logger from 'Utils/logger';
 import useAutoFocus from 'hooks/useAutoFocus';
+import { invalidBreakdownPropertiesList } from 'Constants/general.constants';
 import styles from './index.module.scss';
 import {
   getGroups,
@@ -63,11 +64,7 @@ import RenameSegmentModal from './RenameSegmentModal';
 import DeleteSegmentModal from './DeleteSegmentModal';
 import SaveSegmentModal from './SaveSegmentModal';
 import UpgradeModal from '../UpgradeModal';
-import {
-  checkFiltersEquality,
-  defaultSegmentsList,
-  getColumns
-} from './accountProfiles.helpers';
+import { defaultSegmentsList, getColumns } from './accountProfiles.helpers';
 import ProfilesWrapper from '../ProfilesWrapper';
 import NoDataWithMessage from '../MyComponents/NoDataWithMessage';
 import {
@@ -88,8 +85,6 @@ import {
 } from '../utils';
 import PropertyFilter from './PropertyFilter';
 import { Text, SVG } from '../../factorsComponents';
-import { DEFAULT_TIMELINE_CONFIG } from '../constants';
-import { invalidBreakdownPropertiesList } from 'Constants/general.constants';
 
 function AccountProfiles({
   activeProject,
@@ -106,8 +101,6 @@ function AccountProfiles({
   updateSegmentForId,
   deleteSegment
 }) {
-  const [componentLoading, setComponentLoading] = useState(false);
-
   const [currentPage, setCurrentPage] = useState(1);
   const [currentPageSize, setCurrentPageSize] = useState(25);
   const [searchBarOpen, setSearchBarOpen] = useState(false);
@@ -179,8 +172,6 @@ function AccountProfiles({
 
   const runInit = async () => {
     try {
-      setComponentLoading(true);
-
       if (activeProject?.id) {
         await Promise.allSettled([
           fetchProjectSettings(activeProject.id),
@@ -197,8 +188,6 @@ function AccountProfiles({
       }
     } catch (err) {
       logger.error(err);
-    } finally {
-      setComponentLoading(false);
     }
   };
 
@@ -311,7 +300,7 @@ function AccountProfiles({
         setAppliedFilters(cloneDeep(filters));
         setSelectedFilters(filters);
         setFiltersDirty(false);
-        if (Boolean(accountPayload?.segment?.id)) setFiltersExpanded(false);
+        if (accountPayload?.segment?.id) setFiltersExpanded(false);
       } else {
         restoreFiltersDefaultState();
       }
@@ -386,7 +375,7 @@ function AccountProfiles({
 
     deleteSegment({
       projectId: activeProject.id,
-      segmentId: segmentId
+      segmentId
     })
       .then(() => {
         setMoreActionsModalMode(null);
@@ -455,14 +444,15 @@ function AccountProfiles({
   }, [segmentID, accountPayload]);
 
   const tableData = useMemo(() => {
-    const sortedData = accounts?.data?.sort(
+    const activeID = segmentID || 'default';
+    const sortedData = accounts.data[activeID]?.sort(
       (a, b) => new Date(b.last_activity) - new Date(a.last_activity)
     );
     return sortedData?.map((row) => ({
       ...row,
       ...row?.tableProps
     }));
-  }, [accounts]);
+  }, [accounts, segmentID]);
 
   const applyFilters = useCallback(() => {
     const updatedFilters = cloneDeep(selectedFilters);
@@ -482,7 +472,7 @@ function AccountProfiles({
       });
     } else {
       const newPayload = { ...accountPayload };
-      if (!Boolean(newPayload.segment)) {
+      if (!newPayload.segment) {
         newPayload.segment = {};
       }
       newPayload.segment.query = reqPayload.query;
@@ -604,7 +594,7 @@ function AccountProfiles({
     );
 
     if (
-      !Boolean(accountPayload?.segment?.id) ||
+      !accountPayload?.segment?.id ||
       defaultSegmentsList.includes(accountPayload?.segment?.name)
     ) {
       return accountEngagement;
@@ -686,7 +676,7 @@ function AccountProfiles({
       setSaveSegmentModal(true);
       return;
     }
-    if (Boolean(accountPayload?.segment?.id)) {
+    if (accountPayload?.segment?.id) {
       setUpdateSegmentModal(true);
     } else {
       setSaveSegmentModal(true);
@@ -952,7 +942,7 @@ function AccountProfiles({
 
       location.state.accountsTableRow = '';
     }
-  }, [newTableColumns, location.state, componentLoading]);
+  }, [newTableColumns, location.state]);
 
   const renderTable = useCallback(() => {
     const mergeColumns = newTableColumns.map((col, index) => ({
@@ -980,7 +970,8 @@ function AccountProfiles({
                   currentPageSize,
                   activeSorter: defaultSorterInfo,
                   appliedFilters: areFiltersDirty ? appliedFilters : null,
-                  accountsTableRow: account.name
+                  accountsTableRow: account.name,
+                  path: location.pathname
                 }
               );
             }
@@ -1141,7 +1132,7 @@ function AccountProfiles({
   );
 
   const titleIcon = useMemo(() => {
-    if (Boolean(accountPayload?.segment?.id)) {
+    if (accountPayload?.segment?.id) {
       return defaultSegmentIconsMapping[accountPayload?.segment?.name]
         ? defaultSegmentIconsMapping[accountPayload?.segment?.name]
         : 'pieChart';
@@ -1197,14 +1188,13 @@ function AccountProfiles({
           </ControlledComponent>
         </div>
       </div>
-      <ControlledComponent controller={componentLoading || accounts.isLoading}>
+      <ControlledComponent controller={accounts.isLoading}>
         <Spin size='large' className='fa-page-loader' />
       </ControlledComponent>
       <ControlledComponent
         controller={
           !accounts.isLoading &&
-          !componentLoading &&
-          accounts.data?.length > 0 &&
+          accounts.data?.[segmentID || 'default']?.length > 0 &&
           (!newSegmentMode || areFiltersDirty)
         }
       >
@@ -1225,15 +1215,16 @@ function AccountProfiles({
       <ControlledComponent
         controller={
           !accounts.isLoading &&
-          !componentLoading &&
-          accounts.data.length === 0 &&
+          (!accounts.data[segmentID || 'default'] ||
+            accounts.data[segmentID || 'default'].length === 0) &&
           (!newSegmentMode || areFiltersDirty)
         }
       >
         <NoDataWithMessage
           message={
             isOnboarded(currentProjectSettings)
-              ? accounts?.data?.length === 0
+              ? !accounts.data[segmentID || 'default'] ||
+                accounts.data[segmentID || 'default'].length === 0
                 ? 'No Accounts found'
                 : errMsg
               : 'Onboarding not completed'

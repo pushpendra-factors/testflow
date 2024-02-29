@@ -1,3 +1,4 @@
+import logger from 'Utils/logger';
 import {
   fetchProfileAccounts,
   fetchProfileAccountDetails,
@@ -15,7 +16,7 @@ import { deleteSegmentAction } from './actions';
 export const getProfileAccounts =
   (projectId, payload, agentId) => (dispatch) => {
     dispatch({ type: 'FETCH_PROFILE_ACCOUNTS_LOADING' });
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       fetchProfileAccounts(projectId, payload, agentId)
         .then((response) => {
           const data = response.data?.map((account) => ({
@@ -29,19 +30,18 @@ export const getProfileAccounts =
             dispatch({
               type: 'FETCH_PROFILE_ACCOUNTS_FULFILLED',
               payload: data,
+              segmentID: payload.segment_id,
               status: response.status
             })
           );
         })
         .catch((err) => {
-          console.log(err);
-          resolve(
-            dispatch({
-              type: 'FETCH_PROFILE_ACCOUNTS_FAILED',
-              payload: [],
-              error: err
-            })
-          );
+          dispatch({
+            type: 'FETCH_PROFILE_ACCOUNTS_FAILED',
+            payload: [],
+            error: err
+          });
+          reject(err);
         });
     });
   };
@@ -61,7 +61,7 @@ export const getProfileAccountDetails =
           );
         })
         .catch((err) => {
-          console.log(err);
+          logger.error(err);
           resolve(
             dispatch({
               type: 'FETCH_PROFILE_ACCOUNT_DETAILS_FAILED',
@@ -86,7 +86,7 @@ export const getAccountOverview = (projectId, source, id) => (dispatch) => {
         );
       })
       .catch((err) => {
-        console.log(err);
+        logger.error(err);
         resolve(
           dispatch({
             type: 'FETCH_PROFILE_ACCOUNT_OVERVIEW_FAILED',
@@ -117,7 +117,7 @@ export const getProfileUsers = (projectId, payload) => (dispatch) => {
         );
       })
       .catch((err) => {
-        console.log(err);
+        logger.error(err);
         resolve(
           dispatch({
             type: 'FETCH_PROFILE_USERS_FAILED',
@@ -144,7 +144,7 @@ export const getProfileUserDetails =
           );
         })
         .catch((err) => {
-          console.log(err);
+          logger.error(err);
           resolve(
             dispatch({
               type: 'FETCH_PROFILE_USER_DETAILS_FAILED',
