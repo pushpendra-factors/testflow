@@ -181,22 +181,30 @@ class DataTransformation:
         if doc_type == CAMPAIGNS:
             for data in metadata:
                 campaign_group_id = str(data['campaignGroup'].split(':')[3])
-                campaign_info[str(data['id'])] = {
-                                                'campaign_group_id': campaign_group_id,
-                                                'campaign_id': str(data['id']),
-                                                'campaign_name': data['name'], 
-                                                'campaign_status': data['status'], 
-                                                'campaign_type': data['type']}
+                dict_to_add = {
+                                'campaign_group_id': campaign_group_id,
+                                'campaign_id': str(data['id']),
+                                'campaign_name': data['name'], 
+                                'campaign_status': data['status'], 
+                                'campaign_type': data['type']
+                                }
+                campaign_info[str(data['id'])] = dict_to_add
+                data.update(dict_to_add)
+                updated_metadata.append(data)
         
         if doc_type == CREATIVES:
             for data in metadata:
                 campaign_id = str(data['campaign'].split(':')[3])
                 campaign_group_id = campaign_info[campaign_id][CAMPAIGN_GROUP_ID]
-                creative_info[str(data['id'])] = {
-                                                'campaign_group_id': campaign_group_id, 
-                                                'campaign_id': campaign_id ,
-                                                'creative_id': str(data['id']), 
-                                                'creative_status': data['status'], 
-                                                'creative_type': data['type']}
+                dict_to_add = {
+                                'campaign_group_id': campaign_group_id, 
+                                'campaign_id': campaign_id ,
+                                'creative_id': str(data['id']), 
+                                'creative_status': data['status'], 
+                                'creative_type': data['type']
+                            }
+                creative_info[str(data['id'])] = dict_to_add
+                data.update(dict_to_add)
+                updated_metadata.append(data)
         return updated_metadata
         
