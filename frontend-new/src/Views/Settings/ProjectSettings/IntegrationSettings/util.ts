@@ -105,29 +105,35 @@ export const createDashboardsFromTemplatesForRequiredIntegration = async (
     let dashboardAddedFlag = false;
 
     // looping through each possible template
-    possibleTemplates.forEach(async (templateConstant: string) => {
-      // checking if the dashboard is already created
-      if (checkIfDashboardIsAlreadyCreated(dashboards, templateConstant))
-        return;
-      // now checking if all the possible integration are integrated or not
-      const template = getTemplateFromTemplateConstant(
-        templates,
-        templateConstant
-      );
-      if (!template || !template?.id) return;
-
-      if (
-        IntegrationChecks.checkRequirements(template?.required_integrations)
-          ?.result
-      ) {
-        try {
-          dashboardAddedFlag = true;
-          await createDashboardFromTemplate(projectId, template.id);
-        } catch (error) {
-          logger.error('Error in template', error);
+    possibleTemplates
+      .filter(
+        // filtering only templates for which dashboards are not there
+        (templateConstant) =>
+          !checkIfDashboardIsAlreadyCreated(dashboards, templateConstant)
+      )
+      .map((templateConstant) => {
+        // mapping only template constants which have template id
+        const template = getTemplateFromTemplateConstant(
+          templates,
+          templateConstant
+        );
+        if (!template || !template?.id) return false;
+        return {
+          id: template.id,
+          requiredIntegrations: template?.required_integrations
+        };
+      })
+      .filter((t) => !!t)
+      .forEach(async ({ id, requiredIntegrations }) => {
+        if (IntegrationChecks.checkRequirements(requiredIntegrations)?.result) {
+          try {
+            dashboardAddedFlag = true;
+            await createDashboardFromTemplate(projectId, id);
+          } catch (error) {
+            logger.error('Error in template', error);
+          }
         }
-      }
-    });
+      });
     return dashboardAddedFlag;
   } catch (error) {
     logger.error('Error in creating dashboard', error);
