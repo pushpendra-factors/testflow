@@ -48,6 +48,7 @@ import { getSegmentColorCode } from 'Views/AppSidebar/appSidebar.helpers';
 import ResizableTitle from 'Components/Resizable';
 import logger from 'Utils/logger';
 import useAutoFocus from 'hooks/useAutoFocus';
+import { invalidBreakdownPropertiesList } from 'Constants/general.constants';
 import styles from './index.module.scss';
 import {
   getGroups,
@@ -63,11 +64,7 @@ import RenameSegmentModal from './RenameSegmentModal';
 import DeleteSegmentModal from './DeleteSegmentModal';
 import SaveSegmentModal from './SaveSegmentModal';
 import UpgradeModal from '../UpgradeModal';
-import {
-  checkFiltersEquality,
-  defaultSegmentsList,
-  getColumns
-} from './accountProfiles.helpers';
+import { defaultSegmentsList, getColumns } from './accountProfiles.helpers';
 import ProfilesWrapper from '../ProfilesWrapper';
 import NoDataWithMessage from '../MyComponents/NoDataWithMessage';
 import {
@@ -88,12 +85,10 @@ import {
 } from '../utils';
 import PropertyFilter from './PropertyFilter';
 import { Text, SVG } from '../../factorsComponents';
-import { invalidBreakdownPropertiesList } from 'Constants/general.constants';
 
 function AccountProfiles({
   activeProject,
   accounts,
-  segments,
   currentProjectSettings,
   createNewSegment,
   getSavedSegments,
@@ -135,7 +130,7 @@ function AccountProfiles({
   const { segment_id: segmentID } = useParams();
 
   const { projectDomainsList } = useSelector((state) => state.global);
-  const { groups, groupProperties, groupPropNames } = useSelector(
+  const { groups, groupProperties, groupPropNames, eventNames } = useSelector(
     (state) => state.coreQuery
   );
 
@@ -336,6 +331,9 @@ function AccountProfiles({
       updateSegmentForId(activeProject.id, accountPayload?.segment?.id, {
         name
       }).then(() => {
+        const updatedPayload = { ...accountPayload };
+        updatedPayload.segment.name = name;
+        setAccountPayload(updatedPayload);
         getSavedSegments(activeProject.id);
         setMoreActionsModalMode(null);
         notification.success({
@@ -527,6 +525,9 @@ function AccountProfiles({
       await updateSegmentForId(activeProject.id, accountPayload.segment.id, {
         query: updatedQuery
       });
+      const updatedPayload = { ...accountPayload };
+      updatedPayload.segment.query = updatedQuery;
+      setAccountPayload({ ...updatedPayload });
       await getSavedSegments(activeProject.id);
     } else {
       const enabledProps = checkListAccountProps
@@ -909,6 +910,7 @@ function AccountProfiles({
         isScoringLocked,
         displayTableProps,
         groupPropNames,
+        eventNames,
         listProperties,
         defaultSorterInfo,
         projectDomainsList,
