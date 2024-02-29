@@ -75,7 +75,6 @@ func main() {
 
 	userPropertyUpdateOptProjects := flag.String("user_property_update_opt_projects", "", "")
 
-	companyEnrichmentV1ProjectIDs := flag.String("company_enrichment_v1__projectIds", "", "To enable clearbit enrichment in new properties")
 	chargebeeApiKey := flag.String("chargebee_api_key", "dummy", "Chargebee api key")
 	chargebeeSiteName := flag.String("chargebee_site_name", "dummy", "Chargebee site name")
 	mailmodoTriggerCampaignAPIKey := flag.String("mailmodo_trigger_campaign_api_key", "dummy", "Mailmodo Email Alert API Key")
@@ -136,7 +135,6 @@ func main() {
 		DeviceServiceURL:                                   *deviceServiceUrl,
 		EnableDeviceServiceByProjectID:                     *enableDeviceServiceByProjectID,
 		UserPropertyUpdateOptProjects:                      *userPropertyUpdateOptProjects,
-		CompanyEnrichmentV1ProjectIDs:                      *companyEnrichmentV1ProjectIDs,
 		AccountLimitEmailAlertProjectIDs:                   *accountLimitAlertProjectIDs,
 		ChargebeeApiKey:                                    *chargebeeApiKey,
 		ChargebeeSiteName:                                  *chargebeeSiteName,

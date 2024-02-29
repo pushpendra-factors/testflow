@@ -340,7 +340,6 @@ type Configuration struct {
 	ChargebeeApiKey                                      string
 	ChargebeeSiteName                                    string
 	UserPropertyUpdateOptProjects                        string
-	CompanyEnrichmentV1ProjectIDs                        string
 	AccountLimitEmailAlertProjectIDs                     string
 	AssociateDealToDomainByProjectID                     string
 	EnableSyncTriesFlag                                  bool
@@ -2496,28 +2495,6 @@ func GetSDKAndIntegrationMetricNameByConfig(metricName string) string {
 	}
 
 	return metricName
-}
-
-func IsCompanyEnrichmentV1Enabled(projectId int64) bool {
-
-	if configuration.CompanyEnrichmentV1ProjectIDs == "" {
-		return false
-	}
-
-	if configuration.CompanyEnrichmentV1ProjectIDs == "*" {
-		return true
-	}
-
-	projectIDstr := fmt.Sprintf("%d", projectId)
-	projectIDs := strings.Split(configuration.CompanyEnrichmentV1ProjectIDs, ",")
-	for i := range projectIDs {
-		if projectIDs[i] == projectIDstr {
-			return true
-		}
-	}
-
-	return false
-
 }
 
 func IsAccountLimitEmailAlertEnabled(projectId int64) bool {
