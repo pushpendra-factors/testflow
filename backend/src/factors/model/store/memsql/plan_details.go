@@ -216,7 +216,6 @@ func (store *MemSQL) GetPlanDetailsAndAddonsForProject(projectID int64) (model.F
 	}
 
 	if projectPlanMaping.OverWrite != nil {
-		log.Info("$$$$$ over-write ",string(projectPlanMaping.OverWrite.RawMessage))
 		err = U.DecodePostgresJsonbToStructType(projectPlanMaping.OverWrite, &addOns)
 		if err != nil && err.Error() != "Empty jsonb object" {
 			log.WithError(err).Error("Failed to decode project plan mapping.")
