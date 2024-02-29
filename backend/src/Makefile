@@ -804,6 +804,13 @@ upload-send-internal-alerts: export IMAGE_NAME=send-internal-alerts-job
 upload-send-internal-alerts: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/send-internal-alerts-job:$(TAG)
 
+pack-transform-overwrite-column:
+	docker build -t us.gcr.io/factors-$(ENV)/transform-overwrite-column-job:$(TAG) -f Dockerfile.transform_over_write_column_job .
+
+upload-transform-overwrite-column: export IMAGE_NAME=transform-overwrite-column-job
+upload-transform-overwrite-column: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/tranform-overwrite-column-job:$(TAG)
+
 upload-g2-enrich-job: export IMAGE_NAME=g2-enrich-job
 upload-g2-enrich-job: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/g2-enrich-job:$(TAG)
