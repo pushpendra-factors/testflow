@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Row, Col, Skeleton, message } from 'antd';
 import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { connect } from 'react-redux';
@@ -31,39 +31,59 @@ function IntegrationSettings({
   marketo
 }) {
   const [dataLoading, setDataLoading] = useState(true);
+  const templateDashboardStatusRef = useRef(false);
 
   // effect for creating dashboards from templates based on the integrations
   useEffect(() => {
-    // setting up a timer so the latest values can be used
-    const timeout = setTimeout(async () => {
+    let timeout = false;
+
+    const initializeTimeout = () => {
       // returning for unavailable values or loading states
       if (dashboards?.loading || !dashboards?.data) return;
       if (dashboardTemplates?.loading || !dashboardTemplates?.data) return;
       if (!activeProject?.id) return;
       if (currentProjectSettingsLoading) return;
-      try {
-        const res = await createDashboardsFromTemplatesForRequiredIntegration(
-          activeProject.id,
-          dashboards.data,
-          dashboardTemplates.data,
-          sdkCheck,
-          currentProjectSettings,
-          bingAds,
-          marketo
-        );
-        if (res) {
-          await fetchDashboards(activeProject.id);
-          await fetchQueries(activeProject.id);
-        }
-      } catch (error) {
-        logger.error('Error in creating dashboard from template', error);
-      }
-    }, 1000);
+      // do nothing if dashboard creation is in process
+      if (templateDashboardStatusRef.current) return;
+      // setting up a timer so the latest values can be used
+      timeout = setTimeout(async () => {
+        try {
+          // do nothing if dashboard creation is in process
+          if (templateDashboardStatusRef.current) return;
+          templateDashboardStatusRef.current = true;
 
-    return () => clearTimeout(timeout);
+          const res = await createDashboardsFromTemplatesForRequiredIntegration(
+            activeProject.id,
+            dashboards.data,
+            dashboardTemplates.data,
+            sdkCheck,
+            currentProjectSettings,
+            bingAds,
+            marketo
+          );
+          if (res) {
+            await fetchDashboards(activeProject.id);
+            await fetchQueries(activeProject.id);
+          }
+          // setting template dashboard status back to false
+          setTimeout(() => {
+            templateDashboardStatusRef.current = false;
+          }, 0);
+        } catch (error) {
+          logger.error('Error in creating dashboard from template', error);
+          templateDashboardStatusRef.current = false;
+        }
+      }, 2000);
+    };
+
+    initializeTimeout();
+
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
   }, [
     dashboards,
-    activeProject,
+    activeProject?.id,
     dashboardTemplates,
     sdkCheck,
     currentProjectSettings,
