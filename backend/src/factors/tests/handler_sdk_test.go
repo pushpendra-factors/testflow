@@ -13,6 +13,7 @@ import (
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/stretchr/testify/assert"
 
+	"factors/company_enrichment/factors_deanon"
 	C "factors/config"
 	H "factors/handler"
 	"factors/integration"
@@ -3659,7 +3660,7 @@ func Test_ApplySixSignalFilters(t *testing.T) {
 	}, isoCode: "IN", pageUrl: "www.abc.com"}
 	t2ar := args{sixSignalConfig: model.SixSignalConfig{
 
-		CountryInclude: []model.SixSignalFilter{{Value: "United States", Type: "equals"}},
+		CountryInclude: []model.SixSignalFilter{{Value: "US", Type: "equals"}},
 		CountryExclude: []model.SixSignalFilter{},
 		PagesInclude:   []model.SixSignalFilter{},
 		PagesExclude:   []model.SixSignalFilter{},
@@ -3668,7 +3669,7 @@ func Test_ApplySixSignalFilters(t *testing.T) {
 	t3ar := args{sixSignalConfig: model.SixSignalConfig{
 
 		CountryInclude: []model.SixSignalFilter{},
-		CountryExclude: []model.SixSignalFilter{{Value: "India", Type: "equals"}},
+		CountryExclude: []model.SixSignalFilter{{Value: "IN", Type: "equals"}},
 		PagesInclude:   []model.SixSignalFilter{},
 		PagesExclude:   []model.SixSignalFilter{},
 	}, isoCode: "IN", pageUrl: "www.abc.com"}
@@ -3790,7 +3791,9 @@ func Test_ApplySixSignalFilters(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := sdk.ApplySixSignalFilters(tt.args.sixSignalConfig, tt.args.isoCode, tt.args.pageUrl)
+			sixSignalConfigMarshal, _ := json.Marshal(tt.args.sixSignalConfig)
+			configJson := postgres.Jsonb{RawMessage: sixSignalConfigMarshal}
+			got, err := factors_deanon.ApplyFactorsDeanonRules(&configJson, tt.args.isoCode, tt.args.pageUrl, 0)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("applySixSignalFilters() error = %v, wantErr %v", err, tt.wantErr)
 				return

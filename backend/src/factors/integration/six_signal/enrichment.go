@@ -3,11 +3,7 @@ package six_signal
 import (
 	"encoding/json"
 	"errors"
-	"factors/config"
-	"factors/model/model"
-	"factors/model/store"
 	U "factors/util"
-	"net/http"
 	"strconv"
 
 	log "github.com/sirupsen/logrus"
@@ -56,23 +52,6 @@ func ExecuteSixSignalEnrichV1(projectId int64, sixSignalAPIKey string, propertie
 	resultChannel <- ResultChannel{ExecuteStatus: 1, Domain: domain}
 }
 
-func ExecuteSixSignalEnrich(projectId int64, sixSignalAPIKey string, properties *U.PropertiesMap, clientIP string, statusChannel chan int) {
-	defer close(statusChannel)
-	logCtx := log.WithField("project_id", projectId)
-
-	isFactorsAPIKey := false
-	if sixSignalAPIKey == config.GetFactorsSixSignalAPIKey() {
-		isFactorsAPIKey = true
-	}
-	_, err := enrichUsingSixSignal(projectId, sixSignalAPIKey, properties, clientIP, isFactorsAPIKey)
-
-	if err != nil {
-		logCtx.WithFields(log.Fields{"error": err, "apiKey": sixSignalAPIKey}).Info("enrich --factors debug")
-		statusChannel <- 0
-	}
-	statusChannel <- 1
-}
-
 func enrichUsingSixSignal(projectId int64, sixSignalAPIKey string, properties *U.PropertiesMap, clientIP string, isFactorsAPIKey bool) (string, error) {
 
 	logCtx := log.WithField("project_id", projectId)
@@ -95,15 +74,6 @@ func enrichUsingSixSignal(projectId int64, sixSignalAPIKey string, properties *U
 	}
 
 	FillEnrichmentPropertiesForSixSignal(result, properties, projectId, isFactorsAPIKey)
-
-	if !config.IsCompanyEnrichmentV1Enabled(projectId) {
-		// Adding enrichment source
-		if isFactorsAPIKey {
-			(*properties)[U.ENRICHMENT_SOURCE] = FACTORS_6SIGNAL
-		} else {
-			(*properties)[U.ENRICHMENT_SOURCE] = API_6SIGNAL
-		}
-	}
 
 	return result.Company.Domain, nil
 }
@@ -154,23 +124,7 @@ func FillEnrichmentPropertiesForSixSignal(result Response, properties *U.Propert
 
 		if domain := result.Company.Domain; domain != "" {
 			if c, ok := (*properties)[U.SIX_SIGNAL_DOMAIN]; !ok || c == "" {
-
 				(*properties)[U.SIX_SIGNAL_DOMAIN] = domain
-				if !config.IsCompanyEnrichmentV1Enabled(projectId) {
-					model.SetSixSignalAPICountCacheResult(projectId, U.TimeZoneStringIST)
-
-					if isFactorsAPIKey {
-						timeZone, statusCode := store.GetStore().GetTimezoneForProject(projectId)
-						if statusCode != http.StatusFound {
-							timeZone = U.TimeZoneStringIST
-						}
-						err := model.SetSixSignalMonthlyUniqueEnrichmentCount(projectId, domain, timeZone)
-						if err != nil {
-							log.Error("SetSixSignalMonthlyUniqueEnrichmentCount Failed.")
-						}
-					}
-				}
-
 			}
 		}
 
