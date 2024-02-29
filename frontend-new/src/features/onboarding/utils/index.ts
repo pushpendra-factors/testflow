@@ -106,3 +106,6 @@ export const getCompanyDomainFromEmail = (email: string) => {
   if (!domain) return '';
   return domain;
 };
+
+export const SDKDocumentation =
+  'https://help.factors.ai/en/articles/8999789-setting-up-factors-sdk-on-your-site';

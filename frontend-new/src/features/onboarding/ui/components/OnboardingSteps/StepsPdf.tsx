@@ -22,6 +22,7 @@ import {
   CopySdkTitle,
   CopyTitle,
   OnboardingSupportLink,
+  SDKDocumentation,
   SDK_FLOW
 } from '../../../utils';
 
@@ -204,9 +205,7 @@ function StepsPdf({ scriptCode }: StepsPdfProps) {
             <Text style={styles.normalText}>{SDK_FLOW.GTM.step6}</Text>
             <Text style={styles.normalText}>
               SDK still says "Not verified"? Check these{' '}
-              <Link src='https://help.factors.ai/en/articles/7260638-connecting-factors-to-your-website'>
-                steps
-              </Link>
+              <Link src={SDKDocumentation}>steps</Link>
             </Text>
           </View>
 

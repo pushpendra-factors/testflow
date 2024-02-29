@@ -1,4 +1,6 @@
+import { customerSupportLink } from './constants';
+
 export const meetLink = (isFreePlan) => {
-  if (isFreePlan) return 'https://factors.schedulehero.io/meet/nagaraj/disco';
+  if (isFreePlan) return customerSupportLink;
   return 'http://calendly.com/prajwal-007/30min';
 };

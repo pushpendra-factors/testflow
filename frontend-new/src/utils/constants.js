@@ -701,3 +701,6 @@ export const OPERATORS = {
   inList: 'is in a list',
   notInList: 'not in a list'
 };
+
+export const customerSupportLink =
+  'https://factors.schedulehero.io/campaign/global-round-robin-ssos';
