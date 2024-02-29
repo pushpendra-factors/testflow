@@ -344,7 +344,8 @@ function AccountDetails({
   }, [currentProjectSettings, userPropertiesV2]);
 
   const handleOptionBackClick = useCallback(() => {
-    history.replace(PathUrls.ProfileAccounts, {
+    const path = location.state?.path || PathUrls.ProfileAccounts;
+    history.replace(path, {
       fromDetails: true,
       accountPayload: location.state?.accountPayload,
       currentPage: location.state?.currentPage,
