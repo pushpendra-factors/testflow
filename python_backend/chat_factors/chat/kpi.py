@@ -22,7 +22,7 @@ def get_transformed_kpi_query(gpt_response, kpi_config,
         category = kpi_info['category']
         display_category = kpi_info['display_category']
         query_type = kpi_info['kpi_query_type']
-        log.info(kpi_info)
+        log.info("done step 3 \n kpi_info from kpi_config :%s", kpi_info)
         query_payload = {
             "cl": gpt_response["qt"],
             "qG": [
@@ -58,7 +58,7 @@ def get_transformed_kpi_query(gpt_response, kpi_config,
             "gFil": []
         }
     else:
-        log.info(f"No information found for kpi: {kpi_to_search}")
+        log.info("done step 3 \n No information found in kpi_config for kpi :%s", kpi_to_search)
         query_payload = {}
 
     return query_payload
@@ -74,9 +74,15 @@ def get_kpi_info(name, kpi_config):
                     "kpi_query_type": metric.get("kpi_query_type"),
                 }
 
-    return None
+    log.error("kpi not found in the kpi_config")
+    raise KpiNotFoundError(f"KPI with name '{name}' not found in the kpi_config")
 
 
+class KpiNotFoundError(Exception):
+    pass
+
+
+# returns default time range as "this_week"
 def get_start_end_timestamps(timezone, duration):
     # Get the timezone object
     tz = pytz.timezone(timezone)
@@ -87,6 +93,7 @@ def get_start_end_timestamps(timezone, duration):
     # Calculate the start and end times based on the provided duration
     if duration == "this_week":
         # Calculate the most recent Sunday
+        # current_time.weekday() : Monday-0, Sunday-6
         start_time = current_time - timedelta(days=current_time.weekday() + 1)
         start_time = start_time.replace(hour=0, minute=0, second=0, microsecond=0)
         end_time = current_time
@@ -107,6 +114,21 @@ def get_start_end_timestamps(timezone, duration):
         start_time = start_time.replace(day=1)
         end_time = first_day_of_current_month - timedelta(days=1)
         end_time = end_time.replace(hour=23, minute=59, second=59, microsecond=999999)
+    elif duration == "today":
+        start_time = current_time
+        start_time = start_time.replace(hour=0, minute=0, second=0, microsecond=0)
+        end_time = start_time + timedelta(days=0, hours=23, minutes=59, seconds=59)
+    elif duration == "yesterday":
+        start_time = current_time - timedelta(days=1)
+        start_time = start_time.replace(hour=0, minute=0, second=0, microsecond=0)
+        end_time = start_time + timedelta(days=0, hours=23, minutes=59, seconds=59)
+    else:
+        # default time range : "last_week"
+        # Calculate the Sunday before last
+        start_time = current_time - timedelta(days=current_time.weekday() + 7 + 1)
+        start_time = start_time.replace(hour=0, minute=0, second=0, microsecond=0)
+        # Calculate the Saturday before last midnight
+        end_time = start_time + timedelta(days=6, hours=23, minutes=59, seconds=59)
 
     # Convert datetime objects to timestamps
     start_timestamp = int(start_time.timestamp())

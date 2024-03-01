@@ -10,6 +10,7 @@ from tornado.log import logging as log
 from chatgpt_poc.chat import get_answer_from_ir_model
 from chatgpt_poc.chat import get_answer_from_ir_model_local
 from chat.final_query import get_url_and_query_payload_from_gpt_response
+from chat.kpi import KpiNotFoundError
 from google.cloud import storage
 import io
 import pickle
@@ -52,26 +53,31 @@ class ChatHandler(BaseHandler):
             elif app.CONFIG.ADWORDS_APP.env == "staging" or app.CONFIG.ADWORDS_APP.env == "production":
                 ChatHandler.initialize_variable("")
                 result = get_answer_from_ir_model(prompt, self.prompt_response_data, self.prompt_vector_data)
-            log.info(result["answer"])
 
             # removing chars : '(' & ')' & '-'
             json_string_valid = result["answer"].replace('(', '').replace(')', '').replace('-', '')
-            log.info(json_string_valid)
+            log.info("json_string_valid : %s", json_string_valid)
 
             # adding double quotes around keys and values
             json_string_with_quotes = re.sub(r'(\w+):(-?\w*)', r'"\1":"\2"', json_string_valid)
-            log.info(json_string_with_quotes)
+            log.info("json_string_with_quotes : %s", json_string_with_quotes)
 
             result_dict = json.loads(json_string_with_quotes)
-            log.info(result_dict)
+            # log.info(result_dict)
 
-            query_payload = get_url_and_query_payload_from_gpt_response(result_dict, pid, kpi_config)
-
-            log.info(query_payload)
-            result_json = json.dumps(query_payload, indent=2)
+            query_payload_and_url = get_url_and_query_payload_from_gpt_response(result_dict, pid, kpi_config)
+            log.info("done step 4 \n query_payload_and_url :%s", query_payload_and_url)
+            result_json = json.dumps(query_payload_and_url, indent=2)
 
             self.write(result_json)
+
+        except KpiNotFoundError as cgpe:
+            # Handle kpi not found error here
+            log.error("CustomProcessingGptResponseError processing request: %s", str(cgpe))
+            self.set_status(400)  # Bad Request
+            self.write(json.dumps({'error': {'code': 400, 'message': str(cgpe)}}))
         except Exception as e:
+            # Handle other exceptions
             log.error("Error processing request: %s", str(e))
             self.set_status(500)  # Internal Server Error
             self.write(json.dumps({'error': {'code': 500, 'message': "Internal Server Error"}}))

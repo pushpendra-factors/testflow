@@ -164,7 +164,7 @@ export const PreviewCardWebhook = ({
     payloadProps['Message']= alertMessage ? alertMessage : 'Alert message to be displayed';
     payloadProps['Event']= selectedEvent ? selectedEvent : ''; 
 
-    payloadProps['MessageProperty'] = groupBy?.length>0 ? getMsgPayloadMappingWebhook(groupBy, matchEventName, dummyPayloadValue) : {};
+    payloadProps['MessageProperty'] = groupBy?.length>0 ? getMsgPayloadMappingWebhook(groupBy, matchEventName, dummyPayloadValue) : [];
 
     if(factorsURLinWebhook){
         let url = ""

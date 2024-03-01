@@ -8,7 +8,7 @@ host = host[host.length - 1] === '/' ? host : `${host}/`;
 const initialState = {
   contacts: { isLoading: false, data: [] },
   contactDetails: { isLoading: false, data: {} },
-  accounts: { isLoading: false, data: [] },
+  accounts: { isLoading: true, data: {} },
   accountDetails: { isLoading: false, data: {} },
   accountOverview: { isLoading: false, data: {} },
   segmentCreateStatus: '',
@@ -40,11 +40,14 @@ export default function (state = initialState, action) {
     case 'FETCH_PROFILE_USER_DETAILS_FAILED':
       return { ...state, contactDetails: { isLoading: false, data: {} } };
     case 'FETCH_PROFILE_ACCOUNTS_LOADING':
-      return { ...state, accounts: { isLoading: true, data: [] } };
+      return { ...state, accounts: { ...state.accounts, isLoading: true } };
+
     case 'FETCH_PROFILE_ACCOUNTS_FULFILLED':
-      return { ...state, accounts: { isLoading: false, data: action.payload } };
+      const updatedData = { ...state.accounts.data };
+      updatedData[action.segmentID || 'default'] = action.payload;
+      return { ...state, accounts: { isLoading: false, data: updatedData } };
     case 'FETCH_PROFILE_ACCOUNTS_FAILED':
-      return { ...state, accounts: { isLoading: false, data: [] } };
+      return { ...state, accounts: { ...state.accounts, isLoading: false } };
     case 'FETCH_PROFILE_ACCOUNT_DETAILS_LOADING':
       return { ...state, accountDetails: { isLoading: true, data: {} } };
     case 'FETCH_PROFILE_ACCOUNT_DETAILS_FULFILLED':
@@ -121,7 +124,7 @@ const getURLWithQueryParams = (projectId, profileType, agentId) => {
 };
 
 export const fetchProfileUsers = (projectId, reqBody) => {
-  let url = `${host}projects/${projectId}/v1/profiles/users`;
+  const url = `${host}projects/${projectId}/v1/profiles/users`;
   return post(null, url, reqBody);
 };
 

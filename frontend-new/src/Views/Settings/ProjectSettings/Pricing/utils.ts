@@ -10,7 +10,7 @@ export const showUpgradeNudge = (
       currentProjectSettings?.clearbit_key)
   )
     return false;
-  let percentage = Number(((utilisedAmount / totalAmount) * 100).toFixed(2));
+  const percentage = Number(((utilisedAmount / totalAmount) * 100).toFixed(2));
   return percentage >= 75;
 };
 
@@ -29,4 +29,4 @@ export const showV2PricingVersion = (activeProject: any) => {
 };
 
 export const PRICING_HELP_LINK =
-  'https://factors.schedulehero.io/meet/nagaraj/disco';
+  'https://factors.schedulehero.io/campaign/global-round-robin-ssos';

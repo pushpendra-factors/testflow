@@ -14,6 +14,7 @@ import { useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import { PlansConfigState } from 'Reducers/plansConfig/types';
 import moment from 'moment';
+import { customerSupportLink } from 'Utils/constants';
 import { PRICING_PAGE_TABS, showV2PricingVersion } from './utils';
 
 function BillingTab({ buyAddonLoading, handleBuyAddonClick }: BillingTabProps) {
@@ -51,10 +52,7 @@ function BillingTab({ buyAddonLoading, handleBuyAddonClick }: BillingTabProps) {
     } else if (isSolutionsAdmin) {
       history.push(PathUrls.ConfigurePlans);
     } else {
-      window.open(
-        `https://factors.schedulehero.io/meet/yogeshpai/sso`,
-        '_blank'
-      );
+      window.open(customerSupportLink, '_blank');
     }
   };
 

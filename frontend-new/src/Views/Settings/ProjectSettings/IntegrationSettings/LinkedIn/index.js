@@ -44,6 +44,18 @@ const LinkedInIntegration = ({
     return BUILD_CONFIG.backend_host;
   };
 
+  const linkedInWritePermissionArr = [
+    '12384898978000017', // Traceable
+    '1000005', // Akeyless
+    '12384898978000004', // Spotdraft
+    '6000320', // Sprinklr
+    '6000366', // Moengage
+    '568', // Clevertap
+    '6000356',// Freshworks 
+    '399', // Chargebee
+    '2', // FactorsAI Solutions
+  ]
+
   useEffect(() => {
     if (currentProjectSettings?.int_linkedin_ad_account) {
       setIsActive(true);
@@ -127,7 +139,8 @@ const LinkedInIntegration = ({
       if (port === undefined || port === '') {
         redirect_uri = protocol + '//' + hostname;
       }
-      let href = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${BUILD_CONFIG.linkedin_client_id}&redirect_uri=${redirect_uri}&state=factors&scope=r_basicprofile%20r_liteprofile%20r_ads_reporting%20r_ads`;
+      let adsWritePermission = linkedInWritePermissionArr.includes(activeProject?.id);
+      let href = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${BUILD_CONFIG.linkedin_client_id}&redirect_uri=${redirect_uri}&state=factors&scope=r_basicprofile%20r_liteprofile%20r_ads_reporting%20${adsWritePermission?'rw_ads':'r_ads'}`;
       return (
         <a href={href} className='ant-btn ant-btn-primary'>
           {' '}
@@ -277,7 +290,7 @@ const LinkedInIntegration = ({
                   <Row className={'mt-2'}>
                     <Col span={24}>
                       <div className={'flex justify-end'}>
-                        <Button className='ant-btn-primary' htmlType='submit'>
+                        <Button className='ant-btn-primary' disabled={!SelectedAdAccount} htmlType='submit'>
                           Select
                         </Button>
                       </div>
@@ -285,21 +298,7 @@ const LinkedInIntegration = ({
                   </Row>
                 </form>
               </div>
-            </Modal>
-
-            {/* <div className="p-2">
-            <form onSubmit={e => this.handleSubmit(e)}>
-              <div className="w-50 pb-2">
-                <h5>Choose your ad account:</h5>
-                <Select
-                value={SelectedAdAccount}
-                onChange={this.handleChange}
-                options={createSelectOpts(this.getAdAccountsOptSrc())}
-                />
-              </div>
-              <input className="btn btn-primary shadow-none" type="submit" value="Submit"/>
-            </form>
-          </div> */}
+            </Modal> 
           </>
         );
       }

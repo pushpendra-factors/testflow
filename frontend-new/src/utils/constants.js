@@ -616,7 +616,7 @@ export const OPERATORS = {
 
 //always make sure "city": "UTC" and "city": "Europe/Berlin" is defined for backward compatibility.
 
-export const TimeZoneOffsetValueArr =  [
+export const TimeZoneOffsetValueArr = [
   {
     "abbr": "UTC",
     "name": "UTC",
@@ -1184,4 +1184,7 @@ export const TimeZoneOffsetValueArr =  [
     "text": "(UTC+13:00) Samoa",
     "city": "Pacific/Apia"
   }
-]
+];
+
+export const customerSupportLink =
+  'https://factors.schedulehero.io/campaign/global-round-robin-ssos';

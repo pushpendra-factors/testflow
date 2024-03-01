@@ -1,0 +1,12 @@
+FROM golang:1.20.3-alpine AS builder
+
+WORKDIR /go/src/factors
+ADD /factors .
+RUN go build -o $GOPATH/bin/transform_over_write_column $GOPATH/src/factors/scripts/adhoc/run_transform_over_write_column/run_transform_over_write_column.go
+
+# Create stripped down version without go and source code
+FROM alpine:3.7
+RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
+ADD https://github.com/golang/go/raw/master/lib/time/zoneinfo.zip /usr/local/go/lib/time/zoneinfo.zip
+COPY --from=builder /go/bin/transform_over_write_column /go/bin/transform_over_write_column
+ENTRYPOINT ["/go/bin/transform_over_write_column"]

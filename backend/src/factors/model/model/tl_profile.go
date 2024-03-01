@@ -71,7 +71,7 @@ type AccountDetails struct {
 }
 
 type Overview struct {
-	Temperature float32            `json:"temperature"` // Normalised Score for base 100
+	Temperature float64            `json:"temperature"` // Normalised Score for base 100
 	Engagement  string             `json:"engagement"`  // Hot, Warm, Cold
 	UsersCount  int64              `json:"users_count"` // Number of Associated Users
 	TimeActive  float64            `json:"time_active"` // in seconds
@@ -155,18 +155,12 @@ var NameProps = []string{
 	U.G2_NAME,
 }
 var HostNameProps = []string{
+	U.DP_DOMAIN_NAME,
 	U.GP_HUBSPOT_COMPANY_DOMAIN,
 	U.GP_SALESFORCE_ACCOUNT_WEBSITE,
 	U.SIX_SIGNAL_DOMAIN,
 	U.LI_DOMAIN,
 	U.G2_DOMAIN,
-}
-
-var DomainProperties = []string{
-	U.GROUP_EVENT_NAME_ENGAGEMENT_LEVEL,
-	U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE,
-	U.GROUP_EVENT_NAME_TOTAL_ENGAGEMENT_SCORE,
-	U.DP_DOMAIN_NAME,
 }
 
 // Hover Events Property Map

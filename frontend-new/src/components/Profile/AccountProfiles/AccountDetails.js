@@ -52,7 +52,6 @@ import { Text, SVG } from '../../factorsComponents';
 import styles from './index.module.scss';
 import AccountTimelineTableView from './AccountTimelineTableView';
 import {
-  DEFAULT_TIMELINE_CONFIG,
   GranularityOptions,
   TIMELINE_VIEW_OPTIONS
 } from '../constants';
@@ -87,7 +86,7 @@ function AccountDetails({
   const [checkListMilestones, setCheckListMilestones] = useState([]);
   const [filterProperties, setFilterProperties] = useState([]);
   const [propSelectOpen, setPropSelectOpen] = useState(false);
-  const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
+  const [tlConfig, setTLConfig] = useState({});
   const [timelineViewMode, setTimelineViewMode] = useState('birdview');
   const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
   const [openPopover, setOpenPopover] = useState(false);
@@ -196,14 +195,6 @@ function AccountDetails({
   );
 
   useEffect(() => {
-    if (AdminLock(activeAgent) && !isScoringLocked) {
-      setTimelineViewMode('overview');
-    } else {
-      setTimelineViewMode('birdview');
-    }
-  }, [activeAgent, isScoringLocked]);
-
-  useEffect(() => {
     if (Boolean(timelineViewMode)) {
       insertUrlParam(window.history, 'view', timelineViewMode);
     }
@@ -250,28 +241,9 @@ function AccountDetails({
   }, [timelineViewMode, activeId]);
 
   useEffect(() => {
-    if (currentProjectSettings?.timelines_config) {
-      const {
-        disabled_events = [],
-        user_config = {},
-        account_config = {},
-        events_config = {}
-      } = currentProjectSettings.timelines_config;
-      const timelinesConfig = {
-        disabled_events: [...disabled_events],
-        user_config: { ...DEFAULT_TIMELINE_CONFIG.user_config, ...user_config },
-        account_config: {
-          ...DEFAULT_TIMELINE_CONFIG.account_config,
-          ...account_config
-        },
-        events_config: {
-          ...DEFAULT_TIMELINE_CONFIG.events_config,
-          ...events_config
-        }
-      };
-      setTLConfig(timelinesConfig);
-    }
-  }, [currentProjectSettings]);
+    if (!currentProjectSettings?.timelines_config) return;
+    setTLConfig(currentProjectSettings.timelines_config);
+  }, [currentProjectSettings?.timelines_config]);
 
   useEffect(() => {
     const listActivities = addEnabledFlagToActivities(
@@ -352,7 +324,8 @@ function AccountDetails({
   }, [currentProjectSettings, userPropertiesV2]);
 
   const handleOptionBackClick = useCallback(() => {
-    history.replace(PathUrls.ProfileAccounts, {
+    const path = location.state?.path || PathUrls.ProfileAccounts;
+    history.replace(path, {
       fromDetails: true,
       accountPayload: location.state?.accountPayload,
       currentPage: location.state?.currentPage,

@@ -65,10 +65,10 @@ import {
   formatGroups
 } from './utils';
 
-export const fetchEventNames = (projectId) => {
+export const fetchEventNames = (projectId, isSpecialEvent = false) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
-      getEventNames(dispatch, projectId)
+      getEventNames(dispatch, projectId, isSpecialEvent)
         .then((response) => {
           dispatch(fetchEventsMapAction(response.data.event_names));
           const options = convertToEventOptions(
@@ -384,19 +384,21 @@ export const getUserPropertyValues =
     });
   };
 
-  export const getPredefinedPropertyValues =
+export const getPredefinedPropertyValues =
   (projectId, propertyName, internalID) => (dispatch) => {
     return new Promise((resolve, reject) => {
       dispatch({ type: FETCH_PROPERTY_VALUES_LOADING });
-      fetchPredefinedPropertyValues(projectId, propertyName, internalID).then((response) => {
-        resolve(
-          dispatch({
-            type: FETCH_PROPERTY_VALUES_LOADED,
-            payload: response.data,
-            propName: propertyName
-          })
-        );
-      });
+      fetchPredefinedPropertyValues(projectId, propertyName, internalID).then(
+        (response) => {
+          resolve(
+            dispatch({
+              type: FETCH_PROPERTY_VALUES_LOADED,
+              payload: response.data,
+              propName: propertyName
+            })
+          );
+        }
+      );
     }).catch((err) => {
       console.log(err);
       resolve(

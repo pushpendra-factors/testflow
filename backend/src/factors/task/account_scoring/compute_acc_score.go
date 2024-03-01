@@ -676,17 +676,16 @@ func WriteRangestoDB(projectId int64, buckets []M.BucketRanges) error {
 func ComputeScoreRanges(projectId int64, currentTime int64, lookback int64,
 	data map[string]map[string]M.LatestScore, weights M.AccWeights) ([]M.BucketRanges, map[string]float64, error) {
 
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectId,
+	})
+
 	var buckets []M.BucketRanges = make([]M.BucketRanges, lookback)
 	var scoresMap map[string]float64 = make(map[string]float64)
 	currentDateString := U.GetDateOnlyFromTimestamp(currentTime)
 	saleWindow := weights.SaleWindow
 	dates := U.GenDateStringsForLastNdays(currentTime, lookback)
-	maxDate := int64(0)
 	for _, date := range dates {
-		tsDate := U.GetDateFromString(date)
-		if tsDate > maxDate {
-			maxDate = maxDate
-		}
 		ids := make(map[string]bool)
 		updatedUsers := make(map[string]map[string]M.LatestScore)
 		ts := U.GetDateFromString(date)
@@ -710,12 +709,12 @@ func ComputeScoreRanges(projectId int64, currentTime int64, lookback int64,
 				updatedUsers[id] = tmpdata
 			}
 		}
-		log.Infof("date : %s number of updated users : %d", date, len(updatedUsers))
+		logCtx.Infof("date : %s number of updated users : %d", date, len(updatedUsers))
 		lastEventScores, _, err := UpdateLastEventsDay(updatedUsers, ts, weights, saleWindow)
 		if err != nil {
 			log.WithField("prjoectID", projectId).Error("Unable to compute last event scores")
 		}
-		log.Info("number of last events score: %d", len(lastEventScores))
+		logCtx.Info("number of last events score: %d", len(lastEventScores))
 		scores, scoresMaponDate, err := computeScore(projectId, weights, lastEventScores)
 		if date == currentDateString {
 			scoresMap = scoresMaponDate
@@ -730,6 +729,8 @@ func ComputeScoreRanges(projectId int64, currentTime int64, lookback int64,
 		}
 		buckets = append(buckets, bucket)
 	}
+
+	logCtx.WithField("buckets", buckets).Debug("computed buckets for project")
 
 	return buckets, scoresMap, nil
 }
@@ -767,6 +768,7 @@ func ComputeBucketRanges(projectId int64, scores []float64, date string) (M.Buck
 		return M.BucketRanges{}, fmt.Errorf("not enough scores")
 	}
 
+	// get the max and min percentile ranges from custom config
 	projectbucketRanges.Ranges = make([]M.Bucket, 4)
 	buckets, statusCode := store.GetStore().GetEngagementLevelsByProject(projectId)
 	if statusCode != http.StatusFound {

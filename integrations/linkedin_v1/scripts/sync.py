@@ -88,7 +88,12 @@ if __name__ == '__main__':
         
         except CustomException as e:
             traceback.print_tb(e.__traceback__)
-            metrics_aggregator_obj.update_stats(linkedin_setting.project_id, linkedin_setting.ad_account, 
+            if AD_ACCOUNT_FAILURE in str(e):
+                metrics_aggregator_obj.etl_stats['token_failures'].append({'status': 'failed', 'errMsg': str(e), 
+                                                                        PROJECT_ID: linkedin_setting.project_id, 
+                                                                        AD_ACCOUNT: linkedin_setting.ad_account})
+            else:
+                metrics_aggregator_obj.update_stats(linkedin_setting.project_id, linkedin_setting.ad_account, 
                                                             e.doc_type, e.request_count, 'failed', e.message)
         except Exception as e:
             traceback.print_tb(e.__traceback__)
@@ -101,6 +106,6 @@ if __name__ == '__main__':
                                                             0, 0, 'failed', str(e))
         metrics_aggregator_obj.reset_request_counter()
     
-    metrics_aggregator_obj.ping_notification_services(options.env)
+    metrics_aggregator_obj.ping_notification_services(options.env, HEALTHCHECK_PING_ID)
     log.warning('Successfully synced. End of Linkedin sync job.')
     sys.exit(0)

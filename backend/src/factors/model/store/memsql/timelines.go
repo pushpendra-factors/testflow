@@ -17,7 +17,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.TimelinePayload, profileType string) ([]model.Profile, int, string) {
+func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.TimelinePayload, profileType string, downloadLimitGiven bool) ([]model.Profile, int, string) {
 	logFields := log.Fields{
 		"project_id":   projectID,
 		"payload":      payload,
@@ -52,7 +52,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 			payload.Query.GlobalUserProperties = append(payload.Query.GlobalUserProperties, searchFilters...)
 		}
 
-		profiles, errCode, err := store.GetAnalyzeResultForSegments(projectID, profileType, payload.Query)
+		profiles, errCode, err := store.GetAnalyzeResultForSegments(projectID, profileType, payload.Query, downloadLimitGiven)
 		if errCode != http.StatusOK {
 			return []model.Profile{}, errCode, err.Error()
 		}
@@ -147,7 +147,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	var runQueryStmt string
 	var queryParams []interface{}
 	if model.IsAccountProfiles(profileType) && model.IsDomainGroup(payload.Query.Source) && C.IsAllAccountsEnabled(projectID) {
-		runQueryStmt, queryParams, err = store.GenerateAllAccountsQueryString(projectID, payload.Query.Source, isUserProperty, isAllUserProperties, *timeWindow, groupedFilters, payload.SearchFilter)
+		runQueryStmt, queryParams, err = store.GenerateAllAccountsQueryString(projectID, payload.Query.Source, isUserProperty, isAllUserProperties, *timeWindow, groupedFilters, payload.SearchFilter, downloadLimitGiven)
 		params = queryParams
 	} else {
 		runQueryStmt, queryParams, err = store.GenerateQueryString(projectID, profileType, payload.Query.Source, sourceStmt, isUserProperty, whereStmt, *timeWindow, groupedFilters)
@@ -351,6 +351,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 	timeWindow model.ListingTimeWindow,
 	groupedFilters map[string][]model.QueryProperty,
 	searchFilter []string,
+	downloadLimitGiven bool,
 ) (string, []interface{}, error) {
 	logFields := log.Fields{
 		"project_id":             projectID,
@@ -494,6 +495,13 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 		GROUP BY identity`
 	}
 
+	var domLimit int
+	if downloadLimitGiven {
+		domLimit = 10000
+	} else {
+		domLimit = 1000
+	}
+
 	finalStep := fmt.Sprintf(`, final_step as (%s)
 		SELECT 
         final_step.identity as identity, final_step.host_name as host_name, MAX(users.last_event_at) as last_activity 
@@ -501,7 +509,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 		last_event_at IS NOT NULL ) AS users ON 
 		final_step.identity = users.group_%d_user_id
 		GROUP BY identity 
-		ORDER BY last_activity DESC LIMIT 1000;`, intersectStep, domainGroup.ID, domainGroup.ID)
+		ORDER BY last_activity DESC LIMIT %d;`, intersectStep, domainGroup.ID, domainGroup.ID, domLimit)
 
 	query := fmt.Sprintf(`WITH all_users as (
 		SELECT * FROM (
@@ -1818,6 +1826,8 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 		params = append(params, id)
 	}
 
+	db := C.GetServices().Db
+
 	var errGetCount error
 	if errGetGroup != http.StatusFound {
 		errGetCount = fmt.Errorf("error retrieving parameters")
@@ -1847,7 +1857,6 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 		queryParams = append(queryParams, params...)      // append groupUserString params
 		queryParams = append(queryParams, queryParams...) // double the queryParams
 
-		db := C.GetServices().Db
 		errGetCount = db.Raw(overviewQuery, queryParams...).Scan(&overview).Error
 		if errGetCount != nil {
 			log.WithFields(logFields).WithError(errGetCount).Error("Error retrieving users count and active time")
@@ -1855,13 +1864,40 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 	}
 
 	// Get Account Engagement Score and Trends
-	accountScore, _, engagementLevel, errGetScore := store.GetPerAccountScore(projectID, time.Now().Format("20060102"), id, model.NUM_TREND_DAYS, false)
+	accountScore, _, _, errGetScore := store.GetPerAccountScore(projectID, time.Now().Format("20060102"), id, model.NUM_TREND_DAYS, false)
 	if errGetScore != nil {
 		log.WithFields(logFields).WithError(errGetScore).Error("Error retrieving account score")
 	} else {
-		overview.Temperature = accountScore.Score
 		overview.ScoresList = accountScore.Trend
-		overview.Engagement = engagementLevel
+	}
+
+	// To Get Engagement Level And Score from Domain Properties Column
+	var domainUser model.User
+	if err := db.Model(&model.User{}).
+		Where("project_id = ? AND id = ? AND source=?", projectID, id, model.UserSourceDomains).
+		Select("properties").
+		Limit(1).
+		Find(&domainUser).
+		Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			log.WithFields(logFields).WithError(errGetScore).Error("no record found for given domain")
+		}
+		log.WithFields(logFields).WithError(err).Error("Failed to get properties of given domain.")
+	}
+
+	if U.IsEmptyPostgresJsonb(&domainUser.Properties) {
+		log.WithFields(logFields).WithField("properties", domainUser.Properties).Error("Empty or nil properties for user.")
+	}
+	propertiesDecoded, err := U.DecodePostgresJsonb(&domainUser.Properties)
+	if err != nil {
+		log.WithFields(logFields).WithError(err).Error("Failed decoding user properties.")
+	}
+
+	if score, exists := (*propertiesDecoded)[U.DP_ENGAGEMENT_SCORE]; exists {
+		overview.Temperature = score.(float64)
+	}
+	if level, exists := (*propertiesDecoded)[U.DP_ENGAGEMENT_LEVEL]; exists {
+		overview.Engagement = level.(string)
 	}
 
 	// Get Top Pages and Top Users
@@ -2064,12 +2100,17 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabledV2(projectID int64, id, g
 		}
 		// Fetching accounts associated to the domain
 		accountGroupDetails, status = store.GetAccountsAssociatedToDomain(projectID, id, groupNameIDMap[model.GROUP_NAME_DOMAINS])
-		if status != http.StatusFound {
-			return model.AccountDetails{}, status
+
+		// fetch all domain properties
+		domain, domStatus := store.GetDomainPropertiesByID(projectID, []string{id})
+		if domStatus != http.StatusFound {
+			log.Error("Failed to get account properties.")
+			return model.AccountDetails{}, http.StatusInternalServerError
 		}
+		accountGroupDetails = append(accountGroupDetails, domain...)
 
 		// return not found if no associated accounts found
-		if len(accountGroupDetails) < 1 {
+		if status != http.StatusFound && len(accountGroupDetails) < 1 {
 			return model.AccountDetails{}, http.StatusNotFound
 		}
 	} else {
@@ -2289,7 +2330,7 @@ func (store *MemSQL) GetAccountsAssociatedToDomain(projectID int64, id string, d
 		Where("project_id=? AND source!=? AND is_group_user=1 AND "+fmt.Sprintf("group_%d_user_id", domainGroupId)+"=?", projectID, model.UserSourceDomains, id).Find(&accountGroupDetails).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get groups.")
-		return nil, http.StatusInternalServerError
+		return []model.User{}, http.StatusInternalServerError
 	}
 	return accountGroupDetails, http.StatusFound
 }
@@ -2299,7 +2340,7 @@ func FormatAccountDetails(projectID int64, propertiesDecoded map[string]interfac
 	var companyNameProps, hostNameProps []string
 	var accountDetails model.AccountDetails
 
-	if C.IsDomainEnabled(projectID) && groupName != "All" {
+	if C.IsDomainEnabled(projectID) && groupName != U.GROUP_NAME_DOMAINS {
 		if model.IsAllowedGroupName(groupName) {
 			hostNameProps = []string{model.HostNameGroup[groupName]}
 			companyNameProps = []string{model.AccountNames[groupName], U.UP_COMPANY}
@@ -2370,7 +2411,7 @@ func GetMilestonesFromConfig(timelinesConfig model.TimelinesConfig, profileType 
 	return filteredProperties
 }
 
-func (store *MemSQL) GetAnalyzeResultForSegments(projectId int64, profileType string, query model.Query) ([]model.Profile, int, error) {
+func (store *MemSQL) GetAnalyzeResultForSegments(projectId int64, profileType string, query model.Query, downloadLimitGiven bool) ([]model.Profile, int, error) {
 	logFields := log.Fields{
 		"project_id": projectId,
 	}
@@ -2390,6 +2431,7 @@ func (store *MemSQL) GetAnalyzeResultForSegments(projectId int64, profileType st
 	query.Class = model.QueryClassEvents
 	query.From = U.TimeNowZ().AddDate(0, 0, -90).Unix()
 	query.To = U.TimeNowZ().Unix()
+	query.DownloadAccountsLimitGiven = downloadLimitGiven
 	err := query.TransformDateTypeFilters()
 	if err != nil {
 		log.WithFields(logFields).Error("Failed to transform query payload filters.")
@@ -2530,7 +2572,7 @@ func propsMapGroupingByName(tableProps []string) map[string][]string {
 }
 
 func domainPropertyExist(property string) bool {
-	for _, prop := range model.DomainProperties {
+	for _, prop := range U.ALL_ACCOUNTS_PROPERTIES {
 		if property == prop {
 			return true
 		}

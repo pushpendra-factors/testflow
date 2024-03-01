@@ -1028,6 +1028,8 @@ func InitMemSQLDBWithMaxIdleAndMaxOpenConn(dbConf DBConf, maxOpenConns, maxIdleC
 
 	// Removes emoji and cleans up string and postgres.Jsonb columns.
 	memSQLDB.Callback().Create().Before("gorm:create").Register("cleanup", U.GormCleanupCallback)
+	memSQLDB.Callback().Create().Before("gorm:create").Register("default", U.GormDefault)
+
 	memSQLDB.Callback().Create().Before("gorm:update").Register("cleanup", U.GormCleanupCallback)
 	var info DBConf
 	if IsDBConnectionPool2Enabled() {

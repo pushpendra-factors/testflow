@@ -178,11 +178,6 @@ const GROUP_EVENT_NAME_G2_REPORT = "$g2_report"
 const GROUP_EVENT_NAME_G2_REFERENCE = "$g2_reference"
 const GROUP_EVENT_NAME_G2_DEAL = "$g2_deal"
 
-const GROUP_EVENT_NAME_ENGAGEMENT_SCORE = "$engagement_score"
-const GROUP_EVENT_NAME_ENGAGEMENT_LEVEL = "$engagement_level"
-const GROUP_EVENT_NAME_TOTAL_ENGAGEMENT_SCORE = "$total_enagagement_score"
-const GROUP_EVENT_NAME_ENGAGEMENT_SIGNALS = "$top_enagagement_signals"
-
 // Integration shopify event names.
 const EVENT_NAME_SHOPIFY_CHECKOUT_CREATED = "$shopify_checkout_created"
 const EVENT_NAME_SHOPIFY_CHECKOUT_UPDATED = "$shopify_checkout_updated"
@@ -779,7 +774,12 @@ var IDENTIFIED_USER_ID = "$identified_user_id"
 // SQL column as properties
 var CUSTOMER_USER_ID = "customer_user_id"
 
-var DP_DOMAIN_NAME = "$domain_name"
+// Domain Properties
+const DP_DOMAIN_NAME = "$domain_name"
+const DP_ENGAGEMENT_SCORE = "$engagement_score"
+const DP_ENGAGEMENT_LEVEL = "$engagement_level"
+const DP_TOTAL_ENGAGEMENT_SCORE = "$total_enagagement_score"
+const DP_ENGAGEMENT_SIGNALS = "$top_enagagement_signals"
 
 var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,
@@ -1650,10 +1650,19 @@ var ALL_ACCOUNT_DEFAULT_PROPERTIES = []string{
 }
 
 var ALL_ACCOUNTS_PROPERTIES = []string{
-	GROUP_EVENT_NAME_ENGAGEMENT_LEVEL,
-	GROUP_EVENT_NAME_ENGAGEMENT_SCORE,
-	GROUP_EVENT_NAME_TOTAL_ENGAGEMENT_SCORE,
+	DP_ENGAGEMENT_LEVEL,
+	DP_ENGAGEMENT_SCORE,
+	DP_TOTAL_ENGAGEMENT_SCORE,
 	DP_DOMAIN_NAME,
+	DP_ENGAGEMENT_SIGNALS,
+}
+
+var ALL_ACCOUNTS_PROPERTY_AND_TYPE = map[string]string{
+	DP_ENGAGEMENT_LEVEL:       PropertyTypeCategorical,
+	DP_ENGAGEMENT_SIGNALS:     PropertyTypeCategorical,
+	DP_DOMAIN_NAME:            PropertyTypeCategorical,
+	DP_ENGAGEMENT_SCORE:       PropertyTypeNumerical,
+	DP_TOTAL_ENGAGEMENT_SCORE: PropertyTypeNumerical,
 }
 
 var GROUP_TO_DEFAULT_SEGMENT_MAP = map[string]string{
@@ -1664,15 +1673,16 @@ var GROUP_TO_DEFAULT_SEGMENT_MAP = map[string]string{
 }
 
 var ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES = map[string]string{
-	IN_LINKEDIN:                             "Engaged on LinkedIn",
-	IN_HUBSPOT:                              "In Hubspot",
-	IN_G2:                                   "Visited G2",
-	VISITED_WEBSITE:                         "Visited Website",
-	IN_SALESFORCE:                           "In Salesforce",
-	GROUP_EVENT_NAME_ENGAGEMENT_SCORE:       "Engagement Score",
-	GROUP_EVENT_NAME_ENGAGEMENT_LEVEL:       "Engagement Level",
-	GROUP_EVENT_NAME_TOTAL_ENGAGEMENT_SCORE: "Total Engagement Score",
-	DP_DOMAIN_NAME:                          "Domain Name",
+	IN_LINKEDIN:               "Engaged on LinkedIn",
+	IN_HUBSPOT:                "In Hubspot",
+	IN_G2:                     "Visited G2",
+	VISITED_WEBSITE:           "Visited Website",
+	IN_SALESFORCE:             "In Salesforce",
+	DP_ENGAGEMENT_SCORE:       "Engagement Score",
+	DP_ENGAGEMENT_LEVEL:       "Engagement Level",
+	DP_TOTAL_ENGAGEMENT_SCORE: "Total Engagement Score",
+	DP_DOMAIN_NAME:            "Domain Name",
+	DP_ENGAGEMENT_SIGNALS:     "Top Engagement Signals",
 }
 
 var USER_PROPERTIES_WITH_COLUMN = []string{
@@ -4473,9 +4483,8 @@ func AggregatePropertyValuesAcrossDate(values []CachePropertyValueWithTimestamp,
 	for k, v := range valuesAggregated {
 		// Used for rollup aggregated caching.
 		if isRemovedEnabled && minTimestamp > 0 {
-			// Add only count which is greater than 2 (Removes unique values like raw urls occurrence once or twice.)
-			// and last appeared within the min_timestamp (rollup lookback period).
-			if v.Count > 2 && v.LastSeenTimestamp > minTimestamp {
+			// Only last appeared within the min_timestamp (rollup lookback period).
+			if v.LastSeenTimestamp > minTimestamp {
 				propertyValueAggregatedSlice = append(propertyValueAggregatedSlice, NameCountTimestampCategory{
 					Name: k, Count: v.Count, Timestamp: v.LastSeenTimestamp, Category: "", GroupName: ""})
 			}
@@ -4486,7 +4495,37 @@ func AggregatePropertyValuesAcrossDate(values []CachePropertyValueWithTimestamp,
 			Name: k, Count: v.Count, Timestamp: v.LastSeenTimestamp, Category: "", GroupName: ""})
 	}
 
-	return propertyValueAggregatedSlice
+	if !isRemovedEnabled {
+		return propertyValueAggregatedSlice
+	}
+
+	mapByValue := map[string]NameCountTimestampCategory{}
+	valuesLen := len(propertyValueAggregatedSlice)
+	if valuesLen > 2500 {
+		valuesLen = 2500
+	}
+
+	// Sorted by most occurrence.
+	sort.SliceStable(propertyValueAggregatedSlice, func(i, j int) bool {
+		return propertyValueAggregatedSlice[i].Count > propertyValueAggregatedSlice[j].Count
+	})
+	for i := 0; i < valuesLen; i++ {
+		mapByValue[propertyValueAggregatedSlice[i].Name] = propertyValueAggregatedSlice[i]
+	}
+
+	// Sorted by recency of occurrence.
+	sort.SliceStable(propertyValueAggregatedSlice, func(i, j int) bool {
+		return propertyValueAggregatedSlice[i].Timestamp < propertyValueAggregatedSlice[j].Timestamp
+	})
+	for i := 0; i < valuesLen; i++ {
+		mapByValue[propertyValueAggregatedSlice[i].Name] = propertyValueAggregatedSlice[i]
+	}
+
+	propertyValueAggregatedFiltered := make([]NameCountTimestampCategory, 0)
+	for _, v := range mapByValue {
+		propertyValueAggregatedFiltered = append(propertyValueAggregatedFiltered, v)
+	}
+	return propertyValueAggregatedFiltered
 }
 
 // AggregatePropertyAcrossDate values are stored by date and this method aggregates the count and last seen value and returns

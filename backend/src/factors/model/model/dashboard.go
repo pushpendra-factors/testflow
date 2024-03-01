@@ -52,6 +52,7 @@ type DashboardString struct {
 	Class         string          `json:"class"`
 	InternalID    int64           `json:"inter_id"` // Used only for predefined dashboard.
 	FolderID      string          `json:"folder_id"`
+	TemplateType  string          `json:"template_type"`
 	UnitsPosition *postgres.Jsonb `json:"units_position"` // map[string]map[uint64]int -> map[unit_type]unit_id:unit_position
 	IsDeleted     bool            `gorm:"not null;default:false" json:"is_deleted"`
 	CreatedAt     time.Time       `json:"created_at"`

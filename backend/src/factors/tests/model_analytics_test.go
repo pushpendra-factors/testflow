@@ -8752,6 +8752,8 @@ func TestAnalyticsAllAccountNegativeFilters(t *testing.T) {
 
 	_, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.AllowedGroupNames)
 	assert.Equal(t, http.StatusCreated, status)
+	_, status = store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_DEAL, model.AllowedGroupNames)
+	assert.Equal(t, http.StatusCreated, status)
 
 	properties := postgres.Jsonb{[]byte(`{"user_no":"w1"}`)}
 	userWeb1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: properties,
@@ -8779,7 +8781,19 @@ func TestAnalyticsAllAccountNegativeFilters(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 
 	propertiesMap = U.PropertiesMap{"$hubspot_company_name": "abc2", "$hubspot_company_domain": "abc2.com", "$hubspot_company_region": "B", "hs_company_no": "h2", "$hubspot_company_createddate": dateTimeUTC.Unix()}
+	hubspotAccountUserID, status := SDK.TrackGroupWithDomain(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, "abc2.com", propertiesMap, util.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+
+	enProperties := &map[string]interface{}{"$hubspot_deal_name": "abc2", "$hubspot_deal_domain": "abc2.com", "$hubspot_deal_region": "B", "$hubspot_deal_createddate": dateTimeUTC.Unix()}
 	_, status = SDK.TrackGroupWithDomain(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, "abc2.com", propertiesMap, util.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+
+	groupUserID, err := store.GetStore().CreateOrUpdateGroupPropertiesBySource(project.ID, model.GROUP_NAME_HUBSPOT_DEAL, "deal_1", "",
+		enProperties, dateTimeUTC.Unix(), dateTimeUTC.Unix(), model.UserSourceHubspotString)
+
+	assert.NotEmpty(t, groupUserID)
+
+	status = store.GetStore().UpdateGroupUserDomainAssociationUsingAccountUserID(project.ID, groupUserID, model.GROUP_NAME_HUBSPOT_COMPANY, hubspotAccountUserID)
 	assert.Equal(t, http.StatusOK, status)
 
 	groupProperties := &U.PropertiesMap{U.SIX_SIGNAL_DOMAIN: "abc1.com", U.SIX_SIGNAL_REGION: "A"}
@@ -9503,6 +9517,12 @@ func TestAnalyticsAllAccountNegativeFilters(t *testing.T) {
 	}
 	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
 	assert.Equal(t, http.StatusOK, errCode)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][1])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][1])
+		return p1 < p2
+	})
+
 	assert.Equal(t, float64(3), result.Rows[0][2])
 	assert.Equal(t, float64(1), result.Rows[0][3])
 	assert.Equal(t, "33.3", result.Rows[0][4])
@@ -9511,15 +9531,15 @@ func TestAnalyticsAllAccountNegativeFilters(t *testing.T) {
 	assert.Equal(t, float64(1), result.Rows[1][2])
 	assert.Equal(t, float64(0), result.Rows[1][3])
 	assert.Equal(t, "0.0", result.Rows[1][4])
-	assert.Equal(t, "$none", result.Rows[2][0])
-	assert.Equal(t, "abc3.com", result.Rows[2][1])
+	assert.Equal(t, "abc2", result.Rows[2][0])
+	assert.Equal(t, "abc2.com", result.Rows[2][1])
 	assert.Equal(t, float64(1), result.Rows[2][2])
-	assert.Equal(t, float64(0), result.Rows[2][3])
-	assert.Equal(t, "0.0", result.Rows[2][4])
-	assert.Equal(t, "abc2", result.Rows[3][0])
-	assert.Equal(t, "abc2.com", result.Rows[3][1])
+	assert.Equal(t, float64(1), result.Rows[2][3])
+	assert.Equal(t, "$none", result.Rows[3][0])
+	assert.Equal(t, "abc3.com", result.Rows[3][1])
 	assert.Equal(t, float64(1), result.Rows[3][2])
-	assert.Equal(t, float64(1), result.Rows[3][3])
+	assert.Equal(t, float64(0), result.Rows[3][3])
+	assert.Equal(t, "0.0", result.Rows[3][4])
 
 	/*
 			WITH  step_0 AS (SELECT step_0_event_users_view.group_user_id as coal_group_user_id,
@@ -9883,6 +9903,77 @@ func TestAnalyticsAllAccountNegativeFilters(t *testing.T) {
 	assert.Equal(t, float64(1), result.Rows[1][2])
 	assert.Equal(t, float64(0), result.Rows[1][3])
 	assert.Equal(t, "0.0", result.Rows[1][4])
+
+	query = model.Query{
+		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       "www.xyz.com",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GlobalUserProperties: []model.QueryProperty{
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_HUBSPOT_DEAL,
+				Property:  "$hubspot_deal_name",
+				Operator:  model.EqualsOpStr,
+				Value:     "abc2",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "AND",
+			},
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_HUBSPOT_DEAL,
+				Property:  "$hubspot_deal_name",
+				Operator:  model.EqualsOpStr,
+				Value:     "abc1",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "OR",
+			},
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_name",
+				Operator:  model.NotEqualOpStr,
+				Value:     "abc1",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "AND",
+			},
+		},
+
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_HUBSPOT_COMPANY,
+				Property:  "$hubspot_company_name",
+				EventName: model.UserPropertyGroupByPresent,
+			},
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_HUBSPOT_DEAL,
+				Property:  "$hubspot_deal_name",
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+		Class:           model.QueryClassEvents,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		p1 := U.GetPropertyValueAsString(result.Rows[i][1])
+		p2 := U.GetPropertyValueAsString(result.Rows[j][1])
+		return p1 < p2
+	})
+	assert.Len(t, result.Rows, 1)
+	assert.Equal(t, "www.xyz.com", result.Rows[0][1])
+	assert.Equal(t, "abc2", result.Rows[0][2])
+	assert.Equal(t, "abc2", result.Rows[0][3])
+
 }
 
 func TestAnalyticsAllAccountsFilterBreadkdown(t *testing.T) {
@@ -10754,7 +10845,7 @@ func TestAllAccountDomainProperties(t *testing.T) {
 	domainUser, status := store.GetStore().CreateOrGetDomainGroupUser(project.ID, U.GROUP_NAME_DOMAINS, "abc1.com", 0, model.UserSourceDomains)
 	assert.Equal(t, http.StatusFound, status)
 	domainProperties := map[string]interface{}{
-		U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE: 1,
+		U.DP_ENGAGEMENT_SCORE: 1,
 	}
 	_, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(project.ID, U.GROUP_NAME_DOMAINS, "abc1.com", domainUser, &domainProperties,
 		U.TimeNowUnix(), U.TimeNowUnix(), model.UserSourceDomainsString)
@@ -10763,7 +10854,7 @@ func TestAllAccountDomainProperties(t *testing.T) {
 	domainUser, status = store.GetStore().CreateOrGetDomainGroupUser(project.ID, U.GROUP_NAME_DOMAINS, "abc2.com", 0, model.UserSourceDomains)
 	assert.Equal(t, http.StatusFound, status)
 	domainProperties = map[string]interface{}{
-		U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE: 3,
+		U.DP_ENGAGEMENT_SCORE: 3,
 	}
 	_, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(project.ID, U.GROUP_NAME_DOMAINS, "abc2.com", domainUser, &domainProperties,
 		U.TimeNowUnix(), U.TimeNowUnix(), model.UserSourceDomainsString)
@@ -10905,7 +10996,7 @@ func TestAllAccountDomainProperties(t *testing.T) {
 		{
 			Entity:    model.PropertyEntityDomainGroup,
 			GroupName: model.GROUP_NAME_DOMAINS,
-			Property:  U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE,
+			Property:  U.DP_ENGAGEMENT_SCORE,
 			Operator:  model.LesserThanOpStr,
 			Value:     "2",
 			Type:      U.PropertyTypeNumerical,
@@ -10932,7 +11023,7 @@ func TestAllAccountDomainProperties(t *testing.T) {
 		{
 			Entity:    model.PropertyEntityDomainGroup,
 			GroupName: model.GROUP_NAME_DOMAINS,
-			Property:  U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE,
+			Property:  U.DP_ENGAGEMENT_SCORE,
 			Operator:  model.LesserThanOpStr,
 			Value:     "4",
 			Type:      U.PropertyTypeNumerical,
@@ -11013,7 +11104,7 @@ func TestAllAccountDomainProperties(t *testing.T) {
 	query.GroupByProperties = append(query.GroupByProperties, model.QueryGroupByProperty{
 		Entity:    model.PropertyEntityUser,
 		GroupName: U.GROUP_NAME_DOMAINS,
-		Property:  U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE,
+		Property:  U.DP_ENGAGEMENT_SCORE,
 		EventName: model.UserPropertyGroupByPresent,
 	})
 
@@ -11168,7 +11259,7 @@ func TestAllAccountDomainProperties(t *testing.T) {
 	query.GroupByProperties = append(query.GroupByProperties, model.QueryGroupByProperty{
 		Entity:    model.PropertyEntityDomainGroup,
 		GroupName: U.GROUP_NAME_DOMAINS,
-		Property:  U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE,
+		Property:  U.DP_ENGAGEMENT_SCORE,
 		EventName: model.UserPropertyGroupByPresent,
 	})
 
