@@ -66,6 +66,17 @@ func (store *MemSQL) createUserWithError(user *model.User) (*model.User, error) 
 		return nil, err
 	}
 
+	if *user.Source == model.UserSourceWeb {
+		updatedProperties, err := U.AddToPostgresJsonb(&properties, map[string]interface{}{
+			U.UP_REAL_PAGE_SPENT_TIME: 0,
+			U.UP_REAL_PAGE_COUNT:      0}, false)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to add real page spent time on create user")
+		} else {
+			properties = *updatedProperties
+		}
+	}
+
 	user.Properties = properties
 	// adds join timestamp to user properties.
 	newUserProperties := map[string]interface{}{
@@ -2881,6 +2892,28 @@ func (store *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdatedV2(
 
 		newUserProperties[U.UP_TOTAL_SPENT_TIME] = existingTotalSpentTime + sessionUserProperties.TotalSpentTime
 		newUserProperties[U.UP_PAGE_COUNT] = existingPageCount + sessionUserProperties.PageCount
+
+		if _, exist := (*existingUserPropertiesMap)[U.UP_REAL_PAGE_SPENT_TIME]; exist {
+			existingRealPageSpentTime, err := U.GetPropertyValueAsFloat64((*existingUserPropertiesMap)[U.UP_REAL_PAGE_SPENT_TIME])
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to convert existing real_page_spent_time to float64.")
+			}
+
+			newUserProperties[U.UP_REAL_PAGE_SPENT_TIME] = existingRealPageSpentTime + sessionUserProperties.TotalSpentTime
+		} else {
+			newUserProperties[U.UP_REAL_PAGE_SPENT_TIME] = 1 + sessionUserProperties.TotalSpentTime
+		}
+
+		if _, exist := (*existingUserPropertiesMap)[U.UP_REAL_PAGE_COUNT]; exist {
+			existingRealPageCount, err := U.GetPropertyValueAsFloat64((*existingUserPropertiesMap)[U.UP_REAL_PAGE_COUNT])
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to convert existing real_page_count to float64.")
+			}
+
+			newUserProperties[U.UP_REAL_PAGE_COUNT] = existingRealPageCount + sessionUserProperties.PageCount
+		} else {
+			newUserProperties[U.UP_REAL_PAGE_COUNT] = 1 + sessionUserProperties.PageCount
+		}
 
 		userPropertiesJsonb, err := U.AddToPostgresJsonb(existingUserProperties, newUserProperties, true)
 		if err != nil {
