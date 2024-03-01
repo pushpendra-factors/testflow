@@ -414,7 +414,10 @@ func (store *MemSQL) GetGlobalProjectAnalyticsDataByProjectId(projectID int64, m
 		if sixSignalLimit == 0 {
 			sixSignalLimit = 1
 		}
-		data["account_potential"] = (U.SafeConvertToFloat64(data["unique_user_kpi"]) * 0.4) / float64(sixSignalLimit)
+
+		data["account_potential"] = U.SafeConvertToFloat64(data["unique_user_kpi"]) * 0.4
+		data["account_limit"] = float64(sixSignalLimit)
+		data["upsell_potential"] = (U.SafeConvertToFloat64(data["unique_user_kpi"]) * 0.4) / float64(sixSignalLimit)
 		result = append(result, data)
 
 	}
