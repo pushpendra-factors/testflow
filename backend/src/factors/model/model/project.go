@@ -154,7 +154,7 @@ func DefaultMarketingPropertiesMap() InteractionSettings {
 	interactionSettings.UTMMappings[U.EP_GCLID] = []string{U.QUERY_PARAM_PROPERTY_PREFIX + "gclid", U.QUERY_PARAM_PROPERTY_PREFIX + "utm_gclid",
 		U.QUERY_PARAM_PROPERTY_PREFIX + "wbraid", U.QUERY_PARAM_PROPERTY_PREFIX + "gbraid"}
 	interactionSettings.UTMMappings[U.EP_FBCLID] = []string{U.QUERY_PARAM_PROPERTY_PREFIX + "fbclid", U.QUERY_PARAM_PROPERTY_PREFIX + "utm_fbclid"}
-
+	interactionSettings.UTMMappings[U.EP_LICLID] = []string{U.QUERY_PARAM_PROPERTY_PREFIX + "li_fat_id", U.QUERY_PARAM_PROPERTY_PREFIX + "utm_li_fat_id"}
 	interactionSettings.UTMMappings[U.EP_TERM] = []string{U.QUERY_PARAM_UTM_PREFIX + "term"}
 	interactionSettings.UTMMappings[U.EP_KEYWORD_MATCH_TYPE] = []string{U.QUERY_PARAM_UTM_PREFIX + "matchtype", U.QUERY_PARAM_UTM_PREFIX + "match_type"}
 

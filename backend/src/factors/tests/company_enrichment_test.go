@@ -160,10 +160,12 @@ func UpdateAccountLimtForTesting(projectId int64, accLimit int64) error {
 
 	updatedFeatureList := addOns
 
-	for idx, feature := range updatedFeatureList {
-		if feature.Name == model.FEATURE_FACTORS_DEANONYMISATION {
-			updatedFeatureList[idx].Limit = accLimit
+	if _,exists := updatedFeatureList[model.FEATURE_FACTORS_DEANONYMISATION];exists {
+		feature := model.FeatureDetails{
+			Limit : accLimit,
+			IsEnabledFeature : true,
 		}
+		updatedFeatureList[model.FEATURE_FACTORS_DEANONYMISATION]= feature
 	}
 
 	_, err = store.GetStore().UpdateAddonsForProject(projectId, updatedFeatureList)

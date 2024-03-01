@@ -746,3 +746,43 @@ func sanitizeWebAnalyticsResult(queryResult *model.WebAnalyticsQueryResult,
 	}
 	return queryResultsByUnitMap
 }
+
+func MoveMultipleDashboardToAllBoardsFolderHandler(c *gin.Context) {
+
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Moving dashboards to all boards failed. Invalid project."})
+		return
+	}
+
+	folderId := c.Params.ByName("folder_id")
+	if folderId == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Moving dashboards to all boards failed. Invalid folder id."})
+		return
+	}
+
+	logCtx := log.WithFields(log.Fields{"projrct_id": projectId, "folder_id": folderId})
+
+	dashboards, errCode := store.GetStore().GetDashboardsByFolderId(projectId, folderId)
+	if errCode != http.StatusFound {
+		logCtx.Error("Moving dashboards to all boards failed. Failed to fetch dashboards.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Moving dashboards to all boards failed. Failed to fetch dashboards."})
+		return
+	}
+
+	allBoards, errCode := store.GetStore().GetAllBoardsDashboardFolder(projectId)
+	if errCode != http.StatusFound {
+		logCtx.Error("Moving dashboards to all boards failed. Failed to get All Boards folder.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Moving dashboards to all boards failed."})
+		return
+	}
+
+	errCode = store.GetStore().UpdateFolderIdForMultipleDashboards(projectId, dashboards, allBoards.Id)
+	if errCode != http.StatusAccepted {
+		logCtx.Error("Moving dashboards to all boards failed. Failed to update folder id.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Moving dashboards to all boards failed."})
+		return
+	}
+
+	c.JSON(http.StatusAccepted, gin.H{"message": "Successfully moved."})
+}

@@ -142,7 +142,7 @@ function AppLayout({
 
   useEffect(() => {
     const onKeyDown = (e) => {
-      if (e.metaKey && e.keyCode === 75) {
+      if ((e.metaKey || e.ctrlKey) && e.keyCode === 75) {
         dispatch({ type: TOGGLE_GLOBAL_SEARCH });
       }
     };

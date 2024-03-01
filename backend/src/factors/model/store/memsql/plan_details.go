@@ -5,10 +5,11 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // temp
@@ -105,12 +106,15 @@ func (store *MemSQL) GetDisplayablePlanDetails(ppMap model.ProjectPlanMapping, p
 			return nil, http.StatusBadRequest, errMsg, err
 		}
 	}
-	var enabledAddOns model.OverWrite
-	for _, feature := range addOns {
+	enabledAddOns := make(map[string]model.FeatureDetails)
+
+	for featureName, feature := range addOns {
+		// filter disabled features
 		if feature.IsEnabledFeature {
-			enabledAddOns = append(enabledAddOns, feature)
+			enabledAddOns[featureName] = feature
 		}
 	}
+
 	var sixSignalInfo model.SixSignalInfo
 	isDeanonymisationEnabled, err := store.GetFeatureStatusForProjectV2(ppMap.ProjectID, FEATURE_FACTORS_DEANONYMISATION, false)
 	if err != nil {
@@ -133,9 +137,16 @@ func (store *MemSQL) GetDisplayablePlanDetails(ppMap model.ProjectPlanMapping, p
 			return nil, http.StatusInternalServerError, "Failed to decode feature list json", err
 		}
 	}
+
+	// filter disabled features
+	for fname, feature := range featureList {
+		if !feature.IsEnabledFeature {
+			delete(featureList, fname)
+		}
+	}
+
 	// transform plan details to array to support backward compatibility
 	transFormedFeatureList := model.TransformFeatureListMaptoFeatureListArray(featureList)
-
 	// encode to json
 	transformedFeatureListJson, err := U.EncodeStructTypeToPostgresJsonb(transFormedFeatureList)
 	if err != nil {
@@ -143,13 +154,15 @@ func (store *MemSQL) GetDisplayablePlanDetails(ppMap model.ProjectPlanMapping, p
 		return nil, http.StatusInternalServerError, "Failed to encode transformed feature list to json", err
 	}
 
+	transformedOverwrites := model.TransformFeatureListMaptoFeatureListArray(model.FeatureList(enabledAddOns))
+
 	planDetails.FeatureList = transformedFeatureListJson
 
 	obj := model.DisplayPlanDetails{
 		ProjectID:     ppMap.ProjectID,
 		Plan:          planDetails,
 		DisplayName:   getDisplayNameForPlan(planDetails.Name),
-		AddOns:        enabledAddOns,
+		AddOns:        transformedOverwrites,
 		LastRenewedOn: ppMap.LastRenewedOn,
 		SixSignalInfo: sixSignalInfo,
 	}
@@ -372,22 +385,28 @@ func (store *MemSQL) UpdateFeaturesForCustomPlan(projectID int64, AccountLimit i
 	for _, feature := range AvailableFeatuers {
 		featureMap[feature] = true
 	}
+
 	allFeatures := model.GetAllAvailableFeatures()
-	var updatedFeatureList model.OverWrite
+	updatedFeatureList := make(map[string]model.FeatureDetails)
 	for _, featureName := range allFeatures {
-		var feature model.FeatureDetailsTemp
-		feature.Name = featureName
+		var feature model.FeatureDetails
 		if _, exists := featureMap[featureName]; !exists {
 			feature.IsEnabledFeature = false
 		} else {
 			feature.IsEnabledFeature = true
 		}
-		updatedFeatureList = append(updatedFeatureList, feature)
+		updatedFeatureList[featureName] = feature
 	}
 	// TODO : update MTU limit after roshan's changes
-	for idx, feature := range updatedFeatureList {
-		if feature.Name == model.FEATURE_FACTORS_DEANONYMISATION {
-			updatedFeatureList[idx].Limit = AccountLimit
+	for fname := range updatedFeatureList {
+		if fname == model.FEATURE_FACTORS_DEANONYMISATION {
+			var tempFeatureDetails model.FeatureDetails
+			tempFeatureDetails.Limit = AccountLimit
+			tempFeatureDetails.Expiry = updatedFeatureList[fname].Expiry
+			tempFeatureDetails.IsEnabledFeature = updatedFeatureList[fname].IsEnabledFeature
+			tempFeatureDetails.Granularity = updatedFeatureList[fname].Granularity
+
+			updatedFeatureList[fname] = tempFeatureDetails
 		}
 	}
 	_, err = store.UpdateAddonsForProject(projectID, updatedFeatureList)
@@ -440,14 +459,17 @@ func (store *MemSQL) CreateAddonsForCustomPlanForProject(projectID int64) error 
 		}
 	}
 
-	overWrites := model.TransformFeatureListMaptoFeatureListArray(basicFeatureList)
-	for idx, overwrite := range overWrites {
-		if overwrite.Name == model.FEATURE_FACTORS_DEANONYMISATION {
-			// TODO : change this to const
-			overWrites[idx].Limit = 500
+	overWrite := make(map[string]model.FeatureDetails)
+	for fname := range basicFeatureList {
+		overWrite[fname] = basicFeatureList[fname]
+		if fname == model.FEATURE_FACTORS_DEANONYMISATION {
+			updatedFeature := overWrite[fname]
+			updatedFeature.Limit = 500
+			overWrite[fname] = updatedFeature
 		}
 	}
-	_, err = store.UpdateAddonsForProject(projectID, overWrites)
+
+	_, err = store.UpdateAddonsForProject(projectID, overWrite)
 	if err != nil {
 		log.WithError(err).Error("Failed to create custom plan addons")
 		return err

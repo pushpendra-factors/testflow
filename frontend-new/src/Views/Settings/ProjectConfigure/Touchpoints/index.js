@@ -3,7 +3,7 @@ import { connect, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { Text, SVG } from 'factorsComponents';
 import { getEventPropertiesV2 } from 'Reducers/coreQuery/middleware';
-import { fetchProjects, udpateProjectDetails } from 'Reducers/global';
+import { udpateProjectDetails } from 'Reducers/global';
 import {
   Row,
   Col,
@@ -37,7 +37,6 @@ const Touchpoints = ({
   activeProject,
   currentProjectSettings,
   getEventPropertiesV2,
-  fetchProjects,
   udpateProjectDetails
 }) => {
   const otpService = useService(activeProject.id, OTPService);
@@ -535,7 +534,6 @@ const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
       getEventPropertiesV2,
-      fetchProjects,
       udpateProjectDetails
     },
     dispatch

@@ -20,7 +20,7 @@ func CreateGroupUserAndEvents(linkedinProjectSetting model.LinkedinProjectSettin
 	}
 	log.Info("Starting processing for project ", projectID)
 
-	eventNameViewedAD, eventNameClickedAD, errMsg, errCode := createDependentEventNames(projectID)
+	eventNameViewedAD, eventNameClickedAD, errMsg, errCode := createDependentLinkedInEventNames(projectID)
 	if errCode != http.StatusOK {
 		return errMsg, errCode
 	}
@@ -33,16 +33,16 @@ func CreateGroupUserAndEvents(linkedinProjectSetting model.LinkedinProjectSettin
 		return "Failed to load location via timezone", http.StatusInternalServerError
 	}
 
-	distinctTimestamps, errCode := store.GetStore().GetDistinctTimestampsForEventCreation(linkedinProjectSetting.ProjectId)
+	distinctTimestamps, errCode := store.GetStore().GetDistinctTimestampsForEventCreationFromLinkedinDocs(linkedinProjectSetting.ProjectId)
 	if errCode != http.StatusOK {
 		return "Failed to get distinct timestamps for event creation from linkedin", errCode
 	}
 	for _, timestamp := range distinctTimestamps {
-		domainDataSet, errCode := store.GetStore().GetCompanyDataFromLinkedinForTimestamp(linkedinProjectSetting.ProjectId, timestamp)
+		domainDataSet, errCode := store.GetStore().GetCompanyDataFromLinkedinDocsForTimestamp(linkedinProjectSetting.ProjectId, timestamp)
 		if errCode != http.StatusOK {
 			return "Failed to get domain data from linkedin", errCode
 		}
-		log.WithFields(log.Fields{"count": len(domainDataSet), "timestamp": timestamp}).Info("DebugMetric log 1")
+		log.WithFields(log.Fields{"count": len(domainDataSet), "timestamp": timestamp}).Info("Number of documents to process for timestamp")
 		timestampStr := strconv.FormatInt(timestamp, 10)
 		timestampForEventLookup, err := time.ParseInLocation("20060102", timestampStr, location)
 		if err != nil {
@@ -67,7 +67,7 @@ func CreateGroupUserAndEvents(linkedinProjectSetting model.LinkedinProjectSettin
 			if errCode != http.StatusOK {
 				return errMsg, errCode
 			}
-			domainDataSet, errCode = store.GetStore().GetCompanyDataFromLinkedinForTimestamp(linkedinProjectSetting.ProjectId, timestamp)
+			domainDataSet, errCode = store.GetStore().GetCompanyDataFromLinkedinDocsForTimestamp(linkedinProjectSetting.ProjectId, timestamp)
 			if errCode != http.StatusOK {
 				return "Failed to get domain data from linkedin", errCode
 			}
@@ -77,7 +77,7 @@ func CreateGroupUserAndEvents(linkedinProjectSetting model.LinkedinProjectSettin
 	return "", http.StatusOK
 }
 
-func createDependentEventNames(projectID int64) (*model.EventName, *model.EventName, string, int) {
+func createDependentLinkedInEventNames(projectID int64) (*model.EventName, *model.EventName, string, int) {
 	eventNameViewedAD, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{
 		ProjectId: projectID,
 		Name:      U.GROUP_EVENT_NAME_LINKEDIN_VIEWED_AD,
@@ -137,7 +137,7 @@ func createGroupUserAndEventsForGivenDomainData(projectID int64, eventNameViewed
 			unixTimestamp := timestamp.Unix()
 			userID, errCode := SDK.TrackGroupWithDomain(projectID, U.GROUP_NAME_LINKEDIN_COMPANY, domainData.Domain, properties, unixTimestamp)
 			if errCode == http.StatusNotImplemented {
-				err = store.GetStore().UpdateLinkedinGroupUserCreationDetails(domainData)
+				err = store.GetStore().UpdateSyncStatusLinkedinDocs(domainData)
 				if err != nil {
 					logCtx.WithError(err).Error("Failed in updating user creation details")
 					return "Failed in updating user creation details", http.StatusInternalServerError
@@ -205,7 +205,7 @@ func createGroupUserAndEventsForGivenDomainData(projectID int64, eventNameViewed
 			}
 		}
 
-		err := store.GetStore().UpdateLinkedinGroupUserCreationDetails(domainData)
+		err := store.GetStore().UpdateSyncStatusLinkedinDocs(domainData)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed in updating user creation details")
 			return "Failed in updating user creation details", http.StatusInternalServerError
@@ -238,7 +238,7 @@ func CreateGroupUserAndEventsV1(linkedinProjectSetting model.LinkedinProjectSett
 	}
 	log.Info("Starting processing for project ", projectID)
 
-	eventNameViewedAD, eventNameClickedAD, errMsg, errCode := createDependentEventNames(projectID)
+	eventNameViewedAD, eventNameClickedAD, errMsg, errCode := createDependentLinkedInEventNames(projectID)
 	if errCode != http.StatusOK {
 		return errMsg, errCode
 	}
@@ -251,16 +251,16 @@ func CreateGroupUserAndEventsV1(linkedinProjectSetting model.LinkedinProjectSett
 		return "Failed to load location via timezone", http.StatusInternalServerError
 	}
 
-	distinctTimestamps, errCode := store.GetStore().GetDistinctTimestampsForEventCreation(linkedinProjectSetting.ProjectId)
+	distinctTimestamps, errCode := store.GetStore().GetDistinctTimestampsForEventCreationFromLinkedinDocs(linkedinProjectSetting.ProjectId)
 	if errCode != http.StatusOK {
 		return "Failed to get distinct timestamps for event creation from linkedin", errCode
 	}
 	for _, timestamp := range distinctTimestamps {
-		domainDataSet, errCode := store.GetStore().GetCompanyDataFromLinkedinForTimestamp(linkedinProjectSetting.ProjectId, timestamp)
+		domainDataSet, errCode := store.GetStore().GetCompanyDataFromLinkedinDocsForTimestamp(linkedinProjectSetting.ProjectId, timestamp)
 		if errCode != http.StatusOK {
 			return "Failed to get domain data from linkedin", errCode
 		}
-		log.WithFields(log.Fields{"count": len(domainDataSet), "timestamp": timestamp}).Info("DebugMetric log 1")
+		log.WithFields(log.Fields{"count": len(domainDataSet), "timestamp": timestamp}).Info("Number of documents to process for timestamp")
 		timestampStr := strconv.FormatInt(timestamp, 10)
 		timestampForEventLookup, err := time.ParseInLocation("20060102", timestampStr, location)
 		if err != nil {
@@ -295,7 +295,7 @@ func CreateGroupUserAndEventsV1(linkedinProjectSetting model.LinkedinProjectSett
 					return syncStatus.ErrMsg, syncStatus.StatusCode
 				}
 			}
-			domainDataSet, errCode = store.GetStore().GetCompanyDataFromLinkedinForTimestamp(linkedinProjectSetting.ProjectId, timestamp)
+			domainDataSet, errCode = store.GetStore().GetCompanyDataFromLinkedinDocsForTimestamp(linkedinProjectSetting.ProjectId, timestamp)
 			if errCode != http.StatusOK {
 				return "Failed to get domain data from linkedin", errCode
 			}
@@ -346,7 +346,7 @@ func createGroupUserAndEventsForDomainDataV1(projectID int64, eventNameViewedAD 
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
 	if domainData.Domain == "" || domainData.Domain == "$none" {
-		err := store.GetStore().UpdateLinkedinGroupUserCreationDetails(domainData)
+		err := store.GetStore().UpdateSyncStatusLinkedinDocs(domainData)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed in updating user creation details")
 			return "Failed in updating user creation details", http.StatusInternalServerError
@@ -372,7 +372,7 @@ func createGroupUserAndEventsForDomainDataV1(projectID int64, eventNameViewedAD 
 	unixTimestamp := timestamp.Unix()
 	userID, errCode := SDK.TrackGroupWithDomain(projectID, U.GROUP_NAME_LINKEDIN_COMPANY, domainData.Domain, properties, unixTimestamp)
 	if errCode == http.StatusNotImplemented {
-		err = store.GetStore().UpdateLinkedinGroupUserCreationDetails(domainData)
+		err = store.GetStore().UpdateSyncStatusLinkedinDocs(domainData)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed in updating user creation details")
 			return "Failed in updating user creation details", http.StatusInternalServerError
@@ -395,7 +395,7 @@ func createGroupUserAndEventsForDomainDataV1(projectID int64, eventNameViewedAD 
 		logCtx.Error(errMsg)
 		return errMsg, errCode
 	}
-	err = store.GetStore().UpdateLinkedinGroupUserCreationDetails(domainData)
+	err = store.GetStore().UpdateSyncStatusLinkedinDocs(domainData)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed in updating user creation details")
 		return "Failed in updating user creation details", http.StatusInternalServerError
@@ -431,8 +431,8 @@ func createOrUpdateEventFromDomainDataV1(projectID int64, userID string, eventNa
 		}
 	} else if eventID != "" {
 		errCode := store.GetStore().UpdateEventProperties(projectID, eventID, "", &eventPropertiesMap, timestamp, nil)
-		log.WithFields(log.Fields{"projectID": projectID, "eventID": eventID, "timestamp": timestamp, "props": eventPropertiesMap}).Error("Failed in updating event")
 		if errCode != http.StatusAccepted {
+			log.WithFields(log.Fields{"projectID": projectID, "eventID": eventID, "timestamp": timestamp, "props": eventPropertiesMap}).Error("Failed in updating event")
 			return "Failed in updating event", errCode
 		}
 	}
@@ -449,4 +449,313 @@ func checkIfEventCreationReqV1(propertyValue int64, domain string, timestamp int
 	}
 
 	return true, ""
+}
+
+func CreateGroupUserAndEventsV2(linkedinProjectSetting model.LinkedinProjectSettings, batchSize int) (string, int) {
+	projectID, err := strconv.ParseInt(linkedinProjectSetting.ProjectId, 10, 64)
+	if err != nil {
+		return err.Error(), http.StatusInternalServerError
+	}
+	log.Info("Starting processing for project ", projectID)
+
+	eventNameViewedAD, eventNameClickedAD, errMsg, errCode := createDependentLinkedInEventNames(projectID)
+	if errCode != http.StatusOK {
+		return errMsg, errCode
+	}
+	timeZone, errCode := store.GetStore().GetTimezoneForProject(projectID)
+	if errCode != http.StatusFound {
+		return "Failed to get timezone", errCode
+	}
+	location, err := time.LoadLocation(string(timeZone))
+	if err != nil {
+		return "Failed to load location via timezone", http.StatusInternalServerError
+	}
+
+	distinctTimestamps, errCode := store.GetStore().GetDistinctTimestampsForEventCreationFromLinkedinDocs(linkedinProjectSetting.ProjectId)
+	if errCode != http.StatusOK {
+		return "Failed to get distinct timestamps for event creation from linkedin", errCode
+	}
+	for _, timestamp := range distinctTimestamps {
+		domainDataSet, errCode := store.GetStore().GetCompanyDataFromLinkedinDocsForTimestamp(linkedinProjectSetting.ProjectId, timestamp)
+		if errCode != http.StatusOK {
+			return "Failed to get domain data from linkedin", errCode
+		}
+		log.WithFields(log.Fields{"count": len(domainDataSet), "timestamp": timestamp}).Info("Number of documents to process")
+		timestampStr := strconv.FormatInt(timestamp, 10)
+		timestampForEventLookup, err := time.ParseInLocation("20060102", timestampStr, location)
+		if err != nil {
+			return err.Error(), http.StatusInternalServerError
+		}
+		unixTimestampForEventLookup := timestampForEventLookup.Unix()
+		imprEventsMapWithCampaign, clicksEventsMapWithCampaign, err := store.GetStore().GetLinkedinEventFieldsBasedOnTimestampV2(projectID, unixTimestampForEventLookup, eventNameViewedAD.ID, eventNameClickedAD.ID)
+		if err != nil {
+			return err.Error(), http.StatusInternalServerError
+		}
+		for len(domainDataSet) > 0 {
+			var syncStatus syncWorkerStatus
+			batchedDomainData := getBatchOfDomainDataV2(projectID, domainDataSet, batchSize)
+			for _, domainDataBatch := range batchedDomainData {
+				var wg sync.WaitGroup
+				for _, domainData := range domainDataBatch {
+					wg.Add(1)
+					go createGroupUserAndEventsForGivenDomainDataBatchV2(projectID, eventNameViewedAD,
+						eventNameClickedAD, location, domainData, imprEventsMapWithCampaign, clicksEventsMapWithCampaign, &wg, &syncStatus)
+				}
+				wg.Wait()
+				if syncStatus.HasFailure {
+					return syncStatus.ErrMsg, syncStatus.StatusCode
+				}
+			}
+			domainDataSet, errCode = store.GetStore().GetCompanyDataFromLinkedinDocsForTimestamp(linkedinProjectSetting.ProjectId, timestamp)
+			if errCode != http.StatusOK {
+				return "Failed to get domain data from linkedin", errCode
+			}
+		}
+	}
+	log.Info("Ended processing for project ", projectID)
+	return "", http.StatusOK
+}
+
+/*
+linkedin websites, a.b.com, b.b.com, a.c.com, b.c.com, d.com
+ 1. getGroupingByDomainV2:
+    [[a.b.com, b.b.com], [a.c.com, b.c.com], [d.com]]
+ 2. final return for batch length 2
+    [[[a.b.com, b.b.com], [a.c.com, b.c.com]], [[d.com]]]
+    `[[a.b.com, b.b.com], [a.c.com, b.c.com]]` is batch 1
+ 3. rows with same domain will run serially
+*/
+func getBatchOfDomainDataV2(projectID int64, domainDataSet []model.DomainDataResponse, batchSize int) [][][]model.DomainDataResponse {
+
+	groupedDomainDataSet := getGroupingByDomainV2(projectID, domainDataSet)
+	batchedDomainData := make([][][]model.DomainDataResponse, 0)
+	for i := 0; i < len(groupedDomainDataSet); i += batchSize {
+		end := i + batchSize
+
+		if end > len(groupedDomainDataSet) {
+			end = len(groupedDomainDataSet)
+		}
+		batchedDomainData = append(batchedDomainData, groupedDomainDataSet[i:end])
+	}
+	return batchedDomainData
+}
+
+func getGroupingByDomainV2(projectID int64, domainDataSet []model.DomainDataResponse) [][]model.DomainDataResponse {
+	groupedDomainDataSet := make([][]model.DomainDataResponse, 0)
+	mapOfDomainToDomainDataSet := make(map[string][]model.DomainDataResponse)
+	for _, domainData := range domainDataSet {
+		domain := U.GetDomainGroupDomainName(projectID, domainData.Domain)
+		if _, exists := mapOfDomainToDomainDataSet[domain]; !exists {
+			mapOfDomainToDomainDataSet[domain] = make([]model.DomainDataResponse, 0)
+		}
+		mapOfDomainToDomainDataSet[domain] = append(mapOfDomainToDomainDataSet[domain], domainData)
+	}
+	for key, groupedDomainData := range mapOfDomainToDomainDataSet {
+		groupedDomainDataSet = append(groupedDomainDataSet, groupedDomainData)
+		if len(groupedDomainData) > 10 {
+			log.WithFields(log.Fields{"project_id": projectID, "domain": key, "length": len(groupedDomainData)}).Error("Number of rows per domain exceeding 10")
+		}
+	}
+	return groupedDomainDataSet
+}
+
+func createGroupUserAndEventsForGivenDomainDataBatchV2(projectID int64, eventNameViewedAD *model.EventName,
+	eventNameClickedAD *model.EventName, location *time.Location, groupDomainData []model.DomainDataResponse,
+	imprEventsMapWithCampaign map[int64]map[string]map[string]map[string]interface{},
+	clicksEventsMapWithCampaign map[int64]map[string]map[string]map[string]interface{}, wg *sync.WaitGroup, syncStatus *syncWorkerStatus) {
+	defer wg.Done()
+	for _, domainData := range groupDomainData {
+		errMsg, errCode := createGroupUserAndEventsForDomainDataV2(projectID, eventNameViewedAD,
+			eventNameClickedAD, location, domainData, imprEventsMapWithCampaign, clicksEventsMapWithCampaign)
+
+		syncStatus.Lock.Lock()
+		if errCode != http.StatusOK {
+			syncStatus.HasFailure = true
+			syncStatus.ErrMsg = errMsg
+			syncStatus.StatusCode = errCode
+			syncStatus.Lock.Unlock()
+			break
+		}
+		syncStatus.Lock.Unlock()
+	}
+}
+func createGroupUserAndEventsForDomainDataV2(projectID int64, eventNameViewedAD *model.EventName,
+	eventNameClickedAD *model.EventName, location *time.Location, domainData model.DomainDataResponse,
+	imprEventsMapWithCampaign map[int64]map[string]map[string]map[string]interface{},
+	clicksEventsMapWithCampaign map[int64]map[string]map[string]map[string]interface{}) (string, int) {
+
+	logFields := log.Fields{
+		"project_id": projectID,
+		"doument":    domainData,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+	if (domainData.Domain == "" || domainData.Domain == "$none") || (domainData.Impressions == 0 && domainData.Clicks == 0) {
+		err := store.GetStore().UpdateSyncStatusLinkedinDocs(domainData)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed in updating user creation details")
+			return "Failed in updating user creation details", http.StatusInternalServerError
+		}
+		return "", http.StatusOK
+	}
+
+	properties := U.PropertiesMap{
+		U.LI_DOMAIN:            domainData.Domain,
+		U.LI_HEADQUARTER:       domainData.HeadQuarters,
+		U.LI_LOCALIZED_NAME:    domainData.LocalizedName,
+		U.LI_VANITY_NAME:       domainData.VanityName,
+		U.LI_PREFERRED_COUNTRY: domainData.PreferredCountry,
+		U.LI_ORGANIZATION_ID:   domainData.ID,
+	}
+
+	timestamp, err := time.ParseInLocation("20060102", domainData.Timestamp, location)
+	if err != nil {
+		return err.Error(), http.StatusInternalServerError
+
+	}
+
+	unixTimestamp := timestamp.Unix()
+	userID, errCode := SDK.TrackGroupWithDomain(projectID, U.GROUP_NAME_LINKEDIN_COMPANY, domainData.Domain, properties, unixTimestamp)
+	if errCode == http.StatusNotImplemented {
+		err = store.GetStore().UpdateSyncStatusLinkedinDocs(domainData)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed in updating user creation details")
+			return "Failed in updating user creation details", http.StatusInternalServerError
+		}
+		return "", http.StatusOK
+	} else if errCode != http.StatusOK {
+		logCtx.Fatal("Failed in TrackGroupWithDomain")
+		return "Failed in TrackGroupWithDomain", errCode
+	}
+
+	// creating/updating impr event
+	errMsg, errCode := createOrUpdateEventFromDomainDataV2(projectID, userID, eventNameViewedAD.ID, domainData, U.LI_AD_VIEW_COUNT, domainData.Impressions, unixTimestamp, imprEventsMapWithCampaign)
+	if errMsg != "" {
+		errMsg += " - impression event"
+		logCtx.Error(errMsg)
+		return errMsg, errCode
+	}
+	// creating/updating click event
+	errMsg, errCode = createOrUpdateEventFromDomainDataV2(projectID, userID, eventNameClickedAD.ID, domainData, U.LI_AD_CLICK_COUNT, domainData.Clicks, unixTimestamp+1, clicksEventsMapWithCampaign)
+	if errMsg != "" {
+		errMsg += " - click event"
+		logCtx.Error(errMsg)
+		return errMsg, errCode
+	}
+	existingImprCount := getExistingPropertyValue(domainData.Domain, unixTimestamp, domainData.CampaignGroupID, imprEventsMapWithCampaign)
+	existingClickCount := getExistingPropertyValue(domainData.Domain, unixTimestamp+1, domainData.CampaignGroupID, clicksEventsMapWithCampaign)
+	impr_diff := float64(domainData.Impressions) - existingImprCount
+	clicks_diff := float64(domainData.Clicks) - existingClickCount
+
+	userIDToUpdate := getUserIDFromEventsForUpdatingGroupUser(userID, domainData.Domain, unixTimestamp, domainData.CampaignGroupID, imprEventsMapWithCampaign)
+	errMsg, errCode = updateAccountLevelPropertiesForGroupUser(projectID, U.GROUP_NAME_LINKEDIN_COMPANY, domainData.Domain, userIDToUpdate, impr_diff, clicks_diff, unixTimestamp+1)
+	if errMsg != "" {
+		logCtx.Error(errMsg)
+		return errMsg, errCode
+	}
+
+	err = store.GetStore().UpdateSyncStatusLinkedinDocs(domainData)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed in updating user creation details after event and user update")
+		return "Failed in updating user creation details after event and user update", http.StatusInternalServerError
+	}
+	return "", http.StatusOK
+}
+
+func createOrUpdateEventFromDomainDataV2(projectID int64, userID string, eventNameID string,
+	domainData model.DomainDataResponse, propertyName string, propertyValue int64, timestamp int64,
+	eventLookupMap map[int64]map[string]map[string]map[string]interface{}) (string, int) {
+
+	event := model.Event{
+		EventNameId: eventNameID,
+		Timestamp:   timestamp,
+		ProjectId:   projectID,
+		UserId:      userID,
+	}
+	eventPropertiesMap := U.PropertiesMap{
+		propertyName:      propertyValue,
+		U.EP_CAMPAIGN:     domainData.CampaignGroupName,
+		U.EP_CAMPAIGN_ID:  domainData.CampaignGroupID,
+		U.EP_SKIP_SESSION: U.PROPERTY_VALUE_TRUE,
+	}
+	isEventReq, eventID, eventUserID := checkIfEventCreationReqV2(propertyValue, domainData.Domain, timestamp, domainData.CampaignGroupID, eventLookupMap)
+	if isEventReq {
+		eventPropertiesJsonB, err := U.EncodeStructTypeToPostgresJsonb(&eventPropertiesMap)
+		if err != nil {
+			return "Failed in encoding properties to JSONb", http.StatusInternalServerError
+		}
+		event.Properties = *eventPropertiesJsonB
+		_, errCode := store.GetStore().CreateEvent(&event)
+		if errCode != http.StatusCreated {
+			return "Failed in creating event", errCode
+		}
+	} else if eventID != "" {
+		errCode := store.GetStore().UpdateEventProperties(projectID, eventID, eventUserID, &eventPropertiesMap, timestamp, nil)
+		if errCode != http.StatusAccepted {
+			log.WithFields(log.Fields{"projectID": projectID, "eventID": eventID, "userID": eventUserID, "timestamp": timestamp, "props": eventPropertiesMap}).Error("Failed in updating event")
+			return "Failed in updating event", errCode
+		}
+	}
+
+	return "", http.StatusOK
+}
+
+func checkIfEventCreationReqV2(propertyValue int64, domain string, timestamp int64, campaignGroupID string, existingEventsWithCampaignData map[int64]map[string]map[string]map[string]interface{}) (bool, string, string) {
+	if propertyValue <= 0 {
+		return false, "", ""
+	}
+	if value, exists := existingEventsWithCampaignData[timestamp][domain][campaignGroupID]; exists {
+		return false, value["id"].(string), value["user_id"].(string)
+	}
+
+	return true, "", ""
+}
+
+func getExistingPropertyValue(domain string, timestamp int64, campaignGroupID string, existingEventsWithCampaignData map[int64]map[string]map[string]map[string]interface{}) float64 {
+
+	return U.SafeConvertToFloat64(existingEventsWithCampaignData[timestamp][domain][campaignGroupID]["p_value"])
+}
+
+func getUserIDFromEventsForUpdatingGroupUser(currUserID string, domain string, timestamp int64, campaignGroupID string, existingEventsWithCampaignData map[int64]map[string]map[string]map[string]interface{}) string {
+	if _, exists := existingEventsWithCampaignData[timestamp][domain][campaignGroupID]; !exists {
+		return currUserID
+	}
+	return existingEventsWithCampaignData[timestamp][domain][campaignGroupID]["user_id"].(string)
+}
+
+func updateAccountLevelPropertiesForGroupUser(projectID int64, groupName string, domainName string, groupUserID string, impr_diff float64, clicks_diff float64, timestamp int64) (string, int) {
+	groupID := U.GetDomainGroupDomainName(projectID, domainName)
+	if groupID == "" {
+		return "", http.StatusNotImplemented
+	}
+
+	groupUser, errCode := store.GetStore().GetGroupUserByGroupID(projectID, groupName, groupID)
+	if errCode != http.StatusFound {
+		return "Failed to get existing group user", errCode
+	}
+	existingProperties, err := U.DecodePostgresJsonb(&groupUser.Properties)
+	if err != nil {
+		return "Failed to decode user properties on UpdateUserGroupProperties.", http.StatusInternalServerError
+	}
+	newProperties := make(U.PropertiesMap)
+	if value, exists := (*existingProperties)[U.LI_TOTAL_AD_VIEW_COUNT]; exists {
+		newProperties[U.LI_TOTAL_AD_VIEW_COUNT] = value.(float64) + impr_diff
+	} else {
+		newProperties[U.LI_TOTAL_AD_VIEW_COUNT] = impr_diff
+	}
+	if value, exists := (*existingProperties)[U.LI_TOTAL_AD_CLICK_COUNT]; exists {
+		newProperties[U.LI_TOTAL_AD_CLICK_COUNT] = value.(float64) + clicks_diff
+	} else {
+		newProperties[U.LI_TOTAL_AD_CLICK_COUNT] = clicks_diff
+	}
+
+	propertiesMap := map[string]interface{}(newProperties)
+	source := model.GetGroupUserSourceNameByGroupName(groupName)
+
+	currTimestamp := time.Now().Unix()
+	_, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID, groupUserID, &propertiesMap, currTimestamp, currTimestamp, source)
+	if err != nil {
+		return "Failed to create or update group user on updateAccountLevelPropertiesForGroupUser.", http.StatusInternalServerError
+	}
+	return "", http.StatusOK
 }

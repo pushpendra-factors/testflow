@@ -232,6 +232,17 @@ type Model interface {
 	HasAccessToDashboard(projectID int64, agentUUID string, id int64) (bool, *model.Dashboard)
 	UpdateDashboard(projectID int64, agentUUID string, id int64, dashboard *model.UpdatableDashboard) int
 	DeleteDashboard(projectID int64, agentUUID string, dashboardID int64) int
+	GetDashboardsByFolderId(projectId int64, folderId string) ([]model.Dashboard, int)
+	UpdateFolderIdForMultipleDashboards(projectId int64, dashboards []model.Dashboard, folderId string) int
+
+	// dashboard folders
+	CreateDashboardFolder(projectId int64, folder *model.DashboardFolders) (*model.DashboardFolders, int)
+	UpdateDashboardFolder(projectId int64, folderId string, folder *model.UpdatableDashboardFolder) int
+	GetDashboardFolders(projectId int64) ([]model.DashboardFolders, int)
+	DeleteDashboardFolder(projectId int64, folderId string) int
+	CreateAllBoardsDashboardFolder(projectId int64) (*model.DashboardFolders, int)
+	IsFolderNameAlreadyExists(projectId int64, name string) int
+	GetAllBoardsDashboardFolder(projectId int64) (model.DashboardFolders, int)
 
 	// event_analytics
 	RunEventsGroupQuery(queriesOriginal []model.Query, projectId int64, enableFilterOpt bool) (model.ResultGroup, int)
@@ -299,6 +310,7 @@ type Model interface {
 	IsEventExistsWithType(projectId int64, eventType string) (bool, int)
 	GetDomainNamesByProjectID(projectId int64) ([]string, int)
 	GetEventNameIdsWithGivenNames(projectID int64, eventNameIDsMap map[string]bool) (map[string]string, int)
+	GetEventNameByID(projectID int64, id string) (*model.EventName, int, error)
 
 	// form_fill
 	CreateFormFillEventById(projectId int64, formFill *model.SDKFormFillPayload) (int, error)
@@ -356,6 +368,9 @@ type Model interface {
 	GetLinkedinEventFieldsBasedOnTimestampV1(projectID int64, timestamp int64,
 		imprEventNameID string, clicksEventNameID string) (map[int64]map[string]map[string]string,
 		map[int64]map[string]map[string]string, error)
+	GetLinkedinEventFieldsBasedOnTimestampV2(projectID int64, timestamp int64,
+		imprEventNameID string, clicksEventNameID string) (map[int64]map[string]map[string]map[string]interface{},
+		map[int64]map[string]map[string]map[string]interface{}, error)
 
 	// clickable_elements
 	UpsertCountAndCheckEnabledClickableElement(projectID int64, payload *model.CaptureClickPayload) (isEnabled bool, status int, err error)
@@ -384,10 +399,10 @@ type Model interface {
 	GetSQLQueryAndParametersForLinkedinQueryV1(projectID int64, query *model.ChannelQueryV1, reqID string, fetchSource bool,
 		limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT map[string][]interface{}) (string, []interface{}, []string, []string, int)
 	GetDomainData(projectID string) ([]model.DomainDataResponse, int)
-	GetDistinctTimestampsForEventCreation(projectID string) ([]int64, int)
-	GetCompanyDataFromLinkedinForTimestamp(projectID string, timestamp int64) ([]model.DomainDataResponse, int)
+	GetDistinctTimestampsForEventCreationFromLinkedinDocs(projectID string) ([]int64, int)
+	GetCompanyDataFromLinkedinDocsForTimestamp(projectID string, timestamp int64) ([]model.DomainDataResponse, int)
 
-	UpdateLinkedinGroupUserCreationDetails(domainData model.DomainDataResponse) error
+	UpdateSyncStatusLinkedinDocs(domainData model.DomainDataResponse) error
 	GetCampaignGroupInfoForGivenTimerange(campaignGroupInfoRequestPayload model.LinkedinCampaignGroupInfoRequestPayload) ([]model.LinkedinDocument, int)
 	GetValidationForGivenTimerangeAndJobType(validationRequestPayload model.LinkedinValidationRequestPayload) (bool, int)
 	//bingads document
@@ -931,7 +946,7 @@ type Model interface {
 	IsG2IntegrationAvailable(projectID int64) bool
 
 	// Timeline
-	GetProfilesListByProjectId(projectID int64, payload model.TimelinePayload, profileType string) ([]model.Profile, int, string)
+	GetProfilesListByProjectId(projectID int64, payload model.TimelinePayload, profileType string, downloadLimitGiven bool) ([]model.Profile, int, string)
 	GetProfileUserDetailsByID(projectID int64, identity string, isAnonymous string) (*model.ContactDetails, int, string)
 	GetUserActivities(projectID int64, identity string, userId string) ([]model.UserActivity, error)
 	GetProfileAccountDetailsByID(projectID int64, id string, groupName string) (*model.AccountDetails, int, string)
@@ -946,13 +961,13 @@ type Model interface {
 	GetUserDetailsAssociatedToDomain(projectID int64, id string) (model.AccountDetails, map[string]interface{}, int)
 	GetUserPropertiesForAccounts(projectID int64, source string) (string, interface{}, string)
 	GetUsersAssociatedToDomain(projectID int64, minMax *model.ListingTimeWindow, groupedFilters map[string][]model.QueryProperty) ([]model.Profile, int)
-	GenerateAllAccountsQueryString(projectID int64, source string, hasUserProperty bool, isAllUserProperties bool, minMax model.ListingTimeWindow, groupedFilters map[string][]model.QueryProperty, searchFilter []string) (string, []interface{}, error)
+	GenerateAllAccountsQueryString(projectID int64, source string, hasUserProperty bool, isAllUserProperties bool, minMax model.ListingTimeWindow, groupedFilters map[string][]model.QueryProperty, searchFilter []string, downloadLimitGiven bool) (string, []interface{}, error)
 	GetGroupNameIDMap(projectID int64) (map[string]int, int)
 	UpdateConfigForEvent(projectID int64, eventName string, updatedConfig []string) (int, error)
 	GetDomainPropertiesByID(projectID int64, domainIDs []string) ([]model.User, int)
 
 	// Timeline consuming segment_marker
-	GetMarkedDomainsListByProjectId(projectID int64, payload model.TimelinePayload) ([]model.Profile, int, string)
+	GetMarkedDomainsListByProjectId(projectID int64, payload model.TimelinePayload, downloadLimitGiven bool) ([]model.Profile, int, string)
 
 	// segment
 	CreateSegment(projectId int64, segment *model.SegmentPayload) (int, error)

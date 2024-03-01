@@ -10845,7 +10845,7 @@ func TestAllAccountDomainProperties(t *testing.T) {
 	domainUser, status := store.GetStore().CreateOrGetDomainGroupUser(project.ID, U.GROUP_NAME_DOMAINS, "abc1.com", 0, model.UserSourceDomains)
 	assert.Equal(t, http.StatusFound, status)
 	domainProperties := map[string]interface{}{
-		U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE: 1,
+		U.DP_ENGAGEMENT_SCORE: 1,
 	}
 	_, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(project.ID, U.GROUP_NAME_DOMAINS, "abc1.com", domainUser, &domainProperties,
 		U.TimeNowUnix(), U.TimeNowUnix(), model.UserSourceDomainsString)
@@ -10854,7 +10854,7 @@ func TestAllAccountDomainProperties(t *testing.T) {
 	domainUser, status = store.GetStore().CreateOrGetDomainGroupUser(project.ID, U.GROUP_NAME_DOMAINS, "abc2.com", 0, model.UserSourceDomains)
 	assert.Equal(t, http.StatusFound, status)
 	domainProperties = map[string]interface{}{
-		U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE: 3,
+		U.DP_ENGAGEMENT_SCORE: 3,
 	}
 	_, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(project.ID, U.GROUP_NAME_DOMAINS, "abc2.com", domainUser, &domainProperties,
 		U.TimeNowUnix(), U.TimeNowUnix(), model.UserSourceDomainsString)
@@ -10996,7 +10996,7 @@ func TestAllAccountDomainProperties(t *testing.T) {
 		{
 			Entity:    model.PropertyEntityDomainGroup,
 			GroupName: model.GROUP_NAME_DOMAINS,
-			Property:  U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE,
+			Property:  U.DP_ENGAGEMENT_SCORE,
 			Operator:  model.LesserThanOpStr,
 			Value:     "2",
 			Type:      U.PropertyTypeNumerical,
@@ -11023,7 +11023,7 @@ func TestAllAccountDomainProperties(t *testing.T) {
 		{
 			Entity:    model.PropertyEntityDomainGroup,
 			GroupName: model.GROUP_NAME_DOMAINS,
-			Property:  U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE,
+			Property:  U.DP_ENGAGEMENT_SCORE,
 			Operator:  model.LesserThanOpStr,
 			Value:     "4",
 			Type:      U.PropertyTypeNumerical,
@@ -11104,7 +11104,7 @@ func TestAllAccountDomainProperties(t *testing.T) {
 	query.GroupByProperties = append(query.GroupByProperties, model.QueryGroupByProperty{
 		Entity:    model.PropertyEntityUser,
 		GroupName: U.GROUP_NAME_DOMAINS,
-		Property:  U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE,
+		Property:  U.DP_ENGAGEMENT_SCORE,
 		EventName: model.UserPropertyGroupByPresent,
 	})
 
@@ -11259,7 +11259,7 @@ func TestAllAccountDomainProperties(t *testing.T) {
 	query.GroupByProperties = append(query.GroupByProperties, model.QueryGroupByProperty{
 		Entity:    model.PropertyEntityDomainGroup,
 		GroupName: U.GROUP_NAME_DOMAINS,
-		Property:  U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE,
+		Property:  U.DP_ENGAGEMENT_SCORE,
 		EventName: model.UserPropertyGroupByPresent,
 	})
 

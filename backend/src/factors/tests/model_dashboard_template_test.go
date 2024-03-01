@@ -208,9 +208,11 @@ func TestAPICreateDashboardFromTemplate(t *testing.T) {
 	assert.NotNil(t, agent)
 
 	rName := U.RandomString(5)
+	rType := rName + "_TEST"
 	desc := "testing create dashboard from template abc"
 	template, errCode, _ := store.GetStore().CreateTemplate(&model.DashboardTemplate{
 		Title:       rName,
+		Type:        rType,
 		Description: desc,
 		Dashboard: &postgres.Jsonb{RawMessage: json.RawMessage(`{"id":1,
         "name": "First Dashboard in Test Project",

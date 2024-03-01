@@ -28,7 +28,6 @@ import {
   Text
 } from '../../components/factorsComponents';
 import GroupSelect2 from '../../components/QueryComposer/GroupSelect2';
-import NewProject from '../Settings/SetupAssist/Modals/NewProject';
 import ExistingReportsModal from './ExistingReportsModal';
 import { changeActiveDashboard as changeActiveDashboardService } from 'Reducers/dashboard/services';
 import NewReportButton from './NewReportButton';
@@ -65,7 +64,6 @@ function ProjectDropdown({
   const [showDashboardDesc, setDashboardDesc] = useState('');
   const [deleteDashboardModal, showDeleteDashboardModal] = useState(false);
   const [dashboardDeleteApi, setDashboardDeleteApi] = useState(false);
-  const [showProjectModal, setShowProjectModal] = useState(false);
 
   const [isReportsModalOpen, setIsReportsModalOpen] = useState(false);
   const dispatch = useDispatch();
@@ -410,11 +408,6 @@ function ProjectDropdown({
           okText='Confirm'
           cancelText='Cancel'
           confirmLoading={dashboardDeleteApi}
-        />
-        {/* create project modal */}
-        <NewProject
-          visible={showProjectModal}
-          handleCancel={() => setShowProjectModal(false)}
         />
       </ErrorBoundary>
     );

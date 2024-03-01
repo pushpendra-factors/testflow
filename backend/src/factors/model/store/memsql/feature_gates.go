@@ -94,16 +94,14 @@ func (store *MemSQL) GetFeatureLimitForProject(projectID int64, featureName stri
 		limit += featureList[featureName].Limit
 	}
 
-	for _, feature := range addOns {
-		if featureName == feature.Name {
-			if !feature.IsEnabledFeature {
-				return 0, errors.New("Feature is disabled for this project")
-			} else {
-				isEnabled = true
-			}
-			limit += feature.Limit
+	if _, exists := addOns[featureName]; exists {
+		if !addOns[featureName].IsEnabledFeature {
+			return 0, errors.New("Feature is disabled for this project")
 		}
+		isEnabled = true
+		limit += addOns[featureName].Limit
 	}
+
 	if !isEnabled {
 		return 0, errors.New("Feature not enabled for this project")
 	}
@@ -144,11 +142,8 @@ func isFeatureAvailableForProject(featureList model.FeatureList, addOns model.Ov
 	if _, exists := featureList[featureName]; exists {
 		return featureList[featureName].IsEnabledFeature
 	}
-
-	for _, feature := range addOns {
-		if featureName == feature.Name {
-			return feature.IsEnabledFeature
-		}
+	if _, exists := addOns[featureName]; exists {
+		return addOns[featureName].IsEnabledFeature
 	}
 
 	return false

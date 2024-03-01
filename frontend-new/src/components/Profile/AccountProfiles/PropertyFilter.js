@@ -48,7 +48,7 @@ function PropertyFilter({
   }, [dispatch, setFiltersExpanded]);
 
   const handleCancel = useCallback(() => {
-    toggleFilters();
+    // toggleFilters();
     resetSelectedFilters();
   }, [resetSelectedFilters, toggleFilters]);
 

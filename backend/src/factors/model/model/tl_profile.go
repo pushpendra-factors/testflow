@@ -163,13 +163,6 @@ var HostNameProps = []string{
 	U.G2_DOMAIN,
 }
 
-var DomainProperties = []string{
-	U.GROUP_EVENT_NAME_ENGAGEMENT_LEVEL,
-	U.GROUP_EVENT_NAME_ENGAGEMENT_SCORE,
-	U.GROUP_EVENT_NAME_TOTAL_ENGAGEMENT_SCORE,
-	U.DP_DOMAIN_NAME,
-}
-
 // Hover Events Property Map
 var TIMELINE_EVENT_PROPERTIES_CONFIG = map[string][]string{
 	U.EVENT_NAME_SESSION: {

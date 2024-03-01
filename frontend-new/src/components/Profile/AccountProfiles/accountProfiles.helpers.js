@@ -7,7 +7,6 @@ import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils'
 import truncateURL from 'Utils/truncateURL';
 import { Popover, Tag } from 'antd';
 import { ACCOUNTS_TABLE_COLUMN_TYPES, COLUMN_TYPE_PROPS } from 'Utils/table';
-import { AdminLock } from 'Routes/feature';
 import { EngagementTag } from '../constants';
 import {
   getHost,
@@ -54,42 +53,62 @@ export const getGroupList = (groupOptions) => {
   return groups;
 };
 
-const getTablePropColumn = ({
-  prop,
-  groupPropNames,
-  listProperties,
-  projectDomainsList
-}) => {
-  const getTitleText = (text) => (
+const getTitleText = (text) => (
+  <Text
+    type='title'
+    level={7}
+    color='grey-2'
+    weight='bold'
+    extraClass='m-0 truncate'
+    truncate
+    charLimit={25}
+  >
+    {text}
+  </Text>
+);
+
+const renderValue = (value, propType, prop, domainsList) => {
+  const formattedValue = propValueFormat(prop, value, propType) || '-';
+  const urlTruncatedValue = truncateURL(formattedValue, domainsList);
+  return (
+    <Text
+      type='title'
+      level={7}
+      extraClass='m-0'
+      truncate
+      toolTipTitle={formattedValue}
+    >
+      {urlTruncatedValue}
+    </Text>
+  );
+};
+
+const EngagementSignalTag = ({ eventName, score, displayNames }) => (
+  <Tag color='default' className={styles['tag-enagagementrule']}>
     <Text
       type='title'
       level={7}
       color='grey-2'
-      weight='bold'
       extraClass='m-0 truncate'
       truncate
-      charLimit={25}
+      size='h2'
+      charLimit={20}
     >
-      {text}
+      {displayNames[eventName] || PropTextFormat(eventName)}
     </Text>
-  );
+    <span className={styles['tag-seperator']}>|</span>
+    {parseInt(score)}
+  </Tag>
+);
 
-  const renderValue = (value, propType) => {
-    const formattedValue = propValueFormat(prop, value, propType) || '-';
-    const urlTruncatedValue = truncateURL(formattedValue, projectDomainsList);
-    return (
-      <Text
-        type='title'
-        level={7}
-        extraClass='m-0'
-        truncate
-        toolTipTitle={formattedValue}
-      >
-        {urlTruncatedValue}
-      </Text>
-    );
-  };
-
+const getTablePropColumn = ({
+  headerClassStr,
+  prop,
+  groupPropNames,
+  eventNames,
+  listProperties,
+  projectDomainsList
+}) => {
   const propDisplayName = groupPropNames[prop]
     ? groupPropNames[prop]
     : PropTextFormat(prop);
@@ -126,6 +145,59 @@ const getTablePropColumn = ({
     };
   }
 
+  if (prop === '$top_enagagement_signals') {
+    return {
+      title: <div className={headerClassStr}>Engagement Signals</div>,
+      width: COLUMN_TYPE_PROPS.string.max,
+      type: 'actions',
+      dataIndex: prop,
+      key: prop,
+      render: (value) => {
+        const eventsArr = value?.split(' , ');
+        const renderTags = (events) =>
+          events.map((item) => {
+            const splitItem = item.trim().split(' ');
+            const eventName = splitItem.slice(0, -1).join(' ');
+            const score = splitItem.slice(-1);
+            return (
+              <EngagementSignalTag
+                displayNames={eventNames}
+                eventName={eventName}
+                score={score}
+              />
+            );
+          });
+
+        return (
+          <div className={styles.top_eng_names}>
+            {value && renderTags(eventsArr.slice(0, 2))}
+            {value && eventsArr.length > 2 && (
+              <Popover
+                content={
+                  <div
+                    className='flex flex-col'
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
+                  >
+                    <Text type='title' level={7} color='grey'>
+                      Engagement Signals
+                    </Text>
+                    {renderTags(eventsArr.slice(2))}
+                  </div>
+                }
+              >
+                <Tag color='default' className={styles['tag-enagagementrule']}>
+                  <span>and </span> +{eventsArr.length - 2}
+                </Tag>
+              </Popover>
+            )}
+          </div>
+        );
+      }
+    };
+  }
+
   return {
     title: getTitleText(propDisplayName),
     dataIndex: prop,
@@ -139,18 +211,17 @@ const getTablePropColumn = ({
       propType === 'numerical'
         ? sortNumericalColumn(a[prop], b[prop])
         : sortStringColumn(a[prop], b[prop]),
-    render: (value) => renderValue(value, propType)
+    render: (value) => renderValue(value, propType, prop, projectDomainsList)
   };
 };
 
 export const getColumns = ({
-  isScoringLocked,
   displayTableProps,
   groupPropNames,
+  eventNames,
   listProperties,
   defaultSorterInfo,
-  projectDomainsList,
-  activeAgent
+  projectDomainsList
 }) => {
   const headerClassStr =
     'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold';
@@ -163,6 +234,7 @@ export const getColumns = ({
     type: 'string',
     fixed: 'left',
     ellipsis: true,
+    showSorterTooltip: null,
     sorter: (a, b) => sortStringColumn(a.account.name, b.account.name),
     render: (item) =>
       (
@@ -201,84 +273,12 @@ export const getColumns = ({
       ) || '-'
   };
 
-  const topEngagementsColumn = {
-    title: <div className={headerClassStr}>Engagement Signals</div>,
-    width: COLUMN_TYPE_PROPS.string.max,
-    dataIndex: 'top_engagements',
-    type: 'actions',
-    key: 'top_engagements',
-    render: (value) => (
-      <div className={styles.top_eng_names}>
-        {value &&
-          Object.keys(value)
-            .slice(0, 2)
-            .map((eachKey, eachIndex) => (
-              <Tag color='default' className={styles['tag-enagagementrule']}>
-                <Text
-                  type='title'
-                  level={7}
-                  color='grey-2'
-                  extraClass='m-0 truncate'
-                  truncate
-                  size='h2'
-                  charLimit={20}
-                >
-                  {eachKey}
-                </Text>
-                <span className={styles['tag-seperator']}>|</span>
-                {value[eachKey]}
-              </Tag>
-            ))}
-        {value && Object.keys(value).length > 2 ? (
-          <Popover
-            content={
-              <div
-                className='flex flex-col'
-                onClick={(e) => {
-                  e.stopPropagation();
-                }}
-              >
-                <Text type='title' level={7} color='grey'>
-                  Engagement Signals
-                </Text>
-                {Object.keys(value)
-                  .slice(2)
-                  .map((eachKey, eachIndex) => (
-                    <Tag
-                      color='default'
-                      className={styles['tag-enagagementrule']}
-                    >
-                      <Text
-                        type='title'
-                        level={7}
-                        color='grey-2'
-                        extraClass='m-0 truncate'
-                        truncate
-                        size='h2'
-                        charLimit={20}
-                      >
-                        {eachKey}
-                      </Text>
-                      <span className={styles['tag-seperator']}>|</span>
-                      {value[eachKey]}
-                    </Tag>
-                  ))}
-              </div>
-            }
-          >
-            <Tag color='default' className={styles['tag-enagagementrule']}>
-              <span>and </span> +{Object.keys(value).length - 2}
-            </Tag>
-          </Popover>
-        ) : null}
-      </div>
-    )
-  };
-
   const tablePropColumns = displayTableProps?.map((prop) =>
     getTablePropColumn({
+      headerClassStr,
       prop,
       groupPropNames,
+      eventNames,
       listProperties,
       projectDomainsList
     })
@@ -295,14 +295,7 @@ export const getColumns = ({
     render: (item) => MomentTz(item).fromNow()
   };
 
-  const scoringColumns = [topEngagementsColumn];
-
-  const columns = [
-    accountColumn,
-    ...(isScoringLocked ? [] : scoringColumns),
-    ...tablePropColumns,
-    lastActivityColumn
-  ];
+  const columns = [accountColumn, ...tablePropColumns, lastActivityColumn];
 
   columns.forEach((column) => {
     if (column.key === defaultSorterInfo?.key) {

@@ -152,6 +152,13 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.DELETE("/:project_id/dashboards/:dashboard_id/units/:unit_id", mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), DeleteDashboardUnitHandler)
 	authRouteGroup.POST("/:project_id/dashboard/:dashboard_id/units/query/web_analytics", mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}),
 		DashboardUnitsWebAnalyticsQueryHandler)
+	authRouteGroup.PUT("/:project_id/dashboards/folder/:folder_id", mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), MoveMultipleDashboardToAllBoardsFolderHandler)
+
+	// Dashboard Folder endpoints
+	authRouteGroup.GET("/:project_id/dashboard_folder", mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), stringifyWrapper(GetAllDashboardFolderByProjectID))
+	authRouteGroup.POST("/:project_id/dashboard_folder", mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), stringifyWrapper(MoveDashboardToNewFolderHandler))
+	authRouteGroup.PUT("/:project_id/dashboard_folder/:folder_id", mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), UpdateDashboardFolderHandler)
+	authRouteGroup.DELETE("/:project_id/dashboard_folder/:folder_id", mid.FeatureMiddleware([]string{M.FEATURE_DASHBOARD}), DeleteDashboardFolderHandler)
 
 	// Offline Touch Point rules
 	authRouteGroup.GET("/:project_id/otp_rules", mid.FeatureMiddleware([]string{M.FEATURE_OFFLINE_TOUCHPOINTS}), responseWrapper(GetOTPRuleHandler))
@@ -852,6 +859,8 @@ func ConvertDashboard(data M.Dashboard) M.DashboardString {
 		Class:         data.Class,
 		UnitsPosition: data.UnitsPosition,
 		InternalID:    data.InternalID,
+		TemplateType:  data.TemplateType,
+		FolderID:      data.FolderID,
 		IsDeleted:     data.IsDeleted,
 		CreatedAt:     data.CreatedAt,
 		UpdatedAt:     data.UpdatedAt,

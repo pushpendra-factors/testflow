@@ -815,6 +815,45 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	lsEventProperties15, err := U.DecodePostgresJsonb(&sessionEvent15.Properties)
 	assert.Nil(t, err)
 	assert.Equal(t, model.ChannelDirect, (*lsEventProperties15)[U.EP_CHANNEL])
+
+	// Updating project timestamp to before events start timestamp.
+	errCode = store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	randomEventName = RandomURL()
+	trackEventProperties15 := U.PropertiesMap{
+		U.EP_PAGE_URL:        "https://example.com/1/2/",
+		U.EP_PAGE_RAW_URL:    "https://example.com/1/2?x=1",
+		U.EP_PAGE_SPENT_TIME: 10,
+		U.EP_PAGE_DOMAIN:     "www.example.com",
+		U.EP_REFERRER_DOMAIN: "www.example.com",
+		U.EP_LICLID:          "yyy123",
+	}
+	trackUserProperties15 := U.PropertiesMap{
+		U.UP_OS:         "Mac OSX",
+		U.UP_OS_VERSION: "1.23.1",
+	}
+	trackPayload = SDK.TrackPayload{
+		Auto:            true,
+		Name:            randomEventName,
+		Timestamp:       timestamp,
+		EventProperties: trackEventProperties15,
+		UserProperties:  trackUserProperties15,
+		RequestSource:   model.UserSourceWeb,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.Equal(t, http.StatusOK, status)
+	assert.NotEmpty(t, response.UserId)
+	eventId = response.EventId
+
+	_, err = TaskSession.AddSession([]int64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	assert.Nil(t, err)
+
+	sessionEvent16 := assertAssociatedSession(t, project.ID, []string{eventId},
+		[]string{}, "Session 16")
+	// session event properties added from event properties.
+	lsEventProperties16, err := U.DecodePostgresJsonb(&sessionEvent16.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, model.ChannelOthers, (*lsEventProperties16)[U.EP_CHANNEL])
 }
 
 func TestMultipleEventsWithSingleAddSessionCallWithChannelGroup(t *testing.T) {

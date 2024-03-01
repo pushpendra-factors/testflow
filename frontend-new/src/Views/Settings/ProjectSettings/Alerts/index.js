@@ -29,9 +29,10 @@ import KPIBasedAlert from './KPIBasedAlert';
 import EventBasedAlert from './EventBasedAlert';
 import styles from './index.module.scss';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
-import { getGroups } from 'Reducers/coreQuery/middleware';
+import { fetchEventNames, getGroups } from 'Reducers/coreQuery/middleware';
 import { useParams } from 'react-router-dom';
 import useQuery from 'hooks/useQuery';
+import TableSearchAndRefresh from 'Components/TableSearchAndRefresh';
 
 const { TabPane } = Tabs;
 
@@ -46,7 +47,8 @@ const Alerts = ({
   fetchAllAlerts,
   createAlert,
   groups,
-  getGroups
+  getGroups,
+  fetchEventNames
 }) => {
   const [tableData, setTableData] = useState([]);
   const [tableLoading, setTableLoading] = useState(false);
@@ -58,6 +60,9 @@ const Alerts = ({
   });
   const [alertType, setAlertType] = useState('realtime');
   const { confirm } = Modal;
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTableData, setSearchTableData] = useState([]);
 
   const routeQuery = useQuery();
 
@@ -68,10 +73,17 @@ const Alerts = ({
   }, [activeProject?.id, groups]);
 
   useEffect(() => {
+    fetchEventNames(activeProject?.id, true);
+  }, [activeProject]);
+
+  useEffect(() => {
     const type = routeQuery.get('type');
     if (type && ['realtime', 'weekly'].includes(type)) {
       setAlertState({ state: 'list', index: 0 });
       setAlertType(type);
+
+      setSearchTerm('');
+      setShowSearch(false);
     }
   }, [routeQuery]);
 
@@ -212,12 +224,13 @@ const Alerts = ({
       title: 'Name',
       dataIndex: 'alert_name',
       key: 'alert_name',
-      width: '300px',
+      width: '400px',
       render: (item) => (
         <Text
           type={'title'}
           level={7}
           truncate={true}
+          charLimit={50}
           extraClass={`cursor-pointer m-0`}
           onClick={() => {
             setTabNo(item?.type == 'kpi_alert' ? '1' : '2');
@@ -228,7 +241,6 @@ const Alerts = ({
           {item?.alert_name || item?.title}
         </Text>
       )
-      // width: 100,
     },
     {
       title: 'Delivery Options',
@@ -304,49 +316,59 @@ const Alerts = ({
     });
   }, [activeProject]);
 
+  const IntegrationIcons = ({ slack, teams, webhook, email }) => {
+    let iconSize = 22;
+    return (
+      <div className='flex items-center'>
+        {slack && <SVG name={'slack'} size={iconSize} extraClass={'mr-4'} />}
+        {teams && (
+          <SVG name={'MSTeam'} size={iconSize + 4} extraClass={'mr-4'} />
+        )}
+        {webhook && (
+          <SVG name={'Webhook'} size={iconSize} extraClass={'mr-4'} />
+        )}
+        {email && <SVG name={'Email'} size={iconSize} extraClass={'mr-4'} />}
+      </div>
+    );
+  };
+
   useEffect(() => {
     let savedArr = [];
-    if (savedAlerts && savedAlerts?.type == 'kpi_alert') {
-      savedAlerts?.map((item, index) => {
-        savedArr.push({
-          key: index,
-          alert_name: item,
-          type: item?.type == 'kpi_alert' ? 'Weekly alerts' : 'Real-time',
-          dop:
-            (item.alert_configuration.email_enabled ? 'Email' : '') +
-            ' ' +
-            (item.alert_configuration.slack_enabled ? 'Slack' : '') +
-            ' ' +
-            (item.alert_configuration.teams_enabled ? 'Teams' : ''),
-          status: item?.status,
-          actions: item
-        });
-      });
-    } else {
-      savedAlerts?.forEach((item, index) => {
-        if (alertType === 'weekly') {
-          item.type === 'kpi_alert' &&
-            savedArr.push({
-              key: index,
-              alert_name: item,
-              type: item?.type == 'kpi_alert' ? 'Weekly alerts' : 'Real-time',
-              dop: item?.delivery_options,
-              status: { status: item?.status, error: item?.last_fail_details },
-              actions: item
-            });
-        } else if (alertType === 'realtime') {
-          item.type === 'event_based_alert' &&
-            savedArr.push({
-              key: index,
-              alert_name: item,
-              type: item?.type == 'kpi_alert' ? 'Weekly alerts' : 'Real-time',
-              dop: item?.delivery_options,
-              status: { status: item?.status, error: item?.last_fail_details },
-              actions: item
-            });
-        }
-      });
-    }
+    savedAlerts?.forEach((item, index) => {
+      if (alertType === 'weekly') {
+        item.type === 'kpi_alert' &&
+          savedArr.push({
+            key: index,
+            alert_name: item,
+            type: item?.type == 'kpi_alert' ? 'Weekly alerts' : 'Real-time',
+            dop: (
+              <IntegrationIcons
+                slack={item?.alert?.alert_configuration?.slack_enabled}
+                teams={item?.alert?.alert_configuration?.teams_enabled}
+                email={item?.alert?.alert_configuration?.email_enabled}
+              />
+            ),
+            status: { status: item?.status, error: item?.last_fail_details },
+            actions: item
+          });
+      } else if (alertType === 'realtime') {
+        item.type === 'event_based_alert' &&
+          savedArr.push({
+            key: index,
+            alert_name: item,
+            type: item?.type == 'kpi_alert' ? 'Weekly alerts' : 'Real-time',
+            dop: (
+              <IntegrationIcons
+                slack={item?.alert?.slack}
+                teams={item?.alert?.teams}
+                webhook={item?.alert?.webhook}
+              />
+            ),
+            status: { status: item?.status, error: item?.last_fail_details },
+            actions: item
+          });
+      }
+    });
     setTableData(savedArr);
   }, [savedAlerts, tabNo, alertType]);
 
@@ -481,27 +503,46 @@ const Alerts = ({
     return titleAction;
   };
 
+  const onSearch = (e) => {
+    let term = e.target.value;
+    setSearchTerm(term);
+    let searchResults = tableData?.filter((item) => {
+      return item?.alert_name?.title
+        ?.toLowerCase()
+        .includes(term.toLowerCase());
+    });
+    setSearchTableData(searchResults);
+  };
+
+  const onRefresh = () => {
+    setTableLoading(true);
+    fetchAllAlerts(activeProject?.id).then(() => {
+      setTableLoading(false);
+    });
+  };
+
   const renderAlertContent = () => {
     let alertContent = null;
     if (alertState.state === 'list') {
       alertContent = (
-        <Table
-          className='fa-table--basic mt-8'
-          loading={tableLoading}
-          columns={columns}
-          dataSource={tableData}
-          pagination={false}
-          // onRow={(data,id)=>{
-          //   return {
-          //     onClick: (e) => {
-          //       setTabNo(data.actions?.type == "kpi_alert" ? "1" : "2")
-          //       setAlertState({ state: 'edit', index: data.actions});
-          //       setAlertDetails(data.actions);
-          //       e.stopPropagation();
-          //     }
-          //   }
-          // }}
-        />
+        <div className='mt-8'>
+          <TableSearchAndRefresh
+            showSearch={showSearch}
+            setShowSearch={setShowSearch}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            onSearch={onSearch}
+            onRefresh={onRefresh}
+            tableLoading={tableLoading}
+          />
+          <Table
+            className='fa-table--basic mt-2'
+            loading={tableLoading}
+            columns={columns}
+            dataSource={searchTerm ? searchTableData : tableData}
+            pagination={true}
+          />
+        </div>
       );
     }
     return alertContent;
@@ -535,6 +576,7 @@ const Alerts = ({
                     Learn more
                   </a>
                 </Text>
+
                 <div className={'mt-6'}>{renderAlertContent()}</div>
               </Col>
             </Row>
@@ -583,5 +625,6 @@ export default connect(mapStateToProps, {
   createEventAlert,
   fetchAllAlerts,
   createAlert,
-  getGroups
+  getGroups,
+  fetchEventNames
 })(Alerts);

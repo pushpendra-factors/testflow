@@ -322,7 +322,7 @@ function FaFilterSelect({
   const getIcon = (propState) => {
     const { name, icon } = propState || {};
     if (!name) return null;
-    const iconName = icon === 'group' ? 'user' : icon;
+    const iconName = 'user';
     return (
       <SVG name={iconName} size={16} color={viewMode ? 'grey' : 'purple'} />
     );

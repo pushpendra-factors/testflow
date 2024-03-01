@@ -36,12 +36,7 @@ import {
 } from '../../../reducers/timelines/utils';
 import SearchCheckList from '../../SearchCheckList';
 import LeftPanePropBlock from '../MyComponents/LeftPanePropBlock';
-import {
-  ALPHANUMSTR,
-  DEFAULT_TIMELINE_CONFIG,
-  GranularityOptions,
-  iconColors
-} from '../constants';
+import { ALPHANUMSTR, GranularityOptions, iconColors } from '../constants';
 
 function ContactDetails({
   userDetails,
@@ -166,22 +161,9 @@ function ContactDetails({
   }, [currentProjectSettings, userPropertiesV2]);
 
   useEffect(() => {
-    if (currentProjectSettings?.timelines_config) {
-      const timelinesConfig = {};
-      timelinesConfig.disabled_events = [
-        ...(currentProjectSettings?.timelines_config?.disabled_events || [])
-      ];
-      timelinesConfig.user_config = {
-        ...DEFAULT_TIMELINE_CONFIG.user_config,
-        ...currentProjectSettings?.timelines_config?.user_config
-      };
-      timelinesConfig.account_config = {
-        ...DEFAULT_TIMELINE_CONFIG.account_config,
-        ...currentProjectSettings?.timelines_config?.account_config
-      };
-      setTLConfig(timelinesConfig);
-    }
-  }, [currentProjectSettings]);
+    if (!currentProjectSettings?.timelines_config) return;
+    setTLConfig(currentProjectSettings.timelines_config);
+  }, [currentProjectSettings?.timelines_config]);
 
   useEffect(() => {
     fetchProjectSettings(activeProject.id);

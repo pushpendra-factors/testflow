@@ -89,7 +89,6 @@ import { Text, SVG } from '../../factorsComponents';
 function AccountProfiles({
   activeProject,
   accounts,
-  segments,
   currentProjectSettings,
   createNewSegment,
   getSavedSegments,
@@ -129,7 +128,7 @@ function AccountProfiles({
   const { segment_id: segmentID } = useParams();
 
   const { projectDomainsList } = useSelector((state) => state.global);
-  const { groups, groupProperties, groupPropNames } = useSelector(
+  const { groups, groupProperties, groupPropNames, eventNames } = useSelector(
     (state) => state.coreQuery
   );
 
@@ -170,30 +169,22 @@ function AccountProfiles({
     return accountPayload;
   };
 
-  const runInit = async () => {
-    try {
-      if (activeProject?.id) {
-        await Promise.allSettled([
-          fetchProjectSettings(activeProject.id),
-          getGroups(activeProject.id)
-        ]);
-
-        if (!Object.keys(segments).length) {
-          await getSavedSegments(activeProject.id);
-        }
-        if (Object.keys(segments).length) {
-          const payload = await getAccountPayload();
-          if (!_.isEqual(payload, accountPayload)) setAccountPayload(payload);
-        }
-      }
-    } catch (err) {
-      logger.error(err);
+  useEffect(() => {
+    if (activeProject?.id) {
+      fetchProjectSettings(activeProject.id);
+      getGroups(activeProject.id);
+      getSavedSegments(activeProject.id);
     }
+  }, [activeProject?.id]);
+
+  const runInit = () => {
+    const payload = getAccountPayload();
+    if (!_.isEqual(payload, accountPayload)) setAccountPayload(payload);
   };
 
   useEffect(() => {
     runInit();
-  }, [activeProject?.id, segmentID, accountPayload, segments]);
+  }, [segmentID, accountPayload]);
 
   useEffect(() => {
     const filteredDomainProps = (
@@ -272,6 +263,7 @@ function AccountProfiles({
   );
 
   const restoreFiltersDefaultState = (
+    isClearFilter = false,
     selectedAccount = INITIAL_FILTERS_STATE.account
   ) => {
     const initialFiltersStateWithSelectedAccount = {
@@ -280,7 +272,7 @@ function AccountProfiles({
     };
     setSelectedFilters(initialFiltersStateWithSelectedAccount);
     setAppliedFilters(cloneDeep(initialFiltersStateWithSelectedAccount));
-    setFiltersExpanded(false);
+    if (!isClearFilter) setFiltersExpanded(false);
     setFiltersDirty(false);
   };
 
@@ -330,6 +322,9 @@ function AccountProfiles({
       updateSegmentForId(activeProject.id, accountPayload?.segment?.id, {
         name
       }).then(() => {
+        const updatedPayload = { ...accountPayload };
+        updatedPayload.segment.name = name;
+        setAccountPayload(updatedPayload);
         getSavedSegments(activeProject.id);
         setMoreActionsModalMode(null);
         notification.success({
@@ -478,13 +473,14 @@ function AccountProfiles({
       newPayload.segment.query = reqPayload.query;
       newPayload.isUnsaved = true;
       setAccountPayload(newPayload);
+      setFiltersExpanded(false);
     }
   }, [selectedFilters, newSegmentMode]);
 
   const handlePropChange = (option) => {
     if (
       option.enabled ||
-      checkListAccountProps.filter((item) => item.enabled).length < 8
+      checkListAccountProps.filter((item) => item.enabled).length < 12
     ) {
       setCheckListAccountProps((prev) => {
         const checkListProps = [...prev];
@@ -521,6 +517,9 @@ function AccountProfiles({
       await updateSegmentForId(activeProject.id, accountPayload.segment.id, {
         query: updatedQuery
       });
+      const updatedPayload = { ...accountPayload };
+      updatedPayload.segment.query = updatedQuery;
+      setAccountPayload({ ...updatedPayload });
       await getSavedSegments(activeProject.id);
     } else {
       const enabledProps = checkListAccountProps
@@ -688,11 +687,10 @@ function AccountProfiles({
   }, [appliedFilters]);
 
   const handleClearFilters = () => {
-    restoreFiltersDefaultState();
-    setAccountPayload({ source: GROUP_NAME_DOMAINS });
-    history.replace(PathUrls.ProfileAccounts);
+    restoreFiltersDefaultState(true);
+    // setAccountPayload({ source: GROUP_NAME_DOMAINS });
+    // history.replace(PathUrls.ProfileAccounts);
   };
-
   const saveButtonDisabled = useMemo(
     () => !accountPayload?.isUnsaved,
     [accountPayload?.isUnsaved]
@@ -904,6 +902,7 @@ function AccountProfiles({
         isScoringLocked,
         displayTableProps,
         groupPropNames,
+        eventNames,
         listProperties,
         defaultSorterInfo,
         projectDomainsList,
@@ -1114,7 +1113,7 @@ function AccountProfiles({
         });
       }
     },
-    [activeAgent, activeProject.id, appliedFilters]
+    [activeAgent, activeProject.id, appliedFilters, downloadCSVOptions]
   );
 
   const closeDownloadCSVModal = useCallback(() => {

@@ -1627,6 +1627,13 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 		aggregateSelect = appendOrderByAggr(aggregateSelect)
 	}
 
+	var domLimit int
+	if query.DownloadAccountsLimitGiven {
+		domLimit = 10000
+	} else {
+		domLimit = 1000
+	}
+
 	if model.IsUserProfiles(query.Caller) {
 		aggregateSelect = fmt.Sprintf("SELECT coal_user_id as identity, is_anonymous, last_activity, properties FROM %s GROUP BY identity ORDER BY last_activity DESC LIMIT 1000", aggregateFromStepName)
 		if scopeGroupID > 0 {
@@ -1634,7 +1641,7 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 		}
 	} else if model.IsAccountProfiles(query.Caller) {
 		if scopeGroupID > 0 && isScopeDomains {
-			aggregateSelect = "SELECT coal_group_user_id as identity, last_activity, host_name FROM final_res GROUP BY identity ORDER BY last_activity DESC LIMIT 1000"
+			aggregateSelect = fmt.Sprintf("SELECT coal_group_user_id as identity, last_activity, host_name FROM final_res GROUP BY identity ORDER BY last_activity DESC LIMIT %d", domLimit)
 		}
 	} else {
 		// Limit is applicable only on the following. Because attribution calls this.

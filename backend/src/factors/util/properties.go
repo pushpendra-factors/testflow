@@ -22,6 +22,8 @@ type PropertiesMap map[string]interface{}
 const SEN_ALL_ACTIVE_USERS = "$AllActiveUsers"
 const SEN_ALL_ACTIVE_USERS_DISPLAY_STRING = "All Active Users"
 
+// special events having standard page view properties
+const EVENT_NAME_PAGE_VIEW = "$page_view"
 const SEN_ALL_EVENTS = "$AllEvents"
 const SEN_ALL_EVENTS_DISPLAY_STRING = "All Events"
 
@@ -176,10 +178,6 @@ const GROUP_EVENT_NAME_G2_REPORT = "$g2_report"
 const GROUP_EVENT_NAME_G2_REFERENCE = "$g2_reference"
 const GROUP_EVENT_NAME_G2_DEAL = "$g2_deal"
 
-const GROUP_EVENT_NAME_ENGAGEMENT_SCORE = "$engagement_score"
-const GROUP_EVENT_NAME_ENGAGEMENT_LEVEL = "$engagement_level"
-const GROUP_EVENT_NAME_TOTAL_ENGAGEMENT_SCORE = "$total_enagagement_score"
-
 // Integration shopify event names.
 const EVENT_NAME_SHOPIFY_CHECKOUT_CREATED = "$shopify_checkout_created"
 const EVENT_NAME_SHOPIFY_CHECKOUT_UPDATED = "$shopify_checkout_updated"
@@ -191,6 +189,7 @@ const EVENT_NAME_SHOPIFY_CART_UPDATED = "$shopify_cart_updated"
 
 var ALLOWED_INTERNAL_EVENT_NAMES = [...]string{
 	EVENT_NAME_SESSION,
+	EVENT_NAME_PAGE_VIEW,
 	EVENT_NAME_FORM_FILL,
 	EVENT_NAME_FORM_SUBMITTED,
 	EVENT_NAME_HUBSPOT_CONTACT_CREATED,
@@ -477,6 +476,7 @@ var EP_AD_ID string = "$ad_id"
 var EP_CREATIVE string = "$creative"
 var EP_GCLID string = "$gclid"
 var EP_FBCLID string = "$fbclid"
+var EP_LICLID string = "$liclid"
 var EP_COST string = "$cost"
 var EP_REVENUE string = "$revenue"
 var EP_PAGE_COUNT string = "$page_count"
@@ -621,6 +621,7 @@ var UP_INITIAL_ADGROUP_ID string = "$initial_adgroup_id"
 var UP_INITIAL_CREATIVE string = "$initial_creative"
 var UP_INITIAL_GCLID string = "$initial_gclid"
 var UP_INITIAL_FBCLID string = "$initial_fbclid"
+var UP_INITIAL_LICLID string = "$initial_liclid"
 var UP_INITIAL_REFERRER string = "$initial_referrer"
 var UP_INITIAL_REFERRER_URL string = "$initial_referrer_url"
 var UP_INITIAL_REFERRER_DOMAIN string = "$initial_referrer_domain"
@@ -654,6 +655,7 @@ var UP_LATEST_ADGROUP_ID string = "$latest_adgroup_id"
 var UP_LATEST_CREATIVE string = "$latest_creative"
 var UP_LATEST_GCLID string = "$latest_gclid"
 var UP_LATEST_FBCLID string = "$latest_fbclid"
+var UP_LATEST_LICLID string = "$latest_liclid"
 var UP_LATEST_REFERRER string = "$latest_referrer"
 var UP_LATEST_REFERRER_URL string = "$latest_referrer_url"
 var UP_LATEST_REFERRER_DOMAIN string = "$latest_referrer_domain"
@@ -736,6 +738,8 @@ var LI_LOCALIZED_NAME = "$li_localized_name"
 var LI_AD_VIEW_COUNT = "$li_ad_view_count"
 var LI_AD_CLICK_COUNT = "$li_ad_click_count"
 var LI_ORGANIZATION_ID = "$li_org_id"
+var LI_TOTAL_AD_VIEW_COUNT = "$li_total_ad_view_count"
+var LI_TOTAL_AD_CLICK_COUNT = "$li_total_ad_click_count"
 
 // Click properties
 var EP_CLICK_ELEMENT_TYPE = "element_type"
@@ -770,7 +774,12 @@ var IDENTIFIED_USER_ID = "$identified_user_id"
 // SQL column as properties
 var CUSTOMER_USER_ID = "customer_user_id"
 
-var DP_DOMAIN_NAME = "$domain_name"
+// Domain Properties
+const DP_DOMAIN_NAME = "$domain_name"
+const DP_ENGAGEMENT_SCORE = "$engagement_score"
+const DP_ENGAGEMENT_LEVEL = "$engagement_level"
+const DP_TOTAL_ENGAGEMENT_SCORE = "$total_enagagement_score"
+const DP_ENGAGEMENT_SIGNALS = "$top_enagagement_signals"
 
 var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,
@@ -809,6 +818,7 @@ var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_CREATIVE,
 	EP_GCLID,
 	EP_FBCLID,
+	EP_LICLID,
 	EP_COST,
 	EP_REVENUE,
 	EP_COMPANY_ENRICHED,
@@ -922,6 +932,7 @@ var SDK_ALLOWED_USER_PROPERTIES = [...]string{
 	UP_INITIAL_CREATIVE,
 	UP_INITIAL_GCLID,
 	UP_INITIAL_FBCLID,
+	UP_INITIAL_LICLID,
 	UP_DAY_OF_FIRST_EVENT,
 	UP_HOUR_OF_FIRST_EVENT,
 	UP_LATEST_PAGE_URL,
@@ -1087,6 +1098,7 @@ var EVENT_TO_USER_INITIAL_PROPERTIES = map[string]string{
 	EP_CREATIVE:            UP_INITIAL_CREATIVE,
 	EP_GCLID:               UP_INITIAL_GCLID,
 	EP_FBCLID:              UP_INITIAL_FBCLID,
+	EP_LICLID:              UP_INITIAL_LICLID,
 }
 
 var EVENT_TO_USER_LATEST_PAGE_PROPERTIES = map[string]string{
@@ -1115,6 +1127,7 @@ var EVENT_TO_USER_LATEST_PROPERTIES = map[string]string{
 	EP_CREATIVE:           UP_LATEST_CREATIVE,
 	EP_GCLID:              UP_LATEST_GCLID,
 	EP_FBCLID:             UP_LATEST_FBCLID,
+	EP_LICLID:             UP_LATEST_LICLID,
 }
 
 // Uses same name as source user properties.
@@ -1159,6 +1172,7 @@ var EVENT_TO_SESSION_PROPERTIES = map[string]string{
 	EP_CREATIVE:           EP_CREATIVE,
 	EP_GCLID:              EP_GCLID,
 	EP_FBCLID:             EP_FBCLID,
+	EP_LICLID:             EP_LICLID,
 
 	// Uses session property names.
 	EP_REFERRER:        SP_INITIAL_REFERRER,
@@ -1182,6 +1196,7 @@ var DEFINED_MARKETING_PROPERTIES = [...]string{
 	EP_CREATIVE,
 	EP_GCLID,
 	EP_FBCLID,
+	EP_LICLID,
 }
 
 var PREDEFINED_BIN_RANGES_FOR_PROPERTY = map[string][][2]float64{
@@ -1454,8 +1469,10 @@ var DISABLED_FACTORS_USER_PROPERTIES = [...]string{
 	UP_USER_ID,
 	UP_INITIAL_GCLID,
 	UP_INITIAL_FBCLID,
+	UP_INITIAL_LICLID,
 	UP_LATEST_GCLID,
 	UP_LATEST_FBCLID,
+	UP_LATEST_LICLID,
 	UP_LATEST_REFERRER,
 	UP_INITIAL_REFERRER,
 	UP_MERGE_TIMESTAMP,
@@ -1484,6 +1501,7 @@ var DISABLED_FACTORS_EVENT_PROPERTIES = [...]string{
 	EP_PAGE_RAW_URL,
 	EP_GCLID,
 	EP_FBCLID,
+	EP_LICLID,
 	UP_EMAIL,
 	UP_JOIN_TIME,
 	UP_OS_WITH_VERSION,
@@ -1594,6 +1612,8 @@ var STANDARD_EVENTS_DISPLAY_NAMES = map[string]string{
 	"$offline_touch_point":               "Offline Touchpoint",
 	"$leadsquared_lead_created":          "Lead Created",
 	"$leadsquared_lead_updated":          "Lead Updated",
+	EVENT_NAME_PAGE_VIEW:                 "Page View",
+	SEN_ALL_EVENTS:                       SEN_ALL_EVENTS_DISPLAY_STRING,
 	EVENT_NAME_FORM_FILL:                 "Form Fills",
 	EVENT_NAME_SALESFORCE_TASK_CREATED:   "Salesforce Task Created",
 	EVENT_NAME_SALESFORCE_EVENT_CREATED:  "Salesforce Event Created",
@@ -1630,10 +1650,19 @@ var ALL_ACCOUNT_DEFAULT_PROPERTIES = []string{
 }
 
 var ALL_ACCOUNTS_PROPERTIES = []string{
-	GROUP_EVENT_NAME_ENGAGEMENT_LEVEL,
-	GROUP_EVENT_NAME_ENGAGEMENT_SCORE,
-	GROUP_EVENT_NAME_TOTAL_ENGAGEMENT_SCORE,
+	DP_ENGAGEMENT_LEVEL,
+	DP_ENGAGEMENT_SCORE,
+	DP_TOTAL_ENGAGEMENT_SCORE,
 	DP_DOMAIN_NAME,
+	DP_ENGAGEMENT_SIGNALS,
+}
+
+var ALL_ACCOUNTS_PROPERTY_AND_TYPE = map[string]string{
+	DP_ENGAGEMENT_LEVEL:       PropertyTypeCategorical,
+	DP_ENGAGEMENT_SIGNALS:     PropertyTypeCategorical,
+	DP_DOMAIN_NAME:            PropertyTypeCategorical,
+	DP_ENGAGEMENT_SCORE:       PropertyTypeNumerical,
+	DP_TOTAL_ENGAGEMENT_SCORE: PropertyTypeNumerical,
 }
 
 var GROUP_TO_DEFAULT_SEGMENT_MAP = map[string]string{
@@ -1644,15 +1673,16 @@ var GROUP_TO_DEFAULT_SEGMENT_MAP = map[string]string{
 }
 
 var ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES = map[string]string{
-	IN_LINKEDIN:                             "Engaged on LinkedIn",
-	IN_HUBSPOT:                              "In Hubspot",
-	IN_G2:                                   "Visited G2",
-	VISITED_WEBSITE:                         "Visited Website",
-	IN_SALESFORCE:                           "In Salesforce",
-	GROUP_EVENT_NAME_ENGAGEMENT_SCORE:       "Engagement Score",
-	GROUP_EVENT_NAME_ENGAGEMENT_LEVEL:       "Engagement Level",
-	GROUP_EVENT_NAME_TOTAL_ENGAGEMENT_SCORE: "Total Engagement Score",
-	DP_DOMAIN_NAME:                          "Domain Name",
+	IN_LINKEDIN:               "Engaged on LinkedIn",
+	IN_HUBSPOT:                "In Hubspot",
+	IN_G2:                     "Visited G2",
+	VISITED_WEBSITE:           "Visited Website",
+	IN_SALESFORCE:             "In Salesforce",
+	DP_ENGAGEMENT_SCORE:       "Engagement Score",
+	DP_ENGAGEMENT_LEVEL:       "Engagement Level",
+	DP_TOTAL_ENGAGEMENT_SCORE: "Total Engagement Score",
+	DP_DOMAIN_NAME:            "Domain Name",
+	DP_ENGAGEMENT_SIGNALS:     "Top Engagement Signals",
 }
 
 var USER_PROPERTIES_WITH_COLUMN = []string{
@@ -1798,6 +1828,7 @@ var STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	EP_CREATIVE:                              "Creative",
 	EP_GCLID:                                 "GCLID",
 	EP_FBCLID:                                "FBCLID",
+	EP_LICLID:                                "LICLID",
 	EP_COST:                                  "Cost",
 	EP_REVENUE:                               "Revenue",
 	EP_TIMESTAMP:                             "Timestamp",
@@ -1867,6 +1898,7 @@ var STANDARD_EVENT_PROPERTIES_CATAGORIZATION = map[string]string{
 	EP_CREATIVE:            "Traffic source",
 	EP_GCLID:               "Traffic source",
 	EP_FBCLID:              "Traffic source",
+	EP_LICLID:              "Traffic source",
 	EP_TIMESTAMP:           "Session properties",
 	EP_HOUR_OF_DAY:         "Session properties",
 	EP_DAY_OF_WEEK:         "Session properties",
@@ -1936,6 +1968,7 @@ var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	UP_INITIAL_CREATIVE:                    "User first creative",
 	UP_INITIAL_GCLID:                       "User first GCLID",
 	UP_INITIAL_FBCLID:                      "User first FBCLID",
+	UP_INITIAL_LICLID:                      "User first LICLID",
 	UP_INITIAL_REFERRER:                    "User first referrer",
 	UP_INITIAL_REFERRER_URL:                "User first referrer URL",
 	UP_INITIAL_REFERRER_DOMAIN:             "User first referrer domain",
@@ -1963,6 +1996,7 @@ var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	UP_LATEST_CREATIVE:                     "User latest creative",
 	UP_LATEST_GCLID:                        "User latest GCLID",
 	UP_LATEST_FBCLID:                       "User latest FBCLID",
+	UP_LATEST_LICLID:                       "User latest LICLID",
 	UP_LATEST_REFERRER:                     "User latest referrer",
 	UP_LATEST_REFERRER_URL:                 "User latest referrer URL",
 	UP_LATEST_REFERRER_DOMAIN:              "User latest referrer domain",
@@ -2064,6 +2098,7 @@ var STANDARD_USER_PROPERTIES_CATAGORIZATION = map[string]string{
 	UP_INITIAL_CREATIVE:            "Traffic source",
 	UP_INITIAL_GCLID:               "Traffic source",
 	UP_INITIAL_FBCLID:              "Traffic source",
+	UP_INITIAL_LICLID:              "Traffic source",
 	UP_INITIAL_REFERRER:            "Traffic source",
 	UP_INITIAL_REFERRER_URL:        "Traffic source",
 	UP_INITIAL_REFERRER_DOMAIN:     "Traffic source",
@@ -2089,6 +2124,7 @@ var STANDARD_USER_PROPERTIES_CATAGORIZATION = map[string]string{
 	UP_LATEST_CREATIVE:             "Traffic source",
 	UP_LATEST_GCLID:                "Traffic source",
 	UP_LATEST_FBCLID:               "Traffic source",
+	UP_LATEST_LICLID:               "Traffic source",
 	UP_LATEST_REFERRER:             "Traffic source",
 	UP_LATEST_REFERRER_URL:         "Traffic source",
 	UP_LATEST_REFERRER_DOMAIN:      "Traffic source",
@@ -2176,6 +2212,7 @@ var STANDARD_SESSION_PROPERTIES_CATAGORIZATION = map[string]string{
 	EP_CREATIVE:                    "Session properties",
 	EP_GCLID:                       "Session properties",
 	EP_FBCLID:                      "Session properties",
+	EP_LICLID:                      "Session properties",
 }
 
 var STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES = map[string]string{
@@ -2218,6 +2255,7 @@ var STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	EP_CREATIVE:                    "Session creative",
 	EP_GCLID:                       "Session GCLID",
 	EP_FBCLID:                      "Session FBCLID",
+	EP_LICLID:                      "Session LICLID",
 }
 
 var CHANNEL_PROPERTIES_DISPLAY_NAMES = map[string]string{
@@ -2227,6 +2265,7 @@ var CHANNEL_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	"$medium":                  "Medium",
 	"$gclid":                   "GCLID",
 	"$fbclid":                  "FBCLID",
+	"$liclid":                  "LICLID",
 }
 
 var PAGE_VIEWS_STANDARD_PROPERTIES_CATEGORICAL = []string{
@@ -2245,6 +2284,7 @@ var PAGE_VIEWS_STANDARD_PROPERTIES_CATEGORICAL = []string{
 	EP_CREATIVE,
 	EP_GCLID,
 	EP_FBCLID,
+	EP_LICLID,
 	EP_PAGE_TITLE,
 	EP_PAGE_DOMAIN,
 	EP_PAGE_RAW_URL,
@@ -2293,6 +2333,7 @@ var USER_PROPERTIES_MERGE_TYPE_INITIAL = [...]string{
 	UP_INITIAL_CREATIVE,
 	UP_INITIAL_FBCLID,
 	UP_INITIAL_GCLID,
+	UP_INITIAL_LICLID,
 	UP_INITIAL_KEYWORD,
 	UP_INITIAL_KEYWORD_MATCH_TYPE,
 	UP_INITIAL_TERM,
@@ -2712,6 +2753,7 @@ var CUSTOM_BLACKLIST_DELTA = []string{
 	"$identifiers",
 	"$initial_content",
 	"$initial_fbclid",
+	"$initial_liclid",
 	"$initial_gclid",
 	"$initial_page_url",
 	"$initial_referrer",

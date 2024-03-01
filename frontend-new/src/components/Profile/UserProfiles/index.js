@@ -89,7 +89,7 @@ import DeleteSegmentModal from '../AccountProfiles/DeleteSegmentModal';
 import RenameSegmentModal from '../AccountProfiles/RenameSegmentModal';
 import UpdateSegmentModal from '../AccountProfiles/UpdateSegmentModal';
 import styles from './index.module.scss';
-import { ALPHANUMSTR, DEFAULT_TIMELINE_CONFIG, iconColors } from '../constants';
+import { ALPHANUMSTR, iconColors } from '../constants';
 import logger from 'Utils/logger';
 
 const userOptions = getUserOptions();
@@ -115,7 +115,7 @@ function UserProfiles({
   const [loading, setLoading] = useState(true);
   const [checkListUserProps, setCheckListUserProps] = useState([]);
   const [showPopOver, setShowPopOver] = useState(false);
-  const [tlConfig, setTLConfig] = useState(DEFAULT_TIMELINE_CONFIG);
+  const [tlConfig, setTLConfig] = useState({});
   const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
   const [errMsg, setErrMsg] = useState('');
 
@@ -186,26 +186,29 @@ function UserProfiles({
   }, [currentProjectSettings, timelinePayload]);
 
   const restoreFiltersDefaultState = useCallback(
-    (selectedAccount = INITIAL_USER_PROFILES_FILTERS_STATE.account) => {
+    (
+      isClearFilter = false,
+      selectedAccount = INITIAL_USER_PROFILES_FILTERS_STATE.account
+    ) => {
       const initialFiltersStateWithSelectedAccount = {
         ...INITIAL_USER_PROFILES_FILTERS_STATE,
         account: selectedAccount
       };
       setSelectedFilters(initialFiltersStateWithSelectedAccount);
       setAppliedFilters(initialFiltersStateWithSelectedAccount);
-      setFiltersExpanded(false);
+      if (!isClearFilter) setFiltersExpanded(false);
       setFiltersDirty(false);
     },
     [setFiltersDirty]
   );
 
   const handleClearFilters = useCallback(() => {
-    restoreFiltersDefaultState();
-    const reqPayload = getFiltersRequestPayload({
-      selectedFilters: INITIAL_USER_PROFILES_FILTERS_STATE,
-      tableProps: displayTableProps
-    });
-    getProfileUsers(activeProject.id, reqPayload);
+    restoreFiltersDefaultState(true);
+    // const reqPayload = getFiltersRequestPayload({
+    //   selectedFilters: INITIAL_USER_PROFILES_FILTERS_STATE,
+    //   tableProps: displayTableProps
+    // });
+    // getProfileUsers(activeProject.id, reqPayload);
   }, [
     activeProject.id,
     displayTableProps,
@@ -357,21 +360,8 @@ function UserProfiles({
   }, [timelinePayload?.search_filter]);
 
   useEffect(() => {
-    if (currentProjectSettings?.timelines_config) {
-      const timelinesConfig = {};
-      timelinesConfig.disabled_events = [
-        ...(currentProjectSettings?.timelines_config?.disabled_events || {})
-      ];
-      timelinesConfig.user_config = {
-        ...DEFAULT_TIMELINE_CONFIG.user_config,
-        ...currentProjectSettings?.timelines_config?.user_config
-      };
-      timelinesConfig.account_config = {
-        ...DEFAULT_TIMELINE_CONFIG.account_config,
-        ...currentProjectSettings?.timelines_config?.account_config
-      };
-      setTLConfig(timelinesConfig);
-    }
+    if (!currentProjectSettings?.timelines_config) return;
+    setTLConfig(currentProjectSettings.timelines_config);
   }, [currentProjectSettings?.timelines_config]);
 
   useEffect(() => {
@@ -686,7 +676,7 @@ function UserProfiles({
   const handlePropChange = (option) => {
     if (
       option.enabled ||
-      checkListUserProps.filter((item) => item.enabled === true).length < 8
+      checkListUserProps.filter((item) => item.enabled === true).length < 12
     ) {
       setCheckListUserProps((prev) => {
         const checkListProps = [...prev];

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Row, Col, Skeleton, message } from 'antd';
 import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { connect } from 'react-redux';
@@ -6,19 +6,91 @@ import { fetchProjectSettings, fetchProjectSettingsV1 } from 'Reducers/global';
 
 import { ErrorBoundary } from 'react-error-boundary';
 
-import { ADWORDS_INTERNAL_REDIRECT_URI } from './util';
-import { featureLock } from '../../../../routes/feature';
+import logger from 'Utils/logger';
+import { fetchDashboards } from 'Reducers/dashboard/services';
+import { fetchQueries } from 'Reducers/coreQuery/services';
+import {
+  ADWORDS_INTERNAL_REDIRECT_URI,
+  createDashboardsFromTemplatesForRequiredIntegration
+} from './util';
 import { IntegrationProviderData } from './integrations.constants';
 import IntegrationCard from './IntegrationCard';
 
 function IntegrationSettings({
-  currentProjectSettings,
   activeProject,
+  currentProjectSettings,
+  currentProjectSettingsLoading,
   fetchProjectSettings,
-  currentAgent,
-  fetchProjectSettingsV1
+  fetchProjectSettingsV1,
+  fetchDashboards,
+  fetchQueries,
+  dashboards,
+  dashboardTemplates,
+  sdkCheck,
+  bingAds,
+  marketo
 }) {
   const [dataLoading, setDataLoading] = useState(true);
+  const templateDashboardStatusRef = useRef(false);
+
+  // effect for creating dashboards from templates based on the integrations
+  useEffect(() => {
+    let timeout = false;
+
+    const initializeTimeout = () => {
+      // returning for unavailable values or loading states
+      if (dashboards?.loading || !dashboards?.data) return;
+      if (dashboardTemplates?.loading || !dashboardTemplates?.data) return;
+      if (!activeProject?.id) return;
+      if (currentProjectSettingsLoading) return;
+      // do nothing if dashboard creation is in process
+      if (templateDashboardStatusRef.current) return;
+      // setting up a timer so the latest values can be used
+      timeout = setTimeout(async () => {
+        try {
+          // do nothing if dashboard creation is in process
+          if (templateDashboardStatusRef.current) return;
+          templateDashboardStatusRef.current = true;
+
+          const res = await createDashboardsFromTemplatesForRequiredIntegration(
+            activeProject.id,
+            dashboards.data,
+            dashboardTemplates.data,
+            sdkCheck,
+            currentProjectSettings,
+            bingAds,
+            marketo
+          );
+          if (res) {
+            await fetchDashboards(activeProject.id);
+            await fetchQueries(activeProject.id);
+          }
+          // setting template dashboard status back to false
+          setTimeout(() => {
+            templateDashboardStatusRef.current = false;
+          }, 0);
+        } catch (error) {
+          logger.error('Error in creating dashboard from template', error);
+          templateDashboardStatusRef.current = false;
+        }
+      }, 2000);
+    };
+
+    initializeTimeout();
+
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [
+    dashboards,
+    activeProject?.id,
+    dashboardTemplates,
+    sdkCheck,
+    currentProjectSettings,
+    bingAds,
+    marketo,
+    currentProjectSettingsLoading
+  ]);
 
   useEffect(() => {
     fetchProjectSettings(activeProject.id).then(() => {
@@ -72,7 +144,13 @@ function IntegrationSettings({
             <div className='mb-10'>
               <Row>
                 <Col span={12}>
-                  <Text type='title' level={3} weight='bold' extraClass='m-0' id={'fa-at-text--page-title'}>
+                  <Text
+                    type='title'
+                    level={3}
+                    weight='bold'
+                    extraClass='m-0'
+                    id='fa-at-text--page-title'
+                  >
                     Integrations
                   </Text>
                 </Col>
@@ -115,10 +193,18 @@ function IntegrationSettings({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   currentProjectSettings: state.global.currentProjectSettings,
-  currentAgent: state.agent.agent_details
+  currentProjectSettingsLoading: state.global.currentProjectSettingsLoading,
+  currentAgent: state.agent.agent_details,
+  dashboards: state.dashboard.dashboards,
+  dashboardTemplates: state.dashboardTemplates.templates,
+  sdkCheck: state?.global?.projectSettingsV1?.int_completed,
+  bingAds: state?.global?.bingAds,
+  marketo: state?.global?.marketo
 });
 
 export default connect(mapStateToProps, {
   fetchProjectSettings,
-  fetchProjectSettingsV1
+  fetchProjectSettingsV1,
+  fetchDashboards,
+  fetchQueries
 })(IntegrationSettings);

@@ -119,7 +119,7 @@ func (store *MemSQL) convertEventTriggerAlertToEventTriggerAlertInfo(list []mode
 			if deliveryOption == "" {
 				deliveryOption += "Webhook"
 			} else {
-				deliveryOption += "& Webhook"
+				deliveryOption += "& Webhook "
 			}
 		}
 		if alert.Teams {
@@ -203,7 +203,7 @@ func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int
 	db := C.GetServices().Db
 
 	var alert model.EventTriggerAlert
-	transTime := gorm.NowFunc()
+	transTime := time.Now().UTC()
 	id := U.GetUUID()
 
 	isValidAlertBody, errCode, errMsg := store.isValidEventTriggerAlertBody(projectID, userID, alertConfig)
@@ -218,7 +218,7 @@ func (store *MemSQL) CreateEventTriggerAlert(userID, oldID string, projectID int
 	}
 
 	if isDuplicateAlertTitle(projectID, alertConfig.Title, oldID) {
-		logCtx.Error("alert already exist")
+		logCtx.Error("An alert with the same name already exists. Please choose a different name before saving.")
 		return nil, http.StatusConflict, "alert already exist"
 	}
 
@@ -304,27 +304,27 @@ func (store *MemSQL) isValidEventTriggerAlertBody(projectID int64, agentID strin
 	})
 
 	if alert.Title == "" {
-		errMsg := "title can not be empty"
+		errMsg := "Please provide a name for the alert before saving."
 		logCtx.WithError(fmt.Errorf(errMsg)).Error("alert body validation failure")
 		return false, http.StatusBadRequest, errMsg
 	}
 	if alert.Event == "" {
-		errMsg := "event can not be empty"
+		errMsg := "Please select an event to trigger the alert."
 		logCtx.WithError(fmt.Errorf(errMsg)).Error("alert body validation failure")
 		return false, http.StatusBadRequest, errMsg
 	}
 	if alert.DontRepeatAlerts && (alert.BreakdownProperties == nil || isEmptyPostgresJsonb(alert.BreakdownProperties)) {
-		errMsg := "breakdown property not selected"
+		errMsg := "Please specify a property to limit alerts under advanced settings."
 		logCtx.WithError(fmt.Errorf(errMsg)).Error("alert body validation failure")
 		return false, http.StatusBadRequest, errMsg
 	}
 	if !alert.Slack && !alert.Webhook && !alert.Teams {
-		errMsg := "choose atleast one delivery option"
+		errMsg := "Please choose at least 1 destination to receive the alerts in before saving."
 		logCtx.WithError(fmt.Errorf(errMsg)).Error("alert body validation failure")
 		return false, http.StatusBadRequest, errMsg
 	}
 	if alert.Slack && (alert.SlackChannels == nil || U.IsEmptyPostgresJsonb(alert.SlackChannels)) {
-		errMsg := "slack channel not selected"
+		errMsg := "Please select the Slack channel where you want to receive the alert."
 		logCtx.WithError(fmt.Errorf(errMsg)).Error("alert body validation failure")
 		return false, http.StatusBadRequest, errMsg
 	}
@@ -349,12 +349,12 @@ func (store *MemSQL) isValidEventTriggerAlertBody(projectID int64, agentID strin
 		return false, http.StatusBadRequest, errMsg
 	}
 	if alert.Webhook && alert.WebhookURL == "" {
-		errMsg := "webhook url must not be empty"
+		errMsg := "Please enter the Webhook URL to send data through webhook."
 		logCtx.WithError(fmt.Errorf(errMsg)).Error("alert body validation failure")
 		return false, http.StatusBadRequest, errMsg
 	}
 	if duplicateMessagePropertiesPresent(alert.MessageProperty) {
-		errMsg := "duplicate properties found in message property"
+		errMsg := "Duplicate properties are selected in the alert configuration. Please remove them before saving."
 		logCtx.WithError(fmt.Errorf(errMsg)).Error("alert body validation failure")
 		return false, http.StatusBadRequest, errMsg
 	}
@@ -430,46 +430,66 @@ func isDuplicateAlertTitle(projectID int64, title, id string) bool {
 	return false
 }
 
-func (store *MemSQL) GetEventTriggerAlertsByEvent(projectId int64, id string) ([]model.EventTriggerAlert, model.EventName, int) {
+func (store *MemSQL) GetEventTriggerAlertsForTheCurrentEvent(projectId int64, id string) ([]model.EventTriggerAlert, model.EventName, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"prefix":     id,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
 	var eventAlerts []model.EventTriggerAlert
-	var eventName model.EventName
+	var eventName *model.EventName
+	var errCode int
+	var err error
 
-	db := C.GetServices().Db
-
-	if err := db.Where("project_id = ? AND id = ?", projectId, id).
-		Find(&eventName).Error; err != nil {
-		log.WithFields(log.Fields{"projectId": projectId, "id": id}).WithError(err).Error(
-			"event_name not found")
-		if gorm.IsRecordNotFoundError(err) {
-			return nil, model.EventName{}, http.StatusNotFound
+	if id != "" {
+		eventName, errCode, err = store.GetEventNameByID(projectId, id)
+		if errCode != http.StatusFound || err != nil {
+			log.WithFields(logFields).WithError(err).Error("event_name not found")
+			return nil, model.EventName{}, http.StatusInternalServerError
 		}
-
-		return nil, model.EventName{}, http.StatusInternalServerError
+	} else {
+		eventName = &model.EventName{
+			Name: U.EVENT_NAME_PAGE_VIEW,
+		}
 	}
 
-	if err := db.Where("project_id = ? AND is_deleted = 0", projectId).
-		Where("JSON_EXTRACT_STRING(event_trigger_alert, 'event') LIKE ?", eventName.Name).
-		Not("internal_status = ?", model.Disabled).
-		Find(&eventAlerts).Error; err != nil {
-		log.WithFields(log.Fields{"projectId": projectId, "event": eventName.Name}).WithError(err).Error(
-			"filtering eventName failed on GetFilterEventNamesByEvent")
-		if gorm.IsRecordNotFoundError(err) {
-			return nil, eventName, http.StatusNotFound
-		}
-
-		return nil, eventName, http.StatusInternalServerError
+	eventAlerts, errCode, err = store.GetEventTriggerAlertsByEventName(projectId, eventName.Name)
+	if (errCode != http.StatusFound && errCode != http.StatusNotFound) || err != nil {
+		log.WithFields(logFields).WithError(err).Error("event_name not found")
+		return nil, model.EventName{}, errCode
 	}
 
 	if len(eventAlerts) == 0 {
-		return nil, eventName, http.StatusNotFound
+		return nil, *eventName, http.StatusNotFound
 	}
 
-	return eventAlerts, eventName, http.StatusFound
+	return eventAlerts, *eventName, http.StatusFound
+}
+
+func (store *MemSQL) GetEventTriggerAlertsByEventName(projectID int64, eventName string) ([]model.EventTriggerAlert, int, error) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"event_name": eventName,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	eventAlerts := make([]model.EventTriggerAlert, 0)
+	db := C.GetServices().Db
+
+	if err := db.Where("project_id = ? AND is_deleted = 0", projectID).
+		Where("JSON_EXTRACT_STRING(event_trigger_alert, 'event') LIKE ?", eventName).
+		Not("internal_status = ?", model.Disabled).
+		Find(&eventAlerts).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound, err
+		}
+		log.WithFields(logFields).WithError(err).
+			Error("can not get event trigger alerts by event names")
+		return nil, http.StatusInternalServerError, err
+	}
+
+	return eventAlerts, http.StatusFound, nil
 }
 
 func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eventNameId, userID string, eventProps, userProps *postgres.Jsonb, UpdatedEventProps *postgres.Jsonb, isUpdate bool) (*[]model.EventTriggerAlert, *model.EventName, *map[string]interface{}, int) {
@@ -481,7 +501,7 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	alerts, eventName, errCode := store.GetEventTriggerAlertsByEvent(projectId, eventNameId)
+	alerts, eventName, errCode := store.GetEventTriggerAlertsForTheCurrentEvent(projectId, eventNameId)
 	if errCode != http.StatusFound || alerts == nil {
 		//log.WithFields(logFields).Error("GetEventTriggerAlertsByEvent failure inside Match function.")
 		return nil, nil, nil, errCode

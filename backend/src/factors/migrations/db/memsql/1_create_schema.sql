@@ -75,18 +75,28 @@ CREATE TABLE IF NOT EXISTS users (
     -- COLUMNSTORE key is sort key, can we add an incremental numerical column to the end?
     -- Initial parts of the indices are still useful when don't use the last column which is an incremental value.
     KEY (project_id, source, join_timestamp) USING CLUSTERED COLUMNSTORE,
-    KEY (id) USING HASH,
-    KEY (project_id) USING HASH,
-    KEY (customer_user_id) USING HASH,
-    KEY (segment_anonymous_id) USING HASH,
-    KEY (amp_user_id) USING HASH,
-    KEY (join_timestamp) USING HASH,
-    KEY (is_group_user) USING HASH,
-    KEY (group_1_id) USING HASH,
-    KEY (group_2_id) USING HASH,
-    KEY (group_3_id) USING HASH,
-    KEY (group_4_id) USING HASH,
-    KEY (source) USING HASH,
+
+    KEY `project_id_2` (`project_id`) USING HASH,
+    KEY `customer_user_id` (`customer_user_id`) USING HASH,
+    KEY `segment_anonymous_id` (`segment_anonymous_id`) USING HASH,
+    KEY `amp_user_id` (`amp_user_id`) USING HASH,
+    KEY `join_timestamp` (`join_timestamp`) USING HASH,
+    KEY `is_group_user` (`is_group_user`) USING HASH,
+    KEY `group_1_id` (`group_1_id`) USING HASH,
+    KEY `group_2_id` (`group_2_id`) USING HASH,
+    KEY `group_3_id` (`group_3_id`) USING HASH,
+    KEY `group_4_id` (`group_4_id`) USING HASH,
+    KEY `source_idx` (`source`) USING HASH,
+    KEY `id_idx` (`id`) USING HASH,
+    KEY `group_4_user_idx` (`group_4_user_id`) USING HASH,
+    KEY `group_1_user_idx` (`group_1_user_id`) USING HASH,
+    KEY `group_2_user_idx` (`group_2_user_id`) USING HASH,
+    KEY `group_3_user_idx` (`group_3_user_id`) USING HASH,
+    KEY `group_5_user_idx` (`group_5_user_id`) USING HASH,
+    KEY `group_6_user_idx` (`group_6_user_id`) USING HASH,
+    KEY `group_7_user_idx` (`group_7_user_id`) USING HASH,
+    KEY `group_8_user_idx` (`group_8_user_id`) USING HASH,
+
     UNIQUE KEY (project_id, id) USING HASH,
     SHARD KEY (id)
 
@@ -250,6 +260,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS dashboards (
     description text,
     type varchar(5),
     class text,
+    folder_id text,
     is_deleted boolean NOT NULL DEFAULT FALSE,
     settings json,
     internal_id bigint,
@@ -1440,6 +1451,21 @@ CREATE TABLE IF NOT EXISTS slack_users_list(
     users_list JSON,
     last_sync_time TIMESTAMP(6) NOT NULL DEFAULT '1970-01-01 00:00:00'
 ); 
+
+-- Not accessing dashboards directly through folders, so not adding indexing. FE is mapping folders and dashboard data internally.
+CREATE TABLE IF NOT EXISTS dashboard_folders(
+    id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    project_id BIGINT NOT NULL,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    is_default_folder BOOLEAN NOT NULL DEFAULT FALSE, 
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
+    KEY (id) USING HASH,
+    SHARD KEY (id),
+    PRIMARY KEY (id, project_id)
+    --is_default_folder: true for All Boards folder, in other case false
+);
 
 --  This is generated from DBT workload. Adding this for running test cases alone.
 CREATE TABLE `website_aggregation` (
