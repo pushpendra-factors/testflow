@@ -627,6 +627,8 @@ var UP_INITIAL_REFERRER_URL string = "$initial_referrer_url"
 var UP_INITIAL_REFERRER_DOMAIN string = "$initial_referrer_domain"
 var UP_DAY_OF_FIRST_EVENT string = "$day_of_first_event"
 var UP_HOUR_OF_FIRST_EVENT string = "$hour_of_first_event"
+var UP_REAL_PAGE_SPENT_TIME string = "$real_page_spent_time"
+var UP_REAL_PAGE_COUNT string = "$real_page_count"
 
 // ** INITIAL_CHANNEL is the channel of First session for the user
 var UP_INITIAL_CHANNEL string = "$initial_channel"
@@ -1419,6 +1421,8 @@ var DISABLED_CORE_QUERY_USER_PROPERTIES = [...]string{
 	UP_META_OBJECT_IDENTIFIER_KEY,
 	EP_CRM_REFERENCE_EVENT_ID,
 	"$marketo_lead__fivetran_synced",
+	UP_REAL_PAGE_COUNT,
+	UP_REAL_PAGE_SPENT_TIME,
 }
 
 // DISABLED_CORE_QUERY_EVENT_PROPERTIES Less important event properties in core query context.

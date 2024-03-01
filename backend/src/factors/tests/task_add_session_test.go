@@ -4772,3 +4772,205 @@ func TestPageCountAndSessionSpentTime(t *testing.T) {
 	assert.Equal(t, properitesMap[U.UP_TOTAL_SPENT_TIME], float64(10))
 	assert.Nil(t, properitesMap[U.EP_SESSION_COUNT])
 }
+
+func TestAddSessionUserRealSessionProperties(t *testing.T) {
+	project, _, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+
+	timestamp := time.Now().AddDate(0, 0, -1)
+	timestampUnix := timestamp.Unix()
+
+	randomEventName := RandomURL()
+	trackEventProperties := U.PropertiesMap{
+		U.EP_PAGE_URL:     "https://example.com",
+		U.EP_PAGE_RAW_URL: "https://example.com",
+		U.EP_CAMPAIGN_ID:  "124",
+	}
+	trackUserProperties := U.PropertiesMap{
+		U.UP_OS: "android1",
+	}
+
+	trackPayload := SDK.TrackPayload{
+		Auto:            true,
+		Name:            randomEventName,
+		Timestamp:       timestampUnix,
+		EventProperties: trackEventProperties,
+		UserProperties:  trackUserProperties,
+		RequestSource:   model.UserSourceWeb,
+	}
+	trackPayload1 := trackPayload
+	status, res := SDK.Track(project.ID, &trackPayload1, false, SDK.SourceJSSDK, "")
+	assert.Equal(t, http.StatusOK, status)
+	userID1 := res.UserId
+	eventID1 := res.EventId
+
+	status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{
+		UserId:         userID1,
+		CustomerUserId: "abc1@abc1.com",
+		JoinTimestamp:  timestampUnix,
+		RequestSource:  model.UserSourceWeb,
+	}, false)
+	assert.Equal(t, http.StatusOK, status)
+
+	// session not created.
+	_, errCode := store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
+	assert.Equal(t, http.StatusNotFound, errCode)
+
+	_, err = TaskSession.AddSession([]int64{project.ID}, 2*24*60*60, 0, 0, 30, 1, 1)
+	assert.Nil(t, err)
+
+	// session event name created.
+	_, errCode = store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+
+	event, status := store.GetStore().GetEvent(project.ID, userID1, eventID1)
+	assert.Equal(t, http.StatusFound, errCode)
+
+	sessionEvent, status := store.GetStore().GetEvent(project.ID, userID1, *event.SessionId)
+	assert.Equal(t, http.StatusFound, errCode)
+
+	// session event properties .
+	lsEventProperties, err := U.DecodePostgresJsonb(&sessionEvent.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, (*lsEventProperties)[U.SP_PAGE_COUNT], float64(1))
+	assert.Equal(t, (*lsEventProperties)[U.SP_SPENT_TIME], float64(1))
+	assert.Nil(t, (*lsEventProperties)[U.UP_REAL_PAGE_SPENT_TIME])
+	assert.Nil(t, (*lsEventProperties)[U.UP_REAL_PAGE_COUNT])
+	lsUserProperties, err := U.DecodePostgresJsonb(sessionEvent.UserProperties)
+	assert.Nil(t, err)
+	assert.NotEqual(t, (*lsUserProperties)[U.UP_PAGE_COUNT], float64(1))
+	assert.NotEqual(t, (*lsUserProperties)[U.UP_TOTAL_SPENT_TIME], float64(1))
+	assert.Equal(t, float64(0), (*lsUserProperties)[U.UP_REAL_PAGE_SPENT_TIME])
+	assert.Equal(t, float64(0), (*lsUserProperties)[U.UP_REAL_PAGE_COUNT])
+
+	trackUserProperties = U.PropertiesMap{
+		U.UP_OS: "android2",
+	}
+
+	trackPayload2 := trackPayload
+	trackPayload2.UserProperties = trackUserProperties
+	status, res = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
+	assert.Equal(t, http.StatusOK, status)
+	userID2 := res.UserId
+	eventID2 := res.EventId
+
+	status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{
+		UserId:         userID2,
+		CustomerUserId: "abc1@abc1.com",
+		JoinTimestamp:  timestampUnix,
+		RequestSource:  model.UserSourceWeb,
+	}, false)
+	assert.Equal(t, http.StatusOK, status)
+
+	properties := &U.PropertiesMap{
+		"$page_spent_time": 1.34, "$page_load_time": 1.594, "$page_scroll_percent": 97.54}
+	// add page spent time
+	errCode = store.GetStore().UpdateEventProperties(project.ID, eventID2, userID2, properties, time.Now().Unix(), nil)
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	trackPayload2 = trackPayload
+	trackPayload2.Name = randomEventName
+	trackPayload2.UserId = userID2
+	status, _ = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
+	assert.Equal(t, http.StatusOK, status)
+
+	_, err = TaskSession.AddSession([]int64{project.ID}, 2*24*60*60, 0, 0, 30, 1, 1)
+	assert.Nil(t, err)
+
+	event, status = store.GetStore().GetEvent(project.ID, userID2, eventID2)
+	assert.Equal(t, http.StatusFound, status)
+
+	sessionEvent, status = store.GetStore().GetEvent(project.ID, userID2, *event.SessionId)
+	assert.Equal(t, http.StatusFound, status)
+
+	// session event properties .
+	lsEventProperties, err = U.DecodePostgresJsonb(&sessionEvent.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(2), (*lsEventProperties)[U.SP_PAGE_COUNT])
+	assert.Equal(t, float64(2.34), (*lsEventProperties)[U.SP_SPENT_TIME])
+	assert.Nil(t, (*lsEventProperties)[U.UP_REAL_PAGE_SPENT_TIME])
+	assert.Nil(t, (*lsEventProperties)[U.UP_REAL_PAGE_COUNT])
+	lsUserProperties, err = U.DecodePostgresJsonb(sessionEvent.UserProperties)
+	assert.Nil(t, err)
+	assert.NotEqual(t, (*lsUserProperties)[U.UP_PAGE_COUNT], float64(1))
+	assert.NotEqual(t, (*lsUserProperties)[U.UP_TOTAL_SPENT_TIME], float64(1))
+	assert.Equal(t, float64(0), (*lsUserProperties)[U.UP_REAL_PAGE_SPENT_TIME])
+	assert.Equal(t, float64(0), (*lsUserProperties)[U.UP_REAL_PAGE_COUNT])
+
+	newProperties := &postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
+		`{"%s": "%s"}`, U.UP_FIRST_NAME, "test")))}
+	_, status = store.GetStore().UpdateUserProperties(project.ID, userID1, newProperties, U.TimeNowUnix())
+	assert.Equal(t, http.StatusAccepted, status)
+
+	// real properties for each user is kept as it is without merging
+	user, status := store.GetStore().GetUser(project.ID, userID1)
+	assert.Equal(t, http.StatusFound, status)
+	userProperties, err := U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(1), (*userProperties)[U.UP_REAL_PAGE_SPENT_TIME])
+	assert.Equal(t, float64(1), (*userProperties)[U.UP_REAL_PAGE_COUNT])
+	assert.Equal(t, float64(3), (*userProperties)[U.UP_PAGE_COUNT])
+	assert.Equal(t, float64(3.34), (*userProperties)[U.UP_TOTAL_SPENT_TIME])
+	assert.Equal(t, "android2", (*userProperties)[U.UP_OS])
+
+	user, status = store.GetStore().GetUser(project.ID, userID2)
+	assert.Equal(t, http.StatusFound, status)
+	userProperties, err = U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(2.34), (*userProperties)[U.UP_REAL_PAGE_SPENT_TIME])
+	assert.Equal(t, float64(2), (*userProperties)[U.UP_REAL_PAGE_COUNT])
+	assert.Equal(t, float64(3), (*userProperties)[U.UP_PAGE_COUNT])
+	assert.Equal(t, float64(3.34), (*userProperties)[U.UP_TOTAL_SPENT_TIME])
+	assert.Equal(t, "android2", (*userProperties)[U.UP_OS])
+
+	// user 2 getting another page view event, should add 1 for page spent time and page count
+	trackPayload2 = trackPayload
+	trackPayload2.Name = randomEventName
+	trackPayload2.UserId = userID2
+	status, _ = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
+	assert.Equal(t, http.StatusOK, status)
+
+	_, err = TaskSession.AddSession([]int64{project.ID}, 2*24*60*60, 0, 0, 30, 1, 1)
+	assert.Nil(t, err)
+
+	user, status = store.GetStore().GetUser(project.ID, userID2)
+	assert.Equal(t, http.StatusFound, status)
+	userProperties, err = U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(3.34), (*userProperties)[U.UP_REAL_PAGE_SPENT_TIME])
+	assert.Equal(t, float64(3), (*userProperties)[U.UP_REAL_PAGE_COUNT])
+	assert.Equal(t, float64(4), (*userProperties)[U.UP_PAGE_COUNT])
+	assert.Equal(t, float64(4.34), (*userProperties)[U.UP_TOTAL_SPENT_TIME])
+	assert.Equal(t, "android2", (*userProperties)[U.UP_OS])
+
+	// test when old user without real session spent time gets updated
+	trackPayload3 := trackPayload
+	status, res = SDK.Track(project.ID, &trackPayload3, false, SDK.SourceJSSDK, "")
+	assert.Equal(t, http.StatusOK, status)
+	userID3 := res.UserId
+
+	user, status = store.GetStore().GetUser(project.ID, userID3)
+	assert.Equal(t, http.StatusFound, status)
+	userProperties, err = U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	delete(*userProperties, U.UP_REAL_PAGE_SPENT_TIME)
+	delete(*userProperties, U.UP_REAL_PAGE_COUNT)
+
+	userPropertiesJsonB, err := U.EncodeToPostgresJsonb(userProperties)
+	assert.Nil(t, err)
+
+	status = store.GetStore().OverwriteUserPropertiesByID(project.ID, userID3, nil, userPropertiesJsonB, false, 0, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusAccepted, status)
+	_, err = TaskSession.AddSession([]int64{project.ID}, 2*24*60*60, 0, 0, 30, 1, 1)
+	assert.Nil(t, err)
+
+	user, status = store.GetStore().GetUser(project.ID, userID3)
+	assert.Equal(t, http.StatusFound, status)
+	userProperties, err = U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(2), (*userProperties)[U.UP_REAL_PAGE_SPENT_TIME]) // adds 1 for all previous data
+	assert.Equal(t, float64(2), (*userProperties)[U.UP_REAL_PAGE_COUNT])      // adds 1 for all previous data
+	assert.Equal(t, float64(1), (*userProperties)[U.UP_PAGE_COUNT])
+	assert.Equal(t, float64(1), (*userProperties)[U.UP_TOTAL_SPENT_TIME])
+	assert.Equal(t, "android1", (*userProperties)[U.UP_OS])
+}
