@@ -132,14 +132,6 @@ function App({
           });
         }
 
-        // Trackdesk - For affiliation tracking.
-        if (window.trackdesk && typeof window.trackdesk == 'function') {
-          window.trackdesk('factorsai', 'externalCid', {
-            externalCid: agent_details?.email,
-            revenueOriginId: 'fc51bc33-de16-4d8f-9270-320a311eb873'
-          });
-        }
-
         // Reditus - For affiliation tracking.
         if (window.gr && typeof window.gr == 'function') {
           window.gr('track', 'conversion', { email: agent_details?.email });

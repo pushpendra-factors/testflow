@@ -5,7 +5,8 @@ class MetricsAggregator:
     etl_stats = {
         "failures": {},
         "token_failures": [],
-        "success": {}
+        "success": {},
+        "warnings": {}
     }
     request_counter = 0
     job_type = 'daily'
@@ -18,10 +19,16 @@ class MetricsAggregator:
             'total_api_requests': self.request_counter
         }
         if status == 'failed' or err_msg != '':
-            self.etl_stats['failures'].setdefault(self.job_type, {})
-            self.etl_stats['failures'][self.job_type].setdefault(project_id, {})
-            self.etl_stats['failures'][self.job_type][project_id].setdefault(ad_account, {})
-            self.etl_stats['failures'][self.job_type][project_id][ad_account].setdefault(doc_type, msg_dict)
+            if NO_CAMPAIGN_ERR in err_msg:
+                self.etl_stats['warnings'].setdefault(self.job_type, {})
+                self.etl_stats['warnings'][self.job_type].setdefault(project_id, {})
+                self.etl_stats['warnings'][self.job_type][project_id].setdefault(ad_account, {})
+                self.etl_stats['warnings'][self.job_type][project_id][ad_account].setdefault(doc_type, msg_dict)
+            else:
+                self.etl_stats['failures'].setdefault(self.job_type, {})
+                self.etl_stats['failures'][self.job_type].setdefault(project_id, {})
+                self.etl_stats['failures'][self.job_type][project_id].setdefault(ad_account, {})
+                self.etl_stats['failures'][self.job_type][project_id][ad_account].setdefault(doc_type, msg_dict)
         else:
             self.etl_stats['success'].setdefault(self.job_type, {})
             self.etl_stats['success'][self.job_type].setdefault(project_id, {})
@@ -32,10 +39,11 @@ class MetricsAggregator:
     def reset_request_counter(self):
         self.request_counter = 0
 
-    def ping_notification_services(self, env):
+    def ping_notification_services(self, env, healthcheck_ping_id):
         status_msg = ''
         failures = self.etl_stats['failures']
         successes = self.etl_stats['success']
+        warnings = self.etl_stats['warnings']
         token_failures = self.etl_stats['token_failures']
         if len(failures) > 0: status_msg = 'Failures on sync.'
         else: status_msg = 'Successfully synced.'
@@ -43,9 +51,8 @@ class MetricsAggregator:
             'status': status_msg, 
             'failures': failures, 
             'success': successes,
+            'warnings': warnings,
         }
-        healthcheck_ping_id = HEALTHCHECK_PING_ID
-
         if len(failures) > 0:
             U.ping_healthcheck(env, healthcheck_ping_id,
                 notification_payload, endpoint='/fail')
