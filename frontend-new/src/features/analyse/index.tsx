@@ -608,7 +608,6 @@ const CoreQuery = () => {
   };
 
   const setQueryOptions = (opts: {} | any) => {
-    console.log(opts);
     const qState = coreQueryState.getCopy();
     if (opts?.globalFilters) {
       qState.queryOptions.globalFilters = opts.globalFilters;

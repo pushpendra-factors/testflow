@@ -189,7 +189,7 @@ function WidgetCard({
             setResultState({
               ...initialState,
               data: res.data.result,
-              status:res.status
+              status: res.status
             });
           } else if (
             queryType === QUERY_TYPE_PROFILE &&
@@ -203,7 +203,7 @@ function WidgetCard({
             setResultState({
               ...initialState,
               data: res.data.result,
-              status:res.status
+              status: res.status
             });
           } else if (
             queryType === QUERY_TYPE_ATTRIBUTION &&
@@ -217,7 +217,7 @@ function WidgetCard({
             setResultState({
               ...initialState,
               data: res.data.result,
-              status:res.status,
+              status: res.status,
               apiCallStatus
             });
           } else if (
@@ -232,7 +232,7 @@ function WidgetCard({
             setResultState({
               ...initialState,
               data: res.data.result,
-              status:res.status
+              status: res.status
             });
           } else if (
             queryType === QUERY_TYPE_KPI &&
@@ -246,7 +246,7 @@ function WidgetCard({
             setResultState({
               ...initialState,
               data: res.data.result || res.data,
-              status:res.status
+              status: res.status
             });
           } else if (!hasComponentUnmounted.current) {
             lastRefreshedAt = _.get(
@@ -267,7 +267,7 @@ function WidgetCard({
               setResultState({
                 ...initialState,
                 data: resultGroup[0],
-                status:res.status
+                status: res.status
               });
             } else if (unit.query.query.query_group.length === 3) {
               const userData = formatApiData(resultGroup[0], resultGroup[1]);
@@ -450,9 +450,11 @@ function WidgetCard({
     }
 
     let analyseQueryParamsPath = '/analyse';
-    // if (unit?.query?.query?.query_group?.[0]?.cl === 'events') {
-    //   analyseQueryParamsPath =  analyseQueryParamsPath + '/events/' + unit.query.id_text;
-    // } else if(unit?.query?.query?.cl === 'funnel') {
+    if (unit?.query?.query?.query_group?.[0]?.cl === 'events') {
+      analyseQueryParamsPath =
+        analyseQueryParamsPath + '/events/' + unit.query.id_text;
+    }
+    // else if(unit?.query?.query?.cl === 'funnel') {
     //   analyseQueryParamsPath =  analyseQueryParamsPath + '/funnel/' + unit.query.id_text;
     // }
 
@@ -464,7 +466,6 @@ function WidgetCard({
         navigatedFromDashboard: unit
       }
     });
-    
   }, [
     history,
     unit,
