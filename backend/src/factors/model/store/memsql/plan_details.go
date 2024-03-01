@@ -5,10 +5,11 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // temp
@@ -108,9 +109,9 @@ func (store *MemSQL) GetDisplayablePlanDetails(ppMap model.ProjectPlanMapping, p
 	enabledAddOns := make(map[string]model.FeatureDetails)
 
 	for featureName, feature := range addOns {
-		// filter disabled features 
-		if feature.IsEnabledFeature{
-		enabledAddOns[featureName] = feature
+		// filter disabled features
+		if feature.IsEnabledFeature {
+			enabledAddOns[featureName] = feature
 		}
 	}
 

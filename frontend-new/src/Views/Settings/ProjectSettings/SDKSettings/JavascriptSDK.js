@@ -39,6 +39,7 @@ import ScriptHtml from './ScriptHtml';
 import CodeBlockV2 from 'Components/CodeBlock/CodeBlockV2';
 import logger from 'Utils/logger';
 import GTMSteps from './GTMSteps';
+import { OnboardingSupportLink, SDKDocumentation } from 'Onboarding/utils';
 
 const { TabPane } = Tabs;
 
@@ -902,9 +903,7 @@ const VerifySdkCheck = ({
               type={'text'}
               size={'small'}
               style={{ color: '#1890FF', padding: 0, marginLeft: 4 }}
-              onClick={() =>
-                window.open('https://calendly.com/aravindhvetri', '_blank')
-              }
+              onClick={() => window.open(OnboardingSupportLink, '_blank')}
             >
               book a call
             </Button>
@@ -1013,7 +1012,13 @@ function JavascriptSDK({
       <div className={'mb-4'}>
         <Row style={{ width: '100%', justifyContent: 'space-between' }}>
           <Col span={12}>
-            <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} id={'fa-at-text--page-title'}>
+            <Text
+              type={'title'}
+              level={3}
+              weight={'bold'}
+              extraClass={'m-0'}
+              id={'fa-at-text--page-title'}
+            >
               {isOnBoardFlow === true ? 'Add our ' : ''} Javascript SDK
             </Text>
           </Col>
@@ -1116,11 +1121,7 @@ function JavascriptSDK({
             JavaScript SDK please refer to our
           </Text>
           <Text type='paragraph' color='mono-6' extraClass={'m-0 inline'}>
-            <a
-              href='https://help.factors.ai/en/articles/7260638-placing-factors-sdk'
-              target='_blank'
-              rel='noreferrer'
-            >
+            <a href={SDKDocumentation} target='_blank' rel='noreferrer'>
               JavaScript developer documentation &#8594;
             </a>
           </Text>

@@ -607,6 +607,14 @@ const CoreQuery = () => {
     setCoreQueryState(qState);
   };
 
+  const setQueryOptions = (opts: {} | any) => {
+    const qState = coreQueryState.getCopy();
+    if (opts?.globalFilters) {
+      qState.queryOptions.globalFilters = opts.globalFilters;
+    }
+    setCoreQueryState(qState);
+  };
+
   const renderComposer = () => {
     if (
       coreQueryState.queryType === QUERY_TYPE_FUNNEL ||
@@ -620,7 +628,7 @@ const CoreQuery = () => {
           eventChange={queryChange}
           queryType={coreQueryState.queryType}
           queryOptions={coreQueryState.queryOptions}
-          setQueryOptions={() => {}}
+          setQueryOptions={setQueryOptions}
           runFunnelQuery={() => {}}
           collapse={coreQueryState.showResult}
           setCollapse={() => setQueryOpen(false)}

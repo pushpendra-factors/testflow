@@ -4483,9 +4483,8 @@ func AggregatePropertyValuesAcrossDate(values []CachePropertyValueWithTimestamp,
 	for k, v := range valuesAggregated {
 		// Used for rollup aggregated caching.
 		if isRemovedEnabled && minTimestamp > 0 {
-			// Add only count which is greater than 2 (Removes unique values like raw urls occurrence once or twice.)
-			// and last appeared within the min_timestamp (rollup lookback period).
-			if v.Count > 2 && v.LastSeenTimestamp > minTimestamp {
+			// Only last appeared within the min_timestamp (rollup lookback period).
+			if v.LastSeenTimestamp > minTimestamp {
 				propertyValueAggregatedSlice = append(propertyValueAggregatedSlice, NameCountTimestampCategory{
 					Name: k, Count: v.Count, Timestamp: v.LastSeenTimestamp, Category: "", GroupName: ""})
 			}
@@ -4496,7 +4495,37 @@ func AggregatePropertyValuesAcrossDate(values []CachePropertyValueWithTimestamp,
 			Name: k, Count: v.Count, Timestamp: v.LastSeenTimestamp, Category: "", GroupName: ""})
 	}
 
-	return propertyValueAggregatedSlice
+	if !isRemovedEnabled {
+		return propertyValueAggregatedSlice
+	}
+
+	mapByValue := map[string]NameCountTimestampCategory{}
+	valuesLen := len(propertyValueAggregatedSlice)
+	if valuesLen > 2500 {
+		valuesLen = 2500
+	}
+
+	// Sorted by most occurrence.
+	sort.SliceStable(propertyValueAggregatedSlice, func(i, j int) bool {
+		return propertyValueAggregatedSlice[i].Count > propertyValueAggregatedSlice[j].Count
+	})
+	for i := 0; i < valuesLen; i++ {
+		mapByValue[propertyValueAggregatedSlice[i].Name] = propertyValueAggregatedSlice[i]
+	}
+
+	// Sorted by recency of occurrence.
+	sort.SliceStable(propertyValueAggregatedSlice, func(i, j int) bool {
+		return propertyValueAggregatedSlice[i].Timestamp < propertyValueAggregatedSlice[j].Timestamp
+	})
+	for i := 0; i < valuesLen; i++ {
+		mapByValue[propertyValueAggregatedSlice[i].Name] = propertyValueAggregatedSlice[i]
+	}
+
+	propertyValueAggregatedFiltered := make([]NameCountTimestampCategory, 0)
+	for _, v := range mapByValue {
+		propertyValueAggregatedFiltered = append(propertyValueAggregatedFiltered, v)
+	}
+	return propertyValueAggregatedFiltered
 }
 
 // AggregatePropertyAcrossDate values are stored by date and this method aggregates the count and last seen value and returns
