@@ -1489,12 +1489,13 @@ func buildUniqueUsersFunnelQueryV2(projectId int64, q model.Query, groupIds []in
 		aggregateFromName = bucketedFromName
 		aggregateGroupBys = strings.Join(bucketedGroupBys, ", ")
 		aggregateOrderBys = strings.Join(bucketedOrderBys, ", ")
+		aggregateOrderBys = joinWithComma(funnelCountAliases[len(funnelCountAliases)-1]+" DESC", aggregateOrderBys)
 	} else {
 		_, _, groupKeys := buildGroupKeys(projectId, q.GroupByProperties, q.Timezone, false, false)
 		aggregateSelectKeys = groupKeys + ", "
 		aggregateFromName = stepFunnelName
 		aggregateGroupBys = groupKeys
-		aggregateOrderBys = funnelCountAliases[0] + " DESC"
+		aggregateOrderBys = funnelCountAliases[len(funnelCountAliases)-1] + " DESC"
 	}
 
 	// builds "SUM(step1) AS step1, SUM(step1) AS step2".
@@ -1840,12 +1841,13 @@ func buildUniqueUsersFunnelQueryV3(projectId int64, q model.Query, groupIds []in
 		aggregateFromName = bucketedFromName
 		aggregateGroupBys = strings.Join(bucketedGroupBys, ", ")
 		aggregateOrderBys = strings.Join(bucketedOrderBys, ", ")
+		aggregateOrderBys = joinWithComma(funnelCountAliases[len(funnelCountAliases)-1]+" DESC", aggregateOrderBys)
 	} else {
 		_, _, groupKeys := buildGroupKeys(projectId, q.GroupByProperties, q.Timezone, false, false)
 		aggregateSelectKeys = groupKeys + ", "
 		aggregateFromName = stepFunnelName
 		aggregateGroupBys = groupKeys
-		aggregateOrderBys = funnelCountAliases[0] + " DESC"
+		aggregateOrderBys = funnelCountAliases[len(funnelCountAliases)-1] + " DESC"
 	}
 
 	// builds "SUM(step1) AS step1, SUM(step1) AS step2".
