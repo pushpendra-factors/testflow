@@ -1251,14 +1251,14 @@ CREATE ROWSTORE TABLE IF NOT EXISTS event_trigger_alerts(
     is_deleted boolean NOT NULL DEFAULT FALSE
 );
 
-CREATE TABLE IF NOT EXISTS segments(
+CREATE ROWSTORE TABLE IF NOT EXISTS segments(
     id text NOT NULL,
     project_id bigint NOT NULL,
     name text NOT NULL, 
     description text, 
     query json,
     type text,
-    updated_at timestamp(6) DEFAULT '2024-01-01 00:00:00',
+    updated_at timestamp(6) DEFAULT '2024-01-01 00:00:00';,
     PRIMARY KEY (project_id, id),
     SHARD KEY (project_id, id)
 );
@@ -1464,6 +1464,7 @@ CREATE TABLE IF NOT EXISTS dashboard_folders(
     KEY (id) USING HASH,
     SHARD KEY (id),
     PRIMARY KEY (id, project_id)
+    --is_default_folder: true for All Boards folder, in other case false
 );
 
 --  This is generated from DBT workload. Adding this for running test cases alone.
