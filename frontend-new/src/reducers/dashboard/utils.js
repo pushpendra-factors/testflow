@@ -14,39 +14,35 @@ export const getRearrangedData = (units, dashboard) => {
   let result;
   if (!dashboard.units_position || !dashboard.units_position.position) {
     const clonedUnits = [...units];
-    result = clonedUnits.map((u, index) => {
-      return {
-        ...u,
-        position: index,
-        className: 'w-full',
-        cardSize: 1
-      };
-    });
+    result = clonedUnits.map((u, index) => ({
+      ...u,
+      position: index,
+      className: 'w-full',
+      cardSize: 1
+    }));
   } else {
     const unitsPosition = dashboard.units_position.position;
-    const nonPositionedUnits = units.filter((u) => {
-      return !Object.prototype.hasOwnProperty.call(unitsPosition, u.id || u.inter_id);
-    });
-    const positionedUnits = units.filter((u) => {
-      return Object.prototype.hasOwnProperty.call(unitsPosition, u.id || u.inter_id);
-    });
-    const result1 = nonPositionedUnits.map((u, index) => {
-      return {
-        ...u,
-        position: index,
-        className: 'w-full',
-        cardSize: 1
-      };
-    });
+    const nonPositionedUnits = units.filter(
+      (u) =>
+        !Object.prototype.hasOwnProperty.call(unitsPosition, u.id || u.inter_id)
+    );
+    const positionedUnits = units.filter((u) =>
+      Object.prototype.hasOwnProperty.call(unitsPosition, u.id || u.inter_id)
+    );
+    const result1 = nonPositionedUnits.map((u, index) => ({
+      ...u,
+      position: index,
+      className: 'w-full',
+      cardSize: 1
+    }));
     const startingPosition = nonPositionedUnits.length;
-    let result2 = positionedUnits.map((u) => {
-      return {
-        ...u,
-        position: unitsPosition[u.id || u.inter_id] + startingPosition,
-        className: cardClassNames[dashboard.units_position.size[u.id || u.inter_id]],
-        cardSize: dashboard.units_position.size[u.id || u.inter_id]
-      };
-    });
+    let result2 = positionedUnits.map((u) => ({
+      ...u,
+      position: unitsPosition[u.id || u.inter_id] + startingPosition,
+      className:
+        cardClassNames[dashboard.units_position.size[u.id || u.inter_id]],
+      cardSize: dashboard.units_position.size[u.id || u.inter_id]
+    }));
     result2 = SortData(result2, 'position', 'ascend');
     result = [...result2, ...result1];
   }
@@ -71,7 +67,7 @@ export const getUpdateStateOnDashboardsLoaded = ({ payload }) => {
   );
   const fixedState = {
     ...defaultState,
-    dashboards: { ...defaultState.dashboards, data: payload }
+    dashboards: { ...defaultState.dashboards, data: payload, completed: true }
   };
   if (lastSelectedDashboardID) {
     const lastSelectedDashboard = _.find(
@@ -90,4 +86,46 @@ export const getUpdateStateOnDashboardsLoaded = ({ payload }) => {
     ...fixedState,
     activeDashboard: data
   };
+};
+
+export const getAllBoardsFolderId = (foldersList) => {
+  const allBoardsFolderId = foldersList.find(
+    (folder) => folder.name === 'All Boards'
+  )?.id;
+  return allBoardsFolderId;
+};
+
+export const getFoldersListWithDashboardIds = (dashboardsList, foldersList) => {
+  const allBoardsFolderId = getAllBoardsFolderId(foldersList);
+  const folderIdsMapper = dashboardsList.reduce((prev, curr) => {
+    const { folder_id } = curr;
+
+    if (Boolean(folder_id) === true) {
+      if (prev[folder_id] != null) {
+        return {
+          ...prev,
+          [folder_id]: [...prev[folder_id], curr.id]
+        };
+      }
+      return {
+        ...prev,
+        [folder_id]: [curr.id]
+      };
+    }
+    if (prev[allBoardsFolderId] != null) {
+      return {
+        ...prev,
+        [allBoardsFolderId]: [...prev[allBoardsFolderId], curr.id]
+      };
+    }
+    return {
+      ...prev,
+      [allBoardsFolderId]: [curr.id]
+    };
+  }, {});
+
+  return foldersList.map((folder) => ({
+    ...folder,
+    dashboardIds: folderIdsMapper[folder.id] ?? []
+  }));
 };
