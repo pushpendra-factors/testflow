@@ -5,21 +5,38 @@ export const getAccountActivitiesWithEnableKeyConfig = (
   disabledEvents = []
 ) => {
   const timelineArray = [];
-  for (const user of accountTimeline) {
+
+  accountTimeline.forEach((user) => {
     const newOpts = (user.user_activities || []).map((activity) => {
       const isEnabled = !disabledEvents.includes(activity.display_name);
       return {
         ...activity,
-        user: user.is_anonymous ? 'new_user' : user.user_id,
-        id: user.user_id,
+        username: user.is_anonymous ? 'new_user' : user.user_name,
+        user_id: user.user_id,
+        user_properties: user.properties,
         enabled: isEnabled,
-        isGroupEvent: user.user_name === 'group_user'
+        is_group_event: user.user_name === 'group_user'
       };
     });
     timelineArray.push(...newOpts);
-  }
+  });
+
   return timelineArray;
 };
+
+const mapUser = ({
+  user_name: name,
+  additional_prop: extraProp,
+  user_id: id,
+  is_anonymous: isAnonymous,
+  user_properties: properties
+}) => ({
+  name,
+  extraProp,
+  id,
+  isAnonymous,
+  properties
+});
 
 export const formatAccountTimeline = (data, config) => {
   const milestones = data.milestones || {};
@@ -29,68 +46,39 @@ export const formatAccountTimeline = (data, config) => {
     config?.disabled_events
   );
 
-  const anonymousUsers = accountTimeline.filter((user) => user.is_anonymous);
-  const anonymousUser = anonymousUsers.length
-    ? [
-        {
-          title: 'Anonymous Users',
-          subtitle: `${
-            anonymousUsers.length === 1
-              ? '1 Anonymous User'
-              : `${
-                  anonymousUsers.length > 25 ? '25+' : anonymousUsers.length
-                } Anonymous Users`
-          }`,
-          userId: 'new_user',
-          isAnonymous: true
-        }
-      ]
-    : [];
-
-  const mapUser = ({
-    user_name: title,
-    additional_prop: subtitle,
-    user_id: userId,
-    is_anonymous: isAnonymous
-  }) => ({
-    title,
-    subtitle,
-    userId,
-    isAnonymous
-  });
-
-  const intentUser = accountTimeline
+  const accountUser = accountTimeline
     .filter((user) => user.user_name === 'group_user')
     .map(mapUser);
 
-  const nonAnonymousUsers = accountTimeline
-    .filter((user) => !user.is_anonymous && user.user_name !== 'group_user')
+  const webUsers = accountTimeline
+    .filter((user) => user.user_name !== 'group_user')
     .map(({ user_activities, ...rest }) => ({
-      ...mapUser(rest),
+      ...rest,
       lastEventAt: user_activities?.sort(compareObjTimestampsDesc)?.[0]
         ?.timestamp
     }))
-    .sort((a, b) => b.lastEventAt - a.lastEventAt);
+    .sort((a, b) => b.lastEventAt - a.lastEventAt)
+    .map(mapUser);
 
   const milestoneEvents = Object.entries(milestones).map(
     ([event_name, timestamp]) => ({
       event_name,
       timestamp,
-      user: 'milestone'
+      username: 'milestone',
+      user_id: 'milestone'
     })
   );
 
-  const account_events = [...accountActivities, ...milestoneEvents].sort(
+  const events = [...accountActivities, ...milestoneEvents].sort(
     compareObjTimestampsDesc
   );
 
   return {
-    name: data.name,
-    host: data.host_name,
+    domain: data.name,
     leftpane_props: data.leftpane_props,
     overview: data.overview,
-    account_users: [...nonAnonymousUsers, ...anonymousUser, ...intentUser],
-    account_events
+    users: [...webUsers, ...accountUser],
+    events
   };
 };
 

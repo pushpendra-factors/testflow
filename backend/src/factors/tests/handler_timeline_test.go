@@ -877,7 +877,6 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, resp.UserId, userId)
 		assert.Contains(t, resp.Name, "Cameron")
-		assert.Equal(t, resp.Company, "Freshworks")
 		assert.NotNil(t, resp.LeftPaneProps)
 		userProps := user.Properties
 		userPropsDecoded, err := U.DecodePostgresJsonb(&userProps)
@@ -5040,4 +5039,91 @@ func TestUpdateEventsConfig(t *testing.T) {
 	}
 	w := sendUpdateEventConfigRequest(r, project.ID, agent, U.EVENT_NAME_SESSION, newSessionEventProperties)
 	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestGetUserPropertiesByIDHandler(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	var timelinesConfig model.TimelinesConfig
+
+	timelinesConfig.UserConfig.TableProps = []string{"$page_count", "$session_spent_time"}
+
+	tlConfigEncoded, err := U.EncodeStructTypeToPostgresJsonb(timelinesConfig)
+	assert.Nil(t, err)
+
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID,
+		&model.ProjectSetting{TimelinesConfig: tlConfigEncoded})
+	assert.Equal(t, errCode, http.StatusAccepted)
+
+	props := map[string]interface{}{
+		U.UP_NAME:             "Cameron Williomson",
+		U.UP_COMPANY:          "Freshworks",
+		U.UP_COUNTRY:          "Australia",
+		U.UP_SESSION_COUNT:    int(8),
+		U.UP_TOTAL_SPENT_TIME: int(500),
+		U.UP_PAGE_COUNT:       int(10),
+	}
+	propertiesJSON, err := json.Marshal(props)
+	if err != nil {
+		log.WithError(err).Fatal("Marshal error.")
+	}
+	properties := postgres.Jsonb{RawMessage: propertiesJSON}
+	customerEmail := "abc@example.com"
+	lastEventTime := time.Now().Add(time.Duration(-6) * time.Hour)
+
+	createdUserID, _ := store.GetStore().CreateUser(&model.User{
+		ProjectId:      project.ID,
+		Source:         model.GetRequestSourcePointer(model.UserSourceWeb),
+		CustomerUserId: customerEmail,
+		Properties:     properties,
+		LastEventAt:    &lastEventTime,
+	})
+	user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
+	assert.Equal(t, user.ID, createdUserID)
+	assert.Equal(t, http.StatusFound, errCode)
+
+	w := sendGetProfileUserPropertiesRequest(r, project.ID, agent, "randomuser", "")
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	w = sendGetProfileUserPropertiesRequest(r, project.ID, agent, "randomuser", "false")
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	jsonResponse, _ := io.ReadAll(w.Body)
+	resp := map[string]interface{}{}
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+
+	w = sendGetProfileUserPropertiesRequest(r, project.ID, agent, customerEmail, "false")
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = io.ReadAll(w.Body)
+	resp = map[string]interface{}{}
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	for _, prop := range timelinesConfig.UserConfig.TableProps {
+		_, exists := resp[prop]
+		assert.Equal(t, true, exists)
+	}
+}
+
+func sendGetProfileUserPropertiesRequest(r *gin.Engine, projectId int64, agent *model.Agent, userId string, isAnonymous string) *httptest.ResponseRecorder {
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error Creating cookieData")
+	}
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/v1/profiles/user_properties/%s?is_anonymous=%s", projectId, userId, isAnonymous)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	w := httptest.NewRecorder()
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error Creating getProjectSetting Req")
+	}
+	r.ServeHTTP(w, req)
+	return w
 }

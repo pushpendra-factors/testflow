@@ -79,20 +79,6 @@ func updateProfileUserScores(profileUsersList *[]model.Profile, scoresPerUser ma
 			scores = append(scores, 0)
 		}
 	}
-
-	engagementLevels := model.GetEngagementLevels(scores, buckets)
-
-	for i := range *profileUsersList {
-		if prof, ok := scoresPerUser[(*profileUsersList)[i].Identity]; ok {
-			(*profileUsersList)[i].Engagement = engagementLevels[float64(prof.Score)]
-			(*profileUsersList)[i].TopEngagements = make(map[string]float64)
-			for engagementKey, engengagementval := range prof.TopEvents {
-				(*profileUsersList)[i].TopEngagements[engagementKey] += engengagementval
-			}
-		} else {
-			(*profileUsersList)[i].Engagement = ""
-		}
-	}
 }
 
 func calculatePercentile(data []float64, value float64) float64 {
@@ -370,7 +356,7 @@ func UpdateEventConfigHandler(c *gin.Context) {
 
 	errCode, err := store.GetStore().UpdateConfigForEvent(projectID, eventName, *payload)
 	if errCode != http.StatusOK {
-		logCtx.Errorln(err)
+		logCtx.Error(err)
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
@@ -380,4 +366,51 @@ func UpdateEventConfigHandler(c *gin.Context) {
 		"event_name": eventName,
 	}
 	c.JSON(http.StatusOK, response)
+}
+
+func GetUserPropertiesByIDHandler(c *gin.Context) {
+
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectID,
+	})
+	if projectID == 0 {
+		logCtx.Error("invalid project id")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid project id"})
+		return
+	}
+
+	userID := c.Params.ByName("id")
+	logCtx = log.WithFields(log.Fields{
+		"projectId": projectID,
+		"userId":    userID,
+	})
+
+	if userID == "" {
+		logCtx.Error("invalid user id")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "failed processing user id"})
+		return
+	}
+	isAnon := c.Query("is_anonymous")
+	logCtx = log.WithFields(log.Fields{
+		"projectId":   projectID,
+		"userId":      userID,
+		"isAnonymous": isAnon,
+	})
+	if isAnon == "" {
+		logCtx.Error("invalid user type")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "failed processing query param"})
+		return
+	}
+
+	isAnonymous := isAnon == "true"
+
+	properties, status := store.GetStore().GetConfiguredPropertiesByUserID(projectID, userID, isAnonymous)
+	if status != http.StatusOK {
+		logCtx.Error("status error")
+		c.AbortWithStatusJSON(status, gin.H{"error": "could not fetch user properties"})
+		return
+	}
+
+	c.JSON(http.StatusOK, properties)
 }
