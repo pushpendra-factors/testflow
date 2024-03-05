@@ -474,21 +474,37 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 
 	t1 := time.Now()
 	eventNameId := event.EventNameId
+
+	alerts, eventName, updatedUserProps, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, eventNameId, event.UserId, &event.Properties, event.UserProperties, nil, false)
+	if ErrCode == http.StatusFound && alerts != nil {
+		// log.WithFields(log.Fields{"project_id": event.ProjectId,
+		// 	"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
+
+		for _, alert := range *alerts {
+			success := store.CacheEventTriggerAlert(&alert, event, eventName, updatedUserProps)
+			if !success {
+				log.WithFields(log.Fields{"project_id": event.ProjectId,
+					"event_trigger_alert": alert}).Error("Caching alert failure")
+			}
+		}
+	}
+
+	//Check for alerts set on All Page view event
 	eventPropMap, err := U.DecodePostgresJsonbAsPropertiesMap(eventPropsJSONb)
 	if err == nil {
 		if (*eventPropMap)[U.EP_IS_PAGE_VIEW] == true {
 			eventNameId = ""
-		}
-		alerts, eventName, updatedUserProps, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, eventNameId, event.UserId, &event.Properties, event.UserProperties, nil, false)
-		if ErrCode == http.StatusFound && alerts != nil {
-			// log.WithFields(log.Fields{"project_id": event.ProjectId,
-			// 	"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
+			alerts, eventName, updatedUserProps, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, eventNameId, event.UserId, &event.Properties, event.UserProperties, nil, false)
+			if ErrCode == http.StatusFound && alerts != nil {
+				// log.WithFields(log.Fields{"project_id": event.ProjectId,
+				// 	"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
 
-			for _, alert := range *alerts {
-				success := store.CacheEventTriggerAlert(&alert, event, eventName, updatedUserProps)
-				if !success {
-					log.WithFields(log.Fields{"project_id": event.ProjectId,
-						"event_trigger_alert": alert}).Error("Caching alert failure")
+				for _, alert := range *alerts {
+					success := store.CacheEventTriggerAlert(&alert, event, eventName, updatedUserProps)
+					if !success {
+						log.WithFields(log.Fields{"project_id": event.ProjectId,
+							"event_trigger_alert": alert}).Error("Caching alert failure")
+					}
 				}
 			}
 		}
@@ -889,6 +905,28 @@ func (store *MemSQL) updateEventPropertiesWithTransaction(projectId int64, id, u
 			if !success {
 				log.WithFields(log.Fields{"project_id": event.ProjectId,
 					"event_trigger_alert": alert}).Error("Caching alert failure")
+			}
+		}
+	}
+
+	//Check for alerts set on All Page View event
+	if updatedProperties[U.EP_IS_PAGE_VIEW] == true {
+		eventNameId := ""
+
+		alerts, eventName, updatedUserProps, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, eventNameId, event.UserId, updatedPostgresJsonb, event.UserProperties, updatedPropertiesOnlyJsonBlob, true)
+		if ErrCode == http.StatusFound && alerts != nil {
+			// log.WithFields(log.Fields{"project_id": event.ProjectId,
+			// 	"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
+
+			updatedEvent := model.Event{}
+			updatedEvent = *event
+			updatedEvent.Properties = *updatedPostgresJsonb
+			for _, alert := range *alerts {
+				success := store.CacheEventTriggerAlert(&alert, &updatedEvent, eventName, updatedUserProps)
+				if !success {
+					log.WithFields(log.Fields{"project_id": event.ProjectId,
+						"event_trigger_alert": alert}).Error("Caching alert failure")
+				}
 			}
 		}
 	}
