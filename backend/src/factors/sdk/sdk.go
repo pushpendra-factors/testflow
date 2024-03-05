@@ -571,6 +571,7 @@ func Track(projectId int64, request *TrackPayload,
 			eventName, eventNameErrCode = store.GetStore().CreateOrGetAutoTrackedEventName(
 				&model.EventName{Name: request.Name, ProjectId: projectId})
 		}
+
 	} else if request.SmartEventType != "" {
 		request.Name = strings.TrimSuffix(request.Name, "/")
 		eventName, eventNameErrCode = store.GetStore().GetSmartEventEventName(&model.EventName{Name: request.Name, ProjectId: projectId, Type: request.SmartEventType})
@@ -591,6 +592,7 @@ func Track(projectId int64, request *TrackPayload,
 	parsedPageURL, err := U.ParseURLStable(pageURL)
 	if err == nil {
 		_ = U.FillPropertiesFromURL(&request.EventProperties, parsedPageURL)
+
 	}
 
 	// Event Properties
@@ -601,6 +603,25 @@ func Track(projectId int64, request *TrackPayload,
 	eventProperties := U.GetValidatedEventProperties(definedEventProperties)
 	if ip, ok := (request.EventProperties)[U.EP_INTERNAL_IP]; ok && ip != "" {
 		clientIP = ip.(string)
+	}
+
+	var isClickedEmailEvent bool
+	var clickedEmailEventName *model.EventName
+
+	if C.IsEmailUTMParameterAllowed(projectId) {
+		U.UnEscapeQueryParamProperties(&request.EventProperties)
+		if U.GetPropertyValueAsString((*eventProperties)[U.EP_EMAIL]) != "" {
+			isClickedEmailEvent = true
+
+			clickedEmailEventName, errCode = store.GetStore().CreateOrGetUserCreatedEventName(
+				&model.EventName{Name: U.EVENT_NAME_CLICKED_EMAIL, ProjectId: projectId})
+
+			if errCode != http.StatusCreated && errCode != http.StatusConflict &&
+				errCode != http.StatusFound {
+				isClickedEmailEvent = false
+				logCtx.WithField("event_name", U.EVENT_NAME_CLICKED_EMAIL).Warn("Tracking failed. Creating  ClickedEmail Name  failed.")
+			}
+		}
 	}
 
 	U.SanitizeProperties(eventProperties)
@@ -702,6 +723,11 @@ func Track(projectId int64, request *TrackPayload,
 	if C.IsFormFillIdentificationAllowedForProject(projectId) {
 		isFormEvent = request.Name == U.EVENT_NAME_FORM_SUBMITTED || request.Name == U.EVENT_NAME_FORM_FILL
 	}
+
+	if C.IsEmailUTMParameterAllowed(projectId) {
+		isFormEvent = isFormEvent || isClickedEmailEvent
+	}
+
 	if isFormEvent {
 		customerUserID, formSubmitUserProperties, errCode := store.GetStore().GetCustomerUserIDAndUserPropertiesFromFormSubmit(
 			projectId, request.UserId, eventProperties)
@@ -713,6 +739,7 @@ func Track(projectId int64, request *TrackPayload,
 		}
 
 		if customerUserID != "" {
+
 			pageURL := U.GetPropertyValueAsString((*eventProperties)[U.EP_PAGE_URL])
 
 			errCode, _ := Identify(projectId, &IdentifyPayload{
@@ -809,6 +836,23 @@ func Track(projectId int64, request *TrackPayload,
 			CustomerEventId: request.CustomerEventId}
 	} else if errCode != http.StatusCreated {
 		return errCode, &TrackResponse{Error: "Tracking failed. Event creation failed."}
+	}
+
+	if isClickedEmailEvent {
+		clickedEmailevent := &model.Event{
+			EventNameId:    clickedEmailEventName.ID,
+			Timestamp:      request.Timestamp,
+			ProjectId:      projectId,
+			UserId:         request.UserId,
+			UserProperties: userPropertiesV2,
+			Properties:     event.Properties,
+		}
+
+		_, errCode := store.GetStore().CreateEvent(clickedEmailevent)
+		if errCode != http.StatusCreated {
+			logCtx.Warn("Tracking failed. Clicked email Event creation failed.")
+		}
+
 	}
 
 	// Success response.
