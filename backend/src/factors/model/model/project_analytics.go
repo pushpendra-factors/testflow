@@ -45,6 +45,8 @@ var GlobalDataProjectAnalyticsColumnsName = []string{
 	"Identified Count",
 	"Login Count",
 	"Account Potential",
+	"Account Limit",
+	"Upsell Potential",
 }
 
 var GlobalDataIntegrationListColumnsName = []string{
@@ -71,6 +73,8 @@ var GlobalDataProjectAnalyticsColumnsNameToJsonKeys = map[string]string{
 	"Integration Connected":     "integration_connected",
 	"Integration Disconnected":  "integration_disconnected",
 	"Account Potential":         "account_potential",
+	"Account Limit":             "account_limit",
+	"Upsell Potential":          "upsell_potential",
 }
 
 var AllProjectAnalyticsColumnsName = []string{
