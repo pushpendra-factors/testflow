@@ -1,16 +1,39 @@
 import { EMPTY_OBJECT, EMPTY_ARRAY } from '../../utils/global';
 
+export const apiStates = {
+  loading: false,
+  error: false,
+  completed: false
+};
+
 export const defaultState = {
   dashboards: {
-    loading: false,
-    error: false,
+    ...apiStates,
     data: EMPTY_ARRAY
   },
   activeDashboard: EMPTY_OBJECT,
   activeDashboardUnits: {
-    loading: false,
-    error: false,
+    ...apiStates,
     data: EMPTY_ARRAY
   },
-  draftsSelected: false
+  draftsSelected: false,
+  showNewFolderModal: false,
+  newFolderCreationState: {
+    ...apiStates
+  },
+  addToExistingFolderState: {
+    ...apiStates
+  },
+  renameFolderState: {
+    ...apiStates
+  },
+  deleteFolderState: {
+    ...apiStates
+  },
+  foldersList: {
+    ...apiStates,
+    data: EMPTY_ARRAY
+  },
+  dashboardsArrangementInFoldersCompleted: false,
+  allBoardsFolderId: null
 };

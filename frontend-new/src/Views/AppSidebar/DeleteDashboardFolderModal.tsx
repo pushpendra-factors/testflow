@@ -3,17 +3,17 @@ import AppModal from 'Components/AppModal/AppModal';
 import { Text } from 'Components/factorsComponents';
 
 interface Props {
-  segmentName: string;
+  folderName: string;
   visible: boolean;
   isLoading: boolean;
   onOk: () => void;
   onCancel: () => void;
 }
 
-const DeleteSegmentModal = ({
+const DeleteDashboardFolderModal = ({
   visible,
   isLoading,
-  segmentName,
+  folderName,
   onOk,
   onCancel
 }: Props) => (
@@ -32,9 +32,9 @@ const DeleteSegmentModal = ({
       extraClass='mb-0'
       level={5}
     >
-      {`Are you sure you want to delete "${segmentName}"?`}
+      {`Are you sure you want to delete "${folderName}"?`}
     </Text>
   </AppModal>
 );
 
-export default DeleteSegmentModal;
+export default DeleteDashboardFolderModal;

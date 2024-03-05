@@ -3,7 +3,9 @@ import { useDispatch, useSelector, connect } from 'react-redux';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Spin } from 'antd';
 import { get, isEmpty } from 'lodash';
-
+import { useHistory } from 'react-router-dom';
+import { PathUrls } from 'Routes/pathUrls';
+import { fetchDashboardFolders } from 'Reducers/dashboard/services';
 import {
   fetchProjectSettingsV1 as fetchProjectSettingsV1Service,
   fetchBingAdsIntegration as fetchBingAdsIntegrationService,
@@ -13,6 +15,7 @@ import {
 
 import {
   selectAreDraftsSelected,
+  selectDashboardFoldersListState,
   selectDashboardList
 } from 'Reducers/dashboard/selectors';
 import CommonBeforeIntegrationPage from 'Components/GenericComponents/CommonBeforeIntegrationPage';
@@ -28,8 +31,6 @@ import DashboardAfterIntegration from './EmptyDashboard/DashboardAfterIntegratio
 import ProjectDropdown from './ProjectDropdown';
 import { DASHBOARD_KEYS } from '../../constants/localStorage.constants';
 import Drafts from './Drafts';
-import { useHistory } from 'react-router-dom';
-import { PathUrls } from 'Routes/pathUrls';
 
 const dashboardRefreshInitialState = {
   inProgress: false,
@@ -69,32 +70,12 @@ function Dashboard({
   const queries = useSelector((state) => state.queries);
   const integrationV1 = useSelector((state) => state.global.projectSettingsV1);
   const activeProject = useSelector((state) => state.global.active_project);
+  const foldersList = useSelector((state) =>
+    selectDashboardFoldersListState(state)
+  );
   const { bingAds, marketo } = useSelector((state) => state.global);
   const dispatch = useDispatch();
   const history = useHistory();
-
-  useEffect(() => {
-    fetchProjectSettingsV1(activeProject?.id)
-      .then((res) => {
-        setSdkCheck(res?.data?.int_completed);
-      })
-      .catch((err) => {
-        console.log(err);
-      });
-
-    fetchProjectSettings(activeProject?.id);
-
-    if (isEmpty(dashboards)) {
-      fetchBingAdsIntegration(activeProject?.id);
-      fetchMarketoIntegration(activeProject?.id);
-    }
-  }, [activeProject, sdkCheck]);
-
-  useEffect(() => {
-    if (activeDashboard?.class === 'predefined') {
-      history.replace(`${PathUrls.PreBuildDashboard}`);
-    }
-  }, [activeDashboard, activeProject]);
 
   const checkIntegration =
     integration?.int_segment ||
@@ -219,7 +200,34 @@ function Dashboard({
     [dispatch]
   );
 
-  if (dashboards.loading || queries.loading) {
+  useEffect(() => {
+    fetchProjectSettingsV1(activeProject?.id)
+      .then((res) => {
+        setSdkCheck(res?.data?.int_completed);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+
+    fetchProjectSettings(activeProject?.id);
+
+    if (isEmpty(dashboards)) {
+      fetchBingAdsIntegration(activeProject?.id);
+      fetchMarketoIntegration(activeProject?.id);
+    }
+
+    if (activeDashboard?.class === 'predefined') {
+      history.replace(`${PathUrls.PreBuildDashboard}`);
+    }
+  }, [activeProject, sdkCheck]);
+
+  useEffect(() => {
+    if (foldersList.completed === false) {
+      dispatch(fetchDashboardFolders(activeProject.id));
+    }
+  }, [activeProject.id, foldersList.completed]);
+
+  if (dashboards.loading || queries.loading || foldersList.completed !== true) {
     return (
       <div className='flex justify-center items-center w-full h-64'>
         <Spin size='large' />

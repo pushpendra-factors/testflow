@@ -2884,6 +2884,24 @@ export const CaretDownSVG = ({ size = 16, color, extraClass }) => {
   );
 };
 
+export const CaretRightSVG = ({ size = 16, color, extraClass }) => {
+  return (
+    <svg
+      width={size}
+      height={size}
+      className={extraClass}
+      viewBox='0 0 24 24'
+      fill='none'
+      xmlns='http://www.w3.org/2000/svg'
+    >
+      <path
+        d='M9 16.8262C9 17.5293 9.82031 17.8809 10.3281 17.3731L15.3281 12.3731C15.6406 12.0606 15.6406 11.5527 15.3281 11.2402L10.3281 6.24024C9.82031 5.73243 9 6.08399 9 6.78712V16.8262Z'
+        fill={color}
+      />
+    </svg>
+  );
+};
+
 export const QueryeditSVG = ({ size = 40, color, extraClass }) => {
   return (
     <svg
@@ -2924,6 +2942,7 @@ export const MoreSVG = ({ size = 16, color, extraClass }) => {
       height={size}
       viewBox='0 0 24 24'
       fill='none'
+      className={extraClass}
     >
       <path
         d='M18.245 13.9997C17.1734 13.9997 16.3047 13.131 16.3047 12.0594C16.3047 10.9878 17.1734 10.1191 18.245 10.1191C19.3166 10.1191 20.1853 10.9878 20.1853 12.0594C20.1853 13.131 19.3166 13.9997 18.245 13.9997Z'
