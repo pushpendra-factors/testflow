@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import cx from 'classnames';
 import { Popover } from 'antd';
-import { SVG, SVG as Svg, Text } from 'Components/factorsComponents';
+import { SVG, Text } from 'Components/factorsComponents';
 import { useDispatch, useSelector } from 'react-redux';
 import { toggleNewFolderModal } from 'Reducers/dashboard/actions';
 import { selectDashboardFoldersListState } from 'Reducers/dashboard/selectors';
@@ -157,7 +157,7 @@ function DashboardSidebarMenuItem({
         }}
       >
         <span>
-          <Svg
+          <SVG
             size={16}
             color='#8C8C8C'
             name='more'
