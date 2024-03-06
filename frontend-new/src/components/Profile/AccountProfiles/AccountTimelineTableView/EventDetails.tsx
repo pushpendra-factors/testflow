@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ReactSortable } from 'react-sortablejs';
-import { connect, ConnectedProps, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { HolderOutlined } from '@ant-design/icons';
 import { SVG, Text } from 'Components/factorsComponents';
 import TextWithOverflowTooltip from 'Components/GenericComponents/TextWithOverflowTooltip';

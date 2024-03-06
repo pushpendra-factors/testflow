@@ -24,7 +24,7 @@ function TableRow({
     ? MomentTz(event.timestamp * 1000).format('hh:mm A')
     : '';
 
-  const isEventClickable =
+  const hasEventProperties =
     currentProjectSettings?.timelines_config?.events_config?.[
       event?.display_name === 'Page View' ? 'PageView' : event?.event_name
     ]?.length > 0;
@@ -34,12 +34,12 @@ function TableRow({
     ]?.[0];
 
   const renderPropertyName = () =>
-    isEventClickable
+    hasEventProperties
       ? `${eventPropNames[propertyName] || PropTextFormat(propertyName)}:`
       : null;
 
   const renderPropertyValue = () => {
-    if (!isEventClickable) {
+    if (!hasEventProperties) {
       return null;
     }
 
@@ -60,12 +60,7 @@ function TableRow({
       : Object.entries(event?.properties || {})?.[0]?.[1];
 
   return (
-    <tr
-      className={`table-row ${
-        isEventClickable ? 'clickable cursor-pointer' : ''
-      }`}
-      onClick={() => isEventClickable && onEventClick(event)}
-    >
+    <tr className='table-row clickable cursor-pointer' onClick={onEventClick}>
       <td className='timestamp-cell'>{timestamp}</td>
       <td className='event-cell'>
         <EventIcon icon={event.icon} size={24} />
@@ -84,8 +79,8 @@ function TableRow({
       </td>
       <td className='user-cell'>
         <UsernameWithIcon
-          title={user.title}
-          userID={event.id}
+          title={user.name}
+          userID={event.user_id}
           isAnonymous={user.isAnonymous}
         />
       </td>

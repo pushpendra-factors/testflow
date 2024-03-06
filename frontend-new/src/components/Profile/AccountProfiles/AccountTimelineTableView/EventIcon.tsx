@@ -4,7 +4,7 @@ import { CustomStyles, EventIconProps } from 'Components/Profile/types';
 import React from 'react';
 
 function EventIcon({ icon, size = 16 }: EventIconProps): JSX.Element {
-  if (!icon) return <></>;
+  if (!icon) return <div />;
 
   // exception
   const showIcon = icon === 'globe' ? 'globepointer' : icon;

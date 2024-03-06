@@ -1459,9 +1459,6 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 		if name, exists := (*propertiesDecoded)[U.UP_NAME]; exists {
 			uniqueUser.Name = fmt.Sprintf("%s", name)
 		}
-		if company, exists := (*propertiesDecoded)[U.UP_COMPANY]; exists {
-			uniqueUser.Company = fmt.Sprintf("%s", company)
-		}
 		timelinesConfig, err := store.GetTimelinesConfig(projectID)
 		if err != nil {
 			log.WithField("status", err).WithError(err).Error("Failed to fetch timelines_config from project_settings.")
@@ -1779,6 +1776,10 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 		// Get the user's activities
 		if activities, err := store.GetUserActivities(projectID, userTimeline.UserId, userIDStr); err == nil {
 			userTimeline.UserActivities = activities
+		}
+
+		if userProperties, errCode := store.GetConfiguredPropertiesByUserID(projectID, userTimeline.UserId, userTimeline.IsAnonymous); errCode == http.StatusOK {
+			userTimeline.UserProperties = userProperties
 		}
 
 		accountTimeline = append(accountTimeline, userTimeline)
@@ -2643,4 +2644,56 @@ func (store *MemSQL) UpdateConfigForEvent(projectID int64, eventName string, upd
 	}
 
 	return http.StatusOK, nil
+}
+
+func (store *MemSQL) GetConfiguredPropertiesByUserID(projectID int64, id string, isAnonymous bool) (map[string]interface{}, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"id":         id,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+
+	if projectID == 0 || id == "" {
+		logCtx.Error("Invalid values on arguments.")
+		return nil, http.StatusBadRequest
+	}
+
+	userId := model.COLUMN_NAME_CUSTOMER_USER_ID
+	if isAnonymous {
+		userId = model.COLUMN_NAME_ID
+	}
+
+	var user model.User
+	db := C.GetServices().Db
+	if err := db.Model(&model.User{}).
+		Where("project_id = ? AND "+userId+" = ?", projectID, id).
+		Select("properties").
+		Order("last_event_at DESC").
+		Limit(1).
+		Find(&user).
+		Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Failed to get properties of user.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if U.IsEmptyPostgresJsonb(&user.Properties) {
+		logCtx.WithField("properties", user.Properties).Error("Empty or nil properties for user.")
+		return nil, http.StatusNotFound
+	}
+	propertiesDecoded, err := U.DecodePostgresJsonb(&user.Properties)
+	if err != nil {
+		log.WithFields(logFields).WithError(err).Error("Failed decoding user properties.")
+	}
+	timelinesConfig, err := store.GetTimelinesConfig(projectID)
+	if err != nil {
+		log.WithField("status", err).WithError(err).Error("Failed to fetch timelines_config from project_settings.")
+	}
+	filteredProperties := GetLeftPanePropertiesFromConfig(timelinesConfig, model.PROFILE_TYPE_USER, propertiesDecoded)
+	return filteredProperties, http.StatusOK
 }
