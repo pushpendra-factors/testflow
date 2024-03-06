@@ -31,6 +31,7 @@ const EVENT_NAME_SESSION = "$session"
 const EVENT_NAME_FORM_FILL = "$form_fill"
 const EVENT_NAME_OFFLINE_TOUCH_POINT = "$offline_touch_point"
 const EVENT_NAME_FORM_SUBMITTED = "$form_submitted"
+const EVENT_NAME_CLICKED_EMAIL = "$clicked_email"
 
 // Integration: Hubspot event names.
 const EVENT_NAME_HUBSPOT_CONTACT_CREATED = "$hubspot_contact_created"
@@ -188,6 +189,7 @@ const EVENT_NAME_SHOPIFY_ORDER_CANCELLED = "$shopify_order_cancelled"
 const EVENT_NAME_SHOPIFY_CART_UPDATED = "$shopify_cart_updated"
 
 var ALLOWED_INTERNAL_EVENT_NAMES = [...]string{
+	EVENT_NAME_CLICKED_EMAIL,
 	EVENT_NAME_SESSION,
 	EVENT_NAME_PAGE_VIEW,
 	EVENT_NAME_FORM_FILL,
@@ -543,6 +545,7 @@ var EP_G2_CITY string = "$g2_visitor_city"
 var EP_G2_STATE string = "$g2_visitor_state"
 var EP_G2_COUNTRY string = "$g2_visitor_country"
 var EP_COMPANY_ENRICHED string = "$company_enriched"
+var EP_EMAIL string = "$ep_email"
 
 // Event Form meta attributes properties
 var EP_FORM_ID string = "$form_id"
@@ -822,6 +825,7 @@ var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_COST,
 	EP_REVENUE,
 	EP_COMPANY_ENRICHED,
+	EP_EMAIL,
 
 	// event properties part of offline touch points
 	EP_CHANNEL,
@@ -1613,6 +1617,7 @@ var STANDARD_EVENTS_DISPLAY_NAMES = map[string]string{
 	"$leadsquared_lead_created":          "Lead Created",
 	"$leadsquared_lead_updated":          "Lead Updated",
 	EVENT_NAME_PAGE_VIEW:                 "Page View",
+	EVENT_NAME_CLICKED_EMAIL:             "Clicked Email",
 	SEN_ALL_EVENTS:                       SEN_ALL_EVENTS_DISPLAY_STRING,
 	EVENT_NAME_FORM_FILL:                 "Form Fills",
 	EVENT_NAME_SALESFORCE_TASK_CREATED:   "Salesforce Task Created",
@@ -3765,7 +3770,7 @@ func GetValidatedEventProperties(properties *PropertiesMap) *PropertiesMap {
 				propertyKey = k
 			}
 
-			if propertyKey == UP_EMAIL {
+			if propertyKey == UP_EMAIL || propertyKey == EP_EMAIL {
 				email := GetEmailLowerCase(v)
 				if email != "" {
 					validatedProperties[propertyKey] = email
@@ -4114,7 +4119,6 @@ func FillPropertiesFromURL(properties *PropertiesMap, url *url.URL) error {
 	for k, v := range fragmentParams {
 		(*properties)[QUERY_PARAM_PROPERTY_PREFIX+k] = v
 	}
-
 	return nil
 }
 

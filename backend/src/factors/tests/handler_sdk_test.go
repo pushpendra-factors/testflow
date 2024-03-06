@@ -4264,3 +4264,167 @@ func TestSDKCreateDomainGroupOnUserAssociation(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "freshworks.com", domainName)
 }
+
+func TestSDKEmailUTMParameterForIdentification(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+
+	project, user, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+
+	// update interactionSettings
+	interactionSettings := model.InteractionSettings{}
+	interactionSettings.UTMMappings = make(map[string][]string)
+	interactionSettings.UTMMappings[U.EP_EMAIL] = []string{"$qp_utm_email"}
+	val1, _ := U.EncodeStructTypeToPostgresJsonb(interactionSettings)
+
+	_ = store.GetStore().UpdateProject(project.ID,
+		&model.Project{InteractionSettings: *val1})
+	var testEmail string = `sarthak%40factors.ai`
+	// track form event.
+	t.Run("TestForFirstIndentifedUserWithRmailUTMParameter", func(t *testing.T) {
+		w := ServePostRequestWithHeaders(r, uri,
+			[]byte(fmt.Sprintf(`{"auto":true,"event_name": "%s","user_id":"%s", "event_properties": {"$company": "Example Inc","$page_raw_url":"www.factors.ai/pricing?utm_email=%s"}}`,
+				U.EVENT_NAME_PAGE_VIEW, user.ID, testEmail)), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+		responseMap := DecodeJSONResponseToMap(w.Body)
+		assert.NotEmpty(t, responseMap)
+		rEvent, errCode := store.GetStore().GetEvent(project.ID, user.ID, responseMap["event_id"].(string))
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.NotNil(t, rEvent)
+		eventPropertiesBytes, err := rEvent.Properties.Value()
+		assert.Nil(t, err)
+		var eventProperties map[string]interface{}
+		json.Unmarshal(eventPropertiesBytes.([]byte), &eventProperties)
+
+		// property name should be replaced with corresponding
+		// default property.
+		assert.Nil(t, eventProperties["$qp_utm_email"])
+		assert.Equal(t, eventProperties[U.EP_EMAIL], "sarthak@factors.ai")
+
+		testUser, _ := store.GetStore().GetUser(project.ID, user.ID)
+		assert.NotNil(t, rEvent)
+		userPropertiesBytes, err := testUser.Properties.Value()
+		assert.Nil(t, err)
+		var userProperties map[string]interface{}
+		json.Unmarshal(userPropertiesBytes.([]byte), &userProperties)
+		assert.Equal(t, testUser.CustomerUserId, "sarthak@factors.ai")
+		_, err = store.GetStore().GetEventNameIDFromEventName(U.EVENT_NAME_CLICKED_EMAIL, project.ID)
+		assert.Nil(t, err)
+
+		_, err = store.GetStore().GetEventNameIDFromEventName(U.EVENT_NAME_PAGE_VIEW, project.ID)
+		assert.Nil(t, err)
+	})
+
+	t.Run("TestForAlreadyIndentifedUserWithEmailParameter", func(t *testing.T) {
+
+		userID1 := U.RandomLowerAphaNumString(5)
+		_, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID1, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+		assert.Equal(t, http.StatusCreated, status)
+		//identfying first time
+		w := ServePostRequestWithHeaders(r, uri,
+			[]byte(fmt.Sprintf(`{"auto":true,"event_name": "%s","user_id":"%s", "event_properties": {"$company": "Example Inc","$email":"abc@gmail.com"}}`,
+				U.EVENT_NAME_FORM_SUBMITTED, userID1)), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		//identfying second time
+		w = ServePostRequestWithHeaders(r, uri,
+			[]byte(fmt.Sprintf(`{"auto":true,"event_name": "%s","user_id":"%s", "event_properties": {"$company": "Example Inc","$page_raw_url":"www.factors.ai/pricing?utm_email=%s"}}`,
+				U.EVENT_NAME_PAGE_VIEW, userID1, testEmail)), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		responseMap := DecodeJSONResponseToMap(w.Body)
+		assert.NotEmpty(t, responseMap)
+		rEvent, errCode := store.GetStore().GetEvent(project.ID, userID1, responseMap["event_id"].(string))
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.NotNil(t, rEvent)
+		eventPropertiesBytes, err := rEvent.Properties.Value()
+		assert.Nil(t, err)
+		var eventProperties map[string]interface{}
+		json.Unmarshal(eventPropertiesBytes.([]byte), &eventProperties)
+
+		// property name should be replaced with corresponding
+		// default property.
+		assert.Nil(t, eventProperties["$qp_utm_email"])
+		assert.Equal(t, eventProperties[U.EP_EMAIL], "sarthak@factors.ai")
+
+		testUser, _ := store.GetStore().GetUser(project.ID, userID1)
+		assert.NotNil(t, rEvent)
+		userPropertiesBytes, err := testUser.Properties.Value()
+		assert.Nil(t, err)
+		var userProperties map[string]interface{}
+		json.Unmarshal(userPropertiesBytes.([]byte), &userProperties)
+		assert.Equal(t, testUser.CustomerUserId, "abc@gmail.com")
+
+		_, err = store.GetStore().GetEventNameIDFromEventName(U.EVENT_NAME_CLICKED_EMAIL, project.ID)
+		assert.Nil(t, err)
+
+		_, err = store.GetStore().GetEventNameIDFromEventName(U.EVENT_NAME_PAGE_VIEW, project.ID)
+		assert.Nil(t, err)
+
+	})
+
+	t.Run("TestForAlreadyIndentifedUserWithUTMEmailParameter", func(t *testing.T) {
+
+		userID1 := U.RandomLowerAphaNumString(5)
+		_, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID1, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+		assert.Equal(t, http.StatusCreated, status)
+		//identfying first time
+		w := ServePostRequestWithHeaders(r, uri,
+			[]byte(fmt.Sprintf(`{"auto":true,"event_name": "%s","user_id":"%s", "event_properties": {"$company": "Example Inc","$page_raw_url":"www.factors.ai/pricing?utm_email=%s"}}`,
+				U.EVENT_NAME_PAGE_VIEW, userID1, testEmail)), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		//identfying second time
+
+		w = ServePostRequestWithHeaders(r, uri,
+			[]byte(fmt.Sprintf(`{"auto":true,"event_name": "%s","user_id":"%s", "event_properties": {"$company": "Example Inc","$email":"abc@factors.ai"}}`,
+				U.EVENT_NAME_FORM_SUBMITTED, userID1)), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		responseMap := DecodeJSONResponseToMap(w.Body)
+		assert.NotEmpty(t, responseMap)
+		rEvent, errCode := store.GetStore().GetEvent(project.ID, userID1, responseMap["event_id"].(string))
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.NotNil(t, rEvent)
+		eventPropertiesBytes, err := rEvent.Properties.Value()
+		assert.Nil(t, err)
+		var eventProperties map[string]interface{}
+		json.Unmarshal(eventPropertiesBytes.([]byte), &eventProperties)
+
+		// property name should be replaced with corresponding
+		// default property.
+		assert.Nil(t, eventProperties["$qp_utm_email"])
+		assert.Nil(t, eventProperties[U.EP_EMAIL])
+
+		testUser, _ := store.GetStore().GetUser(project.ID, userID1)
+		assert.NotNil(t, rEvent)
+		userPropertiesBytes, err := testUser.Properties.Value()
+		assert.Nil(t, err)
+		var userProperties map[string]interface{}
+		json.Unmarshal(userPropertiesBytes.([]byte), &userProperties)
+		assert.Equal(t, testUser.CustomerUserId, "abc@factors.ai")
+		assert.Equal(t, userProperties[U.UP_EMAIL], "abc@factors.ai")
+
+		clickedEventName, err := store.GetStore().GetEventNameIDFromEventName(U.EVENT_NAME_CLICKED_EMAIL, project.ID)
+		assert.Nil(t, err)
+
+		_, err = store.GetStore().GetEventNameIDFromEventName(U.EVENT_NAME_PAGE_VIEW, project.ID)
+		assert.Nil(t, err)
+
+		events, errCode := store.GetStore().GetEventsByEventNameId(project.ID, clickedEventName.ID, U.TimeNowUnix()-U.SECONDS_IN_A_DAY, U.TimeNowUnix()+U.SECONDS_IN_A_DAY)
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.NotNil(t, events)
+		eventPropertiesBytes, err = events[0].Properties.Value()
+		assert.Nil(t, err)
+		json.Unmarshal(eventPropertiesBytes.([]byte), &eventProperties)
+
+		// property name should be replaced with corresponding
+		// default property.
+		assert.Equal(t, eventProperties[U.EP_EMAIL], "sarthak@factors.ai")
+
+	})
+
+}

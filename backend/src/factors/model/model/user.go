@@ -395,7 +395,7 @@ func GetUserPropertiesFromFormSubmitEventProperties(formSubmitProperties *U.Prop
 	properties := make(U.PropertiesMap)
 	for k, v := range *formSubmitProperties {
 		if U.IsFormSubmitUserProperty(k) {
-			if k == U.UP_EMAIL {
+			if k == U.UP_EMAIL || k == U.EP_EMAIL {
 				email := U.GetEmailLowerCase(v)
 				if email != "" {
 					properties[k] = email

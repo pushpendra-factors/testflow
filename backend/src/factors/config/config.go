@@ -300,6 +300,7 @@ type Configuration struct {
 	EnableFeatureGates                                   bool
 	EnableDBConnectionPool2                              bool
 	FormFillIdentificationAllowedProjects                string
+	EmailUTMParameterAllowedProjects                     string
 	EnableEventFiltersInSegments                         bool
 	UseSentryRollup                                      bool
 	SentryRollupSyncInSecs                               int
@@ -2481,6 +2482,10 @@ func isIDOnIDList(configIDList string, projectID int64) bool {
 
 func IsFormFillIdentificationAllowedForProject(projectID int64) bool {
 	return isProjectOnProjectsList(configuration.FormFillIdentificationAllowedProjects, projectID)
+}
+
+func IsEmailUTMParameterAllowed(projectID int64) bool {
+	return isProjectOnProjectsList(configuration.EmailUTMParameterAllowedProjects, projectID)
 }
 
 func IsChannelGroupingAllowed(projectID int64) bool {
