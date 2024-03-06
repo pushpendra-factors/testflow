@@ -2,7 +2,7 @@ import React, { memo, useCallback, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import cx from 'classnames';
 import { Button } from 'antd';
-import { SVG as Svg, Text } from 'Components/factorsComponents';
+import { SVG, Text } from 'Components/factorsComponents';
 import {
   selectActiveDashboard,
   selectAreDraftsSelected,
@@ -90,7 +90,7 @@ function DashboardSidebar() {
             }
           )}
         >
-          <Svg name='drafts' />
+          <SVG name='drafts' />
           <Text
             color='character-primary'
             type='title'
@@ -136,7 +136,7 @@ function DashboardSidebar() {
           }}
           id='fa-at-btn--new-dashboard'
         >
-          <Svg
+          <SVG
             name='plus'
             size={16}
             extraClass={styles.sidebar_action_button__content}

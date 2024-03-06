@@ -250,7 +250,7 @@ function DashboardFoldersLayout({ searchText, setActiveDashboardForFolder }) {
         );
         return {
           ...prev,
-          [folderId]: dashboardsList
+          [folderId]: dashboardsList.filter((dashboard) => dashboard)
         };
       }, {}),
     [dashboardFoldersList, filteredDashboardList]
