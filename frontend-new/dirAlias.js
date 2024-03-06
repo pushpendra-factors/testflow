@@ -19,7 +19,8 @@ module.exports = {
     Routes: path.resolve(__dirname, './src/routes'),
     HOC: path.resolve(__dirname, './src/HOC'),
     Onboarding: path.resolve(__dirname, './src/features/onboarding'),
-    Types: path.resolve(__dirname, './src/types')
+    Types: path.resolve(__dirname, './src/types'),
+    Schema: path.resolve(__dirname, './src/schema')
   },
   eslintDirAlias: {
     map: [
@@ -37,7 +38,8 @@ module.exports = {
       ['Routes', './src/routes'],
       ['HOC', './src/HOC'],
       ['Onboarding', './src/features/onboarding'],
-      ['Types', './src/types']
+      ['Types', './src/types'],
+      ['Schema', './src/schema']
     ],
     extensions: ['.ts', '.tsx', '.js', '.jsx', '.json']
   },
@@ -55,6 +57,8 @@ module.exports = {
     '^Constants(.*)$': '<rootDir>/src/Constants$1',
     '^Routes(.*)$': '<rootDir>/src/routes$1',
     '^HOC(.*)$': '<rootDir>/src/HOC$1',
-    '^Onboarding(.*)$': '<rootDir>/src/features/onboarding$1'
+    '^Onboarding(.*)$': '<rootDir>/src/features/onboarding$1',
+    '^Types(.*)$': '<rootDir>/src/types$1',
+    '^Schema(.*)$': '<rootDir>/src/schema$1'
   }
 };
