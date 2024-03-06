@@ -6,6 +6,7 @@ import logger from 'Utils/logger';
 import { useHistory } from 'react-router-dom';
 import { PathUrls } from 'Routes/pathUrls';
 import { TOGGLE_GLOBAL_SEARCH } from 'Reducers/types';
+import KpiSchema from 'Schema/kpi_schema';
 import { TextPromptAPIResponse, getQueryFromTextPrompt } from './service';
 
 const AIPrompt = ({ searchkey }: AIPromptProps) => {
@@ -28,19 +29,25 @@ const AIPrompt = ({ searchkey }: AIPromptProps) => {
       )) as TextPromptAPIResponse;
 
       if (res?.data?.payload) {
-        const query = { query: res?.data?.payload };
-        history.push({
-          pathname: PathUrls.Analyse2,
-          state: { query, navigatedFromAIChartPrompt: true }
-        });
-        dispatch({ type: TOGGLE_GLOBAL_SEARCH });
-      } else {
-        notification.error({
-          message: 'Failed!',
-          description: "Couldn't create query using the text prompt",
-          duration: 3
-        });
+        const query = { query: res.data.payload };
+        // validating query with KPI schema
+        const isQueryValid = KpiSchema.isValidSync(res.data.payload);
+        if (isQueryValid) {
+          history.push({
+            pathname: PathUrls.Analyse2,
+            state: { query, navigatedFromAIChartPrompt: true }
+          });
+          dispatch({ type: TOGGLE_GLOBAL_SEARCH });
+          setLoading(false);
+          return;
+        }
+        logger.error('Query payload received is not valid', query);
       }
+      notification.error({
+        message: 'Failed!',
+        description: "Couldn't create query using the text prompt",
+        duration: 3
+      });
 
       setLoading(false);
     } catch (error) {

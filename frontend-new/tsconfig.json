@@ -35,7 +35,8 @@
       "Routes/*": ["./src/routes/*"],
       "HOC/*": ["./src/HOC/*"],
       "Onboarding/*": ["./src/features/onboarding"],
-      "Types/*": ["./src/types/*"]
+      "Types/*": ["./src/types/*"],
+      "Schema/*": ["./src/schema/*"]
     }
   },
   "include": ["src/**/*", "declaration"],
