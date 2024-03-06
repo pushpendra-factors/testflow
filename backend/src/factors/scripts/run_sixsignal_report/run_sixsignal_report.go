@@ -99,6 +99,10 @@ func main() {
 	projectIdsArray := store.GetStore().GetProjectsToRunForVisitorIdentificationReport(*projectIds, "")
 	log.Info("projectIdArray", projectIdsArray)
 
+	if len(projectIdsArray) <= 0 {
+		C.PingHealthcheckForFailure(healthcheckPingID, "No project ids present.")
+	}
+
 	//Initialized configs
 	configs := make(map[string]interface{})
 
