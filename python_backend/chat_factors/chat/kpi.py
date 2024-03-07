@@ -3,6 +3,8 @@ import os
 import json
 from datetime import datetime, timedelta
 import pytz
+import jaro
+import Levenshtein
 
 DEFAULT_TIMEZONE = "Asia/Kolkata"
 DEFAULT_CATEGORY = "events"
@@ -11,6 +13,7 @@ DEFAULT_DISPLAY_CATEGORY = "website_session"
 
 def get_transformed_kpi_query(gpt_response, kpi_config,
                               raw_data_path=os.path.join('chat_factors/chatgpt_poc', 'data.json')):
+    query_payload = {}
     try:
         data = json.load(open(raw_data_path, 'r'))
     except Exception as e:
@@ -30,7 +33,7 @@ def get_transformed_kpi_query(gpt_response, kpi_config,
                     "ca": category,
                     "pgUrl": "",
                     "dc": display_category,
-                    "me": [gpt_response["qe"]],
+                    "me": [kpi_info["matching_kpi_name"]],
                     "fil": [],
                     "gBy": [],
                     "fr": from_time_stamp,
@@ -43,7 +46,7 @@ def get_transformed_kpi_query(gpt_response, kpi_config,
                     "ca": category,
                     "pgUrl": "",
                     "dc": display_category,
-                    "me": [gpt_response["qe"]],
+                    "me": [kpi_info["matching_kpi_name"]],
                     "fil": [],
                     "gBy": [],
                     "gbt": "date",
@@ -57,28 +60,40 @@ def get_transformed_kpi_query(gpt_response, kpi_config,
             "gGBy": [],
             "gFil": []
         }
-    else:
-        log.info("done step 3 \n No information found in kpi_config for kpi :%s", kpi_to_search)
-        query_payload = {}
+
+    break_down_info = add_break_down_info_kpi(display_category, gpt_response["qb"], kpi_config)
+
+    # filter_info = get_filter_info_kpi(display_category, gpt_response["qf"], kpi_config)
+
+    query_payload["gGBy"] = break_down_info
 
     return query_payload
 
 
 def get_kpi_info(name, kpi_config):
+    lowest_edit_distance = 100
+    kpi_info = {}
     for category_config in kpi_config:
         for metric in category_config.get("metrics", []):
-            if metric.get("name") == name:
-                return {
+            current_string = metric.get("name")
+            current_distance = Levenshtein.distance(name, current_string)
+            normalized_distance = current_distance / max(len(name), len(current_string))
+            if normalized_distance < 0.3 and current_distance < lowest_edit_distance:
+                lowest_edit_distance = current_distance
+                best_match = current_string
+                kpi_info = {
+                    "matching_kpi_name": best_match,
                     "category": category_config.get("category"),
                     "display_category": category_config.get("display_category"),
                     "kpi_query_type": metric.get("kpi_query_type"),
                 }
+        return kpi_info
 
     log.error("kpi not found in the kpi_config")
-    raise KpiNotFoundError(f"KPI with name '{name}' not found in the kpi_config")
+    raise KPIOrPropertyNotFoundError(f"KPI with name '{name}' not found in the kpi_config")
 
 
-class KpiNotFoundError(Exception):
+class KPIOrPropertyNotFoundError(Exception):
     pass
 
 
@@ -135,3 +150,51 @@ def get_start_end_timestamps(timezone, duration):
     end_timestamp = int(end_time.timestamp())
 
     return start_timestamp, end_timestamp
+
+
+def add_break_down_info_kpi(display_category, breakdowns, kpi_config):
+    query_breakdowns = []
+
+    if breakdowns != '':
+        breakdown_list = breakdowns.split(', ')
+        for breakdown_property in breakdown_list:
+            break_down_info = get_break_down_info(display_category, breakdown_property, kpi_config)
+            log.info("breakdown info for breakdown_property: %s", break_down_info)
+
+            query_breakdown = {
+                "gr": "",
+                "prNa": break_down_info["breakdown_property"],
+                "prDaTy": break_down_info["data_type"],
+                "en": break_down_info["entity"],
+                "objTy": "",
+                "dpNa": break_down_info["display_name"],
+                "isPrMa": False
+            }
+
+            query_breakdowns.append(query_breakdown)
+
+    return query_breakdowns
+
+
+def get_break_down_info(display_category, breakdown_name, kpi_config):
+    break_down_info = {}
+    lowest_edit_distance = 100
+    for category_config in kpi_config:
+        if category_config.get("display_category") == display_category:
+            for metric in category_config.get("properties", []):
+                current_string = metric.get("name")
+                current_distance = Levenshtein.distance(breakdown_name, current_string)
+                if current_distance < lowest_edit_distance:
+                    lowest_edit_distance = current_distance
+                    best_match = current_string
+                    break_down_info = {
+                        "breakdown_property": best_match,
+                        "data_type": metric.get("data_type"),
+                        "entity": metric.get("entity"),
+                        "display_name": metric.get("display_name"),
+                    }
+            if lowest_edit_distance / len(breakdown_name) < 0.2:
+                return break_down_info
+
+    log.error("breakdown property not found in the kpi_config")
+    raise KPIOrPropertyNotFoundError(f"breakdown property '{breakdown_name}' not found in the kpi_config")
