@@ -1,4 +1,4 @@
-from .kpi import get_transformed_kpi_query, KpiNotFoundError
+from .kpi import get_transformed_kpi_query, KPIOrPropertyNotFoundError
 from tornado.log import logging as log
 from tornado.web import HTTPError
 
@@ -31,4 +31,12 @@ def get_url_from_response(query_class, pid):
         url = placeholder_url.replace("project_id", str(pid))
     return url
 
+def validate_gpt_response(gpt_response):
+    valid_query_types = ["kpi"]
+    if gpt_response["qt"] not in valid_query_types:
+        log.error("incorrect query_type in gpt response")
+        raise UnexpectedGptResponseError("unexpected query_type :%s in gpt_response", gpt_response["qt"])
 
+
+class UnexpectedGptResponseError(Exception):
+    pass

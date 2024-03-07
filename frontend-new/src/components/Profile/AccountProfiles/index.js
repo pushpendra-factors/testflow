@@ -177,8 +177,8 @@ function AccountProfiles({
     }
   }, [activeProject?.id]);
 
-  const runInit = () => {
-    const payload = getAccountPayload();
+  const runInit = async () => {
+    const payload = await getAccountPayload();
     if (!_.isEqual(payload, accountPayload)) setAccountPayload(payload);
   };
 
@@ -1065,18 +1065,19 @@ function AccountProfiles({
       csvRows.push(headers.join(','));
 
       data.forEach((d) => {
-        const values = selectedOptions
-          .filter((elem) => elem !== 'last_activity')
-          .map((elem) =>
-            d.table_props[elem] != null ? `"${d.table_props[elem]}"` : '-'
-          );
+        const values = selectedOptions.map((elem) =>
+          elem === 'last_activity'
+            ? d.last_activity?.replace('T', ' ').replace('Z', '')
+            : d.table_props[elem] != null
+              ? `"${d.table_props[elem]}"`
+              : '-'
+        );
         values.unshift(
           d.name,
           d.engagement != null ? d.engagement : '-',
           d.score != null ? formatCount(d.score) : '-'
         );
-        if (headers.find((item) => item === 'Last Activity'))
-          values.push(d.last_activity?.replace('T', ' ').replace('Z', ''));
+
         csvRows.push(values);
       });
 

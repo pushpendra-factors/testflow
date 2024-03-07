@@ -113,6 +113,8 @@ var UserPropertiesToSkipOnMergeByCustomerUserID = []string{
 	UserPropertyHubspotContactPrimaryContact,
 	U.UP_SESSION_COUNT,
 	UserPropertyLeadSquaredLeadDeleted,
+	U.UP_REAL_PAGE_COUNT,
+	U.UP_REAL_PAGE_SPENT_TIME,
 }
 
 var ErrDifferentEmailSeen error = errors.New("different_email_seen_for_customer_user_id")
