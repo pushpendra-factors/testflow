@@ -802,9 +802,13 @@ func getDisplayLikePropValue(typ string, exi bool, value interface{}) interface{
 	var res interface{}
 	if exi {
 		if typ == "datetime" {
-			val, ok := value.(int64)
-			if !ok {
-				val = int64(value.(float64))
+			val, err := U.GetPropertyValueAsInt64(value)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"property_type": typ,
+					"property_value": val,
+				}).Error("datetime property value could not parsed as int")
+				return ""
 			}
 			res = val
 		} else {

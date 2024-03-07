@@ -177,8 +177,8 @@ function AccountProfiles({
     }
   }, [activeProject?.id]);
 
-  const runInit = () => {
-    const payload = getAccountPayload();
+  const runInit = async () => {
+    const payload = await getAccountPayload();
     if (!_.isEqual(payload, accountPayload)) setAccountPayload(payload);
   };
 

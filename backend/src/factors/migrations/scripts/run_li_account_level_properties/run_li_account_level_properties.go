@@ -158,45 +158,36 @@ func updateGroupUserWithAccountLevelProperties(projectID int64) (string, int) {
 		return "Failed to get group.", http.StatusInternalServerError
 	}
 	source := model.GetGroupUserSourceByGroupName(U.GROUP_NAME_LINKEDIN_COMPANY)
-	precheckValid, errCode := precheckExitingUsersWithoutAccountLevelProperty(projectID)
-	if !precheckValid {
-		if errCode != http.StatusOK {
-			return "Failed to run precheck", errCode
-		}
-		return "Precheck failed - total users and users without property not equal", http.StatusBadRequest
+	// precheckValid, errCode := precheckExitingUsersWithoutAccountLevelProperty(projectID)
+	// if !precheckValid {
+	// 	if errCode != http.StatusOK {
+	// 		return "Failed to run precheck", errCode
+	// 	}
+	// 	return "Precheck failed - total users and users without property not equal", http.StatusBadRequest
+	// }
+
+	var users []model.User
+	err := db.Select(fmt.Sprintf("id, group_%d_id, is_group_user", group.ID)).
+		Where("project_id = ? and source = ?", projectID, source).Limit("100000").Find(&users).Error
+	if err != nil {
+		log.WithError(err).Error("Failed to get group users")
+		return "Failed to find group users", http.StatusInternalServerError
 	}
 
-	hasMore := true
-
-	for hasMore {
-		var users []model.User
-		err := db.Select(fmt.Sprintf("id, group_%d_id, is_group_user", group.ID)).
-			Where("project_id = ? and source = ? and JSON_EXTRACT_STRING(properties, ?) is null", projectID, source, U.LI_TOTAL_AD_VIEW_COUNT).
-			Limit("10000").Find(&users).Error
+	imprEventName, err := store.GetStore().GetEventNameIDFromEventName(U.GROUP_EVENT_NAME_LINKEDIN_VIEWED_AD, projectID)
+	if err != nil {
+		log.WithError(err).Error("Failed to get impr event name")
+		return "Failed to get impression eventname", http.StatusInternalServerError
+	}
+	clickEventName, err := store.GetStore().GetEventNameIDFromEventName(U.GROUP_EVENT_NAME_LINKEDIN_CLICKED_AD, projectID)
+	if err != nil {
+		log.WithError(err).Error("Failed to get clicks event name")
+		return "Failed to get click eventname", http.StatusInternalServerError
+	}
+	for _, user := range users {
+		err = getMetricsAndUpdateGroupUserProperties(projectID, user, group.ID, imprEventName.ID, clickEventName.ID)
 		if err != nil {
-			log.WithError(err).Error("Failed to get group users")
-			return "Failed to find group users", http.StatusInternalServerError
-		}
-		if len(users) == 0 {
-			hasMore = false
-			break
-		}
-
-		imprEventName, err := store.GetStore().GetEventNameIDFromEventName(U.GROUP_EVENT_NAME_LINKEDIN_VIEWED_AD, projectID)
-		if err != nil {
-			log.WithError(err).Error("Failed to get impr event name")
-			return "Failed to get impression eventname", http.StatusInternalServerError
-		}
-		clickEventName, err := store.GetStore().GetEventNameIDFromEventName(U.GROUP_EVENT_NAME_LINKEDIN_CLICKED_AD, projectID)
-		if err != nil {
-			log.WithError(err).Error("Failed to get clicks event name")
-			return "Failed to get click eventname", http.StatusInternalServerError
-		}
-		for _, user := range users {
-			err = getMetricsAndUpdateGroupUserProperties(projectID, user, group.ID, imprEventName.ID, clickEventName.ID)
-			if err != nil {
-				return err.Error(), http.StatusInternalServerError
-			}
+			return err.Error(), http.StatusInternalServerError
 		}
 	}
 	postCheckValid, errCode := postcheckExitingUsersWithoutAccountLevelProperty(projectID)
@@ -213,23 +204,23 @@ type UserCount struct {
 	UserCount int64 `json:"user_count"`
 }
 
-func precheckExitingUsersWithoutAccountLevelProperty(projectID int64) (bool, int) {
-	db := C.GetServices().Db
+// func precheckExitingUsersWithoutAccountLevelProperty(projectID int64) (bool, int) {
+// 	db := C.GetServices().Db
 
-	source := model.GetGroupUserSourceByGroupName(U.GROUP_NAME_LINKEDIN_COMPANY)
-	var userCountWithProperty UserCount
-	err := db.Table("users").Select("count(*) as user_count").
-		Where("project_id = ? and source = ? and JSON_EXTRACT_STRING(properties, ?) is not null", projectID, source, U.LI_TOTAL_AD_VIEW_COUNT).
-		Find(&userCountWithProperty).Error
-	if err != nil {
-		log.WithError(err).Error("Failed running precheck query")
-		return false, http.StatusInternalServerError
-	}
-	if userCountWithProperty.UserCount > 0 {
-		return false, http.StatusOK
-	}
-	return true, http.StatusOK
-}
+// 	source := model.GetGroupUserSourceByGroupName(U.GROUP_NAME_LINKEDIN_COMPANY)
+// 	var userCountWithProperty UserCount
+// 	err := db.Table("users").Select("count(*) as user_count").
+// 		Where("project_id = ? and source = ? and JSON_EXTRACT_STRING(properties, ?) is not null", projectID, source, U.LI_TOTAL_AD_VIEW_COUNT).
+// 		Find(&userCountWithProperty).Error
+// 	if err != nil {
+// 		log.WithError(err).Error("Failed running precheck query")
+// 		return false, http.StatusInternalServerError
+// 	}
+// 	if userCountWithProperty.UserCount > 0 {
+// 		return false, http.StatusOK
+// 	}
+// 	return true, http.StatusOK
+// }
 
 func getMetricsAndUpdateGroupUserProperties(projectID int64, user model.User, groupIndex int, imprEventNameID, clickEventNameID string) error {
 	totalImpressions, totalClicks, err := getTotalImpressionsAndClicksFromEvents(projectID, user.ID, imprEventNameID, clickEventNameID)
