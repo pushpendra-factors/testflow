@@ -99,8 +99,9 @@ func InitAppRoutes(r *gin.Engine) {
 
 	r.GET(routePrefix+"/"+ROUTE_PROJECTS_ROOT_V1+"/custom_projects", mid.SetLoggedInAgentInternalOnly(), V1.GetCustomPlanProjectsHandler)
 
-	r.POST("/billing/hooks/subscription/hbeqjomjhxjvx2z", V1.BillingSubscriptionChangedWebhookListner) // random string as a part of security measure
-	r.POST("/billing/hooks/invoice/ksh4jcjw245", V1.BillingInvoiceGeneratedWebhookListner)             // random string as a part of security measure
+	r.POST("/billing/hooks/subscription/hbeqjomjhxjvx2z", V1.BillingSubscriptionChangedWebhookListner)     // random string as a part of security measure
+	r.POST("/billing/hooks/invoice/ksh4jcjw245", V1.BillingInvoiceGeneratedWebhookListner)                 // random string as a part of security measure
+	r.POST("/billing/hooks/subscription/jfdksr32wr3ekfjsd", V1.BillingSubscriptionCancelledWebhookListner) // random string as a part of security measure
 	r.GET("/billing/upgrade/callback", V1.BillingUpgradeCallbackHandler)
 	// Feature Gates Auth Group
 	// authRouteGroup := r.Group(routePrefix + ROUTE_PROJECTS_ROOT)
