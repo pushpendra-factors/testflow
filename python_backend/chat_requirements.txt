@@ -7,3 +7,4 @@ tensorflow
 lxml>=3.5.0
 torch==2.0.1
 bert==2.2.0
+python-Levenshtein==0.25.0
