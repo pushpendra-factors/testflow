@@ -217,6 +217,7 @@ func main() {
 	paragonSigningKey := flag.String("paragon_signing_key", "", "")
 	paragonProjectID := flag.String("paragon_project_id", "", "")
 	clearbitAccProvisionKey := flag.String("cb_acc_provision_key", "dummy", "")
+	emailUTMParameterAllowedProjects := flag.String("email_utm_parameter_allowed_projects", "", "")
 
 	flag.Parse()
 
@@ -383,6 +384,7 @@ func main() {
 		ParagonTokenSigningKey:                         *paragonSigningKey,
 		ParagonProjectID:                               *paragonProjectID,
 		ClearbitProvisionAccountAPIKey:                 *clearbitAccProvisionKey,
+		EmailUTMParameterAllowedProjects:               *emailUTMParameterAllowedProjects,
 	}
 	C.InitConf(config)
 

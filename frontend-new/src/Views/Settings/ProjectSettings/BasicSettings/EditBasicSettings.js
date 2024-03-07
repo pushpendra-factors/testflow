@@ -22,6 +22,8 @@ import {
 import sanitizeInputString from 'Utils/sanitizeInputString';
 import { Currency } from 'Utils/currency';
 import _ from 'lodash';
+import { SVG } from 'Components/factorsComponents';
+import style from './index.module.scss';
 
 const { Option } = Select;
 
@@ -140,7 +142,13 @@ function EditBasicSettings({
         >
           <Row>
             <Col span={12}>
-              <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} id={'fa-at-text--page-title'}>
+              <Text
+                type={'title'}
+                level={3}
+                weight={'bold'}
+                extraClass={'m-0'}
+                id={'fa-at-text--page-title'}
+              >
                 Basic Details
               </Text>
             </Col>
@@ -166,43 +174,69 @@ function EditBasicSettings({
               </div>
             </Col>
           </Row>
-          <Row className={'mt-2'}>
-            <Col>
-              <Upload
-                name='avatar'
-                accept={''}
-                showUploadList={false}
-                beforeUpload={beforeUpload}
-                onChange={handleChange}
-              >
-                {dataLoading ? (
-                  <Skeleton.Avatar active={true} size={104} shape={'square'} />
-                ) : imageUrl ? (
-                  <img
-                    src={imageUrl}
-                    alt='avatar'
-                    style={{ width: '105px', borderRadius: '4px' }}
-                  />
-                ) : activeProject?.profile_picture ? (
-                  <img
-                    src={activeProject?.profile_picture}
-                    alt='avatar'
-                    style={{ width: '105px', borderRadius: '4px' }}
-                  />
-                ) : (
-                  <Avatar size={104} shape={'square'} icon={<UserOutlined />} />
-                )}
-              </Upload>
-              <Text
-                type={'paragraph'}
-                mini
-                extraClass={'m-0 mt-1'}
-                color={'grey'}
-              >
-                A logo helps personalise your Project
-              </Text>
-            </Col>
-          </Row>
+          <div className='animate__animated animate__fadeIn'>
+            <Row className={'mt-2'}>
+              <Col xs={12} sm={12} md={24}>
+                <Upload
+                  name='avatar'
+                  accept={''}
+                  showUploadList={false}
+                  listType='picture'
+                  beforeUpload={beforeUpload}
+                  onChange={handleChange}
+                >
+                  {imageUrl || activeProject?.profile_picture ? (
+                    <div
+                      className={`flex justify-center items-center ${style.projectImageContainer}`}
+                      style={{
+                        width: 145,
+                        height: 145,
+                        borderRadius: 11,
+                        border: '0.978px dashed #D9D9D9',
+                        background: '#FAFAFA'
+                      }}
+                    >
+                      <img
+                        src={imageUrl || activeProject?.profile_picture}
+                        alt='avatar'
+                        style={{ width: 145, height: 145, borderRadius: 11 }}
+                      />
+                      <div className={style.editImageIcon}>
+                        <SVG name='ImageEdit' size='22' color='#40A9FF' />
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      className={`flex justify-center items-center ${style.projectImageContainer}`}
+                      style={{
+                        width: 145,
+                        height: 145,
+                        borderRadius: 11,
+                        border: '0.978px dashed #D9D9D9',
+                        background: '#FAFAFA'
+                      }}
+                    >
+                      <SVG
+                        name='ImageBackground'
+                        extraClass={style.projectImage}
+                      />
+                      <div className={style.editImageIcon}>
+                        <SVG name='ImageEdit' size='22' color='#40A9FF' />
+                      </div>
+                    </div>
+                  )}
+                </Upload>
+                <Text
+                  type={'paragraph'}
+                  mini
+                  extraClass={'m-0 mt-2'}
+                  color={'grey'}
+                >
+                  A logo helps personalise your Project
+                </Text>
+              </Col>
+            </Row>
+          </div>
           <Row className={'mt-6'}>
             <Col span={24}>
               <Text type={'title'} level={7} extraClass={'m-0'}>
@@ -237,25 +271,19 @@ function EditBasicSettings({
               </Form.Item>
             </Col>
           </Row>
- 
-            <Row className={'mt-6'}>
-              <Col span={24}>
-                <Text type={'title'} level={7} extraClass={'m-0'}>
-                  Time Zone
-                </Text>
-                <Text
-                  type={'title'}
-                  level={6}
-                  extraClass={'m-0'}
-                  weight={'bold'}
-                >
-                  {!_.isEmpty(activeProject?.time_zone)
-                    ? `${ getTimeZoneNameFromCity(activeProject?.time_zone)?.text}`
-                    : '---'}
-                </Text>
-              </Col>
-            </Row> 
-            
+
+          <Row className={'mt-6'}>
+            <Col span={24}>
+              <Text type={'title'} level={7} extraClass={'m-0'}>
+                Time Zone
+              </Text>
+              <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>
+                {!_.isEmpty(activeProject?.time_zone)
+                  ? `${getTimeZoneNameFromCity(activeProject?.time_zone)?.text}`
+                  : '---'}
+              </Text>
+            </Col>
+          </Row>
         </Form>
 
         <Row className={'mt-6 mb-10'}>

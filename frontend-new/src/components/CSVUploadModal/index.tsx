@@ -8,19 +8,23 @@ import React, { useState } from 'react';
 import csvTableImage from '../../assets/images/csvTable.svg';
 import style from './index.module.scss';
 
-const sampleCSVFile =
+const sampleCSVFileURLs =
   'https://s3.amazonaws.com/www.factors.ai/assets/files/Sample_file_for_page_URL_rules.csv';
+const sampleCSVFileFilters =
+  'https://s3.amazonaws.com/www.factors.ai/assets/files/sample_company_domains.csv';
 
 type Props = {
   uploadModalOpen: boolean;
   setUploadModalOpen(data: boolean): void;
-  handleOkClick(data: string[]): void;
+  handleOkClick(data: string[], name: string): void;
+  uploadType: string;
 };
 
 function CSVUploadModal({
   uploadModalOpen,
   setUploadModalOpen,
-  handleOkClick
+  handleOkClick,
+  uploadType = 'filters'
 }: Props) {
   const [uploadFileName, setUploadFileName] = useState('');
   const [uploadFileArray, setUploadFileArray] = useState<string[]>([]);
@@ -56,11 +60,36 @@ function CSVUploadModal({
       try {
         const text = await readFile(info.file.originFileObj);
         const dataArray = parseFile(text);
-        setUploadFileArray(dataArray);
+
+        if (uploadType === 'filters') {
+          const reader = new FileReader();
+          const fileByteArray: any = [];
+          reader.readAsArrayBuffer(info?.file?.originFileObj);
+          reader.onloadend = function (evt) {
+            if (evt?.target?.readyState === FileReader.DONE) {
+              const arrayBuffer = evt.target.result;
+              const array = new Uint8Array(arrayBuffer);
+              for (let i = 0; i < array.length; i++) {
+                fileByteArray.push(array[i]);
+              }
+            }
+          };
+          setUploadFileArray(fileByteArray);
+        } else {
+          setUploadFileArray(dataArray);
+        }
+
         setUploadFileName(info?.file?.name);
-        if (info?.file?.type !== 'text/csv') throw 'Only .csv file allowed';
-        if (dataArray.length > 50)
-          throw 'Can’t upload a sheet with more than 50 rows';
+
+        if (info?.file?.type !== 'text/csv')
+          throw 'Only .csv files are allowed';
+        if (info?.file?.size > 1000000 && uploadType === 'filters')
+          throw 'File is larger than 1 MB';
+        if (dataArray.length > 50 && uploadType === 'urls')
+          throw 'Can’t upload a sheet with more than 50 URLs';
+        if (dataArray.length > 10000 && uploadType === 'filters')
+          throw 'Can’t upload a sheet with more than 10,000 rows';
+
         setIsCSVFile(true);
         setErrorState('');
       } catch (error: any) {
@@ -86,7 +115,7 @@ function CSVUploadModal({
         logger.error('error: empty file');
         return;
       }
-      await handleOkClick(uploadFileArray);
+      await handleOkClick(uploadFileArray, uploadFileName);
       handleCancel();
     } catch (error) {
       logger.error(error);
@@ -94,11 +123,40 @@ function CSVUploadModal({
     setLoading(false);
   };
 
-  const listData = [
-    'Add values in the first column only with no header',
-    'You can upload a maximum of 50 URLs',
-    'Ensure that the file has a .csv extension only',
-    'Don’t include https:// in the URL'
+  const listDataURLs = [
+    <span>
+      Add values in the first column only with{' '}
+      <span className='font-bold'>no header</span>
+    </span>,
+    <span>
+      You can upload a maximum of <span className='font-bold'>50 URLs</span>
+    </span>,
+    <span>
+      Ensure that the file has a <span className='font-bold'>.csv</span>{' '}
+      extension only
+    </span>,
+    <span>
+      Don’t include <span className='font-bold'>https://</span> in the URL
+    </span>
+  ];
+
+  const listDataFilters = [
+    <span>
+      Add values in the first column only with{' '}
+      <span className='font-bold'>no header</span>
+    </span>,
+    <span>
+      Ensure your CSV has less than{' '}
+      <span className='font-bold'>10,000 rows</span>
+    </span>,
+    <span>
+      Ensure that the file has a <span className='font-bold'>.csv</span>{' '}
+      extension only
+    </span>,
+    <span>
+      Ensure that the file size is less than{' '}
+      <span className='font-bold'>1MB</span>
+    </span>
   ];
 
   return (
@@ -117,7 +175,9 @@ function CSVUploadModal({
             Upload CSV
           </Text>
           <Text type='title' level={6} color='grey' extraClass='m-0 -mt-2'>
-            Import a CSV with list of URLs
+            {uploadType === 'filters'
+              ? 'Import a list of accounts, domains, and page URLs to filter with.'
+              : 'Import a CSV with list of page URLs to include or exclude'}
           </Text>
         </div>
         <div className='mt-4 mb-8'>
@@ -130,7 +190,9 @@ function CSVUploadModal({
                 header={null}
                 footer={null}
                 split={false}
-                dataSource={listData}
+                dataSource={
+                  uploadType === 'filters' ? listDataFilters : listDataURLs
+                }
                 renderItem={(item) => (
                   <List.Item>
                     <Text
@@ -147,14 +209,22 @@ function CSVUploadModal({
               />
               <Text type='title' level={7} color='grey' extraClass='m-0'>
                 In case of any doubts, here is a sample{' '}
-                <a href={sampleCSVFile} target='_blank' rel='noreferrer'>
+                <a
+                  href={
+                    uploadType === 'filters'
+                      ? sampleCSVFileFilters
+                      : sampleCSVFileURLs
+                  }
+                  target='_blank'
+                  rel='noreferrer'
+                >
                   file
                 </a>
               </Text>
             </div>
             <div>
               <div>
-                <img src={csvTableImage} />
+                <img src={csvTableImage} alt='csv table' />
                 <Text type='title' level={7} color='grey' extraClass='m-0 mt-2'>
                   We read values in the first column starting from A1
                 </Text>

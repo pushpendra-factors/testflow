@@ -951,7 +951,7 @@ function AccountProfiles({
       })
     }));
     return (
-      <div>
+      <div id='resizing-table-container-div'>
         <Table
           ref={tableRef}
           components={{
@@ -1061,7 +1061,7 @@ function AccountProfiles({
           downloadCSVOptions.find((elem) => elem.prop_name === propName)
             ?.display_name
       );
-      headers.unshift('Name', 'Engagement category', 'Engagement score');
+      headers.unshift('Name');
       csvRows.push(headers.join(','));
 
       data.forEach((d) => {
@@ -1072,11 +1072,7 @@ function AccountProfiles({
               ? `"${d.table_props[elem]}"`
               : '-'
         );
-        values.unshift(
-          d.name,
-          d.engagement != null ? d.engagement : '-',
-          d.score != null ? formatCount(d.score) : '-'
-        );
+        values.unshift(d.name);
 
         csvRows.push(values);
       });

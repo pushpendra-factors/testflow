@@ -1,5 +1,3 @@
-import { TimelineConfig } from './types';
-
 export const GROUP_TO_DOMAIN_PROPERTY_MAP: Record<string, string> = {
   $hubspot_company: '$hubspot_company_domain',
   $salesforce_account: '$salesforce_account_website',

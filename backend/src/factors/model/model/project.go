@@ -158,6 +158,8 @@ func DefaultMarketingPropertiesMap() InteractionSettings {
 	interactionSettings.UTMMappings[U.EP_TERM] = []string{U.QUERY_PARAM_UTM_PREFIX + "term"}
 	interactionSettings.UTMMappings[U.EP_KEYWORD_MATCH_TYPE] = []string{U.QUERY_PARAM_UTM_PREFIX + "matchtype", U.QUERY_PARAM_UTM_PREFIX + "match_type"}
 
+	interactionSettings.UTMMappings[U.EP_EMAIL] = []string{U.QUERY_PARAM_UTM_PREFIX + "utm_email"}
+
 	return interactionSettings
 }
 

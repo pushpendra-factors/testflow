@@ -3,7 +3,8 @@ import { Spin } from 'antd';
 import NoDataWithMessage from 'Components/Profile/MyComponents/NoDataWithMessage';
 import {
   AccountTimelineTableViewProps,
-  TimelineEvent
+  TimelineEvent,
+  TimelineUser
 } from 'Components/Profile/types';
 import { eventsGroupedByGranularity } from '../../utils';
 import EventDrawer from './EventDrawer';
@@ -18,21 +19,25 @@ function AccountTimelineTableView({
   const [formattedData, setFormattedData] = useState<{
     [key: string]: TimelineEvent[];
   }>({});
-  const [modalVisible, setModalVisible] = useState(false);
+  const [drawerVisible, setDrawerVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
 
   useEffect(() => {
     const data = eventsGroupedByGranularity(
-      timelineEvents.filter((item) => item.user !== 'milestone'),
+      timelineEvents.filter((item) => item.username !== 'milestone'),
       'Timeline'
     );
+    console.log('data--->', data);
     setFormattedData(data);
     document.title = 'Accounts - FactorsAI';
   }, [timelineEvents]);
 
-  const handleEventClick = (event: TimelineEvent) => {
+  const handleEventClick = (event: TimelineEvent, user: TimelineUser) => {
+    console.log('user--->', user);
     setSelectedEvent(event);
-    setModalVisible(true);
+    setSelectedUser(user);
+    setDrawerVisible(true);
   };
 
   return loading ? (
@@ -53,7 +58,7 @@ function AccountTimelineTableView({
                 </tr>
                 {events.map((event) => {
                   const currentUser = timelineUsers.find(
-                    (obj) => obj.userId === event.user
+                    (obj) => obj.id === event.user_id
                   );
                   return (
                     currentUser && (
@@ -61,7 +66,9 @@ function AccountTimelineTableView({
                         event={event}
                         eventPropsType={eventPropsType}
                         user={currentUser}
-                        onEventClick={() => handleEventClick(event)}
+                        onEventClick={() =>
+                          handleEventClick(event, currentUser)
+                        }
                       />
                     )
                   );
@@ -72,9 +79,10 @@ function AccountTimelineTableView({
         </table>
       </div>
       <EventDrawer
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
+        visible={drawerVisible}
+        onClose={() => setDrawerVisible(false)}
         event={selectedEvent}
+        user={selectedUser}
         eventPropsType={eventPropsType}
       />
     </>

@@ -201,7 +201,7 @@
 
   .timeline-view {
     width: 80%;
-    padding: 48px 36px 36px;
+    padding: 16px 36px 36px;
   }
 }
 
@@ -211,7 +211,7 @@
   height: 52px;
   padding: 8px;
 
-  &.pl-8{
+  &.pl-8 {
     padding-left: 32px;
   }
 
@@ -982,7 +982,6 @@
 }
 
 .fa-overview--top-table {
-
   // table head
   .ant-table-thead {
     .ant-table-cell {
@@ -1037,19 +1036,19 @@
     .timestamp-row {
       position: sticky;
       top: 0;
-      background: #F5F6F8;
+      background: #f5f6f8;
       height: 40px;
       z-index: 1;
 
       td {
         font-weight: 600;
-        color: #000000A6;
+        color: #000000a6;
       }
     }
 
     .table-row {
       display: flex;
-      border-top: 1px solid #E7E9ED;
+      border-top: 1px solid #e7e9ed;
       height: 56px;
 
       .timestamp-cell {
@@ -1071,7 +1070,7 @@
           font-weight: 500;
           font-size: 14px;
           line-height: 20px;
-          color: #000000A6;
+          color: #000000a6;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -1114,9 +1113,8 @@
 
     .clickable {
       &:hover {
-        background-color: #F0F0F0;
+        background-color: #f0f0f0;
       }
-
     }
   }
 
@@ -1203,7 +1201,6 @@
       background-color: #f0f0f0;
     }
   }
-
 }
 
 .event-icon {

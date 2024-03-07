@@ -4,75 +4,49 @@ import cx from 'classnames';
 import { Button } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
 import {
-  selectDashboardListFilteredBySearchText,
-  selectDashboardList,
   selectActiveDashboard,
-  selectAreDraftsSelected
+  selectAreDraftsSelected,
+  selectShowDashboardNewFolderModal,
+  selectNewFolderCreationState
 } from 'Reducers/dashboard/selectors';
 
-import { changeActiveDashboard } from 'Reducers/dashboard/services';
+import { addDashboardToNewFolder } from 'Reducers/dashboard/services';
 import { NEW_DASHBOARD_TEMPLATES_MODAL_OPEN } from 'Reducers/types';
-import { makeDraftsActiveAction } from 'Reducers/dashboard/actions';
+import {
+  makeDraftsActiveAction,
+  toggleNewFolderModal
+} from 'Reducers/dashboard/actions';
 import { useHistory } from 'react-router-dom';
 import { PathUrls } from 'Routes/pathUrls';
-import { changeActivePreDashboard } from 'Views/PreBuildDashboard/state/services';
-import SidebarMenuItem from './SidebarMenuItem';
 import SidebarSearch from './SidebarSearch';
+import DashboardNewFolderModal from './DashboardNewFolderModal';
 import styles from './index.module.scss';
-
-function DashboardItem({ dashboard }) {
-  const dispatch = useDispatch();
-  const history = useHistory();
-  const activeDashboard = useSelector((state) => selectActiveDashboard(state));
-  const dashboards = useSelector((state) => selectDashboardList(state));
-  const areDraftsSelected = useSelector((state) =>
-    selectAreDraftsSelected(state)
-  );
-
-  const handleActiveDashboardChange = useCallback(() => {
-    const selectedDashboard = dashboards.find((d) => d.id === dashboard.id);
-    if (selectedDashboard.class === 'predefined') {
-      history.replace(`${PathUrls.PreBuildDashboard}`);
-      dispatch(changeActivePreDashboard(selectedDashboard));
-    } else {
-      history.replace(`${PathUrls.Dashboard}/${selectedDashboard.id}`);
-    }
-    dispatch(changeActiveDashboard(selectedDashboard));
-  }, [dashboard, dashboards, dispatch]);
-
-  const isActive =
-    activeDashboard?.id === dashboard?.id && areDraftsSelected === false;
-
-  useEffect(() => {
-    if (!isActive && activeDashboard.class === 'predefined') {
-      const preDashboard = dashboards.filter((db) => db.class === 'predefined');
-      dispatch(changeActivePreDashboard(preDashboard[0]));
-      dispatch(changeActiveDashboard(preDashboard[0]));
-    }
-  }, [dashboards, dispatch, isActive]);
-
-  return (
-    <SidebarMenuItem
-      text={dashboard.name}
-      onClick={handleActiveDashboardChange}
-      isActive={isActive}
-    />
-  );
-}
+import DashboardFoldersLayout from './DashboardFoldersLayout';
 
 function DashboardSidebar() {
+  const dispatch = useDispatch();
+  const history = useHistory();
   const [searchText, setSearchText] = useState('');
+  const [activeDashboardForFolder, setActiveDashboardForFolder] =
+    useState(null);
   const areDraftsSelected = useSelector((state) =>
     selectAreDraftsSelected(state)
   );
-  const queries = useSelector((state) => state.queries.data);
-  const dispatch = useDispatch();
-
-  const filteredDashboardList = useSelector((state) =>
-    selectDashboardListFilteredBySearchText(state, searchText)
+  const newFolderCreationState = useSelector((state) =>
+    selectNewFolderCreationState(state)
   );
+  const { active_project } = useSelector((state) => state.global);
+  const showNewFolderModal = useSelector((state) =>
+    selectShowDashboardNewFolderModal(state)
+  );
+  const queries = useSelector((state) => state.queries.data);
+
   const activeDashboard = useSelector((state) => selectActiveDashboard(state));
-  const history = useHistory();
+
+  const hideDashboardNewFolderModal = useCallback(() => {
+    setActiveDashboardForFolder(null);
+    dispatch(toggleNewFolderModal(false));
+  });
 
   const handleDraftsClick = () => {
     if (activeDashboard?.class === 'predefined') {
@@ -81,9 +55,32 @@ function DashboardSidebar() {
     dispatch(makeDraftsActiveAction());
   };
 
+  const onNewFolderCreation = useCallback(
+    (folderName) => {
+      dispatch(
+        addDashboardToNewFolder(
+          active_project.id,
+          activeDashboardForFolder,
+          folderName
+        )
+      );
+    },
+    [activeDashboardForFolder, active_project.id]
+  );
+
+  useEffect(() => {
+    if (newFolderCreationState.completed === true) {
+      hideDashboardNewFolderModal();
+    }
+  }, [newFolderCreationState.completed, hideDashboardNewFolderModal]);
+
   return (
     <div className='flex flex-col row-gap-2'>
-      <div role='button' onClick={handleDraftsClick} className='px-4 w-full'>
+      <button
+        type='button'
+        onClick={handleDraftsClick}
+        className='px-4 w-full cursor-pointer'
+      >
         <div
           className={cx(
             'flex col-gap-1 cursor-pointer py-2 rounded-md items-center w-full px-2',
@@ -111,7 +108,7 @@ function DashboardSidebar() {
             {queries.length}
           </Text>
         </div>
-      </div>
+      </button>
       <div className='flex flex-col row-gap-5 px-4'>
         <SidebarSearch
           placeholder='Search board'
@@ -124,9 +121,10 @@ function DashboardSidebar() {
             styles['dashboard-list-container']
           )}
         >
-          {filteredDashboardList.map((dashboard) => (
-            <DashboardItem dashboard={dashboard} key={dashboard.id} />
-          ))}
+          <DashboardFoldersLayout
+            searchText={searchText}
+            setActiveDashboardForFolder={setActiveDashboardForFolder}
+          />
         </div>
         <Button
           className={cx(
@@ -153,6 +151,12 @@ function DashboardSidebar() {
           </Text>
         </Button>
       </div>
+      <DashboardNewFolderModal
+        handleCancel={hideDashboardNewFolderModal}
+        visible={showNewFolderModal}
+        handleSubmit={onNewFolderCreation}
+        isLoading={newFolderCreationState.loading}
+      />
     </div>
   );
 }

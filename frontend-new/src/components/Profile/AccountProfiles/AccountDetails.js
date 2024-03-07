@@ -30,7 +30,6 @@ import useFeatureLock from 'hooks/useFeatureLock';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
 import logger from 'Utils/logger';
-import { AdminLock } from '../../../routes/feature';
 import AccountOverview from './AccountOverview';
 import UpgradeModal from '../UpgradeModal';
 import { PathUrls } from '../../../routes/pathUrls';
@@ -51,10 +50,7 @@ import AccountTimelineBirdView from './AccountTimelineBirdView';
 import { Text, SVG } from '../../factorsComponents';
 import styles from './index.module.scss';
 import AccountTimelineTableView from './AccountTimelineTableView';
-import {
-  GranularityOptions,
-  TIMELINE_VIEW_OPTIONS
-} from '../constants';
+import { GranularityOptions } from '../constants';
 
 function AccountDetails({
   accountDetails,
@@ -105,11 +101,9 @@ function AccountDetails({
   const { plan } = useSelector((state) => state.featureConfig);
   const isFreePlan =
     plan?.name === PLANS.PLAN_FREE || plan?.name === PLANS_V0.PLAN_FREE;
-  const agentState = useSelector((state) => state.agent);
-  const activeAgent = agentState?.agent_details?.email;
 
   const uniqueEventNames = useMemo(() => {
-    const accountEvents = accountDetails.data?.account_events || [];
+    const accountEvents = accountDetails.data?.events || [];
     const eventsArray = accountEvents
       .filter((event) => event.display_name !== 'Page View')
       .map((event) => event.event_name);
@@ -124,7 +118,7 @@ function AccountDetails({
     }
 
     return Array.from(new Set(eventsArray));
-  }, [accountDetails.data?.account_events]);
+  }, [accountDetails.data?.events]);
 
   const fetchEventPropertiesWithType = async () => {
     const promises = uniqueEventNames.map(async (eventName) => {
@@ -176,13 +170,12 @@ function AccountDetails({
     return 'All Accounts';
   }, [location]);
 
-  const [activeId, activeView] = useMemo(() => {
+  const activeId = useMemo(() => {
     const urlSearchParams = new URLSearchParams(location.search);
-    const params = Object.fromEntries(urlSearchParams.entries());
+    // const params = Object.fromEntries(urlSearchParams.entries());
     const id = atob(location.pathname.split('/').pop());
-    const view = timelineViewMode || params.view;
     document.title = 'Accounts - FactorsAI';
-    return [id, view];
+    return id;
   }, [location, timelineViewMode]);
 
   useEffect(
@@ -195,7 +188,7 @@ function AccountDetails({
   );
 
   useEffect(() => {
-    if (Boolean(timelineViewMode)) {
+    if (timelineViewMode) {
       insertUrlParam(window.history, 'view', timelineViewMode);
     }
   }, [timelineViewMode]);
@@ -247,9 +240,10 @@ function AccountDetails({
 
   useEffect(() => {
     const listActivities = addEnabledFlagToActivities(
-      accountDetails.data?.account_events,
+      accountDetails.data?.events,
       currentProjectSettings.timelines_config?.disabled_events
     );
+    console.log('listActivities--->', listActivities);
     setActivities(listActivities);
   }, [currentProjectSettings, accountDetails]);
 
@@ -481,8 +475,8 @@ function AccountDetails({
     </Menu>
   );
 
-  const renderModalHeader = () => {
-    const accountName = accountDetails?.data?.name;
+  const renderHeader = () => {
+    const accountName = accountDetails?.data?.domain;
     return (
       <div className='fa-timeline--header'>
         <div className='flex items-center'>
@@ -608,7 +602,7 @@ function AccountDetails({
         <div className='user'>
           <img
             src={`https://logo.clearbit.com/${getHost(
-              accountDetails?.data?.host
+              accountDetails?.data?.domain
             )}`}
             onError={(e) => {
               if (
@@ -625,7 +619,7 @@ function AccountDetails({
           />
           <a
             className='flex items-center'
-            href={`https://${encodeURIComponent(accountDetails?.data?.name)}`}
+            href={`https://${encodeURIComponent(accountDetails?.data?.domain)}`}
             target='_blank'
             rel='noopener noreferrer'
           >
@@ -635,7 +629,7 @@ function AccountDetails({
               extraClass='m-0 mr-1 py-2'
               weight='bold'
             >
-              {accountDetails?.data?.name}
+              {accountDetails?.data?.domain}
             </Text>
             <SVG name='ArrowUpRightSquare' />
           </a>
@@ -647,7 +641,7 @@ function AccountDetails({
       </div>
       {!currentProjectSettings?.timelines_config?.account_config?.table_props ||
       currentProjectSettings?.timelines_config?.account_config?.table_props
-        ?.length < 8 ? (
+        ?.length < 12 ? (
         <div className='add-prop-btn with-attr'>{renderAddNewProp()}</div>
       ) : null}
       <div className='logo_attr'>
@@ -663,19 +657,54 @@ function AccountDetails({
     </div>
   );
 
-  const getTimelineUsers = () => {
-    const timelineUsers = accountDetails.data?.account_users || [];
-    if (isFreePlan) {
-      return timelineUsers.filter(
-        (userConfig) => userConfig?.title !== 'group_user'
+  const getTimelineUsers = (view = 'timeline') => {
+    const timelineUsers = accountDetails.data?.users || [];
+    const filteredUsers = [];
+
+    if (view === 'birdview') {
+      const knownUsers = timelineUsers.filter(
+        (user) => !user?.isAnonymous && user?.name !== 'group_user'
       );
+      const anonymousUsers = timelineUsers.filter((user) => user?.isAnonymous);
+      const groupedAnonymousUser = anonymousUsers.length
+        ? [
+            {
+              name: 'Anonymous Users',
+              extraProp: `${
+                anonymousUsers.length === 1
+                  ? '1 Anonymous User'
+                  : `${anonymousUsers.length}${
+                      timelineUsers.length > 25 ? '+' : ''
+                    } Anonymous Users`
+              }`,
+              id: 'new_user',
+              isAnonymous: true
+            }
+          ]
+        : [];
+      const accountUser = timelineUsers.filter(
+        (user) => user?.name === 'group_user'
+      );
+
+      filteredUsers.push(
+        ...knownUsers,
+        ...groupedAnonymousUser,
+        ...accountUser
+      );
+    } else {
+      filteredUsers.push(...timelineUsers);
     }
-    return timelineUsers;
+
+    if (isFreePlan) {
+      return filteredUsers.filter((user) => user?.username !== 'group_user');
+    }
+
+    return filteredUsers;
   };
 
   const getFilteredEvents = (events) => {
     if (isFreePlan) {
-      return events.filter((activity) => !activity.isGroupEvent);
+      return events.filter((activity) => !activity.is_group_event);
     }
     return events;
   };
@@ -687,14 +716,14 @@ function AccountDetails({
     />
   );
 
-  const renderSingleTimelineView = () => (
+  const renderTimelineTableView = () => (
     <AccountTimelineTableView
       timelineEvents={getFilteredEvents(
         activities
           ?.filter((activity) => activity.enabled === true)
-          .slice(0, 1000) || []
+          ?.slice(0, 1000) || []
       )}
-      timelineUsers={getTimelineUsers()}
+      timelineUsers={getTimelineUsers('timeline')}
       loading={accountDetails?.isLoading}
       eventPropsType={eventPropertiesType}
     />
@@ -777,7 +806,7 @@ function AccountDetails({
         timelineEvents={getFilteredEvents(
           activities?.filter((activity) => activity.enabled === true) || []
         )}
-        timelineUsers={getTimelineUsers()}
+        timelineUsers={getTimelineUsers('birdview')}
         collapseAll={collapseAll}
         setCollapseAll={setCollapseAll}
         granularity={granularity}
@@ -819,7 +848,7 @@ function AccountDetails({
         {renderTabPane({
           key: 'timeline',
           tabName: 'Timeline',
-          content: renderSingleTimelineView()
+          content: renderTimelineTableView()
         })}
         {renderTabPane({
           key: 'birdview',
@@ -835,7 +864,7 @@ function AccountDetails({
   return (
     <div>
       <div className='fa-timeline'>
-        {renderModalHeader()}
+        {renderHeader()}
         {renderLeftPane()}
         {renderTimelineView()}
       </div>

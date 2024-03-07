@@ -1,5 +1,5 @@
-import { Avatar, Spin, Tooltip } from 'antd';
-import React, { useState, useEffect, useMemo } from 'react';
+import { Avatar, Spin } from 'antd';
+import React, { useState, useEffect } from 'react';
 import { CaretRightOutlined, CaretUpOutlined } from '@ant-design/icons';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import NoDataWithMessage from 'Components/Profile/MyComponents/NoDataWithMessage';
@@ -11,6 +11,7 @@ import {
   iconColors
 } from 'Components/Profile/constants';
 import TextWithOverflowTooltip from 'Components/GenericComponents/TextWithOverflowTooltip';
+import logger from 'Utils/logger';
 import { SVG, Text } from '../../../factorsComponents';
 import {
   eventsFormattedForGranularity,
@@ -19,7 +20,6 @@ import {
   toggleCellCollapse
 } from '../../utils';
 import InfoCard from '../../MyComponents/InfoCard';
-import logger from 'Utils/logger';
 
 function AccountTimelineBirdView({
   timelineEvents = [],
@@ -37,7 +37,6 @@ function AccountTimelineBirdView({
 
   useEffect(() => {
     if (!timelineEvents) return;
-
     const data = eventsFormattedForGranularity(
       timelineEvents,
       granularity,
@@ -199,21 +198,21 @@ function AccountTimelineBirdView({
                       className='userlist-avatar'
                       style={{
                         backgroundColor: `${
-                          user.title === 'group_user'
+                          user.name === 'group_user'
                             ? '#BAE7FF'
                             : iconColors[
                                 ALPHANUMSTR.indexOf(
-                                  user.title.charAt(0).toUpperCase()
+                                  user.name.charAt(0).toUpperCase()
                                 ) % 8
                               ]
                         }`,
                         fontSize: '16px'
                       }}
                     >
-                      {user.title === 'group_user' ? (
+                      {user.name === 'group_user' ? (
                         <SVG name='focus' size={20} />
                       ) : (
-                        user.title.charAt(0).toUpperCase()
+                        user.name.charAt(0).toUpperCase()
                       )}
                     </Avatar>
                   )}
@@ -225,12 +224,12 @@ function AccountTimelineBirdView({
                       weight='medium'
                       extraClass='m-0'
                     >
-                      {user.title === 'group_user'
+                      {user.name === 'group_user'
                         ? 'Account Activity'
-                        : user.title}
+                        : user.name}
                     </Text>
                     <Text type='title' truncate level={8} extraClass='m-0'>
-                      {user.subtitle || '-'}
+                      {user.extraProp || '-'}
                     </Text>
                   </div>
                 </div>
@@ -248,15 +247,15 @@ function AccountTimelineBirdView({
                   {milestones && renderMilestoneStrip(milestones, true)}
                 </td>
                 {timelineUsers.map((user) => {
-                  if (!allEvents[user.userId])
+                  if (!allEvents[user.id])
                     return (
                       <td className='bg-gradient--44px'>
                         {milestones && renderMilestoneStrip(milestones, false)}
                       </td>
                     );
-                  const eventsList = allEvents[user.userId].collapsed
-                    ? allEvents[user.userId].events.slice(0, 1)
-                    : allEvents[user.userId].events;
+                  const eventsList = allEvents[user.id].collapsed
+                    ? allEvents[user.id].events.slice(0, 1)
+                    : allEvents[user.id].events;
                   return (
                     <td
                       className={`bg-gradient--44px pb-${
@@ -265,7 +264,7 @@ function AccountTimelineBirdView({
                     >
                       <div
                         className={`timeline-events account-pad ${
-                          allEvents[user.userId].collapsed
+                          allEvents[user.id].collapsed
                             ? 'timeline-events--collapsed'
                             : 'timeline-events--expanded'
                         }`}
@@ -277,15 +276,15 @@ function AccountTimelineBirdView({
                           </div>
                         ))}
                         {renderAdditionalDiv(
-                          allEvents[user.userId].events.length,
-                          allEvents[user.userId].collapsed,
+                          allEvents[user.id].events.length,
+                          allEvents[user.id].collapsed,
                           () => {
                             setFormattedData(
                               toggleCellCollapse(
                                 formattedData,
                                 timestamp,
-                                user.userId,
-                                !allEvents[user.userId].collapsed
+                                user.id,
+                                !allEvents[user.id].collapsed
                               )
                             );
                             setCollapseAll(undefined);

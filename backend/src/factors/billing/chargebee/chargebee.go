@@ -220,6 +220,25 @@ func DownloadInvoiceByInvoiceID(invoiceID string) (download.Download, error) {
 	return *res.Download, nil
 }
 
+func UpdateSubscriptionOnChargebee(projectID int64, subscriptionID string) error {     // to move plans from paid to free in case of manual cancellation of subscription from Chargebee UI.
+	logCtx := log.Fields{"subscription_ID": subscriptionID,
+		"project_id": projectID,
+	}
+	_, err := subscriptionAction.UpdateForItems(subscriptionID, &subscription.UpdateForItemsRequestParams{
+		InvoiceImmediately: chargebee.Bool(true),
+		SubscriptionItems: []*subscription.UpdateForItemsSubscriptionItemParams{
+			{
+				ItemPriceId: "Free-USD-Monthly",
+			},
+		},
+	}).Request()
+	if err != nil {
+		log.WithFields(logCtx).WithError(err).Error("Failed to update subscription on chargebee")
+		return err
+	}
+	return nil
+}
+
 func GetRedirectUrl(projectID int64) string {
 	callBackUrl := C.GetProtocol() + C.GetAPIDomain() + fmt.Sprintf("/billing/upgrade/callback?project_id=%d", projectID)
 	return callBackUrl

@@ -1,0 +1,13 @@
+.projectImageContainer {
+  position: relative;
+}
+
+.projectImageContainer .projectImage {
+  display: block;
+}
+
+.projectImageContainer .editImageIcon {
+  position: absolute;
+  bottom: -9px;
+  right: -9px;
+}

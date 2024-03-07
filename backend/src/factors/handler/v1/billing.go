@@ -343,3 +343,59 @@ func BillingInvoiceGeneratedWebhookListner(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, "ok")
 }
+
+func BillingSubscriptionCancelledWebhookListner(c *gin.Context) {
+	var event event.Event
+	err := c.BindJSON(&event)
+
+	if err != nil {
+		log.Error("failed to read subscription cancelled event body")
+		c.AbortWithError(http.StatusBadRequest, errors.New("INVALID JSON"))
+		return
+	}
+
+	log.Info("billing subscription cancelled trigger body ", event)
+
+	var content model.Content
+
+	err = json.Unmarshal(event.Content, &content)
+	if err != nil {
+		log.Error("failed to parse content data")
+		c.AbortWithError(http.StatusInternalServerError, errors.New("INTERNAL SERVER ERROR"))
+		return
+	}
+
+	if content.Subscription.Id == "" {
+		log.WithError(err).Error("Subscription ID not found")
+		c.AbortWithError(http.StatusBadRequest, errors.New("BAD REQUEST"))
+		return
+	}
+
+	billingSubscriptionID := content.Subscription.Id
+
+	// get the project ID from subscription id
+	projectID, status := store.GetStore().GetProjectIDByBillingSubscriptionID(billingSubscriptionID)
+	if status != http.StatusFound {
+		log.WithError(err).Error("Failed to get project from subscription id")
+		c.AbortWithError(http.StatusInternalServerError, errors.New("INTERNAL SERVER ERROR"))
+		return
+	}
+
+	// update the subscription to free plan
+
+	err = billing.UpdateSubscriptionOnChargebee(projectID, billingSubscriptionID)
+	if err != nil {
+		log.WithError(err).Error("Failed to update subscription on chargbeee")
+		c.AbortWithError(http.StatusInternalServerError, errors.New("INTERNAL SERVER ERROR"))
+		return
+	}
+
+	// trigger sync
+	err = store.GetStore().TriggerSyncChargebeeToFactors(projectID)
+	if err != nil {
+		log.WithError(err).Error("Failed to sync chargbee data to internal db")
+		c.AbortWithError(http.StatusInternalServerError, errors.New("INTERNAL SERVER ERROR"))
+		return
+	}
+	c.JSON(http.StatusOK, "ok")
+}

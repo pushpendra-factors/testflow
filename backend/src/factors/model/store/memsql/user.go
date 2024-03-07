@@ -2584,6 +2584,10 @@ func (store *MemSQL) GetCustomerUserIDAndUserPropertiesFromFormSubmit(projectID 
 	}
 
 	formPropertyEmail := U.GetPropertyValueAsString((*formSubmitProperties)[U.UP_EMAIL])
+	if formPropertyEmail == "" && C.IsEmailUTMParameterAllowed(projectID) {
+		formPropertyEmail = U.GetPropertyValueAsString((*formSubmitProperties)[U.EP_EMAIL])
+	}
+
 	userPropertyEmail := U.GetPropertyValueAsString((*userProperties)[U.UP_EMAIL])
 
 	formPropertyPhone := U.GetPropertyValueAsString((*formSubmitProperties)[U.UP_PHONE])

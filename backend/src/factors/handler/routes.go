@@ -99,8 +99,9 @@ func InitAppRoutes(r *gin.Engine) {
 
 	r.GET(routePrefix+"/"+ROUTE_PROJECTS_ROOT_V1+"/custom_projects", mid.SetLoggedInAgentInternalOnly(), V1.GetCustomPlanProjectsHandler)
 
-	r.POST("/billing/hooks/subscription/hbeqjomjhxjvx2z", V1.BillingSubscriptionChangedWebhookListner) // random string as a part of security measure
-	r.POST("/billing/hooks/invoice/ksh4jcjw245", V1.BillingInvoiceGeneratedWebhookListner)             // random string as a part of security measure
+	r.POST("/billing/hooks/subscription/hbeqjomjhxjvx2z", V1.BillingSubscriptionChangedWebhookListner)     // random string as a part of security measure
+	r.POST("/billing/hooks/invoice/ksh4jcjw245", V1.BillingInvoiceGeneratedWebhookListner)                 // random string as a part of security measure
+	r.POST("/billing/hooks/subscription/jfdksr32wr3ekfjsd", V1.BillingSubscriptionCancelledWebhookListner) // random string as a part of security measure
 	r.GET("/billing/upgrade/callback", V1.BillingUpgradeCallbackHandler)
 	// Feature Gates Auth Group
 	// authRouteGroup := r.Group(routePrefix + ROUTE_PROJECTS_ROOT)
@@ -306,6 +307,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/v1/profiles/accounts/:group/:id", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_PROFILES}), responseWrapper(V1.GetProfileAccountDetailsHandler))
 	authRouteGroup.GET("/:project_id/v1/profiles/accounts/overview/:group/:id", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_PROFILES}), responseWrapper(V1.GetProfileAccountOverviewHandler))
 	authRouteGroup.PUT("/:project_id/v1/profiles/events_config/:event_name", mid.FeatureMiddleware([]string{M.FEATURE_PEOPLE_PROFILES, M.FEATURE_ACCOUNT_PROFILES}), V1.UpdateEventConfigHandler)
+	authRouteGroup.GET("/:project_id/v1/profiles/user_properties/:id", mid.FeatureMiddleware([]string{M.FEATURE_PEOPLE_PROFILES, M.FEATURE_ACCOUNT_PROFILES}), V1.GetUserPropertiesByIDHandler)
 
 	// Segments
 	authRouteGroup.POST("/:project_id/segments", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), CreateSegmentHandler)
