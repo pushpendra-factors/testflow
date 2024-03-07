@@ -94,6 +94,8 @@ func main() {
 	userPropertyUpdateOptProjects := flag.String("user_property_update_opt_projects", "", "")
 	chargebeeApiKey := flag.String("chargebee_api_key", "dummy", "Chargebee api key")
 	chargebeeSiteName := flag.String("chargebee_site_name", "dummy", "Chargebee site name")
+	emailUTMParameterAllowedProjects := flag.String("email_utm_parameter_allowed_projects", "", "")
+
 	flag.Parse()
 
 	workerName := defaultWorkerName
@@ -153,6 +155,7 @@ func main() {
 		UserPropertyUpdateOptProjects:                      *userPropertyUpdateOptProjects,
 		ChargebeeApiKey:                                    *chargebeeApiKey,
 		ChargebeeSiteName:                                  *chargebeeSiteName,
+		EmailUTMParameterAllowedProjects:                   *emailUTMParameterAllowedProjects,
 	}
 	C.InitConf(config)
 
