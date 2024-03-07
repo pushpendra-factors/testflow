@@ -400,6 +400,12 @@ func (store *MemSQL) CreateProjectWithDependencies(project *model.Project, agent
 		return nil, errCode
 	}
 
+	_, errCode = store.CreateAllBoardsDashboardFolder(cProject.ID)
+	if errCode != http.StatusCreated {
+		log.WithField("err_code", errCode).Error("CreateProject Failed, All Boards creation failed.")
+		return nil, errCode
+	}
+
 	//Generate Website Visitor Identification Dashboard
 	if C.GetConfig().Env == C.PRODUCTION {
 		_, errCode, errMsg := store.GenerateDashboardFromTemplate(cProject.ID, agentUUID, VISITOR_IDENTIFICATION_PROD_TEMPLATE_ID)
