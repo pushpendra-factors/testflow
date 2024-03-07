@@ -417,6 +417,7 @@ const CoreQuery = () => {
       configActionsOnRunningQuery(false, qState);
       qState.requestQuery = query;
       qState.resultState = { ...qState.resultState, loading: true };
+      qState.querySaved = {};
       setCoreQueryState(qState);
       // resetComparisonData();
       //}

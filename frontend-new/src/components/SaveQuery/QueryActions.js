@@ -2,7 +2,7 @@ import React, { memo, useContext, useEffect, useState } from 'react';
 import _ from 'lodash';
 import PropTypes from 'prop-types';
 import { SVG } from 'factorsComponents';
-import { Button, Dropdown, Menu, Tooltip,Modal,message,Popover } from 'antd';
+import { Button, Dropdown, Menu, Tooltip, Modal, message, Popover } from 'antd';
 import { BUTTON_TYPES } from '../../constants/buttons.constants';
 import ControlledComponent from '../ControlledComponent';
 import styles from './index.module.scss';
@@ -16,6 +16,7 @@ import {
 } from '../../utils/constants';
 // import { getChartType } from '../../Views/CoreQuery/AnalysisResultsPage/analysisResultsPage.helpers';
 import { CoreQueryContext } from '../../contexts/CoreQueryContext';
+import { useLocation } from 'react-router-dom';
 
 const QueryActionsComponent = ({
   queryType,
@@ -33,6 +34,8 @@ const QueryActionsComponent = ({
 }) => {
   const [hideIntercomState, setHideIntercomState] = useState(true);
   const [isPopoverVisible, setIsPopoverVisible] = useState(false);
+
+  const location = useLocation();
 
   const {
     coreQueryState: { navigatedFromDashboard, navigatedFromAnalyse }
@@ -130,20 +133,42 @@ const QueryActionsComponent = ({
       onClick={handleActionMenuClick}
       className={`${styles.antdActionMenu}`}
     >
-      <Menu.Item key='1' disabled={!savedQueryId || !(queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI)}>
+      <Menu.Item
+        key='1'
+        disabled={
+          !savedQueryId ||
+          !(queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI)
+        }
+      >
         <SVG
           name={'envelope'}
           size={18}
-          color={`${!savedQueryId || !(queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI) ? 'LightGray' : 'grey'}`}
+          color={`${
+            !savedQueryId ||
+            !(queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI)
+              ? 'LightGray'
+              : 'grey'
+          }`}
           extraClass={'inline mr-2'}
         />
         Email this report
       </Menu.Item>
-      <Menu.Item key='2' disabled={!savedQueryId || !(queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI)}>
+      <Menu.Item
+        key='2'
+        disabled={
+          !savedQueryId ||
+          !(queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI)
+        }
+      >
         <SVG
           name={'SlackStroke'}
           size={18}
-          color={`${!savedQueryId || !(queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI) ? 'LightGray' : 'grey'}`}
+          color={`${
+            !savedQueryId ||
+            !(queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI)
+              ? 'LightGray'
+              : 'grey'
+          }`}
           extraClass={'inline mr-2'}
         />
         Share to slack
@@ -199,19 +224,25 @@ const QueryActionsComponent = ({
     setIsPopoverVisible(true);
   };
 
-  const handleSaveNewClick = () =>{
+  const handleSaveNewClick = () => {
     setIsPopoverVisible(false);
-    handleSaveClick();   
+    handleSaveClick();
   };
 
   const messageBoxContent = (
     <div className={`${styles.messageBox}`}>
-      <p className={`${styles.boxParaContent}`}>Are you sure you want to overwrite these changes on the existing report?</p>
+      <p className={`${styles.boxParaContent}`}>
+        Are you sure you want to overwrite these changes on the existing report?
+      </p>
       <div className={`${styles.buttonContainer}`}>
-        <Button className={`${styles.customWhiteButton}`} onClick={handleSaveNewClick} type="ghost" >
+        <Button
+          className={`${styles.customWhiteButton}`}
+          onClick={handleSaveNewClick}
+          type='ghost'
+        >
           Save as New
         </Button>
-        <Button onClick={handleUpdateClick} type="primary">
+        <Button onClick={handleUpdateClick} type='primary'>
           Yes, overwrite it
         </Button>
       </div>
@@ -289,26 +320,25 @@ const QueryActionsComponent = ({
           navigatedFromAnalyse?.key ||
           navigatedFromAnalyse?.id) && (
           <div className={`${styles.antdIcon}`}>
-
-          <Popover
-            content={messageBoxContent}
-            trigger="click"
-            visible={isPopoverVisible}
-            placement="bottomLeft"
-            arrowPointAtCenter={true}
-            autoAdjustOverflow
-            onVisibleChange={(visible) => setIsPopoverVisible(visible)}
-          >
-          <Dropdown.Button
-            overlay={menuItems}        
-            onClick={handleDropdownClick}
-            type={BUTTON_TYPES.PRIMARY}
-            size={'large'}
-            icon={<SVG name={'CaretDown'} size={20} color={'white'} />}
-          >
-          Save
-          </Dropdown.Button>
-          </Popover>
+            <Popover
+              content={messageBoxContent}
+              trigger='click'
+              visible={isPopoverVisible}
+              placement='bottomLeft'
+              arrowPointAtCenter={true}
+              autoAdjustOverflow
+              onVisibleChange={(visible) => setIsPopoverVisible(visible)}
+            >
+              <Dropdown.Button
+                overlay={menuItems}
+                onClick={handleDropdownClick}
+                type={BUTTON_TYPES.PRIMARY}
+                size={'large'}
+                icon={<SVG name={'CaretDown'} size={20} color={'white'} />}
+              >
+                Save
+              </Dropdown.Button>
+            </Popover>
           </div>
         )}
     </div>
