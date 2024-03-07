@@ -951,7 +951,7 @@ function AccountProfiles({
       })
     }));
     return (
-      <div>
+      <div id='resizing-table-container-div'>
         <Table
           ref={tableRef}
           components={{
