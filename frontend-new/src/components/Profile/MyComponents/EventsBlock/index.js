@@ -518,9 +518,12 @@ function EventsBlock({
                   <Button
                     icon={
                       <SVG
-                        name='mouseevent'
-                        size={16}
-                        color={viewMode ? 'grey' : 'purple'}
+                        name={
+                          showGroups.find(
+                            (group) => group.label === event.group
+                          )?.iconName
+                        }
+                        size={20}
                       />
                     }
                     className={`fa-button--truncate fa-button--truncate-lg ${

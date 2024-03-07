@@ -1789,6 +1789,7 @@ export const ImageEditSVG = ({ size = 23, color = '#40A9FF', extraClass }) => (
     height={size}
     viewBox={`0 0 ${size} ${size}`}
     className={extraClass}
+    style={{ overflow: 'visible' }}
     fill='none'
     xmlns='http://www.w3.org/2000/svg'
   >
