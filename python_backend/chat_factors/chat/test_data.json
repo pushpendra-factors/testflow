@@ -1,0 +1,146 @@
+{
+    "unique Users yesterday?": {
+    "payload": {
+        "cl": "kpi",
+        "qG": [
+            {
+                "ca": "events",
+                "pgUrl": "",
+                "dc": "website_session",
+                "me": [
+                    "unique_users"
+                ],
+                "fil": [],
+                "gBy": [],
+                "fr": 1709663400,
+                "to": 1709749799,
+                "tz": "Asia/Kolkata",
+                "qt": "static",
+                "an": ""
+            },
+            {
+                "ca": "events",
+                "pgUrl": "",
+                "dc": "website_session",
+                "me": [
+                    "unique_users"
+                ],
+                "fil": [],
+                "gBy": [],
+                "gbt": "date",
+                "fr": 1709663400,
+                "to": 1709749799,
+                "tz": "Asia/Kolkata",
+                "qt": "static",
+                "an": ""
+            }
+        ],
+        "gGBy": [],
+        "gFil": []
+    },
+    "url": "projects/2/v1/kpi/query"
+    },
+    "breakdown of unique Users by initial Campaign yesterday? " : {
+    "payload": {
+        "cl": "kpi",
+        "qG": [
+            {
+                "ca": "events",
+                "pgUrl": "",
+                "dc": "website_session",
+                "me": [
+                    "unique_users"
+                ],
+                "fil": [],
+                "gBy": [],
+                "fr": 1709663400,
+                "to": 1709749799,
+                "tz": "Asia/Kolkata",
+                "qt": "static",
+                "an": ""
+            },
+            {
+                "ca": "events",
+                "pgUrl": "",
+                "dc": "website_session",
+                "me": [
+                    "unique_users"
+                ],
+                "fil": [],
+                "gBy": [],
+                "gbt": "date",
+                "fr": 1709663400,
+                "to": 1709749799,
+                "tz": "Asia/Kolkata",
+                "qt": "static",
+                "an": ""
+            }
+        ],
+        "gGBy": [
+            {
+                "gr": "",
+                "prNa": "$initial_campaign",
+                "prDaTy": "categorical",
+                "en": "user",
+                "objTy": "",
+                "dpNa": "User first campaign",
+                "isPrMa": false
+            }
+        ],
+        "gFil": []
+    },
+    "url": "projects/2/v1/kpi/query"
+  },
+    "breakdown of Sessions Per User by initial Campaign id yesterday? ": {
+    "payload": {
+        "cl": "kpi",
+        "qG": [
+            {
+                "ca": "events",
+                "pgUrl": "",
+                "dc": "website_session",
+                "me": [
+                    "sessions_per_user"
+                ],
+                "fil": [],
+                "gBy": [],
+                "fr": 1709663400,
+                "to": 1709749799,
+                "tz": "Asia/Kolkata",
+                "qt": "static",
+                "an": ""
+            },
+            {
+                "ca": "events",
+                "pgUrl": "",
+                "dc": "website_session",
+                "me": [
+                    "sessions_per_user"
+                ],
+                "fil": [],
+                "gBy": [],
+                "gbt": "date",
+                "fr": 1709663400,
+                "to": 1709749799,
+                "tz": "Asia/Kolkata",
+                "qt": "static",
+                "an": ""
+            }
+        ],
+        "gGBy": [
+            {
+                "gr": "",
+                "prNa": "$initial_campaign_id",
+                "prDaTy": "categorical",
+                "en": "user",
+                "objTy": "",
+                "dpNa": "User first campaign ID",
+                "isPrMa": false
+            }
+        ],
+        "gFil": []
+    },
+    "url": "projects/2/v1/kpi/query"
+  }
+
+}

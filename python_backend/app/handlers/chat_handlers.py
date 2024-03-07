@@ -9,8 +9,8 @@ from .base_handler import BaseHandler
 from tornado.log import logging as log
 from chatgpt_poc.chat import get_answer_from_ir_model
 from chatgpt_poc.chat import get_answer_from_ir_model_local
-from chat.final_query import get_url_and_query_payload_from_gpt_response
-from chat.kpi import KpiNotFoundError
+from chat.final_query import get_url_and_query_payload_from_gpt_response, validate_gpt_response, UnexpectedGptResponseError
+from chat.kpi import KPIOrPropertyNotFoundError
 from google.cloud import storage
 import io
 import pickle
@@ -65,17 +65,19 @@ class ChatHandler(BaseHandler):
             result_dict = json.loads(json_string_with_quotes)
             # log.info(result_dict)
 
+            validate_gpt_response(result_dict)
+
             query_payload_and_url = get_url_and_query_payload_from_gpt_response(result_dict, pid, kpi_config)
             log.info("done step 4 \n query_payload_and_url :%s", query_payload_and_url)
             result_json = json.dumps(query_payload_and_url, indent=2)
 
             self.write(result_json)
 
-        except KpiNotFoundError as cgpe:
+        except KPIOrPropertyNotFoundError as kpnfe:
             # Handle kpi not found error here
-            log.error("CustomProcessingGptResponseError processing request: %s", str(cgpe))
+            log.error("CustomProcessingError processing request: %s", str(kpnfe))
             self.set_status(400)  # Bad Request
-            self.write(json.dumps({'error': {'code': 400, 'message': str(cgpe)}}))
+            self.write(json.dumps({'error': {'code': 400, 'message': str(kpnfe)}}))
         except Exception as e:
             # Handle other exceptions
             log.error("Error processing request: %s", str(e))
