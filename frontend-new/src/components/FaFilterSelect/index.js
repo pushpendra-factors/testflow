@@ -34,6 +34,7 @@ import { DISPLAY_PROP, OPERATORS } from '../../utils/constants';
 import FaDatepicker from '../FaDatepicker';
 import { SVG, Text } from '../factorsComponents';
 import styles from './index.module.scss';
+import CSVUploadModal from 'Components/CSVUploadModal';
 // import truncateURL from 'Utils/truncateURL';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
@@ -81,8 +82,6 @@ function FaFilterSelect({
   const [containButton, setContainButton] = useState(true);
   const [updateState, updateStateApply] = useState(false);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
-  const [uploadFileName, setUploadFileName] = useState('');
-  const [uploadFileByteArray, setUploadFileByteArray] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const { userPropNames, eventPropNames, groupPropNames } = useSelector(
@@ -848,31 +847,7 @@ function FaFilterSelect({
     );
   };
 
-  const handleChange = (info) => {
-    const reader = new FileReader();
-    const fileByteArray = [];
-    reader.readAsArrayBuffer(info?.file?.originFileObj);
-    reader.onloadend = function (evt) {
-      if (evt.target.readyState === FileReader.DONE) {
-        const arrayBuffer = evt.target.result;
-        const array = new Uint8Array(arrayBuffer);
-        for (let i = 0; i < array.length; i++) {
-          fileByteArray.push(array[i]);
-        }
-      }
-    };
-
-    setUploadFileName(info?.file?.name);
-    setUploadFileByteArray(fileByteArray);
-  };
-
-  const handleCancel = () => {
-    setUploadModalOpen(false);
-    setUploadFileName('');
-    setUploadFileByteArray([]);
-  };
-
-  const handleOk = () => {
+  const handleOkClick = (uploadFileByteArray, uploadFileName) => {
     setLoading(true);
 
     uploadList(activeProject?.id, {
@@ -881,7 +856,7 @@ function FaFilterSelect({
     })
       .then((res) => {
         valuesSelectSingle([res?.data?.file_reference]);
-        handleCancel();
+        setUploadModalOpen(false);
         setLoading(false);
       })
       .catch((err) => {
@@ -910,63 +885,12 @@ function FaFilterSelect({
 
     if (propState.type === 'categorical') {
       selectionComponent = (
-        <AppModal
-          visible={uploadModalOpen}
-          width={500}
-          closable={false}
-          title={null}
-          footer={null}
-        >
-          <Text type='title' level={6} weight='bold' extraClcalass='m-0'>
-            Upload a CSV with a single column
-          </Text>
-          <Text type='title' level={7} color='grey' extraClass='m-0 -mt-2'>
-            We’ll only look at the first column as your reference list of data
-          </Text>
-          <div className='border rounded mt-2 flex justify-center '>
-            <Upload
-              showUploadList={false}
-              onChange={handleChange}
-              accept='.csv'
-              maxCount={1}
-              className='text-center'
-            >
-              <div className='p-8'>
-                {uploadFileName ? (
-                  <Button className='inline'>
-                    {uploadFileName}
-                    <SVG extraClass='ml-1' name='close' color='grey' />
-                  </Button>
-                ) : (
-                  <Button icon={<UploadOutlined />}>Upload CSV</Button>
-                )}
-              </div>
-            </Upload>
-          </div>
-          <Row className='mt-4'>
-            <Col span={24}>
-              <div className='flex justify-end'>
-                <Button
-                  size='large'
-                  className='mr-2'
-                  onClick={() => handleCancel()}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  size='large'
-                  className='ml-2'
-                  type='primary'
-                  onClick={() => handleOk()}
-                  disabled={!uploadFileName}
-                  loading={loading}
-                >
-                  Done
-                </Button>
-              </div>
-            </Col>
-          </Row>
-        </AppModal>
+        <CSVUploadModal
+          uploadModalOpen={uploadModalOpen}
+          setUploadModalOpen={setUploadModalOpen}
+          handleOkClick={handleOkClick}
+          uploadType='filters'
+        />
       );
     }
 

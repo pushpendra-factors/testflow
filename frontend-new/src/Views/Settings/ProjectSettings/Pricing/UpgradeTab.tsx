@@ -73,94 +73,66 @@ function UpgradeTab({ buyAddonLoading, handleBuyAddonClick }: UpgradeTabProps) {
 
   const renderPlans = () => (
     <div>
-      {isPlansViewCollapsed && GrowthPlan && (
-        <PlanDescriptionCard
-          isPlanActive={
-            currentPlanDetail?.plan?.externalName === GrowthPlan.name
-          }
-          isRecommendedPlan={PLANS_COFIG[GrowthPlan.name].isRecommendedPlan}
-          plan={GrowthPlan}
-          planIcon={PLANS_COFIG[GrowthPlan.name].planIcon}
-          planName={PLANS_COFIG[GrowthPlan.name].name}
-          planIconColor={PLANS_COFIG[GrowthPlan.name].planIconColor}
-          planDescription={PLANS_COFIG[GrowthPlan.name].description}
-          planFeatures={PLANS_COFIG[GrowthPlan.name].uniqueFeatures}
-          accountIdentifiedLimit={
-            PLANS_COFIG[GrowthPlan.name].accountIdentifiedLimit
-          }
-          mtuLimit={PLANS_COFIG[GrowthPlan.name].mtuLimit}
-          handleBuyButtonClick={handleBuyButtonClick}
-          isUserBillingAdmin={isUserBillingAdmin}
-          isButtonLoading={buyAddonLoading}
-          isAdditionalAccountsAddonPurchased={
-            isAdditionalAccountsAddonPurchased
-          }
-          seats={PLANS_COFIG[GrowthPlan.name].seats}
-          icons={PLANS_COFIG[GrowthPlan.name]?.icons}
-        />
-      )}
-      {!isPlansViewCollapsed && (
-        <div className='flex flex-col gap-5'>
-          {plansDetail &&
-            plansDetail?.length > 0 &&
-            plansDetail
-              .filter((plan) => {
-                const localPlansConfig = PLANS_COFIG?.[plan.name];
-                if (!localPlansConfig) false;
-                return true;
-              })
-              .sort((a, b) => {
-                if (
-                  b.name === currentPlanDetail?.plan?.externalName ||
-                  a.name === currentPlanDetail?.plan?.externalName
-                ) {
-                  if (b.name === currentPlanDetail?.plan?.externalName) {
-                    return 1;
-                  }
-                  if (a.name === currentPlanDetail?.plan?.externalName) {
-                    return -1;
-                  }
+      <div className='flex flex-col gap-5'>
+        {plansDetail &&
+          plansDetail?.length > 0 &&
+          plansDetail
+            .filter((plan) => {
+              const localPlansConfig = PLANS_COFIG?.[plan.name];
+              if (!localPlansConfig) return false;
+              return true;
+            })
+            .sort((a, b) => {
+              if (
+                b.name === currentPlanDetail?.plan?.externalName ||
+                a.name === currentPlanDetail?.plan?.externalName
+              ) {
+                if (b.name === currentPlanDetail?.plan?.externalName) {
+                  return 1;
                 }
-                const aPrice =
-                  a.terms.find((p) => p.period === 'month')?.price || 0;
-                const bPrice =
-                  b.terms.find((p) => p.period === 'month')?.price || 0;
-                return aPrice - bPrice;
-              })
-              .map((plan) => {
-                const localPlansConfig = PLANS_COFIG?.[plan.name];
-                if (!localPlansConfig) return <></>;
+                if (a.name === currentPlanDetail?.plan?.externalName) {
+                  return -1;
+                }
+              }
+              const aPrice =
+                a.terms.find((p) => p.period === 'month')?.price || 0;
+              const bPrice =
+                b.terms.find((p) => p.period === 'month')?.price || 0;
+              return aPrice - bPrice;
+            })
+            .map((plan) => {
+              const localPlansConfig = PLANS_COFIG?.[plan.name];
+              if (!localPlansConfig) return <></>;
 
-                return (
-                  <PlanDescriptionCard
-                    isPlanActive={
-                      currentPlanDetail?.plan?.externalName === plan.name
-                    }
-                    isRecommendedPlan={localPlansConfig.isRecommendedPlan}
-                    plan={plan}
-                    planIcon={localPlansConfig.planIcon}
-                    planName={localPlansConfig.name}
-                    planIconColor={localPlansConfig.planIconColor}
-                    planDescription={localPlansConfig.description}
-                    planFeatures={localPlansConfig.uniqueFeatures}
-                    accountIdentifiedLimit={
-                      localPlansConfig.accountIdentifiedLimit
-                    }
-                    mtuLimit={localPlansConfig.mtuLimit}
-                    handleBuyButtonClick={handleBuyButtonClick}
-                    isUserBillingAdmin={isUserBillingAdmin}
-                    isButtonLoading={buyAddonLoading}
-                    isAdditionalAccountsAddonPurchased={
-                      isAdditionalAccountsAddonPurchased
-                    }
-                    seats={localPlansConfig?.seats}
-                    icons={localPlansConfig?.icons}
-                  />
-                );
-              })}
-          {/* <LastPlanCard /> */}
-        </div>
-      )}
+              return (
+                <PlanDescriptionCard
+                  isPlanActive={
+                    currentPlanDetail?.plan?.externalName === plan.name
+                  }
+                  isRecommendedPlan={localPlansConfig.isRecommendedPlan}
+                  plan={plan}
+                  planIcon={localPlansConfig.planIcon}
+                  planName={localPlansConfig.name}
+                  planIconColor={localPlansConfig.planIconColor}
+                  planDescription={localPlansConfig.description}
+                  planFeatures={localPlansConfig.uniqueFeatures}
+                  accountIdentifiedLimit={
+                    localPlansConfig.accountIdentifiedLimit
+                  }
+                  mtuLimit={localPlansConfig.mtuLimit}
+                  handleBuyButtonClick={handleBuyButtonClick}
+                  isUserBillingAdmin={isUserBillingAdmin}
+                  isButtonLoading={buyAddonLoading}
+                  isAdditionalAccountsAddonPurchased={
+                    isAdditionalAccountsAddonPurchased
+                  }
+                  seats={localPlansConfig?.seats}
+                  icons={localPlansConfig?.icons}
+                />
+              );
+            })}
+        {/* <LastPlanCard /> */}
+      </div>
       <Text
         type='title'
         level={7}
@@ -170,33 +142,6 @@ function UpgradeTab({ buyAddonLoading, handleBuyAddonClick }: UpgradeTabProps) {
       >
         *Tailor-made set-up by dedicated CSM
       </Text>
-
-      <Button
-        className='mt-4'
-        type='text'
-        ref={collapseButtonRef}
-        onClick={() => {
-          collapseButtonRef.current?.blur();
-          setIsPlansViewCollapsed((value) => !value);
-        }}
-      >
-        {isPlansViewCollapsed && (
-          <div className='flex gap-2 items-center'>
-            <Text type='title' level={6} extraClass='m-0' color='brand-color-6'>
-              Show All Plans
-            </Text>
-            <SVG name='CaretDown' size={20} color='#1890FF' />
-          </div>
-        )}
-        {!isPlansViewCollapsed && (
-          <div className='flex gap-2 items-center'>
-            <Text type='title' level={6} extraClass='m-0' color='brand-color-6'>
-              Hide All Plans
-            </Text>
-            <SVG name='CaretUp' size={20} color='#1890FF' />
-          </div>
-        )}
-      </Button>
     </div>
   );
 

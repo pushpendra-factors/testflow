@@ -107,9 +107,12 @@ const ViewSetup = ({ currentProjectSettings, activeProject }) => {
             Setup 2 (Optional)
           </Text>
           <Text type='paragraph' color='mono-6' extraClass={'m-0'}>
-            Send us an event (Enable Auto-track under{' '}
-            <span className='italic'>General Configuration tab</span> above for
-            capturing user visits automatically).
+            Once you enable <span className='italic'>Auto-track </span>under{' '}
+            <span className='italic'>General Configuration</span> tab, Factors
+            will track all standard events automatically. You can also add
+            tracking for your own custom events and properties for that event.
+            Eg- You can create a custom track call for whenever someone signups
+            on your website.
           </Text>
         </Col>
         <Col span={24}>
@@ -176,9 +179,12 @@ const GTMSetup = ({ currentProjectSettings, activeProject }) => {
             Setup 2 (Optional)
           </Text>
           <Text type='paragraph' color='mono-6' extraClass={'m-0'}>
-            Send us an event (Enable Auto-track under{' '}
-            <span className='italic'>General Configuration tab</span> above for
-            capturing user visits automatically).
+            Once you enable <span className='italic'>Auto-track </span>under{' '}
+            <span className='italic'>General Configuration</span> tab, Factors
+            will track all standard events automatically. You can also add
+            tracking for your own custom events and properties for that event.
+            Eg- You can create a custom track call for whenever someone signups
+            on your website.
           </Text>
         </Col>
         <Col span={24}>
@@ -480,8 +486,9 @@ const JSConfig = ({
       </Col>
       <Col span={24} className={'flex flex-start items-center'}>
         <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>
-          Track standard events such as page_view, page_load time,
-          page_spent_time and more for each user
+          Automatically track standard events on your website like start of a
+          website session, page views and properties associated with these
+          events like landing page URL, page load time, page scroll percent etc.
         </Text>
       </Col>
       <Col span={24}>
@@ -507,9 +514,8 @@ const JSConfig = ({
       </Col>
       <Col span={24} className={'flex flex-start items-center'}>
         <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>
-          Track standard events such as page_view, page_load time,
-          page_spent_time and button clicks for each user, on Single Page
-          Applications like React, Angular, Vue, etc,.
+          Track standard events on single page applications like React, Angular,
+          Vue, etc.
         </Text>
       </Col>
       <Col span={24}>
@@ -562,8 +568,8 @@ const JSConfig = ({
       </Col>
       <Col span={24} className={'flex flex-start items-center'}>
         <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>
-          Automatically track personal identification information such as email
-          and phone number from Form Submissions
+          Automatically record personal identification information such as email
+          and phone number whenever someone submits a form on your website
         </Text>
       </Col>
       <Col span={24}>
@@ -592,7 +598,8 @@ const JSConfig = ({
       <Col span={24} className={'flex flex-start items-center'}>
         <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>
           Automatically track personal identification information such as email
-          and phone number from Form Filled Values
+          and phone number whenever someone fills a form field on your website,
+          even if they do not submit the form.
         </Text>
       </Col>
       <Col span={24}>
@@ -618,9 +625,9 @@ const JSConfig = ({
       </Col>
       <Col span={24} className={'flex flex-start items-center'}>
         <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>
-          Starts discovering available buttons and anchors on the website. After
-          discovery, it will be listed under Click Tracking Configurations and
-          can be enabled for tracking as events.
+          Automatically capture button clicks take place on your website. Once
+          tracked, they will be available under the Click tracking configuration
+          tab and can be turned on to be tracked as events.
         </Text>
       </Col>
       <Col span={24} className='m-0 mt-8'>
