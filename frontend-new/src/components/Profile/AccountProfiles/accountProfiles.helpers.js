@@ -60,8 +60,6 @@ const getTitleText = (text) => (
     color='grey-2'
     weight='bold'
     extraClass='m-0 truncate'
-    truncate
-    charLimit={25}
   >
     {text}
   </Text>
@@ -147,7 +145,11 @@ const getTablePropColumn = ({
 
   if (prop === '$top_enagagement_signals') {
     return {
-      title: <div className={headerClassStr}>Engagement Signals</div>,
+      title: (
+        <div className={headerClassStr} style={{ padding: '16px 16px' }}>
+          Engagement Signals
+        </div>
+      ),
       width: COLUMN_TYPE_PROPS.string.max,
       type: 'actions',
       dataIndex: prop,
