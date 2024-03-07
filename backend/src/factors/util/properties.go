@@ -2324,6 +2324,10 @@ var PAGE_VIEWS_STANDARD_PROPERTIES_NUMERICAL = []string{
 	EP_PAGE_SCROLL_PERCENT,
 }
 
+var SPECIAL_EVENTS_TO_STANDARD_EVENTS = map[string]string {
+	EVENT_NAME_PAGE_VIEW: EVENT_NAME_SESSION,
+}
+
 // USER_PROPERTIES_MERGE_TYPE_INITIAL Properties for which preference will be given to first occurrence while merging.
 // For rest all properties, latest user values will prevail on conflict.
 var USER_PROPERTIES_MERGE_TYPE_INITIAL = [...]string{
