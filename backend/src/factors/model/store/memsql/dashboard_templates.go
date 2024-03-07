@@ -71,20 +71,16 @@ func (store *MemSQL) SearchTemplateWithTemplateID(templateId string) (model.Dash
 	return dashboardTemplate, http.StatusFound
 }
 
-func (store *MemSQL) SearchTemplateWithTemplateDetails(templateID string) (model.DashboardTemplate, int) {
+func (store *MemSQL) SearchTemplateWithType(templateType string) (model.DashboardTemplate, int) {
+
 	db := C.GetServices().Db
-
-	var template model.DashboardTemplate
-	if templateID == "" {
-		log.WithField("Failed to search, Invalid template ID.", templateID)
-		return template, http.StatusBadRequest
-	}
-
-	err := db.Table("dashboard_queries").Where("id = ?", templateID).Find(&template).Error
+	var dashboardTemplate model.DashboardTemplate
+	err := db.Table("dashboard_templates").Where("type = ? AND is_deleted = ?", templateType, false).Find(&dashboardTemplate).Error
 	if err != nil {
-		return template, http.StatusNotFound
+		log.WithField("type", templateType).Error("Failed to fetch the template with given type.")
+		return dashboardTemplate, http.StatusInternalServerError
 	}
-	return template, http.StatusFound
+	return dashboardTemplate, http.StatusFound
 }
 
 func (store *MemSQL) GetAllTemplates() ([]model.DashboardTemplate, int) {
