@@ -445,29 +445,32 @@ func AddSecurityHeadersForAppRoutes() gin.HandlerFunc {
 }
 
 func LogAudit(c *gin.Context) {
-	byteBody, _ := ioutil.ReadAll(c.Request.Body)
-	c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(byteBody))
-
 	logCtx := log.
 		WithField("tag", "AUDIT_LOG").
 		WithField("client_ip", c.ClientIP()).
 		WithField("url", c.Request.URL.Path+"?"+c.Request.URL.RawQuery).
 		WithField("method", c.Request.Method)
 
-	requestBody := make(map[string]interface{}, 0)
-	requestBodyFiltered := make(map[string]interface{}, 0)
-	if err := json.Unmarshal(byteBody, &requestBody); err == nil {
-		for k, v := range requestBody {
-			// disallowed sensitive fields.
-			if k == "password" || k == "token" || k == "private_token" {
-				continue
+	if c.Request.Method != http.MethodGet {
+		byteBody, _ := ioutil.ReadAll(c.Request.Body)
+		c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(byteBody))
+
+		requestBody := make(map[string]interface{}, 0)
+		requestBodyFiltered := make(map[string]interface{}, 0)
+		if err := json.Unmarshal(byteBody, &requestBody); err == nil {
+			for k, v := range requestBody {
+				// disallowed sensitive fields.
+				if k == "password" || k == "token" || k == "private_token" {
+					continue
+				}
+				requestBodyFiltered[k] = v
 			}
-			requestBodyFiltered[k] = v
+		} else {
+			logCtx = logCtx.WithField("json_read_error", err)
 		}
-	} else {
-		logCtx = logCtx.WithField("json_read_error", err)
+
+		logCtx = logCtx.WithField("request", requestBodyFiltered)
 	}
-	logCtx = logCtx.WithField("request", requestBodyFiltered)
 
 	// Add agent information to log, if available.
 	uuid := U.GetScopeByKey(c, SCOPE_LOGGEDIN_AGENT_UUID)
