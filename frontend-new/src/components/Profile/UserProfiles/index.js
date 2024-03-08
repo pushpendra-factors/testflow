@@ -652,10 +652,8 @@ function UserProfiles({
       setFiltersExpanded(false);
       setFiltersDirty(true);
     } else if (newSegmentMode === false) {
-      if (
-        Boolean(timelinePayload?.segment?.name) === true &&
-        timelinePayload?.segment?.query != null
-      ) {
+      // its already opened segment / All People / other sources
+      if (timelinePayload?.segment?.query != null) {
         const filters = getSelectedFiltersFromQuery({
           query: timelinePayload?.segment?.query,
           groupsList: [],
@@ -800,11 +798,15 @@ function UserProfiles({
     setAppliedFilters(selectedFilters);
     setFiltersExpanded(false);
     setFiltersDirty(true);
+
     const reqPayload = getFiltersRequestPayload({
       selectedFilters,
       tableProps: displayTableProps,
       caller: 'user_profiles'
     });
+    reqPayload.search_filter =
+      (listSearchItems && listSearchItems.length > 0 && listSearchItems) || [];
+
     getProfileUsers(activeProject.id, reqPayload);
   }, [
     selectedFilters,
@@ -931,9 +933,17 @@ function UserProfiles({
       values = [];
     }
 
+    const tmpQuery = getFiltersRequestPayload({
+      selectedFilters,
+      displayTableProps,
+      caller: 'user_profiles'
+    }).query;
     const updatedPayload = {
       ...timelinePayload,
-      search_filter: values.map((value) => JSON.parse(value)[0])
+      search_filter: values.map((value) => JSON.parse(value)[0]),
+      segment: {
+        query: tmpQuery
+      }
     };
     setListSearchItems(updatedPayload.search_filter);
     setTimelinePayload(updatedPayload);
@@ -948,45 +958,42 @@ function UserProfiles({
   const onSearchOpen = () => {
     setSearchBarOpen(true);
   };
-
   const renderSearchSection = () => (
-    <ControlledComponent
-      controller={filtersExpanded === false && newSegmentMode === false}
-    >
-      <div className='relative'>
-        <ControlledComponent controller={searchBarOpen}>
-          <div className='flex items-center justify-between'>
-            <Form
-              name='basic'
-              labelCol={{ span: 8 }}
-              wrapperCol={{ span: 16 }}
-              onFinish={handleUsersSearch}
-              autoComplete='off'
-            >
-              <Form.Item name='users'>
-                <Input
-                  size='large'
-                  value={listSearchItems ? listSearchItems.join(', ') : null}
-                  placeholder='Search Users'
-                  style={{ width: '240px', 'border-radius': '5px' }}
-                  prefix={<SVG name='search' size={24} color='#8c8c8c' />}
-                />
-              </Form.Item>
-            </Form>
-            <Button type='text' className='search-btn' onClick={onSearchClose}>
-              <SVG name='close' size={24} color='#8c8c8c' />
-            </Button>
-          </div>
-        </ControlledComponent>
-        <ControlledComponent controller={!searchBarOpen}>
-          <Tooltip title='Search'>
-            <Button type='text' className='search-btn' onClick={onSearchOpen}>
-              <SVG name='search' size={24} color='#8c8c8c' />
-            </Button>
-          </Tooltip>
-        </ControlledComponent>
-      </div>
-    </ControlledComponent>
+    <div className='relative'>
+      <ControlledComponent controller={searchBarOpen}>
+        <div className='flex items-center justify-between'>
+          <Form
+            name='basic'
+            labelCol={{ a39bd0060fcc3105fd6cbdbb7a5045190776af61span: 8 }}
+            wrapperCol={{ span: 16 }}
+            onFinish={handleUsersSearch}
+            autoComplete='off'
+          >
+            <Form.Item name='users'>
+              <Input
+                size='large'
+                defaultValue={
+                  listSearchItems ? listSearchItems.join(', ') : null
+                }
+                placeholder='Search Users'
+                style={{ width: '240px', 'border-radius': '5px' }}
+                prefix={<SVG name='search' size={24} color='#8c8c8c' />}
+              />
+            </Form.Item>
+          </Form>
+          <Button type='text' className='search-btn' onClick={onSearchClose}>
+            <SVG name='close' size={24} color='#8c8c8c' />
+          </Button>
+        </div>
+      </ControlledComponent>
+      <ControlledComponent controller={!searchBarOpen}>
+        <Tooltip title='Search'>
+          <Button type='text' className='search-btn' onClick={onSearchOpen}>
+            <SVG name='search' size={24} color='#8c8c8c' />
+          </Button>
+        </Tooltip>
+      </ControlledComponent>
+    </div>
   );
 
   const renderTablePropsSelect = () => (
