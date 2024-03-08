@@ -148,15 +148,12 @@ function AccountProfiles({
 
   const searchAccountsInputRef = useAutoFocus(searchBarOpen);
 
-  const setAccountPayload = useCallback(
-    (payload) => {
-      dispatch(setAccountPayloadAction(payload));
-      if (payload.segment?.id) {
-        dispatch(setNewSegmentModeAction(false));
-      }
-    },
-    [dispatch]
-  );
+  const setAccountPayload = (payload) => {
+    dispatch(setAccountPayloadAction(payload));
+    if (payload.segment?.id) {
+      dispatch(setNewSegmentModeAction(false));
+    }
+  };
 
   const getAccountPayload = async () => {
     if (segmentID && !accountPayload.isUnsaved) {
@@ -688,8 +685,6 @@ function AccountProfiles({
 
   const handleClearFilters = () => {
     restoreFiltersDefaultState(true);
-    // setAccountPayload({ source: GROUP_NAME_DOMAINS });
-    // history.replace(PathUrls.ProfileAccounts);
   };
   const saveButtonDisabled = useMemo(
     () => !accountPayload?.isUnsaved,
@@ -1021,6 +1016,12 @@ function AccountProfiles({
           setSaveSegmentModal(false);
           setUpdateSegmentModal(false);
           setFiltersDirty(false);
+          setAccountPayload({
+            source: GROUP_NAME_DOMAINS,
+            segment: {},
+            isUnsaved: false
+          });
+          history.replace(PathUrls.ProfileAccounts);
           await getSavedSegments(activeProject.id);
         }
         dispatch(setNewSegmentModeAction(false));

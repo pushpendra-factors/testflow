@@ -53,15 +53,15 @@ export const getGroupList = (groupOptions) => {
   return groups;
 };
 
-const getTitleText = (text) => (
+const getTitleText = ({ title, extraClass = '' }) => (
   <Text
     type='title'
     level={7}
     color='grey-2'
     weight='bold'
-    extraClass='m-0 truncate'
+    extraClass={`m-0 truncate ${extraClass}`}
   >
-    {text}
+    {title}
   </Text>
 );
 
@@ -114,7 +114,7 @@ const getTablePropColumn = ({
 
   if (prop === '$engagement_level') {
     return {
-      title: getTitleText(propDisplayName),
+      title: getTitleText({ title: propDisplayName }),
       width:
         COLUMN_TYPE_PROPS[ACCOUNTS_TABLE_COLUMN_TYPES[prop]?.Type || 'string']
           ?.min || 264,
@@ -145,11 +145,7 @@ const getTablePropColumn = ({
 
   if (prop === '$top_enagagement_signals') {
     return {
-      title: (
-        <div className={headerClassStr} style={{ padding: '16px 16px' }}>
-          Engagement Signals
-        </div>
-      ),
+      title: getTitleText({ title: propDisplayName, extraClass: 'p-4' }),
       width: COLUMN_TYPE_PROPS.string.max,
       type: 'actions',
       dataIndex: prop,
@@ -201,7 +197,7 @@ const getTablePropColumn = ({
   }
 
   return {
-    title: getTitleText(propDisplayName),
+    title: getTitleText({ title: propDisplayName }),
     dataIndex: prop,
     key: prop,
     width:
