@@ -43,6 +43,8 @@ var tagEnum = map[string]string{
 	"product_reference_pages.show":                U.GROUP_EVENT_NAME_G2_REFERENCE,
 	"deals.show":                                  U.GROUP_EVENT_NAME_G2_DEAL,
 	"deals.index":                                 U.GROUP_EVENT_NAME_G2_DEAL,
+	"ad.sponsored.product_left_sidebar":           U.GROUP_EVENT_NAME_G2_SPONSORED,
+	"ad.sponsored.product_page_header":            U.GROUP_EVENT_NAME_G2_SPONSORED,
 }
 
 type EventStreamResponseStruct struct {
