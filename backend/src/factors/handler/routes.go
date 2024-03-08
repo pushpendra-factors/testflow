@@ -60,8 +60,8 @@ func InitAppRoutes(r *gin.Engine) {
 
 	r.Use(mid.SkipAPIWritesIfDisabled())
 	r.GET(routePrefix+"/health", mid.MonitoringAPIMiddleware(), Monitoring)
-	r.POST(routePrefix+"/accounts/signup", SignUp)
-	r.POST(routePrefix+"/agents/signin", Signin)
+	r.POST(routePrefix+"/accounts/signup", mid.LogAuditMid(), SignUp)
+	r.POST(routePrefix+"/agents/signin", mid.LogAuditMid(), Signin)
 	r.GET(routePrefix+"/agents/signout", mid.SetLoggedInAgent(), Signout)
 	r.POST(routePrefix+"/agents/forgotpassword", AgentGenerateResetPasswordLinkEmail)
 	r.POST(routePrefix+"/agents/setpassword", mid.ValidateAgentSetPasswordRequest(), AgentSetPassword)
@@ -99,9 +99,9 @@ func InitAppRoutes(r *gin.Engine) {
 
 	r.GET(routePrefix+"/"+ROUTE_PROJECTS_ROOT_V1+"/custom_projects", mid.SetLoggedInAgentInternalOnly(), V1.GetCustomPlanProjectsHandler)
 
-	r.POST("/billing/hooks/subscription/hbeqjomjhxjvx2z", V1.BillingSubscriptionChangedWebhookListner) // random string as a part of security measure
-	r.POST("/billing/hooks/invoice/ksh4jcjw245", V1.BillingInvoiceGeneratedWebhookListner)             // random string as a part of security measure
-	r.GET("/billing/upgrade/callback", V1.BillingUpgradeCallbackHandler)
+	r.POST("/billing/hooks/subscription/hbeqjomjhxjvx2z", mid.LogAuditMid(), V1.BillingSubscriptionChangedWebhookListner) // random string as a part of security measure
+	r.POST("/billing/hooks/invoice/ksh4jcjw245", mid.LogAuditMid(), V1.BillingInvoiceGeneratedWebhookListner)             // random string as a part of security measure
+	r.GET("/billing/upgrade/callback", mid.LogAuditMid(), V1.BillingUpgradeCallbackHandler)
 	// Feature Gates Auth Group
 	// authRouteGroup := r.Group(routePrefix + ROUTE_PROJECTS_ROOT)
 	// authRouteGroup.Use(mid.SetLoggedInAgent())
