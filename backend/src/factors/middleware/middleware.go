@@ -717,6 +717,9 @@ func MonitoringAPIMiddleware() gin.HandlerFunc {
 		statusCode, errMessage1, agent := DefineSetLoggedInAgentInternalOnly(c)
 		if statusCode == http.StatusOK {
 			U.SetScope(c, SCOPE_LOGGEDIN_AGENT_UUID, agent.UUID)
+			U.SetScope(c, SCOPE_LOGGEDIN_AGENT_EMAIL, agent.Email)
+			LogAudit(c)
+
 			c.Next()
 			return
 		}
@@ -834,6 +837,9 @@ func ValidateAgentActivationRequest() gin.HandlerFunc {
 		}
 
 		U.SetScope(c, SCOPE_LOGGEDIN_AGENT_UUID, agent.UUID)
+		U.SetScope(c, SCOPE_LOGGEDIN_AGENT_EMAIL, agent.Email)
+		LogAudit(c)
+
 		c.Next()
 	}
 }
@@ -850,6 +856,9 @@ func ValidateAgentSetPasswordRequest() gin.HandlerFunc {
 			return
 		}
 		U.SetScope(c, SCOPE_LOGGEDIN_AGENT_UUID, agent.UUID)
+		U.SetScope(c, SCOPE_LOGGEDIN_AGENT_EMAIL, agent.Email)
+		LogAudit(c)
+
 		c.Next()
 	}
 }
@@ -878,6 +887,7 @@ func ValidateAccessToSharedEntity(entityType int) gin.HandlerFunc {
 			}
 			agentId = agent.UUID
 			U.SetScope(c, SCOPE_LOGGEDIN_AGENT_UUID, agent.UUID)
+			U.SetScope(c, SCOPE_LOGGEDIN_AGENT_EMAIL, agent.Email)
 		}
 
 		// Check whether is part of the project, if yes than access allowed directly
