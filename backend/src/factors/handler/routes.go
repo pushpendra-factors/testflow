@@ -63,7 +63,7 @@ func InitAppRoutes(r *gin.Engine) {
 	r.POST(routePrefix+"/accounts/signup", mid.LogAuditMid(), SignUp)
 	r.POST(routePrefix+"/agents/signin", mid.LogAuditMid(), Signin)
 	r.GET(routePrefix+"/agents/signout", mid.SetLoggedInAgent(), Signout)
-	r.POST(routePrefix+"/agents/forgotpassword", AgentGenerateResetPasswordLinkEmail)
+	r.POST(routePrefix+"/agents/forgotpassword", mid.LogAuditMid(), AgentGenerateResetPasswordLinkEmail)
 	r.POST(routePrefix+"/agents/setpassword", mid.ValidateAgentSetPasswordRequest(), AgentSetPassword)
 	r.PUT(routePrefix+"/agents/updatepassword", mid.SetLoggedInAgent(), UpdateAgentPassword)
 	r.POST(routePrefix+"/agents/activate", mid.ValidateAgentActivationRequest(), AgentActivate)
@@ -118,6 +118,7 @@ func InitAppRoutes(r *gin.Engine) {
 	// Shareable link routes
 	shareRouteGroup := r.Group(routePrefix + ROUTE_PROJECTS_ROOT)
 	shareRouteGroup.Use(mid.ValidateAccessToSharedEntity(M.ShareableURLEntityTypeQuery))
+	shareRouteGroup.Use(mid.LogAuditMid())
 
 	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/query", responseWrapper(EventsQueryHandler))
 	shareRouteGroup.POST("/:project_id/query", responseWrapper(QueryHandler))
