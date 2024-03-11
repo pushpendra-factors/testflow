@@ -1546,7 +1546,7 @@ func sendGetProfileAccountRequest(r *gin.Engine, projectId int64, agent *model.A
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
 	}
-	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/v1/profiles/accounts?score=true&debug=true&download=true", projectId)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/v1/profiles/accounts?score=true&debug=true&download=true&user_marker=true", projectId)).
 		WithPostParams(payload).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
@@ -3249,6 +3249,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 			Properties:   accProps,
 			IsGroupUser:  &groupUser,
 			Group3UserID: domainAccounts[i],
+			Group3ID:     fmt.Sprintf("%s@domainid.com", companyNames[i]),
 			LastEventAt:  &lastEventTime,
 		})
 		account, errCode := store.GetStore().GetUser(project.ID, createdUserID)
@@ -3536,6 +3537,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 				},
 			},
 			Caller: "account_profiles",
+			Source: "$domains",
 		},
 	}
 
@@ -4596,7 +4598,7 @@ func TestAllAccounts(t *testing.T) {
 	// Search a Hubspot Company
 	payload = model.TimelinePayload{
 		Query: model.Query{
-			Source: "$hubspot_company",
+			Source: "$domains",
 		},
 		SearchFilter: []string{"hey"},
 	}
@@ -4608,7 +4610,7 @@ func TestAllAccounts(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, len(resp), 1)
 	assert.Contains(t, resp[0].HostName, "hey")
-	assert.Equal(t, resp[0].Name, "Heyflow")
+	assert.Contains(t, resp[0].Name, "heyflow")
 
 	// Search a Domain
 	payload = model.TimelinePayload{
@@ -4854,7 +4856,7 @@ func TestAccountsConsumingMarker(t *testing.T) {
 					Property:  "$country",
 					Operator:  "equals",
 					Value:     "US",
-					LogicalOp: "OR",
+					LogicalOp: "AND",
 				},
 				{
 					Entity:    "user_group",
@@ -4862,7 +4864,7 @@ func TestAccountsConsumingMarker(t *testing.T) {
 					Property:  "$country",
 					Operator:  "contains",
 					Value:     "India",
-					LogicalOp: "AND",
+					LogicalOp: "OR",
 				},
 				{
 					Entity:    "user_group",
@@ -4941,7 +4943,7 @@ func TestAccountsConsumingMarker(t *testing.T) {
 	}
 
 	// adding a search filter (performed event segment) and additional filters
-	today := time.Now()
+	today := time.Now().UTC()
 	dayOfWeek := today.Weekday()
 	payload = model.TimelinePayload{
 		SegmentId: segmentID,
