@@ -71,7 +71,8 @@ func EventsPerformedCheck(projectID int64, segmentId string, eventNameIDsMap map
 
 	result, status := GetStore().CheckIfUserPerformedGivenEvents(query, params)
 	if status != http.StatusFound {
-		log.WithFields(log.Fields{"project_id": projectID, "user_id": userID}).Error("Error while validating for performed events for segment ", segmentId)
+		log.WithFields(log.Fields{"project_id": projectID, "user_id": userID, "segment_id": segmentId}).
+			Error("Error while validating for performed events")
 	}
 
 	if segmentQuery.EventsCondition == model.EventCondAllGivenEvent {
@@ -85,6 +86,81 @@ func EventsPerformedCheck(projectID int64, segmentId string, eventNameIDsMap map
 	}
 
 	return isMatched
+}
+
+func IsRuleMatchedAllAccounts(projectID int64, segment model.Query, decodedProperties []map[string]interface{}, userArr []model.User,
+	segmentId string, domId string, eventNameIDsMap map[string]string) bool {
+	// isMatched = all rules matched (a or b) AND (c or d)
+	isMatched := false
+
+	if (segment.GlobalUserProperties == nil || len(segment.GlobalUserProperties) == 0) &&
+		(segment.EventsWithProperties != nil && len(segment.EventsWithProperties) > 0) {
+		isMatched = PerformedEventsCheck(projectID, segmentId, eventNameIDsMap, &segment, domId, userArr)
+		return isMatched
+	}
+
+	groupedProperties := model.GetPropertiesGrouped(segment.GlobalUserProperties)
+	for index, currentGroupedProperties := range groupedProperties {
+		// validity for each group like (a or b ) AND (c or d)
+		groupedPropsMatched := false
+		for _, p := range currentGroupedProperties {
+			isValueFound := CheckPropertyInAllUsers(projectID, p, decodedProperties, userArr)
+			if isValueFound {
+				groupedPropsMatched = true
+				break
+			}
+		}
+		if index == 0 {
+			isMatched = groupedPropsMatched
+			continue
+		}
+		isMatched = groupedPropsMatched && isMatched
+	}
+
+	if isMatched && (segment.EventsWithProperties != nil && len(segment.EventsWithProperties) > 0) {
+		isMatched = PerformedEventsCheck(projectID, segmentId, eventNameIDsMap, &segment, domId, userArr)
+	}
+	return isMatched
+}
+
+func PerformedEventsCheck(projectID int64, segmentID string, eventNameIDsMap map[string]string,
+	segmentQuery *model.Query, userID string, userArr []model.User) bool {
+
+	isPerformedEvent, isAllAccounts := false, false
+
+	isAllAccounts = (segmentQuery.Caller == model.PROFILE_TYPE_ACCOUNT)
+	isPerformedEvent = EventsPerformedCheck(projectID, segmentID, eventNameIDsMap, segmentQuery, userID, isAllAccounts, userArr)
+
+	return isPerformedEvent
+}
+
+func CheckPropertyInAllUsers(projectId int64, p model.QueryProperty, decodedProperties []map[string]interface{}, userArr []model.User) bool {
+	isValueFound := false
+	for index, user := range userArr {
+		// skip for group user if entity is user_group or entity is user_g and is not a group user
+		if (p.Entity == model.PropertyEntityUserGroup && (user.IsGroupUser != nil && *user.IsGroupUser)) ||
+			(p.Entity == model.PropertyEntityUserGlobal && (user.IsGroupUser == nil || !*user.IsGroupUser)) {
+			continue
+		}
+		isValueFound = CheckPropertyOfGivenType(projectId, p, &decodedProperties[index])
+
+		// check for negative filters
+		if (p.Operator == model.NotContainsOpStr && p.Value != model.PropertyValueNone) ||
+			(p.Operator == model.ContainsOpStr && p.Value == model.PropertyValueNone) ||
+			(p.Operator == model.NotEqualOpStr && p.Value != model.PropertyValueNone) ||
+			(p.Operator == model.EqualsOpStr && p.Value == model.PropertyValueNone) ||
+			(p.Operator == model.NotInList && p.Value != model.PropertyValueNone) {
+			if !isValueFound {
+				return isValueFound
+			}
+			continue
+		}
+
+		if isValueFound {
+			return isValueFound
+		}
+	}
+	return isValueFound
 }
 
 // SELECT COUNT(event_name_id) FROM events
@@ -422,4 +498,44 @@ func checkDateTypeProperty(segmentRule model.QueryProperty, properties *map[stri
 		propertyExists = false
 	}
 	return propertyExists
+}
+
+func (store *MemSQL) GetAllPropertiesForDomain(projectID int64, domainGroupId int,
+	domainID string, userCount *int64) ([]model.User, int) {
+
+	userStmnt := "AND (is_group_user IS NULL OR is_group_user=0) ORDER BY properties_updated_timestamp DESC LIMIT 100"
+	grpUserStmnt := "AND is_group_user=1 ORDER BY properties_updated_timestamp DESC LIMIT 50"
+
+	// fetching top 100 non group users
+	users, status := store.GetUsersAssociatedToDomainList(projectID, domainGroupId, domainID, userStmnt)
+
+	if status == http.StatusInternalServerError {
+		log.WithField("project_id", projectID).Error("Unable to find users for domain ", domainID)
+		return []model.User{}, status
+	}
+
+	// fetching top 50 group users
+	grpUsers, status := store.GetUsersAssociatedToDomainList(projectID, domainGroupId, domainID, grpUserStmnt)
+
+	if status == http.StatusInternalServerError || (len(users) == 0 && len(grpUsers) == 0) {
+		log.WithField("project_id", projectID).Error("Unable to find users for domain ", domainID)
+		return []model.User{}, status
+	}
+
+	if len(grpUsers) > 0 {
+		users = append(users, grpUsers...)
+	}
+
+	*userCount = *userCount + int64(len(users))
+
+	// appending domain details to process domain based filters
+	domDetails, status := store.GetDomainDetailsByID(projectID, domainID, domainGroupId)
+
+	if status != http.StatusFound {
+		log.WithField("project_id", projectID).Error("Unable to find details for domain %s", domainID)
+	} else {
+		users = append(users, domDetails)
+	}
+
+	return users, http.StatusFound
 }
