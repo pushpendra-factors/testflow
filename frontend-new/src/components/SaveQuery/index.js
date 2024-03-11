@@ -361,7 +361,7 @@ function SaveQuery({
           queryId = res.data.id;
 
           dispatch({ type: QUERY_CREATED, payload: res.data });
-          setNavigatedFromAnalyse(res?.data);
+          if (setNavigatedFromAnalyse) setNavigatedFromAnalyse(res?.data);
           setQuerySaved({ name: title, id: res.data.id });
 
           if (queryType === QUERY_TYPE_EVENT && res?.data?.id_text) {
