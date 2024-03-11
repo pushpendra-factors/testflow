@@ -519,9 +519,6 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		if _, exists := alert.Message.MessageProperty[model.ETA_DOMAIN_GROUP_USER_ID]; exists {
 			groupDomainUserID := alert.Message.MessageProperty[model.ETA_DOMAIN_GROUP_USER_ID].(string)
 			accountUrl = BuildAccountURL(groupDomainUserID)
-			if key.ProjectID == 12384898990000023 {
-				logCtx.Info(groupDomainUserID, accountUrl)
-			}
 			delete(alert.Message.MessageProperty, model.ETA_DOMAIN_GROUP_USER_ID)
 		}
 	}
