@@ -951,6 +951,9 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesAndFieldsTagMap(event *mode
 
 	if alert.EventLevel == model.EventLevelAccount {
 		msgPropMap[model.ETA_DOMAIN_GROUP_USER_ID] = groupDomainUserID
+		if event.ProjectId == 12384898990000023 {
+			log.WithFields(logFields).Info(groupDomainUserID)
+		}
 	}
 
 	breakdownPropMap := make(map[string]interface{}, 0)
