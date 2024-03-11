@@ -1,6 +1,6 @@
 import React from 'react';
 import classnames from 'classnames';
-import _ from 'lodash';
+import isArray from 'lodash/isArray';
 import { Typography, Tooltip } from 'antd';
 
 const { Title, Paragraph } = Typography;
@@ -62,7 +62,7 @@ class Text extends React.Component {
     const isSizeDefined = level || size;
 
     //checks if text truncation and is child is string. ignores if its array.
-    const isTextTruncatePossible = truncate && !_.isArray(children);
+    const isTextTruncatePossible = truncate && !isArray(children);
 
     const isOverFlow = children?.length > charLimit;
 
