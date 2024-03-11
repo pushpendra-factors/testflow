@@ -74,6 +74,7 @@ import MomentTz from 'Components/MomentTz';
 import PageSuspenseLoader from 'Components/SuspenseLoaders/PageSuspenseLoader';
 import SaveQuery from 'Components/SaveQuery';
 import { getChartChangedKey } from 'Views/CoreQuery/AnalysisResultsPage/analysisResultsPage.helpers';
+import _ from 'lodash';
 
 const CoreQuery = () => {
   // Query params
@@ -129,7 +130,7 @@ const CoreQuery = () => {
   }, [query_id, query_type, savedQueries]);
 
   useEffect(() => {
-    const qState = coreQueryState.getCopy();
+    const qState = _.cloneDeep(coreQueryState);
     qState.queryOptions = {
       ...qState.queryOptions,
       groupBy
@@ -609,11 +610,14 @@ const CoreQuery = () => {
     );
   };
 
-  const setQueries = (q: any[]) => {
-    const qState = coreQueryState.getCopy();
-    qState.queries = q;
-    setCoreQueryState(qState);
-  };
+  const setQueries = useCallback(
+    (q: any[]) => {
+      const qState = coreQueryState.getCopy();
+      qState.queries = q;
+      setCoreQueryState(qState);
+    },
+    [setCoreQueryState, coreQueryState]
+  );
 
   const setQueryOptions = (opts: {} | any) => {
     const qState = coreQueryState.getCopy();
@@ -779,12 +783,10 @@ const CoreQuery = () => {
       <div
         id='app-header'
         className={cx('bg-white z-50 flex-col  px-8 w-full', {
-          fixed: coreQueryState.requestQuery
+          fixed: true
         })}
         style={{
-          borderBottom: coreQueryState.requestQuery
-            ? '1px solid lightgray'
-            : 'none'
+          borderBottom: true ? '1px solid lightgray' : 'none'
         }}
       >
         <div className='items-center flex justify-between w-full pt-3 pb-3'>
@@ -894,18 +896,9 @@ const CoreQuery = () => {
     if (coreQueryState.loading) {
       return (
         <>
-          <div className='flex justify-center flex-col items-center w-full'>
-            <div className='w-full flex center'>
-              <div
-                id='app-header'
-                className='bg-white z-50 flex-col  px-8 w-full'
-              >
-                {renderEmptyHeader()}
-                {renderQueryComposerNew()}
-              </div>
-            </div>
-            <div className='mt-24 px-8'>{renderSpinner()}</div>
-          </div>
+          {renderEmptyHeader()}
+          {renderQueryComposerNew()}
+          <div className='mt-24 px-8'>{renderSpinner()}</div>
         </>
       );
     }
