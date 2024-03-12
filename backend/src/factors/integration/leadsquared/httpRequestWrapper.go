@@ -5,11 +5,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
 
-func HttpRequestWrapper(rootUrl string, endpoint string, headers map[string]string, requestBody interface{}, requestMethod string, urlParams map[string]string) (int, interface{}, error) {
+func HttpRequestWrapper(rUrl string, endpoint string, headers map[string]string, requestBody interface{}, requestMethod string, urlParams map[string]string) (int, interface{}, error) {
+	rootUrl := rUrl
+	if !strings.HasPrefix(rUrl, "http") {
+		rootUrl = "https://" + rUrl
+	}
+
 	var reqBody []byte
 	var err error
 	var errResp error
