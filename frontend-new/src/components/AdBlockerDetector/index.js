@@ -1,4 +1,4 @@
-import { InfoCircleFilled, InfoCircleOutlined } from '@ant-design/icons';
+import { InfoCircleFilled } from '@ant-design/icons';
 import { notification } from 'antd';
 import React, { useEffect, useState } from 'react';
 const showAdBlocker = () => {

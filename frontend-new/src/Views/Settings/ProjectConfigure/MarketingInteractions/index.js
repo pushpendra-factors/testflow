@@ -4,8 +4,7 @@ import {
 } from 'antd';
 import { connect } from 'react-redux';
 import { Text, SVG } from 'factorsComponents';
-import { scaleLinear } from 'd3-scale';
-import { ExclamationCircleOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { ExclamationCircleOutlined } from '@ant-design/icons';
 import { udpateProjectDetails } from 'Reducers/global';
 
 const { confirm } = Modal;

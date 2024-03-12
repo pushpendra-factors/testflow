@@ -1,14 +1,13 @@
-import { Button } from 'antd';
-import Modal from 'antd/lib/modal/Modal';
+import { Button, Modal } from 'antd';
 import React from 'react';
-import style from './index.module.scss';
 import cx from 'classnames';
 import { ProfileUpgradeModalType } from 'Context/types';
 import { SVG, Text } from 'Components/factorsComponents';
-import AccountTableImage from '../../assets/images/account_table.png';
-import TimelineTableImage from '../../assets/images/timeline_table.png';
 import usePlanUpgrade from 'hooks/usePlanUpgrade';
 import { FEATURES } from 'Constants/plans.constants';
+import AccountTableImage from '../../assets/images/account_table.png';
+import TimelineTableImage from '../../assets/images/timeline_table.png';
+import style from './index.module.scss';
 
 function UpgradeModal({ visible, onCancel, variant }: UpgradeModalProps) {
   const { handlePlanUpgradeClick } = usePlanUpgrade();
@@ -29,7 +28,7 @@ function UpgradeModal({ visible, onCancel, variant }: UpgradeModalProps) {
             [style['background-image-top-left-timeline']]:
               variant === 'timeline'
           })}
-        ></div>
+        />
         <div
           className={cx({
             [style['background-image-bottom-right-account']]:
@@ -37,7 +36,7 @@ function UpgradeModal({ visible, onCancel, variant }: UpgradeModalProps) {
             [style['background-image-bottom-right-timeline']]:
               variant === 'timeline'
           })}
-        ></div>
+        />
       </div>
       <Button
         type='text'
@@ -47,19 +46,10 @@ function UpgradeModal({ visible, onCancel, variant }: UpgradeModalProps) {
         onClick={onCancel}
       />
       <div>
-        <Text
-          type={'title'}
-          level={2}
-          weight={'bold'}
-          extraClass={'m-0 text-center'}
-        >
+        <Text type='title' level={2} weight='bold' extraClass='m-0 text-center'>
           Upgrade to access this feature{' '}
         </Text>
-        <Text
-          type={'paragraph'}
-          extraClass={'m-0 mt-2 text-center'}
-          color='grey'
-        >
+        <Text type='paragraph' extraClass='m-0 mt-2 text-center' color='grey'>
           Looks like your current plan doesn't include{' '}
           {variant === 'timeline' ? 'Account Activity' : 'Account scoring'}{' '}
           <span role='img' aria-label='sad'>

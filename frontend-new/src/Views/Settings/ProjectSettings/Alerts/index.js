@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { connect } from 'react-redux';
 import {
   Row,
@@ -15,8 +15,7 @@ import {
   Space
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
-import { MoreOutlined } from '@ant-design/icons';
-import _ from 'lodash';
+import { MoreOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import {
   fetchAlerts,
   deleteAlert,
@@ -28,9 +27,7 @@ import {
 import KPIBasedAlert from './KPIBasedAlert';
 import EventBasedAlert from './EventBasedAlert';
 import styles from './index.module.scss';
-import { ExclamationCircleOutlined } from '@ant-design/icons';
 import { fetchEventNames, getGroups } from 'Reducers/coreQuery/middleware';
-import { useParams } from 'react-router-dom';
 import useQuery from 'hooks/useQuery';
 import TableSearchAndRefresh from 'Components/TableSearchAndRefresh';
 

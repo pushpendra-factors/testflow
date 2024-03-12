@@ -7,6 +7,7 @@ import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
 import styles from '../index.module.scss';
 import { processProperties } from 'Utils/dataFormatter';
+import _ from 'lodash'
 
 function SelectKPIBlock({ kpi, header, index, ev, attrConfig, setAttrConfig }) {
   const [isDDVisible, setDDVisible] = useState(false);
