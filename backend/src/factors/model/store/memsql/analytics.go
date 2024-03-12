@@ -357,6 +357,8 @@ func GetValueListFromFile(projectID int64, property model.QueryProperty) string 
 	}
 
 	for _, value := range valuesInFile {
+		value = strings.ReplaceAll(value, "'", "\\'")
+		value = strings.ReplaceAll(value, `"`, "")
 		if valueListString == "" {
 			valueListString = fmt.Sprintf(`'%s'`, value)
 		} else {
