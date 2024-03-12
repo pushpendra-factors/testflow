@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import scripts
+import signal
 from lib.adwords.oauth_service.fetch_service import FetchService
 from lib.utils.csv import CsvUtil
 from .base_job import BaseJob
@@ -68,8 +69,14 @@ class ReportsFetch(BaseJob):
         # Usage - 1.Extract from system into in memory. 2. Message passing for extract-load task.
         self._rows = None
 
-
+    def handle(self, signum, frame):
+        raise Exception("Function timeout after 15 mins")
+    
     def extract_task(self):
+        # timeout this function after 15 mins
+        signal.signal(signal.SIGALRM, self.handle)
+        signal.alarm(900)
+        # 
         self.log_status_of_job("extract", "started", self._next_timestamp)
         records_metric, latency_metric = 0, 0
         start_time = datetime.now()
@@ -77,7 +84,6 @@ class ReportsFetch(BaseJob):
         str_timestamp = '"' + str_timestamp[0:4] + "-" + str_timestamp[4:6] + "-" + str_timestamp[6:8] + '"'
         during = str_timestamp + " AND " + str_timestamp
         
-        self.log_status_of_job("query builder", "started", self._next_timestamp)
         if self.REPORT == "click_view":
             report_query = (QueryBuilder()
                                     .Select(self.EXTRACT_FIELDS)
@@ -93,34 +99,23 @@ class ReportsFetch(BaseJob):
                                     # .Limit(1)
                                     .During(during)
                                     .Build())
-        self.log_status_of_job("query builder", "completed", self._next_timestamp)
         
-        self.log_status_of_job("fetch service", "started", self._next_timestamp)
         ads_service = FetchService(scripts.adwords.CONFIG.ADWORDS_OAUTH).new_get_service(
                                                     "GoogleAdsService", self._refresh_token, self._manager_id)
-        self.log_status_of_job("fetch service", "completed", self._next_timestamp)
-        
-        self.log_status_of_job("search stream", "started", self._next_timestamp)
+
         stream = ads_service.search_stream(customer_id=self._customer_acc_id, query=report_query)
-        self.log_status_of_job("search stream", "completed", self._next_timestamp)
         
-        self.log_status_of_job("stream to csv", "started", self._next_timestamp)
         report = self.MAX_VERSION + CsvUtil.stream_to_csv(
                                             self.EXTRACT_FIELDS, self.HEADERS_VMAX, stream)
-        self.log_status_of_job("stream to csv", "completed", self._next_timestamp)
 
         end_time = datetime.now()
         latency_metric = (end_time - start_time).total_seconds()
-        self.log_status_of_job("upload to in memory", "started", self._next_timestamp)
         self.update_to_in_memory_metrics(EXTRACT, REQUEST_COUNT, self._project_id, self._doc_type, 1)
         self.update_to_in_memory_metrics(EXTRACT, LATENCY_COUNT, self._project_id, self._doc_type, latency_metric)
-        self.log_status_of_job("upload to in memory", "completed", self._next_timestamp)
 
         # Load Phase
         start_time = datetime.now()
-        self.log_status_of_job("load to cloud", "started", self._next_timestamp)
         self.write_after_extract(report)
-        self.log_status_of_job("load to cloud", "completed", self._next_timestamp)
         end_time = datetime.now()
         latency_metric = (end_time - start_time).total_seconds()
         self.update_to_file_metrics(EXTRACT, LATENCY_COUNT, self._project_id, self._doc_type, latency_metric)
@@ -195,6 +190,10 @@ class ReportsFetch(BaseJob):
 
     def transform_and_load_task(self, ran_extract):
         for timestamp in self._extract_load_timestamps:
+            # timeout this function after 15 mins
+            signal.signal(signal.SIGALRM, self.handle)
+            signal.alarm(900)
+            #
             # Extract Phase
             self.log_status_of_job("load", "started", timestamp)
             start_time = datetime.now()

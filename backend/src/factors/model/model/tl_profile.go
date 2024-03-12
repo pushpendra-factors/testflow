@@ -3,6 +3,7 @@ package model
 import (
 	"encoding/base64"
 	U "factors/util"
+	"fmt"
 	"regexp"
 	"strings"
 	"time"
@@ -499,4 +500,43 @@ var ExcludedEventsBool = map[string]bool{
 	U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED:     true,
 	U.GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED: true,
 	U.GROUP_EVENT_NAME_G2_ALL:                         true,
+}
+
+func TransformPayloadForInProperties(globalUserProperties []QueryProperty) []QueryProperty {
+	for i, p := range globalUserProperties {
+		if v, exist := IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]; exist {
+			v.LogicalOp = p.LogicalOp
+			if p.Value == "true" {
+				globalUserProperties[i] = v
+			} else if p.Value == "false" || p.Value == "$none" {
+				v.Operator = EqualsOpStr
+				v.Value = "$none"
+				globalUserProperties[i] = v
+			}
+		}
+	}
+	return globalUserProperties
+}
+
+func FindUserGroupByID(u User, id int) (string, error) {
+	switch id {
+	case 1:
+		return u.Group1ID, nil
+	case 2:
+		return u.Group2ID, nil
+	case 3:
+		return u.Group3ID, nil
+	case 4:
+		return u.Group4ID, nil
+	case 5:
+		return u.Group5ID, nil
+	case 6:
+		return u.Group6ID, nil
+	case 7:
+		return u.Group7ID, nil
+	case 8:
+		return u.Group8ID, nil
+	default:
+		return "", fmt.Errorf("no matching group for ID %d", id)
+	}
 }

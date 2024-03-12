@@ -699,8 +699,8 @@ type Model interface {
 	AssociateUserDomainsGroup(projectID int64, requestUserID string, requestGroupName, requestGroupUserID string) int
 	GetAssociatedDomainForUser(projectID int64, userID string, isAnonymous bool) (string, error)
 	GetUsersAssociatedToDomainList(projectID int64, domainGroupID int, domainID string, userStmnt string) ([]model.User, int)
-	GetDomainDetailsByID(projectID int64, id string) (model.User, int)
-	GetAllDomainsByProjectID(projectID int64, domainID int, limitVal int) ([]string, int)
+	GetDomainDetailsByID(projectID int64, id string, domGroupID int) (model.User, int)
+	GetAllDomainsByProjectID(projectID int64, domainID int, limitVal int, offSet int, searchFilter []string) ([]string, int)
 	GetLatestUpatedDomainsByProjectID(projectID int64, domainGroupID int, fromTime time.Time, limitVal int) ([]string, int)
 	UpdateAssociatedSegments(projectID int64, id string, associatedSegments map[string]model.AssociatedSegments) (int, error)
 	GetNonGroupUsersUpdatedAtGivenHour(projectID int64, fromTime time.Time) ([]model.User, int)
@@ -969,7 +969,13 @@ type Model interface {
 
 	// Timeline consuming segment_marker
 	GetMarkedDomainsListByProjectId(projectID int64, payload model.TimelinePayload, downloadLimitGiven bool) ([]model.Profile, int, string)
-
+	GetAllPropertiesForDomain(projectID int64, domainGroupId int, domainID string, userCount *int64) ([]model.User, int)
+	GetDomainsListFromMarker(projectID int64, payload model.TimelinePayload,
+		domainGroupID int) ([]model.Profile, int, string)
+	GetPreviewDomainsListByProjectId(projectID int64, payload model.TimelinePayload,
+		domainGroupID int) ([]model.Profile, int, string)
+	GetPreviewDomainsListByProjectIdPerRun(projectID int64, payload model.TimelinePayload, domainGroupID int,
+		eventNameIDsMap map[string]string, userCount *int64, offSet int) ([]model.Profile, bool, int, string)
 	// segment
 	CreateSegment(projectId int64, segment *model.SegmentPayload) (int, error)
 	GetAllSegments(projectId int64) (map[string][]model.Segment, int)

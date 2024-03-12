@@ -886,7 +886,7 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesAndFieldsTagMap(event *mode
 		isFieldsTagPresent = true
 	}
 	var groupDomainUserID string
-	if isGroupPropertyRequired || isFieldsTagPresent {
+	if alert.EventLevel == model.EventLevelAccount || isGroupPropertyRequired || isFieldsTagPresent {
 		_, groupDomainUserID = store.GetGroupPropertiesAndDomainGroupUserID(event.ProjectId, event.UserId)
 	}
 

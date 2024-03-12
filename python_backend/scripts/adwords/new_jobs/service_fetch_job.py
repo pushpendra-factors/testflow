@@ -4,6 +4,7 @@ from lib.utils.json import JsonUtil
 from lib.utils.time import TimeUtil
 
 import scripts
+import signal
 from lib.adwords.oauth_service.fetch_service import FetchService
 from lib.utils.csv import CsvUtil
 from .base_job import BaseJob
@@ -35,8 +36,15 @@ class ServicesFetch(BaseJob):
         super().__init__(next_info)
         # Usage - 1.Extract from system into in memory. 2. Message passing for extract-load task.
         self._rows = None
+    
+    def handle(self, signum, frame):
+        raise Exception("Function timeout after 15 mins")
 
     def extract_task(self):
+        # timeout this function after 15 mins
+        signal.signal(signal.SIGALRM, self.handle)
+        signal.alarm(900)
+        # 
         if self.PROCESS_JOB:
             # Extract Phase
             self.log_status_of_job("extract", "started", self._next_timestamp)
@@ -72,6 +80,10 @@ class ServicesFetch(BaseJob):
     def transform_and_load_task(self, ran_extract):
         if self.PROCESS_JOB:
             for timestamp in self._extract_load_timestamps:
+                # timeout this function after 15 mins
+                signal.signal(signal.SIGALRM, self.handle)
+                signal.alarm(900)
+                # 
                 self.log_status_of_job("load", "started", timestamp)
                 start_time = datetime.now()
                 rows, self.current_version = self.read_for_load(ran_extract, timestamp)
