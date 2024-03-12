@@ -47,6 +47,7 @@ function ContactDetails({
   getProfileUserDetails,
   userPropertiesV2,
   eventPropertiesV2,
+  getEventPropertiesV2,
   eventNamesMap
 }) {
   const history = useHistory();

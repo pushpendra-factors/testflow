@@ -5,6 +5,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	C "factors/config"
 	"factors/handler/helpers"
@@ -34,6 +35,7 @@ const SCOPE_PROJECT_TOKEN = "projectToken"
 const SCOPE_PROJECT_PRIVATE_TOKEN = "projectPrivateToken"
 const SCOPE_AUTHORIZED_PROJECTS = "authorizedProjects"
 const SCOPE_LOGGEDIN_AGENT_UUID = "loggedInAgentUUID"
+const SCOPE_LOGGEDIN_AGENT_EMAIL = "loggedInAgentEmail"
 const SCOPE_REQ_ID = "requestId"
 const SCOPE_SHOPIFY_HASH_EMAIL = "shopifyHashEmail"
 
@@ -442,6 +444,49 @@ func AddSecurityHeadersForAppRoutes() gin.HandlerFunc {
 	}
 }
 
+func LogAudit(c *gin.Context) {
+	logCtx := log.
+		WithField("tag", "AUDIT_LOG").
+		WithField("client_ip", c.ClientIP()).
+		WithField("url", c.Request.URL.Path+"?"+c.Request.URL.RawQuery).
+		WithField("method", c.Request.Method)
+
+	if c.Request.Method != http.MethodGet {
+		byteBody, _ := ioutil.ReadAll(c.Request.Body)
+		c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(byteBody))
+
+		requestBody := make(map[string]interface{}, 0)
+		requestBodyFiltered := make(map[string]interface{}, 0)
+		if err := json.Unmarshal(byteBody, &requestBody); err == nil {
+			for k, v := range requestBody {
+				// disallowed sensitive fields.
+				if k == "password" || k == "token" || k == "private_token" {
+					continue
+				}
+				requestBodyFiltered[k] = v
+			}
+		} else {
+			logCtx = logCtx.WithField("json_read_error", err)
+		}
+
+		logCtx = logCtx.WithField("request", requestBodyFiltered)
+	}
+
+	// Add agent information to log, if available.
+	uuid := U.GetScopeByKey(c, SCOPE_LOGGEDIN_AGENT_UUID)
+	email := U.GetScopeByKey(c, SCOPE_LOGGEDIN_AGENT_EMAIL)
+	if uuid != nil {
+		logCtx = logCtx.WithField("agent_uuid", uuid).WithField("agent_email", email)
+	}
+
+	logCtx.Info("Audit Log.")
+	c.Next()
+}
+
+func LogAuditMid() gin.HandlerFunc {
+	return LogAudit
+}
+
 func CustomCors() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		corsConfig := cors.DefaultConfig()
@@ -480,7 +525,6 @@ func CustomCors() gin.HandlerFunc {
 					"https://sloth.factors.ai",
 					"https://violet.factors.app",
 					"https://blue.factors.app",
-
 				}
 			}
 
@@ -657,16 +701,15 @@ func SetLoggedInAgent() gin.HandlerFunc {
 			loginAgent = agent
 		}
 
-		// TODO
-		// check if agent email is not verified
-		// send to verification page
-
 		if loginAgent == nil {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "unable to authenticate"})
 			return
 		}
 
 		U.SetScope(c, SCOPE_LOGGEDIN_AGENT_UUID, loginAgent.UUID)
+		U.SetScope(c, SCOPE_LOGGEDIN_AGENT_EMAIL, loginAgent.Email)
+		LogAudit(c)
+
 		c.Next()
 	}
 }
@@ -677,6 +720,9 @@ func MonitoringAPIMiddleware() gin.HandlerFunc {
 		statusCode, errMessage1, agent := DefineSetLoggedInAgentInternalOnly(c)
 		if statusCode == http.StatusOK {
 			U.SetScope(c, SCOPE_LOGGEDIN_AGENT_UUID, agent.UUID)
+			U.SetScope(c, SCOPE_LOGGEDIN_AGENT_EMAIL, agent.Email)
+			LogAudit(c)
+
 			c.Next()
 			return
 		}
@@ -745,6 +791,9 @@ func SetLoggedInAgentInternalOnly() gin.HandlerFunc {
 		}
 
 		U.SetScope(c, SCOPE_LOGGEDIN_AGENT_UUID, agent.UUID)
+		U.SetScope(c, SCOPE_LOGGEDIN_AGENT_EMAIL, agent.Email)
+		LogAudit(c)
+
 		c.Next()
 	}
 }
@@ -791,6 +840,9 @@ func ValidateAgentActivationRequest() gin.HandlerFunc {
 		}
 
 		U.SetScope(c, SCOPE_LOGGEDIN_AGENT_UUID, agent.UUID)
+		U.SetScope(c, SCOPE_LOGGEDIN_AGENT_EMAIL, agent.Email)
+		LogAudit(c)
+
 		c.Next()
 	}
 }
@@ -807,6 +859,9 @@ func ValidateAgentSetPasswordRequest() gin.HandlerFunc {
 			return
 		}
 		U.SetScope(c, SCOPE_LOGGEDIN_AGENT_UUID, agent.UUID)
+		U.SetScope(c, SCOPE_LOGGEDIN_AGENT_EMAIL, agent.Email)
+		LogAudit(c)
+
 		c.Next()
 	}
 }
@@ -835,6 +890,7 @@ func ValidateAccessToSharedEntity(entityType int) gin.HandlerFunc {
 			}
 			agentId = agent.UUID
 			U.SetScope(c, SCOPE_LOGGEDIN_AGENT_UUID, agent.UUID)
+			U.SetScope(c, SCOPE_LOGGEDIN_AGENT_EMAIL, agent.Email)
 		}
 
 		// Check whether is part of the project, if yes than access allowed directly

@@ -1,7 +1,6 @@
 package task
 
 import (
-	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -105,12 +104,14 @@ func SegmentMarker(projectID int64, projectIdListAllRun []int64) int {
 			}
 			segmentQuery.Timezone = string(timezoneString)
 			segmentQuery.Source = segment.Type
-			if segmentQuery.Caller == model.USER_PROFILES {
+			if segment.Type == model.GROUP_NAME_DOMAINS {
+				segmentQuery.Caller = model.PROFILE_TYPE_ACCOUNT
+				segmentQuery.GroupAnalysis = model.GROUP_NAME_DOMAINS
+			} else {
+				segmentQuery.Caller = model.PROFILE_TYPE_USER
 				segmentQuery.GroupAnalysis = model.FILTER_TYPE_USERS
-			} else if segmentQuery.Caller == model.ACCOUNT_PROFILES {
-				segmentQuery.GroupAnalysis = segment.Type
 			}
-			segmentQuery.GlobalUserProperties = transformPayloadForInProperties(segmentQuery.GlobalUserProperties)
+			segmentQuery.GlobalUserProperties = model.TransformPayloadForInProperties(segmentQuery.GlobalUserProperties)
 			segmentQuery.From = U.TimeNowZ().AddDate(0, 0, -90).Unix()
 			segmentQuery.To = U.TimeNowZ().Unix()
 			for _, eventProp := range segmentQuery.EventsWithProperties {
@@ -195,7 +196,7 @@ func GetDomainsToRunMarkerFor(projectID int64, domainGroup *model.Group, domainG
 
 		if domainGroupStatus == http.StatusFound && isRunAllMarkerForProjectID(projectIdListAllRun, projectID) {
 
-			domainIDList, status := store.GetStore().GetAllDomainsByProjectID(projectID, domainGroup.ID, limitVal)
+			domainIDList, status := store.GetStore().GetAllDomainsByProjectID(projectID, domainGroup.ID, limitVal, 0, []string{})
 
 			if len(domainIDList) > 0 {
 				allUsersRun = true
@@ -288,40 +289,10 @@ func fetchAndProcessFromDomainList(projectID int64, domainID string, segments []
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer waitGroup.Done()
 
-	userStmnt := "AND (is_group_user IS NULL OR is_group_user=0) ORDER BY properties_updated_timestamp DESC LIMIT 100"
-	grpUserStmnt := "AND is_group_user=1 ORDER BY properties_updated_timestamp DESC LIMIT 50"
-
-	// fetching top 100 non group users
-	users, status := store.GetStore().GetUsersAssociatedToDomainList(projectID, domainGroupId, domainID, userStmnt)
-
-	if status == http.StatusInternalServerError {
-		log.WithField("project_id", projectID).Error("Unable to find users for domain ", domainID)
+	users, status := store.GetStore().GetAllPropertiesForDomain(projectID, domainGroupId, domainID, userCount)
+	if len(users) == 0 || status != http.StatusFound {
 		*statusArr = append(*statusArr, false)
 		return
-	}
-
-	// fetching top 50 group users
-	grpUsers, status := store.GetStore().GetUsersAssociatedToDomainList(projectID, domainGroupId, domainID, grpUserStmnt)
-
-	if status == http.StatusInternalServerError || (len(users) == 0 && len(grpUsers) == 0) {
-		log.WithField("project_id", projectID).Error("Unable to find users for domain ", domainID)
-		*statusArr = append(*statusArr, false)
-		return
-	}
-
-	if len(grpUsers) > 0 {
-		users = append(users, grpUsers...)
-	}
-
-	*userCount = *userCount + int64(len(users))
-
-	// appending domain details to process domain based filters
-	domDetails, status := store.GetStore().GetDomainDetailsByID(projectID, domainID)
-
-	if status == http.StatusFound {
-		users = append(users, domDetails)
-	} else {
-		log.WithField("project_id", projectID).Error("Unable to find details for domain %s", domainID)
 	}
 
 	status, err := domainUsersProcessingWithErrcode(projectID, domainID, users, segments,
@@ -331,22 +302,6 @@ func fetchAndProcessFromDomainList(projectID int64, domainID string, segments []
 		log.WithField("project_id", projectID).Error("Unable to update associated_segments to the domain user.")
 		*statusArr = append(*statusArr, false)
 	}
-}
-
-func transformPayloadForInProperties(globalUserProperties []model.QueryProperty) []model.QueryProperty {
-	for i, p := range globalUserProperties {
-		if v, exist := model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]; exist {
-			v.LogicalOp = p.LogicalOp
-			if p.Value == "true" {
-				globalUserProperties[i] = v
-			} else if p.Value == "false" || p.Value == "$none" {
-				v.Operator = model.EqualsOpStr
-				v.Value = "$none"
-				globalUserProperties[i] = v
-			}
-		}
-	}
-	return globalUserProperties
 }
 
 func userProfileSegmentsProcessing(projectID int64, users []model.User, allSegmentsMap map[string][]model.Segment,
@@ -465,7 +420,7 @@ func allAccountsSegmentMarkup(projectID int64, users []model.User, segments []mo
 
 	domainUsersMap := make(map[string][]model.User)
 	for _, user := range users {
-		groupUserId, err := findUserGroupByID(user, domainGroupId)
+		groupUserId, err := model.FindUserGroupByID(user, domainGroupId)
 		if err != nil {
 			return http.StatusBadRequest, err
 		}
@@ -542,7 +497,7 @@ func domainUsersProcessingWithErrcode(projectID int64, domId string, usersArray 
 
 	for index, segmentRule := range segmentsRulesArr {
 		// apply segment rule on the user
-		matched := isRuleMatchedAllAccounts(projectID, segmentRule, decodedPropsArr, usersArray, segments[index].Id, domId, eventNameIDsMap)
+		matched := memsql.IsRuleMatchedAllAccounts(projectID, segmentRule, decodedPropsArr, usersArray, segments[index].Id, domId, eventNameIDsMap)
 
 		// update associated_segments map on the basis of segment rule applied
 		associatedSegments = updateAllAccountsSegmentMap(matched, usersArray,
@@ -606,64 +561,6 @@ func IsMapsNotMatching(projectID int64, domId string, associatedSegments map[str
 	return isDifferent
 }
 
-func findUserGroupByID(u model.User, id int) (string, error) {
-	switch id {
-	case 1:
-		return u.Group1UserID, nil
-	case 2:
-		return u.Group2UserID, nil
-	case 3:
-		return u.Group3UserID, nil
-	case 4:
-		return u.Group4UserID, nil
-	case 5:
-		return u.Group5UserID, nil
-	case 6:
-		return u.Group6UserID, nil
-	case 7:
-		return u.Group7UserID, nil
-	case 8:
-		return u.Group8UserID, nil
-	default:
-		return "", fmt.Errorf("no matching group for ID %d", id)
-	}
-}
-
-func isRuleMatchedAllAccounts(projectID int64, segment model.Query, decodedProperties []map[string]interface{}, userArr []model.User,
-	segmentId string, domId string, eventNameIDsMap map[string]string) bool {
-	// isMatched = all rules matched (a or b) AND (c or d)
-	isMatched := false
-
-	if (segment.GlobalUserProperties == nil || len(segment.GlobalUserProperties) == 0) &&
-		(segment.EventsWithProperties != nil && len(segment.EventsWithProperties) > 0) {
-		isMatched = performedEventsCheck(projectID, segmentId, eventNameIDsMap, &segment, domId, userArr)
-		return isMatched
-	}
-
-	groupedProperties := model.GetPropertiesGrouped(segment.GlobalUserProperties)
-	for index, currentGroupedProperties := range groupedProperties {
-		// validity for each group like (a or b ) AND (c or d)
-		groupedPropsMatched := false
-		for _, p := range currentGroupedProperties {
-			isValueFound := checkPropertyInAllUsers(projectID, segment.GroupAnalysis, p, decodedProperties, userArr)
-			if isValueFound {
-				groupedPropsMatched = true
-				break
-			}
-		}
-		if index == 0 {
-			isMatched = groupedPropsMatched
-			continue
-		}
-		isMatched = groupedPropsMatched && isMatched
-	}
-
-	if isMatched && (segment.EventsWithProperties != nil && len(segment.EventsWithProperties) > 0) {
-		isMatched = performedEventsCheck(projectID, segmentId, eventNameIDsMap, &segment, domId, userArr)
-	}
-	return isMatched
-}
-
 func isRuleMatched(projectID int64, segment model.Segment, decodedProperties *map[string]interface{}, eventNameIDsMap map[string]string, userID string) bool {
 	// isMatched = all rules matched (a or b) AND (c or d)
 	isMatched := false
@@ -676,7 +573,7 @@ func isRuleMatched(projectID int64, segment model.Segment, decodedProperties *ma
 	if (segmentQuery.GlobalUserProperties == nil || len(segmentQuery.GlobalUserProperties) == 0) &&
 		(segmentQuery.EventsWithProperties != nil && len(segmentQuery.EventsWithProperties) > 0) {
 		var userArr []model.User
-		isMatched = performedEventsCheck(projectID, segment.Id, eventNameIDsMap, segmentQuery, userID, userArr)
+		isMatched = memsql.PerformedEventsCheck(projectID, segment.Id, eventNameIDsMap, segmentQuery, userID, userArr)
 		return isMatched
 	}
 
@@ -707,39 +604,10 @@ func isRuleMatched(projectID int64, segment model.Segment, decodedProperties *ma
 
 	if isMatched && (segmentQuery.EventsWithProperties != nil && len(segmentQuery.EventsWithProperties) > 0) {
 		var userArr []model.User
-		isMatched = performedEventsCheck(projectID, segment.Id, eventNameIDsMap, segmentQuery, userID, userArr)
+		isMatched = memsql.PerformedEventsCheck(projectID, segment.Id, eventNameIDsMap, segmentQuery, userID, userArr)
 	}
 
 	return isMatched
-}
-
-func checkPropertyInAllUsers(projectId int64, grpa string, p model.QueryProperty, decodedProperties []map[string]interface{}, userArr []model.User) bool {
-	isValueFound := false
-	for index, user := range userArr {
-		// skip for group user if entity is user_group or entity is user_g and is not a group user
-		if (p.Entity == model.PropertyEntityUserGroup && (user.IsGroupUser != nil && *user.IsGroupUser)) ||
-			(p.Entity == model.PropertyEntityUserGlobal && (user.IsGroupUser == nil || !*user.IsGroupUser)) {
-			continue
-		}
-		isValueFound = memsql.CheckPropertyOfGivenType(projectId, p, &decodedProperties[index])
-
-		// check for negative filters
-		if (p.Operator == model.NotContainsOpStr && p.Value != model.PropertyValueNone) ||
-			(p.Operator == model.ContainsOpStr && p.Value == model.PropertyValueNone) ||
-			(p.Operator == model.NotEqualOpStr && p.Value != model.PropertyValueNone) ||
-			(p.Operator == model.EqualsOpStr && p.Value == model.PropertyValueNone) ||
-			(p.Operator == model.NotInList && p.Value != model.PropertyValueNone) {
-			if !isValueFound {
-				return isValueFound
-			}
-			continue
-		}
-
-		if isValueFound {
-			return isValueFound
-		}
-	}
-	return isValueFound
 }
 
 func updateSegmentMap(matched bool, user model.User, userPartOfSegments map[string]model.AssociatedSegments,
@@ -765,10 +633,8 @@ func updateAllAccountsSegmentMap(matched bool, userArr []model.User, userPartOfS
 		associatedSegUpdatedAt := time.Now().UTC()
 		maxLastEventAt := time.Time{}
 		for _, user := range userArr {
-			if user.LastEventAt != nil {
-				if (*user.LastEventAt).After(maxLastEventAt) {
-					maxLastEventAt = *user.LastEventAt
-				}
+			if user.LastEventAt != nil && (*user.LastEventAt).After(maxLastEventAt) {
+				maxLastEventAt = *user.LastEventAt
 			}
 		}
 		updatedMap.UpdatedAt = model.FormatTimeToString(associatedSegUpdatedAt)
@@ -780,19 +646,6 @@ func updateAllAccountsSegmentMap(matched bool, userArr []model.User, userPartOfS
 	}
 
 	return segmentMap
-}
-
-func performedEventsCheck(projectID int64, segmentID string, eventNameIDsMap map[string]string,
-	segmentQuery *model.Query, userID string, userArr []model.User) bool {
-
-	isPerformedEvent, isAllAccounts := false, false
-
-	if segmentQuery.Caller != model.USER_PROFILES {
-		isAllAccounts = true
-	}
-	isPerformedEvent = memsql.EventsPerformedCheck(projectID, segmentID, eventNameIDsMap, segmentQuery, userID, isAllAccounts, userArr)
-
-	return isPerformedEvent
 }
 
 func isRunAllMarkerForProjectID(projectIdListAllRun []int64, projectID int64) bool {
