@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Row, Col, Modal, Button, Form, Input, Select } from 'antd';
-import { Text, SVG } from 'factorsComponents';
+import React, { useState, useCallback } from 'react';
+import { Row, Col, Button, Form, Input, Select } from 'antd';
+import { Text } from 'factorsComponents';
 import { connect } from 'react-redux';
-import { useHistory } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import AppModal from '../AppModal';
 import { meetLink } from 'Utils/meetLink';
+import _ from 'lodash';
 const { Option } = Select;
 
 const ShareToSlackModal = ({

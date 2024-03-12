@@ -3,7 +3,7 @@ import {
   Row, Col, Button, Avatar, Skeleton
 } from 'antd';
 import { Text } from '../../../components/factorsComponents';
-import { UserOutlined ,EditOutlined} from '@ant-design/icons';
+import { EditOutlined} from '@ant-design/icons';
 import { fetchAgentInfo } from '../../../reducers/agentActions';
 import { connect } from 'react-redux';
 import {udpateProjectDetails} from 'Reducers/global'

@@ -26,12 +26,8 @@ import {
     Tag,
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
-import PreviewCard from './PreviewCard';
 import { TOOLTIP_CONSTANTS } from 'Constants/tooltips.constans';
-import { ConsoleSqlOutlined } from '@ant-design/icons';
 import { getErrorMsg, MS_TEAMS } from './../utils';
-import useFeatureLock from 'hooks/useFeatureLock';
-import { FEATURES } from 'Constants/plans.constants';
 import {PreviewCardTeams} from './PreviewCard';
 
 const Teams = ({
