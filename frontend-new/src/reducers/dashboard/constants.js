@@ -35,5 +35,10 @@ export const defaultState = {
     data: EMPTY_ARRAY
   },
   dashboardsArrangementInFoldersCompleted: false,
-  allBoardsFolderId: null
+  allBoardsFolderId: null,
+  dashboardDeletionInitiated: false,
+  editDashboardDetails: {
+    initiated: false,
+    editDashboard: null
+  }
 };

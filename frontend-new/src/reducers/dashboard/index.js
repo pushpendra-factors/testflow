@@ -15,7 +15,8 @@ import {
   WIDGET_DELETED,
   DASHBOARD_UPDATED,
   SET_ACTIVE_PROJECT,
-  DASHBOARD_LAST_REFRESHED
+  DASHBOARD_LAST_REFRESHED,
+  ADD_DASHBOARD_MODAL_CLOSE
 } from '../types';
 
 import {
@@ -35,7 +36,10 @@ import {
   RENAME_DASHBOARD_FOLDER_FAILED,
   INITIATED_DELETE_DASHBOARD_FOLDER,
   DELETE_DASHBOARD_FOLDER_SUCCESSFUL,
-  DELETE_DASHBOARD_FOLDER_FAILED
+  DELETE_DASHBOARD_FOLDER_FAILED,
+  INITIATE_DASHBOARD_DELETION,
+  RESET_DASHBOARD_DELETION_INITIATION,
+  INITIATE_EDIT_DASHBOARD_DETAILS
 } from './types';
 
 import {
@@ -137,7 +141,8 @@ export default function (state = defaultState, action) {
         ...state,
         activeDashboardUnits: { ...defaultState.activeDashboardUnits },
         dashboards: { ...defaultState.dashboards, data: newDashboardList },
-        activeDashboard: newActiveDashboard
+        activeDashboard: newActiveDashboard,
+        dashboardDeletionInitiated: false
       };
     }
     case WIDGET_DELETED: {
@@ -235,11 +240,34 @@ export default function (state = defaultState, action) {
       };
     }
     case DASHBOARD_NEW_FOLDER_CREATION_SUCCESSFUL: {
+      const { newFolder, dashboardId } = action.payload;
+      const currentDashboardFolderId = state.foldersList.data.find((folder) =>
+        folder.dashboardIds.find((dId) => dId === dashboardId)
+      )?.id;
+      const newFolderState = {
+        ...newFolder,
+        dashboardIds: [dashboardId]
+      };
+      const updatedFoldersList = state.foldersList.data.map((folder) => {
+        if (folder.id === currentDashboardFolderId) {
+          return {
+            ...folder,
+            dashboardIds: folder.dashboardIds.filter(
+              (dId) => dId !== dashboardId
+            )
+          };
+        }
+        return folder;
+      });
       return {
         ...state,
         newFolderCreationState: {
           ...apiStates,
           completed: true
+        },
+        foldersList: {
+          ...state.foldersList,
+          data: [newFolderState, ...updatedFoldersList]
         }
       };
     }
@@ -314,11 +342,36 @@ export default function (state = defaultState, action) {
       };
     }
     case DASHBOARD_MOVE_TO_EXISTING_FOLDER_SUCCESSFUL: {
+      const { dashboardId, folderId } = action.payload;
+      const currentDashboardFolderId = state.foldersList.data.find((folder) =>
+        folder.dashboardIds.find((dId) => dId === dashboardId)
+      )?.id;
+      const updatedFoldersList = state.foldersList.data.map((folder) => {
+        if (folder.id === currentDashboardFolderId) {
+          return {
+            ...folder,
+            dashboardIds: folder.dashboardIds.filter(
+              (dId) => dId !== dashboardId
+            )
+          };
+        }
+        if (folder.id === folderId) {
+          return {
+            ...folder,
+            dashboardIds: [...folder.dashboardIds, dashboardId]
+          };
+        }
+        return folder;
+      });
       return {
         ...state,
         addToExistingFolderState: {
           ...apiStates,
           completed: true
+        },
+        foldersList: {
+          ...state.foldersList,
+          data: updatedFoldersList
         }
       };
     }
@@ -383,9 +436,21 @@ export default function (state = defaultState, action) {
     }
     case DELETE_DASHBOARD_FOLDER_SUCCESSFUL: {
       const { folderId } = action.payload;
+      const deletedFolderDashboards = state.foldersList.data.find(
+        (folder) => folder.id === folderId
+      ).dashboardIds;
       const updatedFoldersList = state.foldersList.data.filter(
         (folder) => folder.id !== folderId
       );
+      const listWithAdjustedDashboards = updatedFoldersList.map((folder) => {
+        if (folder.id === state.allBoardsFolderId) {
+          return {
+            ...folder,
+            dashboardIds: [...deletedFolderDashboards, ...folder.dashboardIds]
+          };
+        }
+        return folder;
+      });
       return {
         ...state,
         deleteFolderState: {
@@ -394,7 +459,7 @@ export default function (state = defaultState, action) {
         },
         foldersList: {
           ...state.foldersList,
-          data: updatedFoldersList
+          data: listWithAdjustedDashboards
         }
       };
     }
@@ -411,6 +476,36 @@ export default function (state = defaultState, action) {
       return {
         ...defaultState
       };
+    case INITIATE_DASHBOARD_DELETION: {
+      return {
+        ...state,
+        dashboardDeletionInitiated: true
+      };
+    }
+    case RESET_DASHBOARD_DELETION_INITIATION: {
+      return {
+        ...state,
+        dashboardDeletionInitiated: false
+      };
+    }
+    case INITIATE_EDIT_DASHBOARD_DETAILS: {
+      const { dashboard } = action.payload;
+      return {
+        ...state,
+        editDashboardDetails: {
+          initiated: true,
+          editDashboard: dashboard
+        }
+      };
+    }
+    case ADD_DASHBOARD_MODAL_CLOSE: {
+      return {
+        ...state,
+        editDashboardDetails: {
+          ...defaultState.editDashboardDetails
+        }
+      };
+    }
     default:
       return state;
   }

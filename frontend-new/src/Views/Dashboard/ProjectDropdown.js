@@ -34,8 +34,10 @@ import NewReportButton from './NewReportButton';
 import { useParams } from 'react-router-dom';
 import {
   selectActiveDashboard,
-  selectDashboardList
+  selectDashboardList,
+  selectIsDashboardDeletionInitiated
 } from 'Reducers/dashboard/selectors';
+import { RESET_DASHBOARD_DELETION_INITIATION } from 'Reducers/dashboard/types';
 
 function ProjectDropdown({
   handleEditClick,
@@ -58,6 +60,9 @@ function ProjectDropdown({
   const { active_project } = useSelector((state) => state.global);
   const { activeDashboardUnits } = useSelector((state) => state.dashboard);
   const activeDashboard = useSelector((state) => selectActiveDashboard(state));
+  const dashboardDeletionInitiated = useSelector((state) =>
+    selectIsDashboardDeletionInitiated(state)
+  );
   const dashboards = useSelector((state) => selectDashboardList(state));
   const [selectVisible, setSelectVisible] = useState(false);
   const [showDashboardName, setDashboardName] = useState('');
@@ -134,9 +139,20 @@ function ProjectDropdown({
     }
   }, [active_project.id, activeDashboard?.id, dispatch]);
 
+  const closeDeleteModal = useCallback(() => {
+    showDeleteDashboardModal(false);
+    dispatch({ type: RESET_DASHBOARD_DELETION_INITIATION });
+  }, []);
+
   useEffect(() => {
     fetchUnits();
   }, [fetchUnits]);
+
+  useEffect(() => {
+    if (dashboardDeletionInitiated === true) {
+      showDeleteDashboardModal(true);
+    }
+  }, [dashboardDeletionInitiated]);
 
   const handleToggleWidgetModal = (val) => {
     setWidgetModalLoading(true);
@@ -403,7 +419,7 @@ function ProjectDropdown({
           visible={deleteDashboardModal}
           confirmationText='Are you sure you want to delete this Dashboard?'
           onOk={confirmDeleteDashboard}
-          onCancel={showDeleteDashboardModal.bind(this, false)}
+          onCancel={closeDeleteModal}
           title={`Delete Dashboard - ${activeDashboard?.name}`}
           okText='Confirm'
           cancelText='Cancel'
