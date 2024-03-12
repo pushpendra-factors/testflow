@@ -935,9 +935,9 @@ const QueryBuilder = ({
           <FaSavedRangePicker
             todayPicker={false}
             customPicker
-            presetRange
-            monthPicker
-            quarterPicker
+            // presetRange
+            // monthPicker
+            // quarterPicker
             placement='topLeft'
             buttonSize={'large'}
             range={{
