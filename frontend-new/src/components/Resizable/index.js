@@ -42,8 +42,8 @@ const ResizableTitle = (props) => {
         if (currentColumn) {
           let minwidth = Math.max(
             e.clientX -
-              currentColumn.parentElement.getBoundingClientRect().left,
-            128
+            currentColumn.parentElement.getBoundingClientRect().left,
+            width
           );
           colHead.style.width = minwidth + 'px';
           colBody.style.width = minwidth + 'px';

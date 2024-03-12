@@ -16,6 +16,7 @@
 }
 
 .table-custom-th {
+  user-select: none;
   & > div > span {
     // This span targets span of column header cell
     overflow: hidden;
