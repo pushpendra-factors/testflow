@@ -7,7 +7,7 @@ import React, {
   useState
 } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useHistory, useParams } from 'react-router-dom';
+import { useHistory, useLocation, useParams } from 'react-router-dom';
 import get from 'lodash/get';
 
 import cx from 'classnames';
@@ -101,6 +101,7 @@ const CoreQuery = () => {
   );
   const [queryOpen, setQueryOpen] = useState(false);
 
+  const location = useLocation();
   const history = useHistory();
   const dispatch = useDispatch();
   const [coreQueryReducerState, localDispatch] = useReducer(
@@ -261,7 +262,11 @@ const CoreQuery = () => {
           );
 
           if (queryState.requestQuery) {
-            updateEventFunnelsState(equivalentQuery, false, queryState);
+            updateEventFunnelsState(
+              equivalentQuery,
+              location?.state?.navigatedFromDashboard,
+              queryState
+            );
             if (queryState.requestQuery.length === 1) {
               dispatch({
                 type: SET_PERFORMANCE_CRITERIA,
