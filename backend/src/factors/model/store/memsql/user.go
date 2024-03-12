@@ -592,10 +592,11 @@ func getLatestDomainsByProjectIDQuery(projectID int64, domainGroupID int, limitV
 	project_id = ? 
 	AND group_%d_user_id IS NOT NULL
 	AND source != ? 
+	AND last_event_at IS NOT NULL
   GROUP BY 
 	group_%d_user_id 
   ORDER BY 
-	properties_updated_timestamp DESC 
+   last_event_at DESC 
   LIMIT 
 	%d OFFSET %d;`, domainGroupID, domainGroupID, domainGroupID, limitVal, offSet)
 

@@ -69,8 +69,8 @@ func (store *MemSQL) GetMarkedDomainsListByProjectId(projectID int64, payload mo
 		return profiles, statusCode, errMsg
 	}
 
-	// Redirect to old flow if no profiles found
-	if len(profiles) == 0 {
+	// Redirect to old flow if no profiles found and flag disabled (for fetching saved segments)
+	if len(profiles) == 0 && !C.IsMarkerPreviewEnabled(projectID) {
 		return store.GetProfilesListByProjectId(projectID, payload, model.PROFILE_TYPE_ACCOUNT, downloadLimitGiven)
 	}
 
@@ -455,8 +455,9 @@ func (store *MemSQL) processDomainWithErr(projectID int64, payload model.Timelin
 	}
 
 	var profile model.Profile
+	var isLastEventAtFound bool
 	if len(payload.Query.GlobalUserProperties) == 0 && len(payload.Query.EventsWithProperties) == 0 {
-		profile = profileValues(projectID, users, domID, domainGroupID)
+		profile, isLastEventAtFound = profileValues(projectID, users, domID, domainGroupID)
 		return profile, true, http.StatusOK
 	}
 
@@ -479,12 +480,15 @@ func (store *MemSQL) processDomainWithErr(projectID int64, payload model.Timelin
 		return model.Profile{}, isMatched, http.StatusOK
 	}
 
-	profile = profileValues(projectID, users, domID, domainGroupID)
+	profile, isLastEventAtFound = profileValues(projectID, users, domID, domainGroupID)
+
+	// if last_event_at does not exist, don't append show that profile
+	isMatched = isMatched && isLastEventAtFound
 
 	return profile, isMatched, http.StatusOK
 }
 
-func profileValues(projectID int64, users []model.User, domID string, domainGroupID int) model.Profile {
+func profileValues(projectID int64, users []model.User, domID string, domainGroupID int) (model.Profile, bool) {
 	var profile model.Profile
 	profile.Identity = domID
 
@@ -517,5 +521,7 @@ func profileValues(projectID int64, users []model.User, domID string, domainGrou
 	profile.LastActivity = maxLastEventAt
 	profile.HostName = hostName
 
-	return profile
+	isLastEventAtFound := !maxLastEventAt.IsZero()
+
+	return profile, isLastEventAtFound
 }
