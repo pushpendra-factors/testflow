@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import cx from 'classnames';
 import { Popover } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
 import { useDispatch, useSelector } from 'react-redux';
 import { toggleNewFolderModal } from 'Reducers/dashboard/actions';
 import { selectDashboardFoldersListState } from 'Reducers/dashboard/selectors';
+import { INITIATE_DASHBOARD_DELETION } from 'Reducers/dashboard/types';
 import styles from './index.module.scss';
 
 function DashboardSidebarMenuItem({
@@ -12,7 +13,8 @@ function DashboardSidebarMenuItem({
   isActive,
   onClick,
   onAdditionToNewFolder,
-  onAddDashboardToExistingFolder
+  onAddDashboardToExistingFolder,
+  onEditDashboardDetails
 }) {
   const [showExistingFoldersList, setShowExistingFoldersList] = useState(false);
   const [showMoreActions, setShowMoreActions] = useState(false);
@@ -44,6 +46,14 @@ function DashboardSidebarMenuItem({
       ))}
     </div>
   );
+
+  const handleDashboardDeletion = useCallback(() => {
+    dispatch({ type: INITIATE_DASHBOARD_DELETION });
+  }, []);
+
+  const handleEditDashboardDetails = useCallback(() => {
+    onEditDashboardDetails();
+  }, []);
 
   const content = (
     <div className='flex flex-col py-2'>
@@ -95,6 +105,7 @@ function DashboardSidebarMenuItem({
         type='button'
         onClick={(e) => {
           e.stopPropagation();
+          handleEditDashboardDetails();
         }}
         className={cx(
           'px-4 py-2 text-left',
@@ -110,6 +121,7 @@ function DashboardSidebarMenuItem({
         type='button'
         onClick={(e) => {
           e.stopPropagation();
+          handleDashboardDeletion();
         }}
         className={cx(
           'px-4 py-2 text-left',

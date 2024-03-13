@@ -139,7 +139,7 @@ export const addDashboardToNewFolder = (projectId, dashboardId, folderName) =>
       });
       dispatch({
         type: DASHBOARD_NEW_FOLDER_CREATION_SUCCESSFUL,
-        payload: res.data
+        payload: { newFolder: res.data, dashboardId }
       });
     } catch (err) {
       console.log(err);
@@ -163,7 +163,7 @@ export const addDashboardToExistingFolder = (
     try {
       dispatch({ type: INITIATED_DASHBOARD_MOVE_TO_EXISTING_FOLDER });
       const url = `${host}projects/${projectId}/dashboards/${dashboardId}`;
-      const res = await put(null, url, {
+      await put(null, url, {
         folder_id: folderId
       });
       notification.success({
@@ -173,7 +173,7 @@ export const addDashboardToExistingFolder = (
       });
       dispatch({
         type: DASHBOARD_MOVE_TO_EXISTING_FOLDER_SUCCESSFUL,
-        payload: res.data
+        payload: { folderId, dashboardId }
       });
     } catch (err) {
       console.log(err);
