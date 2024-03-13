@@ -253,7 +253,7 @@ func GetEventNamesByUserHandler(c *gin.Context) {
 
 	// Adding $page_view event_name by force
 	if showSpecialEvents == "true" {
-		eventNames[U.FrequentlySeen] = append(eventNames[U.FrequentlySeen], U.EVENT_NAME_PAGE_VIEW)
+		eventNames[U.WebsiteActivityEvent] = append(eventNames[U.WebsiteActivityEvent], U.EVENT_NAME_PAGE_VIEW)
 	}
 
 	_, displayNames := store.GetStore().GetDisplayNamesForAllEvents(projectId)
@@ -572,7 +572,7 @@ func GetEventPropertyValuesHandler(c *gin.Context) {
 	log.WithField("decodedEventName", eventName).Debug("Decoded event name on properties value request.")
 
 	if isExplain != "true" {
-	
+
 		normalEventName := eventName
 		normalPropertyName := propertyName
 		//Convert to normal event and property for special event $page_view and property $page_url
@@ -581,7 +581,7 @@ func GetEventPropertyValuesHandler(c *gin.Context) {
 			normalPropertyName = U.EVENT_TO_SESSION_PROPERTIES[propertyName]
 		}
 
-		propertyValues, err = store.GetStore().GetPropertyValuesByEventProperty(projectId, normalEventName, 
+		propertyValues, err = store.GetStore().GetPropertyValuesByEventProperty(projectId, normalEventName,
 			normalPropertyName, 2500, C.GetLookbackWindowForEventUserCache())
 		if err != nil {
 			logCtx.WithError(err).Error("get properties values by event property")
