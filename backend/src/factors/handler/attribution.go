@@ -238,7 +238,11 @@ func getValidAttributionQueryAndDetailsFromRequest(r *http.Request, c *gin.Conte
 		if query.LockedForCacheInvalidation {
 			return queryPayload, dashboardId, unitId, true, http.StatusConflict, V1.PROCESSING_FAILED, "Query is not processed due to saved query updated", false
 		}
-		U.DecodePostgresJsonbToStructType(&query.Query, &dbQuery)
+		errDecode := U.DecodePostgresJsonbToStructType(&query.Query, &dbQuery)
+		if errDecode != nil {
+			log.WithError(errDecode).WithField("project_id", projectId).Error("Failed while decoding query: ", errDecode)
+			return queryPayload, dashboardId, unitId, true, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
+		}
 		queryPayload.Query = dbQuery.Query
 	} else if queryIdString != "" {
 		_, query, err := store.GetStore().GetQueryAndClassFromQueryIdString(queryIdString, projectId)
@@ -249,7 +253,11 @@ func getValidAttributionQueryAndDetailsFromRequest(r *http.Request, c *gin.Conte
 		if query.LockedForCacheInvalidation {
 			return queryPayload, 0, 0, false, http.StatusConflict, V1.PROCESSING_FAILED, "Query is not processed due to saved query updated", false
 		}
-		U.DecodePostgresJsonbToStructType(&query.Query, &dbQuery)
+		errDecode := U.DecodePostgresJsonbToStructType(&query.Query, &dbQuery)
+		if errDecode != nil {
+			log.WithError(errDecode).WithField("project_id", projectId).Error("Failed while decoding query: ", errDecode)
+			return queryPayload, dashboardId, unitId, true, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
+		}
 		queryPayload.Query = dbQuery.Query
 	} else {
 		queryPayload = requestPayload
@@ -335,7 +343,7 @@ func SetTimezoneForAttributionQuery(requestPayload *AttributionRequestPayload, p
 		// For a KPI query, set the timezone internally for correct execution
 		if requestPayload.Query.AnalyzeType == model.AnalyzeTypeHSDeals || requestPayload.Query.AnalyzeType == model.AnalyzeTypeSFOpportunities {
 			if requestPayload.Query.KPI.Queries[0].Timezone != "" {
-				_, err := time.LoadLocation(string(requestPayload.Query.KPI.Queries[0].Timezone))
+				_, err := time.LoadLocation(requestPayload.Query.KPI.Queries[0].Timezone)
 				if err != nil {
 					logCtx.WithError(err).Error("Query failed. Invalid Timezone")
 					return "", err
