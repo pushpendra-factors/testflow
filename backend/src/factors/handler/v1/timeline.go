@@ -142,16 +142,6 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 
 	req := c.Request
 
-	getScore, err := getBoolQueryParam(c.Query("score"))
-	if err != nil {
-		logCtx.Error("Invalid score flag .")
-	}
-
-	getDebug, err := getBoolQueryParam(c.Query("debug"))
-	if err != nil {
-		logCtx.Error("Invalid debug flag.")
-	}
-
 	getUserMarker, err := getBoolQueryParam(c.Query("user_marker"))
 	if err != nil {
 		logCtx.Error("Invalid marker flag.")
@@ -199,7 +189,7 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 		logCtx.Error("Error fetching scoring availability status for the project")
 	}
 
-	showScore := getScore || C.IsScoringEnabledForAllUsers(projectId)
+	showScore := C.IsScoringEnabledForAllUsers(projectId)
 
 	// Add account scores to the response if scoring is enabled
 	if scoringAvailable && showScore {
@@ -208,7 +198,7 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 		for _, profile := range profileAccountsList {
 			accountIds = append(accountIds, profile.Identity)
 		}
-		scoresPerAccount, err := store.GetStore().GetAccountScoreOnIds(projectId, accountIds, getDebug)
+		scoresPerAccount, err := store.GetStore().GetAccountScoreOnIds(projectId, accountIds, false)
 		if err != nil {
 			logCtx.Error("Error while fetching account scores.")
 		} else {
@@ -391,19 +381,18 @@ func GetUserPropertiesByIDHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "failed processing user id"})
 		return
 	}
-	isAnon := c.Query("is_anonymous")
-	logCtx = log.WithFields(log.Fields{
-		"projectId":   projectID,
-		"userId":      userID,
-		"isAnonymous": isAnon,
-	})
-	if isAnon == "" {
-		logCtx.Error("invalid user type")
+	isAnonymous, err := getBoolQueryParam(c.Query("is_anonymous"))
+	if err != nil {
+		logCtx.WithField("is_anonymous", isAnonymous).Error("Invalid query param.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "failed processing query param"})
 		return
 	}
 
-	isAnonymous := isAnon == "true"
+	logCtx = log.WithFields(log.Fields{
+		"projectId":   projectID,
+		"userId":      userID,
+		"isAnonymous": isAnonymous,
+	})
 
 	properties, status := store.GetStore().GetConfiguredPropertiesByUserID(projectID, userID, isAnonymous)
 	if status != http.StatusOK {

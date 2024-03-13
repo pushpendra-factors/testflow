@@ -35,20 +35,16 @@ function EventDrawer({
   const [eventProperties, setEventProperties] = useState([]);
   const [userProperties, setUserProperties] = useState([]);
   const [propSelectOpen, setPropSelectOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('');
+  const [activeTab, setActiveTab] = useState('user');
 
   useEffect(() => {
     if (!event) return;
-    if (
-      currentProjectSettings?.timelines_config?.events_config?.[
-        event?.display_name === 'Page View' ? 'PageView' : event?.event_name
-      ]?.length > 0
-    ) {
+    if (event?.is_group_event) {
       setActiveTab('event');
     } else {
       setActiveTab('user');
     }
-  }, [event, currentProjectSettings]);
+  }, [event]);
 
   const handleUpdateEventProperties = (newList: string[]) => {
     updateEventPropertiesConfig(
@@ -194,6 +190,18 @@ function EventDrawer({
         activeKey={activeTab}
         onChange={handleTabChange}
       >
+        {!event?.is_group_event && (
+          <Tabs.TabPane
+            tab={
+              <span className='fa-activity-filter--tabname'>
+                User Properties
+              </span>
+            }
+            key='user'
+          >
+            <UserDetails user={user} onUpdate={handleUpdateUserProperties} />
+          </Tabs.TabPane>
+        )}
         {currentProjectSettings?.timelines_config?.events_config?.[
           event?.display_name === 'Page View' ? 'PageView' : event?.event_name
         ]?.length > 0 && (
@@ -210,18 +218,6 @@ function EventDrawer({
               eventPropsType={eventPropsType}
               onUpdate={handleUpdateEventProperties}
             />
-          </Tabs.TabPane>
-        )}
-        {!event?.is_group_event && (
-          <Tabs.TabPane
-            tab={
-              <span className='fa-activity-filter--tabname'>
-                User Properties
-              </span>
-            }
-            key='user'
-          >
-            <UserDetails user={user} onUpdate={handleUpdateUserProperties} />
           </Tabs.TabPane>
         )}
       </Tabs>

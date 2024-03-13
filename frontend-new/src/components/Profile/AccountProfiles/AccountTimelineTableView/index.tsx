@@ -28,13 +28,11 @@ function AccountTimelineTableView({
       timelineEvents.filter((item) => item.username !== 'milestone'),
       'Timeline'
     );
-    console.log('data--->', data);
     setFormattedData(data);
     document.title = 'Accounts - FactorsAI';
   }, [timelineEvents]);
 
   const handleEventClick = (event: TimelineEvent, user: TimelineUser) => {
-    console.log('user--->', user);
     setSelectedEvent(event);
     setSelectedUser(user);
     setDrawerVisible(true);
