@@ -38,7 +38,6 @@ import ControlledComponent from 'Components/ControlledComponent/ControlledCompon
 import { selectGroupsList } from 'Reducers/groups/selectors';
 import { fetchProfileAccounts, fetchSegmentById } from 'Reducers/timelines';
 import { downloadCSV } from 'Utils/csv';
-import { formatCount } from 'Utils/dataFormatter';
 import { PathUrls } from 'Routes/pathUrls';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
@@ -137,8 +136,6 @@ function AccountProfiles({
     (state) => state.accountProfilesView
   );
   const groupsList = useSelector((state) => selectGroupsList(state));
-  const agentState = useSelector((state) => state.agent);
-  const activeAgent = agentState?.agent_details?.email;
 
   const accountPayload = useSelector((state) => selectAccountPayload(state));
 
@@ -386,11 +383,7 @@ function AccountProfiles({
       try {
         setDefaultSorterInfo({ key: '$engagement_level', order: 'descend' });
         const reqPayload = formatReqPayload(payload);
-        const response = await getProfileAccounts(
-          activeProject.id,
-          reqPayload,
-          activeAgent
-        );
+        const response = await getProfileAccounts(activeProject.id, reqPayload);
 
         if (response.type === 'FETCH_PROFILE_ACCOUNTS_FAILED') {
           if (response.error.status === 400) {
@@ -409,7 +402,7 @@ function AccountProfiles({
         logger.error(err);
       }
     },
-    [accountPayload, activeProject.id, activeAgent]
+    [accountPayload, activeProject.id]
   );
 
   useEffect(() => {
@@ -892,23 +885,17 @@ function AccountProfiles({
   useEffect(() => {
     setNewTableColumns(
       getColumns({
-        accounts,
-        source: GROUP_NAME_DOMAINS,
-        isScoringLocked,
         displayTableProps,
         groupPropNames,
         eventNames,
         listProperties,
         defaultSorterInfo,
-        projectDomainsList,
-        activeAgent
+        projectDomainsList
       })
     );
   }, [
-    accounts,
     displayTableProps,
     groupPropNames,
-    isScoringLocked,
     listProperties,
     defaultSorterInfo,
     projectDomainsList
@@ -1095,7 +1082,7 @@ function AccountProfiles({
         const resultAccounts = await fetchProfileAccounts(
           activeProject.id,
           updatedPayload,
-          activeAgent
+          true
         );
         const csvData = generateCSVData(resultAccounts.data, selectedOptions);
         downloadCSV(csvData, 'accounts.csv');
@@ -1111,7 +1098,7 @@ function AccountProfiles({
         });
       }
     },
-    [activeAgent, activeProject.id, appliedFilters, downloadCSVOptions]
+    [activeProject.id, appliedFilters, downloadCSVOptions]
   );
 
   const closeDownloadCSVModal = useCallback(() => {

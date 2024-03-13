@@ -243,7 +243,6 @@ function AccountDetails({
       accountDetails.data?.events,
       currentProjectSettings.timelines_config?.disabled_events
     );
-    console.log('listActivities--->', listActivities);
     setActivities(listActivities);
   }, [currentProjectSettings, accountDetails]);
 
