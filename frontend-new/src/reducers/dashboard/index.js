@@ -38,7 +38,6 @@ import {
   DELETE_DASHBOARD_FOLDER_SUCCESSFUL,
   DELETE_DASHBOARD_FOLDER_FAILED,
   INITIATE_DASHBOARD_DELETION,
-  RESET_DASHBOARD_DELETION_INITIATION,
   INITIATE_EDIT_DASHBOARD_DETAILS
 } from './types';
 
@@ -124,14 +123,28 @@ export default function (state = defaultState, action) {
           refreshed_at: action.payload
         }
       };
-    case DASHBOARD_CREATED:
+    case DASHBOARD_CREATED: {
+      const updatedFoldersList = state.foldersList.data.map((folder) => {
+        if (folder.id === state.allBoardsFolderId) {
+          return {
+            ...folder,
+            dashboardIds: [...folder.dashboardIds, action.payload.id]
+          };
+        }
+        return folder;
+      });
       return {
         ...state,
         dashboards: {
           ...state.dashboards,
           data: [...state.dashboards.data, action.payload]
+        },
+        foldersList: {
+          ...state.foldersList,
+          data: updatedFoldersList
         }
       };
+    }
     case DASHBOARD_DELETED: {
       const newDashboardList = state.dashboards.data.filter(
         (d) => d.id !== action.payload.id
@@ -142,7 +155,10 @@ export default function (state = defaultState, action) {
         activeDashboardUnits: { ...defaultState.activeDashboardUnits },
         dashboards: { ...defaultState.dashboards, data: newDashboardList },
         activeDashboard: newActiveDashboard,
-        dashboardDeletionInitiated: false
+        deleteDashboardState: {
+          ...apiStates,
+          completed: true
+        }
       };
     }
     case WIDGET_DELETED: {
@@ -476,18 +492,6 @@ export default function (state = defaultState, action) {
       return {
         ...defaultState
       };
-    case INITIATE_DASHBOARD_DELETION: {
-      return {
-        ...state,
-        dashboardDeletionInitiated: true
-      };
-    }
-    case RESET_DASHBOARD_DELETION_INITIATION: {
-      return {
-        ...state,
-        dashboardDeletionInitiated: false
-      };
-    }
     case INITIATE_EDIT_DASHBOARD_DETAILS: {
       const { dashboard } = action.payload;
       return {
@@ -495,6 +499,15 @@ export default function (state = defaultState, action) {
         editDashboardDetails: {
           initiated: true,
           editDashboard: dashboard
+        }
+      };
+    }
+    case INITIATE_DASHBOARD_DELETION: {
+      return {
+        ...state,
+        deleteDashboardState: {
+          ...apiStates,
+          loading: true
         }
       };
     }

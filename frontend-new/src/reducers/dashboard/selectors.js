@@ -50,12 +50,12 @@ export const selectDeleteFolderState = createSelector(
   (dashboardState) => dashboardState.deleteFolderState
 );
 
-export const selectIsDashboardDeletionInitiated = createSelector(
-  (state) => state.dashboard,
-  (dashboardState) => dashboardState.dashboardDeletionInitiated
-);
-
 export const selectEditDashboardDetailsState = createSelector(
   (state) => state.dashboard,
   (dashboardState) => dashboardState.editDashboardDetails
+);
+
+export const selectDeleteDashboardState = createSelector(
+  (state) => state.dashboard,
+  (dashboardState) => dashboardState.deleteDashboardState
 );

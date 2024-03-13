@@ -134,7 +134,8 @@ function DashboardFolderButton({
 function DashboardItem({
   dashboard,
   setActiveDashboardForFolder,
-  onAddDashboardToExistingFolder
+  onAddDashboardToExistingFolder,
+  onDeleteDashboardClick
 }) {
   const dispatch = useDispatch();
   const history = useHistory();
@@ -174,6 +175,10 @@ function DashboardItem({
     dispatch({ type: ADD_DASHBOARD_MODAL_OPEN });
   }, [dashboard]);
 
+  const handleDeleteDashboardClick = useCallback(() => {
+    onDeleteDashboardClick(dashboard);
+  }, [dashboard]);
+
   useEffect(() => {
     if (!isActive && activeDashboard.class === 'predefined') {
       const preDashboard = dashboards.filter((db) => db.class === 'predefined');
@@ -190,11 +195,16 @@ function DashboardItem({
       onAdditionToNewFolder={handleAdditionToNewFolder}
       onAddDashboardToExistingFolder={handleAddDashboardToExistingFolder}
       onEditDashboardDetails={handleEditDashboardDetails}
+      onDeleteDashboardClick={handleDeleteDashboardClick}
     />
   );
 }
 
-function DashboardFoldersLayout({ searchText, setActiveDashboardForFolder }) {
+function DashboardFoldersLayout({
+  searchText,
+  setActiveDashboardForFolder,
+  onDeleteDashboardClick
+}) {
   const dispatch = useDispatch();
   const dashboardFolders = useSelector((state) =>
     selectDashboardFoldersListState(state)
@@ -324,6 +334,7 @@ function DashboardFoldersLayout({ searchText, setActiveDashboardForFolder }) {
             dashboard={dashboard}
             key={dashboard.id}
             onAddDashboardToExistingFolder={handleAddDashboardToExistingFolder}
+            onDeleteDashboardClick={onDeleteDashboardClick}
           />
         ))}
       </>
@@ -352,6 +363,7 @@ function DashboardFoldersLayout({ searchText, setActiveDashboardForFolder }) {
             dashboard={dashboard}
             key={dashboard.id}
             onAddDashboardToExistingFolder={handleAddDashboardToExistingFolder}
+            onDeleteDashboardClick={onDeleteDashboardClick}
           />
         ))}
       </ControlledComponent>
@@ -373,6 +385,7 @@ function DashboardFoldersLayout({ searchText, setActiveDashboardForFolder }) {
                 onAddDashboardToExistingFolder={
                   handleAddDashboardToExistingFolder
                 }
+                onDeleteDashboardClick={onDeleteDashboardClick}
               />
             ))}
           </ControlledComponent>

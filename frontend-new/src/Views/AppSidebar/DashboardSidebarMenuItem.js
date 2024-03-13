@@ -5,7 +5,6 @@ import { SVG, Text } from 'Components/factorsComponents';
 import { useDispatch, useSelector } from 'react-redux';
 import { toggleNewFolderModal } from 'Reducers/dashboard/actions';
 import { selectDashboardFoldersListState } from 'Reducers/dashboard/selectors';
-import { INITIATE_DASHBOARD_DELETION } from 'Reducers/dashboard/types';
 import styles from './index.module.scss';
 
 function DashboardSidebarMenuItem({
@@ -14,7 +13,8 @@ function DashboardSidebarMenuItem({
   onClick,
   onAdditionToNewFolder,
   onAddDashboardToExistingFolder,
-  onEditDashboardDetails
+  onEditDashboardDetails,
+  onDeleteDashboardClick
 }) {
   const [showExistingFoldersList, setShowExistingFoldersList] = useState(false);
   const [showMoreActions, setShowMoreActions] = useState(false);
@@ -46,10 +46,6 @@ function DashboardSidebarMenuItem({
       ))}
     </div>
   );
-
-  const handleDashboardDeletion = useCallback(() => {
-    dispatch({ type: INITIATE_DASHBOARD_DELETION });
-  }, []);
 
   const handleEditDashboardDetails = useCallback(() => {
     onEditDashboardDetails();
@@ -121,7 +117,7 @@ function DashboardSidebarMenuItem({
         type='button'
         onClick={(e) => {
           e.stopPropagation();
-          handleDashboardDeletion();
+          onDeleteDashboardClick();
         }}
         className={cx(
           'px-4 py-2 text-left',
