@@ -12,14 +12,20 @@ import get from 'lodash/get';
 
 import cx from 'classnames';
 
-import { fetchQueries, getEventsData } from 'Reducers/coreQuery/services';
+import {
+  fetchQueries,
+  getEventsData,
+  updateQuery
+} from 'Reducers/coreQuery/services';
 import { EMPTY_ARRAY, EMPTY_OBJECT, generateRandomKey } from 'Utils/global';
 import AnalysisHeader from 'Views/CoreQuery/AnalysisResultsPage/AnalysisHeader';
 import {
   ACTIVE_USERS_CRITERIA,
   apiChartAnnotations,
+  DefaultChartTypes,
   EACH_USER_TYPE,
   FREQUENCY_CRITERIA,
+  presentationObj,
   QUERY_TYPE_EVENT,
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_KPI,
@@ -36,6 +42,7 @@ import {
   SET_COMPARE_DURATION,
   SET_COMPARISON_SUPPORTED,
   SET_SAVED_QUERY_SETTINGS,
+  UPDATE_CHART_TYPES,
   UPDATE_PIVOT_CONFIG
 } from 'Views/CoreQuery/constants';
 import {
@@ -46,7 +53,7 @@ import {
 } from 'Views/CoreQuery/utils';
 import { getQueryOptionsFromEquivalentQuery } from './utils';
 import { CoreQueryState, QueryParams } from './types';
-import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
+import { QUERY_UPDATED, SHOW_ANALYTICS_RESULT } from 'Reducers/types';
 import CoreQueryReducer from 'Views/CoreQuery/CoreQueryReducer';
 import {
   deleteGroupByEventAction,
@@ -116,6 +123,10 @@ const CoreQuery = () => {
     }
     return [];
   }, []);
+
+  useEffect(() => {
+    console.log(coreQueryReducerState);
+  }, [coreQueryReducerState]);
 
   // Use Effects
   useEffect(() => {
@@ -666,10 +677,18 @@ const CoreQuery = () => {
     [coreQueryState.queryOptions, runQuery]
   );
 
+  const updateChartTypes = useCallback(
+    (payload) => {
+      updateLocalReducer(UPDATE_CHART_TYPES, payload);
+    },
+    [updateLocalReducer]
+  );
+
   const handleChartTypeChange = useCallback(
     ({ key, callUpdateService = true }) => {
       //#TODO fix
 
+      // console.log(coreQueryReducerState);
       const qType = coreQueryState.queryType;
       const changedKey = getChartChangedKey({
         queryType: coreQueryState.queryType,
@@ -678,42 +697,46 @@ const CoreQuery = () => {
         attributionModels: []
       });
 
-      // updateChartTypes({
-      //   ...chartTypes,
-      //   [queryType]: {
-      //     ...chartTypes[queryType],
-      //     [changedKey]: key
-      //   }
-      // });
+      updateChartTypes({
+        ...DefaultChartTypes,
+        [qType]: {
+          ...DefaultChartTypes[qType as keyof typeof DefaultChartTypes],
+          [changedKey]: key
+        }
+      });
 
       if (coreQueryState.querySaved.id && callUpdateService) {
         const queryGettingUpdated = savedQueries.find(
           (elem: any) => elem.id === coreQueryState.querySaved.id
         );
 
-        // const settings = {
-        //   ...queryGettingUpdated.settings,
-        //   chart: apiChartAnnotations[key]
-        // };
+        const settings = {
+          ...queryGettingUpdated.settings,
+          chart: apiChartAnnotations[key as keyof typeof apiChartAnnotations]
+        };
 
         const reqBody = {
           title: queryGettingUpdated.title,
           settings
         };
 
-        // updateQuery(active_project.id, savedQueryId, reqBody);
+        updateQuery(active_project.id, coreQueryState.querySaved.id, reqBody);
 
-        // // #Todo Disabled for now. The query is getting rerun again. Have to figure out a way around it.
-        // if (!query_type) {
-        //   dispatch({
-        //     type: QUERY_UPDATED,
-        //     queryId: savedQueryId,
-        //     payload: reqBody
-        //   });
-        // }
+        // #Todo Disabled for now. The query is getting rerun again. Have to figure out a way around it.
+        if (!qType) {
+          dispatch({
+            type: QUERY_UPDATED,
+            queryId: coreQueryState.querySaved.id,
+            payload: reqBody
+          });
+        }
       }
     },
-    [coreQueryState.queryType, coreQueryState.appliedBreakdown]
+    [
+      coreQueryState.queryType,
+      coreQueryState.appliedBreakdown,
+      coreQueryReducerState
+    ]
   );
 
   const renderComposer = () => {
@@ -875,6 +898,7 @@ const CoreQuery = () => {
   const renderReportContent = () => {
     return (
       <ReportContent
+        coreQueryReducerState={coreQueryReducerState}
         breakdownType={coreQueryState.breakdownType}
         queryType={coreQueryState.queryType}
         renderedCompRef={renderedCompRef}
