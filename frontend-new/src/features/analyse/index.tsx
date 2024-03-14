@@ -260,6 +260,8 @@ const CoreQuery = () => {
             queryState.queryOptions,
             equivalentQuery
           );
+          queryState.breakdownType =
+            REVERSE_USER_TYPES[queryState.requestQuery[0].ec];
 
           if (queryState.requestQuery) {
             updateEventFunnelsState(
@@ -851,7 +853,7 @@ const CoreQuery = () => {
         coreQueryState.querySaved ? coreQueryState.querySaved?.name : null
       }
       setQuerySaved={(v: any) => coreQueryState.setItem('querySaved', v)}
-      breakdownType={EACH_USER_TYPE}
+      breakdownType={coreQueryState.breakdownType}
       changeTab={(v: any) => coreQueryState.setItem('activeTab', v)}
       activeTab={coreQueryState.activeTab}
       getCurrentSorter={getCurrentSorter}
@@ -873,7 +875,7 @@ const CoreQuery = () => {
   const renderReportContent = () => {
     return (
       <ReportContent
-        breakdownType={EACH_USER_TYPE}
+        breakdownType={coreQueryState.breakdownType}
         queryType={coreQueryState.queryType}
         renderedCompRef={renderedCompRef}
         breakdown={coreQueryState.appliedBreakdown}
