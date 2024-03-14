@@ -16,7 +16,8 @@ import {
 import {
   selectAreDraftsSelected,
   selectDashboardFoldersListState,
-  selectDashboardList
+  selectDashboardList,
+  selectEditDashboardDetailsState
 } from 'Reducers/dashboard/selectors';
 import CommonBeforeIntegrationPage from 'Components/GenericComponents/CommonBeforeIntegrationPage';
 import AddDashboard from './AddDashboard';
@@ -45,7 +46,6 @@ function Dashboard({
   fetchMarketoIntegration,
   fetchProjectSettings
 }) {
-  const [addDashboardModal, setaddDashboardModal] = useState(false);
   const [editDashboard, setEditDashboard] = useState(null);
   const [durationObj, setDurationObj] = useState(getDashboardDateRange());
   const [sdkCheck, setSdkCheck] = useState(false);
@@ -57,6 +57,9 @@ function Dashboard({
 
   const { activeDashboardUnits, activeDashboard } = useSelector(
     (state) => state.dashboard
+  );
+  const editDashboardDetailsState = useSelector((state) =>
+    selectEditDashboardDetailsState(state)
   );
   const dashboards = useSelector((state) => selectDashboardList(state));
 
@@ -98,7 +101,6 @@ function Dashboard({
 
   const handleEditClick = useCallback((dashboard) => {
     dispatch({ type: ADD_DASHBOARD_MODAL_OPEN });
-    setaddDashboardModal(true);
     setEditDashboard(dashboard);
   }, []);
 
@@ -227,6 +229,12 @@ function Dashboard({
     }
   }, [activeProject.id, foldersList.completed]);
 
+  useEffect(() => {
+    if (editDashboardDetailsState.initiated === true) {
+      setEditDashboard(editDashboardDetailsState.editDashboard);
+    }
+  }, [editDashboardDetailsState]);
+
   if (dashboards.loading || queries.loading || foldersList.completed !== true) {
     return (
       <div className='flex justify-center items-center w-full h-64'>
@@ -251,7 +259,6 @@ function Dashboard({
           <div className='flex-1 flex flex-col'>
             <ProjectDropdown
               handleEditClick={handleEditClick}
-              setaddDashboardModal={setaddDashboardModal}
               durationObj={durationObj}
               handleDurationChange={handleDurationChange}
               oldestRefreshTime={oldestRefreshTime}
@@ -268,8 +275,6 @@ function Dashboard({
         <AddDashboard
           setEditDashboard={setEditDashboard}
           editDashboard={editDashboard}
-          addDashboardModal={addDashboardModal}
-          setaddDashboardModal={setaddDashboardModal}
         />
       </ErrorBoundary>
     );
@@ -278,9 +283,7 @@ function Dashboard({
   if (checkIntegration) {
     return (
       <>
-        <DashboardAfterIntegration
-          setaddDashboardModal={setaddDashboardModal}
-        />
+        <DashboardAfterIntegration />
         {/* <AddDashboard
           setEditDashboard={setEditDashboard}
           editDashboard={editDashboard}

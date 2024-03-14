@@ -3,7 +3,6 @@ import os
 import json
 from datetime import datetime, timedelta
 import pytz
-import jaro
 import Levenshtein
 
 DEFAULT_TIMEZONE = "Asia/Kolkata"

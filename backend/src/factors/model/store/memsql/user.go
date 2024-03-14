@@ -496,19 +496,28 @@ func (store *MemSQL) GetUsersAssociatedToDomainList(projectID int64, domainGroup
 }
 
 // get domain details
-func (store *MemSQL) GetDomainDetailsByID(projectID int64, id string) (model.User, int) {
+func (store *MemSQL) GetDomainDetailsByID(projectID int64, id string, domGroupID int) (model.User, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"dom_id":     id,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
+	var grpCol string
+
+	// fetching group_x_id for host_name
+	if domGroupID > 0 {
+		grpCol = fmt.Sprintf(", group_%d_id", domGroupID)
+	}
+
+	queryParams := []interface{}{projectID, id, model.UserSourceDomains}
+
 	var user model.User
 
-	query := `SELECT id, properties, is_group_user, source, last_event_at FROM users WHERE project_id = ? AND id = ? AND source = ? LIMIT 1;`
+	query := fmt.Sprintf(`SELECT id, properties, is_group_user, source, last_event_at%s FROM users WHERE project_id = ? AND id = ? AND source = ? LIMIT 1;`, grpCol)
 
 	db := C.GetServices().Db
-	err := db.Raw(query, projectID, id, model.UserSourceDomains).Scan(&user).Error
+	err := db.Raw(query, queryParams...).Scan(&user).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return model.User{}, http.StatusNotFound
@@ -520,7 +529,8 @@ func (store *MemSQL) GetDomainDetailsByID(projectID int64, id string) (model.Use
 }
 
 // get all domains to run marker for
-func (store *MemSQL) GetAllDomainsByProjectID(projectID int64, domainGroupID int, limitVal int) ([]string, int) {
+func (store *MemSQL) GetAllDomainsByProjectID(projectID int64, domainGroupID int, limitVal int,
+	offSet int, searchFilter []string) ([]string, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"domain_id":  domainGroupID,
@@ -529,25 +539,16 @@ func (store *MemSQL) GetAllDomainsByProjectID(projectID int64, domainGroupID int
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	var domainIDs []string
-	queryParams := []interface{}{projectID, model.UserSourceDomains}
-
-	query := fmt.Sprintf(`SELECT 
-	group_%d_user_id 
-  FROM 
-	users 
-  WHERE 
-	project_id = ? 
-	AND group_%d_user_id IS NOT NULL
-	AND source != ? 
-  GROUP BY 
-	group_%d_user_id 
-  ORDER BY 
-	properties_updated_timestamp DESC 
-  LIMIT 
-	%d;`, domainGroupID, domainGroupID, domainGroupID, limitVal)
+	query, queryParams := getLatestDomainsByProjectIDQuery(projectID, domainGroupID, limitVal,
+		offSet, searchFilter)
 
 	db := C.GetServices().Db
 	rows, err := db.Raw(query, queryParams...).Rows()
+
+	if rows != nil {
+		defer rows.Close()
+	}
+
 	if err != nil {
 		log.WithFields(logFields).WithError(err).Error("Error fetching records")
 		return []string{}, http.StatusInternalServerError
@@ -568,6 +569,38 @@ func (store *MemSQL) GetAllDomainsByProjectID(projectID int64, domainGroupID int
 	}
 
 	return domainIDs, http.StatusFound
+}
+
+func getLatestDomainsByProjectIDQuery(projectID int64, domainGroupID int, limitVal int,
+	offSet int, searchFilter []string) (string, []interface{}) {
+	queryParams := []interface{}{projectID, model.UserSourceDomains}
+
+	if len(searchFilter) > 0 {
+		whereForSearchFilters, searchFiltersParams := SearchFilterForAllAccounts(searchFilter, domainGroupID)
+		query := fmt.Sprintf(`SELECT id FROM users WHERE project_id = ? AND source = ? %s 
+		LIMIT %d OFFSET %d;`, whereForSearchFilters, limitVal, offSet)
+		queryParams = append(queryParams, searchFiltersParams...)
+
+		return query, queryParams
+	}
+
+	query := fmt.Sprintf(`SELECT 
+	group_%d_user_id 
+  FROM 
+	users 
+  WHERE 
+	project_id = ? 
+	AND group_%d_user_id IS NOT NULL
+	AND source != ? 
+	AND last_event_at IS NOT NULL
+  GROUP BY 
+	group_%d_user_id 
+  ORDER BY 
+   last_event_at DESC 
+  LIMIT 
+	%d OFFSET %d;`, domainGroupID, domainGroupID, domainGroupID, limitVal, offSet)
+
+	return query, queryParams
 }
 
 // get all domains to run marker for in time range

@@ -7,7 +7,8 @@ import {
   DASHBOARDS_LOADING,
   DASHBOARDS_LOADING_FAILED,
   DASHBOARD_UNITS_LOADING,
-  DASHBOARD_UNITS_LOADED
+  DASHBOARD_UNITS_LOADED,
+  DASHBOARD_DELETED
 } from '../types';
 import { DASHBOARD_KEYS } from '../../constants/localStorage.constants';
 import { changeActiveDashboardAction } from './actions';
@@ -27,7 +28,8 @@ import {
   RENAME_DASHBOARD_FOLDER_FAILED,
   INITIATED_DELETE_DASHBOARD_FOLDER,
   DELETE_DASHBOARD_FOLDER_SUCCESSFUL,
-  DELETE_DASHBOARD_FOLDER_FAILED
+  DELETE_DASHBOARD_FOLDER_FAILED,
+  INITIATE_DASHBOARD_DELETION,
 } from './types';
 
 const host = getHostUrl();
@@ -139,7 +141,7 @@ export const addDashboardToNewFolder = (projectId, dashboardId, folderName) =>
       });
       dispatch({
         type: DASHBOARD_NEW_FOLDER_CREATION_SUCCESSFUL,
-        payload: res.data
+        payload: { newFolder: res.data, dashboardId }
       });
     } catch (err) {
       console.log(err);
@@ -163,7 +165,7 @@ export const addDashboardToExistingFolder = (
     try {
       dispatch({ type: INITIATED_DASHBOARD_MOVE_TO_EXISTING_FOLDER });
       const url = `${host}projects/${projectId}/dashboards/${dashboardId}`;
-      const res = await put(null, url, {
+      await put(null, url, {
         folder_id: folderId
       });
       notification.success({
@@ -173,7 +175,7 @@ export const addDashboardToExistingFolder = (
       });
       dispatch({
         type: DASHBOARD_MOVE_TO_EXISTING_FOLDER_SUCCESSFUL,
-        payload: res.data
+        payload: { folderId, dashboardId }
       });
     } catch (err) {
       console.log(err);
@@ -248,6 +250,32 @@ export const deleteDashboardFolder = (projectId, folderId) =>
       notification.error({
         message: 'Error',
         description: 'Folder deletion failed',
+        duration: 2
+      });
+    }
+  };
+
+export const deleteDashboardAction = (projectId, dashboardId) =>
+  async function (dispatch) {
+    try {
+      dispatch({ type: INITIATE_DASHBOARD_DELETION });
+      await deleteDashboard(projectId, dashboardId);
+      notification.success({
+        message: 'Success',
+        description: 'Dashboard deleted successfully',
+        duration: 2
+      });
+      dispatch({
+        type: DASHBOARD_DELETED,
+        payload: {
+          id: dashboardId
+        }
+      });
+    } catch (err) {
+      console.log(err);
+      notification.error({
+        message: 'Error',
+        description: 'Dashboard deletion failed',
         duration: 2
       });
     }

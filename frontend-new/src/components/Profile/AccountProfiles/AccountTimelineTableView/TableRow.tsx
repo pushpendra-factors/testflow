@@ -60,7 +60,14 @@ function TableRow({
       : Object.entries(event?.properties || {})?.[0]?.[1];
 
   return (
-    <tr className='table-row clickable cursor-pointer' onClick={onEventClick}>
+    <tr
+      className={`table-row ${
+        event.is_group_event && !hasEventProperties
+          ? 'pointer-events-none'
+          : 'clickable'
+      } cursor-pointer`}
+      onClick={onEventClick}
+    >
       <td className='timestamp-cell'>{timestamp}</td>
       <td className='event-cell'>
         <EventIcon icon={event.icon} size={24} />

@@ -150,6 +150,7 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 			Properties:   properties,
 			IsGroupUser:  &groupUser,
 			LastEventAt:  &lastEventTime,
+			Group4ID:     fmt.Sprintf("domain%did.com", i),
 		})
 		account, errCode := store.GetStore().GetUser(project.ID, createdUserID)
 		assert.Equal(t, http.StatusFound, errCode)
@@ -168,6 +169,7 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 			Group1ID:       "1",
 			Group1UserID:   account.ID,
 			Group4UserID:   domainAccounts[i],
+			Group4ID:       fmt.Sprintf("domain%did.com", i),
 			CustomerUserId: fmt.Sprintf("salesforce@%duser", (i%5)+1),
 			LastEventAt:    &lastEventTime,
 		})
@@ -211,6 +213,7 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 			Source:       source,
 			Group2ID:     fmt.Sprintf("hbgroupuser%d@%s", i+1, accountPropertiesMap[i+5]["$hubspot_company_domain"]),
 			Group4UserID: domainAccounts[i],
+			Group4ID:     fmt.Sprintf("domain%did.com", i),
 			Properties:   properties,
 			IsGroupUser:  &groupUser,
 			LastEventAt:  &lastEventTime,
@@ -230,6 +233,7 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 			Source:         model.GetRequestSourcePointer(model.UserSourceHubspot),
 			Properties:     properties,
 			Group2UserID:   account.ID,
+			Group4ID:       fmt.Sprintf("domain%did.com", i),
 			Group4UserID:   domainAccounts[i],
 			CustomerUserId: fmt.Sprintf("hubspot@%duser", (i%5)+1),
 			LastEventAt:    &lastEventTime,
@@ -341,6 +345,7 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 			Source:       source,
 			Group3ID:     fmt.Sprintf("6siguser%d@%s", i+1, accountPropertiesMap[i+10][U.SIX_SIGNAL_DOMAIN]),
 			Group4UserID: domainAccounts[i],
+			Group4ID:     fmt.Sprintf("domain%did.com", i),
 			Properties:   properties,
 			IsGroupUser:  &groupUser,
 			LastEventAt:  &lastEventTime,
@@ -361,6 +366,7 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 			Properties:     properties,
 			Group3UserID:   account.ID,
 			Group4UserID:   domainAccounts[i],
+			Group4ID:       fmt.Sprintf("domain%did.com", i),
 			CustomerUserId: fmt.Sprintf("sixsignal@%duser", (i%5)+1),
 			LastEventAt:    &lastEventTime,
 		})
@@ -967,6 +973,9 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 	// segment11 -> domain1id.com, domain2id.com
 
 	for index, checkUser := range updatedUsers {
+		if checkUser.Source == nil || *checkUser.Source != model.UserSourceDomains {
+			continue
+		}
 		if checkUser.Group4ID == "domain0id.com" {
 			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["User Group props"])
 			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["Group AND User Group props"])

@@ -153,10 +153,7 @@ function DashboardTemplates() {
           </Link>
         </div>
       </div>
-      <AddDashboard
-        addDashboardModal={addDashboardModal}
-        setaddDashboardModal={setaddDashboardModal}
-      />
+      <AddDashboard />
     </>
   );
 }

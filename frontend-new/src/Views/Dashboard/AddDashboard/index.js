@@ -46,8 +46,6 @@ function AddDashboard({ editDashboard, setEditDashboard }) {
   const { active_project } = useSelector((state) => state.global);
   const { activeDashboardUnits } = useSelector((state) => state.dashboard);
   const dispatch = useDispatch();
-  const history = useHistory();
-  const { pathname } = useLocation();
   let { isAddNewDashboardModal } = useSelector(
     (state) => state.dashboard_templates_Reducer
   );

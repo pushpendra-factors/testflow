@@ -7,7 +7,6 @@ import (
 	"factors/model/store"
 	PW "factors/pattern_service_wrapper"
 	U "factors/util"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -254,7 +253,7 @@ func GetEventNamesByUserHandler(c *gin.Context) {
 
 	// Adding $page_view event_name by force
 	if showSpecialEvents == "true" {
-		eventNames[U.FrequentlySeen] = append(eventNames[U.FrequentlySeen], U.EVENT_NAME_PAGE_VIEW)
+		eventNames[U.WebsiteActivityEvent] = append(eventNames[U.WebsiteActivityEvent], U.EVENT_NAME_PAGE_VIEW)
 	}
 
 	_, displayNames := store.GetStore().GetDisplayNamesForAllEvents(projectId)
@@ -573,15 +572,32 @@ func GetEventPropertyValuesHandler(c *gin.Context) {
 	log.WithField("decodedEventName", eventName).Debug("Decoded event name on properties value request.")
 
 	if isExplain != "true" {
-		propertyValues, err = store.GetStore().GetPropertyValuesByEventProperty(projectId, eventName,
-			propertyName, 2500, C.GetLookbackWindowForEventUserCache())
+
+		normalEventName := eventName
+		normalPropertyName := propertyName
+		//Convert to normal event and property for special event $page_view and property $page_url
+		if standardEventNameThatShouldBeUsed, exists := U.SPECIAL_EVENTS_TO_STANDARD_EVENTS[eventName]; exists {
+			normalEventName = standardEventNameThatShouldBeUsed
+			normalPropertyName = U.EVENT_TO_SESSION_PROPERTIES[propertyName]
+		}
+
+		propertyValues, err = store.GetStore().GetPropertyValuesByEventProperty(projectId, normalEventName,
+			normalPropertyName, 2500, C.GetLookbackWindowForEventUserCache())
 		if err != nil {
 			logCtx.WithError(err).Error("get properties values by event property")
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
 		}
+
 		if len(propertyValues) == 0 {
-			logCtx.WithError(err).Error(fmt.Sprintf("No event values Returned - ProjectID - %v, EventName - %s, propertyName -%s", projectId, eventName, propertyName))
+			logCtx.WithFields(log.Fields{
+				"project_id":    projectId,
+				"event_name":    eventName,
+				"property_name": propertyName,
+			}).WithError(err).Error("No property values for the event returned")
+
+			c.AbortWithStatus(http.StatusNoContent)
+			return
 		}
 	} else {
 		var status int

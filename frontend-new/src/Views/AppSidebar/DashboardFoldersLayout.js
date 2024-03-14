@@ -29,6 +29,8 @@ import {
 import { PathUrls } from 'Routes/pathUrls';
 import ControlledComponent from 'Components/ControlledComponent';
 import { changeActivePreDashboard } from 'Views/PreBuildDashboard/state/services';
+import { ADD_DASHBOARD_MODAL_OPEN } from 'Reducers/types';
+import { INITIATE_EDIT_DASHBOARD_DETAILS } from 'Reducers/dashboard/types';
 import DashboardSidebarMenuItem from './DashboardSidebarMenuItem';
 import styles from './index.module.scss';
 import DashboardNewFolderModal from './DashboardNewFolderModal';
@@ -132,7 +134,8 @@ function DashboardFolderButton({
 function DashboardItem({
   dashboard,
   setActiveDashboardForFolder,
-  onAddDashboardToExistingFolder
+  onAddDashboardToExistingFolder,
+  onDeleteDashboardClick
 }) {
   const dispatch = useDispatch();
   const history = useHistory();
@@ -167,6 +170,15 @@ function DashboardItem({
     [dashboard.id, onAddDashboardToExistingFolder]
   );
 
+  const handleEditDashboardDetails = useCallback(() => {
+    dispatch({ type: INITIATE_EDIT_DASHBOARD_DETAILS, payload: { dashboard } });
+    dispatch({ type: ADD_DASHBOARD_MODAL_OPEN });
+  }, [dashboard]);
+
+  const handleDeleteDashboardClick = useCallback(() => {
+    onDeleteDashboardClick(dashboard);
+  }, [dashboard]);
+
   useEffect(() => {
     if (!isActive && activeDashboard.class === 'predefined') {
       const preDashboard = dashboards.filter((db) => db.class === 'predefined');
@@ -182,11 +194,17 @@ function DashboardItem({
       isActive={isActive}
       onAdditionToNewFolder={handleAdditionToNewFolder}
       onAddDashboardToExistingFolder={handleAddDashboardToExistingFolder}
+      onEditDashboardDetails={handleEditDashboardDetails}
+      onDeleteDashboardClick={handleDeleteDashboardClick}
     />
   );
 }
 
-function DashboardFoldersLayout({ searchText, setActiveDashboardForFolder }) {
+function DashboardFoldersLayout({
+  searchText,
+  setActiveDashboardForFolder,
+  onDeleteDashboardClick
+}) {
   const dispatch = useDispatch();
   const dashboardFolders = useSelector((state) =>
     selectDashboardFoldersListState(state)
@@ -204,6 +222,7 @@ function DashboardFoldersLayout({ searchText, setActiveDashboardForFolder }) {
   const deleteFolderState = useSelector((state) =>
     selectDeleteFolderState(state)
   );
+  const activeDashboard = useSelector((state) => selectActiveDashboard(state));
   const { data: dashboardFoldersList } = dashboardFolders;
 
   const [expandedFolders, setExpandedFolders] = useState({});
@@ -284,8 +303,15 @@ function DashboardFoldersLayout({ searchText, setActiveDashboardForFolder }) {
   }, [deleteFolderId, active_project.id]);
 
   useEffect(() => {
-    setExpandedFolders({ [allBoardsFolderId]: true });
-  }, [allBoardsFolderId]);
+    const currentActiveDashboardFolder = dashboardFoldersList.find((folder) =>
+      folder.dashboardIds.find((dId) => dId === activeDashboard.id)
+    );
+    if (currentActiveDashboardFolder != null) {
+      setExpandedFolders({ [currentActiveDashboardFolder.id]: true });
+    } else {
+      setExpandedFolders({ [allBoardsFolderId]: true });
+    }
+  }, [allBoardsFolderId, dashboardFoldersList, activeDashboard.id]);
 
   useEffect(() => {
     if (renameFolderState.completed === true) {
@@ -308,6 +334,7 @@ function DashboardFoldersLayout({ searchText, setActiveDashboardForFolder }) {
             dashboard={dashboard}
             key={dashboard.id}
             onAddDashboardToExistingFolder={handleAddDashboardToExistingFolder}
+            onDeleteDashboardClick={onDeleteDashboardClick}
           />
         ))}
       </>
@@ -336,6 +363,7 @@ function DashboardFoldersLayout({ searchText, setActiveDashboardForFolder }) {
             dashboard={dashboard}
             key={dashboard.id}
             onAddDashboardToExistingFolder={handleAddDashboardToExistingFolder}
+            onDeleteDashboardClick={onDeleteDashboardClick}
           />
         ))}
       </ControlledComponent>
@@ -357,6 +385,7 @@ function DashboardFoldersLayout({ searchText, setActiveDashboardForFolder }) {
                 onAddDashboardToExistingFolder={
                   handleAddDashboardToExistingFolder
                 }
+                onDeleteDashboardClick={onDeleteDashboardClick}
               />
             ))}
           </ControlledComponent>

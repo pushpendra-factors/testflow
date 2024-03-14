@@ -283,6 +283,9 @@ type Configuration struct {
 	BlockedIPList                                        []string
 	BlockedEmailDomainList                               []string
 	AllAccountsProjectId                                 string
+	MarkerPreviewAllAccountsProjectId                    string
+	BatchSizePreviewDomain                               int
+	AccountsToProcessForPreview                          int
 	UseMarkerByProjectID                                 string
 	EnableNewAllAccountsByProjectID                      string
 	DBMaxAllowedPacket                                   int64
@@ -2343,6 +2346,23 @@ func IsDomainEnabled(projectID int64) bool {
 		return true
 	}
 	return false
+}
+
+// IsMarkerPreviewEnabled - Checks if marker is enabled for all accounts preview
+func IsMarkerPreviewEnabled(projectID int64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().MarkerPreviewAllAccountsProjectId, "")
+	if allProjects || projectIDsMap[projectID] {
+		return true
+	}
+	return false
+}
+
+func BatchSizePreviewtMarker() int {
+	return configuration.BatchSizePreviewDomain
+}
+
+func DomainsToProcessForPreview() int {
+	return configuration.AccountsToProcessForPreview
 }
 
 // UseSegmentMarker - Checks if segment marker is enabled for given project_id in all accounts listing

@@ -1608,7 +1608,7 @@ var STANDARD_EVENTS_DISPLAY_NAMES = map[string]string{
 	"$sf_campaign_member_updated":               "Interacted with Campaign",
 	"$sf_campaign_member_responded_to_campaign": "Responded to Campaign",
 	"$session":                           "Website Session",
-	"$form_submitted":                    "Form Button Click",
+	"$form_submitted":                    "Form submitted",
 	"$hubspot_company_created":           "Company Created",
 	"$hubspot_company_updated":           "Company Updated",
 	"$hubspot_deal_created":              "Deal Created",
@@ -1690,7 +1690,7 @@ var ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	DP_ENGAGEMENT_SCORE:       "Engagement Score",
 	DP_ENGAGEMENT_LEVEL:       "Engagement Level",
 	DP_TOTAL_ENGAGEMENT_SCORE: "Total Engagement Score",
-	DP_DOMAIN_NAME:            "Domain Name",
+	DP_DOMAIN_NAME:            "Company ID",
 	DP_ENGAGEMENT_SIGNALS:     "Top Engagement Signals",
 }
 
@@ -1705,6 +1705,7 @@ var USER_PROPERTIES_WITH_COLUMN_DISPLAY_NAMES = map[string]string{
 var CRM_USER_EVENT_NAME_LABELS = map[string]string{
 	"$hubspot_contact_created":                  "Hubspot Contacts",
 	"$hubspot_contact_updated":                  "Hubspot Contacts",
+	"$hubspot_form_submission":                  "Hubspot Contacts",
 	"$hubspot_engagement_email":                 "Hubspot Contacts",
 	"$hubspot_engagement_meeting_created":       "Hubspot Contacts",
 	"$hubspot_engagement_meeting_updated":       "Hubspot Contacts",
@@ -1908,9 +1909,9 @@ var STANDARD_EVENT_PROPERTIES_CATAGORIZATION = map[string]string{
 	EP_GCLID:               "Traffic source",
 	EP_FBCLID:              "Traffic source",
 	EP_LICLID:              "Traffic source",
-	EP_TIMESTAMP:           "Session properties",
-	EP_HOUR_OF_DAY:         "Session properties",
-	EP_DAY_OF_WEEK:         "Session properties",
+	EP_TIMESTAMP:           "Time of occurrence",
+	EP_HOUR_OF_DAY:         "Time of occurrence",
+	EP_DAY_OF_WEEK:         "Time of occurrence",
 	EP_SESSION_COUNT:       "Session properties",
 	EP_CHANNEL:             "Traffic source",
 	UP_POSTAL_CODE:         "User identification",
@@ -2141,8 +2142,8 @@ var STANDARD_USER_PROPERTIES_CATAGORIZATION = map[string]string{
 	UP_JOIN_TIME:                   "User identification",
 	UP_POSTAL_CODE:                 "User identification",
 	UP_CONTINENT:                   "User identification",
-	EP_HOUR_OF_DAY:                 "User identification",
-	EP_DAY_OF_WEEK:                 "User identification",
+	EP_HOUR_OF_DAY:                 "Time of occurence",
+	EP_DAY_OF_WEEK:                 "Time of occurence",
 	SP_SESSION_TIME:                "Session properties",
 	SP_SPENT_TIME:                  "Session properties",
 	SP_PAGE_COUNT:                  "Session properties",
@@ -2327,6 +2328,10 @@ var PAGE_VIEWS_STANDARD_PROPERTIES_NUMERICAL = []string{
 	EP_PAGE_LOAD_TIME,
 	EP_PAGE_SPENT_TIME,
 	EP_PAGE_SCROLL_PERCENT,
+}
+
+var SPECIAL_EVENTS_TO_STANDARD_EVENTS = map[string]string{
+	EVENT_NAME_PAGE_VIEW: EVENT_NAME_SESSION,
 }
 
 // USER_PROPERTIES_MERGE_TYPE_INITIAL Properties for which preference will be given to first occurrence while merging.
@@ -4428,6 +4433,7 @@ func isElementPresent(elementsList []string, element string) bool {
 // No filtering is done in this method
 func SortByTimestampAndCount(data []NameCountTimestampCategory) []NameCountTimestampCategory {
 	mandatoryEventsList := []string{EVENT_NAME_SESSION, EVENT_NAME_FORM_SUBMITTED, EVENT_NAME_FORM_FILL}
+	websiteActivityEventList := []string{EVENT_NAME_SESSION, EVENT_NAME_FORM_SUBMITTED, EVENT_NAME_FORM_FILL}
 	smartEventNames := make([]NameCountTimestampCategory, 0)
 	pageViewEventNames := make([]NameCountTimestampCategory, 0)
 	sorted := make([]NameCountTimestampCategory, 0)
@@ -4441,8 +4447,8 @@ func SortByTimestampAndCount(data []NameCountTimestampCategory) []NameCountTimes
 	for index := range data {
 		if data[index].Category == SmartEvent {
 			data[index].GroupName = SmartEvent
-		} else if data[index].Category == PageViewEvent {
-			data[index].GroupName = PageViewEvent
+		} else if data[index].Category == PageViewEvent || isElementPresent(websiteActivityEventList, data[index].Name) {
+			data[index].GroupName = WebsiteActivityEvent
 		} else {
 			data[index].GroupName = FrequentlySeen
 		}

@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"sync"
 	"time"
 
+	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -30,39 +32,6 @@ func (store *MemSQL) GetMarkedDomainsListByProjectId(projectID int64, payload mo
 		return []model.Profile{}, http.StatusBadRequest, "Failed to fetch source."
 	}
 
-	// Redirect to old flow if segment_id is empty
-	if payload.SegmentId == "" {
-		return store.GetProfilesListByProjectId(projectID, payload, model.PROFILE_TYPE_ACCOUNT, downloadLimitGiven)
-	}
-
-	// Redirect to old flow if additional filters exist
-	segment, statusCode := store.GetSegmentById(projectID, payload.SegmentId)
-	if statusCode != http.StatusFound {
-		logCtx.Error("Segment not found.")
-		return []model.Profile{}, statusCode, "Failed to get segment"
-	}
-
-	lastRunTime, lastRunStatusCode := store.GetMarkerLastForAllAccounts(projectID)
-
-	// for case - segment is updated but all_run for the day is yet to run
-	if lastRunStatusCode != http.StatusFound || segment.UpdatedAt.After(lastRunTime) {
-		return store.GetProfilesListByProjectId(projectID, payload, model.PROFILE_TYPE_ACCOUNT, downloadLimitGiven)
-	}
-
-	// if segment.UpdatedAt
-	segmentQuery := model.Query{}
-	err := U.DecodePostgresJsonbToStructType(segment.Query, &segmentQuery)
-	if err != nil {
-		log.WithField("project_id", projectID).Error("Unable to decode segment query")
-		return []model.Profile{}, statusCode, "Failed to get segment"
-	}
-
-	additionalFiltersExist := CompareFilters(segmentQuery, payload.Query)
-
-	if additionalFiltersExist {
-		return store.GetProfilesListByProjectId(projectID, payload, model.PROFILE_TYPE_ACCOUNT, downloadLimitGiven)
-	}
-
 	// set Query Timezone
 	timezoneString, statusCode := store.GetTimezoneForProject(projectID)
 	if statusCode != http.StatusFound {
@@ -76,85 +45,42 @@ func (store *MemSQL) GetMarkedDomainsListByProjectId(projectID int64, payload mo
 		return []model.Profile{}, http.StatusInternalServerError, "failed to get group while adding group info"
 	}
 
-	// check for search filter
-	whereForSearchFilters, searchFiltersParams := SearchFilterForAllAccounts(payload.SearchFilter, domainGroup.ID)
-
-	var domLimit int
-	if downloadLimitGiven {
-		domLimit = 10000
-	} else {
-		domLimit = 1000
-	}
-
-	query := fmt.Sprintf(`WITH step_0 as (
-		SELECT 
-		  id as identity, 
-		  group_%d_id as host_name 
-		FROM 
-		  users 
-		WHERE 
-		  project_id = ? 
-		  AND JSON_EXTRACT_STRING(
-			associated_segments, ?
-		  ) IS NOT NULL 
-		  AND is_group_user = 1 
-		  AND source = ? 
-		  AND group_%d_id IS NOT NULL %s
-		LIMIT 
-		  100000
-	  ) 
-	  SELECT 
-		identity, 
-		host_name, 
-		MAX(users.last_event_at) as last_activity 
-	  FROM 
-		step_0 
-		JOIN (
-		  SELECT 
-			last_event_at, 
-			group_%d_user_id 
-		  FROM 
-			users 
-		  WHERE 
-			users.project_id = ? 
-			AND users.source != ? 
-			AND last_event_at IS NOT NULL
-		) AS users ON step_0.identity = users.group_%d_user_id 
-	  GROUP BY 
-		identity 
-	  ORDER BY 
-		last_activity DESC 
-	  LIMIT 
-		%d;`, domainGroup.ID, domainGroup.ID, whereForSearchFilters,
-		domainGroup.ID, domainGroup.ID, domLimit)
-
-	params := []interface{}{projectID, payload.SegmentId, model.UserSourceDomains}
-
-	if whereForSearchFilters != "" {
-		params = append(params, searchFiltersParams...)
-	}
-
-	params = append(params, projectID, model.UserSourceDomains)
-
 	var profiles []model.Profile
-	db := C.GetServices().Db
-	err = db.Raw(query, params...).Scan(&profiles).Error
-	if err != nil {
-		return []model.Profile{}, http.StatusInternalServerError, "Error in fetching rows for all accounts"
+	var errMsg string
+
+	payload.Query.Caller = model.PROFILE_TYPE_ACCOUNT
+
+	if payload.SegmentId == "" && !C.IsMarkerPreviewEnabled(projectID) {
+		// Redirect to old flow if segment_id is empty
+		return store.GetProfilesListByProjectId(projectID, payload, model.PROFILE_TYPE_ACCOUNT, downloadLimitGiven)
+	}
+	if payload.SegmentId == "" {
+		// new preview flow
+		profiles, statusCode, errMsg = store.GetPreviewDomainsListByProjectId(projectID, payload,
+			domainGroup.ID)
+	} else {
+		// fetching accounts for segments
+		profiles, statusCode, errMsg = store.GetDomainsListFromMarker(projectID, payload,
+			domainGroup.ID)
 	}
 
-	// Redirect to old flow if no profiles found
-	if len(profiles) == 0 {
+	// if status is not found or profiles are empty, redirecting to old flow
+	if statusCode == http.StatusInternalServerError {
+		return profiles, statusCode, errMsg
+	}
+
+	// Redirect to old flow if no profiles found and flag disabled (for fetching saved segments)
+	if len(profiles) == 0 && !C.IsMarkerPreviewEnabled(projectID) {
 		return store.GetProfilesListByProjectId(projectID, payload, model.PROFILE_TYPE_ACCOUNT, downloadLimitGiven)
 	}
 
 	// datetime conversion
-	err = segmentQuery.TransformDateTypeFilters()
+	err := payload.Query.TransformDateTypeFilters()
 	if err != nil {
 		log.WithField("project_id", projectID).Error("Failed to transform segment filters.")
 		return []model.Profile{}, statusCode, "Failed to get segment"
 	}
-	groupedFilters := GroupFiltersByGroupName(segmentQuery.GlobalUserProperties)
+	groupedFilters := GroupFiltersByGroupName(payload.Query.GlobalUserProperties)
 
 	// set TableProps
 	if len(payload.Query.TableProps) == 0 {
@@ -248,4 +174,354 @@ func CompareFilters(segmentQuery model.Query, payloadQuery model.Query) bool {
 	}
 
 	return additionalFiltersExist
+}
+
+func (store *MemSQL) GetDomainsListFromMarker(projectID int64, payload model.TimelinePayload,
+	domainGroupID int) ([]model.Profile, int, string) {
+
+	logFields := log.Fields{
+		"project_id": projectID,
+		"payload":    payload,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	segment, statusCode := store.GetSegmentById(projectID, payload.SegmentId)
+	if statusCode != http.StatusFound {
+		logCtx.Error("Segment not found.")
+		return []model.Profile{}, statusCode, "Failed to get segment"
+	}
+
+	lastRunTime, lastRunStatusCode := store.GetMarkerLastForAllAccounts(projectID)
+
+	// for case - segment is updated but all_run for the day is yet to run
+	if lastRunStatusCode != http.StatusFound || segment.UpdatedAt.After(lastRunTime) {
+		if C.IsMarkerPreviewEnabled(projectID) {
+			return store.GetPreviewDomainsListByProjectId(projectID, payload, domainGroupID)
+		}
+		return []model.Profile{}, lastRunStatusCode, ""
+	}
+
+	// if segment.UpdatedAt
+	segmentQuery := model.Query{}
+	err := U.DecodePostgresJsonbToStructType(segment.Query, &segmentQuery)
+	if err != nil {
+		log.WithField("project_id", projectID).Error("Unable to decode segment query")
+		return []model.Profile{}, statusCode, "Failed to get segment"
+	}
+
+	additionalFiltersExist := CompareFilters(segmentQuery, payload.Query)
+
+	if additionalFiltersExist {
+		if C.IsMarkerPreviewEnabled(projectID) {
+			return store.GetPreviewDomainsListByProjectId(projectID, payload, domainGroupID)
+		}
+		return []model.Profile{}, http.StatusOK, ""
+	}
+
+	// check for search filter
+	whereForSearchFilters, searchFiltersParams := SearchFilterForAllAccounts(payload.SearchFilter, domainGroupID)
+
+	query := fmt.Sprintf(`WITH step_0 as (
+		SELECT 
+		  id as identity, 
+		  group_%d_id as host_name 
+		FROM 
+		  users 
+		WHERE 
+		  project_id = ? 
+		  AND JSON_EXTRACT_STRING(
+			associated_segments, ?
+		  ) IS NOT NULL 
+		  AND is_group_user = 1 
+		  AND source = ? 
+		  AND group_%d_id IS NOT NULL %s
+		LIMIT 
+		  100000
+	  ) 
+	  SELECT 
+		identity, 
+		host_name, 
+		MAX(users.last_event_at) as last_activity 
+	  FROM 
+		step_0 
+		JOIN (
+		  SELECT 
+			last_event_at, 
+			group_%d_user_id 
+		  FROM 
+			users 
+		  WHERE 
+			users.project_id = ? 
+			AND users.source != ? 
+			AND last_event_at IS NOT NULL
+		) AS users ON step_0.identity = users.group_%d_user_id 
+	  GROUP BY 
+		identity 
+	  ORDER BY 
+		last_activity DESC 
+	  LIMIT 
+		1000;`, domainGroupID, domainGroupID, whereForSearchFilters,
+		domainGroupID, domainGroupID)
+
+	params := []interface{}{projectID, payload.SegmentId, model.UserSourceDomains}
+
+	if whereForSearchFilters != "" {
+		params = append(params, searchFiltersParams...)
+	}
+
+	params = append(params, projectID, model.UserSourceDomains)
+
+	var profiles []model.Profile
+	db := C.GetServices().Db
+	err = db.Raw(query, params...).Scan(&profiles).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return []model.Profile{}, http.StatusNotFound, ""
+		}
+		return []model.Profile{}, http.StatusInternalServerError, "Error in fetching rows for all accounts"
+	}
+
+	return profiles, http.StatusOK, ""
+}
+
+func (store *MemSQL) GetPreviewDomainsListByProjectId(projectID int64, payload model.TimelinePayload,
+	domainGroupID int) ([]model.Profile, int, string) {
+
+	runLimit := 3
+
+	limitAcc := 100
+	userCount := new(int64)
+	profilesList := make([]model.Profile, 0)
+
+	payload, eventNameIDsList, status, errMsg := store.transformPayload(projectID, payload)
+
+	if status != http.StatusOK || errMsg != "" {
+		return []model.Profile{}, status, errMsg
+	}
+
+	startTime := time.Now().Unix()
+
+	for runCount := 0; runCount < runLimit; runCount++ {
+		profiles, isLastRun, status, errMsg := store.GetPreviewDomainsListByProjectIdPerRun(projectID, payload,
+			domainGroupID, eventNameIDsList, userCount, runCount)
+
+		if status != http.StatusOK || errMsg != "" {
+			return []model.Profile{}, status, errMsg
+		}
+		profilesList = append(profilesList, profiles...)
+
+		if len(profilesList) == limitAcc || isLastRun {
+			break
+		}
+	}
+
+	endTime := time.Now().Unix()
+	timeTaken := endTime - startTime
+	log.WithFields(log.Fields{"project_id": projectID, "user_count": *userCount}).Info("Time taken for preview query to compute results: ", timeTaken)
+
+	return profilesList, http.StatusOK, ""
+}
+
+func (store *MemSQL) GetPreviewDomainsListByProjectIdPerRun(projectID int64, payload model.TimelinePayload,
+	domainGroupID int, eventNameIDsMap map[string]string, userCount *int64,
+	runCount int) ([]model.Profile, bool, int, string) {
+	// fetch domains
+	limitVal := C.DomainsToProcessForPreview()
+	offSet := runCount * limitVal
+
+	domainIDList, status := store.GetAllDomainsByProjectID(projectID, domainGroupID, limitVal, offSet,
+		payload.SearchFilter)
+
+	// to check if total domains pulled are less than the given limit
+	isLastRun := (len(domainIDList) < limitVal)
+
+	if status != http.StatusFound || len(domainIDList) <= 0 {
+		return []model.Profile{}, isLastRun, status, "Failed to get domains list"
+	}
+
+	limitAcc := 100
+	profiles := make([]model.Profile, 0)
+
+	batchSize := C.BatchSizePreviewtMarker()
+
+	domainIDChunks := U.GetStringListAsBatch(domainIDList, batchSize)
+	var mu sync.Mutex
+
+	for ci := range domainIDChunks {
+		var wg sync.WaitGroup
+
+		wg.Add(len(domainIDChunks[ci]))
+		for _, domID := range domainIDChunks[ci] {
+			go store.processDomain(projectID, payload, domainGroupID, userCount, domID, eventNameIDsMap,
+				&wg, &mu, &profiles, limitAcc)
+		}
+		wg.Wait()
+
+		if len(profiles) == limitAcc {
+			break
+		}
+	}
+
+	return profiles, isLastRun, http.StatusOK, ""
+}
+
+func (store *MemSQL) transformPayload(projectID int64, payload model.TimelinePayload) (model.TimelinePayload,
+	map[string]string, int, string) {
+
+	var status int
+	// map for all event_names and all ids for it
+	eventNameIDsMap := make(map[string]string)
+	// datetime conversion
+	err := payload.Query.TransformDateTypeFilters()
+	if err != nil {
+		log.WithField("project_id", projectID).Error("Failed to transform segment filters.")
+		return payload, eventNameIDsMap, status, "Failed to transform segment filters"
+	}
+
+	// list of all event_names and all ids for it
+	eventNameIDsList := make(map[string]bool)
+
+	payload.Query.GlobalUserProperties = model.TransformPayloadForInProperties(payload.Query.GlobalUserProperties)
+	payload.Query.From = U.TimeNowZ().AddDate(0, 0, -90).Unix()
+	payload.Query.To = U.TimeNowZ().Unix()
+	for _, eventProp := range payload.Query.EventsWithProperties {
+		if eventProp.Name != "" {
+			eventNameIDsList[eventProp.Name] = true
+		}
+	}
+
+	// adding ids for all the event_names
+	if len(eventNameIDsList) > 0 {
+		eventNameIDsMap, status = store.GetEventNameIdsWithGivenNames(projectID, eventNameIDsList)
+		if status != http.StatusFound {
+			log.WithField("project_id", projectID).Error("Error fetching event_names for the project")
+			return payload, eventNameIDsMap, status, "Error fetching event_names for the project"
+		}
+	}
+
+	return payload, eventNameIDsMap, http.StatusOK, ""
+}
+
+func (store *MemSQL) processDomain(projectID int64, payload model.TimelinePayload, domainGroupID int,
+	userCount *int64, domID string, eventNameIDsMap map[string]string, waitGroup *sync.WaitGroup, mu *sync.Mutex,
+	profiles *[]model.Profile, limitAcc int) {
+	logFields := log.Fields{
+		"project_id":      projectID,
+		"domain_group_id": domainGroupID,
+		"domain_id":       domID,
+		"wait_group":      waitGroup,
+	}
+
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer waitGroup.Done()
+
+	profile, isMatched, status := store.processDomainWithErr(projectID, payload, domainGroupID,
+		userCount, domID, eventNameIDsMap)
+	if status != http.StatusOK {
+		log.WithFields(log.Fields{"project_id": projectID, "domID": domID}).Error("Error while computing for given payload")
+		return
+	}
+
+	// returning if not matched
+	if !isMatched {
+		return
+	}
+
+	// locking before modifying the array
+	addProfile(mu, profiles, limitAcc, profile)
+}
+
+func addProfile(mu *sync.Mutex, profiles *[]model.Profile, limitAcc int, profile model.Profile) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if len(*profiles) == limitAcc {
+		return
+	}
+
+	*profiles = append(*profiles, profile)
+}
+
+func (store *MemSQL) processDomainWithErr(projectID int64, payload model.TimelinePayload, domainGroupID int,
+	userCount *int64, domID string, eventNameIDsMap map[string]string) (model.Profile, bool, int) {
+
+	isMatched := false
+
+	users, status := store.GetAllPropertiesForDomain(projectID, domainGroupID, domID, userCount)
+	if len(users) == 0 || status != http.StatusFound {
+		return model.Profile{}, isMatched, status
+	}
+
+	var profile model.Profile
+	var isLastEventAtFound bool
+	if len(payload.Query.GlobalUserProperties) == 0 && len(payload.Query.EventsWithProperties) == 0 {
+		profile, isLastEventAtFound = profileValues(projectID, users, domID, domainGroupID)
+		return profile, true, http.StatusOK
+	}
+
+	decodedPropsArr := make([]map[string]interface{}, 0)
+
+	for _, user := range users {
+		// decoding user properties col
+		decodedProps, err := U.DecodePostgresJsonb(&user.Properties)
+		if err != nil {
+			log.WithFields(log.Fields{"project_id": projectID, "user_id": user.ID}).Error("Unable to decode user properties for user.")
+			return model.Profile{}, isMatched, http.StatusInternalServerError
+		}
+		decodedPropsArr = append(decodedPropsArr, *decodedProps)
+	}
+
+	isMatched = IsRuleMatchedAllAccounts(projectID, payload.Query, decodedPropsArr, users,
+		"", domID, eventNameIDsMap)
+
+	if !isMatched {
+		return model.Profile{}, isMatched, http.StatusOK
+	}
+
+	profile, isLastEventAtFound = profileValues(projectID, users, domID, domainGroupID)
+
+	// if last_event_at does not exist, don't append show that profile
+	isMatched = isMatched && isLastEventAtFound
+
+	return profile, isMatched, http.StatusOK
+}
+
+func profileValues(projectID int64, users []model.User, domID string, domainGroupID int) (model.Profile, bool) {
+	var profile model.Profile
+	profile.Identity = domID
+
+	maxLastEventAt := time.Time{}
+
+	// set last_activity
+	var domUser model.User
+	for _, user := range users {
+		if user.IsGroupUser == nil || !*user.IsGroupUser {
+			continue
+		}
+		if user.LastEventAt != nil && (*user.LastEventAt).After(maxLastEventAt) {
+			maxLastEventAt = *user.LastEventAt
+		}
+		// storing domain details
+		if user.Source != nil && *user.Source == model.UserSourceDomains {
+			domUser = user
+		}
+	}
+
+	// set hostName
+	hostName, err := model.FindUserGroupByID(domUser, domainGroupID)
+	if err != nil {
+		hostName, err = model.ConvertDomainIdToHostName(domID)
+		if err != nil || hostName == "" {
+			log.WithFields(log.Fields{"project_id": projectID, "dom_id": domID}).
+				WithError(err).Error("Couldn't translate ID to Hostname")
+		}
+	}
+	profile.LastActivity = maxLastEventAt
+	profile.HostName = hostName
+
+	isLastEventAtFound := !maxLastEventAt.IsZero()
+
+	return profile, isLastEventAtFound
 }

@@ -14,10 +14,10 @@ import { formatAccountTimeline, formatUsersTimeline } from './utils';
 import { deleteSegmentAction } from './actions';
 
 export const getProfileAccounts =
-  (projectId, payload, agentId) => (dispatch) => {
+  (projectId, payload, download) => (dispatch) => {
     dispatch({ type: 'FETCH_PROFILE_ACCOUNTS_LOADING' });
     return new Promise((resolve, reject) => {
-      fetchProfileAccounts(projectId, payload, agentId)
+      fetchProfileAccounts(projectId, payload, download)
         .then((response) => {
           const data = response.data?.map((account) => ({
             ...account,

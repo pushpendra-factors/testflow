@@ -7,18 +7,22 @@ import React, {
   useState
 } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useHistory, useParams } from 'react-router-dom';
+import { useHistory, useLocation, useParams } from 'react-router-dom';
 import get from 'lodash/get';
+
+import cx from 'classnames';
 
 import { fetchQueries, getEventsData } from 'Reducers/coreQuery/services';
 import { EMPTY_ARRAY, EMPTY_OBJECT, generateRandomKey } from 'Utils/global';
 import AnalysisHeader from 'Views/CoreQuery/AnalysisResultsPage/AnalysisHeader';
 import {
   ACTIVE_USERS_CRITERIA,
+  apiChartAnnotations,
   EACH_USER_TYPE,
   FREQUENCY_CRITERIA,
   QUERY_TYPE_EVENT,
   QUERY_TYPE_FUNNEL,
+  QUERY_TYPE_KPI,
   REPORT_SECTION,
   REVERSE_USER_TYPES,
   TOTAL_EVENTS_CRITERIA,
@@ -69,6 +73,8 @@ import { getValidGranularityOptions } from 'Utils/dataFormatter';
 import MomentTz from 'Components/MomentTz';
 import PageSuspenseLoader from 'Components/SuspenseLoaders/PageSuspenseLoader';
 import SaveQuery from 'Components/SaveQuery';
+import { getChartChangedKey } from 'Views/CoreQuery/AnalysisResultsPage/analysisResultsPage.helpers';
+import _ from 'lodash';
 
 const CoreQuery = () => {
   // Query params
@@ -87,12 +93,15 @@ const CoreQuery = () => {
     get(state, 'queries.data', EMPTY_ARRAY)
   );
 
+  const [savedQueryModal, setSavedQueryModal] = useState(false);
+
   // Local states
   const [coreQueryState, setCoreQueryState] = useState<CoreQueryState>(
     new CoreQueryState()
   );
   const [queryOpen, setQueryOpen] = useState(false);
 
+  const location = useLocation();
   const history = useHistory();
   const dispatch = useDispatch();
   const [coreQueryReducerState, localDispatch] = useReducer(
@@ -122,7 +131,7 @@ const CoreQuery = () => {
   }, [query_id, query_type, savedQueries]);
 
   useEffect(() => {
-    const qState = coreQueryState.getCopy();
+    const qState = _.cloneDeep(coreQueryState);
     qState.queryOptions = {
       ...qState.queryOptions,
       groupBy
@@ -251,9 +260,15 @@ const CoreQuery = () => {
             queryState.queryOptions,
             equivalentQuery
           );
+          queryState.breakdownType =
+            REVERSE_USER_TYPES[queryState.requestQuery[0].ec];
 
           if (queryState.requestQuery) {
-            updateEventFunnelsState(equivalentQuery, false, queryState);
+            updateEventFunnelsState(
+              equivalentQuery,
+              location?.state?.navigatedFromDashboard,
+              queryState
+            );
             if (queryState.requestQuery.length === 1) {
               dispatch({
                 type: SET_PERFORMANCE_CRITERIA,
@@ -417,6 +432,7 @@ const CoreQuery = () => {
       configActionsOnRunningQuery(false, qState);
       qState.requestQuery = query;
       qState.resultState = { ...qState.resultState, loading: true };
+      qState.querySaved = {};
       setCoreQueryState(qState);
       // resetComparisonData();
       //}
@@ -601,11 +617,14 @@ const CoreQuery = () => {
     );
   };
 
-  const setQueries = (q: any[]) => {
-    const qState = coreQueryState.getCopy();
-    qState.queries = q;
-    setCoreQueryState(qState);
-  };
+  const setQueries = useCallback(
+    (q: any[]) => {
+      const qState = coreQueryState.getCopy();
+      qState.queries = q;
+      setCoreQueryState(qState);
+    },
+    [setCoreQueryState, coreQueryState]
+  );
 
   const setQueryOptions = (opts: {} | any) => {
     const qState = coreQueryState.getCopy();
@@ -614,6 +633,88 @@ const CoreQuery = () => {
     }
     setCoreQueryState(qState);
   };
+
+  const handleGranularityChange = useCallback(
+    ({ key: frequency }) => {
+      // resetComparisonData();
+      if (
+        coreQueryState.queryType === QUERY_TYPE_EVENT ||
+        coreQueryState.queryType === QUERY_TYPE_KPI
+      ) {
+        const qState = coreQueryState.getCopy();
+        const appliedDateRange = {
+          ...coreQueryState.queryOptions.date_range,
+          frequency
+        };
+        qState.queryOptions = {
+          ...qState.queryOptions,
+          date_range: appliedDateRange
+        };
+        setCoreQueryState(qState);
+        // setQueryOptions((currState) => ({
+        //   ...currState,
+        //   date_range: appliedDateRange
+        // }));
+        if (coreQueryState.queryType === QUERY_TYPE_EVENT) {
+          runQuery(appliedDateRange);
+        }
+        // if (queryType === QUERY_TYPE_KPI) {
+        //   runKPIQuery(querySaved, appliedDateRange, true);
+        // }
+      }
+    },
+    [coreQueryState.queryOptions, runQuery]
+  );
+
+  const handleChartTypeChange = useCallback(
+    ({ key, callUpdateService = true }) => {
+      //#TODO fix
+
+      const qType = coreQueryState.queryType;
+      const changedKey = getChartChangedKey({
+        queryType: coreQueryState.queryType,
+        breakdown: coreQueryState.appliedBreakdown,
+        campaignGroupBy: {},
+        attributionModels: []
+      });
+
+      // updateChartTypes({
+      //   ...chartTypes,
+      //   [queryType]: {
+      //     ...chartTypes[queryType],
+      //     [changedKey]: key
+      //   }
+      // });
+
+      if (coreQueryState.querySaved.id && callUpdateService) {
+        const queryGettingUpdated = savedQueries.find(
+          (elem: any) => elem.id === coreQueryState.querySaved.id
+        );
+
+        // const settings = {
+        //   ...queryGettingUpdated.settings,
+        //   chart: apiChartAnnotations[key]
+        // };
+
+        const reqBody = {
+          title: queryGettingUpdated.title,
+          settings
+        };
+
+        // updateQuery(active_project.id, savedQueryId, reqBody);
+
+        // // #Todo Disabled for now. The query is getting rerun again. Have to figure out a way around it.
+        // if (!query_type) {
+        //   dispatch({
+        //     type: QUERY_UPDATED,
+        //     queryId: savedQueryId,
+        //     payload: reqBody
+        //   });
+        // }
+      }
+    },
+    [coreQueryState.queryType, coreQueryState.appliedBreakdown]
+  );
 
   const renderComposer = () => {
     if (
@@ -668,8 +769,8 @@ const CoreQuery = () => {
       }}
       attributionsState={undefined}
       campaignState={undefined}
-      showSaveQueryModal={undefined}
-      setShowSaveQueryModal={undefined}
+      showSaveQueryModal={savedQueryModal}
+      setShowSaveQueryModal={setSavedQueryModal}
       showUpdateQuery={undefined}
     />
   );
@@ -686,43 +787,55 @@ const CoreQuery = () => {
 
   const renderEmptyHeader = () => {
     return (
-      <div className='items-center flex justify-between w-full pt-3 pb-3'>
-        <div
-          role='button'
-          tabIndex={0}
-          className='flex items-center cursor-pointer'
-        >
-          <Button
-            size='large'
-            type='text'
-            onClick={() => {
-              history.push('/');
-            }}
-            icon={<SVG size={32} name='Brand' />}
-          />
-          <Text
-            type='title'
-            level={5}
-            weight='bold'
-            extraClass='m-0 mt-1'
-            lineHeight='small'
+      <div
+        id='app-header'
+        className={cx('bg-white z-50 flex-col  px-8 w-full', {
+          fixed: true
+        })}
+        style={{
+          borderBottom: true ? '1px solid lightgray' : 'none'
+        }}
+      >
+        <div className='items-center flex justify-between w-full pt-3 pb-3'>
+          <div
+            role='button'
+            tabIndex={0}
+            className='flex items-center cursor-pointer'
           >
-            {coreQueryState.querySaved
-              ? `Reports / ${coreQueryState.queryType} / ${coreQueryState.querySaved.name}`
-              : `Reports / ${coreQueryState.queryType} / Untitled Analysis${' '}
+            <Button
+              size='large'
+              type='text'
+              onClick={() => {
+                history.push('/');
+              }}
+              icon={<SVG size={32} name='Brand' />}
+            />
+            <Text
+              type='title'
+              level={5}
+              weight='bold'
+              extraClass='m-0 mt-1'
+              lineHeight='small'
+            >
+              {coreQueryState.querySaved
+                ? `Reports / ${coreQueryState.queryType} / ${coreQueryState.querySaved.name}`
+                : `Reports / ${
+                    coreQueryState.queryType
+                  } / Untitled Analysis${' '}
             ${moment().format('DD/MM/YYYY')}`}
-          </Text>
-        </div>
+            </Text>
+          </div>
 
-        <div className='flex items-center gap-x-2'>
-          <div className='pr-2 border-r'>{renderSaveQueryComp()}</div>
-          <Button
-            size='large'
-            type='default'
-            onClick={handleCloseDashboardQuery}
-          >
-            Close
-          </Button>
+          <div className='flex items-center gap-x-2'>
+            <div className='pr-2 border-r'>{renderSaveQueryComp()}</div>
+            <Button
+              size='large'
+              type='default'
+              onClick={handleCloseDashboardQuery}
+            >
+              Close
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -740,7 +853,7 @@ const CoreQuery = () => {
         coreQueryState.querySaved ? coreQueryState.querySaved?.name : null
       }
       setQuerySaved={(v: any) => coreQueryState.setItem('querySaved', v)}
-      breakdownType={EACH_USER_TYPE}
+      breakdownType={coreQueryState.breakdownType}
       changeTab={(v: any) => coreQueryState.setItem('activeTab', v)}
       activeTab={coreQueryState.activeTab}
       getCurrentSorter={getCurrentSorter}
@@ -759,22 +872,40 @@ const CoreQuery = () => {
     />
   );
 
+  const renderReportContent = () => {
+    return (
+      <ReportContent
+        breakdownType={coreQueryState.breakdownType}
+        queryType={coreQueryState.queryType}
+        renderedCompRef={renderedCompRef}
+        breakdown={coreQueryState.appliedBreakdown}
+        handleChartTypeChange={handleChartTypeChange}
+        queryOptions={coreQueryState.queryOptions}
+        arrayMapper={arrayMapper}
+        resultState={coreQueryState.resultState}
+        queryTitle={coreQueryState.querySaved.name}
+        section={REPORT_SECTION}
+        eventPage={result_criteria}
+        handleDurationChange={handleDurationChange}
+        onReportClose={() => {
+          console.log('Close report');
+        }}
+        handleGranularityChange={handleGranularityChange}
+        setDrawerVisible={() => {
+          console.log('Drawer visible');
+        }}
+        queries={coreQueryState.appliedQueries}
+      />
+    );
+  };
+
   const renderMain = () => {
     if (coreQueryState.loading) {
       return (
         <>
-          <div className='flex justify-center flex-col items-center w-full'>
-            <div className='w-full flex center'>
-              <div
-                id='app-header'
-                className='bg-white z-50 flex-col  px-8 w-full'
-              >
-                {renderEmptyHeader()}
-                {renderQueryComposerNew()}
-              </div>
-            </div>
-            <div className='mt-24 px-8'>{renderSpinner()}</div>
-          </div>
+          {renderEmptyHeader()}
+          {renderQueryComposerNew()}
+          <div className='mt-24 px-8'>{renderSpinner()}</div>
         </>
       );
     }
@@ -798,34 +929,7 @@ const CoreQuery = () => {
               {Number(coreQueryState.activeTab) === 1 && (
                 <>
                   {renderQueryComposerNew()}
-                  {coreQueryState.requestQuery && (
-                    <ReportContent
-                      breakdownType={EACH_USER_TYPE}
-                      queryType={coreQueryState.queryType}
-                      renderedCompRef={renderedCompRef}
-                      breakdown={coreQueryState.appliedBreakdown}
-                      handleChartTypeChange={() => {
-                        console.log('Chart type change');
-                      }}
-                      queryOptions={coreQueryState.queryOptions}
-                      arrayMapper={arrayMapper}
-                      resultState={coreQueryState.resultState}
-                      queryTitle={coreQueryState.querySaved.name}
-                      section={REPORT_SECTION}
-                      eventPage={result_criteria}
-                      handleDurationChange={handleDurationChange}
-                      onReportClose={() => {
-                        console.log('Close report');
-                      }}
-                      handleGranularityChange={() => {
-                        console.log('Granularity change');
-                      }}
-                      setDrawerVisible={() => {
-                        console.log('Drawer visible');
-                      }}
-                      queries={coreQueryState.appliedQueries}
-                    />
-                  )}
+                  {coreQueryState.requestQuery && renderReportContent()}
                 </>
               )}
             </ErrorBoundary>

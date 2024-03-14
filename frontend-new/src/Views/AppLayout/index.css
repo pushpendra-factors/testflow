@@ -1,7 +1,9 @@
-.modal-globalsearch{
-    border-radius: 12px;
-    
+.modal-globalsearch {
+  border-radius: 12px;
 }
-.modal-globalsearch .ant-modal-content{
-    border-radius: inherit !important;
+.modal-globalsearch .ant-modal-content {
+  border-radius: inherit !important;
+}
+thead.ant-table-thead span.ant-table-column-title {
+  overflow: hidden !important;
 }

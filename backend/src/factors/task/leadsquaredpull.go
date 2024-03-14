@@ -66,50 +66,49 @@ type IncrementalSyncLeadListResponse struct {
 var DUPLICATESCHEMAERRORPREFIX = "Error 409: Already Exists"
 
 var LEADSQUARED_ACTIVITYCODE = map[string]int{
-	model.LEADSQUARED_SALES_ACTIVITY: 30,
-	model.LEADSQUARED_EMAIL_SENT:     212,
-	model.LEADSQUARED_EMAIL_INFO:     355,
-	model.LEADSQUARED_HAD_A_CALL:     206,
-	model.LEADSQUARED_CALLED_A_CUST_NEGATIVE_REPLY : 204,
-	model.LEADSQUARED_CALLED_A_CUST_POSITIVE_REPLY : 202,
-	model.LEADSQUARED_CALLED_TO_COLLECT_REFERRAL : 311,
-	model.LEADSQUARED_EMAIL_BOUNCED : 10,
-	model.LEADSQUARED_EMAIL_LINK_CLICKED : 1,
-	model.LEADSQUARED_EMAIL_MAILING_PREFERENCE_LINK_CLICKED : 8,
-	model.LEADSQUARED_EMAIL_MARKED_SPAM : 9,
-	model.LEASQUARED_EMAIL_NEGATIVE_RESPONSE : 13,
-	model.LEASQUARED_EMAIL_NEUTRAL_RESPONSE : 14,
-	model.LEASQUARED_EMAIL_POSITIVE_RESPONSE : 12,
-	model.LEASQUARED_EMAIL_OPENED : 0,
-	model.LEASQUARED_EMAIL_POSITVE_INBOUND_EMAIL : 18,
-	model.LEASQUARED_EMAIL_RESUBSCRIBED : 15,
-	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_BOOTCAMP : 43,
-	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_COLLECTION : 44,
-	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_EVENTS : 47,
-	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_FESTIVAL : 45,
-	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_INTERNNATIONAL_REACTIVATION : 46,
-	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_NEWSLETTER : 51,
-	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_REACTIVATION : 48,
-	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_REFERRAL : 52,
-	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_SURVEY : 49,
-	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_TEST : 41,
-	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_WORKSHOP : 50,
-	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_BOOTCAMP : 63,
-	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_COLLECTION : 64,
-	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_EVENTS : 67,
-	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_FESTIVAL : 65,
-	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_INTERNNATIONAL_REACTIVATION : 66,
-	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_NEWSLETTER : 71,
-	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_REACTIVATION : 68,
-	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_REFERRAL : 72,
-	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_SURVEY : 69,
-	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_TEST : 61,
-	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_WORKSHOP : 70,
-	model.LEADSQUARED_EMAIL_UNSUBSCRIBE_LINK_CLICKED : 6,
-	model.LEADSQUARED_EMAIL_UNSUBSCRIBED : 5,
-	model.LEADSQUARED_EMAIL_VIEW_IN_BROWSER_LINK_CLICKED : 11,
-	model.LEADSQUARED_EMAIL_RECEIVED : 211,
-
+	model.LEADSQUARED_SALES_ACTIVITY:                                    30,
+	model.LEADSQUARED_EMAIL_SENT:                                        212,
+	model.LEADSQUARED_EMAIL_INFO:                                        355,
+	model.LEADSQUARED_HAD_A_CALL:                                        206,
+	model.LEADSQUARED_CALLED_A_CUST_NEGATIVE_REPLY:                      204,
+	model.LEADSQUARED_CALLED_A_CUST_POSITIVE_REPLY:                      202,
+	model.LEADSQUARED_CALLED_TO_COLLECT_REFERRAL:                        311,
+	model.LEADSQUARED_EMAIL_BOUNCED:                                     10,
+	model.LEADSQUARED_EMAIL_LINK_CLICKED:                                1,
+	model.LEADSQUARED_EMAIL_MAILING_PREFERENCE_LINK_CLICKED:             8,
+	model.LEADSQUARED_EMAIL_MARKED_SPAM:                                 9,
+	model.LEASQUARED_EMAIL_NEGATIVE_RESPONSE:                            13,
+	model.LEASQUARED_EMAIL_NEUTRAL_RESPONSE:                             14,
+	model.LEASQUARED_EMAIL_POSITIVE_RESPONSE:                            12,
+	model.LEASQUARED_EMAIL_OPENED:                                       0,
+	model.LEASQUARED_EMAIL_POSITVE_INBOUND_EMAIL:                        18,
+	model.LEASQUARED_EMAIL_RESUBSCRIBED:                                 15,
+	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_BOOTCAMP:                      43,
+	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_COLLECTION:                    44,
+	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_EVENTS:                        47,
+	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_FESTIVAL:                      45,
+	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_INTERNNATIONAL_REACTIVATION:   46,
+	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_NEWSLETTER:                    51,
+	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_REACTIVATION:                  48,
+	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_REFERRAL:                      52,
+	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_SURVEY:                        49,
+	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_TEST:                          41,
+	model.LEADSQUARED_EMAIL_SUBSCRIBED_TO_WORKSHOP:                      50,
+	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_BOOTCAMP:                    63,
+	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_COLLECTION:                  64,
+	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_EVENTS:                      67,
+	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_FESTIVAL:                    65,
+	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_INTERNNATIONAL_REACTIVATION: 66,
+	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_NEWSLETTER:                  71,
+	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_REACTIVATION:                68,
+	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_REFERRAL:                    72,
+	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_SURVEY:                      69,
+	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_TEST:                        61,
+	model.LEADSQUARED_EMAIL_UNSUBSCRIBED_TO_WORKSHOP:                    70,
+	model.LEADSQUARED_EMAIL_UNSUBSCRIBE_LINK_CLICKED:                    6,
+	model.LEADSQUARED_EMAIL_UNSUBSCRIBED:                                5,
+	model.LEADSQUARED_EMAIL_VIEW_IN_BROWSER_LINK_CLICKED:                11,
+	model.LEADSQUARED_EMAIL_RECEIVED:                                    211,
 }
 
 func ifDuplicateSchema(err string) bool {
@@ -153,7 +152,7 @@ func LeadSquaredPull(projectId int64, configs map[string]interface{}) (map[strin
 	datasetID := leadSquaredConfig.BigqueryDataset
 	for documentType, _ := range model.LeadSquaredTableName {
 		_, _, isDone := store.GetStore().GetLeadSquaredMarker(projectId, executionDate, documentType, "incremental_sync")
-		if(isDone == true){
+		if isDone == true {
 			continue
 		}
 		log.Info(fmt.Sprintf("Starting for %v", documentType))
@@ -164,12 +163,12 @@ func LeadSquaredPull(projectId int64, configs map[string]interface{}) (map[strin
 			}
 		}
 		if model.ActivityEvents[documentType] == true {
-			leadSquaredUrlParams["code"] = fmt.Sprintf("%v",LEADSQUARED_ACTIVITYCODE[documentType])
+			leadSquaredUrlParams["code"] = fmt.Sprintf("%v", LEADSQUARED_ACTIVITYCODE[documentType])
 		}
-		propertyMetadataList, errorStatus, msg := getMetadataDetails(documentType, leadSquaredConfig.Host, leadSquaredUrlParams)
-		if errorStatus != false {
+		propertyMetadataList, hasError, msg := getMetadataDetails(documentType, leadSquaredConfig.Host, leadSquaredUrlParams)
+		if hasError {
 			resultStatus["error"] = msg
-			log.Error(msg)
+			log.WithField("error", msg).Error("Failed to get metadata details.")
 			return resultStatus, false
 		}
 
@@ -313,9 +312,9 @@ func extractValue(value interface{}, dataType interface{}) interface{} {
 
 func getMetadataDetails(documentType string, host string, leadSquaredUrlParams map[string]string) ([]PropertyMetadataObjectLeadSquared, bool, string) {
 	metadataEndpoint := model.LeadSquaredMetadataEndpoint(documentType)
-	statusCode, responseMetadata, errorObj := L.HttpRequestWrapper(fmt.Sprintf("https://%s", host), metadataEndpoint, nil, nil, "GET", leadSquaredUrlParams)
-	if statusCode != http.StatusOK || errorObj != nil {
-		return nil, true, errorObj.Error()
+	statusCode, responseMetadata, err, _ := L.HttpRequestWrapper(host, metadataEndpoint, nil, nil, "GET", leadSquaredUrlParams)
+	if statusCode != http.StatusOK || err != nil {
+		return nil, true, err.Error()
 	}
 	byteSliceMetadata, err := json.Marshal(responseMetadata)
 	if err != nil {
@@ -347,7 +346,7 @@ func addConstantFieldsForActivity(documentType string, property []PropertyMetada
 	property = append(property, PropertyMetadataObjectLeadSquared{SchemaName: "RelatedProspectId", DataType: "String", DisplayName: "RelatedProspectId"})
 	property = append(property, PropertyMetadataObjectLeadSquared{SchemaName: "ActivityType", DataType: "String", DisplayName: "ActivityType"})
 	property = append(property, PropertyMetadataObjectLeadSquared{SchemaName: "ActivityEvent", DataType: "String", DisplayName: "ActivityEvent"})
-	if(documentType == model.LEADSQUARED_SALES_ACTIVITY || documentType == model.LEADSQUARED_EMAIL_SENT){
+	if documentType == model.LEADSQUARED_SALES_ACTIVITY || documentType == model.LEADSQUARED_EMAIL_SENT {
 		property = append(property, PropertyMetadataObjectLeadSquared{SchemaName: "ActivityEvent_Note", DataType: "String", DisplayName: "ActivityEvent_Note"})
 	}
 	property = append(property, PropertyMetadataObjectLeadSquared{SchemaName: "CreatedOn", DataType: "DateTime", DisplayName: "CreatedOn"})
@@ -385,7 +384,7 @@ func getColumnsToBeAdded(existingSchema bigquery.Schema, propertyMetadataList []
 
 func DoHistoricalSync(projectId int64, host string, endpoint string, urlParams map[string]string, columns string, pageSize int, executionTimestamp int64, lookback int, datasetID string, tableId string, client *bigquery.Client, propertyMetadataList []SchemaPropertyMetadataMapping, ctx context.Context) (map[string]interface{}, bool, string) {
 	indexNumber, _, isDone := store.GetStore().GetLeadSquaredMarker(projectId, executionTimestamp, model.LEADSQUARED_LEAD, "historical_sync")
-	if(isDone == true){
+	if isDone == true {
 		log.Info("Done. Skipping - Historical Sync")
 		return nil, false, ""
 	}
@@ -421,8 +420,13 @@ func DoHistoricalSync(projectId int64, host string, endpoint string, urlParams m
 		headers := map[string]string{
 			"Content-Type": "application/json",
 		}
-		statusCode, responseHistSyncData, errorObj := L.HttpRequestWrapper(fmt.Sprintf("https://%s", host), endpoint, headers, request, "POST", urlParams)
+		statusCode, responseHistSyncData, errorObj, isContinuableError := L.HttpRequestWrapper(host, endpoint, headers, request, "POST", urlParams)
 		if statusCode != http.StatusOK || errorObj != nil {
+			if isContinuableError {
+				index++
+				continue
+			}
+
 			store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
 				ProjectID:   projectId,
 				Delta:       executionTimestamp,
@@ -476,7 +480,7 @@ func DoHistoricalSync(projectId int64, host string, endpoint string, urlParams m
 				Document:    model.LEADSQUARED_LEAD,
 				Tag:         "historical_sync",
 				IndexNumber: index,
-				IsDone: 	 true,
+				IsDone:      true,
 			})
 			break
 		}
@@ -529,7 +533,7 @@ func DoIncrementalSync(projectId int64, documentType string, host string, histSy
 	endDateinLeadSquaredFormat := fmt.Sprintf("%v", time.Unix(int64(executionTimestamp)+U.SECONDS_IN_A_DAY, 0).Format("2006-01-02 15:04:05"))
 	log.Info(fmt.Sprintf("Starting Incremental Sync with date > %v < %v ", startDateinLeadSquaredFormat, endDateinLeadSquaredFormat))
 	for {
-		if(isDone == true){
+		if isDone == true {
 			log.Info("Done. Skipping - " + documentType)
 			break
 		}
@@ -570,8 +574,13 @@ func DoIncrementalSync(projectId int64, documentType string, host string, histSy
 		headers := map[string]string{
 			"Content-Type": "application/json",
 		}
-		statusCode, responseIncrSyncData, errorObj := L.HttpRequestWrapper(fmt.Sprintf("https://%s", host), endpoint, headers, request, "POST", urlParams)
-		if statusCode != http.StatusOK || errorObj != nil {
+		statusCode, responseIncrSyncData, err, isContinuableError := L.HttpRequestWrapper(host, endpoint, headers, request, "POST", urlParams)
+		if statusCode != http.StatusOK || err != nil {
+			if isContinuableError {
+				index++
+				continue
+			}
+
 			store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
 				ProjectID:   projectId,
 				Delta:       executionTimestamp,
@@ -579,7 +588,7 @@ func DoIncrementalSync(projectId int64, documentType string, host string, histSy
 				Tag:         "incremental_sync",
 				IndexNumber: index,
 			})
-			return nil, true, errorObj.Error()
+			return nil, true, err.Error()
 		}
 		byteSliceIncrSync, err := json.Marshal(responseIncrSyncData)
 		if err != nil {
@@ -656,7 +665,7 @@ func DoIncrementalSync(projectId int64, documentType string, host string, histSy
 				Document:    documentType,
 				Tag:         "incremental_sync",
 				IndexNumber: index,
-				IsDone: 	 true,
+				IsDone:      true,
 			})
 			break
 		}
@@ -700,7 +709,7 @@ func DoIncrementalSync(projectId int64, documentType string, host string, histSy
 	// 		headers := map[string]string{
 	// 			"Content-Type": "application/json",
 	// 		}
-	// 		statusCode, responseHistSyncData, errorObj := L.HttpRequestWrapper(fmt.Sprintf("https://%s", host), histSyncEndpoint, headers, request, "POST", urlParams)
+	// 		statusCode, responseHistSyncData, errorObj := L.HttpRequestWrapper(host, histSyncEndpoint, headers, request, "POST", urlParams)
 	// 		if statusCode != http.StatusOK || errorObj != nil {
 	// 			store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
 	// 				ProjectID:   projectId,

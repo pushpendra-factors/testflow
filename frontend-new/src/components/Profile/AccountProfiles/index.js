@@ -38,7 +38,6 @@ import ControlledComponent from 'Components/ControlledComponent/ControlledCompon
 import { selectGroupsList } from 'Reducers/groups/selectors';
 import { fetchProfileAccounts, fetchSegmentById } from 'Reducers/timelines';
 import { downloadCSV } from 'Utils/csv';
-import { formatCount } from 'Utils/dataFormatter';
 import { PathUrls } from 'Routes/pathUrls';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
@@ -137,8 +136,6 @@ function AccountProfiles({
     (state) => state.accountProfilesView
   );
   const groupsList = useSelector((state) => selectGroupsList(state));
-  const agentState = useSelector((state) => state.agent);
-  const activeAgent = agentState?.agent_details?.email;
 
   const accountPayload = useSelector((state) => selectAccountPayload(state));
 
@@ -148,15 +145,12 @@ function AccountProfiles({
 
   const searchAccountsInputRef = useAutoFocus(searchBarOpen);
 
-  const setAccountPayload = useCallback(
-    (payload) => {
-      dispatch(setAccountPayloadAction(payload));
-      if (payload.segment?.id) {
-        dispatch(setNewSegmentModeAction(false));
-      }
-    },
-    [dispatch]
-  );
+  const setAccountPayload = (payload) => {
+    dispatch(setAccountPayloadAction(payload));
+    if (payload.segment?.id) {
+      dispatch(setNewSegmentModeAction(false));
+    }
+  };
 
   const getAccountPayload = async () => {
     if (segmentID && !accountPayload.isUnsaved) {
@@ -389,11 +383,7 @@ function AccountProfiles({
       try {
         setDefaultSorterInfo({ key: '$engagement_level', order: 'descend' });
         const reqPayload = formatReqPayload(payload);
-        const response = await getProfileAccounts(
-          activeProject.id,
-          reqPayload,
-          activeAgent
-        );
+        const response = await getProfileAccounts(activeProject.id, reqPayload);
 
         if (response.type === 'FETCH_PROFILE_ACCOUNTS_FAILED') {
           if (response.error.status === 400) {
@@ -412,7 +402,7 @@ function AccountProfiles({
         logger.error(err);
       }
     },
-    [accountPayload, activeProject.id, activeAgent]
+    [accountPayload, activeProject.id]
   );
 
   useEffect(() => {
@@ -688,8 +678,6 @@ function AccountProfiles({
 
   const handleClearFilters = () => {
     restoreFiltersDefaultState(true);
-    // setAccountPayload({ source: GROUP_NAME_DOMAINS });
-    // history.replace(PathUrls.ProfileAccounts);
   };
   const saveButtonDisabled = useMemo(
     () => !accountPayload?.isUnsaved,
@@ -897,23 +885,17 @@ function AccountProfiles({
   useEffect(() => {
     setNewTableColumns(
       getColumns({
-        accounts,
-        source: GROUP_NAME_DOMAINS,
-        isScoringLocked,
         displayTableProps,
         groupPropNames,
         eventNames,
         listProperties,
         defaultSorterInfo,
-        projectDomainsList,
-        activeAgent
+        projectDomainsList
       })
     );
   }, [
-    accounts,
     displayTableProps,
     groupPropNames,
-    isScoringLocked,
     listProperties,
     defaultSorterInfo,
     projectDomainsList
@@ -1021,6 +1003,12 @@ function AccountProfiles({
           setSaveSegmentModal(false);
           setUpdateSegmentModal(false);
           setFiltersDirty(false);
+          setAccountPayload({
+            source: GROUP_NAME_DOMAINS,
+            segment: {},
+            isUnsaved: false
+          });
+          history.replace(PathUrls.ProfileAccounts);
           await getSavedSegments(activeProject.id);
         }
         dispatch(setNewSegmentModeAction(false));
@@ -1094,7 +1082,7 @@ function AccountProfiles({
         const resultAccounts = await fetchProfileAccounts(
           activeProject.id,
           updatedPayload,
-          activeAgent
+          true
         );
         const csvData = generateCSVData(resultAccounts.data, selectedOptions);
         downloadCSV(csvData, 'accounts.csv');
@@ -1110,7 +1098,7 @@ function AccountProfiles({
         });
       }
     },
-    [activeAgent, activeProject.id, appliedFilters, downloadCSVOptions]
+    [activeProject.id, appliedFilters, downloadCSVOptions]
   );
 
   const closeDownloadCSVModal = useCallback(() => {

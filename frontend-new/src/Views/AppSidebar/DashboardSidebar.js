@@ -1,4 +1,5 @@
 import React, { memo, useCallback, useEffect, useState } from 'react';
+import { useHistory } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import cx from 'classnames';
 import { Button } from 'antd';
@@ -7,16 +8,20 @@ import {
   selectActiveDashboard,
   selectAreDraftsSelected,
   selectShowDashboardNewFolderModal,
-  selectNewFolderCreationState
+  selectNewFolderCreationState,
+  selectDeleteDashboardState
 } from 'Reducers/dashboard/selectors';
 
-import { addDashboardToNewFolder } from 'Reducers/dashboard/services';
+import {
+  addDashboardToNewFolder,
+  deleteDashboardAction
+} from 'Reducers/dashboard/services';
 import { NEW_DASHBOARD_TEMPLATES_MODAL_OPEN } from 'Reducers/types';
 import {
   makeDraftsActiveAction,
   toggleNewFolderModal
 } from 'Reducers/dashboard/actions';
-import { useHistory } from 'react-router-dom';
+import ConfirmationModal from 'Components/ConfirmationModal';
 import { PathUrls } from 'Routes/pathUrls';
 import SidebarSearch from './SidebarSearch';
 import DashboardNewFolderModal from './DashboardNewFolderModal';
@@ -27,10 +32,14 @@ function DashboardSidebar() {
   const dispatch = useDispatch();
   const history = useHistory();
   const [searchText, setSearchText] = useState('');
+  const [deleteDashboardModal, setDeleteDashboardModal] = useState(false);
   const [activeDashboardForFolder, setActiveDashboardForFolder] =
     useState(null);
   const areDraftsSelected = useSelector((state) =>
     selectAreDraftsSelected(state)
+  );
+  const deleteDashboardState = useSelector((state) =>
+    selectDeleteDashboardState(state)
   );
   const newFolderCreationState = useSelector((state) =>
     selectNewFolderCreationState(state)
@@ -67,6 +76,28 @@ function DashboardSidebar() {
     },
     [activeDashboardForFolder, active_project.id]
   );
+
+  const handleDeleteDashboardClick = useCallback((dashboard) => {
+    setDeleteDashboardModal(true);
+    setActiveDashboardForFolder(dashboard);
+  }, []);
+
+  const confirmDeleteDashboard = useCallback(() => {
+    dispatch(
+      deleteDashboardAction(active_project.id, activeDashboardForFolder.id)
+    );
+  }, [active_project?.id, activeDashboardForFolder?.id]);
+
+  const closeDeleteModal = useCallback(() => {
+    setDeleteDashboardModal(false);
+    setActiveDashboardForFolder(null);
+  }, []);
+
+  useEffect(() => {
+    if (deleteDashboardState.completed === true) {
+      closeDeleteModal();
+    }
+  }, [closeDeleteModal, deleteDashboardState.completed]);
 
   useEffect(() => {
     if (newFolderCreationState.completed === true) {
@@ -124,6 +155,7 @@ function DashboardSidebar() {
           <DashboardFoldersLayout
             searchText={searchText}
             setActiveDashboardForFolder={setActiveDashboardForFolder}
+            onDeleteDashboardClick={handleDeleteDashboardClick}
           />
         </div>
         <Button
@@ -156,6 +188,16 @@ function DashboardSidebar() {
         visible={showNewFolderModal}
         handleSubmit={onNewFolderCreation}
         isLoading={newFolderCreationState.loading}
+      />
+      <ConfirmationModal
+        visible={deleteDashboardModal}
+        confirmationText='Are you sure you want to delete this Dashboard?'
+        onOk={confirmDeleteDashboard}
+        onCancel={closeDeleteModal}
+        title={`Delete Dashboard - ${activeDashboardForFolder?.name}`}
+        okText='Confirm'
+        cancelText='Cancel'
+        confirmLoading={deleteDashboardState.loading}
       />
     </div>
   );

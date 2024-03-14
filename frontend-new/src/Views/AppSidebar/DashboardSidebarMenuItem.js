@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import cx from 'classnames';
 import { Popover } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
@@ -12,7 +12,9 @@ function DashboardSidebarMenuItem({
   isActive,
   onClick,
   onAdditionToNewFolder,
-  onAddDashboardToExistingFolder
+  onAddDashboardToExistingFolder,
+  onEditDashboardDetails,
+  onDeleteDashboardClick
 }) {
   const [showExistingFoldersList, setShowExistingFoldersList] = useState(false);
   const [showMoreActions, setShowMoreActions] = useState(false);
@@ -44,6 +46,10 @@ function DashboardSidebarMenuItem({
       ))}
     </div>
   );
+
+  const handleEditDashboardDetails = useCallback(() => {
+    onEditDashboardDetails();
+  }, []);
 
   const content = (
     <div className='flex flex-col py-2'>
@@ -95,6 +101,7 @@ function DashboardSidebarMenuItem({
         type='button'
         onClick={(e) => {
           e.stopPropagation();
+          handleEditDashboardDetails();
         }}
         className={cx(
           'px-4 py-2 text-left',
@@ -110,6 +117,7 @@ function DashboardSidebarMenuItem({
         type='button'
         onClick={(e) => {
           e.stopPropagation();
+          onDeleteDashboardClick();
         }}
         className={cx(
           'px-4 py-2 text-left',

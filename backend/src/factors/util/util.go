@@ -153,6 +153,7 @@ var MostRecent string = "Most Recent"
 var FrequentlySeen string = "Others"
 var SmartEvent string = "Custom Events"
 var PageViewEvent string = "Page Views"
+var WebsiteActivityEvent = "Website activity"
 
 func RandomString(n int) string {
 	rand.Seed(time.Now().UnixNano())

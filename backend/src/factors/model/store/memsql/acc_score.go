@@ -74,7 +74,7 @@ func GetEngagementSignalString(weights model.AccWeights, signals map[string]floa
 	for filterId, filterCounts := range signals {
 
 		if filterName, ok := weightIdMap[filterId]; ok {
-			s := fmt.Sprintf("%s %.2f", filterName, filterCounts)
+			s := fmt.Sprintf("%s %d", filterName, int(filterCounts))
 			topkString = append(topkString, s)
 		}
 	}
