@@ -36,9 +36,11 @@ export const defaultState = {
   },
   dashboardsArrangementInFoldersCompleted: false,
   allBoardsFolderId: null,
-  dashboardDeletionInitiated: false,
   editDashboardDetails: {
     initiated: false,
     editDashboard: null
+  },
+  deleteDashboardState: {
+    ...apiStates
   }
 };
