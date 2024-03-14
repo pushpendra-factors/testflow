@@ -196,7 +196,7 @@ func GetDomainsToRunMarkerFor(projectID int64, domainGroup *model.Group, domainG
 
 		if domainGroupStatus == http.StatusFound && isRunAllMarkerForProjectID(projectIdListAllRun, projectID) {
 
-			domainIDList, status := store.GetStore().GetAllDomainsByProjectID(projectID, domainGroup.ID, limitVal, 0, []string{})
+			domainIDList, status := store.GetStore().GetAllDomainsByProjectID(projectID, domainGroup.ID, limitVal, []string{})
 
 			if len(domainIDList) > 0 {
 				allUsersRun = true
