@@ -165,10 +165,10 @@ func LeadSquaredPull(projectId int64, configs map[string]interface{}) (map[strin
 		if model.ActivityEvents[documentType] == true {
 			leadSquaredUrlParams["code"] = fmt.Sprintf("%v", LEADSQUARED_ACTIVITYCODE[documentType])
 		}
-		propertyMetadataList, errorStatus, msg := getMetadataDetails(documentType, leadSquaredConfig.Host, leadSquaredUrlParams)
-		if errorStatus != false {
+		propertyMetadataList, hasError, msg := getMetadataDetails(documentType, leadSquaredConfig.Host, leadSquaredUrlParams)
+		if hasError {
 			resultStatus["error"] = msg
-			log.Error(msg)
+			log.WithField("error", msg).Error("Failed to get metadata details.")
 			return resultStatus, false
 		}
 
@@ -312,9 +312,9 @@ func extractValue(value interface{}, dataType interface{}) interface{} {
 
 func getMetadataDetails(documentType string, host string, leadSquaredUrlParams map[string]string) ([]PropertyMetadataObjectLeadSquared, bool, string) {
 	metadataEndpoint := model.LeadSquaredMetadataEndpoint(documentType)
-	statusCode, responseMetadata, errorObj := L.HttpRequestWrapper(host, metadataEndpoint, nil, nil, "GET", leadSquaredUrlParams)
-	if statusCode != http.StatusOK || errorObj != nil {
-		return nil, true, errorObj.Error()
+	statusCode, responseMetadata, err, _ := L.HttpRequestWrapper(host, metadataEndpoint, nil, nil, "GET", leadSquaredUrlParams)
+	if statusCode != http.StatusOK || err != nil {
+		return nil, true, err.Error()
 	}
 	byteSliceMetadata, err := json.Marshal(responseMetadata)
 	if err != nil {
@@ -420,8 +420,13 @@ func DoHistoricalSync(projectId int64, host string, endpoint string, urlParams m
 		headers := map[string]string{
 			"Content-Type": "application/json",
 		}
-		statusCode, responseHistSyncData, errorObj := L.HttpRequestWrapper(host, endpoint, headers, request, "POST", urlParams)
+		statusCode, responseHistSyncData, errorObj, isContinuableError := L.HttpRequestWrapper(host, endpoint, headers, request, "POST", urlParams)
 		if statusCode != http.StatusOK || errorObj != nil {
+			if isContinuableError {
+				index++
+				continue
+			}
+
 			store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
 				ProjectID:   projectId,
 				Delta:       executionTimestamp,
@@ -569,8 +574,13 @@ func DoIncrementalSync(projectId int64, documentType string, host string, histSy
 		headers := map[string]string{
 			"Content-Type": "application/json",
 		}
-		statusCode, responseIncrSyncData, errorObj := L.HttpRequestWrapper(host, endpoint, headers, request, "POST", urlParams)
-		if statusCode != http.StatusOK || errorObj != nil {
+		statusCode, responseIncrSyncData, err, isContinuableError := L.HttpRequestWrapper(host, endpoint, headers, request, "POST", urlParams)
+		if statusCode != http.StatusOK || err != nil {
+			if isContinuableError {
+				index++
+				continue
+			}
+
 			store.GetStore().CreateLeadSquaredMarker(model.LeadsquaredMarker{
 				ProjectID:   projectId,
 				Delta:       executionTimestamp,
@@ -578,7 +588,7 @@ func DoIncrementalSync(projectId int64, documentType string, host string, histSy
 				Tag:         "incremental_sync",
 				IndexNumber: index,
 			})
-			return nil, true, errorObj.Error()
+			return nil, true, err.Error()
 		}
 		byteSliceIncrSync, err := json.Marshal(responseIncrSyncData)
 		if err != nil {
