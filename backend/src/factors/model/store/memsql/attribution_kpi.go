@@ -859,7 +859,7 @@ func (store *MemSQL) FireAttributionForKPI(query *model.AttributionQuery,
 }
 
 // FireAttributionForKPIV1 returns attribution data using UserSessionData
-func (store *MemSQL) FireAttributionForKPIV1(projectID int64, query *model.AttributionQueryV1,
+func (store *MemSQL) FireAttributionForKPIV1(query *model.AttributionQueryV1,
 	sessions map[string]map[string]model.UserSessionData,
 	kpiData map[string]model.KPIInfo,
 	sessionWT map[string][]float64, logCtx log.Entry) (*map[string]*model.AttributionData, bool, error) {
