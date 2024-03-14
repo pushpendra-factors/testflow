@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -50,17 +51,25 @@ func HttpRequestWrapper(rUrl string, endpoint string, headers map[string]string,
 		return http.StatusInternalServerError, respBody, err
 	}
 	defer response.Body.Close()
-	decoder := json.NewDecoder(response.Body)
-	if response.StatusCode == 200 {
-		if err := decoder.Decode(&respBody); err != nil {
-			log.WithError(err).Error("Failed to decode response body")
+
+	responseBytes, err := io.ReadAll(response.Body)
+	if err != nil {
+		log.WithError(err).Error("Failed to read response as bytes.")
+	}
+	logCtx := log.WithField("response_body", string(responseBytes)).
+		WithField("response_status", response.Status)
+
+	if response.StatusCode == http.StatusOK {
+		if err := json.Unmarshal(responseBytes, &respBody); err != nil {
+			logCtx.WithError(err).Error("Failed to decode response body.")
 			return http.StatusInternalServerError, respBody, err
 		}
 	} else {
-		if err := decoder.Decode(&errResp); err != nil {
-			log.WithError(err).Error("Failed to decode error response body")
+		if err := json.Unmarshal(responseBytes, &respBody); err != nil {
+			logCtx.WithError(err).Error("Failed to decode error response body.")
 			return http.StatusInternalServerError, respBody, err
 		}
+		logCtx.Warn("Received error response on http request.")
 	}
 	return response.StatusCode, respBody, errResp
 }
