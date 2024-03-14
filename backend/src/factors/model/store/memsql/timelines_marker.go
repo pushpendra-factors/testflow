@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"sort"
 	"sync"
 	"time"
 
@@ -288,11 +289,22 @@ func (store *MemSQL) GetDomainsListFromMarker(projectID int64, payload model.Tim
 func (store *MemSQL) GetPreviewDomainsListByProjectId(projectID int64, payload model.TimelinePayload,
 	domainGroupID int) ([]model.Profile, int, string) {
 
-	runLimit := 3
+	runLimit := 10
 
 	limitAcc := 100
 	userCount := new(int64)
 	profilesList := make([]model.Profile, 0)
+
+	// calculate limit to fetch total number of domains
+	limitVal := C.DomainsToProcessForPreview() * runLimit
+
+	domainIDs, status := store.GetAllDomainsByProjectID(projectID, domainGroupID, limitVal,
+		payload.SearchFilter)
+
+	// return if no domains found
+	if status != http.StatusFound || len(domainIDs) <= 0 {
+		return []model.Profile{}, status, "Failed to get domains list"
+	}
 
 	payload, eventNameIDsList, status, errMsg := store.transformPayload(projectID, payload)
 
@@ -302,18 +314,28 @@ func (store *MemSQL) GetPreviewDomainsListByProjectId(projectID int64, payload m
 
 	startTime := time.Now().Unix()
 
-	for runCount := 0; runCount < runLimit; runCount++ {
-		profiles, isLastRun, status, errMsg := store.GetPreviewDomainsListByProjectIdPerRun(projectID, payload,
-			domainGroupID, eventNameIDsList, userCount, runCount)
+	// breaking total domains list in small batches and running one at a time
+	domainIDsList := U.GetStringListAsBatch(domainIDs, C.DomainsToProcessForPreview())
+
+	for li := range domainIDsList {
+
+		profiles, status, errMsg := store.GetPreviewDomainsListByProjectIdPerRun(projectID, payload,
+			domainGroupID, eventNameIDsList, userCount, domainIDsList[li])
 
 		if status != http.StatusOK || errMsg != "" {
 			return []model.Profile{}, status, errMsg
 		}
 		profilesList = append(profilesList, profiles...)
 
-		if len(profilesList) == limitAcc || isLastRun {
+		if len(profiles) >= limitAcc {
 			break
 		}
+	}
+
+	// if profiles more than limitAcc, sort them in descending order and send top limitAcc profiles
+	if len(profilesList) > limitAcc {
+		sort.Sort(structSorter(profilesList))
+		profilesList = profilesList[:limitAcc]
 	}
 
 	endTime := time.Now().Unix()
@@ -325,20 +347,7 @@ func (store *MemSQL) GetPreviewDomainsListByProjectId(projectID int64, payload m
 
 func (store *MemSQL) GetPreviewDomainsListByProjectIdPerRun(projectID int64, payload model.TimelinePayload,
 	domainGroupID int, eventNameIDsMap map[string]string, userCount *int64,
-	runCount int) ([]model.Profile, bool, int, string) {
-	// fetch domains
-	limitVal := C.DomainsToProcessForPreview()
-	offSet := runCount * limitVal
-
-	domainIDList, status := store.GetAllDomainsByProjectID(projectID, domainGroupID, limitVal, offSet,
-		payload.SearchFilter)
-
-	// to check if total domains pulled are less than the given limit
-	isLastRun := (len(domainIDList) < limitVal)
-
-	if status != http.StatusFound || len(domainIDList) <= 0 {
-		return []model.Profile{}, isLastRun, status, "Failed to get domains list"
-	}
+	domainIDList []string) ([]model.Profile, int, string) {
 
 	limitAcc := 100
 	profiles := make([]model.Profile, 0)
@@ -358,12 +367,12 @@ func (store *MemSQL) GetPreviewDomainsListByProjectIdPerRun(projectID int64, pay
 		}
 		wg.Wait()
 
-		if len(profiles) == limitAcc {
+		if len(profiles) >= limitAcc {
 			break
 		}
 	}
 
-	return profiles, isLastRun, http.StatusOK, ""
+	return profiles, http.StatusOK, ""
 }
 
 func (store *MemSQL) transformPayload(projectID int64, payload model.TimelinePayload) (model.TimelinePayload,
@@ -437,10 +446,6 @@ func addProfile(mu *sync.Mutex, profiles *[]model.Profile, limitAcc int, profile
 	mu.Lock()
 	defer mu.Unlock()
 
-	if len(*profiles) == limitAcc {
-		return
-	}
-
 	*profiles = append(*profiles, profile)
 }
 
@@ -458,7 +463,7 @@ func (store *MemSQL) processDomainWithErr(projectID int64, payload model.Timelin
 	var isLastEventAtFound bool
 	if len(payload.Query.GlobalUserProperties) == 0 && len(payload.Query.EventsWithProperties) == 0 {
 		profile, isLastEventAtFound = profileValues(projectID, users, domID, domainGroupID)
-		return profile, true, http.StatusOK
+		return profile, isLastEventAtFound, http.StatusOK
 	}
 
 	decodedPropsArr := make([]map[string]interface{}, 0)
@@ -497,9 +502,6 @@ func profileValues(projectID int64, users []model.User, domID string, domainGrou
 	// set last_activity
 	var domUser model.User
 	for _, user := range users {
-		if user.IsGroupUser == nil || !*user.IsGroupUser {
-			continue
-		}
 		if user.LastEventAt != nil && (*user.LastEventAt).After(maxLastEventAt) {
 			maxLastEventAt = *user.LastEventAt
 		}
@@ -524,4 +526,16 @@ func profileValues(projectID int64, users []model.User, domID string, domainGrou
 	isLastEventAtFound := !maxLastEventAt.IsZero()
 
 	return profile, isLastEventAtFound
+}
+
+type structSorter []model.Profile
+
+func (a structSorter) Len() int {
+	return len(a)
+}
+func (a structSorter) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
+func (a structSorter) Less(i, j int) bool {
+	return a[i].LastActivity.After(a[j].LastActivity)
 }

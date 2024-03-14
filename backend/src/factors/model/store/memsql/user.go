@@ -530,7 +530,7 @@ func (store *MemSQL) GetDomainDetailsByID(projectID int64, id string, domGroupID
 
 // get all domains to run marker for
 func (store *MemSQL) GetAllDomainsByProjectID(projectID int64, domainGroupID int, limitVal int,
-	offSet int, searchFilter []string) ([]string, int) {
+	searchFilter []string) ([]string, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"domain_id":  domainGroupID,
@@ -540,7 +540,7 @@ func (store *MemSQL) GetAllDomainsByProjectID(projectID int64, domainGroupID int
 
 	var domainIDs []string
 	query, queryParams := getLatestDomainsByProjectIDQuery(projectID, domainGroupID, limitVal,
-		offSet, searchFilter)
+		searchFilter)
 
 	db := C.GetServices().Db
 	rows, err := db.Raw(query, queryParams...).Rows()
@@ -572,13 +572,13 @@ func (store *MemSQL) GetAllDomainsByProjectID(projectID int64, domainGroupID int
 }
 
 func getLatestDomainsByProjectIDQuery(projectID int64, domainGroupID int, limitVal int,
-	offSet int, searchFilter []string) (string, []interface{}) {
+	searchFilter []string) (string, []interface{}) {
 	queryParams := []interface{}{projectID, model.UserSourceDomains}
 
 	if len(searchFilter) > 0 {
 		whereForSearchFilters, searchFiltersParams := SearchFilterForAllAccounts(searchFilter, domainGroupID)
 		query := fmt.Sprintf(`SELECT id FROM users WHERE project_id = ? AND source = ? %s 
-		LIMIT %d OFFSET %d;`, whereForSearchFilters, limitVal, offSet)
+		LIMIT %d;`, whereForSearchFilters, limitVal)
 		queryParams = append(queryParams, searchFiltersParams...)
 
 		return query, queryParams
@@ -598,7 +598,7 @@ func getLatestDomainsByProjectIDQuery(projectID int64, domainGroupID int, limitV
   ORDER BY 
    last_event_at DESC 
   LIMIT 
-	%d OFFSET %d;`, domainGroupID, domainGroupID, domainGroupID, limitVal, offSet)
+	%d;`, domainGroupID, domainGroupID, domainGroupID, limitVal)
 
 	return query, queryParams
 }
