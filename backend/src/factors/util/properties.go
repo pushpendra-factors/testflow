@@ -31,6 +31,7 @@ const EVENT_NAME_SESSION = "$session"
 const EVENT_NAME_FORM_FILL = "$form_fill"
 const EVENT_NAME_OFFLINE_TOUCH_POINT = "$offline_touch_point"
 const EVENT_NAME_FORM_SUBMITTED = "$form_submitted"
+const EVENT_NAME_CLICKED_EMAIL = "$clicked_email"
 
 // Integration: Hubspot event names.
 const EVENT_NAME_HUBSPOT_CONTACT_CREATED = "$hubspot_contact_created"
@@ -188,6 +189,7 @@ const EVENT_NAME_SHOPIFY_ORDER_CANCELLED = "$shopify_order_cancelled"
 const EVENT_NAME_SHOPIFY_CART_UPDATED = "$shopify_cart_updated"
 
 var ALLOWED_INTERNAL_EVENT_NAMES = [...]string{
+	EVENT_NAME_CLICKED_EMAIL,
 	EVENT_NAME_SESSION,
 	EVENT_NAME_PAGE_VIEW,
 	EVENT_NAME_FORM_FILL,
@@ -543,6 +545,7 @@ var EP_G2_CITY string = "$g2_visitor_city"
 var EP_G2_STATE string = "$g2_visitor_state"
 var EP_G2_COUNTRY string = "$g2_visitor_country"
 var EP_COMPANY_ENRICHED string = "$company_enriched"
+var EP_EMAIL string = "$ep_email"
 
 // Event Form meta attributes properties
 var EP_FORM_ID string = "$form_id"
@@ -824,6 +827,7 @@ var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_COST,
 	EP_REVENUE,
 	EP_COMPANY_ENRICHED,
+	EP_EMAIL,
 
 	// event properties part of offline touch points
 	EP_CHANNEL,
@@ -1604,7 +1608,7 @@ var STANDARD_EVENTS_DISPLAY_NAMES = map[string]string{
 	"$sf_campaign_member_updated":               "Interacted with Campaign",
 	"$sf_campaign_member_responded_to_campaign": "Responded to Campaign",
 	"$session":                           "Website Session",
-	"$form_submitted":                    "Form Button Click",
+	"$form_submitted":                    "Form submitted",
 	"$hubspot_company_created":           "Company Created",
 	"$hubspot_company_updated":           "Company Updated",
 	"$hubspot_deal_created":              "Deal Created",
@@ -1617,6 +1621,7 @@ var STANDARD_EVENTS_DISPLAY_NAMES = map[string]string{
 	"$leadsquared_lead_created":          "Lead Created",
 	"$leadsquared_lead_updated":          "Lead Updated",
 	EVENT_NAME_PAGE_VIEW:                 "Page View",
+	EVENT_NAME_CLICKED_EMAIL:             "Clicked Email",
 	SEN_ALL_EVENTS:                       SEN_ALL_EVENTS_DISPLAY_STRING,
 	EVENT_NAME_FORM_FILL:                 "Form Fills",
 	EVENT_NAME_SALESFORCE_TASK_CREATED:   "Salesforce Task Created",
@@ -1685,7 +1690,7 @@ var ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	DP_ENGAGEMENT_SCORE:       "Engagement Score",
 	DP_ENGAGEMENT_LEVEL:       "Engagement Level",
 	DP_TOTAL_ENGAGEMENT_SCORE: "Total Engagement Score",
-	DP_DOMAIN_NAME:            "Domain Name",
+	DP_DOMAIN_NAME:            "Company ID",
 	DP_ENGAGEMENT_SIGNALS:     "Top Engagement Signals",
 }
 
@@ -1700,6 +1705,7 @@ var USER_PROPERTIES_WITH_COLUMN_DISPLAY_NAMES = map[string]string{
 var CRM_USER_EVENT_NAME_LABELS = map[string]string{
 	"$hubspot_contact_created":                  "Hubspot Contacts",
 	"$hubspot_contact_updated":                  "Hubspot Contacts",
+	"$hubspot_form_submission":                  "Hubspot Contacts",
 	"$hubspot_engagement_email":                 "Hubspot Contacts",
 	"$hubspot_engagement_meeting_created":       "Hubspot Contacts",
 	"$hubspot_engagement_meeting_updated":       "Hubspot Contacts",
@@ -1903,9 +1909,9 @@ var STANDARD_EVENT_PROPERTIES_CATAGORIZATION = map[string]string{
 	EP_GCLID:               "Traffic source",
 	EP_FBCLID:              "Traffic source",
 	EP_LICLID:              "Traffic source",
-	EP_TIMESTAMP:           "Session properties",
-	EP_HOUR_OF_DAY:         "Session properties",
-	EP_DAY_OF_WEEK:         "Session properties",
+	EP_TIMESTAMP:           "Time of occurrence",
+	EP_HOUR_OF_DAY:         "Time of occurrence",
+	EP_DAY_OF_WEEK:         "Time of occurrence",
 	EP_SESSION_COUNT:       "Session properties",
 	EP_CHANNEL:             "Traffic source",
 	UP_POSTAL_CODE:         "User identification",
@@ -2136,8 +2142,8 @@ var STANDARD_USER_PROPERTIES_CATAGORIZATION = map[string]string{
 	UP_JOIN_TIME:                   "User identification",
 	UP_POSTAL_CODE:                 "User identification",
 	UP_CONTINENT:                   "User identification",
-	EP_HOUR_OF_DAY:                 "User identification",
-	EP_DAY_OF_WEEK:                 "User identification",
+	EP_HOUR_OF_DAY:                 "Time of occurence",
+	EP_DAY_OF_WEEK:                 "Time of occurence",
 	SP_SESSION_TIME:                "Session properties",
 	SP_SPENT_TIME:                  "Session properties",
 	SP_PAGE_COUNT:                  "Session properties",
@@ -2324,7 +2330,7 @@ var PAGE_VIEWS_STANDARD_PROPERTIES_NUMERICAL = []string{
 	EP_PAGE_SCROLL_PERCENT,
 }
 
-var SPECIAL_EVENTS_TO_STANDARD_EVENTS = map[string]string {
+var SPECIAL_EVENTS_TO_STANDARD_EVENTS = map[string]string{
 	EVENT_NAME_PAGE_VIEW: EVENT_NAME_SESSION,
 }
 
@@ -3773,7 +3779,7 @@ func GetValidatedEventProperties(properties *PropertiesMap) *PropertiesMap {
 				propertyKey = k
 			}
 
-			if propertyKey == UP_EMAIL {
+			if propertyKey == UP_EMAIL || propertyKey == EP_EMAIL {
 				email := GetEmailLowerCase(v)
 				if email != "" {
 					validatedProperties[propertyKey] = email
@@ -4122,7 +4128,6 @@ func FillPropertiesFromURL(properties *PropertiesMap, url *url.URL) error {
 	for k, v := range fragmentParams {
 		(*properties)[QUERY_PARAM_PROPERTY_PREFIX+k] = v
 	}
-
 	return nil
 }
 
@@ -4428,6 +4433,7 @@ func isElementPresent(elementsList []string, element string) bool {
 // No filtering is done in this method
 func SortByTimestampAndCount(data []NameCountTimestampCategory) []NameCountTimestampCategory {
 	mandatoryEventsList := []string{EVENT_NAME_SESSION, EVENT_NAME_FORM_SUBMITTED, EVENT_NAME_FORM_FILL}
+	websiteActivityEventList := []string{EVENT_NAME_SESSION, EVENT_NAME_FORM_SUBMITTED, EVENT_NAME_FORM_FILL}
 	smartEventNames := make([]NameCountTimestampCategory, 0)
 	pageViewEventNames := make([]NameCountTimestampCategory, 0)
 	sorted := make([]NameCountTimestampCategory, 0)
@@ -4441,8 +4447,8 @@ func SortByTimestampAndCount(data []NameCountTimestampCategory) []NameCountTimes
 	for index := range data {
 		if data[index].Category == SmartEvent {
 			data[index].GroupName = SmartEvent
-		} else if data[index].Category == PageViewEvent {
-			data[index].GroupName = PageViewEvent
+		} else if data[index].Category == PageViewEvent || isElementPresent(websiteActivityEventList, data[index].Name) {
+			data[index].GroupName = WebsiteActivityEvent
 		} else {
 			data[index].GroupName = FrequentlySeen
 		}

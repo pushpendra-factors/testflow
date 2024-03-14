@@ -55,29 +55,34 @@ export interface UsernameWithIconProps {
   isAnonymous: boolean;
 }
 export interface TimelineEvent {
-  timestamp: number;
-  icon: string;
   event_name: string;
   alias_name: string;
   display_name: string;
   event_type: string;
+  icon: string;
+  timestamp: number;
+  enabled: boolean;
+  is_group_event?: boolean;
   properties?: { [key: string]: unknown };
-  user: string;
-  id: string;
+  username: string;
+  user_id: string;
+  user_properties?: { [key: string]: unknown };
 }
 
 export interface EventDrawerProps {
   visible: boolean;
   event: TimelineEvent;
+  user: TimelineUser;
   eventPropsType: { [key: string]: string };
   onClose: () => void;
 }
 
 export interface TimelineUser {
-  title: string;
-  subtitle: string;
-  userId: string;
+  name: string;
+  id: string;
   isAnonymous: boolean;
+  extraProp: string;
+  properties?: { [key: string]: unknown };
 }
 
 export interface TableRowProps {
@@ -99,16 +104,7 @@ export interface EventDetailsProps {
   onUpdate: (newOrder: string[]) => void;
 }
 
-export type TimelineConfig = {
-  disabled_events: string[];
-  user_config: {
-    table_props: string[];
-    milestones: string[];
-  };
-  account_config: {
-    table_props: string[];
-    milestones: string[];
-    user_prop: string;
-  };
-  events_config: object;
-};
+export interface UserDetailsProps {
+  user: TimelineUser;
+  onUpdate: (newOrder: string[]) => void;
+}

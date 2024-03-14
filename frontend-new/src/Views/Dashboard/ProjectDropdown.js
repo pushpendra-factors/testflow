@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useParams } from 'react-router-dom';
 import { Button, Divider, Spin } from 'antd';
 import { useSelector, useDispatch, connect } from 'react-redux';
 import { ErrorBoundary } from 'react-error-boundary';
@@ -6,10 +7,15 @@ import FaSelect from 'Components/FaSelect';
 import factorsai from 'factorsai';
 import { getHubspotContact } from 'Reducers/global';
 import {
+  changeActiveDashboard as changeActiveDashboardService,
   fetchActiveDashboardUnits,
   DeleteUnitFromDashboard,
   deleteDashboard
-} from '../../reducers/dashboard/services';
+} from 'Reducers/dashboard/services';
+import {
+  selectActiveDashboard,
+  selectDashboardList
+} from 'Reducers/dashboard/selectors';
 import {
   WIDGET_DELETED,
   DASHBOARD_DELETED,
@@ -29,13 +35,7 @@ import {
 } from '../../components/factorsComponents';
 import GroupSelect2 from '../../components/QueryComposer/GroupSelect2';
 import ExistingReportsModal from './ExistingReportsModal';
-import { changeActiveDashboard as changeActiveDashboardService } from 'Reducers/dashboard/services';
 import NewReportButton from './NewReportButton';
-import { useParams } from 'react-router-dom';
-import {
-  selectActiveDashboard,
-  selectDashboardList
-} from 'Reducers/dashboard/selectors';
 
 function ProjectDropdown({
   handleEditClick,
@@ -133,6 +133,10 @@ function ProjectDropdown({
       );
     }
   }, [active_project.id, activeDashboard?.id, dispatch]);
+
+  const closeDeleteModal = useCallback(() => {
+    showDeleteDashboardModal(false);
+  }, []);
 
   useEffect(() => {
     fetchUnits();
@@ -335,7 +339,7 @@ function ProjectDropdown({
                 weight='bold'
                 extraClass='mb-0'
                 type='title'
-                id={'fa-at-text--dashboard-title'}
+                id='fa-at-text--dashboard-title'
               >
                 {showDashboardName}
               </Text>
@@ -346,14 +350,14 @@ function ProjectDropdown({
               type='title'
               weight='medium'
               color='grey'
-              id={'fa-at-text--dashboard-desc'}
+              id='fa-at-text--dashboard-desc'
             >
               {showDashboardDesc}
             </Text>
           </div>
           <div className='flex items-center'>
             <NewReportButton
-              showSavedReport={true}
+              showSavedReport
               setIsReportsModalOpen={setIsReportsModalOpen}
             />
             {additionalActions()}
@@ -403,7 +407,7 @@ function ProjectDropdown({
           visible={deleteDashboardModal}
           confirmationText='Are you sure you want to delete this Dashboard?'
           onOk={confirmDeleteDashboard}
-          onCancel={showDeleteDashboardModal.bind(this, false)}
+          onCancel={closeDeleteModal}
           title={`Delete Dashboard - ${activeDashboard?.name}`}
           okText='Confirm'
           cancelText='Cancel'

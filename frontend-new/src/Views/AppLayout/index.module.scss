@@ -14,6 +14,7 @@
     margin-left: 48px;
   }
   &.enable-transition {
-    transition: 0.4s;
+    // Commenting this to avoid transition animation in accounts page
+    // transition: 0.4s;
   }
 }

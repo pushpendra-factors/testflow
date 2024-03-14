@@ -9,6 +9,6 @@
   "author": "T Rachana",
   "license": "ISC",
   "dependencies": {
-    "@slack/bolt": "^3.6.0"
+    "@slack/bolt": "^3.17.1"
   }
 }

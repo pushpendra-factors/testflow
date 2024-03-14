@@ -500,8 +500,6 @@ function UserProfiles({
               color='grey-2'
               weight='bold'
               extraClass='m-0 truncate'
-              truncate
-              charLimit={25}
             >
               {propDisplayName}
             </Text>
@@ -1103,7 +1101,7 @@ function UserProfiles({
       })
     }));
     return (
-      <div>
+      <div id='resizing-table-container-div'>
         <Table
           ref={(e) => {
             if (e) setPeopleRow(e);

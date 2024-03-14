@@ -99,8 +99,9 @@ func InitAppRoutes(r *gin.Engine) {
 
 	r.GET(routePrefix+"/"+ROUTE_PROJECTS_ROOT_V1+"/custom_projects", mid.SetLoggedInAgentInternalOnly(), V1.GetCustomPlanProjectsHandler)
 
-	r.POST("/billing/hooks/subscription/hbeqjomjhxjvx2z", mid.LogAuditMid(), V1.BillingSubscriptionChangedWebhookListner) // random string as a part of security measure
-	r.POST("/billing/hooks/invoice/ksh4jcjw245", mid.LogAuditMid(), V1.BillingInvoiceGeneratedWebhookListner)             // random string as a part of security measure
+	r.POST("/billing/hooks/subscription/hbeqjomjhxjvx2z", mid.LogAuditMid(), V1.BillingSubscriptionChangedWebhookListner)     // random string as a part of security measure
+	r.POST("/billing/hooks/invoice/ksh4jcjw245", mid.LogAuditMid(), V1.BillingInvoiceGeneratedWebhookListner)                 // random string as a part of security measure
+	r.POST("/billing/hooks/subscription/jfdksr32wr3ekfjsd", mid.LogAuditMid(), V1.BillingSubscriptionCancelledWebhookListner) // random string as a part of security measure
 	r.GET("/billing/upgrade/callback", mid.LogAuditMid(), V1.BillingUpgradeCallbackHandler)
 	// Feature Gates Auth Group
 	// authRouteGroup := r.Group(routePrefix + ROUTE_PROJECTS_ROOT)
@@ -307,6 +308,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/v1/profiles/accounts/:group/:id", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_PROFILES}), responseWrapper(V1.GetProfileAccountDetailsHandler))
 	authRouteGroup.GET("/:project_id/v1/profiles/accounts/overview/:group/:id", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_PROFILES}), responseWrapper(V1.GetProfileAccountOverviewHandler))
 	authRouteGroup.PUT("/:project_id/v1/profiles/events_config/:event_name", mid.FeatureMiddleware([]string{M.FEATURE_PEOPLE_PROFILES, M.FEATURE_ACCOUNT_PROFILES}), V1.UpdateEventConfigHandler)
+	authRouteGroup.GET("/:project_id/v1/profiles/user_properties/:id", mid.FeatureMiddleware([]string{M.FEATURE_PEOPLE_PROFILES, M.FEATURE_ACCOUNT_PROFILES}), V1.GetUserPropertiesByIDHandler)
 
 	// Segments
 	authRouteGroup.POST("/:project_id/segments", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), CreateSegmentHandler)
@@ -314,6 +316,13 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/segments/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(GetSegmentByIdHandler))
 	authRouteGroup.PUT("/:project_id/segments/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), UpdateSegmentHandler)
 	authRouteGroup.DELETE("/:project_id/segments/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), DeleteSegmentByIdHandler)
+
+	// TODO Kark - v1 or not later.
+	authRouteGroup.GET("/:project_id/segments/analytics/config", GetSegmentAnalyticsConfigHandler)
+	authRouteGroup.POST("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets", AddNewWidgetToWidgetGroupHandler)
+	authRouteGroup.PATCH("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets/:id", EditSegmentAnalyticsWidgetHandler)
+	// authRouteGroup.DELETE("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets/:id", DeleteSegmentAnalyticsWidgetHandler)
+	authRouteGroup.POST("/:project_id/segments/:segment_id/analytics/widget_group/:id/query", ExecuteSegmentQueryHandler)
 
 	// path analysis
 	authRouteGroup.GET("/:project_id/v1/pathanalysis", mid.FeatureMiddleware([]string{M.FEATURE_PATH_ANALYSIS}), responseWrapper(V1.GetPathAnalysisEntityHandler))

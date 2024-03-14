@@ -267,6 +267,7 @@ function EnrichPages({
               uploadModalOpen={uploadModalOpen}
               setUploadModalOpen={setUploadModalOpen}
               handleOkClick={handleOkClick}
+              uploadType='urls'
             />
           )}
           <div className={`mt-5 ${style.customSelect}`}>

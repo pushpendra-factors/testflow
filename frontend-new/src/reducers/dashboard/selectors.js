@@ -19,3 +19,43 @@ export const selectDashboardListFilteredBySearchText = createSelector(
 // for pre-defined dashboards
 export const selectActivePreDashboard = (state) =>
   state.preBuildDashboardConfig.activePreBuildDashboard;
+
+export const selectShowDashboardNewFolderModal = createSelector(
+  (state) => state.dashboard,
+  (dashboardState) => dashboardState.showNewFolderModal
+);
+
+export const selectNewFolderCreationState = createSelector(
+  (state) => state.dashboard,
+  (dashboardState) => dashboardState.newFolderCreationState
+);
+
+export const selectDashboardFoldersListState = createSelector(
+  (state) => state.dashboard,
+  (dashboardState) => dashboardState.foldersList
+);
+
+export const selectAllBoardsFolderId = createSelector(
+  (state) => state.dashboard,
+  (dashboardState) => dashboardState.allBoardsFolderId
+);
+
+export const selectRenameFolderState = createSelector(
+  (state) => state.dashboard,
+  (dashboardState) => dashboardState.renameFolderState
+);
+
+export const selectDeleteFolderState = createSelector(
+  (state) => state.dashboard,
+  (dashboardState) => dashboardState.deleteFolderState
+);
+
+export const selectEditDashboardDetailsState = createSelector(
+  (state) => state.dashboard,
+  (dashboardState) => dashboardState.editDashboardDetails
+);
+
+export const selectDeleteDashboardState = createSelector(
+  (state) => state.dashboard,
+  (dashboardState) => dashboardState.deleteDashboardState
+);

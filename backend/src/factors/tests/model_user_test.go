@@ -458,14 +458,14 @@ func clearbitAnalysisTestDBClearbit(t *testing.T) {
 	projectId := int64(5)
 	clientIP := "89.76.236.199"
 	propertiesMap1 := U.PropertiesMap{"prop_1": "value_1"}
-	executeClearBitStatusChannel := make(chan int)
+	executeClearBitStatusChannel := make(chan clear_bit.ResultChannel)
 
 	clearbitKey, errCode := store.GetStore().GetClearbitKeyFromProjectSetting(projectId)
 	if errCode != http.StatusFound {
 		log.Info("Get clear_bit key failed.")
 	}
 	logCtx := log.WithField("project_id", projectId)
-	go clear_bit.ExecuteClearBitEnrich(projectId, clearbitKey, &propertiesMap1, clientIP, executeClearBitStatusChannel, logCtx) // Our gateway IP.
+	go clear_bit.ExecuteClearBitEnrichV1(projectId, clearbitKey, &propertiesMap1, clientIP, executeClearBitStatusChannel, logCtx) // Our gateway IP.
 	select {
 	case response, ok := <-executeClearBitStatusChannel:
 		if ok {

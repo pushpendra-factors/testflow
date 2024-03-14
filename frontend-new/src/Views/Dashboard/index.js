@@ -3,7 +3,9 @@ import { useDispatch, useSelector, connect } from 'react-redux';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Spin } from 'antd';
 import { get, isEmpty } from 'lodash';
-
+import { useHistory } from 'react-router-dom';
+import { PathUrls } from 'Routes/pathUrls';
+import { fetchDashboardFolders } from 'Reducers/dashboard/services';
 import {
   fetchProjectSettingsV1 as fetchProjectSettingsV1Service,
   fetchBingAdsIntegration as fetchBingAdsIntegrationService,
@@ -13,7 +15,9 @@ import {
 
 import {
   selectAreDraftsSelected,
-  selectDashboardList
+  selectDashboardFoldersListState,
+  selectDashboardList,
+  selectEditDashboardDetailsState
 } from 'Reducers/dashboard/selectors';
 import CommonBeforeIntegrationPage from 'Components/GenericComponents/CommonBeforeIntegrationPage';
 import AddDashboard from './AddDashboard';
@@ -28,8 +32,6 @@ import DashboardAfterIntegration from './EmptyDashboard/DashboardAfterIntegratio
 import ProjectDropdown from './ProjectDropdown';
 import { DASHBOARD_KEYS } from '../../constants/localStorage.constants';
 import Drafts from './Drafts';
-import { useHistory } from 'react-router-dom';
-import { PathUrls } from 'Routes/pathUrls';
 
 const dashboardRefreshInitialState = {
   inProgress: false,
@@ -44,7 +46,6 @@ function Dashboard({
   fetchMarketoIntegration,
   fetchProjectSettings
 }) {
-  const [addDashboardModal, setaddDashboardModal] = useState(false);
   const [editDashboard, setEditDashboard] = useState(null);
   const [durationObj, setDurationObj] = useState(getDashboardDateRange());
   const [sdkCheck, setSdkCheck] = useState(false);
@@ -56,6 +57,9 @@ function Dashboard({
 
   const { activeDashboardUnits, activeDashboard } = useSelector(
     (state) => state.dashboard
+  );
+  const editDashboardDetailsState = useSelector((state) =>
+    selectEditDashboardDetailsState(state)
   );
   const dashboards = useSelector((state) => selectDashboardList(state));
 
@@ -69,32 +73,12 @@ function Dashboard({
   const queries = useSelector((state) => state.queries);
   const integrationV1 = useSelector((state) => state.global.projectSettingsV1);
   const activeProject = useSelector((state) => state.global.active_project);
+  const foldersList = useSelector((state) =>
+    selectDashboardFoldersListState(state)
+  );
   const { bingAds, marketo } = useSelector((state) => state.global);
   const dispatch = useDispatch();
   const history = useHistory();
-
-  useEffect(() => {
-    fetchProjectSettingsV1(activeProject?.id)
-      .then((res) => {
-        setSdkCheck(res?.data?.int_completed);
-      })
-      .catch((err) => {
-        console.log(err);
-      });
-
-    fetchProjectSettings(activeProject?.id);
-
-    if (isEmpty(dashboards)) {
-      fetchBingAdsIntegration(activeProject?.id);
-      fetchMarketoIntegration(activeProject?.id);
-    }
-  }, [activeProject, sdkCheck]);
-
-  useEffect(() => {
-    if (activeDashboard?.class === 'predefined') {
-      history.replace(`${PathUrls.PreBuildDashboard}`);
-    }
-  }, [activeDashboard, activeProject]);
 
   const checkIntegration =
     integration?.int_segment ||
@@ -117,7 +101,6 @@ function Dashboard({
 
   const handleEditClick = useCallback((dashboard) => {
     dispatch({ type: ADD_DASHBOARD_MODAL_OPEN });
-    setaddDashboardModal(true);
     setEditDashboard(dashboard);
   }, []);
 
@@ -219,7 +202,40 @@ function Dashboard({
     [dispatch]
   );
 
-  if (dashboards.loading || queries.loading) {
+  useEffect(() => {
+    fetchProjectSettingsV1(activeProject?.id)
+      .then((res) => {
+        setSdkCheck(res?.data?.int_completed);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+
+    fetchProjectSettings(activeProject?.id);
+
+    if (isEmpty(dashboards)) {
+      fetchBingAdsIntegration(activeProject?.id);
+      fetchMarketoIntegration(activeProject?.id);
+    }
+
+    if (activeDashboard?.class === 'predefined') {
+      history.replace(`${PathUrls.PreBuildDashboard}`);
+    }
+  }, [activeProject, sdkCheck]);
+
+  useEffect(() => {
+    if (foldersList.completed === false) {
+      dispatch(fetchDashboardFolders(activeProject.id));
+    }
+  }, [activeProject.id, foldersList.completed]);
+
+  useEffect(() => {
+    if (editDashboardDetailsState.initiated === true) {
+      setEditDashboard(editDashboardDetailsState.editDashboard);
+    }
+  }, [editDashboardDetailsState]);
+
+  if (dashboards.loading || queries.loading || foldersList.completed !== true) {
     return (
       <div className='flex justify-center items-center w-full h-64'>
         <Spin size='large' />
@@ -243,7 +259,6 @@ function Dashboard({
           <div className='flex-1 flex flex-col'>
             <ProjectDropdown
               handleEditClick={handleEditClick}
-              setaddDashboardModal={setaddDashboardModal}
               durationObj={durationObj}
               handleDurationChange={handleDurationChange}
               oldestRefreshTime={oldestRefreshTime}
@@ -260,8 +275,6 @@ function Dashboard({
         <AddDashboard
           setEditDashboard={setEditDashboard}
           editDashboard={editDashboard}
-          addDashboardModal={addDashboardModal}
-          setaddDashboardModal={setaddDashboardModal}
         />
       </ErrorBoundary>
     );
@@ -270,9 +283,7 @@ function Dashboard({
   if (checkIntegration) {
     return (
       <>
-        <DashboardAfterIntegration
-          setaddDashboardModal={setaddDashboardModal}
-        />
+        <DashboardAfterIntegration />
         {/* <AddDashboard
           setEditDashboard={setEditDashboard}
           editDashboard={editDashboard}

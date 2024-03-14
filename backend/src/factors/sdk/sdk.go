@@ -7,8 +7,6 @@ import (
 	"factors/company_enrichment/clearbit"
 	"factors/company_enrichment/factors_deanon"
 	"factors/company_enrichment/sixsignal"
-	"factors/integration/clear_bit"
-	"factors/integration/six_signal"
 	"factors/model/model"
 	"factors/model/store"
 	"factors/util"
@@ -573,6 +571,7 @@ func Track(projectId int64, request *TrackPayload,
 			eventName, eventNameErrCode = store.GetStore().CreateOrGetAutoTrackedEventName(
 				&model.EventName{Name: request.Name, ProjectId: projectId})
 		}
+
 	} else if request.SmartEventType != "" {
 		request.Name = strings.TrimSuffix(request.Name, "/")
 		eventName, eventNameErrCode = store.GetStore().GetSmartEventEventName(&model.EventName{Name: request.Name, ProjectId: projectId, Type: request.SmartEventType})
@@ -593,6 +592,7 @@ func Track(projectId int64, request *TrackPayload,
 	parsedPageURL, err := U.ParseURLStable(pageURL)
 	if err == nil {
 		_ = U.FillPropertiesFromURL(&request.EventProperties, parsedPageURL)
+
 	}
 
 	// Event Properties
@@ -603,6 +603,25 @@ func Track(projectId int64, request *TrackPayload,
 	eventProperties := U.GetValidatedEventProperties(definedEventProperties)
 	if ip, ok := (request.EventProperties)[U.EP_INTERNAL_IP]; ok && ip != "" {
 		clientIP = ip.(string)
+	}
+
+	var isClickedEmailEvent bool
+	var clickedEmailEventName *model.EventName
+
+	if C.IsEmailUTMParameterAllowed(projectId) {
+		U.UnEscapeQueryParamProperties(&request.EventProperties)
+		if U.GetPropertyValueAsString((*eventProperties)[U.EP_EMAIL]) != "" {
+			isClickedEmailEvent = true
+
+			clickedEmailEventName, errCode = store.GetStore().CreateOrGetUserCreatedEventName(
+				&model.EventName{Name: U.EVENT_NAME_CLICKED_EMAIL, ProjectId: projectId})
+
+			if errCode != http.StatusCreated && errCode != http.StatusConflict &&
+				errCode != http.StatusFound {
+				isClickedEmailEvent = false
+				logCtx.WithField("event_name", U.EVENT_NAME_CLICKED_EMAIL).Warn("Tracking failed. Creating  ClickedEmail Name  failed.")
+			}
+		}
 	}
 
 	U.SanitizeProperties(eventProperties)
@@ -675,36 +694,7 @@ func Track(projectId int64, request *TrackPayload,
 	_, _, isoCode := model.FillLocationUserProperties(userProperties, clientIP)
 	pageURLProp := U.GetPropertyValueAsString((*eventProperties)[U.EP_PAGE_URL])
 
-	if C.IsCompanyEnrichmentV1Enabled(projectId) {
-		FillCompanyIdentificationUserProperties(projectId, clientIP, projectSettings, userProperties, eventProperties, request.UserId, isoCode, pageURLProp)
-	} else {
-		//Fetching feature flags to check of feature is enabled on the plan.
-		factorsDeanonymisationEnabled, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_FACTORS_DEANONYMISATION, false)
-		if err != nil {
-			logCtx.Error("Failed to fetch factors deanonymisation feature flag")
-		}
-		sixsignalEnabled, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_SIX_SIGNAL, false)
-		if err != nil {
-			logCtx.Error("Failed to fetch client sixsignal feature flag")
-		}
-		clearbitEnabled, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_CLEARBIT, false)
-		if err != nil {
-			logCtx.Warn("Failed to fetch clearbit feature flag")
-		}
-
-		if clearbitEnabled && projectSettings.ClearbitKey != "" && *(projectSettings.IntClearBit) {
-			FillClearbitUserProperties(projectId, projectSettings.ClearbitKey, userProperties, request.UserId, clientIP)
-			logCtx.Info("Enrichment using clearbit")
-		} else if sixsignalEnabled && projectSettings.Client6SignalKey != "" && *(projectSettings.IntClientSixSignalKey) {
-			FillSixSignalUserProperties(projectId, projectSettings.Client6SignalKey, userProperties, request.UserId, clientIP)
-			logCtx.Info("Enrichment using client sixsignal")
-		} else if factorsDeanonymisationEnabled && *(projectSettings.IntFactorsSixSignalKey) {
-			if isSixsignalQuotaAvailable, _ := CheckingSixSignalQuotaLimit(projectId); isSixsignalQuotaAvailable {
-				FillSixSignalUserPropertiesViaFactors(projectId, projectSettings, userProperties, request.UserId, clientIP, isoCode, pageURLProp)
-				logCtx.Info("Enrichment using factors deanonymisation")
-			}
-		}
-	}
+	FillCompanyIdentificationUserProperties(projectId, clientIP, projectSettings, userProperties, eventProperties, request.UserId, isoCode, pageURLProp)
 
 	if C.EnableSixSignalGroupByProjectID(projectId) {
 		groupProperties := U.FilterPropertiesByKeysByPrefix(userProperties, U.SIX_SIGNAL_PROPERTIES_PREFIX)
@@ -733,6 +723,11 @@ func Track(projectId int64, request *TrackPayload,
 	if C.IsFormFillIdentificationAllowedForProject(projectId) {
 		isFormEvent = request.Name == U.EVENT_NAME_FORM_SUBMITTED || request.Name == U.EVENT_NAME_FORM_FILL
 	}
+
+	if C.IsEmailUTMParameterAllowed(projectId) {
+		isFormEvent = isFormEvent || isClickedEmailEvent
+	}
+
 	if isFormEvent {
 		customerUserID, formSubmitUserProperties, errCode := store.GetStore().GetCustomerUserIDAndUserPropertiesFromFormSubmit(
 			projectId, request.UserId, eventProperties)
@@ -744,6 +739,7 @@ func Track(projectId int64, request *TrackPayload,
 		}
 
 		if customerUserID != "" {
+
 			pageURL := U.GetPropertyValueAsString((*eventProperties)[U.EP_PAGE_URL])
 
 			errCode, _ := Identify(projectId, &IdentifyPayload{
@@ -842,6 +838,23 @@ func Track(projectId int64, request *TrackPayload,
 		return errCode, &TrackResponse{Error: "Tracking failed. Event creation failed."}
 	}
 
+	if isClickedEmailEvent {
+		clickedEmailevent := &model.Event{
+			EventNameId:    clickedEmailEventName.ID,
+			Timestamp:      request.Timestamp,
+			ProjectId:      projectId,
+			UserId:         request.UserId,
+			UserProperties: userPropertiesV2,
+			Properties:     event.Properties,
+		}
+
+		_, errCode := store.GetStore().CreateEvent(clickedEmailevent)
+		if errCode != http.StatusCreated {
+			logCtx.Warn("Tracking failed. Clicked email Event creation failed.")
+		}
+
+	}
+
 	// Success response.
 	response.EventId = createdEvent.ID
 	response.Message = "User event tracked successfully."
@@ -877,249 +890,6 @@ func FillCompanyIdentificationUserProperties(projectId int64, clientIP string, p
 
 	}
 
-}
-
-func FillSixSignalUserProperties(projectId int64, apiKey string, userProperties *U.PropertiesMap,
-	UserId, clientIP string) {
-
-	logCtx := log.WithField("project_id", projectId)
-	execute6SignalStatusChannel := make(chan int)
-	sixSignalExists, _ := model.GetSixSignalCacheResult(projectId, UserId, clientIP)
-	if sixSignalExists {
-		logCtx.Info("6Signal cache hit")
-	} else {
-		go six_signal.ExecuteSixSignalEnrich(projectId, apiKey, userProperties, clientIP, execute6SignalStatusChannel)
-		select {
-		case ok := <-execute6SignalStatusChannel:
-			if ok == 1 {
-				model.SetSixSignalCacheResult(projectId, UserId, clientIP)
-				logCtx.Info("ExecuteSixSignal suceeded in track call")
-
-				if apiKey == C.GetFactorsSixSignalAPIKey() {
-					model.SetSixSignalAPITotalHitCountCacheResult(projectId, U.TimeZoneStringIST)
-				}
-
-			} else {
-				logCtx.Warn("ExecuteSixSignal failed in track call")
-			}
-		case <-time.After(U.TimeoutOneSecond):
-			logCtx.Warn("six_Signal enrichment timed out in Track call")
-
-		}
-	}
-}
-
-func FillSixSignalUserPropertiesViaFactors(projectId int64, projectSettings *model.ProjectSetting,
-	userProperties *U.PropertiesMap, UserId, clientIP, isoCode, pageURLProp string) {
-
-	logCtx := log.WithField("project_id", projectId)
-
-	//Fetching sixsignal API Key
-	factors6SignalKey := C.GetFactorsSixSignalAPIKey()
-
-	//Fetching sixsignal configs
-	sixSignalConfig := model.SixSignalConfig{}
-	if projectSettings.SixSignalConfig != nil {
-		err := json.Unmarshal(projectSettings.SixSignalConfig.RawMessage, &sixSignalConfig)
-		if err != nil {
-			logCtx.WithField("six_signal_config", projectSettings.SixSignalConfig).WithError(err).Error("Failed to decode six signal property")
-		}
-	}
-
-	shouldEnrichUsingSixSignal, _ := ApplySixSignalFilters(sixSignalConfig, isoCode, pageURLProp)
-	if !shouldEnrichUsingSixSignal {
-		logCtx.Warn("SixSignal configs not matched.")
-		return
-	}
-
-	FillSixSignalUserProperties(projectId, factors6SignalKey, userProperties, UserId, clientIP)
-
-}
-
-func ApplySixSignalFilters(sixSignalConfig model.SixSignalConfig, isoCode, pageUrl string) (bool, error) {
-
-	//No filter case is true
-	if (sixSignalConfig.CountryInclude == nil || len(sixSignalConfig.CountryInclude) == 0) &&
-		(sixSignalConfig.CountryExclude == nil || len(sixSignalConfig.CountryExclude) == 0) &&
-		(sixSignalConfig.PagesInclude == nil || len(sixSignalConfig.PagesInclude) == 0) &&
-		(sixSignalConfig.PagesExclude == nil || len(sixSignalConfig.PagesExclude) == 0) {
-		return true, nil
-	}
-
-	countryFilterPassed := IsCountryFilterPassed(sixSignalConfig, isoCode)
-	if !countryFilterPassed {
-		return false, nil
-	}
-
-	pageFilterPassed, _ := IsPageFilterPassed(sixSignalConfig, pageUrl)
-	if !pageFilterPassed {
-		return false, nil
-	}
-
-	return true, nil
-}
-
-func IsCountryFilterPassed(sixSignalConfig model.SixSignalConfig, isoCode string) bool {
-
-	isCountryIncluded := (sixSignalConfig.CountryInclude != nil && len(sixSignalConfig.CountryInclude) != 0)
-	isCountryExcluded := (sixSignalConfig.CountryExclude != nil && len(sixSignalConfig.CountryExclude) != 0)
-
-	if !isCountryIncluded && !isCountryExcluded {
-		return true
-	}
-
-	mapOfCountries := make(map[string]bool)
-
-	if isCountryIncluded {
-		for _, filter := range sixSignalConfig.CountryInclude {
-			mapOfCountries[filter.Value] = true
-		}
-
-	} else if isCountryExcluded {
-		for _, filter := range sixSignalConfig.CountryExclude {
-			mapOfCountries[filter.Value] = true
-		}
-	}
-
-	contains := mapOfCountries[isoCode]
-
-	if isCountryIncluded {
-		return contains
-	}
-	return !contains
-
-}
-
-func IsPageFilterPassed(sixSignalConfig model.SixSignalConfig, pageUrl string) (bool, error) {
-
-	pageFilterPassed := true
-	isPageUrlIncluded := (sixSignalConfig.PagesInclude != nil && len(sixSignalConfig.PagesInclude) != 0)
-	if isPageUrlIncluded {
-		pageFilterPassed = false
-		for _, filter := range sixSignalConfig.PagesInclude {
-			switch filter.Type {
-			case model.EqualsOpStr:
-				//cleaning incoming page url
-				parsedPageUrl, err := U.ParseURLStable(pageUrl)
-				if err != nil {
-					log.WithField("PageUrl", pageUrl).Error("Error occured while ParseURLStable.")
-					continue
-				}
-				basePageUrl := U.GetURLHostAndPath(parsedPageUrl)
-
-				//cleaning sixsignal config page url
-				parsedFilterPageUrl, err := U.ParseURLStable(filter.Value)
-				if err != nil {
-					log.WithField("PageUrl filter", filter.Value).Error("Error occured while ParseURLStable.")
-					continue
-				}
-				filterPageUrl := U.GetURLHostAndPath(parsedFilterPageUrl)
-
-				if filterPageUrl == basePageUrl {
-					pageFilterPassed = true
-					break
-				}
-			case model.ContainsOpStr:
-				if strings.Contains(pageUrl, filter.Value) {
-					pageFilterPassed = true
-					break
-				}
-			}
-		}
-		// failed to satisfy page include  filter
-		if pageFilterPassed == false {
-			return false, nil
-		}
-	}
-
-	isPageUrlExcluded := (sixSignalConfig.PagesExclude != nil && len(sixSignalConfig.PagesExclude) != 0)
-	if isPageUrlExcluded {
-		for _, filter := range sixSignalConfig.PagesExclude {
-			switch filter.Type {
-			case model.EqualsOpStr:
-				//cleaning incoming pageUrl
-				parsedPageUrl, err := U.ParseURLStable(pageUrl)
-				if err != nil {
-					log.WithField("PageUrl", pageUrl).Error("Error occured while ParseURLStable.")
-					continue
-				}
-				basePageUrl := U.GetURLHostAndPath(parsedPageUrl)
-
-				//cleaning sixsignal config page url
-				parsedFilterPageUrl, err := U.ParseURLStable(filter.Value)
-				if err != nil {
-					log.WithField("PageUrl filter", filter.Value).Error("Error occured while ParseURLStable.")
-					continue
-				}
-				filterPageUrl := U.GetURLHostAndPath(parsedFilterPageUrl)
-
-				if filterPageUrl == basePageUrl {
-					//skip if page name matches
-					return false, nil
-				}
-			case model.ContainsOpStr:
-				if strings.Contains(pageUrl, filter.Value) {
-					//skip if page contains data matches
-					return false, nil
-				}
-			}
-		}
-	}
-
-	return pageFilterPassed, nil
-}
-
-func CheckingSixSignalQuotaLimit(projectId int64) (bool, error) {
-
-	logCtx := log.WithField("project_id", projectId)
-	limit, err := store.GetStore().GetFeatureLimitForProject(projectId, model.FEATURE_FACTORS_DEANONYMISATION)
-	if err != nil {
-		logCtx.Error("Failed fetching sixsignal quota limit with error ", err)
-		return false, err
-	}
-
-	timeZone, statusCode := store.GetStore().GetTimezoneForProject(projectId)
-	if statusCode != http.StatusFound {
-		timeZone = util.TimeZoneStringIST
-	}
-	monthYear := util.GetCurrentMonthYear(timeZone)
-	count, err := model.GetSixSignalMonthlyUniqueEnrichmentCount(projectId, monthYear)
-	if err != nil {
-		logCtx.Error("Error while fetching sixsignal count")
-		return false, err
-	}
-
-	if count >= limit {
-		logCtx.Warn("SixSignal Limit Exhausted")
-		return false, errors.New("SixSignal Limit Exhausted")
-	}
-	return true, nil
-}
-
-func FillClearbitUserProperties(projectId int64, clearbitKey string,
-	userProperties *U.PropertiesMap, UserId string, clientIP string) {
-
-	logCtx := log.WithField("project_id", projectId)
-
-	executeClearBitStatusChannel := make(chan int)
-	clearBitExists, _ := clear_bit.GetClearbitCacheResult(projectId, UserId, clientIP)
-	if clearBitExists {
-		//logCtx.Info("clearbit cache hit")
-	} else {
-		//logCtx.Info("clearbit cache miss")
-		go clear_bit.ExecuteClearBitEnrich(projectId, clearbitKey, userProperties, clientIP, executeClearBitStatusChannel, logCtx)
-
-		select {
-		case ok := <-executeClearBitStatusChannel:
-			if ok == 1 {
-				clear_bit.SetClearBitCacheResult(projectId, UserId, clientIP)
-			} else {
-				logCtx.Warn("ExecuteClearbit failed in Track call")
-			}
-		case <-time.After(U.TimeoutOneSecond):
-			logCtx.Warn("clear_bit enrichment timed out in Track call")
-		}
-	}
 }
 
 func getURLFromPageEvent(properties U.PropertiesMap) string {
@@ -1605,19 +1375,6 @@ func AddUserProperties(projectId int64,
 
 	// Validate properties.
 	validProperties := U.GetValidatedUserProperties(&request.Properties)
-
-	clearbitKey, err1 := store.GetStore().GetClearbitKeyFromProjectSetting(projectId)
-	if err1 != http.StatusFound {
-		logCtx.Info("Get clear_bit key from project_settings failed.")
-	}
-	clearbitEnabled, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_CLEARBIT, false)
-	if err != nil {
-		logCtx.Warn("Failed to fetch clearbit feature flag")
-	}
-	if clearbitKey != "" && clearbitEnabled {
-		FillClearbitUserProperties(projectId, clearbitKey, validProperties, request.UserId, request.ClientIP)
-		log.Info("clearbit enrichment from AddUserProperties for projectId: ", projectId)
-	}
 
 	_, _, _ = model.FillLocationUserProperties(validProperties, request.ClientIP)
 	propertiesJSON, err := json.Marshal(validProperties)

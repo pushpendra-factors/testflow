@@ -12,16 +12,14 @@ import (
 )
 
 type Profile struct {
-	Identity       string                 `json:"identity"`
-	Properties     *postgres.Jsonb        `json:"-"`
-	Name           string                 `json:"name,omitempty"`
-	HostName       string                 `json:"host_name,omitempty"`
-	IsAnonymous    bool                   `json:"is_anonymous"`
-	LastActivity   time.Time              `json:"last_activity"`
-	TableProps     map[string]interface{} `json:"table_props"`
-	Score          float64                `json:"score"`
-	Engagement     string                 `json:"engagement,omitempty"`
-	TopEngagements map[string]float64     `json:"top_engagements,omitempty"`
+	Identity     string                 `json:"identity"`
+	Properties   *postgres.Jsonb        `json:"-"`
+	Name         string                 `json:"name,omitempty"`
+	HostName     string                 `json:"host_name,omitempty"`
+	IsAnonymous  bool                   `json:"is_anonymous"`
+	LastActivity time.Time              `json:"last_activity"`
+	TableProps   map[string]interface{} `json:"table_props"`
+	Score        float64                `json:"score"`
 }
 
 type ListingTimeWindow struct {
@@ -36,7 +34,6 @@ type ContactDetails struct {
 	LeftPaneProps map[string]interface{} `json:"leftpane_props"`
 	Milestones    map[string]interface{} `json:"milestones"`
 	Name          string                 `json:"name"`
-	Company       string                 `json:"company"`
 	Account       string                 `json:"account"`
 	UserActivity  []UserActivity         `json:"user_activities"`
 }
@@ -63,9 +60,9 @@ type TimelinePayload struct {
 }
 
 type AccountDetails struct {
-	Properties      *postgres.Jsonb        `json:"-"`
-	HostName        string                 `json:"host_name"`
 	Name            string                 `json:"name"`
+	HostName        string                 `json:"host_name"`
+	Properties      *postgres.Jsonb        `json:"-"`
 	LeftPaneProps   map[string]interface{} `json:"leftpane_props"`
 	Milestones      map[string]interface{} `json:"milestones"`
 	AccountTimeline []UserTimeline         `json:"account_timeline"`
@@ -98,11 +95,12 @@ type TopUser struct {
 }
 
 type UserTimeline struct {
-	UserId         string         `json:"user_id"`
-	IsAnonymous    bool           `json:"is_anonymous"`
-	UserName       string         `json:"user_name"`
-	AdditionalProp string         `json:"additional_prop"`
-	UserActivities []UserActivity `json:"user_activities"`
+	UserId         string                 `json:"user_id"`
+	IsAnonymous    bool                   `json:"is_anonymous"`
+	UserName       string                 `json:"user_name"`
+	UserProperties map[string]interface{} `json:"user_properties"`
+	AdditionalProp string                 `json:"additional_prop"`
+	UserActivities []UserActivity         `json:"user_activities"`
 }
 
 // Constants

@@ -92,9 +92,10 @@ func main() {
 	enableDeviceServiceByProjectID := flag.String("enable_device_service_by_project_id", "", "")
 
 	userPropertyUpdateOptProjects := flag.String("user_property_update_opt_projects", "", "")
-	companyEnrichmentV1ProjectIDs := flag.String("company_enrichment_v1__projectIds", "", "To enable clearbit enrichment in new properties")
 	chargebeeApiKey := flag.String("chargebee_api_key", "dummy", "Chargebee api key")
 	chargebeeSiteName := flag.String("chargebee_site_name", "dummy", "Chargebee site name")
+	emailUTMParameterAllowedProjects := flag.String("email_utm_parameter_allowed_projects", "", "")
+
 	flag.Parse()
 
 	workerName := defaultWorkerName
@@ -152,9 +153,9 @@ func main() {
 		DeviceServiceURL:                                   *deviceServiceUrl,
 		EnableDeviceServiceByProjectID:                     *enableDeviceServiceByProjectID,
 		UserPropertyUpdateOptProjects:                      *userPropertyUpdateOptProjects,
-		CompanyEnrichmentV1ProjectIDs:                      *companyEnrichmentV1ProjectIDs,
 		ChargebeeApiKey:                                    *chargebeeApiKey,
 		ChargebeeSiteName:                                  *chargebeeSiteName,
+		EmailUTMParameterAllowedProjects:                   *emailUTMParameterAllowedProjects,
 	}
 	C.InitConf(config)
 

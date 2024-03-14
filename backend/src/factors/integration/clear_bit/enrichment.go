@@ -2,7 +2,6 @@ package clear_bit
 
 import (
 	"encoding/json"
-	"factors/config"
 	U "factors/util"
 	"fmt"
 	"time"
@@ -121,18 +120,6 @@ func ExecuteClearBitEnrichV1(projectId int64, clearbitKey string, properties *U.
 	resultChannel <- ResultChannel{ExecuteStatus: 1, Domain: domain}
 }
 
-func ExecuteClearBitEnrich(projectId int64, clearbitKey string, properties *U.PropertiesMap, clientIP string, statusChannel chan int, logCtx *log.Entry) {
-	defer close(statusChannel)
-
-	_, err := EnrichmentUsingclearBit(projectId, clearbitKey, properties, clientIP)
-
-	if err != nil {
-		logCtx.WithFields(log.Fields{"error": err, "apiKey": clearbitKey}).Warn("clearbit enrichment debug")
-		statusChannel <- 0
-	}
-	statusChannel <- 1
-}
-
 func EnrichmentUsingclearBit(projectId int64, clearbitKey string, properties *U.PropertiesMap, clientIP string) (string, error) {
 
 	if clientIP == "" {
@@ -151,10 +138,6 @@ func EnrichmentUsingclearBit(projectId int64, clearbitKey string, properties *U.
 		return "", err
 	}
 	FillEnrichmentPropertiesForClearbit(results, properties)
-
-	if !config.IsCompanyEnrichmentV1Enabled(projectId) {
-		(*properties)[U.ENRICHMENT_SOURCE] = API_CLEARBIT
-	}
 
 	return results.Domain, nil
 }

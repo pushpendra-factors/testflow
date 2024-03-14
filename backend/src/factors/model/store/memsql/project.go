@@ -19,8 +19,6 @@ import (
 
 const TOKEN_GEN_RETRY_LIMIT = 5
 const ENABLE_DEFAULT_WEB_ANALYTICS = false
-const VISITOR_IDENTIFICATION_PROD_TEMPLATE_ID = "bf721a15-a5c4-4db9-9435-924f4c544850"
-const VISITOR_IDENTIFICATION_STAGING_TEMPLATE_ID = "d14c52fd-7856-4fda-9f2e-0f36c2dd0084"
 
 // Checks for the existence of token already.
 func isTokenExist(token string, private bool) (exists int, err error) {
@@ -407,16 +405,14 @@ func (store *MemSQL) CreateProjectWithDependencies(project *model.Project, agent
 	}
 
 	//Generate Website Visitor Identification Dashboard
-	if C.GetConfig().Env == C.PRODUCTION {
-		_, errCode, errMsg := store.GenerateDashboardFromTemplate(cProject.ID, agentUUID, VISITOR_IDENTIFICATION_PROD_TEMPLATE_ID)
-		if errCode != http.StatusCreated {
-			log.WithField("error", errMsg).Error("Website Visitor Identification dashboard creation failed")
-		}
-	} else if C.GetConfig().Env == C.STAGING {
-		_, errCode, errMsg := store.GenerateDashboardFromTemplate(cProject.ID, agentUUID, VISITOR_IDENTIFICATION_STAGING_TEMPLATE_ID)
-		if errCode != http.StatusCreated {
-			log.WithField("error", errMsg).Error("Website Visitor Identification dashboard creation failed")
-		}
+	visitorIdentificationTemplate, errCode := store.SearchTemplateWithType(model.WEBSITE_VISITOR_IDENTIFICATION)
+	if errCode != http.StatusFound {
+		log.WithField("errCode", errCode).Error("Failed to fetch dashboard template id for website visitor identification template")
+	}
+
+	_, errCode, errMsg := store.GenerateDashboardFromTemplate(cProject.ID, agentUUID, visitorIdentificationTemplate.ID)
+	if errCode != http.StatusCreated {
+		log.WithField("error", errMsg).Error("Website Visitor Identification dashboard creation failed")
 	}
 
 	if createDashboard {

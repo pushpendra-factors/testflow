@@ -168,11 +168,15 @@ export const eventsFormattedForGranularity = (
   const output = events.reduce((result, item) => {
     const byTimestamp = (result[groups[granularity](item)] =
       result[groups[granularity](item)] || {});
-    const byUser = (byTimestamp[item.user] = byTimestamp[item.user] || {
+    const byUserId = (byTimestamp[
+      item.username === 'new_user' ? item.username : item.user_id
+    ] = byTimestamp[
+      item.username === 'new_user' ? item.username : item.user_id
+    ] || {
       events: [],
       collapsed: collapse
     });
-    byUser.events.push(item);
+    byUserId.events.push(item);
     return result;
   }, {});
   return output;

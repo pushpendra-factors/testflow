@@ -150,6 +150,7 @@ func TestMain(m *testing.M) {
 		LookbackSegmentMarker:                               24,
 		RunForAllAccountsInHours:                            24,
 		DomainsLimitAllRun:                                  300000,
+		EmailUTMParameterAllowedProjects:                    "*",
 		BatchSizePreviewDomain:                              100,
 		MarkerPreviewAllAccountsProjectId:                   "*",
 		AccountsToProcessForPreview:                         5000,

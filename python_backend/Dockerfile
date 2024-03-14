@@ -7,7 +7,7 @@ RUN mkdir -p /usr/local/var/factors
 WORKDIR /usr/local/var/factors
 COPY . ./
 
-RUN pip install -r adwords_requirements.txt && pip install -r chat_requirements.txt
+RUN pip install --upgrade pip && pip install -r adwords_requirements.txt && pip install -r chat_requirements.txt
 
 FROM python:3.8-slim
 
