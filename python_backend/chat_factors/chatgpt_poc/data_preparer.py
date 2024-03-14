@@ -14,7 +14,7 @@ def get_query_templates():
             'timeless': ['%s'],
             'timeful': [
                 'Number of %s in %s',
-                # 'How many %s we had %s',
+                'How many %s we had %s',
                 # 'How many %s did we have %s',
                 # 'How many %s visited our website %s'
                 ]
