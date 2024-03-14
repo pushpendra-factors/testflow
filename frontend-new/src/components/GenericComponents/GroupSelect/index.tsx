@@ -38,10 +38,6 @@ export default function GroupSelect({
   allowSearchTextSelection = true
 }: GroupSelectProps) {
   const [groupSelectorOpen, setGroupSelectorOpen] = useState(true);
-  useEffect(() => {
-    if (options && options.length === 1) setGroupSelectorOpen(false);
-    else setGroupSelectorOpen(true);
-  }, [options]);
   const [selectedGroupIndex, setSelectedGroupIndex] = useState(0);
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -333,7 +329,7 @@ export default function GroupSelect({
          }`}
           ref={dropdownRef}
         >
-          {!groupSelectorOpen && options.length > 1 && (
+          {!groupSelectorOpen && (
             <div className={`${styles.dropdown__select__header}`}>
               {generateOptionHeader()}
             </div>
