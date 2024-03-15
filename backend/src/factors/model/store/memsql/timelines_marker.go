@@ -299,7 +299,7 @@ func (store *MemSQL) GetPreviewDomainsListByProjectId(projectID int64, payload m
 	limitVal := C.DomainsToProcessForPreview() * runLimit
 
 	domainIDs, status := store.GetAllDomainsByProjectID(projectID, domainGroupID, limitVal,
-		payload.SearchFilter)
+		payload.SearchFilter, true)
 
 	// return if no domains found
 	if status != http.StatusFound || len(domainIDs) <= 0 {
