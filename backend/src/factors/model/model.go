@@ -700,7 +700,7 @@ type Model interface {
 	GetAssociatedDomainForUser(projectID int64, userID string, isAnonymous bool) (string, error)
 	GetUsersAssociatedToDomainList(projectID int64, domainGroupID int, domainID string, userStmnt string) ([]model.User, int)
 	GetDomainDetailsByID(projectID int64, id string, domGroupID int) (model.User, int)
-	GetAllDomainsByProjectID(projectID int64, domainID int, limitVal int, searchFilter []string) ([]string, int)
+	GetAllDomainsByProjectID(projectID int64, domainID int, limitVal int, searchFilter []string, isPreviewQuery bool) ([]string, int)
 	GetLatestUpatedDomainsByProjectID(projectID int64, domainGroupID int, fromTime time.Time, limitVal int) ([]string, int)
 	UpdateAssociatedSegments(projectID int64, id string, associatedSegments map[string]model.AssociatedSegments) (int, error)
 	GetNonGroupUsersUpdatedAtGivenHour(projectID int64, fromTime time.Time) ([]model.User, int)

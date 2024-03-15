@@ -530,7 +530,7 @@ func (store *MemSQL) GetDomainDetailsByID(projectID int64, id string, domGroupID
 
 // get all domains to run marker for
 func (store *MemSQL) GetAllDomainsByProjectID(projectID int64, domainGroupID int, limitVal int,
-	searchFilter []string) ([]string, int) {
+	searchFilter []string, isPreviewQuery bool) ([]string, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"domain_id":  domainGroupID,
@@ -540,7 +540,7 @@ func (store *MemSQL) GetAllDomainsByProjectID(projectID int64, domainGroupID int
 
 	var domainIDs []string
 	query, queryParams := getLatestDomainsByProjectIDQuery(projectID, domainGroupID, limitVal,
-		searchFilter)
+		searchFilter, isPreviewQuery)
 
 	db := C.GetServices().Db
 	rows, err := db.Raw(query, queryParams...).Rows()
@@ -572,7 +572,7 @@ func (store *MemSQL) GetAllDomainsByProjectID(projectID int64, domainGroupID int
 }
 
 func getLatestDomainsByProjectIDQuery(projectID int64, domainGroupID int, limitVal int,
-	searchFilter []string) (string, []interface{}) {
+	searchFilter []string, isPreviewQuery bool) (string, []interface{}) {
 	queryParams := []interface{}{projectID, model.UserSourceDomains}
 
 	if len(searchFilter) > 0 {
@@ -584,21 +584,28 @@ func getLatestDomainsByProjectIDQuery(projectID int64, domainGroupID int, limitV
 		return query, queryParams
 	}
 
+	var orderByStr string
+	var lastEventCheck string
+	if isPreviewQuery {
+		orderByStr = "MAX(last_event_at) DESC"
+		lastEventCheck = "AND last_event_at IS NOT NULL"
+	} else {
+		orderByStr = "MAX(properties_updated_timestamp) DESC"
+	}
+
 	query := fmt.Sprintf(`SELECT 
 	group_%d_user_id 
   FROM 
 	users 
   WHERE 
 	project_id = ? 
-	AND group_%d_user_id IS NOT NULL
-	AND source != ? 
-	AND last_event_at IS NOT NULL
+	AND group_%d_user_id IS NOT NULL 
+	AND source != ? %s
   GROUP BY 
 	group_%d_user_id 
-  ORDER BY 
-   last_event_at DESC 
+  ORDER BY %s
   LIMIT 
-	%d;`, domainGroupID, domainGroupID, domainGroupID, limitVal)
+	%d;`, domainGroupID, domainGroupID, lastEventCheck, domainGroupID, orderByStr, limitVal)
 
 	return query, queryParams
 }
