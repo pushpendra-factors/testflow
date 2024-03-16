@@ -14,7 +14,8 @@ function DashboardSidebarMenuItem({
   onAdditionToNewFolder,
   onAddDashboardToExistingFolder,
   onEditDashboardDetails,
-  onDeleteDashboardClick
+  onDeleteDashboardClick,
+  activeDashboardRef
 }) {
   const [showExistingFoldersList, setShowExistingFoldersList] = useState(false);
   const [showMoreActions, setShowMoreActions] = useState(false);
@@ -133,6 +134,7 @@ function DashboardSidebarMenuItem({
 
   return (
     <div
+      ref={isActive ? activeDashboardRef : null}
       onClick={onClick}
       className={cx(
         'cursor-pointer rounded-md p-2 flex justify-between col-gap-2 items-center',
