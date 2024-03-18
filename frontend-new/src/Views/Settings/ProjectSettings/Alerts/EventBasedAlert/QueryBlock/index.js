@@ -27,8 +27,8 @@ function QueryBlock({
   eventChange,
   queries,
   queryType,
-  eventOptions,
-  eventNames,
+  eventOptionsSpecial,
+  eventNamesSpecial,
   activeProject,
   groupBy,
   setGroupBy,
@@ -61,10 +61,10 @@ function QueryBlock({
 
   useEffect(() => {
     let showOpts = [];
- 
+
     const groupNamesList = availableGroups?.map((item) => item[0]);
     if (groupAnalysis === 'users') {
-      const userOpts = eventOptions?.filter(
+      const userOpts = eventOptionsSpecial?.filter(
         (item) => !groupNamesList?.includes(item?.label)
       );
       //remove blacklisted events
@@ -74,9 +74,9 @@ function QueryBlock({
       showOpts = userOptsNew;
     } else {
       //remove blacklisted events
-      const groupOpts = eventOptions?.filter((item) =>
-      !blackListedCategories?.includes(item?.label)
-      ); 
+      const groupOpts = eventOptionsSpecial?.filter(
+        (item) => !blackListedCategories?.includes(item?.label)
+      );
       showOpts = groupOpts;
     }
 
@@ -89,7 +89,7 @@ function QueryBlock({
     });
 
     setShowGroups(showOpts);
-  }, [eventOptions, groupAnalysis, availableGroups]);
+  }, [eventOptionsSpecial, groupAnalysis, availableGroups]);
 
   const showModal = () => {
     setIsModalVisible(true);
@@ -124,7 +124,6 @@ function QueryBlock({
     }
   }, [event]);
 
-   
   useEffect(() => {
     queries.forEach((ev) => {
       if (!eventPropertiesV2[ev.label]) {
@@ -134,36 +133,36 @@ function QueryBlock({
   }, [queries]);
 
   const filterProperties = useMemo(() => {
-    const Company_identification = "Company identification";
+    const Company_identification = 'Company identification';
     if (!event) return {};
     const props = {
       event: eventPropertiesV2[event.label] || []
     };
     if (eventGroup) {
-      if(groupProperties){
-        Object?.keys(groupProperties)?.map((key)=>{
+      if (groupProperties) {
+        Object?.keys(groupProperties)?.map((key) => {
           props[key] = groupProperties[key];
-        })
+        });
       }
     } else {
       props.user = eventUserPropertiesV2;
       if (groupAnalysis === 'events') {
-        if(groupProperties){
-          Object?.keys(groupProperties)?.map((key)=>{
+        if (groupProperties) {
+          Object?.keys(groupProperties)?.map((key) => {
             props[key] = groupProperties[key];
-          }) 
+          });
         }
         //only for accounts - user events
-        if(!eventGroup){
+        if (!eventGroup) {
           //remove 'Company identification' from user properties since the same duplicate properties is available in $6_signal
-          if(props?.hasOwnProperty('user')){
-            if(props?.user?.hasOwnProperty(Company_identification)){
+          if (props?.hasOwnProperty('user')) {
+            if (props?.user?.hasOwnProperty(Company_identification)) {
               delete props?.user[Company_identification];
             }
           }
         }
       }
-    } 
+    }
     let finalProps = removeDuplicateAndEmptyKeys(props);
     return finalProps;
   }, [
@@ -235,7 +234,7 @@ function QueryBlock({
     setFilterDDVisible(false);
     setOrFilterIndex(-1);
   };
-  
+
   const selectEventFilter = (ind) => (
     <FilterWrapper
       filterProps={filterProperties}
@@ -295,7 +294,9 @@ function QueryBlock({
         <AliasModal
           visible={isModalVisible}
           event={
-            eventNames[event.label] ? eventNames[event.label] : event.label
+            eventNamesSpecial[event.label]
+              ? eventNamesSpecial[event.label]
+              : event.label
           }
           onOk={handleOk}
           onCancel={handleCancel}
@@ -497,7 +498,9 @@ function QueryBlock({
           <div className='max-w-7xl'>
             <Tooltip
               title={
-                eventNames[event.label] ? eventNames[event.label] : event.label
+                eventNamesSpecial[event.label]
+                  ? eventNamesSpecial[event.label]
+                  : event.label
               }
             >
               <Button
@@ -514,8 +517,8 @@ function QueryBlock({
                 type='link'
                 onClick={triggerDropDown}
               >
-                {eventNames[event.label]
-                  ? eventNames[event.label]
+                {eventNamesSpecial[event.label]
+                  ? eventNamesSpecial[event.label]
                   : event.label}
               </Button>
               {selectEvents()}
@@ -531,14 +534,14 @@ function QueryBlock({
 }
 
 const mapStateToProps = (state) => ({
-  eventOptions: state.coreQuery.eventOptions,
+  eventOptionsSpecial: state.coreQuery.eventOptionsSpecial,
   activeProject: state.global.active_project,
   eventUserPropertiesV2: state.coreQuery.eventUserPropertiesV2,
   groupProperties: state.coreQuery.groupProperties,
   eventPropertiesV2: state.coreQuery.eventPropertiesV2,
   groupBy: state.coreQuery.groupBy.event,
   groupByMagic: state.coreQuery.groupBy,
-  eventNames: state.coreQuery.eventNames
+  eventNamesSpecial: state.coreQuery.eventNamesSpecial
 });
 
 const mapDispatchToProps = (dispatch) =>

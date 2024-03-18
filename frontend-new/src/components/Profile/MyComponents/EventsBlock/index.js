@@ -36,6 +36,8 @@ function EventsBlock({
   eventChange,
   eventOptions,
   eventNames,
+  eventNamesSpecial,
+  eventOptionsSpecial,
   activeProject,
   eventPropertiesV2,
   getEventPropertiesV2,
@@ -48,7 +50,8 @@ function EventsBlock({
   initialDDState = true,
   groupProperties,
   getGroupProperties,
-  showInList = false
+  showInList = false,
+  isSpecialEvent = false
 }) {
   const [isDDVisible, setDDVisible] = useState(initialDDState);
 
@@ -63,6 +66,10 @@ function EventsBlock({
   useEffect(() => {
     if (event && eventGroup?.length && !groupProperties[eventGroup]) {
       getGroupProperties(activeProject?.id, eventGroup);
+    }
+    if (isSpecialEvent) {
+      eventNames = eventNamesSpecial;
+      eventOptions = eventOptionsSpecial;
     }
   }, [event, activeProject?.id, eventGroup]);
 
@@ -555,11 +562,13 @@ function EventsBlock({
 
 const mapStateToProps = (state) => ({
   eventOptions: state.coreQuery.eventOptions,
+  eventOptionsSpecial: state.coreQuery.eventOptionsSpecial,
   activeProject: state.global.active_project,
   eventUserPropertiesV2: state.coreQuery.eventUserPropertiesV2,
   groupProperties: state.coreQuery.groupProperties,
   eventPropertiesV2: state.coreQuery.eventPropertiesV2,
-  eventNames: state.coreQuery.eventNames
+  eventNames: state.coreQuery.eventNames,
+  eventNamesSpecial: state.coreQuery.eventNamesSpecial
 });
 
 const mapDispatchToProps = (dispatch) =>
