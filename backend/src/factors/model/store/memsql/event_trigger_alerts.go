@@ -501,6 +501,7 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
+	logCtx := log.WithFields(logFields)
 	alerts, eventName, errCode := store.GetEventTriggerAlertsForTheCurrentEvent(projectId, eventNameId)
 	if errCode != http.StatusFound || alerts == nil {
 		//log.WithFields(logFields).Error("GetEventTriggerAlertsByEvent failure inside Match function.")
@@ -523,14 +524,14 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 		var config model.EventTriggerAlertConfig
 		err := U.DecodePostgresJsonbToStructType(alert.EventTriggerAlert, &config)
 		if err != nil {
-			log.WithError(err).Error("Jsonb decoding to struct failure")
+			logCtx.WithError(err).Error("Jsonb decoding to struct failure")
 			return nil, nil, nil, http.StatusInternalServerError
 		}
 		messageProperties := make([]model.QueryGroupByProperty, 0)
 		if config.MessageProperty != nil {
 			err := U.DecodePostgresJsonbToStructType(config.MessageProperty, &messageProperties)
 			if err != nil {
-				log.WithError(err).Error("Jsonb decoding to struct failure")
+				logCtx.WithError(err).Error("Jsonb decoding to struct failure")
 				return nil, nil, nil, http.StatusInternalServerError
 			}
 		}
@@ -578,7 +579,12 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 		}
 
 		if config.EventLevel == model.EventLevelAccount && isGroupPropertyRequired {
-			groupProps, _ = store.GetGroupPropertiesAndDomainGroupUserID(projectId, userID)
+			domainsGroupUserID, domainsGroupID, err := store.getDomainsGroupUserIDForUser(projectId, userID)
+			if err != nil {
+				logCtx.Warn("no domains group for the alert")
+				continue
+			}
+			groupProps = store.GetAllGroupPropertiesForGivenDomainGroupUserID(projectId, domainsGroupID, domainsGroupUserID)
 			if groupProps != nil {
 				updateUserPropMapWithGroupProperties(userPropMap, groupProps, log.WithFields(logFields))
 			}
@@ -627,7 +633,7 @@ func updateUserPropMapWithGroupProperties(userPropMap, groupProps *map[string]in
 	}
 }
 
-func (store *MemSQL) GetGroupPropertiesAndDomainGroupUserID(projectID int64, userID string) (*map[string]interface{}, string) {
+func (store *MemSQL) getDomainsGroupUserIDForUser(projectID int64, userID string) (string, int, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -637,25 +643,35 @@ func (store *MemSQL) GetGroupPropertiesAndDomainGroupUserID(projectID int64, use
 	user, errCode := store.GetUser(projectID, userID)
 	if errCode != http.StatusFound {
 		logCtx.Error("user not found")
-		return nil, ""
+		return "", 0, fmt.Errorf("user not found")
 	}
 
 	domainsGroup, errCode := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
 	if errCode != http.StatusFound || domainsGroup == nil {
 		logCtx.Error("no domains group found for project")
-		return nil, ""
+		return "", 0, fmt.Errorf("")
 	}
 
 	domainsGroupUserID, err := model.GetUserGroupUserID(user, domainsGroup.ID)
 	if err != nil || domainsGroupUserID == "" {
-		logCtx.Error("no domains group found for project")
-		return nil, ""
+		logCtx.WithField("domain_id", domainsGroup.ID).Error("no domains group for the given id found for project")
+		return "", domainsGroup.ID, fmt.Errorf("no domains group found for project")
 	}
 
-	groupUsers, errCode := store.GetAllGroupUsersByDomainsGroupUserID(projectID, domainsGroup.ID, domainsGroupUserID)
+	return domainsGroupUserID, domainsGroup.ID, nil
+}
+
+func (store *MemSQL) GetAllGroupPropertiesForGivenDomainGroupUserID(projectID int64, domainsGroupID int, domainsGroupUserID string) *map[string]interface{} {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	logCtx := log.WithFields(logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	groupUsers, errCode := store.GetAllGroupUsersByDomainsGroupUserID(projectID, domainsGroupID, domainsGroupUserID)
 	if errCode != http.StatusFound || len(groupUsers) == 0 {
-		logCtx.WithError(err).Error("no group user found")
-		return nil, ""
+		logCtx.Error("no group user found")
+		return nil
 	}
 
 	groupPropsMap := make(map[string]interface{})
@@ -669,12 +685,12 @@ func (store *MemSQL) GetGroupPropertiesAndDomainGroupUserID(projectID int64, use
 	domainsUser, errCode := store.GetUser(projectID, domainsGroupUserID)
 	if errCode != http.StatusFound {
 		logCtx.Error("failed to get domains user")
-		return &groupPropsMap, ""
+		return &groupPropsMap
 	}
 	// Get user properties from $domains user and add them to groupPropsMap
 	getUserPropertiesFromGroupUser(domainsUser, &groupPropsMap, logCtx)
 
-	return &groupPropsMap, domainsGroupUserID
+	return &groupPropsMap
 }
 
 func getUserPropertiesFromGroupUser(user *model.User, groupPropMap *map[string]interface{}, logCtx *log.Entry) {
@@ -873,23 +889,6 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesAndFieldsTagMap(event *mode
 		}
 	}
 
-	isGroupPropertyRequired := false
-	for _, prop := range messageProperties {
-		if model.AllowedGroupNames[prop.GroupName] {
-			isGroupPropertyRequired = true
-			break
-		}
-	}
-
-	isFieldsTagPresent := false
-	if alert.EventLevel == model.EventLevelAccount && alert.SlackFieldsTag != nil {
-		isFieldsTagPresent = true
-	}
-	var groupDomainUserID string
-	if alert.EventLevel == model.EventLevelAccount || isGroupPropertyRequired || isFieldsTagPresent {
-		_, groupDomainUserID = store.GetGroupPropertiesAndDomainGroupUserID(event.ProjectId, event.UserId)
-	}
-
 	displayNamesEP := store.getDisplayNamesForEP(event.ProjectId, eventName.Name)
 	//log.Info(fmt.Printf("%+v\n", displayNamesEP))
 
@@ -950,6 +949,7 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesAndFieldsTagMap(event *mode
 	}
 
 	if alert.EventLevel == model.EventLevelAccount {
+		groupDomainUserID, _, _ := store.getDomainsGroupUserIDForUser(event.ProjectId, event.UserId)
 		msgPropMap[model.ETA_DOMAIN_GROUP_USER_ID] = groupDomainUserID
 	}
 
@@ -980,13 +980,15 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesAndFieldsTagMap(event *mode
 	}
 
 	fieldTagsMap := make(map[string]string)
-	for _, tag := range alert.SlackFieldsTag {
-		if ownerField := model.ValidAlertTagsForHubspotOwners[tag]; ownerField != "" {
-			ownerId := U.GetPropertyValueAsString((*updatedUserProps)[ownerField])
-			if ownerId != "" {
-				log.Warn("Unable to find owner id for the field tag")
+	if alert.EventLevel == model.EventLevelAccount && alert.SlackFieldsTag != nil {
+		for _, tag := range alert.SlackFieldsTag {
+			if ownerField := model.ValidAlertTagsForHubspotOwners[tag]; ownerField != "" {
+				ownerId := U.GetPropertyValueAsString((*updatedUserProps)[ownerField])
+				if ownerId != "" {
+					log.Warn("Unable to find owner id for the field tag")
+				}
+				fieldTagsMap[tag] = ownerId
 			}
-			fieldTagsMap[tag] = ownerId
 		}
 	}
 
@@ -1390,4 +1392,112 @@ func (store *MemSQL) GetParagonMetadataForEventTriggerAlert(projectID int64, ale
 	}
 
 	return *metadata, http.StatusFound, nil
+}
+
+func (store *MemSQL) FindAndCacheAlertForCurrentSegment(projectID int64, segmentID, domainID, actionPerformed string) {
+	logFields := log.Fields{
+		"project_id":       projectID,
+		"segment_id":       segmentID,
+		"domain_id":        domainID,
+		"action_performed": actionPerformed,
+	}
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+
+	//Find if any alert is present for the current segment
+	alert, errCode := store.GetEventTriggerAlertBySegmentID(projectID, segmentID, actionPerformed)
+	if errCode != http.StatusFound {
+		logCtx.Info("no alert found for the matching conditions")
+		return
+	}
+
+	// check for empty jsonb
+	if alert.EventTriggerAlert == nil {
+		logCtx.WithField("alert_id", alert.ID).Error("alert config absent for the provided alert")
+		return
+	}
+
+	var alertConfig model.EventTriggerAlertConfig
+
+	err := U.DecodePostgresJsonbToStructType(alert.EventTriggerAlert, &alertConfig)
+	if err != nil {
+		logCtx.WithError(err).Error("failed to deserialize json to struct")
+	}
+
+	// get $domains id column number
+	domainsGroup, errCode := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
+	if errCode != http.StatusFound || domainsGroup == nil {
+		logCtx.Error("no domains group found for project")
+		return
+	}
+
+	// get all group and account properties
+	groupUserProps := store.GetAllGroupPropertiesForGivenDomainGroupUserID(projectID, domainsGroup.ID, domainID)
+	messageProps, breakdownProps, fieldTagsMap, err := store.GetMessageAndBreakdownPropertiesAndFieldsTagMap(&model.Event{}, &alertConfig, &model.EventName{}, groupUserProps)
+	if err != nil {
+		logCtx.WithError(err).Error("failed to deserialize json to struct")
+		return
+	}
+
+	tt := time.Now()
+	timestamp := tt.UnixNano()
+
+	// get cache keys
+	isCoolDownTimeExpired, key, sortedSetTuple, err := getCacheKeyAndSortedSetTupleAndCheckCoolDownTimeCondition(
+		projectID, alertConfig.DontRepeatAlerts, alertConfig.CoolDownTime, timestamp, alert.ID, &breakdownProps)
+	if err != nil {
+		log.WithError(err).Error("failed to fetch key and sorted tuple")
+		return
+	}
+
+	if !isCoolDownTimeExpired {
+		log.WithFields(logFields).Info("Alert sending cancelled due to cool down timer")
+		return
+	}
+
+	// set key in sorted set
+	_, err = cacheRedis.ZincrPersistentBatch(true, sortedSetTuple)
+	if err != nil {
+		log.WithError(err).Error("error while getting zincr")
+		return
+	}
+
+	// set cache for the alert
+	successCode, err := store.AddAlertToCache(&alertConfig, &messageProps, fieldTagsMap, key)
+	if err != nil || successCode != http.StatusCreated {
+		log.WithFields(logFields).Error("Failed to send alert.")
+		return
+	}
+
+}
+
+func (store *MemSQL) GetEventTriggerAlertBySegmentID(projectID int64, segmentID, actionPerformed string) (*model.EventTriggerAlert, int) {
+	logFields := log.Fields{
+		"project_id":       projectID,
+		"segment_id":       segmentID,
+		"action_performed": actionPerformed,
+	}
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	db := C.GetServices().Db
+
+	var alert model.EventTriggerAlert
+	if err := db.Where("project_id = ? AND is_deleted = 0", projectID).
+		Where("JSON_EXTRACT_STRING(event_trigger_alert, 'action_performed') LIKE ?", actionPerformed).
+		Where("JSON_EXTRACT_STRING(event_trigger_alert, 'event') LIKE ?", segmentID).
+		Not("internal_status = ?", model.Disabled).
+		Find(&alert).Limit(1).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			logCtx.Info("no alert found for the matching conditions")
+			return nil, http.StatusNotFound
+		}
+		logCtx.WithError(err).Error("failed to fetch alert for the given segment conditions")
+		return nil, http.StatusInternalServerError
+	}
+
+	return &alert, http.StatusFound
 }

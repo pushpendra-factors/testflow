@@ -29,6 +29,10 @@ const (
 	Active                   = "active"             //Default internal status
 	Disabled                 = "disabled"           //Internal status if the failures from the poison queue are not resolved for 72 more hours
 	ETA_DOMAIN_GROUP_USER_ID = "ignore_eta_d_g_uid" // additonal property which needs to be cached for account urls
+	ACTION_EVENT_PERFORMED   = "action_event"
+	ACTION_SEGMENT_ENTRY     = "action_segment_entry"
+	ACTION_SEGMENT_EXIT      = "action_segment_exit"
+
 	// cachekey structure = ETA:pid:<project_id>:<alert_id>:<UnixTime>
 	// cacheCounterKey structure = ETA:Counter:pid:<project_id>:<alert_id>:<YYYYMMDD>
 	// sortedset key structure = ETA:pid:<project_id>
@@ -59,6 +63,7 @@ type EventTriggerAlert struct {
 type EventTriggerAlertConfig struct {
 	Title                 string          `json:"title"`
 	EventLevel            string          `json:"event_level"`
+	ActionPerformed       string          `json:"action_performed"`
 	Event                 string          `json:"event"`
 	Filter                []QueryProperty `json:"filter"`
 	Message               string          `json:"message"`
