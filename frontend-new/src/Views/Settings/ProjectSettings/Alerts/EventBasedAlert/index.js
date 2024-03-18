@@ -125,7 +125,7 @@ const EventBasedAlert = ({
   groupPropNames,
   eventUserPropertiesV2,
   userPropNames,
-  eventNames,
+  eventNamesSpecial,
   getGroupProperties,
   getEventPropertiesV2,
   getGroups,
@@ -382,7 +382,7 @@ const EventBasedAlert = ({
       eventPropNames?.[item] ||
       userPropNames?.[item] ||
       groupPropNames?.[item] ||
-      eventNames?.[item];
+      eventNamesSpecial?.[item];
     return findItem ? findItem : item;
   };
 
@@ -1881,10 +1881,10 @@ const EventBasedAlert = ({
                         <Option value={12}>12 hours</Option>
                         <Option value={24}>24 hours</Option>
                         {/* convert days into hours */}
-                        <Option value={7*24}>7 days</Option>
-                        <Option value={14*24}>14 days</Option>
-                        <Option value={21*24}>21 days</Option>
-                        <Option value={28*24}>28 days</Option>
+                        <Option value={7 * 24}>7 days</Option>
+                        <Option value={14 * 24}>14 days</Option>
+                        <Option value={21 * 24}>21 days</Option>
+                        <Option value={28 * 24}>28 days</Option>
                       </Select>
                     </div>
                   </Form.Item>
@@ -2162,7 +2162,7 @@ const mapStateToProps = (state) => ({
   groupPropNames: state.coreQuery.groupPropNames,
   eventUserPropertiesV2: state.coreQuery.eventUserPropertiesV2,
   userPropNames: state.coreQuery.userPropNames,
-  eventNames: state.coreQuery.eventNames,
+  eventNamesSpecial: state.coreQuery.eventNamesSpecial,
   groups: state.coreQuery.groups,
   slack_users: state.global.slack_users
 });
