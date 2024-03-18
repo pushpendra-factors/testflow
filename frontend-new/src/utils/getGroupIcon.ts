@@ -27,7 +27,8 @@ type GroupIcon =
   | 'LaptopMobile'
   | 'PeopleRoof'
   | 'FaceBook'
-  | 'BullsEyePointer';
+  | 'BullsEyePointer'
+  | 'Clock';
 
 const getGroupIcon = (groupName: any): GroupIcon => {
   const checkIcon = groupName?.toLowerCase().split(' ').join('_');
@@ -86,6 +87,10 @@ const getGroupIcon = (groupName: any): GroupIcon => {
       return 'PeopleRoof';
     case 'platform/device':
       return 'LaptopMobile';
+    case 'website_activity':
+      return 'brand';
+      case 'time_of_occurrence':
+        return 'Clock';
   }
 
   //Mapping Icons With Similar Name.
