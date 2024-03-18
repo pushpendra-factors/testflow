@@ -1,12 +1,15 @@
 package task
 
 import (
+	C "factors/config"
 	"factors/model/model"
 	"factors/model/store"
 	SDK "factors/sdk"
 	U "factors/util"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -512,6 +515,13 @@ func CreateGroupUserAndEventsV2(linkedinProjectSetting model.LinkedinProjectSett
 			}
 		}
 	}
+	userIDsWithMismatch, errMsg, errCode := getUserIDsWithDataMismatch(projectID)
+	if errMsg != "" {
+		return errMsg, errCode
+	}
+	if userIDsWithMismatch != "" {
+		log.WithFields(log.Fields{"projectID": projectID, "userIDs": userIDsWithMismatch}).Info("Mismatched data userIDs")
+	}
 	log.Info("Ended processing for project ", projectID)
 	return "", http.StatusOK
 }
@@ -648,6 +658,9 @@ func createGroupUserAndEventsForDomainDataV2(projectID int64, eventNameViewedAD 
 	clicks_diff := float64(domainData.Clicks) - existingClickCount
 
 	userIDToUpdate := getUserIDFromEventsForUpdatingGroupUser(userID, domainData.Domain, unixTimestamp, domainData.CampaignGroupID, imprEventsMapWithCampaign)
+	if userID != userIDToUpdate {
+		log.WithFields(log.Fields{"projectID": projectID, "userID": userID, "userIDToUpdate": userIDToUpdate}).Info("Different user ID updated")
+	}
 	errMsg, errCode = updateAccountLevelPropertiesForGroupUser(projectID, U.GROUP_NAME_LINKEDIN_COMPANY, domainData.Domain, userIDToUpdate, impr_diff, clicks_diff, unixTimestamp+1)
 	if errMsg != "" {
 		logCtx.Error(errMsg)
@@ -758,4 +771,47 @@ func updateAccountLevelPropertiesForGroupUser(projectID int64, groupName string,
 		return "Failed to create or update group user on updateAccountLevelPropertiesForGroupUser.", http.StatusInternalServerError
 	}
 	return "", http.StatusOK
+}
+
+func getUserIDsWithDataMismatch(projectID int64) (string, string, int) {
+	userIDs := ""
+	db := C.GetServices().Db
+
+	group, errCode := store.GetStore().GetGroup(projectID, model.GROUP_NAME_LINKEDIN_COMPANY)
+	if errCode != http.StatusFound {
+		return "", "Failed to get group.", http.StatusInternalServerError
+	}
+	source := model.GetGroupUserSourceByGroupName(U.GROUP_NAME_LINKEDIN_COMPANY)
+
+	imprEventName, err := store.GetStore().GetEventNameIDFromEventName(U.GROUP_EVENT_NAME_LINKEDIN_VIEWED_AD, projectID)
+	if err != nil {
+		log.WithError(err).Error("Failed to get impr event name")
+		return "", "Failed to get impression eventname", http.StatusInternalServerError
+	}
+	clickEventName, err := store.GetStore().GetEventNameIDFromEventName(U.GROUP_EVENT_NAME_LINKEDIN_CLICKED_AD, projectID)
+	if err != nil {
+		log.WithError(err).Error("Failed to get clicks event name")
+		return "", "Failed to get click eventname", http.StatusInternalServerError
+	}
+
+	queryStr := "With users_0 as (SELECT id, group_%d_id, is_group_user, JSON_EXTRACT_STRING(properties, '$li_total_ad_view_count') as user_impressions, " +
+		"JSON_EXTRACT_STRING(properties, '$li_total_ad_click_count') as user_clicks from users where project_id = ? and source = ?), " +
+		"events_0 as (SELECT user_id, sum(JSON_EXTRACT_STRING(properties, '$li_ad_view_count')) as event_impressions, " +
+		"Case when sum(JSON_EXTRACT_STRING(properties, '$li_ad_click_count')) is null then 0 else " +
+		"sum(JSON_EXTRACT_STRING(properties, '$li_ad_click_count')) END as event_clicks from events where project_id = ? and event_name_id in (?,?)" +
+		"group by user_id order by user_id) SELECT id, group_%d_id, is_group_user from users_0 join events_0 on id=user_id " +
+		"where user_impressions != event_impressions or user_clicks != event_clicks"
+	queryStr = fmt.Sprintf(queryStr, group.ID, group.ID)
+	var users []model.User
+	err = db.Raw(queryStr, projectID, source, projectID, imprEventName.ID, clickEventName.ID).Find(&users).Error
+	if err != nil {
+		log.WithError(err).Error("Failed to get group users")
+		return "", "Failed to find group users", http.StatusInternalServerError
+	}
+	userIDsArr := make([]string, 0)
+	for _, user := range users {
+		userIDsArr = append(userIDsArr, user.ID)
+	}
+	userIDs = strings.Join(userIDsArr, ",")
+	return userIDs, "", http.StatusOK
 }
