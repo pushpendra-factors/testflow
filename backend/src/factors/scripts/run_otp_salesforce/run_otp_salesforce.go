@@ -192,6 +192,7 @@ func main() {
 	allowSalesforceActivityEventByProjectID := flag.String("allowed_salesforce_activity_events_by_project_ids", "", "Allowed project id for salesforce activity - event")
 	disallowSalesforceActivityTaskByProjectID := flag.String("disallowed_salesforce_activity_tasks_by_project_ids", "", "Disallowed project id for salesforce activity - task")
 	disallowSalesforceActivityEventByProjectID := flag.String("disallowed_salesforce_activity_events_by_project_ids", "", "Disallowed project id for salesforce activity - event")
+	enableTotalSessionPropertiesV2ByProjectID := flag.String("enable_total_session_properties_v2", "", "")
 
 	flag.Parse()
 	defaultAppName := "otp_salesforce_job"
@@ -252,6 +253,7 @@ func main() {
 		AllowedSalesforceActivityEventsByProjectIDs:        *allowSalesforceActivityEventByProjectID,
 		DisallowedSalesforceActivityTasksByProjectIDs:      *disallowSalesforceActivityTaskByProjectID,
 		DisallowedSalesforceActivityEventsByProjectIDs:     *disallowSalesforceActivityEventByProjectID,
+		EnableTotalSessionPropertiesV2ByProjectID:          *enableTotalSessionPropertiesV2ByProjectID,
 	}
 
 	C.InitConf(config)

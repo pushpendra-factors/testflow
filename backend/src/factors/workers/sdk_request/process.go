@@ -79,6 +79,7 @@ func main() {
 	chargebeeSiteName := flag.String("chargebee_site_name", "dummy", "Chargebee site name")
 	mailmodoTriggerCampaignAPIKey := flag.String("mailmodo_trigger_campaign_api_key", "dummy", "Mailmodo Email Alert API Key")
 	accountLimitAlertProjectIDs := flag.String("acc_limit_alert_projectIds", "", "To enable account limit email alert")
+	enableTotalSessionPropertiesV2ByProjectID := flag.String("enable_total_session_properties_v2", "", "")
 	emailUTMParameterAllowedProjects := flag.String("email_utm_parameter_allowed_projects", "", "")
 
 	flag.Parse()
@@ -141,6 +142,7 @@ func main() {
 		ChargebeeApiKey:                                    *chargebeeApiKey,
 		ChargebeeSiteName:                                  *chargebeeSiteName,
 		MailModoTriggerCampaignAPIKey:                      *mailmodoTriggerCampaignAPIKey,
+		EnableTotalSessionPropertiesV2ByProjectID:          *enableTotalSessionPropertiesV2ByProjectID,
 		EmailUTMParameterAllowedProjects:                   *emailUTMParameterAllowedProjects,
 	}
 	C.InitConf(config)

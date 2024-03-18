@@ -775,23 +775,18 @@ func (store *MemSQL) GetNonGroupUsersUpdatedAtGivenHour(projectID int64, fromTim
 
 // GetUsersByCustomerUserID Gets all the users dentified by given customer_user_id with a limit.
 func (store *MemSQL) GetUsersByCustomerUserID(projectID int64, customerUserID string) ([]model.User, int) {
-	return store.GetSelectedUsersByCustomerUserID(projectID, customerUserID, 5000, 100)
+	return store.GetSelectedUsersByCustomerUserID(projectID, customerUserID, model.USER_MERGE_RECENT_UPDATED_LIMIT, model.USER_MERGE_LIMIT)
 }
 
-// GetSelectedUsersByCustomerUserID gets selected (top 50 & bottom 50) users identified by given customer_user_id in increasing order of updated_at.
-func (store *MemSQL) GetSelectedUsersByCustomerUserID(projectID int64, customerUserID string, limit uint64, numUsers uint64) ([]model.User, int) {
-	logFields := log.Fields{
-		"project_id":       projectID,
-		"customer_user_id": customerUserID,
-		"limit":            limit,
-		"num_users":        numUsers,
-	}
+func (store *MemSQL) getUserListForMergingPropertiesByCustomerUserID(projectID int64, customerUserID string, limit uint64, numUsers uint64) ([]string, int) {
+	logFields := log.Fields{"project_id": projectID, "customer_user_id": customerUserID}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	db := C.GetServices().Db
+
 	logCtx := log.WithFields(logFields)
 
 	var ids []model.User
 	// Fetches recently updated users to ensure relevance at present.
+	db := C.GetServices().Db
 	if err := db.Limit(limit).Order("updated_at DESC").
 		Where("project_id = ? AND customer_user_id = ?", projectID, customerUserID).
 		Select("id").Find(&ids).Error; err != nil {
@@ -819,6 +814,26 @@ func (store *MemSQL) GetSelectedUsersByCustomerUserID(projectID int64, customerU
 		for i := 0; i < len(ids); i++ {
 			userIDs = append(userIDs, ids[i].ID)
 		}
+	}
+
+	return userIDs, http.StatusFound
+}
+
+// GetSelectedUsersByCustomerUserID gets selected (top 50 & bottom 50) users identified by given customer_user_id in increasing order of updated_at.
+func (store *MemSQL) GetSelectedUsersByCustomerUserID(projectID int64, customerUserID string, limit uint64, numUsers uint64) ([]model.User, int) {
+	logFields := log.Fields{
+		"project_id":       projectID,
+		"customer_user_id": customerUserID,
+		"limit":            limit,
+		"num_users":        numUsers,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+	logCtx := log.WithFields(logFields)
+
+	userIDs, status := store.getUserListForMergingPropertiesByCustomerUserID(projectID, customerUserID, limit, numUsers)
+	if status != http.StatusFound {
+		return nil, status
 	}
 
 	var users []model.User
@@ -2098,7 +2113,6 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID int64, id string,
 		"object_type":          objectType,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	logCtx := log.WithFields(logFields)
 
@@ -3998,4 +4012,72 @@ func (store *MemSQL) GetGroupUsersGroupIdsByGroupName(projectID int64, groupName
 	}
 
 	return users, http.StatusFound
+}
+
+func (store *MemSQL) UpdateSessionProperties(projectID int64, customerUserID, userID string) int {
+	logFields := log.Fields{"project_id": projectID, "customer_user_id": customerUserID, "user_id": userID}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+
+	if projectID == 0 || (customerUserID == "" && userID == "") {
+		logCtx.Error("Invalid parameters.")
+		return http.StatusBadRequest
+	}
+
+	whereStmnt := ""
+	var whereParams []interface{}
+
+	if customerUserID != "" {
+		userIDs, status := store.getUserListForMergingPropertiesByCustomerUserID(projectID, customerUserID, model.USER_MERGE_RECENT_UPDATED_LIMIT, model.USER_MERGE_LIMIT)
+		if status != http.StatusFound {
+			logCtx.Error("Failed to get users by customer user id on UpdateSessionProperties.")
+			return status
+		}
+		whereStmnt = " project_id = ? AND customer_user_id = ? AND id IN ( ? )"
+		whereParams = []interface{}{projectID, customerUserID, userIDs}
+	} else {
+		whereStmnt = " project_id = ? AND id = ? "
+		whereParams = []interface{}{projectID, userID}
+	}
+
+	db := C.GetServices().Db
+
+	stmnt := fmt.Sprintf(`with session_properties as (
+		SELECT
+			ROUND( SUM(
+				JSON_EXTRACT_STRING(properties, '%s')
+			), 2) AS real_page_spent_time,
+			SUM(
+				JSON_EXTRACT_STRING(properties, '%s')
+			) AS real_page_count
+		FROM
+			users
+		WHERE %s
+		LIMIT 100000
+	)
+	UPDATE 
+		users JOIN
+		session_properties
+	SET
+		users.properties = JSON_SET_DOUBLE( JSON_SET_DOUBLE(
+			properties,
+			'%s',
+			session_properties.real_page_spent_time
+		),
+		'%s',
+		session_properties.real_page_count)
+	WHERE
+		%s 
+		AND real_page_spent_time > 0 AND real_page_count > 0`, // update session properties only when aggregate is greater than 0
+		U.UP_REAL_PAGE_SPENT_TIME, U.UP_REAL_PAGE_COUNT, whereStmnt,
+		U.UP_TOTAL_SPENT_TIME, U.UP_PAGE_COUNT, whereStmnt)
+
+	err := db.Exec(stmnt, append(whereParams, whereParams...)...).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to update user total session properties.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusOK
 }

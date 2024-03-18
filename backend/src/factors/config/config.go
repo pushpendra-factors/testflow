@@ -355,6 +355,7 @@ type Configuration struct {
 	ParagonProjectID                                     string
 	MailModoTriggerCampaignAPIKey                        string
 	AddCRMObjectURLPropertyByProjectID                   string
+	EnableTotalSessionPropertiesV2ByProjectID            string
 }
 
 type Services struct {
@@ -3207,6 +3208,15 @@ func GetParagonProjectID() string {
 
 func AddCRMObjectURLPropertyByProjectID(projectID int64) bool {
 	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AddCRMObjectURLPropertyByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
+}
+
+func EnableTotalSessionPropertiesV2ByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableTotalSessionPropertiesV2ByProjectID, "")
 	if allProjects {
 		return true
 	}

@@ -198,6 +198,9 @@ var AccountGroupAssociationPrecedence = []string{
 	GROUP_NAME_SIX_SIGNAL,
 }
 
+const USER_MERGE_RECENT_UPDATED_LIMIT = 5000
+const USER_MERGE_LIMIT = 100
+
 func IsUserSourceCRM(source int) bool {
 	for _, crmSource := range UserSourceCRM {
 		if crmSource == source {
@@ -795,8 +798,12 @@ func MergeUserPropertiesByCustomerUserID(projectID int64, users []User, customer
 
 		for property := range *userProperties {
 			mergedUserPropertiesValues[property] = append(mergedUserPropertiesValues[property], (*userProperties)[property])
-			if U.StringValueIn(property, U.USER_PROPERTIES_MERGE_TYPE_ADD[:]) ||
-				(IsEmptyPropertyValue((*userProperties)[property]) && !U.IsCRMPropertyKey(property)) {
+
+			if !config.EnableTotalSessionPropertiesV2ByProjectID(projectID) && U.StringValueIn(property, U.USER_PROPERTIES_MERGE_TYPE_ADD[:]) {
+				continue
+			}
+
+			if IsEmptyPropertyValue((*userProperties)[property]) && !U.IsCRMPropertyKey(property) {
 				continue
 			}
 
@@ -820,12 +827,14 @@ func MergeUserPropertiesByCustomerUserID(projectID int64, users []User, customer
 		}
 	}
 
-	// Handle merge for add type properties separately.
-	userPropertiesToBeMerged := make([]postgres.Jsonb, 0, 0)
-	for i := range users {
-		userPropertiesToBeMerged = append(userPropertiesToBeMerged, users[i].Properties)
+	if !config.EnableTotalSessionPropertiesV2ByProjectID(projectID) {
+		// Handle merge for add type properties separately.
+		userPropertiesToBeMerged := make([]postgres.Jsonb, 0, 0)
+		for i := range users {
+			userPropertiesToBeMerged = append(userPropertiesToBeMerged, users[i].Properties)
+		}
+		MergeAddTypeUserProperties(&mergedUserProperties, userPropertiesToBeMerged)
 	}
-	MergeAddTypeUserProperties(&mergedUserProperties, userPropertiesToBeMerged)
 
 	// Additional check for properties that can be added. If merge is triggered for users with same set of properties,
 	// value of properties that can be added will change after addition. Below check is to avoid update in such case.

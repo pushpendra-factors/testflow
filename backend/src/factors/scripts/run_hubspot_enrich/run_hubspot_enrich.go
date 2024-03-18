@@ -92,6 +92,7 @@ func main() {
 	enableSyncTries := flag.Bool("enable_sync_tries", false, "Filter using un-sync document using sync-tries")
 	addCRMObjectURLByProjectID := flag.String("add_crm_object_url_by_project_id", "", "")
 	firstTimeEnrich := flag.Bool("first_time_enrich", false, "")
+	enableTotalSessionPropertiesV2ByProjectID := flag.String("enable_total_session_properties_v2", "", "")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -164,6 +165,7 @@ func main() {
 		AssociateDealToDomainByProjectID:                    *associateDealToDomainByProjectID,
 		EnableSyncTriesFlag:                                 *enableSyncTries,
 		AddCRMObjectURLPropertyByProjectID:                  *addCRMObjectURLByProjectID,
+		EnableTotalSessionPropertiesV2ByProjectID:           *enableTotalSessionPropertiesV2ByProjectID,
 	}
 
 	C.InitConf(config)
