@@ -545,6 +545,9 @@ func IsMapsNotMatching(projectID int64, domId string, associatedSegments map[str
 		if _, exists := oldAssociatedSegments[segID]; !exists {
 			log.WithFields(log.Fields{"project_id": projectID, "domain_id": domId, "segment_id": segID}).
 				Info("Entering the segment")
+
+			// alert for entering segment
+			store.GetStore().FindAndCacheAlertForCurrentSegment(projectID, segID, domId, model.ACTION_SEGMENT_ENTRY)
 			isDifferent = true
 		}
 	}
@@ -554,6 +557,9 @@ func IsMapsNotMatching(projectID int64, domId string, associatedSegments map[str
 		if _, exists := associatedSegments[segID]; !exists {
 			log.WithFields(log.Fields{"project_id": projectID, "domain_id": domId, "segment_id": segID}).
 				Info("Leaving the segment")
+
+			// alert for exiting segment
+			store.GetStore().FindAndCacheAlertForCurrentSegment(projectID, segID, domId, model.ACTION_SEGMENT_EXIT)
 			isDifferent = true
 		}
 	}
