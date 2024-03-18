@@ -2218,3 +2218,147 @@ func sendEditEventTriggerAlertRequest(r *gin.Engine, projectId int64, id string,
 	r.ServeHTTP(w, req)
 	return w
 }
+
+func TestCacheAlertForCurrentSegment(t *testing.T) {
+
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	project, agent, err := SetupProjectWithSlackIntegratedAgentDAO()
+	assert.Nil(t, err)
+
+	slackChannel := model.SlackChannel{
+		Name:      "channel1",
+		Id:        U.GetUUID(),
+		IsPrivate: true,
+	}
+	slackChannelJson, err := json.Marshal(slackChannel)
+	assert.Nil(t, err)
+
+	breakdownProps, err := json.Marshal(`[
+        {
+            "pr": "user_id",
+            "en": "user",
+            "pty": "categorical",
+            "ena": "$hubspot_contact_created",
+            "eni": 1
+        }
+    ]`)
+	assert.Nil(t, err)
+
+	// Create segment marker data
+	SegmentMarkerTest(t, project, agent, r)
+
+	// 1. All Accounts segment (different sources, gup)
+	segment1 := &model.SegmentPayload{
+		Name: "All accounts segment",
+		Query: model.Query{
+			Caller:          "account_profiles",
+			Class:           "events",
+			EventsCondition: "any_given_event",
+			GroupAnalysis:   "$domains",
+			Source:          "$domains",
+			Type:            "unique_users",
+			From:            time.Now().AddDate(0, 0, -28).Unix(),
+			To:              time.Now().Unix(),
+			Timezone:        "Asia/Kolkata",
+			GlobalUserProperties: []model.QueryProperty{
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$domain_name",
+					Operator:  "equals",
+					Value:     "madstreetden.com",
+					LogicalOp: "AND",
+					GroupName: "$domains",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$domain_name",
+					Operator:  "equals",
+					Value:     "heyflow.app",
+					LogicalOp: "OR",
+					GroupName: "$domains",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$salesforce_account_billingcountry",
+					Operator:  "equals",
+					Value:     "US",
+					LogicalOp: "AND",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$salesforce_account_billingcountry",
+					Operator:  "equals",
+					Value:     "New Zealand",
+					LogicalOp: "OR",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$hubspot_company_industry",
+					Operator:  "equals",
+					Value:     "Software Development",
+					LogicalOp: "AND",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  U.SIX_SIGNAL_COUNTRY,
+					Operator:  "equals",
+					Value:     "US",
+					LogicalOp: "AND",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  U.SIX_SIGNAL_COUNTRY,
+					Operator:  "equals",
+					Value:     "Germany",
+					LogicalOp: "OR",
+				},
+			},
+		},
+		Type: "$domains",
+	}
+
+	getSegement, status := store.GetStore().GetAllSegments(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, 1, len(getSegement["$domains"]))
+
+	nameFound := false
+
+	for _, segment := range getSegement["$domains"] {
+		if segment1.Name == segment.Name {
+			nameFound = true
+			break
+		}
+	}
+	assert.True(t, nameFound)
+
+	segmentID := getSegement["$domains"][0].Id
+	assert.NotEqual(t, segmentID, "")
+
+	// create alert
+	rName1 := U.RandomString(5)
+	alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
+		Title: rName1, Event: segmentID, Message: "Remember", MessageProperty: &postgres.Jsonb{},
+		DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{RawMessage: breakdownProps}, AlertLimit: 5, SetAlertLimit: true,
+		Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
+			{Entity: "", Type: "categorical", Property: "campaign", Operator: "equals", LogicalOp: "AND"},
+		}}, agent.UUID, agent.UUID, false, nil)
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Empty(t, errMsg)
+	assert.NotNil(t, alert)
+
+	domainID := "domain1id.com"
+	t.Run("FindAndCacheAlertForCurrentSegment:valid", func(t *testing.T) {
+		store.GetStore().FindAndCacheAlertForCurrentSegment(project.ID, segmentID, domainID, model.ACTION_SEGMENT_ENTRY)
+		assert.Equal(t, http.StatusAccepted, errCode)
+		assert.Empty(t, errMsg)
+	})
+}
