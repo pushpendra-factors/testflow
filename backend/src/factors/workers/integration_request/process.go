@@ -94,6 +94,7 @@ func main() {
 	userPropertyUpdateOptProjects := flag.String("user_property_update_opt_projects", "", "")
 	chargebeeApiKey := flag.String("chargebee_api_key", "dummy", "Chargebee api key")
 	chargebeeSiteName := flag.String("chargebee_site_name", "dummy", "Chargebee site name")
+	enableTotalSessionPropertiesV2ByProjectID := flag.String("enable_total_session_properties_v2", "", "")
 	emailUTMParameterAllowedProjects := flag.String("email_utm_parameter_allowed_projects", "", "")
 
 	flag.Parse()
@@ -155,6 +156,7 @@ func main() {
 		UserPropertyUpdateOptProjects:                      *userPropertyUpdateOptProjects,
 		ChargebeeApiKey:                                    *chargebeeApiKey,
 		ChargebeeSiteName:                                  *chargebeeSiteName,
+		EnableTotalSessionPropertiesV2ByProjectID:          *enableTotalSessionPropertiesV2ByProjectID,
 		EmailUTMParameterAllowedProjects:                   *emailUTMParameterAllowedProjects,
 	}
 	C.InitConf(config)

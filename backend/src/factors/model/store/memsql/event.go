@@ -1768,6 +1768,22 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 
 	noOfUserPropertiesUpdated := len(sessionUserPropertiesRecordMap)
 
+	if C.EnableTotalSessionPropertiesV2ByProjectID(projectId) {
+		customerUserID, status := store.GetCustomerUserIdFromUserId(projectId, userId)
+		if status != http.StatusFound {
+			logCtx.Error("Failed to get customer user id on addSessionForUser.")
+			return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
+				noOfUserPropertiesUpdated, isLastEventToBeProcessed, http.StatusOK
+		}
+
+		errCode = store.UpdateSessionProperties(projectId, customerUserID, userId)
+		if errCode != http.StatusOK {
+			logCtx.WithField("err_code", errCode).
+				Error("Failed to update total session properties on adding session.")
+		}
+
+	}
+
 	return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
 		noOfUserPropertiesUpdated, isLastEventToBeProcessed, http.StatusOK
 }

@@ -34,8 +34,8 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 			"paid": true,
 			"gender": "m",
 			"$initial_campaign": "campaign1",
-			"$page_count": 10,
-			"$session_spent_time": 2.2,
+			"$real_page_count": 10,
+			"$real_page_spent_time": 2.2,
 			"$latest_medium": "google",
 			"$hubspot_contact_lead_guid": "lead-guid1"}`,
 		))},
@@ -53,8 +53,8 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 			"age": 30,
 			"paid": false,
 			"$initial_campaign": "campaign2",
-			"$page_count": 15,
-			"$session_spent_time": 4.4,
+			"$real_page_count": 15,
+			"$real_page_spent_time": 4.4,
 			"$user_agent": "browser user agent",
 			"$latest_medium": "",
 			"$hubspot_contact_lead_guid": "lead-guid2"}`, // Empty. Should not overwrite.
@@ -62,6 +62,9 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 		JoinTimestamp: timestamp,
 		Source:        model.GetRequestSourcePointer(model.UserSourceWeb),
 	})
+
+	status := store.GetStore().UpdateSessionProperties(project.ID, customerUserID, "")
+	assert.Equal(t, http.StatusOK, status)
 
 	user1DB, _ := store.GetStore().GetUser(project.ID, createUserID1)
 	user1PropertiesDB, _ := U.DecodePostgresJsonb(&user1DB.Properties)
@@ -89,9 +92,9 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 	for _, prop := range [...]string{"country", "age", "paid", "gender", "$initial_campaign", "$page_count",
 		"$session_spent_time", "$user_agent", "$latest_medium"} {
 		_, found1 := (*user1PropertiesDB)[prop]
-		assert.True(t, found1)
+		assert.True(t, found1, prop)
 		_, found2 := (*user2PropertiesDB)[prop]
-		assert.True(t, found2)
+		assert.True(t, found2, prop)
 	}
 
 	// Initial properties must not be overwritten by older values.
@@ -146,60 +149,74 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 	}
 
 	// If addable properties is updated, only difference should get added.
-	previousPageCount := (*user1PropertiesDB)["$page_count"].(float64)
-	previousSessionSpentTime := (*user1PropertiesDB)["$session_spent_time"].(float64)
+	u1PreviousPageCount := (*user1PropertiesDB)["$real_page_count"].(float64)
+	u1PreviousSessionSpentTime := (*user1PropertiesDB)["$real_page_spent_time"].(float64)
+
+	u2PreviousPageCount := (*user2PropertiesDB)["$real_page_count"].(float64)
+	u2PreviousSessionSpentTime := (*user2PropertiesDB)["$real_page_spent_time"].(float64)
+
 	for i := 0; i < 5; i++ {
 		// Old values for user1: $page_count = 10, $session_spent_time = 2.2. Sum: 25.
 		// Old values for user2: $page_count = 15, $session_spent_time = 4.4. Sum: 6.6.
 		propertiesUpdate := postgres.Jsonb{RawMessage: json.RawMessage(
-			[]byte(fmt.Sprintf(`{"$page_count": %f, "$session_spent_time": %f}`,
-				previousPageCount+float64(i+1), previousSessionSpentTime+float64(i)+0.5)))}
+			[]byte(fmt.Sprintf(`{"$real_page_count": %f, "$real_page_spent_time": %f}`,
+				u1PreviousPageCount+float64(i), u1PreviousSessionSpentTime+float64(i)+0.5)))}
 		timestamp = timestamp + 1
 		_, errCode := store.GetStore().UpdateUserProperties(project.ID, createUserID1, &propertiesUpdate, timestamp)
 		assert.Equal(t, http.StatusAccepted, errCode)
 
+		status := store.GetStore().UpdateSessionProperties(project.ID, customerUserID, "")
+		assert.Equal(t, http.StatusOK, status)
 		user1DB, _ = store.GetStore().GetUser(project.ID, createUserID1)
 		user1PropertiesDB, _ = U.DecodePostgresJsonb(&user1DB.Properties)
 		user2DB, _ = store.GetStore().GetUser(project.ID, createUserID2)
 		user2PropertiesDB, _ = U.DecodePostgresJsonb(&user2DB.Properties)
 
-		assert.Equal(t, float64(previousPageCount+float64(i+1)), (*user1PropertiesDB)["$page_count"])
-		assert.Equal(t, float64(previousPageCount+float64(i+1)), (*user2PropertiesDB)["$page_count"])
-		assert.Equal(t, float64(previousSessionSpentTime+float64(i)+0.5), (*user1PropertiesDB)["$session_spent_time"])
-		assert.Equal(t, float64(previousSessionSpentTime+float64(i)+0.5), (*user2PropertiesDB)["$session_spent_time"])
+		assert.Equal(t, float64(u2PreviousPageCount+u1PreviousPageCount+float64(i)), (*user1PropertiesDB)["$page_count"], fmt.Sprintf("%f %f %d", u2PreviousPageCount, u1PreviousPageCount, i))
+		assert.Equal(t, float64(u2PreviousPageCount+u1PreviousPageCount+float64(i)), (*user2PropertiesDB)["$page_count"])
+		roundValue, err := U.FloatRoundOffWithPrecision(u2PreviousSessionSpentTime+u1PreviousSessionSpentTime+float64(i)+0.5, 2)
+		assert.Nil(t, err)
+		assert.Equal(t, float64(roundValue), (*user1PropertiesDB)["$session_spent_time"])
+
+		roundValue, err = U.FloatRoundOffWithPrecision(u2PreviousSessionSpentTime+u1PreviousSessionSpentTime+float64(i)+0.5, 2)
+		assert.Nil(t, err)
+		assert.Equal(t, float64(roundValue), (*user2PropertiesDB)["$session_spent_time"])
 	}
 
 	// When a new non merged user is added, entire values must be added to all users.
-	previousPageCount = (*user1PropertiesDB)["$page_count"].(float64)
-	previousSessionSpentTime = (*user1PropertiesDB)["$session_spent_time"].(float64)
+	u1PreviousPageCount = (*user1PropertiesDB)["$real_page_count"].(float64)
+	u1PreviousSessionSpentTime = (*user1PropertiesDB)["$real_page_spent_time"].(float64)
+
+	u2PreviousPageCount = (*user2PropertiesDB)["$real_page_count"].(float64)
+	u2PreviousSessionSpentTime = (*user2PropertiesDB)["$real_page_spent_time"].(float64)
+
 	timestamp = timestamp + 1
 	createUserID3, _ := store.GetStore().CreateUser(&model.User{
 		ID:             U.GetUUID(),
 		ProjectId:      project.ID,
 		CustomerUserId: customerUserID,
 		Properties: postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{
-			"$page_count": 15,
-			"$session_spent_time": 4.5}`,
+			"$real_page_count": 15,
+			"$real_page_spent_time": 4.5}`,
 		))},
 		JoinTimestamp: timestamp,
 		Source:        model.GetRequestSourcePointer(model.UserSourceWeb),
 	})
 
-	// Call merge on user3.
-	timestamp = timestamp + 1
-	_, errCode = store.GetStore().UpdateUserProperties(project.ID, createUserID3,
-		&postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(`{"%s": "%s"}`,
-			U.RandomNumericString(4), U.RandomNumericString(4))))}, timestamp)
+	status = store.GetStore().UpdateSessionProperties(project.ID, customerUserID, "")
+	assert.Equal(t, http.StatusOK, status)
 	user1DB, _ = store.GetStore().GetUser(project.ID, createUserID1)
 	user1PropertiesDB, _ = U.DecodePostgresJsonb(&user1DB.Properties)
 	user2DB, _ = store.GetStore().GetUser(project.ID, createUserID1)
 	user2PropertiesDB, _ = U.DecodePostgresJsonb(&user2DB.Properties)
 	user3DB, _ := store.GetStore().GetUser(project.ID, createUserID3)
 	user3PropertiesDB, _ := U.DecodePostgresJsonb(&user3DB.Properties)
-	assert.Equal(t, float64(previousPageCount+15), (*user1PropertiesDB)["$page_count"])
-	assert.Equal(t, float64(previousPageCount+15), (*user2PropertiesDB)["$page_count"])
-	assert.Equal(t, float64(previousPageCount+15), (*user3PropertiesDB)["$page_count"])
-	assert.Equal(t, float64(previousSessionSpentTime+4.5), (*user1PropertiesDB)["$session_spent_time"])
-	assert.Equal(t, float64(previousSessionSpentTime+4.5), (*user2PropertiesDB)["$session_spent_time"])
-	assert.Equal(t, float64(previousSessionSpentTime+4.5), (*user3PropertiesDB)["$session_spent_time"])
+	assert.Equal(t, float64(u1PreviousPageCount+u2PreviousPageCount+15), (*user1PropertiesDB)["$page_count"])
+	assert.Equal(t, float64(u1PreviousPageCount+u2PreviousPageCount+15), (*user2PropertiesDB)["$page_count"])
+	assert.Equal(t, float64(u1PreviousPageCount+u2PreviousPageCount+15), (*user3PropertiesDB)["$page_count"])
+	roundValue, err := U.FloatRoundOffWithPrecision(u1PreviousSessionSpentTime+u2PreviousSessionSpentTime+4.5, 2)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(roundValue), (*user1PropertiesDB)["$session_spent_time"])
+	assert.Equal(t, float64(roundValue), (*user2PropertiesDB)["$session_spent_time"])
+	assert.Equal(t, float64(roundValue), (*user3PropertiesDB)["$session_spent_time"])
 }
