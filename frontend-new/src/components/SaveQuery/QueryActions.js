@@ -16,7 +16,7 @@ import {
 } from '../../utils/constants';
 // import { getChartType } from '../../Views/CoreQuery/AnalysisResultsPage/analysisResultsPage.helpers';
 import { CoreQueryContext } from '../../contexts/CoreQueryContext';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 
 const QueryActionsComponent = ({
   queryType,
@@ -34,8 +34,9 @@ const QueryActionsComponent = ({
 }) => {
   const [hideIntercomState, setHideIntercomState] = useState(true);
   const [isPopoverVisible, setIsPopoverVisible] = useState(false);
+  // const [urlId, setUrlId] = useState('');
 
-  const location = useLocation();
+  const { query_id: urlId } = useParams();
 
   const {
     coreQueryState: { navigatedFromDashboard, navigatedFromAnalyse }
@@ -290,7 +291,8 @@ const QueryActionsComponent = ({
         navigatedFromAnalyse?.key ||
         navigatedFromAnalyse?.id
       ) &&
-        !savedQueryId && (
+        !savedQueryId &&
+        !urlId && (
           <Button
             onClick={handleSaveClick}
             size='large'
@@ -300,11 +302,12 @@ const QueryActionsComponent = ({
           </Button>
         )}
 
-      {savedQueryId && (
-        <Tooltip placement='bottom' title={'No changes to be saved'}>
+      {(savedQueryId || urlId) && (
+        <Tooltip placement='bottom' title={!urlId && 'No changes to be saved'}>
           <div className={`${styles.antdIcon}`}>
             <Dropdown.Button
               overlay={menuItems}
+              onClick={urlId && handleUpdateClick}
               disabled={savedQueryId}
               type={BUTTON_TYPES.PRIMARY}
               size={'large'}
@@ -316,6 +319,7 @@ const QueryActionsComponent = ({
         </Tooltip>
       )}
       {!savedQueryId &&
+        !urlId &&
         (navigatedFromDashboard?.id ||
           navigatedFromAnalyse?.key ||
           navigatedFromAnalyse?.id) && (

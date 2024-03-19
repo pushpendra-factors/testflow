@@ -6,7 +6,7 @@ import React, {
   useState
 } from 'react';
 import { Button, Col, message, notification, Row } from 'antd';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useParams } from 'react-router-dom';
 import { useSelector, useDispatch, connect } from 'react-redux';
 import _ from 'lodash';
 import { saveQuery, updateQuery } from 'Reducers/coreQuery/services';
@@ -79,6 +79,7 @@ function SaveQuery({
   const dispatch = useDispatch();
 
   const history = useHistory();
+  const { query_id: urlId } = useParams();
 
   const [showShareToEmailModal, setShowShareToEmailModal] = useState(false);
   const [showShareToSlackModal, setShowShareToSlackModal] = useState(false);
@@ -174,14 +175,15 @@ function SaveQuery({
   const handleDelete = useCallback(async () => {
     try {
       updateLocalReducer({ type: TOGGLE_APIS_CALLED });
+      const savedId = savedQueryId || urlId;
       await deleteReport({
         project_id: active_project.id,
-        queryId: savedQueryId
+        queryId: savedId
       });
       updateLocalReducer({ type: TOGGLE_APIS_CALLED });
       toggleDeleteModal();
       setQuerySaved(null);
-      dispatch({ type: QUERY_DELETED, payload: savedQueryId });
+      dispatch({ type: QUERY_DELETED, payload: savedId });
       notification.success({
         message: 'Report Deleted Successfully',
         duration: 5
@@ -199,6 +201,7 @@ function SaveQuery({
     updateLocalReducer,
     active_project.id,
     savedQueryId,
+    urlId,
     toggleDeleteModal,
     setQuerySaved,
     dispatch,
@@ -217,10 +220,9 @@ function SaveQuery({
           return false;
         }
         updateLocalReducer({ type: TOGGLE_APIS_CALLED });
+        const savedId = savedQueryId || urlId;
 
-        const queryGettingUpdated = savedQueries.find(
-          (elem) => elem.id === savedQueryId
-        );
+        const queryGettingUpdated = savedQueries.find(findIdFromUrl);
 
         const querySettings = {
           ...queryGettingUpdated.settings,
@@ -233,11 +235,11 @@ function SaveQuery({
           title: queryTitle
         };
 
-        await updateQuery(active_project.id, savedQueryId, updateReqBody);
+        await updateQuery(active_project.id, savedId, updateReqBody);
 
         dispatch({
           type: QUERY_UPDATED,
-          queryId: savedQueryId,
+          queryId: savedId,
           payload: {
             title: queryTitle,
             settings: querySettings
@@ -245,7 +247,7 @@ function SaveQuery({
         });
 
         const reqBody = {
-          query_id: savedQueryId
+          query_id: savedId
         };
 
         await saveQueryToDashboard(
@@ -256,7 +258,7 @@ function SaveQuery({
 
         dispatch({
           type: QUERY_UPDATED,
-          queryId: savedQueryId,
+          queryId: savedId,
           payload: {
             is_dashboard_query: true
           }
@@ -286,6 +288,7 @@ function SaveQuery({
       queryTitle,
       active_project.id,
       savedQueryId,
+      urlId,
       dispatch
     ]
   );
@@ -372,9 +375,7 @@ function SaveQuery({
           //   history.replace('/analyse/funnel/' + res.data.id_text);
           // }
         } else {
-          const queryGettingUpdated = savedQueries.find(
-            (elem) => elem.id === savedQueryId
-          );
+          const queryGettingUpdated = savedQueries.find(findIdFromUrl);
 
           const updatedSettings = {
             ...queryGettingUpdated.settings,
@@ -390,18 +391,18 @@ function SaveQuery({
             settings: updatedSettings
           };
 
-          await updateQuery(active_project.id, savedQueryId, reqBody);
+          await updateQuery(active_project.id, savedId, reqBody);
 
           dispatch({
             type: QUERY_UPDATED,
-            queryId: savedQueryId,
+            queryId: savedId,
             payload: {
               title,
               settings: updatedSettings
             }
           });
           // setQuerySaved({ name: title, id: savedQueryId });
-          queryId = savedQueryId;
+          queryId = savedQueryId || urlId;
         }
 
         if (addToDashboard) {
@@ -433,7 +434,7 @@ function SaveQuery({
         factorsai.track(activeAction, {
           email_id: agent_details?.email,
           query_type: queryType,
-          saved_query_id: savedQueryId,
+          saved_query_id: savedQueryId ? savedQueryId : urlId,
           query_title: title,
           project_id: active_project.id,
           project_name: active_project.name
@@ -531,7 +532,9 @@ function SaveQuery({
       const queryGettingUpdated = savedQueries.find(
         (elem) =>
           elem.id ===
-          (navigatedData?.query_id || navigatedData?.key || navigatedData?.id)
+            (navigatedData?.query_id ||
+              navigatedData?.key ||
+              navigatedData?.id) || elem.id_text === urlId
       );
 
       const updatedSettings = {
@@ -545,16 +548,17 @@ function SaveQuery({
         settings: updatedSettings
       };
 
-      await updateQuery(
-        active_project.id,
-        navigatedData?.query_id || navigatedData?.key || navigatedData?.id,
-        reqBody
-      );
+      const idTobeSaved =
+        navigatedData?.query_id ||
+        navigatedData?.key ||
+        navigatedData?.id ||
+        queryGettingUpdated.id;
+
+      await updateQuery(active_project.id, idTobeSaved, reqBody);
 
       dispatch({
         type: QUERY_UPDATED,
-        queryId:
-          navigatedData?.query_id || navigatedData?.key || navigatedData?.id,
+        queryId: idTobeSaved,
         payload: {
           title:
             queryGettingUpdated?.query?.title || queryGettingUpdated?.title,
@@ -564,7 +568,7 @@ function SaveQuery({
       });
       setQuerySaved({
         name: queryGettingUpdated?.query?.title || queryGettingUpdated?.title,
-        id: navigatedData?.query_id || navigatedData?.key || navigatedData?.id
+        id: idTobeSaved
       });
 
       notification.success({
@@ -651,8 +655,8 @@ function SaveQuery({
     updateLocalReducer({ type: TOGGLE_APIS_CALLED });
 
     let queryData = undefined;
-    if (savedQueryId) {
-      queryData = savedQueries.find((elem) => elem.id === savedQueryId);
+    if (savedQueryId || urlId) {
+      queryData = savedQueries.find(findIdFromUrl);
     }
 
     let emails = [];
@@ -717,12 +721,15 @@ function SaveQuery({
     onSuccess();
   };
 
+  const findIdFromUrl = (elem) =>
+    elem.id === savedQueryId || elem.id_text === urlId;
+
   const handleSlackClick = ({ data, frequency, onSuccess }) => {
     updateLocalReducer({ type: TOGGLE_APIS_CALLED });
 
     let queryData = undefined;
-    if (savedQueryId) {
-      queryData = savedQueries.find((elem) => elem.id === savedQueryId);
+    if (savedQueryId || urlId) {
+      queryData = savedQueries.find(findIdFromUrl);
     }
 
     let slackChannels = {};
@@ -754,7 +761,7 @@ function SaveQuery({
       sendAlertNow(
         active_project.id,
         payload,
-        savedQueryId,
+        savedQueryId || urlId,
         dateFromTo,
         overrideDate
       )
@@ -769,7 +776,8 @@ function SaveQuery({
           message.error(err?.data?.error);
         });
     } else {
-      createAlert(active_project.id, payload, savedQueryId)
+      const savedId = savedQueryId || urlId;
+      createAlert(active_project.id, payload, savedId)
         .then((r) => {
           notification.success({
             message: 'Report Saved Successfully',
