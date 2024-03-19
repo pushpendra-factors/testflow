@@ -93,7 +93,7 @@ function AppSidebar() {
       <ControlledComponent controller={isSidebarCollapsed === false}>
         <div
           className={cx(
-            'flex flex-col row-gap-4 pt-6',
+            'flex flex-col gap-y-4 pt-6',
             styles['sidebar-content-container']
           )}
         >
@@ -116,7 +116,7 @@ function AppSidebar() {
               }
             >
               <div
-                className={cx('flex col-gap-2 items-center px-3', {
+                className={cx('flex gap-x-2 items-center px-3', {
                   'pl-6': sidebarTitleConfig.title === 'Dashboards'
                 })}
               >

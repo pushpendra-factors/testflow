@@ -33,7 +33,7 @@ function InfoCard({
           mini
           type='title'
           color='grey'
-          extraClass='whitespace-no-wrap mr-2'
+          extraClass='whitespace-nowrap mr-2'
         >
           {eventPropNames[key] || PropTextFormat(key)}
         </Text>

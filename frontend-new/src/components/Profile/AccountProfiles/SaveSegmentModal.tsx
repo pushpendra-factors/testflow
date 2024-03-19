@@ -42,7 +42,7 @@ const SaveSegmentModal = ({
       isLoading={isLoading}
       width={542}
     >
-      <div className='flex flex-col row-gap-5'>
+      <div className='flex flex-col gap-y-5'>
         <Text
           type='title'
           level={4}
@@ -52,7 +52,7 @@ const SaveSegmentModal = ({
         >
           New Segment
         </Text>
-        <div className='flex flex-col row-gap-2'>
+        <div className='flex flex-col gap-y-2'>
           <Text type='title' color='character-primary' extraClass='mb-0'>
             Segment name
           </Text>

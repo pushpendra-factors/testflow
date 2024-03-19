@@ -900,7 +900,7 @@ function UserProfiles({
       <Button
         onClick={handleSaveSegmentClick}
         type='default'
-        className='flex items-center col-gap-1'
+        className='flex items-center gap-x-1'
         disabled={saveButtonDisabled}
       >
         <SVG
@@ -1027,7 +1027,7 @@ function UserProfiles({
             setShowSegmentActions(false);
             setMoreActionsModalMode(moreActionsMode.RENAME);
           }}
-          className='flex cursor-pointer hover:bg-gray-100 col-gap-4 items-center py-2 px-4'
+          className='flex cursor-pointer hover:bg-gray-100 gap-x-4 items-center py-2 px-4'
         >
           <SVG size={20} name='edit_query' color='#8c8c8c' />
           <Text type='title' color='character-primary' extraClass='mb-0'>
@@ -1041,7 +1041,7 @@ function UserProfiles({
             setShowSegmentActions(false);
             setMoreActionsModalMode(moreActionsMode.DELETE);
           }}
-          className='flex cursor-pointer hover:bg-gray-100 col-gap-4 items-center py-2 px-4'
+          className='flex cursor-pointer hover:bg-gray-100 gap-x-4 items-center py-2 px-4'
         >
           <SVG size={20} name='trash' color='#8c8c8c' />
           <Text type='title' color='character-primary' extraClass='mb-0'>
@@ -1218,7 +1218,7 @@ function UserProfiles({
         </ControlledComponent>
 
         <div className='flex justify-between items-center'>
-          <div className='flex col-gap-2  items-center'>
+          <div className='flex gap-x-2  items-center'>
             <div className='flex items-center rounded justify-center h-10 w-10'>
               <SVG name={titleIcon} size={32} color={titleIconColor} />
             </div>
@@ -1235,11 +1235,11 @@ function UserProfiles({
         </div>
 
         <div className='flex justify-between items-center my-4'>
-          <div className='flex items-center col-gap-2 w-full'>
+          <div className='flex items-center gap-x-2 w-full'>
             {renderPropertyFilter()}
             {renderSaveSegmentButton()}
           </div>
-          <div className='inline-flex col-gap-2'>
+          <div className='inline-flex gap-x-2'>
             <ControlledComponent
               controller={filtersExpanded === false && newSegmentMode === false}
             >

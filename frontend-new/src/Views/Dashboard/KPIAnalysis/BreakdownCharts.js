@@ -214,7 +214,7 @@ const BreakdownCharts = ({
     );
   } else if (chartType === CHART_TYPE_METRIC_CHART) {
     chartContent = (
-      <div className='flex justify-between w-full col-gap-2 h-full'>
+      <div className='flex justify-between w-full gap-x-2 h-full'>
         {aggregateData
           .slice(0, cardSizeToMetricCount[unit.cardSize])
           .map((eachAggregateData, index) => {

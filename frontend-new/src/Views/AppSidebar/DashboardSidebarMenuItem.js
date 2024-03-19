@@ -69,7 +69,7 @@ function DashboardSidebarMenuItem({
         <button
           type='button'
           className={cx(
-            'px-4 py-2 text-left flex col-gap-4 items-center',
+            'px-4 py-2 text-left flex gap-x-4 items-center',
             styles['dashboard-more-options-menu']
           )}
         >
@@ -135,7 +135,7 @@ function DashboardSidebarMenuItem({
     <div
       onClick={onClick}
       className={cx(
-        'cursor-pointer rounded-md p-2 flex justify-between col-gap-2 items-center',
+        'cursor-pointer rounded-md p-2 flex justify-between gap-x-2 items-center',
         {
           [styles.active]: isActive
         },
@@ -145,7 +145,7 @@ function DashboardSidebarMenuItem({
         }
       )}
     >
-      <div className={cx('flex col-gap-1 items-center w-full')}>
+      <div className={cx('flex gap-x-1 items-center w-full')}>
         <Text
           type='title'
           level={7}

@@ -205,7 +205,7 @@ function SubMenu({ durationObj, handleDurationChange, activeDashboard }) {
 
         <Button
           className={cx(
-            'flex items-center col-gap-2',
+            'flex items-center gap-x-2',
             styles['add-filter-button']
           )}
           type='text'

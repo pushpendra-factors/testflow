@@ -106,7 +106,7 @@ function DashboardSidebar() {
   }, [newFolderCreationState.completed, hideDashboardNewFolderModal]);
 
   return (
-    <div className='flex flex-col row-gap-2'>
+    <div className='flex flex-col gap-y-2'>
       <button
         type='button'
         onClick={handleDraftsClick}
@@ -114,7 +114,7 @@ function DashboardSidebar() {
       >
         <div
           className={cx(
-            'flex col-gap-1 cursor-pointer py-2 rounded-md items-center w-full px-2',
+            'flex gap-x-1 cursor-pointer py-2 rounded-md items-center w-full px-2',
             styles['draft-title'],
             {
               [styles['item-active']]: areDraftsSelected
@@ -140,7 +140,7 @@ function DashboardSidebar() {
           </Text>
         </div>
       </button>
-      <div className='flex flex-col row-gap-5 px-4'>
+      <div className='flex flex-col gap-y-5 px-4'>
         <SidebarSearch
           placeholder='Search board'
           setSearchText={setSearchText}
@@ -148,7 +148,7 @@ function DashboardSidebar() {
         />
         <div
           className={cx(
-            'flex flex-col row-gap-1 overflow-auto',
+            'flex flex-col gap-y-1 overflow-auto',
             styles['dashboard-list-container']
           )}
         >
@@ -160,7 +160,7 @@ function DashboardSidebar() {
         </div>
         <Button
           className={cx(
-            'flex col-gap-2 items-center w-full',
+            'flex gap-x-2 items-center w-full',
             styles.sidebar_action_button
           )}
           onClick={() => {

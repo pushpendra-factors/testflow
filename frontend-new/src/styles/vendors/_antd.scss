@@ -341,11 +341,11 @@ mark {
   color: #fff;
   background: #1890ff;
 }
-.clearfix::before {
+.flow-root::before {
   display: table;
   content: '';
 }
-.clearfix::after {
+.flow-root::after {
   display: table;
   clear: both;
   content: '';
