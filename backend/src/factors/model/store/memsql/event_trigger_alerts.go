@@ -813,7 +813,7 @@ func getSortedSetCacheKey(projectId int64) (*cacheRedis.Key, error) {
 	return key, err
 }
 
-func getDisplayLikePropValue(typ string, exi bool, value interface{}) interface{} {
+func(store *MemSQL) getDisplayLikePropValue(projectID int64, typ string, exi bool, prop string, value interface{}, granularity string) (string, interface{}) {
 
 	var res interface{}
 	if exi {
@@ -824,15 +824,21 @@ func getDisplayLikePropValue(typ string, exi bool, value interface{}) interface{
 					"property_type": typ,
 					"property_value": val,
 				}).Error("datetime property value could not parsed as int")
-				return ""
+				return prop, ""
 			}
-			res = val
+
+			displayName, displayPropVal := store.getDisplayLikeNameAndPropValForDatetimeType(projectID, prop, granularity, val)
+			if strings.EqualFold(prop, "Timestamp") {
+				prop = displayName	
+			}
+			res = displayPropVal
+			
 		} else {
 			res = U.GetPropertyValueAsString(value)
 		}
 	}
 
-	return res
+	return prop, res
 }
 
 func satisfiesInternalProperty(filterVal string, propVal interface{}, op string) bool {
@@ -922,9 +928,10 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesAndFieldsTagMap(event *mode
 				}
 			}
 
+			displayName, displayPropVal := store.getDisplayLikePropValue(event.ProjectId, messageProperty.Type, exi, displayName, propVal, messageProperty.Granularity)
 			msgPropMap[fmt.Sprintf("%d", idx)] = model.MessagePropMapStruct{
 				DisplayName: displayName,
-				PropValue:   getDisplayLikePropValue(messageProperty.Type, exi, propVal),
+				PropValue:   displayPropVal,
 			}
 
 		} else if messageProperty.Entity == "event" {
@@ -933,12 +940,8 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesAndFieldsTagMap(event *mode
 				displayName = U.CreateVirtualDisplayName(p)
 			}
 			propVal, exi := (*eventPropMap)[p]
-			displayPropVal := getDisplayLikePropValue(messageProperty.Type, exi, propVal)
+			displayName, displayPropVal := store.getDisplayLikePropValue(event.ProjectId, messageProperty.Type, exi, displayName, propVal, messageProperty.Granularity)
 
-			// Using granularity for $timestamp property
-			if p == "$timestamp" {
-				displayName, displayPropVal = store.getDisplayLikeNameAndPropValForTimestamp(event.ProjectId, displayName, messageProperty.Granularity, displayPropVal)
-			}
 			msgPropMap[fmt.Sprintf("%d", idx)] = model.MessagePropMapStruct{
 				DisplayName: displayName,
 				PropValue:   displayPropVal,
@@ -1022,7 +1025,7 @@ func (store *MemSQL) getDisplayNameLabelForThisProperty(projectID int64, propert
 	return displayLabel.Label, true
 }
 
-func (store *MemSQL) getDisplayLikeNameAndPropValForTimestamp(projectID int64, displayName, granularity string, propVal interface{}) (string, interface{}) {
+func (store *MemSQL) getDisplayLikeNameAndPropValForDatetimeType(projectID int64, displayName, granularity string, propVal interface{}) (string, interface{}) {
 
 	var displayPropVal interface{}
 	timezoneString, errCode := store.GetTimezoneForProject(projectID)
