@@ -52,7 +52,7 @@ export const formatFiltersForQuery = (filters, scope = 'event') => {
   const formattedFilters = [];
   const groupByRef = {};
   let count = 0;
-  filters.forEach((filter) => {
+  filters?.forEach((filter) => {
     let { ref } = filter;
     if (ref == undefined) {
       ref = count++;
