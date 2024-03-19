@@ -134,7 +134,7 @@ const EventBasedAlert = ({
   groupPropNames,
   eventUserPropertiesV2,
   userPropNames,
-  eventNames,
+  eventNamesSpecial,
   getGroupProperties,
   getEventPropertiesV2,
   getGroups,
@@ -444,7 +444,7 @@ const EventBasedAlert = ({
       eventPropNames?.[item] ||
       userPropNames?.[item] ||
       groupPropNames?.[item] ||
-      eventNames?.[item];
+      eventNamesSpecial?.[item];
     return findItem ? findItem : item;
   };
 
@@ -2302,7 +2302,7 @@ const mapStateToProps = (state) => ({
   groupPropNames: state.coreQuery.groupPropNames,
   eventUserPropertiesV2: state.coreQuery.eventUserPropertiesV2,
   userPropNames: state.coreQuery.userPropNames,
-  eventNames: state.coreQuery.eventNames,
+  eventNamesSpecial: state.coreQuery.eventNamesSpecial,
   groups: state.coreQuery.groups,
   slack_users: state.global.slack_users
 });

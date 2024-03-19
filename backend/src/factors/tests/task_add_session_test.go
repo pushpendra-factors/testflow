@@ -4897,11 +4897,6 @@ func TestAddSessionUserRealSessionProperties(t *testing.T) {
 	assert.Equal(t, float64(0), (*lsUserProperties)[U.UP_REAL_PAGE_SPENT_TIME])
 	assert.Equal(t, float64(0), (*lsUserProperties)[U.UP_REAL_PAGE_COUNT])
 
-	newProperties := &postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
-		`{"%s": "%s"}`, U.UP_FIRST_NAME, "test")))}
-	_, status = store.GetStore().UpdateUserProperties(project.ID, userID1, newProperties, U.TimeNowUnix())
-	assert.Equal(t, http.StatusAccepted, status)
-
 	// real properties for each user is kept as it is without merging
 	user, status := store.GetStore().GetUser(project.ID, userID1)
 	assert.Equal(t, http.StatusFound, status)
@@ -4970,7 +4965,7 @@ func TestAddSessionUserRealSessionProperties(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, float64(2), (*userProperties)[U.UP_REAL_PAGE_SPENT_TIME]) // adds 1 for all previous data
 	assert.Equal(t, float64(2), (*userProperties)[U.UP_REAL_PAGE_COUNT])      // adds 1 for all previous data
-	assert.Equal(t, float64(1), (*userProperties)[U.UP_PAGE_COUNT])
-	assert.Equal(t, float64(1), (*userProperties)[U.UP_TOTAL_SPENT_TIME])
+	assert.Equal(t, float64(2), (*userProperties)[U.UP_PAGE_COUNT])
+	assert.Equal(t, float64(2), (*userProperties)[U.UP_TOTAL_SPENT_TIME])
 	assert.Equal(t, "android1", (*userProperties)[U.UP_OS])
 }

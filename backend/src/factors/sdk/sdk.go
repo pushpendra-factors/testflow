@@ -1255,13 +1255,13 @@ func Identify(projectId int64, request *IdentifyPayload, overwrite bool) (int, *
 		return http.StatusOK, response
 	}
 
-	customerUserId, errCode := store.GetStore().GetCustomerUserIdFromUserId(projectId, request.UserId)
+	existingCustomerUserId, errCode := store.GetStore().GetCustomerUserIdFromUserId(projectId, request.UserId)
 	if errCode != http.StatusFound {
 		return errCode, &IdentifyResponse{Error: "Identification failed. Invalid user_id."}
 	}
 
 	// Precondition: Given user already identified as given customer_user.
-	if customerUserId == request.CustomerUserId {
+	if existingCustomerUserId == request.CustomerUserId {
 		return http.StatusOK, &IdentifyResponse{Message: "Identified already."}
 	}
 
@@ -1286,7 +1286,7 @@ func Identify(projectId int64, request *IdentifyPayload, overwrite bool) (int, *
 
 	// Precondition: user is already identified with different customer_user.
 	// Creating a new user with the given customer_user_id and respond with new_user_id.
-	if customerUserId != "" && !overwrite {
+	if existingCustomerUserId != "" && !overwrite {
 		newUser := model.User{
 			ProjectId:      projectId,
 			CustomerUserId: request.CustomerUserId,
@@ -1317,11 +1317,18 @@ func Identify(projectId int64, request *IdentifyPayload, overwrite bool) (int, *
 			return errCode, &IdentifyResponse{Error: "Identification failed. User creation failed."}
 		}
 
+		if C.EnableTotalSessionPropertiesV2ByProjectID(projectId) {
+			status := store.GetStore().UpdateSessionProperties(projectId, newUser.CustomerUserId, "")
+			if status != http.StatusOK {
+				logCtx.Error("Failed to update total session property on identiy create user.")
+			}
+		}
+
 		if C.EnableUserDomainsGroupByProjectID(projectId) {
 			status := store.GetStore().AssociateUserDomainsGroup(projectId, createdUserID, "", "")
 			if status != http.StatusOK && status != http.StatusNotModified {
 				log.WithFields(log.Fields{"project_id": projectId, "user_id": createdUserID, "err_code": status}).
-					Error("Failed to AssociateUserDomainsGroup on Identify new user.")
+					Error("Failed to AssociateUserDomainsGroup on Identify create user.")
 			}
 		}
 
@@ -1351,6 +1358,22 @@ func Identify(projectId int64, request *IdentifyPayload, overwrite bool) (int, *
 	_, errCode = store.GetStore().UpdateUser(projectId, request.UserId, updateUser, request.Timestamp)
 	if errCode != http.StatusAccepted {
 		return errCode, &IdentifyResponse{Error: "Identification failed. Failed mapping customer_user to user"}
+	}
+
+	if C.EnableTotalSessionPropertiesV2ByProjectID(projectId) {
+		status := store.GetStore().UpdateSessionProperties(projectId, request.CustomerUserId, "")
+		if status != http.StatusOK {
+			logCtx.WithFields(log.Fields{"new_customer_user_id": request.CustomerUserId}).
+				Error("Failed to update total session property on identiy new customer user id .")
+		}
+
+		if existingCustomerUserId != "" {
+			status = store.GetStore().UpdateSessionProperties(projectId, existingCustomerUserId, "")
+			if status != http.StatusOK {
+				logCtx.WithFields(log.Fields{"existing_customer_user_id": existingCustomerUserId}).
+					Error("Failed to update total session property on identiy existing customer user id.")
+			}
+		}
 	}
 
 	if C.EnableUserDomainsGroupByProjectID(projectId) {

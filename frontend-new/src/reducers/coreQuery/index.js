@@ -37,7 +37,10 @@ import {
   FETCH_EVENT_USER_PROPERTIES_V2,
   FETCH_EVENT_PROPERTIES_V2,
   SET_GROUPBY_LIST,
-  SET_GROUPBY_EVENT_LIST
+  SET_GROUPBY_EVENT_LIST,
+  FETCH_SPECIAL_EVENTS_MAP,
+  FETCH_SPECIAL_EVENTS,
+  SET_SPECIAL_EVENT_NAMES
 } from './actions';
 import {
   SHOW_ANALYTICS_RESULT,
@@ -57,7 +60,9 @@ import { DEFAULT_TOUCHPOINTS } from 'Reducers/coreQuery/utils';
 
 const defaultState = {
   eventOptions: [],
+  eventOptionsSpecial: [],
   eventNamesMap: {},
+  eventNamesMapSpecial: {},
   eventPropertiesV2: {},
   userPropertiesV2: {},
   eventUserPropertiesV2: {},
@@ -108,6 +113,7 @@ const defaultState = {
     dateStr: ''
   },
   eventNames: [],
+  eventNamesSpecial: [],
   userPropNames: {},
   eventPropNames: {},
   groupPropNames: {},
@@ -126,6 +132,12 @@ export default function (state = defaultState, action) {
       return { ...state, eventOptions: action.payload };
     case SET_EVENT_NAMES:
       return { ...state, eventNames: action.payload };
+    case FETCH_SPECIAL_EVENTS_MAP:
+      return { ...state, eventNamesMapSpecial: action.payload };
+    case FETCH_SPECIAL_EVENTS:
+      return { ...state, eventOptionsSpecial: action.payload };
+    case SET_SPECIAL_EVENT_NAMES:
+      return { ...state, eventNamesSpecial: action.payload };
     case SET_USER_PROP_NAME:
       return { ...state, userPropNames: action.payload };
     case SET_BUTTONCLICK_PROP_NAME:

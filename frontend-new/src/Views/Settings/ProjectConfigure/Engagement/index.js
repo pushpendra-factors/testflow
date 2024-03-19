@@ -20,7 +20,7 @@ import _ from 'lodash';
 import { bindActionCreators } from 'redux';
 import { updateAccountScores } from 'Reducers/timelines';
 import { fetchProjectSettings } from 'Reducers/global';
-import { getGroups } from 'Reducers/coreQuery/middleware';
+import { fetchEventNames, getGroups } from 'Reducers/coreQuery/middleware';
 import { EngagementTag } from 'Components/Profile/constants.ts';
 import { InfoCircleFilled, InfoCircleOutlined } from '@ant-design/icons';
 import SaleWindowModal from './SaleWindowModal';
@@ -52,7 +52,11 @@ const filterConfigRuleCheck = (existingConfig, newConfig) => {
   }
 };
 
-function EngagementConfig({ fetchProjectSettings, getGroups }) {
+function EngagementConfig({
+  fetchProjectSettings,
+  getGroups,
+  fetchEventNames
+}) {
   const [editIndex, setEditIndex] = useState(undefined);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [renderCategoryModal, setRenderCategoryModal] = useState(false);
@@ -65,10 +69,18 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
   const currentProjectSettings = useSelector(
     (state) => state.global.currentProjectSettings
   );
-  const { eventNames, eventNamesMap } = useSelector((state) => state.coreQuery);
+  const { eventNamesSpecial, eventNamesMapSpecial } = useSelector(
+    (state) => state.coreQuery
+  );
+
+  useEffect(() => {
+    fetchEventNames(activeProject?.id, true);
+  }, [activeProject]);
+
   useEffect(() => {
     getGroups(activeProject?.id);
   }, [activeProject?.id]);
+
   const headerClassStr =
     'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold';
   const columns = [
@@ -275,7 +287,7 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
       weightsConfig
         ?.map((q, index) => {
           const event = transformWeightConfigForQuery(q);
-          event.group = findKeyByValue(eventNamesMap, event.label);
+          event.group = findKeyByValue(eventNamesMapSpecial, event.label);
           return {
             ...event,
             is_deleted: q.is_deleted,
@@ -304,7 +316,7 @@ function EngagementConfig({ fetchProjectSettings, getGroups }) {
           };
         })
         .filter((item) => item.is_deleted === false),
-    [eventNames, weightsConfig]
+    [eventNamesSpecial, weightsConfig]
   );
 
   return (
@@ -448,7 +460,8 @@ const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
       fetchProjectSettings,
-      getGroups
+      getGroups,
+      fetchEventNames
     },
     dispatch
   );

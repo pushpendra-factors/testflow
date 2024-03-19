@@ -41,6 +41,9 @@ export const SET_DEFAULT_STATE = 'SET_DEFAULT_STATE';
 export const SET_EVENT_NAMES = 'SET_EVENT_NAMES';
 export const SET_ATTR_QUERIES = 'SET_ATTR_QUERIES';
 export const SET_EVENT_GROUPBY = 'SET_EVENT_GROUPBY';
+export const SET_SPECIAL_EVENT_NAMES = 'SET_SPECIAL_EVENT_NAMES';
+export const FETCH_SPECIAL_EVENTS = 'FETCH_SPECIAL_EVENTS';
+export const FETCH_SPECIAL_EVENTS_MAP = 'FETCH_SPECIAL_EVENTS_MAP';
 
 // Action creators
 export const fetchEventsMapAction = (eventsMap) => {
@@ -53,6 +56,21 @@ export const fetchEventsAction = (events, status = 'started') => {
 
 export const setEventsDisplayAction = (displayNames, status = 'started') => {
   return { type: SET_EVENT_NAMES, payload: displayNames };
+};
+
+export const fetchSpecialEventsMapAction = (eventsMap) => {
+  return { type: FETCH_SPECIAL_EVENTS_MAP, payload: eventsMap };
+};
+
+export const fetchSpecialEventsAction = (events, status = 'started') => {
+  return { type: FETCH_SPECIAL_EVENTS, payload: events };
+};
+
+export const setSpecialEventsDisplayAction = (
+  displayNames,
+  status = 'started'
+) => {
+  return { type: SET_SPECIAL_EVENT_NAMES, payload: displayNames };
 };
 
 export const fetchUserPropertiesActionV2 = (userProps) => {
