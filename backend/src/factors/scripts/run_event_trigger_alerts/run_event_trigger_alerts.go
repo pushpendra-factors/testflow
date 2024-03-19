@@ -12,7 +12,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	teams "factors/integration/ms_teams"
 	"factors/integration/paragon"
@@ -140,6 +139,10 @@ func main() {
 	success := true
 	projectIDs, _ := store.GetStore().GetAllProjectIDs()
 
+	tt := U.TimeNowZ()
+	hour := tt.Hour()
+	min := tt.Minute()
+
 	for _, projectID := range projectIDs {
 		available := true
 		if *enableFeatureGatesV2 {
@@ -194,9 +197,6 @@ func main() {
 			finalStatus[fmt.Sprintf("Blocked-alert-keys-%v", projectID)] = blockedAlertList.keys
 		}
 
-		tt := time.Now()
-		hour := tt.Hour()
-		min := tt.Minute()
 		if min < 5 {
 			sendReportForProject, blockedAlertList := RetryFailedEventTriggerAlerts(projectID, blockedAlertMap)
 			if sendReportForProject.SlackSuccess > 0 {
@@ -679,7 +679,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 	// partial success means there has been atleast one success
 	if partialSuccess {
 		status, err := store.GetStore().UpdateEventTriggerAlertField(eta.ProjectID, eta.ID,
-			map[string]interface{}{"last_alert_at": time.Now()})
+			map[string]interface{}{"last_alert_at": U.TimeNowZ()})
 		if status != http.StatusAccepted || err != nil {
 			logCtx.WithError(err).Error("Failed to update db field")
 		}
@@ -727,7 +727,7 @@ func EventTriggerDeliveryFailureExecution(key *cacheRedis.Key, eta *model.EventT
 	}
 
 	errDetails := model.LastFailDetails{
-		FailTime: time.Now(),
+		FailTime: U.TimeNowZ(),
 		FailedAt: deliveryFailures,
 		Details:  errMsg,
 	}
@@ -1188,7 +1188,7 @@ func RetryFailedEventTriggerAlerts(projectID int64, blockedAlerts map[string]boo
 				WithError(err).Error("unable to parse int from string in event_trigger_alerts_job")
 		}
 
-		now := time.Now().UnixNano()
+		now := U.TimeNowZ().UnixNano()
 		expBackoff := cc * (cc + 1) / 2
 		if now-retryTime < expBackoff*60*60*1000000000 {
 			log.Info("Skipping retry for alert: ", orgKey[1], ", because retry coolDown condition is false")
