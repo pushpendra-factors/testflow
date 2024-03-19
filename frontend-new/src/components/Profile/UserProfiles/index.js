@@ -46,6 +46,7 @@ import { getSegmentColorCode } from 'Views/AppSidebar/appSidebar.helpers';
 import truncateURL from 'Utils/truncateURL';
 import { ACCOUNTS_TABLE_COLUMN_TYPES, COLUMN_TYPE_PROPS } from 'Utils/table';
 import ResizableTitle from 'Components/Resizable';
+import logger from 'Utils/logger';
 import { Text, SVG } from '../../factorsComponents';
 import { getUserPropertiesV2 } from '../../../reducers/coreQuery/middleware';
 import PropertyFilter from '../AccountProfiles/PropertyFilter';
@@ -90,7 +91,6 @@ import RenameSegmentModal from '../AccountProfiles/RenameSegmentModal';
 import UpdateSegmentModal from '../AccountProfiles/UpdateSegmentModal';
 import styles from './index.module.scss';
 import { ALPHANUMSTR, iconColors } from '../constants';
-import logger from 'Utils/logger';
 
 const userOptions = getUserOptions();
 
@@ -686,7 +686,7 @@ function UserProfiles({
     } else {
       notification.error({
         message: 'Error',
-        description: 'Maximum of 8 Table Properties Selection Allowed.',
+        description: 'Maximum of 12 Table Properties Selection Allowed.',
         duration: 2
       });
     }
@@ -723,7 +723,6 @@ function UserProfiles({
     setIsUpgradeModalVisible(true);
     setShowPopOver(false);
   };
-
   const popoverContent = () => (
     <Tabs defaultActiveKey='events' size='small'>
       <Tabs.TabPane
