@@ -132,7 +132,12 @@ function CustomKPI({
       setKPIType('time_period_based');
       setKPICategory(item.obj_ty);
       setKPIFn(item?.transformations?.agFn);
-      setEventFilterValues(item?.transformations?.fil);
+      setFilterValues({
+        globalFilters: getStateFromKPIFilters(
+          item?.transformations?.fil,
+          userPropNames
+        )
+      });
     } else {
       setKPIType(item.type_of_query === 1 ? 'default' : 'derived_kpi');
     }
@@ -145,8 +150,12 @@ function CustomKPI({
       setKPIType('time_period_based');
       setKPICategory(item.obj_ty);
       setKPIFn(item?.transformations?.agFn);
-      setEventFilterValues({
-        globalFilters: getStateFromKPIFilters(item?.transformations?.fil)
+
+      setFilterValues({
+        globalFilters: getStateFromKPIFilters(
+          item?.transformations?.fil,
+          userPropNames
+        )
       });
     } else {
       setKPIType(item.type_of_query === 1 ? 'default' : 'derived_kpi');
@@ -288,7 +297,7 @@ function CustomKPI({
   };
 
   const periodQueryList = () => {
-    const tmpRes = customKPIConfig.result?.filter(
+    const tmpRes = customKPIConfig?.result?.filter(
       (e) => e.obj_ty === selKPICategory
     );
     let tmpOptions = (tmpRes && tmpRes[0]) || [];
@@ -448,7 +457,7 @@ function CustomKPI({
         value: matchEventName(item?.transformations?.agPr)
       });
       setGlobalFiltersOption(
-        getStateFromKPIFilters(item?.transformations?.fil)
+        getStateFromKPIFilters(item?.transformations?.fil, userPropNames)
       );
     } else if (item?.type_of_query === 2) {
       setQueries(
@@ -462,7 +471,7 @@ function CustomKPI({
         data_type: item?.transformations?.agPrTy
       });
       setEventGlobalFiltersOption(
-        getStateFromKPIFilters(item?.transformations?.fil)
+        getStateFromKPIFilters(item?.transformations?.fil, userPropNames)
       );
       setEventName(item?.transformations?.evNm);
     }
@@ -554,11 +563,8 @@ function CustomKPI({
           agPr2: timePeriodRangeProperties[1].value,
           agPrTy: 'datetime',
           agPrTy2: 'datetime',
-          fil: EventfilterValues?.globalFilters
-            ? getEventsWithPropertiesCustomKPI(
-                EventfilterValues?.globalFilters,
-                ''
-              )
+          fil: filterValues?.globalFilters
+            ? getEventsWithPropertiesCustomKPI(filterValues?.globalFilters, '')
             : [],
           daFie: data.kpi_dateField
         }
@@ -805,7 +811,7 @@ function CustomKPI({
           </Col>
         </Row>
       )}
-      {EventfilterDDValues && (
+      {filterDDValues && (
         <Row className='my-8'>
           <Col span={18}>
             <div className='border-top--thin-2 border-bottom--thin-2 pt-5 pb-5'>
@@ -813,22 +819,23 @@ function CustomKPI({
                 FILTER BY
               </Text>
 
-              {mode === true ? (
-                <GLobalFilter
-                  filters={getStateFromKPIFilters(
-                    viewKPIDetails?.transformations?.fil
-                  )}
-                  setGlobalFilters={setGlobalFiltersOption}
-                  delFilter={false}
-                  viewMode={pageMode === 'View'}
-                />
-              ) : (
-                <EventFilter
-                  filters={EventfilterValues?.globalFilters}
-                  setGlobalFilters={setEventGlobalFiltersOption}
-                  event={{ label: selEventName }}
-                />
-              )}
+              <GLobalFilter
+                filters={filterValues?.globalFilters}
+                setGlobalFilters={setGlobalFiltersOption}
+                delFilter={false}
+                viewMode={mode}
+                onFiltersLoad={[
+                  () => {
+                    getUserPropertiesV2(activeProject.id, null);
+                  }
+                ]}
+                selectedMainCategory={{
+                  group: selKPICategory,
+                  category: 'events'
+                }}
+                KPIConfigProps={filterDDValues}
+                isSameKPIGrp // To avoid common properties in filter
+              />
             </div>
           </Col>
         </Row>
@@ -1139,7 +1146,8 @@ function CustomKPI({
               </Text>
               <GLobalFilter
                 filters={getStateFromKPIFilters(
-                  viewKPIDetails?.transformations?.fil
+                  viewKPIDetails?.transformations?.fil,
+                  userPropNames
                 )}
                 setGlobalFilters={setGlobalFiltersOption}
                 delFilter={false}
@@ -1815,7 +1823,8 @@ function CustomKPI({
                           </Text>
                           <GLobalFilter
                             filters={getStateFromKPIFilters(
-                              viewKPIDetails?.transformations?.fil
+                              viewKPIDetails?.transformations?.fil,
+                              userPropNames
                             )}
                             setGlobalFilters={setGlobalFiltersOption}
                             delFilter={false}
@@ -1905,7 +1914,10 @@ function CustomKPI({
                                   </Text>
 
                                   <GLobalFilter
-                                    filters={getStateFromKPIFilters(item.fil)}
+                                    filters={getStateFromKPIFilters(
+                                      item.fil,
+                                      userPropNames
+                                    )}
                                     setGlobalFilters={setGlobalFiltersOption}
                                     delFilter={false}
                                     viewMode={pageMode === 'View'}
