@@ -131,6 +131,22 @@ export const formatUserPropertiesToCheckList = (
         };
       })
     : [];
+  // We can do it other way too.
+  // by just reordering the elements of userPropsWithEnableKey => This way would be more better.
+  // OR
+  // we can just unshift the enabled rows in the correct order
+  const matchedPropsInOrder = [];
+  activeProps.forEach((eachProp) => {
+    const ele = userPropsWithEnableKey.find((e) => eachProp === e.prop_name);
+    if (ele) {
+      matchedPropsInOrder.push(ele);
+    }
+  });
 
-  return userPropsWithEnableKey.sort((a, b) => b.enabled - a.enabled);
+  const result = [
+    ...matchedPropsInOrder,
+    ...userPropsWithEnableKey.filter((e) => !e.enabled)
+  ];
+
+  return result;
 };
