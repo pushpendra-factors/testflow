@@ -75,6 +75,7 @@ func main() {
 
 	disableUpdateNextSessionTimestamp := flag.Int("disable_update_next_session_timestamp", 0, "Disable the update next session timestamp. Used for historical runs.")
 	userPropertyUpdateOptProjects := flag.String("user_property_update_opt_projects", "", "")
+	enableTotalSessionPropertiesV2ByProjectID := flag.String("enable_total_session_properties_v2", "", "")
 
 	flag.Parse()
 
@@ -128,6 +129,7 @@ func main() {
 		DisableUpdateNextSessionTimestamp:            *disableUpdateNextSessionTimestamp,
 		RemoveDisabledEventUserPropertiesByProjectID: *removeDisabledEventUserPropertiesByProjectId,
 		UserPropertyUpdateOptProjects:                *userPropertyUpdateOptProjects,
+		EnableTotalSessionPropertiesV2ByProjectID:    *enableTotalSessionPropertiesV2ByProjectID,
 	}
 
 	C.InitConf(config)

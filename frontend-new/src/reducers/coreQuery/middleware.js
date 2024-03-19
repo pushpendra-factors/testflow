@@ -37,7 +37,10 @@ import {
   FETCH_PROPERTY_VALUES_LOADED,
   fetchUserPropertiesActionV2,
   fetchEventUserPropertiesActionV2,
-  fetchEventPropertiesActionV2
+  fetchEventPropertiesActionV2,
+  fetchSpecialEventsMapAction,
+  setSpecialEventsDisplayAction,
+  fetchSpecialEventsAction
 } from './actions';
 import {
   getEventNames,
@@ -70,16 +73,25 @@ export const fetchEventNames = (projectId, isSpecialEvent = false) => {
     return new Promise((resolve, reject) => {
       getEventNames(dispatch, projectId, isSpecialEvent)
         .then((response) => {
-          dispatch(fetchEventsMapAction(response.data.event_names));
           const options = convertToEventOptions(
             response.data.event_names,
             response.data.display_names
           );
-          dispatch(setEventsDisplayAction(response.data.display_names));
-          resolve(dispatch(fetchEventsAction(options)));
+          if (isSpecialEvent) {
+            dispatch(fetchSpecialEventsMapAction(response.data.event_names));
+            dispatch(
+              setSpecialEventsDisplayAction(response.data.display_names)
+            );
+            resolve(dispatch(fetchSpecialEventsAction(options)));
+          } else {
+            dispatch(fetchEventsMapAction(response.data.event_names));
+            dispatch(setEventsDisplayAction(response.data.display_names));
+            resolve(dispatch(fetchEventsAction(options)));
+          }
         })
         .catch((err) => {
           resolve(dispatch(fetchEventsAction([])));
+          resolve(dispatch(fetchSpecialEventsAction([])));
         });
     });
   };

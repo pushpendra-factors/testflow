@@ -3,6 +3,7 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState
 } from 'react';
 import cx from 'classnames';
@@ -138,6 +139,7 @@ function DashboardItem({
   onDeleteDashboardClick
 }) {
   const dispatch = useDispatch();
+  const activeDashboardRef = useRef(null);
   const history = useHistory();
   const activeDashboard = useSelector((state) => selectActiveDashboard(state));
   const dashboards = useSelector((state) => selectDashboardList(state));
@@ -147,6 +149,9 @@ function DashboardItem({
 
   const handleActiveDashboardChange = useCallback(() => {
     const selectedDashboard = dashboards.find((d) => d.id === dashboard.id);
+    if (selectedDashboard.id === activeDashboard.id) {
+      return;
+    }
     if (selectedDashboard.class === 'predefined') {
       history.replace(`${PathUrls.PreBuildDashboard}`);
       dispatch(changeActivePreDashboard(selectedDashboard));
@@ -154,7 +159,7 @@ function DashboardItem({
       history.replace(`${PathUrls.Dashboard}/${selectedDashboard.id}`);
     }
     dispatch(changeActiveDashboard(selectedDashboard));
-  }, [dashboard, dashboards, dispatch]);
+  }, [dashboard, dashboards, dispatch, activeDashboard?.id]);
 
   const isActive =
     activeDashboard?.id === dashboard?.id && areDraftsSelected === false;
@@ -187,8 +192,13 @@ function DashboardItem({
     }
   }, [dashboards, dispatch, isActive]);
 
+  useEffect(() => {
+    activeDashboardRef.current?.scrollIntoView();
+  }, []);
+
   return (
     <DashboardSidebarMenuItem
+      activeDashboardRef={activeDashboardRef}
       text={dashboard.name}
       onClick={handleActiveDashboardChange}
       isActive={isActive}
@@ -311,7 +321,7 @@ function DashboardFoldersLayout({
     } else {
       setExpandedFolders({ [allBoardsFolderId]: true });
     }
-  }, [allBoardsFolderId, dashboardFoldersList, activeDashboard.id]);
+  }, [allBoardsFolderId, dashboardFoldersList, activeDashboard?.id]);
 
   useEffect(() => {
     if (renameFolderState.completed === true) {
@@ -357,7 +367,7 @@ function DashboardFoldersLayout({
         expanded={allBoardsFolderExpanded}
       />
       <ControlledComponent controller={allBoardsFolderExpanded}>
-        {dashboardsByFolderId[allBoardsFolderId].map((dashboard) => (
+        {dashboardsByFolderId[allBoardsFolderId]?.map((dashboard) => (
           <DashboardItem
             setActiveDashboardForFolder={setActiveDashboardForFolder}
             dashboard={dashboard}
@@ -377,7 +387,7 @@ function DashboardFoldersLayout({
             onDeleteFolder={handleDeleteFolder}
           />
           <ControlledComponent controller={expandedFolders[folder.id] === true}>
-            {dashboardsByFolderId[folder.id].map((dashboard) => (
+            {dashboardsByFolderId[folder.id]?.map((dashboard) => (
               <DashboardItem
                 setActiveDashboardForFolder={setActiveDashboardForFolder}
                 dashboard={dashboard}

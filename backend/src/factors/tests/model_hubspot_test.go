@@ -8741,7 +8741,7 @@ func TestHubspotCompanyObjectURL(t *testing.T) {
 	properties := map[string]interface{}{}
 	err = json.Unmarshal(groupUser.Properties.RawMessage, &properties)
 	assert.Nil(t, err)
-	assert.Equal(t, "https://app.hubspot.com/contacts/123/company/1", properties["$hubspot_company_$object_url"])
+	assert.Equal(t, "https://app.hubspot.com/contacts/123123/company/1", properties["$hubspot_company_$object_url"])
 
 	groupUser, status = store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, "2")
 	assert.Equal(t, http.StatusFound, status)
@@ -8749,7 +8749,7 @@ func TestHubspotCompanyObjectURL(t *testing.T) {
 	properties = map[string]interface{}{}
 	err = json.Unmarshal(groupUser.Properties.RawMessage, &properties)
 	assert.Nil(t, err)
-	assert.Equal(t, "https://app.hubspot.com/contacts/123/company/2", properties["$hubspot_company_$object_url"])
+	assert.Equal(t, "https://app.hubspot.com/contacts/123123/company/2", properties["$hubspot_company_$object_url"])
 }
 
 func TestHubspotProjectDistributerFirstTimeSync(t *testing.T) {

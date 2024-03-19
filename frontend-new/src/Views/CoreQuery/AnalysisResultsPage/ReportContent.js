@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useMemo, useContext } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useContext,
+  useReducer
+} from 'react';
 import { useSelector } from 'react-redux';
 import { Spin } from 'antd';
 import get from 'lodash/get';
@@ -46,6 +52,7 @@ const nodata = (
   </div>
 );
 function ReportContent({
+  coreQueryReducerState = undefined,
   resultState,
   queryType,
   setDrawerVisible,
@@ -78,26 +85,29 @@ function ReportContent({
   } = useContext(CoreQueryContext);
 
   const { attrQueries } = useSelector((state) => state.coreQuery);
-  const [errMsg,setErrMsg]=useState('');
+  const [errMsg, setErrMsg] = useState('');
 
+  const chartType = useMemo(() => {
+    let chrtTypes = chartTypes;
+    if (queryType === QUERY_TYPE_EVENT && coreQueryReducerState?.chartTypes) {
+      chrtTypes = coreQueryReducerState?.chartTypes;
+    }
 
-  const chartType = useMemo(
-    () =>
-      getChartType({
-        breakdown,
-        chartTypes,
-        queryType,
-        campaignGroupBy: campaignState?.group_by,
-        attributionModels: attributionsState?.models
-      }),
-    [
+    return getChartType({
       breakdown,
-      campaignState?.group_by,
-      chartTypes,
+      chartTypes: chrtTypes,
       queryType,
-      attributionsState?.models
-    ]
-  );
+      campaignGroupBy: campaignState?.group_by,
+      attributionModels: attributionsState?.models
+    });
+  }, [
+    breakdown,
+    campaignState?.group_by,
+    chartTypes,
+    queryType,
+    attributionsState?.models,
+    coreQueryReducerState
+  ]);
 
   const [currMetricsValue, setCurrMetricsValue] = useState(0);
   const [chartTypeMenuItems, setChartTypeMenuItems] = useState([]);
@@ -140,9 +150,9 @@ function ReportContent({
   if (resultState.error) {
     return (
       <div className='flex justify-center items-center w-full h-full pt-4 pb-4'>
-      <NoDataInTimeRange message={errMsg}/>
-    </div>
-  );
+        <NoDataInTimeRange message={errMsg} />
+      </div>
+    );
   }
 
   if (resultState.apiCallStatus && !resultState.apiCallStatus.required) {

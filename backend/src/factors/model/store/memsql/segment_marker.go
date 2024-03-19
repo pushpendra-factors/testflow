@@ -427,9 +427,9 @@ func checkCategoricalTypeProperty(projectId int64, segmentRule model.QueryProper
 
 		propertyExists = false
 		valueListString := GetValueListFromFile(projectId, segmentRule)
-		valueList := strings.Split(valueListString, ",")
+		valueList := strings.Split(valueListString, " , ")
 		for _, val := range valueList {
-			if U.TrimQuotes(strings.TrimSpace(val)) == propertyValue {
+			if strings.ReplaceAll(U.TrimSingleQuotes(strings.TrimSpace(val)), "\\", "") == propertyValue {
 				propertyExists = true
 			}
 		}
@@ -438,9 +438,9 @@ func checkCategoricalTypeProperty(projectId int64, segmentRule model.QueryProper
 
 		propertyExists = true
 		valueListString := GetValueListFromFile(projectId, segmentRule)
-		valueList := strings.Split(valueListString, ",")
+		valueList := strings.Split(valueListString, " , ")
 		for _, val := range valueList {
-			if U.TrimQuotes(strings.TrimSpace(val)) == propertyValue {
+			if strings.ReplaceAll(U.TrimSingleQuotes(strings.TrimSpace(val)), "\\", "") == propertyValue {
 				propertyExists = false
 			}
 		}

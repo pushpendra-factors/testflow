@@ -419,6 +419,10 @@ func TrimQuotes(str string) string {
 	return strings.TrimSuffix(strings.TrimPrefix(str, "\""), "\"")
 }
 
+func TrimSingleQuotes(str string) string {
+	return strings.TrimSuffix(strings.TrimPrefix(str, "'"), "'")
+}
+
 func GetValueAsString(value interface{}) (string, error) {
 	switch value.(type) {
 	case float32, float64:

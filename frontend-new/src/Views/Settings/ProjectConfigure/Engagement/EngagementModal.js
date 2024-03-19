@@ -100,6 +100,7 @@ function EngagementModal({ visible, onOk, onCancel, event, editMode }) {
             groupAnalysis='events'
             dropdownPlacement='bottom'
             propertiesScope={['event', 'user', 'group']}
+            isSpecialEvent={true}
           />
         </div>
       );
@@ -118,6 +119,7 @@ function EngagementModal({ visible, onOk, onCancel, event, editMode }) {
             dropdownPlacement='bottom'
             propertiesScope={['event', 'user', 'group']}
             viewMode={editMode}
+            isSpecialEvent={true}
           />
         </div>
       );
