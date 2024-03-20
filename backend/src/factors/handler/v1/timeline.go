@@ -403,3 +403,27 @@ func GetUserPropertiesByIDHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, properties)
 }
+
+func GetTopEventsForADomainHandler(c *gin.Context) {
+
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	domainID := c.Params.ByName("id")
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectID,
+		"userId":    domainID,
+	})
+	if projectID == 0 || domainID == "" {
+		logCtx.Error("invalid request params")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid request params"})
+		return
+	}
+
+	properties, status := store.GetStore().GetTopEventsForADomain(projectID, domainID)
+	if status != http.StatusOK {
+		logCtx.Error("status error")
+		c.AbortWithStatusJSON(status, gin.H{"error": "could not fetch events for given domain"})
+		return
+	}
+
+	c.JSON(http.StatusOK, properties)
+}
