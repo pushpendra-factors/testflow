@@ -61,7 +61,7 @@ func CreateChargebeeSubscriptionForCustomer(projectID int64, customerID string, 
 	}
 
 	metadata := make(map[string]interface{})
-	metadata["projectID"] = projectID
+	metadata["projectID"] = fmt.Sprint(projectID)
 
 	res, err := subscriptionAction.CreateWithItems(customerID, &subscription.CreateWithItemsRequestParams{
 		SubscriptionItems: []*subscription.CreateWithItemsSubscriptionItemParams{

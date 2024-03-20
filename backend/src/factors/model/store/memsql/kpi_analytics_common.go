@@ -114,14 +114,20 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQuer
 	}
 
 	gbtRelatedQueryResults, nonGbtRelatedQueryResults, gbtRelatedQueries, nonGbtRelatedQueries := model.SplitQueryResultsIntoGBTAndNonGBT(finalResultantResults, kpiQueryGroup, finalStatusCode)
-	if gbtRelatedQueryResults == nil || len(gbtRelatedQueryResults) == 0 || len(gbtRelatedQueryResults[0].Headers) == 0 ||
-		nonGbtRelatedQueryResults == nil || len(nonGbtRelatedQueryResults) == 0 || len(nonGbtRelatedQueryResults[0].Headers) == 0 {
-		return []model.QueryResult{{}, {}}, finalStatusCode
+	if !C.SkipKpiResultValidation() {
+		if gbtRelatedQueryResults == nil || len(gbtRelatedQueryResults) == 0 || len(gbtRelatedQueryResults[0].Headers) == 0 ||
+			nonGbtRelatedQueryResults == nil || len(nonGbtRelatedQueryResults) == 0 || len(nonGbtRelatedQueryResults[0].Headers) == 0 {
+			return []model.QueryResult{{}, {}}, finalStatusCode
+		}
+	}
+	finalQueryResult := make([]model.QueryResult, 0)
+	var nonGbtRelatedMergedResults, gbtRelatedMergedResults model.QueryResult
+
+	if !C.SkipKpiResultValidation() { // for weekly kpi based alerts
+		gbtRelatedMergedResults = model.MergeQueryResults(gbtRelatedQueryResults, gbtRelatedQueries, kpiTimezoneString, finalStatusCode)
 	}
 
-	finalQueryResult := make([]model.QueryResult, 0)
-	gbtRelatedMergedResults := model.MergeQueryResults(gbtRelatedQueryResults, gbtRelatedQueries, kpiTimezoneString, finalStatusCode)
-	nonGbtRelatedMergedResults := model.MergeQueryResults(nonGbtRelatedQueryResults, nonGbtRelatedQueries, kpiTimezoneString, finalStatusCode)
+	nonGbtRelatedMergedResults = model.MergeQueryResults(nonGbtRelatedQueryResults, nonGbtRelatedQueries, kpiTimezoneString, finalStatusCode)
 	if (!reflect.DeepEqual(model.QueryResult{}, gbtRelatedMergedResults)) {
 		finalQueryResult = append(finalQueryResult, gbtRelatedMergedResults)
 	}

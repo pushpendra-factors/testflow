@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
+	"fmt"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -159,7 +159,7 @@ func (store *MemSQL) GetDisplayablePlanDetails(ppMap model.ProjectPlanMapping, p
 	planDetails.FeatureList = transformedFeatureListJson
 
 	obj := model.DisplayPlanDetails{
-		ProjectID:     ppMap.ProjectID,
+		ProjectID:     fmt.Sprint(ppMap.ProjectID),
 		Plan:          planDetails,
 		DisplayName:   getDisplayNameForPlan(planDetails.Name),
 		AddOns:        transformedOverwrites,
