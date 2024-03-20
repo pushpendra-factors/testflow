@@ -52,7 +52,7 @@ import {
   isComparisonEnabled
 } from 'Views/CoreQuery/utils';
 import { getQueryOptionsFromEquivalentQuery } from './utils';
-import { CoreQueryState, QueryParams } from './types';
+import { CoreQueryState, QueryParams, ResultState } from './types';
 import { QUERY_UPDATED, SHOW_ANALYTICS_RESULT } from 'Reducers/types';
 import CoreQueryReducer from 'Views/CoreQuery/CoreQueryReducer';
 import {
@@ -102,6 +102,8 @@ const CoreQuery = () => {
 
   const [savedQueryModal, setSavedQueryModal] = useState(false);
 
+  const [loading, setLoading] = useState(true);
+
   // Local states
   const [coreQueryState, setCoreQueryState] = useState<CoreQueryState>(
     new CoreQueryState()
@@ -124,10 +126,6 @@ const CoreQuery = () => {
     return [];
   }, []);
 
-  useEffect(() => {
-    console.log(coreQueryReducerState);
-  }, [coreQueryReducerState]);
-
   // Use Effects
   useEffect(() => {
     if (!savedQueries || !savedQueries.length) {
@@ -136,19 +134,31 @@ const CoreQuery = () => {
   }, [savedQueries]);
 
   useEffect(() => {
-    if (query_id && query_id != '' && query_type && savedQueries?.length) {
+    if (
+      query_id &&
+      query_id != '' &&
+      query_type &&
+      savedQueries?.length &&
+      !location?.state?.navigatedResultState
+    ) {
       runEventsQueryFromUrl();
     }
-  }, [query_id, query_type, savedQueries]);
+    if (location?.state?.navigatedResultState) {
+      const queryToAdd = getQueryFromHashId();
+      createStateFromResult(queryToAdd);
+    }
+  }, [query_id, query_type, savedQueries, location]);
 
   useEffect(() => {
-    const qState = _.cloneDeep(coreQueryState);
-    qState.queryOptions = {
-      ...qState.queryOptions,
-      groupBy
-    };
-    // setAppliedBreakdowns(groupBy, qState);
-    setCoreQueryState(qState);
+    if (!location?.state?.navigatedResultState) {
+      const qState = _.cloneDeep(coreQueryState);
+      qState.queryOptions = {
+        ...qState.queryOptions,
+        groupBy
+      };
+      // setAppliedBreakdowns(groupBy, qState);
+      setCoreQueryState(qState);
+    }
   }, [groupBy]);
 
   const getQueryFromHashId = () =>
@@ -174,7 +184,7 @@ const CoreQuery = () => {
         payload: equivalentQuery.breakdown
       });
       let queryDateRange;
-      if (navigatedFromDashboard) {
+      if (navigatedFromDashboard && location?.state?.navigatedResultState) {
         queryDateRange = { date_range: dashboardDateRange };
       } else queryDateRange = { date_range: savedDateRange };
 
@@ -248,96 +258,110 @@ const CoreQuery = () => {
     qState.appliedBreakdown = newAppliedBreakdown;
   };
 
+  const createStateFromResult = (
+    queryToAdd: (typeof savedQueries)[0],
+    resultState?: ResultState | null
+  ) => {
+    const equivalentQuery = getStateQueryFromRequestQuery(
+      queryToAdd?.query?.query_group[0]
+    );
+    const queryState = new CoreQueryState();
+    queryState.queryType = QUERY_TYPE_EVENT;
+    queryState.querySaved = { name: queryToAdd.title, id: queryToAdd.id };
+    queryState.requestQuery = queryToAdd?.query?.query_group;
+    queryState.showResult = true;
+    queryState.loading = false;
+    setLoading(false);
+    queryState.queries = equivalentQuery.events;
+    queryState.appliedQueries = equivalentQuery.events.map((elem: any) =>
+      elem.alias ? elem.alias : elem.label
+    );
+    queryState.queryOptions = getQueryOptionsFromEquivalentQuery(
+      queryState.queryOptions,
+      equivalentQuery
+    );
+    queryState.breakdownType =
+      REVERSE_USER_TYPES[queryState.requestQuery[0].ec];
+
+    if (queryState.requestQuery) {
+      updateEventFunnelsState(
+        equivalentQuery,
+        location?.state?.navigatedFromDashboard,
+        queryState
+      );
+      if (queryState.requestQuery.length === 1) {
+        dispatch({
+          type: SET_PERFORMANCE_CRITERIA,
+          payload: REVERSE_USER_TYPES[queryState.requestQuery[0].ec]
+        });
+        dispatch({
+          type: SET_SHOW_CRITERIA,
+          payload: TOTAL_USERS_CRITERIA
+        });
+      } else {
+        dispatch({
+          type: SET_PERFORMANCE_CRITERIA,
+          payload: EACH_USER_TYPE
+        });
+        if (queryState.requestQuery.length === 2) {
+          dispatch({
+            type: SET_SHOW_CRITERIA,
+            payload:
+              queryState.requestQuery[0].ty === TYPE_EVENTS_OCCURRENCE
+                ? TOTAL_EVENTS_CRITERIA
+                : TOTAL_USERS_CRITERIA
+          });
+        } else if (queryState.requestQuery.query.length === 3) {
+          dispatch({
+            type: SET_SHOW_CRITERIA,
+            payload: ACTIVE_USERS_CRITERIA
+          });
+        } else {
+          dispatch({
+            type: SET_SHOW_CRITERIA,
+            payload: FREQUENCY_CRITERIA
+          });
+        }
+      }
+    }
+
+    dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
+    dispatch({
+      type: SET_COMPARISON_SUPPORTED,
+      payload: isComparisonEnabled(
+        queryState.queryType,
+        equivalentQuery.events,
+        equivalentQuery.breakdown,
+        models
+      )
+    });
+
+    setAppliedBreakdowns(equivalentQuery.breakdown, queryState);
+
+    // updateAppliedBreakdown();
+    dispatch({
+      type: UPDATE_PIVOT_CONFIG,
+      payload: { ...DEFAULT_PIVOT_CONFIG }
+    });
+    dispatch({ type: SET_SAVED_QUERY_SETTINGS, payload: EMPTY_OBJECT });
+
+    if (resultState) {
+      updateResultFromSavedQuery(resultState, queryState);
+    }
+    if (location?.state?.navigatedResultState && !resultState) {
+      queryState.resultState = location.state.navigatedResultState;
+    }
+
+    setCoreQueryState(queryState);
+  };
+
   const runEventsQueryFromUrl = () => {
     const queryToAdd = getQueryFromHashId();
     if (queryToAdd) {
       // updateResultState({ ...initialState, loading: true });
       getEventsData(active_project.id, null, null, false, query_id).then(
         (res) => {
-          const equivalentQuery = getStateQueryFromRequestQuery(
-            queryToAdd?.query?.query_group[0]
-          );
-          const queryState = new CoreQueryState();
-          queryState.queryType = QUERY_TYPE_EVENT;
-          queryState.querySaved = { name: queryToAdd.title, id: queryToAdd.id };
-          queryState.requestQuery = queryToAdd?.query?.query_group;
-          queryState.showResult = true;
-          queryState.loading = false;
-          queryState.queries = equivalentQuery.events;
-          queryState.appliedQueries = equivalentQuery.events.map((elem: any) =>
-            elem.alias ? elem.alias : elem.label
-          );
-          queryState.queryOptions = getQueryOptionsFromEquivalentQuery(
-            queryState.queryOptions,
-            equivalentQuery
-          );
-          queryState.breakdownType =
-            REVERSE_USER_TYPES[queryState.requestQuery[0].ec];
-
-          if (queryState.requestQuery) {
-            updateEventFunnelsState(
-              equivalentQuery,
-              location?.state?.navigatedFromDashboard,
-              queryState
-            );
-            if (queryState.requestQuery.length === 1) {
-              dispatch({
-                type: SET_PERFORMANCE_CRITERIA,
-                payload: REVERSE_USER_TYPES[queryState.requestQuery[0].ec]
-              });
-              dispatch({
-                type: SET_SHOW_CRITERIA,
-                payload: TOTAL_USERS_CRITERIA
-              });
-            } else {
-              dispatch({
-                type: SET_PERFORMANCE_CRITERIA,
-                payload: EACH_USER_TYPE
-              });
-              if (queryState.requestQuery.length === 2) {
-                dispatch({
-                  type: SET_SHOW_CRITERIA,
-                  payload:
-                    queryState.requestQuery[0].ty === TYPE_EVENTS_OCCURRENCE
-                      ? TOTAL_EVENTS_CRITERIA
-                      : TOTAL_USERS_CRITERIA
-                });
-              } else if (queryState.requestQuery.query.length === 3) {
-                dispatch({
-                  type: SET_SHOW_CRITERIA,
-                  payload: ACTIVE_USERS_CRITERIA
-                });
-              } else {
-                dispatch({
-                  type: SET_SHOW_CRITERIA,
-                  payload: FREQUENCY_CRITERIA
-                });
-              }
-            }
-          }
-
-          dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
-          dispatch({
-            type: SET_COMPARISON_SUPPORTED,
-            payload: isComparisonEnabled(
-              queryState.queryType,
-              equivalentQuery.events,
-              equivalentQuery.breakdown,
-              models
-            )
-          });
-
-          setAppliedBreakdowns(equivalentQuery.breakdown, queryState);
-
-          // updateAppliedBreakdown();
-          dispatch({
-            type: UPDATE_PIVOT_CONFIG,
-            payload: { ...DEFAULT_PIVOT_CONFIG }
-          });
-          dispatch({ type: SET_SAVED_QUERY_SETTINGS, payload: EMPTY_OBJECT });
-
-          updateResultFromSavedQuery(res, queryState);
-          setCoreQueryState(queryState);
+          createStateFromResult(queryToAdd, res);
         },
         (err) => {
           logger.error(err);
@@ -440,6 +464,7 @@ const CoreQuery = () => {
       setAppliedBreakdowns(coreQueryState.queryOptions?.groupBy, qState);
       qState.showResult = true;
       qState.loading = true;
+      setLoading(true);
       configActionsOnRunningQuery(false, qState);
       qState.requestQuery = query;
       qState.resultState = { ...qState.resultState, loading: true };
@@ -479,6 +504,7 @@ const CoreQuery = () => {
       }
 
       qState.loading = false;
+      setLoading(false);
       qState.resultState = {
         ...qState.resultState,
         data: resultantData,
@@ -500,6 +526,7 @@ const CoreQuery = () => {
       logger.error(err);
       const qState = { ...coreQueryState };
       qState.loading = false;
+      setLoading(false);
       qState.resultState = {
         ...qState.resultState,
         loading: false,
@@ -543,7 +570,7 @@ const CoreQuery = () => {
       dateType
     };
 
-    const qState = coreQueryState.getCopy();
+    const qState = _.cloneDeep(coreQueryState);
 
     if (!isCompareDate) {
       qState.queryOptions = {
@@ -630,7 +657,7 @@ const CoreQuery = () => {
 
   const setQueries = useCallback(
     (q: any[]) => {
-      const qState = coreQueryState.getCopy();
+      const qState = _.cloneDeep(coreQueryState);
       qState.queries = q;
       setCoreQueryState(qState);
     },
@@ -638,7 +665,7 @@ const CoreQuery = () => {
   );
 
   const setQueryOptions = (opts: {} | any) => {
-    const qState = coreQueryState.getCopy();
+    const qState = _.cloneDeep(coreQueryState);
     if (opts?.globalFilters) {
       qState.queryOptions.globalFilters = opts.globalFilters;
     }
@@ -652,7 +679,7 @@ const CoreQuery = () => {
         coreQueryState.queryType === QUERY_TYPE_EVENT ||
         coreQueryState.queryType === QUERY_TYPE_KPI
       ) {
-        const qState = coreQueryState.getCopy();
+        const qState = _.cloneDeep(coreQueryState);
         const appliedDateRange = {
           ...coreQueryState.queryOptions.date_range,
           frequency
