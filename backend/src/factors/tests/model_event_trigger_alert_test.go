@@ -2241,10 +2241,11 @@ func TestCacheAlertForCurrentSegment(t *testing.T) {
             "en": "user",
             "pty": "categorical",
             "ena": "$hubspot_contact_created",
-            "eni": 1
+            "eni": "1"
         }
     ]`)
 	assert.Nil(t, err)
+	assert.NotEqual(t, breakdownProps, "")
 
 	// Create segment marker data
 	SegmentMarkerTest(t, project, agent, r)
@@ -2328,7 +2329,7 @@ func TestCacheAlertForCurrentSegment(t *testing.T) {
 
 	getSegement, status := store.GetStore().GetAllSegments(project.ID)
 	assert.Equal(t, http.StatusFound, status)
-	assert.Equal(t, 1, len(getSegement["$domains"]))
+	assert.Equal(t, 11, len(getSegement["$domains"]))
 
 	nameFound := false
 
@@ -2343,21 +2344,75 @@ func TestCacheAlertForCurrentSegment(t *testing.T) {
 	segmentID := getSegement["$domains"][0].Id
 	assert.NotEqual(t, segmentID, "")
 
-	// create alert
-	rName1 := U.RandomString(5)
-	alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
-		Title: rName1, Event: segmentID, Message: "Remember", MessageProperty: &postgres.Jsonb{},
-		DontRepeatAlerts: true, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{RawMessage: breakdownProps}, AlertLimit: 5, SetAlertLimit: true,
-		Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, Filter: []model.QueryProperty{
-			{Entity: "", Type: "categorical", Property: "campaign", Operator: "equals", LogicalOp: "AND"},
-		}}, agent.UUID, agent.UUID, false, nil)
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.Empty(t, errMsg)
-	assert.NotNil(t, alert)
-
 	domainID := "domain1id.com"
-	t.Run("FindAndCacheAlertForCurrentSegment:valid", func(t *testing.T) {
-		store.GetStore().FindAndCacheAlertForCurrentSegment(project.ID, segmentID, domainID, model.ACTION_SEGMENT_ENTRY)
+	t.Run("FindAndCacheAlertForCurrentSegment:ENTRY", func(t *testing.T) {
+		rName1 := U.RandomString(5)
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
+			Title: rName1, Event: segmentID, Message: "Remember", MessageProperty: &postgres.Jsonb{},
+			DontRepeatAlerts: false, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
+			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, ActionPerformed: model.ACTION_SEGMENT_ENTRY},
+			agent.UUID, agent.UUID, false, nil)
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.Empty(t, errMsg)
+		assert.NotNil(t, alert)
+
+		errCode, err := store.GetStore().FindAndCacheAlertForCurrentSegment(project.ID, segmentID, domainID, model.ACTION_SEGMENT_ENTRY)
+		assert.Equal(t, http.StatusAccepted, errCode)
+		assert.Empty(t, err)
+
+		errCode, err = store.GetStore().FindAndCacheAlertForCurrentSegment(project.ID, segmentID, domainID, model.ACTION_SEGMENT_EXIT)
+		assert.Equal(t, http.StatusNotFound, errCode)
+		assert.NotEmpty(t, err)
+
+		errCode, errMsg = store.GetStore().DeleteEventTriggerAlert(project.ID, alert.ID)
+		assert.Equal(t, http.StatusAccepted, errCode)
+		assert.Empty(t, errMsg)
+	})
+
+	t.Run("FindAndCacheAlertForCurrentSegment:EXIT", func(t *testing.T) {
+		rName1 := U.RandomString(5)
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
+			Title: rName1, Event: segmentID, Message: "Remember", MessageProperty: &postgres.Jsonb{},
+			DontRepeatAlerts: false, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
+			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, ActionPerformed: model.ACTION_SEGMENT_EXIT},
+			agent.UUID, agent.UUID, false, nil)
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.Empty(t, errMsg)
+		assert.NotNil(t, alert)
+
+		errCode, err := store.GetStore().FindAndCacheAlertForCurrentSegment(project.ID, segmentID, domainID, model.ACTION_SEGMENT_EXIT)
+		assert.Equal(t, http.StatusAccepted, errCode)
+		assert.Empty(t, err)
+
+		errCode, err = store.GetStore().FindAndCacheAlertForCurrentSegment(project.ID, segmentID, domainID, model.ACTION_SEGMENT_ENTRY)
+		assert.Equal(t, http.StatusNotFound, errCode)
+		assert.NotEmpty(t, err)
+
+		errCode, errMsg = store.GetStore().DeleteEventTriggerAlert(project.ID, alert.ID)
+		assert.Equal(t, http.StatusAccepted, errCode)
+		assert.Empty(t, errMsg)
+	})
+
+	t.Run("FindAndCacheAlertForCurrentSegment:EVENT", func(t *testing.T) {
+		rName1 := U.RandomString(5)
+		alert, errCode, errMsg := store.GetStore().CreateEventTriggerAlert(agent.UUID, "", project.ID, &model.EventTriggerAlertConfig{
+			Title: rName1, Event: segmentID, Message: "Remember", MessageProperty: &postgres.Jsonb{},
+			DontRepeatAlerts: false, CoolDownTime: 1800, BreakdownProperties: &postgres.Jsonb{}, AlertLimit: 5, SetAlertLimit: true,
+			Slack: true, SlackChannels: &postgres.Jsonb{RawMessage: slackChannelJson}, ActionPerformed: model.ACTION_EVENT_PERFORMED},
+			agent.UUID, agent.UUID, false, nil)
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.Empty(t, errMsg)
+		assert.NotNil(t, alert)
+
+		errCode, err := store.GetStore().FindAndCacheAlertForCurrentSegment(project.ID, segmentID, domainID, model.ACTION_SEGMENT_EXIT)
+		assert.Equal(t, http.StatusNotFound, errCode)
+		assert.NotEmpty(t, err)
+
+		errCode, err = store.GetStore().FindAndCacheAlertForCurrentSegment(project.ID, segmentID, domainID, model.ACTION_SEGMENT_ENTRY)
+		assert.Equal(t, http.StatusNotFound, errCode)
+		assert.NotEmpty(t, err)
+
+		errCode, errMsg = store.GetStore().DeleteEventTriggerAlert(project.ID, alert.ID)
 		assert.Equal(t, http.StatusAccepted, errCode)
 		assert.Empty(t, errMsg)
 	})
