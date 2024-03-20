@@ -463,7 +463,8 @@ function WidgetCard({
       state: {
         query: { ...unit.query, settings: unit.query.settings },
         global_search: true,
-        navigatedFromDashboard: unit
+        navigatedFromDashboard: unit,
+        navigatedResultState: resultState
       }
     });
   }, [
