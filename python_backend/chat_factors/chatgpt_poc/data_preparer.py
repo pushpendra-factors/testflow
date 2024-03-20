@@ -80,7 +80,7 @@ def replace_two_by_one(x, key='qe'):
         if k2 in x:
             v2 = x[k2]
             del x[k2]
-            x[key] = f"({v1}, {v2})"
+            x[key] = f"{v1}, {v2}"
         else:
             x[key] = v1
 
@@ -109,8 +109,8 @@ def get_reduction_map():
                  'time_range': 'time',
                  'start_time': 'st',
                  'end_time': 'et',
-                 'default': '-',
-                 'none': '-'}
+                 'default': '',
+                 'none': ''}
     return reduction_map
 
 
@@ -123,10 +123,10 @@ def reduce_completion(x):
         replace_two_by_one(x, key=k)
     del x['st'], x['et']
     x = json.dumps(x)
-    x = x.replace('"', '')
-    x = x.replace("'", '')
-    x = x.replace(' ', '')
-    x = x.replace('$', '')
+    #x = x.replace('"', '')
+    #x = x.replace("'", '')
+    #x = x.replace(' ', '')
+    #x = x.replace('$', '')
     return x
 
 
