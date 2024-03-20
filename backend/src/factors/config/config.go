@@ -356,6 +356,7 @@ type Configuration struct {
 	MailModoTriggerCampaignAPIKey                        string
 	AddCRMObjectURLPropertyByProjectID                   string
 	EnableTotalSessionPropertiesV2ByProjectID            string
+	SkipKpiResultValidation                              bool
 }
 
 type Services struct {
@@ -2955,6 +2956,10 @@ func GetChargebeeApiKey() string {
 
 func GetChargebeeSiteName() string {
 	return configuration.ChargebeeSiteName
+}
+
+func SkipKpiResultValidation() bool {
+	return configuration.SkipKpiResultValidation
 }
 
 func EnableSixSignalGroupByProjectID(projectID int64) bool {
