@@ -8,7 +8,11 @@ import {
 } from '../types';
 import { defaultState } from './constants';
 
-export default function (state = defaultState, action) {
+export type DashboardTemplatesControllerType = typeof defaultState;
+export default function (
+  state: typeof defaultState = defaultState,
+  action = { type: '', payload: {} }
+) {
   switch (action.type) {
     case NEW_DASHBOARD_TEMPLATES_MODAL_OPEN:
       return {
@@ -18,7 +22,8 @@ export default function (state = defaultState, action) {
     case NEW_DASHBOARD_TEMPLATES_MODAL_CLOSE:
       return {
         ...state,
-        isNewDashboardTemplateModal: false
+        isNewDashboardTemplateModal: false,
+        pickedFirstTemplate: null
       };
     case ADD_DASHBOARD_MODAL_OPEN:
       return {
