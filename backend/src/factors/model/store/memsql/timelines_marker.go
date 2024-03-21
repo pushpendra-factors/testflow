@@ -298,6 +298,12 @@ func (store *MemSQL) GetPreviewDomainsListByProjectId(projectID int64, payload m
 	// calculate limit to fetch total number of domains
 	limitVal := C.DomainsToProcessForPreview() * runLimit
 
+	// set listing limit to 1000 in case of all accounts listing
+	if len(payload.Query.EventsWithProperties) == 0 && len(payload.Query.GlobalUserProperties) == 0 {
+		limitAcc = 1000
+		limitVal = 1000
+	}
+
 	domainIDs, status := store.GetAllDomainsByProjectID(projectID, domainGroupID, limitVal,
 		payload.SearchFilter, true)
 
