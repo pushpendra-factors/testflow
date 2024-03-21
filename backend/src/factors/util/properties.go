@@ -1620,7 +1620,7 @@ var STANDARD_EVENTS_DISPLAY_NAMES = map[string]string{
 	"$offline_touch_point":               "Offline Touchpoint",
 	"$leadsquared_lead_created":          "Lead Created",
 	"$leadsquared_lead_updated":          "Lead Updated",
-	EVENT_NAME_PAGE_VIEW:                 "Page View",
+	EVENT_NAME_PAGE_VIEW:                 "Any page view",
 	EVENT_NAME_CLICKED_EMAIL:             "Clicked Email",
 	SEN_ALL_EVENTS:                       SEN_ALL_EVENTS_DISPLAY_STRING,
 	EVENT_NAME_FORM_FILL:                 "Form Fills",
