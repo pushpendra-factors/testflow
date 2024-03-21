@@ -9,17 +9,21 @@ import { Button, Col, message, notification, Row } from 'antd';
 import { useHistory, useParams } from 'react-router-dom';
 import { useSelector, useDispatch, connect } from 'react-redux';
 import _ from 'lodash';
-import { saveQuery, updateQuery } from 'Reducers/coreQuery/services';
-import { isStringLengthValid } from 'Utils/global';
-import { QUERY_CREATED, QUERY_UPDATED } from 'Reducers/types';
+import factorsai from 'factorsai';
+import {
+  saveQuery,
+  updateQuery,
+  deleteReport
+} from 'Reducers/coreQuery/services';
+import { isStringLengthValid, EMPTY_ARRAY } from 'Utils/global';
+import { QUERY_CREATED, QUERY_UPDATED, QUERY_DELETED } from 'Reducers/types';
 import { saveQueryToDashboard } from 'Reducers/dashboard/services';
 import { fetchWeeklyIngishtsMetaData } from 'Reducers/insights';
 import {
   QUERY_TYPE_ATTRIBUTION,
   QUERY_TYPE_EVENT,
-  QUERY_TYPE_FUNNEL
+  apiChartAnnotations
 } from 'Utils/constants';
-import { EMPTY_ARRAY } from 'Utils/global';
 import { CoreQueryContext } from '../../contexts/CoreQueryContext';
 import SaveQueryModal from './saveQueryModal';
 import {
@@ -32,17 +36,12 @@ import {
   TOGGLE_DELETE_MODAL
 } from './saveQuery.constants';
 import SaveQueryReducer from './saveQuery.reducer';
-
-import factorsai from 'factorsai';
 import QueryActions from './QueryActions';
 import { getQuery } from './saveQuery.helpers';
 import AddToDashboardModal from './AddToDashboardModal';
-import { QUERY_DELETED } from '../../reducers/types';
 import DeleteQueryModal from '../DeleteQueryModal';
 import { getErrorMessage } from '../../utils/dataFormatter';
-import { deleteReport } from '../../reducers/coreQuery/services';
 import { getChartType } from '../../Views/CoreQuery/AnalysisResultsPage/analysisResultsPage.helpers';
-import { apiChartAnnotations } from '../../utils/constants';
 import { isPivotSupported } from '../../utils/chart.helpers';
 import ShareToEmailModal from '../ShareToEmailModal';
 import ShareToSlackModal from '../ShareToSlackModal';
@@ -80,6 +79,11 @@ function SaveQuery({
 
   const history = useHistory();
   const { query_id: urlId } = useParams();
+
+  const findIdFromUrl = useCallback(
+    (elem) => elem.id === savedQueryId || elem.id_text === urlId,
+    [savedQueryId]
+  );
 
   const [showShareToEmailModal, setShowShareToEmailModal] = useState(false);
   const [showShareToSlackModal, setShowShareToSlackModal] = useState(false);
@@ -368,7 +372,7 @@ function SaveQuery({
           setQuerySaved({ name: title, id: res.data.id });
 
           if (queryType === QUERY_TYPE_EVENT && res?.data?.id_text) {
-            history.replace('/analyse/event/' + res.data.id_text);
+            history.replace(`/analyse/event/${res.data.id_text}`);
           }
 
           // if (queryType === QUERY_TYPE_FUNNEL && res?.data?.id_text) {
@@ -390,6 +394,8 @@ function SaveQuery({
             title,
             settings: updatedSettings
           };
+
+          const savedId = savedQueryId || urlId;
 
           await updateQuery(active_project.id, savedId, reqBody);
 
@@ -434,7 +440,7 @@ function SaveQuery({
         factorsai.track(activeAction, {
           email_id: agent_details?.email,
           query_type: queryType,
-          saved_query_id: savedQueryId ? savedQueryId : urlId,
+          saved_query_id: savedQueryId ?? urlId,
           query_title: title,
           project_id: active_project.id,
           project_name: active_project.name
@@ -544,7 +550,7 @@ function SaveQuery({
 
       const reqBody = {
         title: queryGettingUpdated?.query?.title || queryGettingUpdated?.title,
-        query: query,
+        query,
         settings: updatedSettings
       };
 
@@ -654,22 +660,20 @@ function SaveQuery({
   const handleEmailClick = ({ data, frequency, onSuccess }) => {
     updateLocalReducer({ type: TOGGLE_APIS_CALLED });
 
-    let queryData = undefined;
+    let queryData;
     if (savedQueryId || urlId) {
       queryData = savedQueries.find(findIdFromUrl);
     }
 
     let emails = [];
     if (data?.emails) {
-      emails = data.emails.map((item) => {
-        return item.email;
-      });
+      emails = data.emails.map((item) => item.email);
     }
     if (data.email) {
       emails.push(data.email);
     }
 
-    let payload = {
+    const payload = {
       alert_name: queryData?.title || data?.subject,
       alert_type: 3,
       // "query_id": savedQueryId,
@@ -681,7 +685,7 @@ function SaveQuery({
       alert_configuration: {
         email_enabled: true,
         slack_enabled: false,
-        emails: emails,
+        emails,
         slack_channels_and_user_groups: {}
       }
     };
@@ -694,7 +698,7 @@ function SaveQuery({
         dateFromTo,
         overrideDate
       )
-        .then((r) => {
+        .then(() => {
           notification.success({
             message: 'Report Sent Successfully',
             description: 'Report has been sent to the selected emails',
@@ -706,7 +710,7 @@ function SaveQuery({
         });
     } else {
       createAlert(active_project.id, payload, savedQueryId)
-        .then((r) => {
+        .then(() => {
           notification.success({
             message: 'Report Saved Successfully',
             description: 'Report will be sent on the specified date.',
@@ -721,13 +725,10 @@ function SaveQuery({
     onSuccess();
   };
 
-  const findIdFromUrl = (elem) =>
-    elem.id === savedQueryId || elem.id_text === urlId;
-
   const handleSlackClick = ({ data, frequency, onSuccess }) => {
     updateLocalReducer({ type: TOGGLE_APIS_CALLED });
 
-    let queryData = undefined;
+    let queryData;
     if (savedQueryId || urlId) {
       queryData = savedQueries.find(findIdFromUrl);
     }
@@ -740,7 +741,7 @@ function SaveQuery({
       slackChannels = { ...slackChannels, [key]: value };
     }
 
-    let payload = {
+    const payload = {
       alert_name: queryData?.title || data?.subject,
       alert_type: 3,
       // "query_id": savedQueryId,
@@ -765,7 +766,7 @@ function SaveQuery({
         dateFromTo,
         overrideDate
       )
-        .then((r) => {
+        .then(() => {
           notification.success({
             message: 'Report Sent Successfully',
             description: 'Report has been sent to the selected Slack channels',
@@ -778,7 +779,7 @@ function SaveQuery({
     } else {
       const savedId = savedQueryId || urlId;
       createAlert(active_project.id, payload, savedId)
-        .then((r) => {
+        .then(() => {
           notification.success({
             message: 'Report Saved Successfully',
             description: 'Report will be sent on the specified date.',
@@ -862,42 +863,38 @@ function SaveQuery({
           title={null}
           visible={showShareToSlackModal}
           footer={null}
-          centered={true}
-          mask={true}
+          centered
+          mask
           maskClosable={false}
           maskStyle={{ backgroundColor: 'rgb(0 0 0 / 70%)' }}
-          closable={true}
+          closable
           isLoading={apisCalled}
           onCancel={() => setShowShareToSlackModal(false)}
-          className={`fa-modal--regular`}
-          width={'470px'}
+          className='fa-modal--regular'
+          width='470px'
         >
-          <div className={'m-0 mb-2'}>
-            <Row className={'m-0'}>
+          <div className='m-0 mb-2'>
+            <Row className='m-0'>
               <Col>
-                <SVG
-                  name={'Slack'}
-                  size={25}
-                  extraClass={'inline mr-2 -mt-2'}
-                />
+                <SVG name='Slack' size={25} extraClass='inline mr-2 -mt-2' />
                 <Text
-                  type={'title'}
+                  type='title'
                   level={5}
-                  weight={'bold'}
-                  extraClass={'inline m-0'}
+                  weight='bold'
+                  extraClass='inline m-0'
                 >
                   Slack Integration
                 </Text>
               </Col>
             </Row>
-            <Row className={'m-0 mt-4'}>
+            <Row className='m-0 mt-4'>
               <Col>
                 <Text
-                  type={'title'}
+                  type='title'
                   level={6}
-                  color={'grey-2'}
-                  weight={'regular'}
-                  extraClass={'m-0'}
+                  color='grey-2'
+                  weight='regular'
+                  extraClass='m-0'
                 >
                   Slack is not integrated, Do you want to integrate with your
                   slack account now?
@@ -905,17 +902,17 @@ function SaveQuery({
               </Col>
             </Row>
             <Col>
-              <Row justify='end' className={'w-full mb-1 mt-4'}>
-                <Col className={'mr-2'}>
+              <Row justify='end' className='w-full mb-1 mt-4'>
+                <Col className='mr-2'>
                   <Button
-                    type={'default'}
+                    type='default'
                     onClick={() => setShowShareToSlackModal(false)}
                   >
                     Cancel
                   </Button>
                 </Col>
-                <Col className={'mr-2'}>
-                  <Button type={'primary'} onClick={onConnectSlack}>
+                <Col className='mr-2'>
+                  <Button type='primary' onClick={onConnectSlack}>
                     Connect to slack
                   </Button>
                 </Col>
