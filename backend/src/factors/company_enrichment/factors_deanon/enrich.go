@@ -128,12 +128,22 @@ HandleAccountLimitAlert handles the email alerts for account limit if it exceeds
 	Returns :
 		- http.StatusOK, nil : Successful Match and Execute.
 		- http.BadRequest, error : Successful Match but Execute Failed.
-		- http.StatusForbidden, error : Match Failed.
+		- http.StatusForbidden, error : Match Failed/Email blocked or unsubscribed.
 		- http.StatusInternalServerError, error: error in getting or setting internal data.
 */
 func (fd *FactorsDeanon) HandleAccountLimitAlert(projectId int64, client HTTPClient) (int, error) {
 
 	logCtx := log.WithField("project_id", projectId)
+
+	email, errCode := store.GetStore().GetProjectAgentLatestAdminEmailByProjectId(projectId)
+	if errCode != http.StatusFound {
+		return http.StatusInternalServerError, errors.New("failed fetching admin email by projectId")
+	}
+
+	isEmailAllowed := model.IsReceipentAllowedMailmodo(email, EMAIL_TYPE_TRANSACTIONAL)
+	if !isEmailAllowed {
+		return http.StatusForbidden, nil
+	}
 
 	timeZone, errCode := store.GetStore().GetTimezoneForProject(projectId)
 	if errCode != http.StatusFound {
@@ -152,11 +162,6 @@ func (fd *FactorsDeanon) HandleAccountLimitAlert(projectId int64, client HTTPCli
 	}
 	fullLimitExceeded := FullAccountLimitExceeded{
 		Client: client,
-	}
-
-	email, errCode := store.GetStore().GetProjectAgentLatestAdminEmailByProjectId(projectId)
-	if errCode != http.StatusFound {
-		return http.StatusInternalServerError, errors.New("failed fetching admin email by projectId")
 	}
 
 	payloadJSON, err := json.Marshal(model.MailmodoTriggerCampaignRequestPayload{ReceiverEmail: email, Data: map[string]interface{}{"limit_consumed": count}})
