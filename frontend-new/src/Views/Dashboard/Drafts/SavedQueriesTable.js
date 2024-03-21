@@ -68,8 +68,8 @@ const columns = [
               created_by_user.email.split('@')[1] === 'factors.ai'
                 ? 'https://s3.amazonaws.com/www.factors.ai/assets/img/product/factors-icon.svg'
                 : !!created_by_user?.image
-                ? created_by_user?.image
-                : 'assets/avatar/avatar.png'
+                  ? created_by_user?.image
+                  : 'assets/avatar/avatar.png'
             }
             size={24}
             className={'mr-2'}
@@ -132,8 +132,14 @@ const SavedQueriesTable = ({
   const handleRowClick = (record) => {
     const query = queriesState.data.find((query) => query.id === record.key);
     if (query != null) {
+      let analyseQueryParamsPath = '/analyse';
+      if (query?.query?.query_group?.[0]?.cl === 'events') {
+        analyseQueryParamsPath =
+          analyseQueryParamsPath + '/events/' + query.id_text;
+      }
+
       history.push({
-        pathname: '/analyse',
+        pathname: analyseQueryParamsPath,
         state: {
           query,
           global_search: true,
