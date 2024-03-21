@@ -132,6 +132,7 @@ func GetSubscriptionDetailsHander(c *gin.Context) {
 	subscription.Status = string(res.Status)
 	subscription.RenewsOn = time.Unix(res.NextBillingAt, 0)
 	subscription.BillingPeriodUnit = string(res.BillingPeriodUnit)
+	subscription.BillingPeriod = res.BillingPeriod
 
 	for _, item := range res.SubscriptionItems {
 		subscriptionDetails = append(subscriptionDetails, model.SubscriptionDetail{
