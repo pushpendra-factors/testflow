@@ -529,8 +529,7 @@ func (store *MemSQL) GetDomainDetailsByID(projectID int64, id string, domGroupID
 }
 
 // get all domains to run marker for
-func (store *MemSQL) GetAllDomainsByProjectID(projectID int64, domainGroupID int, limitVal int,
-	searchFilter []string, isPreviewQuery bool) ([]string, int) {
+func (store *MemSQL) GetAllDomainsByProjectID(projectID int64, domainGroupID int, limitVal int) ([]string, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"domain_id":  domainGroupID,
@@ -539,8 +538,20 @@ func (store *MemSQL) GetAllDomainsByProjectID(projectID int64, domainGroupID int
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	var domainIDs []string
-	query, queryParams := getLatestDomainsByProjectIDQuery(projectID, domainGroupID, limitVal,
-		searchFilter, isPreviewQuery)
+	query := fmt.Sprintf(`SELECT 
+	group_%d_user_id 
+  FROM 
+	users 
+  WHERE 
+	project_id = ? 
+	AND group_%d_user_id IS NOT NULL 
+	AND source != ?
+  GROUP BY 
+	group_%d_user_id 
+  ORDER BY MAX(properties_updated_timestamp) DESC
+  LIMIT 
+	%d;`, domainGroupID, domainGroupID, domainGroupID, limitVal)
+	queryParams := []interface{}{projectID, model.UserSourceDomains}
 
 	db := C.GetServices().Db
 	rows, err := db.Raw(query, queryParams...).Rows()
@@ -571,8 +582,8 @@ func (store *MemSQL) GetAllDomainsByProjectID(projectID int64, domainGroupID int
 	return domainIDs, http.StatusFound
 }
 
-func getLatestDomainsByProjectIDQuery(projectID int64, domainGroupID int, limitVal int,
-	searchFilter []string, isPreviewQuery bool) (string, []interface{}) {
+func getLatestDomainsByProjectIDQuery(projectID int64, domainGroupID int, limitVal int, filters []model.QueryProperty,
+	searchFilter []string) (string, []interface{}) {
 	queryParams := []interface{}{projectID, model.UserSourceDomains}
 
 	if len(searchFilter) > 0 {
@@ -584,14 +595,20 @@ func getLatestDomainsByProjectIDQuery(projectID int64, domainGroupID int, limitV
 		return query, queryParams
 	}
 
-	var orderByStr string
-	var lastEventCheck string
-	if isPreviewQuery {
-		orderByStr = "MAX(last_event_at) DESC"
-		lastEventCheck = "AND last_event_at IS NOT NULL"
-	} else {
-		orderByStr = "MAX(properties_updated_timestamp) DESC"
+	whereStr, filterParams, err := buildWhereFromProperties(projectID, filters, 0)
+
+	if err != nil && len(filters) > 0 {
+		log.WithFields(log.Fields{"project_id": projectID, "payload": filters}).
+			WithError(err).Error("Failed to form where filter")
 	}
+
+	if whereStr != "" {
+		whereStr = "AND " + whereStr
+		queryParams = append(queryParams, filterParams...)
+	}
+
+	whereStr = strings.ReplaceAll(whereStr, "users.properties", "properties")
+	whereStr = strings.ReplaceAll(whereStr, "user_global_user_properties", "properties")
 
 	query := fmt.Sprintf(`SELECT 
 	group_%d_user_id 
@@ -600,14 +617,58 @@ func getLatestDomainsByProjectIDQuery(projectID int64, domainGroupID int, limitV
   WHERE 
 	project_id = ? 
 	AND group_%d_user_id IS NOT NULL 
-	AND source != ? %s
+	AND source != ? 
+	AND last_event_at IS NOT NULL %s
   GROUP BY 
 	group_%d_user_id 
-  ORDER BY %s
+  ORDER BY MAX(last_event_at) DESC
   LIMIT 
-	%d;`, domainGroupID, domainGroupID, lastEventCheck, domainGroupID, orderByStr, limitVal)
+	%d;`, domainGroupID, domainGroupID, whereStr, domainGroupID, limitVal)
 
 	return query, queryParams
+}
+
+// get all domains to run marker for in preview query
+func (store *MemSQL) GetAllDomainsForPreviewByProjectID(projectID int64, domainGroupID int, limitVal int,
+	filters []model.QueryProperty, searchFilter []string) ([]string, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"domain_id":  domainGroupID,
+		"limit":      limitVal,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	var domainIDs []string
+	query, queryParams := getLatestDomainsByProjectIDQuery(projectID, domainGroupID, limitVal, filters,
+		searchFilter)
+
+	db := C.GetServices().Db
+	rows, err := db.Raw(query, queryParams...).Rows()
+
+	if rows != nil {
+		defer rows.Close()
+	}
+
+	if err != nil {
+		log.WithFields(logFields).WithError(err).Error("Error fetching records")
+		return []string{}, http.StatusInternalServerError
+	}
+
+	for rows.Next() {
+		var id string
+		err = rows.Scan(&id)
+		if err != nil {
+			log.WithFields(logFields).WithError(err).Error("Error fetching rows")
+			return []string{}, http.StatusInternalServerError
+		}
+		domainIDs = append(domainIDs, id)
+	}
+
+	if len(domainIDs) == 0 {
+		return []string{}, http.StatusNotFound
+	}
+
+	return domainIDs, http.StatusFound
 }
 
 // get all domains to run marker for in time range

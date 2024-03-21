@@ -3503,7 +3503,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 	resp = make([]model.Profile, 0)
 	err = json.Unmarshal(jsonResponse, &resp)
 	assert.Nil(t, err)
-	assert.Equal(t, len(resp), 3)
+	assert.Equal(t, len(resp), 4)
 	for _, profile := range resp {
 		assert.NotNil(t, profile.TableProps[U.UP_COUNTRY])
 		assert.NotNil(t, profile.Identity)
