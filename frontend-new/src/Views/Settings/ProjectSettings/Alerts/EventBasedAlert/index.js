@@ -560,6 +560,16 @@ const EventBasedAlert = ({
         setDisbleWebhookInput(false);
         setHideTestMessageBtn(true);
       }
+    } else if (alertState?.state === 'add' && viewAlertDetails) {
+
+      setAlertName(viewAlertDetails?.alert?.title);
+      setAlertMessage(viewAlertDetails?.alert?.message)
+
+      setQueries(viewAlertDetails?.alert?.currentQuery);
+      const messageProperty = viewAlertDetails?.alert?.message_property
+      
+      messageProperty.forEach((property) => pushGroupBy(property));
+  
     }
     return () => {
       //reset form values on unmount
@@ -690,7 +700,6 @@ const EventBasedAlert = ({
     const i = ind >= 0 ? ind : groupBy.length;
     setGroupBy('event', groupState, i);
   };
-
   const selectGroupByEvent = () =>
     isGroupByDDVisible ? (
       <EventGroupBlock
