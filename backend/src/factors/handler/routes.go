@@ -665,6 +665,9 @@ func InitDataServiceRoutes(r *gin.Engine) {
 	dataServiceRouteGroup.GET("/linkedin/documents/campaign_group_info", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}),
 		IH.DataServiceLinkedinGetCampaignGroupInfoHandler)
 
+	dataServiceRouteGroup.GET("/linkedin/documents/campaign_info", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}),
+		IH.DataServiceLinkedinGetCampaignInfoHandler)
+
 	dataServiceRouteGroup.GET("/linkedin/documents/validation", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}),
 		IH.DataServiceLinkedinValidationHandler)
 

@@ -371,6 +371,9 @@ type Model interface {
 	GetLinkedinEventFieldsBasedOnTimestampV2(projectID int64, timestamp int64,
 		imprEventNameID string, clicksEventNameID string) (map[int64]map[string]map[string]map[string]interface{},
 		map[int64]map[string]map[string]map[string]interface{}, error)
+	GetLinkedinEventFieldsBasedOnTimestampV3(projectID int64, timestamp int64,
+		imprEventNameID string, clicksEventNameID string) (map[int64]map[string]map[string]map[string]interface{},
+		map[int64]map[string]map[string]map[string]interface{}, error)
 
 	// clickable_elements
 	UpsertCountAndCheckEnabledClickableElement(projectID int64, payload *model.CaptureClickPayload) (isEnabled bool, status int, err error)
@@ -404,6 +407,7 @@ type Model interface {
 
 	UpdateSyncStatusLinkedinDocs(domainData model.DomainDataResponse) error
 	GetCampaignGroupInfoForGivenTimerange(campaignGroupInfoRequestPayload model.LinkedinCampaignGroupInfoRequestPayload) ([]model.LinkedinDocument, int)
+	GetCampaignInfoForGivenTimerange(campaignInfoRequestPayload model.LinkedinCampaignGroupInfoRequestPayload) ([]model.LinkedinDocument, int)
 	GetValidationForGivenTimerangeAndJobType(validationRequestPayload model.LinkedinValidationRequestPayload) (bool, int)
 	//bingads document
 	GetBingadsFilterValuesSQLAndParams(projectID int64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int)
