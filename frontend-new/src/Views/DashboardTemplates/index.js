@@ -29,7 +29,7 @@ function DashboardTemplates() {
       payload: templateID
     });
 
-    // dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_OPEN });
+    dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_OPEN });
     // setSelectedTemplateFirst();
   };
   const templatesToShow = [

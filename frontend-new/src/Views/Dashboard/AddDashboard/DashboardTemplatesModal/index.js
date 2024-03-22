@@ -359,6 +359,7 @@ const DashboardTemplatesModal = () => {
     (state) => state.dashboardTemplatesController
   );
   const [allTemplates, setAllTemplates] = useState([]);
+  const [selectedItem, setSelectedItem] = useState(undefined)
   useEffect(() => {
     if (dashboardTemplates?.data && Array.isArray(dashboardTemplates.data))
       setAllTemplates(
@@ -374,18 +375,30 @@ const DashboardTemplatesModal = () => {
         }))
       );
   }, [dashboardTemplates]);
+  useEffect(()=>{
+    if( allTemplates && dashboard_templates_modal_state.pickedFirstTemplate){
+      setSelectedItem(allTemplates.find(e=>e.id === dashboard_templates_modal_state.pickedFirstTemplate))
+    }else{
+      setSelectedItem(null)
+    }
+  },[allTemplates, dashboard_templates_modal_state])
   return (
-    <ModalFlow
+    dashboard_templates_modal_state.isNewDashboardTemplateModal 
+      && <ModalFlow
       data={allTemplates}
       visible={dashboard_templates_modal_state.isNewDashboardTemplateModal}
       onCancel={() => {
         dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_CLOSE });
+        dispatch({ type: UPDATE_PICKED_FIRST_DASHBOARD_TEMPLATE, payload: null });
+        setSelectedItem(null);
       }}
       startFreshVisible // this is added to make Start Fresh Option make visible
       FirstScreenIllustration='DashboardTemplateIllustration'
       Step2Screen={Step2DashboardTemplateModal}
+      defaultSelectedItem={selectedItem}
       isDashboardTemplatesFlow
     />
+    
   );
 };
 export default React.memo(DashboardTemplatesModal);

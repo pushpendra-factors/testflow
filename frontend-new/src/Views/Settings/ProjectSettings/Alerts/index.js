@@ -35,7 +35,7 @@ import ModalFlow from 'Components/ModalFlow';
 import KPIBasedAlert from './KPIBasedAlert';
 import EventBasedAlert from './EventBasedAlert';
 import styles from './index.module.scss';
-import { ALERTS_DATA } from './sample';
+import { getAlertTemplatesTransformation } from './utils';
 
 const { TabPane } = Tabs;
 
@@ -71,6 +71,7 @@ const Alerts = ({
   const dashboard_templates_modal_state = useSelector(
     (state) => state.dashboardTemplatesController
   );
+  const alertTemplates = useSelector((state)=>state.alertTemplates)
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -568,7 +569,7 @@ const Alerts = ({
           </Row>
         </Col>
         <ModalFlow
-          data={ALERTS_DATA}
+          data={getAlertTemplatesTransformation(alertTemplates?.data)}
           visible={dashboard_templates_modal_state.isNewDashboardTemplateModal}
           onCancel={() => {
             dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_CLOSE });
