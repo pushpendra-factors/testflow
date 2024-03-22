@@ -359,6 +359,7 @@ const CoreQuery = () => {
     const queryToAdd = getQueryFromHashId();
     if (queryToAdd) {
       // updateResultState({ ...initialState, loading: true });
+      dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
       getEventsData(active_project.id, null, null, false, query_id).then(
         (res) => {
           createStateFromResult(queryToAdd, res);
