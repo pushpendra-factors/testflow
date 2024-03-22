@@ -233,7 +233,7 @@ export const getUniqueItemsByKeyAndSearchTerm = (
   }
 
   const isNotMilestone = (event) =>
-    event && event.user !== 'milestone' && event.event_type !== 'milestone';
+    event && event.username !== 'milestone' && event.event_type !== 'milestone';
 
   const isUnique = (value, index, self) =>
     index === self.findIndex((t) => t && t.display_name === value.display_name);
