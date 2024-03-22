@@ -155,6 +155,7 @@ func TestMain(m *testing.M) {
 		RunAllAccountsMarkerProjectIDs:                      "*",
 		BatchSizePreviewDomain:                              100,
 		MarkerPreviewAllAccountsProjectId:                   "*",
+		NumberOfRunsForPreview:                              2,
 		AccountsToProcessForPreview:                         1000,
 	}
 	C.InitConf(config)
