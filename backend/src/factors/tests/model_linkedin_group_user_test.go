@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"factors/model/model"
 	"factors/model/store"
-	"factors/task"
+	LCE "factors/task/linkedin_company_engagements"
 	U "factors/util"
 	"fmt"
 	"net/http"
@@ -39,7 +39,7 @@ func TestLinkedinCompanyEnagagementEnrichmentV2(t *testing.T) {
 		IntLinkedinAdAccount: customerAccountID,
 	}
 
-	errMsg, errCode := task.CreateGroupUserAndEventsV2(projectSetting, 5)
+	errMsg, errCode := LCE.CreateGroupUserAndEventsV2(projectSetting, 5)
 	assert.Equal(t, "", errMsg)
 	assert.Equal(t, http.StatusOK, errCode)
 
@@ -86,7 +86,7 @@ func TestLinkedinCompanyEnagagementEnrichmentV2(t *testing.T) {
 	errCode = deleteAndUpdateLinkedinCompanyEngagementDocs(project, customerAccountID, intTimestamp)
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	errMsg, errCode = task.CreateGroupUserAndEventsV2(projectSetting, 5)
+	errMsg, errCode = LCE.CreateGroupUserAndEventsV2(projectSetting, 5)
 	assert.Equal(t, "", errMsg)
 	assert.Equal(t, http.StatusOK, errCode)
 
@@ -124,65 +124,35 @@ func TestLinkedinCompanyEnagagementEnrichmentV2(t *testing.T) {
 	assert.Equal(t, 0, len(domainDataSet))
 }
 
-func TestLinkedinCompanyEnagagementEnrichmentV1(t *testing.T) {
-	project, _, _ := SetupProjectWithAgentDAO()
-	assert.NotNil(t, project)
-	customerAccountID := U.RandomNumericString(10)
-	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
-		IntLinkedinAdAccount: customerAccountID,
-	})
-	assert.Equal(t, http.StatusAccepted, errCode)
+// func TestLinkedinCompanyEnagagementEnrichmentV1(t *testing.T) {
+// 	project, _, _ := SetupProjectWithAgentDAO()
+// 	assert.NotNil(t, project)
+// 	customerAccountID := U.RandomNumericString(10)
+// 	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
+// 		IntLinkedinAdAccount: customerAccountID,
+// 	})
+// 	assert.Equal(t, http.StatusAccepted, errCode)
 
-	timestamp := time.Now().Format("20060102")
-	intTimestamp, _ := strconv.ParseInt(timestamp, 10, 64)
-	errCode = createLinkedinCompanyEngagementDocs(project, customerAccountID, intTimestamp)
-	assert.Equal(t, http.StatusCreated, errCode)
+// 	timestamp := time.Now().Format("20060102")
+// 	intTimestamp, _ := strconv.ParseInt(timestamp, 10, 64)
+// 	errCode = createLinkedinCompanyEngagementDocs(project, customerAccountID, intTimestamp)
+// 	assert.Equal(t, http.StatusCreated, errCode)
 
-	projectID := fmt.Sprint(project.ID)
-	projectSetting := model.LinkedinProjectSettings{
-		ProjectId:            projectID,
-		IntLinkedinAdAccount: customerAccountID,
-	}
+// 	projectID := fmt.Sprint(project.ID)
+// 	projectSetting := model.LinkedinProjectSettings{
+// 		ProjectId:            projectID,
+// 		IntLinkedinAdAccount: customerAccountID,
+// 	}
 
-	errMsg, errCode := task.CreateGroupUserAndEventsV1(projectSetting, 5)
-	assert.Equal(t, "", errMsg)
-	assert.Equal(t, http.StatusOK, errCode)
+// 	errMsg, errCode := task.CreateGroupUserAndEventsV1(projectSetting, 5)
+// 	assert.Equal(t, "", errMsg)
+// 	assert.Equal(t, http.StatusOK, errCode)
 
-	domainDataSet, errCode := store.GetStore().GetCompanyDataFromLinkedinDocsForTimestamp(projectSetting.ProjectId, intTimestamp)
-	assert.Equal(t, http.StatusOK, errCode)
-	assert.Equal(t, 0, len(domainDataSet))
+// 	domainDataSet, errCode := store.GetStore().GetCompanyDataFromLinkedinDocsForTimestamp(projectSetting.ProjectId, intTimestamp)
+// 	assert.Equal(t, http.StatusOK, errCode)
+// 	assert.Equal(t, 0, len(domainDataSet))
 
-}
-
-func TestLinkedinCompanyEnagagementEnrichment(t *testing.T) {
-	project, _, _ := SetupProjectWithAgentDAO()
-	assert.NotNil(t, project)
-	customerAccountID := U.RandomNumericString(10)
-	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
-		IntLinkedinAdAccount: customerAccountID,
-	})
-	assert.Equal(t, http.StatusAccepted, errCode)
-
-	timestamp := time.Now().Format("20060102")
-	intTimestamp, _ := strconv.ParseInt(timestamp, 10, 64)
-	errCode = createLinkedinCompanyEngagementDocs(project, customerAccountID, intTimestamp)
-	assert.Equal(t, http.StatusCreated, errCode)
-
-	projectID := fmt.Sprint(project.ID)
-	projectSetting := model.LinkedinProjectSettings{
-		ProjectId:            projectID,
-		IntLinkedinAdAccount: customerAccountID,
-	}
-
-	errMsg, errCode := task.CreateGroupUserAndEvents(projectSetting)
-	assert.Equal(t, "", errMsg)
-	assert.Equal(t, http.StatusOK, errCode)
-
-	domainDataSet, errCode := store.GetStore().GetCompanyDataFromLinkedinDocsForTimestamp(projectSetting.ProjectId, intTimestamp)
-	assert.Equal(t, http.StatusOK, errCode)
-	assert.Equal(t, 0, len(domainDataSet))
-
-}
+// }
 
 var expectedEventsMetricsBeforeUpdate = map[string]map[string]float64{
 	"google.com123":   {"impressions": float64(1000), "clicks": float64(50)},

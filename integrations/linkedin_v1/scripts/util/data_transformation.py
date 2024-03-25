@@ -7,7 +7,9 @@ class DataTransformation:
     # it take organization id for report rows and fetches org details like name location domain and append it to the member company report rows
     
     def enrich_company_details_to_company_insights(records, map_id_to_company_data):
-        for data in records:
+        updated_records = []
+        for row in records:
+            data = copy.deepcopy(row)
             id = data['pivotValues'][0].split(':')[3]
             data['id'] = id
             if id not in map_id_to_company_data:
@@ -50,8 +52,10 @@ class DataTransformation:
                             break
                         else:
                             data['companyHeadquarters'] = '$none'
+            
+            updated_records.append(data)
 
-        return records
+        return updated_records
 
     def enrich_dependencies_to_company_insights(company_insights, campaign_group_info_map, map_id_to_company_data):
         cg_enriched_company_insights = DataTransformation.enrich_campaign_group_info_to_company_insights(
@@ -60,10 +64,30 @@ class DataTransformation:
                                                     cg_enriched_company_insights, map_id_to_company_data)
         return mc_enriched_company_insights
     
+    def enrich_dependencies_to_company_insights_v1(company_insights, map_id_to_company_data, campaign_group_info_map, campaign_info_map=None):
+        enriched_insights = DataTransformation.enrich_company_details_to_company_insights(
+                                                    company_insights, map_id_to_company_data)
+        if campaign_info_map is not None:
+            enriched_insights = DataTransformation.enrich_campaign_info_to_company_insights(
+                                                    enriched_insights, campaign_info_map)
+        enriched_insights = DataTransformation.enrich_campaign_group_info_to_company_insights(
+                                                    enriched_insights, campaign_group_info_map)
+
+        return enriched_insights
+    
     def enrich_campaign_group_info_to_company_insights(records, campaign_group_info_map):
         updated_records = []
-        for record in records:
+        for row in records:
+            record = copy.deepcopy(row)
             record.update(campaign_group_info_map[record['campaign_group_id']])
+            updated_records.append(record)
+        return updated_records
+    
+    def enrich_campaign_info_to_company_insights(records, campaign_info_map):
+        updated_records = []
+        for row in records:
+            record = copy.deepcopy(row)
+            record.update(campaign_info_map[record['campaign_id']])
             updated_records.append(record)
         return updated_records
     

@@ -2990,3 +2990,72 @@ func buildMapOfTimestampDomainCampaignGroupIDV2(linkedinArr []LinkedinEventField
 	}
 	return resultantMap
 }
+
+type LinkedinEventFieldsV3 struct {
+	Timestamp     int64  `json:"timestamp"`
+	CampaignID    string `json:"campaign_id"`
+	Domain        string `json:"domain"`
+	ID            string `json:"id"`
+	PropertyValue int64  `json:"property_value"`
+	UserID        string `json:"user_id"`
+}
+
+func (store *MemSQL) GetLinkedinEventFieldsBasedOnTimestampV3(projectID int64, timestamp int64,
+	imprEventNameID string, clicksEventNameID string) (map[int64]map[string]map[string]map[string]interface{},
+	map[int64]map[string]map[string]map[string]interface{}, error) {
+	if projectID == 0 || timestamp == 0 {
+		return nil, nil, errors.New("invalid project ID or timestamp")
+	}
+	imprLinkedinFieldsWithCampaignArr := make([]LinkedinEventFieldsV3, 0)
+	db := C.GetServices().Db
+	rows, _ := db.Raw("Select id, user_id, JSON_EXTRACT_STRING(properties, '$adgroup_id') as campaign_id, "+
+		"JSON_EXTRACT_STRING(user_properties, '$li_domain') as domain, "+
+		"JSON_EXTRACT_STRING(properties, '$li_ad_view_count') as property_value, timestamp from events where project_id = ? "+
+		"and timestamp >= ? and timestamp < ? and event_name_id = ? "+
+		"and JSON_EXTRACT_STRING(properties, '$adgroup_id') is not null ", projectID, timestamp, timestamp+86400, imprEventNameID).Rows()
+	for rows.Next() {
+		imprLinkedinFields := LinkedinEventFieldsV3{}
+		if err := db.ScanRows(rows, &imprLinkedinFields); err != nil {
+			return nil, nil, err
+		}
+		imprLinkedinFieldsWithCampaignArr = append(imprLinkedinFieldsWithCampaignArr, imprLinkedinFields)
+	}
+
+	clicksLinkedinFieldsWithCampaignArr := make([]LinkedinEventFieldsV3, 0)
+	rows, _ = db.Raw("Select id, user_id, JSON_EXTRACT_STRING(properties, '$adgroup_id') as campaign_id, "+
+		"JSON_EXTRACT_STRING(user_properties, '$li_domain') as domain, "+
+		"JSON_EXTRACT_STRING(properties, '$li_ad_click_count') as property_value, timestamp from events where project_id = ? "+
+		"and timestamp >= ? and timestamp < ? and event_name_id = ? "+
+		"and JSON_EXTRACT_STRING(properties, '$adgroup_id') is not null ", projectID, timestamp, timestamp+86400, clicksEventNameID).Rows()
+	for rows.Next() {
+		clicksLinkedinFields := LinkedinEventFieldsV3{}
+		if err := db.ScanRows(rows, &clicksLinkedinFields); err != nil {
+			return nil, nil, err
+		}
+		clicksLinkedinFieldsWithCampaignArr = append(clicksLinkedinFieldsWithCampaignArr, clicksLinkedinFields)
+	}
+	log.WithFields(log.Fields{"countImpr": len(imprLinkedinFieldsWithCampaignArr), "countClicks": len(clicksLinkedinFieldsWithCampaignArr), "timestamp": timestamp}).Info("Number of existing events fetched from db for timestamp")
+	imprEventsWithCampaignMap := buildMapOfTimestampDomainCampaignGroupIDV3(imprLinkedinFieldsWithCampaignArr)
+	clicksEventsWithCampaignMap := buildMapOfTimestampDomainCampaignGroupIDV3(clicksLinkedinFieldsWithCampaignArr)
+	return imprEventsWithCampaignMap, clicksEventsWithCampaignMap, nil
+}
+
+func buildMapOfTimestampDomainCampaignGroupIDV3(linkedinArr []LinkedinEventFieldsV3) map[int64]map[string]map[string]map[string]interface{} {
+	resultantMap := make(map[int64]map[string]map[string]map[string]interface{})
+	for _, linkedinFields := range linkedinArr {
+		campaignID, domain, timestamp := linkedinFields.CampaignID, linkedinFields.Domain, linkedinFields.Timestamp
+		if _, exists := resultantMap[timestamp]; !exists {
+			resultantMap[timestamp] = make(map[string]map[string]map[string]interface{})
+		}
+		if _, exists := resultantMap[timestamp][domain]; !exists {
+			resultantMap[timestamp][domain] = make(map[string]map[string]interface{})
+		}
+		if _, exists := resultantMap[timestamp][domain][campaignID]; !exists {
+			resultantMap[timestamp][domain][campaignID] = make(map[string]interface{})
+			resultantMap[timestamp][domain][campaignID]["id"] = linkedinFields.ID
+			resultantMap[timestamp][domain][campaignID]["p_value"] = linkedinFields.PropertyValue
+			resultantMap[timestamp][domain][campaignID]["user_id"] = linkedinFields.UserID
+		}
+	}
+	return resultantMap
+}

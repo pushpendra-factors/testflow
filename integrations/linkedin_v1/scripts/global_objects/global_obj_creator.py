@@ -5,19 +5,23 @@ from cache.campaign_info import CampaignInfo
 from cache.creative_info import CreativeInfo
 from metrics_aggregator.metrics_aggregator import MetricsAggregator
 from util.linkedin_api_service import LinkedinApiService
-global data_service_obj
-global campaign_group_cache
-global campaign_cache
-global creative_cache
-global member_company_cache
-global metrics_aggregator_obj
-global client_id
-global client_secret
-campaign_group_cache = CampaignGroupInfo()
-campaign_cache = CampaignInfo()
-creative_cache = CreativeInfo()
-member_company_cache = MemberCompany()
-metrics_aggregator_obj = MetricsAggregator()
-data_service_obj = DataService()
-linkedin_api_service = LinkedinApiService(metrics_aggregator_obj)
+
+class GlobalObjects:
+    campaign_group_cache = None
+    campaign_cache = None
+    creative_cache = None
+    member_company_cache = None
+    metrics_aggregator = None
+    data_service = None
+    linkedin_api_service = None
+
+    def __init__(self, data_service_host):
+        self.campaign_group_cache = CampaignGroupInfo.get_instance()
+        self.campaign_cache = CampaignInfo.get_instance()
+        self.creative_cache = CreativeInfo.get_instance()
+        self.member_company_cache = MemberCompany.get_instance()
+        self.metrics_aggregator = MetricsAggregator.get_instance()
+        self.data_service = DataService.get_instance(data_service_host)
+        self.linkedin_api_service = LinkedinApiService.get_instance()
+
 
