@@ -201,6 +201,7 @@ func main() {
 	batchSizePreviewDomain := flag.Int("batch_size_preview_domain", 100, "Batch size for goroutines to process domains for preview using marker.")
 	accountsToProcessForPreview := flag.Int("accounts_to_process_for_preview", 5000, "No of domains to process domains for preview using marker per run.")
 	numberOfRunsForPreview := flag.Int("number_of_runs_for_preview", 10, "No of runs to process domains for preview using marker per run.")
+	accountLimitPreviewListing := flag.Int("account_limit_preview_listing", 100, "No of accounts to show for preview using marker per run.")
 	useMarkerByProjectID := flag.String("use_marker_by_project_id", "", "List of projectIds to enable segment marker.")
 	enableNewAllAccountsByProjectID := flag.String("enable_new_all_accounts_by_project_id", "", "List of projectIds to enable domain.")
 	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
@@ -370,6 +371,7 @@ func main() {
 		BatchSizePreviewDomain:                         *batchSizePreviewDomain,
 		AccountsToProcessForPreview:                    *accountsToProcessForPreview,
 		NumberOfRunsForPreview:                         *numberOfRunsForPreview,
+		AccountLimitPreviewListing:                     *accountLimitPreviewListing,
 		UseMarkerByProjectID:                           *useMarkerByProjectID,
 		IngestionTimezoneEnabledProjectIDs:             C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
 		EnableEventFiltersInSegments:                   *enableEventFiltersInSegments,
