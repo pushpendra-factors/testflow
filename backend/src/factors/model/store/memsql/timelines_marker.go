@@ -298,7 +298,7 @@ func (store *MemSQL) GetPreviewDomainsListByProjectId(projectID int64, payload m
 
 	runLimit := C.RunNumberToProcessDomainsForPreview()
 
-	limitAcc := 100
+	limitAcc := C.AccountLimitForPreview()
 	userCount := new(int64)
 	profilesList := make([]model.Profile, 0)
 
