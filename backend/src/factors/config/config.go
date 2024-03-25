@@ -286,6 +286,7 @@ type Configuration struct {
 	MarkerPreviewAllAccountsProjectId                    string
 	BatchSizePreviewDomain                               int
 	AccountsToProcessForPreview                          int
+	NumberOfRunsForPreview                               int
 	UseMarkerByProjectID                                 string
 	EnableNewAllAccountsByProjectID                      string
 	DBMaxAllowedPacket                                   int64
@@ -2365,6 +2366,9 @@ func BatchSizePreviewtMarker() int {
 
 func DomainsToProcessForPreview() int {
 	return configuration.AccountsToProcessForPreview
+}
+func RunNumberToProcessDomainsForPreview() int {
+	return configuration.NumberOfRunsForPreview
 }
 
 // UseSegmentMarker - Checks if segment marker is enabled for given project_id in all accounts listing
