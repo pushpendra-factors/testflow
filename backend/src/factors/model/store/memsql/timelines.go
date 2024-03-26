@@ -1505,7 +1505,7 @@ func (store *MemSQL) GetUserActivities(projectID int64, identity string, userId 
         LIMIT 5000) AS events1 
     LEFT JOIN event_names
     ON events1.event_name_id=event_names.id 
-    AND event_names.project_id=?;`, userId, eventNamesToExcludePlaceholders)
+    WHERE event_names.project_id=?;`, userId, eventNamesToExcludePlaceholders)
 
 	excludedEventNamesArgs := make([]interface{}, len(model.ExcludedEvents))
 	for i, name := range model.ExcludedEvents {
@@ -1529,12 +1529,18 @@ func (store *MemSQL) GetUserActivities(projectID int64, identity string, userId 
 		return []model.UserActivity{}, err
 	}
 
-	// User Activity
-	standardDisplayNames := U.STANDARD_EVENTS_DISPLAY_NAMES
+	// Event Display Names
+	eventDisplaNames := U.STANDARD_EVENTS_DISPLAY_NAMES
 	errCode, projectDisplayNames := store.GetDisplayNamesForAllEvents(projectID)
 	if errCode != http.StatusFound {
 		log.WithError(err).WithField("project_id", projectID).Error("Error fetching display names for the project")
+	} else {
+		for key, value := range projectDisplayNames {
+			eventDisplaNames[key] = value
+		}
 	}
+
+	defer rows.Close()
 
 	for rows.Next() {
 		var userActivity model.UserActivity
@@ -1547,66 +1553,23 @@ func (store *MemSQL) GetUserActivities(projectID int64, identity string, userId 
 		if err != nil {
 			log.WithFields(logFields).WithError(err).Error("Failed decoding event properties")
 		} else {
-			// Virtual Events Case: Replace event_name with $page_url
-			if userActivity.EventType == model.TYPE_FILTER_EVENT_NAME {
-				if pageURL, exists := (*properties)[U.EP_PAGE_URL]; exists {
-					userActivity.AliasName = fmt.Sprintf("%s", pageURL)
-				}
-			}
+			// Set AliasName
+			// Virtual Events Case: Set AliasName to $page_url
+			userActivity.AliasName = model.SetAliasName(userActivity.EventName, userActivity.EventType, properties)
+
 			// Display Names
 			if (*properties)[U.EP_IS_PAGE_VIEW] == true {
 				userActivity.DisplayName = "Page View"
+			} else {
+				userActivity.DisplayName = model.SetEventDisplaName(userActivity.EventName, &eventDisplaNames)
+			}
+
+			// Event Icon
+			if (*properties)[U.EP_IS_PAGE_VIEW] == true {
 				// Page View Icon
 				userActivity.Icon = "window"
-			} else if standardDisplayNames[userActivity.EventName] != "" {
-				userActivity.DisplayName = standardDisplayNames[userActivity.EventName]
-			} else if projectDisplayNames[userActivity.EventName] != "" {
-				userActivity.DisplayName = projectDisplayNames[userActivity.EventName]
 			} else {
-				userActivity.DisplayName = userActivity.EventName
-			}
-			// Alias Names
-			if aliasName, exists := model.STANDARD_EVENT_NAME_ALIASES[userActivity.EventName]; exists {
-				userActivity.AliasName = aliasName
-			} else if userActivity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED {
-				userActivity.AliasName = fmt.Sprintf("Added to %s", (*properties)[U.EP_SALESFORCE_CAMPAIGN_NAME])
-			} else if userActivity.EventName == U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN {
-				userActivity.AliasName = fmt.Sprintf("Responded to %s", (*properties)[U.EP_SALESFORCE_CAMPAIGN_NAME])
-			} else if userActivity.EventName == U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION {
-				userActivity.AliasName = fmt.Sprintf("%s", (*properties)[U.EP_HUBSPOT_FORM_SUBMISSION_TITLE])
-			} else if userActivity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL {
-				emailSubject := "No Subject"
-				if subject, exists := (*properties)[U.EP_HUBSPOT_ENGAGEMENT_SUBJECT]; exists {
-					if !(subject == nil || subject == "") {
-						emailSubject = fmt.Sprintf("%s", subject)
-					}
-				}
-				userActivity.AliasName = fmt.Sprintf("%s: %s", (*properties)[U.EP_HUBSPOT_ENGAGEMENT_TYPE], emailSubject)
-			} else if userActivity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED ||
-				userActivity.EventName == U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED {
-				userActivity.AliasName = fmt.Sprintf("%s", (*properties)[U.EP_HUBSPOT_ENGAGEMENT_TITLE])
-			} else if userActivity.EventName == U.EVENT_NAME_SALESFORCE_TASK_CREATED {
-				userActivity.AliasName = fmt.Sprintf("Created Task - %s", (*properties)[U.EP_SF_TASK_SUBJECT])
-			} else if userActivity.EventName == U.EVENT_NAME_SALESFORCE_EVENT_CREATED {
-				userActivity.AliasName = fmt.Sprintf("Created Event - %s", (*properties)[U.EP_SF_EVENT_SUBJECT])
-			} else if userActivity.EventName == U.EVENT_NAME_HUBSPOT_CONTACT_LIST {
-				userActivity.AliasName = fmt.Sprintf("Added to Hubspot List - %s", (*properties)[U.EP_HUBSPOT_CONTACT_LIST_LIST_NAME])
-			}
-			// Set Icons
-			if icon, exists := model.EVENT_ICONS_MAP[userActivity.EventName]; exists {
-				userActivity.Icon = icon
-			} else if strings.Contains(userActivity.EventName, "hubspot_") || strings.Contains(userActivity.EventName, "hs_") {
-				userActivity.Icon = "hubspot"
-			} else if strings.Contains(userActivity.EventName, "salesforce_") || strings.Contains(userActivity.EventName, "sf_") {
-				userActivity.Icon = "salesforce"
-			} else if strings.Contains(userActivity.EventName, "linkedin_") || strings.Contains(userActivity.EventName, "li_") {
-				userActivity.Icon = "linkedin"
-			} else if strings.Contains(userActivity.EventName, "g2_") {
-				userActivity.Icon = "g2crowd"
-			}
-			// Default Icon
-			if userActivity.Icon == "" {
-				userActivity.Icon = "calendar-star"
+				userActivity.Icon = model.SetEventIcon(userActivity.EventName)
 			}
 
 			// Filtered Properties
@@ -2696,4 +2659,128 @@ func (store *MemSQL) GetConfiguredPropertiesByUserID(projectID int64, id string,
 	}
 	filteredProperties := GetLeftPanePropertiesFromConfig(timelinesConfig, model.PROFILE_TYPE_USER, propertiesDecoded)
 	return filteredProperties, http.StatusOK
+}
+
+func (store *MemSQL) GetTopEventsForADomain(projectID int64, domainID string) ([]model.TimelineEvent, int) {
+	var eventsList []model.TimelineEvent
+	logFields := log.Fields{
+		"project_id": projectID,
+		"dom_id":     domainID,
+	}
+
+	domainGroup, errCode := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
+	if errCode != http.StatusFound {
+		log.WithFields(logFields).Error("Domain group not found")
+		return eventsList, http.StatusInternalServerError
+	}
+
+	eventNamesToExcludePlaceholders := strings.Repeat("?,", len(model.ExcludedEvents)-1) + "?"
+	queryStmt := fmt.Sprintf(`SELECT event_names.name,
+		event_names.type,
+		events.id,
+		events.timestamp,
+		events.properties,
+		COALESCE(domain_users.customer_user_id, domain_users.id) AS user_id,
+		domain_users.is_group_user
+	FROM events
+		JOIN (
+		SELECT id,
+			project_id,
+			customer_user_id,
+			is_group_user
+		FROM users
+		WHERE project_id = ?
+			AND group_%d_user_id = ?
+			AND last_event_at > ?
+		ORDER BY last_event_at DESC
+		LIMIT 25
+		) AS domain_users ON events.user_id = domain_users.id
+		LEFT JOIN event_names ON events.event_name_id = event_names.id
+		AND events.project_id = event_names.project_id
+	WHERE events.project_id = ?
+		AND event_names.name NOT IN (%s)
+		AND events.timestamp > ?
+	ORDER BY events.timestamp DESC
+	LIMIT 100;`, domainGroup.ID, eventNamesToExcludePlaceholders)
+
+	excludedEventNamesArgs := make([]interface{}, len(model.ExcludedEvents))
+	for i, name := range model.ExcludedEvents {
+		excludedEventNamesArgs[i] = name
+	}
+	queryArgs := []interface{}{
+		projectID,
+		domainID,
+		model.FormatTimeToString(time.Unix(U.UnixTimeBeforeAWeek(), 0)),
+		projectID,
+	}
+	queryArgs = append(queryArgs, excludedEventNamesArgs...)
+	queryArgs = append(queryArgs, U.UnixTimeBeforeAWeek())
+
+	db := C.GetServices().Db
+	rows, err := db.Raw(queryStmt, queryArgs...).Rows()
+
+	if err != nil || rows.Err() != nil {
+		log.WithFields(logFields).WithError(err).WithError(rows.Err()).Error("Failed to get events")
+		return []model.TimelineEvent{}, http.StatusInternalServerError
+	}
+
+	// Event Display Names
+	eventDisplaNames := U.STANDARD_EVENTS_DISPLAY_NAMES
+	errCode, projectDisplayNames := store.GetDisplayNamesForAllEvents(projectID)
+	if errCode != http.StatusFound {
+		log.WithError(err).WithField("project_id", projectID).Error("Error fetching display names for the project")
+	} else {
+		for key, value := range projectDisplayNames {
+			eventDisplaNames[key] = value
+		}
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var event model.TimelineEvent
+		if err := db.ScanRows(rows, &event); err != nil {
+			log.WithFields(logFields).WithError(err).Error("Failed scanning events list")
+			return []model.TimelineEvent{}, http.StatusInternalServerError
+		}
+		properties, err := U.DecodePostgresJsonb(event.Properties)
+		if err != nil {
+			log.WithFields(logFields).WithError(err).Error("Failed decoding event properties")
+		} else {
+			timelinesConfig, err := store.GetTimelinesConfig(projectID)
+			if err != nil {
+				log.WithError(err).Error("Failed to fetch timelines_config from project_settings.")
+			}
+			eventConfigProps := timelinesConfig.EventsConfig[event.Name]
+			if (*properties)[U.EP_IS_PAGE_VIEW] == true {
+				eventConfigProps = timelinesConfig.EventsConfig["PageView"]
+			}
+
+			formatEventData(&event, &eventDisplaNames, properties, eventConfigProps)
+		}
+		eventsList = append(eventsList, event)
+	}
+
+	return eventsList, http.StatusOK
+}
+
+func formatEventData(event *model.TimelineEvent, eventDisplaNames *map[string]string, properties *map[string]interface{}, configProperties []string) {
+	// Set AliasName
+	event.AliasName = model.SetAliasName(event.Name, event.Type, properties)
+
+	// Display Names
+	if (*properties)[U.EP_IS_PAGE_VIEW] == true {
+		event.DisplayName = "Page View"
+	} else {
+		event.DisplayName = model.SetEventDisplaName(event.Name, eventDisplaNames)
+	}
+
+	// Event Icon
+	if (*properties)[U.EP_IS_PAGE_VIEW] == true {
+		// Page View Icon
+		event.Icon = "window"
+	} else {
+		event.Icon = model.SetEventIcon(event.Name)
+	}
+	event.Properties = GetFilteredEventProperties(event.Name, event.Type, properties, configProperties)
 }

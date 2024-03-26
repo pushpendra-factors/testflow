@@ -971,6 +971,7 @@ type Model interface {
 	UpdateConfigForEvent(projectID int64, eventName string, updatedConfig []string) (int, error)
 	GetDomainPropertiesByID(projectID int64, domainIDs []string) ([]model.User, int)
 	GetConfiguredPropertiesByUserID(projectID int64, id string, isAnonymous bool) (map[string]interface{}, int)
+	GetTopEventsForADomain(projectID int64, domainID string) ([]model.TimelineEvent, int)
 
 	// Timeline consuming segment_marker
 	GetMarkedDomainsListByProjectId(projectID int64, payload model.TimelinePayload, downloadLimitGiven bool) ([]model.Profile, int, string)
