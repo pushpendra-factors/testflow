@@ -132,7 +132,7 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 		result, err = store.GetStore().ExecuteAttributionQueryV1(projectId, requestPayload.Query, debugQueryKey,
 			enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery, unitId)
 		if err != nil {
-			logCtx.Info("Failed to process query from DB - attributionv1", err.Error())
+			logCtx.Info("Failed to process query from DB - attribution v1", err.Error())
 			return nil, http.StatusInternalServerError, PROCESSING_FAILED, err.Error(), true
 		}
 		if result == nil {
@@ -244,7 +244,7 @@ func AttributionHandlerV1(c *gin.Context) (interface{}, int, string, string, boo
 
 	if err != nil {
 		model.DeleteQueryCacheKey(projectId, &attributionQueryUnitPayload)
-		logCtx.Info("Failed to process query from DB - attributionv1", err.Error())
+		logCtx.Info("Failed to process query from DB - attribution v1", err.Error())
 		return nil, http.StatusInternalServerError, PROCESSING_FAILED, err.Error(), true
 	}
 	if result == nil {
@@ -317,15 +317,19 @@ func getValidAttributionQueryAndDetailsFromRequestV1(r *http.Request, c *gin.Con
 		unitId, err = strconv.ParseInt(unitIdParam, 10, 64)
 		if err != nil || unitId == 0 {
 			logCtx.WithError(err).Error("Query failed. Invalid DashboardUnitID.")
-			return queryPayload, dashboardId, unitId, true, isDashboardQueryLocked, http.StatusBadRequest, INVALID_INPUT, "Query failed. Invalid DashboardUnitID.", true
+			return queryPayload, dashboardId, unitId, true, false, http.StatusBadRequest, INVALID_INPUT, "Query failed. Invalid DashboardUnitID.", true
 		}
 		_, query, err := store.GetStore().GetQueryFromUnitID(projectId, unitId)
 		if err != "" {
 			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
-			return queryPayload, dashboardId, unitId, true, isDashboardQueryLocked, http.StatusBadRequest, INVALID_INPUT, "Query failed. Json decode failed.", true
+			return queryPayload, dashboardId, unitId, true, false, http.StatusBadRequest, INVALID_INPUT, "Query failed. Json decode failed.", true
 		}
 		isDashboardQueryLocked = query.LockedForCacheInvalidation
-		U.DecodePostgresJsonbToStructType(&query.Query, &dbQuery)
+		errDecode := U.DecodePostgresJsonbToStructType(&query.Query, &dbQuery)
+		if errDecode != nil {
+			log.WithError(errDecode).WithField("project_id", projectId).Error("Failed while decoding query: ", errDecode)
+			return queryPayload, dashboardId, unitId, true, false, http.StatusBadRequest, INVALID_INPUT, "Query failed. Invalid DashboardUnitID.", true
+		}
 		queryPayload.Query = dbQuery.Query
 	} else if queryIdString != "" {
 		_, query, err := store.GetStore().GetQueryAndClassFromQueryIdString(queryIdString, projectId)
@@ -333,7 +337,11 @@ func getValidAttributionQueryAndDetailsFromRequestV1(r *http.Request, c *gin.Con
 			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
 			return queryPayload, 0, 0, false, isDashboardQueryLocked, http.StatusBadRequest, INVALID_INPUT, "Query failed. Json decode failed.", true
 		}
-		U.DecodePostgresJsonbToStructType(&query.Query, &dbQuery)
+		errDecode := U.DecodePostgresJsonbToStructType(&query.Query, &dbQuery)
+		if errDecode != nil {
+			log.WithError(errDecode).WithField("project_id", projectId).Error("Failed while decoding query: ", errDecode)
+			return queryPayload, dashboardId, unitId, true, false, http.StatusBadRequest, INVALID_INPUT, "Query failed. Invalid DashboardUnitID.", true
+		}
 		queryPayload.Query = dbQuery.Query
 	} else {
 		queryPayload = requestPayload

@@ -1,13 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Row, Col, Modal, Button, Form, Input, Select } from 'antd';
+import React, { useState, useCallback } from 'react';
+import { Row, Col, Button, Form, Input, Select } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { connect } from 'react-redux';
-import { useHistory } from 'react-router-dom';
 import { PlusOutlined } from '@ant-design/icons';
 import PropTypes from 'prop-types';
 import AppModal from '../AppModal';
-import { meetLink } from 'Utils/meetLink';
 import sanitizeInputString from 'Utils/sanitizeInputString';
+import _ from 'lodash';
 
 const ShareToEmailModal = ({
   visible,

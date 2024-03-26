@@ -15,7 +15,7 @@ import pathAnalysis from './pathAnalysis';
 import groups from './groups';
 import timelines from './timelines';
 import dashboardTemplateReducer from './dashboard_templates';
-import dashboard_templates_modal_Reducer from './dashboard_templates_modal';
+import dashboardTemplatesControllerReducer from './dashboard_templates_modal';
 import attributionReducer from '../features/attribution/state/reducer';
 import globalSearch from './globalSearch';
 import allRoutes from './allRoutes';
@@ -25,6 +25,7 @@ import FeatureConfigReducer from './featureConfig';
 import { USER_LOGOUT } from './types';
 import preBuildDashboardConfig from '../Views/PreBuildDashboard/state/reducer';
 import PlansConfigReducer from './plansConfig';
+import alertTemplates from './alertTemplates';
 
 const appReducer = combineReducers({
   global: GlobalReducer,
@@ -43,7 +44,7 @@ const appReducer = combineReducers({
   groups,
   timelines,
   dashboardTemplates: dashboardTemplateReducer,
-  dashboard_templates_Reducer: dashboard_templates_modal_Reducer,
+  dashboardTemplatesController: dashboardTemplatesControllerReducer,
   pathAnalysis,
   attributionDashboard: attributionReducer,
   globalSearch,
@@ -51,7 +52,8 @@ const appReducer = combineReducers({
   accountProfilesView: accountProfilesViewReducer,
   userProfilesView: userProfilesViewReducer,
   featureConfig: FeatureConfigReducer,
-  plansConfig: PlansConfigReducer
+  plansConfig: PlansConfigReducer,
+  alertTemplates: alertTemplates
 });
 
 const rootReducer = (state, action) => {

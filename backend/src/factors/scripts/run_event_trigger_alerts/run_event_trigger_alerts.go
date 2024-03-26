@@ -12,7 +12,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	teams "factors/integration/ms_teams"
 	"factors/integration/paragon"
@@ -140,6 +139,10 @@ func main() {
 	success := true
 	projectIDs, _ := store.GetStore().GetAllProjectIDs()
 
+	tt := U.TimeNowZ()
+	hour := tt.Hour()
+	min := tt.Minute()
+
 	for _, projectID := range projectIDs {
 		available := true
 		if *enableFeatureGatesV2 {
@@ -194,9 +197,6 @@ func main() {
 			finalStatus[fmt.Sprintf("Blocked-alert-keys-%v", projectID)] = blockedAlertList.keys
 		}
 
-		tt := time.Now()
-		hour := tt.Hour()
-		min := tt.Minute()
 		if min < 5 {
 			sendReportForProject, blockedAlertList := RetryFailedEventTriggerAlerts(projectID, blockedAlertMap)
 			if sendReportForProject.SlackSuccess > 0 {
@@ -513,14 +513,23 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		rejectedQueue = true
 	}
 
-	var accountUrl string
+	var accountUrl, hubspotAccountUrl, salesforceAccountUrl string
 	isAccounAlert := alertConfiguration.EventLevel == model.EventLevelAccount
 	if isAccounAlert {
 		if _, exists := alert.Message.MessageProperty[model.ETA_DOMAIN_GROUP_USER_ID]; exists {
+			// factors account url
 			groupDomainUserID := alert.Message.MessageProperty[model.ETA_DOMAIN_GROUP_USER_ID].(string)
 			accountUrl = BuildAccountURL(groupDomainUserID)
 			delete(alert.Message.MessageProperty, model.ETA_DOMAIN_GROUP_USER_ID)
 		}
+		// hubspot object url
+		hubspotAccountUrl = alert.Message.MessageProperty[model.ETA_ENRICHED_HUBSPOT_COMPANY_OBJECT_URL].(string)
+		delete(alert.Message.MessageProperty, model.ETA_ENRICHED_HUBSPOT_COMPANY_OBJECT_URL)
+
+		// salesforce object url
+		salesforceAccountUrl = alert.Message.MessageProperty[model.ETA_ENRICHED_SALESFORCE_ACCOUNT_OBJECT_URL].(string)
+		delete(alert.Message.MessageProperty, model.ETA_ENRICHED_SALESFORCE_ACCOUNT_OBJECT_URL)
+
 	}
 
 	// If retry is true and sendTo var is set for Slack option
@@ -537,7 +546,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		}
 		if isSlackIntergrated {
 			partialSlackSuccess, _, errMsg := sendSlackAlertForEventTriggerAlert(eta.ProjectID,
-				eta.SlackChannelAssociatedBy, alert, alertConfiguration.SlackChannels, alertConfiguration.SlackMentions, alertConfiguration.IsHyperlinkDisabled, isAccounAlert, accountUrl)
+				eta.SlackChannelAssociatedBy, alert, alertConfiguration.SlackChannels, alertConfiguration.SlackMentions, alertConfiguration.IsHyperlinkDisabled, isAccounAlert, accountUrl, hubspotAccountUrl, salesforceAccountUrl)
 			log.WithFields(log.Fields{
 				"project_id": eta.ProjectID,
 				"alert_id":   eta.ID,
@@ -679,7 +688,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 	// partial success means there has been atleast one success
 	if partialSuccess {
 		status, err := store.GetStore().UpdateEventTriggerAlertField(eta.ProjectID, eta.ID,
-			map[string]interface{}{"last_alert_at": time.Now()})
+			map[string]interface{}{"last_alert_at": U.TimeNowZ()})
 		if status != http.StatusAccepted || err != nil {
 			logCtx.WithError(err).Error("Failed to update db field")
 		}
@@ -727,7 +736,7 @@ func EventTriggerDeliveryFailureExecution(key *cacheRedis.Key, eta *model.EventT
 	}
 
 	errDetails := model.LastFailDetails{
-		FailTime: time.Now(),
+		FailTime: U.TimeNowZ(),
 		FailedAt: deliveryFailures,
 		Details:  errMsg,
 	}
@@ -800,7 +809,7 @@ func AddKeyToSortedSet(key *cacheRedis.Key, projectID int64, failPoint string, r
 }
 
 func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
-	alert *model.CachedEventTriggerAlert, Schannels, sMentions *postgres.Jsonb, isHyperlinkDisabled, isAccountAlert bool, accountUrl string) (partialSuccess bool, channelSuccess []bool, errMessage string) {
+	alert *model.CachedEventTriggerAlert, Schannels, sMentions *postgres.Jsonb, isHyperlinkDisabled, isAccountAlert bool, accountUrl, hsAccUrl, sfAccUrl string) (partialSuccess bool, channelSuccess []bool, errMessage string) {
 	logCtx := log.WithFields(log.Fields{
 		"project_id":  projectID,
 		"agent_uuid":  agentUUID,
@@ -848,7 +857,7 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
 				slackMentionStr = model.GetSlackMentionsStr(slackMentions, slackTags)
 			}
 			if !isHyperlinkDisabled {
-				blockMessage = model.GetSlackMsgBlock(alert.Message, slackMentionStr, isAccountAlert, accountUrl)
+				blockMessage = model.GetSlackMsgBlock(alert.Message, slackMentionStr, isAccountAlert, accountUrl, hsAccUrl, sfAccUrl)
 			} else {
 				blockMessage = model.GetSlackMsgBlockWithoutHyperlinks(alert.Message, slackMentionStr)
 			}
@@ -1188,7 +1197,7 @@ func RetryFailedEventTriggerAlerts(projectID int64, blockedAlerts map[string]boo
 				WithError(err).Error("unable to parse int from string in event_trigger_alerts_job")
 		}
 
-		now := time.Now().UnixNano()
+		now := U.TimeNowZ().UnixNano()
 		expBackoff := cc * (cc + 1) / 2
 		if now-retryTime < expBackoff*60*60*1000000000 {
 			log.Info("Skipping retry for alert: ", orgKey[1], ", because retry coolDown condition is false")

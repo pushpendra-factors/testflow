@@ -41,11 +41,11 @@ function MetricChart({
   return (
     <div
       className={cx(
-        'flex flex-col items-center justify-center row-gap-4 w-full'
+        'flex flex-col items-center justify-center gap-y-4 w-full'
       )}
     >
       <Tooltip title={headerTitle}>
-        <div className={'flex items-center col-gap-1 justify-center w-full'}>
+        <div className={'flex items-center gap-x-1 justify-center w-full'}>
           <LegendsCircle color={iconColor} />
           <Text
             color='grey-2'
@@ -75,8 +75,8 @@ function MetricChart({
       </Text>
 
       <ControlledComponent controller={showComparison}>
-        <div className='flex flex-col row-gap-1 items-center'>
-          <div className='flex col-gap-1 items-center'>
+        <div className='flex flex-col gap-y-1 items-center'>
+          <div className='flex gap-x-1 items-center'>
             {changeIcon}
             <Text
               level={7}

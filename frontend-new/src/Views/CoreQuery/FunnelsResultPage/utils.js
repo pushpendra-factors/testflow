@@ -466,7 +466,7 @@ export const getTableColumns = (
     const countColumnHeader = (
       <>
         <ControlledComponent controller={showOnlyCount}>
-          <div className='flex col-gap-1 items-center'>
+          <div className='flex gap-x-1 items-center'>
             {countLabelSVG}
             {countLabelText}
           </div>

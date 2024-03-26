@@ -309,6 +309,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/v1/profiles/accounts/overview/:group/:id", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_PROFILES}), responseWrapper(V1.GetProfileAccountOverviewHandler))
 	authRouteGroup.PUT("/:project_id/v1/profiles/events_config/:event_name", mid.FeatureMiddleware([]string{M.FEATURE_PEOPLE_PROFILES, M.FEATURE_ACCOUNT_PROFILES}), V1.UpdateEventConfigHandler)
 	authRouteGroup.GET("/:project_id/v1/profiles/user_properties/:id", mid.FeatureMiddleware([]string{M.FEATURE_PEOPLE_PROFILES, M.FEATURE_ACCOUNT_PROFILES}), V1.GetUserPropertiesByIDHandler)
+	authRouteGroup.GET("/:project_id/v1/profiles/accounts/top_events/:id", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_PROFILES}), V1.GetTopEventsForADomainHandler)
 
 	// Segments
 	authRouteGroup.POST("/:project_id/segments", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), CreateSegmentHandler)
@@ -422,7 +423,10 @@ func InitAppRoutes(r *gin.Engine) {
 	authCommonRouteGroup.GET("/dashboard_templates/:id/search", SearchTemplateHandler)
 	authCommonRouteGroup.GET("/dashboard_templates", GetDashboardTemplatesHandler)
 	authCommonRouteGroup.POST("/dashboard_template/create", CreateTemplateHandler)
-
+	
+	// alert templates
+	authCommonRouteGroup.GET("/alert_templates", GetAlertTemplateHandler)
+	authCommonRouteGroup.DELETE("/alert_templates/:id", DeleteAlertTemplateHandler)
 	// feature gate v2
 	authRouteGroup.GET("/:project_id/v1/features", responseWrapper(V1.GetPlanDetailsForProjectHandler))
 
@@ -664,6 +668,9 @@ func InitDataServiceRoutes(r *gin.Engine) {
 
 	dataServiceRouteGroup.GET("/linkedin/documents/campaign_group_info", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}),
 		IH.DataServiceLinkedinGetCampaignGroupInfoHandler)
+
+	dataServiceRouteGroup.GET("/linkedin/documents/campaign_info", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}),
+		IH.DataServiceLinkedinGetCampaignInfoHandler)
 
 	dataServiceRouteGroup.GET("/linkedin/documents/validation", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}),
 		IH.DataServiceLinkedinValidationHandler)

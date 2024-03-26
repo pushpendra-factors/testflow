@@ -14,12 +14,12 @@ import (
 )
 
 // ExecuteAttributionQueryV0 Executes the Attribution using following steps:
-//	1. Get all the sessions data (userId, attributionId, timestamp) for given period by attribution key
-// 	2. Add the website visitor info using session data from step 1
-//	3. i) 	Find out users who hit conversion event applying filter
-//	  ii)	Using users from 3.i) find out users who hit linked funnel event applying filter
-//	4. Apply attribution methodology
-//	5. Add performance data by attributionId
+//  1. Get all the sessions data (userId, attributionId, timestamp) for given period by attribution key
+//  2. Add the website visitor info using session data from step 1
+//  3. i) 	Find out users who hit conversion event applying filter
+//     ii)	Using users from 3.i) find out users who hit linked funnel event applying filter
+//  4. Apply attribution methodology
+//  5. Add performance data by attributionId
 func (store *MemSQL) ExecuteAttributionQueryV0(projectID int64, queryOriginal *model.AttributionQuery,
 	debugQueryKey string, enableOptimisedFilterOnProfileQuery,
 	enableOptimisedFilterOnEventUserQuery bool) (*model.QueryResult, error) {
@@ -317,7 +317,7 @@ func (store *MemSQL) getOfflineEventData(projectID int64, logCtx log.Entry) (mod
 	return eventNames[0], nil
 }
 
-// getEventInformation Returns conversion event Id, list of all event_ids(Conversion and funnel events) and a Id to name mapping
+// getEventInformation Returns conversion event ID, list of all event_ids(Conversion and funnel events) and an ID to name mapping
 func (store *MemSQL) getEventInformation(projectId int64,
 	query *model.AttributionQuery, logCtx log.Entry) (string, map[string][]interface{}, error) {
 
@@ -479,7 +479,7 @@ func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID int64, queryFrom,
 	return nil, usersToBeAttributed
 }
 
-// GetAdwordsCurrency Returns currency used for Google Ads (adwords) customer_account_id
+// GetAdwordsCurrency Returns currency used for Google Ads (Adwords) customer_account_id
 func (store *MemSQL) GetAdwordsCurrency(projectID int64, customerAccountID string, from, to int64, logCtx log.Entry) (string, error) {
 	logFields := log.Fields{
 		"project_id":          projectID,

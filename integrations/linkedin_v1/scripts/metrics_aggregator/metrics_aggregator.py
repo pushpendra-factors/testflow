@@ -10,6 +10,16 @@ class MetricsAggregator:
     }
     request_counter = 0
     job_type = 'daily'
+    __instance = None
+
+    @staticmethod
+    def get_instance():
+        if MetricsAggregator.__instance == None:
+            MetricsAggregator()
+        return MetricsAggregator.__instance
+
+    def __init__(self) -> None:
+        MetricsAggregator.__instance = self
 
     def update_stats(self, project_id, ad_account, doc_type=None, request_counter=0, status='success', err_msg=''):
         self.request_counter += request_counter

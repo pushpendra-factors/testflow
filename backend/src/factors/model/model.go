@@ -371,6 +371,9 @@ type Model interface {
 	GetLinkedinEventFieldsBasedOnTimestampV2(projectID int64, timestamp int64,
 		imprEventNameID string, clicksEventNameID string) (map[int64]map[string]map[string]map[string]interface{},
 		map[int64]map[string]map[string]map[string]interface{}, error)
+	GetLinkedinEventFieldsBasedOnTimestampV3(projectID int64, timestamp int64,
+		imprEventNameID string, clicksEventNameID string) (map[int64]map[string]map[string]map[string]interface{},
+		map[int64]map[string]map[string]map[string]interface{}, error)
 
 	// clickable_elements
 	UpsertCountAndCheckEnabledClickableElement(projectID int64, payload *model.CaptureClickPayload) (isEnabled bool, status int, err error)
@@ -404,6 +407,7 @@ type Model interface {
 
 	UpdateSyncStatusLinkedinDocs(domainData model.DomainDataResponse) error
 	GetCampaignGroupInfoForGivenTimerange(campaignGroupInfoRequestPayload model.LinkedinCampaignGroupInfoRequestPayload) ([]model.LinkedinDocument, int)
+	GetCampaignInfoForGivenTimerange(campaignInfoRequestPayload model.LinkedinCampaignGroupInfoRequestPayload) ([]model.LinkedinDocument, int)
 	GetValidationForGivenTimerangeAndJobType(validationRequestPayload model.LinkedinValidationRequestPayload) (bool, int)
 	//bingads document
 	GetBingadsFilterValuesSQLAndParams(projectID int64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int)
@@ -591,6 +595,10 @@ type Model interface {
 	SearchTemplateWithTemplateID(templateId string) (model.DashboardTemplate, int)
 	GetAllTemplates() ([]model.DashboardTemplate, int)
 	GenerateDashboardFromTemplate(projectID int64, agentUUID string, templateID string) (*model.Dashboard, int, error)
+
+	// Alert Templates
+	GetAlertTemplates() ([]model.AlertTemplate, int)
+	DeleteAlertTemplate(id int) error
 
 	// offline touchpoints
 	CreateOTPRule(projectId int64, rule *model.OTPRule) (*model.OTPRule, int, string)
@@ -968,6 +976,7 @@ type Model interface {
 	UpdateConfigForEvent(projectID int64, eventName string, updatedConfig []string) (int, error)
 	GetDomainPropertiesByID(projectID int64, domainIDs []string) ([]model.User, int)
 	GetConfiguredPropertiesByUserID(projectID int64, id string, isAnonymous bool) (map[string]interface{}, int)
+	GetTopEventsForADomain(projectID int64, domainID string) ([]model.TimelineEvent, int)
 
 	// Timeline consuming segment_marker
 	GetMarkedDomainsListByProjectId(projectID int64, payload model.TimelinePayload, downloadLimitGiven bool) ([]model.Profile, int, string)
@@ -1042,6 +1051,7 @@ type Model interface {
 	UpdateInternalStatusAndGetAlertIDs(projectID int64) ([]string, int, error)
 	GetInternalStatusForEventTriggerAlert(projectID int64, id string) (string, int, error)
 	GetParagonMetadataForEventTriggerAlert(projectID int64, alertID string) (map[string]interface{}, int, error)
+	FindAndCacheAlertForCurrentSegment(projectID int64, segmentID, domainID, actionPerformed string) (int, error) 
 
 	//ExplainV2
 	GetAllExplainV2EntityByProject(projectID int64) ([]model.ExplainV2EntityInfo, int)
@@ -1117,7 +1127,7 @@ type Model interface {
 		string, error)
 	GetDisplayablePlanDetails(ppMap model.ProjectPlanMapping, planDetails model.PlanDetails) (
 		*model.DisplayPlanDetails, int, string, error)
-	UpdateFeaturesForCustomPlan(projectID int64, AccountLimit int64, MtuLimit int64, AvailableFeatuers []string) (int, error)
+	UpdateFeaturesForCustomPlan(projectID int64, AccountLimit int64, MtuLimit int64, AvailableFeatures []string) (int, error)
 	UpdateAddonsForProject(projectID int64, addons model.OverWrite) (string, error)
 	CreateAddonsForCustomPlanForProject(projectID int64) error
 	CreateDefaultProjectPlanMapping(projectID int64, planID int, billingPlanPriceID string) (int, error)

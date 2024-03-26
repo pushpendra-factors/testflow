@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { connect } from 'react-redux';
+import React, { useState, useEffect } from 'react';
+import { connect, useDispatch, useSelector } from 'react-redux';
 import {
   Row,
   Col,
@@ -15,8 +15,7 @@ import {
   Space
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
-import { MoreOutlined } from '@ant-design/icons';
-import _ from 'lodash';
+import { MoreOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import {
   fetchAlerts,
   deleteAlert,
@@ -25,14 +24,18 @@ import {
   fetchAllAlerts,
   createAlert
 } from 'Reducers/global';
+import { fetchEventNames, getGroups } from 'Reducers/coreQuery/middleware';
+import useQuery from 'hooks/useQuery';
+import TableSearchAndRefresh from 'Components/TableSearchAndRefresh';
+import {
+  NEW_DASHBOARD_TEMPLATES_MODAL_CLOSE,
+  NEW_DASHBOARD_TEMPLATES_MODAL_OPEN
+} from 'Reducers/types';
+import ModalFlow from 'Components/ModalFlow';
 import KPIBasedAlert from './KPIBasedAlert';
 import EventBasedAlert from './EventBasedAlert';
 import styles from './index.module.scss';
-import { ExclamationCircleOutlined } from '@ant-design/icons';
-import { fetchEventNames, getGroups } from 'Reducers/coreQuery/middleware';
-import { useParams } from 'react-router-dom';
-import useQuery from 'hooks/useQuery';
-import TableSearchAndRefresh from 'Components/TableSearchAndRefresh';
+import { getAlertTemplatesTransformation } from './utils';
 
 const { TabPane } = Tabs;
 
@@ -65,13 +68,17 @@ const Alerts = ({
   const [searchTableData, setSearchTableData] = useState([]);
 
   const routeQuery = useQuery();
+  const dashboard_templates_modal_state = useSelector(
+    (state) => state.dashboardTemplatesController
+  );
+  const alertTemplates = useSelector((state)=>state.alertTemplates)
+  const dispatch = useDispatch();
 
   useEffect(() => {
     if (!groups || Object.keys(groups).length === 0) {
       getGroups(activeProject?.id);
     }
   }, [activeProject?.id, groups]);
-
   useEffect(() => {
     fetchEventNames(activeProject?.id, true);
   }, [activeProject]);
@@ -112,33 +119,32 @@ const Alerts = ({
               });
             }
           );
-        } else {
-          return deleteEventAlert(activeProject?.id, item?.id).then(
-            (res) => {
-              fetchAllAlerts(activeProject?.id);
-              notification.success({
-                message: 'Success',
-                description: 'Deleted Alert successfully ',
-                duration: 5
-              });
-              setAlertState({ state: 'list', index: 0 });
-            },
-            (err) => {
-              notification.error({
-                message: 'Error',
-                description: err.data,
-                duration: 5
-              });
-            }
-          );
         }
+        return deleteEventAlert(activeProject?.id, item?.id).then(
+          (res) => {
+            fetchAllAlerts(activeProject?.id);
+            notification.success({
+              message: 'Success',
+              description: 'Deleted Alert successfully ',
+              duration: 5
+            });
+            setAlertState({ state: 'list', index: 0 });
+          },
+          (err) => {
+            notification.error({
+              message: 'Error',
+              description: err.data,
+              duration: 5
+            });
+          }
+        );
       }
     });
   };
 
   const createDuplicateAlert = (item) => {
     if (item?.type == 'kpi_alert') {
-      let payload = {
+      const payload = {
         ...item?.alert,
         alert_name: `Copy of ${item?.alert?.alert_name}`
       };
@@ -159,7 +165,7 @@ const Alerts = ({
           });
         });
     } else {
-      let payload = {
+      const payload = {
         ...item?.alert,
         title: `Copy of ${item?.alert?.title}`
       };
@@ -183,41 +189,39 @@ const Alerts = ({
     }
   };
 
-  const menu = (item) => {
-    return (
-      <Menu className={`${styles.antdActionMenu}`}>
-        <Menu.Item
-          key='0'
-          onClick={() => {
-            setTabNo(item?.type == 'kpi_alert' ? '1' : '2');
-            setAlertState({ state: 'edit', index: item });
-            setAlertDetails(item);
-          }}
-        >
-          <a>Edit alert</a>
-        </Menu.Item>
-        <Menu.Item
-          key='1'
-          onClick={(e) => {
-            createDuplicateAlert(item);
-          }}
-        >
-          <a>Create copy</a>
-        </Menu.Item>
-        <Menu.Divider />
-        <Menu.Item
-          key='2'
-          onClick={() => {
-            confirmDeleteAlert(item);
-          }}
-        >
-          <a>
-            <span style={{ color: 'red' }}>Remove alert</span>
-          </a>
-        </Menu.Item>
-      </Menu>
-    );
-  };
+  const menu = (item) => (
+    <Menu className={`${styles.antdActionMenu}`}>
+      <Menu.Item
+        key='0'
+        onClick={() => {
+          setTabNo(item?.type == 'kpi_alert' ? '1' : '2');
+          setAlertState({ state: 'edit', index: item });
+          setAlertDetails(item);
+        }}
+      >
+        <a>Edit alert</a>
+      </Menu.Item>
+      <Menu.Item
+        key='1'
+        onClick={(e) => {
+          createDuplicateAlert(item);
+        }}
+      >
+        <a>Create copy</a>
+      </Menu.Item>
+      <Menu.Divider />
+      <Menu.Item
+        key='2'
+        onClick={() => {
+          confirmDeleteAlert(item);
+        }}
+      >
+        <a>
+          <span style={{ color: 'red' }}>Remove alert</span>
+        </a>
+      </Menu.Item>
+    </Menu>
+  );
 
   const columns = [
     {
@@ -227,11 +231,11 @@ const Alerts = ({
       width: '400px',
       render: (item) => (
         <Text
-          type={'title'}
+          type='title'
           level={7}
-          truncate={true}
+          truncate
           charLimit={50}
-          extraClass={`cursor-pointer m-0`}
+          extraClass='cursor-pointer m-0'
           onClick={() => {
             setTabNo(item?.type == 'kpi_alert' ? '1' : '2');
             setAlertState({ state: 'edit', index: item });
@@ -247,7 +251,7 @@ const Alerts = ({
       dataIndex: 'dop',
       key: 'dop',
       render: (text) => (
-        <Text type={'title'} level={7} truncate={true} charLimit={25}>
+        <Text type='title' level={7} truncate charLimit={25}>
           {text}
         </Text>
       )
@@ -261,24 +265,19 @@ const Alerts = ({
         <div className='flex items-center'>
           {item?.status === 'paused' || item?.status === 'disabled' ? (
             <Badge
-              className={'fa-custom-badge fa-custom-badge--orange'}
+              className='fa-custom-badge fa-custom-badge--orange'
               status='processing'
-              text={'Paused'}
+              text='Paused'
             />
           ) : (
             <Badge
-              className={'fa-custom-badge fa-custom-badge--green'}
+              className='fa-custom-badge fa-custom-badge--green'
               status='success'
-              text={'Active'}
+              text='Active'
             />
           )}
           {item?.error && (
-            <SVG
-              name={'InfoCircle'}
-              extraClass={'ml-2'}
-              size={18}
-              color='red'
-            />
+            <SVG name='InfoCircle' extraClass='ml-2' size={18} color='red' />
           )}
         </div>
       )
@@ -317,23 +316,19 @@ const Alerts = ({
   }, [activeProject]);
 
   const IntegrationIcons = ({ slack, teams, webhook, email }) => {
-    let iconSize = 22;
+    const iconSize = 22;
     return (
       <div className='flex items-center'>
-        {slack && <SVG name={'slack'} size={iconSize} extraClass={'mr-4'} />}
-        {teams && (
-          <SVG name={'MSTeam'} size={iconSize + 4} extraClass={'mr-4'} />
-        )}
-        {webhook && (
-          <SVG name={'Webhook'} size={iconSize} extraClass={'mr-4'} />
-        )}
-        {email && <SVG name={'Email'} size={iconSize} extraClass={'mr-4'} />}
+        {slack && <SVG name='slack' size={iconSize} extraClass='mr-4' />}
+        {teams && <SVG name='MSTeam' size={iconSize + 4} extraClass='mr-4' />}
+        {webhook && <SVG name='Webhook' size={iconSize} extraClass='mr-4' />}
+        {email && <SVG name='Email' size={iconSize} extraClass='mr-4' />}
       </div>
     );
   };
 
   useEffect(() => {
-    let savedArr = [];
+    const savedArr = [];
     savedAlerts?.forEach((item, index) => {
       if (alertType === 'weekly') {
         item.type === 'kpi_alert' &&
@@ -395,11 +390,11 @@ const Alerts = ({
     if (alertState.state === 'list') {
       title = (
         <Text
-          type={'title'}
+          type='title'
           level={3}
-          weight={'bold'}
-          extraClass={'m-0'}
-          id={'fa-at-text--page-title'}
+          weight='bold'
+          extraClass='m-0'
+          id='fa-at-text--page-title'
         >
           {titleText}
         </Text>
@@ -408,62 +403,50 @@ const Alerts = ({
     return title;
   };
 
-  const addMenu = (item) => {
-    return (
-      <Menu className={`${styles.antdActionMenu}`}>
-        <Menu.Item
-          key='0'
-          onClick={() => {
-            setTabNo('2');
-            setAlertState({ state: 'add', index: 0 });
-            setAlertDetails(false);
-          }}
-        >
-          <div className='flex items-center'>
-            <SVG name={'Event'} size={20} color='blue' />
-            <div className='pl-2'>
-              <Text
-                type={'title'}
-                level={7}
-                color={'grey-2'}
-                extraClass={'m-0'}
-              >
-                Real-time alerts
-              </Text>
-              <Text type={'title'} level={8} color={'grey'} extraClass={'m-0'}>
-                Track and chart events
-              </Text>
-            </div>
+  const addMenu = (item) => (
+    <Menu className={`${styles.antdActionMenu}`}>
+      <Menu.Item
+        key='0'
+        onClick={() => {
+          setTabNo('2');
+          setAlertState({ state: 'add', index: 0 });
+          setAlertDetails(false);
+        }}
+      >
+        <div className='flex items-center'>
+          <SVG name='Event' size={20} color='blue' />
+          <div className='pl-2'>
+            <Text type='title' level={7} color='grey-2' extraClass='m-0'>
+              Real-time alerts
+            </Text>
+            <Text type='title' level={8} color='grey' extraClass='m-0'>
+              Track and chart events
+            </Text>
           </div>
-        </Menu.Item>
-        <Menu.Item
-          key='0'
-          onClick={() => {
-            setTabNo('1');
-            setAlertState({ state: 'add', index: 0 });
-            setAlertDetails(false);
-          }}
-        >
-          <div className='flex items-center'>
-            <SVG name={'Linechart'} size={20} color='blue' />
-            <div className='pl-2'>
-              <Text
-                type={'title'}
-                level={7}
-                color={'grey-2'}
-                extraClass={'m-0'}
-              >
-                Weekly alerts
-              </Text>
-              <Text type={'title'} level={8} color={'grey'} extraClass={'m-0'}>
-                Measure performance over time
-              </Text>
-            </div>
+        </div>
+      </Menu.Item>
+      <Menu.Item
+        key='0'
+        onClick={() => {
+          setTabNo('1');
+          setAlertState({ state: 'add', index: 0 });
+          setAlertDetails(false);
+        }}
+      >
+        <div className='flex items-center'>
+          <SVG name='Linechart' size={20} color='blue' />
+          <div className='pl-2'>
+            <Text type='title' level={7} color='grey-2' extraClass='m-0'>
+              Weekly alerts
+            </Text>
+            <Text type='title' level={8} color='grey' extraClass='m-0'>
+              Measure performance over time
+            </Text>
           </div>
-        </Menu.Item>
-      </Menu>
-    );
-  };
+        </div>
+      </Menu.Item>
+    </Menu>
+  );
 
   const switchToAddAlertState = (tabNo = '2') => {
     setTabNo(tabNo);
@@ -491,12 +474,23 @@ const Alerts = ({
     let titleAction = null;
     if (alertState.state === 'list') {
       titleAction = (
-        <Button type='primary' onClick={newAlertAction}>
-          <Space>
-            <SVG name={'plus'} size={16} color='white' />
-            New Alert
-          </Space>
-        </Button>
+        <div className='pt-1' style={{ display: 'flex', gap: '5px' }}>
+          <Button
+            type='text'
+            className='dropdown-btn'
+            onClick={() => {
+              dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_OPEN });
+            }}
+          >
+            Templates
+          </Button>
+          <Button type='primary' onClick={newAlertAction}>
+            <Space>
+              <SVG name='plus' size={16} color='white' />
+              New Alert
+            </Space>
+          </Button>
+        </div>
       );
     }
 
@@ -504,13 +498,11 @@ const Alerts = ({
   };
 
   const onSearch = (e) => {
-    let term = e.target.value;
+    const term = e.target.value;
     setSearchTerm(term);
-    let searchResults = tableData?.filter((item) => {
-      return item?.alert_name?.title
-        ?.toLowerCase()
-        .includes(term.toLowerCase());
-    });
+    const searchResults = tableData?.filter((item) =>
+      item?.alert_name?.title?.toLowerCase().includes(term.toLowerCase())
+    );
     setSearchTableData(searchResults);
   };
 
@@ -540,7 +532,7 @@ const Alerts = ({
             loading={tableLoading}
             columns={columns}
             dataSource={searchTerm ? searchTableData : tableData}
-            pagination={true}
+            pagination
           />
         </div>
       );
@@ -548,43 +540,56 @@ const Alerts = ({
     return alertContent;
   };
 
-  const renderTable = () => {
-    return (
-      <div className={'fa-container'}>
-        <Row gutter={[24, 24]} justify='center'>
-          <Col span={22}>
-            <Row>
-              <Col span={12}>{renderTitle()}</Col>
-              <Col span={12}>
-                <div className={'flex justify-end'}>{renderTitleActions()}</div>
-              </Col>
-            </Row>
-            <Row>
-              <Col span={24}>
-                <Text
-                  type={'title'}
-                  level={7}
-                  color={'grey-2'}
-                  extraClass={'m-0'}
+  const renderTable = () => (
+    <div className='fa-container'>
+      <Row gutter={[24, 24]} justify='center'>
+        <Col span={22}>
+          <Row>
+            <Col span={12}>{renderTitle()}</Col>
+            <Col span={12}>
+              <div className='flex justify-end'>{renderTitleActions()}</div>
+            </Col>
+          </Row>
+          <Row>
+            <Col span={24}>
+              <Text type='title' level={7} color='grey-2' extraClass='m-0'>
+                Set up alerts to never miss out on any prospect activity or
+                changes in metrics you care about. &nbsp;
+                <a
+                  href='https://help.factors.ai/en/articles/7284705-alerts'
+                  target='_blank'
+                  rel='noreferrer'
                 >
-                  Set up alerts to never miss out on any prospect activity or
-                  changes in metrics you care about. &nbsp;
-                  <a
-                    href='https://help.factors.ai/en/articles/7284705-alerts'
-                    target='_blank'
-                  >
-                    Learn more
-                  </a>
-                </Text>
+                  Learn more
+                </a>
+              </Text>
 
-                <div className={'mt-6'}>{renderAlertContent()}</div>
-              </Col>
-            </Row>
-          </Col>
-        </Row>
-      </div>
-    );
-  };
+              <div className='mt-6'>{renderAlertContent()}</div>
+            </Col>
+          </Row>
+        </Col>
+        <ModalFlow
+          data={getAlertTemplatesTransformation(alertTemplates?.data)}
+          visible={dashboard_templates_modal_state.isNewDashboardTemplateModal}
+          onCancel={() => {
+            dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_CLOSE });
+          }}
+          handleLastFinish={(item, currentQuery, message_property) => {
+           
+            setTabNo('2');
+            setAlertState({ state: 'add', index: 0 });
+            setAlertDetails(false);
+            setAlertDetails({
+              type: 'event_based_alert',
+              alert: { title: item.alert_name, message: item.alert_message, currentQuery: currentQuery, message_property: message_property },
+              title: item.alert_name,
+              extra: item
+            });
+          }}
+        />
+      </Row>
+    </div>
+  );
 
   return (
     <div>

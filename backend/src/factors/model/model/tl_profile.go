@@ -53,6 +53,19 @@ type UserActivity struct {
 	Icon        string          `json:"icon"`
 }
 
+type TimelineEvent struct {
+	ID          string          `json:"id"`
+	Name        string          `json:"name"`
+	DisplayName string          `json:"display_name"`
+	AliasName   string          `json:"alias_name,omitempty"`
+	Icon        string          `json:"icon"`
+	Type        string          `json:"type"`
+	Timestamp   uint64          `json:"timestamp"`
+	Properties  *postgres.Jsonb `json:"properties,omitempty"`
+	UserID      string          `json:"user_id"`
+	IsGroupUser bool            `json:"is_group_user"`
+}
+
 type TimelinePayload struct {
 	Query        Query    `json:"query"`
 	SearchFilter []string `json:"search_filter"`
@@ -538,5 +551,72 @@ func FindUserGroupByID(u User, id int) (string, error) {
 		return u.Group8ID, nil
 	default:
 		return "", fmt.Errorf("no matching group for ID %d", id)
+	}
+}
+
+func SetEventDisplaName(eventName string, displayNamesMap *map[string]string) string {
+	if displayName, exists := (*displayNamesMap)[eventName]; exists {
+		return displayName
+	}
+	return eventName
+}
+
+func SetAliasName(eventName string, eventType string, properties *map[string]interface{}) string {
+	// Virtual Events Case: Set AliasName to $page_url
+	if eventType == TYPE_FILTER_EVENT_NAME {
+		if pageURL, exists := (*properties)[U.EP_PAGE_URL]; exists {
+			return fmt.Sprintf("%s", pageURL)
+		}
+	}
+
+	// Standard Event Name Aliases
+	if aliasName, exists := STANDARD_EVENT_NAME_ALIASES[eventName]; exists {
+		return aliasName
+	}
+
+	// Specific Event Cases
+	switch eventName {
+	case U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED:
+		return fmt.Sprintf("Added to %s", (*properties)[U.EP_SALESFORCE_CAMPAIGN_NAME])
+	case U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_RESPONDED_TO_CAMPAIGN:
+		return fmt.Sprintf("Responded to %s", (*properties)[U.EP_SALESFORCE_CAMPAIGN_NAME])
+	case U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION:
+		return fmt.Sprintf("%s", (*properties)[U.EP_HUBSPOT_FORM_SUBMISSION_TITLE])
+	case U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL:
+		emailSubject := "No Subject"
+		if subject, exists := (*properties)[U.EP_HUBSPOT_ENGAGEMENT_SUBJECT]; exists && subject != nil && subject != "" {
+			emailSubject = fmt.Sprintf("%s", subject)
+		}
+		return fmt.Sprintf("%s: %s", (*properties)[U.EP_HUBSPOT_ENGAGEMENT_TYPE], emailSubject)
+	case U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED, U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED:
+		return fmt.Sprintf("%s", (*properties)[U.EP_HUBSPOT_ENGAGEMENT_TITLE])
+	case U.EVENT_NAME_SALESFORCE_TASK_CREATED:
+		return fmt.Sprintf("Created Task - %s", (*properties)[U.EP_SF_TASK_SUBJECT])
+	case U.EVENT_NAME_SALESFORCE_EVENT_CREATED:
+		return fmt.Sprintf("Created Event - %s", (*properties)[U.EP_SF_EVENT_SUBJECT])
+	case U.EVENT_NAME_HUBSPOT_CONTACT_LIST:
+		return fmt.Sprintf("Added to Hubspot List - %s", (*properties)[U.EP_HUBSPOT_CONTACT_LIST_LIST_NAME])
+	default:
+		return ""
+	}
+}
+
+func SetEventIcon(eventName string) string {
+	if icon, exists := EVENT_ICONS_MAP[eventName]; exists {
+		return icon
+	}
+
+	switch {
+	case strings.Contains(eventName, "$hubspot_") || strings.Contains(eventName, "$hs_"):
+		return "hubspot"
+	case strings.Contains(eventName, "$salesforce_") || strings.Contains(eventName, "$sf_"):
+		return "salesforce"
+	case strings.Contains(eventName, "$linkedin_") || strings.Contains(eventName, "$li_"):
+		return "linkedin"
+	case strings.Contains(eventName, "$g2_"):
+		return "g2crowd"
+	default:
+		// Default icon
+		return "calendar-star"
 	}
 }

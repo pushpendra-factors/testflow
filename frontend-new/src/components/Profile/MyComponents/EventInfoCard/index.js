@@ -71,7 +71,7 @@ function EventInfoCard({ event, eventIcon, sourceIcon, propertiesType }) {
                 type='title'
                 color='grey'
                 extraClass={`${
-                  key.length > 20 ? 'break-words' : 'whitespace-no-wrap'
+                  key.length > 20 ? 'break-words' : 'whitespace-nowrap'
                 } max-w-xs mr-2`}
               >
                 {eventPropNames[key] || PropTextFormat(key)}
@@ -82,7 +82,7 @@ function EventInfoCard({ event, eventIcon, sourceIcon, propertiesType }) {
                 color='grey-2'
                 weight='medium'
                 extraClass={`${
-                  value?.length > 30 ? 'break-words' : 'whitespace-no-wrap'
+                  value?.length > 30 ? 'break-words' : 'whitespace-nowrap'
                 }  text-right`}
                 truncate
                 charLimit={40}

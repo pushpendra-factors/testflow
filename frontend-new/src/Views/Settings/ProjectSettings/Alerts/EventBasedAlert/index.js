@@ -5,7 +5,7 @@ import React, {
   useRef,
   useMemo
 } from 'react';
-import { connect, useDispatch } from 'react-redux';
+import { connect, useDispatch, useSelector } from 'react-redux';
 import {
   Row,
   Col,
@@ -94,8 +94,17 @@ import Teams from './Teams';
 import { getMsgPayloadMapping, dummyPayloadValue } from './../utils';
 import { ReactSortable } from 'react-sortablejs';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
+import { selectSegments } from 'Reducers/timelines/selectors';
+import { reorderDefaultDomainSegmentsToTop } from 'Components/Profile/AccountProfiles/accountProfiles.helpers';
+import { getSavedSegments } from 'Reducers/timelines/middleware';
+import { getSegmentColorCode } from 'Views/AppSidebar/appSidebar.helpers';
+import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
+import cx from 'classnames';
+import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
 
 const { Option } = Select;
+
+const SegmentIcon = (name) => defaultSegmentIconsMapping[name] || 'pieChart';
 
 const EventBasedAlert = ({
   activeProject,
@@ -138,7 +147,8 @@ const EventBasedAlert = ({
   fetchSlackUsers,
   slack_users,
   testSlackAlert,
-  testTeamsAlert
+  testTeamsAlert,
+  getSavedSegments
 }) => {
   const [errorInfo, seterrorInfo] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -207,6 +217,16 @@ const EventBasedAlert = ({
   const dispatch = useDispatch();
   const { confirm } = Modal;
 
+  // Segment Support
+  const [segmentType, setSegmentType] = useState('action_event');
+  const [selectedSegment, setSelectedSegment] = useState('');
+  const [segmentOptions, setSegmentOptions] = useState([]);
+  const segments = useSelector(selectSegments);
+  const segmentsList = useMemo(
+    () => reorderDefaultDomainSegmentsToTop(segments[GROUP_NAME_DOMAINS]) || [],
+    [segments]
+  );
+
   // Event SELECTION
   const [queryType, setQueryType] = useState(QUERY_TYPE_EVENT);
   const [queries, setQueries] = useState([]);
@@ -267,6 +287,46 @@ const EventBasedAlert = ({
     fetchGroups();
   }, [activeProject?.id, groups]);
 
+  // fetch segments and on Change functions
+  useEffect(() => {
+    getSavedSegments(activeProject?.id);
+  }, [activeProject?.id]);
+
+  const renderOptions = (segment) => {
+    const iconColor = getSegmentColorCode(segment?.name);
+    const icon = SegmentIcon(segment?.name);
+    return (
+      <div className={cx('flex col-gap-1 items-center w-full')}>
+        <ControlledComponent controller={icon != null}>
+          <SVG name={icon} size={20} color={iconColor} />
+        </ControlledComponent>
+        {segment?.name}
+      </div>
+    );
+  };
+
+  useEffect(() => {
+    const segmentListWithLabels = segmentsList.map((segment) => ({
+      value: segment?.id,
+      label: renderOptions(segment)
+    }));
+    setSegmentOptions(segmentListWithLabels);
+  }, [segmentsList]);
+
+  const getSegmentNameFromId = (Id) => {
+    const segmentName = segmentsList.find((segment) => segment?.id === Id);
+    if (segmentName) return segmentName?.name;
+    return '';
+  };
+
+  const onChangeSegmentType = (value) => {
+    setSegmentType(value);
+  };
+
+  const onChangeSegment = (segment) => {
+    setSelectedSegment(segment?.value);
+  };
+
   // useEffect(() => {
   //   if (groups && Object.keys(groups).length != 0) {
   //     Object.keys(groups?.all_groups).forEach((item) => {
@@ -312,10 +372,12 @@ const EventBasedAlert = ({
 
     setQueries([]);
     setQueryOptions(opts);
+    setSegmentType('action_event');
+    setSelectedSegment('');
   };
 
   const confirmGroupSwitch = (group) => {
-    if (queries.length > 0) {
+    if (queries.length > 0 || segmentType !== 'action_event') {
       Modal.confirm({
         title: 'Are you sure?',
         content:
@@ -438,6 +500,8 @@ const EventBasedAlert = ({
         viewAlertDetails?.alert?.event_level == 'account' ? 'events' : 'users'
       );
       setQueries(queryData);
+      setSegmentType(viewAlertDetails?.alert?.action_performed);
+      setSelectedSegment(viewAlertDetails?.alert?.event);
       setAlertName(viewAlertDetails?.alert?.title);
       setAlertMessage(viewAlertDetails?.alert?.message);
       setAlertLimit(viewAlertDetails?.alert?.alert_limit);
@@ -496,6 +560,16 @@ const EventBasedAlert = ({
         setDisbleWebhookInput(false);
         setHideTestMessageBtn(true);
       }
+    } else if (alertState?.state === 'add' && viewAlertDetails) {
+
+      setAlertName(viewAlertDetails?.alert?.title);
+      setAlertMessage(viewAlertDetails?.alert?.message)
+
+      setQueries(viewAlertDetails?.alert?.currentQuery);
+      const messageProperty = viewAlertDetails?.alert?.message_property
+      
+      messageProperty.forEach((property) => pushGroupBy(property));
+  
     }
     return () => {
       //reset form values on unmount
@@ -626,7 +700,6 @@ const EventBasedAlert = ({
     const i = ind >= 0 ? ind : groupBy.length;
     setGroupBy('event', groupState, i);
   };
-
   const selectGroupByEvent = () =>
     isGroupByDDVisible ? (
       <EventGroupBlock
@@ -652,7 +725,7 @@ const EventBasedAlert = ({
       const sortableList = groupBy
         .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
         .filter(
-          (gbp) => gbp.eventName === queries?.[0].label && gbp.eventIndex === 1
+          (gbp) => gbp.eventName === queries?.[0]?.label && gbp.eventIndex === 1
         );
 
       results = (
@@ -713,7 +786,7 @@ const EventBasedAlert = ({
     if (groupBy && groupBy.length && groupBy[0] && groupBy[0].property) {
       groupBy
         .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
-        .filter((gbp) => gbp.eventName === viewAlertDetails?.alert?.event)
+        .filter((gbp) => gbp?.eventName === viewAlertDetails?.alert?.event)
         .forEach((gbp, gbpIndex) => {
           const { groupByIndex, ...orgGbp } = gbp;
           groupByEvents.push(
@@ -872,7 +945,7 @@ const EventBasedAlert = ({
 
     let breakDownProperties = [];
     if (
-      queries.length > 0 &&
+      (queries.length > 0 || selectedSegment) &&
       (EventPropertyDetails?.name || EventPropertyDetails?.[1])
     ) {
       let category;
@@ -888,17 +961,17 @@ const EventBasedAlert = ({
 
       breakDownProperties = [
         {
-          eventName: queries?.[0].label,
+          eventName: queries?.[0]?.label || selectedSegment,
           property: EventPropertyDetails?.name || EventPropertyDetails?.[1],
           prop_type:
             EventPropertyDetails?.data_type || EventPropertyDetails?.[2],
-          prop_category: category.length > 0 ? 'event' : 'user'
+          prop_category: category?.length > 0 ? 'event' : 'user'
         }
       ];
     }
 
     if (
-      queries.length > 0 &&
+      (queries.length > 0 || selectedSegment) &&
       (slackEnabled || webhookEnabled || teamsEnabled) &&
       (saveSelectedChannel.length > 0 ||
         finalWebhookUrl !== '' ||
@@ -907,7 +980,9 @@ const EventBasedAlert = ({
       let payload = {
         title: data?.alert_name,
         event_level: activeGrpBtn == 'events' ? 'account' : 'user',
-        event: queries[0]?.label,
+        action_performed: segmentType,
+        event:
+          segmentType === 'action_event' ? queries[0]?.label : selectedSegment,
         filter: formatFiltersForQuery(queries?.[0]?.filters),
         notifications: notifications,
         is_hyperlink_disabled: !isHyperLinkEnabled,
@@ -919,7 +994,7 @@ const EventBasedAlert = ({
                   .map((gbp, ind) => ({ ...gbp, groupByIndex: ind }))
                   .filter(
                     (gbp) =>
-                      gbp.eventName === queries[0]?.label &&
+                      gbp?.eventName === queries[0]?.label &&
                       gbp.eventIndex === 1
                   )
               )
@@ -1491,14 +1566,14 @@ const EventBasedAlert = ({
               </Text>
             </Col>
           </Row>
-          <Row className={'mt-4 mb-4'}>
-            <Col span={2}>
-              <div className='flex justify-start'>
-                <Text type={'title'} level={8} extraClass={'m-0 mt-2'}>
-                  When
-                </Text>
-              </div>
+          <Row className='mt-4'>
+            <Col span={18}>
+              <Text type={'title'} level={8} extraClass={'m-0'}>
+                When
+              </Text>
             </Col>
+          </Row>
+          <Row className={'mt-1 mb-4'}>
             <Col span={12}>
               <div className='flex items-center justify-start btn-custom--radio-container'>
                 <Button
@@ -1522,22 +1597,96 @@ const EventBasedAlert = ({
               </div>
             </Col>
           </Row>
-          <Row className={'mt-4 mb-4 border-bottom--thin-2 pb-6'}>
-            <Col span={2}>
-              <div className='flex justify-start'>
-                <Text type={'title'} level={8} extraClass={'m-0'}>
-                  Do this
-                </Text>
-              </div>
-            </Col>
-            <Col span={22}>
-              <div className='border--thin-2 px-4 py-2 border-radius--sm'>
-                <Form.Item name='event_name' className={'m-0'}>
-                  {queryList()}
-                </Form.Item>
-              </div>
+          <Row className='mt-4 mb-1'>
+            <Col span={18}>
+              <Text type={'title'} level={7} extraClass={'m-0'}>
+                Do this
+              </Text>
             </Col>
           </Row>
+          <Row>
+            <Col span={22}>
+              <Select
+                showSearch
+                style={{ minWidth: 350 }}
+                className='fa-select'
+                placeholder='Select segment type'
+                optionFilterProp='children'
+                onChange={onChangeSegmentType}
+                filterOption={(input, option) =>
+                  option.props.children
+                    .toLowerCase()
+                    .indexOf(input.toLowerCase()) >= 0
+                }
+                value={segmentType}
+              >
+                {activeGrpBtn === 'users' ? (
+                  <Option value='action_event'>Performs an event</Option>
+                ) : (
+                  <>
+                    <Option value='action_event'>Performs an event</Option>
+                    <Option value='action_segment_entry'>
+                      Enter the segment
+                    </Option>
+                    <Option value='action_segment_exit'>
+                      Exit the segment
+                    </Option>
+                  </>
+                )}
+              </Select>
+            </Col>
+          </Row>
+          {segmentType !== 'action_event' ? (
+            <>
+              <Row className='mt-4'>
+                <Col span={18}>
+                  <Text type={'title'} level={7} extraClass={'m-0'}>
+                    Segment name
+                  </Text>
+                </Col>
+              </Row>
+              <Row className='mt-2 mb-4 border-bottom--thin-2 pb-6'>
+                <Col span={18}>
+                  <Select
+                    showSearch
+                    style={{ minWidth: 350 }}
+                    className='fa-select'
+                    placeholder='Select or search segment'
+                    labelInValue
+                    value={selectedSegment}
+                    onChange={onChangeSegment}
+                    filterOption={(input, option) => {
+                      return (
+                        option?.value
+                          ? getSegmentNameFromId(option?.value).toLowerCase()
+                          : ''
+                      ).includes(input.toLowerCase());
+                    }}
+                    options={segmentOptions}
+                  ></Select>
+                </Col>
+              </Row>
+            </>
+          ) : (
+            <>
+              <Row className='mt-4'>
+                <Col span={18}>
+                  <Text type={'title'} level={7} extraClass={'m-0'}>
+                    Event details
+                  </Text>
+                </Col>
+              </Row>
+              <Row className={'mt-2 mb-4 border-bottom--thin-2 pb-6'}>
+                <Col span={22}>
+                  <div className='border--thin-2 px-4 py-2 border-radius--sm'>
+                    <Form.Item name='event_name' className={'m-0'}>
+                      {queryList()}
+                    </Form.Item>
+                  </div>
+                </Col>
+              </Row>
+            </>
+          )}
 
           <Row className={'mt-6'}>
             <Col span={18}>
@@ -1623,7 +1772,7 @@ const EventBasedAlert = ({
             </Col>
           </Row>
 
-          {queries.length > 0 && (
+          {(queries.length > 0 || selectedSegment) && (
             <Row className={'mt-4'}>
               <Col span={12}>
                 <div>
@@ -1827,7 +1976,7 @@ const EventBasedAlert = ({
                         }}
                         // dropdownMatchSelectWidth={false}
                         value={EventPropertyDetails}
-                        disabled={!queries[0]?.label}
+                        // disabled={!queries[0]?.label}
                         onChange={(value, details) => {
                           setEventPropertyDetails(details);
                           setNotRepeat(true);
@@ -2191,5 +2340,6 @@ export default connect(mapStateToProps, {
   fetchAllAlerts,
   fetchSlackUsers,
   testSlackAlert,
-  testTeamsAlert
+  testTeamsAlert,
+  getSavedSegments
 })(EventBasedAlert);

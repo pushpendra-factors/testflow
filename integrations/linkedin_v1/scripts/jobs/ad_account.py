@@ -1,6 +1,6 @@
 
-from global_objects.global_obj_creator import metrics_aggregator_obj, data_service_obj, linkedin_api_service
 from util.linkedin_api_service import LinkedinApiService
+from data_service.data_service import DataService
 from constants.constants import *
 from _datetime import datetime
 class AdAccountJob:
@@ -11,13 +11,13 @@ class AdAccountJob:
         self.linkedin_setting, self.input_timestamp = linkedin_setting, input_timestamp
     
     def execute(self):
-        metadata = linkedin_api_service.get_ad_account_data(self.linkedin_setting)
+        metadata = LinkedinApiService.get_instance().get_ad_account_data(self.linkedin_setting)
 
         timestamp = int(datetime.now().strftime('%Y%m%d'))
         if self.input_timestamp != None:
             timestamp = self.input_timestamp
         
-        data_service_obj.add_linkedin_documents(
+        DataService.get_instance().add_linkedin_documents(
                         self.linkedin_setting.project_id, self.linkedin_setting.ad_account,
                         AD_ACCOUNT, str(metadata['id']),
                         metadata, timestamp)

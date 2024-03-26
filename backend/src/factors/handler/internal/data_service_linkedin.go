@@ -103,6 +103,23 @@ func DataServiceLinkedinGetCampaignGroupInfoHandler(c *gin.Context) {
 	linkedinDocuments, statusCode := store.GetStore().GetCampaignGroupInfoForGivenTimerange(campaignGroupInfoRequestPayload)
 	c.JSON(statusCode, linkedinDocuments)
 }
+
+func DataServiceLinkedinGetCampaignInfoHandler(c *gin.Context) {
+	r := c.Request
+
+	var campaignInfoRequestPayload model.LinkedinCampaignGroupInfoRequestPayload
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&campaignInfoRequestPayload); err != nil {
+		log.WithError(err).Error("Failed to decode JSON request")
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "Failed to decode JSON request."})
+		return
+	}
+	linkedinDocuments, statusCode := store.GetStore().GetCampaignInfoForGivenTimerange(campaignInfoRequestPayload)
+	c.JSON(statusCode, linkedinDocuments)
+}
+
 func DataServiceLinkedinValidationHandler(c *gin.Context) {
 	r := c.Request
 

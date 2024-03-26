@@ -1,7 +1,6 @@
 import { Skeleton } from 'antd';
-import { FallBackImage } from 'Constants/templates.constants';
+import { FallBackImage, StartFreshImage } from 'Constants/templates.constants';
 import React, { useEffect, useState } from 'react';
-import { StartFreshImage } from 'Constants/templates.constants';
 import styles from './index.module.scss';
 
 const TemplateThumbnailImage = ({
@@ -9,14 +8,15 @@ const TemplateThumbnailImage = ({
   TemplatesThumbnail,
   isStartFresh
 }) => {
-  let [isLoaded, setIsLoaded] = useState(false);
-  useEffect(() => {
-    return () => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  useEffect(
+    () => () => {
       setTimeout(() => {
         setIsLoaded(false);
       }, 1000);
-    };
-  }, []);
+    },
+    []
+  );
   // Below is to render StartFresh Banner Image
   // And to Skeleton is that image not loaded
   if (isStartFresh === true) {

@@ -214,7 +214,7 @@ function ProjectModal(props) {
                 }
               }}
             >
-              <div className='flex items-center flex-no-wrap'>
+              <div className='flex items-center flex-nowrap'>
                 {project.profile_picture ? (
                   <img
                     src={project.profile_picture}

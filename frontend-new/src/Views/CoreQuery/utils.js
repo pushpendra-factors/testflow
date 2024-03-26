@@ -27,11 +27,6 @@ import {
   QUERY_TYPE_PROFILE,
   QUERY_OPTIONS_DEFAULT_VALUE
 } from 'Utils/constants';
-import {
-  CORE_QUERY_INITIAL_STATE,
-  FILTER_TYPES,
-  INITIAL_STATE
-} from './constants';
 
 import {
   operatorMap,
@@ -39,6 +34,11 @@ import {
   reverseDateOperatorMap
 } from 'Utils/operatorMapping';
 import moment from 'moment';
+import {
+  CORE_QUERY_INITIAL_STATE,
+  FILTER_TYPES,
+  INITIAL_STATE
+} from './constants';
 
 export const initialState = INITIAL_STATE;
 
@@ -52,7 +52,7 @@ export const formatFiltersForQuery = (filters, scope = 'event') => {
   const formattedFilters = [];
   const groupByRef = {};
   let count = 0;
-  filters.forEach((filter) => {
+  filters?.forEach((filter) => {
     let { ref } = filter;
     if (ref == undefined) {
       ref = count++;
@@ -121,8 +121,8 @@ export const formatBreakdown = (opt) => {
 export const formatBreakdownsForQuery = (breakdownArr) =>
   breakdownArr.map((breakdown) => formatBreakdown(breakdown));
 
-export const getEventsWithProperties = (queries) => {
-  return queries.map((ev) => {
+export const getEventsWithProperties = (queries) =>
+  queries.map((ev) => {
     const filterProps = formatFiltersForQuery(ev.filters);
     return {
       an: ev.alias,
@@ -131,7 +131,6 @@ export const getEventsWithProperties = (queries) => {
       pr: filterProps
     };
   });
-};
 
 export const getQuery = (
   groupBy,
@@ -228,8 +227,8 @@ export const getFunnelQuery = (
   return query;
 };
 
-const getProfileWithProperties = (queries) => {
-  return queries.map((ev) => {
+const getProfileWithProperties = (queries) =>
+  queries.map((ev) => {
     const filterProps = formatFiltersForQuery(ev.filters);
     return {
       an: ev.alias,
@@ -237,7 +236,6 @@ const getProfileWithProperties = (queries) => {
       pr: filterProps
     };
   });
-};
 
 export const getProfileQuery = (
   queries,
@@ -451,7 +449,7 @@ export const getEventsWithPropertiesKPI = (filters, category) => {
                     : 'event'
                   : '',
             va: fil.props?.[1] === 'datetime' ? formatFilterDate(val) : val,
-            isPrMa: fil?.extra?.[3] == 'propMap' ? true : false
+            isPrMa: fil?.extra?.[3] == 'propMap'
           });
         });
       } else {
@@ -481,7 +479,7 @@ export const getEventsWithPropertiesKPI = (filters, category) => {
             fil.props?.[1] === 'datetime'
               ? formatFilterDate(fil.values)
               : fil.values,
-          isPrMa: fil?.extra?.[3] == 'propMap' ? true : false
+          isPrMa: fil?.extra?.[3] == 'propMap'
         });
       }
     } else {
@@ -511,7 +509,7 @@ export const getEventsWithPropertiesKPI = (filters, category) => {
                     : 'event'
                   : '',
             va: fil.props?.[1] === 'datetime' ? formatFilterDate(val) : val,
-            isPrMa: fil?.extra?.[3] == 'propMap' ? true : false
+            isPrMa: fil?.extra?.[3] == 'propMap'
           });
         });
       } else {
@@ -541,7 +539,7 @@ export const getEventsWithPropertiesKPI = (filters, category) => {
             fil.props?.[1] === 'datetime'
               ? formatFilterDate(fil.values)
               : fil.values,
-          isPrMa: fil?.extra?.[3] == 'propMap' ? true : false
+          isPrMa: fil?.extra?.[3] == 'propMap'
         });
       }
       fil = filtersGr[1];
@@ -570,7 +568,7 @@ export const getEventsWithPropertiesKPI = (filters, category) => {
                     : 'event'
                   : '',
             va: fil.props?.[1] === 'datetime' ? formatFilterDate(val) : val,
-            isPrMa: fil?.extra?.[3] == 'propMap' ? true : false
+            isPrMa: fil?.extra?.[3] == 'propMap'
           });
         });
       } else {
@@ -600,7 +598,7 @@ export const getEventsWithPropertiesKPI = (filters, category) => {
             fil.props?.[1] === 'datetime'
               ? formatFilterDate(fil.values)
               : fil.values,
-          isPrMa: fil?.extra?.[3] == 'propMap' ? true : false
+          isPrMa: fil?.extra?.[3] == 'propMap'
         });
       }
     }
@@ -630,7 +628,7 @@ const getGroupByWithPropertiesKPI = (appliedGroupBy, index, category) =>
               : opt.prop_category
             : '',
         dpNa: opt?.display_name ? opt?.display_name : '',
-        isPrMa: opt.prop_category === 'propMap' ? true : false
+        isPrMa: opt.prop_category === 'propMap'
       };
     } else {
       appGbp = {
@@ -650,7 +648,7 @@ const getGroupByWithPropertiesKPI = (appliedGroupBy, index, category) =>
               : opt.prop_category
             : '',
         dpNa: opt?.display_name ? opt?.display_name : '',
-        isPrMa: opt.prop_category === 'propMap' ? true : false
+        isPrMa: opt.prop_category === 'propMap'
       };
     }
     if (opt.prop_type === 'datetime') {
@@ -739,8 +737,8 @@ export const getKPIQuery = (
 
   return query;
 };
-const getGroupByWithPropertiesCustomKPI = (appliedGroupBy, index, category) => {
-  return appliedGroupBy.map((opt) => {
+const getGroupByWithPropertiesCustomKPI = (appliedGroupBy, index, category) =>
+  appliedGroupBy.map((opt) => {
     let appGbp = {};
     if (opt.eventIndex === index) {
       appGbp = {
@@ -782,7 +780,6 @@ const getGroupByWithPropertiesCustomKPI = (appliedGroupBy, index, category) => {
     }
     return appGbp;
   });
-};
 const getCustomKPIqueryGroup = (queries, eventGrpBy, period) => {
   const alphabetIndex = 'abcdefghijk';
   const queryArr = [];
@@ -859,7 +856,8 @@ const getGroupByByGroup = (grp) => {
         gbty: 'raw_values'
       }
     ];
-  } else if (grp === 'hubspot_deals') {
+  }
+  if (grp === 'hubspot_deals') {
     return [
       {
         gr: '',
@@ -870,7 +868,8 @@ const getGroupByByGroup = (grp) => {
         gbty: 'raw_values'
       }
     ];
-  } else if (grp === 'salesforce_opportunities') {
+  }
+  if (grp === 'salesforce_opportunities') {
     return [
       {
         gr: '',
@@ -938,24 +937,22 @@ export const getKPIQueryAttributionV1 = (
   return kpiQueries;
 };
 
-export const getSessionsQuery = ({ period }) => {
-  return {
-    cl: QUERY_TYPE_EVENT,
-    ty: TYPE_UNIQUE_USERS,
-    fr: period.from,
-    to: period.to,
-    ewp: [
-      {
-        na: '$session',
-        pr: []
-      }
-    ],
-    gup: [],
-    gbt: '',
-    ec: EVENT_QUERY_USER_TYPE.each,
-    tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata'
-  };
-};
+export const getSessionsQuery = ({ period }) => ({
+  cl: QUERY_TYPE_EVENT,
+  ty: TYPE_UNIQUE_USERS,
+  fr: period.from,
+  to: period.to,
+  ewp: [
+    {
+      na: '$session',
+      pr: []
+    }
+  ],
+  gup: [],
+  gbt: '',
+  ec: EVENT_QUERY_USER_TYPE.each,
+  tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata'
+});
 
 export const calculateFrequencyDataForNoBreakdown = (eventData, userData) => {
   const rows = eventData.rows.map((elem, index) => {
@@ -1171,8 +1168,8 @@ export const processFiltersFromQuery = (prArray) => {
   return filtersArray;
 };
 
-export const processBreakdownsFromQuery = (breakdownArray) => {
-  return breakdownArray.map((opt, index) => ({
+export const processBreakdownsFromQuery = (breakdownArray) =>
+  breakdownArray.map((opt, index) => ({
     groupName: opt.grpn,
     property: opt.pr,
     prop_category: opt.en,
@@ -1183,7 +1180,6 @@ export const processBreakdownsFromQuery = (breakdownArray) => {
     gbty: opt.gbty,
     overAllIndex: index
   }));
-};
 
 export const getStateQueryFromRequestQuery = (requestQuery) => {
   const events = (requestQuery?.ewp || []).map((e) => {
@@ -1268,17 +1264,18 @@ export const DashboardDefaultDateRangeFormat = {
   dateType: PREDEFINED_DATES.LAST_WEEK
 };
 
-export const getStateFromKPIFilters = (rawFilters) => {
+export const getStateFromKPIFilters = (rawFilters, userPropNames) => {
   const eventFilters = [];
 
-  let ref = -1,
-    lastProp = '',
-    lastOp = '';
+  let ref = -1;
+  let lastProp = '';
+  let lastOp = '';
   rawFilters.forEach((pr) => {
     if (pr.lOp === 'AND') {
       ref += 1;
       const val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
-      const DNa = _.startCase(pr.prNa);
+      const DNa =
+        (userPropNames && userPropNames[pr.prNa]) || _.startCase(pr.prNa);
       const isCamp =
         pr?.ca === 'channels' || pr?.ca === 'custom_channels'
           ? pr.objTy
@@ -1302,7 +1299,8 @@ export const getStateFromKPIFilters = (rawFilters) => {
       eventFilters[eventFilters.length - 1].values.push(pr.va);
     } else {
       const val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
-      const DNa = _.lowerCase(pr.prNa);
+      const DNa =
+        (userPropNames && userPropNames[pr.prNa]) || _.lowerCase(pr.prNa);
       const isCamp =
         pr?.ca === 'channels' || pr?.ca === 'custom_channels'
           ? pr.objTy
@@ -1513,7 +1511,7 @@ export const getAttributionStateFromRequestQuery = (
   initial_content_groups,
   kpiConfig
 ) => {
-  let attrQueries = [];
+  const attrQueries = [];
   if (requestQuery.kpi_queries && requestQuery.kpi_queries.length) {
     requestQuery.kpi_queries.map((query) => {
       const kpiQuery = getKPIStateFromRequestQuery(

@@ -229,6 +229,17 @@ class Util:
             campaign_group_info_map[campaign_group['id']] = campaign_group_dict_to_add
         return campaign_group_info_map
     
+    def build_map_of_campaign_info(campaign_info):
+        campaign_info_map = {}
+        for campaign in campaign_info:
+            campaign_dict_to_add = {
+                'campaign_group_id': campaign['value']['campaign_group_id'],
+                'campaign_name': campaign['value']['name'],
+                'campaign_status': campaign['value']['status']
+            }
+            campaign_info_map[campaign['id']] = campaign_dict_to_add
+        return campaign_info_map
+    
     def merge_2_dictionaries(dict1, dict2):
         final_dict = {}
         if len(dict1) > 0:
@@ -317,6 +328,22 @@ class Util:
                 REQUESTED_FIELDS, linkedin_setting.ad_account, campaign_group_id,
                 request_rows_start_count, REQUESTED_ROWS_LIMIT)
             
+        headers = {'Authorization': 'Bearer ' + linkedin_setting.access_token,
+                    'X-Restli-Protocol-Version': PROTOCOL_VERSION, 'LinkedIn-Version': LINKEDIN_VERSION}
+        return url, headers
+    
+    def build_url_and_headers_campaign_company(pivot, linkedin_setting, start_timestamp, 
+                                   request_rows_start_count, campaign_id, end_timestamp):
+        
+        start_year, start_month, start_day = Util.get_split_date_from_timestamp(start_timestamp)
+        end_year, end_month, end_day = Util.get_split_date_from_timestamp(start_timestamp)
+        if end_timestamp is not None:
+                end_year, end_month, end_day = Util.get_split_date_from_timestamp(end_timestamp)
+        url = COMPANY_CAMPAIGN_INSIGHTS_REQUEST_URL_FORMAT.format(
+            pivot, start_day, start_month, 
+            start_year, end_day, end_month, end_year,
+            REQUESTED_FIELDS, linkedin_setting.ad_account, campaign_id,
+            request_rows_start_count, REQUESTED_ROWS_LIMIT)
         headers = {'Authorization': 'Bearer ' + linkedin_setting.access_token,
                     'X-Restli-Protocol-Version': PROTOCOL_VERSION, 'LinkedIn-Version': LINKEDIN_VERSION}
         return url, headers

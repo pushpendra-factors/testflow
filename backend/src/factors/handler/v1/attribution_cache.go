@@ -118,7 +118,7 @@ func RunMultipleRangeAttributionQueries(projectId, dashboardId, unitId int64, re
 
 		if mergedResult == nil {
 			logCtx.Info("Failed to process query from DB - attribution v1 as mergedResult is nil")
-			return true, mergedResult, computedMeta, errors.New("The final result is empty, no data to found")
+			return true, mergedResult, computedMeta, errors.New("the final result is empty, no data to found")
 		}
 	}
 	if latestFoundResult != nil {
@@ -139,7 +139,7 @@ func RunAttributionQuery(projectId int64, requestPayload AttributionRequestPaylo
 
 	if err != nil {
 		model.DeleteQueryCacheKey(projectId, &attributionQueryUnitPayload)
-		logCtx.Info("Failed to process query from DB - attributionv1", err.Error())
+		logCtx.Info("Failed to process query from DB - attribution v1", err.Error())
 		return nil, http.StatusInternalServerError, PROCESSING_FAILED, err.Error(), true
 	}
 	if result == nil {

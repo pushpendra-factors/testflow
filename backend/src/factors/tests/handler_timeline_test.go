@@ -4516,7 +4516,6 @@ func TestAllAccounts(t *testing.T) {
 	users := make([]model.User, 0)
 	numUsers := 15
 	// Create 5 Hubspot Companies
-	lastEventTime := time.Now()
 	for i := 0; i < numUsers; i++ {
 		isGroupUser := true
 		propertiesJSON, err := json.Marshal(dummyPropsMap[i])
@@ -4542,6 +4541,7 @@ func TestAllAccounts(t *testing.T) {
 			customerUserID = fmt.Sprintf("6suser%d@%s", i+1, dummyPropsMap[i][U.SIX_SIGNAL_DOMAIN])
 		}
 
+		lastEventTime := time.Now()
 		createdGroupUserID, _ := store.GetStore().CreateUser(&model.User{
 			ProjectId:    project.ID,
 			Properties:   properties,
@@ -4783,6 +4783,7 @@ func TestAllAccounts(t *testing.T) {
 			TableProps: []string{"$hubspot_company_name", U.SIX_SIGNAL_NAME, "$salesforce_account_name",
 				"$domain_name", "$engagement_level", "$engagement_score", "$total_enagagement_score"}},
 	}
+
 	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
 	assert.Equal(t, http.StatusOK, w.Code)
 	jsonResponse, _ = io.ReadAll(w.Body)
@@ -4799,6 +4800,66 @@ func TestAllAccounts(t *testing.T) {
 		assert.Equal(t, 5.3, resp[i].TableProps["$engagement_score"])
 		assert.Equal(t, float64(120), resp[i].TableProps["$total_enagagement_score"])
 	}
+
+	// Create Events
+	trackPayload := SDK.TrackPayload{
+		UserId:          groupUsers[0].ID,
+		CreateUser:      false,
+		IsNewUser:       false,
+		Name:            U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+		EventProperties: map[string]interface{}{},
+		UserProperties:  map[string]interface{}{},
+		ProjectId:       project.ID,
+		Auto:            false,
+		RequestSource:   model.UserSourceWeb,
+		Timestamp:       time.Now().Unix(),
+	}
+	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.NotEmpty(t, response)
+	assert.Equal(t, http.StatusOK, status)
+	// Create Events
+	trackPayload = SDK.TrackPayload{
+		UserId:          users[0].ID,
+		CreateUser:      false,
+		IsNewUser:       false,
+		Name:            U.EVENT_NAME_SESSION,
+		EventProperties: map[string]interface{}{},
+		UserProperties:  map[string]interface{}{},
+		ProjectId:       project.ID,
+		Auto:            false,
+		RequestSource:   model.UserSourceWeb,
+		Timestamp:       time.Now().Unix(),
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.NotEmpty(t, response)
+	assert.Equal(t, http.StatusOK, status)
+
+	trackPayload = SDK.TrackPayload{
+		UserId:        groupUsers[0].ID,
+		CreateUser:    false,
+		IsNewUser:     false,
+		Name:          U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_UPDATED,
+		Timestamp:     time.Now().Unix(),
+		ProjectId:     project.ID,
+		Auto:          false,
+		RequestSource: model.UserSourceHubspot,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+	assert.NotEmpty(t, response)
+	assert.Equal(t, http.StatusOK, status)
+
+	w = sendGetTopEventsForADomainRequest(r, project.ID, agent, domainUsers[0].ID)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = io.ReadAll(w.Body)
+	newResp := make([]model.TimelineEvent, 0)
+	err = json.Unmarshal(jsonResponse, &newResp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(newResp), 2)
+	assert.Equal(t, newResp[0].Name, U.EVENT_NAME_SESSION)
+	assert.Equal(t, newResp[1].Name, U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED)
+	assert.Contains(t, newResp[0].UserID, domainUsers[0].Group1ID)
+	assert.False(t, newResp[0].IsGroupUser)
+	assert.True(t, newResp[1].IsGroupUser)
 }
 
 func sendGetProfileAccountRequestConsumingMarker(r *gin.Engine, projectId int64, agent *model.Agent, payload model.TimelinePayload) *httptest.ResponseRecorder {
@@ -5115,6 +5176,27 @@ func sendGetProfileUserPropertiesRequest(r *gin.Engine, projectId int64, agent *
 		log.WithError(err).Error("Error Creating cookieData")
 	}
 	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/v1/profiles/user_properties/%s?is_anonymous=%s", projectId, userId, isAnonymous)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	w := httptest.NewRecorder()
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error Creating getProjectSetting Req")
+	}
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func sendGetTopEventsForADomainRequest(r *gin.Engine, projectID int64, agent *model.Agent, domainID string) *httptest.ResponseRecorder {
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error Creating cookieData")
+	}
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/v1/profiles/accounts/top_events/%s", projectID, domainID)).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,

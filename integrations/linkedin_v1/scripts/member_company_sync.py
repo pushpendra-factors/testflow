@@ -7,10 +7,13 @@ from constants.constants import *
 from custom_exception.custom_exception import CustomException
 from util.util import Util as U
 from linkedin_setting.linkedin_setting import LinkedinSetting
-from global_objects.global_obj_creator import metrics_aggregator_obj, data_service_obj, campaign_group_cache
-from jobs.member_company import MemberCompanyJob
+from global_objects.global_obj_creator import GlobalObjects
 from job_runners.weekly_member_company_job_runner import WeeklyMemberCompanyJobRunner
 from job_runners.member_company_job_runner import MemberCompanyJobRunner
+from cache.campaign_group_info import CampaignGroupInfo
+from cache.campaign_info import CampaignInfo
+from data_service.data_service import DataService
+from metrics_aggregator.metrics_aggregator import MetricsAggregator
 
 
 parser = OptionParser()
@@ -26,12 +29,14 @@ parser.add_option('--data_service_host', dest='data_service_host',
 parser.add_option('--input_start_timestamp', dest='input_start_timestamp', help='', default=None, type=int)
 parser.add_option('--input_end_timestamp', dest='input_end_timestamp', help='', default=None, type=int)
 parser.add_option('--job_type', dest='job_type', default='1,2,3', type=str)
+parser.add_option('--new_change_project_ids', dest='new_change_project_ids', help='', default='')
 # job_type -> 1 for daily job, 2 for t8 job, 3 for t22
 # to run combination like t8 and t22 only -> use job_type = "2,3"
 
 def sync_company_data(options, linkedin_setting, sync_info_with_type, input_start_timestamp, input_end_timestamp):
     daily_job_req, t8_job_req, t22_job_req = U.check_job_type_req(options.job_type)
 
+    campaign_group_cache = CampaignGroupInfo.get_instance()
     if daily_job_req:
         max_ingestion_timestamp = 0
         if MEMBER_COMPANY_INSIGHTS in sync_info_with_type:
@@ -49,10 +54,33 @@ def sync_company_data(options, linkedin_setting, sync_info_with_type, input_star
         WeeklyMemberCompanyJobRunner(sync_info_with_type[SYNC_INFO_KEY_T22], T22_END_BUFFER, 
                 SYNC_STATUS_T22, 't22', linkedin_setting, input_start_timestamp, input_end_timestamp).execute()
         campaign_group_cache.reset_campaign_group_data()
+
+def sync_company_data_v1(options, linkedin_setting, sync_info_with_type, input_start_timestamp, input_end_timestamp):
+    daily_job_req, t8_job_req, t22_job_req = U.check_job_type_req(options.job_type)
+
+    campaign_group_cache = CampaignGroupInfo.get_instance()
+    campaign_cache = CampaignInfo.get_instance()
+    if daily_job_req:
+        max_ingestion_timestamp = 0
+        if MEMBER_COMPANY_INSIGHTS in sync_info_with_type:
+            max_ingestion_timestamp = sync_info_with_type[MEMBER_COMPANY_INSIGHTS]
+        MemberCompanyJobRunner(linkedin_setting, max_ingestion_timestamp, 
+                                input_start_timestamp, input_end_timestamp).execute_v1()
+        campaign_group_cache.reset_campaign_group_data()
+        campaign_cache.reset_campaign_data()
+    
+    if t8_job_req:
+        WeeklyMemberCompanyJobRunner(sync_info_with_type[SYNC_INFO_KEY_T8], T8_END_BUFFER, 
+                SYNC_STATUS_T8, 't8', linkedin_setting, input_start_timestamp, input_end_timestamp).execute_v1()
+        campaign_group_cache.reset_campaign_group_data()
+        campaign_cache.reset_campaign_data()
+        
+    if t22_job_req:
+        WeeklyMemberCompanyJobRunner(sync_info_with_type[SYNC_INFO_KEY_T22], T22_END_BUFFER, 
+                SYNC_STATUS_T22, 't22', linkedin_setting, input_start_timestamp, input_end_timestamp).execute_v1()
+        campaign_group_cache.reset_campaign_group_data()
+        campaign_cache.reset_campaign_data()
             
-            
-def handle(signum, frame):
-    raise Exception("Function timeout after 20 mins")
 
 if __name__ == '__main__':
     (options, args) = parser.parse_args()
@@ -60,7 +88,10 @@ if __name__ == '__main__':
     input_start_timestamp = options.input_start_timestamp
     input_end_timestamp = options.input_end_timestamp
 
-    data_service_obj.data_service_host = options.data_service_host
+    globalObject = GlobalObjects(options.data_service_host)
+    data_service_obj = DataService.get_instance()
+    metrics_aggregator_obj = MetricsAggregator.get_instance()
+
     is_project_id_flag_given = (options.project_ids != None and options.project_ids != '')
     allProjects = options.project_ids == "*"
     
@@ -84,14 +115,13 @@ if __name__ == '__main__':
     
     for linkedin_setting in split_linkedin_settings:
         try:
-            # timeout this function after 20 mins
-            signal.signal(signal.SIGALRM, handle)
-            signal.alarm(1200)
-            # 
             sync_info_with_type = data_service_obj.get_last_sync_info_for_company_data(
                                                     linkedin_setting, input_start_timestamp, 
                                                                         input_end_timestamp)
-            sync_company_data(options, linkedin_setting, sync_info_with_type, input_start_timestamp, input_end_timestamp)
+            if linkedin_setting.project_id in options.new_change_project_ids:
+                sync_company_data_v1(options, linkedin_setting, sync_info_with_type, input_start_timestamp, input_end_timestamp)
+            else:
+                sync_company_data(options, linkedin_setting, sync_info_with_type, input_start_timestamp, input_end_timestamp)
         except CustomException as e:
             traceback.print_tb(e.__traceback__)
             metrics_aggregator_obj.update_stats(linkedin_setting.project_id, linkedin_setting.ad_account, 

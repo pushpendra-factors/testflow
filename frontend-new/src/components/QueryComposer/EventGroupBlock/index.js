@@ -73,7 +73,7 @@ function EventGroupBlock({
   const onChange = (option, group, ind) => {
     const newGroupByState = { ...groupByEvent };
     newGroupByState.prop_category = option?.extraProps?.propertyType;
-    newGroupByState.eventName = event.label;
+    newGroupByState.eventName = event?.label;
     newGroupByState.property = option?.value;
     newGroupByState.prop_type = option?.extraProps?.valueType;
     newGroupByState.eventIndex = eventIndex;
@@ -166,15 +166,14 @@ function EventGroupBlock({
   };
 
   const renderGroupContent = () => {
-    
     let item = groupByEvent?.property;
 
     let findItem =
-    eventPropNames?.[item] ||
-    userPropNames?.[item] ||
-    groupPropNames?.[item] ||
-    eventNames?.[item];
-    
+      eventPropNames?.[item] ||
+      userPropNames?.[item] ||
+      groupPropNames?.[item] ||
+      eventNames?.[item];
+
     let propName = findItem ? findItem : item;
 
     // let propName = '';

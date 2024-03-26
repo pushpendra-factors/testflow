@@ -1,10 +1,8 @@
 import React from 'react';
-import { Layout, Button } from 'antd';
-import { LeftOutlined, RightOutlined } from '@ant-design/icons';
+import { Layout } from 'antd';
 import { useHistory } from 'react-router-dom';
 import styles from './index.module.scss';
 import SiderMenu from './Menu';
-import { SVG } from '../factorsComponents';
 
 function NavigationBar(props) {
   const { Sider } = Layout;

@@ -44,7 +44,7 @@ const SettingsSidebar = () => {
   }, [pathname, activeAgent]);
 
   return (
-    <div className='flex flex-col row-gap-1 px-2'>
+    <div className='flex flex-col gap-y-1 px-2'>
       {menuList.map((item) => {
         if(item?.whitelisted && !WhiteListedAccounts.includes(activeAgent)){
           return null

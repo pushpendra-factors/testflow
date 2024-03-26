@@ -1,9 +1,20 @@
 from util.util import Util as U
 from constants.constants import *
+from data_service.data_service import DataService
 class CampaignGroupInfo:
     campaign_group_info = {}
+    __instance = None
+
+    @staticmethod
+    def get_instance(campaign_group_info={}):
+        if CampaignGroupInfo.__instance == None:
+            CampaignGroupInfo(campaign_group_info)
+        return CampaignGroupInfo.__instance
+
     def __init__(self, campaign_group_info={}) -> None:
         self.campaign_group_info = campaign_group_info
+        CampaignGroupInfo.__instance = self
+
 
     def get_campaign_group_data(self):
         return self.campaign_group_info
@@ -17,12 +28,11 @@ class CampaignGroupInfo:
         
     def reset_campaign_group_data(self):
         self.campaign_group_info = {}
+        
+    def get_campaign_group_info_from_db(self, project_id, ad_account_id, 
+                                                    start_timestamp, input_end_timestamp):
+        data_service_obj = DataService.get_instance()
 
-    
-    def return_meta_based_on_doc_type(self, doc_type):
-        if doc_type == CAMPAIGN_GROUP_INSIGHTS:
-            return self.campaign_group_info
-        if doc_type == CAMPAIGN_INSIGHTS:
-            return self.campaign_map
-        if doc_type == CREATIVE_INSIGHTS:
-            return self.creative_map
+        self.campaign_group_info = data_service_obj.get_campaign_group_data_for_given_timerange(
+                                                    project_id, ad_account_id, 
+                                                    start_timestamp, input_end_timestamp)

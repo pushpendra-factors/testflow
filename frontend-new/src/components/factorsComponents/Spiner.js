@@ -1,5 +1,4 @@
 import React from 'react';
-import * as icons from '../svgIcons';
 import Lottie from 'react-lottie';
 import animationData from '../../assets/lottie/fa-loader.json';
 

@@ -15,7 +15,7 @@ const legend_length = {
 function TopLegends({
   colors,
   legends,
-  parentClassName = 'flex flex-wrap justify-center col-gap-3 row-gap-3',
+  parentClassName = 'flex flex-wrap justify-center gap-x-3 gap-y-3',
   cardSize,
   showAllLegends = false,
   showFullLengthLegends = false
@@ -44,7 +44,7 @@ function TopLegends({
         const sanitisedLegend = eventNames[legend] || legend;
         return (
           <Tooltip key={legend + index} title={sanitisedLegend}>
-            <div className='flex items-center col-gap-2'>
+            <div className='flex items-center gap-x-2'>
               <LegendsCircle color={colors[index]} />
               {displayLegend(sanitisedLegend)}
             </div>
