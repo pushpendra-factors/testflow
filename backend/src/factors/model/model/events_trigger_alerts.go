@@ -16,19 +16,23 @@ import (
 
 const (
 	// DeliveryOptions
-	SLACK                    = "slack"
-	WEBHOOK                  = "webhook"
-	prefixNameforAlerts      = "ETA"
-	TEAMS                    = "teams"
-	counterIndex             = "Counter"
-	cacheExpiry              = 7 * 24 * 60 * 60
-	cacheCounterExpiry       = 24 * 60 * 60
-	EventLevelAccount        = "account"
-	EventLevelUser           = "user"
-	Paused                   = "paused"             //Internal status if the difference between failure is greater than success of the alert by 72 hours
-	Active                   = "active"             //Default internal status
-	Disabled                 = "disabled"           //Internal status if the failures from the poison queue are not resolved for 72 more hours
-	ETA_DOMAIN_GROUP_USER_ID = "ignore_eta_d_g_uid" // additonal property which needs to be cached for account urls
+	SLACK               = "slack"
+	WEBHOOK             = "webhook"
+	prefixNameforAlerts = "ETA"
+	TEAMS               = "teams"
+	counterIndex        = "Counter"
+	cacheExpiry         = 7 * 24 * 60 * 60
+	cacheCounterExpiry  = 24 * 60 * 60
+	EventLevelAccount   = "account"
+	EventLevelUser      = "user"
+	Paused              = "paused"   //Internal status if the difference between failure is greater than success of the alert by 72 hours
+	Active              = "active"   //Default internal status
+	Disabled            = "disabled" //Internal status if the failures from the poison queue are not resolved for 72 more hours
+
+	ETA_DOMAIN_GROUP_USER_ID                   = "ignore_eta_d_g_uid" // additonal properties which needs to be cached for account urls
+	ETA_ENRICHED_HUBSPOT_COMPANY_OBJECT_URL    = "ignore_eta_hs_c_o_url"
+	ETA_ENRICHED_SALESFORCE_ACCOUNT_OBJECT_URL = "ignore_eta_sf_a_o_url"
+
 	ACTION_EVENT_PERFORMED   = "action_event"
 	ACTION_SEGMENT_ENTRY     = "action_segment_entry"
 	ACTION_SEGMENT_EXIT      = "action_segment_exit"
@@ -325,13 +329,51 @@ func GetSlackMentionsStr(slackMentions []SlackMember, slackTags []string) string
 	return result
 }
 
-func GetSlackMsgBlock(msg EventTriggerAlertMessage, slackMentions string, isAccountAlert bool, overRideUrl string) string {
+func GetSlackMsgBlock(msg EventTriggerAlertMessage, slackMentions string, isAccountAlert bool, overRideUrl, hsAccUrl, sfAccUrl string) string {
 
 	propBlock := getPropsBlockV2(msg.MessageProperty)
 	if !isAccountAlert {
 		overRideUrl = "https://app.factors.ai/profiles/people"
 	} else if isAccountAlert && overRideUrl == "" {
 		overRideUrl = "https://app.factors.ai"
+	}
+
+	var hsUrlAttachement, sfUrlAttachement string
+	hasAttachements := false
+
+	if hsAccUrl != "" {
+		hsUrlAttachement = fmt.Sprintf(`{
+			"type": "button",
+			"text": {
+				"type": "plain_text",
+				"text": "Open Hubspot "
+			},
+			"url": "%s"
+		},`, hsAccUrl)
+		hasAttachements = true
+	}
+
+	if sfAccUrl != "" {
+		sfUrlAttachement = fmt.Sprintf(`{
+			"type": "button",
+			"text": {
+				"type": "plain_text",
+				"text": "Open Salesforce "
+			},
+			"url": "%s"
+		},`, sfAccUrl)
+		hasAttachements = true
+	}
+
+	attachements := ""
+	if hasAttachements && isAccountAlert {
+		attachements = fmt.Sprintf(`{
+			\n
+			"type": "actions",
+			"elements": [
+				%s \n %s
+			]
+		}`, hsUrlAttachement, sfUrlAttachement)
 	}
 
 	// added next two lines to support double quotes(") and backslash(\) in slack templates
@@ -378,8 +420,9 @@ func GetSlackMsgBlock(msg EventTriggerAlertMessage, slackMentions string, isAcco
 			"type": "divider"
 		},
 		%s
+		%s
 		
-	]`, title, message, slackMentions, overRideUrl, propBlock)
+	]`, title, message, slackMentions, overRideUrl, propBlock, attachements)
 
 	return mainBlock
 }

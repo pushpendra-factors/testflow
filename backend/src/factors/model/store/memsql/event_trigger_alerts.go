@@ -911,6 +911,16 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesAndFieldsTagMap(projectID i
 	if alert.EventLevel == model.EventLevelAccount && event.UserId != "" {
 		groupDomainUserID, _, _ := store.getDomainsGroupUserIDForUser(projectID, event.UserId)
 		msgPropMap[model.ETA_DOMAIN_GROUP_USER_ID] = groupDomainUserID
+
+		// for hubspot company url
+		if hsUrl, exists := (*updatedUserProps)[U.ENRICHED_HUBSPOT_COMPANY_OBJECT_URL]; exists {
+			msgPropMap[model.ETA_ENRICHED_HUBSPOT_COMPANY_OBJECT_URL] = hsUrl
+		}
+
+		// for salesforce company url
+		if sfUrl, exists := (*updatedUserProps)[U.ENRICHED_SALESFORCE_ACCOUNT_OBJECT_URL]; exists {
+			msgPropMap[model.ETA_ENRICHED_SALESFORCE_ACCOUNT_OBJECT_URL] = sfUrl
+		}
 	}
 
 	breakdownPropMap := make(map[string]interface{}, 0)
