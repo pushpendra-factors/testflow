@@ -1497,3 +1497,14 @@ CREATE TABLE `website_aggregation` (
   SORT KEY `project_id_website_aggregation` (`project_id`,`event_type`,`timestamp_at_day`)
   , SHARD KEY () 
 ) AUTOSTATS_CARDINALITY_MODE=INCREMENTAL AUTOSTATS_HISTOGRAM_MODE=CREATE AUTOSTATS_SAMPLING=ON SQL_MODE='STRICT_ALL_TABLES'
+
+CREATE TABLE IF NOT EXISTS alert_templates (
+    v TEXT NOT NULL,
+    id int NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    title TEXT NOT NULL,
+    alert json not null,
+    template_constants json not null,
+    is_deleted boolean not null DEFAULT false,
+    created_at timestamp NOT NULL,
+    updated_at timestamp NOT NULL
+);

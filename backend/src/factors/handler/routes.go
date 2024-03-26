@@ -423,7 +423,10 @@ func InitAppRoutes(r *gin.Engine) {
 	authCommonRouteGroup.GET("/dashboard_templates/:id/search", SearchTemplateHandler)
 	authCommonRouteGroup.GET("/dashboard_templates", GetDashboardTemplatesHandler)
 	authCommonRouteGroup.POST("/dashboard_template/create", CreateTemplateHandler)
-
+	
+	// alert templates
+	authCommonRouteGroup.GET("/alert_templates", GetAlertTemplateHandler)
+	authCommonRouteGroup.DELETE("/alert_templates/:id", DeleteAlertTemplateHandler)
 	// feature gate v2
 	authRouteGroup.GET("/:project_id/v1/features", responseWrapper(V1.GetPlanDetailsForProjectHandler))
 
