@@ -513,14 +513,23 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		rejectedQueue = true
 	}
 
-	var accountUrl string
+	var accountUrl, hubspotAccountUrl, salesforceAccountUrl string
 	isAccounAlert := alertConfiguration.EventLevel == model.EventLevelAccount
 	if isAccounAlert {
 		if _, exists := alert.Message.MessageProperty[model.ETA_DOMAIN_GROUP_USER_ID]; exists {
+			// factors account url
 			groupDomainUserID := alert.Message.MessageProperty[model.ETA_DOMAIN_GROUP_USER_ID].(string)
 			accountUrl = BuildAccountURL(groupDomainUserID)
 			delete(alert.Message.MessageProperty, model.ETA_DOMAIN_GROUP_USER_ID)
 		}
+		// hubspot object url
+		hubspotAccountUrl = alert.Message.MessageProperty[model.ETA_ENRICHED_HUBSPOT_COMPANY_OBJECT_URL].(string)
+		delete(alert.Message.MessageProperty, model.ETA_ENRICHED_HUBSPOT_COMPANY_OBJECT_URL)
+
+		// salesforce object url
+		salesforceAccountUrl = alert.Message.MessageProperty[model.ETA_ENRICHED_SALESFORCE_ACCOUNT_OBJECT_URL].(string)
+		delete(alert.Message.MessageProperty, model.ETA_ENRICHED_SALESFORCE_ACCOUNT_OBJECT_URL)
+
 	}
 
 	// If retry is true and sendTo var is set for Slack option
@@ -537,7 +546,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		}
 		if isSlackIntergrated {
 			partialSlackSuccess, _, errMsg := sendSlackAlertForEventTriggerAlert(eta.ProjectID,
-				eta.SlackChannelAssociatedBy, alert, alertConfiguration.SlackChannels, alertConfiguration.SlackMentions, alertConfiguration.IsHyperlinkDisabled, isAccounAlert, accountUrl)
+				eta.SlackChannelAssociatedBy, alert, alertConfiguration.SlackChannels, alertConfiguration.SlackMentions, alertConfiguration.IsHyperlinkDisabled, isAccounAlert, accountUrl, hubspotAccountUrl, salesforceAccountUrl)
 			log.WithFields(log.Fields{
 				"project_id": eta.ProjectID,
 				"alert_id":   eta.ID,
@@ -800,7 +809,7 @@ func AddKeyToSortedSet(key *cacheRedis.Key, projectID int64, failPoint string, r
 }
 
 func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
-	alert *model.CachedEventTriggerAlert, Schannels, sMentions *postgres.Jsonb, isHyperlinkDisabled, isAccountAlert bool, accountUrl string) (partialSuccess bool, channelSuccess []bool, errMessage string) {
+	alert *model.CachedEventTriggerAlert, Schannels, sMentions *postgres.Jsonb, isHyperlinkDisabled, isAccountAlert bool, accountUrl, hsAccUrl, sfAccUrl string) (partialSuccess bool, channelSuccess []bool, errMessage string) {
 	logCtx := log.WithFields(log.Fields{
 		"project_id":  projectID,
 		"agent_uuid":  agentUUID,
@@ -848,7 +857,7 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
 				slackMentionStr = model.GetSlackMentionsStr(slackMentions, slackTags)
 			}
 			if !isHyperlinkDisabled {
-				blockMessage = model.GetSlackMsgBlock(alert.Message, slackMentionStr, isAccountAlert, accountUrl)
+				blockMessage = model.GetSlackMsgBlock(alert.Message, slackMentionStr, isAccountAlert, accountUrl, hsAccUrl, sfAccUrl)
 			} else {
 				blockMessage = model.GetSlackMsgBlockWithoutHyperlinks(alert.Message, slackMentionStr)
 			}

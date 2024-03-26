@@ -490,7 +490,7 @@ func SlackTestforEventTriggerAlerts(c *gin.Context) (interface{}, int, string, s
 
 	isAccountAlert := alert.EventLevel == model.EventLevelAccount
 	if !alert.IsHyperlinkDisabled {
-		blockMessage = model.GetSlackMsgBlock(slackPayload, slackMentionStr, isAccountAlert, "")
+		blockMessage = model.GetSlackMsgBlock(slackPayload, slackMentionStr, isAccountAlert, "", "", "")
 	} else {
 		blockMessage = model.GetSlackMsgBlockWithoutHyperlinks(slackPayload, slackMentionStr)
 	}
