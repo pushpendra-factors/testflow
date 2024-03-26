@@ -75,6 +75,7 @@ import {
   fetchEventDisplayNames,
   fetchQueries
 } from '../../reducers/coreQuery/services';
+import { fetchAlertTemplates } from 'Reducers/alertTemplates';
 
 // customizing highcharts for project requirements
 customizeHighCharts(Highcharts);
@@ -207,6 +208,7 @@ function AppLayout({
       fetchWeeklyIngishtsMetaData(active_project?.id);
       dispatch(fetchAttrContentGroups(active_project?.id));
       dispatch(fetchTemplates());
+      dispatch(fetchAlertTemplates());
       handleRedirection();
 
       fetchProjectSettingsV1(active_project?.id);

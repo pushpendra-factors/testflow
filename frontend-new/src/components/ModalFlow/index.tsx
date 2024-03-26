@@ -644,6 +644,7 @@ interface ModalFlowPropType {
   startFreshVisible?: boolean;
   FirstScreenIllustration?: JSX.Element;
   handleLastFinish?: () => void;
+  defaultSelectedItem?: FlowItemType | null;
 }
 function ModalFlow({
   isDashboardTemplatesFlow = false,
@@ -654,6 +655,7 @@ function ModalFlow({
   Step1Props,
   startFreshVisible = false,
   handleLastFinish,
+  defaultSelectedItem = null,
   ...restProps
 }: ModalFlowPropType) {
   const [step, setStep] = useState(1);
@@ -665,14 +667,21 @@ function ModalFlow({
   };
   const handleCancelModal = () => {
     setStep(1);
+    setSelectedItem(null)
     if (onCancel) onCancel();
   };
   const handleBack = () => {
     setStep(1);
+    setSelectedItem(null)
   };
   const handleSelectItem = (item: FlowItemType) => {
     setSelectedItem(item);
   };
+  useEffect(()=>{
+    if(defaultSelectedItem){
+      handleSelectedItem(defaultSelectedItem)
+    }
+  },[defaultSelectedItem])
   return (
     <Modal
       title={null}
