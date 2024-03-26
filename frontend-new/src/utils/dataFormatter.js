@@ -798,7 +798,8 @@ export const groupKPIPropertiesOnCategory = (
   ];
   return (
     kpiProperties?.reduce((result, kpiItem) => {
-      const category = kpiItem[4];
+      //category check for dropdown (also handles custom property mapping)
+      const category = kpiItem[4] ? kpiItem[4] : (kpiItem[3]=='propMap'? 'Properties':null);
       if (!category) {
         return result;
       }

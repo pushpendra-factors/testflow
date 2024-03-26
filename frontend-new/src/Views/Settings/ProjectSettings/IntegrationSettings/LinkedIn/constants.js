@@ -14,6 +14,6 @@ export const linkedInScope_rw_ads = [
 
   // Scope: rw_conversions
 export const linkedInScope_rw_conversions = [ 
-    '26000050', // Astra
+    '6000050', // Astra
     '2', // FactorsAI Solutions
   ]

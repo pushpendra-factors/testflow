@@ -47,6 +47,7 @@ type Subscription struct {
 	Status              string               `json:"status"`
 	RenewsOn            time.Time            `json:"renews_on"`
 	BillingPeriodUnit   string               `json:"period_unit"`
+	BillingPeriod       int32                  `json:"billing_period"`
 	SubscriptionDetails []SubscriptionDetail `json:"subscription_details"`
 }
 

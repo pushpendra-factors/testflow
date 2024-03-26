@@ -973,9 +973,9 @@ type Model interface {
 	GetMarkedDomainsListByProjectId(projectID int64, payload model.TimelinePayload, downloadLimitGiven bool) ([]model.Profile, int, string)
 	GetAllPropertiesForDomain(projectID int64, domainGroupId int, domainID string, userCount *int64) ([]model.User, int)
 	GetDomainsListFromMarker(projectID int64, payload model.TimelinePayload,
-		domainGroupID int) ([]model.Profile, int, string)
+		domainGroupID int, downloadLimitGiven bool) ([]model.Profile, int, string)
 	GetPreviewDomainsListByProjectId(projectID int64, payload model.TimelinePayload,
-		domainGroupID int) ([]model.Profile, int, string)
+		domainGroupID int, downloadLimitGiven bool) ([]model.Profile, int, string)
 	GetPreviewDomainsListByProjectIdPerRun(projectID int64, payload model.TimelinePayload, domainGroupID int,
 		eventNameIDsMap map[string]string, userCount *int64, domainIDList []string, limitAcc int) ([]model.Profile, int, string)
 	// segment
