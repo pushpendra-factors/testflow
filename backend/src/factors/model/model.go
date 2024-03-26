@@ -592,6 +592,10 @@ type Model interface {
 	GetAllTemplates() ([]model.DashboardTemplate, int)
 	GenerateDashboardFromTemplate(projectID int64, agentUUID string, templateID string) (*model.Dashboard, int, error)
 
+	// Alert Templates
+	GetAlertTemplates() ([]model.AlertTemplate, int)
+	DeleteAlertTemplate(id int) error
+
 	// offline touchpoints
 	CreateOTPRule(projectId int64, rule *model.OTPRule) (*model.OTPRule, int, string)
 	GetALLOTPRuleWithProjectId(projectID int64) ([]model.OTPRule, int)
