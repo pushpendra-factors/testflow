@@ -135,7 +135,7 @@ function ComparisonDatePicker({
       >
         <Button
           type={BUTTON_TYPES.SECONDARY}
-          className='flex items-center col-gap-1'
+          className='flex items-center gap-x-1'
         >
           <SVG name='compare' size={16} />
           <ControlledComponent controller={!showDatePicker && !!value}>
@@ -170,8 +170,8 @@ function ComparisonDatePicker({
               onChange={handleDateChange}
               panelRender={(panelNode) => {
                 return (
-                  <div className='py-4 flex flex-col row-gap-2'>
-                    <div className='px-3 flex flex-col row-gap-2'>
+                  <div className='py-4 flex flex-col gap-y-2'>
+                    <div className='px-3 flex flex-col gap-y-2'>
                       <Text type='title' weight='bold' level={6} color='grey-2'>
                         Compare to date
                       </Text>

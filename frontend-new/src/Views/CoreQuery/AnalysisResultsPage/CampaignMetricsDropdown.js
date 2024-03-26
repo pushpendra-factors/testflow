@@ -4,7 +4,7 @@ import styles from '../../../components/SaveQuery/index.module.scss';
 
 function CampaignMetricsDropdown({ metrics, currValue, onChange }) {
   return (
-    <div className="flex items-center col-gap-2">
+    <div className="flex items-center gap-x-2">
       <div>Show</div>
       <div>
         <Select

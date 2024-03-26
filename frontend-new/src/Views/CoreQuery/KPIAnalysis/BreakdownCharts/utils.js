@@ -361,7 +361,7 @@ export const getTableColumns = (
                   />
                 )}
               </Text>
-              <div className='flex col-gap-1 items-center justify-end'>
+              <div className='flex gap-x-1 items-center justify-end'>
                 <SVG
                   color={
                     row[`${kpiLabel} - ${index} - change`] >= 0
@@ -792,7 +792,7 @@ export const getDateBasedColumns = (
                   />
                 )}
               </Text>
-              <div className='flex col-gap-1 items-center justify-end'>
+              <div className='flex gap-x-1 items-center justify-end'>
                 <SVG
                   color={
                     row[`${kpiLabel} - ${index} - change`] > 0
@@ -918,7 +918,7 @@ export const getDateBasedColumns = (
             />
           );
           return (
-            <div className='flex col-gap-1 items-center justify-end'>
+            <div className='flex gap-x-1 items-center justify-end'>
               {changeIcon}
               <Text level={7} type='title' color={d < 0 ? 'red' : 'green'}>
                 <NumFormat number={Math.abs(d)} />%

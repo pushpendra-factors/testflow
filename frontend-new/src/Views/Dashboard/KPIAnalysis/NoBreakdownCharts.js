@@ -262,7 +262,7 @@ function NoBreakdownCharts({
   } else if (chartType === CHART_TYPE_METRIC_CHART) {
     chartContent = (
       <div
-        className={cx('grid grid-flow-col w-full col-gap-2 row-gap-12 h-full')}
+        className={cx('grid grid-flow-col w-full gap-x-2 gap-y-12 h-full')}
       >
         {aggregateData &&
           aggregateData

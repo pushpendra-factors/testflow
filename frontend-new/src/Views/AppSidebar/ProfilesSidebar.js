@@ -99,14 +99,14 @@ function ProfilesSidebar() {
   const userSegmentsList = useSelector((state) => selectSegmentsList(state));
 
   return (
-    <div className='flex flex-col row-gap-5'>
+    <div className='flex flex-col gap-y-5'>
       <div
         className={cx(
-          'flex flex-col row-gap-6 overflow-auto',
+          'flex flex-col gap-y-6 overflow-auto',
           styles['accounts-list-container']
         )}
       >
-        <div className='flex flex-col row-gap-3 px-4'>
+        <div className='flex flex-col gap-y-3 px-4'>
           <Text
             type='title'
             level={8}
@@ -115,7 +115,7 @@ function ProfilesSidebar() {
           >
             Segments
           </Text>
-          <div className='flex flex-col row-gap-1'>
+          <div className='flex flex-col gap-y-1'>
             <SidebarSearch
               searchText={searchText}
               setSearchText={setSearchText}
@@ -144,7 +144,7 @@ function ProfilesSidebar() {
       <div className='px-4'>
         <Button
           className={cx(
-            'flex col-gap-2 items-center w-full',
+            'flex gap-x-2 items-center w-full',
             styles.sidebar_action_button
           )}
           onClick={() => {

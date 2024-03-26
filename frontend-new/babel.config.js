@@ -13,6 +13,14 @@ module.exports = function (api) {
     [
       'import',
       {
+        libraryName: 'antd',
+        libraryDirectory: 'lib'
+      },
+      'antd'
+    ],
+    [
+      'import',
+      {
         libraryName: '@ant-design/icons',
         libraryDirectory: '',
         camel2DashComponentName: false

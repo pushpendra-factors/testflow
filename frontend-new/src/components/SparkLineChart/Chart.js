@@ -172,7 +172,7 @@ function SparkChart({
       tooltip
         .html(
           ReactDOMServer.renderToString(
-            <div className='flex flex-col row-gap-2'>
+            <div className='flex flex-col gap-y-2'>
               <Text type='title' level={7} color='grey-2'>
                 {eventTitle}
               </Text>
@@ -190,7 +190,7 @@ function SparkChart({
                 <Text type='title' color='grey' level={7}>
                   {addQforQuarter(frequency) + moment(d.date).format(format)}
                 </Text>
-                <div className='flex items-center col-gap-1'>
+                <div className='flex items-center gap-x-1'>
                   <Text weight='bold' type='title' color='grey-6' level={5}>
                     {metricType != null && metricType !== '' ? (
                       getFormattedKpiValue({ value: d[event], metricType })

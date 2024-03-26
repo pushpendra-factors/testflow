@@ -265,9 +265,9 @@ function FiltersBox({
 
   return (
     <div
-      className={cx(styles['filters-box-container'], 'flex flex-col row-gap-5')}
+      className={cx(styles['filters-box-container'], 'flex flex-col gap-y-5')}
     >
-      <div className='pt-4 col-gap-5 flex flex-col row-gap-2'>
+      <div className='pt-4 gap-x-5 flex flex-col gap-y-2'>
         <div className={cx('px-6 pb-1', styles['section-title-container'])}>
           <Text
             type='title'
@@ -315,7 +315,7 @@ function FiltersBox({
 
           <Button
             className={cx(
-              'flex items-center col-gap-2',
+              'flex items-center gap-x-2',
               styles['add-filter-button']
             )}
             type='text'
@@ -333,7 +333,7 @@ function FiltersBox({
           </Button>
         </div>
       </div>
-      <div className='flex flex-col row-gap-2'>
+      <div className='flex flex-col gap-y-2'>
         <div className={cx('px-6 pb-1', styles['section-title-container'])}>
           <Text
             type='title'
@@ -344,7 +344,7 @@ function FiltersBox({
             Who Performed
           </Text>
         </div>
-        <div className='px-6 flex flex-col row-gap-2'>
+        <div className='px-6 flex flex-col gap-y-2'>
           {listEvents.map((event, index) => (
             <div key={index}>
               <EventsBlock
@@ -380,7 +380,7 @@ function FiltersBox({
           <ControlledComponent controller={listEvents.length < 10}>
             <Button
               className={cx(
-                'flex items-center col-gap-2',
+                'flex items-center gap-x-2',
                 styles['add-filter-button']
               )}
               type='text'
@@ -398,7 +398,7 @@ function FiltersBox({
             </Button>
           </ControlledComponent>
           <ControlledComponent controller={false}>
-            <div className='flex col-gap-1 items-center'>
+            <div className='flex gap-x-1 items-center'>
               <Text
                 type='title'
                 extraClass='mb-0'
@@ -410,7 +410,7 @@ function FiltersBox({
               <Dropdown overlay={eventTimelineMenuItems}>
                 <div
                   className={cx(
-                    'flex col-gap-1 cursor-pointer items-center',
+                    'flex gap-x-1 cursor-pointer items-center',
                     styles['event-timeline-picker']
                   )}
                 >
@@ -427,7 +427,7 @@ function FiltersBox({
             </div>
           </ControlledComponent>
           <ControlledComponent controller={listEvents.length > 1}>
-            <div className='flex col-gap-1 items-center'>
+            <div className='flex gap-x-1 items-center'>
               <Text
                 type='title'
                 extraClass='mb-0'
@@ -439,7 +439,7 @@ function FiltersBox({
                   : 'People who performed'}
               </Text>
               <Dropdown overlay={eventMenuItems}>
-                <div className='flex col-gap-1 cursor-pointer items-center'>
+                <div className='flex gap-x-1 cursor-pointer items-center'>
                   <Text type='title' color='brand-color-6' extraClass='mb-0'>
                     {eventMenuList[eventProp].label}
                   </Text>
@@ -451,7 +451,7 @@ function FiltersBox({
         </div>
       </div>
       <ControlledComponent controller={profileType === 'account'}>
-        <div className='flex flex-col row-gap-2 col-gap-5'>
+        <div className='flex flex-col gap-y-2 gap-x-5'>
           <div className={cx('px-6 pb-1', styles['section-title-container'])}>
             <Text
               type='title'
@@ -497,7 +497,7 @@ function FiltersBox({
 
             <Button
               className={cx(
-                'flex items-center col-gap-2',
+                'flex items-center gap-x-2',
                 styles['add-filter-button']
               )}
               type='text'
@@ -522,7 +522,7 @@ function FiltersBox({
           styles['buttons-container']
         )}
       >
-        <div className='flex col-gap-2 items-center'>
+        <div className='flex gap-x-2 items-center'>
           <Button
             disabled={applyButtonDisabled}
             onClick={applyFilters}
@@ -543,7 +543,7 @@ function FiltersBox({
         >
           <Button
             type='text'
-            className='flex items-center col-gap-1'
+            className='flex items-center gap-x-1'
             onClick={onClearFilters}
           >
             <Text type='title' extraClass='mb-0' color='character-title'>
@@ -554,7 +554,7 @@ function FiltersBox({
         <ControlledComponent controller={newSegmentMode === true}>
           <Button
             type='default'
-            className='flex items-center col-gap-1'
+            className='flex items-center gap-x-1'
             disabled={saveButtonDisabled}
             onClick={() => setSaveSegmentModal(true)}
           >

@@ -111,7 +111,7 @@ function CalendarRow({
       return null;
     }
     return (
-      <div className='flex items-center col-gap-2'>
+      <div className='flex items-center gap-x-2'>
         <div className='calendar'>
           <ComparisonDatePicker
             placement='bottomLeft'
@@ -215,7 +215,7 @@ function CalendarRow({
   }
 
   const KpiSecondAxisConfig = (
-    <div className='flex flex-col row-gap-1'>
+    <div className='flex flex-col gap-y-1'>
       <div className='border-b pb-2'>
         <Text color='grey-6' type='title'>
           Enable Secondary Y Axis for:
@@ -234,13 +234,13 @@ function CalendarRow({
 
   return (
     <div className='flex justify-between items-center'>
-      <div className='flex items-center col-gap-2'>
+      <div className='flex items-center gap-x-2'>
         {metricsDropdown}
         {calendarWidget}
         {renderCompareScenario()}
         {granularity}
       </div>
-      <div className='flex items-center col-gap-2'>
+      <div className='flex items-center gap-x-2'>
         <ControlledComponent controller={showChartConfigOptions}>
           <ChartConfigPopover>{KpiSecondAxisConfig}</ChartConfigPopover>
         </ControlledComponent>

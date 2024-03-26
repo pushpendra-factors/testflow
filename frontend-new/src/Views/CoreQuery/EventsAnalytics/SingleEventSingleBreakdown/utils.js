@@ -165,7 +165,7 @@ export const getTableColumns = (
             <Text type='title' level={7} color='grey'>
               <NumFormat number={row.compareValue} />
             </Text>
-            <div className='flex col-gap-1 items-center justify-end'>
+            <div className='flex gap-x-1 items-center justify-end'>
               <SVG
                 color={row.change > 0 ? '#5ACA89' : '#FF0000'}
                 name={row.change > 0 ? 'arrowLift' : 'arrowDown'}
@@ -397,7 +397,7 @@ export const getDateBasedColumns = (
             />
           );
           return (
-            <div className='flex col-gap-1 items-center justify-end'>
+            <div className='flex gap-x-1 items-center justify-end'>
               {changeIcon}
               <Text level={7} type='title' color={d < 0 ? 'red' : 'green'}>
                 <NumFormat number={Math.abs(d)} />%

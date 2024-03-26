@@ -144,7 +144,7 @@ function GroupedChart({
     );
   } else if (chartType === CHART_TYPE_METRIC_CHART) {
     chartContent = (
-      <div className='flex justify-between w-full col-gap-2'>
+      <div className='flex justify-between w-full gap-x-2'>
         {visibleProperties
           .slice(0, cardSizeToMetricCount[unit.cardSize])
           .map((elem, index) => {

@@ -7,7 +7,7 @@ function EventsInfo({ queries, setDrawerVisible, queryType }) {
 
   if (queryType === QUERY_TYPE_EVENT) {
     return (
-            <div onClick={setDrawerVisible.bind(this, true)} className={`whitespace-no-wrap pb-1 flex items-center cursor-pointer leading-6 overflow-hidden ${styles.eventsText}`}>
+            <div onClick={setDrawerVisible.bind(this, true)} className={`whitespace-nowrap pb-1 flex items-center cursor-pointer leading-6 overflow-hidden ${styles.eventsText}`}>
                 {queries.map((q, index) => {
                   if (index < queries.length - 1) {
                     return (

@@ -159,7 +159,7 @@ const GroupedChartComponent = forwardRef(
       chart = (
         <div
           className={cx(
-            'grid w-full col-gap-2 row-gap-12',
+            'grid w-full gap-x-2 gap-y-12',
             { 'grid-flow-col': visibleProperties.length < 3 },
             { 'grid-cols-3': visibleProperties.length >= 3 }
           )}
