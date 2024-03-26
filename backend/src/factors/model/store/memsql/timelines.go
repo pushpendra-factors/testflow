@@ -1833,6 +1833,7 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 		log.WithFields(logFields).WithError(errGetScore).Error("Error retrieving account score")
 	} else {
 		overview.ScoresList = accountScore.Trend
+		overview.LastEventTS = accountScore.LastEventTimeStamp
 	}
 
 	// To Get Engagement Level And Score from Domain Properties Column
