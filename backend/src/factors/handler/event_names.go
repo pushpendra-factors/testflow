@@ -251,9 +251,9 @@ func GetEventNamesByUserHandler(c *gin.Context) {
 	eventNames = tempEventNames
 	eventNames = RemoveLabeledEventNamesFromOtherUserEventNames(eventNames)
 
-	// Adding $page_view event_name by force
+	// Adding $page_view event_name before other website activity events
 	if showSpecialEvents == "true" {
-		eventNames[U.WebsiteActivityEvent] = append(eventNames[U.WebsiteActivityEvent], U.EVENT_NAME_PAGE_VIEW)
+		eventNames[U.WebsiteActivityEvent] = append([]string{U.EVENT_NAME_PAGE_VIEW}, eventNames[U.WebsiteActivityEvent]...)
 	}
 
 	_, displayNames := store.GetStore().GetDisplayNamesForAllEvents(projectId)

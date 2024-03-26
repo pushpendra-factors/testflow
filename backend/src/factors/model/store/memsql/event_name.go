@@ -981,7 +981,7 @@ func (store *MemSQL) GetMostFrequentlyEventNamesByType(projectID int64, limit in
 	}
 	if typeOfEvent == model.PageViewsDisplayCategory {
 		for _, event := range eventsSorted {
-			if event.GroupName == U.PageViewEvent {
+			if event.Category == U.PageViewEvent {
 				mostFrequentEventNames = append(mostFrequentEventNames, event.Name)
 			}
 		}
@@ -1020,11 +1020,12 @@ func (store *MemSQL) GetMostFrequentlyEventNamesByType(projectID int64, limit in
 			hashMapOfFinalEventNames[eventName.Name] = 1
 		}
 
-		if typeOfEvent == model.PageViewsDisplayCategory {
-			if _, ok := hashMapOfFinalEventNames[U.EVENT_NAME_FORM_SUBMITTED]; ok {
-				delete(hashMapOfFinalEventNames, U.EVENT_NAME_FORM_SUBMITTED)
-			}
-		}
+		// Commenting I dont see this as reachable code.
+		// if typeOfEvent == model.PageViewsDisplayCategory {
+		// 	if _, ok := hashMapOfFinalEventNames[U.EVENT_NAME_FORM_SUBMITTED]; ok {
+		// 		delete(hashMapOfFinalEventNames, U.EVENT_NAME_FORM_SUBMITTED)
+		// 	}
+		// }
 
 		for _, event := range mostFrequentEventNames {
 			if _, ok := hashMapOfFinalEventNames[event]; ok {

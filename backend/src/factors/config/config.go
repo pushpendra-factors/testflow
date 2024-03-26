@@ -286,6 +286,8 @@ type Configuration struct {
 	MarkerPreviewAllAccountsProjectId                    string
 	BatchSizePreviewDomain                               int
 	AccountsToProcessForPreview                          int
+	NumberOfRunsForPreview                               int
+	AccountLimitPreviewListing                           int
 	UseMarkerByProjectID                                 string
 	EnableNewAllAccountsByProjectID                      string
 	DBMaxAllowedPacket                                   int64
@@ -356,6 +358,7 @@ type Configuration struct {
 	MailModoTriggerCampaignAPIKey                        string
 	AddCRMObjectURLPropertyByProjectID                   string
 	EnableTotalSessionPropertiesV2ByProjectID            string
+	SkipKpiResultValidation                              bool
 }
 
 type Services struct {
@@ -2365,6 +2368,12 @@ func BatchSizePreviewtMarker() int {
 func DomainsToProcessForPreview() int {
 	return configuration.AccountsToProcessForPreview
 }
+func RunNumberToProcessDomainsForPreview() int {
+	return configuration.NumberOfRunsForPreview
+}
+func AccountLimitForPreview() int {
+	return configuration.AccountLimitPreviewListing
+}
 
 // UseSegmentMarker - Checks if segment marker is enabled for given project_id in all accounts listing
 func UseSegmentMarker(projectID int64) bool {
@@ -2955,6 +2964,10 @@ func GetChargebeeApiKey() string {
 
 func GetChargebeeSiteName() string {
 	return configuration.ChargebeeSiteName
+}
+
+func SkipKpiResultValidation() bool {
+	return configuration.SkipKpiResultValidation
 }
 
 func EnableSixSignalGroupByProjectID(projectID int64) bool {

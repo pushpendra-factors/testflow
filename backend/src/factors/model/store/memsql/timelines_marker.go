@@ -58,11 +58,11 @@ func (store *MemSQL) GetMarkedDomainsListByProjectId(projectID int64, payload mo
 	if payload.SegmentId == "" {
 		// new preview flow
 		profiles, statusCode, errMsg = store.GetPreviewDomainsListByProjectId(projectID, payload,
-			domainGroup.ID)
+			domainGroup.ID, downloadLimitGiven)
 	} else {
 		// fetching accounts for segments
 		profiles, statusCode, errMsg = store.GetDomainsListFromMarker(projectID, payload,
-			domainGroup.ID)
+			domainGroup.ID, downloadLimitGiven)
 	}
 
 	// if status is not found or profiles are empty, redirecting to old flow
@@ -178,7 +178,7 @@ func CompareFilters(segmentQuery model.Query, payloadQuery model.Query) bool {
 }
 
 func (store *MemSQL) GetDomainsListFromMarker(projectID int64, payload model.TimelinePayload,
-	domainGroupID int) ([]model.Profile, int, string) {
+	domainGroupID int, downloadLimitGiven bool) ([]model.Profile, int, string) {
 
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -198,7 +198,7 @@ func (store *MemSQL) GetDomainsListFromMarker(projectID int64, payload model.Tim
 	// for case - segment is updated but all_run for the day is yet to run
 	if lastRunStatusCode != http.StatusFound || segment.UpdatedAt.After(lastRunTime) {
 		if C.IsMarkerPreviewEnabled(projectID) {
-			return store.GetPreviewDomainsListByProjectId(projectID, payload, domainGroupID)
+			return store.GetPreviewDomainsListByProjectId(projectID, payload, domainGroupID, downloadLimitGiven)
 		}
 		return []model.Profile{}, lastRunStatusCode, ""
 	}
@@ -215,13 +215,20 @@ func (store *MemSQL) GetDomainsListFromMarker(projectID int64, payload model.Tim
 
 	if additionalFiltersExist {
 		if C.IsMarkerPreviewEnabled(projectID) {
-			return store.GetPreviewDomainsListByProjectId(projectID, payload, domainGroupID)
+			return store.GetPreviewDomainsListByProjectId(projectID, payload, domainGroupID, downloadLimitGiven)
 		}
 		return []model.Profile{}, http.StatusOK, ""
 	}
 
 	// check for search filter
 	whereForSearchFilters, searchFiltersParams := SearchFilterForAllAccounts(payload.SearchFilter, domainGroupID)
+
+	var domLimit int
+	if downloadLimitGiven {
+		domLimit = 10000
+	} else {
+		domLimit = 1000
+	}
 
 	query := fmt.Sprintf(`WITH step_0 as (
 		SELECT 
@@ -262,8 +269,8 @@ func (store *MemSQL) GetDomainsListFromMarker(projectID int64, payload model.Tim
 	  ORDER BY 
 		last_activity DESC 
 	  LIMIT 
-		1000;`, domainGroupID, domainGroupID, whereForSearchFilters,
-		domainGroupID, domainGroupID)
+		%d;`, domainGroupID, domainGroupID, whereForSearchFilters,
+		domainGroupID, domainGroupID, domLimit)
 
 	params := []interface{}{projectID, payload.SegmentId, model.UserSourceDomains}
 
@@ -287,23 +294,24 @@ func (store *MemSQL) GetDomainsListFromMarker(projectID int64, payload model.Tim
 }
 
 func (store *MemSQL) GetPreviewDomainsListByProjectId(projectID int64, payload model.TimelinePayload,
-	domainGroupID int) ([]model.Profile, int, string) {
+	domainGroupID int, downloadLimitGiven bool) ([]model.Profile, int, string) {
 
-	runLimit := 10
+	runLimit := C.RunNumberToProcessDomainsForPreview()
 
-	limitAcc := 100
+	limitAcc := C.AccountLimitForPreview()
 	userCount := new(int64)
 	profilesList := make([]model.Profile, 0)
 
 	// calculate limit to fetch total number of domains
 	limitVal := C.DomainsToProcessForPreview() * runLimit
 
-	domainIDs, status := store.GetAllDomainsByProjectID(projectID, domainGroupID, limitVal,
-		payload.SearchFilter, true)
-
-	// return if no domains found
-	if status != http.StatusFound || len(domainIDs) <= 0 {
-		return []model.Profile{}, status, "Failed to get domains list"
+	// set listing limit to 1000 in case of all accounts listing
+	if len(payload.Query.EventsWithProperties) == 0 && len(payload.Query.GlobalUserProperties) == 0 {
+		if downloadLimitGiven {
+			limitAcc, limitVal = 10000, 10000
+		} else {
+			limitAcc, limitVal = 1000, 1000
+		}
 	}
 
 	payload, eventNameIDsList, status, errMsg := store.transformPayload(projectID, payload)
@@ -312,7 +320,24 @@ func (store *MemSQL) GetPreviewDomainsListByProjectId(projectID int64, payload m
 		return []model.Profile{}, status, errMsg
 	}
 
+	// making all filter's operator as "OR" and skip domain level filters
+	filtersForAllAccounts := modifyFiltersForAllAccounts(payload.Query.GlobalUserProperties)
+
+	// increase limit if no relevant filter to apply
+	if len(filtersForAllAccounts) == 0 &&
+		(len(payload.Query.GlobalUserProperties) > 0 || len(payload.Query.EventsWithProperties) > 0) {
+		limitVal = 50000
+	}
+
 	startTime := time.Now().Unix()
+
+	domainIDs, status := store.GetAllDomainsForPreviewByProjectID(projectID, domainGroupID, limitVal,
+		filtersForAllAccounts, payload.SearchFilter)
+
+	// return if no domains found
+	if status != http.StatusFound || len(domainIDs) <= 0 {
+		return []model.Profile{}, status, "Failed to get domains list"
+	}
 
 	// breaking total domains list in small batches and running one at a time
 	domainIDsList := U.GetStringListAsBatch(domainIDs, C.DomainsToProcessForPreview())
@@ -320,7 +345,7 @@ func (store *MemSQL) GetPreviewDomainsListByProjectId(projectID int64, payload m
 	for li := range domainIDsList {
 
 		profiles, status, errMsg := store.GetPreviewDomainsListByProjectIdPerRun(projectID, payload,
-			domainGroupID, eventNameIDsList, userCount, domainIDsList[li])
+			domainGroupID, eventNameIDsList, userCount, domainIDsList[li], limitAcc)
 
 		if status != http.StatusOK || errMsg != "" {
 			return []model.Profile{}, status, errMsg
@@ -347,9 +372,8 @@ func (store *MemSQL) GetPreviewDomainsListByProjectId(projectID int64, payload m
 
 func (store *MemSQL) GetPreviewDomainsListByProjectIdPerRun(projectID int64, payload model.TimelinePayload,
 	domainGroupID int, eventNameIDsMap map[string]string, userCount *int64,
-	domainIDList []string) ([]model.Profile, int, string) {
+	domainIDList []string, limitAcc int) ([]model.Profile, int, string) {
 
-	limitAcc := 100
 	profiles := make([]model.Profile, 0)
 
 	batchSize := C.BatchSizePreviewtMarker()
@@ -526,6 +550,20 @@ func profileValues(projectID int64, users []model.User, domID string, domainGrou
 	isLastEventAtFound := !maxLastEventAt.IsZero()
 
 	return profile, isLastEventAtFound
+}
+
+func modifyFiltersForAllAccounts(globalFilters []model.QueryProperty) []model.QueryProperty {
+	modifiedFilters := make([]model.QueryProperty, 0)
+
+	for _, filter := range globalFilters {
+		if filter.GroupName == model.GROUP_NAME_DOMAINS {
+			continue
+		}
+		filter.LogicalOp = "OR"
+		modifiedFilters = append(modifiedFilters, filter)
+	}
+
+	return modifiedFilters
 }
 
 type structSorter []model.Profile

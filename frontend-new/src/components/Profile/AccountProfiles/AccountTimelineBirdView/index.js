@@ -73,10 +73,13 @@ function AccountTimelineBirdView({
       ? event.icon
       : 'calendar-star';
     const { borderColor, bgColor } = eventIconsColorMap[eventIcon] || {};
-    const isTrackedUser = event.user === 'new_user';
+    const isNewUser = event.username === 'new_user';
 
-    const iconContent = isTrackedUser ? (
-      <SVG name={`TrackedUser${event.id.match(/\d/g)?.[0] || 0}`} size={20} />
+    const iconContent = isNewUser ? (
+      <SVG
+        name={`TrackedUser${event.user_id.match(/\d/g)?.[0] || 0}`}
+        size={20}
+      />
     ) : (
       <img
         src={`/assets/icons/${eventIcon}.svg`}

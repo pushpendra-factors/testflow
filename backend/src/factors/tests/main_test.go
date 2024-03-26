@@ -152,9 +152,12 @@ func TestMain(m *testing.M) {
 		DomainsLimitAllRun:                                  300000,
 		EnableTotalSessionPropertiesV2ByProjectID:           "*",
 		EmailUTMParameterAllowedProjects:                    "*",
+		RunAllAccountsMarkerProjectIDs:                      "*",
 		BatchSizePreviewDomain:                              100,
 		MarkerPreviewAllAccountsProjectId:                   "*",
-		AccountsToProcessForPreview:                         5000,
+		NumberOfRunsForPreview:                              2,
+		AccountLimitPreviewListing:                          250,
+		AccountsToProcessForPreview:                         1000,
 	}
 	C.InitConf(config)
 

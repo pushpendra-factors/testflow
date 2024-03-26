@@ -37,7 +37,7 @@ type OverWrite map[string]FeatureDetails
 type OverWriteOld []FeatureDetailsTemp
 
 type DisplayPlanDetails struct {
-	ProjectID     int64         `json:"project_id"`
+	ProjectID     string         `json:"project_id"`
 	Plan          PlanDetails   `json:"plan"`
 	DisplayName   string        `json:"display_name"`
 	AddOns        OverWriteOld     `json:"add_ons"`

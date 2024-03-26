@@ -6,7 +6,6 @@ cache_data_path = os.path.join(directory_path, "data_cached.csv")
 EMBEDDING_CACHE_PATH = 'artifacts/prompt_emb_cache.pkl'
 emb_pkl_path = os.path.join(directory_path, EMBEDDING_CACHE_PATH)
 
-sys.path.append('/Users/satyamishra/repos/factors/python_backend/chat_factors/')
 from optparse import OptionParser
 import logging as log
 from google.cloud import storage
