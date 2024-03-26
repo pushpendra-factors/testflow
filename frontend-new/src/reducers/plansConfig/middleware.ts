@@ -1,4 +1,6 @@
 import { Dispatch } from 'redux';
+import logger from 'Utils/logger';
+import { ADDITIONAL_ACCOUNTS_ADDON_ID } from 'Constants/plans.constants';
 import {
   getDifferentialPricing,
   getPlansDetails,
@@ -12,11 +14,9 @@ import {
   PlansDetailStateInterface,
   SubscriptionDetailsAPIResponse
 } from './types';
-import logger from 'Utils/logger';
-import { ADDITIONAL_ACCOUNTS_ADDON_ID } from 'Constants/plans.constants';
 
-export const fetchPlansDetail = (projectId: string) => {
-  return async (dispatch: Dispatch) => {
+export const fetchPlansDetail =
+  (projectId: string) => async (dispatch: Dispatch) => {
     try {
       dispatch({ type: PlansConfigActionType.SET_PLANS_DETAIL_LOADING });
 
@@ -30,9 +30,11 @@ export const fetchPlansDetail = (projectId: string) => {
         let statePlans: PlansDetailStateInterface[] = [];
 
         if (addons && addons.length) {
-          stateAddons = addons.map((addon) => {
-            return { name: addon.name, id: addon.id, price: addon.price };
-          });
+          stateAddons = addons.map((addon) => ({
+            name: addon.name,
+            id: addon.id,
+            price: addon.price
+          }));
         }
         if (plans && plans.length) {
           // collecting monthly and yearly prices of all plans
@@ -41,7 +43,7 @@ export const fetchPlansDetail = (projectId: string) => {
           plans.forEach((plan) => {
             if (plan?.external_name) {
               if (!reducerPlanObj?.[plan.external_name]) {
-                let obj: PlansDetailStateInterface = {
+                const obj: PlansDetailStateInterface = {
                   name: plan.external_name,
                   terms: [
                     {
@@ -80,7 +82,6 @@ export const fetchPlansDetail = (projectId: string) => {
       dispatch({ type: PlansConfigActionType.SET_PLANS_DETAIL_ERROR });
     }
   };
-};
 
 export const fetchCurrentSubscriptionDetail =
   (projectId: string) => async (dispatch: Dispatch) => {
@@ -97,10 +98,11 @@ export const fetchCurrentSubscriptionDetail =
         const plans = response.data?.subscription_details?.filter(
           (data) => data.type === 'plan'
         );
-        let stateCurrentPlanConfig = {
+        const stateCurrentPlanConfig = {
           renews_on: response.data.renews_on,
           status: response.data.status,
-          period: response.data?.period_unit
+          period: response.data?.period_unit,
+          billingPeriod: response.data?.billing_period
         };
         if (plans && plans?.length > 0) {
           const firstPlan = plans[0];
@@ -109,7 +111,7 @@ export const fetchCurrentSubscriptionDetail =
             id: firstPlan.id || '',
             amount: firstPlan.amount || '',
             name: firstPlan.id || '',
-            externalName: externalName,
+            externalName,
             quantity: firstPlan.quantity
           };
         }
