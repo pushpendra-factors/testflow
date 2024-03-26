@@ -2661,6 +2661,81 @@ func (store *MemSQL) GetConfiguredPropertiesByUserID(projectID int64, id string,
 	return filteredProperties, http.StatusOK
 }
 
+func (store *MemSQL) UpdateTimelineConfigForEngagementScoring(projectID int64, isScoringEnabled bool) error {
+	// Fetch timelinesConfig
+	timelinesConfig, err := store.GetTimelinesConfig(projectID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch timelinesConfig")
+	}
+
+	updatedColumns, isUpdated := getUpdatedTableColumns(timelinesConfig.AccountConfig.TableProps, isScoringEnabled)
+
+	if isUpdated {
+		timelinesConfig.AccountConfig.TableProps = updatedColumns
+		tlConfigEncoded, err := U.EncodeStructTypeToPostgresJsonb(timelinesConfig)
+		if err != nil {
+			return err
+		}
+
+		// Update project settings
+		_, errCode := store.UpdateProjectSettings(projectID, &model.ProjectSetting{TimelinesConfig: tlConfigEncoded})
+		if errCode != http.StatusAccepted {
+			return fmt.Errorf("failed to update account table columns")
+		}
+	}
+
+	return nil
+}
+
+func getUpdatedTableColumns(existingColumns []string, isScoringEnabled bool) ([]string, bool) {
+	// columns bool map for lookup
+	existingColsMap := make(map[string]bool)
+	for _, column := range existingColumns {
+		existingColsMap[column] = true
+	}
+
+	// Check if any of the engagement columns are present
+	hasEngagementColumns := false
+	for _, prop := range U.ENGAGEMENT_PROPERTIES {
+		if existingColsMap[prop] {
+			hasEngagementColumns = true
+			break
+		}
+	}
+
+	configUpdated := false // set flag for config update
+
+	// Update columns list based on scoring feature status
+	var updatedColumns []string
+	if isScoringEnabled && !hasEngagementColumns {
+		updatedColumns = addEngagementColumns(existingColumns)
+		configUpdated = true
+	} else if !isScoringEnabled && hasEngagementColumns {
+		updatedColumns = removeEngagementColumns(existingColumns)
+		configUpdated = true
+	}
+
+	return updatedColumns, configUpdated
+}
+
+func addEngagementColumns(existingColumns []string) []string {
+	return append(U.ENGAGEMENT_PROPERTIES, existingColumns...)
+}
+
+func removeEngagementColumns(existingColumns []string) []string {
+	engagementColumns := make(map[string]bool)
+	for _, column := range U.ENGAGEMENT_PROPERTIES {
+		engagementColumns[column] = true
+	}
+	var updatedColumns []string
+	for _, column := range existingColumns {
+		if !engagementColumns[column] {
+			updatedColumns = append(updatedColumns, column)
+		}
+	}
+	return updatedColumns
+}
+
 func (store *MemSQL) GetTopEventsForADomain(projectID int64, domainID string) ([]model.TimelineEvent, int) {
 	var eventsList []model.TimelineEvent
 	logFields := log.Fields{

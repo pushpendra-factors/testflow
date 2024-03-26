@@ -1123,7 +1123,7 @@ type Model interface {
 		string, error)
 	GetDisplayablePlanDetails(ppMap model.ProjectPlanMapping, planDetails model.PlanDetails) (
 		*model.DisplayPlanDetails, int, string, error)
-	UpdateFeaturesForCustomPlan(projectID int64, AccountLimit int64, MtuLimit int64, AvailableFeatuers []string) (int, error)
+	UpdateFeaturesForCustomPlan(projectID int64, AccountLimit int64, MtuLimit int64, AvailableFeatures []string) (int, error)
 	UpdateAddonsForProject(projectID int64, addons model.OverWrite) (string, error)
 	CreateAddonsForCustomPlanForProject(projectID int64) error
 	CreateDefaultProjectPlanMapping(projectID int64, planID int, billingPlanPriceID string) (int, error)

@@ -94,5 +94,13 @@ func (store *MemSQL) TriggerSyncChargebeeToFactors(projectID int64) error { // C
 		return errors.New("Failed to update project plan mapping")
 	}
 
+	// Call Action on Plan Change
+	features, _, err := store.GetPlanDetailsAndAddonsForProject(projectID)
+	if err != nil {
+		log.WithFields(logCtx).WithError(err)
+	} else if err = store.OnFeatureEnableOrDisableHook(projectID, features); err != nil {
+		log.WithFields(logCtx).WithError(err).Error("Failed to update configs on plan update")
+	}
+
 	return nil
 }
