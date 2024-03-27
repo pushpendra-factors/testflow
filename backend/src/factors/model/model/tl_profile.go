@@ -89,6 +89,7 @@ type Overview struct {
 	ScoresList  map[string]float32 `json:"scores_list"` // Score trends list
 	TopPages    []TopPage          `json:"top_pages"`
 	TopUsers    []TopUser          `json:"top_users"`
+	LastEventTS string             `json:"last_event_ts"` // timestamp of last occured event on account scoring
 }
 
 type TopPage struct {
