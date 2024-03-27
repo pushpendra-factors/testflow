@@ -1,6 +1,7 @@
 package memsql
 
 import (
+	"errors"
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
@@ -68,6 +69,7 @@ func (store *MemSQL) runSingleProfilesQuery(projectID int64, query model.Profile
 	}
 }
 
+// Segment level KPI change is required only on buildAllUsersQuery because it span for larger from, to.
 func (store *MemSQL) ExecuteProfilesQuery(projectID int64, query model.ProfileQuery,
 	enableOptimisedFilter bool) (*model.QueryResult, int, string) {
 	logFields := log.Fields{
@@ -113,7 +115,7 @@ func (store *MemSQL) ExecuteAllUsersProfilesQuery(projectID int64, query model.P
 	if enableOptimisedFilter {
 		statement, params, err = buildAllUsersQueryV2(projectID, query)
 	} else {
-		statement, params, err = buildAllUsersQuery(projectID, query)
+		statement, params, err = store.buildAllUsersQuery(projectID, query)
 	}
 	if err != nil {
 		log.WithError(err).Error(model.ErrMsgQueryProcessingFailure)
@@ -141,7 +143,7 @@ func (store *MemSQL) ExecuteAllUsersProfilesQuery(projectID int64, query model.P
 	return result, http.StatusOK, ""
 }
 
-func buildAllUsersQuery(projectID int64, query model.ProfileQuery) (string, []interface{}, error) {
+func (store *MemSQL) buildAllUsersQuery(projectID int64, query model.ProfileQuery) (string, []interface{}, error) {
 	logFields := log.Fields{
 		"query":      query,
 		"project_id": projectID,
@@ -155,6 +157,7 @@ func buildAllUsersQuery(projectID int64, query model.ProfileQuery) (string, []in
 	_, selectKeysForProfile := getSelectKeysForProfile(query, model.USERS)
 	selectKeys = append(selectKeys, selectKeysForProfile)
 
+	// Forming groupBy keys and select keys
 	for _, groupBy := range query.GroupBys {
 		gKey := groupKeyByIndex(groupBy.Index)
 		groupBySelect, groupByParams := getNoneHandledGroupBySelectForProfiles(projectID, groupBy, gKey, query.Timezone)
@@ -167,8 +170,11 @@ func buildAllUsersQuery(projectID int64, query model.ProfileQuery) (string, []in
 	}
 
 	selectStmnt := joinWithComma(selectKeys...)
+
 	// Using 0 as profile queries are not time bound. The additional properties table will
 	// not be used till we migrate all data and remove timestamp condition.
+
+	// Forming filters
 	filterStmnt, filterParams, err := buildWhereFromProperties(projectID, query.Filters, 0)
 	if filterStmnt != "" {
 		filterStmnt = " AND " + filterStmnt
@@ -177,31 +183,34 @@ func buildAllUsersQuery(projectID int64, query model.ProfileQuery) (string, []in
 		return "", make([]interface{}, 0), err
 	}
 
-	allowSupportForSourceColumnInUsers := C.IsProfileQuerySourceSupported(projectID)
-	allowProfilesGroupSupport := C.IsProfileGroupSupportEnabled(projectID)
+	groupFilterStmnt, groupFilterParams := GetFiltersForGroupAnalysisAndSource(query)
+	filterStmnt += groupFilterStmnt
+	filterParams = append(filterParams, groupFilterParams...)
+
+	innerJoinWithSegment := ""
+	innerJoinParams := make([]interface{}, 0)
+	// Form Inner Join for segment KPI
+	if query.SegmentID != "" {
+		segmentQuery, segmentParams, domainGroup, err1 := store.GetSQLAndParamsForSegmentsAssociatedAccounts(projectID, query.SegmentID)
+		if err1 != "" {
+			return "", make([]interface{}, 0), errors.New(err1)
+		}
+		innerJoinWithSegment = innerJoinClause + " ( " + segmentQuery + " ) as accounts "
+		onCondition := fmt.Sprintf(" ON users.group_%d_user_id = accounts.identity AND users.project_id = ? ", domainGroup.ID)
+		innerJoinWithSegment = innerJoinWithSegment + onCondition
+		segmentParams = append(segmentParams, projectID)
+		innerJoinParams = segmentParams
+	}
 
 	var stepSqlStmnt string
 	stepSqlStmnt = fmt.Sprintf(
-		"SELECT %s FROM users WHERE users.project_id = ? %s AND join_timestamp>=? AND join_timestamp<=?", selectStmnt, filterStmnt)
+		"SELECT %s FROM users %s WHERE users.project_id = ? %s AND join_timestamp>=? AND join_timestamp<=?", selectStmnt, innerJoinWithSegment, filterStmnt)
 	params = append(params, groupBySelectParams...)
+	params = append(params, innerJoinParams...)
 	params = append(params, projectID)
 	params = append(params, filterParams...)
 	params = append(params, query.From)
 	params = append(params, query.To)
-	if allowSupportForSourceColumnInUsers {
-		if model.UserSourceMap[query.Type] == model.UserSourceWeb {
-			stepSqlStmnt = fmt.Sprintf("%s AND (source=? OR source IS NULL)", stepSqlStmnt)
-		} else {
-			stepSqlStmnt = fmt.Sprintf("%s AND source=?", stepSqlStmnt)
-		}
-		params = append(params, model.GetSourceFromQueryTypeOrGroupName(query))
-	}
-
-	if !allowProfilesGroupSupport || (allowProfilesGroupSupport && query.GroupAnalysis == model.USERS) {
-		stepSqlStmnt = fmt.Sprintf("%s AND (is_group_user=0 or is_group_user IS NULL)", stepSqlStmnt)
-	} else {
-		stepSqlStmnt = fmt.Sprintf("%s AND (is_group_user=1 AND group_%d_id IS NOT NULL)", stepSqlStmnt, query.GroupId)
-	}
 
 	stepSqlStmnt = fmt.Sprintf("%s %s ORDER BY %s", stepSqlStmnt, groupByStmnt, model.AliasAggr)
 	if !query.LimitNotApplicable {
@@ -339,17 +348,17 @@ func buildAllUsersQueryV2(projectID int64, query model.ProfileQuery) (string, []
 func getSelectKeysForProfile(query model.ProfileQuery, tableViewName string) (string, string) {
 	if query.AggregateProperty == "1" || query.AggregateProperty == "" || query.AggregateFunction == model.UniqueAggregateFunction { // Generally count is only used againt them.
 		return "users.customer_user_id, users.id, users.properties", fmt.Sprintf("COUNT(DISTINCT(COALESCE(%s.customer_user_id, %s.id))) as %s", tableViewName, tableViewName, model.AliasAggr)
-	} else if query.AggregateProperty != "" &&  query.AggregateProperty2 == "" {
+	} else if query.AggregateProperty != "" && query.AggregateProperty2 == "" {
 		return "users.properties", fmt.Sprintf("%s(CASE WHEN JSON_EXTRACT_STRING(%s.properties, '%s') IS NULL THEN 0 ELSE JSON_EXTRACT_STRING(%s.properties, '%s') END ) as %s", query.AggregateFunction,
 			tableViewName, query.AggregateProperty, tableViewName, query.AggregateProperty, model.AliasAggr)
 	} else {
 		// Following case for when difference of metric is considered.
-		aggPropertySql1 := fmt.Sprintf("CASE WHEN JSON_EXTRACT_STRING(%s.properties, '%s') IS NULL THEN 0 ELSE JSON_EXTRACT_STRING(%s.properties, '%s') END", 
-		tableViewName, query.AggregateProperty, tableViewName, query.AggregateProperty)
-		aggPropertySql2 := fmt.Sprintf("CASE WHEN JSON_EXTRACT_STRING(%s.properties, '%s') IS NULL THEN 0 ELSE JSON_EXTRACT_STRING(%s.properties, '%s') END", 
-		tableViewName, query.AggregateProperty2, tableViewName, query.AggregateProperty2)
+		aggPropertySql1 := fmt.Sprintf("CASE WHEN JSON_EXTRACT_STRING(%s.properties, '%s') IS NULL THEN 0 ELSE JSON_EXTRACT_STRING(%s.properties, '%s') END",
+			tableViewName, query.AggregateProperty, tableViewName, query.AggregateProperty)
+		aggPropertySql2 := fmt.Sprintf("CASE WHEN JSON_EXTRACT_STRING(%s.properties, '%s') IS NULL THEN 0 ELSE JSON_EXTRACT_STRING(%s.properties, '%s') END",
+			tableViewName, query.AggregateProperty2, tableViewName, query.AggregateProperty2)
 		operator, _ := model.MapOfCustomMetricTypeToOp[query.MetricType]
-		return "users.properties", 
+		return "users.properties",
 			fmt.Sprintf("%s(%s %s %s) as %s", query.AggregateFunction, aggPropertySql1, operator, aggPropertySql2, model.AliasAggr)
 	}
 }
@@ -378,6 +387,25 @@ func getNoneHandledGroupBySelectForProfiles(projectID int64, groupProp model.Que
 		groupSelectParams = []interface{}{groupProp.Property, groupProp.Property, groupProp.Property, groupProp.Property}
 	}
 	return groupSelect, groupSelectParams
+}
+
+func GetFiltersForGroupAnalysisAndSource(query model.ProfileQuery) (string, []interface{}) {
+	rStmnt := ""
+	rParams := make([]interface{}, 0)
+	if model.UserSourceMap[query.Type] == model.UserSourceWeb {
+		rStmnt += " AND (source=? OR source IS NULL) "
+	} else {
+		rStmnt += " AND source=? "
+	}
+	rParams = append(rParams, model.GetSourceFromQueryTypeOrGroupName(query))
+
+	if query.GroupAnalysis == model.USERS {
+		rStmnt += " AND (is_group_user=0 or is_group_user IS NULL) "
+	} else {
+		rStmnt += fmt.Sprintf(" AND (is_group_user=1 AND group_%d_id IS NOT NULL) ", query.GroupId)
+	}
+
+	return rStmnt, rParams
 }
 
 func SanitizeQueryResultProfiles(result *model.QueryResult, query *model.ProfileQuery) error {

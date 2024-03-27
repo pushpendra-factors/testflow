@@ -19,7 +19,7 @@ func (store *MemSQL) GetKPIConfigFromStandardUserProperties(projectID int64) []m
 			"display_name": userDisplayPropertyName,
 			"data_type":    U.GetPropertyTypeByName(userProperty),
 			"entity":       model.UserEntity,
-			"category":		model.CategorizeProperty(userProperty, model.UserEntity),
+			"category":     model.CategorizeProperty(userProperty, model.UserEntity),
 		}
 		resultantKPIConfigProperties = append(resultantKPIConfigProperties, tempKPIConfigProperty)
 	}
@@ -41,7 +41,6 @@ func (store *MemSQL) TransformToAndExecuteProfileAnalyticsQueries(projectID int6
 	var queryResults []model.QueryResult
 	queryResults = make([]model.QueryResult, len(kpiQuery.Metrics))
 	profileQueryGroup = model.GetDirectDerivableProfileQueryFromKPI(kpiQuery)
-
 	for index, kpiMetric := range kpiQuery.Metrics {
 		queryResults[index], statusCode = store.ExecuteForSingleKPIMetricProfile(projectID, profileQueryGroup, kpiQuery, kpiMetric, enableOptimisedFilter)
 		finalStatusCode = statusCode

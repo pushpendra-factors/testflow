@@ -466,9 +466,9 @@ func TestKpiAnalytics(t *testing.T) {
 
 	t.Run("Query with verifying user properties being used are global", func(t *testing.T) {
 		query := model.KPIQuery{
-			Category:        "events",
-			DisplayCategory: "page_views",
-			PageUrl:         "s1",
+			Category:         "events",
+			DisplayCategory:  "page_views",
+			PageUrl:          "s1",
 			Metrics:          []string{"page_views"},
 			Filters:          []model.KPIFilter{},
 			From:             startTimestamp,
@@ -480,20 +480,20 @@ func TestKpiAnalytics(t *testing.T) {
 		query1.GroupByTimestamp = ""
 
 		kpiQueryGroup := model.KPIQueryGroup{
-			Class:         "kpi",
-			Queries:       []model.KPIQuery{query, query1},
+			Class:   "kpi",
+			Queries: []model.KPIQuery{query, query1},
 			GlobalFilters: []model.KPIFilter{
 				{
-					Entity: "user",
-					PropertyName: "$latest_page_url",
-					PropertyDataType: "categorical",
-					Condition: "equals",
-					Value: "abc.com/def1",
-					LogicalOp: "AND",
+					Entity:            "user",
+					PropertyName:      "$latest_page_url",
+					PropertyDataType:  "categorical",
+					Condition:         "equals",
+					Value:             "abc.com/def1",
+					LogicalOp:         "AND",
 					IsPropertyMapping: false,
 				},
 			},
-			GlobalGroupBy: []model.KPIGroupBy{ 
+			GlobalGroupBy: []model.KPIGroupBy{
 				{
 					ObjectType:       "s1",
 					PropertyName:     "$latest_page_url",
@@ -507,14 +507,13 @@ func TestKpiAnalytics(t *testing.T) {
 
 		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
 			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
-		log.WithField("result", result).Warn("kark2")
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, result[1].Headers, []string{"$latest_page_url", "page_views"})
 		assert.Equal(t, len(result[1].Rows), 1)
 		// TODO change
 		assert.Equal(t, result[1].Rows[0][0], "abc.com/def1")
 		assert.Equal(t, result[1].Rows[0][1], float64(2))
-	})	
+	})
 }
 
 func TestKpiAnalyticsForProfile(t *testing.T) {
@@ -592,7 +591,6 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 		}
 		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
 			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
-		log.WithField("result", result).Warn("kark2")
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, result[0].Headers, []string{"datetime", name1})
 		assert.Equal(t, len(result[0].Rows), 1)
@@ -926,7 +924,6 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 		}
 		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup,
 			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
-		log.WithField("result", result).Warn("kark2")
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, result[0].Headers, []string{"datetime", name4})
 		assert.Equal(t, len(result[0].Rows), 1)
@@ -990,10 +987,10 @@ func TestKPIProfilesForGroups(t *testing.T) {
 		name4 := U.RandomString(8)
 		description4 := U.RandomString(8)
 		transformations4 := &postgres.Jsonb{json.RawMessage(`{"agFn": "sum", "agPr": "$hubspot_datefield1", "agPr2": "$hubspot_datefield2", "agPrTy": "datetime", "agPrTy2": "datetime", "fil": [], "daFie": "$hubspot_datefield1"}`)}
-	
+
 		w = sendCreateCustomMetricWithOtherProperties(a, project.ID, agent, transformations4, name4, description4, "hubspot_companies", 1, "", model.DateTypeDiffMetricType)
 		assert.Equal(t, http.StatusOK, w.Code)
-	
+
 		query1 := model.KPIQuery{
 			Category:         model.ProfileCategory,
 			DisplayCategory:  "hubspot_companies",
@@ -1045,7 +1042,6 @@ func TestKPIProfilesForGroups(t *testing.T) {
 		}
 		result2, statusCode2 := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup3,
 			C.EnableOptimisedFilterOnProfileQuery(), C.EnableOptimisedFilterOnEventUserQuery())
-		log.WithField("result", result2).Warn("kark2")
 		assert.Equal(t, http.StatusOK, statusCode2)
 
 		assert.Equal(t, float64(-100), result2[0].Rows[0][1])
@@ -1943,15 +1939,19 @@ func TestKpiAnalyticsHandler(t *testing.T) {
 		Category:        "events",
 		DisplayCategory: "page_views",
 		PageUrl:         "s0",
-		Metrics:         []string{"page_views"},
+		Metrics:         []string{"exits"},
 		GroupBy:         []M.KPIGroupBy{},
 		From:            20210801,
 		To:              20210801 + 40,
 	}
 
+	query1 := model.KPIQuery{}
+	U.DeepCopy(&query, &query1)
+	query1.GroupByTimestamp = ""
+
 	kpiQueryGroup := model.KPIQueryGroup{
 		Class:         "kpi",
-		Queries:       []model.KPIQuery{query},
+		Queries:       []model.KPIQuery{query, query1},
 		GlobalFilters: []model.KPIFilter{},
 		GlobalGroupBy: []model.KPIGroupBy{},
 	}

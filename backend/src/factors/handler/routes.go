@@ -318,12 +318,12 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.PUT("/:project_id/segments/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), UpdateSegmentHandler)
 	authRouteGroup.DELETE("/:project_id/segments/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), DeleteSegmentByIdHandler)
 
-	// TODO Kark - v1 or not later.
-	authRouteGroup.GET("/:project_id/segments/analytics/config", GetSegmentAnalyticsConfigHandler)
-	authRouteGroup.POST("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets", AddNewWidgetToWidgetGroupHandler)
-	authRouteGroup.PATCH("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets/:id", EditSegmentAnalyticsWidgetHandler)
-	// authRouteGroup.DELETE("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets/:id", DeleteSegmentAnalyticsWidgetHandler)
-	authRouteGroup.POST("/:project_id/segments/:segment_id/analytics/widget_group/:id/query", ExecuteSegmentQueryHandler)
+	// Segment analysis
+	authRouteGroup.GET("/:project_id/segments/analytics/config", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), GetSegmentAnalyticsConfigHandler)
+	authRouteGroup.POST("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(AddNewWidgetToWidgetGroupHandler))
+	authRouteGroup.PATCH("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(EditSegmentAnalyticsWidgetHandler))
+	authRouteGroup.DELETE("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(DeleteSegmentAnalyticsWidgetHandler))
+	authRouteGroup.POST("/:project_id/segments/:segment_id/analytics/widget_group/:id/query", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), ExecuteSegmentQueryHandler)
 
 	// path analysis
 	authRouteGroup.GET("/:project_id/v1/pathanalysis", mid.FeatureMiddleware([]string{M.FEATURE_PATH_ANALYSIS}), responseWrapper(V1.GetPathAnalysisEntityHandler))

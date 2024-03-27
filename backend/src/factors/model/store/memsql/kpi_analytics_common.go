@@ -45,6 +45,7 @@ import (
 // statusCode need to be clear on http.StatusOk or http.StatusAccepted or something else.
 // Below function relies on fact that each query has only one metric.
 // Note: All of the hash functions use the query without GBT to form keys.
+// enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery is set to true on segment level KPI
 func (store *MemSQL) ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQueryGroup model.KPIQueryGroup,
 	enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) ([]model.QueryResult, int) {
 	logFields := log.Fields{

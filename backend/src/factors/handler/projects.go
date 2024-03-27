@@ -68,6 +68,13 @@ func CreateProjectHandler(c *gin.Context) {
 		return
 	}
 
+	_, errCode = store.GetStore().CreateWidgetGroups(updatedProject.ID)
+	if errCode != http.StatusCreated {
+		logCtx.WithField("err_code", errCode).Error("CreateProject Failed, Create widget groups failed.")
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "Creating project failed."})
+		return
+	}
+
 	c.JSON(http.StatusCreated, V1.MapProjectToString(*updatedProject))
 	return
 }

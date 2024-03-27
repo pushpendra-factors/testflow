@@ -167,6 +167,7 @@ func (store *MemSQL) updateDashboardUnitPresentation(unit *model.DashboardUnit) 
 		logCtx.WithField("err_code", errC).
 			WithField("query_id", unit.QueryId).
 			Error("Failed to fetch query from query_id")
+		return
 	}
 	// request is received from new UI updating Presentation
 	settings := make(map[string]string)

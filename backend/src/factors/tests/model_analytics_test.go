@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
 	H "factors/handler"
@@ -2375,7 +2374,6 @@ func TestAnalyticsInsightsQueryForAliasName(t *testing.T) {
 		}
 
 		result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
-		log.WithField("result", result).WithField("errCode", errCode).Warn("kark1")
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		a0_Index := 0

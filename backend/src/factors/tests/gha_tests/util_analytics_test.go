@@ -4,7 +4,6 @@ import (
 	U "factors/util"
 	"testing"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -18,6 +17,5 @@ func TestGetAllDatesAsTimestamp(t *testing.T) {
 	timestamp1 := 1637316219
 	timestamp2 := 1639908216
 	time, _ := U.GetAllDatesAndOffsetAsTimestamp(int64(timestamp1), int64(timestamp2), "")
-	log.WithField("time", time).Warn("kark2")
 	assert.Len(t, time, 31)
 }
