@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, memo } from 'react';
+import { useSelector } from 'react-redux';
 import { find } from 'lodash';
 import {
   getTableColumns,
@@ -16,7 +17,6 @@ import {
 import { isSeriesChart } from '../../../../utils/dataFormatter';
 import { getFormattedKpiValue } from '../kpiAnalysis.helpers';
 import { getBreakdownDisplayName } from '../../EventsAnalytics/eventsAnalytics.helpers';
-import { useSelector } from 'react-redux';
 
 const BreakdownTable = ({
   data,
@@ -118,45 +118,94 @@ const BreakdownTable = ({
   ]);
 
   const getCSVData = useCallback(() => {
+    if (!isSeriesChart(chartType)) {
+      return {
+        fileName: 'KPI.csv',
+        data: tableData.map(({ index, label, value, metricType, ...rest }) => {
+          const result = {};
+          for (const key in rest) {
+            const isCurrentKeyKpi = find(
+              kpis,
+              (kpi, index) => kpi.label + ' - ' + index === key
+            );
+            if (isCurrentKeyKpi && isCurrentKeyKpi.metricType) {
+              result[key] = getFormattedKpiValue({
+                value: rest[key],
+                metricType: isCurrentKeyKpi.metricType
+              });
+              continue;
+            }
+            const isCurrentKeyForBreakdown = find(
+              breakdown,
+              (b, index) => b.property + ' - ' + index === key
+            );
+            if (isCurrentKeyForBreakdown) {
+              result[
+                `${getBreakdownDisplayName({
+                  breakdown: isCurrentKeyForBreakdown,
+                  queryType: QUERY_TYPE_KPI
+                })} - ${key.split(' - ')[1]}`
+              ] = rest[key];
+              continue;
+            }
+            result[key] = rest[key];
+          }
+          return result;
+        })
+      };
+    }
     return {
       fileName: 'KPI.csv',
-      data: tableData.map(({ index, label, value, metricType, ...rest }) => {
-        const result = {};
-        for (const key in rest) {
-          const isCurrentKeyKpi = find(
-            kpis,
-            (kpi, index) => kpi.label + ' - ' + index === key
-          );
-          if (isCurrentKeyKpi && isCurrentKeyKpi.metricType) {
-            result[key] = getFormattedKpiValue({
-              value: rest[key],
-              metricType: isCurrentKeyKpi.metricType
-            });
-            continue;
+      data: dateBasedTableData.map(
+        ({
+          index,
+          label,
+          value,
+          metricType,
+          data,
+          marker,
+          name,
+          event,
+          Overall,
+          ...rest
+        }) => {
+          const result = {};
+          const keys = Object.keys(rest);
+          for (let i = 0; i < keys.length; i++) {
+            const key = keys[i];
+            const isCurrentKeyKpi = find(
+              kpis,
+              (kpi, kpiIdx) => `${kpi.label} - ${kpiIdx}` === key
+            );
+            if (isCurrentKeyKpi && isCurrentKeyKpi.metricType) {
+              result[key] = getFormattedKpiValue({
+                value: rest[key],
+                metricType: isCurrentKeyKpi.metricType
+              });
+            } else {
+              const isCurrentKeyForBreakdown = find(
+                breakdown,
+                (b, bIdx) => `${b.property} - ${bIdx}` === key
+              );
+              if (isCurrentKeyForBreakdown) {
+                result[
+                  `${getBreakdownDisplayName({
+                    breakdown: isCurrentKeyForBreakdown,
+                    queryType: QUERY_TYPE_KPI
+                  })} - ${key.split(' - ')[1]}`
+                ] = rest[key];
+              } else {
+                result[key] = rest[key];
+              }
+            }
           }
-          const isCurrentKeyForBreakdown = find(
-            breakdown,
-            (b, index) => b.property + ' - ' + index === key
-          );
-          if (isCurrentKeyForBreakdown) {
-            result[
-              `${getBreakdownDisplayName({
-                breakdown: isCurrentKeyForBreakdown,
-                queryType: QUERY_TYPE_KPI
-              })} - ${key.split(' - ')[1]}`
-            ] = rest[key];
-            continue;
-          }
-          result[key] = rest[key];
+          return result;
         }
-        return result;
-      })
+      )
     };
   }, [dateBasedTableData, chartType, tableData]);
 
-  const selectedRowKeys = useCallback((rows) => {
-    return rows.map((vp) => vp.index);
-  }, []);
+  const selectedRowKeys = useCallback((rows) => rows.map((vp) => vp.index), []);
 
   const onSelectionChange = useCallback(
     (_, selectedRows) => {
@@ -171,6 +220,7 @@ const BreakdownTable = ({
         return obj;
       });
       setVisibleProperties(newVisibleProperties);
+      return false;
     },
     [setVisibleProperties, data]
   );
@@ -188,6 +238,7 @@ const BreakdownTable = ({
         return obj;
       });
       setVisibleSeriesData(newVisibleSeriesData);
+      return false;
     },
     [setVisibleSeriesData, seriesData]
   );
@@ -220,9 +271,7 @@ const BreakdownTable = ({
       }
       scroll={{ x: 250 }}
       getCSVData={getCSVData}
-      rowClassName={(record, index) => {
-        return `multi-colored-checkbox-${index}`;
-      }}
+      rowClassName={(record, index) => `multi-colored-checkbox-${index}`}
     />
   );
 };
