@@ -169,7 +169,6 @@ func (store *MemSQL) updateShareableURL(whereFields, updateFields map[string]int
 		return http.StatusInternalServerError
 	}
 	if rows.RowsAffected == 0 {
-		logCtx.Error("No rows affected")
 		return http.StatusNotFound
 	}
 	return http.StatusAccepted

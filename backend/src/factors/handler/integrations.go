@@ -26,6 +26,7 @@ import (
 	mid "factors/middleware"
 	"factors/model/model"
 	"factors/model/store"
+	"factors/model/store/memsql"
 	SDK "factors/sdk"
 	U "factors/util"
 )
@@ -1113,6 +1114,24 @@ func SalesforceCallbackHandler(c *gin.Context) {
 		}
 	}
 
+	areWidgetsAdded, errMsg, statusCode4 := store.GetStore().AreWidgetsAddedToWidgetGroup(oauthState.ProjectID)
+	if statusCode4 != http.StatusFound {
+		msg := fmt.Sprintf("Failed during fetch of AreWidgetsAddedToWidgetGroup: %s %v", errMsg, oauthState.ProjectID)
+		C.PingHealthcheckForFailure(C.HealthCheckPreBuiltCustomKPIPingID, msg)
+	}
+	if !areWidgetsAdded {
+		_, errMsg, statusCode := store.GetStore().AddWidgetsToWidgetGroup(oauthState.ProjectID, memsql.MarketingEngagementWidgetGroup, model.SALESFORCE)
+		if statusCode != http.StatusCreated {
+			C.PingHealthcheckForFailure(C.HealthCheckPreBuiltCustomKPIPingID, errMsg)
+		}
+		if statusCode == http.StatusCreated {
+			_, errMsg, statusCode = store.GetStore().AddWidgetsToWidgetGroup(oauthState.ProjectID, memsql.SalesOppWidgetGroup, model.SALESFORCE)
+			if statusCode != http.StatusCreated {
+				C.PingHealthcheckForFailure(C.HealthCheckPreBuiltCustomKPIPingID, errMsg)
+			}
+		}
+	}
+
 	redirectURL := C.GetProtocol() + C.GetAPPDomain() + IntSalesforce.AppSettingsURL
 	c.Redirect(http.StatusPermanentRedirect, redirectURL)
 }
@@ -1360,6 +1379,26 @@ func HubspotCallbackHandler(c *gin.Context) {
 			statusCode3 := DD.SetFirstTimeIntegrationDone(oauthState.ProjectID, DD.HubspotIntegrationName)
 			if statusCode3 != http.StatusOK {
 				errMsg := fmt.Sprintf("Failed during setting first time integration done hubspot: %v", oauthState.ProjectID)
+				C.PingHealthcheckForFailure(C.HealthCheckPreBuiltCustomKPIPingID, errMsg)
+			}
+		}
+	}
+
+	areWidgetsAdded, errMsg, statusCode4 := store.GetStore().AreWidgetsAddedToWidgetGroup(oauthState.ProjectID)
+	// if statusCode4 != http.StatusNotFound && statusCode4 != http.StatusFound {
+	if statusCode4 != http.StatusFound {
+		msg := fmt.Sprintf("Failed during fetch of AreWidgetsAddedToWidgetGroup: %s %v", errMsg, oauthState.ProjectID)
+		C.PingHealthcheckForFailure(C.HealthCheckPreBuiltCustomKPIPingID, msg)
+	}
+
+	if !areWidgetsAdded {
+		_, errMsg, statusCode := store.GetStore().AddWidgetsToWidgetGroup(oauthState.ProjectID, memsql.MarketingEngagementWidgetGroup, model.HUBSPOT)
+		if statusCode != http.StatusCreated {
+			C.PingHealthcheckForFailure(C.HealthCheckPreBuiltCustomKPIPingID, errMsg)
+		}
+		if statusCode == http.StatusCreated {
+			_, errMsg, statusCode = store.GetStore().AddWidgetsToWidgetGroup(oauthState.ProjectID, memsql.SalesOppWidgetGroup, model.HUBSPOT)
+			if statusCode != http.StatusCreated {
 				C.PingHealthcheckForFailure(C.HealthCheckPreBuiltCustomKPIPingID, errMsg)
 			}
 		}

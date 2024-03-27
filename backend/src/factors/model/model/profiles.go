@@ -26,6 +26,7 @@ type ProfileQueryGroup struct {
 	DateField          string                 `json:"daFie"`
 	GroupAnalysis      string                 `json:"grpa"`
 	LimitNotApplicable bool                   `json:"lmtNA"`
+	SegmentID          string                 `json:"seg_id"`
 }
 
 func (q *ProfileQueryGroup) GetClass() string {
@@ -121,8 +122,9 @@ type ProfileQuery struct {
 	AggregateFunction     string `json:"agFn"`
 	AggregateProperty     string `json:"agPr"`
 	AggregateProperty2    string `json:"agPr2"`
-	MetricType			  string `json:"me_ty"`
+	MetricType            string `json:"me_ty"`
 	AggregatePropertyType string `json:"agPrTy"`
+	SegmentID             string `json:"seg_id"`
 
 	// We convert the exposed expression to internal ones.
 	// If average is considered as an exposed expression, we break it to 2 queries and assign the operator here.

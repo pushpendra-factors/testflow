@@ -34,7 +34,7 @@ type BuildDefaultMarketoCustomKPI struct {
 }
 
 func (buildDefault BuildDefaultMarketoCustomKPI) Build(projectID int64) int {
-	if !CheckIfDefaultLeadSquaredDatasAreCorrect() {
+	if !CheckIfDefaultMarketoDatasAreCorrect() {
 		log.Warn("Failed because defaultDatas and transformations are of incorrect length: marketo.")
 		return http.StatusInternalServerError
 	}
