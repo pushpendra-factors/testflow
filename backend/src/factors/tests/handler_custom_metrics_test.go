@@ -218,7 +218,7 @@ func sendCreateCustomMetric(r *gin.Engine, project_id int64, agent *model.Agent,
 
 func sendCreateCustomMetricWithPercentage(r *gin.Engine, project_id int64, agent *model.Agent, transformations *postgres.Jsonb, name string,
 	description string, objectType string, queryType int) *httptest.ResponseRecorder {
-	w := sendCreateCustomMetricWithOtherProperties(r, project_id, agent, transformations, name, description, objectType, queryType, 
+	w := sendCreateCustomMetricWithOtherProperties(r, project_id, agent, transformations, name, description, objectType, queryType,
 		model.MetricsPercentageType, "")
 	return w
 }
@@ -232,7 +232,7 @@ func sendCreateCustomMetricWithOtherProperties(r *gin.Engine, project_id int64, 
 		"objTy":             objectType,
 		"type_of_query":     queryType,
 		"display_result_as": displayResultAs,
-		"metric_type": 		 metricType,	
+		"metric_type":       metricType,
 	}
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {

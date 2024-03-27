@@ -245,6 +245,7 @@ func (q *KPIQueryGroup) IsValidDerivedKPI() (bool, string) {
 			return false, "Invalid query in query builder"
 		}
 		if len(query.GroupBy) != 0 || query.GroupByTimestamp != "" {
+			log.WithField("q", q).Warn("Group by not allowed in derived kpi")
 			return false, "Group by not allowed in derived kpi"
 		}
 	}
