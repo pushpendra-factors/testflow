@@ -793,7 +793,7 @@ const getCustomKPIqueryGroup = (queries, eventGrpBy, period) => {
       dc: item.group,
       me: [item.metric],
       fil: getEventsWithPropertiesCustomKPI(item.filters, item?.category),
-      gBy: getGroupByWithPropertiesCustomKPI(GrpByItem, index, item?.category),
+      gBy: [], // passing empty array bcoz we don't use Groupby in derived kpi
       fr: period.from,
       to: period.to,
       tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata',

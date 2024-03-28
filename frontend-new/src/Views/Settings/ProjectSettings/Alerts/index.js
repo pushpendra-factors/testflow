@@ -32,6 +32,7 @@ import {
   NEW_DASHBOARD_TEMPLATES_MODAL_OPEN
 } from 'Reducers/types';
 import ModalFlow from 'Components/ModalFlow';
+import { RESET_GROUPBY } from 'Reducers/coreQuery/actions';
 import KPIBasedAlert from './KPIBasedAlert';
 import EventBasedAlert from './EventBasedAlert';
 import styles from './index.module.scss';
@@ -73,7 +74,7 @@ const Alerts = ({
   const dashboard_templates_modal_state = useSelector(
     (state) => state.dashboardTemplatesController
   );
-  const alertTemplates = useSelector((state)=>state.alertTemplates)
+  const alertTemplates = useSelector((state) => state.alertTemplates);
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -196,7 +197,8 @@ const Alerts = ({
       <Menu.Item
         key='0'
         onClick={() => {
-          setTabNo(item?.type == 'kpi_alert' ? '1' : '2');
+          setTabNo(item?.type === 'kpi_alert' ? '1' : '2');
+          dispatch({ type: RESET_GROUPBY });
           setAlertState({ state: 'edit', index: item });
           setAlertDetails(item);
         }}
@@ -240,6 +242,7 @@ const Alerts = ({
           extraClass='cursor-pointer m-0'
           onClick={() => {
             setTabNo(item?.type == 'kpi_alert' ? '1' : '2');
+            dispatch({ type: RESET_GROUPBY });
             setAlertState({ state: 'edit', index: item });
             setAlertDetails(item);
           }}
@@ -601,13 +604,17 @@ const Alerts = ({
             dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_CLOSE });
           }}
           handleLastFinish={(item, currentQuery, message_property) => {
-           
             setTabNo('2');
             setAlertState({ state: 'add', index: 0 });
             setAlertDetails(false);
             setAlertDetails({
               type: 'event_based_alert',
-              alert: { title: item.alert_name, message: item.alert_message, currentQuery: currentQuery, message_property: message_property },
+              alert: {
+                title: item.alert_name,
+                message: item.alert_message,
+                currentQuery,
+                message_property
+              },
               title: item.alert_name,
               extra: item
             });
