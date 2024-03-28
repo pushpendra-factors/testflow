@@ -56,6 +56,19 @@ function BillingTab({ buyAddonLoading, handleBuyAddonClick }: BillingTabProps) {
     }
   };
 
+  const getBillingPeriod = () => {
+    switch (currentPlanDetail?.billingPeriod) {
+      case 1:
+        return currentPlanDetail?.period === 'year' ? 'Yearly' : 'Monthly';
+      case 3:
+        return 'Quarterly';
+      case 6:
+        return 'Half-yearly';
+      default:
+        return '';
+    }
+  };
+
   return (
     <div className='py-4'>
       <div className='flex justify-between'>
@@ -75,15 +88,7 @@ function BillingTab({ buyAddonLoading, handleBuyAddonClick }: BillingTabProps) {
                 : plan?.display_name || plan?.name}
             </Text>
             {showV2PricingVersionFlag && currentPlanDetail?.period && (
-              <>
-                {currentPlanDetail.period === 'month' && (
-                  <Tag color='orange'>Monthly</Tag>
-                )}
-
-                {currentPlanDetail.period == 'year' && (
-                  <Tag color='orange'>Yearly</Tag>
-                )}
-              </>
+              <Tag color='orange'>{getBillingPeriod()}</Tag>
             )}
           </div>
           {!showV2PricingVersionFlag && isFreePlan && (
@@ -98,7 +103,11 @@ function BillingTab({ buyAddonLoading, handleBuyAddonClick }: BillingTabProps) {
               <Text type='paragraph' extraClass='m-0' color='character-primary'>
                 ${currentPlanDetail?.plan?.amount || '0.0'}
                 {' USD / '}
-                {currentPlanDetail.period ? currentPlanDetail.period : ''}
+                {currentPlanDetail?.period && currentPlanDetail?.billingPeriod
+                  ? currentPlanDetail?.billingPeriod === 1
+                    ? currentPlanDetail.period
+                    : `every ${currentPlanDetail.billingPeriod} ${currentPlanDetail?.period}`
+                  : ''}
               </Text>
             </div>
           )}
