@@ -26,6 +26,7 @@ import logger from 'Utils/logger';
 import { meetLink } from 'Utils/meetLink';
 import { PLANS, PLANS_V0 } from 'Constants/plans.constants';
 import VirtualList from 'rc-virtual-list';
+import { RESET_GROUPBY } from 'Reducers/coreQuery/actions';
 import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
 import UserSettings from '../../Views/Settings/UserSettings';
 import styles from './index.module.scss';
@@ -69,6 +70,7 @@ function ProjectModal(props) {
       message: 'Project Changed!',
       description: `You are currently viewing data from ${selectedProject?.name}`
     });
+    dispatch({ type: RESET_GROUPBY });
   };
 
   // const UpdateOnboardingSeen = () => {
