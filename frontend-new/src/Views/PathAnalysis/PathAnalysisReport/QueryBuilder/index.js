@@ -111,11 +111,13 @@ const QueryBuilder = ({
     if (!_.isEmpty(Arr)) {
       let query = {
         ...Arr[0],
-        filters: _, // removing filters key
         filter: !_.isEmpty(Arr[0]?.filters)
           ? formatFiltersForQuery(Arr[0]?.filters)
           : null
       };
+      if(query?.hasOwnProperty('filters')){
+        delete query.filters  
+      }
       return query;
     } else return null;
   };

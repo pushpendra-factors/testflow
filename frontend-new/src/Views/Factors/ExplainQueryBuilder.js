@@ -291,11 +291,13 @@ const queryList = (type) => {
       if (!_.isEmpty(Arr)) {
         let query = {
           ...Arr[index],
-          filters: _, // removing filters key
           filter: !_.isEmpty(Arr[index]?.filters)
             ? formatFiltersForQuery(Arr[index]?.filters)
             : null
         };
+        if(query?.hasOwnProperty('filters')){
+          delete query.filters  
+        }
         return query;
       } else return null;
     };
