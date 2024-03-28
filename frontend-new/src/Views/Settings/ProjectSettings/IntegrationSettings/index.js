@@ -19,16 +19,11 @@ import IntegrationCard from './IntegrationCard';
 function IntegrationSettings({
   activeProject,
   currentProjectSettings,
-  currentProjectSettingsLoading,
   fetchProjectSettings,
   fetchProjectSettingsV1,
   fetchDashboards,
   fetchQueries,
-  dashboards,
-  dashboardTemplates,
-  sdkCheck,
-  bingAds,
-  marketo
+  dashboardTemplates
 }) {
   const [dataLoading, setDataLoading] = useState(true);
   const templateDashboardStatusRef = useRef(false);
@@ -38,11 +33,13 @@ function IntegrationSettings({
     let timeout = false;
 
     const initializeTimeout = () => {
-      // returning for unavailable values or loading states
-      if (dashboards?.loading || !dashboards?.data) return;
-      if (dashboardTemplates?.loading || !dashboardTemplates?.data) return;
-      if (!activeProject?.id) return;
-      if (currentProjectSettingsLoading) return;
+      if (dataLoading) return;
+      if (
+        dashboardTemplates?.loading ||
+        !dashboardTemplates?.data ||
+        !dashboardTemplates?.data?.length
+      )
+        return;
       // do nothing if dashboard creation is in process
       if (templateDashboardStatusRef.current) return;
       // setting up a timer so the latest values can be used
@@ -54,16 +51,12 @@ function IntegrationSettings({
 
           const res = await createDashboardsFromTemplatesForRequiredIntegration(
             activeProject.id,
-            dashboards.data,
-            dashboardTemplates.data,
-            sdkCheck,
-            currentProjectSettings,
-            bingAds,
-            marketo
+            dashboardTemplates?.data,
+            currentProjectSettings
           );
           if (res) {
-            await fetchDashboards(activeProject.id);
-            await fetchQueries(activeProject.id);
+            fetchDashboards(activeProject.id);
+            fetchQueries(activeProject.id);
           }
           // setting template dashboard status back to false
           setTimeout(() => {
@@ -81,16 +74,7 @@ function IntegrationSettings({
     return () => {
       if (timeout) clearTimeout(timeout);
     };
-  }, [
-    dashboards,
-    activeProject?.id,
-    dashboardTemplates,
-    sdkCheck,
-    currentProjectSettings,
-    bingAds,
-    marketo,
-    currentProjectSettingsLoading
-  ]);
+  }, [activeProject?.id, dataLoading, currentProjectSettings]);
 
   useEffect(() => {
     fetchProjectSettings(activeProject.id).then(() => {
@@ -193,13 +177,8 @@ function IntegrationSettings({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   currentProjectSettings: state.global.currentProjectSettings,
-  currentProjectSettingsLoading: state.global.currentProjectSettingsLoading,
   currentAgent: state.agent.agent_details,
-  dashboards: state.dashboard.dashboards,
-  dashboardTemplates: state.dashboardTemplates.templates,
-  sdkCheck: state?.global?.projectSettingsV1?.int_completed,
-  bingAds: state?.global?.bingAds,
-  marketo: state?.global?.marketo
+  dashboardTemplates: state.dashboardTemplates.templates
 });
 
 export default connect(mapStateToProps, {

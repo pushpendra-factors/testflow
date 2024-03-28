@@ -4,11 +4,12 @@ import {
 } from 'Constants/templates.constants';
 import { createDashboardFromTemplate } from 'Reducers/dashboard_templates/services';
 import logger from 'Utils/logger';
+import { get, getHostUrl } from 'Utils/request';
 
 export const INTEGRATION_HOME_PAGE = '/settings/integration';
 export const ADWORDS_INTERNAL_REDIRECT_URI = '?googleAds=manageAccounts';
 export const ADWORDS_REDIRECT_URI_NEW = '/adwords/v1/auth/redirect';
-
+const host = getHostUrl();
 export const getDefaultTimelineConfigForSixSignal = (config) => {
   const defaultProps = [
     '$6Signal_name',
@@ -78,16 +79,28 @@ const getTemplateFromTemplateConstant = (
   return null;
 };
 
+const fetchDashboards = async (projectId: string) => {
+  try {
+    const url = `${host}projects/${projectId}/dashboards`;
+    const res = await get(null, url);
+    return res;
+  } catch (err) {
+    logger.error('Error in fetching dashboards', err);
+    return null;
+  }
+};
+
 export const createDashboardsFromTemplatesForRequiredIntegration = async (
   projectId: string,
-  dashboards: any,
   templates: any[],
-  sdkCheck: boolean,
-  currentProjectSettings: any,
-  bingAds: any,
-  marketo: any
-) => {
+  currentProjectSettings: any
+): Promise<boolean> => {
   try {
+    if (!projectId) return false;
+    const res = await fetchDashboards(projectId);
+    const dashboards = res?.data;
+    if (!dashboards) return false;
+
     const possibleTemplates = [
       TEMPLATE_CONSTANTS.GOOGLE_ADWORDS,
       TEMPLATE_CONSTANTS.G2_INFLLUENCE_SALESFORCE,
@@ -96,10 +109,10 @@ export const createDashboardsFromTemplatesForRequiredIntegration = async (
       TEMPLATE_CONSTANTS.LINKEDIN_INFLUENCE_SALESFORCE
     ];
     const IntegrationChecks = new Integration_Checks(
-      sdkCheck,
+      true,
       currentProjectSettings,
-      bingAds,
-      marketo
+      {},
+      {}
     );
 
     let dashboardAddedFlag = false;
