@@ -27,6 +27,7 @@ export interface PlansConfigState {
     status?: subscriptionStatus;
     renews_on?: string;
     period?: PeriodUnit;
+    billingPeriod: number;
     plan?: PLAN_INFO;
     addons?: ADDON_INFO[];
   };
@@ -78,7 +79,8 @@ interface setCurrentPlanDetails {
   payload: {
     status?: subscriptionStatus;
     renews_on?: string;
-    period: number;
+    period: PeriodUnit;
+    billingPeriod: number;
     plan?: PLAN_INFO;
     addons?: ADDON_INFO[];
   };
@@ -150,6 +152,7 @@ interface SubscriptionDeatilsResponse {
   status: subscriptionStatus;
   renews_on: string;
   period_unit: PeriodUnit;
+  billing_period: number;
   subscription_details: {
     type: planTypes;
     id: string;

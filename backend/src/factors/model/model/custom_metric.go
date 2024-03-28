@@ -149,6 +149,10 @@ func (customMetric *CustomMetric) IsValid() (bool, string) {
 			return false, "Error with values passed in transformations - custom_metrics handler."
 		}
 
+		if strings.Contains(customMetricTransformation.DateField, " ") {
+			return false, "Error in date field - Contains space "
+		}
+
 		return true, ""
 
 	} else if customMetric.TypeOfQuery == DerivedQueryType {
@@ -237,6 +241,12 @@ func (transformation *CustomMetricTransformation) ValidateFilterAndGroupBy() boo
 func (transform *CustomMetricTransformation) IsValid(queryType int, metricType string) bool {
 	if strings.Contains(transform.AggregateProperty, " ") {
 		return false
+	}
+
+	for _, transformation := range transform.Filters {
+		if strings.Contains(transformation.PropertyName, " ") {
+			return false
+		}
 	}
 
 	if queryType == ProfileQueryType {
