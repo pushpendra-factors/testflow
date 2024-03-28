@@ -78,7 +78,7 @@ const SavedProperties = ({
 
   const columns = [
     {
-      title: 'Diplay name',
+      title: 'Display name',
       dataIndex: 'name',
       key: 'name',
       width: '200px',

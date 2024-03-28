@@ -51,7 +51,7 @@ function Events({
 
   const columns = [
     {
-      title: 'Diplay name',
+      title: 'Display name',
       dataIndex: 'name',
       key: 'name',
       render: (text) => <span className={'capitalize'}>{text}</span>
