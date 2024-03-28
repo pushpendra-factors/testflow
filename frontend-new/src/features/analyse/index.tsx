@@ -150,7 +150,7 @@ const CoreQuery = () => {
   }, [query_id, query_type, savedQueries, location]);
 
   useEffect(() => {
-    if (!location?.state?.navigatedResultState) {
+    if (coreQueryState.resultState?.data) {
       const qState = _.cloneDeep(coreQueryState);
       qState.queryOptions = {
         ...qState.queryOptions,
