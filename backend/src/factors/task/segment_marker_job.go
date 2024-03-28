@@ -651,6 +651,10 @@ func updateAllAccountsSegmentMap(matched bool, userArr []model.User, userPartOfS
 func isRunAllMarkerForProjectID(projectIdListAllRun []int64, projectID int64) bool {
 	allRun := false
 
+	if C.DisableAccountsRuntMarker(projectID) {
+		return allRun
+	}
+
 	for _, pID := range projectIdListAllRun {
 		if projectID == pID {
 			allRun = true
