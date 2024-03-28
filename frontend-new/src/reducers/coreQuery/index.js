@@ -269,17 +269,20 @@ export default function (state = defaultState, action) {
               property,
               prop_type,
               eventIndex,
-              overAllIndex
+              overAllIndex,
+              gbty
             } = eachBreakdown;
             whichEventIndex = eventIndex;
-            return {
+            const res = {
               prop_category,
               eventName,
               property,
               prop_type,
               eventIndex,
               overAllIndex: eachBreakdownIndex
-            };
+            }
+            if(gbty) res.gbty = gbty
+            return res;
           }
         );
         let arr = [...state.groupBy.event];
