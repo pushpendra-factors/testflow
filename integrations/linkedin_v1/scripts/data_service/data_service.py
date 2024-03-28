@@ -26,10 +26,10 @@ class DataService:
         uri = '/data_service/linkedin/project/settings'
         url = self.data_service_host + uri
 
-        response = requests.get(url)
-        if not response.ok:
-            log.error('Failed to get linkedin integration settings from data services')
-            return None, 'Failed to get linkedin integration settings from data services'
+        response, errMsg = U.get_request_with_retries(url)
+        if errMsg != '':
+            return None, errMsg
+
         return response.json(), ''
 
     def get_linkedin_int_settings_for_projects(self, project_ids):
@@ -41,11 +41,11 @@ class DataService:
             'project_ids': project_ids_arr
         }
 
-        response = requests.get(url, json=payload)
-        if not response.ok:
+        # response = requests.get(url, json=payload)
+        response, errMsg = U.get_request_with_retries(url, payload)
+        if response is None or errMsg != '':
             log.error('Failed to get linkedin integration settings for projects from data services')
-            return (None, 
-                    'Failed to get linkedin integration settings for projects from data services')
+            return None, errMsg
         return response.json(), ''
 
     
@@ -58,11 +58,12 @@ class DataService:
             'customer_ad_account_id': linkedin_setting.ad_account
         }
 
-        response = requests.get(url,json=payload)
-        if not response.ok:
-            err_string = 'Failed to get linkedin last sync info from data services'
-            log.error(err_string)
-            raise CustomException(err_string, 0, 0)
+        # response = requests.get(url,json=payload)
+        response, errMsg = U.get_request_with_retries(url, payload)
+        if response is None or errMsg != '':
+            log.error(errMsg)
+            raise CustomException(errMsg, 0, 0)
+
         all_info = response.json()
         sync_info_with_type = {}
         for info in all_info:
@@ -82,11 +83,12 @@ class DataService:
             PROJECT_ID: linkedin_setting.project_id,
             'customer_ad_account_id': linkedin_setting.ad_account
         }
-        response = requests.get(url,json=payload)
-        if not response.ok:
-            err_string = 'Failed to get linkedin last sync info from data services'
-            log.error(err_string)
-            raise CustomException(err_string, 0, 0)
+        # response = requests.get(url,json=payload)
+        response, errMsg = U.get_request_with_retries(url, payload)
+        if response is None or errMsg != '':
+            log.error(errMsg)
+            raise CustomException(errMsg, 0, 0)
+
         all_info = response.json()
         sync_info_with_type = {}
         for info in all_info:
@@ -124,11 +126,9 @@ class DataService:
 
         if self.is_dry_run:
             return
-        response = requests.post(url, json=payload)
-        if not response.ok and response.status_code != 409:
-            err_msg = 'Failed to add response {} to linkedin warehouse for project {}. StatusCode:  {}, {}'.format(
-                doc_type, project_id, response.status_code, response.text)
-            raise CustomException(err_msg, 0, doc_type)
+        # response = requests.post(url, json=payload)
+        U.post_request_with_retries(url, payload)
+
 
     def get_empty_object_with_req_ids(self):
         obj_id = ''.join(random.choices(string.ascii_lowercase +
@@ -172,19 +172,12 @@ class DataService:
                                 ad_account_id, doc_type, doc, 
                                 timestamp, sync_status) for doc in docs]
 
-        retries = 0
-        response = {}
-        while retries < 3:
-            response = requests.post(url, json=batch_of_payloads)
-            if not response.ok:
-                log.error(
-                "Linkedin etl - Failed to add response %s to linkedin warehouse for retry: %d, %s, %d",
-                    doc_type, response.status_code, response.text, retries)
-                time.sleep(2)
-            else:
-                return response, 'Linkedin etl - Failed to add response to linkedin - Missing data.'
-            retries += 1
-        log.error("Linkedin etl - Failed to add response to linkedin - Missing data.")
+
+        # response = requests.post(url, json=batch_of_payloads)
+        response, errMsg = U.post_request_with_retries(url, batch_of_payloads)
+        if response is None or errMsg != '':
+            return None, errMsg
+        
         return response, ''
     
     def get_payload_for_linkedin(self, project_id, ad_account_id, doc_type, value, 
@@ -247,13 +240,11 @@ class DataService:
             'start_timestamp': start_timestamp,
             'end_timestamp': input_end_timestamp
         }
-        response = requests.get(url, json=payload)
-        if not response.ok:
-            err_msg = (
-            'Failed to get campaign group info from db for project %s. ad account %s, StatusCode:  %d',
-                project_id, ad_account_id, response.status_code)
-            log.error(err_msg)
-            raise CustomException(err_msg, 0, MEMBER_COMPANY_INSIGHTS)
+        # response = requests.get(url, json=payload)
+        response, errMsg = U.get_request_with_retries(url, payload)
+        if response is None or errMsg != '':
+            log.error(errMsg)
+            raise CustomException(errMsg, 0, MEMBER_COMPANY_INSIGHTS)
         
         campaign_group_info = response.json()
         campaign_group_id_to_info_map = U.build_map_of_campaign_group_info(campaign_group_info)
@@ -271,13 +262,10 @@ class DataService:
             'end_timestamp': input_end_timestamp,
             'sync_status': sync_status
         }
-        response = requests.get(url, json=payload)
-        if not response.ok:
-            err_msg = (
-            'Failed to get campaign group info from db for project %s. ad account %s, StatusCode:  %d',
-                project_id, ad_account_id, response.status_code)
-            log.error(err_msg)
-            raise CustomException(err_msg, 0, MEMBER_COMPANY_INSIGHTS)
+        # response = requests.get(url, json=payload)
+        response, errMsg = U.get_request_with_retries(url, payload)
+        if response is None or errMsg != '':
+            return False
         is_valid = response.json()
         return is_valid
         
@@ -318,3 +306,4 @@ class DataService:
             self.add_all_linkedin_documents(project_id,
                                         ad_account, doc_type, response, timestamp, sync_status)
         log.warning(INSERTION_END_LOG.format(doc_type, 'insights', timestamp))
+
