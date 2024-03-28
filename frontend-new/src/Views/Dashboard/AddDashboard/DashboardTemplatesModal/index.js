@@ -23,7 +23,7 @@ import TemplatesThumbnail, {
   Integration_Checks
 } from '../../../../constants/templates.constants';
 import styles from './index.module.scss';
-import { NEW_DASHBOARD_TEMPLATES_MODAL_CLOSE } from '../../../../reducers/types';
+import { NEW_DASHBOARD_TEMPLATES_MODAL_CLOSE, UPDATE_PICKED_FIRST_DASHBOARD_TEMPLATE } from '../../../../reducers/types';
 
 const Step2DashboardTemplateModal = ({
   template,
@@ -119,8 +119,8 @@ const Step2DashboardTemplateModal = ({
   };
 
   const onIntegrateNowClick = () => {
-    onCancel();
     history.push('/settings/integration');
+    onCancel();
   };
   return (
     <div>
@@ -331,7 +331,7 @@ const Step2DashboardTemplateModal = ({
         </Col>
       </Row>
 
-      <Row>
+      <Row className={styles.modalContainerBottom}>
         <Col span={24}>
           <HorizontalWindow
             windowTemplates={windowTemplates}

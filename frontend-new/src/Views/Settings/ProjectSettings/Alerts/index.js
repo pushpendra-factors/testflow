@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import {
   Row,
@@ -36,6 +36,7 @@ import KPIBasedAlert from './KPIBasedAlert';
 import EventBasedAlert from './EventBasedAlert';
 import styles from './index.module.scss';
 import { getAlertTemplatesTransformation } from './utils';
+import RealTimeAlertsIllustration from "./../../../../assets/images/illustrations/realtimealerts_illustration.png"
 
 const { TabPane } = Tabs;
 
@@ -55,6 +56,7 @@ const Alerts = ({
 }) => {
   const [tableData, setTableData] = useState([]);
   const [tableLoading, setTableLoading] = useState(false);
+  const [tableLoaded, setTableLoaded] = useState(false)
   const [viewAlertDetails, setAlertDetails] = useState(false);
   const [tabNo, setTabNo] = useState('2');
   const [alertState, setAlertState] = useState({
@@ -310,8 +312,10 @@ const Alerts = ({
 
   useEffect(() => {
     setTableLoading(true);
+    setTableLoaded(false)
     fetchAllAlerts(activeProject?.id).then(() => {
       setTableLoading(false);
+      setTableLoaded(true)
     });
   }, [activeProject]);
 
@@ -470,12 +474,15 @@ const Alerts = ({
     }
   };
 
-  const renderTitleActions = () => {
+  const renderTitleActions = (isFromTitleAction = false) => {
     let titleAction = null;
+    if( alertType === 'realtime' && !isFromTitleAction && tableData.length === 0){
+      return titleAction
+    }
     if (alertState.state === 'list') {
       titleAction = (
-        <div className='pt-1' style={{ display: 'flex', gap: '5px' }}>
-          <Button
+        <div className='p-1' style={{ display: 'flex', gap: '10px' }}>
+          {alertType ==='realtime' && <Button
             type='text'
             className='dropdown-btn'
             onClick={() => {
@@ -483,11 +490,11 @@ const Alerts = ({
             }}
           >
             Templates
-          </Button>
+          </Button>}
           <Button type='primary' onClick={newAlertAction}>
             <Space>
               <SVG name='plus' size={16} color='white' />
-              New Alert
+              Create New
             </Space>
           </Button>
         </div>
@@ -508,32 +515,52 @@ const Alerts = ({
 
   const onRefresh = () => {
     setTableLoading(true);
+    setTableLoaded(false)
     fetchAllAlerts(activeProject?.id).then(() => {
       setTableLoading(false);
+      setTableLoaded(true)
     });
   };
-
+  const RealTimeEmptyIllustration = useMemo(()=>
+    <div>
+      <div className='flex justify-center select-none'>
+        <img width={435} src={RealTimeAlertsIllustration} />
+      </div>
+      <div className='flex justify-center text-center py-3'>
+        <Text type='title' level={7} color='grey-2' extraClass='m-0'>
+          Setup alerts to get notified about prospect activity on your messaging apps <br /> like Slack and Team to never miss out on a high intent lead.
+        </Text>
+       
+      </div>
+      <div className='flex justify-center text-center'>{renderTitleActions(true)}</div>
+    </div>
+  ,[]);
   const renderAlertContent = () => {
     let alertContent = null;
     if (alertState.state === 'list') {
       alertContent = (
         <div className='mt-8'>
-          <TableSearchAndRefresh
-            showSearch={showSearch}
-            setShowSearch={setShowSearch}
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            onSearch={onSearch}
-            onRefresh={onRefresh}
-            tableLoading={tableLoading}
-          />
-          <Table
-            className='fa-table--basic mt-2'
-            loading={tableLoading}
-            columns={columns}
-            dataSource={searchTerm ? searchTableData : tableData}
-            pagination
-          />
+          {tableLoaded && alertType === 'realtime' && tableData.length === 0 && RealTimeEmptyIllustration}
+          {((tableData.length > 0 && alertType === 'realtime') || (alertType === 'weekly')) &&
+              <>
+                <TableSearchAndRefresh
+                  showSearch={showSearch}
+                  setShowSearch={setShowSearch}
+                  searchTerm={searchTerm}
+                  setSearchTerm={setSearchTerm}
+                  onSearch={onSearch}
+                  onRefresh={onRefresh}
+                  tableLoading={tableLoading}
+                />
+                <Table
+                  className='fa-table--basic mt-2'
+                  loading={tableLoading}
+                  columns={columns}
+                  dataSource={searchTerm ? searchTableData : tableData}
+                  pagination
+                />
+              </>
+          }
         </div>
       );
     }
@@ -553,10 +580,9 @@ const Alerts = ({
           <Row>
             <Col span={24}>
               <Text type='title' level={7} color='grey-2' extraClass='m-0'>
-                Set up alerts to never miss out on any prospect activity or
-                changes in metrics you care about. &nbsp;
+                Get notified for important actions on your messaging app or send it to other platforms via webhook. &nbsp;
                 <a
-                  href='https://help.factors.ai/en/articles/7284705-alerts'
+                  href='https://help.factors.ai/en/collections/8479811-real-time-alerts'
                   target='_blank'
                   rel='noreferrer'
                 >
