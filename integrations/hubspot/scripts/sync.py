@@ -52,7 +52,7 @@ HEALTHCHECK_RUN_PING_ID = "745d16bc-542b-4b16-a029-05ca2c66ed8f"
 API_RATE_LIMIT_TEN_SECONDLY_ROLLING = "TEN_SECONDLY_ROLLING"
 API_RATE_LIMIT_DAILY = "DAILY"
 API_ERROR_RATE_LIMIT = "RATE_LIMIT"
-RETRY_LIMIT = 15
+RETRY_LIMIT = 25
 CONTACT_PROPERTY_KEY_LAST_MODIFIED_DATE = "lastmodifieddate"
 COMPANY_PROPERTY_KEY_LAST_MODIFIED_DATE = "hs_lastmodifieddate"
 RECORD_PROPERTIES_KEY = "properties"
@@ -1317,23 +1317,15 @@ def fill_associations_for_deals_v3(project_id, deals, hubspot_request_handler):
 
     return deals, total_api_calls
 
-def sync_deals_v3(project_id, refresh_token, api_key, last_sync_timestamp, sync_all=False):
+def sync_deals_v3(project_id, refresh_token, api_key, last_sync_timestamp = 1, sync_all=False):
     log.info("Using sync_deals_v3 for project_id : "+str(project_id)+".")
 
     limit = PAGE_SIZE
-
-    if sync_all:
-        url = "https://api.hubapi.com/crm/v3/objects/deals?"
-        headers = None
-        request = requests.get
-        json_payload = None
-        log.warning("Downloading all deals for project_id : "+ str(project_id) + ".")
-    else:
-        url = "https://api.hubapi.com/crm/v3/objects/deals/search"  # both created and modified.
-        headers = {'Content-Type': 'application/json'}
-        request = requests.post
-        json_payload = get_search_v3_api_payload("hs_lastmodifieddate", last_sync_timestamp, limit)
-        log.warning("Downloading recently created or modified deals for project_id : "+ str(project_id) + ".")
+    url = "https://api.hubapi.com/crm/v3/objects/deals/search"  # both created and modified.
+    headers = {'Content-Type': 'application/json'}
+    request = requests.post
+    json_payload = get_search_v3_api_payload("hs_lastmodifieddate", last_sync_timestamp, limit)
+    log.warning("Downloading recently created or modified deals for project_id : "+ str(project_id) + ".")
 
     buffer_size = PAGE_SIZE * get_buffer_size_by_api_count()
     create_all_deal_documents_with_buffer = get_create_all_documents_with_buffer(project_id, "deal", buffer_size)
