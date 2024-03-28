@@ -17,6 +17,7 @@ const ACCOUNT_LIMIT_PARTIAL_EXCEEDED = "75_percent_limit_exceeded"
 const ACCOUNT_LIMIT_FULLY_EXCEEDED = "100_percent_limit_exceeded"
 const MAILMODO_75_PERCENT_EXCEEDED_CAMPAIGN_ID = "7b6f7b1d-b87c-54f1-87ae-14d6911b1a3e"
 const MAILMODO_100_PERCENT_EXCEEDED_CAMPAIGN_ID = "a7b3aef4-1d15-538f-b01c-55868cfd5c9c"
+const EMAIL_TYPE_TRANSACTIONAL = "transactional"
 
 type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
