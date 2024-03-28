@@ -35,7 +35,7 @@ import React, {
 } from 'react';
 import { DefaultRootState, useDispatch, useSelector } from 'react-redux';
 import Paragraph from 'antd/lib/typography/Paragraph';
-import { Link } from 'react-router-dom';
+import { Link, useHistory } from 'react-router-dom';
 import { Integration_Checks } from 'Constants/templates.constants';
 import EventGroupBlock from 'Components/QueryComposer/EventGroupBlock';
 import QueryBlock from 'Views/Settings/ProjectSettings/Alerts/EventBasedAlert/QueryBlock';
@@ -270,7 +270,7 @@ function FirstScreen({
     return (
       <List
         className={styles.itemsList}
-        grid={{ gutter: 48, column: 2 }}
+        grid={{ gutter: 16, column: 2 }}
         style={{ margin: '10px 0', padding: '10px' }}
         dataSource={results}
         renderItem={(item) => (
@@ -355,8 +355,8 @@ function FirstScreen({
         </div>
       </Row>
       <Row>
-        <Col span={5}>{renderCategories()}</Col>
-        <Col span={19} style={{ maxHeight: '80vh', overflow: 'scroll' }}>
+        <Col span={6}>{renderCategories()}</Col>
+        <Col span={18} style={{ maxHeight: '80vh', overflow: 'scroll' }}>
           <div style={{ padding: '20px' }}>
             {startFreshVisible && renderStartFreshNewDashboard()}
             {renderSearchInput()}
@@ -375,6 +375,7 @@ interface AlertsTemplateStep2ScreenPropType {
   onFinish?: () => void;
 }
 function AlertsTemplateStep2Screen(props: AlertsTemplateStep2ScreenPropType) {
+  const history = useHistory()
   const { item, onCancel, handleBack, onFinish } = props;
   const [currentQuery, setCurrentQuery] = useState<any>([])
   const [currentProperty, setCurrentProperty] = useState<any>([])
@@ -536,8 +537,8 @@ function AlertsTemplateStep2Screen(props: AlertsTemplateStep2ScreenPropType) {
     onFinish(item, currentQuery, currentProperty)
   }
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+    <div className={styles.AlertsTemp2screen}>
+      <div className={styles.AlertsTemp2screenHeader}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <Button
             className='fa-button'
@@ -556,80 +557,87 @@ function AlertsTemplateStep2Screen(props: AlertsTemplateStep2ScreenPropType) {
           />
         </div>
       </div>
-      <CategoryPill item={item} />
-      <div style={{ marginLeft: '10px' }}>
-        <Text type='title' level={6} weight='bold' extraClass='m-0 mr-3'>
-          {item?.title}
-        </Text>
-        <Text
-          type='title'
-          level={7}
-          weight='normal'
-          extraClass={`m-0 mr-3 ${styles.templateDescription}`}
-        >
-          {item?.description}
-        </Text>
+      <div>
+        <CategoryPill item={item} />
+        <div style={{ marginLeft: '10px' }}>
+          <Text type='title' level={6} weight='bold' extraClass='m-0 mr-3'>
+            {item?.title}
+          </Text>
+          <Text
+            type='title'
+            level={7}
+            weight='normal'
+            extraClass={`m-0 mr-3 ${styles.templateDescription}`}
+          >
+            {item?.description}
+          </Text>
 
-        {integrationState.ok && <>
+          {integrationState.ok && <>
+              <div style={{ padding: '10px 0' }}>
+              <Text
+                type='title'
+                level={7}
+                weight='normal'
+                extraClass={`m-0 mr-3 mb-2 `}
+              >
+                {item?.question}
+              </Text>
+              {item && 'prepopulate' in item && (
+                <div className='border--thin-2 px-4 py-2 border-radius--sm'>
+                  {queryList()}
+                </div>
+              )}
+            </div>
             <div style={{ padding: '10px 0' }}>
-            <Text
-              type='title'
-              level={7}
-              weight='normal'
-              extraClass={`m-0 mr-3 mb-2 `}
-            >
-              {item?.question}
-            </Text>
-            {item && 'prepopulate' in item && (
-              <div className='border--thin-2 px-4 py-2 border-radius--sm'>
-                {queryList()}
-              </div>
-            )}
-          </div>
-          <div style={{ padding: '10px 0' }}>
-            <b>Useful tip</b>: In the following screen, the alert name, message,
-            and properties are pre-populated. <br />
-            Adding and configuring the destinations is all that is required of
-            you.
-          </div>
-        </>
-        }
-        {!integrationState.ok && (
-          <Alert
-            type='warning'
-            icon={<InfoCircleOutlined />}
-            message={
-              <>
-                Please complete{' '}
-                <b style={{ textTransform: 'capitalize' }}>
-                  {Object.keys(integrationState)
-                    .filter((eachKey) => eachKey !== 'ok' && integrationState[eachKey] === false)
-                    .join(',')}
-                </b>{' '}
-                integration to use this Template.{' '}
-                <Link to='/settings/integration'>
-                  Integrate Now <ArrowRightOutlined />
-                </Link>
-              </>
-            }
-          />
-        )}
+              <b>Note</b>: The above configuration is used to define the condition for sending the alert. You can change this condition and other settings in the next step as well.
+            </div>
+          </>
+          }
+          {!integrationState.ok && (
+            <Alert
+              type='warning'
+              icon={<InfoCircleOutlined />}
+              message={
+                <>
+                  Please complete{' '}
+                  <b style={{ textTransform: 'capitalize' }}>
+                    {Object.keys(integrationState)
+                      .filter((eachKey) => eachKey !== 'ok' && integrationState[eachKey] === false)
+                      .join(',')}
+                  </b>{' '}
+                  integration to use this Template.{' '}
+                  <Button
+                        className={styles.templatesSectionAlertBtn}
+                        type='link'
+                        onClick={()=>{
+                          history.push('/settings/integration')
+                        if(onCancel) onCancel()
+                        }}
+                      >
+                        Integrate Now 
+                      </Button>
+                </>
+              }
+            />
+          )}
+        </div>
+        
       </div>
       <div
-        style={{
-          display: 'flex',
-          justifyContent: 'end',
-          gap: '10px',
-          marginTop: '5px'
-        }}
-      >
-        <Button type='text' size='large' onClick={handleBack}>
-          Go Back to Templates
-        </Button>
-        <Button type='primary' size='large' onClick={handleContinue} disabled={!integrationState.ok}>
-          Continue
-        </Button>
-      </div>
+          style={{
+            display: 'flex',
+            justifyContent: 'end',
+            gap: '10px',
+            marginTop: '5px',
+            padding: '10px 10px 10px 0',
+            boxShadow: '0px 0px 8px 0px #00000040'
+
+          }}
+        >
+          <Button type='primary' onClick={handleContinue} disabled={!integrationState.ok}>
+            Continue
+          </Button>
+        </div>
     </div>
   );
 }
@@ -659,7 +667,6 @@ function ModalFlow({
   ...restProps
 }: ModalFlowPropType) {
   const [step, setStep] = useState(1);
-  const [defaultData, setDefaultData] = useState<Array<any>>([]);
   const [selectedItem, setSelectedItem] = useState<FlowItemType | null>(null);
   const handleSelectedItem = (item: FlowItemType) => {
     setStep(2);
@@ -682,17 +689,24 @@ function ModalFlow({
       handleSelectedItem(defaultSelectedItem)
     }
   },[defaultSelectedItem])
+  useEffect(()=>{
+    return ()=>{
+      setStep(1);
+      if(onCancel)onCancel()
+    }
+  },[])
   return (
     <Modal
       title={null}
       centered
       zIndex={1005}
-      width={1052}
+      width={1040}
       className='fa-modal--regular'
       closable={false}
       visible={visible}
       footer={null}
       onCancel={handleCancelModal}
+      bodyStyle={{padding: 0}}
     >
       {step === 1 ? (
         <FirstScreen

@@ -118,12 +118,29 @@
 }
 
 .modalContainerTop {
-  padding: 14px 10px 20px 14px;
+  background-color: #fafafa;
+  padding: 14px 25px 10px 25px;
+  margin-bottom: 10px;
+  border-top-left-radius: 15px;
+  border-top-right-radius: 15px;
+  & button{
+    background-color: transparent !important;
+    &:hover{
+      background-color: #f0f0f0 !important;
+    }
+  }
 }
 .modalContainerBody {
   padding: 0 18px 10px 18px;
 }
 
+.modalContainerBottom{
+
+  & div{
+    border-bottom-left-radius: 15px;
+    border-bottom-right-radius: 15px;
+  }
+}
 .categorySelected {
   background-color: #dedede;
 }
