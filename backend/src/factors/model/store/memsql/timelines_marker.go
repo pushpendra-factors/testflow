@@ -314,7 +314,7 @@ func (store *MemSQL) GetPreviewDomainsListByProjectId(projectID int64, payload m
 		}
 	}
 
-	payload, eventNameIDsList, status, errMsg := store.transformPayload(projectID, payload)
+	payload, fileValuesMap, eventNameIDsList, status, errMsg := store.transformPayload(projectID, payload)
 
 	if status != http.StatusOK || errMsg != "" {
 		return []model.Profile{}, status, errMsg
@@ -345,7 +345,7 @@ func (store *MemSQL) GetPreviewDomainsListByProjectId(projectID int64, payload m
 	for li := range domainIDsList {
 
 		profiles, status, errMsg := store.GetPreviewDomainsListByProjectIdPerRun(projectID, payload,
-			domainGroupID, eventNameIDsList, userCount, domainIDsList[li], limitAcc)
+			domainGroupID, eventNameIDsList, userCount, domainIDsList[li], limitAcc, fileValuesMap)
 
 		if status != http.StatusOK || errMsg != "" {
 			return []model.Profile{}, status, errMsg
@@ -372,7 +372,7 @@ func (store *MemSQL) GetPreviewDomainsListByProjectId(projectID int64, payload m
 
 func (store *MemSQL) GetPreviewDomainsListByProjectIdPerRun(projectID int64, payload model.TimelinePayload,
 	domainGroupID int, eventNameIDsMap map[string]string, userCount *int64,
-	domainIDList []string, limitAcc int) ([]model.Profile, int, string) {
+	domainIDList []string, limitAcc int, fileValuesMap map[string]map[string]bool) ([]model.Profile, int, string) {
 
 	profiles := make([]model.Profile, 0)
 
@@ -387,7 +387,7 @@ func (store *MemSQL) GetPreviewDomainsListByProjectIdPerRun(projectID int64, pay
 		wg.Add(len(domainIDChunks[ci]))
 		for _, domID := range domainIDChunks[ci] {
 			go store.processDomain(projectID, payload, domainGroupID, userCount, domID, eventNameIDsMap,
-				&wg, &mu, &profiles, limitAcc)
+				&wg, &mu, &profiles, limitAcc, fileValuesMap)
 		}
 		wg.Wait()
 
@@ -400,16 +400,20 @@ func (store *MemSQL) GetPreviewDomainsListByProjectIdPerRun(projectID int64, pay
 }
 
 func (store *MemSQL) transformPayload(projectID int64, payload model.TimelinePayload) (model.TimelinePayload,
-	map[string]string, int, string) {
+	map[string]map[string]bool, map[string]string, int, string) {
 
 	var status int
 	// map for all event_names and all ids for it
 	eventNameIDsMap := make(map[string]string)
+
+	// map of all the inList and notInList files values
+	fileValuesMap := make(map[string]map[string]bool)
+
 	// datetime conversion
 	err := payload.Query.TransformDateTypeFilters()
 	if err != nil {
 		log.WithField("project_id", projectID).Error("Failed to transform segment filters.")
-		return payload, eventNameIDsMap, status, "Failed to transform segment filters"
+		return payload, fileValuesMap, eventNameIDsMap, status, "Failed to transform segment filters"
 	}
 
 	// list of all event_names and all ids for it
@@ -429,16 +433,19 @@ func (store *MemSQL) transformPayload(projectID int64, payload model.TimelinePay
 		eventNameIDsMap, status = store.GetEventNameIdsWithGivenNames(projectID, eventNameIDsList)
 		if status != http.StatusFound {
 			log.WithField("project_id", projectID).Error("Error fetching event_names for the project")
-			return payload, eventNameIDsMap, status, "Error fetching event_names for the project"
+			return payload, fileValuesMap, eventNameIDsMap, status, "Error fetching event_names for the project"
 		}
 	}
 
-	return payload, eventNameIDsMap, http.StatusOK, ""
+	// map for inList and NotInList
+	fileValuesMap = GetFileValues(projectID, payload.Query.GlobalUserProperties, fileValuesMap)
+
+	return payload, fileValuesMap, eventNameIDsMap, http.StatusOK, ""
 }
 
 func (store *MemSQL) processDomain(projectID int64, payload model.TimelinePayload, domainGroupID int,
 	userCount *int64, domID string, eventNameIDsMap map[string]string, waitGroup *sync.WaitGroup, mu *sync.Mutex,
-	profiles *[]model.Profile, limitAcc int) {
+	profiles *[]model.Profile, limitAcc int, fileValuesMap map[string]map[string]bool) {
 	logFields := log.Fields{
 		"project_id":      projectID,
 		"domain_group_id": domainGroupID,
@@ -451,7 +458,7 @@ func (store *MemSQL) processDomain(projectID int64, payload model.TimelinePayloa
 	defer waitGroup.Done()
 
 	profile, isMatched, status := store.processDomainWithErr(projectID, payload, domainGroupID,
-		userCount, domID, eventNameIDsMap)
+		userCount, domID, eventNameIDsMap, fileValuesMap)
 	if status != http.StatusOK {
 		log.WithFields(log.Fields{"project_id": projectID, "domID": domID}).Error("Error while computing for given payload")
 		return
@@ -474,7 +481,7 @@ func addProfile(mu *sync.Mutex, profiles *[]model.Profile, limitAcc int, profile
 }
 
 func (store *MemSQL) processDomainWithErr(projectID int64, payload model.TimelinePayload, domainGroupID int,
-	userCount *int64, domID string, eventNameIDsMap map[string]string) (model.Profile, bool, int) {
+	userCount *int64, domID string, eventNameIDsMap map[string]string, fileValuesMap map[string]map[string]bool) (model.Profile, bool, int) {
 
 	isMatched := false
 
@@ -503,7 +510,7 @@ func (store *MemSQL) processDomainWithErr(projectID int64, payload model.Timelin
 	}
 
 	isMatched = IsRuleMatchedAllAccounts(projectID, payload.Query, decodedPropsArr, users,
-		"", domID, eventNameIDsMap)
+		"", domID, eventNameIDsMap, fileValuesMap)
 
 	if !isMatched {
 		return model.Profile{}, isMatched, http.StatusOK
