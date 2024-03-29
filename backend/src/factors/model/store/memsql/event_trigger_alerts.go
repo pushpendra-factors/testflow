@@ -937,7 +937,12 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesAndFieldsTagMap(projectID i
 		prop := breakdownProperty.Property
 		var value interface{}
 		uval, uexists := (*updatedUserProps)[prop]
-		eval, eexists := (*eventPropMap)[prop]
+
+		var eval interface{}
+		var eexists bool
+		if eventPropMap != nil {
+			eval, eexists = (*eventPropMap)[prop]
+		}
 
 		if breakdownProperty.Entity == "user" && uexists {
 			value = uval
