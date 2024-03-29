@@ -85,6 +85,9 @@ func SegmentMarker(projectID int64, projectIdListAllRun []int64) int {
 	// list of all event_names and all ids for it
 	eventNameIDsList := make(map[string]bool)
 
+	// map of all the inList and notInList files values
+	fileValuesMap := make(map[string]map[string]bool)
+
 	// decoding all json segment rules
 	decodedSegmentRulesMap := make(map[string][]model.Query)
 	for groupName, segmentArr := range allSegmentsMap {
@@ -120,6 +123,9 @@ func SegmentMarker(projectID int64, projectIdListAllRun []int64) int {
 				}
 			}
 			decodedSegmentRulesMap[groupName] = append(decodedSegmentRulesMap[groupName], segmentQuery)
+
+			// map for inList and NotInList
+			fileValuesMap = memsql.GetFileValues(projectID, segmentQuery.GlobalUserProperties, fileValuesMap)
 		}
 	}
 
@@ -161,7 +167,8 @@ func SegmentMarker(projectID int64, projectIdListAllRun []int64) int {
 	if ruleExists && (domainGroup != nil && domainGroup.ID > 0) {
 
 		// process the domains list
-		status, err := processDomainsInBatches(projectID, domainsList, allSegmentsMap[model.GROUP_NAME_DOMAINS], allAccountsDecodedSegmentRule, domainGroup.ID, eventNameIDsMap)
+		status, err := processDomainsInBatches(projectID, domainsList, allSegmentsMap[model.GROUP_NAME_DOMAINS],
+			allAccountsDecodedSegmentRule, domainGroup.ID, eventNameIDsMap, fileValuesMap)
 
 		if status != http.StatusOK || err != nil {
 			log.WithField("project_id", projectID).Error("Unable to update associated_segments to the domain user.")
@@ -237,7 +244,7 @@ func GetDomainsToRunMarkerFor(projectID int64, domainGroup *model.Group, domainG
 }
 
 func processDomainsInBatches(projectID int64, domainIDList []string, segments []model.Segment, segmentsRulesArr []model.Query,
-	domainGroupId int, eventNameIDsMap map[string]string) (int, error) {
+	domainGroupId int, eventNameIDsMap map[string]string, fileValuesMap map[string]map[string]bool) (int, error) {
 	// Batch size
 	batchSize := C.BatchSizeSegmentMarker()
 
@@ -255,7 +262,7 @@ func processDomainsInBatches(projectID int64, domainIDList []string, segments []
 		wg.Add(len(domainIDChunks[ci]))
 		for _, domID := range domainIDChunks[ci] {
 			go fetchAndProcessFromDomainList(projectID, domID, segments, segmentsRulesArr, domainGroupId,
-				eventNameIDsMap, &wg, &statusArr, userCount, domainUpdateCount)
+				eventNameIDsMap, &wg, &statusArr, userCount, domainUpdateCount, fileValuesMap)
 		}
 		wg.Wait()
 	}
@@ -275,7 +282,8 @@ func processDomainsInBatches(projectID int64, domainIDList []string, segments []
 }
 
 func fetchAndProcessFromDomainList(projectID int64, domainID string, segments []model.Segment, segmentsRulesArr []model.Query,
-	domainGroupId int, eventNameIDsMap map[string]string, waitGroup *sync.WaitGroup, statusArr *[]bool, userCount *int64, domainUpdateCount *int64) {
+	domainGroupId int, eventNameIDsMap map[string]string, waitGroup *sync.WaitGroup, statusArr *[]bool, userCount *int64,
+	domainUpdateCount *int64, fileValuesMap map[string]map[string]bool) {
 
 	logFields := log.Fields{
 		"project_id":      projectID,
@@ -296,7 +304,7 @@ func fetchAndProcessFromDomainList(projectID int64, domainID string, segments []
 	}
 
 	status, err := domainUsersProcessingWithErrcode(projectID, domainID, users, segments,
-		segmentsRulesArr, eventNameIDsMap, domainUpdateCount)
+		segmentsRulesArr, eventNameIDsMap, domainUpdateCount, fileValuesMap)
 
 	if status != http.StatusOK || err != nil {
 		log.WithField("project_id", projectID).Error("Unable to update associated_segments to the domain user.")
@@ -305,7 +313,7 @@ func fetchAndProcessFromDomainList(projectID int64, domainID string, segments []
 }
 
 func userProfileSegmentsProcessing(projectID int64, users []model.User, allSegmentsMap map[string][]model.Segment,
-	decodedSegmentRulesMap map[string][]model.Query, eventNameIDsMap map[string]string) {
+	decodedSegmentRulesMap map[string][]model.Query, eventNameIDsMap map[string]string, fileValuesMap map[string]map[string]bool) {
 	statusMap := make(map[string]int, 0)
 
 	var waitGroup sync.WaitGroup
@@ -324,7 +332,8 @@ func userProfileSegmentsProcessing(projectID int64, users []model.User, allSegme
 		}
 
 		count++
-		go usersProcessing(projectID, user, allSegmentsMap, decodedSegmentRulesMap, eventNameIDsMap, &waitGroup, &statusMap)
+		go usersProcessing(projectID, user, allSegmentsMap, decodedSegmentRulesMap, eventNameIDsMap, &waitGroup,
+			&statusMap, fileValuesMap)
 		if count%actualRoutineLimit == 0 {
 			waitGroup.Wait()
 			waitGroup.Add(U.MinInt(len(users)-count, actualRoutineLimit))
@@ -346,7 +355,8 @@ func userProfileSegmentsProcessing(projectID int64, users []model.User, allSegme
 }
 
 func usersProcessing(projectID int64, user model.User, allSegmentsMap map[string][]model.Segment,
-	decodedSegmentRulesMap map[string][]model.Query, eventNameIDsMap map[string]string, waitGroup *sync.WaitGroup, statusMap *map[string]int) {
+	decodedSegmentRulesMap map[string][]model.Query, eventNameIDsMap map[string]string, waitGroup *sync.WaitGroup,
+	statusMap *map[string]int, fileValuesMap map[string]map[string]bool) {
 	logFields := log.Fields{
 		"project_id":                projectID,
 		"user":                      user,
@@ -360,7 +370,7 @@ func usersProcessing(projectID int64, user model.User, allSegmentsMap map[string
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer waitGroup.Done()
 
-	status := userProcessingWithErrcode(projectID, user, allSegmentsMap, decodedSegmentRulesMap, eventNameIDsMap)
+	status := userProcessingWithErrcode(projectID, user, allSegmentsMap, decodedSegmentRulesMap, eventNameIDsMap, fileValuesMap)
 
 	if status != http.StatusOK {
 		(*statusMap)[user.ID] = status
@@ -369,7 +379,7 @@ func usersProcessing(projectID int64, user model.User, allSegmentsMap map[string
 }
 
 func userProcessingWithErrcode(projectID int64, user model.User, allSegmentsMap map[string][]model.Segment,
-	decodedSegmentRulesMap map[string][]model.Query, eventNameIDsMap map[string]string) int {
+	decodedSegmentRulesMap map[string][]model.Query, eventNameIDsMap map[string]string, fileValuesMap map[string]map[string]bool) int {
 	userAssociatedSegments := make(map[string]model.AssociatedSegments)
 
 	// decoding user properties col
@@ -392,7 +402,7 @@ func userProcessingWithErrcode(projectID int64, user model.User, allSegmentsMap 
 				if (segmentQuery.GroupAnalysis == model.SourceGroupUser[*user.Source] && (user.IsGroupUser != nil && *user.IsGroupUser)) ||
 					(segmentQuery.GroupAnalysis == model.FILTER_TYPE_USERS && (user.IsGroupUser == nil || !*user.IsGroupUser)) {
 					// apply segment rule on the user
-					matched = isRuleMatched(projectID, segment, decodedProps, eventNameIDsMap, user.ID)
+					matched = isRuleMatched(projectID, segment, decodedProps, eventNameIDsMap, user.ID, fileValuesMap)
 
 					// update associated_segments map on the basis of segment rule applied
 					userAssociatedSegments = updateSegmentMap(matched, user,
@@ -412,77 +422,9 @@ func userProcessingWithErrcode(projectID int64, user model.User, allSegmentsMap 
 	return http.StatusOK
 }
 
-func allAccountsSegmentMarkup(projectID int64, users []model.User, segments []model.Segment, segmentsRulesArr []model.Query,
-	domainGroupId int, eventNameIDsMap map[string]string) (int, error) {
-	if len(segments) == 0 {
-		return http.StatusOK, nil
-	}
-
-	domainUsersMap := make(map[string][]model.User)
-	for _, user := range users {
-		groupUserId, err := model.FindUserGroupByID(user, domainGroupId)
-		if err != nil {
-			return http.StatusBadRequest, err
-		}
-		domainUsersMap[groupUserId] = append(domainUsersMap[groupUserId], user)
-	}
-
-	statusMap := make(map[string]int, 0)
-	domainUpdateCount := new(int64)
-
-	startTime := time.Now().Unix()
-	var waitGroup sync.WaitGroup
-	actualRoutineLimit := U.MinInt(len(domainUsersMap), C.AllowedGoRoutinesSegmentMarker())
-	waitGroup.Add(actualRoutineLimit)
-	count := 0
-	for domId, usersArray := range domainUsersMap {
-		count++
-		go domainusersProcessing(projectID, domId, usersArray, segments, segmentsRulesArr, eventNameIDsMap, &waitGroup, &statusMap, domainUpdateCount)
-		if count%actualRoutineLimit == 0 {
-			waitGroup.Wait()
-			waitGroup.Add(U.MinInt(len(domainUsersMap)-count, actualRoutineLimit))
-		}
-	}
-
-	waitGroup.Wait()
-
-	endTime := time.Now().Unix()
-	timeTaken := endTime - startTime
-
-	// Time taken to process domains.
-	log.WithFields(log.Fields{"project_id": projectID, "no_of_domains": len(domainUsersMap), "no_of_updates": *domainUpdateCount}).Info("Processing Time for domains in sec ", timeTaken)
-
-	if len(statusMap) > 0 {
-		log.WithField("project_id", projectID).Error("failures while running segment_markup for following domains ", statusMap)
-	}
-
-	return http.StatusOK, nil
-}
-
-func domainusersProcessing(projectID int64, domId string, users []model.User, segments []model.Segment, segmentsRulesArr []model.Query,
-	eventNameIDsMap map[string]string, waitGroup *sync.WaitGroup, statusMap *map[string]int, domainUpdateCount *int64) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"domain_id":  domId,
-		"users":      users,
-		"segments":   segments,
-		"wait_group": waitGroup,
-	}
-
-	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	defer waitGroup.Done()
-
-	status, err := domainUsersProcessingWithErrcode(projectID, domId, users, segments, segmentsRulesArr, eventNameIDsMap, domainUpdateCount)
-
-	if status != http.StatusOK || err != nil {
-		(*statusMap)[domId] = status
-	}
-
-}
-
 func domainUsersProcessingWithErrcode(projectID int64, domId string, usersArray []model.User,
-	segments []model.Segment, segmentsRulesArr []model.Query, eventNameIDsMap map[string]string, domainUpdateCount *int64) (int, error) {
+	segments []model.Segment, segmentsRulesArr []model.Query, eventNameIDsMap map[string]string,
+	domainUpdateCount *int64, fileValuesMap map[string]map[string]bool) (int, error) {
 	associatedSegments := make(map[string]model.AssociatedSegments)
 	decodedPropsArr := make([]map[string]interface{}, 0)
 	for _, user := range usersArray {
@@ -497,7 +439,8 @@ func domainUsersProcessingWithErrcode(projectID int64, domId string, usersArray 
 
 	for index, segmentRule := range segmentsRulesArr {
 		// apply segment rule on the user
-		matched := memsql.IsRuleMatchedAllAccounts(projectID, segmentRule, decodedPropsArr, usersArray, segments[index].Id, domId, eventNameIDsMap)
+		matched := memsql.IsRuleMatchedAllAccounts(projectID, segmentRule, decodedPropsArr, usersArray, segments[index].Id,
+			domId, eventNameIDsMap, fileValuesMap)
 
 		// update associated_segments map on the basis of segment rule applied
 		associatedSegments = updateAllAccountsSegmentMap(matched, usersArray,
@@ -561,7 +504,8 @@ func IsMapsNotMatching(projectID int64, domId string, associatedSegments map[str
 	return isDifferent
 }
 
-func isRuleMatched(projectID int64, segment model.Segment, decodedProperties *map[string]interface{}, eventNameIDsMap map[string]string, userID string) bool {
+func isRuleMatched(projectID int64, segment model.Segment, decodedProperties *map[string]interface{},
+	eventNameIDsMap map[string]string, userID string, fileValuesMap map[string]map[string]bool) bool {
 	// isMatched = all rules matched (a or b) AND (c or d)
 	isMatched := false
 	segmentQuery := &model.Query{}
@@ -588,7 +532,7 @@ func isRuleMatched(projectID int64, segment model.Segment, decodedProperties *ma
 			if p.Entity != model.PropertyEntityUserGlobal {
 				continue
 			}
-			isValueFound := memsql.CheckPropertyOfGivenType(projectID, p, decodedProperties)
+			isValueFound := memsql.CheckPropertyOfGivenType(projectID, p, decodedProperties, fileValuesMap)
 			if idx == 0 {
 				groupedPropsMatched = isValueFound
 			} else {

@@ -977,7 +977,7 @@ type Model interface {
 	GetPreviewDomainsListByProjectId(projectID int64, payload model.TimelinePayload,
 		domainGroupID int, downloadLimitGiven bool) ([]model.Profile, int, string)
 	GetPreviewDomainsListByProjectIdPerRun(projectID int64, payload model.TimelinePayload, domainGroupID int,
-		eventNameIDsMap map[string]string, userCount *int64, domainIDList []string, limitAcc int) ([]model.Profile, int, string)
+		eventNameIDsMap map[string]string, userCount *int64, domainIDList []string, limitAcc int, fileValuesMap map[string]map[string]bool) ([]model.Profile, int, string)
 	// segment
 	CreateSegment(projectId int64, segment *model.SegmentPayload) (int, error)
 	GetAllSegments(projectId int64) (map[string][]model.Segment, int)
