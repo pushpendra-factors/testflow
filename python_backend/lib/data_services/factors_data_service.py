@@ -7,7 +7,7 @@ import logging as log
 import time
 
 from requests import Response
-from ...lib.utils.sync_util import SyncUtil
+from lib.utils.sync_util import SyncUtil
 
 # Note: This class currently holds 2 functionalities - 1. Fetching data 2. Provide data with proper transformation(sometimes).
 # TODO Add Ability to test.
