@@ -490,7 +490,7 @@ func createGroupUserAndEventsForGivenDomainDataBatchV3(projectID int64, eventNam
 	for _, domainData := range groupDomainData {
 		errMsg, errCode := createGroupUserAndEventsForDomainDataV3(projectID, eventNameViewedAD,
 			eventNameClickedAD, location, domainData, imprEventsMapWithCampaign, clicksEventsMapWithCampaign)
-		if errCode != http.StatusAccepted {
+		if errCode != http.StatusOK {
 			log.WithFields(log.Fields{"projectID": projectID, "domainData": domainData, "errMsg": errMsg}).Error("Failed in user and event creation")
 		}
 

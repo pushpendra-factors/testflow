@@ -264,8 +264,8 @@ func getUserInfoDeleteAndUpdate(projectID int64, timestamp int64, imprEventNameI
 		propertySumByUserID := make([]EventPropertySum, 0)
 		err := db.Table("events").Select("user_id, sum(JSON_EXTRACT_STRING(properties, ?)) as impressions, sum(JSON_EXTRACT_STRING(properties, ?)) as clicks", U.LI_AD_VIEW_COUNT, U.LI_AD_CLICK_COUNT).
 			Where("project_id = ? and event_name_id in (?, ?) and timestamp between ? and ? and JSON_EXTRACT_STRING(properties, ?) is not null",
-				projectID, imprEventNameID, clickEventNameID, startTimestamp, endTimestamp, U.EP_ADGROUP_ID).
-			Find(&propertySumByUserID).Group("user_id").Error
+				projectID, imprEventNameID, clickEventNameID, startTimestamp, endTimestamp, U.EP_ADGROUP_ID).Group("user_id").
+			Find(&propertySumByUserID).Error
 		if err != nil {
 			log.WithFields(log.Fields{"projectID": projectID, "timestamp": timestamp, "isDeleteCampaignType": deleteCampaignType}).WithError(err).Error("Failed running get property sum query")
 			return userIDToUserInfoForDeleteAndUpdate, err
