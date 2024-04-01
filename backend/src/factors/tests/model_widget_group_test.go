@@ -33,6 +33,7 @@ func TestDefaultWidgetGroupsCreation(t *testing.T) {
 	assert.Equal(t, "", errCode2)
 	assert.Equal(t, http.StatusCreated, statusCode2)
 	assert.Equal(t, true, widgetGroup.WidgetsAdded)
+	store.GetStore().AddWidgetsToWidgetGroup(project.ID, memsql.SalesOppWidgetGroup, model.HUBSPOT)
 
 	// Invalid query Metric but adding just to check.
 	// Custom KPI is not created. Just for testing, I am testing a custom KPI.
