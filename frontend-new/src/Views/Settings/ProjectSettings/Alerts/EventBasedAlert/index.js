@@ -877,7 +877,7 @@ const EventBasedAlert = ({
     const payload = {
       title: alertName,
       event_level: activeGrpBtn === 'events' ? 'account' : 'user',
-      action_performed: segmentType,
+      // action_performed: segmentType,
       event:
         segmentType === 'action_event' ? queries[0]?.label : selectedSegment,
       message: alertMessage,
@@ -907,7 +907,7 @@ const EventBasedAlert = ({
     const payload = {
       title: alertName,
       event_level: activeGrpBtn === 'events' ? 'account' : 'user',
-      action_performed: segmentType,
+      // action_performed: segmentType,
       event:
         segmentType === 'action_event' ? queries[0]?.label : selectedSegment,
       message: alertMessage,
@@ -1279,7 +1279,7 @@ const EventBasedAlert = ({
   const handleTestWebhook = () => {
     const payload = {
       title: alertName,
-      action_performed: segmentType,
+      // action_performed: segmentType,
       event:
         segmentType === 'action_event' ? queries[0]?.label : selectedSegment,
       message_property:
