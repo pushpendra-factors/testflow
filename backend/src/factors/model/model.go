@@ -1074,6 +1074,7 @@ type Model interface {
 	GetFeatureLimitForProject(projectID int64, featureName string) (int64, error)
 	GetProjectsArrayWithFeatureEnabledFromProjectIdFlag(stringProjectsIDs, featureName string) ([]int64, error)
 	UpdateProjectPlanMapping(projectID int64, planMapping *model.ProjectPlanMapping) int
+	GetAllProjectIdsUsingPaidPlan() ([]int64, int, string, error)
 
 	// Property Mapping
 	CreatePropertyMapping(propertyMapping model.PropertyMapping) (*model.PropertyMapping, string, int)

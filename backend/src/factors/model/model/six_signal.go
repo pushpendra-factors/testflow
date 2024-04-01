@@ -149,7 +149,11 @@ func SetSixSignalAPICountCacheResult(projectID int64, timeZone U.TimeZoneString)
 		logCtx.Warn("Failed to get cache key")
 		return
 	}
-	count := GetSixSignalAPICountCacheResult(projectID, date)
+	count, err := GetSixSignalAPICountCacheResult(projectID, date)
+	if err != nil {
+		logCtx.Warn("Failed to get total api hit count result, %v", err)
+		return
+	}
 	if count <= 0 {
 		count = 0
 	}
@@ -171,7 +175,7 @@ func GetSixSignalAPITotalHitCountCacheRedisKey(projectID int64, date uint64) (*c
 }
 
 // GetSixSignalAPITotalHitCountCacheResult returns the total count of number of times 6Signal API has been called when projectID and timeZone is given
-func GetSixSignalAPITotalHitCountCacheResult(projectID int64, date uint64) int {
+func GetSixSignalAPITotalHitCountCacheResult(projectID int64, date uint64) (int, error) {
 	cacheResult := 0
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectID,
@@ -179,23 +183,23 @@ func GetSixSignalAPITotalHitCountCacheResult(projectID int64, date uint64) int {
 	cacheKey, err := GetSixSignalAPITotalHitCountCacheRedisKey(projectID, date)
 	if err != nil {
 		logCtx.WithError(err).Error("Error getting cache key")
-		return cacheResult
+		return cacheResult, err
 	}
 
 	result, err := cacheRedis.GetPersistent(cacheKey)
 	if err == redis.ErrNil {
-		return cacheResult
+		return cacheResult, nil
 	} else if err != nil {
 		logCtx.WithError(err).Error("Error getting key from redis")
-		return cacheResult
+		return cacheResult, err
 	}
 
 	err = json.Unmarshal([]byte(result), &cacheResult)
 	if err != nil {
 		logCtx.Warn("Error decoding redis result %v", result)
-		return cacheResult
+		return cacheResult, err
 	}
-	return cacheResult
+	return cacheResult, nil
 
 }
 
@@ -212,7 +216,11 @@ func SetSixSignalAPITotalHitCountCacheResult(projectID int64, timeZone U.TimeZon
 		logCtx.Warn("Failed to get cache key total api hit count")
 		return
 	}
-	count := GetSixSignalAPITotalHitCountCacheResult(projectID, date)
+	count, err := GetSixSignalAPITotalHitCountCacheResult(projectID, date)
+	if err != nil {
+		logCtx.Warn("Failed to get total api hit count result, %v", err)
+		return
+	}
 	if count <= 0 {
 		count = 0
 	}
@@ -226,7 +234,7 @@ func SetSixSignalAPITotalHitCountCacheResult(projectID int64, timeZone U.TimeZon
 }
 
 // GetSixSignalAPICountCacheResult returns the count of number of times 6Signal API has been called when projectID and timeZone is given
-func GetSixSignalAPICountCacheResult(projectID int64, date uint64) int {
+func GetSixSignalAPICountCacheResult(projectID int64, date uint64) (int, error) {
 	cacheResult := 0
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectID,
@@ -234,23 +242,23 @@ func GetSixSignalAPICountCacheResult(projectID int64, date uint64) int {
 	cacheKey, err := GetSixSignalAPICountCacheRedisKey(projectID, date)
 	if err != nil {
 		logCtx.WithError(err).Error("Error getting cache key")
-		return cacheResult
+		return cacheResult, err
 	}
 
 	result, err := cacheRedis.GetPersistent(cacheKey)
 	if err == redis.ErrNil {
-		return cacheResult
+		return cacheResult, nil
 	} else if err != nil {
 		logCtx.WithError(err).Error("Error getting key from redis")
-		return cacheResult
+		return cacheResult, err
 	}
 
 	err = json.Unmarshal([]byte(result), &cacheResult)
 	if err != nil {
 		logCtx.Warn("Error decoding redis result %v", result)
-		return cacheResult
+		return cacheResult, err
 	}
-	return cacheResult
+	return cacheResult, nil
 
 }
 
@@ -289,6 +297,50 @@ func SetSixSignalMonthlyUniqueEnrichmentCount(projectId int64, value string, tim
 
 	_, err = cacheRedis.PFAddPersistent(key, value, 0)
 	return err
+}
+
+func GetFactorsDeanonAlertRedisKey() (*cacheRedis.Key, error) {
+	prefix := "factorsDeanon:internal:alerts"
+	return cacheRedis.NewKeyWithOnlyPrefix(prefix)
+}
+
+func GetFactorsDeanonAlertRedisResult() (int64, error) {
+
+	result := int64(0)
+	key, err := GetFactorsDeanonAlertRedisKey()
+	if err != nil {
+		return result, err
+	}
+
+	redisRes, err := cacheRedis.GetPersistent(key)
+	if err != nil {
+		return result, err
+	}
+
+	err = json.Unmarshal([]byte(redisRes), &result)
+	if err != nil {
+		log.Warn("Error decoding redis result %v", result)
+		return result, err
+	}
+	return result, nil
+
+}
+
+func SetFactorsDeanonAlertRedisResult(timestamp int64) error {
+
+	key, err := GetFactorsDeanonAlertRedisKey()
+	if err != nil {
+		log.Warn("Failed to get redis key for factor deanon alert")
+		return err
+	}
+
+	err = cacheRedis.SetPersistent(key, strconv.FormatInt(timestamp, 10), 0)
+	if err != nil {
+		log.Warn("Failed to set redis value for factor deanon alert key")
+		return err
+	}
+
+	return nil
 }
 
 func convertInterfaceByType(obj interface{}) int64 {

@@ -207,8 +207,8 @@ func (store *MemSQL) GetProjectAnalyticsData(projectIDNameMap map[string]string,
 			hubspotEvents, _ := GetEventsFromCacheByDocumentType(projId, "hubspot", dateKey)
 			linkedinEvents, _ := GetEventsFromCacheByDocumentType(projId, "linkedin", dateKey)
 			salesforceEvents, _ := GetEventsFromCacheByDocumentType(projId, "salesforce", dateKey)
-			sixSignalAPIHits := model.GetSixSignalAPICountCacheResult(projIdInt64, uint64(dateKeyInt))
-			sixSignalAPITotalHits := model.GetSixSignalAPITotalHitCountCacheResult(projIdInt64, uint64(dateKeyInt))
+			sixSignalAPIHits, _ := model.GetSixSignalAPICountCacheResult(projIdInt64, uint64(dateKeyInt))
+			sixSignalAPITotalHits, _ := model.GetSixSignalAPITotalHitCountCacheResult(projIdInt64, uint64(dateKeyInt))
 
 			if projectId == 0 {
 				result[dateKey] = append(result[dateKey], &model.ProjectAnalytics{
