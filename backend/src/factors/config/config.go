@@ -445,6 +445,7 @@ const (
 	HealthcheckDatabaseHealthPingID       = "8464d06b-418b-42d2-9201-b01dc744d283"
 	HealthcheckDatabaseHealthMemSQLPingID = "763baa99-61bf-4721-b293-e62eb1027987"
 	HealthcheckSDKHealthPingID            = "bb2c4757-9fa4-48eb-bd08-42a16996a61b"
+	HealthcheckFactorsDeanonAlertPingID   = "7ea00068-f971-4d03-b3b7-115f3708178b"
 )
 
 func PingHealthCheckBasedOnStatus(status map[string]interface{}, healthcheckPingID string) bool {
