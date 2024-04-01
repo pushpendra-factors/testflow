@@ -239,6 +239,7 @@ func ExecuteSegmentQueryHandler(c *gin.Context) {
 			Error: "Execute Segment failed. Invalid segment ID."})
 		return
 	}
+	log.WithField("reqID", reqID).Warn("Kartheek Complete1")
 
 	widgetGroup, errMsg, statusCode := store.GetStore().GetWidgetGroupByID(projectID, widgetGroupID)
 	if statusCode != http.StatusFound {
@@ -258,6 +259,7 @@ func ExecuteSegmentQueryHandler(c *gin.Context) {
 			Error: "Decode failed on request to RequestSegmentKPI struct"})
 		return
 	}
+	log.WithField("reqID", reqID).WithField("widgetGroup", widgetGroup.ID).WithField("segmentID", segmentID).Warn("Kartheek Complete2")
 
 	results, statusCode := store.GetStore().ExecuteWidgetGroup(projectID, widgetGroup, segmentID, reqID, requestParams)
 

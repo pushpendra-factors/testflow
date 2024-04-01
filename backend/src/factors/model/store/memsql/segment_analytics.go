@@ -17,6 +17,7 @@ func (store *MemSQL) ExecuteWidgetGroup(projectID int64, widgetGroup model.Widge
 	if statusCode != http.StatusFound {
 		return results, http.StatusBadRequest
 	}
+	log.WithField("reqID", reqID).WithField("widgetGroup", widgetGroup.ID).WithField("segmentID", segmentID).Warn("Kartheek Complete3")
 
 	lastRunTime, lastRunStatusCode := store.GetMarkerLastForAllAccounts(projectID)
 	// for case - segment is updated but all_run for the day is yet to run
@@ -32,6 +33,7 @@ func (store *MemSQL) ExecuteWidgetGroup(projectID int64, widgetGroup model.Widge
 				log.WithField("widget", widget).WithField("errMsg", errMsg).Warn("Failed in executing widget group")
 				results[index] = model.QueryResult{}
 			}
+			log.WithField("reqID", reqID).WithField("widgetGroup", widgetGroup.ID).WithField("segmentID", segmentID).Warn("Kartheek Complete4")
 			kpiResult, statusCode := store.ExecuteKPIQueryGroup(projectID, reqID, cKPIQueryGroup, true, true)
 			if statusCode != http.StatusOK {
 				results[index] = model.QueryResult{}
