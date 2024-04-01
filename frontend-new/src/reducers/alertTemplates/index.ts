@@ -12,7 +12,7 @@ const host = getHostUrl();
 export function fetchAlertTemplates(){
   return async function (dispatch: Dispatch<any>) {
   
-      const url =  'http://localhost:8080/common/alert_templates';
+      const url = host + 'common/alert_templates';
       const res = await get(null, url);
       dispatch({ type: SET_ALERT_TEMPLATES, payload: res.data });
   }
