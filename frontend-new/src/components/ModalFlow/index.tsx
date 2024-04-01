@@ -164,8 +164,8 @@ function FirstScreen({
       const tmp = data.filter((e) => {
         // If search term doesn't matches, then never show this results
         if (
-          searchTerm.length > 0 &&
-          !e.title.toLowerCase().includes(searchTerm.toLowerCase())
+          searchTerm.trim().length > 0 &&
+          !e.title.toLowerCase().includes(searchTerm.trim().toLowerCase())
         )
           return false;
 
@@ -184,7 +184,7 @@ function FirstScreen({
 
   const renderCategories = () => (
     <div className={styles.categories}>
-      <Text type='title' level={6} weight='bold'>
+      <Text type='title' level={7} weight='bold'>
         Categories
       </Text>
 
@@ -322,29 +322,19 @@ function FirstScreen({
         )}
       />
     );
-
-    return (
-      <div>
-        {data.map((eachFlowItem) => (
-          <div>{eachFlowItem.title}</div>
-        ))}
-      </div>
-    );
   };
   return (
     <Row className={styles.firstscreencontainer}>
       <Row>
         <div>
-          <img src={FirstScreenIllustration ? DashboardTemplatesHeader : AlertTemplatesHeader} />
+          <img style={{margin: 9.25}} src={FirstScreenIllustration ? DashboardTemplatesHeader : AlertTemplatesHeader} />
           <div>
-            <Text type='title' level={6} weight='bold'>
+            <Text type='title' level={4} weight='bold'>
               What are you planning today ?
             </Text>
 
-            <Paragraph>
-              Discover the perfect dashboard template with ease. Simplify your
-              selection process and find the ideal design to elevate your
-              project effortlessly.
+            <Paragraph style={{width:'512px'}}>
+              { FirstScreenIllustration ? ` Discover the perfect dashboard template with ease. Simplify your selection process and find the ideal design to elevate your project effortlessly.` : `What kind of prospect activity do you want to be alerted for?`}
             </Paragraph>
           </div>
         </div>
@@ -421,7 +411,6 @@ function AlertsTemplateStep2Screen(props: AlertsTemplateStep2ScreenPropType) {
     })
     Integration.ok = finalCheck
   
-    
     setIntegrationState(Integration); // Integration Object having eachIntegration: boolean value
     if (Integration.ok) {
  
@@ -545,8 +534,8 @@ function AlertsTemplateStep2Screen(props: AlertsTemplateStep2ScreenPropType) {
             type='text'
             icon={<ArrowLeftOutlined />}
             onClick={handleBack}
-          />
-          Go Back to Templates
+          > Go Back to Templates </Button>
+         
         </div>
         <div>
           <Button
@@ -557,7 +546,7 @@ function AlertsTemplateStep2Screen(props: AlertsTemplateStep2ScreenPropType) {
           />
         </div>
       </div>
-      <div>
+      <div style={{maxHeight:600, overflow:'scroll'}}>
         <CategoryPill item={item} />
         <div style={{ marginLeft: '10px' }}>
           <Text type='title' level={6} weight='bold' extraClass='m-0 mr-3'>
@@ -595,8 +584,9 @@ function AlertsTemplateStep2Screen(props: AlertsTemplateStep2ScreenPropType) {
           }
           {!integrationState.ok && (
             <Alert
+              style={{margin: '24px 0'}}
+              showIcon
               type='warning'
-              icon={<InfoCircleOutlined />}
               message={
                 <>
                   Please complete{' '}
@@ -606,6 +596,7 @@ function AlertsTemplateStep2Screen(props: AlertsTemplateStep2ScreenPropType) {
                       .join(',')}
                   </b>{' '}
                   integration to use this Template.{' '}
+                  <br />
                   <Button
                         className={styles.templatesSectionAlertBtn}
                         type='link'
@@ -629,7 +620,7 @@ function AlertsTemplateStep2Screen(props: AlertsTemplateStep2ScreenPropType) {
             justifyContent: 'end',
             gap: '10px',
             marginTop: '5px',
-            padding: '10px 10px 10px 0',
+            padding: '10px 24px 10px 0',
             boxShadow: '0px 0px 8px 0px #00000040'
 
           }}

@@ -45,7 +45,7 @@ export class Integration_Checks {
       integration.int_google_organic_url_prefixes &&
       integration.int_google_organic_url_prefixes !== '';
     this.hubspot = integration.int_hubspot;
-    this.linkedin = integration.int_linkedin_agent_uuid;
+    this.linkedin = integration.int_linkedin_ad_account;
     this.facebook = integration.int_facebook_user_id;
     this.marketo = marketo.status;
     this['6signal'] =
