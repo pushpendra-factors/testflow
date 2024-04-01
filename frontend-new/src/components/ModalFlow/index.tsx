@@ -367,21 +367,16 @@ interface AlertsTemplateStep2ScreenPropType {
 function AlertsTemplateStep2Screen(props: AlertsTemplateStep2ScreenPropType) {
   const history = useHistory()
   const { item, onCancel, handleBack, onFinish } = props;
-  const [currentQuery, setCurrentQuery] = useState<any>([])
   const [currentProperty, setCurrentProperty] = useState<any>([])
   const [integrationState, setIntegrationState] = useState<{
     [key: string]: boolean;
   }>({});
-  const [shouldAllow, setShouldAllow] = useState(false)
   const [queries, setQueries] = useState([]);
   const sdkCheck = useSelector(
     (state: any) => state?.global?.projectSettingsV1?.int_completed
   );
   const integration = useSelector(
     (state: any) => state.global.currentProjectSettings
-  );
-  const { groupBy } = useSelector(
-    (state: any) => state?.coreQuery?.groupBy?.event
   );
   const { groups } = useSelector((state: any) => state?.coreQuery);
   const { bingAds, marketo } = useSelector((state: any) => state?.global);
@@ -429,13 +424,6 @@ function AlertsTemplateStep2Screen(props: AlertsTemplateStep2ScreenPropType) {
               filters: item.prepopulate[eachIntPair].filterBy
             }
           ]);
-          setCurrentQuery([
-            {
-              ...item.prepopulate[eachIntPair].event,
-              alias: '',
-              filters: item.prepopulate[eachIntPair].filterBy
-            }
-          ])
           setCurrentProperty(item.payload_props[eachIntPair] || [])
         }
       })
@@ -523,7 +511,7 @@ function AlertsTemplateStep2Screen(props: AlertsTemplateStep2ScreenPropType) {
   };
   const handleContinue = ()=>{
     if(onCancel) onCancel()
-    onFinish(item, currentQuery, currentProperty)
+    onFinish(item, queries, currentProperty)
   }
   return (
     <div className={styles.AlertsTemp2screen}>
@@ -546,7 +534,7 @@ function AlertsTemplateStep2Screen(props: AlertsTemplateStep2ScreenPropType) {
           />
         </div>
       </div>
-      <div style={{maxHeight:600, overflow:'scroll'}}>
+      <div>
         <CategoryPill item={item} />
         <div style={{ marginLeft: '10px' }}>
           <Text type='title' level={6} weight='bold' extraClass='m-0 mr-3'>
