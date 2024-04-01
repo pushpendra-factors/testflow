@@ -158,6 +158,8 @@ const (
 	EndsWith                = "endsWith"
 	InList                  = "inList"
 	NotInList               = "notInList"
+	IsKnown                 = "isKnown"
+	IsUnKnown               = "isUnKnown"
 )
 
 // UserPropertyGroupByPresent Sent from frontend for breakdown on latest user property.
