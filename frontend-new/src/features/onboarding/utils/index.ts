@@ -109,3 +109,6 @@ export const getCompanyDomainFromEmail = (email: string) => {
 
 export const SDKDocumentation =
   'https://help.factors.ai/en/articles/8999789-setting-up-factors-sdk-on-your-site';
+
+export const ClearbitTermsOfUseLink =
+  'https://www.factors.ai/customer-agreement';

@@ -78,7 +78,6 @@ export const PLANS_COFIG: PLANS_COFIG_INTERFACE = {
     description: 'Reveal anonymous companies visiting your website',
     uniqueFeatures: [
       'Company Identification',
-      'Account enrichment',
       'Customer Journey Timelines',
       'Starter GTM Dashboards',
       'Custom Reports & Segments',
@@ -100,8 +99,6 @@ export const PLANS_COFIG: PLANS_COFIG_INTERFACE = {
       'Automate outbound to identified companies and generate pipeline',
     uniqueFeatures: [
       'Everything in Free +',
-      'Contact Enrichment*',
-      'Sales Automations (Automated email and LinkedIn outreach)*',
       'LinkedIn Intent Signals (Reveal companies viewing your LinkedIn ads)',
       'CSV Imports & Exports',
       'Advanced GTM Dashboards',
@@ -138,10 +135,9 @@ export const PLANS_COFIG: PLANS_COFIG_INTERFACE = {
       'LinkedIn Attribution',
       'G2 Intent Signals (Reveal companies viewing your G2 pages)',
       'G2 Attribution ',
-      'Custom Prospecting Workflows*',
-      'Custom Audiences & Syncs*',
       'Dedicated Customer Success Manager (+support for unlimited automations)',
-      'Integrations (HubSpot, SalesForce, Marketo, G2, Drift)'
+      'Integrations (HubSpot, SalesForce, Marketo, G2, Drift)',
+      'Workflow Automations & Data Sync'
     ],
     isRecommendedPlan: true,
     planIcon: 'User',
@@ -162,8 +158,6 @@ export const PLANS_COFIG: PLANS_COFIG_INTERFACE = {
       'Buyer Journey Analysis with AI-Fuelled Explain',
       'Custom Metrics & KPIs',
       'White Glove Onboarding Support',
-      'Enterprise Single Sign-On (Coming Soon)',
-      'LinkedIn Campaign Management(Coming Soon)',
       'Integrations (RudderStack, Segment, Custom Integrations)'
     ],
     isRecommendedPlan: false,

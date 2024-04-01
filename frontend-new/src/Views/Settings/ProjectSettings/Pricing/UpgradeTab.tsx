@@ -133,15 +133,6 @@ function UpgradeTab({ buyAddonLoading, handleBuyAddonClick }: UpgradeTabProps) {
             })}
         {/* <LastPlanCard /> */}
       </div>
-      <Text
-        type='title'
-        level={7}
-        weight='bold'
-        extraClass='mt-2'
-        color='character-primary text-right'
-      >
-        *Tailor-made set-up by dedicated CSM
-      </Text>
     </div>
   );
 

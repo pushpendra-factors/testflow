@@ -1088,6 +1088,13 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profile
 		userDetails = append(userDetails, domainDetails...)
 	}
 
+	// map for inList and NotInList
+	fileValuesMap := make(map[string]map[string]bool)
+
+	for _, globalFilters := range groupedFilters {
+		fileValuesMap = GetFileValues(projectID, globalFilters, fileValuesMap)
+	}
+
 	// map of domain ids and their decoded merged properties
 	domainsIDPropsMap := make(map[string]map[string]interface{})
 	for _, userDetail := range userDetails {
@@ -1124,7 +1131,7 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profile
 			if groupFilterExists && filterExists {
 				// check for property
 				for _, filter := range filterArr {
-					isFound := CheckPropertyOfGivenType(projectID, filter, propertiesDecoded)
+					isFound := CheckPropertyOfGivenType(projectID, filter, propertiesDecoded, fileValuesMap)
 					if isFound {
 						domainsIDPropsMap[userDetail.ID][tablePropName] = (*propertiesDecoded)[tablePropName]
 						break

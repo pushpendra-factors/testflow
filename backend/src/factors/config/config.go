@@ -190,14 +190,15 @@ type Configuration struct {
 	SkippedOtpProjectIDs                   string
 	PrimaryDatastore                       string
 	// Segment Marker lookback
-	UseLookbackSegmentMarker       bool
-	LookbackSegmentMarker          int
-	AllowedGoRoutines              int
-	ProcessOnlyAccountSegments     bool
-	RunAllAccountsMarkerProjectIDs string
-	RunForAllAccountsInHours       int
-	DomainsLimitAllRun             int
-	BatchSizeDomains               int
+	UseLookbackSegmentMarker           bool
+	LookbackSegmentMarker              int
+	AllowedGoRoutines                  int
+	ProcessOnlyAccountSegments         bool
+	RunAllAccountsMarkerProjectIDs     string
+	DisableAllAccountsMarkerProjectIDs string
+	RunForAllAccountsInHours           int
+	DomainsLimitAllRun                 int
+	BatchSizeDomains                   int
 	// Flag for enabling only the /mql routes for secondary env testing.
 	EnableMQLAPI bool
 	// Flags to disable DB and Redis writes when enabled.
@@ -2387,6 +2388,15 @@ func UseSegmentMarker(projectID int64) bool {
 // AllAccountsRuntMarker - Checks if segment marker is to be run for all $domains for given project
 func AllAccountsRuntMarker(projectID int64) bool {
 	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().RunAllAccountsMarkerProjectIDs, "")
+	if allProjects || projectIDsMap[projectID] {
+		return true
+	}
+	return false
+}
+
+// DisableAccountsRuntMarker - Checks if segment marker is to not be run for all $domains for given project
+func DisableAccountsRuntMarker(projectID int64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().DisableAllAccountsMarkerProjectIDs, "")
 	if allProjects || projectIDsMap[projectID] {
 		return true
 	}
