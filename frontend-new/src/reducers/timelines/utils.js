@@ -136,7 +136,7 @@ export const formatUserPropertiesToCheckList = (
   // OR
   // we can just unshift the enabled rows in the correct order
   const matchedPropsInOrder = [];
-  activeProps.forEach((eachProp) => {
+  activeProps?.forEach((eachProp) => {
     const ele = userPropsWithEnableKey.find((e) => eachProp === e.prop_name);
     if (ele) {
       matchedPropsInOrder.push(ele);
