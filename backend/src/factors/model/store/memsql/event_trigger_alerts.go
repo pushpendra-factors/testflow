@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+
 	"sort"
 	"strings"
 	"time"
@@ -1433,6 +1434,13 @@ func (store *MemSQL) FindAndCacheAlertForCurrentSegment(projectID int64, segment
 
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
+	defer func() {
+		if err := recover(); err != nil {
+			logCtx.WithFields(log.Fields{
+				"err": err,
+			}).Error("Panic occured.")
+		}
+	}()
 
 	//Find if any alert is present for the current segment
 	alerts, errCode := store.GetEventTriggerAlertsBySegmentID(projectID, segmentID, actionPerformed)
