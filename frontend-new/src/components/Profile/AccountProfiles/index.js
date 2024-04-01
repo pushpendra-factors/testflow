@@ -162,6 +162,9 @@ function AccountProfiles({
     }
     return accountPayload;
   };
+  useEffect(()=>{
+    dispatch(setNewSegmentModeAction(false))
+  },[])
 
   useEffect(() => {
     if (activeProject?.id) {

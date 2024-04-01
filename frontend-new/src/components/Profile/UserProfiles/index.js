@@ -215,10 +215,10 @@ function UserProfiles({
     getProfileUsers,
     restoreFiltersDefaultState
   ]);
-
+  
   const disableNewSegmentMode = useCallback(() => {
     dispatch(setNewSegmentModeAction(false));
-  }, [dispatch]);
+  }, []);
 
   const handleSaveSegment = useCallback(
     async (segmentPayload) => {
@@ -348,7 +348,9 @@ function UserProfiles({
     getSavedSegments,
     setFiltersDirty
   ]);
-
+  useEffect(()=>{
+    dispatch(setNewSegmentModeAction(false))
+  },[])
   useEffect(() => {
     if (!timelinePayload.search_filter) {
       setListSearchItems([]);
@@ -368,9 +370,7 @@ function UserProfiles({
     setTimeout(() => {
       setLoading(false);
     }, 1000);
-  }, [activeProject]);
-
-  useEffect(() => {
+    
     fetchProjectSettingsV1(activeProject.id);
     fetchProjectSettings(activeProject.id);
     if (_.isEmpty(dashboards?.data)) {
