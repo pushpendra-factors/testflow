@@ -85,17 +85,6 @@ export type FlowItemType = {
         }
       ];
     };
-    noIntegration?: {
-      event: { label: string; group: string };
-      filterBy: [
-        {
-          operator: string;
-          props: Array<string>;
-          values: Array<any>;
-          ref: number;
-        }
-      ];
-    };
   };
 };
 
@@ -381,6 +370,7 @@ function AlertsTemplateStep2Screen(props: AlertsTemplateStep2ScreenPropType) {
   const { groups } = useSelector((state: any) => state?.coreQuery);
   const { bingAds, marketo } = useSelector((state: any) => state?.global);
   useEffect(() => {
+    if(!item) return;
     const integration_check = new Integration_Checks(
       sdkCheck,
       integration,
@@ -409,14 +399,12 @@ function AlertsTemplateStep2Screen(props: AlertsTemplateStep2ScreenPropType) {
     setIntegrationState(Integration); // Integration Object having eachIntegration: boolean value
     if (Integration.ok) {
  
-      Integration.noIntegration = true;
-      if (!('prepopulate' in item)) return;
-
-
-
-      let allIntPairs = Object.keys(item.prepopulate)
-      allIntPairs.forEach((eachIntPair)=>{
-        if(IntegrationMapResults[eachIntPair]){
+      if (!('prepopulate' in item)) return; // this means no event is present, which shouldn't happen
+      // Integration Checking will happen in the order of required_integrations Array
+      let allIntPairs = item?.required_integrations || []
+      for(let i=0; i < allIntPairs.length; i++){
+        const eachIntPair = allIntPairs[i]
+        if(IntegrationMapResults[eachIntPair.join(',')]){
           setQueries([
             {
               ...item.prepopulate[eachIntPair].event,
@@ -425,8 +413,10 @@ function AlertsTemplateStep2Screen(props: AlertsTemplateStep2ScreenPropType) {
             }
           ]);
           setCurrentProperty(item.payload_props[eachIntPair] || [])
+          break;
         }
-      })
+      }
+
  
     }
     
