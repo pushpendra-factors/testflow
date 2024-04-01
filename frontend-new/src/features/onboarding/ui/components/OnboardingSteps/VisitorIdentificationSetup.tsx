@@ -4,6 +4,7 @@ import logger from 'Utils/logger';
 import EnrichFeature from 'Views/Settings/ProjectSettings/IntegrationSettings/SixSignalFactors/EnrichFeature';
 import {
   Button,
+  Checkbox,
   Col,
   Divider,
   Radio,
@@ -12,21 +13,23 @@ import {
   Tooltip,
   notification
 } from 'antd';
+import type { CheckboxChangeEvent } from 'antd/es/checkbox';
 import confirm from 'antd/lib/modal/confirm';
 import useMobileView from 'hooks/useMobileView';
 import { isEmpty } from 'lodash';
 import { ConnectedProps, connect, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { udpateProjectSettings } from 'Reducers/global';
+import { Link } from 'react-router-dom';
 import {
   CommonStepsProps,
-  FactorsDeAnonymisationProvider,
   OnboardingStepsConfig,
   VISITOR_IDENTIFICATION_SETUP
 } from '../../types';
 import styles from './index.module.scss';
 import CheckListIllustration from '../../../../../assets/images/checklist_Illustration.png';
 import { setFactorsDeAnonymisationProvider } from '../../../utils/service';
+import { ClearbitTermsOfUseLink } from '../../../utils';
 
 function Step3({
   udpateProjectSettings,
@@ -35,8 +38,7 @@ function Step3({
 }: Step3PropsType) {
   const isMobileView = useMobileView();
   const [enrichmentType, setEnrichmentType] = useState<boolean | null>(null);
-  const [provider, setProvider] =
-    useState<FactorsDeAnonymisationProvider>('factors_clearbit');
+  const [isClearbitSelected, setIsClearbitSelected] = useState<boolean>(true);
   const [loading, setLoading] = useState(false);
   const { active_project, currentProjectSettings } = useSelector(
     (state) => state?.global
@@ -73,11 +75,18 @@ function Step3({
     }
   };
 
+  const handleClearbitTermsChange = (e: CheckboxChangeEvent) => {
+    setIsClearbitSelected(e.target.checked);
+  };
+
   const handleSubmission = async () => {
     try {
       setLoading(true);
 
-      await setFactorsDeAnonymisationProvider(active_project.id, provider);
+      await setFactorsDeAnonymisationProvider(
+        active_project.id,
+        'factors_clearbit'
+      );
       if (onboarding_steps?.[VISITOR_IDENTIFICATION_SETUP]) {
         incrementStepCount();
         setLoading(false);
@@ -110,13 +119,8 @@ function Step3({
     }
   };
 
-  const handleProviderChange = (_provider: FactorsDeAnonymisationProvider) => {
-    if (provider !== _provider) {
-      setProvider(_provider);
-    }
-  };
-
-  const checkContinueButtonDisablity = () => enrichmentType === null;
+  const checkContinueButtonDisablity = () =>
+    enrichmentType === null || isClearbitSelected === false;
 
   useEffect(() => {
     if (!six_signal_config || isEmpty(six_signal_config)) {
@@ -125,20 +129,6 @@ function Step3({
       setEnrichmentType(true);
     }
   }, [six_signal_config]);
-
-  useEffect(() => {
-    if (
-      currentProjectSettings?.factors_deanon_config?.clearbit
-        ?.traffic_fraction === 1
-    ) {
-      setProvider('factors_clearbit');
-    } else if (
-      currentProjectSettings?.factors_deanon_config?.['6signal']
-        ?.traffic_fraction === 1
-    ) {
-      setProvider('factors_6Signal');
-    }
-  }, [currentProjectSettings]);
 
   return (
     <div>
@@ -162,81 +152,6 @@ function Step3({
             type='title'
             level={6}
             extraClass='m-0 mt-1'
-            color='character-secondary'
-          >
-            Identify accounts that visit your website and track their activity
-            with one of these providers
-          </Text>
-          <div className='mt-6 flex gap-4'>
-            <div
-              className={`${styles.providerCard} ${
-                provider === 'factors_clearbit' ? styles.selectedProvider : ''
-              }`}
-              onClick={() => handleProviderChange('factors_clearbit')}
-            >
-              <SVG name='ClearbitLogo' size={48} color='purple' />
-              <div>
-                <Text
-                  type='title'
-                  level={6}
-                  weight='bold'
-                  extraClass='m-0'
-                  color='character-primary'
-                >
-                  Clearbit Reveal
-                </Text>
-                <Text
-                  type='title'
-                  level={8}
-                  extraClass='m-0'
-                  color='character-secondary'
-                >
-                  Use Clearbit Reveal to identify accounts
-                </Text>
-              </div>
-              <div className={styles.providerCheckContainer}>
-                {provider === 'factors_clearbit' && (
-                  <SVG name='Check_circle' size={24} />
-                )}
-              </div>
-            </div>
-            <div
-              className={`${styles.providerCard} ${
-                provider === 'factors_6Signal' ? styles.selectedProvider : ''
-              }`}
-              onClick={() => handleProviderChange('factors_6Signal')}
-            >
-              <SVG name='SixSignalLogo' size={48} color='purple' />
-              <div>
-                <Text
-                  type='title'
-                  level={6}
-                  weight='bold'
-                  extraClass='m-0'
-                  color='character-primary'
-                >
-                  6Signal by 6Sense
-                </Text>
-                <Text
-                  type='title'
-                  level={8}
-                  extraClass='m-0'
-                  color='character-secondary'
-                >
-                  Use 6Signal by 6Sense to identify accounts
-                </Text>
-              </div>
-              <div className={styles.providerCheckContainer}>
-                {provider === 'factors_6Signal' && (
-                  <SVG name='Check_circle' size={24} />
-                )}
-              </div>
-            </div>
-          </div>
-          <Text
-            type='title'
-            level={6}
-            extraClass='m-0 mt-10'
             color='character-secondary'
           >
             You can choose to identify all accounts that visit your website or
@@ -332,6 +247,32 @@ the pricing page inside the product.'
             </div>
           )}
         </Col>
+        <div className='flex gap-3 mt-8'>
+          <Checkbox
+            checked={isClearbitSelected}
+            onChange={handleClearbitTermsChange}
+          />
+          <Text
+            type='paragraph'
+            mini
+            color='character-primary'
+            extraClass='inline-block'
+          >
+            I agree to use Clearbit for identifying accounts visiting the
+            website as per
+            <Link
+              className='inline-block ml-1'
+              target='_blank'
+              to={{
+                pathname: ClearbitTermsOfUseLink
+              }}
+            >
+              <Text type='paragraph' mini weight='bold' color='brand-color-6'>
+                {'  '} Terms of Use
+              </Text>
+            </Link>
+          </Text>
+        </div>
         {!isMobileView && <Divider className='mt-10 mb-6' />}
         <Col span={24}>
           <div
