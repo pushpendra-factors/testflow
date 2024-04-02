@@ -168,12 +168,12 @@ function ContentGroups({
                   <Col span={12}>
                     <div className={'flex justify-end'}>
                       <Button
-                        size={'large'}
+                        type='primary'
                         onClick={() => {
                           setShowSmartForm(true);
                         }}
-                      >
-                        <SVG name={'plus'} extraClass={'mr-2'} size={16} />
+                        icon={<SVG name={'plus'} color={'white'} size={16} />}
+                      > 
                         Add New
                       </Button>
                     </div>
