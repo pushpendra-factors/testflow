@@ -48,7 +48,8 @@ import styles from './index.module.scss';
 
 import AlertTemplatesHeader from "./../../assets/images/illustrations/alerttemplatesheader.png"
 import DashboardTemplatesHeader from "./../../assets/images/illustrations/dashboardtemplatesheader.png"
-          
+import useAutoFocus from 'hooks/useAutoFocus';
+
 export type FlowItemType = {
   id: string | number;
   description: string;
@@ -101,7 +102,7 @@ function CategoryPill(props: { item: FlowItemType | null }) {
         backgroundColor: item?.backgroundColor,
         color: item?.color,
         width: 'max-content',
-        margin: '10px 0 10px 10px'
+        margin: '10px 0 10px 0px'
       }}
     >
       <SVG name={item.icon} color={item.color} />
@@ -130,6 +131,7 @@ function FirstScreen({
   const [results, setResults] = useState<Array<FlowItemType>>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const searchInputRef = useAutoFocus();
   useEffect(() => {
     setResults(data);
   }, []);
@@ -249,6 +251,7 @@ function FirstScreen({
         size='large'
         className='fa-input'
         type='text'
+        ref={searchInputRef}
         onChange={(e) => {
           setSearchTerm(e.target.value);
         }}
@@ -316,10 +319,10 @@ function FirstScreen({
     <Row className={styles.firstscreencontainer}>
       <Row>
         <div>
-          <img style={{margin: 9.25}} src={FirstScreenIllustration ? DashboardTemplatesHeader : AlertTemplatesHeader} />
+          <img style={{ width: 64, margin: 9.25}} src={FirstScreenIllustration ? DashboardTemplatesHeader : AlertTemplatesHeader} />
           <div>
             <Text type='title' level={4} weight='bold'>
-              What are you planning today ?
+            {isDashboardTemplatesFlow ? 'What are you planning today ?' : 'Select a Template'}
             </Text>
 
             <Paragraph style={{width:'512px'}}>
@@ -335,7 +338,7 @@ function FirstScreen({
       </Row>
       <Row>
         <Col span={6}>{renderCategories()}</Col>
-        <Col span={18} style={{ maxHeight: '80vh', overflow: 'scroll' }}>
+        <Col span={18} style={{ height: '586px',maxHeight: '586px', width: '800px', overflow: 'scroll' }}>
           <div style={{ padding: '20px' }}>
             {startFreshVisible && renderStartFreshNewDashboard()}
             {renderSearchInput()}
@@ -527,7 +530,7 @@ function AlertsTemplateStep2Screen(props: AlertsTemplateStep2ScreenPropType) {
       <div>
         <CategoryPill item={item} />
         <div style={{ marginLeft: '10px' }}>
-          <Text type='title' level={6} weight='bold' extraClass='m-0 mr-3'>
+          <Text type='title' level={4} weight='bold' extraClass='m-0 mr-3'>
             {item?.title}
           </Text>
           <Text
@@ -556,7 +559,7 @@ function AlertsTemplateStep2Screen(props: AlertsTemplateStep2ScreenPropType) {
               )}
             </div>
             <div style={{ padding: '10px 0' }}>
-              <b>Note</b>: The above configuration is used to define the condition for sending the alert. You can change this condition and other settings in the next step as well.
+              <b>Note</b>: The above configuration is used to define the condition for sending the alert. <br /> You can change this condition and other settings in the next step as well.
             </div>
           </>
           }
@@ -604,7 +607,7 @@ function AlertsTemplateStep2Screen(props: AlertsTemplateStep2ScreenPropType) {
           }}
         >
           <Button type='primary' onClick={handleContinue} disabled={!integrationState.ok}>
-            Continue
+            This is correct
           </Button>
         </div>
     </div>
