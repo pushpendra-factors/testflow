@@ -15,6 +15,7 @@ import cx from 'classnames';
 import {
   fetchQueries,
   getEventsData,
+  getFunnelData,
   updateQuery
 } from 'Reducers/coreQuery/services';
 import { EMPTY_ARRAY, EMPTY_OBJECT, generateRandomKey } from 'Utils/global';
@@ -36,6 +37,7 @@ import {
   TYPE_EVENTS_OCCURRENCE
 } from 'Utils/constants';
 import {
+  COMPARISON_DATA_FETCHED,
   CORE_QUERY_INITIAL_STATE,
   DEFAULT_PIVOT_CONFIG,
   INITIAL_STATE as INITIAL_RESULT_STATE,
@@ -47,6 +49,7 @@ import {
 } from 'Views/CoreQuery/constants';
 import {
   formatApiData,
+  getFunnelQuery,
   getQuery,
   getStateQueryFromRequestQuery,
   isComparisonEnabled
@@ -433,7 +436,7 @@ const CoreQuery = () => {
   const runQuery = async (dateRange: any = undefined) => {
     try {
       let durationObj;
-      const qState = { ...coreQueryState };
+      const qState = _.cloneDeep(coreQueryState);
 
       if (!dateRange) {
         durationObj = coreQueryState.queryOptions.date_range;
@@ -767,6 +770,82 @@ const CoreQuery = () => {
     ]
   );
 
+  const runFunnelQuery = useCallback(
+    async (isQuerySaved, dateRange, isCompareQuery) => {
+      try {
+        let durationObj;
+        const qState = _.cloneDeep(coreQueryState);
+
+        if (!dateRange) {
+          durationObj = coreQueryState.queryOptions.date_range;
+        } else {
+          durationObj = dateRange;
+        }
+
+        const query = getFunnelQuery(
+          coreQueryState.queryOptions.groupBy,
+          coreQueryState.queries,
+          coreQueryState.queryOptions.session_analytics_seq,
+          durationObj,
+          coreQueryState.queryOptions.globalFilters,
+          coreQueryState.queryOptions.events_condition,
+          coreQueryState.queryOptions.group_analysis,
+          coreQueryReducerState.funnelConversionDurationNumber,
+          coreQueryReducerState.funnelConversionDurationUnit
+        );
+
+        if (!isQuerySaved) {
+          // Factors RUN_QUERY tracking
+          // factorsai.track('RUN-QUERY', {
+          //   email_id: currentAgent?.email,
+          //   query_type: QUERY_TYPE_FUNNEL,
+          //   project_id: activeProject?.id,
+          //   project_name: activeProject?.name
+          // });
+        }
+
+        if (!isCompareQuery) {
+          setLoading(true);
+          configActionsOnRunningQuery(isQuerySaved, qState);
+          setAppliedBreakdowns(coreQueryState.queryOptions?.groupBy, qState);
+          qState.showResult = true;
+          qState.loading = true;
+          setLoading(true);
+          configActionsOnRunningQuery(false, qState);
+          qState.requestQuery = query;
+          qState.resultState = { ...qState.resultState, loading: true };
+          qState.querySaved = {};
+          setCoreQueryState(qState);
+        } else {
+          // updateLocalReducer(COMPARISON_DATA_LOADING);
+        }
+        const res = await getFunnelData(active_project.id, query, null, true);
+        // if (isCompareQuery) {
+        updateLocalReducer(
+          COMPARISON_DATA_FETCHED,
+          res?.data.result || res?.data
+        );
+        // } else {
+        //   setLoading(false);
+        //   updateResultState({
+        //     ...initialState,
+        //     data: res.data.result || res.data,
+        //     status: res.status
+        //   });
+        // }
+      } catch (err) {
+        logger.error(err);
+        setLoading(false);
+        // updateResultState({ ...initialState, error: true, status: err.status });
+      }
+    },
+    [
+      coreQueryState,
+      coreQueryReducerState.funnelConversionDurationNumber,
+      coreQueryReducerState.funnelConversionDurationUnit
+    ]
+  );
+
   const renderComposer = () => {
     if (
       coreQueryState.queryType === QUERY_TYPE_FUNNEL ||
@@ -781,7 +860,7 @@ const CoreQuery = () => {
           queryType={coreQueryState.queryType}
           queryOptions={coreQueryState.queryOptions}
           setQueryOptions={setQueryOptions}
-          runFunnelQuery={() => {}}
+          runFunnelQuery={runFunnelQuery}
           collapse={coreQueryState.showResult}
           setCollapse={() => setQueryOpen(false)}
         />
