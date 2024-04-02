@@ -140,6 +140,8 @@ func main() {
 		analyzeStatus["status"] = "SUCCESS"
 	}
 
+	dbHealthCheckFailure := false
+
 	dbHealthcheckPingID := C.HealthcheckDatabaseHealthPingID
 	if C.UseMemSQLDatabaseStore() {
 		dbHealthcheckPingID = C.HealthcheckDatabaseHealthMemSQLPingID
@@ -155,6 +157,7 @@ func main() {
 	if len(factorsSlowQueries) > *slowQueriesThreshold {
 		C.PingHealthcheckForFailure(dbHealthcheckPingID,
 			fmt.Sprintf("Slow query count %d exceeds threshold of %d", len(factorsSlowQueries), *slowQueriesThreshold))
+		dbHealthCheckFailure = true
 	}
 
 	var nodeUsageStatsWithErrors mqlStore.MemSQLNodeUsageStatsWithErrors
@@ -162,7 +165,13 @@ func main() {
 		nodeUsageStatsWithErrors = mqlStore.GetStore().MonitorMemSQLDiskUsage()
 		if len(nodeUsageStatsWithErrors.ErrorMessage) > 0 {
 			C.PingHealthcheckForFailure(dbHealthcheckPingID, nodeUsageStatsWithErrors.ErrorMessage)
+			dbHealthCheckFailure = true
 		}
+	}
+
+	// ping health check success for db
+	if !dbHealthCheckFailure {
+		C.PingHealthcheckForSuccess(dbHealthcheckPingID, "db health check success")
 	}
 
 	var isFailure bool
