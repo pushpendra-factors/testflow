@@ -7,7 +7,6 @@ DATA_CACHE_FILE = 'data_cached.csv'
 directory_path = 'chat_factors/chatgpt_poc'
 
 
-
 def get_query_templates():
     query_templates = {
         'uni_metric': {
@@ -18,22 +17,31 @@ def get_query_templates():
                 'Count of %s in %s'
                 # 'How many %s did we have %s',
                 # 'How many %s visited our website %s'
-                ]
-            },
+            ]
+        },
         'bi_metric': {
             'timeless': ['%s and %s'],
             'timeful': ['What\'s the %s and %s in %s']
-            },
+        },
         'breakdown': {
             'timeless': ['%s by %s'],
             'timeful': ['What\'s the breakdown of %s by %s in %s']
-            },
+        },
+        'filter': {
+            'timeless': ['%s having %s as %s'],
+            'timeful': [
+                'Number of %s having %s as %s in %s',
+                'How many %s with %s equals %s we had %s',
+                'Count of %s filter by %s equals %s %s'
+
+            ]
+        },
         'funnel': {
             'timeless': ['Conversion rate from %s to %s'],
             'timeful': [
                 # '%s that led to %s',
                 'What\'s the conversion rate from %s to a %s in %s'
-                ]
+            ]
         }
     }
     return query_templates
@@ -54,6 +62,10 @@ def get_json_templates():
         'breakdown':
             '{"query_type": "kpi", "query_entity_1": "%s", \
               "query_filter_1":"none", "query_breakdown_1": "%s", \
+              "time_range": "%s", "start_time": "default", "end_time": "default"}',
+        'filter':
+            '{"query_type": "kpi", "query_entity_1": "%s", \
+              "query_filter_1":[{"na": "%s", "val": "%s"}], "query_breakdown_1": "none", \
               "time_range": "%s", "start_time": "default", "end_time": "default"}',
         'funnel':
             '{"query_type": "funnel", "query_entity_1": "%s", \
@@ -100,17 +112,17 @@ def replace_one_by_two(x, key='qe'):
 
 def get_reduction_map():
     reduction_map = {'query_type': 'qt',
-                 'query_entity_1': 'qe1',
-                 'query_filter_1': 'qf1',
-                 'query_breakdown_1': 'qb1',
-                 'query_entity_2': 'qe2',
-                 'query_filter_2': 'qf2',
-                 'query_breakdown_2': 'qb2',
-                 'time_range': 'time',
-                 'start_time': 'st',
-                 'end_time': 'et',
-                 'default': '',
-                 'none': ''}
+                     'query_entity_1': 'qe1',
+                     'query_filter_1': 'qf1',
+                     'query_breakdown_1': 'qb1',
+                     'query_entity_2': 'qe2',
+                     'query_filter_2': 'qf2',
+                     'query_breakdown_2': 'qb2',
+                     'time_range': 'time',
+                     'start_time': 'st',
+                     'end_time': 'et',
+                     'default': '',
+                     'none': ''}
     return reduction_map
 
 
@@ -123,17 +135,17 @@ def reduce_completion(x):
         replace_two_by_one(x, key=k)
     del x['st'], x['et']
     x = json.dumps(x)
-    #x = x.replace('"', '')
-    #x = x.replace("'", '')
-    #x = x.replace(' ', '')
-    #x = x.replace('$', '')
+    # x = x.replace('"', '')
+    # x = x.replace("'", '')
+    # x = x.replace(' ', '')
+    # x = x.replace('$', '')
     return x
 
 
 def expand_completion(x):
     # TODO: Expand better!
     reduction_map = get_reduction_map()
-    expansion_map = {v:k for k, v in reduction_map.items()}
+    expansion_map = {v: k for k, v in reduction_map.items()}
     # x = json.loads(x)
     # for k in ['qe', 'qf', 'qb']:
     #     replace_one_by_two(x, key=k)
@@ -142,11 +154,13 @@ def expand_completion(x):
         x = x.replace(a, b)
     return x
 
+
 def abbreviate_data(df):
     df['completion'] = df['orig_completion'].apply(reduce_completion)
 
 
-def get_prepared_data(raw_data_path=os.path.join('chat_factors/chatgpt_poc', 'data.json'), abbreviate=True, cache_path=DATA_CACHE_FILE, force_prepare=False):
+def get_prepared_data(raw_data_path=os.path.join('chat_factors/chatgpt_poc', 'data.json'), abbreviate=True,
+                      cache_path=DATA_CACHE_FILE, force_prepare=False):
     try:
         if force_prepare:
             raise FileNotFoundError
@@ -155,6 +169,7 @@ def get_prepared_data(raw_data_path=os.path.join('chat_factors/chatgpt_poc', 'da
         df = prepare_data(raw_data_path, abbreviate)
         df.to_csv(cache_path)
     return df
+
 
 def prepare_data(raw_data_path='data.json', abbreviate=True):
     raw_data = json.load(open(raw_data_path, 'r'))
@@ -194,11 +209,25 @@ def prepare_data(raw_data_path='data.json', abbreviate=True):
                     _json = jts_map['breakdown'] % (vm, vd, t.replace(' ', '_'))
                     qj = (query, _json)
                     qjs.append(qj)
+    # FILTER:
+    for km, vm in tqdm(metrics_map.items()):
+        for kd, vd in dimensions_map.items():
+            for qt in qts_map['filter']['timeless']:
+                query = qt % (km, kd, 'val_xyz')
+                _json = jts_map['filter'] % (vm, vd, 'val_xyz', 'default')
+                qj = (query, _json)
+                qjs.append(qj)
+            for qt in qts_map['filter']['timeful']:
+                for t in times:
+                    query = qt % (km, kd, 'val_xyz', t)
+                    _json = jts_map['filter'] % (vm, vd, 'val_xyz', t.replace(' ', '_'))
+                    qj = (query, _json)
+                    qjs.append(qj)
 
     # BI-METRIC:
     for k1, v1 in tqdm(metrics_map.items()):
         for k2, v2 in (metrics_map.items()):
-            if k1==k2:
+            if k1 == k2:
                 continue
             for qt in qts_map['bi_metric']['timeless']:
                 query = qt % (k1, k2)
@@ -213,21 +242,21 @@ def prepare_data(raw_data_path='data.json', abbreviate=True):
                     qjs.append(qj)
 
     # FUNNEL:
-    for k1, v1 in tqdm(metrics_map.items()):
-        for k2, v2 in (metrics_map.items()):
-            if k1==k2:
-                continue
-            for qt in qts_map['funnel']['timeless']:
-                query = qt % (k1, k2)
-                _json = jts_map['funnel'] % (v1, v2, 'default')
-                qj = (query, _json)
-                qjs.append(qj)
-            for qt in qts_map['funnel']['timeful']:
-                for t in times:
-                    query = qt % (k1, k2, t)
-                    _json = jts_map['funnel'] % (v1, v2, t.replace(' ', '_'))
-                    qj = (query, _json)
-                    qjs.append(qj)
+    # for k1, v1 in tqdm(metrics_map.items()):
+    #     for k2, v2 in (metrics_map.items()):
+    #         if k1==k2:
+    #             continue
+    #         for qt in qts_map['funnel']['timeless']:
+    #             query = qt % (k1, k2)
+    #             _json = jts_map['funnel'] % (v1, v2, 'default')
+    #             qj = (query, _json)
+    #             qjs.append(qj)
+    #         for qt in qts_map['funnel']['timeful']:
+    #             for t in times:
+    #                 query = qt % (k1, k2, t)
+    #                 _json = jts_map['funnel'] % (v1, v2, t.replace(' ', '_'))
+    #                 qj = (query, _json)
+    #                 qjs.append(qj)
     df = pd.DataFrame(qjs, columns=['prompt', 'orig_completion'])
     if abbreviate:
         abbreviate_data(df)
