@@ -251,7 +251,7 @@ func (store *MemSQL) GetWidgetGroups(projectID int64) ([]model.WidgetGroup, stri
 			logCtx.WithError(err).WithField("projectID", projectID).Warn("Failed while retrieving widget groups.")
 			return make([]model.WidgetGroup, 0), "Invalid project ID for widget group", http.StatusInternalServerError
 		}
-		return make([]model.WidgetGroup, 0), "Invalid ID for widget group", http.StatusBadRequest
+		return make([]model.WidgetGroup, 0), "Invalid ID for widget group", http.StatusNotFound
 	}
 	for index := range widgetGroups {
 		widgetGroups[index].DecodeWidgetsAndSetDecodedWidgets()
@@ -337,9 +337,12 @@ func (store *MemSQL) GetWidgetAndWidgetGroupByWidgetID(projectID int64, widgetGr
 
 func (store *MemSQL) IsCustomMetricPresentInWidgetGroups(projectID int64, queryMetric string) (bool, int) {
 	widgetGroups, err, statusCode := store.GetWidgetGroups(projectID)
+	if statusCode == http.StatusNotFound {
+		return false, http.StatusNotFound
+	}
 	if statusCode != http.StatusFound {
 		log.WithField("projectId", projectID).WithField("err", err).Warn("Failed with the following error in IsCustomMetricPresentInWidgetGroups")
-		return false, statusCode
+		return false, http.StatusInternalServerError
 	}
 
 	for _, widgetGroup := range widgetGroups {
@@ -350,7 +353,7 @@ func (store *MemSQL) IsCustomMetricPresentInWidgetGroups(projectID int64, queryM
 		}
 	}
 
-	return false, 204
+	return false, http.StatusNotFound
 }
 
 func (store *MemSQL) UpdateWidgetToWidgetGroup(widgetGroup model.WidgetGroup, inputWidget model.Widget) (model.Widget, string, int) {

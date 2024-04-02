@@ -359,7 +359,7 @@ func getSelectKeysForProfile(query model.ProfileQuery, tableViewName string) (st
 			tableViewName, query.AggregateProperty2, tableViewName, query.AggregateProperty2)
 		operator, _ := model.MapOfCustomMetricTypeToOp[query.MetricType]
 		return "users.properties",
-			fmt.Sprintf("%s(%s %s %s) as %s", query.AggregateFunction, aggPropertySql1, operator, aggPropertySql2, model.AliasAggr)
+			fmt.Sprintf("%s(%s %s %s) as %s", query.AggregateFunction, aggPropertySql2, operator, aggPropertySql1, model.AliasAggr)
 	}
 }
 

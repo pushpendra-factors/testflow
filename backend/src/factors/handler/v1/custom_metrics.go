@@ -267,11 +267,10 @@ func DeleteCustomMetrics(c *gin.Context) (interface{}, int, string, string, bool
 	}
 
 	isPresent, statusCode := store.GetStore().IsCustomMetricPresentInWidgetGroups(projectID, customMetric.Name)
-	if statusCode != http.StatusFound {
-		return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error Processing/Fetching IsCustomMetricPresentInWidgetGroups", true
-	}
-	if isPresent {
+	if isPresent && statusCode == http.StatusFound {
 		return nil, http.StatusBadRequest, DEPENDENT_RECORD_PRESENT, "Custom KPI is present in Widgets - Segment", true
+	} else if statusCode == http.StatusInternalServerError {
+		return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error Processing/Fetching IsCustomMetricPresentInWidgetGroups", true
 	}
 
 	derivedKPINames := make([]string, 0)
