@@ -93,7 +93,7 @@ import ControlledComponent from 'Components/ControlledComponent/ControlledCompon
 import cx from 'classnames';
 import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
 import { WhiteListedAccounts } from 'Routes/constants';
-import { getMsgPayloadMapping, dummyPayloadValue } from '../utils';
+import { getMsgPayloadMapping, dummyPayloadValue, convertObjectToKeyValuePairArray } from '../utils';
 import Teams from './Teams';
 import Webhook from './Webhook';
 import SelectChannels from '../SelectChannels';
@@ -881,8 +881,10 @@ const EventBasedAlert = ({
       event:
         segmentType === 'action_event' ? queries[0]?.label : selectedSegment,
       message: alertMessage,
-      message_property: updatepayloadDisplayNames(
-        getMsgPayloadMapping(groupBy)
+      message_property: convertObjectToKeyValuePairArray(
+        updatepayloadDisplayNames(
+          getMsgPayloadMapping(groupBy)
+        )
       ),
       slack: slackEnabled,
       slack_channels: saveSelectedChannel,
@@ -911,8 +913,10 @@ const EventBasedAlert = ({
       event:
         segmentType === 'action_event' ? queries[0]?.label : selectedSegment,
       message: alertMessage,
-      message_property: updatepayloadDisplayNames(
-        getMsgPayloadMapping(groupBy)
+      message_property: convertObjectToKeyValuePairArray(
+          updatepayloadDisplayNames(
+          getMsgPayloadMapping(groupBy)
+        )
       ),
       teams: teamsEnabled,
       teams: teamsEnabled,
