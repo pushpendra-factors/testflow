@@ -38,6 +38,10 @@ spec:
                 - $(MEMSQL_PASSWORD)
                 - --memsql_cert
                 - $(MEMSQL_CERTIFICATE)
+                - --redis_host_ps
+                - $(PERSISTENT_REDIS_HOST)
+                - --redis_port_ps
+                - $(PERSISTENT_REDIS_PORT)
                 - --project_ids
                 - "*"
               envFrom:
@@ -45,6 +49,8 @@ spec:
                     name: config-env
                 - configMapRef:
                     name: config-memsql
+                - configMapRef:
+                    name: config-persistent-redis
                 - secretRef:
                     name: secret-memsql
           restartPolicy: OnFailure

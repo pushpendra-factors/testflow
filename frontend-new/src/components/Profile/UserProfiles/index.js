@@ -963,7 +963,7 @@ function UserProfiles({
         <div className='flex items-center justify-between'>
           <Form
             name='basic'
-            labelCol={{ a39bd0060fcc3105fd6cbdbb7a5045190776af61span: 8 }}
+            labelCol={{ span: 8 }}
             wrapperCol={{ span: 16 }}
             onFinish={handleUsersSearch}
             autoComplete='off'

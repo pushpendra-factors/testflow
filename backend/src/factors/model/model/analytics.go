@@ -29,6 +29,7 @@ const (
 	QueryClassWeb           = "web"
 	QueryClassKPI           = "kpi"
 	QueryClassProfiles      = "profiles"
+	QueryClassAccounts      = "accounts" // This is not used with BaseQuery interface.
 
 	PresentationScatterPlot   = "sp"
 	PresentationLine          = "pl"

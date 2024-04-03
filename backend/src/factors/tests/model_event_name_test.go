@@ -575,7 +575,6 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 			"Authorization": project.Token,
 			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
 		})
-
 	assert.Equal(t, http.StatusOK, w.Code)
 	rEventName = "event2"
 	w = ServePostRequestWithHeaders(r, uri,
@@ -604,8 +603,7 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 	// with limit.
 	getEventNames1, err := store.GetStore().GetEventNamesOrderedByOccurenceAndRecency(project.ID, 10, 30)
 	assert.Equal(t, nil, err)
-	assert.Len(t, getEventNames1[U.PageViewEvent], 3)
-	assert.Len(t, getEventNames1[U.FrequentlySeen], 1)
+	assert.Len(t, getEventNames1[U.WebsiteActivityEvent], 4)
 
 	rEventName = "event2"
 	w = ServePostRequestWithHeaders(r, uri,
@@ -635,11 +633,12 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	event_user_cache.DoRollUpSortedSet(configs)
-	getEventNames2, err := store.GetStore().GetEventNamesOrderedByOccurenceAndRecency(project.ID, 2, 30)
+	getEventNames2, err := store.GetStore().GetEventNamesOrderedByOccurenceAndRecency(project.ID, 3, 30)
 	assert.Equal(t, nil, err)
-	assert.Len(t, getEventNames2[U.PageViewEvent], 2)
-	assert.Equal(t, "event2", getEventNames2[U.PageViewEvent][0])
-	assert.Equal(t, "event3", getEventNames2[U.PageViewEvent][1])
+	assert.Len(t, getEventNames2[U.PageViewEvent], 0)
+	assert.Len(t, getEventNames2[U.WebsiteActivityEvent], 3)
+	assert.Equal(t, "event2", getEventNames2[U.WebsiteActivityEvent][1])
+	assert.Equal(t, "event3", getEventNames2[U.WebsiteActivityEvent][2])
 }
 
 func sendCreateSmartEventFilterReq(r *gin.Engine, projectId int64, agent *model.Agent, enPayload *map[string]interface{}) *httptest.ResponseRecorder {

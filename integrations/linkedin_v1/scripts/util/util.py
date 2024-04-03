@@ -411,3 +411,54 @@ class Util:
                 new_timeranges.append(timerange)
         
         return new_timeranges
+    
+
+    @staticmethod
+    def get_request_with_retries(url, payload=None):
+        retries = 0
+        while retries < 3:
+            try:
+                response = requests.get(url, json=payload)
+                if not response.ok:
+                    error = "Failed to get data from url: {}, code: {}, err: {}, retry: {}".format(
+                        url, response.status_code, response.text, retries)
+                    log.error(error)
+                    time.sleep(30 * (retries+1))
+                    retries += 1 
+                    continue
+                    
+                else:
+                    return response, ''
+            except Exception as e:
+                log.error(str(e))
+                time.sleep(30 * (retries+1))
+            retries += 1
+        
+        error = "Failed to get data from url: {}, retry: {}".format(
+                    url, retries)
+        return None, error
+
+    @staticmethod
+    def post_request_with_retries(url, payload=None):
+        retries = 0
+        while retries < 3:
+            try:
+                response = requests.post(url, json=payload)
+                if not response.ok:
+                    error = "Failed to get data from url: {}, code: {}, err: {}, retry: {}".format(
+                        url, response.status_code, response.text, retries)
+                    log.error(error)
+                    time.sleep(30 * (retries+1))
+                    retries += 1 
+                    continue
+                    
+                else:
+                    return response, ''
+            except Exception as e:
+                log.error(str(e))
+                time.sleep(30 * (retries+1))
+            retries += 1
+        
+        error = "Failed to get data from url: {}, retry: {}".format(
+                    url, retries)
+        return None, error

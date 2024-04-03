@@ -26,6 +26,9 @@ func main() {
 	memSQLCertificate := flag.String("memsql_cert", "", "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
 
+	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
+	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
+
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
@@ -42,6 +45,8 @@ func main() {
 	processOnlyAccountSegments := flag.Bool("process_only_account_segments", false, "This flag allows only processing of all accounts type segments")
 	runAllAccountsMarkerProjectIDs := flag.String("run_all_accounts_marker_project_ids", "",
 		"Project Id to run all accounts marker for. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
+	disableAllAccountsMarkerProjectIDs := flag.String("disable_all_accounts_marker_project_ids", "",
+		"Project Id to disable all accounts run for marker. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
 	runForAllAccountsInHours := flag.Int("run_for_all_accounts_in_hours", 24, "Run domains where marker_last_run_all_accounts is greater than given hours")
 
 	memSQLUseExactConnectionsConfig := flag.Bool("memsql_use_exact_connection_config", false, "Use exact connection for open and idle as given.")
@@ -82,19 +87,23 @@ func main() {
 			MaxIdleConnections:     *memSQLDBMaxIdleConnections,
 			UseExactConnFromConfig: *memSQLUseExactConnectionsConfig,
 		},
-		PrimaryDatastore:               *primaryDatastore,
-		SentryDSN:                      *sentryDSN,
-		UseLookbackSegmentMarker:       *useLookbackSegmentMarker,
-		LookbackSegmentMarker:          *lookbackSegmentMarker,
-		AllowedGoRoutines:              *allowedGoRoutines,
-		ProcessOnlyAccountSegments:     *processOnlyAccountSegments,
-		RunAllAccountsMarkerProjectIDs: *runAllAccountsMarkerProjectIDs,
-		RunForAllAccountsInHours:       *runForAllAccountsInHours,
-		BatchSizeDomains:               *batchSizeDomains,
-		DomainsLimitAllRun:             *domainsLimitAllRun,
+		PrimaryDatastore:                   *primaryDatastore,
+		RedisHostPersistent:                *redisHostPersistent,
+		RedisPortPersistent:                *redisPortPersistent,
+		SentryDSN:                          *sentryDSN,
+		UseLookbackSegmentMarker:           *useLookbackSegmentMarker,
+		LookbackSegmentMarker:              *lookbackSegmentMarker,
+		AllowedGoRoutines:                  *allowedGoRoutines,
+		ProcessOnlyAccountSegments:         *processOnlyAccountSegments,
+		RunAllAccountsMarkerProjectIDs:     *runAllAccountsMarkerProjectIDs,
+		DisableAllAccountsMarkerProjectIDs: *disableAllAccountsMarkerProjectIDs,
+		RunForAllAccountsInHours:           *runForAllAccountsInHours,
+		BatchSizeDomains:                   *batchSizeDomains,
+		DomainsLimitAllRun:                 *domainsLimitAllRun,
 	}
 
 	C.InitConf(config)
+	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
 	C.InitFilemanager(*bucketName, *env, config)
 

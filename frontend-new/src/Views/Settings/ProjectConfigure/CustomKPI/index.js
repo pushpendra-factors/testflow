@@ -1181,14 +1181,14 @@ function CustomKPI({
                   </Col>
                   <Col span={12}>
                     <div className='flex justify-end'>
-                      <Button
-                        size='large'
+                      <Button 
                         onClick={() => {
                           form.resetFields();
                           setPageMode('Create');
                         }}
-                      >
-                        <SVG name='plus' extraClass='mr-2' size={16} />
+                        type='primary'
+                        icon={<SVG name={'plus'} color={'white'} size={16} />}
+                      > 
                         Add New
                       </Button>
                     </div>

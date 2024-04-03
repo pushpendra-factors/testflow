@@ -128,7 +128,7 @@ func GetCustomMetricsConfigV1(c *gin.Context) {
 		currentConfigV1.ObjectType = currentConfigV1.SectionDisplayCategory
 		currentConfigV1.TypeOfQuery = model.ProfileQueryType
 		currentConfigV1.TypeOfQueryDisplayName = model.ProfileQueryTypeDisplayName
-		currentConfigV1.MetricTypes = []string { "",  model.DateTypeDiffMetricType}
+		currentConfigV1.MetricTypes = []string{"", model.DateTypeDiffMetricType}
 		currentConfigV1.AggregateFunctions = model.CustomMetricProfilesAggregateFunctions
 		currentConfigV1.Properties = getPropertiesFunctionBasedOnSectionDisplayCategory(sectionDisplayCategory)(projectID, reqID)
 
@@ -264,6 +264,13 @@ func DeleteCustomMetrics(c *gin.Context) (interface{}, int, string, string, bool
 	alertNames, statusCode := store.GetStore().GetAlertNamesByProjectIdTypeAndName(projectID, customMetric.Name)
 	if statusCode != http.StatusFound {
 		return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error Processing/Fetching GetAlertNamesByProjectIdTypeAndName", true
+	}
+
+	isPresent, statusCode := store.GetStore().IsCustomMetricPresentInWidgetGroups(projectID, customMetric.Name)
+	if isPresent && statusCode == http.StatusFound {
+		return nil, http.StatusBadRequest, DEPENDENT_RECORD_PRESENT, "Custom KPI is present in Widgets - Segment", true
+	} else if statusCode == http.StatusInternalServerError {
+		return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error Processing/Fetching IsCustomMetricPresentInWidgetGroups", true
 	}
 
 	derivedKPINames := make([]string, 0)

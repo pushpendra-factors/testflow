@@ -89,7 +89,7 @@ func EventsPerformedCheck(projectID int64, segmentId string, eventNameIDsMap map
 }
 
 func IsRuleMatchedAllAccounts(projectID int64, segment model.Query, decodedProperties []map[string]interface{}, userArr []model.User,
-	segmentId string, domId string, eventNameIDsMap map[string]string) bool {
+	segmentId string, domId string, eventNameIDsMap map[string]string, fileValuesMap map[string]map[string]bool) bool {
 	// isMatched = all rules matched (a or b) AND (c or d)
 	isMatched := false
 
@@ -104,7 +104,7 @@ func IsRuleMatchedAllAccounts(projectID int64, segment model.Query, decodedPrope
 		// validity for each group like (a or b ) AND (c or d)
 		groupedPropsMatched := false
 		for _, p := range currentGroupedProperties {
-			isValueFound := CheckPropertyInAllUsers(projectID, p, decodedProperties, userArr)
+			isValueFound := CheckPropertyInAllUsers(projectID, p, decodedProperties, userArr, fileValuesMap)
 			if isValueFound {
 				groupedPropsMatched = true
 				break
@@ -134,7 +134,8 @@ func PerformedEventsCheck(projectID int64, segmentID string, eventNameIDsMap map
 	return isPerformedEvent
 }
 
-func CheckPropertyInAllUsers(projectId int64, p model.QueryProperty, decodedProperties []map[string]interface{}, userArr []model.User) bool {
+func CheckPropertyInAllUsers(projectId int64, p model.QueryProperty, decodedProperties []map[string]interface{},
+	userArr []model.User, fileValuesMap map[string]map[string]bool) bool {
 	isValueFound := false
 	for index, user := range userArr {
 		// skip for group user if entity is user_group or entity is user_g and is not a group user
@@ -142,7 +143,8 @@ func CheckPropertyInAllUsers(projectId int64, p model.QueryProperty, decodedProp
 			(p.Entity == model.PropertyEntityUserGlobal && (user.IsGroupUser == nil || !*user.IsGroupUser)) {
 			continue
 		}
-		isValueFound = CheckPropertyOfGivenType(projectId, p, &decodedProperties[index])
+
+		isValueFound = CheckPropertyOfGivenType(projectId, p, &decodedProperties[index], fileValuesMap)
 
 		// check for negative filters
 		if (p.Operator == model.NotContainsOpStr && p.Value != model.PropertyValueNone) ||
@@ -299,7 +301,8 @@ func (store *MemSQL) FetchAssociatedSegmentsFromUsers(projectID int64) (int, []m
 	return http.StatusFound, users, associatedSegmentsList
 }
 
-func CheckPropertyOfGivenType(projectId int64, p model.QueryProperty, decodedProperties *map[string]interface{}) bool {
+func CheckPropertyOfGivenType(projectId int64, p model.QueryProperty, decodedProperties *map[string]interface{},
+	fileValuesMap map[string]map[string]bool) bool {
 	isValueFound := false
 	if p.Value != model.PropertyValueNone {
 		if p.Type == U.PropertyTypeDateTime {
@@ -307,7 +310,7 @@ func CheckPropertyOfGivenType(projectId int64, p model.QueryProperty, decodedPro
 		} else if p.Type == U.PropertyTypeNumerical {
 			isValueFound = checkNumericalTypeProperty(p, decodedProperties)
 		} else {
-			isValueFound = checkCategoricalTypeProperty(projectId, p, decodedProperties)
+			isValueFound = checkCategoricalTypeProperty(projectId, p, decodedProperties, fileValuesMap)
 		}
 	} else {
 		// where condition for $none value.
@@ -379,7 +382,8 @@ func checkNumericalTypeProperty(segmentRule model.QueryProperty, properties *map
 	return propertyExists
 }
 
-func checkCategoricalTypeProperty(projectId int64, segmentRule model.QueryProperty, properties *map[string]interface{}) bool {
+func checkCategoricalTypeProperty(projectId int64, segmentRule model.QueryProperty, properties *map[string]interface{},
+	fileValuesMap map[string]map[string]bool) bool {
 
 	if (segmentRule.Operator == model.NotContainsOpStr && segmentRule.Value != model.PropertyValueNone) ||
 		(segmentRule.Operator == model.ContainsOpStr && segmentRule.Value == model.PropertyValueNone) ||
@@ -426,10 +430,8 @@ func checkCategoricalTypeProperty(projectId int64, segmentRule model.QueryProper
 	case model.InList:
 
 		propertyExists = false
-		valueListString := GetValueListFromFile(projectId, segmentRule)
-		valueList := strings.Split(valueListString, " , ")
-		for _, val := range valueList {
-			if strings.ReplaceAll(U.TrimSingleQuotes(strings.TrimSpace(val)), "\\", "") == propertyValue {
+		if fileMap, mapExists := fileValuesMap[segmentRule.Value]; mapExists {
+			if _, valExists := fileMap[propertyValue]; valExists {
 				propertyExists = true
 			}
 		}
@@ -437,10 +439,8 @@ func checkCategoricalTypeProperty(projectId int64, segmentRule model.QueryProper
 	case model.NotInList:
 
 		propertyExists = true
-		valueListString := GetValueListFromFile(projectId, segmentRule)
-		valueList := strings.Split(valueListString, " , ")
-		for _, val := range valueList {
-			if strings.ReplaceAll(U.TrimSingleQuotes(strings.TrimSpace(val)), "\\", "") == propertyValue {
+		if fileMap, mapExists := fileValuesMap[segmentRule.Value]; mapExists {
+			if _, valExists := fileMap[propertyValue]; valExists {
 				propertyExists = false
 			}
 		}
@@ -538,4 +538,33 @@ func (store *MemSQL) GetAllPropertiesForDomain(projectID int64, domainGroupId in
 	}
 
 	return users, http.StatusFound
+}
+
+func GetFileValues(projectID int64, globalUserProperties []model.QueryProperty,
+	fileValues map[string]map[string]bool) map[string]map[string]bool {
+	allFilesValuesMap := fileValues
+
+	for _, filter := range globalUserProperties {
+		if filter.Operator != model.InList && filter.Operator != model.NotInList {
+			continue
+		}
+
+		// file values already exists in the map
+		if _, exists := allFilesValuesMap[filter.Value]; exists {
+			continue
+		}
+
+		fileValueMap := make(map[string]bool)
+
+		valueListString := GetValueListFromFile(projectID, filter)
+		valueList := strings.Split(valueListString, " , ")
+		for _, val := range valueList {
+			valString := strings.ReplaceAll(U.TrimSingleQuotes(strings.TrimSpace(val)), "\\", "")
+			fileValueMap[valString] = true
+		}
+
+		allFilesValuesMap[filter.Value] = fileValueMap
+	}
+
+	return allFilesValuesMap
 }

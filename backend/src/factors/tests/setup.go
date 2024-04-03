@@ -37,6 +37,11 @@ func SetupProjectReturnDAO() (*model.Project, error) {
 		return nil, fmt.Errorf("Project Creation failed, all boards folder creation error.")
 	}
 
+	_, errCode = store.GetStore().CreateWidgetGroups(project.ID)
+	if errCode != http.StatusCreated {
+		return nil, fmt.Errorf("Project Creation failed, widget groups creation error.")
+	}
+
 	// Updates the next session start timestamp of project with older timestamp
 	// to make the add_session to consider events with older timestamp as next
 	// session start timestamp is initialized with project creation timestamp.

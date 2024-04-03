@@ -523,13 +523,16 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 			delete(alert.Message.MessageProperty, model.ETA_DOMAIN_GROUP_USER_ID)
 		}
 		// hubspot object url
-		hubspotAccountUrl = alert.Message.MessageProperty[model.ETA_ENRICHED_HUBSPOT_COMPANY_OBJECT_URL].(string)
-		delete(alert.Message.MessageProperty, model.ETA_ENRICHED_HUBSPOT_COMPANY_OBJECT_URL)
+		if hubspotUrlInProperties, doesHubspotUrlExist := alert.Message.MessageProperty[model.ETA_ENRICHED_HUBSPOT_COMPANY_OBJECT_URL]; doesHubspotUrlExist {
+			hubspotAccountUrl = hubspotUrlInProperties.(string)
+			delete(alert.Message.MessageProperty, model.ETA_ENRICHED_HUBSPOT_COMPANY_OBJECT_URL)
+		}
 
 		// salesforce object url
-		salesforceAccountUrl = alert.Message.MessageProperty[model.ETA_ENRICHED_SALESFORCE_ACCOUNT_OBJECT_URL].(string)
-		delete(alert.Message.MessageProperty, model.ETA_ENRICHED_SALESFORCE_ACCOUNT_OBJECT_URL)
-
+		if salesforceUrlInProperties, doesSalesforceUrlExist := alert.Message.MessageProperty[model.ETA_ENRICHED_HUBSPOT_COMPANY_OBJECT_URL]; doesSalesforceUrlExist {
+			salesforceAccountUrl = salesforceUrlInProperties.(string)
+			delete(alert.Message.MessageProperty, model.ETA_ENRICHED_SALESFORCE_ACCOUNT_OBJECT_URL)
+		}
 	}
 
 	// If retry is true and sendTo var is set for Slack option

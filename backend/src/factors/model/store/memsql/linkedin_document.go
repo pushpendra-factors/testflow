@@ -605,7 +605,9 @@ func (store *MemSQL) GetCompanyDataFromLinkedinDocsForTimestamp(projectID string
 			log.WithError(err).Error("Failed to scan domain data for given timestamp.")
 			return make([]model.DomainDataResponse, 0), http.StatusInternalServerError
 		}
-		domainData.Domain = U.GetDomainGroupDomainName(projectIDInt, domainData.Domain)
+		if domainData.Domain != "$none" {
+			domainData.Domain = U.GetDomainGroupDomainName(projectIDInt, domainData.Domain)
+		}
 		domainDataSet = append(domainDataSet, domainData)
 	}
 	return domainDataSet, http.StatusOK

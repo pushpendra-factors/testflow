@@ -7,6 +7,7 @@ import time
 
 from .base import BaseSystem
 from ...utils.json import JsonUtil
+from ...utils.sync_util import SyncUtil
 
 
 # paginated strategy with support for systems with http and url only.
@@ -39,24 +40,21 @@ class ExternalSystem(BaseSystem):
             result_records.extend(records)
         return JsonUtil.create(records), result_response, total_requests, total_async_requests
 
+    # this throws an exception and it is caught at task context level
     def write(self, input_string):
         input_records = JsonUtil.read(input_string)
         if len(input_records) == 0:
             curr_payload = self.get_payload_for_facebook_data_service({"id": str(uuid.uuid4())})
-            curr_response = requests.post(self.system_attributes["url"], json=curr_payload)
-            if not curr_response.ok:
-                return
-                # log.error('Failed to add response %s to facebook data service for project %s. StatusCode:  %d, %s',
-                #           self.system_attributes["type_alias"], self.system_attributes["project_id"],
-                #           curr_response.status_code, curr_response.json())
+            curr_response, errMsg = SyncUtil.post_request_with_retries(self.system_attributes["url"], curr_payload)
+            if curr_response is None or errMsg != '':
+                raise Exception(errMsg)
+
         for input_record in input_records:
             curr_payload = self.get_payload_for_facebook_data_service(input_record)
-            curr_response = requests.post(self.system_attributes["url"], json=curr_payload)
-            if not curr_response.ok:
-                return
-                # log.error('Failed to add response %s to facebook data service for project %s. StatusCode:  %d, %s',
-                #           self.system_attributes["type_alias"], self.system_attributes["project_id"],
-                #           curr_response.status_code, curr_response.json())
+            curr_response, errMsg = SyncUtil.post_request_with_retries(self.system_attributes["url"], curr_payload)
+            if curr_response is None or errMsg != '':
+                raise Exception(errMsg)
+
         return
 
     def get_paginated_from_source(self, url):

@@ -51,7 +51,7 @@ function Events({
 
   const columns = [
     {
-      title: 'Diplay name',
+      title: 'Display name',
       dataIndex: 'name',
       key: 'name',
       render: (text) => <span className={'capitalize'}>{text}</span>
@@ -146,14 +146,15 @@ function Events({
                   </Col>
                   <Col span={12}>
                     <div className={'flex justify-end'}>
-                      <Button
-                        size={'large'}
+                      <Button 
+                        type='primary'
                         onClick={() => {
                           setSeletedEvent(null);
                           setShowSmartEventForm(true);
                         }}
+                        icon={<SVG name={'plus'} color={'white'} size={16} />}
                       >
-                        <SVG name={'plus'} extraClass={'mr-2'} size={16} />
+                        
                         New Event
                       </Button>
                     </div>

@@ -62,9 +62,11 @@ def get_transformed_kpi_query(gpt_response, kpi_config,
 
     break_down_info = add_break_down_info_kpi(display_category, gpt_response["qb"], kpi_config)
 
-    # filter_info = get_filter_info_kpi(display_category, gpt_response["qf"], kpi_config)
+    filter_info = add_filter_info_kpi(display_category, gpt_response["qf"], kpi_config)
 
     query_payload["gGBy"] = break_down_info
+    query_payload["gFil"] = filter_info
+
 
     return query_payload
 
@@ -197,3 +199,65 @@ def get_break_down_info(display_category, breakdown_name, kpi_config):
 
     log.error("breakdown property not found in the kpi_config")
     raise KPIOrPropertyNotFoundError(f"breakdown property '{breakdown_name}' not found in the kpi_config")
+
+
+def add_filter_info_kpi(display_category, filters, kpi_config):
+    query_filters = []
+
+    if filters != '':
+        filter_list = filters
+        for filter_property in filter_list:
+            filter_info = get_filter_info(display_category, filter_property, kpi_config)
+            log.info("breakdown info for breakdown_property: %s", filter_info)
+
+            query_filter = {
+                "extra": [
+                    filter_info['display_name'],
+                    filter_info["filter_property"],
+                    filter_info["data_type"],
+                    filter_info["entity"]
+                ],
+                "objTy": "",
+                "prNa": filter_info["filter_property"],
+                "prDaTy": filter_info["data_type"],
+                "isPrMa": False,
+                "en": filter_info["entity"],
+                "co": "equals",
+                "va": filter_info["filter_value"],
+                "lOp": "AND"
+            }
+
+
+            query_filters.append(query_filter)
+
+    return query_filters
+
+
+def get_filter_info(display_category, filter_name_val, kpi_config):
+    filter_info = {}
+    filter_name= filter_name_val["na"]
+    lowest_edit_distance = 100
+    for category_config in kpi_config:
+        if category_config.get("display_category") == display_category:
+            for metric in category_config.get("properties", []):
+                current_string = metric.get("name")
+                current_distance = Levenshtein.distance(filter_name, current_string)
+                if current_distance < lowest_edit_distance:
+                    lowest_edit_distance = current_distance
+                    best_match = current_string
+                    filter_info = {
+                        "filter_property": best_match,
+                        "data_type": metric.get("data_type"),
+                        "entity": metric.get("entity"),
+                        "display_name": metric.get("display_name"),
+                        "filter_value" : filter_name_val["val"]
+                    }
+            if lowest_edit_distance / len(filter_name) < 0.2:
+                return filter_info
+
+    log.error("filter property not found in the kpi_config")
+    raise KPIOrPropertyNotFoundError(f"filter property '{filter_name}' not found in the kpi_config")
+
+
+
+

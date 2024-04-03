@@ -2,17 +2,27 @@
     // background-color: #FAFAFA;
     // This one is for header
     &> div:first-child{
-        padding: 0 0 0 10px;
+        padding: 24px 20px;
         display: flex;
         flex-wrap: nowrap;
         justify-content: space-between;
         width: 100%;
+        background-color: #FAFAFA;
+        border-top-left-radius: 15px;
+        border-top-right-radius: 15px;
         
         & > div{
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 20px;
+            & h4{
+                margin-bottom: 2px !important;
+            }
 
+        }
+
+        & > div:nth-child(2){
+            align-items:baseline;
         }
       
        
@@ -29,6 +39,11 @@
     // This one is for 2nd div which represents body
     & > div:nth-child(2){
         width: 100%;
+        padding-left: 20px;
+        padding-right: 20px;
+
+        border-top-left-radius: 15px;
+        border-top-right-radius: 15px;
         
         & > div:first-child{
             border-right: 1px solid #F0F0F0;
@@ -44,7 +59,7 @@
         & .item{
             cursor: pointer;
             border: none;
-            margin-bottom: 36px;
+            margin-bottom: 16px;
            & > div{
             padding: 0;
            }
@@ -60,9 +75,10 @@
     }
 
     & .categories{
-        padding: 10px;
+        padding: 16px 10px 10px 10px;
         &>h4{
-            padding: 0 5px;
+            padding: 10px 5px;
+            
            
         
         }
@@ -77,11 +93,11 @@
             }
             &>div{
                 // this is for each catehgory div
-                padding: 5px;
-                margin: 2px;
+                padding: 5px 10px;
+                margin: 6px 2px;
                 border-radius: 5px;
                 transition-duration: 200ms;
-               
+                font-size: 14px;
                 display: flex;
                 justify-content: space-between;
                 cursor: pointer;
@@ -100,4 +116,35 @@
 
 .templateDescription{
     color: #000000A6;
+}
+
+.templatesSectionAlertBtn {
+    background-color: transparent !important;
+    border:none !important;
+    padding: 0;
+    & span::after {
+      content: ' ->';
+    }
+  }
+
+
+.AlertsTemp2screen{
+    & .AlertsTemp2screenHeader{
+        display: flex; 
+        justify-content: space-between;
+        padding: 10px 24px;
+        background-color: #fafafa;
+        border-top-right-radius: 15px;
+        border-top-left-radius: 15px;
+        & button{
+            background-color: transparent !important;
+            &:hover{
+                background-color: #f0f0f0 !important;
+            }
+        }
+    }
+
+    & > div:nth-child(2){
+        padding: 0 24px 15px 24px;
+    }
 }

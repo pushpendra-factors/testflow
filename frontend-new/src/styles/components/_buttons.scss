@@ -5,11 +5,11 @@
   // padding: 4px 12px;
 
   // border: 1px solid transparent;
-  border-color: transparent;
+  // border-color: transparent;
 
   // background: $fa-color--white;
-  background: $fa-color--mono-1;
-  color: $fa-color--mono-5;
+  // background: $fa-color--mono-1;
+  // color: $fa-color--mono-5;
 
   &:disabled {
     color: #00000040 !important;
@@ -105,8 +105,16 @@
   &:focus,
   &:hover,
   &:active {
-    border-color: $fa-color--mono-5;
-    color: $fa-color--mono-5;
+    svg{
+      color: $fa-color--mono-5; 
+      &:focus,
+      &:hover,
+      &:active {
+        path{
+          fill: $fa-color--mono-5 !important;
+        } 
+      }
+    } 
   }
 
   //Primary Button

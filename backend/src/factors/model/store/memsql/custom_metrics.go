@@ -230,10 +230,20 @@ func (store *MemSQL) GetKpiRelatedCustomMetricsByName(projectID int64, name stri
 		return model.CustomMetric{}, "Invalid project ID for custom metric", http.StatusBadRequest
 	}
 	var customMetric model.CustomMetric
-	err := db.Where("project_id = ? AND type_of_query IN (?, ?) AND name = ?", projectID, model.ProfileQueryType, model.DerivedQueryType, name).Find(&customMetric).Error
+	arrayOfCRMObjects := make([]interface{}, 0)
+	arrayOfCRMObjects = append(arrayOfCRMObjects, model.HubspotContactsDisplayCategory, model.HubspotCompaniesDisplayCategory,
+		model.HubspotDealsDisplayCategory,
+		model.SalesforceUsersDisplayCategory, model.SalesforceAccountsDisplayCategory, model.SalesforceOpportunitiesDisplayCategory)
+	stmnt := "project_id = ? AND type_of_query IN (?, ?) AND name = ? AND object_type IN (?, ?, ?, ?, ?, ?) "
+	args := []interface{}{projectID, model.ProfileQueryType, model.DerivedQueryType, name}
+	args = append(args, arrayOfCRMObjects...)
+	err := db.Where(stmnt, args...).Find(&customMetric).Error
 	if err != nil {
-		logCtx.WithError(err).Warn("Failed while retrieving custom metrics.")
-		return customMetric, err.Error(), http.StatusInternalServerError
+		if !gorm.IsRecordNotFoundError(err) {
+			logCtx.WithError(err).Warn("Failed while retrieving custom metrics.")
+			return customMetric, err.Error(), http.StatusInternalServerError
+		}
+		return customMetric, err.Error(), http.StatusNotFound
 	}
 	// setting sectionDisplayCategory as objectType, as object type in db is used for sectionDisplayCategory
 	customMetric.SectionDisplayCategory = customMetric.ObjectType

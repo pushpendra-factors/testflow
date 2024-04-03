@@ -127,6 +127,28 @@ func (store *MemSQL) GetAllSegments(projectId int64) (map[string][]model.Segment
 	return allSegmentsMap, http.StatusFound
 }
 
+// NOTE: used for testing only.
+func (store *MemSQL) GetSegmentByName(projectId int64, name string) (*model.Segment, int) {
+	if projectId == 0 || name == "" {
+		return nil, http.StatusBadRequest
+	}
+
+	var segment model.Segment
+	db := C.GetServices().Db
+	err := db.Limit(1).Where("project_id = ? AND name = ? ",
+		projectId, name).Find(&segment).Error
+
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		return nil, http.StatusInternalServerError
+	}
+
+	return &segment, http.StatusFound
+}
+
 func (store *MemSQL) GetSegmentById(projectId int64, segmentId string) (*model.Segment, int) {
 	logFields := log.Fields{
 		"project_id": projectId,

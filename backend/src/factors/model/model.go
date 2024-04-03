@@ -986,15 +986,35 @@ type Model interface {
 	GetPreviewDomainsListByProjectId(projectID int64, payload model.TimelinePayload,
 		domainGroupID int, downloadLimitGiven bool) ([]model.Profile, int, string)
 	GetPreviewDomainsListByProjectIdPerRun(projectID int64, payload model.TimelinePayload, domainGroupID int,
-		eventNameIDsMap map[string]string, userCount *int64, domainIDList []string, limitAcc int) ([]model.Profile, int, string)
+		eventNameIDsMap map[string]string, userCount *int64, domainIDList []string, limitAcc int, fileValuesMap map[string]map[string]bool) ([]model.Profile, int, string)
 	// segment
 	CreateSegment(projectId int64, segment *model.SegmentPayload) (int, error)
 	GetAllSegments(projectId int64) (map[string][]model.Segment, int)
+	GetSegmentByName(projectId int64, name string) (*model.Segment, int)
 	GetSegmentById(projectId int64, segmentId string) (*model.Segment, int)
 	UpdateSegmentById(projectId int64, id string, segmentPayload model.SegmentPayload) (error, int)
 	IsDuplicateSegmentNameCheck(projectID int64, name string) bool
 	DeleteSegmentById(projectId int64, segmentId string) (int, error)
 	CreateDefaultSegment(projectID int64, entity string, isGroup bool) (int, error)
+
+	// segment analytics
+	GetWidgetGroupAndWidgetsForConfig(projectID int64) ([]model.WidgetGroup, string, int)
+	CreateWidgetGroups(projectID int64) ([]model.WidgetGroup, int)
+	GetWidgetGroups(projectID int64) ([]model.WidgetGroup, string, int)
+	GetWidgetGroupByID(projectID int64, ID string) (model.WidgetGroup, string, int)
+	AddWidgetToWidgetGroup(widgetGroup model.WidgetGroup, inputWidget model.Widget) (model.Widget, string, int)
+	GetWidgetAndWidgetGroupByWidgetID(projectID int64, widgetGroupID string, ID string) (model.WidgetGroup, model.Widget, string, int)
+	GetWidgetGroupByName(projectID int64, name string) (model.WidgetGroup, string, int)
+	UpdateWidgetToWidgetGroup(widgetGroup model.WidgetGroup, inputWidget model.Widget) (model.Widget, string, int)
+	DeleteWidgetFromWidgetGroup(projectID int64, widgetGroupID string, widgetID string) (string, int)
+	ExecuteWidgetGroup(projectID int64, widgetGroup model.WidgetGroup, segmentID string, reqID string, requestParams model.RequestSegmentKPI) ([]model.QueryResult, int)
+	AreWidgetsAddedToWidgetGroup(projectID int64) (bool, string, int)
+	AddWidgetsToWidgetGroup(projectID int64, widgetGroupName, integrationName string) (model.WidgetGroup, string, int)
+	IsCustomMetricPresentInWidgetGroups(projectID int64, queryMetric string) (bool, int)
+
+	// Account analytics
+	BuildAccountAnalytics(projectID int64, widget model.Widget, segmentID string, requestParams model.RequestSegmentKPI) model.AccountAnalyticsQuery
+	ExecuteAccountAnalyticsQuery(projectID int64, reqID string, accountAnalyticsQuery model.AccountAnalyticsQuery) (model.QueryResult, int)
 
 	// segment_marker
 	CheckIfUserPerformedGivenEvents(queryStr string, params []interface{}) ([]int, int)
@@ -1051,7 +1071,7 @@ type Model interface {
 	UpdateInternalStatusAndGetAlertIDs(projectID int64) ([]string, int, error)
 	GetInternalStatusForEventTriggerAlert(projectID int64, id string) (string, int, error)
 	GetParagonMetadataForEventTriggerAlert(projectID int64, alertID string) (map[string]interface{}, int, error)
-	FindAndCacheAlertForCurrentSegment(projectID int64, segmentID, domainID, actionPerformed string) (int, error) 
+	FindAndCacheAlertForCurrentSegment(projectID int64, segmentID, domainID, actionPerformed string) (int, error)
 
 	//ExplainV2
 	GetAllExplainV2EntityByProject(projectID int64) ([]model.ExplainV2EntityInfo, int)
