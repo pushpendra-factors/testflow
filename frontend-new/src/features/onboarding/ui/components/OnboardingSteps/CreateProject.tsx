@@ -31,6 +31,7 @@ import useQuery from 'hooks/useQuery';
 import { useHistory } from 'react-router-dom';
 import { PathUrls } from 'Routes/pathUrls';
 import { AdminLock } from 'Routes/feature';
+import { filterURLValue } from 'Utils/filterURLValue';
 import style from './index.module.scss';
 import {
   CommonStepsProps,
@@ -91,17 +92,19 @@ function Step1({
         return;
       }
       const projectName = sanitizeInputString(values?.projectName);
+      // striping https:// and trailing slash away from domain name
+      const ClearbitDomain = filterURLValue(values?.domainName);
       const projectData = {
         name: projectName,
         time_zone: values?.time_zone,
-        clearbit_domain: values?.domainName
+        clearbit_domain: ClearbitDomain
       };
 
       // Factors CREATE_PROJECT_TIMEZONE tracking
       factorsai.track('CREATE_PROJECT_TIMEZONE', {
         ProjectName: projectData?.name,
         time_zone: projectData?.time_zone,
-        clearbit_domain: values?.domainName
+        clearbit_domain: projectData?.clearbit_domain
       });
       let prevProjectId = '';
       if (isNewSetup) {
@@ -345,12 +348,10 @@ function Step1({
                     disabled={isFormSubmitted}
                   >
                     {TimeZoneOffsetValueArr?.map((item) => {
-                      if(item?.city != 'Europe/Berlin'){
+                      if (item?.city != 'Europe/Berlin') {
                         return (
-                          <Option
-                            value={item?.city}
-                          >{`${item?.text}`}</Option>
-                        ); 
+                          <Option value={item?.city}>{`${item?.text}`}</Option>
+                        );
                       }
                     })}
                   </Select>
