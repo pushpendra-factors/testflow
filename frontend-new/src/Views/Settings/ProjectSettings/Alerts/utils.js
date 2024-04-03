@@ -8,6 +8,10 @@ export const SLACK = "Slack";
 export const WEBHOOK = "WH";
 export const MS_TEAMS = "Teams";
 
+export const convertObjectToKeyValuePairArray = (obj = {}) => {
+    return Object.keys(obj).map((key) => [key, obj[key]]);
+}
+
 export const getMsgPayloadMapping = (groupBy) => { 
     if (groupBy && groupBy.length && groupBy[0] && groupBy[0].property) {
         var obj = {}
