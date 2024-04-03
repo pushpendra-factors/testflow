@@ -68,10 +68,11 @@ func (store *MemSQL) buildKPIQuery(projectID int64, widget model.Widget, segment
 	kpiQueryGroup.GlobalGroupBy = make([]model.KPIGroupBy, 0)
 	kpiQueryGroup.SegmentID = segmentID
 
-	customMetric, errMsg, statusCode := store.GetProfileCustomMetricByProjectIdName(projectID, widget.QueryMetric)
+	customMetric, errMsg, statusCode := store.GetKpiRelatedCustomMetricsByName(projectID, widget.QueryMetric)
 	if statusCode != http.StatusFound {
 		return kpiQueryGroup, errMsg, statusCode
 	}
+	kpiQueryGroup.DisplayResultAs = customMetric.DisplayResultAs
 
 	kpiQuery := model.KPIQuery{}
 	kpiQuery.Category = model.ProfileCategory
@@ -83,11 +84,18 @@ func (store *MemSQL) buildKPIQuery(projectID int64, widget model.Widget, segment
 	kpiQuery.Timezone = requestParams.Timezone
 	kpiQuery.SegmentID = segmentID
 
+	if customMetric.TypeOfQuery == model.DerivedQueryType {
+		kpiQuery.QueryType = "derived"
+	} else {
+		kpiQuery.QueryType = "custom"
+	}
+
 	kpiQuery1 := model.KPIQuery{}
 	U.DeepCopy(&kpiQuery, &kpiQuery1)
 	kpiQuery1.GroupByTimestamp = ""
 
 	kpiQueryGroup.Queries = []model.KPIQuery{kpiQuery, kpiQuery1}
+
 	return kpiQueryGroup, "", http.StatusOK
 }
 

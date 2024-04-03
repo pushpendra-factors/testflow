@@ -60,6 +60,7 @@ const (
 	HubspotClosedRate            = "Hubspot Closed rate (%)"
 	HubspotAvgSalesCycleLength   = "Hubspot Avg Sales Cycle Length"
 
+	SalesforceLeads               = "Salesforce Leads"
 	SalesforceSQLDateEntered      = "Salesforce SQLs (Date Entered Stage)"
 	SalesforceOpportunities       = "Salesforce Opportunities"
 	SalesforcePipeline            = "Salesforce Pipeline"

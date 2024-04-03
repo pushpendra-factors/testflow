@@ -9,7 +9,7 @@ import (
 
 var defaultSalesforceCustomKPIs = []model.CustomMetric{
 	model.CustomMetric{
-		Name:        "Salesforce Leads",
+		Name:        model.SalesforceLeads,
 		Description: "All Salesforce Leads timestamped at Lead Create Date",
 		TypeOfQuery: 1,
 		ObjectType:  model.SalesforceUsersDisplayCategory,

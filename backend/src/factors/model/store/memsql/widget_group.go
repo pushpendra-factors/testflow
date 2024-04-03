@@ -24,6 +24,8 @@ const (
 	RevenueBooked                  = "Revenue Booked"
 	CloseRate                      = "Close Rate (%)"
 	AvgSalesCycleLength            = "Avg Sales Cycle Length"
+	MarketingQualifiedLeads        = "Marketing qualified leads"
+	SalesQualifiedLeads            = "Sales qualified leads"
 )
 
 var integrationBasedWidgetGroupNames = []string{MarketingEngagementWidgetGroup, SalesOppWidgetGroup}
@@ -31,7 +33,15 @@ var integrationBasedWidgetGroupNames = []string{MarketingEngagementWidgetGroup, 
 var marketingWidgetGroup = map[string][]model.Widget{
 	model.HUBSPOT: {
 		{
+			QueryMetric: model.HubspotMQLDateEntered,
+			DisplayName: MarketingQualifiedLeads,
+		},
+		{
 			QueryMetric: model.HubspotDeals,
+			DisplayName: SalesQualifiedLeads,
+		},
+		{
+			QueryMetric: model.HubspotSQLDateEntered,
 			DisplayName: OpportunityCreated,
 		},
 		{
@@ -40,6 +50,14 @@ var marketingWidgetGroup = map[string][]model.Widget{
 		},
 	},
 	model.SALESFORCE: {
+		{
+			QueryMetric: model.SalesforceLeads,
+			DisplayName: MarketingQualifiedLeads,
+		},
+		{
+			QueryMetric: model.SalesforceSQLDateEntered,
+			DisplayName: SalesQualifiedLeads,
+		},
 		{
 			QueryMetric: model.SalesforceOpportunities,
 			DisplayName: OpportunityCreated,

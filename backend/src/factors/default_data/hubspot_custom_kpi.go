@@ -96,7 +96,7 @@ var defaultHubspotCustomKPIs = []model.CustomMetric{
 		Name:        model.HubspotAvgDealSize,
 		Description: "Sum of Customers divided by Sum of Opps by cohort of Contact Create Date",
 		TypeOfQuery: 1,
-		ObjectType:  model.HubspotContactsDisplayCategory,
+		ObjectType:  model.HubspotDealsDisplayCategory,
 	},
 	{
 		Name:        model.HubspotClosedWonDeals,

@@ -59,8 +59,10 @@ func TestWidgetGroupExecution1(t *testing.T) {
 	statusCode2 := factory.Build(project.ID)
 
 	widgetGroup, _, _ := store.GetStore().AddWidgetsToWidgetGroup(project.ID, memsql.MarketingEngagementWidgetGroup, model.HUBSPOT)
-	widgetGroup.DecodeWidgetsAndSetDecodedWidgets()
-	store.GetStore().AddWidgetsToWidgetGroup(project.ID, memsql.SalesOppWidgetGroup, model.HUBSPOT)
+	_, err1, _ := store.GetStore().AddWidgetsToWidgetGroup(project.ID, memsql.SalesOppWidgetGroup, model.HUBSPOT)
+	assert.NotNil(t, err1)
+
+	widgetGroup, _, _ = store.GetStore().GetWidgetGroupByID(project.ID, widgetGroup.ID)
 
 	domaindGroup, _ := store.GetStore().CreateOrGetDomainsGroup(project.ID)
 	assert.NotNil(t, domaindGroup)
@@ -90,7 +92,7 @@ func TestWidgetGroupExecution1(t *testing.T) {
 	assert.NotNil(t, hubspotGroupDeal)
 
 	dummyPropsMap := []map[string]interface{}{
-		{"$hubspot_company_name": "AdPushup", "$hubspot_company_country": "US",
+		{"$hubspot_company_name": "AdPushup", "$hubspot_company_country": "US", "$hubspot_deal_dealstage": "closedwon",
 			"$hubspot_company_hs_object_id": 2, "$hubspot_company_domain": "adpushup.com", "$hubspot_company_num_associated_contacts": 50, "$hubspot_company_industry": "Technology, Information and Internet", "$browser": "Chrome", "$device_type": "PC"},
 		{"$hubspot_deal_name": "abc2", "$hubspot_deal_domain": "adpushup.com", "$hubspot_deal_region": "B", "$hubspot_deal_createdate": time.Now().Unix()},
 	}
@@ -196,9 +198,10 @@ func TestWidgetGroupExecution1(t *testing.T) {
 	assert.Equal(t, float64(0), results[1].Rows[0][0])
 
 	widgetGroup2, _, _ := store.GetStore().GetWidgetGroupByName(project.ID, memsql.AccountsWidgetGroup)
-	widgetGroup.DecodeWidgetsAndSetDecodedWidgets()
+	log.WithField("widgetGroup2", widgetGroup2.DecodedWidgets).Warn("kark244")
 
 	results2, statusCode2 := store.GetStore().ExecuteWidgetGroup(project.ID, widgetGroup2, segment.Id, uuid.New().String(), requestParamsForExecution)
+	log.WithField("results2", results2).Warn("kark2")
 	assert.Equal(t, http.StatusOK, statusCode2)
 	assert.Equal(t, 1, len(results2[0].Rows))
 	assert.Equal(t, float64(1), results2[0].Rows[0][0])
