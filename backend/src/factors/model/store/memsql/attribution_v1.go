@@ -1094,7 +1094,7 @@ func (store *MemSQL) GetAttributionDataV1(projectID int64, query *model.Attribut
 	}
 
 	var err error
-	attributionData, isCompare, err = store.FireAttributionForKPIV1(projectID, query, groupSessions, kpiData, sessionWT, *logCtx)
+	attributionData, isCompare, err = store.FireAttributionForKPIV1(query, groupSessions, kpiData, sessionWT, *logCtx)
 	if C.GetAttributionDebug() == 1 {
 		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Warn("FireAttribution KPI took time")
 	}

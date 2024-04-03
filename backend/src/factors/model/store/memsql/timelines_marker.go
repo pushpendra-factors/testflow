@@ -15,6 +15,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// Duplicate code below exists. Please change in GetSQLAndParamsForSegmentsAssociatedAccounts if required.
 func (store *MemSQL) GetMarkedDomainsListByProjectId(projectID int64, payload model.TimelinePayload, downloadLimitGiven bool) ([]model.Profile, int, string) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -102,6 +103,23 @@ func (store *MemSQL) GetMarkedDomainsListByProjectId(projectID int64, payload mo
 	}
 
 	return returnData, http.StatusFound, ""
+}
+
+// Duplicated code from above. Please look for a change in GetMarkedDomainsListByProjectId.
+func (store *MemSQL) GetSQLAndParamsForSegmentsAssociatedAccounts(projectID int64, segmentID string) (string, []interface{}, *model.Group, string) {
+	rStmnt := ""
+	rParams := make([]interface{}, 0)
+	domainGroup, errCode := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
+	if errCode != http.StatusFound || domainGroup == nil {
+		return rStmnt, rParams, domainGroup, "failed to get group while adding group info"
+	}
+
+	sql := " SELECT id as identity, group_%d_id as host_name FROM  users " +
+		"WHERE project_id = ? AND JSON_EXTRACT_STRING(associated_segments, ?) IS NOT NULL " +
+		"AND is_group_user = 1 AND source = ? AND group_%d_id IS NOT NULL  "
+	rStmnt = fmt.Sprintf(sql, domainGroup.ID, domainGroup.ID)
+	rParams = append(rParams, projectID, segmentID, model.UserSourceDomains)
+	return rStmnt, rParams, domainGroup, ""
 }
 
 func CompareFilters(segmentQuery model.Query, payloadQuery model.Query) bool {
@@ -195,6 +213,7 @@ func (store *MemSQL) GetDomainsListFromMarker(projectID int64, payload model.Tim
 
 	lastRunTime, lastRunStatusCode := store.GetMarkerLastForAllAccounts(projectID)
 
+	// Code duplicated to Memsql/segment analytics. Change in here should reflect there as well.
 	// for case - segment is updated but all_run for the day is yet to run
 	if lastRunStatusCode != http.StatusFound || segment.UpdatedAt.After(lastRunTime) {
 		if C.IsMarkerPreviewEnabled(projectID) {

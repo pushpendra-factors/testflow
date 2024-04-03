@@ -97,7 +97,7 @@ function DashboardFolderButton({
       type='button'
       onClick={handleFolderStateToggle}
       className={cx(
-        'flex col-gap-1 py-2 items-center cursor-pointer',
+        'flex gap-x-1 py-2 items-center cursor-pointer',
         styles['dashboard-folder']
       )}
     >

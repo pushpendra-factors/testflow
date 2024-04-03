@@ -29,7 +29,6 @@ import {
 import { Text, SVG } from 'factorsComponents';
 import {PreviewCardSlack} from './PreviewCard';
 import { TOOLTIP_CONSTANTS } from 'Constants/tooltips.constans';
-import { ConsoleSqlOutlined } from '@ant-design/icons';
 import { getErrorMsg, SLACK } from './../utils';
 
 const Slack = ({

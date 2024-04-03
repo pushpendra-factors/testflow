@@ -61,7 +61,7 @@ const UpdateSegmentModal = ({
       isLoading={isLoading}
       width={542}
     >
-      <div className='flex flex-col row-gap-5'>
+      <div className='flex flex-col gap-y-5'>
         <Text
           type='title'
           level={4}
@@ -71,7 +71,7 @@ const UpdateSegmentModal = ({
         >
           Save Segment
         </Text>
-        <div className='flex flex-col row-gap-4'>
+        <div className='flex flex-col gap-y-4'>
           <div
             className={`${cx(
               'p-4 flex justify-between items-center rounded-lg',
@@ -84,7 +84,7 @@ const UpdateSegmentModal = ({
             role='button'
             onClick={() => setSaveMode('update')}
           >
-            <div className='flex col-gap-4 items-center'>
+            <div className='flex gap-x-4 items-center'>
               <SVG name='save' size={24} color='#595959' />
               <div className='flex flex-col'>
                 <Text
@@ -120,7 +120,7 @@ const UpdateSegmentModal = ({
                 'border-b border-gray-300': saveMode === 'create'
               })}
             >
-              <div className='flex col-gap-4 items-center'>
+              <div className='flex gap-x-4 items-center'>
                 <SVG name='pieChart' size={24} color='#595959' />
                 <div className='flex flex-col'>
                   <Text
@@ -149,7 +149,7 @@ const UpdateSegmentModal = ({
             <ControlledComponent controller={saveMode === 'create'}>
               <div
                 className={cx(
-                  'pr-4 py-3 flex flex-col row-gap-2',
+                  'pr-4 py-3 flex flex-col gap-y-2',
                   styles['new-segment-input-container']
                 )}
               >

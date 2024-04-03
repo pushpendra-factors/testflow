@@ -19,14 +19,14 @@ const SidebarMenuItem = ({
         role='button'
         onClick={onClick}
         className={cx(
-          'cursor-pointer rounded-md p-2 flex justify-between col-gap-2 items-center',
+          'cursor-pointer rounded-md p-2 flex justify-between gap-x-2 items-center',
           {
             [styles['active']]: isActive
           },
           styles['sidebar-menu-item']
         )}
       >
-        <div className={cx('flex col-gap-1 items-center w-full')}>
+        <div className={cx('flex gap-x-1 items-center w-full')}>
           <ControlledComponent controller={icon != null}>
             <SVG name={icon} size={20} color={iconColor} />
           </ControlledComponent>

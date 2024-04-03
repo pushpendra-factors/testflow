@@ -2,10 +2,18 @@ from util.util import Util as U
 from util.linkedin_api_service import LinkedinApiService
 class MemberCompany:
     member_company_map = {}
-    
-    def __init__(self, member_company_map={}) -> None:
-        self.member_company_map = member_company_map
+    __instance = None
 
+    @staticmethod
+    def get_instance(member_company={}):
+        if MemberCompany.__instance == None:
+            MemberCompany(member_company)
+        return MemberCompany.__instance
+
+    def __init__(self, member_company={}) -> None:
+        self.member_company_map = member_company
+        MemberCompany.__instance = self
+    
     def get_member_company_data(self):
         return self.member_company_map
     
@@ -22,6 +30,6 @@ class MemberCompany:
     def fetch_and_update_non_present_org_data_to_cache(self, access_token, non_present_ids, metrics_aggregator_obj):
         map_of_new_company_data = {}
         
-        map_of_new_company_data = LinkedinApiService(metrics_aggregator_obj).get_company_data_from_linkedin_with_retries(
+        map_of_new_company_data = LinkedinApiService().get_company_data_from_linkedin_with_retries(
                                                                 non_present_ids, access_token)
         self.update_member_company_data(map_of_new_company_data)

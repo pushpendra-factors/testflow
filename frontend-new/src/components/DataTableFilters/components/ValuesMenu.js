@@ -41,7 +41,7 @@ const ValuesMenu = ({
       equalityOperator === EQUALITY_OPERATOR_KEYS.NOT_EQUAL);
 
   return (
-    <div className="flex flex-col row-gap-1">
+    <div className="flex flex-col gap-y-1">
       <Input
         type="search"
         className={styles['input-search-box']}

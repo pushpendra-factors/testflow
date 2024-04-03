@@ -83,7 +83,7 @@ function TrendsChart({ data }: ChartProps): JSX.Element {
           formatter() {
             return ReactDOMServer.renderToString(
               <div
-                className='flex flex-col row-gap-2 p-2'
+                className='flex flex-col gap-y-2 p-2'
                 style={{ minWidth: '120px' }}
               >
                 <Text

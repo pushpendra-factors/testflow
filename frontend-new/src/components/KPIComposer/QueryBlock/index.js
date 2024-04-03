@@ -20,6 +20,7 @@ import { compareFilters, groupFilters } from '../../../utils/global';
 import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import { processProperties } from 'Utils/dataFormatter';
+import { startCase } from 'lodash'
 
 function QueryBlock({
   index,
@@ -130,7 +131,7 @@ function QueryBlock({
     ?.map((groupOpt) => {
       return {
         iconName: groupOpt?.icon,
-        label: _.startCase(groupOpt?.label),
+        label: startCase(groupOpt?.label),
         value: groupOpt?.label,
         extraProps: {
           category: groupOpt?.category

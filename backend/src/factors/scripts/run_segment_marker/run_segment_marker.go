@@ -26,6 +26,9 @@ func main() {
 	memSQLCertificate := flag.String("memsql_cert", "", "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
 
+	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
+	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
+
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
@@ -85,6 +88,8 @@ func main() {
 			UseExactConnFromConfig: *memSQLUseExactConnectionsConfig,
 		},
 		PrimaryDatastore:                   *primaryDatastore,
+		RedisHostPersistent:                *redisHostPersistent,
+		RedisPortPersistent:                *redisPortPersistent,
 		SentryDSN:                          *sentryDSN,
 		UseLookbackSegmentMarker:           *useLookbackSegmentMarker,
 		LookbackSegmentMarker:              *lookbackSegmentMarker,
@@ -98,6 +103,7 @@ func main() {
 	}
 
 	C.InitConf(config)
+	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
 	C.InitFilemanager(*bucketName, *env, config)
 

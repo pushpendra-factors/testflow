@@ -27,6 +27,7 @@ import styles from './index.module.scss';
 import AppModal from '../../../components/AppModal';
 import { PathUrls } from 'Routes/pathUrls';
 import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
+import { RESET_GROUPBY } from 'Reducers/coreQuery/actions';
 
 const { TabPane } = Tabs;
 
@@ -96,6 +97,7 @@ function AnalysisHeader({
     } else {
       setShowSaveQueryModal(true);
     }
+    dispatch({ type: RESET_GROUPBY });
   };
 
   const closeWithoutSave = () => {
@@ -103,6 +105,7 @@ function AnalysisHeader({
       pathname: '/analyse'
     });
     onBreadCrumbClick();
+    dispatch({ type: RESET_GROUPBY });
   };
 
   // This checks where to route back if came from Dashboard
@@ -125,6 +128,7 @@ function AnalysisHeader({
         state: { dashboardWidgetId: navigatedFromDashboard.id }
       });
     }
+    dispatch({ type: RESET_GROUPBY });
   }, [
     history,
     location.state?.navigatedFromDashboardExistingReports,

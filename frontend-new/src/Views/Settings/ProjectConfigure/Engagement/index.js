@@ -358,7 +358,6 @@ function EngagementConfig({
                   content={<SVG name='EngagementCategoryPillsPopover' />}
                 >
                   <Button
-                    type='text'
                     className='dropdown-btn'
                     onClick={() => {
                       setShowCategoryModal(true);

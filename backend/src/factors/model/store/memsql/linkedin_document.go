@@ -145,6 +145,9 @@ const insertLinkedinStr = "INSERT INTO linkedin_documents (project_id,customer_a
 const campaignGroupInfoFetchStr = "With campaign_timestamp as (Select campaign_group_id as c1, max(timestamp) as t1 from linkedin_documents where project_id = ? " +
 	"and customer_ad_account_id = ? and type = 2 and timestamp between ? and ? and (JSON_EXTRACT_STRING(value, 'status') = 'ACTIVE' or JSON_EXTRACT_JSON(value, 'changeAuditStamps', 'lastModified', 'time')>= ?) group by campaign_group_id) select * from linkedin_documents inner join " +
 	"campaign_timestamp on c1 = campaign_group_id and t1=timestamp where project_id = ? and customer_ad_account_id = ? and type = 2 and timestamp between ? and ?"
+const campaignInfoFetchStr = "With campaign_timestamp as (Select campaign_id as c1, max(timestamp) as t1 from linkedin_documents where project_id = ? " +
+	"and customer_ad_account_id = ? and type = 3 and timestamp between ? and ? and (JSON_EXTRACT_STRING(value, 'status') = 'ACTIVE' or JSON_EXTRACT_JSON(value, 'changeAuditStamps', 'lastModified', 'time')>= ?) group by campaign_id) select * from linkedin_documents inner join " +
+	"campaign_timestamp on c1 = campaign_id and t1=timestamp where project_id = ? and customer_ad_account_id = ? and type = 3 and timestamp between ? and ?"
 
 // we are not deleting many records. Hence taken the direct approach.
 const deleteDocumentQuery = "Delete from linkedin_documents where project_id = ? and customer_ad_account_id = ? and type = ? and timestamp = ?"
@@ -568,6 +571,7 @@ func (store *MemSQL) GetDistinctTimestampsForEventCreationFromLinkedinDocs(proje
 	}
 	return arrOfTimestamps, http.StatusOK
 }
+
 func (store *MemSQL) GetCompanyDataFromLinkedinDocsForTimestamp(projectID string, timestamp int64) ([]model.DomainDataResponse, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -578,15 +582,15 @@ func (store *MemSQL) GetCompanyDataFromLinkedinDocsForTimestamp(projectID string
 	domainDataSet := make([]model.DomainDataResponse, 0)
 	projectIDInt, _ := strconv.ParseInt(projectID, 10, 64)
 
-	fetchDomainDataFieldsQueryStr := "SELECT project_id, id, timestamp, customer_ad_account_id, campaign_group_id, JSON_EXTRACT_STRING(value, 'companyHeadquarters') as headquarters, " +
+	fetchDomainDataFieldsQueryStr := "SELECT project_id, id, timestamp, customer_ad_account_id, campaign_id, campaign_group_id, JSON_EXTRACT_STRING(value, 'companyHeadquarters') as headquarters, " +
 		"JSON_EXTRACT_STRING(value, 'localizedWebsite') as domain, JSON_EXTRACT_STRING(value, 'vanityName') as vanity_name, " +
 		"JSON_EXTRACT_STRING(value, 'localizedName') as localized_name, JSON_EXTRACT_STRING(value, 'preferredCountry') as preferred_country, " +
-		"JSON_EXTRACT_STRING(value, 'campaign_group_name') as campaign_group_name, " +
+		"JSON_EXTRACT_STRING(value, 'campaign_group_name') as campaign_group_name, JSON_EXTRACT_STRING(value, 'campaign_name') as campaign_name, " +
 		"JSON_EXTRACT_STRING(value, 'impressions') as impressions, JSON_EXTRACT_STRING(value, 'clicks') as clicks " +
 		"FROM linkedin_documents WHERE " +
 		"project_id = ? and type = ? and is_group_user_created != TRUE and timestamp = ? " +
-		"group by project_id, id, campaign_group_id, timestamp, customer_ad_account_id, headquarters, domain, vanity_name, localized_name, preferred_country, impressions, clicks " +
-		"order by timestamp ASC, project_id, id, customer_ad_account_id, campaign_group_id, headquarters, domain, vanity_name, localized_name, " +
+		"group by project_id, id, campaign_group_id, campaign_id, timestamp, customer_ad_account_id, headquarters, domain, vanity_name, localized_name, preferred_country, impressions, clicks " +
+		"order by timestamp ASC, project_id, id, customer_ad_account_id, campaign_group_id, campaign_id, headquarters, domain, vanity_name, localized_name, " +
 		"campaign_group_name, preferred_country limit 10000"
 
 	rows, err := db.Raw(fetchDomainDataFieldsQueryStr, projectID, LinkedinDocumentTypeAlias["member_company_insights"], timestamp).Rows()
@@ -601,7 +605,9 @@ func (store *MemSQL) GetCompanyDataFromLinkedinDocsForTimestamp(projectID string
 			log.WithError(err).Error("Failed to scan domain data for given timestamp.")
 			return make([]model.DomainDataResponse, 0), http.StatusInternalServerError
 		}
-		domainData.Domain = U.GetDomainGroupDomainName(projectIDInt, domainData.Domain)
+		if domainData.Domain != "$none" {
+			domainData.Domain = U.GetDomainGroupDomainName(projectIDInt, domainData.Domain)
+		}
 		domainDataSet = append(domainDataSet, domainData)
 	}
 	return domainDataSet, http.StatusOK
@@ -743,6 +749,34 @@ func (store *MemSQL) GetCampaignGroupInfoForGivenTimerange(campaignGroupInfoRequ
 	linkedinDocuments := make([]model.LinkedinDocument, 0)
 
 	query := campaignGroupInfoFetchStr
+	rows, err := db.Raw(query, projectID, adAccountID, startTime, endTime, unixForStartTime, projectID, adAccountID, startTime, endTime).Rows()
+
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get campaign group info for given time range.")
+		return make([]model.LinkedinDocument, 0), http.StatusInternalServerError
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var linkedinDocument model.LinkedinDocument
+		if err := db.ScanRows(rows, &linkedinDocument); err != nil {
+			logCtx.WithError(err).Error("Failed to scan campaign group info for given time range.")
+			return make([]model.LinkedinDocument, 0), http.StatusInternalServerError
+		}
+		linkedinDocuments = append(linkedinDocuments, linkedinDocument)
+	}
+	return linkedinDocuments, http.StatusOK
+}
+
+func (store *MemSQL) GetCampaignInfoForGivenTimerange(campaignInfoRequestPayload model.LinkedinCampaignGroupInfoRequestPayload) ([]model.LinkedinDocument, int) {
+	logFields := log.Fields{"campaign_info_request_payload_linkedin": campaignInfoRequestPayload}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+	db := C.GetServices().Db
+	projectID, adAccountID, startTime, endTime := campaignInfoRequestPayload.ProjectID, campaignInfoRequestPayload.CustomerAdAccountID, campaignInfoRequestPayload.StartTimestamp, campaignInfoRequestPayload.EndTimestamp
+	unixForStartTime := U.GetBeginningoftheDayEpochForDateAndTimezone(startTime, "UTC") * 1000
+	linkedinDocuments := make([]model.LinkedinDocument, 0)
+
+	query := campaignInfoFetchStr
 	rows, err := db.Raw(query, projectID, adAccountID, startTime, endTime, unixForStartTime, projectID, adAccountID, startTime, endTime).Rows()
 
 	if err != nil {

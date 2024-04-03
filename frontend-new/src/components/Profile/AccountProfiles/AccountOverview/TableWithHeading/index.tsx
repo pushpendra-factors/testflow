@@ -14,30 +14,28 @@ const TableWithHeading: React.FC<TableWithHeadingProps> = ({
   data,
   columns,
   yScroll = 200
-}) => {
-  return (
-    <div className='grid-table'>
-      <div className='heading'>
-        <Text
-          type='title'
-          level={7}
-          extraClass='m-0 whitespace-no-wrap'
-          weight='bold'
-          color='grey-2'
-        >
-          {heading}
-        </Text>
-      </div>
-      <div className='data-table'>
-        <Table
-          className='fa-overview--top-table'
-          dataSource={data}
-          columns={columns}
-          pagination={false}
-          scroll={{ y: yScroll }}
-        />
-      </div>
+}) => (
+  <div className='grid-table'>
+    <div className='heading'>
+      <Text
+        type='title'
+        level={7}
+        extraClass='m-0 whitespace-nowrap'
+        weight='bold'
+        color='grey-2'
+      >
+        {heading}
+      </Text>
     </div>
-  );
-};
+    <div className='data-table'>
+      <Table
+        className='fa-overview--top-table'
+        dataSource={data}
+        columns={columns}
+        pagination={false}
+        scroll={{ y: yScroll }}
+      />
+    </div>
+  </div>
+);
 export default TableWithHeading;

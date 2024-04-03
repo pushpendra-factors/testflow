@@ -74,6 +74,8 @@ type DomainDataResponse struct {
 	CampaignGroupName   string `json:"campaign_group_name"`
 	Impressions         int64  `json:"impressions"`
 	Clicks              int64  `json:"clicks"`
+	CampaignID          string `json:"campaign_id"`
+	CampaignName        string `json:"campaign_name"`
 }
 
 const (

@@ -4,9 +4,9 @@ import SavedQueriesTable from 'Views/Dashboard/Drafts/SavedQueriesTable';
 import NewReportButton from '../NewReportButton';
 
 const Drafts = () => (
-  <div className='flex flex-col row-gap-12'>
+  <div className='flex flex-col gap-y-12'>
     <div className='flex justify-between items-center'>
-      <div className='flex row-gap-2 flex-col'>
+      <div className='flex gap-y-2 flex-col'>
         <Text
           color='character-primary'
           level={4}

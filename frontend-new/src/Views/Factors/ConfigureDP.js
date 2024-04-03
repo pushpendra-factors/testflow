@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Modal, Button, Progress, message } from 'antd';
 import { Text, SVG } from 'factorsComponents';
-import { PlusOutlined, SlackOutlined } from '@ant-design/icons';
 import { connect } from 'react-redux';
 import {
   addEventToTracked,
@@ -11,7 +10,7 @@ import {
   delEventTracked,
   delUserPropertyTracked
 } from 'Reducers/factors';
-import { MoreOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { ExclamationCircleOutlined } from '@ant-design/icons';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
 import { convertAndAddPropertiesToGroupSelectOptions } from 'Utils/dataFormatter';

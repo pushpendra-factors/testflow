@@ -7,6 +7,7 @@ import { EMPTY_STRING } from 'Utils/global';
 
 import styles from './pivotTableControls.module.scss';
 import ControlledComponent from '../ControlledComponent';
+import _ from 'lodash'
 
 const SelectedItem = ({ label, showRemoveBtn, onRemove }) => {
   const handleRemove = () => {

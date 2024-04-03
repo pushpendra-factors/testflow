@@ -107,7 +107,7 @@ function LineChart({
             timestamp = compareCategories[this.point.index];
           }
           return ReactDOMServer.renderToString(
-            <div className='flex flex-col row-gap-2'>
+            <div className='flex flex-col gap-y-2'>
               <Text
                 extraClass={styles.infoText}
                 type='title'
@@ -121,7 +121,7 @@ function LineChart({
                   {addQforQuarter(frequency) +
                     moment(timestamp).format(dateFormat)}
                 </Text>
-                <div className='flex items-center col-gap-1'>
+                <div className='flex items-center gap-x-1'>
                   <Text weight='bold' type='title' color='grey-6' level={5}>
                     {metricType != null && metricType !== '' ? (
                       getFormattedKpiValue({

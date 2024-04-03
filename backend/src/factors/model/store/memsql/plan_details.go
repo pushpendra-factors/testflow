@@ -91,6 +91,7 @@ func (store *MemSQL) GetFeatureListForProject(projectID int64) (*model.DisplayPl
 
 	return store.GetDisplayablePlanDetails(projectPlanMapping, planDetails)
 }
+
 func (store *MemSQL) GetDisplayablePlanDetails(ppMap model.ProjectPlanMapping, planDetails model.PlanDetails) (
 	*model.DisplayPlanDetails, int, string, error) {
 	logCtx := log.WithFields(log.Fields{
@@ -365,7 +366,7 @@ func (store *MemSQL) UpdateProjectPlanMapping(projectID int64, planMapping *mode
 
 	return http.StatusOK
 }
-func (store *MemSQL) UpdateFeaturesForCustomPlan(projectID int64, AccountLimit int64, MtuLimit int64, AvailableFeatuers []string) (int, error) {
+func (store *MemSQL) UpdateFeaturesForCustomPlan(projectID int64, AccountLimit int64, MtuLimit int64, AvailableFeatures []string) (int, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -378,11 +379,11 @@ func (store *MemSQL) UpdateFeaturesForCustomPlan(projectID int64, AccountLimit i
 		return http.StatusInternalServerError, err
 	}
 	if ppMap.PlanID != model.PLAN_ID_CUSTOM {
-		logCtx.Error("This operation is only allowed in cutsom plan")
+		logCtx.Error("This operation is only allowed in custom plan")
 		return http.StatusBadRequest, err
 	}
 	featureMap := make(map[string]bool)
-	for _, feature := range AvailableFeatuers {
+	for _, feature := range AvailableFeatures {
 		featureMap[feature] = true
 	}
 
@@ -409,13 +410,85 @@ func (store *MemSQL) UpdateFeaturesForCustomPlan(projectID int64, AccountLimit i
 			updatedFeatureList[fname] = tempFeatureDetails
 		}
 	}
+
+	_, existingFeatures, err := store.GetPlanDetailsAndAddonsForProject(projectID)
+	if err != nil {
+		logCtx.WithError(err)
+	}
+
+	updatedFeatures := filterUpdatedFeatures(existingFeatures, updatedFeatureList)
+
 	_, err = store.UpdateAddonsForProject(projectID, updatedFeatureList)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to update features for custom plan")
 		return http.StatusInternalServerError, err
 	}
+
+	// Call Action on Feature Update
+	err = store.OnFeatureEnableOrDisableHook(projectID, updatedFeatures)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to update configs on plan update")
+	}
+
 	return http.StatusAccepted, nil
 }
+
+func filterUpdatedFeatures(existingFeaturesMap map[string]model.FeatureDetails,
+	newFeaturesMap map[string]model.FeatureDetails) map[string]model.FeatureDetails {
+	allFeatures := model.GetAllAvailableFeatures()
+	updatedFeatures := make(map[string]model.FeatureDetails)
+	for _, featureName := range allFeatures {
+		if existingFeaturesMap[featureName].IsEnabledFeature != newFeaturesMap[featureName].IsEnabledFeature {
+			updatedFeatures[featureName] = newFeaturesMap[featureName]
+		}
+	}
+	return updatedFeatures
+}
+
+func (store *MemSQL) OnFeatureEnableOrDisableHook(projectID int64, updatedFeatures map[string]model.FeatureDetails) error {
+
+	var enabledFeatures, disabledFeatures []string
+
+	for featureName, config := range updatedFeatures {
+		switch config.IsEnabledFeature {
+		case true:
+			enabledFeatures = append(enabledFeatures, featureName)
+			break
+		case false:
+			disabledFeatures = append(disabledFeatures, featureName)
+			break
+		default:
+			break
+		}
+	}
+
+	for _, featureName := range enabledFeatures {
+		switch featureName {
+		case model.FEATURE_ACCOUNT_SCORING:
+			err := store.UpdateTimelineConfigForEngagementScoring(projectID, true)
+			if err != nil {
+				return err
+			}
+			break
+		default:
+			break
+		}
+	}
+	for _, featureName := range disabledFeatures {
+		switch featureName {
+		case model.FEATURE_ACCOUNT_SCORING:
+			err := store.UpdateTimelineConfigForEngagementScoring(projectID, false)
+			if err != nil {
+				return err
+			}
+			break
+		default:
+			break
+		}
+	}
+	return nil
+}
+
 func (store *MemSQL) UpdateAddonsForProject(projectID int64, addons model.OverWrite) (string, error) {
 	logFields := log.Fields{
 		"project_id": projectID,

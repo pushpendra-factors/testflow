@@ -192,7 +192,7 @@ const MultipleEventsWithBreakdown = forwardRef(
       chart = (
         <div
           className={cx(
-            'grid w-full col-gap-2 row-gap-12',
+            'grid w-full gap-x-2 gap-y-12',
             { 'grid-flow-col': visibleSeriesData.length < 3 },
             { 'grid-cols-3': visibleSeriesData.length >= 3 }
           )}

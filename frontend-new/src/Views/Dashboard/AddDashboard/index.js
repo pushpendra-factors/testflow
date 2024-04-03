@@ -1,6 +1,13 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Row, Col, Tabs, Modal, notification, Button } from 'antd';
 import { useSelector, useDispatch } from 'react-redux';
+import factorsai from 'factorsai';
+import { Link, useHistory, useLocation } from 'react-router-dom';
+import useAutoFocus from 'hooks/useAutoFocus';
+import { setItemToLocalStorage } from 'Utils/localStorage.helpers';
+import { DASHBOARD_KEYS } from 'Constants/localStorage.constants';
+import { LoadingOutlined } from '@ant-design/icons';
+import { stubFalse } from 'lodash';
 import AddDashboardTab from './AddDashboardTab';
 import AddWidgetsTab from './AddWidgetsTab';
 import { Text, SVG } from '../../../components/factorsComponents';
@@ -23,14 +30,7 @@ import {
 } from '../../../reducers/types';
 import styles from './index.module.scss';
 import ConfirmationModal from '../../../components/ConfirmationModal';
-import factorsai from 'factorsai';
-import { Link, useHistory, useLocation } from 'react-router-dom';
-import useAutoFocus from 'hooks/useAutoFocus';
 import DashboardTemplatesModal from './DashboardTemplatesModal';
-import { setItemToLocalStorage } from 'Utils/localStorage.helpers';
-import { DASHBOARD_KEYS } from 'Constants/localStorage.constants';
-import { LoadingOutlined } from '@ant-design/icons';
-import { stubFalse } from 'lodash';
 
 function AddDashboard({ editDashboard, setEditDashboard }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -46,8 +46,8 @@ function AddDashboard({ editDashboard, setEditDashboard }) {
   const { active_project } = useSelector((state) => state.global);
   const { activeDashboardUnits } = useSelector((state) => state.dashboard);
   const dispatch = useDispatch();
-  let { isAddNewDashboardModal } = useSelector(
-    (state) => state.dashboard_templates_Reducer
+  const { isAddNewDashboardModal } = useSelector(
+    (state) => state.dashboardTemplatesController
   );
   const { TabPane } = Tabs;
 
@@ -110,12 +110,10 @@ function AddDashboard({ editDashboard, setEditDashboard }) {
   }, [activeKey, title]);
 
   const getUnitsAssignRequestBody = useCallback(() => {
-    const reqBody = selectedQueries.map((sq) => {
-      return {
-        description: sq.description,
-        query_id: sq.query_id
-      };
-    });
+    const reqBody = selectedQueries.map((sq) => ({
+      description: sq.description,
+      query_id: sq.query_id
+    }));
     return reqBody;
   }, [selectedQueries]);
 
@@ -171,12 +169,10 @@ function AddDashboard({ editDashboard, setEditDashboard }) {
           -1
       );
       if (newAddedUnits.length) {
-        const reqBody = newAddedUnits.map((unit) => {
-          return {
-            description: unit.description,
-            query_id: unit.query_id
-          };
-        });
+        const reqBody = newAddedUnits.map((unit) => ({
+          description: unit.description,
+          query_id: unit.query_id
+        }));
         await assignUnitsToDashboard(
           active_project?.id,
           editDashboard?.id,
@@ -188,14 +184,10 @@ function AddDashboard({ editDashboard, setEditDashboard }) {
           selectedQueries.findIndex((query) => query.id === elem.id) === -1
       );
       if (deletedUnits.length) {
-        //just delete the deleted widgets
-        const deletePromises = deletedUnits.map((q) => {
-          return DeleteUnitFromDashboard(
-            active_project?.id,
-            editDashboard?.id,
-            q.id
-          );
-        });
+        // just delete the deleted widgets
+        const deletePromises = deletedUnits.map((q) =>
+          DeleteUnitFromDashboard(active_project?.id, editDashboard?.id, q.id)
+        );
         await Promise.all(deletePromises);
         deletedUnits.forEach((unit) => {
           dispatch({ type: WIDGET_DELETED, payload: unit.id });
@@ -222,7 +214,7 @@ function AddDashboard({ editDashboard, setEditDashboard }) {
         );
       }
 
-      //Factors EDIT_DASHBOARD tracking
+      // Factors EDIT_DASHBOARD tracking
       factorsai.track('EDIT_DASHBOARD', {
         dashboard_name: title,
         dashboard_type: dashboardType,
@@ -279,17 +271,14 @@ function AddDashboard({ editDashboard, setEditDashboard }) {
   const getOkText = useCallback(() => {
     if (activeKey === '1') {
       return 'Next';
-    } else {
-      if (editDashboard) {
-        return 'Update Dashboard';
-      } else {
-        if (selectedQueries.length) {
-          return 'Create Dashboard';
-        } else {
-          return "I'll add them later";
-        }
-      }
     }
+    if (editDashboard) {
+      return 'Update Dashboard';
+    }
+    if (selectedQueries.length) {
+      return 'Create Dashboard';
+    }
+    return "I'll add them later";
   }, [activeKey, editDashboard, selectedQueries.length]);
 
   return (
@@ -298,10 +287,10 @@ function AddDashboard({ editDashboard, setEditDashboard }) {
         <Modal
           title={null}
           visible={isAddNewDashboardModal}
-          centered={true}
+          centered
           zIndex={1010}
           width={700}
-          className={'fa-modal--regular p-4 fa-modal--slideInDown'}
+          className='fa-modal--regular p-4 fa-modal--slideInDown'
           confirmLoading={apisCalled}
           closable={false}
           okText={getOkText()}
@@ -313,11 +302,11 @@ function AddDashboard({ editDashboard, setEditDashboard }) {
             <Row>
               <Col span={24}>
                 <Text
-                  type={'title'}
+                  type='title'
                   level={4}
-                  weight={'bold'}
-                  size={'grey'}
-                  extraClass={'m-0'}
+                  weight='bold'
+                  size='grey'
+                  extraClass='m-0'
                 >
                   {editDashboard ? 'Edit Dashboard' : 'New Dashboard'}
                 </Text>
@@ -328,7 +317,7 @@ function AddDashboard({ editDashboard, setEditDashboard }) {
                 <Tabs
                   onChange={handleTabChange}
                   activeKey={activeKey}
-                  className={'fa-tabs'}
+                  className='fa-tabs'
                 >
                   <TabPane className={styles.tabContent} tab='Setup' key='1'>
                     {activeKey === '1' ? (

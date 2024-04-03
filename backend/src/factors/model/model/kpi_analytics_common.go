@@ -46,6 +46,7 @@ type KPIQueryGroup struct {
 	GlobalGroupBy   []KPIGroupBy `json:"gGBy"`
 	Formula         string       `json:"for"`
 	DisplayResultAs string       `json:"display_result_as"`
+	SegmentID       string       `json:"seg_id"`
 }
 
 func (q *KPIQueryGroup) GetClass() string {
@@ -383,6 +384,7 @@ type KPIQuery struct {
 	Name               string       `json:"na"`
 	AliasName          string       `json:"an"`
 	LimitNotApplicable bool         `json:"lmt_na"`
+	SegmentID          string       `json:"seg_id"`
 }
 
 // Here hash has to be considered only with GBT as empty string.

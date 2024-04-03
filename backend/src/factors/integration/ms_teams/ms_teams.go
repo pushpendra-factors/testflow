@@ -6,12 +6,11 @@ import (
 	"errors"
 	"time"
 
-	// "errors"
 	C "factors/config"
 	"factors/model/model"
 	"factors/model/store"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -58,7 +57,7 @@ func SendTeamsMessage(projectID int64, agentUUID, teamID, channelID, message str
 
 	tokens, err := store.GetStore().GetTeamsAuthTokens(projectID, agentUUID)
 	if err != nil {
-		return nil, errors.New("Failed to get access tokens for teams")
+		return nil, errors.New("failed to get access tokens for teams")
 	}
 	teamsMessage := TeamsMessage{Body: struct {
 		ContentType string "json:\"contentType\""
@@ -86,14 +85,14 @@ func SendTeamsMessage(projectID int64, agentUUID, teamID, channelID, message str
 		logCtx.WithError(err).Error("Failed to send request")
 		return nil, err
 	}
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to read response body")
 		return nil, err
 	}
 
 	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusUnauthorized {
+	if resp.StatusCode != http.StatusCreated {
 		var errorResponse map[string]interface{}
 		json.Unmarshal(body, &errorResponse)
 		errorCode, ok := errorResponse["error"].(map[string]interface{})["code"].(string)
@@ -109,7 +108,7 @@ func SendTeamsMessage(projectID int64, agentUUID, teamID, channelID, message str
 			if err != nil {
 				return errorResponse, err
 			}
-			body, err = ioutil.ReadAll(resp.Body)
+			body, err = io.ReadAll(resp.Body)
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to read response body")
 				return errorResponse, err
@@ -118,15 +117,10 @@ func SendTeamsMessage(projectID int64, agentUUID, teamID, channelID, message str
 			defer resp.Body.Close()
 
 		} else {
-			logCtx.Error("Error in making request to teams " + errorCode)
+			logCtx.WithField("error_code", errorCode).Error("Error in making request to teams.")
 			// add healthcheck/sentry notifcation to re integrate
-			return errorResponse, errors.New("Error in making request to teams " + errorCode)
+			return errorResponse, fmt.Errorf("teams failure: status - %v", resp.Status)
 		}
-	}
-	if resp.StatusCode != http.StatusCreated {
-		var errorResponse map[string]interface{}
-		json.Unmarshal(body, &errorResponse)
-		return errorResponse, fmt.Errorf("teams failure: Status - %v", resp.Status)
 	}
 
 	return nil, nil
@@ -136,7 +130,7 @@ func SendTeamsMessage(projectID int64, agentUUID, teamID, channelID, message str
 func GetAllTeams(projectID int64, agentUUID string) (interface{}, error) {
 	tokens, err := store.GetStore().GetTeamsAuthTokens(projectID, agentUUID)
 	if err != nil {
-		return []Team{}, errors.New("Failed to get access tokens for teams")
+		return []Team{}, errors.New("failed to get access tokens for teams")
 	}
 
 	url := "https://graph.microsoft.com/v1.0/me/joinedTeams"
@@ -156,7 +150,7 @@ func GetAllTeams(projectID int64, agentUUID string) (interface{}, error) {
 	}
 
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.WithError(err).Error("Failed to read response body")
 		return nil, err
@@ -177,7 +171,7 @@ func GetAllTeams(projectID int64, agentUUID string) (interface{}, error) {
 			if err != nil {
 				return nil, err
 			}
-			body, err = ioutil.ReadAll(resp.Body)
+			body, err = io.ReadAll(resp.Body)
 			if err != nil {
 				log.WithError(err).Error("Failed to read response body")
 				return nil, err
@@ -207,7 +201,7 @@ func GetAllTeams(projectID int64, agentUUID string) (interface{}, error) {
 func GetTeamsChannels(projectID int64, agentUUID, teamID string) ([]Channel, error) {
 	tokens, err := store.GetStore().GetTeamsAuthTokens(projectID, agentUUID)
 	if err != nil {
-		return []Channel{}, errors.New("Failed to get access tokens for teams")
+		return []Channel{}, errors.New("failed to get access tokens for teams")
 	}
 	url := fmt.Sprintf("https://graph.microsoft.com/v1.0/teams/%s/channels", teamID)
 
@@ -230,7 +224,7 @@ func GetTeamsChannels(projectID int64, agentUUID, teamID string) ([]Channel, err
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to get Teams channels: %v", resp.Status)
 	}
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.WithError(err).Error("Failed to read response body")
 		return nil, err
@@ -251,7 +245,7 @@ func GetTeamsChannels(projectID int64, agentUUID, teamID string) ([]Channel, err
 			if err != nil {
 				return nil, err
 			}
-			body, err = ioutil.ReadAll(resp.Body)
+			body, err = io.ReadAll(resp.Body)
 			if err != nil {
 				log.WithError(err).Error("Failed to read response body")
 				return nil, err

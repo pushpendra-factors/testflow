@@ -3,7 +3,6 @@ import { Button, Tooltip } from 'antd';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { SVG, Text } from 'factorsComponents';
-import styles from './index.module.scss';
 import {
   setGroupBy,
   delGroupBy,
@@ -18,6 +17,7 @@ import { compareFilters, groupFilters } from 'Utils/global';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
 import { processProperties } from 'Utils/dataFormatter';
+import styles from './index.module.scss';
 import { removeDuplicateAndEmptyKeys, blackListedCategories } from './util';
 
 function QueryBlock({
@@ -67,26 +67,24 @@ function QueryBlock({
       const userOpts = eventOptionsSpecial?.filter(
         (item) => !groupNamesList?.includes(item?.label)
       );
-      //remove blacklisted events
+      // remove blacklisted events
       const userOptsNew = userOpts?.filter(
         (item) => !blackListedCategories?.includes(item?.label)
       );
       showOpts = userOptsNew;
     } else {
-      //remove blacklisted events
+      // remove blacklisted events
       const groupOpts = eventOptionsSpecial?.filter(
         (item) => !blackListedCategories?.includes(item?.label)
       );
       showOpts = groupOpts;
     }
 
-    showOpts = showOpts?.map((opt) => {
-      return {
-        iconName: getGroupIcon(opt?.icon),
-        label: opt?.label,
-        values: processProperties(opt?.values)
-      };
-    });
+    showOpts = showOpts?.map((opt) => ({
+      iconName: getGroupIcon(opt?.icon),
+      label: opt?.label,
+      values: processProperties(opt?.values)
+    }));
 
     setShowGroups(showOpts);
   }, [eventOptionsSpecial, groupAnalysis, availableGroups]);
@@ -152,9 +150,9 @@ function QueryBlock({
             props[key] = groupProperties[key];
           });
         }
-        //only for accounts - user events
+        // only for accounts - user events
         if (!eventGroup) {
-          //remove 'Company identification' from user properties since the same duplicate properties is available in $6_signal
+          // remove 'Company identification' from user properties since the same duplicate properties is available in $6_signal
           if (props?.hasOwnProperty('user')) {
             if (props?.user?.hasOwnProperty(Company_identification)) {
               delete props?.user[Company_identification];
@@ -163,7 +161,7 @@ function QueryBlock({
         }
       }
     }
-    let finalProps = removeDuplicateAndEmptyKeys(props);
+    const finalProps = removeDuplicateAndEmptyKeys(props);
     return finalProps;
   }, [
     event,
@@ -187,7 +185,7 @@ function QueryBlock({
         <GroupSelect
           options={showGroups}
           optionClickCallback={onChange}
-          allowSearch={true}
+          allowSearch
           onClickOutside={() => setDDVisible(false)}
           extraClass={`${styles.query_block__event_selector__select}`}
         />
@@ -244,7 +242,7 @@ function QueryBlock({
       insertFilter={insertFilters}
       closeFilter={closeFilter}
       refValue={ind}
-      showInList={true}
+      showInList
     />
   );
 
@@ -333,7 +331,7 @@ function QueryBlock({
                   insertFilter={insertFilters}
                   closeFilter={closeFilter}
                   refValue={refValue}
-                  showInList={true}
+                  showInList
                 />
               </div>
               {ind !== orFilterIndex && (
@@ -350,7 +348,7 @@ function QueryBlock({
                     closeFilter={closeFilter}
                     refValue={refValue}
                     showOr
-                    showInList={true}
+                    showInList
                   />
                 </div>
               )}
@@ -371,7 +369,7 @@ function QueryBlock({
                   insertFilter={insertFilters}
                   closeFilter={closeFilter}
                   refValue={refValue}
-                  showInList={true}
+                  showInList
                 />
               </div>
               <div key={ind + 1}>
@@ -386,7 +384,7 @@ function QueryBlock({
                   closeFilter={closeFilter}
                   refValue={refValue}
                   showOr
-                  showInList={true}
+                  showInList
                 />
               </div>
             </div>
@@ -527,7 +525,7 @@ function QueryBlock({
         </div>
       </div>
       {eventFilters()}
-      <div className={'mt-2'}>{additionalActions()}</div>
+      <div className='mt-2'>{additionalActions()}</div>
       {/* {groupByItems()} */}
     </div>
   );

@@ -80,7 +80,7 @@ const DownloadCSVModal = ({
       width={635}
       isLoading={isLoading}
     >
-      <div className='flex flex-col row-gap-4'>
+      <div className='flex flex-col gap-y-4'>
         <Text
           type='title'
           level={5}
@@ -124,7 +124,7 @@ const DownloadCSVModal = ({
         <div
           className={cx(
             styles['download-csv-modal-options-container'],
-            'border p-4 flex flex-col row-gap-4'
+            'border p-4 flex flex-col gap-y-4'
           )}
         >
           {filteredOptions.map((option) => {

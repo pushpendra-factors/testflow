@@ -438,7 +438,7 @@ func SlackTestforEventTriggerAlerts(c *gin.Context) (interface{}, int, string, s
 		return nil, http.StatusBadRequest, INVALID_INPUT, errMsg, true
 	}
 
-	messageProperties := make(U.PropertiesMap)
+	messageProperties := make([][]string, 0)
 	if alert.MessageProperty != nil {
 		err := U.DecodePostgresJsonbToStructType(alert.MessageProperty, &messageProperties)
 		if err != nil {
@@ -449,13 +449,11 @@ func SlackTestforEventTriggerAlerts(c *gin.Context) (interface{}, int, string, s
 	}
 
 	payload := make(U.PropertiesMap)
-	i := 0
-	for prop, value := range messageProperties {
+	for i, prop := range messageProperties {
 		payload[fmt.Sprintf("%d", i)], _ = U.EncodeStructTypeToMap(model.MessagePropMapStruct{
-			DisplayName: prop,
-			PropValue:   value,
+			DisplayName: prop[0],
+			PropValue:   prop[1],
 		})
-		i++
 	}
 
 	slackChannels := make([]model.SlackChannel, 0)
@@ -490,7 +488,7 @@ func SlackTestforEventTriggerAlerts(c *gin.Context) (interface{}, int, string, s
 
 	isAccountAlert := alert.EventLevel == model.EventLevelAccount
 	if !alert.IsHyperlinkDisabled {
-		blockMessage = model.GetSlackMsgBlock(slackPayload, slackMentionStr, isAccountAlert, "")
+		blockMessage = model.GetSlackMsgBlock(slackPayload, slackMentionStr, isAccountAlert, "", "", "")
 	} else {
 		blockMessage = model.GetSlackMsgBlockWithoutHyperlinks(slackPayload, slackMentionStr)
 	}
@@ -551,7 +549,7 @@ func TeamsTestforEventTriggerAlerts(c *gin.Context) (interface{}, int, string, s
 		return nil, http.StatusBadRequest, INVALID_INPUT, errMsg, true
 	}
 
-	messageProperties := make(U.PropertiesMap)
+	messageProperties := make([][]string, 0)
 	if alert.MessageProperty != nil {
 		err := U.DecodePostgresJsonbToStructType(alert.MessageProperty, &messageProperties)
 		if err != nil {
@@ -562,13 +560,11 @@ func TeamsTestforEventTriggerAlerts(c *gin.Context) (interface{}, int, string, s
 	}
 
 	payload := make(U.PropertiesMap)
-	i := 0
-	for prop, value := range messageProperties {
+	for i, prop := range messageProperties {
 		payload[fmt.Sprintf("%d", i)], _ = U.EncodeStructTypeToMap(model.MessagePropMapStruct{
-			DisplayName: prop,
-			PropValue:   value,
+			DisplayName: prop[0],
+			PropValue:   prop[1],
 		})
-		i++
 	}
 
 	var teamsChannels model.Team

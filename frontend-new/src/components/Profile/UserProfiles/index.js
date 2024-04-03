@@ -46,6 +46,7 @@ import { getSegmentColorCode } from 'Views/AppSidebar/appSidebar.helpers';
 import truncateURL from 'Utils/truncateURL';
 import { ACCOUNTS_TABLE_COLUMN_TYPES, COLUMN_TYPE_PROPS } from 'Utils/table';
 import ResizableTitle from 'Components/Resizable';
+import logger from 'Utils/logger';
 import { Text, SVG } from '../../factorsComponents';
 import { getUserPropertiesV2 } from '../../../reducers/coreQuery/middleware';
 import PropertyFilter from '../AccountProfiles/PropertyFilter';
@@ -90,7 +91,6 @@ import RenameSegmentModal from '../AccountProfiles/RenameSegmentModal';
 import UpdateSegmentModal from '../AccountProfiles/UpdateSegmentModal';
 import styles from './index.module.scss';
 import { ALPHANUMSTR, iconColors } from '../constants';
-import logger from 'Utils/logger';
 
 const userOptions = getUserOptions();
 
@@ -652,10 +652,8 @@ function UserProfiles({
       setFiltersExpanded(false);
       setFiltersDirty(true);
     } else if (newSegmentMode === false) {
-      if (
-        Boolean(timelinePayload?.segment?.name) === true &&
-        timelinePayload?.segment?.query != null
-      ) {
+      // its already opened segment / All People / other sources
+      if (timelinePayload?.segment?.query != null) {
         const filters = getSelectedFiltersFromQuery({
           query: timelinePayload?.segment?.query,
           groupsList: [],
@@ -688,7 +686,7 @@ function UserProfiles({
     } else {
       notification.error({
         message: 'Error',
-        description: 'Maximum of 8 Table Properties Selection Allowed.',
+        description: 'Maximum of 12 Table Properties Selection Allowed.',
         duration: 2
       });
     }
@@ -725,7 +723,6 @@ function UserProfiles({
     setIsUpgradeModalVisible(true);
     setShowPopOver(false);
   };
-
   const popoverContent = () => (
     <Tabs defaultActiveKey='events' size='small'>
       <Tabs.TabPane
@@ -800,11 +797,15 @@ function UserProfiles({
     setAppliedFilters(selectedFilters);
     setFiltersExpanded(false);
     setFiltersDirty(true);
+
     const reqPayload = getFiltersRequestPayload({
       selectedFilters,
       tableProps: displayTableProps,
       caller: 'user_profiles'
     });
+    reqPayload.search_filter =
+      (listSearchItems && listSearchItems.length > 0 && listSearchItems) || [];
+
     getProfileUsers(activeProject.id, reqPayload);
   }, [
     selectedFilters,
@@ -899,7 +900,7 @@ function UserProfiles({
       <Button
         onClick={handleSaveSegmentClick}
         type='default'
-        className='flex items-center col-gap-1'
+        className='flex items-center gap-x-1'
         disabled={saveButtonDisabled}
       >
         <SVG
@@ -931,9 +932,17 @@ function UserProfiles({
       values = [];
     }
 
+    const tmpQuery = getFiltersRequestPayload({
+      selectedFilters,
+      displayTableProps,
+      caller: 'user_profiles'
+    }).query;
     const updatedPayload = {
       ...timelinePayload,
-      search_filter: values.map((value) => JSON.parse(value)[0])
+      search_filter: values.map((value) => JSON.parse(value)[0]),
+      segment: {
+        query: tmpQuery
+      }
     };
     setListSearchItems(updatedPayload.search_filter);
     setTimelinePayload(updatedPayload);
@@ -948,45 +957,42 @@ function UserProfiles({
   const onSearchOpen = () => {
     setSearchBarOpen(true);
   };
-
   const renderSearchSection = () => (
-    <ControlledComponent
-      controller={filtersExpanded === false && newSegmentMode === false}
-    >
-      <div className='relative'>
-        <ControlledComponent controller={searchBarOpen}>
-          <div className='flex items-center justify-between'>
-            <Form
-              name='basic'
-              labelCol={{ span: 8 }}
-              wrapperCol={{ span: 16 }}
-              onFinish={handleUsersSearch}
-              autoComplete='off'
-            >
-              <Form.Item name='users'>
-                <Input
-                  size='large'
-                  value={listSearchItems ? listSearchItems.join(', ') : null}
-                  placeholder='Search Users'
-                  style={{ width: '240px', 'border-radius': '5px' }}
-                  prefix={<SVG name='search' size={24} color='#8c8c8c' />}
-                />
-              </Form.Item>
-            </Form>
-            <Button type='text' className='search-btn' onClick={onSearchClose}>
-              <SVG name='close' size={24} color='#8c8c8c' />
-            </Button>
-          </div>
-        </ControlledComponent>
-        <ControlledComponent controller={!searchBarOpen}>
-          <Tooltip title='Search'>
-            <Button type='text' className='search-btn' onClick={onSearchOpen}>
-              <SVG name='search' size={24} color='#8c8c8c' />
-            </Button>
-          </Tooltip>
-        </ControlledComponent>
-      </div>
-    </ControlledComponent>
+    <div className='relative'>
+      <ControlledComponent controller={searchBarOpen}>
+        <div className='flex items-center justify-between'>
+          <Form
+            name='basic'
+            labelCol={{ span: 8 }}
+            wrapperCol={{ span: 16 }}
+            onFinish={handleUsersSearch}
+            autoComplete='off'
+          >
+            <Form.Item name='users'>
+              <Input
+                size='large'
+                defaultValue={
+                  listSearchItems ? listSearchItems.join(', ') : null
+                }
+                placeholder='Search Users'
+                style={{ width: '240px', 'border-radius': '5px' }}
+                prefix={<SVG name='search' size={24} color='#8c8c8c' />}
+              />
+            </Form.Item>
+          </Form>
+          <Button type='text' className='search-btn' onClick={onSearchClose}>
+            <SVG name='close' size={24} color='#8c8c8c' />
+          </Button>
+        </div>
+      </ControlledComponent>
+      <ControlledComponent controller={!searchBarOpen}>
+        <Tooltip title='Search'>
+          <Button type='text' className='search-btn' onClick={onSearchOpen}>
+            <SVG name='search' size={24} color='#8c8c8c' />
+          </Button>
+        </Tooltip>
+      </ControlledComponent>
+    </div>
   );
 
   const renderTablePropsSelect = () => (
@@ -1021,7 +1027,7 @@ function UserProfiles({
             setShowSegmentActions(false);
             setMoreActionsModalMode(moreActionsMode.RENAME);
           }}
-          className='flex cursor-pointer hover:bg-gray-100 col-gap-4 items-center py-2 px-4'
+          className='flex cursor-pointer hover:bg-gray-100 gap-x-4 items-center py-2 px-4'
         >
           <SVG size={20} name='edit_query' color='#8c8c8c' />
           <Text type='title' color='character-primary' extraClass='mb-0'>
@@ -1035,7 +1041,7 @@ function UserProfiles({
             setShowSegmentActions(false);
             setMoreActionsModalMode(moreActionsMode.DELETE);
           }}
-          className='flex cursor-pointer hover:bg-gray-100 col-gap-4 items-center py-2 px-4'
+          className='flex cursor-pointer hover:bg-gray-100 gap-x-4 items-center py-2 px-4'
         >
           <SVG size={20} name='trash' color='#8c8c8c' />
           <Text type='title' color='character-primary' extraClass='mb-0'>
@@ -1212,7 +1218,7 @@ function UserProfiles({
         </ControlledComponent>
 
         <div className='flex justify-between items-center'>
-          <div className='flex col-gap-2  items-center'>
+          <div className='flex gap-x-2  items-center'>
             <div className='flex items-center rounded justify-center h-10 w-10'>
               <SVG name={titleIcon} size={32} color={titleIconColor} />
             </div>
@@ -1229,11 +1235,11 @@ function UserProfiles({
         </div>
 
         <div className='flex justify-between items-center my-4'>
-          <div className='flex items-center col-gap-2 w-full'>
+          <div className='flex items-center gap-x-2 w-full'>
             {renderPropertyFilter()}
             {renderSaveSegmentButton()}
           </div>
-          <div className='inline-flex col-gap-2'>
+          <div className='inline-flex gap-x-2'>
             <ControlledComponent
               controller={filtersExpanded === false && newSegmentMode === false}
             >

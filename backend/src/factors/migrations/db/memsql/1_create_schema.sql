@@ -1497,3 +1497,27 @@ CREATE TABLE `website_aggregation` (
   SORT KEY `project_id_website_aggregation` (`project_id`,`event_type`,`timestamp_at_day`)
   , SHARD KEY () 
 ) AUTOSTATS_CARDINALITY_MODE=INCREMENTAL AUTOSTATS_HISTOGRAM_MODE=CREATE AUTOSTATS_SAMPLING=ON SQL_MODE='STRICT_ALL_TABLES'
+
+CREATE TABLE IF NOT EXISTS alert_templates (
+    v TEXT NOT NULL,
+    id int NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    title TEXT NOT NULL,
+    alert json not null,
+    template_constants json not null,
+    is_deleted boolean not null DEFAULT false,
+    created_at timestamp NOT NULL,
+    updated_at timestamp NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS widget_groups (
+    project_id BIGINT NOT NULL,
+    id TEXT NOT NULL,
+    display_name TEXT NOT NULL,
+    widgets json,
+    widgets_added boolean NOT NULL DEFAULT FALSE,
+    created_at timestamp(6) DEFAULT '1970-01-01 00:00:00',
+    updated_at timestamp(6) DEFAULT '1970-01-01 00:00:00',
+    SHARD KEY (project_id),
+    KEY (project_id, id) USING HASH,
+    UNIQUE KEY unique_widget_groups_project_id_name_idx(project_id, display_name) USING HASH
+)

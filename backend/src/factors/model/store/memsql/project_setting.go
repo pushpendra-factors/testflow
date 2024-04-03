@@ -1779,9 +1779,6 @@ func (store *MemSQL) GetTimelinesConfig(projectID int64) (model.TimelinesConfig,
 	tlConfigDecoded := model.TimelinesConfig{}
 	err = json.Unmarshal(timelinesConfig, &tlConfigDecoded)
 	if err != nil {
-		return tlConfigDecoded, err
-	}
-	if err != nil {
 		log.WithField("project_id", projectID).WithError(err).Error("Timeline Config Decode Failed")
 		return model.TimelinesConfig{}, err
 	}

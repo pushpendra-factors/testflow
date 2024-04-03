@@ -2,7 +2,7 @@ from constants.constants import *
 import requests
 import copy
 import time
-from global_objects.global_obj_creator import data_service_obj
+from data_service.data_service import DataService
 
 class LinkedinSetting:
     project_id = ''
@@ -88,7 +88,7 @@ class LinkedinSetting:
                                     AD_ACCOUNT: setting.ad_account})
             else:
                 setting.access_token = new_access_token
-                token_update_response = data_service_obj.update_access_token(
+                token_update_response = DataService().update_access_token(
                                     setting.project_id,
                                     setting.access_token)
                 if not token_update_response.ok:

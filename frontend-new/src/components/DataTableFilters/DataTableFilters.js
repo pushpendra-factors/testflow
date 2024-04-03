@@ -180,7 +180,7 @@ function DataTableFilters({
   const renderLabelButton = ({ label, leftRounded = false }) => (
     <Button
       className={cx(
-        'flex col-gap-1 items-center shadow-none',
+        'flex gap-x-1 items-center shadow-none',
         styles['label-button'],
         {
           [styles['label-button-left-rounded']]: leftRounded
@@ -197,7 +197,7 @@ function DataTableFilters({
   const renderCrossIcon = (categoryIndex) => (
     <Button
       className={cx(
-        'flex col-gap-1 items-center shadow-none',
+        'flex gap-x-1 items-center shadow-none',
         styles['label-button'],
         styles['label-button-right-rounded']
       )}
@@ -274,7 +274,7 @@ function DataTableFilters({
       return null;
     }
     return (
-      <div className='flex flex-col row-gap-2'>
+      <div className='flex flex-col gap-y-2'>
         {selectedFilters.categories.map((category, index) => {
           const selectedCategoryField = get(category, `field`);
           const selectedCategoryFieldValueType = get(
@@ -300,8 +300,8 @@ function DataTableFilters({
               : '';
 
           return (
-            <div className='flex col-gap-1 items-center'>
-              <div key={category.key} className='flex col-gap-1 items-center'>
+            <div className='flex gap-x-1 items-center'>
+              <div key={category.key} className='flex gap-x-1 items-center'>
                 <Dropdown
                   overlayClassName='rounded-lg'
                   trigger='click'
@@ -364,7 +364,7 @@ function DataTableFilters({
   };
 
   return (
-    <div className='flex flex-col row-gap-3'>
+    <div className='flex flex-col gap-y-3'>
       <Text type='title' color='grey-2' level={7}>
         Filter if
       </Text>
@@ -377,7 +377,7 @@ function DataTableFilters({
         <Button
           type={BUTTON_TYPES.PLAIN}
           className={cx(
-            'flex col-gap-1 items-center',
+            'flex gap-x-1 items-center',
             styles['add-filters-button']
           )}
         >
@@ -387,7 +387,7 @@ function DataTableFilters({
           </Text>
         </Button>
       </Dropdown>
-      <div className='flex justify-end col-gap-2'>
+      <div className='flex justify-end gap-x-2'>
         <Button
           onClick={setFiltersVisibility.bind(null, false)}
           size={BUTTON_SIZES.MEDIUM}

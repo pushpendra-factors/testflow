@@ -6,11 +6,17 @@ import signal
 from constants.constants import *
 from custom_exception.custom_exception import CustomException
 from linkedin_setting.linkedin_setting import LinkedinSetting
+from global_objects.global_obj_creator import GlobalObjects
 from jobs.ad_account import AdAccountJob
 from jobs.campaign_group import CampaignGroupJob
 from jobs.campaign import CampaignJob
-from global_objects.global_obj_creator import metrics_aggregator_obj, data_service_obj, campaign_group_cache, campaign_cache, creative_cache
 from util.util import Util as U
+from linkedin_setting.linkedin_setting import LinkedinSetting
+from cache.campaign_group_info import CampaignGroupInfo
+from cache.campaign_info import CampaignInfo
+from cache.creative_info import CreativeInfo
+from data_service.data_service import DataService
+from metrics_aggregator.metrics_aggregator import MetricsAggregator
 
 
 
@@ -30,9 +36,9 @@ parser.add_option('--input_end_timestamp', dest='input_end_timestamp', help='', 
 
 
 def clear_cache():
-    campaign_group_cache.reset_campaign_group_data()
-    campaign_cache.reset_campaign_data()
-    creative_cache.reset_creative_data()
+    CampaignGroupInfo.get_instance().reset_campaign_group_data()
+    CampaignInfo.get_instance().reset_campaign_data()
+    CreativeInfo.get_instance().reset_creative_data()
 
 def sync_ads_data(linkedin_setting, sync_info_with_type, input_start_timestamp, input_end_timestamp):
 
@@ -43,7 +49,7 @@ def sync_ads_data(linkedin_setting, sync_info_with_type, input_start_timestamp, 
     CampaignJob(linkedin_setting, sync_info_with_type, input_start_timestamp, input_end_timestamp).execute()
 
     clear_cache()
-    metrics_aggregator_obj.update_stats(linkedin_setting.project_id, linkedin_setting.ad_account)
+    MetricsAggregator.get_instance().update_stats(linkedin_setting.project_id, linkedin_setting.ad_account)
         
 def handle(signum, frame):
     raise Exception("Function timeout after 20 mins")
@@ -53,8 +59,10 @@ if __name__ == '__main__':
 
     input_start_timestamp = options.input_start_timestamp
     input_end_timestamp = options.input_end_timestamp
+    globalObject = GlobalObjects(options.data_service_host)
+    data_service_obj = DataService.get_instance()
+    metrics_aggregator_obj = MetricsAggregator.get_instance()
 
-    data_service_obj.data_service_host = options.data_service_host
     is_project_id_flag_given = (options.project_ids != None and options.project_ids != '')
     allProjects = options.project_ids == "*"
     

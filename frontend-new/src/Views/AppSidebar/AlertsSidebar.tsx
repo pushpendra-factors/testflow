@@ -21,21 +21,21 @@ const AlertsSidebar = () => {
     }
   }, [routeQuery]);
   return (
-    <div className='flex flex-col row-gap-1 px-2'>
+    <div className='flex flex-col gap-y-1 px-2'>
       <div
         role='button'
         onClick={() => {
           history.replace(PathUrls.Alerts + '?type=realtime');
         }}
         className={cx(
-          'cursor-pointer rounded-md p-2 flex justify-between col-gap-2 items-center',
+          'cursor-pointer rounded-md p-2 flex justify-between gap-x-2 items-center',
           styles['draft-title'],
           {
             [styles['item-active']]: alertType === 'realtime'
           }
         )}
       >
-        <div className={cx('flex col-gap-1 items-center w-full')}>
+        <div className={cx('flex gap-x-1 items-center w-full')}>
           {/* <SVG name='settings' /> */}
           <Text
             color={
@@ -56,14 +56,14 @@ const AlertsSidebar = () => {
           history.replace(PathUrls.Alerts + '?type=weekly');
         }}
         className={cx(
-          'cursor-pointer rounded-md p-2 flex justify-between col-gap-2 items-center',
+          'cursor-pointer rounded-md p-2 flex justify-between gap-x-2 items-center',
           styles['draft-title'],
           {
             [styles['item-active']]: alertType === 'weekly'
           }
         )}
       >
-        <div className={cx('flex col-gap-1 items-center w-full')}>
+        <div className={cx('flex gap-x-1 items-center w-full')}>
           {/* <SVG name='settings' /> */}
           <Text
             color={

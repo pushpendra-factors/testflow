@@ -137,7 +137,7 @@ function AccountOverview({
           <Text
             type='title'
             level={7}
-            extraClass='m-0 whitespace-no-wrap'
+            extraClass='m-0 whitespace-nowrap'
             color='grey'
           >
             Engagement Score
@@ -166,7 +166,7 @@ function AccountOverview({
           <Text
             type='title'
             level={7}
-            extraClass='m-0 whitespace-no-wrap'
+            extraClass='m-0 whitespace-nowrap'
             color='grey'
           >
             Active Time
@@ -174,7 +174,7 @@ function AccountOverview({
           <Text
             type='title'
             level={4}
-            extraClass='m-0 whitespace-no-wrap'
+            extraClass='m-0 whitespace-nowrap'
             weight='bold'
           >
             {formatDuration(parseInt((overview?.time_active || 0).toFixed()))}
@@ -186,7 +186,7 @@ function AccountOverview({
           <Text
             type='title'
             level={7}
-            extraClass='m-0 whitespace-no-wrap'
+            extraClass='m-0 whitespace-nowrap'
             weight='bold'
             color='grey-2'
           >

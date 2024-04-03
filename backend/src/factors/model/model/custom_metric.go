@@ -37,6 +37,40 @@ const (
 	DateTypeDiffMetricType         = "date_type_diff_metric"
 )
 
+const (
+	HubspotContacts              = "Hubspot Contacts"
+	HubspotMQLDateEntered        = "HubSpot MQLs (Date Entered Stage)"
+	HubspotSQLDateEntered        = "HubSpot SQLs (Date Entered Stage)"
+	HubspotContactsCreatedDate   = "HubSpot MQLs (Contact Create Date)"
+	HubspotContactSQLCreatedDate = "HubSpot SQLs (Contact Create Date)"
+	HubspotOppCreatedDate        = "HubSpot Opps (Contact Create Date)"
+	HubspotCustomersCreatedDate  = "HubSpot Customers (Contact Create Date)"
+	HubspotMQLMqlDate            = "HubSpot MQLs (MQL Date)"
+	HubspotSQLSqlDate            = "HubSpot SQLs (SQL Date)"
+	HubspotOppsOppDate           = "HubSpot Opps (Opp Date)"
+	HubspotCustomersCustomerDate = "HubSpot Customers (Customer Date)"
+	HubspotDeals                 = "Deals"
+	HubspotPipeline              = "Pipeline"
+	HubspotRevenue               = "Revenue"
+	HubspotAvgDealSize           = "Avg Deal size"
+	HubspotClosedWonDeals        = "Closed won Deals"
+	HubspotMQLToSQL              = "Hubspot MQLs to SQLs (Contact Create Date)"
+	HubspotSQLToOpp              = "Hubspot SQLs to Opps (Contact Create Date)"
+	HubspotOppsToCustomer        = "Hubspot Opps to Customer (Contact Create Date)"
+	HubspotClosedRate            = "Hubspot Closed rate (%)"
+	HubspotAvgSalesCycleLength   = "Hubspot Avg Sales Cycle Length"
+
+	SalesforceLeads               = "Salesforce Leads"
+	SalesforceSQLDateEntered      = "Salesforce SQLs (Date Entered Stage)"
+	SalesforceOpportunities       = "Salesforce Opportunities"
+	SalesforcePipeline            = "Salesforce Pipeline"
+	SalesforceRevenue             = "Salesforce Revenue"
+	SalesforceAvgDealSize         = "Salesforce Avg Deal size"
+	SalesforceClosedWonDeals      = "Salesforce Closed won Deals"
+	SalesforceClosedRate          = "Salesforce Closed rate (%)"
+	SalesforceAvgSalesCycleLength = "Salesforce Avg Sales Cycle Length"
+)
+
 var (
 	// Shouldnt have unique in dateTypeDiff. How do I present that.
 	CustomMetricProfilesAggregateFunctions   = []string{SumAggregateFunction, UniqueAggregateFunction, AverageAggregateFunction}

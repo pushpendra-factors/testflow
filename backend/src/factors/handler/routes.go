@@ -309,6 +309,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/v1/profiles/accounts/overview/:group/:id", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_PROFILES}), responseWrapper(V1.GetProfileAccountOverviewHandler))
 	authRouteGroup.PUT("/:project_id/v1/profiles/events_config/:event_name", mid.FeatureMiddleware([]string{M.FEATURE_PEOPLE_PROFILES, M.FEATURE_ACCOUNT_PROFILES}), V1.UpdateEventConfigHandler)
 	authRouteGroup.GET("/:project_id/v1/profiles/user_properties/:id", mid.FeatureMiddleware([]string{M.FEATURE_PEOPLE_PROFILES, M.FEATURE_ACCOUNT_PROFILES}), V1.GetUserPropertiesByIDHandler)
+	authRouteGroup.GET("/:project_id/v1/profiles/accounts/top_events/:id", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_PROFILES}), V1.GetTopEventsForADomainHandler)
 
 	// Segments
 	authRouteGroup.POST("/:project_id/segments", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), CreateSegmentHandler)
@@ -317,12 +318,12 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.PUT("/:project_id/segments/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), UpdateSegmentHandler)
 	authRouteGroup.DELETE("/:project_id/segments/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), DeleteSegmentByIdHandler)
 
-	// TODO Kark - v1 or not later.
-	authRouteGroup.GET("/:project_id/segments/analytics/config", GetSegmentAnalyticsConfigHandler)
-	authRouteGroup.POST("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets", AddNewWidgetToWidgetGroupHandler)
-	authRouteGroup.PATCH("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets/:id", EditSegmentAnalyticsWidgetHandler)
-	// authRouteGroup.DELETE("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets/:id", DeleteSegmentAnalyticsWidgetHandler)
-	authRouteGroup.POST("/:project_id/segments/:segment_id/analytics/widget_group/:id/query", ExecuteSegmentQueryHandler)
+	// Segment analysis
+	authRouteGroup.GET("/:project_id/segments/analytics/config", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), GetSegmentAnalyticsConfigHandler)
+	authRouteGroup.POST("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(AddNewWidgetToWidgetGroupHandler))
+	authRouteGroup.PATCH("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(EditSegmentAnalyticsWidgetHandler))
+	authRouteGroup.DELETE("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(DeleteSegmentAnalyticsWidgetHandler))
+	authRouteGroup.POST("/:project_id/segments/:segment_id/analytics/widget_group/:widget_group_id/query", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), ExecuteSegmentQueryHandler)
 
 	// path analysis
 	authRouteGroup.GET("/:project_id/v1/pathanalysis", mid.FeatureMiddleware([]string{M.FEATURE_PATH_ANALYSIS}), responseWrapper(V1.GetPathAnalysisEntityHandler))
@@ -358,6 +359,10 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.PUT("/:project_id/v1/eventtriggeralert/:id/status", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), responseWrapper(V1.UpdateEventTriggerAlertInternalStatusHandler))
 	authRouteGroup.POST("/:project_id/v1/eventtriggeralert/test_slack", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), responseWrapper(V1.SlackTestforEventTriggerAlerts))
 	authRouteGroup.POST("/:project_id/v1/eventtriggeralert/test_teams", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), responseWrapper(V1.TeamsTestforEventTriggerAlerts))
+
+	//alert workflows
+	authRouteGroup.GET("/:project_id/v1/workflow/templates", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), V1.GetAllWorkflowTemplates)
+	authRouteGroup.GET("/:project_id/v1/workflow/saved", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), responseWrapper(V1.GetAllSavedWorkflows))
 
 	// teams
 	authRouteGroup.POST("/:project_id/teams/auth", mid.FeatureMiddleware([]string{M.FEATURE_TEAMS}), V1.TeamsAuthRedirectHandler)
@@ -423,6 +428,9 @@ func InitAppRoutes(r *gin.Engine) {
 	authCommonRouteGroup.GET("/dashboard_templates", GetDashboardTemplatesHandler)
 	authCommonRouteGroup.POST("/dashboard_template/create", CreateTemplateHandler)
 
+	// alert templates
+	authCommonRouteGroup.GET("/alert_templates", GetAlertTemplateHandler)
+	authCommonRouteGroup.DELETE("/alert_templates/:id", DeleteAlertTemplateHandler)
 	// feature gate v2
 	authRouteGroup.GET("/:project_id/v1/features", responseWrapper(V1.GetPlanDetailsForProjectHandler))
 
@@ -664,6 +672,9 @@ func InitDataServiceRoutes(r *gin.Engine) {
 
 	dataServiceRouteGroup.GET("/linkedin/documents/campaign_group_info", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}),
 		IH.DataServiceLinkedinGetCampaignGroupInfoHandler)
+
+	dataServiceRouteGroup.GET("/linkedin/documents/campaign_info", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}),
+		IH.DataServiceLinkedinGetCampaignInfoHandler)
 
 	dataServiceRouteGroup.GET("/linkedin/documents/validation", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}),
 		IH.DataServiceLinkedinValidationHandler)

@@ -213,7 +213,7 @@ const NoBreakdownChartsComponent = forwardRef(
       chart = (
         <div
           className={cx(
-            'grid w-full col-gap-2 row-gap-12',
+            'grid w-full gap-x-2 gap-y-12',
             { 'grid-flow-col': aggregateData.length < 3 },
             { 'grid-cols-3': aggregateData.length >= 3 }
           )}

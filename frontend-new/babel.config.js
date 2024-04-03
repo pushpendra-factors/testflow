@@ -9,7 +9,32 @@ module.exports = function (api) {
   const plugins = [
     '@babel/plugin-proposal-class-properties',
     '@babel/plugin-syntax-dynamic-import',
-    '@babel/plugin-proposal-optional-chaining'
+    '@babel/plugin-proposal-optional-chaining',
+    [
+      'import',
+      {
+        libraryName: 'antd',
+        libraryDirectory: 'lib'
+      },
+      'antd'
+    ],
+    [
+      'import',
+      {
+        libraryName: '@ant-design/icons',
+        libraryDirectory: '',
+        camel2DashComponentName: false
+      },
+      '@ant-design/icons'
+    ],
+    [
+      'import',
+      {
+        libraryName: 'lodash',
+        libraryDirectory: '',
+        camel2DashComponentName: false
+      }
+    ]
   ];
 
   return {

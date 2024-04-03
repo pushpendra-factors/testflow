@@ -201,7 +201,7 @@ function ColumnChart({
         formatter() {
           const self = this;
           return ReactDOMServer.renderToString(
-            <div className='flex flex-col row-gap-2'>
+            <div className='flex flex-col gap-y-2'>
               <Text
                 extraClass={styles.infoText}
                 type='title'
@@ -214,7 +214,7 @@ function ColumnChart({
                   : self.point.category}
               </Text>
               <div className={cx('flex flex-col')}>
-                <div className='flex items-center col-gap-1'>
+                <div className='flex items-center gap-x-1'>
                   <Text weight='bold' type='title' color='grey-6' level={5}>
                     <NumFormat number={self.point.y} />
                     {valueMetricType === METRIC_TYPES.percentType ? '%' : ''}

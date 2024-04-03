@@ -17,11 +17,19 @@ class DataService:
 
     data_service_host = ''
     is_dry_run = False
+    __instance = None
+
+    @staticmethod
+    def get_instance(url='', is_dry_run=False):
+        if DataService.__instance == None:
+            DataService(url, is_dry_run)
+        return DataService.__instance
 
     def __init__(self, url='', is_dry_run=False):
         self.data_service_host = url
         self.is_dry_run = is_dry_run
-
+        DataService.__instance = self
+    
     def get_linkedin_int_settings(self):
         uri = '/data_service/linkedin/project/settings'
         url = self.data_service_host + uri
@@ -250,6 +258,29 @@ class DataService:
         campaign_group_id_to_info_map = U.build_map_of_campaign_group_info(campaign_group_info)
         
         return campaign_group_id_to_info_map
+    
+    def get_campaign_data_for_given_timerange(self, project_id, ad_account_id, 
+                                                    start_timestamp, input_end_timestamp):
+        uri = '/data_service/linkedin/documents/campaign_info'
+        url = self.data_service_host + uri
+        payload = {
+            PROJECT_ID: int(project_id),
+            'customer_ad_account_id': ad_account_id,
+            'start_timestamp': start_timestamp,
+            'end_timestamp': input_end_timestamp
+        }
+        response = requests.get(url, json=payload)
+        if not response.ok:
+            err_msg = (
+            'Failed to get campaign group info from db for project %s. ad account %s, StatusCode:  %d',
+                project_id, ad_account_id, response.status_code)
+            log.error(err_msg)
+            raise CustomException(err_msg, 0, MEMBER_COMPANY_INSIGHTS)
+        
+        campaign_info = response.json()
+        campaign_id_to_info_map = U.build_map_of_campaign_info(campaign_info)
+        
+        return campaign_id_to_info_map
     
     def validate_company_data_pull(self, project_id, ad_account_id, 
                                 start_timestamp, input_end_timestamp, sync_status):

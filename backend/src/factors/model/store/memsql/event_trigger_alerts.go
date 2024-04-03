@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+
 	"sort"
 	"strings"
 	"time"
@@ -501,6 +502,7 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
+	logCtx := log.WithFields(logFields)
 	alerts, eventName, errCode := store.GetEventTriggerAlertsForTheCurrentEvent(projectId, eventNameId)
 	if errCode != http.StatusFound || alerts == nil {
 		//log.WithFields(logFields).Error("GetEventTriggerAlertsByEvent failure inside Match function.")
@@ -523,14 +525,14 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 		var config model.EventTriggerAlertConfig
 		err := U.DecodePostgresJsonbToStructType(alert.EventTriggerAlert, &config)
 		if err != nil {
-			log.WithError(err).Error("Jsonb decoding to struct failure")
+			logCtx.WithError(err).Error("Jsonb decoding to struct failure")
 			return nil, nil, nil, http.StatusInternalServerError
 		}
 		messageProperties := make([]model.QueryGroupByProperty, 0)
 		if config.MessageProperty != nil {
 			err := U.DecodePostgresJsonbToStructType(config.MessageProperty, &messageProperties)
 			if err != nil {
-				log.WithError(err).Error("Jsonb decoding to struct failure")
+				logCtx.WithError(err).Error("Jsonb decoding to struct failure")
 				return nil, nil, nil, http.StatusInternalServerError
 			}
 		}
@@ -578,7 +580,12 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 		}
 
 		if config.EventLevel == model.EventLevelAccount && isGroupPropertyRequired {
-			groupProps, _ = store.GetGroupPropertiesAndDomainGroupUserID(projectId, userID)
+			domainsGroupUserID, domainsGroupID, err := store.getDomainsGroupUserIDForUser(projectId, userID)
+			if err != nil {
+				logCtx.Warn("no domains group for the alert")
+				continue
+			}
+			groupProps = store.GetAllGroupPropertiesForGivenDomainGroupUserID(projectId, domainsGroupID, domainsGroupUserID)
 			if groupProps != nil {
 				updateUserPropMapWithGroupProperties(userPropMap, groupProps, log.WithFields(logFields))
 			}
@@ -627,7 +634,7 @@ func updateUserPropMapWithGroupProperties(userPropMap, groupProps *map[string]in
 	}
 }
 
-func (store *MemSQL) GetGroupPropertiesAndDomainGroupUserID(projectID int64, userID string) (*map[string]interface{}, string) {
+func (store *MemSQL) getDomainsGroupUserIDForUser(projectID int64, userID string) (string, int, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
@@ -637,25 +644,35 @@ func (store *MemSQL) GetGroupPropertiesAndDomainGroupUserID(projectID int64, use
 	user, errCode := store.GetUser(projectID, userID)
 	if errCode != http.StatusFound {
 		logCtx.Error("user not found")
-		return nil, ""
+		return "", 0, fmt.Errorf("user not found")
 	}
 
 	domainsGroup, errCode := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
 	if errCode != http.StatusFound || domainsGroup == nil {
 		logCtx.Error("no domains group found for project")
-		return nil, ""
+		return "", 0, fmt.Errorf("")
 	}
 
 	domainsGroupUserID, err := model.GetUserGroupUserID(user, domainsGroup.ID)
 	if err != nil || domainsGroupUserID == "" {
-		logCtx.Error("no domains group found for project")
-		return nil, ""
+		logCtx.WithField("domain_id", domainsGroup.ID).Error("no domains group for the given id found for project")
+		return "", domainsGroup.ID, fmt.Errorf("no domains group found for project")
 	}
 
-	groupUsers, errCode := store.GetAllGroupUsersByDomainsGroupUserID(projectID, domainsGroup.ID, domainsGroupUserID)
+	return domainsGroupUserID, domainsGroup.ID, nil
+}
+
+func (store *MemSQL) GetAllGroupPropertiesForGivenDomainGroupUserID(projectID int64, domainsGroupID int, domainsGroupUserID string) *map[string]interface{} {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	logCtx := log.WithFields(logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	groupUsers, errCode := store.GetAllGroupUsersByDomainsGroupUserID(projectID, domainsGroupID, domainsGroupUserID)
 	if errCode != http.StatusFound || len(groupUsers) == 0 {
-		logCtx.WithError(err).Error("no group user found")
-		return nil, ""
+		logCtx.Error("no group user found")
+		return nil
 	}
 
 	groupPropsMap := make(map[string]interface{})
@@ -669,12 +686,12 @@ func (store *MemSQL) GetGroupPropertiesAndDomainGroupUserID(projectID int64, use
 	domainsUser, errCode := store.GetUser(projectID, domainsGroupUserID)
 	if errCode != http.StatusFound {
 		logCtx.Error("failed to get domains user")
-		return &groupPropsMap, ""
+		return &groupPropsMap
 	}
 	// Get user properties from $domains user and add them to groupPropsMap
 	getUserPropertiesFromGroupUser(domainsUser, &groupPropsMap, logCtx)
 
-	return &groupPropsMap, domainsGroupUserID
+	return &groupPropsMap
 }
 
 func getUserPropertiesFromGroupUser(user *model.User, groupPropMap *map[string]interface{}, logCtx *log.Entry) {
@@ -797,7 +814,7 @@ func getSortedSetCacheKey(projectId int64) (*cacheRedis.Key, error) {
 	return key, err
 }
 
-func getDisplayLikePropValue(typ string, exi bool, value interface{}) interface{} {
+func (store *MemSQL) getDisplayLikePropValue(projectID int64, typ string, exi bool, prop string, value interface{}, granularity string) (string, interface{}) {
 
 	var res interface{}
 	if exi {
@@ -805,18 +822,24 @@ func getDisplayLikePropValue(typ string, exi bool, value interface{}) interface{
 			val, err := U.GetPropertyValueAsInt64(value)
 			if err != nil {
 				log.WithFields(log.Fields{
-					"property_type": typ,
+					"property_type":  typ,
 					"property_value": val,
 				}).Error("datetime property value could not parsed as int")
-				return ""
+				return prop, ""
 			}
-			res = val
+
+			displayName, displayPropVal := store.getDisplayLikeNameAndPropValForDatetimeType(projectID, prop, granularity, val)
+			if strings.EqualFold(prop, "Timestamp") {
+				prop = displayName
+			}
+			res = displayPropVal
+
 		} else {
 			res = U.GetPropertyValueAsString(value)
 		}
 	}
 
-	return res
+	return prop, res
 }
 
 func satisfiesInternalProperty(filterVal string, propVal interface{}, op string) bool {
@@ -847,10 +870,12 @@ func satisfiesInternalProperty(filterVal string, propVal interface{}, op string)
 	return false
 }
 
-func (store *MemSQL) GetMessageAndBreakdownPropertiesAndFieldsTagMap(event *model.Event, alert *model.EventTriggerAlertConfig, eventName *model.EventName, updatedUserProps *map[string]interface{}) (U.PropertiesMap, map[string]interface{}, map[string]string, error) {
+func (store *MemSQL) GetMessageAndBreakdownPropertiesAndFieldsTagMap(projectID int64, event *model.Event, alert *model.EventTriggerAlertConfig, eventName *model.EventName, updatedUserProps *map[string]interface{}) (U.PropertiesMap, map[string]interface{}, map[string]string, error) {
 	logFields := log.Fields{
+		"project_id":          projectID,
 		"event_trigger_alert": *alert,
 		"event":               *event,
+		"event_name":          *eventName,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
@@ -873,84 +898,30 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesAndFieldsTagMap(event *mode
 		}
 	}
 
-	isGroupPropertyRequired := false
-	for _, prop := range messageProperties {
-		if model.AllowedGroupNames[prop.GroupName] {
-			isGroupPropertyRequired = true
-			break
-		}
+	var displayNamesEP, displayNamesUP map[string]string
+	if eventName.Name != "" {
+		displayNamesEP = store.getDisplayNamesForEP(projectID, eventName.Name)
+		//log.Info(fmt.Printf("%+v\n", displayNamesEP))
 	}
 
-	isFieldsTagPresent := false
-	if alert.EventLevel == model.EventLevelAccount && alert.SlackFieldsTag != nil {
-		isFieldsTagPresent = true
-	}
-	var groupDomainUserID string
-	if alert.EventLevel == model.EventLevelAccount || isGroupPropertyRequired || isFieldsTagPresent {
-		_, groupDomainUserID = store.GetGroupPropertiesAndDomainGroupUserID(event.ProjectId, event.UserId)
-	}
-
-	displayNamesEP := store.getDisplayNamesForEP(event.ProjectId, eventName.Name)
-	//log.Info(fmt.Printf("%+v\n", displayNamesEP))
-
-	displayNamesUP := store.getDisplayNamesForUP(event.ProjectId)
+	displayNamesUP = store.getDisplayNamesForUP(projectID)
 	//log.Info(fmt.Printf("%+v\n", displayNamesUP))
 
-	msgPropMap := make(U.PropertiesMap, 0)
-	for idx, messageProperty := range messageProperties {
-		p := messageProperty.Property
-		if messageProperty.Entity == "user" || messageProperty.Entity == model.PropertyEntityUserGlobal {
+	msgPropMap := store.getMessageProperties(projectID, displayNamesEP, displayNamesUP, messageProperties, eventPropMap, updatedUserProps)
 
-			displayName, exists := displayNamesUP[p]
-			if !exists {
-				displayName = U.CreateVirtualDisplayName(p)
-			}
-
-			propVal, exi := (*updatedUserProps)[p]
-
-			//Serve values for properties which need to be modified internally
-			if filter, exists := model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p]; !exi && exists {
-				if satisfiesInternalProperty(filter.Value, (*updatedUserProps)[filter.Property], filter.Operator) {
-					propVal = true
-					exi = true
-				}
-			}
-			// check and get for display name labels for crm property keys
-			if value := U.GetPropertyValueAsString(propVal); U.IsAllowedCRMPropertyPrefix(p) && exi && value != "" {
-				propertyLabel, exist := store.getDisplayNameLabelForThisProperty(event.ProjectId, p, value)
-				if exist {
-					propVal = propertyLabel
-				}
-			}
-
-			msgPropMap[fmt.Sprintf("%d", idx)] = model.MessagePropMapStruct{
-				DisplayName: displayName,
-				PropValue:   getDisplayLikePropValue(messageProperty.Type, exi, propVal),
-			}
-
-		} else if messageProperty.Entity == "event" {
-			displayName, exists := displayNamesEP[p]
-			if !exists {
-				displayName = U.CreateVirtualDisplayName(p)
-			}
-			propVal, exi := (*eventPropMap)[p]
-			displayPropVal := getDisplayLikePropValue(messageProperty.Type, exi, propVal)
-
-			// Using granularity for $timestamp property
-			if p == "$timestamp" {
-				displayName, displayPropVal = store.getDisplayLikeNameAndPropValForTimestamp(event.ProjectId, displayName, messageProperty.Granularity, displayPropVal)
-			}
-			msgPropMap[fmt.Sprintf("%d", idx)] = model.MessagePropMapStruct{
-				DisplayName: displayName,
-				PropValue:   displayPropVal,
-			}
-		} else {
-			log.Warn("can not find the message property in user and event prop sets")
-		}
-	}
-
-	if alert.EventLevel == model.EventLevelAccount {
+	if alert.EventLevel == model.EventLevelAccount && event.UserId != "" {
+		groupDomainUserID, _, _ := store.getDomainsGroupUserIDForUser(projectID, event.UserId)
 		msgPropMap[model.ETA_DOMAIN_GROUP_USER_ID] = groupDomainUserID
+
+		// for hubspot company url
+		if hsUrl, exists := (*updatedUserProps)[U.ENRICHED_HUBSPOT_COMPANY_OBJECT_URL]; exists {
+			msgPropMap[model.ETA_ENRICHED_HUBSPOT_COMPANY_OBJECT_URL] = hsUrl
+		}
+
+		// for salesforce company url
+		if sfUrl, exists := (*updatedUserProps)[U.ENRICHED_SALESFORCE_ACCOUNT_OBJECT_URL]; exists {
+			msgPropMap[model.ETA_ENRICHED_SALESFORCE_ACCOUNT_OBJECT_URL] = sfUrl
+		}
 	}
 
 	breakdownPropMap := make(map[string]interface{}, 0)
@@ -967,7 +938,12 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesAndFieldsTagMap(event *mode
 		prop := breakdownProperty.Property
 		var value interface{}
 		uval, uexists := (*updatedUserProps)[prop]
-		eval, eexists := (*eventPropMap)[prop]
+
+		var eval interface{}
+		var eexists bool
+		if eventPropMap != nil {
+			eval, eexists = (*eventPropMap)[prop]
+		}
 
 		if breakdownProperty.Entity == "user" && uexists {
 			value = uval
@@ -980,28 +956,84 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesAndFieldsTagMap(event *mode
 	}
 
 	fieldTagsMap := make(map[string]string)
-	for _, tag := range alert.SlackFieldsTag {
-		if ownerField := model.ValidAlertTagsForHubspotOwners[tag]; ownerField != "" {
-			ownerId := U.GetPropertyValueAsString((*updatedUserProps)[ownerField])
-			if ownerId != "" {
-				log.Warn("Unable to find owner id for the field tag")
+	if alert.EventLevel == model.EventLevelAccount && alert.SlackFieldsTag != nil {
+		for _, tag := range alert.SlackFieldsTag {
+			if ownerField := model.ValidAlertTagsForHubspotOwners[tag]; ownerField != "" {
+				ownerId := U.GetPropertyValueAsString((*updatedUserProps)[ownerField])
+				if ownerId != "" {
+					log.Warn("Unable to find owner id for the field tag")
+				}
+				fieldTagsMap[tag] = ownerId
 			}
-			fieldTagsMap[tag] = ownerId
-		}
-	}
-
-	projectID := event.ProjectId
-	if C.AllowSyncReferenceFields(projectID) {
-		breakdownPropMap, err = store.transformBreakdownPropertiesToPropertyLabels(projectID, breakdownPropMap)
-		if err != nil {
-			log.WithError(err).Error("Failed to get property labels on GetMessageAndBreakdownPropertiesMap")
-			return msgPropMap, breakdownPropMap, fieldTagsMap, err
 		}
 	}
 
 	return msgPropMap, breakdownPropMap, fieldTagsMap, nil
 }
 
+func (store *MemSQL) getMessageProperties(projectID int64, displayNamesEP, displayNamesUP map[string]string,
+	messageProperties []model.QueryGroupByProperty, eventPropMap, updatedUserProps *map[string]interface{}) U.PropertiesMap {
+
+	msgPropMap := make(U.PropertiesMap, 0)
+	for idx, messageProperty := range messageProperties {
+		p := messageProperty.Property
+		var propVal interface{}
+		var exi bool
+		if messageProperty.Entity == "user" || messageProperty.Entity == model.PropertyEntityUserGlobal {
+
+			displayName, exists := displayNamesUP[p]
+			if !exists {
+				displayName = U.CreateVirtualDisplayName(p)
+			}
+
+			if updatedUserProps != nil {
+				propVal, exi = (*updatedUserProps)[p]
+			}
+
+			//Serve values for properties which need to be modified internally
+			if filter, exists := model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p]; !exi && exists {
+				if satisfiesInternalProperty(filter.Value, (*updatedUserProps)[filter.Property], filter.Operator) {
+					propVal = true
+					exi = true
+				}
+			}
+			// check and get for display name labels for crm property keys
+			if value := U.GetPropertyValueAsString(propVal); U.IsAllowedCRMPropertyPrefix(p) && exi && value != "" {
+				propertyLabel, exist := store.getDisplayNameLabelForThisProperty(projectID, p, value)
+				if exist {
+					propVal = propertyLabel
+				}
+			}
+
+			displayName, displayPropVal := store.getDisplayLikePropValue(projectID, messageProperty.Type, exi, displayName, propVal, messageProperty.Granularity)
+			msgPropMap[fmt.Sprintf("%d", idx)] = model.MessagePropMapStruct{
+				DisplayName: displayName,
+				PropValue:   displayPropVal,
+			}
+
+		} else if messageProperty.Entity == "event" {
+			displayName, exists := displayNamesEP[p]
+			if !exists {
+				displayName = U.CreateVirtualDisplayName(p)
+			}
+
+			if eventPropMap != nil {
+				propVal, exi = (*eventPropMap)[p]
+			}
+
+			displayName, displayPropVal := store.getDisplayLikePropValue(projectID, messageProperty.Type, exi, displayName, propVal, messageProperty.Granularity)
+
+			msgPropMap[fmt.Sprintf("%d", idx)] = model.MessagePropMapStruct{
+				DisplayName: displayName,
+				PropValue:   displayPropVal,
+			}
+		} else {
+			log.Warn("can not find the message property in user and event prop sets")
+		}
+	}
+
+	return msgPropMap
+}
 func (store *MemSQL) getDisplayNameLabelForThisProperty(projectID int64, propertyKey, value string) (string, bool) {
 	source := strings.Split(propertyKey, "_")[0]
 	source = strings.TrimPrefix(source, "$")
@@ -1020,7 +1052,7 @@ func (store *MemSQL) getDisplayNameLabelForThisProperty(projectID int64, propert
 	return displayLabel.Label, true
 }
 
-func (store *MemSQL) getDisplayLikeNameAndPropValForTimestamp(projectID int64, displayName, granularity string, propVal interface{}) (string, interface{}) {
+func (store *MemSQL) getDisplayLikeNameAndPropValForDatetimeType(projectID int64, displayName, granularity string, propVal interface{}) (string, interface{}) {
 
 	var displayPropVal interface{}
 	timezoneString, errCode := store.GetTimezoneForProject(projectID)
@@ -1194,7 +1226,7 @@ func (store *MemSQL) CacheEventTriggerAlert(alert *model.EventTriggerAlert, even
 	timestamp := tt.UnixNano()
 	date := tt.UTC().Format(U.DATETIME_FORMAT_YYYYMMDD)
 
-	messageProps, breakdownProps, fieldsTagMap, err := store.GetMessageAndBreakdownPropertiesAndFieldsTagMap(event, &eta, eventName, updatedUserProps)
+	messageProps, breakdownProps, fieldsTagMap, err := store.GetMessageAndBreakdownPropertiesAndFieldsTagMap(alert.ProjectID, event, &eta, eventName, updatedUserProps)
 	if err != nil {
 		log.WithError(err).Error("key and sortedTuple fetching error")
 		return false
@@ -1390,4 +1422,137 @@ func (store *MemSQL) GetParagonMetadataForEventTriggerAlert(projectID int64, ale
 	}
 
 	return *metadata, http.StatusFound, nil
+}
+
+func (store *MemSQL) FindAndCacheAlertForCurrentSegment(projectID int64, segmentID, domainID, actionPerformed string) (int, error) {
+	logFields := log.Fields{
+		"project_id":       projectID,
+		"segment_id":       segmentID,
+		"domain_id":        domainID,
+		"action_performed": actionPerformed,
+	}
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+	defer func() {
+		if err := recover(); err != nil {
+			logCtx.WithFields(log.Fields{
+				"err": err,
+			}).Error("Panic occured.")
+		}
+	}()
+
+	//Find if any alert is present for the current segment
+	alerts, errCode := store.GetEventTriggerAlertsBySegmentID(projectID, segmentID, actionPerformed)
+	if errCode != http.StatusFound {
+		if errCode == http.StatusNotFound {
+			logCtx.Info("No alert found for the matching conditions.")
+			return errCode, fmt.Errorf("no alert set for the current segment")
+		}
+		logCtx.Error("Failure while fetching alerts.")
+		return errCode, fmt.Errorf("failure while fetching alerts")
+	}
+
+	timestamp := U.TimeNowZ().UnixNano()
+	fail := false
+
+	// get $domains id column number
+	domainsGroup, errCode := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
+	if errCode != http.StatusFound || domainsGroup == nil {
+		logCtx.Warn("No domains group found for project.")
+		return errCode, fmt.Errorf("no domains group found for project")
+	}
+
+	// get all group and account properties
+	groupUserProps := store.GetAllGroupPropertiesForGivenDomainGroupUserID(projectID, domainsGroup.ID, domainID)
+
+	for _, alert := range alerts {
+		// check for empty jsonb
+		if alert.EventTriggerAlert == nil {
+			logCtx.WithField("alert_id", alerts).Error("Alert config absent for the provided alert.")
+			continue
+		}
+
+		var alertConfig model.EventTriggerAlertConfig
+		err := U.DecodePostgresJsonbToStructType(alert.EventTriggerAlert, &alertConfig)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to deserialize json to struct.")
+			continue
+		}
+
+		messageProps, breakdownProps, fieldTagsMap, err := store.GetMessageAndBreakdownPropertiesAndFieldsTagMap(projectID, &model.Event{}, &alertConfig, &model.EventName{}, groupUserProps)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to deserialize json to struct.")
+			continue
+		}
+
+		// get cache keys
+		isCoolDownTimeExpired, key, sortedSetTuple, err := getCacheKeyAndSortedSetTupleAndCheckCoolDownTimeCondition(
+			projectID, alertConfig.DontRepeatAlerts, alertConfig.CoolDownTime, timestamp, alert.ID, &breakdownProps)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to fetch key and sorted tuple.")
+			continue
+		}
+
+		if !isCoolDownTimeExpired {
+			logCtx.WithFields(logFields).Info("Alert sending cancelled due to cool down timer.")
+			continue
+		}
+
+		// set key in sorted set
+		_, err = cacheRedis.ZincrPersistentBatch(true, sortedSetTuple)
+		if err != nil {
+			logCtx.WithError(err).Error("Error while getting zincr")
+			continue
+		}
+
+		// set cache for the alert
+		successCode, err := store.AddAlertToCache(&alertConfig, &messageProps, fieldTagsMap, key)
+		if err != nil || successCode != http.StatusCreated {
+			fail = true
+			logCtx.WithField("errCode", successCode).WithError(err).Error("Failed to cache alert")
+			continue
+		}
+	}
+
+	if fail {
+		logCtx.Error("Failed to cache one or more alerts.")
+		return http.StatusPartialContent, fmt.Errorf("failed to cache one or more alerts")
+	}
+
+	return http.StatusAccepted, nil
+}
+
+func (store *MemSQL) GetEventTriggerAlertsBySegmentID(projectID int64, segmentID, actionPerformed string) ([]model.EventTriggerAlert, int) {
+	logFields := log.Fields{
+		"project_id":       projectID,
+		"segment_id":       segmentID,
+		"action_performed": actionPerformed,
+	}
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	db := C.GetServices().Db
+
+	var alerts []model.EventTriggerAlert
+	if err := db.Where("project_id = ? AND is_deleted = 0", projectID).
+		Where("JSON_EXTRACT_STRING(event_trigger_alert, 'action_performed') LIKE ?", actionPerformed).
+		Where("JSON_EXTRACT_STRING(event_trigger_alert, 'event') LIKE ?", segmentID).
+		Not("internal_status = ?", model.Disabled).
+		Find(&alerts).Limit(ListLimit).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			logCtx.Info("No alert found for the matching conditions.")
+			return nil, http.StatusNotFound
+		}
+		logCtx.WithError(err).Error("Failed to fetch alert for the given segment conditions.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(alerts) == 0 {
+		logCtx.Info("No alert found for the matching conditions.")
+		return alerts, http.StatusNotFound
+	}
+
+	return alerts, http.StatusFound
 }

@@ -4,7 +4,7 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	"factors/model/store"
-	"factors/task"
+	LCE "factors/task/linkedin_company_engagements"
 	"flag"
 	"fmt"
 	"net/http"
@@ -25,6 +25,7 @@ func main() {
 	env := flag.String("env", "development", "")
 	dryRun := flag.Bool("dry_run_1", false, "Dry run mode")
 	projectIDs := flag.String("project_ids", "", "Projects for which the events and group user are to be populated")
+	excludeProjectIDs := flag.String("exclude_project_ids", "", "")
 
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
 	isPSCHost := flag.Int("memsql_is_psc_host", C.MemSQLDefaultDBParams.IsPSCHost, "")
@@ -44,7 +45,7 @@ func main() {
 
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
-	runNewChange := flag.String("run_new_change", "", "Runs new changes with campaign group data")
+	runV3Change := flag.String("run_v3_change", "", "Runs new changes with campaign group data")
 	batchSize := flag.Int("batch_size", 5, "Num of parallel go routine processes")
 
 	flag.Parse()
@@ -87,6 +88,7 @@ func main() {
 	C.InitConf(config)
 	C.InitRedis(config.RedisHost, config.RedisPort)
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
+	C.SafeFlushAllCollectors()
 	// Initialize configs and connections and close with defer.
 	err := C.InitDB(*config)
 	if err != nil {
@@ -109,24 +111,26 @@ func main() {
 	if errCode != http.StatusOK {
 		log.Fatal("Failed to get linkedin settings")
 	}
-	allProjects, allowedProjectIDs, _ := C.GetProjectsFromListWithAllProjectSupport(*runNewChange, "")
+	allProjects, allowedProjectIDs, disallowedProjectIDs := C.GetProjectsFromListWithAllProjectSupport(*runV3Change, *excludeProjectIDs)
 	for _, setting := range linkedinProjectSettings {
 		errMsg, errCode := "", 0
 		projectID, _ := strconv.ParseInt(setting.ProjectId, 10, 64)
-		if allProjects || allowedProjectIDs[projectID] {
-			errMsg, errCode = task.CreateGroupUserAndEventsV2(setting, *batchSize)
-		} else {
-			errMsg, errCode = task.CreateGroupUserAndEventsV1(setting, *batchSize)
-		}
-		if errMsg != "" || errCode != http.StatusOK {
-			syncStatusFailure := Status{
-				ProjectID: setting.ProjectId,
-				ErrCode:   errCode,
-				ErrMsg:    errMsg,
+		if !disallowedProjectIDs[projectID] {
+			if allProjects || allowedProjectIDs[projectID] {
+				errMsg, errCode = LCE.CreateGroupUserAndEventsV3(setting, *batchSize)
+			} else {
+				errMsg, errCode = LCE.CreateGroupUserAndEventsV2(setting, *batchSize)
 			}
-			syncStatusFailures = append(syncStatusFailures, syncStatusFailure)
-		} else {
-			syncStatusSuccesses = append(syncStatusSuccesses, Status{ProjectID: setting.ProjectId})
+			if errMsg != "" || errCode != http.StatusOK {
+				syncStatusFailure := Status{
+					ProjectID: setting.ProjectId,
+					ErrCode:   errCode,
+					ErrMsg:    errMsg,
+				}
+				syncStatusFailures = append(syncStatusFailures, syncStatusFailure)
+			} else {
+				syncStatusSuccesses = append(syncStatusSuccesses, Status{ProjectID: setting.ProjectId})
+			}
 		}
 	}
 

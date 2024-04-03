@@ -260,7 +260,7 @@ function FilterWrapper({
               : index >= 1
                 ? 'mr-16 ml-10'
                 : 'mx-10'
-          } ${filterPrefix?.split(' ')?.length ? 'whitespace-no-wrap' : ''}`}
+          } ${filterPrefix?.split(' ')?.length ? 'whitespace-nowrap' : ''}`}
           weight='thin'
         >
           {index >= 1 ? 'and' : filterPrefix}

@@ -62,7 +62,7 @@ function PropertyFilter({
       return (
         <Button
           className={cx(
-            'flex items-center justify-center col-gap-1',
+            'flex items-center justify-center gap-x-1',
             styles['collapse-button']
           )}
           type='text'
@@ -83,7 +83,7 @@ function PropertyFilter({
     return (
       <Button
         className={cx(
-          'flex items-center justify-center col-gap-1',
+          'flex items-center justify-center gap-x-1',
           styles['filter-button']
         )}
         onClick={toggleFilters}
@@ -104,11 +104,11 @@ function PropertyFilter({
   if (!selectedAccount.length) return null;
 
   return (
-    <div className='flex flex-col row-gap-4 w-full'>
+    <div className='flex flex-col gap-y-4 w-full'>
       <ControlledComponent controller={newSegmentMode === false}>
         <Button
           className={cx(
-            'flex items-center justify-center col-gap-1',
+            'flex items-center justify-center gap-x-1',
             styles['collapse-button']
           )}
           type='text'

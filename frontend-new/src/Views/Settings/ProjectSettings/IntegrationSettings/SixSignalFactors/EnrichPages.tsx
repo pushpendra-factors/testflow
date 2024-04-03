@@ -186,7 +186,7 @@ function EnrichPages({
       type: 'equals',
       value
     }));
-    if (data[0].value === '') {
+    if (data?.[0]?.value === '' || data?.[0]?.value === undefined) {
       setData(convertedArray);
     } else {
       setData([...data, ...convertedArray]);

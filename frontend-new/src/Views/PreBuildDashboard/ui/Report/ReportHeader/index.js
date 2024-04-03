@@ -6,27 +6,14 @@ import React, {
   useState
 } from 'react';
 import cx from 'classnames';
-import moment from 'moment';
-import { isEmpty } from 'lodash';
-import { Button, Dropdown, Menu, Modal, Tabs, Tooltip } from 'antd';
+import { Button, Tabs, Tooltip } from 'antd';
 import { useSelector } from 'react-redux';
 import { useHistory, useLocation } from 'react-router-dom';
 import { SVG, Text } from 'factorsComponents';
-import {
-  EVENT_BREADCRUMB
-  // QUERY_TYPE_ATTRIBUTION,
-  // QUERY_TYPE_FUNNEL,
-  // QUERY_TYPE_KPI
-} from 'Utils/constants';
-import { QuestionCircleOutlined } from '@ant-design/icons';
-import SaveQuery from 'Components/SaveQuery';
 import { addShadowToHeader } from 'Views/CoreQuery/AnalysisResultsPage/analysisResultsPage.helpers';
 import { CoreQueryContext } from 'Context/CoreQueryContext';
 // import FaSelect from 'Components/FaSelect';
-import styles from './index.module.scss';
-import AppModal from 'Components/AppModal';
 import { PathUrls } from 'Routes/pathUrls';
-import { BUTTON_TYPES } from 'Constants/buttons.constants';
 
 const { TabPane } = Tabs;
 
