@@ -4,8 +4,8 @@ export const WhiteListedAccounts = [
   'baliga@factors.ai',
   SolutionsAccountId,
   'sonali@factors.ai',
-  'janani@factors.ai',
-  'junaid@factors.ai'
+  'junaid@factors.ai',
+  'sarath_tdfect@factors.ai'
 ];
 
 export const TestEnvs = [
