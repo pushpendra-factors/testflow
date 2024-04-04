@@ -115,7 +115,7 @@ function FiltersBox({
       computeFilterProperties({
         userProperties,
         groupProperties,
-        availableGroups: availableGroups?.account_groups,
+        availableGroups: availableGroups?.all_groups,
         profileType
       }),
     [userProperties, groupProperties, availableGroups, profileType]
@@ -126,9 +126,8 @@ function FiltersBox({
       computeFilterProperties({
         userProperties,
         groupProperties,
-        availableGroups: availableGroups?.account_groups,
+        availableGroups: availableGroups?.all_groups,
         profileType: 'user',
-        source: 'users'
       }),
     [userProperties, groupProperties, availableGroups]
   );

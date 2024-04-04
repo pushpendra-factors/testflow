@@ -710,6 +710,13 @@ upload-country-name-to-isocode-migration: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/country-name-to-isocode-migration:$(TAG)
 
 
+pack-six-signal-to-clearbit-migration:
+	docker build -t us.gcr.io/factors-$(ENV)/six-signal-to-clearbit-migration:$(TAG) -f Dockerfile.six_signal_to_clearbit_migration .
+
+upload-six-signal-to-clearbit-migration: export IMAGE_NAME=six-signal-to-clearbit-migration
+upload-six-signal-to-clearbit-migration: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/six-signal-to-clearbit-migration:$(TAG)
+
 
 pack-channels-to-kpi-migration:
 	docker build -t us.gcr.io/factors-$(ENV)/channels-to-kpi-migration:$(TAG) -f Dockerfile.channels_v1_to_kpi_query_migration .
