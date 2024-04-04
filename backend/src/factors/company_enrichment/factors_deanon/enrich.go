@@ -142,6 +142,7 @@ func (fd *FactorsDeanon) HandleAccountLimitAlert(projectId int64, client HTTPCli
 
 	isEmailAllowed := model.IsReceipentAllowedMailmodo(email, EMAIL_TYPE_TRANSACTIONAL)
 	if !isEmailAllowed {
+		logCtx.Info("Email failed the check ", email)
 		return http.StatusForbidden, nil
 	}
 
