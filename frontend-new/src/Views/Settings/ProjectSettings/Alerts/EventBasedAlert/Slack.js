@@ -221,7 +221,7 @@ const Slack = ({
                                     >
                                         Have you conneted with Slack
                                     </Text>
-                                    <Button ghost type={'link'} loading={loading} onClick={()=>refreshSlackDetails()} icon={<SVG name={'ArrowRotateRight'} size={16} />} className='fa-button-ghost ml-2'>
+                                    <Button type={'link'} loading={loading} onClick={()=>refreshSlackDetails()} icon={<SVG name={'ArrowRotateRight'} size={16} />} className='fa-button-ghost ml-2'>
                                         Refresh to check
                                     </Button>
                             </div>
@@ -268,8 +268,7 @@ const Slack = ({
                                 {!saveSelectedChannel.length > 0 ? (
                                     <div className={'mt-2'}>
                                         <Button
-                                            type={'link'}
-                                            ghost
+                                            type={'link'} 
                                             className='fa-button-ghost'
                                             onClick={() => setShowSelectChannelsModal(true)}
                                         >
@@ -280,7 +279,6 @@ const Slack = ({
                                     <div className={'mt-2'}>
                                         <Button
                                             type={'link'}
-                                            ghost
                                             className='fa-button-ghost'
                                             onClick={() => setShowSelectChannelsModal(true)}
                                         >
@@ -353,7 +351,7 @@ const Slack = ({
                                     >
                                         Have you reintegrated?
                                     </Text>
-                                    <Button ghost type={'link'} loading={loading} onClick={()=>refreshSlackDetails()} icon={<SVG name={'ArrowRotateRight'} size={16} />} className='fa-button-ghost ml-2'>
+                                    <Button type={'link'} loading={loading} onClick={()=>refreshSlackDetails()} icon={<SVG name={'ArrowRotateRight'} size={16} />} className='fa-button-ghost ml-2'>
                                         Refresh to check
                                     </Button>
                             </div>
@@ -388,7 +386,7 @@ const Slack = ({
 
                         {(slackEnabled && projectSettings?.int_slack) &&
                     <div className='border-top--thin-2 mt-4 p-4'>
-                            <Button disabled={!saveSelectedChannel.length > 0} loading={slackTestMsgLoading} icon={slackTestMsgTxt ?  <SVG name='Checkmark' size={16}  color='grey' /> : <SVG name={'PaperPlane'} size={16} color='grey' />} ghost onClick={()=>sendTestSlackMessage()}>{ slackTestMsgLoading ? 'Sending...' : slackTestMsgTxt ? 'Message sent!' : 'Send test message'}</Button>  
+                            <Button disabled={!saveSelectedChannel.length > 0} loading={slackTestMsgLoading} icon={slackTestMsgTxt ?  <SVG name='Checkmark' size={16}  color='grey' /> : <SVG name={'PaperPlane'} size={16} color='grey' />} onClick={()=>sendTestSlackMessage()}>{ slackTestMsgLoading ? 'Sending...' : slackTestMsgTxt ? 'Message sent!' : 'Send test message'}</Button>  
                         </div> }
 
                 </div>
