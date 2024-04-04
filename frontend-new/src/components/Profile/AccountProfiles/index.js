@@ -228,7 +228,7 @@ function AccountProfiles({
 
   useEffect(() => {
     getGroupPropsFromAPI(GROUP_NAME_DOMAINS);
-    Object.keys(groups?.account_groups || {}).forEach((group) => {
+    Object.keys(groups?.all_groups || {}).forEach((group) => {
       getGroupPropsFromAPI(group);
     });
   }, [activeProject.id, groups]);
