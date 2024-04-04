@@ -62,6 +62,7 @@ func main() {
 	}
 
 	C.InitConf(config)
+	C.InitRedis(config.RedisHost, config.RedisPort)
 	C.InitQueueRedis(config.QueueRedisHost, config.QueueRedisPort)
 	err := C.InitDB(*config)
 	if err != nil {
