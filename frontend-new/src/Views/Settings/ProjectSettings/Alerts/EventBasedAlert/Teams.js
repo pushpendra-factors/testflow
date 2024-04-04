@@ -170,7 +170,7 @@ const Teams = ({
                                     >
                                         Have you conneted with Teams
                                     </Text>
-                                    <Button ghost type={'link'} loading={loading} onClick={()=>refreshTeamsDetails()} icon={<SVG name={'ArrowRotateRight'} size={16} />} className='fa-button-ghost ml-2'>
+                                    <Button type={'link'} loading={loading} onClick={()=>refreshTeamsDetails()} icon={<SVG name={'ArrowRotateRight'} size={16} />} className='fa-button-ghost ml-2'>
                                         Refresh to check
                                     </Button>
                             </div>
@@ -227,7 +227,6 @@ const Teams = ({
                             <Col span={10} className={'m-0'}>
                                 <Button
                                     type={'link'}
-                                    ghost
                                     className='fa-button-ghost'
                                     onClick={() => setTeamsShowSelectChannelsModal(true)}
                                 >
@@ -240,7 +239,6 @@ const Teams = ({
                             <Col span={10} className={'m-0'}>
                                 <Button
                                     type={'link'}
-                                    ghost
                                     className='fa-button-ghost'
                                     onClick={() => setTeamsShowSelectChannelsModal(true)}
                                 >
@@ -273,7 +271,7 @@ const Teams = ({
 
             {(teamsEnabled && projectSettings?.int_teams) && <>
                 <div className='border-top--thin-2 mt-4 p-4'>
-                            <Button disabled={!teamsSaveSelectedChannel.length > 0} loading={teamsTestMsgLoading} icon={teamsTestMsgTxt ? <SVG name='Checkmark' size={16}  color='grey' /> : <SVG name={'PaperPlane'} size={16} color='grey' />} ghost onClick={()=>sendTestTeamsMessage()}>{ teamsTestMsgLoading ? 'Sending...' : teamsTestMsgTxt ? 'Message sent!' : 'Send test message'}</Button>
+                            <Button disabled={!teamsSaveSelectedChannel.length > 0} loading={teamsTestMsgLoading} icon={teamsTestMsgTxt ? <SVG name='Checkmark' size={16}  color='grey' /> : <SVG name={'PaperPlane'} size={16} color='grey' />} onClick={()=>sendTestTeamsMessage()}>{ teamsTestMsgLoading ? 'Sending...' : teamsTestMsgTxt ? 'Message sent!' : 'Send test message'}</Button>
                         </div> 
             </>}
 
