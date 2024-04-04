@@ -1939,6 +1939,31 @@ func (store *MemSQL) GetLastSessionEventTimestamp(projectID int64, sessionEventN
 	return *startTimestamp, http.StatusFound
 }
 
+func (store *MemSQL) IsEventPresentAfterGivenTimestamp(projectId int64, timestamp int64) (int, string) {
+
+	logFields := log.Fields{
+		"project_id": projectId,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	db := C.GetServices().Db
+
+	var events []model.Event
+	err := db.Limit(1).Where("project_id = ? AND timestamp >= ?", projectId, timestamp).Find(&events).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get events of project.")
+		return http.StatusInternalServerError, "Failed to get events of project."
+	}
+
+	if len(events) == 0 {
+		return http.StatusNotFound, "No event present"
+	}
+
+	return http.StatusFound, ""
+
+}
+
 // GetAllEventsForSessionCreationAsUserEventsMap - Returns a map of user:[events...] withing given period,
 // excluding session event and event with session_id.
 func (store *MemSQL) GetAllEventsForSessionCreationAsUserEventsMap(projectId int64, sessionEventNameId string,
