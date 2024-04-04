@@ -91,6 +91,8 @@ import RenameSegmentModal from '../AccountProfiles/RenameSegmentModal';
 import UpdateSegmentModal from '../AccountProfiles/UpdateSegmentModal';
 import styles from './index.module.scss';
 import { ALPHANUMSTR, iconColors } from '../constants';
+import { PathUrls } from 'Routes/pathUrls';
+import useAutoFocus from 'hooks/useAutoFocus';
 
 const userOptions = getUserOptions();
 
@@ -215,7 +217,7 @@ function UserProfiles({
     getProfileUsers,
     restoreFiltersDefaultState
   ]);
-  
+
   const disableNewSegmentMode = useCallback(() => {
     dispatch(setNewSegmentModeAction(false));
   }, []);
@@ -237,6 +239,11 @@ function UserProfiles({
           setUpdateSegmentModal(false);
           setFiltersDirty(false);
         }
+        setTimelinePayload({
+          source: 'All',
+          segment: {}
+        });
+        history.replace(PathUrls.ProfilePeople);
         await getSavedSegments(activeProject.id);
         disableNewSegmentMode();
       } catch (err) {
@@ -248,7 +255,7 @@ function UserProfiles({
         });
       }
     },
-    [activeProject.id, createNewSegment, getSavedSegments, setFiltersDirty]
+    [activeProject.id]
   );
 
   const handleCreateSegment = useCallback(
@@ -262,12 +269,7 @@ function UserProfiles({
       reqPayload.type = 'All';
       handleSaveSegment(reqPayload);
     },
-    [
-      selectedFilters,
-      displayTableProps,
-      handleSaveSegment,
-      disableNewSegmentMode
-    ]
+    [selectedFilters]
   );
 
   const handleDeleteActiveSegment = useCallback(() => {
@@ -348,16 +350,15 @@ function UserProfiles({
     getSavedSegments,
     setFiltersDirty
   ]);
-  useEffect(()=>{
-    dispatch(setNewSegmentModeAction(false))
-  },[])
+  useEffect(() => {
+    dispatch(setNewSegmentModeAction(false));
+  }, []);
   useEffect(() => {
     if (!timelinePayload.search_filter) {
       setListSearchItems([]);
     } else {
       const listValues = timelinePayload?.search_filter || [];
       setListSearchItems(_.uniq(listValues));
-      setSearchBarOpen(true);
     }
   }, [timelinePayload?.search_filter]);
 
@@ -370,7 +371,7 @@ function UserProfiles({
     setTimeout(() => {
       setLoading(false);
     }, 1000);
-    
+
     fetchProjectSettingsV1(activeProject.id);
     fetchProjectSettings(activeProject.id);
     if (_.isEmpty(dashboards?.data)) {
@@ -931,18 +932,9 @@ function UserProfiles({
     } else {
       values = [];
     }
-
-    const tmpQuery = getFiltersRequestPayload({
-      selectedFilters,
-      displayTableProps,
-      caller: 'user_profiles'
-    }).query;
     const updatedPayload = {
       ...timelinePayload,
-      search_filter: values.map((value) => JSON.parse(value)[0]),
-      segment: {
-        query: tmpQuery
-      }
+      search_filter: values.map((value) => JSON.parse(value)[0])
     };
     setListSearchItems(updatedPayload.search_filter);
     setTimelinePayload(updatedPayload);
@@ -957,33 +949,38 @@ function UserProfiles({
   const onSearchOpen = () => {
     setSearchBarOpen(true);
   };
+  function SearchBar() {
+    const searchBarRef = useAutoFocus();
+    return (
+      <div className='flex items-center justify-between'>
+        <Form
+          name='basic'
+          labelCol={{ span: 8 }}
+          wrapperCol={{ span: 16 }}
+          onFinish={handleUsersSearch}
+          autoComplete='off'
+        >
+          <Form.Item name='users'>
+            <Input
+              ref={searchBarRef}
+              size='large'
+              defaultValue={listSearchItems ? listSearchItems.join(', ') : null}
+              placeholder='Search Users'
+              style={{ width: '240px', 'border-radius': '5px' }}
+              prefix={<SVG name='search' size={24} color='#8c8c8c' />}
+            />
+          </Form.Item>
+        </Form>
+        <Button type='text' className='search-btn' onClick={onSearchClose}>
+          <SVG name='close' size={24} color='#8c8c8c' />
+        </Button>
+      </div>
+    );
+  }
   const renderSearchSection = () => (
     <div className='relative'>
       <ControlledComponent controller={searchBarOpen}>
-        <div className='flex items-center justify-between'>
-          <Form
-            name='basic'
-            labelCol={{ span: 8 }}
-            wrapperCol={{ span: 16 }}
-            onFinish={handleUsersSearch}
-            autoComplete='off'
-          >
-            <Form.Item name='users'>
-              <Input
-                size='large'
-                defaultValue={
-                  listSearchItems ? listSearchItems.join(', ') : null
-                }
-                placeholder='Search Users'
-                style={{ width: '240px', 'border-radius': '5px' }}
-                prefix={<SVG name='search' size={24} color='#8c8c8c' />}
-              />
-            </Form.Item>
-          </Form>
-          <Button type='text' className='search-btn' onClick={onSearchClose}>
-            <SVG name='close' size={24} color='#8c8c8c' />
-          </Button>
-        </div>
+        <SearchBar />
       </ControlledComponent>
       <ControlledComponent controller={!searchBarOpen}>
         <Tooltip title='Search'>
