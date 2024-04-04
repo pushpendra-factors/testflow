@@ -32,6 +32,8 @@ func main() {
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
 
+	clearbitAccProvisionKey := flag.String("cb_acc_provision_key", "dummy", "")
+
 	flag.Parse()
 
 	if *env != C.DEVELOPMENT &&
@@ -53,12 +55,13 @@ func main() {
 			Name:        *memSQLName,
 			Password:    *memSQLPass,
 		},
-		PrimaryDatastore: *primaryDatastore,
-		QueueRedisHost:   *queueRedisHost,
-		QueueRedisPort:   *queueRedisPort,
-		UseQueueRedis:    *useQueueRedis,
-		RedisHost:        *redisHost,
-		RedisPort:        *redisPort,
+		PrimaryDatastore:               *primaryDatastore,
+		QueueRedisHost:                 *queueRedisHost,
+		QueueRedisPort:                 *queueRedisPort,
+		UseQueueRedis:                  *useQueueRedis,
+		RedisHost:                      *redisHost,
+		RedisPort:                      *redisPort,
+		ClearbitProvisionAccountAPIKey: *clearbitAccProvisionKey,
 	}
 
 	C.InitConf(config)
@@ -82,13 +85,13 @@ func main() {
 		// Check if they are active after 16 Feb, 2024 00:00:00 IST
 		errCode, errMsg := store.GetStore().IsEventPresentAfterGivenTimestamp(projectId, 1708021800)
 		if errCode != http.StatusFound {
-			log.Error(errMsg)
+			log.Warn(errMsg)
 			failureMap[errMsg] = append(failureMap[errMsg], projectId)
 			continue
 		}
 
 		errCode, errMsg = UpdateClearbitAsDeanonProvider(projectId)
-		if errCode != http.StatusFound {
+		if errCode != http.StatusOK {
 			log.Error(errMsg)
 			failureMap[errMsg] = append(failureMap[errMsg], projectId)
 			continue
@@ -97,7 +100,7 @@ func main() {
 	}
 
 	if count < len(projectIds) {
-		log.Error("List of failed project ids: ", failureMap)
+		log.Info("List of failed project ids: ", failureMap)
 	}
 }
 
