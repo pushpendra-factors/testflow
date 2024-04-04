@@ -499,7 +499,7 @@ function UserProfiles({
               level={7}
               color='grey-2'
               weight='bold'
-              extraClass='m-0 truncate'
+              extraClass='m-0 truncate capitalize'
             >
               {propDisplayName}
             </Text>
