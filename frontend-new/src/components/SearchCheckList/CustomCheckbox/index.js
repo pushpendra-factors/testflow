@@ -42,7 +42,7 @@ export default function CustomCheckbox({
         <Text
           type='title'
           level={7}
-          extraClass='mb-0 truncate not-draggable pl-1'
+          extraClass='mb-0 truncate not-draggable pl-1 capitalize'
           truncate
           charLimit={25}
         >

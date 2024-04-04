@@ -309,7 +309,7 @@ function AccountProfiles({
       : getFilteredTableProps(projectTableProps);
 
     return tableProps;
-  }, [currentProjectSettings, accountPayload?.segment?.id]);
+  }, [currentProjectSettings, accountPayload?.segment]);
 
   const handleRenameSegment = useCallback(
     (name) => {

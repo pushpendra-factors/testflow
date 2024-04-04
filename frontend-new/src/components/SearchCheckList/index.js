@@ -126,7 +126,7 @@ export default function SearchCheckList({
                         <Text
                           type='title'
                           level={7}
-                          extraClass='mb-0 truncate'
+                          extraClass='mb-0 truncate capitalize'
                           truncate
                           charLimit={25}
                         >
@@ -168,7 +168,7 @@ export default function SearchCheckList({
                         <Text
                           type='title'
                           level={7}
-                          extraClass='mb-0 truncate'
+                          extraClass='mb-0 truncate capitalize'
                           truncate
                           charLimit={25}
                         >
