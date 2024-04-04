@@ -197,7 +197,7 @@ const getTablePropColumn = ({
   }
 
   return {
-    title: getTitleText({ title: propDisplayName }),
+    title: getTitleText({ title: propDisplayName, extraClass: 'capitalize' }),
     dataIndex: prop,
     key: prop,
     width:
