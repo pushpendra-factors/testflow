@@ -75,7 +75,7 @@ func main() {
 	}
 
 	count := 0
-	var failureMap map[string][]int64
+	failureMap := make(map[string][]int64)
 	for _, projectId := range projectIds {
 
 		// Check if they are active after 16 Feb, 2024 00:00:00 IST
