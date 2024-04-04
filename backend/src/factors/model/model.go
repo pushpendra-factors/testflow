@@ -374,6 +374,7 @@ type Model interface {
 	GetLinkedinEventFieldsBasedOnTimestampV3(projectID int64, timestamp int64,
 		imprEventNameID string, clicksEventNameID string) (map[int64]map[string]map[string]map[string]interface{},
 		map[int64]map[string]map[string]map[string]interface{}, error)
+	IsEventPresentAfterGivenTimestamp(projectId int64, timestamp int64) (int, string)
 
 	// clickable_elements
 	UpsertCountAndCheckEnabledClickableElement(projectID int64, payload *model.CaptureClickPayload) (isEnabled bool, status int, err error)
