@@ -2962,13 +2962,15 @@ func (store *MemSQL) GetLinkedinEventFieldsBasedOnTimestampV2(projectID int64, t
 	if projectID == 0 || timestamp == 0 {
 		return nil, nil, errors.New("invalid project ID or timestamp")
 	}
+	if !verifyEventCountWithGivenEventProperty(projectID, timestamp, imprEventNameID, clicksEventNameID, U.EP_CAMPAIGN_ID) {
+		return nil, nil, errors.New("existing events do not have campaign_id property")
+	}
 	imprLinkedinFieldsWithCampaignArr := make([]LinkedinEventFieldsV2, 0)
 	db := C.GetServices().Db
 	rows, _ := db.Raw("Select id, user_id, JSON_EXTRACT_STRING(properties, '$campaign_id') as campaign_group_id, "+
 		"JSON_EXTRACT_STRING(user_properties, '$li_domain') as domain, "+
 		"JSON_EXTRACT_STRING(properties, '$li_ad_view_count') as property_value, timestamp from events where project_id = ? "+
-		"and timestamp >= ? and timestamp < ? and event_name_id = ? "+
-		"and JSON_EXTRACT_STRING(properties, '$campaign_id') is not null ", projectID, timestamp, timestamp+86400, imprEventNameID).Rows()
+		"and timestamp >= ? and timestamp < ? and event_name_id = ? ", projectID, timestamp, timestamp+86400, imprEventNameID).Rows()
 	for rows.Next() {
 		imprLinkedinFields := LinkedinEventFieldsV2{}
 		if err := db.ScanRows(rows, &imprLinkedinFields); err != nil {
@@ -2981,8 +2983,7 @@ func (store *MemSQL) GetLinkedinEventFieldsBasedOnTimestampV2(projectID int64, t
 	rows, _ = db.Raw("Select id, user_id, JSON_EXTRACT_STRING(properties, '$campaign_id') as campaign_group_id, "+
 		"JSON_EXTRACT_STRING(user_properties, '$li_domain') as domain, "+
 		"JSON_EXTRACT_STRING(properties, '$li_ad_click_count') as property_value, timestamp from events where project_id = ? "+
-		"and timestamp >= ? and timestamp < ? and event_name_id = ? "+
-		"and JSON_EXTRACT_STRING(properties, '$campaign_id') is not null ", projectID, timestamp, timestamp+86400, clicksEventNameID).Rows()
+		"and timestamp >= ? and timestamp < ? and event_name_id = ? ", projectID, timestamp, timestamp+86400, clicksEventNameID).Rows()
 	for rows.Next() {
 		clicksLinkedinFields := LinkedinEventFieldsV2{}
 		if err := db.ScanRows(rows, &clicksLinkedinFields); err != nil {
@@ -3019,25 +3020,42 @@ func buildMapOfTimestampDomainCampaignGroupIDV2(linkedinArr []LinkedinEventField
 type LinkedinEventFieldsV3 struct {
 	Timestamp     int64  `json:"timestamp"`
 	CampaignID    string `json:"campaign_id"`
-	Domain        string `json:"domain"`
 	ID            string `json:"id"`
 	PropertyValue int64  `json:"property_value"`
 	UserID        string `json:"user_id"`
+	OrgID         string `json:"org_id"`
 }
 
+/*
+Reason for switching to org_id instead of domain or raw_domain
+1. Having multiple rows in linkedin_documents for same identifying entity(initally domain, now orgID)
+	timestamp is creating a data mismatch in events
+	-- same event is updated as checkIfCreationReq returns true and we keep on updating the value for the same event
+1. Initial observation was domain should be unique for each organisation
+	-- new oberservation prove otherwise
+	-- different orgs could be present with same domain or raw domain
+	-- the above reason is why raw domain is not being considered for identification
+*/
+
 func (store *MemSQL) GetLinkedinEventFieldsBasedOnTimestampV3(projectID int64, timestamp int64,
-	imprEventNameID string, clicksEventNameID string) (map[int64]map[string]map[string]map[string]interface{},
-	map[int64]map[string]map[string]map[string]interface{}, error) {
+	imprEventNameID string, clicksEventNameID string) (map[int64]map[string]map[string]model.ValueForEventLookupMap,
+	map[int64]map[string]map[string]model.ValueForEventLookupMap, error) {
 	if projectID == 0 || timestamp == 0 {
 		return nil, nil, errors.New("invalid project ID or timestamp")
 	}
+	if !verifyEventCountWithGivenEventProperty(projectID, timestamp, imprEventNameID, clicksEventNameID, U.EP_ADGROUP_ID) {
+		return nil, nil, errors.New("existing events do not have adgroup_id property")
+	}
+	if !verifyEventCountWithGivenEventProperty(projectID, timestamp, imprEventNameID, clicksEventNameID, U.LI_ORGANIZATION_ID) {
+		return nil, nil, errors.New("existing events do not have org_id property")
+	}
+
 	imprLinkedinFieldsWithCampaignArr := make([]LinkedinEventFieldsV3, 0)
 	db := C.GetServices().Db
 	rows, _ := db.Raw("Select id, user_id, JSON_EXTRACT_STRING(properties, '$adgroup_id') as campaign_id, "+
-		"JSON_EXTRACT_STRING(user_properties, '$li_domain') as domain, "+
+		"JSON_EXTRACT_STRING(properties, '$li_org_id') as org_id, "+
 		"JSON_EXTRACT_STRING(properties, '$li_ad_view_count') as property_value, timestamp from events where project_id = ? "+
-		"and timestamp >= ? and timestamp < ? and event_name_id = ? "+
-		"and JSON_EXTRACT_STRING(properties, '$adgroup_id') is not null ", projectID, timestamp, timestamp+86400, imprEventNameID).Rows()
+		"and timestamp >= ? and timestamp < ? and event_name_id = ? ", projectID, timestamp, timestamp+86400, imprEventNameID).Rows()
 	for rows.Next() {
 		imprLinkedinFields := LinkedinEventFieldsV3{}
 		if err := db.ScanRows(rows, &imprLinkedinFields); err != nil {
@@ -3048,10 +3066,9 @@ func (store *MemSQL) GetLinkedinEventFieldsBasedOnTimestampV3(projectID int64, t
 
 	clicksLinkedinFieldsWithCampaignArr := make([]LinkedinEventFieldsV3, 0)
 	rows, _ = db.Raw("Select id, user_id, JSON_EXTRACT_STRING(properties, '$adgroup_id') as campaign_id, "+
-		"JSON_EXTRACT_STRING(user_properties, '$li_domain') as domain, "+
+		"JSON_EXTRACT_STRING(properties, '$li_org_id') as org_id, "+
 		"JSON_EXTRACT_STRING(properties, '$li_ad_click_count') as property_value, timestamp from events where project_id = ? "+
-		"and timestamp >= ? and timestamp < ? and event_name_id = ? "+
-		"and JSON_EXTRACT_STRING(properties, '$adgroup_id') is not null ", projectID, timestamp, timestamp+86400, clicksEventNameID).Rows()
+		"and timestamp >= ? and timestamp < ? and event_name_id = ? ", projectID, timestamp, timestamp+86400, clicksEventNameID).Rows()
 	for rows.Next() {
 		clicksLinkedinFields := LinkedinEventFieldsV3{}
 		if err := db.ScanRows(rows, &clicksLinkedinFields); err != nil {
@@ -3060,27 +3077,71 @@ func (store *MemSQL) GetLinkedinEventFieldsBasedOnTimestampV3(projectID int64, t
 		clicksLinkedinFieldsWithCampaignArr = append(clicksLinkedinFieldsWithCampaignArr, clicksLinkedinFields)
 	}
 	log.WithFields(log.Fields{"countImpr": len(imprLinkedinFieldsWithCampaignArr), "countClicks": len(clicksLinkedinFieldsWithCampaignArr), "timestamp": timestamp}).Info("Number of existing events fetched from db for timestamp")
-	imprEventsWithCampaignMap := buildMapOfTimestampDomainCampaignGroupIDV3(imprLinkedinFieldsWithCampaignArr)
-	clicksEventsWithCampaignMap := buildMapOfTimestampDomainCampaignGroupIDV3(clicksLinkedinFieldsWithCampaignArr)
+	imprEventsWithCampaignMap, err := buildMapOfTimestampOrgIDCampaignIDV3(imprLinkedinFieldsWithCampaignArr)
+	if err != nil {
+		return nil, nil, errors.New("duplicate values present for events for same org_id and adgroup_id for impression events")
+	}
+	clicksEventsWithCampaignMap, err := buildMapOfTimestampOrgIDCampaignIDV3(clicksLinkedinFieldsWithCampaignArr)
+	if err != nil {
+		return nil, nil, errors.New("duplicate values present for events for same org_id and adgroup_id for click events")
+	}
 	return imprEventsWithCampaignMap, clicksEventsWithCampaignMap, nil
 }
 
-func buildMapOfTimestampDomainCampaignGroupIDV3(linkedinArr []LinkedinEventFieldsV3) map[int64]map[string]map[string]map[string]interface{} {
-	resultantMap := make(map[int64]map[string]map[string]map[string]interface{})
+type EventCount struct {
+	EventCount int64 `json:"event_count"`
+}
+
+/*
+This functions checks the total event count for given timerange and events with given event property present.
+And returns true if both are equal, false (if not equal or error while getting the count)
+*/
+func verifyEventCountWithGivenEventProperty(projectID int64, timestamp int64,
+	imprEventNameID string, clicksEventNameID string, propertyName string) bool {
+	db := C.GetServices().Db
+
+	var allEventCount EventCount
+	err := db.Table("events").Select("count(*) as event_count").
+		Where("project_id = ? and timestamp >= ? and timestamp < ? and event_name_id in (?, ?)", projectID,
+			timestamp, timestamp+86400, imprEventNameID, clicksEventNameID).Find(&allEventCount).Error
+	if err != nil {
+		return false
+	}
+	var eventCountWithProperty EventCount
+	err = db.Table("events").Select("count(*) as event_count").
+		Where("project_id = ? and timestamp >= ? and timestamp < ? and event_name_id in (?, ?) "+
+			"and JSON_EXTRACT_STRING(properties, ?) is not null",
+			projectID, timestamp, timestamp+86400, imprEventNameID, clicksEventNameID, propertyName).Find(&eventCountWithProperty).Error
+	if err != nil {
+		return false
+	}
+
+	if allEventCount.EventCount == eventCountWithProperty.EventCount {
+		return true
+	}
+	return false
+}
+
+func buildMapOfTimestampOrgIDCampaignIDV3(linkedinArr []LinkedinEventFieldsV3) (map[int64]map[string]map[string]model.ValueForEventLookupMap, error) {
+	resultantMap := make(map[int64]map[string]map[string]model.ValueForEventLookupMap)
 	for _, linkedinFields := range linkedinArr {
-		campaignID, domain, timestamp := linkedinFields.CampaignID, linkedinFields.Domain, linkedinFields.Timestamp
+		campaignID, orgID, timestamp := linkedinFields.CampaignID, linkedinFields.OrgID, linkedinFields.Timestamp
 		if _, exists := resultantMap[timestamp]; !exists {
-			resultantMap[timestamp] = make(map[string]map[string]map[string]interface{})
+			resultantMap[timestamp] = make(map[string]map[string]model.ValueForEventLookupMap)
 		}
-		if _, exists := resultantMap[timestamp][domain]; !exists {
-			resultantMap[timestamp][domain] = make(map[string]map[string]interface{})
+		if _, exists := resultantMap[timestamp][orgID]; !exists {
+			resultantMap[timestamp][orgID] = make(map[string]model.ValueForEventLookupMap)
 		}
-		if _, exists := resultantMap[timestamp][domain][campaignID]; !exists {
-			resultantMap[timestamp][domain][campaignID] = make(map[string]interface{})
-			resultantMap[timestamp][domain][campaignID]["id"] = linkedinFields.ID
-			resultantMap[timestamp][domain][campaignID]["p_value"] = linkedinFields.PropertyValue
-			resultantMap[timestamp][domain][campaignID]["user_id"] = linkedinFields.UserID
+		if _, exists := resultantMap[timestamp][orgID][campaignID]; !exists {
+			valueForMap := model.ValueForEventLookupMap{
+				EventID:       linkedinFields.ID,
+				UserID:        linkedinFields.UserID,
+				PropertyValue: linkedinFields.PropertyValue,
+			}
+			resultantMap[timestamp][orgID][campaignID] = valueForMap
+		} else {
+			return nil, errors.New("duplicate values present for events for same org_id and adgroup_id")
 		}
 	}
-	return resultantMap
+	return resultantMap, nil
 }

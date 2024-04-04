@@ -76,6 +76,13 @@ type DomainDataResponse struct {
 	Clicks              int64  `json:"clicks"`
 	CampaignID          string `json:"campaign_id"`
 	CampaignName        string `json:"campaign_name"`
+	RawDomain           string `json:"raw_domain"`
+	OrgID               string `json:"org_id"`
+}
+type ValueForEventLookupMap struct {
+	EventID       string `json:"event_id"`
+	UserID        string `json:"user_id"`
+	PropertyValue int64  `json:"p_value"`
 }
 
 const (

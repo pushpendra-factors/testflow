@@ -372,8 +372,8 @@ type Model interface {
 		imprEventNameID string, clicksEventNameID string) (map[int64]map[string]map[string]map[string]interface{},
 		map[int64]map[string]map[string]map[string]interface{}, error)
 	GetLinkedinEventFieldsBasedOnTimestampV3(projectID int64, timestamp int64,
-		imprEventNameID string, clicksEventNameID string) (map[int64]map[string]map[string]map[string]interface{},
-		map[int64]map[string]map[string]map[string]interface{}, error)
+		imprEventNameID string, clicksEventNameID string) (map[int64]map[string]map[string]model.ValueForEventLookupMap,
+		map[int64]map[string]map[string]model.ValueForEventLookupMap, error)
 	IsEventPresentAfterGivenTimestamp(projectId int64, timestamp int64) (int, string)
 
 	// clickable_elements
