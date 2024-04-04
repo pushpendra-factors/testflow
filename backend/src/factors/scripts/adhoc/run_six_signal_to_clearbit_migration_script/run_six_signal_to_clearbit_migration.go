@@ -32,6 +32,8 @@ func main() {
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
 
+	clearbitAccProvisionKey := flag.String("cb_acc_provision_key", "dummy", "")
+
 	flag.Parse()
 
 	if *env != C.DEVELOPMENT &&
@@ -53,12 +55,13 @@ func main() {
 			Name:        *memSQLName,
 			Password:    *memSQLPass,
 		},
-		PrimaryDatastore: *primaryDatastore,
-		QueueRedisHost:   *queueRedisHost,
-		QueueRedisPort:   *queueRedisPort,
-		UseQueueRedis:    *useQueueRedis,
-		RedisHost:        *redisHost,
-		RedisPort:        *redisPort,
+		PrimaryDatastore:               *primaryDatastore,
+		QueueRedisHost:                 *queueRedisHost,
+		QueueRedisPort:                 *queueRedisPort,
+		UseQueueRedis:                  *useQueueRedis,
+		RedisHost:                      *redisHost,
+		RedisPort:                      *redisPort,
+		ClearbitProvisionAccountAPIKey: *clearbitAccProvisionKey,
 	}
 
 	C.InitConf(config)
