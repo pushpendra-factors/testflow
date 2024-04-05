@@ -363,6 +363,7 @@ func CreateGroupUserAndEventsV3(linkedinProjectSetting model.LinkedinProjectSett
 			if errCode != http.StatusAccepted {
 				return errMsg, errCode
 			}
+
 			imprEventsMapWithCampaignGroup, clicksEventsMapWithCampaignGroup, err := store.GetStore().GetLinkedinEventFieldsBasedOnTimestampV2(projectID, unixTimestampForEventLookup, eventNameViewedAD.ID, eventNameClickedAD.ID)
 			if err != nil {
 				return err.Error(), http.StatusInternalServerError
@@ -484,8 +485,8 @@ func deleteEventsAndUpdateAccountPropertiesForUser(projectID int64, user model.U
 
 func createGroupUserAndEventsForGivenDomainDataBatchV3(projectID int64, eventNameViewedAD *model.EventName,
 	eventNameClickedAD *model.EventName, location *time.Location, groupDomainData []model.DomainDataResponse,
-	imprEventsMapWithCampaign map[int64]map[string]map[string]map[string]interface{},
-	clicksEventsMapWithCampaign map[int64]map[string]map[string]map[string]interface{}, wg *sync.WaitGroup, syncStatus *syncWorkerStatus) {
+	imprEventsMapWithCampaign map[int64]map[string]map[string]model.ValueForEventLookupMap,
+	clicksEventsMapWithCampaign map[int64]map[string]map[string]model.ValueForEventLookupMap, wg *sync.WaitGroup, syncStatus *syncWorkerStatus) {
 	defer wg.Done()
 	for _, domainData := range groupDomainData {
 		errMsg, errCode := createGroupUserAndEventsForDomainDataV3(projectID, eventNameViewedAD,
@@ -507,8 +508,8 @@ func createGroupUserAndEventsForGivenDomainDataBatchV3(projectID int64, eventNam
 }
 func createGroupUserAndEventsForDomainDataV3(projectID int64, eventNameViewedAD *model.EventName,
 	eventNameClickedAD *model.EventName, location *time.Location, domainData model.DomainDataResponse,
-	imprEventsMapWithCampaign map[int64]map[string]map[string]map[string]interface{},
-	clicksEventsMapWithCampaign map[int64]map[string]map[string]map[string]interface{}) (string, int) {
+	imprEventsMapWithCampaign map[int64]map[string]map[string]model.ValueForEventLookupMap,
+	clicksEventsMapWithCampaign map[int64]map[string]map[string]model.ValueForEventLookupMap) (string, int) {
 
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -531,7 +532,7 @@ func createGroupUserAndEventsForDomainDataV3(projectID int64, eventNameViewedAD 
 		U.LI_LOCALIZED_NAME:    domainData.LocalizedName,
 		U.LI_VANITY_NAME:       domainData.VanityName,
 		U.LI_PREFERRED_COUNTRY: domainData.PreferredCountry,
-		U.LI_ORGANIZATION_ID:   domainData.ID,
+		U.LI_ORGANIZATION_ID:   domainData.OrgID,
 	}
 
 	timestamp, err := time.ParseInLocation("20060102", domainData.Timestamp, location)
@@ -569,12 +570,12 @@ func createGroupUserAndEventsForDomainDataV3(projectID int64, eventNameViewedAD 
 		logCtx.Error(errMsg)
 		return errMsg, errCode
 	}
-	existingImprCount := getExistingPropertyValue(domainData.Domain, unixTimestamp, domainData.CampaignID, imprEventsMapWithCampaign)
-	existingClickCount := getExistingPropertyValue(domainData.Domain, unixTimestamp+1, domainData.CampaignID, clicksEventsMapWithCampaign)
+	existingImprCount := getExistingPropertyValueV3(domainData.OrgID, unixTimestamp, domainData.CampaignID, imprEventsMapWithCampaign)
+	existingClickCount := getExistingPropertyValueV3(domainData.OrgID, unixTimestamp+1, domainData.CampaignID, clicksEventsMapWithCampaign)
 	impr_diff := float64(domainData.Impressions) - existingImprCount
 	clicks_diff := float64(domainData.Clicks) - existingClickCount
 
-	userIDToUpdate := getUserIDFromEventsForUpdatingGroupUser(userID, domainData.Domain, unixTimestamp, domainData.CampaignID, imprEventsMapWithCampaign)
+	userIDToUpdate := getUserIDFromEventsForUpdatingGroupUserV3(userID, domainData.OrgID, unixTimestamp, domainData.CampaignID, imprEventsMapWithCampaign)
 	if userID != userIDToUpdate {
 		log.WithFields(log.Fields{"projectID": projectID, "userID": userID, "userIDToUpdate": userIDToUpdate}).Info("Different user ID updated")
 	}
@@ -594,7 +595,7 @@ func createGroupUserAndEventsForDomainDataV3(projectID int64, eventNameViewedAD 
 
 func createOrUpdateEventFromDomainDataV3(projectID int64, userID string, eventNameID string,
 	domainData model.DomainDataResponse, propertyName string, propertyValue int64, timestamp int64,
-	eventLookupMap map[int64]map[string]map[string]map[string]interface{}) (string, int) {
+	eventLookupMap map[int64]map[string]map[string]model.ValueForEventLookupMap) (string, int) {
 
 	event := model.Event{
 		EventNameId: eventNameID,
@@ -603,14 +604,16 @@ func createOrUpdateEventFromDomainDataV3(projectID int64, userID string, eventNa
 		UserId:      userID,
 	}
 	eventPropertiesMap := U.PropertiesMap{
-		propertyName:      propertyValue,
-		U.EP_CAMPAIGN:     domainData.CampaignGroupName,
-		U.EP_CAMPAIGN_ID:  domainData.CampaignGroupID,
-		U.EP_ADGROUP_ID:   domainData.CampaignID,
-		U.EP_ADGROUP:      domainData.CampaignName,
-		U.EP_SKIP_SESSION: U.PROPERTY_VALUE_TRUE,
+		propertyName:         propertyValue,
+		U.EP_CAMPAIGN:        domainData.CampaignGroupName,
+		U.EP_CAMPAIGN_ID:     domainData.CampaignGroupID,
+		U.EP_ADGROUP_ID:      domainData.CampaignID,
+		U.EP_ADGROUP:         domainData.CampaignName,
+		U.EP_SKIP_SESSION:    U.PROPERTY_VALUE_TRUE,
+		U.LI_ORGANIZATION_ID: domainData.ID,
+		U.LI_RAW_URL:         domainData.RawDomain,
 	}
-	isEventReq, eventID, eventUserID := checkIfEventCreationReqV3(propertyValue, domainData.Domain, timestamp, domainData.CampaignID, eventLookupMap)
+	isEventReq, eventID, eventUserID := checkIfEventCreationReqV3(propertyValue, domainData.OrgID, timestamp, domainData.CampaignID, eventLookupMap)
 	if isEventReq {
 		eventPropertiesJsonB, err := U.EncodeStructTypeToPostgresJsonb(&eventPropertiesMap)
 		if err != nil {
