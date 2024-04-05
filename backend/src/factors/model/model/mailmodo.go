@@ -92,6 +92,7 @@ func IsReceipentAllowedMailmodo(email string, emailType string) bool {
 
 	// case of new email id
 	if response.StatusCode != http.StatusOK {
+		logCtx.Info("Passing email check")
 		return true
 	}
 
