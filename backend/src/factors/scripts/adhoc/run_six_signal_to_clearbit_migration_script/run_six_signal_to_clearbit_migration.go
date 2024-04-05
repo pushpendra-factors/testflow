@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -71,6 +72,8 @@ func main() {
 	if err != nil {
 		log.WithError(err).Fatal("Failed to initialize db.")
 	}
+
+	defer C.WaitAndFlushAllCollectors(65 * time.Second)
 
 	// Fetch all the projects on free plan
 	projectIds, errCode, _, _ := store.GetStore().GetAllProjectIdsUsingPlanId(model.PLAN_ID_FREE)
