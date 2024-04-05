@@ -745,6 +745,7 @@ var LI_AD_CLICK_COUNT = "$li_ad_click_count"
 var LI_ORGANIZATION_ID = "$li_org_id"
 var LI_TOTAL_AD_VIEW_COUNT = "$li_total_ad_view_count"
 var LI_TOTAL_AD_CLICK_COUNT = "$li_total_ad_click_count"
+var LI_RAW_URL = "$li_raw_url"
 
 // Click properties
 var EP_CLICK_ELEMENT_TYPE = "element_type"
