@@ -144,6 +144,12 @@ func CheckPropertyInAllUsers(projectId int64, p model.QueryProperty, decodedProp
 			continue
 		}
 
+		// group based filtering
+		if source, exists := model.GroupUserSource[p.GroupName]; exists &&
+			user.Source != nil && *user.Source != source {
+			continue
+		}
+
 		isValueFound = CheckPropertyOfGivenType(projectId, p, &decodedProperties[index], fileValuesMap)
 
 		// check for negative filters
