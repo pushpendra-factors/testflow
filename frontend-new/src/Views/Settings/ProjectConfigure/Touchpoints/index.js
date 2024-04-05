@@ -29,7 +29,6 @@ import { MoreOutlined } from '@ant-design/icons';
 import { OTPService } from '../../../../reducers/touchpoints/services';
 import useService from '../../../../hooks/useService';
 import { Otp } from '../../../../reducers/touchpoints/classes';
-import { data } from 'autoprefixer';
 
 const { TabPane } = Tabs;
 

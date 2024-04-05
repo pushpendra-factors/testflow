@@ -4,6 +4,8 @@ import Spiner from './Spiner';
 import Number from './Number';
 import { FaErrorComp, FaErrorLog } from './FaErrorComp';
 
-const SVG = lazyWithRetry(() => import('./SVG'));
+const SVG = lazyWithRetry(
+  () => import(/* webpackChunkName: "custom-icons" */ './SVG')
+);
 
 export { Text, SVG, Spiner, Number, FaErrorComp, FaErrorLog };
