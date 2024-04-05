@@ -1,14 +1,25 @@
 import React from 'react';
-import Lottie from 'react-lottie';
+import lazyWithRetry from 'Utils/lazyWithRetry';
+// import Lottie from 'react-lottie';
 import * as Sentry from '@sentry/react';
-import animationData from '../../assets/lottie/38064-error-cone.json';
-import { Text } from '../factorsComponents';
 import { Button } from 'antd';
+import { Text } from '.';
+
+const Lottie = lazyWithRetry(
+  () => import(/* webpackChunkName: "animation" */ 'react-lottie')
+);
+
+const animationData = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "animation" */ '../../assets/lottie/38064-error-cone.json'
+    )
+);
 
 const defaultOptions = {
   loop: true,
   autoplay: true,
-  animationData: animationData,
+  animationData,
   rendererSettings: {
     preserveAspectRatio: 'xMidYMid slice'
   }
@@ -33,7 +44,7 @@ const FaErrorComp = ({ size, className, type, title, subtitle }) => {
         return 100;
     }
   };
-  let finalSize = sizeCal(size);
+  const finalSize = sizeCal(size);
 
   if (title) {
     window.Intercom &&
@@ -54,28 +65,28 @@ const FaErrorComp = ({ size, className, type, title, subtitle }) => {
       <Lottie options={defaultOptions} height={finalSize} width={finalSize} />
       {title && (
         <Text
-          type={'title'}
-          align={'center'}
+          type='title'
+          align='center'
           level={5}
-          weight={'bold'}
-          extraClass={'ml-2 m-0'}
+          weight='bold'
+          extraClass='ml-2 m-0'
         >
           {title}
         </Text>
       )}
       {subtitle && (
         <Text
-          type={'title'}
-          align={'center'}
+          type='title'
+          align='center'
           level={7}
-          weight={'thin'}
-          color={'grey'}
-          extraClass={'ml-2 m-0'}
+          weight='thin'
+          color='grey'
+          extraClass='ml-2 m-0'
         >
           {subtitle}
         </Text>
       )}
-      <Button size={'large'} className={'mt-4'} onClick={() => refreshPage()}>
+      <Button size='large' className='mt-4' onClick={() => refreshPage()}>
         Try Again!
       </Button>
     </div>

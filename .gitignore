@@ -6,6 +6,7 @@ frontend/.firebase
 # frontend new
 frontend-new/build
 frontend-new/node_modules
+frontend-new/src/assets/tailwind.output.css
 
 # slack
 slack-app/build

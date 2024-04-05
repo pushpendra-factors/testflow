@@ -4,20 +4,37 @@ import lazyWithRetry from 'Utils/lazyWithRetry';
 import { Redirect, Route, Switch } from 'react-router-dom';
 import { renderRoutes } from './utils';
 
-const Login = lazyWithRetry(() => import('../Views/Pages/Login'));
+const Login = lazyWithRetry(
+  () => import(/* webpackChunkName: "login" */ '../Views/Pages/Login')
+);
 const ForgotPassword = lazyWithRetry(
-  () => import('../Views/Pages/ForgotPassword')
+  () =>
+    import(
+      /* webpackChunkName: "forgot-password" */ '../Views/Pages/ForgotPassword'
+    )
 );
 const ResetPassword = lazyWithRetry(
-  () => import('../Views/Pages/ResetPassword')
+  () =>
+    import(
+      /* webpackChunkName: "reset-password" */ '../Views/Pages/ResetPassword'
+    )
 );
-const SignUp = lazyWithRetry(() => import('../Views/Pages/SignUp'));
-const Activate = lazyWithRetry(() => import('../Views/Pages/Activate'));
+const SignUp = lazyWithRetry(
+  () => import(/* webpackChunkName: "signup" */ '../Views/Pages/SignUp')
+);
+const Activate = lazyWithRetry(
+  () => import(/* webpackChunkName: "activate" */ '../Views/Pages/Activate')
+);
 const Templates = lazyWithRetry(
-  () => import('../Views/CoreQuery/Templates/ResultsPage')
+  () =>
+    import(
+      /* webpackChunkName: "templates" */ '../Views/CoreQuery/Templates/ResultsPage'
+    )
 );
 
-const AppLayout = lazyWithRetry(() => import('../Views/AppLayout'));
+const AppLayout = lazyWithRetry(
+  () => import(/* webpackChunkName: "main-app" */ '../Views/AppLayout')
+);
 
 export const APP_ROUTES = {
   Signup: {
