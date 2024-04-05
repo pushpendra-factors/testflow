@@ -88,7 +88,7 @@ class LinkedinSetting:
                                     AD_ACCOUNT: setting.ad_account})
             else:
                 setting.access_token = new_access_token
-                token_update_response = DataService().update_access_token(
+                token_update_response = DataService.get_instance().update_access_token(
                                     setting.project_id,
                                     setting.access_token)
                 if not token_update_response.ok:

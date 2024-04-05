@@ -764,10 +764,6 @@ func Track(projectId int64, request *TrackPayload,
 		}
 	}
 
-	if eventName.Name == U.EVENT_NAME_FORM_SUBMITTED {
-		logCtx.WithFields(log.Fields{"email": U.GetPropertyValueAsString((*eventProperties)[U.UP_EMAIL]), "project_id": projectId, "IP Address": clientIP}).Info("IP Address info for evaluation")
-	}
-
 	if existingUserProperties == nil {
 		existingUserProperties, errCode = store.GetStore().GetLatestUserPropertiesOfUserAsMap(projectId, request.UserId)
 		if errCode == http.StatusInternalServerError {

@@ -3973,7 +3973,7 @@ func syncEngagementsV2(project *model.Project, otpRules *[]model.OTPRule, unique
 	for i := range contactIds {
 		var userId string
 		for j := range contactDocuments {
-			if contactIds[i] == contactDocuments[j].ID && contactDocuments[j].Action == 1 && contactDocuments[j].Synced {
+			if contactIds[i] == contactDocuments[j].ID && contactDocuments[j].Action == model.HubspotDocumentActionCreated && contactDocuments[j].Synced {
 				userId = contactDocuments[j].UserId
 			}
 		}
@@ -4674,7 +4674,12 @@ func NewHubspotDocumentPaginator(projectID int64, docType int, startTime, endTim
 }
 
 func (dp *DocumentPaginator) GetNextBatch() ([]model.HubspotDocument, int, bool) {
-	documents, status := store.GetStore().GetHubspotDocumentsByTypeANDRangeForSync(dp.ProjectID, dp.DocType, dp.StartTime, dp.EndTime, dp.MaxCreatedAt, dp.Limit, dp.Offset)
+	pullActions := []int{}
+	if C.HubspotEnrichSkipContactUpdatesByProjectID(dp.ProjectID) && dp.DocType == model.HubspotDocumentTypeContact {
+		pullActions = []int{model.HubspotDocumentActionCreated}
+	}
+
+	documents, status := store.GetStore().GetHubspotDocumentsByTypeANDRangeForSync(dp.ProjectID, dp.DocType, dp.StartTime, dp.EndTime, dp.MaxCreatedAt, dp.Limit, dp.Offset, pullActions)
 	if status != http.StatusFound {
 		if status != http.StatusNotFound {
 			log.WithFields(log.Fields{"paginator": dp}).Error("Failed to get hubspot documents using pagination.")
@@ -4694,7 +4699,7 @@ func (dp *DocumentPaginator) GetNextBatch() ([]model.HubspotDocument, int, bool)
 			dp.Offset += len(documents)
 
 			log.WithFields(log.Fields{"paginator": dp, "total_records": len(documents)}).Info("Same records received on hubspot documents paginator. Shifting offest.")
-			documents, status = store.GetStore().GetHubspotDocumentsByTypeANDRangeForSync(dp.ProjectID, dp.DocType, dp.StartTime, dp.EndTime, dp.MaxCreatedAt, dp.Limit, dp.Offset)
+			documents, status = store.GetStore().GetHubspotDocumentsByTypeANDRangeForSync(dp.ProjectID, dp.DocType, dp.StartTime, dp.EndTime, dp.MaxCreatedAt, dp.Limit, dp.Offset, pullActions)
 			if status != http.StatusFound {
 				if status != http.StatusNotFound {
 					log.WithFields(log.Fields{"paginator": dp}).Error("Failed to get hubspot documents using pagination with offset.")

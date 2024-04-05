@@ -185,7 +185,11 @@ func syncWorkerForOTP(projectID int64, startTime, endTime int64, backfillEnabled
 
 			logCtx.Info(fmt.Sprintf("event name  %s", eventName))
 
-			eventDetails, _ := store.GetStore().GetEventNameIDFromEventName(eventName, project.ID)
+			eventDetails, err := store.GetStore().GetEventNameIDFromEventName(eventName, project.ID)
+			if err != nil {
+				logCtx.WithField("error", err).Error("Failed to get OTP Unique Keys for Project")
+				return
+			}
 
 			switch eventName {
 

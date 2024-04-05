@@ -3228,7 +3228,7 @@ func TestHubspotParallelProcessingByDocumentID(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 		documents, _ := store.GetStore().GetHubspotDocumentsByTypeANDRangeForSync(project.ID, model.HubspotDocumentTypeContact, resultTimeSeries[i][0],
-			resultTimeSeries[i][1], time.Now().Unix(), 0, 0)
+			resultTimeSeries[i][1], time.Now().Unix(), 0, 0, nil)
 		if i == 0 {
 			assert.Equal(t, 6, len(documents))
 		} else {
@@ -4997,15 +4997,11 @@ func TestHubspotProjectDistributer(t *testing.T) {
 	project2, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	intHubspot := true
-	_, errCode := store.GetStore().UpdateProjectSettings(project1.ID, &model.ProjectSetting{
-		IntHubspot: &intHubspot, IntHubspotApiKey: "1234",
-	})
-	assert.Equal(t, http.StatusAccepted, errCode)
-	_, errCode = store.GetStore().UpdateProjectSettings(project2.ID, &model.ProjectSetting{
-		IntHubspot: &intHubspot, IntHubspotApiKey: "1234",
-	})
-	assert.Equal(t, http.StatusAccepted, errCode)
+	status := enableHubspotFeatureByProjectID(project1.ID)
+	assert.Equal(t, http.StatusAccepted, status)
+	status = enableHubspotFeatureByProjectID(project2.ID)
+	assert.Equal(t, http.StatusAccepted, status)
+
 	contactCreatedDate := time.Now().AddDate(0, 0, -5)
 	contact := IntHubspot.Contact{
 		Vid: 1,
@@ -5044,7 +5040,7 @@ func TestHubspotProjectDistributer(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, status)
 	}
 
-	status := store.GetStore().UpdateHubspotDocumentAsSynced(project1.ID, "1", model.HubspotDocumentTypeContact, "", contactCreatedDate.Unix()*1000+10, model.HubspotDocumentActionCreated, "", "")
+	status = store.GetStore().UpdateHubspotDocumentAsSynced(project1.ID, "1", model.HubspotDocumentTypeContact, "", contactCreatedDate.Unix()*1000+10, model.HubspotDocumentActionCreated, "", "")
 	assert.Equal(t, http.StatusAccepted, status)
 	status = store.GetStore().UpdateHubspotDocumentAsSynced(project2.ID, "1", model.HubspotDocumentTypeContact, "", contactCreatedDate.Unix()*1000+10, model.HubspotDocumentActionCreated, "", "")
 	assert.Equal(t, http.StatusAccepted, status)
@@ -8752,21 +8748,36 @@ func TestHubspotCompanyObjectURL(t *testing.T) {
 	assert.Equal(t, "https://app.hubspot.com/contacts/123123/company/2", properties["$hubspot_company_$object_url"])
 }
 
+func enableHubspotFeatureByProjectID(projectID int64) int {
+	status, _, _ := store.GetStore().UpdateProjectPlanMappingField(projectID, model.PLAN_CUSTOM)
+
+	if status != http.StatusAccepted {
+		return status
+	}
+
+	status, _ = store.GetStore().UpdateFeaturesForCustomPlan(projectID, 10000, 100000, []string{model.FEATURE_HUBSPOT})
+	if status != http.StatusAccepted {
+		return status
+	}
+	intHubspot := true
+	_, status = store.GetStore().UpdateProjectSettings(projectID, &model.ProjectSetting{
+		IntHubspot: &intHubspot, IntHubspotApiKey: "1234",
+	})
+
+	return status
+}
+
 func TestHubspotProjectDistributerFirstTimeSync(t *testing.T) {
 	project1, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 	project2, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	intHubspot := true
-	_, errCode := store.GetStore().UpdateProjectSettings(project1.ID, &model.ProjectSetting{
-		IntHubspot: &intHubspot, IntHubspotApiKey: "1234",
-	})
-	assert.Equal(t, http.StatusAccepted, errCode)
-	_, errCode = store.GetStore().UpdateProjectSettings(project2.ID, &model.ProjectSetting{
-		IntHubspot: &intHubspot, IntHubspotApiKey: "1234",
-	})
-	assert.Equal(t, http.StatusAccepted, errCode)
+	status := enableHubspotFeatureByProjectID(project1.ID)
+	assert.Equal(t, http.StatusAccepted, status)
+	status = enableHubspotFeatureByProjectID(project2.ID)
+	assert.Equal(t, http.StatusAccepted, status)
+
 	contactCreatedDate := time.Now().AddDate(0, 0, -5)
 	contact := IntHubspot.Contact{
 		Vid: 1,

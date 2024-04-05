@@ -85,13 +85,13 @@ func main() {
 		// Check if they are active after 16 Feb, 2024 00:00:00 IST
 		errCode, errMsg := store.GetStore().IsEventPresentAfterGivenTimestamp(projectId, 1708021800)
 		if errCode != http.StatusFound {
-			log.Error(errMsg)
+			log.Warn(errMsg)
 			failureMap[errMsg] = append(failureMap[errMsg], projectId)
 			continue
 		}
 
 		errCode, errMsg = UpdateClearbitAsDeanonProvider(projectId)
-		if errCode != http.StatusFound {
+		if errCode != http.StatusOK {
 			log.Error(errMsg)
 			failureMap[errMsg] = append(failureMap[errMsg], projectId)
 			continue
@@ -100,7 +100,7 @@ func main() {
 	}
 
 	if count < len(projectIds) {
-		log.Error("List of failed project ids: ", failureMap)
+		log.Info("List of failed project ids: ", failureMap)
 	}
 }
 

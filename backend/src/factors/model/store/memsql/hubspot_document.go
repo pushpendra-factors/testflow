@@ -1410,7 +1410,7 @@ func (store *MemSQL) GetHubspotDocumentsSyncedCount(projectIDs []int64) ([]model
 
 // GetHubspotDocumentsByTypeANDRangeForSync return list of documents unsynced for given time range
 func (store *MemSQL) GetHubspotDocumentsByTypeANDRangeForSync(projectID int64,
-	docType int, from, to, maxCreatedAtSec int64, limit, offset int) ([]model.HubspotDocument, int) {
+	docType int, from, to, maxCreatedAtSec int64, limit, offset int, pullActions []int) ([]model.HubspotDocument, int) {
 
 	argFields := log.Fields{"project_id": projectID, "type": docType, "from": from, "to": to, "max_created_at_sec": maxCreatedAtSec}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &argFields)
@@ -1428,6 +1428,11 @@ func (store *MemSQL) GetHubspotDocumentsByTypeANDRangeForSync(projectID int64,
 
 	wheStmnt := "project_id=? AND type=? AND synced=false AND timestamp BETWEEN ? AND ? AND created_at < ? "
 	whereParams := []interface{}{projectID, docType, from, to, maxCreatedAtFmt}
+
+	if len(pullActions) > 0 {
+		wheStmnt = wheStmnt + "AND action IN ( ? ) "
+		whereParams = append(whereParams, pullActions)
+	}
 
 	if C.IsSyncTriesEnabled() {
 		wheStmnt = wheStmnt + "AND sync_tries < ? "
