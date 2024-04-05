@@ -913,6 +913,10 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesAndFieldsTagMap(projectID i
 		groupDomainUserID, _, _ := store.getDomainsGroupUserIDForUser(projectID, event.UserId)
 		msgPropMap[model.ETA_DOMAIN_GROUP_USER_ID] = groupDomainUserID
 
+		if projectID == 1125899936000037 {
+			log.WithFields(logFields).WithField("user_props", *updatedUserProps).Info("SF PROPERTIES.")
+		}
+		
 		// for hubspot company url
 		if hsUrl, exists := (*updatedUserProps)[U.ENRICHED_HUBSPOT_COMPANY_OBJECT_URL]; exists {
 			msgPropMap[model.ETA_ENRICHED_HUBSPOT_COMPANY_OBJECT_URL] = hsUrl
