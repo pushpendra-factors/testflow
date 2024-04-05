@@ -8,52 +8,30 @@ import {
   Form,
   Table,
   Tag,
-  message
+  message,
+  Divider,
+  Select
 } from 'antd';
 import { connect } from 'react-redux';
 import { Text, SVG } from 'factorsComponents';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import { udpateProjectDetails } from 'Reducers/global';
+import PlatformCard from './PlatformCard.tsx';
 
 const { confirm } = Modal;
 
 const UTM_Mapping = {
   utm_mapping: {
-    $ad: ['$qp_utm_ad'],
-    $term: ['$qp_utm_term'],
-    $ad_id: ['$qp_utm_ad_id', '$qp_utm_adid', '$qp_utm_hsa_ad'],
-    $gclid: ['$qp_gclid', '$qp_utm_gclid', '$qp_wbraid', '$qp_gbraid'],
-    $fbclid: ['$qp_fbclid', '$qp_utm_fbclid'],
-    $medium: ['$qp_utm_medium'],
-    $source: ['$qp_utm_source'],
-    $adgroup: ['$qp_utm_adgroup', '$qp_utm_ad_group'],
-    $content: ['$qp_utm_content', '$qp_utm_utm_content'],
-    $keyword: ['$qp_utm_keyword', '$qp_utm_key_word'],
-    $campaign: ['$qp_utm_campaign', '$qp_utm_campaign_name'],
-    $creative: [
-      '$qp_utm_creative',
-      '$qp_utm_creative_id',
-      '$qp_utm_creativeid'
-    ],
-    $adgroup_id: [
-      '$qp_utm_adgroupid',
-      '$qp_utm_adgroup_id',
-      '$qp_utm_ad_group_id',
-      '$qp_utm_hsa_grp'
-    ],
-    $campaign_id: [
-      '$qp_utm_campaignid',
-      '$qp_utm_campaign_id',
-      '$qp_utm_hsa_cam'
-    ],
-    $keyword_match_type: ['$qp_utm_matchtype', '$qp_utm_match_type']
+    $ep_email: ['$qp_utm_email']
   }
 };
 
-const MartInt = ({ activeProject, udpateProjectDetails }) => {
-  const [newKey, setNewKey] = useState(null);
-  const [dataSource, setDataSource] = useState(null);
-  const [UTM, setUTM] = useState(false);
+const EmailClicks = ({ activeProject, udpateProjectDetails }) => {
+  const [newKey, setNewKey] = useState<null>(null);
+  const [dataSource, setDataSource] = useState<null>(null);
+  const [UTM, setUTM] = useState<object>({});
+  const [tags, setTags] = useState<string[]>([]);
+  const [selectedPlatform, setSelectedPlatform] = useState<object>({});
 
   const [form] = Form.useForm();
   const [errorInfo, seterrorInfo] = useState(null);
@@ -61,7 +39,7 @@ const MartInt = ({ activeProject, udpateProjectDetails }) => {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const DS = Object.keys(UTM)?.map((key, index) => ({
+    const DS: any = Object.keys(UTM)?.map((key, index) => ({
       key: index,
       parameter: key,
       actions: {
@@ -70,6 +48,11 @@ const MartInt = ({ activeProject, udpateProjectDetails }) => {
       }
     }));
     setDataSource(DS);
+
+    const data = UTM?.$ep_email?.map((item: string) =>
+      item.startsWith('$qp_') ? item.slice(4) : item
+    );
+    setTags(data);
   }, [UTM]);
 
   useEffect(() => {
@@ -93,10 +76,10 @@ const MartInt = ({ activeProject, udpateProjectDetails }) => {
     form.resetFields();
   };
 
-  const onFinish = (values) => {
-    let newArr = [];
+  const onFinish = (values: any) => {
+    let newArr: string[] = [];
     const UTM_Map = UTM;
-    const stripLogic = (item) =>
+    const stripLogic = (item: string) =>
       item.startsWith('$qp_') ? item : `$qp_${item}`;
     Object.keys(UTM_Map).map((item) => {
       if (newKey === item) {
@@ -116,19 +99,19 @@ const MartInt = ({ activeProject, udpateProjectDetails }) => {
         onReset();
         setLoading(false);
       })
-      .catch((err) => {
+      .catch((err: any) => {
         console.log('err->', err);
         seterrorInfo(err.data.error);
         setLoading(false);
       });
   };
 
-  const addUTM = (key) => {
+  const addUTM = (key: any) => {
     setNewKey(key);
     setVisible(true);
   };
 
-  const removeUTM = (e, key, item) => {
+  const removeUTM = (e, key: any, item: string) => {
     e.preventDefault();
     confirm({
       icon: <ExclamationCircleOutlined />,
@@ -140,7 +123,7 @@ const MartInt = ({ activeProject, udpateProjectDetails }) => {
         Object.keys(UTM_Map).map((tag) => {
           if (key === tag) {
             const filteredItems = UTM_Map[key].filter(
-              (arryItem) => arryItem !== item
+              (arryItem: string) => arryItem !== item
             );
             updatedKey = { ...UTM, [key]: filteredItems };
           }
@@ -154,7 +137,7 @@ const MartInt = ({ activeProject, udpateProjectDetails }) => {
             message.success('UTM Tag removed!');
             setLoading(false);
           })
-          .catch((err) => {
+          .catch((err: any) => {
             console.log('err->', err);
             message.error(err.data.error);
             setLoading(false);
@@ -165,7 +148,7 @@ const MartInt = ({ activeProject, udpateProjectDetails }) => {
 
   const columns = [
     {
-      title: 'For the following parameters... ',
+      title: 'For the following parameter',
       dataIndex: 'parameter',
       key: 'parameter'
     },
@@ -173,7 +156,7 @@ const MartInt = ({ activeProject, udpateProjectDetails }) => {
       title: 'Track with these UTM tags, in this order of preference',
       dataIndex: 'actions',
       key: 'actions',
-      render: (text) => {
+      render: (text: any) => {
         const key = text?.key;
 
         if (text?.tags?.length === 0) {
@@ -191,9 +174,9 @@ const MartInt = ({ activeProject, udpateProjectDetails }) => {
           );
         }
 
-        const stripLogic = (item) =>
+        const stripLogic = (item: string) =>
           item.startsWith('$qp_') ? item.slice(4) : item;
-        return text?.tags.map((item, index) => {
+        return text?.tags.map((item: string, index: number) => {
           if (text?.tags?.length === index + 1) {
             return (
               <>
@@ -234,28 +217,107 @@ const MartInt = ({ activeProject, udpateProjectDetails }) => {
     }
   ];
 
+  const selectOptions = [
+    {
+      value: 'hubspot',
+      label: 'Hubspot'
+    },
+    {
+      value: 'salesforceOutreach',
+      label: 'Salesforce outreach'
+    },
+    {
+      value: 'salesforceEmailStudio',
+      label: 'Salesforce email studio'
+    },
+    {
+      value: 'apollo',
+      label: 'Apollo'
+    },
+    {
+      value: 'outreach',
+      label: 'Outreach'
+    }
+  ];
+
+  const handlePlatformChange = (value: string) => {
+    setSelectedPlatform(value);
+  };
+
   return (
     <>
       <div className='mb-10 pl-4'>
-        {/* <Row>
-                <Col span={24}>
-                    <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>Marketing Touchpoints</Text>
-                    <Text type={'title'} level={7} extraClass={'m-0'}>Define how your online marketing efforts should be tracked.</Text>
-                </Col>
-            </Row> */}
-
-        <Row className='mt-4'>
+        <Row>
+          <Col>
+            <Text type='title' level={7} color='grey-2' extraClass='m-0'>
+              This can be used as another way to identify emails of the users
+              through the UTM value of email UTM parameter. This can be used as
+              another way to identify emails of the users through the UTM value
+              of email UTM parameter.
+            </Text>
+          </Col>
+        </Row>
+        <Row className='mt-3'>
           <Col span={24}>
-            <div className='mt-6'>
+            <Text type='title' level={6} weight='bold' extraClass='m-0'>
+              Map your UTM tags
+            </Text>
+            <Text type='title' level={7} color='grey-2' extraClass='m-0'>
+              These are the tags that will be used to get the email of the
+              person clicking the link in your emails.
+            </Text>
+          </Col>
+        </Row>
+
+        <Row className='m-0'>
+          <Col span={24}>
+            <div className='mt-2'>
               <Table
-                className='fa-table--basic mt-4'
+                className='fa-table--basic mt-2'
                 columns={columns}
                 dataSource={dataSource?.filter(
-                  (ds) => ds?.parameter !== '$ep_email'
+                  (ds: any) => ds?.parameter === '$ep_email'
                 )}
                 pagination={false}
               />
             </div>
+          </Col>
+        </Row>
+        <Divider />
+
+        <Row className='mt-3'>
+          <Col span={24}>
+            <Text type='title' level={6} weight='bold' extraClass='m-0'>
+              How to get contact’s email from links inside your emails
+            </Text>
+            <Text type='title' level={7} color='grey-2' extraClass='m-0'>
+              Please select the platform and copy the respective utm tag and
+              paste it in your platform
+            </Text>
+          </Col>
+        </Row>
+        <Row className='mt-3'>
+          <Col>
+            <Select
+              showSearch
+              className='fa-select'
+              style={{ minWidth: '200px' }}
+              placeholder='Select Platform'
+              optionFilterProp='children'
+              onChange={(value) => handlePlatformChange(value)}
+              labelInValue
+              filterOption={(input, option) =>
+                (option?.label ?? '')
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
+              }
+              options={selectOptions}
+            />
+          </Col>
+        </Row>
+        <Row className='mt-4'>
+          <Col span={24}>
+            <PlatformCard tags={tags} selectedPlatform={selectedPlatform} />
           </Col>
         </Row>
       </div>
@@ -285,9 +347,16 @@ const MartInt = ({ activeProject, udpateProjectDetails }) => {
                 </Text>
               </Col>
             </Row>
+            <Row>
+              <Col span={24}>
+                <Text type='title' level={7} color='grey' extraClass='m-0'>
+                  Add a UTM parameter for identifying the email address of the
+                  person clicking on links inside your emails.
+                </Text>
+              </Col>
+            </Row>
             <Row className='mt-4'>
               <Col span={24}>
-                {/* <Text type={'title'} level={7} extraClass={'m-0'}>UTM TAG</Text> */}
                 <Form.Item
                   name='utm_tag'
                   rules={[
@@ -342,11 +411,11 @@ const MartInt = ({ activeProject, udpateProjectDetails }) => {
   );
 };
 
-const mapStateToProps = (state) => ({
+const mapStateToProps = (state: any) => ({
   activeProject: state.global.active_project,
   agents: state.agent.agents,
   projects: state.global.projects,
   currentAgent: state.agent.agent_details
 });
 
-export default connect(mapStateToProps, { udpateProjectDetails })(MartInt);
+export default connect(mapStateToProps, { udpateProjectDetails })(EmailClicks);
