@@ -37,6 +37,7 @@ func (store *MemSQL) ProvisionClearbitAccountForSingleProject(projectId int64, e
 
 	provisionAPIKey := config.GetClearbitProvisionAccountAPIKey()
 
+	logCtx.WithFields(log.Fields{"apiKey": provisionAPIKey, "email": emailId, "domain": domainName}).Info("provision params")
 	result, err := clear_bit.GetClearbitProvisionAccountResponse(API_URL, emailId, domainName, provisionAPIKey)
 	if err != nil {
 		logCtx.Error(err)
@@ -60,7 +61,7 @@ func (store *MemSQL) ProvisionClearbitAccountForSingleProject(projectId int64, e
 	responseJSON := postgres.Jsonb{RawMessage: body}
 
 	if result.StatusCode != http.StatusOK {
-		logCtx.Error("failed provision clearbit account with response: ", &responseJSON)
+		logCtx.Error("failed provision clearbit account with response: ", responseJSON, result.StatusCode)
 		return fmt.Errorf("failed provision clearbit account")
 	}
 
