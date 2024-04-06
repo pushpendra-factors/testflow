@@ -67,12 +67,13 @@ func (widgetGroup *WidgetGroup) DeleteWidget(inputWidgetID string) {
 }
 
 type Widget struct {
-	ID          string    `json:"id"`
-	DisplayName string    `json:"d_name"`
-	QueryType   string    `json:"q_ty"`
-	QueryMetric string    `json:"q_me"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID              string    `json:"id"`
+	DisplayName     string    `json:"d_name"`
+	QueryType       string    `json:"q_ty"`
+	QueryMetric     string    `json:"q_me"`
+	QueryMetricType string    `json:"q_me_ty"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
 
 func (widget *Widget) IsValid() (bool, string) {
